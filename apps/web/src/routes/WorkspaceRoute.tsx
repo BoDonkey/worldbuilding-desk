@@ -95,7 +95,7 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
       id: crypto.randomUUID(),
       projectId: activeProject.id,
       title: 'Untitled scene',
-      content: '',
+      content: '<p></p>', // Empty paragraph for TipTap
       createdAt: now,
       updatedAt: now
     };
@@ -118,7 +118,7 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
     setTitle(doc.title);
     setContent(doc.content);
     setSaveStatus('idle');
-    setWordCount(0); // will be updated by the editor on first onUpdate
+    setWordCount(countWords(doc.content));
   };
 
   const handleSave = async () => {
@@ -148,7 +148,14 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
     }
   };
 
-  // 🔁 AUTOSAVE EFFECT (debounced, no sync setState in effect body)
+  // Handle content changes from TipTap
+  const handleContentChange = (html: string) => {
+    setContent(html);
+    setSaveStatus('idle'); // Mark as unsaved
+    setWordCount(countWords(html));
+  };
+
+  // 🔁 AUTOSAVE EFFECT (debounced)
   useEffect(() => {
     if (!activeProject || !selectedId) return;
 
@@ -286,11 +293,11 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
                 >
                   Scene Text
                   <br />
+                  {/* CRITICAL FIX: Remove the key prop! */}
+                  {/* The key prop was causing remounts and triggering the bold bug */}
                   <TipTapEditor
-                    key={selectedId ?? 'no-doc'}
                     content={content}
-                    onChange={setContent}
-                    onWordCountChange={setWordCount}
+                    onChange={handleContentChange}
                   />
                 </label>
               </div>

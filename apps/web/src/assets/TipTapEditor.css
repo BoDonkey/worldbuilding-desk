@@ -1,0 +1,169 @@
+/* TipTap Editor Styles */
+
+.tiptap-wrapper {
+  padding: 1rem;
+}
+
+/* Control group (toolbar container) */
+.control-group {
+  margin-bottom: 0.75rem;
+  border-bottom: 1px solid #ccc;
+  padding-bottom: 0.5rem;
+}
+
+/* Button group */
+.button-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
+
+.button-group button {
+  padding: 0.4rem 0.8rem;
+  border: 1px solid #ccc;
+  background: #fff;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.2s;
+}
+
+.button-group button:hover:not(:disabled) {
+  background: #f0f0f0;
+  border-color: #999;
+}
+
+.button-group button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.button-group button.is-active {
+  background: #333;
+  color: #fff;
+  border-color: #333;
+}
+
+/* Editor content area */
+.tiptap-editor {
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  padding: 1rem;
+  min-height: 300px;
+  background: #fff;
+  color: #000;
+  outline: none;
+}
+
+.tiptap-editor:focus {
+  border-color: #666;
+}
+
+/* ProseMirror styles */
+.ProseMirror {
+  min-height: 300px;
+  outline: none;
+}
+
+.ProseMirror p {
+  margin: 0 0 0.5rem 0;
+}
+
+.ProseMirror h1 {
+  font-size: 2em;
+  margin: 0.5rem 0;
+}
+
+.ProseMirror h2 {
+  font-size: 1.5em;
+  margin: 0.5rem 0;
+}
+
+.ProseMirror h3 {
+  font-size: 1.3em;
+  margin: 0.5rem 0;
+}
+
+.ProseMirror h4 {
+  font-size: 1.1em;
+  margin: 0.5rem 0;
+}
+
+.ProseMirror h5 {
+  font-size: 1em;
+  margin: 0.5rem 0;
+}
+
+.ProseMirror h6 {
+  font-size: 0.9em;
+  margin: 0.5rem 0;
+}
+
+.ProseMirror ul,
+.ProseMirror ol {
+  padding-left: 2rem;
+  margin: 0.5rem 0;
+}
+
+.ProseMirror code {
+  background: #f0f0f0;
+  padding: 0.2rem 0.4rem;
+  border-radius: 3px;
+  font-family: 'Courier New', monospace;
+}
+
+.ProseMirror pre {
+  background: #1e1e1e;
+  color: #f0f0f0;
+  padding: 1rem;
+  border-radius: 4px;
+  overflow-x: auto;
+}
+
+.ProseMirror pre code {
+  background: none;
+  color: inherit;
+  padding: 0;
+}
+
+.ProseMirror blockquote {
+  border-left: 3px solid #ccc;
+  padding-left: 1rem;
+  margin: 0.5rem 0;
+  font-style: italic;
+}
+
+.ProseMirror hr {
+  border: none;
+  border-top: 2px solid #ccc;
+  margin: 1rem 0;
+}
+
+/* Dark theme support */
+@media (prefers-color-scheme: dark) {
+  .tiptap-editor {
+    background: #1e1e1e;
+    color: #f0f0f0;
+    border-color: #555;
+  }
+
+  .button-group button {
+    background: #2a2a2a;
+    color: #f0f0f0;
+    border-color: #555;
+  }
+
+  .button-group button:hover:not(:disabled) {
+    background: #333;
+    border-color: #666;
+  }
+
+  .button-group button.is-active {
+    background: #555;
+    border-color: #777;
+  }
+
+  .ProseMirror code {
+    background: #333;
+  }
+}
