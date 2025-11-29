@@ -293,8 +293,6 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
                 >
                   Scene Text
                   <br />
-                  {/* CRITICAL FIX: Remove the key prop! */}
-                  {/* The key prop was causing remounts and triggering the bold bug */}
                   <TipTapEditor
                     content={content}
                     onChange={handleContentChange}

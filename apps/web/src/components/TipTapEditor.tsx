@@ -256,7 +256,7 @@ function TipTapEditor({content = '', onChange, onWordCountChange}: TipTapEditorP
         isInternalUpdate.current = false;
       }, 0);
     },
-    
+
     onSelectionUpdate({editor}) {
       // Clear stored marks on selection change to prevent formatting weirdness
       const {from, to} = editor.state.selection;
@@ -266,7 +266,7 @@ function TipTapEditor({content = '', onChange, onWordCountChange}: TipTapEditorP
         editor.view.dispatch(tr);
       }
     },
-    
+
     editorProps: {
       attributes: {
         class: 'tiptap-editor',
