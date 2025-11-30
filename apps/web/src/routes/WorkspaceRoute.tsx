@@ -1,12 +1,15 @@
-import {useEffect, useState} from 'react';
-import type {Project, WritingDocument} from '../entityTypes';
+import { useEffect, useState } from 'react';
+import type { Project, WritingDocument } from '../entityTypes';
 import {
   getDocumentsByProject,
   saveWritingDocument,
   deleteWritingDocument
 } from '../writingStorage';
+import { getOrCreateSettings } from '../settingsStorage';
+import { createEditorConfigWithStyles } from '../config/editorConfig';
+import type { EditorConfig } from '../config/editorConfig';
 import TipTapEditor from '../components/TipTapEditor';
-import {countWords} from '../utils/textHelpers';
+import { countWords } from '../utils/textHelpers';
 
 interface WorkspaceRouteProps {
   activeProject: Project | null;
@@ -14,29 +17,47 @@ interface WorkspaceRouteProps {
 
 type SaveStatus = 'idle' | 'saving' | 'saved';
 
-function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
+function WorkspaceRoute({ activeProject }: WorkspaceRouteProps) {
   const [documents, setDocuments] = useState<WritingDocument[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [selectedCreatedAt, setSelectedCreatedAt] = useState<number | null>(
-    null
-  );
+  const [selectedCreatedAt, setSelectedCreatedAt] = useState<number | null>(null);
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
   const [lastSavedAt, setLastSavedAt] = useState<number | null>(null);
   const [wordCount, setWordCount] = useState(0);
+  const [editorConfig, setEditorConfig] = useState<EditorConfig | null>(null);
+  const [toolbarButtons, setToolbarButtons] = useState<Array<{id: string; label: string; markName: string}>>([]);
 
-  // Load documents whenever the active project changes
+
+  // Load documents and settings when project changes
   useEffect(() => {
-    if (!activeProject) return;
+    if (!activeProject) {
+      setEditorConfig(null);
+      setToolbarButtons([]);
+      return;
+    }
 
     let cancelled = false;
 
     (async () => {
-      const docs = await getDocumentsByProject(activeProject.id);
+      const [docs, settings] = await Promise.all([
+        getDocumentsByProject(activeProject.id),
+        getOrCreateSettings(activeProject.id)
+      ]);
+
       if (cancelled) return;
 
       setDocuments(docs);
+      setEditorConfig(createEditorConfigWithStyles(settings.characterStyles));
+
+      // Generate toolbar buttons from character styles
+      const buttons = settings.characterStyles.map(style => ({
+        id: style.id,
+        label: style.name,
+        markName: style.markName
+      }));
+      setToolbarButtons(buttons);
 
       if (docs.length > 0) {
         const first = docs[0];
@@ -95,7 +116,7 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
       id: crypto.randomUUID(),
       projectId: activeProject.id,
       title: 'Untitled scene',
-      content: '<p></p>', // Empty paragraph for TipTap
+      content: '<p></p>',
       createdAt: now,
       updatedAt: now
     };
@@ -148,14 +169,12 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
     }
   };
 
-  // Handle content changes from TipTap
   const handleContentChange = (html: string) => {
     setContent(html);
-    setSaveStatus('idle'); // Mark as unsaved
+    setSaveStatus('idle');
     setWordCount(countWords(html));
   };
 
-  // 🔁 AUTOSAVE EFFECT (debounced)
   useEffect(() => {
     if (!activeProject || !selectedId) return;
 
@@ -174,7 +193,7 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
     const timeoutId = window.setTimeout(() => {
       setSaveStatus('saving');
       void persistDoc(doc);
-    }, 800); // debounce delay (ms)
+    }, 800);
 
     return () => {
       clearTimeout(timeoutId);
@@ -194,12 +213,20 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
     );
   }
 
+  if (!editorConfig) {
+    return (
+      <section>
+        <h1>Writing Workspace</h1>
+        <p>Loading editor...</p>
+      </section>
+    );
+  }
+
   return (
     <section>
       <h1>Writing Workspace</h1>
 
-      <div style={{display: 'flex', gap: '1.5rem', alignItems: 'stretch'}}>
-        {/* Sidebar: document list */}
+      <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'stretch' }}>
         <aside
           style={{
             width: '260px',
@@ -207,19 +234,19 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
             paddingRight: '1rem'
           }}
         >
-          <div style={{marginBottom: '1rem'}}>
+          <div style={{ marginBottom: '1rem' }}>
             <button type='button' onClick={handleNewDocument}>
               + New Scene
             </button>
           </div>
 
           {documents.length === 0 && (
-            <p style={{fontStyle: 'italic'}}>
+            <p style={{ fontStyle: 'italic' }}>
               No scenes yet. Create one to start writing.
             </p>
           )}
 
-          <ul style={{listStyle: 'none', padding: 0, margin: 0}}>
+          <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
             {documents.map((doc) => (
               <li
                 key={doc.id}
@@ -254,7 +281,7 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
                 <button
                   type='button'
                   onClick={() => handleDelete(doc)}
-                  style={{marginTop: '0.25rem', fontSize: '0.8rem'}}
+                  style={{ marginTop: '0.25rem', fontSize: '0.8rem' }}
                 >
                   Delete
                 </button>
@@ -263,11 +290,10 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
           </ul>
         </aside>
 
-        {/* Main editor */}
-        <div style={{flex: 1, display: 'flex', flexDirection: 'column'}}>
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
           {selectedId ? (
             <>
-              <div style={{marginBottom: '0.75rem'}}>
+              <div style={{ marginBottom: '0.75rem' }}>
                 <label>
                   Title
                   <br />
@@ -275,7 +301,7 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
                     type='text'
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
-                    style={{width: '100%'}}
+                    style={{ width: '100%' }}
                   />
                 </label>
               </div>
@@ -289,24 +315,26 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
                 }}
               >
                 <label
-                  style={{flex: 1, display: 'flex', flexDirection: 'column'}}
+                  style={{ flex: 1, display: 'flex', flexDirection: 'column' }}
                 >
                   Scene Text
                   <br />
                   <TipTapEditor
                     content={content}
                     onChange={handleContentChange}
+                    config={editorConfig}
+                    toolbarButtons={toolbarButtons}
                   />
                 </label>
               </div>
 
               <div
-                style={{display: 'flex', alignItems: 'center', gap: '0.75rem'}}
+                style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}
               >
                 <button type='button' onClick={handleSave}>
                   Save now
                 </button>
-                <span style={{fontSize: '0.85rem', fontStyle: 'italic'}}>
+                <span style={{ fontSize: '0.85rem', fontStyle: 'italic' }}>
                   {saveStatus === 'saving' && 'Saving…'}
                   {saveStatus === 'saved' && lastSavedAt && (
                     <>Saved at {new Date(lastSavedAt).toLocaleTimeString()}</>

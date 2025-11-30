@@ -1,38 +1,31 @@
-import {TextStyleKit} from '@tiptap/extension-text-style';
-import type {Editor} from '@tiptap/react';
-import {EditorContent, useEditor, useEditorState} from '@tiptap/react';
-import StarterKit from '@tiptap/starter-kit';
-import {useEffect, useRef} from 'react';
+// apps/web/src/components/TipTapEditor.tsx - UPDATE MenuBar to accept custom buttons
+import type { Editor } from '@tiptap/react';
+import { EditorContent, useEditor, useEditorState } from '@tiptap/react';
+import { useEffect, useRef } from 'react';
 import '../assets/TipTapEditor.css';
+import { defaultEditorConfig, getWordCount, type EditorConfig } from '../config/editorConfig';
 
-// Simple word count extension
-import { Extension } from '@tiptap/core';
+interface ToolbarButton {
+  id: string;
+  label: string;
+  markName: string;
+}
 
-const WordCountExtension = Extension.create({
-  name: 'wordCount',
+interface MenuBarProps {
+  editor: Editor;
+  customButtons?: ToolbarButton[];
+}
 
-  addStorage() {
-    return {
-      characters: 0,
-      words: 0
-    };
-  },
-
-  onUpdate() {
-    const text = this.editor.getText();
-    this.storage.characters = text.length;
-    this.storage.words = text.split(/\s+/).filter(Boolean).length;
-  }
-});
-
-const extensions = [TextStyleKit, StarterKit, WordCountExtension];
-
-function MenuBar({editor}: {editor: Editor}) {
-  // Use useEditorState with selector to optimize re-renders
-  // This hook only causes re-renders when the selected state actually changes
+function MenuBar({ editor, customButtons = [] }: MenuBarProps) {
   const editorState = useEditorState({
     editor,
-    selector: (ctx) => {
+    selector: (ctx): Record<string, boolean> => {
+      // Build dynamic state for custom buttons
+      const customState: Record<string, boolean> = {};
+      customButtons.forEach(btn => {
+        customState[`is_${btn.markName}`] = ctx.editor.isActive(btn.markName) ?? false;
+      });
+
       return {
         isBold: ctx.editor.isActive('bold') ?? false,
         canBold: ctx.editor.can().chain().toggleBold().run() ?? false,
@@ -44,25 +37,30 @@ function MenuBar({editor}: {editor: Editor}) {
         canCode: ctx.editor.can().chain().toggleCode().run() ?? false,
         canClearMarks: ctx.editor.can().chain().unsetAllMarks().run() ?? false,
         isParagraph: ctx.editor.isActive('paragraph') ?? false,
-        isHeading1: ctx.editor.isActive('heading', {level: 1}) ?? false,
-        isHeading2: ctx.editor.isActive('heading', {level: 2}) ?? false,
-        isHeading3: ctx.editor.isActive('heading', {level: 3}) ?? false,
-        isHeading4: ctx.editor.isActive('heading', {level: 4}) ?? false,
-        isHeading5: ctx.editor.isActive('heading', {level: 5}) ?? false,
-        isHeading6: ctx.editor.isActive('heading', {level: 6}) ?? false,
+        isHeading1: ctx.editor.isActive('heading', { level: 1 }) ?? false,
+        isHeading2: ctx.editor.isActive('heading', { level: 2 }) ?? false,
+        isHeading3: ctx.editor.isActive('heading', { level: 3 }) ?? false,
+        isHeading4: ctx.editor.isActive('heading', { level: 4 }) ?? false,
+        isHeading5: ctx.editor.isActive('heading', { level: 5 }) ?? false,
+        isHeading6: ctx.editor.isActive('heading', { level: 6 }) ?? false,
         isBulletList: ctx.editor.isActive('bulletList') ?? false,
         isOrderedList: ctx.editor.isActive('orderedList') ?? false,
         isCodeBlock: ctx.editor.isActive('codeBlock') ?? false,
         isBlockquote: ctx.editor.isActive('blockquote') ?? false,
         canUndo: ctx.editor.can().chain().undo().run() ?? false,
-        canRedo: ctx.editor.can().chain().redo().run() ?? false
+        canRedo: ctx.editor.can().chain().redo().run() ?? false,
+        ...customState
       };
     },
-    // Custom equality function to prevent unnecessary re-renders
     equalityFn: (prev, next) => {
       if (!next || !prev) return false;
-      
-      // Compare all the boolean states
+
+      // Check custom buttons
+      for (const btn of customButtons) {
+        const key = `is_${btn.markName}`;
+        if ((prev as Record<string, unknown>)[key] !== (next as Record<string, unknown>)[key]) return false;
+      }
+
       return (
         prev.isBold === next.isBold &&
         prev.canBold === next.canBold &&
@@ -121,7 +119,7 @@ function MenuBar({editor}: {editor: Editor}) {
         >
           Code
         </button>
-        <button 
+        <button
           onClick={() => editor.chain().focus().unsetAllMarks().run()}
           disabled={!editorState.canClearMarks}
         >
@@ -137,37 +135,37 @@ function MenuBar({editor}: {editor: Editor}) {
           Paragraph
         </button>
         <button
-          onClick={() => editor.chain().focus().toggleHeading({level: 1}).run()}
+          onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
           className={editorState.isHeading1 ? 'is-active' : ''}
         >
           H1
         </button>
         <button
-          onClick={() => editor.chain().focus().toggleHeading({level: 2}).run()}
+          onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
           className={editorState.isHeading2 ? 'is-active' : ''}
         >
           H2
         </button>
         <button
-          onClick={() => editor.chain().focus().toggleHeading({level: 3}).run()}
+          onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}
           className={editorState.isHeading3 ? 'is-active' : ''}
         >
           H3
         </button>
         <button
-          onClick={() => editor.chain().focus().toggleHeading({level: 4}).run()}
+          onClick={() => editor.chain().focus().toggleHeading({ level: 4 }).run()}
           className={editorState.isHeading4 ? 'is-active' : ''}
         >
           H4
         </button>
         <button
-          onClick={() => editor.chain().focus().toggleHeading({level: 5}).run()}
+          onClick={() => editor.chain().focus().toggleHeading({ level: 5 }).run()}
           className={editorState.isHeading5 ? 'is-active' : ''}
         >
           H5
         </button>
         <button
-          onClick={() => editor.chain().focus().toggleHeading({level: 6}).run()}
+          onClick={() => editor.chain().focus().toggleHeading({ level: 6 }).run()}
           className={editorState.isHeading6 ? 'is-active' : ''}
         >
           H6
@@ -216,6 +214,31 @@ function MenuBar({editor}: {editor: Editor}) {
         >
           Redo
         </button>
+
+        {/* Separator for custom buttons */}
+        {customButtons.length > 0 && (
+          <div style={{ 
+            width: '2px', 
+            height: '24px', 
+            backgroundColor: '#ccc', 
+            margin: '0 0.5rem' 
+          }} />
+        )}
+
+        {/* Dynamic custom buttons */}
+        {customButtons.map((btn) => {
+          const isActive = editorState[`is_${btn.markName}`] as boolean;
+          return (
+            <button
+              key={btn.id}
+              onClick={() => editor.chain().focus().toggleMark(btn.markName).run()}
+              className={isActive ? 'is-active' : ''}
+              title={`Toggle ${btn.label}`}
+            >
+              {btn.label}
+            </button>
+          );
+        })}
       </div>
     </div>
   );
@@ -225,56 +248,63 @@ interface TipTapEditorProps {
   content?: string;
   onChange?: (html: string) => void;
   onWordCountChange?: (count: number) => void;
+  config?: EditorConfig;
+  toolbarButtons?: ToolbarButton[];
 }
 
-function TipTapEditor({content = '', onChange, onWordCountChange}: TipTapEditorProps) {
+function TipTapEditor({
+  content = '',
+  onChange,
+  onWordCountChange,
+  config = defaultEditorConfig,
+  toolbarButtons = []
+}: TipTapEditorProps) {
   const isInternalUpdate = useRef(false);
 
-  const editor = useEditor({
-    immediatelyRender: true,
-    shouldRerenderOnTransaction: false,
-    extensions,
-    content: content || '<p></p>',
+const editor = useEditor({
+  immediatelyRender: true,
+  shouldRerenderOnTransaction: false,
+  extensions: config.extensions,
+  content: content || '<p></p>',
 
+  onUpdate({ editor }) {
+    isInternalUpdate.current = true;
 
-    onUpdate({editor}) {
-      isInternalUpdate.current = true;
-      
-      if (onChange) {
-        onChange(editor.getHTML());
-      }
+    if (onChange) {
+      onChange(editor.getHTML());
+    }
 
-      // Update word count - this now happens without causing React re-renders
-      if (onWordCountChange) {
-        const storage = (editor.storage as any).wordCount;
-        if (storage) {
-          onWordCountChange(storage.words ?? 0);
-        }
-      }
-      
-      setTimeout(() => {
-        isInternalUpdate.current = false;
-      }, 0);
+    if (onWordCountChange) {
+      onWordCountChange(getWordCount(editor));
+    }
+
+    setTimeout(() => {
+      isInternalUpdate.current = false;
+    }, 0);
+  },
+
+  onSelectionUpdate({ editor }) {
+    const { from, to } = editor.state.selection;
+    if (from === to) {
+      const tr = editor.state.tr;
+      tr.setStoredMarks([]);
+      editor.view.dispatch(tr);
+    }
+  },
+
+  onCreate({ editor }) {
+    const tr = editor.state.tr;
+    tr.setStoredMarks([]);
+    editor.view.dispatch(tr);
+  },
+
+  editorProps: {
+    attributes: {
+      class: 'tiptap-editor',
     },
+  },
+});
 
-    onSelectionUpdate({editor}) {
-      // Clear stored marks on selection change to prevent formatting weirdness
-      const {from, to} = editor.state.selection;
-      if (from === to) {
-        const tr = editor.state.tr;
-        tr.setStoredMarks([]);
-        editor.view.dispatch(tr);
-      }
-    },
-
-    editorProps: {
-      attributes: {
-        class: 'tiptap-editor',
-      },
-    },
-  });
-
-  // Handle external content changes (when switching documents)
   useEffect(() => {
     if (!editor || isInternalUpdate.current) {
       return;
@@ -284,9 +314,8 @@ function TipTapEditor({content = '', onChange, onWordCountChange}: TipTapEditorP
     const newContent = content || '<p></p>';
 
     if (currentContent !== newContent) {
-      editor.commands.setContent(newContent, false);
-      
-      // Clear stored marks after content change
+      editor.commands.setContent(newContent, { emitUpdate: false });
+
       setTimeout(() => {
         if (editor && !editor.isDestroyed) {
           const tr = editor.state.tr;
@@ -297,13 +326,9 @@ function TipTapEditor({content = '', onChange, onWordCountChange}: TipTapEditorP
     }
   }, [content, editor]);
 
-  // Update word count on mount
   useEffect(() => {
     if (editor && onWordCountChange) {
-      const storage = (editor.storage as any).wordCount;
-      if (storage) {
-        onWordCountChange(storage.words ?? 0);
-      }
+      onWordCountChange(getWordCount(editor));
     }
   }, [editor, onWordCountChange]);
 
@@ -313,7 +338,7 @@ function TipTapEditor({content = '', onChange, onWordCountChange}: TipTapEditorP
 
   return (
     <div className='tiptap-wrapper'>
-      <MenuBar editor={editor} />
+      <MenuBar editor={editor} customButtons={toolbarButtons} />
       <EditorContent editor={editor} />
     </div>
   );

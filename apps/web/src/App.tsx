@@ -6,6 +6,7 @@ import ProjectsRoute from './routes/ProjectsRoute';
 import WorldBibleRoute from './routes/WorldBibleRoute';
 import WorkspaceRoute from './routes/WorkspaceRoute';
 import SettingsRoute from './routes/SettingsRoute';
+import CharactersRoute from './routes/CharactersRoute';
 
 function App() {
   const [activeProject, setActiveProject] = useState<Project | null>(() => {
@@ -47,10 +48,14 @@ function App() {
               element={<WorldBibleRoute activeProject={activeProject} />}
             />
             <Route
+              path="/characters"
+              element={<CharactersRoute activeProject={activeProject} />}
+            />
+            <Route
               path="/workspace"
               element={<WorkspaceRoute activeProject={activeProject} />}
             />
-            <Route path="/settings" element={<SettingsRoute />} />
+            <Route path="/settings" element={<SettingsRoute activeProject={activeProject} />} />
           </Routes>
         </main>
       </div>

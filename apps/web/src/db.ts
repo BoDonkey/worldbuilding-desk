@@ -1,8 +1,10 @@
 export const DB_NAME = 'worldbuilding-db';
-export const DB_VERSION = 3;
+export const DB_VERSION = 5;
 export const ENTITY_STORE_NAME = 'entities';
 export const PROJECT_STORE_NAME = 'projects';
 export const WRITING_STORE_NAME = 'writingDocuments';
+export const SETTINGS_STORE_NAME = 'projectSettings';
+export const CHARACTER_STORE_NAME = 'characters';
 
 export function openDb(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
@@ -21,6 +23,14 @@ export function openDb(): Promise<IDBDatabase> {
 
       if (!db.objectStoreNames.contains(WRITING_STORE_NAME)) {
         db.createObjectStore(WRITING_STORE_NAME, { keyPath: 'id' });
+      }
+
+      if (!db.objectStoreNames.contains(SETTINGS_STORE_NAME)) {
+        db.createObjectStore(SETTINGS_STORE_NAME, { keyPath: 'id' });
+      }
+
+      if (!db.objectStoreNames.contains(CHARACTER_STORE_NAME)) {
+        db.createObjectStore(CHARACTER_STORE_NAME, { keyPath: 'id' });
       }
     };
 

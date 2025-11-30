@@ -38,3 +38,42 @@ export interface WritingDocument {
   createdAt: number;
   updatedAt: number;
 }
+
+export interface ProjectSettings {
+  id: string;
+  projectId: string;
+  characterStyles: CharacterStyle[];
+  createdAt: number;
+  updatedAt: number;
+}
+
+// apps/web/src/entityTypes.ts - ADD Character interface
+export interface Character {
+  id: string;
+  projectId: string;
+  name: string;
+  description?: string;
+  characterStyleId?: string; // Link to their dialogue style
+  fields: {
+    age?: string;
+    role?: string;
+    notes?: string;
+    [key: string]: unknown;
+  };
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface CharacterStyle {
+  id: string;
+  name: string;
+  markName: string; // e.g., 'characterDialogue', 'systemMessage'
+  styles: {
+    fontFamily?: string;
+    fontSize?: string;
+    color?: string;
+    backgroundColor?: string;
+    fontWeight?: 'normal' | 'bold';
+    fontStyle?: 'normal' | 'italic';
+  };
+}
