@@ -318,14 +318,14 @@ function WorkspaceRoute({ activeProject }: WorkspaceRouteProps) {
                   style={{ flex: 1, display: 'flex', flexDirection: 'column' }}
                 >
                   Scene Text
-                  <br />
-                  <TipTapEditor
-                    content={content}
-                    onChange={handleContentChange}
-                    config={editorConfig}
-                    toolbarButtons={toolbarButtons}
-                  />
-                </label>
+                </ label>
+                <br />
+                <TipTapEditor
+                  content={content}
+                  onChange={handleContentChange}
+                  config={editorConfig}
+                  toolbarButtons={toolbarButtons}
+                />
               </div>
 
               <div
