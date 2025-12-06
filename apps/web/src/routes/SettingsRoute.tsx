@@ -10,6 +10,7 @@ interface SettingsRouteProps {
 function SettingsRoute({ activeProject }: SettingsRouteProps) {
   const [settings, setSettings] = useState<ProjectSettings | null>(null);
   const [newStyleName, setNewStyleName] = useState('');
+  const [expandedStyleId, setExpandedStyleId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!activeProject) {
@@ -54,6 +55,7 @@ function SettingsRoute({ activeProject }: SettingsRouteProps) {
     await saveProjectSettings(updated);
     setSettings(updated);
     setNewStyleName('');
+    setExpandedStyleId(newStyle.id); // Open the editor for the new style
   };
 
   const handleUpdateStyle = async (styleId: string, updates: Partial<CharacterStyle['styles']>) => {
@@ -84,6 +86,9 @@ function SettingsRoute({ activeProject }: SettingsRouteProps) {
 
     await saveProjectSettings(updated);
     setSettings(updated);
+    if (expandedStyleId === styleId) {
+      setExpandedStyleId(null);
+    }
   };
 
   if (!activeProject) {
@@ -124,6 +129,8 @@ function SettingsRoute({ activeProject }: SettingsRouteProps) {
           styles={settings.characterStyles}
           onUpdate={handleUpdateStyle}
           onDelete={handleDeleteStyle}
+          expandedStyleId={expandedStyleId}
+          onToggleExpand={setExpandedStyleId}
         />
       </div>
     </section>

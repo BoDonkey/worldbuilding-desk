@@ -12,24 +12,6 @@ export interface Project {
   updatedAt: number;
 }
 
-export interface WorldEntity {
-  id: string;
-  projectId: string;
-  type: EntityType;
-  name: string;
-  /**
-   * Arbitrary key/value metadata — you can refine this later.
-   */
-  fields:EntityFields;
-  /**
-   * IDs of related entities.
-   */
-  links: string[];
-  createdAt: number;
-  updatedAt: number;
-}
-
-
 export interface WritingDocument {
   id: string;
   projectId: string;
@@ -47,13 +29,12 @@ export interface ProjectSettings {
   updatedAt: number;
 }
 
-// apps/web/src/entityTypes.ts - ADD Character interface
 export interface Character {
   id: string;
   projectId: string;
   name: string;
   description?: string;
-  characterStyleId?: string; // Link to their dialogue style
+  characterStyleId?: string;
   fields: {
     age?: string;
     role?: string;
@@ -76,4 +57,37 @@ export interface CharacterStyle {
     fontWeight?: 'normal' | 'bold';
     fontStyle?: 'normal' | 'italic';
   };
+}
+
+// Add to entityTypes.ts
+export interface EntityCategory {
+  id: string;
+  projectId: string;
+  name: string; // "Monsters", "Disasters", "Quests"
+  slug: string; // "monsters", "disasters", "quests"
+  fieldSchema: FieldDefinition[]; // Custom fields for this category
+  icon?: string;
+  createdAt: number;
+}
+
+export interface FieldDefinition {
+  key: string;
+  label: string;
+  type: 'text' | 'textarea' | 'number' | 'select' | 'multiselect' | 'checkbox' | 'dice' | 'modifier';
+  options?: string[]; // For select/multiselect
+  diceConfig?: {
+    allowMultipleDice: boolean; // e.g., "3d6" vs just "1d20"
+  };
+  required?: boolean;
+}
+
+export interface WorldEntity {
+  id: string;
+  projectId: string;
+  categoryId: string; // Instead of EntityType
+  name: string;
+  fields: EntityFields;
+  links: string[];
+  createdAt: number;
+  updatedAt: number;
 }

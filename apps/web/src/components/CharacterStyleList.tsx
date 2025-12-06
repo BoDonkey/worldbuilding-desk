@@ -5,25 +5,20 @@ interface CharacterStyleListProps {
   styles: CharacterStyle[];
   onUpdate: (styleId: string, updates: Partial<CharacterStyle['styles']>) => void;
   onDelete: (styleId: string) => void;
-  onAdd?: () => void;
-  showAddButton?: boolean;
+  expandedStyleId?: string | null;
+  onToggleExpand?: (styleId: string | null) => void;
 }
 
 export function CharacterStyleList({ 
   styles, 
   onUpdate, 
   onDelete,
-  onAdd,
-  showAddButton = false
+  expandedStyleId,
+  onToggleExpand
 }: CharacterStyleListProps) {
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-        <h2>Character Styles</h2>
-        {showAddButton && onAdd && (
-          <button onClick={onAdd}>+ Add Style</button>
-        )}
-      </div>
+      <h2>Character Styles</h2>
 
       {styles.length === 0 ? (
         <p style={{ fontStyle: 'italic', color: '#888' }}>
@@ -37,6 +32,8 @@ export function CharacterStyleList({
               style={style}
               onUpdate={onUpdate}
               onDelete={onDelete}
+              expanded={expandedStyleId === style.id}
+              onToggleExpand={onToggleExpand}
             />
           ))}
         </ul>

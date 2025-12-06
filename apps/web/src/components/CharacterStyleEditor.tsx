@@ -1,18 +1,25 @@
-import { useState } from 'react';
 import type { CharacterStyle } from '../entityTypes';
 
 interface CharacterStyleEditorProps {
   style: CharacterStyle;
   onUpdate: (styleId: string, updates: Partial<CharacterStyle['styles']>) => void;
   onDelete: (styleId: string) => void;
+  expanded?: boolean;
+  onToggleExpand?: (styleId: string | null) => void;
 }
 
 export function CharacterStyleEditor({
   style, 
   onUpdate, 
-  onDelete 
+  onDelete,
+  expanded = false,
+  onToggleExpand
 }: CharacterStyleEditorProps) {
-  const [expanded, setExpanded] = useState(false);
+  const handleToggle = () => {
+    if (onToggleExpand) {
+      onToggleExpand(expanded ? null : style.id);
+    }
+  };
 
   const handleStyleChange = (key: keyof CharacterStyle['styles'], value: string) => {
     onUpdate(style.id, { [key]: value });
@@ -37,7 +44,7 @@ export function CharacterStyleEditor({
         </div>
         <div style={{ display: 'flex', gap: '0.5rem' }}>
           <button 
-            onClick={() => setExpanded(!expanded)}
+            onClick={handleToggle}
             style={{ fontSize: '0.85rem' }}
           >
             {expanded ? 'Collapse' : 'Edit'}
@@ -81,9 +88,9 @@ export function CharacterStyleEditor({
                   style={{ width: '100%', marginTop: '0.25rem' }}
                 >
                   <option value="inherit">Default</option>
-                  <option value="0.8em">Small</option>
-                  <option value="1em">Normal</option>
-                  <option value="1.2em">Large</option>
+                  <option value="0.9em">Small</option>
+                  <option value="1.1em">Large</option>
+                  <option value="1.3em">Extra Large</option>
                 </select>
               </label>
             </div>
@@ -96,7 +103,7 @@ export function CharacterStyleEditor({
                   type="color"
                   value={style.styles.color || '#ffffff'}
                   onChange={(e) => handleStyleChange('color', e.target.value)}
-                  style={{ width: '100%', marginTop: '0.25rem', height: '2.5rem' }}
+                  style={{ width: '100%', marginTop: '0.25rem' }}
                 />
               </label>
             </div>
@@ -109,7 +116,7 @@ export function CharacterStyleEditor({
                   type="color"
                   value={style.styles.backgroundColor || '#000000'}
                   onChange={(e) => handleStyleChange('backgroundColor', e.target.value)}
-                  style={{ width: '100%', marginTop: '0.25rem', height: '2.5rem' }}
+                  style={{ width: '100%', marginTop: '0.25rem' }}
                 />
               </label>
             </div>
@@ -146,18 +153,17 @@ export function CharacterStyleEditor({
           </div>
 
           {/* Preview */}
-          <div style={{ marginTop: '1rem' }}>
-            <label style={{ fontWeight: 'bold' }}>Preview:</label>
+          <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid #555' }}>
+            <strong style={{ display: 'block', marginBottom: '0.5rem' }}>Preview:</strong>
             <div
               style={{
-                marginTop: '0.5rem',
+                ...style.styles,
                 padding: '0.5rem',
-                border: '1px solid #444',
                 borderRadius: '4px',
-                ...style.styles
+                backgroundColor: style.styles.backgroundColor || 'transparent'
               }}
             >
-              The quick brown fox jumps over the lazy dog.
+              Sample text in this style
             </div>
           </div>
         </div>

@@ -1,18 +1,23 @@
 import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
-import type { EntityFields, EntityType, Project, WorldEntity } from '../entityTypes';
+import type { EntityCategory, EntityFields, Project, WorldEntity } from '../entityTypes';
 import { getEntitiesByProject, saveEntity, deleteEntity } from '../entityStorage';
+import { getCategoriesByProject, saveCategory, deleteCategory, initializeDefaultCategories } from '../categoryStorage';
+import CategoryEditor from '../components/CategoryEditor';
+import styles from '../assets/components/WorldBibleRoute.module.css';
 
 interface WorldBibleRouteProps {
   activeProject: Project | null;
 }
 
 function WorldBibleRoute({ activeProject }: WorldBibleRouteProps) {
+  const [categories, setCategories] = useState<EntityCategory[]>([]);
+  const [activeTab, setActiveTab] = useState<string | null>(null);
   const [entities, setEntities] = useState<WorldEntity[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [name, setName] = useState('');
-  const [type, setType] = useState<EntityType>('character');
-  const [notes, setNotes] = useState('');
+  const [fieldValues, setFieldValues] = useState<Record<string, string>>({});
+  const [showCategoryManager, setShowCategoryManager] = useState(false);
 
   useEffect(() => {
     if (!activeProject) return;
@@ -20,46 +25,50 @@ function WorldBibleRoute({ activeProject }: WorldBibleRouteProps) {
     let cancelled = false;
 
     (async () => {
-      const all = await getEntitiesByProject(activeProject.id);
+      let cats = await getCategoriesByProject(activeProject.id);
+      
+      if (cats.length === 0) {
+        await initializeDefaultCategories(activeProject.id);
+        cats = await getCategoriesByProject(activeProject.id);
+      }
+
+      const ents = await getEntitiesByProject(activeProject.id);
+
       if (!cancelled) {
-        setEntities(all);
+        setCategories(cats);
+        setEntities(ents);
+        if (cats.length > 0 && !activeTab) {
+          setActiveTab(cats[0].id);
+        }
       }
     })();
 
-    return () => {
-      cancelled = true;
-    };
-  }, [activeProject]);
+    return () => { cancelled = true; };
+  }, [activeProject, activeTab]);
+
+  const activeCategory = categories.find(c => c.id === activeTab);
+  const filteredEntities = entities.filter(e => e.categoryId === activeTab);
 
   const resetForm = () => {
     setEditingId(null);
     setName('');
-    setType('character');
-    setNotes('');
+    setFieldValues({});
   };
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
-    if (!activeProject) {
-      alert('Select or create a project first.');
-      return;
-    }
+    if (!activeProject || !activeCategory) return;
 
     const now = Date.now();
     const id = editingId ?? crypto.randomUUID();
     const existing = entities.find(e => e.id === id);
 
-    const fields: EntityFields = {
-      ...(existing?.fields ?? {}),
-      notes: notes || undefined
-    };
-
     const entity: WorldEntity = {
       id,
       projectId: activeProject.id,
-      type,
+      categoryId: activeCategory.id,
       name,
-      fields,
+      fields: { ...fieldValues },
       links: existing?.links ?? [],
       createdAt: existing?.createdAt ?? now,
       updatedAt: now
@@ -68,14 +77,11 @@ function WorldBibleRoute({ activeProject }: WorldBibleRouteProps) {
     await saveEntity(entity);
 
     setEntities(prev => {
-      const existingIndex = prev.findIndex(e => e.id === id);
-      if (existingIndex === -1) {
-        return [...prev, entity];
-      } else {
-        const copy = [...prev];
-        copy[existingIndex] = entity;
-        return copy;
-      }
+      const idx = prev.findIndex(e => e.id === id);
+      if (idx === -1) return [...prev, entity];
+      const copy = [...prev];
+      copy[idx] = entity;
+      return copy;
     });
 
     resetForm();
@@ -84,118 +90,289 @@ function WorldBibleRoute({ activeProject }: WorldBibleRouteProps) {
   const handleEdit = (entity: WorldEntity) => {
     setEditingId(entity.id);
     setName(entity.name);
-    setType(entity.type);
-    setNotes(entity.fields.notes ?? '');
+    setFieldValues(entity.fields);
   };
 
   const handleDeleteEntity = async (id: string) => {
+    if (!confirm('Delete this entity?')) return;
     await deleteEntity(id);
     setEntities(prev => prev.filter(e => e.id !== id));
-
-    if (editingId === id) {
-      resetForm();
-    }
+    if (editingId === id) resetForm();
   };
 
   if (!activeProject) {
     return (
-      <section>
+      <section className={styles.noProject}>
         <h1>World Bible</h1>
-        <p>
-          No active project. Go to <strong>Projects</strong> to create or open a
-          project first.
-        </p>
+        <p>No active project. Go to <strong>Projects</strong> to create or open a project first.</p>
       </section>
     );
   }
 
   return (
-    <section>
-      <h1>World Bible</h1>
-
-      <div style={{ display: 'flex', gap: '2rem', alignItems: 'flex-start' }}>
-        <form onSubmit={handleSubmit} style={{ maxWidth: 400 }}>
-          <h2>{editingId ? 'Edit Entity' : 'New Entity'}</h2>
-
-          <div style={{ marginBottom: '0.75rem' }}>
-            <label>
-              Name<br />
-              <input
-                type="text"
-                value={name}
-                onChange={e => setName(e.target.value)}
-                required
-                style={{ width: '100%' }}
-              />
-            </label>
-          </div>
-
-          <div style={{ marginBottom: '0.75rem' }}>
-            <label>
-              Type<br />
-              <select
-                value={type}
-                onChange={e => setType(e.target.value as EntityType)}
-                style={{ width: '100%' }}
-              >
-                <option value="character">Character</option>
-                <option value="location">Location</option>
-                <option value="item">Item</option>
-                <option value="rule">Rule</option>
-              </select>
-            </label>
-          </div>
-
-          <div style={{ marginBottom: '0.75rem' }}>
-            <label>
-              Notes (stored in fields.notes)<br />
-              <textarea
-                value={notes}
-                onChange={e => setNotes(e.target.value)}
-                rows={4}
-                style={{ width: '100%' }}
-              />
-            </label>
-          </div>
-
-          <div style={{ display: 'flex', gap: '0.5rem' }}>
-            <button type="submit">
-              {editingId ? 'Save Changes' : 'Create Entity'}
-            </button>
-            {editingId && (
-              <button type="button" onClick={resetForm}>
-                Cancel
-              </button>
-            )}
-          </div>
-        </form>
-
-        <div style={{ flex: 1 }}>
-          <h2>Entities</h2>
-          {entities.length === 0 && (
-            <p>No entities yet for this project. Add one on the left.</p>
-          )}
-          <ul>
-            {entities.map(entity => (
-              <li key={entity.id} style={{ marginBottom: '0.5rem' }}>
-                <strong>[{entity.type}] {entity.name}</strong>
-                <br />
-                <small>
-                  {entity.fields.notes ?? 'No notes yet.'}
-                </small>
-                <br />
-                <button type="button" onClick={() => handleEdit(entity)}>
-                  Edit
-                </button>{' '}
-                <button type="button" onClick={() => handleDeleteEntity(entity.id)}>
-                  Delete
-                </button>
-              </li>
-            ))}
-          </ul>
-        </div>
+    <section className={styles.container}>
+      <div className={styles.header}>
+        <h1>World Bible</h1>
       </div>
+
+      <div className={styles.tabNav}>
+        {categories.map(cat => (
+          <button
+            key={cat.id}
+            onClick={() => setActiveTab(cat.id)}
+            className={`${styles.tab} ${activeTab === cat.id ? styles.active : ''}`}
+          >
+            {cat.name}
+          </button>
+        ))}
+        <button
+          onClick={() => setShowCategoryManager(!showCategoryManager)}
+          className={styles.manageButton}
+        >
+          {showCategoryManager ? 'Close' : 'Manage Categories'}
+        </button>
+      </div>
+
+      {showCategoryManager && (
+        <CategoryManager
+          projectId={activeProject.id}
+          categories={categories}
+          onCategoriesChange={setCategories}
+          onClose={() => setShowCategoryManager(false)}
+        />
+      )}
+
+      {activeCategory && (
+        <div className={styles.content}>
+          <div className={styles.formSection}>
+            <form onSubmit={handleSubmit} className={styles.form}>
+              <h2>{editingId ? 'Edit' : 'New'} {activeCategory.name.slice(0, -1)}</h2>
+
+              <div className={styles.formGroup}>
+                <label>
+                  Name
+                  <input
+                    type="text"
+                    value={name}
+                    onChange={e => setName(e.target.value)}
+                    required
+                  />
+                </label>
+              </div>
+
+              {activeCategory.fieldSchema.map(field => (
+                <div key={field.key} className={styles.formGroup}>
+                  <label>
+                    {field.label}{field.required && ' *'}
+                    {field.type === 'textarea' ? (
+                      <textarea
+                        value={fieldValues[field.key] || ''}
+                        onChange={e => setFieldValues({ ...fieldValues, [field.key]: e.target.value })}
+                        rows={4}
+                        required={field.required}
+                      />
+                    ) : field.type === 'select' ? (
+                      <select
+                        value={fieldValues[field.key] || ''}
+                        onChange={e => setFieldValues({ ...fieldValues, [field.key]: e.target.value })}
+                        required={field.required}
+                      >
+                        <option value="">-- Select --</option>
+                        {field.options?.map(opt => (
+                          <option key={opt} value={opt}>{opt}</option>
+                        ))}
+                      </select>
+                    ) : field.type === 'multiselect' ? (
+                      <div>
+                        {field.options?.map(opt => (
+                          <label key={opt} style={{ display: 'block', marginBottom: '0.25rem' }}>
+                            <input
+                              type="checkbox"
+                              checked={(fieldValues[field.key] || '').split(',').includes(opt)}
+                              onChange={e => {
+                                const current = (fieldValues[field.key] || '').split(',').filter(Boolean);
+                                const updated = e.target.checked
+                                  ? [...current, opt]
+                                  : current.filter(v => v !== opt);
+                                setFieldValues({ ...fieldValues, [field.key]: updated.join(',') });
+                              }}
+                            />
+                            {' '}{opt}
+                          </label>
+                        ))}
+                      </div>
+                    ) : field.type === 'checkbox' ? (
+                      <input
+                        type="checkbox"
+                        checked={fieldValues[field.key] === 'true'}
+                        onChange={e => setFieldValues({ ...fieldValues, [field.key]: e.target.checked ? 'true' : 'false' })}
+                      />
+                    ) : field.type === 'dice' ? (
+                      <input
+                        type="text"
+                        value={fieldValues[field.key] || ''}
+                        onChange={e => setFieldValues({ ...fieldValues, [field.key]: e.target.value })}
+                        placeholder={field.diceConfig?.allowMultipleDice ? "e.g., 3d6, 2d8+1d4" : "e.g., 1d20"}
+                        pattern={field.diceConfig?.allowMultipleDice ? ".*" : "1d\\d+"}
+                        required={field.required}
+                      />
+                    ) : field.type === 'modifier' ? (
+                      <input
+                        type="text"
+                        value={fieldValues[field.key] || ''}
+                        onChange={e => setFieldValues({ ...fieldValues, [field.key]: e.target.value })}
+                        placeholder="e.g., +5, -2"
+                        pattern="[+-]?\\d+"
+                        required={field.required}
+                      />
+                    ) : (
+                      <input
+                        type={field.type}
+                        value={fieldValues[field.key] || ''}
+                        onChange={e => setFieldValues({ ...fieldValues, [field.key]: e.target.value })}
+                        required={field.required}
+                      />
+                    )}
+                  </label>
+                </div>
+              ))}
+
+              <div className={styles.formActions}>
+                <button type="submit" className={styles.primaryButton}>
+                  {editingId ? 'Save Changes' : 'Create'}
+                </button>
+                {editingId && (
+                  <button type="button" onClick={resetForm}>Cancel</button>
+                )}
+              </div>
+            </form>
+          </div>
+
+          <div className={styles.listSection}>
+            <h2>{activeCategory.name}</h2>
+            {filteredEntities.length === 0 && (
+              <p className={styles.emptyState}>
+                No {activeCategory.name.toLowerCase()} yet. Add one on the left.
+              </p>
+            )}
+            <ul className={styles.entityList}>
+              {filteredEntities.map(entity => (
+                <li key={entity.id} className={styles.entityCard}>
+                  <div className={styles.entityName}>{entity.name}</div>
+                  {Object.entries(entity.fields).map(([key, value]) => (
+                    <div key={key} className={styles.entityField}>
+                      <strong>{key}:</strong> {String(value)}
+                    </div>
+                  ))}
+                  <div className={styles.entityActions}>
+                    <button onClick={() => handleEdit(entity)}>Edit</button>
+                    <button 
+                      onClick={() => handleDeleteEntity(entity.id)}
+                      className={styles.deleteButton}
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      )}
     </section>
+  );
+}
+
+interface CategoryManagerProps {
+  projectId: string;
+  categories: EntityCategory[];
+  onCategoriesChange: (cats: EntityCategory[]) => void;
+  onClose: () => void;
+}
+
+function CategoryManager({ projectId, categories, onCategoriesChange, onClose }: CategoryManagerProps) {
+  const [newCatName, setNewCatName] = useState('');
+  const [editingCategory, setEditingCategory] = useState<EntityCategory | null>(null);
+
+  const handleAddCategory = async () => {
+    if (!newCatName.trim()) return;
+
+    const cat: EntityCategory = {
+      id: crypto.randomUUID(),
+      projectId,
+      name: newCatName,
+      slug: newCatName.toLowerCase().replace(/\s+/g, '-'),
+      fieldSchema: [
+        { key: 'description', label: 'Description', type: 'textarea' }
+      ],
+      createdAt: Date.now()
+    };
+
+    await saveCategory(cat);
+    onCategoriesChange([...categories, cat]);
+    setNewCatName('');
+  };
+
+  const handleDeleteCategory = async (id: string) => {
+    if (!confirm('Delete this category? All entities in it will be orphaned.')) return;
+    await deleteCategory(id);
+    onCategoriesChange(categories.filter(c => c.id !== id));
+  };
+
+  const handleSaveCategory = (updated: EntityCategory) => {
+    onCategoriesChange(categories.map(c => c.id === updated.id ? updated : c));
+    setEditingCategory(null);
+  };
+
+  if (editingCategory) {
+    return (
+      <CategoryEditor
+        category={editingCategory}
+        onSave={handleSaveCategory}
+        onCancel={() => setEditingCategory(null)}
+      />
+    );
+  }
+
+  return (
+    <div className={styles.categoryManager}>
+      <h3>Manage Categories</h3>
+      <div className={styles.addCategoryForm}>
+        <input
+          type="text"
+          placeholder="New category name (e.g., Monsters)"
+          value={newCatName}
+          onChange={e => setNewCatName(e.target.value)}
+        />
+        <button onClick={handleAddCategory}>Add Category</button>
+      </div>
+
+      <ul className={styles.categoryList}>
+        {categories.map(cat => (
+          <li key={cat.id} className={styles.categoryItem}>
+            <div className={styles.categoryInfo}>
+              <strong>{cat.name}</strong>
+              <span className={styles.categoryMeta}>
+                ({cat.fieldSchema.length} fields)
+              </span>
+            </div>
+            <div className={styles.categoryActions}>
+              <button onClick={() => setEditingCategory(cat)}>
+                Edit Fields
+              </button>
+              <button 
+                onClick={() => handleDeleteCategory(cat.id)}
+                className={styles.deleteButton}
+              >
+                Delete
+              </button>
+            </div>
+          </li>
+        ))}
+      </ul>
+
+      <button onClick={onClose} className={styles.closeButton}>Close</button>
+    </div>
   );
 }
 

@@ -1,0 +1,317 @@
+.container {
+  padding: 1rem;
+}
+
+.header {
+  margin-bottom: 1.5rem;
+}
+
+.tabNav {
+  display: flex;
+  gap: 0.5rem;
+  border-bottom: 2px solid #ccc;
+  margin-bottom: 1rem;
+}
+
+.tab {
+  padding: 0.5rem 1rem;
+  background: #fff;
+  color: #000;
+  border: 1px solid #ccc;
+  border-radius: 4px 4px 0 0;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.tab:hover {
+  background-color: #f0f0f0;
+}
+
+.tab.active {
+  background-color: #007bff;
+  color: white;
+  border-color: #007bff;
+}
+
+.manageButton {
+  margin-left: auto;
+  padding: 0.5rem 1rem;
+  background-color: #6c757d;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.manageButton:hover {
+  background-color: #5a6268;
+}
+
+.content {
+  display: flex;
+  gap: 2rem;
+  align-items: flex-start;
+}
+
+.formSection {
+  max-width: 400px;
+  flex-shrink: 0;
+}
+
+.form {
+  background-color: #f9f9f9;
+  padding: 1.5rem;
+  border-radius: 4px;
+  border: 1px solid #ddd;
+}
+
+.form h2 {
+  margin-top: 0;
+  margin-bottom: 1rem;
+  color: #000;
+}
+
+.formGroup {
+  margin-bottom: 0.75rem;
+}
+
+.formGroup label {
+  display: block;
+  margin-bottom: 0.25rem;
+  font-weight: 500;
+  color: #333;
+}
+
+.formGroup input,
+.formGroup textarea,
+.formGroup select {
+  width: 100%;
+  padding: 0.5rem;
+  background-color: #fff;
+  color: #000;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+.formGroup textarea {
+  resize: vertical;
+  font-family: inherit;
+}
+
+.formActions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+.formActions button {
+  padding: 0.5rem 1rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  cursor: pointer;
+  background-color: #fff;
+  color: #000;
+}
+
+.formActions .primaryButton {
+  background-color: #28a745;
+  color: white;
+  border-color: #28a745;
+}
+
+.formActions .primaryButton:hover {
+  background-color: #218838;
+}
+
+.listSection {
+  flex: 1;
+}
+
+.emptyState {
+  font-style: italic;
+  color: #666;
+}
+
+.entityList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.entityCard {
+  margin-bottom: 1rem;
+  padding: 1rem;
+  background-color: #f9f9f9;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  color: #000;
+}
+
+.entityName {
+  font-weight: bold;
+  font-size: 1.1rem;
+  margin-bottom: 0.5rem;
+  color: #000;
+}
+
+.entityField {
+  font-size: 0.85rem;
+  color: #555;
+  margin-bottom: 0.25rem;
+}
+
+.entityActions {
+  margin-top: 0.75rem;
+  display: flex;
+  gap: 0.5rem;
+}
+
+.entityActions button {
+  font-size: 0.85rem;
+  padding: 0.4rem 0.8rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  cursor: pointer;
+  background-color: #fff;
+  color: #000;
+}
+
+.entityActions button:hover {
+  background-color: #e9e9e9;
+}
+
+.entityActions .deleteButton {
+  color: #dc3545;
+  border-color: #dc3545;
+}
+
+.entityActions .deleteButton:hover {
+  background-color: #dc3545;
+  color: white;
+}
+
+/* Category Manager Styles */
+.categoryManager {
+  padding: 1rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  margin-bottom: 1rem;
+  background-color: #f9f9f9;
+}
+
+.categoryManager h3 {
+  margin-top: 0;
+  color: #000;
+}
+
+.addCategoryForm {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.addCategoryForm input {
+  flex: 1;
+  padding: 0.5rem;
+  background-color: #fff;
+  color: #000;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+.addCategoryForm button {
+  padding: 0.5rem 1rem;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.addCategoryForm button:hover {
+  background-color: #0056b3;
+}
+
+.categoryList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.categoryItem {
+  padding: 0.5rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  margin-bottom: 0.5rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: #fff;
+}
+
+.categoryInfo {
+  color: #000;
+}
+
+.categoryInfo strong {
+  color: #000;
+}
+
+.categoryMeta {
+  font-size: 0.85rem;
+  color: #666;
+  margin-left: 0.5rem;
+}
+
+.categoryActions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.categoryActions button {
+  font-size: 0.8rem;
+  padding: 0.4rem 0.8rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  cursor: pointer;
+  background-color: #fff;
+  color: #000;
+}
+
+.categoryActions button:hover {
+  background-color: #e9e9e9;
+}
+
+.categoryActions .deleteButton {
+  color: #dc3545;
+  border-color: #dc3545;
+}
+
+.categoryActions .deleteButton:hover {
+  background-color: #dc3545;
+  color: white;
+}
+
+.closeButton {
+  margin-top: 1rem;
+  padding: 0.5rem 1rem;
+  background-color: #6c757d;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.closeButton:hover {
+  background-color: #5a6268;
+}
+
+.noProject {
+  padding: 2rem;
+  text-align: center;
+  color: #666;
+}
+
+.noProject strong {
+  color: #007bff;
+}
