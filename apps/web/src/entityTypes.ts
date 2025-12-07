@@ -66,9 +66,9 @@ export interface CharacterStyle {
 export interface EntityCategory {
   id: string;
   projectId: string;
-  name: string; // "Monsters", "Disasters", "Quests"
-  slug: string; // "monsters", "disasters", "quests"
-  fieldSchema: FieldDefinition[]; // Custom fields for this category
+  name: string;
+  slug: string;
+  fieldSchema: FieldDefinition[];
   icon?: string;
   createdAt: number;
 }

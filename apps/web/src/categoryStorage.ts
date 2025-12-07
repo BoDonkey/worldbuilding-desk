@@ -39,63 +39,74 @@ export async function deleteCategory(id: string): Promise<void> {
   });
 }
 
-// Initialize default categories for a new project
-export async function initializeDefaultCategories(
-  projectId: string
-): Promise<void> {
+const categoryInitInFlight = new Map<string, Promise<void>>();
 
-  const defaults: Omit<EntityCategory, 'id' | 'createdAt'>[] = [
-    {
-      projectId,
-      name: 'Characters',
-      slug: 'characters',
-      fieldSchema: [
-        {key: 'description', label: 'Description', type: 'textarea'},
-        {key: 'age', label: 'Age', type: 'text'},
-        {key: 'role', label: 'Role', type: 'text'}
-      ]
-    },
-    {
-      projectId,
-      name: 'Locations',
-      slug: 'locations',
-      fieldSchema: [
-        {key: 'description', label: 'Description', type: 'textarea'},
-        {key: 'climate', label: 'Climate', type: 'text'},
-        {key: 'population', label: 'Population', type: 'text'}
-      ]
-    },
-    {
-      projectId,
-      name: 'Items',
-      slug: 'items',
-      fieldSchema: [
-        {key: 'description', label: 'Description', type: 'textarea'},
-        {
-          key: 'rarity',
-          label: 'Rarity',
-          type: 'select',
-          options: ['Common', 'Uncommon', 'Rare', 'Legendary']
-        }
-      ]
-    },
-    {
-      projectId,
-      name: 'Rules',
-      slug: 'rules',
-      fieldSchema: [
-        {key: 'description', label: 'Description', type: 'textarea'},
-        {key: 'mechanics', label: 'Mechanics', type: 'textarea'}
-      ]
-    }
-  ];
-
-  const now = Date.now();
-  for (const def of defaults) {
-    await saveCategory({
-      id: crypto.randomUUID(),
-      ...def,
-      createdAt: now
-    });
+export function initializeDefaultCategories(projectId: string): Promise<void> {
+  // If initialization is already in progress for this project,
+  // just wait for that instead of running it again.
+  const existing = categoryInitInFlight.get(projectId);
+  if (existing) {
+    return existing;
   }
+
+  const promise = (async () => {
+    console.log('in initialize defaults!!!!!!!!!!!!!!', projectId);
+
+    // If there are already categories for this project, do nothing.
+    const existingCats = await getCategoriesByProject(projectId);
+    if (existingCats.length > 0) {
+      return;
+    }
+
+    const defaults: Omit<EntityCategory, 'id' | 'createdAt'>[] = [
+      {
+        projectId,
+        name: 'Characters',
+        slug: 'characters',
+        fieldSchema: [
+          {key: 'description', label: 'Description', type: 'textarea'},
+          {key: 'age', label: 'Age', type: 'text'},
+          {key: 'role', label: 'Role', type: 'text'}
+        ]
+      },
+      {
+        projectId,
+        name: 'Locations',
+        slug: 'locations',
+        fieldSchema: [
+          {key: 'description', label: 'Description', type: 'textarea'},
+          {key: 'climate', label: 'Climate', type: 'text'},
+          {key: 'population', label: 'Population', type: 'text'}
+        ]
+      },
+      {
+        projectId,
+        name: 'Items',
+        slug: 'items',
+        fieldSchema: [
+          {key: 'description', label: 'Description', type: 'textarea'},
+          {
+            key: 'rarity',
+            label: 'Rarity',
+            type: 'select',
+            options: ['Common', 'Uncommon', 'Rare', 'Legendary']
+          }
+        ]
+      }
+    ];
+
+    const now = Date.now();
+    for (const def of defaults) {
+      await saveCategory({
+        id: crypto.randomUUID(),
+        ...def,
+        createdAt: now
+      });
+    }
+  })().finally(() => {
+    categoryInitInFlight.delete(projectId);
+  });
+
+  categoryInitInFlight.set(projectId, promise);
+  return promise;
 }

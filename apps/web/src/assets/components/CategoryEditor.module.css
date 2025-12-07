@@ -179,3 +179,26 @@
 .footer .primaryButton:hover {
   background-color: #218838;
 }
+
+/* Make the outer label (field label + control) stack nicely */
+.formGroup label {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.35rem;
+}
+
+/* Container that holds all the checkboxes */
+.multiselectContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin-top: 0.25rem;
+}
+
+/* Each checkbox + text */
+.multiselectOption {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}

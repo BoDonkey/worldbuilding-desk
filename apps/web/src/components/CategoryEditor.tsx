@@ -220,14 +220,22 @@ function CategoryEditor({category, onSave, onCancel}: CategoryEditorProps) {
                 {(field.type === 'select' || field.type === 'multiselect') && (
                   <div className={styles.fullWidth}>
                     <label>
-                      Options (one per line)<br />
+                      Options (one per line)
+                      <br />
                       <textarea
                         value={(field.options || []).join('\n')}
-                        onChange={e => handleUpdateField(index, {
-                          options: e.target.value.split('\n').map(s => s.trim()).filter(Boolean)
-                        })}
+                        onChange={(e) =>
+                          handleUpdateField(index, {
+                            // if handleUpdateField *replaces* the field,
+                            // keep the other props:
+                            ...field,
+                            options: e.target.value
+                              .split('\n')
+                              .map((s) => s.trim())
+                          })
+                        }
                         rows={4}
-                        placeholder="Common&#10;Uncommon&#10;Rare&#10;Legendary"
+                        placeholder={'Common\nUncommon\nRare\nLegendary'}
                       />
                     </label>
                   </div>
@@ -237,13 +245,15 @@ function CategoryEditor({category, onSave, onCancel}: CategoryEditorProps) {
                   <div className={styles.fullWidth}>
                     <label>
                       <input
-                        type="checkbox"
+                        type='checkbox'
                         checked={field.diceConfig?.allowMultipleDice || false}
-                        onChange={e => handleUpdateField(index, {
-                          diceConfig: { allowMultipleDice: e.target.checked }
-                        })}
-                      />
-                      {' '}Allow multiple dice (e.g., "3d6" instead of just "1d20")
+                        onChange={(e) =>
+                          handleUpdateField(index, {
+                            diceConfig: {allowMultipleDice: e.target.checked}
+                          })
+                        }
+                      />{' '}
+                      Allow multiple dice (e.g., "3d6" instead of just "1d20")
                     </label>
                   </div>
                 )}

@@ -1,4 +1,4 @@
-import {useEffect, useState} from 'react';
+import {useEffect, useRef, useState} from 'react';
 import type {FormEvent} from 'react';
 import type {
   EntityCategory,
@@ -35,29 +35,31 @@ function WorldBibleRoute({activeProject}: WorldBibleRouteProps) {
     let cancelled = false;
 
     (async () => {
-      let cats = await getCategoriesByProject(activeProject.id);
-      console.log('cats!!!!!!!', cats);
+      const projectId = activeProject.id;
 
-      if (cats.length === 0) {
-        await initializeDefaultCategories(activeProject.id);
-        cats = await getCategoriesByProject(activeProject.id);
-      }
+      await initializeDefaultCategories(projectId);
 
-      const ents = await getEntitiesByProject(activeProject.id);
+      const [cats, ents] = await Promise.all([
+        getCategoriesByProject(projectId),
+        getEntitiesByProject(projectId)
+      ]);
 
       if (!cancelled) {
         setCategories(cats);
         setEntities(ents);
-        if (cats.length > 0 && !activeTab) {
-          setActiveTab(cats[0].id);
-        }
       }
     })();
 
     return () => {
       cancelled = true;
     };
-  }, [activeProject, activeTab]);
+  }, [activeProject]);
+
+  useEffect(() => {
+    if (!activeTab && categories.length > 0) {
+      setActiveTab(categories[0].id);
+    }
+  }, [categories, activeTab]);
 
   const activeCategory = categories.find((c) => c.id === activeTab);
   const filteredEntities = entities.filter((e) => e.categoryId === activeTab);
@@ -216,12 +218,9 @@ function WorldBibleRoute({activeProject}: WorldBibleRouteProps) {
                         ))}
                       </select>
                     ) : field.type === 'multiselect' ? (
-                      <div>
+                      <div className={styles.multiselectContainer}>
                         {field.options?.map((opt) => (
-                          <label
-                            key={opt}
-                            style={{display: 'block', marginBottom: '0.25rem'}}
-                          >
+                          <label key={opt} className={styles.multiselectOption}>
                             <input
                               type='checkbox'
                               checked={(fieldValues[field.key] || '')
@@ -239,8 +238,8 @@ function WorldBibleRoute({activeProject}: WorldBibleRouteProps) {
                                   [field.key]: updated.join(',')
                                 });
                               }}
-                            />{' '}
-                            {opt}
+                            />
+                            <span>{opt}</span>
                           </label>
                         ))}
                       </div>
