@@ -23,6 +23,12 @@ importers:
 
   apps/web:
     dependencies:
+      '@litrpg-tool/rules-engine':
+        specifier: workspace:*
+        version: link:../../packages/rules-engine
+      '@litrpg-tool/rules-ui':
+        specifier: workspace:*
+        version: link:../../packages/rules-ui
       react:
         specifier: ^19.2.0
         version: 19.2.0

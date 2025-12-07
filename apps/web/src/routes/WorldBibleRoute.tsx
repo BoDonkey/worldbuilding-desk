@@ -1,8 +1,18 @@
-import { useEffect, useState } from 'react';
-import type { FormEvent } from 'react';
-import type { EntityCategory, EntityFields, Project, WorldEntity } from '../entityTypes';
-import { getEntitiesByProject, saveEntity, deleteEntity } from '../entityStorage';
-import { getCategoriesByProject, saveCategory, deleteCategory, initializeDefaultCategories } from '../categoryStorage';
+import {useEffect, useState} from 'react';
+import type {FormEvent} from 'react';
+import type {
+  EntityCategory,
+  EntityFields,
+  Project,
+  WorldEntity
+} from '../entityTypes';
+import {getEntitiesByProject, saveEntity, deleteEntity} from '../entityStorage';
+import {
+  getCategoriesByProject,
+  saveCategory,
+  deleteCategory,
+  initializeDefaultCategories
+} from '../categoryStorage';
 import CategoryEditor from '../components/CategoryEditor';
 import styles from '../assets/components/WorldBibleRoute.module.css';
 
@@ -10,7 +20,7 @@ interface WorldBibleRouteProps {
   activeProject: Project | null;
 }
 
-function WorldBibleRoute({ activeProject }: WorldBibleRouteProps) {
+function WorldBibleRoute({activeProject}: WorldBibleRouteProps) {
   const [categories, setCategories] = useState<EntityCategory[]>([]);
   const [activeTab, setActiveTab] = useState<string | null>(null);
   const [entities, setEntities] = useState<WorldEntity[]>([]);
@@ -26,7 +36,8 @@ function WorldBibleRoute({ activeProject }: WorldBibleRouteProps) {
 
     (async () => {
       let cats = await getCategoriesByProject(activeProject.id);
-      
+      console.log('cats!!!!!!!', cats);
+
       if (cats.length === 0) {
         await initializeDefaultCategories(activeProject.id);
         cats = await getCategoriesByProject(activeProject.id);
@@ -43,11 +54,13 @@ function WorldBibleRoute({ activeProject }: WorldBibleRouteProps) {
       }
     })();
 
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [activeProject, activeTab]);
 
-  const activeCategory = categories.find(c => c.id === activeTab);
-  const filteredEntities = entities.filter(e => e.categoryId === activeTab);
+  const activeCategory = categories.find((c) => c.id === activeTab);
+  const filteredEntities = entities.filter((e) => e.categoryId === activeTab);
 
   const resetForm = () => {
     setEditingId(null);
@@ -61,14 +74,14 @@ function WorldBibleRoute({ activeProject }: WorldBibleRouteProps) {
 
     const now = Date.now();
     const id = editingId ?? crypto.randomUUID();
-    const existing = entities.find(e => e.id === id);
+    const existing = entities.find((e) => e.id === id);
 
     const entity: WorldEntity = {
       id,
       projectId: activeProject.id,
       categoryId: activeCategory.id,
       name,
-      fields: { ...fieldValues },
+      fields: {...fieldValues},
       links: existing?.links ?? [],
       createdAt: existing?.createdAt ?? now,
       updatedAt: now
@@ -76,8 +89,8 @@ function WorldBibleRoute({ activeProject }: WorldBibleRouteProps) {
 
     await saveEntity(entity);
 
-    setEntities(prev => {
-      const idx = prev.findIndex(e => e.id === id);
+    setEntities((prev) => {
+      const idx = prev.findIndex((e) => e.id === id);
       if (idx === -1) return [...prev, entity];
       const copy = [...prev];
       copy[idx] = entity;
@@ -96,7 +109,7 @@ function WorldBibleRoute({ activeProject }: WorldBibleRouteProps) {
   const handleDeleteEntity = async (id: string) => {
     if (!confirm('Delete this entity?')) return;
     await deleteEntity(id);
-    setEntities(prev => prev.filter(e => e.id !== id));
+    setEntities((prev) => prev.filter((e) => e.id !== id));
     if (editingId === id) resetForm();
   };
 
@@ -104,7 +117,10 @@ function WorldBibleRoute({ activeProject }: WorldBibleRouteProps) {
     return (
       <section className={styles.noProject}>
         <h1>World Bible</h1>
-        <p>No active project. Go to <strong>Projects</strong> to create or open a project first.</p>
+        <p>
+          No active project. Go to <strong>Projects</strong> to create or open a
+          project first.
+        </p>
       </section>
     );
   }
@@ -116,11 +132,13 @@ function WorldBibleRoute({ activeProject }: WorldBibleRouteProps) {
       </div>
 
       <div className={styles.tabNav}>
-        {categories.map(cat => (
+        {categories.map((cat) => (
           <button
             key={cat.id}
             onClick={() => setActiveTab(cat.id)}
-            className={`${styles.tab} ${activeTab === cat.id ? styles.active : ''}`}
+            className={`${styles.tab} ${
+              activeTab === cat.id ? styles.active : ''
+            }`}
           >
             {cat.name}
           </button>
@@ -146,90 +164,141 @@ function WorldBibleRoute({ activeProject }: WorldBibleRouteProps) {
         <div className={styles.content}>
           <div className={styles.formSection}>
             <form onSubmit={handleSubmit} className={styles.form}>
-              <h2>{editingId ? 'Edit' : 'New'} {activeCategory.name.slice(0, -1)}</h2>
+              <h2>
+                {editingId ? 'Edit' : 'New'} {activeCategory.name.slice(0, -1)}
+              </h2>
 
               <div className={styles.formGroup}>
                 <label>
                   Name
                   <input
-                    type="text"
+                    type='text'
                     value={name}
-                    onChange={e => setName(e.target.value)}
+                    onChange={(e) => setName(e.target.value)}
                     required
                   />
                 </label>
               </div>
 
-              {activeCategory.fieldSchema.map(field => (
+              {activeCategory.fieldSchema.map((field) => (
                 <div key={field.key} className={styles.formGroup}>
                   <label>
-                    {field.label}{field.required && ' *'}
+                    {field.label}
+                    {field.required && ' *'}
                     {field.type === 'textarea' ? (
                       <textarea
                         value={fieldValues[field.key] || ''}
-                        onChange={e => setFieldValues({ ...fieldValues, [field.key]: e.target.value })}
+                        onChange={(e) =>
+                          setFieldValues({
+                            ...fieldValues,
+                            [field.key]: e.target.value
+                          })
+                        }
                         rows={4}
                         required={field.required}
                       />
                     ) : field.type === 'select' ? (
                       <select
                         value={fieldValues[field.key] || ''}
-                        onChange={e => setFieldValues({ ...fieldValues, [field.key]: e.target.value })}
+                        onChange={(e) =>
+                          setFieldValues({
+                            ...fieldValues,
+                            [field.key]: e.target.value
+                          })
+                        }
                         required={field.required}
                       >
-                        <option value="">-- Select --</option>
-                        {field.options?.map(opt => (
-                          <option key={opt} value={opt}>{opt}</option>
+                        <option value=''>-- Select --</option>
+                        {field.options?.map((opt) => (
+                          <option key={opt} value={opt}>
+                            {opt}
+                          </option>
                         ))}
                       </select>
                     ) : field.type === 'multiselect' ? (
                       <div>
-                        {field.options?.map(opt => (
-                          <label key={opt} style={{ display: 'block', marginBottom: '0.25rem' }}>
+                        {field.options?.map((opt) => (
+                          <label
+                            key={opt}
+                            style={{display: 'block', marginBottom: '0.25rem'}}
+                          >
                             <input
-                              type="checkbox"
-                              checked={(fieldValues[field.key] || '').split(',').includes(opt)}
-                              onChange={e => {
-                                const current = (fieldValues[field.key] || '').split(',').filter(Boolean);
+                              type='checkbox'
+                              checked={(fieldValues[field.key] || '')
+                                .split(',')
+                                .includes(opt)}
+                              onChange={(e) => {
+                                const current = (fieldValues[field.key] || '')
+                                  .split(',')
+                                  .filter(Boolean);
                                 const updated = e.target.checked
                                   ? [...current, opt]
-                                  : current.filter(v => v !== opt);
-                                setFieldValues({ ...fieldValues, [field.key]: updated.join(',') });
+                                  : current.filter((v) => v !== opt);
+                                setFieldValues({
+                                  ...fieldValues,
+                                  [field.key]: updated.join(',')
+                                });
                               }}
-                            />
-                            {' '}{opt}
+                            />{' '}
+                            {opt}
                           </label>
                         ))}
                       </div>
                     ) : field.type === 'checkbox' ? (
                       <input
-                        type="checkbox"
+                        type='checkbox'
                         checked={fieldValues[field.key] === 'true'}
-                        onChange={e => setFieldValues({ ...fieldValues, [field.key]: e.target.checked ? 'true' : 'false' })}
+                        onChange={(e) =>
+                          setFieldValues({
+                            ...fieldValues,
+                            [field.key]: e.target.checked ? 'true' : 'false'
+                          })
+                        }
                       />
                     ) : field.type === 'dice' ? (
                       <input
-                        type="text"
+                        type='text'
                         value={fieldValues[field.key] || ''}
-                        onChange={e => setFieldValues({ ...fieldValues, [field.key]: e.target.value })}
-                        placeholder={field.diceConfig?.allowMultipleDice ? "e.g., 3d6, 2d8+1d4" : "e.g., 1d20"}
-                        pattern={field.diceConfig?.allowMultipleDice ? ".*" : "1d\\d+"}
+                        onChange={(e) =>
+                          setFieldValues({
+                            ...fieldValues,
+                            [field.key]: e.target.value
+                          })
+                        }
+                        placeholder={
+                          field.diceConfig?.allowMultipleDice
+                            ? 'e.g., 3d6, 2d8+1d4'
+                            : 'e.g., 1d20'
+                        }
+                        pattern={
+                          field.diceConfig?.allowMultipleDice ? '.*' : '1d\\d+'
+                        }
                         required={field.required}
                       />
                     ) : field.type === 'modifier' ? (
                       <input
-                        type="text"
+                        type='text'
                         value={fieldValues[field.key] || ''}
-                        onChange={e => setFieldValues({ ...fieldValues, [field.key]: e.target.value })}
-                        placeholder="e.g., +5, -2"
-                        pattern="[+-]?\\d+"
+                        onChange={(e) =>
+                          setFieldValues({
+                            ...fieldValues,
+                            [field.key]: e.target.value
+                          })
+                        }
+                        placeholder='e.g., +5, -2'
+                        pattern='[+-]?\\d+'
                         required={field.required}
                       />
                     ) : (
                       <input
                         type={field.type}
                         value={fieldValues[field.key] || ''}
-                        onChange={e => setFieldValues({ ...fieldValues, [field.key]: e.target.value })}
+                        onChange={(e) =>
+                          setFieldValues({
+                            ...fieldValues,
+                            [field.key]: e.target.value
+                          })
+                        }
                         required={field.required}
                       />
                     )}
@@ -238,11 +307,13 @@ function WorldBibleRoute({ activeProject }: WorldBibleRouteProps) {
               ))}
 
               <div className={styles.formActions}>
-                <button type="submit" className={styles.primaryButton}>
+                <button type='submit' className={styles.primaryButton}>
                   {editingId ? 'Save Changes' : 'Create'}
                 </button>
                 {editingId && (
-                  <button type="button" onClick={resetForm}>Cancel</button>
+                  <button type='button' onClick={resetForm}>
+                    Cancel
+                  </button>
                 )}
               </div>
             </form>
@@ -256,7 +327,7 @@ function WorldBibleRoute({ activeProject }: WorldBibleRouteProps) {
               </p>
             )}
             <ul className={styles.entityList}>
-              {filteredEntities.map(entity => (
+              {filteredEntities.map((entity) => (
                 <li key={entity.id} className={styles.entityCard}>
                   <div className={styles.entityName}>{entity.name}</div>
                   {Object.entries(entity.fields).map(([key, value]) => (
@@ -266,7 +337,7 @@ function WorldBibleRoute({ activeProject }: WorldBibleRouteProps) {
                   ))}
                   <div className={styles.entityActions}>
                     <button onClick={() => handleEdit(entity)}>Edit</button>
-                    <button 
+                    <button
                       onClick={() => handleDeleteEntity(entity.id)}
                       className={styles.deleteButton}
                     >
@@ -290,9 +361,16 @@ interface CategoryManagerProps {
   onClose: () => void;
 }
 
-function CategoryManager({ projectId, categories, onCategoriesChange, onClose }: CategoryManagerProps) {
+function CategoryManager({
+  projectId,
+  categories,
+  onCategoriesChange,
+  onClose
+}: CategoryManagerProps) {
   const [newCatName, setNewCatName] = useState('');
-  const [editingCategory, setEditingCategory] = useState<EntityCategory | null>(null);
+  const [editingCategory, setEditingCategory] = useState<EntityCategory | null>(
+    null
+  );
 
   const handleAddCategory = async () => {
     if (!newCatName.trim()) return;
@@ -303,7 +381,7 @@ function CategoryManager({ projectId, categories, onCategoriesChange, onClose }:
       name: newCatName,
       slug: newCatName.toLowerCase().replace(/\s+/g, '-'),
       fieldSchema: [
-        { key: 'description', label: 'Description', type: 'textarea' }
+        {key: 'description', label: 'Description', type: 'textarea'}
       ],
       createdAt: Date.now()
     };
@@ -314,13 +392,16 @@ function CategoryManager({ projectId, categories, onCategoriesChange, onClose }:
   };
 
   const handleDeleteCategory = async (id: string) => {
-    if (!confirm('Delete this category? All entities in it will be orphaned.')) return;
+    if (!confirm('Delete this category? All entities in it will be orphaned.'))
+      return;
     await deleteCategory(id);
-    onCategoriesChange(categories.filter(c => c.id !== id));
+    onCategoriesChange(categories.filter((c) => c.id !== id));
   };
 
   const handleSaveCategory = (updated: EntityCategory) => {
-    onCategoriesChange(categories.map(c => c.id === updated.id ? updated : c));
+    onCategoriesChange(
+      categories.map((c) => (c.id === updated.id ? updated : c))
+    );
     setEditingCategory(null);
   };
 
@@ -339,16 +420,16 @@ function CategoryManager({ projectId, categories, onCategoriesChange, onClose }:
       <h3>Manage Categories</h3>
       <div className={styles.addCategoryForm}>
         <input
-          type="text"
-          placeholder="New category name (e.g., Monsters)"
+          type='text'
+          placeholder='New category name (e.g., Monsters)'
           value={newCatName}
-          onChange={e => setNewCatName(e.target.value)}
+          onChange={(e) => setNewCatName(e.target.value)}
         />
         <button onClick={handleAddCategory}>Add Category</button>
       </div>
 
       <ul className={styles.categoryList}>
-        {categories.map(cat => (
+        {categories.map((cat) => (
           <li key={cat.id} className={styles.categoryItem}>
             <div className={styles.categoryInfo}>
               <strong>{cat.name}</strong>
@@ -360,7 +441,7 @@ function CategoryManager({ projectId, categories, onCategoriesChange, onClose }:
               <button onClick={() => setEditingCategory(cat)}>
                 Edit Fields
               </button>
-              <button 
+              <button
                 onClick={() => handleDeleteCategory(cat.id)}
                 className={styles.deleteButton}
               >
@@ -371,7 +452,9 @@ function CategoryManager({ projectId, categories, onCategoriesChange, onClose }:
         ))}
       </ul>
 
-      <button onClick={onClose} className={styles.closeButton}>Close</button>
+      <button onClick={onClose} className={styles.closeButton}>
+        Close
+      </button>
     </div>
   );
 }

@@ -1,3 +1,5 @@
+import type { WorldRuleset } from '@litrpg-tool/rules-engine';
+
 export type EntityType = 'character' | 'location' | 'item' | 'rule';
 
 export interface EntityFields {
@@ -8,6 +10,8 @@ export interface EntityFields {
 export interface Project {
   id: string;
   name: string;
+  description?: string;
+  rulesetId?: string;
   createdAt: number;
   updatedAt: number;
 }
@@ -59,7 +63,6 @@ export interface CharacterStyle {
   };
 }
 
-// Add to entityTypes.ts
 export interface EntityCategory {
   id: string;
   projectId: string;
@@ -84,10 +87,14 @@ export interface FieldDefinition {
 export interface WorldEntity {
   id: string;
   projectId: string;
-  categoryId: string; // Instead of EntityType
+  categoryId: string;
   name: string;
   fields: EntityFields;
   links: string[];
   createdAt: number;
   updatedAt: number;
+}
+
+export interface StoredRuleset extends WorldRuleset {
+  projectId: string;
 }

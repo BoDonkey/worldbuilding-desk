@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import type { Project } from './entityTypes';
+import {useEffect, useState} from 'react';
+import {BrowserRouter, Routes, Route} from 'react-router-dom';
+import type {Project} from './entityTypes';
 import Header from './components/Header';
 import ProjectsRoute from './routes/ProjectsRoute';
 import WorldBibleRoute from './routes/WorldBibleRoute';
@@ -30,12 +30,12 @@ function App() {
 
   return (
     <BrowserRouter>
-      <div className="app">
+      <div className='app'>
         <Header activeProject={activeProject} />
-        <main style={{ padding: '1rem' }}>
+        <main style={{padding: '1rem'}}>
           <Routes>
             <Route
-              path="/"
+              path='/'
               element={
                 <ProjectsRoute
                   activeProject={activeProject}
@@ -44,18 +44,21 @@ function App() {
               }
             />
             <Route
-              path="/world-bible"
+              path='/world-bible'
               element={<WorldBibleRoute activeProject={activeProject} />}
             />
             <Route
-              path="/characters"
+              path='/characters'
               element={<CharactersRoute activeProject={activeProject} />}
             />
             <Route
-              path="/workspace"
+              path='/workspace'
               element={<WorkspaceRoute activeProject={activeProject} />}
             />
-            <Route path="/settings" element={<SettingsRoute activeProject={activeProject} />} />
+            <Route
+              path='/settings'
+              element={<SettingsRoute activeProject={activeProject} />}
+            />
           </Routes>
         </main>
       </div>

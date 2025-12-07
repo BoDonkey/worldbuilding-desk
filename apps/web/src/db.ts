@@ -1,5 +1,5 @@
 export const DB_NAME = 'worldbuilding-db';
-export const DB_VERSION = 6;
+export const DB_VERSION = 7;
 export const ENTITY_STORE_NAME = 'entities';
 export const CATEGORY_STORE_NAME = 'entityCategories';
 export const PROJECT_STORE_NAME = 'projects';
