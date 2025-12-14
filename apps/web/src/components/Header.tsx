@@ -24,6 +24,9 @@ function Header({ activeProject }: HeaderProps) {
           <NavLink to="/characters" style={linkStyle}>
             Characters
           </NavLink>
+          <NavLink to="/character-sheets" style={linkStyle}>
+            Character Sheets
+          </NavLink>
           <NavLink to="/workspace" style={linkStyle}>
             Writing Workspace
           </NavLink>

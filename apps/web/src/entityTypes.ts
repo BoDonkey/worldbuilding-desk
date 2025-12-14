@@ -63,6 +63,36 @@ export interface CharacterStyle {
   };
 }
 
+export interface CharacterStat {
+  definitionId: string;  // Links to StatDefinition.id from ruleset
+  value: number;
+  modifiers?: Array<{
+    source: string;
+    value: number;
+    type: 'flat' | 'multiplier';
+  }>;
+}
+
+export interface CharacterResource {
+  definitionId: string;  // Links to ResourceDefinition.id from ruleset
+  current: number;
+  max: number;
+}
+
+export interface CharacterSheet {
+  id: string;
+  projectId: string;
+  name: string;
+  level: number;
+  experience: number;
+  stats: CharacterStat[];
+  resources: CharacterResource[];
+  inventory: string[];  // Array of WorldEntity IDs (items)
+  notes?: string;
+  createdAt: number;
+  updatedAt: number;
+}
+
 export interface EntityCategory {
   id: string;
   projectId: string;
