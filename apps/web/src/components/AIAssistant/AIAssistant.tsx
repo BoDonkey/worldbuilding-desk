@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import styles from './AIAssistant.module.css';
 import { LLMService } from '../../services/llm/LLMService';
-import { RAGService } from '../../services/rag/RAGServices';
+import { RAGService } from '../../services/rag/RAGService';
 import type { LLMMessage } from '../../services/llm/types';
 
 interface AIAssistantProps {

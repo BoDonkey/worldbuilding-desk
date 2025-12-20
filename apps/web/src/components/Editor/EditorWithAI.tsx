@@ -3,7 +3,8 @@ import type {Editor as TipTapEditorInstance} from '@tiptap/react';
 import TipTapEditor from '../TipTapEditor';
 import {AIAssistant} from '../AIAssistant/AIAssistant';
 import {AIExpandMenu} from './extensions/AIExpandMenu';
-import styles from './EditorWithAI.module.css';
+import type {EditorConfig} from '../../config/editorConfig';
+import styles from '../../assets/components/AISettings.module.css';
 
 interface AIContextType {
   type: 'document';
@@ -18,17 +19,29 @@ interface EditorWithAIProps {
   documentId: string;
   content: string;
   onChange: (content: string) => void;
+  config?: EditorConfig;
+  toolbarButtons?: Array<{id: string; label: string; markName: string}>;
 }
 
 export const EditorWithAI: React.FC<EditorWithAIProps> = ({
   projectId,
   documentId,
   content,
-  onChange
+  onChange,
+  config,
+  toolbarButtons = []
 }) => {
   const [showAI, setShowAI] = useState(false);
   const [aiContext, setAIContext] = useState<AIContextType | null>(null);
   const [editor, setEditor] = useState<TipTapEditorInstance | null>(null);
+
+  // Merge AIExpandMenu with config extensions
+  const mergedConfig = config
+    ? {
+        ...config,
+        extensions: [...config.extensions, AIExpandMenu]
+      }
+    : undefined;
 
   useEffect(() => {
     const handleAIRequest = (event: Event) => {
@@ -72,7 +85,8 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
           content={content}
           onChange={onChange}
           onEditorReady={setEditor}
-          extensions={[AIExpandMenu]}
+          config={mergedConfig}
+          toolbarButtons={toolbarButtons}
         />
       </div>
 

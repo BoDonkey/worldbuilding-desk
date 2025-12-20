@@ -1,13 +1,14 @@
-import { useEffect, useState } from 'react';
-import type { Project, ProjectSettings, CharacterStyle } from '../entityTypes';
-import { getOrCreateSettings, saveProjectSettings } from '../settingsStorage';
-import { CharacterStyleList } from '../components/CharacterStyleList';
+import {useEffect, useState} from 'react';
+import type {Project, ProjectSettings, CharacterStyle} from '../entityTypes';
+import {getOrCreateSettings, saveProjectSettings} from '../settingsStorage';
+import {CharacterStyleList} from '../components/CharacterStyleList';
+import { AISettings } from '../components/Settings/AISettings';
 
 interface SettingsRouteProps {
   activeProject: Project | null;
 }
 
-function SettingsRoute({ activeProject }: SettingsRouteProps) {
+function SettingsRoute({activeProject}: SettingsRouteProps) {
   const [settings, setSettings] = useState<ProjectSettings | null>(null);
   const [newStyleName, setNewStyleName] = useState('');
   const [expandedStyleId, setExpandedStyleId] = useState<string | null>(null);
@@ -55,18 +56,19 @@ function SettingsRoute({ activeProject }: SettingsRouteProps) {
     await saveProjectSettings(updated);
     setSettings(updated);
     setNewStyleName('');
-    setExpandedStyleId(newStyle.id); // Open the editor for the new style
+    setExpandedStyleId(newStyle.id);
   };
 
-  const handleUpdateStyle = async (styleId: string, updates: Partial<CharacterStyle['styles']>) => {
+  const handleUpdateStyle = async (
+    styleId: string,
+    updates: Partial<CharacterStyle['styles']>
+  ) => {
     if (!settings) return;
 
     const updated: ProjectSettings = {
       ...settings,
-      characterStyles: settings.characterStyles.map(s =>
-        s.id === styleId
-          ? { ...s, styles: { ...s.styles, ...updates } }
-          : s
+      characterStyles: settings.characterStyles.map((s) =>
+        s.id === styleId ? {...s, styles: {...s.styles, ...updates}} : s
       ),
       updatedAt: Date.now()
     };
@@ -80,7 +82,7 @@ function SettingsRoute({ activeProject }: SettingsRouteProps) {
 
     const updated: ProjectSettings = {
       ...settings,
-      characterStyles: settings.characterStyles.filter(s => s.id !== styleId),
+      characterStyles: settings.characterStyles.filter((s) => s.id !== styleId),
       updatedAt: Date.now()
     };
 
@@ -113,14 +115,19 @@ function SettingsRoute({ activeProject }: SettingsRouteProps) {
     <section>
       <h1>Settings for {activeProject.name}</h1>
 
-      <div style={{ marginTop: '2rem' }}>
-        <div style={{ marginBottom: '1rem' }}>
+      {/* AI Settings Section */}
+      <AISettings />
+
+      {/* Character Styles Section */}
+      <div style={{marginTop: '2rem'}}>
+        <h2>Character Dialogue Styles</h2>
+        <div style={{marginBottom: '1rem'}}>
           <input
-            type="text"
+            type='text'
             value={newStyleName}
             onChange={(e) => setNewStyleName(e.target.value)}
-            placeholder="Style name (e.g., Protagonist Thoughts)"
-            style={{ marginRight: '0.5rem', width: '300px' }}
+            placeholder='Style name (e.g., Protagonist Thoughts)'
+            style={{marginRight: '0.5rem', width: '300px'}}
           />
           <button onClick={handleAddStyle}>Add Style</button>
         </div>
