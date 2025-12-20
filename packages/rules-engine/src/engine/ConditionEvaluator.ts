@@ -21,32 +21,32 @@ export class ConditionEvaluator {
         result = fieldValue === targetValue;
         break;
 
-      case 'notEquals':
+      case 'not_equals':
         result = fieldValue !== targetValue;
         break;
 
-      case 'greaterThan':
+      case 'greater_than':
         result =
           typeof fieldValue === 'number' && typeof targetValue === 'number'
             ? fieldValue > targetValue
             : false;
         break;
 
-      case 'lessThan':
+      case 'less_than':
         result =
           typeof fieldValue === 'number' && typeof targetValue === 'number'
             ? fieldValue < targetValue
             : false;
         break;
 
-      case 'greaterThanOrEqual':
+      case 'greater_or_equal':
         result =
           typeof fieldValue === 'number' && typeof targetValue === 'number'
             ? fieldValue >= targetValue
             : false;
         break;
 
-      case 'lessThanOrEqual':
+      case 'less_or_equal':
         result =
           typeof fieldValue === 'number' && typeof targetValue === 'number'
             ? fieldValue <= targetValue
@@ -61,13 +61,19 @@ export class ConditionEvaluator {
           typeof targetValue === 'string'
         ) {
           result = fieldValue.includes(targetValue);
-        } else if (typeof fieldValue === 'object' && fieldValue !== null) {
+        } else if (
+          typeof fieldValue === 'object' &&
+          fieldValue !== null &&
+          (typeof targetValue === 'string' ||
+            typeof targetValue === 'number' ||
+            typeof targetValue === 'symbol')
+        ) {
           // Check if object has property
           result = targetValue in fieldValue;
         }
         break;
 
-      case 'notContains':
+      case 'not_contains':
         if (Array.isArray(fieldValue)) {
           result = !fieldValue.includes(targetValue);
         } else if (
@@ -75,7 +81,13 @@ export class ConditionEvaluator {
           typeof targetValue === 'string'
         ) {
           result = !fieldValue.includes(targetValue);
-        } else if (typeof fieldValue === 'object' && fieldValue !== null) {
+        } else if (
+          typeof fieldValue === 'object' &&
+          fieldValue !== null &&
+          (typeof targetValue === 'string' ||
+            typeof targetValue === 'number' ||
+            typeof targetValue === 'symbol')
+        ) {
           result = !(targetValue in fieldValue);
         }
         break;
@@ -86,15 +98,14 @@ export class ConditionEvaluator {
         }
         break;
 
-      case 'notIn':
+      case 'not_in':
         if (Array.isArray(targetValue)) {
           result = !targetValue.includes(fieldValue);
         }
         break;
     }
 
-    // Apply negation if specified
-    return condition.negate ? !result : result;
+    return result;
   }
 
   /**
@@ -113,11 +124,11 @@ export class ConditionEvaluator {
     });
 
     switch (group.operator) {
-      case 'all':
+      case 'AND':
         return results.every((r) => r === true);
-      case 'any':
+      case 'OR':
         return results.some((r) => r === true);
-      case 'none':
+      case 'NOT':
         return results.every((r) => r === false);
       default:
         return false;

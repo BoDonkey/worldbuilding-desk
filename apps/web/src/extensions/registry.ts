@@ -1,4 +1,5 @@
 import { Mark, mergeAttributes } from '@tiptap/core';
+import type { ChainedCommands } from '@tiptap/core';
 import type { CharacterStyle } from '../entityTypes';
 
 export interface ExtensionDefinition {
@@ -7,9 +8,6 @@ export interface ExtensionDefinition {
   mark: Mark;
 }
 
-/**
- * Create a TipTap Mark extension from a CharacterStyle definition
- */
 export function createCharacterStyleMark(style: CharacterStyle): Mark {
   return Mark.create({
     name: style.markName,
@@ -33,11 +31,9 @@ export function createCharacterStyleMark(style: CharacterStyle): Mark {
     },
 
     renderHTML({ HTMLAttributes }) {
-      // Build inline styles from CharacterStyle
       const styleString = Object.entries(style.styles)
-        .filter(([_, value]) => value !== undefined)
+        .filter(([, value]) => value !== undefined)
         .map(([key, value]) => {
-          // Convert camelCase to kebab-case
           const cssKey = key.replace(/([A-Z])/g, '-$1').toLowerCase();
           return `${cssKey}: ${value}`;
         })
@@ -58,7 +54,7 @@ export function createCharacterStyleMark(style: CharacterStyle): Mark {
       return {
         [`toggle${style.markName.charAt(0).toUpperCase() + style.markName.slice(1)}`]:
           () =>
-          ({ commands }) => {
+          ({ commands }: { commands: ChainedCommands }) => {
             return commands.toggleMark(this.name);
           },
       };
@@ -66,9 +62,6 @@ export function createCharacterStyleMark(style: CharacterStyle): Mark {
   });
 }
 
-/**
- * Generate extension definitions from project settings
- */
 export function createCharacterStyleExtensions(
   styles: CharacterStyle[]
 ): ExtensionDefinition[] {

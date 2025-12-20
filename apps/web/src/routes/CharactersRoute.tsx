@@ -6,12 +6,14 @@ import { getCharactersByProject, saveCharacter, deleteCharacter } from '../chara
 import { getOrCreateSettings, saveProjectSettings } from '../settingsStorage';
 import { CharacterStyleList } from '../components/CharacterStyleList';
 import type { CharacterStyle } from '../entityTypes';
+import { useNavigate } from 'react-router-dom';
 
 interface CharactersRouteProps {
   activeProject: Project | null;
 }
 
 function CharactersRoute({ activeProject }: CharactersRouteProps) {
+  const navigate = useNavigate();
   const [characters, setCharacters] = useState<Character[]>([]);
   const [settings, setSettings] = useState<ProjectSettings | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -98,6 +100,12 @@ function CharactersRoute({ activeProject }: CharactersRouteProps) {
     });
 
     resetForm();
+  };
+
+  const handleCreateSheet = (character: Character) => {
+    // Store the character ID in localStorage to auto-populate the sheet form
+    localStorage.setItem('pendingCharacterSheet', character.id);
+    navigate('/character-sheets');
   };
 
   const handleEdit = (character: Character) => {
@@ -304,6 +312,9 @@ function CharactersRoute({ activeProject }: CharactersRouteProps) {
                     )}
                   </div>
                   <div style={{ display: 'flex', gap: '0.5rem' }}>
+                    <button type="button" onClick={() => handleCreateSheet(character)}>
+                      Create Sheet
+                    </button>
                     <button type="button" onClick={() => handleEdit(character)}>
                       Edit
                     </button>

@@ -1,11 +1,9 @@
-// Example custom marks for character-specific styling (like LitRPG system messages)
+// apps/web/src/extensions/CustomMarks.ts
 import { Mark, mergeAttributes } from '@tiptap/core';
 
-// System message mark (for LitRPG-style system notifications)
 export const SystemMessage = Mark.create({
   name: 'systemMessage',
 
-  // Add any attributes you want to store
   addAttributes() {
     return {
       class: {
@@ -38,16 +36,13 @@ export const SystemMessage = Mark.create({
 
   addCommands() {
     return {
-      toggleSystemMessage:
-        () =>
-        ({ commands }) => {
-          return commands.toggleMark(this.name);
-        },
-    };
+      toggleSystemMessage: () => ({ commands }: any) => {
+        return commands.toggleMark(this.name).run();
+      },
+    } as any;
   },
 });
 
-// Status window mark (for character stat displays)
 export const StatusWindow = Mark.create({
   name: 'statusWindow',
 
@@ -83,16 +78,13 @@ export const StatusWindow = Mark.create({
 
   addCommands() {
     return {
-      toggleStatusWindow:
-        () =>
-        ({ commands }) => {
-          return commands.toggleMark(this.name);
-        },
-    };
+      toggleStatusWindow: () => ({ commands }: any) => {
+        return commands.toggleMark(this.name).run();
+      },
+    } as any;
   },
 });
 
-// Dialogue mark (for character-specific dialogue styling)
 export const CharacterDialogue = Mark.create({
   name: 'characterDialogue',
 
@@ -125,10 +117,6 @@ export const CharacterDialogue = Mark.create({
   },
 
   renderHTML({ HTMLAttributes }) {
-    const character = HTMLAttributes['data-character'] || 'default';
-    
-    // You could look up character-specific styles from a config
-    // For now, just a simple example
     return [
       'span',
       mergeAttributes(
@@ -144,21 +132,16 @@ export const CharacterDialogue = Mark.create({
 
   addCommands() {
     return {
-      setCharacterDialogue:
-        (character: string) =>
-        ({ commands }) => {
-          return commands.setMark(this.name, { character });
-        },
-      toggleCharacterDialogue:
-        () =>
-        ({ commands }) => {
-          return commands.toggleMark(this.name);
-        },
-    };
+      setCharacterDialogue: (character: string) => ({ commands }: any) => {
+        return commands.setMark(this.name, { character }).run();
+      },
+      toggleCharacterDialogue: () => ({ commands }: any) => {
+        return commands.toggleMark(this.name).run();
+      },
+    } as any;
   },
 });
 
-// Helper function to create custom styled marks
 export const createCustomStyleMark = (
   name: string,
   defaultStyle: string
@@ -207,12 +190,10 @@ export const createCustomStyleMark = (
 
     addCommands() {
       return {
-        [`toggle${name.charAt(0).toUpperCase() + name.slice(1)}`]:
-          () =>
-          ({ commands }) => {
-            return commands.toggleMark(this.name);
-          },
-      };
+        [`toggle${name.charAt(0).toUpperCase() + name.slice(1)}`]: () => ({ commands }: any) => {
+          return commands.toggleMark(this.name).run();
+        },
+      } as any;
     },
   });
 };

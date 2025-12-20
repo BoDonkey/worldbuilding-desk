@@ -1,5 +1,4 @@
 import {useEffect, useState} from 'react';
-import {useNavigate} from 'react-router-dom';
 import type {FormEvent} from 'react';
 import type {Project} from '../entityTypes';
 import type {WorldRuleset} from '@litrpg-tool/rules-engine';
@@ -25,7 +24,7 @@ function ProjectsRoute({activeProject, onSelectProject}: ProjectsRouteProps) {
   const [name, setName] = useState('');
   const [showWizard, setShowWizard] = useState(false);
   const [wizardProjectId, setWizardProjectId] = useState<string | null>(null);
-  const navigate = useNavigate();
+  const [wizardInitialRuleset, setWizardInitialRuleset] = useState<WorldRuleset | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -90,7 +89,9 @@ function ProjectsRoute({activeProject, onSelectProject}: ProjectsRouteProps) {
   };
 
   const handleCreateRuleset = (projectId: string) => {
+    const existingRuleset = projectRulesets.get(projectId);
     setWizardProjectId(projectId);
+    setWizardInitialRuleset(existingRuleset || null);
     setShowWizard(true);
   };
 
@@ -121,11 +122,13 @@ function ProjectsRoute({activeProject, onSelectProject}: ProjectsRouteProps) {
 
     setShowWizard(false);
     setWizardProjectId(null);
+    setWizardInitialRuleset(null);
   };
 
   const handleWizardCancel = () => {
     setShowWizard(false);
     setWizardProjectId(null);
+    setWizardInitialRuleset(null);
   };
 
   if (showWizard) {
@@ -137,12 +140,13 @@ function ProjectsRoute({activeProject, onSelectProject}: ProjectsRouteProps) {
           <button onClick={handleWizardCancel} style={{marginBottom: '0.5rem'}}>
             ← Back to Projects
           </button>
-          <h1>Create World Ruleset</h1>
+          <h1>{wizardInitialRuleset ? 'Edit World Ruleset' : 'Create World Ruleset'}</h1>
         </div>
         <div style={{flex: 1, overflow: 'hidden'}}>
           <WorldBuildingWizard
             onComplete={handleWizardComplete}
             onCancel={handleWizardCancel}
+            initialRuleset={wizardInitialRuleset || undefined}
           />
         </div>
       </section>

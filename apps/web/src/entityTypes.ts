@@ -79,15 +79,17 @@ export interface CharacterResource {
   max: number;
 }
 
+// apps/web/src/entityTypes.ts
 export interface CharacterSheet {
   id: string;
   projectId: string;
+  characterId?: string;
   name: string;
   level: number;
   experience: number;
   stats: CharacterStat[];
   resources: CharacterResource[];
-  inventory: string[];  // Array of WorldEntity IDs (items)
+  inventory: string[];
   notes?: string;
   createdAt: number;
   updatedAt: number;

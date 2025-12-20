@@ -13,6 +13,9 @@
   "dependencies": {
     "@litrpg-tool/rules-engine": "workspace:*",
     "@litrpg-tool/rules-ui": "workspace:*",
+    "idb": "^8.0.3",
+    "prosemirror-state": "^1.4.4",
+    "prosemirror-view": "^1.41.4",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-router-dom": "^7.9.6"

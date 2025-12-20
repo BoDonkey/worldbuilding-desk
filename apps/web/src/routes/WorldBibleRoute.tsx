@@ -1,8 +1,7 @@
-import {useEffect, useRef, useState} from 'react';
+import {useEffect, useState} from 'react';
 import type {FormEvent} from 'react';
 import type {
   EntityCategory,
-  EntityFields,
   Project,
   WorldEntity
 } from '../entityTypes';
@@ -105,7 +104,7 @@ function WorldBibleRoute({activeProject}: WorldBibleRouteProps) {
   const handleEdit = (entity: WorldEntity) => {
     setEditingId(entity.id);
     setName(entity.name);
-    setFieldValues(entity.fields);
+    setFieldValues(entity.fields as Record<string, string>);
   };
 
   const handleDeleteEntity = async (id: string) => {

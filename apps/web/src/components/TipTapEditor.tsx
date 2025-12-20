@@ -1,4 +1,4 @@
-import type { Editor } from '@tiptap/react';
+import type { Editor, Extension } from '@tiptap/core';
 import { EditorContent, useEditor } from '@tiptap/react';
 import { useEffect, useRef } from 'react';
 
@@ -157,11 +157,13 @@ function MenuBar({ editor, customButtons }: MenuBarProps) {
 }
 
 interface TipTapEditorProps {
-  content?: string;
-  onChange?: (html: string) => void;
+  content: string;
+  onChange: (content: string) => void;
+  onEditorReady?: (editor: Editor) => void;
   onWordCountChange?: (count: number) => void;
   config?: EditorConfig;
   toolbarButtons?: ToolbarButton[];
+  extensions?: Extension[];
 }
 
 function TipTapEditor({

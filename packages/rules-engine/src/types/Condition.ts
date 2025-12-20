@@ -6,21 +6,33 @@ import { OperatorSchema, FieldPath } from './Common';
  */
 
 export const ConditionSchema = z.object({
-  field: z.string(), // Field path: "character.stats.STR"
-  operator: OperatorSchema,
-  value: z.union([z.string(), z.number(), z.boolean(), z.array(z.any())]),
-  
-  // Optional modifiers
-  negate: z.boolean().optional(), // Invert the condition
+  field: z.string(),
+  operator: z.enum([
+    'equals',
+    'not_equals',
+    'greater_than',
+    'less_than',
+    'greater_or_equal',
+    'less_or_equal',
+    'contains',
+    'not_contains',
+    'in',
+    'not_in'
+  ]),
+  value: z.union([z.string(), z.number(), z.boolean(), z.array(z.any())])
 });
 export type Condition = z.infer<typeof ConditionSchema>;
 
+export type ConditionGroup = {
+  operator: 'AND' | 'OR' | 'NOT';
+  conditions: Array<Condition | ConditionGroup>;
+};
+
 // Condition groups for complex logic
-export const ConditionGroupSchema = z.object({
-  operator: z.enum(['all', 'any', 'none']), // AND, OR, NOR
-  conditions: z.array(z.lazy(() => z.union([ConditionSchema, ConditionGroupSchema]))),
+export const ConditionGroupSchema: z.ZodType<ConditionGroup> = z.object({
+  operator: z.enum(['AND', 'OR', 'NOT']),
+  conditions: z.array(z.lazy(() => z.union([ConditionSchema, ConditionGroupSchema])))
 });
-export type ConditionGroup = z.infer<typeof ConditionGroupSchema>;
 
 // Helper functions
 export function createCondition(
@@ -35,5 +47,10 @@ export function createConditionGroup(
   operator: 'all' | 'any' | 'none',
   conditions: (Condition | ConditionGroup)[]
 ): ConditionGroup {
-  return { operator, conditions };
+  const operatorMap = {
+    all: 'AND' as const,
+    any: 'OR' as const,
+    none: 'NOT' as const,
+  };
+  return { operator: operatorMap[operator], conditions };
 }

@@ -10,15 +10,15 @@ export type StatValue = number | string | boolean;
 // Operators for conditions
 export const OperatorSchema = z.enum([
   'equals',
-  'notEquals',
-  'greaterThan',
-  'lessThan',
-  'greaterThanOrEqual',
-  'lessThanOrEqual',
+  'not_equals',
+  'greater_than',
+  'less_than',
+  'greater_or_equal',
+  'less_or_equal',
   'contains',
-  'notContains',
+  'not_contains',
   'in',
-  'notIn',
+  'not_in',
 ]);
 export type Operator = z.infer<typeof OperatorSchema>;
 
