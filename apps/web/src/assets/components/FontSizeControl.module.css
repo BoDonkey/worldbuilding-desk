@@ -1,0 +1,37 @@
+.container {
+  margin-bottom: 2rem;
+}
+
+.container h3 {
+  margin-top: 0;
+  margin-bottom: 0.75rem;
+  font-size: var(--font-size-lg);
+  color: var(--color-text-primary);
+}
+
+.buttonGroup {
+  display: flex;
+  gap: 8px;
+}
+
+.buttonGroup button {
+  padding: 8px 16px;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  background-color: var(--color-bg-secondary);
+  color: var(--color-text-primary);
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.buttonGroup button:hover {
+  background-color: var(--color-bg-tertiary);
+  border-color: var(--color-accent);
+}
+
+.buttonGroup button.active {
+  background-color: var(--color-accent);
+  color: white;
+  border-color: var(--color-accent);
+}

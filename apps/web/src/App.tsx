@@ -1,7 +1,9 @@
 import {useEffect, useState} from 'react';
 import {BrowserRouter, Routes, Route} from 'react-router-dom';
 import type {Project} from './entityTypes';
-import Header from './components/Header';
+import {Navigation} from './components/Navigation';
+import {ThemeProvider} from './contexts/ThemeContext';
+import {AccessibilityProvider} from './contexts/AccessibilityContext';
 import ProjectsRoute from './routes/ProjectsRoute';
 import WorldBibleRoute from './routes/WorldBibleRoute';
 import WorkspaceRoute from './routes/WorkspaceRoute';
@@ -30,44 +32,50 @@ function App() {
   }, [activeProject]);
 
   return (
-    <BrowserRouter>
-      <div className='app'>
-        <Header activeProject={activeProject} />
-        <main style={{padding: '1rem'}}>
-          <Routes>
-            <Route
-              path='/'
-              element={
-                <ProjectsRoute
-                  activeProject={activeProject}
-                  onSelectProject={setActiveProject}
+    <ThemeProvider>
+      <AccessibilityProvider>
+        <BrowserRouter>
+          <div className='app'>
+            <Navigation activeProject={activeProject} />
+            <main style={{padding: '1rem', paddingTop: 'calc(60px + 1rem)'}}>
+              <Routes>
+                <Route
+                  path='/'
+                  element={
+                    <ProjectsRoute
+                      activeProject={activeProject}
+                      onSelectProject={setActiveProject}
+                    />
+                  }
                 />
-              }
-            />
-            <Route
-              path='/world-bible'
-              element={<WorldBibleRoute activeProject={activeProject} />}
-            />
-            <Route
-              path='/characters'
-              element={<CharactersRoute activeProject={activeProject} />}
-            />
-            <Route
-              path='/character-sheets'
-              element={<CharacterSheetsRoute activeProject={activeProject} />}
-            />
-            <Route
-              path='/workspace'
-              element={<WorkspaceRoute activeProject={activeProject} />}
-            />
-            <Route
-              path='/settings'
-              element={<SettingsRoute activeProject={activeProject} />}
-            />
-          </Routes>
-        </main>
-      </div>
-    </BrowserRouter>
+                <Route
+                  path='/world-bible'
+                  element={<WorldBibleRoute activeProject={activeProject} />}
+                />
+                <Route
+                  path='/characters'
+                  element={<CharactersRoute activeProject={activeProject} />}
+                />
+                <Route
+                  path='/character-sheets'
+                  element={
+                    <CharacterSheetsRoute activeProject={activeProject} />
+                  }
+                />
+                <Route
+                  path='/workspace'
+                  element={<WorkspaceRoute activeProject={activeProject} />}
+                />
+                <Route
+                  path='/settings'
+                  element={<SettingsRoute activeProject={activeProject} />}
+                />
+              </Routes>
+            </main>
+          </div>
+        </BrowserRouter>
+      </AccessibilityProvider>
+    </ThemeProvider>
   );
 }
 

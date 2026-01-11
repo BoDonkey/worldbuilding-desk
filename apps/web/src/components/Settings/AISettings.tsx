@@ -1,5 +1,5 @@
 import React, { useState} from 'react';
-import styles from '../../assets/components/AISettings.module.css';
+import styles from '../../assets/components/Settings/AISettingsForm.module.css';
 
 export const AISettings: React.FC = () => {
   const [anthropicKey, setAnthropicKey] = useState(() => 
@@ -27,39 +27,41 @@ export const AISettings: React.FC = () => {
 
   return (
     <div className={styles.container}>
-      <h2>AI Settings</h2>
-      
-      <div className={styles.section}>
-        <label>
+      <div className={styles.field}>
+        <label className={styles.label}>
           Anthropic API Key (for Claude)
-          <input
-            type="password"
-            value={anthropicKey}
-            onChange={e => setAnthropicKey(e.target.value)}
-            placeholder="sk-ant-..."
-          />
         </label>
+        <input
+          type="password"
+          value={anthropicKey}
+          onChange={e => setAnthropicKey(e.target.value)}
+          placeholder="sk-ant-..."
+          className={styles.input}
+        />
         <p className={styles.help}>
           Get your key from <a href="https://console.anthropic.com" target="_blank" rel="noopener noreferrer">console.anthropic.com</a>
         </p>
       </div>
 
-      <div className={styles.section}>
-        <label>
+      <div className={styles.field}>
+        <label className={styles.label}>
           OpenAI API Key (for embeddings)
-          <input
-            type="password"
-            value={openaiKey}
-            onChange={e => setOpenaiKey(e.target.value)}
-            placeholder="sk-..."
-          />
         </label>
+        <input
+          type="password"
+          value={openaiKey}
+          onChange={e => setOpenaiKey(e.target.value)}
+          placeholder="sk-..."
+          className={styles.input}
+        />
         <p className={styles.help}>
           Get your key from <a href="https://platform.openai.com" target="_blank" rel="noopener noreferrer">platform.openai.com</a>
         </p>
       </div>
 
-      <button onClick={handleSave}>Save API Keys</button>
+      <button onClick={handleSave} className={styles.saveButton}>
+        Save API Keys
+      </button>
     </div>
   );
 };

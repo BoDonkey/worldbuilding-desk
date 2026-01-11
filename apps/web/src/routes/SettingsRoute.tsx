@@ -2,7 +2,9 @@ import {useEffect, useState} from 'react';
 import type {Project, ProjectSettings, CharacterStyle} from '../entityTypes';
 import {getOrCreateSettings, saveProjectSettings} from '../settingsStorage';
 import {CharacterStyleList} from '../components/CharacterStyleList';
-import { AISettings } from '../components/Settings/AISettings';
+import {AISettings} from '../components/Settings/AISettings';
+import {FontSizeControl} from '../components/Settings/FontSizeControl';
+import styles from '../styles/SettingsRoute.module.css';
 
 interface SettingsRouteProps {
   activeProject: Project | null;
@@ -95,7 +97,7 @@ function SettingsRoute({activeProject}: SettingsRouteProps) {
 
   if (!activeProject) {
     return (
-      <section>
+      <section className={styles.container}>
         <h1>Settings</h1>
         <p>No active project. Select a project to configure settings.</p>
       </section>
@@ -104,7 +106,7 @@ function SettingsRoute({activeProject}: SettingsRouteProps) {
 
   if (!settings) {
     return (
-      <section>
+      <section className={styles.container}>
         <h1>Settings</h1>
         <p>Loading...</p>
       </section>
@@ -112,33 +114,46 @@ function SettingsRoute({activeProject}: SettingsRouteProps) {
   }
 
   return (
-    <section>
+    <section className={styles.container}>
       <h1>Settings for {activeProject.name}</h1>
 
-      {/* AI Settings Section */}
-      <AISettings />
-
-      {/* Character Styles Section */}
-      <div style={{marginTop: '2rem'}}>
-        <h2>Character Dialogue Styles</h2>
-        <div style={{marginBottom: '1rem'}}>
-          <input
-            type='text'
-            value={newStyleName}
-            onChange={(e) => setNewStyleName(e.target.value)}
-            placeholder='Style name (e.g., Protagonist Thoughts)'
-            style={{marginRight: '0.5rem', width: '300px'}}
-          />
-          <button onClick={handleAddStyle}>Add Style</button>
+      <div className={styles.settingsGrid}>
+        {/* Accessibility Section */}
+        <div className={styles.section}>
+          <h2>Accessibility</h2>
+          <FontSizeControl />
         </div>
 
-        <CharacterStyleList
-          styles={settings.characterStyles}
-          onUpdate={handleUpdateStyle}
-          onDelete={handleDeleteStyle}
-          expandedStyleId={expandedStyleId}
-          onToggleExpand={setExpandedStyleId}
-        />
+        {/* AI Settings Section */}
+        <div className={styles.section}>
+          <h2>AI Settings</h2>
+          <AISettings />
+        </div>
+
+        {/* Character Styles Section */}
+        <div className={styles.section}>
+          <h2>Character Dialogue Styles</h2>
+          <div className={styles.addStyle}>
+            <input
+              type='text'
+              value={newStyleName}
+              onChange={(e) => setNewStyleName(e.target.value)}
+              placeholder='Style name (e.g., Protagonist Thoughts)'
+              className={styles.styleInput}
+            />
+            <button onClick={handleAddStyle} className={styles.addButton}>
+              Add Style
+            </button>
+          </div>
+
+          <CharacterStyleList
+            styles={settings.characterStyles}
+            onUpdate={handleUpdateStyle}
+            onDelete={handleDeleteStyle}
+            expandedStyleId={expandedStyleId}
+            onToggleExpand={setExpandedStyleId}
+          />
+        </div>
       </div>
     </section>
   );
