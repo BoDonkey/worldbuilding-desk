@@ -1,4 +1,9 @@
-import type {LLMProvider, LLMRequest, LLMResponse, LLMContextChunk} from '../types';
+import type {
+  LLMProvider,
+  LLMRequest,
+  LLMResponse,
+  LLMContextChunk
+} from '../types';
 
 export class AnthropicProvider implements LLMProvider {
   name = 'Anthropic';
@@ -10,7 +15,10 @@ export class AnthropicProvider implements LLMProvider {
   }
 
   async generateCompletion(request: LLMRequest): Promise<LLMResponse> {
-    const systemPrompt = this.buildSystemPrompt(request.context);
+    const systemPrompt = this.buildSystemPrompt(
+      request.context,
+      request.systemPrompt
+    );
 
     const response = await fetch(this.baseUrl, {
       method: 'POST',
@@ -44,22 +52,22 @@ export class AnthropicProvider implements LLMProvider {
   }
 
   async *streamCompletion(request: LLMRequest): AsyncGenerator<string> {
-    const systemPrompt = this.buildSystemPrompt(request.context);
+    const systemPrompt = this.buildSystemPrompt(
+      request.context,
+      request.systemPrompt
+    );
 
-    const response = await fetch(this.baseUrl, {
+    const response = await fetch('http://localhost:3001/api/anthropic/stream', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': this.apiKey,
-        'anthropic-version': '2023-06-01'
-      },
+      headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: request.maxTokens || 4096,
-        temperature: request.temperature || 0.7,
-        system: systemPrompt,
-        messages: request.messages.filter((m) => m.role !== 'system'),
-        stream: true
+        apiKey: this.apiKey,
+        request: {
+          messages: request.messages.filter((m) => m.role !== 'system'),
+          systemPrompt,
+          maxTokens: request.maxTokens,
+          temperature: request.temperature
+        }
       })
     });
 
@@ -95,19 +103,19 @@ export class AnthropicProvider implements LLMProvider {
     }
   }
 
-  private buildSystemPrompt(context?: LLMContextChunk[]): string {
+  private buildSystemPrompt(
+    context?: LLMContextChunk[],
+    basePrompt?: string
+  ): string {
     let prompt =
-      'You are an AI assistant helping authors create LitRPG/GameLit content. ';
-    prompt +=
-      'You understand RPG mechanics, world-building, and narrative structure. ';
+      basePrompt ||
+      'You are an AI assistant helping authors create LitRPG/GameLit content.';
 
     if (context && context.length > 0) {
-      prompt += '\n\nRelevant context from the project:\n\n';
-      context.forEach((chunk, i) => {
-        prompt += `[${i + 1}] From ${chunk.source}:\n${chunk.content}\n\n`;
+      prompt += '\n\nRelevant context from the project:\n';
+      context.forEach((chunk) => {
+        prompt += `\n[Source: ${chunk.source}]\n${chunk.content}\n`;
       });
-      prompt +=
-        'Use this context to maintain consistency with established lore and mechanics.';
     }
 
     return prompt;

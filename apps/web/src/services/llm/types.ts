@@ -12,6 +12,7 @@ export interface LLMContextChunk {
 export interface LLMRequest {
   messages: LLMMessage[];
   context?: LLMContextChunk[];
+  systemPrompt?: string;
   maxTokens?: number;
   temperature?: number;
 }

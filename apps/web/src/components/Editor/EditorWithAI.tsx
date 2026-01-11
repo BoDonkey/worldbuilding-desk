@@ -1,4 +1,4 @@
-import React, {useState, useEffect} from 'react';
+import React, {useState, useEffect, useRef} from 'react';
 import type {Editor as TipTapEditorInstance} from '@tiptap/react';
 import TipTapEditor from '../TipTapEditor';
 import {AIAssistant} from '../AIAssistant/AIAssistant';
@@ -33,7 +33,8 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
 }) => {
   const [showAI, setShowAI] = useState(false);
   const [aiContext, setAIContext] = useState<AIContextType | null>(null);
-  const [editor, setEditor] = useState<TipTapEditorInstance | null>(null);
+  const [textToInsert, setTextToInsert] = useState<string | null>(null);
+  const editorRef = useRef<TipTapEditorInstance | null>(null);
 
   // Merge AIExpandMenu with config extensions
   const mergedConfig = config
@@ -68,13 +69,33 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
   }, [documentId]);
 
   const handleInsert = (text: string) => {
-    if (editor && aiContext) {
-      editor
-        .chain()
-        .focus()
-        .setTextSelection({from: aiContext.from, to: aiContext.to})
-        .insertContent(text)
-        .run();
+    console.log('handleInsert called with:', text);
+    const editor = editorRef.current;
+
+    if (!editor) {
+      console.error('No editor instance');
+      return;
+    }
+
+    console.log('Editor state:', {
+      isDestroyed: editor.isDestroyed,
+      hasView: !!editor.view,
+      canInsert: editor.can().insertContent(text),
+      currentPos: editor.state.selection.$from.pos
+    });
+
+    if (aiContext) {
+      console.log('Inserting at selection:', aiContext.from, aiContext.to);
+      const result = editor.commands.setTextSelection({
+        from: aiContext.from,
+        to: aiContext.to
+      });
+      console.log('Selection set?', result);
+      const insertResult = editor.commands.insertContent(text);
+      console.log('Insert result?', insertResult);
+    } else {
+    console.log('Inserting at cursor');
+    setTextToInsert(text);
     }
   };
 
@@ -84,9 +105,11 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
         <TipTapEditor
           content={content}
           onChange={onChange}
-          onEditorReady={setEditor}
           config={mergedConfig}
           toolbarButtons={toolbarButtons}
+          textToInsert={textToInsert}
+          onTextInserted={() => setTextToInsert(null)}
+          insertContext={aiContext}
         />
       </div>
 
@@ -106,9 +129,11 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
         </div>
       )}
 
-      <button className={styles.aiToggle} onClick={() => setShowAI(!showAI)}>
-        AI Assistant
-      </button>
+      {!showAI && (
+        <button className={styles.aiToggle} onClick={() => setShowAI(true)}>
+          AI Assistant
+        </button>
+      )}
     </div>
   );
 };

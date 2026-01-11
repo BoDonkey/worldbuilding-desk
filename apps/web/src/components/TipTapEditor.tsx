@@ -1,6 +1,6 @@
-import type { Editor, Extension } from '@tiptap/core';
-import { EditorContent, useEditor } from '@tiptap/react';
-import { useEffect, useRef } from 'react';
+import type {Editor, Extension} from '@tiptap/core';
+import {EditorContent, useEditor} from '@tiptap/react';
+import {useEffect, useRef} from 'react';
 
 import '../assets/TipTapEditor.css';
 import {
@@ -20,12 +20,24 @@ interface MenuBarProps {
   customButtons: ToolbarButton[];
 }
 
-function MenuBar({ editor, customButtons }: MenuBarProps) {
+interface TipTapEditorProps {
+  content: string;
+  onChange: (content: string) => void;
+  onWordCountChange?: (count: number) => void;
+  config?: EditorConfig;
+  toolbarButtons?: ToolbarButton[];
+  extensions?: Extension[];
+  textToInsert?: string | null;
+  onTextInserted?: () => void;
+  insertContext?: {from: number; to: number} | null;
+}
+
+function MenuBar({editor, customButtons}: MenuBarProps) {
   if (!editor) return null;
 
   return (
-    <div className="control-group">
-      <div className="button-group">
+    <div className='control-group'>
+      <div className='button-group'>
         {/* Core formatting */}
         <button
           onClick={() => editor.chain().focus().toggleBold().run()}
@@ -64,20 +76,20 @@ function MenuBar({ editor, customButtons }: MenuBarProps) {
           P
         </button>
         <button
-          onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
-          className={editor.isActive('heading', { level: 1 }) ? 'is-active' : ''}
+          onClick={() => editor.chain().focus().toggleHeading({level: 1}).run()}
+          className={editor.isActive('heading', {level: 1}) ? 'is-active' : ''}
         >
           H1
         </button>
         <button
-          onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
-          className={editor.isActive('heading', { level: 2 }) ? 'is-active' : ''}
+          onClick={() => editor.chain().focus().toggleHeading({level: 2}).run()}
+          className={editor.isActive('heading', {level: 2}) ? 'is-active' : ''}
         >
           H2
         </button>
         <button
-          onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}
-          className={editor.isActive('heading', { level: 3 }) ? 'is-active' : ''}
+          onClick={() => editor.chain().focus().toggleHeading({level: 3}).run()}
+          className={editor.isActive('heading', {level: 3}) ? 'is-active' : ''}
         >
           H3
         </button>
@@ -171,7 +183,10 @@ function TipTapEditor({
   onChange,
   onWordCountChange,
   config = defaultEditorConfig,
-  toolbarButtons = []
+  toolbarButtons = [],
+  textToInsert,
+  onTextInserted,
+  insertContext
 }: TipTapEditorProps) {
   const isInternalUpdate = useRef(false);
 
@@ -181,7 +196,7 @@ function TipTapEditor({
     immediatelyRender: true,
     shouldRerenderOnTransaction: false,
 
-    onUpdate({ editor }) {
+    onUpdate({editor}) {
       isInternalUpdate.current = true;
 
       if (onChange) {
@@ -212,7 +227,7 @@ function TipTapEditor({
     const next = content || '<p></p>';
 
     if (current !== next) {
-      editor.commands.setContent(next, { emitUpdate: false });
+      editor.commands.setContent(next, {emitUpdate: false});
     }
   }, [content, editor]);
 
@@ -223,10 +238,23 @@ function TipTapEditor({
     }
   }, [editor, onWordCountChange]);
 
+  useEffect(() => {
+    if (!textToInsert || !editor) return;
+
+    if (insertContext) {
+      editor.commands.setTextSelection({
+        from: insertContext.from,
+        to: insertContext.to
+      });
+    }
+    editor.commands.insertContent(textToInsert);
+    onTextInserted?.();
+  }, [textToInsert, editor, insertContext, onTextInserted]);
+
   if (!editor) return null;
 
   return (
-    <div className="tiptap-wrapper">
+    <div className='tiptap-wrapper'>
       <MenuBar editor={editor} customButtons={toolbarButtons} />
       <EditorContent editor={editor} />
     </div>

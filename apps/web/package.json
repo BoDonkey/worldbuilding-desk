@@ -13,6 +13,8 @@
   "dependencies": {
     "@litrpg-tool/rules-engine": "workspace:*",
     "@litrpg-tool/rules-ui": "workspace:*",
+    "cors": "^2.8.5",
+    "express": "^5.2.1",
     "idb": "^8.0.3",
     "prosemirror-state": "^1.4.4",
     "prosemirror-view": "^1.41.4",
@@ -22,6 +24,8 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
     "@types/node": "^24.10.1",
     "@types/react": "^19.2.5",
     "@types/react-dom": "^19.2.3",
