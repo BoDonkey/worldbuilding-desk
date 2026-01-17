@@ -93,7 +93,7 @@ npx tsx proxy-server.ts
 **3. Start the web app:**
 ```bash
 # In another terminal
-pnpm dev
+pnpm dev:web
 # Opens on http://localhost:5173
 ```
 
