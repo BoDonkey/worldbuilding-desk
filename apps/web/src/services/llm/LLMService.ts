@@ -48,6 +48,7 @@ export class LLMService {
         : FALLBACK_ID();
 
     const chunkQueue: string[] = [];
+    let chunkIndex = 0;
     let done = false;
     let pendingResolver: (() => void) | null = null;
     let fatalError: Error | null = null;
@@ -86,9 +87,9 @@ export class LLMService {
           wake();
         });
 
-      while (!done || chunkQueue.length > 0) {
-        if (chunkQueue.length > 0) {
-          yield chunkQueue.shift() as string;
+      while (!done || chunkIndex < chunkQueue.length) {
+        if (chunkIndex < chunkQueue.length) {
+          yield chunkQueue[chunkIndex++];
           continue;
         }
 
