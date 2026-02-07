@@ -7,7 +7,7 @@ const devServerUrl = process.env.VITE_DEV_SERVER_URL;
 let mainWindow: BrowserWindow | null = null;
 
 function rendererIndexHtml(): string {
-  return path.resolve(__dirname, '../../web/dist/index.html');
+  return path.resolve(app.getAppPath(), '../web/dist/index.html');
 }
 
 async function loadRenderer(win: BrowserWindow) {
