@@ -181,6 +181,7 @@ interface TipTapEditorProps {
 function TipTapEditor({
   content = '',
   onChange,
+  onEditorReady,
   onWordCountChange,
   config = defaultEditorConfig,
   toolbarButtons = [],
@@ -218,6 +219,12 @@ function TipTapEditor({
       }
     }
   });
+
+  useEffect(() => {
+    if (editor && onEditorReady) {
+      onEditorReady(editor);
+    }
+  }, [editor, onEditorReady]);
 
   // keep external content in sync
   useEffect(() => {

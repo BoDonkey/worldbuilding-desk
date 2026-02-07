@@ -3,15 +3,26 @@ import {ipcMain} from 'electron';
 import {randomUUID} from 'node:crypto';
 import Anthropic from '@anthropic-ai/sdk';
 
+type RendererMessage = {
+  role: 'user' | 'assistant' | 'system';
+  content: string;
+};
+
 interface LLMStreamPayload {
   apiKey: string;
   request: {
     maxTokens?: number;
     temperature?: number;
     systemPrompt?: string;
-    messages: Array<{role: string; content: string}>;
+    messages: RendererMessage[];
   };
   requestId?: string;
+}
+
+function isAnthropicMessage(
+  message: RendererMessage
+): message is {role: 'user' | 'assistant'; content: string} {
+  return message.role === 'user' || message.role === 'assistant';
 }
 
 export function setupAPIHandlers() {
@@ -20,12 +31,14 @@ export function setupAPIHandlers() {
     const client = new Anthropic({apiKey});
 
     try {
+      const anthropicMessages = request.messages.filter(isAnthropicMessage);
+
       const stream = await client.messages.stream({
         model: 'claude-sonnet-4-20250514',
         max_tokens: request.maxTokens || 4096,
         temperature: request.temperature || 0.7,
         system: request.systemPrompt,
-        messages: request.messages.filter((m: any) => m.role !== 'system')
+        messages: anthropicMessages
       });
 
       const chunks: string[] = [];
