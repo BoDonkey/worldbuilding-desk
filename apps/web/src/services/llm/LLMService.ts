@@ -89,7 +89,7 @@ export class LLMService {
 
       while (!done || chunkIndex < chunkQueue.length) {
         if (chunkIndex < chunkQueue.length) {
-          yield chunkQueue[chunkIndex++];
+          yield chunkQueue[chunkIndex++] as string;
           continue;
         }
 
