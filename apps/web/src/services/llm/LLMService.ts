@@ -25,7 +25,13 @@ export class LLMService {
   }
 
   async *stream(request: LLMRequest): AsyncGenerator<string> {
-    if (this.electronAPI?.llmStream) {
+    // Verify full Electron streaming contract before using Electron path
+    if (
+      this.electronAPI?.llmStream &&
+      this.electronAPI?.onLLMChunk &&
+      this.electronAPI?.onLLMComplete &&
+      this.electronAPI?.onLLMError
+    ) {
       yield* this.streamViaElectron(request);
       return;
     }
