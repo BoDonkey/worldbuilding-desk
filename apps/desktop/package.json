@@ -1,0 +1,20 @@
+{
+  "name": "desktop",
+  "version": "0.0.0",
+  "private": true,
+  "type": "commonjs",
+  "main": "dist/main/main.js",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "start": "electron ./dist/main/main.js",
+    "dev": "NODE_ENV=development electron ./dist/main/main.js"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.27.2",
+    "electron": "^31.2.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.14",
+    "typescript": "~5.9.3"
+  }
+}
