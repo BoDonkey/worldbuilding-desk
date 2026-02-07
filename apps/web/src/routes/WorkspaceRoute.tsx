@@ -8,7 +8,6 @@ import {
 import {getOrCreateSettings} from '../settingsStorage';
 import {createEditorConfigWithStyles} from '../config/editorConfig';
 import type {EditorConfig} from '../config/editorConfig';
-import TipTapEditor from '../components/TipTapEditor';
 import {countWords} from '../utils/textHelpers';
 import {EditorWithAI} from '../components/Editor/EditorWithAI';
 import {RAGService} from '../services/rag/RAGService';

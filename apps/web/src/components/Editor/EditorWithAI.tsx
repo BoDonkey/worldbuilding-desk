@@ -68,6 +68,12 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
     };
   }, [documentId]);
 
+  useEffect(() => {
+    return () => {
+      editorRef.current = null;
+    };
+  }, []);
+
   const handleInsert = (text: string) => {
     console.log('handleInsert called with:', text);
     const editor = editorRef.current;
@@ -94,8 +100,8 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
       const insertResult = editor.commands.insertContent(text);
       console.log('Insert result?', insertResult);
     } else {
-    console.log('Inserting at cursor');
-    setTextToInsert(text);
+      console.log('Inserting at cursor');
+      setTextToInsert(text);
     }
   };
 
@@ -105,6 +111,9 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
         <TipTapEditor
           content={content}
           onChange={onChange}
+          onEditorReady={(editorInstance) => {
+            editorRef.current = editorInstance;
+          }}
           config={mergedConfig}
           toolbarButtons={toolbarButtons}
           textToInsert={textToInsert}
@@ -123,7 +132,7 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
           </button>
           <AIAssistant
             projectId={projectId}
-            context={aiContext}
+            context={aiContext ?? undefined}
             onInsert={handleInsert}
           />
         </div>
