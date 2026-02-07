@@ -46,4 +46,4 @@ coverage/
 
 # Misc
 .cache/
-.temp/
+.temp/apps/desktop/package-lock.json
