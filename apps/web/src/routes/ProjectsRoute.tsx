@@ -10,6 +10,12 @@ import {
 import {getRulesetByProjectId, deleteRuleset} from '../services/rulesetService';
 import {WorldBuildingWizard} from '@litrpg-tool/rules-ui';
 import '@rules-ui/styles/wizard.css';
+import {
+  getSeriesBibleConfig,
+  linkProjectToParent,
+  unlinkProjectFromParent,
+  syncChildWithParent
+} from '../services/seriesBible/SeriesBibleService';
 
 interface ProjectsRouteProps {
   activeProject: Project | null;
@@ -53,6 +59,8 @@ function ProjectsRoute({activeProject, onSelectProject}: ProjectsRouteProps) {
     const project: Project = {
       id: crypto.randomUUID(),
       name: name.trim(),
+      inheritRag: true,
+      inheritShodh: true,
       createdAt: now,
       updatedAt: now
     };
@@ -72,7 +80,7 @@ function ProjectsRoute({activeProject, onSelectProject}: ProjectsRouteProps) {
   const handleDelete = async (project: Project) => {
     // Delete ruleset if it exists
     if (project.rulesetId) {
-      await deleteRuleset(project.rulesetId);
+      await deleteRuleset(project.rulesetId, project.id);
     }
 
     await deleteProjectFromStore(project.id);
@@ -131,6 +139,53 @@ function ProjectsRoute({activeProject, onSelectProject}: ProjectsRouteProps) {
     setWizardInitialRuleset(null);
   };
 
+  const updateProjectState = (updated: Project | null) => {
+    if (!updated) return;
+    setProjects((prev) =>
+      prev.map((p) => (p.id === updated.id ? updated : p))
+    );
+    if (activeProject && activeProject.id === updated.id) {
+      onSelectProject(updated);
+    }
+  };
+
+  const handleParentSelection = async (
+    project: Project,
+    parentProjectId: string
+  ) => {
+    if (!parentProjectId) {
+      const updated = await unlinkProjectFromParent(project.id);
+      updateProjectState(updated);
+      return;
+    }
+    const updated = await linkProjectToParent(project.id, {
+      parentProjectId,
+      inheritRag: project.inheritRag ?? true,
+      inheritShodh: project.inheritShodh ?? true,
+      canonVersion: project.canonVersion
+    });
+    updateProjectState(updated);
+  };
+
+  const handleSyncWithParent = async (project: Project) => {
+    const updated = await syncChildWithParent(project.id);
+    updateProjectState(updated);
+  };
+
+  const handleInheritanceToggle = async (
+    project: Project,
+    field: 'inheritRag' | 'inheritShodh',
+    value: boolean
+  ) => {
+    const updated = {
+      ...project,
+      [field]: value,
+      updatedAt: Date.now()
+    };
+    await saveProject(updated);
+    updateProjectState(updated);
+  };
+
   if (showWizard) {
     return (
       <section
@@ -185,6 +240,8 @@ function ProjectsRoute({activeProject, onSelectProject}: ProjectsRouteProps) {
         {projects.map((project) => {
           const hasRuleset = projectRulesets.has(project.id);
           const ruleset = projectRulesets.get(project.id);
+          const parentConfig = getSeriesBibleConfig(project);
+          const parentOptions = projects.filter((p) => p.id !== project.id);
 
           return (
             <li
@@ -217,6 +274,89 @@ function ProjectsRoute({activeProject, onSelectProject}: ProjectsRouteProps) {
                   {ruleset.rules.length}
                 </div>
               )}
+              <div
+                style={{
+                  marginTop: '0.75rem',
+                  borderTop: '1px solid #e5e7eb',
+                  paddingTop: '0.75rem',
+                  fontSize: '0.85rem',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '0.5rem'
+                }}
+              >
+                <label>
+                  Parent Project
+                  <br />
+                  <select
+                    value={project.parentProjectId ?? ''}
+                    onChange={(e) =>
+                      handleParentSelection(project, e.target.value)
+                    }
+                    style={{width: '100%'}}
+                  >
+                    <option value=''>No parent</option>
+                    {parentOptions.map((candidate) => (
+                      <option key={candidate.id} value={candidate.id}>
+                        {candidate.name}
+                      </option>
+                    ))}
+                  </select>
+                  {project.parentProjectId && (
+                    <span style={{display: 'block', color: '#6b7280'}}>
+                      Inherits from{' '}
+                      {
+                        projects.find((p) => p.id === project.parentProjectId)
+                          ?.name
+                      }
+                    </span>
+                  )}
+                </label>
+                <div style={{display: 'flex', gap: '1rem'}}>
+                  <label style={{display: 'flex', gap: '0.25rem'}}>
+                    <input
+                      type='checkbox'
+                      disabled={!project.parentProjectId}
+                      checked={project.inheritRag ?? true}
+                      onChange={(e) =>
+                        handleInheritanceToggle(project, 'inheritRag', e.target.checked)
+                      }
+                    />
+                    Inherit RAG data
+                  </label>
+                  <label style={{display: 'flex', gap: '0.25rem'}}>
+                    <input
+                      type='checkbox'
+                      disabled={!project.parentProjectId}
+                      checked={project.inheritShodh ?? true}
+                      onChange={(e) =>
+                        handleInheritanceToggle(
+                          project,
+                          'inheritShodh',
+                          e.target.checked
+                        )
+                      }
+                    />
+                    Inherit memories
+                  </label>
+                </div>
+                {project.parentProjectId && (
+                  <div style={{fontSize: '0.8rem', color: '#6b7280'}}>
+                    Parent canon version:{' '}
+                    {parentConfig.canonVersion ?? 'n/a'}
+                    <br />
+                    Last synced:{' '}
+                    {project.lastSyncedCanon ?? 'never'}
+                    <button
+                      type='button'
+                      style={{marginLeft: '0.5rem', fontSize: '0.75rem'}}
+                      onClick={() => handleSyncWithParent(project)}
+                    >
+                      Sync now
+                    </button>
+                  </div>
+                )}
+              </div>
               <div
                 style={{
                   marginTop: '0.75rem',

@@ -12,6 +12,11 @@ export interface Project {
   name: string;
   description?: string;
   rulesetId?: string;
+  parentProjectId?: string;
+  inheritRag?: boolean;
+  inheritShodh?: boolean;
+  canonVersion?: string;
+  lastSyncedCanon?: string;
   createdAt: number;
   updatedAt: number;
 }
@@ -25,10 +30,47 @@ export interface WritingDocument {
   updatedAt: number;
 }
 
+export type AIProviderId = 'anthropic' | 'openai' | 'gemini' | 'ollama';
+
+export interface AnthropicProviderSettings {
+  apiKey?: string;
+  model?: string;
+}
+
+export interface OpenAIProviderSettings {
+  apiKey?: string;
+  model?: string;
+  baseUrl?: string;
+}
+
+export interface GeminiProviderSettings {
+  apiKey?: string;
+  model?: string;
+}
+
+export interface OllamaProviderSettings {
+  baseUrl?: string;
+  model?: string;
+}
+
+export interface ProviderConfigMap {
+  anthropic?: AnthropicProviderSettings;
+  openai?: OpenAIProviderSettings;
+  gemini?: GeminiProviderSettings;
+  ollama?: OllamaProviderSettings;
+}
+
+export interface ProjectAISettings {
+  provider: AIProviderId;
+  configs: ProviderConfigMap;
+}
+
 export interface ProjectSettings {
   id: string;
   projectId: string;
   characterStyles: CharacterStyle[];
+  aiSettings: ProjectAISettings;
+  activeSkills: string[];
   createdAt: number;
   updatedAt: number;
 }

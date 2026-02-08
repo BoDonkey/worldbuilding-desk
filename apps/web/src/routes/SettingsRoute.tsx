@@ -1,5 +1,5 @@
 import {useEffect, useState} from 'react';
-import type {Project, ProjectSettings, CharacterStyle} from '../entityTypes';
+import type {Project, ProjectSettings, CharacterStyle, ProjectAISettings} from '../entityTypes';
 import {getOrCreateSettings, saveProjectSettings} from '../settingsStorage';
 import {CharacterStyleList} from '../components/CharacterStyleList';
 import {AISettings} from '../components/Settings/AISettings';
@@ -95,6 +95,19 @@ function SettingsRoute({activeProject}: SettingsRouteProps) {
     }
   };
 
+  const handleAISettingsChange = async (aiSettings: ProjectAISettings) => {
+    if (!settings) return;
+
+    const updated: ProjectSettings = {
+      ...settings,
+      aiSettings,
+      updatedAt: Date.now()
+    };
+
+    await saveProjectSettings(updated);
+    setSettings(updated);
+  };
+
   if (!activeProject) {
     return (
       <section className={styles.container}>
@@ -127,7 +140,10 @@ function SettingsRoute({activeProject}: SettingsRouteProps) {
         {/* AI Settings Section */}
         <div className={styles.section}>
           <h2>AI Settings</h2>
-          <AISettings />
+          <AISettings
+            aiSettings={settings.aiSettings}
+            onSettingsChange={handleAISettingsChange}
+          />
         </div>
 
         {/* Character Styles Section */}

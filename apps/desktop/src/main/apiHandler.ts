@@ -1,28 +1,19 @@
 // apps/desktop/src/main/apiHandler.ts
 import {ipcMain} from 'electron';
 import {randomUUID} from 'node:crypto';
-import Anthropic from '@anthropic-ai/sdk';
+import {createStreamingAdapter, ProviderId, LLMRequestPayload} from './providers/ProviderRegistry';
 
-type RendererMessage = {
-  role: 'user' | 'assistant' | 'system';
-  content: string;
-};
+type RendererMessage = LLMRequestPayload['messages'][number];
+type RendererContextChunk = NonNullable<LLMRequestPayload['context']>[number];
 
 interface LLMStreamPayload {
+  providerId: ProviderId;
   apiKey: string;
-  request: {
-    maxTokens?: number;
-    temperature?: number;
-    systemPrompt?: string;
-    messages: RendererMessage[];
+  request: LLMRequestPayload;
+  providerConfig?: {
+    baseUrl?: string;
   };
   requestId?: string;
-}
-
-function isAnthropicMessage(
-  message: RendererMessage
-): message is {role: 'user' | 'assistant'; content: string} {
-  return message.role === 'user' || message.role === 'assistant';
 }
 
 function validatePayload(payload: unknown): asserts payload is LLMStreamPayload {
@@ -31,6 +22,10 @@ function validatePayload(payload: unknown): asserts payload is LLMStreamPayload 
   }
 
   const p = payload as Record<string, unknown>;
+
+  if (typeof p.providerId !== 'string' || p.providerId.trim().length === 0) {
+    throw new Error('providerId must be provided');
+  }
 
   // Validate apiKey
   if (typeof p.apiKey !== 'string' || p.apiKey.trim().length === 0) {
@@ -69,6 +64,14 @@ function validatePayload(payload: unknown): asserts payload is LLMStreamPayload 
     throw new Error('systemPrompt must be a string');
   }
 
+  if (request.model !== undefined && typeof request.model !== 'string') {
+    throw new Error('model must be a string if provided');
+  }
+
+  if (request.context !== undefined && !Array.isArray(request.context)) {
+    throw new Error('context must be an array if provided');
+  }
+
   // Validate messages array
   if (!Array.isArray(request.messages)) {
     throw new Error('messages must be an array');
@@ -105,37 +108,28 @@ function validatePayload(payload: unknown): asserts payload is LLMStreamPayload 
   if (p.requestId !== undefined && typeof p.requestId !== 'string') {
     throw new Error('requestId must be a string');
   }
+
+  if (p.providerConfig !== undefined) {
+    const config = p.providerConfig as Record<string, unknown>;
+    if (config.baseUrl !== undefined && typeof config.baseUrl !== 'string') {
+      throw new Error('providerConfig.baseUrl must be a string if provided');
+    }
+  }
 }
 
 export function setupAPIHandlers() {
   ipcMain.handle('llm:stream', async (event, payload: LLMStreamPayload) => {
-    // Validate payload from renderer to prevent misuse or crashes
     validatePayload(payload);
-    
-    const {apiKey, request, requestId = randomUUID()} = payload;
-    const client = new Anthropic({apiKey});
+
+    const {apiKey, providerId, request, requestId = randomUUID()} = payload;
 
     try {
-      const anthropicMessages = request.messages.filter(isAnthropicMessage);
-
-      const stream = await client.messages.stream({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: request.maxTokens || 4096,
-        temperature: request.temperature || 0.7,
-        system: request.systemPrompt,
-        messages: anthropicMessages
-      });
-
+      const adapter = createStreamingAdapter(providerId, {apiKey, request});
       const chunks: string[] = [];
 
-      for await (const chunk of stream) {
-        if (chunk.type === 'content_block_delta' && chunk.delta?.type === 'text_delta') {
-          chunks.push(chunk.delta.text);
-          event.sender.send('llm:stream:chunk', {
-            requestId,
-            text: chunk.delta.text
-          });
-        }
+      for await (const chunk of adapter.stream()) {
+        chunks.push(chunk);
+        event.sender.send('llm:stream:chunk', {requestId, text: chunk});
       }
 
       event.sender.send('llm:stream:complete', {requestId});

@@ -19,6 +19,24 @@ export async function getAllProjects(): Promise<Project[]> {
   });
 }
 
+export async function getProjectById(id: string): Promise<Project | null> {
+  const db = await openDb();
+
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(PROJECT_STORE_NAME, 'readonly');
+    const store = tx.objectStore(PROJECT_STORE_NAME);
+    const request = store.get(id);
+
+    request.onsuccess = () => {
+      resolve((request.result as Project) ?? null);
+    };
+
+    request.onerror = () => {
+      reject(request.error);
+    };
+  });
+}
+
 export async function saveProject(project: Project): Promise<void> {
   const db = await openDb();
 

@@ -1,3 +1,4 @@
+import type {AIProviderId} from '../../../entityTypes';
 import type {
   LLMProvider,
   LLMRequest,
@@ -5,13 +6,26 @@ import type {
   LLMContextChunk
 } from '../types';
 
+interface AnthropicProviderConfig {
+  apiKey: string;
+  model?: string;
+  baseUrl?: string;
+  streamingUrl?: string;
+}
+
 export class AnthropicProvider implements LLMProvider {
+  id: AIProviderId = 'anthropic';
   name = 'Anthropic';
   private apiKey: string;
-  private baseUrl = 'https://api.anthropic.com/v1/messages';
+  private model: string;
+  private baseUrl: string;
+  private streamingUrl: string;
 
-  constructor(apiKey: string) {
-    this.apiKey = apiKey;
+  constructor(config: AnthropicProviderConfig) {
+    this.apiKey = config.apiKey;
+    this.model = config.model ?? 'claude-sonnet-4-20250514';
+    this.baseUrl = config.baseUrl ?? 'https://api.anthropic.com/v1/messages';
+    this.streamingUrl = config.streamingUrl ?? 'http://localhost:3001/api/anthropic/stream';
   }
 
   async generateCompletion(request: LLMRequest): Promise<LLMResponse> {
@@ -28,7 +42,7 @@ export class AnthropicProvider implements LLMProvider {
         'anthropic-version': '2023-06-01'
       },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
+        model: request.model ?? this.model,
         max_tokens: request.maxTokens || 4096,
         temperature: request.temperature || 0.7,
         system: systemPrompt,
@@ -57,7 +71,7 @@ export class AnthropicProvider implements LLMProvider {
       request.systemPrompt
     );
 
-    const response = await fetch('http://localhost:3001/api/anthropic/stream', {
+    const response = await fetch(this.streamingUrl, {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({
@@ -66,7 +80,8 @@ export class AnthropicProvider implements LLMProvider {
           messages: request.messages.filter((m) => m.role !== 'system'),
           systemPrompt,
           maxTokens: request.maxTokens,
-          temperature: request.temperature
+          temperature: request.temperature,
+          model: request.model ?? this.model
         }
       })
     });

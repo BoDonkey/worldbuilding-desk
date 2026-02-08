@@ -1,4 +1,4 @@
-import {useEffect, useState} from 'react';
+import {useEffect, useState, useCallback} from 'react';
 import type {FormEvent} from 'react';
 import type {
   Character,
@@ -15,6 +15,17 @@ import {
 } from '../services/characterSheetService';
 import {getCharactersByProject} from '../characterStorage';
 import {getRulesetByProjectId} from '../services/rulesetService';
+import type {
+  ShodhMemoryService,
+  MemoryEntry
+} from '../services/shodh/ShodhMemoryService';
+import {getShodhService} from '../services/shodh/getShodhService';
+import {ShodhMemoryPanel} from '../components/ShodhMemoryPanel';
+import {
+  getSeriesBibleConfig,
+  promoteMemoryToParent,
+  promoteDocumentToParent
+} from '../services/seriesBible/SeriesBibleService';
 
 interface CharacterSheetsRouteProps {
   activeProject: Project | null;
@@ -32,6 +43,10 @@ function CharacterSheetsRoute({activeProject}: CharacterSheetsRouteProps) {
   const [notes, setNotes] = useState('');
   const [characters, setCharacters] = useState<Character[]>([]);
   const [selectedCharacterId, setSelectedCharacterId] = useState<string>('');
+  const [shodhService, setShodhService] =
+    useState<ShodhMemoryService | null>(null);
+  const [rulesetMemory, setRulesetMemory] = useState<MemoryEntry | null>(null);
+  const [rulesetMemoryFilter, setRulesetMemoryFilter] = useState('');
 
   useEffect(() => {
     let cancelled = false;
@@ -42,6 +57,8 @@ function CharacterSheetsRoute({activeProject}: CharacterSheetsRouteProps) {
           setSheets([]);
           setRuleset(null);
           setCharacters([]);
+          setShodhService(null);
+          setRulesetMemory(null);
         }
         return;
       }
@@ -54,10 +71,25 @@ function CharacterSheetsRoute({activeProject}: CharacterSheetsRouteProps) {
         ]
       );
 
+      const bibleConfig = getSeriesBibleConfig(activeProject);
+      const shodhOptions =
+        bibleConfig.parentProjectId && bibleConfig.inheritShodh
+          ? {
+              projectId: activeProject.id,
+              inheritFromParent: true,
+              parentProjectId: bibleConfig.parentProjectId
+            }
+          : {projectId: activeProject.id};
+
+      let shodh: ShodhMemoryService | null = null;
       if (!cancelled) {
         setSheets(loadedSheets);
         setRuleset(loadedRuleset);
         setCharacters(loadedCharacters);
+        shodh = await getShodhService(shodhOptions);
+        if (!cancelled) {
+          setShodhService(shodh);
+        }
 
         // Handle pending character from Characters route
         const pendingId = localStorage.getItem('pendingCharacterSheet');
@@ -76,6 +108,21 @@ function CharacterSheetsRoute({activeProject}: CharacterSheetsRouteProps) {
       cancelled = true;
     };
   }, [activeProject]);
+
+  const refreshRulesetMemory = useCallback(async () => {
+    if (!shodhService || !ruleset?.id) {
+      setRulesetMemory(null);
+      return;
+    }
+    const list = await shodhService.listMemories();
+    const memory = list.find((entry) => entry.documentId === ruleset.id) ?? null;
+    setRulesetMemory(memory);
+  }, [shodhService, ruleset?.id]);
+
+  useEffect(() => {
+    void refreshRulesetMemory();
+  }, [refreshRulesetMemory]);
+
 
   const resetForm = () => {
     setEditingId(null);
@@ -228,6 +275,55 @@ function CharacterSheetsRoute({activeProject}: CharacterSheetsRouteProps) {
   return (
     <section>
       <h1>Character Sheets</h1>
+
+      {ruleset && (
+        <ShodhMemoryPanel
+          title={`${ruleset.name || 'World ruleset'} summary`}
+          memories={rulesetMemory ? [rulesetMemory] : []}
+          filterValue={rulesetMemoryFilter}
+          onFilterChange={setRulesetMemoryFilter}
+          highlightDocumentId={ruleset.id}
+          onRefresh={() => void refreshRulesetMemory()}
+          pageSize={1}
+          scopeSummaryLabel='this ruleset'
+          emptyState='No Shodh memory found yet. Save the ruleset (Projects → World Ruleset) to generate one.'
+          renderSourceLabel={(memory) =>
+            memory.projectId === activeProject.id ? 'Local' : 'Parent'
+          }
+          renderMemoryActions={(memory) => {
+            if (
+              activeProject.parentProjectId &&
+              memory.projectId === activeProject.id
+            ) {
+              return (
+                <button
+                  type='button'
+                  onClick={() => {
+                    const parentId = activeProject.parentProjectId;
+                    if (!parentId) return;
+                    void promoteMemoryToParent(memory, parentId).then(() =>
+                      refreshRulesetMemory()
+                    );
+                  }}
+                  style={{fontSize: '0.8rem'}}
+                >
+                  Promote
+                </button>
+              );
+            }
+            return null;
+          }}
+        />
+      )}
+      {ruleset && activeProject?.parentProjectId && (
+        <button
+          type='button'
+          style={{marginBottom: '1rem'}}
+          onClick={() => void handlePromoteRuleset()}
+        >
+          Promote ruleset to parent
+        </button>
+      )}
 
       <div style={{display: 'flex', gap: '2rem', alignItems: 'flex-start'}}>
         {/* Character Sheet Editor */}
@@ -555,3 +651,17 @@ function CharacterSheetsRoute({activeProject}: CharacterSheetsRouteProps) {
 }
 
 export default CharacterSheetsRoute;
+  const handlePromoteRuleset = useCallback(async () => {
+    if (!ruleset || !activeProject?.parentProjectId) return;
+    const ruleText = ruleset.rules
+      .map((rule) => `${rule.name}: ${rule.description || ''}`)
+      .join('\n');
+    await promoteDocumentToParent({
+      parentProjectId: activeProject.parentProjectId,
+      documentId: ruleset.id,
+      title: ruleset.name || 'Ruleset',
+      content: `${ruleset.description ?? ''}\n${ruleText}`,
+      type: 'rule',
+      tags: ['ruleset']
+    });
+  }, [ruleset, activeProject?.parentProjectId]);

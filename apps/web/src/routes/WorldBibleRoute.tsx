@@ -1,10 +1,6 @@
-import {useEffect, useState} from 'react';
+import {useEffect, useState, useCallback} from 'react';
 import type {FormEvent} from 'react';
-import type {
-  EntityCategory,
-  Project,
-  WorldEntity
-} from '../entityTypes';
+import type {EntityCategory, Project, WorldEntity} from '../entityTypes';
 import {getEntitiesByProject, saveEntity, deleteEntity} from '../entityStorage';
 import {
   getCategoriesByProject,
@@ -14,6 +10,22 @@ import {
 } from '../categoryStorage';
 import CategoryEditor from '../components/CategoryEditor';
 import styles from '../assets/components/WorldBibleRoute.module.css';
+import type {RAGService} from '../services/rag/RAGService';
+import {getRAGService} from '../services/rag/getRAGService';
+import type {
+  ShodhMemoryService,
+  MemoryEntry
+} from '../services/shodh/ShodhMemoryService';
+import {getShodhService} from '../services/shodh/getShodhService';
+import {emitShodhMemoriesUpdated} from '../services/shodh/shodhEvents';
+import {ShodhMemoryPanel} from '../components/ShodhMemoryPanel';
+import {
+  getSeriesBibleConfig,
+  promoteMemoryToParent,
+  promoteDocumentToParent,
+  getCanonSyncState,
+  syncChildWithParent
+} from '../services/seriesBible/SeriesBibleService';
 
 interface WorldBibleRouteProps {
   activeProject: Project | null;
@@ -27,6 +39,38 @@ function WorldBibleRoute({activeProject}: WorldBibleRouteProps) {
   const [name, setName] = useState('');
   const [fieldValues, setFieldValues] = useState<Record<string, string>>({});
   const [showCategoryManager, setShowCategoryManager] = useState(false);
+  const [ragService, setRagService] = useState<RAGService | null>(null);
+  const [shodhService, setShodhService] =
+    useState<ShodhMemoryService | null>(null);
+  const [memories, setMemories] = useState<MemoryEntry[]>([]);
+  const [memoryFilter, setMemoryFilter] = useState('');
+  const seriesConfig = activeProject
+    ? getSeriesBibleConfig(activeProject)
+    : null;
+  const [canonState, setCanonState] = useState<{
+    parentCanonVersion?: string;
+    childLastSynced?: string;
+    parentName?: string;
+  }>({});
+  const refreshMemories = useCallback(async () => {
+    if (!shodhService) {
+      setMemories([]);
+      emitShodhMemoriesUpdated([]);
+      return;
+    }
+    const list = await shodhService.listMemories();
+    setMemories(list);
+    emitShodhMemoriesUpdated(list);
+  }, [shodhService]);
+
+  const handlePromoteMemory = useCallback(
+    async (memory: MemoryEntry) => {
+      if (!seriesConfig?.parentProjectId) return;
+      await promoteMemoryToParent(memory, seriesConfig.parentProjectId);
+      await refreshMemories();
+    },
+    [seriesConfig?.parentProjectId, refreshMemories]
+  );
 
   useEffect(() => {
     if (!activeProject) return;
@@ -55,13 +99,94 @@ function WorldBibleRoute({activeProject}: WorldBibleRouteProps) {
   }, [activeProject]);
 
   useEffect(() => {
+    void refreshMemories();
+  }, [refreshMemories]);
+
+  useEffect(() => {
     if (!activeTab && categories.length > 0) {
       setActiveTab(categories[0].id);
     }
   }, [categories, activeTab]);
 
+  useEffect(() => {
+    if (!activeProject) {
+      setRagService(null);
+      setShodhService(null);
+      return;
+    }
+
+    const bibleConfig = getSeriesBibleConfig(activeProject);
+    const ragOptions =
+      bibleConfig.parentProjectId && bibleConfig.inheritRag
+        ? {
+            projectId: activeProject.id,
+            inheritFromParent: true,
+            parentProjectId: bibleConfig.parentProjectId
+          }
+        : {projectId: activeProject.id};
+    const shodhOptions =
+      bibleConfig.parentProjectId && bibleConfig.inheritShodh
+        ? {
+            projectId: activeProject.id,
+            inheritFromParent: true,
+            parentProjectId: bibleConfig.parentProjectId
+          }
+        : {projectId: activeProject.id};
+
+    let cancelled = false;
+    Promise.all([getRAGService(ragOptions), getShodhService(shodhOptions)]).then(
+      ([rag, shodh]) => {
+        if (!cancelled) {
+          setRagService(rag);
+          setShodhService(shodh);
+        }
+      }
+    );
+
+    return () => {
+      cancelled = true;
+      setRagService(null);
+      setShodhService(null);
+    };
+  }, [activeProject]);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!activeProject || !seriesConfig?.parentProjectId) {
+      setCanonState({});
+      return;
+    }
+    getCanonSyncState(activeProject).then((state) => {
+      if (!cancelled) {
+        setCanonState(state);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [activeProject, seriesConfig?.parentProjectId]);
+
+  useEffect(() => {
+    if (!ragService) return;
+    const vocabulary = entities.map((entity) => ({
+      id: entity.id,
+      terms: [
+        entity.name,
+        ...Object.values(entity.fields).filter(
+          (value): value is string => typeof value === 'string'
+        )
+      ]
+    }));
+    ragService.setEntityVocabulary(vocabulary);
+  }, [entities, ragService]);
+
   const activeCategory = categories.find((c) => c.id === activeTab);
   const filteredEntities = entities.filter((e) => e.categoryId === activeTab);
+  const currentEntityMemories = editingId
+    ? memories.filter((memory) => memory.documentId === editingId)
+    : [];
+  const memoryPanelEmpty =
+    'This entry has no captured memories yet. Save it to generate one or adjust the filter.';
 
   const resetForm = () => {
     setEditingId(null);
@@ -89,6 +214,28 @@ function WorldBibleRoute({activeProject}: WorldBibleRouteProps) {
     };
 
     await saveEntity(entity);
+    if (ragService) {
+      await ragService.indexDocument(
+        entity.id,
+        entity.name,
+        buildEntityContent(entity),
+        'worldbible',
+        {
+          tags: [activeCategory.slug],
+          entityIds: [entity.id]
+        }
+      );
+    }
+    if (shodhService) {
+      await shodhService.captureAutoMemory({
+        projectId: activeProject.id,
+        documentId: entity.id,
+        title: entity.name,
+        content: buildEntityContent(entity),
+        tags: ['worldbible', activeCategory.slug]
+      });
+      await refreshMemories();
+    }
 
     setEntities((prev) => {
       const idx = prev.findIndex((e) => e.id === id);
@@ -110,8 +257,43 @@ function WorldBibleRoute({activeProject}: WorldBibleRouteProps) {
   const handleDeleteEntity = async (id: string) => {
     if (!confirm('Delete this entity?')) return;
     await deleteEntity(id);
+    if (ragService) {
+      await ragService.deleteDocument(id);
+    }
+    if (shodhService) {
+      await shodhService.deleteMemoriesForDocument(id);
+      await refreshMemories();
+    }
     setEntities((prev) => prev.filter((e) => e.id !== id));
     if (editingId === id) resetForm();
+  };
+
+  const buildEntityContent = (entity: WorldEntity) => {
+    const fieldText = Object.entries(entity.fields)
+      .map(([key, value]) => `${key}: ${value ?? ''}`)
+      .join('\n');
+    return `${entity.name}\n${fieldText}`;
+  };
+  const handlePromoteEntity = async (entity: WorldEntity) => {
+    if (!seriesConfig?.parentProjectId) return;
+    await promoteDocumentToParent({
+      parentProjectId: seriesConfig.parentProjectId,
+      documentId: entity.id,
+      title: entity.name,
+      content: buildEntityContent(entity),
+      type: 'worldbible',
+      tags: [activeCategory?.slug ?? 'worldbible']
+    });
+  };
+  const handleCanonSync = async () => {
+    if (!activeProject) return;
+    const updated = await syncChildWithParent(activeProject.id);
+    if (updated) {
+      setCanonState((prev) => ({
+        ...prev,
+        childLastSynced: updated.lastSyncedCanon
+      }));
+    }
   };
 
   if (!activeProject) {
@@ -131,6 +313,26 @@ function WorldBibleRoute({activeProject}: WorldBibleRouteProps) {
       <div className={styles.header}>
         <h1>World Bible</h1>
       </div>
+      {seriesConfig?.parentProjectId && (
+        <div className={styles.banner}>
+          <strong>Parent canon:</strong> {canonState.parentName ?? 'Unknown'} ·
+          Version {canonState.parentCanonVersion ?? 'n/a'}
+          {canonState.parentCanonVersion &&
+            canonState.childLastSynced &&
+            canonState.parentCanonVersion !== canonState.childLastSynced && (
+              <span className={styles.outOfSync}>Out of sync</span>
+            )}
+          <div className={styles.syncRow}>
+            <span>
+              Last synced:{' '}
+              {canonState.childLastSynced ?? 'never'}
+            </span>
+            <button type='button' onClick={() => void handleCanonSync()}>
+              Mark as synced
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className={styles.tabNav}>
         {categories.map((cat) => (
@@ -315,6 +517,39 @@ function WorldBibleRoute({activeProject}: WorldBibleRouteProps) {
                 )}
               </div>
             </form>
+            {editingId && (
+              <ShodhMemoryPanel
+                title='Canon summary'
+                memories={currentEntityMemories}
+                filterValue={memoryFilter}
+                onFilterChange={setMemoryFilter}
+                highlightDocumentId={editingId}
+                onRefresh={() => void refreshMemories()}
+                pageSize={0}
+                scopeSummaryLabel='this entry'
+                emptyState={memoryPanelEmpty}
+                renderSourceLabel={(memory) =>
+                  memory.projectId === activeProject.id ? 'Local' : 'Parent'
+                }
+                renderMemoryActions={(memory) => {
+                  if (
+                    seriesConfig?.parentProjectId &&
+                    memory.projectId === activeProject.id
+                  ) {
+                    return (
+                      <button
+                        type='button'
+                        onClick={() => void handlePromoteMemory(memory)}
+                        style={{fontSize: '0.8rem'}}
+                      >
+                        Promote
+                      </button>
+                    );
+                  }
+                  return null;
+                }}
+              />
+            )}
           </div>
 
           <div className={styles.listSection}>
@@ -341,6 +576,14 @@ function WorldBibleRoute({activeProject}: WorldBibleRouteProps) {
                     >
                       Delete
                     </button>
+                    {seriesConfig?.parentProjectId && (
+                      <button
+                        type='button'
+                        onClick={() => void handlePromoteEntity(entity)}
+                      >
+                        Promote to parent
+                      </button>
+                    )}
                   </div>
                 </li>
               ))}
