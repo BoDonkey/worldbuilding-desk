@@ -172,3 +172,82 @@ export interface WorldEntity {
 export interface StoredRuleset extends WorldRuleset {
   projectId: string;
 }
+
+export type CompendiumDomain =
+  | 'beast'
+  | 'flora'
+  | 'mineral'
+  | 'artifact'
+  | 'recipe'
+  | 'custom';
+
+export interface CompendiumActionDefinition {
+  id: string;
+  label: string;
+  points: number;
+  repeatable?: boolean;
+}
+
+export interface CompendiumEntry {
+  id: string;
+  projectId: string;
+  name: string;
+  domain: CompendiumDomain;
+  sourceEntityId?: string;
+  description?: string;
+  tags?: string[];
+  actions: CompendiumActionDefinition[];
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface CompendiumRewardEffect {
+  targetType: 'stat' | 'resource' | 'custom';
+  targetId: string;
+  operation: 'add' | 'multiply' | 'set';
+  value: number | string | boolean;
+}
+
+export interface CompendiumMilestone {
+  id: string;
+  projectId: string;
+  name: string;
+  description?: string;
+  pointsRequired: number;
+  unlockRecipeIds?: string[];
+  permanentEffects?: CompendiumRewardEffect[];
+  createdAt: number;
+}
+
+export type RecipeCategory = 'food' | 'crafting' | 'alchemy' | 'custom';
+
+export interface UnlockableRecipe {
+  id: string;
+  projectId: string;
+  name: string;
+  category: RecipeCategory;
+  description?: string;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface CompendiumProgress {
+  id: string;
+  projectId: string;
+  characterSheetId?: string;
+  totalPoints: number;
+  unlockedMilestoneIds: string[];
+  unlockedRecipeIds: string[];
+  updatedAt: number;
+}
+
+export interface CompendiumActionLog {
+  id: string;
+  projectId: string;
+  progressId: string;
+  entryId: string;
+  actionId: string;
+  quantity: number;
+  pointsAwarded: number;
+  createdAt: number;
+}
