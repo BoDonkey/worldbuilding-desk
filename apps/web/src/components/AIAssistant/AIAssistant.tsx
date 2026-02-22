@@ -1,10 +1,10 @@
 import React, {useState, useRef, useEffect, useCallback} from 'react';
 import styles from '../../assets/components/AIAssistant.module.css';
 import {LLMService} from '../../services/llm/LLMService';
-import type {RAGService} from '../../services/rag/RAGService';
+import type {RAGProvider} from '../../services/rag/RAGService';
 import {getRAGService} from '../../services/rag/getRAGService';
 import type {
-  ShodhMemoryService,
+  ShodhMemoryProvider,
   MemoryEntry
 } from '../../services/shodh/ShodhMemoryService';
 import {getShodhService} from '../../services/shodh/getShodhService';
@@ -38,8 +38,8 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const llmService = useRef<LLMService | null>(null);
-  const ragService = useRef<RAGService | null>(null);
-  const shodhService = useRef<ShodhMemoryService | null>(null);
+  const ragService = useRef<RAGProvider | null>(null);
+  const shodhService = useRef<ShodhMemoryProvider | null>(null);
 
   const promptManager = useRef(new PromptManager());
 

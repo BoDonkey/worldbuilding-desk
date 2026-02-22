@@ -218,10 +218,13 @@ export class RAGService implements RAGProvider {
 }
 
 export class CompositeRAGService implements RAGProvider {
-  constructor(
-    private primary: RAGProvider,
-    private parents: RAGProvider[] = []
-  ) {}
+  private primary: RAGProvider;
+  private parents: RAGProvider[];
+
+  constructor(primary: RAGProvider, parents: RAGProvider[] = []) {
+    this.primary = primary;
+    this.parents = parents;
+  }
 
   async init(projectId: string): Promise<void> {
     await this.primary.init(projectId);

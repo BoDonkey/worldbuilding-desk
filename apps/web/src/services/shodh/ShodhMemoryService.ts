@@ -121,10 +121,13 @@ export class ShodhMemoryService implements ShodhMemoryProvider {
 }
 
 export class CompositeShodhMemoryService implements ShodhMemoryProvider {
-  constructor(
-    private primary: ShodhMemoryProvider,
-    private parents: ShodhMemoryProvider[] = []
-  ) {}
+  private primary: ShodhMemoryProvider;
+  private parents: ShodhMemoryProvider[];
+
+  constructor(primary: ShodhMemoryProvider, parents: ShodhMemoryProvider[] = []) {
+    this.primary = primary;
+    this.parents = parents;
+  }
 
   async init(projectId: string): Promise<void> {
     await this.primary.init(projectId);

@@ -2,6 +2,7 @@ import {
   ShodhMemoryService,
   CompositeShodhMemoryService
 } from './ShodhMemoryService';
+import type {ShodhMemoryProvider} from './ShodhMemoryService';
 
 export interface ShodhServiceOptions {
   projectId: string;
@@ -9,7 +10,7 @@ export interface ShodhServiceOptions {
   parentProjectId?: string;
 }
 
-const cache = new Map<string, Promise<ShodhMemoryService>>();
+const cache = new Map<string, Promise<ShodhMemoryProvider>>();
 
 async function createProvider(projectId: string) {
   const service = new ShodhMemoryService();
@@ -19,7 +20,7 @@ async function createProvider(projectId: string) {
 
 export function getShodhService(
   options: ShodhServiceOptions | string
-): Promise<ShodhMemoryService> {
+): Promise<ShodhMemoryProvider> {
   const normalized: ShodhServiceOptions =
     typeof options === 'string'
       ? {projectId: options}

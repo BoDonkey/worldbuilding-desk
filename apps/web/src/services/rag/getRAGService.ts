@@ -1,4 +1,5 @@
 import {RAGService, CompositeRAGService} from './RAGService';
+import type {RAGProvider} from './RAGService';
 
 export interface RagServiceOptions {
   projectId: string;
@@ -6,7 +7,7 @@ export interface RagServiceOptions {
   parentProjectId?: string;
 }
 
-const serviceCache = new Map<string, Promise<RAGService>>();
+const serviceCache = new Map<string, Promise<RAGProvider>>();
 
 async function createProvider(projectId: string) {
   const service = new RAGService();
@@ -16,7 +17,7 @@ async function createProvider(projectId: string) {
 
 export function getRAGService(
   options: RagServiceOptions | string
-): Promise<RAGService> {
+): Promise<RAGProvider> {
   const normalized: RagServiceOptions =
     typeof options === 'string'
       ? {projectId: options}

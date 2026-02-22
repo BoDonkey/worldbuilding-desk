@@ -16,7 +16,7 @@ import {
 import {getCharactersByProject} from '../characterStorage';
 import {getRulesetByProjectId} from '../services/rulesetService';
 import type {
-  ShodhMemoryService,
+  ShodhMemoryProvider,
   MemoryEntry
 } from '../services/shodh/ShodhMemoryService';
 import {getShodhService} from '../services/shodh/getShodhService';
@@ -44,7 +44,7 @@ function CharacterSheetsRoute({activeProject}: CharacterSheetsRouteProps) {
   const [characters, setCharacters] = useState<Character[]>([]);
   const [selectedCharacterId, setSelectedCharacterId] = useState<string>('');
   const [shodhService, setShodhService] =
-    useState<ShodhMemoryService | null>(null);
+    useState<ShodhMemoryProvider | null>(null);
   const [rulesetMemory, setRulesetMemory] = useState<MemoryEntry | null>(null);
   const [rulesetMemoryFilter, setRulesetMemoryFilter] = useState('');
 
@@ -81,7 +81,7 @@ function CharacterSheetsRoute({activeProject}: CharacterSheetsRouteProps) {
             }
           : {projectId: activeProject.id};
 
-      let shodh: ShodhMemoryService | null = null;
+      let shodh: ShodhMemoryProvider | null = null;
       if (!cancelled) {
         setSheets(loadedSheets);
         setRuleset(loadedRuleset);
@@ -245,6 +245,21 @@ function CharacterSheetsRoute({activeProject}: CharacterSheetsRouteProps) {
 
   const getResourceDefinition = (definitionId: string) =>
     ruleset?.resourceDefinitions.find((def) => def.id === definitionId);
+
+  const handlePromoteRuleset = useCallback(async () => {
+    if (!ruleset || !activeProject?.parentProjectId) return;
+    const ruleText = ruleset.rules
+      .map((rule) => `${rule.name}: ${rule.description || ''}`)
+      .join('\n');
+    await promoteDocumentToParent({
+      parentProjectId: activeProject.parentProjectId,
+      documentId: ruleset.id,
+      title: ruleset.name || 'Ruleset',
+      content: `${ruleset.description ?? ''}\n${ruleText}`,
+      type: 'rule',
+      tags: ['ruleset']
+    });
+  }, [ruleset, activeProject?.parentProjectId]);
 
   if (!activeProject) {
     return (
@@ -651,17 +666,3 @@ function CharacterSheetsRoute({activeProject}: CharacterSheetsRouteProps) {
 }
 
 export default CharacterSheetsRoute;
-  const handlePromoteRuleset = useCallback(async () => {
-    if (!ruleset || !activeProject?.parentProjectId) return;
-    const ruleText = ruleset.rules
-      .map((rule) => `${rule.name}: ${rule.description || ''}`)
-      .join('\n');
-    await promoteDocumentToParent({
-      parentProjectId: activeProject.parentProjectId,
-      documentId: ruleset.id,
-      title: ruleset.name || 'Ruleset',
-      content: `${ruleset.description ?? ''}\n${ruleText}`,
-      type: 'rule',
-      tags: ['ruleset']
-    });
-  }, [ruleset, activeProject?.parentProjectId]);

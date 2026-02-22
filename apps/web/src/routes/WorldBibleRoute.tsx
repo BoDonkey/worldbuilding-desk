@@ -10,10 +10,10 @@ import {
 } from '../categoryStorage';
 import CategoryEditor from '../components/CategoryEditor';
 import styles from '../assets/components/WorldBibleRoute.module.css';
-import type {RAGService} from '../services/rag/RAGService';
+import type {RAGProvider} from '../services/rag/RAGService';
 import {getRAGService} from '../services/rag/getRAGService';
 import type {
-  ShodhMemoryService,
+  ShodhMemoryProvider,
   MemoryEntry
 } from '../services/shodh/ShodhMemoryService';
 import {getShodhService} from '../services/shodh/getShodhService';
@@ -39,9 +39,9 @@ function WorldBibleRoute({activeProject}: WorldBibleRouteProps) {
   const [name, setName] = useState('');
   const [fieldValues, setFieldValues] = useState<Record<string, string>>({});
   const [showCategoryManager, setShowCategoryManager] = useState(false);
-  const [ragService, setRagService] = useState<RAGService | null>(null);
+  const [ragService, setRagService] = useState<RAGProvider | null>(null);
   const [shodhService, setShodhService] =
-    useState<ShodhMemoryService | null>(null);
+    useState<ShodhMemoryProvider | null>(null);
   const [memories, setMemories] = useState<MemoryEntry[]>([]);
   const [memoryFilter, setMemoryFilter] = useState('');
   const seriesConfig = activeProject

@@ -13,10 +13,10 @@ import type {EditorConfig} from '../config/editorConfig';
 import {countWords} from '../utils/textHelpers';
 import {EditorWithAI} from '../components/Editor/EditorWithAI';
 import {ShodhMemoryPanel} from '../components/ShodhMemoryPanel';
-import type {RAGService} from '../services/rag/RAGService';
+import type {RAGProvider} from '../services/rag/RAGService';
 import {getRAGService} from '../services/rag/getRAGService';
 import type {
-  ShodhMemoryService,
+  ShodhMemoryProvider,
   MemoryEntry
 } from '../services/shodh/ShodhMemoryService';
 import {getShodhService} from '../services/shodh/getShodhService';
@@ -63,9 +63,9 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
   >([]);
   const [projectSettings, setProjectSettings] =
     useState<ProjectSettings | null>(null);
-  const [ragService, setRagService] = useState<RAGService | null>(null);
+  const [ragService, setRagService] = useState<RAGProvider | null>(null);
   const [shodhService, setShodhService] =
-    useState<ShodhMemoryService | null>(null);
+    useState<ShodhMemoryProvider | null>(null);
   const [isMemoryModalOpen, setMemoryModalOpen] = useState(false);
   const [memoryDraft, setMemoryDraft] = useState('');
   const [memories, setMemories] = useState<MemoryEntry[]>([]);
@@ -719,9 +719,6 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
                   return null;
                 }}
               />
-            </>
-                )}
-              </div>
             </>
           ) : (
             <p>Select a scene from the left, or create a new one.</p>
