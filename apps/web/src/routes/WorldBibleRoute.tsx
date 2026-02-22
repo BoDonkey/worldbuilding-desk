@@ -20,6 +20,11 @@ import {getShodhService} from '../services/shodh/getShodhService';
 import {emitShodhMemoriesUpdated} from '../services/shodh/shodhEvents';
 import {ShodhMemoryPanel} from '../components/ShodhMemoryPanel';
 import {
+  getCompendiumEntriesByProject,
+  upsertCompendiumEntryFromEntity
+} from '../services/compendiumService';
+import type {CompendiumDomain} from '../entityTypes';
+import {
   getSeriesBibleConfig,
   promoteMemoryToParent,
   promoteDocumentToParent,
@@ -61,6 +66,12 @@ function WorldBibleRoute({activeProject}: WorldBibleRouteProps) {
   const [promotingEntityId, setPromotingEntityId] = useState<string | null>(null);
   const [promotingMemoryId, setPromotingMemoryId] = useState<string | null>(null);
   const [isSyncingCanon, setIsSyncingCanon] = useState(false);
+  const [linkingCompendiumEntityId, setLinkingCompendiumEntityId] = useState<
+    string | null
+  >(null);
+  const [compendiumLinkedEntityIds, setCompendiumLinkedEntityIds] = useState<
+    Set<string>
+  >(new Set());
   const refreshMemories = useCallback(async () => {
     if (!shodhService) {
       setMemories([]);
@@ -117,6 +128,34 @@ function WorldBibleRoute({activeProject}: WorldBibleRouteProps) {
       cancelled = true;
     };
   }, [activeProject]);
+
+  useEffect(() => {
+    if (!activeProject) {
+      setCompendiumLinkedEntityIds(new Set());
+      return;
+    }
+
+    let cancelled = false;
+    getCompendiumEntriesByProject(activeProject.id)
+      .then((entries) => {
+        if (cancelled) return;
+        setCompendiumLinkedEntityIds(
+          new Set(entries.map((entry) => entry.sourceEntityId).filter(Boolean) as string[])
+        );
+      })
+      .catch((error) => {
+        if (cancelled) return;
+        const message =
+          error instanceof Error
+            ? error.message
+            : 'Unable to load compendium links.';
+        setFeedback({tone: 'error', message});
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activeProject, entities.length]);
 
   useEffect(() => {
     void refreshMemories();
@@ -318,6 +357,55 @@ function WorldBibleRoute({activeProject}: WorldBibleRouteProps) {
       .join('\n');
     return `${entity.name}\n${fieldText}`;
   };
+
+  const inferCompendiumDomain = (entity: WorldEntity): CompendiumDomain => {
+    const category = categories.find((item) => item.id === entity.categoryId);
+    const slug = (category?.slug ?? '').toLowerCase();
+    if (slug.includes('monster') || slug.includes('beast') || slug.includes('creature')) {
+      return 'beast';
+    }
+    if (slug.includes('plant') || slug.includes('flora') || slug.includes('herb')) {
+      return 'flora';
+    }
+    if (slug.includes('ore') || slug.includes('mineral') || slug.includes('rock')) {
+      return 'mineral';
+    }
+    if (slug.includes('artifact') || slug.includes('relic')) {
+      return 'artifact';
+    }
+    return 'custom';
+  };
+
+  const handleAddEntityToCompendium = async (entity: WorldEntity) => {
+    if (!activeProject) return;
+    setLinkingCompendiumEntityId(entity.id);
+    setFeedback(null);
+    try {
+      await upsertCompendiumEntryFromEntity({
+        projectId: activeProject.id,
+        entity,
+        domain: inferCompendiumDomain(entity)
+      });
+      setCompendiumLinkedEntityIds((prev) => {
+        const next = new Set(prev);
+        next.add(entity.id);
+        return next;
+      });
+      setFeedback({
+        tone: 'success',
+        message: `"${entity.name}" linked to Compendium.`
+      });
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : 'Unable to link entity to compendium.';
+      setFeedback({tone: 'error', message});
+    } finally {
+      setLinkingCompendiumEntityId(null);
+    }
+  };
+
   const handlePromoteEntity = async (entity: WorldEntity) => {
     if (!seriesConfig?.parentProjectId) return;
     setPromotingEntityId(entity.id);
@@ -685,6 +773,17 @@ function WorldBibleRoute({activeProject}: WorldBibleRouteProps) {
                           : 'Promote to parent'}
                       </button>
                     )}
+                    <button
+                      type='button'
+                      onClick={() => void handleAddEntityToCompendium(entity)}
+                      disabled={linkingCompendiumEntityId === entity.id}
+                    >
+                      {linkingCompendiumEntityId === entity.id
+                        ? 'Linking...'
+                        : compendiumLinkedEntityIds.has(entity.id)
+                          ? 'Update Compendium'
+                          : 'Add to Compendium'}
+                    </button>
                   </div>
                 </li>
               ))}
