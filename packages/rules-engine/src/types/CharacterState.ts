@@ -13,9 +13,17 @@ export const InventoryItemSchema = z.object({
   
   // Item-specific state
   durability: z.number().optional(),
+  maxDurability: z.number().optional(),
   charges: z.number().optional(),
   quality: z.number().optional(),
   purity: z.number().optional(),
+
+  // Durability and legacy progression
+  usageCount: z.number().default(0),
+  breakCount: z.number().default(0),
+  legacyTier: z.number().default(0),
+  legacyName: z.string().optional(),
+  yieldBonusPercent: z.number().default(0),
   
   // Custom properties
   properties: z.record(z.unknown()).optional(),

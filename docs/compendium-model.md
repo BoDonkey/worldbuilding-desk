@@ -84,8 +84,12 @@ This makes compendium progression an explicit part of world/rules design.
   - `advanceTime(...)` with `seconds` or abstract `ticks`
   - exposure tracking (`recordExposure`, `clearExposure`)
   - threshold-based ailment application (`applyExposureAilments`)
+  - item durability progression (`applyItemDurability`)
+  - break outcomes to crafting progression (`getCraftingProgress`)
 - Example cave-lung preset:
   - `packages/rules-engine/examples/cave-lung-preset.ts`
+- Example legacy crafting defaults:
+  - `packages/rules-engine/examples/legacy-crafting-preset.ts`
 
 ## Sector Mastery (Zone Affinity)
 

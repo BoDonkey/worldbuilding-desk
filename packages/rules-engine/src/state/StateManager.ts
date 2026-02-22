@@ -37,6 +37,27 @@ export interface ExposureAilmentDefinition {
   data?: Record<string, unknown>;
 }
 
+export interface ItemDurabilityOptions {
+  durabilityCost?: number;
+  allowBreak?: boolean;
+  scrapOnBreak?: number;
+  insightOnBreak?: number;
+  legacyUsageThreshold?: number;
+  legacyYieldIncrement?: number;
+  legacyNamePrefix?: string;
+}
+
+export interface ItemDurabilityResult {
+  state: CharacterState;
+  broken: boolean;
+  removed: boolean;
+  gainedScrap: number;
+  gainedInsight: number;
+  legacyTierIncreased: boolean;
+  newLegacyTier?: number;
+  itemName?: string;
+}
+
 export class StateManager {
   private states: Map<string, CharacterState>;
   private engine: RulesEngine;
@@ -497,6 +518,154 @@ export class StateManager {
 
     this.states.set(characterId, newState);
     return newState;
+  }
+
+  /**
+   * Add a modifier to a character
+   */
+  applyItemDurability(
+    characterId: string,
+    itemInstanceId: string,
+    options: ItemDurabilityOptions = {}
+  ): ItemDurabilityResult {
+    const state = this.states.get(characterId);
+    if (!state) {
+      throw new Error(`Character ${characterId} not found`);
+    }
+
+    const durabilityCost = Math.max(0, options.durabilityCost ?? 1);
+    const allowBreak = options.allowBreak ?? true;
+    const scrapOnBreak = Math.max(0, options.scrapOnBreak ?? 1);
+    const insightOnBreak = Math.max(0, options.insightOnBreak ?? 1);
+    const legacyUsageThreshold = Math.max(1, options.legacyUsageThreshold ?? 100);
+    const legacyYieldIncrement = options.legacyYieldIncrement ?? 0.02;
+    const legacyNamePrefix = options.legacyNamePrefix ?? 'Legacy';
+
+    let broken = false;
+    let removed = false;
+    let gainedScrap = 0;
+    let gainedInsight = 0;
+    let legacyTierIncreased = false;
+    let newLegacyTier: number | undefined;
+    let itemName: string | undefined;
+    let found = false;
+
+    const nextState = updateState(state, (draft) => {
+      const crafting = (draft.custom ?? {}) as Record<string, unknown>;
+      const progression = ((crafting.progression ?? {}) as Record<string, unknown>);
+
+      const processItem = (item: {
+        name: string;
+        durability?: number;
+        usageCount?: number;
+        breakCount?: number;
+        legacyTier?: number;
+        legacyName?: string;
+        yieldBonusPercent?: number;
+      }) => {
+        item.usageCount = (item.usageCount ?? 0) + 1;
+
+        const currentTier = item.legacyTier ?? 0;
+        const nextTierTarget = legacyUsageThreshold * (currentTier + 1);
+        if (item.usageCount >= nextTierTarget) {
+          item.legacyTier = currentTier + 1;
+          item.yieldBonusPercent = (item.yieldBonusPercent ?? 0) + legacyYieldIncrement;
+          item.legacyName = `${legacyNamePrefix} ${item.name}`;
+          itemName = item.legacyName;
+          legacyTierIncreased = true;
+          newLegacyTier = item.legacyTier;
+        } else {
+          itemName = item.legacyName ?? item.name;
+        }
+
+        if (item.durability === undefined || durabilityCost === 0) {
+          return false;
+        }
+
+        item.durability = item.durability - durabilityCost;
+        if (item.durability > 0) {
+          return false;
+        }
+
+        broken = true;
+        item.breakCount = (item.breakCount ?? 0) + 1;
+        gainedScrap = scrapOnBreak + (item.legacyTier ?? 0);
+        gainedInsight = insightOnBreak;
+        progression.craftingScrap = Number(progression.craftingScrap ?? 0) + gainedScrap;
+        progression.craftingInsight = Number(progression.craftingInsight ?? 0) + gainedInsight;
+        return allowBreak;
+      };
+
+      // Inventory items
+      for (let index = 0; index < draft.inventory.items.length; index++) {
+        const item = draft.inventory.items[index];
+        if (item.id !== itemInstanceId) continue;
+        found = true;
+        const shouldRemove = processItem(item);
+        if (shouldRemove) {
+          draft.inventory.items.splice(index, 1);
+          removed = true;
+        } else if (broken) {
+          item.durability = 0;
+        }
+        break;
+      }
+
+      // Equipment slots
+      if (!found) {
+        for (const [slot, item] of Object.entries(draft.equipment)) {
+          if (!item || item.id !== itemInstanceId) continue;
+          found = true;
+          const shouldRemove = processItem(item);
+          if (shouldRemove) {
+            draft.equipment[slot] = null;
+            removed = true;
+          } else if (broken) {
+            item.durability = 0;
+          }
+          break;
+        }
+      }
+
+      if (!found) {
+        throw new Error(`Item ${itemInstanceId} not found`);
+      }
+
+      draft.custom = {
+        ...crafting,
+        progression
+      };
+      draft.updatedAt = Date.now();
+    });
+
+    this.states.set(characterId, nextState);
+    return {
+      state: nextState,
+      broken,
+      removed,
+      gainedScrap,
+      gainedInsight,
+      legacyTierIncreased,
+      newLegacyTier,
+      itemName
+    };
+  }
+
+  getCraftingProgress(characterId: string): {
+    scrap: number;
+    insight: number;
+  } {
+    const state = this.states.get(characterId);
+    if (!state) {
+      throw new Error(`Character ${characterId} not found`);
+    }
+
+    const custom = (state.custom ?? {}) as Record<string, unknown>;
+    const progression = ((custom.progression ?? {}) as Record<string, unknown>);
+    return {
+      scrap: Number(progression.craftingScrap ?? 0),
+      insight: Number(progression.craftingInsight ?? 0)
+    };
   }
 
   /**
