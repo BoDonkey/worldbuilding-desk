@@ -1,10 +1,12 @@
 import {useEffect, useMemo, useState} from 'react';
 import type {
+  Character,
   CompendiumActionDefinition,
   CompendiumDomain,
   CompendiumEntry,
   CompendiumMilestone,
   CompendiumProgress,
+  PartySynergySuggestion,
   Project,
   SettlementModule,
   SettlementState,
@@ -14,8 +16,10 @@ import type {
   ZoneAffinityProgress
 } from '../entityTypes';
 import {
+  DEFAULT_PARTY_SYNERGY_RULES,
   canCraftRecipe,
   attachModuleToSettlement,
+  getPartySynergySuggestions,
   getActiveSettlementAuraEffects,
   getCompendiumActionLogs,
   getCompendiumEntriesByProject,
@@ -36,6 +40,7 @@ import {
   upsertZoneAffinityProfile,
   upsertCompendiumEntryFromEntity
 } from '../services/compendiumService';
+import {getCharactersByProject} from '../characterStorage';
 import {getEntitiesByProject} from '../entityStorage';
 
 interface CompendiumRouteProps {
@@ -88,6 +93,27 @@ function formatSettlementEffectLabel(
   return `${effect.targetType}:${effect.targetId} ${opText}${String(effect.value)}`;
 }
 
+function getCharacterRole(character: Character): string {
+  return String(character.fields.role ?? '').trim();
+}
+
+function formatSynergyStatus(
+  suggestion: PartySynergySuggestion,
+  characterById: Map<string, Character>
+): string {
+  const matchedNames = suggestion.matchedCharacterIds
+    .map((id) => characterById.get(id)?.name)
+    .filter(Boolean)
+    .join(', ');
+  if (suggestion.missingRoles.length === 0) {
+    return matchedNames ? `Active via ${matchedNames}.` : 'Active.';
+  }
+  const missing = suggestion.missingRoles.join(', ');
+  return matchedNames
+    ? `Need ${missing}. Current: ${matchedNames}.`
+    : `Need ${missing}.`;
+}
+
 function getDefaultActions(domain: CompendiumDomain): CompendiumActionDefinition[] {
   if (domain === 'beast') {
     return [
@@ -118,6 +144,8 @@ function CompendiumRoute({activeProject}: CompendiumRouteProps) {
     ReturnType<typeof getCompendiumActionLogs>
   >>([]);
   const [worldEntities, setWorldEntities] = useState<WorldEntity[]>([]);
+  const [characters, setCharacters] = useState<Character[]>([]);
+  const [activePartyCharacterIds, setActivePartyCharacterIds] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isRecordingKey, setIsRecordingKey] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<{
@@ -175,6 +203,8 @@ function CompendiumRoute({activeProject}: CompendiumRouteProps) {
       setProgress(null);
       setLogs([]);
       setWorldEntities([]);
+      setCharacters([]);
+      setActivePartyCharacterIds([]);
       return;
     }
 
@@ -191,9 +221,10 @@ function CompendiumRoute({activeProject}: CompendiumRouteProps) {
       getSettlementModulesByProject(activeProject.id),
       getCompendiumProgress(activeProject.id),
       getCompendiumActionLogs(activeProject.id),
-      getEntitiesByProject(activeProject.id)
+      getEntitiesByProject(activeProject.id),
+      getCharactersByProject(activeProject.id)
     ])
-      .then(([loadedEntries, loadedMilestones, loadedRecipes, loadedZoneProfiles, loadedZoneProgress, loadedSettlementState, loadedSettlementModules, loadedProgress, loadedLogs, loadedEntities]) => {
+      .then(([loadedEntries, loadedMilestones, loadedRecipes, loadedZoneProfiles, loadedZoneProgress, loadedSettlementState, loadedSettlementModules, loadedProgress, loadedLogs, loadedEntities, loadedCharacters]) => {
         if (cancelled) return;
         setEntries(loadedEntries);
         setMilestones(loadedMilestones);
@@ -205,6 +236,17 @@ function CompendiumRoute({activeProject}: CompendiumRouteProps) {
         setProgress(loadedProgress);
         setLogs(loadedLogs);
         setWorldEntities(loadedEntities);
+        setCharacters(loadedCharacters);
+        setActivePartyCharacterIds((prev) => {
+          if (prev.length === 0) {
+            return loadedCharacters.map((character) => character.id);
+          }
+          const loadedIdSet = new Set(loadedCharacters.map((character) => character.id));
+          const intersected = prev.filter((id) => loadedIdSet.has(id));
+          return intersected.length > 0
+            ? intersected
+            : loadedCharacters.map((character) => character.id);
+        });
       })
       .catch((error) => {
         if (cancelled) return;
@@ -242,6 +284,29 @@ function CompendiumRoute({activeProject}: CompendiumRouteProps) {
   const worldEntityById = useMemo(
     () => new Map(worldEntities.map((entity) => [entity.id, entity])),
     [worldEntities]
+  );
+  const characterById = useMemo(
+    () => new Map(characters.map((character) => [character.id, character])),
+    [characters]
+  );
+  const activePartyCharacters = useMemo(() => {
+    const selectedSet = new Set(activePartyCharacterIds);
+    return characters.filter((character) => selectedSet.has(character.id));
+  }, [characters, activePartyCharacterIds]);
+  const activePartySynergies = useMemo(
+    () =>
+      getPartySynergySuggestions({
+        characters: activePartyCharacters
+      }),
+    [activePartyCharacters]
+  );
+  const rosterSynergyOpportunities = useMemo(
+    () =>
+      getPartySynergySuggestions({
+        characters,
+        rules: DEFAULT_PARTY_SYNERGY_RULES
+      }).filter((suggestion) => suggestion.missingRoles.length > 0),
+    [characters]
   );
   const zoneProgressByKey = useMemo(
     () => new Map(zoneProgress.map((progressItem) => [progressItem.biomeKey, progressItem])),
@@ -570,6 +635,14 @@ function CompendiumRoute({activeProject}: CompendiumRouteProps) {
     } finally {
       setIsRecordingKey(null);
     }
+  };
+
+  const togglePartyCharacter = (characterId: string): void => {
+    setActivePartyCharacterIds((prev) =>
+      prev.includes(characterId)
+        ? prev.filter((id) => id !== characterId)
+        : [...prev, characterId]
+    );
   };
 
   if (!activeProject) {
@@ -1009,6 +1082,100 @@ function CompendiumRoute({activeProject}: CompendiumRouteProps) {
                   </li>
                 );
               })}
+            </ul>
+          </section>
+
+          <section style={{padding: '1rem', border: '1px solid #ddd', borderRadius: '8px'}}>
+            <h2 style={{marginTop: 0}}>Community / Logistics</h2>
+            <p style={{marginTop: 0, fontSize: '0.85rem', color: '#6b7280'}}>
+              Shared party synergy buffs driven by role combinations. Select the
+              currently active party to preview concrete in-scene combo effects.
+            </p>
+            <div style={{fontSize: '0.85rem', marginBottom: '0.5rem'}}>
+              <strong>Active Party Members</strong>
+            </div>
+            <div style={{display: 'grid', gap: '0.35rem', marginBottom: '0.8rem'}}>
+              {characters.length === 0 ? (
+                <div style={{fontSize: '0.82rem', color: '#6b7280'}}>
+                  No characters yet. Add role-tagged characters to enable synergy.
+                </div>
+              ) : (
+                characters.map((character) => (
+                  <label
+                    key={character.id}
+                    style={{display: 'flex', alignItems: 'center', gap: '0.45rem'}}
+                  >
+                    <input
+                      type='checkbox'
+                      checked={activePartyCharacterIds.includes(character.id)}
+                      onChange={() => togglePartyCharacter(character.id)}
+                    />
+                    <span>
+                      {character.name}
+                      <span style={{fontSize: '0.8rem', color: '#6b7280'}}>
+                        {' '}
+                        ({getCharacterRole(character) || 'no role'})
+                      </span>
+                    </span>
+                  </label>
+                ))
+              )}
+            </div>
+
+            <div style={{fontSize: '0.85rem', marginBottom: '0.45rem'}}>
+              <strong>Active Combo Buffs</strong>
+            </div>
+            <ul style={{listStyle: 'none', padding: 0, marginTop: 0}}>
+              {activePartySynergies.filter((item) => item.missingRoles.length === 0)
+                .length === 0 ? (
+                <li style={{fontSize: '0.82rem', color: '#6b7280'}}>
+                  No active combos for the current party selection.
+                </li>
+              ) : (
+                activePartySynergies
+                  .filter((item) => item.missingRoles.length === 0)
+                  .map((suggestion) => (
+                    <li key={suggestion.ruleId} style={{marginBottom: '0.55rem'}}>
+                      <strong>{suggestion.ruleName}</strong>
+                      {suggestion.maxDistanceMeters ? (
+                        <span style={{fontSize: '0.8rem', color: '#6b7280'}}>
+                          {' '}
+                          ({suggestion.maxDistanceMeters}m proximity)
+                        </span>
+                      ) : null}
+                      <div style={{fontSize: '0.82rem'}}>{suggestion.effectDescription}</div>
+                      <div style={{fontSize: '0.8rem', color: '#4b5563'}}>
+                        {formatSynergyStatus(suggestion, characterById)}
+                      </div>
+                    </li>
+                  ))
+              )}
+            </ul>
+
+            <div style={{fontSize: '0.85rem', marginBottom: '0.45rem'}}>
+              <strong>Roster Opportunities</strong>
+            </div>
+            <ul style={{listStyle: 'none', padding: 0, marginTop: 0, marginBottom: 0}}>
+              {rosterSynergyOpportunities.length === 0 ? (
+                <li style={{fontSize: '0.82rem', color: '#6b7280'}}>
+                  Full roster can already satisfy all default synergy rules.
+                </li>
+              ) : (
+                rosterSynergyOpportunities.map((suggestion) => (
+                  <li key={`roster-${suggestion.ruleId}`} style={{marginBottom: '0.55rem'}}>
+                    <strong>{suggestion.ruleName}</strong>
+                    <div style={{fontSize: '0.82rem'}}>{suggestion.effectDescription}</div>
+                    <div style={{fontSize: '0.8rem', color: '#4b5563'}}>
+                      {formatSynergyStatus(suggestion, characterById)}
+                    </div>
+                    {suggestion.questPrompt && (
+                      <div style={{fontSize: '0.8rem', color: '#6b7280'}}>
+                        Prompt seed: {suggestion.questPrompt}
+                      </div>
+                    )}
+                  </li>
+                ))
+              )}
             </ul>
           </section>
 

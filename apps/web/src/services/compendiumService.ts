@@ -1,9 +1,12 @@
 import type {
+  Character,
   CompendiumActionLog,
   CompendiumEntry,
   CompendiumDomain,
   CompendiumMilestone,
   CompendiumProgress,
+  PartySynergyRule,
+  PartySynergySuggestion,
   RecipeMaterialRequirement,
   WorldEntity,
   UnlockableRecipe,
@@ -64,6 +67,36 @@ export interface RecordZoneExposureResult {
   unlockedMilestoneIds: string[];
 }
 
+export const DEFAULT_PARTY_SYNERGY_RULES: PartySynergyRule[] = [
+  {
+    id: 'chef-miner-logistics',
+    name: 'Logistics Efficiency',
+    requiredRoles: ['chef', 'miner'],
+    maxDistanceMeters: 50,
+    effectDescription: 'Raw ore carry weight reduced by 10%.',
+    questPrompt:
+      'Generate a duo logistics run where mining and food prep must be coordinated under time pressure.'
+  },
+  {
+    id: 'hunter-tanner-provisioning',
+    name: 'Field Provisioning',
+    requiredRoles: ['hunter', 'tanner'],
+    maxDistanceMeters: 60,
+    effectDescription: 'Hide/meat processing speed increased by 15%.',
+    questPrompt:
+      'Generate a hunting expedition that rewards synchronized kill and skin windows.'
+  },
+  {
+    id: 'scout-crafter-supplychain',
+    name: 'Rapid Supply Chain',
+    requiredRoles: ['scout', 'crafter'],
+    maxDistanceMeters: 80,
+    effectDescription: 'Workbench setup and deployable crafting time reduced by 12%.',
+    questPrompt:
+      'Generate a route-planning objective where scouting unlocks faster crafting opportunities.'
+  }
+];
+
 function requestToPromise<T>(request: IDBRequest<T>): Promise<T> {
   return new Promise((resolve, reject) => {
     request.onsuccess = () => resolve(request.result);
@@ -83,6 +116,56 @@ function normalizeQuantity(quantity?: number): number {
     throw new Error('quantity must be a positive number');
   }
   return quantity;
+}
+
+function normalizeRole(role: string | undefined): string {
+  return (role ?? '').trim().toLowerCase();
+}
+
+export function getPartySynergySuggestions(params: {
+  characters: Character[];
+  rules?: PartySynergyRule[];
+}): PartySynergySuggestion[] {
+  const rules = params.rules ?? DEFAULT_PARTY_SYNERGY_RULES;
+  const roleBuckets = new Map<string, string[]>();
+
+  for (const character of params.characters) {
+    const role = normalizeRole(character.fields.role);
+    if (!role) continue;
+    const existing = roleBuckets.get(role);
+    if (existing) {
+      existing.push(character.id);
+    } else {
+      roleBuckets.set(role, [character.id]);
+    }
+  }
+
+  const suggestions: PartySynergySuggestion[] = [];
+  for (const rule of rules) {
+    const matchedCharacterIds: string[] = [];
+    const missingRoles: string[] = [];
+    for (const requiredRole of rule.requiredRoles) {
+      const normalizedRole = normalizeRole(requiredRole);
+      const matches = roleBuckets.get(normalizedRole);
+      if (!matches || matches.length === 0) {
+        missingRoles.push(requiredRole);
+        continue;
+      }
+      matchedCharacterIds.push(matches[0]);
+    }
+
+    suggestions.push({
+      ruleId: rule.id,
+      ruleName: rule.name,
+      matchedCharacterIds,
+      missingRoles,
+      effectDescription: rule.effectDescription,
+      questPrompt: rule.questPrompt,
+      maxDistanceMeters: rule.maxDistanceMeters
+    });
+  }
+
+  return suggestions;
 }
 
 export async function getCompendiumEntriesByProject(

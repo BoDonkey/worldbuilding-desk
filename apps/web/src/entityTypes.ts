@@ -328,3 +328,22 @@ export interface SettlementState {
   moduleIds: string[];
   updatedAt: number;
 }
+
+export interface PartySynergyRule {
+  id: string;
+  name: string;
+  requiredRoles: string[];
+  maxDistanceMeters?: number;
+  effectDescription: string;
+  questPrompt?: string;
+}
+
+export interface PartySynergySuggestion {
+  ruleId: string;
+  ruleName: string;
+  matchedCharacterIds: string[];
+  missingRoles: string[];
+  effectDescription: string;
+  questPrompt?: string;
+  maxDistanceMeters?: number;
+}
