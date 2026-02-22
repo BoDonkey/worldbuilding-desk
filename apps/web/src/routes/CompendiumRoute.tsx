@@ -86,6 +86,19 @@ const SETTLEMENT_EFFECT_OPERATION_OPTIONS: SettlementModule['effects'][number]['
   'multiply',
   'set'
 ];
+type BaseStatKey = keyof NonNullable<SettlementState['baseStats']>;
+const BASE_STAT_KEYS: BaseStatKey[] = [
+  'defense',
+  'storageCapacity',
+  'craftingThroughput',
+  'morale'
+];
+const BASE_STAT_LIMITS: Record<BaseStatKey, {min: number; max: number}> = {
+  defense: {min: 0, max: 100000},
+  storageCapacity: {min: 0, max: 100000},
+  craftingThroughput: {min: 0, max: 100000},
+  morale: {min: 0, max: 100000}
+};
 
 function formatSettlementEffectLabel(
   effect: SettlementModule['effects'][number]
@@ -97,6 +110,22 @@ function formatSettlementEffectLabel(
         ? 'x'
         : '=';
   return `${effect.targetType}:${effect.targetId} ${opText}${String(effect.value)}`;
+}
+
+function toBaseStatsDraft(
+  baseStats: NonNullable<SettlementState['baseStats']>
+): Record<BaseStatKey, string> {
+  return {
+    defense: String(baseStats.defense),
+    storageCapacity: String(baseStats.storageCapacity),
+    craftingThroughput: String(baseStats.craftingThroughput),
+    morale: String(baseStats.morale)
+  };
+}
+
+function clampBaseStatValue(key: BaseStatKey, value: number): number {
+  const limits = BASE_STAT_LIMITS[key];
+  return Math.min(limits.max, Math.max(limits.min, Math.floor(value)));
 }
 
 function getCharacterRole(character: Character): string {
@@ -193,6 +222,12 @@ function CompendiumRoute({activeProject}: CompendiumRouteProps) {
   const [moduleValue, setModuleValue] = useState('5');
   const [isSavingModule, setIsSavingModule] = useState(false);
   const [isSavingFortress, setIsSavingFortress] = useState(false);
+  const [baseStatsDraft, setBaseStatsDraft] = useState<Record<BaseStatKey, string>>({
+    defense: '10',
+    storageCapacity: '100',
+    craftingThroughput: '100',
+    morale: '50'
+  });
 
   const [quantityByActionKey, setQuantityByActionKey] = useState<
     Record<string, number>
@@ -212,6 +247,12 @@ function CompendiumRoute({activeProject}: CompendiumRouteProps) {
       setWorldEntities([]);
       setCharacters([]);
       setActivePartyCharacterIds([]);
+      setBaseStatsDraft({
+        defense: '10',
+        storageCapacity: '100',
+        craftingThroughput: '100',
+        morale: '50'
+      });
       return;
     }
 
@@ -273,6 +314,11 @@ function CompendiumRoute({activeProject}: CompendiumRouteProps) {
       cancelled = true;
     };
   }, [activeProject]);
+
+  useEffect(() => {
+    if (!settlementState) return;
+    setBaseStatsDraft(toBaseStatsDraft(settlementState.baseStats));
+  }, [settlementState]);
 
   const completedActionSet = useMemo(() => {
     const set = new Set<string>();
@@ -349,6 +395,12 @@ function CompendiumRoute({activeProject}: CompendiumRouteProps) {
       tiers: DEFAULT_FORTRESS_TIERS
     });
   }, [settlementState]);
+  const isBaseStatsDraftDirty = useMemo(() => {
+    if (!settlementState) return false;
+    return BASE_STAT_KEYS.some(
+      (key) => baseStatsDraft[key] !== String(settlementState.baseStats[key])
+    );
+  }, [baseStatsDraft, settlementState]);
   const parsedPreviewMaterials = useMemo(() => {
     const result: Record<string, number> = {};
     for (const rawLine of previewMaterialsText.split('\n')) {
@@ -696,25 +748,41 @@ function CompendiumRoute({activeProject}: CompendiumRouteProps) {
     }
   };
 
-  const handleBaseStatChange = async (
-    statKey: keyof NonNullable<SettlementState['baseStats']>,
-    value: number
-  ) => {
-    if (!activeProject || !settlementState || !Number.isFinite(value)) return;
+  const handleBaseStatDraftChange = (statKey: BaseStatKey, value: string): void => {
+    setBaseStatsDraft((prev) => ({
+      ...prev,
+      [statKey]: value
+    }));
+  };
+
+  const handleSaveBaseStats = async () => {
+    if (!activeProject || !settlementState) return;
+    const nextBaseStats: Partial<SettlementState['baseStats']> = {};
+    for (const key of BASE_STAT_KEYS) {
+      const parsed = Number(baseStatsDraft[key].trim());
+      if (!Number.isFinite(parsed)) {
+        setFeedback({
+          tone: 'error',
+          message: `Base stat "${key}" must be a valid number.`
+        });
+        return;
+      }
+      nextBaseStats[key] = clampBaseStatValue(key, parsed);
+    }
+
     setIsSavingFortress(true);
     setFeedback(null);
     try {
       const nextState = await updateSettlementBaseStats({
         projectId: activeProject.id,
-        baseStats: {
-          [statKey]: value
-        }
+        baseStats: nextBaseStats
       });
       setSettlementState(nextState);
-      setFeedback({tone: 'success', message: `Updated base stat "${statKey}".`});
+      setBaseStatsDraft(toBaseStatsDraft(nextState.baseStats));
+      setFeedback({tone: 'success', message: 'Base stats saved.'});
     } catch (error) {
       const message =
-        error instanceof Error ? error.message : 'Unable to update base stat.';
+        error instanceof Error ? error.message : 'Unable to update base stats.';
       setFeedback({tone: 'error', message});
     } finally {
       setIsSavingFortress(false);
@@ -1392,23 +1460,40 @@ function CompendiumRoute({activeProject}: CompendiumRouteProps) {
                   marginBottom: '0.65rem'
                 }}
               >
-                {(Object.keys(settlementState.baseStats) as Array<
-                  keyof typeof settlementState.baseStats
-                >).map((key) => (
+                {BASE_STAT_KEYS.map((key) => (
                   <label key={`base-${key}`} style={{fontSize: '0.82rem'}}>
                     {key}
                     <input
                       type='number'
-                      value={settlementState.baseStats[key]}
-                      onChange={(e) =>
-                        void handleBaseStatChange(key, Number(e.target.value))
-                      }
+                      min={BASE_STAT_LIMITS[key].min}
+                      max={BASE_STAT_LIMITS[key].max}
+                      step={1}
+                      value={baseStatsDraft[key]}
+                      onChange={(e) => handleBaseStatDraftChange(key, e.target.value)}
                       style={{width: '100%'}}
                     />
                   </label>
                 ))}
               </div>
             )}
+            <div style={{display: 'flex', gap: '0.45rem', marginBottom: '0.7rem'}}>
+              <button
+                type='button'
+                onClick={() => void handleSaveBaseStats()}
+                disabled={!settlementState || !isBaseStatsDraftDirty || isSavingFortress}
+              >
+                {isSavingFortress ? 'Saving...' : 'Save Base Stats'}
+              </button>
+              <button
+                type='button'
+                onClick={() =>
+                  settlementState && setBaseStatsDraft(toBaseStatsDraft(settlementState.baseStats))
+                }
+                disabled={!settlementState || !isBaseStatsDraftDirty || isSavingFortress}
+              >
+                Reset
+              </button>
+            </div>
             <div style={{fontSize: '0.85rem', marginBottom: '0.5rem'}}>
               <strong>Fortress Tier Effects:</strong>{' '}
               {settlementComputedEffects.fortressEffects.length}

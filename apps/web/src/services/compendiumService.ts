@@ -165,14 +165,57 @@ function createDefaultSettlementBaseStats(): SettlementState['baseStats'] {
   };
 }
 
+const SETTLEMENT_BASE_STAT_LIMITS: Record<
+  keyof SettlementState['baseStats'],
+  {min: number; max: number}
+> = {
+  defense: {min: 0, max: 100000},
+  storageCapacity: {min: 0, max: 100000},
+  craftingThroughput: {min: 0, max: 100000},
+  morale: {min: 0, max: 100000}
+};
+
+function clampNumber(value: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, value));
+}
+
+function normalizeSettlementBaseStats(
+  input?: Partial<SettlementState['baseStats']>
+): SettlementState['baseStats'] {
+  const defaults = createDefaultSettlementBaseStats();
+  return {
+    defense: clampNumber(
+      Number.isFinite(input?.defense) ? Number(input?.defense) : defaults.defense,
+      SETTLEMENT_BASE_STAT_LIMITS.defense.min,
+      SETTLEMENT_BASE_STAT_LIMITS.defense.max
+    ),
+    storageCapacity: clampNumber(
+      Number.isFinite(input?.storageCapacity)
+        ? Number(input?.storageCapacity)
+        : defaults.storageCapacity,
+      SETTLEMENT_BASE_STAT_LIMITS.storageCapacity.min,
+      SETTLEMENT_BASE_STAT_LIMITS.storageCapacity.max
+    ),
+    craftingThroughput: clampNumber(
+      Number.isFinite(input?.craftingThroughput)
+        ? Number(input?.craftingThroughput)
+        : defaults.craftingThroughput,
+      SETTLEMENT_BASE_STAT_LIMITS.craftingThroughput.min,
+      SETTLEMENT_BASE_STAT_LIMITS.craftingThroughput.max
+    ),
+    morale: clampNumber(
+      Number.isFinite(input?.morale) ? Number(input?.morale) : defaults.morale,
+      SETTLEMENT_BASE_STAT_LIMITS.morale.min,
+      SETTLEMENT_BASE_STAT_LIMITS.morale.max
+    )
+  };
+}
+
 function normalizeSettlementState(state: SettlementState): SettlementState {
   return {
     ...state,
     fortressLevel: Math.max(1, Math.floor(state.fortressLevel || 1)),
-    baseStats: {
-      ...createDefaultSettlementBaseStats(),
-      ...(state.baseStats ?? {})
-    }
+    baseStats: normalizeSettlementBaseStats(state.baseStats ?? {})
   };
 }
 
@@ -786,10 +829,7 @@ export async function updateSettlementBaseStats(params: {
   const state = await getOrCreateSettlementState(params.projectId);
   const next: SettlementState = {
     ...state,
-    baseStats: {
-      ...state.baseStats,
-      ...params.baseStats
-    },
+    baseStats: normalizeSettlementBaseStats({...state.baseStats, ...params.baseStats}),
     updatedAt: Date.now()
   };
   await saveSettlementState(next);
