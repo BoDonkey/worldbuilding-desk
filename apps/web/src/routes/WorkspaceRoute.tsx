@@ -45,6 +45,7 @@ interface WorkspaceRouteProps {
 }
 
 type SaveStatus = 'idle' | 'saving' | 'saved';
+type FeedbackTone = 'success' | 'error';
 
 function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
   const [documents, setDocuments] = useState<WritingDocument[]>([]);
@@ -82,6 +83,16 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
     childLastSynced?: string;
     parentName?: string;
   }>({});
+  const [feedback, setFeedback] = useState<{
+    tone: FeedbackTone;
+    message: string;
+  } | null>(null);
+  const [isCreatingScene, setIsCreatingScene] = useState(false);
+  const [deletingDocumentId, setDeletingDocumentId] = useState<string | null>(null);
+  const [isPromotingDocument, setIsPromotingDocument] = useState(false);
+  const [isPromotingMemoryId, setIsPromotingMemoryId] = useState<string | null>(null);
+  const [isSavingMemory, setIsSavingMemory] = useState(false);
+  const [isSyncingCanon, setIsSyncingCanon] = useState(false);
   const refreshMemories = useCallback(async () => {
     if (!shodhService) {
       setMemories([]);
@@ -303,26 +314,37 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
   const handleNewDocument = async () => {
     if (!activeProject) return;
 
-    const now = Date.now();
-    const doc: WritingDocument = {
-      id: crypto.randomUUID(),
-      projectId: activeProject.id,
-      title: 'Untitled scene',
-      content: '<p></p>',
-      createdAt: now,
-      updatedAt: now
-    };
+    setIsCreatingScene(true);
+    setFeedback(null);
+    try {
+      const now = Date.now();
+      const doc: WritingDocument = {
+        id: crypto.randomUUID(),
+        projectId: activeProject.id,
+        title: 'Untitled scene',
+        content: '<p></p>',
+        createdAt: now,
+        updatedAt: now
+      };
 
-    await saveWritingDocument(doc);
+      await saveWritingDocument(doc);
 
-    setDocuments((prev) => [...prev, doc]);
-    setSelectedId(doc.id);
-    setSelectedCreatedAt(doc.createdAt);
-    setTitle(doc.title);
-    setContent(doc.content);
-    setSaveStatus('saved');
-    setLastSavedAt(Date.now());
-    setWordCount(0);
+      setDocuments((prev) => [...prev, doc]);
+      setSelectedId(doc.id);
+      setSelectedCreatedAt(doc.createdAt);
+      setTitle(doc.title);
+      setContent(doc.content);
+      setSaveStatus('saved');
+      setLastSavedAt(Date.now());
+      setWordCount(0);
+      setFeedback({tone: 'success', message: 'Created a new scene.'});
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'Unable to create scene.';
+      setFeedback({tone: 'error', message});
+    } finally {
+      setIsCreatingScene(false);
+    }
   };
 
   const handleSelectDocument = (doc: WritingDocument) => {
@@ -349,20 +371,44 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
       updatedAt: now
     };
 
-    await persistDoc(doc);
+    setSaveStatus('saving');
+    setFeedback(null);
+    try {
+      await persistDoc(doc);
+      setFeedback({tone: 'success', message: 'Scene saved.'});
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'Unable to save scene.';
+      setSaveStatus('idle');
+      setFeedback({tone: 'error', message});
+    }
   };
 
   const handleDelete = async (doc: WritingDocument) => {
-    await deleteWritingDocument(doc.id);
-    await Promise.all([
-      ragService?.deleteDocument(doc.id) ?? Promise.resolve(),
-      shodhService?.deleteMemoriesForDocument(doc.id) ?? Promise.resolve()
-    ]);
-    await refreshMemories();
-    setDocuments((prev) => prev.filter((d) => d.id !== doc.id));
+    const confirmed = window.confirm(`Delete "${doc.title || 'Untitled scene'}"?`);
+    if (!confirmed) return;
 
-    if (selectedId === doc.id) {
-      resetEditor();
+    setDeletingDocumentId(doc.id);
+    setFeedback(null);
+    try {
+      await deleteWritingDocument(doc.id);
+      await Promise.all([
+        ragService?.deleteDocument(doc.id) ?? Promise.resolve(),
+        shodhService?.deleteMemoriesForDocument(doc.id) ?? Promise.resolve()
+      ]);
+      await refreshMemories();
+      setDocuments((prev) => prev.filter((d) => d.id !== doc.id));
+
+      if (selectedId === doc.id) {
+        resetEditor();
+      }
+      setFeedback({tone: 'success', message: 'Scene deleted.'});
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'Unable to delete scene.';
+      setFeedback({tone: 'error', message});
+    } finally {
+      setDeletingDocumentId(null);
     }
   };
 
@@ -399,16 +445,27 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
       return;
     }
 
-    await shodhService.addMemory({
-      projectId: selectedDocument.projectId,
-      documentId: selectedDocument.id,
-      title: selectedDocument.title || 'Untitled scene',
-      summary: memoryDraft.trim(),
-      tags: ['scene', 'manual']
-    });
+    setIsSavingMemory(true);
+    setFeedback(null);
+    try {
+      await shodhService.addMemory({
+        projectId: selectedDocument.projectId,
+        documentId: selectedDocument.id,
+        title: selectedDocument.title || 'Untitled scene',
+        summary: memoryDraft.trim(),
+        tags: ['scene', 'manual']
+      });
 
-    await refreshMemories();
-    setMemoryModalOpen(false);
+      await refreshMemories();
+      setMemoryModalOpen(false);
+      setFeedback({tone: 'success', message: 'Memory saved.'});
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'Unable to save memory.';
+      setFeedback({tone: 'error', message});
+    } finally {
+      setIsSavingMemory(false);
+    }
   };
 
   const handleDeleteMemory = useCallback(
@@ -423,8 +480,19 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
   const handlePromoteMemory = useCallback(
     async (memory: MemoryEntry) => {
       if (!seriesBibleConfig?.parentProjectId) return;
-      await promoteMemoryToParent(memory, seriesBibleConfig.parentProjectId);
-      await refreshMemories();
+      setIsPromotingMemoryId(memory.id);
+      setFeedback(null);
+      try {
+        await promoteMemoryToParent(memory, seriesBibleConfig.parentProjectId);
+        await refreshMemories();
+        setFeedback({tone: 'success', message: 'Memory promoted to parent canon.'});
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : 'Unable to promote memory.';
+        setFeedback({tone: 'error', message});
+      } finally {
+        setIsPromotingMemoryId(null);
+      }
     },
     [seriesBibleConfig?.parentProjectId, refreshMemories]
   );
@@ -436,24 +504,46 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
     ) {
       return;
     }
-    await promoteDocumentToParent({
-      parentProjectId: seriesBibleConfig.parentProjectId,
-      documentId: selectedDocument.id,
-      title: selectedDocument.title || 'Untitled scene',
-      content: selectedDocument.content,
-      type: 'scene',
-      tags: ['scene']
-    });
+    setIsPromotingDocument(true);
+    setFeedback(null);
+    try {
+      await promoteDocumentToParent({
+        parentProjectId: seriesBibleConfig.parentProjectId,
+        documentId: selectedDocument.id,
+        title: selectedDocument.title || 'Untitled scene',
+        content: selectedDocument.content,
+        type: 'scene',
+        tags: ['scene']
+      });
+      setFeedback({tone: 'success', message: 'Scene promoted to parent canon.'});
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'Unable to promote scene.';
+      setFeedback({tone: 'error', message});
+    } finally {
+      setIsPromotingDocument(false);
+    }
   }, [seriesBibleConfig?.parentProjectId, selectedDocument]);
 
   const handleCanonSync = useCallback(async () => {
     if (!activeProject) return;
-    const updated = await syncChildWithParent(activeProject.id);
-    if (updated) {
-      setCanonState((prev) => ({
-        ...prev,
-        childLastSynced: updated.lastSyncedCanon
-      }));
+    setIsSyncingCanon(true);
+    setFeedback(null);
+    try {
+      const updated = await syncChildWithParent(activeProject.id);
+      if (updated) {
+        setCanonState((prev) => ({
+          ...prev,
+          childLastSynced: updated.lastSyncedCanon
+        }));
+      }
+      setFeedback({tone: 'success', message: 'Canon sync state updated.'});
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'Unable to mark canon as synced.';
+      setFeedback({tone: 'error', message});
+    } finally {
+      setIsSyncingCanon(false);
     }
   }, [activeProject]);
 
@@ -506,6 +596,24 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
   return (
     <section>
       <h1>Writing Workspace</h1>
+      {feedback && (
+        <p
+          role='status'
+          style={{
+            marginBottom: '1rem',
+            padding: '0.5rem 0.75rem',
+            borderRadius: '6px',
+            border: `1px solid ${
+              feedback.tone === 'error' ? '#fecaca' : '#bbf7d0'
+            }`,
+            backgroundColor:
+              feedback.tone === 'error' ? '#fef2f2' : '#f0fdf4',
+            color: feedback.tone === 'error' ? '#991b1b' : '#166534'
+          }}
+        >
+          {feedback.message}
+        </p>
+      )}
       {seriesBibleConfig?.parentProjectId && (
         <div
           style={{
@@ -532,8 +640,12 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
               Last synced:{' '}
               {canonState.childLastSynced ?? 'never'}
             </span>
-            <button type='button' onClick={() => void handleCanonSync()}>
-              Mark as synced
+            <button
+              type='button'
+              onClick={() => void handleCanonSync()}
+              disabled={isSyncingCanon}
+            >
+              {isSyncingCanon ? 'Marking...' : 'Mark as synced'}
             </button>
           </div>
         </div>
@@ -548,8 +660,12 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
           }}
         >
           <div style={{marginBottom: '1rem'}}>
-            <button type='button' onClick={handleNewDocument}>
-              + New Scene
+            <button
+              type='button'
+              onClick={handleNewDocument}
+              disabled={isCreatingScene}
+            >
+              {isCreatingScene ? 'Creating...' : '+ New Scene'}
             </button>
           </div>
 
@@ -594,9 +710,10 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
                 <button
                   type='button'
                   onClick={() => handleDelete(doc)}
+                  disabled={deletingDocumentId === doc.id}
                   style={{marginTop: '0.25rem', fontSize: '0.8rem'}}
                 >
-                  Delete
+                  {deletingDocumentId === doc.id ? 'Deleting...' : 'Delete'}
                 </button>
               </li>
             ))}
@@ -652,12 +769,22 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
                   flexWrap: 'wrap'
                 }}
               >
-                <button type='button' onClick={handleSave}>
+                <button
+                  type='button'
+                  onClick={handleSave}
+                  disabled={saveStatus === 'saving'}
+                >
                   Save now
                 </button>
                 {seriesBibleConfig?.parentProjectId && (
-                  <button type='button' onClick={() => void handlePromoteDocument()}>
-                    Promote scene to parent
+                  <button
+                    type='button'
+                    onClick={() => void handlePromoteDocument()}
+                    disabled={isPromotingDocument}
+                  >
+                    {isPromotingDocument
+                      ? 'Promoting...'
+                      : 'Promote scene to parent'}
                   </button>
                 )}
                 <button type='button' onClick={openMemoryModal}>
@@ -710,9 +837,12 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
                       <button
                         type='button'
                         onClick={() => void handlePromoteMemory(memory)}
+                        disabled={isPromotingMemoryId === memory.id}
                         style={{fontSize: '0.8rem'}}
                       >
-                        Promote
+                        {isPromotingMemoryId === memory.id
+                          ? 'Promoting...'
+                          : 'Promote'}
                       </button>
                     );
                   }
@@ -773,12 +903,17 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
               <button
                 type='button'
                 onClick={() => setMemoryModalOpen(false)}
+                disabled={isSavingMemory}
                 style={{background: 'transparent'}}
               >
                 Cancel
               </button>
-              <button type='button' onClick={handleMemorySave}>
-                Save memory
+              <button
+                type='button'
+                onClick={handleMemorySave}
+                disabled={isSavingMemory || !memoryDraft.trim()}
+              >
+                {isSavingMemory ? 'Saving...' : 'Save memory'}
               </button>
             </div>
           </div>

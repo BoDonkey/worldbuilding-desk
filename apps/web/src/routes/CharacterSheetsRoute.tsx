@@ -47,6 +47,12 @@ function CharacterSheetsRoute({activeProject}: CharacterSheetsRouteProps) {
     useState<ShodhMemoryProvider | null>(null);
   const [rulesetMemory, setRulesetMemory] = useState<MemoryEntry | null>(null);
   const [rulesetMemoryFilter, setRulesetMemoryFilter] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [deletingSheetId, setDeletingSheetId] = useState<string | null>(null);
+  const [feedback, setFeedback] = useState<{
+    tone: 'success' | 'error';
+    message: string;
+  } | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -187,13 +193,29 @@ function CharacterSheetsRoute({activeProject}: CharacterSheetsRouteProps) {
       updatedAt: now
     };
 
-    await saveCharacterSheet(sheet);
+    setIsSubmitting(true);
+    setFeedback(null);
+    try {
+      await saveCharacterSheet(sheet);
 
-    setSheets((prev) =>
-      editingId ? prev.map((s) => (s.id === id ? sheet : s)) : [...prev, sheet]
-    );
+      setSheets((prev) =>
+        editingId ? prev.map((s) => (s.id === id ? sheet : s)) : [...prev, sheet]
+      );
 
-    resetForm();
+      resetForm();
+      setFeedback({
+        tone: 'success',
+        message: editingId ? 'Character sheet updated.' : 'Character sheet created.'
+      });
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : 'Unable to save character sheet.';
+      setFeedback({tone: 'error', message});
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleEdit = (sheet: CharacterSheet) => {
@@ -217,9 +239,22 @@ function CharacterSheetsRoute({activeProject}: CharacterSheetsRouteProps) {
 
   const handleDelete = async (id: string) => {
     if (!confirm('Delete this character sheet?')) return;
-    await deleteCharacterSheet(id);
-    setSheets((prev) => prev.filter((s) => s.id !== id));
-    if (editingId === id) resetForm();
+    setDeletingSheetId(id);
+    setFeedback(null);
+    try {
+      await deleteCharacterSheet(id);
+      setSheets((prev) => prev.filter((s) => s.id !== id));
+      if (editingId === id) resetForm();
+      setFeedback({tone: 'success', message: 'Character sheet deleted.'});
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : 'Unable to delete character sheet.';
+      setFeedback({tone: 'error', message});
+    } finally {
+      setDeletingSheetId(null);
+    }
   };
 
   const updateStatValue = (definitionId: string, value: number) => {
@@ -290,6 +325,24 @@ function CharacterSheetsRoute({activeProject}: CharacterSheetsRouteProps) {
   return (
     <section>
       <h1>Character Sheets</h1>
+      {feedback && (
+        <p
+          role='status'
+          style={{
+            marginBottom: '1rem',
+            padding: '0.5rem 0.75rem',
+            borderRadius: '6px',
+            border: `1px solid ${
+              feedback.tone === 'error' ? '#fecaca' : '#bbf7d0'
+            }`,
+            backgroundColor:
+              feedback.tone === 'error' ? '#fef2f2' : '#f0fdf4',
+            color: feedback.tone === 'error' ? '#991b1b' : '#166534'
+          }}
+        >
+          {feedback.message}
+        </p>
+      )}
 
       {ruleset && (
         <ShodhMemoryPanel
@@ -542,11 +595,15 @@ function CharacterSheetsRoute({activeProject}: CharacterSheetsRouteProps) {
           </div>
 
           <div style={{display: 'flex', gap: '0.5rem'}}>
-            <button type='submit'>
-              {editingId ? 'Save Changes' : 'Create Character Sheet'}
+            <button type='submit' disabled={isSubmitting}>
+              {isSubmitting
+                ? 'Saving...'
+                : editingId
+                  ? 'Save Changes'
+                  : 'Create Character Sheet'}
             </button>
             {editingId && (
-              <button type='button' onClick={resetForm}>
+              <button type='button' onClick={resetForm} disabled={isSubmitting}>
                 Cancel
               </button>
             )}
@@ -651,8 +708,9 @@ function CharacterSheetsRoute({activeProject}: CharacterSheetsRouteProps) {
                     <button
                       type='button'
                       onClick={() => handleDelete(sheet.id)}
+                      disabled={deletingSheetId === sheet.id}
                     >
-                      Delete
+                      {deletingSheetId === sheet.id ? 'Deleting...' : 'Delete'}
                     </button>
                   </div>
                 </div>
