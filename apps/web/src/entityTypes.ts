@@ -292,3 +292,39 @@ export interface ZoneAffinityProgress {
   unlockedMilestoneIds: string[];
   updatedAt: number;
 }
+
+export type SettlementModuleSourceType =
+  | 'trophy'
+  | 'structure'
+  | 'station'
+  | 'totem'
+  | 'custom';
+
+export interface SettlementAuraEffect {
+  targetType: 'stat' | 'resource' | 'resistance' | 'custom';
+  targetId: string;
+  operation: 'add' | 'multiply' | 'set';
+  value: number | string | boolean;
+}
+
+export interface SettlementModule {
+  id: string;
+  projectId: string;
+  name: string;
+  sourceType: SettlementModuleSourceType;
+  sourceEntityId?: string;
+  auraRadiusMeters: number;
+  effects: SettlementAuraEffect[];
+  active: boolean;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface SettlementState {
+  id: string;
+  projectId: string;
+  name: string;
+  fortressLevel: number;
+  moduleIds: string[];
+  updatedAt: number;
+}

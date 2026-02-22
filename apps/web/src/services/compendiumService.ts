@@ -8,7 +8,9 @@ import type {
   WorldEntity,
   UnlockableRecipe,
   ZoneAffinityProfile,
-  ZoneAffinityProgress
+  ZoneAffinityProgress,
+  SettlementModule,
+  SettlementState
 } from '../entityTypes';
 import {
   openDb,
@@ -18,7 +20,9 @@ import {
   COMPENDIUM_PROGRESS_STORE_NAME,
   COMPENDIUM_RECIPE_STORE_NAME,
   ZONE_AFFINITY_PROFILE_STORE_NAME,
-  ZONE_AFFINITY_PROGRESS_STORE_NAME
+  ZONE_AFFINITY_PROGRESS_STORE_NAME,
+  SETTLEMENT_MODULE_STORE_NAME,
+  SETTLEMENT_STATE_STORE_NAME
 } from '../db';
 
 type RecordActionParams = {
@@ -561,4 +565,88 @@ export async function recordZoneExposure(
     progress: nextProgress,
     unlockedMilestoneIds
   };
+}
+
+function settlementStateId(projectId: string): string {
+  return `settlement:${projectId}`;
+}
+
+export async function getSettlementModulesByProject(
+  projectId: string
+): Promise<SettlementModule[]> {
+  const db = await openDb();
+  const tx = db.transaction(SETTLEMENT_MODULE_STORE_NAME, 'readonly');
+  const store = tx.objectStore(SETTLEMENT_MODULE_STORE_NAME);
+  const all = (await requestToPromise(store.getAll())) as SettlementModule[];
+  return all
+    .filter((module) => module.projectId === projectId)
+    .sort((a, b) => a.name.localeCompare(b.name));
+}
+
+export async function saveSettlementModule(module: SettlementModule): Promise<void> {
+  const db = await openDb();
+  const tx = db.transaction(SETTLEMENT_MODULE_STORE_NAME, 'readwrite');
+  const store = tx.objectStore(SETTLEMENT_MODULE_STORE_NAME);
+  await requestToPromise(store.put(module));
+}
+
+export async function getOrCreateSettlementState(
+  projectId: string,
+  name = 'Main Base'
+): Promise<SettlementState> {
+  const db = await openDb();
+  const tx = db.transaction(SETTLEMENT_STATE_STORE_NAME, 'readwrite');
+  const store = tx.objectStore(SETTLEMENT_STATE_STORE_NAME);
+  const id = settlementStateId(projectId);
+  const existing = (await requestToPromise(
+    store.get(id)
+  )) as SettlementState | undefined;
+  if (existing) {
+    return existing;
+  }
+  const created: SettlementState = {
+    id,
+    projectId,
+    name,
+    fortressLevel: 1,
+    moduleIds: [],
+    updatedAt: Date.now()
+  };
+  await requestToPromise(store.put(created));
+  return created;
+}
+
+export async function saveSettlementState(state: SettlementState): Promise<void> {
+  const db = await openDb();
+  const tx = db.transaction(SETTLEMENT_STATE_STORE_NAME, 'readwrite');
+  const store = tx.objectStore(SETTLEMENT_STATE_STORE_NAME);
+  await requestToPromise(store.put(state));
+}
+
+export async function attachModuleToSettlement(params: {
+  projectId: string;
+  moduleId: string;
+}): Promise<SettlementState> {
+  const state = await getOrCreateSettlementState(params.projectId);
+  if (state.moduleIds.includes(params.moduleId)) {
+    return state;
+  }
+  const next: SettlementState = {
+    ...state,
+    moduleIds: [...state.moduleIds, params.moduleId],
+    updatedAt: Date.now()
+  };
+  await saveSettlementState(next);
+  return next;
+}
+
+export function getActiveSettlementAuraEffects(params: {
+  settlementState: SettlementState;
+  modules: SettlementModule[];
+}): SettlementModule['effects'] {
+  const moduleSet = new Set(params.settlementState.moduleIds);
+  const activeModules = params.modules.filter(
+    (module) => module.active && moduleSet.has(module.id)
+  );
+  return activeModules.flatMap((module) => module.effects);
 }

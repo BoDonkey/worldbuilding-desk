@@ -6,6 +6,8 @@ import type {
   CompendiumMilestone,
   CompendiumProgress,
   Project,
+  SettlementModule,
+  SettlementState,
   UnlockableRecipe,
   WorldEntity,
   ZoneAffinityProfile,
@@ -13,11 +15,15 @@ import type {
 } from '../entityTypes';
 import {
   canCraftRecipe,
+  attachModuleToSettlement,
+  getActiveSettlementAuraEffects,
   getCompendiumActionLogs,
   getCompendiumEntriesByProject,
   getCompendiumMilestonesByProject,
   getCompendiumProgress,
   getRecipesByProject,
+  getOrCreateSettlementState,
+  getSettlementModulesByProject,
   getZoneAffinityPercent,
   getZoneAffinityProfilesByProject,
   getZoneAffinityProgressByProject,
@@ -25,6 +31,7 @@ import {
   recordCompendiumAction,
   saveCompendiumEntry,
   saveCompendiumMilestone,
+  saveSettlementModule,
   saveUnlockableRecipe,
   upsertZoneAffinityProfile,
   upsertCompendiumEntryFromEntity
@@ -50,6 +57,36 @@ const RECIPE_CATEGORY_OPTIONS: UnlockableRecipe['category'][] = [
   'alchemy',
   'custom'
 ];
+const SETTLEMENT_SOURCE_OPTIONS: SettlementModule['sourceType'][] = [
+  'trophy',
+  'structure',
+  'station',
+  'totem',
+  'custom'
+];
+const SETTLEMENT_EFFECT_TARGET_OPTIONS: SettlementModule['effects'][number]['targetType'][] = [
+  'resistance',
+  'stat',
+  'resource',
+  'custom'
+];
+const SETTLEMENT_EFFECT_OPERATION_OPTIONS: SettlementModule['effects'][number]['operation'][] = [
+  'add',
+  'multiply',
+  'set'
+];
+
+function formatSettlementEffectLabel(
+  effect: SettlementModule['effects'][number]
+): string {
+  const opText =
+    effect.operation === 'add'
+      ? '+'
+      : effect.operation === 'multiply'
+        ? 'x'
+        : '=';
+  return `${effect.targetType}:${effect.targetId} ${opText}${String(effect.value)}`;
+}
 
 function getDefaultActions(domain: CompendiumDomain): CompendiumActionDefinition[] {
   if (domain === 'beast') {
@@ -74,6 +111,8 @@ function CompendiumRoute({activeProject}: CompendiumRouteProps) {
   const [recipes, setRecipes] = useState<UnlockableRecipe[]>([]);
   const [zoneProfiles, setZoneProfiles] = useState<ZoneAffinityProfile[]>([]);
   const [zoneProgress, setZoneProgress] = useState<ZoneAffinityProgress[]>([]);
+  const [settlementState, setSettlementState] = useState<SettlementState | null>(null);
+  const [settlementModules, setSettlementModules] = useState<SettlementModule[]>([]);
   const [progress, setProgress] = useState<CompendiumProgress | null>(null);
   const [logs, setLogs] = useState<Awaited<
     ReturnType<typeof getCompendiumActionLogs>
@@ -109,6 +148,16 @@ function CompendiumRoute({activeProject}: CompendiumRouteProps) {
   const [selectedZoneKey, setSelectedZoneKey] = useState('');
   const [zoneExposureMinutes, setZoneExposureMinutes] = useState(10);
   const [isRecordingZone, setIsRecordingZone] = useState(false);
+  const [moduleName, setModuleName] = useState('');
+  const [moduleSourceType, setModuleSourceType] =
+    useState<SettlementModule['sourceType']>('trophy');
+  const [moduleTargetType, setModuleTargetType] =
+    useState<SettlementModule['effects'][number]['targetType']>('resistance');
+  const [moduleTargetId, setModuleTargetId] = useState('poison');
+  const [moduleOperation, setModuleOperation] =
+    useState<SettlementModule['effects'][number]['operation']>('add');
+  const [moduleValue, setModuleValue] = useState('5');
+  const [isSavingModule, setIsSavingModule] = useState(false);
 
   const [quantityByActionKey, setQuantityByActionKey] = useState<
     Record<string, number>
@@ -121,6 +170,8 @@ function CompendiumRoute({activeProject}: CompendiumRouteProps) {
       setRecipes([]);
       setZoneProfiles([]);
       setZoneProgress([]);
+      setSettlementState(null);
+      setSettlementModules([]);
       setProgress(null);
       setLogs([]);
       setWorldEntities([]);
@@ -136,17 +187,21 @@ function CompendiumRoute({activeProject}: CompendiumRouteProps) {
       getRecipesByProject(activeProject.id),
       getZoneAffinityProfilesByProject(activeProject.id),
       getZoneAffinityProgressByProject(activeProject.id),
+      getOrCreateSettlementState(activeProject.id),
+      getSettlementModulesByProject(activeProject.id),
       getCompendiumProgress(activeProject.id),
       getCompendiumActionLogs(activeProject.id),
       getEntitiesByProject(activeProject.id)
     ])
-      .then(([loadedEntries, loadedMilestones, loadedRecipes, loadedZoneProfiles, loadedZoneProgress, loadedProgress, loadedLogs, loadedEntities]) => {
+      .then(([loadedEntries, loadedMilestones, loadedRecipes, loadedZoneProfiles, loadedZoneProgress, loadedSettlementState, loadedSettlementModules, loadedProgress, loadedLogs, loadedEntities]) => {
         if (cancelled) return;
         setEntries(loadedEntries);
         setMilestones(loadedMilestones);
         setRecipes(loadedRecipes);
         setZoneProfiles(loadedZoneProfiles);
         setZoneProgress(loadedZoneProgress);
+        setSettlementState(loadedSettlementState);
+        setSettlementModules(loadedSettlementModules);
         setProgress(loadedProgress);
         setLogs(loadedLogs);
         setWorldEntities(loadedEntities);
@@ -192,6 +247,13 @@ function CompendiumRoute({activeProject}: CompendiumRouteProps) {
     () => new Map(zoneProgress.map((progressItem) => [progressItem.biomeKey, progressItem])),
     [zoneProgress]
   );
+  const activeSettlementEffects = useMemo(() => {
+    if (!settlementState) return [];
+    return getActiveSettlementAuraEffects({
+      settlementState,
+      modules: settlementModules
+    });
+  }, [settlementState, settlementModules]);
   const parsedPreviewMaterials = useMemo(() => {
     const result: Record<string, number> = {};
     for (const rawLine of previewMaterialsText.split('\n')) {
@@ -408,6 +470,57 @@ function CompendiumRoute({activeProject}: CompendiumRouteProps) {
       setFeedback({tone: 'error', message});
     } finally {
       setIsRecordingZone(false);
+    }
+  };
+
+  const handleAddSettlementModule = async () => {
+    if (!activeProject || !settlementState || !moduleName.trim()) return;
+    setIsSavingModule(true);
+    setFeedback(null);
+    try {
+      const parsedValue = Number(moduleValue);
+      const normalizedValue =
+        Number.isFinite(parsedValue) && moduleValue.trim() !== ''
+          ? parsedValue
+          : moduleValue;
+
+      const module: SettlementModule = {
+        id: crypto.randomUUID(),
+        projectId: activeProject.id,
+        name: moduleName.trim(),
+        sourceType: moduleSourceType,
+        auraRadiusMeters: 30,
+        active: true,
+        effects: [
+          {
+            targetType: moduleTargetType,
+            targetId: moduleTargetId.trim() || 'custom',
+            operation: moduleOperation,
+            value: normalizedValue
+          }
+        ],
+        createdAt: Date.now(),
+        updatedAt: Date.now()
+      };
+
+      await saveSettlementModule(module);
+      const nextState = await attachModuleToSettlement({
+        projectId: activeProject.id,
+        moduleId: module.id
+      });
+      setSettlementModules((prev) =>
+        [...prev, module].sort((a, b) => a.name.localeCompare(b.name))
+      );
+      setSettlementState(nextState);
+      setModuleName('');
+      setModuleValue('5');
+      setFeedback({tone: 'success', message: 'Settlement module added.'});
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'Unable to add settlement module.';
+      setFeedback({tone: 'error', message});
+    } finally {
+      setIsSavingModule(false);
     }
   };
 
@@ -896,6 +1009,158 @@ function CompendiumRoute({activeProject}: CompendiumRouteProps) {
                   </li>
                 );
               })}
+            </ul>
+          </section>
+
+          <section style={{padding: '1rem', border: '1px solid #ddd', borderRadius: '8px'}}>
+            <h2 style={{marginTop: 0}}>Settlement Aura</h2>
+            <p style={{marginTop: 0, fontSize: '0.85rem', color: '#6b7280'}}>
+              Generalized settlement buffs. Trophies are one source type, alongside
+              structures, stations, totems, and custom modules.
+            </p>
+            <label style={{display: 'block', marginBottom: '0.5rem'}}>
+              Module Name
+              <input
+                type='text'
+                value={moduleName}
+                onChange={(e) => setModuleName(e.target.value)}
+                placeholder='Cave Worm Trophy'
+                style={{width: '100%'}}
+              />
+            </label>
+            <label style={{display: 'block', marginBottom: '0.5rem'}}>
+              Source Type
+              <select
+                value={moduleSourceType}
+                onChange={(e) =>
+                  setModuleSourceType(e.target.value as SettlementModule['sourceType'])
+                }
+                style={{width: '100%'}}
+              >
+                {SETTLEMENT_SOURCE_OPTIONS.map((option) => (
+                  <option key={option} value={option}>
+                    {option}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem'}}>
+              <label style={{display: 'block', marginBottom: '0.5rem'}}>
+                Target Type
+                <select
+                  value={moduleTargetType}
+                  onChange={(e) =>
+                    setModuleTargetType(
+                      e.target.value as SettlementModule['effects'][number]['targetType']
+                    )
+                  }
+                  style={{width: '100%'}}
+                >
+                  {SETTLEMENT_EFFECT_TARGET_OPTIONS.map((option) => (
+                    <option key={option} value={option}>
+                      {option}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label style={{display: 'block', marginBottom: '0.5rem'}}>
+                Target ID
+                <input
+                  type='text'
+                  value={moduleTargetId}
+                  onChange={(e) => setModuleTargetId(e.target.value)}
+                  placeholder='poison'
+                  style={{width: '100%'}}
+                />
+              </label>
+            </div>
+            <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem'}}>
+              <label style={{display: 'block', marginBottom: '0.75rem'}}>
+                Operation
+                <select
+                  value={moduleOperation}
+                  onChange={(e) =>
+                    setModuleOperation(
+                      e.target.value as SettlementModule['effects'][number]['operation']
+                    )
+                  }
+                  style={{width: '100%'}}
+                >
+                  {SETTLEMENT_EFFECT_OPERATION_OPTIONS.map((option) => (
+                    <option key={option} value={option}>
+                      {option}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label style={{display: 'block', marginBottom: '0.75rem'}}>
+                Value
+                <input
+                  type='text'
+                  value={moduleValue}
+                  onChange={(e) => setModuleValue(e.target.value)}
+                  placeholder='5'
+                  style={{width: '100%'}}
+                />
+              </label>
+            </div>
+            <button
+              type='button'
+              onClick={() => void handleAddSettlementModule()}
+              disabled={isSavingModule || !settlementState || !moduleName.trim()}
+            >
+              {isSavingModule ? 'Adding...' : 'Add Settlement Module'}
+            </button>
+
+            <hr style={{margin: '0.9rem 0'}} />
+            <div style={{fontSize: '0.85rem', marginBottom: '0.5rem'}}>
+              <strong>Fortress Level:</strong> {settlementState?.fortressLevel ?? 1}
+            </div>
+            <div style={{fontSize: '0.85rem', marginBottom: '0.5rem'}}>
+              <strong>Active Aura Effects:</strong> {activeSettlementEffects.length}
+            </div>
+            <ul style={{listStyle: 'none', padding: 0, margin: 0}}>
+              {activeSettlementEffects.length === 0 ? (
+                <li style={{fontSize: '0.82rem', color: '#6b7280'}}>
+                  No active effects yet.
+                </li>
+              ) : (
+                activeSettlementEffects.map((effect, index) => (
+                  <li
+                    key={`active-effect-${effect.targetType}-${effect.targetId}-${index}`}
+                    style={{marginBottom: '0.35rem'}}
+                  >
+                    {formatSettlementEffectLabel(effect)}
+                  </li>
+                ))
+              )}
+            </ul>
+            <div style={{fontSize: '0.82rem', marginTop: '0.75rem'}}>
+              <strong>Installed Modules:</strong>
+            </div>
+            <ul style={{listStyle: 'none', padding: 0, marginTop: '0.35rem', marginBottom: 0}}>
+              {settlementModules.length === 0 ? (
+                <li style={{fontSize: '0.82rem', color: '#6b7280'}}>
+                  No modules installed.
+                </li>
+              ) : (
+                settlementModules.map((module) => (
+                  <li key={module.id} style={{marginBottom: '0.45rem'}}>
+                    <strong>{module.name}</strong>{' '}
+                    <span style={{fontSize: '0.8rem', color: '#6b7280'}}>
+                      [{module.sourceType}]
+                    </span>
+                    {module.effects.map((effect, effectIndex) => (
+                      <div
+                        key={`${module.id}-effect-${effectIndex}`}
+                        style={{fontSize: '0.8rem', color: '#4b5563'}}
+                      >
+                        {formatSettlementEffectLabel(effect)}
+                      </div>
+                    ))}
+                  </li>
+                ))
+              )}
             </ul>
           </section>
 
