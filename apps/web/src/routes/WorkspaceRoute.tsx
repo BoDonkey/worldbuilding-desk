@@ -1,4 +1,5 @@
-import {useEffect, useState, useCallback} from 'react';
+import {useEffect, useState, useCallback, useRef} from 'react';
+import type {ChangeEvent} from 'react';
 import type {Project, ProjectSettings, WritingDocument} from '../entityTypes';
 import {
   getDocumentsByProject,
@@ -88,11 +89,41 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
     message: string;
   } | null>(null);
   const [isCreatingScene, setIsCreatingScene] = useState(false);
+  const [isImportingDocuments, setIsImportingDocuments] = useState(false);
   const [deletingDocumentId, setDeletingDocumentId] = useState<string | null>(null);
   const [isPromotingDocument, setIsPromotingDocument] = useState(false);
   const [isPromotingMemoryId, setIsPromotingMemoryId] = useState<string | null>(null);
   const [isSavingMemory, setIsSavingMemory] = useState(false);
   const [isSyncingCanon, setIsSyncingCanon] = useState(false);
+  const importInputRef = useRef<HTMLInputElement | null>(null);
+
+  const fileNameToTitle = (name: string): string => {
+    const base = name.replace(/\.[^.]+$/, '').trim();
+    return base || 'Imported scene';
+  };
+
+  const plainTextToHtml = (text: string): string => {
+    const escaped = text
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+    const paragraphs = escaped
+      .split(/\n{2,}/)
+      .map((chunk) => chunk.trim())
+      .filter(Boolean);
+    if (paragraphs.length === 0) {
+      return '<p></p>';
+    }
+    return paragraphs.map((chunk) => `<p>${chunk.replace(/\n/g, '<br />')}</p>`).join('');
+  };
+
+  const fileToHtml = (fileName: string, rawContent: string): string => {
+    const lower = fileName.toLowerCase();
+    if (lower.endsWith('.html') || lower.endsWith('.htm')) {
+      return rawContent.trim() || '<p></p>';
+    }
+    return plainTextToHtml(rawContent);
+  };
   const refreshMemories = useCallback(async () => {
     if (!shodhService) {
       setMemories([]);
@@ -344,6 +375,64 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
       setFeedback({tone: 'error', message});
     } finally {
       setIsCreatingScene(false);
+    }
+  };
+
+  const handleImportDocuments = async (event: ChangeEvent<HTMLInputElement>) => {
+    if (!activeProject) return;
+    const fileList = event.target.files;
+    if (!fileList || fileList.length === 0) return;
+
+    setIsImportingDocuments(true);
+    setFeedback(null);
+    let importedCount = 0;
+    let failedCount = 0;
+    let lastImported: WritingDocument | null = null;
+
+    try {
+      const files = Array.from(fileList);
+      for (const file of files) {
+        try {
+          const raw = await file.text();
+          const now = Date.now();
+          const doc: WritingDocument = {
+            id: crypto.randomUUID(),
+            projectId: activeProject.id,
+            title: fileNameToTitle(file.name),
+            content: fileToHtml(file.name, raw),
+            createdAt: now,
+            updatedAt: now
+          };
+          await persistDoc(doc);
+          importedCount += 1;
+          lastImported = doc;
+        } catch {
+          failedCount += 1;
+        }
+      }
+
+      if (lastImported) {
+        setSelectedId(lastImported.id);
+        setSelectedCreatedAt(lastImported.createdAt);
+        setTitle(lastImported.title);
+        setContent(lastImported.content);
+        setWordCount(countWords(lastImported.content));
+      }
+
+      if (failedCount > 0) {
+        setFeedback({
+          tone: 'error',
+          message: `Imported ${importedCount} document(s); ${failedCount} failed.`
+        });
+      } else {
+        setFeedback({
+          tone: 'success',
+          message: `Imported ${importedCount} document(s).`
+        });
+      }
+    } finally {
+      setIsImportingDocuments(false);
+      event.target.value = '';
     }
   };
 
@@ -667,6 +756,22 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
             >
               {isCreatingScene ? 'Creating...' : '+ New Scene'}
             </button>
+            <button
+              type='button'
+              onClick={() => importInputRef.current?.click()}
+              disabled={isImportingDocuments}
+              style={{marginLeft: '0.5rem'}}
+            >
+              {isImportingDocuments ? 'Importing...' : 'Import'}
+            </button>
+            <input
+              ref={importInputRef}
+              type='file'
+              accept='.txt,.md,.markdown,.html,.htm,text/plain,text/markdown,text/html'
+              multiple
+              onChange={(e) => void handleImportDocuments(e)}
+              style={{display: 'none'}}
+            />
           </div>
 
           {documents.length === 0 && (
