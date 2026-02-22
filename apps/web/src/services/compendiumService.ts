@@ -66,6 +66,19 @@ export interface CraftingRuntimeModifiers {
   notes: string[];
 }
 
+interface NumericRuntimeModifier {
+  add: number;
+  multiply: number;
+  set?: number;
+}
+
+export interface CharacterRuntimeModifiers {
+  statModifiers: Record<string, NumericRuntimeModifier>;
+  resourceModifiers: Record<string, NumericRuntimeModifier>;
+  levelBonus: number;
+  notes: string[];
+}
+
 export interface RecordZoneExposureParams {
   projectId: string;
   biomeKey: string;
@@ -401,6 +414,109 @@ function applyMaterialCostMultiplier(
     ...requirement,
     quantity: Math.max(1, Math.ceil(requirement.quantity * safeMultiplier))
   }));
+}
+
+function applyNumericModifier(
+  value: number,
+  modifier: NumericRuntimeModifier | undefined
+): number {
+  if (!modifier) return value;
+  let next = value;
+  if (modifier.set !== undefined) {
+    next = modifier.set;
+  }
+  next += modifier.add;
+  next *= modifier.multiply;
+  return Math.round(next * 100) / 100;
+}
+
+function upsertNumericModifier(
+  bucket: Record<string, NumericRuntimeModifier>,
+  effect: SettlementModule['effects'][number]
+): void {
+  if (typeof effect.value !== 'number') return;
+  const key = effect.targetId;
+  const existing = bucket[key] ?? {add: 0, multiply: 1};
+  if (effect.operation === 'add') {
+    existing.add += effect.value;
+  } else if (effect.operation === 'multiply') {
+    existing.multiply *= effect.value;
+  } else if (effect.operation === 'set') {
+    existing.set = effect.value;
+  }
+  bucket[key] = existing;
+}
+
+export function deriveCharacterRuntimeModifiers(params: {
+  settlementState: SettlementState | null;
+  settlementModules: SettlementModule[];
+  activePartySynergies?: PartySynergySuggestion[];
+}): CharacterRuntimeModifiers {
+  if (!params.settlementState) {
+    return {
+      statModifiers: {},
+      resourceModifiers: {},
+      levelBonus: 0,
+      notes: []
+    };
+  }
+
+  const computed = getSettlementComputedEffects({
+    settlementState: normalizeSettlementState(params.settlementState),
+    modules: params.settlementModules
+  });
+  const statModifiers: Record<string, NumericRuntimeModifier> = {};
+  const resourceModifiers: Record<string, NumericRuntimeModifier> = {};
+  const notes: string[] = [];
+
+  for (const effect of computed.allEffects) {
+    if (effect.targetType === 'stat') {
+      upsertNumericModifier(statModifiers, effect);
+      notes.push(`Stat effect ${effect.targetId} (${effect.operation}) active.`);
+    } else if (effect.targetType === 'resource') {
+      upsertNumericModifier(resourceModifiers, effect);
+      notes.push(`Resource effect ${effect.targetId} (${effect.operation}) active.`);
+    }
+  }
+
+  const activeSynergies = (params.activePartySynergies ?? []).filter(
+    (synergy) => synergy.missingRoles.length === 0
+  );
+  const levelBonus = Math.min(2, activeSynergies.length);
+  if (levelBonus > 0) {
+    notes.push(`Party synergy grants +${levelBonus} effective level.`);
+  }
+
+  return {
+    statModifiers,
+    resourceModifiers,
+    levelBonus,
+    notes
+  };
+}
+
+export function getEffectiveStatValue(params: {
+  definitionId: string;
+  baseValue: number;
+  runtime: CharacterRuntimeModifiers;
+}): number {
+  return applyNumericModifier(
+    params.baseValue,
+    params.runtime.statModifiers[params.definitionId]
+  );
+}
+
+export function getEffectiveResourceValues(params: {
+  definitionId: string;
+  current: number;
+  max: number;
+  runtime: CharacterRuntimeModifiers;
+}): {current: number; max: number} {
+  const modifier = params.runtime.resourceModifiers[params.definitionId];
+  return {
+    current: applyNumericModifier(params.current, modifier),
+    max: applyNumericModifier(params.max, modifier)
+  };
 }
 
 export function deriveCraftingRuntimeModifiers(params: {

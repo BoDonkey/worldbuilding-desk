@@ -1,4 +1,4 @@
-import {useEffect, useState, useCallback} from 'react';
+import {useEffect, useState, useCallback, useMemo} from 'react';
 import type {FormEvent} from 'react';
 import type {
   Character,
@@ -26,6 +26,15 @@ import {
   promoteMemoryToParent,
   promoteDocumentToParent
 } from '../services/seriesBible/SeriesBibleService';
+import {
+  DEFAULT_PARTY_SYNERGY_RULES,
+  deriveCharacterRuntimeModifiers,
+  getEffectiveResourceValues,
+  getEffectiveStatValue,
+  getOrCreateSettlementState,
+  getPartySynergySuggestions,
+  getSettlementModulesByProject
+} from '../services/compendiumService';
 
 interface CharacterSheetsRouteProps {
   activeProject: Project | null;
@@ -42,6 +51,12 @@ function CharacterSheetsRoute({activeProject}: CharacterSheetsRouteProps) {
   const [resources, setResources] = useState<CharacterResource[]>([]);
   const [notes, setNotes] = useState('');
   const [characters, setCharacters] = useState<Character[]>([]);
+  const [settlementState, setSettlementState] = useState<Awaited<
+    ReturnType<typeof getOrCreateSettlementState>
+  > | null>(null);
+  const [settlementModules, setSettlementModules] = useState<Awaited<
+    ReturnType<typeof getSettlementModulesByProject>
+  >>([]);
   const [selectedCharacterId, setSelectedCharacterId] = useState<string>('');
   const [shodhService, setShodhService] =
     useState<ShodhMemoryProvider | null>(null);
@@ -63,17 +78,21 @@ function CharacterSheetsRoute({activeProject}: CharacterSheetsRouteProps) {
           setSheets([]);
           setRuleset(null);
           setCharacters([]);
+          setSettlementState(null);
+          setSettlementModules([]);
           setShodhService(null);
           setRulesetMemory(null);
         }
         return;
       }
 
-      const [loadedSheets, loadedRuleset, loadedCharacters] = await Promise.all(
+      const [loadedSheets, loadedRuleset, loadedCharacters, loadedSettlementState, loadedSettlementModules] = await Promise.all(
         [
           getCharacterSheetsByProject(activeProject.id),
           getRulesetByProjectId(activeProject.id),
-          getCharactersByProject(activeProject.id)
+          getCharactersByProject(activeProject.id),
+          getOrCreateSettlementState(activeProject.id),
+          getSettlementModulesByProject(activeProject.id)
         ]
       );
 
@@ -92,6 +111,8 @@ function CharacterSheetsRoute({activeProject}: CharacterSheetsRouteProps) {
         setSheets(loadedSheets);
         setRuleset(loadedRuleset);
         setCharacters(loadedCharacters);
+        setSettlementState(loadedSettlementState);
+        setSettlementModules(loadedSettlementModules);
         shodh = await getShodhService(shodhOptions);
         if (!cancelled) {
           setShodhService(shodh);
@@ -281,6 +302,25 @@ function CharacterSheetsRoute({activeProject}: CharacterSheetsRouteProps) {
   const getResourceDefinition = (definitionId: string) =>
     ruleset?.resourceDefinitions.find((def) => def.id === definitionId);
 
+  const activePartySynergies = useMemo(
+    () =>
+      getPartySynergySuggestions({
+        characters,
+        rules: DEFAULT_PARTY_SYNERGY_RULES
+      }),
+    [characters]
+  );
+  const runtimeModifiers = useMemo(
+    () =>
+      deriveCharacterRuntimeModifiers({
+        settlementState,
+        settlementModules,
+        activePartySynergies
+      }),
+    [settlementState, settlementModules, activePartySynergies]
+  );
+  const effectiveLevel = Math.max(1, level + runtimeModifiers.levelBonus);
+
   const handlePromoteRuleset = useCallback(async () => {
     if (!ruleset || !activeProject?.parentProjectId) return;
     const ruleText = ruleset.rules
@@ -466,6 +506,30 @@ function CharacterSheetsRoute({activeProject}: CharacterSheetsRouteProps) {
             </label>
           </div>
 
+          <div
+            style={{
+              marginBottom: '0.9rem',
+              padding: '0.6rem 0.75rem',
+              border: '1px solid #dbeafe',
+              borderRadius: '6px',
+              backgroundColor: '#f8fbff',
+              fontSize: '0.85rem'
+            }}
+          >
+            <strong>Runtime Effects (Preview)</strong>
+            <div style={{marginTop: '0.25rem'}}>
+              Effective level: {effectiveLevel}
+              {runtimeModifiers.levelBonus > 0
+                ? ` (base ${level} + ${runtimeModifiers.levelBonus})`
+                : ` (base ${level})`}
+            </div>
+            {runtimeModifiers.notes.length > 0 && (
+              <div style={{marginTop: '0.25rem', color: '#4b5563'}}>
+                {runtimeModifiers.notes.join(' ')}
+              </div>
+            )}
+          </div>
+
           {/* Stats */}
           {stats.length > 0 && (
             <div style={{marginBottom: '1rem'}}>
@@ -473,6 +537,11 @@ function CharacterSheetsRoute({activeProject}: CharacterSheetsRouteProps) {
               {stats.map((stat) => {
                 const def = getStatDefinition(stat.definitionId);
                 if (!def) return null;
+                const effectiveValue = getEffectiveStatValue({
+                  definitionId: stat.definitionId,
+                  baseValue: stat.value,
+                  runtime: runtimeModifiers
+                });
                 return (
                   <div key={stat.definitionId} style={{marginBottom: '0.5rem'}}>
                     <label>
@@ -503,6 +572,9 @@ function CharacterSheetsRoute({activeProject}: CharacterSheetsRouteProps) {
                         style={{width: '100%'}}
                       />
                     </label>
+                    <div style={{fontSize: '0.8rem', color: '#4b5563'}}>
+                      Effective: {effectiveValue}
+                    </div>
                   </div>
                 );
               })}
@@ -516,6 +588,12 @@ function CharacterSheetsRoute({activeProject}: CharacterSheetsRouteProps) {
               {resources.map((resource) => {
                 const def = getResourceDefinition(resource.definitionId);
                 if (!def) return null;
+                const effective = getEffectiveResourceValues({
+                  definitionId: resource.definitionId,
+                  current: resource.current,
+                  max: resource.max,
+                  runtime: runtimeModifiers
+                });
                 return (
                   <div
                     key={resource.definitionId}
@@ -574,6 +652,9 @@ function CharacterSheetsRoute({activeProject}: CharacterSheetsRouteProps) {
                           style={{width: '100%'}}
                         />
                       </label>
+                    </div>
+                    <div style={{fontSize: '0.8rem', color: '#4b5563'}}>
+                      Effective: {effective.current}/{effective.max}
                     </div>
                   </div>
                 );
@@ -643,7 +724,12 @@ function CharacterSheetsRoute({activeProject}: CharacterSheetsRouteProps) {
                         marginTop: '0.5rem'
                       }}
                     >
-                      Level {sheet.level} | {sheet.experience} XP
+                      Level {Math.max(1, sheet.level + runtimeModifiers.levelBonus)}
+                      {runtimeModifiers.levelBonus > 0
+                        ? ` (base ${sheet.level})`
+                        : ''}
+                      {' | '}
+                      {sheet.experience} XP
                     </div>
 
                     {sheet.stats.length > 0 && (
@@ -659,9 +745,17 @@ function CharacterSheetsRoute({activeProject}: CharacterSheetsRouteProps) {
                         >
                           {sheet.stats.map((stat) => {
                             const def = getStatDefinition(stat.definitionId);
+                            const effectiveValue = getEffectiveStatValue({
+                              definitionId: stat.definitionId,
+                              baseValue: stat.value,
+                              runtime: runtimeModifiers
+                            });
                             return def ? (
                               <span key={stat.definitionId}>
                                 {def.name}: {stat.value}
+                                {effectiveValue !== stat.value
+                                  ? ` (${effectiveValue})`
+                                  : ''}
                               </span>
                             ) : null;
                           })}
@@ -677,9 +771,18 @@ function CharacterSheetsRoute({activeProject}: CharacterSheetsRouteProps) {
                             const def = getResourceDefinition(
                               resource.definitionId
                             );
+                            const effective = getEffectiveResourceValues({
+                              definitionId: resource.definitionId,
+                              current: resource.current,
+                              max: resource.max,
+                              runtime: runtimeModifiers
+                            });
                             return def ? (
                               <div key={resource.definitionId}>
                                 {def.name}: {resource.current}/{resource.max}
+                                {(effective.current !== resource.current ||
+                                  effective.max !== resource.max) &&
+                                  ` (${effective.current}/${effective.max})`}
                               </div>
                             ) : null;
                           })}
