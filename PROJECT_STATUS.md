@@ -1,6 +1,6 @@
 # Worldbuilding-Desk Project Status
 
-**Last Updated:** February 8, 2026
+**Last Updated:** February 22, 2026
 
 ## Project Overview
 
@@ -132,6 +132,18 @@ npx tsx examples/basic-usage.ts
 ---
 
 ## Recent Changes & Fixes
+
+### Systems Integration + Imports (February 22, 2026)
+- Added settlement aura model and UI flow with generalized module sources (`trophy`, `structure`, `station`, `totem`, `custom`).
+- Added community/logistics party synergy engine and surfaced active combo buffs + roster opportunities.
+- Added settlement base stats and fortress progression tier effects, including explicit base-stat save/reset flow with validation/clamps.
+- Integrated runtime modifiers into craftability checks (effective level + material multiplier from settlement/synergy state).
+- Integrated runtime-adjusted previews into Character Sheets (effective level/stat/resource values shown alongside base values).
+- Added Workspace multi-file import for `.txt`, `.md`, `.html`, and `.docx`; `.doc` now returns explicit convert-to-docx guidance.
+- Added `docs/next-steps.md` with prioritized roadmap and phase exit criteria.
+
+**Immediate Next Slice**
+- Expand runtime integration beyond previews into persisted gameplay outcomes (rule/action resolution paths).
 
 ### Canon Management & Inheritance (February 8, 2026)
 - Added parent/child project metadata (RAG + Shodh inheritance toggles, canon timestamps).
