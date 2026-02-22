@@ -10,6 +10,7 @@ import type {
   WorldEntity
 } from '../entityTypes';
 import {
+  canCraftRecipe,
   getCompendiumActionLogs,
   getCompendiumEntriesByProject,
   getCompendiumMilestonesByProject,
@@ -91,6 +92,8 @@ function CompendiumRoute({activeProject}: CompendiumRouteProps) {
   const [milestonePoints, setMilestonePoints] = useState(10);
   const [milestoneDescription, setMilestoneDescription] = useState('');
   const [milestoneRecipeIds, setMilestoneRecipeIds] = useState('');
+  const [previewLevel, setPreviewLevel] = useState(1);
+  const [previewMaterialsText, setPreviewMaterialsText] = useState('');
 
   const [quantityByActionKey, setQuantityByActionKey] = useState<
     Record<string, number>
@@ -164,6 +167,21 @@ function CompendiumRoute({activeProject}: CompendiumRouteProps) {
     () => new Map(worldEntities.map((entity) => [entity.id, entity])),
     [worldEntities]
   );
+  const parsedPreviewMaterials = useMemo(() => {
+    const result: Record<string, number> = {};
+    for (const rawLine of previewMaterialsText.split('\n')) {
+      const line = rawLine.trim();
+      if (!line) continue;
+      const [itemIdRaw, qtyRaw] = line.split(':');
+      const itemId = itemIdRaw?.trim();
+      const qty = Number(qtyRaw?.trim() ?? '');
+      if (!itemId || !Number.isFinite(qty) || qty < 0) {
+        continue;
+      }
+      result[itemId] = qty;
+    }
+    return result;
+  }, [previewMaterialsText]);
 
   const handleCreateEntry = async () => {
     if (!activeProject || !entryName.trim()) return;
@@ -603,6 +621,63 @@ function CompendiumRoute({activeProject}: CompendiumRouteProps) {
                   ) : null}
                 </li>
               ))}
+            </ul>
+          </section>
+
+          <section style={{padding: '1rem', border: '1px solid #ddd', borderRadius: '8px'}}>
+            <h2 style={{marginTop: 0}}>Craftability Preview</h2>
+            <label style={{display: 'block', marginBottom: '0.5rem'}}>
+              Character Level
+              <input
+                type='number'
+                min={1}
+                value={previewLevel}
+                onChange={(e) => setPreviewLevel(Number(e.target.value))}
+                style={{width: '100%'}}
+              />
+            </label>
+            <label style={{display: 'block', marginBottom: '0.75rem'}}>
+              Materials (one per line: <code>itemId:quantity</code>)
+              <textarea
+                rows={5}
+                value={previewMaterialsText}
+                onChange={(e) => setPreviewMaterialsText(e.target.value)}
+                placeholder={'wolf_pelt:4\niron_ore:12'}
+                style={{width: '100%'}}
+              />
+            </label>
+            <ul style={{listStyle: 'none', padding: 0, margin: 0}}>
+              {recipes.map((recipe) => {
+                const check = canCraftRecipe(recipe, {
+                  progress,
+                  characterLevel: Math.max(1, Math.floor(previewLevel || 1)),
+                  availableMaterials: parsedPreviewMaterials
+                });
+                return (
+                  <li
+                    key={`preview-${recipe.id}`}
+                    style={{
+                      marginBottom: '0.5rem',
+                      paddingBottom: '0.5rem',
+                      borderBottom: '1px solid #efefef'
+                    }}
+                  >
+                    <strong>{recipe.name}</strong>{' '}
+                    <span
+                      style={{
+                        color: check.craftable ? '#166534' : '#991b1b'
+                      }}
+                    >
+                      {check.craftable ? 'craftable' : 'not craftable'}
+                    </span>
+                    {!check.craftable && check.reasons.length > 0 && (
+                      <div style={{fontSize: '0.82rem', color: '#6b7280'}}>
+                        {check.reasons.join(' ')}
+                      </div>
+                    )}
+                  </li>
+                );
+              })}
             </ul>
           </section>
 
