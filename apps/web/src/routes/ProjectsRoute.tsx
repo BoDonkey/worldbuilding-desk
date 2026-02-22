@@ -323,7 +323,7 @@ function ProjectsRoute({activeProject, onSelectProject}: ProjectsRouteProps) {
       </form>
 
       <h2>Existing Projects</h2>
-      {projects.length === 0 && <p>No projects yet. Create one above.</p>}
+      {projects.length === 0 && <p>No projects yet. Create one above to get started.</p>}
 
       <ul>
         {projects.map((project) => {

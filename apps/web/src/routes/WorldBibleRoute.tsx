@@ -604,7 +604,7 @@ function WorldBibleRoute({activeProject}: WorldBibleRouteProps) {
                     ? 'Saving...'
                     : editingId
                       ? 'Save Changes'
-                      : 'Create'}
+                      : 'Create Entry'}
                 </button>
                 {editingId && (
                   <button type='button' onClick={resetForm} disabled={isSubmittingEntity}>

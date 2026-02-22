@@ -851,7 +851,7 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
               />
             </>
           ) : (
-            <p>Select a scene from the left, or create a new one.</p>
+            <p>Select a scene from the left, or create one with + New Scene.</p>
           )}
         </div>
       </div>

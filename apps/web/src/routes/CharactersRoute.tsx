@@ -280,7 +280,7 @@ function CharactersRoute({ activeProject }: CharactersRouteProps) {
         <div style={{ flex: 1 }}>
           <h2>Character List</h2>
           {characters.length === 0 && (
-            <p>No characters yet. Add one on the left.</p>
+            <p>No characters yet. Create one on the left.</p>
           )}
           <ul style={{ listStyle: 'none', padding: 0 }}>
             {characters.map(character => (

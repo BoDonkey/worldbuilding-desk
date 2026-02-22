@@ -112,7 +112,10 @@ function SettingsRoute({activeProject}: SettingsRouteProps) {
     return (
       <section className={styles.container}>
         <h1>Settings</h1>
-        <p>No active project. Select a project to configure settings.</p>
+        <p>
+          No active project. Go to <strong>Projects</strong> to create or open a
+          project first.
+        </p>
       </section>
     );
   }
@@ -121,7 +124,7 @@ function SettingsRoute({activeProject}: SettingsRouteProps) {
     return (
       <section className={styles.container}>
         <h1>Settings</h1>
-        <p>Loading...</p>
+        <p>Loading settings...</p>
       </section>
     );
   }
