@@ -48,11 +48,22 @@ export interface CraftingCheckContext {
   progress: Pick<CompendiumProgress, 'unlockedMilestoneIds' | 'unlockedRecipeIds'> | null;
   characterLevel: number;
   availableMaterials?: Record<string, number>;
+  runtime?: CraftingRuntimeModifiers;
 }
 
 export interface CraftingCheckResult {
   craftable: boolean;
   reasons: string[];
+  effectiveCharacterLevel: number;
+  materialCostMultiplier: number;
+  adjustedMaterialRequirements: RecipeMaterialRequirement[];
+  appliedRuntimeNotes: string[];
+}
+
+export interface CraftingRuntimeModifiers {
+  levelBonus: number;
+  materialCostMultiplier: number;
+  notes: string[];
 }
 
 export interface RecordZoneExposureParams {
@@ -381,6 +392,95 @@ function hasMaterial(
   return failures;
 }
 
+function applyMaterialCostMultiplier(
+  requirements: RecipeMaterialRequirement[] | undefined,
+  multiplier: number
+): RecipeMaterialRequirement[] {
+  const safeMultiplier = Number.isFinite(multiplier) ? Math.max(0.1, multiplier) : 1;
+  return (requirements ?? []).map((requirement) => ({
+    ...requirement,
+    quantity: Math.max(1, Math.ceil(requirement.quantity * safeMultiplier))
+  }));
+}
+
+export function deriveCraftingRuntimeModifiers(params: {
+  settlementState: SettlementState | null;
+  settlementModules: SettlementModule[];
+  activePartySynergies?: PartySynergySuggestion[];
+}): CraftingRuntimeModifiers {
+  let levelBonus = 0;
+  let materialCostMultiplier = 1;
+  const notes: string[] = [];
+
+  if (!params.settlementState) {
+    return {levelBonus, materialCostMultiplier, notes};
+  }
+
+  const normalizedState = normalizeSettlementState(params.settlementState);
+  const computed = getSettlementComputedEffects({
+    settlementState: normalizedState,
+    modules: params.settlementModules
+  });
+
+  const throughputDelta = normalizedState.baseStats.craftingThroughput - 100;
+  if (throughputDelta > 0) {
+    const throughputBonus = Math.floor(throughputDelta / 25);
+    if (throughputBonus > 0) {
+      levelBonus += throughputBonus;
+      notes.push(
+        `Base crafting throughput grants +${throughputBonus} effective crafting level.`
+      );
+    }
+  }
+
+  for (const effect of computed.allEffects) {
+    if (typeof effect.value !== 'number') continue;
+    if (effect.targetId === 'crafting_throughput') {
+      if (effect.operation === 'add') {
+        materialCostMultiplier *= clampNumber(1 - effect.value / 200, 0.5, 2);
+      } else if (effect.operation === 'multiply') {
+        materialCostMultiplier *= clampNumber(1 / effect.value, 0.5, 2);
+      } else if (effect.operation === 'set') {
+        materialCostMultiplier = clampNumber(effect.value, 0.5, 2);
+      }
+      notes.push(`Applied "${effect.targetId}" effect (${effect.operation}).`);
+      continue;
+    }
+
+    if (
+      effect.targetId === 'crafting_level_bonus' ||
+      effect.targetId === 'crafting_level'
+    ) {
+      if (effect.operation === 'add') {
+        levelBonus += Math.floor(effect.value);
+      } else if (effect.operation === 'multiply') {
+        levelBonus = Math.floor(levelBonus * effect.value);
+      } else if (effect.operation === 'set') {
+        levelBonus = Math.floor(effect.value);
+      }
+      notes.push(`Applied "${effect.targetId}" effect (${effect.operation}).`);
+    }
+  }
+
+  const activeSynergies = (params.activePartySynergies ?? []).filter(
+    (synergy) => synergy.missingRoles.length === 0
+  );
+  if (activeSynergies.length > 0) {
+    const synergyLevelBonus = Math.min(2, activeSynergies.length);
+    levelBonus += synergyLevelBonus;
+    materialCostMultiplier *= clampNumber(1 - activeSynergies.length * 0.02, 0.9, 1);
+    notes.push(
+      `${activeSynergies.length} active party synergy combo(s) applied to crafting.`
+    );
+  }
+
+  return {
+    levelBonus,
+    materialCostMultiplier: clampNumber(materialCostMultiplier, 0.5, 2),
+    notes
+  };
+}
+
 export function canCraftRecipe(
   recipe: UnlockableRecipe,
   context: CraftingCheckContext
@@ -389,13 +489,24 @@ export function canCraftRecipe(
   const requirements = recipe.requirements;
   const unlockedMilestones = new Set(context.progress?.unlockedMilestoneIds ?? []);
   const unlockedRecipes = new Set(context.progress?.unlockedRecipeIds ?? []);
+  const runtimeLevelBonus = Math.floor(context.runtime?.levelBonus ?? 0);
+  const effectiveCharacterLevel = Math.max(1, context.characterLevel + runtimeLevelBonus);
+  const materialCostMultiplier = clampNumber(
+    context.runtime?.materialCostMultiplier ?? 1,
+    0.1,
+    10
+  );
+  const adjustedMaterialRequirements = applyMaterialCostMultiplier(
+    requirements?.requiredMaterials,
+    materialCostMultiplier
+  );
 
   if (
     requirements?.minCharacterLevel !== undefined &&
-    context.characterLevel < requirements.minCharacterLevel
+    effectiveCharacterLevel < requirements.minCharacterLevel
   ) {
     reasons.push(
-      `Requires character level ${requirements.minCharacterLevel} (current ${context.characterLevel}).`
+      `Requires character level ${requirements.minCharacterLevel} (effective ${effectiveCharacterLevel}).`
     );
   }
 
@@ -409,9 +520,9 @@ export function canCraftRecipe(
     reasons.push('Recipe is not unlocked yet.');
   }
 
-  if (requirements?.requiredMaterials?.length) {
+  if (adjustedMaterialRequirements.length > 0) {
     const materialFailures = hasMaterial(
-      requirements.requiredMaterials,
+      adjustedMaterialRequirements,
       context.availableMaterials ?? {}
     );
     reasons.push(...materialFailures);
@@ -419,7 +530,11 @@ export function canCraftRecipe(
 
   return {
     craftable: reasons.length === 0,
-    reasons
+    reasons,
+    effectiveCharacterLevel,
+    materialCostMultiplier,
+    adjustedMaterialRequirements,
+    appliedRuntimeNotes: context.runtime?.notes ?? []
   };
 }
 

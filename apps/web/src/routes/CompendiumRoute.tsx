@@ -20,6 +20,7 @@ import {
   DEFAULT_PARTY_SYNERGY_RULES,
   canCraftRecipe,
   attachModuleToSettlement,
+  deriveCraftingRuntimeModifiers,
   getNextFortressTier,
   getPartySynergySuggestions,
   getSettlementComputedEffects,
@@ -360,6 +361,15 @@ function CompendiumRoute({activeProject}: CompendiumRouteProps) {
         rules: DEFAULT_PARTY_SYNERGY_RULES
       }).filter((suggestion) => suggestion.missingRoles.length > 0),
     [characters]
+  );
+  const craftingRuntimeModifiers = useMemo(
+    () =>
+      deriveCraftingRuntimeModifiers({
+        settlementState,
+        settlementModules,
+        activePartySynergies
+      }),
+    [settlementState, settlementModules, activePartySynergies]
   );
   const zoneProgressByKey = useMemo(
     () => new Map(zoneProgress.map((progressItem) => [progressItem.biomeKey, progressItem])),
@@ -1084,12 +1094,31 @@ function CompendiumRoute({activeProject}: CompendiumRouteProps) {
                 style={{width: '100%'}}
               />
             </label>
+            <div
+              style={{
+                fontSize: '0.82rem',
+                color: '#4b5563',
+                marginBottom: '0.65rem',
+                padding: '0.5rem',
+                border: '1px solid #e5e7eb',
+                borderRadius: '6px'
+              }}
+            >
+              Runtime modifiers: +{craftingRuntimeModifiers.levelBonus} effective level, material
+              cost x{craftingRuntimeModifiers.materialCostMultiplier.toFixed(2)}
+              {craftingRuntimeModifiers.notes.length > 0 && (
+                <div style={{marginTop: '0.3rem'}}>
+                  {craftingRuntimeModifiers.notes.join(' ')}
+                </div>
+              )}
+            </div>
             <ul style={{listStyle: 'none', padding: 0, margin: 0}}>
               {recipes.map((recipe) => {
                 const check = canCraftRecipe(recipe, {
                   progress,
                   characterLevel: Math.max(1, Math.floor(previewLevel || 1)),
-                  availableMaterials: parsedPreviewMaterials
+                  availableMaterials: parsedPreviewMaterials,
+                  runtime: craftingRuntimeModifiers
                 });
                 return (
                   <li
@@ -1108,6 +1137,10 @@ function CompendiumRoute({activeProject}: CompendiumRouteProps) {
                     >
                       {check.craftable ? 'craftable' : 'not craftable'}
                     </span>
+                    <div style={{fontSize: '0.78rem', color: '#6b7280'}}>
+                      Effective level: {check.effectiveCharacterLevel}
+                      {' · '}Material multiplier: x{check.materialCostMultiplier.toFixed(2)}
+                    </div>
                     {!check.craftable && check.reasons.length > 0 && (
                       <div style={{fontSize: '0.82rem', color: '#6b7280'}}>
                         {check.reasons.join(' ')}
