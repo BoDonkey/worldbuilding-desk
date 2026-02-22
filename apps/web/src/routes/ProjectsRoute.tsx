@@ -31,6 +31,14 @@ function ProjectsRoute({activeProject, onSelectProject}: ProjectsRouteProps) {
   const [showWizard, setShowWizard] = useState(false);
   const [wizardProjectId, setWizardProjectId] = useState<string | null>(null);
   const [wizardInitialRuleset, setWizardInitialRuleset] = useState<WorldRuleset | null>(null);
+  const [feedback, setFeedback] = useState<{
+    tone: 'success' | 'error';
+    message: string;
+  } | null>(null);
+  const [isCreatingProject, setIsCreatingProject] = useState(false);
+  const [deletingProjectId, setDeletingProjectId] = useState<string | null>(null);
+  const [syncingProjectId, setSyncingProjectId] = useState<string | null>(null);
+  const [updatingProjectId, setUpdatingProjectId] = useState<string | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -55,21 +63,32 @@ function ProjectsRoute({activeProject, onSelectProject}: ProjectsRouteProps) {
     event.preventDefault();
     if (!name.trim()) return;
 
-    const now = Date.now();
-    const project: Project = {
-      id: crypto.randomUUID(),
-      name: name.trim(),
-      inheritRag: true,
-      inheritShodh: true,
-      createdAt: now,
-      updatedAt: now
-    };
+    setIsCreatingProject(true);
+    setFeedback(null);
+    try {
+      const now = Date.now();
+      const project: Project = {
+        id: crypto.randomUUID(),
+        name: name.trim(),
+        inheritRag: true,
+        inheritShodh: true,
+        createdAt: now,
+        updatedAt: now
+      };
 
-    await saveProject(project);
-    setProjects((prev) => [...prev, project]);
-    setName('');
+      await saveProject(project);
+      setProjects((prev) => [...prev, project]);
+      setName('');
 
-    onSelectProject(project);
+      onSelectProject(project);
+      setFeedback({tone: 'success', message: 'Project created.'});
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'Unable to create project.';
+      setFeedback({tone: 'error', message});
+    } finally {
+      setIsCreatingProject(false);
+    }
   };
 
   const handleOpen = (project: Project) => {
@@ -78,21 +97,35 @@ function ProjectsRoute({activeProject, onSelectProject}: ProjectsRouteProps) {
   };
 
   const handleDelete = async (project: Project) => {
-    // Delete ruleset if it exists
-    if (project.rulesetId) {
-      await deleteRuleset(project.rulesetId, project.id);
-    }
+    const confirmed = window.confirm(`Delete project "${project.name}"?`);
+    if (!confirmed) return;
 
-    await deleteProjectFromStore(project.id);
-    setProjects((prev) => prev.filter((p) => p.id !== project.id));
-    setProjectRulesets((prev) => {
-      const newMap = new Map(prev);
-      newMap.delete(project.id);
-      return newMap;
-    });
+    setDeletingProjectId(project.id);
+    setFeedback(null);
+    try {
+      // Delete ruleset if it exists
+      if (project.rulesetId) {
+        await deleteRuleset(project.rulesetId, project.id);
+      }
 
-    if (activeProject && activeProject.id === project.id) {
-      onSelectProject(null);
+      await deleteProjectFromStore(project.id);
+      setProjects((prev) => prev.filter((p) => p.id !== project.id));
+      setProjectRulesets((prev) => {
+        const newMap = new Map(prev);
+        newMap.delete(project.id);
+        return newMap;
+      });
+
+      if (activeProject && activeProject.id === project.id) {
+        onSelectProject(null);
+      }
+      setFeedback({tone: 'success', message: 'Project deleted.'});
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'Unable to delete project.';
+      setFeedback({tone: 'error', message});
+    } finally {
+      setDeletingProjectId(null);
     }
   };
 
@@ -153,23 +186,48 @@ function ProjectsRoute({activeProject, onSelectProject}: ProjectsRouteProps) {
     project: Project,
     parentProjectId: string
   ) => {
-    if (!parentProjectId) {
-      const updated = await unlinkProjectFromParent(project.id);
+    setUpdatingProjectId(project.id);
+    setFeedback(null);
+    try {
+      if (!parentProjectId) {
+        const updated = await unlinkProjectFromParent(project.id);
+        updateProjectState(updated);
+        setFeedback({tone: 'success', message: 'Parent project removed.'});
+        return;
+      }
+      const updated = await linkProjectToParent(project.id, {
+        parentProjectId,
+        inheritRag: project.inheritRag ?? true,
+        inheritShodh: project.inheritShodh ?? true,
+        canonVersion: project.canonVersion
+      });
       updateProjectState(updated);
-      return;
+      setFeedback({tone: 'success', message: 'Parent project updated.'});
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : 'Unable to update parent project.';
+      setFeedback({tone: 'error', message});
+    } finally {
+      setUpdatingProjectId(null);
     }
-    const updated = await linkProjectToParent(project.id, {
-      parentProjectId,
-      inheritRag: project.inheritRag ?? true,
-      inheritShodh: project.inheritShodh ?? true,
-      canonVersion: project.canonVersion
-    });
-    updateProjectState(updated);
   };
 
   const handleSyncWithParent = async (project: Project) => {
-    const updated = await syncChildWithParent(project.id);
-    updateProjectState(updated);
+    setSyncingProjectId(project.id);
+    setFeedback(null);
+    try {
+      const updated = await syncChildWithParent(project.id);
+      updateProjectState(updated);
+      setFeedback({tone: 'success', message: 'Project synced with parent canon.'});
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'Unable to sync with parent.';
+      setFeedback({tone: 'error', message});
+    } finally {
+      setSyncingProjectId(null);
+    }
   };
 
   const handleInheritanceToggle = async (
@@ -177,13 +235,24 @@ function ProjectsRoute({activeProject, onSelectProject}: ProjectsRouteProps) {
     field: 'inheritRag' | 'inheritShodh',
     value: boolean
   ) => {
-    const updated = {
-      ...project,
-      [field]: value,
-      updatedAt: Date.now()
-    };
-    await saveProject(updated);
-    updateProjectState(updated);
+    setUpdatingProjectId(project.id);
+    setFeedback(null);
+    try {
+      const updated = {
+        ...project,
+        [field]: value,
+        updatedAt: Date.now()
+      };
+      await saveProject(updated);
+      updateProjectState(updated);
+      setFeedback({tone: 'success', message: 'Project inheritance updated.'});
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'Unable to update inheritance.';
+      setFeedback({tone: 'error', message});
+    } finally {
+      setUpdatingProjectId(null);
+    }
   };
 
   if (showWizard) {
@@ -211,6 +280,24 @@ function ProjectsRoute({activeProject, onSelectProject}: ProjectsRouteProps) {
   return (
     <section>
       <h1>Projects</h1>
+      {feedback && (
+        <p
+          role='status'
+          style={{
+            marginBottom: '1rem',
+            padding: '0.5rem 0.75rem',
+            borderRadius: '6px',
+            border: `1px solid ${
+              feedback.tone === 'error' ? '#fecaca' : '#bbf7d0'
+            }`,
+            backgroundColor:
+              feedback.tone === 'error' ? '#fef2f2' : '#f0fdf4',
+            color: feedback.tone === 'error' ? '#991b1b' : '#166534'
+          }}
+        >
+          {feedback.message}
+        </p>
+      )}
 
       <form
         onSubmit={handleSubmit}
@@ -230,7 +317,9 @@ function ProjectsRoute({activeProject, onSelectProject}: ProjectsRouteProps) {
             />
           </label>
         </div>
-        <button type='submit'>Create Project</button>
+        <button type='submit' disabled={isCreatingProject}>
+          {isCreatingProject ? 'Creating...' : 'Create Project'}
+        </button>
       </form>
 
       <h2>Existing Projects</h2>
@@ -293,6 +382,7 @@ function ProjectsRoute({activeProject, onSelectProject}: ProjectsRouteProps) {
                     onChange={(e) =>
                       handleParentSelection(project, e.target.value)
                     }
+                    disabled={updatingProjectId === project.id}
                     style={{width: '100%'}}
                   >
                     <option value=''>No parent</option>
@@ -316,7 +406,9 @@ function ProjectsRoute({activeProject, onSelectProject}: ProjectsRouteProps) {
                   <label style={{display: 'flex', gap: '0.25rem'}}>
                     <input
                       type='checkbox'
-                      disabled={!project.parentProjectId}
+                      disabled={
+                        !project.parentProjectId || updatingProjectId === project.id
+                      }
                       checked={project.inheritRag ?? true}
                       onChange={(e) =>
                         handleInheritanceToggle(project, 'inheritRag', e.target.checked)
@@ -327,7 +419,9 @@ function ProjectsRoute({activeProject, onSelectProject}: ProjectsRouteProps) {
                   <label style={{display: 'flex', gap: '0.25rem'}}>
                     <input
                       type='checkbox'
-                      disabled={!project.parentProjectId}
+                      disabled={
+                        !project.parentProjectId || updatingProjectId === project.id
+                      }
                       checked={project.inheritShodh ?? true}
                       onChange={(e) =>
                         handleInheritanceToggle(
@@ -351,8 +445,9 @@ function ProjectsRoute({activeProject, onSelectProject}: ProjectsRouteProps) {
                       type='button'
                       style={{marginLeft: '0.5rem', fontSize: '0.75rem'}}
                       onClick={() => handleSyncWithParent(project)}
+                      disabled={syncingProjectId === project.id}
                     >
-                      Sync now
+                      {syncingProjectId === project.id ? 'Syncing...' : 'Sync now'}
                     </button>
                   </div>
                 )}
@@ -390,9 +485,10 @@ function ProjectsRoute({activeProject, onSelectProject}: ProjectsRouteProps) {
                 <button
                   type='button'
                   onClick={() => handleDelete(project)}
+                  disabled={deletingProjectId === project.id}
                   style={{background: '#fee2e2', color: '#dc2626'}}
                 >
-                  Delete
+                  {deletingProjectId === project.id ? 'Deleting...' : 'Delete'}
                 </button>
               </div>
             </li>

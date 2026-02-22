@@ -52,6 +52,15 @@ function WorldBibleRoute({activeProject}: WorldBibleRouteProps) {
     childLastSynced?: string;
     parentName?: string;
   }>({});
+  const [feedback, setFeedback] = useState<{
+    tone: 'success' | 'error';
+    message: string;
+  } | null>(null);
+  const [isSubmittingEntity, setIsSubmittingEntity] = useState(false);
+  const [deletingEntityId, setDeletingEntityId] = useState<string | null>(null);
+  const [promotingEntityId, setPromotingEntityId] = useState<string | null>(null);
+  const [promotingMemoryId, setPromotingMemoryId] = useState<string | null>(null);
+  const [isSyncingCanon, setIsSyncingCanon] = useState(false);
   const refreshMemories = useCallback(async () => {
     if (!shodhService) {
       setMemories([]);
@@ -66,8 +75,19 @@ function WorldBibleRoute({activeProject}: WorldBibleRouteProps) {
   const handlePromoteMemory = useCallback(
     async (memory: MemoryEntry) => {
       if (!seriesConfig?.parentProjectId) return;
-      await promoteMemoryToParent(memory, seriesConfig.parentProjectId);
-      await refreshMemories();
+      setPromotingMemoryId(memory.id);
+      setFeedback(null);
+      try {
+        await promoteMemoryToParent(memory, seriesConfig.parentProjectId);
+        await refreshMemories();
+        setFeedback({tone: 'success', message: 'Memory promoted to parent canon.'});
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : 'Unable to promote memory.';
+        setFeedback({tone: 'error', message});
+      } finally {
+        setPromotingMemoryId(null);
+      }
     },
     [seriesConfig?.parentProjectId, refreshMemories]
   );
@@ -198,54 +218,67 @@ function WorldBibleRoute({activeProject}: WorldBibleRouteProps) {
     event.preventDefault();
     if (!activeProject || !activeCategory) return;
 
-    const now = Date.now();
-    const id = editingId ?? crypto.randomUUID();
-    const existing = entities.find((e) => e.id === id);
+    setIsSubmittingEntity(true);
+    setFeedback(null);
+    try {
+      const now = Date.now();
+      const id = editingId ?? crypto.randomUUID();
+      const existing = entities.find((e) => e.id === id);
 
-    const entity: WorldEntity = {
-      id,
-      projectId: activeProject.id,
-      categoryId: activeCategory.id,
-      name,
-      fields: {...fieldValues},
-      links: existing?.links ?? [],
-      createdAt: existing?.createdAt ?? now,
-      updatedAt: now
-    };
-
-    await saveEntity(entity);
-    if (ragService) {
-      await ragService.indexDocument(
-        entity.id,
-        entity.name,
-        buildEntityContent(entity),
-        'worldbible',
-        {
-          tags: [activeCategory.slug],
-          entityIds: [entity.id]
-        }
-      );
-    }
-    if (shodhService) {
-      await shodhService.captureAutoMemory({
+      const entity: WorldEntity = {
+        id,
         projectId: activeProject.id,
-        documentId: entity.id,
-        title: entity.name,
-        content: buildEntityContent(entity),
-        tags: ['worldbible', activeCategory.slug]
+        categoryId: activeCategory.id,
+        name,
+        fields: {...fieldValues},
+        links: existing?.links ?? [],
+        createdAt: existing?.createdAt ?? now,
+        updatedAt: now
+      };
+
+      await saveEntity(entity);
+      if (ragService) {
+        await ragService.indexDocument(
+          entity.id,
+          entity.name,
+          buildEntityContent(entity),
+          'worldbible',
+          {
+            tags: [activeCategory.slug],
+            entityIds: [entity.id]
+          }
+        );
+      }
+      if (shodhService) {
+        await shodhService.captureAutoMemory({
+          projectId: activeProject.id,
+          documentId: entity.id,
+          title: entity.name,
+          content: buildEntityContent(entity),
+          tags: ['worldbible', activeCategory.slug]
+        });
+        await refreshMemories();
+      }
+
+      setEntities((prev) => {
+        const idx = prev.findIndex((e) => e.id === id);
+        if (idx === -1) return [...prev, entity];
+        const copy = [...prev];
+        copy[idx] = entity;
+        return copy;
       });
-      await refreshMemories();
+
+      resetForm();
+      setFeedback({
+        tone: 'success',
+        message: editingId ? 'Entry updated.' : 'Entry created.'
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unable to save entry.';
+      setFeedback({tone: 'error', message});
+    } finally {
+      setIsSubmittingEntity(false);
     }
-
-    setEntities((prev) => {
-      const idx = prev.findIndex((e) => e.id === id);
-      if (idx === -1) return [...prev, entity];
-      const copy = [...prev];
-      copy[idx] = entity;
-      return copy;
-    });
-
-    resetForm();
   };
 
   const handleEdit = (entity: WorldEntity) => {
@@ -256,16 +289,27 @@ function WorldBibleRoute({activeProject}: WorldBibleRouteProps) {
 
   const handleDeleteEntity = async (id: string) => {
     if (!confirm('Delete this entity?')) return;
-    await deleteEntity(id);
-    if (ragService) {
-      await ragService.deleteDocument(id);
+    setDeletingEntityId(id);
+    setFeedback(null);
+    try {
+      await deleteEntity(id);
+      if (ragService) {
+        await ragService.deleteDocument(id);
+      }
+      if (shodhService) {
+        await shodhService.deleteMemoriesForDocument(id);
+        await refreshMemories();
+      }
+      setEntities((prev) => prev.filter((e) => e.id !== id));
+      if (editingId === id) resetForm();
+      setFeedback({tone: 'success', message: 'Entry deleted.'});
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'Unable to delete entry.';
+      setFeedback({tone: 'error', message});
+    } finally {
+      setDeletingEntityId(null);
     }
-    if (shodhService) {
-      await shodhService.deleteMemoriesForDocument(id);
-      await refreshMemories();
-    }
-    setEntities((prev) => prev.filter((e) => e.id !== id));
-    if (editingId === id) resetForm();
   };
 
   const buildEntityContent = (entity: WorldEntity) => {
@@ -276,23 +320,45 @@ function WorldBibleRoute({activeProject}: WorldBibleRouteProps) {
   };
   const handlePromoteEntity = async (entity: WorldEntity) => {
     if (!seriesConfig?.parentProjectId) return;
-    await promoteDocumentToParent({
-      parentProjectId: seriesConfig.parentProjectId,
-      documentId: entity.id,
-      title: entity.name,
-      content: buildEntityContent(entity),
-      type: 'worldbible',
-      tags: [activeCategory?.slug ?? 'worldbible']
-    });
+    setPromotingEntityId(entity.id);
+    setFeedback(null);
+    try {
+      await promoteDocumentToParent({
+        parentProjectId: seriesConfig.parentProjectId,
+        documentId: entity.id,
+        title: entity.name,
+        content: buildEntityContent(entity),
+        type: 'worldbible',
+        tags: [activeCategory?.slug ?? 'worldbible']
+      });
+      setFeedback({tone: 'success', message: 'Entry promoted to parent canon.'});
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'Unable to promote entry.';
+      setFeedback({tone: 'error', message});
+    } finally {
+      setPromotingEntityId(null);
+    }
   };
   const handleCanonSync = async () => {
     if (!activeProject) return;
-    const updated = await syncChildWithParent(activeProject.id);
-    if (updated) {
-      setCanonState((prev) => ({
-        ...prev,
-        childLastSynced: updated.lastSyncedCanon
-      }));
+    setIsSyncingCanon(true);
+    setFeedback(null);
+    try {
+      const updated = await syncChildWithParent(activeProject.id);
+      if (updated) {
+        setCanonState((prev) => ({
+          ...prev,
+          childLastSynced: updated.lastSyncedCanon
+        }));
+      }
+      setFeedback({tone: 'success', message: 'Canon sync state updated.'});
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'Unable to mark canon as synced.';
+      setFeedback({tone: 'error', message});
+    } finally {
+      setIsSyncingCanon(false);
     }
   };
 
@@ -313,6 +379,24 @@ function WorldBibleRoute({activeProject}: WorldBibleRouteProps) {
       <div className={styles.header}>
         <h1>World Bible</h1>
       </div>
+      {feedback && (
+        <p
+          role='status'
+          style={{
+            marginBottom: '1rem',
+            padding: '0.5rem 0.75rem',
+            borderRadius: '6px',
+            border: `1px solid ${
+              feedback.tone === 'error' ? '#fecaca' : '#bbf7d0'
+            }`,
+            backgroundColor:
+              feedback.tone === 'error' ? '#fef2f2' : '#f0fdf4',
+            color: feedback.tone === 'error' ? '#991b1b' : '#166534'
+          }}
+        >
+          {feedback.message}
+        </p>
+      )}
       {seriesConfig?.parentProjectId && (
         <div className={styles.banner}>
           <strong>Parent canon:</strong> {canonState.parentName ?? 'Unknown'} ·
@@ -327,8 +411,12 @@ function WorldBibleRoute({activeProject}: WorldBibleRouteProps) {
               Last synced:{' '}
               {canonState.childLastSynced ?? 'never'}
             </span>
-            <button type='button' onClick={() => void handleCanonSync()}>
-              Mark as synced
+            <button
+              type='button'
+              onClick={() => void handleCanonSync()}
+              disabled={isSyncingCanon}
+            >
+              {isSyncingCanon ? 'Marking...' : 'Mark as synced'}
             </button>
           </div>
         </div>
@@ -507,11 +595,19 @@ function WorldBibleRoute({activeProject}: WorldBibleRouteProps) {
               ))}
 
               <div className={styles.formActions}>
-                <button type='submit' className={styles.primaryButton}>
-                  {editingId ? 'Save Changes' : 'Create'}
+                <button
+                  type='submit'
+                  className={styles.primaryButton}
+                  disabled={isSubmittingEntity}
+                >
+                  {isSubmittingEntity
+                    ? 'Saving...'
+                    : editingId
+                      ? 'Save Changes'
+                      : 'Create'}
                 </button>
                 {editingId && (
-                  <button type='button' onClick={resetForm}>
+                  <button type='button' onClick={resetForm} disabled={isSubmittingEntity}>
                     Cancel
                   </button>
                 )}
@@ -540,9 +636,10 @@ function WorldBibleRoute({activeProject}: WorldBibleRouteProps) {
                       <button
                         type='button'
                         onClick={() => void handlePromoteMemory(memory)}
+                        disabled={promotingMemoryId === memory.id}
                         style={{fontSize: '0.8rem'}}
                       >
-                        Promote
+                        {promotingMemoryId === memory.id ? 'Promoting...' : 'Promote'}
                       </button>
                     );
                   }
@@ -572,16 +669,20 @@ function WorldBibleRoute({activeProject}: WorldBibleRouteProps) {
                     <button onClick={() => handleEdit(entity)}>Edit</button>
                     <button
                       onClick={() => handleDeleteEntity(entity.id)}
+                      disabled={deletingEntityId === entity.id}
                       className={styles.deleteButton}
                     >
-                      Delete
+                      {deletingEntityId === entity.id ? 'Deleting...' : 'Delete'}
                     </button>
                     {seriesConfig?.parentProjectId && (
                       <button
                         type='button'
                         onClick={() => void handlePromoteEntity(entity)}
+                        disabled={promotingEntityId === entity.id}
                       >
-                        Promote to parent
+                        {promotingEntityId === entity.id
+                          ? 'Promoting...'
+                          : 'Promote to parent'}
                       </button>
                     )}
                   </div>
