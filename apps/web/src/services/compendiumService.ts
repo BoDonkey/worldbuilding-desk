@@ -5,6 +5,7 @@ import type {
   CompendiumDomain,
   CompendiumMilestone,
   CompendiumProgress,
+  FortressTierDefinition,
   PartySynergyRule,
   PartySynergySuggestion,
   RecipeMaterialRequirement,
@@ -97,6 +98,39 @@ export const DEFAULT_PARTY_SYNERGY_RULES: PartySynergyRule[] = [
   }
 ];
 
+export const DEFAULT_FORTRESS_TIERS: FortressTierDefinition[] = [
+  {
+    id: 'fortress-tier-2',
+    levelRequired: 2,
+    name: 'Palisade Camp',
+    description: 'First defensive perimeter and basic organization bonuses.',
+    effects: [
+      {targetType: 'stat', targetId: 'defense', operation: 'add', value: 5},
+      {targetType: 'resource', targetId: 'storage_capacity', operation: 'add', value: 25}
+    ]
+  },
+  {
+    id: 'fortress-tier-4',
+    levelRequired: 4,
+    name: 'Hardened Outpost',
+    description: 'Specialized stations increase crafting and resilience.',
+    effects: [
+      {targetType: 'resource', targetId: 'crafting_throughput', operation: 'add', value: 10},
+      {targetType: 'resistance', targetId: 'environmental', operation: 'add', value: 8}
+    ]
+  },
+  {
+    id: 'fortress-tier-6',
+    levelRequired: 6,
+    name: 'Fortified Settlement',
+    description: 'Mature base infrastructure with stable morale and logistics.',
+    effects: [
+      {targetType: 'stat', targetId: 'morale', operation: 'add', value: 12},
+      {targetType: 'resource', targetId: 'ore_carry_weight', operation: 'multiply', value: 0.9}
+    ]
+  }
+];
+
 function requestToPromise<T>(request: IDBRequest<T>): Promise<T> {
   return new Promise((resolve, reject) => {
     request.onsuccess = () => resolve(request.result);
@@ -120,6 +154,26 @@ function normalizeQuantity(quantity?: number): number {
 
 function normalizeRole(role: string | undefined): string {
   return (role ?? '').trim().toLowerCase();
+}
+
+function createDefaultSettlementBaseStats(): SettlementState['baseStats'] {
+  return {
+    defense: 10,
+    storageCapacity: 100,
+    craftingThroughput: 100,
+    morale: 50
+  };
+}
+
+function normalizeSettlementState(state: SettlementState): SettlementState {
+  return {
+    ...state,
+    fortressLevel: Math.max(1, Math.floor(state.fortressLevel || 1)),
+    baseStats: {
+      ...createDefaultSettlementBaseStats(),
+      ...(state.baseStats ?? {})
+    }
+  };
 }
 
 export function getPartySynergySuggestions(params: {
@@ -685,13 +739,18 @@ export async function getOrCreateSettlementState(
     store.get(id)
   )) as SettlementState | undefined;
   if (existing) {
-    return existing;
+    const normalizedExisting = normalizeSettlementState(existing);
+    if (JSON.stringify(normalizedExisting) !== JSON.stringify(existing)) {
+      await requestToPromise(store.put(normalizedExisting));
+    }
+    return normalizedExisting;
   }
   const created: SettlementState = {
     id,
     projectId,
     name,
     fortressLevel: 1,
+    baseStats: createDefaultSettlementBaseStats(),
     moduleIds: [],
     updatedAt: Date.now()
   };
@@ -703,7 +762,38 @@ export async function saveSettlementState(state: SettlementState): Promise<void>
   const db = await openDb();
   const tx = db.transaction(SETTLEMENT_STATE_STORE_NAME, 'readwrite');
   const store = tx.objectStore(SETTLEMENT_STATE_STORE_NAME);
-  await requestToPromise(store.put(state));
+  await requestToPromise(store.put(normalizeSettlementState(state)));
+}
+
+export async function updateSettlementFortressLevel(params: {
+  projectId: string;
+  level: number;
+}): Promise<SettlementState> {
+  const state = await getOrCreateSettlementState(params.projectId);
+  const next: SettlementState = {
+    ...state,
+    fortressLevel: Math.max(1, Math.floor(params.level)),
+    updatedAt: Date.now()
+  };
+  await saveSettlementState(next);
+  return next;
+}
+
+export async function updateSettlementBaseStats(params: {
+  projectId: string;
+  baseStats: Partial<SettlementState['baseStats']>;
+}): Promise<SettlementState> {
+  const state = await getOrCreateSettlementState(params.projectId);
+  const next: SettlementState = {
+    ...state,
+    baseStats: {
+      ...state.baseStats,
+      ...params.baseStats
+    },
+    updatedAt: Date.now()
+  };
+  await saveSettlementState(next);
+  return next;
 }
 
 export async function attachModuleToSettlement(params: {
@@ -732,4 +822,51 @@ export function getActiveSettlementAuraEffects(params: {
     (module) => module.active && moduleSet.has(module.id)
   );
   return activeModules.flatMap((module) => module.effects);
+}
+
+export function getUnlockedFortressTiers(params: {
+  fortressLevel: number;
+  tiers?: FortressTierDefinition[];
+}): FortressTierDefinition[] {
+  const tiers = params.tiers ?? DEFAULT_FORTRESS_TIERS;
+  return tiers
+    .filter((tier) => params.fortressLevel >= tier.levelRequired)
+    .sort((a, b) => a.levelRequired - b.levelRequired);
+}
+
+export function getNextFortressTier(params: {
+  fortressLevel: number;
+  tiers?: FortressTierDefinition[];
+}): FortressTierDefinition | null {
+  const tiers = params.tiers ?? DEFAULT_FORTRESS_TIERS;
+  return (
+    tiers
+      .filter((tier) => tier.levelRequired > params.fortressLevel)
+      .sort((a, b) => a.levelRequired - b.levelRequired)[0] ?? null
+  );
+}
+
+export function getSettlementComputedEffects(params: {
+  settlementState: SettlementState;
+  modules: SettlementModule[];
+  tiers?: FortressTierDefinition[];
+}): {
+  auraEffects: SettlementModule['effects'];
+  fortressEffects: SettlementModule['effects'];
+  allEffects: SettlementModule['effects'];
+} {
+  const auraEffects = getActiveSettlementAuraEffects({
+    settlementState: params.settlementState,
+    modules: params.modules
+  });
+  const unlockedTiers = getUnlockedFortressTiers({
+    fortressLevel: params.settlementState.fortressLevel,
+    tiers: params.tiers
+  });
+  const fortressEffects = unlockedTiers.flatMap((tier) => tier.effects);
+  return {
+    auraEffects,
+    fortressEffects,
+    allEffects: [...fortressEffects, ...auraEffects]
+  };
 }

@@ -16,10 +16,14 @@ import type {
   ZoneAffinityProgress
 } from '../entityTypes';
 import {
+  DEFAULT_FORTRESS_TIERS,
   DEFAULT_PARTY_SYNERGY_RULES,
   canCraftRecipe,
   attachModuleToSettlement,
+  getNextFortressTier,
   getPartySynergySuggestions,
+  getSettlementComputedEffects,
+  getUnlockedFortressTiers,
   getActiveSettlementAuraEffects,
   getCompendiumActionLogs,
   getCompendiumEntriesByProject,
@@ -36,6 +40,8 @@ import {
   saveCompendiumEntry,
   saveCompendiumMilestone,
   saveSettlementModule,
+  updateSettlementBaseStats,
+  updateSettlementFortressLevel,
   saveUnlockableRecipe,
   upsertZoneAffinityProfile,
   upsertCompendiumEntryFromEntity
@@ -186,6 +192,7 @@ function CompendiumRoute({activeProject}: CompendiumRouteProps) {
     useState<SettlementModule['effects'][number]['operation']>('add');
   const [moduleValue, setModuleValue] = useState('5');
   const [isSavingModule, setIsSavingModule] = useState(false);
+  const [isSavingFortress, setIsSavingFortress] = useState(false);
 
   const [quantityByActionKey, setQuantityByActionKey] = useState<
     Record<string, number>
@@ -319,6 +326,29 @@ function CompendiumRoute({activeProject}: CompendiumRouteProps) {
       modules: settlementModules
     });
   }, [settlementState, settlementModules]);
+  const settlementComputedEffects = useMemo(() => {
+    if (!settlementState) {
+      return {auraEffects: [], fortressEffects: [], allEffects: []};
+    }
+    return getSettlementComputedEffects({
+      settlementState,
+      modules: settlementModules
+    });
+  }, [settlementState, settlementModules]);
+  const unlockedFortressTiers = useMemo(() => {
+    if (!settlementState) return [];
+    return getUnlockedFortressTiers({
+      fortressLevel: settlementState.fortressLevel,
+      tiers: DEFAULT_FORTRESS_TIERS
+    });
+  }, [settlementState]);
+  const nextFortressTier = useMemo(() => {
+    if (!settlementState) return null;
+    return getNextFortressTier({
+      fortressLevel: settlementState.fortressLevel,
+      tiers: DEFAULT_FORTRESS_TIERS
+    });
+  }, [settlementState]);
   const parsedPreviewMaterials = useMemo(() => {
     const result: Record<string, number> = {};
     for (const rawLine of previewMaterialsText.split('\n')) {
@@ -643,6 +673,52 @@ function CompendiumRoute({activeProject}: CompendiumRouteProps) {
         ? prev.filter((id) => id !== characterId)
         : [...prev, characterId]
     );
+  };
+
+  const handleAdjustFortressLevel = async (delta: number) => {
+    if (!activeProject || !settlementState) return;
+    const nextLevel = Math.max(1, settlementState.fortressLevel + delta);
+    setIsSavingFortress(true);
+    setFeedback(null);
+    try {
+      const nextState = await updateSettlementFortressLevel({
+        projectId: activeProject.id,
+        level: nextLevel
+      });
+      setSettlementState(nextState);
+      setFeedback({tone: 'success', message: `Fortress level set to ${nextState.fortressLevel}.`});
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'Unable to update fortress level.';
+      setFeedback({tone: 'error', message});
+    } finally {
+      setIsSavingFortress(false);
+    }
+  };
+
+  const handleBaseStatChange = async (
+    statKey: keyof NonNullable<SettlementState['baseStats']>,
+    value: number
+  ) => {
+    if (!activeProject || !settlementState || !Number.isFinite(value)) return;
+    setIsSavingFortress(true);
+    setFeedback(null);
+    try {
+      const nextState = await updateSettlementBaseStats({
+        projectId: activeProject.id,
+        baseStats: {
+          [statKey]: value
+        }
+      });
+      setSettlementState(nextState);
+      setFeedback({tone: 'success', message: `Updated base stat "${statKey}".`});
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'Unable to update base stat.';
+      setFeedback({tone: 'error', message});
+    } finally {
+      setIsSavingFortress(false);
+    }
   };
 
   if (!activeProject) {
@@ -1283,13 +1359,83 @@ function CompendiumRoute({activeProject}: CompendiumRouteProps) {
             <div style={{fontSize: '0.85rem', marginBottom: '0.5rem'}}>
               <strong>Fortress Level:</strong> {settlementState?.fortressLevel ?? 1}
             </div>
+            <div style={{display: 'flex', gap: '0.5rem', marginBottom: '0.65rem'}}>
+              <button
+                type='button'
+                onClick={() => void handleAdjustFortressLevel(-1)}
+                disabled={!settlementState || settlementState.fortressLevel <= 1 || isSavingFortress}
+              >
+                - Level
+              </button>
+              <button
+                type='button'
+                onClick={() => void handleAdjustFortressLevel(1)}
+                disabled={!settlementState || isSavingFortress}
+              >
+                + Level
+              </button>
+            </div>
+            <div style={{fontSize: '0.82rem', color: '#4b5563', marginBottom: '0.6rem'}}>
+              {nextFortressTier
+                ? `Next tier at level ${nextFortressTier.levelRequired}: ${nextFortressTier.name}`
+                : 'All configured fortress tiers unlocked.'}
+            </div>
+            <div style={{fontSize: '0.85rem', marginBottom: '0.35rem'}}>
+              <strong>Base Stats</strong>
+            </div>
+            {settlementState && (
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: '1fr 1fr',
+                  gap: '0.45rem',
+                  marginBottom: '0.65rem'
+                }}
+              >
+                {(Object.keys(settlementState.baseStats) as Array<
+                  keyof typeof settlementState.baseStats
+                >).map((key) => (
+                  <label key={`base-${key}`} style={{fontSize: '0.82rem'}}>
+                    {key}
+                    <input
+                      type='number'
+                      value={settlementState.baseStats[key]}
+                      onChange={(e) =>
+                        void handleBaseStatChange(key, Number(e.target.value))
+                      }
+                      style={{width: '100%'}}
+                    />
+                  </label>
+                ))}
+              </div>
+            )}
             <div style={{fontSize: '0.85rem', marginBottom: '0.5rem'}}>
+              <strong>Fortress Tier Effects:</strong>{' '}
+              {settlementComputedEffects.fortressEffects.length}
+            </div>
+            <ul style={{listStyle: 'none', padding: 0, margin: 0}}>
+              {settlementComputedEffects.fortressEffects.length === 0 ? (
+                <li style={{fontSize: '0.82rem', color: '#6b7280'}}>
+                  No tier effects unlocked yet.
+                </li>
+              ) : (
+                settlementComputedEffects.fortressEffects.map((effect, index) => (
+                  <li
+                    key={`tier-effect-${effect.targetType}-${effect.targetId}-${index}`}
+                    style={{marginBottom: '0.35rem'}}
+                  >
+                    {formatSettlementEffectLabel(effect)}
+                  </li>
+                ))
+              )}
+            </ul>
+            <div style={{fontSize: '0.85rem', marginTop: '0.65rem', marginBottom: '0.5rem'}}>
               <strong>Active Aura Effects:</strong> {activeSettlementEffects.length}
             </div>
             <ul style={{listStyle: 'none', padding: 0, margin: 0}}>
               {activeSettlementEffects.length === 0 ? (
                 <li style={{fontSize: '0.82rem', color: '#6b7280'}}>
-                  No active effects yet.
+                  No active module effects yet.
                 </li>
               ) : (
                 activeSettlementEffects.map((effect, index) => (
@@ -1298,6 +1444,33 @@ function CompendiumRoute({activeProject}: CompendiumRouteProps) {
                     style={{marginBottom: '0.35rem'}}
                   >
                     {formatSettlementEffectLabel(effect)}
+                  </li>
+                ))
+              )}
+            </ul>
+            <div style={{fontSize: '0.85rem', marginTop: '0.65rem', marginBottom: '0.5rem'}}>
+              <strong>Total Active Effects:</strong> {settlementComputedEffects.allEffects.length}
+            </div>
+            <div style={{fontSize: '0.82rem', color: '#4b5563', marginBottom: '0.65rem'}}>
+              Includes fortress progression + aura modules.
+            </div>
+            <div style={{fontSize: '0.85rem', marginBottom: '0.35rem'}}>
+              <strong>Unlocked Fortress Tiers</strong>
+            </div>
+            <ul style={{listStyle: 'none', padding: 0, margin: 0}}>
+              {unlockedFortressTiers.length === 0 ? (
+                <li style={{fontSize: '0.82rem', color: '#6b7280'}}>None yet.</li>
+              ) : (
+                unlockedFortressTiers.map((tier) => (
+                  <li key={tier.id} style={{marginBottom: '0.45rem'}}>
+                    <strong>
+                      L{tier.levelRequired} {tier.name}
+                    </strong>
+                    {tier.description && (
+                      <div style={{fontSize: '0.8rem', color: '#6b7280'}}>
+                        {tier.description}
+                      </div>
+                    )}
                   </li>
                 ))
               )}

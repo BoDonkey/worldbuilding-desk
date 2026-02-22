@@ -325,8 +325,22 @@ export interface SettlementState {
   projectId: string;
   name: string;
   fortressLevel: number;
+  baseStats: {
+    defense: number;
+    storageCapacity: number;
+    craftingThroughput: number;
+    morale: number;
+  };
   moduleIds: string[];
   updatedAt: number;
+}
+
+export interface FortressTierDefinition {
+  id: string;
+  levelRequired: number;
+  name: string;
+  description?: string;
+  effects: SettlementAuraEffect[];
 }
 
 export interface PartySynergyRule {
