@@ -19,6 +19,24 @@ import {RulesEngine} from '../engine/RulesEngine';
  * Manages character state and applies time-based effects
  */
 
+export type TimeProgressionMode = 'seconds' | 'ticks';
+
+export interface TimeAdvanceOptions {
+  mode?: TimeProgressionMode;
+  tickSeconds?: number;
+}
+
+export interface ExposureAilmentDefinition {
+  id: string;
+  exposureKey: string;
+  statusName: string;
+  triggerAtSeconds: number;
+  durationSeconds: number;
+  sourceRuleId?: string;
+  cooldownSeconds?: number;
+  data?: Record<string, unknown>;
+}
+
 export class StateManager {
   private states: Map<string, CharacterState>;
   private engine: RulesEngine;
@@ -147,6 +165,15 @@ export class StateManager {
   /**
    * Process time elapsed for a character (handles regeneration, status expiry, etc)
    */
+  advanceTime(
+    characterId: string,
+    amount: number,
+    options?: TimeAdvanceOptions
+  ): CharacterState {
+    const seconds = this.toSeconds(amount, options);
+    return this.processTimeElapsed(characterId, seconds);
+  }
+
   processTimeElapsed(characterId: string, seconds: number): CharacterState {
     const state = this.states.get(characterId);
     if (!state) {
@@ -169,8 +196,23 @@ export class StateManager {
     // 4. Trigger time-based rules
     newState = this.triggerTimeBasedRules(newState, seconds);
 
+    // 5. Trigger status-active rules
+    newState = this.triggerStatusActiveRules(newState, seconds);
+
     this.states.set(characterId, newState);
     return newState;
+  }
+
+  private toSeconds(amount: number, options?: TimeAdvanceOptions): number {
+    if (!Number.isFinite(amount) || amount <= 0) {
+      throw new Error('Time amount must be a positive number');
+    }
+    const mode = options?.mode ?? 'seconds';
+    if (mode === 'ticks') {
+      const tickSeconds = options?.tickSeconds ?? 60;
+      return amount * tickSeconds;
+    }
+    return amount;
   }
 
   /**
@@ -267,6 +309,145 @@ export class StateManager {
     }
 
     return newState;
+  }
+
+  /**
+   * Trigger rules that should run while a status is active
+   */
+  private triggerStatusActiveRules(
+    state: CharacterState,
+    seconds: number
+  ): CharacterState {
+    const statusRuleCandidates = this.ruleset.rules.filter(
+      (rule) => rule.enabled && rule.trigger?.type === 'status_active'
+    );
+    if (statusRuleCandidates.length === 0 || state.statuses.length === 0) {
+      return state;
+    }
+
+    let newState = state;
+    for (const status of state.statuses) {
+      const matchingRules = statusRuleCandidates.filter((rule) => {
+        const configuredStatus = rule.trigger?.statusName;
+        if (!configuredStatus) return true;
+        return configuredStatus === status.name;
+      });
+
+      for (const rule of matchingRules) {
+        const interval = rule.trigger?.interval || 1;
+        if (seconds < interval) continue;
+        const result = this.engine.evaluateRule(rule, newState);
+        if (result.success && result.newState) {
+          newState = result.newState;
+        }
+      }
+    }
+
+    return newState;
+  }
+
+  /**
+   * Add a status to a character
+   */
+  recordExposure(
+    characterId: string,
+    exposureKey: string,
+    amount: number,
+    options?: TimeAdvanceOptions
+  ): CharacterState {
+    const state = this.states.get(characterId);
+    if (!state) {
+      throw new Error(`Character ${characterId} not found`);
+    }
+    const seconds = this.toSeconds(amount, options);
+    const now = Date.now();
+    const newState = updateState(state, (draft) => {
+      const current = draft.environment.exposures[exposureKey];
+      draft.environment.exposures[exposureKey] = {
+        seconds: (current?.seconds ?? 0) + seconds,
+        lastUpdated: now,
+        lastAppliedAt: current?.lastAppliedAt
+      };
+      draft.updatedAt = now;
+    });
+    this.states.set(characterId, newState);
+    return newState;
+  }
+
+  clearExposure(characterId: string, exposureKey: string): CharacterState {
+    const state = this.states.get(characterId);
+    if (!state) {
+      throw new Error(`Character ${characterId} not found`);
+    }
+    const newState = updateState(state, (draft) => {
+      delete draft.environment.exposures[exposureKey];
+      draft.updatedAt = Date.now();
+    });
+    this.states.set(characterId, newState);
+    return newState;
+  }
+
+  applyExposureAilments(
+    characterId: string,
+    ailments: ExposureAilmentDefinition[]
+  ): CharacterState {
+    const state = this.states.get(characterId);
+    if (!state) {
+      throw new Error(`Character ${characterId} not found`);
+    }
+
+    const now = Date.now();
+    const nextState = updateState(state, (draft) => {
+      for (const ailment of ailments) {
+        const tracker = draft.environment.exposures[ailment.exposureKey];
+        if (!tracker || tracker.seconds < ailment.triggerAtSeconds) {
+          continue;
+        }
+
+        const activeStatus = draft.statuses.find(
+          (status) =>
+            status.name === ailment.statusName &&
+            (!status.expiresAt || status.expiresAt > now)
+        );
+        if (activeStatus) {
+          continue;
+        }
+
+        const cooldownSeconds = ailment.cooldownSeconds ?? 0;
+        if (
+          tracker.lastAppliedAt &&
+          now - tracker.lastAppliedAt < cooldownSeconds * 1000
+        ) {
+          continue;
+        }
+
+        draft.statuses.push({
+          id: crypto.randomUUID(),
+          name: ailment.statusName,
+          sourceRuleId: ailment.sourceRuleId ?? ailment.id,
+          appliedAt: now,
+          expiresAt: now + ailment.durationSeconds * 1000,
+          data: ailment.data
+        });
+        tracker.lastAppliedAt = now;
+      }
+
+      draft.updatedAt = now;
+    });
+
+    this.states.set(characterId, nextState);
+    return nextState;
+  }
+
+  recordExposureAndApplyAilments(
+    characterId: string,
+    exposureKey: string,
+    amount: number,
+    ailments: ExposureAilmentDefinition[],
+    options?: TimeAdvanceOptions
+  ): CharacterState {
+    this.recordExposure(characterId, exposureKey, amount, options);
+    return this.applyExposureAilments(characterId, ailments);
   }
 
   /**

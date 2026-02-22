@@ -221,12 +221,24 @@ export interface CompendiumMilestone {
 
 export type RecipeCategory = 'food' | 'crafting' | 'alchemy' | 'custom';
 
+export interface RecipeMaterialRequirement {
+  itemId: string;
+  quantity: number;
+}
+
+export interface RecipeRequirements {
+  minCharacterLevel?: number;
+  requiredMilestoneIds?: string[];
+  requiredMaterials?: RecipeMaterialRequirement[];
+}
+
 export interface UnlockableRecipe {
   id: string;
   projectId: string;
   name: string;
   category: RecipeCategory;
   description?: string;
+  requirements?: RecipeRequirements;
   createdAt: number;
   updatedAt: number;
 }

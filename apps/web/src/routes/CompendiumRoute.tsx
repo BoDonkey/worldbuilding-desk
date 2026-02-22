@@ -84,6 +84,8 @@ function CompendiumRoute({activeProject}: CompendiumRouteProps) {
   const [recipeName, setRecipeName] = useState('');
   const [recipeCategory, setRecipeCategory] =
     useState<UnlockableRecipe['category']>('food');
+  const [recipeMinLevel, setRecipeMinLevel] = useState<number>(1);
+  const [recipeRequiredMilestones, setRecipeRequiredMilestones] = useState('');
 
   const [milestoneName, setMilestoneName] = useState('');
   const [milestonePoints, setMilestonePoints] = useState(10);
@@ -224,6 +226,13 @@ function CompendiumRoute({activeProject}: CompendiumRouteProps) {
       projectId: activeProject.id,
       name: recipeName.trim(),
       category: recipeCategory,
+      requirements: {
+        minCharacterLevel: Math.max(1, Math.floor(recipeMinLevel)),
+        requiredMilestoneIds: recipeRequiredMilestones
+          .split(',')
+          .map((value) => value.trim())
+          .filter(Boolean)
+      },
       createdAt: now,
       updatedAt: now
     };
@@ -232,6 +241,8 @@ function CompendiumRoute({activeProject}: CompendiumRouteProps) {
       await saveUnlockableRecipe(recipe);
       setRecipes((prev) => [...prev, recipe].sort((a, b) => a.name.localeCompare(b.name)));
       setRecipeName('');
+      setRecipeMinLevel(1);
+      setRecipeRequiredMilestones('');
       setFeedback({tone: 'success', message: 'Unlockable recipe added.'});
     } catch (error) {
       const message =
@@ -561,6 +572,25 @@ function CompendiumRoute({activeProject}: CompendiumRouteProps) {
                 ))}
               </select>
             </label>
+            <label style={{display: 'block', marginBottom: '0.5rem'}}>
+              Min Character Level
+              <input
+                type='number'
+                min={1}
+                value={recipeMinLevel}
+                onChange={(e) => setRecipeMinLevel(Number(e.target.value))}
+                style={{width: '100%'}}
+              />
+            </label>
+            <label style={{display: 'block', marginBottom: '0.75rem'}}>
+              Required Milestone IDs (comma-separated)
+              <input
+                type='text'
+                value={recipeRequiredMilestones}
+                onChange={(e) => setRecipeRequiredMilestones(e.target.value)}
+                style={{width: '100%'}}
+              />
+            </label>
             <button type='button' onClick={() => void handleCreateRecipe()}>
               Add Recipe
             </button>
@@ -568,6 +598,9 @@ function CompendiumRoute({activeProject}: CompendiumRouteProps) {
               {recipes.map((recipe) => (
                 <li key={recipe.id} style={{marginBottom: '0.35rem'}}>
                   {unlockedRecipeSet.has(recipe.id) ? 'Unlocked' : 'Locked'}: {recipe.name}
+                  {recipe.requirements?.minCharacterLevel ? (
+                    <> (lvl {recipe.requirements.minCharacterLevel}+)</>
+                  ) : null}
                 </li>
               ))}
             </ul>

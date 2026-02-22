@@ -72,3 +72,17 @@ This makes compendium progression an explicit part of world/rules design.
    - Progress panel (total points + unlocked items)
 2. Add a quick action drawer to World Bible entities for logging actions.
 3. Surface unlocked permanent effects on character sheets.
+
+## Crafting Tiers + Ailments (Architecture)
+
+- Recipes now support requirements:
+  - `minCharacterLevel`
+  - `requiredMilestoneIds`
+  - optional material requirements
+- `canCraftRecipe(...)` is available in `compendiumService` for craft gating checks.
+- Rules engine `StateManager` now supports:
+  - `advanceTime(...)` with `seconds` or abstract `ticks`
+  - exposure tracking (`recordExposure`, `clearExposure`)
+  - threshold-based ailment application (`applyExposureAilments`)
+- Example cave-lung preset:
+  - `packages/rules-engine/examples/cave-lung-preset.ts`

@@ -4,6 +4,7 @@ import type {
   CompendiumDomain,
   CompendiumMilestone,
   CompendiumProgress,
+  RecipeMaterialRequirement,
   WorldEntity,
   UnlockableRecipe
 } from '../entityTypes';
@@ -29,6 +30,17 @@ export interface RecordActionResult {
   progress: CompendiumProgress;
   unlockedMilestoneIds: string[];
   unlockedRecipeIds: string[];
+}
+
+export interface CraftingCheckContext {
+  progress: Pick<CompendiumProgress, 'unlockedMilestoneIds' | 'unlockedRecipeIds'> | null;
+  characterLevel: number;
+  availableMaterials?: Record<string, number>;
+}
+
+export interface CraftingCheckResult {
+  craftable: boolean;
+  reasons: string[];
 }
 
 function requestToPromise<T>(request: IDBRequest<T>): Promise<T> {
@@ -150,6 +162,64 @@ export async function saveUnlockableRecipe(recipe: UnlockableRecipe): Promise<vo
   const tx = db.transaction(COMPENDIUM_RECIPE_STORE_NAME, 'readwrite');
   const store = tx.objectStore(COMPENDIUM_RECIPE_STORE_NAME);
   await requestToPromise(store.put(recipe));
+}
+
+function hasMaterial(
+  requirements: RecipeMaterialRequirement[] | undefined,
+  availableMaterials: Record<string, number>
+): string[] {
+  const failures: string[] = [];
+  for (const requirement of requirements ?? []) {
+    const available = availableMaterials[requirement.itemId] ?? 0;
+    if (available < requirement.quantity) {
+      failures.push(
+        `Requires ${requirement.quantity}x ${requirement.itemId} (have ${available}).`
+      );
+    }
+  }
+  return failures;
+}
+
+export function canCraftRecipe(
+  recipe: UnlockableRecipe,
+  context: CraftingCheckContext
+): CraftingCheckResult {
+  const reasons: string[] = [];
+  const requirements = recipe.requirements;
+  const unlockedMilestones = new Set(context.progress?.unlockedMilestoneIds ?? []);
+  const unlockedRecipes = new Set(context.progress?.unlockedRecipeIds ?? []);
+
+  if (
+    requirements?.minCharacterLevel !== undefined &&
+    context.characterLevel < requirements.minCharacterLevel
+  ) {
+    reasons.push(
+      `Requires character level ${requirements.minCharacterLevel} (current ${context.characterLevel}).`
+    );
+  }
+
+  for (const milestoneId of requirements?.requiredMilestoneIds ?? []) {
+    if (!unlockedMilestones.has(milestoneId)) {
+      reasons.push(`Requires milestone "${milestoneId}".`);
+    }
+  }
+
+  if (!unlockedRecipes.has(recipe.id)) {
+    reasons.push('Recipe is not unlocked yet.');
+  }
+
+  if (requirements?.requiredMaterials?.length) {
+    const materialFailures = hasMaterial(
+      requirements.requiredMaterials,
+      context.availableMaterials ?? {}
+    );
+    reasons.push(...materialFailures);
+  }
+
+  return {
+    craftable: reasons.length === 0,
+    reasons
+  };
 }
 
 export async function getCompendiumProgress(
