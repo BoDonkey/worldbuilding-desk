@@ -10,6 +10,7 @@ import WorkspaceRoute from './routes/WorkspaceRoute';
 import SettingsRoute from './routes/SettingsRoute';
 import CharactersRoute from './routes/CharactersRoute';
 import CharacterSheetsRoute from './routes/CharacterSheetsRoute';
+import CompendiumRoute from './routes/CompendiumRoute';
 
 function App() {
   const [activeProject, setActiveProject] = useState<Project | null>(() => {
@@ -65,6 +66,10 @@ function App() {
                 <Route
                   path='/workspace'
                   element={<WorkspaceRoute activeProject={activeProject} />}
+                />
+                <Route
+                  path='/compendium'
+                  element={<CompendiumRoute activeProject={activeProject} />}
                 />
                 <Route
                   path='/settings'

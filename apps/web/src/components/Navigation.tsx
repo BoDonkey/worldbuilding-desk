@@ -32,6 +32,9 @@ export const Navigation: React.FC<NavigationProps> = ({ activeProject }) => {
           <NavLink to="/workspace" className={({ isActive }) => isActive ? styles.active : ''}>
             Writing Workspace
           </NavLink>
+          <NavLink to="/compendium" className={({ isActive }) => isActive ? styles.active : ''}>
+            Compendium
+          </NavLink>
           <NavLink to="/settings" className={({ isActive }) => isActive ? styles.active : ''}>
             Settings
           </NavLink>
