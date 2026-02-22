@@ -263,3 +263,32 @@ export interface CompendiumActionLog {
   pointsAwarded: number;
   createdAt: number;
 }
+
+export interface ZoneAffinityMilestone {
+  id: string;
+  thresholdPercent: number;
+  name: string;
+  description?: string;
+  passiveDescription?: string;
+}
+
+export interface ZoneAffinityProfile {
+  id: string;
+  projectId: string;
+  biomeKey: string;
+  name: string;
+  maxAffinityPoints: number;
+  milestones: ZoneAffinityMilestone[];
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface ZoneAffinityProgress {
+  id: string;
+  projectId: string;
+  biomeKey: string;
+  affinityPoints: number;
+  totalExposureSeconds: number;
+  unlockedMilestoneIds: string[];
+  updatedAt: number;
+}

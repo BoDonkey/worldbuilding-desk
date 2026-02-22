@@ -6,7 +6,9 @@ import type {
   CompendiumProgress,
   RecipeMaterialRequirement,
   WorldEntity,
-  UnlockableRecipe
+  UnlockableRecipe,
+  ZoneAffinityProfile,
+  ZoneAffinityProgress
 } from '../entityTypes';
 import {
   openDb,
@@ -14,7 +16,9 @@ import {
   COMPENDIUM_ENTRY_STORE_NAME,
   COMPENDIUM_MILESTONE_STORE_NAME,
   COMPENDIUM_PROGRESS_STORE_NAME,
-  COMPENDIUM_RECIPE_STORE_NAME
+  COMPENDIUM_RECIPE_STORE_NAME,
+  ZONE_AFFINITY_PROFILE_STORE_NAME,
+  ZONE_AFFINITY_PROGRESS_STORE_NAME
 } from '../db';
 
 type RecordActionParams = {
@@ -41,6 +45,19 @@ export interface CraftingCheckContext {
 export interface CraftingCheckResult {
   craftable: boolean;
   reasons: string[];
+}
+
+export interface RecordZoneExposureParams {
+  projectId: string;
+  biomeKey: string;
+  exposureSeconds: number;
+  pointsPerMinute?: number;
+}
+
+export interface RecordZoneExposureResult {
+  profile: ZoneAffinityProfile;
+  progress: ZoneAffinityProgress;
+  unlockedMilestoneIds: string[];
 }
 
 function requestToPromise<T>(request: IDBRequest<T>): Promise<T> {
@@ -391,5 +408,157 @@ export async function recordCompendiumAction(
     progress,
     unlockedMilestoneIds,
     unlockedRecipeIds
+  };
+}
+
+export function getZoneAffinityPercent(
+  progress: ZoneAffinityProgress,
+  profile: ZoneAffinityProfile
+): number {
+  if (profile.maxAffinityPoints <= 0) return 0;
+  return Math.min(100, (progress.affinityPoints / profile.maxAffinityPoints) * 100);
+}
+
+function zoneProfileId(projectId: string, biomeKey: string): string {
+  return `zone-profile:${projectId}:${biomeKey}`;
+}
+
+function zoneProgressId(projectId: string, biomeKey: string): string {
+  return `zone-progress:${projectId}:${biomeKey}`;
+}
+
+export async function getZoneAffinityProfilesByProject(
+  projectId: string
+): Promise<ZoneAffinityProfile[]> {
+  const db = await openDb();
+  const tx = db.transaction(ZONE_AFFINITY_PROFILE_STORE_NAME, 'readonly');
+  const store = tx.objectStore(ZONE_AFFINITY_PROFILE_STORE_NAME);
+  const all = (await requestToPromise(store.getAll())) as ZoneAffinityProfile[];
+  return all
+    .filter((profile) => profile.projectId === projectId)
+    .sort((a, b) => a.name.localeCompare(b.name));
+}
+
+export async function saveZoneAffinityProfile(
+  profile: ZoneAffinityProfile
+): Promise<void> {
+  const db = await openDb();
+  const tx = db.transaction(ZONE_AFFINITY_PROFILE_STORE_NAME, 'readwrite');
+  const store = tx.objectStore(ZONE_AFFINITY_PROFILE_STORE_NAME);
+  await requestToPromise(store.put(profile));
+}
+
+export async function upsertZoneAffinityProfile(params: {
+  projectId: string;
+  biomeKey: string;
+  name: string;
+  maxAffinityPoints?: number;
+  milestones?: ZoneAffinityProfile['milestones'];
+}): Promise<ZoneAffinityProfile> {
+  const id = zoneProfileId(params.projectId, params.biomeKey);
+  const db = await openDb();
+  const tx = db.transaction(ZONE_AFFINITY_PROFILE_STORE_NAME, 'readwrite');
+  const store = tx.objectStore(ZONE_AFFINITY_PROFILE_STORE_NAME);
+  const existing = (await requestToPromise(
+    store.get(id)
+  )) as ZoneAffinityProfile | undefined;
+  const now = Date.now();
+  const next: ZoneAffinityProfile = {
+    id,
+    projectId: params.projectId,
+    biomeKey: params.biomeKey,
+    name: params.name,
+    maxAffinityPoints: params.maxAffinityPoints ?? existing?.maxAffinityPoints ?? 100,
+    milestones: params.milestones ?? existing?.milestones ?? [],
+    createdAt: existing?.createdAt ?? now,
+    updatedAt: now
+  };
+  await requestToPromise(store.put(next));
+  return next;
+}
+
+export async function getZoneAffinityProgressByProject(
+  projectId: string
+): Promise<ZoneAffinityProgress[]> {
+  const db = await openDb();
+  const tx = db.transaction(ZONE_AFFINITY_PROGRESS_STORE_NAME, 'readonly');
+  const store = tx.objectStore(ZONE_AFFINITY_PROGRESS_STORE_NAME);
+  const all = (await requestToPromise(store.getAll())) as ZoneAffinityProgress[];
+  return all
+    .filter((progress) => progress.projectId === projectId)
+    .sort((a, b) => b.affinityPoints - a.affinityPoints);
+}
+
+export async function getZoneAffinityProgress(
+  projectId: string,
+  biomeKey: string
+): Promise<ZoneAffinityProgress> {
+  const id = zoneProgressId(projectId, biomeKey);
+  const db = await openDb();
+  const tx = db.transaction(ZONE_AFFINITY_PROGRESS_STORE_NAME, 'readwrite');
+  const store = tx.objectStore(ZONE_AFFINITY_PROGRESS_STORE_NAME);
+  const existing = (await requestToPromise(
+    store.get(id)
+  )) as ZoneAffinityProgress | undefined;
+  if (existing) return existing;
+  const created: ZoneAffinityProgress = {
+    id,
+    projectId,
+    biomeKey,
+    affinityPoints: 0,
+    totalExposureSeconds: 0,
+    unlockedMilestoneIds: [],
+    updatedAt: Date.now()
+  };
+  await requestToPromise(store.put(created));
+  return created;
+}
+
+export async function recordZoneExposure(
+  params: RecordZoneExposureParams
+): Promise<RecordZoneExposureResult> {
+  if (!Number.isFinite(params.exposureSeconds) || params.exposureSeconds <= 0) {
+    throw new Error('exposureSeconds must be a positive number');
+  }
+
+  const profiles = await getZoneAffinityProfilesByProject(params.projectId);
+  const profile = profiles.find((item) => item.biomeKey === params.biomeKey);
+  if (!profile) {
+    throw new Error(`Zone affinity profile not found for biome "${params.biomeKey}"`);
+  }
+
+  const pointsPerMinute = params.pointsPerMinute ?? 1;
+  const pointsToAdd = (params.exposureSeconds / 60) * pointsPerMinute;
+  const progress = await getZoneAffinityProgress(params.projectId, params.biomeKey);
+
+  const unlockedMilestoneSet = new Set(progress.unlockedMilestoneIds);
+  const unlockedMilestoneIds: string[] = [];
+  const nextProgress: ZoneAffinityProgress = {
+    ...progress,
+    affinityPoints: Math.max(0, progress.affinityPoints + pointsToAdd),
+    totalExposureSeconds: progress.totalExposureSeconds + params.exposureSeconds,
+    updatedAt: Date.now()
+  };
+
+  const nextPercent = getZoneAffinityPercent(nextProgress, profile);
+  for (const milestone of profile.milestones) {
+    if (nextPercent >= milestone.thresholdPercent) {
+      if (!unlockedMilestoneSet.has(milestone.id)) {
+        unlockedMilestoneSet.add(milestone.id);
+        unlockedMilestoneIds.push(milestone.id);
+      }
+    }
+  }
+  nextProgress.unlockedMilestoneIds = Array.from(unlockedMilestoneSet);
+
+  const db = await openDb();
+  const tx = db.transaction(ZONE_AFFINITY_PROGRESS_STORE_NAME, 'readwrite');
+  const store = tx.objectStore(ZONE_AFFINITY_PROGRESS_STORE_NAME);
+  await requestToPromise(store.put(nextProgress));
+
+  return {
+    profile,
+    progress: nextProgress,
+    unlockedMilestoneIds
   };
 }

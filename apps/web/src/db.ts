@@ -1,5 +1,5 @@
 export const DB_NAME = 'worldbuilding-db';
-export const DB_VERSION = 9;
+export const DB_VERSION = 10;
 export const ENTITY_STORE_NAME = 'entities';
 export const CATEGORY_STORE_NAME = 'entityCategories';
 export const PROJECT_STORE_NAME = 'projects';
@@ -12,6 +12,8 @@ export const COMPENDIUM_MILESTONE_STORE_NAME = 'compendium_milestones';
 export const COMPENDIUM_RECIPE_STORE_NAME = 'compendium_recipes';
 export const COMPENDIUM_PROGRESS_STORE_NAME = 'compendium_progress';
 export const COMPENDIUM_ACTION_LOG_STORE_NAME = 'compendium_action_logs';
+export const ZONE_AFFINITY_PROFILE_STORE_NAME = 'zone_affinity_profiles';
+export const ZONE_AFFINITY_PROGRESS_STORE_NAME = 'zone_affinity_progress';
 
 export function openDb(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
@@ -68,6 +70,18 @@ export function openDb(): Promise<IDBDatabase> {
 
       if (!db.objectStoreNames.contains(COMPENDIUM_ACTION_LOG_STORE_NAME)) {
         db.createObjectStore(COMPENDIUM_ACTION_LOG_STORE_NAME, {
+          keyPath: 'id'
+        });
+      }
+
+      if (!db.objectStoreNames.contains(ZONE_AFFINITY_PROFILE_STORE_NAME)) {
+        db.createObjectStore(ZONE_AFFINITY_PROFILE_STORE_NAME, {
+          keyPath: 'id'
+        });
+      }
+
+      if (!db.objectStoreNames.contains(ZONE_AFFINITY_PROGRESS_STORE_NAME)) {
+        db.createObjectStore(ZONE_AFFINITY_PROGRESS_STORE_NAME, {
           keyPath: 'id'
         });
       }

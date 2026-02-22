@@ -86,3 +86,20 @@ This makes compendium progression an explicit part of world/rules design.
   - threshold-based ailment application (`applyExposureAilments`)
 - Example cave-lung preset:
   - `packages/rules-engine/examples/cave-lung-preset.ts`
+
+## Sector Mastery (Zone Affinity)
+
+Implemented as a biome-specific progression layer:
+
+- `ZoneAffinityProfile`: biome definition, max points, and milestone thresholds.
+- `ZoneAffinityProgress`: accumulated exposure/points per biome.
+- Exposure recording and unlock evaluation:
+  - `recordZoneExposure(...)`
+  - `getZoneAffinityPercent(...)`
+- Persistence stores:
+  - `zone_affinity_profiles`
+  - `zone_affinity_progress`
+- Initial UI in Compendium route supports:
+  - creating zone profiles
+  - recording exposure time
+  - viewing affinity % and unlocked 25/50/100 milestones

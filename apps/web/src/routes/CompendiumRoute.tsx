@@ -7,7 +7,9 @@ import type {
   CompendiumProgress,
   Project,
   UnlockableRecipe,
-  WorldEntity
+  WorldEntity,
+  ZoneAffinityProfile,
+  ZoneAffinityProgress
 } from '../entityTypes';
 import {
   canCraftRecipe,
@@ -16,10 +18,15 @@ import {
   getCompendiumMilestonesByProject,
   getCompendiumProgress,
   getRecipesByProject,
+  getZoneAffinityPercent,
+  getZoneAffinityProfilesByProject,
+  getZoneAffinityProgressByProject,
+  recordZoneExposure,
   recordCompendiumAction,
   saveCompendiumEntry,
   saveCompendiumMilestone,
   saveUnlockableRecipe,
+  upsertZoneAffinityProfile,
   upsertCompendiumEntryFromEntity
 } from '../services/compendiumService';
 import {getEntitiesByProject} from '../entityStorage';
@@ -65,6 +72,8 @@ function CompendiumRoute({activeProject}: CompendiumRouteProps) {
   const [entries, setEntries] = useState<CompendiumEntry[]>([]);
   const [milestones, setMilestones] = useState<CompendiumMilestone[]>([]);
   const [recipes, setRecipes] = useState<UnlockableRecipe[]>([]);
+  const [zoneProfiles, setZoneProfiles] = useState<ZoneAffinityProfile[]>([]);
+  const [zoneProgress, setZoneProgress] = useState<ZoneAffinityProgress[]>([]);
   const [progress, setProgress] = useState<CompendiumProgress | null>(null);
   const [logs, setLogs] = useState<Awaited<
     ReturnType<typeof getCompendiumActionLogs>
@@ -94,6 +103,12 @@ function CompendiumRoute({activeProject}: CompendiumRouteProps) {
   const [milestoneRecipeIds, setMilestoneRecipeIds] = useState('');
   const [previewLevel, setPreviewLevel] = useState(1);
   const [previewMaterialsText, setPreviewMaterialsText] = useState('');
+  const [zoneName, setZoneName] = useState('');
+  const [zoneKey, setZoneKey] = useState('');
+  const [zoneMaxPoints, setZoneMaxPoints] = useState(100);
+  const [selectedZoneKey, setSelectedZoneKey] = useState('');
+  const [zoneExposureMinutes, setZoneExposureMinutes] = useState(10);
+  const [isRecordingZone, setIsRecordingZone] = useState(false);
 
   const [quantityByActionKey, setQuantityByActionKey] = useState<
     Record<string, number>
@@ -104,6 +119,8 @@ function CompendiumRoute({activeProject}: CompendiumRouteProps) {
       setEntries([]);
       setMilestones([]);
       setRecipes([]);
+      setZoneProfiles([]);
+      setZoneProgress([]);
       setProgress(null);
       setLogs([]);
       setWorldEntities([]);
@@ -117,15 +134,19 @@ function CompendiumRoute({activeProject}: CompendiumRouteProps) {
       getCompendiumEntriesByProject(activeProject.id),
       getCompendiumMilestonesByProject(activeProject.id),
       getRecipesByProject(activeProject.id),
+      getZoneAffinityProfilesByProject(activeProject.id),
+      getZoneAffinityProgressByProject(activeProject.id),
       getCompendiumProgress(activeProject.id),
       getCompendiumActionLogs(activeProject.id),
       getEntitiesByProject(activeProject.id)
     ])
-      .then(([loadedEntries, loadedMilestones, loadedRecipes, loadedProgress, loadedLogs, loadedEntities]) => {
+      .then(([loadedEntries, loadedMilestones, loadedRecipes, loadedZoneProfiles, loadedZoneProgress, loadedProgress, loadedLogs, loadedEntities]) => {
         if (cancelled) return;
         setEntries(loadedEntries);
         setMilestones(loadedMilestones);
         setRecipes(loadedRecipes);
+        setZoneProfiles(loadedZoneProfiles);
+        setZoneProgress(loadedZoneProgress);
         setProgress(loadedProgress);
         setLogs(loadedLogs);
         setWorldEntities(loadedEntities);
@@ -166,6 +187,10 @@ function CompendiumRoute({activeProject}: CompendiumRouteProps) {
   const worldEntityById = useMemo(
     () => new Map(worldEntities.map((entity) => [entity.id, entity])),
     [worldEntities]
+  );
+  const zoneProgressByKey = useMemo(
+    () => new Map(zoneProgress.map((progressItem) => [progressItem.biomeKey, progressItem])),
+    [zoneProgress]
   );
   const parsedPreviewMaterials = useMemo(() => {
     const result: Record<string, number> = {};
@@ -300,6 +325,89 @@ function CompendiumRoute({activeProject}: CompendiumRouteProps) {
       const message =
         error instanceof Error ? error.message : 'Unable to save milestone.';
       setFeedback({tone: 'error', message});
+    }
+  };
+
+  const handleCreateZoneProfile = async () => {
+    if (!activeProject || !zoneName.trim() || !zoneKey.trim()) return;
+    setFeedback(null);
+    try {
+      const profile = await upsertZoneAffinityProfile({
+        projectId: activeProject.id,
+        biomeKey: zoneKey.trim().toLowerCase(),
+        name: zoneName.trim(),
+        maxAffinityPoints: Math.max(1, Math.floor(zoneMaxPoints)),
+        milestones: [
+          {
+            id: `${zoneKey.trim().toLowerCase()}-25`,
+            thresholdPercent: 25,
+            name: '25% Affinity',
+            description: 'Biome familiarity unlocked.'
+          },
+          {
+            id: `${zoneKey.trim().toLowerCase()}-50`,
+            thresholdPercent: 50,
+            name: '50% Affinity',
+            description: 'Biome resistance unlocked.'
+          },
+          {
+            id: `${zoneKey.trim().toLowerCase()}-100`,
+            thresholdPercent: 100,
+            name: '100% Affinity',
+            description: 'Biome mastery unlocked.'
+          }
+        ]
+      });
+      setZoneProfiles((prev) => {
+        const idx = prev.findIndex((item) => item.id === profile.id);
+        if (idx === -1) return [...prev, profile].sort((a, b) => a.name.localeCompare(b.name));
+        const next = [...prev];
+        next[idx] = profile;
+        return next.sort((a, b) => a.name.localeCompare(b.name));
+      });
+      setSelectedZoneKey(profile.biomeKey);
+      setZoneName('');
+      setZoneKey('');
+      setZoneMaxPoints(100);
+      setFeedback({tone: 'success', message: 'Zone affinity profile created.'});
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'Unable to create zone profile.';
+      setFeedback({tone: 'error', message});
+    }
+  };
+
+  const handleRecordZoneExposure = async () => {
+    if (!activeProject || !selectedZoneKey) return;
+    setIsRecordingZone(true);
+    setFeedback(null);
+    try {
+      const result = await recordZoneExposure({
+        projectId: activeProject.id,
+        biomeKey: selectedZoneKey,
+        exposureSeconds: Math.max(1, Math.floor(zoneExposureMinutes * 60))
+      });
+      setZoneProgress((prev) => {
+        const idx = prev.findIndex((item) => item.id === result.progress.id);
+        if (idx === -1) return [...prev, result.progress].sort((a, b) => b.affinityPoints - a.affinityPoints);
+        const next = [...prev];
+        next[idx] = result.progress;
+        return next.sort((a, b) => b.affinityPoints - a.affinityPoints);
+      });
+      if (result.unlockedMilestoneIds.length > 0) {
+        setFeedback({
+          tone: 'success',
+          message: `Exposure recorded. Unlocked ${result.unlockedMilestoneIds.length} zone milestone(s).`
+        });
+      } else {
+        setFeedback({tone: 'success', message: 'Zone exposure recorded.'});
+      }
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'Unable to record zone exposure.';
+      setFeedback({tone: 'error', message});
+    } finally {
+      setIsRecordingZone(false);
     }
   };
 
@@ -675,6 +783,116 @@ function CompendiumRoute({activeProject}: CompendiumRouteProps) {
                         {check.reasons.join(' ')}
                       </div>
                     )}
+                  </li>
+                );
+              })}
+            </ul>
+          </section>
+
+          <section style={{padding: '1rem', border: '1px solid #ddd', borderRadius: '8px'}}>
+            <h2 style={{marginTop: 0}}>Zone Affinity</h2>
+            <label style={{display: 'block', marginBottom: '0.5rem'}}>
+              Zone Name
+              <input
+                type='text'
+                value={zoneName}
+                onChange={(e) => setZoneName(e.target.value)}
+                placeholder='Bee Cave'
+                style={{width: '100%'}}
+              />
+            </label>
+            <label style={{display: 'block', marginBottom: '0.5rem'}}>
+              Zone Key
+              <input
+                type='text'
+                value={zoneKey}
+                onChange={(e) => setZoneKey(e.target.value)}
+                placeholder='bee_cave'
+                style={{width: '100%'}}
+              />
+            </label>
+            <label style={{display: 'block', marginBottom: '0.75rem'}}>
+              Max Affinity Points
+              <input
+                type='number'
+                min={1}
+                value={zoneMaxPoints}
+                onChange={(e) => setZoneMaxPoints(Number(e.target.value))}
+                style={{width: '100%'}}
+              />
+            </label>
+            <button type='button' onClick={() => void handleCreateZoneProfile()}>
+              Add Zone Profile
+            </button>
+
+            <hr style={{margin: '0.9rem 0'}} />
+            <label style={{display: 'block', marginBottom: '0.5rem'}}>
+              Active Zone
+              <select
+                value={selectedZoneKey}
+                onChange={(e) => setSelectedZoneKey(e.target.value)}
+                style={{width: '100%'}}
+              >
+                <option value=''>Select zone</option>
+                {zoneProfiles.map((profile) => (
+                  <option key={profile.id} value={profile.biomeKey}>
+                    {profile.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label style={{display: 'block', marginBottom: '0.75rem'}}>
+              Exposure Minutes
+              <input
+                type='number'
+                min={1}
+                value={zoneExposureMinutes}
+                onChange={(e) => setZoneExposureMinutes(Number(e.target.value))}
+                style={{width: '100%'}}
+              />
+            </label>
+            <button
+              type='button'
+              onClick={() => void handleRecordZoneExposure()}
+              disabled={!selectedZoneKey || isRecordingZone}
+            >
+              {isRecordingZone ? 'Recording...' : 'Record Exposure'}
+            </button>
+
+            <ul style={{listStyle: 'none', padding: 0, marginTop: '0.75rem'}}>
+              {zoneProfiles.map((profile) => {
+                const progressItem = zoneProgressByKey.get(profile.biomeKey) ?? {
+                  id: '',
+                  projectId: profile.projectId,
+                  biomeKey: profile.biomeKey,
+                  affinityPoints: 0,
+                  totalExposureSeconds: 0,
+                  unlockedMilestoneIds: [],
+                  updatedAt: profile.updatedAt
+                };
+                const percent = getZoneAffinityPercent(progressItem, profile);
+                const unlocked = new Set(progressItem.unlockedMilestoneIds);
+                return (
+                  <li
+                    key={`zone-${profile.id}`}
+                    style={{
+                      marginBottom: '0.65rem',
+                      paddingBottom: '0.55rem',
+                      borderBottom: '1px solid #efefef'
+                    }}
+                  >
+                    <strong>{profile.name}</strong> ({percent.toFixed(1)}%)
+                    <div style={{fontSize: '0.82rem', color: '#6b7280'}}>
+                      Exposure: {(progressItem.totalExposureSeconds / 60).toFixed(1)} minutes
+                    </div>
+                    <div style={{fontSize: '0.82rem'}}>
+                      {profile.milestones.map((milestone) => (
+                        <div key={milestone.id}>
+                          {unlocked.has(milestone.id) ? 'Unlocked' : 'Locked'}{' '}
+                          {milestone.thresholdPercent}%: {milestone.name}
+                        </div>
+                      ))}
+                    </div>
                   </li>
                 );
               })}
