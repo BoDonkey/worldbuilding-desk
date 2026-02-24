@@ -12,6 +12,7 @@ import {getOrCreateSettings} from '../settingsStorage';
 import {createEditorConfigWithStyles} from '../config/editorConfig';
 import type {EditorConfig} from '../config/editorConfig';
 import {countWords} from '../utils/textHelpers';
+import {exportScenesAsDocx, exportScenesAsMarkdown} from '../utils/sceneExport';
 import {EditorWithAI} from '../components/Editor/EditorWithAI';
 import {ShodhMemoryPanel} from '../components/ShodhMemoryPanel';
 import type {RAGProvider} from '../services/rag/RAGService';
@@ -47,6 +48,13 @@ interface WorkspaceRouteProps {
 
 type SaveStatus = 'idle' | 'saving' | 'saved';
 type FeedbackTone = 'success' | 'error';
+type ExportFormat = 'markdown' | 'docx';
+
+interface SceneExportItem {
+  id: string;
+  title: string;
+  included: boolean;
+}
 
 function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
   const [documents, setDocuments] = useState<WritingDocument[]>([]);
@@ -95,6 +103,9 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
   const [isPromotingMemoryId, setIsPromotingMemoryId] = useState<string | null>(null);
   const [isSavingMemory, setIsSavingMemory] = useState(false);
   const [isSyncingCanon, setIsSyncingCanon] = useState(false);
+  const [isExportModalOpen, setExportModalOpen] = useState(false);
+  const [exportFormat, setExportFormat] = useState<ExportFormat>('markdown');
+  const [exportSelection, setExportSelection] = useState<SceneExportItem[]>([]);
   const importInputRef = useRef<HTMLInputElement | null>(null);
 
   const fileNameToTitle = (name: string): string => {
@@ -575,6 +586,83 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
     setWordCount(countWords(doc.content));
   };
 
+  const openExportModal = (format: ExportFormat) => {
+    const selection = documents.map((doc) => ({
+      id: doc.id,
+      title: doc.title || 'Untitled scene',
+      included: true
+    }));
+    setExportSelection(selection);
+    setExportFormat(format);
+    setExportModalOpen(true);
+  };
+
+  const closeExportModal = () => {
+    setExportModalOpen(false);
+  };
+
+  const moveExportItem = (id: string, direction: -1 | 1) => {
+    setExportSelection((prev) => {
+      const index = prev.findIndex((item) => item.id === id);
+      if (index < 0) return prev;
+      const nextIndex = index + direction;
+      if (nextIndex < 0 || nextIndex >= prev.length) return prev;
+      const copy = [...prev];
+      const [item] = copy.splice(index, 1);
+      copy.splice(nextIndex, 0, item);
+      return copy;
+    });
+  };
+
+  const toggleExportItem = (id: string) => {
+    setExportSelection((prev) =>
+      prev.map((item) =>
+        item.id === id ? {...item, included: !item.included} : item
+      )
+    );
+  };
+
+  const toggleAllExportItems = (included: boolean) => {
+    setExportSelection((prev) => prev.map((item) => ({...item, included})));
+  };
+
+  const handleExportScenes = () => {
+    if (!activeProject) return;
+
+    const selectedIds = exportSelection
+      .filter((item) => item.included)
+      .map((item) => item.id);
+    const selectedScenes = selectedIds
+      .map((id) => documents.find((doc) => doc.id === id))
+      .filter((doc): doc is WritingDocument => Boolean(doc));
+
+    if (selectedScenes.length === 0) {
+      setFeedback({tone: 'error', message: 'Select at least one scene to export.'});
+      return;
+    }
+
+    if (exportFormat === 'markdown') {
+      exportScenesAsMarkdown({
+        projectName: activeProject.name,
+        scenes: selectedScenes
+      });
+    } else {
+      exportScenesAsDocx({
+        projectName: activeProject.name,
+        scenes: selectedScenes
+      });
+    }
+
+    setExportModalOpen(false);
+    setFeedback({
+      tone: 'success',
+      message:
+        exportFormat === 'markdown'
+          ? `Exported ${selectedScenes.length} scene(s) to Markdown.`
+          : `Exported ${selectedScenes.length} scene(s) to DOCX.`
+    });
+  };
+
   const handleSave = async () => {
     if (!activeProject || !selectedId) return;
 
@@ -894,6 +982,22 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
             >
               {isImportingDocuments ? 'Importing...' : 'Import'}
             </button>
+            <button
+              type='button'
+              onClick={() => openExportModal('markdown')}
+              disabled={documents.length === 0}
+              style={{marginLeft: '0.5rem'}}
+            >
+              Export MD
+            </button>
+            <button
+              type='button'
+              onClick={() => openExportModal('docx')}
+              disabled={documents.length === 0}
+              style={{marginLeft: '0.5rem'}}
+            >
+              Export DOCX
+            </button>
             <input
               ref={importInputRef}
               type='file'
@@ -993,6 +1097,7 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
                   config={editorConfig}
                   toolbarButtons={toolbarButtons}
                   aiSettings={projectSettings?.aiSettings}
+                  projectMode={projectSettings?.projectMode}
                 />
               </div>
 
@@ -1090,6 +1195,133 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
           )}
         </div>
       </div>
+
+      {isExportModalOpen && (
+        <div
+          role='dialog'
+          aria-modal='true'
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(0,0,0,0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000
+          }}
+        >
+          <div
+            style={{
+              backgroundColor: '#fff',
+              padding: '1.25rem',
+              borderRadius: '8px',
+              width: 'min(680px, 94vw)',
+              maxHeight: '80vh',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '0.75rem'
+            }}
+          >
+            <h3 style={{margin: 0}}>
+              Export scenes as {exportFormat === 'markdown' ? 'Markdown' : 'DOCX'}
+            </h3>
+            <p style={{margin: 0}}>
+              Choose which scenes to export and adjust their order for the final file.
+            </p>
+            <div style={{display: 'flex', gap: '0.5rem', flexWrap: 'wrap'}}>
+              <button type='button' onClick={() => toggleAllExportItems(true)}>
+                Select all
+              </button>
+              <button type='button' onClick={() => toggleAllExportItems(false)}>
+                Clear all
+              </button>
+            </div>
+            <div
+              style={{
+                border: '1px solid #e5e7eb',
+                borderRadius: '6px',
+                padding: '0.5rem',
+                overflowY: 'auto',
+                maxHeight: '42vh'
+              }}
+            >
+              {exportSelection.length === 0 ? (
+                <p style={{margin: '0.25rem 0', fontStyle: 'italic'}}>
+                  No scenes available to export.
+                </p>
+              ) : (
+                <ul style={{listStyle: 'none', margin: 0, padding: 0}}>
+                  {exportSelection.map((item, index) => (
+                    <li
+                      key={item.id}
+                      style={{
+                        display: 'grid',
+                        gridTemplateColumns: '1fr auto',
+                        gap: '0.5rem',
+                        alignItems: 'center',
+                        padding: '0.35rem 0'
+                      }}
+                    >
+                      <label
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.5rem'
+                        }}
+                      >
+                        <input
+                          type='checkbox'
+                          checked={item.included}
+                          onChange={() => toggleExportItem(item.id)}
+                        />
+                        <span style={{fontSize: '0.95rem'}}>
+                          {index + 1}. {item.title}
+                        </span>
+                      </label>
+                      <div style={{display: 'flex', gap: '0.25rem'}}>
+                        <button
+                          type='button'
+                          onClick={() => moveExportItem(item.id, -1)}
+                          disabled={index === 0}
+                          style={{fontSize: '0.8rem'}}
+                        >
+                          Up
+                        </button>
+                        <button
+                          type='button'
+                          onClick={() => moveExportItem(item.id, 1)}
+                          disabled={index === exportSelection.length - 1}
+                          style={{fontSize: '0.8rem'}}
+                        >
+                          Down
+                        </button>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'flex-end',
+                gap: '0.5rem'
+              }}
+            >
+              <button
+                type='button'
+                onClick={closeExportModal}
+                style={{background: 'transparent'}}
+              >
+                Cancel
+              </button>
+              <button type='button' onClick={handleExportScenes}>
+                Export
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {isMemoryModalOpen && selectedDocument && (
         <div
