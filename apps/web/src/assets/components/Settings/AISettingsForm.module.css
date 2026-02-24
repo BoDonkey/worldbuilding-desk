@@ -64,3 +64,89 @@
 .saveButton:hover {
   background-color: var(--color-accent-hover);
 }
+
+.toolsSection {
+  border-top: 1px solid var(--color-border);
+  padding-top: 1rem;
+}
+
+.toolsHeading {
+  margin: 0 0 0.5rem 0;
+  font-size: var(--font-size-lg);
+}
+
+.textarea {
+  width: 100%;
+  max-width: 700px;
+  min-height: 100px;
+  padding: 8px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  background-color: var(--color-bg-primary);
+  color: var(--color-text-primary);
+  font-size: var(--font-size-base);
+  font-family: inherit;
+  resize: vertical;
+}
+
+.textarea:focus {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 0;
+}
+
+.toolList {
+  list-style: none;
+  margin: 1rem 0 0 0;
+  padding: 0;
+  display: grid;
+  gap: 0.75rem;
+}
+
+.toolItem {
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  padding: 0.75rem;
+  background-color: var(--color-bg-secondary);
+}
+
+.toolHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.toolKind {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+
+.toolContent {
+  margin: 0.5rem 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
+  white-space: pre-wrap;
+}
+
+.toolActions {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.toolActions label {
+  display: flex;
+  gap: 0.35rem;
+  align-items: center;
+  font-size: var(--font-size-sm);
+}
+
+.deleteButton {
+  padding: 6px 10px;
+  border: 1px solid #dc2626;
+  border-radius: 6px;
+  background-color: #fee2e2;
+  color: #991b1b;
+  cursor: pointer;
+}

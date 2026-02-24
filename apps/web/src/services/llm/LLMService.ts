@@ -3,11 +3,13 @@ import type {LLMProvider, LLMRequest, LLMResponse} from './types';
 import {AnthropicProvider} from './providers/anthropic';
 import {OpenAIProvider} from './providers/openai';
 import {OllamaProvider} from './providers/ollama';
+import {GeminiProvider} from './providers/gemini';
 import {llmCache} from './LLMCache';
 
 const FALLBACK_ID = () => Math.random().toString(36).slice(2);
 const DEFAULT_ANTHROPIC_MODEL = 'claude-sonnet-4-20250514';
 const DEFAULT_OPENAI_MODEL = 'gpt-4o-mini';
+const DEFAULT_GEMINI_MODEL = 'gemini-2.0-flash';
 
 type ProviderCredentials =
   | {
@@ -17,6 +19,11 @@ type ProviderCredentials =
     }
   | {
       id: 'openai';
+      apiKey: string;
+      model?: string;
+    }
+  | {
+      id: 'gemini';
       apiKey: string;
       model?: string;
     }
@@ -96,6 +103,11 @@ export class LLMService {
           apiKey: credentials.apiKey,
           model: credentials.model ?? DEFAULT_OPENAI_MODEL
         });
+      case 'gemini':
+        return new GeminiProvider({
+          apiKey: credentials.apiKey,
+          model: credentials.model ?? DEFAULT_GEMINI_MODEL
+        });
       case 'ollama':
         return new OllamaProvider({
           baseUrl: credentials.baseUrl ?? 'http://localhost:11434',
@@ -138,6 +150,20 @@ export class LLMService {
           model: settings?.configs?.openai?.model ?? DEFAULT_OPENAI_MODEL
         };
       }
+      case 'gemini': {
+        const apiKey =
+          settings?.configs?.gemini?.apiKey ?? this.readStoredKey('gemini_api_key');
+
+        if (!apiKey) {
+          throw new Error('Gemini API key is missing. Please add it in Settings.');
+        }
+
+        return {
+          id: 'gemini',
+          apiKey,
+          model: settings?.configs?.gemini?.model ?? DEFAULT_GEMINI_MODEL
+        };
+      }
       case 'ollama': {
         return {
           id: 'ollama',
@@ -168,6 +194,10 @@ export class LLMService {
   }
 
   private getStreamingIterator(request: LLMRequest): AsyncGenerator<string> {
+    if (this.providerId === 'gemini' && this.provider.streamCompletion) {
+      return this.provider.streamCompletion(request);
+    }
+
     if (
       this.electronAPI?.llmStream &&
       this.electronAPI?.onLLMChunk &&
