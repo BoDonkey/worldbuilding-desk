@@ -1,14 +1,21 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { ThemeToggle } from './ThemeToggle';
-import type { Project } from '../entityTypes';
+import type { Project, ProjectSettings } from '../entityTypes';
 import styles from '../assets/components/Navigation.module.css';
 
 interface NavigationProps {
   activeProject: Project | null;
+  projectSettings: ProjectSettings | null;
 }
 
-export const Navigation: React.FC<NavigationProps> = ({ activeProject }) => {
+export const Navigation: React.FC<NavigationProps> = ({
+  activeProject,
+  projectSettings
+}) => {
+  const showGameSystems =
+    !activeProject || projectSettings?.featureToggles.enableGameSystems !== false;
+
   return (
     <nav className={styles.nav}>
       <div className={styles.navContent}>
@@ -26,12 +33,19 @@ export const Navigation: React.FC<NavigationProps> = ({ activeProject }) => {
           <NavLink to="/characters" className={({ isActive }) => isActive ? styles.active : ''}>
             Characters
           </NavLink>
-          <NavLink to="/character-sheets" className={({ isActive }) => isActive ? styles.active : ''}>
-            Character Sheets
-          </NavLink>
+          {showGameSystems && (
+            <NavLink to="/character-sheets" className={({ isActive }) => isActive ? styles.active : ''}>
+              Character Sheets
+            </NavLink>
+          )}
           <NavLink to="/workspace" className={({ isActive }) => isActive ? styles.active : ''}>
             Writing Workspace
           </NavLink>
+          {showGameSystems && (
+            <NavLink to="/compendium" className={({ isActive }) => isActive ? styles.active : ''}>
+              Compendium
+            </NavLink>
+          )}
           <NavLink to="/settings" className={({ isActive }) => isActive ? styles.active : ''}>
             Settings
           </NavLink>

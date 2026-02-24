@@ -16,6 +16,7 @@
     "cors": "^2.8.5",
     "express": "^5.2.1",
     "idb": "^8.0.3",
+    "@xenova/transformers": "^2.14.1",
     "prosemirror-state": "^1.4.4",
     "prosemirror-view": "^1.41.4",
     "react": "^19.2.0",

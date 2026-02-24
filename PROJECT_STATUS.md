@@ -1,6 +1,6 @@
 # Worldbuilding-Desk Project Status
 
-**Last Updated:** January 11, 2026
+**Last Updated:** February 22, 2026
 
 ## Project Overview
 
@@ -59,11 +59,11 @@ A comprehensive desktop application for LitRPG/GameLit authors that bridges narr
   - RAG system for document indexing
 
 ### UI Components
-- Ruleset creation wizard
-- Character style editor
-- Project selector
-- Navigation system
-- Split editor/AI panel layout
+- Ruleset creation wizard + desktop import (planned).
+- Character style editor.
+- Project selector + parent-canon controls.
+- Navigation system.
+- Split editor/AI panel layout.
 
 ---
 
@@ -133,6 +133,36 @@ npx tsx examples/basic-usage.ts
 
 ## Recent Changes & Fixes
 
+### Systems Integration + Imports (February 22, 2026)
+- Added settlement aura model and UI flow with generalized module sources (`trophy`, `structure`, `station`, `totem`, `custom`).
+- Added community/logistics party synergy engine and surfaced active combo buffs + roster opportunities.
+- Added settlement base stats and fortress progression tier effects, including explicit base-stat save/reset flow with validation/clamps.
+- Integrated runtime modifiers into craftability checks (effective level + material multiplier from settlement/synergy state).
+- Integrated runtime-adjusted previews into Character Sheets (effective level/stat/resource values shown alongside base values).
+- Added Workspace multi-file import for `.txt`, `.md`, `.html`, and `.docx`; `.doc` now returns explicit convert-to-docx guidance.
+- Added `docs/next-steps.md` with prioritized roadmap and phase exit criteria.
+
+**Immediate Next Slice**
+- Expand runtime integration beyond previews into persisted gameplay outcomes (rule/action resolution paths).
+
+### Canon Management & Inheritance (February 8, 2026)
+- Added parent/child project metadata (RAG + Shodh inheritance toggles, canon timestamps).
+- Built composite Shodh/RAG providers so child projects read parent canon read-only while writing locally.
+- Implemented promote workflows for scenes, world-bible entries, ruleset summaries, and individual memories.
+- Added promote buttons + provenance labels (Local vs Parent) across Workspace, World Bible, Character Sheets, and AI Assistant context.
+- Added parent-canon banners with sync controls in Projects, Workspace, and World Bible routes.
+
+### AI Integration
+- Multi-provider abstraction (Anthropic, OpenAI, Ollama) with caching.
+- Indexed prompt management + Shodh memories feeding context.
+- Context-aware assistance with selectable insertion and AIExpandMenu.
+- Local RAG/Shodh layers now support inherited canon for AI grounding.
+
+
+### Prompt & Tooling Controls (Planned)
+- Expose per-project system prompt editing with tone/policy presets.
+- Allow authors to define “ick” word lists and style rules that attach to documents/imports.
+- Tie prompts/policies into import workflows so external documents inherit the right AI context.
 ### UI Foundation & Theming (January 11, 2026)
 **Implemented:** Complete theming and accessibility foundation
 - **Theme System:** Light/dark mode with CSS variables and ThemeContext
@@ -148,29 +178,6 @@ npx tsx examples/basic-usage.ts
 - Fixed navigation positioning (sticky → fixed)
 - Consolidated settings UI into clean sectioned layout
 
-### AI Integration (Latest)
-**Problem:** Direct Anthropic API calls from browser failed due to CORS
-**Solution:** Created Express proxy server at `apps/web/proxy-server.ts`
-- Handles streaming responses
-- Manages API key securely
-- Routes `/api/anthropic/stream` to Anthropic API
-
-### Editor State Management
-**Problem:** TipTap editor losing reference during AI text insertion
-**Solution:** Refactored `EditorWithAI` component
-- Removed `onMount` callback approach
-- Used `useRef` for stable editor reference
-- Added proper `textToInsert` prop handling in TipTapEditor
-- Fixed stale closure issues with `insertContext`
-
-### Character Styles
-**Problem:** Needed dynamic mark support for character dialogue
-**Solution:** Implemented stored marks system
-- Character styles saved in project settings
-- Dynamic mark registration in TipTap
-- Visual style editor with color picker
-- Toolbar generation from settings
-
 ---
 
 ## Known Issues & Limitations
@@ -185,22 +192,26 @@ npx tsx examples/basic-usage.ts
 - API key must be entered per session
 - No streaming UI feedback yet (planned)
 
-### Storage
-- IndexedDB only (no cloud sync)
-- Manual backup required
-- No export/import functionality
+### Storage / Canon
+- IndexedDB per project, no remote sync yet
+- Child projects inherit parent canon read-only; promotion requires approval
+- Manual backup/export (multi-source import planned next)
 
 ---
 
 ## Planned Next Steps
 
-### Short Term (Next Session)
-1. **AI Chat Window**
-   - Integrate AI assistant panel
-   - Use existing theming/a11y foundation
-   - Consider workspace secondary menu needs
+### Short Term (Next Phase)
+1. **World-Building Import Expansion**
+   - Extend in-app editor to capture scenes + structured world docs
+   - DOCX/Markdown ingestion wizard with type mapping
+   - CSV/JSON import path for rules/entities (validation + conflicts)
+   - Provenance tagging + audit logs
+2. **Storage / Telemetry Planning**
+   - Define telemetry pipeline for quota/usage
+   - Add quota meter UI + export/archive tooling
 
-2. **Full Electron Migration**
+3. **Full Electron Migration**
    - Remove proxy server dependency
    - Native API calls via main process
    - Proper window management

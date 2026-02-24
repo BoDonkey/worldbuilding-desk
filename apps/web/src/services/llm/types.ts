@@ -1,3 +1,5 @@
+import type {AIProviderId} from '../../entityTypes';
+
 export interface LLMMessage {
   role: 'user' | 'assistant' | 'system';
   content: string;
@@ -15,6 +17,8 @@ export interface LLMRequest {
   systemPrompt?: string;
   maxTokens?: number;
   temperature?: number;
+  model?: string;
+  baseUrl?: string;
 }
 
 export interface LLMResponse {
@@ -26,6 +30,7 @@ export interface LLMResponse {
 }
 
 export interface LLMProvider {
+  id: AIProviderId;
   name: string;
   generateCompletion(request: LLMRequest): Promise<LLMResponse>;
   streamCompletion?(request: LLMRequest): AsyncGenerator<string>;

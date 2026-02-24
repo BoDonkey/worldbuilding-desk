@@ -8,6 +8,7 @@ app.use(express.json());
 
 app.post('/api/anthropic/stream', async (req, res) => {
   const {apiKey, request} = req.body;
+  const model = request?.model ?? 'claude-sonnet-4-20250514';
 
   const response = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
@@ -17,7 +18,7 @@ app.post('/api/anthropic/stream', async (req, res) => {
       'anthropic-version': '2023-06-01'
     },
     body: JSON.stringify({
-      model: 'claude-sonnet-4-20250514',
+      model,
       max_tokens: request.maxTokens || 4096,
       temperature: request.temperature || 0.7,
       system: request.systemPrompt,

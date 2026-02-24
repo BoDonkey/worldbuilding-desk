@@ -28,6 +28,7 @@ export function WorldBuildingWizard({
   onCancel,
   initialRuleset
 }: WorldBuildingWizardProps) {
+  const isEditing = Boolean(initialRuleset);
   const [ruleset, setRuleset] = useState<WorldRuleset>(
     initialRuleset || createEmptyRuleset('My World')
   );
@@ -189,7 +190,9 @@ export function WorldBuildingWizard({
             {wizard.isProcessing
               ? 'Processing...'
               : wizard.isLastStep
-              ? 'Create World'
+              ? isEditing
+                ? 'Save Changes'
+                : 'Create World'
               : 'Next'}
           </button>
         </div>

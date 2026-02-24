@@ -1,4 +1,4 @@
-import {useEffect, useState} from 'react';
+import {useEffect, useState, useCallback, useMemo} from 'react';
 import type {FormEvent} from 'react';
 import type {
   Character,
@@ -15,6 +15,26 @@ import {
 } from '../services/characterSheetService';
 import {getCharactersByProject} from '../characterStorage';
 import {getRulesetByProjectId} from '../services/rulesetService';
+import type {
+  ShodhMemoryProvider,
+  MemoryEntry
+} from '../services/shodh/ShodhMemoryService';
+import {getShodhService} from '../services/shodh/getShodhService';
+import {ShodhMemoryPanel} from '../components/ShodhMemoryPanel';
+import {
+  getSeriesBibleConfig,
+  promoteMemoryToParent,
+  promoteDocumentToParent
+} from '../services/seriesBible/SeriesBibleService';
+import {
+  DEFAULT_PARTY_SYNERGY_RULES,
+  deriveCharacterRuntimeModifiers,
+  getEffectiveResourceValues,
+  getEffectiveStatValue,
+  getOrCreateSettlementState,
+  getPartySynergySuggestions,
+  getSettlementModulesByProject
+} from '../services/compendiumService';
 
 interface CharacterSheetsRouteProps {
   activeProject: Project | null;
@@ -31,7 +51,23 @@ function CharacterSheetsRoute({activeProject}: CharacterSheetsRouteProps) {
   const [resources, setResources] = useState<CharacterResource[]>([]);
   const [notes, setNotes] = useState('');
   const [characters, setCharacters] = useState<Character[]>([]);
+  const [settlementState, setSettlementState] = useState<Awaited<
+    ReturnType<typeof getOrCreateSettlementState>
+  > | null>(null);
+  const [settlementModules, setSettlementModules] = useState<Awaited<
+    ReturnType<typeof getSettlementModulesByProject>
+  >>([]);
   const [selectedCharacterId, setSelectedCharacterId] = useState<string>('');
+  const [shodhService, setShodhService] =
+    useState<ShodhMemoryProvider | null>(null);
+  const [rulesetMemory, setRulesetMemory] = useState<MemoryEntry | null>(null);
+  const [rulesetMemoryFilter, setRulesetMemoryFilter] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [deletingSheetId, setDeletingSheetId] = useState<string | null>(null);
+  const [feedback, setFeedback] = useState<{
+    tone: 'success' | 'error';
+    message: string;
+  } | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -42,22 +78,45 @@ function CharacterSheetsRoute({activeProject}: CharacterSheetsRouteProps) {
           setSheets([]);
           setRuleset(null);
           setCharacters([]);
+          setSettlementState(null);
+          setSettlementModules([]);
+          setShodhService(null);
+          setRulesetMemory(null);
         }
         return;
       }
 
-      const [loadedSheets, loadedRuleset, loadedCharacters] = await Promise.all(
+      const [loadedSheets, loadedRuleset, loadedCharacters, loadedSettlementState, loadedSettlementModules] = await Promise.all(
         [
           getCharacterSheetsByProject(activeProject.id),
           getRulesetByProjectId(activeProject.id),
-          getCharactersByProject(activeProject.id)
+          getCharactersByProject(activeProject.id),
+          getOrCreateSettlementState(activeProject.id),
+          getSettlementModulesByProject(activeProject.id)
         ]
       );
 
+      const bibleConfig = getSeriesBibleConfig(activeProject);
+      const shodhOptions =
+        bibleConfig.parentProjectId && bibleConfig.inheritShodh
+          ? {
+              projectId: activeProject.id,
+              inheritFromParent: true,
+              parentProjectId: bibleConfig.parentProjectId
+            }
+          : {projectId: activeProject.id};
+
+      let shodh: ShodhMemoryProvider | null = null;
       if (!cancelled) {
         setSheets(loadedSheets);
         setRuleset(loadedRuleset);
         setCharacters(loadedCharacters);
+        setSettlementState(loadedSettlementState);
+        setSettlementModules(loadedSettlementModules);
+        shodh = await getShodhService(shodhOptions);
+        if (!cancelled) {
+          setShodhService(shodh);
+        }
 
         // Handle pending character from Characters route
         const pendingId = localStorage.getItem('pendingCharacterSheet');
@@ -76,6 +135,21 @@ function CharacterSheetsRoute({activeProject}: CharacterSheetsRouteProps) {
       cancelled = true;
     };
   }, [activeProject]);
+
+  const refreshRulesetMemory = useCallback(async () => {
+    if (!shodhService || !ruleset?.id) {
+      setRulesetMemory(null);
+      return;
+    }
+    const list = await shodhService.listMemories();
+    const memory = list.find((entry) => entry.documentId === ruleset.id) ?? null;
+    setRulesetMemory(memory);
+  }, [shodhService, ruleset?.id]);
+
+  useEffect(() => {
+    void refreshRulesetMemory();
+  }, [refreshRulesetMemory]);
+
 
   const resetForm = () => {
     setEditingId(null);
@@ -140,13 +214,29 @@ function CharacterSheetsRoute({activeProject}: CharacterSheetsRouteProps) {
       updatedAt: now
     };
 
-    await saveCharacterSheet(sheet);
+    setIsSubmitting(true);
+    setFeedback(null);
+    try {
+      await saveCharacterSheet(sheet);
 
-    setSheets((prev) =>
-      editingId ? prev.map((s) => (s.id === id ? sheet : s)) : [...prev, sheet]
-    );
+      setSheets((prev) =>
+        editingId ? prev.map((s) => (s.id === id ? sheet : s)) : [...prev, sheet]
+      );
 
-    resetForm();
+      resetForm();
+      setFeedback({
+        tone: 'success',
+        message: editingId ? 'Character sheet updated.' : 'Character sheet created.'
+      });
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : 'Unable to save character sheet.';
+      setFeedback({tone: 'error', message});
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleEdit = (sheet: CharacterSheet) => {
@@ -170,9 +260,22 @@ function CharacterSheetsRoute({activeProject}: CharacterSheetsRouteProps) {
 
   const handleDelete = async (id: string) => {
     if (!confirm('Delete this character sheet?')) return;
-    await deleteCharacterSheet(id);
-    setSheets((prev) => prev.filter((s) => s.id !== id));
-    if (editingId === id) resetForm();
+    setDeletingSheetId(id);
+    setFeedback(null);
+    try {
+      await deleteCharacterSheet(id);
+      setSheets((prev) => prev.filter((s) => s.id !== id));
+      if (editingId === id) resetForm();
+      setFeedback({tone: 'success', message: 'Character sheet deleted.'});
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : 'Unable to delete character sheet.';
+      setFeedback({tone: 'error', message});
+    } finally {
+      setDeletingSheetId(null);
+    }
   };
 
   const updateStatValue = (definitionId: string, value: number) => {
@@ -198,6 +301,40 @@ function CharacterSheetsRoute({activeProject}: CharacterSheetsRouteProps) {
 
   const getResourceDefinition = (definitionId: string) =>
     ruleset?.resourceDefinitions.find((def) => def.id === definitionId);
+
+  const activePartySynergies = useMemo(
+    () =>
+      getPartySynergySuggestions({
+        characters,
+        rules: DEFAULT_PARTY_SYNERGY_RULES
+      }),
+    [characters]
+  );
+  const runtimeModifiers = useMemo(
+    () =>
+      deriveCharacterRuntimeModifiers({
+        settlementState,
+        settlementModules,
+        activePartySynergies
+      }),
+    [settlementState, settlementModules, activePartySynergies]
+  );
+  const effectiveLevel = Math.max(1, level + runtimeModifiers.levelBonus);
+
+  const handlePromoteRuleset = useCallback(async () => {
+    if (!ruleset || !activeProject?.parentProjectId) return;
+    const ruleText = ruleset.rules
+      .map((rule) => `${rule.name}: ${rule.description || ''}`)
+      .join('\n');
+    await promoteDocumentToParent({
+      parentProjectId: activeProject.parentProjectId,
+      documentId: ruleset.id,
+      title: ruleset.name || 'Ruleset',
+      content: `${ruleset.description ?? ''}\n${ruleText}`,
+      type: 'rule',
+      tags: ['ruleset']
+    });
+  }, [ruleset, activeProject?.parentProjectId]);
 
   if (!activeProject) {
     return (
@@ -228,6 +365,73 @@ function CharacterSheetsRoute({activeProject}: CharacterSheetsRouteProps) {
   return (
     <section>
       <h1>Character Sheets</h1>
+      {feedback && (
+        <p
+          role='status'
+          style={{
+            marginBottom: '1rem',
+            padding: '0.5rem 0.75rem',
+            borderRadius: '6px',
+            border: `1px solid ${
+              feedback.tone === 'error' ? '#fecaca' : '#bbf7d0'
+            }`,
+            backgroundColor:
+              feedback.tone === 'error' ? '#fef2f2' : '#f0fdf4',
+            color: feedback.tone === 'error' ? '#991b1b' : '#166534'
+          }}
+        >
+          {feedback.message}
+        </p>
+      )}
+
+      {ruleset && (
+        <ShodhMemoryPanel
+          title={`${ruleset.name || 'World ruleset'} summary`}
+          memories={rulesetMemory ? [rulesetMemory] : []}
+          filterValue={rulesetMemoryFilter}
+          onFilterChange={setRulesetMemoryFilter}
+          highlightDocumentId={ruleset.id}
+          onRefresh={() => void refreshRulesetMemory()}
+          pageSize={1}
+          scopeSummaryLabel='this ruleset'
+          emptyState='No Shodh memory found yet. Save the ruleset (Projects → World Ruleset) to generate one.'
+          renderSourceLabel={(memory) =>
+            memory.projectId === activeProject.id ? 'Local' : 'Parent'
+          }
+          renderMemoryActions={(memory) => {
+            if (
+              activeProject.parentProjectId &&
+              memory.projectId === activeProject.id
+            ) {
+              return (
+                <button
+                  type='button'
+                  onClick={() => {
+                    const parentId = activeProject.parentProjectId;
+                    if (!parentId) return;
+                    void promoteMemoryToParent(memory, parentId).then(() =>
+                      refreshRulesetMemory()
+                    );
+                  }}
+                  style={{fontSize: '0.8rem'}}
+                >
+                  Promote
+                </button>
+              );
+            }
+            return null;
+          }}
+        />
+      )}
+      {ruleset && activeProject?.parentProjectId && (
+        <button
+          type='button'
+          style={{marginBottom: '1rem'}}
+          onClick={() => void handlePromoteRuleset()}
+        >
+          Promote ruleset to parent
+        </button>
+      )}
 
       <div style={{display: 'flex', gap: '2rem', alignItems: 'flex-start'}}>
         {/* Character Sheet Editor */}
@@ -302,6 +506,30 @@ function CharacterSheetsRoute({activeProject}: CharacterSheetsRouteProps) {
             </label>
           </div>
 
+          <div
+            style={{
+              marginBottom: '0.9rem',
+              padding: '0.6rem 0.75rem',
+              border: '1px solid #dbeafe',
+              borderRadius: '6px',
+              backgroundColor: '#f8fbff',
+              fontSize: '0.85rem'
+            }}
+          >
+            <strong>Runtime Effects (Preview)</strong>
+            <div style={{marginTop: '0.25rem'}}>
+              Effective level: {effectiveLevel}
+              {runtimeModifiers.levelBonus > 0
+                ? ` (base ${level} + ${runtimeModifiers.levelBonus})`
+                : ` (base ${level})`}
+            </div>
+            {runtimeModifiers.notes.length > 0 && (
+              <div style={{marginTop: '0.25rem', color: '#4b5563'}}>
+                {runtimeModifiers.notes.join(' ')}
+              </div>
+            )}
+          </div>
+
           {/* Stats */}
           {stats.length > 0 && (
             <div style={{marginBottom: '1rem'}}>
@@ -309,6 +537,11 @@ function CharacterSheetsRoute({activeProject}: CharacterSheetsRouteProps) {
               {stats.map((stat) => {
                 const def = getStatDefinition(stat.definitionId);
                 if (!def) return null;
+                const effectiveValue = getEffectiveStatValue({
+                  definitionId: stat.definitionId,
+                  baseValue: stat.value,
+                  runtime: runtimeModifiers
+                });
                 return (
                   <div key={stat.definitionId} style={{marginBottom: '0.5rem'}}>
                     <label>
@@ -339,6 +572,9 @@ function CharacterSheetsRoute({activeProject}: CharacterSheetsRouteProps) {
                         style={{width: '100%'}}
                       />
                     </label>
+                    <div style={{fontSize: '0.8rem', color: '#4b5563'}}>
+                      Effective: {effectiveValue}
+                    </div>
                   </div>
                 );
               })}
@@ -352,6 +588,12 @@ function CharacterSheetsRoute({activeProject}: CharacterSheetsRouteProps) {
               {resources.map((resource) => {
                 const def = getResourceDefinition(resource.definitionId);
                 if (!def) return null;
+                const effective = getEffectiveResourceValues({
+                  definitionId: resource.definitionId,
+                  current: resource.current,
+                  max: resource.max,
+                  runtime: runtimeModifiers
+                });
                 return (
                   <div
                     key={resource.definitionId}
@@ -411,6 +653,9 @@ function CharacterSheetsRoute({activeProject}: CharacterSheetsRouteProps) {
                         />
                       </label>
                     </div>
+                    <div style={{fontSize: '0.8rem', color: '#4b5563'}}>
+                      Effective: {effective.current}/{effective.max}
+                    </div>
                   </div>
                 );
               })}
@@ -431,11 +676,15 @@ function CharacterSheetsRoute({activeProject}: CharacterSheetsRouteProps) {
           </div>
 
           <div style={{display: 'flex', gap: '0.5rem'}}>
-            <button type='submit'>
-              {editingId ? 'Save Changes' : 'Create Character Sheet'}
+            <button type='submit' disabled={isSubmitting}>
+              {isSubmitting
+                ? 'Saving...'
+                : editingId
+                  ? 'Save Changes'
+                  : 'Create Character Sheet'}
             </button>
             {editingId && (
-              <button type='button' onClick={resetForm}>
+              <button type='button' onClick={resetForm} disabled={isSubmitting}>
                 Cancel
               </button>
             )}
@@ -475,7 +724,12 @@ function CharacterSheetsRoute({activeProject}: CharacterSheetsRouteProps) {
                         marginTop: '0.5rem'
                       }}
                     >
-                      Level {sheet.level} | {sheet.experience} XP
+                      Level {Math.max(1, sheet.level + runtimeModifiers.levelBonus)}
+                      {runtimeModifiers.levelBonus > 0
+                        ? ` (base ${sheet.level})`
+                        : ''}
+                      {' | '}
+                      {sheet.experience} XP
                     </div>
 
                     {sheet.stats.length > 0 && (
@@ -491,9 +745,17 @@ function CharacterSheetsRoute({activeProject}: CharacterSheetsRouteProps) {
                         >
                           {sheet.stats.map((stat) => {
                             const def = getStatDefinition(stat.definitionId);
+                            const effectiveValue = getEffectiveStatValue({
+                              definitionId: stat.definitionId,
+                              baseValue: stat.value,
+                              runtime: runtimeModifiers
+                            });
                             return def ? (
                               <span key={stat.definitionId}>
                                 {def.name}: {stat.value}
+                                {effectiveValue !== stat.value
+                                  ? ` (${effectiveValue})`
+                                  : ''}
                               </span>
                             ) : null;
                           })}
@@ -509,9 +771,18 @@ function CharacterSheetsRoute({activeProject}: CharacterSheetsRouteProps) {
                             const def = getResourceDefinition(
                               resource.definitionId
                             );
+                            const effective = getEffectiveResourceValues({
+                              definitionId: resource.definitionId,
+                              current: resource.current,
+                              max: resource.max,
+                              runtime: runtimeModifiers
+                            });
                             return def ? (
                               <div key={resource.definitionId}>
                                 {def.name}: {resource.current}/{resource.max}
+                                {(effective.current !== resource.current ||
+                                  effective.max !== resource.max) &&
+                                  ` (${effective.current}/${effective.max})`}
                               </div>
                             ) : null;
                           })}
@@ -540,8 +811,9 @@ function CharacterSheetsRoute({activeProject}: CharacterSheetsRouteProps) {
                     <button
                       type='button'
                       onClick={() => handleDelete(sheet.id)}
+                      disabled={deletingSheetId === sheet.id}
                     >
-                      Delete
+                      {deletingSheetId === sheet.id ? 'Deleting...' : 'Delete'}
                     </button>
                   </div>
                 </div>

@@ -27,6 +27,49 @@ export const ResourceDefinitionSchema = StatDefinitionSchema.extend({
 });
 export type ResourceDefinition = z.infer<typeof ResourceDefinitionSchema>;
 
+export const CompendiumDomainSchema = z.enum([
+  'beast',
+  'flora',
+  'mineral',
+  'artifact',
+  'recipe',
+  'custom'
+]);
+export type CompendiumDomain = z.infer<typeof CompendiumDomainSchema>;
+
+export const CompendiumActionSchema = z.object({
+  id: z.string(),
+  label: z.string(),
+  points: z.number(),
+  repeatable: z.boolean().optional()
+});
+export type CompendiumAction = z.infer<typeof CompendiumActionSchema>;
+
+export const CompendiumRewardEffectSchema = z.object({
+  targetType: z.enum(['stat', 'resource', 'custom']),
+  targetId: z.string(),
+  operation: z.enum(['add', 'multiply', 'set']),
+  value: z.union([z.number(), z.boolean(), z.string()])
+});
+export type CompendiumRewardEffect = z.infer<typeof CompendiumRewardEffectSchema>;
+
+export const CompendiumMilestoneSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  description: z.string().optional(),
+  pointsRequired: z.number(),
+  unlockRecipeIds: z.array(z.string()).default([]),
+  permanentEffects: z.array(CompendiumRewardEffectSchema).default([])
+});
+export type CompendiumMilestone = z.infer<typeof CompendiumMilestoneSchema>;
+
+export const CompendiumConfigSchema = z.object({
+  enabled: z.boolean().default(false),
+  entryDomains: z.array(CompendiumDomainSchema).default([]),
+  milestones: z.array(CompendiumMilestoneSchema).default([])
+});
+export type CompendiumConfig = z.infer<typeof CompendiumConfigSchema>;
+
 export const WorldRulesetSchema = z.object({
   id: z.string(),
   name: z.string(),
@@ -43,6 +86,7 @@ export const WorldRulesetSchema = z.object({
   // Templates for common patterns
   itemTemplates: z.array(z.any()).default([]),
   statusTemplates: z.array(z.any()).default([]),
+  compendium: CompendiumConfigSchema.optional(),
 
   // Metadata
   createdAt: z.number(),
@@ -66,6 +110,11 @@ export function createEmptyRuleset(name: string): WorldRuleset {
     rules: [],
     itemTemplates: [],
     statusTemplates: [],
+    compendium: {
+      enabled: false,
+      entryDomains: [],
+      milestones: []
+    },
     createdAt: now,
     updatedAt: now
   };

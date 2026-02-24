@@ -10,6 +10,11 @@ export * from './CharacterState';
 export {
   StatDefinitionSchema,
   ResourceDefinitionSchema,
+  CompendiumDomainSchema,
+  CompendiumActionSchema,
+  CompendiumRewardEffectSchema,
+  CompendiumMilestoneSchema,
+  CompendiumConfigSchema,
   WorldRulesetSchema,
 } from './WorldRuleset';
 
