@@ -8,6 +8,37 @@
   margin: 0.5rem;
 }
 
+.toolsBar {
+  border-bottom: 1px solid #dee2e6;
+  padding: 0.6rem 0.75rem;
+  background: #f8fafc;
+}
+
+.toolsHeading {
+  font-size: 12px;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 0.35rem;
+}
+
+.toolsList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.toolChip {
+  display: inline-flex;
+  gap: 0.3rem;
+  align-items: center;
+  font-size: 12px;
+  padding: 0.2rem 0.45rem;
+  border: 1px solid #d1d5db;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #111827;
+}
+
 .messages {
   flex: 1;
   overflow-y: auto;

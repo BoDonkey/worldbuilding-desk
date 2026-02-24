@@ -11,7 +11,7 @@ import {getShodhService} from '../../services/shodh/getShodhService';
 import {SHODH_MEMORIES_EVENT} from '../../services/shodh/shodhEvents';
 import type {LLMMessage} from '../../services/llm/types';
 import {PromptManager} from '../../services/prompts/PromptManager';
-import type {ProjectAISettings} from '../../entityTypes';
+import type {ProjectAISettings, PromptTool} from '../../entityTypes';
 
 interface AIAssistantProps {
   projectId: string;
@@ -35,6 +35,7 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
   const [isStreaming, setIsStreaming] = useState(false);
   const [providerError, setProviderError] = useState<string | null>(null);
   const [memoryCache, setMemoryCache] = useState<MemoryEntry[]>([]);
+  const [selectedToolIds, setSelectedToolIds] = useState<string[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const llmService = useRef<LLMService | null>(null);
@@ -76,6 +77,13 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
       setProviderError(message);
       llmService.current = null;
     }
+  }, [aiConfig]);
+
+  useEffect(() => {
+    const enabledTools = (aiConfig?.promptTools ?? []).filter((tool) => tool.enabled);
+    const enabledIds = new Set(enabledTools.map((tool) => tool.id));
+    const defaults = (aiConfig?.defaultToolIds ?? []).filter((id) => enabledIds.has(id));
+    setSelectedToolIds(defaults);
   }, [aiConfig]);
 
   useEffect(() => {
@@ -212,6 +220,18 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
       }
 
       const basePrompt = await promptManager.current.getPrompt(context?.type || 'document');
+      const activeTools = ((aiConfig?.promptTools ?? []) as PromptTool[])
+        .filter((tool) => tool.enabled && selectedToolIds.includes(tool.id));
+      const toolPrompt =
+        activeTools.length > 0
+          ? `\n\nActive Prompt Tools:\n${activeTools
+              .map(
+                (tool) =>
+                  `- [${tool.kind.toUpperCase()}] ${tool.name}: ${tool.content}`
+              )
+              .join('\n')}`
+          : '';
+      const composedPrompt = `${basePrompt}${toolPrompt}`;
 
 
       // Stream response
@@ -221,7 +241,7 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
       for await (const chunk of llmService.current.stream({
         messages: [userMessage],
         context: contextChunks,
-        systemPrompt: basePrompt
+        systemPrompt: composedPrompt
       })) {
         assistantMessage += chunk;
         setMessages((prev) => [
@@ -251,6 +271,31 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
 
   return (
     <div className={styles.container}>
+      {(aiConfig?.promptTools?.filter((tool) => tool.enabled).length ?? 0) > 0 && (
+        <div className={styles.toolsBar}>
+          <div className={styles.toolsHeading}>Prompt Tools</div>
+          <div className={styles.toolsList}>
+            {aiConfig?.promptTools
+              ?.filter((tool) => tool.enabled)
+              .map((tool) => (
+                <label key={tool.id} className={styles.toolChip}>
+                  <input
+                    type='checkbox'
+                    checked={selectedToolIds.includes(tool.id)}
+                    onChange={(e) =>
+                      setSelectedToolIds((prev) =>
+                        e.target.checked
+                          ? [...new Set([...prev, tool.id])]
+                          : prev.filter((id) => id !== tool.id)
+                      )
+                    }
+                  />
+                  <span>{tool.name}</span>
+                </label>
+              ))}
+          </div>
+        </div>
+      )}
       {providerError && (
         <div className={styles.notice}>
           <p>{providerError}</p>
