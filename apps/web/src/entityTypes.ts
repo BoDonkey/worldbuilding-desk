@@ -63,6 +63,27 @@ export interface ProviderConfigMap {
 export interface ProjectAISettings {
   provider: AIProviderId;
   configs: ProviderConfigMap;
+  promptTools: PromptTool[];
+  defaultToolIds: string[];
+}
+
+export type PromptToolKind = 'style' | 'tone' | 'persona' | 'instruction';
+
+export interface PromptTool {
+  id: string;
+  name: string;
+  kind: PromptToolKind;
+  content: string;
+  enabled: boolean;
+}
+
+export type ProjectMode = 'litrpg' | 'game' | 'general';
+
+export interface ProjectFeatureToggles {
+  enableGameSystems: boolean;
+  enableRuntimeModifiers: boolean;
+  enableSettlementAndZoneSystems: boolean;
+  enableRuleAuthoring: boolean;
 }
 
 export interface ProjectSettings {
@@ -71,6 +92,8 @@ export interface ProjectSettings {
   characterStyles: CharacterStyle[];
   aiSettings: ProjectAISettings;
   activeSkills: string[];
+  projectMode: ProjectMode;
+  featureToggles: ProjectFeatureToggles;
   createdAt: number;
   updatedAt: number;
 }

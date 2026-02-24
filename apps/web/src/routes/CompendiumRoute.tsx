@@ -8,6 +8,7 @@ import type {
   CompendiumProgress,
   PartySynergySuggestion,
   Project,
+  ProjectSettings,
   SettlementModule,
   SettlementState,
   UnlockableRecipe,
@@ -52,6 +53,7 @@ import {getEntitiesByProject} from '../entityStorage';
 
 interface CompendiumRouteProps {
   activeProject: Project | null;
+  projectSettings: ProjectSettings | null;
 }
 
 const DOMAIN_OPTIONS: Array<{value: CompendiumDomain; label: string}> = [
@@ -167,7 +169,7 @@ function getDefaultActions(domain: CompendiumDomain): CompendiumActionDefinition
   return [{id: 'discover', label: 'Discover', points: 1, repeatable: false}];
 }
 
-function CompendiumRoute({activeProject}: CompendiumRouteProps) {
+function CompendiumRoute({activeProject, projectSettings}: CompendiumRouteProps) {
   const [entries, setEntries] = useState<CompendiumEntry[]>([]);
   const [milestones, setMilestones] = useState<CompendiumMilestone[]>([]);
   const [recipes, setRecipes] = useState<UnlockableRecipe[]>([]);
@@ -233,6 +235,13 @@ function CompendiumRoute({activeProject}: CompendiumRouteProps) {
   const [quantityByActionKey, setQuantityByActionKey] = useState<
     Record<string, number>
   >({});
+  const enableGameSystems =
+    projectSettings?.featureToggles.enableGameSystems !== false;
+  const enableRuntimeModifiers =
+    projectSettings?.featureToggles.enableRuntimeModifiers !== false;
+  const enableWorldSystems =
+    enableGameSystems &&
+    projectSettings?.featureToggles.enableSettlementAndZoneSystems !== false;
 
   useEffect(() => {
     if (!activeProject) {
@@ -348,63 +357,81 @@ function CompendiumRoute({activeProject}: CompendiumRouteProps) {
     return characters.filter((character) => selectedSet.has(character.id));
   }, [characters, activePartyCharacterIds]);
   const activePartySynergies = useMemo(
-    () =>
-      getPartySynergySuggestions({
+    () => {
+      if (!enableWorldSystems) return [];
+      return getPartySynergySuggestions({
         characters: activePartyCharacters
-      }),
-    [activePartyCharacters]
+      });
+    },
+    [activePartyCharacters, enableWorldSystems]
   );
   const rosterSynergyOpportunities = useMemo(
-    () =>
-      getPartySynergySuggestions({
+    () => {
+      if (!enableWorldSystems) return [];
+      return getPartySynergySuggestions({
         characters,
         rules: DEFAULT_PARTY_SYNERGY_RULES
-      }).filter((suggestion) => suggestion.missingRoles.length > 0),
-    [characters]
+      }).filter((suggestion) => suggestion.missingRoles.length > 0);
+    },
+    [characters, enableWorldSystems]
   );
   const craftingRuntimeModifiers = useMemo(
-    () =>
-      deriveCraftingRuntimeModifiers({
+    () => {
+      if (!enableRuntimeModifiers || !enableWorldSystems) {
+        return {
+          levelBonus: 0,
+          materialCostMultiplier: 1,
+          notes: ['Runtime modifiers disabled in Project Settings.']
+        };
+      }
+      return deriveCraftingRuntimeModifiers({
         settlementState,
         settlementModules,
         activePartySynergies
-      }),
-    [settlementState, settlementModules, activePartySynergies]
+      });
+    },
+    [
+      enableRuntimeModifiers,
+      enableWorldSystems,
+      settlementState,
+      settlementModules,
+      activePartySynergies
+    ]
   );
   const zoneProgressByKey = useMemo(
     () => new Map(zoneProgress.map((progressItem) => [progressItem.biomeKey, progressItem])),
     [zoneProgress]
   );
   const activeSettlementEffects = useMemo(() => {
-    if (!settlementState) return [];
+    if (!enableWorldSystems || !settlementState) return [];
     return getActiveSettlementAuraEffects({
       settlementState,
       modules: settlementModules
     });
-  }, [settlementState, settlementModules]);
+  }, [enableWorldSystems, settlementState, settlementModules]);
   const settlementComputedEffects = useMemo(() => {
-    if (!settlementState) {
+    if (!enableWorldSystems || !settlementState) {
       return {auraEffects: [], fortressEffects: [], allEffects: []};
     }
     return getSettlementComputedEffects({
       settlementState,
       modules: settlementModules
     });
-  }, [settlementState, settlementModules]);
+  }, [enableWorldSystems, settlementState, settlementModules]);
   const unlockedFortressTiers = useMemo(() => {
-    if (!settlementState) return [];
+    if (!enableWorldSystems || !settlementState) return [];
     return getUnlockedFortressTiers({
       fortressLevel: settlementState.fortressLevel,
       tiers: DEFAULT_FORTRESS_TIERS
     });
-  }, [settlementState]);
+  }, [enableWorldSystems, settlementState]);
   const nextFortressTier = useMemo(() => {
-    if (!settlementState) return null;
+    if (!enableWorldSystems || !settlementState) return null;
     return getNextFortressTier({
       fortressLevel: settlementState.fortressLevel,
       tiers: DEFAULT_FORTRESS_TIERS
     });
-  }, [settlementState]);
+  }, [enableWorldSystems, settlementState]);
   const isBaseStatsDraftDirty = useMemo(() => {
     if (!settlementState) return false;
     return BASE_STAT_KEYS.some(
@@ -748,10 +775,13 @@ function CompendiumRoute({activeProject}: CompendiumRouteProps) {
         level: nextLevel
       });
       setSettlementState(nextState);
-      setFeedback({tone: 'success', message: `Fortress level set to ${nextState.fortressLevel}.`});
+      setFeedback({
+        tone: 'success',
+        message: `Settlement tier level set to ${nextState.fortressLevel}.`
+      });
     } catch (error) {
       const message =
-        error instanceof Error ? error.message : 'Unable to update fortress level.';
+        error instanceof Error ? error.message : 'Unable to update settlement tier level.';
       setFeedback({tone: 'error', message});
     } finally {
       setIsSavingFortress(false);
@@ -811,6 +841,19 @@ function CompendiumRoute({activeProject}: CompendiumRouteProps) {
     );
   }
 
+  if (!enableGameSystems) {
+    return (
+      <section>
+        <h1>Compendium</h1>
+        <p>
+          Compendium is hidden because <strong>Enable Game Systems</strong> is
+          turned off for this project.
+        </p>
+        <p>Go to Settings to re-enable it when needed.</p>
+      </section>
+    );
+  }
+
   return (
     <section>
       <h1>Compendium</h1>
@@ -832,6 +875,30 @@ function CompendiumRoute({activeProject}: CompendiumRouteProps) {
           {feedback.message}
         </p>
       )}
+      <details
+        style={{
+          marginBottom: '1rem',
+          border: '1px solid #d1d5db',
+          borderRadius: '8px',
+          padding: '0.7rem 0.85rem',
+          backgroundColor: '#f9fafb'
+        }}
+      >
+        <summary style={{cursor: 'pointer', fontWeight: 600}}>
+          Compendium Wizard Help
+        </summary>
+        <div style={{marginTop: '0.6rem', fontSize: '0.9rem', color: '#374151'}}>
+          <p style={{margin: '0 0 0.4rem 0'}}>
+            Step 1: set up entries, milestones, and recipes.
+          </p>
+          <p style={{margin: '0 0 0.4rem 0'}}>
+            Step 2: record actions and verify progression unlocks.
+          </p>
+          <p style={{margin: 0}}>
+            Step 3: use world systems and runtime previews for balancing.
+          </p>
+        </div>
+      </details>
 
       <div
         style={{
@@ -841,6 +908,9 @@ function CompendiumRoute({activeProject}: CompendiumRouteProps) {
           marginBottom: '1rem'
         }}
       >
+        <div style={{gridColumn: '1 / -1', fontSize: '0.82rem', color: '#4b5563'}}>
+          Step 1 of 3: setup core compendium records.
+        </div>
         <article style={{padding: '1rem', border: '1px solid #ddd', borderRadius: '8px'}}>
           <h2 style={{marginTop: 0}}>Progress</h2>
           {isLoading || !progress ? (
@@ -932,6 +1002,10 @@ function CompendiumRoute({activeProject}: CompendiumRouteProps) {
         </article>
       </div>
 
+      <h2 style={{marginTop: '1.25rem', marginBottom: '0.75rem'}}>Progression</h2>
+      <p style={{marginTop: 0, marginBottom: '0.75rem', fontSize: '0.82rem', color: '#4b5563'}}>
+        Step 2 of 3: log actions and validate progression behavior.
+      </p>
       <div
         style={{
           display: 'grid',
@@ -1152,8 +1226,31 @@ function CompendiumRoute({activeProject}: CompendiumRouteProps) {
             </ul>
           </section>
 
-          <section style={{padding: '1rem', border: '1px solid #ddd', borderRadius: '8px'}}>
-            <h2 style={{marginTop: 0}}>Zone Affinity</h2>
+          <h2 style={{marginTop: '0.25rem', marginBottom: 0}}>World Systems</h2>
+          <p
+            style={{
+              marginTop: '0.35rem',
+              marginBottom: '0.25rem',
+              fontSize: '0.82rem',
+              color: '#4b5563'
+            }}
+          >
+            Step 3 of 3: tune runtime systems for effective values and balance.
+          </p>
+          {!enableWorldSystems && (
+            <section
+              style={{padding: '1rem', border: '1px solid #ddd', borderRadius: '8px'}}
+            >
+              <p style={{margin: 0, color: '#4b5563'}}>
+                Settlement and zone systems are hidden for this project. Enable
+                <strong> Settlement/Zone Systems</strong> in Settings to access them.
+              </p>
+            </section>
+          )}
+          {enableWorldSystems && (
+            <>
+              <section style={{padding: '1rem', border: '1px solid #ddd', borderRadius: '8px'}}>
+                <h2 style={{marginTop: 0}}>Zone Affinity</h2>
             <label style={{display: 'block', marginBottom: '0.5rem'}}>
               Zone Name
               <input
@@ -1260,10 +1357,10 @@ function CompendiumRoute({activeProject}: CompendiumRouteProps) {
                 );
               })}
             </ul>
-          </section>
+              </section>
 
-          <section style={{padding: '1rem', border: '1px solid #ddd', borderRadius: '8px'}}>
-            <h2 style={{marginTop: 0}}>Community / Logistics</h2>
+              <section style={{padding: '1rem', border: '1px solid #ddd', borderRadius: '8px'}}>
+                <h2 style={{marginTop: 0}}>Community / Logistics</h2>
             <p style={{marginTop: 0, fontSize: '0.85rem', color: '#6b7280'}}>
               Shared party synergy buffs driven by role combinations. Select the
               currently active party to preview concrete in-scene combo effects.
@@ -1354,10 +1451,10 @@ function CompendiumRoute({activeProject}: CompendiumRouteProps) {
                 ))
               )}
             </ul>
-          </section>
+              </section>
 
-          <section style={{padding: '1rem', border: '1px solid #ddd', borderRadius: '8px'}}>
-            <h2 style={{marginTop: 0}}>Settlement Aura</h2>
+              <section style={{padding: '1rem', border: '1px solid #ddd', borderRadius: '8px'}}>
+                <h2 style={{marginTop: 0}}>Settlement Progression</h2>
             <p style={{marginTop: 0, fontSize: '0.85rem', color: '#6b7280'}}>
               Generalized settlement buffs. Trophies are one source type, alongside
               structures, stations, totems, and custom modules.
@@ -1458,7 +1555,7 @@ function CompendiumRoute({activeProject}: CompendiumRouteProps) {
 
             <hr style={{margin: '0.9rem 0'}} />
             <div style={{fontSize: '0.85rem', marginBottom: '0.5rem'}}>
-              <strong>Fortress Level:</strong> {settlementState?.fortressLevel ?? 1}
+              <strong>Settlement Tier Level:</strong> {settlementState?.fortressLevel ?? 1}
             </div>
             <div style={{display: 'flex', gap: '0.5rem', marginBottom: '0.65rem'}}>
               <button
@@ -1466,20 +1563,20 @@ function CompendiumRoute({activeProject}: CompendiumRouteProps) {
                 onClick={() => void handleAdjustFortressLevel(-1)}
                 disabled={!settlementState || settlementState.fortressLevel <= 1 || isSavingFortress}
               >
-                - Level
+                - Tier
               </button>
               <button
                 type='button'
                 onClick={() => void handleAdjustFortressLevel(1)}
                 disabled={!settlementState || isSavingFortress}
               >
-                + Level
+                + Tier
               </button>
             </div>
             <div style={{fontSize: '0.82rem', color: '#4b5563', marginBottom: '0.6rem'}}>
               {nextFortressTier
                 ? `Next tier at level ${nextFortressTier.levelRequired}: ${nextFortressTier.name}`
-                : 'All configured fortress tiers unlocked.'}
+                : 'All configured settlement tiers unlocked.'}
             </div>
             <div style={{fontSize: '0.85rem', marginBottom: '0.35rem'}}>
               <strong>Base Stats</strong>
@@ -1528,7 +1625,7 @@ function CompendiumRoute({activeProject}: CompendiumRouteProps) {
               </button>
             </div>
             <div style={{fontSize: '0.85rem', marginBottom: '0.5rem'}}>
-              <strong>Fortress Tier Effects:</strong>{' '}
+              <strong>Settlement Tier Effects:</strong>{' '}
               {settlementComputedEffects.fortressEffects.length}
             </div>
             <ul style={{listStyle: 'none', padding: 0, margin: 0}}>
@@ -1570,10 +1667,10 @@ function CompendiumRoute({activeProject}: CompendiumRouteProps) {
               <strong>Total Active Effects:</strong> {settlementComputedEffects.allEffects.length}
             </div>
             <div style={{fontSize: '0.82rem', color: '#4b5563', marginBottom: '0.65rem'}}>
-              Includes fortress progression + aura modules.
+              Includes settlement progression + aura modules.
             </div>
             <div style={{fontSize: '0.85rem', marginBottom: '0.35rem'}}>
-              <strong>Unlocked Fortress Tiers</strong>
+              <strong>Unlocked Settlement Tiers</strong>
             </div>
             <ul style={{listStyle: 'none', padding: 0, margin: 0}}>
               {unlockedFortressTiers.length === 0 ? (
@@ -1620,7 +1717,9 @@ function CompendiumRoute({activeProject}: CompendiumRouteProps) {
                 ))
               )}
             </ul>
-          </section>
+              </section>
+            </>
+          )}
 
           <section style={{padding: '1rem', border: '1px solid #ddd', borderRadius: '8px'}}>
             <h2 style={{marginTop: 0}}>Milestones</h2>

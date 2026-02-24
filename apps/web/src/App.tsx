@@ -1,9 +1,10 @@
 import {useEffect, useState} from 'react';
 import {BrowserRouter, Routes, Route} from 'react-router-dom';
-import type {Project} from './entityTypes';
+import type {Project, ProjectSettings} from './entityTypes';
 import {Navigation} from './components/Navigation';
 import {ThemeProvider} from './contexts/ThemeContext';
 import {AccessibilityProvider} from './contexts/AccessibilityContext';
+import {getOrCreateSettings} from './settingsStorage';
 import ProjectsRoute from './routes/ProjectsRoute';
 import WorldBibleRoute from './routes/WorldBibleRoute';
 import WorkspaceRoute from './routes/WorkspaceRoute';
@@ -23,6 +24,7 @@ function App() {
       return null;
     }
   });
+  const [projectSettings, setProjectSettings] = useState<ProjectSettings | null>(null);
 
   useEffect(() => {
     if (activeProject) {
@@ -32,12 +34,32 @@ function App() {
     }
   }, [activeProject]);
 
+  useEffect(() => {
+    if (!activeProject) {
+      setProjectSettings(null);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      const settings = await getOrCreateSettings(activeProject.id);
+      if (!cancelled) {
+        setProjectSettings(settings);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [activeProject]);
+
   return (
     <ThemeProvider>
       <AccessibilityProvider>
         <BrowserRouter>
           <div className='app'>
-            <Navigation activeProject={activeProject} />
+            <Navigation
+              activeProject={activeProject}
+              projectSettings={projectSettings}
+            />
             <main style={{padding: '1rem', paddingTop: 'calc(60px + 1rem)'}}>
               <Routes>
                 <Route
@@ -69,11 +91,21 @@ function App() {
                 />
                 <Route
                   path='/compendium'
-                  element={<CompendiumRoute activeProject={activeProject} />}
+                  element={
+                    <CompendiumRoute
+                      activeProject={activeProject}
+                      projectSettings={projectSettings}
+                    />
+                  }
                 />
                 <Route
                   path='/settings'
-                  element={<SettingsRoute activeProject={activeProject} />}
+                  element={
+                    <SettingsRoute
+                      activeProject={activeProject}
+                      onSettingsChanged={setProjectSettings}
+                    />
+                  }
                 />
               </Routes>
             </main>

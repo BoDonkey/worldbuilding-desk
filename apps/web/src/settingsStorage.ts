@@ -1,5 +1,6 @@
-import type {ProjectSettings, ProjectAISettings} from './entityTypes';
+import type {ProjectSettings, ProjectAISettings, ProjectMode} from './entityTypes';
 import { openDb, SETTINGS_STORE_NAME } from './db';
+import {getDefaultFeatureToggles, normalizeFeatureToggles} from './projectMode';
 
 const DEFAULT_AI_SETTINGS: ProjectAISettings = {
   provider: 'anthropic',
@@ -10,12 +11,19 @@ const DEFAULT_AI_SETTINGS: ProjectAISettings = {
     openai: {
       model: 'gpt-4o-mini'
     },
+    gemini: {
+      model: 'gemini-2.0-flash'
+    },
     ollama: {
       model: 'llama3.1',
       baseUrl: 'http://localhost:11434'
     }
-  }
+  },
+  promptTools: [],
+  defaultToolIds: []
 };
+
+const DEFAULT_PROJECT_MODE: ProjectMode = 'litrpg';
 
 function ensureAISettings(settings: ProjectSettings): ProjectSettings {
   const aiSettings: ProjectAISettings = {
@@ -26,11 +34,18 @@ function ensureAISettings(settings: ProjectSettings): ProjectSettings {
     ...DEFAULT_AI_SETTINGS.configs,
     ...(aiSettings.configs ?? {})
   };
+  aiSettings.promptTools = aiSettings.promptTools ?? [];
+  aiSettings.defaultToolIds = aiSettings.defaultToolIds ?? [];
 
   return {
     ...settings,
     aiSettings,
-    activeSkills: settings.activeSkills ?? []
+    activeSkills: settings.activeSkills ?? [],
+    projectMode: settings.projectMode ?? DEFAULT_PROJECT_MODE,
+    featureToggles: normalizeFeatureToggles({
+      mode: settings.projectMode ?? DEFAULT_PROJECT_MODE,
+      featureToggles: settings.featureToggles
+    })
   };
 }
 
@@ -80,6 +95,8 @@ export async function createDefaultSettings(projectId: string): Promise<ProjectS
     characterStyles: [],
     aiSettings: {...DEFAULT_AI_SETTINGS},
     activeSkills: [],
+    projectMode: DEFAULT_PROJECT_MODE,
+    featureToggles: getDefaultFeatureToggles(DEFAULT_PROJECT_MODE),
     createdAt: now,
     updatedAt: now
   };

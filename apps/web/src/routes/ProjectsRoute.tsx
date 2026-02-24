@@ -298,11 +298,38 @@ function ProjectsRoute({activeProject, onSelectProject}: ProjectsRouteProps) {
           {feedback.message}
         </p>
       )}
+      <details
+        style={{
+          marginBottom: '1rem',
+          border: '1px solid #d1d5db',
+          borderRadius: '8px',
+          backgroundColor: '#f9fafb',
+          padding: '0.75rem 0.9rem'
+        }}
+      >
+        <summary style={{cursor: 'pointer', fontWeight: 600}}>
+          Projects Wizard Help
+        </summary>
+        <div style={{marginTop: '0.6rem', fontSize: '0.9rem', color: '#374151'}}>
+          <p style={{margin: '0 0 0.4rem 0'}}>
+            Step 1: create or open a project.
+          </p>
+          <p style={{margin: '0 0 0.4rem 0'}}>
+            Step 2: optionally set parent project inheritance and sync behavior.
+          </p>
+          <p style={{margin: 0}}>
+            Step 3: create or edit a ruleset, then continue to World Bible and Workspace.
+          </p>
+        </div>
+      </details>
 
       <form
         onSubmit={handleSubmit}
         style={{maxWidth: 400, marginBottom: '1rem'}}
       >
+        <p style={{marginTop: 0, marginBottom: '0.75rem', fontSize: '0.82rem', color: '#4b5563'}}>
+          Step 1 of 3: create a project shell.
+        </p>
         <h2>Create New Project</h2>
         <div style={{marginBottom: '0.75rem'}}>
           <label>
@@ -323,6 +350,9 @@ function ProjectsRoute({activeProject, onSelectProject}: ProjectsRouteProps) {
       </form>
 
       <h2>Existing Projects</h2>
+      <p style={{marginTop: 0, marginBottom: '0.75rem', fontSize: '0.82rem', color: '#4b5563'}}>
+        Steps 2-3 of 3: configure inheritance, then open or author ruleset.
+      </p>
       {projects.length === 0 && <p>No projects yet. Create one above to get started.</p>}
 
       <ul>
