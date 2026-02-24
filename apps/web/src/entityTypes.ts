@@ -65,6 +65,7 @@ export interface ProjectAISettings {
   configs: ProviderConfigMap;
   promptTools: PromptTool[];
   defaultToolIds: string[];
+  defaultToolIdsByMode?: Record<ProjectMode, string[]>;
 }
 
 export type PromptToolKind = 'style' | 'tone' | 'persona' | 'instruction';

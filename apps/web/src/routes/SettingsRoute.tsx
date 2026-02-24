@@ -210,6 +210,7 @@ function SettingsRoute({activeProject, onSettingsChanged}: SettingsRouteProps) {
           <h2>AI Settings</h2>
           <AISettings
             aiSettings={settings.aiSettings}
+            projectMode={settings.projectMode}
             onSettingsChange={handleAISettingsChange}
           />
         </div>

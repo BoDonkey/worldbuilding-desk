@@ -1,14 +1,16 @@
-import React, {useState} from 'react';
+import React, {useEffect, useState} from 'react';
 import type {
   ProjectAISettings,
   AIProviderId,
   PromptToolKind,
-  PromptTool
+  PromptTool,
+  ProjectMode
 } from '../../entityTypes';
 import styles from '../../assets/components/Settings/AISettingsForm.module.css';
 
 interface AISettingsProps {
   aiSettings: ProjectAISettings;
+  projectMode: ProjectMode;
   onSettingsChange: (aiSettings: ProjectAISettings) => void;
 }
 
@@ -40,7 +42,14 @@ const PROMPT_TOOL_KIND_LABELS: Record<PromptToolKind, string> = {
 interface PromptToolPack {
   schemaVersion: 1;
   tools: PromptTool[];
+  defaultToolIdsByMode?: Record<ProjectMode, string[]>;
 }
+
+const PROJECT_MODE_LABELS: Record<ProjectMode, string> = {
+  litrpg: 'LitRPG',
+  game: 'Game',
+  general: 'General'
+};
 
 const DEFAULT_PRESET_TOOLS: PromptTool[] = [
   {
@@ -69,7 +78,11 @@ const DEFAULT_PRESET_TOOLS: PromptTool[] = [
   }
 ];
 
-export const AISettings: React.FC<AISettingsProps> = ({aiSettings, onSettingsChange}) => {
+export const AISettings: React.FC<AISettingsProps> = ({
+  aiSettings,
+  projectMode,
+  onSettingsChange
+}) => {
   const [anthropicKey, setAnthropicKey] = useState(() => localStorage.getItem('anthropic_api_key') || '');
   const [openaiKey, setOpenaiKey] = useState(() => localStorage.getItem('openai_api_key') || '');
   const [geminiKey, setGeminiKey] = useState(() => localStorage.getItem('gemini_api_key') || '');
@@ -80,6 +93,11 @@ export const AISettings: React.FC<AISettingsProps> = ({aiSettings, onSettingsCha
   const [editingToolName, setEditingToolName] = useState('');
   const [editingToolKind, setEditingToolKind] = useState<PromptToolKind>('persona');
   const [editingToolContent, setEditingToolContent] = useState('');
+  const [defaultsMode, setDefaultsMode] = useState<ProjectMode>(projectMode);
+
+  useEffect(() => {
+    setDefaultsMode(projectMode);
+  }, [projectMode]);
 
   const handleSaveKeys = () => {
     if (anthropicKey) {
@@ -140,6 +158,24 @@ export const AISettings: React.FC<AISettingsProps> = ({aiSettings, onSettingsCha
     PROVIDER_DEFAULT_BASE_URL[aiSettings.provider];
   const promptTools = aiSettings.promptTools ?? [];
   const defaultToolIds = aiSettings.defaultToolIds ?? [];
+  const defaultToolIdsByMode = aiSettings.defaultToolIdsByMode ?? {
+    litrpg: [...defaultToolIds],
+    game: [...defaultToolIds],
+    general: [...defaultToolIds]
+  };
+  const defaultsForSelectedMode =
+    defaultToolIdsByMode[defaultsMode] ?? defaultToolIds;
+
+  const withDefaultModes = (
+    updates: Partial<ProjectAISettings>
+  ): ProjectAISettings => ({
+    ...aiSettings,
+    ...updates,
+    defaultToolIdsByMode: {
+      ...defaultToolIdsByMode,
+      ...(updates.defaultToolIdsByMode ?? {})
+    }
+  });
 
   const triggerJsonDownload = (fileName: string, data: unknown) => {
     const blob = new Blob([JSON.stringify(data, null, 2)], {type: 'application/json'});
@@ -156,31 +192,42 @@ export const AISettings: React.FC<AISettingsProps> = ({aiSettings, onSettingsCha
   const handleAddPromptTool = () => {
     if (!toolName.trim() || !toolContent.trim()) return;
     const id = crypto.randomUUID();
-    onSettingsChange({
-      ...aiSettings,
-      promptTools: [
-        ...promptTools,
-        {
-          id,
-          name: toolName.trim(),
-          kind: toolKind,
-          content: toolContent.trim(),
-          enabled: true
+    onSettingsChange(
+      withDefaultModes({
+        promptTools: [
+          ...promptTools,
+          {
+            id,
+            name: toolName.trim(),
+            kind: toolKind,
+            content: toolContent.trim(),
+            enabled: true
+          }
+        ],
+        defaultToolIds: [...new Set([...defaultToolIds, id])],
+        defaultToolIdsByMode: {
+          ...defaultToolIdsByMode,
+          [defaultsMode]: [...new Set([...defaultsForSelectedMode, id])]
         }
-      ],
-      defaultToolIds: [...defaultToolIds, id]
-    });
+      })
+    );
     setToolName('');
     setToolKind('persona');
     setToolContent('');
   };
 
   const handleDeletePromptTool = (toolId: string) => {
-    onSettingsChange({
-      ...aiSettings,
-      promptTools: promptTools.filter((tool) => tool.id !== toolId),
-      defaultToolIds: defaultToolIds.filter((id) => id !== toolId)
-    });
+    onSettingsChange(
+      withDefaultModes({
+        promptTools: promptTools.filter((tool) => tool.id !== toolId),
+        defaultToolIds: defaultToolIds.filter((id) => id !== toolId),
+        defaultToolIdsByMode: {
+          litrpg: (defaultToolIdsByMode.litrpg ?? []).filter((id) => id !== toolId),
+          game: (defaultToolIdsByMode.game ?? []).filter((id) => id !== toolId),
+          general: (defaultToolIdsByMode.general ?? []).filter((id) => id !== toolId)
+        }
+      })
+    );
   };
 
   const handleStartEditTool = (tool: PromptTool) => {
@@ -216,29 +263,56 @@ export const AISettings: React.FC<AISettingsProps> = ({aiSettings, onSettingsCha
   };
 
   const handleTogglePromptToolEnabled = (toolId: string, enabled: boolean) => {
-    onSettingsChange({
-      ...aiSettings,
-      promptTools: promptTools.map((tool) =>
-        tool.id === toolId ? {...tool, enabled} : tool
-      ),
-      defaultToolIds: enabled
-        ? defaultToolIds
-        : defaultToolIds.filter((id) => id !== toolId)
-    });
+    onSettingsChange(
+      withDefaultModes({
+        promptTools: promptTools.map((tool) =>
+          tool.id === toolId ? {...tool, enabled} : tool
+        ),
+        defaultToolIds: enabled
+          ? defaultToolIds
+          : defaultToolIds.filter((id) => id !== toolId),
+        defaultToolIdsByMode: enabled
+          ? defaultToolIdsByMode
+          : {
+              litrpg: (defaultToolIdsByMode.litrpg ?? []).filter((id) => id !== toolId),
+              game: (defaultToolIdsByMode.game ?? []).filter((id) => id !== toolId),
+              general: (defaultToolIdsByMode.general ?? []).filter((id) => id !== toolId)
+            }
+      })
+    );
   };
 
   const handleToggleDefaultTool = (toolId: string, checked: boolean) => {
+    const nextModeDefaults = checked
+      ? [...new Set([...(defaultToolIdsByMode[defaultsMode] ?? []), toolId])]
+      : (defaultToolIdsByMode[defaultsMode] ?? []).filter((id) => id !== toolId);
+
     if (checked) {
-      onSettingsChange({
-        ...aiSettings,
-        defaultToolIds: [...new Set([...defaultToolIds, toolId])]
-      });
+      onSettingsChange(
+        withDefaultModes({
+          defaultToolIds: defaultsMode === projectMode
+            ? [...new Set([...defaultToolIds, toolId])]
+            : defaultToolIds,
+          defaultToolIdsByMode: {
+            ...defaultToolIdsByMode,
+            [defaultsMode]: nextModeDefaults
+          }
+        })
+      );
       return;
     }
-    onSettingsChange({
-      ...aiSettings,
-      defaultToolIds: defaultToolIds.filter((id) => id !== toolId)
-    });
+    onSettingsChange(
+      withDefaultModes({
+        defaultToolIds:
+          defaultsMode === projectMode
+            ? defaultToolIds.filter((id) => id !== toolId)
+            : defaultToolIds,
+        defaultToolIdsByMode: {
+          ...defaultToolIdsByMode,
+          [defaultsMode]: nextModeDefaults
+        }
+      })
+    );
   };
 
   const handleInstallPresetTools = () => {
@@ -257,17 +331,26 @@ export const AISettings: React.FC<AISettingsProps> = ({aiSettings, onSettingsCha
       return;
     }
 
-    onSettingsChange({
-      ...aiSettings,
-      promptTools: [...promptTools, ...additions],
-      defaultToolIds: [...new Set([...defaultToolIds, ...additions.map((tool) => tool.id)])]
-    });
+    const additionIds = additions.map((tool) => tool.id);
+    onSettingsChange(
+      withDefaultModes({
+        promptTools: [...promptTools, ...additions],
+        defaultToolIds: [...new Set([...defaultToolIds, ...additionIds])],
+        defaultToolIdsByMode: {
+          ...defaultToolIdsByMode,
+          [defaultsMode]: [
+            ...new Set([...(defaultToolIdsByMode[defaultsMode] ?? []), ...additionIds])
+          ]
+        }
+      })
+    );
   };
 
   const handleExportToolPack = () => {
     const pack: PromptToolPack = {
       schemaVersion: 1,
-      tools: promptTools
+      tools: promptTools,
+      defaultToolIdsByMode
     };
     triggerJsonDownload('prompt-tools-pack.json', pack);
   };
@@ -283,15 +366,22 @@ export const AISettings: React.FC<AISettingsProps> = ({aiSettings, onSettingsCha
       if (parsed.schemaVersion !== 1 || !Array.isArray(parsed.tools)) {
         throw new Error('Invalid tool pack format.');
       }
+      const idMap = new Map<string, string>();
       const importedTools = parsed.tools
         .filter((tool) => tool && typeof tool.name === 'string' && typeof tool.content === 'string')
-        .map((tool) => ({
-          id: crypto.randomUUID(),
-          name: tool.name,
-          kind: (tool.kind as PromptToolKind) || 'instruction',
-          content: tool.content,
-          enabled: tool.enabled !== false
-        })) as PromptTool[];
+        .map((tool) => {
+          const nextId = crypto.randomUUID();
+          if (typeof tool.id === 'string') {
+            idMap.set(tool.id, nextId);
+          }
+          return {
+            id: nextId,
+            name: tool.name,
+            kind: (tool.kind as PromptToolKind) || 'instruction',
+            content: tool.content,
+            enabled: tool.enabled !== false
+          };
+        }) as PromptTool[];
 
       if (importedTools.length === 0) {
         throw new Error('No valid tools found in pack.');
@@ -302,22 +392,65 @@ export const AISettings: React.FC<AISettingsProps> = ({aiSettings, onSettingsCha
       );
 
       if (replace) {
-        onSettingsChange({
-          ...aiSettings,
-          promptTools: importedTools,
-          defaultToolIds: importedTools.filter((tool) => tool.enabled).map((tool) => tool.id)
-        });
+        const enabledImportedIds = importedTools
+          .filter((tool) => tool.enabled)
+          .map((tool) => tool.id);
+        const importedDefaultsByMode = parsed.defaultToolIdsByMode ?? {
+          litrpg: enabledImportedIds,
+          game: enabledImportedIds,
+          general: enabledImportedIds
+        };
+        const validImportedIds = new Set(enabledImportedIds);
+        const remapModeDefaults = (ids: string[] | undefined): string[] =>
+          (ids ?? [])
+            .map((id) => idMap.get(id) ?? id)
+            .filter((id) => validImportedIds.has(id));
+        const normalizedImportedDefaultsByMode: Record<ProjectMode, string[]> = {
+          litrpg:
+            remapModeDefaults(importedDefaultsByMode.litrpg).length > 0
+              ? remapModeDefaults(importedDefaultsByMode.litrpg)
+              : enabledImportedIds,
+          game:
+            remapModeDefaults(importedDefaultsByMode.game).length > 0
+              ? remapModeDefaults(importedDefaultsByMode.game)
+              : enabledImportedIds,
+          general:
+            remapModeDefaults(importedDefaultsByMode.general).length > 0
+              ? remapModeDefaults(importedDefaultsByMode.general)
+              : enabledImportedIds
+        };
+        onSettingsChange(
+          withDefaultModes({
+            promptTools: importedTools,
+            defaultToolIds:
+              defaultsMode === projectMode ? enabledImportedIds : defaultToolIds,
+            defaultToolIdsByMode: normalizedImportedDefaultsByMode
+          })
+        );
       } else {
-        onSettingsChange({
-          ...aiSettings,
-          promptTools: [...promptTools, ...importedTools],
-          defaultToolIds: [
-            ...new Set([
-              ...defaultToolIds,
-              ...importedTools.filter((tool) => tool.enabled).map((tool) => tool.id)
-            ])
-          ]
-        });
+        const enabledImportedIds = importedTools
+          .filter((tool) => tool.enabled)
+          .map((tool) => tool.id);
+        onSettingsChange(
+          withDefaultModes({
+            promptTools: [...promptTools, ...importedTools],
+            defaultToolIds: [
+              ...new Set([
+                ...defaultToolIds,
+                ...enabledImportedIds
+              ])
+            ],
+            defaultToolIdsByMode: {
+              ...defaultToolIdsByMode,
+              [defaultsMode]: [
+                ...new Set([
+                  ...(defaultToolIdsByMode[defaultsMode] ?? []),
+                  ...enabledImportedIds
+                ])
+              ]
+            }
+          })
+        );
       }
     } catch (error) {
       const message =
@@ -446,6 +579,25 @@ export const AISettings: React.FC<AISettingsProps> = ({aiSettings, onSettingsCha
           Add reusable prompt tools like tone guides, personas, and instruction
           blocks. These can be selected in the AI assistant.
         </p>
+        <div className={styles.modeDefaultsHeader}>
+          <label className={styles.label}>
+            Configure Default Active tools for mode
+            <select
+              className={styles.input}
+              value={defaultsMode}
+              onChange={(e) => setDefaultsMode(e.target.value as ProjectMode)}
+            >
+              {(['litrpg', 'game', 'general'] as ProjectMode[]).map((mode) => (
+                <option key={mode} value={mode}>
+                  {PROJECT_MODE_LABELS[mode]}
+                </option>
+              ))}
+            </select>
+          </label>
+          <p className={styles.help}>
+            The AI assistant preselects tools using this mode’s defaults.
+          </p>
+        </div>
 
         <div className={styles.field}>
           <label className={styles.label}>Tool Name</label>
@@ -590,13 +742,13 @@ export const AISettings: React.FC<AISettingsProps> = ({aiSettings, onSettingsCha
                   <label>
                     <input
                       type='checkbox'
-                      checked={defaultToolIds.includes(tool.id)}
+                      checked={defaultsForSelectedMode.includes(tool.id)}
                       disabled={!tool.enabled}
                       onChange={(e) =>
                         handleToggleDefaultTool(tool.id, e.target.checked)
                       }
                     />
-                    Default Active
+                    Default Active ({PROJECT_MODE_LABELS[defaultsMode]})
                   </label>
                   <button
                     type='button'

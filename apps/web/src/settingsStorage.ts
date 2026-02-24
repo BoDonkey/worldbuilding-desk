@@ -20,7 +20,12 @@ const DEFAULT_AI_SETTINGS: ProjectAISettings = {
     }
   },
   promptTools: [],
-  defaultToolIds: []
+  defaultToolIds: [],
+  defaultToolIdsByMode: {
+    litrpg: [],
+    game: [],
+    general: []
+  }
 };
 
 const DEFAULT_PROJECT_MODE: ProjectMode = 'litrpg';
@@ -36,6 +41,24 @@ function ensureAISettings(settings: ProjectSettings): ProjectSettings {
   };
   aiSettings.promptTools = aiSettings.promptTools ?? [];
   aiSettings.defaultToolIds = aiSettings.defaultToolIds ?? [];
+  const enabledIds = new Set(
+    aiSettings.promptTools.filter((tool) => tool.enabled).map((tool) => tool.id)
+  );
+  aiSettings.defaultToolIds = aiSettings.defaultToolIds.filter((id) =>
+    enabledIds.has(id)
+  );
+  const fallbackDefaults = [...aiSettings.defaultToolIds];
+  aiSettings.defaultToolIdsByMode = {
+    litrpg:
+      aiSettings.defaultToolIdsByMode?.litrpg?.filter((id) => enabledIds.has(id)) ??
+      fallbackDefaults,
+    game:
+      aiSettings.defaultToolIdsByMode?.game?.filter((id) => enabledIds.has(id)) ??
+      fallbackDefaults,
+    general:
+      aiSettings.defaultToolIdsByMode?.general?.filter((id) => enabledIds.has(id)) ??
+      fallbackDefaults
+  };
 
   return {
     ...settings,

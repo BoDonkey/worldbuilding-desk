@@ -1097,6 +1097,7 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
                   config={editorConfig}
                   toolbarButtons={toolbarButtons}
                   aiSettings={projectSettings?.aiSettings}
+                  projectMode={projectSettings?.projectMode}
                 />
               </div>
 

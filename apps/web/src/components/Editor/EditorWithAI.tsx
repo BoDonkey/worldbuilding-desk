@@ -4,7 +4,7 @@ import TipTapEditor from '../TipTapEditor';
 import {AIAssistant} from '../AIAssistant/AIAssistant';
 import {AIExpandMenu} from './extensions/AIExpandMenu';
 import type {EditorConfig} from '../../config/editorConfig';
-import type {ProjectAISettings} from '../../entityTypes';
+import type {ProjectAISettings, ProjectMode} from '../../entityTypes';
 import styles from '../../assets/components/AISettings.module.css';
 
 interface AIContextType {
@@ -23,6 +23,7 @@ interface EditorWithAIProps {
   config?: EditorConfig;
   toolbarButtons?: Array<{id: string; label: string; markName: string}>;
   aiSettings?: ProjectAISettings | null;
+  projectMode?: ProjectMode;
 }
 
 export const EditorWithAI: React.FC<EditorWithAIProps> = ({
@@ -32,7 +33,8 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
   onChange,
   config,
   toolbarButtons = [],
-  aiSettings
+  aiSettings,
+  projectMode = 'litrpg'
 }) => {
   const [showAI, setShowAI] = useState(false);
   const [aiContext, setAIContext] = useState<AIContextType | null>(null);
@@ -136,6 +138,7 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
           <AIAssistant
             projectId={projectId}
             aiConfig={aiSettings ?? undefined}
+            projectMode={projectMode}
             context={aiContext ?? undefined}
             onInsert={handleInsert}
           />

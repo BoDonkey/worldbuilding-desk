@@ -11,11 +11,12 @@ import {getShodhService} from '../../services/shodh/getShodhService';
 import {SHODH_MEMORIES_EVENT} from '../../services/shodh/shodhEvents';
 import type {LLMMessage} from '../../services/llm/types';
 import {PromptManager} from '../../services/prompts/PromptManager';
-import type {ProjectAISettings, PromptTool} from '../../entityTypes';
+import type {ProjectAISettings, PromptTool, ProjectMode} from '../../entityTypes';
 
 interface AIAssistantProps {
   projectId: string;
   aiConfig?: ProjectAISettings;
+  projectMode?: ProjectMode;
   context?: {
     type: 'document' | 'rule' | 'character';
     id: string;
@@ -27,6 +28,7 @@ interface AIAssistantProps {
 export const AIAssistant: React.FC<AIAssistantProps> = ({
   projectId,
   aiConfig,
+  projectMode = 'litrpg',
   context,
   onInsert
 }) => {
@@ -82,9 +84,10 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
   useEffect(() => {
     const enabledTools = (aiConfig?.promptTools ?? []).filter((tool) => tool.enabled);
     const enabledIds = new Set(enabledTools.map((tool) => tool.id));
-    const defaults = (aiConfig?.defaultToolIds ?? []).filter((id) => enabledIds.has(id));
+    const modeDefaults = aiConfig?.defaultToolIdsByMode?.[projectMode] ?? aiConfig?.defaultToolIds ?? [];
+    const defaults = modeDefaults.filter((id) => enabledIds.has(id));
     setSelectedToolIds(defaults);
-  }, [aiConfig]);
+  }, [aiConfig, projectMode]);
 
   useEffect(() => {
     let cancelled = false;
