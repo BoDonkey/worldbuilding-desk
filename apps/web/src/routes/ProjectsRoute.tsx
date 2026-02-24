@@ -1,9 +1,10 @@
-import {useEffect, useState} from 'react';
-import type {FormEvent} from 'react';
+import {useCallback, useEffect, useRef, useState} from 'react';
+import type {ChangeEvent, FormEvent} from 'react';
 import type {Project} from '../entityTypes';
 import type {WorldRuleset} from '@litrpg-tool/rules-engine';
 import {
   getAllProjects,
+  getProjectById,
   saveProject,
   deleteProject as deleteProjectFromStore
 } from '../projectStorage';
@@ -16,6 +17,23 @@ import {
   unlinkProjectFromParent,
   syncChildWithParent
 } from '../services/seriesBible/SeriesBibleService';
+import {exportProjectBackupZip} from '../services/projectBackupExport';
+import {
+  importProjectBackup,
+  parseProjectBackupZip,
+  previewProjectBackupConflicts
+} from '../services/projectBackupImport';
+import type {
+  ProjectBackupConflictSummary,
+  ProjectBackupImportMode,
+  ProjectSnapshotImportPreview
+} from '../services/projectBackupImport';
+import type {ProjectSnapshot} from '../services/projectSnapshotService';
+import {
+  buildProjectSnapshot,
+  diffSnapshotCounts,
+  validateSnapshotCounts
+} from '../services/projectSnapshotService';
 
 interface ProjectsRouteProps {
   activeProject: Project | null;
@@ -37,27 +55,39 @@ function ProjectsRoute({activeProject, onSelectProject}: ProjectsRouteProps) {
   } | null>(null);
   const [isCreatingProject, setIsCreatingProject] = useState(false);
   const [deletingProjectId, setDeletingProjectId] = useState<string | null>(null);
+  const [exportingProjectId, setExportingProjectId] = useState<string | null>(null);
   const [syncingProjectId, setSyncingProjectId] = useState<string | null>(null);
   const [updatingProjectId, setUpdatingProjectId] = useState<string | null>(null);
+  const [isParsingImport, setIsParsingImport] = useState(false);
+  const [isApplyingImport, setIsApplyingImport] = useState(false);
+  const [importPreview, setImportPreview] = useState<ProjectSnapshotImportPreview | null>(null);
+  const [importSnapshot, setImportSnapshot] = useState<ProjectSnapshot | null>(null);
+  const [importMode, setImportMode] = useState<ProjectBackupImportMode>('new');
+  const [importTargetProjectId, setImportTargetProjectId] = useState('');
+  const [importConflicts, setImportConflicts] =
+    useState<ProjectBackupConflictSummary | null>(null);
+  const [isValidatingBackup, setIsValidatingBackup] = useState(false);
+  const importFileInputRef = useRef<HTMLInputElement | null>(null);
+  const validateFileInputRef = useRef<HTMLInputElement | null>(null);
+
+  const loadProjects = useCallback(async () => {
+    const all = await getAllProjects();
+    setProjects(all);
+
+    const rulesetMap = new Map<string, WorldRuleset>();
+    for (const project of all) {
+      if (!project.rulesetId) continue;
+      const ruleset = await getRulesetByProjectId(project.id);
+      if (ruleset) {
+        rulesetMap.set(project.id, ruleset);
+      }
+    }
+    setProjectRulesets(rulesetMap);
+  }, []);
 
   useEffect(() => {
-    (async () => {
-      const all = await getAllProjects();
-      setProjects(all);
-
-      // Load rulesets for each project
-      const rulesetMap = new Map<string, WorldRuleset>();
-      for (const project of all) {
-        if (project.rulesetId) {
-          const ruleset = await getRulesetByProjectId(project.id);
-          if (ruleset) {
-            rulesetMap.set(project.id, ruleset);
-          }
-        }
-      }
-      setProjectRulesets(rulesetMap);
-    })();
-  }, []);
+    void loadProjects();
+  }, [loadProjects]);
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
@@ -255,6 +285,180 @@ function ProjectsRoute({activeProject, onSelectProject}: ProjectsRouteProps) {
     }
   };
 
+  const handleExportProjectBackup = async (project: Project) => {
+    setExportingProjectId(project.id);
+    setFeedback(null);
+    try {
+      await exportProjectBackupZip({
+        projectId: project.id,
+        projectName: project.name
+      });
+      setFeedback({
+        tone: 'success',
+        message: `Backup exported for "${project.name}".`
+      });
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : 'Unable to export project backup.';
+      setFeedback({tone: 'error', message});
+    } finally {
+      setExportingProjectId(null);
+    }
+  };
+
+  const clearImportState = () => {
+    setImportPreview(null);
+    setImportSnapshot(null);
+    setImportMode('new');
+    setImportTargetProjectId('');
+    setImportConflicts(null);
+  };
+
+  const refreshImportConflicts = async (
+    snapshot: ProjectSnapshot,
+    targetProjectId: string
+  ) => {
+    if (!targetProjectId) {
+      setImportConflicts(null);
+      return;
+    }
+    try {
+      const conflicts = await previewProjectBackupConflicts({
+        snapshot,
+        targetProjectId
+      });
+      setImportConflicts(conflicts);
+    } catch {
+      setImportConflicts(null);
+    }
+  };
+
+  const handleSelectBackupFile = () => {
+    importFileInputRef.current?.click();
+  };
+
+  const handleSelectValidateFile = () => {
+    validateFileInputRef.current?.click();
+  };
+
+  const handleBackupFileChange = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setIsParsingImport(true);
+    setFeedback(null);
+    try {
+      const parsed = await parseProjectBackupZip(file);
+      setImportSnapshot(parsed.snapshot);
+      setImportPreview(parsed.preview);
+      setImportMode('new');
+      setImportConflicts(null);
+      const defaultTarget = activeProject?.id ?? projects[0]?.id ?? '';
+      setImportTargetProjectId(defaultTarget);
+      setFeedback({
+        tone: 'success',
+        message: `Loaded backup preview for "${parsed.preview.sourceProjectName}".`
+      });
+    } catch (error) {
+      clearImportState();
+      const message =
+        error instanceof Error ? error.message : 'Unable to parse backup zip.';
+      setFeedback({tone: 'error', message});
+    } finally {
+      setIsParsingImport(false);
+      event.target.value = '';
+    }
+  };
+
+  const handleImportModeChange = async (mode: ProjectBackupImportMode) => {
+    setImportMode(mode);
+    if (mode !== 'merge' || !importSnapshot) {
+      setImportConflicts(null);
+      return;
+    }
+    await refreshImportConflicts(importSnapshot, importTargetProjectId);
+  };
+
+  const handleImportTargetProjectChange = async (projectId: string) => {
+    setImportTargetProjectId(projectId);
+    if (importMode !== 'merge' || !importSnapshot) {
+      setImportConflicts(null);
+      return;
+    }
+    await refreshImportConflicts(importSnapshot, projectId);
+  };
+
+  const handleApplyBackupImport = async () => {
+    if (!importSnapshot) return;
+    if (importMode === 'merge' && !importTargetProjectId) {
+      setFeedback({tone: 'error', message: 'Choose a target project to merge into.'});
+      return;
+    }
+
+    setIsApplyingImport(true);
+    setFeedback(null);
+    try {
+      const result = await importProjectBackup({
+        snapshot: importSnapshot,
+        mode: importMode,
+        targetProjectId: importMode === 'merge' ? importTargetProjectId : undefined
+      });
+      await loadProjects();
+      const importedProject = await getProjectById(result.projectId);
+      if (importedProject) {
+        onSelectProject(importedProject);
+      }
+      const importedSnapshot = await buildProjectSnapshot(result.projectId);
+      const countDiffs = diffSnapshotCounts({
+        expected: importSnapshot.counts,
+        actual: importedSnapshot.counts
+      });
+      clearImportState();
+      setFeedback({
+        tone: countDiffs.length > 0 ? 'error' : 'success',
+        message:
+          (result.mode === 'new'
+            ? `Imported backup into new project "${result.projectName}".`
+            : `Merged backup into "${result.projectName}".`) +
+          (countDiffs.length > 0
+            ? ` Count check mismatch: ${countDiffs.join(' | ')}`
+            : ' Count check passed.')
+      });
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'Unable to import backup.';
+      setFeedback({tone: 'error', message});
+    } finally {
+      setIsApplyingImport(false);
+    }
+  };
+
+  const handleValidateBackupFile = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    setIsValidatingBackup(true);
+    setFeedback(null);
+    try {
+      const parsed = await parseProjectBackupZip(file);
+      const result = validateSnapshotCounts(parsed.snapshot);
+      setFeedback({
+        tone: result.ok ? 'success' : 'error',
+        message: result.ok
+          ? `Backup "${file.name}" passed integrity checks.`
+          : `Backup "${file.name}" has count mismatches: ${result.mismatches.join(' | ')}`
+      });
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'Unable to validate backup zip.';
+      setFeedback({tone: 'error', message});
+    } finally {
+      setIsValidatingBackup(false);
+      event.target.value = '';
+    }
+  };
+
   if (showWizard) {
     return (
       <section
@@ -322,6 +526,146 @@ function ProjectsRoute({activeProject, onSelectProject}: ProjectsRouteProps) {
           </p>
         </div>
       </details>
+
+      <div style={{marginBottom: '1rem', display: 'flex', gap: '0.5rem', flexWrap: 'wrap'}}>
+        <button
+          type='button'
+          onClick={handleSelectBackupFile}
+          disabled={isParsingImport}
+        >
+          {isParsingImport ? 'Loading Backup...' : 'Import Backup (.zip)'}
+        </button>
+        <input
+          ref={importFileInputRef}
+          type='file'
+          accept='.zip,application/zip'
+          onChange={(e) => void handleBackupFileChange(e)}
+          style={{display: 'none'}}
+        />
+        <button
+          type='button'
+          onClick={handleSelectValidateFile}
+          disabled={isValidatingBackup}
+        >
+          {isValidatingBackup ? 'Validating...' : 'Validate Backup (.zip)'}
+        </button>
+        <input
+          ref={validateFileInputRef}
+          type='file'
+          accept='.zip,application/zip'
+          onChange={(e) => void handleValidateBackupFile(e)}
+          style={{display: 'none'}}
+        />
+      </div>
+
+      {importPreview && importSnapshot && (
+        <section
+          style={{
+            marginBottom: '1rem',
+            border: '1px solid #d1d5db',
+            borderRadius: '8px',
+            backgroundColor: '#f8fafc',
+            padding: '0.9rem'
+          }}
+        >
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              gap: '0.75rem',
+              flexWrap: 'wrap'
+            }}
+          >
+            <h2 style={{margin: 0}}>Backup Import Preview</h2>
+            <div style={{display: 'flex', gap: '0.5rem'}}>
+              <button
+                type='button'
+                onClick={() => void handleApplyBackupImport()}
+                disabled={isApplyingImport}
+              >
+                {isApplyingImport ? 'Importing...' : 'Apply Import'}
+              </button>
+              <button type='button' onClick={clearImportState} disabled={isApplyingImport}>
+                Cancel
+              </button>
+            </div>
+          </div>
+
+          <p style={{margin: '0.5rem 0', fontSize: '0.85rem', color: '#374151'}}>
+            Source: <strong>{importPreview.sourceProjectName}</strong> ({importPreview.sourceProjectId}) ·
+            Snapshot: {new Date(importPreview.generatedAt).toLocaleString()}
+          </p>
+
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+              gap: '0.6rem',
+              marginBottom: '0.75rem'
+            }}
+          >
+            <label>
+              Import Mode
+              <select
+                value={importMode}
+                onChange={(e) =>
+                  void handleImportModeChange(e.target.value as ProjectBackupImportMode)
+                }
+                style={{width: '100%'}}
+                disabled={isApplyingImport}
+              >
+                <option value='new'>Create New Project</option>
+                <option value='merge'>Merge Into Existing Project</option>
+              </select>
+            </label>
+            {importMode === 'merge' && (
+              <label>
+                Target Project
+                <select
+                  value={importTargetProjectId}
+                  onChange={(e) =>
+                    void handleImportTargetProjectChange(e.target.value)
+                  }
+                  style={{width: '100%'}}
+                  disabled={isApplyingImport}
+                >
+                  <option value=''>Select project</option>
+                  {projects.map((project) => (
+                    <option key={`merge-target-${project.id}`} value={project.id}>
+                      {project.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
+          </div>
+
+          <div style={{fontSize: '0.82rem', color: '#4b5563', marginBottom: '0.75rem'}}>
+            Counts: {importPreview.counts.categories} categories · {importPreview.counts.entities}{' '}
+            entities · {importPreview.counts.writingDocuments} scenes ·{' '}
+            {importPreview.counts.characters} characters · {importPreview.counts.characterSheets}{' '}
+            sheets
+          </div>
+
+          {importMode === 'merge' && importConflicts && (
+            <div
+              style={{
+                fontSize: '0.82rem',
+                color: '#6b7280',
+                borderTop: '1px solid #e5e7eb',
+                paddingTop: '0.6rem'
+              }}
+            >
+              Merge conflict preview: {importConflicts.sameNameCategoryCount} category name match(es),{' '}
+              {importConflicts.sameNameEntityCount} entity name match(es),{' '}
+              {importConflicts.sameNameDocumentCount} scene title match(es), settings exists:{' '}
+              {importConflicts.hasTargetSettings ? 'yes' : 'no'}, ruleset exists:{' '}
+              {importConflicts.hasTargetRuleset ? 'yes' : 'no'}.
+            </div>
+          )}
+        </section>
+      )}
 
       <form
         onSubmit={handleSubmit}
@@ -492,6 +836,17 @@ function ProjectsRoute({activeProject, onSelectProject}: ProjectsRouteProps) {
               >
                 <button type='button' onClick={() => handleOpen(project)}>
                   Open Project
+                </button>
+
+                <button
+                  type='button'
+                  onClick={() => void handleExportProjectBackup(project)}
+                  disabled={exportingProjectId === project.id}
+                  style={{background: '#ecfeff', color: '#0f766e'}}
+                >
+                  {exportingProjectId === project.id
+                    ? 'Exporting...'
+                    : 'Export Backup (.zip)'}
                 </button>
 
                 {hasRuleset ? (
