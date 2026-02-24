@@ -32,6 +32,8 @@ Ship a stable, local-first authoring product that supports:
 5. AI reliability and control
 - Provider selection with working providers and key management.
 - Prompt Tools (style/tone/persona/instruction) with defaults and per-chat selection.
+- One-click prompt tool presets (e.g., Critic, Beta Reader, Line Editor).
+- Tool lifecycle management: add, edit, delete, enable/disable, set defaults, and import/export tool packs.
 - Provider test action and clear failure diagnostics.
 
 6. Canon consistency baseline
@@ -47,13 +49,10 @@ Ship a stable, local-first authoring product that supports:
 2. Compile manuscript wizard
 - Select scenes, ordering, front/back matter, and output format.
 
-3. AI prompt presets
-- One-click preset bundles (e.g., Critic, Beta Reader, Line Editor).
-
-4. App-wide search
+3. App-wide search
 - Search scenes + world bible entries from one place.
 
-5. First-run onboarding
+4. First-run onboarding
 - Guided setup by project mode (LitRPG / Game / General).
 
 ## Later
