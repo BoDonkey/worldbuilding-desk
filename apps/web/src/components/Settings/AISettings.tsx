@@ -2,7 +2,8 @@ import React, {useState} from 'react';
 import type {
   ProjectAISettings,
   AIProviderId,
-  PromptToolKind
+  PromptToolKind,
+  PromptTool
 } from '../../entityTypes';
 import styles from '../../assets/components/Settings/AISettingsForm.module.css';
 
@@ -36,6 +37,38 @@ const PROMPT_TOOL_KIND_LABELS: Record<PromptToolKind, string> = {
   instruction: 'Instruction'
 };
 
+interface PromptToolPack {
+  schemaVersion: 1;
+  tools: PromptTool[];
+}
+
+const DEFAULT_PRESET_TOOLS: PromptTool[] = [
+  {
+    id: 'preset-literary-critic',
+    name: 'Literary Critic',
+    kind: 'persona',
+    content:
+      'Respond as a rigorous literary critic. Focus on structure, pacing, thematic coherence, and prose clarity.',
+    enabled: true
+  },
+  {
+    id: 'preset-beta-reader',
+    name: 'Beta Reader',
+    kind: 'persona',
+    content:
+      'Respond as an engaged beta reader. Call out confusion points, emotional impact, and readability issues.',
+    enabled: true
+  },
+  {
+    id: 'preset-line-editor',
+    name: 'Line Editor',
+    kind: 'tone',
+    content:
+      'Prefer concise, concrete prose. Remove filler, tighten sentence rhythm, and avoid repetition.',
+    enabled: true
+  }
+];
+
 export const AISettings: React.FC<AISettingsProps> = ({aiSettings, onSettingsChange}) => {
   const [anthropicKey, setAnthropicKey] = useState(() => localStorage.getItem('anthropic_api_key') || '');
   const [openaiKey, setOpenaiKey] = useState(() => localStorage.getItem('openai_api_key') || '');
@@ -43,6 +76,10 @@ export const AISettings: React.FC<AISettingsProps> = ({aiSettings, onSettingsCha
   const [toolName, setToolName] = useState('');
   const [toolKind, setToolKind] = useState<PromptToolKind>('persona');
   const [toolContent, setToolContent] = useState('');
+  const [editingToolId, setEditingToolId] = useState<string | null>(null);
+  const [editingToolName, setEditingToolName] = useState('');
+  const [editingToolKind, setEditingToolKind] = useState<PromptToolKind>('persona');
+  const [editingToolContent, setEditingToolContent] = useState('');
 
   const handleSaveKeys = () => {
     if (anthropicKey) {
@@ -104,6 +141,18 @@ export const AISettings: React.FC<AISettingsProps> = ({aiSettings, onSettingsCha
   const promptTools = aiSettings.promptTools ?? [];
   const defaultToolIds = aiSettings.defaultToolIds ?? [];
 
+  const triggerJsonDownload = (fileName: string, data: unknown) => {
+    const blob = new Blob([JSON.stringify(data, null, 2)], {type: 'application/json'});
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
   const handleAddPromptTool = () => {
     if (!toolName.trim() || !toolContent.trim()) return;
     const id = crypto.randomUUID();
@@ -134,6 +183,38 @@ export const AISettings: React.FC<AISettingsProps> = ({aiSettings, onSettingsCha
     });
   };
 
+  const handleStartEditTool = (tool: PromptTool) => {
+    setEditingToolId(tool.id);
+    setEditingToolName(tool.name);
+    setEditingToolKind(tool.kind);
+    setEditingToolContent(tool.content);
+  };
+
+  const handleCancelEditTool = () => {
+    setEditingToolId(null);
+    setEditingToolName('');
+    setEditingToolKind('persona');
+    setEditingToolContent('');
+  };
+
+  const handleSaveEditTool = (toolId: string) => {
+    if (!editingToolName.trim() || !editingToolContent.trim()) return;
+    onSettingsChange({
+      ...aiSettings,
+      promptTools: promptTools.map((tool) =>
+        tool.id === toolId
+          ? {
+              ...tool,
+              name: editingToolName.trim(),
+              kind: editingToolKind,
+              content: editingToolContent.trim()
+            }
+          : tool
+      )
+    });
+    handleCancelEditTool();
+  };
+
   const handleTogglePromptToolEnabled = (toolId: string, enabled: boolean) => {
     onSettingsChange({
       ...aiSettings,
@@ -158,6 +239,93 @@ export const AISettings: React.FC<AISettingsProps> = ({aiSettings, onSettingsCha
       ...aiSettings,
       defaultToolIds: defaultToolIds.filter((id) => id !== toolId)
     });
+  };
+
+  const handleInstallPresetTools = () => {
+    const existingNames = new Set(
+      promptTools.map((tool) => tool.name.trim().toLowerCase())
+    );
+    const additions = DEFAULT_PRESET_TOOLS.filter(
+      (tool) => !existingNames.has(tool.name.trim().toLowerCase())
+    ).map((tool) => ({
+      ...tool,
+      id: crypto.randomUUID()
+    }));
+
+    if (additions.length === 0) {
+      alert('Preset tools are already installed.');
+      return;
+    }
+
+    onSettingsChange({
+      ...aiSettings,
+      promptTools: [...promptTools, ...additions],
+      defaultToolIds: [...new Set([...defaultToolIds, ...additions.map((tool) => tool.id)])]
+    });
+  };
+
+  const handleExportToolPack = () => {
+    const pack: PromptToolPack = {
+      schemaVersion: 1,
+      tools: promptTools
+    };
+    triggerJsonDownload('prompt-tools-pack.json', pack);
+  };
+
+  const handleImportToolPack = async (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    try {
+      const raw = await file.text();
+      const parsed = JSON.parse(raw) as Partial<PromptToolPack>;
+      if (parsed.schemaVersion !== 1 || !Array.isArray(parsed.tools)) {
+        throw new Error('Invalid tool pack format.');
+      }
+      const importedTools = parsed.tools
+        .filter((tool) => tool && typeof tool.name === 'string' && typeof tool.content === 'string')
+        .map((tool) => ({
+          id: crypto.randomUUID(),
+          name: tool.name,
+          kind: (tool.kind as PromptToolKind) || 'instruction',
+          content: tool.content,
+          enabled: tool.enabled !== false
+        })) as PromptTool[];
+
+      if (importedTools.length === 0) {
+        throw new Error('No valid tools found in pack.');
+      }
+
+      const replace = window.confirm(
+        'Replace existing prompt tools with imported tools?\n\nChoose Cancel to append imported tools.'
+      );
+
+      if (replace) {
+        onSettingsChange({
+          ...aiSettings,
+          promptTools: importedTools,
+          defaultToolIds: importedTools.filter((tool) => tool.enabled).map((tool) => tool.id)
+        });
+      } else {
+        onSettingsChange({
+          ...aiSettings,
+          promptTools: [...promptTools, ...importedTools],
+          defaultToolIds: [
+            ...new Set([
+              ...defaultToolIds,
+              ...importedTools.filter((tool) => tool.enabled).map((tool) => tool.id)
+            ])
+          ]
+        });
+      }
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'Unable to import tool pack.';
+      alert(message);
+    } finally {
+      event.target.value = '';
+    }
   };
 
   return (
@@ -323,6 +491,23 @@ export const AISettings: React.FC<AISettingsProps> = ({aiSettings, onSettingsCha
         >
           Add Prompt Tool
         </button>
+        <div className={styles.toolPackActions}>
+          <button type='button' className={styles.secondaryButton} onClick={handleInstallPresetTools}>
+            Install Preset Tools
+          </button>
+          <button type='button' className={styles.secondaryButton} onClick={handleExportToolPack}>
+            Export Tool Pack
+          </button>
+          <label className={styles.secondaryButton}>
+            Import Tool Pack
+            <input
+              type='file'
+              accept='.json,application/json'
+              onChange={(e) => void handleImportToolPack(e)}
+              style={{display: 'none'}}
+            />
+          </label>
+        </div>
 
         {promptTools.length === 0 ? (
           <p className={styles.help}>No prompt tools yet.</p>
@@ -330,13 +515,67 @@ export const AISettings: React.FC<AISettingsProps> = ({aiSettings, onSettingsCha
           <ul className={styles.toolList}>
             {promptTools.map((tool) => (
               <li key={tool.id} className={styles.toolItem}>
-                <div className={styles.toolHeader}>
-                  <strong>{tool.name}</strong>
-                  <span className={styles.toolKind}>
-                    {PROMPT_TOOL_KIND_LABELS[tool.kind]}
-                  </span>
-                </div>
-                <p className={styles.toolContent}>{tool.content}</p>
+                {editingToolId === tool.id ? (
+                  <div className={styles.editPanel}>
+                    <div className={styles.field}>
+                      <label className={styles.label}>Tool Name</label>
+                      <input
+                        type='text'
+                        className={styles.input}
+                        value={editingToolName}
+                        onChange={(e) => setEditingToolName(e.target.value)}
+                      />
+                    </div>
+                    <div className={styles.field}>
+                      <label className={styles.label}>Tool Type</label>
+                      <select
+                        className={styles.input}
+                        value={editingToolKind}
+                        onChange={(e) => setEditingToolKind(e.target.value as PromptToolKind)}
+                      >
+                        {Object.entries(PROMPT_TOOL_KIND_LABELS).map(([value, label]) => (
+                          <option key={`edit-${value}`} value={value}>
+                            {label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className={styles.field}>
+                      <label className={styles.label}>Tool Instructions</label>
+                      <textarea
+                        className={styles.textarea}
+                        value={editingToolContent}
+                        onChange={(e) => setEditingToolContent(e.target.value)}
+                      />
+                    </div>
+                    <div className={styles.toolPackActions}>
+                      <button
+                        type='button'
+                        className={styles.secondaryButton}
+                        onClick={() => handleSaveEditTool(tool.id)}
+                      >
+                        Save Changes
+                      </button>
+                      <button
+                        type='button'
+                        className={styles.secondaryButton}
+                        onClick={handleCancelEditTool}
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <div className={styles.toolHeader}>
+                      <strong>{tool.name}</strong>
+                      <span className={styles.toolKind}>
+                        {PROMPT_TOOL_KIND_LABELS[tool.kind]}
+                      </span>
+                    </div>
+                    <p className={styles.toolContent}>{tool.content}</p>
+                  </>
+                )}
                 <div className={styles.toolActions}>
                   <label>
                     <input
@@ -359,6 +598,14 @@ export const AISettings: React.FC<AISettingsProps> = ({aiSettings, onSettingsCha
                     />
                     Default Active
                   </label>
+                  <button
+                    type='button'
+                    className={styles.secondaryButton}
+                    onClick={() => handleStartEditTool(tool)}
+                    disabled={editingToolId === tool.id}
+                  >
+                    Edit
+                  </button>
                   <button
                     type='button'
                     className={styles.deleteButton}
