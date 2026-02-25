@@ -299,4 +299,56 @@ describe('Post-merge smoke checklist', () => {
     selectDefaultsMode('General');
     assertDefaultActiveForTool('General', TOOL_NAMES.general, true);
   });
+
+  it('inserts rendered character status blocks into the scene editor', () => {
+    cy.visit('/workspace');
+
+    cy.contains('button', 'Insert Status Block').click();
+    cy.get('[aria-label="Status Block Builder"]')
+      .within(() => {
+        cy.get('select').eq(0).select('Character');
+        cy.get('select').eq(1).select('Aria');
+        cy.get('select').eq(2).select('All stats');
+        cy.get('select').eq(3).select('Live block now');
+        cy.contains('button', 'Insert').click();
+      });
+
+    cy.contains('[role="status"]', 'Inserted status block into scene.').should(
+      'be.visible'
+    );
+    cy.get('.tiptap-editor').should('contain.text', '[Character Status');
+    cy.get('.tiptap-editor').should('contain.text', 'Aria');
+    cy.get('.tiptap-editor').should('contain.text', 'Level 5');
+  });
+
+  it('inserts template tokens and refreshes them into live stat blocks', () => {
+    cy.visit('/workspace');
+
+    cy.contains('button', 'Insert Status Block').click();
+    cy.get('[aria-label="Status Block Builder"]')
+      .within(() => {
+        cy.get('select').eq(0).select('Character');
+        cy.get('select').eq(1).select('Aria');
+        cy.get('select').eq(2).select('Compact');
+        cy.get('select').eq(3).select('Reusable placeholder');
+        cy.contains('button', 'Insert').click();
+      });
+
+    cy.get('.tiptap-editor').should(
+      'contain.text',
+      '{{STAT_BLOCK:character:Aria:compact}}'
+    );
+
+    cy.contains('button', 'Refresh Placeholders').click();
+
+    cy.contains('[role="status"]', 'Refreshed 1 stat block template(s).').should(
+      'be.visible'
+    );
+    cy.get('.tiptap-editor').should('contain.text', '[Character Status');
+    cy.get('.tiptap-editor').should('contain.text', 'Aria');
+    cy.get('.tiptap-editor').should(
+      'not.contain.text',
+      '{{STAT_BLOCK:character:Aria:compact}}'
+    );
+  });
 });

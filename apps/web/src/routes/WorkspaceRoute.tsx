@@ -5,6 +5,9 @@ import type {
   CharacterSheet,
   Project,
   ProjectSettings,
+  StatBlockInsertMode,
+  StatBlockSourceType,
+  StatBlockStyle,
   StoredRuleset,
   WorldEntity,
   WritingDocument
@@ -17,7 +20,7 @@ import {
 import {getEntitiesByProject} from '../entityStorage';
 import {getCharactersByProject} from '../characterStorage';
 import {getCharacterSheetsByProject} from '../services/characterSheetService';
-import {getOrCreateSettings} from '../settingsStorage';
+import {getOrCreateSettings, saveProjectSettings} from '../settingsStorage';
 import {createEditorConfigWithStyles} from '../config/editorConfig';
 import type {EditorConfig} from '../config/editorConfig';
 import {countWords} from '../utils/textHelpers';
@@ -42,6 +45,13 @@ import {
   getPartySynergySuggestions,
   getSettlementModulesByProject
 } from '../services/compendiumService';
+import {
+  buildCharacterStatBlockHtml,
+  buildItemStatBlockHtml,
+  createStatBlockToken,
+  formatEntityFieldValue,
+  replaceStatBlockTokensInHtml
+} from '../utils/statBlockTemplates';
 import {
   getSeriesBibleConfig,
   promoteMemoryToParent,
@@ -68,62 +78,11 @@ interface WorkspaceRouteProps {
 type SaveStatus = 'idle' | 'saving' | 'saved';
 type FeedbackTone = 'success' | 'error';
 type ExportFormat = 'markdown' | 'docx';
-type StatBlockSourceType = 'character' | 'item';
-type StatBlockStyle = 'full' | 'buffs' | 'compact';
 
 interface SceneExportItem {
   id: string;
   title: string;
   included: boolean;
-}
-
-function escapeHtml(text: string): string {
-  return text
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
-}
-
-function toHtmlParagraphs(lines: string[]): string {
-  const chunks: string[] = [];
-  let current: string[] = [];
-
-  lines.forEach((line) => {
-    if (!line.trim()) {
-      if (current.length > 0) {
-        chunks.push(`<p>${current.map(escapeHtml).join('<br />')}</p>`);
-        current = [];
-      }
-      return;
-    }
-    current.push(line);
-  });
-
-  if (current.length > 0) {
-    chunks.push(`<p>${current.map(escapeHtml).join('<br />')}</p>`);
-  }
-
-  return chunks.join('');
-}
-
-function formatEntityFieldValue(value: unknown): string {
-  if (value === null || value === undefined) return '';
-  if (Array.isArray(value)) {
-    return value
-      .map((entry) => String(entry).trim())
-      .filter(Boolean)
-      .join(', ');
-  }
-  if (typeof value === 'object') {
-    try {
-      return JSON.stringify(value);
-    } catch {
-      return '';
-    }
-  }
-  return String(value).trim();
 }
 
 function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
@@ -156,9 +115,12 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
   const [statBlockSourceType, setStatBlockSourceType] =
     useState<StatBlockSourceType>('character');
   const [statBlockStyle, setStatBlockStyle] = useState<StatBlockStyle>('full');
+  const [statBlockInsertMode, setStatBlockInsertMode] =
+    useState<StatBlockInsertMode>('block');
   const [selectedStatCharacterId, setSelectedStatCharacterId] = useState('');
   const [selectedStatEntityId, setSelectedStatEntityId] = useState('');
   const [statBlockInsertContent, setStatBlockInsertContent] = useState<string | null>(null);
+  const [isStatPreferencesHydrated, setStatPreferencesHydrated] = useState(false);
   const [ragService, setRagService] = useState<RAGProvider | null>(null);
   const [shodhService, setShodhService] =
     useState<ShodhMemoryProvider | null>(null);
@@ -190,6 +152,7 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
   const [isSavingMemory, setIsSavingMemory] = useState(false);
   const [isSyncingCanon, setIsSyncingCanon] = useState(false);
   const [isExportModalOpen, setExportModalOpen] = useState(false);
+  const [isStatBlockModalOpen, setStatBlockModalOpen] = useState(false);
   const [exportFormat, setExportFormat] = useState<ExportFormat>('markdown');
   const [exportSelection, setExportSelection] = useState<SceneExportItem[]>([]);
   const importInputRef = useRef<HTMLInputElement | null>(null);
@@ -367,6 +330,10 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
       setSettlementModules([]);
       setSelectedStatCharacterId('');
       setSelectedStatEntityId('');
+      setStatBlockSourceType('character');
+      setStatBlockStyle('full');
+      setStatBlockInsertMode('block');
+      setStatPreferencesHydrated(false);
       return;
     }
 
@@ -389,6 +356,13 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
       setDocuments(docs);
       setEditorConfig(createEditorConfigWithStyles(settings.characterStyles));
       setProjectSettings(settings);
+      setStatBlockSourceType(
+        settings.statBlockPreferences?.sourceType ?? 'character'
+      );
+      setStatBlockStyle(settings.statBlockPreferences?.style ?? 'full');
+      setStatBlockInsertMode(
+        settings.statBlockPreferences?.insertMode ?? 'block'
+      );
       setEntities(loadedEntities);
       setCharacters(loadedCharacters);
       setCharacterSheets(loadedSheets);
@@ -397,6 +371,7 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
       setSettlementModules(loadedSettlementModules);
       setSelectedStatCharacterId(loadedSheets[0]?.id ?? '');
       setSelectedStatEntityId(loadedEntities[0]?.id ?? '');
+      setStatPreferencesHydrated(true);
 
       // Generate toolbar buttons from character styles
       const buttons = settings.characterStyles.map((style) => ({
@@ -493,6 +468,38 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
   useEffect(() => {
     void refreshMemories();
   }, [refreshMemories]);
+
+  useEffect(() => {
+    if (!activeProject || !projectSettings || !isStatPreferencesHydrated) {
+      return;
+    }
+    const currentPrefs = projectSettings.statBlockPreferences;
+    if (
+      currentPrefs?.sourceType === statBlockSourceType &&
+      currentPrefs?.style === statBlockStyle &&
+      currentPrefs?.insertMode === statBlockInsertMode
+    ) {
+      return;
+    }
+    const nextSettings: ProjectSettings = {
+      ...projectSettings,
+      statBlockPreferences: {
+        sourceType: statBlockSourceType,
+        style: statBlockStyle,
+        insertMode: statBlockInsertMode
+      },
+      updatedAt: Date.now()
+    };
+    setProjectSettings(nextSettings);
+    void saveProjectSettings(nextSettings);
+  }, [
+    activeProject,
+    projectSettings,
+    statBlockSourceType,
+    statBlockStyle,
+    statBlockInsertMode,
+    isStatPreferencesHydrated
+  ]);
 
   useEffect(() => {
     if (!activeProject || !ragService) {
@@ -855,164 +862,153 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
     characterSheets.find((sheet) => sheet.id === selectedStatCharacterId) ?? null;
   const selectedEntity =
     entities.find((entity) => entity.id === selectedStatEntityId) ?? null;
+  const activeProjectMode = projectSettings?.projectMode ?? 'litrpg';
 
-  const buildCharacterStatBlock = (
-    sheet: CharacterSheet,
-    style: StatBlockStyle
-  ): string => {
-    const lines: string[] = [];
-    const effectiveLevel = Math.max(1, sheet.level + runtimeModifiers.levelBonus);
-    const styleLabel =
-      style === 'full' ? 'All Stats' : style === 'buffs' ? 'Buffs Only' : 'Compact';
-
-    lines.push(`[Character Status • ${styleLabel}]`);
-    lines.push(sheet.name);
-    lines.push(`Level ${effectiveLevel} (base ${sheet.level}) • ${sheet.experience} XP`);
-    lines.push('');
-
-    const statLines = sheet.stats.map((stat) => {
-      const statName = statDefinitionNameById.get(stat.definitionId) ?? stat.definitionId;
-      const effective = getEffectiveStatValue({
-        definitionId: stat.definitionId,
-        baseValue: stat.value,
-        runtime: runtimeModifiers
-      });
-      const delta = effective - stat.value;
-      const modifierNotes = (stat.modifiers ?? [])
-        .map((modifier) =>
-          modifier.type === 'multiplier'
-            ? `${modifier.source} x${modifier.value}`
-            : `${modifier.source} ${modifier.value >= 0 ? '+' : ''}${modifier.value}`
-        )
-        .join(', ');
-
-      return {
-        hasBuff: delta !== 0 || modifierNotes.length > 0,
-        text:
-          `${statName}: ${stat.value}` +
-          (effective !== stat.value ? ` -> ${effective}` : '') +
-          (delta !== 0 ? ` (${delta >= 0 ? '+' : ''}${delta})` : '') +
-          (modifierNotes ? ` [${modifierNotes}]` : '')
-      };
-    });
-
-    const resourceLines = sheet.resources.map((resource) => {
-      const resourceName =
-        resourceDefinitionNameById.get(resource.definitionId) ?? resource.definitionId;
-      const effective = getEffectiveResourceValues({
-        definitionId: resource.definitionId,
-        current: resource.current,
-        max: resource.max,
-        runtime: runtimeModifiers
-      });
-      const hasBuff =
-        effective.current !== resource.current || effective.max !== resource.max;
-      return {
-        hasBuff,
-        text:
-          `${resourceName}: ${resource.current}/${resource.max}` +
-          (hasBuff ? ` -> ${effective.current}/${effective.max}` : '')
-      };
-    });
-
-    if (style !== 'compact') {
-      const statsToRender =
-        style === 'buffs'
-          ? statLines.filter((entry) => entry.hasBuff)
-          : statLines;
-      const resourcesToRender =
-        style === 'buffs'
-          ? resourceLines.filter((entry) => entry.hasBuff)
-          : resourceLines;
-
-      if (statsToRender.length > 0) {
-        lines.push('Stats');
-        statsToRender.forEach((entry) => lines.push(`- ${entry.text}`));
-      }
-
-      if (resourcesToRender.length > 0) {
-        if (lines[lines.length - 1] !== '') {
-          lines.push('');
-        }
-        lines.push('Resources');
-        resourcesToRender.forEach((entry) => lines.push(`- ${entry.text}`));
-      }
-    } else {
-      const compactStats = statLines.slice(0, 4).map((entry) => entry.text).join(' | ');
-      if (compactStats) {
-        lines.push(compactStats);
-      }
-      const compactResources = resourceLines.map((entry) => entry.text).join(' | ');
-      if (compactResources) {
-        lines.push(compactResources);
-      }
-    }
-
-    const activeNotes =
-      style === 'buffs'
-        ? runtimeModifiers.notes
-        : runtimeModifiers.notes.slice(0, 3);
-    if (activeNotes.length > 0) {
-      if (lines[lines.length - 1] !== '') {
-        lines.push('');
-      }
-      lines.push('Active Effects');
-      activeNotes.forEach((note) => lines.push(`- ${note}`));
-    } else if (style === 'buffs') {
-      lines.push('No active buffs detected.');
-    }
-
-    return toHtmlParagraphs(lines);
-  };
-
-  const buildEntityStatBlock = (
-    entity: WorldEntity,
-    style: StatBlockStyle
-  ): string => {
-    const lines: string[] = [];
-    const entries = Object.entries(entity.fields)
-      .map(([key, value]) => [key, formatEntityFieldValue(value)] as const)
-      .filter(([, value]) => Boolean(value));
-    const styleLabel =
-      style === 'full' ? 'All Fields' : style === 'buffs' ? 'Buff Fields' : 'Compact';
-
-    const filteredEntries =
-      style === 'full'
-        ? entries
-        : style === 'buffs'
-          ? entries.filter(([key]) => /(buff|bonus|modifier|effect)/i.test(key))
-          : entries.slice(0, 6);
-
-    lines.push(`[Item Status • ${styleLabel}]`);
-    lines.push(entity.name);
-    lines.push('');
-
-    if (filteredEntries.length === 0) {
-      lines.push(
-        style === 'buffs'
-          ? 'No buff/effect fields found on this item.'
-          : 'No item stats found.'
+  const resolveCharacterBlock = useCallback(
+    (sheet: CharacterSheet, style: StatBlockStyle): string => {
+      const effectiveLevel = Math.max(1, sheet.level + runtimeModifiers.levelBonus);
+      return buildCharacterStatBlockHtml(
+        {
+          name: sheet.name,
+          level: sheet.level,
+          effectiveLevel,
+          experience: sheet.experience,
+          stats: sheet.stats.map((stat) => {
+            const effective = getEffectiveStatValue({
+              definitionId: stat.definitionId,
+              baseValue: stat.value,
+              runtime: runtimeModifiers
+            });
+            const modifierNotes = (stat.modifiers ?? [])
+              .map((modifier) =>
+                modifier.type === 'multiplier'
+                  ? `${modifier.source} x${modifier.value}`
+                  : `${modifier.source} ${modifier.value >= 0 ? '+' : ''}${modifier.value}`
+              )
+              .join(', ');
+            return {
+              name: statDefinitionNameById.get(stat.definitionId) ?? stat.definitionId,
+              baseValue: stat.value,
+              effectiveValue: effective,
+              modifierNotes
+            };
+          }),
+          resources: sheet.resources.map((resource) => {
+            const effective = getEffectiveResourceValues({
+              definitionId: resource.definitionId,
+              current: resource.current,
+              max: resource.max,
+              runtime: runtimeModifiers
+            });
+            return {
+              name:
+                resourceDefinitionNameById.get(resource.definitionId) ??
+                resource.definitionId,
+              current: resource.current,
+              max: resource.max,
+              effectiveCurrent: effective.current,
+              effectiveMax: effective.max
+            };
+          }),
+          activeNotes: runtimeModifiers.notes
+        },
+        style
       );
-    } else {
-      filteredEntries.forEach(([key, value]) => {
-        lines.push(`- ${key}: ${value}`);
-      });
-    }
+    },
+    [runtimeModifiers, statDefinitionNameById, resourceDefinitionNameById]
+  );
 
-    return toHtmlParagraphs(lines);
+  const resolveItemBlock = useCallback(
+    (entity: WorldEntity, style: StatBlockStyle): string => {
+      return buildItemStatBlockHtml(
+        {
+          name: entity.name,
+          fields: Object.entries(entity.fields)
+            .map(([key, value]) => ({
+              key,
+              value: formatEntityFieldValue(value)
+            }))
+            .filter((entry) => Boolean(entry.value))
+        },
+        style
+      );
+    },
+    []
+  );
+
+  const resolveTemplateToBlock = useCallback(
+    (
+      sourceType: StatBlockSourceType,
+      sourceRef: string,
+      style: StatBlockStyle
+    ): string | null => {
+      if (sourceType === 'character') {
+        const normalizedRef = sourceRef.trim().toLowerCase();
+        const sheet =
+          characterSheets.find((candidate) => candidate.id === sourceRef) ??
+          characterSheets.find(
+            (candidate) => candidate.name.trim().toLowerCase() === normalizedRef
+          );
+        return sheet ? resolveCharacterBlock(sheet, style) : null;
+      }
+      const normalizedRef = sourceRef.trim().toLowerCase();
+      const entity =
+        entities.find((candidate) => candidate.id === sourceRef) ??
+        entities.find(
+          (candidate) => candidate.name.trim().toLowerCase() === normalizedRef
+        );
+      return entity ? resolveItemBlock(entity, style) : null;
+    },
+    [characterSheets, entities, resolveCharacterBlock, resolveItemBlock]
+  );
+
+  const handleRefreshStatTemplates = () => {
+    const result = replaceStatBlockTokensInHtml(content, (token) =>
+      resolveTemplateToBlock(token.sourceType, token.sourceRef, token.style)
+    );
+    if (result.replacedCount === 0) {
+      setFeedback({
+        tone: 'error',
+        message: 'No matching STAT_BLOCK templates found to refresh.'
+      });
+      return;
+    }
+    setContent(result.html);
+    setSaveStatus('idle');
+    setWordCount(countWords(result.html));
+    setFeedback({
+      tone: 'success',
+      message: `Refreshed ${result.replacedCount} stat block template(s).`
+    });
   };
 
   const handleInsertStatBlock = () => {
+    const token =
+      statBlockSourceType === 'character'
+        ? selectedSheet
+          ? createStatBlockToken({
+              sourceType: 'character',
+              sourceRef: selectedSheet.name.trim() || selectedSheet.id,
+              style: statBlockStyle
+            })
+          : null
+        : selectedEntity
+          ? createStatBlockToken({
+              sourceType: 'item',
+              sourceRef: selectedEntity.name.trim() || selectedEntity.id,
+              style: statBlockStyle
+            })
+          : null;
     const html =
       statBlockSourceType === 'character'
         ? selectedSheet
-          ? buildCharacterStatBlock(selectedSheet, statBlockStyle)
+          ? resolveCharacterBlock(selectedSheet, statBlockStyle)
           : null
         : selectedEntity
-          ? buildEntityStatBlock(selectedEntity, statBlockStyle)
+          ? resolveItemBlock(selectedEntity, statBlockStyle)
           : null;
 
-    if (!html) {
+    if (!html || !token) {
       setFeedback({
         tone: 'error',
         message:
@@ -1023,8 +1019,21 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
       return;
     }
 
-    setStatBlockInsertContent(html);
-    setFeedback({tone: 'success', message: 'Inserted status block into scene.'});
+    const shouldInsertAsTemplate =
+      statBlockInsertMode === 'template' && activeProjectMode !== 'litrpg';
+    setStatBlockInsertContent(
+      shouldInsertAsTemplate ? `<p>${token}</p>` : html
+    );
+    setStatBlockModalOpen(false);
+    setFeedback({
+      tone: 'success',
+      message:
+        shouldInsertAsTemplate
+          ? 'Inserted STAT_BLOCK template token.'
+          : statBlockInsertMode === 'template' && activeProjectMode === 'litrpg'
+            ? 'Inserted live status block (LitRPG mode auto-resolves placeholders).'
+            : 'Inserted status block into scene.'
+    });
   };
 
   const selectedDocument = selectedId
@@ -1398,61 +1407,12 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
                     flexWrap: 'wrap'
                   }}
                 >
-                  <strong style={{fontSize: '0.9rem'}}>Insert Status Block</strong>
-                  <select
-                    value={statBlockSourceType}
-                    onChange={(event) =>
-                      setStatBlockSourceType(event.target.value as StatBlockSourceType)
-                    }
-                  >
-                    <option value='character'>Character</option>
-                    <option value='item'>Item/Entity</option>
-                  </select>
-                  {statBlockSourceType === 'character' ? (
-                    <select
-                      value={selectedStatCharacterId}
-                      onChange={(event) => setSelectedStatCharacterId(event.target.value)}
-                      disabled={characterSheets.length === 0}
-                    >
-                      {characterSheets.length === 0 ? (
-                        <option value=''>No character sheets</option>
-                      ) : (
-                        characterSheets.map((sheet) => (
-                          <option key={sheet.id} value={sheet.id}>
-                            {sheet.name}
-                          </option>
-                        ))
-                      )}
-                    </select>
-                  ) : (
-                    <select
-                      value={selectedStatEntityId}
-                      onChange={(event) => setSelectedStatEntityId(event.target.value)}
-                      disabled={entities.length === 0}
-                    >
-                      {entities.length === 0 ? (
-                        <option value=''>No entities</option>
-                      ) : (
-                        entities.map((entity) => (
-                          <option key={entity.id} value={entity.id}>
-                            {entity.name}
-                          </option>
-                        ))
-                      )}
-                    </select>
-                  )}
-                  <select
-                    value={statBlockStyle}
-                    onChange={(event) =>
-                      setStatBlockStyle(event.target.value as StatBlockStyle)
-                    }
-                  >
-                    <option value='full'>All stats</option>
-                    <option value='buffs'>Current buffs only</option>
-                    <option value='compact'>Compact</option>
-                  </select>
-                  <button type='button' onClick={handleInsertStatBlock}>
-                    Insert
+                  <strong style={{fontSize: '0.9rem'}}>Status Blocks</strong>
+                  <button type='button' onClick={() => setStatBlockModalOpen(true)}>
+                    Insert Status Block
+                  </button>
+                  <button type='button' onClick={handleRefreshStatTemplates}>
+                    Refresh Placeholders
                   </button>
                 </div>
                 <label
@@ -1569,6 +1529,159 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
           )}
         </div>
       </div>
+
+      {isStatBlockModalOpen && (
+        <div
+          role='dialog'
+          aria-modal='true'
+          aria-label='Status Block Builder'
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(0,0,0,0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000
+          }}
+        >
+          <div
+            style={{
+              backgroundColor: '#fff',
+              padding: '1.25rem',
+              borderRadius: '8px',
+              width: 'min(620px, 94vw)',
+              maxHeight: '80vh',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '0.75rem'
+            }}
+          >
+            <h3 style={{margin: 0}}>Insert Status Block</h3>
+            <p style={{margin: 0}}>
+              Choose what to insert. Use <strong>Reusable placeholder</strong> if you
+              want to refresh it later.
+            </p>
+
+            <div style={{display: 'grid', gap: '0.6rem'}}>
+              <label>
+                Source type
+                <br />
+                <select
+                  value={statBlockSourceType}
+                  onChange={(event) =>
+                    setStatBlockSourceType(event.target.value as StatBlockSourceType)
+                  }
+                  style={{width: '100%'}}
+                >
+                  <option value='character'>Character</option>
+                  <option value='item'>Item/Entity</option>
+                </select>
+              </label>
+
+              {statBlockSourceType === 'character' ? (
+                <label>
+                  Character
+                  <br />
+                  <select
+                    value={selectedStatCharacterId}
+                    onChange={(event) => setSelectedStatCharacterId(event.target.value)}
+                    disabled={characterSheets.length === 0}
+                    style={{width: '100%'}}
+                  >
+                    {characterSheets.length === 0 ? (
+                      <option value=''>No character sheets</option>
+                    ) : (
+                      characterSheets.map((sheet) => (
+                        <option key={sheet.id} value={sheet.id}>
+                          {sheet.name}
+                        </option>
+                      ))
+                    )}
+                  </select>
+                </label>
+              ) : (
+                <label>
+                  Item/Entity
+                  <br />
+                  <select
+                    value={selectedStatEntityId}
+                    onChange={(event) => setSelectedStatEntityId(event.target.value)}
+                    disabled={entities.length === 0}
+                    style={{width: '100%'}}
+                  >
+                    {entities.length === 0 ? (
+                      <option value=''>No entities</option>
+                    ) : (
+                      entities.map((entity) => (
+                        <option key={entity.id} value={entity.id}>
+                          {entity.name}
+                        </option>
+                      ))
+                    )}
+                  </select>
+                </label>
+              )}
+
+              <label>
+                Detail level
+                <br />
+                <select
+                  value={statBlockStyle}
+                  onChange={(event) =>
+                    setStatBlockStyle(event.target.value as StatBlockStyle)
+                  }
+                  style={{width: '100%'}}
+                >
+                  <option value='full'>All stats</option>
+                  <option value='buffs'>Current buffs only</option>
+                  <option value='compact'>Compact</option>
+                </select>
+              </label>
+
+              <label>
+                Insert as
+                <br />
+                <select
+                  value={statBlockInsertMode}
+                  onChange={(event) =>
+                    setStatBlockInsertMode(event.target.value as StatBlockInsertMode)
+                  }
+                  disabled={activeProjectMode === 'litrpg'}
+                  style={{width: '100%'}}
+                >
+                  <option value='block'>Live block now</option>
+                  <option value='template'>Reusable placeholder</option>
+                </select>
+                {activeProjectMode === 'litrpg' && (
+                  <span style={{fontSize: '0.8rem', color: '#4b5563'}}>
+                    LitRPG mode always inserts live text for readability.
+                  </span>
+                )}
+              </label>
+            </div>
+
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'flex-end',
+                gap: '0.5rem'
+              }}
+            >
+              <button
+                type='button'
+                onClick={() => setStatBlockModalOpen(false)}
+                style={{background: 'transparent'}}
+              >
+                Cancel
+              </button>
+              <button type='button' onClick={handleInsertStatBlock}>
+                Insert
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {isExportModalOpen && (
         <div
