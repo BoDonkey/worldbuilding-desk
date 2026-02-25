@@ -24,6 +24,8 @@ interface EditorWithAIProps {
   toolbarButtons?: Array<{id: string; label: string; markName: string}>;
   aiSettings?: ProjectAISettings | null;
   projectMode?: ProjectMode;
+  textToInsert?: string | null;
+  onTextInserted?: () => void;
 }
 
 export const EditorWithAI: React.FC<EditorWithAIProps> = ({
@@ -34,11 +36,13 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
   config,
   toolbarButtons = [],
   aiSettings,
-  projectMode = 'litrpg'
+  projectMode = 'litrpg',
+  textToInsert: externalTextToInsert = null,
+  onTextInserted
 }) => {
   const [showAI, setShowAI] = useState(false);
   const [aiContext, setAIContext] = useState<AIContextType | null>(null);
-  const [textToInsert, setTextToInsert] = useState<string | null>(null);
+  const [textToInsertFromAI, setTextToInsertFromAI] = useState<string | null>(null);
   const editorRef = useRef<TipTapEditorInstance | null>(null);
 
   // Merge AIExpandMenu with config extensions
@@ -48,6 +52,7 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
         extensions: [...config.extensions, AIExpandMenu]
       }
     : undefined;
+  const insertContext = externalTextToInsert ? null : aiContext;
 
   useEffect(() => {
     const handleAIRequest = (event: Event) => {
@@ -106,7 +111,7 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
       console.log('Insert result?', insertResult);
     } else {
       console.log('Inserting at cursor');
-      setTextToInsert(text);
+      setTextToInsertFromAI(text);
     }
   };
 
@@ -121,9 +126,15 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
           }}
           config={mergedConfig}
           toolbarButtons={toolbarButtons}
-          textToInsert={textToInsert}
-          onTextInserted={() => setTextToInsert(null)}
-          insertContext={aiContext}
+          textToInsert={externalTextToInsert ?? textToInsertFromAI}
+          onTextInserted={() => {
+            if (externalTextToInsert) {
+              onTextInserted?.();
+              return;
+            }
+            setTextToInsertFromAI(null);
+          }}
+          insertContext={insertContext}
         />
       </div>
 

@@ -1,6 +1,14 @@
-import {useEffect, useState, useCallback, useRef} from 'react';
+import {useEffect, useState, useCallback, useRef, useMemo} from 'react';
 import type {ChangeEvent} from 'react';
-import type {Project, ProjectSettings, WritingDocument} from '../entityTypes';
+import type {
+  Character,
+  CharacterSheet,
+  Project,
+  ProjectSettings,
+  StoredRuleset,
+  WorldEntity,
+  WritingDocument
+} from '../entityTypes';
 import {
   getDocumentsByProject,
   saveWritingDocument,
@@ -8,6 +16,7 @@ import {
 } from '../writingStorage';
 import {getEntitiesByProject} from '../entityStorage';
 import {getCharactersByProject} from '../characterStorage';
+import {getCharacterSheetsByProject} from '../services/characterSheetService';
 import {getOrCreateSettings} from '../settingsStorage';
 import {createEditorConfigWithStyles} from '../config/editorConfig';
 import type {EditorConfig} from '../config/editorConfig';
@@ -23,6 +32,16 @@ import type {
 } from '../services/shodh/ShodhMemoryService';
 import {getShodhService} from '../services/shodh/getShodhService';
 import {emitShodhMemoriesUpdated} from '../services/shodh/shodhEvents';
+import {getRulesetByProjectId} from '../services/rulesetService';
+import {
+  DEFAULT_PARTY_SYNERGY_RULES,
+  deriveCharacterRuntimeModifiers,
+  getEffectiveResourceValues,
+  getEffectiveStatValue,
+  getOrCreateSettlementState,
+  getPartySynergySuggestions,
+  getSettlementModulesByProject
+} from '../services/compendiumService';
 import {
   getSeriesBibleConfig,
   promoteMemoryToParent,
@@ -49,11 +68,62 @@ interface WorkspaceRouteProps {
 type SaveStatus = 'idle' | 'saving' | 'saved';
 type FeedbackTone = 'success' | 'error';
 type ExportFormat = 'markdown' | 'docx';
+type StatBlockSourceType = 'character' | 'item';
+type StatBlockStyle = 'full' | 'buffs' | 'compact';
 
 interface SceneExportItem {
   id: string;
   title: string;
   included: boolean;
+}
+
+function escapeHtml(text: string): string {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function toHtmlParagraphs(lines: string[]): string {
+  const chunks: string[] = [];
+  let current: string[] = [];
+
+  lines.forEach((line) => {
+    if (!line.trim()) {
+      if (current.length > 0) {
+        chunks.push(`<p>${current.map(escapeHtml).join('<br />')}</p>`);
+        current = [];
+      }
+      return;
+    }
+    current.push(line);
+  });
+
+  if (current.length > 0) {
+    chunks.push(`<p>${current.map(escapeHtml).join('<br />')}</p>`);
+  }
+
+  return chunks.join('');
+}
+
+function formatEntityFieldValue(value: unknown): string {
+  if (value === null || value === undefined) return '';
+  if (Array.isArray(value)) {
+    return value
+      .map((entry) => String(entry).trim())
+      .filter(Boolean)
+      .join(', ');
+  }
+  if (typeof value === 'object') {
+    try {
+      return JSON.stringify(value);
+    } catch {
+      return '';
+    }
+  }
+  return String(value).trim();
 }
 
 function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
@@ -73,6 +143,22 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
   >([]);
   const [projectSettings, setProjectSettings] =
     useState<ProjectSettings | null>(null);
+  const [entities, setEntities] = useState<WorldEntity[]>([]);
+  const [characters, setCharacters] = useState<Character[]>([]);
+  const [characterSheets, setCharacterSheets] = useState<CharacterSheet[]>([]);
+  const [ruleset, setRuleset] = useState<StoredRuleset | null>(null);
+  const [settlementState, setSettlementState] = useState<Awaited<
+    ReturnType<typeof getOrCreateSettlementState>
+  > | null>(null);
+  const [settlementModules, setSettlementModules] = useState<Awaited<
+    ReturnType<typeof getSettlementModulesByProject>
+  >>([]);
+  const [statBlockSourceType, setStatBlockSourceType] =
+    useState<StatBlockSourceType>('character');
+  const [statBlockStyle, setStatBlockStyle] = useState<StatBlockStyle>('full');
+  const [selectedStatCharacterId, setSelectedStatCharacterId] = useState('');
+  const [selectedStatEntityId, setSelectedStatEntityId] = useState('');
+  const [statBlockInsertContent, setStatBlockInsertContent] = useState<string | null>(null);
   const [ragService, setRagService] = useState<RAGProvider | null>(null);
   const [shodhService, setShodhService] =
     useState<ShodhMemoryProvider | null>(null);
@@ -267,21 +353,35 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
     emitShodhMemoriesUpdated(sorted);
   }, [shodhService]);
 
-  // Load documents and settings when project changes
+  // Load project-scoped data when project changes
   useEffect(() => {
     if (!activeProject) {
       setEditorConfig(null);
       setToolbarButtons([]);
       setProjectSettings(null);
+      setEntities([]);
+      setCharacters([]);
+      setCharacterSheets([]);
+      setRuleset(null);
+      setSettlementState(null);
+      setSettlementModules([]);
+      setSelectedStatCharacterId('');
+      setSelectedStatEntityId('');
       return;
     }
 
     let cancelled = false;
 
     (async () => {
-      const [docs, settings] = await Promise.all([
+      const [docs, settings, loadedEntities, loadedCharacters, loadedSheets, loadedRuleset, loadedSettlementState, loadedSettlementModules] = await Promise.all([
         getDocumentsByProject(activeProject.id),
-        getOrCreateSettings(activeProject.id)
+        getOrCreateSettings(activeProject.id),
+        getEntitiesByProject(activeProject.id),
+        getCharactersByProject(activeProject.id),
+        getCharacterSheetsByProject(activeProject.id),
+        getRulesetByProjectId(activeProject.id),
+        getOrCreateSettlementState(activeProject.id),
+        getSettlementModulesByProject(activeProject.id)
       ]);
 
       if (cancelled) return;
@@ -289,6 +389,14 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
       setDocuments(docs);
       setEditorConfig(createEditorConfigWithStyles(settings.characterStyles));
       setProjectSettings(settings);
+      setEntities(loadedEntities);
+      setCharacters(loadedCharacters);
+      setCharacterSheets(loadedSheets);
+      setRuleset(loadedRuleset);
+      setSettlementState(loadedSettlementState);
+      setSettlementModules(loadedSettlementModules);
+      setSelectedStatCharacterId(loadedSheets[0]?.id ?? '');
+      setSelectedStatEntityId(loadedEntities[0]?.id ?? '');
 
       // Generate toolbar buttons from character styles
       const buttons = settings.characterStyles.map((style) => ({
@@ -391,40 +499,27 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
       return;
     }
 
-    let cancelled = false;
+    const vocabulary = [
+      ...entities.map((entity) => ({
+        id: entity.id,
+        terms: [
+          entity.name,
+          ...Object.values(entity.fields)
+            .filter((value): value is string => typeof value === 'string')
+        ]
+      })),
+      ...characters.map((character) => ({
+        id: character.id,
+        terms: [
+          character.name,
+          character.fields?.role ?? '',
+          character.fields?.notes ?? ''
+        ].filter(Boolean) as string[]
+      }))
+    ];
 
-    Promise.all([
-      getEntitiesByProject(activeProject.id),
-      getCharactersByProject(activeProject.id)
-    ]).then(([entities, characters]) => {
-      if (cancelled) return;
-
-      const vocabulary = [
-        ...entities.map((entity) => ({
-          id: entity.id,
-          terms: [
-            entity.name,
-            ...Object.values(entity.fields)
-              .filter((value): value is string => typeof value === 'string')
-          ]
-        })),
-        ...characters.map((character) => ({
-          id: character.id,
-          terms: [
-            character.name,
-            character.fields?.role ?? '',
-            character.fields?.notes ?? ''
-          ].filter(Boolean) as string[]
-        }))
-      ];
-
-      ragService.setEntityVocabulary(vocabulary);
-    });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [activeProject, ragService]);
+    ragService.setEntityVocabulary(vocabulary);
+  }, [activeProject, ragService, entities, characters]);
 
   const resetEditor = () => {
     setSelectedId(null);
@@ -723,6 +818,213 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
     setContent(html);
     setSaveStatus('idle');
     setWordCount(countWords(html));
+  };
+
+  const activePartySynergies = useMemo(
+    () =>
+      getPartySynergySuggestions({
+        characters,
+        rules: DEFAULT_PARTY_SYNERGY_RULES
+      }),
+    [characters]
+  );
+  const runtimeModifiers = useMemo(
+    () =>
+      deriveCharacterRuntimeModifiers({
+        settlementState,
+        settlementModules,
+        activePartySynergies
+      }),
+    [settlementState, settlementModules, activePartySynergies]
+  );
+  const statDefinitionNameById = useMemo(() => {
+    const map = new Map<string, string>();
+    ruleset?.statDefinitions.forEach((def) => {
+      map.set(def.id, def.name);
+    });
+    return map;
+  }, [ruleset]);
+  const resourceDefinitionNameById = useMemo(() => {
+    const map = new Map<string, string>();
+    ruleset?.resourceDefinitions.forEach((def) => {
+      map.set(def.id, def.name);
+    });
+    return map;
+  }, [ruleset]);
+  const selectedSheet =
+    characterSheets.find((sheet) => sheet.id === selectedStatCharacterId) ?? null;
+  const selectedEntity =
+    entities.find((entity) => entity.id === selectedStatEntityId) ?? null;
+
+  const buildCharacterStatBlock = (
+    sheet: CharacterSheet,
+    style: StatBlockStyle
+  ): string => {
+    const lines: string[] = [];
+    const effectiveLevel = Math.max(1, sheet.level + runtimeModifiers.levelBonus);
+    const styleLabel =
+      style === 'full' ? 'All Stats' : style === 'buffs' ? 'Buffs Only' : 'Compact';
+
+    lines.push(`[Character Status • ${styleLabel}]`);
+    lines.push(sheet.name);
+    lines.push(`Level ${effectiveLevel} (base ${sheet.level}) • ${sheet.experience} XP`);
+    lines.push('');
+
+    const statLines = sheet.stats.map((stat) => {
+      const statName = statDefinitionNameById.get(stat.definitionId) ?? stat.definitionId;
+      const effective = getEffectiveStatValue({
+        definitionId: stat.definitionId,
+        baseValue: stat.value,
+        runtime: runtimeModifiers
+      });
+      const delta = effective - stat.value;
+      const modifierNotes = (stat.modifiers ?? [])
+        .map((modifier) =>
+          modifier.type === 'multiplier'
+            ? `${modifier.source} x${modifier.value}`
+            : `${modifier.source} ${modifier.value >= 0 ? '+' : ''}${modifier.value}`
+        )
+        .join(', ');
+
+      return {
+        hasBuff: delta !== 0 || modifierNotes.length > 0,
+        text:
+          `${statName}: ${stat.value}` +
+          (effective !== stat.value ? ` -> ${effective}` : '') +
+          (delta !== 0 ? ` (${delta >= 0 ? '+' : ''}${delta})` : '') +
+          (modifierNotes ? ` [${modifierNotes}]` : '')
+      };
+    });
+
+    const resourceLines = sheet.resources.map((resource) => {
+      const resourceName =
+        resourceDefinitionNameById.get(resource.definitionId) ?? resource.definitionId;
+      const effective = getEffectiveResourceValues({
+        definitionId: resource.definitionId,
+        current: resource.current,
+        max: resource.max,
+        runtime: runtimeModifiers
+      });
+      const hasBuff =
+        effective.current !== resource.current || effective.max !== resource.max;
+      return {
+        hasBuff,
+        text:
+          `${resourceName}: ${resource.current}/${resource.max}` +
+          (hasBuff ? ` -> ${effective.current}/${effective.max}` : '')
+      };
+    });
+
+    if (style !== 'compact') {
+      const statsToRender =
+        style === 'buffs'
+          ? statLines.filter((entry) => entry.hasBuff)
+          : statLines;
+      const resourcesToRender =
+        style === 'buffs'
+          ? resourceLines.filter((entry) => entry.hasBuff)
+          : resourceLines;
+
+      if (statsToRender.length > 0) {
+        lines.push('Stats');
+        statsToRender.forEach((entry) => lines.push(`- ${entry.text}`));
+      }
+
+      if (resourcesToRender.length > 0) {
+        if (lines[lines.length - 1] !== '') {
+          lines.push('');
+        }
+        lines.push('Resources');
+        resourcesToRender.forEach((entry) => lines.push(`- ${entry.text}`));
+      }
+    } else {
+      const compactStats = statLines.slice(0, 4).map((entry) => entry.text).join(' | ');
+      if (compactStats) {
+        lines.push(compactStats);
+      }
+      const compactResources = resourceLines.map((entry) => entry.text).join(' | ');
+      if (compactResources) {
+        lines.push(compactResources);
+      }
+    }
+
+    const activeNotes =
+      style === 'buffs'
+        ? runtimeModifiers.notes
+        : runtimeModifiers.notes.slice(0, 3);
+    if (activeNotes.length > 0) {
+      if (lines[lines.length - 1] !== '') {
+        lines.push('');
+      }
+      lines.push('Active Effects');
+      activeNotes.forEach((note) => lines.push(`- ${note}`));
+    } else if (style === 'buffs') {
+      lines.push('No active buffs detected.');
+    }
+
+    return toHtmlParagraphs(lines);
+  };
+
+  const buildEntityStatBlock = (
+    entity: WorldEntity,
+    style: StatBlockStyle
+  ): string => {
+    const lines: string[] = [];
+    const entries = Object.entries(entity.fields)
+      .map(([key, value]) => [key, formatEntityFieldValue(value)] as const)
+      .filter(([, value]) => Boolean(value));
+    const styleLabel =
+      style === 'full' ? 'All Fields' : style === 'buffs' ? 'Buff Fields' : 'Compact';
+
+    const filteredEntries =
+      style === 'full'
+        ? entries
+        : style === 'buffs'
+          ? entries.filter(([key]) => /(buff|bonus|modifier|effect)/i.test(key))
+          : entries.slice(0, 6);
+
+    lines.push(`[Item Status • ${styleLabel}]`);
+    lines.push(entity.name);
+    lines.push('');
+
+    if (filteredEntries.length === 0) {
+      lines.push(
+        style === 'buffs'
+          ? 'No buff/effect fields found on this item.'
+          : 'No item stats found.'
+      );
+    } else {
+      filteredEntries.forEach(([key, value]) => {
+        lines.push(`- ${key}: ${value}`);
+      });
+    }
+
+    return toHtmlParagraphs(lines);
+  };
+
+  const handleInsertStatBlock = () => {
+    const html =
+      statBlockSourceType === 'character'
+        ? selectedSheet
+          ? buildCharacterStatBlock(selectedSheet, statBlockStyle)
+          : null
+        : selectedEntity
+          ? buildEntityStatBlock(selectedEntity, statBlockStyle)
+          : null;
+
+    if (!html) {
+      setFeedback({
+        tone: 'error',
+        message:
+          statBlockSourceType === 'character'
+            ? 'Select a character sheet to insert.'
+            : 'Select an item/entity to insert.'
+      });
+      return;
+    }
+
+    setStatBlockInsertContent(html);
+    setFeedback({tone: 'success', message: 'Inserted status block into scene.'});
   };
 
   const selectedDocument = selectedId
@@ -1083,6 +1385,76 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
                   flexDirection: 'column'
                 }}
               >
+                <div
+                  style={{
+                    marginBottom: '0.75rem',
+                    padding: '0.65rem 0.75rem',
+                    border: '1px solid #dbeafe',
+                    borderRadius: '6px',
+                    backgroundColor: '#f8fbff',
+                    display: 'flex',
+                    gap: '0.5rem',
+                    alignItems: 'center',
+                    flexWrap: 'wrap'
+                  }}
+                >
+                  <strong style={{fontSize: '0.9rem'}}>Insert Status Block</strong>
+                  <select
+                    value={statBlockSourceType}
+                    onChange={(event) =>
+                      setStatBlockSourceType(event.target.value as StatBlockSourceType)
+                    }
+                  >
+                    <option value='character'>Character</option>
+                    <option value='item'>Item/Entity</option>
+                  </select>
+                  {statBlockSourceType === 'character' ? (
+                    <select
+                      value={selectedStatCharacterId}
+                      onChange={(event) => setSelectedStatCharacterId(event.target.value)}
+                      disabled={characterSheets.length === 0}
+                    >
+                      {characterSheets.length === 0 ? (
+                        <option value=''>No character sheets</option>
+                      ) : (
+                        characterSheets.map((sheet) => (
+                          <option key={sheet.id} value={sheet.id}>
+                            {sheet.name}
+                          </option>
+                        ))
+                      )}
+                    </select>
+                  ) : (
+                    <select
+                      value={selectedStatEntityId}
+                      onChange={(event) => setSelectedStatEntityId(event.target.value)}
+                      disabled={entities.length === 0}
+                    >
+                      {entities.length === 0 ? (
+                        <option value=''>No entities</option>
+                      ) : (
+                        entities.map((entity) => (
+                          <option key={entity.id} value={entity.id}>
+                            {entity.name}
+                          </option>
+                        ))
+                      )}
+                    </select>
+                  )}
+                  <select
+                    value={statBlockStyle}
+                    onChange={(event) =>
+                      setStatBlockStyle(event.target.value as StatBlockStyle)
+                    }
+                  >
+                    <option value='full'>All stats</option>
+                    <option value='buffs'>Current buffs only</option>
+                    <option value='compact'>Compact</option>
+                  </select>
+                  <button type='button' onClick={handleInsertStatBlock}>
+                    Insert
+                  </button>
+                </div>
                 <label
                   style={{flex: 1, display: 'flex', flexDirection: 'column'}}
                 >
@@ -1098,6 +1470,8 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
                   toolbarButtons={toolbarButtons}
                   aiSettings={projectSettings?.aiSettings}
                   projectMode={projectSettings?.projectMode}
+                  textToInsert={statBlockInsertContent}
+                  onTextInserted={() => setStatBlockInsertContent(null)}
                 />
               </div>
 
