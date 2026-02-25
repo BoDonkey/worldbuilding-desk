@@ -1586,7 +1586,6 @@ function WorldBibleRoute({activeProject}: WorldBibleRouteProps) {
         <div className={styles.content}>
           <div className={styles.formSection}>
             <form onSubmit={handleSubmit} className={styles.form}>
-              <p className={styles.wizardStep}>Step 2 of 4: create/edit category entries.</p>
               <h2>
                 {editingId ? 'Edit' : 'New'} {activeCategory.name.slice(0, -1)}
               </h2>
@@ -1782,7 +1781,6 @@ function WorldBibleRoute({activeProject}: WorldBibleRouteProps) {
           </div>
 
           <div className={styles.listSection}>
-            <p className={styles.wizardStep}>Step 3 of 4: review, link, and promote entries.</p>
             <h2>{activeCategory.name}</h2>
             {filteredEntities.length === 0 && (
               <p className={styles.emptyState}>
