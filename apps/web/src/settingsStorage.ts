@@ -1,4 +1,9 @@
-import type {ProjectSettings, ProjectAISettings, ProjectMode} from './entityTypes';
+import type {
+  ProjectSettings,
+  ProjectAISettings,
+  ProjectMode,
+  StatBlockPreferences
+} from './entityTypes';
 import { openDb, SETTINGS_STORE_NAME } from './db';
 import {getDefaultFeatureToggles, normalizeFeatureToggles} from './projectMode';
 
@@ -29,6 +34,11 @@ const DEFAULT_AI_SETTINGS: ProjectAISettings = {
 };
 
 const DEFAULT_PROJECT_MODE: ProjectMode = 'litrpg';
+const DEFAULT_STAT_BLOCK_PREFERENCES: StatBlockPreferences = {
+  sourceType: 'character',
+  style: 'full',
+  insertMode: 'block'
+};
 
 function ensureAISettings(settings: ProjectSettings): ProjectSettings {
   const aiSettings: ProjectAISettings = {
@@ -68,7 +78,11 @@ function ensureAISettings(settings: ProjectSettings): ProjectSettings {
     featureToggles: normalizeFeatureToggles({
       mode: settings.projectMode ?? DEFAULT_PROJECT_MODE,
       featureToggles: settings.featureToggles
-    })
+    }),
+    statBlockPreferences: {
+      ...DEFAULT_STAT_BLOCK_PREFERENCES,
+      ...(settings.statBlockPreferences ?? {})
+    }
   };
 }
 
@@ -120,6 +134,7 @@ export async function createDefaultSettings(projectId: string): Promise<ProjectS
     activeSkills: [],
     projectMode: DEFAULT_PROJECT_MODE,
     featureToggles: getDefaultFeatureToggles(DEFAULT_PROJECT_MODE),
+    statBlockPreferences: {...DEFAULT_STAT_BLOCK_PREFERENCES},
     createdAt: now,
     updatedAt: now
   };

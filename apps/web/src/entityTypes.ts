@@ -87,6 +87,16 @@ export interface ProjectFeatureToggles {
   enableRuleAuthoring: boolean;
 }
 
+export type StatBlockSourceType = 'character' | 'item';
+export type StatBlockStyle = 'full' | 'buffs' | 'compact';
+export type StatBlockInsertMode = 'block' | 'template';
+
+export interface StatBlockPreferences {
+  sourceType: StatBlockSourceType;
+  style: StatBlockStyle;
+  insertMode: StatBlockInsertMode;
+}
+
 export interface ProjectSettings {
   id: string;
   projectId: string;
@@ -95,6 +105,7 @@ export interface ProjectSettings {
   activeSkills: string[];
   projectMode: ProjectMode;
   featureToggles: ProjectFeatureToggles;
+  statBlockPreferences?: StatBlockPreferences;
   createdAt: number;
   updatedAt: number;
 }

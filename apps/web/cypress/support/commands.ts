@@ -70,6 +70,37 @@ interface SeedSettings {
   updatedAt: number;
 }
 
+interface SeedEntity {
+  id: string;
+  projectId: string;
+  categoryId: string;
+  name: string;
+  fields: Record<string, unknown>;
+  links: string[];
+  createdAt: number;
+  updatedAt: number;
+}
+
+interface SeedCharacterSheet {
+  id: string;
+  projectId: string;
+  name: string;
+  level: number;
+  experience: number;
+  stats: Array<{
+    definitionId: string;
+    value: number;
+  }>;
+  resources: Array<{
+    definitionId: string;
+    current: number;
+    max: number;
+  }>;
+  inventory: string[];
+  createdAt: number;
+  updatedAt: number;
+}
+
 function resetDatabase(win: Window): Promise<void> {
   return new Promise((resolve, reject) => {
     const deleteRequest = win.indexedDB.deleteDatabase(DB_NAME);
@@ -102,10 +133,12 @@ function seedRecords(params: {
   project: SeedProject;
   settings: SeedSettings;
   documents: SeedWritingDocument[];
+  entities: SeedEntity[];
+  characterSheets: SeedCharacterSheet[];
 }): Promise<void> {
   return new Promise((resolve, reject) => {
     const tx = params.db.transaction(
-      ['projects', 'projectSettings', 'writingDocuments'],
+      ['projects', 'projectSettings', 'writingDocuments', 'entities', 'character_sheets'],
       'readwrite'
     );
 
@@ -114,6 +147,12 @@ function seedRecords(params: {
 
     for (const doc of params.documents) {
       tx.objectStore('writingDocuments').put(doc);
+    }
+    for (const entity of params.entities) {
+      tx.objectStore('entities').put(entity);
+    }
+    for (const sheet of params.characterSheets) {
+      tx.objectStore('character_sheets').put(sheet);
     }
 
     tx.oncomplete = () => resolve();
@@ -193,6 +232,39 @@ Cypress.Commands.add('seedSmokeProjectData', () => {
       createdAt: now,
       updatedAt: now
     };
+    const entities: SeedEntity[] = [
+      {
+        id: 'entity-sword-1',
+        projectId: project.id,
+        categoryId: 'items',
+        name: 'Iron Sword',
+        fields: {
+          damage: '12',
+          buffAttack: '+2',
+          rarity: 'Common'
+        },
+        links: [],
+        createdAt: now,
+        updatedAt: now
+      }
+    ];
+    const characterSheets: SeedCharacterSheet[] = [
+      {
+        id: 'sheet-aria-1',
+        projectId: project.id,
+        name: 'Aria',
+        level: 5,
+        experience: 2300,
+        stats: [
+          {definitionId: 'strength', value: 14},
+          {definitionId: 'agility', value: 11}
+        ],
+        resources: [{definitionId: 'hp', current: 32, max: 40}],
+        inventory: [],
+        createdAt: now,
+        updatedAt: now
+      }
+    ];
 
     // Seed by API shape instead of UI clicks to keep e2e flows deterministic and fast.
     win.localStorage.clear();
@@ -204,7 +276,9 @@ Cypress.Commands.add('seedSmokeProjectData', () => {
           db,
           project,
           settings,
-          documents
+          documents,
+          entities,
+          characterSheets
         }).finally(() => db.close())
       )
       .then(() => {

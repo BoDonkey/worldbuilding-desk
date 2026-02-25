@@ -1,6 +1,17 @@
-import {useEffect, useState, useCallback, useRef} from 'react';
+import {useEffect, useState, useCallback, useRef, useMemo} from 'react';
 import type {ChangeEvent} from 'react';
-import type {Project, ProjectSettings, WritingDocument} from '../entityTypes';
+import type {
+  Character,
+  CharacterSheet,
+  Project,
+  ProjectSettings,
+  StatBlockInsertMode,
+  StatBlockSourceType,
+  StatBlockStyle,
+  StoredRuleset,
+  WorldEntity,
+  WritingDocument
+} from '../entityTypes';
 import {
   getDocumentsByProject,
   saveWritingDocument,
@@ -8,7 +19,8 @@ import {
 } from '../writingStorage';
 import {getEntitiesByProject} from '../entityStorage';
 import {getCharactersByProject} from '../characterStorage';
-import {getOrCreateSettings} from '../settingsStorage';
+import {getCharacterSheetsByProject} from '../services/characterSheetService';
+import {getOrCreateSettings, saveProjectSettings} from '../settingsStorage';
 import {createEditorConfigWithStyles} from '../config/editorConfig';
 import type {EditorConfig} from '../config/editorConfig';
 import {countWords} from '../utils/textHelpers';
@@ -23,6 +35,23 @@ import type {
 } from '../services/shodh/ShodhMemoryService';
 import {getShodhService} from '../services/shodh/getShodhService';
 import {emitShodhMemoriesUpdated} from '../services/shodh/shodhEvents';
+import {getRulesetByProjectId} from '../services/rulesetService';
+import {
+  DEFAULT_PARTY_SYNERGY_RULES,
+  deriveCharacterRuntimeModifiers,
+  getEffectiveResourceValues,
+  getEffectiveStatValue,
+  getOrCreateSettlementState,
+  getPartySynergySuggestions,
+  getSettlementModulesByProject
+} from '../services/compendiumService';
+import {
+  buildCharacterStatBlockHtml,
+  buildItemStatBlockHtml,
+  createStatBlockToken,
+  formatEntityFieldValue,
+  replaceStatBlockTokensInHtml
+} from '../utils/statBlockTemplates';
 import {
   getSeriesBibleConfig,
   promoteMemoryToParent,
@@ -73,6 +102,25 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
   >([]);
   const [projectSettings, setProjectSettings] =
     useState<ProjectSettings | null>(null);
+  const [entities, setEntities] = useState<WorldEntity[]>([]);
+  const [characters, setCharacters] = useState<Character[]>([]);
+  const [characterSheets, setCharacterSheets] = useState<CharacterSheet[]>([]);
+  const [ruleset, setRuleset] = useState<StoredRuleset | null>(null);
+  const [settlementState, setSettlementState] = useState<Awaited<
+    ReturnType<typeof getOrCreateSettlementState>
+  > | null>(null);
+  const [settlementModules, setSettlementModules] = useState<Awaited<
+    ReturnType<typeof getSettlementModulesByProject>
+  >>([]);
+  const [statBlockSourceType, setStatBlockSourceType] =
+    useState<StatBlockSourceType>('character');
+  const [statBlockStyle, setStatBlockStyle] = useState<StatBlockStyle>('full');
+  const [statBlockInsertMode, setStatBlockInsertMode] =
+    useState<StatBlockInsertMode>('block');
+  const [selectedStatCharacterId, setSelectedStatCharacterId] = useState('');
+  const [selectedStatEntityId, setSelectedStatEntityId] = useState('');
+  const [statBlockInsertContent, setStatBlockInsertContent] = useState<string | null>(null);
+  const [isStatPreferencesHydrated, setStatPreferencesHydrated] = useState(false);
   const [ragService, setRagService] = useState<RAGProvider | null>(null);
   const [shodhService, setShodhService] =
     useState<ShodhMemoryProvider | null>(null);
@@ -104,6 +152,7 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
   const [isSavingMemory, setIsSavingMemory] = useState(false);
   const [isSyncingCanon, setIsSyncingCanon] = useState(false);
   const [isExportModalOpen, setExportModalOpen] = useState(false);
+  const [isStatBlockModalOpen, setStatBlockModalOpen] = useState(false);
   const [exportFormat, setExportFormat] = useState<ExportFormat>('markdown');
   const [exportSelection, setExportSelection] = useState<SceneExportItem[]>([]);
   const importInputRef = useRef<HTMLInputElement | null>(null);
@@ -267,21 +316,39 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
     emitShodhMemoriesUpdated(sorted);
   }, [shodhService]);
 
-  // Load documents and settings when project changes
+  // Load project-scoped data when project changes
   useEffect(() => {
     if (!activeProject) {
       setEditorConfig(null);
       setToolbarButtons([]);
       setProjectSettings(null);
+      setEntities([]);
+      setCharacters([]);
+      setCharacterSheets([]);
+      setRuleset(null);
+      setSettlementState(null);
+      setSettlementModules([]);
+      setSelectedStatCharacterId('');
+      setSelectedStatEntityId('');
+      setStatBlockSourceType('character');
+      setStatBlockStyle('full');
+      setStatBlockInsertMode('block');
+      setStatPreferencesHydrated(false);
       return;
     }
 
     let cancelled = false;
 
     (async () => {
-      const [docs, settings] = await Promise.all([
+      const [docs, settings, loadedEntities, loadedCharacters, loadedSheets, loadedRuleset, loadedSettlementState, loadedSettlementModules] = await Promise.all([
         getDocumentsByProject(activeProject.id),
-        getOrCreateSettings(activeProject.id)
+        getOrCreateSettings(activeProject.id),
+        getEntitiesByProject(activeProject.id),
+        getCharactersByProject(activeProject.id),
+        getCharacterSheetsByProject(activeProject.id),
+        getRulesetByProjectId(activeProject.id),
+        getOrCreateSettlementState(activeProject.id),
+        getSettlementModulesByProject(activeProject.id)
       ]);
 
       if (cancelled) return;
@@ -289,6 +356,22 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
       setDocuments(docs);
       setEditorConfig(createEditorConfigWithStyles(settings.characterStyles));
       setProjectSettings(settings);
+      setStatBlockSourceType(
+        settings.statBlockPreferences?.sourceType ?? 'character'
+      );
+      setStatBlockStyle(settings.statBlockPreferences?.style ?? 'full');
+      setStatBlockInsertMode(
+        settings.statBlockPreferences?.insertMode ?? 'block'
+      );
+      setEntities(loadedEntities);
+      setCharacters(loadedCharacters);
+      setCharacterSheets(loadedSheets);
+      setRuleset(loadedRuleset);
+      setSettlementState(loadedSettlementState);
+      setSettlementModules(loadedSettlementModules);
+      setSelectedStatCharacterId(loadedSheets[0]?.id ?? '');
+      setSelectedStatEntityId(loadedEntities[0]?.id ?? '');
+      setStatPreferencesHydrated(true);
 
       // Generate toolbar buttons from character styles
       const buttons = settings.characterStyles.map((style) => ({
@@ -387,44 +470,63 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
   }, [refreshMemories]);
 
   useEffect(() => {
+    if (!activeProject || !projectSettings || !isStatPreferencesHydrated) {
+      return;
+    }
+    const currentPrefs = projectSettings.statBlockPreferences;
+    if (
+      currentPrefs?.sourceType === statBlockSourceType &&
+      currentPrefs?.style === statBlockStyle &&
+      currentPrefs?.insertMode === statBlockInsertMode
+    ) {
+      return;
+    }
+    const nextSettings: ProjectSettings = {
+      ...projectSettings,
+      statBlockPreferences: {
+        sourceType: statBlockSourceType,
+        style: statBlockStyle,
+        insertMode: statBlockInsertMode
+      },
+      updatedAt: Date.now()
+    };
+    setProjectSettings(nextSettings);
+    void saveProjectSettings(nextSettings);
+  }, [
+    activeProject,
+    projectSettings,
+    statBlockSourceType,
+    statBlockStyle,
+    statBlockInsertMode,
+    isStatPreferencesHydrated
+  ]);
+
+  useEffect(() => {
     if (!activeProject || !ragService) {
       return;
     }
 
-    let cancelled = false;
+    const vocabulary = [
+      ...entities.map((entity) => ({
+        id: entity.id,
+        terms: [
+          entity.name,
+          ...Object.values(entity.fields)
+            .filter((value): value is string => typeof value === 'string')
+        ]
+      })),
+      ...characters.map((character) => ({
+        id: character.id,
+        terms: [
+          character.name,
+          character.fields?.role ?? '',
+          character.fields?.notes ?? ''
+        ].filter(Boolean) as string[]
+      }))
+    ];
 
-    Promise.all([
-      getEntitiesByProject(activeProject.id),
-      getCharactersByProject(activeProject.id)
-    ]).then(([entities, characters]) => {
-      if (cancelled) return;
-
-      const vocabulary = [
-        ...entities.map((entity) => ({
-          id: entity.id,
-          terms: [
-            entity.name,
-            ...Object.values(entity.fields)
-              .filter((value): value is string => typeof value === 'string')
-          ]
-        })),
-        ...characters.map((character) => ({
-          id: character.id,
-          terms: [
-            character.name,
-            character.fields?.role ?? '',
-            character.fields?.notes ?? ''
-          ].filter(Boolean) as string[]
-        }))
-      ];
-
-      ragService.setEntityVocabulary(vocabulary);
-    });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [activeProject, ragService]);
+    ragService.setEntityVocabulary(vocabulary);
+  }, [activeProject, ragService, entities, characters]);
 
   const resetEditor = () => {
     setSelectedId(null);
@@ -723,6 +825,215 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
     setContent(html);
     setSaveStatus('idle');
     setWordCount(countWords(html));
+  };
+
+  const activePartySynergies = useMemo(
+    () =>
+      getPartySynergySuggestions({
+        characters,
+        rules: DEFAULT_PARTY_SYNERGY_RULES
+      }),
+    [characters]
+  );
+  const runtimeModifiers = useMemo(
+    () =>
+      deriveCharacterRuntimeModifiers({
+        settlementState,
+        settlementModules,
+        activePartySynergies
+      }),
+    [settlementState, settlementModules, activePartySynergies]
+  );
+  const statDefinitionNameById = useMemo(() => {
+    const map = new Map<string, string>();
+    ruleset?.statDefinitions.forEach((def) => {
+      map.set(def.id, def.name);
+    });
+    return map;
+  }, [ruleset]);
+  const resourceDefinitionNameById = useMemo(() => {
+    const map = new Map<string, string>();
+    ruleset?.resourceDefinitions.forEach((def) => {
+      map.set(def.id, def.name);
+    });
+    return map;
+  }, [ruleset]);
+  const selectedSheet =
+    characterSheets.find((sheet) => sheet.id === selectedStatCharacterId) ?? null;
+  const selectedEntity =
+    entities.find((entity) => entity.id === selectedStatEntityId) ?? null;
+  const activeProjectMode = projectSettings?.projectMode ?? 'litrpg';
+
+  const resolveCharacterBlock = useCallback(
+    (sheet: CharacterSheet, style: StatBlockStyle): string => {
+      const effectiveLevel = Math.max(1, sheet.level + runtimeModifiers.levelBonus);
+      return buildCharacterStatBlockHtml(
+        {
+          name: sheet.name,
+          level: sheet.level,
+          effectiveLevel,
+          experience: sheet.experience,
+          stats: sheet.stats.map((stat) => {
+            const effective = getEffectiveStatValue({
+              definitionId: stat.definitionId,
+              baseValue: stat.value,
+              runtime: runtimeModifiers
+            });
+            const modifierNotes = (stat.modifiers ?? [])
+              .map((modifier) =>
+                modifier.type === 'multiplier'
+                  ? `${modifier.source} x${modifier.value}`
+                  : `${modifier.source} ${modifier.value >= 0 ? '+' : ''}${modifier.value}`
+              )
+              .join(', ');
+            return {
+              name: statDefinitionNameById.get(stat.definitionId) ?? stat.definitionId,
+              baseValue: stat.value,
+              effectiveValue: effective,
+              modifierNotes
+            };
+          }),
+          resources: sheet.resources.map((resource) => {
+            const effective = getEffectiveResourceValues({
+              definitionId: resource.definitionId,
+              current: resource.current,
+              max: resource.max,
+              runtime: runtimeModifiers
+            });
+            return {
+              name:
+                resourceDefinitionNameById.get(resource.definitionId) ??
+                resource.definitionId,
+              current: resource.current,
+              max: resource.max,
+              effectiveCurrent: effective.current,
+              effectiveMax: effective.max
+            };
+          }),
+          activeNotes: runtimeModifiers.notes
+        },
+        style
+      );
+    },
+    [runtimeModifiers, statDefinitionNameById, resourceDefinitionNameById]
+  );
+
+  const resolveItemBlock = useCallback(
+    (entity: WorldEntity, style: StatBlockStyle): string => {
+      return buildItemStatBlockHtml(
+        {
+          name: entity.name,
+          fields: Object.entries(entity.fields)
+            .map(([key, value]) => ({
+              key,
+              value: formatEntityFieldValue(value)
+            }))
+            .filter((entry) => Boolean(entry.value))
+        },
+        style
+      );
+    },
+    []
+  );
+
+  const resolveTemplateToBlock = useCallback(
+    (
+      sourceType: StatBlockSourceType,
+      sourceRef: string,
+      style: StatBlockStyle
+    ): string | null => {
+      if (sourceType === 'character') {
+        const normalizedRef = sourceRef.trim().toLowerCase();
+        const sheet =
+          characterSheets.find((candidate) => candidate.id === sourceRef) ??
+          characterSheets.find(
+            (candidate) => candidate.name.trim().toLowerCase() === normalizedRef
+          );
+        return sheet ? resolveCharacterBlock(sheet, style) : null;
+      }
+      const normalizedRef = sourceRef.trim().toLowerCase();
+      const entity =
+        entities.find((candidate) => candidate.id === sourceRef) ??
+        entities.find(
+          (candidate) => candidate.name.trim().toLowerCase() === normalizedRef
+        );
+      return entity ? resolveItemBlock(entity, style) : null;
+    },
+    [characterSheets, entities, resolveCharacterBlock, resolveItemBlock]
+  );
+
+  const handleRefreshStatTemplates = () => {
+    const result = replaceStatBlockTokensInHtml(content, (token) =>
+      resolveTemplateToBlock(token.sourceType, token.sourceRef, token.style)
+    );
+    if (result.replacedCount === 0) {
+      setFeedback({
+        tone: 'error',
+        message: 'No matching STAT_BLOCK templates found to refresh.'
+      });
+      return;
+    }
+    setContent(result.html);
+    setSaveStatus('idle');
+    setWordCount(countWords(result.html));
+    setFeedback({
+      tone: 'success',
+      message: `Refreshed ${result.replacedCount} stat block template(s).`
+    });
+  };
+
+  const handleInsertStatBlock = () => {
+    const token =
+      statBlockSourceType === 'character'
+        ? selectedSheet
+          ? createStatBlockToken({
+              sourceType: 'character',
+              sourceRef: selectedSheet.name.trim() || selectedSheet.id,
+              style: statBlockStyle
+            })
+          : null
+        : selectedEntity
+          ? createStatBlockToken({
+              sourceType: 'item',
+              sourceRef: selectedEntity.name.trim() || selectedEntity.id,
+              style: statBlockStyle
+            })
+          : null;
+    const html =
+      statBlockSourceType === 'character'
+        ? selectedSheet
+          ? resolveCharacterBlock(selectedSheet, statBlockStyle)
+          : null
+        : selectedEntity
+          ? resolveItemBlock(selectedEntity, statBlockStyle)
+          : null;
+
+    if (!html || !token) {
+      setFeedback({
+        tone: 'error',
+        message:
+          statBlockSourceType === 'character'
+            ? 'Select a character sheet to insert.'
+            : 'Select an item/entity to insert.'
+      });
+      return;
+    }
+
+    const shouldInsertAsTemplate =
+      statBlockInsertMode === 'template' && activeProjectMode !== 'litrpg';
+    setStatBlockInsertContent(
+      shouldInsertAsTemplate ? `<p>${token}</p>` : html
+    );
+    setStatBlockModalOpen(false);
+    setFeedback({
+      tone: 'success',
+      message:
+        shouldInsertAsTemplate
+          ? 'Inserted STAT_BLOCK template token.'
+          : statBlockInsertMode === 'template' && activeProjectMode === 'litrpg'
+            ? 'Inserted live status block (LitRPG mode auto-resolves placeholders).'
+            : 'Inserted status block into scene.'
+    });
   };
 
   const selectedDocument = selectedId
@@ -1083,6 +1394,27 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
                   flexDirection: 'column'
                 }}
               >
+                <div
+                  style={{
+                    marginBottom: '0.75rem',
+                    padding: '0.65rem 0.75rem',
+                    border: '1px solid #dbeafe',
+                    borderRadius: '6px',
+                    backgroundColor: '#f8fbff',
+                    display: 'flex',
+                    gap: '0.5rem',
+                    alignItems: 'center',
+                    flexWrap: 'wrap'
+                  }}
+                >
+                  <strong style={{fontSize: '0.9rem'}}>Status Blocks</strong>
+                  <button type='button' onClick={() => setStatBlockModalOpen(true)}>
+                    Insert Status Block
+                  </button>
+                  <button type='button' onClick={handleRefreshStatTemplates}>
+                    Refresh Placeholders
+                  </button>
+                </div>
                 <label
                   style={{flex: 1, display: 'flex', flexDirection: 'column'}}
                 >
@@ -1098,6 +1430,8 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
                   toolbarButtons={toolbarButtons}
                   aiSettings={projectSettings?.aiSettings}
                   projectMode={projectSettings?.projectMode}
+                  textToInsert={statBlockInsertContent}
+                  onTextInserted={() => setStatBlockInsertContent(null)}
                 />
               </div>
 
@@ -1195,6 +1529,159 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
           )}
         </div>
       </div>
+
+      {isStatBlockModalOpen && (
+        <div
+          role='dialog'
+          aria-modal='true'
+          aria-label='Status Block Builder'
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(0,0,0,0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000
+          }}
+        >
+          <div
+            style={{
+              backgroundColor: '#fff',
+              padding: '1.25rem',
+              borderRadius: '8px',
+              width: 'min(620px, 94vw)',
+              maxHeight: '80vh',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '0.75rem'
+            }}
+          >
+            <h3 style={{margin: 0}}>Insert Status Block</h3>
+            <p style={{margin: 0}}>
+              Choose what to insert. Use <strong>Reusable placeholder</strong> if you
+              want to refresh it later.
+            </p>
+
+            <div style={{display: 'grid', gap: '0.6rem'}}>
+              <label>
+                Source type
+                <br />
+                <select
+                  value={statBlockSourceType}
+                  onChange={(event) =>
+                    setStatBlockSourceType(event.target.value as StatBlockSourceType)
+                  }
+                  style={{width: '100%'}}
+                >
+                  <option value='character'>Character</option>
+                  <option value='item'>Item/Entity</option>
+                </select>
+              </label>
+
+              {statBlockSourceType === 'character' ? (
+                <label>
+                  Character
+                  <br />
+                  <select
+                    value={selectedStatCharacterId}
+                    onChange={(event) => setSelectedStatCharacterId(event.target.value)}
+                    disabled={characterSheets.length === 0}
+                    style={{width: '100%'}}
+                  >
+                    {characterSheets.length === 0 ? (
+                      <option value=''>No character sheets</option>
+                    ) : (
+                      characterSheets.map((sheet) => (
+                        <option key={sheet.id} value={sheet.id}>
+                          {sheet.name}
+                        </option>
+                      ))
+                    )}
+                  </select>
+                </label>
+              ) : (
+                <label>
+                  Item/Entity
+                  <br />
+                  <select
+                    value={selectedStatEntityId}
+                    onChange={(event) => setSelectedStatEntityId(event.target.value)}
+                    disabled={entities.length === 0}
+                    style={{width: '100%'}}
+                  >
+                    {entities.length === 0 ? (
+                      <option value=''>No entities</option>
+                    ) : (
+                      entities.map((entity) => (
+                        <option key={entity.id} value={entity.id}>
+                          {entity.name}
+                        </option>
+                      ))
+                    )}
+                  </select>
+                </label>
+              )}
+
+              <label>
+                Detail level
+                <br />
+                <select
+                  value={statBlockStyle}
+                  onChange={(event) =>
+                    setStatBlockStyle(event.target.value as StatBlockStyle)
+                  }
+                  style={{width: '100%'}}
+                >
+                  <option value='full'>All stats</option>
+                  <option value='buffs'>Current buffs only</option>
+                  <option value='compact'>Compact</option>
+                </select>
+              </label>
+
+              <label>
+                Insert as
+                <br />
+                <select
+                  value={statBlockInsertMode}
+                  onChange={(event) =>
+                    setStatBlockInsertMode(event.target.value as StatBlockInsertMode)
+                  }
+                  disabled={activeProjectMode === 'litrpg'}
+                  style={{width: '100%'}}
+                >
+                  <option value='block'>Live block now</option>
+                  <option value='template'>Reusable placeholder</option>
+                </select>
+                {activeProjectMode === 'litrpg' && (
+                  <span style={{fontSize: '0.8rem', color: '#4b5563'}}>
+                    LitRPG mode always inserts live text for readability.
+                  </span>
+                )}
+              </label>
+            </div>
+
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'flex-end',
+                gap: '0.5rem'
+              }}
+            >
+              <button
+                type='button'
+                onClick={() => setStatBlockModalOpen(false)}
+                style={{background: 'transparent'}}
+              >
+                Cancel
+              </button>
+              <button type='button' onClick={handleInsertStatBlock}>
+                Insert
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {isExportModalOpen && (
         <div
