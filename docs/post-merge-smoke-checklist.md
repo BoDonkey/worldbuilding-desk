@@ -3,7 +3,6 @@
 Last updated: 2026-02-24
 
 ## Goal
-
 Quickly verify the two most recent merged features:
 
 - Scene export to Markdown and DOCX.
