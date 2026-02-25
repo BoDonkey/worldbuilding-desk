@@ -7,7 +7,11 @@ import type {
   ProjectFeatureToggles,
   ProjectMode
 } from '../entityTypes';
-import {getOrCreateSettings, saveProjectSettings} from '../settingsStorage';
+import {
+  getInheritedConsistencyActionCues,
+  getOrCreateSettings,
+  saveProjectSettings
+} from '../settingsStorage';
 import {CharacterStyleList} from '../components/CharacterStyleList';
 import {AISettings} from '../components/Settings/AISettings';
 import {FontSizeControl} from '../components/Settings/FontSizeControl';
@@ -26,6 +30,10 @@ function SettingsRoute({activeProject, onSettingsChanged}: SettingsRouteProps) {
   const [settings, setSettings] = useState<ProjectSettings | null>(null);
   const [newStyleName, setNewStyleName] = useState('');
   const [expandedStyleId, setExpandedStyleId] = useState<string | null>(null);
+  const [consistencyCuesDraft, setConsistencyCuesDraft] = useState('');
+  const [inheritedConsistencyCues, setInheritedConsistencyCues] = useState<string[]>(
+    []
+  );
 
   useEffect(() => {
     if (!activeProject) {
@@ -38,8 +46,11 @@ function SettingsRoute({activeProject, onSettingsChanged}: SettingsRouteProps) {
 
     (async () => {
       const projectSettings = await getOrCreateSettings(activeProject.id);
+      const inheritedCues = await getInheritedConsistencyActionCues(activeProject);
       if (!cancelled) {
         setSettings(projectSettings);
+        setConsistencyCuesDraft(projectSettings.consistencyActionCues.join('\n'));
+        setInheritedConsistencyCues(inheritedCues);
         onSettingsChanged?.(projectSettings);
       }
     })();
@@ -154,6 +165,24 @@ function SettingsRoute({activeProject, onSettingsChanged}: SettingsRouteProps) {
     };
     await saveProjectSettings(updated);
     setSettings(updated);
+    onSettingsChanged?.(updated);
+  };
+
+  const handleConsistencyCueSave = async () => {
+    if (!settings) return;
+    const cues = consistencyCuesDraft
+      .split('\n')
+      .map((line) => line.trim().toLowerCase())
+      .filter(Boolean);
+    const unique = Array.from(new Set(cues));
+    const updated: ProjectSettings = {
+      ...settings,
+      consistencyActionCues: unique,
+      updatedAt: Date.now()
+    };
+    await saveProjectSettings(updated);
+    setSettings(updated);
+    setConsistencyCuesDraft(updated.consistencyActionCues.join('\n'));
     onSettingsChanged?.(updated);
   };
 
@@ -293,6 +322,31 @@ function SettingsRoute({activeProject, onSettingsChanged}: SettingsRouteProps) {
             />
             <span>Enable Rule Authoring</span>
           </label>
+        </div>
+
+        <div className={styles.section}>
+          <h2>Consistency Engine Action Cues</h2>
+          <p className={styles.helperText}>
+            Add project-specific action verbs (one per line) used to detect
+            state-relevant noun phrases in writing.
+          </p>
+          {inheritedConsistencyCues.length > 0 && (
+            <p className={styles.helperText}>
+              Inherited from parent project: {inheritedConsistencyCues.join(', ')}
+            </p>
+          )}
+          <label className={styles.fieldLabel}>
+            Project-only cues
+            <textarea
+              value={consistencyCuesDraft}
+              onChange={(e) => setConsistencyCuesDraft(e.target.value)}
+              placeholder='parry\nchannel\ninvoke'
+              className={styles.cueTextarea}
+            />
+          </label>
+          <button onClick={() => void handleConsistencyCueSave()} className={styles.addButton}>
+            Save Action Cues
+          </button>
         </div>
 
         {/* Character Styles Section */}

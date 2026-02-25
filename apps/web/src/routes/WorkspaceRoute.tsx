@@ -1,8 +1,10 @@
 import {useEffect, useState, useCallback, useRef, useMemo} from 'react';
 import type {ChangeEvent} from 'react';
+import {useNavigate} from 'react-router-dom';
 import type {
   Character,
   CharacterSheet,
+  EntityCategory,
   Project,
   ProjectSettings,
   StatBlockInsertMode,
@@ -17,13 +19,21 @@ import {
   saveWritingDocument,
   deleteWritingDocument
 } from '../writingStorage';
-import {getEntitiesByProject} from '../entityStorage';
+import {getEntitiesByProject, saveEntity} from '../entityStorage';
+import {
+  getCategoriesByProject,
+  initializeDefaultCategories
+} from '../categoryStorage';
 import {getCharactersByProject} from '../characterStorage';
 import {getCharacterSheetsByProject} from '../services/characterSheetService';
-import {getOrCreateSettings, saveProjectSettings} from '../settingsStorage';
+import {
+  getOrCreateSettings,
+  getResolvedConsistencyActionCues,
+  saveProjectSettings
+} from '../settingsStorage';
 import {createEditorConfigWithStyles} from '../config/editorConfig';
 import type {EditorConfig} from '../config/editorConfig';
-import {countWords} from '../utils/textHelpers';
+import {countWords, htmlToPlainText} from '../utils/textHelpers';
 import {exportScenesAsDocx, exportScenesAsMarkdown} from '../utils/sceneExport';
 import {EditorWithAI} from '../components/Editor/EditorWithAI';
 import {ShodhMemoryPanel} from '../components/ShodhMemoryPanel';
@@ -59,6 +69,13 @@ import {
   getCanonSyncState,
   syncChildWithParent
 } from '../services/seriesBible/SeriesBibleService';
+import {getConsistencyEngineService} from '../services/consistencyEngine/getConsistencyEngineService';
+import type {GuardrailIssue} from '../services/consistencyEngine/types';
+import {
+  getAliasesByProject,
+  saveAlias,
+  type ConsistencyAlias
+} from '../services/consistencyEngine/aliasStorage';
 
 const summarizeContent = (html: string, limit = 500): string => {
   const text = html
@@ -85,7 +102,13 @@ interface SceneExportItem {
   included: boolean;
 }
 
+interface ResolverNotice {
+  message: string;
+}
+
 function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
+  const navigate = useNavigate();
+  const consistencyEngine = useMemo(() => getConsistencyEngineService(), []);
   const [documents, setDocuments] = useState<WritingDocument[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [selectedCreatedAt, setSelectedCreatedAt] = useState<number | null>(
@@ -103,6 +126,9 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
   const [projectSettings, setProjectSettings] =
     useState<ProjectSettings | null>(null);
   const [entities, setEntities] = useState<WorldEntity[]>([]);
+  const [categories, setCategories] = useState<EntityCategory[]>([]);
+  const [aliases, setAliases] = useState<ConsistencyAlias[]>([]);
+  const [resolvedActionCues, setResolvedActionCues] = useState<string[]>([]);
   const [characters, setCharacters] = useState<Character[]>([]);
   const [characterSheets, setCharacterSheets] = useState<CharacterSheet[]>([]);
   const [ruleset, setRuleset] = useState<StoredRuleset | null>(null);
@@ -144,6 +170,14 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
     tone: FeedbackTone;
     message: string;
   } | null>(null);
+  const [guardrailIssues, setGuardrailIssues] = useState<GuardrailIssue[]>([]);
+  const [resolvingUnknown, setResolvingUnknown] = useState<string | null>(null);
+  const [linkingUnknown, setLinkingUnknown] = useState<string | null>(null);
+  const [activeLinkSurface, setActiveLinkSurface] = useState<string | null>(null);
+  const [resolverNotice, setResolverNotice] = useState<ResolverNotice | null>(null);
+  const [unknownLinkSelection, setUnknownLinkSelection] = useState<
+    Record<string, string>
+  >({});
   const [isCreatingScene, setIsCreatingScene] = useState(false);
   const [isImportingDocuments, setIsImportingDocuments] = useState(false);
   const [deletingDocumentId, setDeletingDocumentId] = useState<string | null>(null);
@@ -156,6 +190,7 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
   const [exportFormat, setExportFormat] = useState<ExportFormat>('markdown');
   const [exportSelection, setExportSelection] = useState<SceneExportItem[]>([]);
   const importInputRef = useRef<HTMLInputElement | null>(null);
+  const lastAutosaveErrorRef = useRef<string | null>(null);
 
   const fileNameToTitle = (name: string): string => {
     const base = name.replace(/\.[^.]+$/, '').trim();
@@ -323,6 +358,9 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
       setToolbarButtons([]);
       setProjectSettings(null);
       setEntities([]);
+      setCategories([]);
+      setAliases([]);
+      setResolvedActionCues([]);
       setCharacters([]);
       setCharacterSheets([]);
       setRuleset(null);
@@ -340,10 +378,14 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
     let cancelled = false;
 
     (async () => {
-      const [docs, settings, loadedEntities, loadedCharacters, loadedSheets, loadedRuleset, loadedSettlementState, loadedSettlementModules] = await Promise.all([
+      await initializeDefaultCategories(activeProject.id);
+      const [docs, settings, resolvedCues, loadedEntities, loadedCategories, loadedAliases, loadedCharacters, loadedSheets, loadedRuleset, loadedSettlementState, loadedSettlementModules] = await Promise.all([
         getDocumentsByProject(activeProject.id),
         getOrCreateSettings(activeProject.id),
+        getResolvedConsistencyActionCues(activeProject),
         getEntitiesByProject(activeProject.id),
+        getCategoriesByProject(activeProject.id),
+        getAliasesByProject(activeProject.id),
         getCharactersByProject(activeProject.id),
         getCharacterSheetsByProject(activeProject.id),
         getRulesetByProjectId(activeProject.id),
@@ -356,6 +398,9 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
       setDocuments(docs);
       setEditorConfig(createEditorConfigWithStyles(settings.characterStyles));
       setProjectSettings(settings);
+      setResolvedActionCues(resolvedCues);
+      setCategories(loadedCategories);
+      setAliases(loadedAliases);
       setStatBlockSourceType(
         settings.statBlockPreferences?.sourceType ?? 'character'
       );
@@ -537,7 +582,58 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
     setLastSavedAt(null);
   };
 
-  const persistDoc = useCallback(async (doc: WritingDocument) => {
+  const persistDoc = useCallback(async (doc: WritingDocument, source: 'workspace-save' | 'workspace-autosave' | 'import' = 'workspace-save') => {
+    const entityById = new Map(entities.map((entity) => [entity.id, entity]));
+    const proposal = await consistencyEngine.extractProposal({
+      projectId: doc.projectId,
+      text: htmlToPlainText(doc.content),
+      source,
+      knownEntities: [
+        ...entities.map((entity) => ({
+          id: entity.id,
+          name: entity.name,
+          type: 'entity' as const
+        })),
+        ...characters.map((character) => ({
+          id: character.id,
+          name: character.name,
+          type: 'character' as const
+        })),
+        ...aliases
+          .map((alias) => {
+            const linkedEntity = entityById.get(alias.entityId);
+            if (!linkedEntity) {
+              return null;
+            }
+            return {
+              id: linkedEntity.id,
+              name: alias.alias,
+              type: 'entity' as const
+            };
+          })
+          .filter((entry): entry is {id: string; name: string; type: 'entity'} => Boolean(entry))
+      ],
+      actionCues: resolvedActionCues
+    });
+    const validation = await consistencyEngine.validateProposal(proposal);
+    setGuardrailIssues(validation.issues);
+
+    if (!validation.allowCommit) {
+      const visibleUnknowns = validation.issues
+        .map((issue) => issue.surface)
+        .filter((surface): surface is string => Boolean(surface))
+        .slice(0, 3);
+      const suffix =
+        validation.issues.length > 3
+          ? ` (+${validation.issues.length - 3} more)`
+          : '';
+      const summary = visibleUnknowns.join(', ');
+      throw new Error(
+        `Commit blocked by consistency check: unknown ${validation.issues.length === 1 ? 'entity' : 'entities'} (${summary}${suffix}).`
+      );
+    }
+
+    await consistencyEngine.applyProposal(proposal, validation);
     await saveWritingDocument(doc);
 
     // Index for RAG
@@ -573,7 +669,9 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
     setSelectedCreatedAt(doc.createdAt);
     setSaveStatus('saved');
     setLastSavedAt(Date.now());
-  }, [ragService, shodhService, refreshMemories]);
+    setGuardrailIssues([]);
+    lastAutosaveErrorRef.current = null;
+  }, [consistencyEngine, entities, characters, aliases, resolvedActionCues, ragService, shodhService, refreshMemories]);
 
   const handleNewDocument = async () => {
     if (!activeProject) return;
@@ -644,7 +742,7 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
             createdAt: now,
             updatedAt: now
           };
-          await persistDoc(doc);
+          await persistDoc(doc, 'import');
           importedCount += 1;
           lastImported = doc;
         } catch {
@@ -783,7 +881,7 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
     setSaveStatus('saving');
     setFeedback(null);
     try {
-      await persistDoc(doc);
+      await persistDoc(doc, 'workspace-save');
       setFeedback({tone: 'success', message: 'Scene saved.'});
     } catch (error) {
       const message =
@@ -824,8 +922,176 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
   const handleContentChange = (html: string) => {
     setContent(html);
     setSaveStatus('idle');
+    setGuardrailIssues([]);
     setWordCount(countWords(html));
   };
+
+  const unknownGuardrailIssues = useMemo(() => {
+    const seen = new Set<string>();
+    return guardrailIssues
+      .filter((issue) => issue.code === 'UNKNOWN_ENTITY' && Boolean(issue.surface))
+      .filter((issue) => {
+        const key = (issue.surface ?? '').trim().toLowerCase();
+        if (!key || seen.has(key)) {
+          return false;
+        }
+        seen.add(key);
+        return true;
+      });
+  }, [guardrailIssues]);
+
+  const unknownLinkOptions = useMemo(() => {
+    const optionMap: Record<string, WorldEntity[]> = {};
+    unknownGuardrailIssues.forEach((issue) => {
+      const surface = (issue.surface ?? '').trim();
+      if (!surface) return;
+      const normalizedSurface = surface.toLowerCase();
+      const filtered = entities.filter((entity) => {
+        const normalizedName = entity.name.toLowerCase();
+        if (normalizedName === normalizedSurface) {
+          return true;
+        }
+        return (
+          normalizedName.includes(normalizedSurface) ||
+          normalizedSurface.includes(normalizedName)
+        );
+      });
+      const ranked = [...filtered].sort((a, b) => {
+        const aExact = a.name.toLowerCase() === normalizedSurface ? 0 : 1;
+        const bExact = b.name.toLowerCase() === normalizedSurface ? 0 : 1;
+        if (aExact !== bExact) return aExact - bExact;
+        const aIncludes = a.name.toLowerCase().includes(normalizedSurface) ? 0 : 1;
+        const bIncludes = b.name.toLowerCase().includes(normalizedSurface) ? 0 : 1;
+        if (aIncludes !== bIncludes) return aIncludes - bIncludes;
+        return a.name.localeCompare(b.name);
+      });
+      optionMap[surface] = ranked.slice(0, 20);
+    });
+    return optionMap;
+  }, [unknownGuardrailIssues, entities]);
+
+  const resolveUnknownEntity = useCallback(async (surface: string) => {
+    if (!activeProject) return;
+
+    const normalized = surface.trim();
+    if (!normalized) return;
+
+    setResolvingUnknown(surface);
+    setFeedback(null);
+    try {
+      let availableCategories = categories;
+      if (availableCategories.length === 0) {
+        await initializeDefaultCategories(activeProject.id);
+        availableCategories = await getCategoriesByProject(activeProject.id);
+        setCategories(availableCategories);
+      }
+
+      const preferredCategory =
+        availableCategories.find((category) =>
+          ['items', 'characters', 'locations'].includes(category.slug)
+        ) ?? availableCategories[0];
+
+      if (!preferredCategory) {
+        throw new Error('No categories available for entity creation.');
+      }
+
+      const now = Date.now();
+      const entity: WorldEntity = {
+        id: crypto.randomUUID(),
+        projectId: activeProject.id,
+        categoryId: preferredCategory.id,
+        name: normalized,
+        fields: {},
+        links: [],
+        createdAt: now,
+        updatedAt: now
+      };
+      await saveEntity(entity);
+      setEntities((prev) => [...prev, entity]);
+      setGuardrailIssues((prev) =>
+        prev.filter(
+          (issue) => issue.surface?.trim().toLowerCase() !== normalized.toLowerCase()
+        )
+      );
+      setUnknownLinkSelection((prev) => {
+        const copy = {...prev};
+        delete copy[surface];
+        return copy;
+      });
+      setActiveLinkSurface((prev) => (prev === surface ? null : prev));
+      setFeedback({
+        tone: 'success',
+        message: `Entity "${normalized}" created in ${preferredCategory.name}. Save again to validate.`
+      });
+      setResolverNotice({
+        message: `Entity "${normalized}" created.`
+      });
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'Unable to create entity.';
+      setFeedback({tone: 'error', message});
+    } finally {
+      setResolvingUnknown(null);
+    }
+  }, [activeProject, categories]);
+
+  const linkUnknownEntity = useCallback(
+    async (surface: string) => {
+      if (!activeProject) return;
+      const selectedEntityId = unknownLinkSelection[surface];
+      if (!selectedEntityId) {
+        setFeedback({
+          tone: 'error',
+          message: `Select an entity before linking "${surface}".`
+        });
+        return;
+      }
+
+      setLinkingUnknown(surface);
+      setFeedback(null);
+      try {
+        const saved = await saveAlias({
+          projectId: activeProject.id,
+          entityId: selectedEntityId,
+          alias: surface
+        });
+        setAliases((prev) => {
+          const existingIndex = prev.findIndex((entry) => entry.id === saved.id);
+          if (existingIndex >= 0) {
+            const copy = [...prev];
+            copy[existingIndex] = saved;
+            return copy;
+          }
+          return [...prev, saved];
+        });
+        setGuardrailIssues((prev) =>
+          prev.filter(
+            (issue) => issue.surface?.trim().toLowerCase() !== surface.trim().toLowerCase()
+          )
+        );
+        setUnknownLinkSelection((prev) => {
+          const copy = {...prev};
+          delete copy[surface];
+          return copy;
+        });
+        setActiveLinkSurface((prev) => (prev === surface ? null : prev));
+        setFeedback({
+          tone: 'success',
+          message: `Linked alias "${surface}" to existing entity. Save again to validate.`
+        });
+        setResolverNotice({
+          message: `Alias "${surface}" linked to existing entity.`
+        });
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : 'Unable to link alias.';
+        setFeedback({tone: 'error', message});
+      } finally {
+        setLinkingUnknown(null);
+      }
+    },
+    [activeProject, unknownLinkSelection]
+  );
 
   const activePartySynergies = useMemo(
     () =>
@@ -1182,7 +1448,15 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
 
     const timeoutId = window.setTimeout(() => {
       setSaveStatus('saving');
-      void persistDoc(doc);
+      void persistDoc(doc, 'workspace-autosave').catch((error) => {
+        const message =
+          error instanceof Error ? error.message : 'Unable to save scene.';
+        setSaveStatus('idle');
+        if (lastAutosaveErrorRef.current !== message) {
+          lastAutosaveErrorRef.current = message;
+          setFeedback({tone: 'error', message});
+        }
+      });
     }, 800);
 
     return () => {
@@ -1231,6 +1505,133 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
         >
           {feedback.message}
         </p>
+      )}
+      {resolverNotice && (
+        <div
+          role='status'
+          style={{
+            marginBottom: '1rem',
+            padding: '0.5rem 0.75rem',
+            borderRadius: '6px',
+            border: '1px solid #86efac',
+            backgroundColor: '#f0fdf4',
+            color: '#166534',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem',
+            flexWrap: 'wrap'
+          }}
+        >
+          <span>{resolverNotice.message}</span>
+          <button
+            type='button'
+            onClick={() => navigate('/world-bible')}
+            style={{
+              fontSize: '0.8rem',
+              borderRadius: '4px',
+              border: '1px solid #86efac',
+              backgroundColor: '#ffffff',
+              color: '#166534',
+              padding: '0.2rem 0.45rem',
+              cursor: 'pointer'
+            }}
+          >
+            View in World Bible
+          </button>
+          <button
+            type='button'
+            onClick={() => setResolverNotice(null)}
+            style={{
+              fontSize: '0.8rem',
+              borderRadius: '4px',
+              border: '1px solid #bbf7d0',
+              backgroundColor: 'transparent',
+              color: '#166534',
+              padding: '0.2rem 0.45rem',
+              cursor: 'pointer'
+            }}
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
+      {unknownGuardrailIssues.length > 0 && (
+        <div
+          style={{
+            marginBottom: '1rem',
+            padding: '0.75rem',
+            borderRadius: '6px',
+            border: '1px solid #fca5a5',
+            backgroundColor: '#fff7ed',
+            color: '#7f1d1d'
+          }}
+        >
+          <strong>Commit blocked: unknown entities detected.</strong>
+          <ul style={{margin: '0.5rem 0 0 1rem', padding: 0}}>
+            {unknownGuardrailIssues.map((issue) => {
+              const surface = issue.surface ?? '';
+              const linkOptions = unknownLinkOptions[surface] ?? [];
+              const selectedEntityId = unknownLinkSelection[surface] ?? '';
+              const isLinkActive = activeLinkSurface === surface;
+              return (
+                <li key={`${surface}-${issue.span?.start ?? 0}`} style={{marginBottom: '0.4rem'}}>
+                  <span style={{marginRight: '0.5rem'}}>{surface}</span>
+                  <button
+                    type='button'
+                    onClick={() => void resolveUnknownEntity(surface)}
+                    disabled={resolvingUnknown === surface}
+                    style={{fontSize: '0.8rem'}}
+                  >
+                    {resolvingUnknown === surface ? 'Creating...' : 'Create entity'}
+                  </button>
+                  <button
+                    type='button'
+                    onClick={() =>
+                      setActiveLinkSurface((prev) => (prev === surface ? null : surface))
+                    }
+                    style={{marginLeft: '0.35rem', fontSize: '0.8rem'}}
+                  >
+                    {isLinkActive ? 'Cancel link' : 'Link alias'}
+                  </button>
+                  {isLinkActive && linkOptions.length > 0 && (
+                    <>
+                      <select
+                        value={selectedEntityId}
+                        onChange={(event) =>
+                          setUnknownLinkSelection((prev) => ({
+                            ...prev,
+                            [surface]: event.target.value
+                          }))
+                        }
+                        style={{marginLeft: '0.5rem', fontSize: '0.8rem'}}
+                      >
+                        <option value=''>Select entity...</option>
+                        {linkOptions.map((entity) => (
+                          <option key={entity.id} value={entity.id}>
+                            {entity.name}
+                          </option>
+                        ))}
+                      </select>
+                      <button
+                        type='button'
+                        onClick={() => void linkUnknownEntity(surface)}
+                        disabled={linkingUnknown === surface || !selectedEntityId}
+                        style={{marginLeft: '0.35rem', fontSize: '0.8rem'}}
+                      >
+                        {linkingUnknown === surface ? 'Linking...' : 'Link alias'}
+                      </button>
+                    </>
+                  )}
+                  {isLinkActive && linkOptions.length === 0 && (
+                    <span style={{marginLeft: '0.5rem', fontSize: '0.8rem'}}>
+                      No close entity matches available to link.
+                    </span>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        </div>
       )}
       {seriesBibleConfig?.parentProjectId && (
         <div

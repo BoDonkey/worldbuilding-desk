@@ -1,5 +1,5 @@
 export const DB_NAME = 'worldbuilding-db';
-export const DB_VERSION = 11;
+export const DB_VERSION = 13;
 export const ENTITY_STORE_NAME = 'entities';
 export const CATEGORY_STORE_NAME = 'entityCategories';
 export const PROJECT_STORE_NAME = 'projects';
@@ -16,6 +16,9 @@ export const ZONE_AFFINITY_PROFILE_STORE_NAME = 'zone_affinity_profiles';
 export const ZONE_AFFINITY_PROGRESS_STORE_NAME = 'zone_affinity_progress';
 export const SETTLEMENT_MODULE_STORE_NAME = 'settlement_modules';
 export const SETTLEMENT_STATE_STORE_NAME = 'settlement_state';
+export const CONSISTENCY_PROPOSAL_STORE_NAME = 'consistency_proposals';
+export const CONSISTENCY_EVENT_STORE_NAME = 'consistency_events';
+export const CONSISTENCY_ALIAS_STORE_NAME = 'consistency_aliases';
 
 export function openDb(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
@@ -96,6 +99,24 @@ export function openDb(): Promise<IDBDatabase> {
 
       if (!db.objectStoreNames.contains(SETTLEMENT_STATE_STORE_NAME)) {
         db.createObjectStore(SETTLEMENT_STATE_STORE_NAME, {
+          keyPath: 'id'
+        });
+      }
+
+      if (!db.objectStoreNames.contains(CONSISTENCY_PROPOSAL_STORE_NAME)) {
+        db.createObjectStore(CONSISTENCY_PROPOSAL_STORE_NAME, {
+          keyPath: 'id'
+        });
+      }
+
+      if (!db.objectStoreNames.contains(CONSISTENCY_EVENT_STORE_NAME)) {
+        db.createObjectStore(CONSISTENCY_EVENT_STORE_NAME, {
+          keyPath: 'id'
+        });
+      }
+
+      if (!db.objectStoreNames.contains(CONSISTENCY_ALIAS_STORE_NAME)) {
+        db.createObjectStore(CONSISTENCY_ALIAS_STORE_NAME, {
           keyPath: 'id'
         });
       }

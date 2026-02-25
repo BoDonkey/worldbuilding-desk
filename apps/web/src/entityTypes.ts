@@ -102,6 +102,7 @@ export interface ProjectSettings {
   projectId: string;
   characterStyles: CharacterStyle[];
   aiSettings: ProjectAISettings;
+  consistencyActionCues: string[];
   activeSkills: string[];
   projectMode: ProjectMode;
   featureToggles: ProjectFeatureToggles;

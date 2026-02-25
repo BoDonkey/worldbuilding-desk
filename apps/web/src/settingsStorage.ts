@@ -1,4 +1,5 @@
 import type {
+  Project,
   ProjectSettings,
   ProjectAISettings,
   ProjectMode,
@@ -6,6 +7,7 @@ import type {
 } from './entityTypes';
 import { openDb, SETTINGS_STORE_NAME } from './db';
 import {getDefaultFeatureToggles, normalizeFeatureToggles} from './projectMode';
+import {getProjectById} from './projectStorage';
 
 const DEFAULT_AI_SETTINGS: ProjectAISettings = {
   provider: 'anthropic',
@@ -34,11 +36,24 @@ const DEFAULT_AI_SETTINGS: ProjectAISettings = {
 };
 
 const DEFAULT_PROJECT_MODE: ProjectMode = 'litrpg';
+const DEFAULT_CONSISTENCY_ACTION_CUES: string[] = [];
 const DEFAULT_STAT_BLOCK_PREFERENCES: StatBlockPreferences = {
   sourceType: 'character',
   style: 'full',
   insertMode: 'block'
 };
+
+function normalizeConsistencyActionCues(cues: string[] | undefined): string[] {
+  if (!Array.isArray(cues)) return [];
+  const unique = new Set<string>();
+  cues.forEach((cue) => {
+    const normalized = cue.trim().toLowerCase();
+    if (normalized) {
+      unique.add(normalized);
+    }
+  });
+  return Array.from(unique);
+}
 
 function ensureAISettings(settings: ProjectSettings): ProjectSettings {
   const aiSettings: ProjectAISettings = {
@@ -73,6 +88,9 @@ function ensureAISettings(settings: ProjectSettings): ProjectSettings {
   return {
     ...settings,
     aiSettings,
+    consistencyActionCues: normalizeConsistencyActionCues(
+      settings.consistencyActionCues ?? DEFAULT_CONSISTENCY_ACTION_CUES
+    ),
     activeSkills: settings.activeSkills ?? [],
     projectMode: settings.projectMode ?? DEFAULT_PROJECT_MODE,
     featureToggles: normalizeFeatureToggles({
@@ -131,6 +149,7 @@ export async function createDefaultSettings(projectId: string): Promise<ProjectS
     projectId,
     characterStyles: [],
     aiSettings: {...DEFAULT_AI_SETTINGS},
+    consistencyActionCues: [...DEFAULT_CONSISTENCY_ACTION_CUES],
     activeSkills: [],
     projectMode: DEFAULT_PROJECT_MODE,
     featureToggles: getDefaultFeatureToggles(DEFAULT_PROJECT_MODE),
@@ -147,4 +166,48 @@ export async function getOrCreateSettings(projectId: string): Promise<ProjectSet
   const existing = await getProjectSettings(projectId);
   if (existing) return existing;
   return createDefaultSettings(projectId);
+}
+
+export async function getResolvedConsistencyActionCues(
+  project: Project
+): Promise<string[]> {
+  const visited = new Set<string>();
+  const ordered: string[] = [];
+  const seen = new Set<string>();
+
+  const appendCues = (cues: string[]) => {
+    cues.forEach((cue) => {
+      const normalized = cue.trim().toLowerCase();
+      if (!normalized || seen.has(normalized)) return;
+      seen.add(normalized);
+      ordered.push(normalized);
+    });
+  };
+
+  const visit = async (current: Project | null): Promise<void> => {
+    if (!current || visited.has(current.id)) {
+      return;
+    }
+    visited.add(current.id);
+
+    if (current.parentProjectId) {
+      const parent = await getProjectById(current.parentProjectId);
+      await visit(parent);
+    }
+
+    const settings = await getProjectSettings(current.id);
+    appendCues(settings?.consistencyActionCues ?? []);
+  };
+
+  await visit(project);
+  return ordered;
+}
+
+export async function getInheritedConsistencyActionCues(
+  project: Project
+): Promise<string[]> {
+  if (!project.parentProjectId) return [];
+  const parent = await getProjectById(project.parentProjectId);
+  if (!parent) return [];
+  return getResolvedConsistencyActionCues(parent);
 }
