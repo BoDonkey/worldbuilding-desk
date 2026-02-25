@@ -164,6 +164,12 @@ export class RAGService implements RAGProvider {
   private async loadEmbeddingPipeline(): Promise<EmbeddingPipeline> {
     if (!this.embeddingPipelinePromise) {
       this.embeddingPipelinePromise = (async () => {
+        // Cypress runs in a constrained test browser where model fetches are flaky.
+        // Use a deterministic lightweight embedding so e2e tests exercise flows
+        // without depending on transformer model downloads.
+        if ((globalThis as {Cypress?: unknown}).Cypress) {
+          return async () => ({data: Float32Array.from([1])});
+        }
         const transformers = await import('@xenova/transformers');
         return transformers.pipeline('feature-extraction', 'Xenova/all-MiniLM-L6-v2');
       })();

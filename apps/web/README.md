@@ -71,3 +71,18 @@ export default defineConfig([
   },
 ])
 ```
+
+## Cypress E2E smoke tests
+
+1. Install dependencies from the repo root:
+   - `pnpm install`
+2. Start the web app:
+   - `pnpm --filter web dev`
+3. In another terminal, run Cypress:
+   - `pnpm --filter web e2e:open` (interactive)
+   - `pnpm --filter web e2e:run` (headless)
+
+The starter smoke suite lives in `cypress/e2e/post-merge-smoke.cy.ts` and covers:
+- scene export (Markdown + DOCX)
+- mode-scoped prompt tool defaults
+- tool pack export/import replace+append flows
