@@ -252,12 +252,14 @@ const hasLeadingCueWord = (text: string, mentionStart: number): boolean => {
 
 const buildKnownEntityMap = (
   knownEntities: KnownEntityRef[]
-): Map<string, KnownEntityRef> => {
-  const map = new Map<string, KnownEntityRef>();
+): Map<string, KnownEntityRef[]> => {
+  const map = new Map<string, KnownEntityRef[]>();
   knownEntities.forEach((entity) => {
     const key = normalizePhrase(entity.name);
     if (key) {
-      map.set(key, entity);
+      const existing = map.get(key) ?? [];
+      existing.push(entity);
+      map.set(key, existing);
     }
   });
   return map;
@@ -289,12 +291,27 @@ export class ConsistencyEngineService {
 
     const entities = mergedMentions
       .map((mention) => {
-        const known = knownEntityMap.get(mention.normalized);
+        const rawMatches = knownEntityMap.get(mention.normalized) ?? [];
+        const knownMatches = Array.from(
+          new Map(rawMatches.map((match) => [match.id, match])).values()
+        );
+        const known =
+          knownMatches.length === 1
+            ? knownMatches[0]
+            : undefined;
         return {
           surface: mention.surface,
           normalized: mention.normalized,
           entityId: known?.id,
           entityType: known?.type,
+          candidateEntities:
+            knownMatches.length > 1
+              ? knownMatches.map((match) => ({
+                  id: match.id,
+                  name: match.name,
+                  type: match.type
+                }))
+              : undefined,
           confidence: known ? 0.99 : 0.7,
           span: {
             start: mention.start,
@@ -336,7 +353,9 @@ export class ConsistencyEngineService {
   }
 
   async validateProposal(proposal: ExtractedProposal): Promise<ValidationResult> {
-    const unknownMentions = proposal.entities.filter((ref) => !ref.entityId);
+    const unknownMentions = proposal.entities.filter(
+      (ref) => !ref.entityId && !(ref.candidateEntities && ref.candidateEntities.length > 1)
+    );
     const dedupedBySurface = new Map<string, (typeof unknownMentions)[number]>();
 
     unknownMentions.forEach((mention) => {
@@ -355,8 +374,33 @@ export class ConsistencyEngineService {
       })
     );
 
+    const ambiguousMentions = proposal.entities.filter(
+      (ref) => (ref.candidateEntities?.length ?? 0) > 1
+    );
+    const dedupedAmbiguous = new Map<string, (typeof ambiguousMentions)[number]>();
+    ambiguousMentions.forEach((mention) => {
+      if (!dedupedAmbiguous.has(mention.normalized)) {
+        dedupedAmbiguous.set(mention.normalized, mention);
+      }
+    });
+
+    Array.from(dedupedAmbiguous.values()).forEach((mention) => {
+      const relatedEntities = mention.candidateEntities ?? [];
+      const candidateNames = relatedEntities.map((entity) => entity.name).join(', ');
+      issues.push({
+        code: 'AMBIGUOUS_REFERENCE',
+        severity: 'warning',
+        message:
+          `Reference '${mention.surface}' matches multiple records: ${candidateNames}. ` +
+          'Clarify the target entity in this scene.',
+        span: mention.span,
+        surface: mention.surface,
+        relatedEntities
+      });
+    });
+
     const result: ValidationResult = {
-      allowCommit: issues.length === 0,
+      allowCommit: !issues.some((issue) => issue.severity === 'blocking'),
       issues,
       proposedMutations: []
     };
