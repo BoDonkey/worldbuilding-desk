@@ -90,6 +90,37 @@ const SETTLEMENT_EFFECT_OPERATION_OPTIONS: SettlementModule['effects'][number]['
   'set'
 ];
 type BaseStatKey = keyof NonNullable<SettlementState['baseStats']>;
+type CompendiumTab = 'overview' | 'entries' | 'progression' | 'world-systems';
+
+const COMPENDIUM_TABS: Array<{
+  id: CompendiumTab;
+  label: string;
+  subtitle: string;
+  advanced?: boolean;
+}> = [
+  {
+    id: 'overview',
+    label: 'Overview',
+    subtitle: 'Start here: current progression status and next actions.'
+  },
+  {
+    id: 'entries',
+    label: 'Entries',
+    subtitle: 'Create/import entries and record compendium actions.'
+  },
+  {
+    id: 'progression',
+    label: 'Progression',
+    subtitle: 'Manage milestones, recipes, and craftability checks.'
+  },
+  {
+    id: 'world-systems',
+    label: 'World Systems',
+    subtitle: 'Advanced systems: zone, settlement, and party synergy.',
+    advanced: true
+  }
+];
+
 const BASE_STAT_KEYS: BaseStatKey[] = [
   'defense',
   'storageCapacity',
@@ -235,6 +266,7 @@ function CompendiumRoute({activeProject, projectSettings}: CompendiumRouteProps)
   const [quantityByActionKey, setQuantityByActionKey] = useState<
     Record<string, number>
   >({});
+  const [activeTab, setActiveTab] = useState<CompendiumTab>('overview');
   const enableGameSystems =
     projectSettings?.featureToggles.enableGameSystems !== false;
   const enableRuntimeModifiers =
@@ -329,6 +361,11 @@ function CompendiumRoute({activeProject, projectSettings}: CompendiumRouteProps)
     if (!settlementState) return;
     setBaseStatsDraft(toBaseStatsDraft(settlementState.baseStats));
   }, [settlementState]);
+  useEffect(() => {
+    if (activeTab === 'world-systems' && !enableWorldSystems) {
+      setActiveTab('overview');
+    }
+  }, [activeTab, enableWorldSystems]);
 
   const completedActionSet = useMemo(() => {
     const set = new Set<string>();
@@ -854,6 +891,1165 @@ function CompendiumRoute({activeProject, projectSettings}: CompendiumRouteProps)
     );
   }
 
+  const visibleTabs = COMPENDIUM_TABS.filter(
+    (tab) => !tab.advanced || enableWorldSystems
+  );
+  const currentTab =
+    visibleTabs.find((tab) => tab.id === activeTab) ?? visibleTabs[0];
+  const hasImportedEntity = entries.some((entry) => Boolean(entry.sourceEntityId));
+  const nextStepItems: Array<{
+    id: string;
+    done: boolean;
+    label: string;
+    tab: CompendiumTab;
+  }> = [
+    {
+      id: 'import-entity',
+      done: hasImportedEntity,
+      label: 'Import your first World Bible entity.',
+      tab: 'entries'
+    },
+    {
+      id: 'create-entry',
+      done: entries.length > 0,
+      label: 'Create at least one compendium entry.',
+      tab: 'entries'
+    },
+    {
+      id: 'create-milestone',
+      done: milestones.length > 0,
+      label: 'Create a milestone threshold.',
+      tab: 'progression'
+    },
+    {
+      id: 'define-recipe',
+      done: recipes.length > 0,
+      label: 'Define at least one recipe unlock.',
+      tab: 'progression'
+    },
+    {
+      id: 'log-action',
+      done: logs.length > 0,
+      label: 'Record an action to advance progression.',
+      tab: 'entries'
+    },
+    {
+      id: 'create-zone',
+      done: !enableWorldSystems || zoneProfiles.length > 0,
+      label: 'Add a zone profile if you need advanced simulation.',
+      tab: 'world-systems'
+    }
+  ];
+  const tabAwareNextSteps = nextStepItems.filter((item) => {
+    if (activeTab === 'overview') return !item.done;
+    return item.tab === activeTab && !item.done;
+  });
+  const activeTabDoneCount = nextStepItems.filter(
+    (item) => item.tab === activeTab && item.done
+  ).length;
+  const activeTabTotalCount = nextStepItems.filter(
+    (item) => item.tab === activeTab
+  ).length;
+  const openTabWithSmartDefaults = (
+    tab: CompendiumTab,
+    stepId?: string
+  ): void => {
+    setActiveTab(tab);
+    if (tab === 'entries') {
+      if (!entryName.trim() && stepId === 'create-entry') {
+        setEntryName('First Entry');
+      }
+      if (!entityToImportId && stepId === 'import-entity' && worldEntities.length > 0) {
+        setEntityToImportId(worldEntities[0].id);
+      }
+      return;
+    }
+    if (tab === 'progression') {
+      if (!milestoneName.trim() && stepId === 'create-milestone') {
+        setMilestoneName('First Milestone');
+      }
+      if (!recipeName.trim() && stepId === 'define-recipe') {
+        setRecipeName('First Recipe');
+      }
+      return;
+    }
+    if (tab === 'world-systems') {
+      if (!zoneName.trim() && stepId === 'create-zone') {
+        setZoneName('Starter Zone');
+      }
+      if (!zoneKey.trim() && stepId === 'create-zone') {
+        setZoneKey('starter_zone');
+      }
+    }
+  };
+
+  const CompendiumOverviewSection = () => {
+    return (
+      <>
+        <p style={{marginTop: 0, marginBottom: '0.9rem', color: '#4b5563'}}>
+          Use this snapshot to see progress at a glance, then jump into the next
+          task without scanning every advanced system.
+        </p>
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+            gap: '0.75rem',
+            marginBottom: '1rem'
+          }}
+        >
+          <article style={{padding: '0.85rem', border: '1px solid #ddd', borderRadius: '8px'}}>
+            <h3 style={{marginTop: 0, marginBottom: '0.45rem'}}>Total Points</h3>
+            <div style={{fontSize: '1.1rem', fontWeight: 700}}>
+              {isLoading || !progress ? '...' : progress.totalPoints}
+            </div>
+          </article>
+          <article style={{padding: '0.85rem', border: '1px solid #ddd', borderRadius: '8px'}}>
+            <h3 style={{marginTop: 0, marginBottom: '0.45rem'}}>Milestones Unlocked</h3>
+            <div style={{fontSize: '1.1rem', fontWeight: 700}}>
+              {isLoading || !progress ? '...' : progress.unlockedMilestoneIds.length}
+            </div>
+          </article>
+          <article style={{padding: '0.85rem', border: '1px solid #ddd', borderRadius: '8px'}}>
+            <h3 style={{marginTop: 0, marginBottom: '0.45rem'}}>Recipes Unlocked</h3>
+            <div style={{fontSize: '1.1rem', fontWeight: 700}}>
+              {isLoading || !progress ? '...' : progress.unlockedRecipeIds.length}
+            </div>
+          </article>
+        </div>
+
+        <section style={{padding: '1rem', border: '1px solid #ddd', borderRadius: '8px', marginBottom: '1rem'}}>
+          <h2 style={{marginTop: 0}}>What To Do Next</h2>
+          <ul style={{listStyle: 'none', padding: 0, margin: 0}}>
+            {nextStepItems.map((step) => (
+              <li key={step.id} style={{marginBottom: '0.45rem'}}>
+                {step.done ? 'Done' : 'Next'}: {step.label}{' '}
+                {!step.done && (
+                  <button
+                    type='button'
+                    onClick={() => openTabWithSmartDefaults(step.tab, step.id)}
+                  >
+                    Open {COMPENDIUM_TABS.find((tab) => tab.id === step.tab)?.label}
+                  </button>
+                )}
+              </li>
+            ))}
+          </ul>
+        </section>
+
+        <section style={{padding: '1rem', border: '1px solid #ddd', borderRadius: '8px'}}>
+          <h2 style={{marginTop: 0}}>Recent Actions</h2>
+          {logs.length === 0 ? (
+            <>
+              <p style={{marginBottom: '0.65rem'}}>No actions logged yet.</p>
+              <button
+                type='button'
+                onClick={() => openTabWithSmartDefaults('entries', 'log-action')}
+              >
+                Go to Entries to log your first action
+              </button>
+            </>
+          ) : (
+            <ul style={{listStyle: 'none', padding: 0, margin: 0}}>
+              {logs.slice(0, 12).map((log) => (
+                <li key={log.id} style={{marginBottom: '0.35rem'}}>
+                  {(() => {
+                    const entry = entryById.get(log.entryId);
+                    const actionLabel =
+                      entry?.actions.find((action) => action.id === log.actionId)
+                        ?.label ?? log.actionId;
+                    const entryLabel = entry?.name ?? log.entryId;
+                    return (
+                      <>
+                        +{log.pointsAwarded} pts · {entryLabel} · {actionLabel} ·{' '}
+                        {new Date(log.createdAt).toLocaleString()}
+                      </>
+                    );
+                  })()}
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      </>
+    );
+  };
+
+  const CompendiumEntriesSection = () => (
+    <>
+      <p style={{marginTop: 0, marginBottom: '0.9rem', color: '#4b5563'}}>
+        Create new compendium records or import from World Bible, then log actions
+        from each entry card.
+      </p>
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+          gap: '1rem',
+          marginBottom: '1rem'
+        }}
+      >
+        <article style={{padding: '1rem', border: '1px solid #ddd', borderRadius: '8px'}}>
+          <h2 style={{marginTop: 0}}>Add Entry</h2>
+          <p style={{marginTop: 0, fontSize: '0.85rem', color: '#6b7280'}}>
+            Use this for custom creatures, resources, or artifacts not yet in the
+            World Bible.
+          </p>
+          <label style={{display: 'block', marginBottom: '0.5rem'}}>
+            Name
+            <input
+              type='text'
+              value={entryName}
+              onChange={(e) => setEntryName(e.target.value)}
+              style={{width: '100%'}}
+            />
+          </label>
+          <label style={{display: 'block', marginBottom: '0.75rem'}}>
+            Domain
+            <select
+              value={entryDomain}
+              onChange={(e) => setEntryDomain(e.target.value as CompendiumDomain)}
+              style={{width: '100%'}}
+            >
+              {DOMAIN_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <button type='button' onClick={() => void handleCreateEntry()}>
+            Create Entry
+          </button>
+        </article>
+
+        <article style={{padding: '1rem', border: '1px solid #ddd', borderRadius: '8px'}}>
+          <h2 style={{marginTop: 0}}>Import from World Bible</h2>
+          <p style={{marginTop: 0, fontSize: '0.85rem', color: '#6b7280'}}>
+            Best for existing entities so names stay aligned across tools.
+          </p>
+          <label style={{display: 'block', marginBottom: '0.5rem'}}>
+            Entity
+            <select
+              value={entityToImportId}
+              onChange={(e) => setEntityToImportId(e.target.value)}
+              style={{width: '100%'}}
+            >
+              <option value=''>Select an entity</option>
+              {worldEntities.map((entity) => (
+                <option key={entity.id} value={entity.id}>
+                  {entity.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label style={{display: 'block', marginBottom: '0.75rem'}}>
+            Domain
+            <select
+              value={importDomain}
+              onChange={(e) => setImportDomain(e.target.value as CompendiumDomain)}
+              style={{width: '100%'}}
+            >
+              {DOMAIN_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <button
+            type='button'
+            onClick={() => void handleImportEntity()}
+            disabled={!entityToImportId}
+          >
+            Link Entity
+          </button>
+        </article>
+      </div>
+
+      <section style={{padding: '1rem', border: '1px solid #ddd', borderRadius: '8px'}}>
+        <h2 style={{marginTop: 0}}>Entries</h2>
+        {entries.length === 0 && (
+          <div
+            style={{
+              marginBottom: '0.85rem',
+              padding: '0.75rem',
+              border: '1px solid #e5e7eb',
+              borderRadius: '6px',
+              backgroundColor: '#f9fafb'
+            }}
+          >
+            <p style={{marginTop: 0, marginBottom: '0.6rem'}}>
+              No compendium entries yet.
+            </p>
+            <div style={{display: 'flex', gap: '0.5rem', flexWrap: 'wrap'}}>
+              <button
+                type='button'
+                onClick={() => {
+                  if (!entryName.trim()) setEntryName('First Entry');
+                }}
+              >
+                Create your first entry
+              </button>
+              <button
+                type='button'
+                onClick={() => {
+                  if (!entityToImportId && worldEntities.length > 0) {
+                    setEntityToImportId(worldEntities[0].id);
+                  }
+                }}
+                disabled={worldEntities.length === 0}
+              >
+                Import your first World Bible entity
+              </button>
+            </div>
+          </div>
+        )}
+        <ul style={{listStyle: 'none', padding: 0, margin: 0}}>
+          {entries.map((entry) => (
+            <li
+              key={entry.id}
+              style={{
+                border: '1px solid #eee',
+                borderRadius: '6px',
+                padding: '0.75rem',
+                marginBottom: '0.75rem'
+              }}
+            >
+              <strong>{entry.name}</strong>{' '}
+              <span style={{fontSize: '0.85rem', color: '#666'}}>[{entry.domain}]</span>
+              {entry.sourceEntityId && (
+                <div style={{fontSize: '0.8rem', color: '#666'}}>
+                  Linked to World Bible entity
+                </div>
+              )}
+              <div style={{display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginTop: '0.5rem'}}>
+                {entry.actions.map((action) => {
+                  const key = `${entry.id}:${action.id}`;
+                  const alreadyDone = completedActionSet.has(key);
+                  const disabled =
+                    isRecordingKey === key || (!action.repeatable && alreadyDone);
+                  const quantity = Math.max(1, Math.floor(quantityByActionKey[key] || 1));
+                  return (
+                    <div key={key} style={{display: 'flex', alignItems: 'center', gap: '0.35rem'}}>
+                      {action.repeatable && (
+                        <input
+                          type='number'
+                          min={1}
+                          value={quantity}
+                          onChange={(e) =>
+                            setQuantityByActionKey((prev) => ({
+                              ...prev,
+                              [key]: Number(e.target.value)
+                            }))
+                          }
+                          style={{width: '58px'}}
+                        />
+                      )}
+                      <button
+                        type='button'
+                        onClick={() => void handleRecordAction(entry, action)}
+                        disabled={disabled}
+                      >
+                        {isRecordingKey === key
+                          ? 'Logging...'
+                          : !action.repeatable && alreadyDone
+                            ? `${action.label} complete`
+                            : `${action.label} (+${action.points * quantity})`}
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            </li>
+          ))}
+        </ul>
+      </section>
+    </>
+  );
+
+  const CompendiumProgressionSection = () => (
+    <>
+      <p style={{marginTop: 0, marginBottom: '0.9rem', color: '#4b5563'}}>
+        Define unlock rules first, then validate craftability using current
+        progression and runtime modifiers.
+      </p>
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: '2fr 1fr',
+          gap: '1rem',
+          alignItems: 'start'
+        }}
+      >
+      <section style={{padding: '1rem', border: '1px solid #ddd', borderRadius: '8px'}}>
+        <h2 style={{marginTop: 0}}>Recipes</h2>
+        <p style={{marginTop: 0, fontSize: '0.85rem', color: '#6b7280'}}>
+          Recipes define what can be unlocked and what requirements must be met.
+        </p>
+        <label style={{display: 'block', marginBottom: '0.5rem'}}>
+          Name
+          <input
+            type='text'
+            value={recipeName}
+            onChange={(e) => setRecipeName(e.target.value)}
+            style={{width: '100%'}}
+          />
+        </label>
+        <label style={{display: 'block', marginBottom: '0.75rem'}}>
+          Category
+          <select
+            value={recipeCategory}
+            onChange={(e) =>
+              setRecipeCategory(e.target.value as UnlockableRecipe['category'])
+            }
+            style={{width: '100%'}}
+          >
+            {RECIPE_CATEGORY_OPTIONS.map((category) => (
+              <option key={category} value={category}>
+                {category}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label style={{display: 'block', marginBottom: '0.5rem'}}>
+          Min Character Level
+          <input
+            type='number'
+            min={1}
+            value={recipeMinLevel}
+            onChange={(e) => setRecipeMinLevel(Number(e.target.value))}
+            style={{width: '100%'}}
+          />
+        </label>
+        <label style={{display: 'block', marginBottom: '0.75rem'}}>
+          Required Milestone IDs (comma-separated)
+          <input
+            type='text'
+            value={recipeRequiredMilestones}
+            onChange={(e) => setRecipeRequiredMilestones(e.target.value)}
+            style={{width: '100%'}}
+          />
+        </label>
+        <button type='button' onClick={() => void handleCreateRecipe()}>
+          Add Recipe
+        </button>
+        {recipes.length === 0 && (
+          <div
+            style={{
+              marginTop: '0.75rem',
+              padding: '0.65rem',
+              border: '1px solid #e5e7eb',
+              borderRadius: '6px',
+              backgroundColor: '#f9fafb'
+            }}
+          >
+            <p style={{marginTop: 0, marginBottom: '0.5rem'}}>
+              No recipes yet. Create one to test unlock and craftability flow.
+            </p>
+            <button
+              type='button'
+              onClick={() => {
+                if (!recipeName.trim()) setRecipeName('First Recipe');
+              }}
+            >
+              Create a starter recipe
+            </button>
+          </div>
+        )}
+        <ul style={{listStyle: 'none', padding: 0, marginTop: '0.75rem'}}>
+          {recipes.map((recipe) => (
+            <li key={recipe.id} style={{marginBottom: '0.35rem'}}>
+              {unlockedRecipeSet.has(recipe.id) ? 'Unlocked' : 'Locked'}: {recipe.name}
+              {recipe.requirements?.minCharacterLevel ? (
+                <> (lvl {recipe.requirements.minCharacterLevel}+)</>
+              ) : null}
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      <div style={{display: 'grid', gap: '1rem'}}>
+        <section style={{padding: '1rem', border: '1px solid #ddd', borderRadius: '8px'}}>
+          <h2 style={{marginTop: 0}}>Milestones</h2>
+          <p style={{marginTop: 0, fontSize: '0.85rem', color: '#6b7280'}}>
+            Milestones convert point totals into explicit progression beats.
+          </p>
+          <label style={{display: 'block', marginBottom: '0.5rem'}}>
+            Name
+            <input
+              type='text'
+              value={milestoneName}
+              onChange={(e) => setMilestoneName(e.target.value)}
+              style={{width: '100%'}}
+            />
+          </label>
+          <label style={{display: 'block', marginBottom: '0.5rem'}}>
+            Points Required
+            <input
+              type='number'
+              min={0}
+              value={milestonePoints}
+              onChange={(e) => setMilestonePoints(Number(e.target.value))}
+              style={{width: '100%'}}
+            />
+          </label>
+          <label style={{display: 'block', marginBottom: '0.5rem'}}>
+            Description
+            <input
+              type='text'
+              value={milestoneDescription}
+              onChange={(e) => setMilestoneDescription(e.target.value)}
+              style={{width: '100%'}}
+            />
+          </label>
+          <label style={{display: 'block', marginBottom: '0.75rem'}}>
+            Unlock Recipe IDs (comma-separated)
+            <input
+              type='text'
+              value={milestoneRecipeIds}
+              onChange={(e) => setMilestoneRecipeIds(e.target.value)}
+              style={{width: '100%'}}
+            />
+          </label>
+          <button type='button' onClick={() => void handleCreateMilestone()}>
+            Add Milestone
+          </button>
+          {milestones.length === 0 && (
+            <div
+              style={{
+                marginTop: '0.75rem',
+                padding: '0.65rem',
+                border: '1px solid #e5e7eb',
+                borderRadius: '6px',
+                backgroundColor: '#f9fafb'
+              }}
+            >
+              <p style={{marginTop: 0, marginBottom: '0.5rem'}}>
+                No milestones yet. Add a threshold to make progression visible.
+              </p>
+              <button
+                type='button'
+                onClick={() => {
+                  if (!milestoneName.trim()) setMilestoneName('First Milestone');
+                }}
+              >
+                Create a milestone threshold
+              </button>
+            </div>
+          )}
+          <ul style={{listStyle: 'none', padding: 0, marginTop: '0.75rem'}}>
+            {milestones.map((milestone) => (
+              <li key={milestone.id} style={{marginBottom: '0.35rem'}}>
+                {unlockedMilestoneSet.has(milestone.id) ? 'Unlocked' : 'Locked'}:{' '}
+                {milestone.name} ({milestone.pointsRequired} pts)
+              </li>
+            ))}
+          </ul>
+        </section>
+
+        <section style={{padding: '1rem', border: '1px solid #ddd', borderRadius: '8px'}}>
+          <h2 style={{marginTop: 0}}>Craftability Preview</h2>
+          <p style={{marginTop: 0, fontSize: '0.85rem', color: '#6b7280'}}>
+            Check if recipes are craftable for a sample character and material loadout.
+          </p>
+          <label style={{display: 'block', marginBottom: '0.5rem'}}>
+            Character Level
+            <input
+              type='number'
+              min={1}
+              value={previewLevel}
+              onChange={(e) => setPreviewLevel(Number(e.target.value))}
+              style={{width: '100%'}}
+            />
+          </label>
+          <label style={{display: 'block', marginBottom: '0.75rem'}}>
+            Materials (one per line: <code>itemId:quantity</code>)
+            <textarea
+              rows={5}
+              value={previewMaterialsText}
+              onChange={(e) => setPreviewMaterialsText(e.target.value)}
+              placeholder={'wolf_pelt:4\niron_ore:12'}
+              style={{width: '100%'}}
+            />
+          </label>
+          <div
+            style={{
+              fontSize: '0.82rem',
+              color: '#4b5563',
+              marginBottom: '0.65rem',
+              padding: '0.5rem',
+              border: '1px solid #e5e7eb',
+              borderRadius: '6px'
+            }}
+          >
+            Runtime modifiers: +{craftingRuntimeModifiers.levelBonus} effective level,
+            material cost x{craftingRuntimeModifiers.materialCostMultiplier.toFixed(2)}
+            {craftingRuntimeModifiers.notes.length > 0 && (
+              <div style={{marginTop: '0.3rem'}}>
+                {craftingRuntimeModifiers.notes.join(' ')}
+              </div>
+            )}
+          </div>
+          <ul style={{listStyle: 'none', padding: 0, margin: 0}}>
+            {recipes.map((recipe) => {
+              const check = canCraftRecipe(recipe, {
+                progress,
+                characterLevel: Math.max(1, Math.floor(previewLevel || 1)),
+                availableMaterials: parsedPreviewMaterials,
+                runtime: craftingRuntimeModifiers
+              });
+              return (
+                <li
+                  key={`preview-${recipe.id}`}
+                  style={{
+                    marginBottom: '0.5rem',
+                    paddingBottom: '0.5rem',
+                    borderBottom: '1px solid #efefef'
+                  }}
+                >
+                  <strong>{recipe.name}</strong>{' '}
+                  <span
+                    style={{
+                      color: check.craftable ? '#166534' : '#991b1b'
+                    }}
+                  >
+                    {check.craftable ? 'craftable' : 'not craftable'}
+                  </span>
+                  <div style={{fontSize: '0.78rem', color: '#6b7280'}}>
+                    Effective level: {check.effectiveCharacterLevel}
+                    {' · '}Material multiplier: x{check.materialCostMultiplier.toFixed(2)}
+                  </div>
+                  {!check.craftable && check.reasons.length > 0 && (
+                    <div style={{fontSize: '0.82rem', color: '#6b7280'}}>
+                      {check.reasons.join(' ')}
+                    </div>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      </div>
+      </div>
+    </>
+  );
+
+  const CompendiumWorldSystemsSection = () => {
+    if (!enableWorldSystems) {
+      return (
+        <section
+          style={{padding: '1rem', border: '1px solid #ddd', borderRadius: '8px'}}
+        >
+          <p style={{margin: 0, color: '#4b5563'}}>
+            Settlement and zone systems are hidden for this project. Enable
+            <strong> Settlement/Zone Systems</strong> in Settings to access them.
+          </p>
+        </section>
+      );
+    }
+
+    return (
+      <div style={{display: 'grid', gap: '1rem'}}>
+        <p style={{marginTop: 0, marginBottom: 0, color: '#4b5563'}}>
+          Advanced systems are optional. Enable and tune only when you need
+          simulation depth for progression balancing.
+        </p>
+        <section style={{padding: '1rem', border: '1px solid #ddd', borderRadius: '8px'}}>
+          <h2 style={{marginTop: 0}}>Zone Affinity</h2>
+          <p style={{marginTop: 0, fontSize: '0.85rem', color: '#6b7280'}}>
+            Track zone exposure and unlock biome-specific milestones over time.
+          </p>
+          <label style={{display: 'block', marginBottom: '0.5rem'}}>
+            Zone Name
+            <input
+              type='text'
+              value={zoneName}
+              onChange={(e) => setZoneName(e.target.value)}
+              placeholder='Bee Cave'
+              style={{width: '100%'}}
+            />
+          </label>
+          <label style={{display: 'block', marginBottom: '0.5rem'}}>
+            Zone Key
+            <input
+              type='text'
+              value={zoneKey}
+              onChange={(e) => setZoneKey(e.target.value)}
+              placeholder='bee_cave'
+              style={{width: '100%'}}
+            />
+          </label>
+          <label style={{display: 'block', marginBottom: '0.75rem'}}>
+            Max Affinity Points
+            <input
+              type='number'
+              min={1}
+              value={zoneMaxPoints}
+              onChange={(e) => setZoneMaxPoints(Number(e.target.value))}
+              style={{width: '100%'}}
+            />
+          </label>
+          <button type='button' onClick={() => void handleCreateZoneProfile()}>
+            Add Zone Profile
+          </button>
+          {zoneProfiles.length === 0 && (
+            <div
+              style={{
+                marginTop: '0.75rem',
+                padding: '0.65rem',
+                border: '1px solid #e5e7eb',
+                borderRadius: '6px',
+                backgroundColor: '#f9fafb'
+              }}
+            >
+              <p style={{marginTop: 0, marginBottom: '0.5rem'}}>
+                No zone profiles yet.
+              </p>
+              <button
+                type='button'
+                onClick={() => {
+                  if (!zoneName.trim()) setZoneName('Starter Zone');
+                  if (!zoneKey.trim()) setZoneKey('starter_zone');
+                }}
+              >
+                Create your first zone profile
+              </button>
+            </div>
+          )}
+          <hr style={{margin: '0.9rem 0'}} />
+          <label style={{display: 'block', marginBottom: '0.5rem'}}>
+            Active Zone
+            <select
+              value={selectedZoneKey}
+              onChange={(e) => setSelectedZoneKey(e.target.value)}
+              style={{width: '100%'}}
+            >
+              <option value=''>Select zone</option>
+              {zoneProfiles.map((profile) => (
+                <option key={profile.id} value={profile.biomeKey}>
+                  {profile.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label style={{display: 'block', marginBottom: '0.75rem'}}>
+            Exposure Minutes
+            <input
+              type='number'
+              min={1}
+              value={zoneExposureMinutes}
+              onChange={(e) => setZoneExposureMinutes(Number(e.target.value))}
+              style={{width: '100%'}}
+            />
+          </label>
+          <button
+            type='button'
+            onClick={() => void handleRecordZoneExposure()}
+            disabled={!selectedZoneKey || isRecordingZone}
+          >
+            {isRecordingZone ? 'Recording...' : 'Record Exposure'}
+          </button>
+          <ul style={{listStyle: 'none', padding: 0, marginTop: '0.75rem'}}>
+            {zoneProfiles.map((profile) => {
+              const progressItem = zoneProgressByKey.get(profile.biomeKey) ?? {
+                id: '',
+                projectId: profile.projectId,
+                biomeKey: profile.biomeKey,
+                affinityPoints: 0,
+                totalExposureSeconds: 0,
+                unlockedMilestoneIds: [],
+                updatedAt: profile.updatedAt
+              };
+              const percent = getZoneAffinityPercent(progressItem, profile);
+              const unlocked = new Set(progressItem.unlockedMilestoneIds);
+              return (
+                <li
+                  key={`zone-${profile.id}`}
+                  style={{
+                    marginBottom: '0.65rem',
+                    paddingBottom: '0.55rem',
+                    borderBottom: '1px solid #efefef'
+                  }}
+                >
+                  <strong>{profile.name}</strong> ({percent.toFixed(1)}%)
+                  <div style={{fontSize: '0.82rem', color: '#6b7280'}}>
+                    Exposure: {(progressItem.totalExposureSeconds / 60).toFixed(1)} minutes
+                  </div>
+                  <div style={{fontSize: '0.82rem'}}>
+                    {profile.milestones.map((milestone) => (
+                      <div key={milestone.id}>
+                        {unlocked.has(milestone.id) ? 'Unlocked' : 'Locked'}{' '}
+                        {milestone.thresholdPercent}%: {milestone.name}
+                      </div>
+                    ))}
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+
+        <section style={{padding: '1rem', border: '1px solid #ddd', borderRadius: '8px'}}>
+          <h2 style={{marginTop: 0}}>Community / Logistics</h2>
+          <p style={{marginTop: 0, fontSize: '0.85rem', color: '#6b7280'}}>
+            Shared party synergy buffs driven by role combinations. Select the
+            currently active party to preview concrete in-scene combo effects.
+          </p>
+          <div style={{fontSize: '0.85rem', marginBottom: '0.5rem'}}>
+            <strong>Active Party Members</strong>
+          </div>
+          <div style={{display: 'grid', gap: '0.35rem', marginBottom: '0.8rem'}}>
+            {characters.length === 0 ? (
+              <div style={{fontSize: '0.82rem', color: '#6b7280'}}>
+                No characters yet. Add role-tagged characters to enable synergy.
+              </div>
+            ) : (
+              characters.map((character) => (
+                <label
+                  key={character.id}
+                  style={{display: 'flex', alignItems: 'center', gap: '0.45rem'}}
+                >
+                  <input
+                    type='checkbox'
+                    checked={activePartyCharacterIds.includes(character.id)}
+                    onChange={() => togglePartyCharacter(character.id)}
+                  />
+                  <span>
+                    {character.name}
+                    <span style={{fontSize: '0.8rem', color: '#6b7280'}}>
+                      {' '}
+                      ({getCharacterRole(character) || 'no role'})
+                    </span>
+                  </span>
+                </label>
+              ))
+            )}
+          </div>
+          <div style={{fontSize: '0.85rem', marginBottom: '0.45rem'}}>
+            <strong>Active Combo Buffs</strong>
+          </div>
+          <ul style={{listStyle: 'none', padding: 0, marginTop: 0}}>
+            {activePartySynergies.filter((item) => item.missingRoles.length === 0).length ===
+            0 ? (
+              <li style={{fontSize: '0.82rem', color: '#6b7280'}}>
+                No active combos for the current party selection.
+              </li>
+            ) : (
+              activePartySynergies
+                .filter((item) => item.missingRoles.length === 0)
+                .map((suggestion) => (
+                  <li key={suggestion.ruleId} style={{marginBottom: '0.55rem'}}>
+                    <strong>{suggestion.ruleName}</strong>
+                    {suggestion.maxDistanceMeters ? (
+                      <span style={{fontSize: '0.8rem', color: '#6b7280'}}>
+                        {' '}
+                        ({suggestion.maxDistanceMeters}m proximity)
+                      </span>
+                    ) : null}
+                    <div style={{fontSize: '0.82rem'}}>{suggestion.effectDescription}</div>
+                    <div style={{fontSize: '0.8rem', color: '#4b5563'}}>
+                      {formatSynergyStatus(suggestion, characterById)}
+                    </div>
+                  </li>
+                ))
+            )}
+          </ul>
+          <div style={{fontSize: '0.85rem', marginBottom: '0.45rem'}}>
+            <strong>Roster Opportunities</strong>
+          </div>
+          <ul style={{listStyle: 'none', padding: 0, marginTop: 0, marginBottom: 0}}>
+            {rosterSynergyOpportunities.length === 0 ? (
+              <li style={{fontSize: '0.82rem', color: '#6b7280'}}>
+                Full roster can already satisfy all default synergy rules.
+              </li>
+            ) : (
+              rosterSynergyOpportunities.map((suggestion) => (
+                <li key={`roster-${suggestion.ruleId}`} style={{marginBottom: '0.55rem'}}>
+                  <strong>{suggestion.ruleName}</strong>
+                  <div style={{fontSize: '0.82rem'}}>{suggestion.effectDescription}</div>
+                  <div style={{fontSize: '0.8rem', color: '#4b5563'}}>
+                    {formatSynergyStatus(suggestion, characterById)}
+                  </div>
+                  {suggestion.questPrompt && (
+                    <div style={{fontSize: '0.8rem', color: '#6b7280'}}>
+                      Prompt seed: {suggestion.questPrompt}
+                    </div>
+                  )}
+                </li>
+              ))
+            )}
+          </ul>
+        </section>
+
+        <section style={{padding: '1rem', border: '1px solid #ddd', borderRadius: '8px'}}>
+          <h2 style={{marginTop: 0}}>Settlement Progression</h2>
+          <p style={{marginTop: 0, fontSize: '0.85rem', color: '#6b7280'}}>
+            Generalized settlement buffs. Trophies are one source type, alongside
+            structures, stations, totems, and custom modules.
+          </p>
+          <label style={{display: 'block', marginBottom: '0.5rem'}}>
+            Module Name
+            <input
+              type='text'
+              value={moduleName}
+              onChange={(e) => setModuleName(e.target.value)}
+              placeholder='Cave Worm Trophy'
+              style={{width: '100%'}}
+            />
+          </label>
+          <label style={{display: 'block', marginBottom: '0.5rem'}}>
+            Source Type
+            <select
+              value={moduleSourceType}
+              onChange={(e) =>
+                setModuleSourceType(e.target.value as SettlementModule['sourceType'])
+              }
+              style={{width: '100%'}}
+            >
+              {SETTLEMENT_SOURCE_OPTIONS.map((option) => (
+                <option key={option} value={option}>
+                  {option}
+                </option>
+              ))}
+            </select>
+          </label>
+          <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem'}}>
+            <label style={{display: 'block', marginBottom: '0.5rem'}}>
+              Target Type
+              <select
+                value={moduleTargetType}
+                onChange={(e) =>
+                  setModuleTargetType(
+                    e.target.value as SettlementModule['effects'][number]['targetType']
+                  )
+                }
+                style={{width: '100%'}}
+              >
+                {SETTLEMENT_EFFECT_TARGET_OPTIONS.map((option) => (
+                  <option key={option} value={option}>
+                    {option}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label style={{display: 'block', marginBottom: '0.5rem'}}>
+              Target ID
+              <input
+                type='text'
+                value={moduleTargetId}
+                onChange={(e) => setModuleTargetId(e.target.value)}
+                placeholder='poison'
+                style={{width: '100%'}}
+              />
+            </label>
+          </div>
+          <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem'}}>
+            <label style={{display: 'block', marginBottom: '0.75rem'}}>
+              Operation
+              <select
+                value={moduleOperation}
+                onChange={(e) =>
+                  setModuleOperation(
+                    e.target.value as SettlementModule['effects'][number]['operation']
+                  )
+                }
+                style={{width: '100%'}}
+              >
+                {SETTLEMENT_EFFECT_OPERATION_OPTIONS.map((option) => (
+                  <option key={option} value={option}>
+                    {option}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label style={{display: 'block', marginBottom: '0.75rem'}}>
+              Value
+              <input
+                type='text'
+                value={moduleValue}
+                onChange={(e) => setModuleValue(e.target.value)}
+                placeholder='5'
+                style={{width: '100%'}}
+              />
+            </label>
+          </div>
+          <button
+            type='button'
+            onClick={() => void handleAddSettlementModule()}
+            disabled={isSavingModule || !settlementState || !moduleName.trim()}
+          >
+            {isSavingModule ? 'Adding...' : 'Add Settlement Module'}
+          </button>
+          <hr style={{margin: '0.9rem 0'}} />
+          <div style={{fontSize: '0.85rem', marginBottom: '0.5rem'}}>
+            <strong>Settlement Tier Level:</strong> {settlementState?.fortressLevel ?? 1}
+          </div>
+          <div style={{display: 'flex', gap: '0.5rem', marginBottom: '0.65rem'}}>
+            <button
+              type='button'
+              onClick={() => void handleAdjustFortressLevel(-1)}
+              disabled={!settlementState || settlementState.fortressLevel <= 1 || isSavingFortress}
+            >
+              - Tier
+            </button>
+            <button
+              type='button'
+              onClick={() => void handleAdjustFortressLevel(1)}
+              disabled={!settlementState || isSavingFortress}
+            >
+              + Tier
+            </button>
+          </div>
+          <div style={{fontSize: '0.82rem', color: '#4b5563', marginBottom: '0.6rem'}}>
+            {nextFortressTier
+              ? `Next tier at level ${nextFortressTier.levelRequired}: ${nextFortressTier.name}`
+              : 'All configured settlement tiers unlocked.'}
+          </div>
+          <div style={{fontSize: '0.85rem', marginBottom: '0.35rem'}}>
+            <strong>Base Stats</strong>
+          </div>
+          {settlementState && (
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: '1fr 1fr',
+                gap: '0.45rem',
+                marginBottom: '0.65rem'
+              }}
+            >
+              {BASE_STAT_KEYS.map((key) => (
+                <label key={`base-${key}`} style={{fontSize: '0.82rem'}}>
+                  {key}
+                  <input
+                    type='number'
+                    min={BASE_STAT_LIMITS[key].min}
+                    max={BASE_STAT_LIMITS[key].max}
+                    step={1}
+                    value={baseStatsDraft[key]}
+                    onChange={(e) => handleBaseStatDraftChange(key, e.target.value)}
+                    style={{width: '100%'}}
+                  />
+                </label>
+              ))}
+            </div>
+          )}
+          <div style={{display: 'flex', gap: '0.45rem', marginBottom: '0.7rem'}}>
+            <button
+              type='button'
+              onClick={() => void handleSaveBaseStats()}
+              disabled={!settlementState || !isBaseStatsDraftDirty || isSavingFortress}
+            >
+              {isSavingFortress ? 'Saving...' : 'Save Base Stats'}
+            </button>
+            <button
+              type='button'
+              onClick={() =>
+                settlementState && setBaseStatsDraft(toBaseStatsDraft(settlementState.baseStats))
+              }
+              disabled={!settlementState || !isBaseStatsDraftDirty || isSavingFortress}
+            >
+              Reset
+            </button>
+          </div>
+          <div style={{fontSize: '0.85rem', marginBottom: '0.5rem'}}>
+            <strong>Settlement Tier Effects:</strong>{' '}
+            {settlementComputedEffects.fortressEffects.length}
+          </div>
+          <ul style={{listStyle: 'none', padding: 0, margin: 0}}>
+            {settlementComputedEffects.fortressEffects.length === 0 ? (
+              <li style={{fontSize: '0.82rem', color: '#6b7280'}}>
+                No tier effects unlocked yet.
+              </li>
+            ) : (
+              settlementComputedEffects.fortressEffects.map((effect, index) => (
+                <li
+                  key={`tier-effect-${effect.targetType}-${effect.targetId}-${index}`}
+                  style={{marginBottom: '0.35rem'}}
+                >
+                  {formatSettlementEffectLabel(effect)}
+                </li>
+              ))
+            )}
+          </ul>
+          <div style={{fontSize: '0.85rem', marginTop: '0.65rem', marginBottom: '0.5rem'}}>
+            <strong>Active Aura Effects:</strong> {activeSettlementEffects.length}
+          </div>
+          <ul style={{listStyle: 'none', padding: 0, margin: 0}}>
+            {activeSettlementEffects.length === 0 ? (
+              <li style={{fontSize: '0.82rem', color: '#6b7280'}}>
+                No active module effects yet.
+              </li>
+            ) : (
+              activeSettlementEffects.map((effect, index) => (
+                <li
+                  key={`active-effect-${effect.targetType}-${effect.targetId}-${index}`}
+                  style={{marginBottom: '0.35rem'}}
+                >
+                  {formatSettlementEffectLabel(effect)}
+                </li>
+              ))
+            )}
+          </ul>
+          <div style={{fontSize: '0.85rem', marginTop: '0.65rem', marginBottom: '0.5rem'}}>
+            <strong>Total Active Effects:</strong> {settlementComputedEffects.allEffects.length}
+          </div>
+          <div style={{fontSize: '0.82rem', color: '#4b5563', marginBottom: '0.65rem'}}>
+            Includes settlement progression + aura modules.
+          </div>
+          <div style={{fontSize: '0.85rem', marginBottom: '0.35rem'}}>
+            <strong>Unlocked Settlement Tiers</strong>
+          </div>
+          <ul style={{listStyle: 'none', padding: 0, margin: 0}}>
+            {unlockedFortressTiers.length === 0 ? (
+              <li style={{fontSize: '0.82rem', color: '#6b7280'}}>None yet.</li>
+            ) : (
+              unlockedFortressTiers.map((tier) => (
+                <li key={tier.id} style={{marginBottom: '0.45rem'}}>
+                  <strong>
+                    L{tier.levelRequired} {tier.name}
+                  </strong>
+                  {tier.description && (
+                    <div style={{fontSize: '0.8rem', color: '#6b7280'}}>
+                      {tier.description}
+                    </div>
+                  )}
+                </li>
+              ))
+            )}
+          </ul>
+          <div style={{fontSize: '0.82rem', marginTop: '0.75rem'}}>
+            <strong>Installed Modules:</strong>
+          </div>
+          <ul style={{listStyle: 'none', padding: 0, marginTop: '0.35rem', marginBottom: 0}}>
+            {settlementModules.length === 0 ? (
+              <li style={{fontSize: '0.82rem', color: '#6b7280'}}>
+                No modules installed.
+              </li>
+            ) : (
+              settlementModules.map((module) => (
+                <li key={module.id} style={{marginBottom: '0.45rem'}}>
+                  <strong>{module.name}</strong>{' '}
+                  <span style={{fontSize: '0.8rem', color: '#6b7280'}}>
+                    [{module.sourceType}]
+                  </span>
+                  {module.effects.map((effect, effectIndex) => (
+                    <div
+                      key={`${module.id}-effect-${effectIndex}`}
+                      style={{fontSize: '0.8rem', color: '#4b5563'}}
+                    >
+                      {formatSettlementEffectLabel(effect)}
+                    </div>
+                  ))}
+                </li>
+              ))
+            )}
+          </ul>
+        </section>
+      </div>
+    );
+  };
+
   return (
     <section>
       <h1>Compendium</h1>
@@ -899,908 +2095,96 @@ function CompendiumRoute({activeProject, projectSettings}: CompendiumRouteProps)
           </p>
         </div>
       </details>
-
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
-          gap: '1rem',
-          marginBottom: '1rem'
-        }}
-      >
-        <div style={{gridColumn: '1 / -1', fontSize: '0.82rem', color: '#4b5563'}}>
-          Step 1 of 3: setup core compendium records.
-        </div>
-        <article style={{padding: '1rem', border: '1px solid #ddd', borderRadius: '8px'}}>
-          <h2 style={{marginTop: 0}}>Progress</h2>
-          {isLoading || !progress ? (
-            <p>Loading progress...</p>
-          ) : (
-            <>
-              <p style={{marginBottom: '0.25rem'}}>
-                <strong>Total Points:</strong> {progress.totalPoints}
-              </p>
-              <p style={{marginBottom: '0.25rem'}}>
-                <strong>Milestones Unlocked:</strong>{' '}
-                {progress.unlockedMilestoneIds.length}
-              </p>
-              <p style={{marginBottom: 0}}>
-                <strong>Recipes Unlocked:</strong> {progress.unlockedRecipeIds.length}
-              </p>
-            </>
-          )}
-        </article>
-
-        <article style={{padding: '1rem', border: '1px solid #ddd', borderRadius: '8px'}}>
-          <h2 style={{marginTop: 0}}>Add Entry</h2>
-          <label style={{display: 'block', marginBottom: '0.5rem'}}>
-            Name
-            <input
-              type='text'
-              value={entryName}
-              onChange={(e) => setEntryName(e.target.value)}
-              style={{width: '100%'}}
-            />
-          </label>
-          <label style={{display: 'block', marginBottom: '0.75rem'}}>
-            Domain
-            <select
-              value={entryDomain}
-              onChange={(e) => setEntryDomain(e.target.value as CompendiumDomain)}
-              style={{width: '100%'}}
-            >
-              {DOMAIN_OPTIONS.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </label>
-          <button type='button' onClick={() => void handleCreateEntry()}>
-            Create Entry
-          </button>
-        </article>
-
-        <article style={{padding: '1rem', border: '1px solid #ddd', borderRadius: '8px'}}>
-          <h2 style={{marginTop: 0}}>Import from World Bible</h2>
-          <label style={{display: 'block', marginBottom: '0.5rem'}}>
-            Entity
-            <select
-              value={entityToImportId}
-              onChange={(e) => setEntityToImportId(e.target.value)}
-              style={{width: '100%'}}
-            >
-              <option value=''>Select an entity</option>
-              {worldEntities.map((entity) => (
-                <option key={entity.id} value={entity.id}>
-                  {entity.name}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label style={{display: 'block', marginBottom: '0.75rem'}}>
-            Domain
-            <select
-              value={importDomain}
-              onChange={(e) => setImportDomain(e.target.value as CompendiumDomain)}
-              style={{width: '100%'}}
-            >
-              {DOMAIN_OPTIONS.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </label>
+      <div style={{display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '0.8rem'}}>
+        {visibleTabs.map((tab) => (
           <button
+            key={tab.id}
             type='button'
-            onClick={() => void handleImportEntity()}
-            disabled={!entityToImportId}
-          >
-            Link Entity
-          </button>
-        </article>
-      </div>
-
-      <h2 style={{marginTop: '1.25rem', marginBottom: '0.75rem'}}>Progression</h2>
-      <p style={{marginTop: 0, marginBottom: '0.75rem', fontSize: '0.82rem', color: '#4b5563'}}>
-        Step 2 of 3: log actions and validate progression behavior.
-      </p>
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: '2fr 1fr',
-          gap: '1rem',
-          alignItems: 'start'
-        }}
-      >
-        <section style={{padding: '1rem', border: '1px solid #ddd', borderRadius: '8px'}}>
-          <h2 style={{marginTop: 0}}>Entries</h2>
-          {entries.length === 0 && <p>No compendium entries yet.</p>}
-          <ul style={{listStyle: 'none', padding: 0, margin: 0}}>
-            {entries.map((entry) => (
-              <li
-                key={entry.id}
-                style={{
-                  border: '1px solid #eee',
-                  borderRadius: '6px',
-                  padding: '0.75rem',
-                  marginBottom: '0.75rem'
-                }}
-              >
-                <div style={{display: 'flex', justifyContent: 'space-between', gap: '1rem'}}>
-                  <div>
-                    <strong>{entry.name}</strong>{' '}
-                    <span style={{fontSize: '0.85rem', color: '#666'}}>
-                      [{entry.domain}]
-                    </span>
-                    {entry.sourceEntityId && (
-                      <div style={{fontSize: '0.8rem', color: '#666'}}>
-                        Linked to World Bible entity
-                      </div>
-                    )}
-                  </div>
-                </div>
-                <div style={{display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginTop: '0.5rem'}}>
-                  {entry.actions.map((action) => {
-                    const key = `${entry.id}:${action.id}`;
-                    const alreadyDone = completedActionSet.has(key);
-                    const disabled =
-                      isRecordingKey === key || (!action.repeatable && alreadyDone);
-                    const quantity = Math.max(1, Math.floor(quantityByActionKey[key] || 1));
-                    return (
-                      <div key={key} style={{display: 'flex', alignItems: 'center', gap: '0.35rem'}}>
-                        {action.repeatable && (
-                          <input
-                            type='number'
-                            min={1}
-                            value={quantity}
-                            onChange={(e) =>
-                              setQuantityByActionKey((prev) => ({
-                                ...prev,
-                                [key]: Number(e.target.value)
-                              }))
-                            }
-                            style={{width: '58px'}}
-                          />
-                        )}
-                        <button
-                          type='button'
-                          onClick={() => void handleRecordAction(entry, action)}
-                          disabled={disabled}
-                        >
-                          {isRecordingKey === key
-                            ? 'Logging...'
-                            : !action.repeatable && alreadyDone
-                              ? `${action.label} complete`
-                              : `${action.label} (+${action.points * quantity})`}
-                        </button>
-                      </div>
-                    );
-                  })}
-                </div>
-              </li>
-            ))}
-          </ul>
-        </section>
-
-        <div style={{display: 'grid', gap: '1rem'}}>
-          <section style={{padding: '1rem', border: '1px solid #ddd', borderRadius: '8px'}}>
-            <h2 style={{marginTop: 0}}>Recipes</h2>
-            <label style={{display: 'block', marginBottom: '0.5rem'}}>
-              Name
-              <input
-                type='text'
-                value={recipeName}
-                onChange={(e) => setRecipeName(e.target.value)}
-                style={{width: '100%'}}
-              />
-            </label>
-            <label style={{display: 'block', marginBottom: '0.75rem'}}>
-              Category
-              <select
-                value={recipeCategory}
-                onChange={(e) =>
-                  setRecipeCategory(e.target.value as UnlockableRecipe['category'])
-                }
-                style={{width: '100%'}}
-              >
-                {RECIPE_CATEGORY_OPTIONS.map((category) => (
-                  <option key={category} value={category}>
-                    {category}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label style={{display: 'block', marginBottom: '0.5rem'}}>
-              Min Character Level
-              <input
-                type='number'
-                min={1}
-                value={recipeMinLevel}
-                onChange={(e) => setRecipeMinLevel(Number(e.target.value))}
-                style={{width: '100%'}}
-              />
-            </label>
-            <label style={{display: 'block', marginBottom: '0.75rem'}}>
-              Required Milestone IDs (comma-separated)
-              <input
-                type='text'
-                value={recipeRequiredMilestones}
-                onChange={(e) => setRecipeRequiredMilestones(e.target.value)}
-                style={{width: '100%'}}
-              />
-            </label>
-            <button type='button' onClick={() => void handleCreateRecipe()}>
-              Add Recipe
-            </button>
-            <ul style={{listStyle: 'none', padding: 0, marginTop: '0.75rem'}}>
-              {recipes.map((recipe) => (
-                <li key={recipe.id} style={{marginBottom: '0.35rem'}}>
-                  {unlockedRecipeSet.has(recipe.id) ? 'Unlocked' : 'Locked'}: {recipe.name}
-                  {recipe.requirements?.minCharacterLevel ? (
-                    <> (lvl {recipe.requirements.minCharacterLevel}+)</>
-                  ) : null}
-                </li>
-              ))}
-            </ul>
-          </section>
-
-          <section style={{padding: '1rem', border: '1px solid #ddd', borderRadius: '8px'}}>
-            <h2 style={{marginTop: 0}}>Craftability Preview</h2>
-            <label style={{display: 'block', marginBottom: '0.5rem'}}>
-              Character Level
-              <input
-                type='number'
-                min={1}
-                value={previewLevel}
-                onChange={(e) => setPreviewLevel(Number(e.target.value))}
-                style={{width: '100%'}}
-              />
-            </label>
-            <label style={{display: 'block', marginBottom: '0.75rem'}}>
-              Materials (one per line: <code>itemId:quantity</code>)
-              <textarea
-                rows={5}
-                value={previewMaterialsText}
-                onChange={(e) => setPreviewMaterialsText(e.target.value)}
-                placeholder={'wolf_pelt:4\niron_ore:12'}
-                style={{width: '100%'}}
-              />
-            </label>
-            <div
-              style={{
-                fontSize: '0.82rem',
-                color: '#4b5563',
-                marginBottom: '0.65rem',
-                padding: '0.5rem',
-                border: '1px solid #e5e7eb',
-                borderRadius: '6px'
-              }}
-            >
-              Runtime modifiers: +{craftingRuntimeModifiers.levelBonus} effective level, material
-              cost x{craftingRuntimeModifiers.materialCostMultiplier.toFixed(2)}
-              {craftingRuntimeModifiers.notes.length > 0 && (
-                <div style={{marginTop: '0.3rem'}}>
-                  {craftingRuntimeModifiers.notes.join(' ')}
-                </div>
-              )}
-            </div>
-            <ul style={{listStyle: 'none', padding: 0, margin: 0}}>
-              {recipes.map((recipe) => {
-                const check = canCraftRecipe(recipe, {
-                  progress,
-                  characterLevel: Math.max(1, Math.floor(previewLevel || 1)),
-                  availableMaterials: parsedPreviewMaterials,
-                  runtime: craftingRuntimeModifiers
-                });
-                return (
-                  <li
-                    key={`preview-${recipe.id}`}
-                    style={{
-                      marginBottom: '0.5rem',
-                      paddingBottom: '0.5rem',
-                      borderBottom: '1px solid #efefef'
-                    }}
-                  >
-                    <strong>{recipe.name}</strong>{' '}
-                    <span
-                      style={{
-                        color: check.craftable ? '#166534' : '#991b1b'
-                      }}
-                    >
-                      {check.craftable ? 'craftable' : 'not craftable'}
-                    </span>
-                    <div style={{fontSize: '0.78rem', color: '#6b7280'}}>
-                      Effective level: {check.effectiveCharacterLevel}
-                      {' · '}Material multiplier: x{check.materialCostMultiplier.toFixed(2)}
-                    </div>
-                    {!check.craftable && check.reasons.length > 0 && (
-                      <div style={{fontSize: '0.82rem', color: '#6b7280'}}>
-                        {check.reasons.join(' ')}
-                      </div>
-                    )}
-                  </li>
-                );
-              })}
-            </ul>
-          </section>
-
-          <h2 style={{marginTop: '0.25rem', marginBottom: 0}}>World Systems</h2>
-          <p
+            onClick={() => setActiveTab(tab.id)}
             style={{
-              marginTop: '0.35rem',
-              marginBottom: '0.25rem',
-              fontSize: '0.82rem',
-              color: '#4b5563'
+              padding: '0.4rem 0.65rem',
+              borderRadius: '999px',
+              border: activeTab === tab.id ? '1px solid #111827' : '1px solid #d1d5db',
+              backgroundColor: activeTab === tab.id ? '#f3f4f6' : '#ffffff',
+              cursor: 'pointer'
             }}
           >
-            Step 3 of 3: tune runtime systems for effective values and balance.
-          </p>
-          {!enableWorldSystems && (
-            <section
-              style={{padding: '1rem', border: '1px solid #ddd', borderRadius: '8px'}}
-            >
-              <p style={{margin: 0, color: '#4b5563'}}>
-                Settlement and zone systems are hidden for this project. Enable
-                <strong> Settlement/Zone Systems</strong> in Settings to access them.
-              </p>
-            </section>
-          )}
-          {enableWorldSystems && (
-            <>
-              <section style={{padding: '1rem', border: '1px solid #ddd', borderRadius: '8px'}}>
-                <h2 style={{marginTop: 0}}>Zone Affinity</h2>
-            <label style={{display: 'block', marginBottom: '0.5rem'}}>
-              Zone Name
-              <input
-                type='text'
-                value={zoneName}
-                onChange={(e) => setZoneName(e.target.value)}
-                placeholder='Bee Cave'
-                style={{width: '100%'}}
-              />
-            </label>
-            <label style={{display: 'block', marginBottom: '0.5rem'}}>
-              Zone Key
-              <input
-                type='text'
-                value={zoneKey}
-                onChange={(e) => setZoneKey(e.target.value)}
-                placeholder='bee_cave'
-                style={{width: '100%'}}
-              />
-            </label>
-            <label style={{display: 'block', marginBottom: '0.75rem'}}>
-              Max Affinity Points
-              <input
-                type='number'
-                min={1}
-                value={zoneMaxPoints}
-                onChange={(e) => setZoneMaxPoints(Number(e.target.value))}
-                style={{width: '100%'}}
-              />
-            </label>
-            <button type='button' onClick={() => void handleCreateZoneProfile()}>
-              Add Zone Profile
-            </button>
-
-            <hr style={{margin: '0.9rem 0'}} />
-            <label style={{display: 'block', marginBottom: '0.5rem'}}>
-              Active Zone
-              <select
-                value={selectedZoneKey}
-                onChange={(e) => setSelectedZoneKey(e.target.value)}
-                style={{width: '100%'}}
-              >
-                <option value=''>Select zone</option>
-                {zoneProfiles.map((profile) => (
-                  <option key={profile.id} value={profile.biomeKey}>
-                    {profile.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label style={{display: 'block', marginBottom: '0.75rem'}}>
-              Exposure Minutes
-              <input
-                type='number'
-                min={1}
-                value={zoneExposureMinutes}
-                onChange={(e) => setZoneExposureMinutes(Number(e.target.value))}
-                style={{width: '100%'}}
-              />
-            </label>
-            <button
-              type='button'
-              onClick={() => void handleRecordZoneExposure()}
-              disabled={!selectedZoneKey || isRecordingZone}
-            >
-              {isRecordingZone ? 'Recording...' : 'Record Exposure'}
-            </button>
-
-            <ul style={{listStyle: 'none', padding: 0, marginTop: '0.75rem'}}>
-              {zoneProfiles.map((profile) => {
-                const progressItem = zoneProgressByKey.get(profile.biomeKey) ?? {
-                  id: '',
-                  projectId: profile.projectId,
-                  biomeKey: profile.biomeKey,
-                  affinityPoints: 0,
-                  totalExposureSeconds: 0,
-                  unlockedMilestoneIds: [],
-                  updatedAt: profile.updatedAt
-                };
-                const percent = getZoneAffinityPercent(progressItem, profile);
-                const unlocked = new Set(progressItem.unlockedMilestoneIds);
-                return (
-                  <li
-                    key={`zone-${profile.id}`}
-                    style={{
-                      marginBottom: '0.65rem',
-                      paddingBottom: '0.55rem',
-                      borderBottom: '1px solid #efefef'
-                    }}
-                  >
-                    <strong>{profile.name}</strong> ({percent.toFixed(1)}%)
-                    <div style={{fontSize: '0.82rem', color: '#6b7280'}}>
-                      Exposure: {(progressItem.totalExposureSeconds / 60).toFixed(1)} minutes
-                    </div>
-                    <div style={{fontSize: '0.82rem'}}>
-                      {profile.milestones.map((milestone) => (
-                        <div key={milestone.id}>
-                          {unlocked.has(milestone.id) ? 'Unlocked' : 'Locked'}{' '}
-                          {milestone.thresholdPercent}%: {milestone.name}
-                        </div>
-                      ))}
-                    </div>
-                  </li>
-                );
-              })}
-            </ul>
-              </section>
-
-              <section style={{padding: '1rem', border: '1px solid #ddd', borderRadius: '8px'}}>
-                <h2 style={{marginTop: 0}}>Community / Logistics</h2>
-            <p style={{marginTop: 0, fontSize: '0.85rem', color: '#6b7280'}}>
-              Shared party synergy buffs driven by role combinations. Select the
-              currently active party to preview concrete in-scene combo effects.
-            </p>
-            <div style={{fontSize: '0.85rem', marginBottom: '0.5rem'}}>
-              <strong>Active Party Members</strong>
-            </div>
-            <div style={{display: 'grid', gap: '0.35rem', marginBottom: '0.8rem'}}>
-              {characters.length === 0 ? (
-                <div style={{fontSize: '0.82rem', color: '#6b7280'}}>
-                  No characters yet. Add role-tagged characters to enable synergy.
-                </div>
-              ) : (
-                characters.map((character) => (
-                  <label
-                    key={character.id}
-                    style={{display: 'flex', alignItems: 'center', gap: '0.45rem'}}
-                  >
-                    <input
-                      type='checkbox'
-                      checked={activePartyCharacterIds.includes(character.id)}
-                      onChange={() => togglePartyCharacter(character.id)}
-                    />
-                    <span>
-                      {character.name}
-                      <span style={{fontSize: '0.8rem', color: '#6b7280'}}>
-                        {' '}
-                        ({getCharacterRole(character) || 'no role'})
-                      </span>
-                    </span>
-                  </label>
-                ))
-              )}
-            </div>
-
-            <div style={{fontSize: '0.85rem', marginBottom: '0.45rem'}}>
-              <strong>Active Combo Buffs</strong>
-            </div>
-            <ul style={{listStyle: 'none', padding: 0, marginTop: 0}}>
-              {activePartySynergies.filter((item) => item.missingRoles.length === 0)
-                .length === 0 ? (
-                <li style={{fontSize: '0.82rem', color: '#6b7280'}}>
-                  No active combos for the current party selection.
-                </li>
-              ) : (
-                activePartySynergies
-                  .filter((item) => item.missingRoles.length === 0)
-                  .map((suggestion) => (
-                    <li key={suggestion.ruleId} style={{marginBottom: '0.55rem'}}>
-                      <strong>{suggestion.ruleName}</strong>
-                      {suggestion.maxDistanceMeters ? (
-                        <span style={{fontSize: '0.8rem', color: '#6b7280'}}>
-                          {' '}
-                          ({suggestion.maxDistanceMeters}m proximity)
-                        </span>
-                      ) : null}
-                      <div style={{fontSize: '0.82rem'}}>{suggestion.effectDescription}</div>
-                      <div style={{fontSize: '0.8rem', color: '#4b5563'}}>
-                        {formatSynergyStatus(suggestion, characterById)}
-                      </div>
-                    </li>
-                  ))
-              )}
-            </ul>
-
-            <div style={{fontSize: '0.85rem', marginBottom: '0.45rem'}}>
-              <strong>Roster Opportunities</strong>
-            </div>
-            <ul style={{listStyle: 'none', padding: 0, marginTop: 0, marginBottom: 0}}>
-              {rosterSynergyOpportunities.length === 0 ? (
-                <li style={{fontSize: '0.82rem', color: '#6b7280'}}>
-                  Full roster can already satisfy all default synergy rules.
-                </li>
-              ) : (
-                rosterSynergyOpportunities.map((suggestion) => (
-                  <li key={`roster-${suggestion.ruleId}`} style={{marginBottom: '0.55rem'}}>
-                    <strong>{suggestion.ruleName}</strong>
-                    <div style={{fontSize: '0.82rem'}}>{suggestion.effectDescription}</div>
-                    <div style={{fontSize: '0.8rem', color: '#4b5563'}}>
-                      {formatSynergyStatus(suggestion, characterById)}
-                    </div>
-                    {suggestion.questPrompt && (
-                      <div style={{fontSize: '0.8rem', color: '#6b7280'}}>
-                        Prompt seed: {suggestion.questPrompt}
-                      </div>
-                    )}
-                  </li>
-                ))
-              )}
-            </ul>
-              </section>
-
-              <section style={{padding: '1rem', border: '1px solid #ddd', borderRadius: '8px'}}>
-                <h2 style={{marginTop: 0}}>Settlement Progression</h2>
-            <p style={{marginTop: 0, fontSize: '0.85rem', color: '#6b7280'}}>
-              Generalized settlement buffs. Trophies are one source type, alongside
-              structures, stations, totems, and custom modules.
-            </p>
-            <label style={{display: 'block', marginBottom: '0.5rem'}}>
-              Module Name
-              <input
-                type='text'
-                value={moduleName}
-                onChange={(e) => setModuleName(e.target.value)}
-                placeholder='Cave Worm Trophy'
-                style={{width: '100%'}}
-              />
-            </label>
-            <label style={{display: 'block', marginBottom: '0.5rem'}}>
-              Source Type
-              <select
-                value={moduleSourceType}
-                onChange={(e) =>
-                  setModuleSourceType(e.target.value as SettlementModule['sourceType'])
-                }
-                style={{width: '100%'}}
-              >
-                {SETTLEMENT_SOURCE_OPTIONS.map((option) => (
-                  <option key={option} value={option}>
-                    {option}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem'}}>
-              <label style={{display: 'block', marginBottom: '0.5rem'}}>
-                Target Type
-                <select
-                  value={moduleTargetType}
-                  onChange={(e) =>
-                    setModuleTargetType(
-                      e.target.value as SettlementModule['effects'][number]['targetType']
-                    )
-                  }
-                  style={{width: '100%'}}
-                >
-                  {SETTLEMENT_EFFECT_TARGET_OPTIONS.map((option) => (
-                    <option key={option} value={option}>
-                      {option}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label style={{display: 'block', marginBottom: '0.5rem'}}>
-                Target ID
-                <input
-                  type='text'
-                  value={moduleTargetId}
-                  onChange={(e) => setModuleTargetId(e.target.value)}
-                  placeholder='poison'
-                  style={{width: '100%'}}
-                />
-              </label>
-            </div>
-            <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem'}}>
-              <label style={{display: 'block', marginBottom: '0.75rem'}}>
-                Operation
-                <select
-                  value={moduleOperation}
-                  onChange={(e) =>
-                    setModuleOperation(
-                      e.target.value as SettlementModule['effects'][number]['operation']
-                    )
-                  }
-                  style={{width: '100%'}}
-                >
-                  {SETTLEMENT_EFFECT_OPERATION_OPTIONS.map((option) => (
-                    <option key={option} value={option}>
-                      {option}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label style={{display: 'block', marginBottom: '0.75rem'}}>
-                Value
-                <input
-                  type='text'
-                  value={moduleValue}
-                  onChange={(e) => setModuleValue(e.target.value)}
-                  placeholder='5'
-                  style={{width: '100%'}}
-                />
-              </label>
-            </div>
-            <button
-              type='button'
-              onClick={() => void handleAddSettlementModule()}
-              disabled={isSavingModule || !settlementState || !moduleName.trim()}
-            >
-              {isSavingModule ? 'Adding...' : 'Add Settlement Module'}
-            </button>
-
-            <hr style={{margin: '0.9rem 0'}} />
-            <div style={{fontSize: '0.85rem', marginBottom: '0.5rem'}}>
-              <strong>Settlement Tier Level:</strong> {settlementState?.fortressLevel ?? 1}
-            </div>
-            <div style={{display: 'flex', gap: '0.5rem', marginBottom: '0.65rem'}}>
-              <button
-                type='button'
-                onClick={() => void handleAdjustFortressLevel(-1)}
-                disabled={!settlementState || settlementState.fortressLevel <= 1 || isSavingFortress}
-              >
-                - Tier
-              </button>
-              <button
-                type='button'
-                onClick={() => void handleAdjustFortressLevel(1)}
-                disabled={!settlementState || isSavingFortress}
-              >
-                + Tier
-              </button>
-            </div>
-            <div style={{fontSize: '0.82rem', color: '#4b5563', marginBottom: '0.6rem'}}>
-              {nextFortressTier
-                ? `Next tier at level ${nextFortressTier.levelRequired}: ${nextFortressTier.name}`
-                : 'All configured settlement tiers unlocked.'}
-            </div>
-            <div style={{fontSize: '0.85rem', marginBottom: '0.35rem'}}>
-              <strong>Base Stats</strong>
-            </div>
-            {settlementState && (
-              <div
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: '1fr 1fr',
-                  gap: '0.45rem',
-                  marginBottom: '0.65rem'
-                }}
-              >
-                {BASE_STAT_KEYS.map((key) => (
-                  <label key={`base-${key}`} style={{fontSize: '0.82rem'}}>
-                    {key}
-                    <input
-                      type='number'
-                      min={BASE_STAT_LIMITS[key].min}
-                      max={BASE_STAT_LIMITS[key].max}
-                      step={1}
-                      value={baseStatsDraft[key]}
-                      onChange={(e) => handleBaseStatDraftChange(key, e.target.value)}
-                      style={{width: '100%'}}
-                    />
-                  </label>
-                ))}
-              </div>
-            )}
-            <div style={{display: 'flex', gap: '0.45rem', marginBottom: '0.7rem'}}>
-              <button
-                type='button'
-                onClick={() => void handleSaveBaseStats()}
-                disabled={!settlementState || !isBaseStatsDraftDirty || isSavingFortress}
-              >
-                {isSavingFortress ? 'Saving...' : 'Save Base Stats'}
-              </button>
-              <button
-                type='button'
-                onClick={() =>
-                  settlementState && setBaseStatsDraft(toBaseStatsDraft(settlementState.baseStats))
-                }
-                disabled={!settlementState || !isBaseStatsDraftDirty || isSavingFortress}
-              >
-                Reset
-              </button>
-            </div>
-            <div style={{fontSize: '0.85rem', marginBottom: '0.5rem'}}>
-              <strong>Settlement Tier Effects:</strong>{' '}
-              {settlementComputedEffects.fortressEffects.length}
-            </div>
-            <ul style={{listStyle: 'none', padding: 0, margin: 0}}>
-              {settlementComputedEffects.fortressEffects.length === 0 ? (
-                <li style={{fontSize: '0.82rem', color: '#6b7280'}}>
-                  No tier effects unlocked yet.
-                </li>
-              ) : (
-                settlementComputedEffects.fortressEffects.map((effect, index) => (
-                  <li
-                    key={`tier-effect-${effect.targetType}-${effect.targetId}-${index}`}
-                    style={{marginBottom: '0.35rem'}}
-                  >
-                    {formatSettlementEffectLabel(effect)}
-                  </li>
-                ))
-              )}
-            </ul>
-            <div style={{fontSize: '0.85rem', marginTop: '0.65rem', marginBottom: '0.5rem'}}>
-              <strong>Active Aura Effects:</strong> {activeSettlementEffects.length}
-            </div>
-            <ul style={{listStyle: 'none', padding: 0, margin: 0}}>
-              {activeSettlementEffects.length === 0 ? (
-                <li style={{fontSize: '0.82rem', color: '#6b7280'}}>
-                  No active module effects yet.
-                </li>
-              ) : (
-                activeSettlementEffects.map((effect, index) => (
-                  <li
-                    key={`active-effect-${effect.targetType}-${effect.targetId}-${index}`}
-                    style={{marginBottom: '0.35rem'}}
-                  >
-                    {formatSettlementEffectLabel(effect)}
-                  </li>
-                ))
-              )}
-            </ul>
-            <div style={{fontSize: '0.85rem', marginTop: '0.65rem', marginBottom: '0.5rem'}}>
-              <strong>Total Active Effects:</strong> {settlementComputedEffects.allEffects.length}
-            </div>
-            <div style={{fontSize: '0.82rem', color: '#4b5563', marginBottom: '0.65rem'}}>
-              Includes settlement progression + aura modules.
-            </div>
-            <div style={{fontSize: '0.85rem', marginBottom: '0.35rem'}}>
-              <strong>Unlocked Settlement Tiers</strong>
-            </div>
-            <ul style={{listStyle: 'none', padding: 0, margin: 0}}>
-              {unlockedFortressTiers.length === 0 ? (
-                <li style={{fontSize: '0.82rem', color: '#6b7280'}}>None yet.</li>
-              ) : (
-                unlockedFortressTiers.map((tier) => (
-                  <li key={tier.id} style={{marginBottom: '0.45rem'}}>
-                    <strong>
-                      L{tier.levelRequired} {tier.name}
-                    </strong>
-                    {tier.description && (
-                      <div style={{fontSize: '0.8rem', color: '#6b7280'}}>
-                        {tier.description}
-                      </div>
-                    )}
-                  </li>
-                ))
-              )}
-            </ul>
-            <div style={{fontSize: '0.82rem', marginTop: '0.75rem'}}>
-              <strong>Installed Modules:</strong>
-            </div>
-            <ul style={{listStyle: 'none', padding: 0, marginTop: '0.35rem', marginBottom: 0}}>
-              {settlementModules.length === 0 ? (
-                <li style={{fontSize: '0.82rem', color: '#6b7280'}}>
-                  No modules installed.
-                </li>
-              ) : (
-                settlementModules.map((module) => (
-                  <li key={module.id} style={{marginBottom: '0.45rem'}}>
-                    <strong>{module.name}</strong>{' '}
-                    <span style={{fontSize: '0.8rem', color: '#6b7280'}}>
-                      [{module.sourceType}]
-                    </span>
-                    {module.effects.map((effect, effectIndex) => (
-                      <div
-                        key={`${module.id}-effect-${effectIndex}`}
-                        style={{fontSize: '0.8rem', color: '#4b5563'}}
-                      >
-                        {formatSettlementEffectLabel(effect)}
-                      </div>
-                    ))}
-                  </li>
-                ))
-              )}
-            </ul>
-              </section>
-            </>
-          )}
-
-          <section style={{padding: '1rem', border: '1px solid #ddd', borderRadius: '8px'}}>
-            <h2 style={{marginTop: 0}}>Milestones</h2>
-            <label style={{display: 'block', marginBottom: '0.5rem'}}>
-              Name
-              <input
-                type='text'
-                value={milestoneName}
-                onChange={(e) => setMilestoneName(e.target.value)}
-                style={{width: '100%'}}
-              />
-            </label>
-            <label style={{display: 'block', marginBottom: '0.5rem'}}>
-              Points Required
-              <input
-                type='number'
-                min={0}
-                value={milestonePoints}
-                onChange={(e) => setMilestonePoints(Number(e.target.value))}
-                style={{width: '100%'}}
-              />
-            </label>
-            <label style={{display: 'block', marginBottom: '0.5rem'}}>
-              Description
-              <input
-                type='text'
-                value={milestoneDescription}
-                onChange={(e) => setMilestoneDescription(e.target.value)}
-                style={{width: '100%'}}
-              />
-            </label>
-            <label style={{display: 'block', marginBottom: '0.75rem'}}>
-              Unlock Recipe IDs (comma-separated)
-              <input
-                type='text'
-                value={milestoneRecipeIds}
-                onChange={(e) => setMilestoneRecipeIds(e.target.value)}
-                style={{width: '100%'}}
-              />
-            </label>
-            <button type='button' onClick={() => void handleCreateMilestone()}>
-              Add Milestone
-            </button>
-            <ul style={{listStyle: 'none', padding: 0, marginTop: '0.75rem'}}>
-              {milestones.map((milestone) => (
-                <li key={milestone.id} style={{marginBottom: '0.35rem'}}>
-                  {unlockedMilestoneSet.has(milestone.id) ? 'Unlocked' : 'Locked'}:{' '}
-                  {milestone.name} ({milestone.pointsRequired} pts)
-                </li>
-              ))}
-            </ul>
-          </section>
-        </div>
+            {tab.label}
+          </button>
+        ))}
       </div>
-
-      <section style={{marginTop: '1rem', padding: '1rem', border: '1px solid #ddd', borderRadius: '8px'}}>
-        <h2 style={{marginTop: 0}}>Recent Actions</h2>
-        {logs.length === 0 ? (
-          <p>No actions logged yet.</p>
+      <div style={{fontSize: '0.9rem', color: '#4b5563', marginBottom: '0.5rem'}}>
+        {currentTab.subtitle}
+      </div>
+      <section
+        style={{
+          marginBottom: '0.85rem',
+          padding: '0.75rem 0.85rem',
+          border: '1px solid #e5e7eb',
+          borderRadius: '8px',
+          backgroundColor: '#f9fafb'
+        }}
+      >
+        <h2 style={{marginTop: 0, marginBottom: '0.45rem', fontSize: '1rem'}}>
+          Next Steps For {currentTab.label}
+        </h2>
+        {activeTab !== 'overview' && activeTabTotalCount > 0 && (
+          <p style={{marginTop: 0, marginBottom: '0.55rem', fontSize: '0.82rem', color: '#6b7280'}}>
+            Completed in this section: {activeTabDoneCount}/{activeTabTotalCount}
+          </p>
+        )}
+        {tabAwareNextSteps.length === 0 ? (
+          <p style={{margin: 0, fontSize: '0.88rem', color: '#374151'}}>
+            This section is in good shape. Move to another tab for additional setup.
+          </p>
         ) : (
-          <ul style={{listStyle: 'none', padding: 0, margin: 0}}>
-            {logs.slice(0, 12).map((log) => (
-              <li key={log.id} style={{marginBottom: '0.35rem'}}>
-                {(() => {
-                  const entry = entryById.get(log.entryId);
-                  const actionLabel =
-                    entry?.actions.find((action) => action.id === log.actionId)
-                      ?.label ?? log.actionId;
-                  const entryLabel = entry?.name ?? log.entryId;
-                  return (
-                    <>
-                      +{log.pointsAwarded} pts · {entryLabel} · {actionLabel} ·{' '}
-                      {new Date(log.createdAt).toLocaleString()}
-                    </>
-                  );
-                })()}
+          <ul style={{listStyle: 'none', margin: 0, padding: 0}}>
+            {tabAwareNextSteps.slice(0, 3).map((item) => (
+              <li key={`tab-next-${item.id}`} style={{marginBottom: '0.35rem'}}>
+                Next: {item.label}
+                {activeTab === 'overview' && (
+                  <>
+                    {' '}
+                    <button
+                      type='button'
+                      onClick={() => openTabWithSmartDefaults(item.tab, item.id)}
+                    >
+                      Open {COMPENDIUM_TABS.find((tab) => tab.id === item.tab)?.label}
+                    </button>
+                  </>
+                )}
               </li>
             ))}
           </ul>
         )}
       </section>
+      <div style={{display: 'flex', gap: '0.4rem', flexWrap: 'wrap', marginBottom: '1rem'}}>
+        <span
+          style={{
+            fontSize: '0.75rem',
+            border: '1px solid #d1d5db',
+            borderRadius: '999px',
+            padding: '0.15rem 0.45rem'
+          }}
+        >
+          Game Systems: {enableGameSystems ? 'On' : 'Off'}
+        </span>
+        <span
+          style={{
+            fontSize: '0.75rem',
+            border: '1px solid #d1d5db',
+            borderRadius: '999px',
+            padding: '0.15rem 0.45rem'
+          }}
+        >
+          Runtime Modifiers: {enableRuntimeModifiers ? 'On' : 'Off'}
+        </span>
+      </div>
+
+      {activeTab === 'overview' && <CompendiumOverviewSection />}
+      {activeTab === 'entries' && <CompendiumEntriesSection />}
+      {activeTab === 'progression' && <CompendiumProgressionSection />}
+      {activeTab === 'world-systems' && <CompendiumWorldSystemsSection />}
     </section>
   );
 }
