@@ -301,6 +301,8 @@ describe('Post-merge smoke checklist', () => {
   });
 
   it('inserts rendered character status blocks into the scene editor', () => {
+    cy.visit('/settings');
+    setProjectMode('general');
     cy.visit('/workspace');
 
     cy.contains('button', 'Insert Status Block').click();
@@ -322,6 +324,8 @@ describe('Post-merge smoke checklist', () => {
   });
 
   it('inserts template tokens and refreshes them into live stat blocks', () => {
+    cy.visit('/settings');
+    setProjectMode('general');
     cy.visit('/workspace');
 
     cy.contains('button', 'Insert Status Block').click();
