@@ -34,7 +34,11 @@ import {
 import {createEditorConfigWithStyles} from '../config/editorConfig';
 import type {EditorConfig} from '../config/editorConfig';
 import {countWords, htmlToPlainText} from '../utils/textHelpers';
-import {exportScenesAsDocx, exportScenesAsMarkdown} from '../utils/sceneExport';
+import {
+  exportScenesAsDocx,
+  exportScenesAsEpub,
+  exportScenesAsMarkdown
+} from '../utils/sceneExport';
 import {EditorWithAI} from '../components/Editor/EditorWithAI';
 import {ShodhMemoryPanel} from '../components/ShodhMemoryPanel';
 import type {RAGProvider} from '../services/rag/RAGService';
@@ -94,7 +98,7 @@ interface WorkspaceRouteProps {
 
 type SaveStatus = 'idle' | 'saving' | 'saved';
 type FeedbackTone = 'success' | 'error';
-type ExportFormat = 'markdown' | 'docx';
+type ExportFormat = 'markdown' | 'docx' | 'epub';
 
 interface SceneExportItem {
   id: string;
@@ -846,8 +850,13 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
         projectName: activeProject.name,
         scenes: selectedScenes
       });
-    } else {
+    } else if (exportFormat === 'docx') {
       exportScenesAsDocx({
+        projectName: activeProject.name,
+        scenes: selectedScenes
+      });
+    } else {
+      exportScenesAsEpub({
         projectName: activeProject.name,
         scenes: selectedScenes
       });
@@ -859,7 +868,9 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
       message:
         exportFormat === 'markdown'
           ? `Exported ${selectedScenes.length} scene(s) to Markdown.`
-          : `Exported ${selectedScenes.length} scene(s) to DOCX.`
+          : exportFormat === 'docx'
+            ? `Exported ${selectedScenes.length} scene(s) to DOCX.`
+            : `Exported ${selectedScenes.length} scene(s) to EPUB.`
     });
   };
 
@@ -1710,6 +1721,14 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
             >
               Export DOCX
             </button>
+            <button
+              type='button'
+              onClick={() => openExportModal('epub')}
+              disabled={documents.length === 0}
+              style={{marginLeft: '0.5rem'}}
+            >
+              Export EPUB
+            </button>
             <input
               ref={importInputRef}
               type='file'
@@ -2111,7 +2130,12 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
             }}
           >
             <h3 style={{margin: 0}}>
-              Export scenes as {exportFormat === 'markdown' ? 'Markdown' : 'DOCX'}
+              Export scenes as{' '}
+              {exportFormat === 'markdown'
+                ? 'Markdown'
+                : exportFormat === 'docx'
+                  ? 'DOCX'
+                  : 'EPUB'}
             </h3>
             <p style={{margin: 0}}>
               Choose which scenes to export and adjust their order for the final file.
