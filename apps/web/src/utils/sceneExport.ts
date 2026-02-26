@@ -223,6 +223,137 @@ export function buildScenesDocx(params: {
   ]);
 }
 
+function sanitizeId(value: string): string {
+  const cleaned = value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9-_]+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '');
+  return cleaned || 'item';
+}
+
+function buildSceneChapterXhtml(scene: WritingDocument, index: number): string {
+  const title = scene.title.trim() || `Untitled scene ${index + 1}`;
+  const blocks = sceneTextBlocks(scene);
+  const body =
+    blocks.length === 0
+      ? '<p>No content.</p>'
+      : blocks
+          .map((block) => `<p>${escapeXml(block).replace(/\n/g, '<br />')}</p>`)
+          .join('');
+  return (
+    '<?xml version="1.0" encoding="utf-8"?>' +
+    '<html xmlns="http://www.w3.org/1999/xhtml" lang="en">' +
+    '<head>' +
+    `<title>${escapeXml(title)}</title>` +
+    '<meta charset="utf-8"/>' +
+    '<link rel="stylesheet" type="text/css" href="../styles/book.css"/>' +
+    '</head>' +
+    `<body><h1>${escapeXml(`${index + 1}. ${title}`)}</h1>${body}</body>` +
+    '</html>'
+  );
+}
+
+export function buildScenesEpub(params: {
+  projectName: string;
+  scenes: WritingDocument[];
+}): Uint8Array {
+  const encoder = new TextEncoder();
+  const bookId = `urn:uuid:${crypto.randomUUID()}`;
+  const modifiedIso = new Date().toISOString().replace(/\.\d{3}Z$/, 'Z');
+  const escapedProjectName = escapeXml(params.projectName);
+
+  const chapterEntries = params.scenes.map((scene, index) => {
+    const sceneBase = sanitizeId(scene.title || `scene-${index + 1}`);
+    const chapterFile = `text/${String(index + 1).padStart(3, '0')}-${sceneBase}.xhtml`;
+    const chapterId = `chapter-${index + 1}`;
+    const navLabel = scene.title.trim() || `Untitled scene ${index + 1}`;
+    return {
+      chapterFile,
+      chapterId,
+      navLabel,
+      chapterXml: buildSceneChapterXhtml(scene, index)
+    };
+  });
+
+  const manifestItems = [
+    '<item id="nav" href="nav.xhtml" media-type="application/xhtml+xml" properties="nav"/>',
+    '<item id="style" href="styles/book.css" media-type="text/css"/>',
+    ...chapterEntries.map(
+      (chapter) =>
+        `<item id="${chapter.chapterId}" href="${chapter.chapterFile}" media-type="application/xhtml+xml"/>`
+    )
+  ].join('');
+
+  const spineItems = chapterEntries
+    .map((chapter) => `<itemref idref="${chapter.chapterId}"/>`)
+    .join('');
+
+  const navPoints = chapterEntries
+    .map(
+      (chapter, index) =>
+        `<li><a href="${chapter.chapterFile}">${escapeXml(
+          `${index + 1}. ${chapter.navLabel}`
+        )}</a></li>`
+    )
+    .join('');
+
+  const packageOpf =
+    '<?xml version="1.0" encoding="utf-8"?>' +
+    '<package xmlns="http://www.idpf.org/2007/opf" version="3.0" unique-identifier="bookid">' +
+    '<metadata xmlns:dc="http://purl.org/dc/elements/1.1/">' +
+    `<dc:identifier id="bookid">${escapeXml(bookId)}</dc:identifier>` +
+    `<dc:title>${escapedProjectName} Scene Export</dc:title>` +
+    '<dc:creator>Worldbuilding Desk</dc:creator>' +
+    '<dc:language>en</dc:language>' +
+    `<meta property="dcterms:modified">${modifiedIso}</meta>` +
+    '</metadata>' +
+    `<manifest>${manifestItems}</manifest>` +
+    `<spine>${spineItems}</spine>` +
+    '</package>';
+
+  const navXhtml =
+    '<?xml version="1.0" encoding="utf-8"?>' +
+    '<html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops" lang="en">' +
+    '<head><meta charset="utf-8"/>' +
+    `<title>${escapedProjectName} Table of Contents</title>` +
+    '<link rel="stylesheet" type="text/css" href="styles/book.css"/>' +
+    '</head>' +
+    '<body>' +
+    '<nav epub:type="toc" id="toc">' +
+    '<h1>Table of Contents</h1>' +
+    `<ol>${navPoints}</ol>` +
+    '</nav>' +
+    '</body>' +
+    '</html>';
+
+  const containerXml =
+    '<?xml version="1.0" encoding="UTF-8"?>' +
+    '<container version="1.0" xmlns="urn:oasis:names:tc:opendocument:xmlns:container">' +
+    '<rootfiles>' +
+    '<rootfile full-path="OEBPS/content.opf" media-type="application/oebps-package+xml"/>' +
+    '</rootfiles>' +
+    '</container>';
+
+  const stylesheet =
+    'body{font-family:serif;line-height:1.5;margin:5%;}' +
+    'h1{font-size:1.5em;margin:0 0 1em;}' +
+    'p{margin:0 0 1em;white-space:pre-wrap;}';
+
+  return buildZip([
+    {fileName: 'mimetype', fileData: encoder.encode('application/epub+zip')},
+    {fileName: 'META-INF/container.xml', fileData: encoder.encode(containerXml)},
+    {fileName: 'OEBPS/content.opf', fileData: encoder.encode(packageOpf)},
+    {fileName: 'OEBPS/nav.xhtml', fileData: encoder.encode(navXhtml)},
+    {fileName: 'OEBPS/styles/book.css', fileData: encoder.encode(stylesheet)},
+    ...chapterEntries.map((chapter) => ({
+      fileName: `OEBPS/${chapter.chapterFile}`,
+      fileData: encoder.encode(chapter.chapterXml)
+    }))
+  ]);
+}
+
 export function exportScenesAsMarkdown(params: {
   projectName: string;
   scenes: WritingDocument[];
@@ -246,4 +377,14 @@ export function exportScenesAsDocx(params: {
     bytes,
     'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
   );
+}
+
+export function exportScenesAsEpub(params: {
+  projectName: string;
+  scenes: WritingDocument[];
+}): void {
+  const bytes = buildScenesEpub(params);
+  const stamp = new Date().toISOString().slice(0, 10);
+  const fileName = `${sanitizeFileNamePart(params.projectName)}-scenes-${stamp}.epub`;
+  downloadBlob(fileName, bytes, 'application/epub+zip');
 }
