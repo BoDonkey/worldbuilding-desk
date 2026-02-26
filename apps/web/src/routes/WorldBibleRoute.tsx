@@ -1,5 +1,6 @@
 import {useEffect, useState, useCallback, useRef, useMemo} from 'react';
 import type {ChangeEvent, FormEvent} from 'react';
+import {useLocation} from 'react-router-dom';
 import type {EntityCategory, Project, WorldEntity} from '../entityTypes';
 import {getEntitiesByProject, saveEntity, deleteEntity} from '../entityStorage';
 import {
@@ -278,6 +279,7 @@ const triggerJsonDownload = (fileName: string, data: unknown): void => {
 };
 
 function WorldBibleRoute({activeProject}: WorldBibleRouteProps) {
+  const location = useLocation();
   const [categories, setCategories] = useState<EntityCategory[]>([]);
   const [activeTab, setActiveTab] = useState<string | null>(null);
   const [entities, setEntities] = useState<WorldEntity[]>([]);
@@ -323,6 +325,7 @@ function WorldBibleRoute({activeProject}: WorldBibleRouteProps) {
   );
   const importInputRef = useRef<HTMLInputElement | null>(null);
   const jsonImportInputRef = useRef<HTMLInputElement | null>(null);
+  const focusedEntityKeyRef = useRef<string | null>(null);
   const refreshMemories = useCallback(async () => {
     if (!shodhService) {
       setMemories([]);
@@ -620,11 +623,26 @@ function WorldBibleRoute({activeProject}: WorldBibleRouteProps) {
     }
   };
 
-  const handleEdit = (entity: WorldEntity) => {
+  const handleEdit = useCallback((entity: WorldEntity) => {
     setEditingId(entity.id);
     setName(entity.name);
     setFieldValues(entity.fields as Record<string, string>);
-  };
+  }, []);
+
+  useEffect(() => {
+    const state = location.state as {focusEntityId?: string} | null;
+    const focusEntityId = state?.focusEntityId;
+    if (!focusEntityId) return;
+    const focusKey = `${location.key}:${focusEntityId}`;
+    if (focusedEntityKeyRef.current === focusKey) {
+      return;
+    }
+    const target = entities.find((entity) => entity.id === focusEntityId);
+    if (!target) return;
+    setActiveTab(target.categoryId);
+    handleEdit(target);
+    focusedEntityKeyRef.current = focusKey;
+  }, [entities, handleEdit, location.key, location.state]);
 
   const handleImportEntities = async (event: ChangeEvent<HTMLInputElement>) => {
     if (!activeProject || !activeCategory) return;
