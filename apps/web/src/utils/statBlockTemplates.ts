@@ -4,6 +4,8 @@ export interface ParsedStatBlockToken {
   sourceType: StatBlockSourceType;
   sourceRef: string;
   style: StatBlockStyle;
+  selectedStatIds?: string[];
+  selectedResourceIds?: string[];
 }
 
 export interface CharacterStatEntry {
@@ -36,7 +38,62 @@ export interface ItemStatBlockInput {
   fields: Array<{key: string; value: string}>;
 }
 
-const TOKEN_REGEX = /\{\{STAT_BLOCK:(character|item):([^}]+):(full|buffs|compact)\}\}/g;
+const TOKEN_REGEX =
+  /\{\{STAT_BLOCK:(character|item):([^}:]+):(full|buffs|compact)(?::([^}]+))?\}\}/g;
+
+function encodeSelectionIds(ids: string[] | undefined): string {
+  if (!ids || ids.length === 0) return '';
+  return ids.map((id) => encodeURIComponent(id)).join(',');
+}
+
+function decodeSelectionIds(value: string): string[] {
+  if (!value.trim()) return [];
+  return value
+    .split(',')
+    .map((entry) => entry.trim())
+    .filter(Boolean)
+    .map((entry) => {
+      try {
+        return decodeURIComponent(entry);
+      } catch {
+        return entry;
+      }
+    });
+}
+
+function parseSelectionSegment(
+  segment: string | undefined
+): {selectedStatIds?: string[]; selectedResourceIds?: string[]} {
+  if (!segment) return {};
+  const parsed = segment.split(';').reduce(
+    (acc, part) => {
+      const [rawKey, ...rest] = part.split('=');
+      const key = rawKey?.trim();
+      const value = rest.join('=').trim();
+      if (!key) return acc;
+      if (key === 's') {
+        acc.selectedStatIds = decodeSelectionIds(value);
+      } else if (key === 'r') {
+        acc.selectedResourceIds = decodeSelectionIds(value);
+      }
+      return acc;
+    },
+    {} as {selectedStatIds?: string[]; selectedResourceIds?: string[]}
+  );
+  return parsed;
+}
+
+function buildSelectionSegment(params: ParsedStatBlockToken): string | null {
+  if (
+    params.sourceType !== 'character' ||
+    (!params.selectedStatIds && !params.selectedResourceIds)
+  ) {
+    return null;
+  }
+  const statPart = `s=${encodeSelectionIds(params.selectedStatIds)}`;
+  const resourcePart = `r=${encodeSelectionIds(params.selectedResourceIds)}`;
+  return `${statPart};${resourcePart}`;
+}
 
 function escapeHtml(text: string): string {
   return text
@@ -88,18 +145,23 @@ export function formatEntityFieldValue(value: unknown): string {
 }
 
 export function createStatBlockToken(params: ParsedStatBlockToken): string {
-  return `{{STAT_BLOCK:${params.sourceType}:${params.sourceRef}:${params.style}}}`;
+  const selectionSegment = buildSelectionSegment(params);
+  return selectionSegment
+    ? `{{STAT_BLOCK:${params.sourceType}:${params.sourceRef}:${params.style}:${selectionSegment}}}`
+    : `{{STAT_BLOCK:${params.sourceType}:${params.sourceRef}:${params.style}}}`;
 }
 
 export function parseStatBlockToken(token: string): ParsedStatBlockToken | null {
   const match = token.trim().match(
-    /^\{\{STAT_BLOCK:(character|item):([^}]+):(full|buffs|compact)\}\}$/
+    /^\{\{STAT_BLOCK:(character|item):([^}:]+):(full|buffs|compact)(?::([^}]+))?\}\}$/
   );
   if (!match) return null;
+  const selection = parseSelectionSegment(match[4]);
   return {
     sourceType: match[1] as StatBlockSourceType,
     sourceRef: match[2],
-    style: match[3] as StatBlockStyle
+    style: match[3] as StatBlockStyle,
+    ...selection
   };
 }
 
@@ -111,11 +173,12 @@ export function replaceStatBlockTokensInHtml(
   let replacedCount = 0;
   const updatedHtml = html.replace(
     TOKEN_REGEX,
-    (_match, sourceType: string, sourceRef: string, style: string) => {
+    (_match, sourceType: string, sourceRef: string, style: string, selection: string) => {
       const resolved = resolver({
         sourceType: sourceType as StatBlockSourceType,
         sourceRef,
-        style: style as StatBlockStyle
+        style: style as StatBlockStyle,
+        ...parseSelectionSegment(selection)
       });
       if (!resolved) {
         return _match;

@@ -90,11 +90,24 @@ export interface ProjectFeatureToggles {
 export type StatBlockSourceType = 'character' | 'item';
 export type StatBlockStyle = 'full' | 'buffs' | 'compact';
 export type StatBlockInsertMode = 'block' | 'template';
+export type StatBlockScopePreset = 'all' | 'stats' | 'resources' | 'custom';
+
+export interface StatBlockGroup {
+  id: string;
+  name: string;
+  statIds: string[];
+  resourceIds: string[];
+}
 
 export interface StatBlockPreferences {
   sourceType: StatBlockSourceType;
   style: StatBlockStyle;
   insertMode: StatBlockInsertMode;
+  scopePreset?: StatBlockScopePreset;
+  selectedGroupId?: string;
+  selectedStatIds?: string[];
+  selectedResourceIds?: string[];
+  groups?: StatBlockGroup[];
 }
 
 export interface ProjectSettings {
