@@ -7,7 +7,9 @@ import type {
   EntityCategory,
   Project,
   ProjectSettings,
+  StatBlockGroup,
   StatBlockInsertMode,
+  StatBlockScopePreset,
   StatBlockSourceType,
   StatBlockStyle,
   StoredRuleset,
@@ -155,6 +157,13 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
   const [statBlockStyle, setStatBlockStyle] = useState<StatBlockStyle>('full');
   const [statBlockInsertMode, setStatBlockInsertMode] =
     useState<StatBlockInsertMode>('block');
+  const [statBlockScopePreset, setStatBlockScopePreset] =
+    useState<StatBlockScopePreset>('all');
+  const [selectedStatGroupId, setSelectedStatGroupId] = useState('');
+  const [selectedStatIds, setSelectedStatIds] = useState<string[]>([]);
+  const [selectedResourceIds, setSelectedResourceIds] = useState<string[]>([]);
+  const [statBlockGroups, setStatBlockGroups] = useState<StatBlockGroup[]>([]);
+  const [newStatGroupName, setNewStatGroupName] = useState('');
   const [selectedStatCharacterId, setSelectedStatCharacterId] = useState('');
   const [selectedStatEntityId, setSelectedStatEntityId] = useState('');
   const [statBlockInsertContent, setStatBlockInsertContent] = useState<string | null>(null);
@@ -393,6 +402,12 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
       setStatBlockSourceType('character');
       setStatBlockStyle('full');
       setStatBlockInsertMode('block');
+      setStatBlockScopePreset('all');
+      setSelectedStatGroupId('');
+      setSelectedStatIds([]);
+      setSelectedResourceIds([]);
+      setStatBlockGroups([]);
+      setNewStatGroupName('');
       setStatPreferencesHydrated(false);
       return;
     }
@@ -430,6 +445,17 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
       setStatBlockInsertMode(
         settings.statBlockPreferences?.insertMode ?? 'block'
       );
+      setStatBlockScopePreset(
+        settings.statBlockPreferences?.scopePreset ?? 'all'
+      );
+      setSelectedStatGroupId(
+        settings.statBlockPreferences?.selectedGroupId ?? ''
+      );
+      setSelectedStatIds(settings.statBlockPreferences?.selectedStatIds ?? []);
+      setSelectedResourceIds(
+        settings.statBlockPreferences?.selectedResourceIds ?? []
+      );
+      setStatBlockGroups(settings.statBlockPreferences?.groups ?? []);
       setEntities(loadedEntities);
       setCharacters(loadedCharacters);
       setCharacterSheets(loadedSheets);
@@ -541,10 +567,23 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
       return;
     }
     const currentPrefs = projectSettings.statBlockPreferences;
+    const currentGroupsJson = JSON.stringify(currentPrefs?.groups ?? []);
+    const nextGroupsJson = JSON.stringify(statBlockGroups);
+    const currentStatIdsJson = JSON.stringify(currentPrefs?.selectedStatIds ?? []);
+    const nextStatIdsJson = JSON.stringify(selectedStatIds);
+    const currentResourceIdsJson = JSON.stringify(
+      currentPrefs?.selectedResourceIds ?? []
+    );
+    const nextResourceIdsJson = JSON.stringify(selectedResourceIds);
     if (
       currentPrefs?.sourceType === statBlockSourceType &&
       currentPrefs?.style === statBlockStyle &&
-      currentPrefs?.insertMode === statBlockInsertMode
+      currentPrefs?.insertMode === statBlockInsertMode &&
+      currentPrefs?.scopePreset === statBlockScopePreset &&
+      (currentPrefs?.selectedGroupId ?? '') === selectedStatGroupId &&
+      currentGroupsJson === nextGroupsJson &&
+      currentStatIdsJson === nextStatIdsJson &&
+      currentResourceIdsJson === nextResourceIdsJson
     ) {
       return;
     }
@@ -553,7 +592,12 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
       statBlockPreferences: {
         sourceType: statBlockSourceType,
         style: statBlockStyle,
-        insertMode: statBlockInsertMode
+        insertMode: statBlockInsertMode,
+        scopePreset: statBlockScopePreset,
+        selectedGroupId: selectedStatGroupId,
+        selectedStatIds: [...selectedStatIds],
+        selectedResourceIds: [...selectedResourceIds],
+        groups: statBlockGroups
       },
       updatedAt: Date.now()
     };
@@ -565,6 +609,11 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
     statBlockSourceType,
     statBlockStyle,
     statBlockInsertMode,
+    statBlockScopePreset,
+    selectedStatGroupId,
+    selectedStatIds,
+    selectedResourceIds,
+    statBlockGroups,
     isStatPreferencesHydrated
   ]);
 
@@ -1262,9 +1311,99 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
   const selectedEntity =
     entities.find((entity) => entity.id === selectedStatEntityId) ?? null;
   const activeProjectMode = projectSettings?.projectMode ?? 'litrpg';
+  const availableStatIds = useMemo(
+    () => (selectedSheet ? selectedSheet.stats.map((stat) => stat.definitionId) : []),
+    [selectedSheet]
+  );
+  const availableResourceIds = useMemo(
+    () =>
+      selectedSheet
+        ? selectedSheet.resources.map((resource) => resource.definitionId)
+        : [],
+    [selectedSheet]
+  );
+  const availableStatIdSet = useMemo(
+    () => new Set(availableStatIds),
+    [availableStatIds]
+  );
+  const availableResourceIdSet = useMemo(
+    () => new Set(availableResourceIds),
+    [availableResourceIds]
+  );
+
+  useEffect(() => {
+    setSelectedStatIds((prev) => prev.filter((id) => availableStatIdSet.has(id)));
+  }, [availableStatIdSet]);
+
+  useEffect(() => {
+    setSelectedResourceIds((prev) =>
+      prev.filter((id) => availableResourceIdSet.has(id))
+    );
+  }, [availableResourceIdSet]);
+
+  const selectedStatGroup = useMemo(
+    () => statBlockGroups.find((group) => group.id === selectedStatGroupId) ?? null,
+    [statBlockGroups, selectedStatGroupId]
+  );
+
+  const resolveCharacterSelection = useCallback(() => {
+    if (statBlockScopePreset === 'all') {
+      return {
+        selectedStatIds: undefined,
+        selectedResourceIds: undefined
+      };
+    }
+    if (statBlockScopePreset === 'stats') {
+      return {
+        selectedStatIds: availableStatIds,
+        selectedResourceIds: []
+      };
+    }
+    if (statBlockScopePreset === 'resources') {
+      return {
+        selectedStatIds: [],
+        selectedResourceIds: availableResourceIds
+      };
+    }
+    if (selectedStatGroup) {
+      return {
+        selectedStatIds: selectedStatGroup.statIds.filter((id) =>
+          availableStatIdSet.has(id)
+        ),
+        selectedResourceIds: selectedStatGroup.resourceIds.filter((id) =>
+          availableResourceIdSet.has(id)
+        )
+      };
+    }
+    return {
+      selectedStatIds: selectedStatIds.filter((id) => availableStatIdSet.has(id)),
+      selectedResourceIds: selectedResourceIds.filter((id) =>
+        availableResourceIdSet.has(id)
+      )
+    };
+  }, [
+    statBlockScopePreset,
+    availableStatIds,
+    availableResourceIds,
+    selectedStatGroup,
+    selectedStatIds,
+    selectedResourceIds,
+    availableStatIdSet,
+    availableResourceIdSet
+  ]);
 
   const resolveCharacterBlock = useCallback(
-    (sheet: CharacterSheet, style: StatBlockStyle): string => {
+    (
+      sheet: CharacterSheet,
+      style: StatBlockStyle,
+      selection?: {selectedStatIds?: string[]; selectedResourceIds?: string[]}
+    ): string => {
+      const selectedStatSet = selection?.selectedStatIds
+        ? new Set(selection.selectedStatIds)
+        : null;
+      const selectedResourceSet = selection?.selectedResourceIds
+        ? new Set(selection.selectedResourceIds)
+        : null;
       const effectiveLevel = Math.max(1, sheet.level + runtimeModifiers.levelBonus);
       return buildCharacterStatBlockHtml(
         {
@@ -1272,43 +1411,51 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
           level: sheet.level,
           effectiveLevel,
           experience: sheet.experience,
-          stats: sheet.stats.map((stat) => {
-            const effective = getEffectiveStatValue({
-              definitionId: stat.definitionId,
-              baseValue: stat.value,
-              runtime: runtimeModifiers
-            });
-            const modifierNotes = (stat.modifiers ?? [])
-              .map((modifier) =>
-                modifier.type === 'multiplier'
-                  ? `${modifier.source} x${modifier.value}`
-                  : `${modifier.source} ${modifier.value >= 0 ? '+' : ''}${modifier.value}`
-              )
-              .join(', ');
-            return {
-              name: statDefinitionNameById.get(stat.definitionId) ?? stat.definitionId,
-              baseValue: stat.value,
-              effectiveValue: effective,
-              modifierNotes
-            };
-          }),
-          resources: sheet.resources.map((resource) => {
-            const effective = getEffectiveResourceValues({
-              definitionId: resource.definitionId,
-              current: resource.current,
-              max: resource.max,
-              runtime: runtimeModifiers
-            });
-            return {
-              name:
-                resourceDefinitionNameById.get(resource.definitionId) ??
-                resource.definitionId,
-              current: resource.current,
-              max: resource.max,
-              effectiveCurrent: effective.current,
-              effectiveMax: effective.max
-            };
-          }),
+          stats: sheet.stats
+            .filter((stat) =>
+              selectedStatSet ? selectedStatSet.has(stat.definitionId) : true
+            )
+            .map((stat) => {
+              const effective = getEffectiveStatValue({
+                definitionId: stat.definitionId,
+                baseValue: stat.value,
+                runtime: runtimeModifiers
+              });
+              const modifierNotes = (stat.modifiers ?? [])
+                .map((modifier) =>
+                  modifier.type === 'multiplier'
+                    ? `${modifier.source} x${modifier.value}`
+                    : `${modifier.source} ${modifier.value >= 0 ? '+' : ''}${modifier.value}`
+                )
+                .join(', ');
+              return {
+                name: statDefinitionNameById.get(stat.definitionId) ?? stat.definitionId,
+                baseValue: stat.value,
+                effectiveValue: effective,
+                modifierNotes
+              };
+            }),
+          resources: sheet.resources
+            .filter((resource) =>
+              selectedResourceSet ? selectedResourceSet.has(resource.definitionId) : true
+            )
+            .map((resource) => {
+              const effective = getEffectiveResourceValues({
+                definitionId: resource.definitionId,
+                current: resource.current,
+                max: resource.max,
+                runtime: runtimeModifiers
+              });
+              return {
+                name:
+                  resourceDefinitionNameById.get(resource.definitionId) ??
+                  resource.definitionId,
+                current: resource.current,
+                max: resource.max,
+                effectiveCurrent: effective.current,
+                effectiveMax: effective.max
+              };
+            }),
           activeNotes: runtimeModifiers.notes
         },
         style
@@ -1339,7 +1486,8 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
     (
       sourceType: StatBlockSourceType,
       sourceRef: string,
-      style: StatBlockStyle
+      style: StatBlockStyle,
+      selection?: {selectedStatIds?: string[]; selectedResourceIds?: string[]}
     ): string | null => {
       if (sourceType === 'character') {
         const normalizedRef = sourceRef.trim().toLowerCase();
@@ -1348,7 +1496,7 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
           characterSheets.find(
             (candidate) => candidate.name.trim().toLowerCase() === normalizedRef
           );
-        return sheet ? resolveCharacterBlock(sheet, style) : null;
+        return sheet ? resolveCharacterBlock(sheet, style, selection) : null;
       }
       const normalizedRef = sourceRef.trim().toLowerCase();
       const entity =
@@ -1363,7 +1511,10 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
 
   const handleRefreshStatTemplates = () => {
     const result = replaceStatBlockTokensInHtml(content, (token) =>
-      resolveTemplateToBlock(token.sourceType, token.sourceRef, token.style)
+      resolveTemplateToBlock(token.sourceType, token.sourceRef, token.style, {
+        selectedStatIds: token.selectedStatIds,
+        selectedResourceIds: token.selectedResourceIds
+      })
     );
     if (result.replacedCount === 0) {
       setFeedback({
@@ -1382,13 +1533,28 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
   };
 
   const handleInsertStatBlock = () => {
+    const characterSelection = resolveCharacterSelection();
+    const hasCharacterSelection =
+      statBlockScopePreset === 'all' ||
+      ((characterSelection.selectedStatIds?.length ?? 0) > 0 ||
+        (characterSelection.selectedResourceIds?.length ?? 0) > 0);
+    if (statBlockSourceType === 'character' && !hasCharacterSelection) {
+      setFeedback({
+        tone: 'error',
+        message: 'Select at least one stat or resource for this status block.'
+      });
+      return;
+    }
+
     const token =
       statBlockSourceType === 'character'
         ? selectedSheet
           ? createStatBlockToken({
               sourceType: 'character',
               sourceRef: selectedSheet.name.trim() || selectedSheet.id,
-              style: statBlockStyle
+              style: statBlockStyle,
+              selectedStatIds: characterSelection.selectedStatIds,
+              selectedResourceIds: characterSelection.selectedResourceIds
             })
           : null
         : selectedEntity
@@ -1401,7 +1567,7 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
     const html =
       statBlockSourceType === 'character'
         ? selectedSheet
-          ? resolveCharacterBlock(selectedSheet, statBlockStyle)
+          ? resolveCharacterBlock(selectedSheet, statBlockStyle, characterSelection)
           : null
         : selectedEntity
           ? resolveItemBlock(selectedEntity, statBlockStyle)
@@ -1434,6 +1600,87 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
             : 'Inserted status block into scene.'
     });
   };
+
+  const handleToggleStatSelection = (statId: string) => {
+    setSelectedStatIds((prev) =>
+      prev.includes(statId) ? prev.filter((id) => id !== statId) : [...prev, statId]
+    );
+    setStatBlockScopePreset('custom');
+    setSelectedStatGroupId('');
+  };
+
+  const handleToggleResourceSelection = (resourceId: string) => {
+    setSelectedResourceIds((prev) =>
+      prev.includes(resourceId)
+        ? prev.filter((id) => id !== resourceId)
+        : [...prev, resourceId]
+    );
+    setStatBlockScopePreset('custom');
+    setSelectedStatGroupId('');
+  };
+
+  const handleSaveStatGroup = () => {
+    const name = newStatGroupName.trim();
+    const selection = resolveCharacterSelection();
+    const statIds = selection.selectedStatIds ?? [];
+    const resourceIds = selection.selectedResourceIds ?? [];
+    if (!name) {
+      setFeedback({tone: 'error', message: 'Enter a group name first.'});
+      return;
+    }
+    if (statIds.length === 0 && resourceIds.length === 0) {
+      setFeedback({
+        tone: 'error',
+        message: 'Choose at least one stat/resource before saving a group.'
+      });
+      return;
+    }
+    const existing = statBlockGroups.find(
+      (group) => group.name.trim().toLowerCase() === name.toLowerCase()
+    );
+    const nextGroup: StatBlockGroup = {
+      id: existing?.id ?? crypto.randomUUID(),
+      name,
+      statIds,
+      resourceIds
+    };
+    setStatBlockGroups((prev) => {
+      if (existing) {
+        return prev.map((group) => (group.id === existing.id ? nextGroup : group));
+      }
+      return [...prev, nextGroup];
+    });
+    setSelectedStatGroupId(nextGroup.id);
+    setStatBlockScopePreset('custom');
+    setNewStatGroupName('');
+    setFeedback({
+      tone: 'success',
+      message: existing
+        ? `Updated stat group "${name}".`
+        : `Saved stat group "${name}".`
+    });
+  };
+
+  const handleDeleteStatGroup = (groupId: string) => {
+    const group = statBlockGroups.find((entry) => entry.id === groupId);
+    setStatBlockGroups((prev) => prev.filter((entry) => entry.id !== groupId));
+    if (selectedStatGroupId === groupId) {
+      setSelectedStatGroupId('');
+      setStatBlockScopePreset('all');
+    }
+    if (group) {
+      setFeedback({tone: 'success', message: `Deleted stat group "${group.name}".`});
+    }
+  };
+
+  const activeCharacterSelection = resolveCharacterSelection();
+  const activeSelectedStatSet = new Set(activeCharacterSelection.selectedStatIds ?? []);
+  const activeSelectedResourceSet = new Set(
+    activeCharacterSelection.selectedResourceIds ?? []
+  );
+  const statBlockScopeValue = selectedStatGroup
+    ? `group:${selectedStatGroup.id}`
+    : statBlockScopePreset;
 
   const selectedDocument = selectedId
     ? documents.find((doc) => doc.id === selectedId)
@@ -2185,6 +2432,7 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
                 Source type
                 <br />
                 <select
+                  id='stat-block-source-type'
                   value={statBlockSourceType}
                   onChange={(event) =>
                     setStatBlockSourceType(event.target.value as StatBlockSourceType)
@@ -2197,31 +2445,206 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
               </label>
 
               {statBlockSourceType === 'character' ? (
-                <label>
-                  Character
-                  <br />
-                  <select
-                    value={selectedStatCharacterId}
-                    onChange={(event) => setSelectedStatCharacterId(event.target.value)}
-                    disabled={characterSheets.length === 0}
-                    style={{width: '100%'}}
-                  >
-                    {characterSheets.length === 0 ? (
-                      <option value=''>No character sheets</option>
-                    ) : (
-                      characterSheets.map((sheet) => (
-                        <option key={sheet.id} value={sheet.id}>
-                          {sheet.name}
+                <>
+                  <label>
+                    Character
+                    <br />
+                    <select
+                      id='stat-block-character'
+                      value={selectedStatCharacterId}
+                      onChange={(event) => setSelectedStatCharacterId(event.target.value)}
+                      disabled={characterSheets.length === 0}
+                      style={{width: '100%'}}
+                    >
+                      {characterSheets.length === 0 ? (
+                        <option value=''>No character sheets</option>
+                      ) : (
+                        characterSheets.map((sheet) => (
+                          <option key={sheet.id} value={sheet.id}>
+                            {sheet.name}
+                          </option>
+                        ))
+                      )}
+                    </select>
+                  </label>
+
+                  <label>
+                    Block contents
+                    <br />
+                    <select
+                      id='stat-block-contents'
+                      value={statBlockScopeValue}
+                      onChange={(event) => {
+                        const value = event.target.value;
+                        if (value.startsWith('group:')) {
+                          setSelectedStatGroupId(value.slice('group:'.length));
+                          setStatBlockScopePreset('custom');
+                          return;
+                        }
+                        setSelectedStatGroupId('');
+                        setStatBlockScopePreset(value as StatBlockScopePreset);
+                      }}
+                      style={{width: '100%'}}
+                    >
+                      <option value='all'>All stats + resources</option>
+                      <option value='stats'>Stats only</option>
+                      <option value='resources'>Resources only</option>
+                      <option value='custom'>Custom selection</option>
+                      {statBlockGroups.map((group) => (
+                        <option key={group.id} value={`group:${group.id}`}>
+                          Group: {group.name}
                         </option>
-                      ))
-                    )}
-                  </select>
-                </label>
+                      ))}
+                    </select>
+                  </label>
+
+                  {statBlockScopePreset === 'custom' && !selectedStatGroup && (
+                    <div
+                      style={{
+                        border: '1px solid #e5e7eb',
+                        borderRadius: '6px',
+                        padding: '0.6rem'
+                      }}
+                    >
+                      <strong style={{fontSize: '0.85rem'}}>Custom pick</strong>
+                      <div
+                        style={{
+                          display: 'grid',
+                          gridTemplateColumns: '1fr 1fr',
+                          gap: '0.5rem',
+                          marginTop: '0.5rem'
+                        }}
+                      >
+                        <div>
+                          <div style={{fontSize: '0.8rem', fontWeight: 600}}>Stats</div>
+                          {selectedSheet?.stats.length ? (
+                            selectedSheet.stats.map((stat) => {
+                              const label =
+                                statDefinitionNameById.get(stat.definitionId) ??
+                                stat.definitionId;
+                              return (
+                                <label
+                                  key={stat.definitionId}
+                                  style={{display: 'block', fontSize: '0.8rem'}}
+                                >
+                                  <input
+                                    type='checkbox'
+                                    checked={activeSelectedStatSet.has(stat.definitionId)}
+                                    onChange={() =>
+                                      handleToggleStatSelection(stat.definitionId)
+                                    }
+                                  />{' '}
+                                  {label}
+                                </label>
+                              );
+                            })
+                          ) : (
+                            <span style={{fontSize: '0.8rem', color: '#6b7280'}}>
+                              No stats on this character.
+                            </span>
+                          )}
+                        </div>
+                        <div>
+                          <div style={{fontSize: '0.8rem', fontWeight: 600}}>
+                            Resources
+                          </div>
+                          {selectedSheet?.resources.length ? (
+                            selectedSheet.resources.map((resource) => {
+                              const label =
+                                resourceDefinitionNameById.get(resource.definitionId) ??
+                                resource.definitionId;
+                              return (
+                                <label
+                                  key={resource.definitionId}
+                                  style={{display: 'block', fontSize: '0.8rem'}}
+                                >
+                                  <input
+                                    type='checkbox'
+                                    checked={activeSelectedResourceSet.has(
+                                      resource.definitionId
+                                    )}
+                                    onChange={() =>
+                                      handleToggleResourceSelection(resource.definitionId)
+                                    }
+                                  />{' '}
+                                  {label}
+                                </label>
+                              );
+                            })
+                          ) : (
+                            <span style={{fontSize: '0.8rem', color: '#6b7280'}}>
+                              No resources on this character.
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {selectedStatGroup && (
+                    <div
+                      style={{
+                        border: '1px solid #e5e7eb',
+                        borderRadius: '6px',
+                        padding: '0.6rem',
+                        fontSize: '0.8rem',
+                        color: '#374151',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        gap: '0.5rem'
+                      }}
+                    >
+                      <span>
+                        Group <strong>{selectedStatGroup.name}</strong> includes{' '}
+                        {activeSelectedStatSet.size} stat(s) and{' '}
+                        {activeSelectedResourceSet.size} resource(s).
+                      </span>
+                      <button
+                        type='button'
+                        onClick={() => handleDeleteStatGroup(selectedStatGroup.id)}
+                        style={{fontSize: '0.75rem'}}
+                      >
+                        Delete group
+                      </button>
+                    </div>
+                  )}
+
+                  <div
+                    style={{
+                      border: '1px solid #e5e7eb',
+                      borderRadius: '6px',
+                      padding: '0.6rem'
+                    }}
+                  >
+                    <strong style={{fontSize: '0.85rem'}}>Save current selection</strong>
+                    <div
+                      style={{
+                        marginTop: '0.45rem',
+                        display: 'flex',
+                        gap: '0.4rem',
+                        alignItems: 'center'
+                      }}
+                    >
+                      <input
+                        type='text'
+                        placeholder='Group name (e.g. Qi only)'
+                        value={newStatGroupName}
+                        onChange={(event) => setNewStatGroupName(event.target.value)}
+                        style={{flex: 1}}
+                      />
+                      <button type='button' onClick={handleSaveStatGroup}>
+                        Save group
+                      </button>
+                    </div>
+                  </div>
+                </>
               ) : (
                 <label>
                   Item/Entity
                   <br />
                   <select
+                    id='stat-block-entity'
                     value={selectedStatEntityId}
                     onChange={(event) => setSelectedStatEntityId(event.target.value)}
                     disabled={entities.length === 0}
@@ -2244,6 +2667,7 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
                 Detail level
                 <br />
                 <select
+                  id='stat-block-detail'
                   value={statBlockStyle}
                   onChange={(event) =>
                     setStatBlockStyle(event.target.value as StatBlockStyle)
@@ -2260,6 +2684,7 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
                 Insert as
                 <br />
                 <select
+                  id='stat-block-insert-as'
                   value={statBlockInsertMode}
                   onChange={(event) =>
                     setStatBlockInsertMode(event.target.value as StatBlockInsertMode)

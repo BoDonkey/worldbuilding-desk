@@ -3,6 +3,7 @@ import type {
   ProjectSettings,
   ProjectAISettings,
   ProjectMode,
+  StatBlockGroup,
   StatBlockPreferences
 } from './entityTypes';
 import { openDb, SETTINGS_STORE_NAME } from './db';
@@ -40,8 +41,33 @@ const DEFAULT_CONSISTENCY_ACTION_CUES: string[] = [];
 const DEFAULT_STAT_BLOCK_PREFERENCES: StatBlockPreferences = {
   sourceType: 'character',
   style: 'full',
-  insertMode: 'block'
+  insertMode: 'block',
+  scopePreset: 'all',
+  selectedGroupId: '',
+  selectedStatIds: [],
+  selectedResourceIds: [],
+  groups: []
 };
+
+function normalizeStatBlockGroups(groups: StatBlockGroup[] | undefined): StatBlockGroup[] {
+  if (!Array.isArray(groups)) return [];
+  return groups
+    .map((group) => {
+      const name = typeof group.name === 'string' ? group.name.trim() : '';
+      if (!name) return null;
+      return {
+        id: typeof group.id === 'string' && group.id.trim() ? group.id : crypto.randomUUID(),
+        name,
+        statIds: Array.isArray(group.statIds)
+          ? group.statIds.filter((id): id is string => typeof id === 'string' && id.trim().length > 0)
+          : [],
+        resourceIds: Array.isArray(group.resourceIds)
+          ? group.resourceIds.filter((id): id is string => typeof id === 'string' && id.trim().length > 0)
+          : []
+      };
+    })
+    .filter((group): group is StatBlockGroup => Boolean(group));
+}
 
 function normalizeConsistencyActionCues(cues: string[] | undefined): string[] {
   if (!Array.isArray(cues)) return [];
@@ -97,10 +123,34 @@ function ensureAISettings(settings: ProjectSettings): ProjectSettings {
       mode: settings.projectMode ?? DEFAULT_PROJECT_MODE,
       featureToggles: settings.featureToggles
     }),
-    statBlockPreferences: {
-      ...DEFAULT_STAT_BLOCK_PREFERENCES,
-      ...(settings.statBlockPreferences ?? {})
-    }
+    statBlockPreferences: (() => {
+      const merged = {
+        ...DEFAULT_STAT_BLOCK_PREFERENCES,
+        ...(settings.statBlockPreferences ?? {})
+      };
+      return {
+        ...merged,
+        scopePreset:
+          merged.scopePreset === 'all' ||
+          merged.scopePreset === 'stats' ||
+          merged.scopePreset === 'resources' ||
+          merged.scopePreset === 'custom'
+            ? merged.scopePreset
+            : 'all',
+        selectedGroupId: merged.selectedGroupId ?? '',
+        selectedStatIds: Array.isArray(merged.selectedStatIds)
+          ? merged.selectedStatIds.filter(
+              (id): id is string => typeof id === 'string' && id.trim().length > 0
+            )
+          : [],
+        selectedResourceIds: Array.isArray(merged.selectedResourceIds)
+          ? merged.selectedResourceIds.filter(
+              (id): id is string => typeof id === 'string' && id.trim().length > 0
+            )
+          : [],
+        groups: normalizeStatBlockGroups(merged.groups)
+      };
+    })()
   };
 }
 

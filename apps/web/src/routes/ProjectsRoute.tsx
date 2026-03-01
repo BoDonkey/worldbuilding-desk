@@ -159,9 +159,12 @@ function ProjectsRoute({activeProject, onSelectProject}: ProjectsRouteProps) {
     }
   };
 
-  const handleCreateRuleset = (projectId: string) => {
-    const existingRuleset = projectRulesets.get(projectId);
-    setWizardProjectId(projectId);
+  const handleCreateRuleset = async (project: Project) => {
+    setWizardProjectId(project.id);
+    const cachedRuleset = projectRulesets.get(project.id);
+    const existingRuleset =
+      cachedRuleset ??
+      (project.rulesetId ? await getRulesetByProjectId(project.id) : null);
     setWizardInitialRuleset(existingRuleset || null);
     setShowWizard(true);
   };
@@ -852,7 +855,9 @@ function ProjectsRoute({activeProject, onSelectProject}: ProjectsRouteProps) {
                 {hasRuleset ? (
                   <button
                     type='button'
-                    onClick={() => handleCreateRuleset(project.id)}
+                    onClick={() => {
+                      void handleCreateRuleset(project);
+                    }}
                     style={{background: '#f3f4f6', color: '#374151'}}
                   >
                     Edit Ruleset
@@ -860,7 +865,9 @@ function ProjectsRoute({activeProject, onSelectProject}: ProjectsRouteProps) {
                 ) : (
                   <button
                     type='button'
-                    onClick={() => handleCreateRuleset(project.id)}
+                    onClick={() => {
+                      void handleCreateRuleset(project);
+                    }}
                     style={{background: '#4f46e5', color: 'white'}}
                   >
                     Create Ruleset
