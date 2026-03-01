@@ -5,6 +5,11 @@ export interface ProposalEntityRef {
   normalized: string;
   entityId?: string;
   entityType?: 'character' | 'entity';
+  candidateEntities?: Array<{
+    id: string;
+    name: string;
+    type: 'character' | 'entity';
+  }>;
   confidence: number;
   span: {
     start: number;
@@ -41,6 +46,11 @@ export interface GuardrailIssue {
     end: number;
   };
   surface?: string;
+  relatedEntities?: Array<{
+    id: string;
+    name: string;
+    type: 'character' | 'entity';
+  }>;
 }
 
 export interface ValidationResult {

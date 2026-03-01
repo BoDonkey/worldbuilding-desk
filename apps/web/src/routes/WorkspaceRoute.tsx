@@ -34,7 +34,11 @@ import {
 import {createEditorConfigWithStyles} from '../config/editorConfig';
 import type {EditorConfig} from '../config/editorConfig';
 import {countWords, htmlToPlainText} from '../utils/textHelpers';
-import {exportScenesAsDocx, exportScenesAsMarkdown} from '../utils/sceneExport';
+import {
+  exportScenesAsDocx,
+  exportScenesAsEpub,
+  exportScenesAsMarkdown
+} from '../utils/sceneExport';
 import {EditorWithAI} from '../components/Editor/EditorWithAI';
 import {ShodhMemoryPanel} from '../components/ShodhMemoryPanel';
 import type {RAGProvider} from '../services/rag/RAGService';
@@ -76,6 +80,7 @@ import {
   saveAlias,
   type ConsistencyAlias
 } from '../services/consistencyEngine/aliasStorage';
+import {findCanonContradictions} from '../services/consistencyEngine/contradictionReview';
 
 const summarizeContent = (html: string, limit = 500): string => {
   const text = html
@@ -94,7 +99,7 @@ interface WorkspaceRouteProps {
 
 type SaveStatus = 'idle' | 'saving' | 'saved';
 type FeedbackTone = 'success' | 'error';
-type ExportFormat = 'markdown' | 'docx';
+type ExportFormat = 'markdown' | 'docx' | 'epub';
 
 interface SceneExportItem {
   id: string;
@@ -104,6 +109,13 @@ interface SceneExportItem {
 
 interface ResolverNotice {
   message: string;
+}
+
+interface ConsistencyReviewItem {
+  id: string;
+  sceneId: string;
+  sceneTitle: string;
+  issue: GuardrailIssue;
 }
 
 function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
@@ -178,6 +190,13 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
   const [unknownLinkSelection, setUnknownLinkSelection] = useState<
     Record<string, string>
   >({});
+  const [isRunningConsistencyReview, setIsRunningConsistencyReview] = useState(false);
+  const [consistencyReviewItems, setConsistencyReviewItems] = useState<
+    ConsistencyReviewItem[]
+  >([]);
+  const [lastConsistencyReviewAt, setLastConsistencyReviewAt] = useState<number | null>(
+    null
+  );
   const [isCreatingScene, setIsCreatingScene] = useState(false);
   const [isImportingDocuments, setIsImportingDocuments] = useState(false);
   const [deletingDocumentId, setDeletingDocumentId] = useState<string | null>(null);
@@ -191,6 +210,9 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
   const [exportSelection, setExportSelection] = useState<SceneExportItem[]>([]);
   const importInputRef = useRef<HTMLInputElement | null>(null);
   const lastAutosaveErrorRef = useRef<string | null>(null);
+  const canInsertStatBlock =
+    (statBlockSourceType === 'character' && characterSheets.length > 0) ||
+    (statBlockSourceType === 'item' && entities.length > 0);
 
   const fileNameToTitle = (name: string): string => {
     const base = name.replace(/\.[^.]+$/, '').trim();
@@ -573,6 +595,35 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
     ragService.setEntityVocabulary(vocabulary);
   }, [activeProject, ragService, entities, characters]);
 
+  const knownConsistencyEntities = useMemo(() => {
+    const entityById = new Map(entities.map((entity) => [entity.id, entity]));
+    return [
+      ...entities.map((entity) => ({
+        id: entity.id,
+        name: entity.name,
+        type: 'entity' as const
+      })),
+      ...characters.map((character) => ({
+        id: character.id,
+        name: character.name,
+        type: 'character' as const
+      })),
+      ...aliases
+        .map((alias) => {
+          const linkedEntity = entityById.get(alias.entityId);
+          if (!linkedEntity) {
+            return null;
+          }
+          return {
+            id: linkedEntity.id,
+            name: alias.alias,
+            type: 'entity' as const
+          };
+        })
+        .filter((entry): entry is {id: string; name: string; type: 'entity'} => Boolean(entry))
+    ];
+  }, [aliases, characters, entities]);
+
   const resetEditor = () => {
     setSelectedId(null);
     setSelectedCreatedAt(null);
@@ -583,36 +634,11 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
   };
 
   const persistDoc = useCallback(async (doc: WritingDocument, source: 'workspace-save' | 'workspace-autosave' | 'import' = 'workspace-save') => {
-    const entityById = new Map(entities.map((entity) => [entity.id, entity]));
     const proposal = await consistencyEngine.extractProposal({
       projectId: doc.projectId,
       text: htmlToPlainText(doc.content),
       source,
-      knownEntities: [
-        ...entities.map((entity) => ({
-          id: entity.id,
-          name: entity.name,
-          type: 'entity' as const
-        })),
-        ...characters.map((character) => ({
-          id: character.id,
-          name: character.name,
-          type: 'character' as const
-        })),
-        ...aliases
-          .map((alias) => {
-            const linkedEntity = entityById.get(alias.entityId);
-            if (!linkedEntity) {
-              return null;
-            }
-            return {
-              id: linkedEntity.id,
-              name: alias.alias,
-              type: 'entity' as const
-            };
-          })
-          .filter((entry): entry is {id: string; name: string; type: 'entity'} => Boolean(entry))
-      ],
+      knownEntities: knownConsistencyEntities,
       actionCues: resolvedActionCues
     });
     const validation = await consistencyEngine.validateProposal(proposal);
@@ -671,7 +697,7 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
     setLastSavedAt(Date.now());
     setGuardrailIssues([]);
     lastAutosaveErrorRef.current = null;
-  }, [consistencyEngine, entities, characters, aliases, resolvedActionCues, ragService, shodhService, refreshMemories]);
+  }, [consistencyEngine, knownConsistencyEntities, resolvedActionCues, ragService, shodhService, refreshMemories]);
 
   const handleNewDocument = async () => {
     if (!activeProject) return;
@@ -786,6 +812,91 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
     setWordCount(countWords(doc.content));
   };
 
+  const handleRunConsistencyReview = useCallback(async () => {
+    if (!activeProject) return;
+    if (documents.length === 0) {
+      setConsistencyReviewItems([]);
+      setLastConsistencyReviewAt(Date.now());
+      setFeedback({tone: 'error', message: 'No scenes available to review.'});
+      return;
+    }
+
+    setIsRunningConsistencyReview(true);
+    setFeedback(null);
+    try {
+      const items: ConsistencyReviewItem[] = [];
+      for (const doc of documents) {
+        const proposal = await consistencyEngine.extractProposal({
+          projectId: activeProject.id,
+          text: htmlToPlainText(doc.content),
+          source: 'workspace-save',
+          knownEntities: knownConsistencyEntities,
+          actionCues: resolvedActionCues
+        });
+        const validation = await consistencyEngine.validateProposal(proposal);
+        validation.issues.forEach((issue, index) => {
+          items.push({
+            id: `${doc.id}:${issue.code}:${issue.surface ?? 'issue'}:${index}`,
+            sceneId: doc.id,
+            sceneTitle: doc.title || 'Untitled scene',
+            issue
+          });
+        });
+      }
+
+      const contradictionItems = findCanonContradictions({
+        documents,
+        entities,
+        characters,
+        knownEntities: knownConsistencyEntities
+      });
+      const combinedItems = [...items, ...contradictionItems];
+
+      setConsistencyReviewItems(combinedItems);
+      setLastConsistencyReviewAt(Date.now());
+      if (combinedItems.length === 0) {
+        setFeedback({
+          tone: 'success',
+          message: `Consistency review complete: no issues across ${documents.length} scene(s).`
+        });
+      } else {
+        const contradictionCount = contradictionItems.length;
+        setFeedback({
+          tone: 'error',
+          message:
+            `Consistency review found ${combinedItems.length} issue(s) across ${documents.length} scene(s).` +
+            (contradictionCount > 0
+              ? ` ${contradictionCount} contradiction${contradictionCount === 1 ? '' : 's'} with canon records.`
+              : '')
+        });
+      }
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : 'Unable to run consistency review.';
+      setFeedback({tone: 'error', message});
+    } finally {
+      setIsRunningConsistencyReview(false);
+    }
+  }, [
+    activeProject,
+    characters,
+    consistencyEngine,
+    documents,
+    entities,
+    knownConsistencyEntities,
+    resolvedActionCues
+  ]);
+
+  const openWorldRecord = (target: {id: string; type: 'character' | 'entity'}) => {
+    if (target.type === 'entity') {
+      navigate('/world-bible', {state: {focusEntityId: target.id}});
+      return;
+    }
+    navigate('/characters');
+  };
+
   const openExportModal = (format: ExportFormat) => {
     const selection = documents.map((doc) => ({
       id: doc.id,
@@ -800,6 +911,21 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
   const closeExportModal = () => {
     setExportModalOpen(false);
   };
+
+  const closeStatBlockModal = () => {
+    setStatBlockModalOpen(false);
+  };
+
+  useEffect(() => {
+    if (!isStatBlockModalOpen) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        closeStatBlockModal();
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [isStatBlockModalOpen]);
 
   const moveExportItem = (id: string, direction: -1 | 1) => {
     setExportSelection((prev) => {
@@ -846,8 +972,13 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
         projectName: activeProject.name,
         scenes: selectedScenes
       });
-    } else {
+    } else if (exportFormat === 'docx') {
       exportScenesAsDocx({
+        projectName: activeProject.name,
+        scenes: selectedScenes
+      });
+    } else {
+      exportScenesAsEpub({
         projectName: activeProject.name,
         scenes: selectedScenes
       });
@@ -859,7 +990,9 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
       message:
         exportFormat === 'markdown'
           ? `Exported ${selectedScenes.length} scene(s) to Markdown.`
-          : `Exported ${selectedScenes.length} scene(s) to DOCX.`
+          : exportFormat === 'docx'
+            ? `Exported ${selectedScenes.length} scene(s) to DOCX.`
+            : `Exported ${selectedScenes.length} scene(s) to EPUB.`
     });
   };
 
@@ -1555,6 +1688,78 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
           </button>
         </div>
       )}
+      <section
+        style={{
+          marginBottom: '1rem',
+          padding: '0.75rem',
+          border: '1px solid #d1d5db',
+          borderRadius: '6px',
+          backgroundColor: '#f8fafc'
+        }}
+      >
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            gap: '0.75rem',
+            flexWrap: 'wrap'
+          }}
+        >
+          <div>
+            <strong>Canon Consistency Review</strong>
+            <div style={{fontSize: '0.85rem', color: '#4b5563'}}>
+              Scan all scenes against World Bible and Character records.
+            </div>
+          </div>
+          <button
+            type='button'
+            onClick={() => void handleRunConsistencyReview()}
+            disabled={isRunningConsistencyReview}
+          >
+            {isRunningConsistencyReview ? 'Running review...' : 'Run review'}
+          </button>
+        </div>
+        {lastConsistencyReviewAt && (
+          <div style={{fontSize: '0.82rem', color: '#6b7280', marginTop: '0.5rem'}}>
+            Last run: {new Date(lastConsistencyReviewAt).toLocaleString()}
+          </div>
+        )}
+        {consistencyReviewItems.length > 0 && (
+          <ul style={{margin: '0.65rem 0 0 1rem', padding: 0}}>
+            {consistencyReviewItems.slice(0, 24).map((item) => (
+              <li key={item.id} style={{marginBottom: '0.45rem'}}>
+                <strong>{item.issue.code}</strong> in{' '}
+                <button
+                  type='button'
+                  onClick={() => {
+                    const doc = documents.find((entry) => entry.id === item.sceneId);
+                    if (doc) handleSelectDocument(doc);
+                  }}
+                  style={{fontSize: '0.82rem'}}
+                >
+                  {item.sceneTitle}
+                </button>
+                : {item.issue.message}
+                {item.issue.relatedEntities && item.issue.relatedEntities.length > 0 && (
+                  <span style={{marginLeft: '0.5rem'}}>
+                    {item.issue.relatedEntities.slice(0, 3).map((target) => (
+                      <button
+                        key={`${item.id}-${target.id}`}
+                        type='button'
+                        onClick={() => openWorldRecord(target)}
+                        style={{marginRight: '0.35rem', fontSize: '0.78rem'}}
+                      >
+                        Open {target.name}
+                      </button>
+                    ))}
+                  </span>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
       {unknownGuardrailIssues.length > 0 && (
         <div
           style={{
@@ -1709,6 +1914,14 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
               style={{marginLeft: '0.5rem'}}
             >
               Export DOCX
+            </button>
+            <button
+              type='button'
+              onClick={() => openExportModal('epub')}
+              disabled={documents.length === 0}
+              style={{marginLeft: '0.5rem'}}
+            >
+              Export EPUB
             </button>
             <input
               ref={importInputRef}
@@ -1936,6 +2149,7 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
           role='dialog'
           aria-modal='true'
           aria-label='Status Block Builder'
+          onClick={closeStatBlockModal}
           style={{
             position: 'fixed',
             inset: 0,
@@ -1947,12 +2161,14 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
           }}
         >
           <div
+            onClick={(event) => event.stopPropagation()}
             style={{
               backgroundColor: '#fff',
               padding: '1.25rem',
               borderRadius: '8px',
               width: 'min(620px, 94vw)',
               maxHeight: '80vh',
+              overflowY: 'auto',
               display: 'flex',
               flexDirection: 'column',
               gap: '0.75rem'
@@ -2061,6 +2277,41 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
                 )}
               </label>
             </div>
+            {!canInsertStatBlock && (
+              <div
+                style={{
+                  margin: 0,
+                  padding: '0.55rem 0.65rem',
+                  borderRadius: '6px',
+                  border: '1px solid #e5e7eb',
+                  backgroundColor: '#f9fafb',
+                  color: '#4b5563',
+                  fontSize: '0.85rem'
+                }}
+              >
+                <p style={{margin: 0}}>
+                  Add at least one {statBlockSourceType === 'character' ? 'character sheet' : 'entity'} before inserting a status block.
+                </p>
+                <div style={{marginTop: '0.45rem'}}>
+                  <button
+                    type='button'
+                    onClick={() => {
+                      closeStatBlockModal();
+                      navigate(
+                        statBlockSourceType === 'character'
+                          ? '/character-sheets'
+                          : '/world-bible'
+                      );
+                    }}
+                    style={{fontSize: '0.8rem'}}
+                  >
+                    {statBlockSourceType === 'character'
+                      ? 'Go to Character Sheets'
+                      : 'Go to World Bible'}
+                  </button>
+                </div>
+              </div>
+            )}
 
             <div
               style={{
@@ -2071,12 +2322,12 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
             >
               <button
                 type='button'
-                onClick={() => setStatBlockModalOpen(false)}
+                onClick={closeStatBlockModal}
                 style={{background: 'transparent'}}
               >
                 Cancel
               </button>
-              <button type='button' onClick={handleInsertStatBlock}>
+              <button type='button' onClick={handleInsertStatBlock} disabled={!canInsertStatBlock}>
                 Insert
               </button>
             </div>
@@ -2111,7 +2362,12 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
             }}
           >
             <h3 style={{margin: 0}}>
-              Export scenes as {exportFormat === 'markdown' ? 'Markdown' : 'DOCX'}
+              Export scenes as{' '}
+              {exportFormat === 'markdown'
+                ? 'Markdown'
+                : exportFormat === 'docx'
+                  ? 'DOCX'
+                  : 'EPUB'}
             </h3>
             <p style={{margin: 0}}>
               Choose which scenes to export and adjust their order for the final file.

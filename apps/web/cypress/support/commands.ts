@@ -1,5 +1,5 @@
 const DB_NAME = 'worldbuilding-db';
-const DB_VERSION = 11;
+const DB_VERSION = 13;
 
 const STORE_NAMES = [
   'entities',
@@ -17,7 +17,10 @@ const STORE_NAMES = [
   'zone_affinity_profiles',
   'zone_affinity_progress',
   'settlement_modules',
-  'settlement_state'
+  'settlement_state',
+  'consistency_proposals',
+  'consistency_events',
+  'consistency_aliases'
 ] as const;
 
 interface SeedProject {
