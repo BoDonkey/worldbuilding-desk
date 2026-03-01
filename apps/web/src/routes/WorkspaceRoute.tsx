@@ -82,6 +82,7 @@ import {
   saveAlias,
   type ConsistencyAlias
 } from '../services/consistencyEngine/aliasStorage';
+import {findCanonContradictions} from '../services/consistencyEngine/contradictionReview';
 
 const summarizeContent = (html: string, limit = 500): string => {
   const text = html
@@ -218,6 +219,9 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
   const [exportSelection, setExportSelection] = useState<SceneExportItem[]>([]);
   const importInputRef = useRef<HTMLInputElement | null>(null);
   const lastAutosaveErrorRef = useRef<string | null>(null);
+  const canInsertStatBlock =
+    (statBlockSourceType === 'character' && characterSheets.length > 0) ||
+    (statBlockSourceType === 'item' && entities.length > 0);
 
   const fileNameToTitle = (name: string): string => {
     const base = name.replace(/\.[^.]+$/, '').trim();
@@ -889,17 +893,30 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
         });
       }
 
-      setConsistencyReviewItems(items);
+      const contradictionItems = findCanonContradictions({
+        documents,
+        entities,
+        characters,
+        knownEntities: knownConsistencyEntities
+      });
+      const combinedItems = [...items, ...contradictionItems];
+
+      setConsistencyReviewItems(combinedItems);
       setLastConsistencyReviewAt(Date.now());
-      if (items.length === 0) {
+      if (combinedItems.length === 0) {
         setFeedback({
           tone: 'success',
           message: `Consistency review complete: no issues across ${documents.length} scene(s).`
         });
       } else {
+        const contradictionCount = contradictionItems.length;
         setFeedback({
           tone: 'error',
-          message: `Consistency review found ${items.length} issue(s) across ${documents.length} scene(s).`
+          message:
+            `Consistency review found ${combinedItems.length} issue(s) across ${documents.length} scene(s).` +
+            (contradictionCount > 0
+              ? ` ${contradictionCount} contradiction${contradictionCount === 1 ? '' : 's'} with canon records.`
+              : '')
         });
       }
     } catch (error) {
@@ -913,8 +930,10 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
     }
   }, [
     activeProject,
+    characters,
     consistencyEngine,
     documents,
+    entities,
     knownConsistencyEntities,
     resolvedActionCues
   ]);
@@ -941,6 +960,21 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
   const closeExportModal = () => {
     setExportModalOpen(false);
   };
+
+  const closeStatBlockModal = () => {
+    setStatBlockModalOpen(false);
+  };
+
+  useEffect(() => {
+    if (!isStatBlockModalOpen) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        closeStatBlockModal();
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [isStatBlockModalOpen]);
 
   const moveExportItem = (id: string, direction: -1 | 1) => {
     setExportSelection((prev) => {
@@ -2362,6 +2396,7 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
           role='dialog'
           aria-modal='true'
           aria-label='Status Block Builder'
+          onClick={closeStatBlockModal}
           style={{
             position: 'fixed',
             inset: 0,
@@ -2373,12 +2408,14 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
           }}
         >
           <div
+            onClick={(event) => event.stopPropagation()}
             style={{
               backgroundColor: '#fff',
               padding: '1.25rem',
               borderRadius: '8px',
               width: 'min(620px, 94vw)',
               maxHeight: '80vh',
+              overflowY: 'auto',
               display: 'flex',
               flexDirection: 'column',
               gap: '0.75rem'
@@ -2659,6 +2696,41 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
                 )}
               </label>
             </div>
+            {!canInsertStatBlock && (
+              <div
+                style={{
+                  margin: 0,
+                  padding: '0.55rem 0.65rem',
+                  borderRadius: '6px',
+                  border: '1px solid #e5e7eb',
+                  backgroundColor: '#f9fafb',
+                  color: '#4b5563',
+                  fontSize: '0.85rem'
+                }}
+              >
+                <p style={{margin: 0}}>
+                  Add at least one {statBlockSourceType === 'character' ? 'character sheet' : 'entity'} before inserting a status block.
+                </p>
+                <div style={{marginTop: '0.45rem'}}>
+                  <button
+                    type='button'
+                    onClick={() => {
+                      closeStatBlockModal();
+                      navigate(
+                        statBlockSourceType === 'character'
+                          ? '/character-sheets'
+                          : '/world-bible'
+                      );
+                    }}
+                    style={{fontSize: '0.8rem'}}
+                  >
+                    {statBlockSourceType === 'character'
+                      ? 'Go to Character Sheets'
+                      : 'Go to World Bible'}
+                  </button>
+                </div>
+              </div>
+            )}
 
             <div
               style={{
@@ -2669,12 +2741,12 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
             >
               <button
                 type='button'
-                onClick={() => setStatBlockModalOpen(false)}
+                onClick={closeStatBlockModal}
                 style={{background: 'transparent'}}
               >
                 Cancel
               </button>
-              <button type='button' onClick={handleInsertStatBlock}>
+              <button type='button' onClick={handleInsertStatBlock} disabled={!canInsertStatBlock}>
                 Insert
               </button>
             </div>
