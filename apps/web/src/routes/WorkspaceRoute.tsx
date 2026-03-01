@@ -2432,6 +2432,7 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
                 Source type
                 <br />
                 <select
+                  id='stat-block-source-type'
                   value={statBlockSourceType}
                   onChange={(event) =>
                     setStatBlockSourceType(event.target.value as StatBlockSourceType)
@@ -2449,6 +2450,7 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
                     Character
                     <br />
                     <select
+                      id='stat-block-character'
                       value={selectedStatCharacterId}
                       onChange={(event) => setSelectedStatCharacterId(event.target.value)}
                       disabled={characterSheets.length === 0}
@@ -2470,6 +2472,7 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
                     Block contents
                     <br />
                     <select
+                      id='stat-block-contents'
                       value={statBlockScopeValue}
                       onChange={(event) => {
                         const value = event.target.value;
@@ -2641,6 +2644,7 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
                   Item/Entity
                   <br />
                   <select
+                    id='stat-block-entity'
                     value={selectedStatEntityId}
                     onChange={(event) => setSelectedStatEntityId(event.target.value)}
                     disabled={entities.length === 0}
@@ -2663,6 +2667,7 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
                 Detail level
                 <br />
                 <select
+                  id='stat-block-detail'
                   value={statBlockStyle}
                   onChange={(event) =>
                     setStatBlockStyle(event.target.value as StatBlockStyle)
@@ -2679,6 +2684,7 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
                 Insert as
                 <br />
                 <select
+                  id='stat-block-insert-as'
                   value={statBlockInsertMode}
                   onChange={(event) =>
                     setStatBlockInsertMode(event.target.value as StatBlockInsertMode)

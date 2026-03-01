@@ -308,10 +308,10 @@ describe('Post-merge smoke checklist', () => {
     cy.contains('button', 'Insert Status Block').click();
     cy.get('[aria-label="Status Block Builder"]')
       .within(() => {
-        cy.contains('label', 'Source type').find('select').select('Character');
-        cy.contains('label', 'Character').find('select').select('Aria');
-        cy.contains('label', 'Detail level').find('select').select('All stats');
-        cy.contains('label', 'Insert as').find('select').select('Live block now');
+        cy.get('#stat-block-source-type').select('Character');
+        cy.get('#stat-block-character').select('Aria');
+        cy.get('#stat-block-detail').select('All stats');
+        cy.get('#stat-block-insert-as').select('Live block now');
         cy.contains('button', 'Insert').click();
       });
 
@@ -331,12 +331,10 @@ describe('Post-merge smoke checklist', () => {
     cy.contains('button', 'Insert Status Block').click();
     cy.get('[aria-label="Status Block Builder"]')
       .within(() => {
-        cy.contains('label', 'Source type').find('select').select('Character');
-        cy.contains('label', 'Character').find('select').select('Aria');
-        cy.contains('label', 'Detail level').find('select').select('Compact');
-        cy.contains('label', 'Insert as')
-          .find('select')
-          .select('Reusable placeholder');
+        cy.get('#stat-block-source-type').select('Character');
+        cy.get('#stat-block-character').select('Aria');
+        cy.get('#stat-block-detail').select('Compact');
+        cy.get('#stat-block-insert-as').select('Reusable placeholder');
         cy.contains('button', 'Insert').click();
       });
 
