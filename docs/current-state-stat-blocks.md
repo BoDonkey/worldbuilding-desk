@@ -1,4 +1,4 @@
-# Current State: Stat Blocks in Workspace
+1# Current State: Stat Blocks in Workspace
 
 ## What shipped
 - Added a writer-friendly **Status Block Builder** modal in the Writing Workspace.
