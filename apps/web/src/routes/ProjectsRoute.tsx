@@ -9,8 +9,6 @@ import {
   deleteProject as deleteProjectFromStore
 } from '../projectStorage';
 import {getRulesetByProjectId, deleteRuleset} from '../services/rulesetService';
-import {WorldBuildingWizard} from '@litrpg-tool/rules-ui';
-import '@rules-ui/styles/wizard.css';
 import {
   getSeriesBibleConfig,
   linkProjectToParent,
@@ -46,9 +44,6 @@ function ProjectsRoute({activeProject, onSelectProject}: ProjectsRouteProps) {
     Map<string, WorldRuleset>
   >(new Map());
   const [name, setName] = useState('');
-  const [showWizard, setShowWizard] = useState(false);
-  const [wizardProjectId, setWizardProjectId] = useState<string | null>(null);
-  const [wizardInitialRuleset, setWizardInitialRuleset] = useState<WorldRuleset | null>(null);
   const [feedback, setFeedback] = useState<{
     tone: 'success' | 'error';
     message: string;
@@ -76,7 +71,6 @@ function ProjectsRoute({activeProject, onSelectProject}: ProjectsRouteProps) {
 
     const rulesetMap = new Map<string, WorldRuleset>();
     for (const project of all) {
-      if (!project.rulesetId) continue;
       const ruleset = await getRulesetByProjectId(project.id);
       if (ruleset) {
         rulesetMap.set(project.id, ruleset);
@@ -157,52 +151,6 @@ function ProjectsRoute({activeProject, onSelectProject}: ProjectsRouteProps) {
     } finally {
       setDeletingProjectId(null);
     }
-  };
-
-  const handleCreateRuleset = async (project: Project) => {
-    setWizardProjectId(project.id);
-    const cachedRuleset = projectRulesets.get(project.id);
-    const existingRuleset =
-      cachedRuleset ??
-      (project.rulesetId ? await getRulesetByProjectId(project.id) : null);
-    setWizardInitialRuleset(existingRuleset || null);
-    setShowWizard(true);
-  };
-
-  const handleWizardComplete = async (ruleset: WorldRuleset) => {
-    if (!wizardProjectId) return;
-
-    // Import the saveRuleset function
-    const {saveRuleset} = await import('../services/rulesetService');
-
-    await saveRuleset(ruleset, wizardProjectId);
-
-    // Update project with rulesetId
-    const project = projects.find((p) => p.id === wizardProjectId);
-    if (project) {
-      const updatedProject = {
-        ...project,
-        rulesetId: ruleset.id,
-        updatedAt: Date.now()
-      };
-      await saveProject(updatedProject);
-      setProjects((prev) =>
-        prev.map((p) => (p.id === wizardProjectId ? updatedProject : p))
-      );
-    }
-
-    // Update local state
-    setProjectRulesets((prev) => new Map(prev).set(wizardProjectId, ruleset));
-
-    setShowWizard(false);
-    setWizardProjectId(null);
-    setWizardInitialRuleset(null);
-  };
-
-  const handleWizardCancel = () => {
-    setShowWizard(false);
-    setWizardProjectId(null);
-    setWizardInitialRuleset(null);
   };
 
   const updateProjectState = (updated: Project | null) => {
@@ -462,28 +410,6 @@ function ProjectsRoute({activeProject, onSelectProject}: ProjectsRouteProps) {
     }
   };
 
-  if (showWizard) {
-    return (
-      <section
-        style={{height: '100vh', display: 'flex', flexDirection: 'column'}}
-      >
-        <div style={{padding: '1rem', borderBottom: '1px solid #e5e7eb'}}>
-          <button onClick={handleWizardCancel} style={{marginBottom: '0.5rem'}}>
-            ← Back to Projects
-          </button>
-          <h1>{wizardInitialRuleset ? 'Edit World Ruleset' : 'Create World Ruleset'}</h1>
-        </div>
-        <div style={{flex: 1, overflow: 'hidden'}}>
-          <WorldBuildingWizard
-            onComplete={handleWizardComplete}
-            onCancel={handleWizardCancel}
-            initialRuleset={wizardInitialRuleset || undefined}
-          />
-        </div>
-      </section>
-    );
-  }
-
   return (
     <section>
       <h1>Projects</h1>
@@ -698,7 +624,7 @@ function ProjectsRoute({activeProject, onSelectProject}: ProjectsRouteProps) {
 
       <h2>Existing Projects</h2>
       <p style={{marginTop: 0, marginBottom: '0.75rem', fontSize: '0.82rem', color: '#4b5563'}}>
-        Steps 2-3 of 3: configure inheritance, then open or author ruleset.
+        Configure inheritance here, then use the Ruleset tab to author game rules.
       </p>
       {projects.length === 0 && <p>No projects yet. Create one above to get started.</p>}
 
@@ -851,28 +777,6 @@ function ProjectsRoute({activeProject, onSelectProject}: ProjectsRouteProps) {
                     ? 'Exporting...'
                     : 'Export Backup (.zip)'}
                 </button>
-
-                {hasRuleset ? (
-                  <button
-                    type='button'
-                    onClick={() => {
-                      void handleCreateRuleset(project);
-                    }}
-                    style={{background: '#f3f4f6', color: '#374151'}}
-                  >
-                    Edit Ruleset
-                  </button>
-                ) : (
-                  <button
-                    type='button'
-                    onClick={() => {
-                      void handleCreateRuleset(project);
-                    }}
-                    style={{background: '#4f46e5', color: 'white'}}
-                  >
-                    Create Ruleset
-                  </button>
-                )}
 
                 <button
                   type='button'

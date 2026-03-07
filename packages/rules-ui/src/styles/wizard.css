@@ -113,6 +113,32 @@
   padding: 2rem;
 }
 
+.wizard-sections {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.wizard-section-card {
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 1rem;
+}
+
+.wizard-section-card.locked {
+  opacity: 0.55;
+  pointer-events: none;
+  background: #f9fafb;
+}
+
+.section-lock-hint {
+  margin: 0.75rem 0 0;
+  font-size: 0.875rem;
+  color: #6b7280;
+  font-style: italic;
+}
+
 .step-header {
   margin-bottom: 2rem;
 }

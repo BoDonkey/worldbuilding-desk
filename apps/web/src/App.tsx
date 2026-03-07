@@ -12,6 +12,7 @@ import SettingsRoute from './routes/SettingsRoute';
 import CharactersRoute from './routes/CharactersRoute';
 import CharacterSheetsRoute from './routes/CharacterSheetsRoute';
 import CompendiumRoute from './routes/CompendiumRoute';
+import RulesetRoute from './routes/RulesetRoute';
 
 function App() {
   const [activeProject, setActiveProject] = useState<Project | null>(() => {
@@ -74,6 +75,15 @@ function App() {
                 <Route
                   path='/world-bible'
                   element={<WorldBibleRoute activeProject={activeProject} />}
+                />
+                <Route
+                  path='/ruleset'
+                  element={
+                    <RulesetRoute
+                      activeProject={activeProject}
+                      onProjectUpdated={setActiveProject}
+                    />
+                  }
                 />
                 <Route
                   path='/characters'

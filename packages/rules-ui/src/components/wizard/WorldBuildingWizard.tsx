@@ -1,14 +1,12 @@
-import React, {useState} from 'react';
+import React, {useMemo, useState} from 'react';
 import type {
   WorldRuleset,
   StatDefinition,
   ResourceDefinition
 } from '@litrpg-tool/rules-engine';
 import {createEmptyRuleset} from '@litrpg-tool/rules-engine';
-import {useWizard} from '../../hooks/useWizard';
 import {StatSystemStep} from './StatSystemStep';
 import {ResourceSystemStep} from './ResourceSystemStep';
-import {ReviewStep} from './ReviewStep';
 
 export interface WorldBuildingWizardProps {
   onComplete: (ruleset: WorldRuleset) => void;
@@ -23,145 +21,134 @@ interface WizardData {
   resources: ResourceDefinition[];
 }
 
+function buildDataSignature(data: WizardData): string {
+  return JSON.stringify({
+    name: data.name,
+    description: data.description,
+    stats: data.stats,
+    resources: data.resources
+  });
+}
+
 export function WorldBuildingWizard({
   onComplete,
   onCancel,
   initialRuleset
 }: WorldBuildingWizardProps) {
   const isEditing = Boolean(initialRuleset);
-  const [ruleset, setRuleset] = useState<WorldRuleset>(
-    initialRuleset || createEmptyRuleset('My World')
+  const initialDraft: WizardData = {
+    name: initialRuleset?.name || '',
+    description: initialRuleset?.description || '',
+    stats: initialRuleset?.statDefinitions || [],
+    resources: initialRuleset?.resourceDefinitions || []
+  };
+  const [draft, setDraft] = useState<WizardData>(initialDraft);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [hasSavedOnce, setHasSavedOnce] = useState(isEditing);
+  const [savedSignature, setSavedSignature] = useState(
+    buildDataSignature(initialDraft)
   );
 
-  const steps = [
-    {
-      id: 'basics',
-      title: 'World Basics',
-      description: 'Name and describe your world',
-      component: BasicsStep,
-      isComplete: (data: WizardData) => data.name.trim().length > 0
-    },
-    {
-      id: 'stats',
-      title: 'Character Stats',
-      description: 'Define character attributes',
-      component: StatSystemStep,
-      isComplete: () => true // Optional step
-    },
-    {
-      id: 'resources',
-      title: 'Resources',
-      description: 'Define trackable resources',
-      component: ResourceSystemStep,
-      isComplete: () => true // Optional step
-    },
-    {
-      id: 'review',
-      title: 'Review',
-      description: 'Review and confirm',
-      component: ReviewStep,
-      isComplete: () => true
+  const basicsComplete = draft.name.trim().length > 0;
+  const statsComplete = draft.stats.length > 0;
+  const resourcesComplete = draft.resources.length > 0;
+
+  const isStatsUnlocked = isEditing || hasSavedOnce || basicsComplete;
+  const isResourcesUnlocked =
+    isEditing || hasSavedOnce || (basicsComplete && statsComplete);
+
+  const currentSignature = useMemo(() => buildDataSignature(draft), [draft]);
+  const hasUnsavedChanges = currentSignature !== savedSignature;
+  const canCreate = basicsComplete && statsComplete && resourcesComplete;
+  const canSave = hasSavedOnce || isEditing ? hasUnsavedChanges : canCreate;
+
+  const handleSave = async () => {
+    if (!canSave || isProcessing) {
+      return;
     }
-  ];
 
-  const wizard = useWizard({
-    steps,
-    initialData: {
-      name: ruleset.name,
-      description: ruleset.description || '',
-      stats: ruleset.statDefinitions,
-      resources: ruleset.resourceDefinitions
-    },
-    onComplete: (data: WizardData) => {
-      const finalRuleset: WorldRuleset = {
-        ...ruleset,
-        name: data.name,
-        description: data.description,
-        statDefinitions: data.stats,
-        resourceDefinitions: data.resources,
-        updatedAt: Date.now()
-      };
-      onComplete(finalRuleset);
+    const baseRuleset =
+      initialRuleset || createEmptyRuleset(draft.name.trim() || 'My World');
+    const finalRuleset: WorldRuleset = {
+      ...baseRuleset,
+      name: draft.name,
+      description: draft.description,
+      statDefinitions: draft.stats,
+      resourceDefinitions: draft.resources,
+      updatedAt: Date.now()
+    };
+
+    setIsProcessing(true);
+    try {
+      await Promise.resolve(onComplete(finalRuleset));
+      setHasSavedOnce(true);
+      setSavedSignature(currentSignature);
+    } finally {
+      setIsProcessing(false);
     }
-  });
-
-  const CurrentStepComponent = wizard.currentStep.component;
-
-  // Update ruleset when wizard data changes
-  React.useEffect(() => {
-    setRuleset((prev: WorldRuleset) => ({
-      ...prev,
-      name: wizard.wizardData.name,
-      description: wizard.wizardData.description,
-      statDefinitions: wizard.wizardData.stats,
-      resourceDefinitions: wizard.wizardData.resources
-    }));
-  }, [wizard.wizardData]);
+  };
 
   return (
     <div className='world-building-wizard'>
-      {/* Progress indicator */}
-      <div className='wizard-progress'>
-        <div className='wizard-progress-bar'>
-          <div
-            className='wizard-progress-fill'
-            style={{
-              width: `${
-                ((wizard.currentStepIndex + 1) / wizard.totalSteps) * 100
-              }%`
-            }}
-          />
-        </div>
-        <div className='wizard-steps'>
-          {steps.map((step, index) => (
-            <button
-              key={step.id}
-              className={`wizard-step-indicator ${
-                index === wizard.currentStepIndex ? 'active' : ''
-              } ${index < wizard.currentStepIndex ? 'completed' : ''}`}
-              onClick={() => wizard.goToStep(index)}
-              disabled={index > wizard.currentStepIndex}
-            >
-              <span className='wizard-step-number'>{index + 1}</span>
-              <span className='wizard-step-title'>{step.title}</span>
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Step content */}
       <div className='wizard-content'>
-        {wizard.currentStep.id === 'basics' && (
-          <BasicsStep
-            name={wizard.wizardData.name}
-            description={wizard.wizardData.description}
-            onChange={(updates) => wizard.updateData(updates)}
-          />
-        )}
+        <div className='wizard-sections'>
+          <div className='wizard-section-card'>
+            <BasicsStep
+              name={draft.name}
+              description={draft.description}
+              onChange={(updates) =>
+                setDraft((prev) => ({
+                  ...prev,
+                  ...updates
+                }))
+              }
+            />
+          </div>
 
-        {wizard.currentStep.id === 'stats' && (
-          <StatSystemStep
-            stats={wizard.wizardData.stats}
-            onChange={(stats) => wizard.updateData({stats})}
-          />
-        )}
+          <div
+            className={`wizard-section-card ${isStatsUnlocked ? '' : 'locked'}`}
+            aria-disabled={!isStatsUnlocked}
+          >
+            <StatSystemStep
+              stats={draft.stats}
+              onChange={(stats) =>
+                setDraft((prev) => ({
+                  ...prev,
+                  stats
+                }))
+              }
+            />
+            {!isStatsUnlocked && (
+              <p className='section-lock-hint'>
+                Complete World Basics to unlock Character Stats.
+              </p>
+            )}
+          </div>
 
-        {wizard.currentStep.id === 'resources' && (
-          <ResourceSystemStep
-            resources={wizard.wizardData.resources}
-            onChange={(resources) => wizard.updateData({resources})}
-          />
-        )}
-
-        {wizard.currentStep.id === 'review' && (
-          <ReviewStep
-            ruleset={ruleset}
-            onEdit={(stepIndex) => wizard.goToStep(stepIndex)}
-          />
-        )}
+          <div
+            className={`wizard-section-card ${
+              isResourcesUnlocked ? '' : 'locked'
+            }`}
+            aria-disabled={!isResourcesUnlocked}
+          >
+            <ResourceSystemStep
+              resources={draft.resources}
+              onChange={(resources) =>
+                setDraft((prev) => ({
+                  ...prev,
+                  resources
+                }))
+              }
+            />
+            {!isResourcesUnlocked && (
+              <p className='section-lock-hint'>
+                Add at least one stat to unlock Resources.
+              </p>
+            )}
+          </div>
+        </div>
       </div>
 
-      {/* Navigation */}
       <div className='wizard-navigation'>
         <div className='wizard-nav-left'>
           {onCancel && (
@@ -172,28 +159,17 @@ export function WorldBuildingWizard({
         </div>
 
         <div className='wizard-nav-right'>
-          {!wizard.isFirstStep && (
-            <button
-              onClick={wizard.goBack}
-              className='btn-secondary'
-              disabled={wizard.isProcessing}
-            >
-              Back
-            </button>
-          )}
-
           <button
-            onClick={wizard.goNext}
+            onClick={handleSave}
             className='btn-primary'
-            disabled={!wizard.canGoNext || wizard.isProcessing}
+            disabled={!canSave || isProcessing}
           >
-            {wizard.isProcessing
+            {isProcessing
               ? 'Processing...'
-              : wizard.isLastStep
-              ? isEditing
+              : hasSavedOnce || isEditing
                 ? 'Save Changes'
                 : 'Create World'
-              : 'Next'}
+            }
           </button>
         </div>
       </div>

@@ -30,6 +30,9 @@ export const Navigation: React.FC<NavigationProps> = ({
           <NavLink to="/world-bible" className={({ isActive }) => isActive ? styles.active : ''}>
             World Bible
           </NavLink>
+          <NavLink to="/ruleset" className={({ isActive }) => isActive ? styles.active : ''}>
+            Ruleset
+          </NavLink>
           <NavLink to="/characters" className={({ isActive }) => isActive ? styles.active : ''}>
             Characters
           </NavLink>
