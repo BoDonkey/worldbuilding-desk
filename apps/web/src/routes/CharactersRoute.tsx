@@ -10,9 +10,15 @@ import { useNavigate } from 'react-router-dom';
 
 interface CharactersRouteProps {
   activeProject: Project | null;
+  embedded?: boolean;
+  onOpenSheets?: (characterId?: string) => void;
 }
 
-function CharactersRoute({ activeProject }: CharactersRouteProps) {
+function CharactersRoute({
+  activeProject,
+  embedded = false,
+  onOpenSheets
+}: CharactersRouteProps) {
   const navigate = useNavigate();
   const [characters, setCharacters] = useState<Character[]>([]);
   const [settings, setSettings] = useState<ProjectSettings | null>(null);
@@ -103,9 +109,11 @@ function CharactersRoute({ activeProject }: CharactersRouteProps) {
   };
 
   const handleCreateSheet = (character: Character) => {
-    // Store the character ID in localStorage to auto-populate the sheet form
-    localStorage.setItem('pendingCharacterSheet', character.id);
-    navigate('/character-sheets');
+    if (onOpenSheets) {
+      onOpenSheets(character.id);
+      return;
+    }
+    navigate('/characters?view=sheets');
   };
 
   const handleEdit = (character: Character) => {
@@ -158,15 +166,7 @@ function CharactersRoute({ activeProject }: CharactersRouteProps) {
   };
 
   if (!activeProject) {
-    return (
-      <section>
-        <h1>Characters</h1>
-        <p>
-          No active project. Go to <strong>Projects</strong> to create or open a
-          project first.
-        </p>
-      </section>
-    );
+    return <p>No active project selected.</p>;
   }
 
   const getStyleName = (styleId: string | undefined) => {
@@ -175,9 +175,9 @@ function CharactersRoute({ activeProject }: CharactersRouteProps) {
     return style?.name ?? 'None';
   };
 
-  return (
-    <section>
-      <h1>Characters</h1>
+  const content = (
+    <>
+      {!embedded && <h1>Characters</h1>}
 
       <div style={{ display: 'flex', gap: '2rem', alignItems: 'flex-start' }}>
         {/* Character form */}
@@ -280,7 +280,10 @@ function CharactersRoute({ activeProject }: CharactersRouteProps) {
         <div style={{ flex: 1 }}>
           <h2>Character List</h2>
           {characters.length === 0 && (
-            <p>No characters yet. Create one on the left.</p>
+            <p>
+              No characters yet. Create one on the left, then open Sheets to
+              build stat blocks from your ruleset.
+            </p>
           )}
           <ul style={{ listStyle: 'none', padding: 0 }}>
             {characters.map(character => (
@@ -313,7 +316,7 @@ function CharactersRoute({ activeProject }: CharactersRouteProps) {
                   </div>
                   <div style={{ display: 'flex', gap: '0.5rem' }}>
                     <button type="button" onClick={() => handleCreateSheet(character)}>
-                      Create Sheet
+                      Open Sheet
                     </button>
                     <button type="button" onClick={() => handleEdit(character)}>
                       Edit
@@ -339,8 +342,10 @@ function CharactersRoute({ activeProject }: CharactersRouteProps) {
           />
         </div>
       )}
-    </section>
+    </>
   );
+
+  return embedded ? <>{content}</> : <section>{content}</section>;
 }
 
 export default CharactersRoute;

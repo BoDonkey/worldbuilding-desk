@@ -170,6 +170,15 @@ export interface CharacterResource {
   max: number;
 }
 
+export interface CharacterTrackedEntry {
+  id: string;
+  mode: 'quick' | 'cataloged';
+  name: string;
+  quantity?: number;
+  notes?: string;
+  definitionId?: string;
+}
+
 // apps/web/src/entityTypes.ts
 export interface CharacterSheet {
   id: string;
@@ -181,6 +190,11 @@ export interface CharacterSheet {
   stats: CharacterStat[];
   resources: CharacterResource[];
   inventory: string[];
+  equipment?: string[];
+  statuses?: string[];
+  inventoryEntries?: CharacterTrackedEntry[];
+  equipmentEntries?: CharacterTrackedEntry[];
+  statusEntries?: CharacterTrackedEntry[];
   notes?: string;
   createdAt: number;
   updatedAt: number;

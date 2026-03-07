@@ -1,5 +1,5 @@
 import {useEffect, useState} from 'react';
-import {BrowserRouter, Routes, Route} from 'react-router-dom';
+import {BrowserRouter, Navigate, Routes, Route} from 'react-router-dom';
 import type {Project, ProjectSettings} from './entityTypes';
 import {Navigation} from './components/Navigation';
 import {ThemeProvider} from './contexts/ThemeContext';
@@ -9,8 +9,7 @@ import ProjectsRoute from './routes/ProjectsRoute';
 import WorldBibleRoute from './routes/WorldBibleRoute';
 import WorkspaceRoute from './routes/WorkspaceRoute';
 import SettingsRoute from './routes/SettingsRoute';
-import CharactersRoute from './routes/CharactersRoute';
-import CharacterSheetsRoute from './routes/CharacterSheetsRoute';
+import CharactersHubRoute from './routes/CharactersHubRoute';
 import CompendiumRoute from './routes/CompendiumRoute';
 import RulesetRoute from './routes/RulesetRoute';
 
@@ -87,13 +86,11 @@ function App() {
                 />
                 <Route
                   path='/characters'
-                  element={<CharactersRoute activeProject={activeProject} />}
+                  element={<CharactersHubRoute activeProject={activeProject} />}
                 />
                 <Route
                   path='/character-sheets'
-                  element={
-                    <CharacterSheetsRoute activeProject={activeProject} />
-                  }
+                  element={<Navigate to='/characters?view=sheets' replace />}
                 />
                 <Route
                   path='/workspace'

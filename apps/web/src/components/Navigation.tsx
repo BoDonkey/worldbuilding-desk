@@ -36,11 +36,6 @@ export const Navigation: React.FC<NavigationProps> = ({
           <NavLink to="/characters" className={({ isActive }) => isActive ? styles.active : ''}>
             Characters
           </NavLink>
-          {showGameSystems && (
-            <NavLink to="/character-sheets" className={({ isActive }) => isActive ? styles.active : ''}>
-              Character Sheets
-            </NavLink>
-          )}
           <NavLink to="/workspace" className={({ isActive }) => isActive ? styles.active : ''}>
             Writing Workspace
           </NavLink>

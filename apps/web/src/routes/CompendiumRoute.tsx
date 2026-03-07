@@ -2104,8 +2104,15 @@ function CompendiumRoute({activeProject, projectSettings}: CompendiumRouteProps)
             style={{
               padding: '0.4rem 0.65rem',
               borderRadius: '999px',
-              border: activeTab === tab.id ? '1px solid #111827' : '1px solid #d1d5db',
-              backgroundColor: activeTab === tab.id ? '#f3f4f6' : '#ffffff',
+              border:
+                activeTab === tab.id
+                  ? '1px solid var(--color-text-primary)'
+                  : '1px solid var(--color-border)',
+              backgroundColor:
+                activeTab === tab.id
+                  ? 'var(--color-bg-secondary)'
+                  : 'var(--color-bg-primary)',
+              color: 'var(--color-text-primary)',
               cursor: 'pointer'
             }}
           >

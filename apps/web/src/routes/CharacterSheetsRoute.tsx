@@ -1,8 +1,11 @@
 import {useEffect, useState, useCallback, useMemo} from 'react';
 import type {FormEvent} from 'react';
+import {useNavigate} from 'react-router-dom';
 import type {
   Character,
   CharacterSheet,
+  CharacterTrackedEntry,
+  CompendiumEntry,
   CharacterStat,
   CharacterResource,
   Project
@@ -33,14 +36,24 @@ import {
   getEffectiveStatValue,
   getOrCreateSettlementState,
   getPartySynergySuggestions,
-  getSettlementModulesByProject
+  getSettlementModulesByProject,
+  getCompendiumEntriesByProject
 } from '../services/compendiumService';
 
 interface CharacterSheetsRouteProps {
   activeProject: Project | null;
+  embedded?: boolean;
+  prefillCharacterId?: string | null;
+  onPrefillConsumed?: () => void;
 }
 
-function CharacterSheetsRoute({activeProject}: CharacterSheetsRouteProps) {
+function CharacterSheetsRoute({
+  activeProject,
+  embedded = false,
+  prefillCharacterId,
+  onPrefillConsumed
+}: CharacterSheetsRouteProps) {
+  const navigate = useNavigate();
   const [sheets, setSheets] = useState<CharacterSheet[]>([]);
   const [ruleset, setRuleset] = useState<StoredRuleset | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -50,6 +63,19 @@ function CharacterSheetsRoute({activeProject}: CharacterSheetsRouteProps) {
   const [stats, setStats] = useState<CharacterStat[]>([]);
   const [resources, setResources] = useState<CharacterResource[]>([]);
   const [notes, setNotes] = useState('');
+  const [inventoryEntries, setInventoryEntries] = useState<CharacterTrackedEntry[]>([]);
+  const [equipmentEntries, setEquipmentEntries] = useState<CharacterTrackedEntry[]>([]);
+  const [statusEntries, setStatusEntries] = useState<CharacterTrackedEntry[]>([]);
+  const [compendiumEntries, setCompendiumEntries] = useState<CompendiumEntry[]>(
+    []
+  );
+  const [quickInventoryName, setQuickInventoryName] = useState('');
+  const [quickInventoryQty, setQuickInventoryQty] = useState(1);
+  const [quickEquipmentName, setQuickEquipmentName] = useState('');
+  const [quickStatusName, setQuickStatusName] = useState('');
+  const [catalogInventoryId, setCatalogInventoryId] = useState('');
+  const [catalogEquipmentId, setCatalogEquipmentId] = useState('');
+  const [catalogStatusId, setCatalogStatusId] = useState('');
   const [characters, setCharacters] = useState<Character[]>([]);
   const [settlementState, setSettlementState] = useState<Awaited<
     ReturnType<typeof getOrCreateSettlementState>
@@ -64,6 +90,7 @@ function CharacterSheetsRoute({activeProject}: CharacterSheetsRouteProps) {
   const [rulesetMemoryFilter, setRulesetMemoryFilter] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [deletingSheetId, setDeletingSheetId] = useState<string | null>(null);
+  const [isLoaded, setIsLoaded] = useState(false);
   const [feedback, setFeedback] = useState<{
     tone: 'success' | 'error';
     message: string;
@@ -80,19 +107,32 @@ function CharacterSheetsRoute({activeProject}: CharacterSheetsRouteProps) {
           setCharacters([]);
           setSettlementState(null);
           setSettlementModules([]);
+          setCompendiumEntries([]);
           setShodhService(null);
           setRulesetMemory(null);
+          setIsLoaded(true);
         }
         return;
       }
+      if (!cancelled) {
+        setIsLoaded(false);
+      }
 
-      const [loadedSheets, loadedRuleset, loadedCharacters, loadedSettlementState, loadedSettlementModules] = await Promise.all(
+      const [
+        loadedSheets,
+        loadedRuleset,
+        loadedCharacters,
+        loadedSettlementState,
+        loadedSettlementModules,
+        loadedCompendiumEntries
+      ] = await Promise.all(
         [
           getCharacterSheetsByProject(activeProject.id),
           getRulesetByProjectId(activeProject.id),
           getCharactersByProject(activeProject.id),
           getOrCreateSettlementState(activeProject.id),
-          getSettlementModulesByProject(activeProject.id)
+          getSettlementModulesByProject(activeProject.id),
+          getCompendiumEntriesByProject(activeProject.id)
         ]
       );
 
@@ -113,20 +153,14 @@ function CharacterSheetsRoute({activeProject}: CharacterSheetsRouteProps) {
         setCharacters(loadedCharacters);
         setSettlementState(loadedSettlementState);
         setSettlementModules(loadedSettlementModules);
+        setCompendiumEntries(loadedCompendiumEntries);
         shodh = await getShodhService(shodhOptions);
         if (!cancelled) {
           setShodhService(shodh);
         }
 
-        // Handle pending character from Characters route
-        const pendingId = localStorage.getItem('pendingCharacterSheet');
-        if (pendingId) {
-          localStorage.removeItem('pendingCharacterSheet');
-          const character = loadedCharacters.find((c) => c.id === pendingId);
-          if (character) {
-            setSelectedCharacterId(pendingId);
-            setName(character.name);
-          }
+        if (!cancelled) {
+          setIsLoaded(true);
         }
       }
     })();
@@ -135,6 +169,24 @@ function CharacterSheetsRoute({activeProject}: CharacterSheetsRouteProps) {
       cancelled = true;
     };
   }, [activeProject]);
+
+  useEffect(() => {
+    if (!prefillCharacterId || editingId || !isLoaded) {
+      return;
+    }
+    const character = characters.find((c) => c.id === prefillCharacterId);
+    if (character) {
+      setSelectedCharacterId(prefillCharacterId);
+      setName(character.name);
+    }
+    onPrefillConsumed?.();
+  }, [
+    prefillCharacterId,
+    characters,
+    editingId,
+    isLoaded,
+    onPrefillConsumed
+  ]);
 
   const refreshRulesetMemory = useCallback(async () => {
     if (!shodhService || !ruleset?.id) {
@@ -158,6 +210,16 @@ function CharacterSheetsRoute({activeProject}: CharacterSheetsRouteProps) {
     setLevel(1);
     setExperience(0);
     setNotes('');
+    setInventoryEntries([]);
+    setEquipmentEntries([]);
+    setStatusEntries([]);
+    setQuickInventoryName('');
+    setQuickInventoryQty(1);
+    setQuickEquipmentName('');
+    setQuickStatusName('');
+    setCatalogInventoryId('');
+    setCatalogEquipmentId('');
+    setCatalogStatusId('');
     initializeStatsAndResources();
   };
 
@@ -188,6 +250,112 @@ function CharacterSheetsRoute({activeProject}: CharacterSheetsRouteProps) {
     setResources(initialResources);
   };
 
+  const toLegacyList = (entries: CharacterTrackedEntry[]): string[] =>
+    entries.map((entry) =>
+      entry.quantity && entry.quantity > 1
+        ? `${entry.name} x${entry.quantity}`
+        : entry.name
+    );
+
+  const mergeLegacyAndTracked = (
+    legacy: string[] | undefined,
+    tracked: CharacterTrackedEntry[] | undefined
+  ): CharacterTrackedEntry[] => {
+    const fromTracked = tracked ?? [];
+    const seen = new Set(
+      fromTracked.map((entry) => `${entry.name}:${entry.quantity ?? 1}`)
+    );
+    const fromLegacy = (legacy ?? [])
+      .map((name) => name.trim())
+      .filter((name) => name.length > 0)
+      .filter((name) => {
+        const key = `${name}:1`;
+        if (seen.has(key)) {
+          return false;
+        }
+        seen.add(key);
+        return true;
+      })
+      .map((name) => ({
+        id: crypto.randomUUID(),
+        mode: 'quick' as const,
+        name,
+        quantity: 1
+      }));
+    return [...fromTracked, ...fromLegacy];
+  };
+
+  const appendQuickEntry = (
+    target: 'inventory' | 'equipment' | 'status',
+    name: string,
+    quantity = 1
+  ) => {
+    const trimmed = name.trim();
+    if (!trimmed) return;
+    const next: CharacterTrackedEntry = {
+      id: crypto.randomUUID(),
+      mode: 'quick',
+      name: trimmed,
+      quantity
+    };
+    if (target === 'inventory') {
+      setInventoryEntries((prev) => [...prev, next]);
+      setQuickInventoryName('');
+      setQuickInventoryQty(1);
+      return;
+    }
+    if (target === 'equipment') {
+      setEquipmentEntries((prev) => [...prev, next]);
+      setQuickEquipmentName('');
+      return;
+    }
+    setStatusEntries((prev) => [...prev, next]);
+    setQuickStatusName('');
+  };
+
+  const appendCatalogEntry = (
+    target: 'inventory' | 'equipment' | 'status',
+    entryId: string
+  ) => {
+    if (!entryId) return;
+    const found = compendiumEntries.find((entry) => entry.id === entryId);
+    if (!found) return;
+    const next: CharacterTrackedEntry = {
+      id: crypto.randomUUID(),
+      mode: 'cataloged',
+      name: found.name,
+      quantity: 1,
+      definitionId: found.id
+    };
+    if (target === 'inventory') {
+      setInventoryEntries((prev) => [...prev, next]);
+      setCatalogInventoryId('');
+      return;
+    }
+    if (target === 'equipment') {
+      setEquipmentEntries((prev) => [...prev, next]);
+      setCatalogEquipmentId('');
+      return;
+    }
+    setStatusEntries((prev) => [...prev, next]);
+    setCatalogStatusId('');
+  };
+
+  const removeTrackedEntry = (
+    target: 'inventory' | 'equipment' | 'status',
+    id: string
+  ) => {
+    if (target === 'inventory') {
+      setInventoryEntries((prev) => prev.filter((entry) => entry.id !== id));
+      return;
+    }
+    if (target === 'equipment') {
+      setEquipmentEntries((prev) => prev.filter((entry) => entry.id !== id));
+      return;
+    }
+    setStatusEntries((prev) => prev.filter((entry) => entry.id !== id));
+  };
+
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
     if (!activeProject) {
@@ -199,6 +367,16 @@ function CharacterSheetsRoute({activeProject}: CharacterSheetsRouteProps) {
     const id = editingId ?? crypto.randomUUID();
     const existing = sheets.find((s) => s.id === id);
 
+    const normalizedInventory = inventoryEntries.filter(
+      (entry) => entry.name.trim().length > 0
+    );
+    const normalizedEquipment = equipmentEntries.filter(
+      (entry) => entry.name.trim().length > 0
+    );
+    const normalizedStatuses = statusEntries.filter(
+      (entry) => entry.name.trim().length > 0
+    );
+
     const sheet: CharacterSheet = {
       id,
       projectId: activeProject.id,
@@ -208,7 +386,12 @@ function CharacterSheetsRoute({activeProject}: CharacterSheetsRouteProps) {
       experience,
       stats,
       resources,
-      inventory: existing?.inventory ?? [],
+      inventory: toLegacyList(normalizedInventory),
+      equipment: toLegacyList(normalizedEquipment),
+      statuses: toLegacyList(normalizedStatuses),
+      inventoryEntries: normalizedInventory,
+      equipmentEntries: normalizedEquipment,
+      statusEntries: normalizedStatuses,
       notes: notes.trim() || undefined,
       createdAt: existing?.createdAt ?? now,
       updatedAt: now
@@ -248,6 +431,15 @@ function CharacterSheetsRoute({activeProject}: CharacterSheetsRouteProps) {
     setStats(sheet.stats);
     setResources(sheet.resources);
     setNotes(sheet.notes || '');
+    setInventoryEntries(
+      mergeLegacyAndTracked(sheet.inventory, sheet.inventoryEntries)
+    );
+    setEquipmentEntries(
+      mergeLegacyAndTracked(sheet.equipment, sheet.equipmentEntries)
+    );
+    setStatusEntries(
+      mergeLegacyAndTracked(sheet.statuses, sheet.statusEntries)
+    );
   };
 
   const handleCharacterSelect = (characterId: string) => {
@@ -320,6 +512,14 @@ function CharacterSheetsRoute({activeProject}: CharacterSheetsRouteProps) {
     [settlementState, settlementModules, activePartySynergies]
   );
   const effectiveLevel = Math.max(1, level + runtimeModifiers.levelBonus);
+  const statusCatalogOptions = useMemo(
+    () =>
+      compendiumEntries.filter((entry) => {
+        const tags = (entry.tags ?? []).map((tag) => tag.toLowerCase());
+        return entry.domain === 'custom' || tags.includes('status');
+      }),
+    [compendiumEntries]
+  );
 
   const handlePromoteRuleset = useCallback(async () => {
     if (!ruleset || !activeProject?.parentProjectId) return;
@@ -338,33 +538,33 @@ function CharacterSheetsRoute({activeProject}: CharacterSheetsRouteProps) {
 
   if (!activeProject) {
     return (
-      <section>
-        <h1>Character Sheets</h1>
-        <p>
-          Go to <strong>Projects</strong> to create or open a project first.
-        </p>
-      </section>
+      <p>
+        Go to <strong>Projects</strong> to create or open a project first.
+      </p>
     );
   }
 
   if (!ruleset) {
     return (
-      <section>
-        <h1>Character Sheets</h1>
+      <div>
+        {!embedded && <h1>Character Sheets</h1>}
         <p>
           This project doesn't have a ruleset yet. Character sheets require a
           ruleset to define stats and resources.
         </p>
         <p>
-          Go to <strong>Projects</strong> and create a ruleset for this project.
+          Go to <strong>Ruleset</strong> and create one for this project.
         </p>
-      </section>
+        <button type='button' onClick={() => navigate('/ruleset')}>
+          Open Ruleset
+        </button>
+      </div>
     );
   }
 
-  return (
-    <section>
-      <h1>Character Sheets</h1>
+  const content = (
+    <>
+      {!embedded && <h1>Character Sheets</h1>}
       {feedback && (
         <p
           role='status'
@@ -394,7 +594,7 @@ function CharacterSheetsRoute({activeProject}: CharacterSheetsRouteProps) {
           onRefresh={() => void refreshRulesetMemory()}
           pageSize={1}
           scopeSummaryLabel='this ruleset'
-          emptyState='No Shodh memory found yet. Save the ruleset (Projects → World Ruleset) to generate one.'
+          emptyState='No Shodh memory found yet. Save the ruleset (Ruleset tab) to generate one.'
           renderSourceLabel={(memory) =>
             memory.projectId === activeProject.id ? 'Local' : 'Parent'
           }
@@ -662,6 +862,205 @@ function CharacterSheetsRoute({activeProject}: CharacterSheetsRouteProps) {
             </div>
           )}
 
+          <div
+            style={{
+              marginBottom: '1rem',
+              border: '1px solid #e5e7eb',
+              borderRadius: '8px',
+              padding: '0.75rem'
+            }}
+          >
+            <h3 style={{marginTop: 0}}>Character State</h3>
+            <p style={{marginTop: 0, fontSize: '0.85rem', color: '#6b7280'}}>
+              Use Quick Add for low-friction tracking. Add from Catalog when an
+              item/status should stay tied to Compendium.
+            </p>
+
+            <div style={{marginBottom: '0.8rem'}}>
+              <strong style={{display: 'block', marginBottom: '0.35rem'}}>
+                Inventory
+              </strong>
+              <div style={{display: 'flex', gap: '0.4rem', marginBottom: '0.35rem'}}>
+                <input
+                  type='text'
+                  value={quickInventoryName}
+                  onChange={(e) => setQuickInventoryName(e.target.value)}
+                  placeholder='Quick add item'
+                  style={{flex: 1}}
+                />
+                <input
+                  type='number'
+                  min={1}
+                  value={quickInventoryQty}
+                  onChange={(e) => setQuickInventoryQty(Math.max(1, Number(e.target.value) || 1))}
+                  style={{width: '5rem'}}
+                />
+                <button
+                  type='button'
+                  onClick={() =>
+                    appendQuickEntry('inventory', quickInventoryName, quickInventoryQty)
+                  }
+                >
+                  Add
+                </button>
+              </div>
+              <div style={{display: 'flex', gap: '0.4rem', marginBottom: '0.35rem'}}>
+                <select
+                  value={catalogInventoryId}
+                  onChange={(e) => setCatalogInventoryId(e.target.value)}
+                  style={{flex: 1}}
+                >
+                  <option value=''>Add from Compendium...</option>
+                  {compendiumEntries.map((entry) => (
+                    <option key={entry.id} value={entry.id}>
+                      {entry.name}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  type='button'
+                  onClick={() => appendCatalogEntry('inventory', catalogInventoryId)}
+                >
+                  Add
+                </button>
+              </div>
+              {inventoryEntries.length > 0 && (
+                <ul style={{margin: 0, paddingLeft: '1rem'}}>
+                  {inventoryEntries.map((entry) => (
+                    <li key={entry.id}>
+                      {entry.name}
+                      {entry.quantity && entry.quantity > 1 ? ` x${entry.quantity}` : ''}
+                      {entry.mode === 'cataloged' ? ' (catalog)' : ''}
+                      <button
+                        type='button'
+                        onClick={() => removeTrackedEntry('inventory', entry.id)}
+                        style={{marginLeft: '0.45rem', fontSize: '0.75rem'}}
+                      >
+                        remove
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+
+            <div style={{marginBottom: '0.8rem'}}>
+              <strong style={{display: 'block', marginBottom: '0.35rem'}}>
+                Equipment
+              </strong>
+              <div style={{display: 'flex', gap: '0.4rem', marginBottom: '0.35rem'}}>
+                <input
+                  type='text'
+                  value={quickEquipmentName}
+                  onChange={(e) => setQuickEquipmentName(e.target.value)}
+                  placeholder='Quick add equipment'
+                  style={{flex: 1}}
+                />
+                <button
+                  type='button'
+                  onClick={() => appendQuickEntry('equipment', quickEquipmentName)}
+                >
+                  Add
+                </button>
+              </div>
+              <div style={{display: 'flex', gap: '0.4rem', marginBottom: '0.35rem'}}>
+                <select
+                  value={catalogEquipmentId}
+                  onChange={(e) => setCatalogEquipmentId(e.target.value)}
+                  style={{flex: 1}}
+                >
+                  <option value=''>Add from Compendium...</option>
+                  {compendiumEntries.map((entry) => (
+                    <option key={entry.id} value={entry.id}>
+                      {entry.name}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  type='button'
+                  onClick={() => appendCatalogEntry('equipment', catalogEquipmentId)}
+                >
+                  Add
+                </button>
+              </div>
+              {equipmentEntries.length > 0 && (
+                <ul style={{margin: 0, paddingLeft: '1rem'}}>
+                  {equipmentEntries.map((entry) => (
+                    <li key={entry.id}>
+                      {entry.name}
+                      {entry.mode === 'cataloged' ? ' (catalog)' : ''}
+                      <button
+                        type='button'
+                        onClick={() => removeTrackedEntry('equipment', entry.id)}
+                        style={{marginLeft: '0.45rem', fontSize: '0.75rem'}}
+                      >
+                        remove
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+
+            <div>
+              <strong style={{display: 'block', marginBottom: '0.35rem'}}>
+                Statuses
+              </strong>
+              <div style={{display: 'flex', gap: '0.4rem', marginBottom: '0.35rem'}}>
+                <input
+                  type='text'
+                  value={quickStatusName}
+                  onChange={(e) => setQuickStatusName(e.target.value)}
+                  placeholder='Quick add status'
+                  style={{flex: 1}}
+                />
+                <button
+                  type='button'
+                  onClick={() => appendQuickEntry('status', quickStatusName)}
+                >
+                  Add
+                </button>
+              </div>
+              <div style={{display: 'flex', gap: '0.4rem', marginBottom: '0.35rem'}}>
+                <select
+                  value={catalogStatusId}
+                  onChange={(e) => setCatalogStatusId(e.target.value)}
+                  style={{flex: 1}}
+                >
+                  <option value=''>Add status from Compendium...</option>
+                  {statusCatalogOptions.map((entry) => (
+                    <option key={entry.id} value={entry.id}>
+                      {entry.name}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  type='button'
+                  onClick={() => appendCatalogEntry('status', catalogStatusId)}
+                >
+                  Add
+                </button>
+              </div>
+              {statusEntries.length > 0 && (
+                <ul style={{margin: 0, paddingLeft: '1rem'}}>
+                  {statusEntries.map((entry) => (
+                    <li key={entry.id}>
+                      {entry.name}
+                      {entry.mode === 'cataloged' ? ' (catalog)' : ''}
+                      <button
+                        type='button'
+                        onClick={() => removeTrackedEntry('status', entry.id)}
+                        style={{marginLeft: '0.45rem', fontSize: '0.75rem'}}
+                      >
+                        remove
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </div>
+
           <div style={{marginBottom: '0.75rem'}}>
             <label>
               Notes
@@ -802,6 +1201,40 @@ function CharacterSheetsRoute({activeProject}: CharacterSheetsRouteProps) {
                         {sheet.notes}
                       </p>
                     )}
+                    {((sheet.inventoryEntries?.length ?? 0) > 0 ||
+                      (sheet.inventory?.length ?? 0) > 0) && (
+                      <div style={{marginTop: '0.5rem', fontSize: '0.9em'}}>
+                        <strong>Inventory:</strong>{' '}
+                        {(sheet.inventoryEntries?.length
+                          ? sheet.inventoryEntries.map((entry) =>
+                              entry.quantity && entry.quantity > 1
+                                ? `${entry.name} x${entry.quantity}`
+                                : entry.name
+                            )
+                          : sheet.inventory
+                        ).join(', ')}
+                      </div>
+                    )}
+                    {((sheet.equipmentEntries?.length ?? 0) > 0 ||
+                      (sheet.equipment?.length ?? 0) > 0) && (
+                      <div style={{marginTop: '0.5rem', fontSize: '0.9em'}}>
+                        <strong>Equipment:</strong>{' '}
+                        {(sheet.equipmentEntries?.length
+                          ? sheet.equipmentEntries.map((entry) => entry.name)
+                          : sheet.equipment
+                        )?.join(', ')}
+                      </div>
+                    )}
+                    {((sheet.statusEntries?.length ?? 0) > 0 ||
+                      (sheet.statuses?.length ?? 0) > 0) && (
+                      <div style={{marginTop: '0.5rem', fontSize: '0.9em'}}>
+                        <strong>Statuses:</strong>{' '}
+                        {(sheet.statusEntries?.length
+                          ? sheet.statusEntries.map((entry) => entry.name)
+                          : sheet.statuses
+                        )?.join(', ')}
+                      </div>
+                    )}
                   </div>
 
                   <div style={{display: 'flex', gap: '0.5rem'}}>
@@ -822,8 +1255,10 @@ function CharacterSheetsRoute({activeProject}: CharacterSheetsRouteProps) {
           </ul>
         </div>
       </div>
-    </section>
+    </>
   );
+
+  return embedded ? <>{content}</> : <section>{content}</section>;
 }
 
 export default CharacterSheetsRoute;

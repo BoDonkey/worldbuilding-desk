@@ -2724,14 +2724,14 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
                       closeStatBlockModal();
                       navigate(
                         statBlockSourceType === 'character'
-                          ? '/character-sheets'
+                          ? '/characters?view=sheets'
                           : '/world-bible'
                       );
                     }}
                     style={{fontSize: '0.8rem'}}
                   >
                     {statBlockSourceType === 'character'
-                      ? 'Go to Character Sheets'
+                      ? 'Go to Characters'
                       : 'Go to World Bible'}
                   </button>
                 </div>
