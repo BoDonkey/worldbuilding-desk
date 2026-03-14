@@ -13,6 +13,8 @@ import type {
   StatBlockSourceType,
   StatBlockStyle,
   StoredRuleset,
+  SystemHistoryEntry,
+  WorkspaceImportMode,
   WorldEntity,
   WritingDocument
 } from '../entityTypes';
@@ -42,6 +44,8 @@ import {
   exportScenesAsMarkdown
 } from '../utils/sceneExport';
 import {EditorWithAI} from '../components/Editor/EditorWithAI';
+import {ContextPopover} from '../components/Editor/ContextPopover';
+import type {LoreInspectorRecord} from '../components/Editor/LoreInspectorPanel';
 import {ShodhMemoryPanel} from '../components/ShodhMemoryPanel';
 import type {RAGProvider} from '../services/rag/RAGService';
 import {getRAGService} from '../services/rag/getRAGService';
@@ -55,6 +59,9 @@ import {getRulesetByProjectId} from '../services/rulesetService';
 import {
   DEFAULT_PARTY_SYNERGY_RULES,
   deriveCharacterRuntimeModifiers,
+  getCompendiumActionLogs,
+  getCompendiumEntriesByProject,
+  getCompendiumProgress,
   getEffectiveResourceValues,
   getEffectiveStatValue,
   getOrCreateSettlementState,
@@ -83,6 +90,20 @@ import {
   type ConsistencyAlias
 } from '../services/consistencyEngine/aliasStorage';
 import {findCanonContradictions} from '../services/consistencyEngine/contradictionReview';
+import {
+  appendSystemHistoryEntry,
+  clearSystemHistoryEntries,
+  getSystemHistoryEntries
+} from '../services/systemHistoryService';
+import {
+  getCachedSynopsis,
+  setCachedSynopsis
+} from '../services/loreInspectorCacheService';
+import {
+  WORKSPACE_COMMAND_EVENT,
+  type WorkspaceCommandId
+} from '../commands/workspaceCommands';
+import styles from '../styles/WorkspaceRoute.module.css';
 
 const summarizeContent = (html: string, limit = 500): string => {
   const text = html
@@ -102,6 +123,8 @@ interface WorkspaceRouteProps {
 type SaveStatus = 'idle' | 'saving' | 'saved';
 type FeedbackTone = 'success' | 'error';
 type ExportFormat = 'markdown' | 'docx' | 'epub';
+type ContextDrawerView = 'world-bible' | 'ruleset' | 'characters' | 'compendium';
+type ImportMode = WorkspaceImportMode;
 
 interface SceneExportItem {
   id: string;
@@ -119,6 +142,51 @@ interface ConsistencyReviewItem {
   sceneTitle: string;
   issue: GuardrailIssue;
 }
+
+interface WorkspaceDrawerPreferences {
+  leftDrawerOpen: boolean;
+  rightDrawerOpen: boolean;
+  activeContextView: ContextDrawerView;
+}
+
+interface ImportFailureItem {
+  fileName: string;
+  reason: 'legacy-doc' | 'apple-pages' | 'parse-failed';
+  detail?: string;
+}
+
+interface ImportSummary {
+  importedCount: number;
+  failedCount: number;
+  unresolvedCount: number;
+  mode: ImportMode;
+  suggestionsSkipped: boolean;
+  openedTitle?: string;
+  failures: ImportFailureItem[];
+  createdAt: number;
+}
+
+interface ConsistencyPopoverState {
+  issueId: string;
+  surface: string;
+  left: number;
+  top: number;
+}
+
+const downgradeUnknownIssuesToWarnings = (
+  issues: GuardrailIssue[]
+): GuardrailIssue[] =>
+  issues.map((issue) =>
+    issue.code === 'UNKNOWN_ENTITY'
+      ? {
+          ...issue,
+          severity: 'warning',
+          message: issue.surface
+            ? `Review "${issue.surface}" before canonizing this scene.`
+            : 'Review this unknown entity before canonizing this scene.'
+        }
+      : issue
+  );
 
 function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
   const navigate = useNavigate();
@@ -194,7 +262,6 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
   const [guardrailIssues, setGuardrailIssues] = useState<GuardrailIssue[]>([]);
   const [resolvingUnknown, setResolvingUnknown] = useState<string | null>(null);
   const [linkingUnknown, setLinkingUnknown] = useState<string | null>(null);
-  const [activeLinkSurface, setActiveLinkSurface] = useState<string | null>(null);
   const [resolverNotice, setResolverNotice] = useState<ResolverNotice | null>(null);
   const [unknownLinkSelection, setUnknownLinkSelection] = useState<
     Record<string, string>
@@ -208,6 +275,12 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
   );
   const [isCreatingScene, setIsCreatingScene] = useState(false);
   const [isImportingDocuments, setIsImportingDocuments] = useState(false);
+  const [importMode, setImportMode] = useState<ImportMode>('balanced');
+  const [skipImportSuggestions, setSkipImportSuggestions] = useState(false);
+  const [importSummary, setImportSummary] = useState<ImportSummary | null>(null);
+  const [retryImportFiles, setRetryImportFiles] = useState<File[]>([]);
+  const [consistencyPopover, setConsistencyPopover] =
+    useState<ConsistencyPopoverState | null>(null);
   const [deletingDocumentId, setDeletingDocumentId] = useState<string | null>(null);
   const [isPromotingDocument, setIsPromotingDocument] = useState(false);
   const [isPromotingMemoryId, setIsPromotingMemoryId] = useState<string | null>(null);
@@ -217,11 +290,86 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
   const [isStatBlockModalOpen, setStatBlockModalOpen] = useState(false);
   const [exportFormat, setExportFormat] = useState<ExportFormat>('markdown');
   const [exportSelection, setExportSelection] = useState<SceneExportItem[]>([]);
+  const [systemHistoryEntries, setSystemHistoryEntries] = useState<SystemHistoryEntry[]>([]);
+  const [isSceneDrawerOpen, setSceneDrawerOpen] = useState(() =>
+    typeof window !== 'undefined'
+      ? !window.matchMedia('(max-width: 1200px)').matches
+      : true
+  );
+  const [isContextDrawerOpen, setContextDrawerOpen] = useState(() =>
+    typeof window !== 'undefined'
+      ? !window.matchMedia('(max-width: 1200px)').matches
+      : true
+  );
+  const [activeContextView, setActiveContextView] =
+    useState<ContextDrawerView>('world-bible');
+  const [isNarrowViewport, setNarrowViewport] = useState(() =>
+    typeof window !== 'undefined'
+      ? window.matchMedia('(max-width: 1200px)').matches
+      : false
+  );
+  const [isDrawerPrefsHydrated, setDrawerPrefsHydrated] = useState(false);
+
+  useEffect(() => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (window as any).__wbdWorkspaceMountedAt = Date.now();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (window as any).__wbdWorkspaceRenderCount = 0;
+    return () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (window as any).__wbdWorkspaceUnmountedAt = Date.now();
+    };
+  }, []);
+
+  // Lightweight diagnostics only, no state updates.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  (window as any).__wbdWorkspaceRenderCount =
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    ((window as any).__wbdWorkspaceRenderCount ?? 0) + 1;
+  const toggleSceneDrawer = useCallback(() => {
+    setSceneDrawerOpen((prev) => {
+      const next = !prev;
+      if (isNarrowViewport && next) {
+        setContextDrawerOpen(false);
+      }
+      return next;
+    });
+  }, [isNarrowViewport]);
+  const toggleContextDrawer = useCallback(() => {
+    setContextDrawerOpen((prev) => {
+      const next = !prev;
+      if (isNarrowViewport && next) {
+        setSceneDrawerOpen(false);
+      }
+      return next;
+    });
+  }, [isNarrowViewport]);
+  const openContextDrawer = useCallback(
+    (view: ContextDrawerView) => {
+      setActiveContextView(view);
+      setContextDrawerOpen(true);
+      if (isNarrowViewport) {
+        setSceneDrawerOpen(false);
+      }
+    },
+    [isNarrowViewport]
+  );
   const importInputRef = useRef<HTMLInputElement | null>(null);
   const lastAutosaveErrorRef = useRef<string | null>(null);
   const canInsertStatBlock =
     (statBlockSourceType === 'character' && characterSheets.length > 0) ||
     (statBlockSourceType === 'item' && entities.length > 0);
+
+  useEffect(() => {
+    if (!consistencyPopover) return;
+    const close = () => setConsistencyPopover(null);
+    window.addEventListener('scroll', close, true);
+    window.addEventListener('resize', close);
+    return () => {
+      window.removeEventListener('scroll', close, true);
+      window.removeEventListener('resize', close);
+    };
+  }, [consistencyPopover]);
 
   const fileNameToTitle = (name: string): string => {
     const base = name.replace(/\.[^.]+$/, '').trim();
@@ -260,9 +408,12 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
       (bytes[offset + 2] << 16) |
       (bytes[offset + 3] << 24)) >>> 0;
 
-  const findDocxDocumentEntry = (
+  const findZipEntry = (
     bytes: Uint8Array
+    ,
+    matcher: (fileName: string) => boolean
   ): {
+    fileName: string;
     compressionMethod: number;
     compressedData: Uint8Array;
   } | null => {
@@ -307,7 +458,7 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
       const fileName = decoder.decode(bytes.slice(fileNameStart, fileNameEnd));
       cursor = fileNameEnd + extraLength + commentLength;
 
-      if (fileName !== 'word/document.xml') continue;
+      if (!matcher(fileName)) continue;
       if (localHeaderOffset + 30 > bytes.length) return null;
       if (readU32LE(bytes, localHeaderOffset) !== localSignature) return null;
 
@@ -318,6 +469,7 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
       if (dataEnd > bytes.length) return null;
 
       return {
+        fileName,
         compressionMethod,
         compressedData: bytes.slice(dataStart, dataEnd)
       };
@@ -353,7 +505,7 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
 
   const parseDocxToText = async (file: File): Promise<string> => {
     const bytes = new Uint8Array(await file.arrayBuffer());
-    const entry = findDocxDocumentEntry(bytes);
+    const entry = findZipEntry(bytes, (fileName) => fileName === 'word/document.xml');
     if (!entry) {
       throw new Error('Could not read DOCX structure.');
     }
@@ -370,6 +522,56 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
     const xml = new TextDecoder('utf-8').decode(xmlBytes);
     return docxXmlToText(xml);
   };
+
+  const htmlLikeToPlainText = (raw: string): string => {
+    const parser = new DOMParser();
+    const parsed = parser.parseFromString(raw, 'text/html');
+    return parsed.body.textContent?.replace(/\s+\n/g, '\n').trim() ?? '';
+  };
+
+  const parsePagesToText = async (file: File): Promise<string> => {
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    const preferredEntries = [
+      'quicklook/preview.txt',
+      'quicklook/preview.html',
+      'quicklook/preview.htm',
+      'index.xml'
+    ];
+
+    const entry = findZipEntry(bytes, (fileName) =>
+      preferredEntries.includes(fileName.toLowerCase())
+    );
+    if (!entry) {
+      throw new Error('No readable text preview found in .pages package.');
+    }
+
+    let payloadBytes: Uint8Array;
+    if (entry.compressionMethod === 0) {
+      payloadBytes = entry.compressedData;
+    } else if (entry.compressionMethod === 8) {
+      payloadBytes = await inflateRaw(entry.compressedData);
+    } else {
+      throw new Error(
+        `Unsupported .pages entry compression method (${entry.compressionMethod}).`
+      );
+    }
+
+    const raw = new TextDecoder('utf-8').decode(payloadBytes).trim();
+    if (!raw) {
+      throw new Error('Empty text payload in .pages package.');
+    }
+
+    const lowerName = entry.fileName.toLowerCase();
+    if (lowerName.endsWith('.txt')) {
+      return raw;
+    }
+
+    const normalized = htmlLikeToPlainText(raw);
+    if (!normalized) {
+      throw new Error('Unable to extract readable text from .pages payload.');
+    }
+    return normalized;
+  };
   const refreshMemories = useCallback(async () => {
     if (!shodhService) {
       setMemories([]);
@@ -381,6 +583,69 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
     setMemories(sorted);
     emitShodhMemoriesUpdated(sorted);
   }, [shodhService]);
+
+  const refreshSystemHistory = useCallback(() => {
+    if (!activeProject) {
+      setSystemHistoryEntries([]);
+      return;
+    }
+    setSystemHistoryEntries(getSystemHistoryEntries(activeProject.id));
+  }, [activeProject]);
+
+  const addSystemHistory = useCallback(
+    (input: {
+      category: SystemHistoryEntry['category'];
+      message: string;
+      insertText?: string;
+      sceneId?: string;
+    }) => {
+      if (!activeProject) return;
+      appendSystemHistoryEntry(activeProject.id, input);
+      refreshSystemHistory();
+    },
+    [activeProject, refreshSystemHistory]
+  );
+
+  const syncCompendiumSystemSignals = useCallback(async () => {
+    if (!activeProject) return;
+    const [logs, entries, progress] = await Promise.all([
+      getCompendiumActionLogs(activeProject.id),
+      getCompendiumEntriesByProject(activeProject.id),
+      getCompendiumProgress(activeProject.id)
+    ]);
+    const entryMap = new Map(entries.map((entry) => [entry.id, entry]));
+
+    logs.slice(0, 80).forEach((log) => {
+      const entry = entryMap.get(log.entryId);
+      const action = entry?.actions.find((item) => item.id === log.actionId);
+      const message = `Compendium action: ${entry?.name ?? 'Unknown entry'} · ${
+        action?.label ?? log.actionId
+      } (+${log.pointsAwarded} pts${log.quantity > 1 ? ` x${log.quantity}` : ''}).`;
+      appendSystemHistoryEntry(activeProject.id, {
+        category: 'resource',
+        message,
+        insertText: `System Update: ${message}`,
+        sourceKey: `compendium-log:${log.id}`,
+        createdAt: log.createdAt
+      });
+    });
+
+    appendSystemHistoryEntry(activeProject.id, {
+      category: 'quest',
+      message:
+        `Compendium progress: ${progress.totalPoints} total points, ` +
+        `${progress.unlockedMilestoneIds.length} milestone(s), ` +
+        `${progress.unlockedRecipeIds.length} recipe(s) unlocked.`,
+      insertText:
+        `Quest Progress: ${progress.totalPoints} points · ` +
+        `${progress.unlockedMilestoneIds.length} milestones · ` +
+        `${progress.unlockedRecipeIds.length} recipes.`,
+      sourceKey: `compendium-progress:${progress.updatedAt}`,
+      createdAt: progress.updatedAt
+    });
+
+    refreshSystemHistory();
+  }, [activeProject, refreshSystemHistory]);
 
   // Load project-scoped data when project changes
   useEffect(() => {
@@ -409,6 +674,7 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
       setStatBlockGroups([]);
       setNewStatGroupName('');
       setStatPreferencesHydrated(false);
+      setSystemHistoryEntries([]);
       return;
     }
 
@@ -435,6 +701,8 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
       setDocuments(docs);
       setEditorConfig(createEditorConfigWithStyles(settings.characterStyles));
       setProjectSettings(settings);
+      setImportMode(settings.defaultImportMode ?? 'balanced');
+      setSkipImportSuggestions(settings.defaultSkipImportSuggestions ?? false);
       setResolvedActionCues(resolvedCues);
       setCategories(loadedCategories);
       setAliases(loadedAliases);
@@ -465,6 +733,7 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
       setSelectedStatCharacterId(loadedSheets[0]?.id ?? '');
       setSelectedStatEntityId(loadedEntities[0]?.id ?? '');
       setStatPreferencesHydrated(true);
+      setSystemHistoryEntries(getSystemHistoryEntries(activeProject.id));
 
       // Generate toolbar buttons from character styles
       const buttons = settings.characterStyles.map((style) => ({
@@ -511,6 +780,65 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
       cancelled = true;
     };
   }, [activeProject, seriesBibleConfig?.parentProjectId]);
+
+  useEffect(() => {
+    if (!activeProject) return;
+    setDrawerPrefsHydrated(false);
+    const key = `workspaceDrawers:${activeProject.id}`;
+    try {
+      const raw = localStorage.getItem(key);
+      if (!raw) {
+        if (isNarrowViewport) {
+          setSceneDrawerOpen(false);
+          setContextDrawerOpen(false);
+        }
+        return;
+      }
+      const parsed = JSON.parse(raw) as Partial<WorkspaceDrawerPreferences>;
+      if (isNarrowViewport) {
+        setSceneDrawerOpen(false);
+        setContextDrawerOpen(false);
+      } else if (typeof parsed.leftDrawerOpen === 'boolean') {
+        setSceneDrawerOpen(parsed.leftDrawerOpen);
+      } else {
+        setSceneDrawerOpen(true);
+      }
+      if (!isNarrowViewport && typeof parsed.rightDrawerOpen === 'boolean') {
+        setContextDrawerOpen(parsed.rightDrawerOpen);
+      } else if (!isNarrowViewport) {
+        setContextDrawerOpen(true);
+      }
+      if (
+        parsed.activeContextView === 'world-bible' ||
+        parsed.activeContextView === 'ruleset' ||
+        parsed.activeContextView === 'characters' ||
+        parsed.activeContextView === 'compendium'
+      ) {
+        setActiveContextView(parsed.activeContextView);
+      }
+    } catch {
+      // Ignore malformed local state and continue with defaults.
+    } finally {
+      setDrawerPrefsHydrated(true);
+    }
+  }, [activeProject, isNarrowViewport]);
+
+  useEffect(() => {
+    if (!activeProject || !isDrawerPrefsHydrated) return;
+    const key = `workspaceDrawers:${activeProject.id}`;
+    const payload: WorkspaceDrawerPreferences = {
+      leftDrawerOpen: isSceneDrawerOpen,
+      rightDrawerOpen: isContextDrawerOpen,
+      activeContextView
+    };
+    localStorage.setItem(key, JSON.stringify(payload));
+  }, [
+    activeProject,
+    isDrawerPrefsHydrated,
+    isSceneDrawerOpen,
+    isContextDrawerOpen,
+    activeContextView
+  ]);
 
   useEffect(() => {
     if (!activeProject) {
@@ -618,6 +946,24 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
   ]);
 
   useEffect(() => {
+    if (!activeProject) return;
+    void syncCompendiumSystemSignals().catch(() => {
+      // Compendium data is optional for some projects.
+    });
+
+    const onFocus = () => {
+      void syncCompendiumSystemSignals().catch(() => {
+        // Ignore sync errors from optional stores.
+      });
+    };
+
+    window.addEventListener('focus', onFocus);
+    return () => {
+      window.removeEventListener('focus', onFocus);
+    };
+  }, [activeProject, syncCompendiumSystemSignals]);
+
+  useEffect(() => {
     if (!activeProject || !ragService) {
       return;
     }
@@ -682,53 +1028,83 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
     setLastSavedAt(null);
   };
 
-  const persistDoc = useCallback(async (doc: WritingDocument, source: 'workspace-save' | 'workspace-autosave' | 'import' = 'workspace-save') => {
-    const proposal = await consistencyEngine.extractProposal({
-      projectId: doc.projectId,
-      text: htmlToPlainText(doc.content),
-      source,
-      knownEntities: knownConsistencyEntities,
-      actionCues: resolvedActionCues
-    });
-    const validation = await consistencyEngine.validateProposal(proposal);
-    setGuardrailIssues(validation.issues);
+  const persistDoc = useCallback(async (
+    doc: WritingDocument,
+    options?: {
+      source?: 'workspace-save' | 'workspace-autosave' | 'import';
+      consistencyMode?: ImportMode;
+    }
+  ): Promise<{unresolvedCount: number; consistencyRun: boolean}> => {
+    const source = options?.source ?? 'workspace-save';
+    const consistencyMode = options?.consistencyMode ?? 'strict';
+    let unresolvedCount = 0;
 
-    if (!validation.allowCommit) {
-      const visibleUnknowns = validation.issues
-        .map((issue) => issue.surface)
-        .filter((surface): surface is string => Boolean(surface))
-        .slice(0, 3);
-      const suffix =
-        validation.issues.length > 3
-          ? ` (+${validation.issues.length - 3} more)`
-          : '';
-      const summary = visibleUnknowns.join(', ');
-      throw new Error(
-        `Commit blocked by consistency check: unknown ${validation.issues.length === 1 ? 'entity' : 'entities'} (${summary}${suffix}).`
-      );
+    if (consistencyMode !== 'lenient') {
+      const proposal = await consistencyEngine.extractProposal({
+        projectId: doc.projectId,
+        text: htmlToPlainText(doc.content),
+        source,
+        knownEntities: knownConsistencyEntities,
+        actionCues: resolvedActionCues
+      });
+      const validation = await consistencyEngine.validateProposal(proposal);
+      const presentedIssues =
+        consistencyMode === 'strict'
+          ? validation.issues
+          : downgradeUnknownIssuesToWarnings(validation.issues);
+      setGuardrailIssues(presentedIssues);
+      unresolvedCount = validation.issues.filter(
+        (issue) => issue.code === 'UNKNOWN_ENTITY'
+      ).length;
+
+      if (!validation.allowCommit && consistencyMode === 'strict') {
+        const visibleUnknowns = validation.issues
+          .map((issue) => issue.surface)
+          .filter((surface): surface is string => Boolean(surface))
+          .slice(0, 3);
+        const suffix =
+          validation.issues.length > 3
+            ? ` (+${validation.issues.length - 3} more)`
+            : '';
+        const summary = visibleUnknowns.join(', ');
+        throw new Error(
+          `Commit blocked by consistency check: unknown ${validation.issues.length === 1 ? 'entity' : 'entities'} (${summary}${suffix}).`
+        );
+      }
+
+      if (validation.allowCommit) {
+        await consistencyEngine.applyProposal(proposal, validation);
+      }
     }
 
-    await consistencyEngine.applyProposal(proposal, validation);
     await saveWritingDocument(doc);
 
-    // Index for RAG
-    if (ragService) {
-      await ragService.indexDocument(
-        doc.id,
-        doc.title || 'Untitled scene',
-        doc.content,
-        'scene'
-      );
+    try {
+      if (ragService) {
+        await ragService.indexDocument(
+          doc.id,
+          doc.title || 'Untitled scene',
+          doc.content,
+          'scene'
+        );
+      }
+    } catch (error) {
+      console.warn('RAG indexing failed for scene', doc.id, error);
     }
-    if (shodhService) {
-      await shodhService.captureAutoMemory({
-        projectId: doc.projectId,
-        documentId: doc.id,
-        title: doc.title || 'Untitled scene',
-        content: doc.content,
-        tags: ['scene']
-      });
-      await refreshMemories();
+
+    try {
+      if (shodhService) {
+        await shodhService.captureAutoMemory({
+          projectId: doc.projectId,
+          documentId: doc.id,
+          title: doc.title || 'Untitled scene',
+          content: doc.content,
+          tags: ['scene']
+        });
+        await refreshMemories();
+      }
+    } catch (error) {
+      console.warn('Auto-memory capture failed for scene', doc.id, error);
     }
 
     setDocuments((prev) => {
@@ -744,9 +1120,33 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
     setSelectedCreatedAt(doc.createdAt);
     setSaveStatus('saved');
     setLastSavedAt(Date.now());
-    setGuardrailIssues([]);
+    if (consistencyMode === 'strict') {
+      setGuardrailIssues([]);
+    }
     lastAutosaveErrorRef.current = null;
+    return {
+      unresolvedCount,
+      consistencyRun: consistencyMode !== 'lenient'
+    };
   }, [consistencyEngine, knownConsistencyEntities, resolvedActionCues, ragService, shodhService, refreshMemories]);
+
+  const refreshDeferredReview = useCallback(async (doc: WritingDocument) => {
+    const proposal = await consistencyEngine.extractProposal({
+      projectId: doc.projectId,
+      text: htmlToPlainText(doc.content),
+      source: 'workspace-save',
+      knownEntities: knownConsistencyEntities,
+      actionCues: resolvedActionCues
+    });
+    const validation = await consistencyEngine.validateProposal(proposal);
+    setGuardrailIssues(downgradeUnknownIssuesToWarnings(validation.issues));
+  }, [consistencyEngine, knownConsistencyEntities, resolvedActionCues]);
+
+  const resolveDocumentConsistencyMode = useCallback(
+    (doc: WritingDocument): ImportMode =>
+      doc.consistencyReviewMode === 'deferred' ? 'balanced' : 'strict',
+    []
+  );
 
   const handleNewDocument = async () => {
     if (!activeProject) return;
@@ -775,6 +1175,11 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
       setLastSavedAt(Date.now());
       setWordCount(0);
       setFeedback({tone: 'success', message: 'Created a new scene.'});
+      addSystemHistory({
+        category: 'scene',
+        message: `Created scene "${doc.title}".`,
+        insertText: `System Notice: Scene "${doc.title}" was created.`
+      });
     } catch (error) {
       const message =
         error instanceof Error ? error.message : 'Unable to create scene.';
@@ -784,44 +1189,64 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
     }
   };
 
-  const handleImportDocuments = async (event: ChangeEvent<HTMLInputElement>) => {
-    if (!activeProject) return;
-    const fileList = event.target.files;
-    if (!fileList || fileList.length === 0) return;
-
+  const runImportBatch = useCallback(async (files: File[]) => {
+    if (!activeProject || files.length === 0) return;
     setIsImportingDocuments(true);
     setFeedback(null);
+    setImportSummary(null);
     let importedCount = 0;
     let failedCount = 0;
+    let unresolvedCount = 0;
     let lastImported: WritingDocument | null = null;
+    const failures: ImportFailureItem[] = [];
+    const failedFiles: File[] = [];
+    const consistencyModeForBatch: ImportMode = skipImportSuggestions
+      ? 'lenient'
+      : importMode;
 
     try {
-      const files = Array.from(fileList);
       for (const file of files) {
         const lower = file.name.toLowerCase();
         try {
           if (lower.endsWith('.doc')) {
             failedCount += 1;
+            failures.push({fileName: file.name, reason: 'legacy-doc'});
             continue;
           }
 
           const raw = lower.endsWith('.docx')
             ? await parseDocxToText(file)
-            : await file.text();
+            : lower.endsWith('.pages')
+              ? await parsePagesToText(file)
+              : await file.text();
           const now = Date.now();
           const doc: WritingDocument = {
             id: crypto.randomUUID(),
             projectId: activeProject.id,
             title: fileNameToTitle(file.name),
             content: fileToHtml(file.name, raw),
+            consistencyReviewMode:
+              consistencyModeForBatch === 'strict' ? 'default' : 'deferred',
             createdAt: now,
             updatedAt: now
           };
-          await persistDoc(doc, 'import');
+          const result = await persistDoc(doc, {
+            source: 'import',
+            consistencyMode: consistencyModeForBatch
+          });
           importedCount += 1;
+          unresolvedCount += result.unresolvedCount;
           lastImported = doc;
-        } catch {
+        } catch (error) {
+          const detail =
+            error instanceof Error ? error.message : 'Unknown import error.';
           failedCount += 1;
+          failedFiles.push(file);
+          failures.push({
+            fileName: file.name,
+            reason: lower.endsWith('.pages') ? 'apple-pages' : 'parse-failed',
+            detail
+          });
         }
       }
 
@@ -833,23 +1258,55 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
         setWordCount(countWords(lastImported.content));
       }
 
+      setImportSummary({
+        importedCount,
+        failedCount,
+        unresolvedCount,
+        mode: consistencyModeForBatch,
+        suggestionsSkipped: consistencyModeForBatch === 'lenient',
+        openedTitle: lastImported?.title,
+        failures,
+        createdAt: Date.now()
+      });
+      setRetryImportFiles(failedFiles);
+
       if (failedCount > 0) {
+        const pageFailureCount = failures.filter(
+          (item) => item.reason === 'apple-pages'
+        ).length;
         setFeedback({
           tone: 'error',
           message:
             `Imported ${importedCount} document(s); ${failedCount} failed. ` +
-            'Legacy .doc files are not supported yet. Convert to .docx, .txt, or .md.'
+            (pageFailureCount > 0
+              ? 'For Apple Pages files, export as .docx or .txt from Pages, then import.'
+              : failures[0]?.detail ??
+                'Legacy .doc files are not supported yet. Convert to .docx, .txt, or .md.')
         });
       } else {
         setFeedback({
           tone: 'success',
-          message: `Imported ${importedCount} document(s).`
+          message:
+            consistencyModeForBatch === 'lenient'
+              ? `Imported ${importedCount} document(s). Consistency suggestions skipped for this import.`
+              : `Imported ${importedCount} document(s). Unresolved entities: ${unresolvedCount}.`
         });
       }
     } finally {
       setIsImportingDocuments(false);
-      event.target.value = '';
     }
+  }, [activeProject, importMode, persistDoc, skipImportSuggestions]);
+
+  const handleImportDocuments = async (event: ChangeEvent<HTMLInputElement>) => {
+    const fileList = event.target.files;
+    if (!fileList || fileList.length === 0) return;
+    await runImportBatch(Array.from(fileList));
+    event.target.value = '';
+  };
+
+  const handleRetryFailedImports = async () => {
+    if (retryImportFiles.length === 0) return;
+    await runImportBatch(retryImportFiles);
   };
 
   const handleSelectDocument = (doc: WritingDocument) => {
@@ -859,6 +1316,14 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
     setContent(doc.content);
     setSaveStatus('idle');
     setWordCount(countWords(doc.content));
+    setConsistencyPopover(null);
+    if (doc.consistencyReviewMode === 'deferred') {
+      void refreshDeferredReview(doc).catch((error) => {
+        console.warn('Deferred review refresh failed', error);
+      });
+    } else {
+      setGuardrailIssues([]);
+    }
   };
 
   const handleRunConsistencyReview = useCallback(async () => {
@@ -867,6 +1332,10 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
       setConsistencyReviewItems([]);
       setLastConsistencyReviewAt(Date.now());
       setFeedback({tone: 'error', message: 'No scenes available to review.'});
+      addSystemHistory({
+        category: 'consistency',
+        message: 'Consistency review skipped: no scenes available.'
+      });
       return;
     }
 
@@ -908,8 +1377,13 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
           tone: 'success',
           message: `Consistency review complete: no issues across ${documents.length} scene(s).`
         });
+        addSystemHistory({
+          category: 'consistency',
+          message: `Consistency review complete with no issues across ${documents.length} scene(s).`
+        });
       } else {
         const contradictionCount = contradictionItems.length;
+        const firstSceneId = combinedItems[0]?.sceneId;
         setFeedback({
           tone: 'error',
           message:
@@ -917,6 +1391,15 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
             (contradictionCount > 0
               ? ` ${contradictionCount} contradiction${contradictionCount === 1 ? '' : 's'} with canon records.`
               : '')
+        });
+        addSystemHistory({
+          category: 'consistency',
+          message:
+            `Consistency review found ${combinedItems.length} issue(s) across ${documents.length} scene(s).` +
+            (contradictionCount > 0
+              ? ` ${contradictionCount} contradiction${contradictionCount === 1 ? '' : 's'} with canon records.`
+              : ''),
+          sceneId: firstSceneId
         });
       }
     } catch (error) {
@@ -935,7 +1418,8 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
     documents,
     entities,
     knownConsistencyEntities,
-    resolvedActionCues
+    resolvedActionCues,
+    addSystemHistory
   ]);
 
   const openWorldRecord = (target: {id: string; type: 'character' | 'entity'}) => {
@@ -1034,19 +1518,37 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
     }
 
     setExportModalOpen(false);
+    const exportMessage =
+      exportFormat === 'markdown'
+        ? `Exported ${selectedScenes.length} scene(s) to Markdown.`
+        : exportFormat === 'docx'
+          ? `Exported ${selectedScenes.length} scene(s) to DOCX.`
+          : `Exported ${selectedScenes.length} scene(s) to EPUB.`;
     setFeedback({
       tone: 'success',
-      message:
-        exportFormat === 'markdown'
-          ? `Exported ${selectedScenes.length} scene(s) to Markdown.`
-          : exportFormat === 'docx'
-            ? `Exported ${selectedScenes.length} scene(s) to DOCX.`
-            : `Exported ${selectedScenes.length} scene(s) to EPUB.`
+      message: exportMessage
+    });
+    addSystemHistory({
+      category: 'system',
+      message: exportMessage,
+      insertText: `System Export: ${exportMessage}`
     });
   };
 
   const handleSave = async () => {
     if (!activeProject || !selectedId) return;
+    const existingDocument = documents.find((doc) => doc.id === selectedId);
+    const nextTitle = title.trim() || 'Untitled scene';
+    if (
+      existingDocument &&
+      existingDocument.title === nextTitle &&
+      existingDocument.content === content
+    ) {
+      setSaveStatus('saved');
+      setLastSavedAt(Date.now());
+      setFeedback({tone: 'success', message: 'Scene already saved.'});
+      return;
+    }
 
     const now = Date.now();
     const createdAt = selectedCreatedAt ?? now;
@@ -1054,8 +1556,9 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
     const doc: WritingDocument = {
       id: selectedId,
       projectId: activeProject.id,
-      title: title.trim() || 'Untitled scene',
+      title: nextTitle,
       content,
+      consistencyReviewMode: existingDocument?.consistencyReviewMode ?? 'default',
       createdAt,
       updatedAt: now
     };
@@ -1063,7 +1566,10 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
     setSaveStatus('saving');
     setFeedback(null);
     try {
-      await persistDoc(doc, 'workspace-save');
+      await persistDoc(doc, {
+        source: 'workspace-save',
+        consistencyMode: resolveDocumentConsistencyMode(doc)
+      });
       setFeedback({tone: 'success', message: 'Scene saved.'});
     } catch (error) {
       const message =
@@ -1105,6 +1611,7 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
     setContent(html);
     setSaveStatus('idle');
     setGuardrailIssues([]);
+    setConsistencyPopover(null);
     setWordCount(countWords(html));
   };
 
@@ -1121,6 +1628,22 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
         return true;
       });
   }, [guardrailIssues]);
+
+  const hasBlockingUnknownGuardrailIssues = useMemo(
+    () => unknownGuardrailIssues.some((issue) => issue.severity === 'blocking'),
+    [unknownGuardrailIssues]
+  );
+
+  const highlightableUnknownIssues = useMemo(
+    () =>
+      unknownGuardrailIssues.map((issue) => ({
+        id: `${issue.code}:${issue.surface ?? ''}`,
+        surface: issue.surface ?? '',
+        message: issue.message,
+        severity: issue.severity
+      })),
+    [unknownGuardrailIssues]
+  );
 
   const unknownLinkOptions = useMemo(() => {
     const optionMap: Record<string, WorldEntity[]> = {};
@@ -1200,7 +1723,9 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
         delete copy[surface];
         return copy;
       });
-      setActiveLinkSurface((prev) => (prev === surface ? null : prev));
+      setConsistencyPopover((prev) =>
+        prev?.surface.trim().toLowerCase() === normalized.toLowerCase() ? null : prev
+      );
       setFeedback({
         tone: 'success',
         message: `Entity "${normalized}" created in ${preferredCategory.name}. Save again to validate.`
@@ -1217,10 +1742,50 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
     }
   }, [activeProject, categories]);
 
+  const resolveAllUnknownEntities = useCallback(async () => {
+    const surfaces = unknownGuardrailIssues
+      .map((issue) => issue.surface?.trim())
+      .filter((surface): surface is string => Boolean(surface));
+    if (surfaces.length === 0) return;
+
+    for (const surface of surfaces) {
+      await resolveUnknownEntity(surface);
+    }
+  }, [unknownGuardrailIssues, resolveUnknownEntity]);
+
+  const dismissAllUnknownEntities = useCallback(() => {
+    const blocked = new Set(
+      unknownGuardrailIssues
+        .map((issue) => issue.surface?.trim().toLowerCase())
+        .filter((surface): surface is string => Boolean(surface))
+    );
+    setGuardrailIssues((prev) =>
+      prev.filter((issue) => {
+        const surface = issue.surface?.trim().toLowerCase();
+        return !surface || !blocked.has(surface);
+      })
+    );
+    setFeedback({
+      tone: 'success',
+      message: 'Unknown entity warnings dismissed for now.'
+    });
+  }, [unknownGuardrailIssues]);
+
+  const dismissUnknownEntity = useCallback((surface: string) => {
+    const normalized = surface.trim().toLowerCase();
+    if (!normalized) return;
+    setGuardrailIssues((prev) =>
+      prev.filter((issue) => issue.surface?.trim().toLowerCase() !== normalized)
+    );
+    setConsistencyPopover((prev) =>
+      prev?.surface.trim().toLowerCase() === normalized ? null : prev
+    );
+  }, []);
+
   const linkUnknownEntity = useCallback(
-    async (surface: string) => {
+    async (surface: string, explicitEntityId?: string) => {
       if (!activeProject) return;
-      const selectedEntityId = unknownLinkSelection[surface];
+      const selectedEntityId = explicitEntityId ?? unknownLinkSelection[surface];
       if (!selectedEntityId) {
         setFeedback({
           tone: 'error',
@@ -1256,7 +1821,9 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
           delete copy[surface];
           return copy;
         });
-        setActiveLinkSurface((prev) => (prev === surface ? null : prev));
+        setConsistencyPopover((prev) =>
+          prev?.surface.trim().toLowerCase() === surface.trim().toLowerCase() ? null : prev
+        );
         setFeedback({
           tone: 'success',
           message: `Linked alias "${surface}" to existing entity. Save again to validate.`
@@ -1292,6 +1859,29 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
       }),
     [settlementState, settlementModules, activePartySynergies]
   );
+
+  useEffect(() => {
+    if (!activeProject) return;
+    const activeRules = activePartySynergies
+      .filter((item) => item.missingRoles.length === 0)
+      .map((item) => item.ruleId)
+      .sort();
+    if (activeRules.length === 0) return;
+
+    const message =
+      activeRules.length === 1
+        ? 'Quest hook available from an active party synergy combo.'
+        : `Quest hooks available from ${activeRules.length} active party synergy combos.`;
+
+    appendSystemHistoryEntry(activeProject.id, {
+      category: 'quest',
+      message,
+      insertText: `Quest Update: ${message}`,
+      sourceKey: `party-synergy:${activeRules.join('|')}`,
+      createdAt: Date.now()
+    });
+    refreshSystemHistory();
+  }, [activeProject, activePartySynergies, refreshSystemHistory]);
   const statDefinitionNameById = useMemo(() => {
     const map = new Map<string, string>();
     ruleset?.statDefinitions.forEach((def) => {
@@ -1311,6 +1901,8 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
   const selectedEntity =
     entities.find((entity) => entity.id === selectedStatEntityId) ?? null;
   const activeProjectMode = projectSettings?.projectMode ?? 'litrpg';
+  const showGameSystems =
+    projectSettings?.featureToggles.enableGameSystems !== false;
   const availableStatIds = useMemo(
     () => (selectedSheet ? selectedSheet.stats.map((stat) => stat.definitionId) : []),
     [selectedSheet]
@@ -1482,6 +2074,193 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
     []
   );
 
+  const selectionQuickSnippets = useMemo(() => {
+    if (!activeProject) {
+      return {characters: {}, entities: {}};
+    }
+    const normalize = (input: string) =>
+      input
+        .trim()
+        .toLowerCase()
+        .replace(/[^\w\s'-]/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+
+    const categoryNameById = new Map(categories.map((category) => [category.id, category.name]));
+    const characterById = new Map(characters.map((character) => [character.id, character]));
+    const entityById = new Map(entities.map((entity) => [entity.id, entity]));
+
+    const recentSystemMessageFor = (name: string): string => {
+      const normalized = name.trim().toLowerCase();
+      const match = systemHistoryEntries.find((entry) =>
+        entry.message.toLowerCase().includes(normalized)
+      );
+      return match?.message ?? 'No recent linked system event.';
+    };
+
+    const buildCharacterLore = (sheet: CharacterSheet): LoreInspectorRecord => {
+      const character = sheet.characterId ? characterById.get(sheet.characterId) : null;
+      const role =
+        typeof character?.fields.role === 'string' && character.fields.role.trim()
+          ? character.fields.role.trim()
+          : 'Unassigned class';
+      const statuses = (sheet.statuses ?? []).slice(0, 2);
+      const faction =
+        typeof character?.fields.faction === 'string' && character.fields.faction.trim()
+          ? character.fields.faction.trim()
+          : 'Unknown faction';
+      const cached = getCachedSynopsis(activeProject.id, sheet.id, sheet.updatedAt);
+      const synopsis =
+        cached ??
+        {
+          goal:
+            (typeof character?.fields.goal === 'string' && character.fields.goal.trim()) ||
+            'No explicit active goal recorded.',
+          recentEvent: recentSystemMessageFor(sheet.name),
+          motivation:
+            (typeof character?.fields.motivation === 'string' &&
+              character.fields.motivation.trim()) ||
+            character?.description?.trim() ||
+            'No explicit motivation captured yet.'
+        };
+      if (!cached) {
+        setCachedSynopsis(activeProject.id, sheet.id, sheet.updatedAt, synopsis);
+      }
+      return {
+        type: 'character',
+        id: sheet.id,
+        name: sheet.name,
+        vitalSigns: [
+          `Level ${sheet.level}`,
+          role,
+          statuses.length > 0 ? statuses.join(', ') : 'No active buffs/debuffs',
+          `Faction: ${faction}`
+        ],
+        synopsis
+      };
+    };
+
+    const buildEntityLore = (entity: WorldEntity): LoreInspectorRecord => {
+      const categoryName = categoryNameById.get(entity.categoryId) ?? 'Entity';
+      const status =
+        typeof entity.fields.status === 'string' && entity.fields.status.trim()
+          ? entity.fields.status.trim()
+          : 'State unknown';
+      const cached = getCachedSynopsis(activeProject.id, entity.id, entity.updatedAt);
+      const synopsis =
+        cached ??
+        {
+          goal:
+            (typeof entity.fields.goal === 'string' && entity.fields.goal.trim()) ||
+            `Track relevance of ${entity.name} in this scene.`,
+          recentEvent: recentSystemMessageFor(entity.name),
+          motivation:
+            (typeof entity.fields.motivation === 'string' &&
+              entity.fields.motivation.trim()) ||
+            (typeof entity.fields.notes === 'string' && entity.fields.notes.trim()) ||
+            'No motivation/secret recorded.'
+        };
+      if (!cached) {
+        setCachedSynopsis(activeProject.id, entity.id, entity.updatedAt, synopsis);
+      }
+      return {
+        type: 'entity',
+        id: entity.id,
+        name: entity.name,
+        vitalSigns: [categoryName, status],
+        synopsis
+      };
+    };
+
+    const characterEntries: Array<
+      [string, {name: string; html: string; lore: LoreInspectorRecord}]
+    > = [];
+    const entityEntries: Array<
+      [string, {name: string; html: string; lore: LoreInspectorRecord}]
+    > = [];
+    const surnameCandidates = new Map<string, Array<{
+      bucket: 'characters' | 'entities';
+      entry: {name: string; html: string; lore: LoreInspectorRecord};
+    }>>();
+
+    const registerEntry = (
+      bucket: 'characters' | 'entities',
+      label: string,
+      entry: {name: string; html: string; lore: LoreInspectorRecord}
+    ) => {
+      const key = normalize(label);
+      if (!key) return;
+      if (bucket === 'characters') {
+        characterEntries.push([key, entry]);
+      } else {
+        entityEntries.push([key, entry]);
+      }
+
+      const tokens = label.trim().split(/\s+/).filter(Boolean);
+      if (tokens.length < 2) return;
+      const trailing = normalize(tokens[tokens.length - 1] ?? '');
+      if (!trailing || trailing.length < 4) return;
+      const existing = surnameCandidates.get(trailing) ?? [];
+      existing.push({bucket, entry});
+      surnameCandidates.set(trailing, existing);
+    };
+
+    characterSheets.forEach((sheet) => {
+      const entry = {
+        name: sheet.name,
+        html: resolveCharacterBlock(sheet, 'compact'),
+        lore: buildCharacterLore(sheet)
+      };
+      registerEntry('characters', sheet.name, entry);
+    });
+
+    entities.forEach((entity) => {
+      const entry = {
+        name: entity.name,
+        html: resolveItemBlock(entity, 'compact'),
+        lore: buildEntityLore(entity)
+      };
+      registerEntry('entities', entity.name, entry);
+    });
+
+    aliases.forEach((alias) => {
+      const entity = entityById.get(alias.entityId);
+      if (!entity) return;
+      const entry = {
+        name: entity.name,
+        html: resolveItemBlock(entity, 'compact'),
+        lore: buildEntityLore(entity)
+      };
+      registerEntry('entities', alias.alias, entry);
+    });
+
+    surnameCandidates.forEach((matches, trailing) => {
+      if (matches.length !== 1) return;
+      const [match] = matches;
+      if (!match) return;
+      if (match.bucket === 'characters') {
+        characterEntries.push([trailing, match.entry]);
+      } else {
+        entityEntries.push([trailing, match.entry]);
+      }
+    });
+
+    return {
+      characters: Object.fromEntries(characterEntries),
+      entities: Object.fromEntries(entityEntries)
+    };
+  }, [
+    activeProject,
+    aliases,
+    categories,
+    characters,
+    characterSheets,
+    entities,
+    resolveCharacterBlock,
+    resolveItemBlock,
+    systemHistoryEntries
+  ]);
+
   const resolveTemplateToBlock = useCallback(
     (
       sourceType: StatBlockSourceType,
@@ -1529,6 +2308,11 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
     setFeedback({
       tone: 'success',
       message: `Refreshed ${result.replacedCount} stat block template(s).`
+    });
+    addSystemHistory({
+      category: 'system',
+      message: `Refreshed ${result.replacedCount} stat block template(s).`,
+      insertText: `System Update: Refreshed ${result.replacedCount} stat templates in scene text.`
     });
   };
 
@@ -1599,6 +2383,27 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
             ? 'Inserted live status block (LitRPG mode auto-resolves placeholders).'
             : 'Inserted status block into scene.'
     });
+
+    if (statBlockSourceType === 'character' && selectedSheet) {
+      const resourcePreview = selectedSheet.resources
+        .slice(0, 2)
+        .map((resource) => `${resource.definitionId}: ${resource.current}/${resource.max}`)
+        .join(', ');
+      const message =
+        `Status block inserted for ${selectedSheet.name} (Lv ${selectedSheet.level}, ${selectedSheet.experience} XP)` +
+        (resourcePreview ? ` · ${resourcePreview}` : '.');
+      addSystemHistory({
+        category: 'resource',
+        message,
+        insertText: `System Status: ${message}`
+      });
+    } else if (statBlockSourceType === 'item' && selectedEntity) {
+      addSystemHistory({
+        category: 'system',
+        message: `Status block inserted for entity "${selectedEntity.name}".`,
+        insertText: `System Status: Entity "${selectedEntity.name}" record inserted into scene.`
+      });
+    }
   };
 
   const handleToggleStatSelection = (statId: string) => {
@@ -1685,6 +2490,9 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
   const selectedDocument = selectedId
     ? documents.find((doc) => doc.id === selectedId)
     : null;
+  const activeConsistencyPopoverIssue = consistencyPopover
+    ? highlightableUnknownIssues.find((issue) => issue.id === consistencyPopover.issueId) ?? null
+    : null;
   const selectedDocumentMemories = selectedId
     ? memories.filter((memory) => memory.documentId === selectedId)
     : [];
@@ -1702,6 +2510,137 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
     setMemoryDraft(summarizeContent(selectedDocument.content));
     setMemoryModalOpen(true);
   };
+
+  const updateSelectedDocumentConsistencyReviewMode = useCallback(
+    async (mode: 'default' | 'deferred') => {
+      if (!selectedDocument) return;
+      const nextDocument: WritingDocument = {
+        ...selectedDocument,
+        consistencyReviewMode: mode,
+        updatedAt: Date.now()
+      };
+      await saveWritingDocument(nextDocument);
+      setDocuments((prev) =>
+        prev.map((doc) => (doc.id === nextDocument.id ? nextDocument : doc))
+      );
+      setFeedback({
+        tone: 'success',
+        message:
+          mode === 'deferred'
+            ? 'Scene set to review later. Saves will warn instead of block.'
+            : 'Scene set to strict consistency review.'
+      });
+    },
+    [selectedDocument]
+  );
+
+  useEffect(() => {
+    if (!showGameSystems && activeContextView === 'compendium') {
+      setActiveContextView('world-bible');
+    }
+  }, [showGameSystems, activeContextView]);
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia('(max-width: 1200px)');
+    const update = () => setNarrowViewport(mediaQuery.matches);
+    update();
+    mediaQuery.addEventListener('change', update);
+    return () => mediaQuery.removeEventListener('change', update);
+  }, []);
+
+  useEffect(() => {
+    if (!isNarrowViewport) return;
+    setSceneDrawerOpen(false);
+    setContextDrawerOpen(false);
+  }, [isNarrowViewport]);
+
+  useEffect(() => {
+    if (!isNarrowViewport || (!isContextDrawerOpen && !isSceneDrawerOpen)) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        if (isContextDrawerOpen) {
+          setContextDrawerOpen(false);
+          return;
+        }
+        if (isSceneDrawerOpen) {
+          setSceneDrawerOpen(false);
+        }
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [isNarrowViewport, isContextDrawerOpen, isSceneDrawerOpen]);
+
+  useEffect(() => {
+    const onWorkspaceCommand = (event: Event) => {
+      const detail = (event as CustomEvent<{id?: WorkspaceCommandId}>).detail;
+      const commandId = detail?.id;
+      if (!commandId) return;
+
+      switch (commandId) {
+        case 'new-scene':
+          void handleNewDocument();
+          break;
+        case 'save-scene':
+          void handleSave();
+          break;
+        case 'toggle-left-drawer':
+          toggleSceneDrawer();
+          break;
+        case 'toggle-right-drawer':
+          toggleContextDrawer();
+          break;
+        case 'open-context-world-bible':
+          openContextDrawer('world-bible');
+          break;
+        case 'open-context-ruleset':
+          openContextDrawer('ruleset');
+          break;
+        case 'open-context-characters':
+          openContextDrawer('characters');
+          break;
+        case 'open-context-compendium':
+          if (showGameSystems) {
+            openContextDrawer('compendium');
+          }
+          break;
+        case 'run-consistency-review':
+          void handleRunConsistencyReview();
+          break;
+        case 'export-markdown':
+          openExportModal('markdown');
+          break;
+        case 'export-docx':
+          openExportModal('docx');
+          break;
+        case 'export-epub':
+          openExportModal('epub');
+          break;
+        case 'extract-memory':
+          openMemoryModal();
+          break;
+        case 'toggle-ai-panel':
+          break;
+        default:
+          break;
+      }
+    };
+
+    window.addEventListener(WORKSPACE_COMMAND_EVENT, onWorkspaceCommand);
+    return () => {
+      window.removeEventListener(WORKSPACE_COMMAND_EVENT, onWorkspaceCommand);
+    };
+  }, [
+    handleNewDocument,
+    openContextDrawer,
+    handleRunConsistencyReview,
+    handleSave,
+    openMemoryModal,
+    openExportModal,
+    showGameSystems,
+    toggleContextDrawer,
+    toggleSceneDrawer
+  ]);
 
   const handleMemorySave = async () => {
     if (!selectedDocument || !shodhService || !memoryDraft.trim()) {
@@ -1802,6 +2741,10 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
         }));
       }
       setFeedback({tone: 'success', message: 'Canon sync state updated.'});
+      addSystemHistory({
+        category: 'consistency',
+        message: 'Canon sync state marked as updated.'
+      });
     } catch (error) {
       const message =
         error instanceof Error ? error.message : 'Unable to mark canon as synced.';
@@ -1809,10 +2752,19 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
     } finally {
       setIsSyncingCanon(false);
     }
-  }, [activeProject]);
+  }, [activeProject, addSystemHistory]);
 
   useEffect(() => {
     if (!activeProject || !selectedId) return;
+    const existingDocument = documents.find((doc) => doc.id === selectedId);
+    const nextTitle = title.trim() || 'Untitled scene';
+    if (
+      existingDocument &&
+      existingDocument.title === nextTitle &&
+      existingDocument.content === content
+    ) {
+      return;
+    }
 
     const now = Date.now();
     const createdAt = selectedCreatedAt ?? now;
@@ -1820,15 +2772,19 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
     const doc: WritingDocument = {
       id: selectedId,
       projectId: activeProject.id,
-      title: title.trim() || 'Untitled scene',
+      title: nextTitle,
       content,
+      consistencyReviewMode: existingDocument?.consistencyReviewMode ?? 'default',
       createdAt,
       updatedAt: now
     };
 
     const timeoutId = window.setTimeout(() => {
       setSaveStatus('saving');
-      void persistDoc(doc, 'workspace-autosave').catch((error) => {
+      void persistDoc(doc, {
+        source: 'workspace-autosave',
+        consistencyMode: resolveDocumentConsistencyMode(doc)
+      }).catch((error) => {
         const message =
           error instanceof Error ? error.message : 'Unable to save scene.';
         setSaveStatus('idle');
@@ -1842,7 +2798,16 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
     return () => {
       clearTimeout(timeoutId);
     };
-  }, [title, content, selectedId, activeProject, selectedCreatedAt, persistDoc]);
+  }, [
+    title,
+    content,
+    selectedId,
+    activeProject,
+    selectedCreatedAt,
+    persistDoc,
+    documents,
+    resolveDocumentConsistencyMode
+  ]);
 
   if (!activeProject) {
     return (
@@ -1865,97 +2830,357 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
     );
   }
 
+  const contextDrawerTabs: Array<{
+    id: ContextDrawerView;
+    label: string;
+    hidden?: boolean;
+  }> = [
+    {id: 'world-bible', label: 'World Bible'},
+    {id: 'ruleset', label: 'Ruleset'},
+    {id: 'characters', label: 'Characters'},
+    {id: 'compendium', label: 'Compendium', hidden: !showGameSystems}
+  ];
+
+  const contextDrawerContent = (() => {
+    if (activeContextView === 'world-bible') {
+      return (
+        <div className={styles.contextSummary}>
+          <p className={styles.contextSummaryText}>
+            Entities: <strong>{entities.length}</strong> · Categories:{' '}
+            <strong>{categories.length}</strong>
+          </p>
+          <button type='button' onClick={() => navigate('/world-bible')}>
+            Open World Bible
+          </button>
+        </div>
+      );
+    }
+    if (activeContextView === 'ruleset') {
+      return (
+        <div className={styles.contextSummary}>
+          <p className={styles.contextSummaryText}>
+            Stats: <strong>{ruleset?.statDefinitions.length ?? 0}</strong> · Resources:{' '}
+            <strong>{ruleset?.resourceDefinitions.length ?? 0}</strong> · Rules:{' '}
+            <strong>{ruleset?.rules.length ?? 0}</strong>
+          </p>
+          <button type='button' onClick={() => navigate('/ruleset')}>
+            Open Ruleset
+          </button>
+        </div>
+      );
+    }
+    if (activeContextView === 'characters') {
+      return (
+        <div className={styles.contextSummary}>
+          <p className={styles.contextSummaryText}>
+            Characters: <strong>{characters.length}</strong> · Sheets:{' '}
+            <strong>{characterSheets.length}</strong>
+          </p>
+          <button type='button' onClick={() => navigate('/characters')}>
+            Open Characters
+          </button>
+        </div>
+      );
+    }
+    return (
+      <div className={styles.contextSummary}>
+        <p className={styles.contextSummaryText}>
+          Modules: <strong>{settlementModules.length}</strong> · Party synergies:{' '}
+          <strong>{activePartySynergies.length}</strong>
+        </p>
+        <button type='button' onClick={() => navigate('/compendium')}>
+          Open Compendium
+        </button>
+      </div>
+    );
+  })();
+
+  const contextDrawerPanel = (
+    <>
+      <div
+        className={styles.contextCard}
+      >
+        <div className={styles.contextTabs}>
+          {contextDrawerTabs
+            .filter((tab) => !tab.hidden)
+            .map((tab) => (
+              <button
+                key={tab.id}
+                type='button'
+                onClick={() => setActiveContextView(tab.id)}
+                className={styles.contextTabButton}
+                style={{
+                  backgroundColor:
+                    tab.id === activeContextView ? '#dbeafe' : 'transparent'
+                }}
+              >
+                {tab.label}
+              </button>
+            ))}
+        </div>
+        <div className={styles.contextContent}>{contextDrawerContent}</div>
+      </div>
+
+      {selectedId && (
+        <ShodhMemoryPanel
+          title='Canon memories'
+          memories={memoryCandidates}
+          filterValue={memoryFilter}
+          onFilterChange={setMemoryFilter}
+          scopeSelector={{
+            label: 'Scope',
+            value: memoryScope,
+            options: [
+              {value: 'document', label: 'This scene'},
+              {value: 'project', label: 'All project'}
+            ],
+            onChange: (value) =>
+              setMemoryScope(value as 'document' | 'project')
+          }}
+          scopeSummaryLabel={scopeLabel}
+          highlightDocumentId={selectedId}
+          onRefresh={() => void refreshMemories()}
+          pageSize={MEMORIES_PER_PAGE}
+          showDelete
+          onDeleteMemory={(id) => {
+            void handleDeleteMemory(id);
+          }}
+          emptyState={emptyMemoryMessage}
+          renderSourceLabel={(memory) =>
+            memory.projectId === activeProject.id ? 'Local' : 'Parent'
+          }
+          renderMemoryActions={(memory) => {
+            if (
+              seriesBibleConfig?.parentProjectId &&
+              memory.projectId === activeProject.id
+            ) {
+              return (
+                <button
+                  type='button'
+                  onClick={() => void handlePromoteMemory(memory)}
+                  disabled={isPromotingMemoryId === memory.id}
+                  style={{fontSize: '0.8rem'}}
+                >
+                  {isPromotingMemoryId === memory.id
+                    ? 'Promoting...'
+                    : 'Promote'}
+                </button>
+              );
+            }
+            return null;
+          }}
+        />
+      )}
+    </>
+  );
+
+  const sceneDrawerPanel = (
+    <>
+      <div style={{marginBottom: '1rem'}}>
+        <button
+          type='button'
+          onClick={handleNewDocument}
+          disabled={isCreatingScene}
+        >
+          {isCreatingScene ? 'Creating...' : '+ New Scene'}
+        </button>
+        <button
+          type='button'
+          onClick={() => importInputRef.current?.click()}
+          disabled={isImportingDocuments}
+          style={{marginLeft: '0.5rem'}}
+        >
+          {isImportingDocuments ? 'Importing...' : 'Import'}
+        </button>
+        <label className={styles.importModeLabel}>
+          Import mode
+          <select
+            value={importMode}
+            onChange={(event) => setImportMode(event.target.value as ImportMode)}
+            disabled={isImportingDocuments}
+            className={styles.importModeSelect}
+          >
+            <option value='balanced'>Balanced</option>
+            <option value='strict'>Strict</option>
+            <option value='lenient'>Lenient</option>
+          </select>
+        </label>
+        <label className={styles.importToggleLabel}>
+          <input
+            type='checkbox'
+            checked={skipImportSuggestions}
+            disabled={isImportingDocuments}
+            onChange={(event) => setSkipImportSuggestions(event.target.checked)}
+          />
+          Skip consistency suggestions for this import
+        </label>
+        <button
+          type='button'
+          onClick={() => openExportModal('markdown')}
+          disabled={documents.length === 0}
+          style={{marginLeft: '0.5rem'}}
+        >
+          Export MD
+        </button>
+        <button
+          type='button'
+          onClick={() => openExportModal('docx')}
+          disabled={documents.length === 0}
+          style={{marginLeft: '0.5rem'}}
+        >
+          Export DOCX
+        </button>
+        <button
+          type='button'
+          onClick={() => openExportModal('epub')}
+          disabled={documents.length === 0}
+          style={{marginLeft: '0.5rem'}}
+        >
+          Export EPUB
+        </button>
+        <input
+          ref={importInputRef}
+          type='file'
+          accept='.txt,.md,.markdown,.html,.htm,.docx,.doc,.pages,text/plain,text/markdown,text/html,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/msword'
+          multiple
+          onChange={(e) => void handleImportDocuments(e)}
+          style={{display: 'none'}}
+        />
+      </div>
+
+      {importSummary && (
+        <div className={styles.importSummaryPanel}>
+          <strong>Import Summary</strong>
+          <p className={styles.importSummaryText}>
+            Imported {importSummary.importedCount} · Failed {importSummary.failedCount} ·
+            Unresolved {importSummary.unresolvedCount} · Mode {importSummary.mode}
+            {importSummary.openedTitle ? ` · Opened "${importSummary.openedTitle}"` : ''}
+            {importSummary.suggestionsSkipped ? ' · Suggestions skipped' : ''}
+          </p>
+          <div className={styles.importSummaryActions}>
+            <button
+              type='button'
+              onClick={() => void handleRetryFailedImports()}
+              disabled={isImportingDocuments || retryImportFiles.length === 0}
+            >
+              Retry failed files only
+            </button>
+            <button
+              type='button'
+              onClick={() => {
+                setImportSummary(null);
+                setRetryImportFiles([]);
+              }}
+              disabled={isImportingDocuments}
+            >
+              Dismiss
+            </button>
+          </div>
+          {importSummary.failures.length > 0 && (
+            <ul className={styles.importSummaryList}>
+              {importSummary.failures.slice(0, 6).map((item) => (
+                <li key={`${item.fileName}-${item.reason}`}>
+                  {item.fileName}:{' '}
+                  {item.reason === 'legacy-doc'
+                    ? 'Legacy .doc is unsupported.'
+                    : item.reason === 'apple-pages'
+                      ? item.detail ?? 'Apple Pages file: export as .docx/.txt then import.'
+                      : item.detail ?? 'Could not parse this file.'}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+
+      {documents.length === 0 && (
+        <p style={{fontStyle: 'italic'}}>
+          No scenes yet. Create one to start writing.
+        </p>
+      )}
+
+      <ul style={{listStyle: 'none', padding: 0, margin: 0}}>
+        {documents.map((doc) => (
+          <li
+            key={doc.id}
+            style={{
+              marginBottom: '0.5rem',
+              padding: '0.5rem',
+              borderRadius: '4px',
+              backgroundColor: doc.id === selectedId ? '#eee' : 'transparent',
+              cursor: 'pointer'
+            }}
+          >
+            <div
+              onClick={() => handleSelectDocument(doc)}
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center'
+              }}
+            >
+              <span
+                style={{
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  maxWidth: '160px'
+                }}
+              >
+                {doc.title || 'Untitled scene'}
+              </span>
+            </div>
+            <button
+              type='button'
+              onClick={() => handleDelete(doc)}
+              disabled={deletingDocumentId === doc.id}
+              style={{marginTop: '0.25rem', fontSize: '0.8rem'}}
+            >
+              {deletingDocumentId === doc.id ? 'Deleting...' : 'Delete'}
+            </button>
+          </li>
+        ))}
+      </ul>
+    </>
+  );
+
   return (
-    <section>
+    <section data-workspace-root='true'>
       <h1>Writing Workspace</h1>
       {feedback && (
         <p
           role='status'
-          style={{
-            marginBottom: '1rem',
-            padding: '0.5rem 0.75rem',
-            borderRadius: '6px',
-            border: `1px solid ${
-              feedback.tone === 'error' ? '#fecaca' : '#bbf7d0'
-            }`,
-            backgroundColor:
-              feedback.tone === 'error' ? '#fef2f2' : '#f0fdf4',
-            color: feedback.tone === 'error' ? '#991b1b' : '#166534'
-          }}
+          className={`${styles.feedbackBanner} ${
+            feedback.tone === 'error' ? styles.feedbackError : styles.feedbackSuccess
+          }`}
         >
           {feedback.message}
         </p>
       )}
       {resolverNotice && (
-        <div
-          role='status'
-          style={{
-            marginBottom: '1rem',
-            padding: '0.5rem 0.75rem',
-            borderRadius: '6px',
-            border: '1px solid #86efac',
-            backgroundColor: '#f0fdf4',
-            color: '#166534',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.5rem',
-            flexWrap: 'wrap'
-          }}
-        >
+        <div role='status' className={styles.resolverNotice}>
           <span>{resolverNotice.message}</span>
           <button
             type='button'
             onClick={() => navigate('/world-bible')}
-            style={{
-              fontSize: '0.8rem',
-              borderRadius: '4px',
-              border: '1px solid #86efac',
-              backgroundColor: '#ffffff',
-              color: '#166534',
-              padding: '0.2rem 0.45rem',
-              cursor: 'pointer'
-            }}
+            className={styles.resolverButtonPrimary}
           >
             View in World Bible
           </button>
           <button
             type='button'
             onClick={() => setResolverNotice(null)}
-            style={{
-              fontSize: '0.8rem',
-              borderRadius: '4px',
-              border: '1px solid #bbf7d0',
-              backgroundColor: 'transparent',
-              color: '#166534',
-              padding: '0.2rem 0.45rem',
-              cursor: 'pointer'
-            }}
+            className={styles.resolverButtonSecondary}
           >
             Dismiss
           </button>
         </div>
       )}
-      <section
-        style={{
-          marginBottom: '1rem',
-          padding: '0.75rem',
-          border: '1px solid #d1d5db',
-          borderRadius: '6px',
-          backgroundColor: '#f8fafc'
-        }}
-      >
-        <div
-          style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            gap: '0.75rem',
-            flexWrap: 'wrap'
-          }}
-        >
+      <section className={styles.consistencyPanel}>
+        <div className={styles.consistencyPanelHeader}>
           <div>
             <strong>Canon Consistency Review</strong>
-            <div style={{fontSize: '0.85rem', color: '#4b5563'}}>
+            <div className={styles.consistencyDescription}>
               Scan all scenes against World Bible and Character records.
             </div>
           </div>
@@ -1968,14 +3193,14 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
           </button>
         </div>
         {lastConsistencyReviewAt && (
-          <div style={{fontSize: '0.82rem', color: '#6b7280', marginTop: '0.5rem'}}>
+          <div className={styles.consistencyLastRun}>
             Last run: {new Date(lastConsistencyReviewAt).toLocaleString()}
           </div>
         )}
         {consistencyReviewItems.length > 0 && (
-          <ul style={{margin: '0.65rem 0 0 1rem', padding: 0}}>
+          <ul className={styles.consistencyList}>
             {consistencyReviewItems.slice(0, 24).map((item) => (
-              <li key={item.id} style={{marginBottom: '0.45rem'}}>
+              <li key={item.id} className={styles.consistencyListItem}>
                 <strong>{item.issue.code}</strong> in{' '}
                 <button
                   type='button'
@@ -1983,19 +3208,19 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
                     const doc = documents.find((entry) => entry.id === item.sceneId);
                     if (doc) handleSelectDocument(doc);
                   }}
-                  style={{fontSize: '0.82rem'}}
+                  className={styles.consistencySceneButton}
                 >
                   {item.sceneTitle}
                 </button>
                 : {item.issue.message}
                 {item.issue.relatedEntities && item.issue.relatedEntities.length > 0 && (
-                  <span style={{marginLeft: '0.5rem'}}>
+                  <span className={styles.consistencyRelated}>
                     {item.issue.relatedEntities.slice(0, 3).map((target) => (
                       <button
                         key={`${item.id}-${target.id}`}
                         type='button'
                         onClick={() => openWorldRecord(target)}
-                        style={{marginRight: '0.35rem', fontSize: '0.78rem'}}
+                        className={styles.consistencyRelatedButton}
                       >
                         Open {target.name}
                       </button>
@@ -2008,105 +3233,50 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
         )}
       </section>
       {unknownGuardrailIssues.length > 0 && (
-        <div
-          style={{
-            marginBottom: '1rem',
-            padding: '0.75rem',
-            borderRadius: '6px',
-            border: '1px solid #fca5a5',
-            backgroundColor: '#fff7ed',
-            color: '#7f1d1d'
-          }}
-        >
-          <strong>Commit blocked: unknown entities detected.</strong>
-          <ul style={{margin: '0.5rem 0 0 1rem', padding: 0}}>
-            {unknownGuardrailIssues.map((issue) => {
-              const surface = issue.surface ?? '';
-              const linkOptions = unknownLinkOptions[surface] ?? [];
-              const selectedEntityId = unknownLinkSelection[surface] ?? '';
-              const isLinkActive = activeLinkSurface === surface;
-              return (
-                <li key={`${surface}-${issue.span?.start ?? 0}`} style={{marginBottom: '0.4rem'}}>
-                  <span style={{marginRight: '0.5rem'}}>{surface}</span>
-                  <button
-                    type='button'
-                    onClick={() => void resolveUnknownEntity(surface)}
-                    disabled={resolvingUnknown === surface}
-                    style={{fontSize: '0.8rem'}}
-                  >
-                    {resolvingUnknown === surface ? 'Creating...' : 'Create entity'}
-                  </button>
-                  <button
-                    type='button'
-                    onClick={() =>
-                      setActiveLinkSurface((prev) => (prev === surface ? null : surface))
-                    }
-                    style={{marginLeft: '0.35rem', fontSize: '0.8rem'}}
-                  >
-                    {isLinkActive ? 'Cancel link' : 'Link alias'}
-                  </button>
-                  {isLinkActive && linkOptions.length > 0 && (
-                    <>
-                      <select
-                        value={selectedEntityId}
-                        onChange={(event) =>
-                          setUnknownLinkSelection((prev) => ({
-                            ...prev,
-                            [surface]: event.target.value
-                          }))
-                        }
-                        style={{marginLeft: '0.5rem', fontSize: '0.8rem'}}
-                      >
-                        <option value=''>Select entity...</option>
-                        {linkOptions.map((entity) => (
-                          <option key={entity.id} value={entity.id}>
-                            {entity.name}
-                          </option>
-                        ))}
-                      </select>
-                      <button
-                        type='button'
-                        onClick={() => void linkUnknownEntity(surface)}
-                        disabled={linkingUnknown === surface || !selectedEntityId}
-                        style={{marginLeft: '0.35rem', fontSize: '0.8rem'}}
-                      >
-                        {linkingUnknown === surface ? 'Linking...' : 'Link alias'}
-                      </button>
-                    </>
-                  )}
-                  {isLinkActive && linkOptions.length === 0 && (
-                    <span style={{marginLeft: '0.5rem', fontSize: '0.8rem'}}>
-                      No close entity matches available to link.
-                    </span>
-                  )}
-                </li>
-              );
-            })}
-          </ul>
+        <div className={styles.unknownPanel}>
+          <strong>
+            {hasBlockingUnknownGuardrailIssues
+              ? 'Commit blocked: unknown entities detected.'
+              : 'Inline review items highlighted in the scene.'}
+          </strong>
+          <div className={styles.unknownSummary}>
+            {unknownGuardrailIssues.length} item
+            {unknownGuardrailIssues.length === 1 ? '' : 's'} highlighted. Click the
+            underlined text in the editor to create, link, or dismiss each one.
+          </div>
+          <div className={styles.unknownBulkActions}>
+            <button
+              type='button'
+              onClick={() => void resolveAllUnknownEntities()}
+              className={styles.unknownActionButton}
+            >
+              Accept all as new entities
+            </button>
+            <button
+              type='button'
+              onClick={dismissAllUnknownEntities}
+              className={styles.unknownActionButtonSpaced}
+            >
+              {hasBlockingUnknownGuardrailIssues
+                ? 'Dismiss all for now'
+                : 'Hide all warnings for now'}
+            </button>
+          </div>
         </div>
       )}
       {seriesBibleConfig?.parentProjectId && (
-        <div
-          style={{
-            marginBottom: '1rem',
-            padding: '0.75rem',
-            border: '1px solid #e5e7eb',
-            borderRadius: '6px',
-            backgroundColor: '#f8fafc',
-            fontSize: '0.9rem'
-          }}
-        >
+        <div className={styles.canonPanel}>
           <strong>Parent canon:</strong>{' '}
           {canonState.parentName ?? 'Unknown'} · Version{' '}
           {canonState.parentCanonVersion ?? 'n/a'}
           {canonState.parentCanonVersion &&
             canonState.childLastSynced &&
             canonState.parentCanonVersion !== canonState.childLastSynced && (
-              <span style={{color: '#dc2626', marginLeft: '0.5rem'}}>
+              <span className={styles.canonOutOfSync}>
                 Out of sync
               </span>
             )}
-          <div style={{marginTop: '0.5rem', display: 'flex', gap: '0.75rem'}}>
+          <div className={styles.canonMetaRow}>
             <span>
               Last synced:{' '}
               {canonState.childLastSynced ?? 'never'}
@@ -2122,116 +3292,32 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
         </div>
       )}
 
-      <div style={{display: 'flex', gap: '1.5rem', alignItems: 'stretch'}}>
-        <aside
-          style={{
-            width: '260px',
-            borderRight: '1px solid #ccc',
-            paddingRight: '1rem'
-          }}
-        >
-          <div style={{marginBottom: '1rem'}}>
-            <button
-              type='button'
-              onClick={handleNewDocument}
-              disabled={isCreatingScene}
-            >
-              {isCreatingScene ? 'Creating...' : '+ New Scene'}
-            </button>
-            <button
-              type='button'
-              onClick={() => importInputRef.current?.click()}
-              disabled={isImportingDocuments}
-              style={{marginLeft: '0.5rem'}}
-            >
-              {isImportingDocuments ? 'Importing...' : 'Import'}
-            </button>
-            <button
-              type='button'
-              onClick={() => openExportModal('markdown')}
-              disabled={documents.length === 0}
-              style={{marginLeft: '0.5rem'}}
-            >
-              Export MD
-            </button>
-            <button
-              type='button'
-              onClick={() => openExportModal('docx')}
-              disabled={documents.length === 0}
-              style={{marginLeft: '0.5rem'}}
-            >
-              Export DOCX
-            </button>
-            <button
-              type='button'
-              onClick={() => openExportModal('epub')}
-              disabled={documents.length === 0}
-              style={{marginLeft: '0.5rem'}}
-            >
-              Export EPUB
-            </button>
-            <input
-              ref={importInputRef}
-              type='file'
-              accept='.txt,.md,.markdown,.html,.htm,.docx,.doc,text/plain,text/markdown,text/html,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/msword'
-              multiple
-              onChange={(e) => void handleImportDocuments(e)}
-              style={{display: 'none'}}
-            />
-          </div>
+      <div className={styles.workspaceFrame}>
+        <div className={styles.drawerTopBar}>
+          <button
+            type='button'
+            className={styles.drawerTopButton}
+            onClick={toggleSceneDrawer}
+          >
+            {isSceneDrawerOpen ? 'Hide scenes' : 'Show scenes'}
+          </button>
+          <button
+            type='button'
+            className={styles.drawerTopButton}
+            onClick={toggleContextDrawer}
+          >
+            {isContextDrawerOpen ? 'Hide context' : 'Show context'}
+          </button>
+        </div>
 
-          {documents.length === 0 && (
-            <p style={{fontStyle: 'italic'}}>
-              No scenes yet. Create one to start writing.
-            </p>
-          )}
+        <div className={styles.workspaceLayout}>
+        {isSceneDrawerOpen && !isNarrowViewport && (
+          <aside className={styles.sceneDrawerDesktop}>
+            {sceneDrawerPanel}
+          </aside>
+        )}
 
-          <ul style={{listStyle: 'none', padding: 0, margin: 0}}>
-            {documents.map((doc) => (
-              <li
-                key={doc.id}
-                style={{
-                  marginBottom: '0.5rem',
-                  padding: '0.5rem',
-                  borderRadius: '4px',
-                  backgroundColor:
-                    doc.id === selectedId ? '#eee' : 'transparent',
-                  cursor: 'pointer'
-                }}
-              >
-                <div
-                  onClick={() => handleSelectDocument(doc)}
-                  style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center'
-                  }}
-                >
-                  <span
-                    style={{
-                      whiteSpace: 'nowrap',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      maxWidth: '160px'
-                    }}
-                  >
-                    {doc.title || 'Untitled scene'}
-                  </span>
-                </div>
-                <button
-                  type='button'
-                  onClick={() => handleDelete(doc)}
-                  disabled={deletingDocumentId === doc.id}
-                  style={{marginTop: '0.25rem', fontSize: '0.8rem'}}
-                >
-                  {deletingDocumentId === doc.id ? 'Deleting...' : 'Delete'}
-                </button>
-              </li>
-            ))}
-          </ul>
-        </aside>
-
-        <div style={{flex: 1, display: 'flex', flexDirection: 'column'}}>
+        <div className={styles.editorColumn}>
           {selectedId ? (
             <>
               <div style={{marginBottom: '0.75rem'}}>
@@ -2281,19 +3367,154 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
                 >
                   Scene Text
                 </label>
+                {selectedDocument?.consistencyReviewMode === 'deferred' && (
+                  <div className={styles.reviewLaterBanner}>
+                    <strong>Review later is active.</strong>
+                    <span>
+                      Saves warn and highlight unknowns, but won&apos;t block this scene.
+                    </span>
+                    <button
+                      type='button'
+                      onClick={() => void refreshDeferredReview(selectedDocument)}
+                    >
+                      Refresh review
+                    </button>
+                    <button
+                      type='button'
+                      onClick={() =>
+                        void updateSelectedDocumentConsistencyReviewMode('default')
+                      }
+                    >
+                      Resume strict review
+                    </button>
+                  </div>
+                )}
                 <br />
                 <EditorWithAI
                   projectId={activeProject.id}
                   documentId={selectedId}
                   content={content}
                   onChange={handleContentChange}
+                  onWordCountChange={setWordCount}
+                  consistencyHighlights={highlightableUnknownIssues}
+                  onConsistencyHighlightClick={(issueId, anchorRect) => {
+                    const issue = highlightableUnknownIssues.find(
+                      (entry) => entry.id === issueId
+                    );
+                    if (!issue) return;
+                    setConsistencyPopover({
+                      issueId,
+                      surface: issue.surface,
+                      left: anchorRect.left,
+                      top: anchorRect.bottom + 8
+                    });
+                    setUnknownLinkSelection((prev) => ({
+                      ...prev,
+                      [issue.surface]:
+                        prev[issue.surface] ?? unknownLinkOptions[issue.surface]?.[0]?.id ?? ''
+                    }));
+                  }}
                   config={editorConfig}
                   toolbarButtons={toolbarButtons}
                   aiSettings={projectSettings?.aiSettings}
                   projectMode={projectSettings?.projectMode}
                   textToInsert={statBlockInsertContent}
                   onTextInserted={() => setStatBlockInsertContent(null)}
+                  systemHistoryEntries={systemHistoryEntries}
+                  onClearSystemHistory={() => {
+                    clearSystemHistoryEntries(activeProject.id);
+                    refreshSystemHistory();
+                    setFeedback({tone: 'success', message: 'System history cleared.'});
+                  }}
+                  onOpenSceneFromHistory={(sceneId) => {
+                    const doc = documents.find((entry) => entry.id === sceneId);
+                    if (doc) {
+                      handleSelectDocument(doc);
+                      return;
+                    }
+                    setFeedback({
+                      tone: 'error',
+                      message: 'Could not open scene for this system event.'
+                    });
+                  }}
+                  onRunConsistencyReviewFromHistory={() => {
+                    void handleRunConsistencyReview();
+                  }}
+                  selectionQuickSnippets={selectionQuickSnippets}
                 />
+                {consistencyPopover && activeConsistencyPopoverIssue && (
+                  <ContextPopover
+                    title={activeConsistencyPopoverIssue.surface}
+                    message={activeConsistencyPopoverIssue.message}
+                    left={consistencyPopover.left}
+                    top={consistencyPopover.top}
+                    onClose={() => setConsistencyPopover(null)}
+                  >
+                    <div className={styles.consistencyPopoverActions}>
+                      <button
+                        type='button'
+                        onClick={() => void resolveUnknownEntity(activeConsistencyPopoverIssue.surface)}
+                        disabled={resolvingUnknown === activeConsistencyPopoverIssue.surface}
+                      >
+                        {resolvingUnknown === activeConsistencyPopoverIssue.surface
+                          ? 'Creating...'
+                          : 'Create entity'}
+                      </button>
+                      <button
+                        type='button'
+                        onClick={() => dismissUnknownEntity(activeConsistencyPopoverIssue.surface)}
+                      >
+                        Dismiss
+                      </button>
+                    </div>
+                    {unknownLinkOptions[activeConsistencyPopoverIssue.surface]?.length ? (
+                      <div className={styles.consistencyPopoverLinkRow}>
+                        <select
+                          value={
+                            unknownLinkSelection[activeConsistencyPopoverIssue.surface] ?? ''
+                          }
+                          onChange={(event) =>
+                            setUnknownLinkSelection((prev) => ({
+                              ...prev,
+                              [activeConsistencyPopoverIssue.surface]:
+                                event.target.value
+                            }))
+                          }
+                        >
+                          <option value=''>Select entity...</option>
+                          {unknownLinkOptions[activeConsistencyPopoverIssue.surface].map(
+                            (entity) => (
+                              <option key={entity.id} value={entity.id}>
+                                {entity.name}
+                              </option>
+                            )
+                          )}
+                        </select>
+                        <button
+                          type='button'
+                          onClick={() =>
+                            void linkUnknownEntity(
+                              activeConsistencyPopoverIssue.surface,
+                              unknownLinkSelection[activeConsistencyPopoverIssue.surface]
+                            )
+                          }
+                          disabled={
+                            linkingUnknown === activeConsistencyPopoverIssue.surface ||
+                            !unknownLinkSelection[activeConsistencyPopoverIssue.surface]
+                          }
+                        >
+                          {linkingUnknown === activeConsistencyPopoverIssue.surface
+                            ? 'Linking...'
+                            : 'Link alias'}
+                        </button>
+                      </div>
+                    ) : (
+                      <div className={styles.consistencyPopoverNote}>
+                        No close entity matches available.
+                      </div>
+                    )}
+                  </ContextPopover>
+                )}
               </div>
 
               <div
@@ -2335,61 +3556,65 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
                   {wordCount} words
                 </span>
               </div>
-
-              <ShodhMemoryPanel
-                title='Canon memories'
-                memories={memoryCandidates}
-                filterValue={memoryFilter}
-                onFilterChange={setMemoryFilter}
-                scopeSelector={{
-                  label: 'Scope',
-                  value: memoryScope,
-                  options: [
-                    {value: 'document', label: 'This scene'},
-                    {value: 'project', label: 'All project'}
-                  ],
-                  onChange: (value) =>
-                    setMemoryScope(value as 'document' | 'project')
-                }}
-                scopeSummaryLabel={scopeLabel}
-                highlightDocumentId={selectedId}
-                onRefresh={() => void refreshMemories()}
-                pageSize={MEMORIES_PER_PAGE}
-                showDelete
-                onDeleteMemory={(id) => {
-                  void handleDeleteMemory(id);
-                }}
-                emptyState={emptyMemoryMessage}
-                renderSourceLabel={(memory) =>
-                  memory.projectId === activeProject.id ? 'Local' : 'Parent'
-                }
-                renderMemoryActions={(memory) => {
-                  if (
-                    seriesBibleConfig?.parentProjectId &&
-                    memory.projectId === activeProject.id
-                  ) {
-                    return (
-                      <button
-                        type='button'
-                        onClick={() => void handlePromoteMemory(memory)}
-                        disabled={isPromotingMemoryId === memory.id}
-                        style={{fontSize: '0.8rem'}}
-                      >
-                        {isPromotingMemoryId === memory.id
-                          ? 'Promoting...'
-                          : 'Promote'}
-                      </button>
-                    );
-                  }
-                  return null;
-                }}
-              />
             </>
           ) : (
             <p>Select a scene from the left, or create one with + New Scene.</p>
           )}
         </div>
+
+        {isContextDrawerOpen && !isNarrowViewport && (
+          <aside className={styles.contextDrawerDesktop}>
+            {contextDrawerPanel}
+          </aside>
+        )}
+        </div>
       </div>
+
+      {isSceneDrawerOpen && isNarrowViewport && (
+        <div
+          role='dialog'
+          aria-modal='true'
+          aria-label='Workspace scene drawer'
+          onClick={() => setSceneDrawerOpen(false)}
+          className={`${styles.drawerOverlay} ${styles.sceneOverlay}`}
+        >
+          <aside
+            onClick={(event) => event.stopPropagation()}
+            className={styles.drawerPanelLeft}
+          >
+            <div className={styles.drawerPanelHeader}>
+              <strong>Scenes</strong>
+              <button type='button' onClick={() => setSceneDrawerOpen(false)}>
+                Close
+              </button>
+            </div>
+            {sceneDrawerPanel}
+          </aside>
+        </div>
+      )}
+
+      {isContextDrawerOpen && isNarrowViewport && (
+        <div
+          role='dialog'
+          aria-modal='true'
+          aria-label='Workspace context drawer'
+          onClick={() => setContextDrawerOpen(false)}
+          className={`${styles.drawerOverlay} ${styles.contextOverlay}`}
+        >
+          <aside
+            onClick={(event) => event.stopPropagation()}
+            className={styles.drawerPanelRight}
+          >
+            <div className={styles.drawerPanelHeader}>
+              <strong>Context Drawer</strong>
+              <button type='button' onClick={() => setContextDrawerOpen(false)}>
+                Close
+              </button>
+            </div>
+            {contextDrawerPanel}
+          </aside>
+        </div>
+      )}
 
       {isStatBlockModalOpen && (
         <div
@@ -2397,37 +3622,19 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
           aria-modal='true'
           aria-label='Status Block Builder'
           onClick={closeStatBlockModal}
-          style={{
-            position: 'fixed',
-            inset: 0,
-            backgroundColor: 'rgba(0,0,0,0.5)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 1000
-          }}
+          className={styles.modalOverlay}
         >
           <div
             onClick={(event) => event.stopPropagation()}
-            style={{
-              backgroundColor: '#fff',
-              padding: '1.25rem',
-              borderRadius: '8px',
-              width: 'min(620px, 94vw)',
-              maxHeight: '80vh',
-              overflowY: 'auto',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '0.75rem'
-            }}
+            className={`${styles.modalCard} ${styles.statModalCard}`}
           >
-            <h3 style={{margin: 0}}>Insert Status Block</h3>
-            <p style={{margin: 0}}>
+            <h3 className={styles.modalTitle}>Insert Status Block</h3>
+            <p className={styles.modalDescription}>
               Choose what to insert. Use <strong>Reusable placeholder</strong> if you
               want to refresh it later.
             </p>
 
-            <div style={{display: 'grid', gap: '0.6rem'}}>
+            <div className={styles.statFormGrid}>
               <label>
                 Source type
                 <br />
@@ -2437,7 +3644,7 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
                   onChange={(event) =>
                     setStatBlockSourceType(event.target.value as StatBlockSourceType)
                   }
-                  style={{width: '100%'}}
+                  className={styles.fullWidthField}
                 >
                   <option value='character'>Character</option>
                   <option value='item'>Item/Entity</option>
@@ -2454,7 +3661,7 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
                       value={selectedStatCharacterId}
                       onChange={(event) => setSelectedStatCharacterId(event.target.value)}
                       disabled={characterSheets.length === 0}
-                      style={{width: '100%'}}
+                      className={styles.fullWidthField}
                     >
                       {characterSheets.length === 0 ? (
                         <option value=''>No character sheets</option>
@@ -2484,7 +3691,7 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
                         setSelectedStatGroupId('');
                         setStatBlockScopePreset(value as StatBlockScopePreset);
                       }}
-                      style={{width: '100%'}}
+                      className={styles.fullWidthField}
                     >
                       <option value='all'>All stats + resources</option>
                       <option value='stats'>Stats only</option>
@@ -2499,34 +3706,18 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
                   </label>
 
                   {statBlockScopePreset === 'custom' && !selectedStatGroup && (
-                    <div
-                      style={{
-                        border: '1px solid #e5e7eb',
-                        borderRadius: '6px',
-                        padding: '0.6rem'
-                      }}
-                    >
-                      <strong style={{fontSize: '0.85rem'}}>Custom pick</strong>
-                      <div
-                        style={{
-                          display: 'grid',
-                          gridTemplateColumns: '1fr 1fr',
-                          gap: '0.5rem',
-                          marginTop: '0.5rem'
-                        }}
-                      >
+                    <div className={styles.statCustomCard}>
+                      <strong className={styles.statCustomTitle}>Custom pick</strong>
+                      <div className={styles.statCustomGrid}>
                         <div>
-                          <div style={{fontSize: '0.8rem', fontWeight: 600}}>Stats</div>
+                          <div className={styles.statSectionLabel}>Stats</div>
                           {selectedSheet?.stats.length ? (
                             selectedSheet.stats.map((stat) => {
                               const label =
                                 statDefinitionNameById.get(stat.definitionId) ??
                                 stat.definitionId;
                               return (
-                                <label
-                                  key={stat.definitionId}
-                                  style={{display: 'block', fontSize: '0.8rem'}}
-                                >
+                                <label key={stat.definitionId} className={styles.statOptionLabel}>
                                   <input
                                     type='checkbox'
                                     checked={activeSelectedStatSet.has(stat.definitionId)}
@@ -2539,15 +3730,13 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
                               );
                             })
                           ) : (
-                            <span style={{fontSize: '0.8rem', color: '#6b7280'}}>
+                            <span className={styles.statMutedText}>
                               No stats on this character.
                             </span>
                           )}
                         </div>
                         <div>
-                          <div style={{fontSize: '0.8rem', fontWeight: 600}}>
-                            Resources
-                          </div>
+                          <div className={styles.statSectionLabel}>Resources</div>
                           {selectedSheet?.resources.length ? (
                             selectedSheet.resources.map((resource) => {
                               const label =
@@ -2556,7 +3745,7 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
                               return (
                                 <label
                                   key={resource.definitionId}
-                                  style={{display: 'block', fontSize: '0.8rem'}}
+                                  className={styles.statOptionLabel}
                                 >
                                   <input
                                     type='checkbox'
@@ -2572,7 +3761,7 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
                               );
                             })
                           ) : (
-                            <span style={{fontSize: '0.8rem', color: '#6b7280'}}>
+                            <span className={styles.statMutedText}>
                               No resources on this character.
                             </span>
                           )}
@@ -2582,19 +3771,7 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
                   )}
 
                   {selectedStatGroup && (
-                    <div
-                      style={{
-                        border: '1px solid #e5e7eb',
-                        borderRadius: '6px',
-                        padding: '0.6rem',
-                        fontSize: '0.8rem',
-                        color: '#374151',
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                        gap: '0.5rem'
-                      }}
-                    >
+                    <div className={styles.statGroupSummary}>
                       <span>
                         Group <strong>{selectedStatGroup.name}</strong> includes{' '}
                         {activeSelectedStatSet.size} stat(s) and{' '}
@@ -2603,35 +3780,22 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
                       <button
                         type='button'
                         onClick={() => handleDeleteStatGroup(selectedStatGroup.id)}
-                        style={{fontSize: '0.75rem'}}
+                        className={styles.statGroupDeleteButton}
                       >
                         Delete group
                       </button>
                     </div>
                   )}
 
-                  <div
-                    style={{
-                      border: '1px solid #e5e7eb',
-                      borderRadius: '6px',
-                      padding: '0.6rem'
-                    }}
-                  >
-                    <strong style={{fontSize: '0.85rem'}}>Save current selection</strong>
-                    <div
-                      style={{
-                        marginTop: '0.45rem',
-                        display: 'flex',
-                        gap: '0.4rem',
-                        alignItems: 'center'
-                      }}
-                    >
+                  <div className={styles.statCustomCard}>
+                    <strong className={styles.statSaveGroupTitle}>Save current selection</strong>
+                    <div className={styles.statSaveGroupRow}>
                       <input
                         type='text'
                         placeholder='Group name (e.g. Qi only)'
                         value={newStatGroupName}
                         onChange={(event) => setNewStatGroupName(event.target.value)}
-                        style={{flex: 1}}
+                        className={styles.statSaveGroupInput}
                       />
                       <button type='button' onClick={handleSaveStatGroup}>
                         Save group
@@ -2648,7 +3812,7 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
                     value={selectedStatEntityId}
                     onChange={(event) => setSelectedStatEntityId(event.target.value)}
                     disabled={entities.length === 0}
-                    style={{width: '100%'}}
+                    className={styles.fullWidthField}
                   >
                     {entities.length === 0 ? (
                       <option value=''>No entities</option>
@@ -2672,7 +3836,7 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
                   onChange={(event) =>
                     setStatBlockStyle(event.target.value as StatBlockStyle)
                   }
-                  style={{width: '100%'}}
+                  className={styles.fullWidthField}
                 >
                   <option value='full'>All stats</option>
                   <option value='buffs'>Current buffs only</option>
@@ -2690,34 +3854,24 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
                     setStatBlockInsertMode(event.target.value as StatBlockInsertMode)
                   }
                   disabled={activeProjectMode === 'litrpg'}
-                  style={{width: '100%'}}
+                  className={styles.fullWidthField}
                 >
                   <option value='block'>Live block now</option>
                   <option value='template'>Reusable placeholder</option>
                 </select>
                 {activeProjectMode === 'litrpg' && (
-                  <span style={{fontSize: '0.8rem', color: '#4b5563'}}>
+                  <span className={styles.modeHint}>
                     LitRPG mode always inserts live text for readability.
                   </span>
                 )}
               </label>
             </div>
             {!canInsertStatBlock && (
-              <div
-                style={{
-                  margin: 0,
-                  padding: '0.55rem 0.65rem',
-                  borderRadius: '6px',
-                  border: '1px solid #e5e7eb',
-                  backgroundColor: '#f9fafb',
-                  color: '#4b5563',
-                  fontSize: '0.85rem'
-                }}
-              >
-                <p style={{margin: 0}}>
+              <div className={styles.statInsertHintCard}>
+                <p className={styles.statInsertHintText}>
                   Add at least one {statBlockSourceType === 'character' ? 'character sheet' : 'entity'} before inserting a status block.
                 </p>
-                <div style={{marginTop: '0.45rem'}}>
+                <div className={styles.statInsertHintActions}>
                   <button
                     type='button'
                     onClick={() => {
@@ -2728,7 +3882,7 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
                           : '/world-bible'
                       );
                     }}
-                    style={{fontSize: '0.8rem'}}
+                    className={styles.statInsertHintButton}
                   >
                     {statBlockSourceType === 'character'
                       ? 'Go to Characters'
@@ -2738,17 +3892,11 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
               </div>
             )}
 
-            <div
-              style={{
-                display: 'flex',
-                justifyContent: 'flex-end',
-                gap: '0.5rem'
-              }}
-            >
+            <div className={styles.modalActions}>
               <button
                 type='button'
                 onClick={closeStatBlockModal}
-                style={{background: 'transparent'}}
+                className={styles.modalSecondaryAction}
               >
                 Cancel
               </button>
@@ -2764,29 +3912,10 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
         <div
           role='dialog'
           aria-modal='true'
-          style={{
-            position: 'fixed',
-            inset: 0,
-            backgroundColor: 'rgba(0,0,0,0.5)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 1000
-          }}
+          className={styles.modalOverlay}
         >
-          <div
-            style={{
-              backgroundColor: '#fff',
-              padding: '1.25rem',
-              borderRadius: '8px',
-              width: 'min(680px, 94vw)',
-              maxHeight: '80vh',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '0.75rem'
-            }}
-          >
-            <h3 style={{margin: 0}}>
+          <div className={`${styles.modalCard} ${styles.exportModalCard}`}>
+            <h3 className={styles.modalTitle}>
               Export scenes as{' '}
               {exportFormat === 'markdown'
                 ? 'Markdown'
@@ -2794,10 +3923,10 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
                   ? 'DOCX'
                   : 'EPUB'}
             </h3>
-            <p style={{margin: 0}}>
+            <p className={styles.modalDescription}>
               Choose which scenes to export and adjust their order for the final file.
             </p>
-            <div style={{display: 'flex', gap: '0.5rem', flexWrap: 'wrap'}}>
+            <div className={styles.exportControlRow}>
               <button type='button' onClick={() => toggleAllExportItems(true)}>
                 Select all
               </button>
@@ -2805,54 +3934,31 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
                 Clear all
               </button>
             </div>
-            <div
-              style={{
-                border: '1px solid #e5e7eb',
-                borderRadius: '6px',
-                padding: '0.5rem',
-                overflowY: 'auto',
-                maxHeight: '42vh'
-              }}
-            >
+            <div className={styles.exportListContainer}>
               {exportSelection.length === 0 ? (
-                <p style={{margin: '0.25rem 0', fontStyle: 'italic'}}>
+                <p className={styles.exportEmpty}>
                   No scenes available to export.
                 </p>
               ) : (
-                <ul style={{listStyle: 'none', margin: 0, padding: 0}}>
+                <ul className={styles.exportList}>
                   {exportSelection.map((item, index) => (
-                    <li
-                      key={item.id}
-                      style={{
-                        display: 'grid',
-                        gridTemplateColumns: '1fr auto',
-                        gap: '0.5rem',
-                        alignItems: 'center',
-                        padding: '0.35rem 0'
-                      }}
-                    >
-                      <label
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '0.5rem'
-                        }}
-                      >
+                    <li key={item.id} className={styles.exportListItem}>
+                      <label className={styles.exportItemLabel}>
                         <input
                           type='checkbox'
                           checked={item.included}
                           onChange={() => toggleExportItem(item.id)}
                         />
-                        <span style={{fontSize: '0.95rem'}}>
+                        <span className={styles.exportItemTitle}>
                           {index + 1}. {item.title}
                         </span>
                       </label>
-                      <div style={{display: 'flex', gap: '0.25rem'}}>
+                      <div className={styles.exportMoveActions}>
                         <button
                           type='button'
                           onClick={() => moveExportItem(item.id, -1)}
                           disabled={index === 0}
-                          style={{fontSize: '0.8rem'}}
+                          className={styles.exportMoveButton}
                         >
                           Up
                         </button>
@@ -2860,7 +3966,7 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
                           type='button'
                           onClick={() => moveExportItem(item.id, 1)}
                           disabled={index === exportSelection.length - 1}
-                          style={{fontSize: '0.8rem'}}
+                          className={styles.exportMoveButton}
                         >
                           Down
                         </button>
@@ -2870,17 +3976,11 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
                 </ul>
               )}
             </div>
-            <div
-              style={{
-                display: 'flex',
-                justifyContent: 'flex-end',
-                gap: '0.5rem'
-              }}
-            >
+            <div className={styles.modalActions}>
               <button
                 type='button'
                 onClick={closeExportModal}
-                style={{background: 'transparent'}}
+                className={styles.modalSecondaryAction}
               >
                 Cancel
               </button>
@@ -2896,30 +3996,11 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
         <div
           role='dialog'
           aria-modal='true'
-          style={{
-            position: 'fixed',
-            inset: 0,
-            backgroundColor: 'rgba(0,0,0,0.5)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 1000
-          }}
+          className={styles.modalOverlay}
         >
-          <div
-            style={{
-              backgroundColor: '#fff',
-              padding: '1.5rem',
-              borderRadius: '8px',
-              width: 'min(520px, 90vw)',
-              maxHeight: '80vh',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '0.75rem'
-            }}
-          >
-            <h3 style={{margin: 0}}>Capture Shodh memory</h3>
-            <p style={{margin: 0}}>
+          <div className={`${styles.modalCard} ${styles.memoryModalCard}`}>
+            <h3 className={styles.modalTitle}>Capture Shodh memory</h3>
+            <p className={styles.modalDescription}>
               Review or edit the summary before adding it to the project
               canon.
             </p>
@@ -2927,20 +4008,14 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
               value={memoryDraft}
               onChange={(e) => setMemoryDraft(e.target.value)}
               rows={6}
-              style={{width: '100%'}}
+              className={styles.memoryTextarea}
             />
-            <div
-              style={{
-                display: 'flex',
-                justifyContent: 'flex-end',
-                gap: '0.5rem'
-              }}
-            >
+            <div className={styles.modalActions}>
               <button
                 type='button'
                 onClick={() => setMemoryModalOpen(false)}
                 disabled={isSavingMemory}
-                style={{background: 'transparent'}}
+                className={styles.modalSecondaryAction}
               >
                 Cancel
               </button>

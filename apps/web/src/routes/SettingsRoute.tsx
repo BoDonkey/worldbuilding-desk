@@ -5,7 +5,8 @@ import type {
   CharacterStyle,
   ProjectAISettings,
   ProjectFeatureToggles,
-  ProjectMode
+  ProjectMode,
+  WorkspaceImportMode
 } from '../entityTypes';
 import {
   getInheritedConsistencyActionCues,
@@ -15,6 +16,7 @@ import {
 import {CharacterStyleList} from '../components/CharacterStyleList';
 import {AISettings} from '../components/Settings/AISettings';
 import {FontSizeControl} from '../components/Settings/FontSizeControl';
+import {EditorAppearanceControl} from '../components/Settings/EditorAppearanceControl';
 import {
   getDefaultFeatureToggles,
   PROJECT_MODE_OPTIONS
@@ -186,6 +188,22 @@ function SettingsRoute({activeProject, onSettingsChanged}: SettingsRouteProps) {
     onSettingsChanged?.(updated);
   };
 
+  const handleImportDefaultsChange = async (
+    mode: WorkspaceImportMode,
+    skipSuggestions: boolean
+  ) => {
+    if (!settings) return;
+    const updated: ProjectSettings = {
+      ...settings,
+      defaultImportMode: mode,
+      defaultSkipImportSuggestions: skipSuggestions,
+      updatedAt: Date.now()
+    };
+    await saveProjectSettings(updated);
+    setSettings(updated);
+    onSettingsChanged?.(updated);
+  };
+
   if (!activeProject) {
     return (
       <section className={styles.container}>
@@ -224,14 +242,19 @@ function SettingsRoute({activeProject, onSettingsChanged}: SettingsRouteProps) {
           <p>
             Step 3: configure AI and style settings for day-to-day writing.
           </p>
+          <p>
+            Keyboard shortcut: press <strong>Cmd/Ctrl+K</strong> to open the
+            command palette for fast navigation and workspace actions.
+          </p>
         </div>
       </details>
 
       <div className={styles.settingsGrid}>
         {/* Accessibility Section */}
         <div className={styles.section}>
-          <h2>Accessibility</h2>
+          <h2>Reading & Editor</h2>
           <FontSizeControl />
+          <EditorAppearanceControl />
         </div>
 
         {/* AI Settings Section */}
@@ -325,10 +348,19 @@ function SettingsRoute({activeProject, onSettingsChanged}: SettingsRouteProps) {
         </div>
 
         <div className={styles.section}>
-          <h2>Consistency Engine Action Cues</h2>
+          <h2>Consistency Detection Keywords</h2>
           <p className={styles.helperText}>
-            Add project-specific action verbs (one per line) used to detect
-            state-relevant noun phrases in writing.
+            These are action words the consistency checker should treat as signals that
+            the nearby noun may matter to canon.
+          </p>
+          <p className={styles.helperText}>
+            Example: if you add <strong>brew</strong>, then a phrase like
+            <strong> "brewed the moon draught"</strong> is more likely to surface
+            <strong> moon draught</strong> for review.
+          </p>
+          <p className={styles.helperText}>
+            Only add verbs that are truly project-specific. Leave this short. Common
+            verbs are already built in.
           </p>
           {inheritedConsistencyCues.length > 0 && (
             <p className={styles.helperText}>
@@ -336,17 +368,59 @@ function SettingsRoute({activeProject, onSettingsChanged}: SettingsRouteProps) {
             </p>
           )}
           <label className={styles.fieldLabel}>
-            Project-only cues
+            Extra project-specific verbs
             <textarea
               value={consistencyCuesDraft}
               onChange={(e) => setConsistencyCuesDraft(e.target.value)}
-              placeholder='parry\nchannel\ninvoke'
+              placeholder={'brew\nattune\nchannel\ninvoke'}
               className={styles.cueTextarea}
             />
           </label>
+          <div className={styles.helperList}>
+            <div><strong>Good fits:</strong> attune, soulbind, overclock, transmute</div>
+            <div><strong>Avoid:</strong> go, look, move, say, think</div>
+          </div>
           <button onClick={() => void handleConsistencyCueSave()} className={styles.addButton}>
-            Save Action Cues
+            Save Keywords
           </button>
+        </div>
+
+        <div className={styles.section}>
+          <h2>Workspace Import Defaults</h2>
+          <p className={styles.helperText}>
+            These defaults pre-fill import controls in Writing Workspace. Authors can still
+            override per import batch.
+          </p>
+          <label className={styles.fieldLabel}>
+            Default import mode
+            <select
+              value={settings.defaultImportMode ?? 'balanced'}
+              onChange={(e) =>
+                void handleImportDefaultsChange(
+                  e.target.value as WorkspaceImportMode,
+                  settings.defaultSkipImportSuggestions ?? false
+                )
+              }
+              className={styles.styleInput}
+            >
+              <option value='balanced'>Balanced</option>
+              <option value='strict'>Strict</option>
+              <option value='lenient'>Lenient</option>
+            </select>
+          </label>
+          <label className={styles.toggleRow}>
+            <input
+              type='checkbox'
+              checked={settings.defaultSkipImportSuggestions ?? false}
+              onChange={(e) =>
+                void handleImportDefaultsChange(
+                  settings.defaultImportMode ?? 'balanced',
+                  e.target.checked
+                )
+              }
+            />
+            <span>Default to skipping consistency suggestions during import</span>
+          </label>
         </div>
 
         {/* Character Styles Section */}

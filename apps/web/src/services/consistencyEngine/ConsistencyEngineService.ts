@@ -134,6 +134,128 @@ const PRONOUN_STARTERS = new Set([
   'them'
 ]);
 
+const NON_ENTITY_BOUNDARY_TOKENS = new Set([
+  ...NON_ENTITY_SINGLE_WORDS,
+  'all',
+  'am',
+  'are',
+  'been',
+  'being',
+  'did',
+  'do',
+  'does',
+  'doing',
+  'getting',
+  'had',
+  'has',
+  'have',
+  'if',
+  'maybe',
+  'not',
+  'perhaps',
+  'was',
+  'were',
+  'when',
+  'while'
+]);
+
+const GENERIC_UNKNOWN_TERMS = new Set([
+  'chapter',
+  'chapters',
+  'scene',
+  'scenes',
+  'part',
+  'book',
+  'books',
+  'day',
+  'days',
+  'night',
+  'nights',
+  'morning',
+  'afternoon',
+  'evening',
+  'today',
+  'tomorrow',
+  'yesterday',
+  'week',
+  'month',
+  'year',
+  'years',
+  'north',
+  'south',
+  'east',
+  'west',
+  'left',
+  'right',
+  'inside',
+  'outside',
+  'city',
+  'town',
+  'village',
+  'kingdom',
+  'empire',
+  'capital',
+  'guild',
+  'guard',
+  'team',
+  'group',
+  'squad',
+  'party'
+]);
+
+const MIN_UNKNOWN_CONFIDENCE = 0.72;
+
+const tokenizeNormalized = (value: string): string[] =>
+  value
+    .split(/\s+/)
+    .map((token) => token.trim())
+    .filter(Boolean);
+
+const isPronounContraction = (token: string): boolean =>
+  /^(?:i|you|we|they|he|she|it)(?:'m|'re|'ve|'d|'ll|'s)$/.test(token);
+
+const isNonEntityToken = (token: string): boolean =>
+  NON_ENTITY_BOUNDARY_TOKENS.has(token) || isPronounContraction(token);
+
+const hasEntityLikeToken = (tokens: string[]): boolean =>
+  tokens.some(
+    (token) =>
+      token.length >= 4 &&
+      !isNonEntityToken(token) &&
+      !GENERIC_UNKNOWN_TERMS.has(token) &&
+      !looksLikeNumericOrRoman(token)
+  );
+
+const shouldSuppressMultiWordMention = (
+  text: string,
+  mention: CandidateMention
+): boolean => {
+  const tokens = tokenizeNormalized(mention.normalized);
+  if (tokens.length < 2) {
+    return false;
+  }
+
+  const [first, ...rest] = tokens;
+  const last = rest[rest.length - 1] ?? first;
+  if (!first || !last) {
+    return true;
+  }
+
+  if (isNonEntityToken(first) || isNonEntityToken(last)) {
+    return true;
+  }
+
+  if (!hasEntityLikeToken(tokens)) {
+    return true;
+  }
+
+  if (isSentenceStart(text, mention.start) && isNonEntityToken(first)) {
+    return true;
+  }
+
+  return false;
+};
+
 const isSentenceStart = (text: string, index: number): boolean => {
   for (let i = index - 1; i >= 0; i -= 1) {
     const char = text[i];
@@ -148,7 +270,7 @@ const isSentenceStart = (text: string, index: number): boolean => {
 const shouldKeepMention = (text: string, mention: CandidateMention): boolean => {
   const words = mention.surface.split(/\s+/);
   if (words.length > 1) {
-    return true;
+    return !shouldSuppressMultiWordMention(text, mention);
   }
 
   const normalized = mention.normalized;
@@ -231,12 +353,18 @@ const extractActionObjectMentionsWithCues = (
     const start = objectOffset >= 0 ? fullStart + objectOffset : fullStart;
     const end = start + surface.length;
 
-    results.push({
+    const mention = {
       surface,
       normalized,
       start,
       end
-    });
+    };
+
+    if (shouldSuppressMultiWordMention(text, mention)) {
+      continue;
+    }
+
+    results.push(mention);
   }
 
   return results;
@@ -248,6 +376,41 @@ const hasLeadingCueWord = (text: string, mentionStart: number): boolean => {
   const match = prefix.match(/([A-Za-z]+)$/);
   const prevWord = (match?.[1] ?? '').toLowerCase();
   return LEADING_ENTITY_CUE_WORDS.has(prevWord);
+};
+
+const looksLikeNumericOrRoman = (value: string): boolean => {
+  if (/^\d+$/.test(value)) return true;
+  return /^(?:[ivxlcdm]+)$/i.test(value);
+};
+
+const shouldSuppressUnknownMention = (mention: {
+  normalized: string;
+  surface: string;
+  confidence: number;
+}): boolean => {
+  const tokens = tokenizeNormalized(mention.normalized);
+  if (tokens.length === 0) return true;
+  if (mention.confidence < MIN_UNKNOWN_CONFIDENCE) return true;
+
+  if (tokens.length > 1 && !hasEntityLikeToken(tokens)) {
+    return true;
+  }
+
+  const [first, ...rest] = tokens;
+  const last = rest[rest.length - 1] ?? first;
+  if (!first || !last) return true;
+  if (isNonEntityToken(first) || isNonEntityToken(last)) {
+    return true;
+  }
+
+  if (tokens.length === 1) {
+    const [first] = tokens;
+    if (!first || first.length < 4) return true;
+    if (GENERIC_UNKNOWN_TERMS.has(first)) return true;
+    if (looksLikeNumericOrRoman(first)) return true;
+  }
+
+  return false;
 };
 
 const buildKnownEntityMap = (
@@ -299,6 +462,17 @@ export class ConsistencyEngineService {
           knownMatches.length === 1
             ? knownMatches[0]
             : undefined;
+        const mentionCount = mentionCounts.get(mention.normalized) ?? 0;
+        const hasCue = hasLeadingCueWord(input.text, mention.start);
+        const baseConfidence = known
+          ? 0.99
+          : Math.min(
+              0.92,
+              0.58 +
+                (mention.surface.split(/\s+/).length > 1 ? 0.16 : 0) +
+                (mentionCount > 1 ? 0.13 : 0) +
+                (hasCue ? 0.1 : 0)
+            );
         return {
           surface: mention.surface,
           normalized: mention.normalized,
@@ -312,7 +486,7 @@ export class ConsistencyEngineService {
                   type: match.type
                 }))
               : undefined,
-          confidence: known ? 0.99 : 0.7,
+          confidence: baseConfidence,
           span: {
             start: mention.start,
             end: mention.end
@@ -354,12 +528,16 @@ export class ConsistencyEngineService {
 
   async validateProposal(proposal: ExtractedProposal): Promise<ValidationResult> {
     const unknownMentions = proposal.entities.filter(
-      (ref) => !ref.entityId && !(ref.candidateEntities && ref.candidateEntities.length > 1)
+      (ref) =>
+        !ref.entityId &&
+        !(ref.candidateEntities && ref.candidateEntities.length > 1) &&
+        !shouldSuppressUnknownMention(ref)
     );
     const dedupedBySurface = new Map<string, (typeof unknownMentions)[number]>();
 
     unknownMentions.forEach((mention) => {
-      if (!dedupedBySurface.has(mention.normalized)) {
+      const existing = dedupedBySurface.get(mention.normalized);
+      if (!existing || mention.confidence > existing.confidence) {
         dedupedBySurface.set(mention.normalized, mention);
       }
     });

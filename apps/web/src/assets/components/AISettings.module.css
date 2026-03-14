@@ -21,6 +21,23 @@
   flex-direction: column;
 }
 
+.panelTabs {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.75rem 0.75rem 0;
+}
+
+.panelTab {
+  font-size: 0.8rem;
+  border: 1px solid #cbd5e1;
+  background: #fff;
+}
+
+.panelTabActive {
+  background: #dbeafe;
+  border-color: #93c5fd;
+}
+
 .closeButton {
   position: absolute;
   top: 0.5rem;
@@ -59,4 +76,184 @@
 
 .aiToggle:hover {
   background: #0056b3;
+}
+
+.systemPanel {
+  padding: 0.75rem;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.systemPanelHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.systemPanelTitle {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.systemEmpty {
+  margin: 0;
+  font-size: 0.85rem;
+  color: #4b5563;
+}
+
+.systemList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.systemListItem {
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  padding: 0.55rem;
+  background: #fff;
+}
+
+.systemListItemCritical {
+  border-color: #fca5a5;
+  background: #fff1f2;
+}
+
+.systemMeta {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.4rem;
+  font-size: 0.75rem;
+  color: #6b7280;
+  text-transform: capitalize;
+}
+
+.systemMessage {
+  margin: 0.45rem 0 0.55rem;
+  font-size: 0.86rem;
+}
+
+.systemActions {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.selectionBubble {
+  position: fixed;
+  transform: translate(-50%, -100%);
+  z-index: 1600;
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.2);
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem;
+  max-width: min(92vw, 680px);
+  flex-wrap: wrap;
+}
+
+.selectionHint {
+  font-size: 0.75rem;
+  color: #475569;
+  background: #f1f5f9;
+  border-radius: 999px;
+  padding: 0.15rem 0.45rem;
+}
+
+.lorePanel {
+  padding: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+  overflow-y: auto;
+}
+
+.loreHeaderCard {
+  border: 1px solid #dbeafe;
+  background: #eff6ff;
+  border-radius: 8px;
+  padding: 0.65rem;
+}
+
+.loreVitalList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-top: 0.45rem;
+}
+
+.loreVitalChip {
+  font-size: 0.75rem;
+  border-radius: 999px;
+  background: #ffffff;
+  border: 1px solid #bfdbfe;
+  padding: 0.15rem 0.45rem;
+}
+
+.lorePeekVitals {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.lorePeekList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: 0.84rem;
+  color: #334155;
+}
+
+.loreSection {
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 0.6rem;
+  background: #ffffff;
+}
+
+.loreSectionTitle {
+  margin: 0 0 0.45rem;
+  font-size: 0.86rem;
+}
+
+.loreSynopsisList {
+  margin: 0;
+  padding-left: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: 0.84rem;
+}
+
+.loreBudgetText {
+  margin: 0 0 0.45rem;
+  font-size: 0.78rem;
+  color: #475569;
+}
+
+.systemFilters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.systemFilterButton {
+  font-size: 0.76rem;
+  border: 1px solid #cbd5e1;
+  background: #fff;
+  border-radius: 999px;
+  padding: 0.2rem 0.55rem;
+}
+
+.systemFilterButtonActive {
+  background: #dbeafe;
+  border-color: #93c5fd;
 }

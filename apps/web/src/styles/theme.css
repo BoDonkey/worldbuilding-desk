@@ -12,6 +12,11 @@
   --color-warning: #ea580c;
   --color-error: #dc2626;
   --color-focus: #2563eb;
+  --editor-surface-bg: #fffdf8;
+  --editor-surface-panel: rgba(255, 251, 242, 0.92);
+  --editor-surface-border: #d6cfc2;
+  --editor-text-color: #201a14;
+  --editor-muted-color: #6f655a;
 }
 
 :root[data-theme="dark"] {
@@ -28,6 +33,11 @@
   --color-warning: #f97316;
   --color-error: #ef4444;
   --color-focus: #60a5fa;
+  --editor-surface-bg: #15110d;
+  --editor-surface-panel: rgba(26, 21, 17, 0.94);
+  --editor-surface-border: #40352c;
+  --editor-text-color: #f5efe8;
+  --editor-muted-color: #b8aea3;
 }
 
 :root[data-font-size="small"] {
@@ -49,6 +59,42 @@
   --font-size-sm: 16px;
   --font-size-lg: 20px;
   --font-size-xl: 24px;
+}
+
+:root[data-editor-font="serif"] {
+  --editor-font-family: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, serif;
+}
+
+:root[data-editor-font="sans"] {
+  --editor-font-family: "Avenir Next", "Segoe UI", Helvetica, sans-serif;
+}
+
+:root[data-editor-width="focused"] {
+  --editor-max-width: 760px;
+}
+
+:root[data-editor-width="wide"] {
+  --editor-max-width: 980px;
+}
+
+:root[data-editor-surface="paper"] {
+  --editor-surface-bg: #fffdf8;
+  --editor-surface-panel: rgba(255, 251, 242, 0.92);
+  --editor-surface-border: #d6cfc2;
+}
+
+:root[data-editor-surface="mist"] {
+  --editor-surface-bg: #f7fbff;
+  --editor-surface-panel: rgba(244, 249, 255, 0.94);
+  --editor-surface-border: #c8d7e5;
+}
+
+:root[data-editor-surface="contrast"] {
+  --editor-surface-bg: #111111;
+  --editor-surface-panel: rgba(17, 17, 17, 0.96);
+  --editor-surface-border: #333333;
+  --editor-text-color: #f7f7f7;
+  --editor-muted-color: #cfcfcf;
 }
 
 html, body, #root, .app {

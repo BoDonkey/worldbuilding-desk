@@ -24,6 +24,14 @@ interface TipTapEditorProps {
   content: string;
   onChange: (content: string) => void;
   onWordCountChange?: (count: number) => void;
+  onConsistencyHighlightClick?: (
+    issueId: string,
+    anchorRect: {left: number; top: number; bottom: number}
+  ) => void;
+  onLoreHighlightClick?: (
+    loreId: string,
+    anchorRect: {left: number; top: number; bottom: number}
+  ) => void;
   config?: EditorConfig;
   toolbarButtons?: ToolbarButton[];
   extensions?: Extension[];
@@ -173,6 +181,14 @@ interface TipTapEditorProps {
   onChange: (content: string) => void;
   onEditorReady?: (editor: Editor) => void;
   onWordCountChange?: (count: number) => void;
+  onConsistencyHighlightClick?: (
+    issueId: string,
+    anchorRect: {left: number; top: number; bottom: number}
+  ) => void;
+  onLoreHighlightClick?: (
+    loreId: string,
+    anchorRect: {left: number; top: number; bottom: number}
+  ) => void;
   config?: EditorConfig;
   toolbarButtons?: ToolbarButton[];
   extensions?: Extension[];
@@ -183,6 +199,8 @@ function TipTapEditor({
   onChange,
   onEditorReady,
   onWordCountChange,
+  onConsistencyHighlightClick,
+  onLoreHighlightClick,
   config = defaultEditorConfig,
   toolbarButtons = [],
   textToInsert,
@@ -190,6 +208,11 @@ function TipTapEditor({
   insertContext
 }: TipTapEditorProps) {
   const isInternalUpdate = useRef(false);
+  const onEditorReadyRef = useRef(onEditorReady);
+
+  useEffect(() => {
+    onEditorReadyRef.current = onEditorReady;
+  }, [onEditorReady]);
 
   const editor = useEditor({
     extensions: config.extensions,
@@ -216,15 +239,48 @@ function TipTapEditor({
     editorProps: {
       attributes: {
         class: 'tiptap-editor'
+      },
+      handleClick(_view, _pos, event) {
+        if (!(event.target instanceof HTMLElement)) {
+          return false;
+        }
+        const loreTarget = event.target.closest<HTMLElement>('[data-lore-id]');
+        if (loreTarget) {
+          const loreId = loreTarget.dataset.loreId;
+          if (loreId) {
+            const rect = loreTarget.getBoundingClientRect();
+            onLoreHighlightClick?.(loreId, {
+              left: rect.left,
+              top: rect.top,
+              bottom: rect.bottom
+            });
+          }
+          return false;
+        }
+        const target = event.target.closest<HTMLElement>('[data-consistency-id]');
+        if (!target) {
+          return false;
+        }
+        const issueId = target.dataset.consistencyId;
+        if (!issueId) {
+          return false;
+        }
+        const rect = target.getBoundingClientRect();
+        onConsistencyHighlightClick?.(issueId, {
+          left: rect.left,
+          top: rect.top,
+          bottom: rect.bottom
+        });
+        return false;
       }
     }
   });
 
   useEffect(() => {
-    if (editor && onEditorReady) {
-      onEditorReady(editor);
+    if (editor) {
+      onEditorReadyRef.current?.(editor);
     }
-  }, [editor, onEditorReady]);
+  }, [editor]);
 
   // keep external content in sync
   useEffect(() => {
@@ -235,8 +291,9 @@ function TipTapEditor({
 
     if (current !== next) {
       editor.commands.setContent(next, {emitUpdate: false});
+      onWordCountChange?.(getWordCount(editor));
     }
-  }, [content, editor]);
+  }, [content, editor, onWordCountChange]);
 
   // initial word count
   useEffect(() => {

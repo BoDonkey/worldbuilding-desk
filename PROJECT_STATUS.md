@@ -1,6 +1,6 @@
 # Worldbuilding-Desk Project Status
 
-**Last Updated:** February 22, 2026
+**Last Updated:** March 14, 2026
 
 ## Project Overview
 
@@ -64,6 +64,11 @@ A comprehensive desktop application for LitRPG/GameLit authors that bridges narr
 - Project selector + parent-canon controls.
 - Navigation system.
 - Split editor/AI panel layout.
+- Workspace command palette, drawer shell, system history, and lore inspector.
+- Import modes (`strict`, `balanced`, `lenient`) with deferred review for imported scenes.
+- Inline consistency review highlights + action popovers.
+- Inline lore highlights + quick lore popovers for known entities/characters.
+- Editor appearance controls for reading width, editor surface, and serif/sans presentation.
 
 ---
 
@@ -133,6 +138,26 @@ npx tsx examples/basic-usage.ts
 
 ## Recent Changes & Fixes
 
+### Workspace Review + Editor UX (March 14, 2026)
+- Added import modes and deferred review flow so non-strict imports remain writable without losing review context.
+- Added best-effort `.pages` preview extraction with fallback guidance.
+- Tightened unknown-entity extraction to suppress more connective/prose false positives.
+- Moved unknown-entity handling into inline editor highlights with create/link/dismiss popovers.
+- Added shared popover primitive and reused it for quick lore peeks on known entities and characters.
+- Added editor readability controls:
+  - serif/sans text style
+  - focused/wide reading width
+  - paper/mist/contrast editor surface presets
+- Hardened import/save so RAG indexing and Shodh auto-memory failures do not block scene persistence.
+- Added lightweight local embedding fallback when transformer model bootstrap fails in-browser.
+- Improved settings copy for consistency detection keywords and import defaults.
+
+**Immediate Next Slice**
+- Persist “needs completion” state for review-created World Bible / Compendium records and surface that with badges in navigation.
+- Promote alias handling into a first-class `Alternative names` field on World Bible entries and use it as the shared source of truth for review/lore matching.
+- Continue editor appearance work with richer font/color customization and fix dark mode readability regressions.
+- Begin AI personalities/tools implementation, starting with a writing critic persona.
+
 ### Systems Integration + Imports (February 22, 2026)
 - Added settlement aura model and UI flow with generalized module sources (`trophy`, `structure`, `station`, `totem`, `custom`).
 - Added community/logistics party synergy engine and surfaced active combo buffs + roster opportunities.
@@ -197,27 +222,39 @@ npx tsx examples/basic-usage.ts
 - Child projects inherit parent canon read-only; promotion requires approval
 - Manual backup/export (multi-source import planned next)
 
+### Workspace / Review UX
+- Review-created World Bible entities do not yet automatically seed Compendium records.
+- Review state is reconstructed from validation passes; there is not yet a persisted review queue model.
+- World Bible / Compendium “needs completion” badges are not implemented yet.
+- Aliases exist in consistency storage, but `Alternative names` are not yet exposed as a first-class editable World Bible field.
+
+### Editor Appearance
+- Dark mode currently has readability regressions and poor visual contrast in several panels and controls.
+- Editor appearance controls are still coarse-grained; users cannot yet choose custom fonts, dyslexia-friendly fonts, or custom highlight palettes.
+
+### AI Authoring Tools
+- AI personalities/tools are not implemented yet.
+- No dedicated writing critic persona is available yet.
+
 ---
 
 ## Planned Next Steps
 
 ### Short Term (Next Phase)
-1. **World-Building Import Expansion**
-   - Extend in-app editor to capture scenes + structured world docs
-   - DOCX/Markdown ingestion wizard with type mapping
-   - CSV/JSON import path for rules/entities (validation + conflicts)
-   - Provenance tagging + audit logs
-2. **Storage / Telemetry Planning**
-   - Define telemetry pipeline for quota/usage
-   - Add quota meter UI + export/archive tooling
-
-3. **Full Electron Migration**
-   - Remove proxy server dependency
-   - Native API calls via main process
-   - Proper window management
-
-3. **AI Enhancements**
-   - Streaming UI with progress indicators
+1. **Editor Readability + Theming Hardening**
+   - Fix dark mode regressions across workspace/editor/popovers.
+   - Add richer editor typography controls (including dyslexia-friendly font options).
+   - Add customizable highlight/notification color palettes.
+2. **Review Completion Workflow**
+   - Add draft / needs-completion state to review-created World Bible and Compendium records.
+   - Surface completion badges in navigation and review flows.
+   - Clarify “refresh review” vs “resume strict review” in workspace UX.
+3. **Lore / Compendium Tooltip Convergence**
+   - Expand shared popover into a full lore + compendium review shell.
+   - Support cross-linking shorthand references and alias management from tooltip flows.
+4. **AI Personalities / Tools**
+   - Implement persona/tool framework in project settings.
+   - Ship first writing critic persona with scoped critique modes.
    - Prompt library/templates
    - Context injection from World Bible
 

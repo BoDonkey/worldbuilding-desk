@@ -1,0 +1,25 @@
+.appShell {
+  min-height: 100vh;
+  background: var(--color-bg-primary);
+  color: var(--color-text-primary);
+}
+
+.main {
+  padding-top: 1rem;
+  padding-right: 1rem;
+  padding-bottom: 1rem;
+}
+
+.mainExpanded {
+  padding-left: calc(88px + 1.75rem);
+}
+
+.mainCollapsed {
+  padding-left: 1.25rem;
+}
+
+@media (max-width: 900px) {
+  .main {
+    padding: 1rem 1rem calc(66px + 1rem) 1rem;
+  }
+}

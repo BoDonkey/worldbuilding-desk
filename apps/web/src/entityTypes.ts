@@ -26,8 +26,27 @@ export interface WritingDocument {
   projectId: string;
   title: string;
   content: string;
+  consistencyReviewMode?: 'default' | 'deferred';
   createdAt: number;
   updatedAt: number;
+}
+
+export type SystemHistoryCategory =
+  | 'scene'
+  | 'consistency'
+  | 'resource'
+  | 'quest'
+  | 'system';
+
+export interface SystemHistoryEntry {
+  id: string;
+  projectId: string;
+  category: SystemHistoryCategory;
+  message: string;
+  insertText: string;
+  sourceKey?: string;
+  sceneId?: string;
+  createdAt: number;
 }
 
 export type AIProviderId = 'anthropic' | 'openai' | 'gemini' | 'ollama';
@@ -66,6 +85,15 @@ export interface ProjectAISettings {
   promptTools: PromptTool[];
   defaultToolIds: string[];
   defaultToolIdsByMode?: Record<ProjectMode, string[]>;
+  inspectorSettings?: InspectorSettings;
+}
+
+export interface InspectorSettings {
+  enableAIConsultation: boolean;
+  maxConsultationsPerDay: number;
+  maxContextChars: number;
+  maxResponseTokens: number;
+  lowCostModel?: string;
 }
 
 export type PromptToolKind = 'style' | 'tone' | 'persona' | 'instruction';
@@ -79,6 +107,7 @@ export interface PromptTool {
 }
 
 export type ProjectMode = 'litrpg' | 'game' | 'general';
+export type WorkspaceImportMode = 'strict' | 'balanced' | 'lenient';
 
 export interface ProjectFeatureToggles {
   enableGameSystems: boolean;
@@ -119,6 +148,8 @@ export interface ProjectSettings {
   activeSkills: string[];
   projectMode: ProjectMode;
   featureToggles: ProjectFeatureToggles;
+  defaultImportMode?: WorkspaceImportMode;
+  defaultSkipImportSuggestions?: boolean;
   statBlockPreferences?: StatBlockPreferences;
   createdAt: number;
   updatedAt: number;

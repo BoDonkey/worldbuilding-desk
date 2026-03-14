@@ -23,6 +23,10 @@ interface AIAssistantProps {
     selectedText?: string;
   };
   onInsert?: (text: string) => void;
+  queuedPrompt?: string | null;
+  onQueuedPromptConsumed?: () => void;
+  consultationModel?: string;
+  consultationMaxTokens?: number;
 }
 
 export const AIAssistant: React.FC<AIAssistantProps> = ({
@@ -30,7 +34,11 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
   aiConfig,
   projectMode = 'litrpg',
   context,
-  onInsert
+  onInsert,
+  queuedPrompt,
+  onQueuedPromptConsumed,
+  consultationModel,
+  consultationMaxTokens
 }) => {
   const [messages, setMessages] = useState<LLMMessage[]>([]);
   const [input, setInput] = useState('');
@@ -43,6 +51,7 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
   const llmService = useRef<LLMService | null>(null);
   const ragService = useRef<RAGProvider | null>(null);
   const shodhService = useRef<ShodhMemoryProvider | null>(null);
+  const consumedQueuedPromptRef = useRef<string | null>(null);
 
   const promptManager = useRef(new PromptManager());
 
@@ -179,8 +188,8 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
     [context?.id, memoryCache, projectId]
   );
 
-  const handleSend = async () => {
-    if (!input.trim()) return;
+  const handleSendPrompt = useCallback(async (promptText: string) => {
+    if (!promptText.trim()) return;
     if (!llmService.current) {
       setMessages((prev) => [
         ...prev,
@@ -194,7 +203,7 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
       return;
     }
 
-    const userMessage: LLMMessage = {role: 'user', content: input};
+    const userMessage: LLMMessage = {role: 'user', content: promptText};
     setMessages((prev) => [...prev, userMessage]);
     setInput('');
     setIsStreaming(true);
@@ -244,7 +253,9 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
       for await (const chunk of llmService.current.stream({
         messages: [userMessage],
         context: contextChunks,
-        systemPrompt: composedPrompt
+        systemPrompt: composedPrompt,
+        model: consultationModel?.trim() || undefined,
+        maxTokens: consultationMaxTokens
       })) {
         assistantMessage += chunk;
         setMessages((prev) => [
@@ -261,7 +272,34 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
     } finally {
       setIsStreaming(false);
     }
+  }, [
+    buildMemoryChunks,
+    consultationMaxTokens,
+    consultationModel,
+    context?.id,
+    context?.selectedText,
+    context?.type,
+    input,
+    projectId,
+    providerError,
+    selectedToolIds,
+    aiConfig?.promptTools
+  ]);
+
+  const handleSend = async () => {
+    await handleSendPrompt(input);
   };
+
+  useEffect(() => {
+    const next = queuedPrompt?.trim() ?? '';
+    if (!next) return;
+    if (isStreaming) return;
+    if (consumedQueuedPromptRef.current === next) return;
+    consumedQueuedPromptRef.current = next;
+    void handleSendPrompt(next).finally(() => {
+      onQueuedPromptConsumed?.();
+    });
+  }, [queuedPrompt, handleSendPrompt, isStreaming, onQueuedPromptConsumed]);
 
   const handleInsert = () => {
     const lastAssistantMessage = [...messages]

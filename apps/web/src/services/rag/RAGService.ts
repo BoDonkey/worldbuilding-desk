@@ -20,6 +20,18 @@ type EntityVocabulary = Array<{
 
 type EmbeddingPipeline = (text: string, options?: Record<string, unknown>) => Promise<any>;
 
+const createFallbackEmbeddingPipeline = (): EmbeddingPipeline => {
+  return async (text: string) => {
+    const buckets = new Float32Array(32);
+    const normalized = text.toLowerCase();
+    for (let i = 0; i < normalized.length; i += 1) {
+      const code = normalized.charCodeAt(i);
+      buckets[i % buckets.length] += (code % 31) / 31;
+    }
+    return {data: buckets};
+  };
+};
+
 export interface RAGProvider {
   init(projectId: string): Promise<void>;
   setEntityVocabulary(vocabulary: EntityVocabulary): void;
@@ -170,8 +182,19 @@ export class RAGService implements RAGProvider {
         if ((globalThis as {Cypress?: unknown}).Cypress) {
           return async () => ({data: Float32Array.from([1])});
         }
-        const transformers = await import('@xenova/transformers');
-        return transformers.pipeline('feature-extraction', 'Xenova/all-MiniLM-L6-v2');
+        try {
+          const transformers = await import('@xenova/transformers');
+          return await transformers.pipeline(
+            'feature-extraction',
+            'Xenova/all-MiniLM-L6-v2'
+          );
+        } catch (error) {
+          console.warn(
+            'Falling back to lightweight local embeddings because transformer model loading failed.',
+            error
+          );
+          return createFallbackEmbeddingPipeline();
+        }
       })();
     }
 

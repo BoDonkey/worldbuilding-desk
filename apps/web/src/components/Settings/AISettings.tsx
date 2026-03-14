@@ -165,6 +165,13 @@ export const AISettings: React.FC<AISettingsProps> = ({
   };
   const defaultsForSelectedMode =
     defaultToolIdsByMode[defaultsMode] ?? defaultToolIds;
+  const inspectorSettings = aiSettings.inspectorSettings ?? {
+    enableAIConsultation: true,
+    maxConsultationsPerDay: 20,
+    maxContextChars: 1800,
+    maxResponseTokens: 500,
+    lowCostModel: ''
+  };
 
   const withDefaultModes = (
     updates: Partial<ProjectAISettings>
@@ -491,6 +498,100 @@ export const AISettings: React.FC<AISettingsProps> = ({
           placeholder={PROVIDER_DEFAULT_MODELS[aiSettings.provider]}
         />
         <p className={styles.help}>Override the default model used for this provider.</p>
+      </div>
+
+      <div className={styles.toolsSection}>
+        <h3 className={styles.toolsHeading}>Lore Inspector AI Guardrails</h3>
+        <label className={styles.field}>
+          <span className={styles.label}>
+            <input
+              type='checkbox'
+              checked={inspectorSettings.enableAIConsultation}
+              onChange={(e) =>
+                onSettingsChange({
+                  ...aiSettings,
+                  inspectorSettings: {
+                    ...inspectorSettings,
+                    enableAIConsultation: e.target.checked
+                  }
+                })
+              }
+            />{' '}
+            Enable AI consultation actions in Lore Inspector
+          </span>
+        </label>
+        <div className={styles.field}>
+          <label className={styles.label}>Max consultations per day</label>
+          <input
+            type='number'
+            className={styles.input}
+            min={1}
+            value={inspectorSettings.maxConsultationsPerDay}
+            onChange={(e) =>
+              onSettingsChange({
+                ...aiSettings,
+                inspectorSettings: {
+                  ...inspectorSettings,
+                  maxConsultationsPerDay: Math.max(1, Number(e.target.value) || 20)
+                }
+              })
+            }
+          />
+        </div>
+        <div className={styles.field}>
+          <label className={styles.label}>Max context chars per request</label>
+          <input
+            type='number'
+            className={styles.input}
+            min={300}
+            value={inspectorSettings.maxContextChars}
+            onChange={(e) =>
+              onSettingsChange({
+                ...aiSettings,
+                inspectorSettings: {
+                  ...inspectorSettings,
+                  maxContextChars: Math.max(300, Number(e.target.value) || 1800)
+                }
+              })
+            }
+          />
+        </div>
+        <div className={styles.field}>
+          <label className={styles.label}>Max response tokens</label>
+          <input
+            type='number'
+            className={styles.input}
+            min={100}
+            value={inspectorSettings.maxResponseTokens}
+            onChange={(e) =>
+              onSettingsChange({
+                ...aiSettings,
+                inspectorSettings: {
+                  ...inspectorSettings,
+                  maxResponseTokens: Math.max(100, Number(e.target.value) || 500)
+                }
+              })
+            }
+          />
+        </div>
+        <div className={styles.field}>
+          <label className={styles.label}>Low-cost model override (optional)</label>
+          <input
+            type='text'
+            className={styles.input}
+            value={inspectorSettings.lowCostModel ?? ''}
+            onChange={(e) =>
+              onSettingsChange({
+                ...aiSettings,
+                inspectorSettings: {
+                  ...inspectorSettings,
+                  lowCostModel: e.target.value
+                }
+              })
+            }
+            placeholder='e.g., gpt-4o-mini'
+          />
+        </div>
       </div>
 
       {aiSettings.provider === 'ollama' && (

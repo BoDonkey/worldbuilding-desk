@@ -2,7 +2,9 @@ import type {
   Project,
   ProjectSettings,
   ProjectAISettings,
+  InspectorSettings,
   ProjectMode,
+  WorkspaceImportMode,
   StatBlockGroup,
   StatBlockPreferences
 } from './entityTypes';
@@ -33,7 +35,22 @@ const DEFAULT_AI_SETTINGS: ProjectAISettings = {
     litrpg: [],
     game: [],
     general: []
+  },
+  inspectorSettings: {
+    enableAIConsultation: true,
+    maxConsultationsPerDay: 20,
+    maxContextChars: 1800,
+    maxResponseTokens: 500,
+    lowCostModel: ''
   }
+};
+
+const DEFAULT_INSPECTOR_SETTINGS: InspectorSettings = {
+  enableAIConsultation: true,
+  maxConsultationsPerDay: 20,
+  maxContextChars: 1800,
+  maxResponseTokens: 500,
+  lowCostModel: ''
 };
 
 const DEFAULT_PROJECT_MODE: ProjectMode = 'litrpg';
@@ -48,6 +65,8 @@ const DEFAULT_STAT_BLOCK_PREFERENCES: StatBlockPreferences = {
   selectedResourceIds: [],
   groups: []
 };
+const DEFAULT_IMPORT_MODE: WorkspaceImportMode = 'balanced';
+const DEFAULT_SKIP_IMPORT_SUGGESTIONS = false;
 
 function normalizeStatBlockGroups(groups: StatBlockGroup[] | undefined): StatBlockGroup[] {
   if (!Array.isArray(groups)) return [];
@@ -110,6 +129,22 @@ function ensureAISettings(settings: ProjectSettings): ProjectSettings {
       aiSettings.defaultToolIdsByMode?.general?.filter((id) => enabledIds.has(id)) ??
       fallbackDefaults
   };
+  aiSettings.inspectorSettings = {
+    ...DEFAULT_INSPECTOR_SETTINGS,
+    ...(aiSettings.inspectorSettings ?? {}),
+    maxConsultationsPerDay: Math.max(
+      1,
+      Math.floor(aiSettings.inspectorSettings?.maxConsultationsPerDay ?? 20)
+    ),
+    maxContextChars: Math.max(
+      300,
+      Math.floor(aiSettings.inspectorSettings?.maxContextChars ?? 1800)
+    ),
+    maxResponseTokens: Math.max(
+      100,
+      Math.floor(aiSettings.inspectorSettings?.maxResponseTokens ?? 500)
+    )
+  };
 
   return {
     ...settings,
@@ -123,6 +158,16 @@ function ensureAISettings(settings: ProjectSettings): ProjectSettings {
       mode: settings.projectMode ?? DEFAULT_PROJECT_MODE,
       featureToggles: settings.featureToggles
     }),
+    defaultImportMode:
+      settings.defaultImportMode === 'strict' ||
+      settings.defaultImportMode === 'balanced' ||
+      settings.defaultImportMode === 'lenient'
+        ? settings.defaultImportMode
+        : DEFAULT_IMPORT_MODE,
+    defaultSkipImportSuggestions:
+      typeof settings.defaultSkipImportSuggestions === 'boolean'
+        ? settings.defaultSkipImportSuggestions
+        : DEFAULT_SKIP_IMPORT_SUGGESTIONS,
     statBlockPreferences: (() => {
       const merged = {
         ...DEFAULT_STAT_BLOCK_PREFERENCES,
@@ -203,6 +248,8 @@ export async function createDefaultSettings(projectId: string): Promise<ProjectS
     activeSkills: [],
     projectMode: DEFAULT_PROJECT_MODE,
     featureToggles: getDefaultFeatureToggles(DEFAULT_PROJECT_MODE),
+    defaultImportMode: DEFAULT_IMPORT_MODE,
+    defaultSkipImportSuggestions: DEFAULT_SKIP_IMPORT_SUGGESTIONS,
     statBlockPreferences: {...DEFAULT_STAT_BLOCK_PREFERENCES},
     createdAt: now,
     updatedAt: now

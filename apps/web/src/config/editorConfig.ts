@@ -34,8 +34,11 @@ export const defaultEditorConfig: EditorConfig = {
 
 // Helper to get word count from editor storage
 export function getWordCount(editor: Editor): number {
-  const storage = (editor.storage as unknown) as { wordCount?: { words?: number } };
-  return storage.wordCount?.words ?? 0;
+  const text = editor.getText().trim();
+  if (!text) {
+    return 0;
+  }
+  return text.split(/\s+/).filter(Boolean).length;
 }
 
 /**
