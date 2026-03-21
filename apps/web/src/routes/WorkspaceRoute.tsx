@@ -173,6 +173,128 @@ interface ConsistencyPopoverState {
   top: number;
 }
 
+interface PersistedWorkspaceReviewState {
+  documentId: string | null;
+  isReviewQueueOpen: boolean;
+  guardrailIssues: GuardrailIssue[];
+  unknownDraftEdits: Record<string, UnknownReviewDraft>;
+}
+
+interface UnknownReviewDraft {
+  name: string;
+  categoryId: string;
+}
+
+interface UnknownReviewItem {
+  key: string;
+  surface: string;
+  name: string;
+  categoryId: string;
+  categoryName: string;
+}
+
+interface UnknownLinkOption {
+  value: string;
+  id: string;
+  name: string;
+  targetType: 'entity' | 'character';
+}
+
+const normalizeUnknownKey = (value: string): string => value.trim().toLowerCase();
+const getWorkspaceReviewStorageKey = (projectId: string): string =>
+  `workspaceReview:${projectId}`;
+const buildUnknownLinkValue = (targetType: 'entity' | 'character', id: string): string =>
+  `${targetType}:${id}`;
+const parseUnknownLinkValue = (
+  value: string
+): {id: string; targetType: 'entity' | 'character'} | null => {
+  const [targetType, ...rest] = value.split(':');
+  const id = rest.join(':').trim();
+  if (!id || (targetType !== 'entity' && targetType !== 'character')) {
+    return null;
+  }
+  return {id, targetType};
+};
+
+const normalizeUnknownName = (surface: string): string => {
+  const trimmed = surface.trim().replace(/\s+/g, ' ');
+  if (!trimmed) return '';
+
+  const withSpacedHonorifics = trimmed.replace(
+    /\b(Dr|Mr|Mrs|Ms|Mx|Prof|Sir|Lady|Lord|Capt|Captain|Gen|General|Col|Colonel|Lt|Lieutenant|Sgt|Sergeant)\.(?=\S)/g,
+    '$1. '
+  );
+  const withoutPossessive = withSpacedHonorifics.replace(/[’']s\b$/i, '');
+  const withoutTrailingQuote = withoutPossessive.replace(/[’']$/g, '');
+  const withoutOuterPunctuation = withoutTrailingQuote.replace(
+    /^[^A-Za-z0-9]+|[^A-Za-z0-9'. -]+$/g,
+    ''
+  );
+
+  return withoutOuterPunctuation.trim() || trimmed;
+};
+
+const findCategoryBySlug = (
+  categories: EntityCategory[],
+  slugs: string[]
+): EntityCategory | undefined =>
+  categories.find((category) => slugs.includes(category.slug.toLowerCase()));
+
+const guessUnknownCategory = (
+  surface: string,
+  categories: EntityCategory[]
+): EntityCategory | undefined => {
+  const normalized = normalizeUnknownName(surface);
+  const lower = normalized.toLowerCase();
+  const words = normalized.split(/\s+/).filter(Boolean);
+  const characterCategory = findCategoryBySlug(categories, ['characters']);
+  const locationCategory = findCategoryBySlug(categories, ['locations']);
+  const itemCategory = findCategoryBySlug(categories, ['items']);
+  const groupCategory = findCategoryBySlug(categories, [
+    'groups',
+    'factions',
+    'races',
+    'peoples',
+    'species'
+  ]);
+
+  const hasCharacterCue =
+    /\b(Dr|Mr|Mrs|Ms|Mx|Prof|Sir|Lady|Lord|Captain|Capt|General|Gen|Colonel|Col|Lieutenant|Lt|Sergeant|Sgt)\b\.?/i.test(
+      normalized
+    ) ||
+    (words.length >= 2 &&
+      words.every((word) => /^[A-Z][A-Za-z'’-]*\.?$/.test(word)));
+  if (hasCharacterCue && characterCategory) {
+    return characterCategory;
+  }
+
+  const hasLocationCue =
+    /\b(mount|mt\.?|lake|river|fort|city|town|village|kingdom|realm|forest|temple|keep|harbor|harbour|port|valley|plains|desert|isle|island|bay|road|street|tower|citadel)\b/i.test(
+      lower
+    );
+  if (hasLocationCue && locationCategory) {
+    return locationCategory;
+  }
+
+  const hasGroupCue =
+    /\b(people|folk|tribe|clan|house|order|guild|legion|council|race|species|elves|elf|dwarves|dwarf|orcs|orc|humans|human)\b/i.test(
+      lower
+    );
+  if (hasGroupCue && groupCategory) {
+    return groupCategory;
+  }
+
+  const hasItemCue =
+    /\b(sword|blade|shield|amulet|ring|staff|dagger|armor|armour|relic|artifact|book|tome|crown)\b/i.test(
+      lower
+    );
+  if (hasItemCue && itemCategory) {
+    return itemCategory;
+  }
+
+  return characterCategory ?? locationCategory ?? itemCategory ?? categories[0];
+};
+
 const downgradeUnknownIssuesToWarnings = (
   issues: GuardrailIssue[]
 ): GuardrailIssue[] =>
@@ -266,6 +388,10 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
   const [unknownLinkSelection, setUnknownLinkSelection] = useState<
     Record<string, string>
   >({});
+  const [unknownDraftEdits, setUnknownDraftEdits] = useState<
+    Record<string, UnknownReviewDraft>
+  >({});
+  const [isReviewQueueOpen, setReviewQueueOpen] = useState(false);
   const [isRunningConsistencyReview, setIsRunningConsistencyReview] = useState(false);
   const [consistencyReviewItems, setConsistencyReviewItems] = useState<
     ConsistencyReviewItem[]
@@ -273,6 +399,7 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
   const [lastConsistencyReviewAt, setLastConsistencyReviewAt] = useState<number | null>(
     null
   );
+  const [isConsistencyPanelOpen, setConsistencyPanelOpen] = useState(false);
   const [isCreatingScene, setIsCreatingScene] = useState(false);
   const [isImportingDocuments, setIsImportingDocuments] = useState(false);
   const [importMode, setImportMode] = useState<ImportMode>('balanced');
@@ -309,6 +436,7 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
       : false
   );
   const [isDrawerPrefsHydrated, setDrawerPrefsHydrated] = useState(false);
+  const [isReviewStateHydrated, setReviewStateHydrated] = useState(false);
 
   useEffect(() => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -744,11 +872,25 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
       setToolbarButtons(buttons);
 
       if (docs.length > 0) {
-        const first = docs[0];
-        setSelectedId(first.id);
-        setSelectedCreatedAt(first.createdAt);
-        setTitle(first.title);
-        setContent(first.content);
+        let nextSelected = docs[0];
+        try {
+          const rawReviewState = localStorage.getItem(
+            getWorkspaceReviewStorageKey(activeProject.id)
+          );
+          if (rawReviewState) {
+            const parsed = JSON.parse(rawReviewState) as Partial<PersistedWorkspaceReviewState>;
+            const persistedDoc = docs.find((doc) => doc.id === parsed.documentId);
+            if (persistedDoc) {
+              nextSelected = persistedDoc;
+            }
+          }
+        } catch {
+          // Ignore malformed persisted review state.
+        }
+        setSelectedId(nextSelected.id);
+        setSelectedCreatedAt(nextSelected.createdAt);
+        setTitle(nextSelected.title);
+        setContent(nextSelected.content);
         setSaveStatus('idle');
       } else {
         setSelectedId(null);
@@ -838,6 +980,52 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
     isSceneDrawerOpen,
     isContextDrawerOpen,
     activeContextView
+  ]);
+
+  useEffect(() => {
+    if (!activeProject) return;
+    setReviewStateHydrated(false);
+    const key = getWorkspaceReviewStorageKey(activeProject.id);
+    try {
+      const raw = localStorage.getItem(key);
+      if (!raw) {
+        setGuardrailIssues([]);
+        setUnknownDraftEdits({});
+        setReviewQueueOpen(false);
+        return;
+      }
+      const parsed = JSON.parse(raw) as Partial<PersistedWorkspaceReviewState>;
+      setGuardrailIssues(Array.isArray(parsed.guardrailIssues) ? parsed.guardrailIssues : []);
+      setUnknownDraftEdits(parsed.unknownDraftEdits ?? {});
+      setReviewQueueOpen(Boolean(parsed.isReviewQueueOpen));
+    } catch {
+      setGuardrailIssues([]);
+      setUnknownDraftEdits({});
+      setReviewQueueOpen(false);
+    } finally {
+      setReviewStateHydrated(true);
+    }
+  }, [activeProject]);
+
+  useEffect(() => {
+    if (!activeProject || !isReviewStateHydrated) return;
+    const payload: PersistedWorkspaceReviewState = {
+      documentId: selectedId,
+      isReviewQueueOpen,
+      guardrailIssues,
+      unknownDraftEdits
+    };
+    localStorage.setItem(
+      getWorkspaceReviewStorageKey(activeProject.id),
+      JSON.stringify(payload)
+    );
+  }, [
+    activeProject,
+    guardrailIssues,
+    isReviewQueueOpen,
+    isReviewStateHydrated,
+    selectedId,
+    unknownDraftEdits
   ]);
 
   useEffect(() => {
@@ -992,6 +1180,9 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
 
   const knownConsistencyEntities = useMemo(() => {
     const entityById = new Map(entities.map((entity) => [entity.id, entity]));
+    const characterById = new Map(
+      characters.map((character) => [character.id, character])
+    );
     return [
       ...entities.map((entity) => ({
         id: entity.id,
@@ -1005,6 +1196,17 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
       })),
       ...aliases
         .map((alias) => {
+          if (alias.targetType === 'character') {
+            const linkedCharacter = characterById.get(alias.entityId);
+            if (!linkedCharacter) {
+              return null;
+            }
+            return {
+              id: linkedCharacter.id,
+              name: alias.alias,
+              type: 'character' as const
+            };
+          }
           const linkedEntity = entityById.get(alias.entityId);
           if (!linkedEntity) {
             return null;
@@ -1015,7 +1217,12 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
             type: 'entity' as const
           };
         })
-        .filter((entry): entry is {id: string; name: string; type: 'entity'} => Boolean(entry))
+        .filter(
+          (
+            entry
+          ): entry is {id: string; name: string; type: 'entity' | 'character'} =>
+            Boolean(entry)
+        )
     ];
   }, [aliases, characters, entities]);
 
@@ -1645,41 +1852,237 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
     [unknownGuardrailIssues]
   );
 
-  const unknownLinkOptions = useMemo(() => {
-    const optionMap: Record<string, WorldEntity[]> = {};
-    unknownGuardrailIssues.forEach((issue) => {
+  const unknownReviewItems = useMemo<UnknownReviewItem[]>(() => {
+    return unknownGuardrailIssues.map((issue) => {
       const surface = (issue.surface ?? '').trim();
+      const key = normalizeUnknownKey(surface);
+      const edit = unknownDraftEdits[key];
+      const guessedCategory = guessUnknownCategory(surface, categories);
+      const suggestedName = normalizeUnknownName(surface);
+      const categoryId = edit?.categoryId ?? guessedCategory?.id ?? '';
+      const categoryName =
+        categories.find((category) => category.id === categoryId)?.name ??
+        guessedCategory?.name ??
+        'Choose category';
+
+      return {
+        key,
+        surface,
+        name: edit?.name ?? suggestedName,
+        categoryId,
+        categoryName
+      };
+    });
+  }, [categories, unknownDraftEdits, unknownGuardrailIssues]);
+
+  const unknownReviewItemBySurface = useMemo(
+    () =>
+      new Map(
+        unknownReviewItems.map((item) => [normalizeUnknownKey(item.surface), item] as const)
+      ),
+    [unknownReviewItems]
+  );
+
+  const unknownLinkOptions = useMemo(() => {
+    const optionMap: Record<string, UnknownLinkOption[]> = {};
+    const allCharacterOptions: UnknownLinkOption[] = [
+      ...characters.map((character) => ({
+        value: buildUnknownLinkValue('character', character.id),
+        id: character.id,
+        name: character.name,
+        targetType: 'character' as const
+      }))
+    ];
+    const allEntityOptions: UnknownLinkOption[] = [
+      ...entities.map((entity) => ({
+        value: buildUnknownLinkValue('entity', entity.id),
+        id: entity.id,
+        name: entity.name,
+        targetType: 'entity' as const
+      }))
+    ];
+
+    unknownReviewItems.forEach((item) => {
+      const surface = item.surface.trim();
       if (!surface) return;
       const normalizedSurface = surface.toLowerCase();
-      const filtered = entities.filter((entity) => {
-        const normalizedName = entity.name.toLowerCase();
-        if (normalizedName === normalizedSurface) {
-          return true;
-        }
-        return (
-          normalizedName.includes(normalizedSurface) ||
-          normalizedSurface.includes(normalizedName)
-        );
-      });
-      const ranked = [...filtered].sort((a, b) => {
+      const selectedCategory = categories.find(
+        (category) => category.id === item.categoryId
+      );
+      const scopedOptions =
+        selectedCategory?.slug === 'characters'
+          ? allCharacterOptions
+          : item.categoryId
+            ? allEntityOptions.filter((option) => {
+                const entity = entities.find((entry) => entry.id === option.id);
+                return entity?.categoryId === item.categoryId;
+              })
+            : [...allCharacterOptions, ...allEntityOptions];
+      const fallbackOptions =
+        selectedCategory?.slug === 'characters'
+          ? [...allCharacterOptions, ...allEntityOptions]
+          : [...scopedOptions, ...allCharacterOptions, ...allEntityOptions];
+      const dedupedOptions = Array.from(
+        new Map(fallbackOptions.map((option) => [option.value, option])).values()
+      );
+      const ranked = dedupedOptions.sort((a, b) => {
         const aExact = a.name.toLowerCase() === normalizedSurface ? 0 : 1;
         const bExact = b.name.toLowerCase() === normalizedSurface ? 0 : 1;
         if (aExact !== bExact) return aExact - bExact;
         const aIncludes = a.name.toLowerCase().includes(normalizedSurface) ? 0 : 1;
         const bIncludes = b.name.toLowerCase().includes(normalizedSurface) ? 0 : 1;
         if (aIncludes !== bIncludes) return aIncludes - bIncludes;
+        const aScoped = scopedOptions.some((option) => option.value === a.value) ? 0 : 1;
+        const bScoped = scopedOptions.some((option) => option.value === b.value) ? 0 : 1;
+        if (aScoped !== bScoped) return aScoped - bScoped;
+        if (a.targetType !== b.targetType) {
+          return a.targetType === 'character' ? -1 : 1;
+        }
         return a.name.localeCompare(b.name);
       });
-      optionMap[surface] = ranked.slice(0, 20);
+      optionMap[surface] = ranked.slice(0, 50);
     });
     return optionMap;
-  }, [unknownGuardrailIssues, entities]);
+  }, [unknownReviewItems, categories, entities, characters]);
 
-  const resolveUnknownEntity = useCallback(async (surface: string) => {
+  useEffect(() => {
+    const activeKeys = new Set(
+      unknownGuardrailIssues
+        .map((issue) => normalizeUnknownKey(issue.surface ?? ''))
+        .filter(Boolean)
+    );
+
+    setUnknownDraftEdits((prev) =>
+      Object.fromEntries(Object.entries(prev).filter(([key]) => activeKeys.has(key)))
+    );
+
+    if (activeKeys.size === 0) {
+      setReviewQueueOpen(false);
+    }
+  }, [unknownGuardrailIssues]);
+
+  useEffect(() => {
+    if (consistencyReviewItems.length > 0) {
+      setConsistencyPanelOpen(true);
+    }
+  }, [consistencyReviewItems.length]);
+
+  const updateUnknownDraft = useCallback(
+    (surface: string, updates: Partial<UnknownReviewDraft>) => {
+      const key = normalizeUnknownKey(surface);
+      if (!key) return;
+      setUnknownDraftEdits((prev) => {
+        const current = prev[key] ?? {
+          name: normalizeUnknownName(surface),
+          categoryId: guessUnknownCategory(surface, categories)?.id ?? ''
+        };
+        return {
+          ...prev,
+          [key]: {
+            ...current,
+            ...updates
+          }
+        };
+      });
+    },
+    [categories]
+  );
+
+  const queueUnknownSurfaceForReview = useCallback(async (surface: string) => {
     if (!activeProject) return;
 
-    const normalized = surface.trim();
-    if (!normalized) return;
+    const normalizedSurface = surface.trim();
+    if (!normalizedSurface) return;
+
+    let availableCategories = categories;
+    if (availableCategories.length === 0) {
+      await initializeDefaultCategories(activeProject.id);
+      availableCategories = await getCategoriesByProject(activeProject.id);
+      setCategories(availableCategories);
+    }
+
+    const key = normalizeUnknownKey(normalizedSurface);
+    const suggestedCategoryId =
+      guessUnknownCategory(normalizedSurface, availableCategories)?.id ?? '';
+    const suggestedName = normalizeUnknownName(normalizedSurface);
+
+    setGuardrailIssues((prev) => {
+      if (
+        prev.some(
+          (issue) =>
+            issue.code === 'UNKNOWN_ENTITY' &&
+            normalizeUnknownKey(issue.surface ?? '') === key
+        )
+      ) {
+        return prev;
+      }
+
+      return [
+        ...prev,
+        {
+          code: 'UNKNOWN_ENTITY',
+          severity: 'warning',
+          message: `Review "${normalizedSurface}" before canonizing this scene.`,
+          surface: normalizedSurface,
+          span: {start: 0, end: normalizedSurface.length}
+        }
+      ];
+    });
+
+    setUnknownDraftEdits((prev) => ({
+      ...prev,
+      [key]: prev[key] ?? {
+        name: suggestedName,
+        categoryId: suggestedCategoryId
+      }
+    }));
+    setReviewQueueOpen(true);
+    setFeedback({
+      tone: 'success',
+      message: `"${normalizedSurface}" added to the review queue.`
+    });
+  }, [activeProject, categories]);
+
+  const clearUnknownSurfaceState = useCallback((surface: string) => {
+    const normalized = normalizeUnknownKey(surface);
+    setGuardrailIssues((prev) =>
+      prev.filter((issue) => normalizeUnknownKey(issue.surface ?? '') !== normalized)
+    );
+    setUnknownLinkSelection((prev) => {
+      const copy = {...prev};
+      delete copy[surface];
+      return copy;
+    });
+    setUnknownDraftEdits((prev) => {
+      const copy = {...prev};
+      delete copy[normalized];
+      return copy;
+    });
+    setConsistencyPopover((prev) =>
+      prev?.surface.trim().toLowerCase() === normalized ? null : prev
+    );
+  }, []);
+
+  const applyAliasLocally = useCallback((saved: ConsistencyAlias) => {
+    setAliases((prev) => {
+      const existingIndex = prev.findIndex((entry) => entry.id === saved.id);
+      if (existingIndex >= 0) {
+        const copy = [...prev];
+        copy[existingIndex] = saved;
+        return copy;
+      }
+      return [...prev, saved];
+    });
+  }, []);
+
+  const resolveUnknownEntity = useCallback(async (
+    surface: string,
+    override?: Partial<UnknownReviewDraft>
+  ) => {
+    if (!activeProject) return;
+
+    const normalizedSurface = surface.trim();
+    if (!normalizedSurface) return;
 
     setResolvingUnknown(surface);
     setFeedback(null);
@@ -1691,13 +2094,41 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
         setCategories(availableCategories);
       }
 
+      const draft =
+        override ??
+        unknownReviewItemBySurface.get(normalizeUnknownKey(surface)) ?? {
+          name: normalizeUnknownName(surface),
+          categoryId: guessUnknownCategory(surface, availableCategories)?.id ?? ''
+        };
+      const canonicalName = (draft.name ?? '').trim();
       const preferredCategory =
-        availableCategories.find((category) =>
-          ['items', 'characters', 'locations'].includes(category.slug)
-        ) ?? availableCategories[0];
+        availableCategories.find((category) => category.id === draft.categoryId) ??
+        guessUnknownCategory(canonicalName || normalizedSurface, availableCategories) ??
+        availableCategories[0];
 
-      if (!preferredCategory) {
+      if (!preferredCategory || !canonicalName) {
         throw new Error('No categories available for entity creation.');
+      }
+
+      const existingEntity = entities.find(
+        (entity) => normalizeUnknownKey(entity.name) === normalizeUnknownKey(canonicalName)
+      );
+
+      if (existingEntity) {
+        if (normalizeUnknownKey(normalizedSurface) !== normalizeUnknownKey(canonicalName)) {
+          const savedAlias = await saveAlias({
+            projectId: activeProject.id,
+            entityId: existingEntity.id,
+            alias: normalizedSurface
+          });
+          applyAliasLocally(savedAlias);
+        }
+        clearUnknownSurfaceState(surface);
+        setFeedback({
+          tone: 'success',
+          message: `Matched "${normalizedSurface}" to existing entity "${existingEntity.name}".`
+        });
+        return;
       }
 
       const now = Date.now();
@@ -1705,7 +2136,7 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
         id: crypto.randomUUID(),
         projectId: activeProject.id,
         categoryId: preferredCategory.id,
-        name: normalized,
+        name: canonicalName,
         fields: {},
         links: [],
         createdAt: now,
@@ -1713,25 +2144,23 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
       };
       await saveEntity(entity);
       setEntities((prev) => [...prev, entity]);
-      setGuardrailIssues((prev) =>
-        prev.filter(
-          (issue) => issue.surface?.trim().toLowerCase() !== normalized.toLowerCase()
-        )
-      );
-      setUnknownLinkSelection((prev) => {
-        const copy = {...prev};
-        delete copy[surface];
-        return copy;
-      });
-      setConsistencyPopover((prev) =>
-        prev?.surface.trim().toLowerCase() === normalized.toLowerCase() ? null : prev
-      );
+
+      if (normalizeUnknownKey(normalizedSurface) !== normalizeUnknownKey(canonicalName)) {
+        const savedAlias = await saveAlias({
+          projectId: activeProject.id,
+          entityId: entity.id,
+          alias: normalizedSurface
+        });
+        applyAliasLocally(savedAlias);
+      }
+
+      clearUnknownSurfaceState(surface);
       setFeedback({
         tone: 'success',
-        message: `Entity "${normalized}" created in ${preferredCategory.name}. Save again to validate.`
+        message: `Entity "${canonicalName}" created in ${preferredCategory.name}. Save again to validate.`
       });
       setResolverNotice({
-        message: `Entity "${normalized}" created.`
+        message: `Entity "${canonicalName}" created.`
       });
     } catch (error) {
       const message =
@@ -1740,18 +2169,18 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
     } finally {
       setResolvingUnknown(null);
     }
-  }, [activeProject, categories]);
+  }, [activeProject, applyAliasLocally, clearUnknownSurfaceState, entities, categories, unknownReviewItemBySurface]);
 
   const resolveAllUnknownEntities = useCallback(async () => {
-    const surfaces = unknownGuardrailIssues
-      .map((issue) => issue.surface?.trim())
-      .filter((surface): surface is string => Boolean(surface));
-    if (surfaces.length === 0) return;
+    if (unknownReviewItems.length === 0) return;
 
-    for (const surface of surfaces) {
-      await resolveUnknownEntity(surface);
+    for (const item of unknownReviewItems) {
+      await resolveUnknownEntity(item.surface, {
+        name: item.name,
+        categoryId: item.categoryId
+      });
     }
-  }, [unknownGuardrailIssues, resolveUnknownEntity]);
+  }, [unknownReviewItems, resolveUnknownEntity]);
 
   const dismissAllUnknownEntities = useCallback(() => {
     const blocked = new Set(
@@ -1772,21 +2201,17 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
   }, [unknownGuardrailIssues]);
 
   const dismissUnknownEntity = useCallback((surface: string) => {
-    const normalized = surface.trim().toLowerCase();
+    const normalized = normalizeUnknownKey(surface);
     if (!normalized) return;
-    setGuardrailIssues((prev) =>
-      prev.filter((issue) => issue.surface?.trim().toLowerCase() !== normalized)
-    );
-    setConsistencyPopover((prev) =>
-      prev?.surface.trim().toLowerCase() === normalized ? null : prev
-    );
-  }, []);
+    clearUnknownSurfaceState(surface);
+  }, [clearUnknownSurfaceState]);
 
   const linkUnknownEntity = useCallback(
     async (surface: string, explicitEntityId?: string) => {
       if (!activeProject) return;
-      const selectedEntityId = explicitEntityId ?? unknownLinkSelection[surface];
-      if (!selectedEntityId) {
+      const selectedValue = explicitEntityId ?? unknownLinkSelection[surface];
+      const parsedSelection = selectedValue ? parseUnknownLinkValue(selectedValue) : null;
+      if (!parsedSelection) {
         setFeedback({
           tone: 'error',
           message: `Select an entity before linking "${surface}".`
@@ -1799,37 +2224,18 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
       try {
         const saved = await saveAlias({
           projectId: activeProject.id,
-          entityId: selectedEntityId,
+          entityId: parsedSelection.id,
+          targetType: parsedSelection.targetType,
           alias: surface
         });
-        setAliases((prev) => {
-          const existingIndex = prev.findIndex((entry) => entry.id === saved.id);
-          if (existingIndex >= 0) {
-            const copy = [...prev];
-            copy[existingIndex] = saved;
-            return copy;
-          }
-          return [...prev, saved];
-        });
-        setGuardrailIssues((prev) =>
-          prev.filter(
-            (issue) => issue.surface?.trim().toLowerCase() !== surface.trim().toLowerCase()
-          )
-        );
-        setUnknownLinkSelection((prev) => {
-          const copy = {...prev};
-          delete copy[surface];
-          return copy;
-        });
-        setConsistencyPopover((prev) =>
-          prev?.surface.trim().toLowerCase() === surface.trim().toLowerCase() ? null : prev
-        );
+        applyAliasLocally(saved);
+        clearUnknownSurfaceState(surface);
         setFeedback({
           tone: 'success',
-          message: `Linked alias "${surface}" to existing entity. Save again to validate.`
+          message: `Linked alias "${surface}" to existing record. Save again to validate.`
         });
         setResolverNotice({
-          message: `Alias "${surface}" linked to existing entity.`
+          message: `Alias "${surface}" linked to existing record.`
         });
       } catch (error) {
         const message =
@@ -1839,7 +2245,7 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
         setLinkingUnknown(null);
       }
     },
-    [activeProject, unknownLinkSelection]
+    [activeProject, applyAliasLocally, clearUnknownSurfaceState, unknownLinkSelection]
   );
 
   const activePartySynergies = useMemo(
@@ -2088,6 +2494,11 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
 
     const categoryNameById = new Map(categories.map((category) => [category.id, category.name]));
     const characterById = new Map(characters.map((character) => [character.id, character]));
+    const characterSheetByCharacterId = new Map(
+      characterSheets
+        .filter((sheet): sheet is CharacterSheet & {characterId: string} => Boolean(sheet.characterId))
+        .map((sheet) => [sheet.characterId, sheet])
+    );
     const entityById = new Map(entities.map((entity) => [entity.id, entity]));
 
     const recentSystemMessageFor = (name: string): string => {
@@ -2224,6 +2635,32 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
     });
 
     aliases.forEach((alias) => {
+      if (alias.targetType === 'character') {
+        const character = characterById.get(alias.entityId);
+        if (!character) return;
+        const sheet = characterSheetByCharacterId.get(character.id);
+        const entry = {
+          name: character.name,
+          html: sheet ? resolveCharacterBlock(sheet, 'compact') : `<p>${character.name}</p>`,
+          lore: buildCharacterLore(
+            sheet ?? {
+              id: character.id,
+              projectId: character.projectId,
+              characterId: character.id,
+              name: character.name,
+              level: 1,
+              experience: 0,
+              stats: [],
+              resources: [],
+              inventory: [],
+              createdAt: character.createdAt,
+              updatedAt: character.updatedAt
+            }
+          )
+        };
+        registerEntry('characters', alias.alias, entry);
+        return;
+      }
       const entity = entityById.get(alias.entityId);
       if (!entity) return;
       const entry = {
@@ -2493,6 +2930,11 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
   const activeConsistencyPopoverIssue = consistencyPopover
     ? highlightableUnknownIssues.find((issue) => issue.id === consistencyPopover.issueId) ?? null
     : null;
+  const activeUnknownReviewItem = activeConsistencyPopoverIssue
+    ? unknownReviewItemBySurface.get(
+        normalizeUnknownKey(activeConsistencyPopoverIssue.surface)
+      ) ?? null
+    : null;
   const selectedDocumentMemories = selectedId
     ? memories.filter((memory) => memory.documentId === selectedId)
     : [];
@@ -2583,6 +3025,10 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
           break;
         case 'save-scene':
           void handleSave();
+          break;
+        case 'critique-selected-passage':
+          break;
+        case 'critique-current-scene':
           break;
         case 'toggle-left-drawer':
           toggleSceneDrawer();
@@ -3181,23 +3627,33 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
           <div>
             <strong>Canon Consistency Review</strong>
             <div className={styles.consistencyDescription}>
-              Scan all scenes against World Bible and Character records.
+              {consistencyReviewItems.length > 0
+                ? `${consistencyReviewItems.length} issue(s) queued for review.`
+                : 'Scan scenes against World Bible and Character records.'}
             </div>
           </div>
-          <button
-            type='button'
-            onClick={() => void handleRunConsistencyReview()}
-            disabled={isRunningConsistencyReview}
-          >
-            {isRunningConsistencyReview ? 'Running review...' : 'Run review'}
-          </button>
+          <div className={styles.consistencyPanelActions}>
+            <button
+              type='button'
+              onClick={() => setConsistencyPanelOpen((prev) => !prev)}
+            >
+              {isConsistencyPanelOpen ? 'Hide details' : 'Show details'}
+            </button>
+            <button
+              type='button'
+              onClick={() => void handleRunConsistencyReview()}
+              disabled={isRunningConsistencyReview}
+            >
+              {isRunningConsistencyReview ? 'Running review...' : 'Run review'}
+            </button>
+          </div>
         </div>
         {lastConsistencyReviewAt && (
           <div className={styles.consistencyLastRun}>
             Last run: {new Date(lastConsistencyReviewAt).toLocaleString()}
           </div>
         )}
-        {consistencyReviewItems.length > 0 && (
+        {isConsistencyPanelOpen && consistencyReviewItems.length > 0 && (
           <ul className={styles.consistencyList}>
             {consistencyReviewItems.slice(0, 24).map((item) => (
               <li key={item.id} className={styles.consistencyListItem}>
@@ -3247,10 +3703,12 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
           <div className={styles.unknownBulkActions}>
             <button
               type='button'
-              onClick={() => void resolveAllUnknownEntities()}
+              onClick={() => setReviewQueueOpen((prev) => !prev)}
               className={styles.unknownActionButton}
             >
-              Accept all as new entities
+              {isReviewQueueOpen
+                ? 'Hide review queue'
+                : `Review queue (${unknownReviewItems.length})`}
             </button>
             <button
               type='button'
@@ -3262,6 +3720,109 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
                 : 'Hide all warnings for now'}
             </button>
           </div>
+          {isReviewQueueOpen && (
+            <div className={styles.reviewQueue}>
+              {unknownReviewItems.map((item) => (
+                <div key={item.key} className={styles.reviewQueueCard}>
+                  <div className={styles.reviewQueueHeader}>
+                    <strong>{item.surface}</strong>
+                    <span className={styles.reviewQueueMeta}>
+                      Suggested: {item.categoryName}
+                    </span>
+                  </div>
+                  <div className={styles.reviewQueueGrid}>
+                    <label className={styles.reviewQueueField}>
+                      Canonical name
+                      <input
+                        type='text'
+                        value={item.name}
+                        onChange={(event) =>
+                          updateUnknownDraft(item.surface, {name: event.target.value})
+                        }
+                      />
+                    </label>
+                    <label className={styles.reviewQueueField}>
+                      Category
+                      <select
+                        value={item.categoryId}
+                        onChange={(event) =>
+                          updateUnknownDraft(item.surface, {
+                            categoryId: event.target.value
+                          })
+                        }
+                      >
+                        <option value=''>Choose category...</option>
+                        {categories.map((category) => (
+                          <option key={category.id} value={category.id}>
+                            {category.name}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  </div>
+                  <div className={styles.reviewQueueActions}>
+                    <button
+                      type='button'
+                      onClick={() =>
+                        void resolveUnknownEntity(item.surface, {
+                          name: item.name,
+                          categoryId: item.categoryId
+                        })
+                      }
+                      disabled={resolvingUnknown === item.surface || !item.name.trim()}
+                    >
+                      {resolvingUnknown === item.surface ? 'Creating...' : 'Create record'}
+                    </button>
+                    <label className={styles.reviewQueueLinkField}>
+                      Link to existing
+                      <select
+                        value={unknownLinkSelection[item.surface] ?? ''}
+                        onChange={(event) =>
+                          setUnknownLinkSelection((prev) => ({
+                            ...prev,
+                            [item.surface]: event.target.value
+                          }))
+                        }
+                      >
+                        <option value=''>Select entity...</option>
+                        {unknownLinkOptions[item.surface]?.map((entity) => (
+                          <option key={entity.value} value={entity.value}>
+                            {entity.name}
+                            {entity.targetType === 'character' ? ' (Character)' : ''}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <button
+                      type='button'
+                      onClick={() => void linkUnknownEntity(item.surface)}
+                      disabled={
+                        linkingUnknown === item.surface ||
+                        !unknownLinkSelection[item.surface]
+                      }
+                    >
+                      {linkingUnknown === item.surface ? 'Linking...' : 'Link alias'}
+                    </button>
+                    <button
+                      type='button'
+                      onClick={() => dismissUnknownEntity(item.surface)}
+                    >
+                      Dismiss
+                    </button>
+                  </div>
+                </div>
+              ))}
+              <div className={styles.reviewQueueFooter}>
+                <button
+                  type='button'
+                  onClick={() => void resolveAllUnknownEntities()}
+                  className={styles.unknownActionButton}
+                >
+                  Create all reviewed items
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
       {seriesBibleConfig?.parentProjectId && (
@@ -3411,7 +3972,9 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
                     setUnknownLinkSelection((prev) => ({
                       ...prev,
                       [issue.surface]:
-                        prev[issue.surface] ?? unknownLinkOptions[issue.surface]?.[0]?.id ?? ''
+                        prev[issue.surface] ??
+                        unknownLinkOptions[issue.surface]?.[0]?.value ??
+                        ''
                     }));
                   }}
                   config={editorConfig}
@@ -3420,6 +3983,7 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
                   projectMode={projectSettings?.projectMode}
                   textToInsert={statBlockInsertContent}
                   onTextInserted={() => setStatBlockInsertContent(null)}
+                  onSelectionAddToReview={queueUnknownSurfaceForReview}
                   systemHistoryEntries={systemHistoryEntries}
                   onClearSystemHistory={() => {
                     clearSystemHistoryEntries(activeProject.id);
@@ -3450,10 +4014,54 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
                     top={consistencyPopover.top}
                     onClose={() => setConsistencyPopover(null)}
                   >
+                    {activeUnknownReviewItem && (
+                      <div className={styles.consistencyPopoverDraft}>
+                        <label className={styles.consistencyPopoverField}>
+                          Canonical name
+                          <input
+                            type='text'
+                            value={activeUnknownReviewItem.name}
+                            onChange={(event) =>
+                              updateUnknownDraft(activeConsistencyPopoverIssue.surface, {
+                                name: event.target.value
+                              })
+                            }
+                          />
+                        </label>
+                        <label className={styles.consistencyPopoverField}>
+                          Category
+                          <select
+                            value={activeUnknownReviewItem.categoryId}
+                            onChange={(event) =>
+                              updateUnknownDraft(activeConsistencyPopoverIssue.surface, {
+                                categoryId: event.target.value
+                              })
+                            }
+                          >
+                            <option value=''>Choose category...</option>
+                            {categories.map((category) => (
+                              <option key={category.id} value={category.id}>
+                                {category.name}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                      </div>
+                    )}
                     <div className={styles.consistencyPopoverActions}>
                       <button
                         type='button'
-                        onClick={() => void resolveUnknownEntity(activeConsistencyPopoverIssue.surface)}
+                        onClick={() =>
+                          void resolveUnknownEntity(
+                            activeConsistencyPopoverIssue.surface,
+                            activeUnknownReviewItem
+                              ? {
+                                  name: activeUnknownReviewItem.name,
+                                  categoryId: activeUnknownReviewItem.categoryId
+                                }
+                              : undefined
+                          )
+                        }
                         disabled={resolvingUnknown === activeConsistencyPopoverIssue.surface}
                       >
                         {resolvingUnknown === activeConsistencyPopoverIssue.surface
@@ -3484,8 +4092,11 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
                           <option value=''>Select entity...</option>
                           {unknownLinkOptions[activeConsistencyPopoverIssue.surface].map(
                             (entity) => (
-                              <option key={entity.id} value={entity.id}>
+                              <option key={entity.value} value={entity.value}>
                                 {entity.name}
+                                {entity.targetType === 'character'
+                                  ? ' (Character)'
+                                  : ''}
                               </option>
                             )
                           )}

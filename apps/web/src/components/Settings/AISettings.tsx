@@ -45,36 +45,51 @@ interface PromptToolPack {
   defaultToolIdsByMode?: Record<ProjectMode, string[]>;
 }
 
+interface PromptToolPreset {
+  id: string;
+  name: string;
+  kind: PromptToolKind;
+  summary: string;
+  recommendedModes: ProjectMode[];
+  content: string;
+}
+
 const PROJECT_MODE_LABELS: Record<ProjectMode, string> = {
   litrpg: 'LitRPG',
   game: 'Game',
   general: 'General'
 };
 
-const DEFAULT_PRESET_TOOLS: PromptTool[] = [
+const PERSONA_PRESETS: PromptToolPreset[] = [
   {
-    id: 'preset-literary-critic',
-    name: 'Literary Critic',
+    id: 'preset-writing-critic',
+    name: 'Writing Critic',
     kind: 'persona',
+    summary:
+      'A rigorous critique persona for scenes and chapters. It prioritizes structural clarity, pacing, emotional effect, and precise revision notes.',
+    recommendedModes: ['general', 'litrpg', 'game'],
     content:
-      'Respond as a rigorous literary critic. Focus on structure, pacing, thematic coherence, and prose clarity.',
-    enabled: true
-  },
-  {
-    id: 'preset-beta-reader',
-    name: 'Beta Reader',
-    kind: 'persona',
-    content:
-      'Respond as an engaged beta reader. Call out confusion points, emotional impact, and readability issues.',
-    enabled: true
-  },
-  {
-    id: 'preset-line-editor',
-    name: 'Line Editor',
-    kind: 'tone',
-    content:
-      'Prefer concise, concrete prose. Remove filler, tighten sentence rhythm, and avoid repetition.',
-    enabled: true
+      [
+        'Respond as a rigorous writing critic for fiction drafts.',
+        '',
+        'Priorities:',
+        '- identify the highest-impact problems first',
+        '- focus on clarity, pacing, scene structure, emotional payoff, and voice consistency',
+        '- distinguish between major structural issues and line-level polish',
+        '- avoid vague praise or generic encouragement',
+        '',
+        'Response format:',
+        '1. Quick verdict',
+        '2. Top 3 issues',
+        '3. Specific examples',
+        '4. Revision priorities',
+        '',
+        'Behavior rules:',
+        '- quote only short snippets when necessary',
+        '- give actionable revision guidance, not just diagnosis',
+        '- if the passage is working, say what is working and why',
+        '- do not rewrite the whole passage unless explicitly asked'
+      ].join('\n')
   }
 ];
 
@@ -322,31 +337,34 @@ export const AISettings: React.FC<AISettingsProps> = ({
     );
   };
 
-  const handleInstallPresetTools = () => {
+  const handleInstallPreset = (preset: PromptToolPreset) => {
     const existingNames = new Set(
       promptTools.map((tool) => tool.name.trim().toLowerCase())
     );
-    const additions = DEFAULT_PRESET_TOOLS.filter(
-      (tool) => !existingNames.has(tool.name.trim().toLowerCase())
-    ).map((tool) => ({
-      ...tool,
-      id: crypto.randomUUID()
-    }));
-
-    if (additions.length === 0) {
-      alert('Preset tools are already installed.');
+    if (existingNames.has(preset.name.trim().toLowerCase())) {
+      alert(`${preset.name} is already installed.`);
       return;
     }
 
-    const additionIds = additions.map((tool) => tool.id);
+    const installedTool: PromptTool = {
+      id: crypto.randomUUID(),
+      name: preset.name,
+      kind: preset.kind,
+      content: preset.content,
+      enabled: true
+    };
+
     onSettingsChange(
       withDefaultModes({
-        promptTools: [...promptTools, ...additions],
-        defaultToolIds: [...new Set([...defaultToolIds, ...additionIds])],
+        promptTools: [...promptTools, installedTool],
+        defaultToolIds:
+          defaultsMode === projectMode
+            ? [...new Set([...defaultToolIds, installedTool.id])]
+            : defaultToolIds,
         defaultToolIdsByMode: {
           ...defaultToolIdsByMode,
           [defaultsMode]: [
-            ...new Set([...(defaultToolIdsByMode[defaultsMode] ?? []), ...additionIds])
+            ...new Set([...(defaultToolIdsByMode[defaultsMode] ?? []), installedTool.id])
           ]
         }
       })
@@ -680,6 +698,35 @@ export const AISettings: React.FC<AISettingsProps> = ({
           Add reusable prompt tools like tone guides, personas, and instruction
           blocks. These can be selected in the AI assistant.
         </p>
+        <div className={styles.presetGrid}>
+          {PERSONA_PRESETS.map((preset) => {
+            const installed = promptTools.some(
+              (tool) => tool.name.trim().toLowerCase() === preset.name.trim().toLowerCase()
+            );
+            return (
+              <div key={preset.id} className={styles.presetCard}>
+                <div className={styles.toolHeader}>
+                  <strong>{preset.name}</strong>
+                  <span className={styles.toolKind}>
+                    {PROMPT_TOOL_KIND_LABELS[preset.kind]}
+                  </span>
+                </div>
+                <p className={styles.presetSummary}>{preset.summary}</p>
+                <p className={styles.help}>
+                  Best fit for: {preset.recommendedModes.map((mode) => PROJECT_MODE_LABELS[mode]).join(', ')}
+                </p>
+                <button
+                  type='button'
+                  className={styles.secondaryButton}
+                  onClick={() => handleInstallPreset(preset)}
+                  disabled={installed}
+                >
+                  {installed ? 'Installed' : `Install for ${PROJECT_MODE_LABELS[defaultsMode]}`}
+                </button>
+              </div>
+            );
+          })}
+        </div>
         <div className={styles.modeDefaultsHeader}>
           <label className={styles.label}>
             Configure Default Active tools for mode
@@ -745,9 +792,6 @@ export const AISettings: React.FC<AISettingsProps> = ({
           Add Prompt Tool
         </button>
         <div className={styles.toolPackActions}>
-          <button type='button' className={styles.secondaryButton} onClick={handleInstallPresetTools}>
-            Install Preset Tools
-          </button>
           <button type='button' className={styles.secondaryButton} onClick={handleExportToolPack}>
             Export Tool Pack
           </button>

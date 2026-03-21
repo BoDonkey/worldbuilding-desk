@@ -20,6 +20,7 @@ import type {
   ProjectMode,
   SystemHistoryEntry
 } from '../../entityTypes';
+import {htmlToPlainText} from '../../utils/textHelpers';
 import {
   WORKSPACE_COMMAND_EVENT,
   type WorkspaceCommandId
@@ -55,6 +56,7 @@ interface EditorWithAIProps {
   projectMode?: ProjectMode;
   textToInsert?: string | null;
   onTextInserted?: () => void;
+  onSelectionAddToReview?: (text: string) => void;
   systemHistoryEntries?: SystemHistoryEntry[];
   onClearSystemHistory?: () => void;
   onOpenSceneFromHistory?: (sceneId: string) => void;
@@ -90,6 +92,7 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
   projectMode = 'litrpg',
   textToInsert: externalTextToInsert = null,
   onTextInserted,
+  onSelectionAddToReview,
   systemHistoryEntries = [],
   onClearSystemHistory,
   onOpenSceneFromHistory,
@@ -106,6 +109,7 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
   const [editorReadyToken, setEditorReadyToken] = useState(0);
   const [activeLoreRecord, setActiveLoreRecord] = useState<LoreInspectorRecord | null>(null);
   const [queuedPrompt, setQueuedPrompt] = useState<string | null>(null);
+  const [queuedPromptToolIds, setQueuedPromptToolIds] = useState<string[] | null>(null);
   const [aiBudgetUsed, setAIBudgetUsed] = useState(0);
   const [lorePopoverRecord, setLorePopoverRecord] = useState<LoreInspectorRecord | null>(null);
   const [lorePopoverAnchor, setLorePopoverAnchor] = useState<{left: number; top: number} | null>(
@@ -155,6 +159,80 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
     };
   }, [config, consistencyHighlights, loreHighlights]);
   const insertContext = externalTextToInsert ? null : aiContext;
+  const criticToolIds = React.useMemo(
+    () =>
+      (aiSettings?.promptTools ?? [])
+        .filter(
+          (tool) =>
+            tool.enabled &&
+            tool.kind === 'persona' &&
+            tool.name.trim().toLowerCase() === 'writing critic'
+        )
+        .map((tool) => tool.id),
+    [aiSettings?.promptTools]
+  );
+
+  const buildCritiquePrompt = useCallback(
+    (scope: 'selection' | 'scene', excerpt: string) => {
+      const trimmedExcerpt = excerpt.trim();
+      const subjectLabel =
+        scope === 'selection' ? 'selected passage' : 'current scene draft';
+      return [
+        `Critique this ${subjectLabel}.`,
+        'Keep the response concise and structured as:',
+        '1. Quick verdict',
+        '2. Top issues',
+        '3. Specific examples',
+        '4. Revision priorities',
+        '',
+        'Focus on clarity, pacing, scene structure, emotional payoff, and voice consistency.',
+        'Do not rewrite the full passage unless explicitly asked.',
+        '',
+        `Excerpt:`,
+        trimmedExcerpt
+      ].join('\n');
+    },
+    []
+  );
+
+  const queueCritiquePrompt = useCallback(
+    (scope: 'selection' | 'scene') => {
+      const selectedText =
+        selectionBubble?.selectedText.trim() ?? aiContext?.selectedText?.trim() ?? '';
+      const sceneText = htmlToPlainText(content).slice(0, 12000);
+      const excerpt = scope === 'selection' ? selectedText : sceneText;
+
+      if (!excerpt) {
+        return false;
+      }
+
+      if (scope === 'selection' && selectionBubble) {
+        setAIContext({
+          type: 'document',
+          id: documentId,
+          selectedText: selectionBubble.selectedText,
+          from: selectionBubble.from,
+          to: selectionBubble.to
+        });
+      } else if (scope === 'scene') {
+        setAIContext(null);
+      }
+
+      setQueuedPrompt(buildCritiquePrompt(scope, excerpt));
+      setQueuedPromptToolIds(criticToolIds.length > 0 ? criticToolIds : null);
+      setActivePanelTab('ai');
+      setShowSidePanel(true);
+      return true;
+    },
+    [
+      aiContext?.selectedText,
+      buildCritiquePrompt,
+      content,
+      criticToolIds,
+      documentId,
+      selectionBubble
+    ]
+  );
 
   useEffect(() => {
     const handleAIRequest = (event: Event) => {
@@ -192,13 +270,19 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
         setActivePanelTab('system');
         setShowSidePanel(true);
       }
+      if (detail?.id === 'critique-selected-passage') {
+        queueCritiquePrompt('selection');
+      }
+      if (detail?.id === 'critique-current-scene') {
+        queueCritiquePrompt('scene');
+      }
     };
 
     window.addEventListener(WORKSPACE_COMMAND_EVENT, onWorkspaceCommand);
     return () => {
       window.removeEventListener(WORKSPACE_COMMAND_EVENT, onWorkspaceCommand);
     };
-  }, []);
+  }, [queueCritiquePrompt]);
 
   useEffect(() => {
     return () => {
@@ -444,6 +528,14 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
             >
               AI Expand
             </button>
+            <button
+              type='button'
+              onClick={() => {
+                queueCritiquePrompt('selection');
+              }}
+            >
+              Critique Selected Passage
+            </button>
             {selectionBubble.matchType === 'character' && (
               <button
                 type='button'
@@ -504,6 +596,17 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
                 }}
               >
                 Open Lore
+              </button>
+            )}
+            {!selectionBubble.matchRecord && onSelectionAddToReview && (
+              <button
+                type='button'
+                onClick={() => {
+                  onSelectionAddToReview(selectionBubble.selectedText);
+                  setSelectionBubble(null);
+                }}
+              >
+                Add to Review
               </button>
             )}
             {selectionBubble.matchName && (
@@ -596,17 +699,42 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
             ×
           </button>
           {activePanelTab === 'ai' ? (
-            <AIAssistant
-              projectId={projectId}
-              aiConfig={aiSettings ?? undefined}
-              projectMode={projectMode}
-              context={aiContext ?? undefined}
-              onInsert={handleInsert}
-              queuedPrompt={queuedPrompt}
-              onQueuedPromptConsumed={() => setQueuedPrompt(null)}
-              consultationModel={aiSettings?.inspectorSettings?.lowCostModel}
-              consultationMaxTokens={aiSettings?.inspectorSettings?.maxResponseTokens}
-            />
+            <>
+              <div className={styles.systemActions}>
+                <button
+                  type='button'
+                  onClick={() => {
+                    queueCritiquePrompt('scene');
+                  }}
+                >
+                  Critique Current Scene
+                </button>
+                <button
+                  type='button'
+                  onClick={() => {
+                    queueCritiquePrompt('selection');
+                  }}
+                  disabled={!selectionBubble?.selectedText.trim()}
+                >
+                  Critique Selected Passage
+                </button>
+              </div>
+              <AIAssistant
+                projectId={projectId}
+                aiConfig={aiSettings ?? undefined}
+                projectMode={projectMode}
+                context={aiContext ?? undefined}
+                onInsert={handleInsert}
+                queuedPrompt={queuedPrompt}
+                queuedToolIds={queuedPromptToolIds}
+                onQueuedPromptConsumed={() => {
+                  setQueuedPrompt(null);
+                  setQueuedPromptToolIds(null);
+                }}
+                consultationModel={aiSettings?.inspectorSettings?.lowCostModel}
+                consultationMaxTokens={aiSettings?.inspectorSettings?.maxResponseTokens}
+              />
+            </>
           ) : activePanelTab === 'system' ? (
             <SystemHistoryPanel
               entries={systemHistoryEntries}

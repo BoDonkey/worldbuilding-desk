@@ -196,6 +196,33 @@
   color: #b91c1c;
 }
 
+.entityHeader {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.aliasBadge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.18rem 0.5rem;
+  border-radius: 999px;
+  background: #eff6ff;
+  color: #1d4ed8;
+  font-size: 0.74rem;
+  font-weight: 700;
+  border: 1px solid #bfdbfe;
+}
+
+.aliasRow {
+  margin-top: 0.35rem;
+  margin-bottom: 0.35rem;
+  font-size: 0.82rem;
+  color: #374151;
+}
+
 .wizardStep {
   margin: 0 0 0.55rem 0;
   font-size: 0.82rem;

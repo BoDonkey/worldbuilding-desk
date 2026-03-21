@@ -9,7 +9,9 @@ export const EditorAppearanceControl: React.FC = () => {
     editorWidth,
     setEditorWidth,
     editorSurface,
-    setEditorSurface
+    setEditorSurface,
+    editorLineHeight,
+    setEditorLineHeight
   } = useAccessibility();
 
   return (
@@ -38,6 +40,14 @@ export const EditorAppearanceControl: React.FC = () => {
             aria-pressed={editorFont === 'sans'}
           >
             Sans
+          </button>
+          <button
+            type='button'
+            onClick={() => setEditorFont('mono')}
+            className={editorFont === 'mono' ? styles.active : ''}
+            aria-pressed={editorFont === 'mono'}
+          >
+            Mono
           </button>
         </div>
       </div>
@@ -90,6 +100,36 @@ export const EditorAppearanceControl: React.FC = () => {
             aria-pressed={editorSurface === 'contrast'}
           >
             Contrast
+          </button>
+        </div>
+      </div>
+
+      <div className={styles.group}>
+        <span className={styles.label}>Line spacing</span>
+        <div className={styles.buttonGroup}>
+          <button
+            type='button'
+            onClick={() => setEditorLineHeight('tight')}
+            className={editorLineHeight === 'tight' ? styles.active : ''}
+            aria-pressed={editorLineHeight === 'tight'}
+          >
+            Tight
+          </button>
+          <button
+            type='button'
+            onClick={() => setEditorLineHeight('comfortable')}
+            className={editorLineHeight === 'comfortable' ? styles.active : ''}
+            aria-pressed={editorLineHeight === 'comfortable'}
+          >
+            Comfortable
+          </button>
+          <button
+            type='button'
+            onClick={() => setEditorLineHeight('airy')}
+            className={editorLineHeight === 'airy' ? styles.active : ''}
+            aria-pressed={editorLineHeight === 'airy'}
+          >
+            Airy
           </button>
         </div>
       </div>

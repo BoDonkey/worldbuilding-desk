@@ -104,6 +104,20 @@ export const createAppCommands = ({
       run: () => dispatchWorkspaceCommand('save-scene')
     },
     {
+      id: 'workspace-critique-selected-passage',
+      label: 'Workspace: Critique Selected Passage',
+      section: 'Workspace',
+      keywords: ['critique', 'selected', 'passage', 'critic', 'feedback'],
+      run: () => dispatchWorkspaceCommand('critique-selected-passage')
+    },
+    {
+      id: 'workspace-critique-current-scene',
+      label: 'Workspace: Critique Current Scene',
+      section: 'Workspace',
+      keywords: ['critique', 'current', 'scene', 'critic', 'feedback'],
+      run: () => dispatchWorkspaceCommand('critique-current-scene')
+    },
+    {
       id: 'workspace-toggle-left-drawer',
       label: 'Workspace: Toggle Scene Drawer',
       section: 'Workspace',

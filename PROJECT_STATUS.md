@@ -1,6 +1,6 @@
 # Worldbuilding-Desk Project Status
 
-**Last Updated:** March 14, 2026
+**Last Updated:** March 15, 2026
 
 ## Project Overview
 
@@ -57,6 +57,7 @@ A comprehensive desktop application for LitRPG/GameLit authors that bridges narr
   - Text insertion at cursor/selection
   - AIExpandMenu (right-click selected text)
   - RAG system for document indexing
+  - Prompt-tool presets with first built-in writing critic persona
 
 ### UI Components
 - Ruleset creation wizard + desktop import (planned).
@@ -68,7 +69,9 @@ A comprehensive desktop application for LitRPG/GameLit authors that bridges narr
 - Import modes (`strict`, `balanced`, `lenient`) with deferred review for imported scenes.
 - Inline consistency review highlights + action popovers.
 - Inline lore highlights + quick lore popovers for known entities/characters.
-- Editor appearance controls for reading width, editor surface, and serif/sans presentation.
+- Review queue for unresolved entities with create/link/dismiss actions, queue persistence, and highlight-to-review flow.
+- Alias visibility in World Bible and alias-aware linking in workspace review.
+- Editor appearance controls for reading width, editor surface, serif/sans/mono presentation, and line spacing.
 
 ---
 
@@ -138,6 +141,34 @@ npx tsx examples/basic-usage.ts
 
 ## Recent Changes & Fixes
 
+### Workspace Review, Canon UX, Editor Config, and First Persona (March 15, 2026)
+- Extended smoke coverage for workspace/editor flows:
+  - editor appearance persistence
+  - drawer persistence
+  - `.txt`, `.md`, `.html`, `.docx`, and `.pages` import paths
+- Reworked unresolved-entity handling into a lightweight review queue instead of blind mass creation.
+- Added per-item category selection, link-to-existing, dismiss, and batch create from the queue.
+- Added `Add to Review` from editor text selection for missed mentions such as nicknames.
+- Improved unknown-name normalization for possessives and honorifics (`Evelyn Harlow's`, `Dr.Harrison`, etc.).
+- Persisted review queue state across route switches so authors can leave Workspace and resume review later.
+- Fixed alias linking so aliases can target World Bible entries or characters, and surfaced aliases in World Bible cards.
+- Reduced accidental canon creation risk by moving bulk create into the review queue.
+- Cleaned up World Bible category management so category editing no longer overlaps the entry-create UI.
+- Improved editor toolbar behavior for long documents and collapsed Canon Consistency Review into a compact summary by default.
+- Expanded editor appearance settings:
+  - serif / sans / mono text style
+  - focused / wide reading width
+  - paper / mist / contrast surface presets
+  - tight / comfortable / airy line spacing
+- Added theme-aware dark-mode variants for editor surfaces and tuned highlight readability.
+- Added first built-in AI persona preset: `Writing Critic`, installable from Settings and usable through existing prompt-tool defaults.
+
+**Immediate Next Slice**
+- Improve AI persona usability in Workspace with explicit critique actions such as `Critique selected passage` and `Critique current scene`.
+- Add draft / `needs completion` state for review-created World Bible records and surface that in navigation.
+- Promote aliases into a first-class editable `Alternative names` field on World Bible entries.
+- Revisit editor settings later for deeper customization only after the persona workflow feels right.
+
 ### Workspace Review + Editor UX (March 14, 2026)
 - Added import modes and deferred review flow so non-strict imports remain writable without losing review context.
 - Added best-effort `.pages` preview extraction with fallback guidance.
@@ -152,11 +183,10 @@ npx tsx examples/basic-usage.ts
 - Added lightweight local embedding fallback when transformer model bootstrap fails in-browser.
 - Improved settings copy for consistency detection keywords and import defaults.
 
-**Immediate Next Slice**
-- Persist “needs completion” state for review-created World Bible / Compendium records and surface that with badges in navigation.
+**Follow-on**
+- Persist `needs completion` state for review-created World Bible / Compendium records and surface that with badges in navigation.
 - Promote alias handling into a first-class `Alternative names` field on World Bible entries and use it as the shared source of truth for review/lore matching.
-- Continue editor appearance work with richer font/color customization and fix dark mode readability regressions.
-- Begin AI personalities/tools implementation, starting with a writing critic persona.
+- Continue editor appearance work later with richer font/color customization if needed.
 
 ### Systems Integration + Imports (February 22, 2026)
 - Added settlement aura model and UI flow with generalized module sources (`trophy`, `structure`, `station`, `totem`, `custom`).
@@ -224,39 +254,37 @@ npx tsx examples/basic-usage.ts
 
 ### Workspace / Review UX
 - Review-created World Bible entities do not yet automatically seed Compendium records.
-- Review state is reconstructed from validation passes; there is not yet a persisted review queue model.
-- World Bible / Compendium “needs completion” badges are not implemented yet.
-- Aliases exist in consistency storage, but `Alternative names` are not yet exposed as a first-class editable World Bible field.
+- World Bible / Compendium `needs completion` badges are not implemented yet.
+- `Alternative names` are not yet exposed as a first-class editable World Bible field.
+- Alias candidate scoping in the review queue still falls back broadly and may need a more explicit category/all-record toggle.
 
 ### Editor Appearance
-- Dark mode currently has readability regressions and poor visual contrast in several panels and controls.
-- Editor appearance controls are still coarse-grained; users cannot yet choose custom fonts, dyslexia-friendly fonts, or custom highlight palettes.
+- Editor appearance controls are still intentionally coarse-grained; users cannot yet choose custom fonts, dyslexia-friendly fonts, or custom highlight palettes.
+- The fixed toolbar behavior is much better, but may still need refinement if edge scrolling cases show up again.
 
 ### AI Authoring Tools
-- AI personalities/tools are not implemented yet.
-- No dedicated writing critic persona is available yet.
+- Only the first persona preset exists so far.
+- There are no dedicated one-click critique actions yet for selected passage vs full scene.
 
 ---
 
 ## Planned Next Steps
 
 ### Short Term (Next Phase)
-1. **Editor Readability + Theming Hardening**
-   - Fix dark mode regressions across workspace/editor/popovers.
-   - Add richer editor typography controls (including dyslexia-friendly font options).
-   - Add customizable highlight/notification color palettes.
+1. **AI Persona Workflow**
+   - Add explicit critique actions for selected passage and current scene.
+   - Keep persona outputs structured and manual-apply.
+   - Confirm the first persona feels useful before adding more.
 2. **Review Completion Workflow**
    - Add draft / needs-completion state to review-created World Bible and Compendium records.
    - Surface completion badges in navigation and review flows.
-   - Clarify “refresh review” vs “resume strict review” in workspace UX.
+   - Promote `Alternative names` into the World Bible editing model.
 3. **Lore / Compendium Tooltip Convergence**
    - Expand shared popover into a full lore + compendium review shell.
    - Support cross-linking shorthand references and alias management from tooltip flows.
-4. **AI Personalities / Tools**
-   - Implement persona/tool framework in project settings.
-   - Ship first writing critic persona with scoped critique modes.
-   - Prompt library/templates
-   - Context injection from World Bible
+4. **Editor Customization Follow-up**
+   - Add richer typography controls only if the current presets prove too limiting.
+   - Consider dyslexia-friendly fonts and custom highlight palettes.
 
 4. **User Experience**
    - Project export/import

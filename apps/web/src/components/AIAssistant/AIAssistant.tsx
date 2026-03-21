@@ -24,6 +24,7 @@ interface AIAssistantProps {
   };
   onInsert?: (text: string) => void;
   queuedPrompt?: string | null;
+  queuedToolIds?: string[] | null;
   onQueuedPromptConsumed?: () => void;
   consultationModel?: string;
   consultationMaxTokens?: number;
@@ -36,6 +37,7 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
   context,
   onInsert,
   queuedPrompt,
+  queuedToolIds,
   onQueuedPromptConsumed,
   consultationModel,
   consultationMaxTokens
@@ -188,7 +190,10 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
     [context?.id, memoryCache, projectId]
   );
 
-  const handleSendPrompt = useCallback(async (promptText: string) => {
+  const handleSendPrompt = useCallback(async (
+    promptText: string,
+    overrideToolIds?: string[] | null
+  ) => {
     if (!promptText.trim()) return;
     if (!llmService.current) {
       setMessages((prev) => [
@@ -209,10 +214,12 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
     setIsStreaming(true);
 
     try {
+      const queryText = promptText.trim();
+
       // Get relevant context from RAG
       const [ragResults, shodhChunks] = await Promise.all([
-        ragService.current ? ragService.current.search(input, 3) : [],
-        buildMemoryChunks(input)
+        ragService.current ? ragService.current.search(queryText, 3) : [],
+        buildMemoryChunks(queryText)
       ]);
 
       const ragChunks = ragResults.map((r) => ({
@@ -232,8 +239,9 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
       }
 
       const basePrompt = await promptManager.current.getPrompt(context?.type || 'document');
+      const activeToolIds = overrideToolIds ?? selectedToolIds;
       const activeTools = ((aiConfig?.promptTools ?? []) as PromptTool[])
-        .filter((tool) => tool.enabled && selectedToolIds.includes(tool.id));
+        .filter((tool) => tool.enabled && activeToolIds.includes(tool.id));
       const toolPrompt =
         activeTools.length > 0
           ? `\n\nActive Prompt Tools:\n${activeTools
@@ -296,10 +304,10 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
     if (isStreaming) return;
     if (consumedQueuedPromptRef.current === next) return;
     consumedQueuedPromptRef.current = next;
-    void handleSendPrompt(next).finally(() => {
+    void handleSendPrompt(next, queuedToolIds).finally(() => {
       onQueuedPromptConsumed?.();
     });
-  }, [queuedPrompt, handleSendPrompt, isStreaming, onQueuedPromptConsumed]);
+  }, [queuedPrompt, queuedToolIds, handleSendPrompt, isStreaming, onQueuedPromptConsumed]);
 
   const handleInsert = () => {
     const lastAssistantMessage = [...messages]

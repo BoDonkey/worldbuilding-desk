@@ -4,6 +4,7 @@ export interface ConsistencyAlias {
   id: string;
   projectId: string;
   entityId: string;
+  targetType?: 'entity' | 'character';
   alias: string;
   createdAt: number;
   updatedAt: number;
@@ -30,7 +31,9 @@ export async function getAliasesByProject(projectId: string): Promise<Consistenc
   });
 }
 
-export async function saveAlias(input: Omit<ConsistencyAlias, 'id' | 'createdAt' | 'updatedAt'>): Promise<ConsistencyAlias> {
+export async function saveAlias(
+  input: Omit<ConsistencyAlias, 'id' | 'createdAt' | 'updatedAt'>
+): Promise<ConsistencyAlias> {
   const db = await openDb();
 
   const existing = await getAliasesByProject(input.projectId);
@@ -41,15 +44,17 @@ export async function saveAlias(input: Omit<ConsistencyAlias, 'id' | 'createdAt'
 
   const now = Date.now();
   const aliasToSave: ConsistencyAlias = duplicate
-    ? {
+      ? {
         ...duplicate,
         entityId: input.entityId,
+        targetType: input.targetType ?? duplicate.targetType ?? 'entity',
         updatedAt: now
       }
     : {
         id: crypto.randomUUID(),
         projectId: input.projectId,
         entityId: input.entityId,
+        targetType: input.targetType ?? 'entity',
         alias: input.alias.trim(),
         createdAt: now,
         updatedAt: now

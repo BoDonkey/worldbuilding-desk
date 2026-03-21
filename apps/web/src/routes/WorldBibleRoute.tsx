@@ -32,6 +32,10 @@ import {
   getCanonSyncState,
   syncChildWithParent
 } from '../services/seriesBible/SeriesBibleService';
+import {
+  getAliasesByProject,
+  type ConsistencyAlias
+} from '../services/consistencyEngine/aliasStorage';
 
 interface WorldBibleRouteProps {
   activeProject: Project | null;
@@ -283,6 +287,7 @@ function WorldBibleRoute({activeProject}: WorldBibleRouteProps) {
   const [categories, setCategories] = useState<EntityCategory[]>([]);
   const [activeTab, setActiveTab] = useState<string | null>(null);
   const [entities, setEntities] = useState<WorldEntity[]>([]);
+  const [aliases, setAliases] = useState<ConsistencyAlias[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [name, setName] = useState('');
   const [fieldValues, setFieldValues] = useState<Record<string, string>>({});
@@ -371,14 +376,16 @@ function WorldBibleRoute({activeProject}: WorldBibleRouteProps) {
 
       await initializeDefaultCategories(projectId);
 
-      const [cats, ents] = await Promise.all([
+      const [cats, ents, loadedAliases] = await Promise.all([
         getCategoriesByProject(projectId),
-        getEntitiesByProject(projectId)
+        getEntitiesByProject(projectId),
+        getAliasesByProject(projectId)
       ]);
 
       if (!cancelled) {
         setCategories(cats);
         setEntities(ents);
+        setAliases(loadedAliases);
       }
     })();
 
@@ -544,6 +551,16 @@ function WorldBibleRoute({activeProject}: WorldBibleRouteProps) {
     (row) => row.errors.length === 0
   ).length;
   const filteredEntities = entities.filter((e) => e.categoryId === activeTab);
+  const aliasesByEntityId = useMemo(() => {
+    const map = new Map<string, string[]>();
+    aliases.forEach((alias) => {
+      if (alias.targetType === 'character') return;
+      const existing = map.get(alias.entityId) ?? [];
+      existing.push(alias.alias);
+      map.set(alias.entityId, existing);
+    });
+    return map;
+  }, [aliases]);
   const currentEntityMemories = editingId
     ? memories.filter((memory) => memory.documentId === editingId)
     : [];
@@ -555,6 +572,37 @@ function WorldBibleRoute({activeProject}: WorldBibleRouteProps) {
     setName('');
     setFieldValues({});
   };
+
+  useEffect(() => {
+    if (!activeCategory) {
+      setEditingId(null);
+      setName('');
+      setFieldValues({});
+      return;
+    }
+
+    if (!editingId) {
+      setName('');
+      setFieldValues({});
+      return;
+    }
+
+    const editingEntity = entities.find((entity) => entity.id === editingId);
+    if (!editingEntity || editingEntity.categoryId !== activeCategory.id) {
+      setEditingId(null);
+      setName('');
+      setFieldValues({});
+      return;
+    }
+
+    setFieldValues((prev) =>
+      Object.fromEntries(
+        activeCategory.fieldSchema
+          .map((field) => [field.key, prev[field.key] ?? ''])
+          .filter(([, value]) => value !== '')
+      )
+    );
+  }, [activeCategory, editingId, entities]);
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
@@ -1600,7 +1648,7 @@ function WorldBibleRoute({activeProject}: WorldBibleRouteProps) {
         />
       )}
 
-      {activeCategory && (
+      {!showCategoryManager && activeCategory && (
         <div className={styles.content}>
           <div className={styles.formSection}>
             <form onSubmit={handleSubmit} className={styles.form}>
@@ -1808,7 +1856,20 @@ function WorldBibleRoute({activeProject}: WorldBibleRouteProps) {
             <ul className={styles.entityList}>
               {filteredEntities.map((entity) => (
                 <li key={entity.id} className={styles.entityCard}>
-                  <div className={styles.entityName}>{entity.name}</div>
+                  <div className={styles.entityHeader}>
+                    <div className={styles.entityName}>{entity.name}</div>
+                    {aliasesByEntityId.get(entity.id)?.length ? (
+                      <span className={styles.aliasBadge}>
+                        Alias{aliasesByEntityId.get(entity.id)!.length === 1 ? '' : 'es'}
+                      </span>
+                    ) : null}
+                  </div>
+                  {aliasesByEntityId.get(entity.id)?.length ? (
+                    <div className={styles.aliasRow}>
+                      <strong>Aliases:</strong>{' '}
+                      {aliasesByEntityId.get(entity.id)!.join(', ')}
+                    </div>
+                  ) : null}
                   {Object.entries(entity.fields).map(([key, value]) => (
                     <div key={key} className={styles.entityField}>
                       <strong>{key}:</strong> {String(value)}

@@ -218,6 +218,12 @@
   flex-wrap: wrap;
 }
 
+.consistencyPanelActions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
 .consistencyDescription {
   font-size: 0.85rem;
   color: #4b5563;
@@ -289,6 +295,82 @@
 
 .unknownActionButton {
   font-size: 0.8rem;
+}
+
+.reviewQueue {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+  margin-top: 0.75rem;
+}
+
+.reviewQueueCard {
+  border: 1px solid #fdba74;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.72);
+  padding: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.reviewQueueHeader {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  align-items: baseline;
+  flex-wrap: wrap;
+}
+
+.reviewQueueMeta {
+  font-size: 0.78rem;
+  color: #9a3412;
+}
+
+.reviewQueueGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 0.65rem;
+}
+
+.reviewQueueField {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  font-size: 0.8rem;
+  color: #7c2d12;
+}
+
+.reviewQueueField input,
+.reviewQueueField select,
+.reviewQueueLinkField select {
+  border: 1px solid #fdba74;
+  border-radius: 8px;
+  padding: 0.45rem 0.55rem;
+  font-size: 0.9rem;
+  background: #fff;
+  color: #431407;
+}
+
+.reviewQueueActions {
+  display: flex;
+  gap: 0.55rem;
+  flex-wrap: wrap;
+  align-items: end;
+}
+
+.reviewQueueFooter {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.reviewQueueLinkField {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  font-size: 0.8rem;
+  color: #7c2d12;
+  min-width: 220px;
 }
 
 .unknownActionButtonSpaced {
@@ -369,6 +451,29 @@
   display: flex;
   gap: 0.45rem;
   flex-wrap: wrap;
+}
+
+.consistencyPopoverDraft {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.consistencyPopoverField {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  font-size: 0.8rem;
+  color: #7c2d12;
+}
+
+.consistencyPopoverField input,
+.consistencyPopoverField select {
+  border: 1px solid #fcd34d;
+  border-radius: 8px;
+  padding: 0.45rem 0.55rem;
+  font-size: 0.9rem;
+  background: #fff;
+  color: #431407;
 }
 
 .consistencyPopoverLinkRow {

@@ -1,9 +1,10 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 
 type FontSize = 'small' | 'medium' | 'large';
-type EditorFont = 'serif' | 'sans';
+type EditorFont = 'serif' | 'sans' | 'mono';
 type EditorWidth = 'focused' | 'wide';
 type EditorSurface = 'paper' | 'mist' | 'contrast';
+type EditorLineHeight = 'tight' | 'comfortable' | 'airy';
 
 interface AccessibilityContextType {
   fontSize: FontSize;
@@ -14,6 +15,8 @@ interface AccessibilityContextType {
   setEditorWidth: (width: EditorWidth) => void;
   editorSurface: EditorSurface;
   setEditorSurface: (surface: EditorSurface) => void;
+  editorLineHeight: EditorLineHeight;
+  setEditorLineHeight: (lineHeight: EditorLineHeight) => void;
 }
 
 const AccessibilityContext = createContext<AccessibilityContextType | undefined>(undefined);
@@ -26,7 +29,7 @@ export const AccessibilityProvider: React.FC<{ children: React.ReactNode }> = ({
   });
   const [editorFont, setEditorFont] = useState<EditorFont>(() => {
     const stored = localStorage.getItem('editorFont');
-    if (stored === 'serif' || stored === 'sans') return stored;
+    if (stored === 'serif' || stored === 'sans' || stored === 'mono') return stored;
     return 'serif';
   });
   const [editorWidth, setEditorWidth] = useState<EditorWidth>(() => {
@@ -38,6 +41,13 @@ export const AccessibilityProvider: React.FC<{ children: React.ReactNode }> = ({
     const stored = localStorage.getItem('editorSurface');
     if (stored === 'paper' || stored === 'mist' || stored === 'contrast') return stored;
     return 'paper';
+  });
+  const [editorLineHeight, setEditorLineHeight] = useState<EditorLineHeight>(() => {
+    const stored = localStorage.getItem('editorLineHeight');
+    if (stored === 'tight' || stored === 'comfortable' || stored === 'airy') {
+      return stored;
+    }
+    return 'comfortable';
   });
 
   useEffect(() => {
@@ -60,6 +70,11 @@ export const AccessibilityProvider: React.FC<{ children: React.ReactNode }> = ({
     localStorage.setItem('editorSurface', editorSurface);
   }, [editorSurface]);
 
+  useEffect(() => {
+    document.documentElement.setAttribute('data-editor-line-height', editorLineHeight);
+    localStorage.setItem('editorLineHeight', editorLineHeight);
+  }, [editorLineHeight]);
+
   return (
     <AccessibilityContext.Provider
       value={{
@@ -70,7 +85,9 @@ export const AccessibilityProvider: React.FC<{ children: React.ReactNode }> = ({
         editorWidth,
         setEditorWidth,
         editorSurface,
-        setEditorSurface
+        setEditorSurface,
+        editorLineHeight,
+        setEditorLineHeight
       }}
     >
       {children}

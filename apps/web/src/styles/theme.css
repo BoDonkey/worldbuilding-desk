@@ -69,6 +69,10 @@
   --editor-font-family: "Avenir Next", "Segoe UI", Helvetica, sans-serif;
 }
 
+:root[data-editor-font="mono"] {
+  --editor-font-family: "IBM Plex Mono", "SF Mono", "Cascadia Code", monospace;
+}
+
 :root[data-editor-width="focused"] {
   --editor-max-width: 760px;
 }
@@ -81,12 +85,16 @@
   --editor-surface-bg: #fffdf8;
   --editor-surface-panel: rgba(255, 251, 242, 0.92);
   --editor-surface-border: #d6cfc2;
+  --editor-text-color: #201a14;
+  --editor-muted-color: #6f655a;
 }
 
 :root[data-editor-surface="mist"] {
   --editor-surface-bg: #f7fbff;
   --editor-surface-panel: rgba(244, 249, 255, 0.94);
   --editor-surface-border: #c8d7e5;
+  --editor-text-color: #1d2730;
+  --editor-muted-color: #627182;
 }
 
 :root[data-editor-surface="contrast"] {
@@ -95,6 +103,34 @@
   --editor-surface-border: #333333;
   --editor-text-color: #f7f7f7;
   --editor-muted-color: #cfcfcf;
+}
+
+:root[data-theme="dark"][data-editor-surface="paper"] {
+  --editor-surface-bg: #181410;
+  --editor-surface-panel: rgba(31, 25, 20, 0.95);
+  --editor-surface-border: #463a31;
+  --editor-text-color: #f5efe8;
+  --editor-muted-color: #b8aea3;
+}
+
+:root[data-theme="dark"][data-editor-surface="mist"] {
+  --editor-surface-bg: #121820;
+  --editor-surface-panel: rgba(18, 24, 32, 0.95);
+  --editor-surface-border: #344353;
+  --editor-text-color: #edf4fb;
+  --editor-muted-color: #a9b8c7;
+}
+
+:root[data-editor-line-height="tight"] {
+  --editor-line-height: 1.65;
+}
+
+:root[data-editor-line-height="comfortable"] {
+  --editor-line-height: 1.85;
+}
+
+:root[data-editor-line-height="airy"] {
+  --editor-line-height: 2;
 }
 
 html, body, #root, .app {

@@ -88,6 +88,30 @@
   padding-top: 1rem;
 }
 
+.presetGrid {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  margin: 0.75rem 0 1rem;
+}
+
+.presetCard {
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  padding: 0.85rem;
+  background: var(--color-bg-secondary);
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.presetSummary {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
+  line-height: 1.55;
+}
+
 .modeDefaultsHeader {
   border: 1px solid var(--color-border);
   border-radius: 8px;
