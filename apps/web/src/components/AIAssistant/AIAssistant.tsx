@@ -138,6 +138,21 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
     messagesEndRef.current?.scrollIntoView({behavior: 'smooth'});
   }, [messages]);
 
+  const enabledTools = (aiConfig?.promptTools ?? []).filter((tool) => tool.enabled);
+  const activeToolIdsForDisplay = queuedToolIds ?? selectedToolIds;
+  const activeToolsForDisplay = enabledTools.filter((tool) =>
+    activeToolIdsForDisplay.includes(tool.id)
+  );
+  const activePersonasForDisplay = activeToolsForDisplay.filter(
+    (tool) => tool.kind === 'persona'
+  );
+  const activeSummary =
+    activePersonasForDisplay.length > 0
+      ? activePersonasForDisplay.map((tool) => tool.name).join(', ')
+      : activeToolsForDisplay.length > 0
+        ? activeToolsForDisplay.map((tool) => tool.name).join(', ')
+        : 'Default assistant';
+
   const buildMemoryChunks = useCallback(
     async (query: string) => {
       let allMemories = memoryCache;
@@ -320,13 +335,17 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
 
   return (
     <div className={styles.container}>
-      {(aiConfig?.promptTools?.filter((tool) => tool.enabled).length ?? 0) > 0 && (
+      {(enabledTools.length ?? 0) > 0 && (
         <div className={styles.toolsBar}>
-          <div className={styles.toolsHeading}>Prompt Tools</div>
+          <div className={styles.activeToolsSummary}>
+            <div className={styles.activeToolsLabel}>
+              {activePersonasForDisplay.length > 0 ? 'Active persona' : 'Active assistant'}
+            </div>
+            <div className={styles.activeSummaryText}>{activeSummary}</div>
+          </div>
+          <div className={styles.toolsHeading}>Available personas and tools</div>
           <div className={styles.toolsList}>
-            {aiConfig?.promptTools
-              ?.filter((tool) => tool.enabled)
-              .map((tool) => (
+            {enabledTools.map((tool) => (
                 <label key={tool.id} className={styles.toolChip}>
                   <input
                     type='checkbox'

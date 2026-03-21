@@ -34,6 +34,8 @@ import {
 } from '../services/seriesBible/SeriesBibleService';
 import {
   getAliasesByProject,
+  deleteAliasesForEntity,
+  replaceAliasesForEntity,
   type ConsistencyAlias
 } from '../services/consistencyEngine/aliasStorage';
 
@@ -282,6 +284,25 @@ const triggerJsonDownload = (fileName: string, data: unknown): void => {
   URL.revokeObjectURL(url);
 };
 
+const parseAlternativeNames = (value: string, primaryName: string): string[] => {
+  const normalizedPrimary = primaryName.trim().toLowerCase();
+  const seen = new Set<string>();
+
+  return value
+    .split(/\r?\n|,/)
+    .map((item) => item.trim())
+    .filter(Boolean)
+    .filter((item) => item.toLowerCase() !== normalizedPrimary)
+    .filter((item) => {
+      const normalized = item.toLowerCase();
+      if (seen.has(normalized)) {
+        return false;
+      }
+      seen.add(normalized);
+      return true;
+    });
+};
+
 function WorldBibleRoute({activeProject}: WorldBibleRouteProps) {
   const location = useLocation();
   const [categories, setCategories] = useState<EntityCategory[]>([]);
@@ -290,6 +311,10 @@ function WorldBibleRoute({activeProject}: WorldBibleRouteProps) {
   const [aliases, setAliases] = useState<ConsistencyAlias[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [name, setName] = useState('');
+  const [completionStatus, setCompletionStatus] = useState<'draft' | 'complete'>(
+    'complete'
+  );
+  const [alternativeNamesInput, setAlternativeNamesInput] = useState('');
   const [fieldValues, setFieldValues] = useState<Record<string, string>>({});
   const [showCategoryManager, setShowCategoryManager] = useState(false);
   const [ragService, setRagService] = useState<RAGProvider | null>(null);
@@ -570,6 +595,8 @@ function WorldBibleRoute({activeProject}: WorldBibleRouteProps) {
   const resetForm = () => {
     setEditingId(null);
     setName('');
+    setCompletionStatus('complete');
+    setAlternativeNamesInput('');
     setFieldValues({});
   };
 
@@ -577,12 +604,16 @@ function WorldBibleRoute({activeProject}: WorldBibleRouteProps) {
     if (!activeCategory) {
       setEditingId(null);
       setName('');
+      setCompletionStatus('complete');
+      setAlternativeNamesInput('');
       setFieldValues({});
       return;
     }
 
     if (!editingId) {
       setName('');
+      setCompletionStatus('complete');
+      setAlternativeNamesInput('');
       setFieldValues({});
       return;
     }
@@ -591,10 +622,14 @@ function WorldBibleRoute({activeProject}: WorldBibleRouteProps) {
     if (!editingEntity || editingEntity.categoryId !== activeCategory.id) {
       setEditingId(null);
       setName('');
+      setCompletionStatus('complete');
+      setAlternativeNamesInput('');
       setFieldValues({});
       return;
     }
 
+    setCompletionStatus(editingEntity.completionStatus ?? 'complete');
+    setAlternativeNamesInput((aliasesByEntityId.get(editingEntity.id) ?? []).join(', '));
     setFieldValues((prev) =>
       Object.fromEntries(
         activeCategory.fieldSchema
@@ -614,12 +649,14 @@ function WorldBibleRoute({activeProject}: WorldBibleRouteProps) {
       const now = Date.now();
       const id = editingId ?? crypto.randomUUID();
       const existing = entities.find((e) => e.id === id);
+      const alternativeNames = parseAlternativeNames(alternativeNamesInput, name);
 
       const entity: WorldEntity = {
         id,
         projectId: activeProject.id,
         categoryId: activeCategory.id,
         name,
+        completionStatus,
         fields: {...fieldValues},
         links: existing?.links ?? [],
         createdAt: existing?.createdAt ?? now,
@@ -627,11 +664,16 @@ function WorldBibleRoute({activeProject}: WorldBibleRouteProps) {
       };
 
       await saveEntity(entity);
+      const syncedAliases = await replaceAliasesForEntity({
+        projectId: activeProject.id,
+        entityId: entity.id,
+        aliases: alternativeNames
+      });
       if (ragService) {
         await ragService.indexDocument(
           entity.id,
           entity.name,
-          buildEntityContent(entity),
+          buildEntityContent(entity, alternativeNames),
           'worldbible',
           {
             tags: [activeCategory.slug],
@@ -644,7 +686,7 @@ function WorldBibleRoute({activeProject}: WorldBibleRouteProps) {
           projectId: activeProject.id,
           documentId: entity.id,
           title: entity.name,
-          content: buildEntityContent(entity),
+          content: buildEntityContent(entity, alternativeNames),
           tags: ['worldbible', activeCategory.slug]
         });
         await refreshMemories();
@@ -656,6 +698,13 @@ function WorldBibleRoute({activeProject}: WorldBibleRouteProps) {
         const copy = [...prev];
         copy[idx] = entity;
         return copy;
+      });
+      setAliases((prev) => {
+        const retained = prev.filter(
+          (alias) =>
+            alias.entityId !== entity.id || (alias.targetType ?? 'entity') !== 'entity'
+        );
+        return [...retained, ...syncedAliases];
       });
 
       resetForm();
@@ -674,8 +723,10 @@ function WorldBibleRoute({activeProject}: WorldBibleRouteProps) {
   const handleEdit = useCallback((entity: WorldEntity) => {
     setEditingId(entity.id);
     setName(entity.name);
+    setCompletionStatus(entity.completionStatus ?? 'complete');
+    setAlternativeNamesInput((aliasesByEntityId.get(entity.id) ?? []).join(', '));
     setFieldValues(entity.fields as Record<string, string>);
-  }, []);
+  }, [aliasesByEntityId]);
 
   useEffect(() => {
     const state = location.state as {focusEntityId?: string} | null;
@@ -823,6 +874,7 @@ function WorldBibleRoute({activeProject}: WorldBibleRouteProps) {
                   ...existing.fields,
                   ...mapImportedTextToFields(category, draft.text)
                 },
+                completionStatus: existing.completionStatus ?? 'complete',
                 updatedAt: now
               }
             : {
@@ -830,6 +882,7 @@ function WorldBibleRoute({activeProject}: WorldBibleRouteProps) {
                 projectId: activeProject.id,
                 categoryId: draft.categoryId,
                 name: draft.name.trim() || fileNameToEntityName(draft.fileName),
+                completionStatus: 'complete',
                 fields: mapImportedTextToFields(category, draft.text),
                 links: [],
                 createdAt: now,
@@ -1035,6 +1088,7 @@ function WorldBibleRoute({activeProject}: WorldBibleRouteProps) {
                   ...existing.fields,
                   ...row.fields
                 },
+                completionStatus: existing.completionStatus ?? 'complete',
                 updatedAt: now
               }
             : {
@@ -1042,6 +1096,7 @@ function WorldBibleRoute({activeProject}: WorldBibleRouteProps) {
                 projectId: activeProject.id,
                 categoryId: jsonImportSession.categoryId,
                 name: row.name,
+                completionStatus: 'complete',
                 fields: row.fields,
                 links: [],
                 createdAt: now,
@@ -1153,6 +1208,9 @@ function WorldBibleRoute({activeProject}: WorldBibleRouteProps) {
     setFeedback(null);
     try {
       await deleteEntity(id);
+      if (activeProject) {
+        await deleteAliasesForEntity(activeProject.id, id);
+      }
       if (ragService) {
         await ragService.deleteDocument(id);
       }
@@ -1161,6 +1219,11 @@ function WorldBibleRoute({activeProject}: WorldBibleRouteProps) {
         await refreshMemories();
       }
       setEntities((prev) => prev.filter((e) => e.id !== id));
+      setAliases((prev) =>
+        prev.filter(
+          (alias) => alias.entityId !== id || (alias.targetType ?? 'entity') !== 'entity'
+        )
+      );
       if (editingId === id) resetForm();
       setFeedback({tone: 'success', message: 'Entry deleted.'});
     } catch (error) {
@@ -1172,11 +1235,19 @@ function WorldBibleRoute({activeProject}: WorldBibleRouteProps) {
     }
   };
 
-  const buildEntityContent = (entity: WorldEntity) => {
+  const buildEntityContent = (entity: WorldEntity, aliasOverrides?: string[]) => {
+    const aliasList = aliasOverrides ?? aliasesByEntityId.get(entity.id) ?? [];
+    const completionLine =
+      entity.completionStatus === 'draft' ? 'status: needs completion' : '';
+    const aliasesLine = aliasList.length
+      ? `alternative names: ${aliasList.join(', ')}`
+      : '';
     const fieldText = Object.entries(entity.fields)
       .map(([key, value]) => `${key}: ${value ?? ''}`)
       .join('\n');
-    return `${entity.name}\n${fieldText}`;
+    return [entity.name, completionLine, aliasesLine, fieldText]
+      .filter(Boolean)
+      .join('\n');
   };
 
   const inferCompendiumDomain = (entity: WorldEntity): CompendiumDomain => {
@@ -1668,6 +1739,33 @@ function WorldBibleRoute({activeProject}: WorldBibleRouteProps) {
                 </label>
               </div>
 
+              <div className={styles.formGroup}>
+                <label>
+                  Record status
+                  <select
+                    value={completionStatus}
+                    onChange={(e) =>
+                      setCompletionStatus(e.target.value as 'draft' | 'complete')
+                    }
+                  >
+                    <option value='complete'>Complete</option>
+                    <option value='draft'>Needs completion</option>
+                  </select>
+                </label>
+              </div>
+
+              <div className={styles.formGroup}>
+                <label>
+                  Alternative names
+                  <textarea
+                    value={alternativeNamesInput}
+                    onChange={(e) => setAlternativeNamesInput(e.target.value)}
+                    rows={3}
+                    placeholder='Comma or newline separated aliases, nicknames, and titles'
+                  />
+                </label>
+              </div>
+
               {activeCategory.fieldSchema.map((field) => (
                 <div key={field.key} className={styles.formGroup}>
                   <label>
@@ -1858,11 +1956,16 @@ function WorldBibleRoute({activeProject}: WorldBibleRouteProps) {
                 <li key={entity.id} className={styles.entityCard}>
                   <div className={styles.entityHeader}>
                     <div className={styles.entityName}>{entity.name}</div>
-                    {aliasesByEntityId.get(entity.id)?.length ? (
-                      <span className={styles.aliasBadge}>
-                        Alias{aliasesByEntityId.get(entity.id)!.length === 1 ? '' : 'es'}
-                      </span>
-                    ) : null}
+                    <div className={styles.entityBadges}>
+                      {entity.completionStatus === 'draft' ? (
+                        <span className={styles.draftBadge}>Needs completion</span>
+                      ) : null}
+                      {aliasesByEntityId.get(entity.id)?.length ? (
+                        <span className={styles.aliasBadge}>
+                          Alias{aliasesByEntityId.get(entity.id)!.length === 1 ? '' : 'es'}
+                        </span>
+                      ) : null}
+                    </div>
                   </div>
                   {aliasesByEntityId.get(entity.id)?.length ? (
                     <div className={styles.aliasRow}>

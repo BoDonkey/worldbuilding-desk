@@ -5,6 +5,7 @@ export type WorkspaceCommandId =
   | 'save-scene'
   | 'critique-selected-passage'
   | 'critique-current-scene'
+  | 'line-edit-selected-passage'
   | 'toggle-left-drawer'
   | 'toggle-right-drawer'
   | 'open-context-world-bible'

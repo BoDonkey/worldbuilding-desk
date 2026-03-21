@@ -4,6 +4,7 @@ import {useNavigate} from 'react-router-dom';
 import type {
   Character,
   CharacterSheet,
+  CompendiumDomain,
   EntityCategory,
   Project,
   ProjectSettings,
@@ -68,6 +69,7 @@ import {
   getPartySynergySuggestions,
   getSettlementModulesByProject
 } from '../services/compendiumService';
+import {upsertCompendiumEntryFromEntity} from '../services/compendiumService';
 import {
   buildCharacterStatBlockHtml,
   buildItemStatBlockHtml,
@@ -183,6 +185,7 @@ interface PersistedWorkspaceReviewState {
 interface UnknownReviewDraft {
   name: string;
   categoryId: string;
+  seedCompendium?: boolean;
 }
 
 interface UnknownReviewItem {
@@ -190,6 +193,7 @@ interface UnknownReviewItem {
   surface: string;
   name: string;
   categoryId: string;
+  seedCompendium: boolean;
   categoryName: string;
 }
 
@@ -293,6 +297,28 @@ const guessUnknownCategory = (
   }
 
   return characterCategory ?? locationCategory ?? itemCategory ?? categories[0];
+};
+
+const inferCompendiumDomainFromCategory = (
+  category: EntityCategory | undefined
+): CompendiumDomain => {
+  const slug = (category?.slug ?? '').toLowerCase();
+  if (slug.includes('monster') || slug.includes('beast') || slug.includes('creature')) {
+    return 'beast';
+  }
+  if (slug.includes('plant') || slug.includes('flora') || slug.includes('herb')) {
+    return 'flora';
+  }
+  if (slug.includes('ore') || slug.includes('mineral') || slug.includes('rock')) {
+    return 'mineral';
+  }
+  if (slug.includes('artifact') || slug.includes('relic')) {
+    return 'artifact';
+  }
+  if (slug.includes('recipe')) {
+    return 'recipe';
+  }
+  return 'custom';
 };
 
 const downgradeUnknownIssuesToWarnings = (
@@ -1870,6 +1896,7 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
         surface,
         name: edit?.name ?? suggestedName,
         categoryId,
+        seedCompendium: edit?.seedCompendium ?? false,
         categoryName
       };
     });
@@ -1974,7 +2001,8 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
       setUnknownDraftEdits((prev) => {
         const current = prev[key] ?? {
           name: normalizeUnknownName(surface),
-          categoryId: guessUnknownCategory(surface, categories)?.id ?? ''
+          categoryId: guessUnknownCategory(surface, categories)?.id ?? '',
+          seedCompendium: false
         };
         return {
           ...prev,
@@ -2033,7 +2061,8 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
       ...prev,
       [key]: prev[key] ?? {
         name: suggestedName,
-        categoryId: suggestedCategoryId
+        categoryId: suggestedCategoryId,
+        seedCompendium: false
       }
     }));
     setReviewQueueOpen(true);
@@ -2098,13 +2127,16 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
         override ??
         unknownReviewItemBySurface.get(normalizeUnknownKey(surface)) ?? {
           name: normalizeUnknownName(surface),
-          categoryId: guessUnknownCategory(surface, availableCategories)?.id ?? ''
+          categoryId: guessUnknownCategory(surface, availableCategories)?.id ?? '',
+          seedCompendium: false
         };
       const canonicalName = (draft.name ?? '').trim();
       const preferredCategory =
         availableCategories.find((category) => category.id === draft.categoryId) ??
         guessUnknownCategory(canonicalName || normalizedSurface, availableCategories) ??
         availableCategories[0];
+      const canSeedCompendium =
+        projectSettings?.featureToggles.enableGameSystems !== false;
 
       if (!preferredCategory || !canonicalName) {
         throw new Error('No categories available for entity creation.');
@@ -2137,6 +2169,7 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
         projectId: activeProject.id,
         categoryId: preferredCategory.id,
         name: canonicalName,
+        completionStatus: 'draft',
         fields: {},
         links: [],
         createdAt: now,
@@ -2144,6 +2177,14 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
       };
       await saveEntity(entity);
       setEntities((prev) => [...prev, entity]);
+
+      if (draft.seedCompendium && canSeedCompendium) {
+        await upsertCompendiumEntryFromEntity({
+          projectId: activeProject.id,
+          entity,
+          domain: inferCompendiumDomainFromCategory(preferredCategory)
+        });
+      }
 
       if (normalizeUnknownKey(normalizedSurface) !== normalizeUnknownKey(canonicalName)) {
         const savedAlias = await saveAlias({
@@ -2157,10 +2198,18 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
       clearUnknownSurfaceState(surface);
       setFeedback({
         tone: 'success',
-        message: `Entity "${canonicalName}" created in ${preferredCategory.name}. Save again to validate.`
+        message:
+          `Entity "${canonicalName}" created in ${preferredCategory.name} and marked needs completion.` +
+          (draft.seedCompendium && canSeedCompendium
+            ? ' Compendium entry seeded.'
+            : ' Save again to validate.')
       });
       setResolverNotice({
-        message: `Entity "${canonicalName}" created.`
+        message:
+          `Entity "${canonicalName}" created and marked needs completion.` +
+          (draft.seedCompendium && canSeedCompendium
+            ? ' Compendium entry seeded.'
+            : '')
       });
     } catch (error) {
       const message =
@@ -2169,7 +2218,7 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
     } finally {
       setResolvingUnknown(null);
     }
-  }, [activeProject, applyAliasLocally, clearUnknownSurfaceState, entities, categories, unknownReviewItemBySurface]);
+  }, [activeProject, applyAliasLocally, clearUnknownSurfaceState, entities, categories, unknownReviewItemBySurface, projectSettings?.featureToggles.enableGameSystems]);
 
   const resolveAllUnknownEntities = useCallback(async () => {
     if (unknownReviewItems.length === 0) return;
@@ -2306,6 +2355,10 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
     characterSheets.find((sheet) => sheet.id === selectedStatCharacterId) ?? null;
   const selectedEntity =
     entities.find((entity) => entity.id === selectedStatEntityId) ?? null;
+  const draftEntities = useMemo(
+    () => entities.filter((entity) => entity.completionStatus === 'draft'),
+    [entities]
+  );
   const activeProjectMode = projectSettings?.projectMode ?? 'litrpg';
   const showGameSystems =
     projectSettings?.featureToggles.enableGameSystems !== false;
@@ -3030,6 +3083,8 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
           break;
         case 'critique-current-scene':
           break;
+        case 'line-edit-selected-passage':
+          break;
         case 'toggle-left-drawer':
           toggleSceneDrawer();
           break;
@@ -3280,8 +3335,9 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
     id: ContextDrawerView;
     label: string;
     hidden?: boolean;
+    badgeCount?: number;
   }> = [
-    {id: 'world-bible', label: 'World Bible'},
+    {id: 'world-bible', label: 'World Bible', badgeCount: draftEntities.length},
     {id: 'ruleset', label: 'Ruleset'},
     {id: 'characters', label: 'Characters'},
     {id: 'compendium', label: 'Compendium', hidden: !showGameSystems}
@@ -3293,8 +3349,34 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
         <div className={styles.contextSummary}>
           <p className={styles.contextSummaryText}>
             Entities: <strong>{entities.length}</strong> · Categories:{' '}
-            <strong>{categories.length}</strong>
+            <strong>{categories.length}</strong> · Needs completion:{' '}
+            <strong>{draftEntities.length}</strong>
           </p>
+          {draftEntities.length > 0 && (
+            <div className={styles.contextDraftPanel}>
+              <div className={styles.contextDraftHeading}>Needs completion</div>
+              <div className={styles.contextDraftList}>
+                {draftEntities.slice(0, 4).map((entity) => (
+                  <button
+                    key={entity.id}
+                    type='button'
+                    className={styles.contextDraftButton}
+                    onClick={() =>
+                      navigate('/world-bible', {state: {focusEntityId: entity.id}})
+                    }
+                  >
+                    {entity.name}
+                  </button>
+                ))}
+              </div>
+              {draftEntities.length > 4 && (
+                <div className={styles.contextDraftMore}>
+                  +{draftEntities.length - 4} more draft record
+                  {draftEntities.length - 4 === 1 ? '' : 's'}
+                </div>
+              )}
+            </div>
+          )}
           <button type='button' onClick={() => navigate('/world-bible')}>
             Open World Bible
           </button>
@@ -3360,7 +3442,10 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
                     tab.id === activeContextView ? '#dbeafe' : 'transparent'
                 }}
               >
-                {tab.label}
+                <span>{tab.label}</span>
+                {tab.badgeCount ? (
+                  <span className={styles.contextTabBadge}>{tab.badgeCount}</span>
+                ) : null}
               </button>
             ))}
         </div>
@@ -3759,6 +3844,20 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
                         ))}
                       </select>
                     </label>
+                    {showGameSystems && (
+                      <label className={styles.reviewQueueCheckbox}>
+                        <input
+                          type='checkbox'
+                          checked={item.seedCompendium}
+                          onChange={(event) =>
+                            updateUnknownDraft(item.surface, {
+                              seedCompendium: event.target.checked
+                            })
+                          }
+                        />
+                        <span>Seed compendium entry</span>
+                      </label>
+                    )}
                   </div>
                   <div className={styles.reviewQueueActions}>
                     <button
@@ -3766,7 +3865,8 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
                       onClick={() =>
                         void resolveUnknownEntity(item.surface, {
                           name: item.name,
-                          categoryId: item.categoryId
+                          categoryId: item.categoryId,
+                          seedCompendium: item.seedCompendium
                         })
                       }
                       disabled={resolvingUnknown === item.surface || !item.name.trim()}
@@ -4046,6 +4146,20 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
                             ))}
                           </select>
                         </label>
+                        {showGameSystems && (
+                          <label className={styles.consistencyPopoverCheckbox}>
+                            <input
+                              type='checkbox'
+                              checked={activeUnknownReviewItem.seedCompendium}
+                              onChange={(event) =>
+                                updateUnknownDraft(activeConsistencyPopoverIssue.surface, {
+                                  seedCompendium: event.target.checked
+                                })
+                              }
+                            />
+                            <span>Seed compendium entry</span>
+                          </label>
+                        )}
                       </div>
                     )}
                     <div className={styles.consistencyPopoverActions}>
@@ -4057,7 +4171,8 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
                             activeUnknownReviewItem
                               ? {
                                   name: activeUnknownReviewItem.name,
-                                  categoryId: activeUnknownReviewItem.categoryId
+                                  categoryId: activeUnknownReviewItem.categoryId,
+                                  seedCompendium: activeUnknownReviewItem.seedCompendium
                                 }
                               : undefined
                           )

@@ -204,6 +204,25 @@
   flex-wrap: wrap;
 }
 
+.entityBadges {
+  display: inline-flex;
+  gap: 0.4rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.draftBadge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.18rem 0.5rem;
+  border-radius: 999px;
+  background: #fff7ed;
+  color: #c2410c;
+  font-size: 0.74rem;
+  font-weight: 700;
+  border: 1px solid #fdba74;
+}
+
 .aliasBadge {
   display: inline-flex;
   align-items: center;

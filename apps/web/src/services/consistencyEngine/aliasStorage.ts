@@ -74,3 +74,81 @@ export async function saveAlias(
     };
   });
 }
+
+export async function deleteAlias(id: string): Promise<void> {
+  const db = await openDb();
+
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(CONSISTENCY_ALIAS_STORE_NAME, 'readwrite');
+    const store = tx.objectStore(CONSISTENCY_ALIAS_STORE_NAME);
+    const request = store.delete(id);
+
+    request.onsuccess = () => {
+      resolve();
+    };
+
+    request.onerror = () => {
+      reject(request.error);
+    };
+  });
+}
+
+export async function deleteAliasesForEntity(
+  projectId: string,
+  entityId: string,
+  targetType: 'entity' | 'character' = 'entity'
+): Promise<void> {
+  const aliases = await getAliasesByProject(projectId);
+  const matches = aliases.filter(
+    (alias) =>
+      alias.entityId === entityId && (alias.targetType ?? 'entity') === targetType
+  );
+
+  await Promise.all(matches.map((alias) => deleteAlias(alias.id)));
+}
+
+export async function replaceAliasesForEntity(params: {
+  projectId: string;
+  entityId: string;
+  aliases: string[];
+  targetType?: 'entity' | 'character';
+}): Promise<ConsistencyAlias[]> {
+  const targetType = params.targetType ?? 'entity';
+  const normalizedWanted = new Set(
+    params.aliases
+      .map((alias) => alias.trim())
+      .filter(Boolean)
+      .map((alias) => normalizeAlias(alias))
+  );
+
+  const existing = await getAliasesByProject(params.projectId);
+  const entityAliases = existing.filter(
+    (alias) =>
+      alias.entityId === params.entityId && (alias.targetType ?? 'entity') === targetType
+  );
+
+  const aliasesToDelete = entityAliases.filter(
+    (alias) => !normalizedWanted.has(normalizeAlias(alias.alias))
+  );
+  await Promise.all(aliasesToDelete.map((alias) => deleteAlias(alias.id)));
+
+  const savedAliases: ConsistencyAlias[] = [];
+  for (const alias of params.aliases) {
+    const trimmed = alias.trim();
+    if (!trimmed) continue;
+    const saved = await saveAlias({
+      projectId: params.projectId,
+      entityId: params.entityId,
+      targetType,
+      alias: trimmed
+    });
+    savedAliases.push(saved);
+  }
+
+  return getAliasesByProject(params.projectId).then((aliases) =>
+    aliases.filter(
+      (alias) =>
+        alias.entityId === params.entityId && (alias.targetType ?? 'entity') === targetType
+    )
+  );
+}

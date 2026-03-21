@@ -385,6 +385,11 @@ function CompendiumRoute({activeProject, projectSettings}: CompendiumRouteProps)
     () => new Map(worldEntities.map((entity) => [entity.id, entity])),
     [worldEntities]
   );
+  const draftWorldEntityCount = useMemo(
+    () =>
+      worldEntities.filter((entity) => entity.completionStatus === 'draft').length,
+    [worldEntities]
+  );
   const characterById = useMemo(
     () => new Map(characters.map((character) => [character.id, character])),
     [characters]
@@ -1128,6 +1133,13 @@ function CompendiumRoute({activeProject, projectSettings}: CompendiumRouteProps)
           <p style={{marginTop: 0, fontSize: '0.85rem', color: '#6b7280'}}>
             Best for existing entities so names stay aligned across tools.
           </p>
+          {draftWorldEntityCount > 0 && (
+            <p style={{marginTop: 0, fontSize: '0.82rem', color: '#c2410c'}}>
+              {draftWorldEntityCount} World Bible entr
+              {draftWorldEntityCount === 1 ? 'y is' : 'ies are'} marked needs
+              completion.
+            </p>
+          )}
           <label style={{display: 'block', marginBottom: '0.5rem'}}>
             Entity
             <select
@@ -1139,6 +1151,7 @@ function CompendiumRoute({activeProject, projectSettings}: CompendiumRouteProps)
               {worldEntities.map((entity) => (
                 <option key={entity.id} value={entity.id}>
                   {entity.name}
+                  {entity.completionStatus === 'draft' ? ' (Needs completion)' : ''}
                 </option>
               ))}
             </select>
@@ -1223,6 +1236,12 @@ function CompendiumRoute({activeProject, projectSettings}: CompendiumRouteProps)
                   Linked to World Bible entity
                 </div>
               )}
+              {entry.sourceEntityId &&
+                worldEntityById.get(entry.sourceEntityId)?.completionStatus === 'draft' && (
+                  <div style={{fontSize: '0.8rem', color: '#c2410c'}}>
+                    Source World Bible record still needs completion
+                  </div>
+                )}
               <div style={{display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginTop: '0.5rem'}}>
                 {entry.actions.map((action) => {
                   const key = `${entry.id}:${action.id}`;

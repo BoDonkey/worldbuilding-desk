@@ -159,24 +159,41 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
     };
   }, [config, consistencyHighlights, loreHighlights]);
   const insertContext = externalTextToInsert ? null : aiContext;
-  const criticToolIds = React.useMemo(
-    () =>
-      (aiSettings?.promptTools ?? [])
-        .filter(
-          (tool) =>
-            tool.enabled &&
-            tool.kind === 'persona' &&
-            tool.name.trim().toLowerCase() === 'writing critic'
-        )
-        .map((tool) => tool.id),
-    [aiSettings?.promptTools]
-  );
+  const personaToolIdsByName = React.useMemo(() => {
+    const map = new Map<string, string[]>();
+    (aiSettings?.promptTools ?? [])
+      .filter((tool) => tool.enabled && tool.kind === 'persona')
+      .forEach((tool) => {
+        const key = tool.name.trim().toLowerCase();
+        const existing = map.get(key) ?? [];
+        existing.push(tool.id);
+        map.set(key, existing);
+      });
+    return map;
+  }, [aiSettings?.promptTools]);
 
-  const buildCritiquePrompt = useCallback(
-    (scope: 'selection' | 'scene', excerpt: string) => {
+  const buildPersonaPrompt = useCallback(
+    (action: 'critique' | 'line-edit', scope: 'selection' | 'scene', excerpt: string) => {
       const trimmedExcerpt = excerpt.trim();
       const subjectLabel =
         scope === 'selection' ? 'selected passage' : 'current scene draft';
+      if (action === 'line-edit') {
+        return [
+          `Line edit this ${subjectLabel}.`,
+          'Keep the response concise and structured as:',
+          '1. Quick verdict',
+          '2. Top line issues',
+          '3. Edited example',
+          '4. Notes on voice/preservation',
+          '',
+          'Focus on clarity, rhythm, concision, and sentence flow.',
+          'Preserve intent, canon facts, and voice.',
+          'Do not rewrite beyond the provided passage.',
+          '',
+          'Excerpt:',
+          trimmedExcerpt
+        ].join('\n');
+      }
       return [
         `Critique this ${subjectLabel}.`,
         'Keep the response concise and structured as:',
@@ -195,8 +212,8 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
     []
   );
 
-  const queueCritiquePrompt = useCallback(
-    (scope: 'selection' | 'scene') => {
+  const queuePersonaPrompt = useCallback(
+    (action: 'critique' | 'line-edit', scope: 'selection' | 'scene') => {
       const selectedText =
         selectionBubble?.selectedText.trim() ?? aiContext?.selectedText?.trim() ?? '';
       const sceneText = htmlToPlainText(content).slice(0, 12000);
@@ -218,18 +235,21 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
         setAIContext(null);
       }
 
-      setQueuedPrompt(buildCritiquePrompt(scope, excerpt));
-      setQueuedPromptToolIds(criticToolIds.length > 0 ? criticToolIds : null);
+      const personaName = action === 'line-edit' ? 'line editor' : 'writing critic';
+      const personaToolIds = personaToolIdsByName.get(personaName) ?? [];
+
+      setQueuedPrompt(buildPersonaPrompt(action, scope, excerpt));
+      setQueuedPromptToolIds(personaToolIds.length > 0 ? personaToolIds : null);
       setActivePanelTab('ai');
       setShowSidePanel(true);
       return true;
     },
     [
       aiContext?.selectedText,
-      buildCritiquePrompt,
+      buildPersonaPrompt,
       content,
-      criticToolIds,
       documentId,
+      personaToolIdsByName,
       selectionBubble
     ]
   );
@@ -271,10 +291,13 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
         setShowSidePanel(true);
       }
       if (detail?.id === 'critique-selected-passage') {
-        queueCritiquePrompt('selection');
+        queuePersonaPrompt('critique', 'selection');
       }
       if (detail?.id === 'critique-current-scene') {
-        queueCritiquePrompt('scene');
+        queuePersonaPrompt('critique', 'scene');
+      }
+      if (detail?.id === 'line-edit-selected-passage') {
+        queuePersonaPrompt('line-edit', 'selection');
       }
     };
 
@@ -282,7 +305,7 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
     return () => {
       window.removeEventListener(WORKSPACE_COMMAND_EVENT, onWorkspaceCommand);
     };
-  }, [queueCritiquePrompt]);
+  }, [queuePersonaPrompt]);
 
   useEffect(() => {
     return () => {
@@ -531,10 +554,18 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
             <button
               type='button'
               onClick={() => {
-                queueCritiquePrompt('selection');
+                queuePersonaPrompt('critique', 'selection');
               }}
             >
               Critique Selected Passage
+            </button>
+            <button
+              type='button'
+              onClick={() => {
+                queuePersonaPrompt('line-edit', 'selection');
+              }}
+            >
+              Line Edit Selected Passage
             </button>
             {selectionBubble.matchType === 'character' && (
               <button
@@ -704,7 +735,7 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
                 <button
                   type='button'
                   onClick={() => {
-                    queueCritiquePrompt('scene');
+                    queuePersonaPrompt('critique', 'scene');
                   }}
                 >
                   Critique Current Scene
@@ -712,11 +743,20 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
                 <button
                   type='button'
                   onClick={() => {
-                    queueCritiquePrompt('selection');
+                    queuePersonaPrompt('critique', 'selection');
                   }}
                   disabled={!selectionBubble?.selectedText.trim()}
                 >
                   Critique Selected Passage
+                </button>
+                <button
+                  type='button'
+                  onClick={() => {
+                    queuePersonaPrompt('line-edit', 'selection');
+                  }}
+                  disabled={!selectionBubble?.selectedText.trim()}
+                >
+                  Line Edit Selected Passage
                 </button>
               </div>
               <AIAssistant

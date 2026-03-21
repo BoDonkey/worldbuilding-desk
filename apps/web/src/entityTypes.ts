@@ -257,6 +257,7 @@ export interface WorldEntity {
   projectId: string;
   categoryId: string;
   name: string;
+  completionStatus?: 'draft' | 'complete';
   fields: EntityFields;
   links: string[];
   createdAt: number;

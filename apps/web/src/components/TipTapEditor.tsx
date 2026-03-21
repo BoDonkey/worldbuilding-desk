@@ -1,7 +1,6 @@
 import type {Editor, Extension} from '@tiptap/core';
 import {EditorContent, useEditor} from '@tiptap/react';
-import type {CSSProperties} from 'react';
-import {useEffect, useRef, useState} from 'react';
+import {useEffect, useRef} from 'react';
 
 import '../assets/TipTapEditor.css';
 import {
@@ -19,13 +18,12 @@ type ToolbarButton = {
 interface MenuBarProps {
   editor: Editor;
   customButtons: ToolbarButton[];
-  fixedStyle?: CSSProperties;
-  isFixed: boolean;
 }
 
 interface TipTapEditorProps {
   content: string;
   onChange: (content: string) => void;
+  onEditorReady?: (editor: Editor) => void;
   onWordCountChange?: (count: number) => void;
   onConsistencyHighlightClick?: (
     issueId: string,
@@ -43,14 +41,11 @@ interface TipTapEditorProps {
   insertContext?: {from: number; to: number} | null;
 }
 
-function MenuBar({editor, customButtons, fixedStyle, isFixed}: MenuBarProps) {
+function MenuBar({editor, customButtons}: MenuBarProps) {
   if (!editor) return null;
 
   return (
-    <div
-      className={`control-group${isFixed ? ' is-fixed' : ''}`}
-      style={isFixed ? fixedStyle : undefined}
-    >
+    <div className='control-group'>
       <div className='button-group'>
         {/* Core formatting */}
         <button
@@ -182,24 +177,6 @@ function MenuBar({editor, customButtons, fixedStyle, isFixed}: MenuBarProps) {
   );
 }
 
-interface TipTapEditorProps {
-  content: string;
-  onChange: (content: string) => void;
-  onEditorReady?: (editor: Editor) => void;
-  onWordCountChange?: (count: number) => void;
-  onConsistencyHighlightClick?: (
-    issueId: string,
-    anchorRect: {left: number; top: number; bottom: number}
-  ) => void;
-  onLoreHighlightClick?: (
-    loreId: string,
-    anchorRect: {left: number; top: number; bottom: number}
-  ) => void;
-  config?: EditorConfig;
-  toolbarButtons?: ToolbarButton[];
-  extensions?: Extension[];
-}
-
 function TipTapEditor({
   content = '',
   onChange,
@@ -215,11 +192,6 @@ function TipTapEditor({
 }: TipTapEditorProps) {
   const isInternalUpdate = useRef(false);
   const onEditorReadyRef = useRef(onEditorReady);
-  const wrapperRef = useRef<HTMLDivElement | null>(null);
-  const toolbarRef = useRef<HTMLDivElement | null>(null);
-  const [toolbarFixedStyle, setToolbarFixedStyle] = useState<CSSProperties>({});
-  const [isToolbarFixed, setToolbarFixed] = useState(false);
-  const [toolbarSpacerHeight, setToolbarSpacerHeight] = useState(0);
 
   useEffect(() => {
     onEditorReadyRef.current = onEditorReady;
@@ -326,68 +298,11 @@ function TipTapEditor({
     onTextInserted?.();
   }, [textToInsert, editor, insertContext, onTextInserted]);
 
-  useEffect(() => {
-    const topOffset = 12;
-
-    const updateToolbarPosition = () => {
-      const wrapper = wrapperRef.current;
-      const toolbar = toolbarRef.current;
-      if (!wrapper || !toolbar || window.innerWidth < 900) {
-        setToolbarFixed(false);
-        setToolbarFixedStyle({});
-        setToolbarSpacerHeight(0);
-        return;
-      }
-
-      const wrapperRect = wrapper.getBoundingClientRect();
-      const toolbarHeight = toolbar.offsetHeight;
-      const canFix =
-        wrapperRect.top <= topOffset &&
-        wrapperRect.bottom - toolbarHeight - topOffset > 0;
-
-      if (!canFix) {
-        setToolbarFixed(false);
-        setToolbarFixedStyle({});
-        setToolbarSpacerHeight(0);
-        return;
-      }
-
-      setToolbarFixed(true);
-      setToolbarSpacerHeight(toolbarHeight + 14);
-      setToolbarFixedStyle({
-        left: `${wrapperRect.left}px`,
-        width: `${wrapperRect.width}px`,
-        top: `${topOffset}px`
-      });
-    };
-
-    updateToolbarPosition();
-    window.addEventListener('scroll', updateToolbarPosition, true);
-    window.addEventListener('resize', updateToolbarPosition);
-    return () => {
-      window.removeEventListener('scroll', updateToolbarPosition, true);
-      window.removeEventListener('resize', updateToolbarPosition);
-    };
-  }, [content]);
-
   if (!editor) return null;
 
   return (
-    <div className='tiptap-wrapper' ref={wrapperRef}>
-      {isToolbarFixed && (
-        <div
-          className='control-group-spacer'
-          style={{height: `${toolbarSpacerHeight}px`}}
-        />
-      )}
-      <div ref={toolbarRef}>
-        <MenuBar
-          editor={editor}
-          customButtons={toolbarButtons}
-          isFixed={isToolbarFixed}
-          fixedStyle={toolbarFixedStyle}
-        />
-      </div>
+    <div className='tiptap-wrapper'>
+      <MenuBar editor={editor} customButtons={toolbarButtons} />
       <EditorContent editor={editor} />
     </div>
   );

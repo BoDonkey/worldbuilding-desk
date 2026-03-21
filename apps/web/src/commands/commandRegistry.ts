@@ -118,6 +118,13 @@ export const createAppCommands = ({
       run: () => dispatchWorkspaceCommand('critique-current-scene')
     },
     {
+      id: 'workspace-line-edit-selected-passage',
+      label: 'Workspace: Line Edit Selected Passage',
+      section: 'Workspace',
+      keywords: ['line', 'edit', 'selected', 'passage', 'rewrite', 'prose'],
+      run: () => dispatchWorkspaceCommand('line-edit-selected-passage')
+    },
+    {
       id: 'workspace-toggle-left-drawer',
       label: 'Workspace: Toggle Scene Drawer',
       section: 'Workspace',

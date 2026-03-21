@@ -80,6 +80,63 @@
   flex-wrap: wrap;
 }
 
+.contextTabButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.contextTabBadge {
+  display: inline-flex;
+  min-width: 1.2rem;
+  justify-content: center;
+  align-items: center;
+  padding: 0.05rem 0.35rem;
+  border-radius: 999px;
+  background: #fff7ed;
+  color: #c2410c;
+  font-size: 0.72rem;
+  font-weight: 700;
+  border: 1px solid #fdba74;
+}
+
+.contextDraftPanel {
+  margin: 0.65rem 0;
+  padding: 0.6rem;
+  border: 1px solid #fed7aa;
+  border-radius: 6px;
+  background: #fff7ed;
+}
+
+.contextDraftHeading {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #9a3412;
+  margin-bottom: 0.45rem;
+}
+
+.contextDraftList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.contextDraftButton {
+  border: 1px solid #fdba74;
+  background: #ffffff;
+  color: #9a3412;
+  border-radius: 999px;
+  padding: 0.25rem 0.55rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.contextDraftMore {
+  margin-top: 0.45rem;
+  font-size: 0.76rem;
+  color: #9a3412;
+}
+
 .drawerOverlay {
   position: fixed;
   inset: 0;
@@ -339,6 +396,20 @@
   gap: 0.3rem;
   font-size: 0.8rem;
   color: #7c2d12;
+}
+
+.reviewQueueCheckbox,
+.consistencyPopoverCheckbox {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.8rem;
+  color: #7c2d12;
+}
+
+.reviewQueueCheckbox input,
+.consistencyPopoverCheckbox input {
+  width: auto;
 }
 
 .reviewQueueField input,
