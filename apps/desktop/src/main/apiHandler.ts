@@ -121,10 +121,20 @@ export function setupAPIHandlers() {
   ipcMain.handle('llm:stream', async (event, payload: LLMStreamPayload) => {
     validatePayload(payload);
 
-    const {apiKey, providerId, request, requestId = randomUUID()} = payload;
+    const {
+      apiKey,
+      providerId,
+      request,
+      requestId = randomUUID(),
+      providerConfig
+    } = payload;
 
     try {
-      const adapter = createStreamingAdapter(providerId, {apiKey, request});
+      const adapter = createStreamingAdapter(providerId, {
+        apiKey,
+        baseUrl: providerConfig?.baseUrl,
+        request
+      });
       const chunks: string[] = [];
 
       for await (const chunk of adapter.stream()) {

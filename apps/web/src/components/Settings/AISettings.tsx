@@ -209,6 +209,22 @@ export const AISettings: React.FC<AISettingsProps> = ({
   };
   const defaultsForSelectedMode =
     defaultToolIdsByMode[defaultsMode] ?? defaultToolIds;
+  const enabledTools = promptTools.filter((tool) => tool.enabled);
+  const enabledToolIds = new Set(enabledTools.map((tool) => tool.id));
+  const activeDefaultsForSelectedMode = defaultsForSelectedMode.filter((id) =>
+    enabledToolIds.has(id)
+  );
+  const activeDefaultTools = enabledTools.filter((tool) =>
+    activeDefaultsForSelectedMode.includes(tool.id)
+  );
+  const activeDefaultPersonas = activeDefaultTools.filter(
+    (tool) => tool.kind === 'persona'
+  );
+  const activeDefaultInstructions = activeDefaultTools.filter(
+    (tool) => tool.kind !== 'persona'
+  );
+  const installedPersonas = promptTools.filter((tool) => tool.kind === 'persona');
+  const installedNonPersonaTools = promptTools.filter((tool) => tool.kind !== 'persona');
   const inspectorSettings = aiSettings.inspectorSettings ?? {
     enableAIConsultation: true,
     maxConsultationsPerDay: 20,
@@ -515,211 +531,354 @@ export const AISettings: React.FC<AISettingsProps> = ({
     }
   };
 
+  const renderToolItem = (
+    tool: PromptTool,
+    defaultLabel: string
+  ) => (
+    <li key={tool.id} className={styles.toolItem}>
+      {editingToolId === tool.id ? (
+        <div className={styles.editPanel}>
+          <div className={styles.field}>
+            <label className={styles.label}>Tool Name</label>
+            <input
+              type='text'
+              className={styles.input}
+              value={editingToolName}
+              onChange={(e) => setEditingToolName(e.target.value)}
+            />
+          </div>
+          <div className={styles.field}>
+            <label className={styles.label}>Tool Type</label>
+            <select
+              className={styles.input}
+              value={editingToolKind}
+              onChange={(e) => setEditingToolKind(e.target.value as PromptToolKind)}
+            >
+              {Object.entries(PROMPT_TOOL_KIND_LABELS).map(([value, label]) => (
+                <option key={`edit-${value}`} value={value}>
+                  {label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className={styles.field}>
+            <label className={styles.label}>Tool Instructions</label>
+            <textarea
+              className={styles.textarea}
+              value={editingToolContent}
+              onChange={(e) => setEditingToolContent(e.target.value)}
+            />
+          </div>
+          <div className={styles.toolPackActions}>
+            <button
+              type='button'
+              className={styles.secondaryButton}
+              onClick={() => handleSaveEditTool(tool.id)}
+            >
+              Save Changes
+            </button>
+            <button
+              type='button'
+              className={styles.secondaryButton}
+              onClick={handleCancelEditTool}
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      ) : (
+        <>
+          <div className={styles.toolHeader}>
+            <div className={styles.toolTitleBlock}>
+              <strong>{tool.name}</strong>
+              {defaultsForSelectedMode.includes(tool.id) && tool.enabled ? (
+                <span className={styles.defaultBadge}>
+                  Default in {PROJECT_MODE_LABELS[defaultsMode]}
+                </span>
+              ) : null}
+            </div>
+            <span className={styles.toolKind}>
+              {PROMPT_TOOL_KIND_LABELS[tool.kind]}
+            </span>
+          </div>
+          <p className={styles.toolContent}>{tool.content}</p>
+        </>
+      )}
+      <div className={styles.toolActions}>
+        <label>
+          <input
+            type='checkbox'
+            checked={tool.enabled}
+            onChange={(e) =>
+              handleTogglePromptToolEnabled(tool.id, e.target.checked)
+            }
+          />
+          Enabled
+        </label>
+        <label>
+          <input
+            type='checkbox'
+            checked={defaultsForSelectedMode.includes(tool.id)}
+            disabled={!tool.enabled}
+            onChange={(e) => handleToggleDefaultTool(tool.id, e.target.checked)}
+          />
+          {defaultLabel}
+        </label>
+        <button
+          type='button'
+          className={styles.secondaryButton}
+          onClick={() => handleStartEditTool(tool)}
+          disabled={editingToolId === tool.id}
+        >
+          Edit
+        </button>
+        <button
+          type='button'
+          className={styles.deleteButton}
+          onClick={() => handleDeletePromptTool(tool.id)}
+        >
+          Delete
+        </button>
+      </div>
+    </li>
+  );
+
   return (
     <div className={styles.container}>
-      <div className={styles.field}>
-        <label className={styles.label}>Active Provider</label>
-        <select
-          className={styles.input}
-          value={aiSettings.provider}
-          onChange={(e) => handleProviderChange(e.target.value as AIProviderId)}
-        >
-          {(['anthropic', 'openai', 'gemini', 'ollama'] as AIProviderId[]).map((provider) => (
-            <option key={provider} value={provider}>
-              {PROVIDER_LABELS[provider]}
-            </option>
-          ))}
-        </select>
-        <p className={styles.help}>
-          Choose which LLM provider the writing assistant should use. Additional providers will be added over time.
-        </p>
-      </div>
+      <section className={styles.configSection}>
+        <div className={styles.sectionHeader}>
+          <h3 className={styles.sectionTitle}>Provider & Model</h3>
+          <p className={styles.help}>
+            Configure which model stack the assistant uses for this project.
+          </p>
+        </div>
+        <div className={styles.sectionGrid}>
+          <div className={styles.field}>
+            <label className={styles.label}>Active Provider</label>
+            <select
+              className={styles.input}
+              value={aiSettings.provider}
+              onChange={(e) => handleProviderChange(e.target.value as AIProviderId)}
+            >
+              {(['anthropic', 'openai', 'gemini', 'ollama'] as AIProviderId[]).map((provider) => (
+                <option key={provider} value={provider}>
+                  {PROVIDER_LABELS[provider]}
+                </option>
+              ))}
+            </select>
+            <p className={styles.help}>
+              Choose which LLM provider the writing assistant should use.
+            </p>
+          </div>
 
-      <div className={styles.field}>
-        <label className={styles.label}>Default Model</label>
-        <input
-          type='text'
-          className={styles.input}
-          value={currentModel}
-          onChange={(e) => handleModelChange(e.target.value)}
-          placeholder={PROVIDER_DEFAULT_MODELS[aiSettings.provider]}
-        />
-        <p className={styles.help}>Override the default model used for this provider.</p>
-      </div>
-
-      <div className={styles.toolsSection}>
-        <h3 className={styles.toolsHeading}>Lore Inspector AI Guardrails</h3>
-        <label className={styles.field}>
-          <span className={styles.label}>
+          <div className={styles.field}>
+            <label className={styles.label}>Default Model</label>
             <input
-              type='checkbox'
-              checked={inspectorSettings.enableAIConsultation}
+              type='text'
+              className={styles.input}
+              value={currentModel}
+              onChange={(e) => handleModelChange(e.target.value)}
+              placeholder={PROVIDER_DEFAULT_MODELS[aiSettings.provider]}
+            />
+            <p className={styles.help}>
+              Override the default model used for the active provider.
+            </p>
+          </div>
+
+          {aiSettings.provider === 'ollama' && (
+            <div className={styles.field}>
+              <label className={styles.label}>Ollama Base URL</label>
+              <input
+                type='text'
+                className={styles.input}
+                value={currentBaseUrl ?? ''}
+                onChange={(e) =>
+                  onSettingsChange({
+                    ...aiSettings,
+                    configs: {
+                      ...aiSettings.configs,
+                      ollama: {
+                        ...aiSettings.configs.ollama,
+                        baseUrl: e.target.value || PROVIDER_DEFAULT_BASE_URL.ollama
+                      }
+                    }
+                  })
+                }
+                placeholder={PROVIDER_DEFAULT_BASE_URL.ollama}
+              />
+              <p className={styles.help}>
+                Point to the local Ollama instance if you use local models.
+              </p>
+            </div>
+          )}
+        </div>
+      </section>
+
+      <section className={styles.configSection}>
+        <div className={styles.sectionHeader}>
+          <h3 className={styles.sectionTitle}>API Keys</h3>
+          <p className={styles.help}>
+            Store provider credentials locally for the providers you plan to use.
+          </p>
+        </div>
+        <div className={styles.sectionGrid}>
+          <div className={styles.field}>
+            <label className={styles.label}>Anthropic API Key (Claude)</label>
+            <input
+              type='password'
+              value={anthropicKey}
+              onChange={(e) => setAnthropicKey(e.target.value)}
+              placeholder='sk-ant-...'
+              className={styles.input}
+            />
+            <p className={styles.help}>
+              Get your key from{' '}
+              <a href='https://console.anthropic.com' target='_blank' rel='noopener noreferrer'>
+                console.anthropic.com
+              </a>
+            </p>
+          </div>
+
+          <div className={styles.field}>
+            <label className={styles.label}>OpenAI API Key (GPT & embeddings)</label>
+            <input
+              type='password'
+              value={openaiKey}
+              onChange={(e) => setOpenaiKey(e.target.value)}
+              placeholder='sk-...'
+              className={styles.input}
+            />
+            <p className={styles.help}>
+              Get your key from{' '}
+              <a href='https://platform.openai.com' target='_blank' rel='noopener noreferrer'>
+                platform.openai.com
+              </a>
+            </p>
+          </div>
+
+          <div className={styles.field}>
+            <label className={styles.label}>Gemini API Key</label>
+            <input
+              type='password'
+              value={geminiKey}
+              onChange={(e) => setGeminiKey(e.target.value)}
+              placeholder='AIza...'
+              className={styles.input}
+            />
+            <p className={styles.help}>
+              Get your key from{' '}
+              <a href='https://aistudio.google.com/app/apikey' target='_blank' rel='noopener noreferrer'>
+                Google AI Studio
+              </a>
+            </p>
+          </div>
+        </div>
+        <button onClick={handleSaveKeys} className={styles.saveButton}>
+          Save API Keys
+        </button>
+      </section>
+
+      <section className={styles.configSection}>
+        <div className={styles.sectionHeader}>
+          <h3 className={styles.sectionTitle}>Lore Inspector Behavior</h3>
+          <p className={styles.help}>
+            Control when AI consultation is available from the Lore Inspector and
+            how expensive those requests can get.
+          </p>
+        </div>
+        <div className={styles.sectionGrid}>
+          <label className={styles.field}>
+            <span className={styles.label}>
+              <input
+                type='checkbox'
+                checked={inspectorSettings.enableAIConsultation}
+                onChange={(e) =>
+                  onSettingsChange({
+                    ...aiSettings,
+                    inspectorSettings: {
+                      ...inspectorSettings,
+                      enableAIConsultation: e.target.checked
+                    }
+                  })
+                }
+              />{' '}
+              Enable AI consultation actions in Lore Inspector
+            </span>
+          </label>
+          <div className={styles.field}>
+            <label className={styles.label}>Max consultations per day</label>
+            <input
+              type='number'
+              className={styles.input}
+              min={1}
+              value={inspectorSettings.maxConsultationsPerDay}
               onChange={(e) =>
                 onSettingsChange({
                   ...aiSettings,
                   inspectorSettings: {
                     ...inspectorSettings,
-                    enableAIConsultation: e.target.checked
+                    maxConsultationsPerDay: Math.max(1, Number(e.target.value) || 20)
                   }
                 })
               }
-            />{' '}
-            Enable AI consultation actions in Lore Inspector
-          </span>
-        </label>
-        <div className={styles.field}>
-          <label className={styles.label}>Max consultations per day</label>
-          <input
-            type='number'
-            className={styles.input}
-            min={1}
-            value={inspectorSettings.maxConsultationsPerDay}
-            onChange={(e) =>
-              onSettingsChange({
-                ...aiSettings,
-                inspectorSettings: {
-                  ...inspectorSettings,
-                  maxConsultationsPerDay: Math.max(1, Number(e.target.value) || 20)
-                }
-              })
-            }
-          />
-        </div>
-        <div className={styles.field}>
-          <label className={styles.label}>Max context chars per request</label>
-          <input
-            type='number'
-            className={styles.input}
-            min={300}
-            value={inspectorSettings.maxContextChars}
-            onChange={(e) =>
-              onSettingsChange({
-                ...aiSettings,
-                inspectorSettings: {
-                  ...inspectorSettings,
-                  maxContextChars: Math.max(300, Number(e.target.value) || 1800)
-                }
-              })
-            }
-          />
-        </div>
-        <div className={styles.field}>
-          <label className={styles.label}>Max response tokens</label>
-          <input
-            type='number'
-            className={styles.input}
-            min={100}
-            value={inspectorSettings.maxResponseTokens}
-            onChange={(e) =>
-              onSettingsChange({
-                ...aiSettings,
-                inspectorSettings: {
-                  ...inspectorSettings,
-                  maxResponseTokens: Math.max(100, Number(e.target.value) || 500)
-                }
-              })
-            }
-          />
-        </div>
-        <div className={styles.field}>
-          <label className={styles.label}>Low-cost model override (optional)</label>
-          <input
-            type='text'
-            className={styles.input}
-            value={inspectorSettings.lowCostModel ?? ''}
-            onChange={(e) =>
-              onSettingsChange({
-                ...aiSettings,
-                inspectorSettings: {
-                  ...inspectorSettings,
-                  lowCostModel: e.target.value
-                }
-              })
-            }
-            placeholder='e.g., gpt-4o-mini'
-          />
-        </div>
-      </div>
-
-      {aiSettings.provider === 'ollama' && (
-        <div className={styles.field}>
-          <label className={styles.label}>Ollama Base URL</label>
-          <input
-            type='text'
-            className={styles.input}
-            value={currentBaseUrl ?? ''}
-            onChange={(e) =>
-              onSettingsChange({
-                ...aiSettings,
-                configs: {
-                  ...aiSettings.configs,
-                  ollama: {
-                    ...aiSettings.configs.ollama,
-                    baseUrl: e.target.value || PROVIDER_DEFAULT_BASE_URL.ollama
+            />
+          </div>
+          <div className={styles.field}>
+            <label className={styles.label}>Max context chars per request</label>
+            <input
+              type='number'
+              className={styles.input}
+              min={300}
+              value={inspectorSettings.maxContextChars}
+              onChange={(e) =>
+                onSettingsChange({
+                  ...aiSettings,
+                  inspectorSettings: {
+                    ...inspectorSettings,
+                    maxContextChars: Math.max(300, Number(e.target.value) || 1800)
                   }
-                }
-              })
-            }
-            placeholder={PROVIDER_DEFAULT_BASE_URL.ollama}
-          />
-          <p className={styles.help}>Point to the user’s Ollama instance (default localhost).</p>
+                })
+              }
+            />
+          </div>
+          <div className={styles.field}>
+            <label className={styles.label}>Max response tokens</label>
+            <input
+              type='number'
+              className={styles.input}
+              min={100}
+              value={inspectorSettings.maxResponseTokens}
+              onChange={(e) =>
+                onSettingsChange({
+                  ...aiSettings,
+                  inspectorSettings: {
+                    ...inspectorSettings,
+                    maxResponseTokens: Math.max(100, Number(e.target.value) || 500)
+                  }
+                })
+              }
+            />
+          </div>
+          <div className={styles.field}>
+            <label className={styles.label}>Low-cost model override (optional)</label>
+            <input
+              type='text'
+              className={styles.input}
+              value={inspectorSettings.lowCostModel ?? ''}
+              onChange={(e) =>
+                onSettingsChange({
+                  ...aiSettings,
+                  inspectorSettings: {
+                    ...inspectorSettings,
+                    lowCostModel: e.target.value
+                  }
+                })
+              }
+              placeholder='e.g., gpt-4o-mini'
+            />
+          </div>
         </div>
-      )}
-
-      <div className={styles.field}>
-        <label className={styles.label}>Anthropic API Key (Claude)</label>
-        <input
-          type='password'
-          value={anthropicKey}
-          onChange={(e) => setAnthropicKey(e.target.value)}
-          placeholder='sk-ant-...'
-          className={styles.input}
-        />
-        <p className={styles.help}>
-          Get your key from{' '}
-          <a href='https://console.anthropic.com' target='_blank' rel='noopener noreferrer'>
-            console.anthropic.com
-          </a>
-        </p>
-      </div>
-
-      <div className={styles.field}>
-        <label className={styles.label}>OpenAI API Key (GPT & embeddings)</label>
-        <input
-          type='password'
-          value={openaiKey}
-          onChange={(e) => setOpenaiKey(e.target.value)}
-          placeholder='sk-...'
-          className={styles.input}
-        />
-        <p className={styles.help}>
-          Get your key from{' '}
-          <a href='https://platform.openai.com' target='_blank' rel='noopener noreferrer'>
-            platform.openai.com
-          </a>
-        </p>
-      </div>
-
-      <div className={styles.field}>
-        <label className={styles.label}>Gemini API Key</label>
-        <input
-          type='password'
-          value={geminiKey}
-          onChange={(e) => setGeminiKey(e.target.value)}
-          placeholder='AIza...'
-          className={styles.input}
-        />
-        <p className={styles.help}>
-          Get your key from{' '}
-          <a href='https://aistudio.google.com/app/apikey' target='_blank' rel='noopener noreferrer'>
-            Google AI Studio
-          </a>
-        </p>
-      </div>
-
-      <button onClick={handleSaveKeys} className={styles.saveButton}>
-        Save API Keys
-      </button>
+      </section>
 
       <div className={styles.toolsSection}>
         <h3 className={styles.toolsHeading}>Prompt Tools</h3>
@@ -727,6 +886,64 @@ export const AISettings: React.FC<AISettingsProps> = ({
           Add reusable prompt tools like tone guides, personas, and instruction
           blocks. These can be selected in the AI assistant.
         </p>
+        <div className={styles.defaultsSummaryCard}>
+          <div className={styles.defaultsSummaryHeader}>
+            <div>
+              <div className={styles.summaryEyebrow}>Default assistant for mode</div>
+              <strong>{PROJECT_MODE_LABELS[defaultsMode]}</strong>
+            </div>
+            <label className={styles.modeSelectorInline}>
+              <span className={styles.modeSelectorLabel}>Editing defaults for</span>
+              <select
+                className={styles.input}
+                value={defaultsMode}
+                onChange={(e) => setDefaultsMode(e.target.value as ProjectMode)}
+              >
+                {(['litrpg', 'game', 'general'] as ProjectMode[]).map((mode) => (
+                  <option key={mode} value={mode}>
+                    {PROJECT_MODE_LABELS[mode]}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+          <p className={styles.help}>
+            Active persona is shown in the assistant header during use. Install and
+            choose those defaults here.
+          </p>
+          <div className={styles.defaultsSummaryGrid}>
+            <div className={styles.defaultsSummaryBlock}>
+              <div className={styles.summaryLabel}>Default personas</div>
+              {activeDefaultPersonas.length > 0 ? (
+                <div className={styles.summaryChipRow}>
+                  {activeDefaultPersonas.map((tool) => (
+                    <span key={`persona-${tool.id}`} className={styles.personaChip}>
+                      {tool.name}
+                    </span>
+                  ))}
+                </div>
+              ) : (
+                <p className={styles.summaryEmpty}>No default persona selected.</p>
+              )}
+            </div>
+            <div className={styles.defaultsSummaryBlock}>
+              <div className={styles.summaryLabel}>Default supporting tools</div>
+              {activeDefaultInstructions.length > 0 ? (
+                <div className={styles.summaryChipRow}>
+                  {activeDefaultInstructions.map((tool) => (
+                    <span key={`tool-${tool.id}`} className={styles.toolChip}>
+                      {tool.name}
+                    </span>
+                  ))}
+                </div>
+              ) : (
+                <p className={styles.summaryEmpty}>
+                  No default tone/style/instruction tools selected.
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
         <div className={styles.presetGrid}>
           {PERSONA_PRESETS.map((preset) => {
             const installed = promptTools.some(
@@ -757,22 +974,11 @@ export const AISettings: React.FC<AISettingsProps> = ({
           })}
         </div>
         <div className={styles.modeDefaultsHeader}>
-          <label className={styles.label}>
-            Configure Default Active tools for mode
-            <select
-              className={styles.input}
-              value={defaultsMode}
-              onChange={(e) => setDefaultsMode(e.target.value as ProjectMode)}
-            >
-              {(['litrpg', 'game', 'general'] as ProjectMode[]).map((mode) => (
-                <option key={mode} value={mode}>
-                  {PROJECT_MODE_LABELS[mode]}
-                </option>
-              ))}
-            </select>
-          </label>
+          <strong>How this works</strong>
           <p className={styles.help}>
-            The AI assistant preselects tools using this mode’s defaults.
+            Personas define the assistant role. Other prompt tools add tone, style,
+            or reusable instruction overlays. Enabled tools can be marked as
+            defaults for the selected mode.
           </p>
         </div>
 
@@ -838,111 +1044,48 @@ export const AISettings: React.FC<AISettingsProps> = ({
         {promptTools.length === 0 ? (
           <p className={styles.help}>No prompt tools yet.</p>
         ) : (
-          <ul className={styles.toolList}>
-            {promptTools.map((tool) => (
-              <li key={tool.id} className={styles.toolItem}>
-                {editingToolId === tool.id ? (
-                  <div className={styles.editPanel}>
-                    <div className={styles.field}>
-                      <label className={styles.label}>Tool Name</label>
-                      <input
-                        type='text'
-                        className={styles.input}
-                        value={editingToolName}
-                        onChange={(e) => setEditingToolName(e.target.value)}
-                      />
-                    </div>
-                    <div className={styles.field}>
-                      <label className={styles.label}>Tool Type</label>
-                      <select
-                        className={styles.input}
-                        value={editingToolKind}
-                        onChange={(e) => setEditingToolKind(e.target.value as PromptToolKind)}
-                      >
-                        {Object.entries(PROMPT_TOOL_KIND_LABELS).map(([value, label]) => (
-                          <option key={`edit-${value}`} value={value}>
-                            {label}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    <div className={styles.field}>
-                      <label className={styles.label}>Tool Instructions</label>
-                      <textarea
-                        className={styles.textarea}
-                        value={editingToolContent}
-                        onChange={(e) => setEditingToolContent(e.target.value)}
-                      />
-                    </div>
-                    <div className={styles.toolPackActions}>
-                      <button
-                        type='button'
-                        className={styles.secondaryButton}
-                        onClick={() => handleSaveEditTool(tool.id)}
-                      >
-                        Save Changes
-                      </button>
-                      <button
-                        type='button'
-                        className={styles.secondaryButton}
-                        onClick={handleCancelEditTool}
-                      >
-                        Cancel
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <>
-                    <div className={styles.toolHeader}>
-                      <strong>{tool.name}</strong>
-                      <span className={styles.toolKind}>
-                        {PROMPT_TOOL_KIND_LABELS[tool.kind]}
-                      </span>
-                    </div>
-                    <p className={styles.toolContent}>{tool.content}</p>
-                  </>
-                )}
-                <div className={styles.toolActions}>
-                  <label>
-                    <input
-                      type='checkbox'
-                      checked={tool.enabled}
-                      onChange={(e) =>
-                        handleTogglePromptToolEnabled(tool.id, e.target.checked)
-                      }
-                    />
-                    Enabled
-                  </label>
-                  <label>
-                    <input
-                      type='checkbox'
-                      checked={defaultsForSelectedMode.includes(tool.id)}
-                      disabled={!tool.enabled}
-                      onChange={(e) =>
-                        handleToggleDefaultTool(tool.id, e.target.checked)
-                      }
-                    />
-                    Default Active ({PROJECT_MODE_LABELS[defaultsMode]})
-                  </label>
-                  <button
-                    type='button'
-                    className={styles.secondaryButton}
-                    onClick={() => handleStartEditTool(tool)}
-                    disabled={editingToolId === tool.id}
-                  >
-                    Edit
-                  </button>
-                  <button
-                    type='button'
-                    className={styles.deleteButton}
-                    onClick={() => handleDeletePromptTool(tool.id)}
-                  >
-                    Delete
-                  </button>
-                </div>
-              </li>
-            ))}
-          </ul>
+          <>
+            <div className={styles.librarySection}>
+              <div className={styles.libraryHeader}>
+                <h4 className={styles.libraryTitle}>Installed Personas</h4>
+                <p className={styles.help}>
+                  Personas shape the assistant role used for critique and editing.
+                </p>
+              </div>
+              {installedPersonas.length === 0 ? (
+                <p className={styles.help}>No personas installed yet.</p>
+              ) : (
+                <ul className={styles.toolList}>
+                  {installedPersonas.map((tool) =>
+                    renderToolItem(
+                      tool,
+                      `Default persona (${PROJECT_MODE_LABELS[defaultsMode]})`
+                    )
+                  )}
+                </ul>
+              )}
+            </div>
+            <div className={styles.librarySection}>
+              <div className={styles.libraryHeader}>
+                <h4 className={styles.libraryTitle}>Supporting Prompt Tools</h4>
+                <p className={styles.help}>
+                  Supporting tools add tone, style, and reusable instruction layers.
+                </p>
+              </div>
+              {installedNonPersonaTools.length === 0 ? (
+                <p className={styles.help}>No supporting tools installed yet.</p>
+              ) : (
+                <ul className={styles.toolList}>
+                  {installedNonPersonaTools.map((tool) =>
+                    renderToolItem(
+                      tool,
+                      `Default active (${PROJECT_MODE_LABELS[defaultsMode]})`
+                    )
+                  )}
+                </ul>
+              )}
+            </div>
+          </>
         )}
       </div>
     </div>

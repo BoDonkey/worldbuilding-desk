@@ -1,7 +1,8 @@
-import {useEffect, useMemo, useState} from 'react';
+import {useEffect, useMemo, useRef, useState} from 'react';
 import type {
   Character,
   CompendiumActionDefinition,
+  CompendiumActionLog,
   CompendiumDomain,
   CompendiumEntry,
   CompendiumMilestone,
@@ -40,20 +41,48 @@ import {
   recordZoneExposure,
   recordCompendiumAction,
   saveCompendiumEntry,
+  saveCompendiumActionLog,
   saveCompendiumMilestone,
+  saveCompendiumProgress,
   saveSettlementModule,
+  saveSettlementState,
+  saveZoneAffinityProfile,
   updateSettlementBaseStats,
   updateSettlementFortressLevel,
   saveUnlockableRecipe,
   upsertZoneAffinityProfile,
-  upsertCompendiumEntryFromEntity
+  upsertCompendiumEntryFromEntity,
+  saveZoneAffinityProgress
 } from '../services/compendiumService';
 import {getCharactersByProject} from '../characterStorage';
 import {getEntitiesByProject} from '../entityStorage';
+import {exportCompendiumJson} from '../utils/exportCompendium';
+import {readJsonFile} from '../services/jsonTransfer';
+import styles from '../styles/CompendiumRoute.module.css';
 
 interface CompendiumRouteProps {
   activeProject: Project | null;
   projectSettings: ProjectSettings | null;
+}
+
+interface CompendiumImportPreviewState {
+  fileName: string;
+  projectName?: string;
+  entries: CompendiumEntry[];
+  milestones: CompendiumMilestone[];
+  recipes: UnlockableRecipe[];
+  progress: CompendiumProgress | null;
+  actionLogs: CompendiumActionLog[];
+  zoneProfiles: ZoneAffinityProfile[];
+  zoneProgress: ZoneAffinityProgress[];
+  settlementState: SettlementState | null;
+  settlementModules: SettlementModule[];
+  importEntries: boolean;
+  importMilestones: boolean;
+  importRecipes: boolean;
+  importProgress: boolean;
+  importActionLogs: boolean;
+  importWorldSystems: boolean;
 }
 
 const DOMAIN_OPTIONS: Array<{value: CompendiumDomain; label: string}> = [
@@ -209,9 +238,7 @@ function CompendiumRoute({activeProject, projectSettings}: CompendiumRouteProps)
   const [settlementState, setSettlementState] = useState<SettlementState | null>(null);
   const [settlementModules, setSettlementModules] = useState<SettlementModule[]>([]);
   const [progress, setProgress] = useState<CompendiumProgress | null>(null);
-  const [logs, setLogs] = useState<Awaited<
-    ReturnType<typeof getCompendiumActionLogs>
-  >>([]);
+  const [logs, setLogs] = useState<CompendiumActionLog[]>([]);
   const [worldEntities, setWorldEntities] = useState<WorldEntity[]>([]);
   const [characters, setCharacters] = useState<Character[]>([]);
   const [activePartyCharacterIds, setActivePartyCharacterIds] = useState<string[]>([]);
@@ -221,6 +248,11 @@ function CompendiumRoute({activeProject, projectSettings}: CompendiumRouteProps)
     tone: 'success' | 'error';
     message: string;
   } | null>(null);
+  const [compendiumImportPreview, setCompendiumImportPreview] =
+    useState<CompendiumImportPreviewState | null>(null);
+  const [isImportPreviewOpen, setImportPreviewOpen] = useState(false);
+  const [isImportingJson, setImportingJson] = useState(false);
+  const compendiumImportInputRef = useRef<HTMLInputElement | null>(null);
 
   const [entryName, setEntryName] = useState('');
   const [entryDomain, setEntryDomain] = useState<CompendiumDomain>('beast');
@@ -546,6 +578,271 @@ function CompendiumRoute({activeProject, projectSettings}: CompendiumRouteProps)
       const message =
         error instanceof Error ? error.message : 'Unable to import entity.';
       setFeedback({tone: 'error', message});
+    }
+  };
+
+  const handleExportCompendium = () => {
+    if (!activeProject) return;
+    try {
+      exportCompendiumJson({
+        project: activeProject,
+        entries,
+        milestones,
+        recipes,
+        progress,
+        actionLogs: logs,
+        zoneProfiles,
+        zoneProgress,
+        settlementState,
+        settlementModules,
+        worldEntities
+      });
+      setFeedback({tone: 'success', message: 'Compendium exported to JSON.'});
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'Unable to export compendium.';
+      setFeedback({tone: 'error', message});
+    }
+  };
+
+  const handleImportCompendiumClick = () => {
+    compendiumImportInputRef.current?.click();
+  };
+
+  const handleImportCompendiumJson = async (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    try {
+      const raw = await readJsonFile(file);
+      if (
+        !raw ||
+        typeof raw !== 'object' ||
+        (raw as {schemaVersion?: unknown}).schemaVersion !== 1 ||
+        !('compendium' in raw) ||
+        !('worldSystems' in raw)
+      ) {
+        throw new Error('This JSON file is not a valid compendium export.');
+      }
+
+      const payload = raw as {
+        project?: {name?: string};
+        compendium?: {
+          entries?: CompendiumEntry[];
+          milestones?: CompendiumMilestone[];
+          recipes?: UnlockableRecipe[];
+          progress?: CompendiumProgress | null;
+          actionLogs?: CompendiumActionLog[];
+        };
+        worldSystems?: {
+          zoneProfiles?: ZoneAffinityProfile[];
+          zoneProgress?: ZoneAffinityProgress[];
+          settlementState?: SettlementState | null;
+          settlementModules?: SettlementModule[];
+        };
+      };
+
+      setCompendiumImportPreview({
+        fileName: file.name,
+        projectName: payload.project?.name,
+        entries: Array.isArray(payload.compendium?.entries) ? payload.compendium!.entries : [],
+        milestones: Array.isArray(payload.compendium?.milestones)
+          ? payload.compendium!.milestones
+          : [],
+        recipes: Array.isArray(payload.compendium?.recipes) ? payload.compendium!.recipes : [],
+        progress: payload.compendium?.progress ?? null,
+        actionLogs: Array.isArray(payload.compendium?.actionLogs)
+          ? payload.compendium!.actionLogs
+          : [],
+        zoneProfiles: Array.isArray(payload.worldSystems?.zoneProfiles)
+          ? payload.worldSystems!.zoneProfiles
+          : [],
+        zoneProgress: Array.isArray(payload.worldSystems?.zoneProgress)
+          ? payload.worldSystems!.zoneProgress
+          : [],
+        settlementState: payload.worldSystems?.settlementState ?? null,
+        settlementModules: Array.isArray(payload.worldSystems?.settlementModules)
+          ? payload.worldSystems!.settlementModules
+          : [],
+        importEntries: true,
+        importMilestones: true,
+        importRecipes: true,
+        importProgress: Boolean(payload.compendium?.progress),
+        importActionLogs:
+          Array.isArray(payload.compendium?.actionLogs) &&
+          payload.compendium!.actionLogs.length > 0,
+        importWorldSystems:
+          (Array.isArray(payload.worldSystems?.zoneProfiles) &&
+            payload.worldSystems!.zoneProfiles.length > 0) ||
+          (Array.isArray(payload.worldSystems?.zoneProgress) &&
+            payload.worldSystems!.zoneProgress.length > 0) ||
+          Boolean(payload.worldSystems?.settlementState) ||
+          (Array.isArray(payload.worldSystems?.settlementModules) &&
+            payload.worldSystems!.settlementModules.length > 0)
+      });
+      setImportPreviewOpen(true);
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'Unable to read compendium JSON.';
+      setFeedback({tone: 'error', message});
+    } finally {
+      event.target.value = '';
+    }
+  };
+
+  const closeImportPreview = () => {
+    setImportPreviewOpen(false);
+    setCompendiumImportPreview(null);
+  };
+
+  const toggleImportSection = (
+    key:
+      | 'importEntries'
+      | 'importMilestones'
+      | 'importRecipes'
+      | 'importProgress'
+      | 'importActionLogs'
+      | 'importWorldSystems'
+  ) => {
+    setCompendiumImportPreview((prev) =>
+      prev ? {...prev, [key]: !prev[key]} : prev
+    );
+  };
+
+  const handleConfirmCompendiumImport = async () => {
+    if (!activeProject || !compendiumImportPreview) return;
+    setImportingJson(true);
+    setFeedback(null);
+    try {
+      if (compendiumImportPreview.importEntries) {
+        const importedEntries = compendiumImportPreview.entries.map((entry) => ({
+          ...entry,
+          projectId: activeProject.id
+        }));
+        await Promise.all(importedEntries.map((entry) => saveCompendiumEntry(entry)));
+        setEntries((prev) => {
+          const map = new Map(prev.map((entry) => [entry.id, entry]));
+          importedEntries.forEach((entry) => map.set(entry.id, entry));
+          return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name));
+        });
+      }
+
+      if (compendiumImportPreview.importMilestones) {
+        const importedMilestones = compendiumImportPreview.milestones.map((milestone) => ({
+          ...milestone,
+          projectId: activeProject.id
+        }));
+        await Promise.all(
+          importedMilestones.map((milestone) => saveCompendiumMilestone(milestone))
+        );
+        setMilestones((prev) => {
+          const map = new Map(prev.map((milestone) => [milestone.id, milestone]));
+          importedMilestones.forEach((milestone) => map.set(milestone.id, milestone));
+          return Array.from(map.values()).sort((a, b) => a.pointsRequired - b.pointsRequired);
+        });
+      }
+
+      if (compendiumImportPreview.importRecipes) {
+        const importedRecipes = compendiumImportPreview.recipes.map((recipe) => ({
+          ...recipe,
+          projectId: activeProject.id
+        }));
+        await Promise.all(importedRecipes.map((recipe) => saveUnlockableRecipe(recipe)));
+        setRecipes((prev) => {
+          const map = new Map(prev.map((recipe) => [recipe.id, recipe]));
+          importedRecipes.forEach((recipe) => map.set(recipe.id, recipe));
+          return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name));
+        });
+      }
+
+      if (compendiumImportPreview.importProgress && compendiumImportPreview.progress) {
+        const importedProgress = {
+          ...compendiumImportPreview.progress,
+          projectId: activeProject.id
+        };
+        await saveCompendiumProgress(importedProgress);
+        setProgress(importedProgress);
+      }
+
+      if (compendiumImportPreview.importActionLogs) {
+        const importedLogs = compendiumImportPreview.actionLogs.map((log) => ({
+          ...log,
+          projectId: activeProject.id
+        }));
+        await Promise.all(importedLogs.map((log) => saveCompendiumActionLog(log)));
+        setLogs((prev) => {
+          const map = new Map(prev.map((log) => [log.id, log]));
+          importedLogs.forEach((log) => map.set(log.id, log));
+          return Array.from(map.values()).sort((a, b) => b.createdAt - a.createdAt);
+        });
+      }
+
+      if (compendiumImportPreview.importWorldSystems) {
+        const importedZoneProfiles = compendiumImportPreview.zoneProfiles.map((profile) => ({
+          ...profile,
+          projectId: activeProject.id
+        }));
+        const importedZoneProgress = compendiumImportPreview.zoneProgress.map((progressItem) => ({
+          ...progressItem,
+          projectId: activeProject.id
+        }));
+        const importedSettlementModules = compendiumImportPreview.settlementModules.map(
+          (module) => ({
+            ...module,
+            projectId: activeProject.id
+          })
+        );
+        const importedSettlementState = compendiumImportPreview.settlementState
+          ? {
+              ...compendiumImportPreview.settlementState,
+              projectId: activeProject.id
+            }
+          : null;
+
+        await Promise.all(importedZoneProfiles.map((profile) => saveZoneAffinityProfile(profile)));
+        await Promise.all(
+          importedZoneProgress.map((progressItem) =>
+            saveZoneAffinityProgress(progressItem)
+          )
+        );
+        await Promise.all(
+          importedSettlementModules.map((module) => saveSettlementModule(module))
+        );
+        if (importedSettlementState) {
+          await saveSettlementState(importedSettlementState);
+        }
+
+        setZoneProfiles((prev) => {
+          const map = new Map(prev.map((profile) => [profile.id, profile]));
+          importedZoneProfiles.forEach((profile) => map.set(profile.id, profile));
+          return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name));
+        });
+        setZoneProgress((prev) => {
+          const map = new Map(prev.map((progressItem) => [progressItem.id, progressItem]));
+          importedZoneProgress.forEach((progressItem) =>
+            map.set(progressItem.id, progressItem)
+          );
+          return Array.from(map.values()).sort((a, b) => b.affinityPoints - a.affinityPoints);
+        });
+        setSettlementModules((prev) => {
+          const map = new Map(prev.map((module) => [module.id, module]));
+          importedSettlementModules.forEach((module) => map.set(module.id, module));
+          return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name));
+        });
+        if (importedSettlementState) {
+          setSettlementState(importedSettlementState);
+        }
+      }
+
+      setFeedback({tone: 'success', message: 'Compendium JSON imported.'});
+      closeImportPreview();
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'Unable to import compendium JSON.';
+      setFeedback({tone: 'error', message});
+    } finally {
+      setImportingJson(false);
     }
   };
 
@@ -991,43 +1288,36 @@ function CompendiumRoute({activeProject, projectSettings}: CompendiumRouteProps)
   const CompendiumOverviewSection = () => {
     return (
       <>
-        <p style={{marginTop: 0, marginBottom: '0.9rem', color: '#4b5563'}}>
+        <p className={styles.sectionLead}>
           Use this snapshot to see progress at a glance, then jump into the next
           task without scanning every advanced system.
         </p>
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-            gap: '0.75rem',
-            marginBottom: '1rem'
-          }}
-        >
-          <article style={{padding: '0.85rem', border: '1px solid #ddd', borderRadius: '8px'}}>
-            <h3 style={{marginTop: 0, marginBottom: '0.45rem'}}>Total Points</h3>
-            <div style={{fontSize: '1.1rem', fontWeight: 700}}>
+        <div className={styles.metricsGrid}>
+          <article className={styles.metricCard}>
+            <h3 className={styles.metricTitle}>Total Points</h3>
+            <div className={styles.metricValue}>
               {isLoading || !progress ? '...' : progress.totalPoints}
             </div>
           </article>
-          <article style={{padding: '0.85rem', border: '1px solid #ddd', borderRadius: '8px'}}>
-            <h3 style={{marginTop: 0, marginBottom: '0.45rem'}}>Milestones Unlocked</h3>
-            <div style={{fontSize: '1.1rem', fontWeight: 700}}>
+          <article className={styles.metricCard}>
+            <h3 className={styles.metricTitle}>Milestones Unlocked</h3>
+            <div className={styles.metricValue}>
               {isLoading || !progress ? '...' : progress.unlockedMilestoneIds.length}
             </div>
           </article>
-          <article style={{padding: '0.85rem', border: '1px solid #ddd', borderRadius: '8px'}}>
-            <h3 style={{marginTop: 0, marginBottom: '0.45rem'}}>Recipes Unlocked</h3>
-            <div style={{fontSize: '1.1rem', fontWeight: 700}}>
+          <article className={styles.metricCard}>
+            <h3 className={styles.metricTitle}>Recipes Unlocked</h3>
+            <div className={styles.metricValue}>
               {isLoading || !progress ? '...' : progress.unlockedRecipeIds.length}
             </div>
           </article>
         </div>
 
-        <section style={{padding: '1rem', border: '1px solid #ddd', borderRadius: '8px', marginBottom: '1rem'}}>
-          <h2 style={{marginTop: 0}}>What To Do Next</h2>
-          <ul style={{listStyle: 'none', padding: 0, margin: 0}}>
+        <section className={styles.sectionCard}>
+          <h2 className={styles.sectionTitle}>What To Do Next</h2>
+          <ul className={styles.plainList}>
             {nextStepItems.map((step) => (
-              <li key={step.id} style={{marginBottom: '0.45rem'}}>
+              <li key={step.id} className={styles.listItem}>
                 {step.done ? 'Done' : 'Next'}: {step.label}{' '}
                 {!step.done && (
                   <button
@@ -1042,11 +1332,11 @@ function CompendiumRoute({activeProject, projectSettings}: CompendiumRouteProps)
           </ul>
         </section>
 
-        <section style={{padding: '1rem', border: '1px solid #ddd', borderRadius: '8px'}}>
-          <h2 style={{marginTop: 0}}>Recent Actions</h2>
+        <section className={styles.sectionCard}>
+          <h2 className={styles.sectionTitle}>Recent Actions</h2>
           {logs.length === 0 ? (
             <>
-              <p style={{marginBottom: '0.65rem'}}>No actions logged yet.</p>
+              <p className={styles.emptyStateText}>No actions logged yet.</p>
               <button
                 type='button'
                 onClick={() => openTabWithSmartDefaults('entries', 'log-action')}
@@ -1055,9 +1345,9 @@ function CompendiumRoute({activeProject, projectSettings}: CompendiumRouteProps)
               </button>
             </>
           ) : (
-            <ul style={{listStyle: 'none', padding: 0, margin: 0}}>
+            <ul className={styles.plainList}>
               {logs.slice(0, 12).map((log) => (
-                <li key={log.id} style={{marginBottom: '0.35rem'}}>
+                <li key={log.id} className={styles.listItem}>
                   {(() => {
                     const entry = entryById.get(log.entryId);
                     const actionLabel =
@@ -1082,39 +1372,32 @@ function CompendiumRoute({activeProject, projectSettings}: CompendiumRouteProps)
 
   const CompendiumEntriesSection = () => (
     <>
-      <p style={{marginTop: 0, marginBottom: '0.9rem', color: '#4b5563'}}>
+      <p className={styles.sectionLead}>
         Create new compendium records or import from World Bible, then log actions
         from each entry card.
       </p>
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
-          gap: '1rem',
-          marginBottom: '1rem'
-        }}
-      >
-        <article style={{padding: '1rem', border: '1px solid #ddd', borderRadius: '8px'}}>
-          <h2 style={{marginTop: 0}}>Add Entry</h2>
-          <p style={{marginTop: 0, fontSize: '0.85rem', color: '#6b7280'}}>
+      <div className={styles.cardGrid}>
+        <article className={styles.sectionCard}>
+          <h2 className={styles.sectionTitle}>Add Entry</h2>
+          <p className={styles.sectionHint}>
             Use this for custom creatures, resources, or artifacts not yet in the
             World Bible.
           </p>
-          <label style={{display: 'block', marginBottom: '0.5rem'}}>
-            Name
+          <label className={styles.fieldBlock}>
+            <span className={styles.fieldLabel}>Name</span>
             <input
               type='text'
               value={entryName}
               onChange={(e) => setEntryName(e.target.value)}
-              style={{width: '100%'}}
+              className={styles.fullWidthInput}
             />
           </label>
-          <label style={{display: 'block', marginBottom: '0.75rem'}}>
-            Domain
+          <label className={styles.fieldBlock}>
+            <span className={styles.fieldLabel}>Domain</span>
             <select
               value={entryDomain}
               onChange={(e) => setEntryDomain(e.target.value as CompendiumDomain)}
-              style={{width: '100%'}}
+              className={styles.fullWidthInput}
             >
               {DOMAIN_OPTIONS.map((option) => (
                 <option key={option.value} value={option.value}>
@@ -1128,24 +1411,24 @@ function CompendiumRoute({activeProject, projectSettings}: CompendiumRouteProps)
           </button>
         </article>
 
-        <article style={{padding: '1rem', border: '1px solid #ddd', borderRadius: '8px'}}>
-          <h2 style={{marginTop: 0}}>Import from World Bible</h2>
-          <p style={{marginTop: 0, fontSize: '0.85rem', color: '#6b7280'}}>
+        <article className={styles.sectionCard}>
+          <h2 className={styles.sectionTitle}>Import from World Bible</h2>
+          <p className={styles.sectionHint}>
             Best for existing entities so names stay aligned across tools.
           </p>
           {draftWorldEntityCount > 0 && (
-            <p style={{marginTop: 0, fontSize: '0.82rem', color: '#c2410c'}}>
+            <p className={styles.entryWarning}>
               {draftWorldEntityCount} World Bible entr
               {draftWorldEntityCount === 1 ? 'y is' : 'ies are'} marked needs
               completion.
             </p>
           )}
-          <label style={{display: 'block', marginBottom: '0.5rem'}}>
-            Entity
+          <label className={styles.fieldBlock}>
+            <span className={styles.fieldLabel}>Entity</span>
             <select
               value={entityToImportId}
               onChange={(e) => setEntityToImportId(e.target.value)}
-              style={{width: '100%'}}
+              className={styles.fullWidthInput}
             >
               <option value=''>Select an entity</option>
               {worldEntities.map((entity) => (
@@ -1156,12 +1439,12 @@ function CompendiumRoute({activeProject, projectSettings}: CompendiumRouteProps)
               ))}
             </select>
           </label>
-          <label style={{display: 'block', marginBottom: '0.75rem'}}>
-            Domain
+          <label className={styles.fieldBlock}>
+            <span className={styles.fieldLabel}>Domain</span>
             <select
               value={importDomain}
               onChange={(e) => setImportDomain(e.target.value as CompendiumDomain)}
-              style={{width: '100%'}}
+              className={styles.fullWidthInput}
             >
               {DOMAIN_OPTIONS.map((option) => (
                 <option key={option.value} value={option.value}>
@@ -1180,22 +1463,14 @@ function CompendiumRoute({activeProject, projectSettings}: CompendiumRouteProps)
         </article>
       </div>
 
-      <section style={{padding: '1rem', border: '1px solid #ddd', borderRadius: '8px'}}>
-        <h2 style={{marginTop: 0}}>Entries</h2>
+      <section className={styles.sectionCard}>
+        <h2 className={styles.sectionTitle}>Entries</h2>
         {entries.length === 0 && (
-          <div
-            style={{
-              marginBottom: '0.85rem',
-              padding: '0.75rem',
-              border: '1px solid #e5e7eb',
-              borderRadius: '6px',
-              backgroundColor: '#f9fafb'
-            }}
-          >
-            <p style={{marginTop: 0, marginBottom: '0.6rem'}}>
+          <div className={`${styles.emptyStateCard} ${styles.emptyStateCardTight}`}>
+            <p className={styles.emptyStateText}>
               No compendium entries yet.
             </p>
-            <div style={{display: 'flex', gap: '0.5rem', flexWrap: 'wrap'}}>
+            <div className={styles.inlineActions}>
               <button
                 type='button'
                 onClick={() => {
@@ -1218,31 +1493,23 @@ function CompendiumRoute({activeProject, projectSettings}: CompendiumRouteProps)
             </div>
           </div>
         )}
-        <ul style={{listStyle: 'none', padding: 0, margin: 0}}>
+        <ul className={styles.plainList}>
           {entries.map((entry) => (
-            <li
-              key={entry.id}
-              style={{
-                border: '1px solid #eee',
-                borderRadius: '6px',
-                padding: '0.75rem',
-                marginBottom: '0.75rem'
-              }}
-            >
+            <li key={entry.id} className={styles.entryCard}>
               <strong>{entry.name}</strong>{' '}
-              <span style={{fontSize: '0.85rem', color: '#666'}}>[{entry.domain}]</span>
+              <span className={styles.entryMeta}>[{entry.domain}]</span>
               {entry.sourceEntityId && (
-                <div style={{fontSize: '0.8rem', color: '#666'}}>
+                <div className={styles.entryMeta}>
                   Linked to World Bible entity
                 </div>
               )}
               {entry.sourceEntityId &&
                 worldEntityById.get(entry.sourceEntityId)?.completionStatus === 'draft' && (
-                  <div style={{fontSize: '0.8rem', color: '#c2410c'}}>
+                  <div className={styles.entryWarning}>
                     Source World Bible record still needs completion
                   </div>
                 )}
-              <div style={{display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginTop: '0.5rem'}}>
+              <div className={styles.entryActionRow}>
                 {entry.actions.map((action) => {
                   const key = `${entry.id}:${action.id}`;
                   const alreadyDone = completedActionSet.has(key);
@@ -1250,7 +1517,7 @@ function CompendiumRoute({activeProject, projectSettings}: CompendiumRouteProps)
                     isRecordingKey === key || (!action.repeatable && alreadyDone);
                   const quantity = Math.max(1, Math.floor(quantityByActionKey[key] || 1));
                   return (
-                    <div key={key} style={{display: 'flex', alignItems: 'center', gap: '0.35rem'}}>
+                    <div key={key} className={styles.entryActionGroup}>
                       {action.repeatable && (
                         <input
                           type='number'
@@ -1262,7 +1529,7 @@ function CompendiumRoute({activeProject, projectSettings}: CompendiumRouteProps)
                               [key]: Number(e.target.value)
                             }))
                           }
-                          style={{width: '58px'}}
+                          className={styles.quantityInput}
                         />
                       )}
                       <button
@@ -1289,40 +1556,33 @@ function CompendiumRoute({activeProject, projectSettings}: CompendiumRouteProps)
 
   const CompendiumProgressionSection = () => (
     <>
-      <p style={{marginTop: 0, marginBottom: '0.9rem', color: '#4b5563'}}>
+      <p className={styles.sectionLead}>
         Define unlock rules first, then validate craftability using current
         progression and runtime modifiers.
       </p>
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: '2fr 1fr',
-          gap: '1rem',
-          alignItems: 'start'
-        }}
-      >
-      <section style={{padding: '1rem', border: '1px solid #ddd', borderRadius: '8px'}}>
-        <h2 style={{marginTop: 0}}>Recipes</h2>
-        <p style={{marginTop: 0, fontSize: '0.85rem', color: '#6b7280'}}>
+      <div className={styles.splitGrid}>
+      <section className={styles.sectionCard}>
+        <h2 className={styles.sectionTitle}>Recipes</h2>
+        <p className={styles.sectionHint}>
           Recipes define what can be unlocked and what requirements must be met.
         </p>
-        <label style={{display: 'block', marginBottom: '0.5rem'}}>
-          Name
+        <label className={styles.fieldBlock}>
+          <span className={styles.fieldLabel}>Name</span>
           <input
             type='text'
             value={recipeName}
             onChange={(e) => setRecipeName(e.target.value)}
-            style={{width: '100%'}}
+            className={styles.fullWidthInput}
           />
         </label>
-        <label style={{display: 'block', marginBottom: '0.75rem'}}>
-          Category
+        <label className={styles.fieldBlock}>
+          <span className={styles.fieldLabel}>Category</span>
           <select
             value={recipeCategory}
             onChange={(e) =>
               setRecipeCategory(e.target.value as UnlockableRecipe['category'])
             }
-            style={{width: '100%'}}
+            className={styles.fullWidthInput}
           >
             {RECIPE_CATEGORY_OPTIONS.map((category) => (
               <option key={category} value={category}>
@@ -1331,39 +1591,31 @@ function CompendiumRoute({activeProject, projectSettings}: CompendiumRouteProps)
             ))}
           </select>
         </label>
-        <label style={{display: 'block', marginBottom: '0.5rem'}}>
-          Min Character Level
+        <label className={styles.fieldBlock}>
+          <span className={styles.fieldLabel}>Min Character Level</span>
           <input
             type='number'
             min={1}
             value={recipeMinLevel}
             onChange={(e) => setRecipeMinLevel(Number(e.target.value))}
-            style={{width: '100%'}}
+            className={styles.fullWidthInput}
           />
         </label>
-        <label style={{display: 'block', marginBottom: '0.75rem'}}>
-          Required Milestone IDs (comma-separated)
+        <label className={styles.fieldBlock}>
+          <span className={styles.fieldLabel}>Required Milestone IDs (comma-separated)</span>
           <input
             type='text'
             value={recipeRequiredMilestones}
             onChange={(e) => setRecipeRequiredMilestones(e.target.value)}
-            style={{width: '100%'}}
+            className={styles.fullWidthInput}
           />
         </label>
         <button type='button' onClick={() => void handleCreateRecipe()}>
           Add Recipe
         </button>
         {recipes.length === 0 && (
-          <div
-            style={{
-              marginTop: '0.75rem',
-              padding: '0.65rem',
-              border: '1px solid #e5e7eb',
-              borderRadius: '6px',
-              backgroundColor: '#f9fafb'
-            }}
-          >
-            <p style={{marginTop: 0, marginBottom: '0.5rem'}}>
+          <div className={styles.emptyStateCard}>
+            <p className={styles.emptyStateText}>
               No recipes yet. Create one to test unlock and craftability flow.
             </p>
             <button
@@ -1376,9 +1628,9 @@ function CompendiumRoute({activeProject, projectSettings}: CompendiumRouteProps)
             </button>
           </div>
         )}
-        <ul style={{listStyle: 'none', padding: 0, marginTop: '0.75rem'}}>
+        <ul className={styles.plainListSpaced}>
           {recipes.map((recipe) => (
-            <li key={recipe.id} style={{marginBottom: '0.35rem'}}>
+            <li key={recipe.id} className={styles.listItem}>
               {unlockedRecipeSet.has(recipe.id) ? 'Unlocked' : 'Locked'}: {recipe.name}
               {recipe.requirements?.minCharacterLevel ? (
                 <> (lvl {recipe.requirements.minCharacterLevel}+)</>
@@ -1388,63 +1640,55 @@ function CompendiumRoute({activeProject, projectSettings}: CompendiumRouteProps)
         </ul>
       </section>
 
-      <div style={{display: 'grid', gap: '1rem'}}>
-        <section style={{padding: '1rem', border: '1px solid #ddd', borderRadius: '8px'}}>
-          <h2 style={{marginTop: 0}}>Milestones</h2>
-          <p style={{marginTop: 0, fontSize: '0.85rem', color: '#6b7280'}}>
+      <div className={styles.stackGrid}>
+        <section className={styles.sectionCard}>
+          <h2 className={styles.sectionTitle}>Milestones</h2>
+          <p className={styles.sectionHint}>
             Milestones convert point totals into explicit progression beats.
           </p>
-          <label style={{display: 'block', marginBottom: '0.5rem'}}>
-            Name
+          <label className={styles.fieldBlock}>
+            <span className={styles.fieldLabel}>Name</span>
             <input
               type='text'
               value={milestoneName}
               onChange={(e) => setMilestoneName(e.target.value)}
-              style={{width: '100%'}}
+              className={styles.fullWidthInput}
             />
           </label>
-          <label style={{display: 'block', marginBottom: '0.5rem'}}>
-            Points Required
+          <label className={styles.fieldBlock}>
+            <span className={styles.fieldLabel}>Points Required</span>
             <input
               type='number'
               min={0}
               value={milestonePoints}
               onChange={(e) => setMilestonePoints(Number(e.target.value))}
-              style={{width: '100%'}}
+              className={styles.fullWidthInput}
             />
           </label>
-          <label style={{display: 'block', marginBottom: '0.5rem'}}>
-            Description
+          <label className={styles.fieldBlock}>
+            <span className={styles.fieldLabel}>Description</span>
             <input
               type='text'
               value={milestoneDescription}
               onChange={(e) => setMilestoneDescription(e.target.value)}
-              style={{width: '100%'}}
+              className={styles.fullWidthInput}
             />
           </label>
-          <label style={{display: 'block', marginBottom: '0.75rem'}}>
-            Unlock Recipe IDs (comma-separated)
+          <label className={styles.fieldBlock}>
+            <span className={styles.fieldLabel}>Unlock Recipe IDs (comma-separated)</span>
             <input
               type='text'
               value={milestoneRecipeIds}
               onChange={(e) => setMilestoneRecipeIds(e.target.value)}
-              style={{width: '100%'}}
+              className={styles.fullWidthInput}
             />
           </label>
           <button type='button' onClick={() => void handleCreateMilestone()}>
             Add Milestone
           </button>
           {milestones.length === 0 && (
-            <div
-              style={{
-                marginTop: '0.75rem',
-                padding: '0.65rem',
-                border: '1px solid #e5e7eb',
-                borderRadius: '6px',
-                backgroundColor: '#f9fafb'
-              }}
-            >
-              <p style={{marginTop: 0, marginBottom: '0.5rem'}}>
+            <div className={styles.emptyStateCard}>
+              <p className={styles.emptyStateText}>
                 No milestones yet. Add a threshold to make progression visible.
               </p>
               <button
@@ -1457,9 +1701,9 @@ function CompendiumRoute({activeProject, projectSettings}: CompendiumRouteProps)
               </button>
             </div>
           )}
-          <ul style={{listStyle: 'none', padding: 0, marginTop: '0.75rem'}}>
+          <ul className={styles.plainListSpaced}>
             {milestones.map((milestone) => (
-              <li key={milestone.id} style={{marginBottom: '0.35rem'}}>
+              <li key={milestone.id} className={styles.listItem}>
                 {unlockedMilestoneSet.has(milestone.id) ? 'Unlocked' : 'Locked'}:{' '}
                 {milestone.name} ({milestone.pointsRequired} pts)
               </li>
@@ -1467,50 +1711,41 @@ function CompendiumRoute({activeProject, projectSettings}: CompendiumRouteProps)
           </ul>
         </section>
 
-        <section style={{padding: '1rem', border: '1px solid #ddd', borderRadius: '8px'}}>
-          <h2 style={{marginTop: 0}}>Craftability Preview</h2>
-          <p style={{marginTop: 0, fontSize: '0.85rem', color: '#6b7280'}}>
+        <section className={styles.sectionCard}>
+          <h2 className={styles.sectionTitle}>Craftability Preview</h2>
+          <p className={styles.sectionHint}>
             Check if recipes are craftable for a sample character and material loadout.
           </p>
-          <label style={{display: 'block', marginBottom: '0.5rem'}}>
-            Character Level
+          <label className={styles.fieldBlock}>
+            <span className={styles.fieldLabel}>Character Level</span>
             <input
               type='number'
               min={1}
               value={previewLevel}
               onChange={(e) => setPreviewLevel(Number(e.target.value))}
-              style={{width: '100%'}}
+              className={styles.fullWidthInput}
             />
           </label>
-          <label style={{display: 'block', marginBottom: '0.75rem'}}>
-            Materials (one per line: <code>itemId:quantity</code>)
+          <label className={styles.fieldBlock}>
+            <span className={styles.fieldLabel}>Materials (one per line: <code>itemId:quantity</code>)</span>
             <textarea
               rows={5}
               value={previewMaterialsText}
               onChange={(e) => setPreviewMaterialsText(e.target.value)}
               placeholder={'wolf_pelt:4\niron_ore:12'}
-              style={{width: '100%'}}
+              className={styles.fullWidthInput}
             />
           </label>
-          <div
-            style={{
-              fontSize: '0.82rem',
-              color: '#4b5563',
-              marginBottom: '0.65rem',
-              padding: '0.5rem',
-              border: '1px solid #e5e7eb',
-              borderRadius: '6px'
-            }}
-          >
+          <div className={styles.infoCard}>
             Runtime modifiers: +{craftingRuntimeModifiers.levelBonus} effective level,
             material cost x{craftingRuntimeModifiers.materialCostMultiplier.toFixed(2)}
             {craftingRuntimeModifiers.notes.length > 0 && (
-              <div style={{marginTop: '0.3rem'}}>
+              <div>
                 {craftingRuntimeModifiers.notes.join(' ')}
               </div>
             )}
           </div>
-          <ul style={{listStyle: 'none', padding: 0, margin: 0}}>
+          <ul className={styles.plainList}>
             {recipes.map((recipe) => {
               const check = canCraftRecipe(recipe, {
                 progress,
@@ -1519,28 +1754,23 @@ function CompendiumRoute({activeProject, projectSettings}: CompendiumRouteProps)
                 runtime: craftingRuntimeModifiers
               });
               return (
-                <li
-                  key={`preview-${recipe.id}`}
-                  style={{
-                    marginBottom: '0.5rem',
-                    paddingBottom: '0.5rem',
-                    borderBottom: '1px solid #efefef'
-                  }}
-                >
+                <li key={`preview-${recipe.id}`} className={styles.ruleListItem}>
                   <strong>{recipe.name}</strong>{' '}
                   <span
-                    style={{
-                      color: check.craftable ? '#166534' : '#991b1b'
-                    }}
+                    className={`${styles.recipeStatus} ${
+                      check.craftable
+                        ? styles.recipeStatusCraftable
+                        : styles.recipeStatusBlocked
+                    }`}
                   >
                     {check.craftable ? 'craftable' : 'not craftable'}
                   </span>
-                  <div style={{fontSize: '0.78rem', color: '#6b7280'}}>
+                  <div className={styles.subtleMeta}>
                     Effective level: {check.effectiveCharacterLevel}
                     {' · '}Material multiplier: x{check.materialCostMultiplier.toFixed(2)}
                   </div>
                   {!check.craftable && check.reasons.length > 0 && (
-                    <div style={{fontSize: '0.82rem', color: '#6b7280'}}>
+                    <div className={styles.subtleMeta}>
                       {check.reasons.join(' ')}
                     </div>
                   )}
@@ -1557,10 +1787,8 @@ function CompendiumRoute({activeProject, projectSettings}: CompendiumRouteProps)
   const CompendiumWorldSystemsSection = () => {
     if (!enableWorldSystems) {
       return (
-        <section
-          style={{padding: '1rem', border: '1px solid #ddd', borderRadius: '8px'}}
-        >
-          <p style={{margin: 0, color: '#4b5563'}}>
+        <section className={styles.settingsCallout}>
+          <p className={styles.sectionLead}>
             Settlement and zone systems are hidden for this project. Enable
             <strong> Settlement/Zone Systems</strong> in Settings to access them.
           </p>
@@ -2070,103 +2298,215 @@ function CompendiumRoute({activeProject, projectSettings}: CompendiumRouteProps)
   };
 
   return (
-    <section>
+    <section className={styles.container}>
       <h1>Compendium</h1>
+      <div className={styles.actionRow}>
+        <button type='button' onClick={handleExportCompendium}>
+          Export Compendium JSON
+        </button>
+        <button type='button' onClick={handleImportCompendiumClick}>
+          Import Compendium JSON
+        </button>
+        <input
+          ref={compendiumImportInputRef}
+          type='file'
+          accept='.json,application/json'
+          onChange={(event) => void handleImportCompendiumJson(event)}
+          style={{display: 'none'}}
+        />
+      </div>
       {feedback && (
         <p
           role='status'
-          style={{
-            marginBottom: '1rem',
-            padding: '0.5rem 0.75rem',
-            borderRadius: '6px',
-            border: `1px solid ${
-              feedback.tone === 'error' ? '#fecaca' : '#bbf7d0'
-            }`,
-            backgroundColor:
-              feedback.tone === 'error' ? '#fef2f2' : '#f0fdf4',
-            color: feedback.tone === 'error' ? '#991b1b' : '#166534'
-          }}
+          className={`${styles.feedbackBanner} ${
+            feedback.tone === 'error' ? styles.feedbackError : styles.feedbackSuccess
+          }`}
         >
           {feedback.message}
         </p>
       )}
+      {isImportPreviewOpen && compendiumImportPreview && (
+        <div
+          role='dialog'
+          aria-modal='true'
+          className={styles.modalOverlay}
+        >
+          <div className={styles.modalCard}>
+            <div className={styles.modalHeader}>
+              <h2 className={styles.modalTitle}>Preview compendium JSON import</h2>
+              <p className={styles.modalDescription}>
+                Review the sections from <strong>{compendiumImportPreview.fileName}</strong>
+                {compendiumImportPreview.projectName
+                  ? ` exported from ${compendiumImportPreview.projectName}.`
+                  : '.'}
+              </p>
+            </div>
+
+            <div className={styles.importPreviewGrid}>
+              <label className={styles.importOptionCard}>
+                <span className={styles.importOptionLabel}>
+                  <input
+                    type='checkbox'
+                    checked={compendiumImportPreview.importEntries}
+                    onChange={() => toggleImportSection('importEntries')}
+                  />{' '}
+                  Entries
+                </span>
+                <span className={styles.importOptionMeta}>
+                  {compendiumImportPreview.entries.length} item(s)
+                </span>
+              </label>
+              <label className={styles.importOptionCard}>
+                <span className={styles.importOptionLabel}>
+                  <input
+                    type='checkbox'
+                    checked={compendiumImportPreview.importMilestones}
+                    onChange={() => toggleImportSection('importMilestones')}
+                  />{' '}
+                  Milestones
+                </span>
+                <span className={styles.importOptionMeta}>
+                  {compendiumImportPreview.milestones.length} item(s)
+                </span>
+              </label>
+              <label className={styles.importOptionCard}>
+                <span className={styles.importOptionLabel}>
+                  <input
+                    type='checkbox'
+                    checked={compendiumImportPreview.importRecipes}
+                    onChange={() => toggleImportSection('importRecipes')}
+                  />{' '}
+                  Recipes
+                </span>
+                <span className={styles.importOptionMeta}>
+                  {compendiumImportPreview.recipes.length} item(s)
+                </span>
+              </label>
+              <label className={styles.importOptionCard}>
+                <span className={styles.importOptionLabel}>
+                  <input
+                    type='checkbox'
+                    checked={compendiumImportPreview.importProgress}
+                    onChange={() => toggleImportSection('importProgress')}
+                    disabled={!compendiumImportPreview.progress}
+                  />{' '}
+                  Progress state
+                </span>
+                <span className={styles.importOptionMeta}>
+                  {compendiumImportPreview.progress ? 'Available' : 'Not present'}
+                </span>
+              </label>
+              <label className={styles.importOptionCard}>
+                <span className={styles.importOptionLabel}>
+                  <input
+                    type='checkbox'
+                    checked={compendiumImportPreview.importActionLogs}
+                    onChange={() => toggleImportSection('importActionLogs')}
+                    disabled={compendiumImportPreview.actionLogs.length === 0}
+                  />{' '}
+                  Action logs
+                </span>
+                <span className={styles.importOptionMeta}>
+                  {compendiumImportPreview.actionLogs.length} item(s)
+                </span>
+              </label>
+              <label className={styles.importOptionCard}>
+                <span className={styles.importOptionLabel}>
+                  <input
+                    type='checkbox'
+                    checked={compendiumImportPreview.importWorldSystems}
+                    onChange={() => toggleImportSection('importWorldSystems')}
+                    disabled={
+                      compendiumImportPreview.zoneProfiles.length === 0 &&
+                      compendiumImportPreview.zoneProgress.length === 0 &&
+                      compendiumImportPreview.settlementModules.length === 0 &&
+                      !compendiumImportPreview.settlementState
+                    }
+                  />{' '}
+                  World systems
+                </span>
+                <span className={styles.importOptionMeta}>
+                  {compendiumImportPreview.zoneProfiles.length} zones ·{' '}
+                  {compendiumImportPreview.settlementModules.length} modules
+                </span>
+              </label>
+            </div>
+
+            <div className={styles.importBehaviorCard}>
+              <strong className={styles.importBehaviorTitle}>Import behavior</strong>
+              <p className={styles.importBehaviorText}>
+                Imported records are written into the current project and overwrite
+                local records with the same ids. Unchecked sections are skipped.
+              </p>
+            </div>
+
+            <div className={styles.modalActions}>
+              <button type='button' onClick={closeImportPreview} disabled={isImportingJson}>
+                Cancel
+              </button>
+              <button
+                type='button'
+                onClick={() => void handleConfirmCompendiumImport()}
+                disabled={isImportingJson}
+              >
+                {isImportingJson ? 'Importing...' : 'Import selected sections'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       <details
-        style={{
-          marginBottom: '1rem',
-          border: '1px solid #d1d5db',
-          borderRadius: '8px',
-          padding: '0.7rem 0.85rem',
-          backgroundColor: '#f9fafb'
-        }}
+        className={styles.helpPanel}
       >
-        <summary style={{cursor: 'pointer', fontWeight: 600}}>
+        <summary className={styles.helpSummary}>
           Compendium Wizard Help
         </summary>
-        <div style={{marginTop: '0.6rem', fontSize: '0.9rem', color: '#374151'}}>
-          <p style={{margin: '0 0 0.4rem 0'}}>
+        <div className={styles.helpBody}>
+          <p>
             Step 1: set up entries, milestones, and recipes.
           </p>
-          <p style={{margin: '0 0 0.4rem 0'}}>
+          <p>
             Step 2: record actions and verify progression unlocks.
           </p>
-          <p style={{margin: 0}}>
+          <p>
             Step 3: use world systems and runtime previews for balancing.
           </p>
         </div>
       </details>
-      <div style={{display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '0.8rem'}}>
+      <div className={styles.tabs}>
         {visibleTabs.map((tab) => (
           <button
             key={tab.id}
             type='button'
             onClick={() => setActiveTab(tab.id)}
-            style={{
-              padding: '0.4rem 0.65rem',
-              borderRadius: '999px',
-              border:
-                activeTab === tab.id
-                  ? '1px solid var(--color-text-primary)'
-                  : '1px solid var(--color-border)',
-              backgroundColor:
-                activeTab === tab.id
-                  ? 'var(--color-bg-secondary)'
-                  : 'var(--color-bg-primary)',
-              color: 'var(--color-text-primary)',
-              cursor: 'pointer'
-            }}
+            className={`${styles.tabButton} ${
+              activeTab === tab.id ? styles.tabButtonActive : ''
+            }`}
           >
             {tab.label}
           </button>
         ))}
       </div>
-      <div style={{fontSize: '0.9rem', color: '#4b5563', marginBottom: '0.5rem'}}>
+      <div className={styles.tabSubtitle}>
         {currentTab.subtitle}
       </div>
-      <section
-        style={{
-          marginBottom: '0.85rem',
-          padding: '0.75rem 0.85rem',
-          border: '1px solid #e5e7eb',
-          borderRadius: '8px',
-          backgroundColor: '#f9fafb'
-        }}
-      >
-        <h2 style={{marginTop: 0, marginBottom: '0.45rem', fontSize: '1rem'}}>
+      <section className={styles.nextStepsPanel}>
+        <h2 className={styles.nextStepsTitle}>
           Next Steps For {currentTab.label}
         </h2>
         {activeTab !== 'overview' && activeTabTotalCount > 0 && (
-          <p style={{marginTop: 0, marginBottom: '0.55rem', fontSize: '0.82rem', color: '#6b7280'}}>
+          <p className={styles.nextStepsProgress}>
             Completed in this section: {activeTabDoneCount}/{activeTabTotalCount}
           </p>
         )}
         {tabAwareNextSteps.length === 0 ? (
-          <p style={{margin: 0, fontSize: '0.88rem', color: '#374151'}}>
+          <p className={styles.nextStepsEmpty}>
             This section is in good shape. Move to another tab for additional setup.
           </p>
         ) : (
-          <ul style={{listStyle: 'none', margin: 0, padding: 0}}>
+          <ul className={styles.nextStepsList}>
             {tabAwareNextSteps.slice(0, 3).map((item) => (
-              <li key={`tab-next-${item.id}`} style={{marginBottom: '0.35rem'}}>
+              <li key={`tab-next-${item.id}`} className={styles.nextStepsItem}>
                 Next: {item.label}
                 {activeTab === 'overview' && (
                   <>
@@ -2184,25 +2524,11 @@ function CompendiumRoute({activeProject, projectSettings}: CompendiumRouteProps)
           </ul>
         )}
       </section>
-      <div style={{display: 'flex', gap: '0.4rem', flexWrap: 'wrap', marginBottom: '1rem'}}>
-        <span
-          style={{
-            fontSize: '0.75rem',
-            border: '1px solid #d1d5db',
-            borderRadius: '999px',
-            padding: '0.15rem 0.45rem'
-          }}
-        >
+      <div className={styles.statusChips}>
+        <span className={styles.statusChip}>
           Game Systems: {enableGameSystems ? 'On' : 'Off'}
         </span>
-        <span
-          style={{
-            fontSize: '0.75rem',
-            border: '1px solid #d1d5db',
-            borderRadius: '999px',
-            padding: '0.15rem 0.45rem'
-          }}
-        >
+        <span className={styles.statusChip}>
           Runtime Modifiers: {enableRuntimeModifiers ? 'On' : 'Off'}
         </span>
       </div>

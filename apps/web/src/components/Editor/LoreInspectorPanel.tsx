@@ -5,6 +5,7 @@ export interface LoreInspectorRecord {
   type: 'character' | 'entity';
   id: string;
   name: string;
+  completionStatus?: 'draft' | 'complete';
   vitalSigns: string[];
   synopsis: {
     goal: string;
@@ -47,6 +48,11 @@ export const LoreInspectorPanel = ({
     <div className={styles.lorePanel}>
       <div className={styles.loreHeaderCard}>
         <h3 className={styles.systemPanelTitle}>{record.name}</h3>
+        {record.type === 'entity' && record.completionStatus === 'draft' ? (
+          <div className={styles.loreDraftWarning}>
+            This World Bible record still needs completion.
+          </div>
+        ) : null}
         <div className={styles.loreVitalList}>
           {record.vitalSigns.map((item) => (
             <span key={item} className={styles.loreVitalChip}>

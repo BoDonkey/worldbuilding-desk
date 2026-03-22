@@ -1,6 +1,6 @@
 # Worldbuilding-Desk Project Status
 
-**Last Updated:** March 15, 2026
+**Last Updated:** March 22, 2026
 
 ## Project Overview
 
@@ -37,6 +37,8 @@ A comprehensive desktop application for LitRPG/GameLit authors that bridges narr
   - Custom field schemas per category
   - Rich text descriptions
   - Tagging and relationships
+  - `needs completion` / draft state for review-created records
+  - First-class `Alternative names` editing with alias sync
 
 - **Item Editor**
   - Combined lore and mechanical properties
@@ -57,7 +59,8 @@ A comprehensive desktop application for LitRPG/GameLit authors that bridges narr
   - Text insertion at cursor/selection
   - AIExpandMenu (right-click selected text)
   - RAG system for document indexing
-  - Prompt-tool presets with first built-in writing critic persona
+  - Prompt-tool presets with built-in `Writing Critic` and `Line Editor` personas
+  - Explicit workspace persona actions for critique and line edit flows
 
 ### UI Components
 - Ruleset creation wizard + desktop import (planned).
@@ -71,7 +74,18 @@ A comprehensive desktop application for LitRPG/GameLit authors that bridges narr
 - Inline lore highlights + quick lore popovers for known entities/characters.
 - Review queue for unresolved entities with create/link/dismiss actions, queue persistence, and highlight-to-review flow.
 - Alias visibility in World Bible and alias-aware linking in workspace review.
+- Optional compendium seeding from review-created World Bible records.
+- Draft record visibility in Workspace and Compendium flows.
 - Editor appearance controls for reading width, editor surface, serif/sans/mono presentation, and line spacing.
+- Sticky editor toolbar with stabilized long-document behavior.
+- Softened theme system for buttons, cards, badges, and modal surfaces.
+- Shared import/export preview flows for scene and compendium JSON portability.
+- Workspace writer-first layout pass:
+  - reduced persistent route chrome above the editor
+  - scene title and scene actions moved into the scene rail
+  - review/details moved into on-demand modals
+  - independent scrolling across scene rail, editor column, and context/AI rail
+- Ollama integration path fixes and wider AI panel mode.
 
 ---
 
@@ -141,6 +155,80 @@ npx tsx examples/basic-usage.ts
 
 ## Recent Changes & Fixes
 
+### Workspace Writer-First Cleanup + Ollama Follow-up (March 22, 2026)
+- Reduced route-level workspace noise so the editor appears much sooner:
+  - removed the large top workspace heading
+  - moved routine notices to toast-style overlays
+  - converted consistency/review details into on-demand modal flows
+  - moved scene title and scene-level actions into the left scene rail
+- Reworked workspace desktop scrolling:
+  - left scene rail scrolls independently
+  - editor column scrolls independently
+  - right context/AI rail scrolls independently
+- Improved AI panel behavior:
+  - assistant messages now auto-scroll within the assistant pane instead of trying to scroll ancestor containers
+  - assistant pane has a wider expandable mode for longer responses
+- Fixed Ollama-related wiring issues:
+  - desktop provider registry now receives custom provider `baseUrl`
+  - Workspace now syncs canonical app settings instead of relying on a stale local settings copy
+  - reduced the chance of stale workspace settings writing an old provider back over current AI settings
+
+**Immediate Follow-up**
+- Verify AI provider persistence across full restart, especially for Ollama-selected projects.
+- Verify AI input remains visible and assistant scrolling stays internal after full app restart.
+- If stable, return focus to the remaining Compendium `world-systems` UI sweep.
+
+### Portability, Popover Convergence, and UI Sweep (March 21, 2026)
+- Softened the visual language across the app:
+  - rounded button shapes
+  - muted/pastel but accessible action states
+  - warmer panel/input/card surfaces
+- Unified workspace lore/review interactions around the shared popover shell:
+  - shared header/tone treatment
+  - outside-click + `Escape` close
+  - viewport clamping
+  - direct jump from lore popover to World Bible / Characters
+  - `needs completion` warnings inside lore peek + inspector flows
+- Finished the main persona/settings UX pass:
+  - clearer separation of provider/model setup vs prompt/persona management
+  - explicit default-persona summary by project mode
+  - clearer distinction between installed personas and supporting prompt tools
+- Added JSON portability flows:
+  - scene JSON export
+  - scene JSON import with preview/validation before commit
+  - compendium JSON export
+  - compendium JSON import with section-level preview/validation
+- Started and partially completed a broader UI sweep:
+  - workspace import/export modals and banners now use the softened surface system
+  - compendium shell, JSON import preview, help panels, tabs, and status chips now match the newer theme
+  - compendium overview, entries, and progression sections now use the shared card/layout treatment
+
+**Immediate Next Slice**
+- Finish the remaining Compendium `world-systems` body sweep so zone affinity, party synergy, and settlement progression match the newer route styling.
+- Do one final cross-route polish pass across Workspace, Compendium, and Settings after the compendium sweep is complete.
+- Reassess whether any roadmap feature gaps remain after the UI sweep is fully done.
+
+### Review Completion, Persona Workflow, and Editor Stability (March 21, 2026)
+- Added explicit workspace persona actions:
+  - `Critique selected passage`
+  - `Critique current scene`
+  - `Line edit selected passage`
+- Fixed queued AI persona prompts so RAG/Shodh lookup uses the actual queued prompt text instead of the manual input box state.
+- Added active persona / prompt-stack visibility in the AI assistant panel.
+- Added second built-in persona preset: `Line Editor`.
+- Added `completionStatus` / `needs completion` draft state to World Bible entities.
+- Review-created World Bible records now default to `needs completion`.
+- Added first-class `Alternative names` editing in World Bible and synced it to alias storage.
+- Added alias replace/delete support so World Bible alias editing is now the source of truth instead of one-way display.
+- Added optional compendium seeding from workspace review actions.
+- Surfaced draft record counts and quick links in the Workspace context drawer.
+- Surfaced draft source warnings in Compendium import and linked-entry views.
+- Replaced the editor toolbar's custom scroll/fixed-position logic with a sticky implementation to stop flashing and disappearing during long-scroll editing.
+- Cleaned up the AI assistant panel header and improved panel tab readability.
+
+**Immediate Next Slice**
+- Completed in the later March 21, 2026 portability + UI sweep pass.
+
 ### Workspace Review, Canon UX, Editor Config, and First Persona (March 15, 2026)
 - Extended smoke coverage for workspace/editor flows:
   - editor appearance persistence
@@ -164,10 +252,7 @@ npx tsx examples/basic-usage.ts
 - Added first built-in AI persona preset: `Writing Critic`, installable from Settings and usable through existing prompt-tool defaults.
 
 **Immediate Next Slice**
-- Improve AI persona usability in Workspace with explicit critique actions such as `Critique selected passage` and `Critique current scene`.
-- Add draft / `needs completion` state for review-created World Bible records and surface that in navigation.
-- Promote aliases into a first-class editable `Alternative names` field on World Bible entries.
-- Revisit editor settings later for deeper customization only after the persona workflow feels right.
+- Completed in the March 21, 2026 follow-on slice.
 
 ### Workspace Review + Editor UX (March 14, 2026)
 - Added import modes and deferred review flow so non-strict imports remain writable without losing review context.
@@ -253,10 +338,22 @@ npx tsx examples/basic-usage.ts
 - Manual backup/export (multi-source import planned next)
 
 ### Workspace / Review UX
-- Review-created World Bible entities do not yet automatically seed Compendium records.
-- World Bible / Compendium `needs completion` badges are not implemented yet.
-- `Alternative names` are not yet exposed as a first-class editable World Bible field.
 - Alias candidate scoping in the review queue still falls back broadly and may need a more explicit category/all-record toggle.
+
+### AI / Persona UX
+- Persona defaults and active-stack editing are much clearer in Settings now, but the overall prompt/persona library could still use deeper day-to-day drafting validation.
+- Persona actions currently cover critique and line edit flows; broader persona task coverage is still pending.
+
+### Editor UX
+- Sticky toolbar behavior is significantly improved, but should get one more real-world smoke pass across long documents and narrow viewport layouts.
+
+### Compendium UX
+- The Compendium route shell, overview, entries, and progression sections now follow the newer softened UI language.
+- The remaining `world-systems` body still uses older inline styling and is the main unfinished UI sweep area.
+
+### Data Portability
+- Scene and compendium JSON round-trip flows are now present with preview/validation before import commit.
+- Portability is functional, but schema/versioning strategy and optional bundle-style export/import are still open future enhancements.
 
 ### Editor Appearance
 - Editor appearance controls are still intentionally coarse-grained; users cannot yet choose custom fonts, dyslexia-friendly fonts, or custom highlight palettes.

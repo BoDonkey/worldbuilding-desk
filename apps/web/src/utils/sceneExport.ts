@@ -1,4 +1,5 @@
 import type {WritingDocument} from '../entityTypes';
+import {downloadJsonFile} from '../services/jsonTransfer';
 import {buildZip} from './zip';
 
 function sanitizeFileNamePart(value: string): string {
@@ -93,6 +94,39 @@ export function buildScenesMarkdown(params: {
   });
 
   return lines.join('\n').trimEnd() + '\n';
+}
+
+export function buildScenesJson(params: {
+  projectName: string;
+  scenes: WritingDocument[];
+}): {
+  schemaVersion: 1;
+  projectName: string;
+  exportedAt: number;
+  scenes: Array<{
+    id: string;
+    title: string;
+    contentHtml: string;
+    contentText: string;
+    consistencyReviewMode?: 'default' | 'deferred';
+    createdAt: number;
+    updatedAt: number;
+  }>;
+} {
+  return {
+    schemaVersion: 1,
+    projectName: params.projectName,
+    exportedAt: Date.now(),
+    scenes: params.scenes.map((scene) => ({
+      id: scene.id,
+      title: scene.title,
+      contentHtml: scene.content,
+      contentText: htmlToPlainTextWithParagraphs(scene.content),
+      consistencyReviewMode: scene.consistencyReviewMode,
+      createdAt: scene.createdAt,
+      updatedAt: scene.updatedAt
+    }))
+  };
 }
 
 function escapeXml(value: string): string {
@@ -363,6 +397,15 @@ export function exportScenesAsMarkdown(params: {
   const stamp = new Date().toISOString().slice(0, 10);
   const fileName = `${sanitizeFileNamePart(params.projectName)}-scenes-${stamp}.md`;
   downloadBlob(fileName, bytes, 'text/markdown;charset=utf-8');
+}
+
+export function exportScenesAsJson(params: {
+  projectName: string;
+  scenes: WritingDocument[];
+}): void {
+  const stamp = new Date().toISOString().slice(0, 10);
+  const fileName = `${sanitizeFileNamePart(params.projectName)}-scenes-${stamp}.json`;
+  downloadJsonFile(fileName, buildScenesJson(params));
 }
 
 export function exportScenesAsDocx(params: {

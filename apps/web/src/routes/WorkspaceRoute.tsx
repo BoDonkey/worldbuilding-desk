@@ -40,6 +40,7 @@ import {createEditorConfigWithStyles} from '../config/editorConfig';
 import type {EditorConfig} from '../config/editorConfig';
 import {countWords, htmlToPlainText} from '../utils/textHelpers';
 import {
+  exportScenesAsJson,
   exportScenesAsDocx,
   exportScenesAsEpub,
   exportScenesAsMarkdown
@@ -105,6 +106,7 @@ import {
   WORKSPACE_COMMAND_EVENT,
   type WorkspaceCommandId
 } from '../commands/workspaceCommands';
+import {readJsonFile} from '../services/jsonTransfer';
 import styles from '../styles/WorkspaceRoute.module.css';
 
 const summarizeContent = (html: string, limit = 500): string => {
@@ -120,11 +122,12 @@ const summarizeContent = (html: string, limit = 500): string => {
 
 interface WorkspaceRouteProps {
   activeProject: Project | null;
+  projectSettings?: ProjectSettings | null;
 }
 
 type SaveStatus = 'idle' | 'saving' | 'saved';
 type FeedbackTone = 'success' | 'error';
-type ExportFormat = 'markdown' | 'docx' | 'epub';
+type ExportFormat = 'json' | 'markdown' | 'docx' | 'epub';
 type ContextDrawerView = 'world-bible' | 'ruleset' | 'characters' | 'compendium';
 type ImportMode = WorkspaceImportMode;
 
@@ -166,6 +169,23 @@ interface ImportSummary {
   openedTitle?: string;
   failures: ImportFailureItem[];
   createdAt: number;
+}
+
+interface SceneJsonImportPreviewItem {
+  sourceId: string;
+  title: string;
+  contentHtml: string;
+  contentText: string;
+  consistencyReviewMode?: 'default' | 'deferred';
+  createdAt: number;
+  updatedAt: number;
+  included: boolean;
+}
+
+interface SceneJsonImportPreviewState {
+  fileName: string;
+  projectName?: string;
+  scenes: SceneJsonImportPreviewItem[];
 }
 
 interface ConsistencyPopoverState {
@@ -336,7 +356,7 @@ const downgradeUnknownIssuesToWarnings = (
       : issue
   );
 
-function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
+function WorkspaceRoute({activeProject, projectSettings: initialProjectSettings = null}: WorkspaceRouteProps) {
   const navigate = useNavigate();
   const consistencyEngine = useMemo(() => getConsistencyEngineService(), []);
   const [documents, setDocuments] = useState<WritingDocument[]>([]);
@@ -432,6 +452,9 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
   const [skipImportSuggestions, setSkipImportSuggestions] = useState(false);
   const [importSummary, setImportSummary] = useState<ImportSummary | null>(null);
   const [retryImportFiles, setRetryImportFiles] = useState<File[]>([]);
+  const [sceneJsonImportPreview, setSceneJsonImportPreview] =
+    useState<SceneJsonImportPreviewState | null>(null);
+  const [isImportPreviewModalOpen, setImportPreviewModalOpen] = useState(false);
   const [consistencyPopover, setConsistencyPopover] =
     useState<ConsistencyPopoverState | null>(null);
   const [deletingDocumentId, setDeletingDocumentId] = useState<string | null>(null);
@@ -524,6 +547,16 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
       window.removeEventListener('resize', close);
     };
   }, [consistencyPopover]);
+
+  useEffect(() => {
+    if (!feedback || feedback.tone === 'error') return;
+    const timeoutId = window.setTimeout(() => {
+      setFeedback((current) =>
+        current?.tone === 'success' ? null : current
+      );
+    }, 3200);
+    return () => window.clearTimeout(timeoutId);
+  }, [feedback]);
 
   const fileNameToTitle = (name: string): string => {
     const base = name.replace(/\.[^.]+$/, '').trim();
@@ -934,6 +967,16 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
   }, [activeProject]);
 
   useEffect(() => {
+    if (!initialProjectSettings) return;
+    setProjectSettings(initialProjectSettings);
+    setEditorConfig(createEditorConfigWithStyles(initialProjectSettings.characterStyles));
+    setImportMode(initialProjectSettings.defaultImportMode ?? 'balanced');
+    setSkipImportSuggestions(
+      initialProjectSettings.defaultSkipImportSuggestions ?? false
+    );
+  }, [initialProjectSettings]);
+
+  useEffect(() => {
     let cancelled = false;
     if (!activeProject || !seriesBibleConfig?.parentProjectId) {
       setCanonState({});
@@ -1108,7 +1151,8 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
     if (!activeProject || !projectSettings || !isStatPreferencesHydrated) {
       return;
     }
-    const currentPrefs = projectSettings.statBlockPreferences;
+    const baseSettings = initialProjectSettings ?? projectSettings;
+    const currentPrefs = baseSettings.statBlockPreferences;
     const currentGroupsJson = JSON.stringify(currentPrefs?.groups ?? []);
     const nextGroupsJson = JSON.stringify(statBlockGroups);
     const currentStatIdsJson = JSON.stringify(currentPrefs?.selectedStatIds ?? []);
@@ -1130,7 +1174,7 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
       return;
     }
     const nextSettings: ProjectSettings = {
-      ...projectSettings,
+      ...baseSettings,
       statBlockPreferences: {
         sourceType: statBlockSourceType,
         style: statBlockStyle,
@@ -1147,6 +1191,7 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
     void saveProjectSettings(nextSettings);
   }, [
     activeProject,
+    initialProjectSettings,
     projectSettings,
     statBlockSourceType,
     statBlockStyle,
@@ -1533,13 +1578,199 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
   const handleImportDocuments = async (event: ChangeEvent<HTMLInputElement>) => {
     const fileList = event.target.files;
     if (!fileList || fileList.length === 0) return;
-    await runImportBatch(Array.from(fileList));
+    const files = Array.from(fileList);
+    if (files.length === 1 && files[0].name.toLowerCase().endsWith('.json')) {
+      try {
+        const raw = await readJsonFile(files[0]);
+        if (
+          !raw ||
+          typeof raw !== 'object' ||
+          (raw as {schemaVersion?: unknown}).schemaVersion !== 1 ||
+          !Array.isArray((raw as {scenes?: unknown[]}).scenes)
+        ) {
+          throw new Error('This JSON file is not a valid scene export.');
+        }
+
+        const payload = raw as {
+          projectName?: string;
+          scenes: Array<{
+            id?: string;
+            title?: string;
+            contentHtml?: string;
+            contentText?: string;
+            consistencyReviewMode?: 'default' | 'deferred';
+            createdAt?: number;
+            updatedAt?: number;
+          }>;
+        };
+
+        const scenes = payload.scenes
+          .map((scene, index) => {
+            const contentHtml =
+              typeof scene.contentHtml === 'string' && scene.contentHtml.trim()
+                ? scene.contentHtml
+                : plainTextToHtml(
+                    typeof scene.contentText === 'string' ? scene.contentText : ''
+                  );
+            const contentText =
+              typeof scene.contentText === 'string'
+                ? scene.contentText
+                : htmlToPlainText(contentHtml);
+
+            return {
+              sourceId:
+                typeof scene.id === 'string' && scene.id.trim()
+                  ? scene.id
+                  : `scene-${index + 1}`,
+              title:
+                typeof scene.title === 'string' && scene.title.trim()
+                  ? scene.title.trim()
+                  : `Imported scene ${index + 1}`,
+              contentHtml,
+              contentText,
+              consistencyReviewMode:
+                scene.consistencyReviewMode === 'default' ||
+                scene.consistencyReviewMode === 'deferred'
+                  ? scene.consistencyReviewMode
+                  : 'deferred',
+              createdAt:
+                typeof scene.createdAt === 'number' ? scene.createdAt : Date.now(),
+              updatedAt:
+                typeof scene.updatedAt === 'number' ? scene.updatedAt : Date.now(),
+              included: true
+            };
+          })
+          .filter((scene) => scene.contentHtml.trim() || scene.contentText.trim());
+
+        if (scenes.length === 0) {
+          throw new Error('This scene export does not contain any importable scenes.');
+        }
+
+        setSceneJsonImportPreview({
+          fileName: files[0].name,
+          projectName: payload.projectName,
+          scenes
+        });
+        setImportPreviewModalOpen(true);
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : 'Unable to read scene JSON import.';
+        setFeedback({tone: 'error', message});
+      } finally {
+        event.target.value = '';
+      }
+      return;
+    }
+
+    await runImportBatch(files);
     event.target.value = '';
   };
 
   const handleRetryFailedImports = async () => {
     if (retryImportFiles.length === 0) return;
     await runImportBatch(retryImportFiles);
+  };
+
+  const toggleJsonImportPreviewItem = (sourceId: string) => {
+    setSceneJsonImportPreview((prev) =>
+      prev
+        ? {
+            ...prev,
+            scenes: prev.scenes.map((scene) =>
+              scene.sourceId === sourceId
+                ? {...scene, included: !scene.included}
+                : scene
+            )
+          }
+        : prev
+    );
+  };
+
+  const toggleAllJsonImportPreviewItems = (included: boolean) => {
+    setSceneJsonImportPreview((prev) =>
+      prev
+        ? {
+            ...prev,
+            scenes: prev.scenes.map((scene) => ({...scene, included}))
+          }
+        : prev
+    );
+  };
+
+  const closeImportPreviewModal = () => {
+    setImportPreviewModalOpen(false);
+    setSceneJsonImportPreview(null);
+  };
+
+  const handleImportPreviewScenes = async () => {
+    if (!activeProject || !sceneJsonImportPreview) return;
+    const selectedScenes = sceneJsonImportPreview.scenes.filter((scene) => scene.included);
+    if (selectedScenes.length === 0) {
+      setFeedback({tone: 'error', message: 'Select at least one scene to import.'});
+      return;
+    }
+
+    setIsImportingDocuments(true);
+    setFeedback(null);
+    setImportSummary(null);
+    let importedCount = 0;
+    let unresolvedCount = 0;
+    let lastImported: WritingDocument | null = null;
+
+    try {
+      for (const scene of selectedScenes) {
+        const now = Date.now();
+        const doc: WritingDocument = {
+          id: crypto.randomUUID(),
+          projectId: activeProject.id,
+          title: scene.title,
+          content: scene.contentHtml || plainTextToHtml(scene.contentText),
+          consistencyReviewMode:
+            skipImportSuggestions || importMode === 'lenient'
+              ? 'deferred'
+              : scene.consistencyReviewMode ?? 'deferred',
+          createdAt: scene.createdAt || now,
+          updatedAt: now
+        };
+        const result = await persistDoc(doc, {
+          source: 'import',
+          consistencyMode: skipImportSuggestions ? 'lenient' : importMode
+        });
+        importedCount += 1;
+        unresolvedCount += result.unresolvedCount;
+        lastImported = doc;
+      }
+
+      if (lastImported) {
+        setSelectedId(lastImported.id);
+        setSelectedCreatedAt(lastImported.createdAt);
+        setTitle(lastImported.title);
+        setContent(lastImported.content);
+        setWordCount(countWords(lastImported.content));
+      }
+
+      setImportSummary({
+        importedCount,
+        failedCount: 0,
+        unresolvedCount,
+        mode: skipImportSuggestions ? 'lenient' : importMode,
+        suggestionsSkipped: skipImportSuggestions || importMode === 'lenient',
+        openedTitle: lastImported?.title,
+        failures: [],
+        createdAt: Date.now()
+      });
+      setFeedback({
+        tone: 'success',
+        message: `Imported ${importedCount} scene(s) from JSON. Unresolved entities: ${unresolvedCount}.`
+      });
+      closeImportPreviewModal();
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'Unable to import selected scenes.';
+      setFeedback({tone: 'error', message});
+    } finally {
+      setIsImportingDocuments(false);
+    }
   };
 
   const handleSelectDocument = (doc: WritingDocument) => {
@@ -1733,7 +1964,12 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
       return;
     }
 
-    if (exportFormat === 'markdown') {
+    if (exportFormat === 'json') {
+      exportScenesAsJson({
+        projectName: activeProject.name,
+        scenes: selectedScenes
+      });
+    } else if (exportFormat === 'markdown') {
       exportScenesAsMarkdown({
         projectName: activeProject.name,
         scenes: selectedScenes
@@ -1752,7 +1988,9 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
 
     setExportModalOpen(false);
     const exportMessage =
-      exportFormat === 'markdown'
+      exportFormat === 'json'
+        ? `Exported ${selectedScenes.length} scene(s) to JSON.`
+        : exportFormat === 'markdown'
         ? `Exported ${selectedScenes.length} scene(s) to Markdown.`
         : exportFormat === 'docx'
           ? `Exported ${selectedScenes.length} scene(s) to DOCX.`
@@ -2594,6 +2832,7 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
         type: 'character',
         id: sheet.id,
         name: sheet.name,
+        completionStatus: 'complete',
         vitalSigns: [
           `Level ${sheet.level}`,
           role,
@@ -2631,6 +2870,7 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
         type: 'entity',
         id: entity.id,
         name: entity.name,
+        completionStatus: entity.completionStatus ?? 'complete',
         vitalSigns: [categoryName, status],
         synopsis
       };
@@ -3108,6 +3348,9 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
         case 'run-consistency-review':
           void handleRunConsistencyReview();
           break;
+        case 'export-json':
+          openExportModal('json');
+          break;
         case 'export-markdown':
           openExportModal('markdown');
           break;
@@ -3507,6 +3750,129 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
 
   const sceneDrawerPanel = (
     <>
+      {selectedDocument && (
+        <div className={styles.sceneMetaCard}>
+          <label className={styles.sceneTitleField}>
+            <span className={styles.sceneTitleLabel}>Scene title</span>
+            <input
+              type='text'
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              className={styles.sceneTitleInput}
+            />
+          </label>
+          <div className={styles.sceneMetaSummary}>
+            <strong>Consistency</strong>
+            <span>
+              {consistencyReviewItems.length > 0
+                ? `${consistencyReviewItems.length} issue(s) queued`
+                : lastConsistencyReviewAt
+                  ? `Last run ${new Date(lastConsistencyReviewAt).toLocaleString()}`
+                  : 'No review run yet'}
+            </span>
+          </div>
+          {unknownGuardrailIssues.length > 0 && (
+            <div className={styles.sceneMetaSummary}>
+              <strong>
+                {hasBlockingUnknownGuardrailIssues ? 'Strict save blocked' : 'Unknowns highlighted'}
+              </strong>
+              <span>
+                {unknownGuardrailIssues.length} item
+                {unknownGuardrailIssues.length === 1 ? '' : 's'} need review
+              </span>
+            </div>
+          )}
+          {seriesBibleConfig?.parentProjectId && (
+            <div className={styles.sceneMetaSummary}>
+              <strong>Parent canon</strong>
+              <span>
+                {canonState.parentName ?? 'Unknown'} · {canonState.parentCanonVersion ?? 'n/a'}
+                {canonState.parentCanonVersion &&
+                  canonState.childLastSynced &&
+                  canonState.parentCanonVersion !== canonState.childLastSynced
+                  ? ' · Out of sync'
+                  : ''}
+              </span>
+            </div>
+          )}
+          <div className={styles.sceneMetaActions}>
+            <button
+              type='button'
+              onClick={handleSave}
+              disabled={saveStatus === 'saving'}
+            >
+              {saveStatus === 'saving' ? 'Saving…' : 'Save now'}
+            </button>
+            <button type='button' onClick={openMemoryModal}>
+              Extract memory
+            </button>
+            {seriesBibleConfig?.parentProjectId && (
+              <button
+                type='button'
+                onClick={() => void handlePromoteDocument()}
+                disabled={isPromotingDocument}
+              >
+                {isPromotingDocument ? 'Promoting...' : 'Promote scene'}
+              </button>
+            )}
+            <button
+              type='button'
+              onClick={() => setConsistencyPanelOpen(true)}
+            >
+              Review details
+            </button>
+            {unknownGuardrailIssues.length > 0 && (
+              <button
+                type='button'
+                onClick={() => setReviewQueueOpen(true)}
+              >
+                Review queue
+              </button>
+            )}
+            <button
+              type='button'
+              onClick={() => void handleRunConsistencyReview()}
+              disabled={isRunningConsistencyReview}
+            >
+              {isRunningConsistencyReview ? 'Running review...' : 'Run review'}
+            </button>
+            <button type='button' onClick={() => setStatBlockModalOpen(true)}>
+              Status block
+            </button>
+            <button type='button' onClick={handleRefreshStatTemplates}>
+              Refresh placeholders
+            </button>
+            {selectedDocument.consistencyReviewMode === 'deferred' && (
+              <>
+                <button
+                  type='button'
+                  onClick={() => void refreshDeferredReview(selectedDocument)}
+                >
+                  Refresh review
+                </button>
+                <button
+                  type='button'
+                  onClick={() =>
+                    void updateSelectedDocumentConsistencyReviewMode('default')
+                  }
+                >
+                  Resume strict review
+                </button>
+              </>
+            )}
+            {seriesBibleConfig?.parentProjectId && (
+              <button
+                type='button'
+                onClick={() => void handleCanonSync()}
+                disabled={isSyncingCanon}
+              >
+                {isSyncingCanon ? 'Marking...' : 'Mark as synced'}
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
       <div style={{marginBottom: '1rem'}}>
         <button
           type='button'
@@ -3545,6 +3911,14 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
           />
           Skip consistency suggestions for this import
         </label>
+        <button
+          type='button'
+          onClick={() => openExportModal('json')}
+          disabled={documents.length === 0}
+          style={{marginLeft: '0.5rem'}}
+        >
+          Export JSON
+        </button>
         <button
           type='button'
           onClick={() => openExportModal('markdown')}
@@ -3676,283 +4050,48 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
   );
 
   return (
-    <section data-workspace-root='true'>
-      <h1>Writing Workspace</h1>
-      {feedback && (
-        <p
-          role='status'
-          className={`${styles.feedbackBanner} ${
-            feedback.tone === 'error' ? styles.feedbackError : styles.feedbackSuccess
-          }`}
-        >
-          {feedback.message}
-        </p>
-      )}
-      {resolverNotice && (
-        <div role='status' className={styles.resolverNotice}>
-          <span>{resolverNotice.message}</span>
-          <button
-            type='button'
-            onClick={() => navigate('/world-bible')}
-            className={styles.resolverButtonPrimary}
-          >
-            View in World Bible
-          </button>
-          <button
-            type='button'
-            onClick={() => setResolverNotice(null)}
-            className={styles.resolverButtonSecondary}
-          >
-            Dismiss
-          </button>
-        </div>
-      )}
-      <section className={styles.consistencyPanel}>
-        <div className={styles.consistencyPanelHeader}>
-          <div>
-            <strong>Canon Consistency Review</strong>
-            <div className={styles.consistencyDescription}>
-              {consistencyReviewItems.length > 0
-                ? `${consistencyReviewItems.length} issue(s) queued for review.`
-                : 'Scan scenes against World Bible and Character records.'}
-            </div>
-          </div>
-          <div className={styles.consistencyPanelActions}>
-            <button
-              type='button'
-              onClick={() => setConsistencyPanelOpen((prev) => !prev)}
+    <section data-workspace-root='true' className={styles.workspaceRoot}>
+      {(feedback || resolverNotice) && (
+        <div className={styles.toastStack}>
+          {feedback && (
+            <p
+              role='status'
+              className={`${styles.feedbackBanner} ${
+                feedback.tone === 'error' ? styles.feedbackError : styles.feedbackSuccess
+              }`}
             >
-              {isConsistencyPanelOpen ? 'Hide details' : 'Show details'}
-            </button>
-            <button
-              type='button'
-              onClick={() => void handleRunConsistencyReview()}
-              disabled={isRunningConsistencyReview}
-            >
-              {isRunningConsistencyReview ? 'Running review...' : 'Run review'}
-            </button>
-          </div>
-        </div>
-        {lastConsistencyReviewAt && (
-          <div className={styles.consistencyLastRun}>
-            Last run: {new Date(lastConsistencyReviewAt).toLocaleString()}
-          </div>
-        )}
-        {isConsistencyPanelOpen && consistencyReviewItems.length > 0 && (
-          <ul className={styles.consistencyList}>
-            {consistencyReviewItems.slice(0, 24).map((item) => (
-              <li key={item.id} className={styles.consistencyListItem}>
-                <strong>{item.issue.code}</strong> in{' '}
-                <button
-                  type='button'
-                  onClick={() => {
-                    const doc = documents.find((entry) => entry.id === item.sceneId);
-                    if (doc) handleSelectDocument(doc);
-                  }}
-                  className={styles.consistencySceneButton}
-                >
-                  {item.sceneTitle}
-                </button>
-                : {item.issue.message}
-                {item.issue.relatedEntities && item.issue.relatedEntities.length > 0 && (
-                  <span className={styles.consistencyRelated}>
-                    {item.issue.relatedEntities.slice(0, 3).map((target) => (
-                      <button
-                        key={`${item.id}-${target.id}`}
-                        type='button'
-                        onClick={() => openWorldRecord(target)}
-                        className={styles.consistencyRelatedButton}
-                      >
-                        Open {target.name}
-                      </button>
-                    ))}
-                  </span>
-                )}
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
-      {unknownGuardrailIssues.length > 0 && (
-        <div className={styles.unknownPanel}>
-          <strong>
-            {hasBlockingUnknownGuardrailIssues
-              ? 'Commit blocked: unknown entities detected.'
-              : 'Inline review items highlighted in the scene.'}
-          </strong>
-          <div className={styles.unknownSummary}>
-            {unknownGuardrailIssues.length} item
-            {unknownGuardrailIssues.length === 1 ? '' : 's'} highlighted. Click the
-            underlined text in the editor to create, link, or dismiss each one.
-          </div>
-          <div className={styles.unknownBulkActions}>
-            <button
-              type='button'
-              onClick={() => setReviewQueueOpen((prev) => !prev)}
-              className={styles.unknownActionButton}
-            >
-              {isReviewQueueOpen
-                ? 'Hide review queue'
-                : `Review queue (${unknownReviewItems.length})`}
-            </button>
-            <button
-              type='button'
-              onClick={dismissAllUnknownEntities}
-              className={styles.unknownActionButtonSpaced}
-            >
-              {hasBlockingUnknownGuardrailIssues
-                ? 'Dismiss all for now'
-                : 'Hide all warnings for now'}
-            </button>
-          </div>
-          {isReviewQueueOpen && (
-            <div className={styles.reviewQueue}>
-              {unknownReviewItems.map((item) => (
-                <div key={item.key} className={styles.reviewQueueCard}>
-                  <div className={styles.reviewQueueHeader}>
-                    <strong>{item.surface}</strong>
-                    <span className={styles.reviewQueueMeta}>
-                      Suggested: {item.categoryName}
-                    </span>
-                  </div>
-                  <div className={styles.reviewQueueGrid}>
-                    <label className={styles.reviewQueueField}>
-                      Canonical name
-                      <input
-                        type='text'
-                        value={item.name}
-                        onChange={(event) =>
-                          updateUnknownDraft(item.surface, {name: event.target.value})
-                        }
-                      />
-                    </label>
-                    <label className={styles.reviewQueueField}>
-                      Category
-                      <select
-                        value={item.categoryId}
-                        onChange={(event) =>
-                          updateUnknownDraft(item.surface, {
-                            categoryId: event.target.value
-                          })
-                        }
-                      >
-                        <option value=''>Choose category...</option>
-                        {categories.map((category) => (
-                          <option key={category.id} value={category.id}>
-                            {category.name}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                    {showGameSystems && (
-                      <label className={styles.reviewQueueCheckbox}>
-                        <input
-                          type='checkbox'
-                          checked={item.seedCompendium}
-                          onChange={(event) =>
-                            updateUnknownDraft(item.surface, {
-                              seedCompendium: event.target.checked
-                            })
-                          }
-                        />
-                        <span>Seed compendium entry</span>
-                      </label>
-                    )}
-                  </div>
-                  <div className={styles.reviewQueueActions}>
-                    <button
-                      type='button'
-                      onClick={() =>
-                        void resolveUnknownEntity(item.surface, {
-                          name: item.name,
-                          categoryId: item.categoryId,
-                          seedCompendium: item.seedCompendium
-                        })
-                      }
-                      disabled={resolvingUnknown === item.surface || !item.name.trim()}
-                    >
-                      {resolvingUnknown === item.surface ? 'Creating...' : 'Create record'}
-                    </button>
-                    <label className={styles.reviewQueueLinkField}>
-                      Link to existing
-                      <select
-                        value={unknownLinkSelection[item.surface] ?? ''}
-                        onChange={(event) =>
-                          setUnknownLinkSelection((prev) => ({
-                            ...prev,
-                            [item.surface]: event.target.value
-                          }))
-                        }
-                      >
-                        <option value=''>Select entity...</option>
-                        {unknownLinkOptions[item.surface]?.map((entity) => (
-                          <option key={entity.value} value={entity.value}>
-                            {entity.name}
-                            {entity.targetType === 'character' ? ' (Character)' : ''}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                    <button
-                      type='button'
-                      onClick={() => void linkUnknownEntity(item.surface)}
-                      disabled={
-                        linkingUnknown === item.surface ||
-                        !unknownLinkSelection[item.surface]
-                      }
-                    >
-                      {linkingUnknown === item.surface ? 'Linking...' : 'Link alias'}
-                    </button>
-                    <button
-                      type='button'
-                      onClick={() => dismissUnknownEntity(item.surface)}
-                    >
-                      Dismiss
-                    </button>
-                  </div>
-                </div>
-              ))}
-              <div className={styles.reviewQueueFooter}>
-                <button
-                  type='button'
-                  onClick={() => void resolveAllUnknownEntities()}
-                  className={styles.unknownActionButton}
-                >
-                  Create all reviewed items
-                </button>
-              </div>
+              {feedback.message}
+              <button
+                type='button'
+                onClick={() => setFeedback(null)}
+                className={styles.toastDismissButton}
+                aria-label='Dismiss message'
+              >
+                Dismiss
+              </button>
+            </p>
+          )}
+          {resolverNotice && (
+            <div role='status' className={styles.resolverNotice}>
+              <span>{resolverNotice.message}</span>
+              <button
+                type='button'
+                onClick={() => navigate('/world-bible')}
+                className={styles.resolverButtonPrimary}
+              >
+                View in World Bible
+              </button>
+              <button
+                type='button'
+                onClick={() => setResolverNotice(null)}
+                className={styles.resolverButtonSecondary}
+              >
+                Dismiss
+              </button>
             </div>
           )}
         </div>
       )}
-      {seriesBibleConfig?.parentProjectId && (
-        <div className={styles.canonPanel}>
-          <strong>Parent canon:</strong>{' '}
-          {canonState.parentName ?? 'Unknown'} · Version{' '}
-          {canonState.parentCanonVersion ?? 'n/a'}
-          {canonState.parentCanonVersion &&
-            canonState.childLastSynced &&
-            canonState.parentCanonVersion !== canonState.childLastSynced && (
-              <span className={styles.canonOutOfSync}>
-                Out of sync
-              </span>
-            )}
-          <div className={styles.canonMetaRow}>
-            <span>
-              Last synced:{' '}
-              {canonState.childLastSynced ?? 'never'}
-            </span>
-            <button
-              type='button'
-              onClick={() => void handleCanonSync()}
-              disabled={isSyncingCanon}
-            >
-              {isSyncingCanon ? 'Marking...' : 'Mark as synced'}
-            </button>
-          </div>
-        </div>
-      )}
-
       <div className={styles.workspaceFrame}>
         <div className={styles.drawerTopBar}>
           <button
@@ -3981,76 +4120,16 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
         <div className={styles.editorColumn}>
           {selectedId ? (
             <>
-              <div style={{marginBottom: '0.75rem'}}>
-                <label>
-                  Title
-                  <br />
-                  <input
-                    type='text'
-                    value={title}
-                    onChange={(e) => setTitle(e.target.value)}
-                    style={{width: '100%'}}
-                  />
-                </label>
-              </div>
-
               <div
                 style={{
                   marginBottom: '0.75rem',
                   flex: 1,
                   display: 'flex',
-                  flexDirection: 'column'
+                  flexDirection: 'column',
+                  minHeight: 0,
+                  overflow: 'hidden'
                 }}
               >
-                <div
-                  style={{
-                    marginBottom: '0.75rem',
-                    padding: '0.65rem 0.75rem',
-                    border: '1px solid #dbeafe',
-                    borderRadius: '6px',
-                    backgroundColor: '#f8fbff',
-                    display: 'flex',
-                    gap: '0.5rem',
-                    alignItems: 'center',
-                    flexWrap: 'wrap'
-                  }}
-                >
-                  <strong style={{fontSize: '0.9rem'}}>Status Blocks</strong>
-                  <button type='button' onClick={() => setStatBlockModalOpen(true)}>
-                    Insert Status Block
-                  </button>
-                  <button type='button' onClick={handleRefreshStatTemplates}>
-                    Refresh Placeholders
-                  </button>
-                </div>
-                <label
-                  style={{flex: 1, display: 'flex', flexDirection: 'column'}}
-                >
-                  Scene Text
-                </label>
-                {selectedDocument?.consistencyReviewMode === 'deferred' && (
-                  <div className={styles.reviewLaterBanner}>
-                    <strong>Review later is active.</strong>
-                    <span>
-                      Saves warn and highlight unknowns, but won&apos;t block this scene.
-                    </span>
-                    <button
-                      type='button'
-                      onClick={() => void refreshDeferredReview(selectedDocument)}
-                    >
-                      Refresh review
-                    </button>
-                    <button
-                      type='button'
-                      onClick={() =>
-                        void updateSelectedDocumentConsistencyReviewMode('default')
-                      }
-                    >
-                      Resume strict review
-                    </button>
-                  </div>
-                )}
-                <br />
                 <EditorWithAI
                   projectId={activeProject.id}
                   documentId={selectedId}
@@ -4058,6 +4137,7 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
                   onChange={handleContentChange}
                   onWordCountChange={setWordCount}
                   consistencyHighlights={highlightableUnknownIssues}
+                  onOpenLoreRecord={openWorldRecord}
                   onConsistencyHighlightClick={(issueId, anchorRect) => {
                     const issue = highlightableUnknownIssues.find(
                       (entry) => entry.id === issueId
@@ -4109,130 +4189,143 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
                 {consistencyPopover && activeConsistencyPopoverIssue && (
                   <ContextPopover
                     title={activeConsistencyPopoverIssue.surface}
+                    eyebrow='Review Item'
                     message={activeConsistencyPopoverIssue.message}
+                    tone='warning'
                     left={consistencyPopover.left}
                     top={consistencyPopover.top}
                     onClose={() => setConsistencyPopover(null)}
                   >
+                    <div className={styles.consistencyPopoverMeta}>Unknown entity</div>
                     {activeUnknownReviewItem && (
-                      <div className={styles.consistencyPopoverDraft}>
-                        <label className={styles.consistencyPopoverField}>
-                          Canonical name
-                          <input
-                            type='text'
-                            value={activeUnknownReviewItem.name}
-                            onChange={(event) =>
-                              updateUnknownDraft(activeConsistencyPopoverIssue.surface, {
-                                name: event.target.value
-                              })
-                            }
-                          />
-                        </label>
-                        <label className={styles.consistencyPopoverField}>
-                          Category
-                          <select
-                            value={activeUnknownReviewItem.categoryId}
-                            onChange={(event) =>
-                              updateUnknownDraft(activeConsistencyPopoverIssue.surface, {
-                                categoryId: event.target.value
-                              })
-                            }
-                          >
-                            <option value=''>Choose category...</option>
-                            {categories.map((category) => (
-                              <option key={category.id} value={category.id}>
-                                {category.name}
-                              </option>
-                            ))}
-                          </select>
-                        </label>
-                        {showGameSystems && (
-                          <label className={styles.consistencyPopoverCheckbox}>
+                      <div className={styles.consistencyPopoverSection}>
+                        <div className={styles.consistencyPopoverSectionTitle}>
+                          Create new record
+                        </div>
+                        <div className={styles.consistencyPopoverDraft}>
+                          <label className={styles.consistencyPopoverField}>
+                            Canonical name
                             <input
-                              type='checkbox'
-                              checked={activeUnknownReviewItem.seedCompendium}
+                              type='text'
+                              value={activeUnknownReviewItem.name}
                               onChange={(event) =>
                                 updateUnknownDraft(activeConsistencyPopoverIssue.surface, {
-                                  seedCompendium: event.target.checked
+                                  name: event.target.value
                                 })
                               }
                             />
-                            <span>Seed compendium entry</span>
                           </label>
-                        )}
+                          <label className={styles.consistencyPopoverField}>
+                            Category
+                            <select
+                              value={activeUnknownReviewItem.categoryId}
+                              onChange={(event) =>
+                                updateUnknownDraft(activeConsistencyPopoverIssue.surface, {
+                                  categoryId: event.target.value
+                                })
+                              }
+                            >
+                              <option value=''>Choose category...</option>
+                              {categories.map((category) => (
+                                <option key={category.id} value={category.id}>
+                                  {category.name}
+                                </option>
+                              ))}
+                            </select>
+                          </label>
+                          {showGameSystems && (
+                            <label className={styles.consistencyPopoverCheckbox}>
+                              <input
+                                type='checkbox'
+                                checked={activeUnknownReviewItem.seedCompendium}
+                                onChange={(event) =>
+                                  updateUnknownDraft(activeConsistencyPopoverIssue.surface, {
+                                    seedCompendium: event.target.checked
+                                  })
+                                }
+                              />
+                              <span>Seed compendium entry</span>
+                            </label>
+                          )}
+                        </div>
+                        <div className={styles.consistencyPopoverActions}>
+                          <button
+                            type='button'
+                            onClick={() =>
+                              void resolveUnknownEntity(
+                                activeConsistencyPopoverIssue.surface,
+                                activeUnknownReviewItem
+                                  ? {
+                                      name: activeUnknownReviewItem.name,
+                                      categoryId: activeUnknownReviewItem.categoryId,
+                                      seedCompendium: activeUnknownReviewItem.seedCompendium
+                                    }
+                                  : undefined
+                              )
+                            }
+                            disabled={resolvingUnknown === activeConsistencyPopoverIssue.surface}
+                          >
+                            {resolvingUnknown === activeConsistencyPopoverIssue.surface
+                              ? 'Creating...'
+                              : 'Create entity'}
+                          </button>
+                          <button
+                            type='button'
+                            onClick={() => dismissUnknownEntity(activeConsistencyPopoverIssue.surface)}
+                          >
+                            Dismiss
+                          </button>
+                        </div>
                       </div>
                     )}
-                    <div className={styles.consistencyPopoverActions}>
-                      <button
-                        type='button'
-                        onClick={() =>
-                          void resolveUnknownEntity(
-                            activeConsistencyPopoverIssue.surface,
-                            activeUnknownReviewItem
-                              ? {
-                                  name: activeUnknownReviewItem.name,
-                                  categoryId: activeUnknownReviewItem.categoryId,
-                                  seedCompendium: activeUnknownReviewItem.seedCompendium
-                                }
-                              : undefined
-                          )
-                        }
-                        disabled={resolvingUnknown === activeConsistencyPopoverIssue.surface}
-                      >
-                        {resolvingUnknown === activeConsistencyPopoverIssue.surface
-                          ? 'Creating...'
-                          : 'Create entity'}
-                      </button>
-                      <button
-                        type='button'
-                        onClick={() => dismissUnknownEntity(activeConsistencyPopoverIssue.surface)}
-                      >
-                        Dismiss
-                      </button>
-                    </div>
                     {unknownLinkOptions[activeConsistencyPopoverIssue.surface]?.length ? (
-                      <div className={styles.consistencyPopoverLinkRow}>
-                        <select
-                          value={
-                            unknownLinkSelection[activeConsistencyPopoverIssue.surface] ?? ''
-                          }
-                          onChange={(event) =>
-                            setUnknownLinkSelection((prev) => ({
-                              ...prev,
-                              [activeConsistencyPopoverIssue.surface]:
-                                event.target.value
-                            }))
-                          }
-                        >
-                          <option value=''>Select entity...</option>
-                          {unknownLinkOptions[activeConsistencyPopoverIssue.surface].map(
-                            (entity) => (
-                              <option key={entity.value} value={entity.value}>
-                                {entity.name}
-                                {entity.targetType === 'character'
-                                  ? ' (Character)'
-                                  : ''}
-                              </option>
-                            )
-                          )}
-                        </select>
-                        <button
-                          type='button'
-                          onClick={() =>
-                            void linkUnknownEntity(
-                              activeConsistencyPopoverIssue.surface,
-                              unknownLinkSelection[activeConsistencyPopoverIssue.surface]
-                            )
-                          }
-                          disabled={
-                            linkingUnknown === activeConsistencyPopoverIssue.surface ||
-                            !unknownLinkSelection[activeConsistencyPopoverIssue.surface]
-                          }
-                        >
-                          {linkingUnknown === activeConsistencyPopoverIssue.surface
-                            ? 'Linking...'
-                            : 'Link alias'}
-                        </button>
+                      <div className={styles.consistencyPopoverSection}>
+                        <div className={styles.consistencyPopoverSectionTitle}>
+                          Link to existing record
+                        </div>
+                        <div className={styles.consistencyPopoverLinkRow}>
+                          <select
+                            value={
+                              unknownLinkSelection[activeConsistencyPopoverIssue.surface] ?? ''
+                            }
+                            onChange={(event) =>
+                              setUnknownLinkSelection((prev) => ({
+                                ...prev,
+                                [activeConsistencyPopoverIssue.surface]:
+                                  event.target.value
+                              }))
+                            }
+                          >
+                            <option value=''>Select entity...</option>
+                            {unknownLinkOptions[activeConsistencyPopoverIssue.surface].map(
+                              (entity) => (
+                                <option key={entity.value} value={entity.value}>
+                                  {entity.name}
+                                  {entity.targetType === 'character'
+                                    ? ' (Character)'
+                                    : ''}
+                                </option>
+                              )
+                            )}
+                          </select>
+                          <button
+                            type='button'
+                            onClick={() =>
+                              void linkUnknownEntity(
+                                activeConsistencyPopoverIssue.surface,
+                                unknownLinkSelection[activeConsistencyPopoverIssue.surface]
+                              )
+                            }
+                            disabled={
+                              linkingUnknown === activeConsistencyPopoverIssue.surface ||
+                              !unknownLinkSelection[activeConsistencyPopoverIssue.surface]
+                            }
+                          >
+                            {linkingUnknown === activeConsistencyPopoverIssue.surface
+                              ? 'Linking...'
+                              : 'Link alias'}
+                          </button>
+                        </div>
                       </div>
                     ) : (
                       <div className={styles.consistencyPopoverNote}>
@@ -4243,44 +4336,15 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
                 )}
               </div>
 
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.75rem',
-                  flexWrap: 'wrap'
-                }}
-              >
-                <button
-                  type='button'
-                  onClick={handleSave}
-                  disabled={saveStatus === 'saving'}
-                >
-                  Save now
-                </button>
-                {seriesBibleConfig?.parentProjectId && (
-                  <button
-                    type='button'
-                    onClick={() => void handlePromoteDocument()}
-                    disabled={isPromotingDocument}
-                  >
-                    {isPromotingDocument
-                      ? 'Promoting...'
-                      : 'Promote scene to parent'}
-                  </button>
-                )}
-                <button type='button' onClick={openMemoryModal}>
-                  Extract memory
-                </button>
-                <span style={{fontSize: '0.85rem', fontStyle: 'italic'}}>
+              <div className={styles.editorFooterMeta}>
+                <span>
                   {saveStatus === 'saving' && 'Saving…'}
                   {saveStatus === 'saved' && lastSavedAt && (
                     <>Saved at {new Date(lastSavedAt).toLocaleTimeString()}</>
                   )}
-                  {saveStatus === 'idle' && 'No recent changes'}
-                  {' · '}
-                  {wordCount} words
+                  {saveStatus === 'idle' && 'Ready'}
                 </span>
+                <span>{wordCount} words</span>
               </div>
             </>
           ) : (
@@ -4634,6 +4698,235 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
         </div>
       )}
 
+      {isConsistencyPanelOpen && (
+        <div
+          role='dialog'
+          aria-modal='true'
+          aria-label='Consistency Review Details'
+          onClick={() => setConsistencyPanelOpen(false)}
+          className={styles.modalOverlay}
+        >
+          <div
+            onClick={(event) => event.stopPropagation()}
+            className={`${styles.modalCard} ${styles.exportModalCard}`}
+          >
+            <h3 className={styles.modalTitle}>Consistency Review</h3>
+            <p className={styles.modalDescription}>
+              {consistencyReviewItems.length > 0
+                ? `${consistencyReviewItems.length} issue(s) are currently queued across your scenes.`
+                : 'No queued issues right now. Run a review to scan the project again.'}
+            </p>
+            {lastConsistencyReviewAt && (
+              <div className={styles.consistencyLastRun}>
+                Last run: {new Date(lastConsistencyReviewAt).toLocaleString()}
+              </div>
+            )}
+            {consistencyReviewItems.length > 0 && (
+              <ul className={styles.consistencyList}>
+                {consistencyReviewItems.slice(0, 24).map((item) => (
+                  <li key={item.id} className={styles.consistencyListItem}>
+                    <strong>{item.issue.code}</strong> in{' '}
+                    <button
+                      type='button'
+                      onClick={() => {
+                        const doc = documents.find((entry) => entry.id === item.sceneId);
+                        if (doc) handleSelectDocument(doc);
+                        setConsistencyPanelOpen(false);
+                      }}
+                      className={styles.consistencySceneButton}
+                    >
+                      {item.sceneTitle}
+                    </button>
+                    : {item.issue.message}
+                    {item.issue.relatedEntities && item.issue.relatedEntities.length > 0 && (
+                      <span className={styles.consistencyRelated}>
+                        {item.issue.relatedEntities.slice(0, 3).map((target) => (
+                          <button
+                            key={`${item.id}-${target.id}`}
+                            type='button'
+                            onClick={() => openWorldRecord(target)}
+                            className={styles.consistencyRelatedButton}
+                          >
+                            Open {target.name}
+                          </button>
+                        ))}
+                      </span>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            )}
+            <div className={styles.modalActions}>
+              <button
+                type='button'
+                className={styles.modalSecondaryAction}
+                onClick={() => setConsistencyPanelOpen(false)}
+              >
+                Close
+              </button>
+              <button
+                type='button'
+                onClick={() => void handleRunConsistencyReview()}
+                disabled={isRunningConsistencyReview}
+              >
+                {isRunningConsistencyReview ? 'Running review...' : 'Run review'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isReviewQueueOpen && (
+        <div
+          role='dialog'
+          aria-modal='true'
+          aria-label='Unknown Entity Review Queue'
+          onClick={() => setReviewQueueOpen(false)}
+          className={styles.modalOverlay}
+        >
+          <div
+            onClick={(event) => event.stopPropagation()}
+            className={`${styles.modalCard} ${styles.exportModalCard}`}
+          >
+            <h3 className={styles.modalTitle}>Review Queue</h3>
+            <p className={styles.modalDescription}>
+              Resolve highlighted unknown entities without pushing the editor down.
+            </p>
+            <div className={styles.reviewQueue}>
+              {unknownReviewItems.length > 0 ? (
+                unknownReviewItems.map((item) => (
+                  <div key={item.key} className={styles.reviewQueueCard}>
+                    <div className={styles.reviewQueueHeader}>
+                      <strong>{item.surface}</strong>
+                      <span className={styles.reviewQueueMeta}>
+                        Suggested: {item.categoryName}
+                      </span>
+                    </div>
+                    <div className={styles.reviewQueueGrid}>
+                      <label className={styles.reviewQueueField}>
+                        Canonical name
+                        <input
+                          type='text'
+                          value={item.name}
+                          onChange={(event) =>
+                            updateUnknownDraft(item.surface, {name: event.target.value})
+                          }
+                        />
+                      </label>
+                      <label className={styles.reviewQueueField}>
+                        Category
+                        <select
+                          value={item.categoryId}
+                          onChange={(event) =>
+                            updateUnknownDraft(item.surface, {
+                              categoryId: event.target.value
+                            })
+                          }
+                        >
+                          <option value=''>Choose category...</option>
+                          {categories.map((category) => (
+                            <option key={category.id} value={category.id}>
+                              {category.name}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      {showGameSystems && (
+                        <label className={styles.reviewQueueCheckbox}>
+                          <input
+                            type='checkbox'
+                            checked={item.seedCompendium}
+                            onChange={(event) =>
+                              updateUnknownDraft(item.surface, {
+                                seedCompendium: event.target.checked
+                              })
+                            }
+                          />
+                          <span>Seed compendium entry</span>
+                        </label>
+                      )}
+                    </div>
+                    <div className={styles.reviewQueueActions}>
+                      <button
+                        type='button'
+                        onClick={() =>
+                          void resolveUnknownEntity(item.surface, {
+                            name: item.name,
+                            categoryId: item.categoryId,
+                            seedCompendium: item.seedCompendium
+                          })
+                        }
+                        disabled={resolvingUnknown === item.surface || !item.name.trim()}
+                      >
+                        {resolvingUnknown === item.surface ? 'Creating...' : 'Create record'}
+                      </button>
+                      <label className={styles.reviewQueueLinkField}>
+                        Link to existing
+                        <select
+                          value={unknownLinkSelection[item.surface] ?? ''}
+                          onChange={(event) =>
+                            setUnknownLinkSelection((prev) => ({
+                              ...prev,
+                              [item.surface]: event.target.value
+                            }))
+                          }
+                        >
+                          <option value=''>Select entity...</option>
+                          {unknownLinkOptions[item.surface]?.map((entity) => (
+                            <option key={entity.value} value={entity.value}>
+                              {entity.name}
+                              {entity.targetType === 'character' ? ' (Character)' : ''}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      <button
+                        type='button'
+                        onClick={() => void linkUnknownEntity(item.surface)}
+                        disabled={
+                          linkingUnknown === item.surface ||
+                          !unknownLinkSelection[item.surface]
+                        }
+                      >
+                        {linkingUnknown === item.surface ? 'Linking...' : 'Link alias'}
+                      </button>
+                      <button
+                        type='button'
+                        onClick={() => dismissUnknownEntity(item.surface)}
+                      >
+                        Dismiss
+                      </button>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <p className={styles.exportEmpty}>No review items are queued right now.</p>
+              )}
+              {unknownReviewItems.length > 0 && (
+                <div className={styles.reviewQueueFooter}>
+                  <button
+                    type='button'
+                    onClick={() => void resolveAllUnknownEntities()}
+                    className={styles.unknownActionButton}
+                  >
+                    Create all reviewed items
+                  </button>
+                </div>
+              )}
+            </div>
+            <div className={styles.modalActions}>
+              <button
+                type='button'
+                className={styles.modalSecondaryAction}
+                onClick={() => setReviewQueueOpen(false)}
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {isExportModalOpen && (
         <div
           role='dialog'
@@ -4643,7 +4936,9 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
           <div className={`${styles.modalCard} ${styles.exportModalCard}`}>
             <h3 className={styles.modalTitle}>
               Export scenes as{' '}
-              {exportFormat === 'markdown'
+              {exportFormat === 'json'
+                ? 'JSON'
+                : exportFormat === 'markdown'
                 ? 'Markdown'
                 : exportFormat === 'docx'
                   ? 'DOCX'
@@ -4712,6 +5007,69 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
               </button>
               <button type='button' onClick={handleExportScenes}>
                 Export
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isImportPreviewModalOpen && sceneJsonImportPreview && (
+        <div
+          role='dialog'
+          aria-modal='true'
+          className={styles.modalOverlay}
+        >
+          <div className={`${styles.modalCard} ${styles.exportModalCard}`}>
+            <h3 className={styles.modalTitle}>Preview scene JSON import</h3>
+            <p className={styles.modalDescription}>
+              Review the scenes from <strong>{sceneJsonImportPreview.fileName}</strong>
+              {sceneJsonImportPreview.projectName
+                ? ` exported from ${sceneJsonImportPreview.projectName}.`
+                : '.'}
+            </p>
+            <div className={styles.exportControlRow}>
+              <button type='button' onClick={() => toggleAllJsonImportPreviewItems(true)}>
+                Select all
+              </button>
+              <button type='button' onClick={() => toggleAllJsonImportPreviewItems(false)}>
+                Clear all
+              </button>
+            </div>
+            <div className={styles.exportListContainer}>
+              <ul className={styles.exportList}>
+                {sceneJsonImportPreview.scenes.map((scene, index) => (
+                  <li key={scene.sourceId} className={styles.exportListItem}>
+                    <label className={styles.exportItemLabel}>
+                      <input
+                        type='checkbox'
+                        checked={scene.included}
+                        onChange={() => toggleJsonImportPreviewItem(scene.sourceId)}
+                      />
+                      <span className={styles.exportItemTitle}>
+                        {index + 1}. {scene.title}
+                      </span>
+                    </label>
+                    <div className={styles.importPreviewExcerpt}>
+                      {scene.contentText.trim().slice(0, 180) || 'No content preview available.'}
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div className={styles.modalActions}>
+              <button
+                type='button'
+                onClick={closeImportPreviewModal}
+                className={styles.modalSecondaryAction}
+              >
+                Cancel
+              </button>
+              <button
+                type='button'
+                onClick={() => void handleImportPreviewScenes()}
+                disabled={isImportingDocuments}
+              >
+                {isImportingDocuments ? 'Importing...' : 'Import selected scenes'}
               </button>
             </div>
           </div>

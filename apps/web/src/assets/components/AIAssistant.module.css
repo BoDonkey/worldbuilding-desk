@@ -2,16 +2,19 @@
   display: flex;
   flex-direction: column;
   height: 100%;
-  background: white;
-  border-radius: 8px;
+  min-height: 0;
+  flex: 1;
+  background: var(--surface-panel-elevated);
+  border-radius: 18px;
+  border: 1px solid var(--surface-border-soft);
   overflow: hidden;
   margin: 0.5rem;
 }
 
 .toolsBar {
-  border-bottom: 1px solid #dee2e6;
+  border-bottom: 1px solid var(--surface-border-soft);
   padding: 0.6rem 0.75rem;
-  background: #f8fafc;
+  background: var(--surface-panel);
 }
 
 .activeToolsSummary {
@@ -42,19 +45,19 @@
 .activeToolChip {
   display: inline-flex;
   align-items: center;
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--surface-border-soft);
   border-radius: 999px;
-  background: #ffffff;
-  color: #0f172a;
+  background: var(--surface-panel-elevated);
+  color: var(--color-text-primary);
   padding: 0.2rem 0.5rem;
   font-size: 12px;
   font-weight: 600;
 }
 
 .activePersonaChip {
-  border-color: #bfdbfe;
-  background: #eff6ff;
-  color: #1d4ed8;
+  border-color: var(--badge-info-border);
+  background: var(--badge-info-bg);
+  color: var(--badge-info-text);
 }
 
 .activeToolsEmpty {
@@ -81,20 +84,21 @@
   align-items: center;
   font-size: 12px;
   padding: 0.2rem 0.45rem;
-  border: 1px solid #d1d5db;
+  border: 1px solid var(--surface-border-soft);
   border-radius: 999px;
-  background: #ffffff;
-  color: #111827;
+  background: var(--surface-panel-elevated);
+  color: var(--color-text-primary);
 }
 
 .messages {
   flex: 1;
+  min-height: 0;
   overflow-y: auto;
   padding: 1rem;
   display: flex;
   flex-direction: column;
   gap: 1rem;
-  background: #ffffff;
+  background: var(--surface-panel-elevated);
 }
 
 .user {
@@ -116,39 +120,35 @@
 }
 
 .user .messageContent {
-  background: #007bff;
-  color: white;
+  background: var(--button-primary-bg);
+  color: var(--button-primary-text);
+  border: 1px solid var(--button-primary-border);
 }
 
 .assistant .messageContent {
-  background: #e9ecef;
-  border: 1px solid #dee2e6;
-  color: #212529;
+  background: var(--surface-panel);
+  border: 1px solid var(--surface-border-soft);
+  color: var(--color-text-primary);
 }
 
 .inputArea {
-  border-top: 1px solid #dee2e6;
+  flex-shrink: 0;
+  border-top: 1px solid var(--surface-border-soft);
   padding: 1rem;
-  background: white;
+  background: var(--surface-panel);
 }
 
 .inputArea textarea {
   width: 100%;
   min-height: 80px;
   padding: 0.75rem;
-  border: 1px solid #ced4da;
-  border-radius: 4px;
   resize: vertical;
   font-family: inherit;
   font-size: 14px;
-  color: #212529;
-  background: white;
 }
 
 .inputArea textarea:focus {
   outline: none;
-  border-color: #007bff;
-  box-shadow: 0 0 0 0.2rem rgba(0,123,255,.25);
 }
 
 .actions {
@@ -159,21 +159,18 @@
 }
 
 .actions button {
-  padding: 0.5rem 1rem;
-  border-radius: 4px;
-  border: none;
-  background: #007bff;
-  color: white;
-  cursor: pointer;
-  font-weight: 500;
+  background: var(--button-primary-bg);
+  color: var(--button-primary-text);
+  border: 1px solid var(--button-primary-border);
 }
 
 .actions button:hover {
-  background: #0056b3;
+  background: var(--button-primary-bg-hover);
 }
 
 .actions button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
-  background: #6c757d;
+  background: var(--button-border);
+  color: var(--color-text-secondary);
 }

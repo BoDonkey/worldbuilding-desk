@@ -57,6 +57,7 @@ interface EditorWithAIProps {
   textToInsert?: string | null;
   onTextInserted?: () => void;
   onSelectionAddToReview?: (text: string) => void;
+  onOpenLoreRecord?: (target: {id: string; type: 'character' | 'entity'}) => void;
   systemHistoryEntries?: SystemHistoryEntry[];
   onClearSystemHistory?: () => void;
   onOpenSceneFromHistory?: (sceneId: string) => void;
@@ -93,6 +94,7 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
   textToInsert: externalTextToInsert = null,
   onTextInserted,
   onSelectionAddToReview,
+  onOpenLoreRecord,
   systemHistoryEntries = [],
   onClearSystemHistory,
   onOpenSceneFromHistory,
@@ -100,6 +102,7 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
   selectionQuickSnippets
 }) => {
   const [showSidePanel, setShowSidePanel] = useState(false);
+  const [isSidePanelExpanded, setSidePanelExpanded] = useState(false);
   const [activePanelTab, setActivePanelTab] = useState<'ai' | 'system' | 'lore'>('ai');
   const [aiContext, setAIContext] = useState<AIContextType | null>(null);
   const [textToInsertFromAI, setTextToInsertFromAI] = useState<string | null>(null);
@@ -648,7 +651,11 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
         {lorePopoverRecord && lorePopoverAnchor && (
           <ContextPopover
             title={lorePopoverRecord.name}
-            message={lorePopoverRecord.type === 'character' ? 'Character lore peek' : 'World lore peek'}
+            eyebrow={
+              lorePopoverRecord.type === 'character' ? 'Character Lore' : 'World Lore'
+            }
+            message='Quick canon snapshot for the selected reference.'
+            tone='info'
             left={lorePopoverAnchor.left}
             top={lorePopoverAnchor.top}
             onClose={() => {
@@ -656,6 +663,13 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
               setLorePopoverRecord(null);
             }}
           >
+            <div className={styles.popoverSectionLabel}>Vital signs</div>
+            {lorePopoverRecord.type === 'entity' &&
+            lorePopoverRecord.completionStatus === 'draft' ? (
+              <div className={styles.loreDraftWarning}>
+                Needs completion in World Bible.
+              </div>
+            ) : null}
             <div className={styles.lorePeekVitals}>
               {lorePopoverRecord.vitalSigns.map((item) => (
                 <span key={item} className={styles.loreVitalChip}>
@@ -663,18 +677,43 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
                 </span>
               ))}
             </div>
-            <div className={styles.lorePeekList}>
-              <div>
-                <strong>Goal:</strong> {lorePopoverRecord.synopsis.goal}
+            <div className={styles.popoverSectionLabel}>Synopsis</div>
+            <div className={styles.lorePeekSummary}>
+              <div className={styles.lorePeekRow}>
+                <div className={styles.lorePeekLabel}>Goal</div>
+                <div className={styles.lorePeekValue}>{lorePopoverRecord.synopsis.goal}</div>
               </div>
-              <div>
-                <strong>Recent Event:</strong> {lorePopoverRecord.synopsis.recentEvent}
+              <div className={styles.lorePeekRow}>
+                <div className={styles.lorePeekLabel}>Recent event</div>
+                <div className={styles.lorePeekValue}>
+                  {lorePopoverRecord.synopsis.recentEvent}
+                </div>
               </div>
-              <div>
-                <strong>Motivation:</strong> {lorePopoverRecord.synopsis.motivation}
+              <div className={styles.lorePeekRow}>
+                <div className={styles.lorePeekLabel}>Motivation</div>
+                <div className={styles.lorePeekValue}>
+                  {lorePopoverRecord.synopsis.motivation}
+                </div>
               </div>
             </div>
             <div className={styles.systemActions}>
+              {onOpenLoreRecord && (
+                <button
+                  type='button'
+                  onClick={() => {
+                    onOpenLoreRecord({
+                      id: lorePopoverRecord.id,
+                      type: lorePopoverRecord.type
+                    });
+                    setLorePopoverAnchor(null);
+                    setLorePopoverRecord(null);
+                  }}
+                >
+                  {lorePopoverRecord.type === 'entity'
+                    ? 'Open in World Bible'
+                    : 'Open in Characters'}
+                </button>
+              )}
               <button
                 type='button'
                 onClick={() => {
@@ -693,7 +732,11 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
       </div>
 
       {showSidePanel && (
-        <div className={styles.aiPanel}>
+        <div
+          className={`${styles.aiPanel} ${
+            isSidePanelExpanded ? styles.aiPanelWide : ''
+          }`}
+        >
           <div className={styles.panelTabs}>
             <button
               type='button'
@@ -723,6 +766,13 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
               Lore Inspector
             </button>
           </div>
+          <button
+            type='button'
+            className={styles.panelResizeButton}
+            onClick={() => setSidePanelExpanded((prev) => !prev)}
+          >
+            {isSidePanelExpanded ? 'Narrow' : 'Expand'}
+          </button>
           <button
             className={styles.closeButton}
             onClick={() => setShowSidePanel(false)}

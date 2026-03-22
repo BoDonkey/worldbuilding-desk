@@ -167,6 +167,13 @@ export const createAppCommands = ({
       run: () => dispatchWorkspaceCommand('run-consistency-review')
     },
     {
+      id: 'workspace-export-json',
+      label: 'Workspace: Export JSON',
+      section: 'Workspace',
+      keywords: ['export', 'json', 'portable', 'machine-readable'],
+      run: () => dispatchWorkspaceCommand('export-json')
+    },
+    {
       id: 'workspace-export-markdown',
       label: 'Workspace: Export Markdown',
       section: 'Workspace',

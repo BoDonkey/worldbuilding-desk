@@ -49,6 +49,7 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
   const [memoryCache, setMemoryCache] = useState<MemoryEntry[]>([]);
   const [selectedToolIds, setSelectedToolIds] = useState<string[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
 
   const llmService = useRef<LLMService | null>(null);
   const ragService = useRef<RAGProvider | null>(null);
@@ -135,7 +136,12 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
   }, [syncMemoryCache]);
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({behavior: 'smooth'});
+    const container = messagesContainerRef.current;
+    if (!container) return;
+    container.scrollTo({
+      top: container.scrollHeight,
+      behavior: 'smooth'
+    });
   }, [messages]);
 
   const enabledTools = (aiConfig?.promptTools ?? []).filter((tool) => tool.enabled);
@@ -369,7 +375,7 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
           <p>{providerError}</p>
         </div>
       )}
-      <div className={styles.messages}>
+      <div ref={messagesContainerRef} className={styles.messages}>
         {messages.map((msg, i) => (
           <div key={i} className={styles[msg.role]}>
             <div className={styles.messageContent}>{msg.content}</div>

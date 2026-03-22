@@ -88,6 +88,31 @@
   padding-top: 1rem;
 }
 
+.configSection {
+  border: 1px solid var(--surface-border-soft);
+  border-radius: 16px;
+  padding: 1rem;
+  background: var(--surface-panel);
+  display: grid;
+  gap: 0.85rem;
+}
+
+.sectionHeader {
+  display: grid;
+  gap: 0.3rem;
+}
+
+.sectionTitle {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.sectionGrid {
+  display: grid;
+  gap: 0.85rem;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+}
+
 .presetGrid {
   display: grid;
   gap: 0.75rem;
@@ -113,11 +138,11 @@
 }
 
 .modeDefaultsHeader {
-  border: 1px solid var(--color-border);
-  border-radius: 8px;
+  border: 1px solid var(--surface-border-soft);
+  border-radius: 14px;
   padding: 0.75rem;
   margin-bottom: 0.5rem;
-  background: var(--color-bg-secondary);
+  background: var(--surface-panel);
 }
 
 .toolsHeading {
@@ -153,10 +178,10 @@
 }
 
 .toolItem {
-  border: 1px solid var(--color-border);
-  border-radius: 6px;
+  border: 1px solid var(--surface-border-soft);
+  border-radius: 14px;
   padding: 0.75rem;
-  background-color: var(--color-bg-secondary);
+  background-color: var(--surface-panel);
 }
 
 .editPanel {
@@ -205,4 +230,126 @@
   background-color: #fee2e2;
   color: #991b1b;
   cursor: pointer;
+}
+
+.defaultsSummaryCard {
+  border: 1px solid var(--surface-border-soft);
+  border-radius: 16px;
+  padding: 0.9rem;
+  background: var(--surface-panel);
+  display: grid;
+  gap: 0.85rem;
+}
+
+.defaultsSummaryHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.summaryEyebrow {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+  margin-bottom: 0.2rem;
+}
+
+.modeSelectorInline {
+  display: grid;
+  gap: 0.35rem;
+  min-width: min(320px, 100%);
+}
+
+.modeSelectorLabel {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+
+.defaultsSummaryGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 0.75rem;
+}
+
+.defaultsSummaryBlock {
+  border: 1px solid var(--surface-border-soft);
+  border-radius: 14px;
+  background: var(--surface-panel-elevated);
+  padding: 0.75rem;
+  display: grid;
+  gap: 0.5rem;
+}
+
+.summaryLabel {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--color-text-primary);
+}
+
+.summaryChipRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.personaChip,
+.toolChip,
+.defaultBadge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 0.18rem 0.55rem;
+  font-size: 0.74rem;
+  font-weight: 700;
+}
+
+.personaChip {
+  background: var(--badge-info-bg);
+  border: 1px solid var(--badge-info-border);
+  color: var(--badge-info-text);
+}
+
+.toolChip {
+  background: var(--button-secondary-bg);
+  border: 1px solid var(--button-secondary-border);
+  color: var(--button-secondary-text);
+}
+
+.defaultBadge {
+  background: var(--badge-warning-bg);
+  border: 1px solid var(--badge-warning-border);
+  color: var(--badge-warning-text);
+}
+
+.summaryEmpty {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+
+.librarySection {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.libraryHeader {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.libraryTitle {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.toolTitleBlock {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  flex-wrap: wrap;
 }

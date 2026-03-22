@@ -1,0 +1,459 @@
+.container {
+  display: grid;
+  gap: 1rem;
+}
+
+.actionRow {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.feedbackBanner {
+  margin: 0;
+  padding: 0.7rem 0.85rem;
+  border-radius: 14px;
+  border: 1px solid var(--surface-border-soft);
+  background: var(--surface-panel);
+}
+
+.feedbackSuccess {
+  border-color: color-mix(in srgb, var(--button-primary-border) 78%, var(--surface-border-soft) 22%);
+  background: color-mix(in srgb, var(--button-primary-bg) 22%, var(--surface-panel-elevated) 78%);
+  color: var(--button-primary-text);
+}
+
+.feedbackError {
+  border-color: var(--button-danger-border);
+  background: color-mix(in srgb, var(--button-danger-bg) 26%, var(--surface-panel-elevated) 74%);
+  color: var(--button-danger-text);
+}
+
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(20, 18, 15, 0.46);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 1rem;
+}
+
+.modalCard {
+  width: min(720px, 94vw);
+  max-height: min(84vh, 880px);
+  overflow-y: auto;
+  background: var(--surface-panel-elevated);
+  border: 1px solid var(--surface-border-soft);
+  border-radius: 22px;
+  box-shadow: 0 26px 60px rgba(29, 24, 19, 0.18);
+  padding: 1.2rem;
+  display: grid;
+  gap: 0.95rem;
+}
+
+.modalHeader {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.modalTitle {
+  margin: 0;
+}
+
+.modalDescription {
+  margin: 0;
+  color: var(--color-text-secondary);
+  line-height: 1.55;
+}
+
+.importPreviewGrid {
+  display: grid;
+  gap: 0.7rem;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.importOptionCard {
+  display: grid;
+  gap: 0.3rem;
+  padding: 0.85rem;
+  border: 1px solid var(--surface-border-soft);
+  border-radius: 16px;
+  background: var(--surface-panel);
+}
+
+.importOptionLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.importOptionMeta {
+  font-size: 0.85rem;
+  color: var(--color-text-secondary);
+}
+
+.importBehaviorCard {
+  padding: 0.9rem;
+  border: 1px solid var(--surface-border-soft);
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--surface-panel) 88%, var(--surface-panel-elevated) 12%);
+}
+
+.importBehaviorTitle {
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.importBehaviorText {
+  margin: 0.45rem 0 0;
+  color: var(--color-text-secondary);
+  line-height: 1.55;
+}
+
+.modalActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.helpPanel {
+  border: 1px solid var(--surface-border-soft);
+  border-radius: 16px;
+  padding: 0.8rem 0.9rem;
+  background: var(--surface-panel);
+}
+
+.helpSummary {
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.helpBody {
+  margin-top: 0.6rem;
+  font-size: 0.9rem;
+  color: var(--color-text-secondary);
+}
+
+.helpBody p {
+  margin: 0 0 0.45rem;
+}
+
+.tabs {
+  display: flex;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+}
+
+.tabButton {
+  padding: 0.45rem 0.8rem;
+  border-radius: 999px;
+}
+
+.tabButtonActive {
+  background: var(--button-primary-bg);
+  color: var(--button-primary-text);
+  border-color: var(--button-primary-border);
+}
+
+.tabSubtitle {
+  font-size: 0.92rem;
+  color: var(--color-text-secondary);
+}
+
+.nextStepsPanel {
+  padding: 0.85rem 0.95rem;
+  border: 1px solid var(--surface-border-soft);
+  border-radius: 16px;
+  background: var(--surface-panel);
+}
+
+.nextStepsTitle {
+  margin: 0 0 0.45rem;
+  font-size: 1rem;
+}
+
+.nextStepsProgress {
+  margin: 0 0 0.55rem;
+  font-size: 0.82rem;
+  color: var(--color-text-secondary);
+}
+
+.nextStepsEmpty {
+  margin: 0;
+  font-size: 0.88rem;
+  color: var(--color-text-secondary);
+}
+
+.nextStepsList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.4rem;
+}
+
+.nextStepsItem {
+  font-size: 0.9rem;
+  color: var(--color-text-primary);
+}
+
+.statusChips {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.statusChip {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  border: 1px solid var(--badge-info-border);
+  background: var(--badge-info-bg);
+  color: var(--badge-info-text);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.sectionLead {
+  margin: 0 0 0.9rem;
+  color: var(--color-text-secondary);
+  line-height: 1.6;
+}
+
+.metricsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.metricCard {
+  padding: 0.95rem;
+  border: 1px solid var(--surface-border-soft);
+  border-radius: 18px;
+  background: var(--surface-panel);
+}
+
+.metricTitle {
+  margin: 0 0 0.45rem;
+  font-size: 0.95rem;
+}
+
+.metricValue {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--color-text-primary);
+}
+
+.sectionCard {
+  padding: 1rem;
+  border: 1px solid var(--surface-border-soft);
+  border-radius: 18px;
+  background: var(--surface-panel);
+}
+
+.sectionCard + .sectionCard {
+  margin-top: 1rem;
+}
+
+.sectionTitle {
+  margin: 0 0 0.45rem;
+}
+
+.sectionHint {
+  margin: 0 0 0.8rem;
+  font-size: 0.85rem;
+  color: var(--color-text-secondary);
+  line-height: 1.55;
+}
+
+.cardGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.splitGrid {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 1rem;
+  align-items: start;
+}
+
+.stackGrid {
+  display: grid;
+  gap: 1rem;
+}
+
+.fieldBlock {
+  display: block;
+  margin-bottom: 0.75rem;
+}
+
+.fieldLabel {
+  display: block;
+  margin-bottom: 0.35rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.fullWidthInput {
+  width: 100%;
+}
+
+.emptyStateCard {
+  margin-top: 0.75rem;
+  padding: 0.75rem;
+  border: 1px solid var(--surface-border-soft);
+  border-radius: 16px;
+  background: var(--surface-panel-elevated);
+}
+
+.emptyStateCardTight {
+  margin-bottom: 0.85rem;
+}
+
+.emptyStateText {
+  margin: 0 0 0.6rem;
+  color: var(--color-text-secondary);
+}
+
+.inlineActions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.plainList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.plainListSpaced {
+  list-style: none;
+  padding: 0;
+  margin: 0.75rem 0 0;
+}
+
+.listItem {
+  margin-bottom: 0.45rem;
+}
+
+.entryCard {
+  border: 1px solid var(--surface-border-soft);
+  border-radius: 16px;
+  padding: 0.85rem;
+  margin-bottom: 0.75rem;
+  background: var(--surface-panel-elevated);
+}
+
+.entryMeta {
+  font-size: 0.85rem;
+  color: var(--color-text-secondary);
+}
+
+.entryWarning {
+  font-size: 0.8rem;
+  color: var(--badge-warning-text);
+}
+
+.entryActionRow {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-top: 0.6rem;
+}
+
+.entryActionGroup {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.quantityInput {
+  width: 58px;
+}
+
+.twoColumnCompact {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+}
+
+.infoCard {
+  font-size: 0.82rem;
+  color: var(--color-text-secondary);
+  margin-bottom: 0.65rem;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid var(--surface-border-soft);
+  border-radius: 14px;
+  background: var(--surface-panel-elevated);
+  line-height: 1.5;
+}
+
+.recipeStatus {
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.recipeStatusCraftable {
+  color: #1e5a3f;
+}
+
+.recipeStatusBlocked {
+  color: var(--button-danger-text);
+}
+
+.ruleListItem {
+  margin-bottom: 0.5rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--surface-border-soft) 82%, transparent);
+}
+
+.ruleListItem:last-child {
+  border-bottom: 0;
+}
+
+.subtleMeta {
+  font-size: 0.8rem;
+  color: var(--color-text-secondary);
+}
+
+.sectionMinorHeading {
+  font-size: 0.85rem;
+  margin: 0 0 0.5rem;
+}
+
+.settingsCallout {
+  padding: 1rem;
+  border: 1px solid var(--surface-border-soft);
+  border-radius: 18px;
+  background: var(--surface-panel);
+}
+
+@media (max-width: 900px) {
+  .splitGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .twoColumnCompact {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .modalCard {
+    padding: 1rem;
+    border-radius: 18px;
+  }
+}

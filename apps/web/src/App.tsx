@@ -227,7 +227,12 @@ function AppShell() {
       case '/character-sheets':
         return <Navigate to='/characters?view=sheets' replace />;
       case '/workspace':
-        return <WorkspaceRoute activeProject={activeProject} />;
+        return (
+          <WorkspaceRoute
+            activeProject={activeProject}
+            projectSettings={projectSettings}
+          />
+        );
       case '/compendium':
         return (
           <CompendiumRoute

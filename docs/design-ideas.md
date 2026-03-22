@@ -6,12 +6,14 @@
 - Strengthen LitRPG product identity with dedicated "System" UX.
 - Keep implementation incremental and reversible.
 
-## Current State (as of March 14, 2026)
+## Current State (as of March 21, 2026)
 - Top fixed navigation with route links is in `apps/web/src/components/Navigation.tsx`.
 - Writing editor plus optional AI side panel is in `apps/web/src/components/Editor/EditorWithAI.tsx`.
 - Workspace orchestration is in `apps/web/src/routes/WorkspaceRoute.tsx`.
 - Existing architecture (React + Vite + TipTap) is suitable for phased UI changes without a rewrite.
 - Workspace now supports deferred consistency review with inline text highlights and an action popover for unknown entities.
+- Workspace now supports draft-state World Bible follow-up, editable `Alternative names`, and optional compendium seeding from review flows.
+- The editor toolbar now uses a sticky implementation instead of a custom scroll-positioned fixed toolbar.
 - RAG indexing is non-blocking on import/save and falls back locally when transformer model loading fails.
 
 ## Guiding Product Decision

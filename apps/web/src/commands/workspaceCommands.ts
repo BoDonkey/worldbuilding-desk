@@ -14,6 +14,7 @@ export type WorkspaceCommandId =
   | 'open-context-compendium'
   | 'toggle-system-history-panel'
   | 'run-consistency-review'
+  | 'export-json'
   | 'export-markdown'
   | 'export-docx'
   | 'export-epub'

@@ -1,6 +1,6 @@
 # Next Steps
 
-Last updated: 2026-03-15
+Last updated: 2026-03-22
 
 ## Current Baseline
 
@@ -21,71 +21,111 @@ Implemented recently:
 - Inline lore highlights and quick lore popovers for known entities/characters.
 - Persistent review queue with category selection, alias linking, and highlight-to-review for missed mentions.
 - Alias visibility in World Bible.
+- World Bible `needs completion` draft state with draft visibility in Workspace and Compendium.
+- First-class `Alternative names` editing with alias sync.
+- Optional compendium seeding from review-created World Bible entities.
 - Editor appearance controls for font presentation, reading width, editor surface, and line spacing.
 - Theme-aware editor surface variants for dark mode.
-- First AI persona preset: `Writing Critic`.
+- Stabilized sticky editor toolbar for long-document editing.
+- First AI persona workflow shipped with explicit critique actions and active persona visibility.
+- Second persona preset: `Line Editor`.
+- Shared lore/review popover shell with better behavior, direct record jumps, and draft warnings.
+- Persona/settings UX pass completed for defaults, personas vs supporting tools, and sectioned AI settings.
+- Scene JSON export/import preview and compendium JSON export/import preview completed.
+- UI sweep started across Workspace, Settings, and Compendium shell/body surfaces.
+- Workspace writer-first cleanup pass:
+  - reduced route-level chrome above the editor
+  - moved scene title / scene actions into the left rail
+  - moved review details into on-demand modals
+  - switched feedback to toast-style overlays
+  - independent desktop scrolling for left rail, center editor, and right rail
+- Ollama follow-up fixes:
+  - desktop provider `baseUrl` now forwards correctly
+  - Workspace now syncs canonical app settings instead of holding stale AI config
+  - added a wider AI-pane mode and internal assistant scrolling improvements
 
 ## Recommended Priority Order
 
-1. AI persona workflow
-2. Review completion workflow
-3. Lore / compendium tooltip convergence
-4. Editor customization follow-up
-5. Data portability/import/export hardening
+1. Quick Workspace AI Follow-up Verification
+2. Finish Compendium UI Sweep
+3. Final Cross-Route UI Polish
+4. Lore / compendium tooltip convergence follow-up
+5. Editor customization follow-up
+6. Data portability follow-up
 
-## 1) AI Persona Workflow
+## 1) Quick Workspace AI Follow-up Verification
 
-Goal: make the first persona useful in real drafting flow, not just installable in settings.
-
-Checklist:
-
-- Add explicit assistant actions for:
-  - `Critique selected passage`
-  - `Critique current scene`
-- Keep output structured:
-  - quick verdict
-  - top issues
-  - examples
-  - revision priorities
-- Keep apply/insert manual.
-- Validate that mode defaults still preselect the correct persona.
-
-Exit criteria:
-
-- Authors can invoke the critic without composing the prompt from scratch.
-- Critic outputs are predictable and concise enough to be useful.
-
-## 2) Review Completion Workflow
-
-Goal: make fast review-created records feel intentionally incomplete rather than silently finished.
-
-Next slices:
-
-- Add `needs completion` / draft state to review-created World Bible entities.
-- Add first-class `Alternative names` to World Bible entries and sync them with alias-based review/lore matching.
-- Add optional compendium seeding from review actions.
-- Badge World Bible / Compendium navigation targets when draft records need attention.
-
-Exit criteria:
-
-- Authors can create fast shells from review without losing track of unfinished records.
-- Review-created records surface follow-up work clearly.
-
-## 3) Lore / Compendium Tooltip Convergence
-
-Goal: reuse the stronger workspace popover patterns for broader canon cleanup and lookup.
+Goal: verify the post-cleanup workspace is stable enough to stop touching it and return to Compendium work.
 
 Targets:
 
-- Expand the shared popover shell into a richer review surface for lore and compendium links.
-- Support smoother alias management from tooltip flows.
-- Reduce context switching between Workspace, World Bible, and Compendium.
+- Confirm project AI provider selection persists cleanly across full app restart.
+- Confirm Ollama path stays selected and does not fall back to Anthropic unexpectedly.
+- Confirm AI pane input stays visible without scrolling the editor column.
+- Confirm AI message scrolling is internal to the pane.
+- Decide whether the left-rail scene meta card is acceptable as-is or needs one more visual simplification pass later.
+
+Exit criteria:
+
+- Writing + AI feels usable enough for real drafting sessions without another immediate workspace rework.
+
+## 2) Finish Compendium UI Sweep
+
+Goal: complete the visual cleanup of the remaining Compendium sections so the route feels consistent end to end.
+
+Status:
+
+- Done:
+  - compendium route shell
+  - JSON import preview modal
+  - help / tabs / next-step panels
+  - overview, entries, and progression sections
+- Remaining:
+  - zone affinity section
+  - party synergy/community section
+  - settlement progression section
+  - remaining empty/list/detail states inside `world-systems`
+
+Exit criteria:
+
+- The full Compendium route reads as one coherent UI system instead of mixed generations of styling.
+
+## 3) Final Cross-Route UI Polish
+
+Goal: do one end-to-end polish pass after compendium is finished so the recently expanded flows feel equally refined.
+
+Targets:
+
+- Workspace import/export and consistency surfaces
+- Compendium portability and body sections
+- Settings / AI settings cards and action rows
+- Any remaining stark legacy surfaces, badges, or empty states
+
+Exit criteria:
+
+- No obvious “old UI vs new UI” seams remain in the main authoring flows.
+
+## 4) Lore / Compendium Tooltip Convergence Follow-up
+
+Goal: extend the first popover convergence pass into richer inline canon workflows.
+
+Status:
+
+- Done:
+  - shared popover shell
+  - shared behavior polish
+  - direct lore-to-record navigation
+  - draft-state warnings in lore surfaces
+- Remaining:
+  - richer compendium-related actions from inline lore/review surfaces
+  - more connected related-record context
+  - any remaining duplication between review-queue and lore-peek flows
 
 Exit criteria:
 
 - Authors can inspect and resolve lightweight canon issues without leaving the scene unnecessarily.
 
-## 4) Editor Customization Follow-up
+## 5) Editor Customization Follow-up
 
 Goal: revisit editor controls only if the current presets prove too limiting in real use.
 
@@ -93,25 +133,25 @@ Targets:
 
 - Add richer font options, potentially including dyslexia-friendly choices.
 - Consider custom highlight palettes and more granular surface settings.
-- Revisit toolbar edge cases only if they recur after more writing time.
+- Revisit toolbar edge cases only if they recur after more writing time after the sticky-toolbar fix.
 
 Exit criteria:
 
 - The editor remains comfortable over long sessions without becoming a settings swamp.
 
-## 5) Data Portability / Import-Export
+## 6) Data Portability Follow-up
 
-Goal: improve author workflow and reduce lock-in risk.
+Goal: keep the new portability flows solid, but treat them as a follow-on rather than the immediate bottleneck.
 
 Targets:
 
-- Add export for scenes and compendium data (`.json` + optional markdown bundle).
-- Add import preview/validation before commit.
-- Optional: richer Word import handling (tables/headers/formatting).
+- Round-trip schema/versioning rules for JSON exports/imports.
+- Optional bundle-style exports/imports beyond raw JSON.
+- Optional richer Word import handling (tables/headers/formatting).
 
 Exit criteria:
 
-- Author can round-trip project content safely.
+- Author can round-trip project content safely, with clear expectations when versions diverge.
 
 ## Branch and Commit Workflow (Keep)
 
@@ -122,6 +162,8 @@ Exit criteria:
 
 Suggested branch names:
 
-- `codex/ai-writing-critic-actions`
-- `codex/review-completion-badges`
+- `codex/workspace-ai-followup`
+- `codex/compendium-world-systems-sweep`
+- `codex/final-ui-polish`
 - `codex/lore-tooltip-convergence`
+- `codex/editor-customization-followup`

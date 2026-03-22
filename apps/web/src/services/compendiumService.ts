@@ -389,6 +389,24 @@ export async function saveUnlockableRecipe(recipe: UnlockableRecipe): Promise<vo
   await requestToPromise(store.put(recipe));
 }
 
+export async function saveCompendiumProgress(
+  progress: CompendiumProgress
+): Promise<void> {
+  const db = await openDb();
+  const tx = db.transaction(COMPENDIUM_PROGRESS_STORE_NAME, 'readwrite');
+  const store = tx.objectStore(COMPENDIUM_PROGRESS_STORE_NAME);
+  await requestToPromise(store.put(progress));
+}
+
+export async function saveCompendiumActionLog(
+  log: CompendiumActionLog
+): Promise<void> {
+  const db = await openDb();
+  const tx = db.transaction(COMPENDIUM_ACTION_LOG_STORE_NAME, 'readwrite');
+  const store = tx.objectStore(COMPENDIUM_ACTION_LOG_STORE_NAME);
+  await requestToPromise(store.put(log));
+}
+
 function hasMaterial(
   requirements: RecipeMaterialRequirement[] | undefined,
   availableMaterials: Record<string, number>
@@ -861,6 +879,15 @@ export async function saveZoneAffinityProfile(
   const tx = db.transaction(ZONE_AFFINITY_PROFILE_STORE_NAME, 'readwrite');
   const store = tx.objectStore(ZONE_AFFINITY_PROFILE_STORE_NAME);
   await requestToPromise(store.put(profile));
+}
+
+export async function saveZoneAffinityProgress(
+  progress: ZoneAffinityProgress
+): Promise<void> {
+  const db = await openDb();
+  const tx = db.transaction(ZONE_AFFINITY_PROGRESS_STORE_NAME, 'readwrite');
+  const store = tx.objectStore(ZONE_AFFINITY_PROGRESS_STORE_NAME);
+  await requestToPromise(store.put(progress));
 }
 
 export async function upsertZoneAffinityProfile(params: {
