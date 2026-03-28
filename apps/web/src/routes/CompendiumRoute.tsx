@@ -1797,62 +1797,52 @@ function CompendiumRoute({activeProject, projectSettings}: CompendiumRouteProps)
     }
 
     return (
-      <div style={{display: 'grid', gap: '1rem'}}>
-        <p style={{marginTop: 0, marginBottom: 0, color: '#4b5563'}}>
+      <div className={styles.stackGrid}>
+        <p className={styles.sectionLead}>
           Advanced systems are optional. Enable and tune only when you need
           simulation depth for progression balancing.
         </p>
-        <section style={{padding: '1rem', border: '1px solid #ddd', borderRadius: '8px'}}>
-          <h2 style={{marginTop: 0}}>Zone Affinity</h2>
-          <p style={{marginTop: 0, fontSize: '0.85rem', color: '#6b7280'}}>
+        <section className={styles.sectionCard}>
+          <h2 className={styles.sectionTitle}>Zone Affinity</h2>
+          <p className={styles.sectionHint}>
             Track zone exposure and unlock biome-specific milestones over time.
           </p>
-          <label style={{display: 'block', marginBottom: '0.5rem'}}>
-            Zone Name
+          <label className={styles.fieldBlock}>
+            <span className={styles.fieldLabel}>Zone Name</span>
             <input
               type='text'
               value={zoneName}
               onChange={(e) => setZoneName(e.target.value)}
               placeholder='Bee Cave'
-              style={{width: '100%'}}
+              className={styles.fullWidthInput}
             />
           </label>
-          <label style={{display: 'block', marginBottom: '0.5rem'}}>
-            Zone Key
+          <label className={styles.fieldBlock}>
+            <span className={styles.fieldLabel}>Zone Key</span>
             <input
               type='text'
               value={zoneKey}
               onChange={(e) => setZoneKey(e.target.value)}
               placeholder='bee_cave'
-              style={{width: '100%'}}
+              className={styles.fullWidthInput}
             />
           </label>
-          <label style={{display: 'block', marginBottom: '0.75rem'}}>
-            Max Affinity Points
+          <label className={styles.fieldBlock}>
+            <span className={styles.fieldLabel}>Max Affinity Points</span>
             <input
               type='number'
               min={1}
               value={zoneMaxPoints}
               onChange={(e) => setZoneMaxPoints(Number(e.target.value))}
-              style={{width: '100%'}}
+              className={styles.fullWidthInput}
             />
           </label>
           <button type='button' onClick={() => void handleCreateZoneProfile()}>
             Add Zone Profile
           </button>
           {zoneProfiles.length === 0 && (
-            <div
-              style={{
-                marginTop: '0.75rem',
-                padding: '0.65rem',
-                border: '1px solid #e5e7eb',
-                borderRadius: '6px',
-                backgroundColor: '#f9fafb'
-              }}
-            >
-              <p style={{marginTop: 0, marginBottom: '0.5rem'}}>
-                No zone profiles yet.
-              </p>
+            <div className={styles.emptyStateCard}>
+              <p className={styles.emptyStateText}>No zone profiles yet.</p>
               <button
                 type='button'
                 onClick={() => {
@@ -1864,13 +1854,13 @@ function CompendiumRoute({activeProject, projectSettings}: CompendiumRouteProps)
               </button>
             </div>
           )}
-          <hr style={{margin: '0.9rem 0'}} />
-          <label style={{display: 'block', marginBottom: '0.5rem'}}>
-            Active Zone
+          <div className={styles.sectionDivider} />
+          <label className={styles.fieldBlock}>
+            <span className={styles.fieldLabel}>Active Zone</span>
             <select
               value={selectedZoneKey}
               onChange={(e) => setSelectedZoneKey(e.target.value)}
-              style={{width: '100%'}}
+              className={styles.fullWidthInput}
             >
               <option value=''>Select zone</option>
               {zoneProfiles.map((profile) => (
@@ -1880,14 +1870,14 @@ function CompendiumRoute({activeProject, projectSettings}: CompendiumRouteProps)
               ))}
             </select>
           </label>
-          <label style={{display: 'block', marginBottom: '0.75rem'}}>
-            Exposure Minutes
+          <label className={styles.fieldBlock}>
+            <span className={styles.fieldLabel}>Exposure Minutes</span>
             <input
               type='number'
               min={1}
               value={zoneExposureMinutes}
               onChange={(e) => setZoneExposureMinutes(Number(e.target.value))}
-              style={{width: '100%'}}
+              className={styles.fullWidthInput}
             />
           </label>
           <button
@@ -1897,7 +1887,7 @@ function CompendiumRoute({activeProject, projectSettings}: CompendiumRouteProps)
           >
             {isRecordingZone ? 'Recording...' : 'Record Exposure'}
           </button>
-          <ul style={{listStyle: 'none', padding: 0, marginTop: '0.75rem'}}>
+          <ul className={styles.plainListSpaced}>
             {zoneProfiles.map((profile) => {
               const progressItem = zoneProgressByKey.get(profile.biomeKey) ?? {
                 id: '',
@@ -1913,19 +1903,20 @@ function CompendiumRoute({activeProject, projectSettings}: CompendiumRouteProps)
               return (
                 <li
                   key={`zone-${profile.id}`}
-                  style={{
-                    marginBottom: '0.65rem',
-                    paddingBottom: '0.55rem',
-                    borderBottom: '1px solid #efefef'
-                  }}
+                  className={styles.ruleListItem}
                 >
-                  <strong>{profile.name}</strong> ({percent.toFixed(1)}%)
-                  <div style={{fontSize: '0.82rem', color: '#6b7280'}}>
+                  <div className={styles.worldSystemRowHeader}>
+                    <strong>{profile.name}</strong>
+                    <span className={styles.worldSystemBadge}>
+                      {percent.toFixed(1)}% affinity
+                    </span>
+                  </div>
+                  <div className={styles.subtleMeta}>
                     Exposure: {(progressItem.totalExposureSeconds / 60).toFixed(1)} minutes
                   </div>
-                  <div style={{fontSize: '0.82rem'}}>
+                  <div className={styles.worldSystemList}>
                     {profile.milestones.map((milestone) => (
-                      <div key={milestone.id}>
+                      <div key={milestone.id} className={styles.subtleMeta}>
                         {unlocked.has(milestone.id) ? 'Unlocked' : 'Locked'}{' '}
                         {milestone.thresholdPercent}%: {milestone.name}
                       </div>
@@ -1937,25 +1928,23 @@ function CompendiumRoute({activeProject, projectSettings}: CompendiumRouteProps)
           </ul>
         </section>
 
-        <section style={{padding: '1rem', border: '1px solid #ddd', borderRadius: '8px'}}>
-          <h2 style={{marginTop: 0}}>Community / Logistics</h2>
-          <p style={{marginTop: 0, fontSize: '0.85rem', color: '#6b7280'}}>
+        <section className={styles.sectionCard}>
+          <h2 className={styles.sectionTitle}>Community / Logistics</h2>
+          <p className={styles.sectionHint}>
             Shared party synergy buffs driven by role combinations. Select the
             currently active party to preview concrete in-scene combo effects.
           </p>
-          <div style={{fontSize: '0.85rem', marginBottom: '0.5rem'}}>
-            <strong>Active Party Members</strong>
-          </div>
-          <div style={{display: 'grid', gap: '0.35rem', marginBottom: '0.8rem'}}>
+          <h3 className={styles.sectionMinorHeading}>Active Party Members</h3>
+          <div className={styles.selectionList}>
             {characters.length === 0 ? (
-              <div style={{fontSize: '0.82rem', color: '#6b7280'}}>
+              <div className={styles.subtleMeta}>
                 No characters yet. Add role-tagged characters to enable synergy.
               </div>
             ) : (
               characters.map((character) => (
                 <label
                   key={character.id}
-                  style={{display: 'flex', alignItems: 'center', gap: '0.45rem'}}
+                  className={styles.selectionRow}
                 >
                   <input
                     type='checkbox'
@@ -1964,7 +1953,7 @@ function CompendiumRoute({activeProject, projectSettings}: CompendiumRouteProps)
                   />
                   <span>
                     {character.name}
-                    <span style={{fontSize: '0.8rem', color: '#6b7280'}}>
+                    <span className={styles.subtleMetaInline}>
                       {' '}
                       ({getCharacterRole(character) || 'no role'})
                     </span>
@@ -1973,53 +1962,51 @@ function CompendiumRoute({activeProject, projectSettings}: CompendiumRouteProps)
               ))
             )}
           </div>
-          <div style={{fontSize: '0.85rem', marginBottom: '0.45rem'}}>
-            <strong>Active Combo Buffs</strong>
-          </div>
-          <ul style={{listStyle: 'none', padding: 0, marginTop: 0}}>
+          <h3 className={styles.sectionMinorHeading}>Active Combo Buffs</h3>
+          <ul className={styles.plainList}>
             {activePartySynergies.filter((item) => item.missingRoles.length === 0).length ===
             0 ? (
-              <li style={{fontSize: '0.82rem', color: '#6b7280'}}>
+              <li className={styles.subtleMeta}>
                 No active combos for the current party selection.
               </li>
             ) : (
               activePartySynergies
                 .filter((item) => item.missingRoles.length === 0)
                 .map((suggestion) => (
-                  <li key={suggestion.ruleId} style={{marginBottom: '0.55rem'}}>
-                    <strong>{suggestion.ruleName}</strong>
+                  <li key={suggestion.ruleId} className={styles.ruleListItem}>
+                    <div className={styles.worldSystemRowHeader}>
+                      <strong>{suggestion.ruleName}</strong>
                     {suggestion.maxDistanceMeters ? (
-                      <span style={{fontSize: '0.8rem', color: '#6b7280'}}>
+                        <span className={styles.worldSystemBadge}>
                         {' '}
                         ({suggestion.maxDistanceMeters}m proximity)
                       </span>
                     ) : null}
-                    <div style={{fontSize: '0.82rem'}}>{suggestion.effectDescription}</div>
-                    <div style={{fontSize: '0.8rem', color: '#4b5563'}}>
+                    </div>
+                    <div>{suggestion.effectDescription}</div>
+                    <div className={styles.subtleMeta}>
                       {formatSynergyStatus(suggestion, characterById)}
                     </div>
                   </li>
                 ))
             )}
           </ul>
-          <div style={{fontSize: '0.85rem', marginBottom: '0.45rem'}}>
-            <strong>Roster Opportunities</strong>
-          </div>
-          <ul style={{listStyle: 'none', padding: 0, marginTop: 0, marginBottom: 0}}>
+          <h3 className={styles.sectionMinorHeading}>Roster Opportunities</h3>
+          <ul className={styles.plainList}>
             {rosterSynergyOpportunities.length === 0 ? (
-              <li style={{fontSize: '0.82rem', color: '#6b7280'}}>
+              <li className={styles.subtleMeta}>
                 Full roster can already satisfy all default synergy rules.
               </li>
             ) : (
               rosterSynergyOpportunities.map((suggestion) => (
-                <li key={`roster-${suggestion.ruleId}`} style={{marginBottom: '0.55rem'}}>
+                <li key={`roster-${suggestion.ruleId}`} className={styles.ruleListItem}>
                   <strong>{suggestion.ruleName}</strong>
-                  <div style={{fontSize: '0.82rem'}}>{suggestion.effectDescription}</div>
-                  <div style={{fontSize: '0.8rem', color: '#4b5563'}}>
+                  <div>{suggestion.effectDescription}</div>
+                  <div className={styles.subtleMeta}>
                     {formatSynergyStatus(suggestion, characterById)}
                   </div>
                   {suggestion.questPrompt && (
-                    <div style={{fontSize: '0.8rem', color: '#6b7280'}}>
+                    <div className={styles.subtleMeta}>
                       Prompt seed: {suggestion.questPrompt}
                     </div>
                   )}
@@ -2029,30 +2016,30 @@ function CompendiumRoute({activeProject, projectSettings}: CompendiumRouteProps)
           </ul>
         </section>
 
-        <section style={{padding: '1rem', border: '1px solid #ddd', borderRadius: '8px'}}>
-          <h2 style={{marginTop: 0}}>Settlement Progression</h2>
-          <p style={{marginTop: 0, fontSize: '0.85rem', color: '#6b7280'}}>
+        <section className={styles.sectionCard}>
+          <h2 className={styles.sectionTitle}>Settlement Progression</h2>
+          <p className={styles.sectionHint}>
             Generalized settlement buffs. Trophies are one source type, alongside
             structures, stations, totems, and custom modules.
           </p>
-          <label style={{display: 'block', marginBottom: '0.5rem'}}>
-            Module Name
+          <label className={styles.fieldBlock}>
+            <span className={styles.fieldLabel}>Module Name</span>
             <input
               type='text'
               value={moduleName}
               onChange={(e) => setModuleName(e.target.value)}
               placeholder='Cave Worm Trophy'
-              style={{width: '100%'}}
+              className={styles.fullWidthInput}
             />
           </label>
-          <label style={{display: 'block', marginBottom: '0.5rem'}}>
-            Source Type
+          <label className={styles.fieldBlock}>
+            <span className={styles.fieldLabel}>Source Type</span>
             <select
               value={moduleSourceType}
               onChange={(e) =>
                 setModuleSourceType(e.target.value as SettlementModule['sourceType'])
               }
-              style={{width: '100%'}}
+              className={styles.fullWidthInput}
             >
               {SETTLEMENT_SOURCE_OPTIONS.map((option) => (
                 <option key={option} value={option}>
@@ -2061,9 +2048,9 @@ function CompendiumRoute({activeProject, projectSettings}: CompendiumRouteProps)
               ))}
             </select>
           </label>
-          <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem'}}>
-            <label style={{display: 'block', marginBottom: '0.5rem'}}>
-              Target Type
+          <div className={styles.twoColumnCompact}>
+            <label className={styles.fieldBlock}>
+              <span className={styles.fieldLabel}>Target Type</span>
               <select
                 value={moduleTargetType}
                 onChange={(e) =>
@@ -2071,7 +2058,7 @@ function CompendiumRoute({activeProject, projectSettings}: CompendiumRouteProps)
                     e.target.value as SettlementModule['effects'][number]['targetType']
                   )
                 }
-                style={{width: '100%'}}
+                className={styles.fullWidthInput}
               >
                 {SETTLEMENT_EFFECT_TARGET_OPTIONS.map((option) => (
                   <option key={option} value={option}>
@@ -2080,20 +2067,20 @@ function CompendiumRoute({activeProject, projectSettings}: CompendiumRouteProps)
                 ))}
               </select>
             </label>
-            <label style={{display: 'block', marginBottom: '0.5rem'}}>
-              Target ID
+            <label className={styles.fieldBlock}>
+              <span className={styles.fieldLabel}>Target ID</span>
               <input
                 type='text'
                 value={moduleTargetId}
                 onChange={(e) => setModuleTargetId(e.target.value)}
                 placeholder='poison'
-                style={{width: '100%'}}
+                className={styles.fullWidthInput}
               />
             </label>
           </div>
-          <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem'}}>
-            <label style={{display: 'block', marginBottom: '0.75rem'}}>
-              Operation
+          <div className={styles.twoColumnCompact}>
+            <label className={styles.fieldBlock}>
+              <span className={styles.fieldLabel}>Operation</span>
               <select
                 value={moduleOperation}
                 onChange={(e) =>
@@ -2101,7 +2088,7 @@ function CompendiumRoute({activeProject, projectSettings}: CompendiumRouteProps)
                     e.target.value as SettlementModule['effects'][number]['operation']
                   )
                 }
-                style={{width: '100%'}}
+                className={styles.fullWidthInput}
               >
                 {SETTLEMENT_EFFECT_OPERATION_OPTIONS.map((option) => (
                   <option key={option} value={option}>
@@ -2110,14 +2097,14 @@ function CompendiumRoute({activeProject, projectSettings}: CompendiumRouteProps)
                 ))}
               </select>
             </label>
-            <label style={{display: 'block', marginBottom: '0.75rem'}}>
-              Value
+            <label className={styles.fieldBlock}>
+              <span className={styles.fieldLabel}>Value</span>
               <input
                 type='text'
                 value={moduleValue}
                 onChange={(e) => setModuleValue(e.target.value)}
                 placeholder='5'
-                style={{width: '100%'}}
+                className={styles.fullWidthInput}
               />
             </label>
           </div>
@@ -2128,11 +2115,11 @@ function CompendiumRoute({activeProject, projectSettings}: CompendiumRouteProps)
           >
             {isSavingModule ? 'Adding...' : 'Add Settlement Module'}
           </button>
-          <hr style={{margin: '0.9rem 0'}} />
-          <div style={{fontSize: '0.85rem', marginBottom: '0.5rem'}}>
+          <div className={styles.sectionDivider} />
+          <div className={styles.infoCard}>
             <strong>Settlement Tier Level:</strong> {settlementState?.fortressLevel ?? 1}
           </div>
-          <div style={{display: 'flex', gap: '0.5rem', marginBottom: '0.65rem'}}>
+          <div className={styles.inlineActions}>
             <button
               type='button'
               onClick={() => void handleAdjustFortressLevel(-1)}
@@ -2148,26 +2135,17 @@ function CompendiumRoute({activeProject, projectSettings}: CompendiumRouteProps)
               + Tier
             </button>
           </div>
-          <div style={{fontSize: '0.82rem', color: '#4b5563', marginBottom: '0.6rem'}}>
+          <div className={styles.subtleMeta}>
             {nextFortressTier
               ? `Next tier at level ${nextFortressTier.levelRequired}: ${nextFortressTier.name}`
               : 'All configured settlement tiers unlocked.'}
           </div>
-          <div style={{fontSize: '0.85rem', marginBottom: '0.35rem'}}>
-            <strong>Base Stats</strong>
-          </div>
+          <h3 className={styles.sectionMinorHeading}>Base Stats</h3>
           {settlementState && (
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: '1fr 1fr',
-                gap: '0.45rem',
-                marginBottom: '0.65rem'
-              }}
-            >
+            <div className={styles.twoColumnCompact}>
               {BASE_STAT_KEYS.map((key) => (
-                <label key={`base-${key}`} style={{fontSize: '0.82rem'}}>
-                  {key}
+                <label key={`base-${key}`} className={styles.fieldBlock}>
+                  <span className={styles.fieldLabel}>{key}</span>
                   <input
                     type='number'
                     min={BASE_STAT_LIMITS[key].min}
@@ -2175,13 +2153,13 @@ function CompendiumRoute({activeProject, projectSettings}: CompendiumRouteProps)
                     step={1}
                     value={baseStatsDraft[key]}
                     onChange={(e) => handleBaseStatDraftChange(key, e.target.value)}
-                    style={{width: '100%'}}
+                    className={styles.fullWidthInput}
                   />
                 </label>
               ))}
             </div>
           )}
-          <div style={{display: 'flex', gap: '0.45rem', marginBottom: '0.7rem'}}>
+          <div className={styles.inlineActions}>
             <button
               type='button'
               onClick={() => void handleSaveBaseStats()}
@@ -2199,91 +2177,86 @@ function CompendiumRoute({activeProject, projectSettings}: CompendiumRouteProps)
               Reset
             </button>
           </div>
-          <div style={{fontSize: '0.85rem', marginBottom: '0.5rem'}}>
-            <strong>Settlement Tier Effects:</strong>{' '}
-            {settlementComputedEffects.fortressEffects.length}
-          </div>
-          <ul style={{listStyle: 'none', padding: 0, margin: 0}}>
+          <h3 className={styles.sectionMinorHeading}>
+            Settlement Tier Effects: {settlementComputedEffects.fortressEffects.length}
+          </h3>
+          <ul className={styles.plainList}>
             {settlementComputedEffects.fortressEffects.length === 0 ? (
-              <li style={{fontSize: '0.82rem', color: '#6b7280'}}>
+              <li className={styles.subtleMeta}>
                 No tier effects unlocked yet.
               </li>
             ) : (
               settlementComputedEffects.fortressEffects.map((effect, index) => (
                 <li
                   key={`tier-effect-${effect.targetType}-${effect.targetId}-${index}`}
-                  style={{marginBottom: '0.35rem'}}
+                  className={styles.ruleListItem}
                 >
                   {formatSettlementEffectLabel(effect)}
                 </li>
               ))
             )}
           </ul>
-          <div style={{fontSize: '0.85rem', marginTop: '0.65rem', marginBottom: '0.5rem'}}>
-            <strong>Active Aura Effects:</strong> {activeSettlementEffects.length}
-          </div>
-          <ul style={{listStyle: 'none', padding: 0, margin: 0}}>
+          <h3 className={styles.sectionMinorHeading}>
+            Active Aura Effects: {activeSettlementEffects.length}
+          </h3>
+          <ul className={styles.plainList}>
             {activeSettlementEffects.length === 0 ? (
-              <li style={{fontSize: '0.82rem', color: '#6b7280'}}>
+              <li className={styles.subtleMeta}>
                 No active module effects yet.
               </li>
             ) : (
               activeSettlementEffects.map((effect, index) => (
                 <li
                   key={`active-effect-${effect.targetType}-${effect.targetId}-${index}`}
-                  style={{marginBottom: '0.35rem'}}
+                  className={styles.ruleListItem}
                 >
                   {formatSettlementEffectLabel(effect)}
                 </li>
               ))
             )}
           </ul>
-          <div style={{fontSize: '0.85rem', marginTop: '0.65rem', marginBottom: '0.5rem'}}>
-            <strong>Total Active Effects:</strong> {settlementComputedEffects.allEffects.length}
-          </div>
-          <div style={{fontSize: '0.82rem', color: '#4b5563', marginBottom: '0.65rem'}}>
+          <h3 className={styles.sectionMinorHeading}>
+            Total Active Effects: {settlementComputedEffects.allEffects.length}
+          </h3>
+          <div className={styles.subtleMeta}>
             Includes settlement progression + aura modules.
           </div>
-          <div style={{fontSize: '0.85rem', marginBottom: '0.35rem'}}>
-            <strong>Unlocked Settlement Tiers</strong>
-          </div>
-          <ul style={{listStyle: 'none', padding: 0, margin: 0}}>
+          <h3 className={styles.sectionMinorHeading}>Unlocked Settlement Tiers</h3>
+          <ul className={styles.plainList}>
             {unlockedFortressTiers.length === 0 ? (
-              <li style={{fontSize: '0.82rem', color: '#6b7280'}}>None yet.</li>
+              <li className={styles.subtleMeta}>None yet.</li>
             ) : (
               unlockedFortressTiers.map((tier) => (
-                <li key={tier.id} style={{marginBottom: '0.45rem'}}>
-                  <strong>
-                    L{tier.levelRequired} {tier.name}
-                  </strong>
+                <li key={tier.id} className={styles.ruleListItem}>
+                  <div className={styles.worldSystemRowHeader}>
+                    <strong>
+                      L{tier.levelRequired} {tier.name}
+                    </strong>
+                  </div>
                   {tier.description && (
-                    <div style={{fontSize: '0.8rem', color: '#6b7280'}}>
-                      {tier.description}
-                    </div>
+                    <div className={styles.subtleMeta}>{tier.description}</div>
                   )}
                 </li>
               ))
             )}
           </ul>
-          <div style={{fontSize: '0.82rem', marginTop: '0.75rem'}}>
-            <strong>Installed Modules:</strong>
-          </div>
-          <ul style={{listStyle: 'none', padding: 0, marginTop: '0.35rem', marginBottom: 0}}>
+          <h3 className={styles.sectionMinorHeading}>Installed Modules</h3>
+          <ul className={styles.plainList}>
             {settlementModules.length === 0 ? (
-              <li style={{fontSize: '0.82rem', color: '#6b7280'}}>
+              <li className={styles.subtleMeta}>
                 No modules installed.
               </li>
             ) : (
               settlementModules.map((module) => (
-                <li key={module.id} style={{marginBottom: '0.45rem'}}>
-                  <strong>{module.name}</strong>{' '}
-                  <span style={{fontSize: '0.8rem', color: '#6b7280'}}>
-                    [{module.sourceType}]
-                  </span>
+                <li key={module.id} className={styles.ruleListItem}>
+                  <div className={styles.worldSystemRowHeader}>
+                    <strong>{module.name}</strong>
+                    <span className={styles.worldSystemBadge}>{module.sourceType}</span>
+                  </div>
                   {module.effects.map((effect, effectIndex) => (
                     <div
                       key={`${module.id}-effect-${effectIndex}`}
-                      style={{fontSize: '0.8rem', color: '#4b5563'}}
+                      className={styles.subtleMeta}
                     >
                       {formatSettlementEffectLabel(effect)}
                     </div>

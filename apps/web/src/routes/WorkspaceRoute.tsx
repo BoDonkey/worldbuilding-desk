@@ -2469,24 +2469,6 @@ function WorkspaceRoute({activeProject, projectSettings: initialProjectSettings 
     }
   }, [unknownReviewItems, resolveUnknownEntity]);
 
-  const dismissAllUnknownEntities = useCallback(() => {
-    const blocked = new Set(
-      unknownGuardrailIssues
-        .map((issue) => issue.surface?.trim().toLowerCase())
-        .filter((surface): surface is string => Boolean(surface))
-    );
-    setGuardrailIssues((prev) =>
-      prev.filter((issue) => {
-        const surface = issue.surface?.trim().toLowerCase();
-        return !surface || !blocked.has(surface);
-      })
-    );
-    setFeedback({
-      tone: 'success',
-      message: 'Unknown entity warnings dismissed for now.'
-    });
-  }, [unknownGuardrailIssues]);
-
   const dismissUnknownEntity = useCallback((surface: string) => {
     const normalized = normalizeUnknownKey(surface);
     if (!normalized) return;
