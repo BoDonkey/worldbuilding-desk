@@ -1,88 +1,34 @@
-# React + TypeScript + Vite
+# Worldbuilding Desk Web App
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+This package contains the main authoring UI for Worldbuilding Desk. It is a Vite + React + TypeScript app that powers projects, the writing workspace, world bible, compendium, ruleset editing, and settings.
 
-Currently, two official plugins are available:
+## Commands
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+Run these from the repo root unless noted otherwise:
 
-## React Compiler
+- `pnpm dev:web` starts the app on `http://localhost:5173`
+- `pnpm build:web` builds the web app
+- `pnpm --filter web lint` runs app linting
+- `pnpm --filter web e2e:open` opens Cypress
+- `pnpm --filter web e2e:run` runs Cypress headlessly
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+For AI-provider flows that still use the local proxy, start this in a second terminal:
 
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+cd apps/web
+npx tsx proxy-server.ts
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## Main Areas
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+- `src/routes/` route-level screens and orchestration
+- `src/components/` shared UI, editor, assistant, and settings controls
+- `src/services/` IndexedDB-backed storage and higher-level domain services
+- `src/styles/` route shell and theme styling
+- `cypress/e2e/` smoke and workflow coverage
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+## Current Notes
 
-## Cypress E2E smoke tests
-
-1. Install dependencies from the repo root:
-   - `pnpm install`
-2. Start the web app:
-   - `pnpm --filter web dev`
-3. In another terminal, run Cypress:
-   - `pnpm --filter web e2e:open` (interactive)
-   - `pnpm --filter web e2e:run` (headless)
-
-The starter smoke suite lives in `cypress/e2e/post-merge-smoke.cy.ts` and covers:
-- scene export (Markdown + DOCX)
-- mode-scoped prompt tool defaults
-- tool pack export/import replace+append flows
+- The web app is the main active product surface even though the repo also includes an Electron host in `apps/desktop`.
+- `WorkspaceRoute.tsx` is currently the largest route and the clearest candidate for future decomposition.
+- Cypress coverage exists for key smoke flows, but most feature validation is still manual.

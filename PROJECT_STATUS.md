@@ -1,6 +1,6 @@
 # Worldbuilding-Desk Project Status
 
-**Last Updated:** March 22, 2026
+**Last Updated:** March 28, 2026
 
 ## Project Overview
 
@@ -360,8 +360,8 @@ npx tsx examples/basic-usage.ts
 - The fixed toolbar behavior is much better, but may still need refinement if edge scrolling cases show up again.
 
 ### AI Authoring Tools
-- Only the first persona preset exists so far.
-- There are no dedicated one-click critique actions yet for selected passage vs full scene.
+- Built-in `Writing Critic` and `Line Editor` personas both exist now.
+- Dedicated critique actions exist for selected passage and current scene; broader persona task coverage is still pending.
 
 ---
 
@@ -468,7 +468,7 @@ npx tsx examples/basic-usage.ts
 2. Check "Recent Changes" for context
 3. Review "Planned Next Steps" for priorities
 4. Start proxy server if testing AI features
-5. Run `pnpm dev` in main terminal
+5. Run `pnpm dev:web` in the main terminal
 
 ### Ending a Session
 1. Update "Recent Changes" section
@@ -484,10 +484,10 @@ npx tsx examples/basic-usage.ts
 ### Important Commands
 ```bash
 # Full dev setup
-pnpm install && pnpm dev
+pnpm install && pnpm dev:web
 
 # Just the app
-pnpm dev
+pnpm dev:web
 
 # AI proxy (separate terminal)
 cd apps/web && npx tsx proxy-server.ts
@@ -502,7 +502,7 @@ cd packages/rules-engine && npx tsx examples/basic-usage.ts
 ### Key Files to Know
 - `apps/web/src/routes/` - Main application views
 - `apps/web/src/entityTypes.ts` - Core data models
-- `packages/rules-engine/src/types.ts` - Rules system types
+- `packages/rules-engine/src/types/` - Rules system types
 - `apps/web/src/components/TipTapEditor.tsx` - Editor implementation
 - `apps/web/src/services/` - Storage and business logic
 

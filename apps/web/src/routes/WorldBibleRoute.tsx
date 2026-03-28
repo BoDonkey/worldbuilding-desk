@@ -637,7 +637,7 @@ function WorldBibleRoute({activeProject}: WorldBibleRouteProps) {
           .filter(([, value]) => value !== '')
       )
     );
-  }, [activeCategory, editingId, entities]);
+  }, [activeCategory, aliasesByEntityId, editingId, entities]);
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
