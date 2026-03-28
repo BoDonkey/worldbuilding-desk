@@ -43,14 +43,47 @@
   background-color: var(--surface-panel);
   border: 1px solid var(--surface-border-soft);
   border-radius: 18px;
-  padding: 1.5rem;
+  overflow: hidden;
 }
 
-.section h2 {
-  margin-top: 0;
-  margin-bottom: 1.5rem;
+.sectionSummary {
+  list-style: none;
+  cursor: pointer;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 1rem;
+  align-items: center;
+  padding: 1rem 1.25rem;
+}
+
+.sectionSummary::-webkit-details-marker {
+  display: none;
+}
+
+.sectionSummaryTitle {
   color: var(--color-text-primary);
   font-size: var(--font-size-xl);
+  font-weight: 700;
+}
+
+.sectionSummaryMeta {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+  text-align: right;
+}
+
+.sectionChevron {
+  font-size: 1rem;
+  color: var(--color-text-secondary);
+  transition: transform 0.18s ease;
+}
+
+.section[open] .sectionChevron {
+  transform: rotate(180deg);
+}
+
+.sectionBody {
+  padding: 0 1.5rem 1.5rem;
 }
 
 .addStyle {

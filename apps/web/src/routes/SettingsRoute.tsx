@@ -250,203 +250,250 @@ function SettingsRoute({activeProject, onSettingsChanged}: SettingsRouteProps) {
       </details>
 
       <div className={styles.settingsGrid}>
+        <details className={styles.section} open>
+          <summary className={styles.sectionSummary}>
+            <span className={styles.sectionSummaryTitle}>Project Mode</span>
+            <span className={styles.sectionSummaryMeta}>
+              {PROJECT_MODE_OPTIONS.find((option) => option.value === settings.projectMode)?.label}
+            </span>
+            <span className={styles.sectionChevron} aria-hidden='true'>⌄</span>
+          </summary>
+          <div className={styles.sectionBody}>
+            <p className={styles.helperText}>
+              Set this first. It controls the default experience for the project and
+              resets feature toggles to the mode defaults.
+            </p>
+            <label className={styles.fieldLabel}>
+              Mode
+              <select
+                value={settings.projectMode}
+                onChange={(e) =>
+                  void handleProjectModeChange(e.target.value as ProjectMode)
+                }
+                className={styles.styleInput}
+              >
+                {PROJECT_MODE_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+        </details>
+
         {/* Accessibility Section */}
-        <div className={styles.section}>
-          <h2>Reading & Editor</h2>
-          <FontSizeControl />
-          <EditorAppearanceControl />
-        </div>
+        <details className={styles.section} open>
+          <summary className={styles.sectionSummary}>
+            <span className={styles.sectionSummaryTitle}>Reading & Editor</span>
+            <span className={styles.sectionSummaryMeta}>Always visible while drafting</span>
+            <span className={styles.sectionChevron} aria-hidden='true'>⌄</span>
+          </summary>
+          <div className={styles.sectionBody}>
+            <FontSizeControl />
+            <EditorAppearanceControl />
+          </div>
+        </details>
 
         {/* AI Settings Section */}
-        <div className={styles.section}>
-          <h2>AI Settings</h2>
-          <AISettings
-            aiSettings={settings.aiSettings}
-            projectMode={settings.projectMode}
-            onSettingsChange={handleAISettingsChange}
-          />
-        </div>
-
-        <div className={styles.section}>
-          <h2>Project Mode</h2>
-          <p className={styles.helperText}>
-            Choose the default experience for this project. Changing mode resets
-            feature toggles to mode defaults.
-          </p>
-          <label className={styles.fieldLabel}>
-            Mode
-            <select
-              value={settings.projectMode}
-              onChange={(e) =>
-                void handleProjectModeChange(e.target.value as ProjectMode)
-              }
-              className={styles.styleInput}
-            >
-              {PROJECT_MODE_OPTIONS.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </label>
-        </div>
-
-        <div className={styles.section}>
-          <h2>Feature Toggles</h2>
-          <p className={styles.helperText}>
-            Use toggles to simplify UI per project while preserving data.
-          </p>
-          <label className={styles.toggleRow}>
-            <input
-              type='checkbox'
-              checked={settings.featureToggles.enableGameSystems}
-              onChange={(e) =>
-                void handleFeatureToggleChange('enableGameSystems', e.target.checked)
-              }
+        <details className={styles.section}>
+          <summary className={styles.sectionSummary}>
+            <span className={styles.sectionSummaryTitle}>AI Settings</span>
+            <span className={styles.sectionSummaryMeta}>Provider, models, personas, tools</span>
+            <span className={styles.sectionChevron} aria-hidden='true'>⌄</span>
+          </summary>
+          <div className={styles.sectionBody}>
+            <AISettings
+              aiSettings={settings.aiSettings}
+              projectMode={settings.projectMode}
+              onSettingsChange={handleAISettingsChange}
             />
-            <span>Enable Game Systems</span>
-          </label>
-          <label className={styles.toggleRow}>
-            <input
-              type='checkbox'
-              checked={settings.featureToggles.enableRuntimeModifiers}
-              onChange={(e) =>
-                void handleFeatureToggleChange(
-                  'enableRuntimeModifiers',
-                  e.target.checked
-                )
-              }
-            />
-            <span>Enable Runtime Modifiers</span>
-          </label>
-          <label className={styles.toggleRow}>
-            <input
-              type='checkbox'
-              checked={settings.featureToggles.enableSettlementAndZoneSystems}
-              onChange={(e) =>
-                void handleFeatureToggleChange(
-                  'enableSettlementAndZoneSystems',
-                  e.target.checked
-                )
-              }
-            />
-            <span>Enable Settlement/Zone Systems</span>
-          </label>
-          <label className={styles.toggleRow}>
-            <input
-              type='checkbox'
-              checked={settings.featureToggles.enableRuleAuthoring}
-              onChange={(e) =>
-                void handleFeatureToggleChange(
-                  'enableRuleAuthoring',
-                  e.target.checked
-                )
-              }
-            />
-            <span>Enable Rule Authoring</span>
-          </label>
-        </div>
-
-        <div className={styles.section}>
-          <h2>Consistency Detection Keywords</h2>
-          <p className={styles.helperText}>
-            These are action words the consistency checker should treat as signals that
-            the nearby noun may matter to canon.
-          </p>
-          <p className={styles.helperText}>
-            Example: if you add <strong>brew</strong>, then a phrase like
-            <strong> "brewed the moon draught"</strong> is more likely to surface
-            <strong> moon draught</strong> for review.
-          </p>
-          <p className={styles.helperText}>
-            Only add verbs that are truly project-specific. Leave this short. Common
-            verbs are already built in.
-          </p>
-          {inheritedConsistencyCues.length > 0 && (
-            <p className={styles.helperText}>
-              Inherited from parent project: {inheritedConsistencyCues.join(', ')}
-            </p>
-          )}
-          <label className={styles.fieldLabel}>
-            Extra project-specific verbs
-            <textarea
-              value={consistencyCuesDraft}
-              onChange={(e) => setConsistencyCuesDraft(e.target.value)}
-              placeholder={'brew\nattune\nchannel\ninvoke'}
-              className={styles.cueTextarea}
-            />
-          </label>
-          <div className={styles.helperList}>
-            <div><strong>Good fits:</strong> attune, soulbind, overclock, transmute</div>
-            <div><strong>Avoid:</strong> go, look, move, say, think</div>
           </div>
-          <button onClick={() => void handleConsistencyCueSave()} className={styles.addButton}>
-            Save Keywords
-          </button>
-        </div>
+        </details>
 
-        <div className={styles.section}>
-          <h2>Workspace Import Defaults</h2>
-          <p className={styles.helperText}>
-            These defaults pre-fill import controls in Writing Workspace. Authors can still
-            override per import batch.
-          </p>
-          <label className={styles.fieldLabel}>
-            Default import mode
-            <select
-              value={settings.defaultImportMode ?? 'balanced'}
-              onChange={(e) =>
-                void handleImportDefaultsChange(
-                  e.target.value as WorkspaceImportMode,
-                  settings.defaultSkipImportSuggestions ?? false
-                )
-              }
-              className={styles.styleInput}
-            >
-              <option value='balanced'>Balanced</option>
-              <option value='strict'>Strict</option>
-              <option value='lenient'>Lenient</option>
-            </select>
-          </label>
-          <label className={styles.toggleRow}>
-            <input
-              type='checkbox'
-              checked={settings.defaultSkipImportSuggestions ?? false}
-              onChange={(e) =>
-                void handleImportDefaultsChange(
-                  settings.defaultImportMode ?? 'balanced',
-                  e.target.checked
-                )
-              }
-            />
-            <span>Default to skipping consistency suggestions during import</span>
-          </label>
-        </div>
+        <details className={styles.section}>
+          <summary className={styles.sectionSummary}>
+            <span className={styles.sectionSummaryTitle}>Feature Toggles</span>
+            <span className={styles.sectionSummaryMeta}>Show or simplify system-heavy UI</span>
+            <span className={styles.sectionChevron} aria-hidden='true'>⌄</span>
+          </summary>
+          <div className={styles.sectionBody}>
+            <p className={styles.helperText}>
+              Use toggles to simplify UI per project while preserving data.
+            </p>
+            <label className={styles.toggleRow}>
+              <input
+                type='checkbox'
+                checked={settings.featureToggles.enableGameSystems}
+                onChange={(e) =>
+                  void handleFeatureToggleChange('enableGameSystems', e.target.checked)
+                }
+              />
+              <span>Enable Game Systems</span>
+            </label>
+            <label className={styles.toggleRow}>
+              <input
+                type='checkbox'
+                checked={settings.featureToggles.enableRuntimeModifiers}
+                onChange={(e) =>
+                  void handleFeatureToggleChange(
+                    'enableRuntimeModifiers',
+                    e.target.checked
+                  )
+                }
+              />
+              <span>Enable Runtime Modifiers</span>
+            </label>
+            <label className={styles.toggleRow}>
+              <input
+                type='checkbox'
+                checked={settings.featureToggles.enableSettlementAndZoneSystems}
+                onChange={(e) =>
+                  void handleFeatureToggleChange(
+                    'enableSettlementAndZoneSystems',
+                    e.target.checked
+                  )
+                }
+              />
+              <span>Enable Settlement/Zone Systems</span>
+            </label>
+            <label className={styles.toggleRow}>
+              <input
+                type='checkbox'
+                checked={settings.featureToggles.enableRuleAuthoring}
+                onChange={(e) =>
+                  void handleFeatureToggleChange(
+                    'enableRuleAuthoring',
+                    e.target.checked
+                  )
+                }
+              />
+              <span>Enable Rule Authoring</span>
+            </label>
+          </div>
+        </details>
 
-        {/* Character Styles Section */}
-        <div className={styles.section}>
-          <h2>Character Dialogue Styles</h2>
-          <div className={styles.addStyle}>
-            <input
-              type='text'
-              value={newStyleName}
-              onChange={(e) => setNewStyleName(e.target.value)}
-              placeholder='Style name (e.g., Protagonist Thoughts)'
-              className={styles.styleInput}
-            />
-            <button onClick={handleAddStyle} className={styles.addButton}>
-              Add Style
+        <details className={styles.section}>
+          <summary className={styles.sectionSummary}>
+            <span className={styles.sectionSummaryTitle}>Consistency Detection Keywords</span>
+            <span className={styles.sectionSummaryMeta}>Project-specific canon cues</span>
+            <span className={styles.sectionChevron} aria-hidden='true'>⌄</span>
+          </summary>
+          <div className={styles.sectionBody}>
+            <p className={styles.helperText}>
+              These are action words the consistency checker should treat as signals that
+              the nearby noun may matter to canon.
+            </p>
+            <p className={styles.helperText}>
+              Example: if you add <strong>brew</strong>, then a phrase like
+              <strong> "brewed the moon draught"</strong> is more likely to surface
+              <strong> moon draught</strong> for review.
+            </p>
+            <p className={styles.helperText}>
+              Only add verbs that are truly project-specific. Leave this short. Common
+              verbs are already built in.
+            </p>
+            {inheritedConsistencyCues.length > 0 && (
+              <p className={styles.helperText}>
+                Inherited from parent project: {inheritedConsistencyCues.join(', ')}
+              </p>
+            )}
+            <label className={styles.fieldLabel}>
+              Extra project-specific verbs
+              <textarea
+                value={consistencyCuesDraft}
+                onChange={(e) => setConsistencyCuesDraft(e.target.value)}
+                placeholder={'brew\nattune\nchannel\ninvoke'}
+                className={styles.cueTextarea}
+              />
+            </label>
+            <div className={styles.helperList}>
+              <div><strong>Good fits:</strong> attune, soulbind, overclock, transmute</div>
+              <div><strong>Avoid:</strong> go, look, move, say, think</div>
+            </div>
+            <button onClick={() => void handleConsistencyCueSave()} className={styles.addButton}>
+              Save Keywords
             </button>
           </div>
+        </details>
 
-          <CharacterStyleList
-            styles={settings.characterStyles}
-            onUpdate={handleUpdateStyle}
-            onDelete={handleDeleteStyle}
-            expandedStyleId={expandedStyleId}
-            onToggleExpand={setExpandedStyleId}
-          />
-        </div>
+        <details className={styles.section}>
+          <summary className={styles.sectionSummary}>
+            <span className={styles.sectionSummaryTitle}>Workspace Import Defaults</span>
+            <span className={styles.sectionSummaryMeta}>Prefill import behavior</span>
+            <span className={styles.sectionChevron} aria-hidden='true'>⌄</span>
+          </summary>
+          <div className={styles.sectionBody}>
+            <p className={styles.helperText}>
+              These defaults pre-fill import controls in Writing Workspace. Authors can still
+              override per import batch.
+            </p>
+            <label className={styles.fieldLabel}>
+              Default import mode
+              <select
+                value={settings.defaultImportMode ?? 'balanced'}
+                onChange={(e) =>
+                  void handleImportDefaultsChange(
+                    e.target.value as WorkspaceImportMode,
+                    settings.defaultSkipImportSuggestions ?? false
+                  )
+                }
+                className={styles.styleInput}
+              >
+                <option value='balanced'>Balanced</option>
+                <option value='strict'>Strict</option>
+                <option value='lenient'>Lenient</option>
+              </select>
+            </label>
+            <label className={styles.toggleRow}>
+              <input
+                type='checkbox'
+                checked={settings.defaultSkipImportSuggestions ?? false}
+                onChange={(e) =>
+                  void handleImportDefaultsChange(
+                    settings.defaultImportMode ?? 'balanced',
+                    e.target.checked
+                  )
+                }
+              />
+              <span>Default to skipping consistency suggestions during import</span>
+            </label>
+          </div>
+        </details>
+
+        {/* Character Styles Section */}
+        <details className={styles.section}>
+          <summary className={styles.sectionSummary}>
+            <span className={styles.sectionSummaryTitle}>Character Dialogue Styles</span>
+            <span className={styles.sectionSummaryMeta}>
+              {settings.characterStyles.length} saved style
+              {settings.characterStyles.length === 1 ? '' : 's'}
+            </span>
+            <span className={styles.sectionChevron} aria-hidden='true'>⌄</span>
+          </summary>
+          <div className={styles.sectionBody}>
+            <div className={styles.addStyle}>
+              <input
+                type='text'
+                value={newStyleName}
+                onChange={(e) => setNewStyleName(e.target.value)}
+                placeholder='Style name (e.g., Protagonist Thoughts)'
+                className={styles.styleInput}
+              />
+              <button onClick={handleAddStyle} className={styles.addButton}>
+                Add Style
+              </button>
+            </div>
+
+            <CharacterStyleList
+              styles={settings.characterStyles}
+              onUpdate={handleUpdateStyle}
+              onDelete={handleDeleteStyle}
+              expandedStyleId={expandedStyleId}
+              onToggleExpand={setExpandedStyleId}
+            />
+          </div>
+        </details>
       </div>
     </section>
   );

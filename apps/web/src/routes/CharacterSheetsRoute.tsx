@@ -8,7 +8,8 @@ import type {
   CompendiumEntry,
   CharacterStat,
   CharacterResource,
-  Project
+  Project,
+  ProjectSettings
 } from '../entityTypes';
 import type {StoredRuleset} from '../entityTypes';
 import {
@@ -39,9 +40,11 @@ import {
   getSettlementModulesByProject,
   getCompendiumEntriesByProject
 } from '../services/compendiumService';
+import styles from '../styles/CharactersRoute.module.css';
 
 interface CharacterSheetsRouteProps {
   activeProject: Project | null;
+  projectSettings?: ProjectSettings | null;
   embedded?: boolean;
   prefillCharacterId?: string | null;
   onPrefillConsumed?: () => void;
@@ -49,6 +52,7 @@ interface CharacterSheetsRouteProps {
 
 function CharacterSheetsRoute({
   activeProject,
+  projectSettings = null,
   embedded = false,
   prefillCharacterId,
   onPrefillConsumed
@@ -512,6 +516,11 @@ function CharacterSheetsRoute({
     [settlementState, settlementModules, activePartySynergies]
   );
   const effectiveLevel = Math.max(1, level + runtimeModifiers.levelBonus);
+  const isGeneralFictionMode = projectSettings?.projectMode === 'general';
+  const showRuntimePreview =
+    !isGeneralFictionMode &&
+    projectSettings?.featureToggles.enableRuntimeModifiers !== false;
+  const showCharacterState = !isGeneralFictionMode;
   const statusCatalogOptions = useMemo(
     () =>
       compendiumEntries.filter((entry) => {
@@ -564,21 +573,13 @@ function CharacterSheetsRoute({
 
   const content = (
     <>
-      {!embedded && <h1>Character Sheets</h1>}
+      {!embedded && <h1 className={styles.title}>Character Sheets</h1>}
       {feedback && (
         <p
           role='status'
-          style={{
-            marginBottom: '1rem',
-            padding: '0.5rem 0.75rem',
-            borderRadius: '6px',
-            border: `1px solid ${
-              feedback.tone === 'error' ? '#fecaca' : '#bbf7d0'
-            }`,
-            backgroundColor:
-              feedback.tone === 'error' ? '#fef2f2' : '#f0fdf4',
-            color: feedback.tone === 'error' ? '#991b1b' : '#166534'
-          }}
+          className={`${styles.feedback} ${
+            feedback.tone === 'error' ? styles.feedbackError : styles.feedbackSuccess
+          }`}
         >
           {feedback.message}
         </p>
@@ -633,10 +634,12 @@ function CharacterSheetsRoute({
         </button>
       )}
 
-      <div style={{display: 'flex', gap: '2rem', alignItems: 'flex-start'}}>
+      <div className={styles.layout}>
         {/* Character Sheet Editor */}
-        <form onSubmit={handleSubmit} style={{flex: 1, maxWidth: 500}}>
-          <h2>{editingId ? 'Edit Character Sheet' : 'New Character Sheet'}</h2>
+        <form onSubmit={handleSubmit} className={styles.panel} style={{maxWidth: 500}}>
+          <h2 className={styles.panelTitle}>
+            {editingId ? 'Edit Character Sheet' : 'New Character Sheet'}
+          </h2>
 
           <div style={{marginBottom: '0.75rem'}}>
             <label>
@@ -671,64 +674,68 @@ function CharacterSheetsRoute({
             </label>
           </div>
 
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: '1fr 1fr',
-              gap: '0.75rem',
-              marginBottom: '0.75rem'
-            }}
-          >
-            <label>
-              Level *
-              <br />
-              <input
-                type='number'
-                value={level}
-                onChange={(e) => setLevel(Number(e.target.value))}
-                min={1}
-                required
-                style={{width: '100%'}}
-              />
-            </label>
+          {!isGeneralFictionMode && (
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: '1fr 1fr',
+                gap: '0.75rem',
+                marginBottom: '0.75rem'
+              }}
+            >
+              <label>
+                Level *
+                <br />
+                <input
+                  type='number'
+                  value={level}
+                  onChange={(e) => setLevel(Number(e.target.value))}
+                  min={1}
+                  required
+                  style={{width: '100%'}}
+                />
+              </label>
 
-            <label>
-              Experience *
-              <br />
-              <input
-                type='number'
-                value={experience}
-                onChange={(e) => setExperience(Number(e.target.value))}
-                min={0}
-                required
-                style={{width: '100%'}}
-              />
-            </label>
-          </div>
-
-          <div
-            style={{
-              marginBottom: '0.9rem',
-              padding: '0.6rem 0.75rem',
-              border: '1px solid #dbeafe',
-              borderRadius: '6px',
-              backgroundColor: '#f8fbff',
-              fontSize: '0.85rem'
-            }}
-          >
-            <strong>Runtime Effects (Preview)</strong>
-            <div style={{marginTop: '0.25rem'}}>
-              Effective level: {effectiveLevel}
-              {runtimeModifiers.levelBonus > 0
-                ? ` (base ${level} + ${runtimeModifiers.levelBonus})`
-                : ` (base ${level})`}
+              <label>
+                Experience *
+                <br />
+                <input
+                  type='number'
+                  value={experience}
+                  onChange={(e) => setExperience(Number(e.target.value))}
+                  min={0}
+                  required
+                  style={{width: '100%'}}
+                />
+              </label>
             </div>
-            {runtimeModifiers.notes.length > 0 && (
-              <div style={{marginTop: '0.25rem', color: '#4b5563'}}>
-                {runtimeModifiers.notes.join(' ')}
+          )}
+
+          {showRuntimePreview && (
+            <div
+              style={{
+                marginBottom: '0.9rem',
+                padding: '0.6rem 0.75rem',
+                border: '1px solid #dbeafe',
+                borderRadius: '6px',
+                backgroundColor: '#f8fbff',
+                fontSize: '0.85rem'
+              }}
+            >
+              <strong>Runtime Effects (Preview)</strong>
+              <div style={{marginTop: '0.25rem'}}>
+                Effective level: {effectiveLevel}
+                {runtimeModifiers.levelBonus > 0
+                  ? ` (base ${level} + ${runtimeModifiers.levelBonus})`
+                  : ` (base ${level})`}
               </div>
-            )}
-          </div>
+              {runtimeModifiers.notes.length > 0 && (
+                <div style={{marginTop: '0.25rem', color: '#4b5563'}}>
+                  {runtimeModifiers.notes.join(' ')}
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Stats */}
           {stats.length > 0 && (
@@ -772,9 +779,11 @@ function CharacterSheetsRoute({
                         style={{width: '100%'}}
                       />
                     </label>
-                    <div style={{fontSize: '0.8rem', color: '#4b5563'}}>
-                      Effective: {effectiveValue}
-                    </div>
+                    {showRuntimePreview && (
+                      <div style={{fontSize: '0.8rem', color: '#4b5563'}}>
+                        Effective: {effectiveValue}
+                      </div>
+                    )}
                   </div>
                 );
               })}
@@ -853,23 +862,26 @@ function CharacterSheetsRoute({
                         />
                       </label>
                     </div>
-                    <div style={{fontSize: '0.8rem', color: '#4b5563'}}>
-                      Effective: {effective.current}/{effective.max}
-                    </div>
+                    {showRuntimePreview && (
+                      <div style={{fontSize: '0.8rem', color: '#4b5563'}}>
+                        Effective: {effective.current}/{effective.max}
+                      </div>
+                    )}
                   </div>
                 );
               })}
             </div>
           )}
 
-          <div
-            style={{
-              marginBottom: '1rem',
-              border: '1px solid #e5e7eb',
-              borderRadius: '8px',
-              padding: '0.75rem'
-            }}
-          >
+          {showCharacterState && (
+            <div
+              style={{
+                marginBottom: '1rem',
+                border: '1px solid #e5e7eb',
+                borderRadius: '8px',
+                padding: '0.75rem'
+              }}
+            >
             <h3 style={{marginTop: 0}}>Character State</h3>
             <p style={{marginTop: 0, fontSize: '0.85rem', color: '#6b7280'}}>
               Use Quick Add for low-friction tracking. Add from Catalog when an
@@ -1059,7 +1071,8 @@ function CharacterSheetsRoute({
                 </ul>
               )}
             </div>
-          </div>
+            </div>
+          )}
 
           <div style={{marginBottom: '0.75rem'}}>
             <label>
@@ -1091,44 +1104,28 @@ function CharacterSheetsRoute({
         </form>
 
         {/* Character Sheet List */}
-        <div style={{flex: 1}}>
-          <h2>Character Sheets</h2>
+        <div className={styles.panel}>
+          <h2 className={styles.panelTitle}>Character Sheets</h2>
           {sheets.length === 0 && (
-            <p>No character sheets yet. Add one on the left.</p>
+            <p className={styles.mutedText}>No character sheets yet. Add one on the left.</p>
           )}
-          <ul style={{listStyle: 'none', padding: 0}}>
+          <ul className={styles.list}>
             {sheets.map((sheet) => (
               <li
                 key={sheet.id}
-                style={{
-                  marginBottom: '1rem',
-                  padding: '1rem',
-                  border: '1px solid #444',
-                  borderRadius: '4px'
-                }}
+                className={styles.listCard}
               >
-                <div
-                  style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'flex-start'
-                  }}
-                >
+                <div className={styles.listCardHeader}>
                   <div style={{flex: 1}}>
                     <strong style={{fontSize: '1.2em'}}>{sheet.name}</strong>
-                    <div
-                      style={{
-                        fontSize: '0.9em',
-                        color: '#888',
-                        marginTop: '0.5rem'
-                      }}
-                    >
-                      Level {Math.max(1, sheet.level + runtimeModifiers.levelBonus)}
-                      {runtimeModifiers.levelBonus > 0
-                        ? ` (base ${sheet.level})`
-                        : ''}
-                      {' | '}
-                      {sheet.experience} XP
+                    <div className={styles.listCardMeta}>
+                      {isGeneralFictionMode
+                        ? 'Narrative profile'
+                        : `Level ${Math.max(1, sheet.level + runtimeModifiers.levelBonus)}${
+                            runtimeModifiers.levelBonus > 0
+                              ? ` (base ${sheet.level})`
+                              : ''
+                          } | ${sheet.experience} XP`}
                     </div>
 
                     {sheet.stats.length > 0 && (
@@ -1152,7 +1149,7 @@ function CharacterSheetsRoute({
                             return def ? (
                               <span key={stat.definitionId}>
                                 {def.name}: {stat.value}
-                                {effectiveValue !== stat.value
+                                {showRuntimePreview && effectiveValue !== stat.value
                                   ? ` (${effectiveValue})`
                                   : ''}
                               </span>
@@ -1179,8 +1176,9 @@ function CharacterSheetsRoute({
                             return def ? (
                               <div key={resource.definitionId}>
                                 {def.name}: {resource.current}/{resource.max}
-                                {(effective.current !== resource.current ||
-                                  effective.max !== resource.max) &&
+                                {showRuntimePreview &&
+                                  (effective.current !== resource.current ||
+                                    effective.max !== resource.max) &&
                                   ` (${effective.current}/${effective.max})`}
                               </div>
                             ) : null;
@@ -1191,18 +1189,15 @@ function CharacterSheetsRoute({
 
                     {sheet.notes && (
                       <p
-                        style={{
-                          margin: '0.5rem 0 0 0',
-                          fontSize: '0.9em',
-                          fontStyle: 'italic',
-                          color: '#ccc'
-                        }}
+                        className={styles.italicText}
+                        style={{margin: '0.5rem 0 0 0', fontSize: '0.9em'}}
                       >
                         {sheet.notes}
                       </p>
                     )}
-                    {((sheet.inventoryEntries?.length ?? 0) > 0 ||
-                      (sheet.inventory?.length ?? 0) > 0) && (
+                    {showCharacterState &&
+                      ((sheet.inventoryEntries?.length ?? 0) > 0 ||
+                        (sheet.inventory?.length ?? 0) > 0) && (
                       <div style={{marginTop: '0.5rem', fontSize: '0.9em'}}>
                         <strong>Inventory:</strong>{' '}
                         {(sheet.inventoryEntries?.length
@@ -1215,8 +1210,9 @@ function CharacterSheetsRoute({
                         ).join(', ')}
                       </div>
                     )}
-                    {((sheet.equipmentEntries?.length ?? 0) > 0 ||
-                      (sheet.equipment?.length ?? 0) > 0) && (
+                    {showCharacterState &&
+                      ((sheet.equipmentEntries?.length ?? 0) > 0 ||
+                        (sheet.equipment?.length ?? 0) > 0) && (
                       <div style={{marginTop: '0.5rem', fontSize: '0.9em'}}>
                         <strong>Equipment:</strong>{' '}
                         {(sheet.equipmentEntries?.length
@@ -1225,8 +1221,9 @@ function CharacterSheetsRoute({
                         )?.join(', ')}
                       </div>
                     )}
-                    {((sheet.statusEntries?.length ?? 0) > 0 ||
-                      (sheet.statuses?.length ?? 0) > 0) && (
+                    {showCharacterState &&
+                      ((sheet.statusEntries?.length ?? 0) > 0 ||
+                        (sheet.statuses?.length ?? 0) > 0) && (
                       <div style={{marginTop: '0.5rem', fontSize: '0.9em'}}>
                         <strong>Statuses:</strong>{' '}
                         {(sheet.statusEntries?.length
@@ -1237,7 +1234,7 @@ function CharacterSheetsRoute({
                     )}
                   </div>
 
-                  <div style={{display: 'flex', gap: '0.5rem'}}>
+                  <div className={styles.actionRow}>
                     <button type='button' onClick={() => handleEdit(sheet)}>
                       Edit
                     </button>

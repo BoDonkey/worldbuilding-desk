@@ -1,0 +1,127 @@
+.page {
+  display: grid;
+  gap: 1rem;
+}
+
+.title {
+  margin: 0;
+}
+
+.lead {
+  margin: 0;
+  color: var(--color-text-secondary);
+}
+
+.feedback {
+  margin: 0;
+  padding: 0.7rem 0.85rem;
+  border-radius: 14px;
+  border: 1px solid var(--surface-border-soft);
+  background: var(--surface-panel);
+}
+
+.feedbackSuccess {
+  border-color: color-mix(in srgb, var(--button-primary-border) 78%, var(--surface-border-soft) 22%);
+  background: color-mix(in srgb, var(--button-primary-bg) 22%, var(--surface-panel-elevated) 78%);
+  color: var(--button-primary-text);
+}
+
+.feedbackError {
+  border-color: var(--button-danger-border);
+  background: color-mix(in srgb, var(--button-danger-bg) 26%, var(--surface-panel-elevated) 74%);
+  color: var(--button-danger-text);
+}
+
+.toolbar {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.tabRow {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.tabButtonActive {
+  border-color: var(--button-primary-border);
+  background: var(--button-primary-bg);
+  color: var(--button-primary-text);
+}
+
+.notice {
+  margin: 0;
+  padding: 0.75rem 0.9rem;
+  border: 1px solid var(--surface-border-soft);
+  border-radius: 14px;
+  background: var(--surface-panel);
+  color: var(--color-text-secondary);
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: minmax(320px, 420px) minmax(0, 1fr);
+  gap: 1.25rem;
+  align-items: start;
+}
+
+.panel {
+  border: 1px solid var(--surface-border-soft);
+  border-radius: 18px;
+  background: var(--surface-panel);
+  padding: 1rem;
+}
+
+.panelTitle {
+  margin: 0 0 1rem;
+}
+
+.list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 0.85rem;
+}
+
+.listCard {
+  padding: 0.95rem;
+  border: 1px solid var(--surface-border-soft);
+  border-radius: 16px;
+  background: var(--surface-panel-elevated);
+}
+
+.listCardHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
+.listCardMeta {
+  font-size: 0.9rem;
+  color: var(--color-text-secondary);
+  margin-top: 0.45rem;
+}
+
+.mutedText {
+  color: var(--color-text-secondary);
+}
+
+.italicText {
+  color: var(--color-text-secondary);
+  font-style: italic;
+}
+
+.actionRow {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 900px) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
+}

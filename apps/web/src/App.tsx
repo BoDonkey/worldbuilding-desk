@@ -223,7 +223,12 @@ function AppShell() {
           />
         );
       case '/characters':
-        return <CharactersHubRoute activeProject={activeProject} />;
+        return (
+          <CharactersHubRoute
+            activeProject={activeProject}
+            projectSettings={projectSettings}
+          />
+        );
       case '/character-sheets':
         return <Navigate to='/characters?view=sheets' replace />;
       case '/workspace':

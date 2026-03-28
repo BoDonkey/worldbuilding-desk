@@ -1,6 +1,6 @@
 # Next Steps
 
-Last updated: 2026-03-22
+Last updated: 2026-03-28
 
 ## Current Baseline
 
@@ -46,30 +46,28 @@ Implemented recently:
 
 ## Recommended Priority Order
 
-1. Quick Workspace AI Follow-up Verification
-2. Finish Compendium UI Sweep
-3. Final Cross-Route UI Polish
-4. Lore / compendium tooltip convergence follow-up
-5. Editor customization follow-up
-6. Data portability follow-up
+1. Final Cross-Route UI Polish
+2. Lore / compendium tooltip convergence follow-up
+3. Editor customization follow-up
+4. Data portability follow-up
 
-## 1) Quick Workspace AI Follow-up Verification
+## Workspace AI Follow-up Verification
 
-Goal: verify the post-cleanup workspace is stable enough to stop touching it and return to Compendium work.
+Status: completed on 2026-03-28.
 
-Targets:
+Verified:
 
-- Confirm project AI provider selection persists cleanly across full app restart.
-- Confirm Ollama path stays selected and does not fall back to Anthropic unexpectedly.
-- Confirm AI pane input stays visible without scrolling the editor column.
-- Confirm AI message scrolling is internal to the pane.
-- Decide whether the left-rail scene meta card is acceptable as-is or needs one more visual simplification pass later.
+- Project AI provider selection persists cleanly across full app restart.
+- Ollama stays selected and does not fall back unexpectedly.
+- AI pane input remains visible without scrolling the editor column.
+- AI message scrolling stays internal to the pane.
+- Left-rail scene meta card is acceptable for now; any further simplification can wait for later polish.
 
-Exit criteria:
+Conclusion:
 
-- Writing + AI feels usable enough for real drafting sessions without another immediate workspace rework.
+- Writing + AI is stable enough to stop treating workspace follow-up as the active blocker.
 
-## 2) Finish Compendium UI Sweep
+## 1) Finish Compendium UI Sweep
 
 Goal: complete the visual cleanup of the remaining Compendium sections so the route feels consistent end to end.
 
@@ -80,17 +78,21 @@ Status:
   - JSON import preview modal
   - help / tabs / next-step panels
   - overview, entries, and progression sections
-- Remaining:
   - zone affinity section
   - party synergy/community section
   - settlement progression section
   - remaining empty/list/detail states inside `world-systems`
+  - follow-up notes from manual review, if any
+
+Result:
+
+- `world-systems` received the intended UI sweep and now follows the newer card/grouping treatment. Treat any remaining tweaks as polish, not a blocked unfinished section.
 
 Exit criteria:
 
 - The full Compendium route reads as one coherent UI system instead of mixed generations of styling.
 
-## 3) Final Cross-Route UI Polish
+## 2) Final Cross-Route UI Polish
 
 Goal: do one end-to-end polish pass after compendium is finished so the recently expanded flows feel equally refined.
 
@@ -105,7 +107,7 @@ Exit criteria:
 
 - No obvious “old UI vs new UI” seams remain in the main authoring flows.
 
-## 4) Lore / Compendium Tooltip Convergence Follow-up
+## 3) Lore / Compendium Tooltip Convergence Follow-up
 
 Goal: extend the first popover convergence pass into richer inline canon workflows.
 
@@ -125,7 +127,7 @@ Exit criteria:
 
 - Authors can inspect and resolve lightweight canon issues without leaving the scene unnecessarily.
 
-## 5) Editor Customization Follow-up
+## 4) Editor Customization Follow-up
 
 Goal: revisit editor controls only if the current presets prove too limiting in real use.
 
@@ -139,7 +141,7 @@ Exit criteria:
 
 - The editor remains comfortable over long sessions without becoming a settings swamp.
 
-## 6) Data Portability Follow-up
+## 5) Data Portability Follow-up
 
 Goal: keep the new portability flows solid, but treat them as a follow-on rather than the immediate bottleneck.
 

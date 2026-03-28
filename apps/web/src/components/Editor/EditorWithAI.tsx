@@ -119,6 +119,9 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
     null
   );
   const editorRef = useRef<TipTapEditorInstance | null>(null);
+  const editorPaneRef = useRef<HTMLDivElement | null>(null);
+  const selectionBubbleRef = useRef<HTMLDivElement | null>(null);
+  const [selectionBubbleWidth, setSelectionBubbleWidth] = useState(360);
 
   const loreHighlights = React.useMemo<LoreHighlightEntry[]>(() => {
     const characterEntries = Object.values(selectionQuickSnippets?.characters ?? {}).map(
@@ -332,6 +335,22 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
   }, [selectionBubble]);
 
   useEffect(() => {
+    if (!selectionBubble || !selectionBubbleRef.current) return;
+    const element = selectionBubbleRef.current;
+    const updateWidth = () => {
+      setSelectionBubbleWidth(element.offsetWidth || 360);
+    };
+    updateWidth();
+    const observer = new ResizeObserver(updateWidth);
+    observer.observe(element);
+    window.addEventListener('resize', updateWidth);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('resize', updateWidth);
+    };
+  }, [selectionBubble]);
+
+  useEffect(() => {
     if (!lorePopoverAnchor) return;
     const close = () => {
       setLorePopoverAnchor(null);
@@ -507,9 +526,25 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
     setShowSidePanel(true);
   };
 
+  const editorPaneRect = editorPaneRef.current?.getBoundingClientRect() ?? null;
+  const clampedSelectionBubbleLeft = selectionBubble
+    ? Math.max(
+        selectionBubbleWidth / 2 + 16,
+        Math.min(
+          editorPaneRect
+            ? editorPaneRect.left + editorPaneRect.width / 2
+            : window.innerWidth / 2,
+          window.innerWidth - selectionBubbleWidth / 2 - 16
+        )
+      )
+    : 0;
+  const clampedSelectionBubbleTop = selectionBubble
+    ? Math.max(64, selectionBubble.y)
+    : 0;
+
   return (
     <div className={styles.container}>
-      <div className={styles.editor}>
+      <div ref={editorPaneRef} className={styles.editor}>
         <TipTapEditor
           content={content}
           onChange={onChange}
@@ -531,10 +566,11 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
         />
         {selectionBubble && (
           <div
+            ref={selectionBubbleRef}
             className={styles.selectionBubble}
             style={{
-              left: `${selectionBubble.x}px`,
-              top: `${selectionBubble.y}px`
+              left: `${clampedSelectionBubbleLeft}px`,
+              top: `${clampedSelectionBubbleTop}px`
             }}
             onMouseDown={(event) => event.preventDefault()}
           >

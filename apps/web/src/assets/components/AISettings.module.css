@@ -219,7 +219,7 @@
   align-items: center;
   gap: 0.35rem;
   padding: 0.35rem;
-  max-width: min(92vw, 680px);
+  max-width: min(72vw, 680px);
   flex-wrap: wrap;
 }
 

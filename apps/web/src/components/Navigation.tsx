@@ -22,11 +22,15 @@ export const Navigation: FC<NavigationProps> = ({
   const mobileMenuCloseRef = useRef<HTMLButtonElement | null>(null);
   const showGameSystems =
     !activeProject || projectSettings?.featureToggles.enableGameSystems !== false;
+  const showRuleset =
+    !activeProject ||
+    projectSettings?.projectMode !== 'general' ||
+    projectSettings?.featureToggles.enableRuleAuthoring !== false;
   const navItems = useMemo(
     () => [
       {to: '/', label: 'Projects', icon: 'PR', end: true},
       {to: '/world-bible', label: 'World', icon: 'WB'},
-      {to: '/ruleset', label: 'Ruleset', icon: 'RS'},
+      ...(showRuleset ? [{to: '/ruleset', label: 'Ruleset', icon: 'RS'}] : []),
       {to: '/characters', label: 'Characters', icon: 'CH'},
       {to: '/workspace', label: 'Workspace', icon: 'WS'},
       ...(showGameSystems
@@ -34,7 +38,7 @@ export const Navigation: FC<NavigationProps> = ({
         : []),
       {to: '/settings', label: 'Settings', icon: 'ST'}
     ],
-    [showGameSystems]
+    [showGameSystems, showRuleset]
   );
 
   const mobileBarItems = useMemo(

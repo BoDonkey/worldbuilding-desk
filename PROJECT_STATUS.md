@@ -155,6 +155,34 @@ npx tsx examples/basic-usage.ts
 
 ## Recent Changes & Fixes
 
+### Cross-Route Polish + Re-Entry Cleanup (March 28, 2026)
+- Re-entered the repo, revalidated the current workspace/package/doc baseline, and cleaned up repository drift:
+  - removed tracked `package-lock.json` files so the repo consistently follows the `pnpm` workspace setup
+  - refreshed `apps/web/README.md` so it reflects the actual app/package responsibilities instead of the Vite starter template
+  - updated roadmap/session docs to reflect current commands and current priorities
+- Closed the Workspace AI verification follow-up:
+  - confirmed provider selection persists across full restart
+  - confirmed Ollama selection remains stable
+  - confirmed AI input remains visible without dragging the editor column
+  - confirmed assistant-message scrolling stays inside the AI pane
+- Finished the Compendium `world-systems` UI sweep:
+  - zone affinity now uses grouped creation/logging controls and denser milestone/status cards
+  - community/logistics now presents party selection, active combo buffs, and roster opportunities in the newer card system
+  - settlement progression now breaks cleanly into module setup, tier/base-stat controls, and installed-effect summaries
+- Completed a broader polish pass across Settings, Workspace, Navigation, and Characters:
+  - Settings sections are now collapsible with explicit chevron state indicators
+  - Project Mode was moved near the top of Settings for easier discovery
+  - workspace selection-action bubble is centered within the editor pane instead of hiding under the left rail
+  - workspace shell spacing/header treatment was tightened further
+  - unchecked checkboxes now use custom themed rendering instead of dark browser-default boxes
+  - `Ruleset` is hidden from main navigation in `General Fiction` mode unless rule authoring is explicitly enabled
+  - Character Sheets now suppress most overt LitRPG/system-heavy affordances in `General Fiction` mode
+  - Characters / Character Sheets surfaces now use the newer softened panel/card treatment instead of harsher legacy inline styling
+
+**Immediate Next Slice**
+- Start a fresh session for the next feature discussion and branch.
+- Likely next priority: author-facing planning support such as a corkboard-style plot area and a scratchpad, once requirements are written down.
+
 ### Workspace Writer-First Cleanup + Ollama Follow-up (March 22, 2026)
 - Reduced route-level workspace noise so the editor appears much sooner:
   - removed the large top workspace heading
@@ -174,9 +202,10 @@ npx tsx examples/basic-usage.ts
   - reduced the chance of stale workspace settings writing an old provider back over current AI settings
 
 **Immediate Follow-up**
-- Verify AI provider persistence across full restart, especially for Ollama-selected projects.
-- Verify AI input remains visible and assistant scrolling stays internal after full app restart.
-- If stable, return focus to the remaining Compendium `world-systems` UI sweep.
+- Verified on March 28, 2026:
+  - AI provider persistence across full restart is stable, including Ollama-selected projects.
+  - AI input remains visible and assistant scrolling stays internal after full app restart.
+- Focus can stay on cross-route polish and remaining low-risk UI cleanup instead of more workspace AI follow-up.
 
 ### Portability, Popover Convergence, and UI Sweep (March 21, 2026)
 - Softened the visual language across the app:
@@ -349,7 +378,8 @@ npx tsx examples/basic-usage.ts
 
 ### Compendium UX
 - The Compendium route shell, overview, entries, and progression sections now follow the newer softened UI language.
-- The remaining `world-systems` body still uses older inline styling and is the main unfinished UI sweep area.
+- `world-systems` has now received the main UI sweep as well.
+- Any remaining Compendium work should be treated as polish/follow-up notes rather than a blocked unfinished route section.
 
 ### Data Portability
 - Scene and compendium JSON round-trip flows are now present with preview/validation before import commit.

@@ -1807,87 +1807,137 @@ function CompendiumRoute({activeProject, projectSettings}: CompendiumRouteProps)
           <p className={styles.sectionHint}>
             Track zone exposure and unlock biome-specific milestones over time.
           </p>
-          <label className={styles.fieldBlock}>
-            <span className={styles.fieldLabel}>Zone Name</span>
-            <input
-              type='text'
-              value={zoneName}
-              onChange={(e) => setZoneName(e.target.value)}
-              placeholder='Bee Cave'
-              className={styles.fullWidthInput}
-            />
-          </label>
-          <label className={styles.fieldBlock}>
-            <span className={styles.fieldLabel}>Zone Key</span>
-            <input
-              type='text'
-              value={zoneKey}
-              onChange={(e) => setZoneKey(e.target.value)}
-              placeholder='bee_cave'
-              className={styles.fullWidthInput}
-            />
-          </label>
-          <label className={styles.fieldBlock}>
-            <span className={styles.fieldLabel}>Max Affinity Points</span>
-            <input
-              type='number'
-              min={1}
-              value={zoneMaxPoints}
-              onChange={(e) => setZoneMaxPoints(Number(e.target.value))}
-              className={styles.fullWidthInput}
-            />
-          </label>
-          <button type='button' onClick={() => void handleCreateZoneProfile()}>
-            Add Zone Profile
-          </button>
-          {zoneProfiles.length === 0 && (
-            <div className={styles.emptyStateCard}>
-              <p className={styles.emptyStateText}>No zone profiles yet.</p>
-              <button
-                type='button'
-                onClick={() => {
-                  if (!zoneName.trim()) setZoneName('Starter Zone');
-                  if (!zoneKey.trim()) setZoneKey('starter_zone');
-                }}
-              >
-                Create your first zone profile
-              </button>
+          <div className={styles.sectionStack}>
+            <div className={styles.inlineMetricRow}>
+              <div className={styles.miniMetric}>
+                <span className={styles.miniMetricLabel}>Profiles</span>
+                <span className={styles.miniMetricValue}>{zoneProfiles.length}</span>
+              </div>
+              <div className={styles.miniMetric}>
+                <span className={styles.miniMetricLabel}>Tracked Zones</span>
+                <span className={styles.miniMetricValue}>{zoneProgress.length}</span>
+              </div>
+              <div className={styles.miniMetric}>
+                <span className={styles.miniMetricLabel}>Active Zone</span>
+                <span className={styles.miniMetricValue}>
+                  {selectedZoneKey
+                    ? zoneProfiles.find((profile) => profile.biomeKey === selectedZoneKey)?.name ??
+                      'Selected'
+                    : 'None'}
+                </span>
+              </div>
             </div>
-          )}
+            <div className={styles.subsectionGrid}>
+              <section className={styles.subsectionCard}>
+                <div className={styles.subsectionHeader}>
+                  <h3 className={styles.subsectionTitle}>Create Profile</h3>
+                  <p className={styles.subsectionHint}>
+                    Define a biome once, then reuse it for repeated exposure logging.
+                  </p>
+                </div>
+                <label className={styles.fieldBlock}>
+                  <span className={styles.fieldLabel}>Zone Name</span>
+                  <input
+                    type='text'
+                    value={zoneName}
+                    onChange={(e) => setZoneName(e.target.value)}
+                    placeholder='Bee Cave'
+                    className={styles.fullWidthInput}
+                  />
+                </label>
+                <label className={styles.fieldBlock}>
+                  <span className={styles.fieldLabel}>Zone Key</span>
+                  <input
+                    type='text'
+                    value={zoneKey}
+                    onChange={(e) => setZoneKey(e.target.value)}
+                    placeholder='bee_cave'
+                    className={styles.fullWidthInput}
+                  />
+                </label>
+                <label className={styles.fieldBlock}>
+                  <span className={styles.fieldLabel}>Max Affinity Points</span>
+                  <input
+                    type='number'
+                    min={1}
+                    value={zoneMaxPoints}
+                    onChange={(e) => setZoneMaxPoints(Number(e.target.value))}
+                    className={styles.fullWidthInput}
+                  />
+                </label>
+                <div className={styles.inlineActions}>
+                  <button type='button' onClick={() => void handleCreateZoneProfile()}>
+                    Add Zone Profile
+                  </button>
+                  {zoneProfiles.length === 0 && (
+                    <button
+                      type='button'
+                      onClick={() => {
+                        if (!zoneName.trim()) setZoneName('Starter Zone');
+                        if (!zoneKey.trim()) setZoneKey('starter_zone');
+                      }}
+                    >
+                      Use starter values
+                    </button>
+                  )}
+                </div>
+                {zoneProfiles.length === 0 && (
+                  <p className={styles.emptyStateInline}>
+                    No zone profiles yet. Start with one reusable biome profile, then
+                    record exposure against it below.
+                  </p>
+                )}
+              </section>
+
+              <section className={styles.subsectionCard}>
+                <div className={styles.subsectionHeader}>
+                  <h3 className={styles.subsectionTitle}>Record Exposure</h3>
+                  <p className={styles.subsectionHint}>
+                    Use this during balancing passes to simulate repeated time spent in a zone.
+                  </p>
+                </div>
+                <label className={styles.fieldBlock}>
+                  <span className={styles.fieldLabel}>Active Zone</span>
+                  <select
+                    value={selectedZoneKey}
+                    onChange={(e) => setSelectedZoneKey(e.target.value)}
+                    className={styles.fullWidthInput}
+                  >
+                    <option value=''>Select zone</option>
+                    {zoneProfiles.map((profile) => (
+                      <option key={profile.id} value={profile.biomeKey}>
+                        {profile.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className={styles.fieldBlock}>
+                  <span className={styles.fieldLabel}>Exposure Minutes</span>
+                  <input
+                    type='number'
+                    min={1}
+                    value={zoneExposureMinutes}
+                    onChange={(e) => setZoneExposureMinutes(Number(e.target.value))}
+                    className={styles.fullWidthInput}
+                  />
+                </label>
+                <button
+                  type='button'
+                  onClick={() => void handleRecordZoneExposure()}
+                  disabled={!selectedZoneKey || isRecordingZone}
+                >
+                  {isRecordingZone ? 'Recording...' : 'Record Exposure'}
+                </button>
+                {!selectedZoneKey && zoneProfiles.length > 0 && (
+                  <p className={styles.emptyStateInline}>
+                    Select a zone profile first to start accumulating affinity.
+                  </p>
+                )}
+              </section>
+            </div>
+          </div>
           <div className={styles.sectionDivider} />
-          <label className={styles.fieldBlock}>
-            <span className={styles.fieldLabel}>Active Zone</span>
-            <select
-              value={selectedZoneKey}
-              onChange={(e) => setSelectedZoneKey(e.target.value)}
-              className={styles.fullWidthInput}
-            >
-              <option value=''>Select zone</option>
-              {zoneProfiles.map((profile) => (
-                <option key={profile.id} value={profile.biomeKey}>
-                  {profile.name}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className={styles.fieldBlock}>
-            <span className={styles.fieldLabel}>Exposure Minutes</span>
-            <input
-              type='number'
-              min={1}
-              value={zoneExposureMinutes}
-              onChange={(e) => setZoneExposureMinutes(Number(e.target.value))}
-              className={styles.fullWidthInput}
-            />
-          </label>
-          <button
-            type='button'
-            onClick={() => void handleRecordZoneExposure()}
-            disabled={!selectedZoneKey || isRecordingZone}
-          >
-            {isRecordingZone ? 'Recording...' : 'Record Exposure'}
-          </button>
-          <ul className={styles.plainListSpaced}>
+          <ul className={styles.worldSystemCardList}>
             {zoneProfiles.map((profile) => {
               const progressItem = zoneProgressByKey.get(profile.biomeKey) ?? {
                 id: '',
@@ -1901,27 +1951,59 @@ function CompendiumRoute({activeProject, projectSettings}: CompendiumRouteProps)
               const percent = getZoneAffinityPercent(progressItem, profile);
               const unlocked = new Set(progressItem.unlockedMilestoneIds);
               return (
-                <li
-                  key={`zone-${profile.id}`}
-                  className={styles.ruleListItem}
-                >
+                <li key={`zone-${profile.id}`} className={styles.worldSystemCard}>
                   <div className={styles.worldSystemRowHeader}>
                     <strong>{profile.name}</strong>
-                    <span className={styles.worldSystemBadge}>
-                      {percent.toFixed(1)}% affinity
-                    </span>
+                    <div className={styles.pillRow}>
+                      <span className={styles.worldSystemBadge}>
+                        {percent.toFixed(1)}% affinity
+                      </span>
+                      <span className={styles.softPill}>
+                        {progressItem.affinityPoints}/{profile.maxAffinityPoints} pts
+                      </span>
+                    </div>
                   </div>
-                  <div className={styles.subtleMeta}>
-                    Exposure: {(progressItem.totalExposureSeconds / 60).toFixed(1)} minutes
+                  <div className={styles.worldSystemMetaGrid}>
+                    <div className={styles.worldSystemMetaCard}>
+                      <span className={styles.miniMetricLabel}>Exposure</span>
+                      <span className={styles.miniMetricValue}>
+                        {(progressItem.totalExposureSeconds / 60).toFixed(1)} min
+                      </span>
+                    </div>
+                    <div className={styles.worldSystemMetaCard}>
+                      <span className={styles.miniMetricLabel}>Milestones</span>
+                      <span className={styles.miniMetricValue}>
+                        {progressItem.unlockedMilestoneIds.length}/{profile.milestones.length}
+                      </span>
+                    </div>
                   </div>
-                  <div className={styles.worldSystemList}>
+                  <ul className={styles.milestoneList}>
                     {profile.milestones.map((milestone) => (
-                      <div key={milestone.id} className={styles.subtleMeta}>
-                        {unlocked.has(milestone.id) ? 'Unlocked' : 'Locked'}{' '}
-                        {milestone.thresholdPercent}%: {milestone.name}
-                      </div>
+                      <li
+                        key={milestone.id}
+                        className={`${styles.milestoneItem} ${
+                          unlocked.has(milestone.id) ? styles.milestoneItemUnlocked : ''
+                        }`}
+                      >
+                        <div className={styles.milestoneCopy}>
+                          <span className={styles.milestoneName}>{milestone.name}</span>
+                          {milestone.description && (
+                            <span className={styles.milestoneDescription}>
+                              {milestone.description}
+                            </span>
+                          )}
+                        </div>
+                        <div className={styles.pillRow}>
+                          <span className={styles.softPill}>
+                            {milestone.thresholdPercent}%
+                          </span>
+                          <span className={styles.softPill}>
+                            {unlocked.has(milestone.id) ? 'Unlocked' : 'Locked'}
+                          </span>
+                        </div>
+                      </li>
                     ))}
-                  </div>
+                  </ul>
                 </li>
               );
             })}
@@ -1934,86 +2016,144 @@ function CompendiumRoute({activeProject, projectSettings}: CompendiumRouteProps)
             Shared party synergy buffs driven by role combinations. Select the
             currently active party to preview concrete in-scene combo effects.
           </p>
-          <h3 className={styles.sectionMinorHeading}>Active Party Members</h3>
-          <div className={styles.selectionList}>
-            {characters.length === 0 ? (
-              <div className={styles.subtleMeta}>
-                No characters yet. Add role-tagged characters to enable synergy.
+          <div className={styles.sectionStack}>
+            <div className={styles.inlineMetricRow}>
+              <div className={styles.miniMetric}>
+                <span className={styles.miniMetricLabel}>Active Party</span>
+                <span className={styles.miniMetricValue}>
+                  {activePartyCharacterIds.length}
+                </span>
               </div>
-            ) : (
-              characters.map((character) => (
-                <label
-                  key={character.id}
-                  className={styles.selectionRow}
-                >
-                  <input
-                    type='checkbox'
-                    checked={activePartyCharacterIds.includes(character.id)}
-                    onChange={() => togglePartyCharacter(character.id)}
-                  />
-                  <span>
-                    {character.name}
-                    <span className={styles.subtleMetaInline}>
-                      {' '}
-                      ({getCharacterRole(character) || 'no role'})
-                    </span>
-                  </span>
-                </label>
-              ))
-            )}
-          </div>
-          <h3 className={styles.sectionMinorHeading}>Active Combo Buffs</h3>
-          <ul className={styles.plainList}>
-            {activePartySynergies.filter((item) => item.missingRoles.length === 0).length ===
-            0 ? (
-              <li className={styles.subtleMeta}>
-                No active combos for the current party selection.
-              </li>
-            ) : (
-              activePartySynergies
-                .filter((item) => item.missingRoles.length === 0)
-                .map((suggestion) => (
-                  <li key={suggestion.ruleId} className={styles.ruleListItem}>
-                    <div className={styles.worldSystemRowHeader}>
-                      <strong>{suggestion.ruleName}</strong>
-                    {suggestion.maxDistanceMeters ? (
-                        <span className={styles.worldSystemBadge}>
-                        {' '}
-                        ({suggestion.maxDistanceMeters}m proximity)
+              <div className={styles.miniMetric}>
+                <span className={styles.miniMetricLabel}>Active Combos</span>
+                <span className={styles.miniMetricValue}>
+                  {
+                    activePartySynergies.filter((item) => item.missingRoles.length === 0)
+                      .length
+                  }
+                </span>
+              </div>
+              <div className={styles.miniMetric}>
+                <span className={styles.miniMetricLabel}>Opportunities</span>
+                <span className={styles.miniMetricValue}>
+                  {rosterSynergyOpportunities.length}
+                </span>
+              </div>
+            </div>
+
+            <section className={styles.subsectionCard}>
+              <div className={styles.subsectionHeader}>
+                <h3 className={styles.subsectionTitle}>Active Party Members</h3>
+                <p className={styles.subsectionHint}>
+                  Toggle the currently active roster to see which role combos are live.
+                </p>
+              </div>
+              <div className={styles.selectionList}>
+                {characters.length === 0 ? (
+                  <p className={styles.emptyStateInline}>
+                    No characters yet. Add role-tagged characters to enable synergy previews.
+                  </p>
+                ) : (
+                  characters.map((character) => (
+                    <label key={character.id} className={styles.selectionRow}>
+                      <input
+                        type='checkbox'
+                        checked={activePartyCharacterIds.includes(character.id)}
+                        onChange={() => togglePartyCharacter(character.id)}
+                      />
+                      <span>
+                        {character.name}
+                        <span className={styles.subtleMetaInline}>
+                          {' '}
+                          ({getCharacterRole(character) || 'no role'})
+                        </span>
                       </span>
-                    ) : null}
-                    </div>
-                    <div>{suggestion.effectDescription}</div>
-                    <div className={styles.subtleMeta}>
-                      {formatSynergyStatus(suggestion, characterById)}
-                    </div>
-                  </li>
-                ))
-            )}
-          </ul>
-          <h3 className={styles.sectionMinorHeading}>Roster Opportunities</h3>
-          <ul className={styles.plainList}>
-            {rosterSynergyOpportunities.length === 0 ? (
-              <li className={styles.subtleMeta}>
-                Full roster can already satisfy all default synergy rules.
-              </li>
-            ) : (
-              rosterSynergyOpportunities.map((suggestion) => (
-                <li key={`roster-${suggestion.ruleId}`} className={styles.ruleListItem}>
-                  <strong>{suggestion.ruleName}</strong>
-                  <div>{suggestion.effectDescription}</div>
-                  <div className={styles.subtleMeta}>
-                    {formatSynergyStatus(suggestion, characterById)}
-                  </div>
-                  {suggestion.questPrompt && (
-                    <div className={styles.subtleMeta}>
-                      Prompt seed: {suggestion.questPrompt}
-                    </div>
-                  )}
-                </li>
-              ))
-            )}
-          </ul>
+                    </label>
+                  ))
+                )}
+              </div>
+            </section>
+
+            <div className={styles.subsectionGrid}>
+              <section className={styles.subsectionCard}>
+                <div className={styles.subsectionHeader}>
+                  <h3 className={styles.subsectionTitle}>Active Combo Buffs</h3>
+                  <p className={styles.subsectionHint}>
+                    These rules are fully satisfied by the current party selection.
+                  </p>
+                </div>
+                {activePartySynergies.filter((item) => item.missingRoles.length === 0)
+                  .length === 0 ? (
+                  <p className={styles.emptyStateInline}>
+                    No active combos for the current party selection.
+                  </p>
+                ) : (
+                  <ul className={styles.worldSystemCardList}>
+                    {activePartySynergies
+                      .filter((item) => item.missingRoles.length === 0)
+                      .map((suggestion) => (
+                        <li key={suggestion.ruleId} className={styles.worldSystemCard}>
+                          <div className={styles.worldSystemRowHeader}>
+                            <strong>{suggestion.ruleName}</strong>
+                            <div className={styles.pillRow}>
+                              {suggestion.maxDistanceMeters ? (
+                                <span className={styles.worldSystemBadge}>
+                                  {suggestion.maxDistanceMeters}m proximity
+                                </span>
+                              ) : null}
+                              <span className={styles.softPill}>Active</span>
+                            </div>
+                          </div>
+                          <div>{suggestion.effectDescription}</div>
+                          <div className={styles.subtleMeta}>
+                            {formatSynergyStatus(suggestion, characterById)}
+                          </div>
+                        </li>
+                      ))}
+                  </ul>
+                )}
+              </section>
+
+              <section className={styles.subsectionCard}>
+                <div className={styles.subsectionHeader}>
+                  <h3 className={styles.subsectionTitle}>Roster Opportunities</h3>
+                  <p className={styles.subsectionHint}>
+                    These combos are close. Use them as writing hooks or party-composition prompts.
+                  </p>
+                </div>
+                {rosterSynergyOpportunities.length === 0 ? (
+                  <p className={styles.emptyStateInline}>
+                    Full roster can already satisfy all default synergy rules.
+                  </p>
+                ) : (
+                  <ul className={styles.worldSystemCardList}>
+                    {rosterSynergyOpportunities.map((suggestion) => (
+                      <li
+                        key={`roster-${suggestion.ruleId}`}
+                        className={styles.worldSystemCard}
+                      >
+                        <div className={styles.worldSystemRowHeader}>
+                          <strong>{suggestion.ruleName}</strong>
+                          <span className={styles.softPill}>
+                            Need {suggestion.missingRoles.length}
+                          </span>
+                        </div>
+                        <div>{suggestion.effectDescription}</div>
+                        <div className={styles.subtleMeta}>
+                          {formatSynergyStatus(suggestion, characterById)}
+                        </div>
+                        {suggestion.questPrompt && (
+                          <div className={styles.infoCard}>
+                            Prompt seed: {suggestion.questPrompt}
+                          </div>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </section>
+            </div>
+          </div>
         </section>
 
         <section className={styles.sectionCard}>
@@ -2022,249 +2162,325 @@ function CompendiumRoute({activeProject, projectSettings}: CompendiumRouteProps)
             Generalized settlement buffs. Trophies are one source type, alongside
             structures, stations, totems, and custom modules.
           </p>
-          <label className={styles.fieldBlock}>
-            <span className={styles.fieldLabel}>Module Name</span>
-            <input
-              type='text'
-              value={moduleName}
-              onChange={(e) => setModuleName(e.target.value)}
-              placeholder='Cave Worm Trophy'
-              className={styles.fullWidthInput}
-            />
-          </label>
-          <label className={styles.fieldBlock}>
-            <span className={styles.fieldLabel}>Source Type</span>
-            <select
-              value={moduleSourceType}
-              onChange={(e) =>
-                setModuleSourceType(e.target.value as SettlementModule['sourceType'])
-              }
-              className={styles.fullWidthInput}
-            >
-              {SETTLEMENT_SOURCE_OPTIONS.map((option) => (
-                <option key={option} value={option}>
-                  {option}
-                </option>
-              ))}
-            </select>
-          </label>
-          <div className={styles.twoColumnCompact}>
-            <label className={styles.fieldBlock}>
-              <span className={styles.fieldLabel}>Target Type</span>
-              <select
-                value={moduleTargetType}
-                onChange={(e) =>
-                  setModuleTargetType(
-                    e.target.value as SettlementModule['effects'][number]['targetType']
-                  )
-                }
-                className={styles.fullWidthInput}
-              >
-                {SETTLEMENT_EFFECT_TARGET_OPTIONS.map((option) => (
-                  <option key={option} value={option}>
-                    {option}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className={styles.fieldBlock}>
-              <span className={styles.fieldLabel}>Target ID</span>
-              <input
-                type='text'
-                value={moduleTargetId}
-                onChange={(e) => setModuleTargetId(e.target.value)}
-                placeholder='poison'
-                className={styles.fullWidthInput}
-              />
-            </label>
-          </div>
-          <div className={styles.twoColumnCompact}>
-            <label className={styles.fieldBlock}>
-              <span className={styles.fieldLabel}>Operation</span>
-              <select
-                value={moduleOperation}
-                onChange={(e) =>
-                  setModuleOperation(
-                    e.target.value as SettlementModule['effects'][number]['operation']
-                  )
-                }
-                className={styles.fullWidthInput}
-              >
-                {SETTLEMENT_EFFECT_OPERATION_OPTIONS.map((option) => (
-                  <option key={option} value={option}>
-                    {option}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className={styles.fieldBlock}>
-              <span className={styles.fieldLabel}>Value</span>
-              <input
-                type='text'
-                value={moduleValue}
-                onChange={(e) => setModuleValue(e.target.value)}
-                placeholder='5'
-                className={styles.fullWidthInput}
-              />
-            </label>
-          </div>
-          <button
-            type='button'
-            onClick={() => void handleAddSettlementModule()}
-            disabled={isSavingModule || !settlementState || !moduleName.trim()}
-          >
-            {isSavingModule ? 'Adding...' : 'Add Settlement Module'}
-          </button>
-          <div className={styles.sectionDivider} />
-          <div className={styles.infoCard}>
-            <strong>Settlement Tier Level:</strong> {settlementState?.fortressLevel ?? 1}
-          </div>
-          <div className={styles.inlineActions}>
-            <button
-              type='button'
-              onClick={() => void handleAdjustFortressLevel(-1)}
-              disabled={!settlementState || settlementState.fortressLevel <= 1 || isSavingFortress}
-            >
-              - Tier
-            </button>
-            <button
-              type='button'
-              onClick={() => void handleAdjustFortressLevel(1)}
-              disabled={!settlementState || isSavingFortress}
-            >
-              + Tier
-            </button>
-          </div>
-          <div className={styles.subtleMeta}>
-            {nextFortressTier
-              ? `Next tier at level ${nextFortressTier.levelRequired}: ${nextFortressTier.name}`
-              : 'All configured settlement tiers unlocked.'}
-          </div>
-          <h3 className={styles.sectionMinorHeading}>Base Stats</h3>
-          {settlementState && (
-            <div className={styles.twoColumnCompact}>
-              {BASE_STAT_KEYS.map((key) => (
-                <label key={`base-${key}`} className={styles.fieldBlock}>
-                  <span className={styles.fieldLabel}>{key}</span>
+          <div className={styles.sectionStack}>
+            <div className={styles.inlineMetricRow}>
+              <div className={styles.miniMetric}>
+                <span className={styles.miniMetricLabel}>Tier</span>
+                <span className={styles.miniMetricValue}>
+                  {settlementState?.fortressLevel ?? 1}
+                </span>
+              </div>
+              <div className={styles.miniMetric}>
+                <span className={styles.miniMetricLabel}>Modules</span>
+                <span className={styles.miniMetricValue}>{settlementModules.length}</span>
+              </div>
+              <div className={styles.miniMetric}>
+                <span className={styles.miniMetricLabel}>Total Effects</span>
+                <span className={styles.miniMetricValue}>
+                  {settlementComputedEffects.allEffects.length}
+                </span>
+              </div>
+            </div>
+
+            <div className={styles.subsectionGrid}>
+              <section className={styles.subsectionCard}>
+                <div className={styles.subsectionHeader}>
+                  <h3 className={styles.subsectionTitle}>Add Module</h3>
+                  <p className={styles.subsectionHint}>
+                    Install a trophy, structure, station, totem, or custom aura source.
+                  </p>
+                </div>
+                <label className={styles.fieldBlock}>
+                  <span className={styles.fieldLabel}>Module Name</span>
                   <input
-                    type='number'
-                    min={BASE_STAT_LIMITS[key].min}
-                    max={BASE_STAT_LIMITS[key].max}
-                    step={1}
-                    value={baseStatsDraft[key]}
-                    onChange={(e) => handleBaseStatDraftChange(key, e.target.value)}
+                    type='text'
+                    value={moduleName}
+                    onChange={(e) => setModuleName(e.target.value)}
+                    placeholder='Cave Worm Trophy'
                     className={styles.fullWidthInput}
                   />
                 </label>
-              ))}
-            </div>
-          )}
-          <div className={styles.inlineActions}>
-            <button
-              type='button'
-              onClick={() => void handleSaveBaseStats()}
-              disabled={!settlementState || !isBaseStatsDraftDirty || isSavingFortress}
-            >
-              {isSavingFortress ? 'Saving...' : 'Save Base Stats'}
-            </button>
-            <button
-              type='button'
-              onClick={() =>
-                settlementState && setBaseStatsDraft(toBaseStatsDraft(settlementState.baseStats))
-              }
-              disabled={!settlementState || !isBaseStatsDraftDirty || isSavingFortress}
-            >
-              Reset
-            </button>
-          </div>
-          <h3 className={styles.sectionMinorHeading}>
-            Settlement Tier Effects: {settlementComputedEffects.fortressEffects.length}
-          </h3>
-          <ul className={styles.plainList}>
-            {settlementComputedEffects.fortressEffects.length === 0 ? (
-              <li className={styles.subtleMeta}>
-                No tier effects unlocked yet.
-              </li>
-            ) : (
-              settlementComputedEffects.fortressEffects.map((effect, index) => (
-                <li
-                  key={`tier-effect-${effect.targetType}-${effect.targetId}-${index}`}
-                  className={styles.ruleListItem}
-                >
-                  {formatSettlementEffectLabel(effect)}
-                </li>
-              ))
-            )}
-          </ul>
-          <h3 className={styles.sectionMinorHeading}>
-            Active Aura Effects: {activeSettlementEffects.length}
-          </h3>
-          <ul className={styles.plainList}>
-            {activeSettlementEffects.length === 0 ? (
-              <li className={styles.subtleMeta}>
-                No active module effects yet.
-              </li>
-            ) : (
-              activeSettlementEffects.map((effect, index) => (
-                <li
-                  key={`active-effect-${effect.targetType}-${effect.targetId}-${index}`}
-                  className={styles.ruleListItem}
-                >
-                  {formatSettlementEffectLabel(effect)}
-                </li>
-              ))
-            )}
-          </ul>
-          <h3 className={styles.sectionMinorHeading}>
-            Total Active Effects: {settlementComputedEffects.allEffects.length}
-          </h3>
-          <div className={styles.subtleMeta}>
-            Includes settlement progression + aura modules.
-          </div>
-          <h3 className={styles.sectionMinorHeading}>Unlocked Settlement Tiers</h3>
-          <ul className={styles.plainList}>
-            {unlockedFortressTiers.length === 0 ? (
-              <li className={styles.subtleMeta}>None yet.</li>
-            ) : (
-              unlockedFortressTiers.map((tier) => (
-                <li key={tier.id} className={styles.ruleListItem}>
-                  <div className={styles.worldSystemRowHeader}>
-                    <strong>
-                      L{tier.levelRequired} {tier.name}
-                    </strong>
-                  </div>
-                  {tier.description && (
-                    <div className={styles.subtleMeta}>{tier.description}</div>
-                  )}
-                </li>
-              ))
-            )}
-          </ul>
-          <h3 className={styles.sectionMinorHeading}>Installed Modules</h3>
-          <ul className={styles.plainList}>
-            {settlementModules.length === 0 ? (
-              <li className={styles.subtleMeta}>
-                No modules installed.
-              </li>
-            ) : (
-              settlementModules.map((module) => (
-                <li key={module.id} className={styles.ruleListItem}>
-                  <div className={styles.worldSystemRowHeader}>
-                    <strong>{module.name}</strong>
-                    <span className={styles.worldSystemBadge}>{module.sourceType}</span>
-                  </div>
-                  {module.effects.map((effect, effectIndex) => (
-                    <div
-                      key={`${module.id}-effect-${effectIndex}`}
-                      className={styles.subtleMeta}
+                <label className={styles.fieldBlock}>
+                  <span className={styles.fieldLabel}>Source Type</span>
+                  <select
+                    value={moduleSourceType}
+                    onChange={(e) =>
+                      setModuleSourceType(e.target.value as SettlementModule['sourceType'])
+                    }
+                    className={styles.fullWidthInput}
+                  >
+                    {SETTLEMENT_SOURCE_OPTIONS.map((option) => (
+                      <option key={option} value={option}>
+                        {option}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <div className={styles.twoColumnCompact}>
+                  <label className={styles.fieldBlock}>
+                    <span className={styles.fieldLabel}>Target Type</span>
+                    <select
+                      value={moduleTargetType}
+                      onChange={(e) =>
+                        setModuleTargetType(
+                          e.target.value as SettlementModule['effects'][number]['targetType']
+                        )
+                      }
+                      className={styles.fullWidthInput}
                     >
-                      {formatSettlementEffectLabel(effect)}
-                    </div>
-                  ))}
-                </li>
-              ))
-            )}
-          </ul>
+                      {SETTLEMENT_EFFECT_TARGET_OPTIONS.map((option) => (
+                        <option key={option} value={option}>
+                          {option}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className={styles.fieldBlock}>
+                    <span className={styles.fieldLabel}>Target ID</span>
+                    <input
+                      type='text'
+                      value={moduleTargetId}
+                      onChange={(e) => setModuleTargetId(e.target.value)}
+                      placeholder='poison'
+                      className={styles.fullWidthInput}
+                    />
+                  </label>
+                </div>
+                <div className={styles.twoColumnCompact}>
+                  <label className={styles.fieldBlock}>
+                    <span className={styles.fieldLabel}>Operation</span>
+                    <select
+                      value={moduleOperation}
+                      onChange={(e) =>
+                        setModuleOperation(
+                          e.target.value as SettlementModule['effects'][number]['operation']
+                        )
+                      }
+                      className={styles.fullWidthInput}
+                    >
+                      {SETTLEMENT_EFFECT_OPERATION_OPTIONS.map((option) => (
+                        <option key={option} value={option}>
+                          {option}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className={styles.fieldBlock}>
+                    <span className={styles.fieldLabel}>Value</span>
+                    <input
+                      type='text'
+                      value={moduleValue}
+                      onChange={(e) => setModuleValue(e.target.value)}
+                      placeholder='5'
+                      className={styles.fullWidthInput}
+                    />
+                  </label>
+                </div>
+                <button
+                  type='button'
+                  onClick={() => void handleAddSettlementModule()}
+                  disabled={isSavingModule || !settlementState || !moduleName.trim()}
+                >
+                  {isSavingModule ? 'Adding...' : 'Add Settlement Module'}
+                </button>
+              </section>
+
+              <section className={styles.subsectionCard}>
+                <div className={styles.subsectionHeader}>
+                  <h3 className={styles.subsectionTitle}>Tier & Base Stats</h3>
+                  <p className={styles.subsectionHint}>
+                    Adjust overall settlement progression, then tune the baseline simulation stats.
+                  </p>
+                </div>
+                <div className={styles.infoCard}>
+                  <strong>Settlement Tier Level:</strong>{' '}
+                  {settlementState?.fortressLevel ?? 1}
+                </div>
+                <div className={styles.inlineActions}>
+                  <button
+                    type='button'
+                    onClick={() => void handleAdjustFortressLevel(-1)}
+                    disabled={
+                      !settlementState ||
+                      settlementState.fortressLevel <= 1 ||
+                      isSavingFortress
+                    }
+                  >
+                    - Tier
+                  </button>
+                  <button
+                    type='button'
+                    onClick={() => void handleAdjustFortressLevel(1)}
+                    disabled={!settlementState || isSavingFortress}
+                  >
+                    + Tier
+                  </button>
+                </div>
+                <div className={styles.subtleMeta}>
+                  {nextFortressTier
+                    ? `Next tier at level ${nextFortressTier.levelRequired}: ${nextFortressTier.name}`
+                    : 'All configured settlement tiers unlocked.'}
+                </div>
+                <div className={styles.sectionDivider} />
+                <h4 className={styles.sectionMinorHeading}>Base Stats</h4>
+                {settlementState && (
+                  <div className={styles.baseStatGrid}>
+                    {BASE_STAT_KEYS.map((key) => (
+                      <label key={`base-${key}`} className={styles.fieldBlock}>
+                        <span className={styles.fieldLabel}>{key}</span>
+                        <input
+                          type='number'
+                          min={BASE_STAT_LIMITS[key].min}
+                          max={BASE_STAT_LIMITS[key].max}
+                          step={1}
+                          value={baseStatsDraft[key]}
+                          onChange={(e) => handleBaseStatDraftChange(key, e.target.value)}
+                          className={styles.fullWidthInput}
+                        />
+                      </label>
+                    ))}
+                  </div>
+                )}
+                <div className={styles.inlineActions}>
+                  <button
+                    type='button'
+                    onClick={() => void handleSaveBaseStats()}
+                    disabled={
+                      !settlementState || !isBaseStatsDraftDirty || isSavingFortress
+                    }
+                  >
+                    {isSavingFortress ? 'Saving...' : 'Save Base Stats'}
+                  </button>
+                  <button
+                    type='button'
+                    onClick={() =>
+                      settlementState &&
+                      setBaseStatsDraft(toBaseStatsDraft(settlementState.baseStats))
+                    }
+                    disabled={
+                      !settlementState || !isBaseStatsDraftDirty || isSavingFortress
+                    }
+                  >
+                    Reset
+                  </button>
+                </div>
+              </section>
+            </div>
+
+            <div className={styles.subsectionGrid}>
+              <section className={styles.subsectionCard}>
+                <div className={styles.subsectionHeader}>
+                  <h3 className={styles.subsectionTitle}>
+                    Settlement Effects
+                  </h3>
+                  <p className={styles.subsectionHint}>
+                    View the currently unlocked progression effects and active aura stack.
+                  </p>
+                </div>
+                <h4 className={styles.sectionMinorHeading}>
+                  Tier Effects: {settlementComputedEffects.fortressEffects.length}
+                </h4>
+                {settlementComputedEffects.fortressEffects.length === 0 ? (
+                  <p className={styles.emptyStateInline}>
+                    No tier effects unlocked yet.
+                  </p>
+                ) : (
+                  <ul className={styles.effectList}>
+                    {settlementComputedEffects.fortressEffects.map((effect, index) => (
+                      <li
+                        key={`tier-effect-${effect.targetType}-${effect.targetId}-${index}`}
+                        className={styles.effectCard}
+                      >
+                        {formatSettlementEffectLabel(effect)}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                <div className={styles.sectionDivider} />
+                <h4 className={styles.sectionMinorHeading}>
+                  Active Aura Effects: {activeSettlementEffects.length}
+                </h4>
+                {activeSettlementEffects.length === 0 ? (
+                  <p className={styles.emptyStateInline}>
+                    No active module effects yet.
+                  </p>
+                ) : (
+                  <ul className={styles.effectList}>
+                    {activeSettlementEffects.map((effect, index) => (
+                      <li
+                        key={`active-effect-${effect.targetType}-${effect.targetId}-${index}`}
+                        className={styles.effectCard}
+                      >
+                        {formatSettlementEffectLabel(effect)}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                <div className={styles.infoCard}>
+                  Total Active Effects: {settlementComputedEffects.allEffects.length}
+                  <br />
+                  Includes settlement progression + aura modules.
+                </div>
+              </section>
+
+              <section className={styles.subsectionCard}>
+                <div className={styles.subsectionHeader}>
+                  <h3 className={styles.subsectionTitle}>Unlocked Tiers & Modules</h3>
+                  <p className={styles.subsectionHint}>
+                    Review what is installed and which settlement progression tiers are live.
+                  </p>
+                </div>
+                <h4 className={styles.sectionMinorHeading}>Unlocked Settlement Tiers</h4>
+                {unlockedFortressTiers.length === 0 ? (
+                  <p className={styles.emptyStateInline}>None yet.</p>
+                ) : (
+                  <ul className={styles.worldSystemCardList}>
+                    {unlockedFortressTiers.map((tier) => (
+                      <li key={tier.id} className={styles.worldSystemCard}>
+                        <div className={styles.worldSystemRowHeader}>
+                          <strong>
+                            L{tier.levelRequired} {tier.name}
+                          </strong>
+                          <span className={styles.softPill}>Unlocked</span>
+                        </div>
+                        {tier.description && (
+                          <div className={styles.subtleMeta}>{tier.description}</div>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                <div className={styles.sectionDivider} />
+                <h4 className={styles.sectionMinorHeading}>Installed Modules</h4>
+                {settlementModules.length === 0 ? (
+                  <p className={styles.emptyStateInline}>No modules installed.</p>
+                ) : (
+                  <ul className={styles.worldSystemCardList}>
+                    {settlementModules.map((module) => (
+                      <li key={module.id} className={styles.worldSystemCard}>
+                        <div className={styles.worldSystemRowHeader}>
+                          <strong>{module.name}</strong>
+                          <span className={styles.worldSystemBadge}>
+                            {module.sourceType}
+                          </span>
+                        </div>
+                        <ul className={styles.effectList}>
+                          {module.effects.map((effect, effectIndex) => (
+                            <li
+                              key={`${module.id}-effect-${effectIndex}`}
+                              className={styles.effectCard}
+                            >
+                              {formatSettlementEffectLabel(effect)}
+                            </li>
+                          ))}
+                        </ul>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </section>
+            </div>
+          </div>
         </section>
       </div>
     );

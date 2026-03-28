@@ -1,7 +1,7 @@
 import {useEffect, useMemo, useRef, useState} from 'react';
 import type {ChangeEvent} from 'react';
 import {useNavigate, useSearchParams} from 'react-router-dom';
-import type {Project} from '../entityTypes';
+import type {Project, ProjectSettings} from '../entityTypes';
 import CharactersRoute from './CharactersRoute';
 import CharacterSheetsRoute from './CharacterSheetsRoute';
 import {getRulesetByProjectId} from '../services/rulesetService';
@@ -9,12 +9,17 @@ import {
   exportCharactersJson,
   importCharactersJson
 } from '../services/characterTransferService';
+import styles from '../styles/CharactersRoute.module.css';
 
 interface CharactersHubRouteProps {
   activeProject: Project | null;
+  projectSettings?: ProjectSettings | null;
 }
 
-function CharactersHubRoute({activeProject}: CharactersHubRouteProps) {
+function CharactersHubRoute({
+  activeProject,
+  projectSettings = null
+}: CharactersHubRouteProps) {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [hasRuleset, setHasRuleset] = useState(false);
@@ -150,30 +155,22 @@ function CharactersHubRoute({activeProject}: CharactersHubRouteProps) {
   }
 
   return (
-    <section>
-      <h1 style={{marginTop: 0}}>Characters</h1>
-      <p style={{marginTop: 0, marginBottom: '0.9rem', color: '#4b5563'}}>
+    <section className={styles.page}>
+      <h1 className={styles.title}>Characters</h1>
+      <p className={styles.lead}>
         Manage roster profiles and gameplay-ready sheets in one place.
       </p>
       {feedback && (
         <p
           role='status'
-          style={{
-            marginBottom: '0.9rem',
-            padding: '0.5rem 0.75rem',
-            borderRadius: '6px',
-            border: `1px solid ${
-              feedback.tone === 'error' ? '#fecaca' : '#bbf7d0'
-            }`,
-            backgroundColor:
-              feedback.tone === 'error' ? '#fef2f2' : '#f0fdf4',
-            color: feedback.tone === 'error' ? '#991b1b' : '#166534'
-          }}
+          className={`${styles.feedback} ${
+            feedback.tone === 'error' ? styles.feedbackError : styles.feedbackSuccess
+          }`}
         >
           {feedback.message}
         </p>
       )}
-      <div style={{display: 'flex', gap: '0.5rem', marginBottom: '0.9rem'}}>
+      <div className={styles.toolbar}>
         <button type='button' onClick={() => void handleExportRosterOnly()}>
           Export Roster Only
         </button>
@@ -204,28 +201,11 @@ function CharactersHubRoute({activeProject}: CharactersHubRouteProps) {
           style={{display: 'none'}}
         />
       </div>
-      <div
-        style={{
-          display: 'flex',
-          gap: '0.5rem',
-          marginBottom: '0.9rem',
-          flexWrap: 'wrap'
-        }}
-      >
+      <div className={styles.tabRow}>
         <button
           type='button'
           onClick={() => openView('roster')}
-          style={{
-            border:
-              view === 'roster'
-                ? '1px solid var(--color-text-primary)'
-                : '1px solid var(--color-border)',
-            backgroundColor:
-              view === 'roster'
-                ? 'var(--color-bg-secondary)'
-                : 'var(--color-bg-primary)',
-            color: 'var(--color-text-primary)'
-          }}
+          className={view === 'roster' ? styles.tabButtonActive : ''}
         >
           Roster
         </button>
@@ -233,45 +213,19 @@ function CharactersHubRoute({activeProject}: CharactersHubRouteProps) {
           type='button'
           onClick={() => openView('sheets')}
           disabled={!hasRuleset}
-          style={{
-            border:
-              view === 'sheets'
-                ? '1px solid var(--color-text-primary)'
-                : '1px solid var(--color-border)',
-            backgroundColor:
-              view === 'sheets'
-                ? 'var(--color-bg-secondary)'
-                : 'var(--color-bg-primary)',
-            opacity: hasRuleset ? 1 : 0.55,
-            color: 'var(--color-text-primary)'
-          }}
+          className={view === 'sheets' ? styles.tabButtonActive : ''}
+          style={{opacity: hasRuleset ? 1 : 0.55}}
         >
           Sheets
         </button>
       </div>
       {!hasRuleset && (
-        <div
-          style={{
-            marginBottom: '1rem',
-            padding: '0.55rem 0.7rem',
-            border: '1px solid var(--color-border)',
-            borderRadius: '6px',
-            backgroundColor: 'var(--color-bg-secondary)',
-            color: 'var(--color-text-secondary)',
-            fontSize: '0.85rem'
-          }}
-        >
+        <div className={styles.notice}>
           Sheets are disabled until this project has a ruleset.
           <button
             type='button'
             onClick={() => navigate('/ruleset')}
-            style={{
-              marginLeft: '0.5rem',
-              fontSize: '0.8rem',
-              color: 'var(--color-text-primary)',
-              background: 'var(--color-bg-primary)',
-              border: '1px solid var(--color-border)'
-            }}
+            style={{marginLeft: '0.5rem', fontSize: '0.8rem'}}
           >
             Open Ruleset
           </button>
@@ -296,6 +250,7 @@ function CharactersHubRoute({activeProject}: CharactersHubRouteProps) {
         <CharacterSheetsRoute
           key={`sheets-${dataVersion}`}
           activeProject={activeProject}
+          projectSettings={projectSettings}
           embedded
           prefillCharacterId={pendingCharacterId}
           onPrefillConsumed={() => setPendingCharacterId(null)}
