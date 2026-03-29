@@ -135,6 +135,9 @@ Targets:
 - Preserve manual memories instead of treating them like disposable auto-generated entries.
 - Improve ordering/grouping so the rail surfaces the most relevant canon first.
 - Reassess whether canon memories should show stronger source context or jump-back affordances.
+- Define a two-layer context model for future AI work:
+  - stable canon context from Characters / World Bible / Compendium that should remain broadly available across chapters
+  - narrative memory context from chapter/scene recall systems such as SHODH, which is better suited to local arc recall than persistent canon truth
 
 Exit criteria:
 

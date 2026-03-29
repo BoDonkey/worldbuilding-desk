@@ -194,6 +194,9 @@ npx tsx examples/basic-usage.ts
   - richer canon/progression context for system-enabled projects
   - better AI result management/history
   - clearer chapter/beat editing hierarchy and affordances
+  - split future AI context architecture into:
+    - stable canon context from Characters / World Bible / Compendium
+    - narrative memory context from scene/chapter recall systems such as SHODH
 
 ### Cross-Route Polish + Re-Entry Cleanup (March 28, 2026)
 - Re-entered the repo, revalidated the current workspace/package/doc baseline, and cleaned up repository drift:
