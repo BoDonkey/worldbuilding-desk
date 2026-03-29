@@ -15,6 +15,7 @@
 - [`guardrails.md`](/Volumes/T7/Development/worldbuilding-desk/docs/guardrails.md): technical specification for entity/state guardrails.
 - [`consistency-engine-implementation-plan.md`](/Volumes/T7/Development/worldbuilding-desk/docs/consistency-engine-implementation-plan.md): implementation plan for the consistency engine work.
 - [`compendium-model.md`](/Volumes/T7/Development/worldbuilding-desk/docs/compendium-model.md): progression and compendium domain model.
+- [`scratchpad-and-corkboard.md`](/Volumes/T7/Development/worldbuilding-desk/docs/scratchpad-and-corkboard.md): integration spec for the scratchpad popover and future corkboard route.
 - [`brand-positioning.md`](/Volumes/T7/Development/worldbuilding-desk/docs/brand-positioning.md): product positioning and messaging constraints.
 
 ## Working Rule

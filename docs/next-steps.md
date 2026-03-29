@@ -1,6 +1,6 @@
 # Next Steps
 
-Last updated: 2026-03-28
+Last updated: 2026-03-29
 
 ## Current Baseline
 
@@ -43,13 +43,30 @@ Implemented recently:
   - desktop provider `baseUrl` now forwards correctly
   - Workspace now syncs canonical app settings instead of holding stale AI config
   - added a wider AI-pane mode and internal assistant scrolling improvements
+- Scratchpad v1 started:
+  - project-scoped scratchpad popover mounted at the app shell
+  - nav/menu access, command-palette entry, and shortcut
+  - dedicated IndexedDB storage with autosave
+  - integration spec updated to separate scratchpad utility behavior from the future corkboard route
+- Story Corkboard v1 shipped:
+  - dedicated corkboard route with nav + command-palette entry
+  - per-project brainstorm document with autosave
+  - chapter-card CRUD plus beat CRUD
+  - progression snapshot fields with mode-aware hiding in `General Fiction`
+  - real `Story` / `Chapter` / beat-level `Card` scope behavior
+  - first corkboard AI panel with scoped prompting and selection-based promotion flows
+  - lightweight Characters + World Bible context included in corkboard AI prompts
+  - shared sticky scope header, split-pane independent scrolling, dismissible feedback banner, and markdown-rendered AI results
+  - markdown-aware paste into the brainstorm editor
 
 ## Recommended Priority Order
 
-1. Final Cross-Route UI Polish
-2. Lore / compendium tooltip convergence follow-up
-3. Editor customization follow-up
-4. Data portability follow-up
+1. Corkboard Dogfooding + UI Polish
+2. Canon memory / right-rail relevance follow-up
+3. Lore / compendium tooltip convergence follow-up
+4. Editor customization follow-up
+5. Data portability follow-up
+6. Additional corkboard AI/canon-context follow-up
 
 ## Workspace AI Follow-up Verification
 
@@ -67,45 +84,61 @@ Conclusion:
 
 - Writing + AI is stable enough to stop treating workspace follow-up as the active blocker.
 
-## 1) Finish Compendium UI Sweep
+## 1) Corkboard Dogfooding + UI Polish
 
-Goal: complete the visual cleanup of the remaining Compendium sections so the route feels consistent end to end.
+Goal: use the newly-shipped corkboard in real authoring sessions and tighten the UI based on friction observed during actual outlining.
 
-Status:
+Current state:
 
-- Done:
-  - compendium route shell
-  - JSON import preview modal
-  - help / tabs / next-step panels
-  - overview, entries, and progression sections
-  - zone affinity section
-  - party synergy/community section
-  - settlement progression section
-  - remaining empty/list/detail states inside `world-systems`
-  - follow-up notes from manual review, if any
-
-Result:
-
-- `world-systems` received the intended UI sweep and now follows the newer card/grouping treatment. Treat any remaining tweaks as polish, not a blocked unfinished section.
-
-Exit criteria:
-
-- The full Compendium route reads as one coherent UI system instead of mixed generations of styling.
-
-## 2) Final Cross-Route UI Polish
-
-Goal: do one end-to-end polish pass after compendium is finished so the recently expanded flows feel equally refined.
+- Scratchpad v1 is in place as the cross-route quick-capture tool.
+- Corkboard route, storage, and first AI workflow are now implemented.
+- Characters + World Bible context already feed the corkboard AI in lightweight form.
+- Major pain points already addressed:
+  - pane scrolling
+  - duplicated scope controls
+  - non-dismissible feedback
+  - AI result insertion clutter
+  - markdown rendering/paste gaps
 
 Targets:
 
-- Workspace import/export and consistency surfaces
-- Compendium portability and body sections
-- Settings / AI settings cards and action rows
-- Any remaining stark legacy surfaces, badges, or empty states
+- Continue real-use testing of chapter planning and AI-assisted beat work.
+- Tighten any remaining corkboard friction around:
+  - chapter vs beat clarity
+  - AI result review/history management
+  - sticky/editor behavior edge cases
+  - selection promotion ergonomics
+- Decide whether the next corkboard slice should be:
+  - richer canon/progression context
+  - more explicit AI result history/threading
+  - stronger chapter/beat visual hierarchy
+- Reassess whether brainstorm and structure layout proportions need another pass after longer use.
 
 Exit criteria:
 
-- No obvious “old UI vs new UI” seams remain in the main authoring flows.
+- Authors can use corkboard for real planning sessions without obvious structural friction or “first-pass prototype” seams.
+
+## 2) Canon Memory / Right-Rail Relevance Follow-up
+
+Goal: make the Workspace canon-memory rail feel like useful canon support instead of a shallow document excerpt list.
+
+Current state:
+
+- Canon memories are present in the right rail and can be filtered, refreshed, deleted, and promoted.
+- The current auto-memory behavior is too shallow for real canon lookup.
+- The rail often reads like the opening paragraph of the scene instead of extracted canon facts or beats.
+
+Targets:
+
+- Replace naive first-excerpt auto-memory capture with more meaningful canon summaries or extracted facts.
+- Support multiple useful memories per scene when warranted instead of a single replacement summary.
+- Preserve manual memories instead of treating them like disposable auto-generated entries.
+- Improve ordering/grouping so the rail surfaces the most relevant canon first.
+- Reassess whether canon memories should show stronger source context or jump-back affordances.
+
+Exit criteria:
+
+- Authors can use the right rail to recover meaningful canon context without rereading the start of the scene.
 
 ## 3) Lore / Compendium Tooltip Convergence Follow-up
 
@@ -150,10 +183,26 @@ Targets:
 - Round-trip schema/versioning rules for JSON exports/imports.
 - Optional bundle-style exports/imports beyond raw JSON.
 - Optional richer Word import handling (tables/headers/formatting).
+- Decide explicitly whether scratchpad or future corkboard data belongs in backup/export flows.
 
 Exit criteria:
 
 - Author can round-trip project content safely, with clear expectations when versions diverge.
+
+## 6) Additional Corkboard AI / Canon Context Follow-up
+
+Goal: deepen corkboard intelligence after more dogfooding clarifies what actually matters in planning sessions.
+
+Targets:
+
+- Decide whether corkboard AI needs richer result history instead of only the latest result panel.
+- Consider system/project-mode-aware progression suggestions from Compendium or rules data when appropriate.
+- Explore stronger entity/character linking from beats or chapter cards, if repeated author demand shows up during use.
+- Reassess whether AI output should support more structured promotion targets than chapter summary / beat creation.
+
+Exit criteria:
+
+- Any added corkboard AI complexity is driven by real planning behavior, not speculative feature creep.
 
 ## Branch and Commit Workflow (Keep)
 
@@ -164,6 +213,7 @@ Exit criteria:
 
 Suggested branch names:
 
+- `codex/corkboard-ui-polish`
 - `codex/workspace-ai-followup`
 - `codex/compendium-world-systems-sweep`
 - `codex/final-ui-polish`

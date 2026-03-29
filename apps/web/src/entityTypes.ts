@@ -31,6 +31,55 @@ export interface WritingDocument {
   updatedAt: number;
 }
 
+export interface ScratchpadDocument {
+  id: string;
+  projectId: string;
+  content: string;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export type ChapterCardStatus = 'planned' | 'draft' | 'written';
+
+export interface PlotPoint {
+  id: string;
+  chapterCardId: string;
+  title: string;
+  notes?: string;
+  text?: string;
+  order: number;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface ProgressionSnapshot {
+  focusCharacter?: string;
+  level?: number;
+  xp?: number;
+  notable?: string[];
+}
+
+export interface ChapterCard {
+  id: string;
+  projectId: string;
+  title: string;
+  summary: string;
+  status: ChapterCardStatus;
+  order: number;
+  progressionSnapshot?: ProgressionSnapshot;
+  plotPoints: PlotPoint[];
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface CorkboardBrainstormDocument {
+  id: string;
+  projectId: string;
+  content: string;
+  createdAt: number;
+  updatedAt: number;
+}
+
 export type SystemHistoryCategory =
   | 'scene'
   | 'consistency'

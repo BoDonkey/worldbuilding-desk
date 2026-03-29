@@ -628,7 +628,7 @@ function ProjectsRoute({activeProject, onSelectProject}: ProjectsRouteProps) {
       </p>
       {projects.length === 0 && <p>No projects yet. Create one above to get started.</p>}
 
-      <ul>
+      <ul style={{listStyle: 'none', padding: 0, margin: 0}}>
         {projects.map((project) => {
           const hasRuleset = projectRulesets.has(project.id);
           const ruleset = projectRulesets.get(project.id);

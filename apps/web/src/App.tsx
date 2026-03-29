@@ -22,6 +22,8 @@ import SettingsRoute from './routes/SettingsRoute';
 import CharactersHubRoute from './routes/CharactersHubRoute';
 import CompendiumRoute from './routes/CompendiumRoute';
 import RulesetRoute from './routes/RulesetRoute';
+import CorkboardRoute from './routes/CorkboardRoute';
+import {ScratchpadPopover} from './components/ScratchpadPopover';
 import appShellStyles from './styles/AppShell.module.css';
 
 interface RouteDebugEntry {
@@ -70,6 +72,7 @@ function AppShell() {
   });
   const [projectSettings, setProjectSettings] = useState<ProjectSettings | null>(null);
   const [isPaletteOpen, setPaletteOpen] = useState(false);
+  const [isScratchpadOpen, setScratchpadOpen] = useState(false);
   const [nativePathname, setNativePathname] = useState<string>(() =>
     typeof window !== 'undefined' ? window.location.pathname : '/'
   );
@@ -200,7 +203,8 @@ function AppShell() {
         pathname: effectivePathname,
         navigate,
         activeProject,
-        projectSettings
+        projectSettings,
+        onOpenScratchpad: () => setScratchpadOpen(true)
       }),
     [effectivePathname, navigate, activeProject, projectSettings]
   );
@@ -234,6 +238,13 @@ function AppShell() {
       case '/workspace':
         return (
           <WorkspaceRoute
+            activeProject={activeProject}
+            projectSettings={projectSettings}
+          />
+        );
+      case '/corkboard':
+        return (
+          <CorkboardRoute
             activeProject={activeProject}
             projectSettings={projectSettings}
           />
@@ -273,10 +284,33 @@ function AppShell() {
       if (!isPaletteShortcut) return;
       event.preventDefault();
       setPaletteOpen((prev) => !prev);
+      return;
+    };
+    const onScratchpadKeyDown = (event: KeyboardEvent) => {
+      const isScratchpadShortcut =
+        (event.metaKey || event.ctrlKey) &&
+        event.shiftKey &&
+        event.key.toLowerCase() === 'j';
+      if (!isScratchpadShortcut) return;
+      event.preventDefault();
+      if (!activeProject) {
+        return;
+      }
+      setScratchpadOpen((prev) => !prev);
     };
     window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
-  }, []);
+    window.addEventListener('keydown', onScratchpadKeyDown);
+    return () => {
+      window.removeEventListener('keydown', onKeyDown);
+      window.removeEventListener('keydown', onScratchpadKeyDown);
+    };
+  }, [activeProject]);
+
+  useEffect(() => {
+    if (!activeProject) {
+      setScratchpadOpen(false);
+    }
+  }, [activeProject]);
 
   return (
     <div className={appShellStyles.appShell}>
@@ -285,6 +319,12 @@ function AppShell() {
         projectSettings={projectSettings}
         isRailCollapsed={isRailCollapsed}
         onToggleRail={() => setRailCollapsed((prev) => !prev)}
+        onOpenScratchpad={() => {
+          if (!activeProject) {
+            return;
+          }
+          setScratchpadOpen(true);
+        }}
       />
       <main
         key={effectivePathname}
@@ -299,6 +339,11 @@ function AppShell() {
         commands={commands}
         onClose={() => setPaletteOpen(false)}
         onExecute={handleExecuteCommand}
+      />
+      <ScratchpadPopover
+        activeProject={activeProject}
+        isOpen={isScratchpadOpen}
+        onClose={() => setScratchpadOpen(false)}
       />
     </div>
   );

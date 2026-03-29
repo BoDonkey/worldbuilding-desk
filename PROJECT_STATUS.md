@@ -1,6 +1,6 @@
 # Worldbuilding-Desk Project Status
 
-**Last Updated:** March 28, 2026
+**Last Updated:** March 29, 2026
 
 ## Project Overview
 
@@ -80,6 +80,13 @@ A comprehensive desktop application for LitRPG/GameLit authors that bridges narr
 - Sticky editor toolbar with stabilized long-document behavior.
 - Softened theme system for buttons, cards, badges, and modal surfaces.
 - Shared import/export preview flows for scene and compendium JSON portability.
+- Project-scoped scratchpad popover for freeform note capture from any route.
+- Story corkboard route with per-project brainstorm document and chapter-card storage.
+- Corkboard beat editing with title + optional notes structure.
+- Corkboard progression snapshot planning fields with General Fiction mode suppression.
+- Corkboard AI planning panel with story/chapter/beat scope, project-context prompts, and selection-based promotion actions.
+- Corkboard AI context enrichment from project Characters and World Bible summaries.
+- Markdown rendering for corkboard AI results and markdown-aware paste handling in the brainstorm editor.
 - Workspace writer-first layout pass:
   - reduced persistent route chrome above the editor
   - scene title and scene actions moved into the scene rail
@@ -155,6 +162,39 @@ npx tsx examples/basic-usage.ts
 
 ## Recent Changes & Fixes
 
+### Corkboard Planning Workspace + AI/UX Pass (March 29, 2026)
+- Completed the first real corkboard implementation after the scratchpad groundwork:
+  - added a first-class `Corkboard` route with navigation + command-palette access
+  - added IndexedDB-backed chapter-card storage and a per-project brainstorm document
+  - shipped chapter CRUD, beat CRUD, and progression snapshot fields
+  - hid progression snapshot controls automatically in `General Fiction` mode while preserving stored data
+- Added the first corkboard AI workflow:
+  - scope-aware planning prompts at `Story`, `Chapter`, and beat-level `Card` scope
+  - AI results now stay in the corkboard AI panel instead of auto-writing into the brainstorm document
+  - selected AI result text can be inserted into the brainstorm doc or promoted directly into chapters / beats
+  - AI prompts now treat brainstorm notes as provisional rather than silently endorsing them as canon
+- Enriched corkboard AI context:
+  - lightweight character summaries
+  - lightweight World Bible entity/category summaries
+  - narrower context targeting for selected chapters and beats
+- Finished a substantial corkboard UX/QOL pass:
+  - independent scrolling for brainstorm and structure/AI panes
+  - shared sticky scope header instead of duplicated scope controls inside both panes
+  - beat selection now powers real `Card` scope behavior
+  - dismissible feedback banner
+  - improved AI-result workflow using selection-based actions
+  - markdown-rendered AI results and markdown-aware brainstorm paste support
+- Small cross-route cleanup:
+  - removed default unordered-list bullets from the Projects list UI
+
+**Immediate Next Slice**
+- Dogfood the corkboard AI in real outlining sessions to see where context still feels thin or too generic.
+- Highest-value likely next step: a focused corkboard UI/authoring polish pass informed by real use.
+- Strong follow-up candidates:
+  - richer canon/progression context for system-enabled projects
+  - better AI result management/history
+  - clearer chapter/beat editing hierarchy and affordances
+
 ### Cross-Route Polish + Re-Entry Cleanup (March 28, 2026)
 - Re-entered the repo, revalidated the current workspace/package/doc baseline, and cleaned up repository drift:
   - removed tracked `package-lock.json` files so the repo consistently follows the `pnpm` workspace setup
@@ -178,10 +218,15 @@ npx tsx examples/basic-usage.ts
   - `Ruleset` is hidden from main navigation in `General Fiction` mode unless rule authoring is explicitly enabled
   - Character Sheets now suppress most overt LitRPG/system-heavy affordances in `General Fiction` mode
   - Characters / Character Sheets surfaces now use the newer softened panel/card treatment instead of harsher legacy inline styling
+- Started the planning-support implementation slice:
+  - added a project-scoped scratchpad popover mounted at the app shell so notes can be captured without leaving the current route
+  - added dedicated IndexedDB scratchpad storage with debounced autosave
+  - exposed scratchpad launch through the shell UI, command palette, and shortcut
+  - rewrote the scratchpad/corkboard feature spec to match the current app architecture and storage model
 
 **Immediate Next Slice**
-- Start a fresh session for the next feature discussion and branch.
-- Likely next priority: author-facing planning support such as a corkboard-style plot area and a scratchpad, once requirements are written down.
+- Continue the planning-support slice from the new baseline.
+- Highest-value next step: scaffold the corkboard route and chapter-card storage model described in the updated spec.
 
 ### Workspace Writer-First Cleanup + Ollama Follow-up (March 22, 2026)
 - Reduced route-level workspace noise so the editor appears much sooner:

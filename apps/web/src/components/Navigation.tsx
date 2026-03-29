@@ -9,13 +9,15 @@ interface NavigationProps {
   projectSettings: ProjectSettings | null;
   isRailCollapsed?: boolean;
   onToggleRail?: () => void;
+  onOpenScratchpad?: () => void;
 }
 
 export const Navigation: FC<NavigationProps> = ({
   activeProject,
   projectSettings,
   isRailCollapsed = false,
-  onToggleRail
+  onToggleRail,
+  onOpenScratchpad
 }) => {
   const location = useLocation();
   const [isMobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -33,6 +35,7 @@ export const Navigation: FC<NavigationProps> = ({
       ...(showRuleset ? [{to: '/ruleset', label: 'Ruleset', icon: 'RS'}] : []),
       {to: '/characters', label: 'Characters', icon: 'CH'},
       {to: '/workspace', label: 'Workspace', icon: 'WS'},
+      {to: '/corkboard', label: 'Corkboard', icon: 'CB'},
       ...(showGameSystems
         ? [{to: '/compendium', label: 'Compendium', icon: 'CP'}]
         : []),
@@ -83,6 +86,21 @@ export const Navigation: FC<NavigationProps> = ({
             ))}
           </nav>
           <div className={styles.railFooter}>
+            <button
+              type='button'
+              className={styles.railUtilityButton}
+              onClick={onOpenScratchpad}
+              disabled={!activeProject}
+              aria-label='Open project scratchpad'
+              title={
+                activeProject
+                  ? 'Open scratchpad (Cmd/Ctrl+Shift+J)'
+                  : 'Select a project to use the scratchpad'
+              }
+            >
+              <span className={styles.icon}>SP</span>
+              <span className={styles.label}>Scratchpad</span>
+            </button>
             <button
               type='button'
               className={styles.railToggle}
@@ -165,6 +183,17 @@ export const Navigation: FC<NavigationProps> = ({
               ))}
             </div>
             <div className={styles.mobileMenuMeta}>
+              <button
+                type='button'
+                className={styles.mobileMenuAction}
+                onClick={() => {
+                  onOpenScratchpad?.();
+                  setMobileMenuOpen(false);
+                }}
+                disabled={!activeProject}
+              >
+                Scratchpad
+              </button>
               <span className={styles.shortcutHint}>Cmd/Ctrl+K</span>
               <button
                 ref={mobileMenuCloseRef}

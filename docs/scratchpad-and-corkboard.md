@@ -1,166 +1,126 @@
-# Feature Spec: Scratch Pad & Story Corkboard
-_Worldbuilding Desk — Draft Spec_
+# Feature Spec: Scratchpad & Story Corkboard
+_Worldbuilding Desk — integration draft_
 
----
+This version adapts the original idea to the way the current app is built today:
 
-## Feature 1: Scratch Pad
+- Rich text is stored as HTML across the app, not TipTap JSON
+- Project utilities that should be reachable from anywhere belong at the app shell layer
+- New top-level planning surfaces should be normal routes with command-palette and navigation support
+
+## Feature 1: Scratchpad
 
 ### Overview
-A freeform, unstructured writing space per project. No schema, no validation, no world bible integration. A place to dump ideas without commitment.
+A freeform, unstructured writing space per project for capturing ideas without leaving the current screen.
+
+In this app, the scratchpad should be a shell-mounted popover, not a route and not a normal tab. The author should be able to open it from any project screen, jot something down, and close it without losing navigation state.
 
 ### Goals
-- Zero friction capture of thoughts, ideas, dialogue snippets, notes
-- No pressure to formalize content into world bible or scenes
-- Accessible quickly from any view
+- Zero-friction capture of thoughts, snippets, and temporary notes
+- Accessible from any project route without changing pages
+- No pressure to formalize content into world bible, scenes, or characters
+- Project-scoped persistence with autosave
 
 ### Non-Goals
-- Not indexed for RAG — ephemeral by design
-- Not validated against consistency engine
-- Not version controlled
+- Not indexed for RAG in v1
+- Not reviewed by the consistency engine in v1
+- Not part of project backup/export in v1
+- No history/versioning in v1
 
 ### UX
-- Single persistent tab/panel per project
-- Plain TipTap instance — basic formatting only (bold, italic, bullet lists, headings)
-- No save button — auto-saves on change (debounced)
-- Optional: "Promote to World Bible" action to formalize a selected passage
+- Global launcher in the app shell
+- Opens as a large popover anchored above the shell UI
+- Also reachable from the command palette
+- Plain rich-text editor with basic formatting only:
+  bold, italic, headings, bullet lists, numbered lists
+- Autosaves on change with debounce
+- Per-project content
+- Closing the popover preserves the user’s place in the current route
+
+### Suggested Interaction Details
+- Desktop: floating launcher at the lower-right edge of the shell
+- Mobile: launcher stays above the bottom nav
+- Shortcut: optional global shortcut for fast capture
+- Empty state when no active project is selected
 
 ### Data Model
 ```typescript
-interface ScratchPad {
+interface ScratchpadDocument {
+  id: string;          // projectId
   projectId: string;
-  content: JSONContent; // TipTap JSON
-  updatedAt: Date;
+  content: string;     // stored as HTML to match current editor storage
+  createdAt: number;
+  updatedAt: number;
 }
 ```
 
 ### Storage
 - Single IndexedDB record per project
-- No history/versioning needed in v1
+- Dedicated store separate from writing documents
+- Explicitly excluded from project snapshot/export in v1
 
----
+### Integration Notes
+- Scratchpad should be mounted in `AppShell`, not inside `WorkspaceRoute`
+- It should not appear in normal route navigation as its own page
+- Later “Promote to World Bible” or “Promote to Scene” actions can be added from a text selection flow, but are out of scope for v1
 
 ## Feature 2: Story Corkboard
 
 ### Overview
-A visual chapter/arc planning board combined with a collaborative AI brainstorming workspace. Authors lay out chapters as cards, add plot point sub-cards, and work with an AI collaborator to develop the story. The AI contributes actively — not just answering questions, but flagging issues, asking questions, and helping firm up ideas. Authors can promote any text (their own or AI-generated) into cards.
+A planning surface for story structure, chapter arcs, and AI-assisted brainstorming.
 
-Top-level navigation item in the app.
+Unlike the scratchpad, the corkboard should be a first-class route because it is a destination workflow, not a quick-capture utility.
+
+### Route Placement
+- New top-level navigation item: `Corkboard`
+- Normal route such as `/corkboard`
+- Included in command palette navigation commands
 
 ### Goals
-- Bird's-eye view of narrative arc
-- LitRPG-specific: progression milestones visible alongside story beats
-- Collaborative AI brainstorming at card, chapter, and story scope
-- Promote text selections directly into plot point sub-cards or chapter cards
-- Works for pre-planning (plotters) OR post-hoc mapping (pantsers)
+- Bird’s-eye view of narrative arc
+- LitRPG progression milestones visible alongside story beats
+- Collaborative AI brainstorming at story, chapter, and card scope
+- Promotion of selected brainstorm text into structured cards
+- Useful for both plotters and pantsers
 
 ### Non-Goals
 - Not a Kanban board
 - No drag-and-drop reordering in v1
-- Not linked to the scene/chapter editor in v1
-- No auto-population from written content in v1
-- No token usage indicators in v1
+- No direct scene/document linkage in v1
+- No auto-generated cards from manuscript text in v1
+- No token usage telemetry in v1
 
----
+## Recommended v1 Layout
 
-## UI Layout
-
-```
-┌─────────────────────────────────────────────────────────┐
-│  STORY CORKBOARD                    [Story Brainstorm ▼] │
-├─────────────────────────────┬───────────────────────────┤
-│  BRAINSTORM WORKSPACE       │   CHAPTER CARDS           │
-│                             │                           │
-│  ┌─────────────────────┐    │  ┌─────────────────────┐  │
-│  │                     │    │  │ Ch 1: The Beginning  │  │
-│  │  Author writes      │    │  │ Status: Written      │  │
-│  │  freely here...     │    │  │ ▸ Progression        │  │
-│  │  (large, dominant)  │    │  │ ▸ Plot Points        │  │
-│  │                     │    │  └─────────────────────┘  │
-│  └─────────────────────┘    │                           │
-│  [Ask AI]  Scope: [Story ▼] │  ┌─────────────────────┐  │
-│                             │  │ Ch 2: The Journey    │  │
-│  ▾ AI — Story scope         │  │ Status: Planned      │  │
-│  ┌─────────────────────┐    │  │ ▸ Progression        │  │
-│  │ AI annotation/      │    │  │ ▸ Plot Points        │  │
-│  │ response appears    │    │  └─────────────────────┘  │
-│  │ here, collapsible   │    │                           │
-│  └─────────────────────┘    │  [+ Add Chapter]          │
-└─────────────────────────────┴───────────────────────────┘
-```
-
-**Text selection → promote:**
-- Select any text in the brainstorm workspace (author or AI side)
-- Context menu appears: "Make Plot Point" | "Make Chapter Card"
-- Card created pre-populated with selected text
-- No distinction between author text and AI text — author decides what's worth keeping
-
----
-
-## Brainstorm Workspace
-
-### Interaction Model
-- Author-first canvas — the writing area is dominant, AI is present but not intrusive
-- Visually resembles a document, not a chat interface — no equal-weight chat bubbles
-- Author writes freely in a large freeform area; AI responses appear as clearly marked annotation blocks below the author's text, collapsible, non-dominant
-- AI can initiate — flag inconsistencies, ask clarifying questions, suggest directions — but as annotations, not interruptions
-- Author explicitly invokes AI ("Ask AI" action) or AI responds when author pauses/submits
-- Single persistent document-style thread per project
-- Older history periodically compressed into a digest to manage context size
-
-### Brainstorm Scope
-Controls what context is sent to the AI:
-
-| Scope | Context Sent |
-|-------|-------------|
-| **Card** | Selected card + adjacent chapter cards (prev/next) |
-| **Chapter** | Full chapter card + plot points + compressed summaries of other chapters |
-| **Story** | Compressed summaries of all chapters and plot points |
-
-Scope selector lives in the input area. Card/Chapter scope activates automatically when brainstorming from within a specific card.
-
-### AI Behavior
-- At story scope: actively looks for pacing issues, motivation gaps, unresolved plot threads, progression curve problems
-- At chapter scope: missing beats, weak transitions, setup/payoff opportunities
-- At card scope: specificity, plausibility within world rules, mechanical implications
-- AI is conversational but actionable — always moves the story forward, doesn't just summarize
-
-### Context Management
-- Conversation history persists in IndexedDB per project
-- When history exceeds threshold, oldest messages are summarized into a rolling digest prepended to context
-- Recent N messages always sent verbatim
-- User can manually trigger "Compress History"
-
----
-
-## Chapter Cards
-
-### Structure
-```
-Chapter Card
-  ├── Title
-  ├── Summary (1-3 sentences)
-  ├── Status: [ Planned | Draft | Written ]
-  ├── Progression Snapshot (optional, collapsed by default)
-  │     ├── Character Level
-  │     ├── XP
-  │     └── Notable: skills/loot/boss (free text tags)
-  └── Plot Point Sub-cards (ordered list)
-        ├── Title
-        └── Notes (optional)
+```text
+┌──────────────────────────────────────────────────────────────┐
+│ CORKBOARD                                     Scope: Story ▼ │
+├────────────────────────────────┬─────────────────────────────┤
+│ Brainstorm Document            │ Chapter Outline             │
+│                                │                             │
+│ Freeform writing canvas        │ [Ch 1] Planned             │
+│ with collapsible AI notes      │   - Plot point             │
+│ below the author text          │   - Plot point             │
+│                                │                             │
+│ [Ask AI] [Compress History]    │ [Ch 2] Draft               │
+│                                │ [Add Chapter]              │
+└────────────────────────────────┴─────────────────────────────┘
 ```
 
 ### UX
-- Vertical list of Chapter Cards
-- Each card is collapsible
-- Plot Points are an ordered sub-list — add/remove/reorder inline
-- Status badge: color coded Planned / Draft / Written
-- Progression snapshot optional, collapsed by default
-- Each card has a "Brainstorm this chapter" button that scopes the workspace to that card
+- Left side is the dominant brainstorming document
+- Right side is the structured chapter card column
+- AI appears as collapsible annotations, not equal-weight chat bubbles
+- “Brainstorm this chapter” sets scope in the shared workspace instead of opening a separate mini-thread
 
----
+### Scope Model
 
-## Data Model
+| Scope | Context Sent |
+|-------|---------------|
+| Card | Selected chapter card plus adjacent cards |
+| Chapter | Active chapter plus summaries of the rest |
+| Story | Summaries of all chapters and plot points |
 
+### Data Model
 ```typescript
 interface PlotPoint {
   id: string;
@@ -173,7 +133,7 @@ interface ProgressionSnapshot {
   characterId?: string;
   level?: number;
   xp?: number;
-  notable?: string[];         // "Learned Fireball", "Got cursed sword"
+  notable?: string[];
 }
 
 interface ChapterCard {
@@ -185,8 +145,8 @@ interface ChapterCard {
   order: number;
   progressionSnapshot?: ProgressionSnapshot;
   plotPoints: PlotPoint[];
-  createdAt: Date;
-  updatedAt: Date;
+  createdAt: number;
+  updatedAt: number;
 }
 
 interface BrainstormMessage {
@@ -195,31 +155,30 @@ interface BrainstormMessage {
   role: 'user' | 'assistant';
   content: string;
   scope: 'card' | 'chapter' | 'story';
-  scopeTargetId?: string;     // chapterCard id if scope is card or chapter
-  createdAt: Date;
-  isDigest?: boolean;         // true if this is a compressed history summary
-}
-
-interface ScratchPad {
-  projectId: string;
-  content: JSONContent;
-  updatedAt: Date;
+  scopeTargetId?: string;
+  createdAt: number;
+  isDigest?: boolean;
 }
 ```
 
----
+### Storage
+- IndexedDB stores for chapter cards and brainstorm history
+- Kept separate from writing documents in v1
+- Can be added to backup/export later once the schema stabilizes
+
+## Implementation Order
+
+1. Scratchpad popover in `AppShell`
+2. Scratchpad command-palette entry and shortcut
+3. Corkboard route scaffold with navigation entry
+4. Chapter card CRUD and IndexedDB storage
+5. Brainstorm workspace and AI context controls
+6. Promotion flows from brainstorm text to chapter and plot-point cards
 
 ## v2 Considerations
-- Drag-and-drop chapter reordering
-- Link Chapter Card to a scene/document in the editor
-- Auto-populate progression snapshot from linked character sheet
-- Timeline / horizontal arc view
-- Pantser mode: auto-generate cards from written chapters via AI summary
-- Token/context usage indicator
-- Grid view option for cards
-
----
-
-## Resolved Design Decisions
-1. **Brainstorm workspace layout** — author-first document canvas, not a chat interface. AI responses appear as collapsible annotation blocks below author text, not equal-weight chat bubbles. Author invokes AI explicitly via "Ask AI" action.
-2. **Card-level brainstorm** — clicking "Brainstorm this chapter" switches focus to the main brainstorm workspace, pre-scoped to that chapter automatically. No inline expansion inside the card.
+- Drag-and-drop chapter ordering
+- Card linkage to scene/documents
+- Progression snapshot auto-fill from character sheets
+- Timeline or arc view
+- AI-generated card extraction from existing manuscript content
+- Promotion from scratchpad into corkboard/world bible

@@ -84,6 +84,31 @@
   gap: 0.45rem;
 }
 
+.railUtilityButton {
+  width: 72px;
+  min-height: 58px;
+  border-radius: 10px;
+  border: 1px solid var(--button-primary-border);
+  background: color-mix(in srgb, var(--button-primary-bg) 88%, var(--surface-panel-elevated) 12%);
+  color: var(--button-primary-text);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.2rem;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.16);
+}
+
+.railUtilityButton:hover:not(:disabled) {
+  background: var(--button-primary-bg-hover);
+}
+
+.railUtilityButton:disabled {
+  opacity: 0.62;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
 .railToggle {
   border-radius: 999px;
   padding: 0.15rem 0.45rem;
@@ -207,6 +232,14 @@
   border-radius: 999px;
   padding: 0.35rem 0.6rem;
   font-size: var(--font-size-sm);
+}
+
+.mobileMenuAction {
+  align-self: stretch;
+  border-radius: 10px;
+  padding: 0.6rem 0.7rem;
+  text-align: left;
+  font-weight: 600;
 }
 
 @media (max-width: 900px) {

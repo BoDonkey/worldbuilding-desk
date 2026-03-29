@@ -10,6 +10,8 @@ interface ContextPopoverProps {
   top: number;
   onClose: () => void;
   children?: ReactNode;
+  className?: string;
+  bodyClassName?: string;
 }
 
 export function ContextPopover({
@@ -20,7 +22,9 @@ export function ContextPopover({
   left,
   top,
   onClose,
-  children
+  children,
+  className,
+  bodyClassName
 }: ContextPopoverProps) {
   const popoverRef = useRef<HTMLDivElement | null>(null);
   const closeButtonRef = useRef<HTMLButtonElement | null>(null);
@@ -41,7 +45,7 @@ export function ContextPopover({
       left: Math.max(margin, Math.min(left, maxLeft)),
       top: Math.max(margin, Math.min(top, maxTop))
     });
-  }, [left, top, children, message, title, eyebrow, tone]);
+  }, [left, top, children, message, title, eyebrow, tone, className, bodyClassName]);
 
   useEffect(() => {
     closeButtonRef.current?.focus();
@@ -83,7 +87,7 @@ export function ContextPopover({
           : tone === 'info'
             ? styles.popoverInfo
             : ''
-      }`}
+      } ${className ?? ''}`}
       style={{
         left: `${position.left}px`,
         top: `${position.top}px`
@@ -107,7 +111,7 @@ export function ContextPopover({
           ×
         </button>
       </div>
-      <div className={styles.body}>{children}</div>
+      <div className={`${styles.body} ${bodyClassName ?? ''}`}>{children}</div>
     </div>
   );
 }

@@ -1,9 +1,12 @@
 export const DB_NAME = 'worldbuilding-db';
-export const DB_VERSION = 13;
+export const DB_VERSION = 16;
 export const ENTITY_STORE_NAME = 'entities';
 export const CATEGORY_STORE_NAME = 'entityCategories';
 export const PROJECT_STORE_NAME = 'projects';
 export const WRITING_STORE_NAME = 'writingDocuments';
+export const SCRATCHPAD_STORE_NAME = 'scratchpads';
+export const CORKBOARD_CHAPTER_CARD_STORE_NAME = 'corkboard_chapter_cards';
+export const CORKBOARD_BRAINSTORM_STORE_NAME = 'corkboard_brainstorms';
 export const SETTINGS_STORE_NAME = 'projectSettings';
 export const CHARACTER_STORE_NAME = 'characters';
 export const CHARACTER_SHEET_STORE_NAME = 'character_sheets';
@@ -37,6 +40,18 @@ export function openDb(): Promise<IDBDatabase> {
 
       if (!db.objectStoreNames.contains(WRITING_STORE_NAME)) {
         db.createObjectStore(WRITING_STORE_NAME, { keyPath: 'id' });
+      }
+
+      if (!db.objectStoreNames.contains(SCRATCHPAD_STORE_NAME)) {
+        db.createObjectStore(SCRATCHPAD_STORE_NAME, { keyPath: 'id' });
+      }
+
+      if (!db.objectStoreNames.contains(CORKBOARD_CHAPTER_CARD_STORE_NAME)) {
+        db.createObjectStore(CORKBOARD_CHAPTER_CARD_STORE_NAME, { keyPath: 'id' });
+      }
+
+      if (!db.objectStoreNames.contains(CORKBOARD_BRAINSTORM_STORE_NAME)) {
+        db.createObjectStore(CORKBOARD_BRAINSTORM_STORE_NAME, { keyPath: 'id' });
       }
 
       if (!db.objectStoreNames.contains(SETTINGS_STORE_NAME)) {

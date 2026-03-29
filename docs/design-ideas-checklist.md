@@ -1,6 +1,6 @@
 # Design Ideas Checklist
 
-Last verified: 2026-03-22
+Last verified: 2026-03-28
 Source roadmap: `docs/design-ideas.md`
 
 Legend:
@@ -73,6 +73,7 @@ This checklist is a repo-verified status pass, not a full manual QA sign-off.
   - richer compendium-related actions from inline lore/review surfaces
   - stronger related-record context
   - any lingering duplication between review-queue and lore-peek flows
+  - right-rail canon memories still need a relevance overhaul beyond shallow scene excerpts
 - [~] Success criteria look partially met, but still worth validating during polish:
   - inline canon resolution should feel faster than leaving the scene
   - popovers should stay readable and keyboard-friendly across edge cases
@@ -126,6 +127,7 @@ Still visibly open:
 - contextual selection bubble
 - slash-command layer
 - richer lore/compendium inline actions and related-record context
+- canon-memory relevance improvements in the right rail
 - expanded editor customization beyond the current presets
 - telemetry
 - final manual UX/polish validation across the newer surfaces

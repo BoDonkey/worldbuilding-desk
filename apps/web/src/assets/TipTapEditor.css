@@ -4,14 +4,25 @@
   padding: 0.35rem 0 1rem;
   position: relative;
   min-height: 100%;
+  display: grid;
+  gap: 0.75rem;
+  overflow: visible;
+}
+
+.tiptap-toolbar-shell {
+  position: sticky;
+  top: var(--tiptap-toolbar-top, 1rem);
+  z-index: 6;
+}
+
+.tiptap-content-shell {
+  min-height: 0;
 }
 
 /* Control group (toolbar container) */
 .control-group {
-  position: sticky;
-  top: 1rem;
-  z-index: 6;
-  margin-bottom: 0.9rem;
+  position: relative;
+  margin-bottom: 0;
   border: 1px solid var(--editor-surface-border);
   border-radius: 14px;
   padding: 0.7rem 0.8rem;
@@ -28,9 +39,8 @@
 }
 
 @media (max-width: 899px) {
-  .control-group {
+  .tiptap-toolbar-shell {
     position: static;
-    top: auto;
   }
 }
 

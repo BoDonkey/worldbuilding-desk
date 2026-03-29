@@ -5,7 +5,7 @@ import {dispatchWorkspaceCommand} from './workspaceCommands';
 export interface AppCommand {
   id: string;
   label: string;
-  section: 'Navigation' | 'Workspace';
+  section: 'Navigation' | 'Project' | 'Workspace';
   keywords: string[];
   shortcut?: string;
   run: () => void;
@@ -16,13 +16,15 @@ interface CreateAppCommandsOptions {
   navigate: NavigateFunction;
   activeProject: Project | null;
   projectSettings: ProjectSettings | null;
+  onOpenScratchpad: () => void;
 }
 
 export const createAppCommands = ({
   pathname,
   navigate,
   activeProject,
-  projectSettings
+  projectSettings,
+  onOpenScratchpad
 }: CreateAppCommandsOptions): AppCommand[] => {
   const showGameSystems =
     !activeProject || projectSettings?.featureToggles.enableGameSystems !== false;
@@ -64,6 +66,13 @@ export const createAppCommands = ({
       run: () => navigate('/workspace')
     },
     {
+      id: 'nav-corkboard',
+      label: 'Go to Corkboard',
+      section: 'Navigation',
+      keywords: ['corkboard', 'story', 'outline', 'chapters', 'planning'],
+      run: () => navigate('/corkboard')
+    },
+    {
       id: 'nav-settings',
       label: 'Go to Settings',
       section: 'Navigation',
@@ -82,9 +91,21 @@ export const createAppCommands = ({
     });
   }
 
+  const projectCommands: AppCommand[] = activeProject
+    ? [
+        {
+          id: 'project-open-scratchpad',
+          label: 'Open Scratchpad',
+          section: 'Project',
+          keywords: ['scratchpad', 'notes', 'quick notes', 'freeform'],
+          run: onOpenScratchpad
+        }
+      ]
+    : [];
+
   const isWorkspaceRoute = pathname.startsWith('/workspace');
   if (!isWorkspaceRoute) {
-    return navigationCommands;
+    return [...navigationCommands, ...projectCommands];
   }
 
   const workspaceCommands: AppCommand[] = [
@@ -227,5 +248,5 @@ export const createAppCommands = ({
     });
   }
 
-  return [...navigationCommands, ...workspaceCommands];
+  return [...navigationCommands, ...projectCommands, ...workspaceCommands];
 };

@@ -8,6 +8,7 @@ import {
   getWordCount,
   type EditorConfig
 } from '../config/editorConfig';
+import {looksLikeMarkdown, markdownToHtml} from '../utils/markdown';
 
 type ToolbarButton = {
   id: string;
@@ -35,13 +36,18 @@ interface TipTapEditorProps {
   ) => void;
   config?: EditorConfig;
   toolbarButtons?: ToolbarButton[];
+  toolbarMode?: 'full' | 'basic';
   extensions?: Extension[];
   textToInsert?: string | null;
   onTextInserted?: () => void;
   insertContext?: {from: number; to: number} | null;
 }
 
-function MenuBar({editor, customButtons}: MenuBarProps) {
+function MenuBar({
+  editor,
+  customButtons,
+  toolbarMode
+}: MenuBarProps & {toolbarMode: 'full' | 'basic'}) {
   if (!editor) return null;
 
   return (
@@ -62,20 +68,24 @@ function MenuBar({editor, customButtons}: MenuBarProps) {
         >
           Italic
         </button>
-        <button
-          onClick={() => editor.chain().focus().toggleStrike().run()}
-          disabled={!editor.can().chain().focus().toggleStrike().run()}
-          className={editor.isActive('strike') ? 'is-active' : ''}
-        >
-          Strike
-        </button>
-        <button
-          onClick={() => editor.chain().focus().toggleCode().run()}
-          disabled={!editor.can().chain().focus().toggleCode().run()}
-          className={editor.isActive('code') ? 'is-active' : ''}
-        >
-          Code
-        </button>
+        {toolbarMode === 'full' && (
+          <>
+            <button
+              onClick={() => editor.chain().focus().toggleStrike().run()}
+              disabled={!editor.can().chain().focus().toggleStrike().run()}
+              className={editor.isActive('strike') ? 'is-active' : ''}
+            >
+              Strike
+            </button>
+            <button
+              onClick={() => editor.chain().focus().toggleCode().run()}
+              disabled={!editor.can().chain().focus().toggleCode().run()}
+              className={editor.isActive('code') ? 'is-active' : ''}
+            >
+              Code
+            </button>
+          </>
+        )}
 
         {/* Paragraph / headings */}
         <button
@@ -120,18 +130,22 @@ function MenuBar({editor, customButtons}: MenuBarProps) {
         </button>
 
         {/* Blocks */}
-        <button
-          onClick={() => editor.chain().focus().toggleCodeBlock().run()}
-          className={editor.isActive('codeBlock') ? 'is-active' : ''}
-        >
-          Code block
-        </button>
-        <button
-          onClick={() => editor.chain().focus().toggleBlockquote().run()}
-          className={editor.isActive('blockquote') ? 'is-active' : ''}
-        >
-          Quote
-        </button>
+        {toolbarMode === 'full' && (
+          <>
+            <button
+              onClick={() => editor.chain().focus().toggleCodeBlock().run()}
+              className={editor.isActive('codeBlock') ? 'is-active' : ''}
+            >
+              Code block
+            </button>
+            <button
+              onClick={() => editor.chain().focus().toggleBlockquote().run()}
+              className={editor.isActive('blockquote') ? 'is-active' : ''}
+            >
+              Quote
+            </button>
+          </>
+        )}
 
         {/* History */}
         <button
@@ -186,6 +200,7 @@ function TipTapEditor({
   onLoreHighlightClick,
   config = defaultEditorConfig,
   toolbarButtons = [],
+  toolbarMode = 'full',
   textToInsert,
   onTextInserted,
   insertContext
@@ -255,6 +270,16 @@ function TipTapEditor({
           bottom: rect.bottom
         });
         return false;
+      },
+      handlePaste(_view, event) {
+        const plainText = event.clipboardData?.getData('text/plain') ?? '';
+        const html = event.clipboardData?.getData('text/html') ?? '';
+        if (!plainText || html || !looksLikeMarkdown(plainText)) {
+          return false;
+        }
+        event.preventDefault();
+        editor?.chain().focus().insertContent(markdownToHtml(plainText)).run();
+        return true;
       }
     }
   });
@@ -302,8 +327,16 @@ function TipTapEditor({
 
   return (
     <div className='tiptap-wrapper'>
-      <MenuBar editor={editor} customButtons={toolbarButtons} />
-      <EditorContent editor={editor} />
+      <div className='tiptap-toolbar-shell'>
+        <MenuBar
+          editor={editor}
+          customButtons={toolbarButtons}
+          toolbarMode={toolbarMode}
+        />
+      </div>
+      <div className='tiptap-content-shell'>
+        <EditorContent editor={editor} />
+      </div>
     </div>
   );
 }
