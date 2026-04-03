@@ -98,6 +98,58 @@
   gap: 0.65rem;
 }
 
+.sceneActionsCard {
+  margin-bottom: 1rem;
+  padding: 0.8rem;
+  border: 1px solid var(--surface-border-soft);
+  border-radius: 18px;
+  background: color-mix(in srgb, var(--surface-panel) 88%, var(--surface-panel-elevated) 12%);
+  display: grid;
+  gap: 0.75rem;
+}
+
+.sceneActionsBody {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.sceneActionPrimaryRow {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.55rem;
+}
+
+.sceneActionSettings {
+  display: grid;
+  gap: 0.65rem;
+  padding: 0.7rem;
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--surface-panel-elevated) 82%, var(--badge-info-bg) 18%);
+}
+
+.sceneExportSection {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.sceneExportLabel {
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+}
+
+.sceneExportGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.55rem;
+}
+
+.sceneExportGrid button {
+  min-height: 2.25rem;
+}
+
 .sceneMetaSummary {
   display: grid;
   gap: 0.18rem;
@@ -161,6 +213,33 @@
   background-color: var(--surface-panel);
 }
 
+.contextSectionToggle {
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
+.contextSectionHeader,
+.contextSectionMeta {
+  display: flex;
+  justify-content: space-between;
+  align-items: start;
+  gap: 0.75rem;
+}
+
+.contextSectionMeta {
+  align-items: center;
+}
+
+.contextSectionChevron {
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: var(--color-text-secondary);
+}
+
 .contextTabs {
   display: flex;
   gap: 0.4rem;
@@ -222,6 +301,193 @@
   margin-top: 0.45rem;
   font-size: 0.76rem;
   color: #9a3412;
+}
+
+.scenePresenceHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: start;
+  gap: 0.75rem;
+}
+
+.scenePresenceIntro {
+  margin: 0.25rem 0 0;
+  font-size: 0.78rem;
+  color: var(--color-text-secondary);
+  line-height: 1.4;
+}
+
+.scenePresenceCount {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--badge-info-bg) 78%, var(--surface-panel-elevated) 22%);
+  color: var(--badge-info-text);
+  font-size: 0.74rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.scenePresencePinnedRow,
+.scenePresenceChipRow,
+.sceneScorecardMetaRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.scenePresencePinnedRow {
+  margin-top: 0.75rem;
+}
+
+.scenePresencePinnedChip,
+.scenePresenceChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  border-radius: 999px;
+  border: 1px solid var(--surface-border-soft);
+  background: var(--surface-panel-elevated);
+  color: var(--color-text-primary);
+  font-size: 0.76rem;
+  font-weight: 600;
+}
+
+.scenePresencePinnedChip {
+  padding: 0.3rem 0.65rem;
+}
+
+.scenePresencePinnedChipActive,
+.scenePresenceChipActive {
+  border-color: color-mix(in srgb, var(--button-primary-border) 78%, var(--surface-border-soft) 22%);
+  background: color-mix(in srgb, var(--button-primary-bg) 18%, var(--surface-panel-elevated) 82%);
+  color: var(--button-primary-text);
+}
+
+.scenePresenceGroups {
+  display: grid;
+  gap: 0.8rem;
+  margin-top: 0.9rem;
+}
+
+.scenePresenceGroup {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.scenePresenceGroupLabel {
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+}
+
+.scenePresenceChip {
+  justify-content: space-between;
+  padding: 0.32rem 0.65rem;
+}
+
+.scenePresenceChipMeta {
+  font-size: 0.7rem;
+  opacity: 0.8;
+}
+
+.scenePresenceEmpty {
+  margin: 0.85rem 0 0;
+  font-size: 0.82rem;
+  color: var(--color-text-secondary);
+}
+
+.sceneScorecard {
+  margin-top: 0.9rem;
+  padding: 0.8rem;
+  border-radius: 16px;
+  border: 1px solid var(--surface-border-soft);
+  background: color-mix(in srgb, var(--surface-panel-elevated) 82%, var(--badge-info-bg) 18%);
+  display: grid;
+  gap: 0.7rem;
+}
+
+.sceneScorecardHeader,
+.sceneScorecardFooter {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.sceneScorecardEyebrow {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+  margin-bottom: 0.15rem;
+}
+
+.sceneScorecardPinButton {
+  font-size: 0.76rem;
+}
+
+.sceneScorecardMetaChip {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.22rem 0.5rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--surface-panel) 78%, white 22%);
+  font-size: 0.74rem;
+  color: var(--color-text-secondary);
+}
+
+.sceneScorecardGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 0.55rem;
+}
+
+.sceneScorecardStat {
+  display: grid;
+  gap: 0.12rem;
+  padding: 0.55rem 0.65rem;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--surface-panel) 84%, white 16%);
+}
+
+.sceneScorecardStat span {
+  font-size: 0.72rem;
+  color: var(--color-text-secondary);
+}
+
+.sceneScorecardStat strong {
+  font-size: 0.84rem;
+  line-height: 1.35;
+}
+
+.sceneScorecardSection {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.sceneScorecardSectionTitle {
+  font-size: 0.73rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-secondary);
+}
+
+.sceneScorecardBody {
+  margin: 0;
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+.sceneScorecardFooter {
+  font-size: 0.76rem;
+  color: var(--color-text-secondary);
 }
 
 .drawerOverlay {
@@ -605,24 +871,23 @@
 }
 
 .importModeLabel {
-  margin-left: 0.5rem;
   font-size: 0.78rem;
-  display: inline-flex;
-  align-items: center;
+  display: grid;
   gap: 0.35rem;
 }
 
 .importModeSelect {
   font-size: 0.78rem;
   border-radius: 10px;
+  min-height: 2.1rem;
 }
 
 .importToggleLabel {
-  margin-left: 0.5rem;
   font-size: 0.78rem;
   display: inline-flex;
-  align-items: center;
+  align-items: start;
   gap: 0.3rem;
+  line-height: 1.4;
 }
 
 .reviewLaterBanner {

@@ -12,7 +12,7 @@ Run these from the repo root unless noted otherwise:
 - `pnpm --filter web e2e:open` opens Cypress
 - `pnpm --filter web e2e:run` runs Cypress headlessly
 
-For AI-provider flows that still use the local proxy, start this in a second terminal:
+For browser-only development paths that still use the local Anthropic streaming proxy, start this in a second terminal:
 
 ```bash
 cd apps/web
@@ -30,5 +30,6 @@ npx tsx proxy-server.ts
 ## Current Notes
 
 - The web app is the main active product surface even though the repo also includes an Electron host in `apps/desktop`.
+- In Electron, AI completions and streams now route through the main process IPC bridge instead of a user-visible local proxy.
 - `WorkspaceRoute.tsx` is currently the largest route and the clearest candidate for future decomposition.
 - Cypress coverage exists for key smoke flows, but most feature validation is still manual.

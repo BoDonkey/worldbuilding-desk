@@ -1,22 +1,26 @@
 // apps/desktop/src/main/apiHandler.ts
 import {ipcMain} from 'electron';
 import {randomUUID} from 'node:crypto';
-import {createStreamingAdapter, ProviderId, LLMRequestPayload} from './providers/ProviderRegistry';
+import {
+  createProviderClient,
+  ProviderId,
+  LLMRequestPayload
+} from './providers/ProviderRegistry';
 
-type RendererMessage = LLMRequestPayload['messages'][number];
-type RendererContextChunk = NonNullable<LLMRequestPayload['context']>[number];
-
-interface LLMStreamPayload {
+interface LLMPayload {
   providerId: ProviderId;
-  apiKey: string;
+  apiKey?: string;
   request: LLMRequestPayload;
   providerConfig?: {
     baseUrl?: string;
   };
+}
+
+interface LLMStreamPayload extends LLMPayload {
   requestId?: string;
 }
 
-function validatePayload(payload: unknown): asserts payload is LLMStreamPayload {
+function validatePayload(payload: unknown): asserts payload is LLMPayload {
   if (!payload || typeof payload !== 'object') {
     throw new Error('Payload must be an object');
   }
@@ -27,9 +31,8 @@ function validatePayload(payload: unknown): asserts payload is LLMStreamPayload 
     throw new Error('providerId must be provided');
   }
 
-  // Validate apiKey
-  if (typeof p.apiKey !== 'string' || p.apiKey.trim().length === 0) {
-    throw new Error('apiKey must be a non-empty string');
+  if (p.apiKey !== undefined && typeof p.apiKey !== 'string') {
+    throw new Error('apiKey must be a string when provided');
   }
 
   // Validate request object
@@ -130,7 +133,7 @@ export function setupAPIHandlers() {
     } = payload;
 
     try {
-      const adapter = createStreamingAdapter(providerId, {
+      const adapter = createProviderClient(providerId, {
         apiKey,
         baseUrl: providerConfig?.baseUrl,
         request
@@ -149,5 +152,18 @@ export function setupAPIHandlers() {
       event.sender.send('llm:stream:error', {requestId, message});
       throw error;
     }
+  });
+
+  ipcMain.handle('llm:complete', async (_event, payload: LLMPayload) => {
+    validatePayload(payload);
+
+    const {apiKey, providerId, request, providerConfig} = payload;
+    const client = createProviderClient(providerId, {
+      apiKey,
+      baseUrl: providerConfig?.baseUrl,
+      request
+    });
+
+    return client.complete();
   });
 }

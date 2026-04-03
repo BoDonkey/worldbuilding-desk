@@ -1,0 +1,334 @@
+# Worldbuilding Desk Summary
+Last updated: March 29, 2026
+
+## Purpose
+
+This document is a handoff artifact for a conversational LLM or human reviewer. It summarizes:
+
+- what Worldbuilding Desk currently offers
+- what it appears designed to become
+
+This document distinguishes between:
+
+- **Shipped**: present in the repository/docs as implemented behavior
+- **Planned**: explicitly described in roadmap/spec docs
+- **Inferred strategic direction**: not fully committed as a roadmap promise, but strongly suggested by the architecture and product language
+
+## Short Take
+
+Worldbuilding Desk is not best understood as “another AI novel-writing app.” Its strongest strategic angle is:
+
+- local-first authoring
+- structured canon management
+- controllable AI assistance
+- explicit progression/mechanics support
+- a credible future path toward deterministic state enforcement
+
+
+## Worldbuilding Desk: Shipped Features
+
+### 1. Project and storage model
+
+Shipped:
+
+- local IndexedDB-backed project storage
+- create/delete projects
+- per-project settings
+- parent/child project metadata for canon inheritance
+- project-scoped scratchpad and corkboard storage
+- project snapshot / backup import-export infrastructure
+
+Important implication:
+
+- the product is currently local-first, not cloud-first
+- this is a real differentiator for privacy-sensitive writers, but also a current product-distribution weakness versus a mature SaaS
+
+### 2. Writing workspace
+
+Shipped:
+
+- rich text writing editor
+- scene/document management
+- writer-first layout with reduced UI chrome
+- independent scrolling for left rail, editor, and right rail
+- sticky editor toolbar
+- command palette
+- import of `.txt`, `.md`, `.html`, `.docx`
+- best-effort `.pages` preview extraction with fallback guidance
+- export as JSON, DOCX, EPUB, and Markdown from scene export utilities
+- scratchpad popover for quick per-project note capture
+
+Shipped polish/details:
+
+- editor appearance controls for font presentation, reading width, editor surface, line spacing
+- context-sensitive workspace tooling
+- system history panel
+- lore inspector
+
+### 3. World Bible / canon management
+
+Shipped:
+
+- dynamic world bible categories
+- custom field schemas
+- rich text descriptions
+- tags and relationships
+- alias management / “Alternative names”
+- draft / “needs completion” state on review-created records
+- world bible visibility in writing and review flows
+- alias-aware linking and review behavior
+
+This is broader than a basic “story bible” because the data model is meant to support later automation and consistency work.
+
+### 4. Character and item systems
+
+Shipped:
+
+- characters
+- character sheets linked to project rulesets
+- dynamic stats and resources
+- visual stat/resource editors
+- item editor with lore + mechanics
+- damage formulas
+- armor/resistance values
+- weapon types and item categories
+- runtime-adjusted previews in character sheets
+
+This is where the product starts separating from standard novelist tools. It is not only storing lore; it is storing mechanically meaningful entities.
+
+### 5. Rules engine
+
+Shipped in a separate package:
+
+- stat definitions with formulas
+- resource definitions with regeneration
+- dice roller
+- modifier system
+- active effects/status tracking
+- state manager for character progression
+- time-based mechanics and triggers
+- condition/effect evaluation
+
+The rules-engine package is not speculative. It exists as code and examples. This makes the product meaningfully closer to a lightweight simulation framework than to a plain writing organizer.
+
+### 6. Compendium and progression systems
+
+Shipped:
+
+- compendium entries, milestones, recipes, progress, action logs
+- progression tied to domains like beast/flora/mineral/artifact/recipe/custom
+- craftability preview
+- zone affinity / sector mastery
+- durability / legacy crafting primitives
+- settlement aura/module system
+- fortress progression effects
+- community/logistics party synergy engine
+- runtime modifiers integrated into craftability checks
+- world-systems UI inside the Compendium route
+- compendium JSON import/export preview flows
+
+This is a major differentiator. NovelCrafter has strong codex/planning/writing support, but this repo is already modeling progression mechanics that can affect characters and systems.
+
+### 7. AI integration
+
+Shipped:
+
+- multi-provider abstraction
+- Anthropic, OpenAI, Gemini, Ollama support
+- provider-specific settings
+- local cache for completions
+- prompt management system
+- prompt tools/personas
+- built-in personas including `Writing Critic` and `Line Editor`
+- context-aware assistance
+- text insertion at cursor/selection
+- selection-based AI expand flow
+- corkboard AI planning flow
+
+Important nuance:
+
+- internal positioning explicitly resists “AI ghostwriter” framing
+- current implementation still includes useful drafting/critique help, but the strategic language emphasizes support and enforcement rather than autonomous authorship
+
+### 8. Retrieval and memory
+
+Shipped:
+
+- local RAG service
+- chunking and local embedding pipeline with fallback local embeddings
+- Shodh-style memory store
+- inherited canon context from parent projects
+- promotion flows from child projects to parent canon
+- provenance labels for local vs parent context
+
+This is significant because the app is already moving toward multi-book / series-level canon management, not just single-manuscript drafting.
+
+### 9. Planning surfaces
+
+Shipped:
+
+- scratchpad for low-friction capture
+- dedicated corkboard route
+- chapter-card CRUD
+- beat CRUD
+- progression snapshot fields
+- story/chapter/card scoped AI prompts
+- AI result review before insertion
+- selection-based promotion from AI results into planning structures
+- project-context enrichment from characters and world bible summaries
+
+This is not yet as mature as NovelCrafter’s planning stack, but it is real and usable.
+
+### 10. Review, canon resolution, and consistency-adjacent workflows
+
+Shipped:
+
+- inline consistency highlights
+- inline lore highlights
+- review queue for unresolved entities
+- create/link/dismiss review actions
+- alias-aware linking
+- draft warnings
+- optional compendium seeding from review-created world bible records
+- contradiction review service
+
+This is the foundation of the future consistency engine direction.
+
+## Worldbuilding Desk: Planned Features and Near-Term Direction
+
+### 1. Consistency engine / pre-commit guardrails
+
+Explicitly planned:
+
+- proposal extraction
+- proposal validation
+- apply-before-commit workflow
+- blocking unknown entities
+- ambiguity resolution
+- state conflicts and override reasons
+- deterministic mutation commands
+- mutation audit trail with before/after hashes
+- issue highlighting and mutation previews
+
+If implemented well, this is one of the strongest possible differentiators from NovelCrafter and most AI writing tools.
+
+### 2. Richer canon memory and right-rail relevance
+
+Explicitly planned:
+
+- replace shallow auto-memory summaries with more useful canon summaries/facts
+- preserve manual memories better
+- better grouping, ordering, and relevance
+- clearer separation of stable canon vs narrative memory
+
+### 3. Corkboard follow-up
+
+Explicitly planned:
+
+- dogfooding and UI polish
+- richer AI result management/history
+- stronger chapter/beat visual hierarchy
+- richer canon/progression context in planning
+- possibly more structured promotion targets
+
+### 4. Portability follow-up
+
+Explicitly planned:
+
+- schema/versioning rules
+- bundle-style exports/imports
+- richer Word import handling
+
+### 5. Additional prompt and policy controls
+
+Planned:
+
+- per-project system prompt editing
+- tone/policy presets
+- “ick” word lists and style rules
+- policy attachment to imported documents
+
+## Worldbuilding Desk: Longer-Term Prospects
+
+### 1. Credible path to a deterministic narrative-state platform
+
+The deepest strategic opportunity is not “better prompt UX.” It is:
+
+- canonical entities
+- mechanical state
+- deterministic mutation
+- auditability
+- local ownership
+
+That can support:
+
+- LitRPG continuity enforcement
+- item/resource/state tracking
+- chapter-by-chapter progression verification
+- “did this action actually make sense in the world?” checks
+
+This is a genuinely differentiated category if executed well.
+
+### 2. Credible path to a game or campaign engine
+
+There is already enough code and product language to justify this as a **credible future prospect**, though not yet a shipped product promise.
+
+Why this is credible:
+
+- existing rules engine
+- state manager
+- compendium progression
+- settlement/zone/synergy systems
+- runtime modifier previews
+- explicit roadmap note to expand runtime integration into persisted gameplay outcomes
+- planned deterministic apply/commit pipeline
+
+Possible futures:
+
+- solo campaign engine for writers designing story worlds through mechanics
+- scenario simulator for progression-heavy fiction
+- author-facing “what would happen if” sandbox
+- GM/campaign manager for TTRPG worlds
+- narrative game prototyping environment
+
+### 3. Possible “story-to-simulation” bridge
+
+A very strong long-term differentiator would be:
+
+- manuscript text references actions and entities
+- extraction identifies intended state changes
+- deterministic systems validate/apply them
+- canon and progression remain synchronized with the prose
+
+That could eventually make the product useful not just for writing about systems, but for partially **running** them.
+
+### 4. Limits on that future
+
+Important caution:
+
+- the repo does **not** yet implement autonomous simulation ticks as a shipped goal
+- guardrails docs explicitly mark autonomous world simulation as out of scope for V1
+- current architecture is promising, but still early enough that execution risk is substantial
+
+So “future game play engine” is a valid prospect, but it should be described as a **strategic extension**, not a near-term committed deliverable.
+
+## Current Limitations of Worldbuilding Desk
+
+These matter in any competitive analysis.
+
+### Product maturity gaps
+
+- current app still has web-app characteristics rather than a finished desktop product
+- proxy server needed for some AI flows
+- no native desktop packaging currently
+- no remote sync yet
+- no mature collaboration layer
+
+### Workflow maturity gaps
+
+- planning system is newer and less mature than NovelCrafter’s
+- slash commands and richer contextual action bubbles are still open
+- canon-memory relevance needs work
+- broader persona coverage is still pending
+- portability exists but schema/versioning is not fully hardened
+

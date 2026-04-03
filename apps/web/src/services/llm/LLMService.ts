@@ -64,7 +64,9 @@ export class LLMService {
       return {content: cached};
     }
 
-    const response = await this.provider.generateCompletion(normalizedRequest);
+    const response = this.electronAPI?.llmComplete
+      ? await this.completeViaElectron(normalizedRequest)
+      : await this.provider.generateCompletion(normalizedRequest);
     if (response.content) {
       llmCache.set(cacheKey, response.content);
     }
@@ -194,10 +196,6 @@ export class LLMService {
   }
 
   private getStreamingIterator(request: LLMRequest): AsyncGenerator<string> {
-    if (this.providerId === 'gemini' && this.provider.streamCompletion) {
-      return this.provider.streamCompletion(request);
-    }
-
     if (
       this.electronAPI?.llmStream &&
       this.electronAPI?.onLLMChunk &&
@@ -212,6 +210,34 @@ export class LLMService {
     }
 
     return this.provider.streamCompletion(request);
+  }
+
+  private async completeViaElectron(request: LLMRequest): Promise<LLMResponse> {
+    const api = this.electronAPI;
+    if (!api?.llmComplete) {
+      throw new Error('Electron bridge is unavailable');
+    }
+
+    const response = await api.llmComplete({
+      providerId: this.providerId,
+      apiKey: this.providerApiKey,
+      request,
+      providerConfig: {
+        baseUrl: this.providerBaseUrl
+      }
+    });
+
+    return {
+      content: response.content,
+      usage:
+        response.usage?.promptTokens !== undefined &&
+        response.usage?.completionTokens !== undefined
+          ? {
+              promptTokens: response.usage.promptTokens,
+              completionTokens: response.usage.completionTokens
+            }
+          : undefined
+    };
   }
 
   private buildCacheKey(request: LLMRequest): string {

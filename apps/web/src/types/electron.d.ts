@@ -16,6 +16,13 @@ declare global {
   }
 
   interface ElectronAPI {
+    llmComplete: (payload: unknown) => Promise<{
+      content: string;
+      usage?: {
+        promptTokens?: number;
+        completionTokens?: number;
+      };
+    }>;
     llmStream: (payload: unknown) => Promise<string>;
     onLLMChunk?: (callback: (payload: ElectronLLMChunkEvent) => void) => () => void;
     onLLMComplete?: (callback: (payload: ElectronLLMCompleteEvent) => void) => () => void;

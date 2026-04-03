@@ -23,6 +23,7 @@ interface ShodhMemoryPanelProps {
   emptyState?: string;
   renderSourceLabel?: (memory: MemoryEntry) => React.ReactNode;
   renderMemoryActions?: (memory: MemoryEntry) => React.ReactNode;
+  embedded?: boolean;
 }
 
 export const ShodhMemoryPanel: React.FC<ShodhMemoryPanelProps> = ({
@@ -39,7 +40,8 @@ export const ShodhMemoryPanel: React.FC<ShodhMemoryPanelProps> = ({
   onDeleteMemory,
   emptyState = 'No memories captured yet.',
   renderSourceLabel,
-  renderMemoryActions
+  renderMemoryActions,
+  embedded = false
 }) => {
   const [page, setPage] = useState(0);
 
@@ -73,9 +75,9 @@ export const ShodhMemoryPanel: React.FC<ShodhMemoryPanelProps> = ({
   return (
     <div
       style={{
-        marginTop: '1.25rem',
-        borderTop: '1px solid #e5e7eb',
-        paddingTop: '1rem'
+        marginTop: embedded ? 0 : '1.25rem',
+        borderTop: embedded ? 'none' : '1px solid #e5e7eb',
+        paddingTop: embedded ? 0 : '1rem'
       }}
     >
       <div
@@ -102,6 +104,12 @@ export const ShodhMemoryPanel: React.FC<ShodhMemoryPanelProps> = ({
               <select
                 value={scopeSelector.value}
                 onChange={(e) => scopeSelector.onChange(e.target.value)}
+                style={{
+                  borderRadius: '10px',
+                  border: '1px solid var(--surface-border-soft)',
+                  background: 'var(--surface-panel-elevated)',
+                  color: 'var(--color-text-primary)'
+                }}
               >
                     {scopeSelector.options.map(({label, value}) => (
                       <option key={value} value={value}>
@@ -116,7 +124,13 @@ export const ShodhMemoryPanel: React.FC<ShodhMemoryPanelProps> = ({
             placeholder='Filter text or tags'
             value={filterValue}
             onChange={(e) => onFilterChange(e.target.value)}
-            style={{minWidth: '180px'}}
+            style={{
+              minWidth: '180px',
+              borderRadius: '10px',
+              border: '1px solid var(--surface-border-soft)',
+              background: 'var(--surface-panel-elevated)',
+              color: 'var(--color-text-primary)'
+            }}
           />
           {onRefresh && (
             <button type='button' onClick={onRefresh} style={{fontSize: '0.85rem'}}>
@@ -130,7 +144,7 @@ export const ShodhMemoryPanel: React.FC<ShodhMemoryPanelProps> = ({
           style={{
             marginTop: '0.5rem',
             fontSize: '0.85rem',
-            color: '#555'
+            color: 'var(--color-text-secondary)'
           }}
         >
           Showing{' '}
@@ -166,13 +180,13 @@ export const ShodhMemoryPanel: React.FC<ShodhMemoryPanelProps> = ({
               <li
                 key={memory.id}
                 style={{
-                  border: '1px solid #ddd',
-                  borderRadius: '6px',
-                  padding: '0.5rem',
+                  border: '1px solid var(--surface-border-soft)',
+                  borderRadius: '14px',
+                  padding: '0.7rem',
                   backgroundColor:
                     highlightDocumentId && memory.documentId === highlightDocumentId
-                      ? '#f9fafb'
-                      : '#fff'
+                      ? 'color-mix(in srgb, var(--badge-info-bg) 22%, var(--surface-panel-elevated) 78%)'
+                      : 'var(--surface-panel-elevated)'
                 }}
               >
                 <div
@@ -204,7 +218,7 @@ export const ShodhMemoryPanel: React.FC<ShodhMemoryPanelProps> = ({
                 <p style={{margin: '0.25rem 0', whiteSpace: 'pre-wrap'}}>
                   {memory.summary}
                 </p>
-                <small style={{color: '#555'}}>
+                <small style={{color: 'var(--color-text-secondary)'}}>
                   {new Date(memory.createdAt).toLocaleString()}
                   {memory.tags?.length ? ` · ${memory.tags.join(', ')}` : ''}
                   {renderSourceLabel && (

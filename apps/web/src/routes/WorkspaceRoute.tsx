@@ -431,7 +431,67 @@ type WorkspaceDebugWindow = Window & {
   __wbdWorkspaceUnmountedAt?: number;
 };
 
+type ScenePresenceKind = 'character' | 'item' | 'location' | 'world';
+
+interface ScenePresenceItem {
+  key: string;
+  type: 'character' | 'entity';
+  kind: ScenePresenceKind;
+  name: string;
+  mentionCount: number;
+  matchedLabels: string[];
+  lore: LoreInspectorRecord;
+  summaryLines: string[];
+  scorecardStats: Array<{label: string; value: string}>;
+}
+
 const normalizeUnknownKey = (value: string): string => value.trim().toLowerCase();
+const normalizeSceneSearchText = (input: string): string =>
+  input
+    .trim()
+    .toLowerCase()
+    .replace(/[^\w\s'-]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+const escapeRegExp = (input: string): string =>
+  input.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const countSceneMentions = (normalizedText: string, label: string): number => {
+  const normalizedLabel = normalizeSceneSearchText(label);
+  if (!normalizedText || !normalizedLabel) return 0;
+  const pattern = new RegExp(
+    `(?:^|\\s)${escapeRegExp(normalizedLabel)}(?=$|\\s)`,
+    'g'
+  );
+  return Array.from(normalizedText.matchAll(pattern)).length;
+};
+const inferScenePresenceKind = (
+  entity: WorldEntity,
+  categoryNameById: Map<string, string>
+): Exclude<ScenePresenceKind, 'character'> => {
+  const categoryName = categoryNameById.get(entity.categoryId) ?? '';
+  const surface = `${categoryName} ${entity.name}`.toLowerCase();
+  if (
+    /(location|place|region|city|town|village|kingdom|realm|zone|area|sector|district|settlement|fortress|dungeon)/.test(
+      surface
+    )
+  ) {
+    return 'location';
+  }
+  if (
+    /(item|artifact|weapon|armor|tool|relic|gear|inventory|resource|material|book|vehicle)/.test(
+      surface
+    )
+  ) {
+    return 'item';
+  }
+  return 'world';
+};
+const buildScenePresenceLabel = (kind: ScenePresenceKind): string => {
+  if (kind === 'character') return 'Character';
+  if (kind === 'item') return 'Item';
+  if (kind === 'location') return 'Location';
+  return 'World';
+};
 const getWorkspaceReviewStorageKey = (projectId: string): string =>
   `workspaceReview:${projectId}`;
 const buildUnknownLinkValue = (targetType: 'entity' | 'character', id: string): string =>
@@ -687,6 +747,11 @@ function WorkspaceRoute({activeProject, projectSettings: initialProjectSettings 
   );
   const [activeContextView, setActiveContextView] =
     useState<ContextDrawerView>('world-bible');
+  const [activeScenePresenceKey, setActiveScenePresenceKey] = useState<string | null>(null);
+  const [pinnedScenePresenceKeys, setPinnedScenePresenceKeys] = useState<string[]>([]);
+  const [isScenePresenceOpen, setScenePresenceOpen] = useState(true);
+  const [isMemoryPanelOpen, setMemoryPanelOpen] = useState(true);
+  const [isSceneActionsOpen, setSceneActionsOpen] = useState(true);
   const [isNarrowViewport, setNarrowViewport] = useState(() =>
     typeof window !== 'undefined'
       ? window.matchMedia('(max-width: 1200px)').matches
@@ -2989,6 +3054,251 @@ function WorkspaceRoute({activeProject, projectSettings: initialProjectSettings 
     systemHistoryEntries
   ]);
 
+  const scenePresence = useMemo(() => {
+    const currentDocument = selectedId
+      ? documents.find((doc) => doc.id === selectedId) ?? null
+      : null;
+    if (!activeProject || !currentDocument) {
+      return [] as ScenePresenceItem[];
+    }
+
+    const normalizedSceneText = normalizeSceneSearchText(
+      `${currentDocument.title} ${htmlToPlainText(content)}`
+    );
+    if (!normalizedSceneText) {
+      return [] as ScenePresenceItem[];
+    }
+
+    const categoryNameById = new Map(categories.map((category) => [category.id, category.name]));
+    const characterById = new Map(characters.map((character) => [character.id, character]));
+    const aliasesByTarget = new Map<string, string[]>();
+
+    aliases.forEach((alias) => {
+      const targetType = alias.targetType ?? 'entity';
+      const key = `${targetType}:${alias.entityId}`;
+      const existing = aliasesByTarget.get(key) ?? [];
+      existing.push(alias.alias);
+      aliasesByTarget.set(key, existing);
+    });
+
+    const items: ScenePresenceItem[] = [];
+
+    characterSheets.forEach((sheet) => {
+      const character = sheet.characterId ? characterById.get(sheet.characterId) : null;
+      const labels = Array.from(
+        new Set(
+          [sheet.name, character?.name, ...(aliasesByTarget.get(`character:${sheet.characterId ?? sheet.id}`) ?? [])]
+            .map((value) => value?.trim() ?? '')
+            .filter(Boolean)
+        )
+      );
+      const matchedLabels = labels.filter(
+        (label) => countSceneMentions(normalizedSceneText, label) > 0
+      );
+      if (matchedLabels.length === 0) {
+        return;
+      }
+
+      const primaryStat = sheet.stats[0];
+      const primaryResource = sheet.resources[0];
+      const effectivePrimaryStat = primaryStat
+        ? getEffectiveStatValue({
+            definitionId: primaryStat.definitionId,
+            baseValue: primaryStat.value,
+            runtime: runtimeModifiers
+          })
+        : null;
+      const effectivePrimaryResource = primaryResource
+        ? getEffectiveResourceValues({
+            definitionId: primaryResource.definitionId,
+            current: primaryResource.current,
+            max: primaryResource.max,
+            runtime: runtimeModifiers
+          })
+        : null;
+
+      items.push({
+        key: `character:${sheet.id}`,
+        type: 'character',
+        kind: 'character',
+        name: sheet.name,
+        mentionCount: Math.max(
+          ...matchedLabels.map((label) => countSceneMentions(normalizedSceneText, label))
+        ),
+        matchedLabels,
+        lore:
+          selectionQuickSnippets.characters[normalizeSceneSearchText(sheet.name)]?.lore ?? {
+            type: 'character',
+            id: sheet.id,
+            name: sheet.name,
+            completionStatus: 'complete',
+            vitalSigns: [`Level ${sheet.level}`],
+            synopsis: {
+              goal: 'No explicit active goal recorded.',
+              recentEvent: 'No recent linked system event.',
+              motivation: 'No explicit motivation captured yet.'
+            }
+          },
+        summaryLines: [
+          `Level ${sheet.level}`,
+          sheet.statuses?.length ? sheet.statuses.slice(0, 2).join(', ') : 'No active statuses',
+          character?.fields.role ? String(character.fields.role) : 'Role not set'
+        ],
+        scorecardStats: [
+          {label: 'Level', value: String(sheet.level)},
+          primaryStat
+            ? {
+                label:
+                  statDefinitionNameById.get(primaryStat.definitionId) ??
+                  primaryStat.definitionId,
+                value:
+                  effectivePrimaryStat !== null &&
+                  effectivePrimaryStat !== primaryStat.value
+                    ? `${effectivePrimaryStat} (${primaryStat.value} base)`
+                    : String(primaryStat.value)
+              }
+            : {label: 'Stats', value: 'No tracked stats'},
+          primaryResource
+            ? {
+                label:
+                  resourceDefinitionNameById.get(primaryResource.definitionId) ??
+                  primaryResource.definitionId,
+                value: effectivePrimaryResource
+                  ? `${effectivePrimaryResource.current}/${effectivePrimaryResource.max}`
+                  : `${primaryResource.current}/${primaryResource.max}`
+              }
+            : {label: 'Resources', value: 'No tracked resources'}
+        ]
+      });
+    });
+
+    entities.forEach((entity) => {
+      const labels = Array.from(
+        new Set(
+          [entity.name, ...(aliasesByTarget.get(`entity:${entity.id}`) ?? [])]
+            .map((value) => value.trim())
+            .filter(Boolean)
+        )
+      );
+      const matchedLabels = labels.filter(
+        (label) => countSceneMentions(normalizedSceneText, label) > 0
+      );
+      if (matchedLabels.length === 0) {
+        return;
+      }
+
+      const categoryName = categoryNameById.get(entity.categoryId) ?? 'Entity';
+      const status =
+        typeof entity.fields.status === 'string' && entity.fields.status.trim()
+          ? entity.fields.status.trim()
+          : entity.completionStatus === 'draft'
+            ? 'Needs completion'
+            : 'No explicit status';
+      const owner =
+        typeof entity.fields.owner === 'string' && entity.fields.owner.trim()
+          ? entity.fields.owner.trim()
+          : typeof entity.fields.faction === 'string' && entity.fields.faction.trim()
+            ? entity.fields.faction.trim()
+            : 'Unassigned';
+      const location =
+        typeof entity.fields.location === 'string' && entity.fields.location.trim()
+          ? entity.fields.location.trim()
+          : typeof entity.fields.region === 'string' && entity.fields.region.trim()
+            ? entity.fields.region.trim()
+            : 'Not specified';
+      const lore =
+        selectionQuickSnippets.entities[normalizeSceneSearchText(entity.name)]?.lore ?? {
+          type: 'entity',
+          id: entity.id,
+          name: entity.name,
+          completionStatus: entity.completionStatus ?? 'complete',
+          vitalSigns: [categoryName, status],
+          synopsis: {
+            goal: `Track relevance of ${entity.name} in this scene.`,
+            recentEvent: 'No recent linked system event.',
+            motivation: 'No motivation/secret recorded.'
+          }
+        };
+
+      items.push({
+        key: `entity:${entity.id}`,
+        type: 'entity',
+        kind: inferScenePresenceKind(entity, categoryNameById),
+        name: entity.name,
+        mentionCount: Math.max(
+          ...matchedLabels.map((label) => countSceneMentions(normalizedSceneText, label))
+        ),
+        matchedLabels,
+        lore,
+        summaryLines: [categoryName, status, lore.synopsis.recentEvent],
+        scorecardStats: [
+          {label: 'Category', value: categoryName},
+          {label: 'Status', value: status},
+          {
+            label: inferScenePresenceKind(entity, categoryNameById) === 'location'
+              ? 'Region'
+              : 'Owner',
+            value:
+              inferScenePresenceKind(entity, categoryNameById) === 'location'
+                ? location
+                : owner
+          }
+        ]
+      });
+    });
+
+    return items.sort((left, right) => {
+      if (right.mentionCount !== left.mentionCount) {
+        return right.mentionCount - left.mentionCount;
+      }
+      return left.name.localeCompare(right.name);
+    });
+  }, [
+    activeProject,
+    aliases,
+    categories,
+    characters,
+    characterSheets,
+    content,
+    documents,
+    entities,
+    resourceDefinitionNameById,
+    runtimeModifiers,
+    selectedId,
+    selectionQuickSnippets,
+    statDefinitionNameById
+  ]);
+
+  const scenePresenceByKey = useMemo(
+    () => new Map(scenePresence.map((item) => [item.key, item])),
+    [scenePresence]
+  );
+  const pinnedScenePresence = useMemo(
+    () =>
+      pinnedScenePresenceKeys
+        .map((key) => scenePresenceByKey.get(key) ?? null)
+        .filter((item): item is ScenePresenceItem => Boolean(item)),
+    [pinnedScenePresenceKeys, scenePresenceByKey]
+  );
+  const activeScenePresence =
+    (activeScenePresenceKey ? scenePresenceByKey.get(activeScenePresenceKey) : null) ??
+    pinnedScenePresence[0] ??
+    scenePresence[0] ??
+    null;
+
+  useEffect(() => {
+    setPinnedScenePresenceKeys((prev) =>
+      prev.filter((key) => scenePresenceByKey.has(key)).slice(0, 3)
+    );
+  }, [scenePresenceByKey]);
+
+  useEffect(() => {
+    if (activeScenePresenceKey && scenePresenceByKey.has(activeScenePresenceKey)) {
+      return;
+    }
+    setActiveScenePresenceKey(scenePresence[0]?.key ?? null);
+  }, [activeScenePresenceKey, scenePresence, scenePresenceByKey]);
+
   const resolveTemplateToBlock = useCallback(
     (
       sourceType: StatBlockSourceType,
@@ -3664,6 +3974,33 @@ function WorkspaceRoute({activeProject, projectSettings: initialProjectSettings 
     );
   })();
 
+  const scenePresenceGroups: Array<{
+    id: ScenePresenceKind;
+    label: string;
+    items: ScenePresenceItem[];
+  }> = [
+    {
+      id: 'character' as const,
+      label: 'Characters',
+      items: scenePresence.filter((item) => item.kind === 'character')
+    },
+    {
+      id: 'item' as const,
+      label: 'Items',
+      items: scenePresence.filter((item) => item.kind === 'item')
+    },
+    {
+      id: 'location' as const,
+      label: 'Locations',
+      items: scenePresence.filter((item) => item.kind === 'location')
+    },
+    {
+      id: 'world' as const,
+      label: 'Other',
+      items: scenePresence.filter((item) => item.kind === 'world')
+    }
+  ].filter((group) => group.items.length > 0);
+
   const contextDrawerPanel = (
     <>
       <div
@@ -3694,54 +4031,240 @@ function WorkspaceRoute({activeProject, projectSettings: initialProjectSettings 
       </div>
 
       {selectedId && (
-        <ShodhMemoryPanel
-          title='Canon memories'
-          memories={memoryCandidates}
-          filterValue={memoryFilter}
-          onFilterChange={setMemoryFilter}
-          scopeSelector={{
-            label: 'Scope',
-            value: memoryScope,
-            options: [
-              {value: 'document', label: 'This scene'},
-              {value: 'project', label: 'All project'}
-            ],
-            onChange: (value) =>
-              setMemoryScope(value as 'document' | 'project')
-          }}
-          scopeSummaryLabel={scopeLabel}
-          highlightDocumentId={selectedId}
-          onRefresh={() => void refreshMemories()}
-          pageSize={MEMORIES_PER_PAGE}
-          showDelete
-          onDeleteMemory={(id) => {
-            void handleDeleteMemory(id);
-          }}
-          emptyState={emptyMemoryMessage}
-          renderSourceLabel={(memory) =>
-            memory.projectId === activeProject.id ? 'Local' : 'Parent'
-          }
-          renderMemoryActions={(memory) => {
-            if (
-              seriesBibleConfig?.parentProjectId &&
-              memory.projectId === activeProject.id
-            ) {
-              return (
-                <button
-                  type='button'
-                  onClick={() => void handlePromoteMemory(memory)}
-                  disabled={isPromotingMemoryId === memory.id}
-                  style={{fontSize: '0.8rem'}}
-                >
-                  {isPromotingMemoryId === memory.id
-                    ? 'Promoting...'
-                    : 'Promote'}
-                </button>
-              );
-            }
-            return null;
-          }}
-        />
+        <div className={styles.contextCard}>
+          <button
+            type='button'
+            className={styles.contextSectionToggle}
+            onClick={() => setScenePresenceOpen((prev) => !prev)}
+            aria-expanded={isScenePresenceOpen}
+          >
+            <div className={styles.scenePresenceHeader}>
+              <div>
+                <strong>In This Scene</strong>
+                <p className={styles.scenePresenceIntro}>
+                  Quick presence badges and a compact scorecard for whoever is active right now.
+                </p>
+              </div>
+              <div className={styles.contextSectionMeta}>
+                <span className={styles.scenePresenceCount}>
+                  {scenePresence.length} in play
+                </span>
+                <span className={styles.contextSectionChevron}>
+                  {isScenePresenceOpen ? 'Hide' : 'Show'}
+                </span>
+              </div>
+            </div>
+          </button>
+
+          {isScenePresenceOpen && (
+            <>
+              {pinnedScenePresence.length > 0 && (
+                <div className={styles.scenePresencePinnedRow}>
+                  {pinnedScenePresence.map((item) => (
+                    <button
+                      key={item.key}
+                      type='button'
+                      className={`${styles.scenePresencePinnedChip} ${
+                        activeScenePresence?.key === item.key ? styles.scenePresencePinnedChipActive : ''
+                      }`}
+                      onClick={() => setActiveScenePresenceKey(item.key)}
+                    >
+                      {item.name}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {scenePresence.length === 0 ? (
+                <p className={styles.scenePresenceEmpty}>
+                  No tracked characters, items, or locations detected in the current draft yet.
+                </p>
+              ) : (
+                <>
+                  <div className={styles.scenePresenceGroups}>
+                    {scenePresenceGroups.map((group) => (
+                      <div key={group.id} className={styles.scenePresenceGroup}>
+                        <div className={styles.scenePresenceGroupLabel}>{group.label}</div>
+                        <div className={styles.scenePresenceChipRow}>
+                          {group.items.slice(0, 6).map((item) => (
+                            <button
+                              key={item.key}
+                              type='button'
+                              className={`${styles.scenePresenceChip} ${
+                                activeScenePresence?.key === item.key ? styles.scenePresenceChipActive : ''
+                              }`}
+                              onClick={() => setActiveScenePresenceKey(item.key)}
+                            >
+                              <span>{item.name}</span>
+                              <span className={styles.scenePresenceChipMeta}>
+                                x{item.mentionCount}
+                              </span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {activeScenePresence && (
+                    <div className={styles.sceneScorecard}>
+                      <div className={styles.sceneScorecardHeader}>
+                        <div>
+                          <div className={styles.sceneScorecardEyebrow}>
+                            {buildScenePresenceLabel(activeScenePresence.kind)}
+                          </div>
+                          <strong>{activeScenePresence.name}</strong>
+                        </div>
+                        <button
+                          type='button'
+                          className={styles.sceneScorecardPinButton}
+                          onClick={() =>
+                            setPinnedScenePresenceKeys((prev) => {
+                              if (prev.includes(activeScenePresence.key)) {
+                                return prev.filter((key) => key !== activeScenePresence.key);
+                              }
+                              return [activeScenePresence.key, ...prev].slice(0, 3);
+                            })
+                          }
+                        >
+                          {pinnedScenePresenceKeys.includes(activeScenePresence.key)
+                            ? 'Unpin'
+                            : 'Pin'}
+                        </button>
+                      </div>
+
+                      <div className={styles.sceneScorecardMetaRow}>
+                        {activeScenePresence.summaryLines.map((line) => (
+                          <span key={line} className={styles.sceneScorecardMetaChip}>
+                            {line}
+                          </span>
+                        ))}
+                      </div>
+
+                      <div className={styles.sceneScorecardGrid}>
+                        {activeScenePresence.scorecardStats.map((stat) => (
+                          <div key={stat.label} className={styles.sceneScorecardStat}>
+                            <span>{stat.label}</span>
+                            <strong>{stat.value}</strong>
+                          </div>
+                        ))}
+                      </div>
+
+                      <div className={styles.sceneScorecardSection}>
+                        <div className={styles.sceneScorecardSectionTitle}>Scene relevance</div>
+                        <p className={styles.sceneScorecardBody}>
+                          {activeScenePresence.lore.synopsis.goal}
+                        </p>
+                      </div>
+
+                      <div className={styles.sceneScorecardSection}>
+                        <div className={styles.sceneScorecardSectionTitle}>Recent change</div>
+                        <p className={styles.sceneScorecardBody}>
+                          {activeScenePresence.lore.synopsis.recentEvent}
+                        </p>
+                      </div>
+
+                      <div className={styles.sceneScorecardFooter}>
+                        <span>
+                          Matched as {activeScenePresence.matchedLabels.slice(0, 2).join(', ')}
+                        </span>
+                        <button
+                          type='button'
+                          onClick={() =>
+                            activeScenePresence.type === 'character'
+                              ? navigate('/characters')
+                              : navigate('/world-bible')
+                          }
+                        >
+                          Open record
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
+            </>
+          )}
+        </div>
+      )}
+
+      {selectedId && (
+        <div className={styles.contextCard}>
+          <button
+            type='button'
+            className={styles.contextSectionToggle}
+            onClick={() => setMemoryPanelOpen((prev) => !prev)}
+            aria-expanded={isMemoryPanelOpen}
+          >
+            <div className={styles.contextSectionHeader}>
+              <div>
+                <strong>Canon Memories</strong>
+                <p className={styles.scenePresenceIntro}>
+                  Recent local and inherited memory summaries for this scene or the full project.
+                </p>
+              </div>
+              <div className={styles.contextSectionMeta}>
+                <span className={styles.scenePresenceCount}>
+                  {memoryCandidates.length} memories
+                </span>
+                <span className={styles.contextSectionChevron}>
+                  {isMemoryPanelOpen ? 'Hide' : 'Show'}
+                </span>
+              </div>
+            </div>
+          </button>
+          {isMemoryPanelOpen && (
+            <ShodhMemoryPanel
+              title='Canon memories'
+              memories={memoryCandidates}
+              filterValue={memoryFilter}
+              onFilterChange={setMemoryFilter}
+              embedded
+              scopeSelector={{
+                label: 'Scope',
+                value: memoryScope,
+                options: [
+                  {value: 'document', label: 'This scene'},
+                  {value: 'project', label: 'All project'}
+                ],
+                onChange: (value) =>
+                  setMemoryScope(value as 'document' | 'project')
+              }}
+              scopeSummaryLabel={scopeLabel}
+              highlightDocumentId={selectedId}
+              onRefresh={() => void refreshMemories()}
+              pageSize={MEMORIES_PER_PAGE}
+              showDelete
+              onDeleteMemory={(id) => {
+                void handleDeleteMemory(id);
+              }}
+              emptyState={emptyMemoryMessage}
+              renderSourceLabel={(memory) =>
+                memory.projectId === activeProject.id ? 'Local' : 'Parent'
+              }
+              renderMemoryActions={(memory) => {
+                if (
+                  seriesBibleConfig?.parentProjectId &&
+                  memory.projectId === activeProject.id
+                ) {
+                  return (
+                    <button
+                      type='button'
+                      onClick={() => void handlePromoteMemory(memory)}
+                      disabled={isPromotingMemoryId === memory.id}
+                      style={{fontSize: '0.8rem'}}
+                    >
+                      {isPromotingMemoryId === memory.id
+                        ? 'Promoting...'
+                        : 'Promote'}
+                    </button>
+                  );
+                }
+                return null;
+              }}
+            />
+          )}
+        </div>
       )}
     </>
   );
@@ -3871,76 +4394,111 @@ function WorkspaceRoute({activeProject, projectSettings: initialProjectSettings 
         </div>
       )}
 
-      <div style={{marginBottom: '1rem'}}>
+      <div className={styles.sceneActionsCard}>
         <button
           type='button'
-          onClick={handleNewDocument}
-          disabled={isCreatingScene}
+          className={styles.contextSectionToggle}
+          onClick={() => setSceneActionsOpen((prev) => !prev)}
+          aria-expanded={isSceneActionsOpen}
         >
-          {isCreatingScene ? 'Creating...' : '+ New Scene'}
+          <div className={styles.contextSectionHeader}>
+            <div>
+              <strong>Scene Actions</strong>
+              <p className={styles.scenePresenceIntro}>
+                Create scenes, import drafts, and export the current project from one place.
+              </p>
+            </div>
+            <div className={styles.contextSectionMeta}>
+              <span className={styles.scenePresenceCount}>
+                {documents.length} scene{documents.length === 1 ? '' : 's'}
+              </span>
+              <span className={styles.contextSectionChevron}>
+                {isSceneActionsOpen ? 'Hide' : 'Show'}
+              </span>
+            </div>
+          </div>
         </button>
-        <button
-          type='button'
-          onClick={() => importInputRef.current?.click()}
-          disabled={isImportingDocuments}
-          style={{marginLeft: '0.5rem'}}
-        >
-          {isImportingDocuments ? 'Importing...' : 'Import'}
-        </button>
-        <label className={styles.importModeLabel}>
-          Import mode
-          <select
-            value={importMode}
-            onChange={(event) => setImportMode(event.target.value as ImportMode)}
-            disabled={isImportingDocuments}
-            className={styles.importModeSelect}
-          >
-            <option value='balanced'>Balanced</option>
-            <option value='strict'>Strict</option>
-            <option value='lenient'>Lenient</option>
-          </select>
-        </label>
-        <label className={styles.importToggleLabel}>
-          <input
-            type='checkbox'
-            checked={skipImportSuggestions}
-            disabled={isImportingDocuments}
-            onChange={(event) => setSkipImportSuggestions(event.target.checked)}
-          />
-          Skip consistency suggestions for this import
-        </label>
-        <button
-          type='button'
-          onClick={() => openExportModal('json')}
-          disabled={documents.length === 0}
-          style={{marginLeft: '0.5rem'}}
-        >
-          Export JSON
-        </button>
-        <button
-          type='button'
-          onClick={() => openExportModal('markdown')}
-          disabled={documents.length === 0}
-          style={{marginLeft: '0.5rem'}}
-        >
-          Export MD
-        </button>
-        <button
-          type='button'
-          onClick={() => openExportModal('docx')}
-          disabled={documents.length === 0}
-          style={{marginLeft: '0.5rem'}}
-        >
-          Export DOCX
-        </button>
-        <button
-          type='button'
-          onClick={() => openExportModal('epub')}
-          disabled={documents.length === 0}
-          style={{marginLeft: '0.5rem'}}
-        >
-          Export EPUB
-        </button>
+
+        {isSceneActionsOpen && (
+          <div className={styles.sceneActionsBody}>
+            <div className={styles.sceneActionPrimaryRow}>
+              <button
+                type='button'
+                onClick={handleNewDocument}
+                disabled={isCreatingScene}
+              >
+                {isCreatingScene ? 'Creating...' : '+ New Scene'}
+              </button>
+              <button
+                type='button'
+                onClick={() => importInputRef.current?.click()}
+                disabled={isImportingDocuments}
+              >
+                {isImportingDocuments ? 'Importing...' : 'Import'}
+              </button>
+            </div>
+
+            <div className={styles.sceneActionSettings}>
+              <label className={styles.importModeLabel}>
+                Import mode
+                <select
+                  value={importMode}
+                  onChange={(event) => setImportMode(event.target.value as ImportMode)}
+                  disabled={isImportingDocuments}
+                  className={styles.importModeSelect}
+                >
+                  <option value='balanced'>Balanced</option>
+                  <option value='strict'>Strict</option>
+                  <option value='lenient'>Lenient</option>
+                </select>
+              </label>
+              <label className={styles.importToggleLabel}>
+                <input
+                  type='checkbox'
+                  checked={skipImportSuggestions}
+                  disabled={isImportingDocuments}
+                  onChange={(event) => setSkipImportSuggestions(event.target.checked)}
+                />
+                Skip consistency suggestions for this import
+              </label>
+            </div>
+
+            <div className={styles.sceneExportSection}>
+              <div className={styles.sceneExportLabel}>Export project</div>
+              <div className={styles.sceneExportGrid}>
+                <button
+                  type='button'
+                  onClick={() => openExportModal('json')}
+                  disabled={documents.length === 0}
+                >
+                  JSON
+                </button>
+                <button
+                  type='button'
+                  onClick={() => openExportModal('markdown')}
+                  disabled={documents.length === 0}
+                >
+                  Markdown
+                </button>
+                <button
+                  type='button'
+                  onClick={() => openExportModal('docx')}
+                  disabled={documents.length === 0}
+                >
+                  DOCX
+                </button>
+                <button
+                  type='button'
+                  onClick={() => openExportModal('epub')}
+                  disabled={documents.length === 0}
+                >
+                  EPUB
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         <input
           ref={importInputRef}
           type='file'
