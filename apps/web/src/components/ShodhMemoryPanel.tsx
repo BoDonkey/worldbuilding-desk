@@ -13,6 +13,8 @@ interface ShodhMemoryPanelProps {
   memories: MemoryEntry[];
   filterValue: string;
   onFilterChange: (value: string) => void;
+  activeFilterLabel?: string | null;
+  onClearFilter?: () => void;
   scopeSelector?: ScopeSelectorProps;
   scopeSummaryLabel?: string;
   highlightDocumentId?: string | null;
@@ -21,6 +23,7 @@ interface ShodhMemoryPanelProps {
   showDelete?: boolean;
   onDeleteMemory?: (id: string) => void;
   emptyState?: string;
+  renderMemoryBadges?: (memory: MemoryEntry) => React.ReactNode;
   renderSourceLabel?: (memory: MemoryEntry) => React.ReactNode;
   renderMemoryActions?: (memory: MemoryEntry) => React.ReactNode;
   embedded?: boolean;
@@ -31,6 +34,8 @@ export const ShodhMemoryPanel: React.FC<ShodhMemoryPanelProps> = ({
   memories,
   filterValue,
   onFilterChange,
+  activeFilterLabel,
+  onClearFilter,
   scopeSelector,
   scopeSummaryLabel,
   highlightDocumentId,
@@ -39,6 +44,7 @@ export const ShodhMemoryPanel: React.FC<ShodhMemoryPanelProps> = ({
   showDelete = false,
   onDeleteMemory,
   emptyState = 'No memories captured yet.',
+  renderMemoryBadges,
   renderSourceLabel,
   renderMemoryActions,
   embedded = false
@@ -139,6 +145,36 @@ export const ShodhMemoryPanel: React.FC<ShodhMemoryPanelProps> = ({
           )}
         </div>
       </div>
+      {activeFilterLabel && onClearFilter && (
+        <div
+          style={{
+            marginTop: '0.55rem',
+            display: 'flex',
+            flexWrap: 'wrap',
+            gap: '0.45rem',
+            alignItems: 'center'
+          }}
+        >
+          <span
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.35rem',
+              padding: '0.22rem 0.55rem',
+              borderRadius: '999px',
+              background: 'color-mix(in srgb, var(--badge-info-bg) 78%, var(--surface-panel-elevated) 22%)',
+              color: 'var(--badge-info-text)',
+              fontSize: '0.76rem',
+              fontWeight: 700
+            }}
+          >
+            Filtered by {activeFilterLabel}
+          </span>
+          <button type='button' onClick={onClearFilter} style={{fontSize: '0.8rem'}}>
+            Clear filter
+          </button>
+        </div>
+      )}
       {effectivePageSize && (
         <div
           style={{
@@ -218,6 +254,9 @@ export const ShodhMemoryPanel: React.FC<ShodhMemoryPanelProps> = ({
                 <p style={{margin: '0.25rem 0', whiteSpace: 'pre-wrap'}}>
                   {memory.summary}
                 </p>
+                {renderMemoryBadges && (
+                  <div style={{marginBottom: '0.35rem'}}>{renderMemoryBadges(memory)}</div>
+                )}
                 <small style={{color: 'var(--color-text-secondary)'}}>
                   {new Date(memory.createdAt).toLocaleString()}
                   {memory.tags?.length ? ` · ${memory.tags.join(', ')}` : ''}

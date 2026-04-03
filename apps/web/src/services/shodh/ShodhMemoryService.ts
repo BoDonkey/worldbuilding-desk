@@ -11,12 +11,19 @@ interface MemoryDB extends DBSchema {
   };
 }
 
+export interface MemoryEntityHint {
+  id: string;
+  name: string;
+  type: 'character' | 'entity';
+}
+
 export interface MemoryEntry {
   id: string;
   projectId: string;
   documentId: string;
   title: string;
   summary: string;
+  kind?: 'manual' | 'scene-recall' | 'open-loop' | 'canon-fact';
   tags?: string[];
   createdAt: number;
 }
@@ -33,6 +40,7 @@ export interface ShodhMemoryProvider {
     title: string;
     content: string;
     tags?: string[];
+    knownEntities?: MemoryEntityHint[];
   }): Promise<void>;
 }
 
@@ -85,31 +93,246 @@ export class ShodhMemoryService implements ShodhMemoryProvider {
     title: string;
     content: string;
     tags?: string[];
+    knownEntities?: MemoryEntityHint[];
   }): Promise<void> {
-    await this.deleteMemoriesForDocument(params.documentId);
-    const summary = this.generateSummary(params.content);
+    await this.deleteAutoMemoriesForDocument(params.documentId);
+    const memories = this.generateAutoMemories(params);
 
-    if (summary.length === 0) {
+    if (memories.length === 0) {
       return;
     }
 
-    await this.addMemory({
-      projectId: params.projectId,
-      documentId: params.documentId,
-      title: params.title,
-      summary,
-      tags: params.tags
-    });
+    for (const memory of memories) {
+      await this.addMemory(memory);
+    }
   }
 
-  private generateSummary(content: string): string {
-    const plain = content
+  private async deleteAutoMemoriesForDocument(documentId: string): Promise<void> {
+    const db = this.requireDb();
+    const tx = db.transaction('memories', 'readwrite');
+    const index = tx.store.index('by-document');
+    let cursor = await index.openCursor(IDBKeyRange.only(documentId));
+    while (cursor) {
+      const value = cursor.value;
+      if ((value.tags ?? []).includes('auto-memory')) {
+        await cursor.delete();
+      }
+      cursor = await cursor.continue();
+    }
+    await tx.done;
+  }
+
+  private generateAutoMemories(params: {
+    projectId: string;
+    documentId: string;
+    title: string;
+    content: string;
+    tags?: string[];
+    knownEntities?: MemoryEntityHint[];
+  }): Array<Omit<MemoryEntry, 'id' | 'createdAt'> & {id?: string; createdAt?: number}> {
+    const plain = params.content
       .replace(/<br\s*\/?>/gi, '\n')
       .replace(/<[^>]+>/g, ' ')
       .replace(/\s+/g, ' ')
       .trim();
+    if (!plain) {
+      return [];
+    }
 
-    return plain.slice(0, 500);
+    const baseTags = Array.from(new Set([...(params.tags ?? []), 'auto-memory']));
+    const sentences = plain
+      .split(/(?<=[.!?])\s+/)
+      .map((sentence) => sentence.trim())
+      .filter(Boolean);
+
+    const entityHints = this.prepareEntityHints(params.knownEntities ?? []);
+    const summary = this.generateSummary(sentences, entityHints);
+    const openLoop = this.extractOpenLoop(sentences, entityHints);
+    const canonFact = this.extractCanonFact(sentences, entityHints);
+    const records: Array<
+      Omit<MemoryEntry, 'id' | 'createdAt'> & {id?: string; createdAt?: number}
+    > = [];
+
+    if (summary) {
+      const summaryEntityTags = this.buildEntityTags(summary, entityHints);
+      records.push({
+        projectId: params.projectId,
+        documentId: params.documentId,
+        title: `${params.title} · Scene snapshot`,
+        summary,
+        kind: (params.tags ?? []).includes('ruleset') ? 'canon-fact' : 'scene-recall',
+        tags: [...baseTags, 'scene-recall', ...summaryEntityTags]
+      });
+    }
+
+    if (openLoop) {
+      const openLoopEntityTags = this.buildEntityTags(openLoop, entityHints);
+      records.push({
+        projectId: params.projectId,
+        documentId: params.documentId,
+        title: `${params.title} · Open loop`,
+        summary: openLoop,
+        kind: 'open-loop',
+        tags: [...baseTags, 'open-loop', ...openLoopEntityTags]
+      });
+    }
+
+    if (canonFact && !(params.tags ?? []).includes('ruleset')) {
+      const canonFactEntityTags = this.buildEntityTags(canonFact, entityHints);
+      records.push({
+        projectId: params.projectId,
+        documentId: params.documentId,
+        title: `${params.title} · Canon fact`,
+        summary: canonFact,
+        kind: 'canon-fact',
+        tags: [...baseTags, 'canon-fact', ...canonFactEntityTags]
+      });
+    }
+
+    return records;
+  }
+
+  private prepareEntityHints(hints: MemoryEntityHint[]): Array<
+    MemoryEntityHint & {normalizedName: string}
+  > {
+    const seen = new Set<string>();
+    return hints
+      .map((hint) => ({
+        ...hint,
+        normalizedName: this.normalizeText(hint.name)
+      }))
+      .filter((hint) => {
+        if (!hint.normalizedName) return false;
+        const key = `${hint.type}:${hint.id}:${hint.normalizedName}`;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+  }
+
+  private normalizeText(input: string): string {
+    return input
+      .trim()
+      .toLowerCase()
+      .replace(/[^\w\s'-]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  private countEntityMatches(
+    sentence: string,
+    entityHints: Array<MemoryEntityHint & {normalizedName: string}>
+  ): number {
+    const normalizedSentence = this.normalizeText(sentence);
+    if (!normalizedSentence) return 0;
+    return entityHints.reduce((count, hint) => {
+      const pattern = new RegExp(
+        `(?:^|\\s)${hint.normalizedName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?=$|\\s)`,
+        'g'
+      );
+      return count + Array.from(normalizedSentence.matchAll(pattern)).length;
+    }, 0);
+  }
+
+  private buildEntityTags(
+    sentence: string,
+    entityHints: Array<MemoryEntityHint & {normalizedName: string}>
+  ): string[] {
+    const normalizedSentence = this.normalizeText(sentence);
+    if (!normalizedSentence) return [];
+    return entityHints
+      .filter((hint) => {
+        const pattern = new RegExp(
+          `(?:^|\\s)${hint.normalizedName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?=$|\\s)`
+        );
+        return pattern.test(normalizedSentence);
+      })
+      .slice(0, 2)
+      .map((hint) => `entity:${hint.id}`);
+  }
+
+  private sentenceScore(
+    sentence: string,
+    entityHints: Array<MemoryEntityHint & {normalizedName: string}>,
+    signalPattern?: RegExp,
+    penaltyPattern?: RegExp
+  ): number {
+    let score = this.countEntityMatches(sentence, entityHints) * 4;
+    if (signalPattern?.test(sentence)) score += 3;
+    if (penaltyPattern?.test(sentence)) score -= 2;
+    return score;
+  }
+
+  private generateSummary(
+    sentences: string[],
+    entityHints: Array<MemoryEntityHint & {normalizedName: string}>
+  ): string {
+    const ranked = [...sentences]
+      .map((sentence, index) => ({
+        sentence,
+        index,
+        score: this.sentenceScore(
+          sentence,
+          entityHints,
+          /\b(is|are|was|were|has|have|holds|carries|stands|waits|moves|arrives|leaves|fights|speaks)\b/i
+        )
+      }))
+      .sort((left, right) => {
+        if (right.score !== left.score) {
+          return right.score - left.score;
+        }
+        return left.index - right.index;
+      })
+      .slice(0, 2)
+      .sort((left, right) => left.index - right.index);
+    const summary = ranked.map((entry) => entry.sentence).join(' ').trim();
+    return summary.slice(0, 320);
+  }
+
+  private extractOpenLoop(
+    sentences: string[],
+    entityHints: Array<MemoryEntityHint & {normalizedName: string}>
+  ): string {
+    const candidate = [...sentences]
+      .map((sentence) => ({
+        sentence,
+        score: this.sentenceScore(
+          sentence,
+          entityHints,
+          /\b(must|need|needs|plan|plans|planned|promise|promised|will|later|tomorrow|before|after|if|when|until|quest|goal)\b/i
+        )
+      }))
+      .filter((entry) =>
+        /\b(must|need|needs|plan|plans|planned|promise|promised|will|later|tomorrow|before|after|if|when|until|quest|goal)\b/i.test(
+          entry.sentence
+        )
+      )
+      .sort((left, right) => right.score - left.score)[0];
+    return candidate ? candidate.sentence.slice(0, 280) : '';
+  }
+
+  private extractCanonFact(
+    sentences: string[],
+    entityHints: Array<MemoryEntityHint & {normalizedName: string}>
+  ): string {
+    const candidate = [...sentences]
+      .map((sentence) => ({
+        sentence,
+        score: this.sentenceScore(
+          sentence,
+          entityHints,
+          /\b(is|are|was|were|has|have|holds|carries|belongs|serves|rules|lives|located|called|known as)\b/i,
+          /\b(must|need|will|later|tomorrow|if|when|until)\b/i
+        )
+      }))
+      .filter((entry) =>
+        /\b(is|are|was|were|has|have|holds|carries|belongs|serves|rules|lives|located|called|known as)\b/i.test(
+          entry.sentence
+        ) &&
+        !/\b(must|need|will|later|tomorrow|if|when|until)\b/i.test(entry.sentence)
+      )
+      .sort((left, right) => right.score - left.score)[0];
+    return candidate ? candidate.sentence.slice(0, 280) : '';
   }
 
   private requireDb(): IDBPDatabase<MemoryDB> {

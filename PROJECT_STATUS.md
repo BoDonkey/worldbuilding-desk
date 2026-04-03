@@ -1,6 +1,6 @@
 # Worldbuilding-Desk Project Status
 
-**Last Updated:** March 29, 2026
+**Last Updated:** April 3, 2026
 
 ## Project Overview
 
@@ -69,15 +69,25 @@ A comprehensive desktop application for LitRPG/GameLit authors that bridges narr
 - Navigation system.
 - Split editor/AI panel layout.
 - Workspace command palette, drawer shell, system history, and lore inspector.
+- Workspace context rail upgrades:
+  - collapsible `Scene Actions`, `In This Scene`, and `Canon Memories` cards
+  - scene entity badges, compact scorecards, temporary tracked entities, and related-memory jumps
+  - grouped canon-memory highlights (`Local canon`, `Parent canon`, `Scene recall`, `Recent changes`)
+  - memory entity badges with click-to-filter behavior
 - Import modes (`strict`, `balanced`, `lenient`) with deferred review for imported scenes.
 - Inline consistency review highlights + action popovers.
 - Inline lore highlights + quick lore popovers for known entities/characters.
+- Selection bubble with AI, critique, lore, and review shortcuts for highlighted text.
 - Review queue for unresolved entities with create/link/dismiss actions, queue persistence, and highlight-to-review flow.
 - Alias visibility in World Bible and alias-aware linking in workspace review.
 - Optional compendium seeding from review-created World Bible records.
 - Draft record visibility in Workspace and Compendium flows.
 - Editor appearance controls for reading width, editor surface, serif/sans/mono presentation, and line spacing.
 - Sticky editor toolbar with stabilized long-document behavior.
+- Editor slash-command workflow:
+  - `/character`, `/item`, `/memory`, `/system`, `/stat-block`
+  - command-first parsing with `/command query` behavior
+  - context-aware ranking using active/pinned scene entities and related memory tags
 - Softened theme system for buttons, cards, badges, and modal surfaces.
 - Shared import/export preview flows for scene and compendium JSON portability.
 - Project-scoped scratchpad popover for freeform note capture from any route.
@@ -161,6 +171,41 @@ npx tsx examples/basic-usage.ts
 ---
 
 ## Recent Changes & Fixes
+
+### Workspace Context Loop + Slash Commands (April 3, 2026)
+- Finished a substantial workspace context pass:
+  - added collapsible side-rail cards for `In This Scene` and `Canon Memories`
+  - added a matching collapsible `Scene Actions` card in the left rail
+  - made rail cards collapsed by default for lower-noise writing sessions
+- Built a more coherent scene-state workflow:
+  - scene-presence badges for characters/items/locations
+  - compact scorecards with pinning for currently tracked entities
+  - direct `Related memories` jump from selected scene entity into filtered canon memories
+- Reworked canon memory relevance:
+  - manual memories are preserved instead of being overwritten by auto-capture
+  - auto-capture now emits typed records such as `Scene snapshot`, `Open loop`, and `Canon fact`
+  - right rail groups highlights into `Local canon`, `Parent canon`, `Scene recall`, and `Recent changes`
+  - extracted memories now use entity-aware scoring and carry `entity:<id>` tags when possible
+  - memory cards show clickable entity badges and support temporary entity filtering
+- Added editor discovery/help affordances:
+  - `Writing Shortcuts` modal on `Cmd/Ctrl+/`
+  - command-palette entry for the same modal
+- Shipped first slash-command support in the workspace editor:
+  - `/character`, `/item`, `/memory`, `/system`, and `/stat-block`
+  - slash flow now supports command-style parsing (`/command query`) instead of only a flat insert search
+  - `/system` now favors useful quest/resource/status updates rather than consistency-review noise
+- Closed several UX bugs during the pass:
+  - dismissed review highlights now stay dismissed across later review updates
+  - scratchpad content now scrolls correctly
+  - writing-shortcuts modal is available without needing to clear review state first
+
+**Immediate Next Slice**
+- Dogfood the new slash workflow and decide whether exact command matches should auto-advance without `Enter`.
+- Strongest nearby follow-up candidates:
+  - slash-menu UX polish (section headers, previews, exact-match behavior)
+  - richer lore/compendium inline actions from popovers
+  - corkboard dogfooding based on real outlining sessions
+  - portability/versioning hardening once current workspace UX settles
 
 ### Corkboard Planning Workspace + AI/UX Pass (March 29, 2026)
 - Completed the first real corkboard implementation after the scratchpad groundwork:

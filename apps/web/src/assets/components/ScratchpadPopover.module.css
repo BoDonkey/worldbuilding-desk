@@ -1,10 +1,14 @@
 .popover {
   width: min(720px, calc(100vw - 2rem));
   max-height: min(82vh, 760px);
+  display: flex;
+  flex-direction: column;
 }
 
 .body {
   min-height: 0;
+  flex: 1 1 auto;
+  overflow: hidden;
 }
 
 .metaRow {
@@ -23,4 +27,15 @@
   margin: 0;
   color: var(--color-text-secondary);
   line-height: 1.55;
+}
+
+.editorShell {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 0.2rem;
+}
+
+.editorShell :global(.tiptap-wrapper) {
+  min-height: 100%;
 }

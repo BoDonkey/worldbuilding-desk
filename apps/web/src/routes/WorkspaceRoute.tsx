@@ -401,6 +401,7 @@ interface PersistedWorkspaceReviewState {
   isReviewQueueOpen: boolean;
   guardrailIssues: GuardrailIssue[];
   unknownDraftEdits: Record<string, UnknownReviewDraft>;
+  dismissedUnknownSurfaces?: string[];
 }
 
 interface UnknownReviewDraft {
@@ -438,6 +439,7 @@ interface ScenePresenceItem {
   type: 'character' | 'entity';
   kind: ScenePresenceKind;
   name: string;
+  memoryEntityTag: string | null;
   mentionCount: number;
   matchedLabels: string[];
   lore: LoreInspectorRecord;
@@ -682,6 +684,7 @@ function WorkspaceRoute({activeProject, projectSettings: initialProjectSettings 
     'document'
   );
   const [memoryFilter, setMemoryFilter] = useState('');
+  const [activeMemoryEntityTag, setActiveMemoryEntityTag] = useState<string | null>(null);
   const MEMORIES_PER_PAGE = 5;
   const seriesBibleConfig = activeProject
     ? getSeriesBibleConfig(activeProject)
@@ -705,6 +708,7 @@ function WorkspaceRoute({activeProject, projectSettings: initialProjectSettings 
   const [unknownDraftEdits, setUnknownDraftEdits] = useState<
     Record<string, UnknownReviewDraft>
   >({});
+  const [dismissedUnknownSurfaces, setDismissedUnknownSurfaces] = useState<string[]>([]);
   const [isReviewQueueOpen, setReviewQueueOpen] = useState(false);
   const [isRunningConsistencyReview, setIsRunningConsistencyReview] = useState(false);
   const [consistencyReviewItems, setConsistencyReviewItems] = useState<
@@ -749,9 +753,9 @@ function WorkspaceRoute({activeProject, projectSettings: initialProjectSettings 
     useState<ContextDrawerView>('world-bible');
   const [activeScenePresenceKey, setActiveScenePresenceKey] = useState<string | null>(null);
   const [pinnedScenePresenceKeys, setPinnedScenePresenceKeys] = useState<string[]>([]);
-  const [isScenePresenceOpen, setScenePresenceOpen] = useState(true);
-  const [isMemoryPanelOpen, setMemoryPanelOpen] = useState(true);
-  const [isSceneActionsOpen, setSceneActionsOpen] = useState(true);
+  const [isScenePresenceOpen, setScenePresenceOpen] = useState(false);
+  const [isMemoryPanelOpen, setMemoryPanelOpen] = useState(false);
+  const [isSceneActionsOpen, setSceneActionsOpen] = useState(false);
   const [isNarrowViewport, setNarrowViewport] = useState(() =>
     typeof window !== 'undefined'
       ? window.matchMedia('(max-width: 1200px)').matches
@@ -1127,16 +1131,25 @@ function WorkspaceRoute({activeProject, projectSettings: initialProjectSettings 
       if (!raw) {
         setGuardrailIssues([]);
         setUnknownDraftEdits({});
+        setDismissedUnknownSurfaces([]);
         setReviewQueueOpen(false);
         return;
       }
       const parsed = JSON.parse(raw) as Partial<PersistedWorkspaceReviewState>;
       setGuardrailIssues(Array.isArray(parsed.guardrailIssues) ? parsed.guardrailIssues : []);
       setUnknownDraftEdits(parsed.unknownDraftEdits ?? {});
+      setDismissedUnknownSurfaces(
+        Array.isArray(parsed.dismissedUnknownSurfaces)
+          ? parsed.dismissedUnknownSurfaces.filter(
+              (value): value is string => typeof value === 'string'
+            )
+          : []
+      );
       setReviewQueueOpen(Boolean(parsed.isReviewQueueOpen));
     } catch {
       setGuardrailIssues([]);
       setUnknownDraftEdits({});
+      setDismissedUnknownSurfaces([]);
       setReviewQueueOpen(false);
     } finally {
       setReviewStateHydrated(true);
@@ -1149,7 +1162,8 @@ function WorkspaceRoute({activeProject, projectSettings: initialProjectSettings 
       documentId: selectedId,
       isReviewQueueOpen,
       guardrailIssues,
-      unknownDraftEdits
+      unknownDraftEdits,
+      dismissedUnknownSurfaces
     };
     localStorage.setItem(
       getWorkspaceReviewStorageKey(activeProject.id),
@@ -1157,6 +1171,7 @@ function WorkspaceRoute({activeProject, projectSettings: initialProjectSettings 
     );
   }, [
     activeProject,
+    dismissedUnknownSurfaces,
     guardrailIssues,
     isReviewQueueOpen,
     isReviewStateHydrated,
@@ -1444,7 +1459,8 @@ function WorkspaceRoute({activeProject, projectSettings: initialProjectSettings 
           documentId: doc.id,
           title: doc.title || 'Untitled scene',
           content: doc.content,
-          tags: ['scene']
+          tags: ['scene'],
+          knownEntities: knownConsistencyEntities
         });
         await refreshMemories();
       }
@@ -1845,7 +1861,7 @@ function WorkspaceRoute({activeProject, projectSettings: initialProjectSettings 
     }
   };
 
-  const handleSelectDocument = (doc: WritingDocument) => {
+  const handleSelectDocument = useCallback((doc: WritingDocument) => {
     setSelectedId(doc.id);
     setSelectedCreatedAt(doc.createdAt);
     setTitle(doc.title);
@@ -1860,7 +1876,7 @@ function WorkspaceRoute({activeProject, projectSettings: initialProjectSettings 
     } else {
       setGuardrailIssues([]);
     }
-  };
+  }, [refreshDeferredReview]);
 
   const handleRunConsistencyReview = useCallback(async () => {
     if (!activeProject) return;
@@ -2169,17 +2185,18 @@ function WorkspaceRoute({activeProject, projectSettings: initialProjectSettings 
 
   const unknownGuardrailIssues = useMemo(() => {
     const seen = new Set<string>();
+    const dismissed = new Set(dismissedUnknownSurfaces);
     return guardrailIssues
       .filter((issue) => issue.code === 'UNKNOWN_ENTITY' && Boolean(issue.surface))
       .filter((issue) => {
         const key = (issue.surface ?? '').trim().toLowerCase();
-        if (!key || seen.has(key)) {
+        if (!key || seen.has(key) || dismissed.has(key)) {
           return false;
         }
         seen.add(key);
         return true;
       });
-  }, [guardrailIssues]);
+  }, [dismissedUnknownSurfaces, guardrailIssues]);
 
   const hasBlockingUnknownGuardrailIssues = useMemo(
     () => unknownGuardrailIssues.some((issue) => issue.severity === 'blocking'),
@@ -2308,6 +2325,18 @@ function WorkspaceRoute({activeProject, projectSettings: initialProjectSettings 
   }, [unknownGuardrailIssues]);
 
   useEffect(() => {
+    const currentUnknownKeys = new Set(
+      guardrailIssues
+        .filter((issue) => issue.code === 'UNKNOWN_ENTITY' && Boolean(issue.surface))
+        .map((issue) => normalizeUnknownKey(issue.surface ?? ''))
+        .filter(Boolean)
+    );
+    setDismissedUnknownSurfaces((prev) =>
+      prev.filter((key) => currentUnknownKeys.has(key))
+    );
+  }, [guardrailIssues]);
+
+  useEffect(() => {
     if (consistencyReviewItems.length > 0) {
       setConsistencyPanelOpen(true);
     }
@@ -2375,6 +2404,10 @@ function WorkspaceRoute({activeProject, projectSettings: initialProjectSettings 
         }
       ];
     });
+
+    setDismissedUnknownSurfaces((prev) =>
+      prev.filter((entry) => entry !== key)
+    );
 
     setUnknownDraftEdits((prev) => ({
       ...prev,
@@ -2553,6 +2586,9 @@ function WorkspaceRoute({activeProject, projectSettings: initialProjectSettings 
   const dismissUnknownEntity = useCallback((surface: string) => {
     const normalized = normalizeUnknownKey(surface);
     if (!normalized) return;
+    setDismissedUnknownSurfaces((prev) =>
+      prev.includes(normalized) ? prev : [...prev, normalized]
+    );
     clearUnknownSurfaceState(surface);
   }, [clearUnknownSurfaceState]);
 
@@ -3122,6 +3158,7 @@ function WorkspaceRoute({activeProject, projectSettings: initialProjectSettings 
         type: 'character',
         kind: 'character',
         name: sheet.name,
+        memoryEntityTag: character?.id ? `entity:${character.id}` : null,
         mentionCount: Math.max(
           ...matchedLabels.map((label) => countSceneMentions(normalizedSceneText, label))
         ),
@@ -3225,6 +3262,7 @@ function WorkspaceRoute({activeProject, projectSettings: initialProjectSettings 
         type: 'entity',
         kind: inferScenePresenceKind(entity, categoryNameById),
         name: entity.name,
+        memoryEntityTag: `entity:${entity.id}`,
         mentionCount: Math.max(
           ...matchedLabels.map((label) => countSceneMentions(normalizedSceneText, label))
         ),
@@ -3285,6 +3323,24 @@ function WorkspaceRoute({activeProject, projectSettings: initialProjectSettings 
     pinnedScenePresence[0] ??
     scenePresence[0] ??
     null;
+  const preferredSlashEntityNames = useMemo(
+    () =>
+      [
+        activeScenePresence?.name ?? null,
+        ...pinnedScenePresence.map((item) => item.name),
+        ...scenePresence.slice(0, 4).map((item) => item.name)
+      ].filter((value, index, array): value is string => Boolean(value) && array.indexOf(value) === index),
+    [activeScenePresence?.name, pinnedScenePresence, scenePresence]
+  );
+  const preferredSlashMemoryTags = useMemo(
+    () =>
+      [
+        activeScenePresence?.memoryEntityTag ?? null,
+        ...pinnedScenePresence.map((item) => item.memoryEntityTag),
+        ...scenePresence.slice(0, 4).map((item) => item.memoryEntityTag)
+      ].filter((value, index, array): value is string => Boolean(value) && array.indexOf(value) === index),
+    [activeScenePresence?.memoryEntityTag, pinnedScenePresence, scenePresence]
+  );
 
   useEffect(() => {
     setPinnedScenePresenceKeys((prev) =>
@@ -3536,17 +3592,138 @@ function WorkspaceRoute({activeProject, projectSettings: initialProjectSettings 
         normalizeUnknownKey(activeConsistencyPopoverIssue.surface)
       ) ?? null
     : null;
-  const selectedDocumentMemories = selectedId
-    ? memories.filter((memory) => memory.documentId === selectedId)
-    : [];
+  const selectedDocumentMemories = useMemo(
+    () =>
+      selectedId
+        ? memories.filter((memory) => memory.documentId === selectedId)
+        : [],
+    [memories, selectedId]
+  );
   const memoryCandidates =
     memoryScope === 'document' ? selectedDocumentMemories : memories;
+  const filteredMemoryCandidates = useMemo(
+    () =>
+      activeMemoryEntityTag
+        ? memoryCandidates.filter((memory) =>
+            (memory.tags ?? []).includes(activeMemoryEntityTag)
+          )
+        : memoryCandidates,
+    [activeMemoryEntityTag, memoryCandidates]
+  );
   const scopeLabel =
     memoryScope === 'document' ? 'this scene' : 'the project';
   const emptyMemoryMessage =
     memoryScope === 'document'
       ? 'No memories captured for this scene yet.'
       : 'Project memories will appear here as you capture them.';
+  const stableCanonMemories = useMemo(
+    () => {
+      if (!activeProject) {
+        return [];
+      }
+      return (
+      memoryCandidates
+        .filter((memory) => {
+          const tags = new Set(memory.tags ?? []);
+          if (memory.projectId !== activeProject.id) return true;
+          if (tags.has('promoted-from-child') || tags.has('ruleset')) return true;
+          if (memory.kind === 'manual' || memory.kind === 'canon-fact') {
+            return memoryScope === 'project' || memory.documentId !== selectedId;
+          }
+          return false;
+        })
+        .slice(0, 4)
+      );
+    },
+    [activeProject, memoryCandidates, memoryScope, selectedId]
+  );
+  const parentCanonMemories = useMemo(
+    () => stableCanonMemories.filter((memory) => memory.projectId !== activeProject?.id).slice(0, 3),
+    [activeProject?.id, stableCanonMemories]
+  );
+  const localCanonMemories = useMemo(
+    () => stableCanonMemories.filter((memory) => memory.projectId === activeProject?.id).slice(0, 3),
+    [activeProject?.id, stableCanonMemories]
+  );
+  const sceneRecallMemories = useMemo(
+    () =>
+      selectedDocumentMemories
+        .filter((memory) =>
+          memory.kind === 'manual' ||
+          memory.kind === 'scene-recall' ||
+          memory.kind === 'open-loop' ||
+          (memory.tags ?? []).includes('scene')
+        )
+        .slice(0, 4),
+    [selectedDocumentMemories]
+  );
+  const recentMemoryChanges = useMemo(
+    () =>
+      systemHistoryEntries
+        .filter((entry) => !entry.sceneId || entry.sceneId === selectedId)
+        .filter((entry) => entry.category !== 'scene')
+        .slice(0, 4),
+    [selectedId, systemHistoryEntries]
+  );
+  const memoryEntityNameByTag = useMemo(() => {
+    const map = new Map<string, string>();
+    knownConsistencyEntities.forEach((entity) => {
+      const key = `entity:${entity.id}`;
+      if (!map.has(key)) {
+        map.set(key, entity.name);
+      }
+    });
+    return map;
+  }, [knownConsistencyEntities]);
+  const activeMemoryFilterLabel =
+    activeMemoryEntityTag ? memoryEntityNameByTag.get(activeMemoryEntityTag) ?? null : null;
+  const activeScenePresenceMemoryCount =
+    activeScenePresence?.memoryEntityTag
+      ? memoryCandidates.filter((memory) =>
+          (memory.tags ?? []).includes(activeScenePresence.memoryEntityTag as string)
+        ).length
+      : 0;
+
+  const renderMemoryEntityBadges = useCallback(
+    (memory: MemoryEntry) => {
+      const entityTags = (memory.tags ?? []).filter((tag) => tag.startsWith('entity:'));
+      if (entityTags.length === 0) {
+        return null;
+      }
+      return (
+        <div className={styles.memoryEntityBadgeRow}>
+          {entityTags.map((tag) => (
+            <button
+              key={tag}
+              type='button'
+              className={`${styles.memoryEntityBadge} ${
+                activeMemoryEntityTag === tag ? styles.memoryEntityBadgeActive : ''
+              }`}
+              onClick={() => setActiveMemoryEntityTag(tag)}
+            >
+              {memoryEntityNameByTag.get(tag) ?? tag.replace('entity:', '')}
+            </button>
+          ))}
+        </div>
+      );
+    },
+    [activeMemoryEntityTag, memoryEntityNameByTag]
+  );
+
+  const openMemorySourceScene = useCallback(
+    (memory: MemoryEntry) => {
+      const doc = documents.find((entry) => entry.id === memory.documentId);
+      if (doc) {
+        handleSelectDocument(doc);
+        return;
+      }
+      setFeedback({
+        tone: 'error',
+        message: 'Could not open the source scene for this memory.'
+      });
+    },
+    [documents, handleSelectDocument]
+  );
 
   const openMemoryModal = useCallback(() => {
     if (!selectedDocument) return;
@@ -3708,6 +3885,7 @@ function WorkspaceRoute({activeProject, projectSettings: initialProjectSettings 
         documentId: selectedDocument.id,
         title: selectedDocument.title || 'Untitled scene',
         summary: memoryDraft.trim(),
+        kind: 'manual',
         tags: ['scene', 'manual']
       });
 
@@ -4168,16 +4346,31 @@ function WorkspaceRoute({activeProject, projectSettings: initialProjectSettings 
                         <span>
                           Matched as {activeScenePresence.matchedLabels.slice(0, 2).join(', ')}
                         </span>
-                        <button
-                          type='button'
-                          onClick={() =>
-                            activeScenePresence.type === 'character'
-                              ? navigate('/characters')
-                              : navigate('/world-bible')
-                          }
-                        >
-                          Open record
-                        </button>
+                        <div className={styles.sceneScorecardFooterActions}>
+                          {activeScenePresence.memoryEntityTag && (
+                            <button
+                              type='button'
+                              onClick={() => {
+                                setActiveMemoryEntityTag(activeScenePresence.memoryEntityTag);
+                                setMemoryPanelOpen(true);
+                              }}
+                            >
+                              {activeScenePresenceMemoryCount > 0
+                                ? `Related memories (${activeScenePresenceMemoryCount})`
+                                : 'Filter memories'}
+                            </button>
+                          )}
+                          <button
+                            type='button'
+                            onClick={() =>
+                              activeScenePresence.type === 'character'
+                                ? navigate('/characters')
+                                : navigate('/world-bible')
+                            }
+                          >
+                            Open record
+                          </button>
+                        </div>
                       </div>
                     </div>
                   )}
@@ -4214,55 +4407,171 @@ function WorkspaceRoute({activeProject, projectSettings: initialProjectSettings 
             </div>
           </button>
           {isMemoryPanelOpen && (
-            <ShodhMemoryPanel
-              title='Canon memories'
-              memories={memoryCandidates}
-              filterValue={memoryFilter}
-              onFilterChange={setMemoryFilter}
-              embedded
-              scopeSelector={{
-                label: 'Scope',
-                value: memoryScope,
-                options: [
-                  {value: 'document', label: 'This scene'},
-                  {value: 'project', label: 'All project'}
-                ],
-                onChange: (value) =>
-                  setMemoryScope(value as 'document' | 'project')
-              }}
-              scopeSummaryLabel={scopeLabel}
-              highlightDocumentId={selectedId}
-              onRefresh={() => void refreshMemories()}
-              pageSize={MEMORIES_PER_PAGE}
-              showDelete
-              onDeleteMemory={(id) => {
-                void handleDeleteMemory(id);
-              }}
-              emptyState={emptyMemoryMessage}
-              renderSourceLabel={(memory) =>
-                memory.projectId === activeProject.id ? 'Local' : 'Parent'
-              }
-              renderMemoryActions={(memory) => {
-                if (
-                  seriesBibleConfig?.parentProjectId &&
-                  memory.projectId === activeProject.id
-                ) {
-                  return (
-                    <button
-                      type='button'
-                      onClick={() => void handlePromoteMemory(memory)}
-                      disabled={isPromotingMemoryId === memory.id}
-                      style={{fontSize: '0.8rem'}}
-                    >
-                      {isPromotingMemoryId === memory.id
-                        ? 'Promoting...'
-                        : 'Promote'}
-                    </button>
-                  );
+            <>
+              <div className={styles.memoryHighlights}>
+                <section className={styles.memoryHighlightSection}>
+                  <div className={styles.memoryHighlightHeader}>Local canon</div>
+                  {localCanonMemories.length > 0 ? (
+                    <div className={styles.memoryHighlightList}>
+                      {localCanonMemories.map((memory) => (
+                        <article key={memory.id} className={styles.memoryHighlightCard}>
+                          <strong>{memory.title}</strong>
+                          <p>{memory.summary}</p>
+                          {renderMemoryEntityBadges(memory)}
+                          <div className={styles.memoryHighlightActions}>
+                            {documents.some((entry) => entry.id === memory.documentId) && (
+                              <button
+                                type='button'
+                                onClick={() => openMemorySourceScene(memory)}
+                              >
+                                Open scene
+                              </button>
+                            )}
+                          </div>
+                        </article>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className={styles.memoryHighlightEmpty}>
+                      No local canon memories are surfaced yet.
+                    </p>
+                  )}
+                </section>
+
+                <section className={styles.memoryHighlightSection}>
+                  <div className={styles.memoryHighlightHeader}>Parent canon</div>
+                  {parentCanonMemories.length > 0 ? (
+                    <div className={styles.memoryHighlightList}>
+                      {parentCanonMemories.map((memory) => (
+                        <article key={memory.id} className={styles.memoryHighlightCard}>
+                          <strong>{memory.title}</strong>
+                          <p>{memory.summary}</p>
+                          {renderMemoryEntityBadges(memory)}
+                        </article>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className={styles.memoryHighlightEmpty}>
+                      No inherited canon memories are surfaced for this scope.
+                    </p>
+                  )}
+                </section>
+
+                <section className={styles.memoryHighlightSection}>
+                  <div className={styles.memoryHighlightHeader}>Scene recall</div>
+                  {sceneRecallMemories.length > 0 ? (
+                    <div className={styles.memoryHighlightList}>
+                      {sceneRecallMemories.map((memory) => (
+                        <article key={memory.id} className={styles.memoryHighlightCard}>
+                          <strong>{memory.title}</strong>
+                          <p>{memory.summary}</p>
+                          {renderMemoryEntityBadges(memory)}
+                          <div className={styles.memoryHighlightActions}>
+                            {documents.some((entry) => entry.id === memory.documentId) && (
+                              <button
+                                type='button'
+                                onClick={() => openMemorySourceScene(memory)}
+                              >
+                                Open scene
+                              </button>
+                            )}
+                          </div>
+                        </article>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className={styles.memoryHighlightEmpty}>
+                      Save or auto-capture a scene memory to see recall notes here.
+                    </p>
+                  )}
+                </section>
+
+                <section className={styles.memoryHighlightSection}>
+                  <div className={styles.memoryHighlightHeader}>Recent changes</div>
+                  {recentMemoryChanges.length > 0 ? (
+                    <div className={styles.memoryHighlightList}>
+                      {recentMemoryChanges.map((entry) => (
+                        <article key={entry.id} className={styles.memoryHighlightCard}>
+                          <strong>{entry.category}</strong>
+                          <p>{entry.message}</p>
+                        </article>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className={styles.memoryHighlightEmpty}>
+                      No recent system or canon changes for this scope.
+                    </p>
+                  )}
+                </section>
+              </div>
+
+              <ShodhMemoryPanel
+                title='Canon memories'
+                memories={filteredMemoryCandidates}
+                filterValue={memoryFilter}
+                onFilterChange={setMemoryFilter}
+                activeFilterLabel={activeMemoryFilterLabel}
+                onClearFilter={() => setActiveMemoryEntityTag(null)}
+                embedded
+                scopeSelector={{
+                  label: 'Scope',
+                  value: memoryScope,
+                  options: [
+                    {value: 'document', label: 'This scene'},
+                    {value: 'project', label: 'All project'}
+                  ],
+                  onChange: (value) =>
+                    setMemoryScope(value as 'document' | 'project')
+                }}
+                scopeSummaryLabel={scopeLabel}
+                highlightDocumentId={selectedId}
+                onRefresh={() => void refreshMemories()}
+                pageSize={MEMORIES_PER_PAGE}
+                showDelete
+                onDeleteMemory={(id) => {
+                  void handleDeleteMemory(id);
+                }}
+                emptyState={emptyMemoryMessage}
+                renderMemoryBadges={renderMemoryEntityBadges}
+                renderSourceLabel={(memory) =>
+                  memory.projectId === activeProject.id ? 'Local' : 'Parent'
                 }
-                return null;
-              }}
-            />
+                renderMemoryActions={(memory) => {
+                  const actions = [];
+                  if (documents.some((entry) => entry.id === memory.documentId)) {
+                    actions.push(
+                      <button
+                        key='open-scene'
+                        type='button'
+                        onClick={() => openMemorySourceScene(memory)}
+                        style={{fontSize: '0.8rem'}}
+                      >
+                        Open scene
+                      </button>
+                    );
+                  }
+                  if (
+                    seriesBibleConfig?.parentProjectId &&
+                    memory.projectId === activeProject.id
+                  ) {
+                    actions.push(
+                      <button
+                        key='promote'
+                        type='button'
+                        onClick={() => void handlePromoteMemory(memory)}
+                        disabled={isPromotingMemoryId === memory.id}
+                        style={{fontSize: '0.8rem'}}
+                      >
+                        {isPromotingMemoryId === memory.id
+                          ? 'Promoting...'
+                          : 'Promote'}
+                      </button>
+                    );
+                  }
+                  return actions.length > 0 ? actions : null;
+                }}
+              />
+            </>
           )}
         </div>
       )}
@@ -4719,6 +5028,10 @@ function WorkspaceRoute({activeProject, projectSettings: initialProjectSettings 
                   projectMode={projectSettings?.projectMode}
                   textToInsert={statBlockInsertContent}
                   onTextInserted={() => setStatBlockInsertContent(null)}
+                  slashMemoryEntries={filteredMemoryCandidates}
+                  preferredSlashEntityNames={preferredSlashEntityNames}
+                  preferredSlashMemoryTags={preferredSlashMemoryTags}
+                  onOpenStatBlockBuilder={() => setStatBlockModalOpen(true)}
                   onSelectionAddToReview={queueUnknownSurfaceForReview}
                   systemHistoryEntries={systemHistoryEntries}
                   onClearSystemHistory={() => {

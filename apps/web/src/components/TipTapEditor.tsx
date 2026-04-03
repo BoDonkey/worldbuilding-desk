@@ -25,6 +25,8 @@ interface TipTapEditorProps {
   content: string;
   onChange: (content: string) => void;
   onEditorReady?: (editor: Editor) => void;
+  onEditorKeyDown?: (event: KeyboardEvent) => boolean;
+  onEditorTextInput?: (text: string) => void;
   onWordCountChange?: (count: number) => void;
   onConsistencyHighlightClick?: (
     issueId: string,
@@ -195,6 +197,8 @@ function TipTapEditor({
   content = '',
   onChange,
   onEditorReady,
+  onEditorKeyDown,
+  onEditorTextInput,
   onWordCountChange,
   onConsistencyHighlightClick,
   onLoreHighlightClick,
@@ -237,6 +241,21 @@ function TipTapEditor({
     editorProps: {
       attributes: {
         class: 'tiptap-editor'
+      },
+      handleKeyDown(_view, event) {
+        if (!onEditorKeyDown) {
+          return false;
+        }
+        return onEditorKeyDown(event);
+      },
+      handleTextInput(_view, _from, _to, text) {
+        if (!onEditorTextInput) {
+          return false;
+        }
+        window.requestAnimationFrame(() => {
+          onEditorTextInput(text);
+        });
+        return false;
       },
       handleClick(_view, _pos, event) {
         if (!(event.target instanceof HTMLElement)) {

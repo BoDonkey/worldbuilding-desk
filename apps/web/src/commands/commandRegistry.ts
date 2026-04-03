@@ -17,6 +17,7 @@ interface CreateAppCommandsOptions {
   activeProject: Project | null;
   projectSettings: ProjectSettings | null;
   onOpenScratchpad: () => void;
+  onOpenWritingShortcuts: () => void;
 }
 
 export const createAppCommands = ({
@@ -24,7 +25,8 @@ export const createAppCommands = ({
   navigate,
   activeProject,
   projectSettings,
-  onOpenScratchpad
+  onOpenScratchpad,
+  onOpenWritingShortcuts
 }: CreateAppCommandsOptions): AppCommand[] => {
   const showGameSystems =
     !activeProject || projectSettings?.featureToggles.enableGameSystems !== false;
@@ -99,6 +101,14 @@ export const createAppCommands = ({
           section: 'Project',
           keywords: ['scratchpad', 'notes', 'quick notes', 'freeform'],
           run: onOpenScratchpad
+        },
+        {
+          id: 'project-open-writing-shortcuts',
+          label: 'Show Writing Shortcuts',
+          section: 'Project',
+          keywords: ['shortcuts', 'keyboard', 'help', 'slash', 'editor'],
+          shortcut: 'Cmd/Ctrl+/',
+          run: onOpenWritingShortcuts
         }
       ]
     : [];

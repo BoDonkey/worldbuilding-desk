@@ -73,6 +73,7 @@ function AppShell() {
   const [projectSettings, setProjectSettings] = useState<ProjectSettings | null>(null);
   const [isPaletteOpen, setPaletteOpen] = useState(false);
   const [isScratchpadOpen, setScratchpadOpen] = useState(false);
+  const [isWritingShortcutsOpen, setWritingShortcutsOpen] = useState(false);
   const [nativePathname, setNativePathname] = useState<string>(() =>
     typeof window !== 'undefined' ? window.location.pathname : '/'
   );
@@ -204,7 +205,8 @@ function AppShell() {
         navigate,
         activeProject,
         projectSettings,
-        onOpenScratchpad: () => setScratchpadOpen(true)
+        onOpenScratchpad: () => setScratchpadOpen(true),
+        onOpenWritingShortcuts: () => setWritingShortcutsOpen(true)
       }),
     [effectivePathname, navigate, activeProject, projectSettings]
   );
@@ -298,11 +300,21 @@ function AppShell() {
       }
       setScratchpadOpen((prev) => !prev);
     };
+    const onWritingShortcutsKeyDown = (event: KeyboardEvent) => {
+      const isShortcut =
+        (event.metaKey || event.ctrlKey) &&
+        (event.key === '/' || event.key === '?');
+      if (!isShortcut) return;
+      event.preventDefault();
+      setWritingShortcutsOpen((prev) => !prev);
+    };
     window.addEventListener('keydown', onKeyDown);
     window.addEventListener('keydown', onScratchpadKeyDown);
+    window.addEventListener('keydown', onWritingShortcutsKeyDown);
     return () => {
       window.removeEventListener('keydown', onKeyDown);
       window.removeEventListener('keydown', onScratchpadKeyDown);
+      window.removeEventListener('keydown', onWritingShortcutsKeyDown);
     };
   }, [activeProject]);
 
@@ -345,6 +357,69 @@ function AppShell() {
         isOpen={isScratchpadOpen}
         onClose={() => setScratchpadOpen(false)}
       />
+      {isWritingShortcutsOpen && (
+        <div
+          className={appShellStyles.modalOverlay}
+          onClick={() => setWritingShortcutsOpen(false)}
+        >
+          <div
+            className={appShellStyles.shortcutsModal}
+            role='dialog'
+            aria-modal='true'
+            aria-label='Writing shortcuts'
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className={appShellStyles.shortcutsHeader}>
+              <div>
+                <h2 className={appShellStyles.shortcutsTitle}>Writing Shortcuts</h2>
+                <p className={appShellStyles.shortcutsIntro}>
+                  Current keyboard actions for writing flow, including the first slash actions now available in the editor.
+                </p>
+              </div>
+              <button
+                type='button'
+                className={appShellStyles.shortcutsClose}
+                onClick={() => setWritingShortcutsOpen(false)}
+              >
+                Close
+              </button>
+            </div>
+
+            <div className={appShellStyles.shortcutsSection}>
+              <div className={appShellStyles.shortcutsSectionTitle}>Available now</div>
+              <div className={appShellStyles.shortcutsGrid}>
+                <div className={appShellStyles.shortcutRow}>
+                  <strong>Command palette</strong>
+                  <span>Cmd/Ctrl+K</span>
+                </div>
+                <div className={appShellStyles.shortcutRow}>
+                  <strong>Writing shortcuts</strong>
+                  <span>Cmd/Ctrl+/</span>
+                </div>
+                <div className={appShellStyles.shortcutRow}>
+                  <strong>Scratchpad</strong>
+                  <span>Cmd/Ctrl+Shift+J</span>
+                </div>
+                <div className={appShellStyles.shortcutRow}>
+                  <strong>Save scene</strong>
+                  <span>Cmd/Ctrl+S</span>
+                </div>
+              </div>
+            </div>
+
+            <div className={appShellStyles.shortcutsSection}>
+              <div className={appShellStyles.shortcutsSectionTitle}>Available slash actions</div>
+              <div className={appShellStyles.shortcutsList}>
+                <span>/character: insert or inspect a character snapshot</span>
+                <span>/item: insert a lore or item block</span>
+                <span>/memory: pull in canon memory</span>
+                <span>/system: insert recent system history</span>
+                <span>/stat-block: open the status block flow</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

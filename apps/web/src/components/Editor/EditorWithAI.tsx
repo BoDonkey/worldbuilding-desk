@@ -21,6 +21,7 @@ import type {
   SystemHistoryEntry
 } from '../../entityTypes';
 import {htmlToPlainText} from '../../utils/textHelpers';
+import type {MemoryEntry as ShodhMemoryEntry} from '../../services/shodh/ShodhMemoryService';
 import {
   WORKSPACE_COMMAND_EVENT,
   type WorkspaceCommandId
@@ -59,6 +60,10 @@ interface EditorWithAIProps {
   onSelectionAddToReview?: (text: string) => void;
   onOpenLoreRecord?: (target: {id: string; type: 'character' | 'entity'}) => void;
   systemHistoryEntries?: SystemHistoryEntry[];
+  slashMemoryEntries?: ShodhMemoryEntry[];
+  preferredSlashEntityNames?: string[];
+  preferredSlashMemoryTags?: string[];
+  onOpenStatBlockBuilder?: () => void;
   onClearSystemHistory?: () => void;
   onOpenSceneFromHistory?: (sceneId: string) => void;
   onRunConsistencyReviewFromHistory?: () => void;
@@ -79,6 +84,47 @@ interface SelectionBubbleState {
   matchRecord?: {name: string; html: string; lore: LoreInspectorRecord};
 }
 
+interface SlashMenuState {
+  from: number;
+  to: number;
+  query: string;
+  mode: 'root' | 'character' | 'item' | 'memory' | 'system';
+  x: number;
+  y: number;
+  activeIndex: number;
+}
+
+interface SlashCommandEntry {
+  id: string;
+  label: string;
+  keywords: string[];
+  group: 'action' | 'character' | 'item' | 'memory' | 'system';
+  preferredNames?: string[];
+  memoryTags?: string[];
+  sceneId?: string;
+  run: () => void;
+}
+
+const ROOT_SLASH_COMMANDS = ['character', 'item', 'memory', 'system'] as const;
+
+type RootSlashCommand = (typeof ROOT_SLASH_COMMANDS)[number];
+
+const parseRootSlashCommand = (query: string): RootSlashCommand | null => {
+  const normalized = query.trim().toLowerCase();
+  if (!normalized) return null;
+  if (normalized === 'character' || normalized === 'char') return 'character';
+  if (normalized === 'item' || normalized === 'entity' || normalized === 'location') {
+    return 'item';
+  }
+  if (normalized === 'memory' || normalized === 'mem' || normalized === 'canon') {
+    return 'memory';
+  }
+  if (normalized === 'system' || normalized === 'sys' || normalized === 'event') {
+    return 'system';
+  }
+  return null;
+};
+
 export const EditorWithAI: React.FC<EditorWithAIProps> = ({
   projectId,
   documentId,
@@ -96,6 +142,10 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
   onSelectionAddToReview,
   onOpenLoreRecord,
   systemHistoryEntries = [],
+  slashMemoryEntries = [],
+  preferredSlashEntityNames = [],
+  preferredSlashMemoryTags = [],
+  onOpenStatBlockBuilder,
   onClearSystemHistory,
   onOpenSceneFromHistory,
   onRunConsistencyReviewFromHistory,
@@ -109,6 +159,7 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
   const [selectionBubble, setSelectionBubble] = useState<SelectionBubbleState | null>(
     null
   );
+  const [slashMenu, setSlashMenu] = useState<SlashMenuState | null>(null);
   const [editorReadyToken, setEditorReadyToken] = useState(0);
   const [activeLoreRecord, setActiveLoreRecord] = useState<LoreInspectorRecord | null>(null);
   const [queuedPrompt, setQueuedPrompt] = useState<string | null>(null);
@@ -437,6 +488,300 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
     });
   }, [normalizeSelectionSurface, selectionQuickSnippets]);
 
+  const handleSlashInsert = useCallback((from: number, to: number, contentToInsert: string) => {
+    const editor = editorRef.current;
+    if (!editor) return;
+    editor.commands.setTextSelection({from, to});
+    editor.commands.deleteSelection();
+    editor.commands.insertContent(contentToInsert);
+    setSlashMenu(null);
+  }, []);
+
+  const uniqueCharacterSlashEntries = React.useMemo(() => {
+    const seen = new Set<string>();
+    return Object.values(selectionQuickSnippets?.characters ?? {})
+      .filter((entry) => {
+        const key = entry.name.trim().toLowerCase();
+        if (!key || seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      })
+      .slice(0, 12);
+  }, [selectionQuickSnippets]);
+
+  const uniqueEntitySlashEntries = React.useMemo(() => {
+    const seen = new Set<string>();
+    return Object.values(selectionQuickSnippets?.entities ?? {})
+      .filter((entry) => {
+        const key = entry.name.trim().toLowerCase();
+        if (!key || seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      })
+      .slice(0, 12);
+  }, [selectionQuickSnippets]);
+
+  const rootSlashEntries = React.useMemo<SlashCommandEntry[]>(() => [
+    {
+      id: 'root-character',
+      label: '/character',
+      keywords: ['character', 'char', 'snapshot', 'person'],
+      group: 'action',
+      run: () =>
+        setSlashMenu((prev) =>
+          prev ? {...prev, mode: 'character', query: '', activeIndex: 0} : prev
+        )
+    },
+    {
+      id: 'root-item',
+      label: '/item',
+      keywords: ['item', 'entity', 'world', 'location', 'lore'],
+      group: 'action',
+      run: () =>
+        setSlashMenu((prev) =>
+          prev ? {...prev, mode: 'item', query: '', activeIndex: 0} : prev
+        )
+    },
+    {
+      id: 'root-memory',
+      label: '/memory',
+      keywords: ['memory', 'canon', 'shodh'],
+      group: 'action',
+      run: () =>
+        setSlashMenu((prev) =>
+          prev ? {...prev, mode: 'memory', query: '', activeIndex: 0} : prev
+        )
+    },
+    {
+      id: 'root-system',
+      label: '/system',
+      keywords: ['system', 'event', 'history', 'resource', 'quest'],
+      group: 'action',
+      run: () =>
+        setSlashMenu((prev) =>
+          prev ? {...prev, mode: 'system', query: '', activeIndex: 0} : prev
+        )
+    },
+    {
+      id: 'root-stat-block',
+      label: '/stat-block',
+      keywords: ['stat', 'block', 'status', 'builder'],
+      group: 'action',
+      run: () => {
+        onOpenStatBlockBuilder?.();
+        const editor = editorRef.current;
+        const activeSlash = slashMenu;
+        if (!editor || !activeSlash) return;
+        editor.commands.setTextSelection({from: activeSlash.from, to: activeSlash.to});
+        editor.commands.deleteSelection();
+        setSlashMenu(null);
+      }
+    }
+  ], [onOpenStatBlockBuilder, slashMenu]);
+
+  const slashEntries = React.useMemo<SlashCommandEntry[]>(() => {
+    const slashFrom = slashMenu?.from ?? 0;
+    const slashTo = slashMenu?.to ?? 0;
+    if (slashMenu?.mode === 'character') {
+      return uniqueCharacterSlashEntries.map((entry) => ({
+        id: `character:${entry.lore.id}`,
+        label: `Character: ${entry.name}`,
+        keywords: ['character', 'snapshot', 'stat', entry.name],
+        group: 'character' as const,
+        preferredNames: [entry.name],
+        run: () => handleSlashInsert(slashFrom, slashTo, entry.html)
+      }));
+    }
+    if (slashMenu?.mode === 'item') {
+      return uniqueEntitySlashEntries.map((entry) => ({
+        id: `entity:${entry.lore.id}`,
+        label: `Item/World: ${entry.name}`,
+        keywords: ['item', 'entity', 'lore', 'location', entry.name],
+        group: 'item' as const,
+        preferredNames: [entry.name],
+        run: () => handleSlashInsert(slashFrom, slashTo, entry.html)
+      }));
+    }
+    if (slashMenu?.mode === 'memory') {
+      return slashMemoryEntries.slice(0, 12).map((memory) => ({
+        id: `memory:${memory.id}`,
+        label: `Memory: ${memory.title || 'Untitled memory'}`,
+        keywords: ['memory', 'canon', 'shodh', ...(memory.tags ?? [])],
+        group: 'memory' as const,
+        memoryTags: memory.tags ?? [],
+        run: () => handleSlashInsert(slashFrom, slashTo, memory.summary)
+      }));
+    }
+    if (slashMenu?.mode === 'system') {
+      return systemHistoryEntries
+        .filter((entry) => {
+          if (entry.category === 'consistency') {
+            return false;
+          }
+          if (entry.category === 'quest' || entry.category === 'resource') {
+            return true;
+          }
+          if (entry.category === 'system') {
+            return (
+              entry.insertText.startsWith('System Update:') ||
+              entry.insertText.startsWith('System Status:')
+            );
+          }
+          return false;
+        })
+        .slice(0, 12)
+        .map((entry) => ({
+        id: `system:${entry.id}`,
+        label: `System: ${entry.message}`,
+        keywords: ['system', 'history', entry.category, 'event'],
+        group: 'system' as const,
+        sceneId: entry.sceneId,
+        run: () => handleSlashInsert(slashFrom, slashTo, entry.insertText)
+      }));
+    }
+    return rootSlashEntries;
+  }, [
+    handleSlashInsert,
+    rootSlashEntries,
+    slashMenu?.from,
+    slashMenu?.mode,
+    slashMenu?.to,
+    slashMemoryEntries,
+    systemHistoryEntries,
+    uniqueCharacterSlashEntries,
+    uniqueEntitySlashEntries
+  ]);
+
+  const filteredSlashEntries = React.useMemo(() => {
+    const query = slashMenu?.query.trim().toLowerCase() ?? '';
+    const entries = query
+      ? slashEntries.filter((entry) =>
+          [entry.label, ...entry.keywords].join(' ').toLowerCase().includes(query)
+        )
+      : slashEntries;
+    if (slashMenu?.mode === 'root') {
+      return entries.slice(0, 5);
+    }
+    const groupRank = {action: 0, character: 1, item: 2, memory: 3, system: 4};
+    const preferredNameSet = new Set(
+      preferredSlashEntityNames.map((name) => name.trim().toLowerCase()).filter(Boolean)
+    );
+    const preferredMemoryTagSet = new Set(preferredSlashMemoryTags);
+    const preferenceScore = (entry: SlashCommandEntry) => {
+      let score = 0;
+      if (
+        entry.preferredNames?.some((name) =>
+          preferredNameSet.has(name.trim().toLowerCase())
+        )
+      ) {
+        score += 20;
+      }
+      if (entry.memoryTags?.some((tag) => preferredMemoryTagSet.has(tag))) {
+        score += 20;
+      }
+      if (entry.sceneId && entry.sceneId === documentId) {
+        score += 10;
+      }
+      return score;
+    };
+    return entries
+      .sort((left, right) => {
+        const preferenceDelta = preferenceScore(right) - preferenceScore(left);
+        if (preferenceDelta !== 0) return preferenceDelta;
+        const groupDelta = groupRank[left.group] - groupRank[right.group];
+        if (groupDelta !== 0) return groupDelta;
+        return left.label.localeCompare(right.label);
+      })
+      .slice(0, 10);
+  }, [
+    documentId,
+    preferredSlashEntityNames,
+    preferredSlashMemoryTags,
+    slashEntries,
+    slashMenu?.mode,
+    slashMenu?.query
+  ]);
+
+  const updateSlashMenu = useCallback(() => {
+    const editor = editorRef.current;
+    if (!editor) return;
+    const {from, to, $from} = editor.state.selection;
+    if (from !== to) {
+      setSlashMenu(null);
+      return;
+    }
+    const parentStart = $from.start();
+    const textBefore = editor.state.doc.textBetween(parentStart, from, '\n', ' ');
+    const committedMatch = textBefore.match(/(?:^|\s)\/([a-z-]+)\s+([^/\n]*)$/i);
+    if (committedMatch) {
+      const command = parseRootSlashCommand(committedMatch[1] ?? '');
+      if (!command) {
+        setSlashMenu(null);
+        return;
+      }
+      const query = committedMatch[2] ?? '';
+      const slashStart = from - query.length - committedMatch[1].length - 2;
+      const coords = editor.view.coordsAtPos(from);
+      setSlashMenu((prev) => ({
+        from: slashStart,
+        to: from,
+        query,
+        mode: command,
+        x: coords.left,
+        y: coords.bottom + 8,
+        activeIndex:
+          prev && prev.from === slashStart && prev.query === query && prev.mode === command
+            ? Math.min(prev.activeIndex, Math.max(0, filteredSlashEntries.length - 1))
+            : 0
+      }));
+      return;
+    }
+    const rootMatch = textBefore.match(/(?:^|\s)\/([a-z-]*)$/i);
+    if (!rootMatch) {
+      setSlashMenu(null);
+      return;
+    }
+    const query = rootMatch[1] ?? '';
+    const slashStart = from - query.length - 1;
+    const coords = editor.view.coordsAtPos(from);
+    setSlashMenu((prev) => ({
+      from: slashStart,
+      to: from,
+      query,
+      mode: 'root',
+      x: coords.left,
+      y: coords.bottom + 8,
+      activeIndex:
+        prev && prev.from === slashStart && prev.query === query && prev.mode === 'root'
+          ? Math.min(prev.activeIndex, Math.max(0, filteredSlashEntries.length - 1))
+          : 0
+      }));
+  }, [filteredSlashEntries.length]);
+
+  const openSlashMenuAtSelection = useCallback(() => {
+    const editor = editorRef.current;
+    if (!editor) return;
+    const {from, to} = editor.state.selection;
+    if (from !== to || from < 1) {
+      return;
+    }
+    const textBefore = editor.state.doc.textBetween(Math.max(0, from - 1), from, '\n', ' ');
+    if (textBefore !== '/') {
+      updateSlashMenu();
+      return;
+    }
+    const coords = editor.view.coordsAtPos(from);
+    setSlashMenu({
+      from: from - 1,
+      to: from,
+      query: '',
+      mode: 'root',
+      x: coords.left,
+      y: coords.bottom + 8,
+      activeIndex: 0
+    });
+  }, [updateSlashMenu]);
+
   const handleEditorReady = useCallback((editorInstance: TipTapEditorInstance) => {
     editorRef.current = editorInstance;
     setEditorReadyToken((prev) => prev + 1);
@@ -463,11 +808,69 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
     if (!editor) return;
     editor.on('selectionUpdate', updateSelectionBubble);
     editor.on('transaction', updateSelectionBubble);
+    editor.on('selectionUpdate', updateSlashMenu);
+    editor.on('transaction', updateSlashMenu);
     return () => {
       editor.off('selectionUpdate', updateSelectionBubble);
       editor.off('transaction', updateSelectionBubble);
+      editor.off('selectionUpdate', updateSlashMenu);
+      editor.off('transaction', updateSlashMenu);
     };
-  }, [editorReadyToken, updateSelectionBubble]);
+  }, [editorReadyToken, updateSelectionBubble, updateSlashMenu]);
+
+  const handleEditorKeyDown = useCallback((event: KeyboardEvent) => {
+    const isPlainSlash =
+      event.key === '/' &&
+      !event.metaKey &&
+      !event.ctrlKey &&
+      !event.altKey;
+    if (isPlainSlash && !slashMenu) {
+      window.setTimeout(() => {
+        openSlashMenuAtSelection();
+      }, 0);
+      return false;
+    }
+    if (!slashMenu) {
+      return false;
+    }
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      setSlashMenu(null);
+      return true;
+    }
+    if (filteredSlashEntries.length === 0) {
+      return false;
+    }
+    if (event.key === 'ArrowDown') {
+      event.preventDefault();
+      setSlashMenu((prev) =>
+        prev
+          ? {...prev, activeIndex: (prev.activeIndex + 1) % filteredSlashEntries.length}
+          : prev
+      );
+      return true;
+    }
+    if (event.key === 'ArrowUp') {
+      event.preventDefault();
+      setSlashMenu((prev) =>
+        prev
+          ? {
+              ...prev,
+              activeIndex:
+                (prev.activeIndex - 1 + filteredSlashEntries.length) %
+                filteredSlashEntries.length
+            }
+          : prev
+      );
+      return true;
+    }
+    if (event.key === 'Enter' || event.key === 'Tab') {
+      event.preventDefault();
+      filteredSlashEntries[slashMenu.activeIndex]?.run();
+      return true;
+    }
+    return false;
+  }, [filteredSlashEntries, openSlashMenuAtSelection, slashMenu]);
 
   const handleInsert = (text: string) => {
     const editor = editorRef.current;
@@ -548,6 +951,12 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
         <TipTapEditor
           content={content}
           onChange={onChange}
+          onEditorKeyDown={handleEditorKeyDown}
+          onEditorTextInput={(text) => {
+            if (text === '/') {
+              openSlashMenuAtSelection();
+            }
+          }}
           onWordCountChange={onWordCountChange}
           onConsistencyHighlightClick={onConsistencyHighlightClick}
           onLoreHighlightClick={handleLoreHighlightClick}
@@ -564,6 +973,33 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
           }}
           insertContext={insertContext}
         />
+        {slashMenu && (
+          <div
+            className={styles.slashMenu}
+            style={{left: `${slashMenu.x}px`, top: `${slashMenu.y}px`}}
+          >
+            {filteredSlashEntries.length === 0 ? (
+              <div className={styles.slashMenuEmpty}>No slash actions match.</div>
+            ) : (
+              filteredSlashEntries.map((entry, index) => (
+                <button
+                  key={entry.id}
+                  type='button'
+                  className={`${styles.slashMenuItem} ${
+                    index === slashMenu.activeIndex ? styles.slashMenuItemActive : ''
+                  }`}
+                  onMouseDown={(event) => event.preventDefault()}
+                  onClick={() => entry.run()}
+                >
+                  <span>{entry.label}</span>
+                  <span className={styles.slashMenuMeta}>
+                    {slashMenu.mode === 'root' ? 'command' : entry.group}
+                  </span>
+                </button>
+              ))
+            )}
+          </div>
+        )}
         {selectionBubble && (
           <div
             ref={selectionBubbleRef}

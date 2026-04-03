@@ -1,6 +1,6 @@
 # Next Steps
 
-Last updated: 2026-03-29
+Last updated: 2026-04-03
 
 ## Current Baseline
 
@@ -58,14 +58,28 @@ Implemented recently:
   - lightweight Characters + World Bible context included in corkboard AI prompts
   - shared sticky scope header, split-pane independent scrolling, dismissible feedback banner, and markdown-rendered AI results
   - markdown-aware paste into the brainstorm editor
+- Workspace context loop pass shipped:
+  - collapsible `Scene Actions`, `In This Scene`, and `Canon Memories` cards
+  - scene badges, compact scorecards, temporary pinning, and related-memory jumps
+  - canon-memory grouping into `Local canon`, `Parent canon`, `Scene recall`, and `Recent changes`
+  - entity-aware memory extraction, entity badges, and click-to-filter behavior
+- Writing shortcuts + slash-command v1 shipped:
+  - `Cmd/Ctrl+/` writing-shortcuts modal and command-palette entry
+  - `/character`, `/item`, `/memory`, `/system`, `/stat-block`
+  - command-style slash parsing using `/command query`
+  - context-aware ranking from active/pinned scene entities and related memory tags
+- Workspace paper-cut fixes shipped:
+  - dismissed review highlights persist correctly when later review data changes
+  - scratchpad popover now scrolls correctly
+  - writing-shortcuts shortcut no longer depends on resolving review-state friction first
 
 ## Recommended Priority Order
 
-1. Corkboard Dogfooding + UI Polish
-2. Canon memory / right-rail relevance follow-up
-3. Lore / compendium tooltip convergence follow-up
-4. Editor customization follow-up
-5. Data portability follow-up
+1. Slash-command UX polish + inline authoring flow follow-up
+2. Lore / compendium tooltip convergence follow-up
+3. Corkboard dogfooding + UI polish
+4. Data portability follow-up
+5. Editor customization follow-up
 6. Additional corkboard AI/canon-context follow-up
 
 ## Workspace AI Follow-up Verification
@@ -84,7 +98,57 @@ Conclusion:
 
 - Writing + AI is stable enough to stop treating workspace follow-up as the active blocker.
 
-## 1) Corkboard Dogfooding + UI Polish
+## 1) Slash-Command UX Polish + Inline Authoring Flow
+
+Goal: make the new slash layer feel native to the editor instead of like a thin chooser over insert actions.
+
+Current state:
+
+- Slash actions now exist for:
+  - `/character`
+  - `/item`
+  - `/memory`
+  - `/system`
+  - `/stat-block`
+- The editor now supports `/command query` parsing instead of only flat post-slash filtering.
+- Writing shortcuts are discoverable through `Cmd/Ctrl+/` and the command palette.
+- The feature works, but the interaction still needs real-use polish.
+
+Targets:
+
+- Decide whether exact command matches should auto-advance without `Enter`.
+- Add clearer section headers and richer previews inside the slash menu where helpful.
+- Reassess `/system` naming and content scope; possible rename target: `/event`.
+- Consider lightweight hinting near the editor so slash remains discoverable without adding shell chrome.
+- Tighten keyboard behavior and empty-state behavior after real writing sessions.
+
+Exit criteria:
+
+- Authors can type and complete slash commands without needing to reason about the UI first.
+
+## 2) Lore / Compendium Tooltip Convergence Follow-up
+
+Goal: extend the first popover convergence pass into richer inline canon workflows.
+
+Status:
+
+- Done:
+  - shared popover shell
+  - shared behavior polish
+  - direct lore-to-record navigation
+  - draft-state warnings in lore surfaces
+  - right-rail canon memory relevance overhaul
+  - scene-entity to related-memory linking
+- Remaining:
+  - richer compendium-related actions from inline lore/review surfaces
+  - more connected related-record context
+  - any remaining duplication between review-queue and lore-peek flows
+
+Exit criteria:
+
+- Authors can inspect and resolve lightweight canon issues without leaving the scene unnecessarily.
+
+## 3) Corkboard Dogfooding + UI Polish
 
 Goal: use the newly-shipped corkboard in real authoring sessions and tighten the UI based on friction observed during actual outlining.
 
@@ -118,52 +182,26 @@ Exit criteria:
 
 - Authors can use corkboard for real planning sessions without obvious structural friction or “first-pass prototype” seams.
 
-## 2) Canon Memory / Right-Rail Relevance Follow-up
+## 4) Data Portability Follow-up
 
-Goal: make the Workspace canon-memory rail feel like useful canon support instead of a shallow document excerpt list.
-
-Current state:
-
-- Canon memories are present in the right rail and can be filtered, refreshed, deleted, and promoted.
-- The current auto-memory behavior is too shallow for real canon lookup.
-- The rail often reads like the opening paragraph of the scene instead of extracted canon facts or beats.
+Goal: keep the portability flows solid now that more workspace-specific state exists around memory, context, and planning.
 
 Targets:
 
-- Replace naive first-excerpt auto-memory capture with more meaningful canon summaries or extracted facts.
-- Support multiple useful memories per scene when warranted instead of a single replacement summary.
-- Preserve manual memories instead of treating them like disposable auto-generated entries.
-- Improve ordering/grouping so the rail surfaces the most relevant canon first.
-- Reassess whether canon memories should show stronger source context or jump-back affordances.
-- Define a two-layer context model for future AI work:
-  - stable canon context from Characters / World Bible / Compendium that should remain broadly available across chapters
-  - narrative memory context from chapter/scene recall systems such as SHODH, which is better suited to local arc recall than persistent canon truth
+- Round-trip schema/versioning rules for JSON exports/imports.
+- Decide explicitly what belongs in project backup/export flows:
+  - scratchpad
+  - corkboard
+  - canon memories
+  - workspace preferences or pinned context state
+- Optional bundle-style exports/imports beyond raw JSON.
+- Optional richer Word import handling (tables/headers/formatting).
 
 Exit criteria:
 
-- Authors can use the right rail to recover meaningful canon context without rereading the start of the scene.
+- Author can round-trip project content safely, with clear expectations when versions diverge.
 
-## 3) Lore / Compendium Tooltip Convergence Follow-up
-
-Goal: extend the first popover convergence pass into richer inline canon workflows.
-
-Status:
-
-- Done:
-  - shared popover shell
-  - shared behavior polish
-  - direct lore-to-record navigation
-  - draft-state warnings in lore surfaces
-- Remaining:
-  - richer compendium-related actions from inline lore/review surfaces
-  - more connected related-record context
-  - any remaining duplication between review-queue and lore-peek flows
-
-Exit criteria:
-
-- Authors can inspect and resolve lightweight canon issues without leaving the scene unnecessarily.
-
-## 4) Editor Customization Follow-up
+## 5) Editor Customization Follow-up
 
 Goal: revisit editor controls only if the current presets prove too limiting in real use.
 
@@ -176,21 +214,6 @@ Targets:
 Exit criteria:
 
 - The editor remains comfortable over long sessions without becoming a settings swamp.
-
-## 5) Data Portability Follow-up
-
-Goal: keep the new portability flows solid, but treat them as a follow-on rather than the immediate bottleneck.
-
-Targets:
-
-- Round-trip schema/versioning rules for JSON exports/imports.
-- Optional bundle-style exports/imports beyond raw JSON.
-- Optional richer Word import handling (tables/headers/formatting).
-- Decide explicitly whether scratchpad or future corkboard data belongs in backup/export flows.
-
-Exit criteria:
-
-- Author can round-trip project content safely, with clear expectations when versions diverge.
 
 ## 6) Additional Corkboard AI / Canon Context Follow-up
 

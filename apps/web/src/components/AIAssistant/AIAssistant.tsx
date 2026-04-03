@@ -197,7 +197,17 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
       queryMatches.forEach(pushUnique);
       allMemories
         .filter((memory) => !seen.has(memory.id))
-        .sort((a, b) => b.createdAt - a.createdAt)
+        .sort((a, b) => {
+          const rank = (memory: MemoryEntry) => {
+            if (memory.kind === 'manual' || memory.kind === 'canon-fact') return 3;
+            if (memory.kind === 'scene-recall') return 2;
+            if (memory.kind === 'open-loop') return 1;
+            return 0;
+          };
+          const rankDelta = rank(b) - rank(a);
+          if (rankDelta !== 0) return rankDelta;
+          return b.createdAt - a.createdAt;
+        })
         .forEach(pushUnique);
 
       return ordered.slice(0, 3).map((memory) => ({

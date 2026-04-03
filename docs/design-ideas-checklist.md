@@ -1,6 +1,6 @@
 # Design Ideas Checklist
 
-Last verified: 2026-03-28
+Last verified: 2026-04-03
 Source roadmap: `docs/design-ideas.md`
 
 Legend:
@@ -16,9 +16,10 @@ This checklist is a repo-verified status pass, not a full manual QA sign-off.
 - [x] App-shell keyboard handler wired in `apps/web/src/App.tsx`.
 - [x] Route navigation commands present.
 - [x] Workspace action commands present.
-- [ ] Slash commands inside the editor such as `/system`, `/character`, `/lore`.
+- [x] Slash commands inside the editor now exist for `/character`, `/item`, `/memory`, `/system`, and `/stat-block`.
 - [~] Success criteria still need manual UX confirmation:
   - common actions should be reachable quickly after opening the palette
+  - slash flow should feel like command entry rather than only menu picking
   - no route-navigation regressions
 
 ## Phase 2: Left Rail + Collapsible Drawers
@@ -51,11 +52,14 @@ This checklist is a repo-verified status pass, not a full manual QA sign-off.
 
 ## Phase 4: Contextual Selection Bubble
 
-- [~] There is already a selection-based AI entry point through the editor context-menu flow (`ai-expand-request`).
-- [ ] No dedicated contextual selection bubble found for highlighted text.
-- [ ] No entity-type-specific quick actions found for highlighted character/location/item text.
+- [x] Dedicated contextual selection bubble exists for highlighted text.
+- [~] Entity-type-specific quick actions now exist in partial form:
+  - AI expand
+  - critique selected passage
+  - add to review
+  - lore open when a known entity/character is selected
 - [ ] No quick stat snapshot / insert-stat-block bubble found from selection.
-- [ ] No lightweight lore-peek bubble found from arbitrary highlighted entities beyond the current lore/review popover flows.
+- [~] Lightweight lore-peek behavior exists through current lore/review popover flows, but arbitrary selection-to-lore coverage is still incomplete.
 
 ## Phase 5: Lore Tooltip + Review Convergence
 
@@ -73,7 +77,7 @@ This checklist is a repo-verified status pass, not a full manual QA sign-off.
   - richer compendium-related actions from inline lore/review surfaces
   - stronger related-record context
   - any lingering duplication between review-queue and lore-peek flows
-  - right-rail canon memories still need a relevance overhaul beyond shallow scene excerpts
+  - slash-command and inline authoring flow still need UX polish after the first implementation
 - [~] Success criteria look partially met, but still worth validating during polish:
   - inline canon resolution should feel faster than leaving the scene
   - popovers should stay readable and keyboard-friendly across edge cases
@@ -125,9 +129,9 @@ Shipped or substantially shipped:
 
 Still visibly open:
 - contextual selection bubble
-- slash-command layer
+- selection bubble deeper entity-specific actions
+- slash-command UX polish
 - richer lore/compendium inline actions and related-record context
-- canon-memory relevance improvements in the right rail
 - expanded editor customization beyond the current presets
 - telemetry
 - final manual UX/polish validation across the newer surfaces
@@ -137,6 +141,6 @@ Still visibly open:
 Use this file as the working checklist.
 
 Use `docs/next-steps.md` as the execution-order handoff:
-1. Finish the remaining Compendium UI sweep.
-2. Do the final cross-route UI polish pass.
-3. Revisit the open roadmap items above once the sweep is complete.
+1. Polish the slash-command and inline authoring flow.
+2. Continue lore/compendium convergence work.
+3. Dogfood corkboard before broadening planning scope further.

@@ -137,6 +137,7 @@ export async function promoteMemoryToParent(
     documentId: memory.documentId,
     title: memory.title,
     summary: memory.summary,
+    kind: memory.kind,
     tags: Array.from(
       new Set([...(memory.tags ?? []), 'promoted-from-child'])
     )

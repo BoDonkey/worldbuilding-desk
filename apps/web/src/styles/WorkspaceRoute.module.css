@@ -490,6 +490,89 @@
   color: var(--color-text-secondary);
 }
 
+.sceneScorecardFooterActions {
+  display: flex;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+}
+
+.memoryHighlights {
+  display: grid;
+  gap: 0.8rem;
+  margin-bottom: 0.9rem;
+}
+
+.memoryHighlightSection {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.memoryHighlightHeader {
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+}
+
+.memoryHighlightList {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.memoryHighlightCard {
+  padding: 0.6rem 0.7rem;
+  border-radius: 14px;
+  border: 1px solid var(--surface-border-soft);
+  background: color-mix(in srgb, var(--surface-panel-elevated) 80%, var(--badge-info-bg) 20%);
+}
+
+.memoryHighlightCard strong {
+  display: block;
+  font-size: 0.8rem;
+  margin-bottom: 0.15rem;
+}
+
+.memoryHighlightActions {
+  margin-top: 0.45rem;
+  display: flex;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+}
+
+.memoryEntityBadgeRow {
+  margin-top: 0.45rem;
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.memoryEntityBadge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem 0.5rem;
+  border-radius: 999px;
+  border: 1px solid var(--surface-border-soft);
+  background: var(--surface-panel);
+  color: var(--color-text-secondary);
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+
+.memoryEntityBadgeActive {
+  border-color: color-mix(in srgb, var(--button-primary-border) 78%, var(--surface-border-soft) 22%);
+  background: color-mix(in srgb, var(--button-primary-bg) 18%, var(--surface-panel-elevated) 82%);
+  color: var(--button-primary-text);
+}
+
+.memoryHighlightCard p,
+.memoryHighlightEmpty {
+  margin: 0;
+  font-size: 0.8rem;
+  line-height: 1.45;
+  color: var(--color-text-secondary);
+}
+
 .drawerOverlay {
   position: fixed;
   inset: 0;

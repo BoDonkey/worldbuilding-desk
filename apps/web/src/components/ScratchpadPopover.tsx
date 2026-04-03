@@ -140,11 +140,13 @@ export function ScratchpadPopover({
         <span className={styles.status}>{saveLabel}</span>
       </div>
       {activeProject ? (
-        <TipTapEditor
-          content={content}
-          onChange={setContent}
-          toolbarMode='basic'
-        />
+        <div className={styles.editorShell}>
+          <TipTapEditor
+            content={content}
+            onChange={setContent}
+            toolbarMode='basic'
+          />
+        </div>
       ) : (
         <p className={styles.emptyState}>
           Select a project first. The scratchpad is stored per project.
