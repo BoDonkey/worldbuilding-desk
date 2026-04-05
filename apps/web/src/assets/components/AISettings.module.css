@@ -14,6 +14,7 @@
   min-height: 0;
   overflow-y: auto;
   padding: 0;
+  position: relative;
 }
 
 .aiPanel {
@@ -239,11 +240,31 @@
   gap: 0.25rem;
 }
 
+.slashMenuHeader {
+  padding: 0.55rem 0.7rem 0.45rem;
+  border-bottom: 1px solid var(--surface-border-soft);
+  margin-bottom: 0.1rem;
+}
+
+.slashMenuTitle {
+  margin: 0;
+  font-size: 0.84rem;
+  font-weight: 700;
+  color: var(--color-text-primary);
+}
+
+.slashMenuSubtitle {
+  margin: 0.2rem 0 0;
+  font-size: 0.75rem;
+  line-height: 1.45;
+  color: var(--color-text-secondary);
+}
+
 .slashMenuItem {
   width: 100%;
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
   gap: 0.75rem;
   padding: 0.55rem 0.7rem;
   border-radius: 12px;
@@ -264,12 +285,54 @@
   letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--color-text-secondary);
+  flex-shrink: 0;
+  margin-top: 0.1rem;
+}
+
+.slashMenuBody {
+  min-width: 0;
+  display: grid;
+  gap: 0.2rem;
+}
+
+.slashMenuLabel {
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.slashMenuDescription {
+  font-size: 0.76rem;
+  line-height: 1.45;
+  color: var(--color-text-secondary);
 }
 
 .slashMenuEmpty {
   padding: 0.7rem;
   font-size: 0.82rem;
   color: var(--color-text-secondary);
+}
+
+.slashHint {
+  position: sticky;
+  top: 0.8rem;
+  margin: 0 1rem 0.8rem auto;
+  width: fit-content;
+  max-width: calc(100% - 2rem);
+  z-index: 20;
+  font-size: 0.76rem;
+  color: var(--color-text-secondary);
+  background: color-mix(in srgb, var(--surface-panel-elevated) 92%, var(--button-primary-bg) 8%);
+  border: 1px solid var(--surface-border-soft);
+  border-radius: 999px;
+  padding: 0.3rem 0.7rem;
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.08);
+}
+
+.slashHint kbd {
+  font: inherit;
+  font-weight: 700;
+  color: var(--color-text-primary);
 }
 
 .selectionHint {
@@ -308,6 +371,12 @@
   color: var(--badge-warning-text);
   font-size: 0.76rem;
   font-weight: 700;
+}
+
+.loreCompendiumStatus {
+  margin-top: 0.55rem;
+  font-size: 0.78rem;
+  color: var(--color-text-secondary);
 }
 
 .loreVitalList {

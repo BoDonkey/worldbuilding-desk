@@ -237,7 +237,10 @@ export async function saveProjectSettings(settings: ProjectSettings): Promise<vo
   });
 }
 
-export async function createDefaultSettings(projectId: string): Promise<ProjectSettings> {
+export async function createDefaultSettings(
+  projectId: string,
+  mode: ProjectMode = DEFAULT_PROJECT_MODE
+): Promise<ProjectSettings> {
   const now = Date.now();
   const settings: ProjectSettings = {
     id: crypto.randomUUID(),
@@ -246,8 +249,8 @@ export async function createDefaultSettings(projectId: string): Promise<ProjectS
     aiSettings: {...DEFAULT_AI_SETTINGS},
     consistencyActionCues: [...DEFAULT_CONSISTENCY_ACTION_CUES],
     activeSkills: [],
-    projectMode: DEFAULT_PROJECT_MODE,
-    featureToggles: getDefaultFeatureToggles(DEFAULT_PROJECT_MODE),
+    projectMode: mode,
+    featureToggles: getDefaultFeatureToggles(mode),
     defaultImportMode: DEFAULT_IMPORT_MODE,
     defaultSkipImportSuggestions: DEFAULT_SKIP_IMPORT_SUGGESTIONS,
     statBlockPreferences: {...DEFAULT_STAT_BLOCK_PREFERENCES},

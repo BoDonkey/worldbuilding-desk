@@ -77,6 +77,92 @@
   margin: 0 0 1rem;
 }
 
+.formPanel {
+  width: 100%;
+  max-width: 1000px;
+  border: 1px solid var(--surface-border-soft);
+  border-radius: 22px;
+  background:
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--surface-panel) 86%, white 14%) 0%,
+      var(--surface-panel) 100%
+    );
+  padding: 1.25rem;
+}
+
+.fieldGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 0.9rem;
+}
+
+.fieldLabel {
+  display: grid;
+  gap: 0.35rem;
+  color: var(--color-text-primary);
+  min-width: 0;
+}
+
+.softInput,
+.softTextarea,
+.softSelect {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+  border-radius: 16px;
+  border: 1px solid color-mix(in srgb, var(--surface-border-soft) 78%, white 22%);
+  background:
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--surface-panel-elevated) 82%, white 18%) 0%,
+      var(--surface-panel-elevated) 100%
+    );
+  color: var(--color-text-primary);
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, white 55%, transparent 45%),
+    0 10px 30px color-mix(in srgb, black 6%, transparent 94%);
+}
+
+.softInput,
+.softSelect {
+  min-height: 2.8rem;
+  padding: 0.7rem 0.9rem;
+}
+
+.softTextarea {
+  min-height: 7rem;
+  padding: 0.85rem 0.95rem;
+  resize: vertical;
+}
+
+.softInput:focus,
+.softTextarea:focus,
+.softSelect:focus {
+  outline: none;
+  border-color: color-mix(in srgb, var(--button-primary-border) 74%, white 26%);
+  box-shadow:
+    0 0 0 3px color-mix(in srgb, var(--button-primary-bg) 18%, transparent 82%),
+    inset 0 1px 0 color-mix(in srgb, white 55%, transparent 45%);
+}
+
+.bottomActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--surface-border-soft);
+}
+
+.sectionCard {
+  padding: 0.8rem;
+  border: 1px solid var(--surface-border-soft);
+  border-radius: 12px;
+  background: var(--surface-panel-elevated);
+}
+
 .list {
   list-style: none;
   padding: 0;

@@ -1,6 +1,6 @@
-import {useEffect, useMemo, useRef, useState} from 'react';
+import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import type {ChangeEvent} from 'react';
-import {useNavigate, useSearchParams} from 'react-router-dom';
+import {useLocation, useNavigate, useSearchParams} from 'react-router-dom';
 import type {Project, ProjectSettings} from '../entityTypes';
 import CharactersRoute from './CharactersRoute';
 import CharacterSheetsRoute from './CharacterSheetsRoute';
@@ -21,11 +21,13 @@ function CharactersHubRoute({
   projectSettings = null
 }: CharactersHubRouteProps) {
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
   const [hasRuleset, setHasRuleset] = useState(false);
   const [pendingCharacterId, setPendingCharacterId] = useState<string | null>(
     null
   );
+  const [pendingSheetId, setPendingSheetId] = useState<string | null>(null);
   const [isImportingCharacters, setIsImportingCharacters] = useState(false);
   const [pendingImportMode, setPendingImportMode] = useState<
     'roster' | 'full'
@@ -68,12 +70,36 @@ function CharactersHubRoute({
     }
   }, [view, activeProject, hasRuleset, setSearchParams]);
 
-  const openView = (next: 'roster' | 'sheets') => {
-    if (next === 'sheets' && activeProject && !hasRuleset) {
+  const openView = useCallback(
+    (next: 'roster' | 'sheets') => {
+      if (next === 'sheets' && activeProject && !hasRuleset) {
+        return;
+      }
+      setSearchParams(next === 'sheets' ? {view: 'sheets'} : {});
+    },
+    [activeProject, hasRuleset, setSearchParams]
+  );
+
+  useEffect(() => {
+    const state = location.state as
+      | {view?: 'roster' | 'sheets'; focusCharacterId?: string; focusSheetId?: string}
+      | null;
+    if (!state) {
       return;
     }
-    setSearchParams(next === 'sheets' ? {view: 'sheets'} : {});
-  };
+    if (state.focusCharacterId) {
+      setPendingCharacterId(state.focusCharacterId);
+    }
+    if (state.focusSheetId) {
+      setPendingSheetId(state.focusSheetId);
+    }
+    if (state.view === 'sheets') {
+      openView('sheets');
+    } else if (state.view === 'roster') {
+      openView('roster');
+    }
+    navigate(location.pathname + location.search, {replace: true, state: null});
+  }, [location.pathname, location.search, location.state, navigate, openView, setSearchParams]);
 
   const handleExportCharacters = async () => {
     if (!activeProject) return;
@@ -158,7 +184,13 @@ function CharactersHubRoute({
     <section className={styles.page}>
       <h1 className={styles.title}>Characters</h1>
       <p className={styles.lead}>
-        Manage roster profiles and gameplay-ready sheets in one place.
+        {projectSettings?.projectMode === 'general'
+          ? 'Manage your cast in one place. Use roster profiles for story-facing character notes, and treat sheets as optional advanced records.'
+          : 'Manage roster profiles and gameplay-ready sheets in one place.'}
+      </p>
+      <p className={styles.lead} style={{marginTop: '-0.4rem', fontSize: '0.95rem'}}>
+        World Bible holds canon records for people in the setting. Characters is the
+        cast workspace for author-facing profiles and, in system-heavy projects, character sheets.
       </p>
       {feedback && (
         <p
@@ -172,11 +204,13 @@ function CharactersHubRoute({
       )}
       <div className={styles.toolbar}>
         <button type='button' onClick={() => void handleExportRosterOnly()}>
-          Export Roster Only
+          Export Roster
         </button>
-        <button type='button' onClick={() => void handleExportCharacters()}>
-          Export Roster + Sheets
-        </button>
+        {hasRuleset && (
+          <button type='button' onClick={() => void handleExportCharacters()}>
+            Export Roster + Sheets
+          </button>
+        )}
         <button
           type='button'
           onClick={() => handleImportCharactersClick('roster')}
@@ -184,15 +218,17 @@ function CharactersHubRoute({
         >
           {isImportingCharacters
             ? 'Importing...'
-            : 'Import Roster Only'}
+            : 'Import Roster'}
         </button>
-        <button
-          type='button'
-          onClick={() => handleImportCharactersClick('full')}
-          disabled={isImportingCharacters}
-        >
-          {isImportingCharacters ? 'Importing...' : 'Import Roster + Sheets'}
-        </button>
+        {hasRuleset && (
+          <button
+            type='button'
+            onClick={() => handleImportCharactersClick('full')}
+            disabled={isImportingCharacters}
+          >
+            {isImportingCharacters ? 'Importing...' : 'Import Roster + Sheets'}
+          </button>
+        )}
         <input
           ref={importInputRef}
           type='file'
@@ -216,10 +252,10 @@ function CharactersHubRoute({
           className={view === 'sheets' ? styles.tabButtonActive : ''}
           style={{opacity: hasRuleset ? 1 : 0.55}}
         >
-          Sheets
+          {projectSettings?.projectMode === 'general' ? 'Sheets (Optional)' : 'Sheets'}
         </button>
       </div>
-      {!hasRuleset && (
+      {!hasRuleset && projectSettings?.projectMode !== 'general' && (
         <div className={styles.notice}>
           Sheets are disabled until this project has a ruleset.
           <button
@@ -236,7 +272,11 @@ function CharactersHubRoute({
         <CharactersRoute
           key={`roster-${dataVersion}`}
           activeProject={activeProject}
+          projectSettings={projectSettings}
           embedded
+          focusCharacterId={pendingCharacterId}
+          onFocusCharacterConsumed={() => setPendingCharacterId(null)}
+          canOpenSheets={hasRuleset}
           onOpenSheets={(characterId) => {
             if (!hasRuleset) {
               return;
@@ -253,7 +293,9 @@ function CharactersHubRoute({
           projectSettings={projectSettings}
           embedded
           prefillCharacterId={pendingCharacterId}
+          focusSheetId={pendingSheetId}
           onPrefillConsumed={() => setPendingCharacterId(null)}
+          onFocusSheetConsumed={() => setPendingSheetId(null)}
         />
       )}
     </section>

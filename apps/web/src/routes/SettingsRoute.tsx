@@ -29,6 +29,14 @@ interface SettingsRouteProps {
 }
 
 function SettingsRoute({activeProject, onSettingsChanged}: SettingsRouteProps) {
+  const PROJECT_MODE_HELP: Record<ProjectMode, string> = {
+    general:
+      'General Fiction keeps the app focused on planning, lore, cast management, and drafting without assuming game systems.',
+    litrpg:
+      'LitRPG Author keeps progression, rules, stat-block, and compendium workflows prominent.',
+    game:
+      'Game Simulation keeps system-heavy mechanics and runtime-oriented tools available by default.'
+  };
   const [settings, setSettings] = useState<ProjectSettings | null>(null);
   const [newStyleName, setNewStyleName] = useState('');
   const [expandedStyleId, setExpandedStyleId] = useState<string | null>(null);
@@ -232,12 +240,12 @@ function SettingsRoute({activeProject, onSettingsChanged}: SettingsRouteProps) {
         <summary>Settings Wizard Help</summary>
         <div className={styles.helpBody}>
           <p>
-            Step 1: pick a <strong>Project Mode</strong> to set defaults for this
-            project.
+            Step 1: pick a <strong>Project Mode</strong> to define the default posture
+            for this project.
           </p>
           <p>
-            Step 2: fine-tune <strong>Feature Toggles</strong> to simplify what users
-            see.
+            Step 2: fine-tune <strong>Feature Toggles</strong> to simplify or expand what
+            this project shows.
           </p>
           <p>
             Step 3: configure AI and style settings for day-to-day writing.
@@ -260,8 +268,8 @@ function SettingsRoute({activeProject, onSettingsChanged}: SettingsRouteProps) {
           </summary>
           <div className={styles.sectionBody}>
             <p className={styles.helperText}>
-              Set this first. It controls the default experience for the project and
-              resets feature toggles to the mode defaults.
+              Project mode defines the default experience for this project. Change it if
+              you want the app to emphasize planning/lore, LitRPG systems, or simulation-heavy work.
             </p>
             <label className={styles.fieldLabel}>
               Mode
@@ -279,6 +287,7 @@ function SettingsRoute({activeProject, onSettingsChanged}: SettingsRouteProps) {
                 ))}
               </select>
             </label>
+            <p className={styles.helperText}>{PROJECT_MODE_HELP[settings.projectMode]}</p>
           </div>
         </details>
 

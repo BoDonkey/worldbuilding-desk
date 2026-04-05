@@ -1,6 +1,6 @@
 # Worldbuilding-Desk Project Status
 
-**Last Updated:** April 3, 2026
+**Last Updated:** April 5, 2026
 
 ## Project Overview
 
@@ -61,6 +61,8 @@ A comprehensive desktop application for LitRPG/GameLit authors that bridges narr
   - RAG system for document indexing
   - Prompt-tool presets with built-in `Writing Critic` and `Line Editor` personas
   - Explicit workspace persona actions for critique and line edit flows
+  - Character import AI review with conservative JSON-based suggestions
+  - Character Coach discussion panel during character editing
 
 ### UI Components
 - Ruleset creation wizard + desktop import (planned).
@@ -88,6 +90,7 @@ A comprehensive desktop application for LitRPG/GameLit authors that bridges narr
   - `/character`, `/item`, `/memory`, `/system`, `/stat-block`
   - command-first parsing with `/command query` behavior
   - context-aware ranking using active/pinned scene entities and related memory tags
+  - exact-match auto-advance, richer menu previews, and lightweight discoverability hinting
 - Softened theme system for buttons, cards, badges, and modal surfaces.
 - Shared import/export preview flows for scene and compendium JSON portability.
 - Project-scoped scratchpad popover for freeform note capture from any route.
@@ -103,6 +106,19 @@ A comprehensive desktop application for LitRPG/GameLit authors that bridges narr
   - review/details moved into on-demand modals
   - independent scrolling across scene rail, editor column, and context/AI rail
 - Ollama integration path fixes and wider AI panel mode.
+- Lore/review inline workflow convergence:
+  - related-record context, alternative names, and compendium status in lore surfaces
+  - direct compendium seeding/open actions from inline lore and Lore Inspector
+  - richer review-queue candidate context with inspect-before-link actions
+  - focused navigation into matching Character Sheets and Compendium entries
+- Character authoring/import follow-up:
+  - `Project Mode` selection moved into project creation for first-use clarity
+  - General Fiction copy/gating tightened across Projects, Settings, Characters, and World Bible
+  - review-first long-form character import for `.docx`, `.rtf`, and pasted text
+  - structured imported sections preserved instead of flattening immediately into one notes blob
+  - richer character editing surface for imported sections and source residue
+  - compact character list/details split for better authoring space use
+  - Character Coach AI panel for in-editor character development discussion
 
 ---
 
@@ -134,6 +150,13 @@ npx tsx proxy-server.ts
 # In another terminal
 pnpm dev:web
 # Opens on http://localhost:5173
+```
+
+**4. Start Electron for desktop testing:**
+```bash
+# In another terminal
+cd apps/desktop
+pnpm start:dev
 ```
 
 ### Project Structure
@@ -172,6 +195,74 @@ npx tsx examples/basic-usage.ts
 
 ## Recent Changes & Fixes
 
+### Character Creation / Promotion Follow-up (April 5, 2026)
+- Continued the character dogfooding pass with a stronger mode-based `Characters` route:
+  - default state now emphasizes three entry paths in human-first order: manual, import, then AI-assisted draft
+  - focused workspaces hide the roster/list while creating, reviewing imports, reviewing AI drafts, or editing a character
+  - manual creation now supports full-width editing plus author-added custom sections
+- Extended AI-assisted character work beyond the initial draft:
+  - AI-generated drafts now share the same review flow as imports
+  - review and edit surfaces both support per-section AI actions (`Expand`, `Sharpen`, `Find tension`)
+  - AI/import review now allows adding new sections before save instead of forcing a save-first workaround
+- Hardened fragile AI/import paths uncovered during dogfooding:
+  - tolerant JSON parsing now handles several malformed model responses that previously crashed draft creation
+  - import parsing now recognizes broader labels such as `Character:` and approximate age phrases like `mid 20s`
+  - inline section starts like `Background: ...` and `Goals: ...` now become real structured sections during import
+- Added character lifecycle groundwork between `World Bible` and `Characters`:
+  - World Bible people-like entries can now be promoted into full Characters records
+  - roadmap notes now explicitly track future author-editable prompt overrides and a companion `Demote to World Bible` flow
+
+**Immediate Next Slice**
+- Keep dogfooding AI-assisted character creation until the model reliably returns richer section detail instead of thin top-level summaries.
+- Validate whether the `Promote to Characters` flow needs linked provenance UI before adding demotion.
+
+### Character Import / Editing / Coaching Pass (April 4, 2026)
+- Closed the first major dogfooding loop around character authoring:
+  - fixed the Characters route blank-screen crash
+  - moved `Project Mode` into project creation so new projects stop silently inheriting the wrong posture
+  - clarified `General Fiction` expectations and the `World Bible` vs `Characters` boundary in the UI
+- Reworked long-form character import into a review-first flow:
+  - import now supports `.docx`, `.rtf`, and pasted text on the Characters surface
+  - imports extract likely basic info, section blocks, and source residue before save
+  - per-section actions now use clearer language (`Keep in details`, `Add to short description`, etc.)
+  - structured imported sections are preserved in the saved character instead of being flattened immediately
+- Hardened the RTF and AI-assist paths during dogfooding:
+  - improved RTF cleanup for Apple/Word-style exports after several real-file failures
+  - fixed duplicate-key issues from repeated section titles
+  - made AI import suggestions resilient to fenced/non-ideal JSON responses
+  - surfaced what the AI actually changed so success is visible instead of silent
+- Extended character editing beyond the original minimal form:
+  - imported sections and source residue are editable after save
+  - age was demoted from the compact list in favor of name/role emphasis
+  - added a `Character Coach` panel so AI can help identify missing dimensions, tensions, and texture during editing
+
+**Immediate Next Slice**
+- Dogfood the new character-coach/editor loop in real use.
+- Decide whether coach suggestions need lightweight apply/promote actions.
+- Decide whether imported sections should remain structured details or become first-class character fields.
+
+### Workspace Lore/Review Convergence + Focused Record Navigation (April 3, 2026)
+- Finished the workspace inline-authoring follow-up after the initial slash-command pass:
+  - slash menu now auto-advances exact command matches instead of always requiring `Enter`
+  - visible `/event` labeling replaces `/system` in the root menu while keeping `system` as an accepted alias
+  - slash rows now show clearer descriptions, metadata, and section headers
+  - lightweight `type /` hinting was added for low-content scenes
+- Extended inline lore and canon workflows:
+  - lore popovers and Lore Inspector now show alternative names, connected-record context, and compendium-link status
+  - entity lore can seed a Compendium entry directly or open the existing entry without leaving a dead-end route hop
+  - review popovers and the review queue now show top suggested matches with inspectable context before linking aliases
+- Tightened cross-route navigation:
+  - character lore now opens the matching Character Sheet directly in edit mode
+  - compendium actions now land on the `Entries` tab with the linked entry focused/highlighted
+  - review/open actions across workspace surfaces now behave like one connected canon-resolution flow instead of separate tools
+
+**Immediate Next Slice**
+- Corkboard dogfooding/polish is now the clearest product-work follow-up if time is available.
+- Strategic/document follow-ups worth carrying forward:
+  - translate broader-market table stakes into explicit roadmap slices without diluting the LitRPG/GameLit wedge
+  - decide which generic-fiction planning features are required for parity vs which should stay secondary to consistency/state differentiation
+  - revisit portability/versioning after the workspace UX settles further
+
 ### Workspace Context Loop + Slash Commands (April 3, 2026)
 - Finished a substantial workspace context pass:
   - added collapsible side-rail cards for `In This Scene` and `Canon Memories`
@@ -200,12 +291,14 @@ npx tsx examples/basic-usage.ts
   - writing-shortcuts modal is available without needing to clear review state first
 
 **Immediate Next Slice**
-- Dogfood the new slash workflow and decide whether exact command matches should auto-advance without `Enter`.
-- Strongest nearby follow-up candidates:
-  - slash-menu UX polish (section headers, previews, exact-match behavior)
+- Completed later the same day:
+  - exact-match slash auto-advance and menu polish
   - richer lore/compendium inline actions from popovers
+  - review/lore convergence pass and focused record navigation
+- Remaining nearby follow-up candidates:
   - corkboard dogfooding based on real outlining sessions
   - portability/versioning hardening once current workspace UX settles
+  - market/table-stakes planning for broader fiction feature parity
 
 ### Corkboard Planning Workspace + AI/UX Pass (March 29, 2026)
 - Completed the first real corkboard implementation after the scratchpad groundwork:

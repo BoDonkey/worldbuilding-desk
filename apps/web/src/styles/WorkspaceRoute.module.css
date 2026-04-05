@@ -924,6 +924,44 @@
   align-items: end;
 }
 
+.reviewSuggestionList {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.reviewSuggestionRow {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.65rem;
+  align-items: center;
+  padding: 0.55rem 0.65rem;
+  border: 1px solid var(--surface-border-soft);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--surface-panel) 90%, var(--surface-panel-elevated) 10%);
+}
+
+.reviewSuggestionText {
+  display: grid;
+  gap: 0.18rem;
+  min-width: 0;
+}
+
+.reviewSuggestionText strong {
+  font-size: 0.84rem;
+  color: #7c2d12;
+}
+
+.reviewSuggestionText span {
+  font-size: 0.76rem;
+  color: #92400e;
+  line-height: 1.4;
+}
+
+.reviewSuggestionButton {
+  font-size: 0.78rem;
+  flex-shrink: 0;
+}
+
 .reviewQueueFooter {
   display: flex;
   justify-content: flex-end;

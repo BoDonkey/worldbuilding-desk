@@ -1,4 +1,5 @@
 import {useEffect, useMemo, useRef, useState} from 'react';
+import {useLocation} from 'react-router-dom';
 import type {
   Character,
   CompendiumActionDefinition,
@@ -230,6 +231,7 @@ function getDefaultActions(domain: CompendiumDomain): CompendiumActionDefinition
 }
 
 function CompendiumRoute({activeProject, projectSettings}: CompendiumRouteProps) {
+  const location = useLocation();
   const [entries, setEntries] = useState<CompendiumEntry[]>([]);
   const [milestones, setMilestones] = useState<CompendiumMilestone[]>([]);
   const [recipes, setRecipes] = useState<UnlockableRecipe[]>([]);
@@ -248,11 +250,13 @@ function CompendiumRoute({activeProject, projectSettings}: CompendiumRouteProps)
     tone: 'success' | 'error';
     message: string;
   } | null>(null);
+  const [focusedEntryId, setFocusedEntryId] = useState<string | null>(null);
   const [compendiumImportPreview, setCompendiumImportPreview] =
     useState<CompendiumImportPreviewState | null>(null);
   const [isImportPreviewOpen, setImportPreviewOpen] = useState(false);
   const [isImportingJson, setImportingJson] = useState(false);
   const compendiumImportInputRef = useRef<HTMLInputElement | null>(null);
+  const focusedEntryRef = useRef<HTMLLIElement | null>(null);
 
   const [entryName, setEntryName] = useState('');
   const [entryDomain, setEntryDomain] = useState<CompendiumDomain>('beast');
@@ -393,6 +397,24 @@ function CompendiumRoute({activeProject, projectSettings}: CompendiumRouteProps)
     if (!settlementState) return;
     setBaseStatsDraft(toBaseStatsDraft(settlementState.baseStats));
   }, [settlementState]);
+
+  useEffect(() => {
+    const state = location.state as {focusEntryId?: string} | null;
+    if (!state?.focusEntryId) {
+      return;
+    }
+    setActiveTab('entries');
+    setFocusedEntryId(state.focusEntryId);
+    window.requestAnimationFrame(() => {
+      focusedEntryRef.current?.scrollIntoView({block: 'center', behavior: 'smooth'});
+    });
+  }, [location.state]);
+
+  useEffect(() => {
+    if (!focusedEntryId) return;
+    const timeoutId = window.setTimeout(() => setFocusedEntryId(null), 2600);
+    return () => window.clearTimeout(timeoutId);
+  }, [focusedEntryId]);
   useEffect(() => {
     if (activeTab === 'world-systems' && !enableWorldSystems) {
       setActiveTab('overview');
@@ -1495,7 +1517,13 @@ function CompendiumRoute({activeProject, projectSettings}: CompendiumRouteProps)
         )}
         <ul className={styles.plainList}>
           {entries.map((entry) => (
-            <li key={entry.id} className={styles.entryCard}>
+            <li
+              key={entry.id}
+              ref={entry.id === focusedEntryId ? focusedEntryRef : null}
+              className={`${styles.entryCard} ${
+                entry.id === focusedEntryId ? styles.entryCardFocused : ''
+              }`}
+            >
               <strong>{entry.name}</strong>{' '}
               <span className={styles.entryMeta}>[{entry.domain}]</span>
               {entry.sourceEntityId && (

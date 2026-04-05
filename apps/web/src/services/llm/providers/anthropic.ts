@@ -24,7 +24,7 @@ export class AnthropicProvider implements LLMProvider {
   constructor(config: AnthropicProviderConfig) {
     this.apiKey = config.apiKey;
     this.model = config.model ?? 'claude-sonnet-4-20250514';
-    this.baseUrl = config.baseUrl ?? 'https://api.anthropic.com/v1/messages';
+    this.baseUrl = config.baseUrl ?? 'http://localhost:3001/api/anthropic/complete';
     this.streamingUrl = config.streamingUrl ?? 'http://localhost:3001/api/anthropic/stream';
   }
 
@@ -34,21 +34,32 @@ export class AnthropicProvider implements LLMProvider {
       request.systemPrompt
     );
 
-    const response = await fetch(this.baseUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': this.apiKey,
-        'anthropic-version': '2023-06-01'
-      },
-      body: JSON.stringify({
-        model: request.model ?? this.model,
-        max_tokens: request.maxTokens || 4096,
-        temperature: request.temperature || 0.7,
-        system: systemPrompt,
-        messages: request.messages.filter((m) => m.role !== 'system')
-      })
-    });
+    let response: Response;
+    try {
+      response = await fetch(this.baseUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          apiKey: this.apiKey,
+          request: {
+            model: request.model ?? this.model,
+            maxTokens: request.maxTokens || 4096,
+            temperature: request.temperature || 0.7,
+            systemPrompt,
+            messages: request.messages.filter((m) => m.role !== 'system')
+          }
+        })
+      });
+    } catch (error) {
+      if (error instanceof TypeError) {
+        throw new Error(
+          'Anthropic browser requests use the local proxy. Start `npx tsx proxy-server.ts` in `apps/web`, or use the Electron app.'
+        );
+      }
+      throw error;
+    }
 
     if (!response.ok) {
       throw new Error(`Anthropic API error: ${response.statusText}`);

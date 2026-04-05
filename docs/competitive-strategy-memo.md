@@ -1,6 +1,6 @@
 # Competitive Strategy Memo
 
-Last updated: March 29, 2026
+Last updated: April 3, 2026
 
 ## Question
 
@@ -257,6 +257,70 @@ If the product leans too hard into:
 then it loses its most defensible identity and enters a commodity space.
 
 ### 2. Do not try to match every NovelCrafter feature before sharpening differentiation
+
+Broader-market fiction competitors are increasingly bundling a familiar “AI author suite” surface area:
+
+- genre/project presets
+- trope libraries
+- story-structure templates and beat sheets
+- AI world/character setup
+- series management
+- AI editing/refinement
+- marketing copy generation
+
+This does **not** mean Worldbuilding Desk should chase full feature parity across all of those areas immediately.
+
+It **does** mean the roadmap should now distinguish more explicitly between:
+
+- **table-stakes parity** features the market increasingly expects
+- **differentiating wedge** features that define why this product exists
+
+## Table-Stakes vs Wedge
+
+### Table-stakes features to consider for eventual parity
+
+These are increasingly baseline expectations for fiction-writing tools, even if they are not the core moat:
+
+- project/genre presets
+- trope and convention scaffolds
+- structure templates such as Three Act / Save the Cat / Romance beat sheets
+- lightweight AI help for character setup and world setup
+- series-level continuity summaries
+- editing/refinement assistance
+- marketing copy generation
+
+### Features that should stay central to differentiation
+
+These are the areas where Worldbuilding Desk can still feel materially different instead of interchangeable:
+
+- canon/state enforcement
+- review-driven entity resolution
+- world-state and progression-aware authoring
+- rules/mechanics support for LitRPG/GameLit/progression fiction
+- local-first trust and controllable AI usage
+- parent/child canon inheritance across books or projects
+
+## Recommendation
+
+Treat broader-fiction “AI author suite” features as a **layer**, not the identity.
+
+Recommended product posture:
+
+- Ship a small set of obvious parity features so the app does not look incomplete.
+- Keep those parity features subordinate to the main promise:
+  - **worldbuilding that survives drafting**
+  - **canon and progression that stay connected**
+  - **a writing desk for stories with rules, state, and continuity**
+
+## Suggested Table-Stakes Package
+
+If the team chooses to cover more of the broader market, the smallest coherent package is likely:
+
+1. Project/genre setup presets.
+2. Story-structure and trope scaffolds.
+3. AI-assisted character/world setup helpers.
+
+Everything else, especially marketing generation, should remain explicitly secondary unless repeated user demand proves it is worth pulling forward.
 
 That creates a treadmill:
 

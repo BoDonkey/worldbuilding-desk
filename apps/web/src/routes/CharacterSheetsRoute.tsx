@@ -47,7 +47,9 @@ interface CharacterSheetsRouteProps {
   projectSettings?: ProjectSettings | null;
   embedded?: boolean;
   prefillCharacterId?: string | null;
+  focusSheetId?: string | null;
   onPrefillConsumed?: () => void;
+  onFocusSheetConsumed?: () => void;
 }
 
 function CharacterSheetsRoute({
@@ -55,7 +57,9 @@ function CharacterSheetsRoute({
   projectSettings = null,
   embedded = false,
   prefillCharacterId,
-  onPrefillConsumed
+  focusSheetId,
+  onPrefillConsumed,
+  onFocusSheetConsumed
 }: CharacterSheetsRouteProps) {
   const navigate = useNavigate();
   const [sheets, setSheets] = useState<CharacterSheet[]>([]);
@@ -191,6 +195,38 @@ function CharacterSheetsRoute({
     isLoaded,
     onPrefillConsumed
   ]);
+
+  useEffect(() => {
+    if (!focusSheetId || !isLoaded) {
+      return;
+    }
+    const sheet = sheets.find((entry) => entry.id === focusSheetId);
+    if (sheet) {
+      setEditingId(sheet.id);
+      setSelectedCharacterId(sheet.characterId || '');
+      setName(sheet.name);
+      setLevel(sheet.level);
+      setExperience(sheet.experience);
+      setStats(sheet.stats);
+      setResources(sheet.resources);
+      setNotes(sheet.notes ?? '');
+      setInventoryEntries(
+        mergeLegacyAndTracked(sheet.inventory, sheet.inventoryEntries)
+      );
+      setEquipmentEntries(
+        mergeLegacyAndTracked(sheet.equipment ?? [], sheet.equipmentEntries)
+      );
+      setStatusEntries(mergeLegacyAndTracked(sheet.statuses ?? [], sheet.statusEntries));
+      setQuickInventoryName('');
+      setQuickInventoryQty(1);
+      setQuickEquipmentName('');
+      setQuickStatusName('');
+      setCatalogInventoryId('');
+      setCatalogEquipmentId('');
+      setCatalogStatusId('');
+    }
+    onFocusSheetConsumed?.();
+  }, [focusSheetId, isLoaded, onFocusSheetConsumed, sheets]);
 
   const refreshRulesetMemory = useCallback(async () => {
     if (!shodhService || !ruleset?.id) {

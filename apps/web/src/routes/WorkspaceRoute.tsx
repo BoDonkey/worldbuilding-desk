@@ -5,6 +5,7 @@ import type {
   Character,
   CharacterSheet,
   CompendiumDomain,
+  CompendiumEntry,
   EntityCategory,
   Project,
   ProjectSettings,
@@ -39,6 +40,7 @@ import {
 import {createEditorConfigWithStyles} from '../config/editorConfig';
 import type {EditorConfig} from '../config/editorConfig';
 import {countWords, htmlToPlainText} from '../utils/textHelpers';
+import {parseRtfToText} from '../utils/importText';
 import {
   exportScenesAsJson,
   exportScenesAsDocx,
@@ -424,6 +426,7 @@ interface UnknownLinkOption {
   id: string;
   name: string;
   targetType: 'entity' | 'character';
+  detail: string;
 }
 
 type WorkspaceDebugWindow = Window & {
@@ -646,6 +649,7 @@ function WorkspaceRoute({activeProject, projectSettings: initialProjectSettings 
   const [projectSettings, setProjectSettings] =
     useState<ProjectSettings | null>(null);
   const [entities, setEntities] = useState<WorldEntity[]>([]);
+  const [compendiumEntries, setCompendiumEntries] = useState<CompendiumEntry[]>([]);
   const [categories, setCategories] = useState<EntityCategory[]>([]);
   const [aliases, setAliases] = useState<ConsistencyAlias[]>([]);
   const [resolvedActionCues, setResolvedActionCues] = useState<string[]>([]);
@@ -698,6 +702,7 @@ function WorkspaceRoute({activeProject, projectSettings: initialProjectSettings 
     tone: FeedbackTone;
     message: string;
   } | null>(null);
+  const [seedingCompendiumEntityId, setSeedingCompendiumEntityId] = useState<string | null>(null);
   const [guardrailIssues, setGuardrailIssues] = useState<GuardrailIssue[]>([]);
   const [resolvingUnknown, setResolvingUnknown] = useState<string | null>(null);
   const [linkingUnknown, setLinkingUnknown] = useState<string | null>(null);
@@ -912,6 +917,7 @@ function WorkspaceRoute({activeProject, projectSettings: initialProjectSettings 
       setToolbarButtons([]);
       setProjectSettings(null);
       setEntities([]);
+      setCompendiumEntries([]);
       setCategories([]);
       setAliases([]);
       setResolvedActionCues([]);
@@ -940,11 +946,12 @@ function WorkspaceRoute({activeProject, projectSettings: initialProjectSettings 
 
     (async () => {
       await initializeDefaultCategories(activeProject.id);
-      const [docs, settings, resolvedCues, loadedEntities, loadedCategories, loadedAliases, loadedCharacters, loadedSheets, loadedRuleset, loadedSettlementState, loadedSettlementModules] = await Promise.all([
+      const [docs, settings, resolvedCues, loadedEntities, loadedCompendiumEntries, loadedCategories, loadedAliases, loadedCharacters, loadedSheets, loadedRuleset, loadedSettlementState, loadedSettlementModules] = await Promise.all([
         getDocumentsByProject(activeProject.id),
         getOrCreateSettings(activeProject.id),
         getResolvedConsistencyActionCues(activeProject),
         getEntitiesByProject(activeProject.id),
+        getCompendiumEntriesByProject(activeProject.id),
         getCategoriesByProject(activeProject.id),
         getAliasesByProject(activeProject.id),
         getCharactersByProject(activeProject.id),
@@ -983,6 +990,7 @@ function WorkspaceRoute({activeProject, projectSettings: initialProjectSettings 
       );
       setStatBlockGroups(settings.statBlockPreferences?.groups ?? []);
       setEntities(loadedEntities);
+      setCompendiumEntries(loadedCompendiumEntries);
       setCharacters(loadedCharacters);
       setCharacterSheets(loadedSheets);
       setRuleset(loadedRuleset);
@@ -1577,6 +1585,8 @@ function WorkspaceRoute({activeProject, projectSettings: initialProjectSettings 
 
           const raw = lower.endsWith('.docx')
             ? await parseDocxToText(file)
+            : lower.endsWith('.rtf')
+              ? parseRtfToText(await file.text())
             : lower.endsWith('.pages')
               ? await parsePagesToText(file)
               : await file.text();
@@ -1974,13 +1984,77 @@ function WorkspaceRoute({activeProject, projectSettings: initialProjectSettings 
     addSystemHistory
   ]);
 
-  const openWorldRecord = (target: {id: string; type: 'character' | 'entity'}) => {
+  const openWorldRecord = useCallback((target: {id: string; type: 'character' | 'entity'}) => {
     if (target.type === 'entity') {
       navigate('/world-bible', {state: {focusEntityId: target.id}});
       return;
     }
-    navigate('/characters');
-  };
+    navigate('/characters', {state: {view: 'sheets', focusSheetId: target.id}});
+  }, [navigate]);
+
+  const openCompendiumView = useCallback((record?: LoreInspectorRecord) => {
+    navigate('/compendium', {
+      state: record?.compendium?.entryId
+        ? {focusEntryId: record.compendium.entryId}
+        : undefined
+    });
+  }, [navigate]);
+
+  const openLinkedReviewTarget = useCallback((selectionValue?: string) => {
+    const parsedSelection = selectionValue ? parseUnknownLinkValue(selectionValue) : null;
+    if (!parsedSelection) {
+      return;
+    }
+    openWorldRecord({
+      id: parsedSelection.id,
+      type: parsedSelection.targetType
+    });
+  }, [openWorldRecord]);
+
+  const seedCompendiumEntryForEntity = useCallback(async (entity: WorldEntity) => {
+    if (!activeProject) {
+      throw new Error('No active project selected.');
+    }
+    const category = categories.find((item) => item.id === entity.categoryId);
+    const entry = await upsertCompendiumEntryFromEntity({
+      projectId: activeProject.id,
+      entity,
+      domain: inferCompendiumDomainFromCategory(category)
+    });
+    setCompendiumEntries((prev) =>
+      [...prev.filter((item) => item.id !== entry.id), entry].sort((left, right) =>
+        left.name.localeCompare(right.name)
+      )
+    );
+    return entry;
+  }, [activeProject, categories]);
+
+  const handleSeedCompendiumFromLore = useCallback(async (record: LoreInspectorRecord) => {
+    if (!activeProject || record.type !== 'entity') {
+      return;
+    }
+    const entity = entities.find((item) => item.id === record.id);
+    if (!entity) {
+      setFeedback({tone: 'error', message: 'Could not find this World Bible entity.'});
+      return;
+    }
+    setSeedingCompendiumEntityId(entity.id);
+    try {
+      const entry = await seedCompendiumEntryForEntity(entity);
+      setFeedback({
+        tone: 'success',
+        message: `"${entity.name}" linked to Compendium as "${entry.name}".`
+      });
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : 'Unable to seed compendium entry.';
+      setFeedback({tone: 'error', message});
+    } finally {
+      setSeedingCompendiumEntityId(null);
+    }
+  }, [activeProject, entities, seedCompendiumEntryForEntity]);
 
   const openExportModal = useCallback((format: ExportFormat) => {
     const selection = documents.map((doc) => ({
@@ -2248,12 +2322,25 @@ function WorkspaceRoute({activeProject, projectSettings: initialProjectSettings 
 
   const unknownLinkOptions = useMemo(() => {
     const optionMap: Record<string, UnknownLinkOption[]> = {};
+    const categoryNameById = new Map(categories.map((category) => [category.id, category.name]));
+    const characterSheetByCharacterId = new Map(
+      characterSheets
+        .filter((sheet): sheet is CharacterSheet & {characterId: string} => Boolean(sheet.characterId))
+        .map((sheet) => [sheet.characterId, sheet])
+    );
     const allCharacterOptions: UnknownLinkOption[] = [
       ...characters.map((character) => ({
         value: buildUnknownLinkValue('character', character.id),
         id: character.id,
         name: character.name,
-        targetType: 'character' as const
+        targetType: 'character' as const,
+        detail: (() => {
+          const sheet = characterSheetByCharacterId.get(character.id);
+          const role = typeof character.fields.role === 'string' && character.fields.role.trim()
+            ? character.fields.role.trim()
+            : 'Role not set';
+          return sheet ? `Character · Level ${sheet.level} · ${role}` : `Character · ${role}`;
+        })()
       }))
     ];
     const allEntityOptions: UnknownLinkOption[] = [
@@ -2261,7 +2348,17 @@ function WorkspaceRoute({activeProject, projectSettings: initialProjectSettings 
         value: buildUnknownLinkValue('entity', entity.id),
         id: entity.id,
         name: entity.name,
-        targetType: 'entity' as const
+        targetType: 'entity' as const,
+        detail: (() => {
+          const categoryName = categoryNameById.get(entity.categoryId) ?? 'Entity';
+          const status =
+            typeof entity.fields.status === 'string' && entity.fields.status.trim()
+              ? entity.fields.status.trim()
+              : entity.completionStatus === 'draft'
+                ? 'Needs completion'
+                : 'No explicit status';
+          return `${categoryName} · ${status}`;
+        })()
       }))
     ];
 
@@ -2306,7 +2403,16 @@ function WorkspaceRoute({activeProject, projectSettings: initialProjectSettings 
       optionMap[surface] = ranked.slice(0, 50);
     });
     return optionMap;
-  }, [unknownReviewItems, categories, entities, characters]);
+  }, [unknownReviewItems, categories, entities, characters, characterSheets]);
+
+  const selectedUnknownLinkOptionBySurface = useMemo(() => {
+    const map: Record<string, UnknownLinkOption | null> = {};
+    Object.entries(unknownLinkSelection).forEach(([surface, value]) => {
+      map[surface] =
+        unknownLinkOptions[surface]?.find((option) => option.value === value) ?? null;
+    });
+    return map;
+  }, [unknownLinkOptions, unknownLinkSelection]);
 
   useEffect(() => {
     const activeKeys = new Set(
@@ -2531,11 +2637,7 @@ function WorkspaceRoute({activeProject, projectSettings: initialProjectSettings 
       setEntities((prev) => [...prev, entity]);
 
       if (draft.seedCompendium && canSeedCompendium) {
-        await upsertCompendiumEntryFromEntity({
-          projectId: activeProject.id,
-          entity,
-          domain: inferCompendiumDomainFromCategory(preferredCategory)
-        });
+        await seedCompendiumEntryForEntity(entity);
       }
 
       if (normalizeUnknownKey(normalizedSurface) !== normalizeUnknownKey(canonicalName)) {
@@ -2570,7 +2672,7 @@ function WorkspaceRoute({activeProject, projectSettings: initialProjectSettings 
     } finally {
       setResolvingUnknown(null);
     }
-  }, [activeProject, applyAliasLocally, clearUnknownSurfaceState, entities, categories, unknownReviewItemBySurface, projectSettings?.featureToggles.enableGameSystems]);
+  }, [activeProject, applyAliasLocally, clearUnknownSurfaceState, entities, categories, unknownReviewItemBySurface, projectSettings?.featureToggles.enableGameSystems, seedCompendiumEntryForEntity]);
 
   const resolveAllUnknownEntities = useCallback(async () => {
     if (unknownReviewItems.length === 0) return;
@@ -2884,12 +2986,26 @@ function WorkspaceRoute({activeProject, projectSettings: initialProjectSettings 
 
     const categoryNameById = new Map(categories.map((category) => [category.id, category.name]));
     const characterById = new Map(characters.map((character) => [character.id, character]));
+    const aliasesByTarget = new Map<string, string[]>();
     const characterSheetByCharacterId = new Map(
       characterSheets
         .filter((sheet): sheet is CharacterSheet & {characterId: string} => Boolean(sheet.characterId))
         .map((sheet) => [sheet.characterId, sheet])
     );
     const entityById = new Map(entities.map((entity) => [entity.id, entity]));
+    const compendiumEntryBySourceEntityId = new Map(
+      compendiumEntries
+        .filter((entry): entry is CompendiumEntry & {sourceEntityId: string} => Boolean(entry.sourceEntityId))
+        .map((entry) => [entry.sourceEntityId, entry])
+    );
+
+    aliases.forEach((alias) => {
+      const targetType = alias.targetType ?? 'entity';
+      const key = `${targetType}:${alias.entityId}`;
+      const existing = aliasesByTarget.get(key) ?? [];
+      existing.push(alias.alias);
+      aliasesByTarget.set(key, existing);
+    });
 
     const recentSystemMessageFor = (name: string): string => {
       const normalized = name.trim().toLowerCase();
@@ -2932,6 +3048,17 @@ function WorkspaceRoute({activeProject, projectSettings: initialProjectSettings 
         id: sheet.id,
         name: sheet.name,
         completionStatus: 'complete',
+        alternativeNames: Array.from(
+          new Set(aliasesByTarget.get(`character:${sheet.characterId ?? sheet.id}`) ?? [])
+        ),
+        relatedRecords: [
+          {
+            id: sheet.id,
+            label: 'Character sheet',
+            detail: `Level ${sheet.level} snapshot for scene inserts.`,
+            targetType: 'character'
+          }
+        ],
         vitalSigns: [
           `Level ${sheet.level}`,
           role,
@@ -2965,11 +3092,34 @@ function WorkspaceRoute({activeProject, projectSettings: initialProjectSettings 
       if (!cached) {
         setCachedSynopsis(activeProject.id, entity.id, entity.updatedAt, synopsis);
       }
+      const compendiumEntry = compendiumEntryBySourceEntityId.get(entity.id);
+      const alternativeNames = Array.from(
+        new Set(aliasesByTarget.get(`entity:${entity.id}`) ?? [])
+      );
       return {
         type: 'entity',
         id: entity.id,
         name: entity.name,
         completionStatus: entity.completionStatus ?? 'complete',
+        alternativeNames,
+        relatedRecords: compendiumEntry
+          ? [
+              {
+                id: compendiumEntry.id,
+                label: 'Compendium entry',
+                detail: `${compendiumEntry.name}${compendiumEntry.domain ? ` · ${compendiumEntry.domain}` : ''}`,
+                targetType: 'compendium'
+              }
+            ]
+          : [],
+        compendium: {
+          entryId: compendiumEntry?.id,
+          name: compendiumEntry?.name ?? entity.name,
+          domain: compendiumEntry?.domain ?? inferCompendiumDomainFromCategory(
+            categories.find((item) => item.id === entity.categoryId)
+          ),
+          linked: Boolean(compendiumEntry)
+        },
         vitalSigns: [categoryName, status],
         synopsis
       };
@@ -3084,6 +3234,7 @@ function WorkspaceRoute({activeProject, projectSettings: initialProjectSettings 
     categories,
     characters,
     characterSheets,
+    compendiumEntries,
     entities,
     resolveCharacterBlock,
     resolveItemBlock,
@@ -4811,11 +4962,15 @@ function WorkspaceRoute({activeProject, projectSettings: initialProjectSettings 
         <input
           ref={importInputRef}
           type='file'
-          accept='.txt,.md,.markdown,.html,.htm,.docx,.doc,.pages,text/plain,text/markdown,text/html,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/msword'
+          accept='.txt,.md,.markdown,.html,.htm,.docx,.doc,.rtf,.pages,text/plain,text/markdown,text/html,text/rtf,application/rtf,application/x-rtf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/msword'
           multiple
           onChange={(e) => void handleImportDocuments(e)}
           style={{display: 'none'}}
         />
+        <p className={styles.sceneMeta} style={{marginTop: '0.5rem'}}>
+          Supports `.txt`, `.md`, `.html`, `.docx`, and `.rtf`. Apple Pages is best-effort only;
+          if it fails, export as `.docx` or `.txt` from Pages first.
+        </p>
       </div>
 
       {importSummary && (
@@ -5003,6 +5158,11 @@ function WorkspaceRoute({activeProject, projectSettings: initialProjectSettings 
                   onWordCountChange={setWordCount}
                   consistencyHighlights={highlightableUnknownIssues}
                   onOpenLoreRecord={openWorldRecord}
+                  onOpenCompendium={openCompendiumView}
+                  onSeedCompendiumEntry={(record) => {
+                    void handleSeedCompendiumFromLore(record);
+                  }}
+                  seedingCompendiumRecordId={seedingCompendiumEntityId}
                   onConsistencyHighlightClick={(issueId, anchorRect) => {
                     const issue = highlightableUnknownIssues.find(
                       (entry) => entry.id === issueId
@@ -5194,6 +5354,53 @@ function WorkspaceRoute({activeProject, projectSettings: initialProjectSettings 
                               ? 'Linking...'
                               : 'Link alias'}
                           </button>
+                          <button
+                            type='button'
+                            className={styles.modalSecondaryAction}
+                            onClick={() =>
+                              openLinkedReviewTarget(
+                                unknownLinkSelection[activeConsistencyPopoverIssue.surface]
+                              )
+                            }
+                            disabled={
+                              !unknownLinkSelection[activeConsistencyPopoverIssue.surface]
+                            }
+                          >
+                            Open selected
+                          </button>
+                        </div>
+                        {selectedUnknownLinkOptionBySurface[
+                          activeConsistencyPopoverIssue.surface
+                        ] && (
+                          <div className={styles.consistencyPopoverNote}>
+                            {
+                              selectedUnknownLinkOptionBySurface[
+                                activeConsistencyPopoverIssue.surface
+                              ]?.detail
+                            }
+                          </div>
+                        )}
+                        <div className={styles.reviewSuggestionList}>
+                          {unknownLinkOptions[activeConsistencyPopoverIssue.surface]
+                            .slice(0, 3)
+                            .map((entity) => (
+                              <div
+                                key={`${activeConsistencyPopoverIssue.surface}:${entity.value}`}
+                                className={styles.reviewSuggestionRow}
+                              >
+                                <div className={styles.reviewSuggestionText}>
+                                  <strong>{entity.name}</strong>
+                                  <span>{entity.detail}</span>
+                                </div>
+                                <button
+                                  type='button'
+                                  className={styles.reviewSuggestionButton}
+                                  onClick={() => openLinkedReviewTarget(entity.value)}
+                                >
+                                  Open
+                                </button>
+                              </div>
+                            ))}
                         </div>
                       </div>
                     ) : (
@@ -5715,6 +5922,28 @@ function WorkspaceRoute({activeProject, projectSettings: initialProjectSettings 
                         </label>
                       )}
                     </div>
+                    {unknownLinkOptions[item.surface]?.length ? (
+                      <div className={styles.reviewSuggestionList}>
+                        {unknownLinkOptions[item.surface].slice(0, 3).map((entity) => (
+                          <div
+                            key={`${item.surface}:${entity.value}`}
+                            className={styles.reviewSuggestionRow}
+                          >
+                            <div className={styles.reviewSuggestionText}>
+                              <strong>{entity.name}</strong>
+                              <span>{entity.detail}</span>
+                            </div>
+                            <button
+                              type='button'
+                              className={styles.reviewSuggestionButton}
+                              onClick={() => openLinkedReviewTarget(entity.value)}
+                            >
+                              Open
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    ) : null}
                     <div className={styles.reviewQueueActions}>
                       <button
                         type='button'
@@ -5761,11 +5990,27 @@ function WorkspaceRoute({activeProject, projectSettings: initialProjectSettings 
                       </button>
                       <button
                         type='button'
+                        className={styles.modalSecondaryAction}
+                        onClick={() =>
+                          openLinkedReviewTarget(unknownLinkSelection[item.surface])
+                        }
+                        disabled={!unknownLinkSelection[item.surface]}
+                      >
+                        Open selected
+                      </button>
+                      <button
+                        type='button'
                         onClick={() => dismissUnknownEntity(item.surface)}
                       >
                         Dismiss
                       </button>
                     </div>
+                    {selectedUnknownLinkOptionBySurface[item.surface] && (
+                      <div className={styles.reviewQueueMeta}>
+                        Selected match:{' '}
+                        {selectedUnknownLinkOptionBySurface[item.surface]?.detail}
+                      </div>
+                    )}
                   </div>
                 ))
               ) : (

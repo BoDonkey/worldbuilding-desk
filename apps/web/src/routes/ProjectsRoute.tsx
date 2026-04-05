@@ -1,6 +1,6 @@
 import {useCallback, useEffect, useRef, useState} from 'react';
 import type {ChangeEvent, FormEvent} from 'react';
-import type {Project} from '../entityTypes';
+import type {Project, ProjectMode} from '../entityTypes';
 import type {WorldRuleset} from '@litrpg-tool/rules-engine';
 import {
   getAllProjects,
@@ -9,6 +9,8 @@ import {
   deleteProject as deleteProjectFromStore
 } from '../projectStorage';
 import {getRulesetByProjectId, deleteRuleset} from '../services/rulesetService';
+import {createDefaultSettings} from '../settingsStorage';
+import {PROJECT_MODE_OPTIONS} from '../projectMode';
 import {
   getSeriesBibleConfig,
   linkProjectToParent,
@@ -39,11 +41,20 @@ interface ProjectsRouteProps {
 }
 
 function ProjectsRoute({activeProject, onSelectProject}: ProjectsRouteProps) {
+  const PROJECT_MODE_HELP: Record<ProjectMode, string> = {
+    general:
+      'Best for standard fiction projects. Focuses on writing, planning, lore, and cast management without system-heavy assumptions.',
+    litrpg:
+      'Best for LitRPG and progression fiction. Keeps rules, compendium, stat blocks, and progression workflows close at hand.',
+    game:
+      'Best for mechanics-first or simulation-heavy projects where system logic is central.'
+  };
   const [projects, setProjects] = useState<Project[]>([]);
   const [projectRulesets, setProjectRulesets] = useState<
     Map<string, WorldRuleset>
   >(new Map());
   const [name, setName] = useState('');
+  const [projectMode, setProjectMode] = useState<ProjectMode>('general');
   const [feedback, setFeedback] = useState<{
     tone: 'success' | 'error';
     message: string;
@@ -101,8 +112,10 @@ function ProjectsRoute({activeProject, onSelectProject}: ProjectsRouteProps) {
       };
 
       await saveProject(project);
+      await createDefaultSettings(project.id, projectMode);
       setProjects((prev) => [...prev, project]);
       setName('');
+      setProjectMode('general');
 
       onSelectProject(project);
       setFeedback({tone: 'success', message: 'Project created.'});
@@ -445,13 +458,13 @@ function ProjectsRoute({activeProject, onSelectProject}: ProjectsRouteProps) {
         </summary>
         <div style={{marginTop: '0.6rem', fontSize: '0.9rem', color: '#374151'}}>
           <p style={{margin: '0 0 0.4rem 0'}}>
-            Step 1: create or open a project.
+            Step 1: create or open a project and choose the mode that matches how you write.
           </p>
           <p style={{margin: '0 0 0.4rem 0'}}>
             Step 2: optionally set parent project inheritance and sync behavior.
           </p>
           <p style={{margin: 0}}>
-            Step 3: create or edit a ruleset, then continue to World Bible and Workspace.
+            Step 3: continue into World Bible, Characters, Workspace, or Corkboard based on your project mode.
           </p>
         </div>
       </details>
@@ -601,7 +614,7 @@ function ProjectsRoute({activeProject, onSelectProject}: ProjectsRouteProps) {
         style={{maxWidth: 400, marginBottom: '1rem'}}
       >
         <p style={{marginTop: 0, marginBottom: '0.75rem', fontSize: '0.82rem', color: '#4b5563'}}>
-          Step 1 of 3: create a project shell.
+          Step 1 of 3: create the project and choose its default posture.
         </p>
         <h2>Create New Project</h2>
         <div style={{marginBottom: '0.75rem'}}>
@@ -617,6 +630,26 @@ function ProjectsRoute({activeProject, onSelectProject}: ProjectsRouteProps) {
             />
           </label>
         </div>
+        <div style={{marginBottom: '0.75rem'}}>
+          <label>
+            Project Mode
+            <br />
+            <select
+              value={projectMode}
+              onChange={(e) => setProjectMode(e.target.value as ProjectMode)}
+              style={{width: '100%'}}
+            >
+              {PROJECT_MODE_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <p style={{margin: '0.45rem 0 0', fontSize: '0.82rem', color: '#4b5563'}}>
+            {PROJECT_MODE_HELP[projectMode]}
+          </p>
+        </div>
         <button type='submit' disabled={isCreatingProject}>
           {isCreatingProject ? 'Creating...' : 'Create Project'}
         </button>
@@ -624,7 +657,7 @@ function ProjectsRoute({activeProject, onSelectProject}: ProjectsRouteProps) {
 
       <h2>Existing Projects</h2>
       <p style={{marginTop: 0, marginBottom: '0.75rem', fontSize: '0.82rem', color: '#4b5563'}}>
-        Configure inheritance here, then use the Ruleset tab to author game rules.
+        Configure inheritance here. Ruleset authoring is only a primary next step for system-heavy projects.
       </p>
       {projects.length === 0 && <p>No projects yet. Create one above to get started.</p>}
 

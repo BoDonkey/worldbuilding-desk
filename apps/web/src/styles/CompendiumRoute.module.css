@@ -423,6 +423,11 @@
   background: var(--surface-panel-elevated);
 }
 
+.entryCardFocused {
+  border-color: var(--button-primary-border);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--button-primary-bg) 18%, transparent);
+}
+
 .entryMeta {
   font-size: 0.85rem;
   color: var(--color-text-secondary);

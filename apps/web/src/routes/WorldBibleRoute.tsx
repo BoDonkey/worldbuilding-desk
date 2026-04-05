@@ -1,8 +1,9 @@
 import {useEffect, useState, useCallback, useRef, useMemo} from 'react';
 import type {ChangeEvent, FormEvent} from 'react';
-import {useLocation} from 'react-router-dom';
+import {useLocation, useNavigate} from 'react-router-dom';
 import type {EntityCategory, Project, WorldEntity} from '../entityTypes';
 import {getEntitiesByProject, saveEntity, deleteEntity} from '../entityStorage';
+import {getCharactersByProject, saveCharacter} from '../characterStorage';
 import {
   getCategoriesByProject,
   saveCategory,
@@ -38,6 +39,8 @@ import {
   replaceAliasesForEntity,
   type ConsistencyAlias
 } from '../services/consistencyEngine/aliasStorage';
+import {createCharacterFromWorldEntity} from '../services/characterPromotionService';
+import {parseRtfToText} from '../utils/importText';
 
 interface WorldBibleRouteProps {
   activeProject: Project | null;
@@ -305,6 +308,7 @@ const parseAlternativeNames = (value: string, primaryName: string): string[] => 
 
 function WorldBibleRoute({activeProject}: WorldBibleRouteProps) {
   const location = useLocation();
+  const navigate = useNavigate();
   const [categories, setCategories] = useState<EntityCategory[]>([]);
   const [activeTab, setActiveTab] = useState<string | null>(null);
   const [entities, setEntities] = useState<WorldEntity[]>([]);
@@ -337,6 +341,7 @@ function WorldBibleRoute({activeProject}: WorldBibleRouteProps) {
   const [isSubmittingEntity, setIsSubmittingEntity] = useState(false);
   const [deletingEntityId, setDeletingEntityId] = useState<string | null>(null);
   const [promotingEntityId, setPromotingEntityId] = useState<string | null>(null);
+  const [promotingToCharactersEntityId, setPromotingToCharactersEntityId] = useState<string | null>(null);
   const [promotingMemoryId, setPromotingMemoryId] = useState<string | null>(null);
   const [isSyncingCanon, setIsSyncingCanon] = useState(false);
   const [linkingCompendiumEntityId, setLinkingCompendiumEntityId] = useState<
@@ -776,6 +781,8 @@ function WorldBibleRoute({activeProject}: WorldBibleRouteProps) {
           }
           const raw = lower.endsWith('.docx')
             ? await parseDocxToText(file)
+            : lower.endsWith('.rtf')
+              ? parseRtfToText(await file.text())
             : await file.text();
           const text =
             lower.endsWith('.html') || lower.endsWith('.htm')
@@ -793,6 +800,12 @@ function WorldBibleRoute({activeProject}: WorldBibleRouteProps) {
           });
         } catch {
           parseFailures += 1;
+          const detail =
+            lower.endsWith('.pages')
+              ? 'Apple Pages is not imported directly here yet. Export as .docx or .txt first.'
+              : lower.endsWith('.rtf')
+                ? 'Failed to read this RTF file. Re-export as .docx or .txt if the source app uses unusual formatting.'
+                : 'Failed to parse this file.';
           drafts.push({
             id: crypto.randomUUID(),
             fileName: file.name,
@@ -802,7 +815,7 @@ function WorldBibleRoute({activeProject}: WorldBibleRouteProps) {
             categoryId: activeCategory.id,
             mode: 'create',
             include: false,
-            parseError: 'Failed to parse this file.'
+            parseError: detail
           });
         }
       }
@@ -1320,6 +1333,62 @@ function WorldBibleRoute({activeProject}: WorldBibleRouteProps) {
       setPromotingEntityId(null);
     }
   };
+
+  const isCharacterLikeEntity = (entity: WorldEntity) => {
+    const category = categories.find((item) => item.id === entity.categoryId);
+    const haystack = `${category?.name ?? ''} ${category?.slug ?? ''}`.toLowerCase();
+    return /character|person|people|npc|cast/.test(haystack);
+  };
+
+  const handlePromoteToCharacters = async (entity: WorldEntity) => {
+    if (!activeProject) return;
+    setPromotingToCharactersEntityId(entity.id);
+    setFeedback(null);
+    try {
+      const existingCharacters = await getCharactersByProject(activeProject.id);
+      const existing = existingCharacters.find(
+        (character) => character.fields.sourceWorldEntityId === entity.id
+      );
+
+      if (existing) {
+        navigate('/characters', {
+          state: {
+            view: 'roster',
+            focusCharacterId: existing.id
+          }
+        });
+        setFeedback({
+          tone: 'success',
+          message: `"${entity.name}" is already in Characters.`
+        });
+        return;
+      }
+
+      const category = categories.find((item) => item.id === entity.categoryId) ?? null;
+      const character = createCharacterFromWorldEntity({
+        entity,
+        projectId: activeProject.id,
+        category
+      });
+      await saveCharacter(character);
+      navigate('/characters', {
+        state: {
+          view: 'roster',
+          focusCharacterId: character.id
+        }
+      });
+      setFeedback({
+        tone: 'success',
+        message: `"${entity.name}" promoted to Characters.`
+      });
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'Unable to promote this entry to Characters.';
+      setFeedback({tone: 'error', message});
+    } finally {
+      setPromotingToCharactersEntityId(null);
+    }
+  };
   const handleCanonSync = async () => {
     if (!activeProject) return;
     setIsSyncingCanon(true);
@@ -1357,7 +1426,13 @@ function WorldBibleRoute({activeProject}: WorldBibleRouteProps) {
   return (
     <section className={styles.container}>
       <div className={styles.header}>
-        <h1>World Bible</h1>
+        <div>
+          <h1>World Bible</h1>
+          <p style={{margin: '0.35rem 0 0', color: '#6b7280'}}>
+            Canon records for people, places, items, factions, and other world details.
+            Use Characters for cast-facing profiles and sheets.
+          </p>
+        </div>
         {activeCategory && (
           <>
             <div className={styles.headerActions}>
@@ -1387,7 +1462,7 @@ function WorldBibleRoute({activeProject}: WorldBibleRouteProps) {
             <input
               ref={importInputRef}
               type='file'
-              accept='.txt,.md,.markdown,.html,.htm,.docx,.doc,text/plain,text/markdown,text/html,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/msword'
+              accept='.txt,.md,.markdown,.html,.htm,.docx,.doc,.rtf,text/plain,text/markdown,text/html,text/rtf,application/rtf,application/x-rtf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/msword'
               multiple
               onChange={(e) => void handleImportEntities(e)}
               style={{display: 'none'}}
@@ -1402,6 +1477,10 @@ function WorldBibleRoute({activeProject}: WorldBibleRouteProps) {
           </>
         )}
       </div>
+      <p style={{margin: '0.75rem 0 1rem', color: '#6b7280'}}>
+        Import supports `.txt`, `.md`, `.html`, `.docx`, and `.rtf`. For Apple Pages,
+        export to `.docx` or `.txt` first, then import.
+      </p>
       {feedback && (
         <p
           role='status'
@@ -1987,6 +2066,17 @@ function WorldBibleRoute({activeProject}: WorldBibleRouteProps) {
                     >
                       {deletingEntityId === entity.id ? 'Deleting...' : 'Delete'}
                     </button>
+                    {isCharacterLikeEntity(entity) && (
+                      <button
+                        type='button'
+                        onClick={() => void handlePromoteToCharacters(entity)}
+                        disabled={promotingToCharactersEntityId === entity.id}
+                      >
+                        {promotingToCharactersEntityId === entity.id
+                          ? 'Promoting...'
+                          : 'Promote to Characters'}
+                      </button>
+                    )}
                     {seriesConfig?.parentProjectId && (
                       <button
                         type='button'

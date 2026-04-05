@@ -59,6 +59,9 @@ interface EditorWithAIProps {
   onTextInserted?: () => void;
   onSelectionAddToReview?: (text: string) => void;
   onOpenLoreRecord?: (target: {id: string; type: 'character' | 'entity'}) => void;
+  onOpenCompendium?: (record: LoreInspectorRecord) => void;
+  onSeedCompendiumEntry?: (record: LoreInspectorRecord) => void;
+  seedingCompendiumRecordId?: string | null;
   systemHistoryEntries?: SystemHistoryEntry[];
   slashMemoryEntries?: ShodhMemoryEntry[];
   preferredSlashEntityNames?: string[];
@@ -97,17 +100,17 @@ interface SlashMenuState {
 interface SlashCommandEntry {
   id: string;
   label: string;
+  description: string;
   keywords: string[];
   group: 'action' | 'character' | 'item' | 'memory' | 'system';
+  metaLabel?: string;
   preferredNames?: string[];
   memoryTags?: string[];
   sceneId?: string;
-  run: () => void;
+  insertContent?: string;
 }
 
-const ROOT_SLASH_COMMANDS = ['character', 'item', 'memory', 'system'] as const;
-
-type RootSlashCommand = (typeof ROOT_SLASH_COMMANDS)[number];
+type RootSlashCommand = 'character' | 'item' | 'memory' | 'system';
 
 const parseRootSlashCommand = (query: string): RootSlashCommand | null => {
   const normalized = query.trim().toLowerCase();
@@ -123,6 +126,17 @@ const parseRootSlashCommand = (query: string): RootSlashCommand | null => {
     return 'system';
   }
   return null;
+};
+
+const parseExactSlashAction = (
+  query: string
+): RootSlashCommand | 'stat-block' | null => {
+  const normalized = query.trim().toLowerCase();
+  if (!normalized) return null;
+  if (normalized === 'stat-block' || normalized === 'statblock') {
+    return 'stat-block';
+  }
+  return parseRootSlashCommand(normalized);
 };
 
 export const EditorWithAI: React.FC<EditorWithAIProps> = ({
@@ -141,6 +155,9 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
   onTextInserted,
   onSelectionAddToReview,
   onOpenLoreRecord,
+  onOpenCompendium,
+  onSeedCompendiumEntry,
+  seedingCompendiumRecordId = null,
   systemHistoryEntries = [],
   slashMemoryEntries = [],
   preferredSlashEntityNames = [],
@@ -173,6 +190,7 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
   const editorPaneRef = useRef<HTMLDivElement | null>(null);
   const selectionBubbleRef = useRef<HTMLDivElement | null>(null);
   const [selectionBubbleWidth, setSelectionBubbleWidth] = useState(360);
+  const [editorPaneCenterX, setEditorPaneCenterX] = useState<number | null>(null);
 
   const loreHighlights = React.useMemo<LoreHighlightEntry[]>(() => {
     const characterEntries = Object.values(selectionQuickSnippets?.characters ?? {}).map(
@@ -402,6 +420,23 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
   }, [selectionBubble]);
 
   useEffect(() => {
+    const element = editorPaneRef.current;
+    if (!element) return;
+    const updatePaneMetrics = () => {
+      const rect = element.getBoundingClientRect();
+      setEditorPaneCenterX(rect.left + rect.width / 2);
+    };
+    updatePaneMetrics();
+    const observer = new ResizeObserver(updatePaneMetrics);
+    observer.observe(element);
+    window.addEventListener('resize', updatePaneMetrics);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('resize', updatePaneMetrics);
+    };
+  }, []);
+
+  useEffect(() => {
     if (!lorePopoverAnchor) return;
     const close = () => {
       setLorePopoverAnchor(null);
@@ -521,95 +556,134 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
       .slice(0, 12);
   }, [selectionQuickSnippets]);
 
+  const openSlashMode = useCallback((mode: RootSlashCommand) => {
+    setSlashMenu((prev) =>
+      prev ? {...prev, mode, query: '', activeIndex: 0} : prev
+    );
+  }, []);
+
+  const openStatBlockBuilderFromSlash = useCallback(() => {
+    onOpenStatBlockBuilder?.();
+    const editor = editorRef.current;
+    const activeSlash = slashMenu;
+    if (!editor || !activeSlash) return;
+    editor.commands.setTextSelection({from: activeSlash.from, to: activeSlash.to});
+    editor.commands.deleteSelection();
+    setSlashMenu(null);
+  }, [onOpenStatBlockBuilder, slashMenu]);
+
+  const executeSlashEntry = useCallback((entry: SlashCommandEntry) => {
+    if (entry.id === 'root-character') {
+      openSlashMode('character');
+      return;
+    }
+    if (entry.id === 'root-item') {
+      openSlashMode('item');
+      return;
+    }
+    if (entry.id === 'root-memory') {
+      openSlashMode('memory');
+      return;
+    }
+    if (entry.id === 'root-system') {
+      openSlashMode('system');
+      return;
+    }
+    if (entry.id === 'root-stat-block') {
+      openStatBlockBuilderFromSlash();
+      return;
+    }
+    if (entry.insertContent) {
+      const slashFrom = slashMenu?.from ?? 0;
+      const slashTo = slashMenu?.to ?? 0;
+      handleSlashInsert(slashFrom, slashTo, entry.insertContent);
+    }
+  }, [
+    handleSlashInsert,
+    openSlashMode,
+    openStatBlockBuilderFromSlash,
+    slashMenu?.from,
+    slashMenu?.to
+  ]);
+
   const rootSlashEntries = React.useMemo<SlashCommandEntry[]>(() => [
     {
       id: 'root-character',
       label: '/character',
+      description: 'Insert a stat snapshot or character-facing reference.',
       keywords: ['character', 'char', 'snapshot', 'person'],
       group: 'action',
-      run: () =>
-        setSlashMenu((prev) =>
-          prev ? {...prev, mode: 'character', query: '', activeIndex: 0} : prev
-        )
+      metaLabel: 'Insert'
     },
     {
       id: 'root-item',
       label: '/item',
+      description: 'Insert an item, location, or world-lore snippet.',
       keywords: ['item', 'entity', 'world', 'location', 'lore'],
       group: 'action',
-      run: () =>
-        setSlashMenu((prev) =>
-          prev ? {...prev, mode: 'item', query: '', activeIndex: 0} : prev
-        )
+      metaLabel: 'Insert'
     },
     {
       id: 'root-memory',
       label: '/memory',
+      description: 'Pull in canon memories and recent story facts.',
       keywords: ['memory', 'canon', 'shodh'],
       group: 'action',
-      run: () =>
-        setSlashMenu((prev) =>
-          prev ? {...prev, mode: 'memory', query: '', activeIndex: 0} : prev
-        )
+      metaLabel: 'Insert'
     },
     {
       id: 'root-system',
-      label: '/system',
+      label: '/event',
+      description: 'Insert quests, resources, or system-status updates.',
       keywords: ['system', 'event', 'history', 'resource', 'quest'],
       group: 'action',
-      run: () =>
-        setSlashMenu((prev) =>
-          prev ? {...prev, mode: 'system', query: '', activeIndex: 0} : prev
-        )
+      metaLabel: 'Insert'
     },
     {
       id: 'root-stat-block',
       label: '/stat-block',
+      description: 'Open the stat-block builder for a richer insert flow.',
       keywords: ['stat', 'block', 'status', 'builder'],
       group: 'action',
-      run: () => {
-        onOpenStatBlockBuilder?.();
-        const editor = editorRef.current;
-        const activeSlash = slashMenu;
-        if (!editor || !activeSlash) return;
-        editor.commands.setTextSelection({from: activeSlash.from, to: activeSlash.to});
-        editor.commands.deleteSelection();
-        setSlashMenu(null);
-      }
+      metaLabel: 'Builder'
     }
-  ], [onOpenStatBlockBuilder, slashMenu]);
+  ], []);
 
   const slashEntries = React.useMemo<SlashCommandEntry[]>(() => {
-    const slashFrom = slashMenu?.from ?? 0;
-    const slashTo = slashMenu?.to ?? 0;
     if (slashMenu?.mode === 'character') {
       return uniqueCharacterSlashEntries.map((entry) => ({
         id: `character:${entry.lore.id}`,
         label: `Character: ${entry.name}`,
+        description: 'Insert the saved character snapshot at the cursor.',
         keywords: ['character', 'snapshot', 'stat', entry.name],
         group: 'character' as const,
+        metaLabel: 'Character',
         preferredNames: [entry.name],
-        run: () => handleSlashInsert(slashFrom, slashTo, entry.html)
+        insertContent: entry.html
       }));
     }
     if (slashMenu?.mode === 'item') {
       return uniqueEntitySlashEntries.map((entry) => ({
         id: `entity:${entry.lore.id}`,
         label: `Item/World: ${entry.name}`,
+        description: 'Insert the linked lore snippet for this entity.',
         keywords: ['item', 'entity', 'lore', 'location', entry.name],
         group: 'item' as const,
+        metaLabel: 'Lore',
         preferredNames: [entry.name],
-        run: () => handleSlashInsert(slashFrom, slashTo, entry.html)
+        insertContent: entry.html
       }));
     }
     if (slashMenu?.mode === 'memory') {
       return slashMemoryEntries.slice(0, 12).map((memory) => ({
         id: `memory:${memory.id}`,
         label: `Memory: ${memory.title || 'Untitled memory'}`,
+        description: memory.summary || 'Insert this canon memory summary.',
         keywords: ['memory', 'canon', 'shodh', ...(memory.tags ?? [])],
         group: 'memory' as const,
+        metaLabel: memory.tags?.[0] ?? 'Memory',
         memoryTags: memory.tags ?? [],
-        run: () => handleSlashInsert(slashFrom, slashTo, memory.summary)
+        insertContent: memory.summary
       }));
     }
     if (slashMenu?.mode === 'system') {
@@ -632,20 +706,19 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
         .slice(0, 12)
         .map((entry) => ({
         id: `system:${entry.id}`,
-        label: `System: ${entry.message}`,
+        label: `Event: ${entry.message}`,
+        description: entry.insertText,
         keywords: ['system', 'history', entry.category, 'event'],
         group: 'system' as const,
+        metaLabel: entry.category,
         sceneId: entry.sceneId,
-        run: () => handleSlashInsert(slashFrom, slashTo, entry.insertText)
+        insertContent: entry.insertText
       }));
     }
     return rootSlashEntries;
   }, [
-    handleSlashInsert,
     rootSlashEntries,
-    slashMenu?.from,
     slashMenu?.mode,
-    slashMenu?.to,
     slashMemoryEntries,
     systemHistoryEntries,
     uniqueCharacterSlashEntries,
@@ -702,6 +775,43 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
     slashMenu?.query
   ]);
 
+  const slashMenuHeading = React.useMemo(() => {
+    switch (slashMenu?.mode) {
+      case 'character':
+        return {
+          title: 'Character Inserts',
+          subtitle: 'Choose a tracked character snapshot to insert.'
+        };
+      case 'item':
+        return {
+          title: 'Lore Inserts',
+          subtitle: 'Choose an item, location, or world entry snippet.'
+        };
+      case 'memory':
+        return {
+          title: 'Canon Memory Inserts',
+          subtitle: 'Pull in prior facts, recalls, and memory summaries.'
+        };
+      case 'system':
+        return {
+          title: 'Event Inserts',
+          subtitle: 'Insert quest, resource, or system-status updates.'
+        };
+      case 'root':
+      default:
+        return {
+          title: 'Slash Commands',
+          subtitle: 'Type a command or pick an insert workflow.'
+        };
+    }
+  }, [slashMenu?.mode]);
+
+  const shouldShowSlashHint = React.useMemo(() => {
+    if (slashMenu) return false;
+    const plainText = htmlToPlainText(content).trim();
+    return plainText.length < 240;
+  }, [content, slashMenu]);
+
   const updateSlashMenu = useCallback(() => {
     const editor = editorRef.current;
     if (!editor) return;
@@ -742,6 +852,33 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
       return;
     }
     const query = rootMatch[1] ?? '';
+    const exactAction = parseExactSlashAction(query);
+    if (exactAction && query.trim().length > 0) {
+      if (exactAction === 'stat-block') {
+        setSlashMenu((prev) =>
+          prev
+            ? {
+                ...prev,
+                query,
+                activeIndex: 0
+              }
+            : prev
+        );
+      } else {
+        const coords = editor.view.coordsAtPos(from);
+        const slashStart = from - query.length - 1;
+        setSlashMenu({
+          from: slashStart,
+          to: from,
+          query: '',
+          mode: exactAction,
+          x: coords.left,
+          y: coords.bottom + 8,
+          activeIndex: 0
+        });
+      }
+      return;
+    }
     const slashStart = from - query.length - 1;
     const coords = editor.view.coordsAtPos(from);
     setSlashMenu((prev) => ({
@@ -866,11 +1003,14 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
     }
     if (event.key === 'Enter' || event.key === 'Tab') {
       event.preventDefault();
-      filteredSlashEntries[slashMenu.activeIndex]?.run();
+      const activeEntry = filteredSlashEntries[slashMenu.activeIndex];
+      if (activeEntry) {
+        executeSlashEntry(activeEntry);
+      }
       return true;
     }
     return false;
-  }, [filteredSlashEntries, openSlashMenuAtSelection, slashMenu]);
+  }, [executeSlashEntry, filteredSlashEntries, openSlashMenuAtSelection, slashMenu]);
 
   const handleInsert = (text: string) => {
     const editor = editorRef.current;
@@ -929,14 +1069,11 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
     setShowSidePanel(true);
   };
 
-  const editorPaneRect = editorPaneRef.current?.getBoundingClientRect() ?? null;
   const clampedSelectionBubbleLeft = selectionBubble
     ? Math.max(
         selectionBubbleWidth / 2 + 16,
         Math.min(
-          editorPaneRect
-            ? editorPaneRect.left + editorPaneRect.width / 2
-            : window.innerWidth / 2,
+          editorPaneCenterX ?? window.innerWidth / 2,
           window.innerWidth - selectionBubbleWidth / 2 - 16
         )
       )
@@ -973,13 +1110,24 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
           }}
           insertContext={insertContext}
         />
+        {shouldShowSlashHint && (
+          <div className={styles.slashHint} aria-hidden='true'>
+            Type <kbd>/</kbd> for characters, lore, memories, and events.
+          </div>
+        )}
         {slashMenu && (
           <div
             className={styles.slashMenu}
             style={{left: `${slashMenu.x}px`, top: `${slashMenu.y}px`}}
           >
+            <div className={styles.slashMenuHeader}>
+              <p className={styles.slashMenuTitle}>{slashMenuHeading.title}</p>
+              <p className={styles.slashMenuSubtitle}>{slashMenuHeading.subtitle}</p>
+            </div>
             {filteredSlashEntries.length === 0 ? (
-              <div className={styles.slashMenuEmpty}>No slash actions match.</div>
+              <div className={styles.slashMenuEmpty}>
+                No slash actions match. Try a broader name or a different command.
+              </div>
             ) : (
               filteredSlashEntries.map((entry, index) => (
                 <button
@@ -989,11 +1137,14 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
                     index === slashMenu.activeIndex ? styles.slashMenuItemActive : ''
                   }`}
                   onMouseDown={(event) => event.preventDefault()}
-                  onClick={() => entry.run()}
+                  onClick={() => executeSlashEntry(entry)}
                 >
-                  <span>{entry.label}</span>
+                  <span className={styles.slashMenuBody}>
+                    <span className={styles.slashMenuLabel}>{entry.label}</span>
+                    <span className={styles.slashMenuDescription}>{entry.description}</span>
+                  </span>
                   <span className={styles.slashMenuMeta}>
-                    {slashMenu.mode === 'root' ? 'command' : entry.group}
+                    {entry.metaLabel ?? (slashMenu.mode === 'root' ? 'command' : entry.group)}
                   </span>
                 </button>
               ))
@@ -1168,6 +1319,50 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
                 </div>
               </div>
             </div>
+            {lorePopoverRecord.alternativeNames?.length ? (
+              <>
+                <div className={styles.popoverSectionLabel}>Alternative names</div>
+                <div className={styles.lorePeekVitals}>
+                  {lorePopoverRecord.alternativeNames.map((item) => (
+                    <span key={item} className={styles.loreVitalChip}>
+                      {item}
+                    </span>
+                  ))}
+                </div>
+              </>
+            ) : null}
+            {lorePopoverRecord.relatedRecords?.length ? (
+              <>
+                <div className={styles.popoverSectionLabel}>Connected records</div>
+                <div className={styles.lorePeekSummary}>
+                  {lorePopoverRecord.relatedRecords.map((item) => (
+                    <div
+                      key={`${item.targetType}:${item.id}`}
+                      className={styles.lorePeekRow}
+                    >
+                      <div className={styles.lorePeekLabel}>{item.label}</div>
+                      <div className={styles.lorePeekValue}>{item.detail}</div>
+                    </div>
+                  ))}
+                </div>
+              </>
+            ) : null}
+            {lorePopoverRecord.compendium ? (
+              <>
+                <div className={styles.popoverSectionLabel}>Compendium</div>
+                <div className={styles.lorePeekRow}>
+                  <div className={styles.lorePeekLabel}>
+                    {lorePopoverRecord.compendium.linked ? 'Linked entry' : 'Suggested seed'}
+                  </div>
+                  <div className={styles.lorePeekValue}>
+                    {lorePopoverRecord.compendium.name}
+                    {lorePopoverRecord.compendium.domain
+                      ? ` · ${lorePopoverRecord.compendium.domain}`
+                      : ''}
+                  </div>
+                </div>
+              </>
+            ) : null}
             <div className={styles.systemActions}>
               {onOpenLoreRecord && (
                 <button
@@ -1186,6 +1381,33 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
                     : 'Open in Characters'}
                 </button>
               )}
+              {lorePopoverRecord.type === 'entity' &&
+              lorePopoverRecord.compendium?.linked &&
+              onOpenCompendium ? (
+                <button
+                  type='button'
+                  onClick={() => {
+                    onOpenCompendium(lorePopoverRecord);
+                    setLorePopoverAnchor(null);
+                    setLorePopoverRecord(null);
+                  }}
+                >
+                  Open Compendium
+                </button>
+              ) : null}
+              {lorePopoverRecord.type === 'entity' &&
+              !lorePopoverRecord.compendium?.linked &&
+              onSeedCompendiumEntry ? (
+                <button
+                  type='button'
+                  onClick={() => onSeedCompendiumEntry(lorePopoverRecord)}
+                  disabled={seedingCompendiumRecordId === lorePopoverRecord.id}
+                >
+                  {seedingCompendiumRecordId === lorePopoverRecord.id
+                    ? 'Seeding...'
+                    : 'Seed Compendium Entry'}
+                </button>
+              ) : null}
               <button
                 type='button'
                 onClick={() => {
@@ -1312,6 +1534,10 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
               aiBudgetUsed={aiBudgetUsed}
               aiBudgetMax={aiSettings?.inspectorSettings?.maxConsultationsPerDay ?? 20}
               onConsult={handleConsultation}
+              onOpenPrimaryRecord={onOpenLoreRecord}
+              onOpenCompendium={onOpenCompendium}
+              onSeedCompendiumEntry={onSeedCompendiumEntry}
+              seedingCompendiumRecordId={seedingCompendiumRecordId}
             />
           )}
         </div>

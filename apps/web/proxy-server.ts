@@ -6,6 +6,32 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+app.post('/api/anthropic/complete', async (req, res) => {
+  const {apiKey, request} = req.body;
+  const model = request?.model ?? 'claude-sonnet-4-20250514';
+
+  const response = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01'
+    },
+    body: JSON.stringify({
+      model,
+      max_tokens: request.maxTokens || 4096,
+      temperature: request.temperature || 0.7,
+      system: request.systemPrompt,
+      messages: request.messages
+    })
+  });
+
+  const text = await response.text();
+  res.status(response.status);
+  res.setHeader('Content-Type', 'application/json');
+  res.send(text);
+});
+
 app.post('/api/anthropic/stream', async (req, res) => {
   const {apiKey, request} = req.body;
   const model = request?.model ?? 'claude-sonnet-4-20250514';
