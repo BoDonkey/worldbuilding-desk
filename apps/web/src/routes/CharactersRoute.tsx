@@ -56,6 +56,29 @@ interface CharacterCoachMessage {
   content: string;
 }
 
+interface AppliedAiAction {
+  id: string;
+  summary: string;
+}
+
+type DiscussionTarget =
+  | {kind: 'edit-description'}
+  | {kind: 'edit-notes'}
+  | {kind: 'edit-section'; index: number}
+  | {kind: 'import-description'}
+  | {kind: 'import-notes'}
+  | {kind: 'import-section'; sectionId: string};
+
+interface FieldDiscussionState {
+  isOpen: boolean;
+  target: DiscussionTarget | null;
+  title: string;
+  sourceContent: string;
+  messages: CharacterCoachMessage[];
+  input: string;
+  isLoading: boolean;
+}
+
 interface ImportReviewSuggestionResponse {
   name?: string;
   age?: string;
@@ -86,6 +109,63 @@ const ensureUniqueImportSectionStates = (
       id: count === 0 ? baseId : `${baseId}-${index}`
     };
   });
+};
+
+const parseCharacterCoachSections = (
+  content: string
+): Array<{title: string; content: string}> => {
+  const normalizedContent = content
+    .replace(/^```[a-zA-Z0-9_-]*\s*\n?/, '')
+    .replace(/\n?```$/, '')
+    .trim();
+
+  const blocks = normalizedContent
+    .split(/\n\s*\n+/)
+    .map((block) => block.trim())
+    .filter(Boolean);
+
+  const parsed = blocks
+    .map((block) => {
+      const lines = block
+        .split('\n')
+        .map((line) => line.replace(/\r/g, '').trim())
+        .filter(Boolean);
+      if (lines.length === 0) return null;
+
+      const firstLine = lines[0];
+      const hasMarkdownHeading = /^#{1,6}\s+/.test(firstLine);
+      const hasBoldHeading = /^\*\*.+\*\*:?\s*$/.test(firstLine);
+      const cleanedHeading = firstLine
+        .replace(/^#{1,6}\s*/, '')
+        .replace(/^\*\*(.+?)\*\*:?\s*$/, '$1')
+        .trim();
+      const bodyLines = lines.slice(1);
+
+      if (bodyLines.length > 0 && (hasMarkdownHeading || hasBoldHeading || cleanedHeading !== firstLine)) {
+        const body = bodyLines.join('\n').trim();
+        if (!cleanedHeading || !body) return null;
+        return {title: cleanedHeading, content: body};
+      }
+
+      const inlineMatch = block.match(/^(?:[-*]\s+|\d+\.\s+)?(?:\*\*)?([^:\n]{2,80}?)(?:\*\*)?:\s+([\s\S]+)$/);
+      if (inlineMatch) {
+        const [, title, body] = inlineMatch;
+        const cleanTitle = title.trim();
+        const cleanBody = body.trim();
+        if (cleanTitle && cleanBody) {
+          return {title: cleanTitle, content: cleanBody};
+        }
+      }
+
+      return null;
+    })
+    .filter((section): section is {title: string; content: string} => Boolean(section));
+
+  if (parsed.length >= 2) {
+    return parsed;
+  }
+
+  return [];
 };
 
 function CharactersRoute({
@@ -133,6 +213,16 @@ function CharactersRoute({
   const [characterCoachInput, setCharacterCoachInput] = useState('');
   const [isAskingCharacterCoach, setIsAskingCharacterCoach] = useState(false);
   const [creationMode, setCreationMode] = useState<CharacterCreationMode>('idle');
+  const [appliedAiActions, setAppliedAiActions] = useState<AppliedAiAction[]>([]);
+  const [fieldDiscussion, setFieldDiscussion] = useState<FieldDiscussionState>({
+    isOpen: false,
+    target: null,
+    title: '',
+    sourceContent: '',
+    messages: [],
+    input: '',
+    isLoading: false
+  });
 
   useEffect(() => {
     if (!activeProject) {
@@ -177,10 +267,157 @@ function CharactersRoute({
     setCharacterStyleId(character.characterStyleId ?? '');
     setCharacterCoachMessages([]);
     setCharacterCoachInput('');
+    setAppliedAiActions([]);
+    setFieldDiscussion({
+      isOpen: false,
+      target: null,
+      title: '',
+      sourceContent: '',
+      messages: [],
+      input: '',
+      isLoading: false
+    });
     onFocusCharacterConsumed?.();
   }, [characters, focusCharacterId, onFocusCharacterConsumed]);
 
   const effectiveProjectSettings = projectSettings ?? settings;
+
+  const appendTextBlock = (base: string, addition: string) => {
+    const trimmedBase = base.trim();
+    const trimmedAddition = addition.trim();
+    if (!trimmedAddition) {
+      return trimmedBase;
+    }
+    return trimmedBase ? `${trimmedBase}\n\n${trimmedAddition}` : trimmedAddition;
+  };
+
+  const pushAppliedAiAction = (summary: string) => {
+    setAppliedAiActions((prev) => [{id: crypto.randomUUID(), summary}, ...prev].slice(0, 6));
+  };
+
+  const clearImportSectionSuggestion = (sectionId: string) => {
+    setSectionAssistStates((prev) => ({
+      ...prev,
+      [sectionId]: {
+        ...prev[sectionId],
+        suggestion: '',
+        note: ''
+      }
+    }));
+  };
+
+  const clearEditingSectionSuggestion = (assistKey: string) => {
+    setEditingSectionAssistStates((prev) => ({
+      ...prev,
+      [assistKey]: {
+        ...prev[assistKey],
+        suggestion: '',
+        note: ''
+      }
+    }));
+  };
+
+  const closeFieldDiscussion = () => {
+    setFieldDiscussion({
+      isOpen: false,
+      target: null,
+      title: '',
+      sourceContent: '',
+      messages: [],
+      input: '',
+      isLoading: false
+    });
+  };
+
+  const openFieldDiscussion = (target: DiscussionTarget, title: string, sourceContent: string) => {
+    setFieldDiscussion({
+      isOpen: true,
+      target,
+      title,
+      sourceContent,
+      messages: [],
+      input: '',
+      isLoading: false
+    });
+  };
+
+  const buildDiscussionContext = (target: DiscussionTarget) => {
+    const baseLines =
+      target.kind === 'import-description' ||
+      target.kind === 'import-notes' ||
+      target.kind === 'import-section'
+        ? [
+            `Name: ${importName.trim() || '(missing)'}`,
+            `Role: ${importRole.trim() || '(missing)'}`,
+            `Age: ${importAge.trim() || '(missing)'}`,
+            `Short Description: ${importDescription.trim() || '(missing)'}`,
+            `Notes / Residue: ${importUnmatchedText.trim() || '(none)'}`,
+            `Detail Sections: ${JSON.stringify(importSectionStates.map((section) => ({
+              title: section.title,
+              content: section.content,
+              action: section.action
+            })))}`
+          ]
+        : [
+            `Name: ${name.trim() || '(missing)'}`,
+            `Role: ${role.trim() || '(missing)'}`,
+            `Age: ${age.trim() || '(missing)'}`,
+            `Short Description: ${description.trim() || '(missing)'}`,
+            `Notes / Residue: ${(editingId ? editingSourceResidue : notes).trim() || '(none)'}`,
+            `Detail Sections: ${JSON.stringify(editingImportedSections.map((section) => ({
+              title: section.title,
+              content: section.content,
+              action: section.action
+            })))}`
+          ];
+    return baseLines.join('\n');
+  };
+
+  const applyDiscussionSuggestion = (target: DiscussionTarget, content: string, mode: 'replace' | 'append') => {
+    const trimmed = content.trim();
+    if (!trimmed) return;
+
+    switch (target.kind) {
+      case 'edit-description':
+        setDescription((prev) => (mode === 'replace' ? trimmed : appendTextBlock(prev, trimmed)));
+        break;
+      case 'edit-notes':
+        if (editingId) {
+          setEditingSourceResidue((prev) => (mode === 'replace' ? trimmed : appendTextBlock(prev, trimmed)));
+        } else {
+          setNotes((prev) => (mode === 'replace' ? trimmed : appendTextBlock(prev, trimmed)));
+        }
+        break;
+      case 'edit-section':
+        setEditingImportedSections((prev) =>
+          prev.map((section, index) =>
+            index === target.index
+              ? { ...section, content: mode === 'replace' ? trimmed : appendTextBlock(section.content, trimmed) }
+              : section
+          )
+        );
+        break;
+      case 'import-description':
+        setImportDescription((prev) => (mode === 'replace' ? trimmed : appendTextBlock(prev, trimmed)));
+        break;
+      case 'import-notes':
+        setImportUnmatchedText((prev) => (mode === 'replace' ? trimmed : appendTextBlock(prev, trimmed)));
+        break;
+      case 'import-section':
+        setImportSectionStates((prev) =>
+          prev.map((section) =>
+            section.id === target.sectionId
+              ? { ...section, content: mode === 'replace' ? trimmed : appendTextBlock(section.content, trimmed) }
+              : section
+          )
+        );
+        break;
+    }
+
+    pushAppliedAiAction(
+      `${mode === 'replace' ? 'Replaced' : 'Appended to'} ${fieldDiscussion.title} from discussion.`
+    );
+  };
 
   const resetForm = () => {
     setEditingId(null);
@@ -196,6 +433,8 @@ function CharactersRoute({
     setCharacterStyleId('');
     setCharacterCoachMessages([]);
     setCharacterCoachInput('');
+    setAppliedAiActions([]);
+    closeFieldDiscussion();
   };
 
   const handleAddManualSection = () => {
@@ -222,6 +461,227 @@ function CharactersRoute({
     ]);
   };
 
+  const applyImportSectionSuggestion = (
+    sectionId: string,
+    suggestion: string,
+    target: 'section-replace' | 'section-append' | 'description' | 'notes'
+  ) => {
+    const trimmedSuggestion = suggestion.trim();
+    if (!trimmedSuggestion) return;
+
+    if (target === 'description') {
+      setImportDescription(trimmedSuggestion);
+      pushAppliedAiAction('Applied an import suggestion to the short description.');
+      clearImportSectionSuggestion(sectionId);
+      return;
+    }
+
+    if (target === 'notes') {
+      setImportUnmatchedText((prev) => appendTextBlock(prev, trimmedSuggestion));
+      pushAppliedAiAction('Appended an import suggestion to notes/source residue.');
+      clearImportSectionSuggestion(sectionId);
+      return;
+    }
+
+    setImportSectionStates((prev) =>
+      prev.map((entry) => {
+        if (entry.id !== sectionId) {
+          return entry;
+        }
+        return {
+          ...entry,
+          content:
+            target === 'section-replace'
+              ? trimmedSuggestion
+              : appendTextBlock(entry.content, trimmedSuggestion)
+        };
+      })
+    );
+    pushAppliedAiAction(
+      target === 'section-replace'
+        ? 'Replaced an import-review section with AI-suggested text.'
+        : 'Appended AI-suggested text to an import-review section.'
+    );
+    clearImportSectionSuggestion(sectionId);
+  };
+
+  const applyEditingSectionSuggestion = (
+    sectionIndex: number,
+    assistKey: string,
+    suggestion: string,
+    target: 'section-replace' | 'section-append' | 'description' | 'notes'
+  ) => {
+    const trimmedSuggestion = suggestion.trim();
+    if (!trimmedSuggestion) return;
+
+    if (target === 'description') {
+      setDescription(trimmedSuggestion);
+      pushAppliedAiAction('Applied a section suggestion to the character description.');
+      clearEditingSectionSuggestion(assistKey);
+      return;
+    }
+
+    if (target === 'notes') {
+      if (editingId) {
+        setEditingSourceResidue((prev) => appendTextBlock(prev, trimmedSuggestion));
+      } else {
+        setNotes((prev) => appendTextBlock(prev, trimmedSuggestion));
+      }
+      pushAppliedAiAction('Appended a section suggestion to notes.');
+      clearEditingSectionSuggestion(assistKey);
+      return;
+    }
+
+    setEditingImportedSections((prev) =>
+      prev.map((entry, entryIndex) => {
+        if (entryIndex !== sectionIndex) {
+          return entry;
+        }
+        return {
+          ...entry,
+          content:
+            target === 'section-replace'
+              ? trimmedSuggestion
+              : appendTextBlock(entry.content, trimmedSuggestion)
+        };
+      })
+    );
+    pushAppliedAiAction(
+      target === 'section-replace'
+        ? 'Replaced a character section with AI-suggested text.'
+        : 'Appended AI-suggested text to a character section.'
+    );
+    clearEditingSectionSuggestion(assistKey);
+  };
+
+  const applyCharacterCoachSuggestion = (
+    content: string,
+    target: 'description' | 'notes' | 'section'
+  ) => {
+    const trimmedContent = content.trim();
+    if (!trimmedContent) return;
+
+    if (target === 'description') {
+      setDescription(trimmedContent);
+      pushAppliedAiAction('Applied Character Coach output to the description.');
+      return;
+    }
+
+    if (target === 'notes') {
+      if (editingId) {
+        setEditingSourceResidue((prev) => appendTextBlock(prev, trimmedContent));
+      } else {
+        setNotes((prev) => appendTextBlock(prev, trimmedContent));
+      }
+      pushAppliedAiAction('Appended Character Coach output to notes.');
+      return;
+    }
+
+    const parsedSections = parseCharacterCoachSections(trimmedContent);
+    setEditingImportedSections((prev) => [
+      ...prev,
+      ...(parsedSections.length > 0
+        ? parsedSections.map((section) => ({
+            id: crypto.randomUUID(),
+            title: section.title,
+            content: section.content,
+            action: 'notes' as const
+          }))
+        : [
+            {
+              id: crypto.randomUUID(),
+              title: 'AI Notes',
+              content: trimmedContent,
+              action: 'notes' as const
+            }
+          ])
+    ]);
+    pushAppliedAiAction(
+      parsedSections.length > 0
+        ? `Created ${parsedSections.length} sections from Character Coach output.`
+        : 'Added one section from Character Coach output.'
+    );
+  };
+
+  const handleAskFieldDiscussion = async (promptOverride?: string) => {
+    const promptText = (promptOverride ?? fieldDiscussion.input).trim();
+    if (!promptText) {
+      setFeedback({tone: 'error', message: 'Ask a question about the selected field first.'});
+      return;
+    }
+    if (!fieldDiscussion.target) {
+      setFeedback({tone: 'error', message: 'Open a field discussion first.'});
+      return;
+    }
+    if (!effectiveProjectSettings?.aiSettings) {
+      setFeedback({
+        tone: 'error',
+        message: 'AI provider is not configured. Add an API key in Settings first.'
+      });
+      return;
+    }
+
+    const userMessage: CharacterCoachMessage = {
+      id: crypto.randomUUID(),
+      role: 'user',
+      content: promptText
+    };
+
+    setFieldDiscussion((prev) => ({
+      ...prev,
+      messages: [...prev.messages, userMessage],
+      input: '',
+      isLoading: true
+    }));
+
+    try {
+      const llmService = new LLMService(effectiveProjectSettings.aiSettings);
+      const response = await llmService.complete({
+        messages: [
+          ...fieldDiscussion.messages.map((message) => ({
+            role: message.role,
+            content: message.content
+          })),
+          {
+            role: 'user',
+            content: [
+              `Field title: ${fieldDiscussion.title}`,
+              `Current field content: ${fieldDiscussion.sourceContent || '(empty)'}`,
+              '',
+              'Character context:',
+              buildDiscussionContext(fieldDiscussion.target),
+              '',
+              'Stay tightly focused on improving this one field or section.',
+              'Use markdown when structure helps, but keep the answer directly usable.',
+              '',
+              `Question: ${promptText}`
+            ].join('\n')
+          }
+        ],
+        systemPrompt:
+          'You are helping an author improve one character field or section. Stay anchored to the provided character context. Do not rewrite the whole sheet. Give concrete, field-specific help that can be pasted back into the selected field.',
+        maxTokens: effectiveProjectSettings.aiSettings.inspectorSettings?.maxResponseTokens
+      });
+
+      const assistantMessage: CharacterCoachMessage = {
+        id: crypto.randomUUID(),
+        role: 'assistant',
+        content: response.content.trim() || 'No response returned.'
+      };
+
+      setFieldDiscussion((prev) => ({
+        ...prev,
+        messages: [...prev.messages, assistantMessage],
+        isLoading: false
+      }));
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'Unable to discuss this field right now.';
+      setFieldDiscussion((prev) => ({...prev, isLoading: false}));
+      setFeedback({tone: 'error', message});
+    }
+  };
+
   const resetImportState = () => {
     setImportDraft(null);
     setCreationMode('idle');
@@ -234,6 +694,8 @@ function CharactersRoute({
     setSectionAssistStates({});
     setImportAiNote(null);
     setPastedImportText('');
+    setAppliedAiActions([]);
+    closeFieldDiscussion();
   };
 
   const reviewSourceLabel = importDraft?.sourceKind === 'ai' ? 'AI Character Draft Review' : 'Character Import Review';
@@ -267,6 +729,8 @@ function CharactersRoute({
     );
     setSectionAssistStates({});
     setImportAiNote(null);
+    setAppliedAiActions([]);
+    closeFieldDiscussion();
   };
 
   const handleSubmit = async (event: FormEvent) => {
@@ -354,6 +818,7 @@ function CharactersRoute({
     setCharacterStyleId(character.characterStyleId ?? '');
     setCharacterCoachMessages([]);
     setCharacterCoachInput('');
+    closeFieldDiscussion();
   };
 
   const buildCharacterCoachContext = () => {
@@ -452,7 +917,15 @@ function CharactersRoute({
               buildCharacterCoachContext(),
               '',
               'Respond with concrete observations tied to the current sheet.',
-              'Prefer bullets or short sections over long essays.',
+              'Use markdown section headings when you are giving multiple groups of suggestions.',
+              'Preferred format:',
+              '## Section Title',
+              '- detail',
+              '- detail',
+              '',
+              'If you have several distinct categories, separate them into multiple markdown sections.',
+              'Do not wrap the answer in code fences.',
+              'Prefer short sections over long essays.',
               '',
               `Question: ${promptText}`
             ].join('\n')
@@ -1210,6 +1683,16 @@ function CharactersRoute({
               {importAiNote}
             </div>
           )}
+          {appliedAiActions.length > 0 && (
+            <div className={styles.notice} style={{marginTop: '1rem'}}>
+              <strong>Applied This Session</strong>
+              <div style={{display: 'grid', gap: '0.3rem', marginTop: '0.45rem'}}>
+                {appliedAiActions.map((action) => (
+                  <div key={action.id}>{action.summary}</div>
+                ))}
+              </div>
+            </div>
+          )}
 
           <div
             style={{
@@ -1250,7 +1733,15 @@ function CharactersRoute({
 
           <div style={{marginTop: '0.9rem'}}>
             <label className={styles.fieldLabel}>
-              Short Description
+              <span style={{display: 'flex', justifyContent: 'space-between', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap'}}>
+                <span>Short Description</span>
+                <button
+                  type='button'
+                  onClick={() => openFieldDiscussion({kind: 'import-description'}, 'Import Description', importDescription)}
+                >
+                  Discuss
+                </button>
+              </span>
               <textarea
                 className={styles.softTextarea}
                 value={importDescription}
@@ -1334,6 +1825,12 @@ function CharactersRoute({
                     >
                       {assistState?.isLoading && assistState.intent === 'tension' ? 'Working...' : 'Find tension'}
                     </button>
+                    <button
+                      type='button'
+                      onClick={() => openFieldDiscussion({kind: 'import-section', sectionId: section.id}, section.title || 'Import Section', section.content)}
+                    >
+                      Discuss
+                    </button>
                     <select
                       className={styles.softSelect}
                       value={section.action}
@@ -1395,65 +1892,39 @@ function CharactersRoute({
                       <div style={{display: 'flex', gap: '0.5rem', flexWrap: 'wrap'}}>
                         <button
                           type='button'
-                          onClick={() => {
-                            setImportSectionStates((prev) =>
-                              prev.map((entry) =>
-                                entry.id === section.id
-                                  ? {...entry, content: assistState.suggestion}
-                                  : entry
-                              )
-                            );
-                            setSectionAssistStates((prev) => ({
-                              ...prev,
-                              [section.id]: {
-                                ...prev[section.id],
-                                suggestion: '',
-                                note: ''
-                              }
-                            }));
-                          }}
+                          onClick={() =>
+                            applyImportSectionSuggestion(section.id, assistState.suggestion, 'section-replace')
+                          }
                         >
                           Replace section
                         </button>
                         <button
                           type='button'
-                          onClick={() => {
-                            setImportSectionStates((prev) =>
-                              prev.map((entry) =>
-                                entry.id === section.id
-                                  ? {
-                                      ...entry,
-                                      content: entry.content.trim()
-                                        ? `${entry.content.trim()}\n\n${assistState.suggestion}`
-                                        : assistState.suggestion
-                                    }
-                                  : entry
-                              )
-                            );
-                            setSectionAssistStates((prev) => ({
-                              ...prev,
-                              [section.id]: {
-                                ...prev[section.id],
-                                suggestion: '',
-                                note: ''
-                              }
-                            }));
-                          }}
+                          onClick={() =>
+                            applyImportSectionSuggestion(section.id, assistState.suggestion, 'section-append')
+                          }
                         >
                           Append
                         </button>
                         <button
                           type='button'
                           onClick={() =>
-                            setSectionAssistStates((prev) => ({
-                              ...prev,
-                              [section.id]: {
-                                ...prev[section.id],
-                                suggestion: '',
-                                note: ''
-                              }
-                            }))
+                            applyImportSectionSuggestion(section.id, assistState.suggestion, 'description')
                           }
+                        >
+                          Replace description
+                        </button>
+                        <button
+                          type='button'
+                          onClick={() =>
+                            applyImportSectionSuggestion(section.id, assistState.suggestion, 'notes')
+                          }
+                        >
+                          Append to notes
+                        </button>
+                        <button
+                          type='button'
+                          onClick={() => clearImportSectionSuggestion(section.id)}
                         >
                           Dismiss
                         </button>
@@ -1488,7 +1959,15 @@ function CharactersRoute({
 
           <div style={{marginTop: '1rem'}}>
             <label className={styles.fieldLabel}>
-              {sourceResidueLabel}
+              <span style={{display: 'flex', justifyContent: 'space-between', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap'}}>
+                <span>{sourceResidueLabel}</span>
+                <button
+                  type='button'
+                  onClick={() => openFieldDiscussion({kind: 'import-notes'}, sourceResidueLabel, importUnmatchedText)}
+                >
+                  Discuss
+                </button>
+              </span>
               <textarea
                 className={styles.softTextarea}
                 value={importUnmatchedText}
@@ -1555,7 +2034,15 @@ function CharactersRoute({
 
           <div style={{marginBottom: '0.9rem'}}>
             <label className={styles.fieldLabel}>
-              Description
+              <span style={{display: 'flex', justifyContent: 'space-between', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap'}}>
+                <span>Description</span>
+                <button
+                  type='button'
+                  onClick={() => openFieldDiscussion({kind: 'edit-description'}, 'Description', description)}
+                >
+                  Discuss
+                </button>
+              </span>
               <textarea
                 className={styles.softTextarea}
                 value={description}
@@ -1582,7 +2069,15 @@ function CharactersRoute({
               </select>
             </label>
             <label className={styles.fieldLabel}>
-              Notes
+              <span style={{display: 'flex', justifyContent: 'space-between', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap'}}>
+                <span>Notes</span>
+                <button
+                  type='button'
+                  onClick={() => openFieldDiscussion({kind: 'edit-notes'}, 'Notes', editingId ? editingSourceResidue : notes)}
+                >
+                  Discuss
+                </button>
+              </span>
               <textarea
                 className={styles.softTextarea}
                 value={notes}
@@ -1659,6 +2154,12 @@ function CharactersRoute({
                       >
                         {assistState?.isLoading && assistState.intent === 'tension' ? 'Working...' : 'Find tension'}
                       </button>
+                      <button
+                        type='button'
+                        onClick={() => openFieldDiscussion({kind: 'edit-section', index}, section.title || 'Section', section.content)}
+                      >
+                        Discuss
+                      </button>
                     <select
                       className={styles.softSelect}
                       value={section.action}
@@ -1727,65 +2228,39 @@ function CharactersRoute({
                           <div style={{display: 'flex', gap: '0.5rem', flexWrap: 'wrap'}}>
                             <button
                               type='button'
-                              onClick={() => {
-                                setEditingImportedSections((prev) =>
-                                  prev.map((entry, entryIndex) =>
-                                    entryIndex === index
-                                      ? {...entry, content: assistState.suggestion}
-                                      : entry
-                                  )
-                                );
-                                setEditingSectionAssistStates((prev) => ({
-                                  ...prev,
-                                  [assistKey]: {
-                                    ...prev[assistKey],
-                                    suggestion: '',
-                                    note: ''
-                                  }
-                                }));
-                              }}
+                              onClick={() =>
+                                applyEditingSectionSuggestion(index, assistKey, assistState.suggestion, 'section-replace')
+                              }
                             >
                               Replace section
                             </button>
                             <button
                               type='button'
-                              onClick={() => {
-                                setEditingImportedSections((prev) =>
-                                  prev.map((entry, entryIndex) =>
-                                    entryIndex === index
-                                      ? {
-                                          ...entry,
-                                          content: entry.content.trim()
-                                            ? `${entry.content.trim()}\n\n${assistState.suggestion}`
-                                            : assistState.suggestion
-                                        }
-                                      : entry
-                                  )
-                                );
-                                setEditingSectionAssistStates((prev) => ({
-                                  ...prev,
-                                  [assistKey]: {
-                                    ...prev[assistKey],
-                                    suggestion: '',
-                                    note: ''
-                                  }
-                                }));
-                              }}
+                              onClick={() =>
+                                applyEditingSectionSuggestion(index, assistKey, assistState.suggestion, 'section-append')
+                              }
                             >
                               Append
                             </button>
                             <button
                               type='button'
                               onClick={() =>
-                                setEditingSectionAssistStates((prev) => ({
-                                  ...prev,
-                                  [assistKey]: {
-                                    ...prev[assistKey],
-                                    suggestion: '',
-                                    note: ''
-                                  }
-                                }))
+                                applyEditingSectionSuggestion(index, assistKey, assistState.suggestion, 'description')
                               }
+                            >
+                              Replace description
+                            </button>
+                            <button
+                              type='button'
+                              onClick={() =>
+                                applyEditingSectionSuggestion(index, assistKey, assistState.suggestion, 'notes')
+                              }
+                            >
+                              Append to notes
+                            </button>
+                            <button
+                              type='button'
+                              onClick={() => clearEditingSectionSuggestion(assistKey)}
                             >
                               Dismiss
                             </button>
@@ -1850,6 +2325,31 @@ function CharactersRoute({
                 Ask the AI to spot missing dimensions, contradictions, weak motivations, or ways to make this character feel more complete. It suggests; you decide what to keep.
               </p>
             </div>
+            {appliedAiActions.length > 0 && (
+              <div
+                style={{
+                  padding: '0.75rem',
+                  borderRadius: '12px',
+                  border: '1px solid var(--surface-border-soft)',
+                  background: 'var(--surface-panel)'
+                }}
+              >
+                <strong>Applied This Session</strong>
+                <div
+                  style={{
+                    marginTop: '0.45rem',
+                    display: 'grid',
+                    gap: '0.35rem',
+                    color: 'var(--color-text-secondary)',
+                    fontSize: '0.92rem'
+                  }}
+                >
+                  {appliedAiActions.map((action) => (
+                    <div key={action.id}>{action.summary}</div>
+                  ))}
+                </div>
+              </div>
+            )}
             <div style={{display: 'flex', gap: '0.5rem', flexWrap: 'wrap'}}>
               <button
                 type='button'
@@ -1949,6 +2449,28 @@ function CharactersRoute({
                     <div style={{whiteSpace: 'pre-wrap', color: 'var(--color-text-primary)'}}>
                       {message.content}
                     </div>
+                    {message.role === 'assistant' && (
+                      <div style={{display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginTop: '0.75rem'}}>
+                        <button
+                          type='button'
+                          onClick={() => applyCharacterCoachSuggestion(message.content, 'description')}
+                        >
+                          Replace description
+                        </button>
+                        <button
+                          type='button'
+                          onClick={() => applyCharacterCoachSuggestion(message.content, 'notes')}
+                        >
+                          Append to notes
+                        </button>
+                        <button
+                          type='button'
+                          onClick={() => applyCharacterCoachSuggestion(message.content, 'section')}
+                        >
+                          Add section(s)
+                        </button>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
@@ -2100,6 +2622,140 @@ function CharactersRoute({
             onUpdate={handleUpdateStyle}
             onDelete={handleDeleteStyle}
           />
+        </div>
+      )}
+
+      {fieldDiscussion.isOpen && fieldDiscussion.target && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(10, 12, 18, 0.6)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '1.25rem',
+            zIndex: 1000
+          }}
+        >
+          <div
+            style={{
+              width: 'min(880px, 100%)',
+              maxHeight: '85vh',
+              overflow: 'auto',
+              background: 'var(--surface-canvas)',
+              border: '1px solid var(--surface-border-soft)',
+              borderRadius: '18px',
+              padding: '1rem',
+              display: 'grid',
+              gap: '0.9rem'
+            }}
+          >
+            <div style={{display: 'flex', justifyContent: 'space-between', gap: '1rem', alignItems: 'center'}}>
+              <div>
+                <strong>Discuss: {fieldDiscussion.title}</strong>
+                <div style={{marginTop: '0.3rem', color: 'var(--color-text-secondary)', fontSize: '0.92rem'}}>
+                  Ask the AI to deepen, sharpen, or troubleshoot just this field.
+                </div>
+              </div>
+              <button type='button' onClick={closeFieldDiscussion}>
+                Close
+              </button>
+            </div>
+
+            <div
+              style={{
+                padding: '0.8rem',
+                borderRadius: '12px',
+                border: '1px solid var(--surface-border-soft)',
+                background: 'var(--surface-panel)',
+                whiteSpace: 'pre-wrap'
+              }}
+            >
+              {fieldDiscussion.sourceContent || '(empty)'}
+            </div>
+
+            <div style={{display: 'flex', gap: '0.5rem', flexWrap: 'wrap'}}>
+              <button type='button' onClick={() => void handleAskFieldDiscussion('Add concrete specificity and usable detail without changing the core facts.')}>
+                Add specificity
+              </button>
+              <button type='button' onClick={() => void handleAskFieldDiscussion('Deepen contradiction, pressure, or vulnerability inside this field.')}>
+                Deepen tension
+              </button>
+              <button type='button' onClick={() => void handleAskFieldDiscussion('Make this field more scene-usable and less generic.')}>
+                Make scene-usable
+              </button>
+            </div>
+
+            <textarea
+              className={styles.softTextarea}
+              value={fieldDiscussion.input}
+              onChange={(event) =>
+                setFieldDiscussion((prev) => ({...prev, input: event.target.value}))
+              }
+              rows={3}
+              placeholder='Ask about this field or section.'
+            />
+
+            <div style={{display: 'flex', gap: '0.5rem', flexWrap: 'wrap'}}>
+              <button
+                type='button'
+                onClick={() => void handleAskFieldDiscussion()}
+                disabled={fieldDiscussion.isLoading}
+              >
+                {fieldDiscussion.isLoading ? 'Thinking...' : 'Ask AI'}
+              </button>
+              {fieldDiscussion.messages.length > 0 && (
+                <button
+                  type='button'
+                  onClick={() => setFieldDiscussion((prev) => ({...prev, messages: []}))}
+                  disabled={fieldDiscussion.isLoading}
+                >
+                  Clear Discussion
+                </button>
+              )}
+            </div>
+
+            {fieldDiscussion.messages.length > 0 && (
+              <div style={{display: 'grid', gap: '0.75rem'}}>
+                {fieldDiscussion.messages.map((message) => (
+                  <div
+                    key={message.id}
+                    style={{
+                      padding: '0.8rem',
+                      borderRadius: '12px',
+                      border: '1px solid var(--surface-border-soft)',
+                      background:
+                        message.role === 'assistant'
+                          ? 'var(--surface-panel)'
+                          : 'var(--surface-panel-elevated)'
+                    }}
+                  >
+                    <div style={{fontSize: '0.82rem', fontWeight: 600, color: 'var(--color-text-secondary)', marginBottom: '0.35rem'}}>
+                      {message.role === 'assistant' ? 'AI Helper' : 'You'}
+                    </div>
+                    <div style={{whiteSpace: 'pre-wrap'}}>{message.content}</div>
+                    {message.role === 'assistant' && (
+                      <div style={{display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginTop: '0.75rem'}}>
+                        <button
+                          type='button'
+                          onClick={() => applyDiscussionSuggestion(fieldDiscussion.target as DiscussionTarget, message.content, 'replace')}
+                        >
+                          Replace field
+                        </button>
+                        <button
+                          type='button'
+                          onClick={() => applyDiscussionSuggestion(fieldDiscussion.target as DiscussionTarget, message.content, 'append')}
+                        >
+                          Append
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       )}
     </>

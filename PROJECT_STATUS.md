@@ -119,6 +119,7 @@ A comprehensive desktop application for LitRPG/GameLit authors that bridges narr
   - richer character editing surface for imported sections and source residue
   - compact character list/details split for better authoring space use
   - Character Coach AI panel for in-editor character development discussion
+  - field-level AI discussion modal for descriptions, notes/residue, and character detail sections
 
 ---
 
@@ -204,6 +205,8 @@ npx tsx examples/basic-usage.ts
   - AI-generated drafts now share the same review flow as imports
   - review and edit surfaces both support per-section AI actions (`Expand`, `Sharpen`, `Find tension`)
   - AI/import review now allows adding new sections before save instead of forcing a save-first workaround
+  - AI suggestions can now be applied into descriptions, notes, or section bodies instead of staying discussion-only
+  - `Character Coach` replies now support direct apply actions and a lightweight field-level discussion modal
 - Hardened fragile AI/import paths uncovered during dogfooding:
   - tolerant JSON parsing now handles several malformed model responses that previously crashed draft creation
   - import parsing now recognizes broader labels such as `Character:` and approximate age phrases like `mid 20s`
@@ -213,7 +216,8 @@ npx tsx examples/basic-usage.ts
   - roadmap notes now explicitly track future author-editable prompt overrides and a companion `Demote to World Bible` flow
 
 **Immediate Next Slice**
-- Keep dogfooding AI-assisted character creation until the model reliably returns richer section detail instead of thin top-level summaries.
+- Dogfood the new field-level `Discuss` modal in real use and decide whether assistant replies inside that modal also need `Make section` / `Add section(s)` actions.
+- Keep tightening `Character Coach` response structure so multi-section suggestions become reusable character detail blocks more reliably across providers.
 - Validate whether the `Promote to Characters` flow needs linked provenance UI before adding demotion.
 
 ### Character Import / Editing / Coaching Pass (April 4, 2026)

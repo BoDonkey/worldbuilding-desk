@@ -210,6 +210,7 @@ Check specifically:
 
 - whether `Character Coach` helps make characters more complete instead of just more verbose
 - whether AI suggestions need lightweight apply/promote actions or should stay discussion-only
+- whether the new field-level `Discuss` modal is enough with `Replace` / `Append`, or whether assistant replies there also need `Make section` / `Add section(s)` actions
 - whether imported sections should remain structured detail blocks or become first-class character fields
 - whether the saved-character presentation makes summary vs details vs source residue clear
 

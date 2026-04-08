@@ -295,8 +295,9 @@ Recommended next slice:
 
 1. Dogfood the new character editing + `Character Coach` flow in real use.
 2. Decide whether AI suggestions should stay discussion-only or gain lightweight apply actions.
-3. Decide whether imported sections remain structured details or become first-class character fields.
-4. Resume deeper corkboard testing once the character flow is no longer distorting first-use impressions.
+3. Decide whether the new field-level discussion modal also needs reply actions that can create one or more new character sections, not just replace/append the current field.
+4. Decide whether imported sections remain structured details or become first-class character fields.
+5. Resume deeper corkboard testing once the character flow is no longer distorting first-use impressions.
 
 1. In a `General Fiction` project, what routes and concepts should be primary, secondary, or hidden?
 2. Is `Characters` a cast-management surface, a gameplay-sheet surface, or both?

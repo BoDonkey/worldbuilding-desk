@@ -1241,7 +1241,7 @@ function WorkspaceRoute({activeProject, projectSettings: initialProjectSettings 
     if (!activeProject || !projectSettings || !isStatPreferencesHydrated) {
       return;
     }
-    const baseSettings = initialProjectSettings ?? projectSettings;
+    const baseSettings = projectSettings;
     const currentPrefs = baseSettings.statBlockPreferences;
     const currentGroupsJson = JSON.stringify(currentPrefs?.groups ?? []);
     const nextGroupsJson = JSON.stringify(statBlockGroups);
