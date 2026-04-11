@@ -1,5 +1,5 @@
-import type { CharacterSheet } from '../entityTypes';
-import { openDb } from '../db';
+import type { CharacterSheet } from '../../entityTypes';
+import { openDb } from '../../db';
 
 const STORE_NAME = 'character_sheets';
 

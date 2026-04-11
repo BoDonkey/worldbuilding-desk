@@ -1,4 +1,4 @@
-import type {SystemHistoryCategory, SystemHistoryEntry} from '../entityTypes';
+import type {SystemHistoryCategory, SystemHistoryEntry} from '../../entityTypes';
 
 const MAX_ENTRIES = 200;
 

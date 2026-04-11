@@ -4,7 +4,7 @@ import type {
   ProjectSettings,
   WorldEntity,
   WritingDocument,
-} from '../entityTypes';
+} from '../../entityTypes';
 import {
   openDb,
   CATEGORY_STORE_NAME,
@@ -22,11 +22,11 @@ import {
   WRITING_STORE_NAME,
   ZONE_AFFINITY_PROFILE_STORE_NAME,
   ZONE_AFFINITY_PROGRESS_STORE_NAME
-} from '../db';
-import {saveProject, getProjectById, getAllProjects} from '../projectStorage';
-import {getRulesetByProjectId, saveRuleset, deleteRuleset} from './rulesetService';
+} from '../../db';
+import {saveProject, getProjectById, getAllProjects} from '../../projectStorage';
+import {getRulesetByProjectId, saveRuleset, deleteRuleset} from '../rules/rulesetService';
 import type {ProjectSnapshot} from './projectSnapshotService';
-import {extractSingleFileZip} from '../utils/unzip';
+import {extractSingleFileZip} from '../../utils/unzip';
 
 export type ProjectBackupImportMode = 'new' | 'merge';
 

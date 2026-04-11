@@ -1,5 +1,5 @@
 import {buildProjectSnapshot, serializeProjectSnapshot} from './projectSnapshotService';
-import {buildSingleFileZip} from '../utils/zip';
+import {buildSingleFileZip} from '../../utils/zip';
 
 function sanitizeFileNamePart(value: string): string {
   const cleaned = value

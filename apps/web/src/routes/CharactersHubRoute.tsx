@@ -4,11 +4,11 @@ import {useNavigate, useSearchParams} from 'react-router-dom';
 import type {Project} from '../entityTypes';
 import CharactersRoute from './CharactersRoute';
 import CharacterSheetsRoute from './CharacterSheetsRoute';
-import {getRulesetByProjectId} from '../services/rulesetService';
+import {getRulesetByProjectId} from '../services/rules';
 import {
   exportCharactersJson,
   importCharactersJson
-} from '../services/characterTransferService';
+} from '../services/characters';
 
 interface CharactersHubRouteProps {
   activeProject: Project | null;

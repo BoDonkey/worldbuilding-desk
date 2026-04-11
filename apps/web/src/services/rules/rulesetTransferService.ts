@@ -3,7 +3,7 @@ import {
   downloadJsonFile,
   readJsonFile,
   sanitizeFileNamePart
-} from './jsonTransfer';
+} from '../storage/jsonTransfer';
 
 interface RulesetTransferPayload {
   schemaVersion: 1;

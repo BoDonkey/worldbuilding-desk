@@ -15,9 +15,9 @@ import {
   getCharacterSheetsByProject,
   saveCharacterSheet,
   deleteCharacterSheet
-} from '../services/characterSheetService';
+} from '../services/characters';
 import {getCharactersByProject} from '../characterStorage';
-import {getRulesetByProjectId} from '../services/rulesetService';
+import {getRulesetByProjectId} from '../services/rules';
 import type {
   ShodhMemoryProvider,
   MemoryEntry
@@ -38,7 +38,7 @@ import {
   getPartySynergySuggestions,
   getSettlementModulesByProject,
   getCompendiumEntriesByProject
-} from '../services/compendiumService';
+} from '../services/compendium';
 
 interface CharacterSheetsRouteProps {
   activeProject: Project | null;

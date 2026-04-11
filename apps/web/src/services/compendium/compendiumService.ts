@@ -15,7 +15,7 @@ import type {
   ZoneAffinityProgress,
   SettlementModule,
   SettlementState
-} from '../entityTypes';
+} from '../../entityTypes';
 import {
   openDb,
   COMPENDIUM_ACTION_LOG_STORE_NAME,
@@ -27,7 +27,12 @@ import {
   ZONE_AFFINITY_PROGRESS_STORE_NAME,
   SETTLEMENT_MODULE_STORE_NAME,
   SETTLEMENT_STATE_STORE_NAME
-} from '../db';
+} from '../../db';
+
+function emitCompendiumRecordsChanged(): void {
+  if (typeof window === 'undefined') return;
+  window.dispatchEvent(new CustomEvent('wbd:compendium-records-changed'));
+}
 
 type RecordActionParams = {
   projectId: string;
@@ -306,6 +311,7 @@ export async function saveCompendiumEntry(entry: CompendiumEntry): Promise<void>
   const tx = db.transaction(COMPENDIUM_ENTRY_STORE_NAME, 'readwrite');
   const store = tx.objectStore(COMPENDIUM_ENTRY_STORE_NAME);
   await requestToPromise(store.put(entry));
+  emitCompendiumRecordsChanged();
 }
 
 export async function upsertCompendiumEntryFromEntity(params: {
@@ -313,6 +319,7 @@ export async function upsertCompendiumEntryFromEntity(params: {
   entity: WorldEntity;
   domain: CompendiumDomain;
   defaultActions?: CompendiumEntry['actions'];
+  needsCompletion?: boolean;
 }): Promise<CompendiumEntry> {
   const existing = (await getCompendiumEntriesByProject(params.projectId)).find(
     (entry) => entry.sourceEntityId === params.entity.id
@@ -333,6 +340,7 @@ export async function upsertCompendiumEntryFromEntity(params: {
         ? params.entity.fields.description
         : undefined,
     tags: existing?.tags ?? [],
+    needsCompletion: params.needsCompletion ?? existing?.needsCompletion ?? false,
     actions: existing?.actions ?? params.defaultActions ?? fallbackActions,
     createdAt: existing?.createdAt ?? now,
     updatedAt: now
@@ -347,6 +355,7 @@ export async function deleteCompendiumEntry(entryId: string): Promise<void> {
   const tx = db.transaction(COMPENDIUM_ENTRY_STORE_NAME, 'readwrite');
   const store = tx.objectStore(COMPENDIUM_ENTRY_STORE_NAME);
   await requestToPromise(store.delete(entryId));
+  emitCompendiumRecordsChanged();
 }
 
 export async function getCompendiumMilestonesByProject(

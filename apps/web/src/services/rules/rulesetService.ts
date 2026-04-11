@@ -1,8 +1,8 @@
 import type {WorldRuleset} from '@litrpg-tool/rules-engine';
-import type {StoredRuleset} from '../entityTypes';
-import {getRAGService} from './rag/getRAGService';
-import {getShodhService} from './shodh/getShodhService';
-import {emitShodhMemoriesUpdated} from './shodh/shodhEvents';
+import type {StoredRuleset} from '../../entityTypes';
+import {getRAGService} from '../rag/getRAGService';
+import {getShodhService} from '../shodh/getShodhService';
+import {emitShodhMemoriesUpdated} from '../shodh/shodhEvents';
 
 const DB_NAME = 'worldbuilding-desk';
 const RULESET_STORE = 'rulesets';

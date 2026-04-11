@@ -16,7 +16,7 @@ import type {
   ZoneAffinityProfile,
   ZoneAffinityProgress,
   StoredRuleset
-} from '../entityTypes';
+} from '../../entityTypes';
 import {
   openDb,
   CATEGORY_STORE_NAME,
@@ -34,9 +34,9 @@ import {
   WRITING_STORE_NAME,
   ZONE_AFFINITY_PROFILE_STORE_NAME,
   ZONE_AFFINITY_PROGRESS_STORE_NAME
-} from '../db';
-import {getProjectById} from '../projectStorage';
-import {getRulesetByProjectId} from './rulesetService';
+} from '../../db';
+import {getProjectById} from '../../projectStorage';
+import {getRulesetByProjectId} from '../rules/rulesetService';
 
 export interface ProjectSnapshot {
   schemaVersion: 1;

@@ -1,16 +1,16 @@
-import type {Character, CharacterSheet} from '../entityTypes';
+import type {Character, CharacterSheet} from '../../entityTypes';
 import {
   CHARACTER_SHEET_STORE_NAME,
   CHARACTER_STORE_NAME,
   openDb
-} from '../db';
-import {getCharactersByProject} from '../characterStorage';
+} from '../../db';
+import {getCharactersByProject} from '../../characterStorage';
 import {getCharacterSheetsByProject} from './characterSheetService';
 import {
   downloadJsonFile,
   readJsonFile,
   sanitizeFileNamePart
-} from './jsonTransfer';
+} from '../storage/jsonTransfer';
 
 interface CharacterTransferPayload {
   schemaVersion: 1;
