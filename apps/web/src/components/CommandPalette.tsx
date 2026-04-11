@@ -77,7 +77,6 @@ export const CommandPalette = ({
     const workspace = filteredCommands.filter(
       (command) => command.section === 'Workspace' && !seen.has(command.id)
     );
-
     if (navigation.length > 0) {
       groups.push({label: 'Navigation', commands: navigation});
     }
@@ -195,7 +194,12 @@ export const CommandPalette = ({
                         role='option'
                         aria-selected={index === activeIndex}
                       >
-                        <span>{command.label}</span>
+                        <span className={styles.primary}>
+                          <span>{command.label}</span>
+                          {command.description ? (
+                            <span className={styles.description}>{command.description}</span>
+                          ) : null}
+                        </span>
                         <span className={styles.meta}>
                           {command.section}
                           {command.shortcut ? ` · ${command.shortcut}` : ''}

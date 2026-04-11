@@ -5,8 +5,9 @@ import {dispatchWorkspaceCommand} from './workspaceCommands';
 export interface AppCommand {
   id: string;
   label: string;
-  section: 'Navigation' | 'Workspace';
+  section: 'Navigation' | 'Workspace' | 'Search';
   keywords: string[];
+  description?: string;
   shortcut?: string;
   run: () => void;
 }

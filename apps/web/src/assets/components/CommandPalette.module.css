@@ -77,14 +77,29 @@
   align-items: center;
 }
 
+.primary {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
 .item:hover,
 .itemActive {
   background: var(--color-bg-secondary);
 }
 
+.description {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+}
+
 .meta {
   color: var(--color-text-secondary);
   font-size: var(--font-size-sm);
+  text-align: right;
+  flex-shrink: 0;
+  margin-left: 0.75rem;
 }
 
 .empty {
