@@ -23,8 +23,14 @@ import {ShodhMemoryPanel} from '../components/ShodhMemoryPanel';
 import {
   getCompendiumEntriesByProject,
   upsertCompendiumEntryFromEntity
-} from '../services/compendiumService';
+} from '../services/compendium';
 import type {CompendiumDomain} from '../entityTypes';
+import type {ConsistencyAlias} from '../services/consistency';
+import {
+  deleteAliasesForEntity,
+  getAliasesByProject,
+  replaceAliasesForEntity
+} from '../services/consistency';
 import {
   getSeriesBibleConfig,
   promoteMemoryToParent,
@@ -66,11 +72,21 @@ interface JsonImportSession {
   fieldMap: Record<string, string>;
 }
 
+type JsonImportConflictResolution = ImportMode | 'skip';
+
+interface JsonImportConflict {
+  kind: 'existing' | 'batch-duplicate';
+  message: string;
+}
+
 interface JsonImportPreparedRow {
   rowIndex: number;
   name: string;
   fields: Record<string, string>;
   errors: string[];
+  existingEntityId?: string;
+  conflict?: JsonImportConflict;
+  resolution: JsonImportConflictResolution;
 }
 
 const fileNameToEntityName = (name: string): string => {
@@ -264,6 +280,21 @@ const getFieldTemplateValue = (field: EntityCategory['fieldSchema'][number]): un
   return '';
 };
 
+const ALTERNATIVE_NAMES_KEY = 'alternativeNames';
+
+const parseAlternativeNames = (value: string): string[] =>
+  Array.from(
+    new Map(
+      value
+        .split(',')
+        .map((item) => item.trim())
+        .filter(Boolean)
+        .map((item) => [item.toLowerCase(), item])
+    ).values()
+  );
+
+const formatAlternativeNames = (names: string[]): string => names.join(', ');
+
 const triggerJsonDownload = (fileName: string, data: unknown): void => {
   const blob = new Blob([JSON.stringify(data, null, 2)], {
     type: 'application/json'
@@ -287,11 +318,15 @@ function WorldBibleRoute({activeProject}: WorldBibleRouteProps) {
   const [name, setName] = useState('');
   const [fieldValues, setFieldValues] = useState<Record<string, string>>({});
   const [showCategoryManager, setShowCategoryManager] = useState(false);
+  const [aliases, setAliases] = useState<ConsistencyAlias[]>([]);
   const [ragService, setRagService] = useState<RAGProvider | null>(null);
   const [shodhService, setShodhService] =
     useState<ShodhMemoryProvider | null>(null);
   const [memories, setMemories] = useState<MemoryEntry[]>([]);
   const [memoryFilter, setMemoryFilter] = useState('');
+  const [pendingReviewFocus, setPendingReviewFocus] = useState<'general' | 'aliases' | null>(
+    null
+  );
   const seriesConfig = activeProject
     ? getSeriesBibleConfig(activeProject)
     : null;
@@ -323,8 +358,12 @@ function WorldBibleRoute({activeProject}: WorldBibleRouteProps) {
   const [jsonImportSession, setJsonImportSession] = useState<JsonImportSession | null>(
     null
   );
+  const [jsonImportConflictResolutions, setJsonImportConflictResolutions] = useState<
+    Record<number, JsonImportConflictResolution>
+  >({});
   const importInputRef = useRef<HTMLInputElement | null>(null);
   const jsonImportInputRef = useRef<HTMLInputElement | null>(null);
+  const aliasTextareaRef = useRef<HTMLTextAreaElement | null>(null);
   const focusedEntityKeyRef = useRef<string | null>(null);
   const refreshMemories = useCallback(async () => {
     if (!shodhService) {
@@ -361,6 +400,7 @@ function WorldBibleRoute({activeProject}: WorldBibleRouteProps) {
     if (!activeProject) {
       setImportDrafts([]);
       setJsonImportSession(null);
+      setJsonImportConflictResolutions({});
       return;
     }
 
@@ -371,19 +411,61 @@ function WorldBibleRoute({activeProject}: WorldBibleRouteProps) {
 
       await initializeDefaultCategories(projectId);
 
-      const [cats, ents] = await Promise.all([
+      const [cats, ents, loadedAliases] = await Promise.all([
         getCategoriesByProject(projectId),
-        getEntitiesByProject(projectId)
+        getEntitiesByProject(projectId),
+        getAliasesByProject(projectId)
       ]);
 
       if (!cancelled) {
         setCategories(cats);
         setEntities(ents);
+        setAliases(loadedAliases);
       }
     })();
 
     return () => {
       cancelled = true;
+    };
+  }, [activeProject]);
+
+  useEffect(() => {
+    if (!activeProject) {
+      setAliases([]);
+      return;
+    }
+
+    let cancelled = false;
+    getAliasesByProject(activeProject.id)
+      .then((loadedAliases) => {
+        if (!cancelled) {
+          setAliases(loadedAliases);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setAliases([]);
+        }
+      });
+
+    const refreshAliases = () => {
+      void getAliasesByProject(activeProject.id)
+        .then((loadedAliases) => {
+          if (!cancelled) {
+            setAliases(loadedAliases);
+          }
+        })
+        .catch(() => {
+          if (!cancelled) {
+            setAliases([]);
+          }
+        });
+    };
+
+    window.addEventListener('wbd:alias-records-changed', refreshAliases);
+    return () => {
+      cancelled = true;
+      window.removeEventListener('wbd:alias-records-changed', refreshAliases);
     };
   }, [activeProject]);
 
@@ -507,6 +589,19 @@ function WorldBibleRoute({activeProject}: WorldBibleRouteProps) {
   );
   const preparedJsonRows = useMemo<JsonImportPreparedRow[]>(() => {
     if (!jsonImportSession || !activeJsonCategory) return [];
+    const existingByName = new Map(
+      entities
+        .filter((entity) => entity.categoryId === jsonImportSession.categoryId)
+        .map((entity) => [entity.name.trim().toLowerCase(), entity])
+    );
+    const duplicateNameCounts = new Map<string, number>();
+    jsonImportSession.rows.forEach((row) => {
+      const nameRaw = valueToString(row.record[jsonImportSession.nameKey]);
+      const normalized = nameRaw.trim().toLowerCase();
+      if (!normalized) return;
+      duplicateNameCounts.set(normalized, (duplicateNameCounts.get(normalized) ?? 0) + 1);
+    });
+
     return jsonImportSession.rows.map((row) => {
       const errors: string[] = [];
       const nameRaw = valueToString(row.record[jsonImportSession.nameKey]);
@@ -532,21 +627,83 @@ function WorldBibleRoute({activeProject}: WorldBibleRouteProps) {
           fields[field.key] = value;
         }
       }
+      const normalizedName = name.trim().toLowerCase();
+      const existingEntity = normalizedName
+        ? existingByName.get(normalizedName)
+        : undefined;
+      const hasBatchDuplicate = normalizedName
+        ? (duplicateNameCounts.get(normalizedName) ?? 0) > 1
+        : false;
+      const conflict =
+        jsonImportSession.mode === 'create' && existingEntity
+          ? {
+              kind: 'existing' as const,
+              message: `Matches existing ${activeJsonCategory.name.slice(0, -1).toLowerCase()} "${existingEntity.name}". Choose whether to create a duplicate, update it, or skip this row.`
+            }
+          : hasBatchDuplicate
+            ? {
+                kind: 'batch-duplicate' as const,
+                message:
+                  'Another JSON row uses this same name in the selected category. Choose whether to create, update by name, or skip this row.'
+              }
+            : undefined;
+      const resolution =
+        jsonImportConflictResolutions[row.rowIndex] ??
+        (conflict ? ('skip' as const) : jsonImportSession.mode);
       return {
         rowIndex: row.rowIndex,
         name,
         fields,
-        errors
+        errors,
+        existingEntityId: existingEntity?.id,
+        conflict,
+        resolution
       };
     });
-  }, [activeJsonCategory, jsonImportSession]);
+  }, [activeJsonCategory, entities, jsonImportConflictResolutions, jsonImportSession]);
   const jsonImportValidCount = preparedJsonRows.filter(
     (row) => row.errors.length === 0
+  ).length;
+  const jsonImportConflictCount = preparedJsonRows.filter((row) => row.conflict).length;
+  const unresolvedJsonConflictCount = preparedJsonRows.filter(
+    (row) => row.conflict && !jsonImportConflictResolutions[row.rowIndex]
   ).length;
   const filteredEntities = entities.filter((e) => e.categoryId === activeTab);
   const currentEntityMemories = editingId
     ? memories.filter((memory) => memory.documentId === editingId)
     : [];
+  const aliasMapByEntityId = useMemo(() => {
+    const map = new Map<string, string[]>();
+    aliases.forEach((alias) => {
+      const current = map.get(alias.entityId) ?? [];
+      current.push(alias.alias);
+      map.set(alias.entityId, current);
+    });
+    return map;
+  }, [aliases]);
+  const reviewQueue = useMemo(
+    () =>
+      entities
+        .map((entity) => {
+          const aliasCount = (aliasMapByEntityId.get(entity.id) ?? []).length;
+          const reasons: string[] = [];
+          if (entity.needsCompletion) {
+            reasons.push('Needs completion');
+          }
+          if (aliasCount === 0) {
+            reasons.push('Alternative names not reviewed');
+          }
+          return {entity, aliasCount, reasons};
+        })
+        .filter((item) => item.reasons.length > 0)
+        .sort((a, b) => {
+          if (a.entity.needsCompletion !== b.entity.needsCompletion) {
+            return a.entity.needsCompletion ? -1 : 1;
+          }
+          return a.entity.name.localeCompare(b.entity.name);
+        }),
+    [aliasMapByEntityId, entities]
+  );
   const memoryPanelEmpty =
     'This entry has no captured memories yet. Save it to generate one or adjust the filter.';
 
@@ -554,6 +711,7 @@ function WorldBibleRoute({activeProject}: WorldBibleRouteProps) {
     setEditingId(null);
     setName('');
     setFieldValues({});
+    setPendingReviewFocus(null);
   };
 
   const handleSubmit = async (event: FormEvent) => {
@@ -566,19 +724,36 @@ function WorldBibleRoute({activeProject}: WorldBibleRouteProps) {
       const now = Date.now();
       const id = editingId ?? crypto.randomUUID();
       const existing = entities.find((e) => e.id === id);
+      const alternativeNames = parseAlternativeNames(
+        fieldValues[ALTERNATIVE_NAMES_KEY] || ''
+      );
+      const nextFields = {...fieldValues};
+      if (alternativeNames.length > 0) {
+        nextFields[ALTERNATIVE_NAMES_KEY] = formatAlternativeNames(alternativeNames);
+      } else {
+        delete nextFields[ALTERNATIVE_NAMES_KEY];
+      }
 
       const entity: WorldEntity = {
         id,
         projectId: activeProject.id,
         categoryId: activeCategory.id,
         name,
-        fields: {...fieldValues},
+        fields: nextFields,
+        needsCompletion: false,
         links: existing?.links ?? [],
         createdAt: existing?.createdAt ?? now,
         updatedAt: now
       };
 
       await saveEntity(entity);
+      const savedAliases = await replaceAliasesForEntity({
+        projectId: activeProject.id,
+        entityId: entity.id,
+        aliases: alternativeNames.filter(
+          (alias) => alias.trim().toLowerCase() !== entity.name.trim().toLowerCase()
+        )
+      });
       if (ragService) {
         await ragService.indexDocument(
           entity.id,
@@ -609,6 +784,10 @@ function WorldBibleRoute({activeProject}: WorldBibleRouteProps) {
         copy[idx] = entity;
         return copy;
       });
+      setAliases((prev) => [
+        ...prev.filter((alias) => alias.entityId !== entity.id),
+        ...savedAliases
+      ]);
 
       resetForm();
       setFeedback({
@@ -623,11 +802,61 @@ function WorldBibleRoute({activeProject}: WorldBibleRouteProps) {
     }
   };
 
-  const handleEdit = useCallback((entity: WorldEntity) => {
+  const handleEdit = useCallback((entity: WorldEntity, focus: 'general' | 'aliases' = 'general') => {
     setEditingId(entity.id);
+    setPendingReviewFocus(focus);
     setName(entity.name);
-    setFieldValues(entity.fields as Record<string, string>);
-  }, []);
+    const persistedAlternativeNames =
+      typeof entity.fields[ALTERNATIVE_NAMES_KEY] === 'string'
+        ? entity.fields[ALTERNATIVE_NAMES_KEY]
+        : '';
+    const indexedAlternativeNames = aliasMapByEntityId.get(entity.id) ?? [];
+    const mergedAlternativeNames = formatAlternativeNames([
+      ...parseAlternativeNames(persistedAlternativeNames),
+      ...indexedAlternativeNames
+    ]);
+    setFieldValues({
+      ...(entity.fields as Record<string, string>),
+      [ALTERNATIVE_NAMES_KEY]: mergedAlternativeNames
+    });
+  }, [aliasMapByEntityId]);
+
+  const handleMarkEntityComplete = useCallback(
+    async (entity: WorldEntity) => {
+      const next: WorldEntity = {
+        ...entity,
+        needsCompletion: false,
+        updatedAt: Date.now()
+      };
+
+      setFeedback(null);
+      try {
+        await saveEntity(next);
+        setEntities((prev) =>
+          prev.map((item) => (item.id === entity.id ? next : item))
+        );
+        setFeedback({
+          tone: 'success',
+          message: `"${entity.name}" marked complete.`
+        });
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : 'Unable to update entry.';
+        setFeedback({tone: 'error', message});
+      }
+    },
+    []
+  );
+
+  useEffect(() => {
+    if (pendingReviewFocus !== 'aliases') return;
+    aliasTextareaRef.current?.focus();
+    aliasTextareaRef.current?.setSelectionRange(
+      aliasTextareaRef.current.value.length,
+      aliasTextareaRef.current.value.length
+    );
+    setPendingReviewFocus(null);
+  }, [editingId, pendingReviewFocus]);
 
   useEffect(() => {
     const state = location.state as {focusEntityId?: string} | null;
@@ -783,6 +1012,7 @@ function WorldBibleRoute({activeProject}: WorldBibleRouteProps) {
                 categoryId: draft.categoryId,
                 name: draft.name.trim() || fileNameToEntityName(draft.fileName),
                 fields: mapImportedTextToFields(category, draft.text),
+                needsCompletion: false,
                 links: [],
                 createdAt: now,
                 updatedAt: now
@@ -902,6 +1132,7 @@ function WorldBibleRoute({activeProject}: WorldBibleRouteProps) {
         nameKey: defaultNameKey,
         fieldMap: defaultFieldMap
       });
+      setJsonImportConflictResolutions({});
       setFeedback({
         tone: 'success',
         message: `Loaded ${rows.length} JSON row(s). Map fields and apply when ready.`
@@ -911,6 +1142,7 @@ function WorldBibleRoute({activeProject}: WorldBibleRouteProps) {
         error instanceof Error ? error.message : 'Unable to parse JSON import file.';
       setFeedback({tone: 'error', message});
       setJsonImportSession(null);
+      setJsonImportConflictResolutions({});
     } finally {
       setIsImportingJson(false);
       event.target.value = '';
@@ -933,6 +1165,7 @@ function WorldBibleRoute({activeProject}: WorldBibleRouteProps) {
         fieldMap: nextFieldMap
       };
     });
+    setJsonImportConflictResolutions({});
   };
 
   const handleJsonFieldMapChange = (fieldKey: string, sourceKey: string) => {
@@ -948,6 +1181,16 @@ function WorldBibleRoute({activeProject}: WorldBibleRouteProps) {
     });
   };
 
+  const handleJsonConflictResolutionChange = (
+    rowIndex: number,
+    resolution: JsonImportConflictResolution
+  ) => {
+    setJsonImportConflictResolutions((prev) => ({
+      ...prev,
+      [rowIndex]: resolution
+    }));
+  };
+
   const handleApplyJsonImport = async () => {
     if (!activeProject || !jsonImportSession || !activeJsonCategory) return;
     const validRows = preparedJsonRows.filter((row) => row.errors.length === 0);
@@ -958,6 +1201,13 @@ function WorldBibleRoute({activeProject}: WorldBibleRouteProps) {
       });
       return;
     }
+    if (unresolvedJsonConflictCount > 0) {
+      setFeedback({
+        tone: 'error',
+        message: `Review ${unresolvedJsonConflictCount} conflicting JSON row(s) before importing.`
+      });
+      return;
+    }
 
     setIsApplyingJsonImport(true);
     setFeedback(null);
@@ -965,14 +1215,19 @@ function WorldBibleRoute({activeProject}: WorldBibleRouteProps) {
     let createdCount = 0;
     let updatedCount = 0;
     let failedCount = 0;
+    let skippedCount = 0;
 
     try {
       for (const row of validRows) {
         try {
+          if (row.resolution === 'skip') {
+            skippedCount += 1;
+            continue;
+          }
           const now = Date.now();
           const normalizedName = row.name.trim().toLowerCase();
           const existing =
-            jsonImportSession.mode === 'upsert'
+            row.resolution === 'upsert'
               ? nextEntities.find(
                   (entity) =>
                     entity.categoryId === jsonImportSession.categoryId &&
@@ -995,6 +1250,7 @@ function WorldBibleRoute({activeProject}: WorldBibleRouteProps) {
                 categoryId: jsonImportSession.categoryId,
                 name: row.name,
                 fields: row.fields,
+                needsCompletion: false,
                 links: [],
                 createdAt: now,
                 updatedAt: now
@@ -1044,10 +1300,12 @@ function WorldBibleRoute({activeProject}: WorldBibleRouteProps) {
           `JSON import created ${createdCount} entr${
             createdCount === 1 ? 'y' : 'ies'
           } and updated ${updatedCount}.` +
+          (skippedCount > 0 ? ` Skipped ${skippedCount}.` : '') +
           (failedCount > 0 ? ` ${failedCount} failed.` : '')
       });
       if (failedCount === 0) {
         setJsonImportSession(null);
+        setJsonImportConflictResolutions({});
       }
     } finally {
       setIsApplyingJsonImport(false);
@@ -1104,6 +1362,9 @@ function WorldBibleRoute({activeProject}: WorldBibleRouteProps) {
     setDeletingEntityId(id);
     setFeedback(null);
     try {
+      if (activeProject) {
+        await deleteAliasesForEntity(activeProject.id, id);
+      }
       await deleteEntity(id);
       if (ragService) {
         await ragService.deleteDocument(id);
@@ -1113,6 +1374,7 @@ function WorldBibleRoute({activeProject}: WorldBibleRouteProps) {
         await refreshMemories();
       }
       setEntities((prev) => prev.filter((e) => e.id !== id));
+      setAliases((prev) => prev.filter((alias) => alias.entityId !== id));
       if (editingId === id) resetForm();
       setFeedback({tone: 'success', message: 'Entry deleted.'});
     } catch (error) {
@@ -1157,7 +1419,8 @@ function WorldBibleRoute({activeProject}: WorldBibleRouteProps) {
       await upsertCompendiumEntryFromEntity({
         projectId: activeProject.id,
         entity,
-        domain: inferCompendiumDomain(entity)
+        domain: inferCompendiumDomain(entity),
+        needsCompletion: entity.needsCompletion ?? false
       });
       setCompendiumLinkedEntityIds((prev) => {
         const next = new Set(prev);
@@ -1301,6 +1564,25 @@ function WorldBibleRoute({activeProject}: WorldBibleRouteProps) {
           {feedback.message}
         </p>
       )}
+      <details className={styles.helpPanel}>
+        <summary>World Bible Onboarding</summary>
+        <div className={styles.helpBody}>
+          <p>
+            Start here when you need stable canon before writing. Add only the records
+            you need for the next scene, then expand later.
+          </p>
+          <p>
+            Fast path: choose a category, create a record, and capture names,
+            alternative names, status, and one or two high-value facts the workspace
+            should recognize.
+          </p>
+          <p>
+            Import path: use <strong>Import Docs</strong> for prose notes or{' '}
+            <strong>Import JSON</strong> for batch records, then review anything marked
+            as needing completion.
+          </p>
+        </div>
+      </details>
       {seriesConfig?.parentProjectId && (
         <div className={styles.banner}>
           <strong>Parent canon:</strong> {canonState.parentName ?? 'Unknown'} ·
@@ -1496,8 +1778,15 @@ function WorldBibleRoute({activeProject}: WorldBibleRouteProps) {
           <p className={styles.importSummary}>
             File: {jsonImportSession.fileName} · Rows: {jsonImportSession.rows.length} ·
             Valid: {jsonImportValidCount} · Invalid:{' '}
-            {preparedJsonRows.length - jsonImportValidCount}
+            {preparedJsonRows.length - jsonImportValidCount} · Conflicts:{' '}
+            {jsonImportConflictCount}
           </p>
+          {jsonImportConflictCount > 0 && (
+            <p className={styles.importError}>
+              Resolve duplicate-name conflicts before applying import. Unreviewed conflicts:{' '}
+              {unresolvedJsonConflictCount}
+            </p>
+          )}
           <div className={styles.importDraftFields}>
             <label>
               Category
@@ -1585,6 +1874,29 @@ function WorldBibleRoute({activeProject}: WorldBibleRouteProps) {
                 {row.errors.length > 0 && (
                   <p className={styles.importError}>{row.errors.join(' ')}</p>
                 )}
+                {row.conflict && (
+                  <>
+                    <p className={styles.importError}>{row.conflict.message}</p>
+                    <label>
+                      Conflict resolution
+                      <select
+                        value={jsonImportConflictResolutions[row.rowIndex] ?? ''}
+                        onChange={(e) =>
+                          handleJsonConflictResolutionChange(
+                            row.rowIndex,
+                            e.target.value as JsonImportConflictResolution
+                          )
+                        }
+                        disabled={isApplyingJsonImport}
+                      >
+                        <option value=''>-- Choose resolution --</option>
+                        <option value='skip'>Skip Row</option>
+                        <option value='upsert'>Update by Name</option>
+                        <option value='create'>Create Duplicate</option>
+                      </select>
+                    </label>
+                  </>
+                )}
               </li>
             ))}
           </ul>
@@ -1598,6 +1910,75 @@ function WorldBibleRoute({activeProject}: WorldBibleRouteProps) {
           onCategoriesChange={setCategories}
           onClose={() => setShowCategoryManager(false)}
         />
+      )}
+
+      {reviewQueue.length > 0 && (
+        <section className={styles.reviewPanel}>
+          <div className={styles.reviewPanelHeader}>
+            <div>
+              <h2>Review Queue</h2>
+              <p>
+                Finish incomplete canon records here. This queue combines entries that
+                still need completion with records that have not had alternative names
+                reviewed yet.
+              </p>
+            </div>
+            <div className={styles.reviewCount}>{reviewQueue.length} open</div>
+          </div>
+          <div className={styles.reviewList}>
+            {reviewQueue.slice(0, 12).map(({entity, aliasCount, reasons}) => (
+              <div key={entity.id} className={styles.reviewCard}>
+                <div className={styles.reviewCardHeader}>
+                  <strong>{entity.name}</strong>
+                  <span className={styles.reviewMeta}>
+                    {categories.find((category) => category.id === entity.categoryId)?.name ??
+                      'Record'}
+                  </span>
+                </div>
+                <div className={styles.reviewReasonList}>
+                  {reasons.map((reason) => (
+                    <span key={`${entity.id}-${reason}`} className={styles.reviewReasonChip}>
+                      {reason}
+                    </span>
+                  ))}
+                </div>
+                <div className={styles.reviewHint}>
+                  {aliasCount > 0
+                    ? `${aliasCount} alternative name${aliasCount === 1 ? '' : 's'} saved.`
+                    : 'No alternative names saved yet.'}
+                </div>
+                <div className={styles.reviewActions}>
+                  <button
+                    type='button'
+                    onClick={() => {
+                      setActiveTab(entity.categoryId);
+                      handleEdit(entity);
+                    }}
+                  >
+                    Review entry
+                  </button>
+                  <button
+                    type='button'
+                    onClick={() => {
+                      setActiveTab(entity.categoryId);
+                      handleEdit(entity, 'aliases');
+                    }}
+                  >
+                    Review aliases
+                  </button>
+                  {entity.needsCompletion && (
+                    <button
+                      type='button'
+                      onClick={() => void handleMarkEntityComplete(entity)}
+                    >
+                      Mark complete
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
       )}
 
       {activeCategory && (
@@ -1616,6 +1997,24 @@ function WorldBibleRoute({activeProject}: WorldBibleRouteProps) {
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     required
+                  />
+                </label>
+              </div>
+
+              <div className={styles.formGroup}>
+                <label>
+                  Alternative names
+                  <textarea
+                    ref={aliasTextareaRef}
+                    value={fieldValues[ALTERNATIVE_NAMES_KEY] || ''}
+                    onChange={(e) =>
+                      setFieldValues({
+                        ...fieldValues,
+                        [ALTERNATIVE_NAMES_KEY]: e.target.value
+                      })
+                    }
+                    rows={3}
+                    placeholder='Comma-separated aliases, titles, or shorthand references'
                   />
                 </label>
               </div>
@@ -1808,7 +2207,12 @@ function WorldBibleRoute({activeProject}: WorldBibleRouteProps) {
             <ul className={styles.entityList}>
               {filteredEntities.map((entity) => (
                 <li key={entity.id} className={styles.entityCard}>
-                  <div className={styles.entityName}>{entity.name}</div>
+                  <div className={styles.entityHeader}>
+                    <div className={styles.entityName}>{entity.name}</div>
+                    {entity.needsCompletion && (
+                      <span className={styles.completionBadge}>Needs completion</span>
+                    )}
+                  </div>
                   {Object.entries(entity.fields).map(([key, value]) => (
                     <div key={key} className={styles.entityField}>
                       <strong>{key}:</strong> {String(value)}

@@ -211,8 +211,8 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
     try {
       // Get relevant context from RAG
       const [ragResults, shodhChunks] = await Promise.all([
-        ragService.current ? ragService.current.search(input, 3) : [],
-        buildMemoryChunks(input)
+        ragService.current ? ragService.current.search(promptText, 3) : [],
+        buildMemoryChunks(promptText)
       ]);
 
       const ragChunks = ragResults.map((r) => ({
@@ -279,7 +279,6 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
     context?.id,
     context?.selectedText,
     context?.type,
-    input,
     projectId,
     providerError,
     selectedToolIds,

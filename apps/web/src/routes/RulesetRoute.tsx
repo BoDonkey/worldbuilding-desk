@@ -1,19 +1,76 @@
-import {useEffect, useRef, useState} from 'react';
-import type {ChangeEvent} from 'react';
+import {Component, useEffect, useRef, useState} from 'react';
+import type {ChangeEvent, ReactNode} from 'react';
 import type {Project} from '../entityTypes';
 import type {WorldRuleset} from '@litrpg-tool/rules-engine';
 import {WorldBuildingWizard} from '@litrpg-tool/rules-ui';
 import '@rules-ui/styles/wizard.css';
 import {saveProject} from '../projectStorage';
-import {getRulesetByProjectId, saveRuleset} from '../services/rulesetService';
+import {getRulesetByProjectId, saveRuleset} from '../services/rules';
 import {
   exportRulesetJson,
   importRulesetJson
-} from '../services/rulesetTransferService';
+} from '../services/rules';
 
 interface RulesetRouteProps {
   activeProject: Project | null;
   onProjectUpdated(project: Project): void;
+}
+
+interface RulesetWizardErrorBoundaryProps {
+  children: ReactNode;
+}
+
+interface RulesetWizardErrorBoundaryState {
+  error: Error | null;
+}
+
+class RulesetWizardErrorBoundary extends Component<
+  RulesetWizardErrorBoundaryProps,
+  RulesetWizardErrorBoundaryState
+> {
+  state: RulesetWizardErrorBoundaryState = {error: null};
+
+  static getDerivedStateFromError(error: Error): RulesetWizardErrorBoundaryState {
+    return {error};
+  }
+
+  componentDidCatch(error: Error) {
+    console.error('Ruleset wizard failed to render', error);
+  }
+
+  render() {
+    if (this.state.error) {
+      return (
+        <div
+          role='alert'
+          style={{
+            padding: '1rem',
+            borderRadius: '8px',
+            border: '1px solid #fecaca',
+            backgroundColor: '#fef2f2',
+            color: '#991b1b'
+          }}
+        >
+          <h2 style={{marginTop: 0}}>Ruleset editor failed to load.</h2>
+          <p style={{marginBottom: '0.75rem'}}>
+            The rest of the app is still available, but this route hit a render error.
+          </p>
+          <pre
+            style={{
+              margin: 0,
+              whiteSpace: 'pre-wrap',
+              fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
+              fontSize: '0.85rem'
+            }}
+          >
+            {this.state.error.message}
+          </pre>
+        </div>
+      );
+    }
+
+    return this.props.children;
+  }
 }
 
 function RulesetRoute({activeProject, onProjectUpdated}: RulesetRouteProps) {
@@ -196,11 +253,13 @@ function RulesetRoute({activeProject, onProjectUpdated}: RulesetRouteProps) {
         <p>Loading ruleset...</p>
       ) : (
         <div style={{flex: 1, minHeight: 0}}>
-          <WorldBuildingWizard
-            key={activeProject.id}
-            onComplete={handleComplete}
-            initialRuleset={ruleset ?? undefined}
-          />
+          <RulesetWizardErrorBoundary>
+            <WorldBuildingWizard
+              key={activeProject.id}
+              onComplete={handleComplete}
+              initialRuleset={ruleset ?? undefined}
+            />
+          </RulesetWizardErrorBoundary>
         </div>
       )}
     </section>

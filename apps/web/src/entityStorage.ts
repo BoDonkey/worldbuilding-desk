@@ -1,6 +1,11 @@
 import type { WorldEntity } from './entityTypes';
 import { openDb, ENTITY_STORE_NAME } from './db';
 
+function emitEntityRecordsChanged(): void {
+  if (typeof window === 'undefined') return;
+  window.dispatchEvent(new CustomEvent('wbd:entity-records-changed'));
+}
+
 export async function getAllEntities(): Promise<WorldEntity[]> {
   const db = await openDb();
 
@@ -33,6 +38,7 @@ export async function saveEntity(entity: WorldEntity): Promise<void> {
     const request = store.put(entity);
 
     request.onsuccess = () => {
+      emitEntityRecordsChanged();
       resolve();
     };
 
@@ -51,6 +57,7 @@ export async function deleteEntity(id: string): Promise<void> {
     const request = store.delete(id);
 
     request.onsuccess = () => {
+      emitEntityRecordsChanged();
       resolve();
     };
 

@@ -18,7 +18,14 @@ interface LoreInspectorPanelProps {
   aiEnabled: boolean;
   aiBudgetUsed: number;
   aiBudgetMax: number;
-  onConsult: (mode: 'consistency' | 'reaction' | 'outcome') => void;
+  onConsult: (
+    mode:
+      | 'consistency'
+      | 'reaction'
+      | 'outcome'
+      | 'worldbuilding'
+      | 'plotting'
+  ) => void;
 }
 
 export const LoreInspectorPanel = ({
@@ -86,6 +93,12 @@ export const LoreInspectorPanel = ({
           </button>
           <button type='button' onClick={() => onConsult('outcome')} disabled={!aiEnabled || remaining === 0}>
             Calculate Outcome
+          </button>
+          <button type='button' onClick={() => onConsult('worldbuilding')} disabled={!aiEnabled || remaining === 0}>
+            Expand World Detail
+          </button>
+          <button type='button' onClick={() => onConsult('plotting')} disabled={!aiEnabled || remaining === 0}>
+            Generate Plot Hooks
           </button>
         </div>
       </section>

@@ -1,4 +1,5 @@
 import {useEffect, useState} from 'react';
+import type {ReactNode} from 'react';
 import type {
   Project,
   ProjectSettings,
@@ -26,6 +27,21 @@ import styles from '../styles/SettingsRoute.module.css';
 interface SettingsRouteProps {
   activeProject: Project | null;
   onSettingsChanged?: (settings: ProjectSettings | null) => void;
+}
+
+interface SettingsSectionProps {
+  title: string;
+  defaultOpen?: boolean;
+  children: ReactNode;
+}
+
+function SettingsSection({title, defaultOpen = false, children}: SettingsSectionProps) {
+  return (
+    <details className={styles.sectionDetails} open={defaultOpen}>
+      <summary className={styles.sectionSummary}>{title}</summary>
+      <div className={styles.sectionBody}>{children}</div>
+    </details>
+  );
 }
 
 function SettingsRoute({activeProject, onSettingsChanged}: SettingsRouteProps) {
@@ -233,14 +249,19 @@ function SettingsRoute({activeProject, onSettingsChanged}: SettingsRouteProps) {
         <div className={styles.helpBody}>
           <p>
             Step 1: pick a <strong>Project Mode</strong> to set defaults for this
-            project.
+            project and simplify the rest of the UI.
           </p>
           <p>
-            Step 2: fine-tune <strong>Feature Toggles</strong> to simplify what users
-            see.
+            Step 2: fine-tune <strong>Feature Toggles</strong> and import defaults so
+            new workspace imports behave the way you expect.
           </p>
           <p>
-            Step 3: configure AI and style settings for day-to-day writing.
+            Step 3: configure AI and editor comfort only after the project workflow
+            feels right.
+          </p>
+          <p>
+            Recommended first session: mode first, import defaults second, AI provider
+            last.
           </p>
           <p>
             Keyboard shortcut: press <strong>Cmd/Ctrl+K</strong> to open the
@@ -250,25 +271,20 @@ function SettingsRoute({activeProject, onSettingsChanged}: SettingsRouteProps) {
       </details>
 
       <div className={styles.settingsGrid}>
-        {/* Accessibility Section */}
-        <div className={styles.section}>
-          <h2>Reading & Editor</h2>
+        <SettingsSection title='Reading & Editor' defaultOpen={true}>
           <FontSizeControl />
           <EditorAppearanceControl />
-        </div>
+        </SettingsSection>
 
-        {/* AI Settings Section */}
-        <div className={styles.section}>
-          <h2>AI Settings</h2>
+        <SettingsSection title='AI Settings'>
           <AISettings
             aiSettings={settings.aiSettings}
             projectMode={settings.projectMode}
             onSettingsChange={handleAISettingsChange}
           />
-        </div>
+        </SettingsSection>
 
-        <div className={styles.section}>
-          <h2>Project Mode</h2>
+        <SettingsSection title='Project Mode' defaultOpen={true}>
           <p className={styles.helperText}>
             Choose the default experience for this project. Changing mode resets
             feature toggles to mode defaults.
@@ -289,10 +305,9 @@ function SettingsRoute({activeProject, onSettingsChanged}: SettingsRouteProps) {
               ))}
             </select>
           </label>
-        </div>
+        </SettingsSection>
 
-        <div className={styles.section}>
-          <h2>Feature Toggles</h2>
+        <SettingsSection title='Feature Toggles'>
           <p className={styles.helperText}>
             Use toggles to simplify UI per project while preserving data.
           </p>
@@ -345,10 +360,9 @@ function SettingsRoute({activeProject, onSettingsChanged}: SettingsRouteProps) {
             />
             <span>Enable Rule Authoring</span>
           </label>
-        </div>
+        </SettingsSection>
 
-        <div className={styles.section}>
-          <h2>Consistency Detection Keywords</h2>
+        <SettingsSection title='Consistency Detection Keywords'>
           <p className={styles.helperText}>
             These are action words the consistency checker should treat as signals that
             the nearby noun may matter to canon.
@@ -383,10 +397,9 @@ function SettingsRoute({activeProject, onSettingsChanged}: SettingsRouteProps) {
           <button onClick={() => void handleConsistencyCueSave()} className={styles.addButton}>
             Save Keywords
           </button>
-        </div>
+        </SettingsSection>
 
-        <div className={styles.section}>
-          <h2>Workspace Import Defaults</h2>
+        <SettingsSection title='Workspace Import Defaults'>
           <p className={styles.helperText}>
             These defaults pre-fill import controls in Writing Workspace. Authors can still
             override per import batch.
@@ -421,11 +434,9 @@ function SettingsRoute({activeProject, onSettingsChanged}: SettingsRouteProps) {
             />
             <span>Default to skipping consistency suggestions during import</span>
           </label>
-        </div>
+        </SettingsSection>
 
-        {/* Character Styles Section */}
-        <div className={styles.section}>
-          <h2>Character Dialogue Styles</h2>
+        <SettingsSection title='Character Dialogue Styles'>
           <div className={styles.addStyle}>
             <input
               type='text'
@@ -446,7 +457,7 @@ function SettingsRoute({activeProject, onSettingsChanged}: SettingsRouteProps) {
             expandedStyleId={expandedStyleId}
             onToggleExpand={setExpandedStyleId}
           />
-        </div>
+        </SettingsSection>
       </div>
     </section>
   );

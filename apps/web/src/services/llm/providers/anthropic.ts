@@ -5,6 +5,7 @@ import type {
   LLMResponse,
   LLMContextChunk
 } from '../types';
+import {PROVIDER_FALLBACK_MODELS} from '../providerConfig';
 
 interface AnthropicProviderConfig {
   apiKey: string;
@@ -23,7 +24,7 @@ export class AnthropicProvider implements LLMProvider {
 
   constructor(config: AnthropicProviderConfig) {
     this.apiKey = config.apiKey;
-    this.model = config.model ?? 'claude-sonnet-4-20250514';
+    this.model = config.model ?? PROVIDER_FALLBACK_MODELS.anthropic ?? 'claude-sonnet-4-20250514';
     this.baseUrl = config.baseUrl ?? 'https://api.anthropic.com/v1/messages';
     this.streamingUrl = config.streamingUrl ?? 'http://localhost:3001/api/anthropic/stream';
   }

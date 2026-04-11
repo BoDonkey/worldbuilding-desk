@@ -1,4 +1,5 @@
 import {useEffect, useMemo, useState} from 'react';
+import {useNavigate} from 'react-router-dom';
 import type {
   Character,
   CompendiumActionDefinition,
@@ -47,7 +48,7 @@ import {
   saveUnlockableRecipe,
   upsertZoneAffinityProfile,
   upsertCompendiumEntryFromEntity
-} from '../services/compendiumService';
+} from '../services/compendium';
 import {getCharactersByProject} from '../characterStorage';
 import {getEntitiesByProject} from '../entityStorage';
 
@@ -201,6 +202,7 @@ function getDefaultActions(domain: CompendiumDomain): CompendiumActionDefinition
 }
 
 function CompendiumRoute({activeProject, projectSettings}: CompendiumRouteProps) {
+  const navigate = useNavigate();
   const [entries, setEntries] = useState<CompendiumEntry[]>([]);
   const [milestones, setMilestones] = useState<CompendiumMilestone[]>([]);
   const [recipes, setRecipes] = useState<UnlockableRecipe[]>([]);
@@ -490,6 +492,10 @@ function CompendiumRoute({activeProject, projectSettings}: CompendiumRouteProps)
     }
     return result;
   }, [previewMaterialsText]);
+  const reviewEntries = useMemo(
+    () => entries.filter((entry) => entry.needsCompletion),
+    [entries]
+  );
 
   const handleCreateEntry = async () => {
     if (!activeProject || !entryName.trim()) return;
@@ -499,6 +505,7 @@ function CompendiumRoute({activeProject, projectSettings}: CompendiumRouteProps)
       projectId: activeProject.id,
       name: entryName.trim(),
       domain: entryDomain,
+      needsCompletion: false,
       actions: getDefaultActions(entryDomain),
       createdAt: now,
       updatedAt: now
@@ -527,7 +534,8 @@ function CompendiumRoute({activeProject, projectSettings}: CompendiumRouteProps)
         projectId: activeProject.id,
         entity,
         domain: importDomain,
-        defaultActions: getDefaultActions(importDomain)
+        defaultActions: getDefaultActions(importDomain),
+        needsCompletion: entity.needsCompletion ?? false
       });
       setEntries((prev) => {
         const idx = prev.findIndex((item) => item.id === entry.id);
@@ -540,6 +548,29 @@ function CompendiumRoute({activeProject, projectSettings}: CompendiumRouteProps)
     } catch (error) {
       const message =
         error instanceof Error ? error.message : 'Unable to import entity.';
+      setFeedback({tone: 'error', message});
+    }
+  };
+
+  const handleMarkEntryComplete = async (entry: CompendiumEntry) => {
+    const next: CompendiumEntry = {
+      ...entry,
+      needsCompletion: false,
+      updatedAt: Date.now()
+    };
+
+    setFeedback(null);
+    try {
+      await saveCompendiumEntry(next);
+      setEntries((prev) =>
+        prev
+          .map((item) => (item.id === entry.id ? next : item))
+          .sort((a, b) => a.name.localeCompare(b.name))
+      );
+      setFeedback({tone: 'success', message: `"${entry.name}" marked complete.`});
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'Unable to update entry.';
       setFeedback({tone: 'error', message});
     }
   };
@@ -1169,6 +1200,90 @@ function CompendiumRoute({activeProject, projectSettings}: CompendiumRouteProps)
 
       <section style={{padding: '1rem', border: '1px solid #ddd', borderRadius: '8px'}}>
         <h2 style={{marginTop: 0}}>Entries</h2>
+        {reviewEntries.length > 0 && (
+          <div
+            style={{
+              marginBottom: '0.85rem',
+              padding: '0.85rem',
+              border: '1px solid #d1d5db',
+              borderRadius: '8px',
+              backgroundColor: '#f8fafc'
+            }}
+          >
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'flex-start',
+                gap: '0.75rem',
+                flexWrap: 'wrap'
+              }}
+            >
+              <div>
+                <strong>Review Queue</strong>
+                <div style={{fontSize: '0.84rem', color: '#475569', marginTop: '0.25rem'}}>
+                  Finish imported or placeholder entries before treating the compendium as
+                  complete.
+                </div>
+              </div>
+              <span
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  padding: '0.2rem 0.55rem',
+                  borderRadius: '999px',
+                  backgroundColor: '#e2e8f0',
+                  color: '#0f172a',
+                  fontSize: '0.78rem',
+                  fontWeight: 700
+                }}
+              >
+                {reviewEntries.length} open
+              </span>
+            </div>
+            <div style={{display: 'grid', gap: '0.6rem', marginTop: '0.75rem'}}>
+              {reviewEntries.slice(0, 8).map((entry) => (
+                <div
+                  key={`review-${entry.id}`}
+                  style={{
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '8px',
+                    backgroundColor: '#ffffff',
+                    padding: '0.7rem'
+                  }}
+                >
+                  <div style={{display: 'flex', justifyContent: 'space-between', gap: '0.5rem'}}>
+                    <strong>{entry.name}</strong>
+                    <span style={{fontSize: '0.78rem', color: '#64748b'}}>[{entry.domain}]</span>
+                  </div>
+                  <div style={{fontSize: '0.82rem', color: '#475569', marginTop: '0.35rem'}}>
+                    {entry.sourceEntityId
+                      ? 'Linked from World Bible. Review the derived compendium details and mark complete when ready.'
+                      : 'Created directly in Compendium. Fill out the entry intent and mark complete when ready.'}
+                  </div>
+                  <div style={{display: 'flex', gap: '0.45rem', flexWrap: 'wrap', marginTop: '0.6rem'}}>
+                    {entry.sourceEntityId && (
+                      <button
+                        type='button'
+                        onClick={() =>
+                          navigate('/world-bible', {state: {focusEntityId: entry.sourceEntityId}})
+                        }
+                      >
+                        Open source record
+                      </button>
+                    )}
+                    <button
+                      type='button'
+                      onClick={() => void handleMarkEntryComplete(entry)}
+                    >
+                      Mark complete
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
         {entries.length === 0 && (
           <div
             style={{
@@ -1216,11 +1331,47 @@ function CompendiumRoute({activeProject, projectSettings}: CompendiumRouteProps)
                 marginBottom: '0.75rem'
               }}
             >
-              <strong>{entry.name}</strong>{' '}
-              <span style={{fontSize: '0.85rem', color: '#666'}}>[{entry.domain}]</span>
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  flexWrap: 'wrap'
+                }}
+              >
+                <strong>{entry.name}</strong>
+                <span style={{fontSize: '0.85rem', color: '#666'}}>[{entry.domain}]</span>
+                {entry.needsCompletion && (
+                  <span
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      padding: '0.18rem 0.5rem',
+                      borderRadius: '999px',
+                      backgroundColor: '#fff7ed',
+                      border: '1px solid #fdba74',
+                      color: '#9a3412',
+                      fontSize: '0.78rem',
+                      fontWeight: 600
+                    }}
+                  >
+                    Needs completion
+                  </span>
+                )}
+              </div>
               {entry.sourceEntityId && (
                 <div style={{fontSize: '0.8rem', color: '#666'}}>
                   Linked to World Bible entity
+                </div>
+              )}
+              {entry.needsCompletion && (
+                <div style={{marginTop: '0.5rem'}}>
+                  <button
+                    type='button'
+                    onClick={() => void handleMarkEntryComplete(entry)}
+                  >
+                    Mark complete
+                  </button>
                 </div>
               )}
               <div style={{display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginTop: '0.5rem'}}>

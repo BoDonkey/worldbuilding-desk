@@ -1,7 +1,9 @@
-import {useEffect, useMemo, useRef, useState, type FC} from 'react';
+import {useCallback, useEffect, useMemo, useRef, useState, type FC} from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { ThemeToggle } from './ThemeToggle';
 import type { Project, ProjectSettings } from '../entityTypes';
+import {getEntitiesByProject} from '../entityStorage';
+import {getCompendiumEntriesByProject} from '../services/compendium';
 import styles from '../assets/components/Navigation.module.css';
 
 interface NavigationProps {
@@ -19,22 +21,66 @@ export const Navigation: FC<NavigationProps> = ({
 }) => {
   const location = useLocation();
   const [isMobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [pendingCounts, setPendingCounts] = useState<{world: number; compendium: number}>({
+    world: 0,
+    compendium: 0
+  });
   const mobileMenuCloseRef = useRef<HTMLButtonElement | null>(null);
   const showGameSystems =
     !activeProject || projectSettings?.featureToggles.enableGameSystems !== false;
+  const loadPendingCounts = useCallback(() => {
+    if (!activeProject) {
+      setPendingCounts({world: 0, compendium: 0});
+      return Promise.resolve();
+    }
+
+    return Promise.all([
+      getEntitiesByProject(activeProject.id),
+      getCompendiumEntriesByProject(activeProject.id)
+    ])
+      .then(([entities, entries]) => {
+        setPendingCounts({
+          world: entities.filter((entity) => entity.needsCompletion).length,
+          compendium: entries.filter((entry) => entry.needsCompletion).length
+        });
+      })
+      .catch(() => {
+        setPendingCounts({world: 0, compendium: 0});
+      });
+  }, [activeProject]);
+
+  useEffect(() => {
+    let cancelled = false;
+    void loadPendingCounts().then(() => {
+      if (cancelled) return;
+    });
+
+    const handleRecordsChanged = () => {
+      void loadPendingCounts();
+    };
+    window.addEventListener('wbd:entity-records-changed', handleRecordsChanged);
+    window.addEventListener('wbd:compendium-records-changed', handleRecordsChanged);
+
+    return () => {
+      cancelled = true;
+      window.removeEventListener('wbd:entity-records-changed', handleRecordsChanged);
+      window.removeEventListener('wbd:compendium-records-changed', handleRecordsChanged);
+    };
+  }, [loadPendingCounts, location.pathname]);
+
   const navItems = useMemo(
     () => [
       {to: '/', label: 'Projects', icon: 'PR', end: true},
-      {to: '/world-bible', label: 'World', icon: 'WB'},
+      {to: '/world-bible', label: 'World', icon: 'WB', badgeCount: pendingCounts.world},
       {to: '/ruleset', label: 'Ruleset', icon: 'RS'},
       {to: '/characters', label: 'Characters', icon: 'CH'},
       {to: '/workspace', label: 'Workspace', icon: 'WS'},
       ...(showGameSystems
-        ? [{to: '/compendium', label: 'Compendium', icon: 'CP'}]
+        ? [{to: '/compendium', label: 'Compendium', icon: 'CP', badgeCount: pendingCounts.compendium}]
         : []),
       {to: '/settings', label: 'Settings', icon: 'ST'}
     ],
-    [showGameSystems]
+    [pendingCounts.compendium, pendingCounts.world, showGameSystems]
   );
 
   const mobileBarItems = useMemo(
@@ -75,6 +121,9 @@ export const Navigation: FC<NavigationProps> = ({
               >
                 <span className={styles.icon}>{item.icon}</span>
                 <span className={styles.label}>{item.label}</span>
+                {item.badgeCount ? (
+                  <span className={styles.navBadge}>{item.badgeCount}</span>
+                ) : null}
               </NavLink>
             ))}
           </nav>
@@ -125,6 +174,7 @@ export const Navigation: FC<NavigationProps> = ({
           >
             <span className={styles.icon}>{item.icon}</span>
             <span className={styles.mobileLabel}>{item.label}</span>
+            {item.badgeCount ? <span className={styles.navBadge}>{item.badgeCount}</span> : null}
           </NavLink>
         ))}
         <button
@@ -157,6 +207,9 @@ export const Navigation: FC<NavigationProps> = ({
                   }
                 >
                   {item.label}
+                  {item.badgeCount ? (
+                    <span className={styles.mobileMenuBadge}>{item.badgeCount}</span>
+                  ) : null}
                 </NavLink>
               ))}
             </div>

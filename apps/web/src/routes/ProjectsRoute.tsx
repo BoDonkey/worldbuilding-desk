@@ -1,5 +1,6 @@
 import {useCallback, useEffect, useRef, useState} from 'react';
 import type {ChangeEvent, FormEvent} from 'react';
+import {useNavigate} from 'react-router-dom';
 import type {Project} from '../entityTypes';
 import type {WorldRuleset} from '@litrpg-tool/rules-engine';
 import {
@@ -8,30 +9,33 @@ import {
   saveProject,
   deleteProject as deleteProjectFromStore
 } from '../projectStorage';
-import {getRulesetByProjectId, deleteRuleset} from '../services/rulesetService';
+import {getDocumentsByProject} from '../writingStorage';
+import {getEntitiesByProject} from '../entityStorage';
+import {getRulesetByProjectId, deleteRuleset} from '../services/rules';
 import {
   getSeriesBibleConfig,
   linkProjectToParent,
   unlinkProjectFromParent,
   syncChildWithParent
 } from '../services/seriesBible/SeriesBibleService';
-import {exportProjectBackupZip} from '../services/projectBackupExport';
+import {exportProjectBackupZip} from '../services/storage';
 import {
   importProjectBackup,
   parseProjectBackupZip,
   previewProjectBackupConflicts
-} from '../services/projectBackupImport';
+} from '../services/storage';
 import type {
   ProjectBackupConflictSummary,
   ProjectBackupImportMode,
   ProjectSnapshotImportPreview
-} from '../services/projectBackupImport';
-import type {ProjectSnapshot} from '../services/projectSnapshotService';
+} from '../services/storage';
+import type {ProjectSnapshot} from '../services/storage';
 import {
   buildProjectSnapshot,
   diffSnapshotCounts,
   validateSnapshotCounts
-} from '../services/projectSnapshotService';
+} from '../services/storage';
+import styles from '../styles/ProjectsRoute.module.css';
 
 interface ProjectsRouteProps {
   activeProject: Project | null;
@@ -39,9 +43,13 @@ interface ProjectsRouteProps {
 }
 
 function ProjectsRoute({activeProject, onSelectProject}: ProjectsRouteProps) {
+  const navigate = useNavigate();
   const [projects, setProjects] = useState<Project[]>([]);
   const [projectRulesets, setProjectRulesets] = useState<
     Map<string, WorldRuleset>
+  >(new Map());
+  const [projectCounts, setProjectCounts] = useState<
+    Map<string, {worldEntries: number; scenes: number}>
   >(new Map());
   const [name, setName] = useState('');
   const [feedback, setFeedback] = useState<{
@@ -70,13 +78,23 @@ function ProjectsRoute({activeProject, onSelectProject}: ProjectsRouteProps) {
     setProjects(all);
 
     const rulesetMap = new Map<string, WorldRuleset>();
+    const countsMap = new Map<string, {worldEntries: number; scenes: number}>();
     for (const project of all) {
-      const ruleset = await getRulesetByProjectId(project.id);
+      const [ruleset, entities, documents] = await Promise.all([
+        getRulesetByProjectId(project.id),
+        getEntitiesByProject(project.id),
+        getDocumentsByProject(project.id)
+      ]);
       if (ruleset) {
         rulesetMap.set(project.id, ruleset);
       }
+      countsMap.set(project.id, {
+        worldEntries: entities.length,
+        scenes: documents.length
+      });
     }
     setProjectRulesets(rulesetMap);
+    setProjectCounts(countsMap);
   }, []);
 
   useEffect(() => {
@@ -117,8 +135,59 @@ function ProjectsRoute({activeProject, onSelectProject}: ProjectsRouteProps) {
 
   const handleOpen = (project: Project) => {
     onSelectProject(project);
-    // navigate('/world-bible');
   };
+
+  const activeProjectCounts = activeProject
+    ? projectCounts.get(activeProject.id) ?? {worldEntries: 0, scenes: 0}
+    : null;
+  const activeProjectHasRuleset = activeProject
+    ? projectRulesets.has(activeProject.id)
+    : false;
+  const activeProjectChecklist = activeProject
+    ? [
+        {
+          id: 'ruleset',
+          label: 'Define your project mode and ruleset baseline',
+          done: activeProjectHasRuleset,
+          helper: activeProjectHasRuleset
+            ? 'Ruleset data exists for this project.'
+            : 'Start with Settings for project mode, then add rules in Ruleset if this world uses game systems.',
+          actionLabel: activeProjectHasRuleset ? 'Open Ruleset' : 'Set Up Rules',
+          action: () => navigate(activeProjectHasRuleset ? '/ruleset' : '/settings')
+        },
+        {
+          id: 'world',
+          label: 'Capture core canon in World Bible',
+          done: (activeProjectCounts?.worldEntries ?? 0) > 0,
+          helper:
+            (activeProjectCounts?.worldEntries ?? 0) > 0
+              ? `${activeProjectCounts?.worldEntries ?? 0} world record(s) created.`
+              : 'Add your first locations, factions, items, or lore records before writing heavily.',
+          actionLabel: 'Open World Bible',
+          action: () => navigate('/world-bible')
+        },
+        {
+          id: 'workspace',
+          label: 'Import or create your first scene in Workspace',
+          done: (activeProjectCounts?.scenes ?? 0) > 0,
+          helper:
+            (activeProjectCounts?.scenes ?? 0) > 0
+              ? `${activeProjectCounts?.scenes ?? 0} scene(s) available in the workspace.`
+              : 'Workspace supports .txt, .md, .html, and .docx import plus direct scene creation.',
+          actionLabel: 'Open Workspace',
+          action: () => navigate('/workspace')
+        },
+        {
+          id: 'settings',
+          label: 'Tune import defaults, AI, and editor comfort',
+          done: false,
+          helper:
+            'Use Settings to choose project mode, default import behavior, and AI/provider setup for day-to-day work.',
+          actionLabel: 'Open Settings',
+          action: () => navigate('/settings')
+        }
+      ]
+    : [];
 
   const handleDelete = async (project: Project) => {
     const confirmed = window.confirm(`Delete project "${project.name}"?`);
@@ -411,52 +480,74 @@ function ProjectsRoute({activeProject, onSelectProject}: ProjectsRouteProps) {
   };
 
   return (
-    <section>
-      <h1>Projects</h1>
+    <section className={styles.page}>
+      <div className={styles.pageHeader}>
+        <h1>Projects</h1>
+        <p className={styles.pageIntro}>
+          Create a project shell, continue setup, and manage backups or parent-canon inheritance.
+        </p>
+      </div>
       {feedback && (
         <p
           role='status'
-          style={{
-            marginBottom: '1rem',
-            padding: '0.5rem 0.75rem',
-            borderRadius: '6px',
-            border: `1px solid ${
-              feedback.tone === 'error' ? '#fecaca' : '#bbf7d0'
-            }`,
-            backgroundColor:
-              feedback.tone === 'error' ? '#fef2f2' : '#f0fdf4',
-            color: feedback.tone === 'error' ? '#991b1b' : '#166534'
-          }}
+          className={`${styles.feedback} ${
+            feedback.tone === 'error' ? styles.feedbackError : styles.feedbackSuccess
+          }`}
         >
           {feedback.message}
         </p>
       )}
-      <details
-        style={{
-          marginBottom: '1rem',
-          border: '1px solid #d1d5db',
-          borderRadius: '8px',
-          backgroundColor: '#f9fafb',
-          padding: '0.75rem 0.9rem'
-        }}
-      >
-        <summary style={{cursor: 'pointer', fontWeight: 600}}>
-          Projects Wizard Help
-        </summary>
-        <div style={{marginTop: '0.6rem', fontSize: '0.9rem', color: '#374151'}}>
-          <p style={{margin: '0 0 0.4rem 0'}}>
-            Step 1: create or open a project.
+      <details className={styles.helpPanel}>
+        <summary>Projects Wizard Help</summary>
+        <div className={styles.helpBody}>
+          <p>
+            Step 1: create or open a project shell here.
           </p>
-          <p style={{margin: '0 0 0.4rem 0'}}>
-            Step 2: optionally set parent project inheritance and sync behavior.
+          <p>
+            Step 2: set project mode in Settings, then add canon in World Bible.
           </p>
-          <p style={{margin: 0}}>
-            Step 3: create or edit a ruleset, then continue to World Bible and Workspace.
+          <p>
+            Step 3: import or write scenes in Workspace, then return here only for backup/import or series inheritance.
           </p>
         </div>
       </details>
 
-      <div style={{marginBottom: '1rem', display: 'flex', gap: '0.5rem', flexWrap: 'wrap'}}>
+      {activeProject && (
+        <section className={styles.heroCard}>
+          <div className={styles.heroHeader}>
+            <div>
+              <h2 className={styles.heroTitle}>Continue Setup: {activeProject.name}</h2>
+              <p className={styles.heroCopy}>
+                Use this checklist for a first project. The goal is simple: define the
+                world, import or write a scene, then tune settings only where needed.
+              </p>
+            </div>
+            <button type='button' onClick={() => navigate('/workspace')}>
+              Go to Workspace
+            </button>
+          </div>
+          <div className={styles.checklistGrid}>
+            {activeProjectChecklist.map((item, index) => (
+              <div key={item.id} className={styles.checklistCard}>
+                <div
+                  className={`${styles.checklistMeta} ${
+                    item.done ? styles.checklistMetaDone : styles.checklistMetaNext
+                  }`}
+                >
+                  Step {index + 1} {item.done ? '• Done' : '• Next'}
+                </div>
+                <div className={styles.checklistTitle}>{item.label}</div>
+                <div className={styles.checklistHelp}>{item.helper}</div>
+                <button type='button' onClick={item.action}>
+                  {item.actionLabel}
+                </button>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      <div className={styles.utilityBar}>
         <button
           type='button'
           onClick={handleSelectBackupFile}
@@ -488,26 +579,10 @@ function ProjectsRoute({activeProject, onSelectProject}: ProjectsRouteProps) {
       </div>
 
       {importPreview && importSnapshot && (
-        <section
-          style={{
-            marginBottom: '1rem',
-            border: '1px solid #d1d5db',
-            borderRadius: '8px',
-            backgroundColor: '#f8fafc',
-            padding: '0.9rem'
-          }}
-        >
-          <div
-            style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              gap: '0.75rem',
-              flexWrap: 'wrap'
-            }}
-          >
-            <h2 style={{margin: 0}}>Backup Import Preview</h2>
-            <div style={{display: 'flex', gap: '0.5rem'}}>
+        <section className={styles.importPreviewCard}>
+          <div className={styles.importPreviewHeader}>
+            <h2>Backup Import Preview</h2>
+            <div className={styles.inlineActions}>
               <button
                 type='button'
                 onClick={() => void handleApplyBackupImport()}
@@ -521,27 +596,19 @@ function ProjectsRoute({activeProject, onSelectProject}: ProjectsRouteProps) {
             </div>
           </div>
 
-          <p style={{margin: '0.5rem 0', fontSize: '0.85rem', color: '#374151'}}>
+          <p className={styles.importMeta}>
             Source: <strong>{importPreview.sourceProjectName}</strong> ({importPreview.sourceProjectId}) ·
             Snapshot: {new Date(importPreview.generatedAt).toLocaleString()}
           </p>
 
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-              gap: '0.6rem',
-              marginBottom: '0.75rem'
-            }}
-          >
-            <label>
+          <div className={styles.importControls}>
+            <label className={styles.fieldLabel}>
               Import Mode
               <select
                 value={importMode}
                 onChange={(e) =>
                   void handleImportModeChange(e.target.value as ProjectBackupImportMode)
                 }
-                style={{width: '100%'}}
                 disabled={isApplyingImport}
               >
                 <option value='new'>Create New Project</option>
@@ -549,14 +616,13 @@ function ProjectsRoute({activeProject, onSelectProject}: ProjectsRouteProps) {
               </select>
             </label>
             {importMode === 'merge' && (
-              <label>
+              <label className={styles.fieldLabel}>
                 Target Project
                 <select
                   value={importTargetProjectId}
                   onChange={(e) =>
                     void handleImportTargetProjectChange(e.target.value)
                   }
-                  style={{width: '100%'}}
                   disabled={isApplyingImport}
                 >
                   <option value=''>Select project</option>
@@ -570,7 +636,7 @@ function ProjectsRoute({activeProject, onSelectProject}: ProjectsRouteProps) {
             )}
           </div>
 
-          <div style={{fontSize: '0.82rem', color: '#4b5563', marginBottom: '0.75rem'}}>
+          <div className={styles.countsText}>
             Counts: {importPreview.counts.categories} categories · {importPreview.counts.entities}{' '}
             entities · {importPreview.counts.writingDocuments} scenes ·{' '}
             {importPreview.counts.characters} characters · {importPreview.counts.characterSheets}{' '}
@@ -578,14 +644,7 @@ function ProjectsRoute({activeProject, onSelectProject}: ProjectsRouteProps) {
           </div>
 
           {importMode === 'merge' && importConflicts && (
-            <div
-              style={{
-                fontSize: '0.82rem',
-                color: '#6b7280',
-                borderTop: '1px solid #e5e7eb',
-                paddingTop: '0.6rem'
-              }}
-            >
+            <div className={styles.conflictPreview}>
               Merge conflict preview: {importConflicts.sameNameCategoryCount} category name match(es),{' '}
               {importConflicts.sameNameEntityCount} entity name match(es),{' '}
               {importConflicts.sameNameDocumentCount} scene title match(es), settings exists:{' '}
@@ -596,39 +655,39 @@ function ProjectsRoute({activeProject, onSelectProject}: ProjectsRouteProps) {
         </section>
       )}
 
-      <form
-        onSubmit={handleSubmit}
-        style={{maxWidth: 400, marginBottom: '1rem'}}
-      >
-        <p style={{marginTop: 0, marginBottom: '0.75rem', fontSize: '0.82rem', color: '#4b5563'}}>
-          Step 1 of 3: create a project shell.
-        </p>
-        <h2>Create New Project</h2>
-        <div style={{marginBottom: '0.75rem'}}>
-          <label>
-            Project Name
-            <br />
-            <input
-              type='text'
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              required
-              style={{width: '100%'}}
-            />
-          </label>
-        </div>
-        <button type='submit' disabled={isCreatingProject}>
-          {isCreatingProject ? 'Creating...' : 'Create Project'}
-        </button>
-      </form>
+      <div className={styles.layout}>
+        <form onSubmit={handleSubmit} className={styles.createCard}>
+          <p className={styles.eyebrow}>Step 1 of 3: create a project shell.</p>
+          <h2>Create New Project</h2>
+          <p className={styles.sectionIntro}>
+            Start with a simple name. You can set mode, canon, and import behavior after opening it.
+          </p>
+          <div className={styles.formRow}>
+            <label className={styles.fieldLabel}>
+              Project Name
+              <input
+                type='text'
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                required
+              />
+            </label>
+          </div>
+          <button type='submit' disabled={isCreatingProject}>
+            {isCreatingProject ? 'Creating...' : 'Create Project'}
+          </button>
+        </form>
 
-      <h2>Existing Projects</h2>
-      <p style={{marginTop: 0, marginBottom: '0.75rem', fontSize: '0.82rem', color: '#4b5563'}}>
-        Configure inheritance here, then use the Ruleset tab to author game rules.
-      </p>
-      {projects.length === 0 && <p>No projects yet. Create one above to get started.</p>}
+        <section className={styles.listCard}>
+          <h2>Existing Projects</h2>
+          <p className={styles.sectionIntro}>
+            Configure inheritance and backups here. Most day-to-day authoring happens in World Bible, Workspace, and Settings.
+          </p>
+          {projects.length === 0 && (
+            <p className={styles.emptyState}>No projects yet. Create one to get started.</p>
+          )}
 
-      <ul>
+      <ul className={styles.projectList}>
         {projects.map((project) => {
           const hasRuleset = projectRulesets.has(project.id);
           const ruleset = projectRulesets.get(project.id);
@@ -636,29 +695,17 @@ function ProjectsRoute({activeProject, onSelectProject}: ProjectsRouteProps) {
           const parentOptions = projects.filter((p) => p.id !== project.id);
 
           return (
-            <li
-              key={project.id}
-              style={{
-                marginBottom: '1rem',
-                padding: '1rem',
-                border: '1px solid #e5e7eb',
-                borderRadius: '8px'
-              }}
-            >
-              <strong>{project.name}</strong>{' '}
+            <li key={project.id} className={styles.projectCard}>
+              <div className={styles.projectHeader}>
+              <strong className={styles.projectName}>{project.name}</strong>{' '}
               {activeProject && activeProject.id === project.id && (
-                <span style={{color: '#10b981', fontWeight: 600}}>
+                <span className={styles.activeBadge}>
                   (active)
                 </span>
               )}
+              </div>
               {hasRuleset && ruleset && (
-                <div
-                  style={{
-                    marginTop: '0.5rem',
-                    fontSize: '0.875rem',
-                    color: '#6b7280'
-                  }}
-                >
+                <div className={styles.projectStats}>
                   <strong>Ruleset:</strong> {ruleset.name}
                   <br />
                   Stats: {ruleset.statDefinitions.length}, Resources:{' '}
@@ -666,37 +713,25 @@ function ProjectsRoute({activeProject, onSelectProject}: ProjectsRouteProps) {
                   {ruleset.rules.length}
                 </div>
               )}
-              <div
-                style={{
-                  marginTop: '0.75rem',
-                  borderTop: '1px solid #e5e7eb',
-                  paddingTop: '0.75rem',
-                  fontSize: '0.85rem',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '0.5rem'
-                }}
-              >
-                <label>
+              <div className={styles.projectMetaSection}>
+                <label className={styles.fieldLabel}>
                   Parent Project
-                  <br />
                   <select
                     value={project.parentProjectId ?? ''}
                     onChange={(e) =>
                       handleParentSelection(project, e.target.value)
                     }
                     disabled={updatingProjectId === project.id}
-                    style={{width: '100%'}}
                   >
                     <option value=''>No parent</option>
                     {parentOptions.map((candidate) => (
                       <option key={candidate.id} value={candidate.id}>
                         {candidate.name}
-                      </option>
-                    ))}
+                    </option>
+                  ))}
                   </select>
                   {project.parentProjectId && (
-                    <span style={{display: 'block', color: '#6b7280'}}>
+                    <span className={styles.sectionIntro}>
                       Inherits from{' '}
                       {
                         projects.find((p) => p.id === project.parentProjectId)
@@ -705,8 +740,8 @@ function ProjectsRoute({activeProject, onSelectProject}: ProjectsRouteProps) {
                     </span>
                   )}
                 </label>
-                <div style={{display: 'flex', gap: '1rem'}}>
-                  <label style={{display: 'flex', gap: '0.25rem'}}>
+                <div className={styles.toggleGroup}>
+                  <label className={styles.toggleLabel}>
                     <input
                       type='checkbox'
                       disabled={
@@ -719,7 +754,7 @@ function ProjectsRoute({activeProject, onSelectProject}: ProjectsRouteProps) {
                     />
                     Inherit RAG data
                   </label>
-                  <label style={{display: 'flex', gap: '0.25rem'}}>
+                  <label className={styles.toggleLabel}>
                     <input
                       type='checkbox'
                       disabled={
@@ -738,7 +773,7 @@ function ProjectsRoute({activeProject, onSelectProject}: ProjectsRouteProps) {
                   </label>
                 </div>
                 {project.parentProjectId && (
-                  <div style={{fontSize: '0.8rem', color: '#6b7280'}}>
+                  <div className={styles.syncMeta}>
                     Parent canon version:{' '}
                     {parentConfig.canonVersion ?? 'n/a'}
                     <br />
@@ -746,7 +781,7 @@ function ProjectsRoute({activeProject, onSelectProject}: ProjectsRouteProps) {
                     {project.lastSyncedCanon ?? 'never'}
                     <button
                       type='button'
-                      style={{marginLeft: '0.5rem', fontSize: '0.75rem'}}
+                      className={styles.syncButton}
                       onClick={() => handleSyncWithParent(project)}
                       disabled={syncingProjectId === project.id}
                     >
@@ -755,14 +790,7 @@ function ProjectsRoute({activeProject, onSelectProject}: ProjectsRouteProps) {
                   </div>
                 )}
               </div>
-              <div
-                style={{
-                  marginTop: '0.75rem',
-                  display: 'flex',
-                  gap: '0.5rem',
-                  flexWrap: 'wrap'
-                }}
-              >
+              <div className={styles.projectActions}>
                 <button type='button' onClick={() => handleOpen(project)}>
                   Open Project
                 </button>
@@ -771,7 +799,7 @@ function ProjectsRoute({activeProject, onSelectProject}: ProjectsRouteProps) {
                   type='button'
                   onClick={() => void handleExportProjectBackup(project)}
                   disabled={exportingProjectId === project.id}
-                  style={{background: '#ecfeff', color: '#0f766e'}}
+                  className={styles.backupButton}
                 >
                   {exportingProjectId === project.id
                     ? 'Exporting...'
@@ -782,7 +810,7 @@ function ProjectsRoute({activeProject, onSelectProject}: ProjectsRouteProps) {
                   type='button'
                   onClick={() => handleDelete(project)}
                   disabled={deletingProjectId === project.id}
-                  style={{background: '#fee2e2', color: '#dc2626'}}
+                  className={styles.dangerButton}
                 >
                   {deletingProjectId === project.id ? 'Deleting...' : 'Delete'}
                 </button>
@@ -791,6 +819,8 @@ function ProjectsRoute({activeProject, onSelectProject}: ProjectsRouteProps) {
           );
         })}
       </ul>
+        </section>
+      </div>
     </section>
   );
 }

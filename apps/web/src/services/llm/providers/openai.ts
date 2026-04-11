@@ -1,5 +1,6 @@
 import type {AIProviderId} from '../../../entityTypes';
 import type {LLMProvider, LLMRequest, LLMResponse, LLMContextChunk} from '../types';
+import {PROVIDER_FALLBACK_MODELS} from '../providerConfig';
 
 interface OpenAIProviderConfig {
   apiKey: string;
@@ -21,7 +22,7 @@ export class OpenAIProvider implements LLMProvider {
 
   constructor(config: OpenAIProviderConfig) {
     this.apiKey = config.apiKey;
-    this.model = config.model ?? 'gpt-4o-mini';
+    this.model = config.model ?? PROVIDER_FALLBACK_MODELS.openai ?? 'gpt-4o-mini';
     this.baseUrl = config.baseUrl ?? 'https://api.openai.com/v1/chat/completions';
   }
 

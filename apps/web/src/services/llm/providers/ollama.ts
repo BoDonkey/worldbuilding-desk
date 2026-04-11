@@ -2,14 +2,14 @@ import type {LLMProvider, LLMRequest, LLMResponse} from '../types';
 
 interface OllamaProviderConfig {
   baseUrl: string;
-  model: string;
+  model?: string;
 }
 
 export class OllamaProvider implements LLMProvider {
   id = 'ollama' as const;
   name = 'Ollama';
   private readonly baseUrl: string;
-  private readonly model: string;
+  private readonly model?: string;
 
   constructor(config: OllamaProviderConfig) {
     this.baseUrl = config.baseUrl;
@@ -17,7 +17,7 @@ export class OllamaProvider implements LLMProvider {
   }
 
   async generateCompletion(request: LLMRequest): Promise<LLMResponse> {
-    const payload = this.buildPayload(request, false);
+    const payload = await this.buildPayload(request, false);
     const response = await fetch(`${this.getBaseUrl(request)}/api/chat`, {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
@@ -34,7 +34,7 @@ export class OllamaProvider implements LLMProvider {
   }
 
   async *streamCompletion(request: LLMRequest): AsyncGenerator<string> {
-    const payload = this.buildPayload(request, true);
+    const payload = await this.buildPayload(request, true);
     const response = await fetch(`${this.getBaseUrl(request)}/api/chat`, {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
@@ -68,12 +68,39 @@ export class OllamaProvider implements LLMProvider {
     }
   }
 
-  private buildPayload(request: LLMRequest, stream: boolean) {
+  private async buildPayload(request: LLMRequest, stream: boolean) {
+    const model = await this.resolveModel(request);
     return {
-      model: request.model ?? this.model,
+      model,
       stream,
       messages: request.messages.map((m) => ({role: m.role, content: m.content}))
     };
+  }
+
+  private async resolveModel(request: LLMRequest): Promise<string> {
+    const explicitModel = request.model?.trim() || this.model?.trim();
+    if (explicitModel) {
+      return explicitModel;
+    }
+
+    const response = await fetch(`${this.getBaseUrl(request)}/api/tags`);
+    if (!response.ok) {
+      throw new Error(`Ollama model lookup failed: ${response.status} ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    const firstModel = Array.isArray(data.models)
+      ? data.models.find(
+          (entry: {name?: unknown}) =>
+            typeof entry?.name === 'string' && entry.name.trim()
+        )
+      : null;
+
+    if (!firstModel?.name) {
+      throw new Error('No Ollama models are installed. Pull a model or enter one explicitly.');
+    }
+
+    return firstModel.name;
   }
 
   private getBaseUrl(request: LLMRequest) {

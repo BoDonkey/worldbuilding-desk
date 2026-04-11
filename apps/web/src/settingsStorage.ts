@@ -11,22 +11,26 @@ import type {
 import { openDb, SETTINGS_STORE_NAME } from './db';
 import {getDefaultFeatureToggles, normalizeFeatureToggles} from './projectMode';
 import {getProjectById} from './projectStorage';
+import {
+  PROVIDER_DEFAULT_BASE_URLS,
+  PROVIDER_FALLBACK_MODELS,
+  normalizeConfiguredModel
+} from './services/llm/providerConfig';
 
 const DEFAULT_AI_SETTINGS: ProjectAISettings = {
   provider: 'anthropic',
   configs: {
     anthropic: {
-      model: 'claude-sonnet-4-20250514'
+      model: PROVIDER_FALLBACK_MODELS.anthropic
     },
     openai: {
-      model: 'gpt-4o-mini'
+      model: PROVIDER_FALLBACK_MODELS.openai
     },
     gemini: {
-      model: 'gemini-2.0-flash'
+      model: PROVIDER_FALLBACK_MODELS.gemini
     },
     ollama: {
-      model: 'llama3.1',
-      baseUrl: 'http://localhost:11434'
+      baseUrl: PROVIDER_DEFAULT_BASE_URLS.ollama
     }
   },
   promptTools: [],
@@ -108,6 +112,26 @@ function ensureAISettings(settings: ProjectSettings): ProjectSettings {
   aiSettings.configs = {
     ...DEFAULT_AI_SETTINGS.configs,
     ...(aiSettings.configs ?? {})
+  };
+  aiSettings.configs = {
+    ...aiSettings.configs,
+    anthropic: {
+      ...aiSettings.configs.anthropic,
+      model: normalizeConfiguredModel(aiSettings.configs.anthropic?.model) ?? PROVIDER_FALLBACK_MODELS.anthropic
+    },
+    openai: {
+      ...aiSettings.configs.openai,
+      model: normalizeConfiguredModel(aiSettings.configs.openai?.model) ?? PROVIDER_FALLBACK_MODELS.openai
+    },
+    gemini: {
+      ...aiSettings.configs.gemini,
+      model: normalizeConfiguredModel(aiSettings.configs.gemini?.model) ?? PROVIDER_FALLBACK_MODELS.gemini
+    },
+    ollama: {
+      ...aiSettings.configs.ollama,
+      model: normalizeConfiguredModel(aiSettings.configs.ollama?.model),
+      baseUrl: aiSettings.configs.ollama?.baseUrl ?? PROVIDER_DEFAULT_BASE_URLS.ollama
+    }
   };
   aiSettings.promptTools = aiSettings.promptTools ?? [];
   aiSettings.defaultToolIds = aiSettings.defaultToolIds ?? [];

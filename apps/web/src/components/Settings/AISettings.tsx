@@ -7,6 +7,12 @@ import type {
   ProjectMode
 } from '../../entityTypes';
 import styles from '../../assets/components/Settings/AISettingsForm.module.css';
+import {
+  PROVIDER_DEFAULT_BASE_URLS,
+  PROVIDER_FALLBACK_MODELS,
+  PROVIDER_MODEL_PLACEHOLDERS,
+  normalizeConfiguredModel
+} from '../../services/llm/providerConfig';
 
 interface AISettingsProps {
   aiSettings: ProjectAISettings;
@@ -21,17 +27,6 @@ const PROVIDER_LABELS: Record<AIProviderId, string> = {
   ollama: 'Ollama (Local)'
 };
 
-const PROVIDER_DEFAULT_MODELS: Record<AIProviderId, string> = {
-  anthropic: 'claude-sonnet-4-20250514',
-  openai: 'gpt-4o-mini',
-  gemini: 'gemini-2.0-flash',
-  ollama: 'llama3.1'
-};
-
-const PROVIDER_DEFAULT_BASE_URL: Partial<Record<AIProviderId, string>> = {
-  ollama: 'http://localhost:11434'
-};
-
 const PROMPT_TOOL_KIND_LABELS: Record<PromptToolKind, string> = {
   style: 'Style Guide',
   tone: 'Tone Guide',
@@ -43,6 +38,13 @@ interface PromptToolPack {
   schemaVersion: 1;
   tools: PromptTool[];
   defaultToolIdsByMode?: Record<ProjectMode, string[]>;
+}
+
+interface ProviderDiagnosticsState {
+  tone: 'success' | 'error';
+  summary: string;
+  details: string[];
+  detectedModels?: string[];
 }
 
 const PROJECT_MODE_LABELS: Record<ProjectMode, string> = {
@@ -94,6 +96,8 @@ export const AISettings: React.FC<AISettingsProps> = ({
   const [editingToolKind, setEditingToolKind] = useState<PromptToolKind>('persona');
   const [editingToolContent, setEditingToolContent] = useState('');
   const [defaultsMode, setDefaultsMode] = useState<ProjectMode>(projectMode);
+  const [isRunningDiagnostics, setIsRunningDiagnostics] = useState(false);
+  const [diagnostics, setDiagnostics] = useState<ProviderDiagnosticsState | null>(null);
 
   useEffect(() => {
     setDefaultsMode(projectMode);
@@ -125,10 +129,11 @@ export const AISettings: React.FC<AISettingsProps> = ({
     const nextConfigs = {...aiSettings.configs};
     if (!nextConfigs[provider]) {
       nextConfigs[provider] = {
-        model: PROVIDER_DEFAULT_MODELS[provider],
-        ...(PROVIDER_DEFAULT_BASE_URL[provider] ? {baseUrl: PROVIDER_DEFAULT_BASE_URL[provider]} : {})
+        ...(PROVIDER_DEFAULT_BASE_URLS[provider] ? {baseUrl: PROVIDER_DEFAULT_BASE_URLS[provider]} : {})
       } as any;
     }
+
+    setDiagnostics(null);
 
     onSettingsChange({
       ...aiSettings,
@@ -145,17 +150,144 @@ export const AISettings: React.FC<AISettingsProps> = ({
         ...aiSettings.configs,
         [currentProvider]: {
           ...aiSettings.configs[currentProvider],
-          model: model.trim() || PROVIDER_DEFAULT_MODELS[currentProvider]
+          model: normalizeConfiguredModel(model)
         }
       }
     });
   };
 
+  const handleUseDetectedModel = (model: string) => {
+    handleModelChange(model);
+    setDiagnostics((prev) =>
+      prev
+        ? {
+            ...prev,
+            summary: `Selected detected Ollama model "${model}".`
+          }
+        : prev
+    );
+  };
+
+  const handleRunDiagnostics = async () => {
+    const provider = aiSettings.provider;
+    const details: string[] = [];
+    setIsRunningDiagnostics(true);
+    setDiagnostics(null);
+
+    try {
+      if (provider === 'anthropic') {
+        const hasKey = Boolean(anthropicKey.trim() || localStorage.getItem('anthropic_api_key'));
+        if (!hasKey) {
+          throw new Error('Anthropic API key is missing.');
+        }
+        details.push('API key present.');
+        details.push(
+          currentModel.trim()
+            ? `Configured model: ${currentModel.trim()}.`
+            : `No explicit model configured. Fallback: ${PROVIDER_FALLBACK_MODELS.anthropic}.`
+        );
+        details.push('Live API probing is not attempted here; this check validates local configuration.');
+        setDiagnostics({
+          tone: 'success',
+          summary: 'Anthropic configuration looks usable.',
+          details
+        });
+        return;
+      }
+
+      if (provider === 'openai') {
+        const hasKey = Boolean(openaiKey.trim() || localStorage.getItem('openai_api_key'));
+        if (!hasKey) {
+          throw new Error('OpenAI API key is missing.');
+        }
+        details.push('API key present.');
+        details.push(
+          currentModel.trim()
+            ? `Configured model: ${currentModel.trim()}.`
+            : `No explicit model configured. Fallback: ${PROVIDER_FALLBACK_MODELS.openai}.`
+        );
+        details.push('Live API probing is not attempted here; this check validates local configuration.');
+        setDiagnostics({
+          tone: 'success',
+          summary: 'OpenAI configuration looks usable.',
+          details
+        });
+        return;
+      }
+
+      if (provider === 'gemini') {
+        const hasKey = Boolean(geminiKey.trim() || localStorage.getItem('gemini_api_key'));
+        if (!hasKey) {
+          throw new Error('Gemini API key is missing.');
+        }
+        details.push('API key present.');
+        details.push(
+          currentModel.trim()
+            ? `Configured model: ${currentModel.trim()}.`
+            : `No explicit model configured. Fallback: ${PROVIDER_FALLBACK_MODELS.gemini}.`
+        );
+        details.push('Live API probing is not attempted here; this check validates local configuration.');
+        setDiagnostics({
+          tone: 'success',
+          summary: 'Gemini configuration looks usable.',
+          details
+        });
+        return;
+      }
+
+      const baseUrl =
+        currentBaseUrl?.trim() || PROVIDER_DEFAULT_BASE_URLS.ollama || 'http://localhost:11434';
+      const response = await fetch(`${baseUrl.replace(/\/$/, '')}/api/tags`);
+      if (!response.ok) {
+        throw new Error(`Ollama responded with ${response.status} ${response.statusText}.`);
+      }
+      const data = await response.json();
+      const detectedModels = Array.isArray(data.models)
+        ? data.models
+            .map((entry: {name?: unknown}) =>
+              typeof entry?.name === 'string' ? entry.name.trim() : ''
+            )
+            .filter(Boolean)
+        : [];
+      if (detectedModels.length === 0) {
+        throw new Error('Connected to Ollama, but no local models are installed.');
+      }
+      details.push(`Connected to ${baseUrl}.`);
+      details.push(`Detected ${detectedModels.length} installed model(s).`);
+      if (currentModel.trim()) {
+        details.push(
+          detectedModels.includes(currentModel.trim())
+            ? `Configured model "${currentModel.trim()}" is installed.`
+            : `Configured model "${currentModel.trim()}" is not installed locally.`
+        );
+      } else {
+        details.push(`No explicit model configured. Runtime will auto-detect "${detectedModels[0]}".`);
+      }
+      setDiagnostics({
+        tone: currentModel.trim() && !detectedModels.includes(currentModel.trim()) ? 'error' : 'success',
+        summary:
+          currentModel.trim() && !detectedModels.includes(currentModel.trim())
+            ? 'Ollama is reachable, but the configured model is not installed.'
+            : 'Ollama diagnostics passed.',
+        details,
+        detectedModels
+      });
+    } catch (error) {
+      setDiagnostics({
+        tone: 'error',
+        summary: error instanceof Error ? error.message : 'Diagnostics failed.',
+        details
+      });
+    } finally {
+      setIsRunningDiagnostics(false);
+    }
+  };
+
   const currentProviderConfig = aiSettings.configs[aiSettings.provider] ?? {};
-  const currentModel = currentProviderConfig.model ?? PROVIDER_DEFAULT_MODELS[aiSettings.provider];
+  const currentModel = currentProviderConfig.model ?? '';
   const currentBaseUrl =
     (currentProviderConfig as {baseUrl?: string}).baseUrl ??
-    PROVIDER_DEFAULT_BASE_URL[aiSettings.provider];
+    PROVIDER_DEFAULT_BASE_URLS[aiSettings.provider];
   const promptTools = aiSettings.promptTools ?? [];
   const defaultToolIds = aiSettings.defaultToolIds ?? [];
   const defaultToolIdsByMode = aiSettings.defaultToolIdsByMode ?? {
@@ -495,10 +627,58 @@ export const AISettings: React.FC<AISettingsProps> = ({
           className={styles.input}
           value={currentModel}
           onChange={(e) => handleModelChange(e.target.value)}
-          placeholder={PROVIDER_DEFAULT_MODELS[aiSettings.provider]}
+          placeholder={PROVIDER_MODEL_PLACEHOLDERS[aiSettings.provider]}
         />
-        <p className={styles.help}>Override the default model used for this provider.</p>
+        <p className={styles.help}>
+          Set a provider-specific model override. Leaving this blank uses the app fallback,
+          and Ollama will auto-detect an installed local model.
+        </p>
       </div>
+
+      <div className={styles.field}>
+        <button
+          type='button'
+          className={styles.secondaryButton}
+          onClick={() => void handleRunDiagnostics()}
+          disabled={isRunningDiagnostics}
+        >
+          {isRunningDiagnostics ? 'Running Diagnostics...' : 'Run Provider Diagnostics'}
+        </button>
+      </div>
+
+      {diagnostics && (
+        <div
+          className={styles.field}
+          style={{
+            border: `1px solid ${diagnostics.tone === 'error' ? '#fecaca' : '#bbf7d0'}`,
+            backgroundColor: diagnostics.tone === 'error' ? '#fef2f2' : '#f0fdf4',
+            color: diagnostics.tone === 'error' ? '#991b1b' : '#166534',
+            borderRadius: '8px',
+            padding: '0.75rem'
+          }}
+        >
+          <strong>{diagnostics.summary}</strong>
+          <ul style={{margin: '0.5rem 0 0 1rem', padding: 0}}>
+            {diagnostics.details.map((detail) => (
+              <li key={detail}>{detail}</li>
+            ))}
+          </ul>
+          {aiSettings.provider === 'ollama' && diagnostics.detectedModels?.length ? (
+            <div style={{marginTop: '0.75rem', display: 'flex', gap: '0.5rem', flexWrap: 'wrap'}}>
+              {diagnostics.detectedModels.slice(0, 6).map((model) => (
+                <button
+                  key={model}
+                  type='button'
+                  className={styles.secondaryButton}
+                  onClick={() => handleUseDetectedModel(model)}
+                >
+                  Use {model}
+                </button>
+              ))}
+            </div>
+          ) : null}
+        </div>
+      )}
 
       <div className={styles.toolsSection}>
         <h3 className={styles.toolsHeading}>Lore Inspector AI Guardrails</h3>
@@ -608,12 +788,12 @@ export const AISettings: React.FC<AISettingsProps> = ({
                   ...aiSettings.configs,
                   ollama: {
                     ...aiSettings.configs.ollama,
-                    baseUrl: e.target.value || PROVIDER_DEFAULT_BASE_URL.ollama
+                    baseUrl: e.target.value || PROVIDER_DEFAULT_BASE_URLS.ollama
                   }
                 }
               })
             }
-            placeholder={PROVIDER_DEFAULT_BASE_URL.ollama}
+            placeholder={PROVIDER_DEFAULT_BASE_URLS.ollama}
           />
           <p className={styles.help}>Point to the user’s Ollama instance (default localhost).</p>
         </div>

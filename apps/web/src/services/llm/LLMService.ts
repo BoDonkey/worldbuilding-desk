@@ -5,11 +5,12 @@ import {OpenAIProvider} from './providers/openai';
 import {OllamaProvider} from './providers/ollama';
 import {GeminiProvider} from './providers/gemini';
 import {llmCache} from './LLMCache';
+import {
+  PROVIDER_DEFAULT_BASE_URLS,
+  PROVIDER_FALLBACK_MODELS
+} from './providerConfig';
 
 const FALLBACK_ID = () => Math.random().toString(36).slice(2);
-const DEFAULT_ANTHROPIC_MODEL = 'claude-sonnet-4-20250514';
-const DEFAULT_OPENAI_MODEL = 'gpt-4o-mini';
-const DEFAULT_GEMINI_MODEL = 'gemini-2.0-flash';
 
 type ProviderCredentials =
   | {
@@ -96,22 +97,22 @@ export class LLMService {
       case 'anthropic':
         return new AnthropicProvider({
           apiKey: credentials.apiKey,
-          model: credentials.model ?? DEFAULT_ANTHROPIC_MODEL
+          model: credentials.model ?? PROVIDER_FALLBACK_MODELS.anthropic
         });
       case 'openai':
         return new OpenAIProvider({
           apiKey: credentials.apiKey,
-          model: credentials.model ?? DEFAULT_OPENAI_MODEL
+          model: credentials.model ?? PROVIDER_FALLBACK_MODELS.openai
         });
       case 'gemini':
         return new GeminiProvider({
           apiKey: credentials.apiKey,
-          model: credentials.model ?? DEFAULT_GEMINI_MODEL
+          model: credentials.model ?? PROVIDER_FALLBACK_MODELS.gemini
         });
       case 'ollama':
         return new OllamaProvider({
-          baseUrl: credentials.baseUrl ?? 'http://localhost:11434',
-          model: credentials.model ?? 'llama3.1'
+          baseUrl: credentials.baseUrl ?? PROVIDER_DEFAULT_BASE_URLS.ollama ?? 'http://localhost:11434',
+          model: credentials.model
         });
     }
 
@@ -133,7 +134,7 @@ export class LLMService {
         return {
           id: 'anthropic',
           apiKey,
-          model: settings?.configs?.anthropic?.model ?? DEFAULT_ANTHROPIC_MODEL
+          model: settings?.configs?.anthropic?.model ?? PROVIDER_FALLBACK_MODELS.anthropic
         };
       }
       case 'openai': {
@@ -147,7 +148,7 @@ export class LLMService {
         return {
           id: 'openai',
           apiKey,
-          model: settings?.configs?.openai?.model ?? DEFAULT_OPENAI_MODEL
+          model: settings?.configs?.openai?.model ?? PROVIDER_FALLBACK_MODELS.openai
         };
       }
       case 'gemini': {
@@ -161,14 +162,14 @@ export class LLMService {
         return {
           id: 'gemini',
           apiKey,
-          model: settings?.configs?.gemini?.model ?? DEFAULT_GEMINI_MODEL
+          model: settings?.configs?.gemini?.model ?? PROVIDER_FALLBACK_MODELS.gemini
         };
       }
       case 'ollama': {
         return {
           id: 'ollama',
-          baseUrl: settings?.configs?.ollama?.baseUrl ?? 'http://localhost:11434',
-          model: settings?.configs?.ollama?.model ?? 'llama3.1'
+          baseUrl: settings?.configs?.ollama?.baseUrl ?? PROVIDER_DEFAULT_BASE_URLS.ollama ?? 'http://localhost:11434',
+          model: settings?.configs?.ollama?.model
         };
       }
       default:

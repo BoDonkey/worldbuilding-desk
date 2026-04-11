@@ -1,5 +1,6 @@
 import type {AIProviderId} from '../../../entityTypes';
 import type {LLMProvider, LLMRequest, LLMResponse, LLMContextChunk} from '../types';
+import {PROVIDER_FALLBACK_MODELS} from '../providerConfig';
 
 interface GeminiProviderConfig {
   apiKey: string;
@@ -30,7 +31,7 @@ export class GeminiProvider implements LLMProvider {
 
   constructor(config: GeminiProviderConfig) {
     this.apiKey = config.apiKey;
-    this.model = config.model ?? 'gemini-2.0-flash';
+    this.model = config.model ?? PROVIDER_FALLBACK_MODELS.gemini ?? 'gemini-2.0-flash';
     this.baseUrl = config.baseUrl ?? 'https://generativelanguage.googleapis.com/v1beta';
   }
 

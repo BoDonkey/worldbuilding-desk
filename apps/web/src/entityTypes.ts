@@ -258,6 +258,7 @@ export interface WorldEntity {
   categoryId: string;
   name: string;
   fields: EntityFields;
+  needsCompletion?: boolean;
   links: string[];
   createdAt: number;
   updatedAt: number;
@@ -290,6 +291,7 @@ export interface CompendiumEntry {
   sourceEntityId?: string;
   description?: string;
   tags?: string[];
+  needsCompletion?: boolean;
   actions: CompendiumActionDefinition[];
   createdAt: number;
   updatedAt: number;
