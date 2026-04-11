@@ -8,6 +8,11 @@ import {
   getWordCount,
   type EditorConfig
 } from '../config/editorConfig';
+import {
+  getDefaultStatBlockTokenPresentation,
+  serializeStatBlockTokensAsChipHtml,
+  type StatBlockTokenPresentation
+} from '../utils/statBlockTemplates';
 
 type ToolbarButton = {
   id: string;
@@ -15,9 +20,16 @@ type ToolbarButton = {
   markName: string;
 };
 
+type ToolbarAction = {
+  id: string;
+  label: string;
+  onClick: () => void;
+};
+
 interface MenuBarProps {
   editor: Editor;
   customButtons: ToolbarButton[];
+  actionButtons: ToolbarAction[];
 }
 
 interface TipTapEditorProps {
@@ -32,105 +44,130 @@ interface TipTapEditorProps {
     loreId: string,
     anchorRect: {left: number; top: number; bottom: number}
   ) => void;
+  onStatBlockTokenClick?: (
+    rawToken: string,
+    anchorRect: {left: number; top: number; bottom: number}
+  ) => void;
   config?: EditorConfig;
   toolbarButtons?: ToolbarButton[];
+  toolbarActions?: ToolbarAction[];
   extensions?: Extension[];
   textToInsert?: string | null;
   onTextInserted?: () => void;
   insertContext?: {from: number; to: number} | null;
+  presentStatBlockToken?: (rawToken: string) => StatBlockTokenPresentation;
 }
 
-function MenuBar({editor, customButtons}: MenuBarProps) {
+function MenuBar({editor, customButtons, actionButtons}: MenuBarProps) {
   if (!editor) return null;
+
+  const activeHeadingLevel = [1, 2, 3].find((level) =>
+    editor.isActive('heading', {level})
+  );
+  const activeBlockStyle = editor.isActive('bulletList')
+    ? 'bullet-list'
+    : editor.isActive('orderedList')
+      ? 'ordered-list'
+      : editor.isActive('blockquote')
+        ? 'blockquote'
+        : editor.isActive('codeBlock')
+          ? 'code-block'
+          : activeHeadingLevel
+            ? `heading-${activeHeadingLevel}`
+            : 'paragraph';
+  const activeInlineStyle = editor.isActive('bold')
+    ? 'bold'
+    : editor.isActive('italic')
+      ? 'italic'
+      : editor.isActive('strike')
+        ? 'strike'
+        : editor.isActive('code')
+          ? 'inline-code'
+          : 'plain';
+  const activeCustomStyle =
+    customButtons.find((btn) => editor.isActive(btn.markName))?.id ?? '';
 
   return (
     <div className='control-group'>
       <div className='button-group'>
-        {/* Core formatting */}
-        <button
-          onClick={() => editor.chain().focus().toggleBold().run()}
-          disabled={!editor.can().chain().focus().toggleBold().run()}
-          className={editor.isActive('bold') ? 'is-active' : ''}
+        <select
+          className='toolbar-select'
+          value={activeBlockStyle}
+          onChange={(event) => {
+            const value = event.target.value;
+            const chain = editor.chain().focus();
+            if (value === 'paragraph') {
+              chain.setParagraph().run();
+              return;
+            }
+            if (value === 'bullet-list') {
+              chain.toggleBulletList().run();
+              return;
+            }
+            if (value === 'ordered-list') {
+              chain.toggleOrderedList().run();
+              return;
+            }
+            if (value === 'blockquote') {
+              chain.toggleBlockquote().run();
+              return;
+            }
+            if (value === 'code-block') {
+              chain.toggleCodeBlock().run();
+              return;
+            }
+            if (value.startsWith('heading-')) {
+              const level = Number(value.replace('heading-', ''));
+              if ([1, 2, 3].includes(level)) {
+                chain.setHeading({level: level as 1 | 2 | 3}).run();
+              }
+            }
+          }}
         >
-          Bold
-        </button>
-        <button
-          onClick={() => editor.chain().focus().toggleItalic().run()}
-          disabled={!editor.can().chain().focus().toggleItalic().run()}
-          className={editor.isActive('italic') ? 'is-active' : ''}
-        >
-          Italic
-        </button>
-        <button
-          onClick={() => editor.chain().focus().toggleStrike().run()}
-          disabled={!editor.can().chain().focus().toggleStrike().run()}
-          className={editor.isActive('strike') ? 'is-active' : ''}
-        >
-          Strike
-        </button>
-        <button
-          onClick={() => editor.chain().focus().toggleCode().run()}
-          disabled={!editor.can().chain().focus().toggleCode().run()}
-          className={editor.isActive('code') ? 'is-active' : ''}
-        >
-          Code
-        </button>
+          <option value='paragraph'>Paragraph</option>
+          <option value='heading-1'>Heading 1</option>
+          <option value='heading-2'>Heading 2</option>
+          <option value='heading-3'>Heading 3</option>
+          <option value='bullet-list'>Bullet List</option>
+          <option value='ordered-list'>Numbered List</option>
+          <option value='blockquote'>Quote</option>
+          <option value='code-block'>System Block</option>
+        </select>
 
-        {/* Paragraph / headings */}
-        <button
-          onClick={() => editor.chain().focus().setParagraph().run()}
-          className={editor.isActive('paragraph') ? 'is-active' : ''}
+        <select
+          className='toolbar-select'
+          value={activeInlineStyle}
+          onChange={(event) => {
+            const value = event.target.value;
+            const chain = editor.chain().focus();
+            chain.unsetBold().unsetItalic().unsetStrike().unsetCode();
+            if (value === 'plain') {
+              chain.run();
+              return;
+            }
+            if (value === 'bold') {
+              chain.setBold().run();
+              return;
+            }
+            if (value === 'italic') {
+              chain.setItalic().run();
+              return;
+            }
+            if (value === 'strike') {
+              chain.setStrike().run();
+              return;
+            }
+            if (value === 'inline-code') {
+              chain.setCode().run();
+            }
+          }}
         >
-          P
-        </button>
-        <button
-          onClick={() => editor.chain().focus().toggleHeading({level: 1}).run()}
-          className={editor.isActive('heading', {level: 1}) ? 'is-active' : ''}
-        >
-          H1
-        </button>
-        <button
-          onClick={() => editor.chain().focus().toggleHeading({level: 2}).run()}
-          className={editor.isActive('heading', {level: 2}) ? 'is-active' : ''}
-        >
-          H2
-        </button>
-        <button
-          onClick={() => editor.chain().focus().toggleHeading({level: 3}).run()}
-          className={editor.isActive('heading', {level: 3}) ? 'is-active' : ''}
-        >
-          H3
-        </button>
-
-        {/* Lists */}
-        <button
-          onClick={() => editor.chain().focus().toggleBulletList().run()}
-          className={editor.isActive('bulletList') ? 'is-active' : ''}
-          disabled={!editor.can().chain().focus().toggleBulletList().run()}
-        >
-          • List
-        </button>
-        <button
-          onClick={() => editor.chain().focus().toggleOrderedList().run()}
-          className={editor.isActive('orderedList') ? 'is-active' : ''}
-          disabled={!editor.can().chain().focus().toggleOrderedList().run()}
-        >
-          1. List
-        </button>
-
-        {/* Blocks */}
-        <button
-          onClick={() => editor.chain().focus().toggleCodeBlock().run()}
-          className={editor.isActive('codeBlock') ? 'is-active' : ''}
-        >
-          Code block
-        </button>
-        <button
-          onClick={() => editor.chain().focus().toggleBlockquote().run()}
-          className={editor.isActive('blockquote') ? 'is-active' : ''}
-        >
-          Quote
-        </button>
+          <option value='plain'>Text Style</option>
+          <option value='bold'>Bold</option>
+          <option value='italic'>Italic</option>
+          <option value='strike'>Strike</option>
+          <option value='inline-code'>Monospace</option>
+        </select>
 
         {/* History */}
         <button
@@ -147,7 +184,7 @@ function MenuBar({editor, customButtons}: MenuBarProps) {
         </button>
 
         {/* Separator for custom buttons */}
-        {customButtons.length > 0 && (
+        {(customButtons.length > 0 || actionButtons.length > 0) && (
           <div
             style={{
               width: '2px',
@@ -158,16 +195,36 @@ function MenuBar({editor, customButtons}: MenuBarProps) {
           />
         )}
 
-        {/* Character style buttons */}
-        {customButtons.map((btn) => (
-          <button
-            key={btn.id}
-            onClick={() =>
-              editor.chain().focus().toggleMark(btn.markName).run()
-            }
-            className={editor.isActive(btn.markName) ? 'is-active' : ''}
-            title={btn.label}
+        {/* Character style dropdown */}
+        {customButtons.length > 0 && (
+          <select
+            className='toolbar-select'
+            value={activeCustomStyle}
+            onChange={(event) => {
+              const value = event.target.value;
+              const chain = editor.chain().focus();
+              customButtons.forEach((btn) => chain.unsetMark(btn.markName));
+              if (value) {
+                const selected = customButtons.find((btn) => btn.id === value);
+                if (selected) {
+                  chain.toggleMark(selected.markName).run();
+                  return;
+                }
+              }
+              chain.run();
+            }}
           >
+            <option value=''>Style</option>
+            {customButtons.map((btn) => (
+              <option key={btn.id} value={btn.id}>
+                {btn.label}
+              </option>
+            ))}
+          </select>
+        )}
+
+        {actionButtons.map((btn) => (
+          <button key={btn.id} type='button' onClick={btn.onClick}>
             {btn.label}
           </button>
         ))}
@@ -189,8 +246,13 @@ interface TipTapEditorProps {
     loreId: string,
     anchorRect: {left: number; top: number; bottom: number}
   ) => void;
+  onStatBlockTokenClick?: (
+    rawToken: string,
+    anchorRect: {left: number; top: number; bottom: number}
+  ) => void;
   config?: EditorConfig;
   toolbarButtons?: ToolbarButton[];
+  toolbarActions?: ToolbarAction[];
   extensions?: Extension[];
 }
 
@@ -201,14 +263,21 @@ function TipTapEditor({
   onWordCountChange,
   onConsistencyHighlightClick,
   onLoreHighlightClick,
+  onStatBlockTokenClick,
   config = defaultEditorConfig,
   toolbarButtons = [],
+  toolbarActions = [],
   textToInsert,
   onTextInserted,
-  insertContext
+  insertContext,
+  presentStatBlockToken = getDefaultStatBlockTokenPresentation
 }: TipTapEditorProps) {
   const isInternalUpdate = useRef(false);
   const onEditorReadyRef = useRef(onEditorReady);
+  const normalizedContent = serializeStatBlockTokensAsChipHtml(
+    content || '<p></p>',
+    presentStatBlockToken
+  );
 
   useEffect(() => {
     onEditorReadyRef.current = onEditorReady;
@@ -216,7 +285,7 @@ function TipTapEditor({
 
   const editor = useEditor({
     extensions: config.extensions,
-    content: content || '<p></p>',
+    content: normalizedContent,
     immediatelyRender: true,
     shouldRerenderOnTransaction: false,
 
@@ -257,6 +326,19 @@ function TipTapEditor({
           }
           return false;
         }
+        const statBlockTarget = event.target.closest<HTMLElement>('[data-stat-block-token]');
+        if (statBlockTarget) {
+          const rawToken = statBlockTarget.dataset.statBlockToken;
+          if (rawToken) {
+            const rect = statBlockTarget.getBoundingClientRect();
+            onStatBlockTokenClick?.(rawToken, {
+              left: rect.left,
+              top: rect.top,
+              bottom: rect.bottom
+            });
+          }
+          return false;
+        }
         const target = event.target.closest<HTMLElement>('[data-consistency-id]');
         if (!target) {
           return false;
@@ -288,12 +370,16 @@ function TipTapEditor({
 
     const current = editor.getHTML();
     const next = content || '<p></p>';
+    const normalizedNext = serializeStatBlockTokensAsChipHtml(
+      next,
+      presentStatBlockToken
+    );
 
-    if (current !== next) {
+    if (current !== next && current !== normalizedNext) {
       editor.commands.setContent(next, {emitUpdate: false});
       onWordCountChange?.(getWordCount(editor));
     }
-  }, [content, editor, onWordCountChange]);
+  }, [content, editor, onWordCountChange, presentStatBlockToken]);
 
   // initial word count
   useEffect(() => {
@@ -319,7 +405,11 @@ function TipTapEditor({
 
   return (
     <div className='tiptap-wrapper'>
-      <MenuBar editor={editor} customButtons={toolbarButtons} />
+      <MenuBar
+        editor={editor}
+        customButtons={toolbarButtons}
+        actionButtons={toolbarActions}
+      />
       <EditorContent editor={editor} />
     </div>
   );

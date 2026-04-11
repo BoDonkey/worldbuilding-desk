@@ -17,6 +17,17 @@
   --editor-surface-border: #d6cfc2;
   --editor-text-color: #201a14;
   --editor-muted-color: #6f655a;
+  --editor-code-bg: #f1efe8;
+  --editor-code-text: #2f241a;
+  --editor-pre-bg: #1f2937;
+  --editor-pre-text: #f8fafc;
+  --editor-highlight-warning-bg: rgba(245, 158, 11, 0.16);
+  --editor-highlight-warning-line: #b45309;
+  --editor-highlight-blocking-bg: rgba(239, 68, 68, 0.14);
+  --editor-highlight-blocking-line: #b91c1c;
+  --editor-lore-bg: rgba(59, 130, 246, 0.12);
+  --editor-lore-bg-hover: rgba(59, 130, 246, 0.2);
+  --editor-lore-line: rgba(29, 78, 216, 0.9);
 }
 
 :root[data-theme="dark"] {
@@ -38,6 +49,17 @@
   --editor-surface-border: #40352c;
   --editor-text-color: #f5efe8;
   --editor-muted-color: #b8aea3;
+  --editor-code-bg: #2a211b;
+  --editor-code-text: #f7efe5;
+  --editor-pre-bg: #111827;
+  --editor-pre-text: #e5eefb;
+  --editor-highlight-warning-bg: rgba(251, 191, 36, 0.16);
+  --editor-highlight-warning-line: #fbbf24;
+  --editor-highlight-blocking-bg: rgba(248, 113, 113, 0.18);
+  --editor-highlight-blocking-line: #fca5a5;
+  --editor-lore-bg: rgba(96, 165, 250, 0.16);
+  --editor-lore-bg-hover: rgba(96, 165, 250, 0.24);
+  --editor-lore-line: rgba(147, 197, 253, 0.95);
 }
 
 :root[data-font-size="small"] {
@@ -45,6 +67,7 @@
   --font-size-sm: 12px;
   --font-size-lg: 16px;
   --font-size-xl: 18px;
+  --editor-font-size: 0.98rem;
 }
 
 :root[data-font-size="medium"] {
@@ -52,6 +75,7 @@
   --font-size-sm: 14px;
   --font-size-lg: 18px;
   --font-size-xl: 20px;
+  --editor-font-size: 1.08rem;
 }
 
 :root[data-font-size="large"] {
@@ -59,6 +83,7 @@
   --font-size-sm: 16px;
   --font-size-lg: 20px;
   --font-size-xl: 24px;
+  --editor-font-size: 1.18rem;
 }
 
 :root[data-editor-font="serif"] {
@@ -69,12 +94,28 @@
   --editor-font-family: "Avenir Next", "Segoe UI", Helvetica, sans-serif;
 }
 
+:root[data-editor-font="dyslexic"] {
+  --editor-font-family: "OpenDyslexic", "Atkinson Hyperlegible", "Verdana", sans-serif;
+}
+
 :root[data-editor-width="focused"] {
   --editor-max-width: 760px;
 }
 
 :root[data-editor-width="wide"] {
   --editor-max-width: 980px;
+}
+
+:root[data-editor-line-height="compact"] {
+  --editor-line-height: 1.68;
+}
+
+:root[data-editor-line-height="comfortable"] {
+  --editor-line-height: 1.85;
+}
+
+:root[data-editor-line-height="airy"] {
+  --editor-line-height: 2;
 }
 
 :root[data-editor-surface="paper"] {
@@ -87,6 +128,10 @@
   --editor-surface-bg: #f7fbff;
   --editor-surface-panel: rgba(244, 249, 255, 0.94);
   --editor-surface-border: #c8d7e5;
+  --editor-text-color: #122033;
+  --editor-muted-color: #5d6b7c;
+  --editor-code-bg: #e8f1fa;
+  --editor-code-text: #17304d;
 }
 
 :root[data-editor-surface="contrast"] {
@@ -95,6 +140,15 @@
   --editor-surface-border: #333333;
   --editor-text-color: #f7f7f7;
   --editor-muted-color: #cfcfcf;
+  --editor-code-bg: #1d1d1d;
+  --editor-code-text: #ffffff;
+  --editor-highlight-warning-bg: rgba(251, 191, 36, 0.18);
+  --editor-highlight-warning-line: #fcd34d;
+  --editor-highlight-blocking-bg: rgba(248, 113, 113, 0.2);
+  --editor-highlight-blocking-line: #fda4af;
+  --editor-lore-bg: rgba(96, 165, 250, 0.18);
+  --editor-lore-bg-hover: rgba(96, 165, 250, 0.28);
+  --editor-lore-line: rgba(191, 219, 254, 0.95);
 }
 
 html, body, #root, .app {
