@@ -1,6 +1,5 @@
-import {useEffect, useState, useCallback, useRef, useMemo} from 'react';
-import type {ChangeEvent} from 'react';
-import {useNavigate} from 'react-router-dom';
+import {useEffect, useState, useCallback, useMemo, useRef} from 'react';
+import {useLocation, useNavigate} from 'react-router-dom';
 import type {
   Character,
   CharacterSheet,
@@ -19,43 +18,35 @@ import type {
   WritingDocument
 } from '../entityTypes';
 import {
-  getDocumentsByProject,
-  saveWritingDocument,
-  deleteWritingDocument
+  getDocumentsByProject
 } from '../writingStorage';
-import {getEntitiesByProject, saveEntity} from '../entityStorage';
+import {getEntitiesByProject} from '../entityStorage';
 import {
   getCategoriesByProject,
   initializeDefaultCategories
 } from '../categoryStorage';
 import {getCharactersByProject} from '../characterStorage';
-import {getCharacterSheetsByProject} from '../services/characterSheetService';
+import {getCharacterSheetsByProject} from '../services/characters';
 import {
   getOrCreateSettings,
-  getResolvedConsistencyActionCues,
-  saveProjectSettings
+  getResolvedConsistencyActionCues
 } from '../settingsStorage';
 import {createEditorConfigWithStyles} from '../config/editorConfig';
 import type {EditorConfig} from '../config/editorConfig';
-import {countWords, htmlToPlainText} from '../utils/textHelpers';
-import {
-  exportScenesAsDocx,
-  exportScenesAsEpub,
-  exportScenesAsMarkdown
-} from '../utils/sceneExport';
 import {EditorWithAI} from '../components/Editor/EditorWithAI';
 import {ContextPopover} from '../components/Editor/ContextPopover';
 import type {LoreInspectorRecord} from '../components/Editor/LoreInspectorPanel';
+import {LoreInspectorPanel} from '../components/Editor/LoreInspectorPanel';
+import {SystemHistoryPanel} from '../components/Editor/SystemHistoryPanel';
+import {AIAssistant} from '../components/AIAssistant/AIAssistant';
 import {ShodhMemoryPanel} from '../components/ShodhMemoryPanel';
+import {useWorkspaceMemories} from '../hooks/useWorkspaceMemories';
+import {useWorkspaceConsistency} from '../hooks/useWorkspaceConsistency';
+import {useWorkspaceDocuments} from '../hooks/useWorkspaceDocuments';
+import {useWorkspaceStatBlocks} from '../hooks/useWorkspaceStatBlocks';
 import type {RAGProvider} from '../services/rag/RAGService';
 import {getRAGService} from '../services/rag/getRAGService';
-import type {
-  ShodhMemoryProvider,
-  MemoryEntry
-} from '../services/shodh/ShodhMemoryService';
-import {getShodhService} from '../services/shodh/getShodhService';
-import {emitShodhMemoriesUpdated} from '../services/shodh/shodhEvents';
-import {getRulesetByProjectId} from '../services/rulesetService';
+import {getRulesetByProjectId} from '../services/rules';
 import {
   DEFAULT_PARTY_SYNERGY_RULES,
   deriveCharacterRuntimeModifiers,
@@ -67,43 +58,46 @@ import {
   getOrCreateSettlementState,
   getPartySynergySuggestions,
   getSettlementModulesByProject
-} from '../services/compendiumService';
-import {
-  buildCharacterStatBlockHtml,
-  buildItemStatBlockHtml,
-  createStatBlockToken,
-  formatEntityFieldValue,
-  replaceStatBlockTokensInHtml
-} from '../utils/statBlockTemplates';
+} from '../services/compendium';
 import {
   getSeriesBibleConfig,
-  promoteMemoryToParent,
   promoteDocumentToParent,
   getCanonSyncState,
   syncChildWithParent
 } from '../services/seriesBible/SeriesBibleService';
-import {getConsistencyEngineService} from '../services/consistencyEngine/getConsistencyEngineService';
-import type {GuardrailIssue} from '../services/consistencyEngine/types';
+import {getConsistencyEngineService} from '../services/consistency';
 import {
   getAliasesByProject,
-  saveAlias,
   type ConsistencyAlias
-} from '../services/consistencyEngine/aliasStorage';
-import {findCanonContradictions} from '../services/consistencyEngine/contradictionReview';
+} from '../services/consistency';
 import {
   appendSystemHistoryEntry,
   clearSystemHistoryEntries,
   getSystemHistoryEntries
-} from '../services/systemHistoryService';
+} from '../services/system';
 import {
   getCachedSynopsis,
+  getInspectorConsultationUsage,
+  incrementInspectorConsultationUsage,
   setCachedSynopsis
-} from '../services/loreInspectorCacheService';
+} from '../services/editor';
 import {
   WORKSPACE_COMMAND_EVENT,
   type WorkspaceCommandId
 } from '../commands/workspaceCommands';
+import {
+  useWorkspaceDrawers,
+  type WorkspaceContextDrawerView
+} from '../hooks/useWorkspaceDrawers';
 import styles from '../styles/WorkspaceRoute.module.css';
+
+declare global {
+  interface Window {
+    __wbdWorkspaceMountedAt?: number;
+    __wbdWorkspaceRenderCount?: number;
+    __wbdWorkspaceUnmountedAt?: number;
+  }
+}
 
 const summarizeContent = (html: string, limit = 500): string => {
   const text = html
@@ -120,87 +114,22 @@ interface WorkspaceRouteProps {
   activeProject: Project | null;
 }
 
-type SaveStatus = 'idle' | 'saving' | 'saved';
 type FeedbackTone = 'success' | 'error';
-type ExportFormat = 'markdown' | 'docx' | 'epub';
-type ContextDrawerView = 'world-bible' | 'ruleset' | 'characters' | 'compendium';
+type ContextDrawerView = WorkspaceContextDrawerView;
 type ImportMode = WorkspaceImportMode;
-
-interface SceneExportItem {
+type WorkspaceAIContext = {
+  type: 'document';
   id: string;
-  title: string;
-  included: boolean;
-}
-
-interface ResolverNotice {
-  message: string;
-}
-
-interface ConsistencyReviewItem {
-  id: string;
-  sceneId: string;
-  sceneTitle: string;
-  issue: GuardrailIssue;
-}
-
-interface WorkspaceDrawerPreferences {
-  leftDrawerOpen: boolean;
-  rightDrawerOpen: boolean;
-  activeContextView: ContextDrawerView;
-}
-
-interface ImportFailureItem {
-  fileName: string;
-  reason: 'legacy-doc' | 'apple-pages' | 'parse-failed';
-  detail?: string;
-}
-
-interface ImportSummary {
-  importedCount: number;
-  failedCount: number;
-  unresolvedCount: number;
-  mode: ImportMode;
-  suggestionsSkipped: boolean;
-  openedTitle?: string;
-  failures: ImportFailureItem[];
-  createdAt: number;
-}
-
-interface ConsistencyPopoverState {
-  issueId: string;
-  surface: string;
-  left: number;
-  top: number;
-}
-
-const downgradeUnknownIssuesToWarnings = (
-  issues: GuardrailIssue[]
-): GuardrailIssue[] =>
-  issues.map((issue) =>
-    issue.code === 'UNKNOWN_ENTITY'
-      ? {
-          ...issue,
-          severity: 'warning',
-          message: issue.surface
-            ? `Review "${issue.surface}" before canonizing this scene.`
-            : 'Review this unknown entity before canonizing this scene.'
-        }
-      : issue
-  );
+  selectedText?: string;
+  from: number;
+  to: number;
+};
 
 function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
   const navigate = useNavigate();
+  const location = useLocation();
   const consistencyEngine = useMemo(() => getConsistencyEngineService(), []);
   const [documents, setDocuments] = useState<WritingDocument[]>([]);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [selectedCreatedAt, setSelectedCreatedAt] = useState<number | null>(
-    null
-  );
-  const [title, setTitle] = useState('');
-  const [content, setContent] = useState('');
-  const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
-  const [lastSavedAt, setLastSavedAt] = useState<number | null>(null);
-  const [wordCount, setWordCount] = useState(0);
   const [editorConfig, setEditorConfig] = useState<EditorConfig | null>(null);
   const [toolbarButtons, setToolbarButtons] = useState<
     Array<{id: string; label: string; markName: string}>
@@ -235,17 +164,9 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
   const [selectedStatCharacterId, setSelectedStatCharacterId] = useState('');
   const [selectedStatEntityId, setSelectedStatEntityId] = useState('');
   const [statBlockInsertContent, setStatBlockInsertContent] = useState<string | null>(null);
+  const [pendingStatBlockRebindToken, setPendingStatBlockRebindToken] = useState<string | null>(null);
   const [isStatPreferencesHydrated, setStatPreferencesHydrated] = useState(false);
   const [ragService, setRagService] = useState<RAGProvider | null>(null);
-  const [shodhService, setShodhService] =
-    useState<ShodhMemoryProvider | null>(null);
-  const [isMemoryModalOpen, setMemoryModalOpen] = useState(false);
-  const [memoryDraft, setMemoryDraft] = useState('');
-  const [memories, setMemories] = useState<MemoryEntry[]>([]);
-  const [memoryScope, setMemoryScope] = useState<'document' | 'project'>(
-    'document'
-  );
-  const [memoryFilter, setMemoryFilter] = useState('');
   const MEMORIES_PER_PAGE = 5;
   const seriesBibleConfig = activeProject
     ? getSeriesBibleConfig(activeProject)
@@ -259,73 +180,45 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
     tone: FeedbackTone;
     message: string;
   } | null>(null);
-  const [guardrailIssues, setGuardrailIssues] = useState<GuardrailIssue[]>([]);
-  const [resolvingUnknown, setResolvingUnknown] = useState<string | null>(null);
-  const [linkingUnknown, setLinkingUnknown] = useState<string | null>(null);
-  const [resolverNotice, setResolverNotice] = useState<ResolverNotice | null>(null);
-  const [unknownLinkSelection, setUnknownLinkSelection] = useState<
-    Record<string, string>
-  >({});
-  const [isRunningConsistencyReview, setIsRunningConsistencyReview] = useState(false);
-  const [consistencyReviewItems, setConsistencyReviewItems] = useState<
-    ConsistencyReviewItem[]
-  >([]);
-  const [lastConsistencyReviewAt, setLastConsistencyReviewAt] = useState<number | null>(
-    null
-  );
-  const [isCreatingScene, setIsCreatingScene] = useState(false);
-  const [isImportingDocuments, setIsImportingDocuments] = useState(false);
-  const [importMode, setImportMode] = useState<ImportMode>('balanced');
-  const [skipImportSuggestions, setSkipImportSuggestions] = useState(false);
-  const [importSummary, setImportSummary] = useState<ImportSummary | null>(null);
-  const [retryImportFiles, setRetryImportFiles] = useState<File[]>([]);
-  const [consistencyPopover, setConsistencyPopover] =
-    useState<ConsistencyPopoverState | null>(null);
-  const [deletingDocumentId, setDeletingDocumentId] = useState<string | null>(null);
   const [isPromotingDocument, setIsPromotingDocument] = useState(false);
-  const [isPromotingMemoryId, setIsPromotingMemoryId] = useState<string | null>(null);
-  const [isSavingMemory, setIsSavingMemory] = useState(false);
   const [isSyncingCanon, setIsSyncingCanon] = useState(false);
-  const [isExportModalOpen, setExportModalOpen] = useState(false);
   const [isStatBlockModalOpen, setStatBlockModalOpen] = useState(false);
-  const [exportFormat, setExportFormat] = useState<ExportFormat>('markdown');
-  const [exportSelection, setExportSelection] = useState<SceneExportItem[]>([]);
   const [systemHistoryEntries, setSystemHistoryEntries] = useState<SystemHistoryEntry[]>([]);
-  const [isSceneDrawerOpen, setSceneDrawerOpen] = useState(() =>
-    typeof window !== 'undefined'
-      ? !window.matchMedia('(max-width: 1200px)').matches
-      : true
-  );
-  const [isContextDrawerOpen, setContextDrawerOpen] = useState(() =>
-    typeof window !== 'undefined'
-      ? !window.matchMedia('(max-width: 1200px)').matches
-      : true
-  );
-  const [activeContextView, setActiveContextView] =
-    useState<ContextDrawerView>('world-bible');
+  const [activeAIContext, setActiveAIContext] = useState<WorkspaceAIContext | null>(null);
+  const [queuedAssistantPrompt, setQueuedAssistantPrompt] = useState<string | null>(null);
+  const [activeLoreRecord, setActiveLoreRecord] = useState<LoreInspectorRecord | null>(null);
+  const [aiBudgetUsed, setAIBudgetUsed] = useState(0);
+  const [pendingAIInsert, setPendingAIInsert] = useState<{
+    text: string;
+    context: {from: number; to: number} | null;
+  } | null>(null);
   const [isNarrowViewport, setNarrowViewport] = useState(() =>
     typeof window !== 'undefined'
       ? window.matchMedia('(max-width: 1200px)').matches
       : false
   );
-  const [isDrawerPrefsHydrated, setDrawerPrefsHydrated] = useState(false);
+  const {
+    isSceneDrawerOpen,
+    setSceneDrawerOpen,
+    isContextDrawerOpen,
+    setContextDrawerOpen,
+    activeContextView,
+    setActiveContextView
+  } = useWorkspaceDrawers({
+    activeProjectId: activeProject?.id ?? null,
+    isNarrowViewport
+  });
 
   useEffect(() => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (window as any).__wbdWorkspaceMountedAt = Date.now();
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (window as any).__wbdWorkspaceRenderCount = 0;
+    window.__wbdWorkspaceMountedAt = Date.now();
+    window.__wbdWorkspaceRenderCount = 0;
     return () => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (window as any).__wbdWorkspaceUnmountedAt = Date.now();
+      window.__wbdWorkspaceUnmountedAt = Date.now();
     };
   }, []);
 
   // Lightweight diagnostics only, no state updates.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  (window as any).__wbdWorkspaceRenderCount =
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    ((window as any).__wbdWorkspaceRenderCount ?? 0) + 1;
+  window.__wbdWorkspaceRenderCount = (window.__wbdWorkspaceRenderCount ?? 0) + 1;
   const toggleSceneDrawer = useCallback(() => {
     setSceneDrawerOpen((prev) => {
       const next = !prev;
@@ -334,7 +227,7 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
       }
       return next;
     });
-  }, [isNarrowViewport]);
+  }, [isNarrowViewport, setContextDrawerOpen, setSceneDrawerOpen]);
   const toggleContextDrawer = useCallback(() => {
     setContextDrawerOpen((prev) => {
       const next = !prev;
@@ -343,7 +236,7 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
       }
       return next;
     });
-  }, [isNarrowViewport]);
+  }, [isNarrowViewport, setContextDrawerOpen, setSceneDrawerOpen]);
   const openContextDrawer = useCallback(
     (view: ContextDrawerView) => {
       setActiveContextView(view);
@@ -352,244 +245,22 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
         setSceneDrawerOpen(false);
       }
     },
-    [isNarrowViewport]
+    [isNarrowViewport, setActiveContextView, setContextDrawerOpen, setSceneDrawerOpen]
   );
-  const importInputRef = useRef<HTMLInputElement | null>(null);
-  const lastAutosaveErrorRef = useRef<string | null>(null);
-  const canInsertStatBlock =
-    (statBlockSourceType === 'character' && characterSheets.length > 0) ||
-    (statBlockSourceType === 'item' && entities.length > 0);
-
-  useEffect(() => {
-    if (!consistencyPopover) return;
-    const close = () => setConsistencyPopover(null);
-    window.addEventListener('scroll', close, true);
-    window.addEventListener('resize', close);
-    return () => {
-      window.removeEventListener('scroll', close, true);
-      window.removeEventListener('resize', close);
-    };
-  }, [consistencyPopover]);
-
-  const fileNameToTitle = (name: string): string => {
-    const base = name.replace(/\.[^.]+$/, '').trim();
-    return base || 'Imported scene';
-  };
-
-  const plainTextToHtml = (text: string): string => {
-    const escaped = text
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;');
-    const paragraphs = escaped
-      .split(/\n{2,}/)
-      .map((chunk) => chunk.trim())
-      .filter(Boolean);
-    if (paragraphs.length === 0) {
-      return '<p></p>';
-    }
-    return paragraphs.map((chunk) => `<p>${chunk.replace(/\n/g, '<br />')}</p>`).join('');
-  };
-
-  const fileToHtml = (fileName: string, rawContent: string): string => {
-    const lower = fileName.toLowerCase();
-    if (lower.endsWith('.html') || lower.endsWith('.htm')) {
-      return rawContent.trim() || '<p></p>';
-    }
-    return plainTextToHtml(rawContent);
-  };
-
-  const readU16LE = (bytes: Uint8Array, offset: number): number =>
-    bytes[offset] | (bytes[offset + 1] << 8);
-
-  const readU32LE = (bytes: Uint8Array, offset: number): number =>
-    (bytes[offset] |
-      (bytes[offset + 1] << 8) |
-      (bytes[offset + 2] << 16) |
-      (bytes[offset + 3] << 24)) >>> 0;
-
-  const findZipEntry = (
-    bytes: Uint8Array
-    ,
-    matcher: (fileName: string) => boolean
-  ): {
-    fileName: string;
-    compressionMethod: number;
-    compressedData: Uint8Array;
-  } | null => {
-    const eocdSignature = 0x06054b50;
-    const centralSignature = 0x02014b50;
-    const localSignature = 0x04034b50;
-
-    const minEocdSize = 22;
-    const maxCommentLength = 0xffff;
-    const searchStart = Math.max(0, bytes.length - (minEocdSize + maxCommentLength));
-    let eocdOffset = -1;
-    for (let i = bytes.length - minEocdSize; i >= searchStart; i -= 1) {
-      if (readU32LE(bytes, i) === eocdSignature) {
-        eocdOffset = i;
-        break;
-      }
-    }
-    if (eocdOffset === -1) return null;
-
-    const centralDirectorySize = readU32LE(bytes, eocdOffset + 12);
-    const centralDirectoryOffset = readU32LE(bytes, eocdOffset + 16);
-    const centralDirectoryEnd = centralDirectoryOffset + centralDirectorySize;
-    if (centralDirectoryEnd > bytes.length) return null;
-
-    const decoder = new TextDecoder('utf-8');
-    let cursor = centralDirectoryOffset;
-
-    while (cursor + 46 <= centralDirectoryEnd) {
-      if (readU32LE(bytes, cursor) !== centralSignature) {
-        break;
-      }
-      const compressionMethod = readU16LE(bytes, cursor + 10);
-      const compressedSize = readU32LE(bytes, cursor + 20);
-      const fileNameLength = readU16LE(bytes, cursor + 28);
-      const extraLength = readU16LE(bytes, cursor + 30);
-      const commentLength = readU16LE(bytes, cursor + 32);
-      const localHeaderOffset = readU32LE(bytes, cursor + 42);
-      const fileNameStart = cursor + 46;
-      const fileNameEnd = fileNameStart + fileNameLength;
-      if (fileNameEnd > bytes.length) return null;
-
-      const fileName = decoder.decode(bytes.slice(fileNameStart, fileNameEnd));
-      cursor = fileNameEnd + extraLength + commentLength;
-
-      if (!matcher(fileName)) continue;
-      if (localHeaderOffset + 30 > bytes.length) return null;
-      if (readU32LE(bytes, localHeaderOffset) !== localSignature) return null;
-
-      const localNameLength = readU16LE(bytes, localHeaderOffset + 26);
-      const localExtraLength = readU16LE(bytes, localHeaderOffset + 28);
-      const dataStart = localHeaderOffset + 30 + localNameLength + localExtraLength;
-      const dataEnd = dataStart + compressedSize;
-      if (dataEnd > bytes.length) return null;
-
-      return {
-        fileName,
-        compressionMethod,
-        compressedData: bytes.slice(dataStart, dataEnd)
-      };
-    }
-
-    return null;
-  };
-
-  const inflateRaw = async (compressedData: Uint8Array): Promise<Uint8Array> => {
-    const copy = new Uint8Array(compressedData.byteLength);
-    copy.set(compressedData);
-    const stream = new Blob([copy.buffer]).stream().pipeThrough(
-      new DecompressionStream('deflate-raw')
-    );
-    const decompressed = await new Response(stream).arrayBuffer();
-    return new Uint8Array(decompressed);
-  };
-
-  const docxXmlToText = (xml: string): string => {
-    const withBreaks = xml
-      .replace(/<w:tab\b[^>]*\/>/g, '\t')
-      .replace(/<w:br\b[^>]*\/>/g, '\n')
-      .replace(/<w:cr\b[^>]*\/>/g, '\n')
-      .replace(/<\/w:p>/g, '\n\n');
-    const withoutTags = withBreaks.replace(/<[^>]+>/g, '');
-    const parser = new DOMParser();
-    const decoded = parser.parseFromString(
-      `<!doctype html><body>${withoutTags}`,
-      'text/html'
-    ).body.textContent;
-    return decoded?.trim() ?? '';
-  };
-
-  const parseDocxToText = async (file: File): Promise<string> => {
-    const bytes = new Uint8Array(await file.arrayBuffer());
-    const entry = findZipEntry(bytes, (fileName) => fileName === 'word/document.xml');
-    if (!entry) {
-      throw new Error('Could not read DOCX structure.');
-    }
-
-    let xmlBytes: Uint8Array;
-    if (entry.compressionMethod === 0) {
-      xmlBytes = entry.compressedData;
-    } else if (entry.compressionMethod === 8) {
-      xmlBytes = await inflateRaw(entry.compressedData);
-    } else {
-      throw new Error(`Unsupported DOCX compression method (${entry.compressionMethod}).`);
-    }
-
-    const xml = new TextDecoder('utf-8').decode(xmlBytes);
-    return docxXmlToText(xml);
-  };
-
-  const htmlLikeToPlainText = (raw: string): string => {
-    const parser = new DOMParser();
-    const parsed = parser.parseFromString(raw, 'text/html');
-    return parsed.body.textContent?.replace(/\s+\n/g, '\n').trim() ?? '';
-  };
-
-  const parsePagesToText = async (file: File): Promise<string> => {
-    const bytes = new Uint8Array(await file.arrayBuffer());
-    const preferredEntries = [
-      'quicklook/preview.txt',
-      'quicklook/preview.html',
-      'quicklook/preview.htm',
-      'index.xml'
-    ];
-
-    const entry = findZipEntry(bytes, (fileName) =>
-      preferredEntries.includes(fileName.toLowerCase())
-    );
-    if (!entry) {
-      throw new Error('No readable text preview found in .pages package.');
-    }
-
-    let payloadBytes: Uint8Array;
-    if (entry.compressionMethod === 0) {
-      payloadBytes = entry.compressedData;
-    } else if (entry.compressionMethod === 8) {
-      payloadBytes = await inflateRaw(entry.compressedData);
-    } else {
-      throw new Error(
-        `Unsupported .pages entry compression method (${entry.compressionMethod}).`
-      );
-    }
-
-    const raw = new TextDecoder('utf-8').decode(payloadBytes).trim();
-    if (!raw) {
-      throw new Error('Empty text payload in .pages package.');
-    }
-
-    const lowerName = entry.fileName.toLowerCase();
-    if (lowerName.endsWith('.txt')) {
-      return raw;
-    }
-
-    const normalized = htmlLikeToPlainText(raw);
-    if (!normalized) {
-      throw new Error('Unable to extract readable text from .pages payload.');
-    }
-    return normalized;
-  };
-  const refreshMemories = useCallback(async () => {
-    if (!shodhService) {
-      setMemories([]);
-      emitShodhMemoriesUpdated([]);
-      return;
-    }
-    const list = await shodhService.listMemories();
-    const sorted = [...list].sort((a, b) => b.createdAt - a.createdAt);
-    setMemories(sorted);
-    emitShodhMemoriesUpdated(sorted);
-  }, [shodhService]);
-
   const refreshSystemHistory = useCallback(() => {
     if (!activeProject) {
       setSystemHistoryEntries([]);
       return;
     }
     setSystemHistoryEntries(getSystemHistoryEntries(activeProject.id));
+  }, [activeProject]);
+
+  useEffect(() => {
+    if (!activeProject) {
+      setAIBudgetUsed(0);
+      return;
+    }
+    setAIBudgetUsed(getInspectorConsultationUsage(activeProject.id));
   }, [activeProject]);
 
   const addSystemHistory = useCallback(
@@ -605,6 +276,180 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
     },
     [activeProject, refreshSystemHistory]
   );
+  const lastAutosaveErrorRef = useRef<string | null>(null);
+  const persistDocRef = useRef<Parameters<typeof useWorkspaceDocuments>[0]['persistDocRef']['current']>(null);
+  const refreshDeferredReviewRef =
+    useRef<Parameters<typeof useWorkspaceDocuments>[0]['refreshDeferredReviewRef']['current']>(
+      null
+    );
+  const setGuardrailIssuesRef =
+    useRef<Parameters<typeof useWorkspaceDocuments>[0]['setGuardrailIssuesRef']['current']>(
+      null
+    );
+  const setConsistencyPopoverRef =
+    useRef<Parameters<typeof useWorkspaceDocuments>[0]['setConsistencyPopoverRef']['current']>(
+      null
+    );
+  const deleteDocumentSideEffectsRef =
+    useRef<
+      Parameters<typeof useWorkspaceDocuments>[0]['deleteDocumentSideEffectsRef']['current']
+    >(null);
+  const {
+    selectedId,
+    setSelectedCreatedAt,
+    title,
+    setTitle,
+    content,
+    setContent,
+    saveStatus,
+    setSaveStatus,
+    lastSavedAt,
+    setLastSavedAt,
+    wordCount,
+    setWordCount,
+    selectedDocument,
+    importInputRef,
+    isCreatingScene,
+    isImportingDocuments,
+    importMode,
+    setImportMode,
+    skipImportSuggestions,
+    setSkipImportSuggestions,
+    importSummary,
+    setImportSummary,
+    retryImportFiles,
+    setRetryImportFiles,
+    deletingDocumentId,
+    isExportModalOpen,
+    exportFormat,
+    exportSelection,
+    initializeEditorState,
+    handleNewDocument,
+    handleImportDocuments,
+    handleRetryFailedImports,
+    handleSelectDocument,
+    openExportModal,
+    closeExportModal,
+    moveExportItem,
+    toggleExportItem,
+    toggleAllExportItems,
+    handleExportScenes,
+    handleSave,
+    handleDelete,
+    handleContentChange
+  } = useWorkspaceDocuments({
+    activeProject,
+    documents,
+    setDocuments,
+    persistDocRef,
+    refreshDeferredReviewRef,
+    setGuardrailIssuesRef,
+    setConsistencyPopoverRef,
+    deleteDocumentSideEffectsRef,
+    setFeedback,
+    addSystemHistory
+  });
+  const openExportModalWithDrawerHandling = useCallback(
+    (format: 'markdown' | 'docx' | 'epub') => {
+      if (isNarrowViewport) {
+        setSceneDrawerOpen(false);
+      }
+      openExportModal(format);
+    },
+    [isNarrowViewport, openExportModal, setSceneDrawerOpen]
+  );
+  const {
+    shodhService,
+    refreshMemories,
+    isMemoryModalOpen,
+    setMemoryModalOpen,
+    memoryDraft,
+    setMemoryDraft,
+    memoryScope,
+    setMemoryScope,
+    memoryFilter,
+    setMemoryFilter,
+    isPromotingMemoryId,
+    isSavingMemory,
+    memoryCandidates,
+    scopeLabel,
+    emptyMemoryMessage,
+    openMemoryModal,
+    handleMemorySave,
+    handleDeleteMemory,
+    handlePromoteMemory
+  } = useWorkspaceMemories({
+    activeProject,
+    seriesBibleConfig: seriesBibleConfig ?? {
+      inheritRag: true,
+      inheritShodh: true
+    },
+    selectedDocument,
+    summarizeContent,
+    setFeedback
+  });
+
+  const {
+    setGuardrailIssues,
+    resolvingUnknown,
+    linkingUnknown,
+    resolverNotice,
+    setResolverNotice,
+    unknownLinkSelection,
+    setUnknownLinkSelection,
+    isRunningConsistencyReview,
+    consistencyReviewItems,
+    lastConsistencyReviewAt,
+    consistencyPopover,
+    setConsistencyPopover,
+    persistDoc,
+    refreshDeferredReview,
+    handleRunConsistencyReview,
+    unknownGuardrailIssues,
+    hasBlockingUnknownGuardrailIssues,
+    highlightableUnknownIssues,
+    unknownLinkOptions,
+    resolveUnknownEntity,
+    resolveAllUnknownEntities,
+    dismissAllUnknownEntities,
+    dismissUnknownEntity,
+    linkUnknownEntity,
+    activeConsistencyPopoverIssue,
+    openConsistencyPopover
+  } = useWorkspaceConsistency({
+    activeProject,
+    documents,
+    setDocuments,
+    entities,
+    setEntities,
+    categories,
+    setCategories,
+    aliases,
+    setAliases,
+    characters,
+    resolvedActionCues,
+    consistencyEngine,
+    ragService,
+    shodhService,
+    refreshMemories,
+    setSelectedCreatedAt,
+    setSaveStatus,
+    setLastSavedAt,
+    lastAutosaveErrorRef,
+    setFeedback,
+    addSystemHistory
+  });
+  persistDocRef.current = persistDoc;
+  refreshDeferredReviewRef.current = refreshDeferredReview;
+  setGuardrailIssuesRef.current = setGuardrailIssues as typeof setGuardrailIssuesRef.current;
+  setConsistencyPopoverRef.current = setConsistencyPopover as typeof setConsistencyPopoverRef.current;
+  deleteDocumentSideEffectsRef.current = async (docId: string) => {
+    await Promise.all([
+      ragService?.deleteDocument(docId) ?? Promise.resolve(),
+      shodhService?.deleteMemoriesForDocument(docId) ?? Promise.resolve()
+    ]);
+    await refreshMemories();
+  };
 
   const syncCompendiumSystemSignals = useCallback(async () => {
     if (!activeProject) return;
@@ -675,6 +520,10 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
       setNewStatGroupName('');
       setStatPreferencesHydrated(false);
       setSystemHistoryEntries([]);
+      setActiveAIContext(null);
+      setQueuedAssistantPrompt(null);
+      setActiveLoreRecord(null);
+      setPendingAIInsert(null);
       return;
     }
 
@@ -742,28 +591,13 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
         markName: style.markName
       }));
       setToolbarButtons(buttons);
-
-      if (docs.length > 0) {
-        const first = docs[0];
-        setSelectedId(first.id);
-        setSelectedCreatedAt(first.createdAt);
-        setTitle(first.title);
-        setContent(first.content);
-        setSaveStatus('idle');
-      } else {
-        setSelectedId(null);
-        setSelectedCreatedAt(null);
-        setTitle('');
-        setContent('');
-        setSaveStatus('idle');
-        setLastSavedAt(null);
-      }
+      initializeEditorState(docs[0] ?? null);
     })();
 
     return () => {
       cancelled = true;
     };
-  }, [activeProject]);
+  }, [activeProject, initializeEditorState, setImportMode, setSkipImportSuggestions]);
 
   useEffect(() => {
     let cancelled = false;
@@ -782,68 +616,8 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
   }, [activeProject, seriesBibleConfig?.parentProjectId]);
 
   useEffect(() => {
-    if (!activeProject) return;
-    setDrawerPrefsHydrated(false);
-    const key = `workspaceDrawers:${activeProject.id}`;
-    try {
-      const raw = localStorage.getItem(key);
-      if (!raw) {
-        if (isNarrowViewport) {
-          setSceneDrawerOpen(false);
-          setContextDrawerOpen(false);
-        }
-        return;
-      }
-      const parsed = JSON.parse(raw) as Partial<WorkspaceDrawerPreferences>;
-      if (isNarrowViewport) {
-        setSceneDrawerOpen(false);
-        setContextDrawerOpen(false);
-      } else if (typeof parsed.leftDrawerOpen === 'boolean') {
-        setSceneDrawerOpen(parsed.leftDrawerOpen);
-      } else {
-        setSceneDrawerOpen(true);
-      }
-      if (!isNarrowViewport && typeof parsed.rightDrawerOpen === 'boolean') {
-        setContextDrawerOpen(parsed.rightDrawerOpen);
-      } else if (!isNarrowViewport) {
-        setContextDrawerOpen(true);
-      }
-      if (
-        parsed.activeContextView === 'world-bible' ||
-        parsed.activeContextView === 'ruleset' ||
-        parsed.activeContextView === 'characters' ||
-        parsed.activeContextView === 'compendium'
-      ) {
-        setActiveContextView(parsed.activeContextView);
-      }
-    } catch {
-      // Ignore malformed local state and continue with defaults.
-    } finally {
-      setDrawerPrefsHydrated(true);
-    }
-  }, [activeProject, isNarrowViewport]);
-
-  useEffect(() => {
-    if (!activeProject || !isDrawerPrefsHydrated) return;
-    const key = `workspaceDrawers:${activeProject.id}`;
-    const payload: WorkspaceDrawerPreferences = {
-      leftDrawerOpen: isSceneDrawerOpen,
-      rightDrawerOpen: isContextDrawerOpen,
-      activeContextView
-    };
-    localStorage.setItem(key, JSON.stringify(payload));
-  }, [
-    activeProject,
-    isDrawerPrefsHydrated,
-    isSceneDrawerOpen,
-    isContextDrawerOpen,
-    activeContextView
-  ]);
-
-  useEffect(() => {
     if (!activeProject) {
       setRagService(null);
-      setShodhService(null);
       return;
     }
 
@@ -856,15 +630,6 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
             parentProjectId: bibleConfig.parentProjectId
           }
         : {projectId: activeProject.id};
-    const shodhOptions =
-      bibleConfig.parentProjectId && bibleConfig.inheritShodh
-        ? {
-            projectId: activeProject.id,
-            inheritFromParent: true,
-            parentProjectId: bibleConfig.parentProjectId
-          }
-        : {projectId: activeProject.id};
-
     let cancelled = false;
 
     getRAGService(ragOptions).then((service) => {
@@ -873,77 +638,11 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
       }
     });
 
-    getShodhService(shodhOptions).then((service) => {
-      if (!cancelled) {
-        setShodhService(service);
-      }
-    });
-
     return () => {
       cancelled = true;
       setRagService(null);
-      setShodhService(null);
     };
   }, [activeProject]);
-
-  useEffect(() => {
-    void refreshMemories();
-  }, [refreshMemories]);
-
-  useEffect(() => {
-    if (!activeProject || !projectSettings || !isStatPreferencesHydrated) {
-      return;
-    }
-    const currentPrefs = projectSettings.statBlockPreferences;
-    const currentGroupsJson = JSON.stringify(currentPrefs?.groups ?? []);
-    const nextGroupsJson = JSON.stringify(statBlockGroups);
-    const currentStatIdsJson = JSON.stringify(currentPrefs?.selectedStatIds ?? []);
-    const nextStatIdsJson = JSON.stringify(selectedStatIds);
-    const currentResourceIdsJson = JSON.stringify(
-      currentPrefs?.selectedResourceIds ?? []
-    );
-    const nextResourceIdsJson = JSON.stringify(selectedResourceIds);
-    if (
-      currentPrefs?.sourceType === statBlockSourceType &&
-      currentPrefs?.style === statBlockStyle &&
-      currentPrefs?.insertMode === statBlockInsertMode &&
-      currentPrefs?.scopePreset === statBlockScopePreset &&
-      (currentPrefs?.selectedGroupId ?? '') === selectedStatGroupId &&
-      currentGroupsJson === nextGroupsJson &&
-      currentStatIdsJson === nextStatIdsJson &&
-      currentResourceIdsJson === nextResourceIdsJson
-    ) {
-      return;
-    }
-    const nextSettings: ProjectSettings = {
-      ...projectSettings,
-      statBlockPreferences: {
-        sourceType: statBlockSourceType,
-        style: statBlockStyle,
-        insertMode: statBlockInsertMode,
-        scopePreset: statBlockScopePreset,
-        selectedGroupId: selectedStatGroupId,
-        selectedStatIds: [...selectedStatIds],
-        selectedResourceIds: [...selectedResourceIds],
-        groups: statBlockGroups
-      },
-      updatedAt: Date.now()
-    };
-    setProjectSettings(nextSettings);
-    void saveProjectSettings(nextSettings);
-  }, [
-    activeProject,
-    projectSettings,
-    statBlockSourceType,
-    statBlockStyle,
-    statBlockInsertMode,
-    statBlockScopePreset,
-    selectedStatGroupId,
-    selectedStatIds,
-    selectedResourceIds,
-    statBlockGroups,
-    isStatPreferencesHydrated
-  ]);
 
   useEffect(() => {
     if (!activeProject) return;
@@ -990,438 +689,6 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
     ragService.setEntityVocabulary(vocabulary);
   }, [activeProject, ragService, entities, characters]);
 
-  const knownConsistencyEntities = useMemo(() => {
-    const entityById = new Map(entities.map((entity) => [entity.id, entity]));
-    return [
-      ...entities.map((entity) => ({
-        id: entity.id,
-        name: entity.name,
-        type: 'entity' as const
-      })),
-      ...characters.map((character) => ({
-        id: character.id,
-        name: character.name,
-        type: 'character' as const
-      })),
-      ...aliases
-        .map((alias) => {
-          const linkedEntity = entityById.get(alias.entityId);
-          if (!linkedEntity) {
-            return null;
-          }
-          return {
-            id: linkedEntity.id,
-            name: alias.alias,
-            type: 'entity' as const
-          };
-        })
-        .filter((entry): entry is {id: string; name: string; type: 'entity'} => Boolean(entry))
-    ];
-  }, [aliases, characters, entities]);
-
-  const resetEditor = () => {
-    setSelectedId(null);
-    setSelectedCreatedAt(null);
-    setTitle('');
-    setContent('');
-    setSaveStatus('idle');
-    setLastSavedAt(null);
-  };
-
-  const persistDoc = useCallback(async (
-    doc: WritingDocument,
-    options?: {
-      source?: 'workspace-save' | 'workspace-autosave' | 'import';
-      consistencyMode?: ImportMode;
-    }
-  ): Promise<{unresolvedCount: number; consistencyRun: boolean}> => {
-    const source = options?.source ?? 'workspace-save';
-    const consistencyMode = options?.consistencyMode ?? 'strict';
-    let unresolvedCount = 0;
-
-    if (consistencyMode !== 'lenient') {
-      const proposal = await consistencyEngine.extractProposal({
-        projectId: doc.projectId,
-        text: htmlToPlainText(doc.content),
-        source,
-        knownEntities: knownConsistencyEntities,
-        actionCues: resolvedActionCues
-      });
-      const validation = await consistencyEngine.validateProposal(proposal);
-      const presentedIssues =
-        consistencyMode === 'strict'
-          ? validation.issues
-          : downgradeUnknownIssuesToWarnings(validation.issues);
-      setGuardrailIssues(presentedIssues);
-      unresolvedCount = validation.issues.filter(
-        (issue) => issue.code === 'UNKNOWN_ENTITY'
-      ).length;
-
-      if (!validation.allowCommit && consistencyMode === 'strict') {
-        const visibleUnknowns = validation.issues
-          .map((issue) => issue.surface)
-          .filter((surface): surface is string => Boolean(surface))
-          .slice(0, 3);
-        const suffix =
-          validation.issues.length > 3
-            ? ` (+${validation.issues.length - 3} more)`
-            : '';
-        const summary = visibleUnknowns.join(', ');
-        throw new Error(
-          `Commit blocked by consistency check: unknown ${validation.issues.length === 1 ? 'entity' : 'entities'} (${summary}${suffix}).`
-        );
-      }
-
-      if (validation.allowCommit) {
-        await consistencyEngine.applyProposal(proposal, validation);
-      }
-    }
-
-    await saveWritingDocument(doc);
-
-    try {
-      if (ragService) {
-        await ragService.indexDocument(
-          doc.id,
-          doc.title || 'Untitled scene',
-          doc.content,
-          'scene'
-        );
-      }
-    } catch (error) {
-      console.warn('RAG indexing failed for scene', doc.id, error);
-    }
-
-    try {
-      if (shodhService) {
-        await shodhService.captureAutoMemory({
-          projectId: doc.projectId,
-          documentId: doc.id,
-          title: doc.title || 'Untitled scene',
-          content: doc.content,
-          tags: ['scene']
-        });
-        await refreshMemories();
-      }
-    } catch (error) {
-      console.warn('Auto-memory capture failed for scene', doc.id, error);
-    }
-
-    setDocuments((prev) => {
-      const index = prev.findIndex((d) => d.id === doc.id);
-      if (index === -1) {
-        return [...prev, doc];
-      }
-      const copy = [...prev];
-      copy[index] = doc;
-      return copy;
-    });
-
-    setSelectedCreatedAt(doc.createdAt);
-    setSaveStatus('saved');
-    setLastSavedAt(Date.now());
-    if (consistencyMode === 'strict') {
-      setGuardrailIssues([]);
-    }
-    lastAutosaveErrorRef.current = null;
-    return {
-      unresolvedCount,
-      consistencyRun: consistencyMode !== 'lenient'
-    };
-  }, [consistencyEngine, knownConsistencyEntities, resolvedActionCues, ragService, shodhService, refreshMemories]);
-
-  const refreshDeferredReview = useCallback(async (doc: WritingDocument) => {
-    const proposal = await consistencyEngine.extractProposal({
-      projectId: doc.projectId,
-      text: htmlToPlainText(doc.content),
-      source: 'workspace-save',
-      knownEntities: knownConsistencyEntities,
-      actionCues: resolvedActionCues
-    });
-    const validation = await consistencyEngine.validateProposal(proposal);
-    setGuardrailIssues(downgradeUnknownIssuesToWarnings(validation.issues));
-  }, [consistencyEngine, knownConsistencyEntities, resolvedActionCues]);
-
-  const resolveDocumentConsistencyMode = useCallback(
-    (doc: WritingDocument): ImportMode =>
-      doc.consistencyReviewMode === 'deferred' ? 'balanced' : 'strict',
-    []
-  );
-
-  const handleNewDocument = async () => {
-    if (!activeProject) return;
-
-    setIsCreatingScene(true);
-    setFeedback(null);
-    try {
-      const now = Date.now();
-      const doc: WritingDocument = {
-        id: crypto.randomUUID(),
-        projectId: activeProject.id,
-        title: 'Untitled scene',
-        content: '<p></p>',
-        createdAt: now,
-        updatedAt: now
-      };
-
-      await saveWritingDocument(doc);
-
-      setDocuments((prev) => [...prev, doc]);
-      setSelectedId(doc.id);
-      setSelectedCreatedAt(doc.createdAt);
-      setTitle(doc.title);
-      setContent(doc.content);
-      setSaveStatus('saved');
-      setLastSavedAt(Date.now());
-      setWordCount(0);
-      setFeedback({tone: 'success', message: 'Created a new scene.'});
-      addSystemHistory({
-        category: 'scene',
-        message: `Created scene "${doc.title}".`,
-        insertText: `System Notice: Scene "${doc.title}" was created.`
-      });
-    } catch (error) {
-      const message =
-        error instanceof Error ? error.message : 'Unable to create scene.';
-      setFeedback({tone: 'error', message});
-    } finally {
-      setIsCreatingScene(false);
-    }
-  };
-
-  const runImportBatch = useCallback(async (files: File[]) => {
-    if (!activeProject || files.length === 0) return;
-    setIsImportingDocuments(true);
-    setFeedback(null);
-    setImportSummary(null);
-    let importedCount = 0;
-    let failedCount = 0;
-    let unresolvedCount = 0;
-    let lastImported: WritingDocument | null = null;
-    const failures: ImportFailureItem[] = [];
-    const failedFiles: File[] = [];
-    const consistencyModeForBatch: ImportMode = skipImportSuggestions
-      ? 'lenient'
-      : importMode;
-
-    try {
-      for (const file of files) {
-        const lower = file.name.toLowerCase();
-        try {
-          if (lower.endsWith('.doc')) {
-            failedCount += 1;
-            failures.push({fileName: file.name, reason: 'legacy-doc'});
-            continue;
-          }
-
-          const raw = lower.endsWith('.docx')
-            ? await parseDocxToText(file)
-            : lower.endsWith('.pages')
-              ? await parsePagesToText(file)
-              : await file.text();
-          const now = Date.now();
-          const doc: WritingDocument = {
-            id: crypto.randomUUID(),
-            projectId: activeProject.id,
-            title: fileNameToTitle(file.name),
-            content: fileToHtml(file.name, raw),
-            consistencyReviewMode:
-              consistencyModeForBatch === 'strict' ? 'default' : 'deferred',
-            createdAt: now,
-            updatedAt: now
-          };
-          const result = await persistDoc(doc, {
-            source: 'import',
-            consistencyMode: consistencyModeForBatch
-          });
-          importedCount += 1;
-          unresolvedCount += result.unresolvedCount;
-          lastImported = doc;
-        } catch (error) {
-          const detail =
-            error instanceof Error ? error.message : 'Unknown import error.';
-          failedCount += 1;
-          failedFiles.push(file);
-          failures.push({
-            fileName: file.name,
-            reason: lower.endsWith('.pages') ? 'apple-pages' : 'parse-failed',
-            detail
-          });
-        }
-      }
-
-      if (lastImported) {
-        setSelectedId(lastImported.id);
-        setSelectedCreatedAt(lastImported.createdAt);
-        setTitle(lastImported.title);
-        setContent(lastImported.content);
-        setWordCount(countWords(lastImported.content));
-      }
-
-      setImportSummary({
-        importedCount,
-        failedCount,
-        unresolvedCount,
-        mode: consistencyModeForBatch,
-        suggestionsSkipped: consistencyModeForBatch === 'lenient',
-        openedTitle: lastImported?.title,
-        failures,
-        createdAt: Date.now()
-      });
-      setRetryImportFiles(failedFiles);
-
-      if (failedCount > 0) {
-        const pageFailureCount = failures.filter(
-          (item) => item.reason === 'apple-pages'
-        ).length;
-        setFeedback({
-          tone: 'error',
-          message:
-            `Imported ${importedCount} document(s); ${failedCount} failed. ` +
-            (pageFailureCount > 0
-              ? 'For Apple Pages files, export as .docx or .txt from Pages, then import.'
-              : failures[0]?.detail ??
-                'Legacy .doc files are not supported yet. Convert to .docx, .txt, or .md.')
-        });
-      } else {
-        setFeedback({
-          tone: 'success',
-          message:
-            consistencyModeForBatch === 'lenient'
-              ? `Imported ${importedCount} document(s). Consistency suggestions skipped for this import.`
-              : `Imported ${importedCount} document(s). Unresolved entities: ${unresolvedCount}.`
-        });
-      }
-    } finally {
-      setIsImportingDocuments(false);
-    }
-  }, [activeProject, importMode, persistDoc, skipImportSuggestions]);
-
-  const handleImportDocuments = async (event: ChangeEvent<HTMLInputElement>) => {
-    const fileList = event.target.files;
-    if (!fileList || fileList.length === 0) return;
-    await runImportBatch(Array.from(fileList));
-    event.target.value = '';
-  };
-
-  const handleRetryFailedImports = async () => {
-    if (retryImportFiles.length === 0) return;
-    await runImportBatch(retryImportFiles);
-  };
-
-  const handleSelectDocument = (doc: WritingDocument) => {
-    setSelectedId(doc.id);
-    setSelectedCreatedAt(doc.createdAt);
-    setTitle(doc.title);
-    setContent(doc.content);
-    setSaveStatus('idle');
-    setWordCount(countWords(doc.content));
-    setConsistencyPopover(null);
-    if (doc.consistencyReviewMode === 'deferred') {
-      void refreshDeferredReview(doc).catch((error) => {
-        console.warn('Deferred review refresh failed', error);
-      });
-    } else {
-      setGuardrailIssues([]);
-    }
-  };
-
-  const handleRunConsistencyReview = useCallback(async () => {
-    if (!activeProject) return;
-    if (documents.length === 0) {
-      setConsistencyReviewItems([]);
-      setLastConsistencyReviewAt(Date.now());
-      setFeedback({tone: 'error', message: 'No scenes available to review.'});
-      addSystemHistory({
-        category: 'consistency',
-        message: 'Consistency review skipped: no scenes available.'
-      });
-      return;
-    }
-
-    setIsRunningConsistencyReview(true);
-    setFeedback(null);
-    try {
-      const items: ConsistencyReviewItem[] = [];
-      for (const doc of documents) {
-        const proposal = await consistencyEngine.extractProposal({
-          projectId: activeProject.id,
-          text: htmlToPlainText(doc.content),
-          source: 'workspace-save',
-          knownEntities: knownConsistencyEntities,
-          actionCues: resolvedActionCues
-        });
-        const validation = await consistencyEngine.validateProposal(proposal);
-        validation.issues.forEach((issue, index) => {
-          items.push({
-            id: `${doc.id}:${issue.code}:${issue.surface ?? 'issue'}:${index}`,
-            sceneId: doc.id,
-            sceneTitle: doc.title || 'Untitled scene',
-            issue
-          });
-        });
-      }
-
-      const contradictionItems = findCanonContradictions({
-        documents,
-        entities,
-        characters,
-        knownEntities: knownConsistencyEntities
-      });
-      const combinedItems = [...items, ...contradictionItems];
-
-      setConsistencyReviewItems(combinedItems);
-      setLastConsistencyReviewAt(Date.now());
-      if (combinedItems.length === 0) {
-        setFeedback({
-          tone: 'success',
-          message: `Consistency review complete: no issues across ${documents.length} scene(s).`
-        });
-        addSystemHistory({
-          category: 'consistency',
-          message: `Consistency review complete with no issues across ${documents.length} scene(s).`
-        });
-      } else {
-        const contradictionCount = contradictionItems.length;
-        const firstSceneId = combinedItems[0]?.sceneId;
-        setFeedback({
-          tone: 'error',
-          message:
-            `Consistency review found ${combinedItems.length} issue(s) across ${documents.length} scene(s).` +
-            (contradictionCount > 0
-              ? ` ${contradictionCount} contradiction${contradictionCount === 1 ? '' : 's'} with canon records.`
-              : '')
-        });
-        addSystemHistory({
-          category: 'consistency',
-          message:
-            `Consistency review found ${combinedItems.length} issue(s) across ${documents.length} scene(s).` +
-            (contradictionCount > 0
-              ? ` ${contradictionCount} contradiction${contradictionCount === 1 ? '' : 's'} with canon records.`
-              : ''),
-          sceneId: firstSceneId
-        });
-      }
-    } catch (error) {
-      const message =
-        error instanceof Error
-          ? error.message
-          : 'Unable to run consistency review.';
-      setFeedback({tone: 'error', message});
-    } finally {
-      setIsRunningConsistencyReview(false);
-    }
-  }, [
-    activeProject,
-    characters,
-    consistencyEngine,
-    documents,
-    entities,
-    knownConsistencyEntities,
-    resolvedActionCues,
-    addSystemHistory
-  ]);
-
   const openWorldRecord = (target: {id: string; type: 'character' | 'entity'}) => {
     if (target.type === 'entity') {
       navigate('/world-bible', {state: {focusEntityId: target.id}});
@@ -1429,418 +696,6 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
     }
     navigate('/characters');
   };
-
-  const openExportModal = (format: ExportFormat) => {
-    const selection = documents.map((doc) => ({
-      id: doc.id,
-      title: doc.title || 'Untitled scene',
-      included: true
-    }));
-    setExportSelection(selection);
-    setExportFormat(format);
-    setExportModalOpen(true);
-  };
-
-  const closeExportModal = () => {
-    setExportModalOpen(false);
-  };
-
-  const closeStatBlockModal = () => {
-    setStatBlockModalOpen(false);
-  };
-
-  useEffect(() => {
-    if (!isStatBlockModalOpen) return;
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        closeStatBlockModal();
-      }
-    };
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
-  }, [isStatBlockModalOpen]);
-
-  const moveExportItem = (id: string, direction: -1 | 1) => {
-    setExportSelection((prev) => {
-      const index = prev.findIndex((item) => item.id === id);
-      if (index < 0) return prev;
-      const nextIndex = index + direction;
-      if (nextIndex < 0 || nextIndex >= prev.length) return prev;
-      const copy = [...prev];
-      const [item] = copy.splice(index, 1);
-      copy.splice(nextIndex, 0, item);
-      return copy;
-    });
-  };
-
-  const toggleExportItem = (id: string) => {
-    setExportSelection((prev) =>
-      prev.map((item) =>
-        item.id === id ? {...item, included: !item.included} : item
-      )
-    );
-  };
-
-  const toggleAllExportItems = (included: boolean) => {
-    setExportSelection((prev) => prev.map((item) => ({...item, included})));
-  };
-
-  const handleExportScenes = () => {
-    if (!activeProject) return;
-
-    const selectedIds = exportSelection
-      .filter((item) => item.included)
-      .map((item) => item.id);
-    const selectedScenes = selectedIds
-      .map((id) => documents.find((doc) => doc.id === id))
-      .filter((doc): doc is WritingDocument => Boolean(doc));
-
-    if (selectedScenes.length === 0) {
-      setFeedback({tone: 'error', message: 'Select at least one scene to export.'});
-      return;
-    }
-
-    if (exportFormat === 'markdown') {
-      exportScenesAsMarkdown({
-        projectName: activeProject.name,
-        scenes: selectedScenes
-      });
-    } else if (exportFormat === 'docx') {
-      exportScenesAsDocx({
-        projectName: activeProject.name,
-        scenes: selectedScenes
-      });
-    } else {
-      exportScenesAsEpub({
-        projectName: activeProject.name,
-        scenes: selectedScenes
-      });
-    }
-
-    setExportModalOpen(false);
-    const exportMessage =
-      exportFormat === 'markdown'
-        ? `Exported ${selectedScenes.length} scene(s) to Markdown.`
-        : exportFormat === 'docx'
-          ? `Exported ${selectedScenes.length} scene(s) to DOCX.`
-          : `Exported ${selectedScenes.length} scene(s) to EPUB.`;
-    setFeedback({
-      tone: 'success',
-      message: exportMessage
-    });
-    addSystemHistory({
-      category: 'system',
-      message: exportMessage,
-      insertText: `System Export: ${exportMessage}`
-    });
-  };
-
-  const handleSave = async () => {
-    if (!activeProject || !selectedId) return;
-    const existingDocument = documents.find((doc) => doc.id === selectedId);
-    const nextTitle = title.trim() || 'Untitled scene';
-    if (
-      existingDocument &&
-      existingDocument.title === nextTitle &&
-      existingDocument.content === content
-    ) {
-      setSaveStatus('saved');
-      setLastSavedAt(Date.now());
-      setFeedback({tone: 'success', message: 'Scene already saved.'});
-      return;
-    }
-
-    const now = Date.now();
-    const createdAt = selectedCreatedAt ?? now;
-
-    const doc: WritingDocument = {
-      id: selectedId,
-      projectId: activeProject.id,
-      title: nextTitle,
-      content,
-      consistencyReviewMode: existingDocument?.consistencyReviewMode ?? 'default',
-      createdAt,
-      updatedAt: now
-    };
-
-    setSaveStatus('saving');
-    setFeedback(null);
-    try {
-      await persistDoc(doc, {
-        source: 'workspace-save',
-        consistencyMode: resolveDocumentConsistencyMode(doc)
-      });
-      setFeedback({tone: 'success', message: 'Scene saved.'});
-    } catch (error) {
-      const message =
-        error instanceof Error ? error.message : 'Unable to save scene.';
-      setSaveStatus('idle');
-      setFeedback({tone: 'error', message});
-    }
-  };
-
-  const handleDelete = async (doc: WritingDocument) => {
-    const confirmed = window.confirm(`Delete "${doc.title || 'Untitled scene'}"?`);
-    if (!confirmed) return;
-
-    setDeletingDocumentId(doc.id);
-    setFeedback(null);
-    try {
-      await deleteWritingDocument(doc.id);
-      await Promise.all([
-        ragService?.deleteDocument(doc.id) ?? Promise.resolve(),
-        shodhService?.deleteMemoriesForDocument(doc.id) ?? Promise.resolve()
-      ]);
-      await refreshMemories();
-      setDocuments((prev) => prev.filter((d) => d.id !== doc.id));
-
-      if (selectedId === doc.id) {
-        resetEditor();
-      }
-      setFeedback({tone: 'success', message: 'Scene deleted.'});
-    } catch (error) {
-      const message =
-        error instanceof Error ? error.message : 'Unable to delete scene.';
-      setFeedback({tone: 'error', message});
-    } finally {
-      setDeletingDocumentId(null);
-    }
-  };
-
-  const handleContentChange = (html: string) => {
-    setContent(html);
-    setSaveStatus('idle');
-    setGuardrailIssues([]);
-    setConsistencyPopover(null);
-    setWordCount(countWords(html));
-  };
-
-  const unknownGuardrailIssues = useMemo(() => {
-    const seen = new Set<string>();
-    return guardrailIssues
-      .filter((issue) => issue.code === 'UNKNOWN_ENTITY' && Boolean(issue.surface))
-      .filter((issue) => {
-        const key = (issue.surface ?? '').trim().toLowerCase();
-        if (!key || seen.has(key)) {
-          return false;
-        }
-        seen.add(key);
-        return true;
-      });
-  }, [guardrailIssues]);
-
-  const hasBlockingUnknownGuardrailIssues = useMemo(
-    () => unknownGuardrailIssues.some((issue) => issue.severity === 'blocking'),
-    [unknownGuardrailIssues]
-  );
-
-  const highlightableUnknownIssues = useMemo(
-    () =>
-      unknownGuardrailIssues.map((issue) => ({
-        id: `${issue.code}:${issue.surface ?? ''}`,
-        surface: issue.surface ?? '',
-        message: issue.message,
-        severity: issue.severity
-      })),
-    [unknownGuardrailIssues]
-  );
-
-  const unknownLinkOptions = useMemo(() => {
-    const optionMap: Record<string, WorldEntity[]> = {};
-    unknownGuardrailIssues.forEach((issue) => {
-      const surface = (issue.surface ?? '').trim();
-      if (!surface) return;
-      const normalizedSurface = surface.toLowerCase();
-      const filtered = entities.filter((entity) => {
-        const normalizedName = entity.name.toLowerCase();
-        if (normalizedName === normalizedSurface) {
-          return true;
-        }
-        return (
-          normalizedName.includes(normalizedSurface) ||
-          normalizedSurface.includes(normalizedName)
-        );
-      });
-      const ranked = [...filtered].sort((a, b) => {
-        const aExact = a.name.toLowerCase() === normalizedSurface ? 0 : 1;
-        const bExact = b.name.toLowerCase() === normalizedSurface ? 0 : 1;
-        if (aExact !== bExact) return aExact - bExact;
-        const aIncludes = a.name.toLowerCase().includes(normalizedSurface) ? 0 : 1;
-        const bIncludes = b.name.toLowerCase().includes(normalizedSurface) ? 0 : 1;
-        if (aIncludes !== bIncludes) return aIncludes - bIncludes;
-        return a.name.localeCompare(b.name);
-      });
-      optionMap[surface] = ranked.slice(0, 20);
-    });
-    return optionMap;
-  }, [unknownGuardrailIssues, entities]);
-
-  const resolveUnknownEntity = useCallback(async (surface: string) => {
-    if (!activeProject) return;
-
-    const normalized = surface.trim();
-    if (!normalized) return;
-
-    setResolvingUnknown(surface);
-    setFeedback(null);
-    try {
-      let availableCategories = categories;
-      if (availableCategories.length === 0) {
-        await initializeDefaultCategories(activeProject.id);
-        availableCategories = await getCategoriesByProject(activeProject.id);
-        setCategories(availableCategories);
-      }
-
-      const preferredCategory =
-        availableCategories.find((category) =>
-          ['items', 'characters', 'locations'].includes(category.slug)
-        ) ?? availableCategories[0];
-
-      if (!preferredCategory) {
-        throw new Error('No categories available for entity creation.');
-      }
-
-      const now = Date.now();
-      const entity: WorldEntity = {
-        id: crypto.randomUUID(),
-        projectId: activeProject.id,
-        categoryId: preferredCategory.id,
-        name: normalized,
-        fields: {},
-        links: [],
-        createdAt: now,
-        updatedAt: now
-      };
-      await saveEntity(entity);
-      setEntities((prev) => [...prev, entity]);
-      setGuardrailIssues((prev) =>
-        prev.filter(
-          (issue) => issue.surface?.trim().toLowerCase() !== normalized.toLowerCase()
-        )
-      );
-      setUnknownLinkSelection((prev) => {
-        const copy = {...prev};
-        delete copy[surface];
-        return copy;
-      });
-      setConsistencyPopover((prev) =>
-        prev?.surface.trim().toLowerCase() === normalized.toLowerCase() ? null : prev
-      );
-      setFeedback({
-        tone: 'success',
-        message: `Entity "${normalized}" created in ${preferredCategory.name}. Save again to validate.`
-      });
-      setResolverNotice({
-        message: `Entity "${normalized}" created.`
-      });
-    } catch (error) {
-      const message =
-        error instanceof Error ? error.message : 'Unable to create entity.';
-      setFeedback({tone: 'error', message});
-    } finally {
-      setResolvingUnknown(null);
-    }
-  }, [activeProject, categories]);
-
-  const resolveAllUnknownEntities = useCallback(async () => {
-    const surfaces = unknownGuardrailIssues
-      .map((issue) => issue.surface?.trim())
-      .filter((surface): surface is string => Boolean(surface));
-    if (surfaces.length === 0) return;
-
-    for (const surface of surfaces) {
-      await resolveUnknownEntity(surface);
-    }
-  }, [unknownGuardrailIssues, resolveUnknownEntity]);
-
-  const dismissAllUnknownEntities = useCallback(() => {
-    const blocked = new Set(
-      unknownGuardrailIssues
-        .map((issue) => issue.surface?.trim().toLowerCase())
-        .filter((surface): surface is string => Boolean(surface))
-    );
-    setGuardrailIssues((prev) =>
-      prev.filter((issue) => {
-        const surface = issue.surface?.trim().toLowerCase();
-        return !surface || !blocked.has(surface);
-      })
-    );
-    setFeedback({
-      tone: 'success',
-      message: 'Unknown entity warnings dismissed for now.'
-    });
-  }, [unknownGuardrailIssues]);
-
-  const dismissUnknownEntity = useCallback((surface: string) => {
-    const normalized = surface.trim().toLowerCase();
-    if (!normalized) return;
-    setGuardrailIssues((prev) =>
-      prev.filter((issue) => issue.surface?.trim().toLowerCase() !== normalized)
-    );
-    setConsistencyPopover((prev) =>
-      prev?.surface.trim().toLowerCase() === normalized ? null : prev
-    );
-  }, []);
-
-  const linkUnknownEntity = useCallback(
-    async (surface: string, explicitEntityId?: string) => {
-      if (!activeProject) return;
-      const selectedEntityId = explicitEntityId ?? unknownLinkSelection[surface];
-      if (!selectedEntityId) {
-        setFeedback({
-          tone: 'error',
-          message: `Select an entity before linking "${surface}".`
-        });
-        return;
-      }
-
-      setLinkingUnknown(surface);
-      setFeedback(null);
-      try {
-        const saved = await saveAlias({
-          projectId: activeProject.id,
-          entityId: selectedEntityId,
-          alias: surface
-        });
-        setAliases((prev) => {
-          const existingIndex = prev.findIndex((entry) => entry.id === saved.id);
-          if (existingIndex >= 0) {
-            const copy = [...prev];
-            copy[existingIndex] = saved;
-            return copy;
-          }
-          return [...prev, saved];
-        });
-        setGuardrailIssues((prev) =>
-          prev.filter(
-            (issue) => issue.surface?.trim().toLowerCase() !== surface.trim().toLowerCase()
-          )
-        );
-        setUnknownLinkSelection((prev) => {
-          const copy = {...prev};
-          delete copy[surface];
-          return copy;
-        });
-        setConsistencyPopover((prev) =>
-          prev?.surface.trim().toLowerCase() === surface.trim().toLowerCase() ? null : prev
-        );
-        setFeedback({
-          tone: 'success',
-          message: `Linked alias "${surface}" to existing entity. Save again to validate.`
-        });
-        setResolverNotice({
-          message: `Alias "${surface}" linked to existing entity.`
-        });
-      } catch (error) {
-        const message =
-          error instanceof Error ? error.message : 'Unable to link alias.';
-        setFeedback({tone: 'error', message});
-      } finally {
-        setLinkingUnknown(null);
-      }
-    },
-    [activeProject, unknownLinkSelection]
-  );
 
   const activePartySynergies = useMemo(
     () =>
@@ -1859,6 +714,74 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
       }),
     [settlementState, settlementModules, activePartySynergies]
   );
+  const {
+    statDefinitionNameById,
+    resourceDefinitionNameById,
+    selectedSheet,
+    activeProjectMode,
+    canInsertStatBlock,
+    selectedStatGroup,
+    activeSelectedStatSet,
+    activeSelectedResourceSet,
+    statBlockScopeValue,
+    resolveCharacterBlock,
+    resolveItemBlock,
+    getStatBlockTokenPresentation,
+    getStatBlockPreviewData,
+    handleRefreshStatTemplates,
+    handleInsertStatBlock,
+    openStatBlockRebind,
+    handleToggleStatSelection,
+    handleToggleResourceSelection,
+    handleSaveStatGroup,
+    handleDeleteStatGroup,
+    closeStatBlockModal
+  } = useWorkspaceStatBlocks({
+    activeProject,
+    projectSettings,
+    setProjectSettings,
+    isStatPreferencesHydrated,
+    statBlockSourceType,
+    setStatBlockSourceType,
+    statBlockStyle,
+    setStatBlockStyle,
+    statBlockInsertMode,
+    setStatBlockInsertMode,
+    statBlockScopePreset,
+    setStatBlockScopePreset,
+    selectedStatGroupId,
+    setSelectedStatGroupId,
+    selectedStatIds,
+    setSelectedStatIds,
+    selectedResourceIds,
+    setSelectedResourceIds,
+    statBlockGroups,
+    setStatBlockGroups,
+    newStatGroupName,
+    setNewStatGroupName,
+    selectedStatCharacterId,
+    setSelectedStatCharacterId,
+    selectedStatEntityId,
+    setSelectedStatEntityId,
+    statBlockInsertContent,
+    setStatBlockInsertContent,
+    isStatBlockModalOpen,
+    setStatBlockModalOpen,
+    pendingStatBlockRebindToken,
+    setPendingStatBlockRebindToken,
+    characterSheets,
+    entities,
+    ruleset,
+    runtimeModifiers,
+    content,
+    setContent,
+    setSaveStatus,
+    setWordCount,
+    setFeedback,
+    addSystemHistory,
+    getEffectiveStatValue,
+    getEffectiveResourceValues
+  });
 
   useEffect(() => {
     if (!activeProject) return;
@@ -1882,198 +805,8 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
     });
     refreshSystemHistory();
   }, [activeProject, activePartySynergies, refreshSystemHistory]);
-  const statDefinitionNameById = useMemo(() => {
-    const map = new Map<string, string>();
-    ruleset?.statDefinitions.forEach((def) => {
-      map.set(def.id, def.name);
-    });
-    return map;
-  }, [ruleset]);
-  const resourceDefinitionNameById = useMemo(() => {
-    const map = new Map<string, string>();
-    ruleset?.resourceDefinitions.forEach((def) => {
-      map.set(def.id, def.name);
-    });
-    return map;
-  }, [ruleset]);
-  const selectedSheet =
-    characterSheets.find((sheet) => sheet.id === selectedStatCharacterId) ?? null;
-  const selectedEntity =
-    entities.find((entity) => entity.id === selectedStatEntityId) ?? null;
-  const activeProjectMode = projectSettings?.projectMode ?? 'litrpg';
   const showGameSystems =
     projectSettings?.featureToggles.enableGameSystems !== false;
-  const availableStatIds = useMemo(
-    () => (selectedSheet ? selectedSheet.stats.map((stat) => stat.definitionId) : []),
-    [selectedSheet]
-  );
-  const availableResourceIds = useMemo(
-    () =>
-      selectedSheet
-        ? selectedSheet.resources.map((resource) => resource.definitionId)
-        : [],
-    [selectedSheet]
-  );
-  const availableStatIdSet = useMemo(
-    () => new Set(availableStatIds),
-    [availableStatIds]
-  );
-  const availableResourceIdSet = useMemo(
-    () => new Set(availableResourceIds),
-    [availableResourceIds]
-  );
-
-  useEffect(() => {
-    setSelectedStatIds((prev) => prev.filter((id) => availableStatIdSet.has(id)));
-  }, [availableStatIdSet]);
-
-  useEffect(() => {
-    setSelectedResourceIds((prev) =>
-      prev.filter((id) => availableResourceIdSet.has(id))
-    );
-  }, [availableResourceIdSet]);
-
-  const selectedStatGroup = useMemo(
-    () => statBlockGroups.find((group) => group.id === selectedStatGroupId) ?? null,
-    [statBlockGroups, selectedStatGroupId]
-  );
-
-  const resolveCharacterSelection = useCallback(() => {
-    if (statBlockScopePreset === 'all') {
-      return {
-        selectedStatIds: undefined,
-        selectedResourceIds: undefined
-      };
-    }
-    if (statBlockScopePreset === 'stats') {
-      return {
-        selectedStatIds: availableStatIds,
-        selectedResourceIds: []
-      };
-    }
-    if (statBlockScopePreset === 'resources') {
-      return {
-        selectedStatIds: [],
-        selectedResourceIds: availableResourceIds
-      };
-    }
-    if (selectedStatGroup) {
-      return {
-        selectedStatIds: selectedStatGroup.statIds.filter((id) =>
-          availableStatIdSet.has(id)
-        ),
-        selectedResourceIds: selectedStatGroup.resourceIds.filter((id) =>
-          availableResourceIdSet.has(id)
-        )
-      };
-    }
-    return {
-      selectedStatIds: selectedStatIds.filter((id) => availableStatIdSet.has(id)),
-      selectedResourceIds: selectedResourceIds.filter((id) =>
-        availableResourceIdSet.has(id)
-      )
-    };
-  }, [
-    statBlockScopePreset,
-    availableStatIds,
-    availableResourceIds,
-    selectedStatGroup,
-    selectedStatIds,
-    selectedResourceIds,
-    availableStatIdSet,
-    availableResourceIdSet
-  ]);
-
-  const resolveCharacterBlock = useCallback(
-    (
-      sheet: CharacterSheet,
-      style: StatBlockStyle,
-      selection?: {selectedStatIds?: string[]; selectedResourceIds?: string[]}
-    ): string => {
-      const selectedStatSet = selection?.selectedStatIds
-        ? new Set(selection.selectedStatIds)
-        : null;
-      const selectedResourceSet = selection?.selectedResourceIds
-        ? new Set(selection.selectedResourceIds)
-        : null;
-      const effectiveLevel = Math.max(1, sheet.level + runtimeModifiers.levelBonus);
-      return buildCharacterStatBlockHtml(
-        {
-          name: sheet.name,
-          level: sheet.level,
-          effectiveLevel,
-          experience: sheet.experience,
-          stats: sheet.stats
-            .filter((stat) =>
-              selectedStatSet ? selectedStatSet.has(stat.definitionId) : true
-            )
-            .map((stat) => {
-              const effective = getEffectiveStatValue({
-                definitionId: stat.definitionId,
-                baseValue: stat.value,
-                runtime: runtimeModifiers
-              });
-              const modifierNotes = (stat.modifiers ?? [])
-                .map((modifier) =>
-                  modifier.type === 'multiplier'
-                    ? `${modifier.source} x${modifier.value}`
-                    : `${modifier.source} ${modifier.value >= 0 ? '+' : ''}${modifier.value}`
-                )
-                .join(', ');
-              return {
-                name: statDefinitionNameById.get(stat.definitionId) ?? stat.definitionId,
-                baseValue: stat.value,
-                effectiveValue: effective,
-                modifierNotes
-              };
-            }),
-          resources: sheet.resources
-            .filter((resource) =>
-              selectedResourceSet ? selectedResourceSet.has(resource.definitionId) : true
-            )
-            .map((resource) => {
-              const effective = getEffectiveResourceValues({
-                definitionId: resource.definitionId,
-                current: resource.current,
-                max: resource.max,
-                runtime: runtimeModifiers
-              });
-              return {
-                name:
-                  resourceDefinitionNameById.get(resource.definitionId) ??
-                  resource.definitionId,
-                current: resource.current,
-                max: resource.max,
-                effectiveCurrent: effective.current,
-                effectiveMax: effective.max
-              };
-            }),
-          activeNotes: runtimeModifiers.notes
-        },
-        style
-      );
-    },
-    [runtimeModifiers, statDefinitionNameById, resourceDefinitionNameById]
-  );
-
-  const resolveItemBlock = useCallback(
-    (entity: WorldEntity, style: StatBlockStyle): string => {
-      return buildItemStatBlockHtml(
-        {
-          name: entity.name,
-          fields: Object.entries(entity.fields)
-            .map(([key, value]) => ({
-              key,
-              value: formatEntityFieldValue(value)
-            }))
-            .filter((entry) => Boolean(entry.value))
-        },
-        style
-      );
-    },
-    []
-  );
-
   const selectionQuickSnippets = useMemo(() => {
     if (!activeProject) {
       return {characters: {}, entities: {}};
@@ -2260,285 +993,39 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
     resolveItemBlock,
     systemHistoryEntries
   ]);
-
-  const resolveTemplateToBlock = useCallback(
-    (
-      sourceType: StatBlockSourceType,
-      sourceRef: string,
-      style: StatBlockStyle,
-      selection?: {selectedStatIds?: string[]; selectedResourceIds?: string[]}
-    ): string | null => {
-      if (sourceType === 'character') {
-        const normalizedRef = sourceRef.trim().toLowerCase();
-        const sheet =
-          characterSheets.find((candidate) => candidate.id === sourceRef) ??
-          characterSheets.find(
-            (candidate) => candidate.name.trim().toLowerCase() === normalizedRef
-          );
-        return sheet ? resolveCharacterBlock(sheet, style, selection) : null;
+  const toolbarActions = useMemo(
+    () => [
+      {
+        id: 'insert-status-block',
+        label: 'Insert Status Block',
+        onClick: () => setStatBlockModalOpen(true)
+      },
+      {
+        id: 'refresh-placeholders',
+        label: 'Refresh Placeholders',
+        onClick: handleRefreshStatTemplates
       }
-      const normalizedRef = sourceRef.trim().toLowerCase();
-      const entity =
-        entities.find((candidate) => candidate.id === sourceRef) ??
-        entities.find(
-          (candidate) => candidate.name.trim().toLowerCase() === normalizedRef
-        );
-      return entity ? resolveItemBlock(entity, style) : null;
-    },
-    [characterSheets, entities, resolveCharacterBlock, resolveItemBlock]
+    ],
+    [handleRefreshStatTemplates]
   );
 
-  const handleRefreshStatTemplates = () => {
-    const result = replaceStatBlockTokensInHtml(content, (token) =>
-      resolveTemplateToBlock(token.sourceType, token.sourceRef, token.style, {
-        selectedStatIds: token.selectedStatIds,
-        selectedResourceIds: token.selectedResourceIds
-      })
-    );
-    if (result.replacedCount === 0) {
-      setFeedback({
-        tone: 'error',
-        message: 'No matching STAT_BLOCK templates found to refresh.'
-      });
-      return;
+  useEffect(() => {
+    const state = location.state as {focusDocumentId?: string} | null;
+    const focusDocumentId = state?.focusDocumentId;
+    if (!focusDocumentId) return;
+    const target = documents.find((doc) => doc.id === focusDocumentId);
+    if (!target) return;
+    if (selectedId !== target.id) {
+      handleSelectDocument(target);
     }
-    setContent(result.html);
-    setSaveStatus('idle');
-    setWordCount(countWords(result.html));
-    setFeedback({
-      tone: 'success',
-      message: `Refreshed ${result.replacedCount} stat block template(s).`
-    });
-    addSystemHistory({
-      category: 'system',
-      message: `Refreshed ${result.replacedCount} stat block template(s).`,
-      insertText: `System Update: Refreshed ${result.replacedCount} stat templates in scene text.`
-    });
-  };
-
-  const handleInsertStatBlock = () => {
-    const characterSelection = resolveCharacterSelection();
-    const hasCharacterSelection =
-      statBlockScopePreset === 'all' ||
-      ((characterSelection.selectedStatIds?.length ?? 0) > 0 ||
-        (characterSelection.selectedResourceIds?.length ?? 0) > 0);
-    if (statBlockSourceType === 'character' && !hasCharacterSelection) {
-      setFeedback({
-        tone: 'error',
-        message: 'Select at least one stat or resource for this status block.'
-      });
-      return;
-    }
-
-    const token =
-      statBlockSourceType === 'character'
-        ? selectedSheet
-          ? createStatBlockToken({
-              sourceType: 'character',
-              sourceRef: selectedSheet.name.trim() || selectedSheet.id,
-              style: statBlockStyle,
-              selectedStatIds: characterSelection.selectedStatIds,
-              selectedResourceIds: characterSelection.selectedResourceIds
-            })
-          : null
-        : selectedEntity
-          ? createStatBlockToken({
-              sourceType: 'item',
-              sourceRef: selectedEntity.name.trim() || selectedEntity.id,
-              style: statBlockStyle
-            })
-          : null;
-    const html =
-      statBlockSourceType === 'character'
-        ? selectedSheet
-          ? resolveCharacterBlock(selectedSheet, statBlockStyle, characterSelection)
-          : null
-        : selectedEntity
-          ? resolveItemBlock(selectedEntity, statBlockStyle)
-          : null;
-
-    if (!html || !token) {
-      setFeedback({
-        tone: 'error',
-        message:
-          statBlockSourceType === 'character'
-            ? 'Select a character sheet to insert.'
-            : 'Select an item/entity to insert.'
-      });
-      return;
-    }
-
-    const shouldInsertAsTemplate =
-      statBlockInsertMode === 'template' && activeProjectMode !== 'litrpg';
-    setStatBlockInsertContent(
-      shouldInsertAsTemplate ? `<p>${token}</p>` : html
-    );
-    setStatBlockModalOpen(false);
-    setFeedback({
-      tone: 'success',
-      message:
-        shouldInsertAsTemplate
-          ? 'Inserted STAT_BLOCK template token.'
-          : statBlockInsertMode === 'template' && activeProjectMode === 'litrpg'
-            ? 'Inserted live status block (LitRPG mode auto-resolves placeholders).'
-            : 'Inserted status block into scene.'
-    });
-
-    if (statBlockSourceType === 'character' && selectedSheet) {
-      const resourcePreview = selectedSheet.resources
-        .slice(0, 2)
-        .map((resource) => `${resource.definitionId}: ${resource.current}/${resource.max}`)
-        .join(', ');
-      const message =
-        `Status block inserted for ${selectedSheet.name} (Lv ${selectedSheet.level}, ${selectedSheet.experience} XP)` +
-        (resourcePreview ? ` · ${resourcePreview}` : '.');
-      addSystemHistory({
-        category: 'resource',
-        message,
-        insertText: `System Status: ${message}`
-      });
-    } else if (statBlockSourceType === 'item' && selectedEntity) {
-      addSystemHistory({
-        category: 'system',
-        message: `Status block inserted for entity "${selectedEntity.name}".`,
-        insertText: `System Status: Entity "${selectedEntity.name}" record inserted into scene.`
-      });
-    }
-  };
-
-  const handleToggleStatSelection = (statId: string) => {
-    setSelectedStatIds((prev) =>
-      prev.includes(statId) ? prev.filter((id) => id !== statId) : [...prev, statId]
-    );
-    setStatBlockScopePreset('custom');
-    setSelectedStatGroupId('');
-  };
-
-  const handleToggleResourceSelection = (resourceId: string) => {
-    setSelectedResourceIds((prev) =>
-      prev.includes(resourceId)
-        ? prev.filter((id) => id !== resourceId)
-        : [...prev, resourceId]
-    );
-    setStatBlockScopePreset('custom');
-    setSelectedStatGroupId('');
-  };
-
-  const handleSaveStatGroup = () => {
-    const name = newStatGroupName.trim();
-    const selection = resolveCharacterSelection();
-    const statIds = selection.selectedStatIds ?? [];
-    const resourceIds = selection.selectedResourceIds ?? [];
-    if (!name) {
-      setFeedback({tone: 'error', message: 'Enter a group name first.'});
-      return;
-    }
-    if (statIds.length === 0 && resourceIds.length === 0) {
-      setFeedback({
-        tone: 'error',
-        message: 'Choose at least one stat/resource before saving a group.'
-      });
-      return;
-    }
-    const existing = statBlockGroups.find(
-      (group) => group.name.trim().toLowerCase() === name.toLowerCase()
-    );
-    const nextGroup: StatBlockGroup = {
-      id: existing?.id ?? crypto.randomUUID(),
-      name,
-      statIds,
-      resourceIds
-    };
-    setStatBlockGroups((prev) => {
-      if (existing) {
-        return prev.map((group) => (group.id === existing.id ? nextGroup : group));
-      }
-      return [...prev, nextGroup];
-    });
-    setSelectedStatGroupId(nextGroup.id);
-    setStatBlockScopePreset('custom');
-    setNewStatGroupName('');
-    setFeedback({
-      tone: 'success',
-      message: existing
-        ? `Updated stat group "${name}".`
-        : `Saved stat group "${name}".`
-    });
-  };
-
-  const handleDeleteStatGroup = (groupId: string) => {
-    const group = statBlockGroups.find((entry) => entry.id === groupId);
-    setStatBlockGroups((prev) => prev.filter((entry) => entry.id !== groupId));
-    if (selectedStatGroupId === groupId) {
-      setSelectedStatGroupId('');
-      setStatBlockScopePreset('all');
-    }
-    if (group) {
-      setFeedback({tone: 'success', message: `Deleted stat group "${group.name}".`});
-    }
-  };
-
-  const activeCharacterSelection = resolveCharacterSelection();
-  const activeSelectedStatSet = new Set(activeCharacterSelection.selectedStatIds ?? []);
-  const activeSelectedResourceSet = new Set(
-    activeCharacterSelection.selectedResourceIds ?? []
-  );
-  const statBlockScopeValue = selectedStatGroup
-    ? `group:${selectedStatGroup.id}`
-    : statBlockScopePreset;
-
-  const selectedDocument = selectedId
-    ? documents.find((doc) => doc.id === selectedId)
-    : null;
-  const activeConsistencyPopoverIssue = consistencyPopover
-    ? highlightableUnknownIssues.find((issue) => issue.id === consistencyPopover.issueId) ?? null
-    : null;
-  const selectedDocumentMemories = selectedId
-    ? memories.filter((memory) => memory.documentId === selectedId)
-    : [];
-  const memoryCandidates =
-    memoryScope === 'document' ? selectedDocumentMemories : memories;
-  const scopeLabel =
-    memoryScope === 'document' ? 'this scene' : 'the project';
-  const emptyMemoryMessage =
-    memoryScope === 'document'
-      ? 'No memories captured for this scene yet.'
-      : 'Project memories will appear here as you capture them.';
-
-  const openMemoryModal = () => {
-    if (!selectedDocument) return;
-    setMemoryDraft(summarizeContent(selectedDocument.content));
-    setMemoryModalOpen(true);
-  };
-
-  const updateSelectedDocumentConsistencyReviewMode = useCallback(
-    async (mode: 'default' | 'deferred') => {
-      if (!selectedDocument) return;
-      const nextDocument: WritingDocument = {
-        ...selectedDocument,
-        consistencyReviewMode: mode,
-        updatedAt: Date.now()
-      };
-      await saveWritingDocument(nextDocument);
-      setDocuments((prev) =>
-        prev.map((doc) => (doc.id === nextDocument.id ? nextDocument : doc))
-      );
-      setFeedback({
-        tone: 'success',
-        message:
-          mode === 'deferred'
-            ? 'Scene set to review later. Saves will warn instead of block.'
-            : 'Scene set to strict consistency review.'
-      });
-    },
-    [selectedDocument]
-  );
+    navigate(location.pathname, {replace: true, state: {}});
+  }, [documents, handleSelectDocument, location.pathname, location.state, navigate, selectedId]);
 
   useEffect(() => {
     if (!showGameSystems && activeContextView === 'compendium') {
       setActiveContextView('world-bible');
     }
-  }, [showGameSystems, activeContextView]);
+  }, [showGameSystems, activeContextView, setActiveContextView]);
 
   useEffect(() => {
     const mediaQuery = window.matchMedia('(max-width: 1200px)');
@@ -2552,7 +1039,7 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
     if (!isNarrowViewport) return;
     setSceneDrawerOpen(false);
     setContextDrawerOpen(false);
-  }, [isNarrowViewport]);
+  }, [isNarrowViewport, setContextDrawerOpen, setSceneDrawerOpen]);
 
   useEffect(() => {
     if (!isNarrowViewport || (!isContextDrawerOpen && !isSceneDrawerOpen)) return;
@@ -2569,7 +1056,13 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [isNarrowViewport, isContextDrawerOpen, isSceneDrawerOpen]);
+  }, [
+    isNarrowViewport,
+    isContextDrawerOpen,
+    isSceneDrawerOpen,
+    setContextDrawerOpen,
+    setSceneDrawerOpen
+  ]);
 
   useEffect(() => {
     const onWorkspaceCommand = (event: Event) => {
@@ -2608,18 +1101,22 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
           void handleRunConsistencyReview();
           break;
         case 'export-markdown':
-          openExportModal('markdown');
+          openExportModalWithDrawerHandling('markdown');
           break;
         case 'export-docx':
-          openExportModal('docx');
+          openExportModalWithDrawerHandling('docx');
           break;
         case 'export-epub':
-          openExportModal('epub');
+          openExportModalWithDrawerHandling('epub');
           break;
         case 'extract-memory':
           openMemoryModal();
           break;
         case 'toggle-ai-panel':
+          openContextDrawer('ai');
+          break;
+        case 'toggle-system-history-panel':
+          openContextDrawer('system');
           break;
         default:
           break;
@@ -2636,68 +1133,104 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
     handleRunConsistencyReview,
     handleSave,
     openMemoryModal,
-    openExportModal,
+    openExportModalWithDrawerHandling,
     showGameSystems,
+    openContextDrawer,
     toggleContextDrawer,
     toggleSceneDrawer
   ]);
 
-  const handleMemorySave = async () => {
-    if (!selectedDocument || !shodhService || !memoryDraft.trim()) {
-      setMemoryModalOpen(false);
-      return;
-    }
-
-    setIsSavingMemory(true);
-    setFeedback(null);
-    try {
-      await shodhService.addMemory({
-        projectId: selectedDocument.projectId,
-        documentId: selectedDocument.id,
-        title: selectedDocument.title || 'Untitled scene',
-        summary: memoryDraft.trim(),
-        tags: ['scene', 'manual']
-      });
-
-      await refreshMemories();
-      setMemoryModalOpen(false);
-      setFeedback({tone: 'success', message: 'Memory saved.'});
-    } catch (error) {
-      const message =
-        error instanceof Error ? error.message : 'Unable to save memory.';
-      setFeedback({tone: 'error', message});
-    } finally {
-      setIsSavingMemory(false);
-    }
-  };
-
-  const handleDeleteMemory = useCallback(
-    async (memoryId: string) => {
-      if (!shodhService) return;
-      await shodhService.deleteMemory(memoryId);
-      await refreshMemories();
+  const handleOpenAIContext = useCallback(
+    (context: WorkspaceAIContext, prompt?: string | null) => {
+      setActiveAIContext(context);
+      if (prompt !== undefined) {
+        setQueuedAssistantPrompt(prompt);
+      }
+      openContextDrawer('ai');
     },
-    [shodhService, refreshMemories]
+    [openContextDrawer]
   );
 
-  const handlePromoteMemory = useCallback(
-    async (memory: MemoryEntry) => {
-      if (!seriesBibleConfig?.parentProjectId) return;
-      setIsPromotingMemoryId(memory.id);
-      setFeedback(null);
-      try {
-        await promoteMemoryToParent(memory, seriesBibleConfig.parentProjectId);
-        await refreshMemories();
-        setFeedback({tone: 'success', message: 'Memory promoted to parent canon.'});
-      } catch (error) {
-        const message =
-          error instanceof Error ? error.message : 'Unable to promote memory.';
-        setFeedback({tone: 'error', message});
-      } finally {
-        setIsPromotingMemoryId(null);
-      }
+  const handleOpenLoreInspector = useCallback(
+    (record: LoreInspectorRecord) => {
+      setActiveLoreRecord(record);
+      openContextDrawer('lore');
     },
-    [seriesBibleConfig?.parentProjectId, refreshMemories]
+    [openContextDrawer]
+  );
+
+  const handleConsultationFromLore = useCallback(
+    (
+      mode:
+        | 'consistency'
+        | 'reaction'
+        | 'outcome'
+        | 'worldbuilding'
+        | 'plotting'
+    ) => {
+      if (!activeProject || !activeLoreRecord) return;
+      const inspector = projectSettings?.aiSettings?.inspectorSettings;
+      if (inspector?.enableAIConsultation === false) {
+        return;
+      }
+      const maxConsultations = inspector?.maxConsultationsPerDay ?? 20;
+      const used = getInspectorConsultationUsage(activeProject.id);
+      if (used >= maxConsultations) {
+        return;
+      }
+
+      const nextUsed = incrementInspectorConsultationUsage(activeProject.id);
+      setAIBudgetUsed(nextUsed);
+
+      const maxContextChars = inspector?.maxContextChars ?? 1800;
+      const compactContext = summarizeContent(content).slice(0, maxContextChars);
+      const header =
+        mode === 'consistency'
+          ? 'Check consistency for this subject against the current scene context.'
+          : mode === 'reaction'
+            ? 'Suggest an in-character reaction aligned with this subject profile.'
+            : mode === 'outcome'
+              ? 'Calculate a plausible outcome grounded in current stats/resources.'
+              : mode === 'worldbuilding'
+                ? 'Expand the surrounding worldbuilding around this subject without inventing canon-breaking facts.'
+                : 'Generate plot hooks and scene pressure that naturally involve this subject.';
+      const outputGuide =
+        mode === 'worldbuilding'
+          ? 'Return 3 grounded expansions with headings: Social/Cultural, Environmental/Material, and Tension/Complication. Keep each brief and explicitly tie it to existing context.'
+          : mode === 'plotting'
+            ? 'Return 4 plot hooks. For each hook include: Hook, Why it matters now, Risk/complication, and Best-fit scene type. Do not write the scene itself.'
+            : mode === 'consistency'
+              ? 'Return a concise review with confirmed facts, possible conflicts, and one safe next-step suggestion.'
+              : mode === 'reaction'
+                ? 'Return 3 plausible reactions ranked from most likely to least likely, with a short reason for each.'
+                : 'Return one likely outcome, 2 alternate outcomes, and the key stat/resource pressures driving them.';
+      const prompt =
+        `${header}\n\n` +
+        `Subject: ${activeLoreRecord.name} (${activeLoreRecord.type})\n` +
+        `Vital Signs: ${activeLoreRecord.vitalSigns.join(' | ')}\n` +
+        `Goal: ${activeLoreRecord.synopsis.goal}\n` +
+        `Recent Event: ${activeLoreRecord.synopsis.recentEvent}\n` +
+        `Motivation: ${activeLoreRecord.synopsis.motivation}\n` +
+        `Scene Context: ${compactContext}\n\n` +
+        `Constraints:\n` +
+        `- Treat established details as canon unless explicitly marked uncertain.\n` +
+        `- Prefer extensions, implications, and tensions over replacement.\n` +
+        `- Do not write finished prose for the novel unless the request explicitly asks for insertable text.\n` +
+        `- Flag any assumption that is not directly grounded in the provided context.\n\n` +
+        `Output format:\n${outputGuide}`;
+
+      handleOpenAIContext(
+        {
+          type: 'document',
+          id: selectedId || activeProject.id,
+          selectedText: compactContext,
+          from: 0,
+          to: 0
+        },
+        prompt
+      );
+    },
+    [activeLoreRecord, activeProject, content, handleOpenAIContext, projectSettings?.aiSettings?.inspectorSettings, selectedId]
   );
 
   const handlePromoteDocument = useCallback(async () => {
@@ -2754,61 +1287,6 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
     }
   }, [activeProject, addSystemHistory]);
 
-  useEffect(() => {
-    if (!activeProject || !selectedId) return;
-    const existingDocument = documents.find((doc) => doc.id === selectedId);
-    const nextTitle = title.trim() || 'Untitled scene';
-    if (
-      existingDocument &&
-      existingDocument.title === nextTitle &&
-      existingDocument.content === content
-    ) {
-      return;
-    }
-
-    const now = Date.now();
-    const createdAt = selectedCreatedAt ?? now;
-
-    const doc: WritingDocument = {
-      id: selectedId,
-      projectId: activeProject.id,
-      title: nextTitle,
-      content,
-      consistencyReviewMode: existingDocument?.consistencyReviewMode ?? 'default',
-      createdAt,
-      updatedAt: now
-    };
-
-    const timeoutId = window.setTimeout(() => {
-      setSaveStatus('saving');
-      void persistDoc(doc, {
-        source: 'workspace-autosave',
-        consistencyMode: resolveDocumentConsistencyMode(doc)
-      }).catch((error) => {
-        const message =
-          error instanceof Error ? error.message : 'Unable to save scene.';
-        setSaveStatus('idle');
-        if (lastAutosaveErrorRef.current !== message) {
-          lastAutosaveErrorRef.current = message;
-          setFeedback({tone: 'error', message});
-        }
-      });
-    }, 800);
-
-    return () => {
-      clearTimeout(timeoutId);
-    };
-  }, [
-    title,
-    content,
-    selectedId,
-    activeProject,
-    selectedCreatedAt,
-    persistDoc,
-    documents,
-    resolveDocumentConsistencyMode
-  ]);
-
   if (!activeProject) {
     return (
       <section>
@@ -2838,7 +1316,11 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
     {id: 'world-bible', label: 'World Bible'},
     {id: 'ruleset', label: 'Ruleset'},
     {id: 'characters', label: 'Characters'},
-    {id: 'compendium', label: 'Compendium', hidden: !showGameSystems}
+    {id: 'compendium', label: 'Compendium', hidden: !showGameSystems},
+    {id: 'review', label: 'Review'},
+    {id: 'ai', label: 'AI'},
+    {id: 'system', label: 'System'},
+    {id: 'lore', label: 'Lore'}
   ];
 
   const contextDrawerContent = (() => {
@@ -2880,6 +1362,134 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
             Open Characters
           </button>
         </div>
+      );
+    }
+    if (activeContextView === 'review') {
+      return (
+        <div className={styles.contextSummary}>
+          <div className={styles.contextSummaryText}>
+            <strong>Canon Consistency Review</strong>
+            <div className={styles.consistencyDescription}>
+              Run review when you want a canon check, not on every glance at the page.
+            </div>
+          </div>
+          <div className={styles.consistencyPanelHeader}>
+            <button
+              type='button'
+              onClick={() => void handleRunConsistencyReview()}
+              disabled={isRunningConsistencyReview}
+            >
+              {isRunningConsistencyReview ? 'Running review...' : 'Run review'}
+            </button>
+          </div>
+          {lastConsistencyReviewAt && (
+            <div className={styles.consistencyLastRun}>
+              Last run: {new Date(lastConsistencyReviewAt).toLocaleString()}
+            </div>
+          )}
+          {consistencyReviewItems.length > 0 ? (
+            <ul className={styles.consistencyList}>
+              {consistencyReviewItems.slice(0, 24).map((item) => (
+                <li key={item.id} className={styles.consistencyListItem}>
+                  <strong>{item.issue.code}</strong> in{' '}
+                  <button
+                    type='button'
+                    onClick={() => {
+                      const doc = documents.find((entry) => entry.id === item.sceneId);
+                      if (doc) handleSelectDocument(doc);
+                    }}
+                    className={styles.consistencySceneButton}
+                  >
+                    {item.sceneTitle}
+                  </button>
+                  : {item.issue.message}
+                  {item.issue.relatedEntities && item.issue.relatedEntities.length > 0 && (
+                    <span className={styles.consistencyRelated}>
+                      {item.issue.relatedEntities.slice(0, 3).map((target) => (
+                        <button
+                          key={`${item.id}-${target.id}`}
+                          type='button'
+                          onClick={() => openWorldRecord(target)}
+                          className={styles.consistencyRelatedButton}
+                        >
+                          Open {target.name}
+                        </button>
+                      ))}
+                    </span>
+                  )}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className={styles.contextSummaryText}>No open review items.</p>
+          )}
+        </div>
+      );
+    }
+    if (activeContextView === 'ai') {
+      return (
+        <AIAssistant
+          projectId={activeProject.id}
+          aiConfig={projectSettings?.aiSettings}
+          projectMode={projectSettings?.projectMode}
+          context={activeAIContext ?? undefined}
+          onInsert={(text) =>
+            setPendingAIInsert({
+              text,
+              context:
+                activeAIContext && activeAIContext.from !== activeAIContext.to
+                  ? {from: activeAIContext.from, to: activeAIContext.to}
+                  : null
+            })
+          }
+          queuedPrompt={queuedAssistantPrompt}
+          onQueuedPromptConsumed={() => setQueuedAssistantPrompt(null)}
+          consultationModel={projectSettings?.aiSettings?.inspectorSettings?.lowCostModel}
+          consultationMaxTokens={projectSettings?.aiSettings?.inspectorSettings?.maxResponseTokens}
+        />
+      );
+    }
+    if (activeContextView === 'system') {
+      return (
+        <SystemHistoryPanel
+          entries={systemHistoryEntries}
+          onInsertEntry={(entry) =>
+            setPendingAIInsert({
+              text: entry.insertText,
+              context: null
+            })
+          }
+          onClear={() => {
+            clearSystemHistoryEntries(activeProject.id);
+            refreshSystemHistory();
+            setFeedback({tone: 'success', message: 'System history cleared.'});
+          }}
+          onOpenScene={(sceneId) => {
+            const doc = documents.find((entry) => entry.id === sceneId);
+            if (doc) {
+              handleSelectDocument(doc);
+              return;
+            }
+            setFeedback({
+              tone: 'error',
+              message: 'Could not open scene for this system event.'
+            });
+          }}
+          onRunConsistencyReview={() => {
+            void handleRunConsistencyReview();
+          }}
+        />
+      );
+    }
+    if (activeContextView === 'lore') {
+      return (
+        <LoreInspectorPanel
+          record={activeLoreRecord}
+          aiEnabled={projectSettings?.aiSettings?.inspectorSettings?.enableAIConsultation !== false}
+          aiBudgetUsed={aiBudgetUsed}
+          aiBudgetMax={projectSettings?.aiSettings?.inspectorSettings?.maxConsultationsPerDay ?? 20}
+          onConsult={handleConsultationFromLore}
+        />
       );
     }
     return (
@@ -3016,7 +1626,7 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
         </label>
         <button
           type='button'
-          onClick={() => openExportModal('markdown')}
+          onClick={() => openExportModalWithDrawerHandling('markdown')}
           disabled={documents.length === 0}
           style={{marginLeft: '0.5rem'}}
         >
@@ -3024,7 +1634,7 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
         </button>
         <button
           type='button'
-          onClick={() => openExportModal('docx')}
+          onClick={() => openExportModalWithDrawerHandling('docx')}
           disabled={documents.length === 0}
           style={{marginLeft: '0.5rem'}}
         >
@@ -3032,7 +1642,7 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
         </button>
         <button
           type='button'
-          onClick={() => openExportModal('epub')}
+          onClick={() => openExportModalWithDrawerHandling('epub')}
           disabled={documents.length === 0}
           style={{marginLeft: '0.5rem'}}
         >
@@ -3145,8 +1755,7 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
   );
 
   return (
-    <section data-workspace-root='true'>
-      <h1>Writing Workspace</h1>
+    <section data-workspace-root='true' className={styles.workspaceRoot}>
       {feedback && (
         <p
           role='status'
@@ -3176,62 +1785,6 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
           </button>
         </div>
       )}
-      <section className={styles.consistencyPanel}>
-        <div className={styles.consistencyPanelHeader}>
-          <div>
-            <strong>Canon Consistency Review</strong>
-            <div className={styles.consistencyDescription}>
-              Scan all scenes against World Bible and Character records.
-            </div>
-          </div>
-          <button
-            type='button'
-            onClick={() => void handleRunConsistencyReview()}
-            disabled={isRunningConsistencyReview}
-          >
-            {isRunningConsistencyReview ? 'Running review...' : 'Run review'}
-          </button>
-        </div>
-        {lastConsistencyReviewAt && (
-          <div className={styles.consistencyLastRun}>
-            Last run: {new Date(lastConsistencyReviewAt).toLocaleString()}
-          </div>
-        )}
-        {consistencyReviewItems.length > 0 && (
-          <ul className={styles.consistencyList}>
-            {consistencyReviewItems.slice(0, 24).map((item) => (
-              <li key={item.id} className={styles.consistencyListItem}>
-                <strong>{item.issue.code}</strong> in{' '}
-                <button
-                  type='button'
-                  onClick={() => {
-                    const doc = documents.find((entry) => entry.id === item.sceneId);
-                    if (doc) handleSelectDocument(doc);
-                  }}
-                  className={styles.consistencySceneButton}
-                >
-                  {item.sceneTitle}
-                </button>
-                : {item.issue.message}
-                {item.issue.relatedEntities && item.issue.relatedEntities.length > 0 && (
-                  <span className={styles.consistencyRelated}>
-                    {item.issue.relatedEntities.slice(0, 3).map((target) => (
-                      <button
-                        key={`${item.id}-${target.id}`}
-                        type='button'
-                        onClick={() => openWorldRecord(target)}
-                        className={styles.consistencyRelatedButton}
-                      >
-                        Open {target.name}
-                      </button>
-                    ))}
-                  </span>
-                )}
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
       {unknownGuardrailIssues.length > 0 && (
         <div className={styles.unknownPanel}>
           <strong>
@@ -3266,16 +1819,18 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
       )}
       {seriesBibleConfig?.parentProjectId && (
         <div className={styles.canonPanel}>
-          <strong>Parent canon:</strong>{' '}
-          {canonState.parentName ?? 'Unknown'} · Version{' '}
-          {canonState.parentCanonVersion ?? 'n/a'}
-          {canonState.parentCanonVersion &&
-            canonState.childLastSynced &&
-            canonState.parentCanonVersion !== canonState.childLastSynced && (
-              <span className={styles.canonOutOfSync}>
-                Out of sync
-              </span>
-            )}
+          <div>
+            <strong>Parent canon:</strong>{' '}
+            {canonState.parentName ?? 'Unknown'} · Version{' '}
+            {canonState.parentCanonVersion ?? 'n/a'}
+            {canonState.parentCanonVersion &&
+              canonState.childLastSynced &&
+              canonState.parentCanonVersion !== canonState.childLastSynced && (
+                <span className={styles.canonOutOfSync}>
+                  Out of sync
+                </span>
+              )}
+          </div>
           <div className={styles.canonMetaRow}>
             <span>
               Last synced:{' '}
@@ -3293,23 +1848,6 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
       )}
 
       <div className={styles.workspaceFrame}>
-        <div className={styles.drawerTopBar}>
-          <button
-            type='button'
-            className={styles.drawerTopButton}
-            onClick={toggleSceneDrawer}
-          >
-            {isSceneDrawerOpen ? 'Hide scenes' : 'Show scenes'}
-          </button>
-          <button
-            type='button'
-            className={styles.drawerTopButton}
-            onClick={toggleContextDrawer}
-          >
-            {isContextDrawerOpen ? 'Hide context' : 'Show context'}
-          </button>
-        </div>
-
         <div className={styles.workspaceLayout}>
         {isSceneDrawerOpen && !isNarrowViewport && (
           <aside className={styles.sceneDrawerDesktop}>
@@ -3320,7 +1858,7 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
         <div className={styles.editorColumn}>
           {selectedId ? (
             <>
-              <div style={{marginBottom: '0.75rem'}}>
+              <div className={styles.editorTitleRow}>
                 <label>
                   Title
                   <br />
@@ -3333,65 +1871,8 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
                 </label>
               </div>
 
-              <div
-                style={{
-                  marginBottom: '0.75rem',
-                  flex: 1,
-                  display: 'flex',
-                  flexDirection: 'column'
-                }}
-              >
-                <div
-                  style={{
-                    marginBottom: '0.75rem',
-                    padding: '0.65rem 0.75rem',
-                    border: '1px solid #dbeafe',
-                    borderRadius: '6px',
-                    backgroundColor: '#f8fbff',
-                    display: 'flex',
-                    gap: '0.5rem',
-                    alignItems: 'center',
-                    flexWrap: 'wrap'
-                  }}
-                >
-                  <strong style={{fontSize: '0.9rem'}}>Status Blocks</strong>
-                  <button type='button' onClick={() => setStatBlockModalOpen(true)}>
-                    Insert Status Block
-                  </button>
-                  <button type='button' onClick={handleRefreshStatTemplates}>
-                    Refresh Placeholders
-                  </button>
-                </div>
-                <label
-                  style={{flex: 1, display: 'flex', flexDirection: 'column'}}
-                >
-                  Scene Text
-                </label>
-                {selectedDocument?.consistencyReviewMode === 'deferred' && (
-                  <div className={styles.reviewLaterBanner}>
-                    <strong>Review later is active.</strong>
-                    <span>
-                      Saves warn and highlight unknowns, but won&apos;t block this scene.
-                    </span>
-                    <button
-                      type='button'
-                      onClick={() => void refreshDeferredReview(selectedDocument)}
-                    >
-                      Refresh review
-                    </button>
-                    <button
-                      type='button'
-                      onClick={() =>
-                        void updateSelectedDocumentConsistencyReviewMode('default')
-                      }
-                    >
-                      Resume strict review
-                    </button>
-                  </div>
-                )}
-                <br />
+              <div className={styles.editorPane}>
                 <EditorWithAI
-                  projectId={activeProject.id}
                   documentId={selectedId}
                   content={content}
                   onChange={handleContentChange}
@@ -3402,45 +1883,26 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
                       (entry) => entry.id === issueId
                     );
                     if (!issue) return;
-                    setConsistencyPopover({
-                      issueId,
-                      surface: issue.surface,
-                      left: anchorRect.left,
-                      top: anchorRect.bottom + 8
-                    });
-                    setUnknownLinkSelection((prev) => ({
-                      ...prev,
-                      [issue.surface]:
-                        prev[issue.surface] ?? unknownLinkOptions[issue.surface]?.[0]?.id ?? ''
-                    }));
+                    openConsistencyPopover(issueId, anchorRect, issue.surface);
                   }}
                   config={editorConfig}
                   toolbarButtons={toolbarButtons}
-                  aiSettings={projectSettings?.aiSettings}
-                  projectMode={projectSettings?.projectMode}
-                  textToInsert={statBlockInsertContent}
-                  onTextInserted={() => setStatBlockInsertContent(null)}
-                  systemHistoryEntries={systemHistoryEntries}
-                  onClearSystemHistory={() => {
-                    clearSystemHistoryEntries(activeProject.id);
-                    refreshSystemHistory();
-                    setFeedback({tone: 'success', message: 'System history cleared.'});
-                  }}
-                  onOpenSceneFromHistory={(sceneId) => {
-                    const doc = documents.find((entry) => entry.id === sceneId);
-                    if (doc) {
-                      handleSelectDocument(doc);
+                  toolbarActions={toolbarActions}
+                  textToInsert={pendingAIInsert?.text ?? statBlockInsertContent}
+                  insertContext={pendingAIInsert?.context ?? null}
+                  onTextInserted={() => {
+                    if (pendingAIInsert) {
+                      setPendingAIInsert(null);
                       return;
                     }
-                    setFeedback({
-                      tone: 'error',
-                      message: 'Could not open scene for this system event.'
-                    });
-                  }}
-                  onRunConsistencyReviewFromHistory={() => {
-                    void handleRunConsistencyReview();
+                    setStatBlockInsertContent(null);
                   }}
                   selectionQuickSnippets={selectionQuickSnippets}
+                  presentStatBlockToken={getStatBlockTokenPresentation}
+                  getStatBlockPreviewData={getStatBlockPreviewData}
+                  onRebindStatBlockToken={openStatBlockRebind}
+                  onOpenAIContext={handleOpenAIContext}
+                  onOpenLoreInspector={handleOpenLoreInspector}
                 />
                 {consistencyPopover && activeConsistencyPopoverIssue && (
                   <ContextPopover
@@ -3517,14 +1979,7 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
                 )}
               </div>
 
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.75rem',
-                  flexWrap: 'wrap'
-                }}
-              >
+              <div className={styles.editorFooterBar}>
                 <button
                   type='button'
                   onClick={handleSave}
@@ -3546,7 +2001,7 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
                 <button type='button' onClick={openMemoryModal}>
                   Extract memory
                 </button>
-                <span style={{fontSize: '0.85rem', fontStyle: 'italic'}}>
+                <span className={styles.editorFooterStatus}>
                   {saveStatus === 'saving' && 'Saving…'}
                   {saveStatus === 'saved' && lastSavedAt && (
                     <>Saved at {new Date(lastSavedAt).toLocaleTimeString()}</>
@@ -3555,6 +2010,22 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
                   {' · '}
                   {wordCount} words
                 </span>
+                <div className={styles.editorFooterUtilities}>
+                  <button
+                    type='button'
+                    className={styles.drawerTopButton}
+                    onClick={toggleSceneDrawer}
+                  >
+                    {isSceneDrawerOpen ? 'Scenes on' : 'Scenes off'}
+                  </button>
+                  <button
+                    type='button'
+                    className={styles.drawerTopButton}
+                    onClick={toggleContextDrawer}
+                  >
+                    {isContextDrawerOpen ? 'Context on' : 'Context off'}
+                  </button>
+                </div>
               </div>
             </>
           ) : (
@@ -3628,11 +2099,27 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
             onClick={(event) => event.stopPropagation()}
             className={`${styles.modalCard} ${styles.statModalCard}`}
           >
-            <h3 className={styles.modalTitle}>Insert Status Block</h3>
+            <h3 className={styles.modalTitle}>
+              {pendingStatBlockRebindToken ? 'Rebind Status Block' : 'Insert Status Block'}
+            </h3>
             <p className={styles.modalDescription}>
-              Choose what to insert. Use <strong>Reusable placeholder</strong> if you
-              want to refresh it later.
+              {pendingStatBlockRebindToken ? (
+                <>
+                  Choose the correct source and save it back into this placeholder token.
+                </>
+              ) : (
+                <>
+                  Choose what to insert. Use <strong>Reusable placeholder</strong> if you
+                  want to refresh it later.
+                </>
+              )}
             </p>
+            {pendingStatBlockRebindToken && (
+              <div className={styles.statRebindNotice}>
+                Rebinding keeps this token as a reusable placeholder and updates only the
+                selected chip in the scene.
+              </div>
+            )}
 
             <div className={styles.statFormGrid}>
               <label>
@@ -3901,7 +2388,7 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
                 Cancel
               </button>
               <button type='button' onClick={handleInsertStatBlock} disabled={!canInsertStatBlock}>
-                Insert
+                {pendingStatBlockRebindToken ? 'Rebind token' : 'Insert'}
               </button>
             </div>
           </div>

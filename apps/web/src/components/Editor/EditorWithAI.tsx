@@ -1,9 +1,7 @@
 import React, {useState, useEffect, useRef, useCallback} from 'react';
 import type {Editor as TipTapEditorInstance} from '@tiptap/react';
 import TipTapEditor from '../TipTapEditor';
-import {AIAssistant} from '../AIAssistant/AIAssistant';
-import {LoreInspectorPanel, type LoreInspectorRecord} from './LoreInspectorPanel';
-import {SystemHistoryPanel} from './SystemHistoryPanel';
+import type {LoreInspectorRecord} from './LoreInspectorPanel';
 import {ContextPopover} from './ContextPopover';
 import {AIExpandMenu} from './extensions/AIExpandMenu';
 import {
@@ -15,19 +13,8 @@ import {
   type LoreHighlightEntry
 } from './extensions/LoreHighlightsExtension';
 import type {EditorConfig} from '../../config/editorConfig';
-import type {
-  ProjectAISettings,
-  ProjectMode,
-  SystemHistoryEntry
-} from '../../entityTypes';
-import {
-  WORKSPACE_COMMAND_EVENT,
-  type WorkspaceCommandId
-} from '../../commands/workspaceCommands';
-import {
-  getInspectorConsultationUsage,
-  incrementInspectorConsultationUsage
-} from '../../services/inspectorBudgetService';
+import type {StatBlockTokenPresentation} from '../../utils/statBlockTemplates';
+import type {StatBlockPreviewData} from '../../hooks/useWorkspaceStatBlocks';
 import styles from '../../assets/components/AISettings.module.css';
 
 interface AIContextType {
@@ -39,7 +26,6 @@ interface AIContextType {
 }
 
 interface EditorWithAIProps {
-  projectId: string;
   documentId: string;
   content: string;
   onChange: (content: string) => void;
@@ -51,18 +37,19 @@ interface EditorWithAIProps {
   ) => void;
   config?: EditorConfig;
   toolbarButtons?: Array<{id: string; label: string; markName: string}>;
-  aiSettings?: ProjectAISettings | null;
-  projectMode?: ProjectMode;
+  toolbarActions?: Array<{id: string; label: string; onClick: () => void}>;
   textToInsert?: string | null;
+  insertContext?: {from: number; to: number} | null;
   onTextInserted?: () => void;
-  systemHistoryEntries?: SystemHistoryEntry[];
-  onClearSystemHistory?: () => void;
-  onOpenSceneFromHistory?: (sceneId: string) => void;
-  onRunConsistencyReviewFromHistory?: () => void;
   selectionQuickSnippets?: {
     characters: Record<string, {name: string; html: string; lore: LoreInspectorRecord}>;
     entities: Record<string, {name: string; html: string; lore: LoreInspectorRecord}>;
   };
+  presentStatBlockToken?: (rawToken: string) => StatBlockTokenPresentation;
+  getStatBlockPreviewData?: (rawToken: string) => StatBlockPreviewData;
+  onRebindStatBlockToken?: (rawToken: string) => void;
+  onOpenAIContext?: (context: AIContextType) => void;
+  onOpenLoreInspector?: (record: LoreInspectorRecord) => void;
 }
 
 interface SelectionBubbleState {
@@ -77,7 +64,6 @@ interface SelectionBubbleState {
 }
 
 export const EditorWithAI: React.FC<EditorWithAIProps> = ({
-  projectId,
   documentId,
   content,
   onChange,
@@ -86,31 +72,31 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
   onConsistencyHighlightClick,
   config,
   toolbarButtons = [],
-  aiSettings,
-  projectMode = 'litrpg',
+  toolbarActions = [],
   textToInsert: externalTextToInsert = null,
+  insertContext = null,
   onTextInserted,
-  systemHistoryEntries = [],
-  onClearSystemHistory,
-  onOpenSceneFromHistory,
-  onRunConsistencyReviewFromHistory,
-  selectionQuickSnippets
+  selectionQuickSnippets,
+  presentStatBlockToken,
+  getStatBlockPreviewData,
+  onRebindStatBlockToken,
+  onOpenAIContext,
+  onOpenLoreInspector
 }) => {
-  const [showSidePanel, setShowSidePanel] = useState(false);
-  const [activePanelTab, setActivePanelTab] = useState<'ai' | 'system' | 'lore'>('ai');
-  const [aiContext, setAIContext] = useState<AIContextType | null>(null);
   const [textToInsertFromAI, setTextToInsertFromAI] = useState<string | null>(null);
   const [selectionBubble, setSelectionBubble] = useState<SelectionBubbleState | null>(
     null
   );
   const [editorReadyToken, setEditorReadyToken] = useState(0);
-  const [activeLoreRecord, setActiveLoreRecord] = useState<LoreInspectorRecord | null>(null);
-  const [queuedPrompt, setQueuedPrompt] = useState<string | null>(null);
-  const [aiBudgetUsed, setAIBudgetUsed] = useState(0);
   const [lorePopoverRecord, setLorePopoverRecord] = useState<LoreInspectorRecord | null>(null);
   const [lorePopoverAnchor, setLorePopoverAnchor] = useState<{left: number; top: number} | null>(
     null
   );
+  const [statBlockPopover, setStatBlockPopover] = useState<{
+    preview: StatBlockPreviewData;
+    left: number;
+    top: number;
+  } | null>(null);
   const editorRef = useRef<TipTapEditorInstance | null>(null);
 
   const loreHighlights = React.useMemo<LoreHighlightEntry[]>(() => {
@@ -154,7 +140,6 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
       ]
     };
   }, [config, consistencyHighlights, loreHighlights]);
-  const insertContext = externalTextToInsert ? null : aiContext;
 
   useEffect(() => {
     const handleAIRequest = (event: Event) => {
@@ -164,15 +149,13 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
         to: number;
       }>;
 
-      setAIContext({
+      onOpenAIContext?.({
         type: 'document',
         id: documentId,
         selectedText: customEvent.detail.selectedText,
         from: customEvent.detail.from,
         to: customEvent.detail.to
       });
-      setActivePanelTab('ai');
-      setShowSidePanel(true);
     };
 
     window.addEventListener('ai-expand-request', handleAIRequest);
@@ -182,33 +165,10 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
   }, [documentId]);
 
   useEffect(() => {
-    const onWorkspaceCommand = (event: Event) => {
-      const detail = (event as CustomEvent<{id?: WorkspaceCommandId}>).detail;
-      if (detail?.id === 'toggle-ai-panel') {
-        setActivePanelTab('ai');
-        setShowSidePanel(true);
-      }
-      if (detail?.id === 'toggle-system-history-panel') {
-        setActivePanelTab('system');
-        setShowSidePanel(true);
-      }
-    };
-
-    window.addEventListener(WORKSPACE_COMMAND_EVENT, onWorkspaceCommand);
-    return () => {
-      window.removeEventListener(WORKSPACE_COMMAND_EVENT, onWorkspaceCommand);
-    };
-  }, []);
-
-  useEffect(() => {
     return () => {
       editorRef.current = null;
     };
   }, []);
-
-  useEffect(() => {
-    setAIBudgetUsed(getInspectorConsultationUsage(projectId));
-  }, [projectId]);
 
   useEffect(() => {
     if (!selectionBubble) return;
@@ -222,10 +182,11 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
   }, [selectionBubble]);
 
   useEffect(() => {
-    if (!lorePopoverAnchor) return;
+    if (!lorePopoverAnchor && !statBlockPopover) return;
     const close = () => {
       setLorePopoverAnchor(null);
       setLorePopoverRecord(null);
+      setStatBlockPopover(null);
     };
     window.addEventListener('scroll', close, true);
     window.addEventListener('resize', close);
@@ -233,7 +194,7 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
       window.removeEventListener('scroll', close, true);
       window.removeEventListener('resize', close);
     };
-  }, [lorePopoverAnchor]);
+  }, [lorePopoverAnchor, statBlockPopover]);
 
   useEffect(() => {
     const reposition = () => {
@@ -329,6 +290,22 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
     [loreRecordById]
   );
 
+  const handleStatBlockTokenClick = useCallback(
+    (rawToken: string, anchorRect: {left: number; top: number; bottom: number}) => {
+      const preview = getStatBlockPreviewData?.(rawToken);
+      if (!preview) {
+        onRebindStatBlockToken?.(rawToken);
+        return;
+      }
+      setStatBlockPopover({
+        preview,
+        left: anchorRect.left,
+        top: anchorRect.bottom + 8
+      });
+    },
+    [getStatBlockPreviewData, onRebindStatBlockToken]
+  );
+
   useEffect(() => {
     const editor = editorRef.current;
     if (!editor) return;
@@ -340,63 +317,6 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
     };
   }, [editorReadyToken, updateSelectionBubble]);
 
-  const handleInsert = (text: string) => {
-    const editor = editorRef.current;
-
-    if (!editor) {
-      return;
-    }
-
-    if (aiContext) {
-      editor.commands.setTextSelection({
-        from: aiContext.from,
-        to: aiContext.to
-      });
-      editor.commands.insertContent(text);
-    } else {
-      setTextToInsertFromAI(text);
-    }
-  };
-
-  const handleConsultation = (mode: 'consistency' | 'reaction' | 'outcome') => {
-    if (!activeLoreRecord) return;
-    const inspector = aiSettings?.inspectorSettings;
-    if (inspector?.enableAIConsultation === false) {
-      return;
-    }
-    const maxConsultations = inspector?.maxConsultationsPerDay ?? 20;
-    const used = getInspectorConsultationUsage(projectId);
-    if (used >= maxConsultations) {
-      return;
-    }
-
-    const nextUsed = incrementInspectorConsultationUsage(projectId);
-    setAIBudgetUsed(nextUsed);
-
-    const maxContextChars = inspector?.maxContextChars ?? 1800;
-    const selectedContext =
-      selectionBubble?.selectedText || aiContext?.selectedText || activeLoreRecord.name;
-    const compactContext = selectedContext.slice(0, maxContextChars);
-    const header =
-      mode === 'consistency'
-        ? 'Check consistency for this subject against the selected scene context.'
-        : mode === 'reaction'
-          ? 'Suggest an in-character reaction aligned with this subject profile.'
-          : 'Calculate a plausible outcome grounded in current stats/resources.';
-    const prompt =
-      `${header}\n\n` +
-      `Subject: ${activeLoreRecord.name} (${activeLoreRecord.type})\n` +
-      `Vital Signs: ${activeLoreRecord.vitalSigns.join(' | ')}\n` +
-      `Goal: ${activeLoreRecord.synopsis.goal}\n` +
-      `Recent Event: ${activeLoreRecord.synopsis.recentEvent}\n` +
-      `Motivation: ${activeLoreRecord.synopsis.motivation}\n` +
-      `Scene Context: ${compactContext}`;
-
-    setQueuedPrompt(prompt);
-    setActivePanelTab('ai');
-    setShowSidePanel(true);
-  };
-
   return (
     <div className={styles.container}>
       <div className={styles.editor}>
@@ -406,9 +326,11 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
           onWordCountChange={onWordCountChange}
           onConsistencyHighlightClick={onConsistencyHighlightClick}
           onLoreHighlightClick={handleLoreHighlightClick}
+          onStatBlockTokenClick={handleStatBlockTokenClick}
           onEditorReady={handleEditorReady}
           config={mergedConfig}
           toolbarButtons={toolbarButtons}
+          toolbarActions={toolbarActions}
           textToInsert={externalTextToInsert ?? textToInsertFromAI}
           onTextInserted={() => {
             if (externalTextToInsert) {
@@ -418,6 +340,7 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
             setTextToInsertFromAI(null);
           }}
           insertContext={insertContext}
+          presentStatBlockToken={presentStatBlockToken}
         />
         {selectionBubble && (
           <div
@@ -431,19 +354,41 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
             <button
               type='button'
               onClick={() => {
-                setAIContext({
+                onOpenAIContext?.({
                   type: 'document',
                   id: documentId,
                   selectedText: selectionBubble.selectedText,
                   from: selectionBubble.from,
                   to: selectionBubble.to
                 });
-                setActivePanelTab('ai');
-                setShowSidePanel(true);
               }}
             >
               AI Expand
             </button>
+            {selectionBubble.matchType === 'character' && (
+              <button
+                type='button'
+                onClick={() => {
+                  if (!selectionBubble.matchRecord) return;
+                  setStatBlockPopover({
+                    preview: {
+                      rawToken: selectionBubble.matchName ?? selectionBubble.selectedText,
+                      title: `${selectionBubble.matchRecord.name} · Quick Preview`,
+                      sourceType: 'character',
+                      style: 'compact',
+                      status: 'resolved',
+                      message: 'Quick character snapshot from the current workspace state.',
+                      html: selectionBubble.matchRecord.html,
+                      requiresRebind: false
+                    },
+                    left: selectionBubble.x,
+                    top: selectionBubble.y + 12
+                  });
+                }}
+              >
+                Preview Stats
+              </button>
+            )}
             {selectionBubble.matchType === 'character' && (
               <button
                 type='button'
@@ -498,9 +443,8 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
               <button
                 type='button'
                 onClick={() => {
-                  setActiveLoreRecord(selectionBubble.matchRecord?.lore ?? null);
-                  setActivePanelTab('lore');
-                  setShowSidePanel(true);
+                  if (!selectionBubble.matchRecord?.lore) return;
+                  onOpenLoreInspector?.(selectionBubble.matchRecord.lore);
                 }}
               >
                 Open Lore
@@ -544,9 +488,7 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
               <button
                 type='button'
                 onClick={() => {
-                  setActiveLoreRecord(lorePopoverRecord);
-                  setActivePanelTab('lore');
-                  setShowSidePanel(true);
+                  onOpenLoreInspector?.(lorePopoverRecord);
                   setLorePopoverAnchor(null);
                   setLorePopoverRecord(null);
                 }}
@@ -556,82 +498,58 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
             </div>
           </ContextPopover>
         )}
-      </div>
-
-      {showSidePanel && (
-        <div className={styles.aiPanel}>
-          <div className={styles.panelTabs}>
-            <button
-              type='button'
-              className={`${styles.panelTab} ${
-                activePanelTab === 'ai' ? styles.panelTabActive : ''
-              }`}
-              onClick={() => setActivePanelTab('ai')}
-            >
-              AI Assistant
-            </button>
-            <button
-              type='button'
-              className={`${styles.panelTab} ${
-                activePanelTab === 'system' ? styles.panelTabActive : ''
-              }`}
-              onClick={() => setActivePanelTab('system')}
-            >
-              System History
-            </button>
-            <button
-              type='button'
-              className={`${styles.panelTab} ${
-                activePanelTab === 'lore' ? styles.panelTabActive : ''
-              }`}
-              onClick={() => setActivePanelTab('lore')}
-            >
-              Lore Inspector
-            </button>
-          </div>
-          <button
-            className={styles.closeButton}
-            onClick={() => setShowSidePanel(false)}
+        {statBlockPopover && (
+          <ContextPopover
+            title={statBlockPopover.preview.title}
+            message={statBlockPopover.preview.message}
+            left={statBlockPopover.left}
+            top={statBlockPopover.top}
+            onClose={() => setStatBlockPopover(null)}
           >
-            ×
-          </button>
-          {activePanelTab === 'ai' ? (
-            <AIAssistant
-              projectId={projectId}
-              aiConfig={aiSettings ?? undefined}
-              projectMode={projectMode}
-              context={aiContext ?? undefined}
-              onInsert={handleInsert}
-              queuedPrompt={queuedPrompt}
-              onQueuedPromptConsumed={() => setQueuedPrompt(null)}
-              consultationModel={aiSettings?.inspectorSettings?.lowCostModel}
-              consultationMaxTokens={aiSettings?.inspectorSettings?.maxResponseTokens}
-            />
-          ) : activePanelTab === 'system' ? (
-            <SystemHistoryPanel
-              entries={systemHistoryEntries}
-              onInsertEntry={(entry) => handleInsert(entry.insertText)}
-              onClear={() => onClearSystemHistory?.()}
-              onOpenScene={onOpenSceneFromHistory}
-              onRunConsistencyReview={onRunConsistencyReviewFromHistory}
-            />
-          ) : (
-            <LoreInspectorPanel
-              record={activeLoreRecord}
-              aiEnabled={aiSettings?.inspectorSettings?.enableAIConsultation !== false}
-              aiBudgetUsed={aiBudgetUsed}
-              aiBudgetMax={aiSettings?.inspectorSettings?.maxConsultationsPerDay ?? 20}
-              onConsult={handleConsultation}
-            />
-          )}
-        </div>
-      )}
-
-      {!showSidePanel && (
-        <button className={styles.aiToggle} onClick={() => setShowSidePanel(true)}>
-          AI Assistant
-        </button>
-      )}
+            <div className={styles.statBlockPopoverMeta}>
+              <span
+                className={`${styles.statBlockStatusChip} ${
+                  statBlockPopover.preview.status === 'resolved'
+                    ? styles.statBlockStatusResolved
+                    : statBlockPopover.preview.status === 'ambiguous'
+                      ? styles.statBlockStatusAmbiguous
+                      : styles.statBlockStatusMissing
+                }`}
+              >
+                {statBlockPopover.preview.status === 'resolved'
+                  ? 'Linked'
+                  : statBlockPopover.preview.status === 'ambiguous'
+                    ? 'Needs rebind'
+                    : 'Missing source'}
+              </span>
+              <span className={styles.statBlockKindLabel}>
+                {statBlockPopover.preview.sourceType === 'character'
+                  ? 'Character'
+                  : 'Entity'}
+              </span>
+            </div>
+            {statBlockPopover.preview.html && (
+              <div
+                className={styles.statBlockPreviewCard}
+                dangerouslySetInnerHTML={{__html: statBlockPopover.preview.html}}
+              />
+            )}
+            {statBlockPopover.preview.requiresRebind && (
+              <div className={styles.systemActions}>
+                <button
+                  type='button'
+                  onClick={() => {
+                    onRebindStatBlockToken?.(statBlockPopover.preview.rawToken);
+                    setStatBlockPopover(null);
+                  }}
+                >
+                  Rebind Token
+                </button>
+              </div>
+            )}
+          </ContextPopover>
+        )}
+      </div>
     </div>
   );
 };

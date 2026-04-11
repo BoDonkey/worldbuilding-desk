@@ -4,6 +4,7 @@ export interface ParsedStatBlockToken {
   sourceType: StatBlockSourceType;
   sourceRef: string;
   style: StatBlockStyle;
+  label?: string;
   selectedStatIds?: string[];
   selectedResourceIds?: string[];
 }
@@ -38,6 +39,15 @@ export interface ItemStatBlockInput {
   fields: Array<{key: string; value: string}>;
 }
 
+export type StatBlockTokenPresentationStatus = 'resolved' | 'ambiguous' | 'missing';
+
+export interface StatBlockTokenPresentation {
+  rawToken: string;
+  label: string;
+  status: StatBlockTokenPresentationStatus;
+  title: string;
+}
+
 const TOKEN_REGEX =
   /\{\{STAT_BLOCK:(character|item):([^}:]+):(full|buffs|compact)(?::([^}]+))?\}\}/g;
 
@@ -63,7 +73,11 @@ function decodeSelectionIds(value: string): string[] {
 
 function parseSelectionSegment(
   segment: string | undefined
-): {selectedStatIds?: string[]; selectedResourceIds?: string[]} {
+): {
+  label?: string;
+  selectedStatIds?: string[];
+  selectedResourceIds?: string[];
+} {
   if (!segment) return {};
   const parsed = segment.split(';').reduce(
     (acc, part) => {
@@ -71,28 +85,42 @@ function parseSelectionSegment(
       const key = rawKey?.trim();
       const value = rest.join('=').trim();
       if (!key) return acc;
-      if (key === 's') {
+      if (key === 'l') {
+        try {
+          acc.label = decodeURIComponent(value);
+        } catch {
+          acc.label = value;
+        }
+      } else if (key === 's') {
         acc.selectedStatIds = decodeSelectionIds(value);
       } else if (key === 'r') {
         acc.selectedResourceIds = decodeSelectionIds(value);
       }
       return acc;
     },
-    {} as {selectedStatIds?: string[]; selectedResourceIds?: string[]}
+    {} as {
+      label?: string;
+      selectedStatIds?: string[];
+      selectedResourceIds?: string[];
+    }
   );
   return parsed;
 }
 
 function buildSelectionSegment(params: ParsedStatBlockToken): string | null {
-  if (
-    params.sourceType !== 'character' ||
-    (!params.selectedStatIds && !params.selectedResourceIds)
-  ) {
+  const parts: string[] = [];
+  if (params.label?.trim()) {
+    parts.push(`l=${encodeURIComponent(params.label.trim())}`);
+  }
+  if (params.sourceType !== 'character') {
+    return parts.length > 0 ? parts.join(';') : null;
+  }
+  if (!params.selectedStatIds && !params.selectedResourceIds && parts.length === 0) {
     return null;
   }
-  const statPart = `s=${encodeSelectionIds(params.selectedStatIds)}`;
-  const resourcePart = `r=${encodeSelectionIds(params.selectedResourceIds)}`;
-  return `${statPart};${resourcePart}`;
+  parts.push(`s=${encodeSelectionIds(params.selectedStatIds)}`);
+  parts.push(`r=${encodeSelectionIds(params.selectedResourceIds)}`);
+  return parts.join(';');
 }
 
 function escapeHtml(text: string): string {
@@ -169,9 +197,35 @@ export function replaceStatBlockTokensInHtml(
   html: string,
   resolver: (token: ParsedStatBlockToken) => string | null
 ): {html: string; replacedCount: number} {
-  TOKEN_REGEX.lastIndex = 0;
   let replacedCount = 0;
-  const updatedHtml = html.replace(
+  let updatedHtml = html;
+
+  if (typeof DOMParser !== 'undefined' && updatedHtml.includes('data-stat-block-token=')) {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(updatedHtml, 'text/html');
+    const tokenElements = doc.querySelectorAll<HTMLElement>('[data-stat-block-token]');
+    tokenElements.forEach((element) => {
+      const rawToken = element.dataset.statBlockToken;
+      if (!rawToken) return;
+      const parsed = parseStatBlockToken(rawToken);
+      if (!parsed) return;
+      const resolved = resolver(parsed);
+      if (!resolved || !element.parentNode) {
+        return;
+      }
+      const fragmentHost = doc.createElement('div');
+      fragmentHost.innerHTML = resolved;
+      while (fragmentHost.firstChild) {
+        element.parentNode.insertBefore(fragmentHost.firstChild, element);
+      }
+      element.remove();
+      replacedCount += 1;
+    });
+    updatedHtml = doc.body.innerHTML;
+  }
+
+  TOKEN_REGEX.lastIndex = 0;
+  updatedHtml = updatedHtml.replace(
     TOKEN_REGEX,
     (_match, sourceType: string, sourceRef: string, style: string, selection: string) => {
       const resolved = resolver({
@@ -188,6 +242,114 @@ export function replaceStatBlockTokensInHtml(
     }
   );
   return {html: updatedHtml, replacedCount};
+}
+
+export function getStatBlockTokenDisplayLabel(token: ParsedStatBlockToken): string {
+  return token.label?.trim() || token.sourceRef;
+}
+
+export function getStatBlockStyleLabel(style: StatBlockStyle): string {
+  return style === 'full' ? 'All Stats' : style === 'buffs' ? 'Buffs Only' : 'Compact';
+}
+
+export function getDefaultStatBlockTokenPresentation(
+  rawToken: string
+): StatBlockTokenPresentation {
+  const parsed = parseStatBlockToken(rawToken);
+  return parsed
+    ? {
+        rawToken,
+        label: `Stat Block: ${getStatBlockTokenDisplayLabel(parsed)} · ${getStatBlockStyleLabel(parsed.style)}`,
+        status: 'resolved',
+        title: rawToken
+      }
+    : {
+        rawToken,
+        label: 'Stat Block',
+        status: 'missing',
+        title: rawToken
+      };
+}
+
+export function renderStatBlockTokenChipHtml(
+  rawToken: string,
+  presentation: StatBlockTokenPresentation = getDefaultStatBlockTokenPresentation(rawToken)
+): string {
+  const chipLabel = escapeHtml(presentation.label);
+  const chipStatus = escapeHtml(presentation.status);
+  const chipTitle = escapeHtml(presentation.title);
+
+  return `<span data-stat-block-token="${escapeHtml(rawToken)}" data-stat-block-label="${escapeHtml(
+    presentation.label
+  )}" data-stat-block-status="${chipStatus}" class="stat-block-token-chip stat-block-token-chip--${chipStatus}" contenteditable="false" title="${chipTitle}">${chipLabel}</span>`;
+}
+
+export function serializeStatBlockTokensAsChipHtml(
+  html: string,
+  presentToken: (rawToken: string) => StatBlockTokenPresentation = getDefaultStatBlockTokenPresentation
+): string {
+  TOKEN_REGEX.lastIndex = 0;
+  return html.replace(TOKEN_REGEX, (rawToken) =>
+    renderStatBlockTokenChipHtml(rawToken, presentToken(rawToken))
+  );
+}
+
+export function extractStatBlockTokensFromHtml(html: string): string[] {
+  const tokens: string[] = [];
+  TOKEN_REGEX.lastIndex = 0;
+  let match: RegExpExecArray | null = null;
+  while ((match = TOKEN_REGEX.exec(html)) !== null) {
+    tokens.push(match[0]);
+  }
+
+  if (typeof DOMParser !== 'undefined' && html.includes('data-stat-block-token=')) {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(html, 'text/html');
+    doc.querySelectorAll<HTMLElement>('[data-stat-block-token]').forEach((element) => {
+      const rawToken = element.dataset.statBlockToken;
+      if (rawToken) {
+        tokens.push(rawToken);
+      }
+    });
+  }
+
+  return tokens;
+}
+
+export function replaceFirstStatBlockTokenInHtml(
+  html: string,
+  targetRawToken: string,
+  replacementHtml: string
+): {html: string; replaced: boolean} {
+  if (typeof DOMParser !== 'undefined' && html.includes('data-stat-block-token=')) {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(html, 'text/html');
+    const tokenElement = Array.from(
+      doc.querySelectorAll<HTMLElement>('[data-stat-block-token]')
+    ).find((element) => element.dataset.statBlockToken === targetRawToken);
+    if (tokenElement && tokenElement.parentNode) {
+      const fragmentHost = doc.createElement('div');
+      fragmentHost.innerHTML = replacementHtml;
+      while (fragmentHost.firstChild) {
+        tokenElement.parentNode.insertBefore(fragmentHost.firstChild, tokenElement);
+      }
+      tokenElement.remove();
+      return {html: doc.body.innerHTML, replaced: true};
+    }
+  }
+
+  const targetIndex = html.indexOf(targetRawToken);
+  if (targetIndex === -1) {
+    return {html, replaced: false};
+  }
+
+  return {
+    html:
+      html.slice(0, targetIndex) +
+      replacementHtml +
+      html.slice(targetIndex + targetRawToken.length),
+    replaced: true
+  };
 }
 
 export function buildCharacterStatBlockHtml(

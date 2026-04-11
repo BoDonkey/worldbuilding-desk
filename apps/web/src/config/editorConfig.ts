@@ -5,6 +5,7 @@ import { TextStyleKit } from '@tiptap/extension-text-style';
 import StarterKit from '@tiptap/starter-kit';
 import type { CharacterStyle } from '../entityTypes';
 import { createCharacterStyleExtensions } from '../extensions/registry';
+import {StatBlockTokenExtension} from '../extensions/StatBlockTokenExtension';
 
 // Word count extension
 const WordCountExtension = Extension.create({
@@ -29,7 +30,7 @@ export interface EditorConfig {
 }
 
 export const defaultEditorConfig: EditorConfig = {
-  extensions: [TextStyleKit, StarterKit, WordCountExtension]
+  extensions: [TextStyleKit, StarterKit, WordCountExtension, StatBlockTokenExtension]
 };
 
 // Helper to get word count from editor storage
@@ -55,6 +56,7 @@ export function createEditorConfigWithStyles(
       TextStyleKit,
       StarterKit,
       WordCountExtension,
+      StatBlockTokenExtension,
       ...characterMarks,
     ],
   };
