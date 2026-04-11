@@ -1,4 +1,3 @@
-import Anthropic from '@anthropic-ai/sdk';
 export type ProviderId = 'anthropic' | 'openai' | 'ollama';
 
 export interface RendererMessage {
@@ -38,27 +37,65 @@ export class AnthropicStreamingAdapter implements StreamingAdapter {
     if (!this.config.apiKey) {
       throw new Error('Anthropic API key is missing');
     }
-    const client = new Anthropic({apiKey: this.config.apiKey});
-    const anthropicMessages = this.config.request.messages
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': this.config.apiKey,
+        'anthropic-version': '2023-06-01'
+      },
+      body: JSON.stringify({
+        model: this.config.request.model ?? 'claude-sonnet-4-20250514',
+        max_tokens: this.config.request.maxTokens ?? 4096,
+        temperature: this.config.request.temperature ?? 0.7,
+        system: this.config.request.systemPrompt,
+        stream: true,
+        messages: this.buildMessages()
+      })
+    });
+
+    if (!response.ok || !response.body) {
+      throw new Error(`Anthropic API error: ${response.status} ${response.statusText}`);
+    }
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+
+    while (true) {
+      const {done, value} = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, {stream: true});
+      const lines = buffer.split('\n');
+      buffer = lines.pop() ?? '';
+
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed.startsWith('data:')) continue;
+
+        const data = trimmed.slice(5).trim();
+        if (!data || data === '[DONE]') continue;
+
+        try {
+          const parsed = JSON.parse(data);
+          if (parsed.type === 'content_block_delta' && parsed.delta?.text) {
+            yield parsed.delta.text;
+          }
+        } catch {
+          // Ignore malformed SSE chunks.
+        }
+      }
+    }
+  }
+
+  private buildMessages() {
+    return this.config.request.messages
       .filter(
         (m): m is RendererMessage & {role: 'user' | 'assistant'} =>
           m.role === 'user' || m.role === 'assistant'
       )
       .map((m) => ({role: m.role, content: m.content}));
-
-    const stream = await client.messages.stream({
-      model: this.config.request.model ?? 'claude-sonnet-4-20250514',
-      max_tokens: this.config.request.maxTokens ?? 4096,
-      temperature: this.config.request.temperature ?? 0.7,
-      system: this.config.request.systemPrompt,
-      messages: anthropicMessages
-    });
-
-    for await (const chunk of stream) {
-      if (chunk.type === 'content_block_delta' && chunk.delta?.type === 'text_delta') {
-        yield chunk.delta.text;
-      }
-    }
   }
 }
 

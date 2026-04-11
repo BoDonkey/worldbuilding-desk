@@ -2,20 +2,61 @@
   "name": "desktop",
   "version": "0.0.0",
   "private": true,
+  "description": "Electron desktop shell for Worldbuilding Desk",
+  "author": "Worldbuilding Desk",
   "type": "commonjs",
   "main": "dist/main/main.js",
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "dev": "tsc -p tsconfig.json --watch",
     "start": "electron ./dist/main/main.js",
-    "start:dev": "VITE_DEV_SERVER_URL=http://localhost:5173 electron ./dist/main/main.js"
+    "start:dev": "VITE_DEV_SERVER_URL=http://localhost:5173 electron ./dist/main/main.js",
+    "package": "electron-builder",
+    "package:dir": "electron-builder --dir"
   },
-  "dependencies": {
-    "@anthropic-ai/sdk": "^0.27.2",
-    "electron": "^31.7.7"
-  },
+  "dependencies": {},
   "devDependencies": {
     "@types/node": "^20.14.14",
+    "electron": "^31.7.7",
+    "electron-builder": "^24.13.3",
     "typescript": "~5.9.3"
+  },
+  "build": {
+    "appId": "com.worldbuildingdesk.app",
+    "productName": "Worldbuilding Desk",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "../web/dist",
+        "to": "renderer",
+        "filter": [
+          "**/*"
+        ]
+      }
+    ],
+    "mac": {
+      "target": [
+        "dmg",
+        "zip"
+      ],
+      "category": "public.app-category.productivity"
+    },
+    "win": {
+      "target": [
+        "nsis"
+      ]
+    },
+    "linux": {
+      "target": [
+        "AppImage"
+      ],
+      "category": "Office"
+    }
   }
 }

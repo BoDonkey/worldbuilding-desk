@@ -7,6 +7,9 @@ const devServerUrl = process.env.VITE_DEV_SERVER_URL;
 let mainWindow: BrowserWindow | null = null;
 
 function rendererIndexHtml(): string {
+  if (app.isPackaged) {
+    return path.join(process.resourcesPath, 'renderer', 'index.html');
+  }
   return path.resolve(app.getAppPath(), '../web/dist/index.html');
 }
 
