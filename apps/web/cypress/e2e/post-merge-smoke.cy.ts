@@ -4,6 +4,55 @@ const TOOL_NAMES = {
   general: 'General Clarity Tool'
 } as const;
 
+const DB_NAME = 'worldbuilding-db';
+const DB_VERSION = 13;
+
+function mutateSmokeDb(
+  mutator: (db: IDBDatabase) => void | Promise<void>
+): Cypress.Chainable<void> {
+  return cy.window().then(
+    (win) =>
+      new Cypress.Promise<void>((resolve, reject) => {
+        const openRequest = win.indexedDB.open(DB_NAME, DB_VERSION);
+        openRequest.onerror = () => reject(openRequest.error);
+        openRequest.onsuccess = async () => {
+          const db = openRequest.result;
+          try {
+            await mutator(db);
+            resolve();
+          } catch (error) {
+            reject(error);
+          } finally {
+            db.close();
+          }
+        };
+      })
+  );
+}
+
+function putRecord<T extends {id: string}>(
+  db: IDBDatabase,
+  storeName: string,
+  record: T
+): Promise<void> {
+  return new Cypress.Promise<void>((resolve, reject) => {
+    const tx = db.transaction([storeName], 'readwrite');
+    tx.objectStore(storeName).put(record);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+    tx.onabort = () => reject(tx.error);
+  });
+}
+
+function getRecord<T>(db: IDBDatabase, storeName: string, id: string): Promise<T> {
+  return new Cypress.Promise<T>((resolve, reject) => {
+    const tx = db.transaction([storeName], 'readonly');
+    const request = tx.objectStore(storeName).get(id);
+    request.onsuccess = () => resolve(request.result as T);
+    request.onerror = () => reject(request.error);
+  });
+}
+
 function addPromptTool(name: string, instructions: string): void {
   // Use placeholders instead of label nesting to avoid DOM-structure brittleness.
   cy.get('input[placeholder="e.g., Literary Critic Persona"]').first().clear().type(name);
@@ -76,7 +125,7 @@ function openAssistantAndAssertSelectedTool(
     .find('input')
     .should(
       selectedToolName === TOOL_NAMES.general ? 'be.checked' : 'not.be.checked'
-    );
+  );
 }
 
 describe('Post-merge smoke checklist', () => {
@@ -89,6 +138,7 @@ describe('Post-merge smoke checklist', () => {
 
   it('exports markdown with selected scenes in chosen order', () => {
     cy.visit('/workspace');
+    cy.contains('button', 'Show scenes').click();
 
     // Capture the blob that the app prepares for download.
     cy.window().then((win) => {
@@ -100,15 +150,17 @@ describe('Post-merge smoke checklist', () => {
         .as('createObjectURL');
     });
 
-    cy.contains('button', 'Export MD').click();
+    cy.contains('button', 'Export MD').click({force: true});
 
-    cy.get('[role="dialog"]').within(() => {
-      cy.contains('li', 'Beta Scene').find('input[type="checkbox"]').first().uncheck();
+    cy.contains('[role="dialog"] h3', 'Export scenes as Markdown')
+      .closest('[role="dialog"]')
+      .within(() => {
+      cy.contains('li', 'Beta Scene').find('label').first().click();
       // Re-query after each move so we do not keep stale row references.
       cy.contains('li', '3. Gamma Scene').contains('button', 'Up').click();
       cy.contains('li', '2. Gamma Scene').contains('button', 'Up').click();
       cy.contains('button', 'Export').click();
-    });
+      });
 
     cy.contains('[role="status"]', 'Exported 2 scene(s) to Markdown.').should('be.visible');
     cy.get('@createObjectURL').should('have.been.calledOnce');
@@ -128,6 +180,7 @@ describe('Post-merge smoke checklist', () => {
 
   it('exports docx as a non-empty zip payload', () => {
     cy.visit('/workspace');
+    cy.contains('button', 'Show scenes').click();
 
     cy.window().then((win) => {
       cy.stub(win.URL, 'createObjectURL')
@@ -138,10 +191,12 @@ describe('Post-merge smoke checklist', () => {
         .as('createObjectURL');
     });
 
-    cy.contains('button', 'Export DOCX').click();
-    cy.get('[role="dialog"]').within(() => {
+    cy.contains('button', 'Export DOCX').click({force: true});
+    cy.contains('[role="dialog"] h3', 'Export scenes as DOCX')
+      .closest('[role="dialog"]')
+      .within(() => {
       cy.contains('button', 'Export').click();
-    });
+      });
 
     cy.contains('[role="status"]', 'Exported 3 scene(s) to DOCX.').should('be.visible');
     cy.get('@createObjectURL').should('have.been.calledOnce');
@@ -155,6 +210,50 @@ describe('Post-merge smoke checklist', () => {
       expect(bytes[0]).to.equal(0x50);
       expect(bytes[1]).to.equal(0x4b);
       expect(zipText).to.contain('word/document.xml');
+    });
+  });
+
+  it('exports epub as a valid ebook-shaped zip payload', () => {
+    cy.visit('/workspace');
+    cy.contains('button', 'Show scenes').click();
+
+    cy.window().then((win) => {
+      cy.stub(win.URL, 'createObjectURL')
+        .callsFake((blob: Blob) => {
+          (win as any).__lastEpubBlob = blob;
+          return 'blob:cypress-epub-export';
+        })
+        .as('createObjectURL');
+    });
+
+    cy.contains('button', 'Export EPUB').click({force: true});
+    cy.contains('[role="dialog"] h3', 'Export scenes as EPUB')
+      .closest('[role="dialog"]')
+      .within(() => {
+        cy.contains('button', 'Export').click();
+      });
+
+    cy.contains('[role="status"]', 'Exported 3 scene(s) to EPUB.').should('be.visible');
+    cy.get('@createObjectURL').should('have.been.calledOnce');
+
+    cy.window().then(async (win) => {
+      const epubBlob = (win as any).__lastEpubBlob as Blob;
+      const bytes = new Uint8Array(await epubBlob.arrayBuffer());
+      const zipText = new TextDecoder().decode(bytes);
+
+      expect(epubBlob.size).to.be.greaterThan(500);
+      expect(bytes[0]).to.equal(0x50);
+      expect(bytes[1]).to.equal(0x4b);
+      expect(zipText).to.contain('application/epub+zip');
+      expect(zipText).to.contain('META-INF/container.xml');
+      expect(zipText).to.contain('OEBPS/content.opf');
+      expect(zipText).to.contain('OEBPS/nav.xhtml');
+      expect(zipText).to.contain('OEBPS/text/001-alpha-scene.xhtml');
+      expect(zipText).to.contain('OEBPS/text/002-beta-scene.xhtml');
+      expect(zipText).to.contain('OEBPS/text/003-gamma-scene.xhtml');
+      expect(zipText).to.contain('1. Alpha Scene');
+      expect(zipText).to.contain('2. Beta Scene');
+      expect(zipText).to.contain('3. Gamma Scene');
     });
   });
 
@@ -209,6 +308,149 @@ describe('Post-merge smoke checklist', () => {
     setProjectMode('general');
     cy.visit('/workspace');
     openAssistantAndAssertSelectedTool(TOOL_NAMES.general);
+  });
+
+  it('runs ollama diagnostics and applies a detected local model', () => {
+    cy.visit('/settings');
+
+    cy.window().then((win) => {
+      const originalFetch = win.fetch.bind(win);
+      cy.stub(win, 'fetch')
+        .callsFake((input: RequestInfo | URL, init?: RequestInit) => {
+          const url =
+            typeof input === 'string'
+              ? input
+              : input instanceof URL
+                ? input.toString()
+                : input.url;
+          if (url.includes('/api/tags')) {
+            return Promise.resolve(
+              new win.Response(
+                JSON.stringify({
+                  models: [{name: 'llama3.2:latest'}, {name: 'mistral:latest'}]
+                }),
+                {
+                  status: 200,
+                  headers: {'Content-Type': 'application/json'}
+                }
+              )
+            );
+          }
+          return originalFetch(input, init);
+        })
+        .as('fetchStub');
+    });
+
+    cy.contains('label', 'Active Provider').parent().find('select').select('Ollama (Local)');
+    cy.contains('label', 'Default Model').parent().find('input').clear();
+    cy.contains('button', 'Run Provider Diagnostics').click();
+
+    cy.contains('strong', 'Ollama diagnostics passed.').should('be.visible');
+    cy.contains('Connected to http://localhost:11434.').should('be.visible');
+    cy.contains('Detected 2 installed model(s).').should('be.visible');
+    cy.contains('No explicit model configured. Runtime will auto-detect "llama3.2:latest".').should(
+      'be.visible'
+    );
+
+    cy.contains('button', 'Use llama3.2:latest').click();
+    cy.contains('label', 'Default Model').parent().find('input').should('have.value', 'llama3.2:latest');
+  });
+
+  it('exports, validates, and imports a project backup with count check success', () => {
+    cy.visit('/');
+
+    cy.window().then((win) => {
+      cy.stub(win.URL, 'createObjectURL')
+        .callsFake((blob: Blob) => {
+          (win as any).__lastBackupBlob = blob;
+          return 'blob:cypress-backup-export';
+        })
+        .as('createBackupObjectURL');
+    });
+
+    cy.contains('li', 'Cypress Smoke Project').within(() => {
+      cy.contains('button', 'Export Backup (.zip)').click();
+    });
+
+    cy.contains('[role="status"]', 'Backup exported for "Cypress Smoke Project".').should(
+      'be.visible'
+    );
+    cy.get('@createBackupObjectURL').should('have.been.calledOnce');
+
+    cy.window().then(async (win) => {
+      const backupBlob = (win as any).__lastBackupBlob as Blob;
+      const backupBuffer = Cypress.Buffer.from(await backupBlob.arrayBuffer());
+      const backupFile = {
+        contents: backupBuffer,
+        fileName: 'cypress-smoke-backup.zip',
+        mimeType: 'application/zip',
+        lastModified: Date.now()
+      };
+
+      cy.contains('button', 'Validate Backup (.zip)')
+        .next('input[type="file"]')
+        .selectFile(backupFile, {force: true});
+      cy.contains('[role="status"]', 'passed integrity checks').should('be.visible');
+
+      cy.contains('button', 'Import Backup (.zip)')
+        .next('input[type="file"]')
+        .selectFile(backupFile, {force: true});
+    });
+
+    cy.contains('h2', 'Backup Import Preview').should('be.visible');
+    cy.contains('button', 'Apply Import').click();
+    cy.contains('[role="status"]', 'Count check passed.').should('be.visible');
+    cy.contains('strong', 'Cypress Smoke Project (Imported)').should('be.visible');
+  });
+
+  it('blocks world bible JSON import on duplicate-name conflicts until a resolution is chosen', () => {
+    cy.visit('/world-bible');
+
+    cy.get('input[type="text"]').first().clear().type('Conflict Entry');
+    cy.contains('label', 'Description').find('textarea').first().clear().type('Original description');
+    cy.contains('button', 'Create Entry').click();
+    cy.contains('[role="status"]', 'Entry created.').should('be.visible');
+
+    const jsonPayload = JSON.stringify({
+      entries: [
+        {
+          name: 'Conflict Entry',
+          description: 'Imported replacement description'
+        }
+      ]
+    });
+
+    cy.get('input[type="file"][accept*="application/json"]').first().selectFile(
+      {
+        contents: Cypress.Buffer.from(jsonPayload),
+        fileName: 'world-bible-conflict.json',
+        mimeType: 'application/json'
+      },
+      {force: true}
+    );
+
+    cy.contains('h2', 'JSON Import Mapping').should('be.visible');
+    cy.contains('button', 'Apply JSON Import').click();
+    cy.contains('[role="status"]', 'Review 1 conflicting JSON row(s) before importing.').should(
+      'be.visible'
+    );
+
+    cy.contains('li', 'Conflict Entry').within(() => {
+      cy.contains('Conflict resolution')
+        .parent()
+        .find('select')
+        .select('Update by Name');
+    });
+
+    cy.contains('button', 'Apply JSON Import').click();
+    cy.contains('[role="status"]', 'JSON import created 0 entries and updated 1.').should(
+      'be.visible'
+    );
+    cy.contains('Conflict Entry').should('be.visible');
+    cy.contains('strong', 'description:').parent().should(
+      'contain.text',
+      'Imported replacement description'
+    );
   });
 
   it('round-trips tool pack with replace and append without breaking defaults', () => {
@@ -338,10 +580,8 @@ describe('Post-merge smoke checklist', () => {
         cy.contains('button', 'Insert').click();
       });
 
-    cy.get('.tiptap-editor').should(
-      'contain.text',
-      '{{STAT_BLOCK:character:Aria:compact}}'
-    );
+    cy.get('.tiptap-editor').should('contain.text', 'Stat Block: Aria · Compact');
+    cy.get('.tiptap-editor').should('not.contain.text', '{{STAT_BLOCK:character:Aria:compact}}');
 
     cy.contains('button', 'Refresh Placeholders').click();
 
@@ -354,5 +594,98 @@ describe('Post-merge smoke checklist', () => {
       'not.contain.text',
       '{{STAT_BLOCK:character:Aria:compact}}'
     );
+  });
+
+  it('rebinds an ambiguous legacy stat block token in place', () => {
+    cy.visit('/workspace');
+
+    mutateSmokeDb(async (db) => {
+      const alphaScene = await getRecord<{
+        id: string;
+        projectId: string;
+        title: string;
+        content: string;
+        createdAt: number;
+        updatedAt: number;
+      }>(db, 'writingDocuments', 'scene-alpha');
+      await putRecord(db, 'writingDocuments', {
+        ...alphaScene,
+        content: '<p>{{STAT_BLOCK:character:Aria:compact}}</p>',
+        updatedAt: Date.now()
+      });
+
+      await putRecord(db, 'character_sheets', {
+        id: 'sheet-aria-2',
+        projectId: 'cypress-project-1',
+        name: 'Aria',
+        level: 7,
+        experience: 4100,
+        stats: [
+          {definitionId: 'strength', value: 18},
+          {definitionId: 'agility', value: 16}
+        ],
+        resources: [{definitionId: 'hp', current: 55, max: 60}],
+        inventory: [],
+        createdAt: Date.now(),
+        updatedAt: Date.now()
+      });
+    });
+
+    cy.reload();
+
+    cy.get('.tiptap-editor .stat-block-token-chip--ambiguous')
+      .should('contain.text', 'Needs rebind')
+      .click();
+
+    cy.get('[aria-label="Status Block Builder"]').within(() => {
+      cy.contains('h3', 'Rebind Status Block').should('be.visible');
+      cy.get('#stat-block-character').select('sheet-aria-2');
+      cy.contains('button', 'Rebind token').click();
+    });
+
+    cy.contains('[role="status"]', 'Rebound stat block placeholder.').should('be.visible');
+    cy.get('.tiptap-editor .stat-block-token-chip--ambiguous').should('not.exist');
+    cy.get('.tiptap-editor [data-stat-block-token]')
+      .should('have.attr', 'data-stat-block-token')
+      .and('include', 'sheet-aria-2');
+  });
+
+  it('rebinds a missing stat block token in place', () => {
+    cy.visit('/workspace');
+
+    mutateSmokeDb(async (db) => {
+      const alphaScene = await getRecord<{
+        id: string;
+        projectId: string;
+        title: string;
+        content: string;
+        createdAt: number;
+        updatedAt: number;
+      }>(db, 'writingDocuments', 'scene-alpha');
+      await putRecord(db, 'writingDocuments', {
+        ...alphaScene,
+        content: '<p>{{STAT_BLOCK:item:missing-entity:compact:l=Ghost%20Sword}}</p>',
+        updatedAt: Date.now()
+      });
+    });
+
+    cy.reload();
+
+    cy.get('.tiptap-editor .stat-block-token-chip--missing')
+      .should('contain.text', 'Missing source')
+      .click();
+
+    cy.get('[aria-label="Status Block Builder"]').within(() => {
+      cy.contains('h3', 'Rebind Status Block').should('be.visible');
+      cy.get('#stat-block-source-type').should('have.value', 'item');
+      cy.get('#stat-block-entity').select('entity-sword-1');
+      cy.contains('button', 'Rebind token').click();
+    });
+
+    cy.contains('[role="status"]', 'Rebound stat block placeholder.').should('be.visible');
+    cy.get('.tiptap-editor .stat-block-token-chip--missing').should('not.exist');
+    cy.get('.tiptap-editor [data-stat-block-token]')
+      .should('have.attr', 'data-stat-block-token')
+      .and('include', 'entity-sword-1');
   });
 });

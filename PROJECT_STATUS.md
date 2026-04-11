@@ -1,6 +1,6 @@
 # Worldbuilding-Desk Project Status
 
-**Last Updated:** March 14, 2026
+**Last Updated:** April 10, 2026
 
 ## Project Overview
 
@@ -65,6 +65,7 @@ A comprehensive desktop application for LitRPG/GameLit authors that bridges narr
 - Navigation system.
 - Split editor/AI panel layout.
 - Workspace command palette, drawer shell, system history, and lore inspector.
+- Declarative app routing with shared layout composition.
 - Import modes (`strict`, `balanced`, `lenient`) with deferred review for imported scenes.
 - Inline consistency review highlights + action popovers.
 - Inline lore highlights + quick lore popovers for known entities/characters.
@@ -138,6 +139,22 @@ npx tsx examples/basic-usage.ts
 
 ## Recent Changes & Fixes
 
+### Architecture Refactor Status (April 9, 2026)
+- Completed the service-layer reorganization into domain folders with barrel exports.
+- Split `App.tsx` into routing/layout composition, command-palette provider, route-debug utility, and app-shell state hook.
+- Decomposed `WorkspaceRoute.tsx` into focused hooks:
+  - `useWorkspaceDrawers`
+  - `useWorkspaceMemories`
+  - `useWorkspaceStatBlocks`
+  - `useWorkspaceConsistency`
+  - `useWorkspaceDocuments`
+- Brought the workspace route back to a composition-oriented shape instead of a single orchestration-heavy component.
+- Kept behavior stable while maintaining clean `web` lint/build verification.
+
+**Immediate Next Slice**
+- Evaluate the next architecture item separately from feature work: centralized app state/store migration.
+- Keep architecture work behind current release-baseline needs: onboarding, search, and packaging.
+
 ### Workspace Review + Editor UX (March 14, 2026)
 - Added import modes and deferred review flow so non-strict imports remain writable without losing review context.
 - Added best-effort `.pages` preview extraction with fallback guidance.
@@ -153,8 +170,6 @@ npx tsx examples/basic-usage.ts
 - Improved settings copy for consistency detection keywords and import defaults.
 
 **Immediate Next Slice**
-- Persist “needs completion” state for review-created World Bible / Compendium records and surface that with badges in navigation.
-- Promote alias handling into a first-class `Alternative names` field on World Bible entries and use it as the shared source of truth for review/lore matching.
 - Continue editor appearance work with richer font/color customization and fix dark mode readability regressions.
 - Begin AI personalities/tools implementation, starting with a writing critic persona.
 
@@ -182,6 +197,23 @@ npx tsx examples/basic-usage.ts
 - Indexed prompt management + Shodh memories feeding context.
 - Context-aware assistance with selectable insertion and AIExpandMenu.
 - Local RAG/Shodh layers now support inherited canon for AI grounding.
+- AI settings now include provider diagnostics, with Ollama model discovery from local installed models.
+- Ollama no longer depends on a stale hardcoded default model; blank configuration now auto-detects an installed model at runtime.
+
+### Release-Baseline Hardening (April 10, 2026)
+- Added a concrete release-baseline checklist in `docs/table-stakes-release-checklist.md`.
+- Verified project backup export, validation, and import round-trip in smoke coverage.
+- Verified manuscript export flows for Markdown, DOCX, and EPUB in smoke coverage.
+- Fixed a narrow-viewport export bug where the workspace drawer could block the export modal.
+- Added World Bible JSON import conflict review for duplicate-name collisions before commit.
+- Added AI provider diagnostics in Settings, including installed-model detection and apply-model actions for Ollama.
+- Expanded the post-merge smoke spec to cover:
+  - Markdown export
+  - DOCX export
+  - EPUB export
+  - backup export / validate / import
+  - World Bible duplicate-name conflict review
+  - Ollama diagnostics + detected-model application
 
 
 ### Prompt & Tooling Controls (Planned)
@@ -211,6 +243,7 @@ npx tsx examples/basic-usage.ts
 - Running as web app, not full Electron yet
 - Proxy server must be started separately
 - No native desktop packaging currently
+- Frontend architecture cleanup is substantially improved, but centralized app state/store migration is still pending.
 
 ### AI Features
 - Proxy server doesn't persist across restarts
@@ -220,13 +253,18 @@ npx tsx examples/basic-usage.ts
 ### Storage / Canon
 - IndexedDB per project, no remote sync yet
 - Child projects inherit parent canon read-only; promotion requires approval
-- Manual backup/export (multi-source import planned next)
+- Manual backup/export is implemented and now covered by smoke tests; merge/conflict UX still needs broader real-world validation
 
 ### Workspace / Review UX
-- Review-created World Bible entities do not yet automatically seed Compendium records.
+- Review-created World Bible entities now seed draft Compendium records when created from workspace review.
 - Review state is reconstructed from validation passes; there is not yet a persisted review queue model.
-- World Bible / Compendium “needs completion” badges are not implemented yet.
-- Aliases exist in consistency storage, but `Alternative names` are not yet exposed as a first-class editable World Bible field.
+- World Bible / Compendium “needs completion” badges are implemented in navigation and route views.
+- `Alternative names` is now an editable World Bible field and syncs into consistency alias storage for review/lore matching.
+- World Bible JSON import now blocks duplicate-name conflicts until the user explicitly chooses skip, update, or create-duplicate behavior.
+
+### Frontend Structure
+- `WorkspaceRoute.tsx` is now split across dedicated hooks for drawers, memories, stat blocks, consistency, and document workflow.
+- The next structural step, if resumed later, is store consolidation rather than more route-splitting.
 
 ### Editor Appearance
 - Dark mode currently has readability regressions and poor visual contrast in several panels and controls.
@@ -235,6 +273,12 @@ npx tsx examples/basic-usage.ts
 ### AI Authoring Tools
 - AI personalities/tools are not implemented yet.
 - No dedicated writing critic persona is available yet.
+
+### Release Gaps
+- No first-run onboarding flow yet.
+- No unified app-wide search yet.
+- No packaged desktop build yet.
+- EPUB export has automated structure validation, but external reader compatibility is still not manually verified.
 
 ---
 
@@ -246,9 +290,8 @@ npx tsx examples/basic-usage.ts
    - Add richer editor typography controls (including dyslexia-friendly font options).
    - Add customizable highlight/notification color palettes.
 2. **Review Completion Workflow**
-   - Add draft / needs-completion state to review-created World Bible and Compendium records.
-   - Surface completion badges in navigation and review flows.
    - Clarify “refresh review” vs “resume strict review” in workspace UX.
+   - Decide whether to keep review state validation-derived or add a persisted review queue.
 3. **Lore / Compendium Tooltip Convergence**
    - Expand shared popover into a full lore + compendium review shell.
    - Support cross-linking shorthand references and alias management from tooltip flows.

@@ -1,6 +1,6 @@
 # Next Steps
 
-Last updated: 2026-03-14
+Last updated: 2026-04-10
 
 ## Current Baseline
 
@@ -20,37 +20,70 @@ Implemented recently:
 - Inline consistency highlights and quick action popovers.
 - Inline lore highlights and quick lore popovers for known entities/characters.
 - Editor appearance controls for font presentation, reading width, and editor surface.
+- World Bible / Compendium `needs completion` badges for review-created records.
+- `Alternative names` as a first-class World Bible field synced into alias matching.
+- Conflict-reviewed World Bible JSON import for duplicate-name collisions.
+- Backup export / validate / import smoke coverage.
+- Manuscript export smoke coverage for Markdown, DOCX, and EPUB.
+- AI provider diagnostics in Settings, including Ollama installed-model detection and apply-model actions.
 
 ## Recommended Priority Order
 
-1. Workspace and editor stabilization
-2. Editor readability and theme hardening
-3. Review completion workflow
-4. AI personas/tools
-5. Data portability/import/export hardening
+1. First-run onboarding
+2. App-wide search
+3. Review completion workflow polish
+4. Editor readability and theme hardening
+5. Desktop packaging
+6. AI personas/tools
 
-## 1) Workspace and Editor Stabilization
+## 1) First-Run Onboarding
 
-Goal: ensure the new workspace review/editor flows are safe to build on.
+Goal: make the current feature set approachable without outside guidance.
 
 Checklist:
 
-- Run: `pnpm lint`
-- Run: `pnpm build:web`
-- Smoke test:
-  - Workspace imports for `.txt`, `.md`, `.html`, `.docx`, `.pages`.
-  - Deferred review refresh/reopen behavior.
-  - Lore highlight clicks for full names and shorthand references.
-  - Drawer persistence across route changes.
-  - Editor appearance settings survive reload.
+- Add guided first-project creation.
+- Explain import modes and when to use them.
+- Surface the core routes and expected author workflow.
+- Add lightweight inline help for Projects, Workspace, World Bible, and Settings.
 
 Exit criteria:
 
-- No regressions in create/edit/save flows.
-- No data-loss path on reload.
-- Review/lore highlighting behaves predictably across scene switches.
+- A new user can create a project, import source text, and understand where world/canon/AI settings live.
+- The app no longer depends on the docs for first-session orientation.
 
-## 2) Editor Readability and Theme Hardening
+## 2) App-Wide Search
+
+Goal: let authors retrieve scenes and canon from one obvious entry point.
+
+Next slices:
+
+- Add a global search entry point in the app shell.
+- Return scene and World Bible matches in one result list.
+- Support direct-open behavior into the target route and record.
+- Decide whether alias matches should be shown explicitly in results.
+
+Exit criteria:
+
+- A user can locate a scene or World Bible entry from anywhere in the app.
+- Search results open the correct destination without manual hunting.
+
+## 3) Review Completion Workflow
+
+Goal: make fast review-created records feel intentionally incomplete rather than silently finished.
+
+Targets:
+
+- Clarify the difference between `Refresh review` and `Resume strict review`.
+- Decide whether review state should stay validation-derived or move to a persisted review queue.
+- Expand the `Alternative names` model into tooltip/review editing flows so alias management is not limited to the World Bible form.
+
+Exit criteria:
+
+- Authors can create fast shells from review without losing track of unfinished records.
+- Alias follow-up and review follow-up can both be completed from the same review-oriented workflow.
+
+## 4) Editor Readability and Theme Hardening
 
 Goal: make the workspace comfortable for long writing sessions.
 
@@ -68,24 +101,21 @@ Exit criteria:
 - Writers can reach a comfortable editor setup in both light and dark themes.
 - Highlight and notification colors remain legible across presets.
 
-## 3) Review Completion Workflow
+## 5) Desktop Packaging
 
-Goal: make fast review-created records feel intentionally incomplete rather than silently finished.
+Goal: close the gap between “web app in development” and “desktop authoring product.”
 
 Targets:
 
-- Add `needs completion` / draft state to review-created World Bible entities.
-- Add first-class `Alternative names` to World Bible entries and sync them with alias-based review/lore matching.
-- Add optional compendium seeding from review actions.
-- Badge World Bible / Compendium navigation targets when draft records need attention.
-- Clarify the difference between `Refresh review` and `Resume strict review`.
+- Choose packaging path and target platform baseline.
+- Produce an installable desktop build with local storage behavior verified.
+- Confirm backup/export/import and AI proxy expectations in the packaged app.
 
 Exit criteria:
 
-- Authors can create fast shells from review without losing track of unfinished records.
-- Review-created records surface follow-up work clearly.
+- A distributable desktop build exists and supports the core author workflow.
 
-## 4) AI Personas / Tools
+## 6) AI Personas / Tools
 
 Goal: move beyond generic assistant behavior toward explicit author-facing roles.
 
@@ -101,20 +131,6 @@ Targets:
 Exit criteria:
 
 - Critic persona can review selected text with predictable structured output.
-
-## 5) Data Portability / Import-Export
-
-Goal: improve author workflow and reduce lock-in risk.
-
-Targets:
-
-- Add export for scenes and compendium data (`.json` + optional markdown bundle).
-- Add import preview/validation before commit.
-- Optional: richer Word import handling (tables/headers/formatting).
-
-Exit criteria:
-
-- Author can round-trip project content safely.
 
 ## Branch and Commit Workflow (Keep)
 
