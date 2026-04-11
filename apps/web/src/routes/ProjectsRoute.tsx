@@ -1,7 +1,9 @@
 import {useCallback, useEffect, useRef, useState} from 'react';
 import type {ChangeEvent, FormEvent} from 'react';
 import {useNavigate} from 'react-router-dom';
-import type {Project} from '../entityTypes';
+import type {Project, ProjectMode} from '../entityTypes';
+import {createDefaultSettings, saveProjectSettings} from '../settingsStorage';
+import {getDefaultFeatureToggles} from '../projectMode';
 import type {WorldRuleset} from '@litrpg-tool/rules-engine';
 import {
   getAllProjects,
@@ -52,6 +54,7 @@ function ProjectsRoute({activeProject, onSelectProject}: ProjectsRouteProps) {
     Map<string, {worldEntries: number; scenes: number}>
   >(new Map());
   const [name, setName] = useState('');
+  const [newProjectMode, setNewProjectMode] = useState<ProjectMode>('general');
   const [feedback, setFeedback] = useState<{
     tone: 'success' | 'error';
     message: string;
@@ -119,8 +122,19 @@ function ProjectsRoute({activeProject, onSelectProject}: ProjectsRouteProps) {
       };
 
       await saveProject(project);
+
+      const defaultSettings = await createDefaultSettings(project.id);
+      if (newProjectMode !== defaultSettings.projectMode) {
+        await saveProjectSettings({
+          ...defaultSettings,
+          projectMode: newProjectMode,
+          featureToggles: getDefaultFeatureToggles(newProjectMode)
+        });
+      }
+
       setProjects((prev) => [...prev, project]);
       setName('');
+      setNewProjectMode('general');
 
       onSelectProject(project);
       setFeedback({tone: 'success', message: 'Project created.'});
@@ -660,7 +674,7 @@ function ProjectsRoute({activeProject, onSelectProject}: ProjectsRouteProps) {
           <p className={styles.eyebrow}>Step 1 of 3: create a project shell.</p>
           <h2>Create New Project</h2>
           <p className={styles.sectionIntro}>
-            Start with a simple name. You can set mode, canon, and import behavior after opening it.
+            Pick a name and project type. You can change canon, import behavior, and advanced settings after opening it.
           </p>
           <div className={styles.formRow}>
             <label className={styles.fieldLabel}>
@@ -671,6 +685,19 @@ function ProjectsRoute({activeProject, onSelectProject}: ProjectsRouteProps) {
                 onChange={(e) => setName(e.target.value)}
                 required
               />
+            </label>
+          </div>
+          <div className={styles.formRow}>
+            <label className={styles.fieldLabel}>
+              Project Type
+              <select
+                value={newProjectMode}
+                onChange={(e) => setNewProjectMode(e.target.value as ProjectMode)}
+              >
+                <option value='general'>General Fiction — narrative focus, no game systems</option>
+                <option value='litrpg'>LitRPG — system notifications, status windows, stat blocks</option>
+                <option value='game'>Game / TTRPG — rules-heavy, mechanics-forward</option>
+              </select>
             </label>
           </div>
           <button type='submit' disabled={isCreatingProject}>

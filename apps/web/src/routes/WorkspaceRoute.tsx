@@ -397,6 +397,8 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
     setResolverNotice,
     unknownLinkSelection,
     setUnknownLinkSelection,
+    unknownCategorySelection,
+    setUnknownCategorySelection,
     isRunningConsistencyReview,
     consistencyReviewItems,
     lastConsistencyReviewAt,
@@ -1913,9 +1915,31 @@ function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
                     onClose={() => setConsistencyPopover(null)}
                   >
                     <div className={styles.consistencyPopoverActions}>
+                      {categories.length > 0 && (
+                        <select
+                          value={unknownCategorySelection[activeConsistencyPopoverIssue.surface] ?? ''}
+                          onChange={(e) =>
+                            setUnknownCategorySelection((prev) => ({
+                              ...prev,
+                              [activeConsistencyPopoverIssue.surface]: e.target.value
+                            }))
+                          }
+                          aria-label='Entity category'
+                        >
+                          <option value=''>Auto-select category</option>
+                          {categories.map((cat) => (
+                            <option key={cat.id} value={cat.id}>
+                              {cat.name}
+                            </option>
+                          ))}
+                        </select>
+                      )}
                       <button
                         type='button'
-                        onClick={() => void resolveUnknownEntity(activeConsistencyPopoverIssue.surface)}
+                        onClick={() => void resolveUnknownEntity(
+                          activeConsistencyPopoverIssue.surface,
+                          unknownCategorySelection[activeConsistencyPopoverIssue.surface] || undefined
+                        )}
                         disabled={resolvingUnknown === activeConsistencyPopoverIssue.surface}
                       >
                         {resolvingUnknown === activeConsistencyPopoverIssue.surface

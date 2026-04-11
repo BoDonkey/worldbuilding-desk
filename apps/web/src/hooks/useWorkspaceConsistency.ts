@@ -118,6 +118,9 @@ export const useWorkspaceConsistency = ({
   const [unknownLinkSelection, setUnknownLinkSelection] = useState<
     Record<string, string>
   >({});
+  const [unknownCategorySelection, setUnknownCategorySelection] = useState<
+    Record<string, string>
+  >({});
   const [isRunningConsistencyReview, setIsRunningConsistencyReview] = useState(false);
   const [consistencyReviewItems, setConsistencyReviewItems] = useState<
     ConsistencyReviewItem[]
@@ -452,7 +455,7 @@ export const useWorkspaceConsistency = ({
   }, [entities, unknownGuardrailIssues]);
 
   const resolveUnknownEntity = useCallback(
-    async (surface: string) => {
+    async (surface: string, categoryId?: string) => {
       if (!activeProject) return;
 
       const normalized = surface.trim();
@@ -468,12 +471,16 @@ export const useWorkspaceConsistency = ({
           setCategories(availableCategories);
         }
 
-        const preferredCategory =
+        const chosenCategory =
+          (categoryId
+            ? availableCategories.find((c) => c.id === categoryId)
+            : null) ??
           availableCategories.find((category) =>
-            ['items', 'characters', 'locations'].includes(category.slug)
-          ) ?? availableCategories[0];
+            ['characters', 'locations', 'items'].includes(category.slug)
+          ) ??
+          availableCategories[0];
 
-        if (!preferredCategory) {
+        if (!chosenCategory) {
           throw new Error('No categories available for entity creation.');
         }
 
@@ -481,7 +488,7 @@ export const useWorkspaceConsistency = ({
         const entity: WorldEntity = {
           id: crypto.randomUUID(),
           projectId: activeProject.id,
-          categoryId: preferredCategory.id,
+          categoryId: chosenCategory.id,
           name: normalized,
           fields: {},
           needsCompletion: true,
@@ -507,12 +514,17 @@ export const useWorkspaceConsistency = ({
           delete copy[surface];
           return copy;
         });
+        setUnknownCategorySelection((prev) => {
+          const copy = {...prev};
+          delete copy[surface];
+          return copy;
+        });
         setConsistencyPopover((prev) =>
           prev?.surface.trim().toLowerCase() === normalized.toLowerCase() ? null : prev
         );
         setFeedback({
           tone: 'success',
-          message: `Entity "${normalized}" created in ${preferredCategory.name} and marked needs completion. Save again to validate.`
+          message: `Entity "${normalized}" created in ${chosenCategory.name} and marked needs completion. Save again to validate.`
         });
         setResolverNotice({
           message: `Entity "${normalized}" created.`
@@ -661,6 +673,8 @@ export const useWorkspaceConsistency = ({
     setResolverNotice,
     unknownLinkSelection,
     setUnknownLinkSelection,
+    unknownCategorySelection,
+    setUnknownCategorySelection,
     isRunningConsistencyReview,
     consistencyReviewItems,
     lastConsistencyReviewAt,
