@@ -1,5 +1,6 @@
 import {useEffect, useMemo, useState} from 'react';
 import {useNavigate} from 'react-router-dom';
+import {useAppStore} from '../store/appStore';
 import type {
   Character,
   CompendiumActionDefinition,
@@ -52,10 +53,7 @@ import {
 import {getCharactersByProject} from '../characterStorage';
 import {getEntitiesByProject} from '../entityStorage';
 
-interface CompendiumRouteProps {
-  activeProject: Project | null;
-  projectSettings: ProjectSettings | null;
-}
+// activeProject and projectSettings read from store below
 
 const DOMAIN_OPTIONS: Array<{value: CompendiumDomain; label: string}> = [
   {value: 'beast', label: 'Beast'},
@@ -201,7 +199,9 @@ function getDefaultActions(domain: CompendiumDomain): CompendiumActionDefinition
   return [{id: 'discover', label: 'Discover', points: 1, repeatable: false}];
 }
 
-function CompendiumRoute({activeProject, projectSettings}: CompendiumRouteProps) {
+function CompendiumRoute() {
+  const activeProject = useAppStore((s) => s.activeProject);
+  const projectSettings = useAppStore((s) => s.projectSettings);
   const navigate = useNavigate();
   const [entries, setEntries] = useState<CompendiumEntry[]>([]);
   const [milestones, setMilestones] = useState<CompendiumMilestone[]>([]);

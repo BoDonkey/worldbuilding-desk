@@ -1,61 +1,17 @@
-import {useEffect, useState} from 'react';
-import type {Project, ProjectSettings} from '../entityTypes';
-import {getOrCreateSettings} from '../settingsStorage';
+import {useAppStore} from '../store/appStore';
 
-const ACTIVE_PROJECT_KEY = 'activeProject';
-const RAIL_COLLAPSED_KEY = 'ui.railCollapsed';
-
-const readStoredProject = (): Project | null => {
-  const raw = localStorage.getItem(ACTIVE_PROJECT_KEY);
-  if (!raw) return null;
-
-  try {
-    return JSON.parse(raw) as Project;
-  } catch {
-    return null;
-  }
-};
-
-const readStoredRailState = (): boolean => {
-  const raw = localStorage.getItem(RAIL_COLLAPSED_KEY);
-  return raw === '1';
-};
-
+/**
+ * Thin wrapper over the Zustand app store.
+ * Preserves the same API shape so App.tsx does not need changes beyond
+ * removing prop drilling to child routes.
+ */
 export const useAppShellState = () => {
-  const [activeProject, setActiveProject] = useState<Project | null>(readStoredProject);
-  const [projectSettings, setProjectSettings] = useState<ProjectSettings | null>(null);
-  const [isRailCollapsed, setRailCollapsed] = useState<boolean>(readStoredRailState);
-
-  useEffect(() => {
-    localStorage.setItem(RAIL_COLLAPSED_KEY, isRailCollapsed ? '1' : '0');
-  }, [isRailCollapsed]);
-
-  useEffect(() => {
-    if (activeProject) {
-      localStorage.setItem(ACTIVE_PROJECT_KEY, JSON.stringify(activeProject));
-    } else {
-      localStorage.removeItem(ACTIVE_PROJECT_KEY);
-    }
-  }, [activeProject]);
-
-  useEffect(() => {
-    if (!activeProject) {
-      setProjectSettings(null);
-      return;
-    }
-
-    let cancelled = false;
-    (async () => {
-      const settings = await getOrCreateSettings(activeProject.id);
-      if (!cancelled) {
-        setProjectSettings(settings);
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [activeProject]);
+  const activeProject = useAppStore((s) => s.activeProject);
+  const projectSettings = useAppStore((s) => s.projectSettings);
+  const isRailCollapsed = useAppStore((s) => s.isRailCollapsed);
+  const setActiveProject = useAppStore((s) => s.setActiveProject);
+  const setProjectSettings = useAppStore((s) => s.setProjectSettings);
+  const setRailCollapsed = useAppStore((s) => s.setRailCollapsed);
 
   return {
     activeProject,
@@ -63,6 +19,6 @@ export const useAppShellState = () => {
     projectSettings,
     setProjectSettings,
     isRailCollapsed,
-    setRailCollapsed
+    setRailCollapsed,
   };
 };

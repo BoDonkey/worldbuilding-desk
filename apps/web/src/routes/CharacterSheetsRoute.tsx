@@ -7,8 +7,7 @@ import type {
   CharacterTrackedEntry,
   CompendiumEntry,
   CharacterStat,
-  CharacterResource,
-  Project
+  CharacterResource
 } from '../entityTypes';
 import type {StoredRuleset} from '../entityTypes';
 import {
@@ -40,19 +39,20 @@ import {
   getCompendiumEntriesByProject
 } from '../services/compendium';
 
+import {useAppStore} from '../store/appStore';
+
 interface CharacterSheetsRouteProps {
-  activeProject: Project | null;
   embedded?: boolean;
   prefillCharacterId?: string | null;
   onPrefillConsumed?: () => void;
 }
 
 function CharacterSheetsRoute({
-  activeProject,
   embedded = false,
   prefillCharacterId,
   onPrefillConsumed
 }: CharacterSheetsRouteProps) {
+  const activeProject = useAppStore((s) => s.activeProject);
   const navigate = useNavigate();
   const [sheets, setSheets] = useState<CharacterSheet[]>([]);
   const [ruleset, setRuleset] = useState<StoredRuleset | null>(null);

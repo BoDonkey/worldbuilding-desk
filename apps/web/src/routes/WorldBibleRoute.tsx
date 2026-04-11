@@ -1,6 +1,7 @@
 import {useEffect, useState, useCallback, useRef, useMemo} from 'react';
 import type {ChangeEvent, FormEvent} from 'react';
 import {useLocation} from 'react-router-dom';
+import {useAppStore} from '../store/appStore';
 import type {EntityCategory, Project, WorldEntity} from '../entityTypes';
 import {getEntitiesByProject, saveEntity, deleteEntity} from '../entityStorage';
 import {
@@ -39,9 +40,7 @@ import {
   syncChildWithParent
 } from '../services/seriesBible/SeriesBibleService';
 
-interface WorldBibleRouteProps {
-  activeProject: Project | null;
-}
+// activeProject read from store below
 
 type ImportMode = 'create' | 'upsert';
 
@@ -309,7 +308,8 @@ const triggerJsonDownload = (fileName: string, data: unknown): void => {
   URL.revokeObjectURL(url);
 };
 
-function WorldBibleRoute({activeProject}: WorldBibleRouteProps) {
+function WorldBibleRoute() {
+  const activeProject = useAppStore((s) => s.activeProject);
   const location = useLocation();
   const [categories, setCategories] = useState<EntityCategory[]>([]);
   const [activeTab, setActiveTab] = useState<string | null>(null);

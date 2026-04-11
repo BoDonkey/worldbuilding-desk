@@ -1,24 +1,24 @@
 // apps/web/src/routes/CharactersRoute.tsx - NEW FILE
 import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
-import type { Character, Project, ProjectSettings } from '../entityTypes';
+import type { Character, ProjectSettings } from '../entityTypes';
 import { getCharactersByProject, saveCharacter, deleteCharacter } from '../characterStorage';
 import { getOrCreateSettings, saveProjectSettings } from '../settingsStorage';
 import { CharacterStyleList } from '../components/CharacterStyleList';
 import type { CharacterStyle } from '../entityTypes';
 import { useNavigate } from 'react-router-dom';
+import { useAppStore } from '../store/appStore';
 
 interface CharactersRouteProps {
-  activeProject: Project | null;
   embedded?: boolean;
   onOpenSheets?: (characterId?: string) => void;
 }
 
 function CharactersRoute({
-  activeProject,
   embedded = false,
   onOpenSheets
 }: CharactersRouteProps) {
+  const activeProject = useAppStore((s) => s.activeProject);
   const navigate = useNavigate();
   const [characters, setCharacters] = useState<Character[]>([]);
   const [settings, setSettings] = useState<ProjectSettings | null>(null);

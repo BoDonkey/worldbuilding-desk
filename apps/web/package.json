@@ -15,15 +15,16 @@
   "dependencies": {
     "@litrpg-tool/rules-engine": "workspace:*",
     "@litrpg-tool/rules-ui": "workspace:*",
+    "@xenova/transformers": "^2.14.1",
     "cors": "^2.8.5",
     "express": "^5.2.1",
     "idb": "^8.0.3",
-    "@xenova/transformers": "^2.14.1",
     "prosemirror-state": "^1.4.4",
     "prosemirror-view": "^1.41.4",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
-    "react-router-dom": "^7.9.6"
+    "react-router-dom": "^7.9.6",
+    "zustand": "^5.0.12"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",

@@ -22,12 +22,8 @@ import {
   getDefaultFeatureToggles,
   PROJECT_MODE_OPTIONS
 } from '../projectMode';
+import {useAppStore} from '../store/appStore';
 import styles from '../styles/SettingsRoute.module.css';
-
-interface SettingsRouteProps {
-  activeProject: Project | null;
-  onSettingsChanged?: (settings: ProjectSettings | null) => void;
-}
 
 interface SettingsSectionProps {
   title: string;
@@ -44,7 +40,9 @@ function SettingsSection({title, defaultOpen = false, children}: SettingsSection
   );
 }
 
-function SettingsRoute({activeProject, onSettingsChanged}: SettingsRouteProps) {
+function SettingsRoute() {
+  const activeProject = useAppStore((s) => s.activeProject);
+  const setProjectSettings = useAppStore((s) => s.setProjectSettings);
   const [settings, setSettings] = useState<ProjectSettings | null>(null);
   const [newStyleName, setNewStyleName] = useState('');
   const [expandedStyleId, setExpandedStyleId] = useState<string | null>(null);
@@ -56,7 +54,7 @@ function SettingsRoute({activeProject, onSettingsChanged}: SettingsRouteProps) {
   useEffect(() => {
     if (!activeProject) {
       setSettings(null);
-      onSettingsChanged?.(null);
+      setProjectSettings(null);
       return;
     }
 
@@ -69,14 +67,14 @@ function SettingsRoute({activeProject, onSettingsChanged}: SettingsRouteProps) {
         setSettings(projectSettings);
         setConsistencyCuesDraft(projectSettings.consistencyActionCues.join('\n'));
         setInheritedConsistencyCues(inheritedCues);
-        onSettingsChanged?.(projectSettings);
+        setProjectSettings(projectSettings);
       }
     })();
 
     return () => {
       cancelled = true;
     };
-  }, [activeProject, onSettingsChanged]);
+  }, [activeProject]);
 
   const handleAddStyle = async () => {
     if (!settings || !newStyleName.trim()) return;
@@ -100,7 +98,7 @@ function SettingsRoute({activeProject, onSettingsChanged}: SettingsRouteProps) {
 
     await saveProjectSettings(updated);
     setSettings(updated);
-    onSettingsChanged?.(updated);
+    setProjectSettings(updated);
     setNewStyleName('');
     setExpandedStyleId(newStyle.id);
   };
@@ -121,7 +119,7 @@ function SettingsRoute({activeProject, onSettingsChanged}: SettingsRouteProps) {
 
     await saveProjectSettings(updated);
     setSettings(updated);
-    onSettingsChanged?.(updated);
+    setProjectSettings(updated);
   };
 
   const handleDeleteStyle = async (styleId: string) => {
@@ -135,7 +133,7 @@ function SettingsRoute({activeProject, onSettingsChanged}: SettingsRouteProps) {
 
     await saveProjectSettings(updated);
     setSettings(updated);
-    onSettingsChanged?.(updated);
+    setProjectSettings(updated);
     if (expandedStyleId === styleId) {
       setExpandedStyleId(null);
     }
@@ -152,7 +150,7 @@ function SettingsRoute({activeProject, onSettingsChanged}: SettingsRouteProps) {
 
     await saveProjectSettings(updated);
     setSettings(updated);
-    onSettingsChanged?.(updated);
+    setProjectSettings(updated);
   };
 
   const handleProjectModeChange = async (mode: ProjectMode) => {
@@ -165,7 +163,7 @@ function SettingsRoute({activeProject, onSettingsChanged}: SettingsRouteProps) {
     };
     await saveProjectSettings(updated);
     setSettings(updated);
-    onSettingsChanged?.(updated);
+    setProjectSettings(updated);
   };
 
   const handleFeatureToggleChange = async (
@@ -183,7 +181,7 @@ function SettingsRoute({activeProject, onSettingsChanged}: SettingsRouteProps) {
     };
     await saveProjectSettings(updated);
     setSettings(updated);
-    onSettingsChanged?.(updated);
+    setProjectSettings(updated);
   };
 
   const handleConsistencyCueSave = async () => {
@@ -201,7 +199,7 @@ function SettingsRoute({activeProject, onSettingsChanged}: SettingsRouteProps) {
     await saveProjectSettings(updated);
     setSettings(updated);
     setConsistencyCuesDraft(updated.consistencyActionCues.join('\n'));
-    onSettingsChanged?.(updated);
+    setProjectSettings(updated);
   };
 
   const handleImportDefaultsChange = async (
@@ -217,7 +215,7 @@ function SettingsRoute({activeProject, onSettingsChanged}: SettingsRouteProps) {
     };
     await saveProjectSettings(updated);
     setSettings(updated);
-    onSettingsChanged?.(updated);
+    setProjectSettings(updated);
   };
 
   if (!activeProject) {

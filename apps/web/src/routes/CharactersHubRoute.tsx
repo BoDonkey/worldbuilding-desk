@@ -1,7 +1,7 @@
 import {useEffect, useMemo, useRef, useState} from 'react';
 import type {ChangeEvent} from 'react';
 import {useNavigate, useSearchParams} from 'react-router-dom';
-import type {Project} from '../entityTypes';
+import {useAppStore} from '../store/appStore';
 import CharactersRoute from './CharactersRoute';
 import CharacterSheetsRoute from './CharacterSheetsRoute';
 import {getRulesetByProjectId} from '../services/rules';
@@ -10,11 +10,8 @@ import {
   importCharactersJson
 } from '../services/characters';
 
-interface CharactersHubRouteProps {
-  activeProject: Project | null;
-}
-
-function CharactersHubRoute({activeProject}: CharactersHubRouteProps) {
+function CharactersHubRoute() {
+  const activeProject = useAppStore((s) => s.activeProject);
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [hasRuleset, setHasRuleset] = useState(false);
@@ -281,7 +278,6 @@ function CharactersHubRoute({activeProject}: CharactersHubRouteProps) {
       {view === 'roster' && (
         <CharactersRoute
           key={`roster-${dataVersion}`}
-          activeProject={activeProject}
           embedded
           onOpenSheets={(characterId) => {
             if (!hasRuleset) {
@@ -295,7 +291,6 @@ function CharactersHubRoute({activeProject}: CharactersHubRouteProps) {
       {view === 'sheets' && (
         <CharacterSheetsRoute
           key={`sheets-${dataVersion}`}
-          activeProject={activeProject}
           embedded
           prefillCharacterId={pendingCharacterId}
           onPrefillConsumed={() => setPendingCharacterId(null)}

@@ -4,7 +4,6 @@ import type {
   Character,
   CharacterSheet,
   EntityCategory,
-  Project,
   ProjectSettings,
   StatBlockGroup,
   StatBlockInsertMode,
@@ -90,6 +89,7 @@ import {
   type WorkspaceContextDrawerView
 } from '../hooks/useWorkspaceDrawers';
 import styles from '../styles/WorkspaceRoute.module.css';
+import {useAppStore} from '../store/appStore';
 
 declare global {
   interface Window {
@@ -110,10 +110,6 @@ const summarizeContent = (html: string, limit = 500): string => {
   return text.slice(0, limit);
 };
 
-interface WorkspaceRouteProps {
-  activeProject: Project | null;
-}
-
 type FeedbackTone = 'success' | 'error';
 type ContextDrawerView = WorkspaceContextDrawerView;
 type ImportMode = WorkspaceImportMode;
@@ -125,7 +121,8 @@ type WorkspaceAIContext = {
   to: number;
 };
 
-function WorkspaceRoute({activeProject}: WorkspaceRouteProps) {
+function WorkspaceRoute() {
+  const activeProject = useAppStore((s) => s.activeProject);
   const navigate = useNavigate();
   const location = useLocation();
   const consistencyEngine = useMemo(() => getConsistencyEngineService(), []);

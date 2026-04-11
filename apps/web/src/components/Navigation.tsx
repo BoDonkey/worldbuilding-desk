@@ -1,24 +1,22 @@
 import {useCallback, useEffect, useMemo, useRef, useState, type FC} from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { ThemeToggle } from './ThemeToggle';
-import type { Project, ProjectSettings } from '../entityTypes';
 import {getEntitiesByProject} from '../entityStorage';
 import {getCompendiumEntriesByProject} from '../services/compendium';
+import {useAppStore} from '../store/appStore';
 import styles from '../assets/components/Navigation.module.css';
 
 interface NavigationProps {
-  activeProject: Project | null;
-  projectSettings: ProjectSettings | null;
   isRailCollapsed?: boolean;
   onToggleRail?: () => void;
 }
 
 export const Navigation: FC<NavigationProps> = ({
-  activeProject,
-  projectSettings,
   isRailCollapsed = false,
   onToggleRail
 }) => {
+  const activeProject = useAppStore((s) => s.activeProject);
+  const projectSettings = useAppStore((s) => s.projectSettings);
   const location = useLocation();
   const [isMobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [pendingCounts, setPendingCounts] = useState<{world: number; compendium: number}>({

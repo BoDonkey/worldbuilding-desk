@@ -11,26 +11,22 @@ import {
   createAppCommands,
   type AppCommand
 } from '../commands/commandRegistry';
-import type {Project, ProjectSettings} from '../entityTypes';
 import {getDocumentsByProject} from '../writingStorage';
 import {getEntitiesByProject} from '../entityStorage';
 import {getAliasesByProject} from '../services/consistency';
+import {useAppStore} from '../store/appStore';
 import {
   CommandPaletteContext,
   type CommandPaletteContextValue
 } from './commandPaletteApi';
 
 interface CommandPaletteProviderProps {
-  activeProject: Project | null;
-  projectSettings: ProjectSettings | null;
   children: ReactNode;
 }
 
-export const CommandPaletteProvider = ({
-  activeProject,
-  projectSettings,
-  children
-}: CommandPaletteProviderProps) => {
+export const CommandPaletteProvider = ({children}: CommandPaletteProviderProps) => {
+  const activeProject = useAppStore((s) => s.activeProject);
+  const projectSettings = useAppStore((s) => s.projectSettings);
   const navigate = useNavigate();
   const location = useLocation();
   const [isOpen, setIsOpen] = useState(false);

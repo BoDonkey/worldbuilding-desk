@@ -5,16 +5,14 @@ import type {WorldRuleset} from '@litrpg-tool/rules-engine';
 import {WorldBuildingWizard} from '@litrpg-tool/rules-ui';
 import '@rules-ui/styles/wizard.css';
 import {saveProject} from '../projectStorage';
+import {useAppStore} from '../store/appStore';
 import {getRulesetByProjectId, saveRuleset} from '../services/rules';
 import {
   exportRulesetJson,
   importRulesetJson
 } from '../services/rules';
 
-interface RulesetRouteProps {
-  activeProject: Project | null;
-  onProjectUpdated(project: Project): void;
-}
+// activeProject and setActiveProject read from store below
 
 interface RulesetWizardErrorBoundaryProps {
   children: ReactNode;
@@ -73,7 +71,9 @@ class RulesetWizardErrorBoundary extends Component<
   }
 }
 
-function RulesetRoute({activeProject, onProjectUpdated}: RulesetRouteProps) {
+function RulesetRoute() {
+  const activeProject = useAppStore((s) => s.activeProject);
+  const setActiveProject = useAppStore((s) => s.setActiveProject);
   const [ruleset, setRuleset] = useState<WorldRuleset | null>(null);
   const [loading, setLoading] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
@@ -137,7 +137,7 @@ function RulesetRoute({activeProject, onProjectUpdated}: RulesetRouteProps) {
           updatedAt: Date.now()
         };
         await saveProject(updatedProject);
-        onProjectUpdated(updatedProject);
+        void setActiveProject(updatedProject);
       }
 
       setFeedback({tone: 'success', message: 'Ruleset saved.'});

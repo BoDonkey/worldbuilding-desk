@@ -37,14 +37,12 @@ import {
   diffSnapshotCounts,
   validateSnapshotCounts
 } from '../services/storage';
+import {useAppStore} from '../store/appStore';
 import styles from '../styles/ProjectsRoute.module.css';
 
-interface ProjectsRouteProps {
-  activeProject: Project | null;
-  onSelectProject(project: Project | null): void;
-}
-
-function ProjectsRoute({activeProject, onSelectProject}: ProjectsRouteProps) {
+function ProjectsRoute() {
+  const activeProject = useAppStore((s) => s.activeProject);
+  const onSelectProject = useAppStore((s) => s.setActiveProject);
   const navigate = useNavigate();
   const [projects, setProjects] = useState<Project[]>([]);
   const [projectRulesets, setProjectRulesets] = useState<

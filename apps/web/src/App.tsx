@@ -6,12 +6,12 @@ import {
   Routes,
   useLocation
 } from 'react-router-dom';
-import type {Project, ProjectSettings} from './entityTypes';
 import {Navigation} from './components/Navigation';
 import {ThemeProvider} from './contexts/ThemeContext';
 import {AccessibilityProvider} from './contexts/AccessibilityContext';
 import {CommandPaletteProvider} from './contexts/CommandPaletteContext';
-import {useAppShellState} from './hooks/useAppShellState';
+import {useAppStore} from './store/appStore';
+import {useRouteDebug} from './utils/routeDebug';
 import ProjectsRoute from './routes/ProjectsRoute';
 import WorldBibleRoute from './routes/WorldBibleRoute';
 import WorkspaceRoute from './routes/WorkspaceRoute';
@@ -20,30 +20,17 @@ import CharactersHubRoute from './routes/CharactersHubRoute';
 import CompendiumRoute from './routes/CompendiumRoute';
 import RulesetRoute from './routes/RulesetRoute';
 import appShellStyles from './styles/AppShell.module.css';
-import {useRouteDebug} from './utils/routeDebug';
 
-interface AppShellLayoutProps {
-  activeProject: Project | null;
-  projectSettings: ProjectSettings | null;
-  isRailCollapsed: boolean;
-  onToggleRail: () => void;
-}
-
-function AppShellLayout({
-  activeProject,
-  projectSettings,
-  isRailCollapsed,
-  onToggleRail
-}: AppShellLayoutProps) {
+function AppShellLayout() {
   const location = useLocation();
+  const isRailCollapsed = useAppStore((s) => s.isRailCollapsed);
+  const setRailCollapsed = useAppStore((s) => s.setRailCollapsed);
 
   return (
     <div className={appShellStyles.appShell}>
       <Navigation
-        activeProject={activeProject}
-        projectSettings={projectSettings}
         isRailCollapsed={isRailCollapsed}
-        onToggleRail={onToggleRail}
+        onToggleRail={() => setRailCollapsed(!isRailCollapsed)}
       />
       <main
         key={location.pathname}
@@ -59,85 +46,23 @@ function AppShellLayout({
 
 function AppRoutes() {
   const location = useLocation();
-  const {
-    activeProject,
-    setActiveProject,
-    projectSettings,
-    setProjectSettings,
-    isRailCollapsed,
-    setRailCollapsed
-  } = useAppShellState();
-
   useRouteDebug(location.pathname);
 
   return (
-    <CommandPaletteProvider
-      activeProject={activeProject}
-      projectSettings={projectSettings}
-    >
+    <CommandPaletteProvider>
       <Routes>
-        <Route
-          element={
-            <AppShellLayout
-              activeProject={activeProject}
-              projectSettings={projectSettings}
-              isRailCollapsed={isRailCollapsed}
-              onToggleRail={() => setRailCollapsed((prev) => !prev)}
-            />
-          }
-        >
-          <Route
-            path='/'
-            element={
-              <ProjectsRoute
-                activeProject={activeProject}
-                onSelectProject={setActiveProject}
-              />
-            }
-          />
-          <Route
-            path='/world-bible'
-            element={<WorldBibleRoute activeProject={activeProject} />}
-          />
-          <Route
-            path='/ruleset'
-            element={
-              <RulesetRoute
-                activeProject={activeProject}
-                onProjectUpdated={setActiveProject}
-              />
-            }
-          />
-          <Route
-            path='/characters'
-            element={<CharactersHubRoute activeProject={activeProject} />}
-          />
+        <Route element={<AppShellLayout />}>
+          <Route path='/' element={<ProjectsRoute />} />
+          <Route path='/world-bible' element={<WorldBibleRoute />} />
+          <Route path='/ruleset' element={<RulesetRoute />} />
+          <Route path='/characters' element={<CharactersHubRoute />} />
           <Route
             path='/character-sheets'
             element={<Navigate to='/characters?view=sheets' replace />}
           />
-          <Route
-            path='/workspace'
-            element={<WorkspaceRoute activeProject={activeProject} />}
-          />
-          <Route
-            path='/compendium'
-            element={
-              <CompendiumRoute
-                activeProject={activeProject}
-                projectSettings={projectSettings}
-              />
-            }
-          />
-          <Route
-            path='/settings'
-            element={
-              <SettingsRoute
-                activeProject={activeProject}
-                onSettingsChanged={setProjectSettings}
-              />
-            }
-          />
+          <Route path='/workspace' element={<WorkspaceRoute />} />
+          <Route path='/compendium' element={<CompendiumRoute />} />
+          <Route path='/settings' element={<SettingsRoute />} />
           <Route path='*' element={<Navigate to='/' replace />} />
         </Route>
       </Routes>
