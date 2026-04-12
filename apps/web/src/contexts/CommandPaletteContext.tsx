@@ -50,7 +50,10 @@ export const CommandPaletteProvider = ({children}: CommandPaletteProviderProps) 
       if (cancelled) return;
 
       const aliasesByEntityId = aliases.reduce<Record<string, string[]>>((acc, alias) => {
-        acc[alias.entityId] = [...(acc[alias.entityId] ?? []), alias.alias];
+        if (alias.targetType !== 'entity') {
+          return acc;
+        }
+        acc[alias.targetId] = [...(acc[alias.targetId] ?? []), alias.alias];
         return acc;
       }, {});
 

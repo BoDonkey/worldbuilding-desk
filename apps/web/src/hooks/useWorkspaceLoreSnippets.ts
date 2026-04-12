@@ -57,6 +57,11 @@ export function useWorkspaceLoreSnippets({
 
     const categoryNameById = new Map(categories.map((category) => [category.id, category.name]));
     const characterById = new Map(characters.map((character) => [character.id, character]));
+    const characterSheetByCharacterId = new Map(
+      characterSheets
+        .filter((sheet): sheet is CharacterSheet & {characterId: string} => Boolean(sheet.characterId))
+        .map((sheet) => [sheet.characterId, sheet])
+    );
     const entityById = new Map(entities.map((entity) => [entity.id, entity]));
 
     const recentSystemMessageFor = (name: string): string => {
@@ -189,7 +194,18 @@ export function useWorkspaceLoreSnippets({
     });
 
     aliases.forEach((alias) => {
-      const entity = entityById.get(alias.entityId);
+      if (alias.targetType === 'character') {
+        const sheet = characterSheetByCharacterId.get(alias.targetId);
+        if (!sheet) return;
+        const entry = {
+          name: sheet.name,
+          html: resolveCharacterBlock(sheet, 'compact'),
+          lore: buildCharacterLore(sheet)
+        };
+        registerEntry('characters', alias.alias, entry);
+        return;
+      }
+      const entity = entityById.get(alias.targetId);
       if (!entity) return;
       const entry = {
         name: entity.name,

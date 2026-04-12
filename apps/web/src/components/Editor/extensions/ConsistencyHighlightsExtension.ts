@@ -12,7 +12,17 @@ export interface ConsistencyHighlightIssue {
 
 const consistencyHighlightsKey = new PluginKey('consistency-highlights');
 
-const normalize = (value: string): string => value.trim().toLowerCase();
+const normalize = (value: string): string =>
+  value
+    .trim()
+    .toLowerCase()
+    .replace(/['’]s\b/g, '')
+    .replace(/s['’]\b/g, 's')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+const escapeRegex = (value: string): string =>
+  value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 export const createConsistencyHighlightsExtension = (
   issues: ConsistencyHighlightIssue[]
@@ -24,7 +34,11 @@ export const createConsistencyHighlightsExtension = (
       const normalizedIssues = issues
         .map((issue) => ({
           ...issue,
-          normalizedSurface: normalize(issue.surface)
+          normalizedSurface: normalize(issue.surface),
+          matcher: new RegExp(
+            `(^|[^\\p{L}\\p{N}_])(${escapeRegex(normalize(issue.surface))})(?:['’]s|s['’])?(?=$|[^\\p{L}\\p{N}_])`,
+            'giu'
+          )
         }))
         .filter((issue) => issue.normalizedSurface.length > 0);
 
@@ -48,21 +62,19 @@ export const createConsistencyHighlightsExtension = (
                 }
 
                 const text = node.text;
-                const normalizedText = text.toLowerCase();
+                const normalizedText = text
+                  .toLowerCase()
+                  .replace(/\s+/g, ' ');
 
                 normalizedIssues.forEach((issue) => {
-                  let searchFrom = 0;
-                  while (searchFrom < normalizedText.length) {
-                    const matchIndex = normalizedText.indexOf(
-                      issue.normalizedSurface,
-                      searchFrom
-                    );
-                    if (matchIndex === -1) {
-                      break;
-                    }
-
+                  issue.matcher.lastIndex = 0;
+                  let match: RegExpExecArray | null = null;
+                  while ((match = issue.matcher.exec(normalizedText))) {
+                    const prefix = match[1] ?? '';
+                    const matchedText = match[0] ?? '';
+                    const matchIndex = match.index + prefix.length;
                     const from = pos + matchIndex;
-                    const to = from + issue.surface.length;
+                    const to = from + (matchedText.length - prefix.length);
                     decorations.push(
                       Decoration.inline(from, to, {
                         class:
@@ -73,7 +85,6 @@ export const createConsistencyHighlightsExtension = (
                         title: issue.message
                       })
                     );
-                    searchFrom = matchIndex + issue.surface.length;
                   }
                 });
               });

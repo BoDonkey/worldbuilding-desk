@@ -88,6 +88,15 @@ const downgradeUnknownIssuesToWarnings = (
       : issue
   );
 
+const canonicalizeUnknownSurface = (value: string): string =>
+  value
+    .trim()
+    .toLowerCase()
+    .replace(/['’]s\b/g, '')
+    .replace(/s['’]\b/g, 's')
+    .replace(/\s+/g, ' ')
+    .trim();
+
 export const useWorkspaceConsistency = ({
   activeProject,
   documents,
@@ -112,6 +121,11 @@ export const useWorkspaceConsistency = ({
   addSystemHistory
 }: UseWorkspaceConsistencyParams) => {
   const [guardrailIssues, setGuardrailIssues] = useState<GuardrailIssue[]>([]);
+  const [dismissedUnknownByDocument, setDismissedUnknownByDocument] = useState<
+    Record<string, string[]>
+  >({});
+  const [ignoredUnknownSurfaces, setIgnoredUnknownSurfaces] = useState<string[]>([]);
+  const [isReviewPrefsHydrated, setReviewPrefsHydrated] = useState(false);
   const [resolvingUnknown, setResolvingUnknown] = useState<string | null>(null);
   const [linkingUnknown, setLinkingUnknown] = useState<string | null>(null);
   const [resolverNotice, setResolverNotice] = useState<ResolverNotice | null>(null);
@@ -132,6 +146,78 @@ export const useWorkspaceConsistency = ({
     useState<ConsistencyPopoverState | null>(null);
 
   useEffect(() => {
+    if (!activeProject) {
+      setIgnoredUnknownSurfaces([]);
+      setDismissedUnknownByDocument({});
+      setReviewPrefsHydrated(true);
+      return;
+    }
+    try {
+      const raw = localStorage.getItem(`workspaceReviewPrefs:${activeProject.id}`);
+      if (!raw) {
+        setIgnoredUnknownSurfaces([]);
+        setDismissedUnknownByDocument({});
+        setReviewPrefsHydrated(true);
+        return;
+      }
+      const parsed = JSON.parse(raw) as unknown;
+      if (!parsed || typeof parsed !== 'object') {
+        setIgnoredUnknownSurfaces([]);
+        setDismissedUnknownByDocument({});
+        setReviewPrefsHydrated(true);
+        return;
+      }
+      const prefs = parsed as {
+        ignoredUnknownSurfaces?: unknown;
+        dismissedUnknownByDocument?: unknown;
+      };
+      setIgnoredUnknownSurfaces(
+        (Array.isArray(prefs.ignoredUnknownSurfaces) ? prefs.ignoredUnknownSurfaces : [])
+          .filter((value): value is string => typeof value === 'string')
+          .map((value) => value.trim())
+          .filter(Boolean)
+      );
+      const nextDismissed: Record<string, string[]> = {};
+      if (
+        prefs.dismissedUnknownByDocument &&
+        typeof prefs.dismissedUnknownByDocument === 'object'
+      ) {
+        Object.entries(prefs.dismissedUnknownByDocument as Record<string, unknown>).forEach(
+          ([docId, values]) => {
+            if (!Array.isArray(values)) return;
+            nextDismissed[docId] = values
+              .filter((value): value is string => typeof value === 'string')
+              .map((value) => value.trim())
+              .filter(Boolean);
+          }
+        );
+      }
+      setDismissedUnknownByDocument(nextDismissed);
+    } catch {
+      setIgnoredUnknownSurfaces([]);
+      setDismissedUnknownByDocument({});
+    } finally {
+      setReviewPrefsHydrated(true);
+    }
+  }, [activeProject]);
+
+  useEffect(() => {
+    if (!activeProject || !isReviewPrefsHydrated) return;
+    localStorage.setItem(
+      `workspaceReviewPrefs:${activeProject.id}`,
+      JSON.stringify({
+        ignoredUnknownSurfaces,
+        dismissedUnknownByDocument
+      })
+    );
+  }, [
+    activeProject,
+    dismissedUnknownByDocument,
+    ignoredUnknownSurfaces,
+    isReviewPrefsHydrated
+  ]);
+
+  useEffect(() => {
     if (!consistencyPopover) return;
     const close = () => setConsistencyPopover(null);
     window.addEventListener('scroll', close, true);
@@ -144,6 +230,7 @@ export const useWorkspaceConsistency = ({
 
   const knownConsistencyEntities = useMemo(() => {
     const entityById = new Map(entities.map((entity) => [entity.id, entity]));
+    const characterById = new Map(characters.map((character) => [character.id, character]));
     return [
       ...entities.map((entity) => ({
         id: entity.id,
@@ -157,19 +244,86 @@ export const useWorkspaceConsistency = ({
       })),
       ...aliases
         .map((alias) => {
-          const linkedEntity = entityById.get(alias.entityId);
-          if (!linkedEntity) {
+          const linkedRecord =
+            alias.targetType === 'character'
+              ? characterById.get(alias.targetId)
+              : entityById.get(alias.targetId);
+          if (!linkedRecord) {
             return null;
           }
           return {
-            id: linkedEntity.id,
+            id: linkedRecord.id,
             name: alias.alias,
-            type: 'entity' as const
+            type: alias.targetType === 'character' ? ('character' as const) : ('entity' as const)
           };
         })
-        .filter((entry): entry is {id: string; name: string; type: 'entity'} => Boolean(entry))
+        .filter(
+          (entry): entry is {id: string; name: string; type: 'character' | 'entity'} =>
+            Boolean(entry)
+        )
     ];
   }, [aliases, characters, entities]);
+
+  const filterDismissedUnknownIssues = useCallback(
+    (docId: string, issues: GuardrailIssue[]): GuardrailIssue[] => {
+      const dismissed = new Set(
+        (dismissedUnknownByDocument[docId] ?? []).map((surface) =>
+          canonicalizeUnknownSurface(surface)
+        )
+      );
+      const ignored = new Set(
+        ignoredUnknownSurfaces.map((surface) => canonicalizeUnknownSurface(surface))
+      );
+      if (dismissed.size === 0 && ignored.size === 0) {
+        return issues;
+      }
+      return issues.filter((issue) => {
+        if (issue.code !== 'UNKNOWN_ENTITY') {
+          return true;
+        }
+        const surface = issue.surface ? canonicalizeUnknownSurface(issue.surface) : '';
+        return !surface || (!dismissed.has(surface) && !ignored.has(surface));
+      });
+    },
+    [dismissedUnknownByDocument, ignoredUnknownSurfaces]
+  );
+
+  const attachAliasTexts = useCallback(
+    async (params: {
+      projectId: string;
+      targetId: string;
+      targetType: 'entity' | 'character';
+      aliasTexts: string[];
+    }) => {
+      const uniqueAliases = Array.from(
+        new Map(
+          params.aliasTexts
+            .map((alias) => alias.trim())
+            .filter(Boolean)
+            .map((alias) => [alias.toLowerCase(), alias])
+        ).values()
+      );
+
+      for (const alias of uniqueAliases) {
+        const saved = await saveAlias({
+          projectId: params.projectId,
+          targetId: params.targetId,
+          targetType: params.targetType,
+          alias
+        });
+        setAliases((prev) => {
+          const existingIndex = prev.findIndex((entry) => entry.id === saved.id);
+          if (existingIndex >= 0) {
+            const copy = [...prev];
+            copy[existingIndex] = saved;
+            return copy;
+          }
+          return [...prev, saved];
+        });
+      }
+    },
+    [setAliases]
+  );
 
   const persistDoc = useCallback(
     async (
@@ -192,11 +346,11 @@ export const useWorkspaceConsistency = ({
           actionCues: resolvedActionCues
         });
         const validation = await consistencyEngine.validateProposal(proposal);
-        const presentedIssues =
+      const presentedIssues =
           consistencyMode === 'strict'
             ? validation.issues
             : downgradeUnknownIssuesToWarnings(validation.issues);
-        setGuardrailIssues(presentedIssues);
+        setGuardrailIssues(filterDismissedUnknownIssues(doc.id, presentedIssues));
         unresolvedCount = validation.issues.filter(
           (issue) => issue.code === 'UNKNOWN_ENTITY'
         ).length;
@@ -298,9 +452,19 @@ export const useWorkspaceConsistency = ({
         actionCues: resolvedActionCues
       });
       const validation = await consistencyEngine.validateProposal(proposal);
-      setGuardrailIssues(downgradeUnknownIssuesToWarnings(validation.issues));
+      setGuardrailIssues(
+        filterDismissedUnknownIssues(
+          doc.id,
+          downgradeUnknownIssuesToWarnings(validation.issues)
+        )
+      );
     },
-    [consistencyEngine, knownConsistencyEntities, resolvedActionCues]
+    [
+      consistencyEngine,
+      filterDismissedUnknownIssues,
+      knownConsistencyEntities,
+      resolvedActionCues
+    ]
   );
 
   const handleRunConsistencyReview = useCallback(async () => {
@@ -399,7 +563,7 @@ export const useWorkspaceConsistency = ({
     return guardrailIssues
       .filter((issue) => issue.code === 'UNKNOWN_ENTITY' && Boolean(issue.surface))
       .filter((issue) => {
-        const key = (issue.surface ?? '').trim().toLowerCase();
+        const key = canonicalizeUnknownSurface(issue.surface ?? '');
         if (!key || seen.has(key)) {
           return false;
         }
@@ -425,13 +589,24 @@ export const useWorkspaceConsistency = ({
   );
 
   const unknownLinkOptions = useMemo(() => {
-    const optionMap: Record<string, WorldEntity[]> = {};
+    const optionMap: Record<
+      string,
+      Array<{id: string; name: string; type: 'character' | 'entity'}>
+    > = {};
     unknownGuardrailIssues.forEach((issue) => {
       const surface = (issue.surface ?? '').trim();
       if (!surface) return;
       const normalizedSurface = surface.toLowerCase();
-      const filtered = entities.filter((entity) => {
-        const normalizedName = entity.name.toLowerCase();
+      const candidates = [
+        ...entities.map((entity) => ({id: entity.id, name: entity.name, type: 'entity' as const})),
+        ...characters.map((character) => ({
+          id: character.id,
+          name: character.name,
+          type: 'character' as const
+        }))
+      ];
+      const filtered = candidates.filter((record) => {
+        const normalizedName = record.name.toLowerCase();
         if (normalizedName === normalizedSurface) {
           return true;
         }
@@ -452,14 +627,19 @@ export const useWorkspaceConsistency = ({
       optionMap[surface] = ranked.slice(0, 20);
     });
     return optionMap;
-  }, [entities, unknownGuardrailIssues]);
+  }, [characters, entities, unknownGuardrailIssues]);
 
   const resolveUnknownEntity = useCallback(
-    async (surface: string, categoryId?: string) => {
+    async (
+      surface: string,
+      categoryId?: string,
+      preferredName?: string
+    ) => {
       if (!activeProject) return;
 
-      const normalized = surface.trim();
-      if (!normalized) return;
+      const normalizedSurface = surface.trim();
+      const normalizedName = preferredName?.trim() || normalizedSurface;
+      if (!normalizedSurface || !normalizedName) return;
 
       setResolvingUnknown(surface);
       setFeedback(null);
@@ -489,7 +669,7 @@ export const useWorkspaceConsistency = ({
           id: crypto.randomUUID(),
           projectId: activeProject.id,
           categoryId: chosenCategory.id,
-          name: normalized,
+          name: normalizedName,
           fields: {},
           needsCompletion: true,
           links: [],
@@ -503,10 +683,21 @@ export const useWorkspaceConsistency = ({
           domain: 'custom',
           needsCompletion: true
         });
+        await attachAliasTexts({
+          projectId: activeProject.id,
+          targetId: entity.id,
+          targetType: 'entity',
+          aliasTexts:
+            normalizedName.toLowerCase() === normalizedSurface.toLowerCase()
+              ? [normalizedName]
+              : [normalizedName, normalizedSurface]
+        });
         setEntities((prev) => [...prev, entity]);
         setGuardrailIssues((prev) =>
           prev.filter(
-            (issue) => issue.surface?.trim().toLowerCase() !== normalized.toLowerCase()
+            (issue) =>
+              canonicalizeUnknownSurface(issue.surface ?? '') !==
+              canonicalizeUnknownSurface(normalizedSurface)
           )
         );
         setUnknownLinkSelection((prev) => {
@@ -520,14 +711,17 @@ export const useWorkspaceConsistency = ({
           return copy;
         });
         setConsistencyPopover((prev) =>
-          prev?.surface.trim().toLowerCase() === normalized.toLowerCase() ? null : prev
+          canonicalizeUnknownSurface(prev?.surface ?? '') ===
+          canonicalizeUnknownSurface(normalizedSurface)
+            ? null
+            : prev
         );
         setFeedback({
           tone: 'success',
-          message: `Entity "${normalized}" created in ${chosenCategory.name} and marked needs completion. Save again to validate.`
+          message: `"${normalizedName}" added to ${chosenCategory.name} and marked for later completion.`
         });
         setResolverNotice({
-          message: `Entity "${normalized}" created.`
+          message: `"${normalizedName}" added to your world.`
         });
       } catch (error) {
         const message =
@@ -537,7 +731,7 @@ export const useWorkspaceConsistency = ({
         setResolvingUnknown(null);
       }
     },
-    [activeProject, categories, setCategories, setEntities, setFeedback]
+    [activeProject, attachAliasTexts, categories, setCategories, setEntities, setFeedback]
   );
 
   const resolveAllUnknownEntities = useCallback(async () => {
@@ -551,12 +745,27 @@ export const useWorkspaceConsistency = ({
     }
   }, [resolveUnknownEntity, unknownGuardrailIssues]);
 
-  const dismissAllUnknownEntities = useCallback(() => {
-    const blocked = new Set(
-      unknownGuardrailIssues
-        .map((issue) => issue.surface?.trim().toLowerCase())
-        .filter((surface): surface is string => Boolean(surface))
+  const dismissAllUnknownEntities = useCallback((docId?: string) => {
+    const dismissedSurfaces = Array.from(
+      new Set(
+        unknownGuardrailIssues
+          .map((issue) => issue.surface?.trim())
+          .filter((surface): surface is string => Boolean(surface))
+      )
     );
+    const blocked = new Set(
+        unknownGuardrailIssues
+          .map((issue) => (issue.surface ? canonicalizeUnknownSurface(issue.surface) : ''))
+          .filter((surface): surface is string => Boolean(surface))
+    );
+    if (docId && dismissedSurfaces.length > 0) {
+      setDismissedUnknownByDocument((prev) => ({
+        ...prev,
+        [docId]: Array.from(
+          new Set([...(prev[docId] ?? []), ...dismissedSurfaces])
+        )
+      }));
+    }
     setGuardrailIssues((prev) =>
       prev.filter((issue) => {
         const surface = issue.surface?.trim().toLowerCase();
@@ -569,19 +778,51 @@ export const useWorkspaceConsistency = ({
     });
   }, [setFeedback, unknownGuardrailIssues]);
 
-  const dismissUnknownEntity = useCallback((surface: string) => {
-    const normalized = surface.trim().toLowerCase();
+  const dismissUnknownEntity = useCallback((surface: string, docId?: string) => {
+    const normalized = canonicalizeUnknownSurface(surface);
     if (!normalized) return;
+    if (docId) {
+      setDismissedUnknownByDocument((prev) => ({
+        ...prev,
+        [docId]: Array.from(new Set([...(prev[docId] ?? []), surface.trim()]))
+      }));
+    }
     setGuardrailIssues((prev) =>
-      prev.filter((issue) => issue.surface?.trim().toLowerCase() !== normalized)
+      prev.filter(
+        (issue) => canonicalizeUnknownSurface(issue.surface ?? '') !== normalized
+      )
     );
     setConsistencyPopover((prev) =>
-      prev?.surface.trim().toLowerCase() === normalized ? null : prev
+      canonicalizeUnknownSurface(prev?.surface ?? '') === normalized ? null : prev
     );
   }, []);
 
+  const ignoreUnknownSurfaceProjectWide = useCallback(
+    (surface: string, docId?: string) => {
+      const normalized = surface.trim();
+      if (!normalized) return;
+      setIgnoredUnknownSurfaces((prev) => {
+        const existing = new Set(prev.map((entry) => entry.trim().toLowerCase()));
+        if (existing.has(normalized.toLowerCase())) {
+          return prev;
+        }
+        return [...prev, normalized];
+      });
+      dismissUnknownEntity(surface, docId);
+      setFeedback({
+        tone: 'success',
+        message: `"${normalized}" will be ignored for this project in future reviews.`
+      });
+    },
+    [dismissUnknownEntity, setFeedback]
+  );
+
   const linkUnknownEntity = useCallback(
-    async (surface: string, explicitEntityId?: string) => {
+    async (
+      surface: string,
+      explicitEntityId?: string,
+      preferredAlias?: string
+    ) => {
       if (!activeProject) return;
       const selectedEntityId = explicitEntityId ?? unknownLinkSelection[surface];
       if (!selectedEntityId) {
@@ -595,23 +836,28 @@ export const useWorkspaceConsistency = ({
       setLinkingUnknown(surface);
       setFeedback(null);
       try {
-        const saved = await saveAlias({
+        const [selectedTargetType, selectedTargetId] = selectedEntityId.split(':');
+        if (
+          (selectedTargetType !== 'entity' && selectedTargetType !== 'character') ||
+          !selectedTargetId
+        ) {
+          throw new Error('Invalid link target selected.');
+        }
+        const aliasTexts =
+          preferredAlias && preferredAlias.trim()
+            ? [preferredAlias.trim(), surface]
+            : [surface];
+        await attachAliasTexts({
           projectId: activeProject.id,
-          entityId: selectedEntityId,
-          alias: surface
-        });
-        setAliases((prev) => {
-          const existingIndex = prev.findIndex((entry) => entry.id === saved.id);
-          if (existingIndex >= 0) {
-            const copy = [...prev];
-            copy[existingIndex] = saved;
-            return copy;
-          }
-          return [...prev, saved];
+          targetId: selectedTargetId,
+          targetType: selectedTargetType,
+          aliasTexts
         });
         setGuardrailIssues((prev) =>
           prev.filter(
-            (issue) => issue.surface?.trim().toLowerCase() !== surface.trim().toLowerCase()
+            (issue) =>
+              canonicalizeUnknownSurface(issue.surface ?? '') !==
+              canonicalizeUnknownSurface(surface)
           )
         );
         setUnknownLinkSelection((prev) => {
@@ -620,14 +866,17 @@ export const useWorkspaceConsistency = ({
           return copy;
         });
         setConsistencyPopover((prev) =>
-          prev?.surface.trim().toLowerCase() === surface.trim().toLowerCase() ? null : prev
+          canonicalizeUnknownSurface(prev?.surface ?? '') ===
+          canonicalizeUnknownSurface(surface)
+            ? null
+            : prev
         );
         setFeedback({
           tone: 'success',
-          message: `Linked alias "${surface}" to existing entity. Save again to validate.`
+          message: `Connected "${surface}" to an existing record. Save again to validate.`
         });
         setResolverNotice({
-          message: `Alias "${surface}" linked to existing entity.`
+          message: `"${surface}" connected to an existing record.`
         });
       } catch (error) {
         const message =
@@ -637,7 +886,7 @@ export const useWorkspaceConsistency = ({
         setLinkingUnknown(null);
       }
     },
-    [activeProject, setAliases, setFeedback, unknownLinkSelection]
+    [activeProject, attachAliasTexts, setFeedback, unknownLinkSelection]
   );
 
   const activeConsistencyPopoverIssue = consistencyPopover
@@ -687,11 +936,13 @@ export const useWorkspaceConsistency = ({
     unknownGuardrailIssues,
     hasBlockingUnknownGuardrailIssues,
     highlightableUnknownIssues,
+    isReviewPrefsHydrated,
     unknownLinkOptions,
     resolveUnknownEntity,
     resolveAllUnknownEntities,
     dismissAllUnknownEntities,
     dismissUnknownEntity,
+    ignoreUnknownSurfaceProjectWide,
     linkUnknownEntity,
     activeConsistencyPopoverIssue,
     openConsistencyPopover

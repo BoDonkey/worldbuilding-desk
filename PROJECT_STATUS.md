@@ -31,11 +31,16 @@ Under the hood, the app still includes rich systems for world data, rules, chara
 ### Writing Workspace
 - TipTap-based rich text editor.
 - Workspace command palette and drawer-based shell.
+- Active projects now route directly into the writing workspace.
+- Scene/context drawers now default closed so the editor remains primary.
 - Scene creation, deletion, autosave, and export.
 - Markdown, DOCX, and EPUB export flows.
 - Import modes for scene ingestion: `strict`, `balanced`, `lenient`.
 - Deferred consistency review for imported scenes so writing is not blocked.
 - Inline consistency highlights and action popovers.
+- Editable review capture flow for detected names/places before adding to world records.
+- Manual selection-to-world capture from the editor for non-detected text.
+- Temporary dismiss and project-level `Always ignore` review actions.
 - Inline lore highlights and quick lore popovers for known entities and characters.
 - Editor appearance controls for width, surface style, and serif/sans presentation.
 
@@ -43,6 +48,7 @@ Under the hood, the app still includes rich systems for world data, rules, chara
 - World Bible with dynamic categories and custom field schemas.
 - Character records and character sheets.
 - Alias tracking and consistency storage.
+- Review linking can now target either World Bible entries or characters.
 - System history and lore inspection surfaces.
 - Parent/child canon inheritance with promotion and sync flows.
 - Project backup export/import with validation and conflict review.
@@ -93,7 +99,8 @@ Under the hood, the app still includes rich systems for world data, rules, chara
 - Make the writing workspace the clearest default entry point.
 - Reduce visible system complexity on first load.
 - Revisit panel defaults and route emphasis to match the writing-first UX docs.
-- Soften entity/canon review interactions where they still feel too workflow-heavy.
+- Continue moving alias/review acceptance into a stronger World Bible workflow.
+- Finish review/count correctness where overlap between known-lore and unresolved-review highlights can still confuse authors.
 
 ### Engineering
 - Add targeted smoke coverage for the workspace import/review path after the recent extraction.

@@ -5,8 +5,8 @@ import styles from '../../styles/WorkspaceRoute.module.css';
 interface WorkspaceSceneDrawerProps {
   handleNewDocument: () => void;
   isCreatingScene: boolean;
-  importInputRef: React.RefObject<HTMLInputElement | null>;
   isImportingDocuments: boolean;
+  openImportPicker: () => void;
   importMode: WorkspaceImportMode;
   setImportMode: (mode: WorkspaceImportMode) => void;
   skipImportSuggestions: boolean;
@@ -22,14 +22,13 @@ interface WorkspaceSceneDrawerProps {
   handleSelectDocument: (doc: WritingDocument) => void;
   handleDelete: (doc: WritingDocument) => void;
   deletingDocumentId: string | null;
-  handleImportDocuments: (e: React.ChangeEvent<HTMLInputElement>) => void;
 }
 
 export function WorkspaceSceneDrawer({
   handleNewDocument,
   isCreatingScene,
-  importInputRef,
   isImportingDocuments,
+  openImportPicker,
   importMode,
   setImportMode,
   skipImportSuggestions,
@@ -44,8 +43,7 @@ export function WorkspaceSceneDrawer({
   selectedId,
   handleSelectDocument,
   handleDelete,
-  deletingDocumentId,
-  handleImportDocuments
+  deletingDocumentId
 }: WorkspaceSceneDrawerProps) {
   return (
     <>
@@ -59,7 +57,7 @@ export function WorkspaceSceneDrawer({
         </button>
         <button
           type='button'
-          onClick={() => importInputRef.current?.click()}
+          onClick={openImportPicker}
           disabled={isImportingDocuments}
           style={{marginLeft: '0.5rem'}}
         >
@@ -111,14 +109,6 @@ export function WorkspaceSceneDrawer({
         >
           Export EPUB
         </button>
-        <input
-          ref={importInputRef}
-          type='file'
-          accept='.txt,.md,.markdown,.html,.htm,.docx,.doc,.pages,text/plain,text/markdown,text/html,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/msword'
-          multiple
-          onChange={handleImportDocuments}
-          style={{display: 'none'}}
-        />
       </div>
 
       {importSummary && (
@@ -126,7 +116,7 @@ export function WorkspaceSceneDrawer({
           <strong>Import Summary</strong>
           <p className={styles.importSummaryText}>
             Imported {importSummary.importedCount} · Failed {importSummary.failedCount} ·
-            Unresolved {importSummary.unresolvedCount} · Mode {importSummary.mode}
+            Detected on import {importSummary.unresolvedCount} · Mode {importSummary.mode}
             {importSummary.openedTitle ? ` · Opened "${importSummary.openedTitle}"` : ''}
             {importSummary.suggestionsSkipped ? ' · Suggestions skipped' : ''}
           </p>

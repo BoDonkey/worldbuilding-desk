@@ -675,9 +675,12 @@ function WorldBibleRoute() {
   const aliasMapByEntityId = useMemo(() => {
     const map = new Map<string, string[]>();
     aliases.forEach((alias) => {
-      const current = map.get(alias.entityId) ?? [];
+      if (alias.targetType !== 'entity') {
+        return;
+      }
+      const current = map.get(alias.targetId) ?? [];
       current.push(alias.alias);
-      map.set(alias.entityId, current);
+      map.set(alias.targetId, current);
     });
     return map;
   }, [aliases]);

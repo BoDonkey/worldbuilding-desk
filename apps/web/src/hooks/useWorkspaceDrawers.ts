@@ -33,16 +33,8 @@ export const useWorkspaceDrawers = (params: {
   isNarrowViewport: boolean;
 }) => {
   const {activeProjectId, isNarrowViewport} = params;
-  const [isSceneDrawerOpen, setSceneDrawerOpen] = useState(() =>
-    typeof window !== 'undefined'
-      ? !window.matchMedia('(max-width: 1200px)').matches
-      : true
-  );
-  const [isContextDrawerOpen, setContextDrawerOpen] = useState(() =>
-    typeof window !== 'undefined'
-      ? !window.matchMedia('(max-width: 1200px)').matches
-      : true
-  );
+  const [isSceneDrawerOpen, setSceneDrawerOpen] = useState(false);
+  const [isContextDrawerOpen, setContextDrawerOpen] = useState(false);
   const [activeContextView, setActiveContextView] =
     useState<WorkspaceContextDrawerView>('world-bible');
   const [isDrawerPrefsHydrated, setDrawerPrefsHydrated] = useState(false);
@@ -55,10 +47,8 @@ export const useWorkspaceDrawers = (params: {
     try {
       const raw = localStorage.getItem(key);
       if (!raw) {
-        if (isNarrowViewport) {
-          setSceneDrawerOpen(false);
-          setContextDrawerOpen(false);
-        }
+        setSceneDrawerOpen(false);
+        setContextDrawerOpen(false);
         return;
       }
 
@@ -69,13 +59,13 @@ export const useWorkspaceDrawers = (params: {
       } else if (typeof parsed.leftDrawerOpen === 'boolean') {
         setSceneDrawerOpen(parsed.leftDrawerOpen);
       } else {
-        setSceneDrawerOpen(true);
+        setSceneDrawerOpen(false);
       }
 
       if (!isNarrowViewport && typeof parsed.rightDrawerOpen === 'boolean') {
         setContextDrawerOpen(parsed.rightDrawerOpen);
       } else if (!isNarrowViewport) {
-        setContextDrawerOpen(true);
+        setContextDrawerOpen(false);
       }
 
       if (isValidContextView(parsed.activeContextView)) {

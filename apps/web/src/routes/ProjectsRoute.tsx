@@ -136,6 +136,7 @@ function ProjectsRoute() {
 
       onSelectProject(project);
       setFeedback({tone: 'success', message: 'Project created.'});
+      navigate('/workspace');
     } catch (error) {
       const message =
         error instanceof Error ? error.message : 'Unable to create project.';
@@ -147,6 +148,7 @@ function ProjectsRoute() {
 
   const handleOpen = (project: Project) => {
     onSelectProject(project);
+    navigate('/workspace');
   };
 
   const activeProjectCounts = activeProject
@@ -155,51 +157,6 @@ function ProjectsRoute() {
   const activeProjectHasRuleset = activeProject
     ? projectRulesets.has(activeProject.id)
     : false;
-  const activeProjectChecklist = activeProject
-    ? [
-        {
-          id: 'ruleset',
-          label: 'Define your project mode and ruleset baseline',
-          done: activeProjectHasRuleset,
-          helper: activeProjectHasRuleset
-            ? 'Ruleset data exists for this project.'
-            : 'Start with Settings for project mode, then add rules in Ruleset if this world uses game systems.',
-          actionLabel: activeProjectHasRuleset ? 'Open Ruleset' : 'Set Up Rules',
-          action: () => navigate(activeProjectHasRuleset ? '/ruleset' : '/settings')
-        },
-        {
-          id: 'world',
-          label: 'Capture core canon in World Bible',
-          done: (activeProjectCounts?.worldEntries ?? 0) > 0,
-          helper:
-            (activeProjectCounts?.worldEntries ?? 0) > 0
-              ? `${activeProjectCounts?.worldEntries ?? 0} world record(s) created.`
-              : 'Add your first locations, factions, items, or lore records before writing heavily.',
-          actionLabel: 'Open World Bible',
-          action: () => navigate('/world-bible')
-        },
-        {
-          id: 'workspace',
-          label: 'Import or create your first scene in Workspace',
-          done: (activeProjectCounts?.scenes ?? 0) > 0,
-          helper:
-            (activeProjectCounts?.scenes ?? 0) > 0
-              ? `${activeProjectCounts?.scenes ?? 0} scene(s) available in the workspace.`
-              : 'Workspace supports .txt, .md, .html, and .docx import plus direct scene creation.',
-          actionLabel: 'Open Workspace',
-          action: () => navigate('/workspace')
-        },
-        {
-          id: 'settings',
-          label: 'Tune import defaults, AI, and editor comfort',
-          done: false,
-          helper:
-            'Use Settings to choose project mode, default import behavior, and AI/provider setup for day-to-day work.',
-          actionLabel: 'Open Settings',
-          action: () => navigate('/settings')
-        }
-      ]
-    : [];
 
   const handleDelete = async (project: Project) => {
     const confirmed = window.confirm(`Delete project "${project.name}"?`);
@@ -496,7 +453,7 @@ function ProjectsRoute() {
       <div className={styles.pageHeader}>
         <h1>Projects</h1>
         <p className={styles.pageIntro}>
-          Create a project shell, continue setup, and manage backups or parent-canon inheritance.
+          Open a project and get back to writing. Create new worlds here; use the utility tools only when you need backup or migration work.
         </p>
       </div>
       {feedback && (
@@ -509,86 +466,99 @@ function ProjectsRoute() {
           {feedback.message}
         </p>
       )}
-      <details className={styles.helpPanel}>
-        <summary>Projects Wizard Help</summary>
-        <div className={styles.helpBody}>
-          <p>
-            Step 1: create or open a project shell here.
-          </p>
-          <p>
-            Step 2: set project mode in Settings, then add canon in World Bible.
-          </p>
-          <p>
-            Step 3: import or write scenes in Workspace, then return here only for backup/import or series inheritance.
-          </p>
-        </div>
-      </details>
-
       {activeProject && (
         <section className={styles.heroCard}>
           <div className={styles.heroHeader}>
             <div>
-              <h2 className={styles.heroTitle}>Continue Setup: {activeProject.name}</h2>
+              <h2 className={styles.heroTitle}>{activeProject.name}</h2>
               <p className={styles.heroCopy}>
-                Use this checklist for a first project. The goal is simple: define the
-                world, import or write a scene, then tune settings only where needed.
+                Resume writing, review canon, or adjust project settings. Advanced setup can stay out of the way until you need it.
               </p>
             </div>
-            <button type='button' onClick={() => navigate('/workspace')}>
-              Go to Workspace
-            </button>
+            <div className={styles.inlineActions}>
+              <button type='button' onClick={() => navigate('/workspace')}>
+                Open Workspace
+              </button>
+              <button type='button' onClick={() => navigate('/world-bible')}>
+                Open World
+              </button>
+              <button type='button' onClick={() => navigate('/settings')}>
+                Settings
+              </button>
+            </div>
           </div>
           <div className={styles.checklistGrid}>
-            {activeProjectChecklist.map((item, index) => (
-              <div key={item.id} className={styles.checklistCard}>
-                <div
-                  className={`${styles.checklistMeta} ${
-                    item.done ? styles.checklistMetaDone : styles.checklistMetaNext
-                  }`}
-                >
-                  Step {index + 1} {item.done ? '• Done' : '• Next'}
-                </div>
-                <div className={styles.checklistTitle}>{item.label}</div>
-                <div className={styles.checklistHelp}>{item.helper}</div>
-                <button type='button' onClick={item.action}>
-                  {item.actionLabel}
-                </button>
+            <div className={styles.checklistCard}>
+              <div className={styles.checklistMeta}>Scenes</div>
+              <div className={styles.checklistTitle}>
+                {activeProjectCounts?.scenes ?? 0} scene{(activeProjectCounts?.scenes ?? 0) === 1 ? '' : 's'}
               </div>
-            ))}
+              <div className={styles.checklistHelp}>
+                Drafts and imported manuscript scenes available in the workspace.
+              </div>
+            </div>
+            <div className={styles.checklistCard}>
+              <div className={styles.checklistMeta}>World Records</div>
+              <div className={styles.checklistTitle}>
+                {activeProjectCounts?.worldEntries ?? 0} entr{(activeProjectCounts?.worldEntries ?? 0) === 1 ? 'y' : 'ies'}
+              </div>
+              <div className={styles.checklistHelp}>
+                Characters, places, factions, items, and other canon records.
+              </div>
+            </div>
+            <div className={styles.checklistCard}>
+              <div className={styles.checklistMeta}>Systems Layer</div>
+              <div className={styles.checklistTitle}>
+                {activeProjectHasRuleset ? 'Configured' : 'Lightweight'}
+              </div>
+              <div className={styles.checklistHelp}>
+                {activeProjectHasRuleset
+                  ? 'This project already has ruleset data and can grow into deeper system support.'
+                  : 'This project is currently oriented around writing and canon, with no ruleset required.'}
+              </div>
+            </div>
           </div>
         </section>
       )}
 
-      <div className={styles.utilityBar}>
-        <button
-          type='button'
-          onClick={handleSelectBackupFile}
-          disabled={isParsingImport}
-        >
-          {isParsingImport ? 'Loading Backup...' : 'Import Backup (.zip)'}
-        </button>
-        <input
-          ref={importFileInputRef}
-          type='file'
-          accept='.zip,application/zip'
-          onChange={(e) => void handleBackupFileChange(e)}
-          style={{display: 'none'}}
-        />
-        <button
-          type='button'
-          onClick={handleSelectValidateFile}
-          disabled={isValidatingBackup}
-        >
-          {isValidatingBackup ? 'Validating...' : 'Validate Backup (.zip)'}
-        </button>
-        <input
-          ref={validateFileInputRef}
-          type='file'
-          accept='.zip,application/zip'
-          onChange={(e) => void handleValidateBackupFile(e)}
-          style={{display: 'none'}}
-        />
-      </div>
+      <details className={styles.helpPanel}>
+        <summary>Backup and import tools</summary>
+        <div className={styles.helpBody}>
+          <div className={styles.utilityBar}>
+            <button
+              type='button'
+              onClick={handleSelectBackupFile}
+              disabled={isParsingImport}
+            >
+              {isParsingImport ? 'Loading Backup...' : 'Import Backup (.zip)'}
+            </button>
+            <input
+              ref={importFileInputRef}
+              type='file'
+              accept='.zip,application/zip'
+              onChange={(e) => void handleBackupFileChange(e)}
+              style={{display: 'none'}}
+            />
+            <button
+              type='button'
+              onClick={handleSelectValidateFile}
+              disabled={isValidatingBackup}
+            >
+              {isValidatingBackup ? 'Validating...' : 'Validate Backup (.zip)'}
+            </button>
+            <input
+              ref={validateFileInputRef}
+              type='file'
+              accept='.zip,application/zip'
+              onChange={(e) => void handleValidateBackupFile(e)}
+              style={{display: 'none'}}
+            />
+          </div>
+          <p>
+            Use these when migrating projects, checking archive integrity, or restoring a backup. They are not part of normal writing flow.
+          </p>
+        </div>
+      </details>
 
       {importPreview && importSnapshot && (
         <section className={styles.importPreviewCard}>
@@ -669,10 +639,9 @@ function ProjectsRoute() {
 
       <div className={styles.layout}>
         <form onSubmit={handleSubmit} className={styles.createCard}>
-          <p className={styles.eyebrow}>Step 1 of 3: create a project shell.</p>
           <h2>Create New Project</h2>
           <p className={styles.sectionIntro}>
-            Pick a name and project type. You can change canon, import behavior, and advanced settings after opening it.
+            Pick a name and starting mode. You can change behavior later in Settings.
           </p>
           <div className={styles.formRow}>
             <label className={styles.fieldLabel}>
@@ -706,7 +675,7 @@ function ProjectsRoute() {
         <section className={styles.listCard}>
           <h2>Existing Projects</h2>
           <p className={styles.sectionIntro}>
-            Configure inheritance and backups here. Most day-to-day authoring happens in World Bible, Workspace, and Settings.
+            Open a project to continue writing. Canon inheritance and backups remain available per project when needed.
           </p>
           {projects.length === 0 && (
             <p className={styles.emptyState}>No projects yet. Create one to get started.</p>

@@ -11,6 +11,14 @@ interface NavigationProps {
   onToggleRail?: () => void;
 }
 
+interface NavItem {
+  to: string;
+  label: string;
+  icon: string;
+  end?: boolean;
+  badgeCount?: number;
+}
+
 export const Navigation: FC<NavigationProps> = ({
   isRailCollapsed = false,
   onToggleRail
@@ -66,9 +74,9 @@ export const Navigation: FC<NavigationProps> = ({
     };
   }, [loadPendingCounts, location.pathname]);
 
-  const navItems = useMemo(
+  const navItems = useMemo<NavItem[]>(
     () => [
-      {to: '/', label: 'Projects', icon: 'PR', end: true},
+      {to: '/projects', label: 'Projects', icon: 'PR'},
       {to: '/world-bible', label: 'World', icon: 'WB', badgeCount: pendingCounts.world},
       {to: '/ruleset', label: 'Ruleset', icon: 'RS'},
       {to: '/characters', label: 'Characters', icon: 'CH'},
@@ -82,7 +90,10 @@ export const Navigation: FC<NavigationProps> = ({
   );
 
   const mobileBarItems = useMemo(
-    () => navItems.filter((item) => ['/', '/world-bible', '/workspace', '/characters'].includes(item.to)),
+    () =>
+      navItems.filter((item) =>
+        ['/projects', '/world-bible', '/workspace', '/characters'].includes(item.to)
+      ),
     [navItems]
   );
   useEffect(() => {

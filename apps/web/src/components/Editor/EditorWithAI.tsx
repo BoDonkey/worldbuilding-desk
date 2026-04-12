@@ -50,6 +50,10 @@ interface EditorWithAIProps {
   onRebindStatBlockToken?: (rawToken: string) => void;
   onOpenAIContext?: (context: AIContextType) => void;
   onOpenLoreInspector?: (record: LoreInspectorRecord) => void;
+  onOpenWorldCapture?: (
+    draftText: string,
+    anchorRect: {left: number; top: number; bottom: number}
+  ) => void;
 }
 
 interface SelectionBubbleState {
@@ -81,7 +85,8 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
   getStatBlockPreviewData,
   onRebindStatBlockToken,
   onOpenAIContext,
-  onOpenLoreInspector
+  onOpenLoreInspector,
+  onOpenWorldCapture
 }) => {
   const [textToInsertFromAI, setTextToInsertFromAI] = useState<string | null>(null);
   const [selectionBubble, setSelectionBubble] = useState<SelectionBubbleState | null>(
@@ -145,10 +150,10 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
     return {
       ...config,
       extensions: [
-        ...config.extensions,
-        AIExpandMenu,
-        createConsistencyHighlightsExtension(consistencyHighlights),
-        createLoreHighlightsExtension(loreHighlights)
+      ...config.extensions,
+      AIExpandMenu,
+      createConsistencyHighlightsExtension(consistencyHighlights),
+        createLoreHighlightsExtension(loreHighlights, consistencyHighlights)
       ]
     };
   }, [config, consistencyHighlights, loreHighlights]);
@@ -461,6 +466,21 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
                 }}
               >
                 Open Lore
+              </button>
+            )}
+            {!selectionBubble.matchRecord && (
+              <button
+                type='button'
+                onClick={() => {
+                  onOpenWorldCapture?.(selectionBubble.selectedText, {
+                    left: selectionBubble.x,
+                    top: selectionBubble.y,
+                    bottom: selectionBubble.y + 12
+                  });
+                  setSelectionBubble(null);
+                }}
+              >
+                Add to World
               </button>
             )}
             {selectionBubble.matchName && (

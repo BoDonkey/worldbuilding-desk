@@ -1,6 +1,6 @@
 # Next Steps
 
-Last updated: 2026-04-10
+Last updated: 2026-04-12
 
 ## Current Baseline
 
@@ -19,6 +19,11 @@ Implemented recently:
 - Writing Workspace import modes with deferred review and best-effort `.pages` preview extraction.
 - Inline consistency highlights and quick action popovers.
 - Inline lore highlights and quick lore popovers for known entities/characters.
+- Writing-first routing and drawer defaults: active projects now land in Workspace, and advanced drawers stay closed until opened.
+- Editable review capture flow: detected names/places can be edited before adding to the world, and manual text selection can create new world records.
+- Character-aware alias linking from review: review items can now connect to existing characters as well as World Bible entries.
+- Temporary dismiss and project-level `Always ignore` review actions.
+- Boundary-aware review highlighting with improved handling for possessives and overlapping lore/review highlights.
 - Editor appearance controls for font presentation, reading width, and editor surface.
 - World Bible / Compendium `needs completion` badges for review-created records.
 - `Alternative names` as a first-class World Bible field synced into alias matching.
@@ -29,28 +34,35 @@ Implemented recently:
 
 ## Recommended Priority Order
 
-1. First-run onboarding
+1. Review completion workflow + World Bible intake
 2. App-wide search
-3. Review completion workflow polish
-4. Editor readability and theme hardening
-5. Desktop packaging
-6. AI personas/tools
+3. Editor readability and theme hardening
+4. Desktop packaging
+5. AI personas/tools
+6. First-run onboarding cleanup
 
-## 1) First-Run Onboarding
+## 1) Review Completion Workflow + World Bible Intake
 
-Goal: make the current feature set approachable without outside guidance.
+Goal: make review-created canon feel intentional and editable instead of half-hidden.
 
-Checklist:
+Targets:
 
-- Add guided first-project creation.
-- Explain import modes and when to use them.
-- Surface the core routes and expected author workflow.
-- Add lightweight inline help for Projects, Workspace, World Bible, and Settings.
+- Move more alias and review follow-up into World Bible so authors can accept/refine from one place.
+- Add a dedicated review queue or review mode in World Bible for:
+  - needs completion records
+  - alias follow-up
+  - ignored/rejected review surfaces
+- Let authors accept, rename, merge, and alias from World Bible without returning to the manuscript for every cleanup action.
+- Decide whether `Always ignore` should stay local-storage backed or move into persisted project settings/backups.
+- Keep improving overlap/count correctness between:
+  - review issue state
+  - inline underline rendering
+  - passive lore highlights
 
 Exit criteria:
 
-- A new user can create a project, import source text, and understand where world/canon/AI settings live.
-- The app no longer depends on the docs for first-session orientation.
+- Authors can finish review-created records and alias cleanup from a coherent World Bible workflow.
+- Review counts, chips, and visible underlines agree reliably.
 
 ## 2) App-Wide Search
 
@@ -68,22 +80,7 @@ Exit criteria:
 - A user can locate a scene or World Bible entry from anywhere in the app.
 - Search results open the correct destination without manual hunting.
 
-## 3) Review Completion Workflow
-
-Goal: make fast review-created records feel intentionally incomplete rather than silently finished.
-
-Targets:
-
-- Clarify the difference between `Refresh review` and `Resume strict review`.
-- Decide whether review state should stay validation-derived or move to a persisted review queue.
-- Expand the `Alternative names` model into tooltip/review editing flows so alias management is not limited to the World Bible form.
-
-Exit criteria:
-
-- Authors can create fast shells from review without losing track of unfinished records.
-- Alias follow-up and review follow-up can both be completed from the same review-oriented workflow.
-
-## 4) Editor Readability and Theme Hardening
+## 3) Editor Readability and Theme Hardening
 
 Goal: make the workspace comfortable for long writing sessions.
 
@@ -101,7 +98,7 @@ Exit criteria:
 - Writers can reach a comfortable editor setup in both light and dark themes.
 - Highlight and notification colors remain legible across presets.
 
-## 5) Desktop Packaging
+## 4) Desktop Packaging
 
 Goal: close the gap between “web app in development” and “desktop authoring product.”
 
@@ -115,7 +112,7 @@ Exit criteria:
 
 - A distributable desktop build exists and supports the core author workflow.
 
-## 6) AI Personas / Tools
+## 5) AI Personas / Tools
 
 Goal: move beyond generic assistant behavior toward explicit author-facing roles.
 
@@ -141,6 +138,7 @@ Exit criteria:
 
 Suggested branch names:
 
+- `codex/world-bible-review-intake`
 - `codex/editor-theme-hardening`
 - `codex/review-completion-badges`
 - `codex/ai-writing-critic`

@@ -21,6 +21,11 @@ import CompendiumRoute from './routes/CompendiumRoute';
 import RulesetRoute from './routes/RulesetRoute';
 import appShellStyles from './styles/AppShell.module.css';
 
+function HomeRoute() {
+  const activeProject = useAppStore((s) => s.activeProject);
+  return <Navigate to={activeProject ? '/workspace' : '/projects'} replace />;
+}
+
 function AppShellLayout() {
   const location = useLocation();
   const isRailCollapsed = useAppStore((s) => s.isRailCollapsed);
@@ -52,7 +57,8 @@ function AppRoutes() {
     <CommandPaletteProvider>
       <Routes>
         <Route element={<AppShellLayout />}>
-          <Route path='/' element={<ProjectsRoute />} />
+          <Route path='/' element={<HomeRoute />} />
+          <Route path='/projects' element={<ProjectsRoute />} />
           <Route path='/world-bible' element={<WorldBibleRoute />} />
           <Route path='/ruleset' element={<RulesetRoute />} />
           <Route path='/characters' element={<CharactersHubRoute />} />

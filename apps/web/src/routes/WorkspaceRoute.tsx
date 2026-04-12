@@ -105,6 +105,12 @@ function WorkspaceRoute() {
     text: string;
     context: {from: number; to: number} | null;
   } | null>(null);
+  const [worldCaptureDrafts, setWorldCaptureDrafts] = useState<Record<string, string>>({});
+  const [manualWorldCapture, setManualWorldCapture] = useState<{
+    draftText: string;
+    left: number;
+    top: number;
+  } | null>(null);
   const [isNarrowViewport, setNarrowViewport] = useState(() =>
     typeof window !== 'undefined'
       ? window.matchMedia('(max-width: 1200px)').matches
@@ -262,6 +268,9 @@ function WorkspaceRoute() {
     setFeedback,
     addSystemHistory
   });
+  const openImportPicker = useCallback(() => {
+    importInputRef.current?.click();
+  }, [importInputRef]);
   const openExportModalWithDrawerHandling = useCallback(
     (format: 'markdown' | 'docx' | 'epub') => {
       if (isNarrowViewport) {
@@ -307,6 +316,8 @@ function WorkspaceRoute() {
     setQueuedAssistantPrompt(null);
     setActiveLoreRecord(null);
     setPendingAIInsert(null);
+    setWorldCaptureDrafts({});
+    setManualWorldCapture(null);
   }, []);
 
   const {
@@ -387,11 +398,13 @@ function WorkspaceRoute() {
     unknownGuardrailIssues,
     hasBlockingUnknownGuardrailIssues,
     highlightableUnknownIssues,
+    isReviewPrefsHydrated,
     unknownLinkOptions,
     resolveUnknownEntity,
     resolveAllUnknownEntities,
     dismissAllUnknownEntities,
     dismissUnknownEntity,
+    ignoreUnknownSurfaceProjectWide,
     linkUnknownEntity,
     activeConsistencyPopoverIssue,
     openConsistencyPopover
@@ -548,6 +561,43 @@ function WorkspaceRoute() {
   }, [activeProject, activePartySynergies, refreshSystemHistory]);
   const showGameSystems =
     projectSettings?.featureToggles.enableGameSystems !== false;
+  const isGeneralFictionProject = projectSettings?.projectMode === 'general';
+  const reviewBannerTitle = hasBlockingUnknownGuardrailIssues
+    ? isGeneralFictionProject
+      ? 'A few names or places need a quick review before this draft is fully checked.'
+      : 'A few detected references need a quick review before this draft is fully checked.'
+    : isGeneralFictionProject
+      ? 'A few names or places were noticed in this scene.'
+      : 'A few detected references were noticed in this scene.';
+  const reviewBannerBody = isGeneralFictionProject
+    ? 'Click an underline in the editor to add it to your world, connect it to something existing, or ignore it for now.'
+    : 'Click an underline in the editor to add it to the world, connect it to an existing record, or ignore it for now.';
+  const reviewCreateLabel = isGeneralFictionProject ? 'Add to World' : 'Create record';
+  const reviewCreateAllLabel = isGeneralFictionProject
+    ? 'Add all to World'
+    : 'Create all as new records';
+  const reviewDismissAllLabel = isGeneralFictionProject
+    ? 'Ignore all for now'
+    : hasBlockingUnknownGuardrailIssues
+      ? 'Dismiss all for now'
+      : 'Hide all warnings for now';
+  const reviewLinkLabel = isGeneralFictionProject ? 'Connect to existing' : 'Link alias';
+  const reviewPopoverMessage = isGeneralFictionProject
+    ? 'Add this to your world, connect it to something you already track, or ignore it for now.'
+    : 'Choose how to handle this detected reference.';
+  const visibleReviewSurfaces = unknownGuardrailIssues
+    .map((issue) => issue.surface?.trim())
+    .filter((surface): surface is string => Boolean(surface))
+    .slice(0, 6);
+  const hiddenReviewSurfaceCount = Math.max(
+    0,
+    unknownGuardrailIssues.length - visibleReviewSurfaces.length
+  );
+  const activeWorldCaptureDraft =
+    (activeConsistencyPopoverIssue &&
+      worldCaptureDrafts[activeConsistencyPopoverIssue.surface]) ||
+    activeConsistencyPopoverIssue?.surface ||
+    '';
   const selectionQuickSnippets = useWorkspaceLoreSnippets({
     activeProject,
     categories,
@@ -588,13 +638,17 @@ function WorkspaceRoute() {
   }, [documents, handleSelectDocument, location.pathname, location.state, navigate, selectedId]);
 
   useEffect(() => {
-    if (!selectedDocument || selectedDocument.consistencyReviewMode !== 'deferred') {
+    if (
+      !isReviewPrefsHydrated ||
+      !selectedDocument ||
+      selectedDocument.consistencyReviewMode !== 'deferred'
+    ) {
       return;
     }
     void refreshDeferredReview(selectedDocument).catch((error) => {
       console.warn('Deferred review rehydrate failed', error);
     });
-  }, [refreshDeferredReview, selectedDocument]);
+  }, [isReviewPrefsHydrated, refreshDeferredReview, selectedDocument]);
 
   useEffect(() => {
     if (!showGameSystems && activeContextView === 'compendium') {
@@ -732,6 +786,16 @@ function WorkspaceRoute() {
       openContextDrawer('lore');
     },
     [openContextDrawer]
+  );
+  const handleOpenManualWorldCapture = useCallback(
+    (draftText: string, anchorRect: {left: number; top: number; bottom: number}) => {
+      setManualWorldCapture({
+        draftText,
+        left: anchorRect.left,
+        top: anchorRect.bottom + 8
+      });
+    },
+    []
   );
 
   const handleConsultationFromLore = useCallback(
@@ -885,6 +949,53 @@ function WorkspaceRoute() {
 
   return (
     <section data-workspace-root='true' className={styles.workspaceRoot}>
+      <input
+        ref={importInputRef}
+        type='file'
+        accept='.txt,.md,.markdown,.html,.htm,.docx,.doc,.pages,text/plain,text/markdown,text/html,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/msword'
+        multiple
+        onChange={(e) => void handleImportDocuments(e)}
+        style={{display: 'none'}}
+      />
+      <div className={styles.workspaceHeader}>
+        <div>
+          <h1 className={styles.workspaceTitle}>Writing Workspace</h1>
+          <p className={styles.workspaceSubtitle}>
+            {activeProject.name}
+            {selectedDocument ? ` · ${selectedDocument.title || 'Untitled scene'}` : ''}
+          </p>
+        </div>
+        <div className={styles.workspaceHeaderActions}>
+          <button
+            type='button'
+            onClick={() => void handleNewDocument()}
+            disabled={isCreatingScene}
+          >
+            {isCreatingScene ? 'Creating...' : 'New Scene'}
+          </button>
+          <button
+            type='button'
+            onClick={openImportPicker}
+            disabled={isImportingDocuments}
+          >
+            {isImportingDocuments ? 'Importing...' : 'Import'}
+          </button>
+          <button
+            type='button'
+            className={styles.drawerTopButton}
+            onClick={toggleSceneDrawer}
+          >
+            Scenes
+          </button>
+          <button
+            type='button'
+            className={styles.drawerTopButton}
+            onClick={toggleContextDrawer}
+          >
+            Context
+          </button>
+        </div>
+      </div>
       {feedback && (
         <p
           role='status'
@@ -916,32 +1027,39 @@ function WorkspaceRoute() {
       )}
       {unknownGuardrailIssues.length > 0 && (
         <div className={styles.unknownPanel}>
-          <strong>
-            {hasBlockingUnknownGuardrailIssues
-              ? 'Commit blocked: unknown entities detected.'
-              : 'Inline review items highlighted in the scene.'}
-          </strong>
+          <strong>{reviewBannerTitle}</strong>
           <div className={styles.unknownSummary}>
             {unknownGuardrailIssues.length} item
-            {unknownGuardrailIssues.length === 1 ? '' : 's'} highlighted. Click the
-            underlined text in the editor to create, link, or dismiss each one.
+            {unknownGuardrailIssues.length === 1 ? '' : 's'} highlighted. {reviewBannerBody}
           </div>
+          {visibleReviewSurfaces.length > 0 && (
+            <div className={styles.unknownSurfaceList}>
+              {visibleReviewSurfaces.map((surface) => (
+                <span key={surface} className={styles.unknownSurfaceChip}>
+                  {surface}
+                </span>
+              ))}
+              {hiddenReviewSurfaceCount > 0 && (
+                <span className={styles.unknownSurfaceChipMuted}>
+                  +{hiddenReviewSurfaceCount} more
+                </span>
+              )}
+            </div>
+          )}
           <div className={styles.unknownBulkActions}>
             <button
               type='button'
               onClick={() => void resolveAllUnknownEntities()}
               className={styles.unknownActionButton}
             >
-              Accept all as new entities
+              {reviewCreateAllLabel}
             </button>
             <button
               type='button'
-              onClick={dismissAllUnknownEntities}
+              onClick={() => dismissAllUnknownEntities(selectedId ?? undefined)}
               className={styles.unknownActionButtonSpaced}
             >
-              {hasBlockingUnknownGuardrailIssues
-                ? 'Dismiss all for now'
-                : 'Hide all warnings for now'}
+              {reviewDismissAllLabel}
             </button>
           </div>
         </div>
@@ -983,8 +1101,8 @@ function WorkspaceRoute() {
             <WorkspaceSceneDrawer
               handleNewDocument={handleNewDocument}
               isCreatingScene={isCreatingScene}
-              importInputRef={importInputRef}
               isImportingDocuments={isImportingDocuments}
+              openImportPicker={openImportPicker}
               importMode={importMode}
               setImportMode={setImportMode}
               skipImportSuggestions={skipImportSuggestions}
@@ -1000,7 +1118,6 @@ function WorkspaceRoute() {
               handleSelectDocument={handleSelectDocument}
               handleDelete={handleDelete}
               deletingDocumentId={deletingDocumentId}
-              handleImportDocuments={(e) => void handleImportDocuments(e)}
             />
           </aside>
         )}
@@ -1053,11 +1170,12 @@ function WorkspaceRoute() {
                   onRebindStatBlockToken={openStatBlockRebind}
                   onOpenAIContext={handleOpenAIContext}
                   onOpenLoreInspector={handleOpenLoreInspector}
+                  onOpenWorldCapture={handleOpenManualWorldCapture}
                 />
                 {consistencyPopover && activeConsistencyPopoverIssue && (
                   <ContextPopover
                     title={activeConsistencyPopoverIssue.surface}
-                    message={activeConsistencyPopoverIssue.message}
+                    message={reviewPopoverMessage}
                     left={consistencyPopover.left}
                     top={consistencyPopover.top}
                     onClose={() => setConsistencyPopover(null)}
@@ -1072,9 +1190,9 @@ function WorkspaceRoute() {
                               [activeConsistencyPopoverIssue.surface]: e.target.value
                             }))
                           }
-                          aria-label='Entity category'
+                          aria-label='World category'
                         >
-                          <option value=''>Auto-select category</option>
+                          <option value=''>Choose a type</option>
                           {categories.map((cat) => (
                             <option key={cat.id} value={cat.id}>
                               {cat.name}
@@ -1082,23 +1200,52 @@ function WorkspaceRoute() {
                           ))}
                         </select>
                       )}
+                      <input
+                        type='text'
+                        value={activeWorldCaptureDraft}
+                        onChange={(event) =>
+                          setWorldCaptureDrafts((prev) => ({
+                            ...prev,
+                            [activeConsistencyPopoverIssue.surface]: event.target.value
+                          }))
+                        }
+                        placeholder='Name or place'
+                        className={styles.captureNameInput}
+                      />
                       <button
                         type='button'
                         onClick={() => void resolveUnknownEntity(
                           activeConsistencyPopoverIssue.surface,
-                          unknownCategorySelection[activeConsistencyPopoverIssue.surface] || undefined
+                          unknownCategorySelection[activeConsistencyPopoverIssue.surface] || undefined,
+                          activeWorldCaptureDraft
                         )}
                         disabled={resolvingUnknown === activeConsistencyPopoverIssue.surface}
                       >
                         {resolvingUnknown === activeConsistencyPopoverIssue.surface
-                          ? 'Creating...'
-                          : 'Create entity'}
+                          ? 'Adding...'
+                          : reviewCreateLabel}
                       </button>
                       <button
                         type='button'
-                        onClick={() => dismissUnknownEntity(activeConsistencyPopoverIssue.surface)}
+                        onClick={() =>
+                          dismissUnknownEntity(
+                            activeConsistencyPopoverIssue.surface,
+                            selectedId ?? undefined
+                          )
+                        }
                       >
-                        Dismiss
+                        Ignore
+                      </button>
+                      <button
+                        type='button'
+                        onClick={() =>
+                          ignoreUnknownSurfaceProjectWide(
+                            activeConsistencyPopoverIssue.surface,
+                            selectedId ?? undefined
+                          )
+                        }
+                      >
+                        Always ignore
                       </button>
                     </div>
                     {unknownLinkOptions[activeConsistencyPopoverIssue.surface]?.length ? (
@@ -1115,11 +1262,14 @@ function WorkspaceRoute() {
                             }))
                           }
                         >
-                          <option value=''>Select entity...</option>
+                          <option value=''>Select existing record...</option>
                           {unknownLinkOptions[activeConsistencyPopoverIssue.surface].map(
                             (entity) => (
-                              <option key={entity.id} value={entity.id}>
-                                {entity.name}
+                              <option
+                                key={`${entity.type}-${entity.id}`}
+                                value={`${entity.type}:${entity.id}`}
+                              >
+                                {entity.name} {entity.type === 'character' ? '· Character' : '· World'}
                               </option>
                             )
                           )}
@@ -1129,7 +1279,8 @@ function WorkspaceRoute() {
                           onClick={() =>
                             void linkUnknownEntity(
                               activeConsistencyPopoverIssue.surface,
-                              unknownLinkSelection[activeConsistencyPopoverIssue.surface]
+                              unknownLinkSelection[activeConsistencyPopoverIssue.surface],
+                              activeWorldCaptureDraft
                             )
                           }
                           disabled={
@@ -1138,15 +1289,72 @@ function WorkspaceRoute() {
                           }
                         >
                           {linkingUnknown === activeConsistencyPopoverIssue.surface
-                            ? 'Linking...'
-                            : 'Link alias'}
+                            ? 'Connecting...'
+                            : reviewLinkLabel}
                         </button>
                       </div>
                     ) : (
                       <div className={styles.consistencyPopoverNote}>
-                        No close entity matches available.
+                        No close existing matches available yet.
                       </div>
                     )}
+                  </ContextPopover>
+                )}
+                {manualWorldCapture && (
+                  <ContextPopover
+                    title='Add to World'
+                    message='Use the selected text as a starting point, then edit it before creating a world record.'
+                    left={manualWorldCapture.left}
+                    top={manualWorldCapture.top}
+                    onClose={() => setManualWorldCapture(null)}
+                  >
+                    <div className={styles.consistencyPopoverActions}>
+                      {categories.length > 0 && (
+                        <select
+                          value={unknownCategorySelection.__manual__ ?? ''}
+                          onChange={(e) =>
+                            setUnknownCategorySelection((prev) => ({
+                              ...prev,
+                              __manual__: e.target.value
+                            }))
+                          }
+                          aria-label='World category'
+                        >
+                          <option value=''>Choose a type</option>
+                          {categories.map((cat) => (
+                            <option key={cat.id} value={cat.id}>
+                              {cat.name}
+                            </option>
+                          ))}
+                        </select>
+                      )}
+                      <input
+                        type='text'
+                        value={manualWorldCapture.draftText}
+                        onChange={(event) =>
+                          setManualWorldCapture((prev) =>
+                            prev ? {...prev, draftText: event.target.value} : prev
+                          )
+                        }
+                        placeholder='Name or place'
+                        className={styles.captureNameInput}
+                      />
+                      <button
+                        type='button'
+                        onClick={() =>
+                          void resolveUnknownEntity(
+                            manualWorldCapture.draftText,
+                            unknownCategorySelection.__manual__ || undefined,
+                            manualWorldCapture.draftText
+                          ).then(() => setManualWorldCapture(null))
+                        }
+                        disabled={resolvingUnknown === manualWorldCapture.draftText}
+                      >
+                        {resolvingUnknown === manualWorldCapture.draftText
+                          ? 'Adding...'
+                          : reviewCreateLabel}
+                      </button>
+                    </div>
                   </ContextPopover>
                 )}
               </div>
@@ -1188,20 +1396,49 @@ function WorkspaceRoute() {
                     className={styles.drawerTopButton}
                     onClick={toggleSceneDrawer}
                   >
-                    {isSceneDrawerOpen ? 'Scenes on' : 'Scenes off'}
+                    Scenes
                   </button>
                   <button
                     type='button'
                     className={styles.drawerTopButton}
                     onClick={toggleContextDrawer}
                   >
-                    {isContextDrawerOpen ? 'Context on' : 'Context off'}
+                    Context
                   </button>
                 </div>
               </div>
             </>
           ) : (
-            <p>Select a scene from the left, or create one with + New Scene.</p>
+            <div className={styles.emptyWorkspaceState}>
+              <h2 className={styles.emptyWorkspaceTitle}>Start writing immediately</h2>
+              <p className={styles.emptyWorkspaceCopy}>
+                Create a blank scene or import existing pages. World context and review
+                tools can stay in the background until you need them.
+              </p>
+              <div className={styles.emptyWorkspaceActions}>
+                <button
+                  type='button'
+                  onClick={() => void handleNewDocument()}
+                  disabled={isCreatingScene}
+                >
+                  {isCreatingScene ? 'Creating...' : 'New Scene'}
+                </button>
+                <button
+                  type='button'
+                  onClick={openImportPicker}
+                  disabled={isImportingDocuments}
+                >
+                  {isImportingDocuments ? 'Importing...' : 'Import Draft'}
+                </button>
+                <button
+                  type='button'
+                  className={styles.drawerTopButton}
+                  onClick={toggleSceneDrawer}
+                >
+                  Browse Scenes
+                </button>
+              </div>
+            </div>
           )}
         </div>
 
@@ -1277,8 +1514,8 @@ function WorkspaceRoute() {
             <WorkspaceSceneDrawer
               handleNewDocument={handleNewDocument}
               isCreatingScene={isCreatingScene}
-              importInputRef={importInputRef}
               isImportingDocuments={isImportingDocuments}
+              openImportPicker={openImportPicker}
               importMode={importMode}
               setImportMode={setImportMode}
               skipImportSuggestions={skipImportSuggestions}
@@ -1294,7 +1531,6 @@ function WorkspaceRoute() {
               handleSelectDocument={handleSelectDocument}
               handleDelete={handleDelete}
               deletingDocumentId={deletingDocumentId}
-              handleImportDocuments={(e) => void handleImportDocuments(e)}
             />
           </aside>
         </div>

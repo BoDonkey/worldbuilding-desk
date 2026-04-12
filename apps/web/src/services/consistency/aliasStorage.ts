@@ -3,7 +3,9 @@ import { CONSISTENCY_ALIAS_STORE_NAME, openDb } from '../../db';
 export interface ConsistencyAlias {
   id: string;
   projectId: string;
-  entityId: string;
+  targetId: string;
+  targetType: 'entity' | 'character';
+  entityId?: string;
   alias: string;
   createdAt: number;
   updatedAt: number;
@@ -25,8 +27,30 @@ export async function getAliasesByProject(projectId: string): Promise<Consistenc
     const request = store.getAll();
 
     request.onsuccess = () => {
-      const all = request.result as ConsistencyAlias[];
-      resolve(all.filter((alias) => alias.projectId === projectId));
+      const all = request.result as Array<Partial<ConsistencyAlias>>;
+      resolve(
+        all
+          .filter((alias): alias is Partial<ConsistencyAlias> & {projectId: string; alias: string} =>
+            alias.projectId === projectId && typeof alias.alias === 'string'
+          )
+          .map((alias) => {
+            const targetType = alias.targetType ?? 'entity';
+            const targetId = alias.targetId ?? alias.entityId;
+            if (!targetId) {
+              throw new Error('Alias record missing target id.');
+            }
+            return {
+              id: alias.id ?? crypto.randomUUID(),
+              projectId: alias.projectId,
+              targetId,
+              targetType,
+              entityId: targetType === 'entity' ? targetId : undefined,
+              alias: alias.alias,
+              createdAt: alias.createdAt ?? Date.now(),
+              updatedAt: alias.updatedAt ?? alias.createdAt ?? Date.now()
+            };
+          })
+      );
     };
 
     request.onerror = () => {
@@ -35,7 +59,9 @@ export async function getAliasesByProject(projectId: string): Promise<Consistenc
   });
 }
 
-export async function saveAlias(input: Omit<ConsistencyAlias, 'id' | 'createdAt' | 'updatedAt'>): Promise<ConsistencyAlias> {
+export async function saveAlias(
+  input: Omit<ConsistencyAlias, 'id' | 'createdAt' | 'updatedAt' | 'entityId'>
+): Promise<ConsistencyAlias> {
   const db = await openDb();
 
   const existing = await getAliasesByProject(input.projectId);
@@ -48,13 +74,17 @@ export async function saveAlias(input: Omit<ConsistencyAlias, 'id' | 'createdAt'
   const aliasToSave: ConsistencyAlias = duplicate
     ? {
         ...duplicate,
-        entityId: input.entityId,
+        targetId: input.targetId,
+        targetType: input.targetType,
+        entityId: input.targetType === 'entity' ? input.targetId : undefined,
         updatedAt: now
       }
     : {
         id: crypto.randomUUID(),
         projectId: input.projectId,
-        entityId: input.entityId,
+        targetId: input.targetId,
+        targetType: input.targetType,
+        entityId: input.targetType === 'entity' ? input.targetId : undefined,
         alias: input.alias.trim(),
         createdAt: now,
         updatedAt: now
@@ -108,15 +138,17 @@ export async function replaceAliasesForEntity(input: {
       if (shouldBelongToEntity) {
         const nextRecord: ConsistencyAlias = {
           ...aliasRecord,
-          entityId: input.entityId,
-          updatedAt: now
-        };
+        targetId: input.entityId,
+        targetType: 'entity',
+        entityId: input.entityId,
+        updatedAt: now
+      };
         kept.push(nextRecord);
         store.put(nextRecord);
         return;
       }
 
-      if (aliasRecord.entityId === input.entityId) {
+      if ((aliasRecord.targetType ?? 'entity') === 'entity' && aliasRecord.targetId === input.entityId) {
         store.delete(aliasRecord.id);
       }
     });
@@ -134,12 +166,16 @@ export async function replaceAliasesForEntity(input: {
       const nextRecord: ConsistencyAlias = duplicate
         ? {
             ...duplicate,
+            targetId: input.entityId,
+            targetType: 'entity',
             entityId: input.entityId,
             updatedAt: now
           }
         : {
             id: crypto.randomUUID(),
             projectId: input.projectId,
+            targetId: input.entityId,
+            targetType: 'entity',
             entityId: input.entityId,
             alias,
             createdAt: now,
@@ -151,7 +187,11 @@ export async function replaceAliasesForEntity(input: {
 
     tx.oncomplete = () => {
       emitAliasRecordsChanged();
-      resolve(kept.filter((entry) => entry.entityId === input.entityId));
+      resolve(
+        kept.filter(
+          (entry) => (entry.targetType ?? 'entity') === 'entity' && entry.targetId === input.entityId
+        )
+      );
     };
     tx.onerror = () => reject(tx.error);
     tx.onabort = () => reject(tx.error);
@@ -170,7 +210,7 @@ export async function deleteAliasesForEntity(
     const store = tx.objectStore(CONSISTENCY_ALIAS_STORE_NAME);
 
     existing
-      .filter((alias) => alias.entityId === entityId)
+      .filter((alias) => (alias.targetType ?? 'entity') === 'entity' && alias.targetId === entityId)
       .forEach((alias) => {
         store.delete(alias.id);
       });
