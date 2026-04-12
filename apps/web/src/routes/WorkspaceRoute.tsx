@@ -1,84 +1,40 @@
 import {useEffect, useState, useCallback, useMemo, useRef} from 'react';
 import {useLocation, useNavigate} from 'react-router-dom';
 import type {
-  Character,
-  CharacterSheet,
-  EntityCategory,
-  ProjectSettings,
-  StatBlockGroup,
   StatBlockInsertMode,
   StatBlockScopePreset,
   StatBlockSourceType,
   StatBlockStyle,
-  StoredRuleset,
   SystemHistoryEntry,
-  WorkspaceImportMode,
-  WorldEntity,
   WritingDocument
 } from '../entityTypes';
-import {
-  getDocumentsByProject
-} from '../writingStorage';
-import {getEntitiesByProject} from '../entityStorage';
-import {
-  getCategoriesByProject,
-  initializeDefaultCategories
-} from '../categoryStorage';
-import {getCharactersByProject} from '../characterStorage';
-import {getCharacterSheetsByProject} from '../services/characters';
-import {
-  getOrCreateSettings,
-  getResolvedConsistencyActionCues
-} from '../settingsStorage';
-import {createEditorConfigWithStyles} from '../config/editorConfig';
-import type {EditorConfig} from '../config/editorConfig';
 import {EditorWithAI} from '../components/Editor/EditorWithAI';
 import {ContextPopover} from '../components/Editor/ContextPopover';
 import type {LoreInspectorRecord} from '../components/Editor/LoreInspectorPanel';
-import {LoreInspectorPanel} from '../components/Editor/LoreInspectorPanel';
-import {SystemHistoryPanel} from '../components/Editor/SystemHistoryPanel';
-import {AIAssistant} from '../components/AIAssistant/AIAssistant';
-import {ShodhMemoryPanel} from '../components/ShodhMemoryPanel';
 import {useWorkspaceMemories} from '../hooks/useWorkspaceMemories';
 import {useWorkspaceConsistency} from '../hooks/useWorkspaceConsistency';
 import {useWorkspaceDocuments} from '../hooks/useWorkspaceDocuments';
 import {useWorkspaceStatBlocks} from '../hooks/useWorkspaceStatBlocks';
-import type {RAGProvider} from '../services/rag/RAGService';
-import {getRAGService} from '../services/rag/getRAGService';
-import {getRulesetByProjectId} from '../services/rules';
 import {
   DEFAULT_PARTY_SYNERGY_RULES,
   deriveCharacterRuntimeModifiers,
-  getCompendiumActionLogs,
-  getCompendiumEntriesByProject,
-  getCompendiumProgress,
   getEffectiveResourceValues,
   getEffectiveStatValue,
-  getOrCreateSettlementState,
-  getPartySynergySuggestions,
-  getSettlementModulesByProject
+  getPartySynergySuggestions
 } from '../services/compendium';
 import {
   getSeriesBibleConfig,
   promoteDocumentToParent,
-  getCanonSyncState,
   syncChildWithParent
 } from '../services/seriesBible/SeriesBibleService';
 import {getConsistencyEngineService} from '../services/consistency';
 import {
-  getAliasesByProject,
-  type ConsistencyAlias
-} from '../services/consistency';
-import {
   appendSystemHistoryEntry,
-  clearSystemHistoryEntries,
   getSystemHistoryEntries
 } from '../services/system';
 import {
-  getCachedSynopsis,
   getInspectorConsultationUsage,
-  incrementInspectorConsultationUsage,
-  setCachedSynopsis
+  incrementInspectorConsultationUsage
 } from '../services/editor';
 import {
   WORKSPACE_COMMAND_EVENT,
@@ -90,6 +46,10 @@ import {
 } from '../hooks/useWorkspaceDrawers';
 import styles from '../styles/WorkspaceRoute.module.css';
 import {useAppStore} from '../store/appStore';
+import {WorkspaceContextDrawer} from '../components/Workspace/WorkspaceContextDrawer';
+import {WorkspaceSceneDrawer} from '../components/Workspace/WorkspaceSceneDrawer';
+import {useWorkspaceProjectData} from '../hooks/useWorkspaceProjectData';
+import {useWorkspaceLoreSnippets} from '../hooks/useWorkspaceLoreSnippets';
 
 declare global {
   interface Window {
@@ -112,7 +72,6 @@ const summarizeContent = (html: string, limit = 500): string => {
 
 type FeedbackTone = 'success' | 'error';
 type ContextDrawerView = WorkspaceContextDrawerView;
-type ImportMode = WorkspaceImportMode;
 type WorkspaceAIContext = {
   type: 'document';
   id: string;
@@ -127,52 +86,9 @@ function WorkspaceRoute() {
   const location = useLocation();
   const consistencyEngine = useMemo(() => getConsistencyEngineService(), []);
   const [documents, setDocuments] = useState<WritingDocument[]>([]);
-  const [editorConfig, setEditorConfig] = useState<EditorConfig | null>(null);
-  const [toolbarButtons, setToolbarButtons] = useState<
-    Array<{id: string; label: string; markName: string}>
-  >([]);
-  const [projectSettings, setProjectSettings] =
-    useState<ProjectSettings | null>(null);
-  const [entities, setEntities] = useState<WorldEntity[]>([]);
-  const [categories, setCategories] = useState<EntityCategory[]>([]);
-  const [aliases, setAliases] = useState<ConsistencyAlias[]>([]);
-  const [resolvedActionCues, setResolvedActionCues] = useState<string[]>([]);
-  const [characters, setCharacters] = useState<Character[]>([]);
-  const [characterSheets, setCharacterSheets] = useState<CharacterSheet[]>([]);
-  const [ruleset, setRuleset] = useState<StoredRuleset | null>(null);
-  const [settlementState, setSettlementState] = useState<Awaited<
-    ReturnType<typeof getOrCreateSettlementState>
-  > | null>(null);
-  const [settlementModules, setSettlementModules] = useState<Awaited<
-    ReturnType<typeof getSettlementModulesByProject>
-  >>([]);
-  const [statBlockSourceType, setStatBlockSourceType] =
-    useState<StatBlockSourceType>('character');
-  const [statBlockStyle, setStatBlockStyle] = useState<StatBlockStyle>('full');
-  const [statBlockInsertMode, setStatBlockInsertMode] =
-    useState<StatBlockInsertMode>('block');
-  const [statBlockScopePreset, setStatBlockScopePreset] =
-    useState<StatBlockScopePreset>('all');
-  const [selectedStatGroupId, setSelectedStatGroupId] = useState('');
-  const [selectedStatIds, setSelectedStatIds] = useState<string[]>([]);
-  const [selectedResourceIds, setSelectedResourceIds] = useState<string[]>([]);
-  const [statBlockGroups, setStatBlockGroups] = useState<StatBlockGroup[]>([]);
-  const [newStatGroupName, setNewStatGroupName] = useState('');
-  const [selectedStatCharacterId, setSelectedStatCharacterId] = useState('');
-  const [selectedStatEntityId, setSelectedStatEntityId] = useState('');
-  const [statBlockInsertContent, setStatBlockInsertContent] = useState<string | null>(null);
-  const [pendingStatBlockRebindToken, setPendingStatBlockRebindToken] = useState<string | null>(null);
-  const [isStatPreferencesHydrated, setStatPreferencesHydrated] = useState(false);
-  const [ragService, setRagService] = useState<RAGProvider | null>(null);
-  const MEMORIES_PER_PAGE = 5;
   const seriesBibleConfig = activeProject
     ? getSeriesBibleConfig(activeProject)
     : null;
-  const [canonState, setCanonState] = useState<{
-    parentCanonVersion?: string;
-    childLastSynced?: string;
-    parentName?: string;
-  }>({});
   const [feedback, setFeedback] = useState<{
     tone: FeedbackTone;
     message: string;
@@ -386,6 +302,70 @@ function WorkspaceRoute() {
     setFeedback
   });
 
+  const handleProjectReset = useCallback(() => {
+    setActiveAIContext(null);
+    setQueuedAssistantPrompt(null);
+    setActiveLoreRecord(null);
+    setPendingAIInsert(null);
+  }, []);
+
+  const {
+    editorConfig,
+    toolbarButtons,
+    projectSettings,
+    setProjectSettings,
+    entities,
+    setEntities,
+    categories,
+    setCategories,
+    aliases,
+    setAliases,
+    resolvedActionCues,
+    characters,
+    characterSheets,
+    ruleset,
+    settlementState,
+    settlementModules,
+    ragService,
+    canonState,
+    setCanonState,
+    statBlockSourceType,
+    setStatBlockSourceType,
+    statBlockStyle,
+    setStatBlockStyle,
+    statBlockInsertMode,
+    setStatBlockInsertMode,
+    statBlockScopePreset,
+    setStatBlockScopePreset,
+    selectedStatGroupId,
+    setSelectedStatGroupId,
+    selectedStatIds,
+    setSelectedStatIds,
+    selectedResourceIds,
+    setSelectedResourceIds,
+    statBlockGroups,
+    setStatBlockGroups,
+    newStatGroupName,
+    setNewStatGroupName,
+    selectedStatCharacterId,
+    setSelectedStatCharacterId,
+    selectedStatEntityId,
+    setSelectedStatEntityId,
+    statBlockInsertContent,
+    setStatBlockInsertContent,
+    pendingStatBlockRebindToken,
+    setPendingStatBlockRebindToken,
+    isStatPreferencesHydrated
+  } = useWorkspaceProjectData({
+    activeProject,
+    initializeEditorState,
+    setDocuments,
+    setImportMode,
+    setSkipImportSuggestions,
+    refreshSystemHistory,
+    onProjectReset: handleProjectReset
+  });
+
   const {
     setGuardrailIssues,
     resolvingUnknown,
@@ -449,244 +429,6 @@ function WorkspaceRoute() {
     ]);
     await refreshMemories();
   };
-
-  const syncCompendiumSystemSignals = useCallback(async () => {
-    if (!activeProject) return;
-    const [logs, entries, progress] = await Promise.all([
-      getCompendiumActionLogs(activeProject.id),
-      getCompendiumEntriesByProject(activeProject.id),
-      getCompendiumProgress(activeProject.id)
-    ]);
-    const entryMap = new Map(entries.map((entry) => [entry.id, entry]));
-
-    logs.slice(0, 80).forEach((log) => {
-      const entry = entryMap.get(log.entryId);
-      const action = entry?.actions.find((item) => item.id === log.actionId);
-      const message = `Compendium action: ${entry?.name ?? 'Unknown entry'} · ${
-        action?.label ?? log.actionId
-      } (+${log.pointsAwarded} pts${log.quantity > 1 ? ` x${log.quantity}` : ''}).`;
-      appendSystemHistoryEntry(activeProject.id, {
-        category: 'resource',
-        message,
-        insertText: `System Update: ${message}`,
-        sourceKey: `compendium-log:${log.id}`,
-        createdAt: log.createdAt
-      });
-    });
-
-    appendSystemHistoryEntry(activeProject.id, {
-      category: 'quest',
-      message:
-        `Compendium progress: ${progress.totalPoints} total points, ` +
-        `${progress.unlockedMilestoneIds.length} milestone(s), ` +
-        `${progress.unlockedRecipeIds.length} recipe(s) unlocked.`,
-      insertText:
-        `Quest Progress: ${progress.totalPoints} points · ` +
-        `${progress.unlockedMilestoneIds.length} milestones · ` +
-        `${progress.unlockedRecipeIds.length} recipes.`,
-      sourceKey: `compendium-progress:${progress.updatedAt}`,
-      createdAt: progress.updatedAt
-    });
-
-    refreshSystemHistory();
-  }, [activeProject, refreshSystemHistory]);
-
-  // Load project-scoped data when project changes
-  useEffect(() => {
-    if (!activeProject) {
-      setEditorConfig(null);
-      setToolbarButtons([]);
-      setProjectSettings(null);
-      setEntities([]);
-      setCategories([]);
-      setAliases([]);
-      setResolvedActionCues([]);
-      setCharacters([]);
-      setCharacterSheets([]);
-      setRuleset(null);
-      setSettlementState(null);
-      setSettlementModules([]);
-      setSelectedStatCharacterId('');
-      setSelectedStatEntityId('');
-      setStatBlockSourceType('character');
-      setStatBlockStyle('full');
-      setStatBlockInsertMode('block');
-      setStatBlockScopePreset('all');
-      setSelectedStatGroupId('');
-      setSelectedStatIds([]);
-      setSelectedResourceIds([]);
-      setStatBlockGroups([]);
-      setNewStatGroupName('');
-      setStatPreferencesHydrated(false);
-      setSystemHistoryEntries([]);
-      setActiveAIContext(null);
-      setQueuedAssistantPrompt(null);
-      setActiveLoreRecord(null);
-      setPendingAIInsert(null);
-      return;
-    }
-
-    let cancelled = false;
-
-    (async () => {
-      await initializeDefaultCategories(activeProject.id);
-      const [docs, settings, resolvedCues, loadedEntities, loadedCategories, loadedAliases, loadedCharacters, loadedSheets, loadedRuleset, loadedSettlementState, loadedSettlementModules] = await Promise.all([
-        getDocumentsByProject(activeProject.id),
-        getOrCreateSettings(activeProject.id),
-        getResolvedConsistencyActionCues(activeProject),
-        getEntitiesByProject(activeProject.id),
-        getCategoriesByProject(activeProject.id),
-        getAliasesByProject(activeProject.id),
-        getCharactersByProject(activeProject.id),
-        getCharacterSheetsByProject(activeProject.id),
-        getRulesetByProjectId(activeProject.id),
-        getOrCreateSettlementState(activeProject.id),
-        getSettlementModulesByProject(activeProject.id)
-      ]);
-
-      if (cancelled) return;
-
-      setDocuments(docs);
-      setEditorConfig(createEditorConfigWithStyles(settings.characterStyles));
-      setProjectSettings(settings);
-      setImportMode(settings.defaultImportMode ?? 'balanced');
-      setSkipImportSuggestions(settings.defaultSkipImportSuggestions ?? false);
-      setResolvedActionCues(resolvedCues);
-      setCategories(loadedCategories);
-      setAliases(loadedAliases);
-      setStatBlockSourceType(
-        settings.statBlockPreferences?.sourceType ?? 'character'
-      );
-      setStatBlockStyle(settings.statBlockPreferences?.style ?? 'full');
-      setStatBlockInsertMode(
-        settings.statBlockPreferences?.insertMode ?? 'block'
-      );
-      setStatBlockScopePreset(
-        settings.statBlockPreferences?.scopePreset ?? 'all'
-      );
-      setSelectedStatGroupId(
-        settings.statBlockPreferences?.selectedGroupId ?? ''
-      );
-      setSelectedStatIds(settings.statBlockPreferences?.selectedStatIds ?? []);
-      setSelectedResourceIds(
-        settings.statBlockPreferences?.selectedResourceIds ?? []
-      );
-      setStatBlockGroups(settings.statBlockPreferences?.groups ?? []);
-      setEntities(loadedEntities);
-      setCharacters(loadedCharacters);
-      setCharacterSheets(loadedSheets);
-      setRuleset(loadedRuleset);
-      setSettlementState(loadedSettlementState);
-      setSettlementModules(loadedSettlementModules);
-      setSelectedStatCharacterId(loadedSheets[0]?.id ?? '');
-      setSelectedStatEntityId(loadedEntities[0]?.id ?? '');
-      setStatPreferencesHydrated(true);
-      setSystemHistoryEntries(getSystemHistoryEntries(activeProject.id));
-
-      // Generate toolbar buttons from character styles
-      const buttons = settings.characterStyles.map((style) => ({
-        id: style.id,
-        label: style.name,
-        markName: style.markName
-      }));
-      setToolbarButtons(buttons);
-      initializeEditorState(docs[0] ?? null);
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [activeProject, initializeEditorState, setImportMode, setSkipImportSuggestions]);
-
-  useEffect(() => {
-    let cancelled = false;
-    if (!activeProject || !seriesBibleConfig?.parentProjectId) {
-      setCanonState({});
-      return;
-    }
-    getCanonSyncState(activeProject).then((state) => {
-      if (!cancelled) {
-        setCanonState(state);
-      }
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [activeProject, seriesBibleConfig?.parentProjectId]);
-
-  useEffect(() => {
-    if (!activeProject) {
-      setRagService(null);
-      return;
-    }
-
-    const bibleConfig = getSeriesBibleConfig(activeProject);
-    const ragOptions =
-      bibleConfig.parentProjectId && bibleConfig.inheritRag
-        ? {
-            projectId: activeProject.id,
-            inheritFromParent: true,
-            parentProjectId: bibleConfig.parentProjectId
-          }
-        : {projectId: activeProject.id};
-    let cancelled = false;
-
-    getRAGService(ragOptions).then((service) => {
-      if (!cancelled) {
-        setRagService(service);
-      }
-    });
-
-    return () => {
-      cancelled = true;
-      setRagService(null);
-    };
-  }, [activeProject]);
-
-  useEffect(() => {
-    if (!activeProject) return;
-    void syncCompendiumSystemSignals().catch(() => {
-      // Compendium data is optional for some projects.
-    });
-
-    const onFocus = () => {
-      void syncCompendiumSystemSignals().catch(() => {
-        // Ignore sync errors from optional stores.
-      });
-    };
-
-    window.addEventListener('focus', onFocus);
-    return () => {
-      window.removeEventListener('focus', onFocus);
-    };
-  }, [activeProject, syncCompendiumSystemSignals]);
-
-  useEffect(() => {
-    if (!activeProject || !ragService) {
-      return;
-    }
-
-    const vocabulary = [
-      ...entities.map((entity) => ({
-        id: entity.id,
-        terms: [
-          entity.name,
-          ...Object.values(entity.fields)
-            .filter((value): value is string => typeof value === 'string')
-        ]
-      })),
-      ...characters.map((character) => ({
-        id: character.id,
-        terms: [
-          character.name,
-          character.fields?.role ?? '',
-          character.fields?.notes ?? ''
-        ].filter(Boolean) as string[]
-      }))
-    ];
-
-    ragService.setEntityVocabulary(vocabulary);
-  }, [activeProject, ragService, entities, characters]);
 
   const openWorldRecord = (target: {id: string; type: 'character' | 'entity'}) => {
     if (target.type === 'entity') {
@@ -806,192 +548,17 @@ function WorkspaceRoute() {
   }, [activeProject, activePartySynergies, refreshSystemHistory]);
   const showGameSystems =
     projectSettings?.featureToggles.enableGameSystems !== false;
-  const selectionQuickSnippets = useMemo(() => {
-    if (!activeProject) {
-      return {characters: {}, entities: {}};
-    }
-    const normalize = (input: string) =>
-      input
-        .trim()
-        .toLowerCase()
-        .replace(/[^\w\s'-]/g, ' ')
-        .replace(/\s+/g, ' ')
-        .trim();
-
-    const categoryNameById = new Map(categories.map((category) => [category.id, category.name]));
-    const characterById = new Map(characters.map((character) => [character.id, character]));
-    const entityById = new Map(entities.map((entity) => [entity.id, entity]));
-
-    const recentSystemMessageFor = (name: string): string => {
-      const normalized = name.trim().toLowerCase();
-      const match = systemHistoryEntries.find((entry) =>
-        entry.message.toLowerCase().includes(normalized)
-      );
-      return match?.message ?? 'No recent linked system event.';
-    };
-
-    const buildCharacterLore = (sheet: CharacterSheet): LoreInspectorRecord => {
-      const character = sheet.characterId ? characterById.get(sheet.characterId) : null;
-      const role =
-        typeof character?.fields.role === 'string' && character.fields.role.trim()
-          ? character.fields.role.trim()
-          : 'Unassigned class';
-      const statuses = (sheet.statuses ?? []).slice(0, 2);
-      const faction =
-        typeof character?.fields.faction === 'string' && character.fields.faction.trim()
-          ? character.fields.faction.trim()
-          : 'Unknown faction';
-      const cached = getCachedSynopsis(activeProject.id, sheet.id, sheet.updatedAt);
-      const synopsis =
-        cached ??
-        {
-          goal:
-            (typeof character?.fields.goal === 'string' && character.fields.goal.trim()) ||
-            'No explicit active goal recorded.',
-          recentEvent: recentSystemMessageFor(sheet.name),
-          motivation:
-            (typeof character?.fields.motivation === 'string' &&
-              character.fields.motivation.trim()) ||
-            character?.description?.trim() ||
-            'No explicit motivation captured yet.'
-        };
-      if (!cached) {
-        setCachedSynopsis(activeProject.id, sheet.id, sheet.updatedAt, synopsis);
-      }
-      return {
-        type: 'character',
-        id: sheet.id,
-        name: sheet.name,
-        vitalSigns: [
-          `Level ${sheet.level}`,
-          role,
-          statuses.length > 0 ? statuses.join(', ') : 'No active buffs/debuffs',
-          `Faction: ${faction}`
-        ],
-        synopsis
-      };
-    };
-
-    const buildEntityLore = (entity: WorldEntity): LoreInspectorRecord => {
-      const categoryName = categoryNameById.get(entity.categoryId) ?? 'Entity';
-      const status =
-        typeof entity.fields.status === 'string' && entity.fields.status.trim()
-          ? entity.fields.status.trim()
-          : 'State unknown';
-      const cached = getCachedSynopsis(activeProject.id, entity.id, entity.updatedAt);
-      const synopsis =
-        cached ??
-        {
-          goal:
-            (typeof entity.fields.goal === 'string' && entity.fields.goal.trim()) ||
-            `Track relevance of ${entity.name} in this scene.`,
-          recentEvent: recentSystemMessageFor(entity.name),
-          motivation:
-            (typeof entity.fields.motivation === 'string' &&
-              entity.fields.motivation.trim()) ||
-            (typeof entity.fields.notes === 'string' && entity.fields.notes.trim()) ||
-            'No motivation/secret recorded.'
-        };
-      if (!cached) {
-        setCachedSynopsis(activeProject.id, entity.id, entity.updatedAt, synopsis);
-      }
-      return {
-        type: 'entity',
-        id: entity.id,
-        name: entity.name,
-        vitalSigns: [categoryName, status],
-        synopsis
-      };
-    };
-
-    const characterEntries: Array<
-      [string, {name: string; html: string; lore: LoreInspectorRecord}]
-    > = [];
-    const entityEntries: Array<
-      [string, {name: string; html: string; lore: LoreInspectorRecord}]
-    > = [];
-    const surnameCandidates = new Map<string, Array<{
-      bucket: 'characters' | 'entities';
-      entry: {name: string; html: string; lore: LoreInspectorRecord};
-    }>>();
-
-    const registerEntry = (
-      bucket: 'characters' | 'entities',
-      label: string,
-      entry: {name: string; html: string; lore: LoreInspectorRecord}
-    ) => {
-      const key = normalize(label);
-      if (!key) return;
-      if (bucket === 'characters') {
-        characterEntries.push([key, entry]);
-      } else {
-        entityEntries.push([key, entry]);
-      }
-
-      const tokens = label.trim().split(/\s+/).filter(Boolean);
-      if (tokens.length < 2) return;
-      const trailing = normalize(tokens[tokens.length - 1] ?? '');
-      if (!trailing || trailing.length < 4) return;
-      const existing = surnameCandidates.get(trailing) ?? [];
-      existing.push({bucket, entry});
-      surnameCandidates.set(trailing, existing);
-    };
-
-    characterSheets.forEach((sheet) => {
-      const entry = {
-        name: sheet.name,
-        html: resolveCharacterBlock(sheet, 'compact'),
-        lore: buildCharacterLore(sheet)
-      };
-      registerEntry('characters', sheet.name, entry);
-    });
-
-    entities.forEach((entity) => {
-      const entry = {
-        name: entity.name,
-        html: resolveItemBlock(entity, 'compact'),
-        lore: buildEntityLore(entity)
-      };
-      registerEntry('entities', entity.name, entry);
-    });
-
-    aliases.forEach((alias) => {
-      const entity = entityById.get(alias.entityId);
-      if (!entity) return;
-      const entry = {
-        name: entity.name,
-        html: resolveItemBlock(entity, 'compact'),
-        lore: buildEntityLore(entity)
-      };
-      registerEntry('entities', alias.alias, entry);
-    });
-
-    surnameCandidates.forEach((matches, trailing) => {
-      if (matches.length !== 1) return;
-      const [match] = matches;
-      if (!match) return;
-      if (match.bucket === 'characters') {
-        characterEntries.push([trailing, match.entry]);
-      } else {
-        entityEntries.push([trailing, match.entry]);
-      }
-    });
-
-    return {
-      characters: Object.fromEntries(characterEntries),
-      entities: Object.fromEntries(entityEntries)
-    };
-  }, [
+  const selectionQuickSnippets = useWorkspaceLoreSnippets({
     activeProject,
-    aliases,
     categories,
     characters,
     characterSheets,
     entities,
+    aliases,
+    systemHistoryEntries,
     resolveCharacterBlock,
-    resolveItemBlock,
-    systemHistoryEntries
-  ]);
+    resolveItemBlock
+  });
   const toolbarActions = useMemo(
     () => [
       {
@@ -1019,6 +586,15 @@ function WorkspaceRoute() {
     }
     navigate(location.pathname, {replace: true, state: {}});
   }, [documents, handleSelectDocument, location.pathname, location.state, navigate, selectedId]);
+
+  useEffect(() => {
+    if (!selectedDocument || selectedDocument.consistencyReviewMode !== 'deferred') {
+      return;
+    }
+    void refreshDeferredReview(selectedDocument).catch((error) => {
+      console.warn('Deferred review rehydrate failed', error);
+    });
+  }, [refreshDeferredReview, selectedDocument]);
 
   useEffect(() => {
     if (!showGameSystems && activeContextView === 'compendium') {
@@ -1307,452 +883,6 @@ function WorkspaceRoute() {
     );
   }
 
-  const contextDrawerTabs: Array<{
-    id: ContextDrawerView;
-    label: string;
-    hidden?: boolean;
-  }> = [
-    {id: 'world-bible', label: 'World Bible'},
-    {id: 'ruleset', label: 'Ruleset'},
-    {id: 'characters', label: 'Characters'},
-    {id: 'compendium', label: 'Compendium', hidden: !showGameSystems},
-    {id: 'review', label: 'Review'},
-    {id: 'ai', label: 'AI'},
-    {id: 'system', label: 'System'},
-    {id: 'lore', label: 'Lore'}
-  ];
-
-  const contextDrawerContent = (() => {
-    if (activeContextView === 'world-bible') {
-      return (
-        <div className={styles.contextSummary}>
-          <p className={styles.contextSummaryText}>
-            Entities: <strong>{entities.length}</strong> · Categories:{' '}
-            <strong>{categories.length}</strong>
-          </p>
-          <button type='button' onClick={() => navigate('/world-bible')}>
-            Open World Bible
-          </button>
-        </div>
-      );
-    }
-    if (activeContextView === 'ruleset') {
-      return (
-        <div className={styles.contextSummary}>
-          <p className={styles.contextSummaryText}>
-            Stats: <strong>{ruleset?.statDefinitions.length ?? 0}</strong> · Resources:{' '}
-            <strong>{ruleset?.resourceDefinitions.length ?? 0}</strong> · Rules:{' '}
-            <strong>{ruleset?.rules.length ?? 0}</strong>
-          </p>
-          <button type='button' onClick={() => navigate('/ruleset')}>
-            Open Ruleset
-          </button>
-        </div>
-      );
-    }
-    if (activeContextView === 'characters') {
-      return (
-        <div className={styles.contextSummary}>
-          <p className={styles.contextSummaryText}>
-            Characters: <strong>{characters.length}</strong> · Sheets:{' '}
-            <strong>{characterSheets.length}</strong>
-          </p>
-          <button type='button' onClick={() => navigate('/characters')}>
-            Open Characters
-          </button>
-        </div>
-      );
-    }
-    if (activeContextView === 'review') {
-      return (
-        <div className={styles.contextSummary}>
-          <div className={styles.contextSummaryText}>
-            <strong>Canon Consistency Review</strong>
-            <div className={styles.consistencyDescription}>
-              Run review when you want a canon check, not on every glance at the page.
-            </div>
-          </div>
-          <div className={styles.consistencyPanelHeader}>
-            <button
-              type='button'
-              onClick={() => void handleRunConsistencyReview()}
-              disabled={isRunningConsistencyReview}
-            >
-              {isRunningConsistencyReview ? 'Running review...' : 'Run review'}
-            </button>
-          </div>
-          {lastConsistencyReviewAt && (
-            <div className={styles.consistencyLastRun}>
-              Last run: {new Date(lastConsistencyReviewAt).toLocaleString()}
-            </div>
-          )}
-          {consistencyReviewItems.length > 0 ? (
-            <ul className={styles.consistencyList}>
-              {consistencyReviewItems.slice(0, 24).map((item) => (
-                <li key={item.id} className={styles.consistencyListItem}>
-                  <strong>{item.issue.code}</strong> in{' '}
-                  <button
-                    type='button'
-                    onClick={() => {
-                      const doc = documents.find((entry) => entry.id === item.sceneId);
-                      if (doc) handleSelectDocument(doc);
-                    }}
-                    className={styles.consistencySceneButton}
-                  >
-                    {item.sceneTitle}
-                  </button>
-                  : {item.issue.message}
-                  {item.issue.relatedEntities && item.issue.relatedEntities.length > 0 && (
-                    <span className={styles.consistencyRelated}>
-                      {item.issue.relatedEntities.slice(0, 3).map((target) => (
-                        <button
-                          key={`${item.id}-${target.id}`}
-                          type='button'
-                          onClick={() => openWorldRecord(target)}
-                          className={styles.consistencyRelatedButton}
-                        >
-                          Open {target.name}
-                        </button>
-                      ))}
-                    </span>
-                  )}
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className={styles.contextSummaryText}>No open review items.</p>
-          )}
-        </div>
-      );
-    }
-    if (activeContextView === 'ai') {
-      return (
-        <AIAssistant
-          projectId={activeProject.id}
-          aiConfig={projectSettings?.aiSettings}
-          projectMode={projectSettings?.projectMode}
-          context={activeAIContext ?? undefined}
-          onInsert={(text) =>
-            setPendingAIInsert({
-              text,
-              context:
-                activeAIContext && activeAIContext.from !== activeAIContext.to
-                  ? {from: activeAIContext.from, to: activeAIContext.to}
-                  : null
-            })
-          }
-          queuedPrompt={queuedAssistantPrompt}
-          onQueuedPromptConsumed={() => setQueuedAssistantPrompt(null)}
-          consultationModel={projectSettings?.aiSettings?.inspectorSettings?.lowCostModel}
-          consultationMaxTokens={projectSettings?.aiSettings?.inspectorSettings?.maxResponseTokens}
-        />
-      );
-    }
-    if (activeContextView === 'system') {
-      return (
-        <SystemHistoryPanel
-          entries={systemHistoryEntries}
-          onInsertEntry={(entry) =>
-            setPendingAIInsert({
-              text: entry.insertText,
-              context: null
-            })
-          }
-          onClear={() => {
-            clearSystemHistoryEntries(activeProject.id);
-            refreshSystemHistory();
-            setFeedback({tone: 'success', message: 'System history cleared.'});
-          }}
-          onOpenScene={(sceneId) => {
-            const doc = documents.find((entry) => entry.id === sceneId);
-            if (doc) {
-              handleSelectDocument(doc);
-              return;
-            }
-            setFeedback({
-              tone: 'error',
-              message: 'Could not open scene for this system event.'
-            });
-          }}
-          onRunConsistencyReview={() => {
-            void handleRunConsistencyReview();
-          }}
-        />
-      );
-    }
-    if (activeContextView === 'lore') {
-      return (
-        <LoreInspectorPanel
-          record={activeLoreRecord}
-          aiEnabled={projectSettings?.aiSettings?.inspectorSettings?.enableAIConsultation !== false}
-          aiBudgetUsed={aiBudgetUsed}
-          aiBudgetMax={projectSettings?.aiSettings?.inspectorSettings?.maxConsultationsPerDay ?? 20}
-          onConsult={handleConsultationFromLore}
-        />
-      );
-    }
-    return (
-      <div className={styles.contextSummary}>
-        <p className={styles.contextSummaryText}>
-          Modules: <strong>{settlementModules.length}</strong> · Party synergies:{' '}
-          <strong>{activePartySynergies.length}</strong>
-        </p>
-        <button type='button' onClick={() => navigate('/compendium')}>
-          Open Compendium
-        </button>
-      </div>
-    );
-  })();
-
-  const contextDrawerPanel = (
-    <>
-      <div
-        className={styles.contextCard}
-      >
-        <div className={styles.contextTabs}>
-          {contextDrawerTabs
-            .filter((tab) => !tab.hidden)
-            .map((tab) => (
-              <button
-                key={tab.id}
-                type='button'
-                onClick={() => setActiveContextView(tab.id)}
-                className={styles.contextTabButton}
-                style={{
-                  backgroundColor:
-                    tab.id === activeContextView ? '#dbeafe' : 'transparent'
-                }}
-              >
-                {tab.label}
-              </button>
-            ))}
-        </div>
-        <div className={styles.contextContent}>{contextDrawerContent}</div>
-      </div>
-
-      {selectedId && (
-        <ShodhMemoryPanel
-          title='Canon memories'
-          memories={memoryCandidates}
-          filterValue={memoryFilter}
-          onFilterChange={setMemoryFilter}
-          scopeSelector={{
-            label: 'Scope',
-            value: memoryScope,
-            options: [
-              {value: 'document', label: 'This scene'},
-              {value: 'project', label: 'All project'}
-            ],
-            onChange: (value) =>
-              setMemoryScope(value as 'document' | 'project')
-          }}
-          scopeSummaryLabel={scopeLabel}
-          highlightDocumentId={selectedId}
-          onRefresh={() => void refreshMemories()}
-          pageSize={MEMORIES_PER_PAGE}
-          showDelete
-          onDeleteMemory={(id) => {
-            void handleDeleteMemory(id);
-          }}
-          emptyState={emptyMemoryMessage}
-          renderSourceLabel={(memory) =>
-            memory.projectId === activeProject.id ? 'Local' : 'Parent'
-          }
-          renderMemoryActions={(memory) => {
-            if (
-              seriesBibleConfig?.parentProjectId &&
-              memory.projectId === activeProject.id
-            ) {
-              return (
-                <button
-                  type='button'
-                  onClick={() => void handlePromoteMemory(memory)}
-                  disabled={isPromotingMemoryId === memory.id}
-                  style={{fontSize: '0.8rem'}}
-                >
-                  {isPromotingMemoryId === memory.id
-                    ? 'Promoting...'
-                    : 'Promote'}
-                </button>
-              );
-            }
-            return null;
-          }}
-        />
-      )}
-    </>
-  );
-
-  const sceneDrawerPanel = (
-    <>
-      <div style={{marginBottom: '1rem'}}>
-        <button
-          type='button'
-          onClick={handleNewDocument}
-          disabled={isCreatingScene}
-        >
-          {isCreatingScene ? 'Creating...' : '+ New Scene'}
-        </button>
-        <button
-          type='button'
-          onClick={() => importInputRef.current?.click()}
-          disabled={isImportingDocuments}
-          style={{marginLeft: '0.5rem'}}
-        >
-          {isImportingDocuments ? 'Importing...' : 'Import'}
-        </button>
-        <label className={styles.importModeLabel}>
-          Import mode
-          <select
-            value={importMode}
-            onChange={(event) => setImportMode(event.target.value as ImportMode)}
-            disabled={isImportingDocuments}
-            className={styles.importModeSelect}
-          >
-            <option value='balanced'>Balanced</option>
-            <option value='strict'>Strict</option>
-            <option value='lenient'>Lenient</option>
-          </select>
-        </label>
-        <label className={styles.importToggleLabel}>
-          <input
-            type='checkbox'
-            checked={skipImportSuggestions}
-            disabled={isImportingDocuments}
-            onChange={(event) => setSkipImportSuggestions(event.target.checked)}
-          />
-          Skip consistency suggestions for this import
-        </label>
-        <button
-          type='button'
-          onClick={() => openExportModalWithDrawerHandling('markdown')}
-          disabled={documents.length === 0}
-          style={{marginLeft: '0.5rem'}}
-        >
-          Export MD
-        </button>
-        <button
-          type='button'
-          onClick={() => openExportModalWithDrawerHandling('docx')}
-          disabled={documents.length === 0}
-          style={{marginLeft: '0.5rem'}}
-        >
-          Export DOCX
-        </button>
-        <button
-          type='button'
-          onClick={() => openExportModalWithDrawerHandling('epub')}
-          disabled={documents.length === 0}
-          style={{marginLeft: '0.5rem'}}
-        >
-          Export EPUB
-        </button>
-        <input
-          ref={importInputRef}
-          type='file'
-          accept='.txt,.md,.markdown,.html,.htm,.docx,.doc,.pages,text/plain,text/markdown,text/html,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/msword'
-          multiple
-          onChange={(e) => void handleImportDocuments(e)}
-          style={{display: 'none'}}
-        />
-      </div>
-
-      {importSummary && (
-        <div className={styles.importSummaryPanel}>
-          <strong>Import Summary</strong>
-          <p className={styles.importSummaryText}>
-            Imported {importSummary.importedCount} · Failed {importSummary.failedCount} ·
-            Unresolved {importSummary.unresolvedCount} · Mode {importSummary.mode}
-            {importSummary.openedTitle ? ` · Opened "${importSummary.openedTitle}"` : ''}
-            {importSummary.suggestionsSkipped ? ' · Suggestions skipped' : ''}
-          </p>
-          <div className={styles.importSummaryActions}>
-            <button
-              type='button'
-              onClick={() => void handleRetryFailedImports()}
-              disabled={isImportingDocuments || retryImportFiles.length === 0}
-            >
-              Retry failed files only
-            </button>
-            <button
-              type='button'
-              onClick={() => {
-                setImportSummary(null);
-                setRetryImportFiles([]);
-              }}
-              disabled={isImportingDocuments}
-            >
-              Dismiss
-            </button>
-          </div>
-          {importSummary.failures.length > 0 && (
-            <ul className={styles.importSummaryList}>
-              {importSummary.failures.slice(0, 6).map((item) => (
-                <li key={`${item.fileName}-${item.reason}`}>
-                  {item.fileName}:{' '}
-                  {item.reason === 'legacy-doc'
-                    ? 'Legacy .doc is unsupported.'
-                    : item.reason === 'apple-pages'
-                      ? item.detail ?? 'Apple Pages file: export as .docx/.txt then import.'
-                      : item.detail ?? 'Could not parse this file.'}
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-      )}
-
-      {documents.length === 0 && (
-        <p style={{fontStyle: 'italic'}}>
-          No scenes yet. Create one to start writing.
-        </p>
-      )}
-
-      <ul style={{listStyle: 'none', padding: 0, margin: 0}}>
-        {documents.map((doc) => (
-          <li
-            key={doc.id}
-            style={{
-              marginBottom: '0.5rem',
-              padding: '0.5rem',
-              borderRadius: '4px',
-              backgroundColor: doc.id === selectedId ? '#eee' : 'transparent',
-              cursor: 'pointer'
-            }}
-          >
-            <div
-              onClick={() => handleSelectDocument(doc)}
-              style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center'
-              }}
-            >
-              <span
-                style={{
-                  whiteSpace: 'nowrap',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  maxWidth: '160px'
-                }}
-              >
-                {doc.title || 'Untitled scene'}
-              </span>
-            </div>
-            <button
-              type='button'
-              onClick={() => handleDelete(doc)}
-              disabled={deletingDocumentId === doc.id}
-              style={{marginTop: '0.25rem', fontSize: '0.8rem'}}
-            >
-              {deletingDocumentId === doc.id ? 'Deleting...' : 'Delete'}
-            </button>
-          </li>
-        ))}
-      </ul>
-    </>
-  );
-
   return (
     <section data-workspace-root='true' className={styles.workspaceRoot}>
       {feedback && (
@@ -1850,7 +980,28 @@ function WorkspaceRoute() {
         <div className={styles.workspaceLayout}>
         {isSceneDrawerOpen && !isNarrowViewport && (
           <aside className={styles.sceneDrawerDesktop}>
-            {sceneDrawerPanel}
+            <WorkspaceSceneDrawer
+              handleNewDocument={handleNewDocument}
+              isCreatingScene={isCreatingScene}
+              importInputRef={importInputRef}
+              isImportingDocuments={isImportingDocuments}
+              importMode={importMode}
+              setImportMode={setImportMode}
+              skipImportSuggestions={skipImportSuggestions}
+              setSkipImportSuggestions={setSkipImportSuggestions}
+              openExportModalWithDrawerHandling={openExportModalWithDrawerHandling}
+              documents={documents}
+              importSummary={importSummary}
+              setImportSummary={setImportSummary}
+              retryImportFiles={retryImportFiles}
+              setRetryImportFiles={setRetryImportFiles}
+              handleRetryFailedImports={handleRetryFailedImports}
+              selectedId={selectedId}
+              handleSelectDocument={handleSelectDocument}
+              handleDelete={handleDelete}
+              deletingDocumentId={deletingDocumentId}
+              handleImportDocuments={(e) => void handleImportDocuments(e)}
+            />
           </aside>
         )}
 
@@ -2056,7 +1207,50 @@ function WorkspaceRoute() {
 
         {isContextDrawerOpen && !isNarrowViewport && (
           <aside className={styles.contextDrawerDesktop}>
-            {contextDrawerPanel}
+            <WorkspaceContextDrawer
+              activeContextView={activeContextView}
+              setActiveContextView={setActiveContextView}
+              showGameSystems={showGameSystems}
+              entities={entities}
+              categories={categories}
+              ruleset={ruleset}
+              characters={characters}
+              characterSheets={characterSheets}
+              handleRunConsistencyReview={handleRunConsistencyReview}
+              isRunningConsistencyReview={isRunningConsistencyReview}
+              lastConsistencyReviewAt={lastConsistencyReviewAt}
+              consistencyReviewItems={consistencyReviewItems}
+              documents={documents}
+              handleSelectDocument={handleSelectDocument}
+              openWorldRecord={openWorldRecord}
+              activeProject={activeProject}
+              projectSettings={projectSettings}
+              activeAIContext={activeAIContext}
+              setPendingAIInsert={setPendingAIInsert}
+              queuedAssistantPrompt={queuedAssistantPrompt}
+              setQueuedAssistantPrompt={setQueuedAssistantPrompt}
+              systemHistoryEntries={systemHistoryEntries}
+              setFeedback={setFeedback}
+              refreshSystemHistory={refreshSystemHistory}
+              activeLoreRecord={activeLoreRecord}
+              aiBudgetUsed={aiBudgetUsed}
+              handleConsultationFromLore={handleConsultationFromLore}
+              settlementModuleCount={settlementModules.length}
+              activePartySynergyCount={activePartySynergies.length}
+              selectedId={selectedId}
+              memoryCandidates={memoryCandidates}
+              memoryFilter={memoryFilter}
+              setMemoryFilter={setMemoryFilter}
+              memoryScope={memoryScope}
+              setMemoryScope={setMemoryScope}
+              scopeLabel={scopeLabel}
+              refreshMemories={refreshMemories}
+              handleDeleteMemory={handleDeleteMemory}
+              emptyMemoryMessage={emptyMemoryMessage}
+              seriesBibleConfig={seriesBibleConfig}
+              handlePromoteMemory={handlePromoteMemory}
+              isPromotingMemoryId={isPromotingMemoryId}
+            />
           </aside>
         )}
         </div>
@@ -2080,7 +1274,28 @@ function WorkspaceRoute() {
                 Close
               </button>
             </div>
-            {sceneDrawerPanel}
+            <WorkspaceSceneDrawer
+              handleNewDocument={handleNewDocument}
+              isCreatingScene={isCreatingScene}
+              importInputRef={importInputRef}
+              isImportingDocuments={isImportingDocuments}
+              importMode={importMode}
+              setImportMode={setImportMode}
+              skipImportSuggestions={skipImportSuggestions}
+              setSkipImportSuggestions={setSkipImportSuggestions}
+              openExportModalWithDrawerHandling={openExportModalWithDrawerHandling}
+              documents={documents}
+              importSummary={importSummary}
+              setImportSummary={setImportSummary}
+              retryImportFiles={retryImportFiles}
+              setRetryImportFiles={setRetryImportFiles}
+              handleRetryFailedImports={handleRetryFailedImports}
+              selectedId={selectedId}
+              handleSelectDocument={handleSelectDocument}
+              handleDelete={handleDelete}
+              deletingDocumentId={deletingDocumentId}
+              handleImportDocuments={(e) => void handleImportDocuments(e)}
+            />
           </aside>
         </div>
       )}
@@ -2103,7 +1318,50 @@ function WorkspaceRoute() {
                 Close
               </button>
             </div>
-            {contextDrawerPanel}
+            <WorkspaceContextDrawer
+              activeContextView={activeContextView}
+              setActiveContextView={setActiveContextView}
+              showGameSystems={showGameSystems}
+              entities={entities}
+              categories={categories}
+              ruleset={ruleset}
+              characters={characters}
+              characterSheets={characterSheets}
+              handleRunConsistencyReview={handleRunConsistencyReview}
+              isRunningConsistencyReview={isRunningConsistencyReview}
+              lastConsistencyReviewAt={lastConsistencyReviewAt}
+              consistencyReviewItems={consistencyReviewItems}
+              documents={documents}
+              handleSelectDocument={handleSelectDocument}
+              openWorldRecord={openWorldRecord}
+              activeProject={activeProject}
+              projectSettings={projectSettings}
+              activeAIContext={activeAIContext}
+              setPendingAIInsert={setPendingAIInsert}
+              queuedAssistantPrompt={queuedAssistantPrompt}
+              setQueuedAssistantPrompt={setQueuedAssistantPrompt}
+              systemHistoryEntries={systemHistoryEntries}
+              setFeedback={setFeedback}
+              refreshSystemHistory={refreshSystemHistory}
+              activeLoreRecord={activeLoreRecord}
+              aiBudgetUsed={aiBudgetUsed}
+              handleConsultationFromLore={handleConsultationFromLore}
+              settlementModuleCount={settlementModules.length}
+              activePartySynergyCount={activePartySynergies.length}
+              selectedId={selectedId}
+              memoryCandidates={memoryCandidates}
+              memoryFilter={memoryFilter}
+              setMemoryFilter={setMemoryFilter}
+              memoryScope={memoryScope}
+              setMemoryScope={setMemoryScope}
+              scopeLabel={scopeLabel}
+              refreshMemories={refreshMemories}
+              handleDeleteMemory={handleDeleteMemory}
+              emptyMemoryMessage={emptyMemoryMessage}
+              seriesBibleConfig={seriesBibleConfig}
+              handlePromoteMemory={handlePromoteMemory}
+              isPromotingMemoryId={isPromotingMemoryId}
+            />
           </aside>
         </div>
       )}

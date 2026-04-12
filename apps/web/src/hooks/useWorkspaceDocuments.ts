@@ -38,20 +38,20 @@ interface SceneExportItem {
   included: boolean;
 }
 
-interface ImportFailureItem {
+export interface WorkspaceImportFailureItem {
   fileName: string;
   reason: 'legacy-doc' | 'apple-pages' | 'parse-failed';
   detail?: string;
 }
 
-interface ImportSummary {
+export interface WorkspaceImportSummary {
   importedCount: number;
   failedCount: number;
   unresolvedCount: number;
   mode: ImportMode;
   suggestionsSkipped: boolean;
   openedTitle?: string;
-  failures: ImportFailureItem[];
+  failures: WorkspaceImportFailureItem[];
   createdAt: number;
 }
 
@@ -105,7 +105,7 @@ export const useWorkspaceDocuments = ({
   const [isImportingDocuments, setIsImportingDocuments] = useState(false);
   const [importMode, setImportMode] = useState<ImportMode>('balanced');
   const [skipImportSuggestions, setSkipImportSuggestions] = useState(false);
-  const [importSummary, setImportSummary] = useState<ImportSummary | null>(null);
+  const [importSummary, setImportSummary] = useState<WorkspaceImportSummary | null>(null);
   const [retryImportFiles, setRetryImportFiles] = useState<File[]>([]);
   const [deletingDocumentId, setDeletingDocumentId] = useState<string | null>(null);
   const [isExportModalOpen, setExportModalOpen] = useState(false);
@@ -208,7 +208,7 @@ export const useWorkspaceDocuments = ({
       let failedCount = 0;
       let unresolvedCount = 0;
       let lastImported: WritingDocument | null = null;
-      const failures: ImportFailureItem[] = [];
+      const failures: WorkspaceImportFailureItem[] = [];
       const failedFiles: File[] = [];
       const consistencyModeForBatch: ImportMode = skipImportSuggestions
         ? 'lenient'

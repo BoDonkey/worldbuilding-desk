@@ -1,7 +1,6 @@
 import {useEffect, useState} from 'react';
 import type {ReactNode} from 'react';
 import type {
-  Project,
   ProjectSettings,
   CharacterStyle,
   ProjectAISettings,

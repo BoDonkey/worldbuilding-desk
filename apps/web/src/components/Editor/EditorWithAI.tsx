@@ -125,6 +125,18 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
     return new Map(records.map((entry) => [entry.lore.id, entry.lore]));
   }, [selectionQuickSnippets]);
 
+  const editorRenderKey = React.useMemo(() => {
+    const consistencyKey = consistencyHighlights
+      .map((issue) => `${issue.id}:${issue.surface}:${issue.severity}`)
+      .sort()
+      .join('|');
+    const loreKey = loreHighlights
+      .map((entry) => `${entry.id}:${entry.surface}:${entry.type}`)
+      .sort()
+      .join('|');
+    return `${documentId}::${consistencyKey}::${loreKey}`;
+  }, [consistencyHighlights, documentId, loreHighlights]);
+
   // Merge AIExpandMenu with config extensions
   const mergedConfig = React.useMemo(() => {
     if (!config) {
@@ -321,6 +333,7 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
     <div className={styles.container}>
       <div className={styles.editor}>
         <TipTapEditor
+          key={editorRenderKey}
           content={content}
           onChange={onChange}
           onWordCountChange={onWordCountChange}

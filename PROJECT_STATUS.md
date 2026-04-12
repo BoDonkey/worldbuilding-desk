@@ -1,447 +1,152 @@
 # Worldbuilding-Desk Project Status
 
-**Last Updated:** April 10, 2026
+**Last Updated:** April 12, 2026
 
 ## Project Overview
 
-A comprehensive desktop application for LitRPG/GameLit authors that bridges narrative writing with integrated RPG mechanics. Built as an Electron app using React, TypeScript, and IndexedDB.
+Worldbuilding-Desk is a desktop writing environment for fiction authors. The current product direction is **writing first**: authors should be able to open the app, start drafting immediately, and let structure, lore tracking, and consistency support appear progressively instead of blocking the writing flow.
+
+Under the hood, the app still includes rich systems for world data, rules, character state, AI assistance, and consistency review. The difference in the current direction is presentation: those systems are support infrastructure, not the primary surface.
 
 ---
 
-## Current Features ✅
+## Current Product Direction
 
-### Core Systems
-- **Rules Engine Package** (`packages/rules-engine/`)
-  - Stat definitions with formulas (derived stats)
-  - Resource definitions with regeneration
-  - Dice roller with standard notation (2d6+3, etc.)
-  - State manager for character progression
-  - Modifier system (add/multiply/override)
-  - Active effects and status tracking
-  - Time-based mechanics and triggers
+### UX North Star
+- Open directly into writing.
+- Hide advanced systems by default.
+- Keep feedback soft and ignorable.
+- Make lore and structure auto-assisted where possible.
+- Treat AI as a collaborator, not an authoring replacement.
 
-- **Project Management**
-  - Create/delete projects
-  - IndexedDB storage
-  - Per-project rulesets
-  - Settings storage with character styles
-
-- **Character Sheets**
-  - Linked to project rulesets
-  - Dynamic stat/resource fields
-  - Visual stat/resource editors
-  - CRUD operations with persistence
-
-- **World Bible System**
-  - Dynamic categories (Characters, Locations, Items, etc.)
-  - Custom field schemas per category
-  - Rich text descriptions
-  - Tagging and relationships
-
-- **Item Editor**
-  - Combined lore and mechanical properties
-  - Damage formulas
-  - Armor/resistance values
-  - Weapon types and item categories
-
-- **TipTap Rich Text Editor**
-  - Custom character styles (stored marks)
-  - Dynamic style toolbar
-  - Settings UI for managing styles
-  - Color picker and font styling
-
-- **AI Integration**
-  - Anthropic API integration via local proxy
-  - Prompt management system
-  - Context-aware assistance
-  - Text insertion at cursor/selection
-  - AIExpandMenu (right-click selected text)
-  - RAG system for document indexing
-
-### UI Components
-- Ruleset creation wizard + desktop import (planned).
-- Character style editor.
-- Project selector + parent-canon controls.
-- Navigation system.
-- Split editor/AI panel layout.
-- Workspace command palette, drawer shell, system history, and lore inspector.
-- Declarative app routing with shared layout composition.
-- Import modes (`strict`, `balanced`, `lenient`) with deferred review for imported scenes.
-- Inline consistency review highlights + action popovers.
-- Inline lore highlights + quick lore popovers for known entities/characters.
-- Editor appearance controls for reading width, editor surface, and serif/sans presentation.
+### Product Positioning
+- Primary value: maintain creative flow while keeping story context coherent.
+- Secondary value: provide optional structured systems for authors who want deeper world/rules support.
+- Differentiator: passive context awareness and narrative consistency support, without forcing up-front setup.
 
 ---
 
-## How to Run the Project
+## Current Features
 
-### Prerequisites
-```bash
-# Node.js 18+ and pnpm
-npm install -g pnpm
-```
+### Writing Workspace
+- TipTap-based rich text editor.
+- Workspace command palette and drawer-based shell.
+- Scene creation, deletion, autosave, and export.
+- Markdown, DOCX, and EPUB export flows.
+- Import modes for scene ingestion: `strict`, `balanced`, `lenient`.
+- Deferred consistency review for imported scenes so writing is not blocked.
+- Inline consistency highlights and action popovers.
+- Inline lore highlights and quick lore popovers for known entities and characters.
+- Editor appearance controls for width, surface style, and serif/sans presentation.
 
-### Development Setup
+### Story Context Systems
+- World Bible with dynamic categories and custom field schemas.
+- Character records and character sheets.
+- Alias tracking and consistency storage.
+- System history and lore inspection surfaces.
+- Parent/child canon inheritance with promotion and sync flows.
+- Project backup export/import with validation and conflict review.
 
-**1. Install dependencies:**
-```bash
-pnpm install
-```
+### AI and Retrieval
+- Multi-provider abstraction for Anthropic, OpenAI, Ollama, and Gemini.
+- Prompt management and provider diagnostics.
+- Local RAG and Shodh memory services for contextual assistance.
+- Selection-aware AI insertion and editor assistance tools.
+- Inherited canon support in AI grounding for parent/child projects.
 
-**2. Start the proxy server (for AI features):**
-```bash
-# In one terminal
-cd apps/web
-npx tsx proxy-server.ts
-# Runs on http://localhost:3001
-```
-
-**3. Start the web app:**
-```bash
-# In another terminal
-pnpm dev:web
-# Opens on http://localhost:5173
-```
-
-### Project Structure
-```
-worldbuilding-desk/
-├── apps/
-│   └── web/                    # Main Electron app
-│       ├── src/
-│       │   ├── routes/         # Main UI routes
-│       │   ├── components/     # React components
-│       │   ├── services/       # Business logic
-│       │   └── entityTypes.ts  # TypeScript types
-│       └── proxy-server.ts     # AI API proxy
-│
-├── packages/
-│   └── rules-engine/          # Standalone rules package
-│       ├── src/
-│       │   ├── core/          # Engine, evaluator
-│       │   ├── state/         # Character state
-│       │   ├── utils/         # Dice roller
-│       │   └── types.ts       # Type definitions
-│       └── examples/          # Usage examples
-│
-└── pnpm-workspace.yaml        # Monorepo config
-```
-
-### Testing Examples
-```bash
-# Run rules engine examples
-cd packages/rules-engine
-pnpm build
-npx tsx examples/basic-usage.ts
-```
+### Optional Game/System Layers
+- Standalone `rules-engine` package with stats, resources, formulas, effects, and dice.
+- Ruleset builder and runtime stat/resource evaluation.
+- Settlement progression, synergy logic, and compendium systems.
+- Character/runtime previews for effective stat and resource values.
 
 ---
 
-## Recent Changes & Fixes
+## Current Architecture Status
 
-### Architecture Refactor Status (April 9, 2026)
-- Completed the service-layer reorganization into domain folders with barrel exports.
-- Split `App.tsx` into routing/layout composition, command-palette provider, route-debug utility, and app-shell state hook.
-- Decomposed `WorkspaceRoute.tsx` into focused hooks:
+### Stabilized
+- Service layer reorganized into domain folders with barrel exports.
+- `App.tsx` split into routing/layout composition and shared shell concerns.
+- Workspace logic decomposed into focused hooks:
   - `useWorkspaceDrawers`
   - `useWorkspaceMemories`
   - `useWorkspaceStatBlocks`
   - `useWorkspaceConsistency`
   - `useWorkspaceDocuments`
-- Brought the workspace route back to a composition-oriented shape instead of a single orchestration-heavy component.
-- Kept behavior stable while maintaining clean `web` lint/build verification.
+  - `useWorkspaceProjectData`
+  - `useWorkspaceLoreSnippets`
+- Workspace drawer UI extracted into:
+  - `WorkspaceSceneDrawer`
+  - `WorkspaceContextDrawer`
+- Zustand app store added to reduce `activeProject` prop drilling.
 
-**Immediate Next Slice**
-- Evaluate the next architecture item separately from feature work: centralized app state/store migration.
-- Keep architecture work behind current release-baseline needs: onboarding, search, and packaging.
-
-### Workspace Review + Editor UX (March 14, 2026)
-- Added import modes and deferred review flow so non-strict imports remain writable without losing review context.
-- Added best-effort `.pages` preview extraction with fallback guidance.
-- Tightened unknown-entity extraction to suppress more connective/prose false positives.
-- Moved unknown-entity handling into inline editor highlights with create/link/dismiss popovers.
-- Added shared popover primitive and reused it for quick lore peeks on known entities and characters.
-- Added editor readability controls:
-  - serif/sans text style
-  - focused/wide reading width
-  - paper/mist/contrast editor surface presets
-- Hardened import/save so RAG indexing and Shodh auto-memory failures do not block scene persistence.
-- Added lightweight local embedding fallback when transformer model bootstrap fails in-browser.
-- Improved settings copy for consistency detection keywords and import defaults.
-
-**Immediate Next Slice**
-- Continue editor appearance work with richer font/color customization and fix dark mode readability regressions.
-- Begin AI personalities/tools implementation, starting with a writing critic persona.
-
-### Systems Integration + Imports (February 22, 2026)
-- Added settlement aura model and UI flow with generalized module sources (`trophy`, `structure`, `station`, `totem`, `custom`).
-- Added community/logistics party synergy engine and surfaced active combo buffs + roster opportunities.
-- Added settlement base stats and fortress progression tier effects, including explicit base-stat save/reset flow with validation/clamps.
-- Integrated runtime modifiers into craftability checks (effective level + material multiplier from settlement/synergy state).
-- Integrated runtime-adjusted previews into Character Sheets (effective level/stat/resource values shown alongside base values).
-- Added Workspace multi-file import for `.txt`, `.md`, `.html`, and `.docx`; `.doc` now returns explicit convert-to-docx guidance.
-- Added `docs/next-steps.md` with prioritized roadmap and phase exit criteria.
-
-**Immediate Next Slice**
-- Expand runtime integration beyond previews into persisted gameplay outcomes (rule/action resolution paths).
-
-### Canon Management & Inheritance (February 8, 2026)
-- Added parent/child project metadata (RAG + Shodh inheritance toggles, canon timestamps).
-- Built composite Shodh/RAG providers so child projects read parent canon read-only while writing locally.
-- Implemented promote workflows for scenes, world-bible entries, ruleset summaries, and individual memories.
-- Added promote buttons + provenance labels (Local vs Parent) across Workspace, World Bible, Character Sheets, and AI Assistant context.
-- Added parent-canon banners with sync controls in Projects, Workspace, and World Bible routes.
-
-### AI Integration
-- Multi-provider abstraction (Anthropic, OpenAI, Ollama) with caching.
-- Indexed prompt management + Shodh memories feeding context.
-- Context-aware assistance with selectable insertion and AIExpandMenu.
-- Local RAG/Shodh layers now support inherited canon for AI grounding.
-- AI settings now include provider diagnostics, with Ollama model discovery from local installed models.
-- Ollama no longer depends on a stale hardcoded default model; blank configuration now auto-detects an installed model at runtime.
-
-### Release-Baseline Hardening (April 10, 2026)
-- Added a concrete release-baseline checklist in `docs/table-stakes-release-checklist.md`.
-- Verified project backup export, validation, and import round-trip in smoke coverage.
-- Verified manuscript export flows for Markdown, DOCX, and EPUB in smoke coverage.
-- Fixed a narrow-viewport export bug where the workspace drawer could block the export modal.
-- Added World Bible JSON import conflict review for duplicate-name collisions before commit.
-- Added AI provider diagnostics in Settings, including installed-model detection and apply-model actions for Ollama.
-- Expanded the post-merge smoke spec to cover:
-  - Markdown export
-  - DOCX export
-  - EPUB export
-  - backup export / validate / import
-  - World Bible duplicate-name conflict review
-  - Ollama diagnostics + detected-model application
-
-
-### Prompt & Tooling Controls (Planned)
-- Expose per-project system prompt editing with tone/policy presets.
-- Allow authors to define “ick” word lists and style rules that attach to documents/imports.
-- Tie prompts/policies into import workflows so external documents inherit the right AI context.
-### UI Foundation & Theming (January 11, 2026)
-**Implemented:** Complete theming and accessibility foundation
-- **Theme System:** Light/dark mode with CSS variables and ThemeContext
-- **Navigation:** Fixed top navigation bar with active route highlighting
-- **Accessibility:** Font size controls (small/medium/large) with system-wide scaling
-- **Settings Page:** Reorganized layout with proper sections and styling
-- **Design Tokens:** Established consistent color palette and spacing system
-
-**Technical Details:**
-- Created ThemeProvider and AccessibilityProvider contexts
-- Implemented CSS custom properties for theme variables
-- Added keyboard navigation focus indicators (WCAG compliant)
-- Fixed navigation positioning (sticky → fixed)
-- Consolidated settings UI into clean sectioned layout
+### Current Assessment
+- The route decomposition is viable and now builds cleanly again.
+- The latest local refactor had stopped in an intermediate state; that stabilization pass is now complete.
+- The remaining work is product-shaping work, not emergency architecture repair.
 
 ---
 
-## Known Issues & Limitations
+## Immediate Priorities
 
-### Current Architecture
-- Running as web app, not full Electron yet
-- Proxy server must be started separately
-- No native desktop packaging currently
-- Frontend architecture cleanup is substantially improved, but centralized app state/store migration is still pending.
+### Product / UX
+- Make the writing workspace the clearest default entry point.
+- Reduce visible system complexity on first load.
+- Revisit panel defaults and route emphasis to match the writing-first UX docs.
+- Soften entity/canon review interactions where they still feel too workflow-heavy.
 
-### AI Features
-- Proxy server doesn't persist across restarts
-- API key must be entered per session
-- No streaming UI feedback yet (planned)
-
-### Storage / Canon
-- IndexedDB per project, no remote sync yet
-- Child projects inherit parent canon read-only; promotion requires approval
-- Manual backup/export is implemented and now covered by smoke tests; merge/conflict UX still needs broader real-world validation
-
-### Workspace / Review UX
-- Review-created World Bible entities now seed draft Compendium records when created from workspace review.
-- Review state is reconstructed from validation passes; there is not yet a persisted review queue model.
-- World Bible / Compendium “needs completion” badges are implemented in navigation and route views.
-- `Alternative names` is now an editable World Bible field and syncs into consistency alias storage for review/lore matching.
-- World Bible JSON import now blocks duplicate-name conflicts until the user explicitly chooses skip, update, or create-duplicate behavior.
-
-### Frontend Structure
-- `WorkspaceRoute.tsx` is now split across dedicated hooks for drawers, memories, stat blocks, consistency, and document workflow.
-- The next structural step, if resumed later, is store consolidation rather than more route-splitting.
-
-### Editor Appearance
-- Dark mode currently has readability regressions and poor visual contrast in several panels and controls.
-- Editor appearance controls are still coarse-grained; users cannot yet choose custom fonts, dyslexia-friendly fonts, or custom highlight palettes.
-
-### AI Authoring Tools
-- AI personalities/tools are not implemented yet.
-- No dedicated writing critic persona is available yet.
-
-### Release Gaps
-- No first-run onboarding flow yet.
-- No unified app-wide search yet.
-- No packaged desktop build yet.
-- EPUB export has automated structure validation, but external reader compatibility is still not manually verified.
-
----
-
-## Planned Next Steps
-
-### Short Term (Next Phase)
-1. **Editor Readability + Theming Hardening**
-   - Fix dark mode regressions across workspace/editor/popovers.
-   - Add richer editor typography controls (including dyslexia-friendly font options).
-   - Add customizable highlight/notification color palettes.
-2. **Review Completion Workflow**
-   - Clarify “refresh review” vs “resume strict review” in workspace UX.
-   - Decide whether to keep review state validation-derived or add a persisted review queue.
-3. **Lore / Compendium Tooltip Convergence**
-   - Expand shared popover into a full lore + compendium review shell.
-   - Support cross-linking shorthand references and alias management from tooltip flows.
-4. **AI Personalities / Tools**
-   - Implement persona/tool framework in project settings.
-   - Ship first writing critic persona with scoped critique modes.
-   - Prompt library/templates
-   - Context injection from World Bible
-
-4. **User Experience**
-   - Project export/import
-   - Auto-save indicators
-   - Better error handling
-
-### Medium Term
-1. **Memory System Integration**
-   - Evaluate Shodh-memory for canon tracking
-   - Per-project memory stores
-   - Contradiction detection
-   - World Bible long-form documents
-
-2. **Advanced Worldbuilding**
-   - Timeline/chronology tools
-   - Relationship graphs
-   - Map integration
-   - Scene planner
-
-3. **Rules Engine Extensions**
-   - Combat simulator
-   - Character progression curves
-   - Balance analysis tools
-   - Import existing rulesets (D&D, etc.)
-
-### Long Term
-- Multi-user collaboration
-- Cloud sync option
-- Mobile companion app
-- Plugin/extension system
-- Marketplace for rulesets/templates
-
----
-
-## Technical Debt & Cleanup
-
-### Code Quality
-- [ ] Add comprehensive error boundaries
-- [ ] Implement proper TypeScript strict mode
-- [ ] Unit tests for rules engine
-- [ ] Integration tests for storage layer
+### Engineering
+- Add targeted smoke coverage for the workspace import/review path after the recent extraction.
+- Continue trimming `WorkspaceRoute` orchestration where extraction still leaks route-owned knowledge.
+- Consider code-splitting large web bundles, especially the transformer-related client chunk.
 
 ### Documentation
-- [ ] API documentation for rules-engine package
-- [ ] Component documentation
-- [ ] User guide/tutorials
-- [ ] Video walkthroughs
-
-### Performance
-- [ ] Optimize large document rendering
-- [ ] Lazy loading for World Bible entries
-- [ ] IndexedDB query optimization
-- [ ] Editor debouncing improvements
+- Keep summary docs aligned with the writing-first UX direction.
+- Treat older “functional IDE” language as implementation heritage, not the main pitch.
 
 ---
 
-## Development Notes
+## Verification Status
 
-### Key Learnings
-- TipTap stored marks require careful state management
-- React component remounting can cause editor issues
-- Monorepo requires workspace resolution attention
-- CORS is real, proxy servers work
+### Verified Recently
+- `pnpm build:web` succeeds on the current tree.
+- Backup export/import coverage exists in the smoke checklist.
+- Manuscript export flows are covered in smoke documentation.
+- World Bible duplicate-name conflict review exists.
+- Ollama diagnostics and model detection flows exist.
 
-### Architecture Decisions
-- **Monorepo:** Clear separation between engine and app
-- **IndexedDB:** Local-first, offline-capable
-- **TypeScript:** Strict typing prevents runtime errors
-- **Modular Design:** Each system can evolve independently
-
-### Dependencies Worth Noting
-- `@tiptap/react` - Rich text editing
-- `@anthropic-ai/sdk` - AI integration
-- `immer` - Immutable state updates (rules engine)
-- `mathjs` - Formula evaluation
-- `express` + `cors` - Temporary proxy
+### Still Worth Rechecking
+- Workspace import/retry UX after the drawer extraction.
+- Narrow viewport drawer/modal interactions.
+- Any route-level assumptions introduced by the newer Zustand migration.
 
 ---
 
-## Session Workflow
+## Run / Dev Notes
 
-### Starting a Session
-1. Read this file for current state
-2. Check "Recent Changes" for context
-3. Review "Planned Next Steps" for priorities
-4. Start proxy server if testing AI features
-5. Run `pnpm dev` in main terminal
-
-### Ending a Session
-1. Update "Recent Changes" section
-2. Move completed items from "Planned Next Steps"
-3. Add new issues to "Known Issues"
-4. Update "Last Updated" date
-5. Commit PROJECT_STATUS.md
-
----
-
-## Quick Reference
-
-### Important Commands
+### Prerequisites
 ```bash
-# Full dev setup
-pnpm install && pnpm dev
-
-# Just the app
-pnpm dev
-
-# AI proxy (separate terminal)
-cd apps/web && npx tsx proxy-server.ts
-
-# Build rules engine
-cd packages/rules-engine && pnpm build
-
-# Run examples
-cd packages/rules-engine && npx tsx examples/basic-usage.ts
+npm install -g pnpm
+pnpm install
 ```
 
-### Key Files to Know
-- `apps/web/src/routes/` - Main application views
-- `apps/web/src/entityTypes.ts` - Core data models
-- `packages/rules-engine/src/types.ts` - Rules system types
-- `apps/web/src/components/TipTapEditor.tsx` - Editor implementation
-- `apps/web/src/services/` - Storage and business logic
+### Main Development Commands
+```bash
+pnpm dev:web
+pnpm build:web
+pnpm start:desktop:dev
+```
 
-### Port Usage
-- `5173` - Vite dev server (main app)
-- `3001` - Express proxy server (AI)
-
----
-
-## Contact & Resources
-
-### Related Documentation
-- See `packages/rules-engine/README.md` for engine details
-- See `Comprehensive_RPG_Rules_System_Design_Guide.docx` for design philosophy
-- See `shodh_memory_integration_vision (1).md` for memory system plans
-
-### External Resources
-- TipTap Docs: https://tiptap.dev/
-- Anthropic API: https://docs.anthropic.com/
-- Shodh Memory: https://github.com/shodh-ai/shodh-memory
+### AI Proxy
+```bash
+cd apps/web
+npx tsx proxy-server.ts
+```
 
 ---
 
-**Remember:** This file should be updated at the end of each major work session to maintain accurate project state.
+## Working Summary
+
+The project is no longer best described as a systems-heavy LitRPG IDE that happens to contain an editor. The better description of the current direction is:
+
+**a writing-first narrative workspace with optional structured context, consistency support, and deeper systems available when the author wants them.**

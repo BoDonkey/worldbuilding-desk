@@ -2,7 +2,7 @@ import {useEffect, useState, useCallback, useRef, useMemo} from 'react';
 import type {ChangeEvent, FormEvent} from 'react';
 import {useLocation} from 'react-router-dom';
 import {useAppStore} from '../store/appStore';
-import type {EntityCategory, Project, WorldEntity} from '../entityTypes';
+import type {EntityCategory, WorldEntity} from '../entityTypes';
 import {getEntitiesByProject, saveEntity, deleteEntity} from '../entityStorage';
 import {
   getCategoriesByProject,

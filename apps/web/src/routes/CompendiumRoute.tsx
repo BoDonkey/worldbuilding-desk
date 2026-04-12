@@ -9,8 +9,6 @@ import type {
   CompendiumMilestone,
   CompendiumProgress,
   PartySynergySuggestion,
-  Project,
-  ProjectSettings,
   SettlementModule,
   SettlementState,
   UnlockableRecipe,
