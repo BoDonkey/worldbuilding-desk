@@ -1,6 +1,6 @@
 # Worldbuilding-Desk Project Status
 
-**Last Updated:** April 12, 2026
+**Last Updated:** April 15, 2026
 
 ## Project Overview
 
@@ -42,6 +42,7 @@ Under the hood, the app still includes rich systems for world data, rules, chara
 - Manual selection-to-world capture from the editor for non-detected text.
 - Temporary dismiss and project-level `Always ignore` review actions.
 - Inline lore highlights and quick lore popovers for known entities and characters.
+- World Bible review queue for finishing review-created records and alias follow-up.
 - Editor appearance controls for width, surface style, and serif/sans presentation.
 
 ### Story Context Systems
@@ -49,6 +50,7 @@ Under the hood, the app still includes rich systems for world data, rules, chara
 - Character records and character sheets.
 - Alias tracking and consistency storage.
 - Review linking can now target either World Bible entries or characters.
+- World Bible review completion now treats saving or marking reviewed as clearing both record completion and alias follow-up.
 - System history and lore inspection surfaces.
 - Parent/child canon inheritance with promotion and sync flows.
 - Project backup export/import with validation and conflict review.
@@ -121,11 +123,22 @@ Under the hood, the app still includes rich systems for world data, rules, chara
 - Manuscript export flows are covered in smoke documentation.
 - World Bible duplicate-name conflict review exists.
 - Ollama diagnostics and model detection flows exist.
+- Review completion smoke coverage now has a dedicated checklist spanning import -> workspace review -> World Bible queue completion.
+- Review queue smoke pass is in progress on `codex/world-bible-review-queue`.
+- During the smoke pass, the following review/alias issues were fixed:
+  - self-alias creation when a new record name matched the detected surface
+  - repeated single-word proper names not surfacing from sentence-start mentions
+  - alias linking controls only showing close matches and defaulting to an invalid target value
+  - duplicate alias display/counts in World Bible review queue
+  - alias lore highlights using canonical names instead of alias surfaces
+  - possessive alias normalization mismatch between consistency scan and editor highlights
 
 ### Still Worth Rechecking
 - Workspace import/retry UX after the drawer extraction.
 - Narrow viewport drawer/modal interactions.
 - Any route-level assumptions introduced by the newer Zustand migration.
+- Finish the manual review-completion smoke checklist from the current in-progress point.
+- Recheck reload behavior after marking records reviewed and after project-level `Always ignore`.
 
 ---
 

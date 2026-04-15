@@ -145,6 +145,7 @@ export interface ProjectSettings {
   characterStyles: CharacterStyle[];
   aiSettings: ProjectAISettings;
   consistencyActionCues: string[];
+  ignoredUnknownSurfaces?: string[];
   activeSkills: string[];
   projectMode: ProjectMode;
   featureToggles: ProjectFeatureToggles;
@@ -259,6 +260,7 @@ export interface WorldEntity {
   name: string;
   fields: EntityFields;
   needsCompletion?: boolean;
+  aliasesReviewedAt?: number;
   links: string[];
   createdAt: number;
   updatedAt: number;

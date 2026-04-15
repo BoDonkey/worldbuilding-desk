@@ -4,12 +4,14 @@ import type {
   Character,
   EntityCategory,
   Project,
+  ProjectSettings,
   WorldEntity,
   WritingDocument
 } from '../entityTypes';
 import {saveWritingDocument} from '../writingStorage';
 import {getCategoriesByProject, initializeDefaultCategories} from '../categoryStorage';
 import {saveEntity} from '../entityStorage';
+import {saveProjectSettings} from '../settingsStorage';
 import {upsertCompendiumEntryFromEntity} from '../services/compendium';
 import type {RAGProvider} from '../services/rag/RAGService';
 import type {
@@ -55,6 +57,8 @@ interface UseWorkspaceConsistencyParams {
   aliases: ConsistencyAlias[];
   setAliases: Dispatch<SetStateAction<ConsistencyAlias[]>>;
   characters: Character[];
+  projectSettings: ProjectSettings | null;
+  setProjectSettings: Dispatch<SetStateAction<ProjectSettings | null>> | ((settings: ProjectSettings | null) => void);
   resolvedActionCues: string[];
   consistencyEngine: ConsistencyEngineService;
   ragService: RAGProvider | null;
@@ -108,6 +112,8 @@ export const useWorkspaceConsistency = ({
   aliases,
   setAliases,
   characters,
+  projectSettings,
+  setProjectSettings,
   resolvedActionCues,
   consistencyEngine,
   ragService,
@@ -124,7 +130,6 @@ export const useWorkspaceConsistency = ({
   const [dismissedUnknownByDocument, setDismissedUnknownByDocument] = useState<
     Record<string, string[]>
   >({});
-  const [ignoredUnknownSurfaces, setIgnoredUnknownSurfaces] = useState<string[]>([]);
   const [isReviewPrefsHydrated, setReviewPrefsHydrated] = useState(false);
   const [resolvingUnknown, setResolvingUnknown] = useState<string | null>(null);
   const [linkingUnknown, setLinkingUnknown] = useState<string | null>(null);
@@ -147,7 +152,6 @@ export const useWorkspaceConsistency = ({
 
   useEffect(() => {
     if (!activeProject) {
-      setIgnoredUnknownSurfaces([]);
       setDismissedUnknownByDocument({});
       setReviewPrefsHydrated(true);
       return;
@@ -155,28 +159,19 @@ export const useWorkspaceConsistency = ({
     try {
       const raw = localStorage.getItem(`workspaceReviewPrefs:${activeProject.id}`);
       if (!raw) {
-        setIgnoredUnknownSurfaces([]);
         setDismissedUnknownByDocument({});
         setReviewPrefsHydrated(true);
         return;
       }
       const parsed = JSON.parse(raw) as unknown;
       if (!parsed || typeof parsed !== 'object') {
-        setIgnoredUnknownSurfaces([]);
         setDismissedUnknownByDocument({});
         setReviewPrefsHydrated(true);
         return;
       }
       const prefs = parsed as {
-        ignoredUnknownSurfaces?: unknown;
         dismissedUnknownByDocument?: unknown;
       };
-      setIgnoredUnknownSurfaces(
-        (Array.isArray(prefs.ignoredUnknownSurfaces) ? prefs.ignoredUnknownSurfaces : [])
-          .filter((value): value is string => typeof value === 'string')
-          .map((value) => value.trim())
-          .filter(Boolean)
-      );
       const nextDismissed: Record<string, string[]> = {};
       if (
         prefs.dismissedUnknownByDocument &&
@@ -194,7 +189,6 @@ export const useWorkspaceConsistency = ({
       }
       setDismissedUnknownByDocument(nextDismissed);
     } catch {
-      setIgnoredUnknownSurfaces([]);
       setDismissedUnknownByDocument({});
     } finally {
       setReviewPrefsHydrated(true);
@@ -202,18 +196,59 @@ export const useWorkspaceConsistency = ({
   }, [activeProject]);
 
   useEffect(() => {
+    if (!activeProject || !projectSettings || !isReviewPrefsHydrated) return;
+    try {
+      const raw = localStorage.getItem(`workspaceReviewPrefs:${activeProject.id}`);
+      if (!raw) return;
+      const parsed = JSON.parse(raw) as
+        | {
+            ignoredUnknownSurfaces?: unknown;
+          }
+        | null;
+      const legacyIgnoredValues = parsed?.ignoredUnknownSurfaces;
+      const legacyIgnored = (
+        Array.isArray(legacyIgnoredValues) ? legacyIgnoredValues : []
+      )
+        .filter((value): value is string => typeof value === 'string')
+        .map((value) => value.trim().toLowerCase())
+        .filter(Boolean);
+      if (legacyIgnored.length === 0) return;
+
+      const mergedIgnored = Array.from(
+        new Set([...(projectSettings.ignoredUnknownSurfaces ?? []), ...legacyIgnored])
+      );
+      if (mergedIgnored.length === (projectSettings.ignoredUnknownSurfaces ?? []).length) {
+        return;
+      }
+
+      const nextSettings: ProjectSettings = {
+        ...projectSettings,
+        ignoredUnknownSurfaces: mergedIgnored,
+        updatedAt: Date.now()
+      };
+      void saveProjectSettings(nextSettings)
+        .then(() => {
+          setProjectSettings(nextSettings);
+        })
+        .catch(() => {
+          // Ignore migration errors and continue using current settings.
+        });
+    } catch {
+      // Ignore malformed legacy local storage.
+    }
+  }, [activeProject, isReviewPrefsHydrated, projectSettings, setProjectSettings]);
+
+  useEffect(() => {
     if (!activeProject || !isReviewPrefsHydrated) return;
     localStorage.setItem(
       `workspaceReviewPrefs:${activeProject.id}`,
       JSON.stringify({
-        ignoredUnknownSurfaces,
         dismissedUnknownByDocument
       })
     );
   }, [
     activeProject,
     dismissedUnknownByDocument,
-    ignoredUnknownSurfaces,
     isReviewPrefsHydrated
   ]);
 
@@ -272,7 +307,9 @@ export const useWorkspaceConsistency = ({
         )
       );
       const ignored = new Set(
-        ignoredUnknownSurfaces.map((surface) => canonicalizeUnknownSurface(surface))
+        (projectSettings?.ignoredUnknownSurfaces ?? []).map((surface) =>
+          canonicalizeUnknownSurface(surface)
+        )
       );
       if (dismissed.size === 0 && ignored.size === 0) {
         return issues;
@@ -285,7 +322,7 @@ export const useWorkspaceConsistency = ({
         return !surface || (!dismissed.has(surface) && !ignored.has(surface));
       });
     },
-    [dismissedUnknownByDocument, ignoredUnknownSurfaces]
+    [dismissedUnknownByDocument, projectSettings?.ignoredUnknownSurfaces]
   );
 
   const attachAliasTexts = useCallback(
@@ -429,6 +466,7 @@ export const useWorkspaceConsistency = ({
     },
     [
       consistencyEngine,
+      filterDismissedUnknownIssues,
       knownConsistencyEntities,
       resolvedActionCues,
       ragService,
@@ -605,7 +643,35 @@ export const useWorkspaceConsistency = ({
           type: 'character' as const
         }))
       ];
-      const filtered = candidates.filter((record) => {
+      const ranked = [...candidates].sort((a, b) => {
+        const aName = a.name.toLowerCase();
+        const bName = b.name.toLowerCase();
+        const aExact = aName === normalizedSurface ? 0 : 1;
+        const bExact = bName === normalizedSurface ? 0 : 1;
+        if (aExact !== bExact) return aExact - bExact;
+        const aClose =
+          aName.includes(normalizedSurface) || normalizedSurface.includes(aName) ? 0 : 1;
+        const bClose =
+          bName.includes(normalizedSurface) || normalizedSurface.includes(bName) ? 0 : 1;
+        if (aClose !== bClose) return aClose - bClose;
+        return a.name.localeCompare(b.name);
+      });
+      optionMap[surface] = ranked.slice(0, 20);
+    });
+    return optionMap;
+  }, [characters, entities, unknownGuardrailIssues]);
+
+  const closeUnknownLinkOptions = useMemo(() => {
+    const optionMap: Record<
+      string,
+      Array<{id: string; name: string; type: 'character' | 'entity'}>
+    > = {};
+    unknownGuardrailIssues.forEach((issue) => {
+      const surface = (issue.surface ?? '').trim();
+      if (!surface) return;
+      const normalizedSurface = surface.toLowerCase();
+      const candidates = unknownLinkOptions[surface] ?? [];
+      optionMap[surface] = candidates.filter((record) => {
         const normalizedName = record.name.toLowerCase();
         if (normalizedName === normalizedSurface) {
           return true;
@@ -615,19 +681,9 @@ export const useWorkspaceConsistency = ({
           normalizedSurface.includes(normalizedName)
         );
       });
-      const ranked = [...filtered].sort((a, b) => {
-        const aExact = a.name.toLowerCase() === normalizedSurface ? 0 : 1;
-        const bExact = b.name.toLowerCase() === normalizedSurface ? 0 : 1;
-        if (aExact !== bExact) return aExact - bExact;
-        const aIncludes = a.name.toLowerCase().includes(normalizedSurface) ? 0 : 1;
-        const bIncludes = b.name.toLowerCase().includes(normalizedSurface) ? 0 : 1;
-        if (aIncludes !== bIncludes) return aIncludes - bIncludes;
-        return a.name.localeCompare(b.name);
-      });
-      optionMap[surface] = ranked.slice(0, 20);
     });
     return optionMap;
-  }, [characters, entities, unknownGuardrailIssues]);
+  }, [unknownGuardrailIssues, unknownLinkOptions]);
 
   const resolveUnknownEntity = useCallback(
     async (
@@ -689,7 +745,7 @@ export const useWorkspaceConsistency = ({
           targetType: 'entity',
           aliasTexts:
             normalizedName.toLowerCase() === normalizedSurface.toLowerCase()
-              ? [normalizedName]
+              ? []
               : [normalizedName, normalizedSurface]
         });
         setEntities((prev) => [...prev, entity]);
@@ -801,20 +857,37 @@ export const useWorkspaceConsistency = ({
     (surface: string, docId?: string) => {
       const normalized = surface.trim();
       if (!normalized) return;
-      setIgnoredUnknownSurfaces((prev) => {
-        const existing = new Set(prev.map((entry) => entry.trim().toLowerCase()));
-        if (existing.has(normalized.toLowerCase())) {
-          return prev;
-        }
-        return [...prev, normalized];
-      });
+      if (!projectSettings || !activeProject) {
+        setFeedback({
+          tone: 'error',
+          message: 'Project settings are not available yet. Try again in a moment.'
+        });
+        return;
+      }
+      const mergedIgnored = Array.from(
+        new Set([...(projectSettings.ignoredUnknownSurfaces ?? []), normalized.toLowerCase()])
+      );
       dismissUnknownEntity(surface, docId);
-      setFeedback({
-        tone: 'success',
-        message: `"${normalized}" will be ignored for this project in future reviews.`
-      });
+      const nextSettings: ProjectSettings = {
+        ...projectSettings,
+        ignoredUnknownSurfaces: mergedIgnored,
+        updatedAt: Date.now()
+      };
+      void saveProjectSettings(nextSettings)
+        .then(() => {
+          setProjectSettings(nextSettings);
+          setFeedback({
+            tone: 'success',
+            message: `"${normalized}" will be ignored for this project in future reviews.`
+          });
+        })
+        .catch((error) => {
+          const message =
+            error instanceof Error ? error.message : 'Unable to save project review settings.';
+          setFeedback({tone: 'error', message});
+        });
     },
-    [dismissUnknownEntity, setFeedback]
+    [activeProject, dismissUnknownEntity, projectSettings, setFeedback, setProjectSettings]
   );
 
   const linkUnknownEntity = useCallback(
@@ -907,7 +980,11 @@ export const useWorkspaceConsistency = ({
       });
       setUnknownLinkSelection((prev) => ({
         ...prev,
-        [surface]: prev[surface] ?? unknownLinkOptions[surface]?.[0]?.id ?? ''
+        [surface]:
+          prev[surface] ??
+          (unknownLinkOptions[surface]?.[0]
+            ? `${unknownLinkOptions[surface][0].type}:${unknownLinkOptions[surface][0].id}`
+            : '')
       }));
     },
     [unknownLinkOptions]
@@ -938,6 +1015,7 @@ export const useWorkspaceConsistency = ({
     highlightableUnknownIssues,
     isReviewPrefsHydrated,
     unknownLinkOptions,
+    closeUnknownLinkOptions,
     resolveUnknownEntity,
     resolveAllUnknownEntities,
     dismissAllUnknownEntities,

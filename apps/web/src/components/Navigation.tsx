@@ -3,6 +3,7 @@ import { NavLink, useLocation } from 'react-router-dom';
 import { ThemeToggle } from './ThemeToggle';
 import {getEntitiesByProject} from '../entityStorage';
 import {getCompendiumEntriesByProject} from '../services/compendium';
+import {buildWorldReviewQueue, getAliasesByProject} from '../services/consistency';
 import {useAppStore} from '../store/appStore';
 import styles from '../assets/components/Navigation.module.css';
 
@@ -42,11 +43,12 @@ export const Navigation: FC<NavigationProps> = ({
 
     return Promise.all([
       getEntitiesByProject(activeProject.id),
+      getAliasesByProject(activeProject.id),
       getCompendiumEntriesByProject(activeProject.id)
     ])
-      .then(([entities, entries]) => {
+      .then(([entities, aliases, entries]) => {
         setPendingCounts({
-          world: entities.filter((entity) => entity.needsCompletion).length,
+          world: buildWorldReviewQueue(entities, aliases).length,
           compendium: entries.filter((entry) => entry.needsCompletion).length
         });
       })
@@ -65,11 +67,13 @@ export const Navigation: FC<NavigationProps> = ({
       void loadPendingCounts();
     };
     window.addEventListener('wbd:entity-records-changed', handleRecordsChanged);
+    window.addEventListener('wbd:alias-records-changed', handleRecordsChanged);
     window.addEventListener('wbd:compendium-records-changed', handleRecordsChanged);
 
     return () => {
       cancelled = true;
       window.removeEventListener('wbd:entity-records-changed', handleRecordsChanged);
+      window.removeEventListener('wbd:alias-records-changed', handleRecordsChanged);
       window.removeEventListener('wbd:compendium-records-changed', handleRecordsChanged);
     };
   }, [loadPendingCounts, location.pathname]);

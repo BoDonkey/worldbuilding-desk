@@ -142,6 +142,44 @@
   font-weight: 700;
 }
 
+.reviewToolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.75rem;
+  margin-bottom: 0.8rem;
+  flex-wrap: wrap;
+}
+
+.reviewFilterGroup {
+  display: flex;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+}
+
+.reviewFilterButton {
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  color: #334155;
+  border-radius: 999px;
+  padding: 0.32rem 0.7rem;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.reviewFilterButtonActive {
+  border-color: #2563eb;
+  background: #dbeafe;
+  color: #1d4ed8;
+  font-weight: 700;
+}
+
+.reviewToolbarActions {
+  display: flex;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+}
+
 .reviewList {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
@@ -329,6 +367,15 @@
   .mappingGrid {
     grid-template-columns: 1fr;
   }
+
+  .content {
+    flex-direction: column;
+  }
+
+  .formSection {
+    max-width: none;
+    width: 100%;
+  }
 }
 
 .content {
@@ -349,10 +396,37 @@
   border: 1px solid #ddd;
 }
 
+.reviewFocusPanel {
+  background-color: #f8fafc;
+  padding: 1.25rem;
+  border-radius: 8px;
+  border: 1px solid #d1d5db;
+}
+
+.reviewFocusPanel h2 {
+  margin-top: 0;
+  margin-bottom: 0.75rem;
+}
+
+.reviewFocusPanel p {
+  margin: 0 0 1rem 0;
+  color: #475569;
+}
+
 .form h2 {
   margin-top: 0;
   margin-bottom: 1rem;
   color: #000;
+}
+
+.reviewFormNotice {
+  margin-bottom: 0.9rem;
+  padding: 0.65rem 0.75rem;
+  border-radius: 6px;
+  border: 1px solid #bfdbfe;
+  background: #eff6ff;
+  color: #1e3a8a;
+  font-size: 0.85rem;
 }
 
 .formGroup {
@@ -463,10 +537,26 @@
   margin-bottom: 0.25rem;
 }
 
+.reviewListSummary {
+  margin: 0 0 0.85rem 0;
+  font-size: 0.85rem;
+  color: #475569;
+}
+
+.reviewEntityMeta {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  font-size: 0.8rem;
+  color: #64748b;
+  margin-bottom: 0.55rem;
+}
+
 .entityActions {
   margin-top: 0.75rem;
   display: flex;
   gap: 0.5rem;
+  flex-wrap: wrap;
 }
 
 .entityActions button {

@@ -59,6 +59,7 @@ const DEFAULT_INSPECTOR_SETTINGS: InspectorSettings = {
 
 const DEFAULT_PROJECT_MODE: ProjectMode = 'litrpg';
 const DEFAULT_CONSISTENCY_ACTION_CUES: string[] = [];
+const DEFAULT_IGNORED_UNKNOWN_SURFACES: string[] = [];
 const DEFAULT_STAT_BLOCK_PREFERENCES: StatBlockPreferences = {
   sourceType: 'character',
   style: 'full',
@@ -176,6 +177,9 @@ function ensureAISettings(settings: ProjectSettings): ProjectSettings {
     consistencyActionCues: normalizeConsistencyActionCues(
       settings.consistencyActionCues ?? DEFAULT_CONSISTENCY_ACTION_CUES
     ),
+    ignoredUnknownSurfaces: normalizeConsistencyActionCues(
+      settings.ignoredUnknownSurfaces ?? DEFAULT_IGNORED_UNKNOWN_SURFACES
+    ),
     activeSkills: settings.activeSkills ?? [],
     projectMode: settings.projectMode ?? DEFAULT_PROJECT_MODE,
     featureToggles: normalizeFeatureToggles({
@@ -269,6 +273,7 @@ export async function createDefaultSettings(projectId: string): Promise<ProjectS
     characterStyles: [],
     aiSettings: {...DEFAULT_AI_SETTINGS},
     consistencyActionCues: [...DEFAULT_CONSISTENCY_ACTION_CUES],
+    ignoredUnknownSurfaces: [...DEFAULT_IGNORED_UNKNOWN_SURFACES],
     activeSkills: [],
     projectMode: DEFAULT_PROJECT_MODE,
     featureToggles: getDefaultFeatureToggles(DEFAULT_PROJECT_MODE),

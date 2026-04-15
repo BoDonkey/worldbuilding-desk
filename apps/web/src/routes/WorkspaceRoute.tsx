@@ -400,6 +400,7 @@ function WorkspaceRoute() {
     highlightableUnknownIssues,
     isReviewPrefsHydrated,
     unknownLinkOptions,
+    closeUnknownLinkOptions,
     resolveUnknownEntity,
     resolveAllUnknownEntities,
     dismissAllUnknownEntities,
@@ -419,6 +420,8 @@ function WorkspaceRoute() {
     aliases,
     setAliases,
     characters,
+    projectSettings,
+    setProjectSettings,
     resolvedActionCues,
     consistencyEngine,
     ragService,
@@ -1292,10 +1295,15 @@ function WorkspaceRoute() {
                             ? 'Connecting...'
                             : reviewLinkLabel}
                         </button>
+                        {closeUnknownLinkOptions[activeConsistencyPopoverIssue.surface]?.length ? null : (
+                          <span className={styles.consistencyPopoverNote}>
+                            No close match found. Showing recent records.
+                          </span>
+                        )}
                       </div>
                     ) : (
                       <div className={styles.consistencyPopoverNote}>
-                        No close existing matches available yet.
+                        No existing records available yet.
                       </div>
                     )}
                   </ContextPopover>

@@ -75,6 +75,8 @@ const normalizePhrase = (value: string): string =>
   value
     .trim()
     .replace(/^[^A-Za-z0-9]+|[^A-Za-z0-9]+$/g, '')
+    .replace(/['’]s\b/g, '')
+    .replace(/s['’]\b/g, 's')
     .replace(/^(the|a|an)\s+/i, '')
     .replace(/\s+/g, ' ')
     .toLowerCase();
@@ -278,10 +280,6 @@ const shouldKeepMention = (text: string, mention: CandidateMention): boolean => 
     return false;
   }
 
-  if (isSentenceStart(text, mention.start)) {
-    return false;
-  }
-
   return true;
 };
 
@@ -468,9 +466,9 @@ export class ConsistencyEngineService {
           ? 0.99
           : Math.min(
               0.92,
-              0.58 +
+              0.72 +
                 (mention.surface.split(/\s+/).length > 1 ? 0.16 : 0) +
-                (mentionCount > 1 ? 0.13 : 0) +
+                (mentionCount > 1 ? 0.16 : 0) +
                 (hasCue ? 0.1 : 0)
             );
         return {
@@ -508,7 +506,10 @@ export class ConsistencyEngineService {
         }
 
         const mentionCount = mentionCounts.get(entityRef.normalized) ?? 0;
-        return mentionCount > 1 || hasLeadingCueWord(input.text, entityRef.span.start);
+        return (
+          mentionCount > 0 ||
+          hasLeadingCueWord(input.text, entityRef.span.start)
+        );
       });
 
     const proposal: ExtractedProposal = {

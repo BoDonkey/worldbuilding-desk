@@ -26,8 +26,9 @@ import {
   upsertCompendiumEntryFromEntity
 } from '../services/compendium';
 import type {CompendiumDomain} from '../entityTypes';
-import type {ConsistencyAlias} from '../services/consistency';
+import type {ConsistencyAlias, ReviewQueueItem, ReviewQueueReason} from '../services/consistency';
 import {
+  buildWorldReviewQueue,
   deleteAliasesForEntity,
   getAliasesByProject,
   replaceAliasesForEntity
@@ -87,6 +88,8 @@ interface JsonImportPreparedRow {
   conflict?: JsonImportConflict;
   resolution: JsonImportConflictResolution;
 }
+
+type WorldBibleViewMode = 'category' | 'review';
 
 const fileNameToEntityName = (name: string): string => {
   const base = name.replace(/\.[^.]+$/, '').trim();
@@ -294,6 +297,11 @@ const parseAlternativeNames = (value: string): string[] =>
 
 const formatAlternativeNames = (names: string[]): string => names.join(', ');
 
+const reviewReasonLabels: Record<ReviewQueueReason, string> = {
+  needsCompletion: 'Needs completion',
+  aliasFollowUp: 'Review alternative names'
+};
+
 const triggerJsonDownload = (fileName: string, data: unknown): void => {
   const blob = new Blob([JSON.stringify(data, null, 2)], {
     type: 'application/json'
@@ -313,6 +321,7 @@ function WorldBibleRoute() {
   const location = useLocation();
   const [categories, setCategories] = useState<EntityCategory[]>([]);
   const [activeTab, setActiveTab] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<WorldBibleViewMode>('category');
   const [entities, setEntities] = useState<WorldEntity[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [name, setName] = useState('');
@@ -327,6 +336,7 @@ function WorldBibleRoute() {
   const [pendingReviewFocus, setPendingReviewFocus] = useState<'general' | 'aliases' | null>(
     null
   );
+  const [reviewFilter, setReviewFilter] = useState<'all' | ReviewQueueReason>('all');
   const seriesConfig = activeProject
     ? getSeriesBibleConfig(activeProject)
     : null;
@@ -679,34 +689,47 @@ function WorldBibleRoute() {
         return;
       }
       const current = map.get(alias.targetId) ?? [];
-      current.push(alias.alias);
-      map.set(alias.targetId, current);
+      map.set(
+        alias.targetId,
+        parseAlternativeNames([...current, alias.alias].join(', '))
+      );
     });
     return map;
   }, [aliases]);
-  const reviewQueue = useMemo(
-    () =>
-      entities
-        .map((entity) => {
-          const aliasCount = (aliasMapByEntityId.get(entity.id) ?? []).length;
-          const reasons: string[] = [];
-          if (entity.needsCompletion) {
-            reasons.push('Needs completion');
-          }
-          if (aliasCount === 0) {
-            reasons.push('Alternative names not reviewed');
-          }
-          return {entity, aliasCount, reasons};
-        })
-        .filter((item) => item.reasons.length > 0)
-        .sort((a, b) => {
-          if (a.entity.needsCompletion !== b.entity.needsCompletion) {
-            return a.entity.needsCompletion ? -1 : 1;
-          }
-          return a.entity.name.localeCompare(b.entity.name);
-        }),
-    [aliasMapByEntityId, entities]
+  const reviewQueue = useMemo<ReviewQueueItem[]>(
+    () => buildWorldReviewQueue(entities, aliases),
+    [aliases, entities]
   );
+  const filteredReviewQueue = useMemo(
+    () =>
+      reviewQueue.filter((item) =>
+        reviewFilter === 'all' ? true : item.reasons.includes(reviewFilter)
+      ),
+    [reviewFilter, reviewQueue]
+  );
+  const reviewCounts = useMemo(
+    () => ({
+      all: reviewQueue.length,
+      needsCompletion: reviewQueue.filter((item) =>
+        item.reasons.includes('needsCompletion')
+      ).length,
+      aliasFollowUp: reviewQueue.filter((item) =>
+        item.reasons.includes('aliasFollowUp')
+      ).length
+    }),
+    [reviewQueue]
+  );
+  const visibleEntities =
+    viewMode === 'review'
+      ? filteredReviewQueue.map((item) => item.entity)
+      : filteredEntities;
+  const selectedEntity = editingId
+    ? entities.find((entity) => entity.id === editingId) ?? null
+    : null;
+  const selectedEntityQueueItem =
+    selectedEntity
+      ? reviewQueue.find((item) => item.entity.id === selectedEntity.id) ?? null
+      : null;
   const memoryPanelEmpty =
     'This entry has no captured memories yet. Save it to generate one or adjust the filter.';
 
@@ -744,6 +767,10 @@ function WorldBibleRoute() {
         name,
         fields: nextFields,
         needsCompletion: false,
+        aliasesReviewedAt:
+          viewMode === 'review' && selectedEntityQueueItem
+            ? now
+            : existing?.aliasesReviewedAt,
         links: existing?.links ?? [],
         createdAt: existing?.createdAt ?? now,
         updatedAt: now
@@ -814,22 +841,36 @@ function WorldBibleRoute() {
         ? entity.fields[ALTERNATIVE_NAMES_KEY]
         : '';
     const indexedAlternativeNames = aliasMapByEntityId.get(entity.id) ?? [];
-    const mergedAlternativeNames = formatAlternativeNames([
-      ...parseAlternativeNames(persistedAlternativeNames),
-      ...indexedAlternativeNames
-    ]);
+    const mergedAlternativeNames = formatAlternativeNames(
+      parseAlternativeNames(
+        [...parseAlternativeNames(persistedAlternativeNames), ...indexedAlternativeNames]
+          .filter((alias) => alias.trim().toLowerCase() !== entity.name.trim().toLowerCase())
+          .join(', ')
+      )
+    );
     setFieldValues({
       ...(entity.fields as Record<string, string>),
       [ALTERNATIVE_NAMES_KEY]: mergedAlternativeNames
     });
   }, [aliasMapByEntityId]);
 
+  const handleOpenReviewItem = useCallback(
+    (entity: WorldEntity, focus: 'general' | 'aliases' = 'general') => {
+      setViewMode('review');
+      setActiveTab(entity.categoryId);
+      handleEdit(entity, focus);
+    },
+    [handleEdit]
+  );
+
   const handleMarkEntityComplete = useCallback(
     async (entity: WorldEntity) => {
+      const now = Date.now();
       const next: WorldEntity = {
         ...entity,
         needsCompletion: false,
-        updatedAt: Date.now()
+        aliasesReviewedAt: now,
+        updatedAt: now
       };
 
       setFeedback(null);
@@ -840,7 +881,7 @@ function WorldBibleRoute() {
         );
         setFeedback({
           tone: 'success',
-          message: `"${entity.name}" marked complete.`
+          message: `"${entity.name}" marked reviewed.`
         });
       } catch (error) {
         const message =
@@ -872,6 +913,7 @@ function WorldBibleRoute() {
     const target = entities.find((entity) => entity.id === focusEntityId);
     if (!target) return;
     setActiveTab(target.categoryId);
+    setViewMode('review');
     handleEdit(target);
     focusedEntityKeyRef.current = focusKey;
   }, [entities, handleEdit, location.key, location.state]);
@@ -1612,12 +1654,24 @@ function WorldBibleRoute() {
       )}
 
       <div className={styles.tabNav}>
+        <button
+          type='button'
+          onClick={() => setViewMode('review')}
+          className={`${styles.tab} ${viewMode === 'review' ? styles.active : ''}`}
+        >
+          Review Queue
+          {reviewQueue.length > 0 ? ` (${reviewQueue.length})` : ''}
+        </button>
         {categories.map((cat) => (
           <button
             key={cat.id}
-            onClick={() => setActiveTab(cat.id)}
+            type='button'
+            onClick={() => {
+              setViewMode('category');
+              setActiveTab(cat.id);
+            }}
             className={`${styles.tab} ${
-              activeTab === cat.id ? styles.active : ''
+              viewMode === 'category' && activeTab === cat.id ? styles.active : ''
             }`}
           >
             {cat.name}
@@ -1922,14 +1976,62 @@ function WorldBibleRoute() {
               <h2>Review Queue</h2>
               <p>
                 Finish incomplete canon records here. This queue combines entries that
-                still need completion with records that have not had alternative names
-                reviewed yet.
+                still need completion with records that have captured alternative names
+                ready for review.
               </p>
             </div>
             <div className={styles.reviewCount}>{reviewQueue.length} open</div>
           </div>
+          <div className={styles.reviewToolbar}>
+            <div className={styles.reviewFilterGroup}>
+              <button
+                type='button'
+                onClick={() => setReviewFilter('all')}
+                className={`${styles.reviewFilterButton} ${
+                  reviewFilter === 'all' ? styles.reviewFilterButtonActive : ''
+                }`}
+              >
+                All ({reviewCounts.all})
+              </button>
+              <button
+                type='button'
+                onClick={() => setReviewFilter('needsCompletion')}
+                className={`${styles.reviewFilterButton} ${
+                  reviewFilter === 'needsCompletion'
+                    ? styles.reviewFilterButtonActive
+                    : ''
+                }`}
+              >
+                Needs completion ({reviewCounts.needsCompletion})
+              </button>
+              <button
+                type='button'
+                onClick={() => setReviewFilter('aliasFollowUp')}
+                className={`${styles.reviewFilterButton} ${
+                  reviewFilter === 'aliasFollowUp'
+                    ? styles.reviewFilterButtonActive
+                    : ''
+                }`}
+              >
+                Alias follow-up ({reviewCounts.aliasFollowUp})
+              </button>
+            </div>
+            <div className={styles.reviewToolbarActions}>
+              <button type='button' onClick={() => setViewMode('review')}>
+                Open queue mode
+              </button>
+              {filteredReviewQueue.length > 0 && (
+                <button
+                  type='button'
+                  onClick={() => handleOpenReviewItem(filteredReviewQueue[0].entity)}
+                >
+                  Focus first item
+                </button>
+              )}
+            </div>
+          </div>
           <div className={styles.reviewList}>
-            {reviewQueue.slice(0, 12).map(({entity, aliasCount, reasons}) => (
+            {filteredReviewQueue.slice(0, viewMode === 'review' ? filteredReviewQueue.length : 12).map(({entity, aliasCount, reasons}) => (
               <div key={entity.id} className={styles.reviewCard}>
                 <div className={styles.reviewCardHeader}>
                   <strong>{entity.name}</strong>
@@ -1941,7 +2043,7 @@ function WorldBibleRoute() {
                 <div className={styles.reviewReasonList}>
                   {reasons.map((reason) => (
                     <span key={`${entity.id}-${reason}`} className={styles.reviewReasonChip}>
-                      {reason}
+                      {reviewReasonLabels[reason]}
                     </span>
                   ))}
                 </div>
@@ -1953,44 +2055,90 @@ function WorldBibleRoute() {
                 <div className={styles.reviewActions}>
                   <button
                     type='button'
-                    onClick={() => {
-                      setActiveTab(entity.categoryId);
-                      handleEdit(entity);
-                    }}
+                    onClick={() => handleOpenReviewItem(entity)}
                   >
                     Review entry
                   </button>
                   <button
                     type='button'
-                    onClick={() => {
-                      setActiveTab(entity.categoryId);
-                      handleEdit(entity, 'aliases');
-                    }}
+                    onClick={() => handleOpenReviewItem(entity, 'aliases')}
                   >
                     Review aliases
                   </button>
-                  {entity.needsCompletion && (
-                    <button
-                      type='button'
-                      onClick={() => void handleMarkEntityComplete(entity)}
-                    >
-                      Mark complete
-                    </button>
-                  )}
+                  <button
+                    type='button'
+                    onClick={() => void handleMarkEntityComplete(entity)}
+                  >
+                    Mark reviewed
+                  </button>
                 </div>
               </div>
             ))}
           </div>
+          {filteredReviewQueue.length === 0 && (
+            <p className={styles.emptyState}>
+              No queue items match the current filter.
+            </p>
+          )}
         </section>
       )}
 
       {activeCategory && (
         <div className={styles.content}>
           <div className={styles.formSection}>
+            {viewMode === 'review' && !editingId ? (
+              <div className={styles.reviewFocusPanel}>
+                <h2>Queue Focus</h2>
+                <p>
+                  Pick a queue item to review. The editor on this side will switch to
+                  the selected record so you can complete canon details or refine
+                  alternative names.
+                </p>
+                <div className={styles.reviewToolbarActions}>
+                  {filteredReviewQueue.length > 0 && (
+                    <button
+                      type='button'
+                      onClick={() => handleOpenReviewItem(filteredReviewQueue[0].entity)}
+                    >
+                      Open first queue item
+                    </button>
+                  )}
+                  <button
+                    type='button'
+                    onClick={() => {
+                      setViewMode('category');
+                      resetForm();
+                    }}
+                  >
+                    Return to category view
+                  </button>
+                </div>
+              </div>
+            ) : (
             <form onSubmit={handleSubmit} className={styles.form}>
               <h2>
                 {editingId ? 'Edit' : 'New'} {activeCategory.name.slice(0, -1)}
               </h2>
+
+              {viewMode === 'review' && selectedEntityQueueItem && (
+                <div className={styles.reviewFormNotice}>
+                  Reviewing{' '}
+                  <strong>{selectedEntityQueueItem.entity.name}</strong>.
+                  {' '}
+                  {selectedEntityQueueItem.reasons
+                    .map((reason) => reviewReasonLabels[reason])
+                    .join(' · ')}
+                  <div className={styles.reviewToolbarActions}>
+                    <button
+                      type='button'
+                      onClick={() => void handleMarkEntityComplete(selectedEntityQueueItem.entity)}
+                      disabled={isSubmittingEntity}
+                    >
+                      Mark reviewed
+                    </button>
+                  </div>
+                </div>
+              )}
 
               <div className={styles.formGroup}>
                 <label>
@@ -2162,8 +2310,18 @@ function WorldBibleRoute() {
                     Cancel
                   </button>
                 )}
+                {viewMode === 'review' && (
+                  <button
+                    type='button'
+                    onClick={() => setViewMode('category')}
+                    disabled={isSubmittingEntity}
+                  >
+                    Back to category view
+                  </button>
+                )}
               </div>
             </form>
+            )}
             {editingId && (
               <ShodhMemoryPanel
                 title='Canon summary'
@@ -2201,28 +2359,95 @@ function WorldBibleRoute() {
           </div>
 
           <div className={styles.listSection}>
-            <h2>{activeCategory.name}</h2>
-            {filteredEntities.length === 0 && (
+            <h2>{viewMode === 'review' ? 'Review Queue Items' : activeCategory.name}</h2>
+            {viewMode === 'review' && (
+              <p className={styles.reviewListSummary}>
+                Showing {visibleEntities.length} queue item
+                {visibleEntities.length === 1 ? '' : 's'}
+                {reviewFilter === 'all'
+                  ? ''
+                  : ` filtered by ${reviewReasonLabels[reviewFilter].toLowerCase()}`}
+                .
+              </p>
+            )}
+            {visibleEntities.length === 0 && (
               <p className={styles.emptyState}>
-                No {activeCategory.name.toLowerCase()} yet. Add one on the left.
+                {viewMode === 'review'
+                  ? 'No queue items are open right now.'
+                  : `No ${activeCategory.name.toLowerCase()} yet. Add one on the left.`}
               </p>
             )}
             <ul className={styles.entityList}>
-              {filteredEntities.map((entity) => (
+              {visibleEntities.map((entity) => {
+                const queueItem =
+                  viewMode === 'review'
+                    ? reviewQueue.find((item) => item.entity.id === entity.id) ?? null
+                    : null;
+                const categoryName =
+                  categories.find((category) => category.id === entity.categoryId)?.name ??
+                  'Record';
+
+                return (
                 <li key={entity.id} className={styles.entityCard}>
                   <div className={styles.entityHeader}>
                     <div className={styles.entityName}>{entity.name}</div>
-                    {entity.needsCompletion && (
-                      <span className={styles.completionBadge}>Needs completion</span>
-                    )}
+                    {viewMode === 'review'
+                      ? (
+                          <>
+                            {queueItem?.reasons.includes('needsCompletion') && (
+                              <span className={styles.completionBadge}>Needs completion</span>
+                            )}
+                            {queueItem?.reasons.includes('aliasFollowUp') && (
+                              <span className={styles.completionBadge}>Alias follow-up</span>
+                            )}
+                          </>
+                        )
+                      : (
+                          entity.needsCompletion && (
+                            <span className={styles.completionBadge}>Needs completion</span>
+                          )
+                        )}
                   </div>
+                  {viewMode === 'review' && queueItem && (
+                    <div className={styles.reviewEntityMeta}>
+                      <span>{categoryName}</span>
+                      <span>
+                        {queueItem.aliasCount} alternative name
+                        {queueItem.aliasCount === 1 ? '' : 's'}
+                      </span>
+                      <span>
+                        {queueItem.entity.aliasesReviewedAt
+                          ? `Last reviewed ${new Date(queueItem.entity.aliasesReviewedAt).toLocaleDateString()}`
+                          : 'Aliases not reviewed yet'}
+                      </span>
+                    </div>
+                  )}
                   {Object.entries(entity.fields).map(([key, value]) => (
                     <div key={key} className={styles.entityField}>
                       <strong>{key}:</strong> {String(value)}
                     </div>
                   ))}
                   <div className={styles.entityActions}>
-                    <button onClick={() => handleEdit(entity)}>Edit</button>
+                    <button
+                      onClick={() =>
+                        viewMode === 'review' ? handleOpenReviewItem(entity) : handleEdit(entity)
+                      }
+                    >
+                      Edit
+                    </button>
+                    {viewMode === 'review' && (
+                      <button onClick={() => handleOpenReviewItem(entity, 'aliases')}>
+                        Review aliases
+                      </button>
+                    )}
+                    {viewMode === 'review' && queueItem && (
+                      <button
+                        type='button'
+                        onClick={() => void handleMarkEntityComplete(entity)}
+                      >
+                        Mark reviewed
+                      </button>
+                    )}
                     <button
                       onClick={() => handleDeleteEntity(entity.id)}
                       disabled={deletingEntityId === entity.id}
@@ -2245,16 +2470,17 @@ function WorldBibleRoute() {
                       type='button'
                       onClick={() => void handleAddEntityToCompendium(entity)}
                       disabled={linkingCompendiumEntityId === entity.id}
-                    >
-                      {linkingCompendiumEntityId === entity.id
-                        ? 'Linking...'
-                        : compendiumLinkedEntityIds.has(entity.id)
+                      >
+                        {linkingCompendiumEntityId === entity.id
+                          ? 'Linking...'
+                          : compendiumLinkedEntityIds.has(entity.id)
                           ? 'Update Compendium'
                           : 'Add to Compendium'}
                     </button>
                   </div>
                 </li>
-              ))}
+                );
+              })}
             </ul>
           </div>
         </div>

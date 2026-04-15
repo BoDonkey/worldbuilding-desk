@@ -160,10 +160,14 @@ export function useWorkspaceLoreSnippets({
     ) => {
       const key = normalize(label);
       if (!key) return;
+      const indexedEntry = {
+        ...entry,
+        name: label
+      };
       if (bucket === 'characters') {
-        characterEntries.push([key, entry]);
+        characterEntries.push([key, indexedEntry]);
       } else {
-        entityEntries.push([key, entry]);
+        entityEntries.push([key, indexedEntry]);
       }
 
       const tokens = label.trim().split(/\s+/).filter(Boolean);
@@ -171,7 +175,7 @@ export function useWorkspaceLoreSnippets({
       const trailing = normalize(tokens[tokens.length - 1] ?? '');
       if (!trailing || trailing.length < 4) return;
       const existing = surnameCandidates.get(trailing) ?? [];
-      existing.push({bucket, entry});
+      existing.push({bucket, entry: indexedEntry});
       surnameCandidates.set(trailing, existing);
     };
 

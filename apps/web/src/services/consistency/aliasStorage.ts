@@ -128,6 +128,7 @@ export async function replaceAliasesForEntity(input: {
     const store = tx.objectStore(CONSISTENCY_ALIAS_STORE_NAME);
 
     const kept: ConsistencyAlias[] = [];
+    const keptNormalizedAliases = new Set<string>();
 
     existing.forEach((aliasRecord) => {
       const normalized = normalizeAlias(aliasRecord.alias);
@@ -136,13 +137,18 @@ export async function replaceAliasesForEntity(input: {
       );
 
       if (shouldBelongToEntity) {
+        if (keptNormalizedAliases.has(normalized)) {
+          store.delete(aliasRecord.id);
+          return;
+        }
         const nextRecord: ConsistencyAlias = {
           ...aliasRecord,
-        targetId: input.entityId,
-        targetType: 'entity',
-        entityId: input.entityId,
-        updatedAt: now
-      };
+          targetId: input.entityId,
+          targetType: 'entity',
+          entityId: input.entityId,
+          updatedAt: now
+        };
+        keptNormalizedAliases.add(normalized);
         kept.push(nextRecord);
         store.put(nextRecord);
         return;
@@ -181,6 +187,7 @@ export async function replaceAliasesForEntity(input: {
             createdAt: now,
             updatedAt: now
           };
+      keptNormalizedAliases.add(normalized);
       kept.push(nextRecord);
       store.put(nextRecord);
     });
