@@ -1,4 +1,5 @@
 import type {
+  ChapterCard,
   Character,
   CharacterSheet,
   CompendiumActionLog,
@@ -8,8 +9,10 @@ import type {
   EntityCategory,
   Project,
   ProjectSettings,
+  StateMutationEvent,
   SettlementModule,
   SettlementState,
+  ScratchpadDocument,
   UnlockableRecipe,
   WorldEntity,
   WritingDocument,
@@ -20,6 +23,7 @@ import type {
 import {
   openDb,
   CATEGORY_STORE_NAME,
+  CORKBOARD_CHAPTER_CARD_STORE_NAME,
   CHARACTER_SHEET_STORE_NAME,
   CHARACTER_STORE_NAME,
   COMPENDIUM_ACTION_LOG_STORE_NAME,
@@ -31,6 +35,8 @@ import {
   SETTINGS_STORE_NAME,
   SETTLEMENT_MODULE_STORE_NAME,
   SETTLEMENT_STATE_STORE_NAME,
+  SCRATCHPAD_STORE_NAME,
+  STATE_MUTATION_EVENT_STORE_NAME,
   WRITING_STORE_NAME,
   ZONE_AFFINITY_PROFILE_STORE_NAME,
   ZONE_AFFINITY_PROGRESS_STORE_NAME
@@ -49,6 +55,8 @@ export interface ProjectSnapshot {
     categories: EntityCategory[];
     entities: WorldEntity[];
     writingDocuments: WritingDocument[];
+    scratchpads: ScratchpadDocument[];
+    corkboardChapterCards: ChapterCard[];
     characters: Character[];
     characterSheets: CharacterSheet[];
     compendiumEntries: CompendiumEntry[];
@@ -60,11 +68,14 @@ export interface ProjectSnapshot {
     zoneAffinityProgressRecords: ZoneAffinityProgress[];
     settlementModules: SettlementModule[];
     settlementStateRecords: SettlementState[];
+    stateMutationEvents: StateMutationEvent[];
   };
   counts: {
     categories: number;
     entities: number;
     writingDocuments: number;
+    scratchpads: number;
+    corkboardChapterCards: number;
     characters: number;
     characterSheets: number;
     compendiumEntries: number;
@@ -76,6 +87,7 @@ export interface ProjectSnapshot {
     zoneAffinityProgressRecords: number;
     settlementModules: number;
     settlementStateRecords: number;
+    stateMutationEvents: number;
     hasSettings: boolean;
     hasRuleset: boolean;
   };
@@ -116,6 +128,8 @@ export async function buildProjectSnapshot(projectId: string): Promise<ProjectSn
     categories,
     entities,
     writingDocuments,
+    scratchpads,
+    corkboardChapterCards,
     characters,
     characterSheets,
     compendiumEntries,
@@ -126,13 +140,16 @@ export async function buildProjectSnapshot(projectId: string): Promise<ProjectSn
     zoneAffinityProfiles,
     zoneAffinityProgressRecords,
     settlementModules,
-    settlementStateRecords
+    settlementStateRecords,
+    stateMutationEvents
   ] = await Promise.all([
     getProjectScopedRecords<ProjectSettings>(SETTINGS_STORE_NAME, projectId),
     getRulesetByProjectId(projectId),
     getProjectScopedRecords<EntityCategory>(CATEGORY_STORE_NAME, projectId),
     getProjectScopedRecords<WorldEntity>(ENTITY_STORE_NAME, projectId),
     getProjectScopedRecords<WritingDocument>(WRITING_STORE_NAME, projectId),
+    getProjectScopedRecords<ScratchpadDocument>(SCRATCHPAD_STORE_NAME, projectId),
+    getProjectScopedRecords<ChapterCard>(CORKBOARD_CHAPTER_CARD_STORE_NAME, projectId),
     getProjectScopedRecords<Character>(CHARACTER_STORE_NAME, projectId),
     getProjectScopedRecords<CharacterSheet>(CHARACTER_SHEET_STORE_NAME, projectId),
     getProjectScopedRecords<CompendiumEntry>(COMPENDIUM_ENTRY_STORE_NAME, projectId),
@@ -158,7 +175,8 @@ export async function buildProjectSnapshot(projectId: string): Promise<ProjectSn
       projectId
     ),
     getProjectScopedRecords<SettlementModule>(SETTLEMENT_MODULE_STORE_NAME, projectId),
-    getProjectScopedRecords<SettlementState>(SETTLEMENT_STATE_STORE_NAME, projectId)
+    getProjectScopedRecords<SettlementState>(SETTLEMENT_STATE_STORE_NAME, projectId),
+    getProjectScopedRecords<StateMutationEvent>(STATE_MUTATION_EVENT_STORE_NAME, projectId)
   ]);
 
   const settings = settingsRecords[0] ?? null;
@@ -174,6 +192,8 @@ export async function buildProjectSnapshot(projectId: string): Promise<ProjectSn
       categories,
       entities,
       writingDocuments,
+      scratchpads,
+      corkboardChapterCards,
       characters,
       characterSheets,
       compendiumEntries,
@@ -184,12 +204,15 @@ export async function buildProjectSnapshot(projectId: string): Promise<ProjectSn
       zoneAffinityProfiles,
       zoneAffinityProgressRecords,
       settlementModules,
-      settlementStateRecords
+      settlementStateRecords,
+      stateMutationEvents
     },
     counts: {
       categories: categories.length,
       entities: entities.length,
       writingDocuments: writingDocuments.length,
+      scratchpads: scratchpads.length,
+      corkboardChapterCards: corkboardChapterCards.length,
       characters: characters.length,
       characterSheets: characterSheets.length,
       compendiumEntries: compendiumEntries.length,
@@ -201,6 +224,7 @@ export async function buildProjectSnapshot(projectId: string): Promise<ProjectSn
       zoneAffinityProgressRecords: zoneAffinityProgressRecords.length,
       settlementModules: settlementModules.length,
       settlementStateRecords: settlementStateRecords.length,
+      stateMutationEvents: stateMutationEvents.length,
       hasSettings: Boolean(settings),
       hasRuleset: Boolean(ruleset)
     }
@@ -218,6 +242,8 @@ export function validateSnapshotCounts(snapshot: ProjectSnapshot): SnapshotCount
     categories: snapshot.data.categories.length,
     entities: snapshot.data.entities.length,
     writingDocuments: snapshot.data.writingDocuments.length,
+    scratchpads: snapshot.data.scratchpads.length,
+    corkboardChapterCards: snapshot.data.corkboardChapterCards.length,
     characters: snapshot.data.characters.length,
     characterSheets: snapshot.data.characterSheets.length,
     compendiumEntries: snapshot.data.compendiumEntries.length,
@@ -229,6 +255,7 @@ export function validateSnapshotCounts(snapshot: ProjectSnapshot): SnapshotCount
     zoneAffinityProgressRecords: snapshot.data.zoneAffinityProgressRecords.length,
     settlementModules: snapshot.data.settlementModules.length,
     settlementStateRecords: snapshot.data.settlementStateRecords.length,
+    stateMutationEvents: snapshot.data.stateMutationEvents.length,
     hasSettings: Boolean(snapshot.data.settings),
     hasRuleset: Boolean(snapshot.data.ruleset)
   };

@@ -4,14 +4,20 @@ import type {
   ExtractedProposal,
   GuardrailIssue,
   KnownEntityRef,
+  CandidateDetectionReason,
   ValidationResult
 } from './types';
+import {
+  isInProgressCanonPrefix,
+  normalizeCanonText
+} from './textMatcher';
 
 interface CandidateMention {
   surface: string;
   normalized: string;
   start: number;
   end: number;
+  detectionReason: CandidateDetectionReason;
 }
 
 const NON_ENTITY_SINGLE_WORDS = new Set([
@@ -28,7 +34,9 @@ const NON_ENTITY_SINGLE_WORDS = new Set([
   'hers',
   'him',
   'his',
+  'how',
   'i',
+  'if',
   'in',
   'it',
   'its',
@@ -39,14 +47,29 @@ const NON_ENTITY_SINGLE_WORDS = new Set([
   'our',
   'she',
   'so',
+  'that',
   'the',
   'their',
   'them',
   'then',
   'there',
+  'three',
+  'these',
+  'this',
+  'those',
+  'though',
   'they',
   'to',
   'we',
+  'what',
+  'when',
+  'where',
+  'whether',
+  'which',
+  'while',
+  'who',
+  'why',
+  'with',
   'you',
   'your',
   'yours',
@@ -71,15 +94,43 @@ const NON_ENTITY_SINGLE_WORDS = new Set([
   'december'
 ]);
 
-const normalizePhrase = (value: string): string =>
-  value
-    .trim()
-    .replace(/^[^A-Za-z0-9]+|[^A-Za-z0-9]+$/g, '')
-    .replace(/['’]s\b/g, '')
-    .replace(/s['’]\b/g, 's')
-    .replace(/^(the|a|an)\s+/i, '')
-    .replace(/\s+/g, ' ')
-    .toLowerCase();
+const COMMON_SENTENCE_START_WORDS = new Set([
+  'dont',
+  "don't",
+  'look',
+  'some'
+]);
+
+const CARDINAL_NUMBER_WORDS = new Set([
+  'zero',
+  'one',
+  'two',
+  'three',
+  'four',
+  'five',
+  'six',
+  'seven',
+  'eight',
+  'nine',
+  'ten',
+  'eleven',
+  'twelve',
+  'thirteen',
+  'fourteen',
+  'fifteen',
+  'sixteen',
+  'seventeen',
+  'eighteen',
+  'nineteen',
+  'twenty'
+]);
+
+const normalizePhrase = normalizeCanonText;
+
+const NAME_TOKEN_PATTERN = String.raw`\p{Lu}[\p{L}\p{M}\p{N}'_-]*`;
+const WORD_TOKEN_PATTERN = String.raw`[\p{L}\p{M}][\p{L}\p{M}\p{N}'_-]*`;
+const TEXT_BOUNDARY_PREFIX = String.raw`(^|[^\p{L}\p{N}_])`;
+const TEXT_BOUNDARY_SUFFIX = String.raw`(?=$|[^\p{L}\p{N}_])`;
 
 const LEADING_ENTITY_CUE_WORDS = new Set([
   'the',
@@ -123,6 +174,42 @@ const ACTION_CUE_WORDS = [
   'throw'
 ];
 
+const CHARACTER_CONTEXT_CUE_WORDS = new Set([
+  'arrived',
+  'asked',
+  'attacked',
+  'believed',
+  'called',
+  'closed',
+  'could',
+  'crossed',
+  'entered',
+  'felt',
+  'fought',
+  'found',
+  'grabbed',
+  'held',
+  'knew',
+  'laughed',
+  'looked',
+  'moved',
+  'opened',
+  'replied',
+  'returned',
+  'said',
+  'saw',
+  'shouted',
+  'spoke',
+  'thought',
+  'told',
+  'walked',
+  'wanted',
+  'was',
+  'went',
+  'whispered',
+  'would'
+]);
+
 const PRONOUN_STARTERS = new Set([
   'he',
   'she',
@@ -147,6 +234,9 @@ const NON_ENTITY_BOUNDARY_TOKENS = new Set([
   'do',
   'does',
   'doing',
+  'dont',
+  "don't",
+  'despite',
   'getting',
   'had',
   'has',
@@ -155,6 +245,9 @@ const NON_ENTITY_BOUNDARY_TOKENS = new Set([
   'maybe',
   'not',
   'perhaps',
+  'reflecting',
+  'some',
+  'typical',
   'was',
   'were',
   'when',
@@ -166,6 +259,12 @@ const GENERIC_UNKNOWN_TERMS = new Set([
   'chapters',
   'scene',
   'scenes',
+  'page',
+  'pages',
+  'paragraph',
+  'paragraphs',
+  'line',
+  'lines',
   'part',
   'book',
   'books',
@@ -189,20 +288,96 @@ const GENERIC_UNKNOWN_TERMS = new Set([
   'west',
   'left',
   'right',
+  'center',
+  'middle',
+  'front',
+  'back',
+  'above',
+  'below',
   'inside',
   'outside',
+  'office',
+  'offices',
+  'room',
+  'rooms',
+  'hall',
+  'halls',
+  'hallway',
+  'hallways',
+  'door',
+  'doors',
+  'window',
+  'windows',
+  'wall',
+  'walls',
+  'floor',
+  'floors',
+  'stairs',
+  'tower',
+  'towers',
+  'road',
+  'roads',
+  'street',
+  'streets',
   'city',
+  'cities',
   'town',
+  'towns',
   'village',
+  'villages',
   'kingdom',
+  'kingdoms',
   'empire',
+  'empires',
   'capital',
+  'capitals',
   'guild',
+  'guilds',
   'guard',
+  'guards',
   'team',
+  'teams',
   'group',
+  'groups',
   'squad',
-  'party'
+  'squads',
+  'party',
+  'parties',
+  'people',
+  'person',
+  'man',
+  'men',
+  'woman',
+  'women',
+  'child',
+  'children',
+  'friend',
+  'friends',
+  'enemy',
+  'enemies',
+  'hand',
+  'hands',
+  'head',
+  'eyes',
+  'face',
+  'voice',
+  'word',
+  'words',
+  'each',
+  'every',
+  'other',
+  'another',
+  'same',
+  'first',
+  'second',
+  'third',
+  'last',
+  'next',
+  'only',
+  'again',
+  'still',
+  'just',
+  'even'
 ]);
 
 const MIN_UNKNOWN_CONFIDENCE = 0.72;
@@ -217,7 +392,10 @@ const isPronounContraction = (token: string): boolean =>
   /^(?:i|you|we|they|he|she|it)(?:'m|'re|'ve|'d|'ll|'s)$/.test(token);
 
 const isNonEntityToken = (token: string): boolean =>
-  NON_ENTITY_BOUNDARY_TOKENS.has(token) || isPronounContraction(token);
+  NON_ENTITY_BOUNDARY_TOKENS.has(token) ||
+  COMMON_SENTENCE_START_WORDS.has(token) ||
+  CARDINAL_NUMBER_WORDS.has(token) ||
+  isPronounContraction(token);
 
 const hasEntityLikeToken = (tokens: string[]): boolean =>
   tokens.some(
@@ -279,24 +457,69 @@ const shouldKeepMention = (text: string, mention: CandidateMention): boolean => 
   if (!normalized || NON_ENTITY_SINGLE_WORDS.has(normalized)) {
     return false;
   }
+  if (COMMON_SENTENCE_START_WORDS.has(normalized)) {
+    return false;
+  }
+  if (
+    isSentenceStart(text, mention.start) &&
+    (CARDINAL_NUMBER_WORDS.has(normalized) || normalized.endsWith('ing'))
+  ) {
+    return false;
+  }
 
   return true;
 };
 
+const isPartOfTitledName = (text: string, start: number): boolean => {
+  const prefix = text.slice(Math.max(0, start - 24), start);
+  return /(?:^|[^\p{L}\p{N}_])(?:Dr|Mr|Mrs|Ms|Mx|Prof|Professor)\.\s+$/u.test(prefix);
+};
+
 const extractCandidateMentions = (text: string): CandidateMention[] => {
-  const pattern = /\b[A-Z][A-Za-z0-9'_-]*(?:\s+[A-Z][A-Za-z0-9'_-]*){0,2}\b/g;
+  const pattern = new RegExp(
+    `${TEXT_BOUNDARY_PREFIX}(${NAME_TOKEN_PATTERN}(?:\\s+${NAME_TOKEN_PATTERN}){0,2})${TEXT_BOUNDARY_SUFFIX}`,
+    'gu'
+  );
   const matches = Array.from(text.matchAll(pattern));
 
   return matches
     .map((match) => {
-      const surface = (match[0] ?? '').trim();
-      const start = match.index ?? 0;
+      const prefix = match[1] ?? '';
+      const surface = (match[2] ?? '').trim();
+      const start = (match.index ?? 0) + prefix.length;
       const end = start + surface.length;
       return {
         surface,
         normalized: normalizePhrase(surface),
         start,
-        end
+        end,
+        detectionReason: 'multiword_proper_candidate' as const
+      };
+    })
+    .filter((mention) => mention.normalized.length > 0)
+    .filter((mention) => !isPartOfTitledName(text, mention.start))
+    .filter((mention) => shouldKeepMention(text, mention));
+};
+
+const extractTitledNameMentions = (text: string): CandidateMention[] => {
+  const pattern = new RegExp(
+    `${TEXT_BOUNDARY_PREFIX}((?:Dr|Mr|Mrs|Ms|Mx|Prof|Professor)\\.\\s+${NAME_TOKEN_PATTERN}(?:\\s+${NAME_TOKEN_PATTERN})?)${TEXT_BOUNDARY_SUFFIX}`,
+    'gu'
+  );
+  const matches = Array.from(text.matchAll(pattern));
+
+  return matches
+    .map((match) => {
+      const prefix = match[1] ?? '';
+      const surface = (match[2] ?? '').trim();
+      const start = (match.index ?? 0) + prefix.length;
+      const end = start + surface.length;
+      return {
+        surface,
+        normalized: normalizePhrase(surface),
+        start,
+        end,
+        detectionReason: 'titled_name' as const
       };
     })
     .filter((mention) => mention.normalized.length > 0)
@@ -324,8 +547,8 @@ const extractActionObjectMentionsWithCues = (
       .join('\\s+')
   );
   const actionPattern = new RegExp(
-    `\\b(?:${escapedCues.join('|')})\\s+(?:the|a|an|his|her|their)?\\s*([A-Za-z][A-Za-z0-9'_-]*(?:\\s+[A-Za-z][A-Za-z0-9'_-]*){0,2})`,
-    'gi'
+    `\\b(?:${escapedCues.join('|')})\\s+(?:the|a|an|his|her|their)?\\s*(${WORD_TOKEN_PATTERN}(?:\\s+${WORD_TOKEN_PATTERN}){0,2})`,
+    'giu'
   );
   const results: CandidateMention[] = [];
 
@@ -355,7 +578,8 @@ const extractActionObjectMentionsWithCues = (
       surface,
       normalized,
       start,
-      end
+      end,
+      detectionReason: 'action_object_candidate' as const
     };
 
     if (shouldSuppressMultiWordMention(text, mention)) {
@@ -374,6 +598,24 @@ const hasLeadingCueWord = (text: string, mentionStart: number): boolean => {
   const match = prefix.match(/([A-Za-z]+)$/);
   const prevWord = (match?.[1] ?? '').toLowerCase();
   return LEADING_ENTITY_CUE_WORDS.has(prevWord);
+};
+
+const hasCharacterContextCue = (
+  text: string,
+  mention: {
+    surface: string;
+    end: number;
+  }
+): boolean => {
+  if (/['’]s$/u.test(mention.surface)) {
+    return true;
+  }
+
+  const suffix = text.slice(mention.end, mention.end + 48);
+  const nextWord = suffix.match(/^\s+(?:['’]s\s+)?([\p{L}\p{M}][\p{L}\p{M}\p{N}'_-]*)/u)?.[1]
+    .toLowerCase();
+
+  return !!nextWord && CHARACTER_CONTEXT_CUE_WORDS.has(nextWord);
 };
 
 const looksLikeNumericOrRoman = (value: string): boolean => {
@@ -411,6 +653,69 @@ const shouldSuppressUnknownMention = (mention: {
   return false;
 };
 
+const isEligibleSingleWordUnknown = (params: {
+  text: string;
+  normalized: string;
+  mentionCount: number;
+  start: number;
+  surface: string;
+  end: number;
+  detectionReason: CandidateDetectionReason;
+}): boolean => {
+  const {text, normalized, mentionCount, start, surface, end, detectionReason} = params;
+  if (normalized.length < 4) {
+    return false;
+  }
+  if (
+    isNonEntityToken(normalized) ||
+    GENERIC_UNKNOWN_TERMS.has(normalized) ||
+    looksLikeNumericOrRoman(normalized)
+  ) {
+    return false;
+  }
+
+  if (detectionReason === 'action_object_candidate') {
+    return true;
+  }
+
+  if (mentionCount > 1) {
+    return true;
+  }
+
+  if (hasCharacterContextCue(text, {surface, end})) {
+    return true;
+  }
+
+  return hasLeadingCueWord(text, start);
+};
+
+const getUnknownDetectionReason = (params: {
+  source: ExtractProposalInput['source'];
+  wordCount: number;
+  mentionCount: number;
+  hasCue: boolean;
+  hasCharacterCue: boolean;
+  mentionReason: CandidateDetectionReason;
+}): CandidateDetectionReason | null => {
+  const {source, wordCount, mentionCount, hasCue, hasCharacterCue, mentionReason} = params;
+  if (mentionReason === 'titled_name' || mentionReason === 'action_object_candidate') {
+    return mentionReason;
+  }
+  if (mentionCount > 1) {
+    return 'repeated_unknown';
+  }
+  if (hasCue) {
+    return 'leading_entity_cue';
+  }
+  if (wordCount === 1 && hasCharacterCue) {
+    return 'character_context_candidate';
+  }
+  if (wordCount > 1 && source !== 'import') {
+    return 'multiword_proper_candidate';
+  }
+  return null;
+};
+
 const buildKnownEntityMap = (
   knownEntities: KnownEntityRef[]
 ): Map<string, KnownEntityRef[]> => {
@@ -426,103 +731,143 @@ const buildKnownEntityMap = (
   return map;
 };
 
+export function buildExtractedProposal(
+  input: ExtractProposalInput,
+  options: {
+    id?: string;
+    createdAt?: number;
+  } = {}
+): ExtractedProposal {
+  const knownEntityMap = buildKnownEntityMap(input.knownEntities);
+  const knownEntityNames = Array.from(knownEntityMap.keys());
+  const actionCues = [...ACTION_CUE_WORDS, ...(input.actionCues ?? [])];
+  const mentions = [
+    ...extractTitledNameMentions(input.text),
+    ...extractCandidateMentions(input.text),
+    ...extractActionObjectMentionsWithCues(input.text, actionCues)
+  ];
+  const dedupedMentions = new Map<string, CandidateMention>();
+  mentions.forEach((mention) => {
+    const key = `${mention.start}:${mention.end}:${mention.normalized}`;
+    if (!dedupedMentions.has(key)) {
+      dedupedMentions.set(key, mention);
+    }
+  });
+  const mergedMentions = Array.from(dedupedMentions.values());
+  const mentionCounts = new Map<string, number>();
+  mergedMentions.forEach((mention) => {
+    mentionCounts.set(
+      mention.normalized,
+      (mentionCounts.get(mention.normalized) ?? 0) + 1
+    );
+  });
+
+  const entities = mergedMentions
+    .map((mention) => {
+      const rawMatches = knownEntityMap.get(mention.normalized) ?? [];
+      const knownMatches = Array.from(
+        new Map(rawMatches.map((match) => [match.id, match])).values()
+      );
+      const known =
+        knownMatches.length === 1
+          ? knownMatches[0]
+          : undefined;
+      const mentionCount = mentionCounts.get(mention.normalized) ?? 0;
+      const hasCue = hasLeadingCueWord(input.text, mention.start);
+      const hasCharacterCue = hasCharacterContextCue(input.text, mention);
+      const wordCount = mention.surface.split(/\s+/).length;
+      const detectionReason =
+        known || knownMatches.length > 1
+          ? 'known_entity'
+          : getUnknownDetectionReason({
+              source: input.source,
+              wordCount,
+              mentionCount,
+              hasCue,
+              hasCharacterCue,
+              mentionReason: mention.detectionReason
+            });
+      const baseConfidence = known
+        ? 0.99
+        : Math.min(
+            0.92,
+            0.72 +
+              (wordCount > 1 ? 0.16 : 0) +
+              (mentionCount > 1 ? 0.16 : 0) +
+              (hasCue ? 0.1 : 0) +
+              (hasCharacterCue ? 0.1 : 0) +
+              (mention.detectionReason === 'titled_name' ? 0.1 : 0)
+          );
+      return {
+        surface: mention.surface,
+        normalized: mention.normalized,
+        entityId: known?.id,
+        entityType: known?.type,
+        candidateEntities:
+          knownMatches.length > 1
+            ? knownMatches.map((match) => ({
+                id: match.id,
+                name: match.name,
+                type: match.type
+              }))
+            : undefined,
+        confidence: baseConfidence,
+        span: {
+          start: mention.start,
+          end: mention.end
+        },
+        detectionReason
+      };
+    })
+    .filter((entityRef) => {
+      if (entityRef.entityId) {
+        return true;
+      }
+      if (!entityRef.detectionReason) {
+        return false;
+      }
+      if (isInProgressCanonPrefix(entityRef.normalized, knownEntityNames)) {
+        return false;
+      }
+
+      const wordCount = entityRef.surface.split(/\s+/).length;
+      if (wordCount > 1) {
+        return true;
+      }
+
+      const mentionCount = mentionCounts.get(entityRef.normalized) ?? 0;
+      return isEligibleSingleWordUnknown({
+        text: input.text,
+        normalized: entityRef.normalized,
+        mentionCount,
+        start: entityRef.span.start,
+        surface: entityRef.surface,
+        end: entityRef.span.end,
+        detectionReason: entityRef.detectionReason
+      });
+    })
+    .map((entityRef) => ({
+      ...entityRef,
+      detectionReason: entityRef.detectionReason ?? 'multiword_proper_candidate'
+    }));
+
+  const proposal: ExtractedProposal = {
+    id: options.id ?? crypto.randomUUID(),
+    projectId: input.projectId,
+    source: input.source,
+    text: input.text,
+    entities,
+    intents: [],
+    unresolvedSpans: [],
+    createdAt: options.createdAt ?? Date.now()
+  };
+
+  return proposal;
+}
+
 export class ConsistencyEngineService {
   async extractProposal(input: ExtractProposalInput): Promise<ExtractedProposal> {
-    const knownEntityMap = buildKnownEntityMap(input.knownEntities);
-    const actionCues = [...ACTION_CUE_WORDS, ...(input.actionCues ?? [])];
-    const mentions = [
-      ...extractCandidateMentions(input.text),
-      ...extractActionObjectMentionsWithCues(input.text, actionCues)
-    ];
-    const dedupedMentions = new Map<string, CandidateMention>();
-    mentions.forEach((mention) => {
-      const key = `${mention.start}:${mention.end}:${mention.normalized}`;
-      if (!dedupedMentions.has(key)) {
-        dedupedMentions.set(key, mention);
-      }
-    });
-    const mergedMentions = Array.from(dedupedMentions.values());
-    const mentionCounts = new Map<string, number>();
-    mergedMentions.forEach((mention) => {
-      mentionCounts.set(
-        mention.normalized,
-        (mentionCounts.get(mention.normalized) ?? 0) + 1
-      );
-    });
-
-    const entities = mergedMentions
-      .map((mention) => {
-        const rawMatches = knownEntityMap.get(mention.normalized) ?? [];
-        const knownMatches = Array.from(
-          new Map(rawMatches.map((match) => [match.id, match])).values()
-        );
-        const known =
-          knownMatches.length === 1
-            ? knownMatches[0]
-            : undefined;
-        const mentionCount = mentionCounts.get(mention.normalized) ?? 0;
-        const hasCue = hasLeadingCueWord(input.text, mention.start);
-        const baseConfidence = known
-          ? 0.99
-          : Math.min(
-              0.92,
-              0.72 +
-                (mention.surface.split(/\s+/).length > 1 ? 0.16 : 0) +
-                (mentionCount > 1 ? 0.16 : 0) +
-                (hasCue ? 0.1 : 0)
-            );
-        return {
-          surface: mention.surface,
-          normalized: mention.normalized,
-          entityId: known?.id,
-          entityType: known?.type,
-          candidateEntities:
-            knownMatches.length > 1
-              ? knownMatches.map((match) => ({
-                  id: match.id,
-                  name: match.name,
-                  type: match.type
-                }))
-              : undefined,
-          confidence: baseConfidence,
-          span: {
-            start: mention.start,
-            end: mention.end
-          }
-        };
-      })
-      .filter((entityRef) => {
-        if (entityRef.entityId) {
-          return true;
-        }
-
-        const wordCount = entityRef.surface.split(/\s+/).length;
-        if (wordCount > 1) {
-          return true;
-        }
-
-        if (entityRef.normalized.length < 4) {
-          return false;
-        }
-
-        const mentionCount = mentionCounts.get(entityRef.normalized) ?? 0;
-        return (
-          mentionCount > 0 ||
-          hasLeadingCueWord(input.text, entityRef.span.start)
-        );
-      });
-
-    const proposal: ExtractedProposal = {
-      id: crypto.randomUUID(),
-      projectId: input.projectId,
-      source: input.source,
-      text: input.text,
-      entities,
-      intents: [],
-      unresolvedSpans: [],
-      createdAt: Date.now()
-    };
-
+    const proposal = buildExtractedProposal(input);
     await saveProposal(proposal);
     return proposal;
   }
@@ -549,7 +894,8 @@ export class ConsistencyEngineService {
         severity: 'blocking',
         message: `Entity '${mention.surface}' not found. Create it before saving.`,
         span: mention.span,
-        surface: mention.surface
+        surface: mention.surface,
+        detectionReason: mention.detectionReason
       })
     );
 
@@ -574,6 +920,7 @@ export class ConsistencyEngineService {
           'Clarify the target entity in this scene.',
         span: mention.span,
         surface: mention.surface,
+        detectionReason: mention.detectionReason,
         relatedEntities
       });
     });

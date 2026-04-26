@@ -42,6 +42,7 @@ const DEFAULT_AI_SETTINGS: ProjectAISettings = {
   },
   inspectorSettings: {
     enableAIConsultation: true,
+    reviewEngineMode: 'deterministic',
     maxConsultationsPerDay: 20,
     maxContextChars: 1800,
     maxResponseTokens: 500,
@@ -51,6 +52,7 @@ const DEFAULT_AI_SETTINGS: ProjectAISettings = {
 
 const DEFAULT_INSPECTOR_SETTINGS: InspectorSettings = {
   enableAIConsultation: true,
+  reviewEngineMode: 'deterministic',
   maxConsultationsPerDay: 20,
   maxContextChars: 1800,
   maxResponseTokens: 500,
@@ -157,6 +159,10 @@ function ensureAISettings(settings: ProjectSettings): ProjectSettings {
   aiSettings.inspectorSettings = {
     ...DEFAULT_INSPECTOR_SETTINGS,
     ...(aiSettings.inspectorSettings ?? {}),
+    reviewEngineMode:
+      aiSettings.inspectorSettings?.reviewEngineMode === 'local-ai-preview'
+        ? 'local-ai-preview'
+        : 'deterministic',
     maxConsultationsPerDay: Math.max(
       1,
       Math.floor(aiSettings.inspectorSettings?.maxConsultationsPerDay ?? 20)

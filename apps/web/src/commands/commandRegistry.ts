@@ -9,7 +9,7 @@ export interface AppCommand {
   keywords: string[];
   description?: string;
   shortcut?: string;
-  run: () => void;
+  run: (query?: string) => void;
 }
 
 interface CreateAppCommandsOptions {
@@ -103,6 +103,20 @@ export const createAppCommands = ({
       keywords: ['save', 'scene'],
       shortcut: 'Cmd/Ctrl+S',
       run: () => dispatchWorkspaceCommand('save-scene')
+    },
+    {
+      id: 'workspace-open-scratchpad',
+      label: 'Workspace: Open Scratchpad',
+      section: 'Workspace',
+      keywords: ['scratchpad', 'notes', 'planning', 'modal'],
+      run: () => dispatchWorkspaceCommand('open-scratchpad')
+    },
+    {
+      id: 'workspace-open-corkboard',
+      label: 'Workspace: Open Corkboard',
+      section: 'Workspace',
+      keywords: ['corkboard', 'cards', 'outline', 'chapters', 'planning'],
+      run: () => dispatchWorkspaceCommand('open-corkboard')
     },
     {
       id: 'workspace-toggle-left-drawer',

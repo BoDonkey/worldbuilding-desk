@@ -913,7 +913,7 @@ function WorldBibleRoute() {
     const target = entities.find((entity) => entity.id === focusEntityId);
     if (!target) return;
     setActiveTab(target.categoryId);
-    setViewMode('review');
+    setViewMode('category');
     handleEdit(target);
     focusedEntityKeyRef.current = focusKey;
   }, [entities, handleEdit, location.key, location.state]);

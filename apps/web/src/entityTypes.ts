@@ -31,6 +31,38 @@ export interface WritingDocument {
   updatedAt: number;
 }
 
+export interface ScratchpadDocument {
+  id: string;
+  projectId: string;
+  content: string;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export type ChapterCardStatus = 'planned' | 'draft' | 'written';
+
+export interface PlotPoint {
+  id: string;
+  chapterCardId: string;
+  title: string;
+  notes?: string;
+  order: number;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface ChapterCard {
+  id: string;
+  projectId: string;
+  title: string;
+  summary: string;
+  status: ChapterCardStatus;
+  order: number;
+  plotPoints: PlotPoint[];
+  createdAt: number;
+  updatedAt: number;
+}
+
 export type SystemHistoryCategory =
   | 'scene'
   | 'consistency'
@@ -90,6 +122,7 @@ export interface ProjectAISettings {
 
 export interface InspectorSettings {
   enableAIConsultation: boolean;
+  reviewEngineMode?: 'deterministic' | 'local-ai-preview';
   maxConsultationsPerDay: number;
   maxContextChars: number;
   maxResponseTokens: number;
@@ -230,6 +263,56 @@ export interface CharacterSheet {
   notes?: string;
   createdAt: number;
   updatedAt: number;
+}
+
+export type StateMutationCommand =
+  | {
+      type: 'equip_item' | 'unequip_item' | 'consume_item';
+      actorId: string;
+      itemName: string;
+      quantity?: number;
+    }
+  | {
+      type: 'move_entity';
+      actorId: string;
+      destination: string;
+    }
+  | {
+      type: 'apply_status' | 'remove_status';
+      actorId: string;
+      statusName: string;
+    }
+  | {
+      type: 'increment_stat' | 'decrement_stat';
+      actorId: string;
+      statDefinitionId: string;
+      amount: number;
+    }
+  | {
+      type: 'resource_change';
+      actorId: string;
+      resourceDefinitionId: string;
+      amount: number;
+    }
+  | {
+      type: 'level_up';
+      actorId: string;
+      levels: number;
+    };
+
+export interface StateMutationEvent {
+  id: string;
+  projectId: string;
+  sceneId: string;
+  sceneTitle?: string;
+  sceneOrder?: number;
+  sourceRevision: number;
+  sourceHash: string;
+  status: 'accepted' | 'invalidated';
+  commands: StateMutationCommand[];
+  createdAt: number;
+  invalidatedAt?: number;
+  invalidationReason?: string;
 }
 
 export interface EntityCategory {

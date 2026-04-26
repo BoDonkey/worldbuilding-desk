@@ -245,7 +245,6 @@ export function useWorkspaceProjectData({
       setToolbarButtons(buttons);
 
       refreshSystemHistory();
-      initializeEditorState(docs[0] ?? null);
     })();
 
     return () => {

@@ -73,7 +73,7 @@ function SettingsRoute() {
     return () => {
       cancelled = true;
     };
-  }, [activeProject]);
+  }, [activeProject, setProjectSettings]);
 
   const handleAddStyle = async () => {
     if (!settings || !newStyleName.trim()) return;

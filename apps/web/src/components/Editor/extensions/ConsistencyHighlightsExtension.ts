@@ -2,6 +2,7 @@ import {Extension} from '@tiptap/core';
 import {Plugin, PluginKey} from 'prosemirror-state';
 import {Decoration, DecorationSet} from 'prosemirror-view';
 import type {EditorState} from 'prosemirror-state';
+import {findTextMatches} from '../../../services/consistency/textMatcher';
 
 export interface ConsistencyHighlightIssue {
   id: string;
@@ -11,43 +12,25 @@ export interface ConsistencyHighlightIssue {
 }
 
 const consistencyHighlightsKey = new PluginKey('consistency-highlights');
+type HighlightSource<T> = T[] | (() => T[]);
 
-const normalize = (value: string): string =>
-  value
-    .trim()
-    .toLowerCase()
-    .replace(/['’]s\b/g, '')
-    .replace(/s['’]\b/g, 's')
-    .replace(/\s+/g, ' ')
-    .trim();
-
-const escapeRegex = (value: string): string =>
-  value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const resolveHighlightSource = <T,>(source: HighlightSource<T>): T[] =>
+  typeof source === 'function' ? source() : source;
 
 export const createConsistencyHighlightsExtension = (
-  issues: ConsistencyHighlightIssue[]
+  issues: HighlightSource<ConsistencyHighlightIssue>
 ) =>
   Extension.create({
     name: 'consistencyHighlights',
 
     addProseMirrorPlugins() {
-      const normalizedIssues = issues
-        .map((issue) => ({
-          ...issue,
-          normalizedSurface: normalize(issue.surface),
-          matcher: new RegExp(
-            `(^|[^\\p{L}\\p{N}_])(${escapeRegex(normalize(issue.surface))})(?:['’]s|s['’])?(?=$|[^\\p{L}\\p{N}_])`,
-            'giu'
-          )
-        }))
-        .filter((issue) => issue.normalizedSurface.length > 0);
-
       return [
         new Plugin({
           key: consistencyHighlightsKey,
           props: {
             decorations(state: EditorState) {
-              if (normalizedIssues.length === 0) {
+              const currentIssues = resolveHighlightSource(issues);
+              if (currentIssues.length === 0) {
                 return DecorationSet.empty;
               }
 
@@ -61,31 +44,29 @@ export const createConsistencyHighlightsExtension = (
                   return;
                 }
 
-                const text = node.text;
-                const normalizedText = text
-                  .toLowerCase()
-                  .replace(/\s+/g, ' ');
-
-                normalizedIssues.forEach((issue) => {
-                  issue.matcher.lastIndex = 0;
-                  let match: RegExpExecArray | null = null;
-                  while ((match = issue.matcher.exec(normalizedText))) {
-                    const prefix = match[1] ?? '';
-                    const matchedText = match[0] ?? '';
-                    const matchIndex = match.index + prefix.length;
-                    const from = pos + matchIndex;
-                    const to = from + (matchedText.length - prefix.length);
-                    decorations.push(
-                      Decoration.inline(from, to, {
-                        class:
-                          issue.severity === 'blocking'
-                            ? 'consistency-highlight consistency-highlight-blocking'
-                            : 'consistency-highlight consistency-highlight-warning',
-                        'data-consistency-id': issue.id,
-                        title: issue.message
-                      })
-                    );
-                  }
+                findTextMatches(
+                  node.text,
+                  currentIssues.map((issue) => ({
+                    id: issue.id,
+                    surface: issue.surface,
+                    kind: 'review' as const,
+                    metadata: {issue}
+                  }))
+                ).forEach((match) => {
+                  const issue = match.pattern.metadata?.issue as
+                    | ConsistencyHighlightIssue
+                    | undefined;
+                  if (!issue) return;
+                  decorations.push(
+                    Decoration.inline(pos + match.from, pos + match.to, {
+                      class:
+                        issue.severity === 'blocking'
+                          ? 'consistency-highlight consistency-highlight-blocking'
+                          : 'consistency-highlight consistency-highlight-warning',
+                      'data-consistency-id': issue.id,
+                      title: issue.message
+                    })
+                  );
                 });
               });
 

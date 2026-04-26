@@ -1,6 +1,6 @@
 # Project Backup Smoke Test
 
-Last updated: 2026-02-24
+Last updated: 2026-04-25
 
 ## Goal
 
@@ -10,6 +10,7 @@ Verify project backup export/import round-trip safety:
 - Validation check passes on exported backup.
 - Import succeeds in both `new` and `merge` modes.
 - Count comparison matches exported snapshot data.
+- Scratchpad and Corkboard planning data survive export/import round-trip.
 
 ## Preconditions
 
@@ -22,6 +23,19 @@ Verify project backup export/import round-trip safety:
 - world bible entries/categories
 - characters and character sheets
 - compendium and/or settlement data
+
+3. Before exporting, seed planning data in the same project:
+- add a non-trivial Scratchpad note
+- add at least two Corkboard cards
+- add at least one plot point to each Corkboard card
+
+Suggested seed:
+- Scratchpad:
+  - one paragraph of loose planning notes
+  - one short checklist or question list
+- Corkboard:
+  - Card 1 with title, summary, status, and two plot points
+  - Card 2 with title, summary, status, and one plot point
 
 ## Scenario A: Export + Validate
 
@@ -66,11 +80,49 @@ Expected:
 2. `Writing Workspace`:
 - scenes exist and open correctly.
 
-3. `Characters` and `Character Sheets`:
+3. `Scratchpad`:
+- open the quick-access Scratchpad modal or context-drawer Scratchpad
+- confirm the seeded note content is present
+- confirm formatting/line breaks are preserved closely enough for normal note-taking use
+
+4. `Corkboard`:
+- open Corkboard from the workspace
+- confirm card count matches the exported project
+- confirm card order matches the exported project
+- confirm each seeded card keeps:
+  - title
+  - summary
+  - status
+  - plot-point count
+- confirm plot-point order and notes survive import
+
+5. `Scratchpad` + `Corkboard` editing sanity:
+- make a small edit after import
+- confirm autosave still works normally after restored data loads
+
+6. `Characters` and `Character Sheets`:
 - records present and editable.
 
-4. `Compendium`:
+7. `Compendium`:
 - entries/milestones/recipes/progress logs persist.
+
+## New-Project Round-Trip Signals
+
+Expected:
+- Imported project shows `Count check passed.`
+- Scratchpad content is present in the imported project.
+- Corkboard cards and plot points are present in the imported project.
+
+## Merge-Import Spot Checks
+
+When merging into an existing project, confirm:
+- incoming Scratchpad content behaves predictably for the chosen project model
+- incoming Corkboard cards appear and remain editable
+- no obvious silent loss occurs in planning data even if merge creates duplicate-looking manuscript/canon data elsewhere
+
+Note:
+- Scratchpad is project-scoped singleton note data, so the important check is "not silently lost."
+- Corkboard cards should import as project-scoped planning records and remain reorderable/editable after merge.
 
 ## Failure Signals
 
@@ -78,3 +130,5 @@ Expected:
 2. Import applies but key data sections are empty unexpectedly.
 3. Count check mismatch for unchanged new-project import.
 4. Runtime errors during import/export actions.
+5. Scratchpad restores as empty or partially truncated after import.
+6. Corkboard cards import without plot points, wrong ordering, or missing summaries/status values.

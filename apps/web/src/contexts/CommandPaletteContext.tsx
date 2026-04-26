@@ -57,41 +57,62 @@ export const CommandPaletteProvider = ({children}: CommandPaletteProviderProps) 
         return acc;
       }, {});
 
+      const summarizeScene = (html: string) =>
+        html
+          .replace(/<br\s*\/?>/gi, ' ')
+          .replace(/<\/p>/gi, ' ')
+          .replace(/<[^>]+>/g, ' ')
+          .replace(/\s+/g, ' ')
+          .trim()
+          .slice(0, 180);
+
       const nextSearchCommands: AppCommand[] = [
         ...documents
           .slice()
           .sort((a, b) => b.updatedAt - a.updatedAt)
-          .map((doc) => ({
-            id: `search-scene-${doc.id}`,
-            label: `Open Scene: ${doc.title || 'Untitled scene'}`,
-            description: 'Writing Workspace',
-            section: 'Search' as const,
-            keywords: [
-              'scene',
-              'workspace',
-              doc.title || '',
-              doc.content
-                .replace(/<[^>]+>/g, ' ')
-                .replace(/\s+/g, ' ')
-                .trim()
-                .slice(0, 240)
-            ],
-            run: () =>
-              navigate('/workspace', {
-                state: {focusDocumentId: doc.id}
-              })
-          })),
+          .map((doc) => {
+            const excerpt = summarizeScene(doc.content);
+            const fullText = doc.content
+              .replace(/<br\s*\/?>/gi, ' ')
+              .replace(/<\/p>/gi, ' ')
+              .replace(/<[^>]+>/g, ' ')
+              .replace(/\s+/g, ' ')
+              .trim();
+            return {
+              id: `search-scene-${doc.id}`,
+              label: doc.title || 'Untitled scene',
+              description: excerpt
+                ? `Scene · ${excerpt}`
+                : 'Scene · Writing Workspace',
+              section: 'Search' as const,
+              keywords: ['scene', 'workspace', doc.title || '', fullText],
+              run: (query?: string) =>
+                navigate('/workspace', {
+                  state: {
+                    focusDocumentId: doc.id,
+                    focusQuery: query?.trim() || undefined
+                  }
+                })
+            };
+          }),
         ...entities
           .slice()
           .sort((a, b) => b.updatedAt - a.updatedAt)
           .map((entity) => {
             const aliasesForEntity = aliasesByEntityId[entity.id] ?? [];
+            const fieldSummary = Object.values(entity.fields)
+              .filter((value): value is string => typeof value === 'string')
+              .join(' ')
+              .replace(/\s+/g, ' ')
+              .trim()
+              .slice(0, 140);
             return {
               id: `search-world-${entity.id}`,
-              label: `Open World Record: ${entity.name}`,
-              description:
-                aliasesForEntity.length > 0
-                  ? `World Bible · Aliases: ${aliasesForEntity.slice(0, 3).join(', ')}`
+              label: entity.name,
+              description: aliasesForEntity.length > 0
+                ? `World Bible · Aliases: ${aliasesForEntity.slice(0, 3).join(', ')}${fieldSummary ? ` · ${fieldSummary}` : ''}`
+                : fieldSummary
+                  ? `World Bible · ${fieldSummary}`
                   : 'World Bible',
               section: 'Search' as const,
               keywords: [
@@ -100,9 +121,7 @@ export const CommandPaletteProvider = ({children}: CommandPaletteProviderProps) 
                 'entity',
                 entity.name,
                 ...aliasesForEntity,
-                ...Object.values(entity.fields)
-                  .filter((value): value is string => typeof value === 'string')
-                  .slice(0, 6)
+                fieldSummary
               ],
               run: () =>
                 navigate('/world-bible', {
@@ -123,11 +142,13 @@ export const CommandPaletteProvider = ({children}: CommandPaletteProviderProps) 
 
     window.addEventListener('wbd:entity-records-changed', reload);
     window.addEventListener('wbd:alias-records-changed', reload);
+    window.addEventListener('wbd:writing-records-changed', reload);
 
     return () => {
       cancelled = true;
       window.removeEventListener('wbd:entity-records-changed', reload);
       window.removeEventListener('wbd:alias-records-changed', reload);
+      window.removeEventListener('wbd:writing-records-changed', reload);
     };
   }, [activeProject, isOpen, navigate]);
 

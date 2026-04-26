@@ -28,6 +28,7 @@ interface AIContextType {
 interface EditorWithAIProps {
   documentId: string;
   content: string;
+  focusQuery?: string | null;
   onChange: (content: string) => void;
   onWordCountChange?: (count: number) => void;
   consistencyHighlights?: ConsistencyHighlightIssue[];
@@ -70,6 +71,7 @@ interface SelectionBubbleState {
 export const EditorWithAI: React.FC<EditorWithAIProps> = ({
   documentId,
   content,
+  focusQuery = null,
   onChange,
   onWordCountChange,
   consistencyHighlights = [],
@@ -103,6 +105,8 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
     top: number;
   } | null>(null);
   const editorRef = useRef<TipTapEditorInstance | null>(null);
+  const consistencyHighlightsRef = useRef(consistencyHighlights);
+  const loreHighlightsRef = useRef<LoreHighlightEntry[]>([]);
 
   const loreHighlights = React.useMemo<LoreHighlightEntry[]>(() => {
     const characterEntries = Object.values(selectionQuickSnippets?.characters ?? {}).map(
@@ -122,6 +126,14 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
     return [...characterEntries, ...entityEntries];
   }, [selectionQuickSnippets]);
 
+  useEffect(() => {
+    consistencyHighlightsRef.current = consistencyHighlights;
+    loreHighlightsRef.current = loreHighlights;
+    const editor = editorRef.current;
+    if (!editor || editor.isDestroyed) return;
+    editor.view.dispatch(editor.state.tr.setMeta('highlight-refresh', Date.now()));
+  }, [consistencyHighlights, loreHighlights]);
+
   const loreRecordById = React.useMemo(() => {
     const records = [
       ...Object.values(selectionQuickSnippets?.characters ?? {}),
@@ -129,18 +141,6 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
     ];
     return new Map(records.map((entry) => [entry.lore.id, entry.lore]));
   }, [selectionQuickSnippets]);
-
-  const editorRenderKey = React.useMemo(() => {
-    const consistencyKey = consistencyHighlights
-      .map((issue) => `${issue.id}:${issue.surface}:${issue.severity}`)
-      .sort()
-      .join('|');
-    const loreKey = loreHighlights
-      .map((entry) => `${entry.id}:${entry.surface}:${entry.type}`)
-      .sort()
-      .join('|');
-    return `${documentId}::${consistencyKey}::${loreKey}`;
-  }, [consistencyHighlights, documentId, loreHighlights]);
 
   // Merge AIExpandMenu with config extensions
   const mergedConfig = React.useMemo(() => {
@@ -152,11 +152,14 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
       extensions: [
       ...config.extensions,
       AIExpandMenu,
-      createConsistencyHighlightsExtension(consistencyHighlights),
-        createLoreHighlightsExtension(loreHighlights, consistencyHighlights)
+      createConsistencyHighlightsExtension(() => consistencyHighlightsRef.current),
+        createLoreHighlightsExtension(
+          () => loreHighlightsRef.current,
+          () => consistencyHighlightsRef.current
+        )
       ]
     };
-  }, [config, consistencyHighlights, loreHighlights]);
+  }, [config]);
 
   useEffect(() => {
     const handleAIRequest = (event: Event) => {
@@ -334,11 +337,40 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
     };
   }, [editorReadyToken, updateSelectionBubble]);
 
+  useEffect(() => {
+    const query = focusQuery?.trim();
+    const editor = editorRef.current;
+    if (!editor || !query) return;
+
+    const loweredQuery = query.toLowerCase();
+    let match: {from: number; to: number} | null = null;
+
+    editor.state.doc.descendants((node, pos) => {
+      if (match || !node.isText || !node.text) {
+        return;
+      }
+      const index = node.text.toLowerCase().indexOf(loweredQuery);
+      if (index < 0) {
+        return;
+      }
+      match = {
+        from: pos + index,
+        to: pos + index + query.length
+      };
+    });
+
+    if (!match) return;
+
+    editor.commands.focus();
+    editor.commands.setTextSelection(match);
+    editor.view.dispatch(editor.state.tr.scrollIntoView());
+  }, [documentId, editorReadyToken, focusQuery]);
+
   return (
     <div className={styles.container}>
       <div className={styles.editor}>
         <TipTapEditor
-          key={editorRenderKey}
+          key={documentId}
           content={content}
           onChange={onChange}
           onWordCountChange={onWordCountChange}

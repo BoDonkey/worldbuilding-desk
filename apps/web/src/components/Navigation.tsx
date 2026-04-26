@@ -1,6 +1,7 @@
 import {useCallback, useEffect, useMemo, useRef, useState, type FC} from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { ThemeToggle } from './ThemeToggle';
+import {useCommandPalette} from '../contexts/commandPaletteApi';
 import {getEntitiesByProject} from '../entityStorage';
 import {getCompendiumEntriesByProject} from '../services/compendium';
 import {buildWorldReviewQueue, getAliasesByProject} from '../services/consistency';
@@ -24,6 +25,7 @@ export const Navigation: FC<NavigationProps> = ({
   isRailCollapsed = false,
   onToggleRail
 }) => {
+  const {openPalette} = useCommandPalette();
   const activeProject = useAppStore((s) => s.activeProject);
   const projectSettings = useAppStore((s) => s.projectSettings);
   const location = useLocation();
@@ -123,6 +125,15 @@ export const Navigation: FC<NavigationProps> = ({
           <div className={styles.brand} title='Worldbuilding Desk'>
             WBD
           </div>
+          <button
+            type='button'
+            className={styles.searchLauncher}
+            onClick={openPalette}
+            title='Search scenes and world records'
+          >
+            <span className={styles.icon}>SR</span>
+            <span className={styles.label}>Search</span>
+          </button>
           <nav className={styles.railLinks} aria-label='Primary navigation'>
             {navItems.map((item) => (
               <NavLink
@@ -210,6 +221,17 @@ export const Navigation: FC<NavigationProps> = ({
           >
             <h2 className={styles.mobileMenuTitle}>Navigation</h2>
             <div className={styles.mobileMenuLinks}>
+              <button
+                type='button'
+                className={styles.mobileMenuAction}
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  openPalette();
+                }}
+              >
+                <span>Search scenes and world records</span>
+                <span className={styles.mobileMenuActionMeta}>Cmd/Ctrl+K</span>
+              </button>
               {navItems.map((item) => (
                 <NavLink
                   key={`mobile-${item.to}`}

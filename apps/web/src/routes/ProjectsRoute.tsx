@@ -74,6 +74,28 @@ function ProjectsRoute() {
   const importFileInputRef = useRef<HTMLInputElement | null>(null);
   const validateFileInputRef = useRef<HTMLInputElement | null>(null);
 
+  const openHiddenFileInput = (
+    input: HTMLInputElement | null,
+    failureMessage: string
+  ) => {
+    if (!input) {
+      setFeedback({tone: 'error', message: failureMessage});
+      return;
+    }
+
+    try {
+      if (typeof input.showPicker === 'function') {
+        input.showPicker();
+        return;
+      }
+      input.click();
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : failureMessage;
+      setFeedback({tone: 'error', message});
+    }
+  };
+
   const loadProjects = useCallback(async () => {
     const all = await getAllProjects();
     setProjects(all);
@@ -325,11 +347,17 @@ function ProjectsRoute() {
   };
 
   const handleSelectBackupFile = () => {
-    importFileInputRef.current?.click();
+    openHiddenFileInput(
+      importFileInputRef.current,
+      'Could not open the backup import file picker.'
+    );
   };
 
   const handleSelectValidateFile = () => {
-    validateFileInputRef.current?.click();
+    openHiddenFileInput(
+      validateFileInputRef.current,
+      'Could not open the backup validation file picker.'
+    );
   };
 
   const handleBackupFileChange = async (event: ChangeEvent<HTMLInputElement>) => {
@@ -537,7 +565,9 @@ function ProjectsRoute() {
               type='file'
               accept='.zip,application/zip'
               onChange={(e) => void handleBackupFileChange(e)}
-              style={{display: 'none'}}
+              className={styles.hiddenFileInput}
+              tabIndex={-1}
+              aria-hidden='true'
             />
             <button
               type='button'
@@ -551,7 +581,9 @@ function ProjectsRoute() {
               type='file'
               accept='.zip,application/zip'
               onChange={(e) => void handleValidateBackupFile(e)}
-              style={{display: 'none'}}
+              className={styles.hiddenFileInput}
+              tabIndex={-1}
+              aria-hidden='true'
             />
           </div>
           <p>

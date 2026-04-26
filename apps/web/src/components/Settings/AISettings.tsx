@@ -299,6 +299,7 @@ export const AISettings: React.FC<AISettingsProps> = ({
     defaultToolIdsByMode[defaultsMode] ?? defaultToolIds;
   const inspectorSettings = aiSettings.inspectorSettings ?? {
     enableAIConsultation: true,
+    reviewEngineMode: 'deterministic' as const,
     maxConsultationsPerDay: 20,
     maxContextChars: 1800,
     maxResponseTokens: 500,
@@ -682,6 +683,33 @@ export const AISettings: React.FC<AISettingsProps> = ({
 
       <div className={styles.toolsSection}>
         <h3 className={styles.toolsHeading}>Lore Inspector AI Guardrails</h3>
+        <div className={styles.field}>
+          <label className={styles.label}>Project review engine</label>
+          <select
+            className={styles.input}
+            value={inspectorSettings.reviewEngineMode ?? 'deterministic'}
+            onChange={(e) =>
+              onSettingsChange({
+                ...aiSettings,
+                inspectorSettings: {
+                  ...inspectorSettings,
+                  reviewEngineMode:
+                    e.target.value === 'local-ai-preview'
+                      ? 'local-ai-preview'
+                      : 'deterministic'
+                }
+              })
+            }
+          >
+            <option value='deterministic'>Deterministic review</option>
+            <option value='local-ai-preview'>Local AI review annotations</option>
+          </select>
+          <p className={styles.help}>
+            Local AI mode uses the Ollama model configured below, keeps deterministic
+            validation as the source of truth, and only enriches the per-issue review
+            annotation layer.
+          </p>
+        </div>
         <label className={styles.field}>
           <span className={styles.label}>
             <input

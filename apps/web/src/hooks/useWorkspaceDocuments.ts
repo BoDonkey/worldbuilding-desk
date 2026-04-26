@@ -94,6 +94,9 @@ export const useWorkspaceDocuments = ({
   setFeedback,
   addSystemHistory
 }: UseWorkspaceDocumentsParams) => {
+  const selectionStorageKey = activeProject
+    ? `workspaceSelection:${activeProject.id}`
+    : null;
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [selectedCreatedAt, setSelectedCreatedAt] = useState<number | null>(null);
   const [title, setTitle] = useState('');
@@ -159,6 +162,43 @@ export const useWorkspaceDocuments = ({
     setSaveStatus('idle');
     setWordCount(countWords(doc.content));
   }, []);
+
+  useEffect(() => {
+    if (!selectionStorageKey) {
+      return;
+    }
+    if (!selectedId) {
+      localStorage.removeItem(selectionStorageKey);
+      return;
+    }
+    localStorage.setItem(selectionStorageKey, selectedId);
+  }, [selectionStorageKey, selectedId]);
+
+  useEffect(() => {
+    if (!activeProject) {
+      return;
+    }
+    if (selectedId) {
+      return;
+    }
+    if (documents.length === 0) {
+      return;
+    }
+
+    const persistedSelectedId = selectionStorageKey
+      ? localStorage.getItem(selectionStorageKey)
+      : null;
+    const persistedDocument = persistedSelectedId
+      ? documents.find((doc) => doc.id === persistedSelectedId) ?? null
+      : null;
+
+    if (persistedDocument) {
+      initializeEditorState(persistedDocument);
+      return;
+    }
+
+    initializeEditorState(documents[0]);
+  }, [activeProject, documents, initializeEditorState, selectedId, selectionStorageKey]);
 
   const handleNewDocument = useCallback(async () => {
     if (!activeProject) return;
@@ -564,7 +604,8 @@ export const useWorkspaceDocuments = ({
       }
       void save(doc, {
         source: 'workspace-autosave',
-        consistencyMode: resolveDocumentConsistencyMode(doc)
+        consistencyMode:
+          doc.consistencyReviewMode === 'deferred' ? 'balanced' : 'lenient'
       }).catch((error) => {
         const message =
           error instanceof Error ? error.message : 'Unable to save scene.';

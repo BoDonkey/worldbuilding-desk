@@ -51,7 +51,7 @@ export function useWorkspaceLoreSnippets({
       input
         .trim()
         .toLowerCase()
-        .replace(/[^\w\s'-]/g, ' ')
+        .replace(/[^\p{L}\p{N}\s'-]/gu, ' ')
         .replace(/\s+/g, ' ')
         .trim();
 

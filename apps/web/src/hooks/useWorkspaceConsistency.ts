@@ -16,11 +16,14 @@ import {upsertCompendiumEntryFromEntity} from '../services/compendium';
 import type {RAGProvider} from '../services/rag/RAGService';
 import type {
   ConsistencyAlias,
-  ConsistencyEngineService,
   GuardrailIssue
 } from '../services/consistency';
 import {findCanonContradictions, saveAlias} from '../services/consistency';
+import type {WorldEngine} from '../services/worldEngine';
+import type {WorldEngineStatus} from '../services/worldEngine';
+import type {ReviewIssueAnnotation} from '../services/worldEngine';
 import type {ShodhMemoryProvider} from '../services/shodh/ShodhMemoryService';
+import {normalizeCanonText} from '../services/consistency/textMatcher';
 import {htmlToPlainText} from '../utils/textHelpers';
 
 type FeedbackState = {
@@ -37,6 +40,7 @@ interface ConsistencyReviewItem {
   sceneId: string;
   sceneTitle: string;
   issue: GuardrailIssue;
+  reviewAnnotation?: ReviewIssueAnnotation;
 }
 
 interface ConsistencyPopoverState {
@@ -44,6 +48,20 @@ interface ConsistencyPopoverState {
   surface: string;
   left: number;
   top: number;
+}
+
+export type ReviewReadinessState =
+  | 'idle'
+  | 'running'
+  | 'ready'
+  | 'attention'
+  | 'unavailable';
+
+export interface ReviewReadiness {
+  state: ReviewReadinessState;
+  count: number;
+  label: string;
+  detail: string;
 }
 
 interface UseWorkspaceConsistencyParams {
@@ -57,10 +75,11 @@ interface UseWorkspaceConsistencyParams {
   aliases: ConsistencyAlias[];
   setAliases: Dispatch<SetStateAction<ConsistencyAlias[]>>;
   characters: Character[];
+  selectedDocumentId: string | null;
   projectSettings: ProjectSettings | null;
   setProjectSettings: Dispatch<SetStateAction<ProjectSettings | null>> | ((settings: ProjectSettings | null) => void);
   resolvedActionCues: string[];
-  consistencyEngine: ConsistencyEngineService;
+  worldEngine: WorldEngine;
   ragService: RAGProvider | null;
   shodhService: ShodhMemoryProvider | null;
   refreshMemories: () => Promise<void>;
@@ -81,25 +100,35 @@ const downgradeUnknownIssuesToWarnings = (
   issues: GuardrailIssue[]
 ): GuardrailIssue[] =>
   issues.map((issue) =>
-    issue.code === 'UNKNOWN_ENTITY'
+        issue.code === 'UNKNOWN_ENTITY'
       ? {
           ...issue,
           severity: 'warning',
           message: issue.surface
-            ? `Review "${issue.surface}" before canonizing this scene.`
-            : 'Review this unknown entity before canonizing this scene.'
+            ? `Review "${issue.surface}" when you are ready to add or ignore this scene context.`
+            : 'Review this name or world term when you are ready to add or ignore it.'
         }
       : issue
   );
 
-const canonicalizeUnknownSurface = (value: string): string =>
-  value
-    .trim()
-    .toLowerCase()
-    .replace(/['’]s\b/g, '')
-    .replace(/s['’]\b/g, 's')
-    .replace(/\s+/g, ' ')
-    .trim();
+const canonicalizeUnknownSurface = normalizeCanonText;
+
+const getReviewIssueKey = (issue: GuardrailIssue): string =>
+  [
+    issue.code,
+    canonicalizeUnknownSurface(issue.surface ?? issue.message)
+  ].join(':');
+
+const getReviewSourceForDocument = (
+  doc: WritingDocument
+): 'workspace-save' | 'import' =>
+  doc.consistencyReviewMode === 'deferred' ? 'import' : 'workspace-save';
+
+const makeReviewItemId = (
+  docId: string,
+  issue: GuardrailIssue,
+  index: number
+): string => `${docId}:${getReviewIssueKey(issue)}:${index}`;
 
 export const useWorkspaceConsistency = ({
   activeProject,
@@ -112,10 +141,11 @@ export const useWorkspaceConsistency = ({
   aliases,
   setAliases,
   characters,
+  selectedDocumentId,
   projectSettings,
   setProjectSettings,
   resolvedActionCues,
-  consistencyEngine,
+  worldEngine,
   ragService,
   shodhService,
   refreshMemories,
@@ -149,6 +179,33 @@ export const useWorkspaceConsistency = ({
   );
   const [consistencyPopover, setConsistencyPopover] =
     useState<ConsistencyPopoverState | null>(null);
+  const [worldEngineStatus, setWorldEngineStatus] =
+    useState<WorldEngineStatus | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    void worldEngine
+      .getStatus()
+      .then((status) => {
+        if (!cancelled) {
+          setWorldEngineStatus(status);
+        }
+      })
+      .catch((error) => {
+        if (!cancelled) {
+          setWorldEngineStatus({
+            state: 'installedUnavailable',
+            reason:
+              error instanceof Error
+                ? error.message
+                : 'Review engine status could not be checked.'
+          });
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [worldEngine]);
 
   useEffect(() => {
     if (!activeProject) {
@@ -325,6 +382,35 @@ export const useWorkspaceConsistency = ({
     [dismissedUnknownByDocument, projectSettings?.ignoredUnknownSurfaces]
   );
 
+  const removeReviewSurface = useCallback(
+    (
+      surface: string,
+      options?: {
+        docId?: string;
+      }
+    ) => {
+      const normalized = canonicalizeUnknownSurface(surface);
+      if (!normalized) return;
+      const shouldKeepIssue = (issue: GuardrailIssue) => {
+        const issueSurface = canonicalizeUnknownSurface(issue.surface ?? '');
+        if (!issueSurface) {
+          return true;
+        }
+        return issueSurface !== normalized;
+      };
+      setGuardrailIssues((prev) => prev.filter(shouldKeepIssue));
+      setConsistencyReviewItems((prev) =>
+        prev.filter((item) => {
+          if (options?.docId && item.sceneId !== options.docId) {
+            return true;
+          }
+          return shouldKeepIssue(item.issue);
+        })
+      );
+    },
+    []
+  );
+
   const attachAliasTexts = useCallback(
     async (params: {
       projectId: string;
@@ -372,47 +458,60 @@ export const useWorkspaceConsistency = ({
     ): Promise<{unresolvedCount: number; consistencyRun: boolean}> => {
       const source = options?.source ?? 'workspace-save';
       const consistencyMode = options?.consistencyMode ?? 'strict';
+      const isImport = source === 'import';
       let unresolvedCount = 0;
 
+      if (isImport) {
+        await saveWritingDocument(doc);
+      }
+
       if (consistencyMode !== 'lenient') {
-        const proposal = await consistencyEngine.extractProposal({
-          projectId: doc.projectId,
-          text: htmlToPlainText(doc.content),
-          source,
-          knownEntities: knownConsistencyEntities,
-          actionCues: resolvedActionCues
-        });
-        const validation = await consistencyEngine.validateProposal(proposal);
-      const presentedIssues =
-          consistencyMode === 'strict'
-            ? validation.issues
-            : downgradeUnknownIssuesToWarnings(validation.issues);
-        setGuardrailIssues(filterDismissedUnknownIssues(doc.id, presentedIssues));
-        unresolvedCount = validation.issues.filter(
-          (issue) => issue.code === 'UNKNOWN_ENTITY'
-        ).length;
+        try {
+          const {proposal, validation} = await worldEngine.reviewText({
+            projectId: doc.projectId,
+            text: htmlToPlainText(doc.content),
+            source,
+            knownEntities: knownConsistencyEntities,
+            actionCues: resolvedActionCues
+          });
+          const presentedIssues =
+            consistencyMode === 'strict'
+              ? validation.issues
+              : downgradeUnknownIssuesToWarnings(validation.issues);
+          setGuardrailIssues(filterDismissedUnknownIssues(doc.id, presentedIssues));
+          unresolvedCount = validation.issues.filter(
+            (issue) => issue.code === 'UNKNOWN_ENTITY'
+          ).length;
 
-        if (!validation.allowCommit && consistencyMode === 'strict') {
-          const visibleUnknowns = validation.issues
-            .map((issue) => issue.surface)
-            .filter((surface): surface is string => Boolean(surface))
-            .slice(0, 3);
-          const suffix =
-            validation.issues.length > 3
-              ? ` (+${validation.issues.length - 3} more)`
-              : '';
-          const summary = visibleUnknowns.join(', ');
-          throw new Error(
-            `Commit blocked by consistency check: unknown ${validation.issues.length === 1 ? 'entity' : 'entities'} (${summary}${suffix}).`
-          );
-        }
+          if (!validation.allowCommit && consistencyMode === 'strict' && !isImport) {
+            const visibleUnknowns = validation.issues
+              .map((issue) => issue.surface)
+              .filter((surface): surface is string => Boolean(surface))
+              .slice(0, 3);
+            const suffix =
+              validation.issues.length > 3
+                ? ` (+${validation.issues.length - 3} more)`
+                : '';
+            const summary = visibleUnknowns.join(', ');
+            throw new Error(
+              `Scene save needs review first: ${validation.issues.length} unknown ${validation.issues.length === 1 ? 'name or world term' : 'names or world terms'} (${summary}${suffix}).`
+            );
+          }
 
-        if (validation.allowCommit) {
-          await consistencyEngine.applyProposal(proposal, validation);
+          if (validation.allowCommit) {
+            await worldEngine.applyAcceptedProposal(proposal, validation);
+          }
+        } catch (error) {
+          if (!isImport) {
+            throw error;
+          }
+          console.warn('Import review failed after scene persistence', doc.id, error);
         }
       }
 
-      await saveWritingDocument(doc);
+      if (!isImport) {
+        await saveWritingDocument(doc);
+      }
 
       try {
         if (ragService) {
@@ -455,7 +554,7 @@ export const useWorkspaceConsistency = ({
       setSelectedCreatedAt(doc.createdAt);
       setSaveStatus('saved');
       setLastSavedAt(Date.now());
-      if (consistencyMode === 'strict') {
+      if (consistencyMode === 'strict' && !isImport) {
         setGuardrailIssues([]);
       }
       lastAutosaveErrorRef.current = null;
@@ -465,7 +564,6 @@ export const useWorkspaceConsistency = ({
       };
     },
     [
-      consistencyEngine,
       filterDismissedUnknownIssues,
       knownConsistencyEntities,
       resolvedActionCues,
@@ -476,32 +574,40 @@ export const useWorkspaceConsistency = ({
       setLastSavedAt,
       setSaveStatus,
       setSelectedCreatedAt,
-      lastAutosaveErrorRef
+      lastAutosaveErrorRef,
+      worldEngine
     ]
   );
 
   const refreshDeferredReview = useCallback(
     async (doc: WritingDocument) => {
-      const proposal = await consistencyEngine.extractProposal({
+      const {validation} = await worldEngine.reviewText({
         projectId: doc.projectId,
         text: htmlToPlainText(doc.content),
-        source: 'workspace-save',
+        source: getReviewSourceForDocument(doc),
         knownEntities: knownConsistencyEntities,
         actionCues: resolvedActionCues
       });
-      const validation = await consistencyEngine.validateProposal(proposal);
-      setGuardrailIssues(
-        filterDismissedUnknownIssues(
-          doc.id,
-          downgradeUnknownIssuesToWarnings(validation.issues)
-        )
+      const presentedIssues = filterDismissedUnknownIssues(
+        doc.id,
+        downgradeUnknownIssuesToWarnings(validation.issues)
       );
+      setGuardrailIssues(presentedIssues);
+      setConsistencyReviewItems((prev) => [
+        ...prev.filter((item) => item.sceneId !== doc.id),
+        ...presentedIssues.map((issue, index) => ({
+          id: makeReviewItemId(doc.id, issue, index),
+          sceneId: doc.id,
+          sceneTitle: doc.title || 'Untitled scene',
+          issue
+        }))
+      ]);
     },
     [
-      consistencyEngine,
       filterDismissedUnknownIssues,
       knownConsistencyEntities,
-      resolvedActionCues
+      resolvedActionCues,
+      worldEngine
     ]
   );
 
@@ -523,20 +629,21 @@ export const useWorkspaceConsistency = ({
     try {
       const items: ConsistencyReviewItem[] = [];
       for (const doc of documents) {
-        const proposal = await consistencyEngine.extractProposal({
+        const {validation, issueAnnotations} = await worldEngine.reviewText({
           projectId: activeProject.id,
           text: htmlToPlainText(doc.content),
-          source: 'workspace-save',
+          source: getReviewSourceForDocument(doc),
           knownEntities: knownConsistencyEntities,
           actionCues: resolvedActionCues
         });
-        const validation = await consistencyEngine.validateProposal(proposal);
-        validation.issues.forEach((issue, index) => {
+        const presentedIssues = filterDismissedUnknownIssues(doc.id, validation.issues);
+        presentedIssues.forEach((issue, index) => {
           items.push({
-            id: `${doc.id}:${issue.code}:${issue.surface ?? 'issue'}:${index}`,
+            id: makeReviewItemId(doc.id, issue, index),
             sceneId: doc.id,
             sceneTitle: doc.title || 'Untitled scene',
-            issue
+            issue,
+            reviewAnnotation: issueAnnotations[index]
           });
         });
       }
@@ -564,7 +671,7 @@ export const useWorkspaceConsistency = ({
         const contradictionCount = contradictionItems.length;
         const firstSceneId = combinedItems[0]?.sceneId;
         const message =
-          `Consistency review found ${combinedItems.length} issue(s) across ${documents.length} scene(s).` +
+          `Project review found ${combinedItems.length} item(s) across ${documents.length} scene(s).` +
           (contradictionCount > 0
             ? ` ${contradictionCount} contradiction${contradictionCount === 1 ? '' : 's'} with canon records.`
             : '');
@@ -588,12 +695,13 @@ export const useWorkspaceConsistency = ({
     activeProject,
     addSystemHistory,
     characters,
-    consistencyEngine,
     documents,
     entities,
+    filterDismissedUnknownIssues,
     knownConsistencyEntities,
     resolvedActionCues,
-    setFeedback
+    setFeedback,
+    worldEngine
   ]);
 
   const unknownGuardrailIssues = useMemo(() => {
@@ -615,16 +723,95 @@ export const useWorkspaceConsistency = ({
     [unknownGuardrailIssues]
   );
 
-  const highlightableUnknownIssues = useMemo(
-    () =>
-      unknownGuardrailIssues.map((issue) => ({
-        id: `${issue.code}:${issue.surface ?? ''}`,
-        surface: issue.surface ?? '',
+  const highlightableUnknownIssues = useMemo(() => {
+    const issueMap = new Map<
+      string,
+      {
+        id: string;
+        surface: string;
+        message: string;
+        severity: 'blocking' | 'warning';
+      }
+    >();
+    const addIssue = (issue: GuardrailIssue) => {
+      if (issue.code !== 'UNKNOWN_ENTITY' || !issue.surface) return;
+      const key = getReviewIssueKey(issue);
+      if (issueMap.has(key)) return;
+      issueMap.set(key, {
+        id: `${issue.code}:${issue.surface}`,
+        surface: issue.surface,
         message: issue.message,
         severity: issue.severity
-      })),
-    [unknownGuardrailIssues]
-  );
+      });
+    };
+
+    unknownGuardrailIssues.forEach(addIssue);
+    if (selectedDocumentId) {
+      consistencyReviewItems
+        .filter((item) => item.sceneId === selectedDocumentId)
+        .forEach((item) => addIssue(item.issue));
+    }
+
+    return Array.from(issueMap.values());
+  }, [consistencyReviewItems, selectedDocumentId, unknownGuardrailIssues]);
+
+  const reviewReadiness = useMemo<ReviewReadiness>(() => {
+    const issueKeys = new Set<string>();
+    unknownGuardrailIssues.forEach((issue) => {
+      issueKeys.add(getReviewIssueKey(issue));
+    });
+    consistencyReviewItems.forEach((item) => {
+      issueKeys.add(getReviewIssueKey(item.issue));
+    });
+    const count = issueKeys.size;
+    if (worldEngineStatus && worldEngineStatus.state !== 'available') {
+      return {
+        state: 'unavailable',
+        count,
+        label: 'Review unavailable',
+        detail:
+          worldEngineStatus.state === 'notInstalled'
+            ? 'Local review engine is not installed.'
+            : worldEngineStatus.reason
+      };
+    }
+    if (isRunningConsistencyReview) {
+      return {
+        state: 'running',
+        count,
+        label: 'Review running',
+        detail: 'Review is checking the current project.'
+      };
+    }
+    if (hasBlockingUnknownGuardrailIssues) {
+      return {
+        state: 'attention',
+        count,
+        label: count === 1 ? '1 review item' : `${count} review items`,
+        detail: 'Some review items need attention before a strict save can finish.'
+      };
+    }
+    if (count > 0) {
+      return {
+        state: 'ready',
+        count,
+        label: count === 1 ? '1 review item' : `${count} review items`,
+        detail: 'Review items are ready when you want to check them.'
+      };
+    }
+    return {
+      state: 'idle',
+      count: 0,
+      label: 'Review clear',
+      detail: 'No open review items.'
+    };
+  }, [
+    consistencyReviewItems,
+    hasBlockingUnknownGuardrailIssues,
+    isRunningConsistencyReview,
+    unknownGuardrailIssues,
+    worldEngineStatus
+  ]);
 
   const unknownLinkOptions = useMemo(() => {
     const optionMap: Record<
@@ -749,13 +936,7 @@ export const useWorkspaceConsistency = ({
               : [normalizedName, normalizedSurface]
         });
         setEntities((prev) => [...prev, entity]);
-        setGuardrailIssues((prev) =>
-          prev.filter(
-            (issue) =>
-              canonicalizeUnknownSurface(issue.surface ?? '') !==
-              canonicalizeUnknownSurface(normalizedSurface)
-          )
-        );
+        removeReviewSurface(normalizedSurface, {docId: selectedDocumentId ?? undefined});
         setUnknownLinkSelection((prev) => {
           const copy = {...prev};
           delete copy[surface];
@@ -787,8 +968,21 @@ export const useWorkspaceConsistency = ({
         setResolvingUnknown(null);
       }
     },
-    [activeProject, attachAliasTexts, categories, setCategories, setEntities, setFeedback]
+    [
+      activeProject,
+      attachAliasTexts,
+      categories,
+      removeReviewSurface,
+      selectedDocumentId,
+      setCategories,
+      setEntities,
+      setFeedback
+    ]
   );
+
+  const clearUnknownSurface = useCallback((surface: string) => {
+    removeReviewSurface(surface, {docId: selectedDocumentId ?? undefined});
+  }, [removeReviewSurface, selectedDocumentId]);
 
   const resolveAllUnknownEntities = useCallback(async () => {
     const surfaces = unknownGuardrailIssues
@@ -824,7 +1018,15 @@ export const useWorkspaceConsistency = ({
     }
     setGuardrailIssues((prev) =>
       prev.filter((issue) => {
-        const surface = issue.surface?.trim().toLowerCase();
+        const surface = issue.surface ? canonicalizeUnknownSurface(issue.surface) : '';
+        return !surface || !blocked.has(surface);
+      })
+    );
+    setConsistencyReviewItems((prev) =>
+      prev.filter((item) => {
+        const surface = item.issue.surface
+          ? canonicalizeUnknownSurface(item.issue.surface)
+          : '';
         return !surface || !blocked.has(surface);
       })
     );
@@ -843,15 +1045,11 @@ export const useWorkspaceConsistency = ({
         [docId]: Array.from(new Set([...(prev[docId] ?? []), surface.trim()]))
       }));
     }
-    setGuardrailIssues((prev) =>
-      prev.filter(
-        (issue) => canonicalizeUnknownSurface(issue.surface ?? '') !== normalized
-      )
-    );
+    removeReviewSurface(surface, {docId});
     setConsistencyPopover((prev) =>
       canonicalizeUnknownSurface(prev?.surface ?? '') === normalized ? null : prev
     );
-  }, []);
+  }, [removeReviewSurface]);
 
   const ignoreUnknownSurfaceProjectWide = useCallback(
     (surface: string, docId?: string) => {
@@ -867,7 +1065,19 @@ export const useWorkspaceConsistency = ({
       const mergedIgnored = Array.from(
         new Set([...(projectSettings.ignoredUnknownSurfaces ?? []), normalized.toLowerCase()])
       );
-      dismissUnknownEntity(surface, docId);
+      if (docId) {
+        setDismissedUnknownByDocument((prev) => ({
+          ...prev,
+          [docId]: Array.from(new Set([...(prev[docId] ?? []), surface.trim()]))
+        }));
+      }
+      removeReviewSurface(surface);
+      setConsistencyPopover((prev) =>
+        canonicalizeUnknownSurface(prev?.surface ?? '') ===
+        canonicalizeUnknownSurface(surface)
+          ? null
+          : prev
+      );
       const nextSettings: ProjectSettings = {
         ...projectSettings,
         ignoredUnknownSurfaces: mergedIgnored,
@@ -887,7 +1097,13 @@ export const useWorkspaceConsistency = ({
           setFeedback({tone: 'error', message});
         });
     },
-    [activeProject, dismissUnknownEntity, projectSettings, setFeedback, setProjectSettings]
+    [
+      activeProject,
+      projectSettings,
+      removeReviewSurface,
+      setFeedback,
+      setProjectSettings
+    ]
   );
 
   const linkUnknownEntity = useCallback(
@@ -896,14 +1112,14 @@ export const useWorkspaceConsistency = ({
       explicitEntityId?: string,
       preferredAlias?: string
     ) => {
-      if (!activeProject) return;
+      if (!activeProject) return false;
       const selectedEntityId = explicitEntityId ?? unknownLinkSelection[surface];
       if (!selectedEntityId) {
         setFeedback({
           tone: 'error',
           message: `Select an entity before linking "${surface}".`
         });
-        return;
+        return false;
       }
 
       setLinkingUnknown(surface);
@@ -926,13 +1142,7 @@ export const useWorkspaceConsistency = ({
           targetType: selectedTargetType,
           aliasTexts
         });
-        setGuardrailIssues((prev) =>
-          prev.filter(
-            (issue) =>
-              canonicalizeUnknownSurface(issue.surface ?? '') !==
-              canonicalizeUnknownSurface(surface)
-          )
-        );
+        removeReviewSurface(surface, {docId: selectedDocumentId ?? undefined});
         setUnknownLinkSelection((prev) => {
           const copy = {...prev};
           delete copy[surface];
@@ -951,15 +1161,24 @@ export const useWorkspaceConsistency = ({
         setResolverNotice({
           message: `"${surface}" connected to an existing record.`
         });
+        return true;
       } catch (error) {
         const message =
           error instanceof Error ? error.message : 'Unable to link alias.';
         setFeedback({tone: 'error', message});
+        return false;
       } finally {
         setLinkingUnknown(null);
       }
     },
-    [activeProject, attachAliasTexts, setFeedback, unknownLinkSelection]
+    [
+      activeProject,
+      attachAliasTexts,
+      removeReviewSurface,
+      selectedDocumentId,
+      setFeedback,
+      unknownLinkSelection
+    ]
   );
 
   const activeConsistencyPopoverIssue = consistencyPopover
@@ -1004,6 +1223,7 @@ export const useWorkspaceConsistency = ({
     isRunningConsistencyReview,
     consistencyReviewItems,
     lastConsistencyReviewAt,
+    reviewReadiness,
     consistencyPopover,
     setConsistencyPopover,
     knownConsistencyEntities,
@@ -1022,6 +1242,7 @@ export const useWorkspaceConsistency = ({
     dismissUnknownEntity,
     ignoreUnknownSurfaceProjectWide,
     linkUnknownEntity,
+    clearUnknownSurface,
     activeConsistencyPopoverIssue,
     openConsistencyPopover
   };

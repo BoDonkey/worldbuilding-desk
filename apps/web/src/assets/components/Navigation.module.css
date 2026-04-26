@@ -37,6 +37,26 @@
   align-items: center;
 }
 
+.searchLauncher {
+  width: 72px;
+  min-height: 58px;
+  border-radius: 10px;
+  color: var(--color-text-secondary);
+  border: 1px dashed var(--color-border);
+  background: color-mix(in oklab, var(--color-bg-secondary) 80%, white);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.2rem;
+  cursor: pointer;
+}
+
+.searchLauncher:hover {
+  background: var(--color-bg-secondary);
+  color: var(--color-text-primary);
+}
+
 .railLink {
   width: 72px;
   min-height: 58px;
@@ -231,6 +251,24 @@
 .mobileMenuLink:hover {
   background: var(--color-bg-secondary);
   color: var(--color-text-primary);
+}
+
+.mobileMenuAction {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-radius: 8px;
+  padding: 0.6rem 0.7rem;
+  border: 1px dashed var(--color-border);
+  background: color-mix(in oklab, var(--color-bg-secondary) 80%, white);
+  color: var(--color-text-primary);
+  font: inherit;
+  cursor: pointer;
+}
+
+.mobileMenuActionMeta {
+  font-size: 0.78rem;
+  color: var(--color-text-secondary);
 }
 
 .mobileMenuMeta {

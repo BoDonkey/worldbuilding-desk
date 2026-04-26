@@ -1,6 +1,6 @@
 # Next Steps
 
-Last updated: 2026-04-15
+Last updated: 2026-04-26
 
 ## Current Baseline
 
@@ -39,24 +39,52 @@ Implemented recently:
 - Backup export / validate / import smoke coverage.
 - Manuscript export smoke coverage for Markdown, DOCX, and EPUB.
 - AI provider diagnostics in Settings, including Ollama installed-model detection and apply-model actions.
+- Dual LLM review architecture documented: local World Engine for passive structured review, BYOK providers for explicit creative work.
+- Initial deterministic World Engine boundary: workspace review now calls a `WorldEngine` service, proposal/review schemas exist, and false-positive examples have unit coverage.
+- Passive review readiness indicator in the Writing Workspace chrome and Review drawer tab.
+- Imported scenes persist before post-import review runs, so review issues no longer own the import success path.
+- Import review candidates now carry detection reasons, and one-off unknown multiword candidates are suppressed on import unless they have stronger evidence.
+- Review readiness counts now dedupe inline deferred review items against sidebar review results, and sidebar items display their detection reason.
+- Deferred imported documents now keep stricter import-source extraction during review rehydration and manual sidebar review.
+- Review readiness now dedupes the same issue across inline and sidebar sources without scene-id inflation, and the context sidebar scrolls independently.
+- Regex extraction remains deterministic but now uses Unicode-aware name tokens for titled names and action/object candidates.
+- Common sentence-start words such as `Look`, `Some`, and `Don't` are suppressed before highlighting.
+- Shared lore/review matcher now handles canon normalization, possessives, longer-overlap priority, and in-progress known-name prefix suppression across extraction and editor highlights.
+- Cypress now covers known-lore highlight behavior for `Ember Archive` and prevents partial `Ember Archiv` from becoming a review underline.
+- Manual Project Review results now underline in the active editor scene, not only in the side rail.
+- Review item resolution now clears both editor highlights and project-review rail items while preserving remaining unresolved highlights.
+- Active-scene review refreshes when canon, aliases, or characters change, so returning from World Bible no longer requires rerunning Project Review just to restore unresolved underlines.
+- Project Review copy now uses author-facing labels instead of raw internal issue codes and detection reasons.
+- Project scratchpad is back as an autosaved workspace context drawer tab and is included in project backup snapshot/import paths.
+- Cypress covers scratchpad autosave/reload restoration and backup export/import round-trip.
+- Feature-flagged local review annotations are implemented behind the `Project review engine` selector.
+- Local review annotation prompts now use issue-local excerpt windows rather than full-scene text and fallback on timeout instead of stalling the review run.
+- Dev-mode RAG embedding loads now use deterministic lightweight fallback immediately, avoiding transformer fetch noise during local smoke testing.
+- State mutation ledger scaffolding now exists in IndexedDB plus backup/snapshot plumbing, but nothing writes accepted scene-derived mutation events yet.
 
 ## Recommended Priority Order
 
 1. Review completion workflow + World Bible intake
-2. App-wide search
-3. Editor readability and theme hardening
-4. Release confidence and reload safety
-5. Structural cleanup in active routes
-6. Desktop packaging validation
-7. AI personas/tools
-8. First-run onboarding cleanup
+2. State mutation ledger integration
+3. Scratchpad access and lightweight planning surfaces
+4. App-wide search
+5. Editor readability and theme hardening
+6. Release confidence and reload safety
+7. Structural cleanup in active routes
+8. Desktop packaging validation
+9. AI personas/tools
+10. First-run onboarding cleanup
 
 ## Planning Notes
 
 - Bias toward slices that complete the writing-first workflow instead of adding new optional systems.
 - Prefer feature work that also removes route-level complexity in `WorkspaceRoute.tsx` or `WorldBibleRoute.tsx`.
 - Treat build/lint as baseline gates, but use smoke coverage for import, review, reload, and export as the real confidence bar.
+- Current automated browser smoke is green on the current tree. In the Codex desktop environment, Cypress may still need to launch outside the GUI sandbox restriction.
 - Keep branch scope narrow enough that each slice can be reverted cleanly if the UX direction changes.
+- Scratchpad should become a quick-access popover/modal available from any workspace tab or route surface. The current context drawer tab is a first restoration step, not the final interaction model.
+- Future optional systems note: character inventory currently tracks item names, quantities, notes, and catalog links, while the rules-engine inventory has a `capacity` field but no per-item weight or surfaced encumbrance calculation. When system-heavy character support comes back into focus, add carry weight/encumbrance as an explicit inventory concern rather than treating quantity as enough.
+- The background review path is only worth keeping if it remains bounded: proposal-only, local-first, and subordinate to deterministic validation. Avoid broadening it into an unbounded “project manager AI.”
 
 ## 1) Review Completion Workflow + World Bible Intake
 
@@ -75,6 +103,7 @@ Targets:
   - review issue state
   - inline underline rendering
   - passive lore highlights
+- Add a passive review-needed indicator so authors know review is ready without losing drafting flow.
 
 Exit criteria:
 
@@ -102,8 +131,9 @@ Status:
 
 - In progress on `codex/world-bible-review-queue`.
 - Implemented queue surface, filters, nav badge count integration, queue-focused opening, and unified reviewed action.
-- Smoke testing exposed and fixed alias/highlight normalization issues.
-- Remaining: finish reload/ignore-state portions of the manual smoke checklist and decide whether persisted ignore state stays in this slice or is split into Slice 1C.
+- Smoke testing exposed and fixed alias/highlight normalization issues plus active-scene review refresh regressions.
+- Current smoke pass is sufficient to validate the underlying review-completion behavior on the current UX.
+- Remaining: decide whether persisted ignore state stays in this slice or is split into Slice 1C, then rerun the full manual review-completion smoke after the next review/workspace UX change lands.
 
 Suggested branch:
 
@@ -178,15 +208,220 @@ Acceptance criteria:
 Status:
 
 - A dedicated manual smoke checklist now exists in `docs/review-completion-smoke-test.md`.
-- Automated coverage is still optional follow-up if this flow proves stable enough to encode in Cypress without brittle editor interactions.
+- Automated coverage now passes for the smoke-critical editor matching paths, including manual Project Review highlighting, preserving remaining unresolved highlights after creating one reviewed record, scratchpad reload restoration, workspace navigation lock, and the updated post-merge smoke suite.
+- Import persistence now happens before review. Remaining follow-up is targeted browser smoke coverage that confirms an imported scene stays saved when post-import review finds unresolved unknowns.
+- Candidate reason metadata now records why an item was proposed, such as titled name, repeated unknown, leading cue, action-object cue, or known entity.
+- Treat the current manual smoke pass as functionally complete for the present UX; repeat the end-to-end manual pass after the next review/workspace interaction change instead of continuing to polish the current flow.
 
 Suggested branch:
 
 - `codex/review-completion-smoke`
 
-## 2) App-Wide Search
+### Slice 1F: Passive review-needed indicator
+
+Scope:
+
+- Add a small review state indicator to the writing workspace chrome or review drawer tab.
+- Model review state independently from whether the review drawer is open.
+- Support states:
+  - `idle`: no pending review signal
+  - `running`: review pass is in progress
+  - `ready`: non-blocking review items are available
+  - `attention`: review should be checked before strict save, canon commit, export validation, or publish
+  - `unavailable`: configured review engine is unavailable
+- Keep banners and blocking language reserved for deliberate strict actions.
+- Use the drawer or tooltip for detail; do not interrupt the editor with modals while typing.
+- Tie the indicator to future changed-word plus idle-pause review cadence from `dual-llm-review-architecture.md`.
+
+Acceptance criteria:
+
+- Authors can keep typing when review work is detected.
+- The workspace shows review readiness without forcing a context switch.
+- Indicator state is derived from actual unresolved review counts and review-engine status.
+- Review state survives route changes and reloads according to the chosen persistence model.
+- Explicit "Run review" remains available for authors who want immediate feedback.
+
+Suggested branch:
+
+- `codex/passive-review-indicator`
+
+Status:
+
+- Initial deterministic indicator is implemented. It derives `idle`, `running`, `ready`, `attention`, and `unavailable` from current review counts, manual review state, and `WorldEngine` status.
+- Remaining follow-up: connect the indicator to changed-word plus idle-pause review cadence once automatic local review exists.
+- Current behavior note: known lore highlights can appear while typing because they are live text matches; new unknown-name highlights require import/deferred review, strict save, or manual Project Review until idle review cadence is implemented.
+
+### Slice 1G: Accepted state-mutation ledger writes
+
+Scope:
+
+- Introduce the first behavior on top of the new `state_mutation_events` store.
+- When future state-delta review items are accepted, persist typed mutation events with:
+  - `sceneId`
+  - `sceneOrder`
+  - `sourceRevision`
+  - `sourceHash`
+  - accepted/invalidated status
+- Do not attempt replay or full rule validation in the same slice.
+
+Acceptance criteria:
+
+- Accepted scene-derived state changes are recorded as durable ledger events instead of disappearing into UI-only resolution.
+- Snapshot/export/import preserves the mutation ledger.
+- The ledger is ready for later replay/invalidation when earlier scenes change.
+
+Suggested branch:
+
+- `codex/state-mutation-ledger-writes`
+
+## 2) Scratchpad Access and Lightweight Planning Surfaces
+
+Goal: bring back loose planning support without turning the app into an up-front planning tool.
+
+Current status:
+
+- Project scratchpad exists as a per-project autosaved workspace note surface with both quick-access modal entry and context drawer access.
+- Scratchpad data is included in project backup snapshots and import paths.
+- Cypress covers scratchpad autosave and reload restoration.
+
+Next slices:
+
+### Slice 2A: Scratchpad quick-access popover
+
+Scope:
+
+- Add a top-level Scratchpad affordance that can be opened from any workspace tab or route surface.
+- Present Scratchpad as a popover/modal instead of requiring the user to switch the context drawer to the Scratchpad tab.
+- Keep autosave behavior and backup inclusion.
+
+Acceptance criteria:
+
+- A user can open and close Scratchpad without losing their place in the current route or drawer tab.
+- Scratchpad remains project-scoped and does not participate in canon/review unless explicitly copied into a scene or record.
+- Keyboard and narrow viewport behavior are usable.
+
+Status:
+
+- Implemented in the workspace shell with header/footer/empty-state entry points plus a command-palette action.
+- Scratchpad now opens as a modal without forcing a drawer-tab switch and can still be opened in the context drawer when desired.
+- Follow-up remains deciding how Corkboard should reuse the same lightweight planning affordance pattern.
+
+Suggested branch:
+
+- `codex/scratchpad-popover-access`
+
+### Slice 2B: Scratchpad backup smoke coverage
+
+Scope:
+
+- Extend backup smoke coverage to prove scratchpad content round-trips through backup export/import.
+
+Acceptance criteria:
+
+- A populated scratchpad exports and restores with count/parity confidence.
+- Backup validation messaging remains clear.
+
+Status:
+
+- Implemented in the Cypress post-merge smoke suite by seeding scratchpad content before export and verifying it after import.
+
+### Slice 2C: Lightweight corkboard return
+
+Scope:
+
+- Restore corkboard as a simple planning view over chapter cards.
+- Keep scope limited to card title, summary, status, ordering, and plot points.
+
+Acceptance criteria:
+
+- Authors can sketch chapter-level structure without leaving the writing-first workflow.
+- Corkboard data survives reload and backup restore.
+
+Status:
+
+- Implemented as a lightweight workspace modal with chapter cards, summary, status, ordering, and plot-point editing.
+- Corkboard is reachable from the workspace header, footer, empty state, and command palette.
+- Chapter-card data is now included in project backup snapshot/import paths.
+
+Suggested branch:
+
+- `codex/corkboard-lite`
+
+### Slice 2D: Dedicated corkboard workspace
+
+Scope:
+
+- Promote Corkboard from a quick-access modal into a first-class planning surface or route.
+- Keep the quick-access modal for in-scene reference, but let the same card data open in a larger dedicated view when the author is actively structuring a book.
+- Decide whether the dedicated view lives as its own app tab/route or as a stronger workspace mode.
+
+Acceptance criteria:
+
+- Authors can use Corkboard as the primary place to shape chapter flow for a full manuscript.
+- Quick-access and dedicated Corkboard views stay in sync against the same underlying chapter-card data.
+- The dedicated view has enough space for reordering, scanning, and comparing cards without feeling cramped.
+
+Notes:
+
+- This matches how stronger writing tools treat corkboard/plot-grid features: important enough to deserve a real planning surface, while still staying linked to drafting.
+- Keep the current modal as the lightweight companion surface for checking flow without leaving the scene.
+
+Suggested branch:
+
+- `codex/corkboard-dedicated-view`
+
+### Slice 2E: AI to scratchpad capture
+
+Scope:
+
+- Add an explicit action in the right-rail AI assistant to send a generated note, summary, or selected excerpt into the project Scratchpad.
+- Support author workflows where "rubber ducking" with the AI produces useful planning fragments that should be retained outside the manuscript.
+
+Acceptance criteria:
+
+- An author can move useful AI discussion output into Scratchpad without manual copy/paste.
+- The captured note is easy to find and clearly separated from scene prose and canon records.
+- The capture flow works whether the AI generated the text from a scene selection, lore question, or planning discussion.
+
+Notes:
+
+- This should bias toward deliberate author capture, not silent automatic logging of AI output.
+
+Suggested branch:
+
+- `codex/ai-scratchpad-capture`
+
+### Slice 2F: Scratchpad organization
+
+Scope:
+
+- Evolve Scratchpad beyond one flat note into a lightweight organized planning surface.
+- Explore sections, pinned notes, dated entries, or simple cards without turning Scratchpad into a heavy database of planning objects.
+- Define how organized Scratchpad relates to Corkboard so the two tools complement each other rather than duplicate each other.
+
+Acceptance criteria:
+
+- Authors can keep brainstorming fragments, reminders, and planning notes discoverable over a long project.
+- Scratchpad stays lightweight and low-friction.
+- The relationship between Scratchpad and Corkboard is legible:
+  - Scratchpad for loose thought capture and ad hoc notes
+  - Corkboard for shaped chapter/beat flow
+
+Suggested branch:
+
+- `codex/scratchpad-organization`
+
+## 3) App-Wide Search
 
 Goal: let authors retrieve scenes and canon from one obvious entry point.
+
+Current status:
+
+- Search is now exposed from the app shell instead of living only behind the command palette shortcut.
+- Scene and World Bible results are returned in one command-palette search list with direct-open behavior.
+- World Bible search focus now opens the matching category tab instead of leaving the user in `Review Queue`.
+- Scene search now indexes full plain-text scene content instead of only a short excerpt.
+- Workspace search-open flow now attempts to reopen the matching scene and select/scroll to the first matching in-scene occurrence.
 
 Next slices:
 
@@ -202,7 +437,7 @@ Exit criteria:
 
 Implementation backlog:
 
-### Slice 2A: Search entry point in app shell
+### Slice 3A: Search entry point in app shell
 
 Scope:
 
@@ -214,11 +449,15 @@ Acceptance criteria:
 - Search is discoverable from any major route.
 - Keyboard-first open behavior exists.
 
+Status:
+
+- Implemented via a visible `Search` launcher in the app shell rail and mobile navigation, reusing the command palette search surface.
+
 Suggested branch:
 
 - `codex/app-shell-search-entry`
 
-### Slice 2B: Unified results model
+### Slice 3B: Unified results model
 
 Scope:
 
@@ -230,11 +469,16 @@ Acceptance criteria:
 - A user can search once and see manuscript plus canon results in one place.
 - Result labeling makes the destination type obvious.
 
+Status:
+
+- Implemented for scenes plus World Bible records.
+- Remaining follow-up is manual retest of scene-result behavior in the workspace and deciding whether Compendium should join the unified result set.
+
 Suggested branch:
 
 - `codex/unified-search-results`
 
-### Slice 2C: Alias-aware matching and direct-open routing
+### Slice 3C: Alias-aware matching and direct-open routing
 
 Scope:
 
@@ -246,11 +490,16 @@ Acceptance criteria:
 - Selecting a result lands the user on the correct destination without manual re-navigation.
 - Alias behavior is explicit and not surprising.
 
+Status:
+
+- Alias metadata now appears on World Bible search results.
+- Remaining follow-up is to decide whether alias hits should appear as separate rows and whether search should expand beyond World Bible into Compendium/canon-wide results.
+
 Suggested branch:
 
 - `codex/search-alias-routing`
 
-## 3) Editor Readability and Theme Hardening
+## 4) Editor Readability and Theme Hardening
 
 Goal: make the workspace comfortable for long writing sessions.
 
@@ -270,7 +519,7 @@ Exit criteria:
 
 Implementation backlog:
 
-### Slice 3A: Dark mode readability audit
+### Slice 4A: Dark mode readability audit
 
 Scope:
 
@@ -286,7 +535,7 @@ Suggested branch:
 
 - `codex/dark-mode-readability`
 
-### Slice 3B: Typography and spacing controls
+### Slice 4B: Typography and spacing controls
 
 Scope:
 
@@ -302,7 +551,7 @@ Suggested branch:
 
 - `codex/editor-typography-controls`
 
-### Slice 3C: Highlight palette hardening
+### Slice 4C: Highlight palette hardening
 
 Scope:
 
@@ -317,7 +566,7 @@ Suggested branch:
 
 - `codex/highlight-palette-hardening`
 
-## 4) Release Confidence and Reload Safety
+## 5) Release Confidence and Reload Safety
 
 Goal: close the gap between “build passes” and “author workflow is reliable.”
 
@@ -334,7 +583,7 @@ Exit criteria:
 
 Implementation backlog:
 
-### Slice 4A: Reload and project-switch smoke pass
+### Slice 5A: Reload and project-switch smoke pass
 
 Scope:
 
@@ -348,21 +597,21 @@ Suggested branch:
 
 - `codex/reload-project-switch-smoke`
 
-### Slice 4B: Backup parity audit for review and alias state
+### Slice 5B: Backup parity audit for review and alias state
 
 Scope:
 
-- Confirm newer review/alias state is included in backup export/import flows.
+- Confirm newer review/alias/scratchpad state is included in backup export/import flows.
 
 Acceptance criteria:
 
-- Exported backups restore review-related follow-up state without silent loss.
+- Exported backups restore review-related follow-up and scratchpad state without silent loss.
 
 Suggested branch:
 
 - `codex/backup-review-alias-parity`
 
-### Slice 4C: Store-boundary cleanup where reliability requires it
+### Slice 5C: Store-boundary cleanup where reliability requires it
 
 Scope:
 
@@ -377,7 +626,7 @@ Suggested branch:
 
 - `codex/store-reliability-slices`
 
-## 5) Structural Cleanup in Active Routes
+## 6) Structural Cleanup in Active Routes
 
 Goal: reduce feature friction in the routes that are still carrying too much inline orchestration.
 
@@ -393,7 +642,7 @@ Exit criteria:
 
 Implementation backlog:
 
-### Slice 5A: Workspace export hook extraction
+### Slice 6A: Workspace export hook extraction
 
 Scope:
 
@@ -407,7 +656,7 @@ Suggested branch:
 
 - `codex/workspace-export-hook`
 
-### Slice 5B: Workspace canon sync extraction
+### Slice 6B: Workspace canon sync extraction
 
 Scope:
 
@@ -421,7 +670,7 @@ Suggested branch:
 
 - `codex/workspace-canon-hook`
 
-### Slice 5C: World Bible import and alias logic extraction
+### Slice 6C: World Bible import and alias logic extraction
 
 Scope:
 
@@ -435,7 +684,7 @@ Suggested branch:
 
 - `codex/world-bible-import-alias-extraction`
 
-## 6) Desktop Packaging Validation
+## 7) Desktop Packaging Validation
 
 Goal: close the gap between “web app in development” and “desktop authoring product.”
 
@@ -451,7 +700,7 @@ Exit criteria:
 
 Implementation backlog:
 
-### Slice 6A: Packaged-app validation pass
+### Slice 7A: Packaged-app validation pass
 
 Scope:
 
@@ -465,7 +714,7 @@ Suggested branch:
 
 - `codex/desktop-packaged-smoke`
 
-### Slice 6B: Desktop-specific reliability gaps
+### Slice 7B: Desktop-specific reliability gaps
 
 Scope:
 
@@ -479,7 +728,7 @@ Suggested branch:
 
 - `codex/desktop-packaging-fixes`
 
-## 7) AI Personas / Tools
+## 8) AI Personas / Tools
 
 Goal: move beyond generic assistant behavior toward explicit author-facing roles.
 
@@ -498,7 +747,7 @@ Exit criteria:
 
 Implementation backlog:
 
-### Slice 7A: Persona model and project binding
+### Slice 8A: Persona model and project binding
 
 Scope:
 
@@ -512,7 +761,7 @@ Suggested branch:
 
 - `codex/ai-persona-model`
 
-### Slice 7B: Writing critic v1
+### Slice 8B: Writing critic v1
 
 Scope:
 
@@ -526,7 +775,7 @@ Suggested branch:
 
 - `codex/ai-writing-critic`
 
-## 8) First-Run Onboarding Cleanup
+## 9) First-Run Onboarding Cleanup
 
 Goal: keep the first-use experience aligned with the writing-first product promise.
 
@@ -541,21 +790,27 @@ Exit criteria:
 
 Implementation backlog:
 
-### Slice 8A: First-run friction audit
+### Slice 9A: First-run friction audit
 
 Scope:
 
 - Review empty states, first-run labels, and entry points for projects and workspace.
+- Normalize no-project empty states across main tabs. Use the World Bible empty
+  state as the visual baseline: centered, muted, and calm. If "Projects" appears
+  in link styling, make it navigate to Projects; otherwise render it as plain
+  muted text.
 
 Acceptance criteria:
 
 - No first-run path implies that rules, canon schemas, or AI setup are mandatory before writing.
+- No-project empty states use consistent placement, type color, and action
+  behavior across Workspace, World Bible, Ruleset, and other main tabs.
 
 Suggested branch:
 
 - `codex/first-run-friction-audit`
 
-### Slice 8B: Optional-system discovery
+### Slice 9B: Optional-system discovery
 
 Scope:
 
@@ -578,9 +833,12 @@ Recommended order for the next active branches:
 3. `codex/review-ignore-persistence`
 4. `codex/review-highlight-correctness`
 5. `codex/review-completion-smoke`
-6. `codex/app-shell-search-entry`
-7. `codex/unified-search-results`
-8. `codex/search-alias-routing`
+6. `codex/scratchpad-popover-access`
+7. `codex/scratchpad-backup-smoke`
+8. `codex/corkboard-lite`
+9. `codex/app-shell-search-entry`
+10. `codex/unified-search-results`
+11. `codex/search-alias-routing`
 
 ## Branch and Commit Workflow (Keep)
 
@@ -593,4 +851,6 @@ Suggested branch names:
 
 - `codex/editor-theme-hardening`
 - `codex/review-completion-badges`
+- `codex/scratchpad-popover-access`
+- `codex/corkboard-lite`
 - `codex/ai-writing-critic`

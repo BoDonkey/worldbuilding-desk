@@ -3,6 +3,8 @@ export const WORKSPACE_COMMAND_EVENT = 'workspace-command';
 export type WorkspaceCommandId =
   | 'new-scene'
   | 'save-scene'
+  | 'open-scratchpad'
+  | 'open-corkboard'
   | 'toggle-left-drawer'
   | 'toggle-right-drawer'
   | 'open-context-world-bible'

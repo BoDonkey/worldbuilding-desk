@@ -6,6 +6,7 @@ export type WorkspaceContextDrawerView =
   | 'characters'
   | 'compendium'
   | 'review'
+  | 'scratchpad'
   | 'ai'
   | 'system'
   | 'lore';
@@ -23,7 +24,8 @@ const isValidContextView = (
   value === 'ruleset' ||
   value === 'characters' ||
   value === 'compendium' ||
-  value === 'review' ||
+    value === 'review' ||
+    value === 'scratchpad' ||
   value === 'ai' ||
   value === 'system' ||
   value === 'lore';

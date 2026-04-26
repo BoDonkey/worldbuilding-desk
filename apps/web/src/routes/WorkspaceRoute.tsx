@@ -27,7 +27,7 @@ import {
   promoteDocumentToParent,
   syncChildWithParent
 } from '../services/seriesBible/SeriesBibleService';
-import {getConsistencyEngineService} from '../services/consistency';
+import {getWorldEngine} from '../services/worldEngine';
 import {
   appendSystemHistoryEntry,
   getSystemHistoryEntries
@@ -50,6 +50,8 @@ import {WorkspaceContextDrawer} from '../components/Workspace/WorkspaceContextDr
 import {WorkspaceSceneDrawer} from '../components/Workspace/WorkspaceSceneDrawer';
 import {useWorkspaceProjectData} from '../hooks/useWorkspaceProjectData';
 import {useWorkspaceLoreSnippets} from '../hooks/useWorkspaceLoreSnippets';
+import {useWorkspaceScratchpad} from '../hooks/useWorkspaceScratchpad';
+import {useWorkspaceCorkboard} from '../hooks/useWorkspaceCorkboard';
 
 declare global {
   interface Window {
@@ -84,7 +86,6 @@ function WorkspaceRoute() {
   const activeProject = useAppStore((s) => s.activeProject);
   const navigate = useNavigate();
   const location = useLocation();
-  const consistencyEngine = useMemo(() => getConsistencyEngineService(), []);
   const [documents, setDocuments] = useState<WritingDocument[]>([]);
   const seriesBibleConfig = activeProject
     ? getSeriesBibleConfig(activeProject)
@@ -111,6 +112,30 @@ function WorkspaceRoute() {
     left: number;
     top: number;
   } | null>(null);
+  const [manualExistingTargetId, setManualExistingTargetId] = useState('');
+  const [isReviewBannerDismissed, setReviewBannerDismissed] = useState(false);
+  const [isScratchpadModalOpen, setScratchpadModalOpen] = useState(false);
+  const [isCorkboardModalOpen, setCorkboardModalOpen] = useState(false);
+  const {
+    scratchpadContent,
+    setScratchpadContent,
+    scratchpadStatus,
+    scratchpadLastSavedAt
+  } = useWorkspaceScratchpad(activeProject?.id ?? null);
+  const {
+    corkboardCards,
+    corkboardStatus,
+    corkboardLastSavedAt,
+    corkboardPlotPointCount,
+    createCorkboardCard,
+    updateCorkboardCard,
+    deleteCorkboardCard,
+    moveCorkboardCard,
+    addCorkboardPlotPoint,
+    updateCorkboardPlotPoint,
+    deleteCorkboardPlotPoint,
+    moveCorkboardPlotPoint
+  } = useWorkspaceCorkboard(activeProject?.id ?? null);
   const [isNarrowViewport, setNarrowViewport] = useState(() =>
     typeof window !== 'undefined'
       ? window.matchMedia('(max-width: 1200px)').matches
@@ -166,6 +191,18 @@ function WorkspaceRoute() {
     },
     [isNarrowViewport, setActiveContextView, setContextDrawerOpen, setSceneDrawerOpen]
   );
+  const openScratchpadModal = useCallback(() => {
+    setScratchpadModalOpen(true);
+  }, []);
+  const closeScratchpadModal = useCallback(() => {
+    setScratchpadModalOpen(false);
+  }, []);
+  const openCorkboardModal = useCallback(() => {
+    setCorkboardModalOpen(true);
+  }, []);
+  const closeCorkboardModal = useCallback(() => {
+    setCorkboardModalOpen(false);
+  }, []);
   const refreshSystemHistory = useCallback(() => {
     if (!activeProject) {
       setSystemHistoryEntries([]);
@@ -318,6 +355,8 @@ function WorkspaceRoute() {
     setPendingAIInsert(null);
     setWorldCaptureDrafts({});
     setManualWorldCapture(null);
+    setManualExistingTargetId('');
+    setReviewBannerDismissed(false);
   }, []);
 
   const {
@@ -376,6 +415,15 @@ function WorkspaceRoute() {
     refreshSystemHistory,
     onProjectReset: handleProjectReset
   });
+  const worldEngine = useMemo(
+    () =>
+      getWorldEngine(
+        projectSettings?.aiSettings?.inspectorSettings?.reviewEngineMode ??
+          'deterministic',
+        projectSettings?.aiSettings
+      ),
+    [projectSettings?.aiSettings]
+  );
 
   const {
     setGuardrailIssues,
@@ -407,7 +455,9 @@ function WorkspaceRoute() {
     dismissUnknownEntity,
     ignoreUnknownSurfaceProjectWide,
     linkUnknownEntity,
+    clearUnknownSurface,
     activeConsistencyPopoverIssue,
+    reviewReadiness,
     openConsistencyPopover
   } = useWorkspaceConsistency({
     activeProject,
@@ -420,10 +470,11 @@ function WorkspaceRoute() {
     aliases,
     setAliases,
     characters,
+    selectedDocumentId: selectedId,
     projectSettings,
     setProjectSettings,
     resolvedActionCues,
-    consistencyEngine,
+    worldEngine,
     ragService,
     shodhService,
     refreshMemories,
@@ -434,6 +485,10 @@ function WorkspaceRoute() {
     setFeedback,
     addSystemHistory
   });
+  const runConsistencyReviewFromUi = useCallback(async () => {
+    setReviewBannerDismissed(false);
+    await handleRunConsistencyReview();
+  }, [handleRunConsistencyReview]);
   persistDocRef.current = persistDoc;
   refreshDeferredReviewRef.current = refreshDeferredReview;
   setGuardrailIssuesRef.current = setGuardrailIssues as typeof setGuardrailIssuesRef.current;
@@ -567,11 +622,11 @@ function WorkspaceRoute() {
   const isGeneralFictionProject = projectSettings?.projectMode === 'general';
   const reviewBannerTitle = hasBlockingUnknownGuardrailIssues
     ? isGeneralFictionProject
-      ? 'A few names or places need a quick review before this draft is fully checked.'
-      : 'A few detected references need a quick review before this draft is fully checked.'
+      ? 'This scene has names or places to review before strict save.'
+      : 'This scene has detected references to review before strict save.'
     : isGeneralFictionProject
-      ? 'A few names or places were noticed in this scene.'
-      : 'A few detected references were noticed in this scene.';
+      ? 'Project review found names or places in this scene.'
+      : 'Project review found detected references in this scene.';
   const reviewBannerBody = isGeneralFictionProject
     ? 'Click an underline in the editor to add it to your world, connect it to something existing, or ignore it for now.'
     : 'Click an underline in the editor to add it to the world, connect it to an existing record, or ignore it for now.';
@@ -596,6 +651,28 @@ function WorkspaceRoute() {
     0,
     unknownGuardrailIssues.length - visibleReviewSurfaces.length
   );
+  const showReviewBanner =
+    unknownGuardrailIssues.length > 0 && !isReviewBannerDismissed;
+  const scratchpadStatusLabel =
+    scratchpadStatus === 'loading'
+      ? 'Loading scratchpad...'
+      : scratchpadStatus === 'saving'
+        ? 'Saving scratchpad...'
+        : scratchpadStatus === 'error'
+          ? 'Scratchpad could not be saved.'
+          : scratchpadLastSavedAt
+            ? `Scratchpad saved at ${new Date(scratchpadLastSavedAt).toLocaleTimeString()}`
+            : 'Scratchpad ready.';
+  const corkboardStatusLabel =
+    corkboardStatus === 'loading'
+      ? 'Loading corkboard...'
+      : corkboardStatus === 'saving'
+        ? 'Saving corkboard...'
+        : corkboardStatus === 'error'
+          ? 'Corkboard could not be saved.'
+          : corkboardLastSavedAt
+            ? `Corkboard saved at ${new Date(corkboardLastSavedAt).toLocaleTimeString()}`
+            : 'Corkboard ready.';
   const activeWorldCaptureDraft =
     (activeConsistencyPopoverIssue &&
       worldCaptureDrafts[activeConsistencyPopoverIssue.surface]) ||
@@ -612,6 +689,52 @@ function WorkspaceRoute() {
     resolveCharacterBlock,
     resolveItemBlock
   });
+  const normalizeCaptureSelection = useCallback((input: string) =>
+    input
+      .trim()
+      .toLowerCase()
+      .replace(/[^\p{L}\p{N}\s'-]/gu, ' ')
+      .replace(/\s+/g, ' ')
+      .trim(), []);
+  const manualCaptureExistingEntity = manualWorldCapture
+    ? selectionQuickSnippets.entities[
+        normalizeCaptureSelection(manualWorldCapture.draftText)
+      ] ?? null
+    : null;
+  const manualCaptureLinkOptions = useMemo(() => {
+    if (!manualWorldCapture) return [];
+
+    const normalizedSelection = normalizeCaptureSelection(manualWorldCapture.draftText);
+    const candidates = [
+      ...entities.map((entity) => ({
+        id: `entity:${entity.id}`,
+        name: entity.name,
+        type: 'Entity'
+      })),
+      ...characters.map((character) => ({
+        id: `character:${character.id}`,
+        name: character.name,
+        type: 'Character'
+      }))
+    ];
+
+    return candidates
+      .map((candidate) => {
+        const normalizedName = normalizeCaptureSelection(candidate.name);
+        const exactScore = normalizedName === normalizedSelection ? 0 : 1;
+        const overlapScore =
+          normalizedName.includes(normalizedSelection) ||
+          normalizedSelection.includes(normalizedName)
+            ? 0
+            : 1;
+        return {
+          ...candidate,
+          score: exactScore + overlapScore
+        };
+      })
+      .sort((a, b) => a.score - b.score || a.name.localeCompare(b.name))
+      .slice(0, 30);
+  }, [characters, entities, manualWorldCapture, normalizeCaptureSelection]);
   const toolbarActions = useMemo(
     () => [
       {
@@ -628,36 +751,81 @@ function WorkspaceRoute() {
     [handleRefreshStatTemplates]
   );
 
+  const [focusQuery, setFocusQuery] = useState<string | null>(null);
+
   useEffect(() => {
-    const state = location.state as {focusDocumentId?: string} | null;
+    const state = location.state as {focusDocumentId?: string; focusQuery?: string} | null;
     const focusDocumentId = state?.focusDocumentId;
     if (!focusDocumentId) return;
     const target = documents.find((doc) => doc.id === focusDocumentId);
     if (!target) return;
+    setFocusQuery(state?.focusQuery?.trim() || null);
     if (selectedId !== target.id) {
-      handleSelectDocument(target);
+    handleSelectDocument(target);
     }
     navigate(location.pathname, {replace: true, state: {}});
   }, [documents, handleSelectDocument, location.pathname, location.state, navigate, selectedId]);
 
+  const selectedDocumentRef = useRef(selectedDocument);
+  selectedDocumentRef.current = selectedDocument;
+  const reviewRefreshSignature = useMemo(
+    () =>
+      [
+        ...entities.map((entity) =>
+          `entity:${entity.id}:${entity.name}:${entity.updatedAt}:${entity.needsCompletion ?? false}`
+        ),
+        ...aliases.map((alias) =>
+          `alias:${alias.id}:${alias.targetId}:${alias.targetType}:${alias.alias}:${alias.updatedAt}`
+        ),
+        ...characters.map((character) =>
+          `character:${character.id}:${character.name}:${character.updatedAt}`
+        )
+      ]
+        .sort()
+        .join('|'),
+    [aliases, characters, entities]
+  );
+
   useEffect(() => {
-    if (
-      !isReviewPrefsHydrated ||
-      !selectedDocument ||
-      selectedDocument.consistencyReviewMode !== 'deferred'
-    ) {
+    if (!isReviewPrefsHydrated || !selectedId) {
       return;
     }
-    void refreshDeferredReview(selectedDocument).catch((error) => {
-      console.warn('Deferred review rehydrate failed', error);
+    const doc = selectedDocumentRef.current;
+    if (!doc || doc.id !== selectedId) {
+      return;
+    }
+    void refreshDeferredReview(doc).catch((error) => {
+      console.warn('Active scene review refresh failed', error);
     });
-  }, [isReviewPrefsHydrated, refreshDeferredReview, selectedDocument]);
+  }, [isReviewPrefsHydrated, refreshDeferredReview, reviewRefreshSignature, selectedId]);
 
   useEffect(() => {
     if (!showGameSystems && activeContextView === 'compendium') {
       setActiveContextView('world-bible');
     }
   }, [showGameSystems, activeContextView, setActiveContextView]);
+
+  useEffect(() => {
+    if (!isScratchpadModalOpen) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setScratchpadModalOpen(false);
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [isScratchpadModalOpen]);
+
+  useEffect(() => {
+    if (!isCorkboardModalOpen) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setCorkboardModalOpen(false);
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [isCorkboardModalOpen]);
 
   useEffect(() => {
     const mediaQuery = window.matchMedia('(max-width: 1200px)');
@@ -709,6 +877,12 @@ function WorkspaceRoute() {
         case 'save-scene':
           void handleSave();
           break;
+        case 'open-scratchpad':
+          openScratchpadModal();
+          break;
+        case 'open-corkboard':
+          openCorkboardModal();
+          break;
         case 'toggle-left-drawer':
           toggleSceneDrawer();
           break;
@@ -730,7 +904,7 @@ function WorkspaceRoute() {
           }
           break;
         case 'run-consistency-review':
-          void handleRunConsistencyReview();
+          void runConsistencyReviewFromUi();
           break;
         case 'export-markdown':
           openExportModalWithDrawerHandling('markdown');
@@ -761,13 +935,14 @@ function WorkspaceRoute() {
     };
   }, [
     handleNewDocument,
+    openCorkboardModal,
     openContextDrawer,
-    handleRunConsistencyReview,
+    openScratchpadModal,
+    runConsistencyReviewFromUi,
     handleSave,
     openMemoryModal,
     openExportModalWithDrawerHandling,
     showGameSystems,
-    openContextDrawer,
     toggleContextDrawer,
     toggleSceneDrawer
   ]);
@@ -792,6 +967,7 @@ function WorkspaceRoute() {
   );
   const handleOpenManualWorldCapture = useCallback(
     (draftText: string, anchorRect: {left: number; top: number; bottom: number}) => {
+      setManualExistingTargetId('');
       setManualWorldCapture({
         draftText,
         left: anchorRect.left,
@@ -927,7 +1103,7 @@ function WorkspaceRoute() {
     } finally {
       setIsSyncingCanon(false);
     }
-  }, [activeProject, addSystemHistory]);
+  }, [activeProject, addSystemHistory, setCanonState]);
 
   if (!activeProject) {
     return (
@@ -985,6 +1161,30 @@ function WorkspaceRoute() {
           </button>
           <button
             type='button'
+            className={`${styles.reviewIndicator} ${styles[`reviewIndicator_${reviewReadiness.state}`]}`}
+            onClick={() => openContextDrawer('review')}
+            title={reviewReadiness.detail}
+            aria-label={`Open review drawer: ${reviewReadiness.detail}`}
+          >
+            <span className={styles.reviewIndicatorDot} />
+            <span>{reviewReadiness.label}</span>
+          </button>
+          <button
+            type='button'
+            className={styles.drawerTopButton}
+            onClick={openScratchpadModal}
+          >
+            Scratchpad
+          </button>
+          <button
+            type='button'
+            className={styles.drawerTopButton}
+            onClick={openCorkboardModal}
+          >
+            Corkboard
+          </button>
+          <button
+            type='button'
             className={styles.drawerTopButton}
             onClick={toggleSceneDrawer}
           >
@@ -1000,14 +1200,22 @@ function WorkspaceRoute() {
         </div>
       </div>
       {feedback && (
-        <p
+        <div
           role='status'
           className={`${styles.feedbackBanner} ${
             feedback.tone === 'error' ? styles.feedbackError : styles.feedbackSuccess
           }`}
         >
-          {feedback.message}
-        </p>
+          <span>{feedback.message}</span>
+          <button
+            type='button'
+            onClick={() => setFeedback(null)}
+            className={styles.feedbackDismissButton}
+            aria-label='Dismiss notification'
+          >
+            Dismiss
+          </button>
+        </div>
       )}
       {resolverNotice && (
         <div role='status' className={styles.resolverNotice}>
@@ -1028,9 +1236,19 @@ function WorkspaceRoute() {
           </button>
         </div>
       )}
-      {unknownGuardrailIssues.length > 0 && (
+      {showReviewBanner && (
         <div className={styles.unknownPanel}>
-          <strong>{reviewBannerTitle}</strong>
+          <div className={styles.unknownPanelHeader}>
+            <strong>{reviewBannerTitle}</strong>
+            <button
+              type='button'
+              onClick={() => setReviewBannerDismissed(true)}
+              className={styles.unknownPanelDismissButton}
+              aria-label='Dismiss review notice'
+            >
+              Dismiss
+            </button>
+          </div>
           <div className={styles.unknownSummary}>
             {unknownGuardrailIssues.length} item
             {unknownGuardrailIssues.length === 1 ? '' : 's'} highlighted. {reviewBannerBody}
@@ -1145,6 +1363,7 @@ function WorkspaceRoute() {
                 <EditorWithAI
                   documentId={selectedId}
                   content={content}
+                  focusQuery={focusQuery}
                   onChange={handleContentChange}
                   onWordCountChange={setWordCount}
                   consistencyHighlights={highlightableUnknownIssues}
@@ -1339,11 +1558,12 @@ function WorkspaceRoute() {
                       <input
                         type='text'
                         value={manualWorldCapture.draftText}
-                        onChange={(event) =>
+                        onChange={(event) => {
+                          setManualExistingTargetId('');
                           setManualWorldCapture((prev) =>
                             prev ? {...prev, draftText: event.target.value} : prev
-                          )
-                        }
+                          );
+                        }}
                         placeholder='Name or place'
                         className={styles.captureNameInput}
                       />
@@ -1362,6 +1582,64 @@ function WorkspaceRoute() {
                           ? 'Adding...'
                           : reviewCreateLabel}
                       </button>
+                      {manualCaptureExistingEntity && (
+                        <button
+                          type='button'
+                          onClick={() => {
+                            clearUnknownSurface(manualWorldCapture.draftText);
+                            setManualWorldCapture(null);
+                            setFeedback({
+                              tone: 'success',
+                              message: `"${manualWorldCapture.draftText}" matched ${manualCaptureExistingEntity.name}.`
+                            });
+                          }}
+                        >
+                          Use existing
+                        </button>
+                      )}
+                      {manualCaptureLinkOptions.length > 0 && (
+                        <div className={styles.manualExistingLinkControls}>
+                          <select
+                            value={manualExistingTargetId}
+                            onChange={(event) =>
+                              setManualExistingTargetId(event.target.value)
+                            }
+                            aria-label='Existing world record'
+                          >
+                            <option value=''>Link to existing...</option>
+                            {manualCaptureLinkOptions.map((option) => (
+                              <option key={option.id} value={option.id}>
+                                {option.name} ({option.type})
+                              </option>
+                            ))}
+                          </select>
+                          <button
+                            type='button'
+                            onClick={() => {
+                              const selectedTargetId = manualExistingTargetId;
+                              const selectedSurface = manualWorldCapture.draftText;
+                              void linkUnknownEntity(
+                                selectedSurface,
+                                selectedTargetId,
+                                selectedSurface
+                              ).then((linked) => {
+                                if (!linked) return;
+                                clearUnknownSurface(selectedSurface);
+                                setManualExistingTargetId('');
+                                setManualWorldCapture(null);
+                              });
+                            }}
+                            disabled={
+                              !manualExistingTargetId ||
+                              linkingUnknown === manualWorldCapture.draftText
+                            }
+                          >
+                            {linkingUnknown === manualWorldCapture.draftText
+                              ? 'Linking...'
+                              : 'Link selected'}
+                          </button>
+                        </div>
+                      )}
                     </div>
                   </ContextPopover>
                 )}
@@ -1399,6 +1677,20 @@ function WorkspaceRoute() {
                   {wordCount} words
                 </span>
                 <div className={styles.editorFooterUtilities}>
+                  <button
+                    type='button'
+                    className={styles.drawerTopButton}
+                    onClick={openScratchpadModal}
+                  >
+                    Scratchpad
+                  </button>
+                  <button
+                    type='button'
+                    className={styles.drawerTopButton}
+                    onClick={openCorkboardModal}
+                  >
+                    Corkboard
+                  </button>
                   <button
                     type='button'
                     className={styles.drawerTopButton}
@@ -1441,6 +1733,20 @@ function WorkspaceRoute() {
                 <button
                   type='button'
                   className={styles.drawerTopButton}
+                  onClick={openScratchpadModal}
+                >
+                  Open Scratchpad
+                </button>
+                <button
+                  type='button'
+                  className={styles.drawerTopButton}
+                  onClick={openCorkboardModal}
+                >
+                  Open Corkboard
+                </button>
+                <button
+                  type='button'
+                  className={styles.drawerTopButton}
                   onClick={toggleSceneDrawer}
                 >
                   Browse Scenes
@@ -1461,13 +1767,18 @@ function WorkspaceRoute() {
               ruleset={ruleset}
               characters={characters}
               characterSheets={characterSheets}
-              handleRunConsistencyReview={handleRunConsistencyReview}
+              handleRunConsistencyReview={runConsistencyReviewFromUi}
               isRunningConsistencyReview={isRunningConsistencyReview}
               lastConsistencyReviewAt={lastConsistencyReviewAt}
               consistencyReviewItems={consistencyReviewItems}
+              reviewReadiness={reviewReadiness}
               documents={documents}
               handleSelectDocument={handleSelectDocument}
               openWorldRecord={openWorldRecord}
+              scratchpadContent={scratchpadContent}
+              setScratchpadContent={setScratchpadContent}
+              scratchpadStatus={scratchpadStatus}
+              scratchpadLastSavedAt={scratchpadLastSavedAt}
               activeProject={activeProject}
               projectSettings={projectSettings}
               activeAIContext={activeAIContext}
@@ -1571,13 +1882,18 @@ function WorkspaceRoute() {
               ruleset={ruleset}
               characters={characters}
               characterSheets={characterSheets}
-              handleRunConsistencyReview={handleRunConsistencyReview}
+              handleRunConsistencyReview={runConsistencyReviewFromUi}
               isRunningConsistencyReview={isRunningConsistencyReview}
               lastConsistencyReviewAt={lastConsistencyReviewAt}
               consistencyReviewItems={consistencyReviewItems}
+              reviewReadiness={reviewReadiness}
               documents={documents}
               handleSelectDocument={handleSelectDocument}
               openWorldRecord={openWorldRecord}
+              scratchpadContent={scratchpadContent}
+              setScratchpadContent={setScratchpadContent}
+              scratchpadStatus={scratchpadStatus}
+              scratchpadLastSavedAt={scratchpadLastSavedAt}
               activeProject={activeProject}
               projectSettings={projectSettings}
               activeAIContext={activeAIContext}
@@ -1912,6 +2228,300 @@ function WorkspaceRoute() {
               </button>
               <button type='button' onClick={handleInsertStatBlock} disabled={!canInsertStatBlock}>
                 {pendingStatBlockRebindToken ? 'Rebind token' : 'Insert'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isScratchpadModalOpen && (
+        <div
+          role='dialog'
+          aria-modal='true'
+          aria-label='Project scratchpad'
+          onClick={closeScratchpadModal}
+          className={styles.modalOverlay}
+        >
+          <div
+            onClick={(event) => event.stopPropagation()}
+            className={`${styles.modalCard} ${styles.scratchpadModalCard}`}
+          >
+            <div className={styles.scratchpadModalHeader}>
+              <div>
+                <h3 className={styles.modalTitle}>Scratchpad</h3>
+                <p className={styles.modalDescription}>
+                  Loose project notes that stay outside scenes and canon.
+                </p>
+              </div>
+              <button
+                type='button'
+                className={styles.modalSecondaryAction}
+                onClick={closeScratchpadModal}
+              >
+                Close
+              </button>
+            </div>
+            <textarea
+              className={`${styles.scratchpadTextarea} ${styles.scratchpadModalTextarea}`}
+              value={scratchpadContent}
+              onChange={(event) => setScratchpadContent(event.target.value)}
+              placeholder='Loose notes, fragments, reminders, questions...'
+              aria-label='Project scratchpad'
+            />
+            <div className={styles.scratchpadModalFooter}>
+              <div className={styles.scratchpadStatus} role='status'>
+                {scratchpadStatusLabel}
+              </div>
+              <div className={styles.scratchpadModalActions}>
+                <button
+                  type='button'
+                  className={styles.modalSecondaryAction}
+                  onClick={() => {
+                    setActiveContextView('scratchpad');
+                    setContextDrawerOpen(true);
+                    if (isNarrowViewport) {
+                      setSceneDrawerOpen(false);
+                    }
+                    closeScratchpadModal();
+                  }}
+                >
+                  Open in Context Drawer
+                </button>
+                <button type='button' onClick={closeScratchpadModal}>
+                  Done
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isCorkboardModalOpen && (
+        <div
+          role='dialog'
+          aria-modal='true'
+          aria-label='Project corkboard'
+          onClick={closeCorkboardModal}
+          className={styles.modalOverlay}
+        >
+          <div
+            onClick={(event) => event.stopPropagation()}
+            className={`${styles.modalCard} ${styles.corkboardModalCard}`}
+          >
+            <div className={styles.corkboardModalHeader}>
+              <div>
+                <h3 className={styles.modalTitle}>Corkboard</h3>
+                <p className={styles.modalDescription}>
+                  Lightweight chapter planning with cards, summaries, status, and plot points.
+                </p>
+              </div>
+              <div className={styles.corkboardHeaderActions}>
+                <button
+                  type='button'
+                  className={styles.modalSecondaryAction}
+                  onClick={createCorkboardCard}
+                >
+                  New Card
+                </button>
+                <button
+                  type='button'
+                  className={styles.modalSecondaryAction}
+                  onClick={closeCorkboardModal}
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+
+            <div className={styles.corkboardMetaRow}>
+              <span>
+                {corkboardCards.length} card{corkboardCards.length === 1 ? '' : 's'}
+              </span>
+              <span>
+                {corkboardPlotPointCount} plot point{corkboardPlotPointCount === 1 ? '' : 's'}
+              </span>
+              <span>{corkboardStatusLabel}</span>
+            </div>
+
+            {corkboardCards.length === 0 ? (
+              <div className={styles.corkboardEmptyState}>
+                <p className={styles.corkboardEmptyTitle}>Start with a chapter card.</p>
+                <p className={styles.corkboardEmptyCopy}>
+                  Sketch scenes, chapter beats, or loose sequence ideas without leaving the writing workspace.
+                </p>
+                <button type='button' onClick={createCorkboardCard}>
+                  Create first card
+                </button>
+              </div>
+            ) : (
+              <div className={styles.corkboardCardList}>
+                {corkboardCards.map((card, index) => (
+                  <section key={card.id} className={styles.corkboardCard}>
+                    <div className={styles.corkboardCardHeader}>
+                      <div className={styles.corkboardCardTitleRow}>
+                        <span className={styles.corkboardCardIndex}>Card {index + 1}</span>
+                        <input
+                          type='text'
+                          value={card.title}
+                          onChange={(event) =>
+                            updateCorkboardCard(card.id, {title: event.target.value})
+                          }
+                          placeholder='Chapter or sequence title'
+                          className={styles.corkboardTitleInput}
+                        />
+                      </div>
+                      <div className={styles.corkboardCardActions}>
+                        <button
+                          type='button'
+                          className={styles.modalSecondaryAction}
+                          onClick={() => moveCorkboardCard(card.id, -1)}
+                          disabled={index === 0}
+                        >
+                          Up
+                        </button>
+                        <button
+                          type='button'
+                          className={styles.modalSecondaryAction}
+                          onClick={() => moveCorkboardCard(card.id, 1)}
+                          disabled={index === corkboardCards.length - 1}
+                        >
+                          Down
+                        </button>
+                        <button
+                          type='button'
+                          className={styles.modalSecondaryAction}
+                          onClick={() => deleteCorkboardCard(card.id)}
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className={styles.corkboardCardFields}>
+                      <label className={styles.corkboardField}>
+                        <span>Status</span>
+                        <select
+                          value={card.status}
+                          onChange={(event) =>
+                            updateCorkboardCard(card.id, {
+                              status: event.target.value as 'planned' | 'draft' | 'written'
+                            })
+                          }
+                        >
+                          <option value='planned'>Planned</option>
+                          <option value='draft'>Draft</option>
+                          <option value='written'>Written</option>
+                        </select>
+                      </label>
+                      <label className={styles.corkboardField}>
+                        <span>Summary</span>
+                        <textarea
+                          value={card.summary}
+                          onChange={(event) =>
+                            updateCorkboardCard(card.id, {summary: event.target.value})
+                          }
+                          placeholder='What happens in this chapter or scene sequence?'
+                          className={styles.corkboardSummaryTextarea}
+                        />
+                      </label>
+                    </div>
+
+                    <div className={styles.corkboardPlotSection}>
+                      <div className={styles.corkboardPlotHeader}>
+                        <strong>Plot points</strong>
+                        <button
+                          type='button'
+                          className={styles.modalSecondaryAction}
+                          onClick={() => addCorkboardPlotPoint(card.id)}
+                        >
+                          Add plot point
+                        </button>
+                      </div>
+                      {card.plotPoints.length === 0 ? (
+                        <p className={styles.corkboardPlotEmpty}>
+                          No plot points yet.
+                        </p>
+                      ) : (
+                        <div className={styles.corkboardPlotList}>
+                          {card.plotPoints.map((plotPoint, plotIndex) => (
+                            <div key={plotPoint.id} className={styles.corkboardPlotPoint}>
+                              <div className={styles.corkboardPlotPointHeader}>
+                                <span className={styles.corkboardPlotIndex}>
+                                  {plotIndex + 1}
+                                </span>
+                                <input
+                                  type='text'
+                                  value={plotPoint.title}
+                                  onChange={(event) =>
+                                    updateCorkboardPlotPoint(card.id, plotPoint.id, {
+                                      title: event.target.value
+                                    })
+                                  }
+                                  placeholder='Beat or turning point'
+                                  className={styles.corkboardPlotTitleInput}
+                                />
+                                <div className={styles.corkboardPlotActions}>
+                                  <button
+                                    type='button'
+                                    className={styles.modalSecondaryAction}
+                                    onClick={() =>
+                                      moveCorkboardPlotPoint(card.id, plotPoint.id, -1)
+                                    }
+                                    disabled={plotIndex === 0}
+                                  >
+                                    Up
+                                  </button>
+                                  <button
+                                    type='button'
+                                    className={styles.modalSecondaryAction}
+                                    onClick={() =>
+                                      moveCorkboardPlotPoint(card.id, plotPoint.id, 1)
+                                    }
+                                    disabled={plotIndex === card.plotPoints.length - 1}
+                                  >
+                                    Down
+                                  </button>
+                                  <button
+                                    type='button'
+                                    className={styles.modalSecondaryAction}
+                                    onClick={() =>
+                                      deleteCorkboardPlotPoint(card.id, plotPoint.id)
+                                    }
+                                  >
+                                    Delete
+                                  </button>
+                                </div>
+                              </div>
+                              <textarea
+                                value={plotPoint.notes ?? ''}
+                                onChange={(event) =>
+                                  updateCorkboardPlotPoint(card.id, plotPoint.id, {
+                                    notes: event.target.value
+                                  })
+                                }
+                                placeholder='Optional note or reminder'
+                                className={styles.corkboardPlotNotes}
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </section>
+                ))}
+              </div>
+            )}
+
+            <div className={styles.corkboardFooterActions}>
+              <button
+                type='button'
+                className={styles.modalSecondaryAction}
+                onClick={openScratchpadModal}
+              >
+                Open Scratchpad
+              </button>
+              <button type='button' onClick={closeCorkboardModal}>
+                Done
               </button>
             </div>
           </div>

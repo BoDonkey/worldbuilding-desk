@@ -8,6 +8,7 @@
     "build": "tsc -b && vite build",
     "lint": "eslint src/**/*.{ts,tsx}",
     "lint:fix": "eslint src/**/*.{ts,tsx} --fix",
+    "test:unit": "vitest run",
     "preview": "vite preview",
     "e2e:open": "cypress open",
     "e2e:run": "cypress run"
@@ -24,6 +25,7 @@
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-router-dom": "^7.9.6",
+    "zod": "^3.25.76",
     "zustand": "^5.0.12"
   },
   "devDependencies": {
@@ -41,6 +43,7 @@
     "globals": "^16.5.0",
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.46.4",
-    "vite": "^7.2.4"
+    "vite": "^7.2.4",
+    "vitest": "^1.6.1"
   }
 }

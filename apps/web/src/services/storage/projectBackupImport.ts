@@ -2,12 +2,15 @@ import type {
   EntityCategory,
   Project,
   ProjectSettings,
+  ScratchpadDocument,
+  StateMutationEvent,
   WorldEntity,
   WritingDocument,
 } from '../../entityTypes';
 import {
   openDb,
   CATEGORY_STORE_NAME,
+  CORKBOARD_CHAPTER_CARD_STORE_NAME,
   CHARACTER_SHEET_STORE_NAME,
   CHARACTER_STORE_NAME,
   COMPENDIUM_ACTION_LOG_STORE_NAME,
@@ -16,7 +19,9 @@ import {
   COMPENDIUM_PROGRESS_STORE_NAME,
   COMPENDIUM_RECIPE_STORE_NAME,
   ENTITY_STORE_NAME,
+  SCRATCHPAD_STORE_NAME,
   SETTINGS_STORE_NAME,
+  STATE_MUTATION_EVENT_STORE_NAME,
   SETTLEMENT_MODULE_STORE_NAME,
   SETTLEMENT_STATE_STORE_NAME,
   WRITING_STORE_NAME,
@@ -87,6 +92,12 @@ function ensureProjectSnapshot(value: unknown): ProjectSnapshot {
   if (!snapshot.data || !snapshot.counts) {
     throw new Error('Snapshot data is incomplete.');
   }
+  snapshot.data.scratchpads ??= [];
+  snapshot.counts.scratchpads ??= snapshot.data.scratchpads.length;
+  snapshot.data.corkboardChapterCards ??= [];
+  snapshot.counts.corkboardChapterCards ??= snapshot.data.corkboardChapterCards.length;
+  snapshot.data.stateMutationEvents ??= [];
+  snapshot.counts.stateMutationEvents ??= snapshot.data.stateMutationEvents.length;
   return snapshot as ProjectSnapshot;
 }
 
@@ -103,6 +114,10 @@ async function readZipJson(file: File): Promise<unknown> {
 function sanitizeImportedProjectName(base: string): string {
   const cleaned = base.trim() || 'Imported Project';
   return `${cleaned} (Imported)`;
+}
+
+function normalizeCategoryKey(value: string): string {
+  return value.trim().toLowerCase();
 }
 
 async function uniqueProjectName(base: string): Promise<string> {
@@ -123,6 +138,17 @@ function rewriteProjectScoped<T extends {projectId: string}>(
   return records.map((record) => ({...record, projectId}));
 }
 
+function rewriteScratchpads(
+  records: ScratchpadDocument[],
+  projectId: string
+): ScratchpadDocument[] {
+  return records.map((record) => ({
+    ...record,
+    id: projectId,
+    projectId
+  }));
+}
+
 async function saveProjectScopedRecords(params: {
   projectId: string;
   data: ProjectSnapshot['data'];
@@ -135,6 +161,8 @@ async function saveProjectScopedRecords(params: {
       CATEGORY_STORE_NAME,
       ENTITY_STORE_NAME,
       WRITING_STORE_NAME,
+      SCRATCHPAD_STORE_NAME,
+      CORKBOARD_CHAPTER_CARD_STORE_NAME,
       CHARACTER_STORE_NAME,
       CHARACTER_SHEET_STORE_NAME,
       COMPENDIUM_ENTRY_STORE_NAME,
@@ -145,7 +173,8 @@ async function saveProjectScopedRecords(params: {
       ZONE_AFFINITY_PROFILE_STORE_NAME,
       ZONE_AFFINITY_PROGRESS_STORE_NAME,
       SETTLEMENT_MODULE_STORE_NAME,
-      SETTLEMENT_STATE_STORE_NAME
+      SETTLEMENT_STATE_STORE_NAME,
+      STATE_MUTATION_EVENT_STORE_NAME
     ],
     'readwrite'
   );
@@ -177,6 +206,14 @@ async function saveProjectScopedRecords(params: {
   await putMany(
     WRITING_STORE_NAME,
     rewriteProjectScoped(params.data.writingDocuments, params.projectId)
+  );
+  await putMany(
+    SCRATCHPAD_STORE_NAME,
+    rewriteScratchpads(params.data.scratchpads ?? [], params.projectId)
+  );
+  await putMany(
+    CORKBOARD_CHAPTER_CARD_STORE_NAME,
+    rewriteProjectScoped(params.data.corkboardChapterCards ?? [], params.projectId)
   );
   await putMany(
     CHARACTER_STORE_NAME,
@@ -222,6 +259,13 @@ async function saveProjectScopedRecords(params: {
     SETTLEMENT_STATE_STORE_NAME,
     rewriteProjectScoped(params.data.settlementStateRecords, params.projectId)
   );
+  await putMany(
+    STATE_MUTATION_EVENT_STORE_NAME,
+    rewriteProjectScoped<StateMutationEvent>(
+      params.data.stateMutationEvents ?? [],
+      params.projectId
+    )
+  );
 
   await new Promise<void>((resolve, reject) => {
     tx.oncomplete = () => resolve();
@@ -262,6 +306,7 @@ export async function previewProjectBackupConflicts(params: {
     getRulesetByProjectId(params.targetProjectId),
     getProjectRecords<EntityCategory>(CATEGORY_STORE_NAME, params.targetProjectId),
     getProjectRecords<WorldEntity>(ENTITY_STORE_NAME, params.targetProjectId),
+    // Scratchpads are project-scoped singleton notes; they do not participate in name conflicts.
     getProjectRecords<WritingDocument>(WRITING_STORE_NAME, params.targetProjectId)
   ]);
 
@@ -324,6 +369,48 @@ export async function importProjectBackup(params: {
     targetProjectName = existing.name;
   }
 
+  let importedData = snapshot.data;
+  if (params.mode === 'merge') {
+    const existingCategories = await getProjectRecords<EntityCategory>(
+      CATEGORY_STORE_NAME,
+      targetProjectId
+    );
+    const categoryIdRemap = new Map<string, string>();
+
+    const existingByName = new Map(
+      existingCategories.map((category) => [
+        normalizeCategoryKey(category.name),
+        category
+      ])
+    );
+    const existingBySlug = new Map(
+      existingCategories.map((category) => [
+        normalizeCategoryKey(category.slug),
+        category
+      ])
+    );
+
+    const categoriesToImport = snapshot.data.categories.filter((category) => {
+      const existingMatch =
+        existingByName.get(normalizeCategoryKey(category.name)) ??
+        existingBySlug.get(normalizeCategoryKey(category.slug));
+      if (!existingMatch) {
+        return true;
+      }
+      categoryIdRemap.set(category.id, existingMatch.id);
+      return false;
+    });
+
+    importedData = {
+      ...snapshot.data,
+      categories: categoriesToImport,
+      entities: snapshot.data.entities.map((entity) => ({
+        ...entity,
+        categoryId: categoryIdRemap.get(entity.categoryId) ?? entity.categoryId
+      }))
+    };
+  }
+
   const existingSettings = await getProjectRecords<ProjectSettings>(
     SETTINGS_STORE_NAME,
     targetProjectId
@@ -331,18 +418,18 @@ export async function importProjectBackup(params: {
 
   await saveProjectScopedRecords({
     projectId: targetProjectId,
-    data: snapshot.data,
+    data: importedData,
     existingSettingsId: existingSettings[0]?.id ?? null
   });
 
-  if (snapshot.data.ruleset) {
+  if (importedData.ruleset) {
     const existingRuleset = await getRulesetByProjectId(targetProjectId);
     if (existingRuleset) {
       await deleteRuleset(existingRuleset.id, targetProjectId);
     }
     const rulesetData = Object.fromEntries(
-      Object.entries(snapshot.data.ruleset).filter(([key]) => key !== 'projectId')
-    ) as Omit<typeof snapshot.data.ruleset, 'projectId'>;
+      Object.entries(importedData.ruleset).filter(([key]) => key !== 'projectId')
+    ) as Omit<typeof importedData.ruleset, 'projectId'>;
     await saveRuleset(rulesetData, targetProjectId);
   }
 
@@ -351,7 +438,7 @@ export async function importProjectBackup(params: {
     throw new Error('Imported project missing after save.');
   }
 
-  if (snapshot.data.ruleset) {
+  if (importedData.ruleset) {
     const ruleset = await getRulesetByProjectId(targetProjectId);
     if (ruleset && project.rulesetId !== ruleset.id) {
       await saveProject({

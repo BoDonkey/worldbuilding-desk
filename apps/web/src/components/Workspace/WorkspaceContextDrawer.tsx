@@ -17,6 +17,8 @@ import {SystemHistoryPanel} from '../Editor/SystemHistoryPanel';
 import {ShodhMemoryPanel} from '../ShodhMemoryPanel';
 import type {MemoryEntry} from '../../services/shodh/ShodhMemoryService';
 import type {WorkspaceContextDrawerView} from '../../hooks/useWorkspaceDrawers';
+import type {ReviewReadiness} from '../../hooks/useWorkspaceConsistency';
+import type {ReviewIssueAnnotation} from '../../services/worldEngine';
 import styles from '../../styles/WorkspaceRoute.module.css';
 
 interface ConsistencyReviewItem {
@@ -26,9 +28,59 @@ interface ConsistencyReviewItem {
   issue: {
     code: string;
     message: string;
+    detectionReason?: string;
     relatedEntities?: Array<{id: string; name: string; type: 'character' | 'entity'}>;
   };
+  reviewAnnotation?: ReviewIssueAnnotation;
 }
+
+const ISSUE_LABELS: Record<string, string> = {
+  UNKNOWN_ENTITY: 'Unknown name',
+  AMBIGUOUS_REFERENCE: 'Ambiguous reference',
+  STATE_CONFLICT: 'Canon conflict',
+  INVALID_MUTATION: 'Invalid story state change'
+};
+
+const DETECTION_REASON_LABELS: Record<string, {label: string; title: string}> = {
+  known_entity: {
+    label: 'Known canon',
+    title: 'This text already appears to match an existing world or character record.'
+  },
+  titled_name: {
+    label: 'Titled name',
+    title: 'This looks like a named person because it includes a title such as Dr., Captain, or Professor.'
+  },
+  repeated_unknown: {
+    label: 'Repeated name',
+    title: 'This unknown name appears more than once, so review treats it as likely story context.'
+  },
+  leading_entity_cue: {
+    label: 'Context clue',
+    title: 'Nearby wording suggests this may be a place, object, person, or other story-world term.'
+  },
+  character_context_candidate: {
+    label: 'Character-like name',
+    title: 'Sentence context suggests this unknown term may be a character name.'
+  },
+  multiword_proper_candidate: {
+    label: 'Proper name',
+    title: 'Capitalization and word shape suggest this may be a named story-world term.'
+  },
+  action_object_candidate: {
+    label: 'Action object',
+    title: 'The text uses this term like an object involved in an action.'
+  }
+};
+
+const getIssueLabel = (code: string): string => ISSUE_LABELS[code] ?? 'Review item';
+
+const getDetectionReason = (
+  reason: string
+): {label: string; title: string} =>
+  DETECTION_REASON_LABELS[reason] ?? {
+    label: 'Review clue',
+    title: 'Review found a pattern that may need canon cleanup.'
+  };
 
 interface AIContext {
   type: 'document';
@@ -64,9 +116,16 @@ interface WorkspaceContextDrawerProps {
   isRunningConsistencyReview: boolean;
   lastConsistencyReviewAt: number | null;
   consistencyReviewItems: ConsistencyReviewItem[];
+  reviewReadiness: ReviewReadiness;
   documents: WritingDocument[];
   handleSelectDocument: (doc: WritingDocument) => void;
   openWorldRecord: (target: {id: string; type: 'character' | 'entity'}) => void;
+
+  // Scratchpad view
+  scratchpadContent: string;
+  setScratchpadContent: (content: string) => void;
+  scratchpadStatus: 'idle' | 'loading' | 'saving' | 'saved' | 'error';
+  scratchpadLastSavedAt: number | null;
 
   // AI view
   activeProject: {id: string};
@@ -116,6 +175,7 @@ const CONTEXT_DRAWER_TABS: Array<{id: WorkspaceContextDrawerView; label: string}
   {id: 'characters', label: 'Characters'},
   {id: 'compendium', label: 'Compendium'},
   {id: 'review', label: 'Review'},
+  {id: 'scratchpad', label: 'Scratchpad'},
   {id: 'ai', label: 'AI'},
   {id: 'system', label: 'System'},
   {id: 'lore', label: 'Lore'}
@@ -134,9 +194,14 @@ export function WorkspaceContextDrawer({
   isRunningConsistencyReview,
   lastConsistencyReviewAt,
   consistencyReviewItems,
+  reviewReadiness,
   documents,
   handleSelectDocument,
   openWorldRecord,
+  scratchpadContent,
+  setScratchpadContent,
+  scratchpadStatus,
+  scratchpadLastSavedAt,
   activeProject,
   projectSettings,
   activeAIContext,
@@ -216,9 +281,11 @@ export function WorkspaceContextDrawer({
       return (
         <div className={styles.contextSummary}>
           <div className={styles.contextSummaryText}>
-            <strong>Canon Consistency Review</strong>
+            <strong>Project Review</strong>
             <div className={styles.consistencyDescription}>
-              Run review when you want a canon check, not on every glance at the page.
+              Scans every scene for names and canon references that are not already
+              tracked. Known canon can underline while you type; new names appear here
+              after review runs.
             </div>
           </div>
           <div className={styles.consistencyPanelHeader}>
@@ -227,7 +294,7 @@ export function WorkspaceContextDrawer({
               onClick={() => void handleRunConsistencyReview()}
               disabled={isRunningConsistencyReview}
             >
-              {isRunningConsistencyReview ? 'Running review...' : 'Run review'}
+              {isRunningConsistencyReview ? 'Running project review...' : 'Run project review'}
             </button>
           </div>
           {lastConsistencyReviewAt && (
@@ -239,7 +306,7 @@ export function WorkspaceContextDrawer({
             <ul className={styles.consistencyList}>
               {consistencyReviewItems.slice(0, 24).map((item) => (
                 <li key={item.id} className={styles.consistencyListItem}>
-                  <strong>{item.issue.code}</strong> in{' '}
+                  <strong>{getIssueLabel(item.issue.code)}</strong>{' '}
                   <button
                     type='button'
                     onClick={() => {
@@ -247,10 +314,29 @@ export function WorkspaceContextDrawer({
                       if (doc) handleSelectDocument(doc);
                     }}
                     className={styles.consistencySceneButton}
+                    title={`Open ${item.sceneTitle}`}
                   >
                     {item.sceneTitle}
                   </button>
                   : {item.issue.message}
+                  {item.reviewAnnotation?.summary && (
+                    <div className={styles.consistencyDescription}>
+                      {item.reviewAnnotation.summary}
+                    </div>
+                  )}
+                  {item.reviewAnnotation && (
+                    <span className={styles.consistencyReason}>
+                      {item.reviewAnnotation.engineLabel}
+                    </span>
+                  )}
+                  {item.issue.detectionReason && (
+                    <span
+                      className={styles.consistencyReason}
+                      title={getDetectionReason(item.issue.detectionReason).title}
+                    >
+                      {getDetectionReason(item.issue.detectionReason).label}
+                    </span>
+                  )}
                   {item.issue.relatedEntities && item.issue.relatedEntities.length > 0 && (
                     <span className={styles.consistencyRelated}>
                       {item.issue.relatedEntities.slice(0, 3).map((target) => (
@@ -297,6 +383,36 @@ export function WorkspaceContextDrawer({
             projectSettings?.aiSettings?.inspectorSettings?.maxResponseTokens
           }
         />
+      );
+    }
+    if (activeContextView === 'scratchpad') {
+      return (
+        <div className={styles.contextSummary}>
+          <div className={styles.contextSummaryText}>
+            <strong>Scratchpad</strong>
+            <div className={styles.consistencyDescription}>
+              Private project notes that stay out of scenes and canon.
+            </div>
+          </div>
+          <textarea
+            className={styles.scratchpadTextarea}
+            value={scratchpadContent}
+            onChange={(event) => setScratchpadContent(event.target.value)}
+            placeholder='Loose notes, fragments, reminders, questions...'
+            aria-label='Project scratchpad'
+          />
+          <div className={styles.scratchpadStatus} role='status'>
+            {scratchpadStatus === 'loading'
+              ? 'Loading scratchpad...'
+              : scratchpadStatus === 'saving'
+                ? 'Saving scratchpad...'
+                : scratchpadStatus === 'error'
+                  ? 'Scratchpad could not be saved.'
+                  : scratchpadLastSavedAt
+                    ? `Scratchpad saved at ${new Date(scratchpadLastSavedAt).toLocaleTimeString()}`
+                    : 'Scratchpad ready.'}
+          </div>
+        </div>
       );
     }
     if (activeContextView === 'system') {
@@ -372,7 +488,12 @@ export function WorkspaceContextDrawer({
                   tab.id === activeContextView ? '#dbeafe' : 'transparent'
               }}
             >
-              {tab.label}
+              <span>{tab.label}</span>
+              {tab.id === 'review' && reviewReadiness.count > 0 && (
+                <span className={styles.contextTabBadge}>
+                  {reviewReadiness.count}
+                </span>
+              )}
             </button>
           ))}
         </div>

@@ -6,6 +6,8 @@
 
 *Status update: 2026-04-11*
 
+*Status update: 2026-04-18*
+
 ---
 
 ## Overview
@@ -213,15 +215,20 @@ Issues are prioritized by impact on future development velocity.
 
 ## Suggested Sequencing
 
+*Reordered 2026-04-18 — state consolidation elevated above further route extraction. See the 2026-04-18 addendum below for rationale.*
+
 1. **Services reorganization** — completed.
 2. **Routing migration / app-shell split** — completed.
 3. **CSS token consolidation** — completed.
 4. **Electron packaging config** — completed.
-5. **WorkspaceRoute hook extraction (continued)** — next structural pass; target export and canon hooks.
-6. **Zustand store** — introduce alongside existing state, migrate slice by slice. Now is the right time: the shell and hooks are clean enough that a store can be dropped in without a full rewrite.
+5. **Zustand store, slice by slice** — next structural pass. Start with `activeProject` and `projectSettings`. `localStorage` and `IndexedDB` become persistence adapters that hydrate/flush the store rather than direct state sources. De-risks every remaining route extraction.
+6. **WorkspaceRoute hook extraction (continued)** — target export flow and canon sync hooks; aim for under 800 lines in the route shell.
 7. **WorldBibleRoute import/alias extraction** — low urgency, clean up alongside any WorldBible feature work.
-8. **Desktop E2E + ESLint cleanup** — good candidates for quiet periods between feature sprints.
-9. **Auto-update strategy** — decide before first external build share.
+8. **One Playwright Electron E2E covering LLM streaming** — smallest change with the highest payoff against silent IPC regressions.
+9. **Auto-update strategy** — decide before first external build share; affects main-process structure and code signing.
+10. **Keep transformer loading deferred** — `@xenova/transformers` is already dynamically imported in the RAG embedding path and builds as a separate chunk; preserve that split while addressing broader bundle size.
+11. **Re-enable suppressed hook lint rules one at a time** — fix underlying violations; prefer targeted inline disables with a `// why:` comment over blanket config suppression.
+12. **Rename `@litrpg-tool/*` packages** to align with the writing-first product identity. Cheapest while the monorepo is still small.
 
 ---
 
@@ -239,3 +246,62 @@ Still inline in the route (candidates for next extraction pass):
 - Export flow (Markdown / DOCX / EPUB scene export)
 - Canon sync and series bible operations (`getCanonSyncState`, `syncChildWithParent`, `promoteDocumentToParent`)
 - Lore inspector panel integration
+
+---
+
+## 2026-04-18 Addendum
+
+An independent architecture read on 2026-04-18 confirmed the overall posture is healthy: the `rules-engine` / `rules-ui` split is the strongest single decision in the repo, the Electron IPC surface remains narrow and auditable, and the service-layer reorganization is doing real work. Most of the priorities in the original review are genuinely complete. The following additions and one reordering came out of that pass.
+
+### Priority reordering
+
+The previous sequencing put continued `WorkspaceRoute` hook extraction ahead of the Zustand store. That ordering is reversed in the updated list above. Rationale: state-truth fragmentation (localStorage + IndexedDB + React state + partial Zustand) is the largest remaining source of latent bugs, and consolidating it now de-risks every remaining route extraction. The shell and hooks are clean enough that a store can be dropped in slice by slice without a full rewrite — the earlier work earned the right to do this cleanly, and deferring it means future route hooks inherit the fragmentation.
+
+### New — Package namespace no longer matches product identity
+
+**Problem:** Internal packages are namespaced `@litrpg-tool/rules-engine` and `@litrpg-tool/rules-ui`, but the product has repositioned as "a writing-first narrative workspace with optional structured context." The namespace is a branding and discoverability mismatch.
+
+**Impact:** Low technically, medium narratively. Aligns the code with the pitch that is actually shipping.
+
+**Action:** Rename the internal packages. Cheapest to do now while the monorepo is still small; becomes progressively more painful as external consumers, docs, and shipping artifacts reference the old names.
+
+### New — Root `package.json` dependency drift
+
+**Problem:** The root `package.json` declares `@tiptap/core`, `@tiptap/extension-text-style`, `@tiptap/react`, and `@tiptap/starter-kit` as direct dependencies. These are already (correctly) declared in `apps/web/package.json`. Root-level app dependencies in a pnpm workspace are usually historical drift rather than intent.
+
+**Impact:** Low. Duplicate resolution, confusing ownership, and an attractive nuisance for future additions.
+
+**Action:** Remove the TipTap dependencies from the root `package.json`. The root should only carry truly cross-workspace tooling (formatters, shared linters, etc.).
+
+### New — Transformer bundle weight
+
+**Status:** Implemented.
+
+**Problem:** `@xenova/transformers` was a large renderer dependency. The concrete fix was to defer the load behind the first operation that actually needs it.
+
+**Impact:** Medium for cold-start perception; less acute on desktop than web, but still worth protecting.
+
+**Implemented:** `RAGService` dynamically imports `@xenova/transformers` inside the embedding pipeline loader. First RAG operation pays the load cost; subsequent operations reuse the cached pipeline promise. The current Vite build emits a separate `transformers` chunk.
+
+### New — Auto-update timing is a design decision, not just a config task
+
+**Context:** The earlier review noted that auto-update strategy (Squirrel / electron-updater / manual) is unresolved. Worth escalating: the choice affects main-process structure, code-signing setup, and release channel expectations. Retrofitting after the first external build share is materially more expensive than deciding now.
+
+**Action:** Commit to a strategy before the first externally shared build. This is a decision, not code; do it now to avoid having to re-architect the main process later.
+
+### New — Asymmetric test posture
+
+**Observation:** The `rules-engine` package is the most testable thing in the repo and almost certainly carries the best coverage. The Electron IPC bridge — arguably the most failure-prone seam — has no automated coverage. Cypress against `localhost:5173` exercises the renderer only.
+
+**Action:** Add one Playwright-driven Electron E2E that opens the app, triggers an LLM stream, and asserts chunks arrive in the renderer. Smallest change with the highest payoff against silent IPC regressions. Not an argument for broad E2E investment — one targeted test for the one path authors would notice breaking.
+
+### Summary of deltas from earlier review
+
+| Change | Type |
+|--------|------|
+| Zustand store elevated above further `WorkspaceRoute` extraction | Reordering |
+| `@litrpg-tool/*` rename to match writing-first identity | New |
+| Remove TipTap deps from root `package.json` | New |
+| Lazy-load `@xenova/transformers` behind first RAG op (vs. generic "code-split") | Implemented refinement |
+| Frame auto-update as a pre-external-share decision | Framing |
+| Add one Playwright Electron E2E for the LLM streaming path | Refinement |
