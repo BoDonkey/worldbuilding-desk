@@ -1,6 +1,6 @@
 # Worldbuilding-Desk Project Status
 
-**Last Updated:** April 26, 2026
+**Last Updated:** April 29, 2026
 
 ## Project Overview
 
@@ -51,6 +51,8 @@ Under the hood, the app still includes rich systems for world data, rules, chara
 - World Bible review queue for finishing review-created records and alias follow-up.
 - Editor appearance controls for width, surface style, and serif/sans presentation.
 - Passive review readiness indicator in the workspace header and Review drawer tab.
+- Deterministic state-change suggestions stay in the Review drawer, can be accepted or rejected explicitly, support per-scene batch actions, and can be hidden until the source scene changes so drafting is not blocked.
+- Hidden deterministic state suggestions now surface only as lightweight review summaries with per-scene and project-level restore actions.
 - Project scratchpad is available as an autosaved quick-access modal and remains available from the workspace context drawer.
 - Scratchpad records are included in project backup snapshots and restore paths.
 - Lightweight Corkboard is back as a workspace planning modal for chapter cards and plot points.
@@ -78,7 +80,8 @@ Under the hood, the app still includes rich systems for world data, rules, chara
 - Feature-flagged local review annotations now run through the `WorldEngine` boundary using project-scoped Ollama settings while keeping deterministic validation as the source of truth.
 - Local review annotation requests now use issue-local context windows instead of full-scene text, reducing latency on longer scenes and falling back cleanly to deterministic annotations on timeout or parse failure.
 - Dev-mode RAG embedding loads now default to deterministic lightweight fallback instead of noisy browser-transformer fetch failures.
-- State-mutation ledger scaffolding now exists as a project-scoped persistence layer for future accepted scene-state changes.
+- Scene-scoped state mutation tracking now exists as a project-scoped persistence layer with accepted/invalidation flow, replay, and workspace inspection surfaces.
+- Deterministic `state_delta_candidate` extraction now feeds the same typed mutation ledger as proposed `deterministic-review` events rather than mutating tracked state automatically.
 
 ### Optional Game/System Layers
 - Standalone `rules-engine` package with stats, resources, formulas, effects, and dice.
@@ -146,6 +149,7 @@ Under the hood, the app still includes rich systems for world data, rules, chara
 - Treat older “functional IDE” language as implementation heritage, not the main pitch.
 - Dual LLM review direction is captured in `docs/dual-llm-review-architecture.md`: local World Engine for passive structured review, BYOK providers for explicit creative work.
 - Near-term state-tracking direction is now grounded by persisted mutation-ledger scaffolding rather than docs alone: future accepted state deltas can be tied to `sceneId`, `sceneOrder`, `sourceRevision`, and `sourceHash`.
+- The current review UX direction for deterministic state suggestions is passive-by-default: proposals stay out of the writing flow, do not affect replay until accepted, and can be hidden and later restored without rejecting them.
 
 ---
 
@@ -162,8 +166,12 @@ Under the hood, the app still includes rich systems for world data, rules, chara
 - Initial deterministic World Engine slice is implemented and covered by false-positive unit tests.
 - Feature-flagged local review annotations are implemented behind the existing `Project review engine` setting and now use issue-local excerpt windows instead of whole-scene prompts.
 - Local review annotation requests now timeout and fall back to deterministic annotations instead of leaving Project Review stuck in `running`.
-- State mutation ledger scaffolding is implemented in storage/snapshot/import layers, but no scene-derived mutation commands are written yet.
+- Manual scene-derived state mutation commands now write to the ledger, including explicit within-scene `sceneSequence` ordering.
+- Character Sheets now supports manual mutation entry, mutation editing, per-scene step reordering, replayed state inspection, stale-event detection, and targeted invalidation.
+- Workspace scenes now surface stale-state badges plus a selected-scene state timeline with per-step summaries and end-of-scene snapshots.
+- The workspace editor now supports character hover-card previews that show replayed state at the selected scene.
 - Passive review indicator state is implemented for deterministic/manual review state.
+- Deterministic review can now propose scene-scoped state changes, show before/after previews, explain individual versus batch validity, support scene-level batch accept/reject, and preserve hidden suggestions outside the active queue until restored.
 - Import persistence now precedes post-import review in the shared workspace persistence path.
 - Import unknown extraction is more conservative for one-off multiword candidates unless a stronger detection reason exists.
 - Sidebar review now shows detection reasons for unknown-entity candidates.
@@ -194,7 +202,7 @@ Under the hood, the app still includes rich systems for world data, rules, chara
 
 ### Current Verification Notes
 - `pnpm --filter web lint` passes.
-- `pnpm --filter web test:unit -- --runInBand` passes: 17 tests.
+- `pnpm --filter web test:unit` passes: 30 tests.
 - `pnpm --filter web build` passes with the existing Vite large-chunk and `onnxruntime-web` eval warnings.
 - `pnpm --filter web exec cypress run` passes: 18 tests across review matching, post-merge smoke, scratchpad, and workspace navigation lock.
 - The post-merge Cypress smoke selectors were updated to match the current writing-first UI: `Scenes` / `Context` drawer controls, collapsed `Settings` sections, `/projects` backup flow, and stat-block rebind popovers.
@@ -203,7 +211,7 @@ Under the hood, the app still includes rich systems for world data, rules, chara
   - backup/import validation, scratchpad, review matching, and workspace navigation checks are passing in Cypress
   - search is exposed and World Bible results behave correctly
   - workspace scene restore and in-scene search targeting still need a fresh manual retest
-  - local review annotations are usable for smoke evaluation, but accepted review actions still do not write scene-scoped mutation ledger events
+  - deterministic review proposals now feed scene-scoped mutation ledger events, but the long-scene manual UX pass still needs to confirm the passive review flow feels unobtrusive in practice
 
 ### Still Worth Rechecking
 - Workspace import/retry UX after the drawer extraction.
@@ -220,6 +228,16 @@ Under the hood, the app still includes rich systems for world data, rules, chara
   - search for a term known to exist in scene text
   - open the scene result
   - confirm the editor lands on the first matching occurrence and scrolls it into view
+- Manually retest the new state workflow in long scenes:
+  - same-scene step ordering
+  - stale badge visibility after scene edits
+  - scene timeline readability
+  - character hover-card usefulness during drafting
+- Recheck passive review ergonomics for deterministic state suggestions:
+  - hide a suggestion and confirm writing flow remains unaffected
+  - confirm hidden-count summaries appear in Project Review
+  - restore one scene's hidden suggestions
+  - restore all hidden suggestions
 - Decide whether unified search should expand from scene + World Bible into Compendium/canon-wide results.
 
 ---

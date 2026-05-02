@@ -2,6 +2,28 @@ import type {WritingDocument, WorkspaceImportMode} from '../../entityTypes';
 import type {WorkspaceImportSummary} from '../../hooks/useWorkspaceDocuments';
 import styles from '../../styles/WorkspaceRoute.module.css';
 
+interface WorkspaceSceneTimelineEntry {
+  id: string;
+  status: 'accepted' | 'invalidated';
+  stepLabel: string;
+  actorLabel: string;
+  summaryLines: string[];
+  effectLines: string[];
+  isStale: boolean;
+  staleLabel: string;
+}
+
+interface WorkspaceSceneTimelineSnapshot {
+  actorLabel: string;
+  lines: string[];
+}
+
+interface WorkspaceSceneTimelineData {
+  sceneTitle: string;
+  entries: WorkspaceSceneTimelineEntry[];
+  snapshots: WorkspaceSceneTimelineSnapshot[];
+}
+
 interface WorkspaceSceneDrawerProps {
   handleNewDocument: () => void;
   isCreatingScene: boolean;
@@ -22,6 +44,8 @@ interface WorkspaceSceneDrawerProps {
   handleSelectDocument: (doc: WritingDocument) => void;
   handleDelete: (doc: WritingDocument) => void;
   deletingDocumentId: string | null;
+  staleStateEventCountBySceneId?: Record<string, number>;
+  selectedSceneTimeline?: WorkspaceSceneTimelineData | null;
 }
 
 export function WorkspaceSceneDrawer({
@@ -43,7 +67,9 @@ export function WorkspaceSceneDrawer({
   selectedId,
   handleSelectDocument,
   handleDelete,
-  deletingDocumentId
+  deletingDocumentId,
+  staleStateEventCountBySceneId = {},
+  selectedSceneTimeline = null
 }: WorkspaceSceneDrawerProps) {
   return (
     <>
@@ -192,6 +218,23 @@ export function WorkspaceSceneDrawer({
               >
                 {doc.title || 'Untitled scene'}
               </span>
+              {(staleStateEventCountBySceneId[doc.id] ?? 0) > 0 && (
+                <span
+                  style={{
+                    marginLeft: '0.5rem',
+                    flexShrink: 0,
+                    fontSize: '0.72rem',
+                    color: '#92400e',
+                    backgroundColor: '#fffbeb',
+                    border: '1px solid #fcd34d',
+                    borderRadius: '999px',
+                    padding: '0.1rem 0.45rem'
+                  }}
+                  title='Recorded state changes from this scene may be stale.'
+                >
+                  State {staleStateEventCountBySceneId[doc.id]}
+                </span>
+              )}
             </div>
             <button
               type='button'
@@ -204,6 +247,74 @@ export function WorkspaceSceneDrawer({
           </li>
         ))}
       </ul>
+
+      {selectedSceneTimeline && (
+        <section className={styles.sceneTimelinePanel}>
+          <div className={styles.sceneTimelineHeader}>
+            <strong>Scene State Timeline</strong>
+            <span className={styles.sceneTimelineMeta}>
+              {selectedSceneTimeline.sceneTitle || 'Untitled scene'}
+            </span>
+          </div>
+          {selectedSceneTimeline.entries.length === 0 ? (
+            <p className={styles.sceneTimelineEmpty}>
+              No recorded state steps for this scene yet.
+            </p>
+          ) : (
+            <ul className={styles.sceneTimelineList}>
+              {selectedSceneTimeline.entries.map((entry) => (
+                <li key={entry.id} className={styles.sceneTimelineItem}>
+                  <div className={styles.sceneTimelineItemHeader}>
+                    <div>
+                      <strong>{entry.stepLabel}</strong>
+                      <span className={styles.sceneTimelineActor}>
+                        {entry.actorLabel}
+                      </span>
+                    </div>
+                    <div className={styles.sceneTimelineBadges}>
+                      {entry.status === 'invalidated' && (
+                        <span className={styles.sceneTimelineBadgeMuted}>
+                          Invalidated
+                        </span>
+                      )}
+                      {entry.isStale && (
+                        <span className={styles.sceneTimelineBadgeWarning}>
+                          {entry.staleLabel}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <ul className={styles.sceneTimelineLineList}>
+                    {entry.summaryLines.map((line) => (
+                      <li key={`${entry.id}-summary-${line}`}>{line}</li>
+                    ))}
+                  </ul>
+                  {entry.effectLines.length > 0 && (
+                    <ul className={styles.sceneTimelineEffectList}>
+                      {entry.effectLines.map((line) => (
+                        <li key={`${entry.id}-effect-${line}`}>{line}</li>
+                      ))}
+                    </ul>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
+          {selectedSceneTimeline.snapshots.length > 0 && (
+            <div className={styles.sceneTimelineSnapshotPanel}>
+              <strong>State After Scene</strong>
+              <ul className={styles.sceneTimelineSnapshotList}>
+                {selectedSceneTimeline.snapshots.map((snapshot) => (
+                  <li key={snapshot.actorLabel} className={styles.sceneTimelineSnapshotItem}>
+                    <strong>{snapshot.actorLabel}</strong>
+                    <span>{snapshot.lines.join(' · ')}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </section>
+      )}
     </>
   );
 }

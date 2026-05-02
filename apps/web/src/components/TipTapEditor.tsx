@@ -44,6 +44,11 @@ interface TipTapEditorProps {
     loreId: string,
     anchorRect: {left: number; top: number; bottom: number}
   ) => void;
+  onLoreHighlightHover?: (
+    loreId: string,
+    anchorRect: {left: number; top: number; bottom: number}
+  ) => void;
+  onLoreHighlightLeave?: () => void;
   onStatBlockTokenClick?: (
     rawToken: string,
     anchorRect: {left: number; top: number; bottom: number}
@@ -246,6 +251,11 @@ interface TipTapEditorProps {
     loreId: string,
     anchorRect: {left: number; top: number; bottom: number}
   ) => void;
+  onLoreHighlightHover?: (
+    loreId: string,
+    anchorRect: {left: number; top: number; bottom: number}
+  ) => void;
+  onLoreHighlightLeave?: () => void;
   onStatBlockTokenClick?: (
     rawToken: string,
     anchorRect: {left: number; top: number; bottom: number}
@@ -263,6 +273,8 @@ function TipTapEditor({
   onWordCountChange,
   onConsistencyHighlightClick,
   onLoreHighlightClick,
+  onLoreHighlightHover,
+  onLoreHighlightLeave,
   onStatBlockTokenClick,
   config = defaultEditorConfig,
   toolbarButtons = [],
@@ -354,6 +366,46 @@ function TipTapEditor({
           bottom: rect.bottom
         });
         return false;
+      },
+      handleDOMEvents: {
+        mouseover(_view, event) {
+          if (!(event.target instanceof HTMLElement)) {
+            return false;
+          }
+          const loreTarget = event.target.closest<HTMLElement>('[data-lore-id]');
+          if (!loreTarget) {
+            return false;
+          }
+          const loreId = loreTarget.dataset.loreId;
+          if (!loreId) {
+            return false;
+          }
+          const rect = loreTarget.getBoundingClientRect();
+          onLoreHighlightHover?.(loreId, {
+            left: rect.left,
+            top: rect.top,
+            bottom: rect.bottom
+          });
+          return false;
+        },
+        mouseout(_view, event) {
+          if (!(event.target instanceof HTMLElement)) {
+            return false;
+          }
+          const loreTarget = event.target.closest<HTMLElement>('[data-lore-id]');
+          if (!loreTarget) {
+            return false;
+          }
+          const relatedTarget = event.relatedTarget;
+          if (
+            relatedTarget instanceof Node &&
+            loreTarget.contains(relatedTarget)
+          ) {
+            return false;
+          }
+          onLoreHighlightLeave?.();
+          return false;
+        }
       }
     }
   });

@@ -1,6 +1,6 @@
 # Next Steps
 
-Last updated: 2026-04-26
+Last updated: 2026-04-28
 
 ## Current Baseline
 
@@ -60,7 +60,7 @@ Implemented recently:
 - Feature-flagged local review annotations are implemented behind the `Project review engine` selector.
 - Local review annotation prompts now use issue-local excerpt windows rather than full-scene text and fallback on timeout instead of stalling the review run.
 - Dev-mode RAG embedding loads now use deterministic lightweight fallback immediately, avoiding transformer fetch noise during local smoke testing.
-- State mutation ledger scaffolding now exists in IndexedDB plus backup/snapshot plumbing, but nothing writes accepted scene-derived mutation events yet.
+- State mutation ledger now supports accepted manual scene-derived mutation events, explicit same-scene ordering, replay, stale detection, and workspace-facing inspection surfaces.
 
 ## Recommended Priority Order
 
@@ -251,24 +251,42 @@ Status:
 - Remaining follow-up: connect the indicator to changed-word plus idle-pause review cadence once automatic local review exists.
 - Current behavior note: known lore highlights can appear while typing because they are live text matches; new unknown-name highlights require import/deferred review, strict save, or manual Project Review until idle review cadence is implemented.
 
-### Slice 1G: Accepted state-mutation ledger writes
+### Slice 1G: Manual-first state mutation workflow
 
 Scope:
 
-- Introduce the first behavior on top of the new `state_mutation_events` store.
-- When future state-delta review items are accepted, persist typed mutation events with:
-  - `sceneId`
-  - `sceneOrder`
-  - `sourceRevision`
-  - `sourceHash`
-  - accepted/invalidated status
-- Do not attempt replay or full rule validation in the same slice.
+- Land the first usable manuscript-time state workflow on top of `state_mutation_events`.
+- Support:
+  - manual scene-scoped mutation entry from Character Sheets
+  - accepted/invalidated mutation lifecycle
+  - explicit `sceneSequence` ordering within a scene
+  - replayed character state at a selected scene
+  - stale-event detection when source scene text changes
+  - workspace scene badges and a scene-level state timeline
+- Keep deterministic extraction and LLM proposal generation out of this slice.
 
 Acceptance criteria:
 
-- Accepted scene-derived state changes are recorded as durable ledger events instead of disappearing into UI-only resolution.
+- Authors can record accepted scene-scoped state changes as durable ledger events.
+- Replay reconstructs character state at an arbitrary scene boundary.
+- Same-scene ordering is explicit and author-correctable.
+- Stale events are detectable after scene edits without destructive auto-invalidation.
 - Snapshot/export/import preserves the mutation ledger.
-- The ledger is ready for later replay/invalidation when earlier scenes change.
+
+Status:
+
+- Implemented for manual-first character state tracking.
+- Current workflow includes:
+  - manual mutation entry in Character Sheets
+  - mutation edit/reorder/invalidate flow
+  - replayed state at selected scene
+  - stale detection and workspace stale badges
+  - selected-scene state timeline in Workspace
+  - character hover-card state preview in the editor
+- Remaining follow-up:
+  - manual UX retest in long, state-heavy scenes
+  - decide whether manuscript-context editing should expand beyond Character Sheets
+  - later connect deterministic review proposals or local-model suggestions to the same typed mutation boundary
 
 Suggested branch:
 

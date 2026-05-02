@@ -46,6 +46,17 @@ interface EditorWithAIProps {
     characters: Record<string, {name: string; html: string; lore: LoreInspectorRecord}>;
     entities: Record<string, {name: string; html: string; lore: LoreInspectorRecord}>;
   };
+  characterStateHoverCardsByLoreId?: Record<
+    string,
+    {
+      title: string;
+      sceneLabel: string;
+      resources: string[];
+      stats: string[];
+      statuses: string[];
+      location?: string;
+    }
+  >;
   presentStatBlockToken?: (rawToken: string) => StatBlockTokenPresentation;
   getStatBlockPreviewData?: (rawToken: string) => StatBlockPreviewData;
   onRebindStatBlockToken?: (rawToken: string) => void;
@@ -88,7 +99,8 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
   onRebindStatBlockToken,
   onOpenAIContext,
   onOpenLoreInspector,
-  onOpenWorldCapture
+  onOpenWorldCapture,
+  characterStateHoverCardsByLoreId = {}
 }) => {
   const [textToInsertFromAI, setTextToInsertFromAI] = useState<string | null>(null);
   const [selectionBubble, setSelectionBubble] = useState<SelectionBubbleState | null>(
@@ -101,6 +113,18 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
   );
   const [statBlockPopover, setStatBlockPopover] = useState<{
     preview: StatBlockPreviewData;
+    left: number;
+    top: number;
+  } | null>(null);
+  const [characterStateHoverCard, setCharacterStateHoverCard] = useState<{
+    card: {
+      title: string;
+      sceneLabel: string;
+      resources: string[];
+      stats: string[];
+      statuses: string[];
+      location?: string;
+    };
     left: number;
     top: number;
   } | null>(null);
@@ -202,11 +226,12 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
   }, [selectionBubble]);
 
   useEffect(() => {
-    if (!lorePopoverAnchor && !statBlockPopover) return;
+    if (!lorePopoverAnchor && !statBlockPopover && !characterStateHoverCard) return;
     const close = () => {
       setLorePopoverAnchor(null);
       setLorePopoverRecord(null);
       setStatBlockPopover(null);
+      setCharacterStateHoverCard(null);
     };
     window.addEventListener('scroll', close, true);
     window.addEventListener('resize', close);
@@ -214,7 +239,7 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
       window.removeEventListener('scroll', close, true);
       window.removeEventListener('resize', close);
     };
-  }, [lorePopoverAnchor, statBlockPopover]);
+  }, [characterStateHoverCard, lorePopoverAnchor, statBlockPopover]);
 
   useEffect(() => {
     const reposition = () => {
@@ -297,6 +322,7 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
 
   const handleLoreHighlightClick = useCallback(
     (loreId: string, anchorRect: {left: number; top: number; bottom: number}) => {
+      setCharacterStateHoverCard(null);
       const record = loreRecordById.get(loreId);
       if (!record) {
         return;
@@ -309,6 +335,29 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
     },
     [loreRecordById]
   );
+
+  const handleLoreHighlightHover = useCallback(
+    (loreId: string, anchorRect: {left: number; top: number; bottom: number}) => {
+      const card = characterStateHoverCardsByLoreId[loreId];
+      if (!card) {
+        setCharacterStateHoverCard(null);
+        return;
+      }
+      setLorePopoverAnchor(null);
+      setLorePopoverRecord(null);
+      setStatBlockPopover(null);
+      setCharacterStateHoverCard({
+        card,
+        left: anchorRect.left,
+        top: anchorRect.bottom + 8
+      });
+    },
+    [characterStateHoverCardsByLoreId]
+  );
+
+  const handleLoreHighlightLeave = useCallback(() => {
+    setCharacterStateHoverCard(null);
+  }, []);
 
   const handleStatBlockTokenClick = useCallback(
     (rawToken: string, anchorRect: {left: number; top: number; bottom: number}) => {
@@ -376,6 +425,8 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
           onWordCountChange={onWordCountChange}
           onConsistencyHighlightClick={onConsistencyHighlightClick}
           onLoreHighlightClick={handleLoreHighlightClick}
+          onLoreHighlightHover={handleLoreHighlightHover}
+          onLoreHighlightLeave={handleLoreHighlightLeave}
           onStatBlockTokenClick={handleStatBlockTokenClick}
           onEditorReady={handleEditorReady}
           config={mergedConfig}
@@ -612,6 +663,43 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
                 </button>
               </div>
             )}
+          </ContextPopover>
+        )}
+        {characterStateHoverCard && (
+          <ContextPopover
+            title={characterStateHoverCard.card.title}
+            message={`State at ${characterStateHoverCard.card.sceneLabel}`}
+            left={characterStateHoverCard.left}
+            top={characterStateHoverCard.top}
+            onClose={() => setCharacterStateHoverCard(null)}
+          >
+            {characterStateHoverCard.card.resources.length > 0 && (
+              <div className={styles.lorePeekList}>
+                <div>
+                  <strong>Resources:</strong> {characterStateHoverCard.card.resources.join(' · ')}
+                </div>
+              </div>
+            )}
+            {characterStateHoverCard.card.stats.length > 0 && (
+              <div className={styles.lorePeekList}>
+                <div>
+                  <strong>Stats:</strong> {characterStateHoverCard.card.stats.join(' · ')}
+                </div>
+              </div>
+            )}
+            <div className={styles.lorePeekList}>
+              <div>
+                <strong>Statuses:</strong>{' '}
+                {characterStateHoverCard.card.statuses.length > 0
+                  ? characterStateHoverCard.card.statuses.join(', ')
+                  : 'none'}
+              </div>
+              {characterStateHoverCard.card.location && (
+                <div>
+                  <strong>Location:</strong> {characterStateHoverCard.card.location}
+                </div>
+              )}
+            </div>
           </ContextPopover>
         )}
       </div>

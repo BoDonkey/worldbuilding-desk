@@ -356,6 +356,129 @@
   font-size: 0.82rem;
 }
 
+.sceneTimelinePanel {
+  margin-top: 1rem;
+  padding-top: 0.85rem;
+  border-top: 1px solid #e5e7eb;
+}
+
+.sceneTimelineHeader {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  margin-bottom: 0.65rem;
+}
+
+.sceneTimelineMeta {
+  color: #64748b;
+  font-size: 0.8rem;
+}
+
+.sceneTimelineEmpty {
+  margin: 0;
+  color: #64748b;
+  font-size: 0.84rem;
+  font-style: italic;
+}
+
+.sceneTimelineList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.sceneTimelineItem {
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 0.6rem 0.7rem;
+  background: #f8fafc;
+}
+
+.sceneTimelineItemHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+
+.sceneTimelineActor {
+  display: inline-block;
+  margin-left: 0.4rem;
+  color: #475569;
+  font-size: 0.78rem;
+}
+
+.sceneTimelineBadges {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.35rem;
+}
+
+.sceneTimelineBadgeWarning {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  border: 1px solid #fcd34d;
+  background: #fffbeb;
+  color: #92400e;
+  padding: 0.08rem 0.45rem;
+  font-size: 0.7rem;
+}
+
+.sceneTimelineBadgeMuted {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  border: 1px solid #d1d5db;
+  background: #f3f4f6;
+  color: #4b5563;
+  padding: 0.08rem 0.45rem;
+  font-size: 0.7rem;
+}
+
+.sceneTimelineLineList {
+  margin: 0.45rem 0 0;
+  padding-left: 1rem;
+  color: #0f172a;
+  font-size: 0.8rem;
+}
+
+.sceneTimelineEffectList {
+  margin: 0.45rem 0 0;
+  padding-left: 1rem;
+  color: #1d4ed8;
+  font-size: 0.78rem;
+}
+
+.sceneTimelineSnapshotPanel {
+  margin-top: 0.8rem;
+  padding: 0.65rem 0.7rem;
+  border: 1px solid #dbeafe;
+  border-radius: 10px;
+  background: #eff6ff;
+}
+
+.sceneTimelineSnapshotList {
+  list-style: none;
+  padding: 0;
+  margin: 0.45rem 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.sceneTimelineSnapshotItem {
+  display: flex;
+  flex-direction: column;
+  gap: 0.18rem;
+  font-size: 0.8rem;
+  color: #1e3a8a;
+}
+
 .resolverNotice {
   margin-bottom: 1rem;
   padding: 0.5rem 0.75rem;
@@ -438,6 +561,42 @@
   color: #1e40af;
   padding: 0.08rem 0.38rem;
   font-size: 0.7rem;
+}
+
+.consistencyBadgeReady {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid #86efac;
+  border-radius: 999px;
+  background: #f0fdf4;
+  color: #166534;
+  padding: 0.08rem 0.38rem;
+  font-size: 0.7rem;
+  font-weight: 600;
+}
+
+.consistencyBadgeBatch {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid #dbeafe;
+  border-radius: 999px;
+  background: #eff6ff;
+  color: #1d4ed8;
+  padding: 0.08rem 0.38rem;
+  font-size: 0.7rem;
+  font-weight: 600;
+}
+
+.consistencyBadgeBlocked {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid #fdba74;
+  border-radius: 999px;
+  background: #fff7ed;
+  color: #9a3412;
+  padding: 0.08rem 0.38rem;
+  font-size: 0.7rem;
+  font-weight: 600;
 }
 
 .consistencyRelated {

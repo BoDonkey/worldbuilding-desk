@@ -20,6 +20,7 @@ import type {
   WorldEngineReviewResult,
   WorldEngineStatus
 } from './types';
+import {extractStateDeltaObservations} from './stateDeltaObservations';
 
 const makeObservationId = (
   proposal: ExtractedProposal,
@@ -87,6 +88,15 @@ function annotateIssue(
   });
 }
 
+function mergeObservations(
+  entityObservations: ObservationProposal[],
+  stateObservations: ObservationProposal[]
+): ObservationProposal[] {
+  return [...entityObservations, ...stateObservations].sort(
+    (a, b) => a.evidence.start - b.evidence.start
+  );
+}
+
 export class DeterministicWorldEngine implements WorldEngine {
   private readonly consistencyEngine: ConsistencyEngineService;
 
@@ -103,13 +113,19 @@ export class DeterministicWorldEngine implements WorldEngine {
 
   async extractObservations(input: ExtractProposalInput): Promise<ObservationProposal[]> {
     const proposal = await this.consistencyEngine.extractProposal(input);
-    return mapProposalToObservations(proposal);
+    return mergeObservations(
+      mapProposalToObservations(proposal),
+      extractStateDeltaObservations(input)
+    );
   }
 
   async reviewText(input: ExtractProposalInput): Promise<WorldEngineReviewResult> {
     const proposal = await this.consistencyEngine.extractProposal(input);
     const validation = await this.consistencyEngine.validateProposal(proposal);
-    const observations = mapProposalToObservations(proposal);
+    const observations = mergeObservations(
+      mapProposalToObservations(proposal),
+      extractStateDeltaObservations(input)
+    );
     const issueAnnotations = validation.issues.map((issue) =>
       annotateIssue(issue, proposal.text)
     );
