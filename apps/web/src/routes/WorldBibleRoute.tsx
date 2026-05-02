@@ -1,8 +1,8 @@
 import {useEffect, useState, useCallback, useRef, useMemo} from 'react';
 import type {ChangeEvent, FormEvent} from 'react';
-import {useLocation} from 'react-router-dom';
+import {useLocation, useNavigate} from 'react-router-dom';
 import {useAppStore} from '../store/appStore';
-import type {EntityCategory, WorldEntity} from '../entityTypes';
+import type {Character, EntityCategory, WorldEntity} from '../entityTypes';
 import {getEntitiesByProject, saveEntity, deleteEntity} from '../entityStorage';
 import {
   getCategoriesByProject,
@@ -10,6 +10,7 @@ import {
   deleteCategory,
   initializeDefaultCategories
 } from '../categoryStorage';
+import {getCharactersByProject, saveCharacter} from '../characterStorage';
 import CategoryEditor from '../components/CategoryEditor';
 import styles from '../assets/components/WorldBibleRoute.module.css';
 import type {RAGProvider} from '../services/rag/RAGService';
@@ -95,6 +96,12 @@ const fileNameToEntityName = (name: string): string => {
   const base = name.replace(/\.[^.]+$/, '').trim();
   return base || 'Imported entry';
 };
+
+const normalizeName = (value: string): string =>
+  value.trim().toLowerCase().replace(/\s+/g, ' ');
+
+const CHARACTER_CATEGORY_HINTS = ['character', 'characters', 'npc', 'person', 'people'];
+const LOCATION_CATEGORY_HINTS = ['location', 'locations', 'place', 'places', 'region', 'zone'];
 
 const htmlToText = (raw: string): string => {
   const parser = new DOMParser();
@@ -302,6 +309,50 @@ const reviewReasonLabels: Record<ReviewQueueReason, string> = {
   aliasFollowUp: 'Review alternative names'
 };
 
+interface PotentialEntityMatch {
+  entity: WorldEntity;
+  reasons: string[];
+}
+
+const mergeEntityFields = (
+  targetFields: Record<string, unknown>,
+  sourceFields: Record<string, unknown>
+): Record<string, unknown> => {
+  const merged = {...targetFields};
+
+  Object.entries(sourceFields).forEach(([key, value]) => {
+    const existing = merged[key];
+    const normalizedExisting =
+      typeof existing === 'string' ? existing.trim() : existing;
+    const normalizedIncoming = typeof value === 'string' ? value.trim() : value;
+
+    if (
+      normalizedExisting === undefined ||
+      normalizedExisting === null ||
+      normalizedExisting === '' ||
+      (Array.isArray(normalizedExisting) && normalizedExisting.length === 0)
+    ) {
+      merged[key] = value;
+      return;
+    }
+
+    if (
+      key === ALTERNATIVE_NAMES_KEY &&
+      (typeof normalizedExisting === 'string' || typeof normalizedIncoming === 'string')
+    ) {
+      merged[key] = formatAlternativeNames(
+        parseAlternativeNames(
+          [String(normalizedExisting ?? ''), String(normalizedIncoming ?? '')]
+            .filter(Boolean)
+            .join(', ')
+        )
+      );
+    }
+  });
+
+  return merged;
+};
+
 const triggerJsonDownload = (fileName: string, data: unknown): void => {
   const blob = new Blob([JSON.stringify(data, null, 2)], {
     type: 'application/json'
@@ -318,11 +369,14 @@ const triggerJsonDownload = (fileName: string, data: unknown): void => {
 
 function WorldBibleRoute() {
   const activeProject = useAppStore((s) => s.activeProject);
+  const projectSettings = useAppStore((s) => s.projectSettings);
   const location = useLocation();
+  const navigate = useNavigate();
   const [categories, setCategories] = useState<EntityCategory[]>([]);
   const [activeTab, setActiveTab] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<WorldBibleViewMode>('category');
   const [entities, setEntities] = useState<WorldEntity[]>([]);
+  const [characters, setCharacters] = useState<Character[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [name, setName] = useState('');
   const [fieldValues, setFieldValues] = useState<Record<string, string>>({});
@@ -340,6 +394,8 @@ function WorldBibleRoute() {
   const seriesConfig = activeProject
     ? getSeriesBibleConfig(activeProject)
     : null;
+  const showGameSystems =
+    projectSettings?.featureToggles.enableGameSystems !== false;
   const [canonState, setCanonState] = useState<{
     parentCanonVersion?: string;
     childLastSynced?: string;
@@ -353,6 +409,10 @@ function WorldBibleRoute() {
   const [deletingEntityId, setDeletingEntityId] = useState<string | null>(null);
   const [promotingEntityId, setPromotingEntityId] = useState<string | null>(null);
   const [promotingMemoryId, setPromotingMemoryId] = useState<string | null>(null);
+  const [importingCharacterEntityId, setImportingCharacterEntityId] = useState<string | null>(
+    null
+  );
+  const [mergingEntityTargetId, setMergingEntityTargetId] = useState<string | null>(null);
   const [isSyncingCanon, setIsSyncingCanon] = useState(false);
   const [linkingCompendiumEntityId, setLinkingCompendiumEntityId] = useState<
     string | null
@@ -421,16 +481,18 @@ function WorldBibleRoute() {
 
       await initializeDefaultCategories(projectId);
 
-      const [cats, ents, loadedAliases] = await Promise.all([
+      const [cats, ents, loadedAliases, loadedCharacters] = await Promise.all([
         getCategoriesByProject(projectId),
         getEntitiesByProject(projectId),
-        getAliasesByProject(projectId)
+        getAliasesByProject(projectId),
+        getCharactersByProject(projectId)
       ]);
 
       if (!cancelled) {
         setCategories(cats);
         setEntities(ents);
         setAliases(loadedAliases);
+        setCharacters(loadedCharacters);
       }
     })();
 
@@ -719,6 +781,45 @@ function WorldBibleRoute() {
     }),
     [reviewQueue]
   );
+  const potentialEntityMatches = useMemo<PotentialEntityMatch[]>(() => {
+    const normalizedName = normalizeName(name);
+    const aliasValues = parseAlternativeNames(fieldValues[ALTERNATIVE_NAMES_KEY] || '');
+    const normalizedAliases = aliasValues
+      .map((alias) => normalizeName(alias))
+      .filter(Boolean);
+
+    if (!normalizedName && normalizedAliases.length === 0) {
+      return [];
+    }
+
+    return entities
+      .filter((entity) => entity.id !== editingId)
+      .map((entity) => {
+        const reasons = new Set<string>();
+        const entityName = normalizeName(entity.name);
+        const entityAliases = aliasMapByEntityId
+          .get(entity.id)
+          ?.map((alias) => normalizeName(alias))
+          .filter(Boolean) ?? [];
+
+        if (normalizedName && entityName === normalizedName) {
+          reasons.add('Same name as an existing record');
+        }
+        if (normalizedName && entityAliases.includes(normalizedName)) {
+          reasons.add('Current name already exists as an alias');
+        }
+        if (normalizedAliases.includes(entityName)) {
+          reasons.add('One of your aliases matches an existing record name');
+        }
+        if (normalizedAliases.some((alias) => entityAliases.includes(alias))) {
+          reasons.add('One or more aliases overlap with another record');
+        }
+
+        return {entity, reasons: Array.from(reasons)};
+      })
+      .filter((match) => match.reasons.length > 0)
+      .sort((a, b) => a.entity.name.localeCompare(b.entity.name));
+  }, [aliasMapByEntityId, editingId, entities, fieldValues, name]);
   const visibleEntities =
     viewMode === 'review'
       ? filteredReviewQueue.map((item) => item.entity)
@@ -766,6 +867,7 @@ function WorldBibleRoute() {
         categoryId: activeCategory.id,
         name,
         fields: nextFields,
+        isNew: false,
         needsCompletion: false,
         aliasesReviewedAt:
           viewMode === 'review' && selectedEntityQueueItem
@@ -868,6 +970,7 @@ function WorldBibleRoute() {
       const now = Date.now();
       const next: WorldEntity = {
         ...entity,
+        isNew: false,
         needsCompletion: false,
         aliasesReviewedAt: now,
         updatedAt: now
@@ -1431,12 +1534,237 @@ function WorldBibleRoute() {
     }
   };
 
+  const handleMergeEntityIntoMatch = useCallback(
+    async (target: WorldEntity) => {
+      if (!activeProject || !editingId) {
+        return;
+      }
+
+      const source = entities.find((entity) => entity.id === editingId);
+      if (!source || source.id === target.id) {
+        return;
+      }
+
+      if (!confirm(`Merge "${source.name}" into "${target.name}" and remove the duplicate record?`)) {
+        return;
+      }
+
+      setMergingEntityTargetId(target.id);
+      setFeedback(null);
+
+      try {
+        const sourceName = name.trim() || source.name;
+        const sourceDraftFields: Record<string, unknown> = {
+          ...source.fields,
+          ...fieldValues
+        };
+        const sourceAliasTexts = [
+          ...(aliasMapByEntityId.get(source.id) ?? []),
+          ...parseAlternativeNames(
+            typeof sourceDraftFields[ALTERNATIVE_NAMES_KEY] === 'string'
+              ? String(sourceDraftFields[ALTERNATIVE_NAMES_KEY])
+              : ''
+          ),
+          source.name,
+          sourceName
+        ].filter((alias) => normalizeName(alias) !== normalizeName(target.name));
+        const targetAliasTexts = [
+          ...(aliasMapByEntityId.get(target.id) ?? []),
+          ...parseAlternativeNames(
+            typeof target.fields[ALTERNATIVE_NAMES_KEY] === 'string'
+              ? target.fields[ALTERNATIVE_NAMES_KEY]
+              : ''
+          )
+        ];
+
+        const mergedEntity: WorldEntity = {
+          ...target,
+          fields: (() => {
+            const nextFields = mergeEntityFields(target.fields, sourceDraftFields);
+            delete nextFields[ALTERNATIVE_NAMES_KEY];
+            return nextFields;
+          })(),
+          links: Array.from(new Set([...(target.links ?? []), ...(source.links ?? [])])),
+          isNew: false,
+          needsCompletion: false,
+          aliasesReviewedAt: Math.max(
+            target.aliasesReviewedAt ?? 0,
+            source.aliasesReviewedAt ?? 0
+          ) || undefined,
+          updatedAt: Date.now()
+        };
+
+        await saveEntity(mergedEntity);
+        const mergedAliases = await replaceAliasesForEntity({
+          projectId: activeProject.id,
+          entityId: target.id,
+          aliases: Array.from(
+            new Map(
+              [...targetAliasTexts, ...sourceAliasTexts]
+                .map((alias) => alias.trim())
+                .filter(Boolean)
+                .map((alias) => [normalizeName(alias), alias])
+            ).values()
+          )
+        });
+        await deleteAliasesForEntity(activeProject.id, source.id);
+        await deleteEntity(source.id);
+
+        if (ragService) {
+          await ragService.indexDocument(
+            mergedEntity.id,
+            mergedEntity.name,
+            buildEntityContent(mergedEntity),
+            'worldbible',
+            {
+              tags: [
+                categories.find((category) => category.id === mergedEntity.categoryId)?.slug ?? ''
+              ].filter(Boolean),
+              entityIds: [mergedEntity.id]
+            }
+          );
+          await ragService.deleteDocument(source.id);
+        }
+        if (shodhService) {
+          await shodhService.captureAutoMemory({
+            projectId: activeProject.id,
+            documentId: mergedEntity.id,
+            title: mergedEntity.name,
+            content: buildEntityContent(mergedEntity),
+            tags: [
+              'worldbible',
+              categories.find((category) => category.id === mergedEntity.categoryId)?.slug ?? ''
+            ].filter(Boolean)
+          });
+          await shodhService.deleteMemoriesForDocument(source.id);
+          await refreshMemories();
+        }
+
+        setEntities((prev) =>
+          prev
+            .filter((entity) => entity.id !== source.id)
+            .map((entity) => (entity.id === target.id ? mergedEntity : entity))
+        );
+        setAliases((prev) => [
+          ...prev.filter(
+            (alias) => alias.targetId !== source.id && alias.targetId !== target.id
+          ),
+          ...mergedAliases
+        ]);
+        setViewMode('category');
+        handleEdit(mergedEntity, 'aliases');
+        setFeedback({
+          tone: 'success',
+          message: `"${sourceName}" merged into "${target.name}".`
+        });
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : 'Unable to merge records.';
+        setFeedback({tone: 'error', message});
+      } finally {
+        setMergingEntityTargetId(null);
+      }
+    },
+    [
+      activeProject,
+      aliasMapByEntityId,
+      categories,
+      editingId,
+      entities,
+      fieldValues,
+      handleEdit,
+      name,
+      ragService,
+      shodhService,
+      refreshMemories
+    ]
+  );
+
   const buildEntityContent = (entity: WorldEntity) => {
     const fieldText = Object.entries(entity.fields)
       .map(([key, value]) => `${key}: ${value ?? ''}`)
       .join('\n');
     return `${entity.name}\n${fieldText}`;
   };
+
+  const isCharacterLikeEntity = useCallback(
+    (entity: WorldEntity): boolean => {
+      const category = categories.find((item) => item.id === entity.categoryId);
+      const slug = (category?.slug ?? '').toLowerCase();
+      return CHARACTER_CATEGORY_HINTS.some((hint) => slug.includes(hint));
+    },
+    [categories]
+  );
+  const isLocationLikeEntity = useCallback(
+    (entity: WorldEntity): boolean => {
+      const category = categories.find((item) => item.id === entity.categoryId);
+      const slug = (category?.slug ?? '').toLowerCase();
+      return LOCATION_CATEGORY_HINTS.some((hint) => slug.includes(hint));
+    },
+    [categories]
+  );
+
+  const hasRuleset = Boolean(activeProject?.rulesetId);
+
+  const handleImportEntityToCharacters = useCallback(
+    async (entity: WorldEntity, options?: {autoCreateSheet?: boolean}) => {
+      if (!activeProject) {
+        return;
+      }
+      setImportingCharacterEntityId(entity.id);
+      setFeedback(null);
+      try {
+        const existingCharacter = characters.find(
+          (character) => normalizeName(character.name) === normalizeName(entity.name)
+        );
+        const character: Character = existingCharacter ?? {
+          id: crypto.randomUUID(),
+          projectId: activeProject.id,
+          name: entity.name,
+          description:
+            typeof entity.fields.description === 'string'
+              ? entity.fields.description
+              : undefined,
+          fields: {
+            age: typeof entity.fields.age === 'string' ? entity.fields.age : undefined,
+            role: typeof entity.fields.role === 'string' ? entity.fields.role : undefined,
+            notes: typeof entity.fields.notes === 'string' ? entity.fields.notes : undefined
+          },
+          createdAt: Date.now(),
+          updatedAt: Date.now()
+        };
+
+        if (!existingCharacter) {
+          await saveCharacter(character);
+          setCharacters((prev) => [...prev, character]);
+        }
+
+        setFeedback({
+          tone: 'success',
+          message: existingCharacter
+            ? `"${entity.name}" already exists in Characters.`
+            : `"${entity.name}" imported into Characters without removing the World Bible record.`
+        });
+
+        if (options?.autoCreateSheet && hasRuleset) {
+          navigate('/characters?view=sheets', {
+            state: {
+              prefillCharacterId: character.id,
+              preferredView: 'sheets',
+              autoCreateSheetForCharacterId: character.id
+            }
+          });
+        }
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : 'Unable to import character.';
+        setFeedback({tone: 'error', message});
+      } finally {
+        setImportingCharacterEntityId(null);
+      }
+    },
+    [activeProject, characters, hasRuleset, navigate]
+  );
 
   const inferCompendiumDomain = (entity: WorldEntity): CompendiumDomain => {
     const category = categories.find((item) => item.id === entity.categoryId);
@@ -1458,10 +1786,22 @@ function WorldBibleRoute() {
 
   const handleAddEntityToCompendium = async (entity: WorldEntity) => {
     if (!activeProject) return;
+    if (isLocationLikeEntity(entity) && !compendiumLinkedEntityIds.has(entity.id)) {
+      navigate('/compendium', {
+        state: {
+          activeTab: 'entries',
+          importEntityId: entity.id,
+          importMechanicKind: 'discovery',
+          importProgressScope: 'character',
+          flashMessage: `Choose the mechanics type for "${entity.name}".`
+        }
+      });
+      return;
+    }
     setLinkingCompendiumEntityId(entity.id);
     setFeedback(null);
     try {
-      await upsertCompendiumEntryFromEntity({
+      const entry = await upsertCompendiumEntryFromEntity({
         projectId: activeProject.id,
         entity,
         domain: inferCompendiumDomain(entity),
@@ -1474,7 +1814,14 @@ function WorldBibleRoute() {
       });
       setFeedback({
         tone: 'success',
-        message: `"${entity.name}" linked to Compendium.`
+        message: `"${entity.name}" linked to mechanics.`
+      });
+      navigate('/compendium', {
+        state: {
+          focusEntryId: entry.id,
+          activeTab: 'entries',
+          flashMessage: `"${entity.name}" linked to mechanics.`
+        }
       });
     } catch (error) {
       const message =
@@ -2170,6 +2517,53 @@ function WorldBibleRoute() {
                 </label>
               </div>
 
+              {potentialEntityMatches.length > 0 && (
+                <div className={styles.matchPanel}>
+                  <strong>Possible duplicate or alias matches</strong>
+                  <p>
+                    This name overlaps with existing canon records. Open the matching
+                    entry before saving if this should be one record instead of two.
+                  </p>
+                  <div className={styles.matchList}>
+                    {potentialEntityMatches.slice(0, 4).map((match) => (
+                      <div key={match.entity.id} className={styles.matchCard}>
+                        <div>
+                          <strong>{match.entity.name}</strong>
+                          <div className={styles.matchReasons}>
+                            {match.reasons.join(' · ')}
+                          </div>
+                        </div>
+                        <div className={styles.reviewToolbarActions}>
+                          <button
+                            type='button'
+                            onClick={() => handleEdit(match.entity)}
+                          >
+                            Open record
+                          </button>
+                          <button
+                            type='button'
+                            onClick={() => handleEdit(match.entity, 'aliases')}
+                          >
+                            Review aliases
+                          </button>
+                          {editingId && (
+                            <button
+                              type='button'
+                              onClick={() => void handleMergeEntityIntoMatch(match.entity)}
+                              disabled={mergingEntityTargetId === match.entity.id}
+                            >
+                              {mergingEntityTargetId === match.entity.id
+                                ? 'Merging...'
+                                : 'Merge into this record'}
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {activeCategory.fieldSchema.map((field) => (
                 <div key={field.key} className={styles.formGroup}>
                   <label>
@@ -2403,10 +2797,13 @@ function WorldBibleRoute() {
                           </>
                         )
                       : (
-                          entity.needsCompletion && (
-                            <span className={styles.completionBadge}>Needs completion</span>
+                          entity.isNew && (
+                            <span className={styles.newBadge}>New</span>
                           )
                         )}
+                    {viewMode !== 'review' && entity.needsCompletion && (
+                      <span className={styles.completionBadge}>Needs completion</span>
+                    )}
                   </div>
                   {viewMode === 'review' && queueItem && (
                     <div className={styles.reviewEntityMeta}>
@@ -2466,17 +2863,48 @@ function WorldBibleRoute() {
                           : 'Promote to parent'}
                       </button>
                     )}
-                    <button
-                      type='button'
-                      onClick={() => void handleAddEntityToCompendium(entity)}
-                      disabled={linkingCompendiumEntityId === entity.id}
+                    {isCharacterLikeEntity(entity) && (
+                      <button
+                        type='button'
+                        onClick={() => void handleImportEntityToCharacters(entity)}
+                        disabled={importingCharacterEntityId === entity.id}
+                        title='Create or link a Characters record so this person can use sheets, stats, inventory, and resources.'
+                      >
+                        {importingCharacterEntityId === entity.id
+                          ? 'Importing...'
+                          : 'Import Character'}
+                      </button>
+                    )}
+                    {isCharacterLikeEntity(entity) && hasRuleset && (
+                      <button
+                        type='button'
+                        onClick={() =>
+                          void handleImportEntityToCharacters(entity, {
+                            autoCreateSheet: true
+                          })
+                        }
+                        disabled={importingCharacterEntityId === entity.id}
+                        title='Import this World Bible record into Characters and create or open a character sheet immediately.'
+                      >
+                        {importingCharacterEntityId === entity.id
+                          ? 'Importing...'
+                          : 'Import + Sheet'}
+                      </button>
+                    )}
+                    {showGameSystems && (
+                      <button
+                        type='button'
+                        onClick={() => void handleAddEntityToCompendium(entity)}
+                        disabled={linkingCompendiumEntityId === entity.id}
+                        title='Attach optional progression, crafting, discovery, or bestiary mechanics.'
                       >
                         {linkingCompendiumEntityId === entity.id
                           ? 'Linking...'
                           : compendiumLinkedEntityIds.has(entity.id)
-                          ? 'Update Compendium'
-                          : 'Add to Compendium'}
-                    </button>
+                            ? 'Update Mechanics'
+                            : 'Add Mechanics'}
+                      </button>
+                    )}
                   </div>
                 </li>
                 );

@@ -265,40 +265,71 @@ export interface CharacterSheet {
   updatedAt: number;
 }
 
+export type StateMutationActorId = string;
+export type StateMutationInventoryQuantity = number;
+
+export type ResourceChangeStateMutationCommand = {
+  type: 'resource_change';
+  actorId: StateMutationActorId;
+  resourceDefinitionId: string;
+  delta: number;
+};
+
+export type ResourceSetStateMutationCommand = {
+  type: 'resource_set';
+  actorId: StateMutationActorId;
+  resourceDefinitionId: string;
+  value: number;
+};
+
+export type StatChangeStateMutationCommand = {
+  type: 'stat_change';
+  actorId: StateMutationActorId;
+  statDefinitionId: string;
+  delta: number | boolean | string;
+};
+
+export type StatSetStateMutationCommand = {
+  type: 'stat_set';
+  actorId: StateMutationActorId;
+  statDefinitionId: string;
+  value: number | boolean | string;
+};
+
+export type StatusStateMutationCommand = {
+  type: 'status_apply' | 'status_remove';
+  actorId: StateMutationActorId;
+  statusName: string;
+};
+
+export type InventoryQuantityStateMutationCommand = {
+  type: 'inventory_add' | 'inventory_remove' | 'inventory_consume';
+  actorId: StateMutationActorId;
+  itemName: string;
+  quantity?: StateMutationInventoryQuantity;
+};
+
+export type InventoryEquipStateMutationCommand = {
+  type: 'inventory_equip' | 'inventory_unequip';
+  actorId: StateMutationActorId;
+  itemName: string;
+};
+
+export type LocationSetStateMutationCommand = {
+  type: 'location_set';
+  actorId: StateMutationActorId;
+  locationName: string;
+};
+
 export type StateMutationCommand =
-  | {
-      type: 'equip_item' | 'unequip_item' | 'consume_item';
-      actorId: string;
-      itemName: string;
-      quantity?: number;
-    }
-  | {
-      type: 'move_entity';
-      actorId: string;
-      destination: string;
-    }
-  | {
-      type: 'apply_status' | 'remove_status';
-      actorId: string;
-      statusName: string;
-    }
-  | {
-      type: 'increment_stat' | 'decrement_stat';
-      actorId: string;
-      statDefinitionId: string;
-      amount: number;
-    }
-  | {
-      type: 'resource_change';
-      actorId: string;
-      resourceDefinitionId: string;
-      amount: number;
-    }
-  | {
-      type: 'level_up';
-      actorId: string;
-      levels: number;
-    };
+  | ResourceChangeStateMutationCommand
+  | ResourceSetStateMutationCommand
+  | StatChangeStateMutationCommand
+  | StatSetStateMutationCommand
+  | StatusStateMutationCommand
+  | InventoryQuantityStateMutationCommand
+  | InventoryEquipStateMutationCommand
+  | LocationSetStateMutationCommand;
 
 export interface StateMutationEvent {
   id: string;
@@ -306,9 +337,11 @@ export interface StateMutationEvent {
   sceneId: string;
   sceneTitle?: string;
   sceneOrder?: number;
+  sceneSequence?: number;
+  sourceType?: 'manual' | 'deterministic-review';
   sourceRevision: number;
   sourceHash: string;
-  status: 'accepted' | 'invalidated';
+  status: 'proposed' | 'accepted' | 'invalidated';
   commands: StateMutationCommand[];
   createdAt: number;
   invalidatedAt?: number;
@@ -342,6 +375,7 @@ export interface WorldEntity {
   categoryId: string;
   name: string;
   fields: EntityFields;
+  isNew?: boolean;
   needsCompletion?: boolean;
   aliasesReviewedAt?: number;
   links: string[];
@@ -368,6 +402,9 @@ export interface CompendiumActionDefinition {
   repeatable?: boolean;
 }
 
+export type MechanicsProgressScope = 'global' | 'character' | 'party';
+export type CompendiumMechanicKind = 'discovery' | 'zone' | 'settlement' | 'general';
+
 export interface CompendiumEntry {
   id: string;
   projectId: string;
@@ -376,6 +413,8 @@ export interface CompendiumEntry {
   sourceEntityId?: string;
   description?: string;
   tags?: string[];
+  mechanicKind?: CompendiumMechanicKind;
+  progressScope?: MechanicsProgressScope;
   needsCompletion?: boolean;
   actions: CompendiumActionDefinition[];
   createdAt: number;
@@ -458,6 +497,8 @@ export interface ZoneAffinityProfile {
   projectId: string;
   biomeKey: string;
   name: string;
+  sourceEntityId?: string;
+  progressScope?: MechanicsProgressScope;
   maxAffinityPoints: number;
   milestones: ZoneAffinityMilestone[];
   createdAt: number;
@@ -468,6 +509,7 @@ export interface ZoneAffinityProgress {
   id: string;
   projectId: string;
   biomeKey: string;
+  characterSheetId?: string;
   affinityPoints: number;
   totalExposureSeconds: number;
   unlockedMilestoneIds: string[];
@@ -505,6 +547,7 @@ export interface SettlementState {
   id: string;
   projectId: string;
   name: string;
+  sourceEntityId?: string;
   fortressLevel: number;
   baseStats: {
     defense: number;

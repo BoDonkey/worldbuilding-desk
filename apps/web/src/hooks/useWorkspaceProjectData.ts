@@ -5,6 +5,7 @@ import type {
   CharacterSheet,
   EntityCategory,
   ProjectSettings,
+  StateMutationEvent,
   StatBlockGroup,
   StatBlockInsertMode,
   StatBlockScopePreset,
@@ -37,6 +38,7 @@ import {
 } from '../services/seriesBible/SeriesBibleService';
 import {getAliasesByProject, type ConsistencyAlias} from '../services/consistency';
 import {appendSystemHistoryEntry} from '../services/system';
+import {getStateMutationEventsByProject} from '../services/state/stateMutationLedger';
 import type {RAGProvider} from '../services/rag/RAGService';
 import {getRAGService} from '../services/rag/getRAGService';
 import type {Project} from '../entityTypes';
@@ -84,6 +86,7 @@ export function useWorkspaceProjectData({
     childLastSynced?: string;
     parentName?: string;
   }>({});
+  const [stateMutationEvents, setStateMutationEvents] = useState<StateMutationEvent[]>([]);
 
   // StatBlock preference state — owned here, loaded from settings, also mutated by
   // useWorkspaceStatBlocks at runtime (user selections).
@@ -163,6 +166,7 @@ export function useWorkspaceProjectData({
       setRuleset(null);
       setSettlementState(null);
       setSettlementModules([]);
+      setStateMutationEvents([]);
       setSelectedStatCharacterId('');
       setSelectedStatEntityId('');
       setStatBlockSourceType('character');
@@ -194,7 +198,8 @@ export function useWorkspaceProjectData({
         loadedSheets,
         loadedRuleset,
         loadedSettlementState,
-        loadedSettlementModules
+        loadedSettlementModules,
+        loadedStateMutationEvents
       ] = await Promise.all([
         getDocumentsByProject(activeProject.id),
         getOrCreateSettings(activeProject.id),
@@ -206,7 +211,8 @@ export function useWorkspaceProjectData({
         getCharacterSheetsByProject(activeProject.id),
         getRulesetByProjectId(activeProject.id),
         getOrCreateSettlementState(activeProject.id),
-        getSettlementModulesByProject(activeProject.id)
+        getSettlementModulesByProject(activeProject.id),
+        getStateMutationEventsByProject(activeProject.id)
       ]);
 
       if (cancelled) return;
@@ -233,6 +239,7 @@ export function useWorkspaceProjectData({
       setRuleset(loadedRuleset);
       setSettlementState(loadedSettlementState);
       setSettlementModules(loadedSettlementModules);
+      setStateMutationEvents(loadedStateMutationEvents);
       setSelectedStatCharacterId(loadedSheets[0]?.id ?? '');
       setSelectedStatEntityId(loadedEntities[0]?.id ?? '');
       setStatPreferencesHydrated(true);
@@ -354,6 +361,19 @@ export function useWorkspaceProjectData({
     ragService.setEntityVocabulary(vocabulary);
   }, [activeProject, ragService, entities, characters]);
 
+  useEffect(() => {
+    if (!activeProject) return;
+    const refresh = () => {
+      void getStateMutationEventsByProject(activeProject.id).then((events) => {
+        setStateMutationEvents(events);
+      });
+    };
+    window.addEventListener('wbd:state-mutation-events-changed', refresh);
+    return () => {
+      window.removeEventListener('wbd:state-mutation-events-changed', refresh);
+    };
+  }, [activeProject]);
+
   return {
     // Editor
     editorConfig,
@@ -372,6 +392,7 @@ export function useWorkspaceProjectData({
     setAliases,
     resolvedActionCues,
     characters,
+    setCharacters,
     characterSheets,
     ruleset,
 
@@ -385,6 +406,7 @@ export function useWorkspaceProjectData({
     // Canon sync (setter needed by handleCanonSync in route)
     canonState,
     setCanonState,
+    stateMutationEvents,
 
     // StatBlock preferences (all setters needed by useWorkspaceStatBlocks)
     statBlockSourceType,

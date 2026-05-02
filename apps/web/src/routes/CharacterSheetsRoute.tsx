@@ -7,7 +7,10 @@ import type {
   CharacterTrackedEntry,
   CompendiumEntry,
   CharacterStat,
-  CharacterResource
+  CharacterResource,
+  StateMutationCommand,
+  StateMutationEvent,
+  WritingDocument
 } from '../entityTypes';
 import type {StoredRuleset} from '../entityTypes';
 import {
@@ -38,6 +41,23 @@ import {
   getSettlementModulesByProject,
   getCompendiumEntriesByProject
 } from '../services/compendium';
+import {getDocumentsByProject} from '../writingStorage';
+import {
+  getStateMutationEventsByProject,
+  invalidateStateMutationEventById,
+  saveStateMutationEvent
+} from '../services/state/stateMutationLedger';
+import {
+  replayCharacterState,
+  validateStateMutationCommandAgainstState,
+  validateStateMutationEventForRuleset
+} from '../services/state/stateReplay';
+import {buildStateMutationPreview} from '../services/state/stateMutationPresentation';
+import {validateStateMutationEvent} from '../services/state/stateMutationSchemas';
+import {
+  describeStateMutationEventStaleness,
+  getStateMutationEventStaleness
+} from '../services/state/stateMutationStaleness';
 
 import {useAppStore} from '../store/appStore';
 
@@ -45,12 +65,103 @@ interface CharacterSheetsRouteProps {
   embedded?: boolean;
   prefillCharacterId?: string | null;
   onPrefillConsumed?: () => void;
+  autoCreateSheetCharacterId?: string | null;
+  onAutoCreateConsumed?: () => void;
+}
+
+type MutationFormType =
+  | 'resource_change'
+  | 'resource_set'
+  | 'stat_change'
+  | 'stat_set'
+  | 'status_apply'
+  | 'status_remove'
+  | 'inventory_add'
+  | 'inventory_remove'
+  | 'inventory_consume'
+  | 'inventory_equip'
+  | 'inventory_unequip'
+  | 'location_set';
+
+const MUTATION_FORM_TYPES: Array<{value: MutationFormType; label: string}> = [
+  {value: 'resource_change', label: 'Resource change'},
+  {value: 'resource_set', label: 'Resource set'},
+  {value: 'stat_change', label: 'Stat change'},
+  {value: 'stat_set', label: 'Stat set'},
+  {value: 'status_apply', label: 'Apply status'},
+  {value: 'status_remove', label: 'Remove status'},
+  {value: 'inventory_add', label: 'Add inventory'},
+  {value: 'inventory_remove', label: 'Remove inventory'},
+  {value: 'inventory_consume', label: 'Consume inventory'},
+  {value: 'inventory_equip', label: 'Equip inventory'},
+  {value: 'inventory_unequip', label: 'Unequip inventory'},
+  {value: 'location_set', label: 'Set location'}
+];
+
+function hashString(value: string): string {
+  let hash = 5381;
+  for (let index = 0; index < value.length; index += 1) {
+    hash = (hash * 33) ^ value.charCodeAt(index);
+  }
+  return `h${(hash >>> 0).toString(16)}`;
+}
+
+function buildDefaultStats(ruleset: StoredRuleset | null): CharacterStat[] {
+  if (!ruleset) {
+    return [];
+  }
+  return ruleset.statDefinitions.map((def) => ({
+    definitionId: def.id,
+    value: typeof def.defaultValue === 'number' ? def.defaultValue : 0
+  }));
+}
+
+function buildDefaultResources(ruleset: StoredRuleset | null): CharacterResource[] {
+  if (!ruleset) {
+    return [];
+  }
+  return ruleset.resourceDefinitions.map((def) => ({
+    definitionId: def.id,
+    current: typeof def.defaultValue === 'number' ? def.defaultValue : 0,
+    max: typeof def.defaultValue === 'number' ? def.defaultValue : 0
+  }));
+}
+
+function summarizeMutationCommand(command: StateMutationCommand): string {
+  switch (command.type) {
+    case 'resource_change':
+      return `Resource ${command.resourceDefinitionId} ${command.delta >= 0 ? '+' : ''}${command.delta}`;
+    case 'resource_set':
+      return `Resource ${command.resourceDefinitionId} = ${command.value}`;
+    case 'stat_change':
+      return `Stat ${command.statDefinitionId} -> delta ${String(command.delta)}`;
+    case 'stat_set':
+      return `Stat ${command.statDefinitionId} = ${String(command.value)}`;
+    case 'status_apply':
+      return `Apply status ${command.statusName}`;
+    case 'status_remove':
+      return `Remove status ${command.statusName}`;
+    case 'inventory_add':
+      return `Add ${command.itemName}${command.quantity ? ` x${command.quantity}` : ''}`;
+    case 'inventory_remove':
+      return `Remove ${command.itemName}${command.quantity ? ` x${command.quantity}` : ''}`;
+    case 'inventory_consume':
+      return `Consume ${command.itemName}${command.quantity ? ` x${command.quantity}` : ''}`;
+    case 'inventory_equip':
+      return `Equip ${command.itemName}`;
+    case 'inventory_unequip':
+      return `Unequip ${command.itemName}`;
+    case 'location_set':
+      return `Move to ${command.locationName}`;
+  }
 }
 
 function CharacterSheetsRoute({
   embedded = false,
   prefillCharacterId,
-  onPrefillConsumed
+  onPrefillConsumed,
+  autoCreateSheetCharacterId,
+  onAutoCreateConsumed
 }: CharacterSheetsRouteProps) {
   const activeProject = useAppStore((s) => s.activeProject);
   const navigate = useNavigate();
@@ -69,6 +180,8 @@ function CharacterSheetsRoute({
   const [compendiumEntries, setCompendiumEntries] = useState<CompendiumEntry[]>(
     []
   );
+  const [documents, setDocuments] = useState<WritingDocument[]>([]);
+  const [stateMutationEvents, setStateMutationEvents] = useState<StateMutationEvent[]>([]);
   const [quickInventoryName, setQuickInventoryName] = useState('');
   const [quickInventoryQty, setQuickInventoryQty] = useState(1);
   const [quickEquipmentName, setQuickEquipmentName] = useState('');
@@ -95,6 +208,29 @@ function CharacterSheetsRoute({
     tone: 'success' | 'error';
     message: string;
   } | null>(null);
+  const [mutationTargetSheetId, setMutationTargetSheetId] = useState('');
+  const [mutationSceneId, setMutationSceneId] = useState('');
+  const [mutationType, setMutationType] =
+    useState<MutationFormType>('resource_change');
+  const [mutationStatDefinitionId, setMutationStatDefinitionId] = useState('');
+  const [mutationResourceDefinitionId, setMutationResourceDefinitionId] =
+    useState('');
+  const [mutationNumberValue, setMutationNumberValue] = useState('0');
+  const [mutationTextValue, setMutationTextValue] = useState('');
+  const [mutationBooleanValue, setMutationBooleanValue] = useState(false);
+  const [mutationStatusName, setMutationStatusName] = useState('');
+  const [mutationItemName, setMutationItemName] = useState('');
+  const [mutationQuantity, setMutationQuantity] = useState('1');
+  const [mutationLocationName, setMutationLocationName] = useState('');
+  const [isSavingMutation, setIsSavingMutation] = useState(false);
+  const [invalidatingMutationEventId, setInvalidatingMutationEventId] =
+    useState<string | null>(null);
+  const [editingMutationEventId, setEditingMutationEventId] = useState<string | null>(
+    null
+  );
+  const [reorderingMutationEventId, setReorderingMutationEventId] = useState<
+    string | null
+  >(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -108,6 +244,8 @@ function CharacterSheetsRoute({
           setSettlementState(null);
           setSettlementModules([]);
           setCompendiumEntries([]);
+          setDocuments([]);
+          setStateMutationEvents([]);
           setShodhService(null);
           setRulesetMemory(null);
           setIsLoaded(true);
@@ -124,7 +262,9 @@ function CharacterSheetsRoute({
         loadedCharacters,
         loadedSettlementState,
         loadedSettlementModules,
-        loadedCompendiumEntries
+        loadedCompendiumEntries,
+        loadedDocuments,
+        loadedStateMutationEvents
       ] = await Promise.all(
         [
           getCharacterSheetsByProject(activeProject.id),
@@ -132,7 +272,9 @@ function CharacterSheetsRoute({
           getCharactersByProject(activeProject.id),
           getOrCreateSettlementState(activeProject.id),
           getSettlementModulesByProject(activeProject.id),
-          getCompendiumEntriesByProject(activeProject.id)
+          getCompendiumEntriesByProject(activeProject.id),
+          getDocumentsByProject(activeProject.id),
+          getStateMutationEventsByProject(activeProject.id)
         ]
       );
 
@@ -154,6 +296,8 @@ function CharacterSheetsRoute({
         setSettlementState(loadedSettlementState);
         setSettlementModules(loadedSettlementModules);
         setCompendiumEntries(loadedCompendiumEntries);
+        setDocuments(loadedDocuments);
+        setStateMutationEvents(loadedStateMutationEvents);
         shodh = await getShodhService(shodhOptions);
         if (!cancelled) {
           setShodhService(shodh);
@@ -176,8 +320,28 @@ function CharacterSheetsRoute({
     }
     const character = characters.find((c) => c.id === prefillCharacterId);
     if (character) {
+      setEditingId(null);
       setSelectedCharacterId(prefillCharacterId);
       setName(character.name);
+      setLevel(1);
+      setExperience(0);
+      setNotes('');
+      setInventoryEntries([]);
+      setEquipmentEntries([]);
+      setStatusEntries([]);
+      setQuickInventoryName('');
+      setQuickInventoryQty(1);
+      setQuickEquipmentName('');
+      setQuickStatusName('');
+      setCatalogInventoryId('');
+      setCatalogEquipmentId('');
+      setCatalogStatusId('');
+      setStats(buildDefaultStats(ruleset));
+      setResources(buildDefaultResources(ruleset));
+      setFeedback({
+        tone: 'success',
+        message: `"${character.name}" is ready for a sheet. Base stats and resources below come from the active ruleset.`
+      });
     }
     onPrefillConsumed?.();
   }, [
@@ -185,7 +349,113 @@ function CharacterSheetsRoute({
     characters,
     editingId,
     isLoaded,
+    ruleset,
     onPrefillConsumed
+  ]);
+
+  useEffect(() => {
+    if (!autoCreateSheetCharacterId || editingId || !isLoaded || !activeProject) {
+      return;
+    }
+    const character = characters.find((entry) => entry.id === autoCreateSheetCharacterId);
+    if (!character) {
+      onAutoCreateConsumed?.();
+      return;
+    }
+
+    const existingSheet =
+      sheets.find((sheet) => sheet.characterId === autoCreateSheetCharacterId) ?? null;
+    if (existingSheet) {
+      setEditingId(existingSheet.id);
+      setSelectedCharacterId(existingSheet.characterId || '');
+      setName(existingSheet.name);
+      setLevel(existingSheet.level);
+      setExperience(existingSheet.experience);
+      setStats(existingSheet.stats);
+      setResources(existingSheet.resources);
+      setNotes(existingSheet.notes || '');
+      setInventoryEntries(
+        mergeLegacyAndTracked(existingSheet.inventory, existingSheet.inventoryEntries)
+      );
+      setEquipmentEntries(
+        mergeLegacyAndTracked(existingSheet.equipment, existingSheet.equipmentEntries)
+      );
+      setStatusEntries(
+        mergeLegacyAndTracked(existingSheet.statuses, existingSheet.statusEntries)
+      );
+      setFeedback({
+        tone: 'success',
+        message: `Opened the existing sheet for "${character.name}".`
+      });
+      onAutoCreateConsumed?.();
+      return;
+    }
+
+    const now = Date.now();
+    const sheet: CharacterSheet = {
+      id: crypto.randomUUID(),
+      projectId: activeProject.id,
+      characterId: character.id,
+      name: character.name,
+      level: 1,
+      experience: 0,
+      stats: buildDefaultStats(ruleset),
+      resources: buildDefaultResources(ruleset),
+      inventory: [],
+      equipment: [],
+      statuses: [],
+      inventoryEntries: [],
+      equipmentEntries: [],
+      statusEntries: [],
+      notes: character.description ?? '',
+      createdAt: now,
+      updatedAt: now
+    };
+
+    void saveCharacterSheet(sheet)
+      .then(() => {
+        setSheets((prev) => [...prev, sheet]);
+        setEditingId(sheet.id);
+        setSelectedCharacterId(sheet.characterId || '');
+        setName(sheet.name);
+        setLevel(sheet.level);
+        setExperience(sheet.experience);
+        setStats(sheet.stats);
+        setResources(sheet.resources);
+        setNotes(sheet.notes || '');
+        setInventoryEntries(
+          mergeLegacyAndTracked(sheet.inventory, sheet.inventoryEntries)
+        );
+        setEquipmentEntries(
+          mergeLegacyAndTracked(sheet.equipment, sheet.equipmentEntries)
+        );
+        setStatusEntries(
+          mergeLegacyAndTracked(sheet.statuses, sheet.statusEntries)
+        );
+        setFeedback({
+          tone: 'success',
+          message: `Created a character sheet for "${character.name}". Stats and resources came from the active ruleset.`
+        });
+      })
+      .catch((error) => {
+        const message =
+          error instanceof Error
+            ? error.message
+            : 'Unable to create a character sheet.';
+        setFeedback({tone: 'error', message});
+      })
+      .finally(() => {
+        onAutoCreateConsumed?.();
+      });
+  }, [
+    activeProject,
+    autoCreateSheetCharacterId,
+    characters,
+    editingId,
+    isLoaded,
+    onAutoCreateConsumed,
+    ruleset,
+    sheets
   ]);
 
   const refreshRulesetMemory = useCallback(async () => {
@@ -224,30 +494,8 @@ function CharacterSheetsRoute({
   };
 
   const initializeStatsAndResources = () => {
-    if (!ruleset) {
-      setStats([]);
-      setResources([]);
-      return;
-    }
-
-    // Initialize stats from ruleset definitions
-    const initialStats: CharacterStat[] = ruleset.statDefinitions.map(
-      (def) => ({
-        definitionId: def.id,
-        value: typeof def.defaultValue === 'number' ? def.defaultValue : 0
-      })
-    );
-
-    // Initialize resources from ruleset definitions
-    const initialResources: CharacterResource[] =
-      ruleset.resourceDefinitions.map((def) => ({
-        definitionId: def.id,
-        current: typeof def.defaultValue === 'number' ? def.defaultValue : 0,
-        max: typeof def.defaultValue === 'number' ? def.defaultValue : 0
-      }));
-
-    setStats(initialStats);
-    setResources(initialResources);
+    setStats(buildDefaultStats(ruleset));
+    setResources(buildDefaultResources(ruleset));
   };
 
   const toLegacyList = (entries: CharacterTrackedEntry[]): string[] =>
@@ -521,6 +769,679 @@ function CharacterSheetsRoute({
     [compendiumEntries]
   );
 
+  const orderedDocuments = useMemo(
+    () =>
+      [...documents].sort((a, b) => {
+        if (a.createdAt !== b.createdAt) {
+          return a.createdAt - b.createdAt;
+        }
+        return a.updatedAt - b.updatedAt;
+      }),
+    [documents]
+  );
+
+  const sceneOrderById = useMemo(
+    () =>
+      new Map(
+        orderedDocuments.map((document, index) => [document.id, index + 1] as const)
+      ),
+    [orderedDocuments]
+  );
+
+  const selectedMutationSheet = useMemo(
+    () => sheets.find((sheet) => sheet.id === mutationTargetSheetId) ?? null,
+    [sheets, mutationTargetSheetId]
+  );
+
+  const selectedMutationScene = useMemo(
+    () =>
+      orderedDocuments.find((document) => document.id === mutationSceneId) ?? null,
+    [orderedDocuments, mutationSceneId]
+  );
+
+  const selectedMutationStatDefinition = useMemo(
+    () =>
+      ruleset?.statDefinitions.find(
+        (definition) => definition.id === mutationStatDefinitionId
+      ) ?? null,
+    [ruleset, mutationStatDefinitionId]
+  );
+
+  const selectedMutationResourceDefinition = useMemo(
+    () =>
+      ruleset?.resourceDefinitions.find(
+        (definition) => definition.id === mutationResourceDefinitionId
+      ) ?? null,
+    [ruleset, mutationResourceDefinitionId]
+  );
+
+  const selectedMutationActorId =
+    selectedMutationSheet?.characterId ?? selectedMutationSheet?.id ?? '';
+
+  const buildDraftMutationCommand = useCallback(
+    (params: {
+      actorId: string;
+      mutationType: MutationFormType;
+      statDefinition: StoredRuleset['statDefinitions'][number] | null;
+      resourceDefinition: StoredRuleset['resourceDefinitions'][number] | null;
+      numberValue: string;
+      textValue: string;
+      booleanValue: boolean;
+      statusName: string;
+      itemName: string;
+      quantity: string;
+      locationName: string;
+    }): StateMutationCommand | null => {
+      const actorId = params.actorId.trim();
+      if (!actorId) return null;
+      const numericValue = Number(params.numberValue);
+      const quantity = Math.max(1, Number(params.quantity) || 1);
+      const itemName = params.itemName.trim();
+      const statusName = params.statusName.trim();
+      const locationName = params.locationName.trim();
+
+      switch (params.mutationType) {
+        case 'resource_change':
+          return params.resourceDefinition && Number.isFinite(numericValue)
+            ? {
+                type: 'resource_change',
+                actorId,
+                resourceDefinitionId: params.resourceDefinition.id,
+                delta: numericValue
+              }
+            : null;
+        case 'resource_set':
+          return params.resourceDefinition && Number.isFinite(numericValue)
+            ? {
+                type: 'resource_set',
+                actorId,
+                resourceDefinitionId: params.resourceDefinition.id,
+                value: numericValue
+              }
+            : null;
+        case 'stat_change':
+          if (!params.statDefinition) return null;
+          if (
+            params.statDefinition.type === 'number' &&
+            Number.isFinite(numericValue)
+          ) {
+            return {
+              type: 'stat_change',
+              actorId,
+              statDefinitionId: params.statDefinition.id,
+              delta: numericValue
+            };
+          }
+          if (params.statDefinition.type === 'boolean') {
+            return {
+              type: 'stat_change',
+              actorId,
+              statDefinitionId: params.statDefinition.id,
+              delta: params.booleanValue
+            };
+          }
+          return {
+            type: 'stat_change',
+            actorId,
+            statDefinitionId: params.statDefinition.id,
+            delta: params.textValue
+          };
+        case 'stat_set':
+          if (!params.statDefinition) return null;
+          if (
+            params.statDefinition.type === 'number' &&
+            Number.isFinite(numericValue)
+          ) {
+            return {
+              type: 'stat_set',
+              actorId,
+              statDefinitionId: params.statDefinition.id,
+              value: numericValue
+            };
+          }
+          if (params.statDefinition.type === 'boolean') {
+            return {
+              type: 'stat_set',
+              actorId,
+              statDefinitionId: params.statDefinition.id,
+              value: params.booleanValue
+            };
+          }
+          return {
+            type: 'stat_set',
+            actorId,
+            statDefinitionId: params.statDefinition.id,
+            value: params.textValue
+          };
+        case 'status_apply':
+        case 'status_remove':
+          return statusName
+            ? {
+                type: params.mutationType,
+                actorId,
+                statusName
+              }
+            : null;
+        case 'inventory_add':
+        case 'inventory_remove':
+        case 'inventory_consume':
+          return itemName
+            ? {
+                type: params.mutationType,
+                actorId,
+                itemName,
+                quantity
+              }
+            : null;
+        case 'inventory_equip':
+        case 'inventory_unequip':
+          return itemName
+            ? {
+                type: params.mutationType,
+                actorId,
+                itemName
+              }
+            : null;
+        case 'location_set':
+          return locationName
+            ? {
+                type: 'location_set',
+                actorId,
+                locationName
+              }
+            : null;
+      }
+    },
+    []
+  );
+
+  const mutationPreview = useMemo(() => {
+    if (!selectedMutationSheet || !ruleset) {
+      return null;
+    }
+
+    const selectedSceneOrder = selectedMutationScene
+      ? (sceneOrderById.get(selectedMutationScene.id) ?? Number.MAX_SAFE_INTEGER)
+      : undefined;
+    const before = replayCharacterState({
+      sheet: selectedMutationSheet,
+      ruleset,
+      events: stateMutationEvents,
+      target: {
+        actorId: selectedMutationActorId,
+        characterId: selectedMutationSheet.characterId,
+        sheetId: selectedMutationSheet.id,
+        actorName: selectedMutationSheet.name
+      },
+      upToSceneOrder: selectedSceneOrder
+    });
+    const command = buildDraftMutationCommand({
+      actorId: selectedMutationActorId,
+      mutationType,
+      statDefinition: selectedMutationStatDefinition,
+      resourceDefinition: selectedMutationResourceDefinition,
+      numberValue: mutationNumberValue,
+      textValue: mutationTextValue,
+      booleanValue: mutationBooleanValue,
+      statusName: mutationStatusName,
+      itemName: mutationItemName,
+      quantity: mutationQuantity,
+      locationName: mutationLocationName
+    });
+
+    if (!command) {
+      return {
+        before,
+        command: null,
+        validationIssues: [],
+        after: null,
+        effectLines: [] as string[]
+      };
+    }
+
+    const preview = buildStateMutationPreview({
+      sheet: selectedMutationSheet,
+      ruleset,
+      events: stateMutationEvents,
+      target: {
+        actorId: selectedMutationActorId,
+        characterId: selectedMutationSheet.characterId,
+        sheetId: selectedMutationSheet.id,
+        actorName: selectedMutationSheet.name
+      },
+      command,
+      upToSceneOrder: selectedSceneOrder
+    });
+
+    return {
+      ...preview,
+      command
+    };
+  }, [
+    buildDraftMutationCommand,
+    mutationBooleanValue,
+    mutationItemName,
+    mutationLocationName,
+    mutationNumberValue,
+    mutationQuantity,
+    mutationStatusName,
+    mutationTextValue,
+    mutationType,
+    ruleset,
+    sceneOrderById,
+    selectedMutationActorId,
+    selectedMutationResourceDefinition,
+    selectedMutationScene,
+    selectedMutationSheet,
+    selectedMutationStatDefinition,
+    stateMutationEvents
+  ]);
+
+  const replayedStateAtSelectedScene = useMemo(() => {
+    if (!selectedMutationSheet || !selectedMutationScene || !ruleset) {
+      return null;
+    }
+    const selectedSceneOrder =
+      sceneOrderById.get(selectedMutationScene.id) ?? Number.MAX_SAFE_INTEGER;
+    return replayCharacterState({
+      sheet: selectedMutationSheet,
+      ruleset,
+      events: stateMutationEvents,
+      target: {
+        actorId: selectedMutationActorId,
+        characterId: selectedMutationSheet.characterId,
+        sheetId: selectedMutationSheet.id,
+        actorName: selectedMutationSheet.name
+      },
+      upToSceneOrder: selectedSceneOrder
+    });
+  }, [
+    ruleset,
+    sceneOrderById,
+    selectedMutationActorId,
+    selectedMutationScene,
+    selectedMutationSheet,
+    stateMutationEvents
+  ]);
+
+  const selectedMutationValueSummary = useMemo(() => {
+    if (!mutationPreview?.after) {
+      return null;
+    }
+    return mutationPreview.effectLines[0] ?? null;
+  }, [mutationPreview]);
+
+  const mutationPreviewIssues = mutationPreview?.validationIssues ?? [];
+
+  const selectedSheetMutationEvents = useMemo(() => {
+    if (!selectedMutationSheet) {
+      return [];
+    }
+    const candidateIds = new Set(
+      [selectedMutationSheet.id, selectedMutationSheet.characterId].filter(Boolean)
+    );
+    return stateMutationEvents.filter(
+      (event) =>
+        event.status !== 'proposed' &&
+        event.commands.some((command) => candidateIds.has(command.actorId))
+    );
+  }, [selectedMutationSheet, stateMutationEvents]);
+
+  const selectedSheetMutationHistory = useMemo(
+    () =>
+      selectedSheetMutationEvents.map((event) => {
+        const sameSceneOrdered = selectedSheetMutationEvents
+          .filter(
+            (entry) =>
+              entry.sceneId === event.sceneId && entry.status !== 'invalidated'
+          )
+          .sort(
+            (a, b) =>
+              (a.sceneSequence ?? Number.MAX_SAFE_INTEGER) -
+              (b.sceneSequence ?? Number.MAX_SAFE_INTEGER)
+          );
+        const sceneIndex = sameSceneOrdered.findIndex((entry) => entry.id === event.id);
+        const staleness = getStateMutationEventStaleness({
+          event,
+          documents: orderedDocuments
+        });
+        return {
+          event,
+          canMoveUp: sceneIndex > 0,
+          canMoveDown:
+            sceneIndex !== -1 && sceneIndex < sameSceneOrdered.length - 1,
+          staleness,
+          stalenessLabel: describeStateMutationEventStaleness(staleness)
+        };
+      }),
+    [orderedDocuments, selectedSheetMutationEvents]
+  );
+
+  const resetMutationForm = useCallback(() => {
+    setEditingMutationEventId(null);
+    setMutationType('resource_change');
+    setMutationStatDefinitionId('');
+    setMutationResourceDefinitionId('');
+    setMutationNumberValue('0');
+    setMutationTextValue('');
+    setMutationBooleanValue(false);
+    setMutationStatusName('');
+    setMutationItemName('');
+    setMutationQuantity('1');
+    setMutationLocationName('');
+  }, []);
+
+  const loadMutationEventIntoForm = useCallback(
+    (event: StateMutationEvent) => {
+      const command = event.commands[0];
+      if (!command) {
+        return;
+      }
+      const matchingSheet =
+        sheets.find(
+          (sheet) =>
+            sheet.id === command.actorId || sheet.characterId === command.actorId
+        ) ?? null;
+      setEditingMutationEventId(event.id);
+      if (matchingSheet) {
+        setMutationTargetSheetId(matchingSheet.id);
+      }
+      setMutationSceneId(event.sceneId);
+      switch (command.type) {
+        case 'resource_change':
+          setMutationType('resource_change');
+          setMutationResourceDefinitionId(command.resourceDefinitionId);
+          setMutationNumberValue(String(command.delta));
+          break;
+        case 'resource_set':
+          setMutationType('resource_set');
+          setMutationResourceDefinitionId(command.resourceDefinitionId);
+          setMutationNumberValue(String(command.value));
+          break;
+        case 'stat_change':
+          setMutationType('stat_change');
+          setMutationStatDefinitionId(command.statDefinitionId);
+          if (typeof command.delta === 'boolean') {
+            setMutationBooleanValue(command.delta);
+            setMutationTextValue('');
+            setMutationNumberValue('0');
+          } else if (typeof command.delta === 'number') {
+            setMutationNumberValue(String(command.delta));
+            setMutationTextValue('');
+          } else {
+            setMutationTextValue(command.delta);
+            setMutationNumberValue('0');
+          }
+          break;
+        case 'stat_set':
+          setMutationType('stat_set');
+          setMutationStatDefinitionId(command.statDefinitionId);
+          if (typeof command.value === 'boolean') {
+            setMutationBooleanValue(command.value);
+            setMutationTextValue('');
+            setMutationNumberValue('0');
+          } else if (typeof command.value === 'number') {
+            setMutationNumberValue(String(command.value));
+            setMutationTextValue('');
+          } else {
+            setMutationTextValue(command.value);
+            setMutationNumberValue('0');
+          }
+          break;
+        case 'status_apply':
+        case 'status_remove':
+          setMutationType(command.type);
+          setMutationStatusName(command.statusName);
+          break;
+        case 'inventory_add':
+        case 'inventory_remove':
+        case 'inventory_consume':
+          setMutationType(command.type);
+          setMutationItemName(command.itemName);
+          setMutationQuantity(String(command.quantity ?? 1));
+          break;
+        case 'inventory_equip':
+        case 'inventory_unequip':
+          setMutationType(command.type);
+          setMutationItemName(command.itemName);
+          break;
+        case 'location_set':
+          setMutationType('location_set');
+          setMutationLocationName(command.locationName);
+          break;
+      }
+    },
+    [sheets]
+  );
+
+  const handleSaveMutation = useCallback(async () => {
+    if (!activeProject || !selectedMutationSheet || !selectedMutationScene) {
+      setFeedback({
+        tone: 'error',
+        message: 'Choose a character sheet and source scene first.'
+      });
+      return;
+    }
+
+    const command = buildDraftMutationCommand({
+      actorId: selectedMutationActorId,
+      mutationType,
+      statDefinition: selectedMutationStatDefinition,
+      resourceDefinition: selectedMutationResourceDefinition,
+      numberValue: mutationNumberValue,
+      textValue: mutationTextValue,
+      booleanValue: mutationBooleanValue,
+      statusName: mutationStatusName,
+      itemName: mutationItemName,
+      quantity: mutationQuantity,
+      locationName: mutationLocationName
+    });
+
+    if (!command) {
+      setFeedback({
+        tone: 'error',
+        message: 'Complete the mutation fields before saving.'
+      });
+      return;
+    }
+
+    const existingMutationEvent = editingMutationEventId
+      ? stateMutationEvents.find((entry) => entry.id === editingMutationEventId) ?? null
+      : null;
+
+    const event: StateMutationEvent = {
+      id: existingMutationEvent?.id ?? crypto.randomUUID(),
+      projectId: activeProject.id,
+      sceneId: selectedMutationScene.id,
+      sceneTitle: selectedMutationScene.title,
+      sceneOrder:
+        sceneOrderById.get(selectedMutationScene.id) ?? orderedDocuments.length + 1,
+      sceneSequence:
+        existingMutationEvent?.sceneSequence ??
+        stateMutationEvents
+          .filter((entry) => entry.sceneId === selectedMutationScene.id)
+          .reduce((max, entry) => Math.max(max, entry.sceneSequence ?? 0), 0) + 1,
+      sourceType: existingMutationEvent?.sourceType ?? 'manual',
+      sourceRevision: selectedMutationScene.updatedAt,
+      sourceHash: hashString(selectedMutationScene.content),
+      status: 'accepted',
+      commands: [command],
+      createdAt: existingMutationEvent?.createdAt ?? Date.now()
+    };
+
+    setIsSavingMutation(true);
+    setFeedback(null);
+    try {
+      validateStateMutationEvent(event);
+      const validationErrors = validateStateMutationEventForRuleset({
+        event,
+        ruleset
+      });
+      const stateValidationErrors = validateStateMutationCommandAgainstState({
+        state: mutationPreview?.before ?? replayCharacterState({
+          sheet: selectedMutationSheet,
+          ruleset,
+          events: stateMutationEvents,
+          target: {
+            actorId: selectedMutationActorId,
+            characterId: selectedMutationSheet.characterId,
+            sheetId: selectedMutationSheet.id,
+            actorName: selectedMutationSheet.name
+          },
+          upToSceneOrder:
+            sceneOrderById.get(selectedMutationScene.id) ?? Number.MAX_SAFE_INTEGER
+        }),
+        command
+      });
+      if (validationErrors.length > 0) {
+        throw new Error(validationErrors.join(' '));
+      }
+      if (stateValidationErrors.length > 0) {
+        throw new Error(stateValidationErrors.join(' '));
+      }
+      await saveStateMutationEvent(event);
+      setStateMutationEvents((prev) => {
+        const existingIndex = prev.findIndex((entry) => entry.id === event.id);
+        if (existingIndex === -1) {
+          return [...prev, event];
+        }
+        return prev.map((entry) => (entry.id === event.id ? event : entry));
+      });
+      resetMutationForm();
+      setFeedback({
+        tone: 'success',
+        message: editingMutationEventId
+          ? `State change updated for "${selectedMutationScene.title}".`
+          : `State change recorded for "${selectedMutationScene.title}".`
+      });
+    } catch (error) {
+      setFeedback({
+        tone: 'error',
+        message:
+          error instanceof Error
+            ? error.message
+            : 'Unable to record state change.'
+      });
+    } finally {
+      setIsSavingMutation(false);
+    }
+  }, [
+    activeProject,
+    buildDraftMutationCommand,
+    mutationBooleanValue,
+    editingMutationEventId,
+    mutationItemName,
+    mutationLocationName,
+    mutationNumberValue,
+    mutationQuantity,
+    mutationStatusName,
+    mutationTextValue,
+    mutationType,
+    orderedDocuments.length,
+    resetMutationForm,
+    ruleset,
+    sceneOrderById,
+    selectedMutationActorId,
+    selectedMutationResourceDefinition,
+    selectedMutationScene,
+    selectedMutationSheet,
+    selectedMutationStatDefinition,
+    stateMutationEvents,
+    mutationPreview
+  ]);
+
+  const handleInvalidateMutationEvent = useCallback(
+    async (event: StateMutationEvent) => {
+      setInvalidatingMutationEventId(event.id);
+      setFeedback(null);
+      try {
+        const updated = await invalidateStateMutationEventById({
+          eventId: event.id,
+          reason: 'Invalidated from Character Sheets history.'
+        });
+        if (!updated) {
+          throw new Error('Mutation event not found.');
+        }
+        setStateMutationEvents((prev) =>
+          prev.map((entry) => (entry.id === updated.id ? updated : entry))
+        );
+        setFeedback({
+          tone: 'success',
+          message: `Invalidated state change from "${event.sceneTitle || 'scene'}".`
+        });
+      } catch (error) {
+        setFeedback({
+          tone: 'error',
+          message:
+            error instanceof Error
+              ? error.message
+              : 'Unable to invalidate state change.'
+        });
+      } finally {
+        setInvalidatingMutationEventId(null);
+      }
+    },
+    []
+  );
+
+  const handleMoveMutationEvent = useCallback(
+    async (event: StateMutationEvent, direction: -1 | 1) => {
+      const sceneEvents = selectedSheetMutationHistory
+        .map((entry) => entry.event)
+        .filter(
+          (entry) =>
+            entry.sceneId === event.sceneId && entry.status !== 'invalidated'
+        )
+        .sort(
+          (a, b) =>
+            (a.sceneSequence ?? Number.MAX_SAFE_INTEGER) -
+            (b.sceneSequence ?? Number.MAX_SAFE_INTEGER)
+        );
+      const index = sceneEvents.findIndex((entry) => entry.id === event.id);
+      const swapIndex = index + direction;
+      if (index === -1 || swapIndex < 0 || swapIndex >= sceneEvents.length) {
+        return;
+      }
+      const current = sceneEvents[index];
+      const adjacent = sceneEvents[swapIndex];
+      const currentSequence = current.sceneSequence ?? index + 1;
+      const adjacentSequence = adjacent.sceneSequence ?? swapIndex + 1;
+
+      setReorderingMutationEventId(event.id);
+      setFeedback(null);
+      try {
+        const updatedCurrent: StateMutationEvent = {
+          ...current,
+          sceneSequence: adjacentSequence
+        };
+        const updatedAdjacent: StateMutationEvent = {
+          ...adjacent,
+          sceneSequence: currentSequence
+        };
+        await saveStateMutationEvent(updatedCurrent);
+        await saveStateMutationEvent(updatedAdjacent);
+        setStateMutationEvents((prev) =>
+          prev.map((entry) => {
+            if (entry.id === updatedCurrent.id) return updatedCurrent;
+            if (entry.id === updatedAdjacent.id) return updatedAdjacent;
+            return entry;
+          })
+        );
+      } catch (error) {
+        setFeedback({
+          tone: 'error',
+          message:
+            error instanceof Error
+              ? error.message
+              : 'Unable to reorder state change.'
+        });
+      } finally {
+        setReorderingMutationEventId(null);
+      }
+    },
+    [selectedSheetMutationHistory]
+  );
+
   const handlePromoteRuleset = useCallback(async () => {
     if (!ruleset || !activeProject?.parentProjectId) return;
     const ruleText = ruleset.rules
@@ -553,7 +1474,9 @@ function CharacterSheetsRoute({
           ruleset to define stats and resources.
         </p>
         <p>
-          Go to <strong>Ruleset</strong> and create one for this project.
+          Without a ruleset, you will not see base stats like Strength or
+          dynamic resources like Mana. Go to <strong>Ruleset</strong> and create
+          one for this project.
         </p>
         <button type='button' onClick={() => navigate('/ruleset')}>
           Open Ruleset
@@ -637,6 +1560,20 @@ function CharacterSheetsRoute({
         {/* Character Sheet Editor */}
         <form onSubmit={handleSubmit} style={{flex: 1, maxWidth: 500}}>
           <h2>{editingId ? 'Edit Character Sheet' : 'New Character Sheet'}</h2>
+          <div
+            style={{
+              marginBottom: '0.85rem',
+              padding: '0.75rem',
+              border: '1px solid #dbeafe',
+              borderRadius: '8px',
+              backgroundColor: '#f8fbff',
+              fontSize: '0.86rem',
+              color: '#334155'
+            }}
+          >
+            This is the main place to track level, stats, resources like mana,
+            inventory, equipment, and statuses for a character.
+          </div>
 
           <div style={{marginBottom: '0.75rem'}}>
             <label>
@@ -654,7 +1591,7 @@ function CharacterSheetsRoute({
 
           <div style={{marginBottom: '0.75rem'}}>
             <label>
-              Link to Character (optional)
+              Link to Character
               <br />
               <select
                 value={selectedCharacterId}
@@ -669,6 +1606,10 @@ function CharacterSheetsRoute({
                 ))}
               </select>
             </label>
+            <div style={{fontSize: '0.8rem', color: '#64748b', marginTop: '0.25rem'}}>
+              Link a roster character first, then adjust the sheet-specific stats
+              and resources here.
+            </div>
           </div>
 
           <div
@@ -731,7 +1672,7 @@ function CharacterSheetsRoute({
           </div>
 
           {/* Stats */}
-          {stats.length > 0 && (
+          {stats.length > 0 ? (
             <div style={{marginBottom: '1rem'}}>
               <h3>Stats</h3>
               {stats.map((stat) => {
@@ -779,10 +1720,14 @@ function CharacterSheetsRoute({
                 );
               })}
             </div>
+          ) : (
+            <div style={{marginBottom: '1rem', fontSize: '0.85rem', color: '#64748b'}}>
+              No stat definitions are available in this ruleset yet.
+            </div>
           )}
 
           {/* Resources */}
-          {resources.length > 0 && (
+          {resources.length > 0 ? (
             <div style={{marginBottom: '1rem'}}>
               <h3>Resources</h3>
               {resources.map((resource) => {
@@ -860,6 +1805,11 @@ function CharacterSheetsRoute({
                 );
               })}
             </div>
+          ) : (
+            <div style={{marginBottom: '1rem', fontSize: '0.85rem', color: '#64748b'}}>
+              No resource definitions are available yet. Add things like Mana,
+              Stamina, or Health in the ruleset to track them here.
+            </div>
           )}
 
           <div
@@ -873,7 +1823,7 @@ function CharacterSheetsRoute({
             <h3 style={{marginTop: 0}}>Character State</h3>
             <p style={{marginTop: 0, fontSize: '0.85rem', color: '#6b7280'}}>
               Use Quick Add for low-friction tracking. Add from Catalog when an
-              item/status should stay tied to Compendium.
+              item or status should stay tied to optional mechanics data.
             </p>
 
             <div style={{marginBottom: '0.8rem'}}>
@@ -910,7 +1860,7 @@ function CharacterSheetsRoute({
                   onChange={(e) => setCatalogInventoryId(e.target.value)}
                   style={{flex: 1}}
                 >
-                  <option value=''>Add from Compendium...</option>
+                  <option value=''>Add from Mechanics...</option>
                   {compendiumEntries.map((entry) => (
                     <option key={entry.id} value={entry.id}>
                       {entry.name}
@@ -969,7 +1919,7 @@ function CharacterSheetsRoute({
                   onChange={(e) => setCatalogEquipmentId(e.target.value)}
                   style={{flex: 1}}
                 >
-                  <option value=''>Add from Compendium...</option>
+                  <option value=''>Add from Mechanics...</option>
                   {compendiumEntries.map((entry) => (
                     <option key={entry.id} value={entry.id}>
                       {entry.name}
@@ -1027,7 +1977,7 @@ function CharacterSheetsRoute({
                   onChange={(e) => setCatalogStatusId(e.target.value)}
                   style={{flex: 1}}
                 >
-                  <option value=''>Add status from Compendium...</option>
+                  <option value=''>Add status from Mechanics...</option>
                   {statusCatalogOptions.map((entry) => (
                     <option key={entry.id} value={entry.id}>
                       {entry.name}
@@ -1089,6 +2039,566 @@ function CharacterSheetsRoute({
             )}
           </div>
         </form>
+
+        <section
+          style={{
+            flex: 1,
+            maxWidth: 520,
+            border: '1px solid #e5e7eb',
+            borderRadius: '10px',
+            padding: '1rem',
+            backgroundColor: '#fafafa'
+          }}
+        >
+          <h2 style={{marginTop: 0}}>Record Scene State Change</h2>
+          <p style={{fontSize: '0.9rem', color: '#4b5563'}}>
+            Attach an accepted state mutation to a manuscript scene. This
+            writes directly to the mutation ledger and becomes replayable
+            history.
+          </p>
+          {editingMutationEventId && (
+            <div
+              style={{
+                marginBottom: '0.75rem',
+                padding: '0.55rem 0.7rem',
+                borderRadius: '8px',
+                border: '1px solid #bfdbfe',
+                backgroundColor: '#eff6ff',
+                color: '#1d4ed8',
+                fontSize: '0.88rem'
+              }}
+            >
+              Editing existing state step.
+            </div>
+          )}
+
+          <div style={{marginBottom: '0.75rem'}}>
+            <label>
+              Character Sheet
+              <br />
+              <select
+                value={mutationTargetSheetId}
+                onChange={(e) => setMutationTargetSheetId(e.target.value)}
+                style={{width: '100%'}}
+              >
+                <option value=''>Select a sheet...</option>
+                {sheets.map((sheet) => (
+                  <option key={sheet.id} value={sheet.id}>
+                    {sheet.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+
+          <div style={{marginBottom: '0.75rem'}}>
+            <label>
+              Source Scene
+              <br />
+              <select
+                value={mutationSceneId}
+                onChange={(e) => setMutationSceneId(e.target.value)}
+                style={{width: '100%'}}
+              >
+                <option value=''>Select a scene...</option>
+                {orderedDocuments.map((document, index) => (
+                  <option key={document.id} value={document.id}>
+                    {index + 1}. {document.title}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+
+          <div style={{marginBottom: '0.75rem'}}>
+            <label>
+              Change Type
+              <br />
+              <select
+                value={mutationType}
+                onChange={(e) => setMutationType(e.target.value as MutationFormType)}
+                style={{width: '100%'}}
+              >
+                {MUTATION_FORM_TYPES.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+
+          {(mutationType === 'resource_change' ||
+            mutationType === 'resource_set') && (
+            <>
+              <div style={{marginBottom: '0.75rem'}}>
+                <label>
+                  Resource
+                  <br />
+                  <select
+                    value={mutationResourceDefinitionId}
+                    onChange={(e) => setMutationResourceDefinitionId(e.target.value)}
+                    style={{width: '100%'}}
+                  >
+                    <option value=''>Select a resource...</option>
+                    {ruleset.resourceDefinitions.map((definition) => (
+                      <option key={definition.id} value={definition.id}>
+                        {definition.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+              <div style={{marginBottom: '0.75rem'}}>
+                <label>
+                  {mutationType === 'resource_change' ? 'Delta' : 'Value'}
+                  <br />
+                  <input
+                    type='number'
+                    value={mutationNumberValue}
+                    onChange={(e) => setMutationNumberValue(e.target.value)}
+                    style={{width: '100%'}}
+                  />
+                </label>
+              </div>
+            </>
+          )}
+
+          {(mutationType === 'stat_change' || mutationType === 'stat_set') && (
+            <>
+              <div style={{marginBottom: '0.75rem'}}>
+                <label>
+                  Stat
+                  <br />
+                  <select
+                    value={mutationStatDefinitionId}
+                    onChange={(e) => setMutationStatDefinitionId(e.target.value)}
+                    style={{width: '100%'}}
+                  >
+                    <option value=''>Select a stat...</option>
+                    {ruleset.statDefinitions.map((definition) => (
+                      <option key={definition.id} value={definition.id}>
+                        {definition.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+              {selectedMutationStatDefinition?.type === 'boolean' ? (
+                <div style={{marginBottom: '0.75rem'}}>
+                  <label
+                    style={{display: 'flex', gap: '0.5rem', alignItems: 'center'}}
+                  >
+                    <input
+                      type='checkbox'
+                      checked={mutationBooleanValue}
+                      onChange={(e) => setMutationBooleanValue(e.target.checked)}
+                    />
+                    Value
+                  </label>
+                </div>
+              ) : selectedMutationStatDefinition?.type === 'text' ? (
+                <div style={{marginBottom: '0.75rem'}}>
+                  <label>
+                    {mutationType === 'stat_change' ? 'Delta text' : 'Value'}
+                    <br />
+                    <input
+                      type='text'
+                      value={mutationTextValue}
+                      onChange={(e) => setMutationTextValue(e.target.value)}
+                      style={{width: '100%'}}
+                    />
+                  </label>
+                </div>
+              ) : (
+                <div style={{marginBottom: '0.75rem'}}>
+                  <label>
+                    {mutationType === 'stat_change' ? 'Delta' : 'Value'}
+                    <br />
+                    <input
+                      type='number'
+                      value={mutationNumberValue}
+                      onChange={(e) => setMutationNumberValue(e.target.value)}
+                      style={{width: '100%'}}
+                    />
+                  </label>
+                </div>
+              )}
+            </>
+          )}
+
+          {(mutationType === 'status_apply' ||
+            mutationType === 'status_remove') && (
+            <div style={{marginBottom: '0.75rem'}}>
+              <label>
+                Status name
+                <br />
+                <input
+                  type='text'
+                  value={mutationStatusName}
+                  onChange={(e) => setMutationStatusName(e.target.value)}
+                  placeholder='Poisoned'
+                  style={{width: '100%'}}
+                />
+              </label>
+            </div>
+          )}
+
+          {(mutationType === 'inventory_add' ||
+            mutationType === 'inventory_remove' ||
+            mutationType === 'inventory_consume' ||
+            mutationType === 'inventory_equip' ||
+            mutationType === 'inventory_unequip') && (
+            <>
+              <div style={{marginBottom: '0.75rem'}}>
+                <label>
+                  Item name
+                  <br />
+                  <input
+                    type='text'
+                    value={mutationItemName}
+                    onChange={(e) => setMutationItemName(e.target.value)}
+                    placeholder='Iron Key'
+                    style={{width: '100%'}}
+                  />
+                </label>
+              </div>
+              {(mutationType === 'inventory_add' ||
+                mutationType === 'inventory_remove' ||
+                mutationType === 'inventory_consume') && (
+                <div style={{marginBottom: '0.75rem'}}>
+                  <label>
+                    Quantity
+                    <br />
+                    <input
+                      type='number'
+                      min={1}
+                      value={mutationQuantity}
+                      onChange={(e) => setMutationQuantity(e.target.value)}
+                      style={{width: '100%'}}
+                    />
+                  </label>
+                </div>
+              )}
+            </>
+          )}
+
+          {mutationType === 'location_set' && (
+            <div style={{marginBottom: '0.75rem'}}>
+              <label>
+                Location
+                <br />
+                <input
+                  type='text'
+                  value={mutationLocationName}
+                  onChange={(e) => setMutationLocationName(e.target.value)}
+                  placeholder='South Gate'
+                  style={{width: '100%'}}
+                />
+              </label>
+            </div>
+          )}
+
+          <div
+            style={{
+              marginBottom: '0.9rem',
+              padding: '0.75rem',
+              borderRadius: '8px',
+              backgroundColor: '#fff',
+              border: '1px solid #e5e7eb',
+              fontSize: '0.9rem'
+            }}
+          >
+            <strong>Preview</strong>
+            <div style={{marginTop: '0.35rem', color: '#4b5563'}}>
+              {selectedMutationValueSummary ||
+                'Select a sheet, scene, and change details to preview the mutation.'}
+            </div>
+            {selectedMutationScene && (
+              <div
+                style={{
+                  marginTop: '0.35rem',
+                  color: '#6b7280',
+                  fontSize: '0.82rem'
+                }}
+              >
+                Scene revision source: {selectedMutationScene.updatedAt} · hash{' '}
+                {hashString(selectedMutationScene.content)}
+              </div>
+            )}
+          </div>
+
+          {mutationPreviewIssues.length > 0 && (
+            <div
+              role='alert'
+              style={{
+                marginBottom: '0.9rem',
+                padding: '0.75rem',
+                borderRadius: '8px',
+                border: '1px solid #fecaca',
+                backgroundColor: '#fef2f2',
+                color: '#991b1b',
+                fontSize: '0.9rem'
+              }}
+            >
+              <strong>Mutation warning</strong>
+              <ul style={{margin: '0.5rem 0 0 1rem', padding: 0}}>
+                {mutationPreviewIssues.map((issue) => (
+                  <li key={issue}>{issue}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          <div
+            style={{
+              marginBottom: '0.9rem',
+              padding: '0.75rem',
+              borderRadius: '8px',
+              backgroundColor: '#fff',
+              border: '1px solid #e5e7eb',
+              fontSize: '0.9rem'
+            }}
+          >
+            <strong>State At Selected Scene</strong>
+            {!replayedStateAtSelectedScene ? (
+              <div style={{marginTop: '0.35rem', color: '#6b7280'}}>
+                Select a sheet and scene to inspect the replayed state timeline.
+              </div>
+            ) : (
+              <>
+                <div style={{marginTop: '0.4rem'}}>
+                  <strong>Stats:</strong>
+                  <div
+                    style={{
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+                      gap: '0.25rem',
+                      marginTop: '0.25rem'
+                    }}
+                  >
+                    {Object.entries(replayedStateAtSelectedScene.stats).map(
+                      ([key, value]) => (
+                        <span key={key}>
+                          {key}: {String(value)}
+                        </span>
+                      )
+                    )}
+                  </div>
+                </div>
+
+                <div style={{marginTop: '0.6rem'}}>
+                  <strong>Resources:</strong>
+                  <div
+                    style={{
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+                      gap: '0.25rem',
+                      marginTop: '0.25rem'
+                    }}
+                  >
+                    {Object.entries(replayedStateAtSelectedScene.resources.current).map(
+                      ([key, current]) => (
+                        <span key={key}>
+                          {key}: {current}/
+                          {replayedStateAtSelectedScene.resources.max[key] ?? current}
+                        </span>
+                      )
+                    )}
+                  </div>
+                </div>
+
+                <div style={{marginTop: '0.6rem'}}>
+                  <strong>Statuses:</strong>{' '}
+                  {replayedStateAtSelectedScene.statuses.join(', ') || 'none'}
+                </div>
+
+                <div style={{marginTop: '0.6rem'}}>
+                  <strong>Inventory:</strong>{' '}
+                  {replayedStateAtSelectedScene.inventory.items.length > 0
+                    ? replayedStateAtSelectedScene.inventory.items
+                        .map((item) =>
+                          item.quantity > 1
+                            ? `${item.name} x${item.quantity}`
+                            : item.name
+                        )
+                        .join(', ')
+                    : 'none'}
+                </div>
+
+                <div style={{marginTop: '0.6rem'}}>
+                  <strong>Equipped:</strong>{' '}
+                  {replayedStateAtSelectedScene.inventory.equipped.join(', ') ||
+                    'none'}
+                </div>
+
+                <div style={{marginTop: '0.6rem'}}>
+                  <strong>Location:</strong>{' '}
+                  {replayedStateAtSelectedScene.locationName || 'unset'}
+                </div>
+              </>
+            )}
+          </div>
+
+          <div style={{display: 'flex', gap: '0.75rem'}}>
+            <button
+              type='button'
+              onClick={() => void handleSaveMutation()}
+              disabled={
+                isSavingMutation || !mutationTargetSheetId || !mutationSceneId
+              }
+            >
+              {isSavingMutation
+                ? 'Saving…'
+                : editingMutationEventId
+                  ? 'Update State Change'
+                  : 'Record State Change'}
+            </button>
+            <button type='button' onClick={() => resetMutationForm()}>
+              {editingMutationEventId ? 'Cancel Edit' : 'Reset Change'}
+            </button>
+          </div>
+
+          <div style={{marginTop: '1rem'}}>
+            <h3 style={{marginBottom: '0.5rem'}}>Recorded State History</h3>
+            {!mutationTargetSheetId ? (
+              <p style={{fontSize: '0.9rem', color: '#6b7280'}}>
+                Select a character sheet to inspect its recorded mutation history.
+              </p>
+            ) : selectedSheetMutationHistory.length === 0 ? (
+              <p style={{fontSize: '0.9rem', color: '#6b7280'}}>
+                No recorded state changes yet for this character sheet.
+              </p>
+            ) : (
+              <ul style={{listStyle: 'none', padding: 0, margin: 0}}>
+                {selectedSheetMutationHistory.map(
+                  ({event, canMoveUp, canMoveDown, staleness, stalenessLabel}) => (
+                  <li
+                    key={event.id}
+                    style={{
+                      marginBottom: '0.75rem',
+                      padding: '0.75rem',
+                      border: '1px solid #e5e7eb',
+                      borderRadius: '8px',
+                      backgroundColor:
+                        event.status === 'invalidated' ? '#f8fafc' : '#fff'
+                    }}
+                  >
+                    <div
+                      style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        gap: '0.75rem',
+                        alignItems: 'flex-start'
+                      }}
+                    >
+                      <div style={{flex: 1}}>
+                        <div style={{fontSize: '0.92rem', fontWeight: 600}}>
+                          {event.sceneOrder ? `${event.sceneOrder}. ` : ''}
+                          {event.sceneTitle || 'Untitled scene'}
+                          {event.sceneSequence ? ` · Step ${event.sceneSequence}` : ''}
+                        </div>
+                        <div
+                          style={{
+                            marginTop: '0.25rem',
+                            fontSize: '0.82rem',
+                            color: '#6b7280'
+                          }}
+                        >
+                          Status: {event.status}
+                          {event.invalidationReason
+                            ? ` · ${event.invalidationReason}`
+                            : ''}
+                        </div>
+                        {stalenessLabel && event.status !== 'invalidated' && (
+                          <div
+                            style={{
+                              marginTop: '0.3rem',
+                              display: 'inline-block',
+                              fontSize: '0.78rem',
+                              color: '#92400e',
+                              backgroundColor: '#fffbeb',
+                              border: '1px solid #fcd34d',
+                              borderRadius: '999px',
+                              padding: '0.1rem 0.45rem'
+                            }}
+                          >
+                            Stale: {stalenessLabel}
+                          </div>
+                        )}
+                        <ul
+                          style={{
+                            margin: '0.5rem 0 0 0',
+                            paddingLeft: '1rem',
+                            fontSize: '0.9rem'
+                          }}
+                        >
+                          {event.commands.map((command, index) => (
+                            <li key={`${event.id}-${index}`}>
+                              {summarizeMutationCommand(command)}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                      <div>
+                        <button
+                          type='button'
+                          onClick={() => loadMutationEventIntoForm(event)}
+                          style={{fontSize: '0.8rem', marginRight: '0.35rem'}}
+                          disabled={event.status === 'invalidated'}
+                        >
+                          Edit
+                        </button>
+                        <button
+                          type='button'
+                          onClick={() => void handleMoveMutationEvent(event, -1)}
+                          style={{fontSize: '0.8rem', marginRight: '0.35rem'}}
+                          disabled={
+                            !canMoveUp ||
+                            event.status === 'invalidated' ||
+                            reorderingMutationEventId === event.id
+                          }
+                        >
+                          Up
+                        </button>
+                        <button
+                          type='button'
+                          onClick={() => void handleMoveMutationEvent(event, 1)}
+                          style={{fontSize: '0.8rem', marginRight: '0.35rem'}}
+                          disabled={
+                            !canMoveDown ||
+                            event.status === 'invalidated' ||
+                            reorderingMutationEventId === event.id
+                          }
+                        >
+                          Down
+                        </button>
+                        <button
+                          type='button'
+                          onClick={() => void handleInvalidateMutationEvent(event)}
+                          disabled={
+                            event.status === 'invalidated' ||
+                            invalidatingMutationEventId === event.id
+                          }
+                          style={{fontSize: '0.8rem'}}
+                        >
+                          {invalidatingMutationEventId === event.id
+                            ? 'Invalidating...'
+                            : event.status === 'invalidated'
+                              ? 'Invalidated'
+                              : staleness.isStale
+                                ? 'Invalidate stale'
+                                : 'Invalidate'}
+                        </button>
+                      </div>
+                    </div>
+                  </li>
+                )
+                )}
+              </ul>
+            )}
+          </div>
+        </section>
 
         {/* Character Sheet List */}
         <div style={{flex: 1}}>

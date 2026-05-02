@@ -17,7 +17,11 @@ import {SystemHistoryPanel} from '../Editor/SystemHistoryPanel';
 import {ShodhMemoryPanel} from '../ShodhMemoryPanel';
 import type {MemoryEntry} from '../../services/shodh/ShodhMemoryService';
 import type {WorkspaceContextDrawerView} from '../../hooks/useWorkspaceDrawers';
-import type {ReviewReadiness} from '../../hooks/useWorkspaceConsistency';
+import type {
+  ReviewReadiness,
+  StateMutationReviewGroupHiddenCounts,
+  StateMutationReviewItem
+} from '../../hooks/useWorkspaceConsistency';
 import type {ReviewIssueAnnotation} from '../../services/worldEngine';
 import styles from '../../styles/WorkspaceRoute.module.css';
 
@@ -116,7 +120,18 @@ interface WorkspaceContextDrawerProps {
   isRunningConsistencyReview: boolean;
   lastConsistencyReviewAt: number | null;
   consistencyReviewItems: ConsistencyReviewItem[];
+  stateMutationReviewItems: StateMutationReviewItem[];
+  hiddenStateMutationReviewCountBySceneId: StateMutationReviewGroupHiddenCounts;
+  hiddenStateMutationReviewCount: number;
+  applyingStateMutationReviewId: string | null;
   reviewReadiness: ReviewReadiness;
+  acceptStateMutationReviewItem: (eventId: string) => Promise<void>;
+  rejectStateMutationReviewItem: (eventId: string) => Promise<void>;
+  acceptSceneStateMutationReviewItems: (sceneId: string) => Promise<void>;
+  rejectSceneStateMutationReviewItems: (sceneId: string) => Promise<void>;
+  hideStateMutationReviewItem: (eventId: string) => void;
+  restoreHiddenStateMutationReviewItems: (sceneId: string) => void;
+  restoreAllHiddenStateMutationReviewItems: () => void;
   documents: WritingDocument[];
   handleSelectDocument: (doc: WritingDocument) => void;
   openWorldRecord: (target: {id: string; type: 'character' | 'entity'}) => void;
@@ -194,7 +209,18 @@ export function WorkspaceContextDrawer({
   isRunningConsistencyReview,
   lastConsistencyReviewAt,
   consistencyReviewItems,
+  stateMutationReviewItems,
+  hiddenStateMutationReviewCountBySceneId,
+  hiddenStateMutationReviewCount,
+  applyingStateMutationReviewId,
   reviewReadiness,
+  acceptStateMutationReviewItem,
+  rejectStateMutationReviewItem,
+  acceptSceneStateMutationReviewItems,
+  rejectSceneStateMutationReviewItems,
+  hideStateMutationReviewItem,
+  restoreHiddenStateMutationReviewItems,
+  restoreAllHiddenStateMutationReviewItems,
   documents,
   handleSelectDocument,
   openWorldRecord,
@@ -235,6 +261,21 @@ export function WorkspaceContextDrawer({
   const visibleTabs = CONTEXT_DRAWER_TABS.filter(
     (tab) => tab.id !== 'compendium' || showGameSystems
   );
+  const stateMutationReviewGroups = stateMutationReviewItems.reduce<
+    Array<{sceneId: string; sceneTitle: string; items: StateMutationReviewItem[]}>
+  >((groups, item) => {
+    const existing = groups.find((group) => group.sceneId === item.sceneId);
+    if (existing) {
+      existing.items.push(item);
+      return groups;
+    }
+    groups.push({
+      sceneId: item.sceneId,
+      sceneTitle: item.sceneTitle,
+      items: [item]
+    });
+    return groups;
+  }, []);
 
   const content = (() => {
     if (activeContextView === 'world-bible') {
@@ -302,61 +343,206 @@ export function WorkspaceContextDrawer({
               Last run: {new Date(lastConsistencyReviewAt).toLocaleString()}
             </div>
           )}
-          {consistencyReviewItems.length > 0 ? (
-            <ul className={styles.consistencyList}>
-              {consistencyReviewItems.slice(0, 24).map((item) => (
-                <li key={item.id} className={styles.consistencyListItem}>
-                  <strong>{getIssueLabel(item.issue.code)}</strong>{' '}
-                  <button
-                    type='button'
-                    onClick={() => {
-                      const doc = documents.find((entry) => entry.id === item.sceneId);
-                      if (doc) handleSelectDocument(doc);
-                    }}
-                    className={styles.consistencySceneButton}
-                    title={`Open ${item.sceneTitle}`}
-                  >
-                    {item.sceneTitle}
-                  </button>
-                  : {item.issue.message}
-                  {item.reviewAnnotation?.summary && (
-                    <div className={styles.consistencyDescription}>
-                      {item.reviewAnnotation.summary}
-                    </div>
-                  )}
-                  {item.reviewAnnotation && (
-                    <span className={styles.consistencyReason}>
-                      {item.reviewAnnotation.engineLabel}
-                    </span>
-                  )}
-                  {item.issue.detectionReason && (
-                    <span
-                      className={styles.consistencyReason}
-                      title={getDetectionReason(item.issue.detectionReason).title}
+          {hiddenStateMutationReviewCount > 0 && (
+            <div className={styles.consistencyDescription}>
+              {hiddenStateMutationReviewCount} hidden suggested state change
+              {hiddenStateMutationReviewCount === 1 ? '' : 's'} kept out of the active queue.
+              {' '}
+              <button
+                type='button'
+                onClick={restoreAllHiddenStateMutationReviewItems}
+                className={styles.consistencyRelatedButton}
+              >
+                Restore all
+              </button>
+            </div>
+          )}
+          {consistencyReviewItems.length > 0 && (
+            <>
+              <div className={styles.consistencyDescription}>
+                <strong>Review issues</strong>
+              </div>
+              <ul className={styles.consistencyList}>
+                {consistencyReviewItems.slice(0, 24).map((item) => (
+                  <li key={item.id} className={styles.consistencyListItem}>
+                    <strong>{getIssueLabel(item.issue.code)}</strong>{' '}
+                    <button
+                      type='button'
+                      onClick={() => {
+                        const doc = documents.find((entry) => entry.id === item.sceneId);
+                        if (doc) handleSelectDocument(doc);
+                      }}
+                      className={styles.consistencySceneButton}
+                      title={`Open ${item.sceneTitle}`}
                     >
-                      {getDetectionReason(item.issue.detectionReason).label}
-                    </span>
-                  )}
-                  {item.issue.relatedEntities && item.issue.relatedEntities.length > 0 && (
-                    <span className={styles.consistencyRelated}>
-                      {item.issue.relatedEntities.slice(0, 3).map((target) => (
+                      {item.sceneTitle}
+                    </button>
+                    : {item.issue.message}
+                    {item.reviewAnnotation?.summary && (
+                      <div className={styles.consistencyDescription}>
+                        {item.reviewAnnotation.summary}
+                      </div>
+                    )}
+                    {item.reviewAnnotation && (
+                      <span className={styles.consistencyReason}>
+                        {item.reviewAnnotation.engineLabel}
+                      </span>
+                    )}
+                    {item.issue.detectionReason && (
+                      <span
+                        className={styles.consistencyReason}
+                        title={getDetectionReason(item.issue.detectionReason).title}
+                      >
+                        {getDetectionReason(item.issue.detectionReason).label}
+                      </span>
+                    )}
+                    {item.issue.relatedEntities && item.issue.relatedEntities.length > 0 && (
+                      <span className={styles.consistencyRelated}>
+                        {item.issue.relatedEntities.slice(0, 3).map((target) => (
+                          <button
+                            key={`${item.id}-${target.id}`}
+                            type='button'
+                            onClick={() => openWorldRecord(target)}
+                            className={styles.consistencyRelatedButton}
+                          >
+                            Open {target.name}
+                          </button>
+                        ))}
+                      </span>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+          {stateMutationReviewItems.length > 0 && (
+            <>
+              <div className={styles.consistencyDescription}>
+                <strong>Suggested state changes</strong>
+              </div>
+              {stateMutationReviewGroups.slice(0, 24).map((group) => {
+                const batchAcceptId = `scene:${group.sceneId}:accept`;
+                const batchRejectId = `scene:${group.sceneId}:reject`;
+                const validCount = group.items.filter((item) => item.canAcceptInBatch).length;
+                const hiddenCount =
+                  hiddenStateMutationReviewCountBySceneId[group.sceneId] ?? 0;
+                return (
+                  <div key={group.sceneId}>
+                    <div className={styles.consistencyPanelHeader}>
+                      <button
+                        type='button'
+                        onClick={() => {
+                          const doc = documents.find((entry) => entry.id === group.sceneId);
+                          if (doc) handleSelectDocument(doc);
+                        }}
+                        className={styles.consistencySceneButton}
+                        title={`Open ${group.sceneTitle}`}
+                      >
+                        {group.sceneTitle}
+                      </button>
+                      <button
+                        type='button'
+                        onClick={() => void acceptSceneStateMutationReviewItems(group.sceneId)}
+                        disabled={validCount === 0 || applyingStateMutationReviewId === batchAcceptId}
+                        className={styles.consistencyRelatedButton}
+                      >
+                        {applyingStateMutationReviewId === batchAcceptId ? 'Applying...' : `Accept valid (${validCount})`}
+                      </button>
+                      <button
+                        type='button'
+                        onClick={() => void rejectSceneStateMutationReviewItems(group.sceneId)}
+                        disabled={applyingStateMutationReviewId === batchRejectId}
+                        className={styles.consistencyRelatedButton}
+                      >
+                        {applyingStateMutationReviewId === batchRejectId ? 'Rejecting...' : 'Reject all'}
+                      </button>
+                      {hiddenCount > 0 ? (
                         <button
-                          key={`${item.id}-${target.id}`}
                           type='button'
-                          onClick={() => openWorldRecord(target)}
+                          onClick={() => restoreHiddenStateMutationReviewItems(group.sceneId)}
                           className={styles.consistencyRelatedButton}
                         >
-                          Open {target.name}
+                          {`Restore hidden (${hiddenCount})`}
                         </button>
+                      ) : null}
+                    </div>
+                    <ul className={styles.consistencyList}>
+                      {group.items.map((item) => (
+                        <li key={item.id} className={styles.consistencyListItem}>
+                          <strong>{item.actorLabel}</strong>
+                          {item.sceneSequence ? ` · Step ${item.sceneSequence}` : ''}
+                          <div className={styles.consistencyRelated}>
+                            {item.canAccept ? (
+                              <span className={styles.consistencyBadgeReady}>Ready</span>
+                            ) : item.canAcceptInBatch ? (
+                              <span className={styles.consistencyBadgeBatch}>After earlier steps</span>
+                            ) : (
+                              <span className={styles.consistencyBadgeBlocked}>Blocked</span>
+                            )}
+                          </div>
+                          {item.summaryLines.map((line) => (
+                            <div key={`${item.id}-${line}`} className={styles.consistencyDescription}>
+                              {line}
+                            </div>
+                          ))}
+                          {item.effectLines.map((line) => (
+                            <div key={`${item.id}:effect:${line}`} className={styles.consistencyDescription}>
+                              {line}
+                            </div>
+                          ))}
+                          {item.acceptanceHint && (
+                            <div className={styles.consistencyDescription}>
+                              {item.acceptanceHint}
+                            </div>
+                          )}
+                          {item.validationIssues.map((issue) => (
+                            <div key={`${item.id}:issue:${issue}`} className={styles.consistencyDescription}>
+                              {issue}
+                            </div>
+                          ))}
+                          <div className={styles.consistencyRelated}>
+                            <button
+                              type='button'
+                              onClick={() => void acceptStateMutationReviewItem(item.id)}
+                              disabled={!item.canAccept || applyingStateMutationReviewId === item.id}
+                              className={styles.consistencyRelatedButton}
+                            >
+                              {applyingStateMutationReviewId === item.id ? 'Applying...' : 'Accept'}
+                            </button>
+                            <button
+                              type='button'
+                              onClick={() => void rejectStateMutationReviewItem(item.id)}
+                              disabled={applyingStateMutationReviewId === item.id}
+                              className={styles.consistencyRelatedButton}
+                            >
+                              Reject
+                            </button>
+                            <button
+                              type='button'
+                              onClick={() => hideStateMutationReviewItem(item.id)}
+                              disabled={applyingStateMutationReviewId === item.id}
+                              className={styles.consistencyRelatedButton}
+                            >
+                              Hide for now
+                            </button>
+                          </div>
+                          <span className={styles.consistencyReason}>Deterministic state review</span>
+                          {item.staleLabel && (
+                            <span className={styles.consistencyReason}>
+                              {item.isStale ? `Stale: ${item.staleLabel}` : item.staleLabel}
+                            </span>
+                          )}
+                        </li>
                       ))}
-                    </span>
-                  )}
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className={styles.contextSummaryText}>No open review items.</p>
+                    </ul>
+                  </div>
+                );
+              })}
+            </>
           )}
+          {consistencyReviewItems.length === 0 && stateMutationReviewItems.length === 0 ? (
+            <p className={styles.contextSummaryText}>No open review items.</p>
+          ) : null}
         </div>
       );
     }
@@ -467,7 +653,7 @@ export function WorkspaceContextDrawer({
           <strong>{activePartySynergyCount}</strong>
         </p>
         <button type='button' onClick={() => navigate('/compendium')}>
-          Open Compendium
+          Open Mechanics
         </button>
       </div>
     );

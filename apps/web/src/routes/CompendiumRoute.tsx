@@ -1,11 +1,14 @@
 import {useEffect, useMemo, useState} from 'react';
-import {useNavigate} from 'react-router-dom';
+import {useLocation, useNavigate} from 'react-router-dom';
 import {useAppStore} from '../store/appStore';
 import type {
   Character,
+  CharacterSheet,
+  CompendiumMechanicKind,
   CompendiumActionDefinition,
   CompendiumDomain,
   CompendiumEntry,
+  MechanicsProgressScope,
   CompendiumMilestone,
   CompendiumProgress,
   PartySynergySuggestion,
@@ -42,12 +45,14 @@ import {
   saveCompendiumEntry,
   saveCompendiumMilestone,
   saveSettlementModule,
+  updateSettlementLocation,
   updateSettlementBaseStats,
   updateSettlementFortressLevel,
   saveUnlockableRecipe,
   upsertZoneAffinityProfile,
   upsertCompendiumEntryFromEntity
 } from '../services/compendium';
+import {getCharacterSheetsByProject} from '../services/characters';
 import {getCharactersByProject} from '../characterStorage';
 import {getEntitiesByProject} from '../entityStorage';
 
@@ -85,6 +90,22 @@ const SETTLEMENT_EFFECT_OPERATION_OPTIONS: SettlementModule['effects'][number]['
   'add',
   'multiply',
   'set'
+];
+const MECHANICS_SCOPE_OPTIONS: Array<{
+  value: MechanicsProgressScope;
+  label: string;
+}> = [
+  {value: 'character', label: 'Per character'},
+  {value: 'global', label: 'Shared / global'}
+];
+const MECHANIC_KIND_OPTIONS: Array<{
+  value: CompendiumMechanicKind;
+  label: string;
+}> = [
+  {value: 'discovery', label: 'Discovery'},
+  {value: 'zone', label: 'Zone'},
+  {value: 'settlement', label: 'Settlement'},
+  {value: 'general', label: 'General'}
 ];
 type BaseStatKey = keyof NonNullable<SettlementState['baseStats']>;
 type CompendiumTab = 'overview' | 'entries' | 'progression' | 'world-systems';
@@ -197,9 +218,17 @@ function getDefaultActions(domain: CompendiumDomain): CompendiumActionDefinition
   return [{id: 'discover', label: 'Discover', points: 1, repeatable: false}];
 }
 
+const toBiomeKey = (value: string): string =>
+  value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '') || 'zone';
+
 function CompendiumRoute() {
   const activeProject = useAppStore((s) => s.activeProject);
   const projectSettings = useAppStore((s) => s.projectSettings);
+  const location = useLocation();
   const navigate = useNavigate();
   const [entries, setEntries] = useState<CompendiumEntry[]>([]);
   const [milestones, setMilestones] = useState<CompendiumMilestone[]>([]);
@@ -212,8 +241,12 @@ function CompendiumRoute() {
   const [logs, setLogs] = useState<Awaited<
     ReturnType<typeof getCompendiumActionLogs>
   >>([]);
+  const [globalLogs, setGlobalLogs] = useState<Awaited<
+    ReturnType<typeof getCompendiumActionLogs>
+  >>([]);
   const [worldEntities, setWorldEntities] = useState<WorldEntity[]>([]);
   const [characters, setCharacters] = useState<Character[]>([]);
+  const [characterSheets, setCharacterSheets] = useState<CharacterSheet[]>([]);
   const [activePartyCharacterIds, setActivePartyCharacterIds] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isRecordingKey, setIsRecordingKey] = useState<string | null>(null);
@@ -226,6 +259,10 @@ function CompendiumRoute() {
   const [entryDomain, setEntryDomain] = useState<CompendiumDomain>('beast');
   const [entityToImportId, setEntityToImportId] = useState('');
   const [importDomain, setImportDomain] = useState<CompendiumDomain>('beast');
+  const [importMechanicKind, setImportMechanicKind] =
+    useState<CompendiumMechanicKind>('discovery');
+  const [importProgressScope, setImportProgressScope] =
+    useState<MechanicsProgressScope>('character');
 
   const [recipeName, setRecipeName] = useState('');
   const [recipeCategory, setRecipeCategory] =
@@ -242,9 +279,13 @@ function CompendiumRoute() {
   const [zoneName, setZoneName] = useState('');
   const [zoneKey, setZoneKey] = useState('');
   const [zoneMaxPoints, setZoneMaxPoints] = useState(100);
+  const [zoneSourceEntityId, setZoneSourceEntityId] = useState('');
+  const [zoneProgressScope, setZoneProgressScope] =
+    useState<MechanicsProgressScope>('character');
   const [selectedZoneKey, setSelectedZoneKey] = useState('');
   const [zoneExposureMinutes, setZoneExposureMinutes] = useState(10);
   const [isRecordingZone, setIsRecordingZone] = useState(false);
+  const [selectedSettlementLocationId, setSelectedSettlementLocationId] = useState('');
   const [moduleName, setModuleName] = useState('');
   const [moduleSourceType, setModuleSourceType] =
     useState<SettlementModule['sourceType']>('trophy');
@@ -267,6 +308,10 @@ function CompendiumRoute() {
     Record<string, number>
   >({});
   const [activeTab, setActiveTab] = useState<CompendiumTab>('overview');
+  const [highlightedEntryId, setHighlightedEntryId] = useState<string | null>(null);
+  const [showAdvancedSetup, setShowAdvancedSetup] = useState(false);
+  const [activeMechanicsCharacterSheetId, setActiveMechanicsCharacterSheetId] = useState('');
+  const [editingMechanicsEntryId, setEditingMechanicsEntryId] = useState<string | null>(null);
   const enableGameSystems =
     projectSettings?.featureToggles.enableGameSystems !== false;
   const enableRuntimeModifiers =
@@ -284,11 +329,15 @@ function CompendiumRoute() {
       setZoneProgress([]);
       setSettlementState(null);
       setSettlementModules([]);
+      setSelectedSettlementLocationId('');
       setProgress(null);
       setLogs([]);
+      setGlobalLogs([]);
       setWorldEntities([]);
       setCharacters([]);
+      setCharacterSheets([]);
       setActivePartyCharacterIds([]);
+      setActiveMechanicsCharacterSheetId('');
       setBaseStatsDraft({
         defense: '10',
         storageCapacity: '100',
@@ -309,12 +358,12 @@ function CompendiumRoute() {
       getZoneAffinityProgressByProject(activeProject.id),
       getOrCreateSettlementState(activeProject.id),
       getSettlementModulesByProject(activeProject.id),
-      getCompendiumProgress(activeProject.id),
       getCompendiumActionLogs(activeProject.id),
       getEntitiesByProject(activeProject.id),
-      getCharactersByProject(activeProject.id)
+      getCharactersByProject(activeProject.id),
+      getCharacterSheetsByProject(activeProject.id)
     ])
-      .then(([loadedEntries, loadedMilestones, loadedRecipes, loadedZoneProfiles, loadedZoneProgress, loadedSettlementState, loadedSettlementModules, loadedProgress, loadedLogs, loadedEntities, loadedCharacters]) => {
+      .then(([loadedEntries, loadedMilestones, loadedRecipes, loadedZoneProfiles, loadedZoneProgress, loadedSettlementState, loadedSettlementModules, loadedGlobalLogs, loadedEntities, loadedCharacters, loadedCharacterSheets]) => {
         if (cancelled) return;
         setEntries(loadedEntries);
         setMilestones(loadedMilestones);
@@ -323,10 +372,17 @@ function CompendiumRoute() {
         setZoneProgress(loadedZoneProgress);
         setSettlementState(loadedSettlementState);
         setSettlementModules(loadedSettlementModules);
-        setProgress(loadedProgress);
-        setLogs(loadedLogs);
+        setSelectedSettlementLocationId(loadedSettlementState.sourceEntityId ?? '');
+        setGlobalLogs(loadedGlobalLogs);
         setWorldEntities(loadedEntities);
         setCharacters(loadedCharacters);
+        setCharacterSheets(loadedCharacterSheets);
+        setActiveMechanicsCharacterSheetId((prev) => {
+          if (prev && loadedCharacterSheets.some((sheet) => sheet.id === prev)) {
+            return prev;
+          }
+          return loadedCharacterSheets[0]?.id ?? '';
+        });
         setActivePartyCharacterIds((prev) => {
           if (prev.length === 0) {
             return loadedCharacters.map((character) => character.id);
@@ -358,6 +414,36 @@ function CompendiumRoute() {
   }, [activeProject]);
 
   useEffect(() => {
+    if (!activeProject) {
+      setProgress(null);
+      setLogs([]);
+      return;
+    }
+
+    let cancelled = false;
+    const scopedCharacterSheetId = activeMechanicsCharacterSheetId || undefined;
+    Promise.all([
+      getCompendiumProgress(activeProject.id, scopedCharacterSheetId),
+      getCompendiumActionLogs(activeProject.id, scopedCharacterSheetId)
+    ])
+      .then(([loadedProgress, loadedLogs]) => {
+        if (cancelled) return;
+        setProgress(loadedProgress);
+        setLogs(loadedLogs);
+      })
+      .catch((error) => {
+        if (cancelled) return;
+        const message =
+          error instanceof Error ? error.message : 'Unable to load mechanics progress.';
+        setFeedback({tone: 'error', message});
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activeMechanicsCharacterSheetId, activeProject]);
+
+  useEffect(() => {
     if (!settlementState) return;
     setBaseStatsDraft(toBaseStatsDraft(settlementState.baseStats));
   }, [settlementState]);
@@ -367,6 +453,51 @@ function CompendiumRoute() {
     }
   }, [activeTab, enableWorldSystems]);
 
+  useEffect(() => {
+    const state = location.state as
+      | {
+          focusEntryId?: string;
+          activeTab?: CompendiumTab;
+          flashMessage?: string;
+          importEntityId?: string;
+          importMechanicKind?: CompendiumMechanicKind;
+          importProgressScope?: MechanicsProgressScope;
+        }
+      | null;
+    if (!state) return;
+
+    if (state.activeTab) {
+      setActiveTab(state.activeTab);
+      if (state.activeTab === 'progression' || state.activeTab === 'world-systems') {
+        setShowAdvancedSetup(true);
+      }
+    }
+    if (state.flashMessage) {
+      setFeedback({tone: 'success', message: state.flashMessage});
+    }
+    if (state.focusEntryId) {
+      setHighlightedEntryId(state.focusEntryId);
+    }
+    if (state.importEntityId) {
+      setEntityToImportId(state.importEntityId);
+    }
+    if (state.importMechanicKind) {
+      setImportMechanicKind(state.importMechanicKind);
+    }
+    if (state.importProgressScope) {
+      setImportProgressScope(state.importProgressScope);
+    }
+  }, [location.key, location.state]);
+
+  useEffect(() => {
+    if (!highlightedEntryId) return;
+    const timer = window.setTimeout(() => {
+      const element = document.getElementById(`compendium-entry-${highlightedEntryId}`);
+      element?.scrollIntoView({behavior: 'smooth', block: 'center'});
+    }, 50);
+    return () => window.clearTimeout(timer);
+  }, [highlightedEntryId, entries]);
+
   const completedActionSet = useMemo(() => {
     const set = new Set<string>();
     for (const log of logs) {
@@ -374,9 +505,20 @@ function CompendiumRoute() {
     }
     return set;
   }, [logs]);
+  const globalCompletedActionSet = useMemo(() => {
+    const set = new Set<string>();
+    for (const log of globalLogs) {
+      set.add(`${log.entryId}:${log.actionId}`);
+    }
+    return set;
+  }, [globalLogs]);
 
   const unlockedMilestoneSet = new Set(progress?.unlockedMilestoneIds ?? []);
   const unlockedRecipeSet = new Set(progress?.unlockedRecipeIds ?? []);
+  const activeMechanicsCharacterSheet =
+    activeMechanicsCharacterSheetId
+      ? characterSheets.find((sheet) => sheet.id === activeMechanicsCharacterSheetId) ?? null
+      : null;
   const entryById = useMemo(
     () => new Map(entries.map((entry) => [entry.id, entry])),
     [entries]
@@ -384,6 +526,17 @@ function CompendiumRoute() {
   const worldEntityById = useMemo(
     () => new Map(worldEntities.map((entity) => [entity.id, entity])),
     [worldEntities]
+  );
+  const zoneProfileBySourceEntityId = useMemo(
+    () =>
+      new Map(
+        zoneProfiles
+          .filter((profile): profile is ZoneAffinityProfile & {sourceEntityId: string} =>
+            Boolean(profile.sourceEntityId)
+          )
+          .map((profile) => [profile.sourceEntityId, profile])
+      ),
+    [zoneProfiles]
   );
   const characterById = useMemo(
     () => new Map(characters.map((character) => [character.id, character])),
@@ -393,6 +546,14 @@ function CompendiumRoute() {
     const selectedSet = new Set(activePartyCharacterIds);
     return characters.filter((character) => selectedSet.has(character.id));
   }, [characters, activePartyCharacterIds]);
+  const selectedZoneProfile =
+    selectedZoneKey
+      ? zoneProfiles.find((profile) => profile.biomeKey === selectedZoneKey) ?? null
+      : null;
+  const settlementLocationName =
+    settlementState?.sourceEntityId
+      ? worldEntityById.get(settlementState.sourceEntityId)?.name ?? settlementState.sourceEntityId
+      : null;
   const activePartySynergies = useMemo(
     () => {
       if (!enableWorldSystems) return [];
@@ -436,7 +597,13 @@ function CompendiumRoute() {
     ]
   );
   const zoneProgressByKey = useMemo(
-    () => new Map(zoneProgress.map((progressItem) => [progressItem.biomeKey, progressItem])),
+    () =>
+      new Map(
+        zoneProgress.map((progressItem) => [
+          `${progressItem.biomeKey}:${progressItem.characterSheetId ?? 'global'}`,
+          progressItem
+        ])
+      ),
     [zoneProgress]
   );
   const activeSettlementEffects = useMemo(() => {
@@ -446,6 +613,33 @@ function CompendiumRoute() {
       modules: settlementModules
     });
   }, [enableWorldSystems, settlementState, settlementModules]);
+
+  useEffect(() => {
+    if (!activeProject) return;
+    let cancelled = false;
+    const locationName =
+      worldEntities.find((entity) => entity.id === selectedSettlementLocationId)?.name ??
+      'Main Base';
+    void getOrCreateSettlementState(
+      activeProject.id,
+      locationName,
+      selectedSettlementLocationId || undefined
+    )
+      .then((nextState) => {
+        if (!cancelled) {
+          setSettlementState(nextState);
+        }
+      })
+      .catch((error) => {
+        if (cancelled) return;
+        const message =
+          error instanceof Error ? error.message : 'Unable to load settlement state.';
+        setFeedback({tone: 'error', message});
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [activeProject, selectedSettlementLocationId, worldEntities]);
   const settlementComputedEffects = useMemo(() => {
     if (!enableWorldSystems || !settlementState) {
       return {auraEffects: [], fortressEffects: [], allEffects: []};
@@ -526,6 +720,13 @@ function CompendiumRoute() {
     if (!activeProject || !entityToImportId) return;
     const entity = worldEntityById.get(entityToImportId);
     if (!entity) return;
+    if (importProgressScope === 'character' && !activeMechanicsCharacterSheetId) {
+      setFeedback({
+        tone: 'error',
+        message: 'Choose a character sheet before linking character-scoped mechanics.'
+      });
+      return;
+    }
     setFeedback(null);
     try {
       const entry = await upsertCompendiumEntryFromEntity({
@@ -533,7 +734,9 @@ function CompendiumRoute() {
         entity,
         domain: importDomain,
         defaultActions: getDefaultActions(importDomain),
-        needsCompletion: entity.needsCompletion ?? false
+        needsCompletion: entity.needsCompletion ?? false,
+        mechanicKind: importMechanicKind,
+        progressScope: importProgressScope
       });
       setEntries((prev) => {
         const idx = prev.findIndex((item) => item.id === entry.id);
@@ -542,12 +745,121 @@ function CompendiumRoute() {
         next[idx] = entry;
         return next.sort((a, b) => a.name.localeCompare(b.name));
       });
-      setFeedback({tone: 'success', message: 'World Bible entity linked to compendium.'});
+      if (importMechanicKind === 'zone') {
+        const biomeKey = toBiomeKey(entity.name);
+        const profile = await upsertZoneAffinityProfile({
+          projectId: activeProject.id,
+          biomeKey,
+          name: entity.name,
+          sourceEntityId: entity.id,
+          progressScope: importProgressScope,
+          maxAffinityPoints: 100,
+          milestones: [
+            {
+              id: `${biomeKey}-25`,
+              thresholdPercent: 25,
+              name: '25% Affinity',
+              description: 'Biome familiarity unlocked.'
+            },
+            {
+              id: `${biomeKey}-50`,
+              thresholdPercent: 50,
+              name: '50% Affinity',
+              description: 'Biome resistance unlocked.'
+            },
+            {
+              id: `${biomeKey}-100`,
+              thresholdPercent: 100,
+              name: '100% Affinity',
+              description: 'Biome mastery unlocked.'
+            }
+          ]
+        });
+        setZoneProfiles((prev) => {
+          const idx = prev.findIndex((item) => item.id === profile.id);
+          if (idx === -1) return [...prev, profile].sort((a, b) => a.name.localeCompare(b.name));
+          const next = [...prev];
+          next[idx] = profile;
+          return next.sort((a, b) => a.name.localeCompare(b.name));
+        });
+        setSelectedZoneKey(profile.biomeKey);
+        setShowAdvancedSetup(true);
+        setActiveTab('world-systems');
+        setFeedback({tone: 'success', message: 'Location linked as a zone profile.'});
+        return;
+      }
+      if (importMechanicKind === 'settlement') {
+        const nextState = await updateSettlementLocation({
+          projectId: activeProject.id,
+          sourceEntityId: entity.id,
+          name: entity.name
+        });
+        setSelectedSettlementLocationId(entity.id);
+        setSettlementState(nextState);
+        setShowAdvancedSetup(true);
+        setActiveTab('world-systems');
+        setFeedback({tone: 'success', message: 'Location linked to settlement/community systems.'});
+        return;
+      }
+      setFeedback({tone: 'success', message: 'World Bible entity linked to mechanics.'});
     } catch (error) {
       const message =
         error instanceof Error ? error.message : 'Unable to import entity.';
       setFeedback({tone: 'error', message});
     }
+  };
+
+  const handleUpdateEntryMechanics = async (
+    entry: CompendiumEntry,
+    updates: Partial<Pick<CompendiumEntry, 'mechanicKind' | 'progressScope'>>
+  ) => {
+    const next: CompendiumEntry = {
+      ...entry,
+      ...updates,
+      updatedAt: Date.now()
+    };
+    setFeedback(null);
+    try {
+      await saveCompendiumEntry(next);
+      setEntries((prev) =>
+        prev.map((item) => (item.id === entry.id ? next : item))
+      );
+      setFeedback({tone: 'success', message: 'Mechanics settings saved.'});
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'Unable to update mechanics settings.';
+      setFeedback({tone: 'error', message});
+    }
+  };
+
+  const handleOpenEntryMechanicsEditor = async (entry: CompendiumEntry) => {
+    if (!entry.sourceEntityId) return;
+    if (entry.mechanicKind === 'zone') {
+      const existingProfile = zoneProfileBySourceEntityId.get(entry.sourceEntityId);
+      if (existingProfile) {
+        setSelectedZoneKey(existingProfile.biomeKey);
+      } else {
+        const sourceEntity = worldEntityById.get(entry.sourceEntityId);
+        setZoneSourceEntityId(entry.sourceEntityId);
+        setZoneName(sourceEntity?.name ?? entry.name);
+        setZoneKey(toBiomeKey(sourceEntity?.name ?? entry.name));
+        setZoneProgressScope(
+          entry.progressScope === 'party' ? 'global' : entry.progressScope ?? 'character'
+        );
+      }
+      setShowAdvancedSetup(true);
+      setActiveTab('world-systems');
+      return;
+    }
+
+    if (entry.mechanicKind === 'settlement') {
+      setSelectedSettlementLocationId(entry.sourceEntityId);
+      setShowAdvancedSetup(true);
+      setActiveTab('world-systems');
+      return;
+    }
+
+    setActiveTab('entries');
   };
 
   const handleMarkEntryComplete = async (entry: CompendiumEntry) => {
@@ -648,6 +960,8 @@ function CompendiumRoute() {
         projectId: activeProject.id,
         biomeKey: zoneKey.trim().toLowerCase(),
         name: zoneName.trim(),
+        sourceEntityId: zoneSourceEntityId || undefined,
+        progressScope: zoneProgressScope,
         maxAffinityPoints: Math.max(1, Math.floor(zoneMaxPoints)),
         milestones: [
           {
@@ -681,6 +995,8 @@ function CompendiumRoute() {
       setZoneName('');
       setZoneKey('');
       setZoneMaxPoints(100);
+      setZoneSourceEntityId('');
+      setZoneProgressScope('character');
       setFeedback({tone: 'success', message: 'Zone affinity profile created.'});
     } catch (error) {
       const message =
@@ -691,13 +1007,27 @@ function CompendiumRoute() {
 
   const handleRecordZoneExposure = async () => {
     if (!activeProject || !selectedZoneKey) return;
+    if (
+      selectedZoneProfile?.progressScope === 'character' &&
+      !activeMechanicsCharacterSheetId
+    ) {
+      setFeedback({
+        tone: 'error',
+        message: 'Choose a character sheet before recording character-scoped zone exposure.'
+      });
+      return;
+    }
     setIsRecordingZone(true);
     setFeedback(null);
     try {
       const result = await recordZoneExposure({
         projectId: activeProject.id,
         biomeKey: selectedZoneKey,
-        exposureSeconds: Math.max(1, Math.floor(zoneExposureMinutes * 60))
+        exposureSeconds: Math.max(1, Math.floor(zoneExposureMinutes * 60)),
+        characterSheetId:
+          selectedZoneProfile?.progressScope === 'character'
+            ? activeMechanicsCharacterSheetId || undefined
+            : undefined
       });
       setZoneProgress((prev) => {
         const idx = prev.findIndex((item) => item.id === result.progress.id);
@@ -756,7 +1086,8 @@ function CompendiumRoute() {
       await saveSettlementModule(module);
       const nextState = await attachModuleToSettlement({
         projectId: activeProject.id,
-        moduleId: module.id
+        moduleId: module.id,
+        sourceEntityId: selectedSettlementLocationId || undefined
       });
       setSettlementModules((prev) =>
         [...prev, module].sort((a, b) => a.name.localeCompare(b.name))
@@ -779,6 +1110,13 @@ function CompendiumRoute() {
     action: CompendiumActionDefinition
   ) => {
     if (!activeProject) return;
+    if (entry.progressScope === 'character' && !activeMechanicsCharacterSheetId) {
+      setFeedback({
+        tone: 'error',
+        message: 'Choose a character sheet before recording character-scoped discovery.'
+      });
+      return;
+    }
     const key = `${entry.id}:${action.id}`;
     const quantity = action.repeatable
       ? Math.max(1, Math.floor(quantityByActionKey[key] || 1))
@@ -791,11 +1129,19 @@ function CompendiumRoute() {
         projectId: activeProject.id,
         entryId: entry.id,
         actionId: action.id,
-        quantity
+        quantity,
+        characterSheetId:
+          entry.progressScope === 'character'
+            ? activeMechanicsCharacterSheetId || undefined
+            : undefined
       });
       setProgress(result.progress);
       if (result.log) {
-        setLogs((prev) => [result.log!, ...prev]);
+        if (entry.progressScope === 'character') {
+          setLogs((prev) => [result.log!, ...prev]);
+        } else {
+          setGlobalLogs((prev) => [result.log!, ...prev]);
+        }
       }
       if (!result.log) {
         setFeedback({
@@ -838,7 +1184,8 @@ function CompendiumRoute() {
     try {
       const nextState = await updateSettlementFortressLevel({
         projectId: activeProject.id,
-        level: nextLevel
+        level: nextLevel,
+        sourceEntityId: selectedSettlementLocationId || undefined
       });
       setSettlementState(nextState);
       setFeedback({
@@ -881,7 +1228,8 @@ function CompendiumRoute() {
     try {
       const nextState = await updateSettlementBaseStats({
         projectId: activeProject.id,
-        baseStats: nextBaseStats
+        baseStats: nextBaseStats,
+        sourceEntityId: selectedSettlementLocationId || undefined
       });
       setSettlementState(nextState);
       setBaseStatsDraft(toBaseStatsDraft(nextState.baseStats));
@@ -912,17 +1260,29 @@ function CompendiumRoute() {
       <section>
         <h1>Compendium</h1>
         <p>
-          Compendium is hidden because <strong>Enable Game Systems</strong> is
+          Mechanics are hidden because <strong>Enable Game Systems</strong> is
           turned off for this project.
         </p>
-        <p>Go to Settings to re-enable it when needed.</p>
+        <p>Re-enable game systems when you want progression, crafting, discovery, or runtime mechanics.</p>
       </section>
     );
   }
 
-  const visibleTabs = COMPENDIUM_TABS.filter(
-    (tab) => !tab.advanced || enableWorldSystems
-  );
+  const visibleTabs = COMPENDIUM_TABS.filter((tab) => {
+    if (tab.id === 'overview' || tab.id === 'entries') {
+      return true;
+    }
+    if (tab.id === 'progression') {
+      return showAdvancedSetup || milestones.length > 0 || recipes.length > 0;
+    }
+    if (tab.id === 'world-systems') {
+      return (
+        enableWorldSystems &&
+        (showAdvancedSetup || zoneProfiles.length > 0 || settlementModules.length > 0)
+      );
+    }
+    return !tab.advanced || enableWorldSystems;
+  });
   const currentTab =
     visibleTabs.find((tab) => tab.id === activeTab) ?? visibleTabs[0];
   const hasImportedEntity = entries.some((entry) => Boolean(entry.sourceEntityId));
@@ -935,7 +1295,7 @@ function CompendiumRoute() {
     {
       id: 'import-entity',
       done: hasImportedEntity,
-      label: 'Import your first World Bible entity.',
+      label: 'Link your first World Bible record into mechanics.',
       tab: 'entries'
     },
     {
@@ -973,6 +1333,11 @@ function CompendiumRoute() {
     if (activeTab === 'overview') return !item.done;
     return item.tab === activeTab && !item.done;
   });
+  const compactNextSteps = tabAwareNextSteps.filter(
+    (item) =>
+      item.tab === 'entries' ||
+      (showAdvancedSetup && (item.tab === 'progression' || item.tab === 'world-systems'))
+  );
   const activeTabDoneCount = nextStepItems.filter(
     (item) => item.tab === activeTab && item.done
   ).length;
@@ -1110,6 +1475,35 @@ function CompendiumRoute() {
         Create new compendium records or import from World Bible, then log actions
         from each entry card.
       </p>
+      <section
+        style={{
+          marginBottom: '1rem',
+          padding: '0.85rem',
+          border: '1px solid #e5e7eb',
+          borderRadius: '8px',
+          backgroundColor: '#f9fafb'
+        }}
+      >
+        <strong>Discovery Scope</strong>
+        <div style={{fontSize: '0.84rem', color: '#6b7280', marginTop: '0.25rem', marginBottom: '0.55rem'}}>
+          Character-scoped discovery and progression use the selected actor below.
+        </div>
+        <label style={{display: 'block', maxWidth: '320px'}}>
+          Active character sheet
+          <select
+            value={activeMechanicsCharacterSheetId}
+            onChange={(e) => setActiveMechanicsCharacterSheetId(e.target.value)}
+            style={{width: '100%'}}
+          >
+            <option value=''>No character selected</option>
+            {characterSheets.map((sheet) => (
+              <option key={sheet.id} value={sheet.id}>
+                {sheet.name}
+              </option>
+            ))}
+          </select>
+        </label>
+      </section>
       <div
         style={{
           display: 'grid',
@@ -1155,7 +1549,7 @@ function CompendiumRoute() {
         <article style={{padding: '1rem', border: '1px solid #ddd', borderRadius: '8px'}}>
           <h2 style={{marginTop: 0}}>Import from World Bible</h2>
           <p style={{marginTop: 0, fontSize: '0.85rem', color: '#6b7280'}}>
-            Best for existing entities so names stay aligned across tools.
+            Best for existing entities so names stay aligned across tools. Choose what kind of mechanics this record should gain.
           </p>
           <label style={{display: 'block', marginBottom: '0.5rem'}}>
             Entity
@@ -1172,6 +1566,57 @@ function CompendiumRoute() {
               ))}
             </select>
           </label>
+          <label style={{display: 'block', marginBottom: '0.5rem'}}>
+            Mechanics type
+            <select
+              value={importMechanicKind}
+              onChange={(e) =>
+                setImportMechanicKind(e.target.value as CompendiumMechanicKind)
+              }
+              style={{width: '100%'}}
+            >
+              {MECHANIC_KIND_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          {importMechanicKind !== 'settlement' && (
+            <label style={{display: 'block', marginBottom: '0.5rem'}}>
+              Progress scope
+              <select
+                value={importProgressScope === 'party' ? 'global' : importProgressScope}
+                onChange={(e) =>
+                  setImportProgressScope(e.target.value as MechanicsProgressScope)
+                }
+                style={{width: '100%'}}
+              >
+                {MECHANICS_SCOPE_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
+          {importProgressScope === 'character' && importMechanicKind !== 'settlement' && (
+            <label style={{display: 'block', marginBottom: '0.5rem'}}>
+              Active character sheet
+              <select
+                value={activeMechanicsCharacterSheetId}
+                onChange={(e) => setActiveMechanicsCharacterSheetId(e.target.value)}
+                style={{width: '100%'}}
+              >
+                <option value=''>No character selected</option>
+                {characterSheets.map((sheet) => (
+                  <option key={sheet.id} value={sheet.id}>
+                    {sheet.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
           <label style={{display: 'block', marginBottom: '0.75rem'}}>
             Domain
             <select
@@ -1191,7 +1636,7 @@ function CompendiumRoute() {
             onClick={() => void handleImportEntity()}
             disabled={!entityToImportId}
           >
-            Link Entity
+            Link Mechanics
           </button>
         </article>
       </div>
@@ -1256,8 +1701,8 @@ function CompendiumRoute() {
                   </div>
                   <div style={{fontSize: '0.82rem', color: '#475569', marginTop: '0.35rem'}}>
                     {entry.sourceEntityId
-                      ? 'Linked from World Bible. Review the derived compendium details and mark complete when ready.'
-                      : 'Created directly in Compendium. Fill out the entry intent and mark complete when ready.'}
+                      ? 'Linked from World Bible. Add or adjust the optional mechanics details, then mark complete when ready.'
+                      : 'Created directly in mechanics. Fill out the entry intent and mark complete when ready.'}
                   </div>
                   <div style={{display: 'flex', gap: '0.45rem', flexWrap: 'wrap', marginTop: '0.6rem'}}>
                     {entry.sourceEntityId && (
@@ -1313,20 +1758,40 @@ function CompendiumRoute() {
                 }}
                 disabled={worldEntities.length === 0}
               >
-                Import your first World Bible entity
+                Link your first World Bible record
               </button>
             </div>
           </div>
         )}
         <ul style={{listStyle: 'none', padding: 0, margin: 0}}>
-          {entries.map((entry) => (
+          {entries.map((entry) => {
+            const sourceEntity = entry.sourceEntityId
+              ? worldEntityById.get(entry.sourceEntityId) ?? null
+              : null;
+            const linkedZoneProfile = entry.sourceEntityId
+              ? zoneProfileBySourceEntityId.get(entry.sourceEntityId) ?? null
+              : null;
+            const isLinkedSettlement =
+              Boolean(entry.sourceEntityId) &&
+              settlementState?.sourceEntityId === entry.sourceEntityId;
+            return (
             <li
               key={entry.id}
+              id={`compendium-entry-${entry.id}`}
               style={{
-                border: '1px solid #eee',
+                border:
+                  highlightedEntryId === entry.id
+                    ? '1px solid #2563eb'
+                    : '1px solid #eee',
                 borderRadius: '6px',
                 padding: '0.75rem',
-                marginBottom: '0.75rem'
+                marginBottom: '0.75rem',
+                backgroundColor:
+                  highlightedEntryId === entry.id ? '#eff6ff' : 'transparent',
+                boxShadow:
+                  highlightedEntryId === entry.id
+                    ? '0 0 0 1px rgba(37, 99, 235, 0.08)'
+                    : 'none'
               }}
             >
               <div
@@ -1362,6 +1827,163 @@ function CompendiumRoute() {
                   Linked to World Bible entity
                 </div>
               )}
+              {entry.sourceEntityId && (
+                <div
+                  style={{
+                    marginTop: '0.55rem',
+                    marginBottom: '0.55rem',
+                    padding: '0.75rem',
+                    border: '1px solid #dbeafe',
+                    borderRadius: '8px',
+                    backgroundColor: '#f8fbff'
+                  }}
+                >
+                  <div style={{display: 'flex', justifyContent: 'space-between', gap: '0.75rem', flexWrap: 'wrap'}}>
+                    <div>
+                      <strong>Location Mechanics Summary</strong>
+                      <div style={{fontSize: '0.82rem', color: '#475569', marginTop: '0.25rem'}}>
+                        {sourceEntity?.name ?? entry.name}
+                        {' · '}
+                        {entry.mechanicKind === 'zone'
+                          ? 'Zone-linked'
+                          : entry.mechanicKind === 'settlement'
+                            ? 'Settlement-linked'
+                            : entry.mechanicKind === 'discovery'
+                              ? 'Discovery-tracked'
+                              : 'General mechanics'}
+                      </div>
+                    </div>
+                    <div style={{display: 'flex', gap: '0.45rem', flexWrap: 'wrap'}}>
+                      <button
+                        type='button'
+                        onClick={() =>
+                          setEditingMechanicsEntryId((current) =>
+                            current === entry.id ? null : entry.id
+                          )
+                        }
+                      >
+                        {editingMechanicsEntryId === entry.id
+                          ? 'Hide Mechanics Settings'
+                          : 'Edit Mechanics'}
+                      </button>
+                      <button
+                        type='button'
+                        onClick={() => void handleOpenEntryMechanicsEditor(entry)}
+                      >
+                        {entry.mechanicKind === 'zone'
+                          ? linkedZoneProfile
+                            ? 'Open Zone Editor'
+                            : 'Create Zone Link'
+                          : entry.mechanicKind === 'settlement'
+                            ? 'Open Settlement Editor'
+                            : 'Open Mechanics'}
+                      </button>
+                      <button
+                        type='button'
+                        onClick={() =>
+                          navigate('/world-bible', {
+                            state: {focusEntityId: entry.sourceEntityId}
+                          })
+                        }
+                      >
+                        Open World Record
+                      </button>
+                    </div>
+                  </div>
+                  <div
+                    style={{
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+                      gap: '0.5rem',
+                      marginTop: '0.65rem',
+                      fontSize: '0.82rem',
+                      color: '#4b5563'
+                    }}
+                  >
+                    <div>
+                      <strong>Scope:</strong>{' '}
+                      {entry.progressScope === 'character'
+                        ? activeMechanicsCharacterSheet?.name
+                          ? `Per character (${activeMechanicsCharacterSheet.name})`
+                          : 'Per character'
+                        : 'Shared / global'}
+                    </div>
+                    <div>
+                      <strong>Zone:</strong>{' '}
+                      {linkedZoneProfile
+                        ? `${linkedZoneProfile.name} (${linkedZoneProfile.progressScope ?? 'character'})`
+                        : 'Not linked'}
+                    </div>
+                    <div>
+                      <strong>Settlement:</strong>{' '}
+                      {isLinkedSettlement
+                        ? settlementLocationName ?? 'Linked'
+                        : 'Not linked'}
+                    </div>
+                  </div>
+                </div>
+              )}
+              {editingMechanicsEntryId === entry.id && (
+                <div
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+                    gap: '0.5rem',
+                    marginTop: '0.55rem',
+                    marginBottom: '0.55rem',
+                    padding: '0.75rem',
+                    border: '1px solid #e5e7eb',
+                    borderRadius: '8px',
+                    backgroundColor: '#fafafa'
+                  }}
+                >
+                  <label style={{fontSize: '0.82rem', color: '#4b5563'}}>
+                    Mechanics type
+                    <select
+                      value={entry.mechanicKind ?? 'discovery'}
+                      onChange={(e) =>
+                        void handleUpdateEntryMechanics(entry, {
+                          mechanicKind: e.target.value as CompendiumEntry['mechanicKind']
+                        })
+                      }
+                      style={{width: '100%'}}
+                    >
+                      <option value='discovery'>Discovery</option>
+                      <option value='zone'>Zone</option>
+                      <option value='settlement'>Settlement</option>
+                      <option value='general'>General</option>
+                    </select>
+                  </label>
+                  <label style={{fontSize: '0.82rem', color: '#4b5563'}}>
+                    Progress scope
+                    <select
+                      value={
+                        entry.progressScope === 'party'
+                          ? 'global'
+                          : entry.progressScope ?? 'character'
+                      }
+                      onChange={(e) =>
+                        void handleUpdateEntryMechanics(entry, {
+                          progressScope: e.target.value as MechanicsProgressScope
+                        })
+                      }
+                      style={{width: '100%'}}
+                    >
+                      {MECHANICS_SCOPE_OPTIONS.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  {entry.progressScope === 'character' && (
+                    <div style={{fontSize: '0.8rem', color: '#4b5563', gridColumn: '1 / -1'}}>
+                      Recording for:{' '}
+                      {activeMechanicsCharacterSheet?.name ?? 'No character sheet selected'}
+                    </div>
+                  )}
+                </div>
+              )}
               {entry.needsCompletion && (
                 <div style={{marginTop: '0.5rem'}}>
                   <button
@@ -1375,7 +1997,10 @@ function CompendiumRoute() {
               <div style={{display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginTop: '0.5rem'}}>
                 {entry.actions.map((action) => {
                   const key = `${entry.id}:${action.id}`;
-                  const alreadyDone = completedActionSet.has(key);
+                  const alreadyDone =
+                    entry.progressScope === 'character'
+                      ? completedActionSet.has(key)
+                      : globalCompletedActionSet.has(key);
                   const disabled =
                     isRecordingKey === key || (!action.repeatable && alreadyDone);
                   const quantity = Math.max(1, Math.floor(quantityByActionKey[key] || 1));
@@ -1411,7 +2036,8 @@ function CompendiumRoute() {
                 })}
               </div>
             </li>
-          ))}
+            );
+          })}
         </ul>
       </section>
     </>
@@ -1710,6 +2336,54 @@ function CompendiumRoute() {
             Track zone exposure and unlock biome-specific milestones over time.
           </p>
           <label style={{display: 'block', marginBottom: '0.5rem'}}>
+            Linked location
+            <select
+              value={zoneSourceEntityId}
+              onChange={(e) => setZoneSourceEntityId(e.target.value)}
+              style={{width: '100%'}}
+            >
+              <option value=''>No linked location</option>
+              {worldEntities.map((entity) => (
+                <option key={entity.id} value={entity.id}>
+                  {entity.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label style={{display: 'block', marginBottom: '0.5rem'}}>
+            Progress scope
+            <select
+              value={zoneProgressScope === 'party' ? 'global' : zoneProgressScope}
+              onChange={(e) =>
+                setZoneProgressScope(e.target.value as MechanicsProgressScope)
+              }
+              style={{width: '100%'}}
+            >
+              {MECHANICS_SCOPE_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          {zoneProgressScope === 'character' && (
+            <label style={{display: 'block', marginBottom: '0.75rem'}}>
+              Active character sheet
+              <select
+                value={activeMechanicsCharacterSheetId}
+                onChange={(e) => setActiveMechanicsCharacterSheetId(e.target.value)}
+                style={{width: '100%'}}
+              >
+                <option value=''>No character selected</option>
+                {characterSheets.map((sheet) => (
+                  <option key={sheet.id} value={sheet.id}>
+                    {sheet.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
+          <label style={{display: 'block', marginBottom: '0.5rem'}}>
             Zone Name
             <input
               type='text'
@@ -1801,10 +2475,19 @@ function CompendiumRoute() {
           </button>
           <ul style={{listStyle: 'none', padding: 0, marginTop: '0.75rem'}}>
             {zoneProfiles.map((profile) => {
-              const progressItem = zoneProgressByKey.get(profile.biomeKey) ?? {
+              const progressKey = `${profile.biomeKey}:${
+                profile.progressScope === 'character'
+                  ? activeMechanicsCharacterSheetId || 'global'
+                  : 'global'
+              }`;
+              const progressItem = zoneProgressByKey.get(progressKey) ?? {
                 id: '',
                 projectId: profile.projectId,
                 biomeKey: profile.biomeKey,
+                characterSheetId:
+                  profile.progressScope === 'character'
+                    ? activeMechanicsCharacterSheetId || undefined
+                    : undefined,
                 affinityPoints: 0,
                 totalExposureSeconds: 0,
                 unlockedMilestoneIds: [],
@@ -1822,7 +2505,15 @@ function CompendiumRoute() {
                   }}
                 >
                   <strong>{profile.name}</strong> ({percent.toFixed(1)}%)
+                  {profile.sourceEntityId && (
+                    <div style={{fontSize: '0.8rem', color: '#6b7280'}}>
+                      Linked location:{' '}
+                      {worldEntityById.get(profile.sourceEntityId)?.name ?? profile.sourceEntityId}
+                    </div>
+                  )}
                   <div style={{fontSize: '0.82rem', color: '#6b7280'}}>
+                    Scope: {profile.progressScope ?? 'character'}
+                    {' · '}
                     Exposure: {(progressItem.totalExposureSeconds / 60).toFixed(1)} minutes
                   </div>
                   <div style={{fontSize: '0.82rem'}}>
@@ -1937,6 +2628,31 @@ function CompendiumRoute() {
             Generalized settlement buffs. Trophies are one source type, alongside
             structures, stations, totems, and custom modules.
           </p>
+          <label style={{display: 'block', marginBottom: '0.75rem'}}>
+            Linked location
+            <select
+              value={selectedSettlementLocationId}
+              onChange={(e) => setSelectedSettlementLocationId(e.target.value)}
+              style={{width: '100%'}}
+            >
+              <option value=''>No linked location</option>
+              {worldEntities.map((entity) => (
+                <option key={entity.id} value={entity.id}>
+                  {entity.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          {settlementState?.sourceEntityId && (
+            <div style={{fontSize: '0.82rem', color: '#6b7280', marginBottom: '0.65rem'}}>
+              Settlement systems are currently attached to{' '}
+              <strong>
+                {worldEntityById.get(settlementState.sourceEntityId)?.name ??
+                  settlementState.sourceEntityId}
+              </strong>
+              .
+            </div>
+          )}
           <label style={{display: 'block', marginBottom: '0.5rem'}}>
             Module Name
             <input
@@ -2230,20 +2946,43 @@ function CompendiumRoute() {
         }}
       >
         <summary style={{cursor: 'pointer', fontWeight: 600}}>
-          Compendium Wizard Help
+          Mechanics Setup Help
         </summary>
         <div style={{marginTop: '0.6rem', fontSize: '0.9rem', color: '#374151'}}>
           <p style={{margin: '0 0 0.4rem 0'}}>
-            Step 1: set up entries, milestones, and recipes.
+            Step 1: link a world record only when it truly needs mechanics.
           </p>
           <p style={{margin: '0 0 0.4rem 0'}}>
-            Step 2: record actions and verify progression unlocks.
+            Step 2: stay in Entries for lightweight setup.
           </p>
           <p style={{margin: 0}}>
-            Step 3: use world systems and runtime previews for balancing.
+            Step 3: open advanced setup only when you need progression, recipes, zones, or simulation.
           </p>
         </div>
       </details>
+      {!showAdvancedSetup && (
+        <section
+          style={{
+            marginBottom: '0.85rem',
+            padding: '0.85rem',
+            border: '1px solid #dbeafe',
+            borderRadius: '8px',
+            backgroundColor: '#f8fbff'
+          }}
+        >
+          <div style={{display: 'flex', justifyContent: 'space-between', gap: '0.75rem', flexWrap: 'wrap'}}>
+            <div>
+              <strong>Start Small</strong>
+              <div style={{fontSize: '0.88rem', color: '#475569', marginTop: '0.25rem'}}>
+                You only need the <strong>Entries</strong> tab right now unless this project truly needs progression or world simulation.
+              </div>
+            </div>
+            <button type='button' onClick={() => setShowAdvancedSetup(true)}>
+              Show advanced setup
+            </button>
+          </div>
+        </section>
+      )}
       <div style={{display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '0.8rem'}}>
         {visibleTabs.map((tab) => (
           <button
@@ -2289,13 +3028,13 @@ function CompendiumRoute() {
             Completed in this section: {activeTabDoneCount}/{activeTabTotalCount}
           </p>
         )}
-        {tabAwareNextSteps.length === 0 ? (
+        {compactNextSteps.length === 0 ? (
           <p style={{margin: 0, fontSize: '0.88rem', color: '#374151'}}>
             This section is in good shape. Move to another tab for additional setup.
           </p>
         ) : (
           <ul style={{listStyle: 'none', margin: 0, padding: 0}}>
-            {tabAwareNextSteps.slice(0, 3).map((item) => (
+            {compactNextSteps.slice(0, 3).map((item) => (
               <li key={`tab-next-${item.id}`} style={{marginBottom: '0.35rem'}}>
                 Next: {item.label}
                 {activeTab === 'overview' && (
@@ -2336,11 +3075,20 @@ function CompendiumRoute() {
           Runtime Modifiers: {enableRuntimeModifiers ? 'On' : 'Off'}
         </span>
       </div>
+      {!showAdvancedSetup &&
+        milestones.length === 0 &&
+        recipes.length === 0 &&
+        zoneProfiles.length === 0 &&
+        settlementModules.length === 0 && (
+          <p style={{marginTop: 0, marginBottom: '0.85rem', fontSize: '0.84rem', color: '#6b7280'}}>
+            Advanced mechanics are hidden until you ask for them.
+          </p>
+        )}
 
-      {activeTab === 'overview' && <CompendiumOverviewSection />}
-      {activeTab === 'entries' && <CompendiumEntriesSection />}
-      {activeTab === 'progression' && <CompendiumProgressionSection />}
-      {activeTab === 'world-systems' && <CompendiumWorldSystemsSection />}
+      {currentTab.id === 'overview' && <CompendiumOverviewSection />}
+      {currentTab.id === 'entries' && <CompendiumEntriesSection />}
+      {currentTab.id === 'progression' && <CompendiumProgressionSection />}
+      {currentTab.id === 'world-systems' && <CompendiumWorldSystemsSection />}
     </section>
   );
 }

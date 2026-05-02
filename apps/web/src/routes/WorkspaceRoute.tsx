@@ -48,6 +48,19 @@ import styles from '../styles/WorkspaceRoute.module.css';
 import {useAppStore} from '../store/appStore';
 import {WorkspaceContextDrawer} from '../components/Workspace/WorkspaceContextDrawer';
 import {WorkspaceSceneDrawer} from '../components/Workspace/WorkspaceSceneDrawer';
+import {
+  describeStateMutationEventStaleness,
+  getStateMutationEventStaleness
+} from '../services/state/stateMutationStaleness';
+import {
+  applyStateMutationCommand,
+  compareStateMutationEvents,
+  replayCharacterState
+} from '../services/state/stateReplay';
+import {
+  summarizeStateMutationCommand,
+  summarizeStateMutationEffects
+} from '../services/state/stateMutationPresentation';
 import {useWorkspaceProjectData} from '../hooks/useWorkspaceProjectData';
 import {useWorkspaceLoreSnippets} from '../hooks/useWorkspaceLoreSnippets';
 import {useWorkspaceScratchpad} from '../hooks/useWorkspaceScratchpad';
@@ -70,6 +83,23 @@ const summarizeContent = (html: string, limit = 500): string => {
     .replace(/\s+/g, ' ')
     .trim();
   return text.slice(0, limit);
+};
+
+const toSingularLabel = (value: string): string => {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return 'Record';
+  }
+  if (/ies$/i.test(trimmed)) {
+    return trimmed.replace(/ies$/i, 'y');
+  }
+  if (/ses$/i.test(trimmed)) {
+    return trimmed.replace(/es$/i, '');
+  }
+  if (/s$/i.test(trimmed) && !/ss$/i.test(trimmed)) {
+    return trimmed.slice(0, -1);
+  }
+  return trimmed;
 };
 
 type FeedbackTone = 'success' | 'error';
@@ -372,6 +402,7 @@ function WorkspaceRoute() {
     setAliases,
     resolvedActionCues,
     characters,
+    setCharacters,
     characterSheets,
     ruleset,
     settlementState,
@@ -379,6 +410,7 @@ function WorkspaceRoute() {
     ragService,
     canonState,
     setCanonState,
+    stateMutationEvents,
     statBlockSourceType,
     setStatBlockSourceType,
     statBlockStyle,
@@ -425,6 +457,24 @@ function WorkspaceRoute() {
     [projectSettings?.aiSettings]
   );
 
+  const staleStateEventCountBySceneId = useMemo(() => {
+    const counts: Record<string, number> = {};
+    stateMutationEvents.forEach((event) => {
+      if (event.status !== 'accepted') {
+        return;
+      }
+      const staleness = getStateMutationEventStaleness({
+        event,
+        documents
+      });
+      if (!staleness.isStale) {
+        return;
+      }
+      counts[event.sceneId] = (counts[event.sceneId] ?? 0) + 1;
+    });
+    return counts;
+  }, [documents, stateMutationEvents]);
+
   const {
     setGuardrailIssues,
     resolvingUnknown,
@@ -437,6 +487,10 @@ function WorkspaceRoute() {
     setUnknownCategorySelection,
     isRunningConsistencyReview,
     consistencyReviewItems,
+    stateMutationReviewItems,
+    hiddenStateMutationReviewCountBySceneId,
+    hiddenStateMutationReviewCount,
+    applyingStateMutationReviewId,
     lastConsistencyReviewAt,
     consistencyPopover,
     setConsistencyPopover,
@@ -449,6 +503,7 @@ function WorkspaceRoute() {
     isReviewPrefsHydrated,
     unknownLinkOptions,
     closeUnknownLinkOptions,
+    getSuggestedUnknownCategoryId,
     resolveUnknownEntity,
     resolveAllUnknownEntities,
     dismissAllUnknownEntities,
@@ -458,7 +513,14 @@ function WorkspaceRoute() {
     clearUnknownSurface,
     activeConsistencyPopoverIssue,
     reviewReadiness,
-    openConsistencyPopover
+    openConsistencyPopover,
+    acceptStateMutationReviewItem,
+    rejectStateMutationReviewItem,
+    acceptSceneStateMutationReviewItems,
+    rejectSceneStateMutationReviewItems,
+    hideStateMutationReviewItem,
+    restoreHiddenStateMutationReviewItems,
+    restoreAllHiddenStateMutationReviewItems
   } = useWorkspaceConsistency({
     activeProject,
     documents,
@@ -470,6 +532,10 @@ function WorkspaceRoute() {
     aliases,
     setAliases,
     characters,
+    setCharacters,
+    characterSheets,
+    ruleset,
+    stateMutationEvents,
     selectedDocumentId: selectedId,
     projectSettings,
     setProjectSettings,
@@ -489,6 +555,48 @@ function WorkspaceRoute() {
     setReviewBannerDismissed(false);
     await handleRunConsistencyReview();
   }, [handleRunConsistencyReview]);
+  const openResolverNoticeDestination = useCallback(() => {
+    if (!resolverNotice) {
+      return;
+    }
+    if (resolverNotice.destination === 'character-sheet-create') {
+      navigate('/characters?view=sheets', {
+        state: {
+          prefillCharacterId: resolverNotice.targetId,
+          preferredView: 'sheets',
+          autoCreateSheetForCharacterId: resolverNotice.targetId
+        }
+      });
+      return;
+    }
+    if (resolverNotice.destination === 'character-sheets') {
+      navigate('/characters?view=sheets', {
+        state: {
+          prefillCharacterId: resolverNotice.targetId,
+          preferredView: 'sheets'
+        }
+      });
+      return;
+    }
+    if (resolverNotice.destination === 'characters') {
+      navigate('/characters', {
+        state: {
+          prefillCharacterId: resolverNotice.targetId,
+          preferredView: 'roster'
+        }
+      });
+      return;
+    }
+    navigate('/world-bible');
+  }, [navigate, resolverNotice]);
+  const resolverNoticePrimaryLabel =
+    resolverNotice?.destination === 'character-sheet-create'
+      ? 'Create Character Sheet'
+      : resolverNotice?.destination === 'character-sheets'
+      ? 'Open Character Sheet'
+      : resolverNotice?.destination === 'characters'
+        ? 'Open Character'
+        : 'View in World Bible';
   persistDocRef.current = persistDoc;
   refreshDeferredReviewRef.current = refreshDeferredReview;
   setGuardrailIssuesRef.current = setGuardrailIssues as typeof setGuardrailIssuesRef.current;
@@ -595,6 +703,281 @@ function WorkspaceRoute() {
     getEffectiveResourceValues
   });
 
+  const selectedSceneTimeline = useMemo(() => {
+    if (!selectedDocument) {
+      return null;
+    }
+
+    const selectedSceneEvents = stateMutationEvents
+      .filter(
+        (
+          event
+        ): event is typeof event & {
+          status: 'accepted' | 'invalidated';
+        } => event.sceneId === selectedDocument.id && event.status !== 'proposed'
+      )
+      .slice()
+      .sort(compareStateMutationEvents);
+    const acceptedEvents = stateMutationEvents
+      .filter((event) => event.status === 'accepted')
+      .slice()
+      .sort(compareStateMutationEvents);
+    const sheetByActorId = new Map<string, typeof characterSheets[number]>();
+    characterSheets.forEach((sheet) => {
+      sheetByActorId.set(sheet.id, sheet);
+      if (sheet.characterId) {
+        sheetByActorId.set(sheet.characterId, sheet);
+      }
+    });
+
+    const actorStateById = new Map<
+      string,
+      ReturnType<typeof replayCharacterState>
+    >();
+    const actorIdsTouchedInSelectedScene = new Set<string>();
+    const entries: Array<{
+      id: string;
+      status: 'accepted' | 'invalidated';
+      stepLabel: string;
+      actorLabel: string;
+      summaryLines: string[];
+      effectLines: string[];
+      isStale: boolean;
+      staleLabel: string;
+    }> = [];
+
+    for (const event of acceptedEvents) {
+      for (const command of event.commands) {
+        const sheet = sheetByActorId.get(command.actorId);
+        if (!sheet) {
+          continue;
+        }
+        const actorStateKey = sheet.id;
+        const before =
+          actorStateById.get(actorStateKey) ??
+          replayCharacterState({
+            sheet,
+            ruleset,
+            events: [],
+            target: {
+              actorId: command.actorId,
+              characterId: sheet.characterId,
+              sheetId: sheet.id,
+              actorName: sheet.name
+            }
+          });
+        const after = applyStateMutationCommand(before, command);
+        actorStateById.set(actorStateKey, after);
+
+        if (event.sceneId === selectedDocument.id) {
+          actorIdsTouchedInSelectedScene.add(actorStateKey);
+          const existingEntry = entries.find((entry) => entry.id === event.id);
+          const summaryLine = summarizeStateMutationCommand({
+            command,
+            labels: {
+              resourceDefinitionNameById,
+              statDefinitionNameById
+            }
+          });
+          const effectLines = summarizeStateMutationEffects({
+            before,
+            after,
+            command,
+            labels: {
+              resourceDefinitionNameById,
+              statDefinitionNameById
+            }
+          });
+          if (existingEntry) {
+            if (existingEntry.actorLabel !== sheet.name) {
+              existingEntry.actorLabel = 'Multiple actors';
+            }
+            existingEntry.summaryLines.push(summaryLine);
+            existingEntry.effectLines.push(...effectLines);
+          } else {
+            const staleness = getStateMutationEventStaleness({
+              event,
+              documents
+            });
+            entries.push({
+              id: event.id,
+              status: 'accepted',
+              stepLabel: `Step ${event.sceneSequence ?? '?'}`,
+              actorLabel: sheet.name,
+              summaryLines: [summaryLine],
+              effectLines,
+              isStale: staleness.isStale,
+              staleLabel: describeStateMutationEventStaleness(staleness) ?? ''
+            });
+          }
+        }
+      }
+    }
+
+    selectedSceneEvents
+      .filter((event) => event.status === 'invalidated')
+      .forEach((event) => {
+        const actorLabel =
+          event.commands
+            .map((command) => sheetByActorId.get(command.actorId)?.name)
+            .find(Boolean) ?? 'Unknown actor';
+        const staleness = getStateMutationEventStaleness({
+          event,
+          documents
+        });
+        entries.push({
+          id: event.id,
+          status: event.status,
+          stepLabel: `Step ${event.sceneSequence ?? '?'}`,
+          actorLabel,
+          summaryLines: event.commands.map((command) =>
+            summarizeStateMutationCommand({
+              command,
+              labels: {
+                resourceDefinitionNameById,
+                statDefinitionNameById
+              }
+            })
+          ),
+          effectLines: [],
+          isStale: staleness.isStale,
+          staleLabel: describeStateMutationEventStaleness(staleness) ?? ''
+        });
+      });
+
+    entries.sort((a, b) => {
+      const aEvent = selectedSceneEvents.find((event) => event.id === a.id);
+      const bEvent = selectedSceneEvents.find((event) => event.id === b.id);
+      if (!aEvent || !bEvent) {
+        return 0;
+      }
+      return compareStateMutationEvents(aEvent, bEvent);
+    });
+
+    const selectedSceneOrder =
+      selectedDocument &&
+      documents
+        .slice()
+        .sort((a, b) => a.createdAt - b.createdAt)
+        .findIndex((doc) => doc.id === selectedDocument.id) + 1;
+
+    const snapshots = Array.from(actorIdsTouchedInSelectedScene)
+      .map((actorStateKey) => {
+        const sheet = sheetByActorId.get(actorStateKey);
+        if (!sheet) {
+          return null;
+        }
+        const finalState = replayCharacterState({
+          sheet,
+          ruleset,
+          events: acceptedEvents,
+          target: {
+            actorId: sheet.id,
+            characterId: sheet.characterId,
+            sheetId: sheet.id,
+            actorName: sheet.name
+          },
+          upToSceneOrder: selectedSceneOrder
+        });
+        const resourceLines = Object.entries(finalState.resources.current)
+          .slice(0, 3)
+          .map(([resourceId, value]) => {
+            const label = resourceDefinitionNameById.get(resourceId) ?? resourceId;
+            const max = finalState.resources.max[resourceId];
+            return `${label} ${value}${typeof max === 'number' ? `/${max}` : ''}`;
+          });
+        const lines = [
+          ...resourceLines,
+          finalState.locationName ? `Location ${finalState.locationName}` : '',
+          finalState.statuses.length > 0
+            ? `Statuses ${finalState.statuses.join(', ')}`
+            : ''
+        ].filter(Boolean);
+        return {
+          actorLabel: sheet.name,
+          lines: lines.length > 0 ? lines : ['No tracked changes visible.']
+        };
+      })
+      .filter(Boolean) as Array<{actorLabel: string; lines: string[]}>;
+
+    return {
+      sceneTitle: selectedDocument.title || 'Untitled scene',
+      entries,
+      snapshots
+    };
+  }, [
+    characterSheets,
+    documents,
+    resourceDefinitionNameById,
+    ruleset,
+    selectedDocument,
+    statDefinitionNameById,
+    stateMutationEvents
+  ]);
+
+  const characterStateHoverCardsByLoreId = useMemo(() => {
+    if (!selectedDocument) {
+      return {};
+    }
+    const orderedSceneIds = documents
+      .slice()
+      .sort((a, b) => a.createdAt - b.createdAt)
+      .map((doc) => doc.id);
+    const selectedSceneOrder = orderedSceneIds.findIndex((id) => id === selectedDocument.id) + 1;
+    if (selectedSceneOrder <= 0) {
+      return {};
+    }
+
+    return Object.fromEntries(
+      characterSheets.map((sheet) => {
+        const replayed = replayCharacterState({
+          sheet,
+          ruleset,
+          events: stateMutationEvents,
+          target: {
+            actorId: sheet.id,
+            characterId: sheet.characterId,
+            sheetId: sheet.id,
+            actorName: sheet.name
+          },
+          upToSceneOrder: selectedSceneOrder
+        });
+        const resources = Object.entries(replayed.resources.current)
+          .slice(0, 4)
+          .map(([resourceId, value]) => {
+            const label = resourceDefinitionNameById.get(resourceId) ?? resourceId;
+            const max = replayed.resources.max[resourceId];
+            return `${label} ${value}${typeof max === 'number' ? `/${max}` : ''}`;
+          });
+        const stats = Object.entries(replayed.stats)
+          .slice(0, 4)
+          .map(([statId, value]) => {
+            const label = statDefinitionNameById.get(statId) ?? statId;
+            return `${label} ${String(value)}`;
+          });
+        return [
+          sheet.id,
+          {
+            title: sheet.name,
+            sceneLabel: selectedDocument.title || 'this scene',
+            resources,
+            stats,
+            statuses: replayed.statuses,
+            location: replayed.locationName
+          }
+        ];
+      })
+    );
+  }, [
+    characterSheets,
+    documents,
+    resourceDefinitionNameById,
+    ruleset,
+    selectedDocument,
+    statDefinitionNameById,
+    stateMutationEvents
+  ]);
+
   useEffect(() => {
     if (!activeProject) return;
     const activeRules = activePartySynergies
@@ -678,6 +1061,18 @@ function WorkspaceRoute() {
       worldCaptureDrafts[activeConsistencyPopoverIssue.surface]) ||
     activeConsistencyPopoverIssue?.surface ||
     '';
+  const activeSuggestedCategoryId = activeConsistencyPopoverIssue
+    ? unknownCategorySelection[activeConsistencyPopoverIssue.surface] ||
+      getSuggestedUnknownCategoryId(activeConsistencyPopoverIssue.surface) ||
+      ''
+    : '';
+  const activeSuggestedCategory = activeSuggestedCategoryId
+    ? categories.find((category) => category.id === activeSuggestedCategoryId) ?? null
+    : null;
+  const reviewCreateActionLabel =
+    activeSuggestedCategory
+      ? `Add ${toSingularLabel(activeSuggestedCategory.name)}`
+      : reviewCreateLabel;
   const selectionQuickSnippets = useWorkspaceLoreSnippets({
     activeProject,
     categories,
@@ -1222,10 +1617,10 @@ function WorkspaceRoute() {
           <span>{resolverNotice.message}</span>
           <button
             type='button'
-            onClick={() => navigate('/world-bible')}
+            onClick={openResolverNoticeDestination}
             className={styles.resolverButtonPrimary}
           >
-            View in World Bible
+            {resolverNoticePrimaryLabel}
           </button>
           <button
             type='button'
@@ -1339,6 +1734,8 @@ function WorkspaceRoute() {
               handleSelectDocument={handleSelectDocument}
               handleDelete={handleDelete}
               deletingDocumentId={deletingDocumentId}
+              staleStateEventCountBySceneId={staleStateEventCountBySceneId}
+              selectedSceneTimeline={selectedSceneTimeline}
             />
           </aside>
         )}
@@ -1387,6 +1784,7 @@ function WorkspaceRoute() {
                     setStatBlockInsertContent(null);
                   }}
                   selectionQuickSnippets={selectionQuickSnippets}
+                  characterStateHoverCardsByLoreId={characterStateHoverCardsByLoreId}
                   presentStatBlockToken={getStatBlockTokenPresentation}
                   getStatBlockPreviewData={getStatBlockPreviewData}
                   onRebindStatBlockToken={openStatBlockRebind}
@@ -1405,7 +1803,7 @@ function WorkspaceRoute() {
                     <div className={styles.consistencyPopoverActions}>
                       {categories.length > 0 && (
                         <select
-                          value={unknownCategorySelection[activeConsistencyPopoverIssue.surface] ?? ''}
+                          value={activeSuggestedCategoryId}
                           onChange={(e) =>
                             setUnknownCategorySelection((prev) => ({
                               ...prev,
@@ -1438,14 +1836,14 @@ function WorkspaceRoute() {
                         type='button'
                         onClick={() => void resolveUnknownEntity(
                           activeConsistencyPopoverIssue.surface,
-                          unknownCategorySelection[activeConsistencyPopoverIssue.surface] || undefined,
+                          activeSuggestedCategoryId || undefined,
                           activeWorldCaptureDraft
                         )}
                         disabled={resolvingUnknown === activeConsistencyPopoverIssue.surface}
                       >
                         {resolvingUnknown === activeConsistencyPopoverIssue.surface
                           ? 'Adding...'
-                          : reviewCreateLabel}
+                          : reviewCreateActionLabel}
                       </button>
                       <button
                         type='button'
@@ -1771,7 +2169,18 @@ function WorkspaceRoute() {
               isRunningConsistencyReview={isRunningConsistencyReview}
               lastConsistencyReviewAt={lastConsistencyReviewAt}
               consistencyReviewItems={consistencyReviewItems}
+              stateMutationReviewItems={stateMutationReviewItems}
+              hiddenStateMutationReviewCountBySceneId={hiddenStateMutationReviewCountBySceneId}
+              hiddenStateMutationReviewCount={hiddenStateMutationReviewCount}
+              applyingStateMutationReviewId={applyingStateMutationReviewId}
               reviewReadiness={reviewReadiness}
+              acceptStateMutationReviewItem={acceptStateMutationReviewItem}
+              rejectStateMutationReviewItem={rejectStateMutationReviewItem}
+              acceptSceneStateMutationReviewItems={acceptSceneStateMutationReviewItems}
+              rejectSceneStateMutationReviewItems={rejectSceneStateMutationReviewItems}
+              hideStateMutationReviewItem={hideStateMutationReviewItem}
+              restoreHiddenStateMutationReviewItems={restoreHiddenStateMutationReviewItems}
+              restoreAllHiddenStateMutationReviewItems={restoreAllHiddenStateMutationReviewItems}
               documents={documents}
               handleSelectDocument={handleSelectDocument}
               openWorldRecord={openWorldRecord}
@@ -1850,6 +2259,8 @@ function WorkspaceRoute() {
               handleSelectDocument={handleSelectDocument}
               handleDelete={handleDelete}
               deletingDocumentId={deletingDocumentId}
+              staleStateEventCountBySceneId={staleStateEventCountBySceneId}
+              selectedSceneTimeline={selectedSceneTimeline}
             />
           </aside>
         </div>
@@ -1886,7 +2297,18 @@ function WorkspaceRoute() {
               isRunningConsistencyReview={isRunningConsistencyReview}
               lastConsistencyReviewAt={lastConsistencyReviewAt}
               consistencyReviewItems={consistencyReviewItems}
+              stateMutationReviewItems={stateMutationReviewItems}
+              hiddenStateMutationReviewCountBySceneId={hiddenStateMutationReviewCountBySceneId}
+              hiddenStateMutationReviewCount={hiddenStateMutationReviewCount}
+              applyingStateMutationReviewId={applyingStateMutationReviewId}
               reviewReadiness={reviewReadiness}
+              acceptStateMutationReviewItem={acceptStateMutationReviewItem}
+              rejectStateMutationReviewItem={rejectStateMutationReviewItem}
+              acceptSceneStateMutationReviewItems={acceptSceneStateMutationReviewItems}
+              rejectSceneStateMutationReviewItems={rejectSceneStateMutationReviewItems}
+              hideStateMutationReviewItem={hideStateMutationReviewItem}
+              restoreHiddenStateMutationReviewItems={restoreHiddenStateMutationReviewItems}
+              restoreAllHiddenStateMutationReviewItems={restoreAllHiddenStateMutationReviewItems}
               documents={documents}
               handleSelectDocument={handleSelectDocument}
               openWorldRecord={openWorldRecord}

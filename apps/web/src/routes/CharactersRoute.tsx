@@ -1,8 +1,10 @@
 // apps/web/src/routes/CharactersRoute.tsx - NEW FILE
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { FormEvent } from 'react';
-import type { Character, ProjectSettings } from '../entityTypes';
+import type { Character, EntityCategory, ProjectSettings, WorldEntity } from '../entityTypes';
 import { getCharactersByProject, saveCharacter, deleteCharacter } from '../characterStorage';
+import { getEntitiesByProject, saveEntity } from '../entityStorage';
+import { getCategoriesByProject, saveCategory } from '../categoryStorage';
 import { getOrCreateSettings, saveProjectSettings } from '../settingsStorage';
 import { CharacterStyleList } from '../components/CharacterStyleList';
 import type { CharacterStyle } from '../entityTypes';
@@ -11,8 +13,19 @@ import { useAppStore } from '../store/appStore';
 
 interface CharactersRouteProps {
   embedded?: boolean;
-  onOpenSheets?: (characterId?: string) => void;
+  onOpenSheets?: (characterId?: string, options?: {autoCreate?: boolean}) => void;
 }
+
+const normalizeName = (value: string): string =>
+  value.trim().toLowerCase().replace(/\s+/g, ' ');
+
+const CHARACTER_CATEGORY_HINTS = ['character', 'characters', 'npc', 'person', 'people'];
+const DEFAULT_CHARACTER_FIELD_SCHEMA: EntityCategory['fieldSchema'] = [
+  {key: 'description', label: 'Description', type: 'textarea'},
+  {key: 'age', label: 'Age', type: 'text'},
+  {key: 'role', label: 'Role', type: 'text'},
+  {key: 'notes', label: 'Notes', type: 'textarea'}
+];
 
 function CharactersRoute({
   embedded = false,
@@ -21,8 +34,15 @@ function CharactersRoute({
   const activeProject = useAppStore((s) => s.activeProject);
   const navigate = useNavigate();
   const [characters, setCharacters] = useState<Character[]>([]);
+  const [worldEntities, setWorldEntities] = useState<WorldEntity[]>([]);
+  const [categories, setCategories] = useState<EntityCategory[]>([]);
   const [settings, setSettings] = useState<ProjectSettings | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [feedback, setFeedback] = useState<{
+    tone: 'success' | 'error';
+    message: string;
+  } | null>(null);
+  const [importingEntityId, setImportingEntityId] = useState<string | null>(null);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [age, setAge] = useState('');
@@ -33,6 +53,8 @@ function CharactersRoute({
   useEffect(() => {
     if (!activeProject) {
       setCharacters([]);
+      setWorldEntities([]);
+      setCategories([]);
       setSettings(null);
       return;
     }
@@ -40,13 +62,17 @@ function CharactersRoute({
     let cancelled = false;
 
     (async () => {
-      const [chars, projectSettings] = await Promise.all([
+      const [chars, entities, loadedCategories, projectSettings] = await Promise.all([
         getCharactersByProject(activeProject.id),
+        getEntitiesByProject(activeProject.id),
+        getCategoriesByProject(activeProject.id),
         getOrCreateSettings(activeProject.id)
       ]);
 
       if (!cancelled) {
         setCharacters(chars);
+        setWorldEntities(entities);
+        setCategories(loadedCategories);
         setSettings(projectSettings);
       }
     })();
@@ -55,6 +81,60 @@ function CharactersRoute({
       cancelled = true;
     };
   }, [activeProject]);
+
+  const migrationCandidates = useMemo(() => {
+    const characterCategoryIds = new Set(
+      categories
+        .filter((category) =>
+          CHARACTER_CATEGORY_HINTS.some((hint) =>
+            category.slug.toLowerCase().includes(hint)
+          )
+        )
+        .map((category) => category.id)
+    );
+    if (characterCategoryIds.size === 0) {
+      return [];
+    }
+
+    const existingNames = new Set(characters.map((character) => normalizeName(character.name)));
+    return worldEntities.filter((entity) => {
+      if (!characterCategoryIds.has(entity.categoryId)) {
+        return false;
+      }
+      return !existingNames.has(normalizeName(entity.name));
+    });
+  }, [categories, characters, worldEntities]);
+
+  const characterLoreEntityIdByCharacterId = useMemo(() => {
+    const map = new Map<string, string>();
+    const characterCategoryIds = new Set(
+      categories
+        .filter((category) =>
+          CHARACTER_CATEGORY_HINTS.some((hint) =>
+            category.slug.toLowerCase().includes(hint)
+          )
+        )
+        .map((category) => category.id)
+    );
+    if (characterCategoryIds.size === 0) {
+      return map;
+    }
+
+    worldEntities.forEach((entity) => {
+      if (!characterCategoryIds.has(entity.categoryId)) {
+        return;
+      }
+      const normalizedEntityName = normalizeName(entity.name);
+      const matchingCharacter = characters.find(
+        (character) => normalizeName(character.name) === normalizedEntityName
+      );
+      if (matchingCharacter) {
+        map.set(matchingCharacter.id, entity.id);
+      }
+    });
+
+    return map;
+  }, [categories, characters, worldEntities]);
 
   const resetForm = () => {
     setEditingId(null);
@@ -114,6 +194,159 @@ function CharactersRoute({
       return;
     }
     navigate('/characters?view=sheets');
+  };
+
+  const ensureCharacterLoreCategory = async (): Promise<EntityCategory> => {
+    const existing = categories.find((category) =>
+      CHARACTER_CATEGORY_HINTS.some((hint) =>
+        category.slug.toLowerCase().includes(hint)
+      )
+    );
+    if (existing) {
+      return existing;
+    }
+
+    if (!activeProject) {
+      throw new Error('Select or create a project first.');
+    }
+
+    const category: EntityCategory = {
+      id: crypto.randomUUID(),
+      projectId: activeProject.id,
+      name: 'Characters',
+      slug: 'characters',
+      fieldSchema: DEFAULT_CHARACTER_FIELD_SCHEMA,
+      createdAt: Date.now()
+    };
+
+    await saveCategory(category);
+    setCategories((prev) => [...prev, category]);
+    return category;
+  };
+
+  const handleOpenWorldLore = async (character: Character) => {
+    if (!activeProject) {
+      return;
+    }
+
+    setFeedback(null);
+    try {
+      const existingEntity = worldEntities.find((entity) =>
+        normalizeName(entity.name) === normalizeName(character.name)
+      );
+
+      if (existingEntity) {
+        navigate('/world-bible', {
+          state: {focusEntityId: existingEntity.id}
+        });
+        return;
+      }
+
+      const category = await ensureCharacterLoreCategory();
+      const now = Date.now();
+      const entity: WorldEntity = {
+        id: crypto.randomUUID(),
+        projectId: activeProject.id,
+        categoryId: category.id,
+        name: character.name,
+        fields: {
+          ...(character.description ? {description: character.description} : {}),
+          ...(typeof character.fields.age === 'string' && character.fields.age.trim()
+            ? {age: character.fields.age}
+            : {}),
+          ...(typeof character.fields.role === 'string' && character.fields.role.trim()
+            ? {role: character.fields.role}
+            : {}),
+          ...(typeof character.fields.notes === 'string' && character.fields.notes.trim()
+            ? {notes: character.fields.notes}
+            : {})
+        },
+        isNew: true,
+        needsCompletion: false,
+        links: [],
+        createdAt: now,
+        updatedAt: now
+      };
+
+      await saveEntity(entity);
+      setWorldEntities((prev) => [...prev, entity]);
+      setFeedback({
+        tone: 'success',
+        message: `"${character.name}" now has a World Bible lore entry.`
+      });
+      navigate('/world-bible', {
+        state: {focusEntityId: entity.id}
+      });
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'Unable to open world lore entry.';
+      setFeedback({tone: 'error', message});
+    }
+  };
+
+  const handleImportWorldEntity = async (
+    entity: WorldEntity,
+    options?: {autoCreateSheet?: boolean}
+  ) => {
+    if (!activeProject) {
+      return;
+    }
+    setImportingEntityId(entity.id);
+    setFeedback(null);
+    try {
+      const existing = characters.find(
+        (character) => normalizeName(character.name) === normalizeName(entity.name)
+      );
+      const character: Character = existing ?? {
+        id: crypto.randomUUID(),
+        projectId: activeProject.id,
+        name: entity.name,
+        description:
+          typeof entity.fields.description === 'string'
+            ? entity.fields.description
+            : undefined,
+        fields: {
+          age: typeof entity.fields.age === 'string' ? entity.fields.age : undefined,
+          role: typeof entity.fields.role === 'string' ? entity.fields.role : undefined,
+          notes: typeof entity.fields.notes === 'string' ? entity.fields.notes : undefined
+        },
+        createdAt: Date.now(),
+        updatedAt: Date.now()
+      };
+
+      if (!existing) {
+        await saveCharacter(character);
+        setCharacters((prev) => [...prev, character]);
+      }
+
+      setFeedback({
+        tone: 'success',
+        message: existing
+          ? `"${entity.name}" already exists in Characters.`
+          : `"${entity.name}" moved into Characters without removing the World Bible record.`
+      });
+
+      if (options?.autoCreateSheet) {
+        if (onOpenSheets) {
+          onOpenSheets(character.id, {autoCreate: true});
+        } else {
+          navigate('/characters?view=sheets', {
+            state: {
+              prefillCharacterId: character.id,
+              preferredView: 'sheets',
+              autoCreateSheetForCharacterId: character.id
+            }
+          });
+        }
+        return;
+      }
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'Unable to import world record.';
+      setFeedback({tone: 'error', message});
+    } finally {
+      setImportingEntityId(null);
+    }
   };
 
   const handleEdit = (character: Character) => {
@@ -178,6 +411,82 @@ function CharactersRoute({
   const content = (
     <>
       {!embedded && <h1>Characters</h1>}
+      {feedback && (
+        <p
+          role='status'
+          style={{
+            marginBottom: '1rem',
+            padding: '0.5rem 0.75rem',
+            borderRadius: '6px',
+            border: `1px solid ${feedback.tone === 'error' ? '#fecaca' : '#bbf7d0'}`,
+            backgroundColor: feedback.tone === 'error' ? '#fef2f2' : '#f0fdf4',
+            color: feedback.tone === 'error' ? '#991b1b' : '#166534'
+          }}
+        >
+          {feedback.message}
+        </p>
+      )}
+      {migrationCandidates.length > 0 && (
+        <div
+          style={{
+            marginBottom: '1rem',
+            padding: '0.85rem',
+            border: '1px solid #dbeafe',
+            borderRadius: '8px',
+            backgroundColor: '#f8fbff'
+          }}
+        >
+          <strong>World Bible character cleanup</strong>
+          <p style={{margin: '0.4rem 0 0.75rem 0', fontSize: '0.9rem', color: '#475569'}}>
+            These world records look like character entries but are not yet in
+            Characters. Import them here so they can use sheets, stats,
+            inventory, and resources.
+          </p>
+          <div style={{display: 'grid', gap: '0.6rem'}}>
+            {migrationCandidates.slice(0, 8).map((entity) => (
+              <div
+                key={entity.id}
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'flex-start',
+                  gap: '0.75rem',
+                  padding: '0.7rem',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '8px',
+                  backgroundColor: '#ffffff'
+                }}
+              >
+                <div>
+                  <strong>{entity.name}</strong>
+                  {typeof entity.fields.description === 'string' &&
+                    entity.fields.description.trim().length > 0 && (
+                      <div style={{marginTop: '0.25rem', fontSize: '0.85rem', color: '#64748b'}}>
+                        {entity.fields.description}
+                      </div>
+                    )}
+                </div>
+                <div style={{display: 'flex', gap: '0.5rem', flexWrap: 'wrap'}}>
+                  <button
+                    type='button'
+                    onClick={() => void handleImportWorldEntity(entity)}
+                    disabled={importingEntityId === entity.id}
+                  >
+                    {importingEntityId === entity.id ? 'Importing...' : 'Import Character'}
+                  </button>
+                  <button
+                    type='button'
+                    onClick={() => void handleImportWorldEntity(entity, {autoCreateSheet: true})}
+                    disabled={importingEntityId === entity.id}
+                  >
+                    {importingEntityId === entity.id ? 'Importing...' : 'Import + Sheet'}
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div style={{ display: 'flex', gap: '2rem', alignItems: 'flex-start' }}>
         {/* Character form */}
@@ -286,7 +595,9 @@ function CharactersRoute({
             </p>
           )}
           <ul style={{ listStyle: 'none', padding: 0 }}>
-            {characters.map(character => (
+            {characters.map((character) => {
+              const hasLinkedLore = characterLoreEntityIdByCharacterId.has(character.id);
+              return (
               <li key={character.id} style={{ 
                 marginBottom: '1rem', 
                 padding: '1rem',
@@ -318,6 +629,12 @@ function CharactersRoute({
                     <button type="button" onClick={() => handleCreateSheet(character)}>
                       Open Sheet
                     </button>
+                    <button
+                      type="button"
+                      onClick={() => void handleOpenWorldLore(character)}
+                    >
+                      {hasLinkedLore ? 'Open World Lore' : 'Create World Lore'}
+                    </button>
                     <button type="button" onClick={() => handleEdit(character)}>
                       Edit
                     </button>
@@ -327,7 +644,8 @@ function CharactersRoute({
                   </div>
                 </div>
               </li>
-            ))}
+              );
+            })}
           </ul>
         </div>
       </div>

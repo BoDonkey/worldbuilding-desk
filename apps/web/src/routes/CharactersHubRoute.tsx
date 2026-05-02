@@ -1,6 +1,6 @@
 import {useEffect, useMemo, useRef, useState} from 'react';
 import type {ChangeEvent} from 'react';
-import {useNavigate, useSearchParams} from 'react-router-dom';
+import {useLocation, useNavigate, useSearchParams} from 'react-router-dom';
 import {useAppStore} from '../store/appStore';
 import CharactersRoute from './CharactersRoute';
 import CharacterSheetsRoute from './CharacterSheetsRoute';
@@ -12,12 +12,15 @@ import {
 
 function CharactersHubRoute() {
   const activeProject = useAppStore((s) => s.activeProject);
+  const location = useLocation();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [hasRuleset, setHasRuleset] = useState(false);
   const [pendingCharacterId, setPendingCharacterId] = useState<string | null>(
     null
   );
+  const [pendingAutoCreateSheetCharacterId, setPendingAutoCreateSheetCharacterId] =
+    useState<string | null>(null);
   const [isImportingCharacters, setIsImportingCharacters] = useState(false);
   const [pendingImportMode, setPendingImportMode] = useState<
     'roster' | 'full'
@@ -28,9 +31,34 @@ function CharactersHubRoute() {
     message: string;
   } | null>(null);
   const importInputRef = useRef<HTMLInputElement | null>(null);
+  const appliedLocationPrefillRef = useRef<string | null>(null);
   const view = useMemo(() => {
     return searchParams.get('view') === 'sheets' ? 'sheets' : 'roster';
   }, [searchParams]);
+
+  useEffect(() => {
+    const state = location.state as
+      | {
+          prefillCharacterId?: string;
+          preferredView?: 'roster' | 'sheets';
+          autoCreateSheetForCharacterId?: string;
+        }
+      | null;
+    const prefillCharacterId = state?.prefillCharacterId ?? null;
+    if (!prefillCharacterId || appliedLocationPrefillRef.current === prefillCharacterId) {
+      return;
+    }
+    appliedLocationPrefillRef.current = prefillCharacterId;
+    setPendingCharacterId(prefillCharacterId);
+    setPendingAutoCreateSheetCharacterId(state?.autoCreateSheetForCharacterId ?? null);
+    if (state?.preferredView === 'sheets' && hasRuleset) {
+      setSearchParams({view: 'sheets'});
+      return;
+    }
+    if (state?.preferredView === 'roster') {
+      setSearchParams({});
+    }
+  }, [hasRuleset, location.state, setSearchParams]);
 
   useEffect(() => {
     let cancelled = false;
@@ -279,11 +307,14 @@ function CharactersHubRoute() {
         <CharactersRoute
           key={`roster-${dataVersion}`}
           embedded
-          onOpenSheets={(characterId) => {
+          onOpenSheets={(characterId, options) => {
             if (!hasRuleset) {
               return;
             }
             setPendingCharacterId(characterId ?? null);
+            setPendingAutoCreateSheetCharacterId(
+              options?.autoCreate ? characterId ?? null : null
+            );
             openView('sheets');
           }}
         />
@@ -294,6 +325,8 @@ function CharactersHubRoute() {
           embedded
           prefillCharacterId={pendingCharacterId}
           onPrefillConsumed={() => setPendingCharacterId(null)}
+          autoCreateSheetCharacterId={pendingAutoCreateSheetCharacterId}
+          onAutoCreateConsumed={() => setPendingAutoCreateSheetCharacterId(null)}
         />
       )}
     </section>
