@@ -300,6 +300,7 @@ export const AISettings: React.FC<AISettingsProps> = ({
   const inspectorSettings = aiSettings.inspectorSettings ?? {
     enableAIConsultation: true,
     reviewEngineMode: 'deterministic' as const,
+    canonDecisionProviderMode: 'project-provider' as const,
     maxConsultationsPerDay: 20,
     maxContextChars: 1800,
     maxResponseTokens: 500,
@@ -708,6 +709,31 @@ export const AISettings: React.FC<AISettingsProps> = ({
             Local AI mode uses the Ollama model configured below, keeps deterministic
             validation as the source of truth, and only enriches the per-issue review
             annotation layer.
+          </p>
+        </div>
+        <div className={styles.field}>
+          <label className={styles.label}>Canon decision AI provider policy</label>
+          <select
+            className={styles.input}
+            value={inspectorSettings.canonDecisionProviderMode ?? 'project-provider'}
+            onChange={(e) =>
+              onSettingsChange({
+                ...aiSettings,
+                inspectorSettings: {
+                  ...inspectorSettings,
+                  canonDecisionProviderMode:
+                    e.target.value === 'local-ollama'
+                      ? 'local-ollama'
+                      : 'project-provider'
+                }
+              })
+            }
+          >
+            <option value='project-provider'>Use project provider</option>
+            <option value='local-ollama'>Force local Ollama</option>
+          </select>
+          <p className={styles.help}>
+            Canon decision rubber-ducking can follow the main assistant provider or stay local through Ollama even when writing assistance uses a hosted model.
           </p>
         </div>
         <label className={styles.field}>

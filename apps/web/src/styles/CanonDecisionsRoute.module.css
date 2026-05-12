@@ -1,0 +1,200 @@
+.page {
+  width: 100%;
+  max-width: 1120px;
+  margin: 0 auto;
+}
+
+.pageHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.eyebrow {
+  margin: 0 0 0.35rem;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #92400e;
+  font-weight: 700;
+}
+
+.pageTitle {
+  margin: 0 0 0.35rem;
+}
+
+.pageIntro {
+  margin: 0;
+  color: var(--color-text-secondary);
+  max-width: 70ch;
+}
+
+.countBadge {
+  min-width: 2.2rem;
+  padding: 0.25rem 0.6rem;
+  border-radius: 999px;
+  background: #ffedd5;
+  color: #9a3412;
+  font-weight: 700;
+  text-align: center;
+}
+
+.feedback {
+  margin-bottom: 1rem;
+  padding: 0.7rem 0.85rem;
+  border-radius: 10px;
+  border: 1px solid var(--color-border);
+}
+
+.feedbackSuccess {
+  border-color: #bbf7d0;
+  background: #f0fdf4;
+  color: #166534;
+}
+
+.feedbackError {
+  border-color: #fecaca;
+  background: #fef2f2;
+  color: #991b1b;
+}
+
+.emptyPanel {
+  border: 1px solid var(--color-border);
+  border-radius: 16px;
+  background: color-mix(in oklab, var(--color-bg-secondary) 90%, white);
+  padding: 1rem;
+}
+
+.emptyPanel h2 {
+  margin-top: 0;
+}
+
+.clusterList {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.clusterCard {
+  border: 1px solid var(--color-border);
+  border-radius: 16px;
+  background: color-mix(in oklab, var(--color-bg-secondary) 92%, white);
+  padding: 1rem;
+}
+
+.clusterHeader {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: flex-start;
+  margin-bottom: 0.5rem;
+}
+
+.clusterHeader h2 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.clusterKind {
+  margin: 0 0 0.2rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #92400e;
+}
+
+.statusBadge {
+  display: inline-flex;
+  padding: 0.24rem 0.55rem;
+  border-radius: 999px;
+  background: #e0f2fe;
+  color: #075985;
+  font-size: 0.8rem;
+  text-transform: capitalize;
+}
+
+.clusterSummary {
+  margin: 0 0 0.7rem;
+  color: var(--color-text-secondary);
+}
+
+.reasonRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin-bottom: 0.7rem;
+}
+
+.reasonChip {
+  display: inline-flex;
+  padding: 0.22rem 0.5rem;
+  border-radius: 999px;
+  background: #fff7ed;
+  border: 1px solid #fdba74;
+  color: #9a3412;
+  font-size: 0.78rem;
+}
+
+.detailPanel {
+  margin-bottom: 0.75rem;
+  padding: 0.75rem;
+  border-radius: 12px;
+  background: var(--color-bg-primary);
+  border: 1px solid color-mix(in oklab, var(--color-border) 84%, #fed7aa);
+}
+
+.detailPanel p {
+  margin: 0 0 0.35rem;
+}
+
+.aiPanel {
+  margin-bottom: 0.75rem;
+  padding: 0.8rem;
+  border-radius: 12px;
+  border: 1px solid color-mix(in oklab, var(--color-border) 80%, #bfdbfe);
+  background: linear-gradient(180deg, #f8fbff 0%, #eef6ff 100%);
+}
+
+.aiPanelHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.75rem;
+  margin-bottom: 0.45rem;
+}
+
+.aiPanelTitle {
+  margin: 0;
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #1d4ed8;
+}
+
+.aiPanelMeta {
+  font-size: 0.78rem;
+  color: #475569;
+}
+
+.aiHint {
+  margin: 0;
+  color: #475569;
+}
+
+.aiResponse {
+  white-space: pre-wrap;
+  line-height: 1.5;
+  color: #0f172a;
+}
+
+.aiError {
+  margin: 0;
+  color: #991b1b;
+}
+
+.actionRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}

@@ -2,7 +2,7 @@ import {useCallback, useEffect, useRef, useState} from 'react';
 import type {ChangeEvent, FormEvent} from 'react';
 import {useNavigate} from 'react-router-dom';
 import type {Project, ProjectMode} from '../entityTypes';
-import {createDefaultSettings, saveProjectSettings} from '../settingsStorage';
+import {createDefaultSettings} from '../settingsStorage';
 import {getDefaultFeatureToggles} from '../projectMode';
 import type {WorldRuleset} from '@litrpg-tool/rules-engine';
 import {
@@ -43,6 +43,7 @@ import styles from '../styles/ProjectsRoute.module.css';
 function ProjectsRoute() {
   const activeProject = useAppStore((s) => s.activeProject);
   const onSelectProject = useAppStore((s) => s.setActiveProject);
+  const persistProjectSettings = useAppStore((s) => s.saveProjectSettings);
   const navigate = useNavigate();
   const [projects, setProjects] = useState<Project[]>([]);
   const [projectRulesets, setProjectRulesets] = useState<
@@ -145,7 +146,7 @@ function ProjectsRoute() {
 
       const defaultSettings = await createDefaultSettings(project.id);
       if (newProjectMode !== defaultSettings.projectMode) {
-        await saveProjectSettings({
+        await persistProjectSettings({
           ...defaultSettings,
           projectMode: newProjectMode,
           featureToggles: getDefaultFeatureToggles(newProjectMode)

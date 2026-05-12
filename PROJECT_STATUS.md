@@ -1,6 +1,6 @@
 # Worldbuilding-Desk Project Status
 
-**Last Updated:** April 29, 2026
+**Last Updated:** May 9, 2026
 
 ## Project Overview
 
@@ -44,11 +44,13 @@ Under the hood, the app still includes rich systems for world data, rules, chara
 - Project review results for the active scene now feed editor review highlights, so the side rail and editor underlines stay aligned.
 - Resolving, linking, dismissing, or ignoring a review surface now clears both the active editor highlight and the project review rail item.
 - Active-scene review refreshes when canon, aliases, or characters change, including after returning from World Bible.
+- Returning from World Bible now restores the previously selected scene instead of resetting to scene one.
 - Editable review capture flow for detected names/places before adding to world records.
 - Manual selection-to-world capture from the editor for non-detected text.
 - Temporary dismiss and project-level `Always ignore` review actions.
 - Inline lore highlights and quick lore popovers for known entities and characters.
 - World Bible review queue for finishing review-created records and alias follow-up.
+- World Bible review queue now supports queue filtering by review reason and recommended action (`complete`, `alias`, `merge`, `ignore`).
 - Editor appearance controls for width, surface style, and serif/sans presentation.
 - Passive review readiness indicator in the workspace header and Review drawer tab.
 - Deterministic state-change suggestions stay in the Review drawer, can be accepted or rejected explicitly, support per-scene batch actions, and can be hidden until the source scene changes so drafting is not blocked.
@@ -65,8 +67,10 @@ Under the hood, the app still includes rich systems for world data, rules, chara
 - Alias tracking and consistency storage.
 - Review linking can now target either World Bible entries or characters.
 - World Bible review completion now treats saving or marking reviewed as clearing both record completion and alias follow-up.
+- World Bible review actions now support explicit canonical rename, alias conversion, persistent `keep separate` / `ignore this match`, and recommended next-action guidance.
 - System history and lore inspection surfaces.
 - Shared lore/review text matcher now owns canon normalization, possessives, longer-match priority, and in-progress known-name prefix suppression.
+- Full-name, hyphenated-name, and alias smoke coverage now exists for cases such as `Mira Voss`, `Lantern-Mira`, `Iron Warrens`, and `Warrens`.
 - Parent/child canon inheritance with promotion and sync flows.
 - Project backup export/import with validation and conflict review.
 
@@ -124,8 +128,10 @@ Under the hood, the app still includes rich systems for world data, rules, chara
 - Reduce visible system complexity on first load.
 - Revisit panel defaults and route emphasis to match the writing-first UX docs.
 - Continue moving alias/review acceptance into a stronger World Bible workflow.
+- Manually retest the new World Bible recommended-action filters and resolution paths against the review-completion smoke checklist.
 - Extend the passive review-needed indicator into changed-word plus idle-pause background cadence.
 - Finish review/count correctness where overlap between known-lore and unresolved-review highlights can still confuse authors.
+- Manually retest alias highlighting for short aliases nested inside longer canon names, especially character full names plus nicknames and location short forms.
 - Decide whether Corkboard graduates from a quick-access modal into a dedicated planning tab/route while keeping the modal for in-scene reference.
 - Add a deliberate AI-to-Scratchpad capture action so planning thoughts from right-rail conversations are easy to retain.
 - Define the next Scratchpad evolution: likely lightweight organization rather than one flat note forever.
@@ -136,7 +142,7 @@ Under the hood, the app still includes rich systems for world data, rules, chara
 
 - **Zustand store, slice by slice** — elevated above further route extraction. Start with `activeProject` and `projectSettings`; treat `localStorage` and `IndexedDB` as persistence adapters rather than direct state sources. De-risks every remaining route extraction.
 - Continue trimming `WorkspaceRoute` orchestration where extraction still leaks route-owned knowledge (export flow and canon sync are the next candidates; target under 800 lines for the route shell).
-- Extract `WorldBibleRoute` import/alias resolution into a hook or service utility; keep display/editing inline.
+- Add targeted smoke coverage for the newer World Bible rename / alias / ignore resolution paths after the recent extraction and workflow pass.
 - Add targeted smoke coverage for the workspace import/review path after the recent extraction.
 - Add one Playwright Electron E2E covering the LLM streaming path — smallest change with the highest payoff against silent IPC regressions.
 - Decide auto-update strategy (Squirrel / electron-updater / manual) before the first externally shared build; affects main-process structure and code signing.
@@ -210,8 +216,9 @@ Under the hood, the app still includes rich systems for world data, rules, chara
 - Stop point for the current session:
   - backup/import validation, scratchpad, review matching, and workspace navigation checks are passing in Cypress
   - search is exposed and World Bible results behave correctly
-  - workspace scene restore and in-scene search targeting still need a fresh manual retest
-  - deterministic review proposals now feed scene-scoped mutation ledger events, but the long-scene manual UX pass still needs to confirm the passive review flow feels unobtrusive in practice
+- workspace scene restore and in-scene search targeting still need a fresh manual retest
+- latest manual smoke indicates scene restore after `Workspace -> World Bible -> Workspace` is fixed, but it should still be rechecked after any future route-state changes
+- deterministic review proposals now feed scene-scoped mutation ledger events, but the long-scene manual UX pass still needs to confirm the passive review flow feels unobtrusive in practice
 
 ### Still Worth Rechecking
 - Workspace import/retry UX after the drawer extraction.

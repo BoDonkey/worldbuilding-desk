@@ -123,6 +123,7 @@ export interface ProjectAISettings {
 export interface InspectorSettings {
   enableAIConsultation: boolean;
   reviewEngineMode?: 'deterministic' | 'local-ai-preview';
+  canonDecisionProviderMode?: 'project-provider' | 'local-ollama';
   maxConsultationsPerDay: number;
   maxContextChars: number;
   maxResponseTokens: number;
@@ -172,6 +173,12 @@ export interface StatBlockPreferences {
   groups?: StatBlockGroup[];
 }
 
+export type InlineHighlightsMode = 'visible' | 'subtle' | 'hidden-while-typing';
+
+export interface EditorFeedbackSettings {
+  inlineHighlightsMode: InlineHighlightsMode;
+}
+
 export interface ProjectSettings {
   id: string;
   projectId: string;
@@ -179,12 +186,14 @@ export interface ProjectSettings {
   aiSettings: ProjectAISettings;
   consistencyActionCues: string[];
   ignoredUnknownSurfaces?: string[];
+  ignoredEntityMatchKeys?: string[];
   activeSkills: string[];
   projectMode: ProjectMode;
   featureToggles: ProjectFeatureToggles;
   defaultImportMode?: WorkspaceImportMode;
   defaultSkipImportSuggestions?: boolean;
   statBlockPreferences?: StatBlockPreferences;
+  editorFeedback?: EditorFeedbackSettings;
   createdAt: number;
   updatedAt: number;
 }
@@ -380,6 +389,177 @@ export interface WorldEntity {
   aliasesReviewedAt?: number;
   links: string[];
   createdAt: number;
+  updatedAt: number;
+}
+
+export type LoreDocumentKind =
+  | 'character_dossier'
+  | 'place_history'
+  | 'faction_notes'
+  | 'item_history'
+  | 'myth'
+  | 'timeline'
+  | 'general_lore';
+
+export type LoreDocumentFormat = 'plain_text' | 'markdown' | 'html';
+
+export interface LoreDocument {
+  id: string;
+  projectId: string;
+  title: string;
+  kind: LoreDocumentKind;
+  format: LoreDocumentFormat;
+  content: string;
+  summary?: string;
+  source:
+    | {type: 'manual'}
+    | {type: 'import'; fileName: string; mimeType?: string}
+    | {type: 'ai-session'; sessionId: string};
+  status: 'active' | 'archived';
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface LoreDocumentLink {
+  id: string;
+  projectId: string;
+  loreDocumentId: string;
+  targetType: 'character' | 'entity';
+  targetId: string;
+  relationship: 'primary_subject' | 'secondary_subject' | 'mentions' | 'supports';
+  createdAt: number;
+}
+
+export type CanonicalFactValue =
+  | string
+  | {
+      label: string;
+      value: string;
+    };
+
+export type CanonicalFactType =
+  | 'alias'
+  | 'age'
+  | 'occupation'
+  | 'membership'
+  | 'heritage'
+  | 'appearance'
+  | 'trait'
+  | 'ability'
+  | 'relationship'
+  | 'goal'
+  | 'background';
+
+export interface LoreFactProposal {
+  id: string;
+  projectId: string;
+  loreDocumentId: string;
+  targetType?: 'character' | 'entity';
+  targetId?: string;
+  targetName?: string;
+  factType: CanonicalFactType;
+  value: CanonicalFactValue;
+  confidence: number;
+  evidence: {
+    start: number;
+    end: number;
+    text: string;
+  };
+  status: 'proposed' | 'accepted' | 'rejected';
+  createdAt: number;
+  updatedAt: number;
+}
+
+export type LoreEntityKind =
+  | 'character'
+  | 'location'
+  | 'item'
+  | 'faction'
+  | 'concept';
+
+export interface LoreEntityProposal {
+  id: string;
+  projectId: string;
+  loreDocumentId: string;
+  name: string;
+  entityKind: LoreEntityKind;
+  confidence: number;
+  evidence: {
+    start: number;
+    end: number;
+    text: string;
+  };
+  targetType?: 'character' | 'entity';
+  targetId?: string;
+  status: 'proposed' | 'accepted' | 'rejected';
+  createdAt: number;
+  updatedAt: number;
+}
+
+export type CanonDecisionKind = 'entity_identity' | 'fact_conflict';
+
+export type CanonDecisionResolution =
+  | 'merge'
+  | 'alias'
+  | 'keep_separate'
+  | 'accept_new'
+  | 'accept_update'
+  | 'reject'
+  | 'defer';
+
+export interface CanonDecisionClusterMemberRef {
+  type:
+    | 'lore_entity_proposal'
+    | 'lore_fact_proposal'
+    | 'canonical_fact'
+    | 'character'
+    | 'world_entity';
+  id: string;
+}
+
+export interface CanonDecisionCluster {
+  id: string;
+  projectId: string;
+  kind: CanonDecisionKind;
+  title: string;
+  summary: string;
+  memberRefs: CanonDecisionClusterMemberRef[];
+  status: 'open' | 'resolved' | 'deferred';
+  suggestedResolution?: CanonDecisionResolution;
+  resolution?: CanonDecisionResolution;
+  reasonCodes: string[];
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface CanonDecisionSuppression {
+  id: string;
+  projectId: string;
+  kind: 'entity_identity' | 'fact_conflict';
+  key: string;
+  resolution: Extract<
+    CanonDecisionResolution,
+    'alias' | 'keep_separate' | 'reject' | 'accept_update'
+  >;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface CanonicalFact {
+  id: string;
+  projectId: string;
+  targetType: 'character' | 'entity';
+  targetId: string;
+  targetName?: string;
+  loreDocumentId?: string;
+  sourceLoreDocumentTitle?: string;
+  sourceProposalId?: string;
+  factType: CanonicalFactType;
+  value: CanonicalFactValue;
+  evidenceText?: string;
+  evidenceStart?: number;
+  evidenceEnd?: number;
+  acceptedAt: number;
   updatedAt: number;
 }
 

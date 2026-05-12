@@ -56,4 +56,31 @@ describe('textMatcher', () => {
     expect(isPossessiveFormOf("Kaelor's", 'Kaelor')).toBe(true);
     expect(isPossessiveFormOf('Kaelor', 'Kaelor')).toBe(false);
   });
+
+  it('matches multiword and hyphenated canon surfaces alongside short aliases', () => {
+    const matches = findTextMatches(
+      'Mira Voss slipped into the Iron Warrens while Lantern-Mira watched the Warrens gate.',
+      [
+        {id: 'mira-voss', surface: 'Mira Voss', kind: 'known'},
+        {id: 'lantern-mira', surface: 'Lantern-Mira', kind: 'known'},
+        {id: 'iron-warrens', surface: 'Iron Warrens', kind: 'known'},
+        {id: 'warrens', surface: 'Warrens', kind: 'known'}
+      ]
+    );
+
+    expect(matches.map((match) => match.surface)).toEqual([
+      'Mira Voss',
+      'Iron Warrens',
+      'Lantern-Mira',
+      'Warrens'
+    ]);
+  });
+
+  it('does not match a short alias inside a hyphenated compound name', () => {
+    const matches = findTextMatches('Lantern-Mira checked the gate.', [
+      {id: 'mira', surface: 'Mira', kind: 'known'}
+    ]);
+
+    expect(matches).toEqual([]);
+  });
 });

@@ -170,6 +170,32 @@ describe('buildExtractedProposal', () => {
     ).toBe('character_context_candidate');
   });
 
+  it('keeps one-off character names when the sentence opens with an emotional action', () => {
+    const entities = entityRefsFor(
+      'Kael hated the dungeon. All he wanted was to curl up with a good book.',
+      [],
+      'workspace-save'
+    );
+
+    expect(entities.map((entity) => entity.surface)).toContain('Kael');
+    expect(
+      entities.find((entity) => entity.surface === 'Kael')?.detectionReason
+    ).toBe('character_context_candidate');
+  });
+
+  it('treats one-off hyphenated nicknames as multi-part unknowns during workspace review', () => {
+    const entities = entityRefsFor(
+      'Lantern-Mira checked the Warrens gate alone.',
+      [],
+      'workspace-autosave'
+    );
+
+    expect(entities.map((entity) => entity.surface)).toContain('Lantern-Mira');
+    expect(
+      entities.find((entity) => entity.surface === 'Lantern-Mira')?.detectionReason
+    ).toBe('multiword_proper_candidate');
+  });
+
   it('does not report an in-progress prefix of a known multiword entity', () => {
     const surfaces = surfacesFor(
       'Zippy could see the Ember Archiv from the road.',
@@ -188,5 +214,29 @@ describe('buildExtractedProposal', () => {
 
     expect(surfaces).not.toContain('He');
     expect(surfaces).not.toContain('strength');
+  });
+
+  it('treats full names, hyphenated nicknames, and short aliases as known when provided', () => {
+    const entities = entityRefsFor(
+      'Mira Voss slipped into the Iron Warrens while Lantern-Mira checked the Warrens gate. Mira returned at dusk.',
+      [
+        {id: 'character-1', name: 'Mira Voss', type: 'character'},
+        {id: 'character-1', name: 'Mira', type: 'character'},
+        {id: 'character-1', name: 'Lantern-Mira', type: 'character'},
+        {id: 'entity-1', name: 'Iron Warrens', type: 'entity'},
+        {id: 'entity-1', name: 'Warrens', type: 'entity'}
+      ],
+      'workspace-autosave'
+    );
+
+    expect(
+      entities.map((entity) => [entity.surface, entity.entityId, entity.detectionReason])
+    ).toEqual([
+      ['Mira Voss', 'character-1', 'known_entity'],
+      ['Iron Warrens', 'entity-1', 'known_entity'],
+      ['Lantern-Mira', 'character-1', 'known_entity'],
+      ['Warrens', 'entity-1', 'known_entity'],
+      ['Mira', 'character-1', 'known_entity']
+    ]);
   });
 });

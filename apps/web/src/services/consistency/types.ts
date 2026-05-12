@@ -14,6 +14,7 @@ export interface ProposalEntityRef {
   normalized: string;
   entityId?: string;
   entityType?: 'character' | 'entity';
+  entityName?: string;
   candidateEntities?: Array<{
     id: string;
     name: string;
@@ -44,6 +45,7 @@ export interface ExtractedProposal {
 export type GuardrailIssueCode =
   | 'UNKNOWN_ENTITY'
   | 'AMBIGUOUS_REFERENCE'
+  | 'UNEXPECTED_SCENE_PRESENCE'
   | 'STATE_CONFLICT'
   | 'INVALID_MUTATION';
 

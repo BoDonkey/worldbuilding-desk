@@ -83,6 +83,8 @@ export const Navigation: FC<NavigationProps> = ({
   const navItems = useMemo<NavItem[]>(
     () => [
       {to: '/projects', label: 'Projects', icon: 'PR'},
+      {to: '/lore', label: 'Lore', icon: 'LR'},
+      {to: '/canon-decisions', label: 'Canon', icon: 'CD'},
       {to: '/world-bible', label: 'World', icon: 'WB', badgeCount: pendingCounts.world},
       {to: '/ruleset', label: 'Ruleset', icon: 'RS'},
       {to: '/characters', label: 'Characters', icon: 'CH'},
@@ -98,7 +100,8 @@ export const Navigation: FC<NavigationProps> = ({
   const mobileBarItems = useMemo(
     () =>
       navItems.filter((item) =>
-        ['/projects', '/world-bible', '/workspace', '/characters'].includes(item.to)
+        ['/projects', '/lore', '/world-bible', '/workspace', '/characters'].includes(item.to)
+          || item.to === '/canon-decisions'
       ),
     [navItems]
   );

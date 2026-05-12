@@ -1,6 +1,7 @@
 import type {Editor, Extension} from '@tiptap/core';
 import {EditorContent, useEditor} from '@tiptap/react';
 import {useEffect, useRef} from 'react';
+import type {InlineHighlightsMode} from '../entityTypes';
 
 import '../assets/TipTapEditor.css';
 import {
@@ -61,6 +62,8 @@ interface TipTapEditorProps {
   onTextInserted?: () => void;
   insertContext?: {from: number; to: number} | null;
   presentStatBlockToken?: (rawToken: string) => StatBlockTokenPresentation;
+  onTypingActivity?: () => void;
+  inlineHighlightsMode?: InlineHighlightsMode | 'hidden';
 }
 
 function MenuBar({editor, customButtons, actionButtons}: MenuBarProps) {
@@ -282,7 +285,9 @@ function TipTapEditor({
   textToInsert,
   onTextInserted,
   insertContext,
-  presentStatBlockToken = getDefaultStatBlockTokenPresentation
+  presentStatBlockToken = getDefaultStatBlockTokenPresentation,
+  onTypingActivity,
+  inlineHighlightsMode = 'visible'
 }: TipTapEditorProps) {
   const isInternalUpdate = useRef(false);
   const onEditorReadyRef = useRef(onEditorReady);
@@ -303,6 +308,7 @@ function TipTapEditor({
 
     onUpdate({editor}) {
       isInternalUpdate.current = true;
+      onTypingActivity?.();
 
       if (onChange) {
         onChange(editor.getHTML());
@@ -416,6 +422,11 @@ function TipTapEditor({
     }
   }, [editor]);
 
+  useEffect(() => {
+    if (!editor) return;
+    editor.view.dom.setAttribute('spellcheck', 'false');
+  }, [editor]);
+
   // keep external content in sync
   useEffect(() => {
     if (!editor || isInternalUpdate.current) return;
@@ -462,7 +473,10 @@ function TipTapEditor({
         customButtons={toolbarButtons}
         actionButtons={toolbarActions}
       />
-      <EditorContent editor={editor} />
+      <EditorContent
+        editor={editor}
+        className={`inline-highlights-mode-${inlineHighlightsMode}`}
+      />
     </div>
   );
 }

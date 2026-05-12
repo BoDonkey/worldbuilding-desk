@@ -20,6 +20,24 @@ interface CandidateMention {
   detectionReason: CandidateDetectionReason;
 }
 
+const SCENE_ENTRY_CUE_WORDS = new Set([
+  'arrived',
+  'approached',
+  'appeared',
+  'came',
+  'entered',
+  'followed',
+  'joined',
+  'knocked',
+  'returned',
+  'showed',
+  'stepped',
+  'walked'
+]);
+
+const SCENE_PROGRESS_CHAR_THRESHOLD = 240;
+const SCENE_PROGRESS_SENTENCE_THRESHOLD = 2;
+
 const NON_ENTITY_SINGLE_WORDS = new Set([
   'a',
   'an',
@@ -188,9 +206,15 @@ const CHARACTER_CONTEXT_CUE_WORDS = new Set([
   'fought',
   'found',
   'grabbed',
+  'hate',
+  'hated',
+  'hates',
   'held',
   'knew',
   'laughed',
+  'love',
+  'loved',
+  'loves',
   'looked',
   'moved',
   'opened',
@@ -387,6 +411,12 @@ const tokenizeNormalized = (value: string): string[] =>
     .split(/\s+/)
     .map((token) => token.trim())
     .filter(Boolean);
+
+const countEntityNameParts = (value: string): number =>
+  value
+    .split(/[\s-]+/)
+    .map((token) => token.trim())
+    .filter(Boolean).length;
 
 const isPronounContraction = (token: string): boolean =>
   /^(?:i|you|we|they|he|she|it)(?:'m|'re|'ve|'d|'ll|'s)$/.test(token);
@@ -618,6 +648,88 @@ const hasCharacterContextCue = (
   return !!nextWord && CHARACTER_CONTEXT_CUE_WORDS.has(nextWord);
 };
 
+const countSceneSentencesBefore = (text: string, index: number): number =>
+  (text.slice(0, index).match(/[.!?](?:\s|$)/g) ?? []).length;
+
+const hasSceneEntryCue = (text: string, mention: {start: number; end: number}): boolean => {
+  const prefix = text.slice(Math.max(0, mention.start - 48), mention.start).toLowerCase();
+  if (
+    /\b(?:when|as|after|before)\s+$/u.test(prefix) ||
+    /\b(?:then|suddenly)\s+$/u.test(prefix)
+  ) {
+    return true;
+  }
+  const suffix = text.slice(mention.end, mention.end + 48).toLowerCase();
+  const nextWord = suffix.match(/^\s+([\p{L}\p{M}][\p{L}\p{M}\p{N}'_-]*)/u)?.[1];
+  return !!nextWord && SCENE_ENTRY_CUE_WORDS.has(nextWord);
+};
+
+const findUnexpectedScenePresenceIssues = (
+  proposal: ExtractedProposal
+): GuardrailIssue[] => {
+  type ResolvedCharacterMention = ExtractedProposal['entities'][number] & {
+    entityId: string;
+    entityType: 'character';
+    entityName: string;
+  };
+  const firstMentionsByCharacterId = new Map<
+    string,
+    ResolvedCharacterMention
+  >();
+
+  proposal.entities
+    .filter(
+      (ref): ref is ResolvedCharacterMention =>
+        ref.entityId !== undefined &&
+        ref.entityType === 'character' &&
+        typeof ref.entityName === 'string'
+    )
+    .forEach((ref) => {
+      const existing = firstMentionsByCharacterId.get(ref.entityId);
+      if (!existing || ref.span.start < existing.span.start) {
+        firstMentionsByCharacterId.set(ref.entityId, ref);
+      }
+    });
+
+  return Array.from(firstMentionsByCharacterId.values())
+    .filter((ref) => {
+      if (ref.span.start < SCENE_PROGRESS_CHAR_THRESHOLD) {
+        return false;
+      }
+      if (countSceneSentencesBefore(proposal.text, ref.span.start) < SCENE_PROGRESS_SENTENCE_THRESHOLD) {
+        return false;
+      }
+      if (hasSceneEntryCue(proposal.text, ref.span)) {
+        return false;
+      }
+
+      const surfaceTokens = tokenizeNormalized(ref.normalized);
+      const canonicalTokens = tokenizeNormalized(normalizePhrase(ref.entityName));
+      if (surfaceTokens.length !== 1 || canonicalTokens.length < 2) {
+        return false;
+      }
+
+      return ref.normalized !== normalizePhrase(ref.entityName);
+    })
+    .map((ref) => ({
+      code: 'UNEXPECTED_SCENE_PRESENCE' as const,
+      severity: 'warning' as const,
+      message:
+        `"${ref.surface}" is the first mention of ${ref.entityName} in this scene and appears after the scene is already underway. ` +
+        'Confirm this entrance is intentional and not a leftover name from an earlier draft.',
+      span: ref.span,
+      surface: ref.surface,
+      detectionReason: ref.detectionReason,
+      relatedEntities: [
+        {
+          id: ref.entityId,
+          name: ref.entityName,
+          type: 'character' as const
+        }
+      ]
+    }));
+};
+
 const looksLikeNumericOrRoman = (value: string): boolean => {
   if (/^\d+$/.test(value)) return true;
   return /^(?:[ivxlcdm]+)$/i.test(value);
@@ -775,7 +887,7 @@ export function buildExtractedProposal(
       const mentionCount = mentionCounts.get(mention.normalized) ?? 0;
       const hasCue = hasLeadingCueWord(input.text, mention.start);
       const hasCharacterCue = hasCharacterContextCue(input.text, mention);
-      const wordCount = mention.surface.split(/\s+/).length;
+      const wordCount = countEntityNameParts(mention.surface);
       const detectionReason =
         known || knownMatches.length > 1
           ? 'known_entity'
@@ -803,6 +915,7 @@ export function buildExtractedProposal(
         normalized: mention.normalized,
         entityId: known?.id,
         entityType: known?.type,
+        entityName: known?.name,
         candidateEntities:
           knownMatches.length > 1
             ? knownMatches.map((match) => ({
@@ -830,7 +943,7 @@ export function buildExtractedProposal(
         return false;
       }
 
-      const wordCount = entityRef.surface.split(/\s+/).length;
+      const wordCount = countEntityNameParts(entityRef.surface);
       if (wordCount > 1) {
         return true;
       }
@@ -924,6 +1037,8 @@ export class ConsistencyEngineService {
         relatedEntities
       });
     });
+
+    issues.push(...findUnexpectedScenePresenceIssues(proposal));
 
     const result: ValidationResult = {
       allowCommit: !issues.some((issue) => issue.severity === 'blocking'),

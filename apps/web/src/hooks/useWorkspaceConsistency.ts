@@ -1,6 +1,7 @@
 import {useCallback, useEffect, useMemo, useState} from 'react';
 import type {Dispatch, MutableRefObject, SetStateAction} from 'react';
 import type {
+  CanonicalFact,
   Character,
   CharacterSheet,
   EntityCategory,
@@ -15,7 +16,6 @@ import {saveWritingDocument} from '../writingStorage';
 import {getCategoriesByProject, initializeDefaultCategories} from '../categoryStorage';
 import {saveEntity} from '../entityStorage';
 import {saveCharacter} from '../characterStorage';
-import {saveProjectSettings} from '../settingsStorage';
 import type {RAGProvider} from '../services/rag/RAGService';
 import type {
   ConsistencyAlias,
@@ -49,6 +49,7 @@ type FeedbackState = {
 
 interface ResolverNotice {
   message: string;
+  primaryLabel?: string;
   destination?:
     | 'world-bible'
     | 'characters'
@@ -130,12 +131,13 @@ interface UseWorkspaceConsistencyParams {
   setAliases: Dispatch<SetStateAction<ConsistencyAlias[]>>;
   characters: Character[];
   setCharacters: Dispatch<SetStateAction<Character[]>>;
+  canonicalFacts: CanonicalFact[];
   characterSheets: CharacterSheet[];
   ruleset: StoredRuleset | null;
   stateMutationEvents: StateMutationEvent[];
   selectedDocumentId: string | null;
   projectSettings: ProjectSettings | null;
-  setProjectSettings: Dispatch<SetStateAction<ProjectSettings | null>> | ((settings: ProjectSettings | null) => void);
+  saveProjectSettings: (settings: ProjectSettings) => Promise<ProjectSettings>;
   resolvedActionCues: string[];
   worldEngine: WorldEngine;
   ragService: RAGProvider | null;
@@ -172,6 +174,8 @@ const downgradeUnknownIssuesToWarnings = (
 const canonicalizeUnknownSurface = normalizeCanonText;
 
 const hasUppercaseLetter = (value: string): boolean => /[A-Z]/.test(value);
+const normalizeRecordName = (value: string): string =>
+  value.trim().toLowerCase().replace(/\s+/g, ' ');
 
 const LOCATION_HINT_TOKENS = new Set([
   'archive',
@@ -422,12 +426,13 @@ export const useWorkspaceConsistency = ({
   setAliases,
   characters,
   setCharacters,
+  canonicalFacts,
   characterSheets,
   ruleset,
   stateMutationEvents,
   selectedDocumentId,
   projectSettings,
-  setProjectSettings,
+  saveProjectSettings,
   resolvedActionCues,
   worldEngine,
   ragService,
@@ -581,16 +586,13 @@ export const useWorkspaceConsistency = ({
         updatedAt: Date.now()
       };
       void saveProjectSettings(nextSettings)
-        .then(() => {
-          setProjectSettings(nextSettings);
-        })
         .catch(() => {
           // Ignore migration errors and continue using current settings.
         });
     } catch {
       // Ignore malformed legacy local storage.
     }
-  }, [activeProject, isReviewPrefsHydrated, projectSettings, setProjectSettings]);
+  }, [activeProject, isReviewPrefsHydrated, projectSettings, saveProjectSettings]);
 
   useEffect(() => {
     if (!activeProject || !isReviewPrefsHydrated) return;
@@ -945,6 +947,44 @@ export const useWorkspaceConsistency = ({
     ]
   );
 
+  const refreshActiveDraftReview = useCallback(
+    async (doc: WritingDocument) => {
+      setIsRunningConsistencyReview(true);
+      try {
+        const {validation, issueAnnotations} = await worldEngine.reviewText({
+          projectId: doc.projectId,
+          text: htmlToPlainText(doc.content),
+          source: 'workspace-autosave',
+          knownEntities: knownConsistencyEntities,
+          actionCues: resolvedActionCues
+        });
+        const presentedIssues = filterDismissedUnknownIssues(
+          doc.id,
+          downgradeUnknownIssuesToWarnings(validation.issues)
+        );
+        setGuardrailIssues(presentedIssues);
+        setConsistencyReviewItems((prev) => [
+          ...prev.filter((item) => item.sceneId !== doc.id),
+          ...presentedIssues.map((issue, index) => ({
+            id: makeReviewItemId(doc.id, issue, index),
+            sceneId: doc.id,
+            sceneTitle: doc.title || 'Untitled scene',
+            issue,
+            reviewAnnotation: issueAnnotations[index]
+          }))
+        ]);
+      } finally {
+        setIsRunningConsistencyReview(false);
+      }
+    },
+    [
+      filterDismissedUnknownIssues,
+      knownConsistencyEntities,
+      resolvedActionCues,
+      worldEngine
+    ]
+  );
+
   const handleRunConsistencyReview = useCallback(async () => {
     if (!activeProject) return;
     if (documents.length === 0) {
@@ -986,6 +1026,7 @@ export const useWorkspaceConsistency = ({
         documents,
         entities,
         characters,
+        canonicalFacts,
         knownEntities: knownConsistencyEntities
       });
       const combinedItems = [...items, ...contradictionItems];
@@ -1028,6 +1069,7 @@ export const useWorkspaceConsistency = ({
   }, [
     activeProject,
     addSystemHistory,
+    canonicalFacts,
     characters,
     documents,
     entities,
@@ -1646,6 +1688,30 @@ export const useWorkspaceConsistency = ({
         const now = Date.now();
         const explicitCharacterSelection = selectedCategory?.slug === 'characters';
         if (explicitCharacterSelection) {
+          const normalizedCharacterName = normalizeRecordName(normalizedName);
+          const closeCharacterMatch = [...characters]
+            .filter(
+              (candidate) =>
+                normalizeRecordName(candidate.name) !== normalizedCharacterName
+            )
+            .sort((left, right) => {
+              const leftName = normalizeRecordName(left.name);
+              const rightName = normalizeRecordName(right.name);
+              const leftClose =
+                leftName.includes(normalizedCharacterName) ||
+                normalizedCharacterName.includes(leftName)
+                  ? 0
+                  : 1;
+              const rightClose =
+                rightName.includes(normalizedCharacterName) ||
+                normalizedCharacterName.includes(rightName)
+                  ? 0
+                  : 1;
+              if (leftClose !== rightClose) {
+                return leftClose - rightClose;
+              }
+              return left.name.localeCompare(right.name);
+            })[0] ?? null;
           const character: Character = {
             id: crypto.randomUUID(),
             projectId: activeProject.id,
@@ -1670,7 +1736,10 @@ export const useWorkspaceConsistency = ({
             message: `"${normalizedName}" added to Characters. Create a sheet when you're ready to track stats, inventory, or resources.`
           });
           setResolverNotice({
-            message: `"${normalizedName}" added to Characters.`,
+            message: closeCharacterMatch
+              ? `"${normalizedName}" added to Characters. Review possible match with "${closeCharacterMatch.name}".`
+              : `"${normalizedName}" added to Characters.`,
+            primaryLabel: closeCharacterMatch ? 'Review Character Match' : undefined,
             destination: ruleset ? 'character-sheet-create' : 'characters',
             targetId: character.id
           });
@@ -1737,6 +1806,7 @@ export const useWorkspaceConsistency = ({
       activeProject,
       attachAliasTexts,
       categories,
+      characters,
       getSuggestedUnknownCategoryId,
       removeReviewSurface,
       ruleset,
@@ -1853,7 +1923,6 @@ export const useWorkspaceConsistency = ({
       };
       void saveProjectSettings(nextSettings)
         .then(() => {
-          setProjectSettings(nextSettings);
           setFeedback({
             tone: 'success',
             message: `"${normalized}" will be ignored for this project in future reviews.`
@@ -1870,7 +1939,7 @@ export const useWorkspaceConsistency = ({
       projectSettings,
       removeReviewSurface,
       setFeedback,
-      setProjectSettings
+      saveProjectSettings
     ]
   );
 
@@ -2014,6 +2083,7 @@ export const useWorkspaceConsistency = ({
     knownConsistencyEntities,
     persistDoc,
     refreshDeferredReview,
+    refreshActiveDraftReview,
     handleRunConsistencyReview,
     unknownGuardrailIssues,
     hasBlockingUnknownGuardrailIssues,

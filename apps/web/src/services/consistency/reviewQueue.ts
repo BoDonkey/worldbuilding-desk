@@ -3,6 +3,10 @@ import type {ConsistencyAlias} from './aliasStorage';
 
 export type ReviewQueueReason = 'needsCompletion' | 'aliasFollowUp';
 
+interface BuildWorldReviewQueueOptions {
+  excludedCategoryIds?: string[];
+}
+
 export interface ReviewQueueItem {
   entity: WorldEntity;
   aliasCount: number;
@@ -12,9 +16,12 @@ export interface ReviewQueueItem {
 
 export function buildWorldReviewQueue(
   entities: WorldEntity[],
-  aliases: ConsistencyAlias[]
+  aliases: ConsistencyAlias[],
+  options: BuildWorldReviewQueueOptions = {}
 ): ReviewQueueItem[] {
+  const excludedCategoryIds = new Set(options.excludedCategoryIds ?? []);
   return entities
+    .filter((entity) => !excludedCategoryIds.has(entity.categoryId))
     .map((entity) => {
       const entityAliases = Array.from(
         new Map(

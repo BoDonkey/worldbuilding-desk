@@ -67,7 +67,7 @@ export const findTextMatches = (
 
   normalizedPatterns.forEach((pattern) => {
     const matcher = new RegExp(
-      `(^|[^\\p{L}\\p{N}_])(${escapeRegex(pattern.normalized)})(['’]s|s['’])?(?=$|[^\\p{L}\\p{N}_])`,
+      `(^|[^\\p{L}\\p{N}_'-])(${escapeRegex(pattern.normalized)})(['’]s|s['’])?(?=$|[^\\p{L}\\p{N}_'-])`,
       'giu'
     );
     let match: RegExpExecArray | null = null;

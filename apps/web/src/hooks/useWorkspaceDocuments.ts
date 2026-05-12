@@ -130,14 +130,17 @@ export const useWorkspaceDocuments = ({
     [documents, selectedId]
   );
 
-  const resetEditor = useCallback(() => {
+  const resetEditor = useCallback((options?: {clearPersistedSelection?: boolean}) => {
+    if (options?.clearPersistedSelection && selectionStorageKey) {
+      localStorage.removeItem(selectionStorageKey);
+    }
     setSelectedId(null);
     setSelectedCreatedAt(null);
     setTitle('');
     setContent('');
     setSaveStatus('idle');
     setLastSavedAt(null);
-  }, []);
+  }, [selectionStorageKey]);
 
   const resolveDocumentConsistencyMode = useCallback(
     (doc: WritingDocument): ImportMode =>
@@ -164,11 +167,7 @@ export const useWorkspaceDocuments = ({
   }, []);
 
   useEffect(() => {
-    if (!selectionStorageKey) {
-      return;
-    }
-    if (!selectedId) {
-      localStorage.removeItem(selectionStorageKey);
+    if (!selectionStorageKey || !selectedId) {
       return;
     }
     localStorage.setItem(selectionStorageKey, selectedId);
@@ -541,7 +540,7 @@ export const useWorkspaceDocuments = ({
         setDocuments((prev) => prev.filter((entry) => entry.id !== doc.id));
 
         if (selectedId === doc.id) {
-          resetEditor();
+          resetEditor({clearPersistedSelection: true});
         }
         setFeedback({tone: 'success', message: 'Scene deleted.'});
       } catch (error) {

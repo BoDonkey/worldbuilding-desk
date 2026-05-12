@@ -295,6 +295,37 @@
   color: #111827;
 }
 
+.importChipRow {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  margin-top: 0.5rem;
+}
+
+.importChip {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.16rem 0.5rem;
+  border-radius: 999px;
+  border: 1px solid #cbd5e1;
+  background: #f8fafc;
+  color: #334155;
+  font-size: 0.74rem;
+  font-weight: 700;
+}
+
+.importChipRich {
+  border-color: #bfdbfe;
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+.importChipPlain {
+  border-color: #d1d5db;
+  background: #f9fafb;
+  color: #4b5563;
+}
+
 .importDraftFields {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -321,6 +352,128 @@
   margin: 0.55rem 0 0 0;
   font-size: 0.85rem;
   color: #4b5563;
+}
+
+.importDraftActions {
+  margin-top: 0.55rem;
+}
+
+.importPreviewButton {
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  color: #334155;
+  border-radius: 999px;
+  padding: 0.32rem 0.8rem;
+  font-size: 0.78rem;
+  cursor: pointer;
+}
+
+.importPreviewButton:hover {
+  background: #f8fafc;
+}
+
+.importDraftNote {
+  margin: 0.45rem 0 0 0;
+  font-size: 0.8rem;
+  color: #64748b;
+}
+
+.importPreviewOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  background: rgba(15, 23, 42, 0.52);
+  backdrop-filter: blur(6px);
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.importPreviewCard {
+  width: min(1080px, 100%);
+  height: 100%;
+  max-height: 100%;
+  background: linear-gradient(180deg, #f8fbff 0%, #edf3fa 100%);
+  border: 1px solid #cbd5e1;
+  border-radius: 18px;
+  box-shadow: 0 28px 70px rgba(15, 23, 42, 0.28);
+  padding: 1rem;
+  overflow: auto;
+}
+
+.importPreviewHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: 0.85rem;
+}
+
+.importPreviewEyebrow {
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #64748b;
+  margin-bottom: 0.35rem;
+}
+
+.importPreviewTitle {
+  margin: 0 0 0.55rem 0;
+  font-size: 1.4rem;
+  line-height: 1.2;
+  color: #0f172a;
+}
+
+.importPreviewDocument {
+  border: 1px solid #d6deea;
+  border-radius: 14px;
+  background: #ffffff;
+  padding: 1rem 1.1rem;
+  min-height: calc(100% - 5rem);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+}
+
+.importPreviewContent {
+  max-width: 840px;
+  margin: 0 auto;
+  color: #1f2937;
+  font-family: Georgia, serif;
+  font-size: 1.05rem;
+  line-height: 1.8;
+}
+
+.importPreviewContent p {
+  margin: 0 0 0.95rem 0;
+}
+
+.importPreviewContent h1,
+.importPreviewContent h2,
+.importPreviewContent h3 {
+  line-height: 1.25;
+  margin: 0.9rem 0 0.65rem;
+  color: #0f172a;
+}
+
+.importPreviewContent ul,
+.importPreviewContent ol {
+  padding-left: 1.7rem;
+  margin: 0.7rem 0 1rem;
+}
+
+.importPreviewContent blockquote {
+  border-left: 3px solid #cbd5e1;
+  margin: 0.9rem 0 1rem;
+  padding-left: 1rem;
+  color: #475569;
+  font-style: italic;
+}
+
+.importPreviewContent hr {
+  border: 0;
+  border-top: 1px solid #d6deea;
+  margin: 1rem 0;
 }
 
 .importError {
@@ -368,6 +521,10 @@
     grid-template-columns: 1fr;
   }
 
+  .importPreviewHeader {
+    flex-direction: column;
+  }
+
   .content {
     flex-direction: column;
   }
@@ -385,8 +542,8 @@
 }
 
 .formSection {
-  max-width: 400px;
-  flex-shrink: 0;
+  max-width: 760px;
+  flex: 1 1 620px;
 }
 
 .form {
@@ -427,6 +584,29 @@
   background: #eff6ff;
   color: #1e3a8a;
   font-size: 0.85rem;
+}
+
+.reviewSummaryPreview {
+  margin-top: 0.75rem;
+  padding-top: 0.7rem;
+  border-top: 1px solid rgba(37, 99, 235, 0.18);
+}
+
+.reviewSummaryLabel {
+  margin-bottom: 0.35rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #1d4ed8;
+}
+
+.reviewSummaryMeta {
+  display: flex;
+  gap: 0.7rem;
+  flex-wrap: wrap;
+  font-size: 0.79rem;
+  color: #475569;
 }
 
 .matchPanel {
@@ -583,6 +763,36 @@
   font-size: 0.85rem;
   color: #555;
   margin-bottom: 0.25rem;
+}
+
+.entitySummary {
+  margin: 0 0 0.7rem 0;
+  font-size: 0.92rem;
+  line-height: 1.6;
+  color: #334155;
+}
+
+.entitySummaryBlock {
+  margin-bottom: 0.7rem;
+}
+
+.entitySummaryBlock .entitySummary {
+  margin-bottom: 0.35rem;
+}
+
+.entitySummaryToggle {
+  border: none;
+  background: transparent;
+  color: #2563eb;
+  padding: 0;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.entitySummaryToggle:hover {
+  color: #1d4ed8;
+  text-decoration: underline;
 }
 
 .reviewListSummary {

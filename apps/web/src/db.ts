@@ -1,5 +1,5 @@
 export const DB_NAME = 'worldbuilding-db';
-export const DB_VERSION = 19;
+export const DB_VERSION = 24;
 export const ENTITY_STORE_NAME = 'entities';
 export const CATEGORY_STORE_NAME = 'entityCategories';
 export const PROJECT_STORE_NAME = 'projects';
@@ -9,6 +9,13 @@ export const CORKBOARD_CHAPTER_CARD_STORE_NAME = 'corkboard_chapter_cards';
 export const SETTINGS_STORE_NAME = 'projectSettings';
 export const CHARACTER_STORE_NAME = 'characters';
 export const CHARACTER_SHEET_STORE_NAME = 'character_sheets';
+export const LORE_DOCUMENT_STORE_NAME = 'lore_documents';
+export const LORE_DOCUMENT_LINK_STORE_NAME = 'lore_document_links';
+export const LORE_FACT_PROPOSAL_STORE_NAME = 'lore_fact_proposals';
+export const LORE_ENTITY_PROPOSAL_STORE_NAME = 'lore_entity_proposals';
+export const CANONICAL_FACT_STORE_NAME = 'canonical_facts';
+export const CANON_DECISION_CLUSTER_STORE_NAME = 'canon_decision_clusters';
+export const CANON_DECISION_SUPPRESSION_STORE_NAME = 'canon_decision_suppressions';
 export const COMPENDIUM_ENTRY_STORE_NAME = 'compendium_entries';
 export const COMPENDIUM_MILESTONE_STORE_NAME = 'compendium_milestones';
 export const COMPENDIUM_RECIPE_STORE_NAME = 'compendium_recipes';
@@ -60,6 +67,34 @@ export function openDb(): Promise<IDBDatabase> {
 
       if (!db.objectStoreNames.contains(CHARACTER_SHEET_STORE_NAME)) {
         db.createObjectStore(CHARACTER_SHEET_STORE_NAME, { keyPath: 'id' });
+      }
+
+      if (!db.objectStoreNames.contains(LORE_DOCUMENT_STORE_NAME)) {
+        db.createObjectStore(LORE_DOCUMENT_STORE_NAME, { keyPath: 'id' });
+      }
+
+      if (!db.objectStoreNames.contains(LORE_DOCUMENT_LINK_STORE_NAME)) {
+        db.createObjectStore(LORE_DOCUMENT_LINK_STORE_NAME, { keyPath: 'id' });
+      }
+
+      if (!db.objectStoreNames.contains(LORE_FACT_PROPOSAL_STORE_NAME)) {
+        db.createObjectStore(LORE_FACT_PROPOSAL_STORE_NAME, { keyPath: 'id' });
+      }
+
+      if (!db.objectStoreNames.contains(LORE_ENTITY_PROPOSAL_STORE_NAME)) {
+        db.createObjectStore(LORE_ENTITY_PROPOSAL_STORE_NAME, { keyPath: 'id' });
+      }
+
+      if (!db.objectStoreNames.contains(CANONICAL_FACT_STORE_NAME)) {
+        db.createObjectStore(CANONICAL_FACT_STORE_NAME, { keyPath: 'id' });
+      }
+
+      if (!db.objectStoreNames.contains(CANON_DECISION_CLUSTER_STORE_NAME)) {
+        db.createObjectStore(CANON_DECISION_CLUSTER_STORE_NAME, { keyPath: 'id' });
+      }
+
+      if (!db.objectStoreNames.contains(CANON_DECISION_SUPPRESSION_STORE_NAME)) {
+        db.createObjectStore(CANON_DECISION_SUPPRESSION_STORE_NAME, { keyPath: 'id' });
       }
 
       if (!db.objectStoreNames.contains(CATEGORY_STORE_NAME)) {

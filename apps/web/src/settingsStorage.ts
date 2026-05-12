@@ -6,7 +6,8 @@ import type {
   ProjectMode,
   WorkspaceImportMode,
   StatBlockGroup,
-  StatBlockPreferences
+  StatBlockPreferences,
+  EditorFeedbackSettings
 } from './entityTypes';
 import { openDb, SETTINGS_STORE_NAME } from './db';
 import {getDefaultFeatureToggles, normalizeFeatureToggles} from './projectMode';
@@ -43,6 +44,7 @@ const DEFAULT_AI_SETTINGS: ProjectAISettings = {
   inspectorSettings: {
     enableAIConsultation: true,
     reviewEngineMode: 'deterministic',
+    canonDecisionProviderMode: 'project-provider',
     maxConsultationsPerDay: 20,
     maxContextChars: 1800,
     maxResponseTokens: 500,
@@ -53,6 +55,7 @@ const DEFAULT_AI_SETTINGS: ProjectAISettings = {
 const DEFAULT_INSPECTOR_SETTINGS: InspectorSettings = {
   enableAIConsultation: true,
   reviewEngineMode: 'deterministic',
+  canonDecisionProviderMode: 'project-provider',
   maxConsultationsPerDay: 20,
   maxContextChars: 1800,
   maxResponseTokens: 500,
@@ -62,6 +65,7 @@ const DEFAULT_INSPECTOR_SETTINGS: InspectorSettings = {
 const DEFAULT_PROJECT_MODE: ProjectMode = 'litrpg';
 const DEFAULT_CONSISTENCY_ACTION_CUES: string[] = [];
 const DEFAULT_IGNORED_UNKNOWN_SURFACES: string[] = [];
+const DEFAULT_IGNORED_ENTITY_MATCH_KEYS: string[] = [];
 const DEFAULT_STAT_BLOCK_PREFERENCES: StatBlockPreferences = {
   sourceType: 'character',
   style: 'full',
@@ -71,6 +75,9 @@ const DEFAULT_STAT_BLOCK_PREFERENCES: StatBlockPreferences = {
   selectedStatIds: [],
   selectedResourceIds: [],
   groups: []
+};
+const DEFAULT_EDITOR_FEEDBACK: EditorFeedbackSettings = {
+  inlineHighlightsMode: 'visible'
 };
 const DEFAULT_IMPORT_MODE: WorkspaceImportMode = 'balanced';
 const DEFAULT_SKIP_IMPORT_SUGGESTIONS = false;
@@ -100,6 +107,18 @@ function normalizeConsistencyActionCues(cues: string[] | undefined): string[] {
   const unique = new Set<string>();
   cues.forEach((cue) => {
     const normalized = cue.trim().toLowerCase();
+    if (normalized) {
+      unique.add(normalized);
+    }
+  });
+  return Array.from(unique);
+}
+
+function normalizeIgnoredEntityMatchKeys(keys: string[] | undefined): string[] {
+  if (!Array.isArray(keys)) return [];
+  const unique = new Set<string>();
+  keys.forEach((key) => {
+    const normalized = key.trim();
     if (normalized) {
       unique.add(normalized);
     }
@@ -163,6 +182,10 @@ function ensureAISettings(settings: ProjectSettings): ProjectSettings {
       aiSettings.inspectorSettings?.reviewEngineMode === 'local-ai-preview'
         ? 'local-ai-preview'
         : 'deterministic',
+    canonDecisionProviderMode:
+      aiSettings.inspectorSettings?.canonDecisionProviderMode === 'local-ollama'
+        ? 'local-ollama'
+        : 'project-provider',
     maxConsultationsPerDay: Math.max(
       1,
       Math.floor(aiSettings.inspectorSettings?.maxConsultationsPerDay ?? 20)
@@ -185,6 +208,9 @@ function ensureAISettings(settings: ProjectSettings): ProjectSettings {
     ),
     ignoredUnknownSurfaces: normalizeConsistencyActionCues(
       settings.ignoredUnknownSurfaces ?? DEFAULT_IGNORED_UNKNOWN_SURFACES
+    ),
+    ignoredEntityMatchKeys: normalizeIgnoredEntityMatchKeys(
+      settings.ignoredEntityMatchKeys ?? DEFAULT_IGNORED_ENTITY_MATCH_KEYS
     ),
     activeSkills: settings.activeSkills ?? [],
     projectMode: settings.projectMode ?? DEFAULT_PROJECT_MODE,
@@ -229,7 +255,16 @@ function ensureAISettings(settings: ProjectSettings): ProjectSettings {
           : [],
         groups: normalizeStatBlockGroups(merged.groups)
       };
-    })()
+    })(),
+    editorFeedback: {
+      ...DEFAULT_EDITOR_FEEDBACK,
+      ...(settings.editorFeedback ?? {}),
+      inlineHighlightsMode:
+        settings.editorFeedback?.inlineHighlightsMode === 'subtle' ||
+        settings.editorFeedback?.inlineHighlightsMode === 'hidden-while-typing'
+          ? settings.editorFeedback.inlineHighlightsMode
+          : 'visible'
+    }
   };
 }
 
@@ -280,12 +315,14 @@ export async function createDefaultSettings(projectId: string): Promise<ProjectS
     aiSettings: {...DEFAULT_AI_SETTINGS},
     consistencyActionCues: [...DEFAULT_CONSISTENCY_ACTION_CUES],
     ignoredUnknownSurfaces: [...DEFAULT_IGNORED_UNKNOWN_SURFACES],
+    ignoredEntityMatchKeys: [...DEFAULT_IGNORED_ENTITY_MATCH_KEYS],
     activeSkills: [],
     projectMode: DEFAULT_PROJECT_MODE,
     featureToggles: getDefaultFeatureToggles(DEFAULT_PROJECT_MODE),
     defaultImportMode: DEFAULT_IMPORT_MODE,
     defaultSkipImportSuggestions: DEFAULT_SKIP_IMPORT_SUGGESTIONS,
     statBlockPreferences: {...DEFAULT_STAT_BLOCK_PREFERENCES},
+    editorFeedback: {...DEFAULT_EDITOR_FEEDBACK},
     createdAt: now,
     updatedAt: now
   };

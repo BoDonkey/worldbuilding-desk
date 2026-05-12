@@ -1,6 +1,6 @@
 # Next Steps
 
-Last updated: 2026-04-28
+Last updated: 2026-05-11
 
 ## Current Baseline
 
@@ -24,7 +24,8 @@ Implemented recently:
 - Character-aware alias linking from review: review items can now connect to existing characters as well as World Bible entries.
 - Temporary dismiss and project-level `Always ignore` review actions.
 - Boundary-aware review highlighting with improved handling for possessives and overlapping lore/review highlights.
-- World Bible review queue branch is in progress with queue filtering, review-focused open/edit flow, and unified "Mark reviewed" behavior for completion plus alias follow-up.
+- World Bible review queue now supports reason filters, recommended-action filters, review-focused open/edit flow, and unified "Mark reviewed" behavior for completion plus alias follow-up.
+- World Bible review actions now cover merge, convert-to-alias, persistent keep-separate / ignore-match decisions, and explicit canonical rename from the review form.
 - Workspace review linking now offers existing records for alias connection, with close matches sorted first and fallback access to other records.
 - Alias/lore review fixes from smoke testing:
   - prevent self-alias creation
@@ -54,6 +55,8 @@ Implemented recently:
 - Manual Project Review results now underline in the active editor scene, not only in the side rail.
 - Review item resolution now clears both editor highlights and project-review rail items while preserving remaining unresolved highlights.
 - Active-scene review refreshes when canon, aliases, or characters change, so returning from World Bible no longer requires rerunning Project Review just to restore unresolved underlines.
+- Workspace scene selection now survives a `Workspace -> World Bible -> Workspace` round trip instead of jumping back to the first scene.
+- Smoke regressions now cover known full names, hyphenated nicknames, and short aliases such as `Mira Voss`, `Lantern-Mira`, `Iron Warrens`, and `Warrens`.
 - Project Review copy now uses author-facing labels instead of raw internal issue codes and detection reasons.
 - Project scratchpad is back as an autosaved workspace context drawer tab and is included in project backup snapshot/import paths.
 - Cypress covers scratchpad autosave/reload restoration and backup export/import round-trip.
@@ -61,23 +64,44 @@ Implemented recently:
 - Local review annotation prompts now use issue-local excerpt windows rather than full-scene text and fallback on timeout instead of stalling the review run.
 - Dev-mode RAG embedding loads now use deterministic lightweight fallback immediately, avoiding transformer fetch noise during local smoke testing.
 - State mutation ledger now supports accepted manual scene-derived mutation events, explicit same-scene ordering, replay, stale detection, and workspace-facing inspection surfaces.
+- Freeform `Lore` route now exists as a first-class intake surface for longform worldbuilding notes and imported dossiers.
+- Lore storage is persisted in project data and included in backup export/import.
+- Deterministic lore fact extraction now creates reviewable `LoreFactProposal` records from freeform dossiers.
+- Accepted lore facts now persist as `CanonicalFact` records and can materialize safe side effects like aliases and simple character-field updates.
+- Accepted canonical facts now feed workspace contradiction review and inspector/snippet surfaces as real canon evidence.
+- Contradiction messages can now cite accepted lore fact provenance, including source lore document title when available.
+- Deterministic lore entity extraction now creates `LoreEntityProposal` candidates for characters and world anchors.
+- Accepted lore entity proposals can create or link canon anchors in `Characters` and `World Bible`.
+- `Canon Decisions` now exists as a dedicated route for deterministic duplicate/conflict clustering across extracted lore and existing canon.
+- Canon decision actions now support aliasing to existing canon, accepting new anchors, accepting fact updates, keeping records separate, rejecting, and deferring.
+- Canon-decision suppression memory now persists resolved duplicate/conflict pairs so the same cluster does not keep resurfacing.
+- Canon-decision consultation now supports explicit per-cluster LLM rubber-ducking without allowing model output to write canon directly.
+- Canon-decision AI provider policy can now either follow the project provider or force local Ollama for this workflow specifically.
+- Project-level inline highlight visibility modes now support `Visible`, `Subtle`, and `Hidden while typing`.
+- World Bible longform `textarea` fields now use rich-text editing with full-width `Expand to document` mode.
+- World Bible import previews now preserve richer Markdown/HTML structure for longform lore fields instead of flattening everything into plain text.
+- World Bible import flow now supports document preview plus `Import and open` for single drafts.
+- World Bible list and review surfaces now show richer lore summaries with `Read more` expansion and structure-aware excerpts for lists, quotes, and simple tables.
 
 ## Recommended Priority Order
 
-1. Review completion workflow + World Bible intake
-2. State mutation ledger integration
-3. Scratchpad access and lightweight planning surfaces
-4. App-wide search
-5. Editor readability and theme hardening
-6. Release confidence and reload safety
-7. Structural cleanup in active routes
-8. Desktop packaging validation
-9. AI personas/tools
-10. First-run onboarding cleanup
+1. Lore/canon decision smoke stabilization
+2. Canon decision merge review refinement
+3. Structural cleanup in active routes
+4. State mutation ledger integration
+5. Scratchpad access and lightweight planning surfaces
+6. App-wide search
+7. Editor readability and theme hardening
+8. Release confidence and reload safety
+9. Review-completion and World Bible polish
+10. Desktop packaging validation
+11. AI personas/tools
+12. First-run onboarding cleanup
 
 ## Planning Notes
 
 - Bias toward slices that complete the writing-first workflow instead of adding new optional systems.
+- Keep prioritizing lore-consistency trust failures over new settlement/mechanics work until alias, nickname, and review-refresh behavior feels boringly reliable in normal drafting.
 - Prefer feature work that also removes route-level complexity in `WorkspaceRoute.tsx` or `WorldBibleRoute.tsx`.
 - Treat build/lint as baseline gates, but use smoke coverage for import, review, reload, and export as the real confidence bar.
 - Current automated browser smoke is green on the current tree. In the Codex desktop environment, Cypress may still need to launch outside the GUI sandbox restriction.
@@ -85,6 +109,64 @@ Implemented recently:
 - Scratchpad should become a quick-access popover/modal available from any workspace tab or route surface. The current context drawer tab is a first restoration step, not the final interaction model.
 - Future optional systems note: character inventory currently tracks item names, quantities, notes, and catalog links, while the rules-engine inventory has a `capacity` field but no per-item weight or surfaced encumbrance calculation. When system-heavy character support comes back into focus, add carry weight/encumbrance as an explicit inventory concern rather than treating quantity as enough.
 - The background review path is only worth keeping if it remains bounded: proposal-only, local-first, and subordinate to deterministic validation. Avoid broadening it into an unbounded “project manager AI.”
+- Lore/canon reminder: freeform lore documents are author-facing source material, extracted entity/fact proposals are candidates, and only accepted anchors plus accepted canonical facts count as source-of-truth canon.
+- Canon-decision AI reminder: the LLM may explain tradeoffs, overlaps, and risks, but it must not silently mutate canon state. Canon-decision consultation is explicit and provider-controlled.
+
+## 0) Lore/Canon Decision Smoke Stabilization
+
+Goal: keep author trust high now that freeform lore intake, canon extraction, suppression memory, and explicit AI consultation are all interacting in live authoring.
+
+Targets:
+
+- Recheck the current smoke-critical paths for:
+  - full names plus short forms
+  - hyphenated nicknames
+  - location aliases
+  - route-return scene restoration
+- Recheck the new lore/canon paths for:
+  - lore import -> extract facts/entities -> accept into canon
+  - accepted canon facts showing up in contradiction review
+  - `keep separate` and `alias` suppression persisting across reload
+  - canon-decision AI following the configured provider policy
+- Prefer small correctness fixes over new review features.
+- Leave Cypress last in the slice, after manual smoke settles.
+
+Acceptance criteria:
+
+- Adding or linking canon does not leave stale unknown underlines behind in the active scene.
+- Full names, short aliases, and hyphenated aliases all resolve as known lore once canon exists.
+- Leaving `Workspace` for `World Bible` and returning preserves the current scene.
+- Rejected or separated canon-decision clusters do not immediately reappear after refresh/reload.
+- Canon-decision AI can be forced local through Ollama even when the main assistant uses a hosted provider.
+
+Status:
+
+- Latest smoke regressions for `Mira Voss`, `Lantern-Mira`, `Iron Warrens`, and `Warrens` are now covered in unit tests.
+- Active-scene review refresh and workspace scene-return regressions were fixed on 2026-05-09.
+- New lore/canon architecture is implemented enough to warrant a dedicated manual smoke pass before broader extraction sophistication work.
+
+## 0A) Canon Decision Merge Review Refinement
+
+Goal: make the new canon-decision workflow feel like a trustworthy source-of-truth layer instead of a noisy duplicate detector.
+
+Targets:
+
+- Add suppression-memory refinement so obviously resolved pairs stay quiet even as surrounding canon changes.
+- Improve duplicate/entity clustering for cross-document overlaps and fuller-name/short-name cases.
+- Decide whether `keep separate` needs durable explanatory notes or just suppression keys.
+- Make the AI rubber-duck output easier to act on, ideally with stronger evidence display and tighter cluster summaries.
+- Consider a future explicit `merge` workflow only after current `alias` / `accept new` / `keep separate` behavior is manually validated.
+
+Acceptance criteria:
+
+- Authors can process a realistic batch of extracted lore without the same duplicate clusters resurfacing repeatedly.
+- The queue feels like a source-of-truth review surface, not just a diagnostics list.
+- The AI panel helps clarify ambiguity without implying that model output itself is canon.
+
+Status:
+
+- Deterministic clustering, suppression memory, and explicit AI consultation are implemented.
+- Remaining follow-up is manual smoke, queue polish, and better consolidation behavior across multiple lore documents.
 
 ## 1) Review Completion Workflow + World Bible Intake
 
@@ -92,23 +174,28 @@ Goal: make review-created canon feel intentional and editable instead of half-hi
 
 Targets:
 
-- Move more alias and review follow-up into World Bible so authors can accept/refine from one place.
-- Add a dedicated review queue or review mode in World Bible for:
+- Keep alias and review follow-up centered in World Bible so authors can accept/refine from one place.
+- Continue polishing the dedicated review mode in World Bible for:
   - needs completion records
   - alias follow-up
-  - ignored/rejected review surfaces
-- Let authors accept, rename, merge, and alias from World Bible without returning to the manuscript for every cleanup action.
+  - ignored/rejected review surfaces if they remain part of the workflow
+- Keep authors able to accept, rename, merge, alias, and dismiss false-positive match suggestions from World Bible without returning to the manuscript for every cleanup action.
 - Decide whether `Always ignore` should stay local-storage backed or move into persisted project settings/backups.
 - Keep improving overlap/count correctness between:
   - review issue state
   - inline underline rendering
   - passive lore highlights
-- Add a passive review-needed indicator so authors know review is ready without losing drafting flow.
+- Keep the passive review-needed indicator reliable without losing drafting flow.
+- Continue improving World Bible authoring quality:
+  - richer longform editing
+  - better import fidelity
+  - better summary surfaces across browse/review flows
 
 Exit criteria:
 
 - Authors can finish review-created records and alias cleanup from a coherent World Bible workflow.
 - Review counts, chips, and visible underlines agree reliably.
+- World Bible feels like a real lore-writing surface rather than a cramped metadata form.
 
 Implementation backlog:
 
@@ -129,11 +216,10 @@ Acceptance criteria:
 
 Status:
 
-- In progress on `codex/world-bible-review-queue`.
 - Implemented queue surface, filters, nav badge count integration, queue-focused opening, and unified reviewed action.
 - Smoke testing exposed and fixed alias/highlight normalization issues plus active-scene review refresh regressions.
-- Current smoke pass is sufficient to validate the underlying review-completion behavior on the current UX.
-- Remaining: decide whether persisted ignore state stays in this slice or is split into Slice 1C, then rerun the full manual review-completion smoke after the next review/workspace UX change lands.
+- Remaining: rerun the full manual review-completion smoke against the newer alias-conversion, keep-separate, ignore-match, canonical-rename, and recommended-action filter paths.
+- Remaining: decide whether ignored/rejected surfaces should stay visible in this queue or move to a lighter audit path.
 
 Suggested branch:
 
@@ -150,6 +236,13 @@ Acceptance criteria:
 
 - A review-created record can be fully resolved from World Bible.
 - Merge/rename/alias actions update the underlying canon and remove or update the related unfinished state.
+
+Status:
+
+- Implemented explicit `merge`, `convert to alias`, `keep separate`, `ignore this match`, and `rename to canonical + next` actions inside World Bible review.
+- Match-level false positives now persist in project settings so queue suggestions stay cleared across reloads/project switches.
+- Review queue cards and match cards now derive and display a recommended next action.
+- Remaining: validate the end-to-end UX with a fresh manual smoke pass and decide whether `rename` should graduate from contextual form action into a queue-card shortcut.
 
 Suggested branch:
 
@@ -170,6 +263,27 @@ Acceptance criteria:
 Suggested branch:
 
 - `codex/review-ignore-persistence`
+
+### Slice 1E: World Bible authoring polish
+
+Scope:
+
+- Keep improving the World Bible as a real writing surface instead of a plain schema form.
+- Build on the now-implemented rich-text longform fields, import previews, and card/review summaries.
+- Focus next on polish rather than another structural rewrite.
+
+Acceptance criteria:
+
+- Longform lore can be written, imported, previewed, and reviewed without feeling cramped.
+- Authors can understand imported or existing lore from list/review surfaces before opening full edit mode.
+
+Status:
+
+- Implemented rich-text editing for longform World Bible fields.
+- Implemented full-width `Expand to document` mode.
+- Implemented richer import preservation plus document preview and `Import and open`.
+- Implemented structure-aware World Bible summaries across list and review surfaces.
+- Remaining: decide whether summary surfaces should gain richer rendering for more complex tables/lists or stay excerpt-only.
 
 ### Slice 1D: Review count and highlight correctness audit
 
@@ -248,8 +362,8 @@ Suggested branch:
 Status:
 
 - Initial deterministic indicator is implemented. It derives `idle`, `running`, `ready`, `attention`, and `unavailable` from current review counts, manual review state, and `WorldEngine` status.
-- Remaining follow-up: connect the indicator to changed-word plus idle-pause review cadence once automatic local review exists.
-- Current behavior note: known lore highlights can appear while typing because they are live text matches; new unknown-name highlights require import/deferred review, strict save, or manual Project Review until idle review cadence is implemented.
+- Idle review cadence now exists for changed scenes after a short typing pause.
+- Current behavior note: passive idle review should update underlines and the header badge without showing the large blocking review panel unless the scene hits a strict-save case.
 
 ### Slice 1G: Manual-first state mutation workflow
 
@@ -757,6 +871,11 @@ Targets:
   - line edit
   - story clarity
   - scene tension
+- Frame post-draft prose cleanup as craft critique rather than "AI phrase cleanup," with bounded review modes such as:
+  - repetition detection
+  - cliche detection
+  - pacing friction
+  - flattening removal
 - Keep outputs scoped and manual-apply.
 
 Exit criteria:
@@ -783,7 +902,18 @@ Suggested branch:
 
 Scope:
 
-- Ship one critic persona with bounded critique modes such as line edit, story clarity, and scene tension.
+- Ship one critic persona with bounded critique modes such as:
+  - line edit
+  - story clarity
+  - scene tension
+  - repetition detection
+  - cliche detection
+  - pacing friction
+  - flattening removal
+- Keep the framing craft-first and author-facing:
+  - surface patterns, weak spots, and targeted revision suggestions
+  - avoid presenting this as generic "AI slop" detection
+  - prefer findings-first output over automatic rewrites
 
 Acceptance criteria:
 
@@ -841,6 +971,116 @@ Acceptance criteria:
 Suggested branch:
 
 - `codex/optional-system-discovery`
+
+## 10) Stat Block Token Improvements
+
+Goal: make stat block placeholders feel like first-class editor objects instead of raw token strings.
+
+Current status:
+- Status Block Builder modal exists with live-block and placeholder insert modes.
+- Placeholder format: `{{STAT_BLOCK:character:Aria:compact}}`.
+- `Refresh Placeholders` replaces tokens with rendered HTML (destructive).
+- Project-level preferences for source type, style, and insert mode.
+- Cypress covers rendered insert and placeholder refresh flow.
+
+Next slices:
+
+### Slice 10A: Chip rendering for stat block tokens
+
+Scope:
+- Add a TipTap inline stat-block node that parses existing `{{STAT_BLOCK:...}}` syntax on load/paste.
+- Render as a pill/chip label (e.g. `Stat Block: Aria · Compact`).
+- Preserve raw token payload in node attributes so save/load is lossless.
+- Teach refresh utilities to recognize both legacy raw token text and chip/node HTML.
+
+Acceptance criteria:
+- Writers are not exposed to raw `{{...}}` syntax during normal editing.
+- Existing documents load without data loss.
+
+Suggested branch: `codex/stat-block-chip-rendering`
+
+### Slice 10B: Template-preserving refresh model
+
+Scope:
+- Replace the current one-way destructive refresh with a preview model.
+- Chips remain canonical; refresh updates chip preview/metadata only.
+- Export/render paths resolve chips to live rendered blocks.
+- Add project-level refresh policy preference: `manual`, `onOpen`, `onSave`, `onOpenAndSave`.
+
+Acceptance criteria:
+- Refreshing a placeholder does not permanently burn it into static prose.
+- Refresh policy is respected on document open and manual save.
+
+Suggested branch: `codex/stat-block-template-refresh`
+
+### Slice 10C: Token disambiguation
+
+Scope:
+- Newly inserted tokens persist a stable source id alongside the human-readable label.
+- Resolution order: stable id match → unique normalized label match → ambiguous state shown on chip.
+- Legacy name-only tokens preserve current behavior; duplicates surface an ambiguous-state chip.
+
+Suggested branch: `codex/stat-block-token-disambiguation`
+
+---
+
+## 11) Author Tool Customization
+
+Goal: let authors tailor the workspace tools around them without displacing the manuscript.
+
+Current status:
+- Toolbar generates buttons dynamically via `toolbarButtons`; not yet user-configurable.
+- Rail tool visibility is not yet persisted per-project.
+- Writing Workspace Preferences panel does not yet exist in Settings.
+
+Implementation order:
+
+### Slice 11A: Persist toolbar and rail preferences
+
+Scope:
+- Persist toolbar density and visible control groups in project settings.
+- Persist rail visibility, default open tab, and tab order.
+
+Acceptance criteria:
+- Preferences survive reload and project switch.
+- Defaults remain simple for new projects.
+
+Suggested branch: `codex/workspace-tool-preferences`
+
+### Slice 11B: Writing Workspace Preferences panel
+
+Scope:
+- Add a lightweight "Writing Workspace Preferences" section in Settings.
+- Expose: toolbar density, visible toolbar groups, rail defaults, chrome visibility toggles.
+- One "Restore defaults" action clears all customization.
+
+Acceptance criteria:
+- Authors can reduce visible chrome without disabling important features.
+- Customization does not crowd the settings panel.
+
+Suggested branch: `codex/workspace-preferences-panel`
+
+---
+
+## 12) Entity Ownership and Intake Refactor
+
+Goal: make entity intake ownership coherent so accepting a detected reference creates one primary record, not three.
+
+See `entity-ownership-intake-refactor-plan.md` for detailed slices, file-level implementation notes, and dogfood findings from May 2026.
+
+Summary of slices:
+- **Slice 1**: Stop duplicate intake — remove automatic compendium creation from workspace review acceptance.
+- **Slice 2**: Add explicit intake classification (`character` / `location` / `item` / `creature`).
+- **Slice 3**: Character-first intake completion — `Character` + optional `CharacterSheet` in one flow.
+- **Slice 4**: Reframe compendium as optional mechanics attachment; rename `Add to Compendium` → `Add mechanics`.
+- **Slice 5**: Character sheet discoverability and stat editing.
+- **World Bible follow-up**: canonical rename with alias preservation, lighter location review treatment, lore-handling rethink.
+
+Recommended execution order: Slice 1 → 3 → 4 → 5 → 2 → World Bible follow-up.
+
+Suggested branch: `codex/entity-intake-ownership`
+
+---
 
 ## Working Sequence
 

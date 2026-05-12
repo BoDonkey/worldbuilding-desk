@@ -41,6 +41,7 @@ interface ConsistencyReviewItem {
 const ISSUE_LABELS: Record<string, string> = {
   UNKNOWN_ENTITY: 'Unknown name',
   AMBIGUOUS_REFERENCE: 'Ambiguous reference',
+  UNEXPECTED_SCENE_PRESENCE: 'Unexpected scene presence',
   STATE_CONFLICT: 'Canon conflict',
   INVALID_MUTATION: 'Invalid story state change'
 };

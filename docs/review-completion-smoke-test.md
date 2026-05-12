@@ -1,6 +1,6 @@
 # Review Completion Smoke Test
 
-Last updated: 2026-04-26
+Last updated: 2026-05-09
 
 ## Goal
 
@@ -53,6 +53,22 @@ Expected for the regression text:
 - `Zippy` should surface as a reviewable unknown name after autosave or `Save now`.
 - Existing records remain available in the link/select control even when there is no close text match.
 
+Additional alias/full-name regression text:
+
+```text
+Mira Voss slipped into the Iron Warrens before dusk.
+
+Later, Lantern-Mira doubled back through the Warrens gate alone.
+```
+
+Expected for the alias/full-name regression text:
+
+- `Mira Voss` should resolve as a known character once saved.
+- If `Mira` is kept as an alias, it should stop surfacing as its own unknown after canon refreshes.
+- `Lantern-Mira` should resolve as a known character alias, not leave `Mira` behind as a stale unknown.
+- `Iron Warrens` should resolve as a known location.
+- If `Warrens` is saved as an alias, it should resolve as known lore too.
+
 ## A) Import Into Workspace
 
 1. Open `Writing Workspace`.
@@ -70,13 +86,14 @@ Expected:
 
 ## B) Deferred Review Appears
 
-1. Confirm the workspace review banner appears above the editor.
+1. Confirm the header review badge changes after passive idle review or manual review.
 2. Confirm the unknown surface appears in the review chips or underline targets.
 3. Click one underlined unknown reference in the editor.
 
 Expected:
 
-- The review banner reflects the imported unknown reference count.
+- The header badge reflects the current unresolved count.
+- Passive idle review should not show the large top review panel during normal drafting.
 - Clicking the underline opens the review popover.
 - The popover offers:
   - create record
@@ -149,6 +166,17 @@ Expected:
 - The ignored surface does not immediately return as a new unresolved unknown.
 - Ignore behavior is project-scoped, not just session-scoped.
 
+## H) Workspace Return Regression Check
+
+1. Open a later scene, not the first one in the project.
+2. Switch to `World Bible`.
+3. Return to `Writing Workspace`.
+
+Expected:
+
+- The previously selected scene is still active.
+- The workspace does not reset to scene one unless the prior scene was deleted.
+
 ## Failure Signals
 
 1. Imported scenes do not produce the expected deferred review banner.
@@ -189,7 +217,7 @@ Automated check on 2026-04-18:
 
 Manual smoke findings and fixes on 2026-04-23:
 
-- Pasting or typing new names into a normal scene does not currently trigger unknown-name review automatically. Known canon can highlight immediately because it is live text matching; unknown-name detection still requires strict save, import/deferred review, or manual Project Review until idle review cadence is implemented.
+- At that point in the branch, pasting or typing new names into a normal scene did not trigger unknown-name review automatically. Known canon could highlight immediately because it was live text matching; unknown-name detection still required strict save, import/deferred review, or manual Project Review until idle review cadence was implemented.
 - Manual `Run project review` is whole-project. Save-time strict review is selected-scene only for normal scenes. Imported/deferred scenes use a softer balanced path so import/save is not blocked by review cleanup.
 - UI copy was updated to make that distinction clearer:
   - Review drawer is now `Project Review`.
@@ -213,6 +241,23 @@ Manual smoke findings and fixes on 2026-04-23:
 - Additional manual verification completed:
   - `Always ignore` now clears only the targeted unknown surface instead of dropping all active-scene review underlines.
   - Project Review rail items and editor underlines now stay in sync for ignored terms.
+
+Idle-review follow-up added on 2026-05-09:
+
+- Normal workspace drafting now triggers a passive idle review after a short typing pause for changed scenes.
+- Expected behavior changed:
+  - new unknown-name underlines can now appear without clicking `Run project review`
+  - the header review badge updates from idle review
+  - the large review panel above the editor should stay hidden for passive idle-review results and only appear for blocking strict-save cases
+- Additional regression fixed on 2026-05-09:
+  - returning from `World Bible` no longer resets scene selection to the first scene
+  - active-scene review refresh after canon changes now covers normal scenes as well as deferred-review scenes, preventing stale unknowns from masking known full names or aliases
+- Canonicalization follow-up to retest:
+  - create `Kael` in one scene
+  - create `Kaelor` in another scene
+  - merge `Kaelor` into `Kael` from `Characters`
+  - return to the second scene
+  - confirm `Kaelor` becomes a lore highlight, the review underline disappears, and unrelated unknowns such as `Blatnor` remain counted
 
 Current disposition:
 

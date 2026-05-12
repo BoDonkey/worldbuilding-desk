@@ -1,4 +1,5 @@
 import type {
+  CanonicalFact,
   Character,
   WorldEntity,
   WritingDocument
@@ -31,6 +32,7 @@ interface Assertion {
   sourceType: 'scene' | 'world' | 'character';
   sourceId: string;
   sourceTitle: string;
+  sourceDetail?: string;
   sceneId?: string;
 }
 
@@ -45,6 +47,7 @@ interface ContradictionInput {
   documents: WritingDocument[];
   entities: WorldEntity[];
   characters: Character[];
+  canonicalFacts: CanonicalFact[];
   knownEntities: KnownEntityRef[];
 }
 
@@ -126,6 +129,7 @@ const extractAssertions = (
 const buildCanonAssertions = (
   entities: WorldEntity[],
   characters: Character[],
+  canonicalFacts: CanonicalFact[],
   lookup: Map<string, string>
 ): Assertion[] => {
   const assertions: Assertion[] = [];
@@ -163,6 +167,43 @@ const buildCanonAssertions = (
     );
   });
 
+  canonicalFacts.forEach((fact) => {
+    const knownTargetName = fact.targetName?.trim();
+    const targetName =
+      knownTargetName ||
+      (fact.targetType === 'character'
+        ? characters.find((character) => character.id === fact.targetId)?.name
+        : entities.find((entity) => entity.id === fact.targetId)?.name) ||
+      '';
+    const subjectNormalized = normalizePhrase(targetName);
+    const entityId = lookup.get(subjectNormalized);
+    if (!entityId) {
+      return;
+    }
+
+    const value =
+      typeof fact.value === 'string'
+        ? fact.value
+        : fact.value.value || `${fact.value.label} ${fact.value.value}`;
+    const descriptor = normalizeDescriptor(value);
+    if (!descriptor) {
+      return;
+    }
+
+    assertions.push({
+      entityId,
+      descriptor,
+      negative: false,
+      phrase: `${targetName} is ${value}`.trim(),
+      sourceType: fact.targetType === 'character' ? 'character' : 'world',
+      sourceId: fact.id,
+      sourceTitle: targetName || fact.targetId,
+      sourceDetail: fact.sourceLoreDocumentTitle
+        ? `accepted lore fact from "${fact.sourceLoreDocumentTitle}"`
+        : 'accepted lore fact'
+    });
+  });
+
   return assertions;
 };
 
@@ -184,10 +225,16 @@ export const findCanonContradictions = ({
   documents,
   entities,
   characters,
+  canonicalFacts,
   knownEntities
 }: ContradictionInput): SceneConflictItem[] => {
   const {byNormalizedName, byId} = buildEntityLookup(knownEntities);
-  const canonAssertions = buildCanonAssertions(entities, characters, byNormalizedName);
+  const canonAssertions = buildCanonAssertions(
+    entities,
+    characters,
+    canonicalFacts,
+    byNormalizedName
+  );
   const sceneAssertions = buildSceneAssertions(documents, byNormalizedName);
 
   const canonByEntityDescriptor = new Map<string, Assertion[]>();
@@ -221,9 +268,10 @@ export const findCanonContradictions = ({
     const sceneClaim = `'${sceneAssertion.phrase}'`;
     const canonClaim = `'${contradiction.phrase}'`;
     const canonSource =
-      contradiction.sourceType === 'world'
+      contradiction.sourceDetail ??
+      (contradiction.sourceType === 'world'
         ? `World Bible entry "${contradiction.sourceTitle}"`
-        : `Character record "${contradiction.sourceTitle}"`;
+        : `Character record "${contradiction.sourceTitle}"`);
 
     items.push({
       id: `conflict:${dedupeKey}`,

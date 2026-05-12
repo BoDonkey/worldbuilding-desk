@@ -1,5 +1,12 @@
 import type {
+  CanonDecisionCluster,
+  CanonDecisionSuppression,
+  CanonicalFact,
   EntityCategory,
+  LoreDocument,
+  LoreDocumentLink,
+  LoreEntityProposal,
+  LoreFactProposal,
   Project,
   ProjectSettings,
   ScratchpadDocument,
@@ -13,12 +20,19 @@ import {
   CORKBOARD_CHAPTER_CARD_STORE_NAME,
   CHARACTER_SHEET_STORE_NAME,
   CHARACTER_STORE_NAME,
+  CANONICAL_FACT_STORE_NAME,
+  CANON_DECISION_CLUSTER_STORE_NAME,
+  CANON_DECISION_SUPPRESSION_STORE_NAME,
   COMPENDIUM_ACTION_LOG_STORE_NAME,
   COMPENDIUM_ENTRY_STORE_NAME,
   COMPENDIUM_MILESTONE_STORE_NAME,
   COMPENDIUM_PROGRESS_STORE_NAME,
   COMPENDIUM_RECIPE_STORE_NAME,
   ENTITY_STORE_NAME,
+  LORE_DOCUMENT_LINK_STORE_NAME,
+  LORE_DOCUMENT_STORE_NAME,
+  LORE_ENTITY_PROPOSAL_STORE_NAME,
+  LORE_FACT_PROPOSAL_STORE_NAME,
   SCRATCHPAD_STORE_NAME,
   SETTINGS_STORE_NAME,
   STATE_MUTATION_EVENT_STORE_NAME,
@@ -96,6 +110,20 @@ function ensureProjectSnapshot(value: unknown): ProjectSnapshot {
   snapshot.counts.scratchpads ??= snapshot.data.scratchpads.length;
   snapshot.data.corkboardChapterCards ??= [];
   snapshot.counts.corkboardChapterCards ??= snapshot.data.corkboardChapterCards.length;
+  snapshot.data.loreDocuments ??= [];
+  snapshot.counts.loreDocuments ??= snapshot.data.loreDocuments.length;
+  snapshot.data.loreDocumentLinks ??= [];
+  snapshot.counts.loreDocumentLinks ??= snapshot.data.loreDocumentLinks.length;
+  snapshot.data.loreEntityProposals ??= [];
+  snapshot.counts.loreEntityProposals ??= snapshot.data.loreEntityProposals.length;
+  snapshot.data.loreFactProposals ??= [];
+  snapshot.counts.loreFactProposals ??= snapshot.data.loreFactProposals.length;
+  snapshot.data.canonicalFacts ??= [];
+  snapshot.counts.canonicalFacts ??= snapshot.data.canonicalFacts.length;
+  snapshot.data.canonDecisionClusters ??= [];
+  snapshot.counts.canonDecisionClusters ??= snapshot.data.canonDecisionClusters.length;
+  snapshot.data.canonDecisionSuppressions ??= [];
+  snapshot.counts.canonDecisionSuppressions ??= snapshot.data.canonDecisionSuppressions.length;
   snapshot.data.stateMutationEvents ??= [];
   snapshot.counts.stateMutationEvents ??= snapshot.data.stateMutationEvents.length;
   return snapshot as ProjectSnapshot;
@@ -165,6 +193,13 @@ async function saveProjectScopedRecords(params: {
       CORKBOARD_CHAPTER_CARD_STORE_NAME,
       CHARACTER_STORE_NAME,
       CHARACTER_SHEET_STORE_NAME,
+      LORE_DOCUMENT_STORE_NAME,
+      LORE_DOCUMENT_LINK_STORE_NAME,
+      LORE_ENTITY_PROPOSAL_STORE_NAME,
+      LORE_FACT_PROPOSAL_STORE_NAME,
+      CANONICAL_FACT_STORE_NAME,
+      CANON_DECISION_CLUSTER_STORE_NAME,
+      CANON_DECISION_SUPPRESSION_STORE_NAME,
       COMPENDIUM_ENTRY_STORE_NAME,
       COMPENDIUM_MILESTONE_STORE_NAME,
       COMPENDIUM_RECIPE_STORE_NAME,
@@ -222,6 +257,49 @@ async function saveProjectScopedRecords(params: {
   await putMany(
     CHARACTER_SHEET_STORE_NAME,
     rewriteProjectScoped(params.data.characterSheets, params.projectId)
+  );
+  await putMany(
+    LORE_DOCUMENT_STORE_NAME,
+    rewriteProjectScoped<LoreDocument>(params.data.loreDocuments ?? [], params.projectId)
+  );
+  await putMany(
+    LORE_DOCUMENT_LINK_STORE_NAME,
+    rewriteProjectScoped<LoreDocumentLink>(
+      params.data.loreDocumentLinks ?? [],
+      params.projectId
+    )
+  );
+  await putMany(
+    LORE_ENTITY_PROPOSAL_STORE_NAME,
+    rewriteProjectScoped<LoreEntityProposal>(
+      params.data.loreEntityProposals ?? [],
+      params.projectId
+    )
+  );
+  await putMany(
+    LORE_FACT_PROPOSAL_STORE_NAME,
+    rewriteProjectScoped<LoreFactProposal>(
+      params.data.loreFactProposals ?? [],
+      params.projectId
+    )
+  );
+  await putMany(
+    CANONICAL_FACT_STORE_NAME,
+    rewriteProjectScoped<CanonicalFact>(params.data.canonicalFacts ?? [], params.projectId)
+  );
+  await putMany(
+    CANON_DECISION_CLUSTER_STORE_NAME,
+    rewriteProjectScoped<CanonDecisionCluster>(
+      params.data.canonDecisionClusters ?? [],
+      params.projectId
+    )
+  );
+  await putMany(
+    CANON_DECISION_SUPPRESSION_STORE_NAME,
+    rewriteProjectScoped<CanonDecisionSuppression>(
+      params.data.canonDecisionSuppressions ?? [],
+      params.projectId
+    )
   );
   await putMany(
     COMPENDIUM_ENTRY_STORE_NAME,

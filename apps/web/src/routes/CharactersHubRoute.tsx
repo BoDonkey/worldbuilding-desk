@@ -307,6 +307,8 @@ function CharactersHubRoute() {
         <CharactersRoute
           key={`roster-${dataVersion}`}
           embedded
+          prefillCharacterId={pendingCharacterId}
+          onPrefillConsumed={() => setPendingCharacterId(null)}
           onOpenSheets={(characterId, options) => {
             if (!hasRuleset) {
               return;

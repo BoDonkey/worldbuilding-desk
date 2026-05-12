@@ -1,12 +1,19 @@
 import type {
+  CanonDecisionCluster,
+  CanonDecisionSuppression,
   ChapterCard,
   Character,
   CharacterSheet,
+  CanonicalFact,
   CompendiumActionLog,
   CompendiumEntry,
   CompendiumMilestone,
   CompendiumProgress,
   EntityCategory,
+  LoreDocument,
+  LoreDocumentLink,
+  LoreEntityProposal,
+  LoreFactProposal,
   Project,
   ProjectSettings,
   StateMutationEvent,
@@ -31,7 +38,14 @@ import {
   COMPENDIUM_MILESTONE_STORE_NAME,
   COMPENDIUM_PROGRESS_STORE_NAME,
   COMPENDIUM_RECIPE_STORE_NAME,
+  CANONICAL_FACT_STORE_NAME,
+  CANON_DECISION_CLUSTER_STORE_NAME,
+  CANON_DECISION_SUPPRESSION_STORE_NAME,
   ENTITY_STORE_NAME,
+  LORE_DOCUMENT_LINK_STORE_NAME,
+  LORE_DOCUMENT_STORE_NAME,
+  LORE_ENTITY_PROPOSAL_STORE_NAME,
+  LORE_FACT_PROPOSAL_STORE_NAME,
   SETTINGS_STORE_NAME,
   SETTLEMENT_MODULE_STORE_NAME,
   SETTLEMENT_STATE_STORE_NAME,
@@ -59,6 +73,13 @@ export interface ProjectSnapshot {
     corkboardChapterCards: ChapterCard[];
     characters: Character[];
     characterSheets: CharacterSheet[];
+    loreDocuments: LoreDocument[];
+    loreDocumentLinks: LoreDocumentLink[];
+    loreEntityProposals: LoreEntityProposal[];
+    loreFactProposals: LoreFactProposal[];
+    canonicalFacts: CanonicalFact[];
+    canonDecisionClusters: CanonDecisionCluster[];
+    canonDecisionSuppressions: CanonDecisionSuppression[];
     compendiumEntries: CompendiumEntry[];
     compendiumMilestones: CompendiumMilestone[];
     compendiumRecipes: UnlockableRecipe[];
@@ -78,6 +99,13 @@ export interface ProjectSnapshot {
     corkboardChapterCards: number;
     characters: number;
     characterSheets: number;
+    loreDocuments: number;
+    loreDocumentLinks: number;
+    loreEntityProposals: number;
+    loreFactProposals: number;
+    canonicalFacts: number;
+    canonDecisionClusters: number;
+    canonDecisionSuppressions: number;
     compendiumEntries: number;
     compendiumMilestones: number;
     compendiumRecipes: number;
@@ -132,6 +160,13 @@ export async function buildProjectSnapshot(projectId: string): Promise<ProjectSn
     corkboardChapterCards,
     characters,
     characterSheets,
+    loreDocuments,
+    loreDocumentLinks,
+    loreEntityProposals,
+    loreFactProposals,
+    canonicalFacts,
+    canonDecisionClusters,
+    canonDecisionSuppressions,
     compendiumEntries,
     compendiumMilestones,
     compendiumRecipes,
@@ -152,6 +187,16 @@ export async function buildProjectSnapshot(projectId: string): Promise<ProjectSn
     getProjectScopedRecords<ChapterCard>(CORKBOARD_CHAPTER_CARD_STORE_NAME, projectId),
     getProjectScopedRecords<Character>(CHARACTER_STORE_NAME, projectId),
     getProjectScopedRecords<CharacterSheet>(CHARACTER_SHEET_STORE_NAME, projectId),
+    getProjectScopedRecords<LoreDocument>(LORE_DOCUMENT_STORE_NAME, projectId),
+    getProjectScopedRecords<LoreDocumentLink>(LORE_DOCUMENT_LINK_STORE_NAME, projectId),
+    getProjectScopedRecords<LoreEntityProposal>(LORE_ENTITY_PROPOSAL_STORE_NAME, projectId),
+    getProjectScopedRecords<LoreFactProposal>(LORE_FACT_PROPOSAL_STORE_NAME, projectId),
+    getProjectScopedRecords<CanonicalFact>(CANONICAL_FACT_STORE_NAME, projectId),
+    getProjectScopedRecords<CanonDecisionCluster>(CANON_DECISION_CLUSTER_STORE_NAME, projectId),
+    getProjectScopedRecords<CanonDecisionSuppression>(
+      CANON_DECISION_SUPPRESSION_STORE_NAME,
+      projectId
+    ),
     getProjectScopedRecords<CompendiumEntry>(COMPENDIUM_ENTRY_STORE_NAME, projectId),
     getProjectScopedRecords<CompendiumMilestone>(
       COMPENDIUM_MILESTONE_STORE_NAME,
@@ -196,6 +241,13 @@ export async function buildProjectSnapshot(projectId: string): Promise<ProjectSn
       corkboardChapterCards,
       characters,
       characterSheets,
+      loreDocuments,
+      loreDocumentLinks,
+      loreEntityProposals,
+      loreFactProposals,
+      canonicalFacts,
+      canonDecisionClusters,
+      canonDecisionSuppressions,
       compendiumEntries,
       compendiumMilestones,
       compendiumRecipes,
@@ -215,6 +267,13 @@ export async function buildProjectSnapshot(projectId: string): Promise<ProjectSn
       corkboardChapterCards: corkboardChapterCards.length,
       characters: characters.length,
       characterSheets: characterSheets.length,
+      loreDocuments: loreDocuments.length,
+      loreDocumentLinks: loreDocumentLinks.length,
+      loreEntityProposals: loreEntityProposals.length,
+      loreFactProposals: loreFactProposals.length,
+      canonicalFacts: canonicalFacts.length,
+      canonDecisionClusters: canonDecisionClusters.length,
+      canonDecisionSuppressions: canonDecisionSuppressions.length,
       compendiumEntries: compendiumEntries.length,
       compendiumMilestones: compendiumMilestones.length,
       compendiumRecipes: compendiumRecipes.length,
@@ -246,6 +305,13 @@ export function validateSnapshotCounts(snapshot: ProjectSnapshot): SnapshotCount
     corkboardChapterCards: snapshot.data.corkboardChapterCards.length,
     characters: snapshot.data.characters.length,
     characterSheets: snapshot.data.characterSheets.length,
+    loreDocuments: snapshot.data.loreDocuments.length,
+    loreDocumentLinks: snapshot.data.loreDocumentLinks.length,
+    loreEntityProposals: snapshot.data.loreEntityProposals.length,
+    loreFactProposals: snapshot.data.loreFactProposals.length,
+    canonicalFacts: snapshot.data.canonicalFacts.length,
+    canonDecisionClusters: snapshot.data.canonDecisionClusters.length,
+    canonDecisionSuppressions: snapshot.data.canonDecisionSuppressions.length,
     compendiumEntries: snapshot.data.compendiumEntries.length,
     compendiumMilestones: snapshot.data.compendiumMilestones.length,
     compendiumRecipes: snapshot.data.compendiumRecipes.length,

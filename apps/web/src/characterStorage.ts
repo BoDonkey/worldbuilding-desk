@@ -1,6 +1,11 @@
 import type { Character } from './entityTypes';
 import { openDb, CHARACTER_STORE_NAME } from './db';
 
+function emitCharacterRecordsChanged(): void {
+  if (typeof window === 'undefined') return;
+  window.dispatchEvent(new CustomEvent('wbd:character-records-changed'));
+}
+
 export async function getCharactersByProject(projectId: string): Promise<Character[]> {
   const db = await openDb();
 
@@ -29,6 +34,7 @@ export async function saveCharacter(character: Character): Promise<void> {
     const request = store.put(character);
 
     request.onsuccess = () => {
+      emitCharacterRecordsChanged();
       resolve();
     };
 
@@ -47,6 +53,7 @@ export async function deleteCharacter(id: string): Promise<void> {
     const request = store.delete(id);
 
     request.onsuccess = () => {
+      emitCharacterRecordsChanged();
       resolve();
     };
 

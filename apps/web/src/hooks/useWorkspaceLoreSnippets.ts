@@ -1,5 +1,6 @@
 import {useMemo} from 'react';
 import type {
+  CanonicalFact,
   Character,
   CharacterSheet,
   EntityCategory,
@@ -25,6 +26,7 @@ interface UseWorkspaceLoreSnippetsParams {
   characters: Character[];
   characterSheets: CharacterSheet[];
   entities: WorldEntity[];
+  canonicalFacts: CanonicalFact[];
   aliases: ConsistencyAlias[];
   systemHistoryEntries: SystemHistoryEntry[];
   resolveCharacterBlock: (sheet: CharacterSheet, style: StatBlockStyle) => string;
@@ -37,6 +39,7 @@ export function useWorkspaceLoreSnippets({
   characters,
   characterSheets,
   entities,
+  canonicalFacts,
   aliases,
   systemHistoryEntries,
   resolveCharacterBlock,
@@ -63,6 +66,24 @@ export function useWorkspaceLoreSnippets({
         .map((sheet) => [sheet.characterId, sheet])
     );
     const entityById = new Map(entities.map((entity) => [entity.id, entity]));
+    const canonicalFactsByTarget = new Map<string, CanonicalFact[]>();
+    canonicalFacts.forEach((fact) => {
+      const key = `${fact.targetType}:${fact.targetId}`;
+      const current = canonicalFactsByTarget.get(key) ?? [];
+      current.push(fact);
+      canonicalFactsByTarget.set(key, current);
+    });
+
+    const factSummaryLines = (targetType: 'character' | 'entity', targetId: string): string[] =>
+      (canonicalFactsByTarget.get(`${targetType}:${targetId}`) ?? [])
+        .slice(0, 4)
+        .map((fact) => {
+          const value =
+            typeof fact.value === 'string'
+              ? fact.value
+              : `${fact.value.label}: ${fact.value.value}`;
+          return `${fact.factType.replace(/_/g, ' ')}: ${value}`;
+        });
 
     const recentSystemMessageFor = (name: string): string => {
       const normalized = name.trim().toLowerCase();
@@ -71,6 +92,14 @@ export function useWorkspaceLoreSnippets({
       );
       return match?.message ?? 'No recent linked system event.';
     };
+
+    const escapeHtml = (value: string): string =>
+      value
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
 
     const buildCharacterLore = (sheet: CharacterSheet): LoreInspectorRecord => {
       const character = sheet.characterId ? characterById.get(sheet.characterId) : null;
@@ -114,12 +143,73 @@ export function useWorkspaceLoreSnippets({
       };
     };
 
+    const buildCharacterLoreFromCharacter = (character: Character): LoreInspectorRecord => {
+      const role =
+        typeof character.fields.role === 'string' && character.fields.role.trim()
+          ? character.fields.role.trim()
+          : 'Role not set';
+      const age =
+        typeof character.fields.age === 'string' && character.fields.age.trim()
+          ? character.fields.age.trim()
+          : 'Age not set';
+      const notes =
+        typeof character.fields.notes === 'string' && character.fields.notes.trim()
+          ? character.fields.notes.trim()
+          : 'No notes captured yet.';
+      const canonicalLines = factSummaryLines('character', character.id);
+      const cached = getCachedSynopsis(activeProject.id, character.id, character.updatedAt);
+      const synopsis =
+        cached ??
+        {
+          goal:
+            (typeof character.fields.goal === 'string' && character.fields.goal.trim()) ||
+            'No explicit active goal recorded.',
+          recentEvent: recentSystemMessageFor(character.name),
+          motivation:
+            (typeof character.fields.motivation === 'string' &&
+              character.fields.motivation.trim()) ||
+            character.description?.trim() ||
+            canonicalLines[0] ||
+            notes
+        };
+      if (!cached) {
+        setCachedSynopsis(activeProject.id, character.id, character.updatedAt, synopsis);
+      }
+      return {
+        type: 'character',
+        id: character.id,
+        name: character.name,
+        vitalSigns: [role, `Age: ${age}`, ...canonicalLines.slice(0, 2)],
+        synopsis
+      };
+    };
+
+    const buildCharacterSnippetFromCharacter = (character: Character): string => {
+      const lines = [
+        `<p><strong>${escapeHtml(character.name)}</strong></p>`
+      ];
+      if (character.description?.trim()) {
+        lines.push(`<p>${escapeHtml(character.description.trim())}</p>`);
+      }
+      if (typeof character.fields.role === 'string' && character.fields.role.trim()) {
+        lines.push(`<p><strong>Role:</strong> ${escapeHtml(character.fields.role.trim())}</p>`);
+      }
+      if (typeof character.fields.notes === 'string' && character.fields.notes.trim()) {
+        lines.push(`<p>${escapeHtml(character.fields.notes.trim())}</p>`);
+      }
+      factSummaryLines('character', character.id).forEach((line) => {
+        lines.push(`<p><strong>Canon:</strong> ${escapeHtml(line)}</p>`);
+      });
+      return lines.join('');
+    };
+
     const buildEntityLore = (entity: WorldEntity): LoreInspectorRecord => {
       const categoryName = categoryNameById.get(entity.categoryId) ?? 'Entity';
       const status =
         typeof entity.fields.status === 'string' && entity.fields.status.trim()
           ? entity.fields.status.trim()
           : 'State unknown';
+      const canonicalLines = factSummaryLines('entity', entity.id);
       const cached = getCachedSynopsis(activeProject.id, entity.id, entity.updatedAt);
       const synopsis =
         cached ??
@@ -132,6 +222,7 @@ export function useWorkspaceLoreSnippets({
             (typeof entity.fields.motivation === 'string' &&
               entity.fields.motivation.trim()) ||
             (typeof entity.fields.notes === 'string' && entity.fields.notes.trim()) ||
+            canonicalLines[0] ||
             'No motivation/secret recorded.'
         };
       if (!cached) {
@@ -141,13 +232,15 @@ export function useWorkspaceLoreSnippets({
         type: 'entity',
         id: entity.id,
         name: entity.name,
-        vitalSigns: [categoryName, status],
+        vitalSigns: [categoryName, status, ...canonicalLines.slice(0, 2)],
         synopsis
       };
     };
 
     const characterEntries: Array<[string, SnippetEntry]> = [];
     const entityEntries: Array<[string, SnippetEntry]> = [];
+    const explicitCharacterKeys = new Set<string>();
+    const explicitEntityKeys = new Set<string>();
     const surnameCandidates = new Map<
       string,
       Array<{bucket: 'characters' | 'entities'; entry: SnippetEntry}>
@@ -166,8 +259,10 @@ export function useWorkspaceLoreSnippets({
       };
       if (bucket === 'characters') {
         characterEntries.push([key, indexedEntry]);
+        explicitCharacterKeys.add(key);
       } else {
         entityEntries.push([key, indexedEntry]);
+        explicitEntityKeys.add(key);
       }
 
       const tokens = label.trim().split(/\s+/).filter(Boolean);
@@ -188,6 +283,18 @@ export function useWorkspaceLoreSnippets({
       registerEntry('characters', sheet.name, entry);
     });
 
+    characters.forEach((character) => {
+      if (characterSheetByCharacterId.has(character.id)) {
+        return;
+      }
+      const entry = {
+        name: character.name,
+        html: buildCharacterSnippetFromCharacter(character),
+        lore: buildCharacterLoreFromCharacter(character)
+      };
+      registerEntry('characters', character.name, entry);
+    });
+
     entities.forEach((entity) => {
       const entry = {
         name: entity.name,
@@ -200,12 +307,19 @@ export function useWorkspaceLoreSnippets({
     aliases.forEach((alias) => {
       if (alias.targetType === 'character') {
         const sheet = characterSheetByCharacterId.get(alias.targetId);
-        if (!sheet) return;
-        const entry = {
-          name: sheet.name,
-          html: resolveCharacterBlock(sheet, 'compact'),
-          lore: buildCharacterLore(sheet)
-        };
+        const character = characterById.get(alias.targetId);
+        if (!sheet && !character) return;
+        const entry = sheet
+          ? {
+              name: sheet.name,
+              html: resolveCharacterBlock(sheet, 'compact'),
+              lore: buildCharacterLore(sheet)
+            }
+          : {
+              name: character!.name,
+              html: buildCharacterSnippetFromCharacter(character!),
+              lore: buildCharacterLoreFromCharacter(character!)
+            };
         registerEntry('characters', alias.alias, entry);
         return;
       }
@@ -224,8 +338,14 @@ export function useWorkspaceLoreSnippets({
       const [match] = matches;
       if (!match) return;
       if (match.bucket === 'characters') {
+        if (explicitCharacterKeys.has(trailing)) {
+          return;
+        }
         characterEntries.push([trailing, match.entry]);
       } else {
+        if (explicitEntityKeys.has(trailing)) {
+          return;
+        }
         entityEntries.push([trailing, match.entry]);
       }
     });
@@ -236,6 +356,7 @@ export function useWorkspaceLoreSnippets({
     };
   }, [
     activeProject,
+    canonicalFacts,
     aliases,
     categories,
     characters,

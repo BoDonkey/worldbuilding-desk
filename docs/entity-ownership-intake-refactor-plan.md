@@ -37,6 +37,95 @@ Recommended next-chat starting point:
 - treat the remaining work as UX validation and targeted cleanup
 - start from current dogfood observations, not from older assumptions about the intake architecture
 
+## Dogfood findings added May 2, 2026
+
+Recent author testing exposed a few concrete follow-up gaps:
+
+- World Bible location records do not seem to need heavyweight review cards; lightweight `New` / `Needs completion` / alias badges are likely enough
+- the app still lacks a clean path to promote a fuller character name into the canonical base name while preserving the earlier short form as an alias
+- consistency can notice some wrong-name problems, but it does not yet reason well about `unexpected scene presence` versus a legitimate mention of an established canon character
+- chapter editing still lacks a direct find/replace workflow, which makes fixing consistency slips slower than it should be
+- more broadly, World Bible lore handling likely needs a rethink so canon facts, scene references, aliases, and author cleanup do not all collapse into one overloaded record-management surface
+
+Implication:
+
+- the next pass should not just keep adding queue affordances; it should simplify World Bible review burden and separate `canon storage` from `author cleanup workflow` more deliberately
+
+## Longform lore direction added May 2, 2026
+
+Another important dogfood takeaway:
+
+- the current World Bible still behaves too much like a structured database with a few short fields
+- that is not a good fit for authors who think in longform character dossiers, item histories, regional history, myths, timelines, and exploratory world notes
+- adding more short fields is probably the wrong answer
+
+What the product likely needs instead:
+
+- lightweight canon records for operational facts:
+  - name
+  - aliases
+  - category / type
+  - key facts
+  - links
+  - mechanics attachments when relevant
+- separate longform lore documents for deep writing:
+  - character backstories
+  - item provenance
+  - place history
+  - faction notes
+  - myths and religions
+  - historical eras and timelines
+  - AI-assisted rubber-ducking sessions that get refined into canon
+
+This suggests a better model:
+
+- `WorldEntity` should be an anchor, not the container for all lore
+- a canon record can link to one or more lore documents
+- the author should be able to move fluidly between:
+  - structured canon facts
+  - longform prose notes
+  - scene references
+  - AI-assisted expansion / refinement
+
+Example:
+
+- one character record might link to:
+  - `Character dossier`
+  - `Childhood and family history`
+  - `Detective career timeline`
+  - `House Moreland notes`
+
+Likewise the world itself may need first-class lore documents that are not forced into one entity row:
+
+- `World history`
+- `The age before the empire`
+- `Religions and myths`
+- `Trade routes and cities`
+- `Magic theory`
+
+## Companion-book possibility
+
+Dogfood also surfaced a higher-level publishing opportunity:
+
+- deep worldbuilding material should eventually be extractable into a `World of XXX` style companion novel / lore book
+
+That only works well if the app stores rich narrative source material, not just sparse field values.
+
+Product implication:
+
+- the app should eventually support compiling selected lore documents and canon records into export-ready longform artifacts
+- that export path could become:
+  - companion book drafts
+  - setting guides
+  - character dossiers
+  - in-universe reference books
+
+Recommended design stance:
+
+- do not keep stretching the current World Bible form model
+- move toward `canon records + longform lore docs + AI conversation-to-canon workflow`
+- treat this as a distinct product direction, not just another World Bible form enhancement
+
 ## Why this refactor is necessary
 
 Dogfooding exposed a real product-model problem:
@@ -212,6 +301,14 @@ After adding a character from workspace:
 
 The author should not have to discover `Character Sheets` via navigation after intake.
 
+### World Bible review treatment
+
+Dogfood suggests the review model should be lighter for at least some canon types:
+
+- location records should generally rely on inline badges/state instead of a heavyweight review-card queue
+- queue-like review should be reserved for cases where an author actually needs a focused cleanup workflow, not for every fresh lore record
+- alias follow-up may still matter, but it should not force location canon into the same review experience as higher-touch character cleanup
+
 ### World Bible entity actions
 
 Keep `Add mechanics`, but rename/reframe the current compendium action:
@@ -239,6 +336,35 @@ Make this the obvious home for:
 - scene-derived state mutation history
 
 If the project mode is `general`, this surface can stay hidden or reduced unless the user explicitly enables game systems.
+
+### Canonical rename and alias promotion
+
+The app needs a first-class cleanup path for authoring reality:
+
+- if a character first appears as `Harlow` or `Moreland` and later the author settles on `Detective Harlow Moreland`, the canonical record should be able to adopt the fuller name
+- the prior shorter form should automatically remain as an alias
+- scene/lore matching should refresh so both names continue to resolve without duplicate-record cleanup
+
+This is not just alias editing. It is a canonical rename flow with alias preservation.
+
+### Lore handling rethink
+
+The current World Bible is carrying too many jobs at once:
+
+- canon authoring
+- review cleanup
+- alias administration
+- duplicate resolution
+- scene-derived follow-up
+
+The next UX rethink should evaluate whether lore handling should separate:
+
+- stable canon records
+- scene review inbox / cleanup tasks
+- name resolution and alias management
+- contextual scene presence warnings
+
+That separation may matter more than additional queue controls.
 
 ## Implementation plan
 
@@ -427,6 +553,8 @@ Avoid the higher-risk path in this pass.
 3. Slice 4: compendium as mechanics attachment
 4. Slice 5: stat/resource discoverability
 5. Slice 2: stronger intake classification
+6. World Bible follow-up:
+   canonical rename with alias preservation, lighter location review treatment, and a broader lore-handling rethink
 
 This order intentionally fixes the lived user pain first before improving classification sophistication.
 

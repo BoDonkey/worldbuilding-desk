@@ -1,7 +1,10 @@
 import {create} from 'zustand';
 import {persist, createJSONStorage} from 'zustand/middleware';
 import type {Project, ProjectSettings} from '../entityTypes';
-import {getOrCreateSettings} from '../settingsStorage';
+import {
+  getOrCreateSettings,
+  saveProjectSettings as persistProjectSettings
+} from '../settingsStorage';
 
 interface AppState {
   activeProject: Project | null;
@@ -10,6 +13,8 @@ interface AppState {
 
   setActiveProject: (project: Project | null) => Promise<void>;
   setProjectSettings: (settings: ProjectSettings | null) => void;
+  loadProjectSettings: (projectId: string) => Promise<ProjectSettings>;
+  saveProjectSettings: (settings: ProjectSettings) => Promise<ProjectSettings>;
   setRailCollapsed: (collapsed: boolean) => void;
 }
 
@@ -29,6 +34,24 @@ export const useAppStore = create<AppState>()(
       },
 
       setProjectSettings: (settings) => set({projectSettings: settings}),
+
+      loadProjectSettings: async (projectId) => {
+        const settings = await getOrCreateSettings(projectId);
+        set((state) =>
+          state.activeProject?.id === projectId ? {projectSettings: settings} : {}
+        );
+        return settings;
+      },
+
+      saveProjectSettings: async (settings) => {
+        await persistProjectSettings(settings);
+        set((state) =>
+          state.activeProject?.id === settings.projectId
+            ? {projectSettings: settings}
+            : {}
+        );
+        return settings;
+      },
 
       setRailCollapsed: (collapsed) => set({isRailCollapsed: collapsed}),
     }),

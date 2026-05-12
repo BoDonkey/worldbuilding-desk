@@ -393,7 +393,7 @@ function WorkspaceRoute() {
     editorConfig,
     toolbarButtons,
     projectSettings,
-    setProjectSettings,
+    saveProjectSettings,
     entities,
     setEntities,
     categories,
@@ -411,6 +411,7 @@ function WorkspaceRoute() {
     canonState,
     setCanonState,
     stateMutationEvents,
+    canonicalFacts,
     statBlockSourceType,
     setStatBlockSourceType,
     statBlockStyle,
@@ -496,6 +497,7 @@ function WorkspaceRoute() {
     setConsistencyPopover,
     persistDoc,
     refreshDeferredReview,
+    refreshActiveDraftReview,
     handleRunConsistencyReview,
     unknownGuardrailIssues,
     hasBlockingUnknownGuardrailIssues,
@@ -533,12 +535,13 @@ function WorkspaceRoute() {
     setAliases,
     characters,
     setCharacters,
+    canonicalFacts,
     characterSheets,
     ruleset,
     stateMutationEvents,
     selectedDocumentId: selectedId,
     projectSettings,
-    setProjectSettings,
+    saveProjectSettings,
     resolvedActionCues,
     worldEngine,
     ragService,
@@ -590,13 +593,14 @@ function WorkspaceRoute() {
     navigate('/world-bible');
   }, [navigate, resolverNotice]);
   const resolverNoticePrimaryLabel =
-    resolverNotice?.destination === 'character-sheet-create'
+    resolverNotice?.primaryLabel ??
+    (resolverNotice?.destination === 'character-sheet-create'
       ? 'Create Character Sheet'
       : resolverNotice?.destination === 'character-sheets'
       ? 'Open Character Sheet'
       : resolverNotice?.destination === 'characters'
         ? 'Open Character'
-        : 'View in World Bible';
+        : 'View in World Bible');
   persistDocRef.current = persistDoc;
   refreshDeferredReviewRef.current = refreshDeferredReview;
   setGuardrailIssuesRef.current = setGuardrailIssues as typeof setGuardrailIssuesRef.current;
@@ -659,7 +663,7 @@ function WorkspaceRoute() {
   } = useWorkspaceStatBlocks({
     activeProject,
     projectSettings,
-    setProjectSettings,
+    saveProjectSettings,
     isStatPreferencesHydrated,
     statBlockSourceType,
     setStatBlockSourceType,
@@ -1035,7 +1039,7 @@ function WorkspaceRoute() {
     unknownGuardrailIssues.length - visibleReviewSurfaces.length
   );
   const showReviewBanner =
-    unknownGuardrailIssues.length > 0 && !isReviewBannerDismissed;
+    hasBlockingUnknownGuardrailIssues && !isReviewBannerDismissed;
   const scratchpadStatusLabel =
     scratchpadStatus === 'loading'
       ? 'Loading scratchpad...'
@@ -1073,12 +1077,22 @@ function WorkspaceRoute() {
     activeSuggestedCategory
       ? `Add ${toSingularLabel(activeSuggestedCategory.name)}`
       : reviewCreateLabel;
+  const activeCloseCharacterMatches =
+    activeConsistencyPopoverIssue
+      ? (closeUnknownLinkOptions[activeConsistencyPopoverIssue.surface] ?? []).filter(
+          (entry) => entry.type === 'character'
+        )
+      : [];
+  const showCharacterCanonicalizationHint =
+    activeSuggestedCategory?.slug === 'characters' &&
+    activeCloseCharacterMatches.length > 0;
   const selectionQuickSnippets = useWorkspaceLoreSnippets({
     activeProject,
     categories,
     characters,
     characterSheets,
     entities,
+    canonicalFacts,
     aliases,
     systemHistoryEntries,
     resolveCharacterBlock,
@@ -1163,6 +1177,12 @@ function WorkspaceRoute() {
 
   const selectedDocumentRef = useRef(selectedDocument);
   selectedDocumentRef.current = selectedDocument;
+  const draftTitleRef = useRef(title);
+  draftTitleRef.current = title;
+  const draftContentRef = useRef(content);
+  draftContentRef.current = content;
+  const lastIdleReviewSignatureRef = useRef<string | null>(null);
+  const idleReviewDelayMs = 2500;
   const reviewRefreshSignature = useMemo(
     () =>
       [
@@ -1189,10 +1209,81 @@ function WorkspaceRoute() {
     if (!doc || doc.id !== selectedId) {
       return;
     }
-    void refreshDeferredReview(doc).catch((error) => {
+    const draftTitle = draftTitleRef.current.trim() || doc.title || 'Untitled scene';
+    const draftContent = draftContentRef.current;
+    const draftDoc =
+      draftTitle === doc.title && draftContent === doc.content
+        ? doc
+        : {
+            ...doc,
+            title: draftTitle,
+            content: draftContent,
+            updatedAt: Date.now()
+          };
+
+    const refresh =
+      draftDoc.consistencyReviewMode === 'deferred'
+        ? refreshDeferredReview(draftDoc)
+        : refreshActiveDraftReview(draftDoc);
+
+    void refresh.catch((error) => {
       console.warn('Active scene review refresh failed', error);
     });
-  }, [isReviewPrefsHydrated, refreshDeferredReview, reviewRefreshSignature, selectedId]);
+  }, [
+    isReviewPrefsHydrated,
+    refreshActiveDraftReview,
+    refreshDeferredReview,
+    reviewRefreshSignature,
+    selectedId
+  ]);
+
+  useEffect(() => {
+    if (!isReviewPrefsHydrated || !selectedId) {
+      return;
+    }
+    const persistedDoc = selectedDocumentRef.current;
+    if (!persistedDoc || persistedDoc.id !== selectedId) {
+      return;
+    }
+    if (persistedDoc.consistencyReviewMode === 'deferred') {
+      return;
+    }
+
+    const draftTitle = title.trim() || 'Untitled scene';
+    const hasDraftChanges =
+      persistedDoc.title !== draftTitle || persistedDoc.content !== content;
+    if (!hasDraftChanges) {
+      lastIdleReviewSignatureRef.current = null;
+      return;
+    }
+
+    const draftSignature = `${selectedId}:${draftTitle}:${content}`;
+    const timeoutId = window.setTimeout(() => {
+      if (lastIdleReviewSignatureRef.current === draftSignature) {
+        return;
+      }
+      lastIdleReviewSignatureRef.current = draftSignature;
+      void refreshActiveDraftReview({
+        ...persistedDoc,
+        title: draftTitle,
+        content,
+        updatedAt: Date.now()
+      }).catch((error) => {
+        lastIdleReviewSignatureRef.current = null;
+        console.warn('Idle draft review failed', error);
+      });
+    }, idleReviewDelayMs);
+
+    return () => {
+      clearTimeout(timeoutId);
+    };
+  }, [
+    content,
+    isReviewPrefsHydrated,
+    refreshActiveDraftReview,
+    selectedId,
+    title
+  ]);
 
   useEffect(() => {
     if (!showGameSystems && activeContextView === 'compendium') {
@@ -1763,6 +1854,9 @@ function WorkspaceRoute() {
                   focusQuery={focusQuery}
                   onChange={handleContentChange}
                   onWordCountChange={setWordCount}
+                  inlineHighlightsMode={
+                    projectSettings?.editorFeedback?.inlineHighlightsMode ?? 'visible'
+                  }
                   consistencyHighlights={highlightableUnknownIssues}
                   onConsistencyHighlightClick={(issueId, anchorRect) => {
                     const issue = highlightableUnknownIssues.find(
@@ -1868,6 +1962,14 @@ function WorkspaceRoute() {
                         Always ignore
                       </button>
                     </div>
+                    {showCharacterCanonicalizationHint && (
+                      <div className={styles.consistencyPopoverNote}>
+                        Possible existing character match:{' '}
+                        <strong>{activeCloseCharacterMatches[0]?.name}</strong>. Add this
+                        as a character, then use <strong>Review Character Match</strong> to
+                        decide whether "{activeWorldCaptureDraft}" should become an alias.
+                      </div>
+                    )}
                     {unknownLinkOptions[activeConsistencyPopoverIssue.surface]?.length ? (
                       <div className={styles.consistencyPopoverLinkRow}>
                         <select

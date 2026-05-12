@@ -15,6 +15,7 @@ import {
 import type {EditorConfig} from '../../config/editorConfig';
 import type {StatBlockTokenPresentation} from '../../utils/statBlockTemplates';
 import type {StatBlockPreviewData} from '../../hooks/useWorkspaceStatBlocks';
+import type {InlineHighlightsMode} from '../../entityTypes';
 import styles from '../../assets/components/AISettings.module.css';
 
 interface AIContextType {
@@ -66,6 +67,7 @@ interface EditorWithAIProps {
     draftText: string,
     anchorRect: {left: number; top: number; bottom: number}
   ) => void;
+  inlineHighlightsMode?: InlineHighlightsMode;
 }
 
 interface SelectionBubbleState {
@@ -100,7 +102,8 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
   onOpenAIContext,
   onOpenLoreInspector,
   onOpenWorldCapture,
-  characterStateHoverCardsByLoreId = {}
+  characterStateHoverCardsByLoreId = {},
+  inlineHighlightsMode = 'visible'
 }) => {
   const [textToInsertFromAI, setTextToInsertFromAI] = useState<string | null>(null);
   const [selectionBubble, setSelectionBubble] = useState<SelectionBubbleState | null>(
@@ -128,9 +131,16 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
     left: number;
     top: number;
   } | null>(null);
+  const [isActivelyTyping, setIsActivelyTyping] = useState(false);
   const editorRef = useRef<TipTapEditorInstance | null>(null);
   const consistencyHighlightsRef = useRef(consistencyHighlights);
   const loreHighlightsRef = useRef<LoreHighlightEntry[]>([]);
+  const typingIdleTimeoutRef = useRef<number | null>(null);
+
+  const effectiveInlineHighlightsMode =
+    inlineHighlightsMode === 'hidden-while-typing' && isActivelyTyping
+      ? 'hidden'
+      : inlineHighlightsMode;
 
   const loreHighlights = React.useMemo<LoreHighlightEntry[]>(() => {
     const characterEntries = Object.values(selectionQuickSnippets?.characters ?? {}).map(
@@ -210,6 +220,9 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
 
   useEffect(() => {
     return () => {
+      if (typingIdleTimeoutRef.current !== null) {
+        window.clearTimeout(typingIdleTimeoutRef.current);
+      }
       editorRef.current = null;
     };
   }, []);
@@ -415,6 +428,31 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
     editor.view.dispatch(editor.state.tr.scrollIntoView());
   }, [documentId, editorReadyToken, focusQuery]);
 
+  const handleTypingActivity = useCallback(() => {
+    if (inlineHighlightsMode !== 'hidden-while-typing') {
+      return;
+    }
+    setIsActivelyTyping(true);
+    if (typingIdleTimeoutRef.current !== null) {
+      window.clearTimeout(typingIdleTimeoutRef.current);
+    }
+    typingIdleTimeoutRef.current = window.setTimeout(() => {
+      setIsActivelyTyping(false);
+      typingIdleTimeoutRef.current = null;
+    }, 3000);
+  }, [inlineHighlightsMode]);
+
+  useEffect(() => {
+    if (inlineHighlightsMode === 'hidden-while-typing') {
+      return;
+    }
+    setIsActivelyTyping(false);
+    if (typingIdleTimeoutRef.current !== null) {
+      window.clearTimeout(typingIdleTimeoutRef.current);
+      typingIdleTimeoutRef.current = null;
+    }
+  }, [inlineHighlightsMode]);
+
   return (
     <div className={styles.container}>
       <div className={styles.editor}>
@@ -429,6 +467,8 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
           onLoreHighlightLeave={handleLoreHighlightLeave}
           onStatBlockTokenClick={handleStatBlockTokenClick}
           onEditorReady={handleEditorReady}
+          onTypingActivity={handleTypingActivity}
+          inlineHighlightsMode={effectiveInlineHighlightsMode}
           config={mergedConfig}
           toolbarButtons={toolbarButtons}
           toolbarActions={toolbarActions}

@@ -19,6 +19,8 @@ import SettingsRoute from './routes/SettingsRoute';
 import CharactersHubRoute from './routes/CharactersHubRoute';
 import CompendiumRoute from './routes/CompendiumRoute';
 import RulesetRoute from './routes/RulesetRoute';
+import LoreRoute from './routes/LoreRoute';
+import CanonDecisionsRoute from './routes/CanonDecisionsRoute';
 import appShellStyles from './styles/AppShell.module.css';
 
 function HomeRoute() {
@@ -59,6 +61,8 @@ function AppRoutes() {
         <Route element={<AppShellLayout />}>
           <Route path='/' element={<HomeRoute />} />
           <Route path='/projects' element={<ProjectsRoute />} />
+          <Route path='/lore' element={<LoreRoute />} />
+          <Route path='/canon-decisions' element={<CanonDecisionsRoute />} />
           <Route path='/world-bible' element={<WorldBibleRoute />} />
           <Route path='/ruleset' element={<RulesetRoute />} />
           <Route path='/characters' element={<CharactersHubRoute />} />

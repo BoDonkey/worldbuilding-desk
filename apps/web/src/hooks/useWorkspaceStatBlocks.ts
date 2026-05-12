@@ -32,7 +32,6 @@ import type {
   StatBlockTokenPresentation
 } from '../utils/statBlockTemplates';
 import {countWords} from '../utils/textHelpers';
-import {saveProjectSettings} from '../settingsStorage';
 
 type FeedbackState = {
   tone: 'success' | 'error';
@@ -42,7 +41,7 @@ type FeedbackState = {
 interface UseWorkspaceStatBlocksParams {
   activeProject: Project | null;
   projectSettings: ProjectSettings | null;
-  setProjectSettings: Dispatch<SetStateAction<ProjectSettings | null>>;
+  saveProjectSettings: (settings: ProjectSettings) => Promise<ProjectSettings>;
   isStatPreferencesHydrated: boolean;
   statBlockSourceType: StatBlockSourceType;
   setStatBlockSourceType: Dispatch<SetStateAction<StatBlockSourceType>>;
@@ -115,7 +114,7 @@ export const useWorkspaceStatBlocks = (params: UseWorkspaceStatBlocksParams) => 
   const {
     activeProject,
     projectSettings,
-    setProjectSettings,
+    saveProjectSettings,
     isStatPreferencesHydrated,
     statBlockSourceType,
     setStatBlockSourceType,
@@ -198,7 +197,6 @@ export const useWorkspaceStatBlocks = (params: UseWorkspaceStatBlocksParams) => 
       },
       updatedAt: Date.now()
     };
-    setProjectSettings(nextSettings);
     void saveProjectSettings(nextSettings);
   }, [
     activeProject,
@@ -212,7 +210,7 @@ export const useWorkspaceStatBlocks = (params: UseWorkspaceStatBlocksParams) => 
     selectedResourceIds,
     statBlockGroups,
     isStatPreferencesHydrated,
-    setProjectSettings
+    saveProjectSettings
   ]);
 
   const statDefinitionNameById = useMemo(() => {

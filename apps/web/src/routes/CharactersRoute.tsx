@@ -1,11 +1,30 @@
 // apps/web/src/routes/CharactersRoute.tsx - NEW FILE
 import { useEffect, useMemo, useState } from 'react';
 import type { FormEvent } from 'react';
-import type { Character, EntityCategory, ProjectSettings, WorldEntity } from '../entityTypes';
+import type {
+  Character,
+  CharacterSheet,
+  EntityCategory,
+  ProjectSettings,
+  StateMutationEvent,
+  WorldEntity
+} from '../entityTypes';
 import { getCharactersByProject, saveCharacter, deleteCharacter } from '../characterStorage';
 import { getEntitiesByProject, saveEntity } from '../entityStorage';
 import { getCategoriesByProject, saveCategory } from '../categoryStorage';
-import { getOrCreateSettings, saveProjectSettings } from '../settingsStorage';
+import {
+  deleteAliasesForTarget,
+  getAliasesByProject,
+  replaceAliasesForTarget,
+  saveAlias,
+  type ConsistencyAlias
+} from '../services/consistency';
+import {getCharacterSheetsByProject, saveCharacterSheet} from '../services/characters';
+import {getStateMutationEventsByProject, saveStateMutationEvent} from '../services/state/stateMutationLedger';
+import {
+  buildCharacterMergeCandidatesById,
+  mergeCharacterFields
+} from '../services/characters/characterMergeHelpers';
 import { CharacterStyleList } from '../components/CharacterStyleList';
 import type { CharacterStyle } from '../entityTypes';
 import { useNavigate } from 'react-router-dom';
@@ -14,10 +33,46 @@ import { useAppStore } from '../store/appStore';
 interface CharactersRouteProps {
   embedded?: boolean;
   onOpenSheets?: (characterId?: string, options?: {autoCreate?: boolean}) => void;
+  prefillCharacterId?: string | null;
+  onPrefillConsumed?: () => void;
 }
 
 const normalizeName = (value: string): string =>
   value.trim().toLowerCase().replace(/\s+/g, ' ');
+
+const parseAlternativeNames = (value: string): string[] =>
+  value
+    .split(',')
+    .map((item) => item.trim())
+    .filter(Boolean);
+
+const formatAlternativeNames = (names: string[]): string => names.join(', ');
+
+const buildCanonicalAliasList = (params: {
+  previousName?: string;
+  nextName: string;
+  aliases: string[];
+}): string[] => {
+  const nextNormalized = normalizeName(params.nextName);
+  const previousNormalized = params.previousName ? normalizeName(params.previousName) : '';
+  const combined = [...params.aliases];
+  if (
+    previousNormalized &&
+    nextNormalized &&
+    previousNormalized !== nextNormalized &&
+    params.previousName
+  ) {
+    combined.unshift(params.previousName.trim());
+  }
+  return Array.from(
+    new Map(
+      combined
+        .map((alias) => alias.trim())
+        .filter((alias) => alias.length > 0 && normalizeName(alias) !== nextNormalized)
+        .map((alias) => [normalizeName(alias), alias])
+    ).values()
+  );
+};
 
 const CHARACTER_CATEGORY_HINTS = ['character', 'characters', 'npc', 'person', 'people'];
 const DEFAULT_CHARACTER_FIELD_SCHEMA: EntityCategory['fieldSchema'] = [
@@ -29,13 +84,21 @@ const DEFAULT_CHARACTER_FIELD_SCHEMA: EntityCategory['fieldSchema'] = [
 
 function CharactersRoute({
   embedded = false,
-  onOpenSheets
+  onOpenSheets,
+  prefillCharacterId = null,
+  onPrefillConsumed
 }: CharactersRouteProps) {
   const activeProject = useAppStore((s) => s.activeProject);
+  const projectSettings = useAppStore((s) => s.projectSettings);
+  const loadProjectSettings = useAppStore((s) => s.loadProjectSettings);
+  const saveProjectSettings = useAppStore((s) => s.saveProjectSettings);
   const navigate = useNavigate();
   const [characters, setCharacters] = useState<Character[]>([]);
+  const [sheets, setSheets] = useState<CharacterSheet[]>([]);
+  const [stateMutationEvents, setStateMutationEvents] = useState<StateMutationEvent[]>([]);
   const [worldEntities, setWorldEntities] = useState<WorldEntity[]>([]);
   const [categories, setCategories] = useState<EntityCategory[]>([]);
+  const [aliases, setAliases] = useState<ConsistencyAlias[]>([]);
   const [settings, setSettings] = useState<ProjectSettings | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<{
@@ -43,18 +106,23 @@ function CharactersRoute({
     message: string;
   } | null>(null);
   const [importingEntityId, setImportingEntityId] = useState<string | null>(null);
+  const [mergingCharacterId, setMergingCharacterId] = useState<string | null>(null);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [age, setAge] = useState('');
   const [role, setRole] = useState('');
   const [notes, setNotes] = useState('');
+  const [alternativeNames, setAlternativeNames] = useState('');
   const [characterStyleId, setCharacterStyleId] = useState<string>('');
 
   useEffect(() => {
     if (!activeProject) {
       setCharacters([]);
+      setSheets([]);
+      setStateMutationEvents([]);
       setWorldEntities([]);
       setCategories([]);
+      setAliases([]);
       setSettings(null);
       return;
     }
@@ -62,25 +130,41 @@ function CharactersRoute({
     let cancelled = false;
 
     (async () => {
-      const [chars, entities, loadedCategories, projectSettings] = await Promise.all([
+      const [chars, loadedSheets, loadedStateMutationEvents, entities, loadedCategories, loadedAliases] = await Promise.all([
         getCharactersByProject(activeProject.id),
+        getCharacterSheetsByProject(activeProject.id),
+        getStateMutationEventsByProject(activeProject.id),
         getEntitiesByProject(activeProject.id),
         getCategoriesByProject(activeProject.id),
-        getOrCreateSettings(activeProject.id)
+        getAliasesByProject(activeProject.id)
       ]);
+      const loadedSettings =
+        projectSettings && projectSettings.projectId === activeProject.id
+          ? projectSettings
+          : await loadProjectSettings(activeProject.id);
 
       if (!cancelled) {
         setCharacters(chars);
+        setSheets(loadedSheets);
+        setStateMutationEvents(loadedStateMutationEvents);
         setWorldEntities(entities);
         setCategories(loadedCategories);
-        setSettings(projectSettings);
+        setAliases(loadedAliases);
+        setSettings(loadedSettings);
       }
     })();
 
     return () => {
       cancelled = true;
     };
-  }, [activeProject]);
+  }, [activeProject, loadProjectSettings, projectSettings]);
+
+  useEffect(() => {
+    if (!activeProject || !projectSettings || projectSettings.projectId !== activeProject.id) {
+      return;
+    }
+    setSettings(projectSettings);
+  }, [activeProject, projectSettings]);
 
   const migrationCandidates = useMemo(() => {
     const characterCategoryIds = new Set(
@@ -136,6 +220,60 @@ function CharactersRoute({
     return map;
   }, [categories, characters, worldEntities]);
 
+  const characterAliasesById = useMemo(() => {
+    const map = new Map<string, string[]>();
+    aliases.forEach((alias) => {
+      if (alias.targetType !== 'character') {
+        return;
+      }
+      const current = map.get(alias.targetId) ?? [];
+      map.set(
+        alias.targetId,
+        Array.from(
+          new Map(
+            [...current, alias.alias]
+              .map((value) => value.trim())
+              .filter(Boolean)
+              .map((value) => [normalizeName(value), value])
+          ).values()
+        )
+      );
+    });
+    return map;
+  }, [aliases]);
+
+  useEffect(() => {
+    if (!prefillCharacterId) {
+      return;
+    }
+    const character = characters.find((entry) => entry.id === prefillCharacterId);
+    if (!character) {
+      onPrefillConsumed?.();
+      return;
+    }
+
+    setEditingId(character.id);
+    setName(character.name);
+    setDescription(character.description ?? '');
+    setAge(character.fields.age ?? '');
+    setRole(character.fields.role ?? '');
+    setNotes(character.fields.notes ?? '');
+    setAlternativeNames(
+      formatAlternativeNames(characterAliasesById.get(character.id) ?? [])
+    );
+    setCharacterStyleId(character.characterStyleId ?? '');
+    onPrefillConsumed?.();
+  }, [characterAliasesById, characters, onPrefillConsumed, prefillCharacterId]);
+
+  const mergeCandidatesByCharacterId = useMemo(
+    () =>
+      buildCharacterMergeCandidatesById({
+        characters,
+        aliases
+      }),
+    [aliases, characters]
+  );
+
   const resetForm = () => {
     setEditingId(null);
     setName('');
@@ -143,6 +281,7 @@ function CharactersRoute({
     setAge('');
     setRole('');
     setNotes('');
+    setAlternativeNames('');
     setCharacterStyleId('');
   };
 
@@ -156,6 +295,11 @@ function CharactersRoute({
     const now = Date.now();
     const id = editingId ?? crypto.randomUUID();
     const existing = characters.find(c => c.id === id);
+    const nextAlternativeNames = buildCanonicalAliasList({
+      previousName: existing?.name,
+      nextName: name,
+      aliases: parseAlternativeNames(alternativeNames)
+    });
 
     const character: Character = {
       id,
@@ -173,6 +317,53 @@ function CharactersRoute({
     };
 
     await saveCharacter(character);
+    const canonicalRename =
+      typeof existing?.name === 'string' &&
+      normalizeName(existing.name) !== normalizeName(character.name);
+    const linkedLoreEntityId = existing
+      ? characterLoreEntityIdByCharacterId.get(existing.id)
+      : undefined;
+    const linkedLoreEntity = linkedLoreEntityId
+      ? worldEntities.find((entity) => entity.id === linkedLoreEntityId)
+      : undefined;
+    if (
+      canonicalRename &&
+      linkedLoreEntity &&
+      normalizeName(linkedLoreEntity.name) !== normalizeName(character.name)
+    ) {
+      const renamedLoreEntity: WorldEntity = {
+        ...linkedLoreEntity,
+        name: character.name,
+        updatedAt: now
+      };
+      await saveEntity(renamedLoreEntity);
+      const savedLoreAlias = await saveAlias({
+        projectId: activeProject.id,
+        targetId: linkedLoreEntity.id,
+        targetType: 'entity',
+        alias: linkedLoreEntity.name
+      });
+      setWorldEntities((prev) =>
+        prev.map((entity) =>
+          entity.id === linkedLoreEntity.id ? renamedLoreEntity : entity
+        )
+      );
+      setAliases((prev) => {
+        const existingIndex = prev.findIndex((alias) => alias.id === savedLoreAlias.id);
+        if (existingIndex >= 0) {
+          const copy = [...prev];
+          copy[existingIndex] = savedLoreAlias;
+          return copy;
+        }
+        return [...prev, savedLoreAlias];
+      });
+    }
+    const savedAliases = await replaceAliasesForTarget({
+      projectId: activeProject.id,
+      targetId: character.id,
+      targetType: 'character',
+      aliases: nextAlternativeNames
+    });
 
     setCharacters(prev => {
       const existingIndex = prev.findIndex(c => c.id === id);
@@ -184,6 +375,10 @@ function CharactersRoute({
         return copy;
       }
     });
+    setAliases(prev => [
+      ...prev.filter(alias => alias.targetType !== 'character' || alias.targetId !== character.id),
+      ...savedAliases
+    ]);
 
     resetForm();
   };
@@ -356,6 +551,20 @@ function CharactersRoute({
     setAge(character.fields.age ?? '');
     setRole(character.fields.role ?? '');
     setNotes(character.fields.notes ?? '');
+    setAlternativeNames(
+      formatAlternativeNames(
+        Array.from(
+          new Map(
+            aliases
+              .filter(
+                (alias) =>
+                  alias.targetType === 'character' && alias.targetId === character.id
+              )
+              .map((alias) => [normalizeName(alias.alias), alias.alias])
+          ).values()
+        )
+      )
+    );
     setCharacterStyleId(character.characterStyleId ?? '');
   };
 
@@ -365,6 +574,150 @@ function CharactersRoute({
 
     if (editingId === id) {
       resetForm();
+    }
+  };
+
+  const handleConvertCharacterToAlias = async (
+    sourceId: string,
+    targetId: string
+  ) => {
+    if (!activeProject || sourceId === targetId) {
+      return;
+    }
+
+    const source = characters.find((character) => character.id === sourceId);
+    const target = characters.find((character) => character.id === targetId);
+    if (!source || !target) {
+      setFeedback({tone: 'error', message: 'Character records could not be found.'});
+      return;
+    }
+
+    const sourceSheets = sheets.filter((sheet) => sheet.characterId === sourceId);
+    const targetSheets = sheets.filter((sheet) => sheet.characterId === targetId);
+    const confirmMessage =
+      sourceSheets.length === 1 || targetSheets.length === 1
+        ? `Use "${target.name}" as the canonical character and convert "${source.name}" into its alias?\n\nThis will remove the separate "${source.name}" character record, move its sheet/state onto "${target.name}" when possible, and cannot be undone automatically.`
+        : `Use "${target.name}" as the canonical character and convert "${source.name}" into its alias?\n\nThis will remove the separate "${source.name}" character record and cannot be undone automatically.`;
+
+    if (!window.confirm(confirmMessage)) {
+      return;
+    }
+
+    setMergingCharacterId(sourceId);
+    setFeedback(null);
+    try {
+      if (sourceSheets.length > 1 || targetSheets.length > 1) {
+        throw new Error(
+          'Character merge is blocked because one side has multiple sheets attached.'
+        );
+      }
+      if (sourceSheets.length === 1 && targetSheets.length === 1) {
+        throw new Error(
+          `Both "${source.name}" and "${target.name}" already have character sheets. Automatic sheet merging is not implemented yet.`
+        );
+      }
+
+      const sourceAliases = characterAliasesById.get(source.id) ?? [];
+      const targetAliases = characterAliasesById.get(target.id) ?? [];
+      const mergedTarget: Character = {
+        ...target,
+        description: target.description?.trim() || source.description?.trim() || undefined,
+        characterStyleId: target.characterStyleId || source.characterStyleId || undefined,
+        fields: mergeCharacterFields(target.fields, source.fields),
+        updatedAt: Date.now()
+      };
+
+      const mergedAliases = buildCanonicalAliasList({
+        previousName: undefined,
+        nextName: mergedTarget.name,
+        aliases: [...targetAliases, ...sourceAliases, source.name]
+      });
+
+      await saveCharacter(mergedTarget);
+      const savedAliases = await replaceAliasesForTarget({
+        projectId: activeProject.id,
+        targetId: mergedTarget.id,
+        targetType: 'character',
+        aliases: mergedAliases
+      });
+
+      const sourceSheet = sourceSheets[0] ?? null;
+      let reboundSheet: CharacterSheet | null = null;
+      if (sourceSheet) {
+        reboundSheet = {
+          ...sourceSheet,
+          characterId: mergedTarget.id,
+          name: mergedTarget.name,
+          updatedAt: Date.now()
+        };
+        await saveCharacterSheet(reboundSheet);
+      }
+
+      const eventsToUpdate = stateMutationEvents.filter((event) =>
+        event.commands.some((command) => command.actorId === source.id)
+      );
+      const updatedEvents: StateMutationEvent[] = [];
+      for (const event of eventsToUpdate) {
+        const updatedEvent: StateMutationEvent = {
+          ...event,
+          commands: event.commands.map((command) =>
+            command.actorId === source.id
+              ? {...command, actorId: mergedTarget.id}
+              : command
+          )
+        };
+        await saveStateMutationEvent(updatedEvent);
+        updatedEvents.push(updatedEvent);
+      }
+
+      await deleteAliasesForTarget({
+        projectId: activeProject.id,
+        targetId: source.id,
+        targetType: 'character'
+      });
+      await deleteCharacter(source.id);
+
+      setCharacters((prev) =>
+        prev
+          .filter((character) => character.id !== source.id)
+          .map((character) => (character.id === mergedTarget.id ? mergedTarget : character))
+      );
+      setAliases((prev) => [
+        ...prev.filter(
+          (alias) =>
+            !(
+              alias.targetType === 'character' &&
+              (alias.targetId === source.id || alias.targetId === mergedTarget.id)
+            )
+        ),
+        ...savedAliases
+      ]);
+      if (reboundSheet) {
+        setSheets((prev) =>
+          prev.map((sheet) => (sheet.id === reboundSheet!.id ? reboundSheet! : sheet))
+        );
+      }
+      setStateMutationEvents((prev) =>
+        prev.map((event) => updatedEvents.find((entry) => entry.id === event.id) ?? event)
+      );
+      if (editingId === source.id) {
+        resetForm();
+      }
+      setFeedback({
+        tone: 'success',
+        message:
+          sourceSheet
+            ? `"${source.name}" is now an alias of "${mergedTarget.name}", and its sheet moved with it.`
+            : `"${source.name}" is now an alias of "${mergedTarget.name}".`
+      });
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : 'Unable to convert this character into an alias.';
+      setFeedback({tone: 'error', message});
+    } finally {
+      setMergingCharacterId(null);
     }
   };
 
@@ -520,6 +873,19 @@ function CharactersRoute({
 
           <div style={{ marginBottom: '0.75rem' }}>
             <label>
+              Alternative names<br />
+              <textarea
+                value={alternativeNames}
+                onChange={e => setAlternativeNames(e.target.value)}
+                rows={2}
+                placeholder="Comma-separated aliases, shorthand names, or titles"
+                style={{ width: '100%' }}
+              />
+            </label>
+          </div>
+
+          <div style={{ marginBottom: '0.75rem' }}>
+            <label>
               Age<br />
               <input
                 type="text"
@@ -597,6 +963,8 @@ function CharactersRoute({
           <ul style={{ listStyle: 'none', padding: 0 }}>
             {characters.map((character) => {
               const hasLinkedLore = characterLoreEntityIdByCharacterId.has(character.id);
+              const characterAliases = characterAliasesById.get(character.id) ?? [];
+              const mergeCandidates = mergeCandidatesByCharacterId.get(character.id) ?? [];
               return (
               <li key={character.id} style={{ 
                 marginBottom: '1rem', 
@@ -613,6 +981,9 @@ function CharactersRoute({
                       </p>
                     )}
                     <div style={{ fontSize: '0.9em', color: '#888' }}>
+                      {characterAliases.length > 0 && (
+                        <div>Aliases: {characterAliases.join(', ')}</div>
+                      )}
                       {character.fields.age && <div>Age: {character.fields.age}</div>}
                       {character.fields.role && <div>Role: {character.fields.role}</div>}
                       {character.characterStyleId && (
@@ -623,6 +994,56 @@ function CharactersRoute({
                       <p style={{ margin: '0.5rem 0 0 0', fontSize: '0.9em', fontStyle: 'italic' }}>
                         {character.fields.notes}
                       </p>
+                    )}
+                    {mergeCandidates.length > 0 && (
+                      <div
+                        style={{
+                          marginTop: '0.75rem',
+                          padding: '0.65rem 0.75rem',
+                          borderRadius: '8px',
+                          border: '1px solid #334155',
+                          background: 'rgba(15, 23, 42, 0.4)'
+                        }}
+                      >
+                        <div style={{fontSize: '0.85em', color: '#cbd5e1', marginBottom: '0.45rem'}}>
+                          Possible canonical match{mergeCandidates.length === 1 ? '' : 'es'}
+                        </div>
+                        <div style={{display: 'grid', gap: '0.45rem'}}>
+                          {mergeCandidates.slice(0, 3).map((candidate) => (
+                            <div
+                              key={candidate.character.id}
+                              style={{
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                alignItems: 'center',
+                                gap: '0.75rem',
+                                flexWrap: 'wrap'
+                              }}
+                            >
+                              <div style={{fontSize: '0.85em', color: '#94a3b8'}}>
+                                <strong style={{color: '#e2e8f0'}}>{candidate.character.name}</strong>
+                                {': '}
+                                {candidate.reasons.join(' · ')}
+                              </div>
+                              <button
+                                type='button'
+                                onClick={() =>
+                                  void handleConvertCharacterToAlias(
+                                    character.id,
+                                    candidate.character.id
+                                  )
+                                }
+                                disabled={mergingCharacterId === character.id}
+                                title={`Use "${candidate.character.name}" as canonical and convert "${character.name}" into its alias.`}
+                              >
+                                {mergingCharacterId === character.id
+                                  ? 'Merging...'
+                                  : `Use ${candidate.character.name} as Canonical`}
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
                     )}
                   </div>
                   <div style={{ display: 'flex', gap: '0.5rem' }}>

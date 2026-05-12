@@ -1,17 +1,18 @@
 import {useEffect, useState, useCallback, useRef, useMemo} from 'react';
-import type {ChangeEvent, FormEvent} from 'react';
+import type {FormEvent} from 'react';
 import {useLocation, useNavigate} from 'react-router-dom';
 import {useAppStore} from '../store/appStore';
 import type {Character, EntityCategory, WorldEntity} from '../entityTypes';
-import {getEntitiesByProject, saveEntity, deleteEntity} from '../entityStorage';
+import {getEntitiesByProject, saveEntity} from '../entityStorage';
 import {
   getCategoriesByProject,
   saveCategory,
   deleteCategory,
   initializeDefaultCategories
 } from '../categoryStorage';
-import {getCharactersByProject, saveCharacter} from '../characterStorage';
+import {getCharactersByProject} from '../characterStorage';
 import CategoryEditor from '../components/CategoryEditor';
+import {WorldBibleRichTextField} from '../components/WorldBibleRichTextField';
 import styles from '../assets/components/WorldBibleRoute.module.css';
 import type {RAGProvider} from '../services/rag/RAGService';
 import {getRAGService} from '../services/rag/getRAGService';
@@ -22,73 +23,39 @@ import type {
 import {getShodhService} from '../services/shodh/getShodhService';
 import {emitShodhMemoriesUpdated} from '../services/shodh/shodhEvents';
 import {ShodhMemoryPanel} from '../components/ShodhMemoryPanel';
+import {getCompendiumEntriesByProject} from '../services/compendium';
+import type {ConsistencyAlias, ReviewQueueReason} from '../services/consistency';
+import {getAliasesByProject} from '../services/consistency';
+import {useWorldBibleReview} from '../hooks/useWorldBibleReview';
 import {
-  getCompendiumEntriesByProject,
-  upsertCompendiumEntryFromEntity
-} from '../services/compendium';
-import type {CompendiumDomain} from '../entityTypes';
-import type {ConsistencyAlias, ReviewQueueItem, ReviewQueueReason} from '../services/consistency';
-import {
-  buildWorldReviewQueue,
-  deleteAliasesForEntity,
-  getAliasesByProject,
-  replaceAliasesForEntity
-} from '../services/consistency';
+  useWorldBibleImports,
+  type ImportMode,
+  type JsonImportConflictResolution
+} from '../hooks/useWorldBibleImports';
+import {useWorldBibleEntityActions} from '../hooks/useWorldBibleEntityActions';
 import {
   getSeriesBibleConfig,
   promoteMemoryToParent,
-  promoteDocumentToParent,
-  getCanonSyncState,
-  syncChildWithParent
+  getCanonSyncState
 } from '../services/seriesBible/SeriesBibleService';
+import {
+  ALTERNATIVE_NAMES_KEY,
+  buildCanonicalAliasList,
+  extractPlainTextFromRichText,
+  extractStructuredSummaryFromRichText,
+  formatAlternativeNames,
+  mergeEntityFields,
+  normalizeRichTextValue,
+  normalizeName,
+  parseAlternativeNames
+} from '../services/worldBible/worldBibleEntityHelpers';
+import {
+  buildEntityMatchKey,
+  getReviewResolutionLabel,
+  type ReviewResolution
+} from '../services/worldBible/worldBibleReviewHelpers';
 
 // activeProject read from store below
-
-type ImportMode = 'create' | 'upsert';
-
-interface WorldBibleImportDraft {
-  id: string;
-  fileName: string;
-  name: string;
-  text: string;
-  preview: string;
-  categoryId: string;
-  mode: ImportMode;
-  include: boolean;
-  parseError?: string;
-}
-
-interface JsonImportRowInput {
-  rowIndex: number;
-  record: Record<string, unknown>;
-}
-
-interface JsonImportSession {
-  fileName: string;
-  rows: JsonImportRowInput[];
-  keys: string[];
-  categoryId: string;
-  mode: ImportMode;
-  nameKey: string;
-  fieldMap: Record<string, string>;
-}
-
-type JsonImportConflictResolution = ImportMode | 'skip';
-
-interface JsonImportConflict {
-  kind: 'existing' | 'batch-duplicate';
-  message: string;
-}
-
-interface JsonImportPreparedRow {
-  rowIndex: number;
-  name: string;
-  fields: Record<string, string>;
-  errors: string[];
-  existingEntityId?: string;
-  conflict?: JsonImportConflict;
-  resolution: JsonImportConflictResolution;
-}
 
 type WorldBibleViewMode = 'category' | 'review';
 
@@ -97,141 +64,10 @@ const fileNameToEntityName = (name: string): string => {
   return base || 'Imported entry';
 };
 
-const normalizeName = (value: string): string =>
-  value.trim().toLowerCase().replace(/\s+/g, ' ');
-
-const CHARACTER_CATEGORY_HINTS = ['character', 'characters', 'npc', 'person', 'people'];
-const LOCATION_CATEGORY_HINTS = ['location', 'locations', 'place', 'places', 'region', 'zone'];
-
-const htmlToText = (raw: string): string => {
-  const parser = new DOMParser();
-  const parsed = parser.parseFromString(raw, 'text/html');
-  return parsed.body.textContent?.trim() ?? '';
-};
-
-const readU16LE = (bytes: Uint8Array, offset: number): number =>
-  bytes[offset] | (bytes[offset + 1] << 8);
-
-const readU32LE = (bytes: Uint8Array, offset: number): number =>
-  (bytes[offset] |
-    (bytes[offset + 1] << 8) |
-    (bytes[offset + 2] << 16) |
-    (bytes[offset + 3] << 24)) >>> 0;
-
-const findDocxDocumentEntry = (
-  bytes: Uint8Array
-): {
-  compressionMethod: number;
-  compressedData: Uint8Array;
-} | null => {
-  const eocdSignature = 0x06054b50;
-  const centralSignature = 0x02014b50;
-  const localSignature = 0x04034b50;
-
-  const minEocdSize = 22;
-  const maxCommentLength = 0xffff;
-  const searchStart = Math.max(0, bytes.length - (minEocdSize + maxCommentLength));
-  let eocdOffset = -1;
-  for (let i = bytes.length - minEocdSize; i >= searchStart; i -= 1) {
-    if (readU32LE(bytes, i) === eocdSignature) {
-      eocdOffset = i;
-      break;
-    }
-  }
-  if (eocdOffset === -1) return null;
-
-  const centralDirectorySize = readU32LE(bytes, eocdOffset + 12);
-  const centralDirectoryOffset = readU32LE(bytes, eocdOffset + 16);
-  const centralDirectoryEnd = centralDirectoryOffset + centralDirectorySize;
-  if (centralDirectoryEnd > bytes.length) return null;
-
-  const decoder = new TextDecoder('utf-8');
-  let cursor = centralDirectoryOffset;
-
-  while (cursor + 46 <= centralDirectoryEnd) {
-    if (readU32LE(bytes, cursor) !== centralSignature) {
-      break;
-    }
-    const compressionMethod = readU16LE(bytes, cursor + 10);
-    const compressedSize = readU32LE(bytes, cursor + 20);
-    const fileNameLength = readU16LE(bytes, cursor + 28);
-    const extraLength = readU16LE(bytes, cursor + 30);
-    const commentLength = readU16LE(bytes, cursor + 32);
-    const localHeaderOffset = readU32LE(bytes, cursor + 42);
-    const fileNameStart = cursor + 46;
-    const fileNameEnd = fileNameStart + fileNameLength;
-    if (fileNameEnd > bytes.length) return null;
-
-    const fileName = decoder.decode(bytes.slice(fileNameStart, fileNameEnd));
-    cursor = fileNameEnd + extraLength + commentLength;
-
-    if (fileName !== 'word/document.xml') continue;
-    if (localHeaderOffset + 30 > bytes.length) return null;
-    if (readU32LE(bytes, localHeaderOffset) !== localSignature) return null;
-
-    const localNameLength = readU16LE(bytes, localHeaderOffset + 26);
-    const localExtraLength = readU16LE(bytes, localHeaderOffset + 28);
-    const dataStart = localHeaderOffset + 30 + localNameLength + localExtraLength;
-    const dataEnd = dataStart + compressedSize;
-    if (dataEnd > bytes.length) return null;
-
-    return {
-      compressionMethod,
-      compressedData: bytes.slice(dataStart, dataEnd)
-    };
-  }
-
-  return null;
-};
-
-const inflateRaw = async (compressedData: Uint8Array): Promise<Uint8Array> => {
-  const copy = new Uint8Array(compressedData.byteLength);
-  copy.set(compressedData);
-  const stream = new Blob([copy.buffer]).stream().pipeThrough(
-    new DecompressionStream('deflate-raw')
-  );
-  const decompressed = await new Response(stream).arrayBuffer();
-  return new Uint8Array(decompressed);
-};
-
-const docxXmlToText = (xml: string): string => {
-  const withBreaks = xml
-    .replace(/<w:tab\b[^>]*\/>/g, '\t')
-    .replace(/<w:br\b[^>]*\/>/g, '\n')
-    .replace(/<w:cr\b[^>]*\/>/g, '\n')
-    .replace(/<\/w:p>/g, '\n\n');
-  const withoutTags = withBreaks.replace(/<[^>]+>/g, '');
-  const parser = new DOMParser();
-  const decoded = parser.parseFromString(
-    `<!doctype html><body>${withoutTags}`,
-    'text/html'
-  ).body.textContent;
-  return decoded?.trim() ?? '';
-};
-
-const parseDocxToText = async (file: File): Promise<string> => {
-  const bytes = new Uint8Array(await file.arrayBuffer());
-  const entry = findDocxDocumentEntry(bytes);
-  if (!entry) {
-    throw new Error('Could not read DOCX structure.');
-  }
-
-  let xmlBytes: Uint8Array;
-  if (entry.compressionMethod === 0) {
-    xmlBytes = entry.compressedData;
-  } else if (entry.compressionMethod === 8) {
-    xmlBytes = await inflateRaw(entry.compressedData);
-  } else {
-    throw new Error(`Unsupported DOCX compression method (${entry.compressionMethod}).`);
-  }
-
-  const xml = new TextDecoder('utf-8').decode(xmlBytes);
-  return docxXmlToText(xml);
-};
-
 const mapImportedTextToFields = (
   category: EntityCategory,
-  text: string
+  text: string,
+  richTextHtml?: string
 ): Record<string, string> => {
   const normalized = text.trim();
   const fields: Record<string, string> = {};
@@ -241,40 +77,140 @@ const mapImportedTextToFields = (
     category.fieldSchema.find((field) => field.type === 'text');
 
   if (preferredField) {
-    fields[preferredField.key] = normalized;
+    fields[preferredField.key] =
+      preferredField.type === 'textarea'
+        ? richTextHtml || normalizeRichTextValue(normalized)
+        : normalized;
   } else {
-    fields.description = normalized;
+    fields.description = richTextHtml || normalizeRichTextValue(normalized);
   }
 
   return fields;
 };
 
-const buildPreview = (text: string, limit = 180): string => {
-  const normalized = text.replace(/\s+/g, ' ').trim();
-  if (!normalized) return '(empty)';
-  return normalized.length > limit
-    ? `${normalized.slice(0, limit)}...`
-    : normalized;
+const getPreferredImportField = (
+  category: EntityCategory
+): EntityCategory['fieldSchema'][number] | undefined =>
+  category.fieldSchema.find((field) => field.key === 'description') ??
+  category.fieldSchema.find((field) => field.type === 'textarea') ??
+  category.fieldSchema.find((field) => field.type === 'text');
+
+const CATEGORY_SUMMARY_PRIORITY: Record<string, string[]> = {
+  characters: ['description', 'role', 'age', 'notes'],
+  locations: ['description', 'climate', 'population', 'notes'],
+  items: ['description', 'rarity', 'notes'],
+  factions: ['description', 'notes'],
+  concepts: ['description', 'notes']
 };
 
-const valueToString = (value: unknown): string => {
-  if (value === null || value === undefined) return '';
-  if (typeof value === 'string') return value.trim();
-  if (typeof value === 'number' || typeof value === 'boolean') {
-    return String(value);
-  }
-  if (Array.isArray(value)) {
-    return value.map((item) => valueToString(item)).filter(Boolean).join(', ');
-  }
-  if (typeof value === 'object') {
-    try {
-      return JSON.stringify(value);
-    } catch {
-      return '';
-    }
-  }
-  return '';
+const buildEntityCardSummary = (
+  entity: WorldEntity,
+  category: EntityCategory | null | undefined,
+  aliasTexts: string[] = []
+): {
+  primarySummary: string | null;
+  fullSummary: string | null;
+  summaryIsTruncated: boolean;
+  secondaryFields: Array<{label: string; value: string}>;
+} => {
+  const labelByKey = new Map(
+    [
+      ...(category?.fieldSchema ?? []).map((field) => [field.key, field.label] as const),
+      [ALTERNATIVE_NAMES_KEY, 'Alternative names'] as const
+    ]
+  );
+  const richTextKeys = new Set(
+    (category?.fieldSchema ?? [])
+      .filter((field) => field.type === 'textarea')
+      .map((field) => field.key)
+  );
+
+  const summaryPriority = [
+    ...(category ? CATEGORY_SUMMARY_PRIORITY[category.slug] ?? [] : []),
+    'description',
+    'summary',
+    'notes'
+  ];
+  const dedupedSummaryKeys = Array.from(new Set(summaryPriority));
+  const summarySourceKey =
+    dedupedSummaryKeys.find((key) => {
+      const value = entity.fields[key];
+      return typeof value === 'string' && extractPlainTextFromRichText(value).length > 0;
+    }) ??
+    Array.from(richTextKeys).find((key) => {
+      const value = entity.fields[key];
+      return typeof value === 'string' && extractPlainTextFromRichText(value).length > 0;
+    }) ??
+    null;
+
+  const primarySummary =
+    summarySourceKey && typeof entity.fields[summarySourceKey] === 'string'
+      ? extractStructuredSummaryFromRichText(entity.fields[summarySourceKey] as string)
+      : null;
+
+  const secondaryPriority = Array.from(
+    new Set([
+      ...(category?.fieldSchema.map((field) => field.key) ?? []),
+      ...(aliasTexts.length > 0 ? [ALTERNATIVE_NAMES_KEY] : []),
+      ...Object.keys(entity.fields)
+    ])
+  );
+
+  const secondaryFields = secondaryPriority
+    .filter((key) => key !== summarySourceKey)
+    .map((key) => {
+      if (key === ALTERNATIVE_NAMES_KEY) {
+        const fieldAliases = parseAlternativeNames(
+          typeof entity.fields[ALTERNATIVE_NAMES_KEY] === 'string'
+            ? String(entity.fields[ALTERNATIVE_NAMES_KEY])
+            : ''
+        );
+        return {
+          label: labelByKey.get(key) ?? key,
+          value: formatAlternativeNames(
+            parseAlternativeNames([...fieldAliases, ...aliasTexts].join(', '))
+          )
+        };
+      }
+      const value = entity.fields[key];
+      if (typeof value === 'string') {
+        return {
+          label: labelByKey.get(key) ?? key,
+          value: extractPlainTextFromRichText(value)
+        };
+      }
+      if (Array.isArray(value)) {
+        return {
+          label: labelByKey.get(key) ?? key,
+          value: value.map((item) => String(item)).filter(Boolean).join(', ')
+        };
+      }
+      if (typeof value === 'boolean') {
+        return {
+          label: labelByKey.get(key) ?? key,
+          value: value ? 'Yes' : 'No'
+        };
+      }
+      return {
+        label: labelByKey.get(key) ?? key,
+        value: String(value ?? '')
+      };
+    })
+    .filter((field) => field.value.trim().length > 0)
+    .slice(0, 4);
+
+  return {
+    primarySummary: primarySummary
+      ? primarySummary.length > 280
+        ? `${primarySummary.slice(0, 280)}...`
+        : primarySummary
+      : null,
+    fullSummary: primarySummary,
+    summaryIsTruncated: Boolean(primarySummary && primarySummary.length > 280),
+    secondaryFields
+  };
 };
+
 
 const getFieldTemplateValue = (field: EntityCategory['fieldSchema'][number]): unknown => {
   if (field.type === 'checkbox') return false;
@@ -289,68 +225,18 @@ const getFieldTemplateValue = (field: EntityCategory['fieldSchema'][number]): un
   return '';
 };
 
-const ALTERNATIVE_NAMES_KEY = 'alternativeNames';
-
-const parseAlternativeNames = (value: string): string[] =>
-  Array.from(
-    new Map(
-      value
-        .split(',')
-        .map((item) => item.trim())
-        .filter(Boolean)
-        .map((item) => [item.toLowerCase(), item])
-    ).values()
-  );
-
-const formatAlternativeNames = (names: string[]): string => names.join(', ');
-
 const reviewReasonLabels: Record<ReviewQueueReason, string> = {
   needsCompletion: 'Needs completion',
   aliasFollowUp: 'Review alternative names'
 };
 
-interface PotentialEntityMatch {
-  entity: WorldEntity;
-  reasons: string[];
-}
-
-const mergeEntityFields = (
-  targetFields: Record<string, unknown>,
-  sourceFields: Record<string, unknown>
-): Record<string, unknown> => {
-  const merged = {...targetFields};
-
-  Object.entries(sourceFields).forEach(([key, value]) => {
-    const existing = merged[key];
-    const normalizedExisting =
-      typeof existing === 'string' ? existing.trim() : existing;
-    const normalizedIncoming = typeof value === 'string' ? value.trim() : value;
-
-    if (
-      normalizedExisting === undefined ||
-      normalizedExisting === null ||
-      normalizedExisting === '' ||
-      (Array.isArray(normalizedExisting) && normalizedExisting.length === 0)
-    ) {
-      merged[key] = value;
-      return;
-    }
-
-    if (
-      key === ALTERNATIVE_NAMES_KEY &&
-      (typeof normalizedExisting === 'string' || typeof normalizedIncoming === 'string')
-    ) {
-      merged[key] = formatAlternativeNames(
-        parseAlternativeNames(
-          [String(normalizedExisting ?? ''), String(normalizedIncoming ?? '')]
-            .filter(Boolean)
-            .join(', ')
-        )
-      );
-    }
-  });
-
-  return merged;
+const reviewResolutionLabels: Record<'all' | ReviewResolution, string> = {
+  all: 'All recommendations',
+  complete: 'Complete fields',
+  rename: 'Rename to canonical',
+  alias: 'Convert to alias',
+  merge: 'Merge records',
+  ignore: 'Ignore match'
 };
 
 const triggerJsonDownload = (fileName: string, data: unknown): void => {
@@ -370,6 +256,7 @@ const triggerJsonDownload = (fileName: string, data: unknown): void => {
 function WorldBibleRoute() {
   const activeProject = useAppStore((s) => s.activeProject);
   const projectSettings = useAppStore((s) => s.projectSettings);
+  const saveProjectSettings = useAppStore((s) => s.saveProjectSettings);
   const location = useLocation();
   const navigate = useNavigate();
   const [categories, setCategories] = useState<EntityCategory[]>([]);
@@ -382,6 +269,9 @@ function WorldBibleRoute() {
   const [fieldValues, setFieldValues] = useState<Record<string, string>>({});
   const [showCategoryManager, setShowCategoryManager] = useState(false);
   const [aliases, setAliases] = useState<ConsistencyAlias[]>([]);
+  const [activeImportPreviewId, setActiveImportPreviewId] = useState<string | null>(null);
+  const [expandedSummaryEntityIds, setExpandedSummaryEntityIds] = useState<string[]>([]);
+  const [isSelectedSummaryExpanded, setIsSelectedSummaryExpanded] = useState(false);
   const [ragService, setRagService] = useState<RAGProvider | null>(null);
   const [shodhService, setShodhService] =
     useState<ShodhMemoryProvider | null>(null);
@@ -391,6 +281,7 @@ function WorldBibleRoute() {
     null
   );
   const [reviewFilter, setReviewFilter] = useState<'all' | ReviewQueueReason>('all');
+  const [recommendedFilter, setRecommendedFilter] = useState<'all' | ReviewResolution>('all');
   const seriesConfig = activeProject
     ? getSeriesBibleConfig(activeProject)
     : null;
@@ -405,32 +296,10 @@ function WorldBibleRoute() {
     tone: 'success' | 'error';
     message: string;
   } | null>(null);
-  const [isSubmittingEntity, setIsSubmittingEntity] = useState(false);
-  const [deletingEntityId, setDeletingEntityId] = useState<string | null>(null);
-  const [promotingEntityId, setPromotingEntityId] = useState<string | null>(null);
   const [promotingMemoryId, setPromotingMemoryId] = useState<string | null>(null);
-  const [importingCharacterEntityId, setImportingCharacterEntityId] = useState<string | null>(
-    null
-  );
-  const [mergingEntityTargetId, setMergingEntityTargetId] = useState<string | null>(null);
-  const [isSyncingCanon, setIsSyncingCanon] = useState(false);
-  const [linkingCompendiumEntityId, setLinkingCompendiumEntityId] = useState<
-    string | null
-  >(null);
   const [compendiumLinkedEntityIds, setCompendiumLinkedEntityIds] = useState<
     Set<string>
   >(new Set());
-  const [isImportingEntities, setIsImportingEntities] = useState(false);
-  const [isApplyingImports, setIsApplyingImports] = useState(false);
-  const [importDrafts, setImportDrafts] = useState<WorldBibleImportDraft[]>([]);
-  const [isImportingJson, setIsImportingJson] = useState(false);
-  const [isApplyingJsonImport, setIsApplyingJsonImport] = useState(false);
-  const [jsonImportSession, setJsonImportSession] = useState<JsonImportSession | null>(
-    null
-  );
-  const [jsonImportConflictResolutions, setJsonImportConflictResolutions] = useState<
-    Record<number, JsonImportConflictResolution>
-  >({});
   const importInputRef = useRef<HTMLInputElement | null>(null);
   const jsonImportInputRef = useRef<HTMLInputElement | null>(null);
   const aliasTextareaRef = useRef<HTMLTextAreaElement | null>(null);
@@ -468,9 +337,6 @@ function WorldBibleRoute() {
 
   useEffect(() => {
     if (!activeProject) {
-      setImportDrafts([]);
-      setJsonImportSession(null);
-      setJsonImportConflictResolutions({});
       return;
     }
 
@@ -652,95 +518,41 @@ function WorldBibleRoute() {
   }, [entities, ragService]);
 
   const activeCategory = categories.find((c) => c.id === activeTab);
-  const activeJsonCategory = useMemo(
-    () =>
-      jsonImportSession
-        ? categories.find((category) => category.id === jsonImportSession.categoryId) ?? null
-        : null,
-    [categories, jsonImportSession]
+  const categoryById = useMemo(
+    () => new Map(categories.map((category) => [category.id, category])),
+    [categories]
   );
-  const preparedJsonRows = useMemo<JsonImportPreparedRow[]>(() => {
-    if (!jsonImportSession || !activeJsonCategory) return [];
-    const existingByName = new Map(
-      entities
-        .filter((entity) => entity.categoryId === jsonImportSession.categoryId)
-        .map((entity) => [entity.name.trim().toLowerCase(), entity])
-    );
-    const duplicateNameCounts = new Map<string, number>();
-    jsonImportSession.rows.forEach((row) => {
-      const nameRaw = valueToString(row.record[jsonImportSession.nameKey]);
-      const normalized = nameRaw.trim().toLowerCase();
-      if (!normalized) return;
-      duplicateNameCounts.set(normalized, (duplicateNameCounts.get(normalized) ?? 0) + 1);
-    });
-
-    return jsonImportSession.rows.map((row) => {
-      const errors: string[] = [];
-      const nameRaw = valueToString(row.record[jsonImportSession.nameKey]);
-      const name = nameRaw.trim();
-      if (!name) {
-        errors.push('Missing name value.');
-      }
-
-      const fields: Record<string, string> = {};
-      for (const field of activeJsonCategory.fieldSchema) {
-        const mappedKey = jsonImportSession.fieldMap[field.key];
-        if (!mappedKey) {
-          if (field.required) {
-            errors.push(`Required field "${field.label}" is not mapped.`);
-          }
-          continue;
-        }
-        const value = valueToString(row.record[mappedKey]);
-        if (field.required && !value) {
-          errors.push(`Required field "${field.label}" is empty.`);
-        }
-        if (value) {
-          fields[field.key] = value;
-        }
-      }
-      const normalizedName = name.trim().toLowerCase();
-      const existingEntity = normalizedName
-        ? existingByName.get(normalizedName)
-        : undefined;
-      const hasBatchDuplicate = normalizedName
-        ? (duplicateNameCounts.get(normalizedName) ?? 0) > 1
-        : false;
-      const conflict =
-        jsonImportSession.mode === 'create' && existingEntity
-          ? {
-              kind: 'existing' as const,
-              message: `Matches existing ${activeJsonCategory.name.slice(0, -1).toLowerCase()} "${existingEntity.name}". Choose whether to create a duplicate, update it, or skip this row.`
-            }
-          : hasBatchDuplicate
-            ? {
-                kind: 'batch-duplicate' as const,
-                message:
-                  'Another JSON row uses this same name in the selected category. Choose whether to create, update by name, or skip this row.'
-              }
-            : undefined;
-      const resolution =
-        jsonImportConflictResolutions[row.rowIndex] ??
-        (conflict ? ('skip' as const) : jsonImportSession.mode);
-      return {
-        rowIndex: row.rowIndex,
-        name,
-        fields,
-        errors,
-        existingEntityId: existingEntity?.id,
-        conflict,
-        resolution
-      };
-    });
-  }, [activeJsonCategory, entities, jsonImportConflictResolutions, jsonImportSession]);
-  const jsonImportValidCount = preparedJsonRows.filter(
-    (row) => row.errors.length === 0
-  ).length;
-  const jsonImportConflictCount = preparedJsonRows.filter((row) => row.conflict).length;
-  const unresolvedJsonConflictCount = preparedJsonRows.filter(
-    (row) => row.conflict && !jsonImportConflictResolutions[row.rowIndex]
-  ).length;
-  const filteredEntities = entities.filter((e) => e.categoryId === activeTab);
+  const {
+    isImportingEntities,
+    isApplyingImports,
+    setIsApplyingImports,
+    importDrafts,
+    setImportDrafts,
+    isImportingJson,
+    isApplyingJsonImport,
+    setIsApplyingJsonImport,
+    jsonImportSession,
+    setJsonImportSession,
+    jsonImportConflictResolutions,
+    setJsonImportConflictResolutions,
+    activeJsonCategory,
+    preparedJsonRows,
+    jsonImportValidCount,
+    jsonImportConflictCount,
+    unresolvedJsonConflictCount,
+    handleImportEntities,
+    updateImportDraft,
+    handleJsonImportFile,
+    handleJsonCategoryChange,
+    handleJsonFieldMapChange,
+    handleJsonConflictResolutionChange
+  } = useWorldBibleImports({
+    activeProjectId: activeProject?.id ?? null,
+    activeCategory: activeCategory ?? null,
+    categories,
+    entities,
+    setFeedback
+  });
   const currentEntityMemories = editingId
     ? memories.filter((memory) => memory.documentId === editingId)
     : [];
@@ -758,79 +570,69 @@ function WorldBibleRoute() {
     });
     return map;
   }, [aliases]);
-  const reviewQueue = useMemo<ReviewQueueItem[]>(
-    () => buildWorldReviewQueue(entities, aliases),
-    [aliases, entities]
+
+  const ignoredEntityMatchKeys = useMemo(
+    () => new Set(projectSettings?.ignoredEntityMatchKeys ?? []),
+    [projectSettings?.ignoredEntityMatchKeys]
   );
-  const filteredReviewQueue = useMemo(
+  const richImportDraftCount = useMemo(
     () =>
-      reviewQueue.filter((item) =>
-        reviewFilter === 'all' ? true : item.reasons.includes(reviewFilter)
-      ),
-    [reviewFilter, reviewQueue]
+      importDrafts.filter((draft) => {
+        const category = categoryById.get(draft.categoryId);
+        const preferredField = category ? getPreferredImportField(category) : null;
+        return preferredField?.type === 'textarea';
+      }).length,
+    [categoryById, importDrafts]
   );
-  const reviewCounts = useMemo(
-    () => ({
-      all: reviewQueue.length,
-      needsCompletion: reviewQueue.filter((item) =>
-        item.reasons.includes('needsCompletion')
-      ).length,
-      aliasFollowUp: reviewQueue.filter((item) =>
-        item.reasons.includes('aliasFollowUp')
-      ).length
-    }),
-    [reviewQueue]
+  const activeImportPreviewDraft = useMemo(
+    () => importDrafts.find((draft) => draft.id === activeImportPreviewId) ?? null,
+    [activeImportPreviewId, importDrafts]
   );
-  const potentialEntityMatches = useMemo<PotentialEntityMatch[]>(() => {
-    const normalizedName = normalizeName(name);
-    const aliasValues = parseAlternativeNames(fieldValues[ALTERNATIVE_NAMES_KEY] || '');
-    const normalizedAliases = aliasValues
-      .map((alias) => normalizeName(alias))
-      .filter(Boolean);
-
-    if (!normalizedName && normalizedAliases.length === 0) {
-      return [];
-    }
-
-    return entities
-      .filter((entity) => entity.id !== editingId)
-      .map((entity) => {
-        const reasons = new Set<string>();
-        const entityName = normalizeName(entity.name);
-        const entityAliases = aliasMapByEntityId
-          .get(entity.id)
-          ?.map((alias) => normalizeName(alias))
-          .filter(Boolean) ?? [];
-
-        if (normalizedName && entityName === normalizedName) {
-          reasons.add('Same name as an existing record');
-        }
-        if (normalizedName && entityAliases.includes(normalizedName)) {
-          reasons.add('Current name already exists as an alias');
-        }
-        if (normalizedAliases.includes(entityName)) {
-          reasons.add('One of your aliases matches an existing record name');
-        }
-        if (normalizedAliases.some((alias) => entityAliases.includes(alias))) {
-          reasons.add('One or more aliases overlap with another record');
-        }
-
-        return {entity, reasons: Array.from(reasons)};
-      })
-      .filter((match) => match.reasons.length > 0)
-      .sort((a, b) => a.entity.name.localeCompare(b.entity.name));
-  }, [aliasMapByEntityId, editingId, entities, fieldValues, name]);
-  const visibleEntities =
-    viewMode === 'review'
-      ? filteredReviewQueue.map((item) => item.entity)
-      : filteredEntities;
   const selectedEntity = editingId
     ? entities.find((entity) => entity.id === editingId) ?? null
     : null;
-  const selectedEntityQueueItem =
-    selectedEntity
-      ? reviewQueue.find((item) => item.entity.id === selectedEntity.id) ?? null
-      : null;
+  const selectedEntityCategory = selectedEntity
+    ? categoryById.get(selectedEntity.categoryId) ?? null
+    : null;
+  const selectedEntitySummary = selectedEntity
+    ? buildEntityCardSummary(
+        selectedEntity,
+        selectedEntityCategory,
+        aliasMapByEntityId.get(selectedEntity.id) ?? []
+      )
+    : null;
+  const isCanonicalRenameDraft = Boolean(
+    selectedEntity &&
+      name.trim().length > 0 &&
+      normalizeName(selectedEntity.name) !== normalizeName(name)
+  );
+  const {
+    reviewQueue,
+    filteredReviewQueue,
+    reviewCounts,
+    recommendedCounts,
+    potentialEntityMatches,
+    reviewEntityInsightsById,
+    visibleEntities,
+    selectedEntityQueueItem
+  } = useWorldBibleReview({
+    entities,
+    aliases,
+    categories,
+    aliasMapByEntityId,
+    activeTab,
+    viewMode,
+    reviewFilter,
+    recommendedFilter,
+    editingId,
+    name,
+    fieldValues,
+    selectedEntity,
+    alternativeNamesKey: ALTERNATIVE_NAMES_KEY,
+    ignoredEntityMatchKeys,
+    normalizeName,
+    parseAlternativeNames
+  });
   const memoryPanelEmpty =
     'This entry has no captured memories yet. Save it to generate one or adjust the filter.';
 
@@ -839,104 +641,13 @@ function WorldBibleRoute() {
     setName('');
     setFieldValues({});
     setPendingReviewFocus(null);
-  };
-
-  const handleSubmit = async (event: FormEvent) => {
-    event.preventDefault();
-    if (!activeProject || !activeCategory) return;
-
-    setIsSubmittingEntity(true);
-    setFeedback(null);
-    try {
-      const now = Date.now();
-      const id = editingId ?? crypto.randomUUID();
-      const existing = entities.find((e) => e.id === id);
-      const alternativeNames = parseAlternativeNames(
-        fieldValues[ALTERNATIVE_NAMES_KEY] || ''
-      );
-      const nextFields = {...fieldValues};
-      if (alternativeNames.length > 0) {
-        nextFields[ALTERNATIVE_NAMES_KEY] = formatAlternativeNames(alternativeNames);
-      } else {
-        delete nextFields[ALTERNATIVE_NAMES_KEY];
-      }
-
-      const entity: WorldEntity = {
-        id,
-        projectId: activeProject.id,
-        categoryId: activeCategory.id,
-        name,
-        fields: nextFields,
-        isNew: false,
-        needsCompletion: false,
-        aliasesReviewedAt:
-          viewMode === 'review' && selectedEntityQueueItem
-            ? now
-            : existing?.aliasesReviewedAt,
-        links: existing?.links ?? [],
-        createdAt: existing?.createdAt ?? now,
-        updatedAt: now
-      };
-
-      await saveEntity(entity);
-      const savedAliases = await replaceAliasesForEntity({
-        projectId: activeProject.id,
-        entityId: entity.id,
-        aliases: alternativeNames.filter(
-          (alias) => alias.trim().toLowerCase() !== entity.name.trim().toLowerCase()
-        )
-      });
-      if (ragService) {
-        await ragService.indexDocument(
-          entity.id,
-          entity.name,
-          buildEntityContent(entity),
-          'worldbible',
-          {
-            tags: [activeCategory.slug],
-            entityIds: [entity.id]
-          }
-        );
-      }
-      if (shodhService) {
-        await shodhService.captureAutoMemory({
-          projectId: activeProject.id,
-          documentId: entity.id,
-          title: entity.name,
-          content: buildEntityContent(entity),
-          tags: ['worldbible', activeCategory.slug]
-        });
-        await refreshMemories();
-      }
-
-      setEntities((prev) => {
-        const idx = prev.findIndex((e) => e.id === id);
-        if (idx === -1) return [...prev, entity];
-        const copy = [...prev];
-        copy[idx] = entity;
-        return copy;
-      });
-      setAliases((prev) => [
-        ...prev.filter((alias) => alias.entityId !== entity.id),
-        ...savedAliases
-      ]);
-
-      resetForm();
-      setFeedback({
-        tone: 'success',
-        message: editingId ? 'Entry updated.' : 'Entry created.'
-      });
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unable to save entry.';
-      setFeedback({tone: 'error', message});
-    } finally {
-      setIsSubmittingEntity(false);
-    }
+    setIsSelectedSummaryExpanded(false);
   };
 
   const handleEdit = useCallback((entity: WorldEntity, focus: 'general' | 'aliases' = 'general') => {
     setEditingId(entity.id);
     setPendingReviewFocus(focus);
+    setIsSelectedSummaryExpanded(false);
     setName(entity.name);
     const persistedAlternativeNames =
       typeof entity.fields[ALTERNATIVE_NAMES_KEY] === 'string'
@@ -950,11 +661,24 @@ function WorldBibleRoute() {
           .join(', ')
       )
     );
+    const normalizedFields = Object.fromEntries(
+      Object.entries(entity.fields as Record<string, string>).map(([key, value]) => {
+        const fieldType = categories
+          .find((category) => category.id === entity.categoryId)
+          ?.fieldSchema.find((field) => field.key === key)?.type;
+        return [
+          key,
+          fieldType === 'textarea'
+            ? normalizeRichTextValue(String(value ?? ''))
+            : String(value ?? '')
+        ];
+      })
+    );
     setFieldValues({
-      ...(entity.fields as Record<string, string>),
+      ...normalizedFields,
       [ALTERNATIVE_NAMES_KEY]: mergedAlternativeNames
     });
-  }, [aliasMapByEntityId]);
+  }, [aliasMapByEntityId, categories]);
 
   const handleOpenReviewItem = useCallback(
     (entity: WorldEntity, focus: 'general' | 'aliases' = 'general') => {
@@ -965,34 +689,174 @@ function WorldBibleRoute() {
     [handleEdit]
   );
 
-  const handleMarkEntityComplete = useCallback(
-    async (entity: WorldEntity) => {
-      const now = Date.now();
-      const next: WorldEntity = {
-        ...entity,
-        isNew: false,
-        needsCompletion: false,
-        aliasesReviewedAt: now,
-        updatedAt: now
-      };
+  const buildEntityContent = (entity: WorldEntity) => {
+    const fieldText = Object.entries(entity.fields)
+      .map(([key, value]) =>
+        `${key}: ${typeof value === 'string' ? extractPlainTextFromRichText(value) : value ?? ''}`
+      )
+      .join('\n');
+    return `${entity.name}\n${fieldText}`;
+  };
 
-      setFeedback(null);
+  const hasRuleset = Boolean(activeProject?.rulesetId);
+
+  const {
+    isSubmittingEntity,
+    deletingEntityId,
+    promotingEntityId,
+    importingCharacterEntityId,
+    mergingEntityTargetId,
+    aliasingEntityTargetId,
+    isSyncingCanon,
+    linkingCompendiumEntityId,
+    saveEntityDraft,
+    handleMarkEntityComplete,
+    handleDeleteEntity,
+    handleMergeEntityIntoMatch,
+    handleConvertEntityToAlias,
+    handleImportEntityToCharacters,
+    handleAddEntityToCompendium,
+    handlePromoteEntity,
+    handleCanonSync,
+    isCharacterLikeEntity
+  } = useWorldBibleEntityActions({
+    activeProject,
+    activeCategory: activeCategory ?? null,
+    categories,
+    entities,
+    characters,
+    setCharacters,
+    setEntities,
+    setAliases,
+    setFeedback,
+    setViewMode,
+    setCanonState,
+    ragService,
+    shodhService,
+    refreshMemories,
+    editingId,
+    name,
+    fieldValues,
+    viewMode,
+    selectedEntityQueueItem,
+    filteredReviewQueue,
+    aliasMapByEntityId,
+    compendiumLinkedEntityIds,
+    setCompendiumLinkedEntityIds,
+    hasRuleset,
+    seriesParentProjectId: seriesConfig?.parentProjectId ?? null,
+    normalizeName,
+    parseAlternativeNames,
+    formatAlternativeNames,
+    buildCanonicalAliasList,
+    mergeEntityFields,
+    buildEntityContent,
+    alternativeNamesKey: ALTERNATIVE_NAMES_KEY,
+    openReviewItem: handleOpenReviewItem,
+    handleEdit,
+    resetForm,
+    navigate: (to, options) => navigate(to, options as never)
+  });
+
+  const handleSubmit = async (event: FormEvent) => {
+    event.preventDefault();
+    await saveEntityDraft();
+  };
+
+  const persistIgnoredEntityMatch = useCallback(
+    async (otherEntityId: string) => {
+      if (!activeProject || !projectSettings || !editingId) {
+        throw new Error('Project settings are not ready.');
+      }
+
+      const matchKey = buildEntityMatchKey(editingId, otherEntityId);
+      const nextSettings = {
+        ...projectSettings,
+        ignoredEntityMatchKeys: Array.from(
+          new Set([...(projectSettings.ignoredEntityMatchKeys ?? []), matchKey])
+        )
+      };
+      await saveProjectSettings(nextSettings);
+      return matchKey;
+    },
+    [activeProject, editingId, projectSettings, saveProjectSettings]
+  );
+
+  const handleKeepSeparateMatch = useCallback(
+    async (otherEntity: WorldEntity) => {
       try {
-        await saveEntity(next);
-        setEntities((prev) =>
-          prev.map((item) => (item.id === entity.id ? next : item))
-        );
+        await persistIgnoredEntityMatch(otherEntity.id);
+        if (
+          selectedEntityQueueItem &&
+          editingId === selectedEntityQueueItem.entity.id &&
+          selectedEntityQueueItem.reasons.length === 1 &&
+          selectedEntityQueueItem.reasons[0] === 'aliasFollowUp'
+        ) {
+          await handleMarkEntityComplete(selectedEntityQueueItem.entity, {openNext: true});
+          return;
+        }
         setFeedback({
           tone: 'success',
-          message: `"${entity.name}" marked reviewed.`
+          message: `"${selectedEntity?.name ?? 'This entry'}" and "${otherEntity.name}" will stay separate.`
         });
       } catch (error) {
         const message =
-          error instanceof Error ? error.message : 'Unable to update entry.';
+          error instanceof Error ? error.message : 'Unable to keep these records separate.';
         setFeedback({tone: 'error', message});
       }
     },
-    []
+    [
+      editingId,
+      handleMarkEntityComplete,
+      persistIgnoredEntityMatch,
+      selectedEntity,
+      selectedEntityQueueItem
+    ]
+  );
+
+  const handleIgnoreEntityMatch = useCallback(
+    async (otherEntity: WorldEntity) => {
+      try {
+        await persistIgnoredEntityMatch(otherEntity.id);
+        const currentInsight =
+          editingId && selectedEntityQueueItem?.entity.id === editingId
+            ? reviewEntityInsightsById.get(editingId)
+            : null;
+        const remainingVisibleMatchCount = potentialEntityMatches.filter(
+          (match) => match.entity.id !== otherEntity.id
+        ).length;
+        const canAutoResolveCurrentReview =
+          Boolean(selectedEntityQueueItem) &&
+          editingId === selectedEntityQueueItem?.entity.id &&
+          selectedEntityQueueItem?.reasons.length === 1 &&
+          selectedEntityQueueItem?.reasons[0] === 'aliasFollowUp' &&
+          remainingVisibleMatchCount === 0 &&
+          (currentInsight?.missingRequiredFields.length ?? 0) === 0;
+
+        if (canAutoResolveCurrentReview) {
+          await handleMarkEntityComplete(selectedEntityQueueItem.entity, {openNext: true});
+          return;
+        }
+
+        setFeedback({
+          tone: 'success',
+          message: `Ignored the match between "${selectedEntity?.name ?? 'this entry'}" and "${otherEntity.name}".`
+        });
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : 'Unable to ignore this match.';
+        setFeedback({tone: 'error', message});
+      }
+    },
+    [
+      editingId,
+      handleMarkEntityComplete,
+      persistIgnoredEntityMatch,
+      potentialEntityMatches,
+      reviewEntityInsightsById,
+      selectedEntity,
+      selectedEntityQueueItem
+    ]
   );
 
   useEffect(() => {
@@ -1021,95 +885,17 @@ function WorldBibleRoute() {
     focusedEntityKeyRef.current = focusKey;
   }, [entities, handleEdit, location.key, location.state]);
 
-  const handleImportEntities = async (event: ChangeEvent<HTMLInputElement>) => {
-    if (!activeProject || !activeCategory) return;
-    const fileList = event.target.files;
-    if (!fileList || fileList.length === 0) return;
-
-    setIsImportingEntities(true);
-    setFeedback(null);
-    const drafts: WorldBibleImportDraft[] = [];
-    let parseFailures = 0;
-
-    try {
-      const files = Array.from(fileList);
-      for (const file of files) {
-        const lower = file.name.toLowerCase();
-        try {
-          if (lower.endsWith('.doc')) {
-            parseFailures += 1;
-            drafts.push({
-              id: crypto.randomUUID(),
-              fileName: file.name,
-              name: fileNameToEntityName(file.name),
-              text: '',
-              preview: '',
-              categoryId: activeCategory.id,
-              mode: 'create',
-              include: false,
-              parseError:
-                'Legacy .doc files are not supported yet. Convert to .docx, .txt, or .md.'
-            });
-            continue;
-          }
-          const raw = lower.endsWith('.docx')
-            ? await parseDocxToText(file)
-            : await file.text();
-          const text =
-            lower.endsWith('.html') || lower.endsWith('.htm')
-              ? htmlToText(raw)
-              : raw.trim();
-          drafts.push({
-            id: crypto.randomUUID(),
-            fileName: file.name,
-            name: fileNameToEntityName(file.name),
-            text,
-            preview: buildPreview(text),
-            categoryId: activeCategory.id,
-            mode: 'create',
-            include: true
-          });
-        } catch {
-          parseFailures += 1;
-          drafts.push({
-            id: crypto.randomUUID(),
-            fileName: file.name,
-            name: fileNameToEntityName(file.name),
-            text: '',
-            preview: '',
-            categoryId: activeCategory.id,
-            mode: 'create',
-            include: false,
-            parseError: 'Failed to parse this file.'
-          });
-        }
-      }
-      setImportDrafts(drafts);
-      setFeedback({
-        tone: parseFailures > 0 ? 'error' : 'success',
-        message:
-          parseFailures > 0
-            ? `Prepared ${drafts.length - parseFailures} import draft(s); ${parseFailures} file(s) need attention.`
-            : `Prepared ${drafts.length} import draft(s). Review and apply when ready.`
-      });
-    } finally {
-      setIsImportingEntities(false);
-      event.target.value = '';
-    }
-  };
-
-  const updateImportDraft = (
-    draftId: string,
-    updates: Partial<WorldBibleImportDraft>
-  ) => {
-    setImportDrafts((prev) =>
-      prev.map((draft) => (draft.id === draftId ? {...draft, ...updates} : draft))
-    );
-  };
-
-  const handleApplyImportDrafts = async () => {
+  const handleApplyImportDrafts = async (options?: {
+    draftIds?: string[];
+    openFirstImported?: boolean;
+  }) => {
     if (!activeProject) return;
-    const queuedDrafts = importDrafts.filter((draft) => draft.include && !draft.parseError);
+    const queuedDrafts = importDrafts.filter(
+      (draft) =>
+        draft.include &&
+        !draft.parseError &&
+        (!options?.draftIds || options.draftIds.includes(draft.id))
+    );
     if (queuedDrafts.length === 0) {
       setFeedback({
         tone: 'error',
@@ -1124,6 +910,7 @@ function WorldBibleRoute() {
     let createdCount = 0;
     let updatedCount = 0;
     let failedCount = 0;
+    let firstImportedEntity: WorldEntity | null = null;
 
     try {
       for (const draft of queuedDrafts) {
@@ -1150,7 +937,7 @@ function WorldBibleRoute() {
                 ...existing,
                 fields: {
                   ...existing.fields,
-                  ...mapImportedTextToFields(category, draft.text)
+                  ...mapImportedTextToFields(category, draft.text, draft.richTextHtml)
                 },
                 updatedAt: now
               }
@@ -1159,7 +946,7 @@ function WorldBibleRoute() {
                 projectId: activeProject.id,
                 categoryId: draft.categoryId,
                 name: draft.name.trim() || fileNameToEntityName(draft.fileName),
-                fields: mapImportedTextToFields(category, draft.text),
+                fields: mapImportedTextToFields(category, draft.text, draft.richTextHtml),
                 needsCompletion: false,
                 links: [],
                 createdAt: now,
@@ -1167,6 +954,9 @@ function WorldBibleRoute() {
               };
 
           await saveEntity(entity);
+          if (!firstImportedEntity) {
+            firstImportedEntity = entity;
+          }
           if (ragService) {
             await ragService.indexDocument(
               entity.id,
@@ -1217,126 +1007,24 @@ function WorldBibleRoute() {
       });
 
       if (failedCount === 0) {
-        setImportDrafts([]);
+        if (options?.draftIds?.length) {
+          setImportDrafts((prev) =>
+            prev.filter((draft) => !options.draftIds?.includes(draft.id))
+          );
+        } else {
+          setImportDrafts([]);
+        }
+      }
+
+      if (options?.openFirstImported && firstImportedEntity) {
+        setActiveImportPreviewId(null);
+        setViewMode('category');
+        setActiveTab(firstImportedEntity.categoryId);
+        handleEdit(firstImportedEntity);
       }
     } finally {
       setIsApplyingImports(false);
     }
-  };
-
-  const handleJsonImportFile = async (event: ChangeEvent<HTMLInputElement>) => {
-    if (!activeProject || !activeCategory) return;
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    setIsImportingJson(true);
-    setFeedback(null);
-    try {
-      const raw = await file.text();
-      const parsed = JSON.parse(raw) as unknown;
-      const recordsSource = Array.isArray(parsed)
-        ? parsed
-        : typeof parsed === 'object' && parsed !== null
-          ? ((parsed as Record<string, unknown>).entries ??
-            (parsed as Record<string, unknown>).items ??
-            (parsed as Record<string, unknown>).rows)
-          : null;
-
-      if (!Array.isArray(recordsSource)) {
-        throw new Error(
-          'JSON must be an array of objects or an object with entries/items/rows.'
-        );
-      }
-
-      const rows: JsonImportRowInput[] = [];
-      const keySet = new Set<string>();
-      recordsSource.forEach((item, index) => {
-        if (!item || typeof item !== 'object' || Array.isArray(item)) return;
-        const record = item as Record<string, unknown>;
-        Object.keys(record).forEach((key) => keySet.add(key));
-        rows.push({
-          rowIndex: index + 1,
-          record
-        });
-      });
-
-      if (rows.length === 0) {
-        throw new Error('No object rows found in JSON.');
-      }
-
-      const keys = Array.from(keySet).sort();
-      const defaultNameKey = keys.includes('name') ? 'name' : (keys[0] ?? '');
-      const defaultFieldMap: Record<string, string> = {};
-      activeCategory.fieldSchema.forEach((field) => {
-        defaultFieldMap[field.key] = keys.includes(field.key) ? field.key : '';
-      });
-
-      setJsonImportSession({
-        fileName: file.name,
-        rows,
-        keys,
-        categoryId: activeCategory.id,
-        mode: 'create',
-        nameKey: defaultNameKey,
-        fieldMap: defaultFieldMap
-      });
-      setJsonImportConflictResolutions({});
-      setFeedback({
-        tone: 'success',
-        message: `Loaded ${rows.length} JSON row(s). Map fields and apply when ready.`
-      });
-    } catch (error) {
-      const message =
-        error instanceof Error ? error.message : 'Unable to parse JSON import file.';
-      setFeedback({tone: 'error', message});
-      setJsonImportSession(null);
-      setJsonImportConflictResolutions({});
-    } finally {
-      setIsImportingJson(false);
-      event.target.value = '';
-    }
-  };
-
-  const handleJsonCategoryChange = (categoryId: string) => {
-    const category = categories.find((item) => item.id === categoryId);
-    setJsonImportSession((prev) => {
-      if (!prev) return prev;
-      const nextFieldMap: Record<string, string> = {};
-      if (category) {
-        category.fieldSchema.forEach((field) => {
-          nextFieldMap[field.key] = prev.keys.includes(field.key) ? field.key : '';
-        });
-      }
-      return {
-        ...prev,
-        categoryId,
-        fieldMap: nextFieldMap
-      };
-    });
-    setJsonImportConflictResolutions({});
-  };
-
-  const handleJsonFieldMapChange = (fieldKey: string, sourceKey: string) => {
-    setJsonImportSession((prev) => {
-      if (!prev) return prev;
-      return {
-        ...prev,
-        fieldMap: {
-          ...prev.fieldMap,
-          [fieldKey]: sourceKey
-        }
-      };
-    });
-  };
-
-  const handleJsonConflictResolutionChange = (
-    rowIndex: number,
-    resolution: JsonImportConflictResolution
-  ) => {
-    setJsonImportConflictResolutions((prev) => ({
-      ...prev,
-      [rowIndex]: resolution
-    }));
   };
 
   const handleApplyJsonImport = async () => {
@@ -1382,13 +1070,20 @@ function WorldBibleRoute() {
                     entity.name.trim().toLowerCase() === normalizedName
                 )
               : undefined;
+          const normalizedRowFields = {...row.fields};
+          activeJsonCategory.fieldSchema.forEach((field) => {
+            if (field.type !== 'textarea') return;
+            const rawValue = normalizedRowFields[field.key];
+            normalizedRowFields[field.key] =
+              typeof rawValue === 'string' ? normalizeRichTextValue(rawValue) : '<p></p>';
+          });
 
           const entity: WorldEntity = existing
             ? {
                 ...existing,
                 fields: {
                   ...existing.fields,
-                  ...row.fields
+                  ...normalizedRowFields
                 },
                 updatedAt: now
               }
@@ -1397,7 +1092,7 @@ function WorldBibleRoute() {
                 projectId: activeProject.id,
                 categoryId: jsonImportSession.categoryId,
                 name: row.name,
-                fields: row.fields,
+                fields: normalizedRowFields,
                 needsCompletion: false,
                 links: [],
                 createdAt: now,
@@ -1503,379 +1198,6 @@ function WorldBibleRoute() {
         entries: [makeRow(1), makeRow(2), makeRow(3)]
       }
     );
-  };
-
-  const handleDeleteEntity = async (id: string) => {
-    if (!confirm('Delete this entity?')) return;
-    setDeletingEntityId(id);
-    setFeedback(null);
-    try {
-      if (activeProject) {
-        await deleteAliasesForEntity(activeProject.id, id);
-      }
-      await deleteEntity(id);
-      if (ragService) {
-        await ragService.deleteDocument(id);
-      }
-      if (shodhService) {
-        await shodhService.deleteMemoriesForDocument(id);
-        await refreshMemories();
-      }
-      setEntities((prev) => prev.filter((e) => e.id !== id));
-      setAliases((prev) => prev.filter((alias) => alias.entityId !== id));
-      if (editingId === id) resetForm();
-      setFeedback({tone: 'success', message: 'Entry deleted.'});
-    } catch (error) {
-      const message =
-        error instanceof Error ? error.message : 'Unable to delete entry.';
-      setFeedback({tone: 'error', message});
-    } finally {
-      setDeletingEntityId(null);
-    }
-  };
-
-  const handleMergeEntityIntoMatch = useCallback(
-    async (target: WorldEntity) => {
-      if (!activeProject || !editingId) {
-        return;
-      }
-
-      const source = entities.find((entity) => entity.id === editingId);
-      if (!source || source.id === target.id) {
-        return;
-      }
-
-      if (!confirm(`Merge "${source.name}" into "${target.name}" and remove the duplicate record?`)) {
-        return;
-      }
-
-      setMergingEntityTargetId(target.id);
-      setFeedback(null);
-
-      try {
-        const sourceName = name.trim() || source.name;
-        const sourceDraftFields: Record<string, unknown> = {
-          ...source.fields,
-          ...fieldValues
-        };
-        const sourceAliasTexts = [
-          ...(aliasMapByEntityId.get(source.id) ?? []),
-          ...parseAlternativeNames(
-            typeof sourceDraftFields[ALTERNATIVE_NAMES_KEY] === 'string'
-              ? String(sourceDraftFields[ALTERNATIVE_NAMES_KEY])
-              : ''
-          ),
-          source.name,
-          sourceName
-        ].filter((alias) => normalizeName(alias) !== normalizeName(target.name));
-        const targetAliasTexts = [
-          ...(aliasMapByEntityId.get(target.id) ?? []),
-          ...parseAlternativeNames(
-            typeof target.fields[ALTERNATIVE_NAMES_KEY] === 'string'
-              ? target.fields[ALTERNATIVE_NAMES_KEY]
-              : ''
-          )
-        ];
-
-        const mergedEntity: WorldEntity = {
-          ...target,
-          fields: (() => {
-            const nextFields = mergeEntityFields(target.fields, sourceDraftFields);
-            delete nextFields[ALTERNATIVE_NAMES_KEY];
-            return nextFields;
-          })(),
-          links: Array.from(new Set([...(target.links ?? []), ...(source.links ?? [])])),
-          isNew: false,
-          needsCompletion: false,
-          aliasesReviewedAt: Math.max(
-            target.aliasesReviewedAt ?? 0,
-            source.aliasesReviewedAt ?? 0
-          ) || undefined,
-          updatedAt: Date.now()
-        };
-
-        await saveEntity(mergedEntity);
-        const mergedAliases = await replaceAliasesForEntity({
-          projectId: activeProject.id,
-          entityId: target.id,
-          aliases: Array.from(
-            new Map(
-              [...targetAliasTexts, ...sourceAliasTexts]
-                .map((alias) => alias.trim())
-                .filter(Boolean)
-                .map((alias) => [normalizeName(alias), alias])
-            ).values()
-          )
-        });
-        await deleteAliasesForEntity(activeProject.id, source.id);
-        await deleteEntity(source.id);
-
-        if (ragService) {
-          await ragService.indexDocument(
-            mergedEntity.id,
-            mergedEntity.name,
-            buildEntityContent(mergedEntity),
-            'worldbible',
-            {
-              tags: [
-                categories.find((category) => category.id === mergedEntity.categoryId)?.slug ?? ''
-              ].filter(Boolean),
-              entityIds: [mergedEntity.id]
-            }
-          );
-          await ragService.deleteDocument(source.id);
-        }
-        if (shodhService) {
-          await shodhService.captureAutoMemory({
-            projectId: activeProject.id,
-            documentId: mergedEntity.id,
-            title: mergedEntity.name,
-            content: buildEntityContent(mergedEntity),
-            tags: [
-              'worldbible',
-              categories.find((category) => category.id === mergedEntity.categoryId)?.slug ?? ''
-            ].filter(Boolean)
-          });
-          await shodhService.deleteMemoriesForDocument(source.id);
-          await refreshMemories();
-        }
-
-        setEntities((prev) =>
-          prev
-            .filter((entity) => entity.id !== source.id)
-            .map((entity) => (entity.id === target.id ? mergedEntity : entity))
-        );
-        setAliases((prev) => [
-          ...prev.filter(
-            (alias) => alias.targetId !== source.id && alias.targetId !== target.id
-          ),
-          ...mergedAliases
-        ]);
-        setViewMode('category');
-        handleEdit(mergedEntity, 'aliases');
-        setFeedback({
-          tone: 'success',
-          message: `"${sourceName}" merged into "${target.name}".`
-        });
-      } catch (error) {
-        const message =
-          error instanceof Error ? error.message : 'Unable to merge records.';
-        setFeedback({tone: 'error', message});
-      } finally {
-        setMergingEntityTargetId(null);
-      }
-    },
-    [
-      activeProject,
-      aliasMapByEntityId,
-      categories,
-      editingId,
-      entities,
-      fieldValues,
-      handleEdit,
-      name,
-      ragService,
-      shodhService,
-      refreshMemories
-    ]
-  );
-
-  const buildEntityContent = (entity: WorldEntity) => {
-    const fieldText = Object.entries(entity.fields)
-      .map(([key, value]) => `${key}: ${value ?? ''}`)
-      .join('\n');
-    return `${entity.name}\n${fieldText}`;
-  };
-
-  const isCharacterLikeEntity = useCallback(
-    (entity: WorldEntity): boolean => {
-      const category = categories.find((item) => item.id === entity.categoryId);
-      const slug = (category?.slug ?? '').toLowerCase();
-      return CHARACTER_CATEGORY_HINTS.some((hint) => slug.includes(hint));
-    },
-    [categories]
-  );
-  const isLocationLikeEntity = useCallback(
-    (entity: WorldEntity): boolean => {
-      const category = categories.find((item) => item.id === entity.categoryId);
-      const slug = (category?.slug ?? '').toLowerCase();
-      return LOCATION_CATEGORY_HINTS.some((hint) => slug.includes(hint));
-    },
-    [categories]
-  );
-
-  const hasRuleset = Boolean(activeProject?.rulesetId);
-
-  const handleImportEntityToCharacters = useCallback(
-    async (entity: WorldEntity, options?: {autoCreateSheet?: boolean}) => {
-      if (!activeProject) {
-        return;
-      }
-      setImportingCharacterEntityId(entity.id);
-      setFeedback(null);
-      try {
-        const existingCharacter = characters.find(
-          (character) => normalizeName(character.name) === normalizeName(entity.name)
-        );
-        const character: Character = existingCharacter ?? {
-          id: crypto.randomUUID(),
-          projectId: activeProject.id,
-          name: entity.name,
-          description:
-            typeof entity.fields.description === 'string'
-              ? entity.fields.description
-              : undefined,
-          fields: {
-            age: typeof entity.fields.age === 'string' ? entity.fields.age : undefined,
-            role: typeof entity.fields.role === 'string' ? entity.fields.role : undefined,
-            notes: typeof entity.fields.notes === 'string' ? entity.fields.notes : undefined
-          },
-          createdAt: Date.now(),
-          updatedAt: Date.now()
-        };
-
-        if (!existingCharacter) {
-          await saveCharacter(character);
-          setCharacters((prev) => [...prev, character]);
-        }
-
-        setFeedback({
-          tone: 'success',
-          message: existingCharacter
-            ? `"${entity.name}" already exists in Characters.`
-            : `"${entity.name}" imported into Characters without removing the World Bible record.`
-        });
-
-        if (options?.autoCreateSheet && hasRuleset) {
-          navigate('/characters?view=sheets', {
-            state: {
-              prefillCharacterId: character.id,
-              preferredView: 'sheets',
-              autoCreateSheetForCharacterId: character.id
-            }
-          });
-        }
-      } catch (error) {
-        const message =
-          error instanceof Error ? error.message : 'Unable to import character.';
-        setFeedback({tone: 'error', message});
-      } finally {
-        setImportingCharacterEntityId(null);
-      }
-    },
-    [activeProject, characters, hasRuleset, navigate]
-  );
-
-  const inferCompendiumDomain = (entity: WorldEntity): CompendiumDomain => {
-    const category = categories.find((item) => item.id === entity.categoryId);
-    const slug = (category?.slug ?? '').toLowerCase();
-    if (slug.includes('monster') || slug.includes('beast') || slug.includes('creature')) {
-      return 'beast';
-    }
-    if (slug.includes('plant') || slug.includes('flora') || slug.includes('herb')) {
-      return 'flora';
-    }
-    if (slug.includes('ore') || slug.includes('mineral') || slug.includes('rock')) {
-      return 'mineral';
-    }
-    if (slug.includes('artifact') || slug.includes('relic')) {
-      return 'artifact';
-    }
-    return 'custom';
-  };
-
-  const handleAddEntityToCompendium = async (entity: WorldEntity) => {
-    if (!activeProject) return;
-    if (isLocationLikeEntity(entity) && !compendiumLinkedEntityIds.has(entity.id)) {
-      navigate('/compendium', {
-        state: {
-          activeTab: 'entries',
-          importEntityId: entity.id,
-          importMechanicKind: 'discovery',
-          importProgressScope: 'character',
-          flashMessage: `Choose the mechanics type for "${entity.name}".`
-        }
-      });
-      return;
-    }
-    setLinkingCompendiumEntityId(entity.id);
-    setFeedback(null);
-    try {
-      const entry = await upsertCompendiumEntryFromEntity({
-        projectId: activeProject.id,
-        entity,
-        domain: inferCompendiumDomain(entity),
-        needsCompletion: entity.needsCompletion ?? false
-      });
-      setCompendiumLinkedEntityIds((prev) => {
-        const next = new Set(prev);
-        next.add(entity.id);
-        return next;
-      });
-      setFeedback({
-        tone: 'success',
-        message: `"${entity.name}" linked to mechanics.`
-      });
-      navigate('/compendium', {
-        state: {
-          focusEntryId: entry.id,
-          activeTab: 'entries',
-          flashMessage: `"${entity.name}" linked to mechanics.`
-        }
-      });
-    } catch (error) {
-      const message =
-        error instanceof Error
-          ? error.message
-          : 'Unable to link entity to compendium.';
-      setFeedback({tone: 'error', message});
-    } finally {
-      setLinkingCompendiumEntityId(null);
-    }
-  };
-
-  const handlePromoteEntity = async (entity: WorldEntity) => {
-    if (!seriesConfig?.parentProjectId) return;
-    setPromotingEntityId(entity.id);
-    setFeedback(null);
-    try {
-      await promoteDocumentToParent({
-        parentProjectId: seriesConfig.parentProjectId,
-        documentId: entity.id,
-        title: entity.name,
-        content: buildEntityContent(entity),
-        type: 'worldbible',
-        tags: [activeCategory?.slug ?? 'worldbible']
-      });
-      setFeedback({tone: 'success', message: 'Entry promoted to parent canon.'});
-    } catch (error) {
-      const message =
-        error instanceof Error ? error.message : 'Unable to promote entry.';
-      setFeedback({tone: 'error', message});
-    } finally {
-      setPromotingEntityId(null);
-    }
-  };
-  const handleCanonSync = async () => {
-    if (!activeProject) return;
-    setIsSyncingCanon(true);
-    setFeedback(null);
-    try {
-      const updated = await syncChildWithParent(activeProject.id);
-      if (updated) {
-        setCanonState((prev) => ({
-          ...prev,
-          childLastSynced: updated.lastSyncedCanon
-        }));
-      }
-      setFeedback({tone: 'success', message: 'Canon sync state updated.'});
-    } catch (error) {
-      const message =
-        error instanceof Error ? error.message : 'Unable to mark canon as synced.';
-      setFeedback({tone: 'error', message});
-    } finally {
-      setIsSyncingCanon(false);
-    }
   };
 
   if (!activeProject) {
@@ -2084,76 +1406,225 @@ function WorldBibleRoute() {
           <p className={styles.importSummary}>
             {importDrafts.filter((draft) => draft.include && !draft.parseError).length}{' '}
             selected · {importDrafts.filter((draft) => draft.parseError).length} with
-            errors
+            errors · {richImportDraftCount} targeting rich-text lore fields
           </p>
           <ul className={styles.importDraftList}>
-            {importDrafts.map((draft) => (
-              <li key={draft.id} className={styles.importDraftCard}>
-                <div className={styles.importDraftTop}>
-                  <label>
-                    <input
-                      type='checkbox'
-                      checked={draft.include}
-                      disabled={Boolean(draft.parseError) || isApplyingImports}
-                      onChange={(e) =>
-                        updateImportDraft(draft.id, {include: e.target.checked})
-                      }
-                    />
-                    <span>{draft.fileName}</span>
-                  </label>
-                </div>
-                <div className={styles.importDraftFields}>
-                  <label>
-                    Entry Name
-                    <input
-                      type='text'
-                      value={draft.name}
-                      disabled={Boolean(draft.parseError) || isApplyingImports}
-                      onChange={(e) =>
-                        updateImportDraft(draft.id, {name: e.target.value})
-                      }
-                    />
-                  </label>
-                  <label>
-                    Category
-                    <select
-                      value={draft.categoryId}
-                      disabled={Boolean(draft.parseError) || isApplyingImports}
-                      onChange={(e) =>
-                        updateImportDraft(draft.id, {categoryId: e.target.value})
-                      }
-                    >
-                      {categories.map((category) => (
-                        <option key={category.id} value={category.id}>
-                          {category.name}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <label>
-                    Behavior
-                    <select
-                      value={draft.mode}
-                      disabled={Boolean(draft.parseError) || isApplyingImports}
-                      onChange={(e) =>
-                        updateImportDraft(draft.id, {mode: e.target.value as ImportMode})
-                      }
-                    >
-                      <option value='create'>Create New</option>
-                      <option value='upsert'>Update by Name</option>
-                    </select>
-                  </label>
-                </div>
-                {draft.parseError ? (
-                  <p className={styles.importError}>{draft.parseError}</p>
-                ) : (
-                  <p className={styles.importPreview}>{draft.preview}</p>
-                )}
-              </li>
-            ))}
+            {importDrafts.map((draft) => {
+              const category = categoryById.get(draft.categoryId) ?? null;
+              const preferredField = category ? getPreferredImportField(category) : null;
+              const landsAsRichText = preferredField?.type === 'textarea';
+              const sourceKind = draft.fileName.toLowerCase().endsWith('.html') ||
+                draft.fileName.toLowerCase().endsWith('.htm')
+                ? 'HTML'
+                : draft.fileName.toLowerCase().endsWith('.md') ||
+                    draft.fileName.toLowerCase().endsWith('.markdown')
+                  ? 'Markdown'
+                  : draft.fileName.toLowerCase().endsWith('.docx')
+                    ? 'DOCX'
+                    : 'Text';
+              return (
+                <li key={draft.id} className={styles.importDraftCard}>
+                  <div className={styles.importDraftTop}>
+                    <label>
+                      <input
+                        type='checkbox'
+                        checked={draft.include}
+                        disabled={Boolean(draft.parseError) || isApplyingImports}
+                        onChange={(e) =>
+                          updateImportDraft(draft.id, {include: e.target.checked})
+                        }
+                      />
+                      <span>{draft.fileName}</span>
+                    </label>
+                    <div className={styles.importChipRow}>
+                      <span className={styles.importChip}>{sourceKind}</span>
+                      {preferredField && (
+                        <span
+                          className={`${styles.importChip} ${
+                            landsAsRichText ? styles.importChipRich : styles.importChipPlain
+                          }`}
+                        >
+                          {landsAsRichText
+                            ? `Rich text -> ${preferredField.label}`
+                            : `Plain field -> ${preferredField.label}`}
+                        </span>
+                      )}
+                      <span className={styles.importChip}>
+                        {draft.mode === 'upsert' ? 'Update by name' : 'Create new'}
+                      </span>
+                    </div>
+                  </div>
+                  <div className={styles.importDraftFields}>
+                    <label>
+                      Entry Name
+                      <input
+                        type='text'
+                        value={draft.name}
+                        disabled={Boolean(draft.parseError) || isApplyingImports}
+                        onChange={(e) =>
+                          updateImportDraft(draft.id, {name: e.target.value})
+                        }
+                      />
+                    </label>
+                    <label>
+                      Category
+                      <select
+                        value={draft.categoryId}
+                        disabled={Boolean(draft.parseError) || isApplyingImports}
+                        onChange={(e) =>
+                          updateImportDraft(draft.id, {categoryId: e.target.value})
+                        }
+                      >
+                        {categories.map((categoryOption) => (
+                          <option key={categoryOption.id} value={categoryOption.id}>
+                            {categoryOption.name}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <label>
+                      Behavior
+                      <select
+                        value={draft.mode}
+                        disabled={Boolean(draft.parseError) || isApplyingImports}
+                        onChange={(e) =>
+                          updateImportDraft(draft.id, {mode: e.target.value as ImportMode})
+                        }
+                      >
+                        <option value='create'>Create New</option>
+                        <option value='upsert'>Update by Name</option>
+                      </select>
+                    </label>
+                  </div>
+                  {draft.parseError ? (
+                    <p className={styles.importError}>{draft.parseError}</p>
+                  ) : (
+                    <>
+                      <div className={styles.importDraftActions}>
+                        <button
+                          type='button'
+                          className={styles.importPreviewButton}
+                          onClick={() =>
+                            void handleApplyImportDrafts({
+                              draftIds: [draft.id],
+                              openFirstImported: true
+                            })
+                          }
+                          disabled={isApplyingImports}
+                        >
+                          Import and open
+                        </button>
+                        {draft.richTextHtml && (
+                          <button
+                            type='button'
+                            className={styles.importPreviewButton}
+                            onClick={() => setActiveImportPreviewId(draft.id)}
+                            disabled={isApplyingImports}
+                          >
+                            Open document preview
+                          </button>
+                        )}
+                      </div>
+                      <p className={styles.importPreview}>{draft.preview}</p>
+                      <p className={styles.importDraftNote}>
+                        {landsAsRichText
+                          ? 'This import will preserve richer prose structure in the target lore field.'
+                          : 'This import will land as plain text in the target field.'}
+                      </p>
+                    </>
+                  )}
+                </li>
+              );
+            })}
           </ul>
         </section>
       )}
+
+      {activeImportPreviewDraft && (() => {
+        const previewCategory = categoryById.get(activeImportPreviewDraft.categoryId) ?? null;
+        const previewField = previewCategory ? getPreferredImportField(previewCategory) : null;
+        const previewSourceKind =
+          activeImportPreviewDraft.fileName.toLowerCase().endsWith('.html') ||
+          activeImportPreviewDraft.fileName.toLowerCase().endsWith('.htm')
+            ? 'HTML'
+            : activeImportPreviewDraft.fileName.toLowerCase().endsWith('.md') ||
+                activeImportPreviewDraft.fileName.toLowerCase().endsWith('.markdown')
+              ? 'Markdown'
+              : activeImportPreviewDraft.fileName.toLowerCase().endsWith('.docx')
+                ? 'DOCX'
+                : 'Text';
+        return (
+          <div
+            className={styles.importPreviewOverlay}
+            role='dialog'
+            aria-modal='true'
+            aria-label='Import document preview'
+            onClick={() => setActiveImportPreviewId(null)}
+          >
+            <div
+              className={styles.importPreviewCard}
+              onClick={(event) => event.stopPropagation()}
+            >
+              <div className={styles.importPreviewHeader}>
+                <div>
+                  <div className={styles.importPreviewEyebrow}>Import document preview</div>
+                  <h3 className={styles.importPreviewTitle}>
+                    {activeImportPreviewDraft.name || activeImportPreviewDraft.fileName}
+                  </h3>
+                  <div className={styles.importChipRow}>
+                    <span className={styles.importChip}>{previewSourceKind}</span>
+                    {previewField && (
+                      <span
+                        className={`${styles.importChip} ${
+                          previewField.type === 'textarea'
+                            ? styles.importChipRich
+                            : styles.importChipPlain
+                        }`}
+                      >
+                        {previewField.type === 'textarea'
+                          ? `Rich text -> ${previewField.label}`
+                          : `Plain field -> ${previewField.label}`}
+                      </span>
+                    )}
+                    <span className={styles.importChip}>{activeImportPreviewDraft.fileName}</span>
+                  </div>
+                </div>
+                <button
+                  type='button'
+                  className={styles.importPreviewButton}
+                  onClick={() =>
+                    void handleApplyImportDrafts({
+                      draftIds: [activeImportPreviewDraft.id],
+                      openFirstImported: true
+                    })
+                  }
+                  disabled={isApplyingImports}
+                >
+                  Import and open
+                </button>
+                <button
+                  type='button'
+                  className={styles.importPreviewButton}
+                  onClick={() => setActiveImportPreviewId(null)}
+                  disabled={isApplyingImports}
+                >
+                  Close preview
+                </button>
+              </div>
+              <div className={styles.importPreviewDocument}>
+                <article
+                  className={styles.importPreviewContent}
+                  dangerouslySetInnerHTML={{
+                    __html:
+                      activeImportPreviewDraft.richTextHtml ||
+                      normalizeRichTextValue(activeImportPreviewDraft.text)
+                  }}
+                />
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {jsonImportSession && (
         <section className={styles.importPanel}>
@@ -2323,8 +1794,8 @@ function WorldBibleRoute() {
               <h2>Review Queue</h2>
               <p>
                 Finish incomplete canon records here. This queue combines entries that
-                still need completion with records that have captured alternative names
-                ready for review.
+                still need required canon details with records whose aliases or duplicate
+                matches still need a decision.
               </p>
             </div>
             <div className={styles.reviewCount}>{reviewQueue.length} open</div>
@@ -2363,6 +1834,53 @@ function WorldBibleRoute() {
                 Alias follow-up ({reviewCounts.aliasFollowUp})
               </button>
             </div>
+            <div className={styles.reviewFilterGroup}>
+              <button
+                type='button'
+                onClick={() => setRecommendedFilter('all')}
+                className={`${styles.reviewFilterButton} ${
+                  recommendedFilter === 'all' ? styles.reviewFilterButtonActive : ''
+                }`}
+              >
+                All recommendations ({recommendedCounts.all})
+              </button>
+              <button
+                type='button'
+                onClick={() => setRecommendedFilter('complete')}
+                className={`${styles.reviewFilterButton} ${
+                  recommendedFilter === 'complete' ? styles.reviewFilterButtonActive : ''
+                }`}
+              >
+                Complete ({recommendedCounts.complete})
+              </button>
+              <button
+                type='button'
+                onClick={() => setRecommendedFilter('alias')}
+                className={`${styles.reviewFilterButton} ${
+                  recommendedFilter === 'alias' ? styles.reviewFilterButtonActive : ''
+                }`}
+              >
+                Alias ({recommendedCounts.alias})
+              </button>
+              <button
+                type='button'
+                onClick={() => setRecommendedFilter('merge')}
+                className={`${styles.reviewFilterButton} ${
+                  recommendedFilter === 'merge' ? styles.reviewFilterButtonActive : ''
+                }`}
+              >
+                Merge ({recommendedCounts.merge})
+              </button>
+              <button
+                type='button'
+                onClick={() => setRecommendedFilter('ignore')}
+                className={`${styles.reviewFilterButton} ${
+                  recommendedFilter === 'ignore' ? styles.reviewFilterButtonActive : ''
+                }`}
+              >
+                Ignore ({recommendedCounts.ignore})
+              </button>
+            </div>
             <div className={styles.reviewToolbarActions}>
               <button type='button' onClick={() => setViewMode('review')}>
                 Open queue mode
@@ -2380,6 +1898,10 @@ function WorldBibleRoute() {
           <div className={styles.reviewList}>
             {filteredReviewQueue.slice(0, viewMode === 'review' ? filteredReviewQueue.length : 12).map(({entity, aliasCount, reasons}) => (
               <div key={entity.id} className={styles.reviewCard}>
+                {(() => {
+                  const insight = reviewEntityInsightsById.get(entity.id);
+                  return (
+                    <>
                 <div className={styles.reviewCardHeader}>
                   <strong>{entity.name}</strong>
                   <span className={styles.reviewMeta}>
@@ -2399,12 +1921,29 @@ function WorldBibleRoute() {
                     ? `${aliasCount} alternative name${aliasCount === 1 ? '' : 's'} saved.`
                     : 'No alternative names saved yet.'}
                 </div>
+                {insight && (
+                  <div className={styles.reviewHint}>
+                    {insight.missingRequiredFields.length > 0
+                      ? `Missing required fields: ${insight.missingRequiredFields.join(', ')}.`
+                      : 'Required fields are filled.'}
+                    {insight.matchCount > 0
+                      ? ` ${insight.matchCount} possible duplicate or alias match${insight.matchCount === 1 ? '' : 'es'} found.`
+                      : ''}
+                  </div>
+                )}
+                {insight && (
+                  <div className={styles.reviewHint}>
+                    {insight.matchCount > 0
+                      ? `Recommended: ${getReviewResolutionLabel(insight.recommendedResolution)}.`
+                      : ''}
+                  </div>
+                )}
                 <div className={styles.reviewActions}>
                   <button
                     type='button'
                     onClick={() => handleOpenReviewItem(entity)}
                   >
-                    Review entry
+                    Review details
                   </button>
                   <button
                     type='button'
@@ -2412,13 +1951,30 @@ function WorldBibleRoute() {
                   >
                     Review aliases
                   </button>
+                  {insight && insight.matchCount > 0 && (
+                    <button
+                      type='button'
+                      onClick={() => handleOpenReviewItem(entity)}
+                    >
+                      Merge matches
+                    </button>
+                  )}
                   <button
                     type='button'
                     onClick={() => void handleMarkEntityComplete(entity)}
                   >
                     Mark reviewed
                   </button>
+                  <button
+                    type='button'
+                    onClick={() => void handleMarkEntityComplete(entity, {openNext: true})}
+                  >
+                    Mark reviewed + next
+                  </button>
                 </div>
+                    </>
+                  );
+                })()}
               </div>
             ))}
           </div>
@@ -2475,6 +2031,55 @@ function WorldBibleRoute() {
                   {selectedEntityQueueItem.reasons
                     .map((reason) => reviewReasonLabels[reason])
                     .join(' · ')}
+                  {(() => {
+                    const insight = reviewEntityInsightsById.get(selectedEntityQueueItem.entity.id);
+                    if (!insight) return null;
+                    return (
+                      <div className={styles.reviewHint}>
+                        {insight.missingRequiredFields.length > 0
+                          ? `Fill: ${insight.missingRequiredFields.join(', ')}.`
+                          : 'Required fields complete.'}
+                        {insight.matchCount > 0
+                          ? ` ${insight.matchCount} possible duplicate or alias match${insight.matchCount === 1 ? '' : 'es'} detected below.`
+                          : ''}
+                        {isCanonicalRenameDraft || insight.matchCount > 0
+                          ? ` Recommended: ${getReviewResolutionLabel(
+                              isCanonicalRenameDraft ? 'rename' : insight.recommendedResolution
+                            )}.`
+                          : ''}
+                      </div>
+                    );
+                  })()}
+                  {selectedEntitySummary?.primarySummary && (
+                    <div className={styles.reviewSummaryPreview}>
+                      <div className={styles.reviewSummaryLabel}>Lore preview</div>
+                      <div className={styles.entitySummaryBlock}>
+                        <p className={styles.entitySummary}>
+                          {isSelectedSummaryExpanded
+                            ? selectedEntitySummary.fullSummary
+                            : selectedEntitySummary.primarySummary}
+                        </p>
+                        {selectedEntitySummary.summaryIsTruncated && (
+                          <button
+                            type='button'
+                            className={styles.entitySummaryToggle}
+                            onClick={() => setIsSelectedSummaryExpanded((value) => !value)}
+                          >
+                            {isSelectedSummaryExpanded ? 'Show less' : 'Read more'}
+                          </button>
+                        )}
+                      </div>
+                      {selectedEntitySummary.secondaryFields.length > 0 && (
+                        <div className={styles.reviewSummaryMeta}>
+                          {selectedEntitySummary.secondaryFields.slice(0, 3).map((field) => (
+                            <span key={field.label}>
+                              <strong>{field.label}:</strong> {field.value}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
                   <div className={styles.reviewToolbarActions}>
                     <button
                       type='button'
@@ -2482,6 +2087,35 @@ function WorldBibleRoute() {
                       disabled={isSubmittingEntity}
                     >
                       Mark reviewed
+                    </button>
+                    <button
+                      type='button'
+                      onClick={() => void handleMarkEntityComplete(selectedEntityQueueItem.entity, {openNext: true})}
+                      disabled={isSubmittingEntity}
+                    >
+                      Mark reviewed + next
+                    </button>
+                    {isCanonicalRenameDraft && selectedEntity && (
+                      <button
+                        type='button'
+                        onClick={() =>
+                          void saveEntityDraft({
+                            openNext: true,
+                            successMessage: `Renamed to "${name.trim()}" and kept "${selectedEntity.name}" as an alias.`,
+                            successMessageWithNext: `Renamed to "${name.trim()}", kept "${selectedEntity.name}" as an alias, and opened the next queue item.`
+                          })
+                        }
+                        disabled={isSubmittingEntity}
+                      >
+                        Rename to canonical + next
+                      </button>
+                    )}
+                    <button
+                      type='button'
+                      onClick={() => setPendingReviewFocus('aliases')}
+                      disabled={isSubmittingEntity}
+                    >
+                      Focus aliases
                     </button>
                   </div>
                 </div>
@@ -2497,6 +2131,12 @@ function WorldBibleRoute() {
                     required
                   />
                 </label>
+                {isCanonicalRenameDraft && selectedEntity && (
+                  <div className={styles.reviewHint}>
+                    Saving this rename will keep <strong>{selectedEntity.name}</strong> as an
+                    alternative name.
+                  </div>
+                )}
               </div>
 
               <div className={styles.formGroup}>
@@ -2521,8 +2161,10 @@ function WorldBibleRoute() {
                 <div className={styles.matchPanel}>
                   <strong>Possible duplicate or alias matches</strong>
                   <p>
-                    This name overlaps with existing canon records. Open the matching
-                    entry before saving if this should be one record instead of two.
+                    This draft overlaps with existing canon. Choose one action for each
+                    match:
+                    {' '}merge duplicates, convert this record into an alias, keep both
+                    records as separate canon, or ignore a noisy suggestion.
                   </p>
                   <div className={styles.matchList}>
                     {potentialEntityMatches.slice(0, 4).map((match) => (
@@ -2532,20 +2174,53 @@ function WorldBibleRoute() {
                           <div className={styles.matchReasons}>
                             {match.reasons.join(' · ')}
                           </div>
+                          <div className={styles.reviewHint}>
+                            Recommended: {getReviewResolutionLabel(match.recommendedResolution)}.
+                          </div>
                         </div>
                         <div className={styles.reviewToolbarActions}>
                           <button
                             type='button'
                             onClick={() => handleEdit(match.entity)}
                           >
-                            Open record
+                            Open other record
                           </button>
                           <button
                             type='button'
                             onClick={() => handleEdit(match.entity, 'aliases')}
                           >
-                            Review aliases
+                            Open aliases
                           </button>
+                          {editingId && match.matchKey && (
+                            <button
+                              type='button'
+                              onClick={() => void handleKeepSeparateMatch(match.entity)}
+                            >
+                              Keep both records
+                            </button>
+                          )}
+                          {editingId && match.matchKey && (
+                            <button
+                              type='button'
+                              onClick={() => void handleIgnoreEntityMatch(match.entity)}
+                            >
+                              Ignore this suggestion
+                            </button>
+                          )}
+                          {editingId && (
+                            <button
+                              type='button'
+                              onClick={() => void handleConvertEntityToAlias(match.entity)}
+                              disabled={
+                                aliasingEntityTargetId === match.entity.id ||
+                                mergingEntityTargetId === match.entity.id
+                              }
+                            >
+                              {aliasingEntityTargetId === match.entity.id
+                                ? 'Converting...'
+                                : 'Convert this record into an alias'}
+                            </button>
+                          )}
                           {editingId && (
                             <button
                               type='button'
@@ -2566,22 +2241,23 @@ function WorldBibleRoute() {
 
               {activeCategory.fieldSchema.map((field) => (
                 <div key={field.key} className={styles.formGroup}>
-                  <label>
-                    {field.label}
-                    {field.required && ' *'}
-                    {field.type === 'textarea' ? (
-                      <textarea
-                        value={fieldValues[field.key] || ''}
-                        onChange={(e) =>
-                          setFieldValues({
-                            ...fieldValues,
-                            [field.key]: e.target.value
-                          })
-                        }
-                        rows={4}
-                        required={field.required}
-                      />
-                    ) : field.type === 'select' ? (
+                  {field.type === 'textarea' ? (
+                    <WorldBibleRichTextField
+                      label={field.label}
+                      required={field.required}
+                      value={fieldValues[field.key] || ''}
+                      onChange={(value) =>
+                        setFieldValues({
+                          ...fieldValues,
+                          [field.key]: value
+                        })
+                      }
+                    />
+                  ) : (
+                    <label>
+                      {field.label}
+                      {field.required && ' *'}
+                      {field.type === 'select' ? (
                       <select
                         value={fieldValues[field.key] || ''}
                         onChange={(e) =>
@@ -2682,8 +2358,9 @@ function WorldBibleRoute() {
                         }
                         required={field.required}
                       />
-                    )}
-                  </label>
+                      )}
+                    </label>
+                  )}
                 </div>
               ))}
 
@@ -2699,6 +2376,30 @@ function WorldBibleRoute() {
                       ? 'Save Changes'
                       : 'Create Entry'}
                 </button>
+                {viewMode === 'review' && (
+                  <button
+                    type='button'
+                    onClick={() => void saveEntityDraft({openNext: true})}
+                    disabled={isSubmittingEntity}
+                  >
+                    Save + next
+                  </button>
+                )}
+                {viewMode === 'review' && isCanonicalRenameDraft && selectedEntity && (
+                  <button
+                    type='button'
+                    onClick={() =>
+                      void saveEntityDraft({
+                        openNext: true,
+                        successMessage: `Renamed to "${name.trim()}" and kept "${selectedEntity.name}" as an alias.`,
+                        successMessageWithNext: `Renamed to "${name.trim()}", kept "${selectedEntity.name}" as an alias, and opened the next queue item.`
+                      })
+                    }
+                    disabled={isSubmittingEntity}
+                  >
+                    Rename to canonical + next
+                  </button>
+                )}
                 {editingId && (
                   <button type='button' onClick={resetForm} disabled={isSubmittingEntity}>
                     Cancel
@@ -2758,9 +2459,18 @@ function WorldBibleRoute() {
               <p className={styles.reviewListSummary}>
                 Showing {visibleEntities.length} queue item
                 {visibleEntities.length === 1 ? '' : 's'}
-                {reviewFilter === 'all'
+                {reviewFilter === 'all' && recommendedFilter === 'all'
                   ? ''
-                  : ` filtered by ${reviewReasonLabels[reviewFilter].toLowerCase()}`}
+                  : ` filtered by ${[
+                      reviewFilter === 'all'
+                        ? null
+                        : reviewReasonLabels[reviewFilter].toLowerCase(),
+                      recommendedFilter === 'all'
+                        ? null
+                        : reviewResolutionLabels[recommendedFilter].toLowerCase()
+                    ]
+                      .filter(Boolean)
+                      .join(' + ')}`}
                 .
               </p>
             )}
@@ -2777,9 +2487,17 @@ function WorldBibleRoute() {
                   viewMode === 'review'
                     ? reviewQueue.find((item) => item.entity.id === entity.id) ?? null
                     : null;
-                const categoryName =
-                  categories.find((category) => category.id === entity.categoryId)?.name ??
-                  'Record';
+                const insight = reviewEntityInsightsById.get(entity.id);
+                const entityCategory =
+                  categories.find((category) => category.id === entity.categoryId) ?? null;
+                const categoryName = entityCategory?.name ?? 'Record';
+                const {primarySummary, fullSummary, summaryIsTruncated, secondaryFields} = buildEntityCardSummary(
+                  entity,
+                  entityCategory,
+                  aliasMapByEntityId.get(entity.id) ?? []
+                );
+                const isSummaryExpanded = expandedSummaryEntityIds.includes(entity.id);
+                const displayedSummary = isSummaryExpanded ? fullSummary : primarySummary;
 
                 return (
                 <li key={entity.id} className={styles.entityCard}>
@@ -2819,9 +2537,44 @@ function WorldBibleRoute() {
                       </span>
                     </div>
                   )}
-                  {Object.entries(entity.fields).map(([key, value]) => (
-                    <div key={key} className={styles.entityField}>
-                      <strong>{key}:</strong> {String(value)}
+                  {viewMode === 'review' && insight && (
+                    <div className={styles.reviewEntityMeta}>
+                      <span>
+                        {insight.missingRequiredFields.length > 0
+                          ? `Missing: ${insight.missingRequiredFields.join(', ')}`
+                          : 'Required fields complete'}
+                      </span>
+                      {insight.matchCount > 0 && (
+                        <span>
+                          {insight.matchCount} merge match
+                          {insight.matchCount === 1 ? '' : 'es'}
+                        </span>
+                      )}
+                    </div>
+                  )}
+                  {displayedSummary && (
+                    <div className={styles.entitySummaryBlock}>
+                      <p className={styles.entitySummary}>{displayedSummary}</p>
+                      {summaryIsTruncated && (
+                        <button
+                          type='button'
+                          className={styles.entitySummaryToggle}
+                          onClick={() =>
+                            setExpandedSummaryEntityIds((prev) =>
+                              prev.includes(entity.id)
+                                ? prev.filter((id) => id !== entity.id)
+                                : [...prev, entity.id]
+                            )
+                          }
+                        >
+                          {isSummaryExpanded ? 'Show less' : 'Read more'}
+                        </button>
+                      )}
+                    </div>
+                  )}
+                  {secondaryFields.map((field) => (
+                    <div key={field.label} className={styles.entityField}>
+                      <strong>{field.label}:</strong> {field.value}
                     </div>
                   ))}
                   <div className={styles.entityActions}>
@@ -2843,6 +2596,14 @@ function WorldBibleRoute() {
                         onClick={() => void handleMarkEntityComplete(entity)}
                       >
                         Mark reviewed
+                      </button>
+                    )}
+                    {viewMode === 'review' && queueItem && (
+                      <button
+                        type='button'
+                        onClick={() => void handleMarkEntityComplete(entity, {openNext: true})}
+                      >
+                        Mark reviewed + next
                       </button>
                     )}
                     <button

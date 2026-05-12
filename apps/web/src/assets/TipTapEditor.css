@@ -211,6 +211,43 @@
   background: var(--editor-lore-bg-hover);
 }
 
+.inline-highlights-mode-subtle .ProseMirror .consistency-highlight {
+  background: transparent;
+  text-decoration-style: dotted;
+  text-decoration-thickness: 1px;
+}
+
+.inline-highlights-mode-subtle .ProseMirror .consistency-highlight-warning {
+  text-decoration-color: color-mix(
+    in oklab,
+    var(--editor-highlight-warning-line) 48%,
+    transparent
+  );
+}
+
+.inline-highlights-mode-subtle .ProseMirror .consistency-highlight-blocking {
+  text-decoration-color: color-mix(
+    in oklab,
+    var(--editor-highlight-blocking-line) 52%,
+    transparent
+  );
+}
+
+.inline-highlights-mode-subtle .ProseMirror .lore-highlight {
+  background: transparent;
+  text-decoration-color: color-mix(in oklab, var(--editor-lore-line) 45%, transparent);
+}
+
+.inline-highlights-mode-subtle .ProseMirror .lore-highlight:hover {
+  background: color-mix(in oklab, var(--editor-lore-bg) 30%, transparent);
+}
+
+.inline-highlights-mode-hidden .ProseMirror .consistency-highlight,
+.inline-highlights-mode-hidden .ProseMirror .lore-highlight {
+  background: transparent;
+  text-decoration-color: transparent;
+}
+
 .ProseMirror .stat-block-token-chip {
   display: inline-flex;
   align-items: center;
