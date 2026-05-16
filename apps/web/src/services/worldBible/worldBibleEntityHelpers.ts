@@ -109,6 +109,103 @@ const summarizeTable = (table: HTMLTableElement): string[] => {
   return rows.map((cells) => cells.join(' | '));
 };
 
+const decodeHtmlEntities = (value: string): string =>
+  value
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&amp;/gi, '&')
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;/gi, "'");
+
+const stripTags = (value: string): string =>
+  decodeHtmlEntities(value).replace(/<[^>]+>/g, ' ');
+
+const extractStructuredSummaryWithoutDom = (value: string): string => {
+  const blocks: string[] = [];
+  const blockPattern =
+    /<(p|ul|ol|blockquote|table|hr)\b[^>]*>([\s\S]*?)<\/\1>|<hr\b[^>]*\/?>/gi;
+  let match: RegExpExecArray | null;
+
+  while ((match = blockPattern.exec(value)) !== null) {
+    const tag = (match[1] ?? 'hr').toLowerCase();
+    const content = match[2] ?? '';
+
+    if (tag === 'ul' || tag === 'ol') {
+      const items = Array.from(content.matchAll(/<li\b[^>]*>([\s\S]*?)<\/li>/gi))
+        .map((itemMatch) => normalizeSummarySegment(stripTags(itemMatch[1] ?? '')))
+        .filter(Boolean)
+        .map((item) => `- ${item}`);
+      blocks.push(...items);
+      continue;
+    }
+
+    if (tag === 'blockquote') {
+      const text = normalizeSummarySegment(stripTags(content));
+      if (text) {
+        blocks.push(`"${text}"`);
+      }
+      continue;
+    }
+
+    if (tag === 'table') {
+      const rowMatches = Array.from(content.matchAll(/<tr\b[^>]*>([\s\S]*?)<\/tr>/gi));
+      const rows = rowMatches
+        .map((rowMatch) =>
+          Array.from(rowMatch[1].matchAll(/<(th|td)\b[^>]*>([\s\S]*?)<\/\1>/gi))
+            .map((cellMatch) => normalizeSummarySegment(stripTags(cellMatch[2] ?? '')))
+            .filter(Boolean)
+        )
+        .filter((cells) => cells.length > 0);
+
+      if (rows.length === 0) {
+        continue;
+      }
+
+      const headerCells = Array.from(
+        (rowMatches.find((rowMatch) => /<th\b/i.test(rowMatch[1]))?.[1] ?? '').matchAll(
+          /<th\b[^>]*>([\s\S]*?)<\/th>/gi
+        )
+      )
+        .map((cellMatch) => normalizeSummarySegment(stripTags(cellMatch[1] ?? '')))
+        .filter(Boolean);
+
+      const dataRows = headerCells.length > 0 ? rows.slice(1) : rows;
+      const summaries =
+        headerCells.length > 0
+          ? dataRows.map((cells) =>
+              cells
+                .map((cell, index) => (headerCells[index] ? `${headerCells[index]}: ${cell}` : cell))
+                .filter(Boolean)
+                .join(' | ')
+            )
+          : rows.map((cells) => cells.join(' | '));
+      blocks.push(...summaries);
+      continue;
+    }
+
+    if (tag === 'hr') {
+      blocks.push('---');
+      continue;
+    }
+
+    const text = normalizeSummarySegment(stripTags(content));
+    if (text) {
+      blocks.push(text);
+    }
+  }
+
+  if (blocks.length === 0) {
+    return extractPlainTextFromRichText(value);
+  }
+
+  return blocks
+    .join(' \u2022 ')
+    .replace(/\s+\u2022\s+---\s+\u2022\s+/g, ' --- ')
+    .replace(/\s+/g, ' ')
+    .trim();
+};
+
 export const extractStructuredSummaryFromRichText = (value: string): string => {
   const trimmed = value.trim();
   if (!trimmed) {
@@ -120,7 +217,7 @@ export const extractStructuredSummaryFromRichText = (value: string): string => {
   }
 
   if (typeof DOMParser === 'undefined') {
-    return extractPlainTextFromRichText(trimmed);
+    return extractStructuredSummaryWithoutDom(trimmed);
   }
 
   const parser = new DOMParser();
@@ -176,149 +273,3 @@ export const extractStructuredSummaryFromRichText = (value: string): string => {
 
 export const isRichTextEffectivelyEmpty = (value: string): boolean =>
   extractPlainTextFromRichText(value).length === 0;
-
-export const buildCanonicalAliasList = (params: {
-  previousName?: string;
-  nextName: string;
-  aliases: string[];
-}): string[] => {
-  const nextNormalized = params.nextName.trim().toLowerCase();
-  const previousNormalized = params.previousName?.trim().toLowerCase() ?? '';
-  const combined = [...params.aliases];
-  if (previousNormalized && nextNormalized && previousNormalized !== nextNormalized) {
-    combined.unshift(params.previousName!.trim());
-  }
-  return Array.from(
-    new Map(
-      combined
-        .map((alias) => alias.trim())
-        .filter((alias) => alias.length > 0 && alias.toLowerCase() !== nextNormalized)
-        .map((alias) => [alias.toLowerCase(), alias])
-    ).values()
-  );
-};
-
-export const mergeEntityFields = (
-  targetFields: Record<string, unknown>,
-  sourceFields: Record<string, unknown>
-): Record<string, unknown> => {
-  const merged = {...targetFields};
-
-  Object.entries(sourceFields).forEach(([key, value]) => {
-    const existing = merged[key];
-    const normalizedExisting = typeof existing === 'string' ? existing.trim() : existing;
-    const normalizedIncoming = typeof value === 'string' ? value.trim() : value;
-
-    if (
-      normalizedExisting === undefined ||
-      normalizedExisting === null ||
-      normalizedExisting === '' ||
-      (Array.isArray(normalizedExisting) && normalizedExisting.length === 0)
-    ) {
-      merged[key] = value;
-      return;
-    }
-
-    if (
-      key === ALTERNATIVE_NAMES_KEY &&
-      (typeof normalizedExisting === 'string' || typeof normalizedIncoming === 'string')
-    ) {
-      merged[key] = formatAlternativeNames(
-        parseAlternativeNames(
-          [String(normalizedExisting ?? ''), String(normalizedIncoming ?? '')]
-            .filter(Boolean)
-            .join(', ')
-        )
-      );
-    }
-  });
-
-  return merged;
-};
-
-const normalizeFieldValueForComparison = (value: unknown): unknown => {
-  if (typeof value === 'string') {
-    const normalized = extractPlainTextFromRichText(value);
-    return normalized.length > 0 ? normalized : null;
-  }
-  if (Array.isArray(value)) {
-    const normalized = value
-      .map((item) => (typeof item === 'string' ? item.trim() : item))
-      .filter((item) => item !== '' && item !== null && item !== undefined);
-    return normalized.length > 0 ? normalized : null;
-  }
-  if (typeof value === 'number') {
-    return Number.isFinite(value) ? value : null;
-  }
-  if (typeof value === 'boolean') {
-    return value;
-  }
-  return value ?? null;
-};
-
-const fieldValuesMatch = (left: unknown, right: unknown): boolean => {
-  const normalizedLeft = normalizeFieldValueForComparison(left);
-  const normalizedRight = normalizeFieldValueForComparison(right);
-
-  if (Array.isArray(normalizedLeft) && Array.isArray(normalizedRight)) {
-    return JSON.stringify(normalizedLeft) === JSON.stringify(normalizedRight);
-  }
-
-  return normalizedLeft === normalizedRight;
-};
-
-export const getAliasConversionPlan = (params: {
-  sourceName: string;
-  sourceFields: Record<string, unknown>;
-  sourceLinks: string[];
-  targetName: string;
-  targetFields: Record<string, unknown>;
-  targetLinks: string[];
-  sourceIndexedAliases: string[];
-  targetIndexedAliases: string[];
-  alternativeNamesKey: string;
-  normalizeName: (value: string) => string;
-  parseAlternativeNames: (value: string) => string[];
-}) => {
-  const transferAliases = Array.from(
-    new Map(
-      [
-        ...params.targetIndexedAliases,
-        ...params.parseAlternativeNames(
-          typeof params.targetFields[params.alternativeNamesKey] === 'string'
-            ? String(params.targetFields[params.alternativeNamesKey])
-            : ''
-        ),
-        ...params.sourceIndexedAliases,
-        ...params.parseAlternativeNames(
-          typeof params.sourceFields[params.alternativeNamesKey] === 'string'
-            ? String(params.sourceFields[params.alternativeNamesKey])
-            : ''
-        ),
-        params.sourceName
-      ]
-        .map((alias) => alias.trim())
-        .filter(Boolean)
-        .filter((alias) => params.normalizeName(alias) !== params.normalizeName(params.targetName))
-        .map((alias) => [params.normalizeName(alias), alias])
-    ).values()
-  );
-
-  const blockingFieldKeys = Object.entries(params.sourceFields)
-    .filter(([key]) => key !== params.alternativeNamesKey)
-    .filter(([, value]) => normalizeFieldValueForComparison(value) !== null)
-    .filter(([key, value]) => !fieldValuesMatch(value, params.targetFields[key]))
-    .map(([key]) => key);
-
-  const missingTargetLinks = params.sourceLinks.filter(
-    (link) => !params.targetLinks.includes(link)
-  );
-
-  return {
-    transferAliases,
-    mergedLinks: Array.from(new Set([...params.targetLinks, ...params.sourceLinks])),
-    canDeleteSource: blockingFieldKeys.length === 0,
-    blockingFieldKeys,
-    hasLinkChanges: missingTargetLinks.length > 0
-  };
-};

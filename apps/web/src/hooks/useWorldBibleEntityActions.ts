@@ -13,7 +13,11 @@ import type {
 import type {ConsistencyAlias, ReviewQueueItem} from '../services/consistency';
 import {deleteAliasesForEntity, replaceAliasesForEntity} from '../services/consistency';
 import {
-  getAliasConversionPlan,
+  buildCanonicalAliasList,
+  buildEntityMergePlan,
+  getAliasConversionPlan
+} from '../services/worldBible/worldBibleCanonicalization';
+import {
   normalizeRichTextValue
 } from '../services/worldBible/worldBibleEntityHelpers';
 import type {RAGProvider} from '../services/rag/RAGService';
@@ -63,15 +67,6 @@ interface UseWorldBibleEntityActionsParams {
   normalizeName: (value: string) => string;
   parseAlternativeNames: (value: string) => string[];
   formatAlternativeNames: (names: string[]) => string;
-  buildCanonicalAliasList: (params: {
-    previousName?: string;
-    nextName: string;
-    aliases: string[];
-  }) => string[];
-  mergeEntityFields: (
-    targetFields: Record<string, unknown>,
-    sourceFields: Record<string, unknown>
-  ) => Record<string, unknown>;
   buildEntityContent: (entity: WorldEntity) => string;
   alternativeNamesKey: string;
   openReviewItem: (entity: WorldEntity, focus?: 'general' | 'aliases') => void;
@@ -112,8 +107,6 @@ export const useWorldBibleEntityActions = ({
   normalizeName,
   parseAlternativeNames,
   formatAlternativeNames,
-  buildCanonicalAliasList,
-  mergeEntityFields,
   buildEntityContent,
   alternativeNamesKey,
   openReviewItem,
@@ -293,7 +286,6 @@ export const useWorldBibleEntityActions = ({
       activeProject,
       aliasMapByEntityId,
       alternativeNamesKey,
-      buildCanonicalAliasList,
       buildEntityContent,
       editingId,
       entities,
@@ -410,54 +402,28 @@ export const useWorldBibleEntityActions = ({
           ...source.fields,
           ...fieldValues
         };
-        const sourceAliasTexts = [
-          ...(aliasMapByEntityId.get(source.id) ?? []),
-          ...parseAlternativeNames(
-            typeof sourceDraftFields[alternativeNamesKey] === 'string'
-              ? String(sourceDraftFields[alternativeNamesKey])
-              : ''
-          ),
-          source.name,
-          sourceName
-        ].filter((alias) => normalizeName(alias) !== normalizeName(target.name));
-        const targetAliasTexts = [
-          ...(aliasMapByEntityId.get(target.id) ?? []),
-          ...parseAlternativeNames(
-            typeof target.fields[alternativeNamesKey] === 'string'
-              ? target.fields[alternativeNamesKey]
-              : ''
-          )
-        ];
-
-        const mergedEntity: WorldEntity = {
-          ...target,
-          fields: (() => {
-            const nextFields = mergeEntityFields(target.fields, sourceDraftFields);
-            delete nextFields[alternativeNamesKey];
-            return nextFields;
-          })(),
-          links: Array.from(new Set([...(target.links ?? []), ...(source.links ?? [])])),
-          isNew: false,
-          needsCompletion: false,
+        const {mergedEntity, aliases: mergedAliasTexts} = buildEntityMergePlan({
+          source,
+          target,
+          sourceName,
+          sourceFields: sourceDraftFields,
+          targetFields: target.fields,
+          sourceIndexedAliases: aliasMapByEntityId.get(source.id) ?? [],
+          targetIndexedAliases: aliasMapByEntityId.get(target.id) ?? [],
+          alternativeNamesKey,
+          normalizeName,
+          parseAlternativeNames,
           aliasesReviewedAt: Math.max(
             target.aliasesReviewedAt ?? 0,
             source.aliasesReviewedAt ?? 0
-          ) || undefined,
-          updatedAt: Date.now()
-        };
+          ) || undefined
+        });
 
         await saveEntity(mergedEntity);
         const mergedAliases = await replaceAliasesForEntity({
           projectId: activeProject.id,
           entityId: target.id,
-          aliases: Array.from(
-            new Map(
-              [...targetAliasTexts, ...sourceAliasTexts]
-                .map((alias) => alias.trim())
-                .filter(Boolean)
-                .map((alias) => [normalizeName(alias), alias])
-            ).values()
-          )
+          aliases: mergedAliasTexts
         });
         await deleteAliasesForEntity(activeProject.id, source.id);
         await deleteEntity(source.id);
@@ -527,7 +493,125 @@ export const useWorldBibleEntityActions = ({
       entities,
       fieldValues,
       handleEdit,
-      mergeEntityFields,
+      name,
+      normalizeName,
+      parseAlternativeNames,
+      ragService,
+      refreshMemories,
+      setAliases,
+      setEntities,
+      setFeedback,
+      setViewMode,
+      shodhService
+    ]
+  );
+
+  const handleMergeMatchIntoCurrentEntity = useCallback(
+    async (source: WorldEntity) => {
+      if (!activeProject || !editingId) return;
+
+      const target = entities.find((entity) => entity.id === editingId);
+      if (!target || source.id === target.id) return;
+
+      const targetName = name.trim() || target.name;
+      if (!confirm(`Keep "${targetName}" canonical, merge "${source.name}" into it, and remove the duplicate record?`)) {
+        return;
+      }
+
+      setMergingEntityTargetId(source.id);
+      setFeedback(null);
+
+      try {
+        const now = Date.now();
+        const targetDraftFields: Record<string, unknown> = {
+          ...target.fields,
+          ...fieldValues
+        };
+        const {mergedEntity, aliases: mergedAliasTexts} = buildEntityMergePlan({
+          source,
+          target,
+          targetName,
+          sourceFields: source.fields,
+          targetFields: targetDraftFields,
+          sourceIndexedAliases: aliasMapByEntityId.get(source.id) ?? [],
+          targetIndexedAliases: aliasMapByEntityId.get(target.id) ?? [],
+          alternativeNamesKey,
+          normalizeName,
+          parseAlternativeNames,
+          aliasesReviewedAt: now
+        });
+
+        await saveEntity(mergedEntity);
+        const mergedAliases = await replaceAliasesForEntity({
+          projectId: activeProject.id,
+          entityId: target.id,
+          aliases: mergedAliasTexts
+        });
+        await deleteAliasesForEntity(activeProject.id, source.id);
+        await deleteEntity(source.id);
+
+        const targetCategorySlug =
+          categories.find((category) => category.id === target.categoryId)?.slug ?? '';
+        if (ragService) {
+          await ragService.indexDocument(
+            mergedEntity.id,
+            mergedEntity.name,
+            buildEntityContent(mergedEntity),
+            'worldbible',
+            {
+              tags: [targetCategorySlug].filter(Boolean),
+              entityIds: [mergedEntity.id]
+            }
+          );
+          await ragService.deleteDocument(source.id);
+        }
+        if (shodhService) {
+          await shodhService.captureAutoMemory({
+            projectId: activeProject.id,
+            documentId: mergedEntity.id,
+            title: mergedEntity.name,
+            content: buildEntityContent(mergedEntity),
+            tags: ['worldbible', targetCategorySlug].filter(Boolean)
+          });
+          await shodhService.deleteMemoriesForDocument(source.id);
+          await refreshMemories();
+        }
+
+        setEntities((prev) =>
+          prev
+            .filter((entity) => entity.id !== source.id)
+            .map((entity) => (entity.id === target.id ? mergedEntity : entity))
+        );
+        setAliases((prev) => [
+          ...prev.filter(
+            (alias) => alias.targetId !== source.id && alias.targetId !== target.id
+          ),
+          ...mergedAliases
+        ]);
+        setViewMode('category');
+        handleEdit(mergedEntity, 'aliases');
+        setFeedback({
+          tone: 'success',
+          message: `"${source.name}" merged into "${targetName}".`
+        });
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : 'Unable to merge records.';
+        setFeedback({tone: 'error', message});
+      } finally {
+        setMergingEntityTargetId(null);
+      }
+    },
+    [
+      activeProject,
+      aliasMapByEntityId,
+      alternativeNamesKey,
+      buildEntityContent,
+      categories,
+      editingId,
+      entities,
+      fieldValues,
+      handleEdit,
       name,
       normalizeName,
       parseAlternativeNames,
@@ -740,8 +824,8 @@ export const useWorldBibleEntityActions = ({
         setFeedback({
           tone: 'success',
           message: existingCharacter
-            ? `"${entity.name}" already exists in Characters.`
-            : `"${entity.name}" imported into Characters without removing the World Bible record.`
+            ? `"${entity.name}" is already linked to Character Tools. World Bible remains the canonical record.`
+            : `"${entity.name}" is now linked to Character Tools. World Bible remains the canonical record.`
         });
 
         if (options?.autoCreateSheet && hasRuleset) {
@@ -752,10 +836,18 @@ export const useWorldBibleEntityActions = ({
               autoCreateSheetForCharacterId: character.id
             }
           });
+          return;
         }
+
+        navigate('/characters', {
+          state: {
+            prefillCharacterId: character.id,
+            preferredView: 'roster'
+          }
+        });
       } catch (error) {
         const message =
-          error instanceof Error ? error.message : 'Unable to import character.';
+          error instanceof Error ? error.message : 'Unable to open character tools.';
         setFeedback({tone: 'error', message});
       } finally {
         setImportingCharacterEntityId(null);
@@ -908,6 +1000,7 @@ export const useWorldBibleEntityActions = ({
     handleMarkEntityComplete,
     handleDeleteEntity,
     handleMergeEntityIntoMatch,
+    handleMergeMatchIntoCurrentEntity,
     handleConvertEntityToAlias,
     handleImportEntityToCharacters,
     handleAddEntityToCompendium,

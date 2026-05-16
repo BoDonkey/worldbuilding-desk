@@ -56,7 +56,22 @@ interface ResolverNotice {
     | 'character-sheets'
     | 'character-sheet-create';
   targetId?: string;
+  matchEntityId?: string;
+  sourceName?: string;
 }
+
+interface LinkUnknownEntityResult {
+  destination: 'world-bible' | 'characters' | 'character-sheets' | 'character-sheet-create';
+  targetId?: string;
+  focus?: 'general' | 'aliases';
+}
+
+type LinkTargetOption = {
+  id: string;
+  name: string;
+  type: 'character' | 'entity';
+  label: string;
+};
 
 type SuggestedUnknownCategory =
   | 'character'
@@ -621,6 +636,33 @@ export const useWorkspaceConsistency = ({
     };
   }, [consistencyPopover]);
 
+  const characterCategoryIds = useMemo(
+    () =>
+      new Set(
+        categories
+          .filter((category) => category.slug.toLowerCase().includes('character'))
+          .map((category) => category.id)
+      ),
+    [categories]
+  );
+
+  const characterLoreEntityIdByCharacterId = useMemo(() => {
+    const linkedEntityIdByCharacterId = new Map<string, string>();
+    entities.forEach((entity) => {
+      if (!characterCategoryIds.has(entity.categoryId)) {
+        return;
+      }
+      const normalizedEntityName = normalizeRecordName(entity.name);
+      const matchingCharacter = characters.find(
+        (character) => normalizeRecordName(character.name) === normalizedEntityName
+      );
+      if (matchingCharacter) {
+        linkedEntityIdByCharacterId.set(matchingCharacter.id, entity.id);
+      }
+    });
+    return linkedEntityIdByCharacterId;
+  }, [characterCategoryIds, characters, entities]);
+
   const knownConsistencyEntities = useMemo(() => {
     const entityById = new Map(entities.map((entity) => [entity.id, entity]));
     const characterById = new Map(characters.map((character) => [character.id, character]));
@@ -637,6 +679,20 @@ export const useWorkspaceConsistency = ({
       })),
       ...aliases
         .map((alias) => {
+          if (alias.targetType === 'character') {
+            const linkedEntityId = characterLoreEntityIdByCharacterId.get(alias.targetId);
+            if (linkedEntityId) {
+              const linkedEntity = entityById.get(linkedEntityId);
+              if (!linkedEntity) {
+                return null;
+              }
+              return {
+                id: linkedEntity.id,
+                name: alias.alias,
+                type: 'entity' as const
+              };
+            }
+          }
           const linkedRecord =
             alias.targetType === 'character'
               ? characterById.get(alias.targetId)
@@ -653,9 +709,29 @@ export const useWorkspaceConsistency = ({
         .filter(
           (entry): entry is {id: string; name: string; type: 'character' | 'entity'} =>
             Boolean(entry)
-        )
+      )
     ];
-  }, [aliases, characters, entities]);
+  }, [aliases, characterLoreEntityIdByCharacterId, characters, entities]);
+
+  const knownConsistencySurfaceSet = useMemo(
+    () =>
+      new Set(
+        knownConsistencyEntities
+          .map((entity) => canonicalizeUnknownSurface(entity.name))
+          .filter(Boolean)
+      ),
+    [knownConsistencyEntities]
+  );
+
+  const isKnownConsistencyIssue = useCallback(
+    (issue: GuardrailIssue): boolean => {
+      if (issue.code !== 'UNKNOWN_ENTITY' || !issue.surface) {
+        return false;
+      }
+      return knownConsistencySurfaceSet.has(canonicalizeUnknownSurface(issue.surface));
+    },
+    [knownConsistencySurfaceSet]
+  );
 
   const filterDismissedUnknownIssues = useCallback(
     (docId: string, issues: GuardrailIssue[]): GuardrailIssue[] => {
@@ -1084,6 +1160,7 @@ export const useWorkspaceConsistency = ({
     const seen = new Set<string>();
     return guardrailIssues
       .filter((issue) => issue.code === 'UNKNOWN_ENTITY' && Boolean(issue.surface))
+      .filter((issue) => !isKnownConsistencyIssue(issue))
       .filter((issue) => {
         const key = canonicalizeUnknownSurface(issue.surface ?? '');
         if (!key || seen.has(key)) {
@@ -1092,7 +1169,7 @@ export const useWorkspaceConsistency = ({
         seen.add(key);
         return true;
       });
-  }, [guardrailIssues]);
+  }, [guardrailIssues, isKnownConsistencyIssue]);
 
   const hasBlockingUnknownGuardrailIssues = useMemo(
     () => unknownGuardrailIssues.some((issue) => issue.severity === 'blocking'),
@@ -1125,20 +1202,23 @@ export const useWorkspaceConsistency = ({
     if (selectedDocumentId) {
       consistencyReviewItems
         .filter((item) => item.sceneId === selectedDocumentId)
+        .filter((item) => !isKnownConsistencyIssue(item.issue))
         .forEach((item) => addIssue(item.issue));
     }
 
     return Array.from(issueMap.values());
-  }, [consistencyReviewItems, selectedDocumentId, unknownGuardrailIssues]);
+  }, [consistencyReviewItems, isKnownConsistencyIssue, selectedDocumentId, unknownGuardrailIssues]);
 
   const reviewReadiness = useMemo<ReviewReadiness>(() => {
     const issueKeys = new Set<string>();
     unknownGuardrailIssues.forEach((issue) => {
       issueKeys.add(getReviewIssueKey(issue));
     });
-    consistencyReviewItems.forEach((item) => {
-      issueKeys.add(getReviewIssueKey(item.issue));
-    });
+    consistencyReviewItems
+      .filter((item) => !isKnownConsistencyIssue(item.issue))
+      .forEach((item) => {
+        issueKeys.add(getReviewIssueKey(item.issue));
+      });
     const stateMutationItemCount = stateMutationEvents.filter(
       (event) => event.status === 'proposed' && event.sourceType === 'deterministic-review'
     ).length;
@@ -1187,6 +1267,7 @@ export const useWorkspaceConsistency = ({
   }, [
     consistencyReviewItems,
     hasBlockingUnknownGuardrailIssues,
+    isKnownConsistencyIssue,
     isRunningConsistencyReview,
     unknownGuardrailIssues,
     stateMutationEvents,
@@ -1588,22 +1669,36 @@ export const useWorkspaceConsistency = ({
   );
 
   const unknownLinkOptions = useMemo(() => {
-    const optionMap: Record<
-      string,
-      Array<{id: string; name: string; type: 'character' | 'entity'}>
-    > = {};
+    const optionMap: Record<string, LinkTargetOption[]> = {};
+    const categoryLabelById = new Map(
+      categories.map((category) => [category.id, category.name])
+    );
     unknownGuardrailIssues.forEach((issue) => {
       const surface = (issue.surface ?? '').trim();
       if (!surface) return;
       const normalizedSurface = surface.toLowerCase();
-      const candidates = [
-        ...entities.map((entity) => ({id: entity.id, name: entity.name, type: 'entity' as const})),
-        ...characters.map((character) => ({
+      const candidatesByKey = new Map<string, LinkTargetOption>();
+      entities.forEach((entity) => {
+        candidatesByKey.set(`entity:${entity.id}`, {
+          id: entity.id,
+          name: entity.name,
+          type: 'entity',
+          label: categoryLabelById.get(entity.categoryId) ?? 'World Bible'
+        });
+      });
+      characters.forEach((character) => {
+        const linkedEntityId = characterLoreEntityIdByCharacterId.get(character.id);
+        if (linkedEntityId && candidatesByKey.has(`entity:${linkedEntityId}`)) {
+          return;
+        }
+        candidatesByKey.set(`character:${character.id}`, {
           id: character.id,
           name: character.name,
-          type: 'character' as const
-        }))
-      ];
+          type: 'character',
+          label: 'Character'
+        });
+      });
+      const candidates = Array.from(candidatesByKey.values());
       const ranked = [...candidates].sort((a, b) => {
         const aName = a.name.toLowerCase();
         const bName = b.name.toLowerCase();
@@ -1620,7 +1715,7 @@ export const useWorkspaceConsistency = ({
       optionMap[surface] = ranked.slice(0, 20);
     });
     return optionMap;
-  }, [characters, entities, unknownGuardrailIssues]);
+  }, [categories, characterLoreEntityIdByCharacterId, characters, entities, unknownGuardrailIssues]);
 
   const closeUnknownLinkOptions = useMemo(() => {
     const optionMap: Record<
@@ -1689,6 +1784,11 @@ export const useWorkspaceConsistency = ({
         const explicitCharacterSelection = selectedCategory?.slug === 'characters';
         if (explicitCharacterSelection) {
           const normalizedCharacterName = normalizeRecordName(normalizedName);
+          const linkedCharacterEntity = entities.find(
+            (entity) =>
+              entity.categoryId === chosenCategory.id &&
+              normalizeRecordName(entity.name) === normalizedCharacterName
+          );
           const closeCharacterMatch = [...characters]
             .filter(
               (candidate) =>
@@ -1721,10 +1821,28 @@ export const useWorkspaceConsistency = ({
             updatedAt: now
           };
           await saveCharacter(character);
+          const characterEntity =
+            linkedCharacterEntity ??
+            ({
+              id: crypto.randomUUID(),
+              projectId: activeProject.id,
+              categoryId: chosenCategory.id,
+              name: normalizedName,
+              fields: {},
+              isNew: true,
+              needsCompletion: false,
+              links: [],
+              createdAt: now,
+              updatedAt: now
+            } satisfies WorldEntity);
+          if (!linkedCharacterEntity) {
+            await saveEntity(characterEntity);
+            setEntities((prev) => [...prev, characterEntity]);
+          }
           await attachAliasTexts({
             projectId: activeProject.id,
-            targetId: character.id,
-            targetType: 'character',
+            targetId: characterEntity.id,
+            targetType: 'entity',
             aliasTexts:
               normalizedName.toLowerCase() === normalizedSurface.toLowerCase()
                 ? []
@@ -1733,15 +1851,17 @@ export const useWorkspaceConsistency = ({
           setCharacters((prev) => [...prev, character]);
           setFeedback({
             tone: 'success',
-            message: `"${normalizedName}" added to Characters. Create a sheet when you're ready to track stats, inventory, or resources.`
+            message: `"${normalizedName}" added to World Bible Characters and Character Tools.`
           });
           setResolverNotice({
             message: closeCharacterMatch
-              ? `"${normalizedName}" added to Characters. Review possible match with "${closeCharacterMatch.name}".`
-              : `"${normalizedName}" added to Characters.`,
+              ? `"${normalizedName}" added to World Bible Characters. Review possible match with "${closeCharacterMatch.name}".`
+              : `"${normalizedName}" added to World Bible Characters.`,
             primaryLabel: closeCharacterMatch ? 'Review Character Match' : undefined,
-            destination: ruleset ? 'character-sheet-create' : 'characters',
-            targetId: character.id
+            destination: 'world-bible',
+            targetId: characterEntity.id,
+            matchEntityId: closeCharacterMatch?.id,
+            sourceName: normalizedName
           });
         } else {
           const entity: WorldEntity = {
@@ -1777,7 +1897,7 @@ export const useWorkspaceConsistency = ({
             targetId: entity.id
           });
         }
-        removeReviewSurface(normalizedSurface, {docId: selectedDocumentId ?? undefined});
+        removeReviewSurface(normalizedSurface);
         setUnknownLinkSelection((prev) => {
           const copy = {...prev};
           delete copy[surface];
@@ -1807,10 +1927,9 @@ export const useWorkspaceConsistency = ({
       attachAliasTexts,
       categories,
       characters,
+      entities,
       getSuggestedUnknownCategoryId,
       removeReviewSurface,
-      ruleset,
-      selectedDocumentId,
       setCategories,
       setCharacters,
       setEntities,
@@ -1948,7 +2067,7 @@ export const useWorkspaceConsistency = ({
       surface: string,
       explicitEntityId?: string,
       preferredAlias?: string
-    ) => {
+    ): Promise<LinkUnknownEntityResult | false> => {
       if (!activeProject) return false;
       const selectedEntityId = explicitEntityId ?? unknownLinkSelection[surface];
       if (!selectedEntityId) {
@@ -1969,17 +2088,38 @@ export const useWorkspaceConsistency = ({
         ) {
           throw new Error('Invalid link target selected.');
         }
+        const characterCategoryIds = new Set(
+          categories
+            .filter((category) => category.slug.toLowerCase().includes('character'))
+            .map((category) => category.id)
+        );
+        let targetType: 'entity' | 'character' = selectedTargetType;
+        let targetId = selectedTargetId;
+        if (selectedTargetType === 'character') {
+          const selectedCharacter = characters.find((character) => character.id === selectedTargetId);
+          const linkedEntity = selectedCharacter
+            ? entities.find(
+                (entity) =>
+                  characterCategoryIds.has(entity.categoryId) &&
+                  normalizeRecordName(entity.name) === normalizeRecordName(selectedCharacter.name)
+              )
+            : null;
+          if (linkedEntity) {
+            targetType = 'entity';
+            targetId = linkedEntity.id;
+          }
+        }
         const aliasTexts =
           preferredAlias && preferredAlias.trim()
             ? [preferredAlias.trim(), surface]
             : [surface];
         await attachAliasTexts({
           projectId: activeProject.id,
-          targetId: selectedTargetId,
-          targetType: selectedTargetType,
+          targetId,
+          targetType,
           aliasTexts
         });
-        removeReviewSurface(surface, {docId: selectedDocumentId ?? undefined});
+        removeReviewSurface(surface);
         setUnknownLinkSelection((prev) => {
           const copy = {...prev};
           delete copy[surface];
@@ -1995,17 +2135,22 @@ export const useWorkspaceConsistency = ({
           tone: 'success',
           message: `Connected "${surface}" to an existing record. Save again to validate.`
         });
-        setResolverNotice({
-          message: `"${surface}" connected to an existing record.`,
+        setResolverNotice(null);
+        return {
           destination:
-            selectedTargetType === 'character'
+            targetType === 'character'
               ? ruleset
                 ? 'character-sheet-create'
                 : 'characters'
               : 'world-bible',
-          targetId: selectedTargetId
-        });
-        return true;
+          targetId,
+          focus:
+            selectedTargetType === 'character' || selectedTargetType === 'entity'
+              ? selectedTargetType === 'character'
+                ? 'aliases'
+                : 'general'
+              : 'general'
+        };
       } catch (error) {
         const message =
           error instanceof Error ? error.message : 'Unable to link alias.';
@@ -2018,9 +2163,11 @@ export const useWorkspaceConsistency = ({
     [
       activeProject,
       attachAliasTexts,
+      categories,
+      characters,
+      entities,
       ruleset,
       removeReviewSurface,
-      selectedDocumentId,
       setFeedback,
       unknownLinkSelection
     ]

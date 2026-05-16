@@ -1,9 +1,11 @@
 import {useCallback, useEffect, useMemo, useState} from 'react';
 import type {ChangeEvent, Dispatch, SetStateAction} from 'react';
 import type {EntityCategory, WorldEntity} from '../entityTypes';
+import {saveEntity} from '../entityStorage';
 import {
   convertPlainTextToRichHtml,
-  extractPlainTextFromRichText
+  extractPlainTextFromRichText,
+  normalizeRichTextValue
 } from '../services/worldBible/worldBibleEntityHelpers';
 
 export type ImportMode = 'create' | 'upsert';
@@ -63,7 +65,10 @@ interface UseWorldBibleImportsParams {
   activeCategory: EntityCategory | null;
   categories: EntityCategory[];
   entities: WorldEntity[];
+  setEntities: Dispatch<SetStateAction<WorldEntity[]>>;
   setFeedback: Dispatch<SetStateAction<FeedbackState>>;
+  onEntitySaved?: (entity: WorldEntity, category: EntityCategory) => Promise<void>;
+  onEntitiesChanged?: () => Promise<void>;
 }
 
 const fileNameToEntityName = (name: string): string => {
@@ -481,12 +486,43 @@ const valueToString = (value: unknown): string => {
   return '';
 };
 
+const mapImportedTextToFields = (
+  category: EntityCategory,
+  text: string,
+  richTextHtml?: string
+): Record<string, string> => {
+  const normalized = text.trim();
+  const fields: Record<string, string> = {};
+  const preferredField =
+    category.fieldSchema.find((field) => field.key === 'description') ??
+    category.fieldSchema.find((field) => field.type === 'textarea') ??
+    category.fieldSchema.find((field) => field.type === 'text');
+
+  if (preferredField) {
+    fields[preferredField.key] =
+      preferredField.type === 'textarea'
+        ? richTextHtml || normalizeRichTextValue(normalized)
+        : normalized;
+  } else {
+    fields.description = richTextHtml || normalizeRichTextValue(normalized);
+  }
+
+  return fields;
+};
+
+interface ApplyImportDraftOptions {
+  draftIds?: string[];
+}
+
 export const useWorldBibleImports = ({
   activeProjectId,
   activeCategory,
   categories,
   entities,
-  setFeedback
+  setEntities,
+  setFeedback,
+  onEntitySaved,
+  onEntitiesChanged
 }: UseWorldBibleImportsParams) => {
   const [isImportingEntities, setIsImportingEntities] = useState(false);
   const [isApplyingImports, setIsApplyingImports] = useState(false);
@@ -807,19 +843,274 @@ export const useWorldBibleImports = ({
     []
   );
 
+  const handleJsonNameKeyChange = useCallback((nameKey: string) => {
+    setJsonImportSession((prev) => (prev ? {...prev, nameKey} : prev));
+  }, []);
+
+  const handleJsonModeChange = useCallback((mode: ImportMode) => {
+    setJsonImportSession((prev) => (prev ? {...prev, mode} : prev));
+  }, []);
+
+  const clearImportDrafts = useCallback(() => {
+    setImportDrafts([]);
+  }, []);
+
+  const clearJsonImportSession = useCallback(() => {
+    setJsonImportSession(null);
+    setJsonImportConflictResolutions({});
+  }, []);
+
+  const applyImportDrafts = useCallback(async (options?: ApplyImportDraftOptions) => {
+    if (!activeProjectId) return null;
+    const queuedDrafts = importDrafts.filter(
+      (draft) =>
+        draft.include &&
+        !draft.parseError &&
+        (!options?.draftIds || options.draftIds.includes(draft.id))
+    );
+    if (queuedDrafts.length === 0) {
+      setFeedback({
+        tone: 'error',
+        message: 'No valid import drafts selected.'
+      });
+      return null;
+    }
+
+    setIsApplyingImports(true);
+    setFeedback(null);
+    const nextEntities = [...entities];
+    let createdCount = 0;
+    let updatedCount = 0;
+    let failedCount = 0;
+    let firstImportedEntity: WorldEntity | null = null;
+
+    try {
+      for (const draft of queuedDrafts) {
+        const category = categories.find((item) => item.id === draft.categoryId);
+        if (!category) {
+          failedCount += 1;
+          continue;
+        }
+
+        try {
+          const now = Date.now();
+          const normalizedName = draft.name.trim().toLowerCase();
+          const existing =
+            draft.mode === 'upsert'
+              ? nextEntities.find(
+                  (entity) =>
+                    entity.categoryId === draft.categoryId &&
+                    entity.name.trim().toLowerCase() === normalizedName
+                )
+              : undefined;
+
+          const entity: WorldEntity = existing
+            ? {
+                ...existing,
+                fields: {
+                  ...existing.fields,
+                  ...mapImportedTextToFields(category, draft.text, draft.richTextHtml)
+                },
+                updatedAt: now
+              }
+            : {
+                id: crypto.randomUUID(),
+                projectId: activeProjectId,
+                categoryId: draft.categoryId,
+                name: draft.name.trim() || fileNameToEntityName(draft.fileName),
+                fields: mapImportedTextToFields(category, draft.text, draft.richTextHtml),
+                needsCompletion: false,
+                links: [],
+                createdAt: now,
+                updatedAt: now
+              };
+
+          await saveEntity(entity);
+          await onEntitySaved?.(entity, category);
+          if (!firstImportedEntity) {
+            firstImportedEntity = entity;
+          }
+
+          if (existing) {
+            const idx = nextEntities.findIndex((item) => item.id === existing.id);
+            if (idx !== -1) nextEntities[idx] = entity;
+            updatedCount += 1;
+          } else {
+            nextEntities.push(entity);
+            createdCount += 1;
+          }
+        } catch {
+          failedCount += 1;
+        }
+      }
+
+      setEntities(nextEntities);
+      if (createdCount + updatedCount > 0) {
+        await onEntitiesChanged?.();
+      }
+
+      setFeedback({
+        tone: failedCount > 0 ? 'error' : 'success',
+        message:
+          `Imported ${createdCount} new entr${
+            createdCount === 1 ? 'y' : 'ies'
+          } and updated ${updatedCount}.` +
+          (failedCount > 0 ? ` ${failedCount} failed.` : '')
+      });
+
+      if (failedCount === 0) {
+        if (options?.draftIds?.length) {
+          setImportDrafts((prev) =>
+            prev.filter((draft) => !options.draftIds?.includes(draft.id))
+          );
+        } else {
+          setImportDrafts([]);
+        }
+      }
+
+      return firstImportedEntity;
+    } finally {
+      setIsApplyingImports(false);
+    }
+  }, [
+    activeProjectId,
+    categories,
+    entities,
+    importDrafts,
+    onEntitiesChanged,
+    onEntitySaved,
+    setEntities,
+    setFeedback
+  ]);
+
+  const applyJsonImport = useCallback(async () => {
+    if (!activeProjectId || !jsonImportSession || !activeJsonCategory) return;
+    const validRows = preparedJsonRows.filter((row) => row.errors.length === 0);
+    if (validRows.length === 0) {
+      setFeedback({
+        tone: 'error',
+        message: 'No valid JSON rows to import. Fix mapping/validation first.'
+      });
+      return;
+    }
+    if (unresolvedJsonConflictCount > 0) {
+      setFeedback({
+        tone: 'error',
+        message: `Review ${unresolvedJsonConflictCount} conflicting JSON row(s) before importing.`
+      });
+      return;
+    }
+
+    setIsApplyingJsonImport(true);
+    setFeedback(null);
+    const nextEntities = [...entities];
+    let createdCount = 0;
+    let updatedCount = 0;
+    let failedCount = 0;
+    let skippedCount = 0;
+
+    try {
+      for (const row of validRows) {
+        try {
+          if (row.resolution === 'skip') {
+            skippedCount += 1;
+            continue;
+          }
+          const now = Date.now();
+          const normalizedName = row.name.trim().toLowerCase();
+          const existing =
+            row.resolution === 'upsert'
+              ? nextEntities.find(
+                  (entity) =>
+                    entity.categoryId === jsonImportSession.categoryId &&
+                    entity.name.trim().toLowerCase() === normalizedName
+                )
+              : undefined;
+          const normalizedRowFields = {...row.fields};
+          activeJsonCategory.fieldSchema.forEach((field) => {
+            if (field.type !== 'textarea') return;
+            const rawValue = normalizedRowFields[field.key];
+            normalizedRowFields[field.key] =
+              typeof rawValue === 'string' ? normalizeRichTextValue(rawValue) : '<p></p>';
+          });
+
+          const entity: WorldEntity = existing
+            ? {
+                ...existing,
+                fields: {
+                  ...existing.fields,
+                  ...normalizedRowFields
+                },
+                updatedAt: now
+              }
+            : {
+                id: crypto.randomUUID(),
+                projectId: activeProjectId,
+                categoryId: jsonImportSession.categoryId,
+                name: row.name,
+                fields: normalizedRowFields,
+                needsCompletion: false,
+                links: [],
+                createdAt: now,
+                updatedAt: now
+              };
+
+          await saveEntity(entity);
+          await onEntitySaved?.(entity, activeJsonCategory);
+
+          if (existing) {
+            const idx = nextEntities.findIndex((item) => item.id === existing.id);
+            if (idx !== -1) nextEntities[idx] = entity;
+            updatedCount += 1;
+          } else {
+            nextEntities.push(entity);
+            createdCount += 1;
+          }
+        } catch {
+          failedCount += 1;
+        }
+      }
+
+      setEntities(nextEntities);
+      await onEntitiesChanged?.();
+      setFeedback({
+        tone: failedCount > 0 ? 'error' : 'success',
+        message:
+          `JSON import created ${createdCount} entr${
+            createdCount === 1 ? 'y' : 'ies'
+          } and updated ${updatedCount}.` +
+          (skippedCount > 0 ? ` Skipped ${skippedCount}.` : '') +
+          (failedCount > 0 ? ` ${failedCount} failed.` : '')
+      });
+      if (failedCount === 0) {
+        clearJsonImportSession();
+      }
+    } finally {
+      setIsApplyingJsonImport(false);
+    }
+  }, [
+    activeJsonCategory,
+    activeProjectId,
+    clearJsonImportSession,
+    entities,
+    jsonImportSession,
+    onEntitiesChanged,
+    onEntitySaved,
+    preparedJsonRows,
+    setEntities,
+    setFeedback,
+    unresolvedJsonConflictCount
+  ]);
+
   return {
     isImportingEntities,
-    setIsApplyingImports,
     isApplyingImports,
     importDrafts,
-    setImportDrafts,
+    clearImportDrafts,
     isImportingJson,
     isApplyingJsonImport,
-    setIsApplyingJsonImport,
     jsonImportSession,
-    setJsonImportSession,
     jsonImportConflictResolutions,
-    setJsonImportConflictResolutions,
     activeJsonCategory,
     preparedJsonRows,
     jsonImportValidCount,
@@ -827,9 +1118,14 @@ export const useWorldBibleImports = ({
     unresolvedJsonConflictCount,
     handleImportEntities,
     updateImportDraft,
+    applyImportDrafts,
+    applyJsonImport,
     handleJsonImportFile,
     handleJsonCategoryChange,
+    handleJsonNameKeyChange,
+    handleJsonModeChange,
     handleJsonFieldMapChange,
-    handleJsonConflictResolutionChange
+    handleJsonConflictResolutionChange,
+    clearJsonImportSession
   };
 };

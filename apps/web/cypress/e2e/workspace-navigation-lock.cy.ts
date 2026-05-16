@@ -3,7 +3,7 @@ describe('Workspace navigation lock regression', () => {
     cy.visit('/');
     cy.seedSmokeProjectData();
     cy.reload();
-    cy.contains('strong', 'Cypress Smoke Project').should('be.visible');
+    cy.contains('h2', 'Cypress Smoke Project').should('be.visible');
   });
 
   it('navigates away from workspace via primary nav', () => {

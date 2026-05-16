@@ -1,3 +1,4 @@
+import type {Character, EntityCategory, WorldEntity} from '../../entityTypes';
 import { CONSISTENCY_ALIAS_STORE_NAME, openDb } from '../../db';
 
 export interface ConsistencyAlias {
@@ -12,6 +13,72 @@ export interface ConsistencyAlias {
 }
 
 const normalizeAlias = (value: string): string => value.trim().toLowerCase();
+
+const normalizeName = (value: string): string =>
+  value.trim().toLowerCase().replace(/\s+/g, ' ');
+
+export function resolveCharacterAliasEntityMigrations(params: {
+  aliases: ConsistencyAlias[];
+  characters: Character[];
+  entities: WorldEntity[];
+  categories: EntityCategory[];
+}): Array<{from: ConsistencyAlias; to: ConsistencyAlias | null}> {
+  const characterCategoryIds = new Set(
+    params.categories
+      .filter((category) => category.slug.toLowerCase().includes('character'))
+      .map((category) => category.id)
+  );
+  if (characterCategoryIds.size === 0) {
+    return [];
+  }
+
+  const characterById = new Map(params.characters.map((character) => [character.id, character]));
+  const characterEntitiesByName = new Map<string, WorldEntity[]>();
+  params.entities.forEach((entity) => {
+    if (!characterCategoryIds.has(entity.categoryId)) {
+      return;
+    }
+    const key = normalizeName(entity.name);
+    const current = characterEntitiesByName.get(key) ?? [];
+    current.push(entity);
+    characterEntitiesByName.set(key, current);
+  });
+
+  const normalizedEntityAliasKeys = new Set(
+    params.aliases
+      .filter((alias) => alias.targetType === 'entity')
+      .map((alias) => `${alias.targetId}:${normalizeAlias(alias.alias)}`)
+  );
+
+  return params.aliases.flatMap(
+    (alias): Array<{from: ConsistencyAlias; to: ConsistencyAlias | null}> => {
+      if (alias.targetType !== 'character') {
+        return [];
+      }
+      const character = characterById.get(alias.targetId);
+      if (!character) {
+        return [];
+      }
+      const [targetEntity, ...rest] =
+        characterEntitiesByName.get(normalizeName(character.name)) ?? [];
+      if (!targetEntity || rest.length > 0) {
+        return [];
+      }
+      const duplicateKey = `${targetEntity.id}:${normalizeAlias(alias.alias)}`;
+      if (normalizedEntityAliasKeys.has(duplicateKey)) {
+        return [{from: alias, to: null}];
+      }
+      const migrated: ConsistencyAlias = {
+        ...alias,
+        targetId: targetEntity.id,
+        targetType: 'entity',
+        entityId: targetEntity.id
+      };
+      normalizedEntityAliasKeys.add(duplicateKey);
+      return [{from: alias, to: migrated}];
+    }
+  );
+}
 
 function emitAliasRecordsChanged(): void {
   if (typeof window === 'undefined') return;
@@ -56,6 +123,50 @@ export async function getAliasesByProject(projectId: string): Promise<Consistenc
     request.onerror = () => {
       reject(request.error);
     };
+  });
+}
+
+export async function migrateCharacterAliasesToEntities(params: {
+  projectId: string;
+  aliases: ConsistencyAlias[];
+  characters: Character[];
+  entities: WorldEntity[];
+  categories: EntityCategory[];
+}): Promise<ConsistencyAlias[]> {
+  const migrationPlan = resolveCharacterAliasEntityMigrations(params);
+  if (migrationPlan.length === 0) {
+    return params.aliases;
+  }
+
+  const db = await openDb();
+
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(CONSISTENCY_ALIAS_STORE_NAME, 'readwrite');
+    const store = tx.objectStore(CONSISTENCY_ALIAS_STORE_NAME);
+    const migratedIds = new Set<string>();
+
+    migrationPlan.forEach(({from, to}) => {
+      if (to) {
+        store.put({
+          ...to,
+          updatedAt: Date.now()
+        });
+      } else {
+        store.delete(from.id);
+      }
+      migratedIds.add(from.id);
+    });
+
+    tx.oncomplete = () => {
+      if (migratedIds.size > 0) {
+        emitAliasRecordsChanged();
+      }
+      void getAliasesByProject(params.projectId)
+        .then(resolve)
+        .catch(reject);
+    };
+    tx.onerror = () => reject(tx.error);
+    tx.onabort = () => reject(tx.error);
   });
 }
 

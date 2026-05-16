@@ -634,6 +634,7 @@ const hasCharacterContextCue = (
   text: string,
   mention: {
     surface: string;
+    start: number;
     end: number;
   }
 ): boolean => {
@@ -642,6 +643,10 @@ const hasCharacterContextCue = (
   }
 
   const suffix = text.slice(mention.end, mention.end + 48);
+  const prefix = text.slice(Math.max(0, mention.start - 8), mention.start);
+  if (/^\s*,/u.test(suffix) && /["“‘]\s*$/u.test(prefix)) {
+    return true;
+  }
   const nextWord = suffix.match(/^\s+(?:['’]s\s+)?([\p{L}\p{M}][\p{L}\p{M}\p{N}'_-]*)/u)?.[1]
     .toLowerCase();
 
@@ -794,7 +799,7 @@ const isEligibleSingleWordUnknown = (params: {
     return true;
   }
 
-  if (hasCharacterContextCue(text, {surface, end})) {
+  if (hasCharacterContextCue(text, {surface, start, end})) {
     return true;
   }
 
@@ -843,6 +848,17 @@ const buildKnownEntityMap = (
   return map;
 };
 
+const resolveSingleKnownMatch = (matches: KnownEntityRef[]): KnownEntityRef | undefined => {
+  if (matches.length === 1) {
+    return matches[0];
+  }
+  const normalizedNames = new Set(matches.map((match) => normalizePhrase(match.name)));
+  if (normalizedNames.size === 1) {
+    return matches[0];
+  }
+  return undefined;
+};
+
 export function buildExtractedProposal(
   input: ExtractProposalInput,
   options: {
@@ -880,10 +896,7 @@ export function buildExtractedProposal(
       const knownMatches = Array.from(
         new Map(rawMatches.map((match) => [match.id, match])).values()
       );
-      const known =
-        knownMatches.length === 1
-          ? knownMatches[0]
-          : undefined;
+      const known = resolveSingleKnownMatch(knownMatches);
       const mentionCount = mentionCounts.get(mention.normalized) ?? 0;
       const hasCue = hasLeadingCueWord(input.text, mention.start);
       const hasCharacterCue = hasCharacterContextCue(input.text, mention);
@@ -917,7 +930,7 @@ export function buildExtractedProposal(
         entityType: known?.type,
         entityName: known?.name,
         candidateEntities:
-          knownMatches.length > 1
+          knownMatches.length > 1 && !known
             ? knownMatches.map((match) => ({
                 id: match.id,
                 name: match.name,

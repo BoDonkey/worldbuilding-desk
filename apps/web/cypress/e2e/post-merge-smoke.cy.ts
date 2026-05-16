@@ -5,7 +5,7 @@ const TOOL_NAMES = {
 } as const;
 
 const DB_NAME = 'worldbuilding-db';
-const DB_VERSION = 18;
+const DB_VERSION = 24;
 
 function mutateSmokeDb(
   mutator: (db: IDBDatabase) => void | Promise<void>
@@ -458,8 +458,8 @@ describe('Post-merge smoke checklist', () => {
     cy.visit('/world-bible');
 
     cy.get('input[type="text"]').first().clear().type('Conflict Entry');
-    cy.contains('label', 'Description').find('textarea').first().clear().type('Original description');
-    cy.contains('button', 'Create Entry').click();
+    cy.get('.tiptap-editor').first().click().type('Original description');
+    cy.contains('button', /Create (Entry|Canon Record)/).click();
     cy.contains('[role="status"]', 'Entry created.').should('be.visible');
 
     const jsonPayload = JSON.stringify({
@@ -498,10 +498,7 @@ describe('Post-merge smoke checklist', () => {
       'be.visible'
     );
     cy.contains('Conflict Entry').should('be.visible');
-    cy.contains('strong', 'description:').parent().should(
-      'contain.text',
-      'Imported replacement description'
-    );
+    cy.contains('p', 'Imported replacement description').should('be.visible');
   });
 
   it('round-trips tool pack with replace and append without breaking defaults', () => {

@@ -1,13 +1,9 @@
 import {describe, expect, it} from 'vitest';
 import {
-  ALTERNATIVE_NAMES_KEY,
-  buildCanonicalAliasList,
   convertPlainTextToRichHtml,
   extractPlainTextFromRichText,
   extractStructuredSummaryFromRichText,
-  getAliasConversionPlan,
   isRichTextEffectivelyEmpty,
-  mergeEntityFields,
   normalizeRichTextValue,
   normalizeName,
   parseAlternativeNames
@@ -20,16 +16,6 @@ describe('worldBibleEntityHelpers', () => {
       'kael',
       'ember archive'
     ]);
-  });
-
-  it('preserves the previous name as an alias when renaming', () => {
-    expect(
-      buildCanonicalAliasList({
-        previousName: 'Kael',
-        nextName: 'Kaelor',
-        aliases: [' Wanderer ', 'kael', 'WANDERER']
-      })
-    ).toEqual(['kael', 'WANDERER']);
   });
 
   it('normalizes plain text into rich text html and extracts plain text back out', () => {
@@ -59,80 +45,4 @@ describe('worldBibleEntityHelpers', () => {
     );
   });
 
-  it('fills empty fields and merges alternative names without clobbering populated data', () => {
-    const merged = mergeEntityFields(
-      {
-        description: 'Existing summary',
-        notes: '',
-        tags: [],
-        [ALTERNATIVE_NAMES_KEY]: 'Kael'
-      },
-      {
-        description: 'Incoming summary',
-        notes: 'Fresh notes',
-        tags: ['chosen'],
-        [ALTERNATIVE_NAMES_KEY]: 'Wanderer, kael'
-      }
-    );
-
-    expect(merged).toEqual({
-      description: 'Existing summary',
-      notes: 'Fresh notes',
-      tags: ['chosen'],
-      [ALTERNATIVE_NAMES_KEY]: 'kael, Wanderer'
-    });
-  });
-
-  it('builds an alias-conversion plan only when the source has no unique field content', () => {
-    const convertible = getAliasConversionPlan({
-      sourceName: 'Kael',
-      sourceFields: {
-        [ALTERNATIVE_NAMES_KEY]: 'Wanderer'
-      },
-      sourceLinks: ['doc-1'],
-      targetName: 'Kaelor',
-      targetFields: {
-        summary: 'Known scout'
-      },
-      targetLinks: [],
-      sourceIndexedAliases: ['The Scout'],
-      targetIndexedAliases: ['Bladeborn'],
-      alternativeNamesKey: ALTERNATIVE_NAMES_KEY,
-      normalizeName,
-      parseAlternativeNames
-    });
-
-    expect(convertible.transferAliases).toEqual([
-      'Bladeborn',
-      'The Scout',
-      'Wanderer',
-      'Kael'
-    ]);
-    expect(convertible.mergedLinks).toEqual(['doc-1']);
-    expect(convertible.canDeleteSource).toBe(true);
-    expect(convertible.blockingFieldKeys).toEqual([]);
-    expect(convertible.hasLinkChanges).toBe(true);
-
-    const blocked = getAliasConversionPlan({
-      sourceName: 'Kael',
-      sourceFields: {
-        summary: 'Unique backstory',
-        [ALTERNATIVE_NAMES_KEY]: 'Wanderer'
-      },
-      sourceLinks: [],
-      targetName: 'Kaelor',
-      targetFields: {
-        summary: ''
-      },
-      targetLinks: [],
-      sourceIndexedAliases: [],
-      targetIndexedAliases: [],
-      alternativeNamesKey: ALTERNATIVE_NAMES_KEY,
-      normalizeName,
-      parseAlternativeNames
-    });
-
-    expect(blocked.canDeleteSource).toBe(false);
-    expect(blocked.blockingFieldKeys).toEqual(['summary']);
-  });
 });

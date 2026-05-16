@@ -115,7 +115,9 @@ describe('Lore and review matching', () => {
     cy.contains('button', /Add Character|Add to World|Create record/).click();
     cy.contains('[role="status"]', 'Kael').should('be.visible');
     cy.contains('.tiptap-editor [data-lore-id]', 'Kael').should('be.visible');
-    cy.get('button[aria-label^="Open review drawer"]').should('contain.text', 'Review clear');
+    cy.get('button[aria-label^="Open review drawer"]')
+      .invoke('text')
+      .should('match', /Review clear/);
 
     cy.contains('button', /^Scenes$/).first().click();
     cy.contains('Beta Scene').click();
@@ -128,29 +130,37 @@ describe('Lore and review matching', () => {
         {delay: 0}
       );
 
-    cy.wait(3200);
-    cy.contains('.tiptap-editor [data-consistency-id]', 'Blatnor').should('be.visible');
-    cy.get('button[aria-label^="Open review drawer"]').should('contain.text', '1 review item');
+    cy.get('button[aria-label^="Open review drawer"]', {timeout: 10000})
+      .should('contain.text', '2 review items');
+    cy.get('.tiptap-editor [data-consistency-id]', {timeout: 10000}).should(($highlights) => {
+      const texts = [...$highlights].map((node) => node.textContent ?? '');
+      expect(texts.some((text) => text.includes('Kaelor'))).to.equal(true);
+      expect(texts.some((text) => text.includes('Blatnor'))).to.equal(true);
+    });
 
     cy.visit('/characters');
-    cy.contains('h1', 'Characters').should('be.visible');
+    cy.contains('h1', 'Character Tools').should('be.visible');
     cy.get('input[type="text"]').first().clear().type('Kaelor');
     cy.contains('button', 'Create Character').click();
     cy.contains('strong', 'Kaelor').should('be.visible');
     cy.contains('strong', 'Kaelor')
       .closest('li')
-      .should('contain.text', 'Looks like a longer or shorter name variant')
       .within(() => {
-        cy.contains('button', 'Make Alias of Kael').click();
-    });
+        cy.contains('button', 'Create Canon Record').click();
+      });
 
-    cy.go('back');
+    cy.contains('h2', 'Edit Character').should('be.visible');
+
+    cy.visit('/workspace');
     cy.contains('Beta Scene').click();
     cy.contains('Cypress Smoke Project · Beta Scene').should('be.visible');
     cy.wait(1000);
 
-    cy.contains('.tiptap-editor [data-consistency-id]', 'Kaelor').should('not.exist');
-    cy.contains('.tiptap-editor [data-consistency-id]', 'Blatnor').should('be.visible');
+    cy.get('.tiptap-editor [data-consistency-id]').should(($highlights) => {
+      const texts = [...$highlights].map((node) => node.textContent ?? '');
+      expect(texts.some((text) => text.includes('Kaelor'))).to.equal(false);
+      expect(texts.some((text) => text.includes('Blatnor'))).to.equal(true);
+    });
     cy.contains('.tiptap-editor [data-lore-id]', 'Kaelor').should('be.visible');
     cy.get('button[aria-label^="Open review drawer"]').should('contain.text', '1 review item');
   });

@@ -183,6 +183,20 @@ describe('buildExtractedProposal', () => {
     ).toBe('character_context_candidate');
   });
 
+  it('keeps one-off character names used in direct-address dialogue', () => {
+    const entities = entityRefsFor(
+      '"Kaelor, get your head in the game!" Blatnor shouted.',
+      [],
+      'workspace-autosave'
+    );
+
+    expect(entities.map((entity) => entity.surface)).toContain('Kaelor');
+    expect(entities.map((entity) => entity.surface)).toContain('Blatnor');
+    expect(
+      entities.find((entity) => entity.surface === 'Kaelor')?.detectionReason
+    ).toBe('character_context_candidate');
+  });
+
   it('treats one-off hyphenated nicknames as multi-part unknowns during workspace review', () => {
     const entities = entityRefsFor(
       'Lantern-Mira checked the Warrens gate alone.',
@@ -237,6 +251,27 @@ describe('buildExtractedProposal', () => {
       ['Lantern-Mira', 'character-1', 'known_entity'],
       ['Warrens', 'entity-1', 'known_entity'],
       ['Mira', 'character-1', 'known_entity']
+    ]);
+  });
+
+  it('does not mark linked exact-name character and world bible records as ambiguous', () => {
+    const entities = entityRefsFor(
+      '"Kaelor, get your head in the game!" Blatnor shouted. Kael thought to himself, "no."',
+      [
+        {id: 'entity-kael', name: 'Kael', type: 'entity'},
+        {id: 'character-kael', name: 'Kael', type: 'character'}
+      ],
+      'workspace-autosave'
+    );
+
+    const kael = entities.find((entity) => entity.surface === 'Kael');
+
+    expect(kael?.detectionReason).toBe('known_entity');
+    expect(kael?.candidateEntities).toBeUndefined();
+    expect(entities.map((entity) => entity.surface)).toEqual([
+      'Kaelor',
+      'Blatnor',
+      'Kael'
     ]);
   });
 });

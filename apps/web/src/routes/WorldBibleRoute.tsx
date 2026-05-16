@@ -3,7 +3,7 @@ import type {FormEvent} from 'react';
 import {useLocation, useNavigate} from 'react-router-dom';
 import {useAppStore} from '../store/appStore';
 import type {Character, EntityCategory, WorldEntity} from '../entityTypes';
-import {getEntitiesByProject, saveEntity} from '../entityStorage';
+import {getEntitiesByProject} from '../entityStorage';
 import {
   getCategoriesByProject,
   saveCategory,
@@ -40,11 +40,9 @@ import {
 } from '../services/seriesBible/SeriesBibleService';
 import {
   ALTERNATIVE_NAMES_KEY,
-  buildCanonicalAliasList,
   extractPlainTextFromRichText,
   extractStructuredSummaryFromRichText,
   formatAlternativeNames,
-  mergeEntityFields,
   normalizeRichTextValue,
   normalizeName,
   parseAlternativeNames
@@ -58,35 +56,6 @@ import {
 // activeProject read from store below
 
 type WorldBibleViewMode = 'category' | 'review';
-
-const fileNameToEntityName = (name: string): string => {
-  const base = name.replace(/\.[^.]+$/, '').trim();
-  return base || 'Imported entry';
-};
-
-const mapImportedTextToFields = (
-  category: EntityCategory,
-  text: string,
-  richTextHtml?: string
-): Record<string, string> => {
-  const normalized = text.trim();
-  const fields: Record<string, string> = {};
-  const preferredField =
-    category.fieldSchema.find((field) => field.key === 'description') ??
-    category.fieldSchema.find((field) => field.type === 'textarea') ??
-    category.fieldSchema.find((field) => field.type === 'text');
-
-  if (preferredField) {
-    fields[preferredField.key] =
-      preferredField.type === 'textarea'
-        ? richTextHtml || normalizeRichTextValue(normalized)
-        : normalized;
-  } else {
-    fields.description = richTextHtml || normalizeRichTextValue(normalized);
-  }
-
-  return fields;
-};
 
 const getPreferredImportField = (
   category: EntityCategory
@@ -102,6 +71,7 @@ const CATEGORY_SUMMARY_PRIORITY: Record<string, string[]> = {
   factions: ['description', 'notes'],
   concepts: ['description', 'notes']
 };
+const CHARACTER_CATEGORY_HINTS = ['character', 'characters', 'npc', 'person', 'people'];
 
 const buildEntityCardSummary = (
   entity: WorldEntity,
@@ -253,6 +223,15 @@ const triggerJsonDownload = (fileName: string, data: unknown): void => {
   URL.revokeObjectURL(url);
 };
 
+const buildEntityContent = (entity: WorldEntity) => {
+  const fieldText = Object.entries(entity.fields)
+    .map(([key, value]) =>
+      `${key}: ${typeof value === 'string' ? extractPlainTextFromRichText(value) : value ?? ''}`
+    )
+    .join('\n');
+  return `${entity.name}\n${fieldText}`;
+};
+
 function WorldBibleRoute() {
   const activeProject = useAppStore((s) => s.activeProject);
   const projectSettings = useAppStore((s) => s.projectSettings);
@@ -280,6 +259,11 @@ function WorldBibleRoute() {
   const [pendingReviewFocus, setPendingReviewFocus] = useState<'general' | 'aliases' | null>(
     null
   );
+  const [handoffGuidance, setHandoffGuidance] = useState<{
+    kind: 'character-canonicalization';
+    sourceName: string;
+    matchEntityId?: string;
+  } | null>(null);
   const [reviewFilter, setReviewFilter] = useState<'all' | ReviewQueueReason>('all');
   const [recommendedFilter, setRecommendedFilter] = useState<'all' | ReviewResolution>('all');
   const seriesConfig = activeProject
@@ -518,6 +502,10 @@ function WorldBibleRoute() {
   }, [entities, ragService]);
 
   const activeCategory = categories.find((c) => c.id === activeTab);
+  const activeCategoryIsCharacterLike = useMemo(() => {
+    const slug = (activeCategory?.slug ?? '').toLowerCase();
+    return CHARACTER_CATEGORY_HINTS.some((hint) => slug.includes(hint));
+  }, [activeCategory?.slug]);
   const categoryById = useMemo(
     () => new Map(categories.map((category) => [category.id, category])),
     [categories]
@@ -525,16 +513,12 @@ function WorldBibleRoute() {
   const {
     isImportingEntities,
     isApplyingImports,
-    setIsApplyingImports,
     importDrafts,
-    setImportDrafts,
+    clearImportDrafts,
     isImportingJson,
     isApplyingJsonImport,
-    setIsApplyingJsonImport,
     jsonImportSession,
-    setJsonImportSession,
     jsonImportConflictResolutions,
-    setJsonImportConflictResolutions,
     activeJsonCategory,
     preparedJsonRows,
     jsonImportValidCount,
@@ -542,16 +526,47 @@ function WorldBibleRoute() {
     unresolvedJsonConflictCount,
     handleImportEntities,
     updateImportDraft,
+    applyImportDrafts,
+    applyJsonImport,
     handleJsonImportFile,
     handleJsonCategoryChange,
+    handleJsonNameKeyChange,
+    handleJsonModeChange,
     handleJsonFieldMapChange,
-    handleJsonConflictResolutionChange
+    handleJsonConflictResolutionChange,
+    clearJsonImportSession
   } = useWorldBibleImports({
     activeProjectId: activeProject?.id ?? null,
     activeCategory: activeCategory ?? null,
     categories,
     entities,
-    setFeedback
+    setEntities,
+    setFeedback,
+    onEntitySaved: async (entity, category) => {
+      const content = buildEntityContent(entity);
+      if (ragService) {
+        await ragService.indexDocument(
+          entity.id,
+          entity.name,
+          content,
+          'worldbible',
+          {
+            tags: [category.slug],
+            entityIds: [entity.id]
+          }
+        );
+      }
+      if (shodhService) {
+        await shodhService.captureAutoMemory({
+          projectId: entity.projectId,
+          documentId: entity.id,
+          title: entity.name,
+          content,
+          tags: ['worldbible', category.slug]
+        });
+      }
+    },
+    onEntitiesChanged: refreshMemories
   });
   const currentEntityMemories = editingId
     ? memories.filter((memory) => memory.documentId === editingId)
@@ -601,6 +616,8 @@ function WorldBibleRoute() {
         aliasMapByEntityId.get(selectedEntity.id) ?? []
       )
     : null;
+  const currentCharacterLabel =
+    name.trim() || selectedEntity?.name || activeCategory?.name.slice(0, -1) || 'this record';
   const isCanonicalRenameDraft = Boolean(
     selectedEntity &&
       name.trim().length > 0 &&
@@ -633,6 +650,29 @@ function WorldBibleRoute() {
     normalizeName,
     parseAlternativeNames
   });
+  const canonicalResolutionMatches = useMemo(() => {
+    if (!editingId) {
+      return potentialEntityMatches;
+    }
+    const handoffMatch = handoffGuidance?.matchEntityId
+      ? entities.find((entity) => entity.id === handoffGuidance.matchEntityId)
+      : null;
+    if (!handoffMatch || handoffMatch.id === editingId) {
+      return potentialEntityMatches;
+    }
+    if (potentialEntityMatches.some((match) => match.entity.id === handoffMatch.id)) {
+      return potentialEntityMatches;
+    }
+    return [
+      {
+        entity: handoffMatch,
+        matchKey: buildEntityMatchKey(editingId, handoffMatch.id),
+        reasons: [`Linked from ${handoffGuidance?.sourceName ?? 'Character Tools'}`],
+        recommendedResolution: 'merge' as const
+      },
+      ...potentialEntityMatches
+    ];
+  }, [editingId, entities, handoffGuidance, potentialEntityMatches]);
   const memoryPanelEmpty =
     'This entry has no captured memories yet. Save it to generate one or adjust the filter.';
 
@@ -689,15 +729,6 @@ function WorldBibleRoute() {
     [handleEdit]
   );
 
-  const buildEntityContent = (entity: WorldEntity) => {
-    const fieldText = Object.entries(entity.fields)
-      .map(([key, value]) =>
-        `${key}: ${typeof value === 'string' ? extractPlainTextFromRichText(value) : value ?? ''}`
-      )
-      .join('\n');
-    return `${entity.name}\n${fieldText}`;
-  };
-
   const hasRuleset = Boolean(activeProject?.rulesetId);
 
   const {
@@ -713,6 +744,7 @@ function WorldBibleRoute() {
     handleMarkEntityComplete,
     handleDeleteEntity,
     handleMergeEntityIntoMatch,
+    handleMergeMatchIntoCurrentEntity,
     handleConvertEntityToAlias,
     handleImportEntityToCharacters,
     handleAddEntityToCompendium,
@@ -748,8 +780,6 @@ function WorldBibleRoute() {
     normalizeName,
     parseAlternativeNames,
     formatAlternativeNames,
-    buildCanonicalAliasList,
-    mergeEntityFields,
     buildEntityContent,
     alternativeNamesKey: ALTERNATIVE_NAMES_KEY,
     openReviewItem: handleOpenReviewItem,
@@ -822,7 +852,7 @@ function WorldBibleRoute() {
           editingId && selectedEntityQueueItem?.entity.id === editingId
             ? reviewEntityInsightsById.get(editingId)
             : null;
-        const remainingVisibleMatchCount = potentialEntityMatches.filter(
+        const remainingVisibleMatchCount = canonicalResolutionMatches.filter(
           (match) => match.entity.id !== otherEntity.id
         ).length;
         const canAutoResolveCurrentReview =
@@ -852,7 +882,7 @@ function WorldBibleRoute() {
       editingId,
       handleMarkEntityComplete,
       persistIgnoredEntityMatch,
-      potentialEntityMatches,
+      canonicalResolutionMatches,
       reviewEntityInsightsById,
       selectedEntity,
       selectedEntityQueueItem
@@ -870,10 +900,17 @@ function WorldBibleRoute() {
   }, [editingId, pendingReviewFocus]);
 
   useEffect(() => {
-    const state = location.state as {focusEntityId?: string} | null;
+    const state = location.state as {
+      focusEntityId?: string;
+      focus?: 'general' | 'aliases';
+      handoffKind?: 'character-canonicalization';
+      handoffSourceName?: string;
+      handoffMatchEntityId?: string;
+    } | null;
     const focusEntityId = state?.focusEntityId;
     if (!focusEntityId) return;
-    const focusKey = `${location.key}:${focusEntityId}`;
+    const focus = state?.focus ?? 'general';
+    const focusKey = `${location.key}:${focusEntityId}:${focus}`;
     if (focusedEntityKeyRef.current === focusKey) {
       return;
     }
@@ -881,7 +918,14 @@ function WorldBibleRoute() {
     if (!target) return;
     setActiveTab(target.categoryId);
     setViewMode('category');
-    handleEdit(target);
+    handleEdit(target, focus);
+    if (state?.handoffKind === 'character-canonicalization' && state.handoffSourceName) {
+      setHandoffGuidance({
+        kind: 'character-canonicalization',
+        sourceName: state.handoffSourceName,
+        matchEntityId: state.handoffMatchEntityId
+      });
+    }
     focusedEntityKeyRef.current = focusKey;
   }, [entities, handleEdit, location.key, location.state]);
 
@@ -889,269 +933,12 @@ function WorldBibleRoute() {
     draftIds?: string[];
     openFirstImported?: boolean;
   }) => {
-    if (!activeProject) return;
-    const queuedDrafts = importDrafts.filter(
-      (draft) =>
-        draft.include &&
-        !draft.parseError &&
-        (!options?.draftIds || options.draftIds.includes(draft.id))
-    );
-    if (queuedDrafts.length === 0) {
-      setFeedback({
-        tone: 'error',
-        message: 'No valid import drafts selected.'
-      });
-      return;
-    }
-
-    setIsApplyingImports(true);
-    setFeedback(null);
-    const nextEntities = [...entities];
-    let createdCount = 0;
-    let updatedCount = 0;
-    let failedCount = 0;
-    let firstImportedEntity: WorldEntity | null = null;
-
-    try {
-      for (const draft of queuedDrafts) {
-        const category = categories.find((item) => item.id === draft.categoryId);
-        if (!category) {
-          failedCount += 1;
-          continue;
-        }
-
-        try {
-          const now = Date.now();
-          const normalizedName = draft.name.trim().toLowerCase();
-          const existing =
-            draft.mode === 'upsert'
-              ? nextEntities.find(
-                  (entity) =>
-                    entity.categoryId === draft.categoryId &&
-                    entity.name.trim().toLowerCase() === normalizedName
-                )
-              : undefined;
-
-          const entity: WorldEntity = existing
-            ? {
-                ...existing,
-                fields: {
-                  ...existing.fields,
-                  ...mapImportedTextToFields(category, draft.text, draft.richTextHtml)
-                },
-                updatedAt: now
-              }
-            : {
-                id: crypto.randomUUID(),
-                projectId: activeProject.id,
-                categoryId: draft.categoryId,
-                name: draft.name.trim() || fileNameToEntityName(draft.fileName),
-                fields: mapImportedTextToFields(category, draft.text, draft.richTextHtml),
-                needsCompletion: false,
-                links: [],
-                createdAt: now,
-                updatedAt: now
-              };
-
-          await saveEntity(entity);
-          if (!firstImportedEntity) {
-            firstImportedEntity = entity;
-          }
-          if (ragService) {
-            await ragService.indexDocument(
-              entity.id,
-              entity.name,
-              buildEntityContent(entity),
-              'worldbible',
-              {
-                tags: [category.slug],
-                entityIds: [entity.id]
-              }
-            );
-          }
-          if (shodhService) {
-            await shodhService.captureAutoMemory({
-              projectId: activeProject.id,
-              documentId: entity.id,
-              title: entity.name,
-              content: buildEntityContent(entity),
-              tags: ['worldbible', category.slug]
-            });
-          }
-
-          if (existing) {
-            const idx = nextEntities.findIndex((item) => item.id === existing.id);
-            if (idx !== -1) nextEntities[idx] = entity;
-            updatedCount += 1;
-          } else {
-            nextEntities.push(entity);
-            createdCount += 1;
-          }
-        } catch {
-          failedCount += 1;
-        }
-      }
-
-      setEntities(nextEntities);
-      if (createdCount + updatedCount > 0) {
-        await refreshMemories();
-      }
-
-      setFeedback({
-        tone: failedCount > 0 ? 'error' : 'success',
-        message:
-          `Imported ${createdCount} new entr${
-            createdCount === 1 ? 'y' : 'ies'
-          } and updated ${updatedCount}.` +
-          (failedCount > 0 ? ` ${failedCount} failed.` : '')
-      });
-
-      if (failedCount === 0) {
-        if (options?.draftIds?.length) {
-          setImportDrafts((prev) =>
-            prev.filter((draft) => !options.draftIds?.includes(draft.id))
-          );
-        } else {
-          setImportDrafts([]);
-        }
-      }
-
-      if (options?.openFirstImported && firstImportedEntity) {
-        setActiveImportPreviewId(null);
-        setViewMode('category');
-        setActiveTab(firstImportedEntity.categoryId);
-        handleEdit(firstImportedEntity);
-      }
-    } finally {
-      setIsApplyingImports(false);
-    }
-  };
-
-  const handleApplyJsonImport = async () => {
-    if (!activeProject || !jsonImportSession || !activeJsonCategory) return;
-    const validRows = preparedJsonRows.filter((row) => row.errors.length === 0);
-    if (validRows.length === 0) {
-      setFeedback({
-        tone: 'error',
-        message: 'No valid JSON rows to import. Fix mapping/validation first.'
-      });
-      return;
-    }
-    if (unresolvedJsonConflictCount > 0) {
-      setFeedback({
-        tone: 'error',
-        message: `Review ${unresolvedJsonConflictCount} conflicting JSON row(s) before importing.`
-      });
-      return;
-    }
-
-    setIsApplyingJsonImport(true);
-    setFeedback(null);
-    const nextEntities = [...entities];
-    let createdCount = 0;
-    let updatedCount = 0;
-    let failedCount = 0;
-    let skippedCount = 0;
-
-    try {
-      for (const row of validRows) {
-        try {
-          if (row.resolution === 'skip') {
-            skippedCount += 1;
-            continue;
-          }
-          const now = Date.now();
-          const normalizedName = row.name.trim().toLowerCase();
-          const existing =
-            row.resolution === 'upsert'
-              ? nextEntities.find(
-                  (entity) =>
-                    entity.categoryId === jsonImportSession.categoryId &&
-                    entity.name.trim().toLowerCase() === normalizedName
-                )
-              : undefined;
-          const normalizedRowFields = {...row.fields};
-          activeJsonCategory.fieldSchema.forEach((field) => {
-            if (field.type !== 'textarea') return;
-            const rawValue = normalizedRowFields[field.key];
-            normalizedRowFields[field.key] =
-              typeof rawValue === 'string' ? normalizeRichTextValue(rawValue) : '<p></p>';
-          });
-
-          const entity: WorldEntity = existing
-            ? {
-                ...existing,
-                fields: {
-                  ...existing.fields,
-                  ...normalizedRowFields
-                },
-                updatedAt: now
-              }
-            : {
-                id: crypto.randomUUID(),
-                projectId: activeProject.id,
-                categoryId: jsonImportSession.categoryId,
-                name: row.name,
-                fields: normalizedRowFields,
-                needsCompletion: false,
-                links: [],
-                createdAt: now,
-                updatedAt: now
-              };
-
-          await saveEntity(entity);
-          if (ragService) {
-            await ragService.indexDocument(
-              entity.id,
-              entity.name,
-              buildEntityContent(entity),
-              'worldbible',
-              {
-                tags: [activeJsonCategory.slug],
-                entityIds: [entity.id]
-              }
-            );
-          }
-          if (shodhService) {
-            await shodhService.captureAutoMemory({
-              projectId: activeProject.id,
-              documentId: entity.id,
-              title: entity.name,
-              content: buildEntityContent(entity),
-              tags: ['worldbible', activeJsonCategory.slug]
-            });
-          }
-
-          if (existing) {
-            const idx = nextEntities.findIndex((item) => item.id === existing.id);
-            if (idx !== -1) nextEntities[idx] = entity;
-            updatedCount += 1;
-          } else {
-            nextEntities.push(entity);
-            createdCount += 1;
-          }
-        } catch {
-          failedCount += 1;
-        }
-      }
-
-      setEntities(nextEntities);
-      await refreshMemories();
-      setFeedback({
-        tone: failedCount > 0 ? 'error' : 'success',
-        message:
-          `JSON import created ${createdCount} entr${
-            createdCount === 1 ? 'y' : 'ies'
-          } and updated ${updatedCount}.` +
-          (skippedCount > 0 ? ` Skipped ${skippedCount}.` : '') +
-          (failedCount > 0 ? ` ${failedCount} failed.` : '')
-      });
-      if (failedCount === 0) {
-        setJsonImportSession(null);
-        setJsonImportConflictResolutions({});
-      }
-    } finally {
-      setIsApplyingJsonImport(false);
+    const firstImportedEntity = await applyImportDrafts(options);
+    if (options?.openFirstImported && firstImportedEntity) {
+      setActiveImportPreviewId(null);
+      setViewMode('category');
+      setActiveTab(firstImportedEntity.categoryId);
+      handleEdit(firstImportedEntity);
     }
   };
 
@@ -1268,11 +1055,11 @@ function WorldBibleRoute() {
             padding: '0.5rem 0.75rem',
             borderRadius: '6px',
             border: `1px solid ${
-              feedback.tone === 'error' ? '#fecaca' : '#bbf7d0'
+              feedback.tone === 'error' ? 'var(--color-error-soft-border)' : 'var(--color-success-soft-border)'
             }`,
             backgroundColor:
-              feedback.tone === 'error' ? '#fef2f2' : '#f0fdf4',
-            color: feedback.tone === 'error' ? '#991b1b' : '#166534'
+              feedback.tone === 'error' ? 'var(--color-error-soft-bg)' : 'var(--color-success-soft-bg)',
+            color: feedback.tone === 'error' ? 'var(--color-error)' : 'var(--color-success)'
           }}
         >
           {feedback.message}
@@ -1396,7 +1183,7 @@ function WorldBibleRoute() {
               </button>
               <button
                 type='button'
-                onClick={() => setImportDrafts([])}
+                onClick={clearImportDrafts}
                 disabled={isApplyingImports}
               >
                 Clear
@@ -1636,14 +1423,14 @@ function WorldBibleRoute() {
             <div className={styles.importPanelActions}>
               <button
                 type='button'
-                onClick={() => void handleApplyJsonImport()}
+                onClick={() => void applyJsonImport()}
                 disabled={isApplyingJsonImport}
               >
                 {isApplyingJsonImport ? 'Importing...' : 'Apply JSON Import'}
               </button>
               <button
                 type='button'
-                onClick={() => setJsonImportSession(null)}
+                onClick={clearJsonImportSession}
                 disabled={isApplyingJsonImport}
               >
                 Clear
@@ -1681,11 +1468,7 @@ function WorldBibleRoute() {
               Row Name Key
               <select
                 value={jsonImportSession.nameKey}
-                onChange={(e) =>
-                  setJsonImportSession((prev) =>
-                    prev ? {...prev, nameKey: e.target.value} : prev
-                  )
-                }
+                onChange={(e) => handleJsonNameKeyChange(e.target.value)}
                 disabled={isApplyingJsonImport}
               >
                 <option value=''>-- Select key --</option>
@@ -1700,11 +1483,7 @@ function WorldBibleRoute() {
               Behavior
               <select
                 value={jsonImportSession.mode}
-                onChange={(e) =>
-                  setJsonImportSession((prev) =>
-                    prev ? {...prev, mode: e.target.value as ImportMode} : prev
-                  )
-                }
+                onChange={(e) => handleJsonModeChange(e.target.value as ImportMode)}
                 disabled={isApplyingJsonImport}
               >
                 <option value='create'>Create New</option>
@@ -1787,7 +1566,7 @@ function WorldBibleRoute() {
         />
       )}
 
-      {reviewQueue.length > 0 && (
+      {viewMode === 'review' && reviewQueue.length > 0 && (
         <section className={styles.reviewPanel}>
           <div className={styles.reviewPanelHeader}>
             <div>
@@ -2022,6 +1801,44 @@ function WorldBibleRoute() {
               <h2>
                 {editingId ? 'Edit' : 'New'} {activeCategory.name.slice(0, -1)}
               </h2>
+              {activeCategoryIsCharacterLike && (
+                <div className={styles.reviewHint}>
+                  Use this record as the canonical character profile. Set names,
+                  alternative names, and lore here; open Character Tools later only if
+                  you need sheets, stats, inventory, or resources.
+                </div>
+              )}
+              {activeCategoryIsCharacterLike && handoffGuidance?.kind === 'character-canonicalization' && (
+                <div className={styles.handoffBanner}>
+                  <div>
+                    <strong>Resolve {handoffGuidance.sourceName}</strong>
+                    <p>
+                      World Bible owns canonical names and aliases. Use the overlap
+                      actions below, or mark this reviewed if this is already the
+                      right canonical record.
+                    </p>
+                  </div>
+                  {canonicalResolutionMatches.length === 0 && selectedEntity && (
+                    <button
+                      type='button'
+                      onClick={() =>
+                        void handleMarkEntityComplete(selectedEntity).then(() => {
+                          setHandoffGuidance(null);
+                        })
+                      }
+                    >
+                      Keep {currentCharacterLabel} canonical
+                    </button>
+                  )}
+                  <button
+                    type='button'
+                    className={styles.dismissButton}
+                    onClick={() => setHandoffGuidance(null)}
+                  >
+                    Dismiss
+                  </button>
+                </div>
+              )}
 
               {viewMode === 'review' && selectedEntityQueueItem && (
                 <div className={styles.reviewFormNotice}>
@@ -2040,7 +1857,7 @@ function WorldBibleRoute() {
                           ? `Fill: ${insight.missingRequiredFields.join(', ')}.`
                           : 'Required fields complete.'}
                         {insight.matchCount > 0
-                          ? ` ${insight.matchCount} possible duplicate or alias match${insight.matchCount === 1 ? '' : 'es'} detected below.`
+                          ? ` ${insight.matchCount} possible ${activeCategoryIsCharacterLike ? 'character canon overlap' : 'duplicate or alias match'}${insight.matchCount === 1 ? '' : 'es'} detected below.`
                           : ''}
                         {isCanonicalRenameDraft || insight.matchCount > 0
                           ? ` Recommended: ${getReviewResolutionLabel(
@@ -2107,7 +1924,9 @@ function WorldBibleRoute() {
                         }
                         disabled={isSubmittingEntity}
                       >
-                        Rename to canonical + next
+                        {activeCategoryIsCharacterLike
+                          ? 'Promote this name to canonical + next'
+                          : 'Rename to canonical + next'}
                       </button>
                     )}
                     <button
@@ -2152,22 +1971,35 @@ function WorldBibleRoute() {
                       })
                     }
                     rows={3}
-                    placeholder='Comma-separated aliases, titles, or shorthand references'
+                    placeholder={
+                      activeCategoryIsCharacterLike
+                        ? 'Comma-separated nicknames, titles, short forms, or alternate spellings'
+                        : 'Comma-separated aliases, titles, or shorthand references'
+                    }
                   />
                 </label>
+                {activeCategoryIsCharacterLike && (
+                  <div className={styles.reviewHint}>
+                    Use alternative names for short forms like first-name references,
+                    titles, nicknames, and prior canonical forms after a rename.
+                  </div>
+                )}
               </div>
 
-              {potentialEntityMatches.length > 0 && (
+              {canonicalResolutionMatches.length > 0 && (
                 <div className={styles.matchPanel}>
-                  <strong>Possible duplicate or alias matches</strong>
+                  <strong>
+                    {activeCategoryIsCharacterLike
+                      ? 'Possible canonical character overlaps'
+                      : 'Possible duplicate or alias matches'}
+                  </strong>
                   <p>
-                    This draft overlaps with existing canon. Choose one action for each
-                    match:
-                    {' '}merge duplicates, convert this record into an alias, keep both
-                    records as separate canon, or ignore a noisy suggestion.
+                    {activeCategoryIsCharacterLike
+                      ? `This character draft overlaps with existing canon. Choose whether ${currentCharacterLabel} should stay canonical, another matching record should stay canonical, both should remain separate people, or the suggestion should be ignored.`
+                      : 'This draft overlaps with existing canon. Choose one action for each match: merge duplicates, convert this record into an alias, keep both records as separate canon, or ignore a noisy suggestion.'}
                   </p>
                   <div className={styles.matchList}>
-                    {potentialEntityMatches.slice(0, 4).map((match) => (
+                    {canonicalResolutionMatches.slice(0, 4).map((match) => (
                       <div key={match.entity.id} className={styles.matchCard}>
                         <div>
                           <strong>{match.entity.name}</strong>
@@ -2175,7 +2007,9 @@ function WorldBibleRoute() {
                             {match.reasons.join(' · ')}
                           </div>
                           <div className={styles.reviewHint}>
-                            Recommended: {getReviewResolutionLabel(match.recommendedResolution)}.
+                            {activeCategoryIsCharacterLike
+                              ? `Keep ${currentCharacterLabel} canonical to preserve this record, or keep ${match.entity.name} canonical to make ${currentCharacterLabel} an alias.`
+                              : `Recommended: ${getReviewResolutionLabel(match.recommendedResolution)}.`}
                           </div>
                         </div>
                         <div className={styles.reviewToolbarActions}>
@@ -2183,20 +2017,24 @@ function WorldBibleRoute() {
                             type='button'
                             onClick={() => handleEdit(match.entity)}
                           >
-                            Open other record
+                            {activeCategoryIsCharacterLike
+                              ? 'Open other canon record'
+                              : 'Open other record'}
                           </button>
                           <button
                             type='button'
                             onClick={() => handleEdit(match.entity, 'aliases')}
                           >
-                            Open aliases
+                            {activeCategoryIsCharacterLike ? 'Open other aliases' : 'Open aliases'}
                           </button>
                           {editingId && match.matchKey && (
                             <button
                               type='button'
                               onClick={() => void handleKeepSeparateMatch(match.entity)}
                             >
-                              Keep both records
+                              {activeCategoryIsCharacterLike
+                                ? 'Keep separate characters'
+                                : 'Keep both records'}
                             </button>
                           )}
                           {editingId && match.matchKey && (
@@ -2210,15 +2048,14 @@ function WorldBibleRoute() {
                           {editingId && (
                             <button
                               type='button'
-                              onClick={() => void handleConvertEntityToAlias(match.entity)}
-                              disabled={
-                                aliasingEntityTargetId === match.entity.id ||
-                                mergingEntityTargetId === match.entity.id
-                              }
+                              onClick={() => void handleMergeMatchIntoCurrentEntity(match.entity)}
+                              disabled={mergingEntityTargetId === match.entity.id}
                             >
-                              {aliasingEntityTargetId === match.entity.id
-                                ? 'Converting...'
-                                : 'Convert this record into an alias'}
+                              {mergingEntityTargetId === match.entity.id
+                                ? 'Merging...'
+                                : activeCategoryIsCharacterLike
+                                  ? `Keep ${currentCharacterLabel} canonical`
+                                  : 'Merge match into this record'}
                             </button>
                           )}
                           {editingId && (
@@ -2229,7 +2066,25 @@ function WorldBibleRoute() {
                             >
                               {mergingEntityTargetId === match.entity.id
                                 ? 'Merging...'
-                                : 'Merge into this record'}
+                                : activeCategoryIsCharacterLike
+                                  ? `Keep ${match.entity.name} canonical`
+                                  : 'Merge this record into match'}
+                            </button>
+                          )}
+                          {editingId && (
+                            <button
+                              type='button'
+                              onClick={() => void handleConvertEntityToAlias(match.entity)}
+                              disabled={
+                                aliasingEntityTargetId === match.entity.id ||
+                                mergingEntityTargetId === match.entity.id
+                              }
+                            >
+                              {aliasingEntityTargetId === match.entity.id
+                                ? 'Converting...'
+                                : activeCategoryIsCharacterLike
+                                  ? `Make ${currentCharacterLabel} an alias`
+                                  : 'Convert this record into an alias'}
                             </button>
                           )}
                         </div>
@@ -2373,8 +2228,12 @@ function WorldBibleRoute() {
                   {isSubmittingEntity
                     ? 'Saving...'
                     : editingId
-                      ? 'Save Changes'
-                      : 'Create Entry'}
+                      ? activeCategoryIsCharacterLike
+                        ? 'Save Canon Changes'
+                        : 'Save Changes'
+                      : activeCategoryIsCharacterLike
+                        ? 'Create Canon Record'
+                        : 'Create Entry'}
                 </button>
                 {viewMode === 'review' && (
                   <button
@@ -2397,7 +2256,9 @@ function WorldBibleRoute() {
                     }
                     disabled={isSubmittingEntity}
                   >
-                    Rename to canonical + next
+                    {activeCategoryIsCharacterLike
+                      ? 'Promote this name to canonical + next'
+                      : 'Rename to canonical + next'}
                   </button>
                 )}
                 {editingId && (
@@ -2629,11 +2490,11 @@ function WorldBibleRoute() {
                         type='button'
                         onClick={() => void handleImportEntityToCharacters(entity)}
                         disabled={importingCharacterEntityId === entity.id}
-                        title='Create or link a Characters record so this person can use sheets, stats, inventory, and resources.'
+                        title='Open optional character tools for sheets, stats, inventory, and resources. World Bible remains the canonical record.'
                       >
                         {importingCharacterEntityId === entity.id
-                          ? 'Importing...'
-                          : 'Import Character'}
+                          ? 'Opening...'
+                          : 'Open Character Tools'}
                       </button>
                     )}
                     {isCharacterLikeEntity(entity) && hasRuleset && (
@@ -2645,11 +2506,11 @@ function WorldBibleRoute() {
                           })
                         }
                         disabled={importingCharacterEntityId === entity.id}
-                        title='Import this World Bible record into Characters and create or open a character sheet immediately.'
+                        title='Open character sheets for this World Bible record and create one if needed. World Bible remains the canonical record.'
                       >
                         {importingCharacterEntityId === entity.id
-                          ? 'Importing...'
-                          : 'Import + Sheet'}
+                          ? 'Opening...'
+                          : 'Open/Create Sheet'}
                       </button>
                     )}
                     {showGameSystems && (
