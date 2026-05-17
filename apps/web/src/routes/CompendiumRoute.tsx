@@ -1380,7 +1380,7 @@ function CompendiumRoute() {
   const CompendiumOverviewSection = () => {
     return (
       <>
-        <p style={{marginTop: 0, marginBottom: '0.9rem', color: '#4b5563'}}>
+        <p style={{marginTop: 0, marginBottom: '0.9rem', color: 'var(--color-text-secondary)'}}>
           Use this snapshot to see progress at a glance, then jump into the next
           task without scanning every advanced system.
         </p>
@@ -1392,19 +1392,19 @@ function CompendiumRoute() {
             marginBottom: '1rem'
           }}
         >
-          <article style={{padding: '0.85rem', border: '1px solid #ddd', borderRadius: '8px'}}>
+          <article style={{padding: '0.85rem', border: '1px solid var(--color-border)', borderRadius: '8px'}}>
             <h3 style={{marginTop: 0, marginBottom: '0.45rem'}}>Total Points</h3>
             <div style={{fontSize: '1.1rem', fontWeight: 700}}>
               {isLoading || !progress ? '...' : progress.totalPoints}
             </div>
           </article>
-          <article style={{padding: '0.85rem', border: '1px solid #ddd', borderRadius: '8px'}}>
+          <article style={{padding: '0.85rem', border: '1px solid var(--color-border)', borderRadius: '8px'}}>
             <h3 style={{marginTop: 0, marginBottom: '0.45rem'}}>Milestones Unlocked</h3>
             <div style={{fontSize: '1.1rem', fontWeight: 700}}>
               {isLoading || !progress ? '...' : progress.unlockedMilestoneIds.length}
             </div>
           </article>
-          <article style={{padding: '0.85rem', border: '1px solid #ddd', borderRadius: '8px'}}>
+          <article style={{padding: '0.85rem', border: '1px solid var(--color-border)', borderRadius: '8px'}}>
             <h3 style={{marginTop: 0, marginBottom: '0.45rem'}}>Recipes Unlocked</h3>
             <div style={{fontSize: '1.1rem', fontWeight: 700}}>
               {isLoading || !progress ? '...' : progress.unlockedRecipeIds.length}
@@ -1412,7 +1412,7 @@ function CompendiumRoute() {
           </article>
         </div>
 
-        <section style={{padding: '1rem', border: '1px solid #ddd', borderRadius: '8px', marginBottom: '1rem'}}>
+        <section style={{padding: '1rem', border: '1px solid var(--color-border)', borderRadius: '8px', marginBottom: '1rem'}}>
           <h2 style={{marginTop: 0}}>What To Do Next</h2>
           <ul style={{listStyle: 'none', padding: 0, margin: 0}}>
             {nextStepItems.map((step) => (
@@ -1431,7 +1431,7 @@ function CompendiumRoute() {
           </ul>
         </section>
 
-        <section style={{padding: '1rem', border: '1px solid #ddd', borderRadius: '8px'}}>
+        <section style={{padding: '1rem', border: '1px solid var(--color-border)', borderRadius: '8px'}}>
           <h2 style={{marginTop: 0}}>Recent Actions</h2>
           {logs.length === 0 ? (
             <>
@@ -1471,7 +1471,7 @@ function CompendiumRoute() {
 
   const CompendiumEntriesSection = () => (
     <>
-      <p style={{marginTop: 0, marginBottom: '0.9rem', color: '#4b5563'}}>
+      <p style={{marginTop: 0, marginBottom: '0.9rem', color: 'var(--color-text-secondary)'}}>
         Create new compendium records or import from World Bible, then log actions
         from each entry card.
       </p>
@@ -1479,13 +1479,13 @@ function CompendiumRoute() {
         style={{
           marginBottom: '1rem',
           padding: '0.85rem',
-          border: '1px solid #e5e7eb',
+          border: '1px solid var(--color-border)',
           borderRadius: '8px',
-          backgroundColor: '#f9fafb'
+          backgroundColor: 'var(--color-bg-secondary)'
         }}
       >
         <strong>Discovery Scope</strong>
-        <div style={{fontSize: '0.84rem', color: '#6b7280', marginTop: '0.25rem', marginBottom: '0.55rem'}}>
+        <div style={{fontSize: '0.84rem', color: 'var(--color-text-secondary)', marginTop: '0.25rem', marginBottom: '0.55rem'}}>
           Character-scoped discovery and progression use the selected actor below.
         </div>
         <label style={{display: 'block', maxWidth: '320px'}}>
@@ -1512,9 +1512,9 @@ function CompendiumRoute() {
           marginBottom: '1rem'
         }}
       >
-        <article style={{padding: '1rem', border: '1px solid #ddd', borderRadius: '8px'}}>
+        <article style={{padding: '1rem', border: '1px solid var(--color-border)', borderRadius: '8px'}}>
           <h2 style={{marginTop: 0}}>Add Entry</h2>
-          <p style={{marginTop: 0, fontSize: '0.85rem', color: '#6b7280'}}>
+          <p style={{marginTop: 0, fontSize: '0.85rem', color: 'var(--color-text-secondary)'}}>
             Use this for custom creatures, resources, or artifacts not yet in the
             World Bible.
           </p>
@@ -1546,9 +1546,9 @@ function CompendiumRoute() {
           </button>
         </article>
 
-        <article style={{padding: '1rem', border: '1px solid #ddd', borderRadius: '8px'}}>
+        <article style={{padding: '1rem', border: '1px solid var(--color-border)', borderRadius: '8px'}}>
           <h2 style={{marginTop: 0}}>Import from World Bible</h2>
-          <p style={{marginTop: 0, fontSize: '0.85rem', color: '#6b7280'}}>
+          <p style={{marginTop: 0, fontSize: '0.85rem', color: 'var(--color-text-secondary)'}}>
             Best for existing entities so names stay aligned across tools. Choose what kind of mechanics this record should gain.
           </p>
           <label style={{display: 'block', marginBottom: '0.5rem'}}>
@@ -1641,16 +1641,16 @@ function CompendiumRoute() {
         </article>
       </div>
 
-      <section style={{padding: '1rem', border: '1px solid #ddd', borderRadius: '8px'}}>
+      <section style={{padding: '1rem', border: '1px solid var(--color-border)', borderRadius: '8px'}}>
         <h2 style={{marginTop: 0}}>Entries</h2>
         {reviewEntries.length > 0 && (
           <div
             style={{
               marginBottom: '0.85rem',
               padding: '0.85rem',
-              border: '1px solid #d1d5db',
+              border: '1px solid var(--color-border)',
               borderRadius: '8px',
-              backgroundColor: '#f8fafc'
+              backgroundColor: 'var(--color-bg-secondary)'
             }}
           >
             <div
@@ -1664,7 +1664,7 @@ function CompendiumRoute() {
             >
               <div>
                 <strong>Review Queue</strong>
-                <div style={{fontSize: '0.84rem', color: '#475569', marginTop: '0.25rem'}}>
+                <div style={{fontSize: '0.84rem', color: 'var(--color-text-secondary)', marginTop: '0.25rem'}}>
                   Finish imported or placeholder entries before treating the compendium as
                   complete.
                 </div>
@@ -1675,8 +1675,8 @@ function CompendiumRoute() {
                   alignItems: 'center',
                   padding: '0.2rem 0.55rem',
                   borderRadius: '999px',
-                  backgroundColor: '#e2e8f0',
-                  color: '#0f172a',
+                  backgroundColor: 'var(--color-bg-tertiary)',
+                  color: 'var(--color-text-primary)',
                   fontSize: '0.78rem',
                   fontWeight: 700
                 }}
@@ -1689,17 +1689,17 @@ function CompendiumRoute() {
                 <div
                   key={`review-${entry.id}`}
                   style={{
-                    border: '1px solid #e2e8f0',
+                    border: '1px solid var(--color-bg-tertiary)',
                     borderRadius: '8px',
-                    backgroundColor: '#ffffff',
+                    backgroundColor: 'var(--color-bg-primary)',
                     padding: '0.7rem'
                   }}
                 >
                   <div style={{display: 'flex', justifyContent: 'space-between', gap: '0.5rem'}}>
                     <strong>{entry.name}</strong>
-                    <span style={{fontSize: '0.78rem', color: '#64748b'}}>[{entry.domain}]</span>
+                    <span style={{fontSize: '0.78rem', color: 'var(--color-text-secondary)'}}>[{entry.domain}]</span>
                   </div>
-                  <div style={{fontSize: '0.82rem', color: '#475569', marginTop: '0.35rem'}}>
+                  <div style={{fontSize: '0.82rem', color: 'var(--color-text-secondary)', marginTop: '0.35rem'}}>
                     {entry.sourceEntityId
                       ? 'Linked from World Bible. Add or adjust the optional mechanics details, then mark complete when ready.'
                       : 'Created directly in mechanics. Fill out the entry intent and mark complete when ready.'}
@@ -1732,9 +1732,9 @@ function CompendiumRoute() {
             style={{
               marginBottom: '0.85rem',
               padding: '0.75rem',
-              border: '1px solid #e5e7eb',
+              border: '1px solid var(--color-border)',
               borderRadius: '6px',
-              backgroundColor: '#f9fafb'
+              backgroundColor: 'var(--color-bg-secondary)'
             }}
           >
             <p style={{marginTop: 0, marginBottom: '0.6rem'}}>
@@ -1781,16 +1781,16 @@ function CompendiumRoute() {
               style={{
                 border:
                   highlightedEntryId === entry.id
-                    ? '1px solid #2563eb'
-                    : '1px solid #eee',
+                    ? '1px solid var(--color-accent)'
+                    : '1px solid var(--color-border)',
                 borderRadius: '6px',
                 padding: '0.75rem',
                 marginBottom: '0.75rem',
                 backgroundColor:
-                  highlightedEntryId === entry.id ? '#eff6ff' : 'transparent',
+                  highlightedEntryId === entry.id ? 'var(--color-accent-soft-bg)' : 'transparent',
                 boxShadow:
                   highlightedEntryId === entry.id
-                    ? '0 0 0 1px rgba(37, 99, 235, 0.08)'
+                    ? '0 0 0 1px color-mix(in oklab, var(--color-accent) 10%, transparent)'
                     : 'none'
               }}
             >
@@ -1803,7 +1803,7 @@ function CompendiumRoute() {
                 }}
               >
                 <strong>{entry.name}</strong>
-                <span style={{fontSize: '0.85rem', color: '#666'}}>[{entry.domain}]</span>
+                <span style={{fontSize: '0.85rem', color: 'var(--color-text-secondary)'}}>[{entry.domain}]</span>
                 {entry.needsCompletion && (
                   <span
                     style={{
@@ -1811,9 +1811,9 @@ function CompendiumRoute() {
                       alignItems: 'center',
                       padding: '0.18rem 0.5rem',
                       borderRadius: '999px',
-                      backgroundColor: '#fff7ed',
-                      border: '1px solid #fdba74',
-                      color: '#9a3412',
+                      backgroundColor: 'var(--color-warning-soft-bg)',
+                      border: '1px solid var(--color-warning-soft-border)',
+                      color: 'var(--color-warning)',
                       fontSize: '0.78rem',
                       fontWeight: 600
                     }}
@@ -1823,7 +1823,7 @@ function CompendiumRoute() {
                 )}
               </div>
               {entry.sourceEntityId && (
-                <div style={{fontSize: '0.8rem', color: '#666'}}>
+                <div style={{fontSize: '0.8rem', color: 'var(--color-text-secondary)'}}>
                   Linked to World Bible entity
                 </div>
               )}
@@ -1833,15 +1833,15 @@ function CompendiumRoute() {
                     marginTop: '0.55rem',
                     marginBottom: '0.55rem',
                     padding: '0.75rem',
-                    border: '1px solid #dbeafe',
+                    border: '1px solid var(--color-accent-soft-bg)',
                     borderRadius: '8px',
-                    backgroundColor: '#f8fbff'
+                    backgroundColor: 'var(--color-bg-secondary)'
                   }}
                 >
                   <div style={{display: 'flex', justifyContent: 'space-between', gap: '0.75rem', flexWrap: 'wrap'}}>
                     <div>
                       <strong>Location Mechanics Summary</strong>
-                      <div style={{fontSize: '0.82rem', color: '#475569', marginTop: '0.25rem'}}>
+                      <div style={{fontSize: '0.82rem', color: 'var(--color-text-secondary)', marginTop: '0.25rem'}}>
                         {sourceEntity?.name ?? entry.name}
                         {' · '}
                         {entry.mechanicKind === 'zone'
@@ -1897,7 +1897,7 @@ function CompendiumRoute() {
                       gap: '0.5rem',
                       marginTop: '0.65rem',
                       fontSize: '0.82rem',
-                      color: '#4b5563'
+                      color: 'var(--color-text-secondary)'
                     }}
                   >
                     <div>
@@ -1932,12 +1932,12 @@ function CompendiumRoute() {
                     marginTop: '0.55rem',
                     marginBottom: '0.55rem',
                     padding: '0.75rem',
-                    border: '1px solid #e5e7eb',
+                    border: '1px solid var(--color-border)',
                     borderRadius: '8px',
-                    backgroundColor: '#fafafa'
+                    backgroundColor: 'var(--color-bg-secondary)'
                   }}
                 >
-                  <label style={{fontSize: '0.82rem', color: '#4b5563'}}>
+                  <label style={{fontSize: '0.82rem', color: 'var(--color-text-secondary)'}}>
                     Mechanics type
                     <select
                       value={entry.mechanicKind ?? 'discovery'}
@@ -1954,7 +1954,7 @@ function CompendiumRoute() {
                       <option value='general'>General</option>
                     </select>
                   </label>
-                  <label style={{fontSize: '0.82rem', color: '#4b5563'}}>
+                  <label style={{fontSize: '0.82rem', color: 'var(--color-text-secondary)'}}>
                     Progress scope
                     <select
                       value={
@@ -1977,7 +1977,7 @@ function CompendiumRoute() {
                     </select>
                   </label>
                   {entry.progressScope === 'character' && (
-                    <div style={{fontSize: '0.8rem', color: '#4b5563', gridColumn: '1 / -1'}}>
+                    <div style={{fontSize: '0.8rem', color: 'var(--color-text-secondary)', gridColumn: '1 / -1'}}>
                       Recording for:{' '}
                       {activeMechanicsCharacterSheet?.name ?? 'No character sheet selected'}
                     </div>
@@ -2045,7 +2045,7 @@ function CompendiumRoute() {
 
   const CompendiumProgressionSection = () => (
     <>
-      <p style={{marginTop: 0, marginBottom: '0.9rem', color: '#4b5563'}}>
+      <p style={{marginTop: 0, marginBottom: '0.9rem', color: 'var(--color-text-secondary)'}}>
         Define unlock rules first, then validate craftability using current
         progression and runtime modifiers.
       </p>
@@ -2057,9 +2057,9 @@ function CompendiumRoute() {
           alignItems: 'start'
         }}
       >
-      <section style={{padding: '1rem', border: '1px solid #ddd', borderRadius: '8px'}}>
+      <section style={{padding: '1rem', border: '1px solid var(--color-border)', borderRadius: '8px'}}>
         <h2 style={{marginTop: 0}}>Recipes</h2>
-        <p style={{marginTop: 0, fontSize: '0.85rem', color: '#6b7280'}}>
+        <p style={{marginTop: 0, fontSize: '0.85rem', color: 'var(--color-text-secondary)'}}>
           Recipes define what can be unlocked and what requirements must be met.
         </p>
         <label style={{display: 'block', marginBottom: '0.5rem'}}>
@@ -2114,9 +2114,9 @@ function CompendiumRoute() {
             style={{
               marginTop: '0.75rem',
               padding: '0.65rem',
-              border: '1px solid #e5e7eb',
+              border: '1px solid var(--color-border)',
               borderRadius: '6px',
-              backgroundColor: '#f9fafb'
+              backgroundColor: 'var(--color-bg-secondary)'
             }}
           >
             <p style={{marginTop: 0, marginBottom: '0.5rem'}}>
@@ -2145,9 +2145,9 @@ function CompendiumRoute() {
       </section>
 
       <div style={{display: 'grid', gap: '1rem'}}>
-        <section style={{padding: '1rem', border: '1px solid #ddd', borderRadius: '8px'}}>
+        <section style={{padding: '1rem', border: '1px solid var(--color-border)', borderRadius: '8px'}}>
           <h2 style={{marginTop: 0}}>Milestones</h2>
-          <p style={{marginTop: 0, fontSize: '0.85rem', color: '#6b7280'}}>
+          <p style={{marginTop: 0, fontSize: '0.85rem', color: 'var(--color-text-secondary)'}}>
             Milestones convert point totals into explicit progression beats.
           </p>
           <label style={{display: 'block', marginBottom: '0.5rem'}}>
@@ -2195,9 +2195,9 @@ function CompendiumRoute() {
               style={{
                 marginTop: '0.75rem',
                 padding: '0.65rem',
-                border: '1px solid #e5e7eb',
+                border: '1px solid var(--color-border)',
                 borderRadius: '6px',
-                backgroundColor: '#f9fafb'
+                backgroundColor: 'var(--color-bg-secondary)'
               }}
             >
               <p style={{marginTop: 0, marginBottom: '0.5rem'}}>
@@ -2223,9 +2223,9 @@ function CompendiumRoute() {
           </ul>
         </section>
 
-        <section style={{padding: '1rem', border: '1px solid #ddd', borderRadius: '8px'}}>
+        <section style={{padding: '1rem', border: '1px solid var(--color-border)', borderRadius: '8px'}}>
           <h2 style={{marginTop: 0}}>Craftability Preview</h2>
-          <p style={{marginTop: 0, fontSize: '0.85rem', color: '#6b7280'}}>
+          <p style={{marginTop: 0, fontSize: '0.85rem', color: 'var(--color-text-secondary)'}}>
             Check if recipes are craftable for a sample character and material loadout.
           </p>
           <label style={{display: 'block', marginBottom: '0.5rem'}}>
@@ -2251,10 +2251,10 @@ function CompendiumRoute() {
           <div
             style={{
               fontSize: '0.82rem',
-              color: '#4b5563',
+              color: 'var(--color-text-secondary)',
               marginBottom: '0.65rem',
               padding: '0.5rem',
-              border: '1px solid #e5e7eb',
+              border: '1px solid var(--color-border)',
               borderRadius: '6px'
             }}
           >
@@ -2280,23 +2280,23 @@ function CompendiumRoute() {
                   style={{
                     marginBottom: '0.5rem',
                     paddingBottom: '0.5rem',
-                    borderBottom: '1px solid #efefef'
+                    borderBottom: '1px solid var(--color-border)'
                   }}
                 >
                   <strong>{recipe.name}</strong>{' '}
                   <span
                     style={{
-                      color: check.craftable ? '#166534' : '#991b1b'
+                      color: check.craftable ? 'var(--color-success)' : 'var(--color-error)'
                     }}
                   >
                     {check.craftable ? 'craftable' : 'not craftable'}
                   </span>
-                  <div style={{fontSize: '0.78rem', color: '#6b7280'}}>
+                  <div style={{fontSize: '0.78rem', color: 'var(--color-text-secondary)'}}>
                     Effective level: {check.effectiveCharacterLevel}
                     {' · '}Material multiplier: x{check.materialCostMultiplier.toFixed(2)}
                   </div>
                   {!check.craftable && check.reasons.length > 0 && (
-                    <div style={{fontSize: '0.82rem', color: '#6b7280'}}>
+                    <div style={{fontSize: '0.82rem', color: 'var(--color-text-secondary)'}}>
                       {check.reasons.join(' ')}
                     </div>
                   )}
@@ -2314,9 +2314,9 @@ function CompendiumRoute() {
     if (!enableWorldSystems) {
       return (
         <section
-          style={{padding: '1rem', border: '1px solid #ddd', borderRadius: '8px'}}
+          style={{padding: '1rem', border: '1px solid var(--color-border)', borderRadius: '8px'}}
         >
-          <p style={{margin: 0, color: '#4b5563'}}>
+          <p style={{margin: 0, color: 'var(--color-text-secondary)'}}>
             Settlement and zone systems are hidden for this project. Enable
             <strong> Settlement/Zone Systems</strong> in Settings to access them.
           </p>
@@ -2326,13 +2326,13 @@ function CompendiumRoute() {
 
     return (
       <div style={{display: 'grid', gap: '1rem'}}>
-        <p style={{marginTop: 0, marginBottom: 0, color: '#4b5563'}}>
+        <p style={{marginTop: 0, marginBottom: 0, color: 'var(--color-text-secondary)'}}>
           Advanced systems are optional. Enable and tune only when you need
           simulation depth for progression balancing.
         </p>
-        <section style={{padding: '1rem', border: '1px solid #ddd', borderRadius: '8px'}}>
+        <section style={{padding: '1rem', border: '1px solid var(--color-border)', borderRadius: '8px'}}>
           <h2 style={{marginTop: 0}}>Zone Affinity</h2>
-          <p style={{marginTop: 0, fontSize: '0.85rem', color: '#6b7280'}}>
+          <p style={{marginTop: 0, fontSize: '0.85rem', color: 'var(--color-text-secondary)'}}>
             Track zone exposure and unlock biome-specific milestones over time.
           </p>
           <label style={{display: 'block', marginBottom: '0.5rem'}}>
@@ -2421,9 +2421,9 @@ function CompendiumRoute() {
               style={{
                 marginTop: '0.75rem',
                 padding: '0.65rem',
-                border: '1px solid #e5e7eb',
+                border: '1px solid var(--color-border)',
                 borderRadius: '6px',
-                backgroundColor: '#f9fafb'
+                backgroundColor: 'var(--color-bg-secondary)'
               }}
             >
               <p style={{marginTop: 0, marginBottom: '0.5rem'}}>
@@ -2501,17 +2501,17 @@ function CompendiumRoute() {
                   style={{
                     marginBottom: '0.65rem',
                     paddingBottom: '0.55rem',
-                    borderBottom: '1px solid #efefef'
+                    borderBottom: '1px solid var(--color-border)'
                   }}
                 >
                   <strong>{profile.name}</strong> ({percent.toFixed(1)}%)
                   {profile.sourceEntityId && (
-                    <div style={{fontSize: '0.8rem', color: '#6b7280'}}>
+                    <div style={{fontSize: '0.8rem', color: 'var(--color-text-secondary)'}}>
                       Linked location:{' '}
                       {worldEntityById.get(profile.sourceEntityId)?.name ?? profile.sourceEntityId}
                     </div>
                   )}
-                  <div style={{fontSize: '0.82rem', color: '#6b7280'}}>
+                  <div style={{fontSize: '0.82rem', color: 'var(--color-text-secondary)'}}>
                     Scope: {profile.progressScope ?? 'character'}
                     {' · '}
                     Exposure: {(progressItem.totalExposureSeconds / 60).toFixed(1)} minutes
@@ -2530,9 +2530,9 @@ function CompendiumRoute() {
           </ul>
         </section>
 
-        <section style={{padding: '1rem', border: '1px solid #ddd', borderRadius: '8px'}}>
+        <section style={{padding: '1rem', border: '1px solid var(--color-border)', borderRadius: '8px'}}>
           <h2 style={{marginTop: 0}}>Community / Logistics</h2>
-          <p style={{marginTop: 0, fontSize: '0.85rem', color: '#6b7280'}}>
+          <p style={{marginTop: 0, fontSize: '0.85rem', color: 'var(--color-text-secondary)'}}>
             Shared party synergy buffs driven by role combinations. Select the
             currently active party to preview concrete in-scene combo effects.
           </p>
@@ -2541,7 +2541,7 @@ function CompendiumRoute() {
           </div>
           <div style={{display: 'grid', gap: '0.35rem', marginBottom: '0.8rem'}}>
             {characters.length === 0 ? (
-              <div style={{fontSize: '0.82rem', color: '#6b7280'}}>
+              <div style={{fontSize: '0.82rem', color: 'var(--color-text-secondary)'}}>
                 No characters yet. Add role-tagged characters to enable synergy.
               </div>
             ) : (
@@ -2557,7 +2557,7 @@ function CompendiumRoute() {
                   />
                   <span>
                     {character.name}
-                    <span style={{fontSize: '0.8rem', color: '#6b7280'}}>
+                    <span style={{fontSize: '0.8rem', color: 'var(--color-text-secondary)'}}>
                       {' '}
                       ({getCharacterRole(character) || 'no role'})
                     </span>
@@ -2572,7 +2572,7 @@ function CompendiumRoute() {
           <ul style={{listStyle: 'none', padding: 0, marginTop: 0}}>
             {activePartySynergies.filter((item) => item.missingRoles.length === 0).length ===
             0 ? (
-              <li style={{fontSize: '0.82rem', color: '#6b7280'}}>
+              <li style={{fontSize: '0.82rem', color: 'var(--color-text-secondary)'}}>
                 No active combos for the current party selection.
               </li>
             ) : (
@@ -2582,13 +2582,13 @@ function CompendiumRoute() {
                   <li key={suggestion.ruleId} style={{marginBottom: '0.55rem'}}>
                     <strong>{suggestion.ruleName}</strong>
                     {suggestion.maxDistanceMeters ? (
-                      <span style={{fontSize: '0.8rem', color: '#6b7280'}}>
+                      <span style={{fontSize: '0.8rem', color: 'var(--color-text-secondary)'}}>
                         {' '}
                         ({suggestion.maxDistanceMeters}m proximity)
                       </span>
                     ) : null}
                     <div style={{fontSize: '0.82rem'}}>{suggestion.effectDescription}</div>
-                    <div style={{fontSize: '0.8rem', color: '#4b5563'}}>
+                    <div style={{fontSize: '0.8rem', color: 'var(--color-text-secondary)'}}>
                       {formatSynergyStatus(suggestion, characterById)}
                     </div>
                   </li>
@@ -2600,7 +2600,7 @@ function CompendiumRoute() {
           </div>
           <ul style={{listStyle: 'none', padding: 0, marginTop: 0, marginBottom: 0}}>
             {rosterSynergyOpportunities.length === 0 ? (
-              <li style={{fontSize: '0.82rem', color: '#6b7280'}}>
+              <li style={{fontSize: '0.82rem', color: 'var(--color-text-secondary)'}}>
                 Full roster can already satisfy all default synergy rules.
               </li>
             ) : (
@@ -2608,11 +2608,11 @@ function CompendiumRoute() {
                 <li key={`roster-${suggestion.ruleId}`} style={{marginBottom: '0.55rem'}}>
                   <strong>{suggestion.ruleName}</strong>
                   <div style={{fontSize: '0.82rem'}}>{suggestion.effectDescription}</div>
-                  <div style={{fontSize: '0.8rem', color: '#4b5563'}}>
+                  <div style={{fontSize: '0.8rem', color: 'var(--color-text-secondary)'}}>
                     {formatSynergyStatus(suggestion, characterById)}
                   </div>
                   {suggestion.questPrompt && (
-                    <div style={{fontSize: '0.8rem', color: '#6b7280'}}>
+                    <div style={{fontSize: '0.8rem', color: 'var(--color-text-secondary)'}}>
                       Prompt seed: {suggestion.questPrompt}
                     </div>
                   )}
@@ -2622,9 +2622,9 @@ function CompendiumRoute() {
           </ul>
         </section>
 
-        <section style={{padding: '1rem', border: '1px solid #ddd', borderRadius: '8px'}}>
+        <section style={{padding: '1rem', border: '1px solid var(--color-border)', borderRadius: '8px'}}>
           <h2 style={{marginTop: 0}}>Settlement Progression</h2>
-          <p style={{marginTop: 0, fontSize: '0.85rem', color: '#6b7280'}}>
+          <p style={{marginTop: 0, fontSize: '0.85rem', color: 'var(--color-text-secondary)'}}>
             Generalized settlement buffs. Trophies are one source type, alongside
             structures, stations, totems, and custom modules.
           </p>
@@ -2644,7 +2644,7 @@ function CompendiumRoute() {
             </select>
           </label>
           {settlementState?.sourceEntityId && (
-            <div style={{fontSize: '0.82rem', color: '#6b7280', marginBottom: '0.65rem'}}>
+            <div style={{fontSize: '0.82rem', color: 'var(--color-text-secondary)', marginBottom: '0.65rem'}}>
               Settlement systems are currently attached to{' '}
               <strong>
                 {worldEntityById.get(settlementState.sourceEntityId)?.name ??
@@ -2766,7 +2766,7 @@ function CompendiumRoute() {
               + Tier
             </button>
           </div>
-          <div style={{fontSize: '0.82rem', color: '#4b5563', marginBottom: '0.6rem'}}>
+          <div style={{fontSize: '0.82rem', color: 'var(--color-text-secondary)', marginBottom: '0.6rem'}}>
             {nextFortressTier
               ? `Next tier at level ${nextFortressTier.levelRequired}: ${nextFortressTier.name}`
               : 'All configured settlement tiers unlocked.'}
@@ -2823,7 +2823,7 @@ function CompendiumRoute() {
           </div>
           <ul style={{listStyle: 'none', padding: 0, margin: 0}}>
             {settlementComputedEffects.fortressEffects.length === 0 ? (
-              <li style={{fontSize: '0.82rem', color: '#6b7280'}}>
+              <li style={{fontSize: '0.82rem', color: 'var(--color-text-secondary)'}}>
                 No tier effects unlocked yet.
               </li>
             ) : (
@@ -2842,7 +2842,7 @@ function CompendiumRoute() {
           </div>
           <ul style={{listStyle: 'none', padding: 0, margin: 0}}>
             {activeSettlementEffects.length === 0 ? (
-              <li style={{fontSize: '0.82rem', color: '#6b7280'}}>
+              <li style={{fontSize: '0.82rem', color: 'var(--color-text-secondary)'}}>
                 No active module effects yet.
               </li>
             ) : (
@@ -2859,7 +2859,7 @@ function CompendiumRoute() {
           <div style={{fontSize: '0.85rem', marginTop: '0.65rem', marginBottom: '0.5rem'}}>
             <strong>Total Active Effects:</strong> {settlementComputedEffects.allEffects.length}
           </div>
-          <div style={{fontSize: '0.82rem', color: '#4b5563', marginBottom: '0.65rem'}}>
+          <div style={{fontSize: '0.82rem', color: 'var(--color-text-secondary)', marginBottom: '0.65rem'}}>
             Includes settlement progression + aura modules.
           </div>
           <div style={{fontSize: '0.85rem', marginBottom: '0.35rem'}}>
@@ -2867,7 +2867,7 @@ function CompendiumRoute() {
           </div>
           <ul style={{listStyle: 'none', padding: 0, margin: 0}}>
             {unlockedFortressTiers.length === 0 ? (
-              <li style={{fontSize: '0.82rem', color: '#6b7280'}}>None yet.</li>
+              <li style={{fontSize: '0.82rem', color: 'var(--color-text-secondary)'}}>None yet.</li>
             ) : (
               unlockedFortressTiers.map((tier) => (
                 <li key={tier.id} style={{marginBottom: '0.45rem'}}>
@@ -2875,7 +2875,7 @@ function CompendiumRoute() {
                     L{tier.levelRequired} {tier.name}
                   </strong>
                   {tier.description && (
-                    <div style={{fontSize: '0.8rem', color: '#6b7280'}}>
+                    <div style={{fontSize: '0.8rem', color: 'var(--color-text-secondary)'}}>
                       {tier.description}
                     </div>
                   )}
@@ -2888,20 +2888,20 @@ function CompendiumRoute() {
           </div>
           <ul style={{listStyle: 'none', padding: 0, marginTop: '0.35rem', marginBottom: 0}}>
             {settlementModules.length === 0 ? (
-              <li style={{fontSize: '0.82rem', color: '#6b7280'}}>
+              <li style={{fontSize: '0.82rem', color: 'var(--color-text-secondary)'}}>
                 No modules installed.
               </li>
             ) : (
               settlementModules.map((module) => (
                 <li key={module.id} style={{marginBottom: '0.45rem'}}>
                   <strong>{module.name}</strong>{' '}
-                  <span style={{fontSize: '0.8rem', color: '#6b7280'}}>
+                  <span style={{fontSize: '0.8rem', color: 'var(--color-text-secondary)'}}>
                     [{module.sourceType}]
                   </span>
                   {module.effects.map((effect, effectIndex) => (
                     <div
                       key={`${module.id}-effect-${effectIndex}`}
-                      style={{fontSize: '0.8rem', color: '#4b5563'}}
+                      style={{fontSize: '0.8rem', color: 'var(--color-text-secondary)'}}
                     >
                       {formatSettlementEffectLabel(effect)}
                     </div>
@@ -2926,11 +2926,11 @@ function CompendiumRoute() {
             padding: '0.5rem 0.75rem',
             borderRadius: '6px',
             border: `1px solid ${
-              feedback.tone === 'error' ? '#fecaca' : '#bbf7d0'
+              feedback.tone === 'error' ? 'var(--color-error-soft-border)' : 'var(--color-success-soft-border)'
             }`,
             backgroundColor:
-              feedback.tone === 'error' ? '#fef2f2' : '#f0fdf4',
-            color: feedback.tone === 'error' ? '#991b1b' : '#166534'
+              feedback.tone === 'error' ? 'var(--color-error-soft-bg)' : 'var(--color-success-soft-bg)',
+            color: feedback.tone === 'error' ? 'var(--color-error)' : 'var(--color-success)'
           }}
         >
           {feedback.message}
@@ -2939,16 +2939,16 @@ function CompendiumRoute() {
       <details
         style={{
           marginBottom: '1rem',
-          border: '1px solid #d1d5db',
+          border: '1px solid var(--color-border)',
           borderRadius: '8px',
           padding: '0.7rem 0.85rem',
-          backgroundColor: '#f9fafb'
+          backgroundColor: 'var(--color-bg-secondary)'
         }}
       >
         <summary style={{cursor: 'pointer', fontWeight: 600}}>
           Mechanics Setup Help
         </summary>
-        <div style={{marginTop: '0.6rem', fontSize: '0.9rem', color: '#374151'}}>
+        <div style={{marginTop: '0.6rem', fontSize: '0.9rem', color: 'var(--color-text-primary)'}}>
           <p style={{margin: '0 0 0.4rem 0'}}>
             Step 1: link a world record only when it truly needs mechanics.
           </p>
@@ -2965,15 +2965,15 @@ function CompendiumRoute() {
           style={{
             marginBottom: '0.85rem',
             padding: '0.85rem',
-            border: '1px solid #dbeafe',
+            border: '1px solid var(--color-accent-soft-bg)',
             borderRadius: '8px',
-            backgroundColor: '#f8fbff'
+            backgroundColor: 'var(--color-bg-secondary)'
           }}
         >
           <div style={{display: 'flex', justifyContent: 'space-between', gap: '0.75rem', flexWrap: 'wrap'}}>
             <div>
               <strong>Start Small</strong>
-              <div style={{fontSize: '0.88rem', color: '#475569', marginTop: '0.25rem'}}>
+              <div style={{fontSize: '0.88rem', color: 'var(--color-text-secondary)', marginTop: '0.25rem'}}>
                 You only need the <strong>Entries</strong> tab right now unless this project truly needs progression or world simulation.
               </div>
             </div>
@@ -3008,28 +3008,28 @@ function CompendiumRoute() {
           </button>
         ))}
       </div>
-      <div style={{fontSize: '0.9rem', color: '#4b5563', marginBottom: '0.5rem'}}>
+      <div style={{fontSize: '0.9rem', color: 'var(--color-text-secondary)', marginBottom: '0.5rem'}}>
         {currentTab.subtitle}
       </div>
       <section
         style={{
           marginBottom: '0.85rem',
           padding: '0.75rem 0.85rem',
-          border: '1px solid #e5e7eb',
+          border: '1px solid var(--color-border)',
           borderRadius: '8px',
-          backgroundColor: '#f9fafb'
+          backgroundColor: 'var(--color-bg-secondary)'
         }}
       >
         <h2 style={{marginTop: 0, marginBottom: '0.45rem', fontSize: '1rem'}}>
           Next Steps For {currentTab.label}
         </h2>
         {activeTab !== 'overview' && activeTabTotalCount > 0 && (
-          <p style={{marginTop: 0, marginBottom: '0.55rem', fontSize: '0.82rem', color: '#6b7280'}}>
+          <p style={{marginTop: 0, marginBottom: '0.55rem', fontSize: '0.82rem', color: 'var(--color-text-secondary)'}}>
             Completed in this section: {activeTabDoneCount}/{activeTabTotalCount}
           </p>
         )}
         {compactNextSteps.length === 0 ? (
-          <p style={{margin: 0, fontSize: '0.88rem', color: '#374151'}}>
+          <p style={{margin: 0, fontSize: '0.88rem', color: 'var(--color-text-primary)'}}>
             This section is in good shape. Move to another tab for additional setup.
           </p>
         ) : (
@@ -3057,7 +3057,7 @@ function CompendiumRoute() {
         <span
           style={{
             fontSize: '0.75rem',
-            border: '1px solid #d1d5db',
+            border: '1px solid var(--color-border)',
             borderRadius: '999px',
             padding: '0.15rem 0.45rem'
           }}
@@ -3067,7 +3067,7 @@ function CompendiumRoute() {
         <span
           style={{
             fontSize: '0.75rem',
-            border: '1px solid #d1d5db',
+            border: '1px solid var(--color-border)',
             borderRadius: '999px',
             padding: '0.15rem 0.45rem'
           }}
@@ -3080,7 +3080,7 @@ function CompendiumRoute() {
         recipes.length === 0 &&
         zoneProfiles.length === 0 &&
         settlementModules.length === 0 && (
-          <p style={{marginTop: 0, marginBottom: '0.85rem', fontSize: '0.84rem', color: '#6b7280'}}>
+          <p style={{marginTop: 0, marginBottom: '0.85rem', fontSize: '0.84rem', color: 'var(--color-text-secondary)'}}>
             Advanced mechanics are hidden until you ask for them.
           </p>
         )}

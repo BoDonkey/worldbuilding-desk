@@ -2,7 +2,7 @@
   position: fixed;
   inset: 0;
   z-index: 1250;
-  background: rgba(15, 23, 42, 0.18);
+  background: var(--color-shadow);
   display: flex;
   align-items: flex-end;
   justify-content: flex-end;
@@ -12,10 +12,10 @@
 .panel {
   width: min(560px, calc(100vw - 2rem));
   max-height: min(720px, calc(100vh - 2rem));
-  border: 1px solid #d6dde7;
+  border: 1px solid var(--color-border);
   border-radius: 8px;
-  background: #fff;
-  box-shadow: 0 22px 48px rgba(15, 23, 42, 0.22);
+  background: var(--color-bg-primary);
+  box-shadow: 0 22px 48px var(--color-shadow);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -26,7 +26,7 @@
   justify-content: space-between;
   align-items: flex-start;
   gap: 0.75rem;
-  border-bottom: 1px solid #e5e7eb;
+  border-bottom: 1px solid var(--color-border);
   padding: 0.8rem 0.9rem;
 }
 
@@ -37,22 +37,22 @@
 
 .subtitle {
   margin: 0.15rem 0 0;
-  color: #64748b;
+  color: var(--color-text-secondary);
   font-size: 0.8rem;
 }
 
 .closeButton {
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--color-border);
   border-radius: 4px;
-  background: #fff;
-  color: #334155;
+  background: var(--color-bg-primary);
+  color: var(--color-text-primary);
   padding: 0.22rem 0.5rem;
   cursor: pointer;
 }
 
 .status {
-  border-bottom: 1px solid #e5e7eb;
-  color: #64748b;
+  border-bottom: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
   font-size: 0.78rem;
   padding: 0.45rem 0.9rem;
 }
@@ -68,6 +68,6 @@
 }
 
 .emptyState {
-  color: #64748b;
+  color: var(--color-text-secondary);
   margin: 0;
 }

@@ -15,6 +15,7 @@ import {deleteAliasesForEntity, replaceAliasesForEntity} from '../services/consi
 import {
   buildCanonicalAliasList,
   buildEntityMergePlan,
+  deriveFirstNameAlias,
   getAliasConversionPlan
 } from '../services/worldBible/worldBibleCanonicalization';
 import {
@@ -162,10 +163,20 @@ export const useWorldBibleEntityActions = ({
         const manualAlternativeNames = parseAlternativeNames(
           fieldValues[alternativeNamesKey] || ''
         );
+        const activeCategorySlug = activeCategory.slug.toLowerCase();
+        const shouldSuggestFirstNameAlias =
+          CHARACTER_CATEGORY_HINTS.some((hint) => activeCategorySlug.includes(hint)) &&
+          (!existing || !existing.aliasesReviewedAt);
+        const suggestedAliases = shouldSuggestFirstNameAlias
+          ? [deriveFirstNameAlias(name)].filter(
+              (alias): alias is string => typeof alias === 'string'
+            )
+          : [];
         const alternativeNames = buildCanonicalAliasList({
           previousName: existing?.name,
           nextName: name,
-          aliases: manualAlternativeNames
+          aliases: manualAlternativeNames,
+          suggestedAliases
         });
         const persistedAlternativeNames = [
           ...parseAlternativeNames(

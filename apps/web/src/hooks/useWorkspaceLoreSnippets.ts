@@ -59,6 +59,11 @@ export function useWorkspaceLoreSnippets({
         .trim();
 
     const categoryNameById = new Map(categories.map((category) => [category.id, category.name]));
+    const characterCategoryIds = new Set(
+      categories
+        .filter((category) => category.slug.toLowerCase().includes('character'))
+        .map((category) => category.id)
+    );
     const characterById = new Map(characters.map((character) => [character.id, character]));
     const characterSheetByCharacterId = new Map(
       characterSheets
@@ -66,6 +71,21 @@ export function useWorkspaceLoreSnippets({
         .map((sheet) => [sheet.characterId, sheet])
     );
     const entityById = new Map(entities.map((entity) => [entity.id, entity]));
+    const linkedCharacterIdByEntityId = new Map<string, string>();
+    const linkedEntityIdByCharacterId = new Map<string, string>();
+    entities.forEach((entity) => {
+      if (!characterCategoryIds.has(entity.categoryId)) {
+        return;
+      }
+      const normalizedEntityName = normalize(entity.name);
+      const matchingCharacter = characters.find(
+        (character) => normalize(character.name) === normalizedEntityName
+      );
+      if (matchingCharacter) {
+        linkedCharacterIdByEntityId.set(entity.id, matchingCharacter.id);
+        linkedEntityIdByCharacterId.set(matchingCharacter.id, entity.id);
+      }
+    });
     const canonicalFactsByTarget = new Map<string, CanonicalFact[]>();
     canonicalFacts.forEach((fact) => {
       const key = `${fact.targetType}:${fact.targetId}`;
@@ -306,6 +326,9 @@ export function useWorkspaceLoreSnippets({
 
     aliases.forEach((alias) => {
       if (alias.targetType === 'character') {
+        if (linkedEntityIdByCharacterId.has(alias.targetId)) {
+          return;
+        }
         const sheet = characterSheetByCharacterId.get(alias.targetId);
         const character = characterById.get(alias.targetId);
         if (!sheet && !character) return;
@@ -325,6 +348,25 @@ export function useWorkspaceLoreSnippets({
       }
       const entity = entityById.get(alias.targetId);
       if (!entity) return;
+      const linkedCharacterId = linkedCharacterIdByEntityId.get(entity.id);
+      if (linkedCharacterId) {
+        const sheet = characterSheetByCharacterId.get(linkedCharacterId);
+        const character = characterById.get(linkedCharacterId);
+        if (!sheet && !character) return;
+        const entry = sheet
+          ? {
+              name: sheet.name,
+              html: resolveCharacterBlock(sheet, 'compact'),
+              lore: buildCharacterLore(sheet)
+            }
+          : {
+              name: character!.name,
+              html: buildCharacterSnippetFromCharacter(character!),
+              lore: buildCharacterLoreFromCharacter(character!)
+            };
+        registerEntry('characters', alias.alias, entry);
+        return;
+      }
       const entry = {
         name: entity.name,
         html: resolveItemBlock(entity, 'compact'),

@@ -1,4 +1,4 @@
-import {useEffect, useState, useCallback, useMemo, useRef} from 'react';
+import {useEffect, useLayoutEffect, useState, useCallback, useMemo, useRef} from 'react';
 import {useLocation, useNavigate} from 'react-router-dom';
 import type {
   StatBlockInsertMode,
@@ -71,6 +71,10 @@ declare global {
     __wbdWorkspaceMountedAt?: number;
     __wbdWorkspaceRenderCount?: number;
     __wbdWorkspaceUnmountedAt?: number;
+    __wbdLastWorkspaceScrollSnapshot?: {
+      elements: Array<{key: string; top: number; left: number}>;
+      windowY: number;
+    };
   }
 }
 
@@ -112,10 +116,20 @@ type WorkspaceAIContext = {
   to: number;
 };
 
+const workspaceWindowScrollPositions = new Map<string, number>();
+const workspaceScrollSnapshots = new Map<
+  string,
+  {
+    windowY: number;
+    elements: Array<{key: string; top: number; left: number}>;
+  }
+>();
+
 function WorkspaceRoute() {
   const activeProject = useAppStore((s) => s.activeProject);
   const navigate = useNavigate();
   const location = useLocation();
+  const workspaceRootRef = useRef<HTMLElement | null>(null);
   const [documents, setDocuments] = useState<WritingDocument[]>([]);
   const seriesBibleConfig = activeProject
     ? getSeriesBibleConfig(activeProject)
@@ -590,7 +604,26 @@ function WorkspaceRoute() {
       });
       return;
     }
-    navigate('/world-bible');
+    navigate('/world-bible', {
+      state: resolverNotice.targetId
+        ? {
+            focusEntityId: resolverNotice.targetId,
+            focus:
+              resolverNotice.primaryLabel === 'Review Character Match'
+                ? 'aliases'
+                : 'general',
+            handoffKind:
+              resolverNotice.primaryLabel === 'Review Character Match'
+                ? 'character-canonicalization'
+                : undefined,
+            handoffSourceName:
+              resolverNotice.primaryLabel === 'Review Character Match'
+                ? resolverNotice.sourceName
+                : undefined,
+            handoffMatchEntityId: resolverNotice.matchEntityId
+          }
+        : undefined
+    });
   }, [navigate, resolverNotice]);
   const resolverNoticePrimaryLabel =
     resolverNotice?.primaryLabel ??
@@ -599,7 +632,7 @@ function WorkspaceRoute() {
       : resolverNotice?.destination === 'character-sheets'
       ? 'Open Character Sheet'
       : resolverNotice?.destination === 'characters'
-        ? 'Open Character'
+        ? 'Open Character Tools'
         : 'View in World Bible');
   persistDocRef.current = persistDoc;
   refreshDeferredReviewRef.current = refreshDeferredReview;
@@ -1006,6 +1039,8 @@ function WorkspaceRoute() {
   }, [activeProject, activePartySynergies, refreshSystemHistory]);
   const showGameSystems =
     projectSettings?.featureToggles.enableGameSystems !== false;
+  const showRuleAuthoring =
+    projectSettings?.featureToggles.enableRuleAuthoring !== false;
   const isGeneralFictionProject = projectSettings?.projectMode === 'general';
   const reviewBannerTitle = hasBlockingUnknownGuardrailIssues
     ? isGeneralFictionProject
@@ -1161,6 +1196,14 @@ function WorkspaceRoute() {
   );
 
   const [focusQuery, setFocusQuery] = useState<string | null>(null);
+  const workspaceWindowScrollKey =
+    activeProject && selectedId
+      ? `wbd:workspace-window-scroll:${activeProject.id}:${selectedId}`
+      : null;
+  const workspaceScrollSnapshotKey =
+    activeProject && selectedId
+      ? `workspace-scroll:${activeProject.id}:${selectedId}`
+      : null;
 
   useEffect(() => {
     const state = location.state as {focusDocumentId?: string; focusQuery?: string} | null;
@@ -1174,6 +1217,122 @@ function WorkspaceRoute() {
     }
     navigate(location.pathname, {replace: true, state: {}});
   }, [documents, handleSelectDocument, location.pathname, location.state, navigate, selectedId]);
+
+  useEffect(() => {
+    if (!workspaceWindowScrollKey) return;
+
+    let animationFrame: number | null = null;
+    const saveScrollPosition = () => {
+      workspaceWindowScrollPositions.set(workspaceWindowScrollKey, window.scrollY);
+    };
+    const handleScroll = () => {
+      if (animationFrame !== null) return;
+      animationFrame = window.requestAnimationFrame(() => {
+        animationFrame = null;
+        saveScrollPosition();
+      });
+    };
+
+    window.addEventListener('scroll', handleScroll, {passive: true});
+    return () => {
+      if (animationFrame !== null) {
+        window.cancelAnimationFrame(animationFrame);
+      }
+      saveScrollPosition();
+      window.removeEventListener('scroll', handleScroll);
+    };
+  }, [workspaceWindowScrollKey]);
+
+  useEffect(() => {
+    if (!workspaceWindowScrollKey || focusQuery?.trim()) return;
+
+    const storedScrollY = workspaceWindowScrollPositions.get(workspaceWindowScrollKey) ?? 0;
+    if (!Number.isFinite(storedScrollY) || storedScrollY <= 0) return;
+
+    const frameIds: number[] = [];
+    const timeoutIds: number[] = [];
+    const restoreScrollPosition = () => {
+      frameIds.push(
+        window.requestAnimationFrame(() => {
+        window.scrollTo({top: storedScrollY, left: 0, behavior: 'auto'});
+        })
+      );
+    };
+
+    frameIds.push(window.requestAnimationFrame(restoreScrollPosition));
+    [50, 150, 300].forEach((delay) => {
+      timeoutIds.push(window.setTimeout(restoreScrollPosition, delay));
+    });
+
+    return () => {
+      frameIds.forEach((frameId) => window.cancelAnimationFrame(frameId));
+      timeoutIds.forEach((timeoutId) => window.clearTimeout(timeoutId));
+    };
+  }, [focusQuery, workspaceWindowScrollKey]);
+
+  const captureWorkspaceScroll = useCallback(() => {
+    if (!workspaceScrollSnapshotKey) return;
+    const root = workspaceRootRef.current;
+    const elements = root
+      ? Array.from(root.querySelectorAll<HTMLElement>('[data-wbd-scroll-key]'))
+          .map((element) => ({
+            key: element.dataset.wbdScrollKey ?? '',
+            top: element.scrollTop,
+            left: element.scrollLeft
+          }))
+          .filter((entry) => entry.key)
+      : [];
+
+    workspaceScrollSnapshots.set(workspaceScrollSnapshotKey, {
+      windowY: window.scrollY,
+      elements
+    });
+  }, [workspaceScrollSnapshotKey]);
+
+  useEffect(() => {
+    window.addEventListener('wbd:capture-workspace-scroll', captureWorkspaceScroll);
+    return () => {
+      captureWorkspaceScroll();
+      window.removeEventListener('wbd:capture-workspace-scroll', captureWorkspaceScroll);
+    };
+  }, [captureWorkspaceScroll]);
+
+  useLayoutEffect(() => {
+    if (!workspaceScrollSnapshotKey || focusQuery?.trim()) return;
+    const snapshot =
+      workspaceScrollSnapshots.get(workspaceScrollSnapshotKey) ??
+      window.__wbdLastWorkspaceScrollSnapshot;
+    if (!snapshot) return;
+
+    const frameIds: number[] = [];
+    const timeoutIds: number[] = [];
+    const restore = () => {
+      window.scrollTo({top: snapshot.windowY, left: 0, behavior: 'auto'});
+      const root = workspaceRootRef.current;
+      if (!root) return;
+      snapshot.elements.forEach((entry) => {
+        const element = root.querySelector<HTMLElement>(
+          `[data-wbd-scroll-key="${entry.key}"]`
+        );
+        if (element) {
+          element.scrollTop = entry.top;
+          element.scrollLeft = entry.left;
+          element.dataset.wbdRestoreTarget = String(entry.top);
+          element.dataset.wbdRestoredScrollTop = String(element.scrollTop);
+        }
+      });
+    };
+
+    frameIds.push(window.requestAnimationFrame(restore));
+    [50, 150, 300, 600].forEach((delay) => {
+      timeoutIds.push(window.setTimeout(restore, delay));
+    });
+
+    return () => {
+      frameIds.forEach((frameId) => window.cancelAnimationFrame(frameId));
+      timeoutIds.forEach((timeoutId) => window.clearTimeout(timeoutId));
+    };
+  }, [content, focusQuery, workspaceScrollSnapshotKey]);
 
   const selectedDocumentRef = useRef(selectedDocument);
   selectedDocumentRef.current = selectedDocument;
@@ -1379,7 +1538,9 @@ function WorkspaceRoute() {
           openContextDrawer('world-bible');
           break;
         case 'open-context-ruleset':
-          openContextDrawer('ruleset');
+          if (showRuleAuthoring) {
+            openContextDrawer('ruleset');
+          }
           break;
         case 'open-context-characters':
           openContextDrawer('characters');
@@ -1429,6 +1590,7 @@ function WorkspaceRoute() {
     openMemoryModal,
     openExportModalWithDrawerHandling,
     showGameSystems,
+    showRuleAuthoring,
     toggleContextDrawer,
     toggleSceneDrawer
   ]);
@@ -1613,7 +1775,12 @@ function WorkspaceRoute() {
   }
 
   return (
-    <section data-workspace-root='true' className={styles.workspaceRoot}>
+    <section
+      data-workspace-root='true'
+      data-wbd-scroll-key='workspace-root'
+      className={styles.workspaceRoot}
+      ref={workspaceRootRef}
+    >
       <input
         ref={importInputRef}
         type='file'
@@ -1801,8 +1968,8 @@ function WorkspaceRoute() {
         </div>
       )}
 
-      <div className={styles.workspaceFrame}>
-        <div className={styles.workspaceLayout}>
+      <div className={styles.workspaceFrame} data-wbd-scroll-key='workspace-frame'>
+        <div className={styles.workspaceLayout} data-wbd-scroll-key='workspace-layout'>
         {isSceneDrawerOpen && !isNarrowViewport && (
           <aside className={styles.sceneDrawerDesktop}>
             <WorkspaceSceneDrawer
@@ -1831,7 +1998,7 @@ function WorkspaceRoute() {
           </aside>
         )}
 
-        <div className={styles.editorColumn}>
+        <div className={styles.editorColumn} data-wbd-scroll-key='workspace-editor-column'>
           {selectedId ? (
             <>
               <div className={styles.editorTitleRow}>
@@ -1847,7 +2014,7 @@ function WorkspaceRoute() {
                 </label>
               </div>
 
-              <div className={styles.editorPane}>
+              <div className={styles.editorPane} data-wbd-scroll-key='workspace-editor-pane'>
                 <EditorWithAI
                   documentId={selectedId}
                   content={content}
@@ -1885,6 +2052,7 @@ function WorkspaceRoute() {
                   onOpenAIContext={handleOpenAIContext}
                   onOpenLoreInspector={handleOpenLoreInspector}
                   onOpenWorldCapture={handleOpenManualWorldCapture}
+                  suppressSelectionBubble={Boolean(manualWorldCapture)}
                 />
                 {consistencyPopover && activeConsistencyPopoverIssue && (
                   <ContextPopover
@@ -1991,7 +2159,7 @@ function WorkspaceRoute() {
                                 key={`${entity.type}-${entity.id}`}
                                 value={`${entity.type}:${entity.id}`}
                               >
-                                {entity.name} {entity.type === 'character' ? '· Character' : '· World'}
+                                {entity.name} · {entity.label}
                               </option>
                             )
                           )}
@@ -2262,6 +2430,7 @@ function WorkspaceRoute() {
               activeContextView={activeContextView}
               setActiveContextView={setActiveContextView}
               showGameSystems={showGameSystems}
+              showRuleAuthoring={showRuleAuthoring}
               entities={entities}
               categories={categories}
               ruleset={ruleset}
@@ -2390,6 +2559,7 @@ function WorkspaceRoute() {
               activeContextView={activeContextView}
               setActiveContextView={setActiveContextView}
               showGameSystems={showGameSystems}
+              showRuleAuthoring={showRuleAuthoring}
               entities={entities}
               categories={categories}
               ruleset={ruleset}
@@ -2735,7 +2905,7 @@ function WorkspaceRoute() {
                     className={styles.statInsertHintButton}
                   >
                     {statBlockSourceType === 'character'
-                      ? 'Go to Characters'
+                      ? 'Go to Character Sheets'
                       : 'Go to World Bible'}
                   </button>
                 </div>

@@ -36,7 +36,11 @@ import {
   getSeriesBibleConfig,
   getCanonSyncState
 } from '../services/seriesBible/SeriesBibleService';
-import {getAliasesByProject, type ConsistencyAlias} from '../services/consistency';
+import {
+  getAliasesByProject,
+  migrateCharacterAliasesToEntities,
+  type ConsistencyAlias
+} from '../services/consistency';
 import {appendSystemHistoryEntry} from '../services/system';
 import {getStateMutationEventsByProject} from '../services/state/stateMutationLedger';
 import {getCanonicalFactsByProject} from '../services/lore/loreFactStorage';
@@ -222,6 +226,13 @@ export function useWorkspaceProjectData({
         getCanonicalFactsByProject(activeProject.id)
       ]);
       const settings = await loadProjectSettings(activeProject.id);
+      const migratedAliases = await migrateCharacterAliasesToEntities({
+        projectId: activeProject.id,
+        aliases: loadedAliases,
+        characters: loadedCharacters,
+        entities: loadedEntities,
+        categories: loadedCategories
+      });
 
       if (cancelled) return;
 
@@ -232,7 +243,7 @@ export function useWorkspaceProjectData({
       setSkipImportSuggestions(settings.defaultSkipImportSuggestions ?? false);
       setResolvedActionCues(resolvedCues);
       setCategories(loadedCategories);
-      setAliases(loadedAliases);
+      setAliases(migratedAliases);
       setStatBlockSourceType(settings.statBlockPreferences?.sourceType ?? 'character');
       setStatBlockStyle(settings.statBlockPreferences?.style ?? 'full');
       setStatBlockInsertMode(settings.statBlockPreferences?.insertMode ?? 'block');
@@ -415,8 +426,21 @@ export function useWorkspaceProjectData({
   useEffect(() => {
     if (!activeProject) return;
     const refresh = () => {
-      void getAliasesByProject(activeProject.id).then((loadedAliases) => {
-        setAliases(loadedAliases);
+      void Promise.all([
+        getAliasesByProject(activeProject.id),
+        getCharactersByProject(activeProject.id),
+        getEntitiesByProject(activeProject.id),
+        getCategoriesByProject(activeProject.id)
+      ]).then(([loadedAliases, loadedCharacters, loadedEntities, loadedCategories]) => {
+        void migrateCharacterAliasesToEntities({
+          projectId: activeProject.id,
+          aliases: loadedAliases,
+          characters: loadedCharacters,
+          entities: loadedEntities,
+          categories: loadedCategories
+        }).then((migratedAliases) => {
+          setAliases(migratedAliases);
+        });
       });
     };
     window.addEventListener('wbd:alias-records-changed', refresh);

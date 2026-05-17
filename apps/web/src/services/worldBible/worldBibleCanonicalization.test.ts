@@ -4,6 +4,7 @@ import {ALTERNATIVE_NAMES_KEY, normalizeName, parseAlternativeNames} from './wor
 import {
   buildCanonicalAliasList,
   buildEntityMergePlan,
+  deriveFirstNameAlias,
   getAliasConversionPlan,
   mergeEntityFields
 } from './worldBibleCanonicalization';
@@ -31,6 +32,25 @@ describe('worldBibleCanonicalization', () => {
         aliases: [' Wanderer ', 'kael', 'WANDERER']
       })
     ).toEqual(['kael', 'WANDERER']);
+  });
+
+  it('adds suggested first-name aliases without duplicating canonical names', () => {
+    expect(
+      buildCanonicalAliasList({
+        nextName: 'Garcia de Terra',
+        aliases: [],
+        suggestedAliases: [deriveFirstNameAlias('Garcia de Terra')].filter(
+          (alias): alias is string => typeof alias === 'string'
+        )
+      })
+    ).toEqual(['Garcia']);
+  });
+
+  it('does not derive weak first-name aliases from particles or short names', () => {
+    expect(deriveFirstNameAlias('de Terra')).toBe('Terra');
+    expect(deriveFirstNameAlias('Detective Moreland')).toBe('Moreland');
+    expect(deriveFirstNameAlias('Li Chen')).toBeNull();
+    expect(deriveFirstNameAlias('Kael')).toBeNull();
   });
 
   it('fills empty fields and merges alternative names without clobbering populated data', () => {

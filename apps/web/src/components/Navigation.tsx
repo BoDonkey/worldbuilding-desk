@@ -21,6 +21,17 @@ interface NavItem {
   badgeCount?: number;
 }
 
+interface WorkspaceScrollSnapshot {
+  elements: Array<{key: string; top: number; left: number}>;
+  windowY: number;
+}
+
+declare global {
+  interface Window {
+    __wbdLastWorkspaceScrollSnapshot?: WorkspaceScrollSnapshot;
+  }
+}
+
 export const Navigation: FC<NavigationProps> = ({
   isRailCollapsed = false,
   onToggleRail
@@ -37,6 +48,8 @@ export const Navigation: FC<NavigationProps> = ({
   const mobileMenuCloseRef = useRef<HTMLButtonElement | null>(null);
   const showGameSystems =
     !activeProject || projectSettings?.featureToggles.enableGameSystems !== false;
+  const showRuleAuthoring =
+    !activeProject || projectSettings?.featureToggles.enableRuleAuthoring !== false;
   const loadPendingCounts = useCallback(() => {
     if (!activeProject) {
       setPendingCounts({world: 0, compendium: 0});
@@ -86,21 +99,20 @@ export const Navigation: FC<NavigationProps> = ({
       {to: '/lore', label: 'Lore', icon: 'LR'},
       {to: '/canon-decisions', label: 'Canon', icon: 'CD'},
       {to: '/world-bible', label: 'World', icon: 'WB', badgeCount: pendingCounts.world},
-      {to: '/ruleset', label: 'Ruleset', icon: 'RS'},
-      {to: '/characters', label: 'Characters', icon: 'CH'},
+      ...(showRuleAuthoring ? [{to: '/ruleset', label: 'Ruleset', icon: 'RS'}] : []),
       {to: '/workspace', label: 'Workspace', icon: 'WS'},
       ...(showGameSystems
         ? [{to: '/compendium', label: 'Compendium', icon: 'CP', badgeCount: pendingCounts.compendium}]
         : []),
       {to: '/settings', label: 'Settings', icon: 'ST'}
     ],
-    [pendingCounts.compendium, pendingCounts.world, showGameSystems]
+    [pendingCounts.compendium, pendingCounts.world, showGameSystems, showRuleAuthoring]
   );
 
   const mobileBarItems = useMemo(
     () =>
       navItems.filter((item) =>
-        ['/projects', '/lore', '/world-bible', '/workspace', '/characters'].includes(item.to)
+        ['/projects', '/lore', '/world-bible', '/workspace'].includes(item.to)
           || item.to === '/canon-decisions'
       ),
     [navItems]
@@ -120,6 +132,24 @@ export const Navigation: FC<NavigationProps> = ({
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [isMobileMenuOpen]);
+
+  const captureRouteScroll = useCallback(() => {
+    if (location.pathname === '/workspace') {
+      window.__wbdLastWorkspaceScrollSnapshot = {
+        windowY: window.scrollY,
+        elements: Array.from(
+          document.querySelectorAll<HTMLElement>('[data-wbd-scroll-key]')
+        )
+          .map((element) => ({
+            key: element.dataset.wbdScrollKey ?? '',
+            top: element.scrollTop,
+            left: element.scrollLeft
+          }))
+          .filter((entry) => entry.key)
+      };
+    }
+    window.dispatchEvent(new CustomEvent('wbd:capture-workspace-scroll'));
+  }, [location.pathname]);
 
   return (
     <>
@@ -144,6 +174,8 @@ export const Navigation: FC<NavigationProps> = ({
                 to={item.to}
                 end={item.end}
                 title={item.label}
+                onMouseDownCapture={captureRouteScroll}
+                onClickCapture={captureRouteScroll}
                 className={({isActive}) => `${styles.railLink} ${isActive ? styles.active : ''}`}
               >
                 <span className={styles.icon}>{item.icon}</span>
@@ -197,6 +229,8 @@ export const Navigation: FC<NavigationProps> = ({
             key={item.to}
             to={item.to}
             end={item.end}
+            onMouseDownCapture={captureRouteScroll}
+            onClickCapture={captureRouteScroll}
             className={({isActive}) => `${styles.mobileItem} ${isActive ? styles.active : ''}`}
           >
             <span className={styles.icon}>{item.icon}</span>
@@ -240,6 +274,8 @@ export const Navigation: FC<NavigationProps> = ({
                   key={`mobile-${item.to}`}
                   to={item.to}
                   end={item.end}
+                  onMouseDownCapture={captureRouteScroll}
+                  onClickCapture={captureRouteScroll}
                   className={({isActive}) =>
                     `${styles.mobileMenuLink} ${isActive ? styles.active : ''}`
                   }

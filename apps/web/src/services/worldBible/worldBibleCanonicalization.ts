@@ -5,10 +5,11 @@ export const buildCanonicalAliasList = (params: {
   previousName?: string;
   nextName: string;
   aliases: string[];
+  suggestedAliases?: string[];
 }): string[] => {
   const nextNormalized = params.nextName.trim().toLowerCase();
   const previousNormalized = params.previousName?.trim().toLowerCase() ?? '';
-  const combined = [...params.aliases];
+  const combined = [...params.aliases, ...(params.suggestedAliases ?? [])];
   if (previousNormalized && nextNormalized && previousNormalized !== nextNormalized) {
     combined.unshift(params.previousName!.trim());
   }
@@ -20,6 +21,68 @@ export const buildCanonicalAliasList = (params: {
         .map((alias) => [alias.toLowerCase(), alias])
     ).values()
   );
+};
+
+const NAME_ALIAS_STOP_WORDS = new Set([
+  'a',
+  'an',
+  'captain',
+  'detective',
+  'da',
+  'de',
+  'del',
+  'der',
+  'di',
+  'dos',
+  'du',
+  'el',
+  'la',
+  'las',
+  'le',
+  'lord',
+  'lady',
+  'madam',
+  'madame',
+  'master',
+  'miss',
+  'mister',
+  'mr',
+  'mrs',
+  'ms',
+  'mx',
+  'of',
+  'officer',
+  'prof',
+  'professor',
+  'sir',
+  'the',
+  'van',
+  'von'
+]);
+
+export const deriveFirstNameAlias = (name: string): string | null => {
+  const tokens = name
+    .trim()
+    .split(/\s+/)
+    .map((token) => token.replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu, ''))
+    .filter(Boolean);
+
+  if (tokens.length < 2) {
+    return null;
+  }
+
+  const firstMeaningfulToken = tokens.find(
+    (token) => !NAME_ALIAS_STOP_WORDS.has(token.toLowerCase())
+  );
+  if (!firstMeaningfulToken || firstMeaningfulToken.length < 3) {
+    return null;
+  }
+
+  if (firstMeaningfulToken.toLowerCase() === name.trim().toLowerCase()) {
+    return null;
+  }
+
+  return firstMeaningfulToken;
 };
 
 const parseCommaSeparatedAliases = (value: string): string[] =>

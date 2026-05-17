@@ -17,7 +17,7 @@
   font-size: 0.78rem;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: #92400e;
+  color: var(--color-warning);
   font-weight: 700;
 }
 
@@ -35,8 +35,8 @@
   min-width: 2.2rem;
   padding: 0.25rem 0.6rem;
   border-radius: 999px;
-  background: #ffedd5;
-  color: #9a3412;
+  background: var(--color-warning-soft-bg);
+  color: var(--color-warning);
   font-weight: 700;
   text-align: center;
 }
@@ -49,21 +49,21 @@
 }
 
 .feedbackSuccess {
-  border-color: #bbf7d0;
-  background: #f0fdf4;
-  color: #166534;
+  border-color: var(--color-success-soft-border);
+  background: var(--color-success-soft-bg);
+  color: var(--color-success);
 }
 
 .feedbackError {
-  border-color: #fecaca;
-  background: #fef2f2;
-  color: #991b1b;
+  border-color: var(--color-error-soft-border);
+  background: var(--color-error-soft-bg);
+  color: var(--color-error);
 }
 
 .emptyPanel {
   border: 1px solid var(--color-border);
   border-radius: 16px;
-  background: color-mix(in oklab, var(--color-bg-secondary) 90%, white);
+  background: color-mix(in oklab, var(--color-bg-secondary) 90%, var(--color-on-accent));
   padding: 1rem;
 }
 
@@ -79,7 +79,7 @@
 .clusterCard {
   border: 1px solid var(--color-border);
   border-radius: 16px;
-  background: color-mix(in oklab, var(--color-bg-secondary) 92%, white);
+  background: color-mix(in oklab, var(--color-bg-secondary) 92%, var(--color-on-accent));
   padding: 1rem;
 }
 
@@ -102,15 +102,15 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: #92400e;
+  color: var(--color-warning);
 }
 
 .statusBadge {
   display: inline-flex;
   padding: 0.24rem 0.55rem;
   border-radius: 999px;
-  background: #e0f2fe;
-  color: #075985;
+  background: var(--color-accent-soft-bg);
+  color: var(--color-accent-soft-text);
   font-size: 0.8rem;
   text-transform: capitalize;
 }
@@ -131,9 +131,9 @@
   display: inline-flex;
   padding: 0.22rem 0.5rem;
   border-radius: 999px;
-  background: #fff7ed;
-  border: 1px solid #fdba74;
-  color: #9a3412;
+  background: var(--color-warning-soft-bg);
+  border: 1px solid var(--color-warning-soft-border);
+  color: var(--color-warning);
   font-size: 0.78rem;
 }
 
@@ -142,7 +142,7 @@
   padding: 0.75rem;
   border-radius: 12px;
   background: var(--color-bg-primary);
-  border: 1px solid color-mix(in oklab, var(--color-border) 84%, #fed7aa);
+  border: 1px solid color-mix(in oklab, var(--color-border) 84%, var(--color-warning-soft-border));
 }
 
 .detailPanel p {
@@ -153,8 +153,8 @@
   margin-bottom: 0.75rem;
   padding: 0.8rem;
   border-radius: 12px;
-  border: 1px solid color-mix(in oklab, var(--color-border) 80%, #bfdbfe);
-  background: linear-gradient(180deg, #f8fbff 0%, #eef6ff 100%);
+  border: 1px solid color-mix(in oklab, var(--color-border) 80%, var(--color-accent-soft-border));
+  background: linear-gradient(180deg, var(--color-bg-secondary) 0%, var(--color-bg-secondary) 100%);
 }
 
 .aiPanelHeader {
@@ -169,28 +169,28 @@
   margin: 0;
   font-size: 0.88rem;
   font-weight: 700;
-  color: #1d4ed8;
+  color: var(--color-accent);
 }
 
 .aiPanelMeta {
   font-size: 0.78rem;
-  color: #475569;
+  color: var(--color-text-secondary);
 }
 
 .aiHint {
   margin: 0;
-  color: #475569;
+  color: var(--color-text-secondary);
 }
 
 .aiResponse {
   white-space: pre-wrap;
   line-height: 1.5;
-  color: #0f172a;
+  color: var(--color-text-primary);
 }
 
 .aiError {
   margin: 0;
-  color: #991b1b;
+  color: var(--color-error);
 }
 
 .actionRow {

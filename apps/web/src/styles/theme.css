@@ -8,10 +8,25 @@
   --color-border: #d4d4d4;
   --color-accent: #2563eb;
   --color-accent-hover: #1d4ed8;
+  --color-on-accent: #ffffff;
   --color-success: #16a34a;
   --color-warning: #ea580c;
   --color-error: #dc2626;
   --color-focus: #2563eb;
+  --color-shadow: rgba(15, 23, 42, 0.18);
+  --color-overlay: rgba(15, 23, 42, 0.45);
+  --color-accent-soft-bg: #eff6ff;
+  --color-accent-soft-border: #bfdbfe;
+  --color-accent-soft-text: #1d4ed8;
+  --color-success-soft-bg: #f0fdf4;
+  --color-success-soft-border: #bbf7d0;
+  --color-success-soft-text: #166534;
+  --color-warning-soft-bg: #fff7ed;
+  --color-warning-soft-border: #fdba74;
+  --color-warning-soft-text: #9a3412;
+  --color-error-soft-bg: #fef2f2;
+  --color-error-soft-border: #fecaca;
+  --color-error-soft-text: #991b1b;
   --editor-surface-bg: #fffdf8;
   --editor-surface-panel: rgba(255, 251, 242, 0.92);
   --editor-surface-border: #d6cfc2;
@@ -40,10 +55,25 @@
   --color-border: #404040;
   --color-accent: #3b82f6;
   --color-accent-hover: #60a5fa;
+  --color-on-accent: #ffffff;
   --color-success: #22c55e;
   --color-warning: #f97316;
   --color-error: #ef4444;
   --color-focus: #60a5fa;
+  --color-shadow: rgba(0, 0, 0, 0.36);
+  --color-overlay: rgba(0, 0, 0, 0.62);
+  --color-accent-soft-bg: color-mix(in oklab, var(--color-accent) 20%, var(--color-bg-secondary));
+  --color-accent-soft-border: color-mix(in oklab, var(--color-accent) 55%, var(--color-border));
+  --color-accent-soft-text: var(--color-accent-soft-border);
+  --color-success-soft-bg: color-mix(in oklab, var(--color-success) 18%, var(--color-bg-secondary));
+  --color-success-soft-border: color-mix(in oklab, var(--color-success) 50%, var(--color-border));
+  --color-success-soft-text: var(--color-success-soft-border);
+  --color-warning-soft-bg: color-mix(in oklab, var(--color-warning) 18%, var(--color-bg-secondary));
+  --color-warning-soft-border: color-mix(in oklab, var(--color-warning) 55%, var(--color-border));
+  --color-warning-soft-text: var(--color-warning-soft-border);
+  --color-error-soft-bg: color-mix(in oklab, var(--color-error) 18%, var(--color-bg-secondary));
+  --color-error-soft-border: color-mix(in oklab, var(--color-error) 55%, var(--color-border));
+  --color-error-soft-text: var(--color-error-soft-border);
   --editor-surface-bg: #15110d;
   --editor-surface-panel: rgba(26, 21, 17, 0.94);
   --editor-surface-border: #40352c;
@@ -56,7 +86,7 @@
   --editor-highlight-warning-bg: rgba(251, 191, 36, 0.16);
   --editor-highlight-warning-line: #fbbf24;
   --editor-highlight-blocking-bg: rgba(248, 113, 113, 0.18);
-  --editor-highlight-blocking-line: #fca5a5;
+  --editor-highlight-blocking-line: var(--color-error-soft-border);
   --editor-lore-bg: rgba(96, 165, 250, 0.16);
   --editor-lore-bg-hover: rgba(96, 165, 250, 0.24);
   --editor-lore-line: rgba(147, 197, 253, 0.95);
@@ -118,13 +148,13 @@
   --editor-line-height: 2;
 }
 
-:root[data-editor-surface="paper"] {
+:root[data-theme="light"][data-editor-surface="paper"] {
   --editor-surface-bg: #fffdf8;
   --editor-surface-panel: rgba(255, 251, 242, 0.92);
   --editor-surface-border: #d6cfc2;
 }
 
-:root[data-editor-surface="mist"] {
+:root[data-theme="light"][data-editor-surface="mist"] {
   --editor-surface-bg: #f7fbff;
   --editor-surface-panel: rgba(244, 249, 255, 0.94);
   --editor-surface-border: #c8d7e5;
@@ -134,7 +164,24 @@
   --editor-code-text: #17304d;
 }
 
-:root[data-editor-surface="contrast"] {
+:root[data-theme="light"][data-editor-surface="contrast"] {
+  --editor-surface-bg: #ffffff;
+  --editor-surface-panel: rgba(255, 255, 255, 0.96);
+  --editor-surface-border: #111827;
+  --editor-text-color: #111827;
+  --editor-muted-color: #374151;
+  --editor-code-bg: #f3f4f6;
+  --editor-code-text: #111827;
+  --editor-highlight-warning-bg: rgba(217, 119, 6, 0.14);
+  --editor-highlight-warning-line: #b45309;
+  --editor-highlight-blocking-bg: rgba(220, 38, 38, 0.12);
+  --editor-highlight-blocking-line: #b91c1c;
+  --editor-lore-bg: rgba(37, 99, 235, 0.12);
+  --editor-lore-bg-hover: rgba(37, 99, 235, 0.2);
+  --editor-lore-line: rgba(29, 78, 216, 0.9);
+}
+
+:root[data-theme="dark"][data-editor-surface="contrast"] {
   --editor-surface-bg: #111111;
   --editor-surface-panel: rgba(17, 17, 17, 0.96);
   --editor-surface-border: #333333;
@@ -143,12 +190,32 @@
   --editor-code-bg: #1d1d1d;
   --editor-code-text: #ffffff;
   --editor-highlight-warning-bg: rgba(251, 191, 36, 0.18);
-  --editor-highlight-warning-line: #fcd34d;
+  --editor-highlight-warning-line: var(--color-warning-soft-border);
   --editor-highlight-blocking-bg: rgba(248, 113, 113, 0.2);
-  --editor-highlight-blocking-line: #fda4af;
+  --editor-highlight-blocking-line: var(--color-error-soft-border);
   --editor-lore-bg: rgba(96, 165, 250, 0.18);
   --editor-lore-bg-hover: rgba(96, 165, 250, 0.28);
   --editor-lore-line: rgba(191, 219, 254, 0.95);
+}
+
+:root[data-theme="dark"][data-editor-surface="paper"] {
+  --editor-surface-bg: #15110d;
+  --editor-surface-panel: rgba(26, 21, 17, 0.94);
+  --editor-surface-border: #40352c;
+  --editor-text-color: #f5efe8;
+  --editor-muted-color: #b8aea3;
+  --editor-code-bg: #2a211b;
+  --editor-code-text: #f7efe5;
+}
+
+:root[data-theme="dark"][data-editor-surface="mist"] {
+  --editor-surface-bg: #101721;
+  --editor-surface-panel: rgba(16, 23, 33, 0.94);
+  --editor-surface-border: #2f4158;
+  --editor-text-color: #e8f1fb;
+  --editor-muted-color: #a9b8ca;
+  --editor-code-bg: #1a2634;
+  --editor-code-text: #edf6ff;
 }
 
 html, body, #root, .app {
@@ -162,6 +229,25 @@ body {
   color: var(--color-text-primary);
   font-size: var(--font-size-base);
   transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+select,
+textarea {
+  background-color: var(--color-bg-primary);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-primary);
+  font: inherit;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: var(--color-text-tertiary);
+}
+
+select option {
+  background-color: var(--color-bg-primary);
+  color: var(--color-text-primary);
 }
 
 *:focus-visible {

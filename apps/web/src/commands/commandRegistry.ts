@@ -27,6 +27,8 @@ export const createAppCommands = ({
 }: CreateAppCommandsOptions): AppCommand[] => {
   const showGameSystems =
     !activeProject || projectSettings?.featureToggles.enableGameSystems !== false;
+  const showRuleAuthoring =
+    !activeProject || projectSettings?.featureToggles.enableRuleAuthoring !== false;
 
   const navigationCommands: AppCommand[] = [
     {
@@ -42,20 +44,6 @@ export const createAppCommands = ({
       section: 'Navigation',
       keywords: ['world', 'bible', 'lore', 'entities'],
       run: () => navigate('/world-bible')
-    },
-    {
-      id: 'nav-ruleset',
-      label: 'Go to Ruleset',
-      section: 'Navigation',
-      keywords: ['rules', 'system', 'mechanics'],
-      run: () => navigate('/ruleset')
-    },
-    {
-      id: 'nav-characters',
-      label: 'Go to Characters',
-      section: 'Navigation',
-      keywords: ['characters', 'sheets', 'party'],
-      run: () => navigate('/characters')
     },
     {
       id: 'nav-workspace',
@@ -80,6 +68,16 @@ export const createAppCommands = ({
       section: 'Navigation',
       keywords: ['compendium', 'items', 'systems', 'modules'],
       run: () => navigate('/compendium')
+    });
+  }
+
+  if (showRuleAuthoring) {
+    navigationCommands.splice(2, 0, {
+      id: 'nav-ruleset',
+      label: 'Go to Ruleset',
+      section: 'Navigation',
+      keywords: ['rules', 'system', 'mechanics'],
+      run: () => navigate('/ruleset')
     });
   }
 
@@ -138,13 +136,6 @@ export const createAppCommands = ({
       section: 'Workspace',
       keywords: ['context', 'world', 'bible', 'drawer'],
       run: () => dispatchWorkspaceCommand('open-context-world-bible')
-    },
-    {
-      id: 'workspace-context-ruleset',
-      label: 'Workspace: Open Context - Ruleset',
-      section: 'Workspace',
-      keywords: ['context', 'ruleset', 'drawer'],
-      run: () => dispatchWorkspaceCommand('open-context-ruleset')
     },
     {
       id: 'workspace-context-characters',
@@ -211,6 +202,16 @@ export const createAppCommands = ({
       section: 'Workspace',
       keywords: ['context', 'compendium', 'drawer'],
       run: () => dispatchWorkspaceCommand('open-context-compendium')
+    });
+  }
+
+  if (showRuleAuthoring) {
+    workspaceCommands.splice(7, 0, {
+      id: 'workspace-context-ruleset',
+      label: 'Workspace: Open Context - Ruleset',
+      section: 'Workspace',
+      keywords: ['context', 'ruleset', 'drawer'],
+      run: () => dispatchWorkspaceCommand('open-context-ruleset')
     });
   }
 

@@ -61,13 +61,14 @@ interface EditorWithAIProps {
   presentStatBlockToken?: (rawToken: string) => StatBlockTokenPresentation;
   getStatBlockPreviewData?: (rawToken: string) => StatBlockPreviewData;
   onRebindStatBlockToken?: (rawToken: string) => void;
-  onOpenAIContext?: (context: AIContextType) => void;
+  onOpenAIContext?: (context: AIContextType, prompt?: string | null) => void;
   onOpenLoreInspector?: (record: LoreInspectorRecord) => void;
   onOpenWorldCapture?: (
     draftText: string,
     anchorRect: {left: number; top: number; bottom: number}
   ) => void;
   inlineHighlightsMode?: InlineHighlightsMode;
+  suppressSelectionBubble?: boolean;
 }
 
 interface SelectionBubbleState {
@@ -80,6 +81,58 @@ interface SelectionBubbleState {
   matchName?: string;
   matchRecord?: {name: string; html: string; lore: LoreInspectorRecord};
 }
+
+declare global {
+  interface Window {
+    __wbdEditorScrollPositions?: Record<string, number>;
+    __wbdLastWorkspaceEditorScrollTop?: number;
+    __wbdLastWorkspaceScrollSnapshot?: {
+      elements: Array<{key: string; top: number; left: number}>;
+      windowY: number;
+    };
+  }
+}
+
+const editorScrollPositions = new Map<string, number>();
+
+const getWindowEditorScrollStore = () => {
+  if (typeof window === 'undefined') return null;
+  window.__wbdEditorScrollPositions ??= {};
+  return window.__wbdEditorScrollPositions;
+};
+
+const getSnapshotEditorScrollTop = () => {
+  if (typeof window === 'undefined') return undefined;
+  return window.__wbdLastWorkspaceScrollSnapshot?.elements.find(
+    (element) => element.key === 'workspace-editor'
+  )?.top;
+};
+
+const readSavedEditorScrollTop = (scrollKey: string) => {
+  const store = getWindowEditorScrollStore();
+  const candidates = [
+    editorScrollPositions.get(scrollKey),
+    store?.[scrollKey],
+    getSnapshotEditorScrollTop(),
+    typeof window === 'undefined' ? undefined : window.__wbdLastWorkspaceEditorScrollTop
+  ];
+
+  return candidates.find(
+    (candidate): candidate is number =>
+      typeof candidate === 'number' && Number.isFinite(candidate) && candidate > 0
+  ) ?? 0;
+};
+
+const writeSavedEditorScrollTop = (scrollKey: string, scrollTop: number) => {
+  if (!Number.isFinite(scrollTop)) return;
+  editorScrollPositions.set(scrollKey, scrollTop);
+  const store = getWindowEditorScrollStore();
+  if (!store) return;
+  store[scrollKey] = scrollTop;
+  if (scrollTop > 0) {
+    window.__wbdLastWorkspaceEditorScrollTop = scrollTop;
+  }
+};
 
 export const EditorWithAI: React.FC<EditorWithAIProps> = ({
   documentId,
@@ -103,7 +156,8 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
   onOpenLoreInspector,
   onOpenWorldCapture,
   characterStateHoverCardsByLoreId = {},
-  inlineHighlightsMode = 'visible'
+  inlineHighlightsMode = 'visible',
+  suppressSelectionBubble = false
 }) => {
   const [textToInsertFromAI, setTextToInsertFromAI] = useState<string | null>(null);
   const [selectionBubble, setSelectionBubble] = useState<SelectionBubbleState | null>(
@@ -133,9 +187,13 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
   } | null>(null);
   const [isActivelyTyping, setIsActivelyTyping] = useState(false);
   const editorRef = useRef<TipTapEditorInstance | null>(null);
+  const editorScrollRef = useRef<HTMLDivElement | null>(null);
+  const isRestoringEditorScrollRef = useRef(false);
+  const editorMountedAtRef = useRef(Date.now());
   const consistencyHighlightsRef = useRef(consistencyHighlights);
   const loreHighlightsRef = useRef<LoreHighlightEntry[]>([]);
   const typingIdleTimeoutRef = useRef<number | null>(null);
+  const editorScrollKey = `workspace-editor-scroll:${documentId}`;
 
   const effectiveInlineHighlightsMode =
     inlineHighlightsMode === 'hidden-while-typing' && isActivelyTyping
@@ -228,6 +286,118 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
   }, []);
 
   useEffect(() => {
+    const scrollElement = editorScrollRef.current;
+    if (!scrollElement) return;
+
+    let animationFrame: number | null = null;
+    const saveScrollPosition = () => {
+      if (isRestoringEditorScrollRef.current) {
+        return;
+      }
+      const nextScrollTop = scrollElement.scrollTop;
+      const savedScrollTop = readSavedEditorScrollTop(editorScrollKey);
+      const isEarlyZeroAfterRemount =
+        nextScrollTop === 0 &&
+        savedScrollTop > 0 &&
+        Date.now() - editorMountedAtRef.current < 1500;
+
+      if (isEarlyZeroAfterRemount) {
+        scrollElement.dataset.wbdSavedScrollTop = String(savedScrollTop);
+        scrollElement.dataset.wbdSkippedZeroScrollSave = 'true';
+        return;
+      }
+
+      writeSavedEditorScrollTop(editorScrollKey, nextScrollTop);
+      scrollElement.dataset.wbdSavedScrollTop = String(nextScrollTop);
+      delete scrollElement.dataset.wbdSkippedZeroScrollSave;
+    };
+    const handleScroll = () => {
+      if (animationFrame !== null) return;
+      animationFrame = window.requestAnimationFrame(() => {
+        animationFrame = null;
+        saveScrollPosition();
+      });
+    };
+
+    scrollElement.addEventListener('scroll', handleScroll, {passive: true});
+    return () => {
+      if (animationFrame !== null) {
+        window.cancelAnimationFrame(animationFrame);
+      }
+      isRestoringEditorScrollRef.current = false;
+      saveScrollPosition();
+      scrollElement.removeEventListener('scroll', handleScroll);
+    };
+  }, [editorScrollKey]);
+
+  useEffect(() => {
+    const scrollElement = editorScrollRef.current;
+    if (!scrollElement || focusQuery?.trim()) return;
+
+    const storedScrollTop = readSavedEditorScrollTop(editorScrollKey);
+    if (!Number.isFinite(storedScrollTop) || storedScrollTop <= 0) return;
+
+    let cancelled = false;
+    let userInterrupted = false;
+    const startedAt = Date.now();
+    const frameIds: number[] = [];
+    isRestoringEditorScrollRef.current = true;
+    scrollElement.dataset.wbdRestoreTarget = String(storedScrollTop);
+
+    const restoreScrollPosition = () => {
+      if (cancelled || userInterrupted) {
+        isRestoringEditorScrollRef.current = false;
+        return;
+      }
+
+      const maxScrollTop = Math.max(0, scrollElement.scrollHeight - scrollElement.clientHeight);
+      const nextScrollTop = Math.min(storedScrollTop, maxScrollTop);
+      scrollElement.scrollTop = nextScrollTop;
+      scrollElement.dataset.wbdRestoredScrollTop = String(nextScrollTop);
+
+      if (Date.now() - startedAt < 2500) {
+        frameIds.push(window.requestAnimationFrame(restoreScrollPosition));
+        return;
+      }
+
+      isRestoringEditorScrollRef.current = false;
+    };
+    const markUserInterrupted = () => {
+      userInterrupted = true;
+      isRestoringEditorScrollRef.current = false;
+      writeSavedEditorScrollTop(editorScrollKey, scrollElement.scrollTop);
+      scrollElement.dataset.wbdSavedScrollTop = String(scrollElement.scrollTop);
+    };
+
+    scrollElement.addEventListener('wheel', markUserInterrupted, {passive: true});
+    scrollElement.addEventListener('touchstart', markUserInterrupted, {passive: true});
+    scrollElement.addEventListener('keydown', markUserInterrupted);
+    frameIds.push(
+      window.requestAnimationFrame(() =>
+        frameIds.push(window.requestAnimationFrame(restoreScrollPosition))
+      )
+    );
+
+    return () => {
+      cancelled = true;
+      isRestoringEditorScrollRef.current = false;
+      frameIds.forEach((frameId) => window.cancelAnimationFrame(frameId));
+      scrollElement.removeEventListener('wheel', markUserInterrupted);
+      scrollElement.removeEventListener('touchstart', markUserInterrupted);
+      scrollElement.removeEventListener('keydown', markUserInterrupted);
+    };
+  }, [documentId, editorReadyToken, editorScrollKey, focusQuery, content]);
+
+  useEffect(() => {
+    const scrollElement = editorScrollRef.current;
+    return () => {
+      if (scrollElement) {
+        writeSavedEditorScrollTop(editorScrollKey, scrollElement.scrollTop);
+      }
+    };
+  }, [editorScrollKey]);
+
+  useEffect(() => {
     if (!selectionBubble) return;
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
@@ -295,6 +465,10 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
   );
 
   const updateSelectionBubble = useCallback(() => {
+    if (suppressSelectionBubble) {
+      setSelectionBubble(null);
+      return;
+    }
     const editor = editorRef.current;
     if (!editor) return;
     const {from, to} = editor.state.selection;
@@ -325,7 +499,13 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
       matchName: matchRecord?.name,
       matchRecord
     });
-  }, [normalizeSelectionSurface, selectionQuickSnippets]);
+  }, [normalizeSelectionSurface, selectionQuickSnippets, suppressSelectionBubble]);
+
+  useEffect(() => {
+    if (suppressSelectionBubble) {
+      setSelectionBubble(null);
+    }
+  }, [suppressSelectionBubble]);
 
   const handleEditorReady = useCallback((editorInstance: TipTapEditorInstance) => {
     editorRef.current = editorInstance;
@@ -455,7 +635,11 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
 
   return (
     <div className={styles.container}>
-      <div className={styles.editor}>
+      <div
+        className={styles.editor}
+        ref={editorScrollRef}
+        data-wbd-scroll-key='workspace-editor'
+      >
         <TipTapEditor
           key={documentId}
           content={content}

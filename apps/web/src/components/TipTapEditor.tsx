@@ -197,7 +197,7 @@ function MenuBar({editor, customButtons, actionButtons}: MenuBarProps) {
             style={{
               width: '2px',
               height: '24px',
-              backgroundColor: '#ccc',
+              backgroundColor: 'var(--color-border)',
               margin: '0 0.5rem'
             }}
           />

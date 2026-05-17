@@ -146,6 +146,9 @@ const CARDINAL_NUMBER_WORDS = new Set([
 const normalizePhrase = normalizeCanonText;
 
 const NAME_TOKEN_PATTERN = String.raw`\p{Lu}[\p{L}\p{M}\p{N}'_-]*`;
+const NAME_PARTICLE_PATTERN = String.raw`(?:d[aeiou]s?|de|del|der|di|dos|du|el|la|las|le|of|the|van|von)`;
+const NAME_SEQUENCE_PATTERN = String.raw`${NAME_TOKEN_PATTERN}(?:\s+(?:(?:${NAME_PARTICLE_PATTERN})\s+)?${NAME_TOKEN_PATTERN}){0,2}`;
+const TITLE_PATTERN = String.raw`(?:Detective|Dr|Mr|Mrs|Ms|Mx|Officer|Prof|Professor)`;
 const WORD_TOKEN_PATTERN = String.raw`[\p{L}\p{M}][\p{L}\p{M}\p{N}'_-]*`;
 const TEXT_BOUNDARY_PREFIX = String.raw`(^|[^\p{L}\p{N}_])`;
 const TEXT_BOUNDARY_SUFFIX = String.raw`(?=$|[^\p{L}\p{N}_])`;
@@ -502,12 +505,12 @@ const shouldKeepMention = (text: string, mention: CandidateMention): boolean => 
 
 const isPartOfTitledName = (text: string, start: number): boolean => {
   const prefix = text.slice(Math.max(0, start - 24), start);
-  return /(?:^|[^\p{L}\p{N}_])(?:Dr|Mr|Mrs|Ms|Mx|Prof|Professor)\.\s+$/u.test(prefix);
+  return /(?:^|[^\p{L}\p{N}_])(?:Detective|Dr|Mr|Mrs|Ms|Mx|Officer|Prof|Professor)\.?\s+$/u.test(prefix);
 };
 
 const extractCandidateMentions = (text: string): CandidateMention[] => {
   const pattern = new RegExp(
-    `${TEXT_BOUNDARY_PREFIX}(${NAME_TOKEN_PATTERN}(?:\\s+${NAME_TOKEN_PATTERN}){0,2})${TEXT_BOUNDARY_SUFFIX}`,
+    `${TEXT_BOUNDARY_PREFIX}(${NAME_SEQUENCE_PATTERN})${TEXT_BOUNDARY_SUFFIX}`,
     'gu'
   );
   const matches = Array.from(text.matchAll(pattern));
@@ -533,7 +536,7 @@ const extractCandidateMentions = (text: string): CandidateMention[] => {
 
 const extractTitledNameMentions = (text: string): CandidateMention[] => {
   const pattern = new RegExp(
-    `${TEXT_BOUNDARY_PREFIX}((?:Dr|Mr|Mrs|Ms|Mx|Prof|Professor)\\.\\s+${NAME_TOKEN_PATTERN}(?:\\s+${NAME_TOKEN_PATTERN})?)${TEXT_BOUNDARY_SUFFIX}`,
+    `${TEXT_BOUNDARY_PREFIX}(${TITLE_PATTERN}\\.?\\s+${NAME_SEQUENCE_PATTERN})${TEXT_BOUNDARY_SUFFIX}`,
     'gu'
   );
   const matches = Array.from(text.matchAll(pattern));
@@ -824,7 +827,7 @@ const getUnknownDetectionReason = (params: {
   if (hasCue) {
     return 'leading_entity_cue';
   }
-  if (wordCount === 1 && hasCharacterCue) {
+  if (hasCharacterCue) {
     return 'character_context_candidate';
   }
   if (wordCount > 1 && source !== 'import') {

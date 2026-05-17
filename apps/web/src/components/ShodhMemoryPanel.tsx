@@ -74,8 +74,9 @@ export const ShodhMemoryPanel: React.FC<ShodhMemoryPanelProps> = ({
     <div
       style={{
         marginTop: '1.25rem',
-        borderTop: '1px solid #e5e7eb',
-        paddingTop: '1rem'
+        borderTop: '1px solid var(--color-border)',
+        paddingTop: '1rem',
+        color: 'var(--color-text-primary)'
       }}
     >
       <div
@@ -130,7 +131,7 @@ export const ShodhMemoryPanel: React.FC<ShodhMemoryPanelProps> = ({
           style={{
             marginTop: '0.5rem',
             fontSize: '0.85rem',
-            color: '#555'
+            color: 'var(--color-text-secondary)'
           }}
         >
           Showing{' '}
@@ -145,7 +146,14 @@ export const ShodhMemoryPanel: React.FC<ShodhMemoryPanelProps> = ({
         </div>
       )}
       {filteredMemories.length === 0 ? (
-        <p style={{fontSize: '0.9rem', fontStyle: 'italic', marginTop: '0.75rem'}}>
+        <p
+          style={{
+            fontSize: '0.9rem',
+            fontStyle: 'italic',
+            marginTop: '0.75rem',
+            color: 'var(--color-text-secondary)'
+          }}
+        >
           {emptyState}
         </p>
       ) : (
@@ -166,13 +174,14 @@ export const ShodhMemoryPanel: React.FC<ShodhMemoryPanelProps> = ({
               <li
                 key={memory.id}
                 style={{
-                  border: '1px solid #ddd',
+                  border: '1px solid var(--color-border)',
                   borderRadius: '6px',
                   padding: '0.5rem',
+                  color: 'var(--color-text-primary)',
                   backgroundColor:
                     highlightDocumentId && memory.documentId === highlightDocumentId
-                      ? '#f9fafb'
-                      : '#fff'
+                      ? 'var(--color-bg-secondary)'
+                      : 'var(--color-bg-primary)'
                 }}
               >
                 <div
@@ -204,7 +213,7 @@ export const ShodhMemoryPanel: React.FC<ShodhMemoryPanelProps> = ({
                 <p style={{margin: '0.25rem 0', whiteSpace: 'pre-wrap'}}>
                   {memory.summary}
                 </p>
-                <small style={{color: '#555'}}>
+                <small style={{color: 'var(--color-text-secondary)'}}>
                   {new Date(memory.createdAt).toLocaleString()}
                   {memory.tags?.length ? ` · ${memory.tags.join(', ')}` : ''}
                   {renderSourceLabel && (

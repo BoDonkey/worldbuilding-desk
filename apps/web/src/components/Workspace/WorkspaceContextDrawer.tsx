@@ -1,3 +1,4 @@
+import {useEffect, useMemo} from 'react';
 import {useNavigate} from 'react-router-dom';
 import {clearSystemHistoryEntries} from '../../services/system';
 import type {
@@ -104,6 +105,7 @@ interface WorkspaceContextDrawerProps {
   activeContextView: WorkspaceContextDrawerView;
   setActiveContextView: (view: WorkspaceContextDrawerView) => void;
   showGameSystems: boolean;
+  showRuleAuthoring: boolean;
 
   // World-bible view
   entities: WorldEntity[];
@@ -201,6 +203,7 @@ export function WorkspaceContextDrawer({
   activeContextView,
   setActiveContextView,
   showGameSystems,
+  showRuleAuthoring,
   entities,
   categories,
   ruleset,
@@ -259,9 +262,20 @@ export function WorkspaceContextDrawer({
 }: WorkspaceContextDrawerProps) {
   const navigate = useNavigate();
 
-  const visibleTabs = CONTEXT_DRAWER_TABS.filter(
-    (tab) => tab.id !== 'compendium' || showGameSystems
+  const visibleTabs = useMemo(
+    () =>
+      CONTEXT_DRAWER_TABS.filter(
+        (tab) =>
+          (tab.id !== 'compendium' || showGameSystems) &&
+          (tab.id !== 'ruleset' || showRuleAuthoring)
+      ),
+    [showGameSystems, showRuleAuthoring]
   );
+  useEffect(() => {
+    if (!visibleTabs.some((tab) => tab.id === activeContextView)) {
+      setActiveContextView('world-bible');
+    }
+  }, [activeContextView, setActiveContextView, visibleTabs]);
   const stateMutationReviewGroups = stateMutationReviewItems.reduce<
     Array<{sceneId: string; sceneTitle: string; items: StateMutationReviewItem[]}>
   >((groups, item) => {
@@ -310,11 +324,11 @@ export function WorkspaceContextDrawer({
       return (
         <div className={styles.contextSummary}>
           <p className={styles.contextSummaryText}>
-            Characters: <strong>{characters.length}</strong> · Sheets:{' '}
+            Roster: <strong>{characters.length}</strong> · Sheets:{' '}
             <strong>{characterSheets.length}</strong>
           </p>
           <button type='button' onClick={() => navigate('/characters')}>
-            Open Characters
+            Open Character Sheets
           </button>
         </div>
       );
@@ -669,11 +683,9 @@ export function WorkspaceContextDrawer({
               key={tab.id}
               type='button'
               onClick={() => setActiveContextView(tab.id)}
-              className={styles.contextTabButton}
-              style={{
-                backgroundColor:
-                  tab.id === activeContextView ? '#dbeafe' : 'transparent'
-              }}
+              className={`${styles.contextTabButton} ${
+                tab.id === activeContextView ? styles.contextTabButtonActive : ''
+              }`}
             >
               <span>{tab.label}</span>
               {tab.id === 'review' && reviewReadiness.count > 0 && (

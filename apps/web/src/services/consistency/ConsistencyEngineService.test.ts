@@ -86,6 +86,32 @@ describe('buildExtractedProposal', () => {
     ).toBe('titled_name');
   });
 
+  it('keeps lowercase particles inside multi-part proper names', () => {
+    const surfaces = surfacesFor(
+      'Garcia de Terra entered the archive before Garcia checked the lock.',
+      [],
+      'import'
+    );
+
+    expect(surfaces).toContain('Garcia de Terra');
+  });
+
+  it('treats detective titles as part of titled names', () => {
+    const entities = entityRefsFor(
+      'Detective Moreland waited near the loading bay.',
+      [],
+      'import'
+    );
+    const surfaces = entities.map((entity) => entity.surface);
+
+    expect(surfaces).toContain('Detective Moreland');
+    expect(surfaces).not.toContain('Moreland');
+    expect(
+      entities.find((entity) => entity.surface === 'Detective Moreland')
+        ?.detectionReason
+    ).toBe('titled_name');
+  });
+
   it('does not widen an unknown candidate to include a lowercase boundary word', () => {
     const surfaces = surfacesFor(
       "The overpowering smell of a clove cigarette that Johnson must have smoked just before the meeting lingered in my mind."

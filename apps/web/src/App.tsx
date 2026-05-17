@@ -1,4 +1,7 @@
 import {
+  useLayoutEffect
+} from 'react';
+import {
   BrowserRouter,
   Navigate,
   Outlet,
@@ -23,15 +26,44 @@ import LoreRoute from './routes/LoreRoute';
 import CanonDecisionsRoute from './routes/CanonDecisionsRoute';
 import appShellStyles from './styles/AppShell.module.css';
 
+const routeWindowScrollPositions = new Map<string, number>();
+
 function HomeRoute() {
   const activeProject = useAppStore((s) => s.activeProject);
   return <Navigate to={activeProject ? '/workspace' : '/projects'} replace />;
+}
+
+function RulesetGate() {
+  const activeProject = useAppStore((s) => s.activeProject);
+  const projectSettings = useAppStore((s) => s.projectSettings);
+
+  if (
+    activeProject &&
+    projectSettings &&
+    projectSettings.featureToggles.enableRuleAuthoring === false
+  ) {
+    return <Navigate to='/workspace' replace />;
+  }
+
+  return <RulesetRoute />;
 }
 
 function AppShellLayout() {
   const location = useLocation();
   const isRailCollapsed = useAppStore((s) => s.isRailCollapsed);
   const setRailCollapsed = useAppStore((s) => s.setRailCollapsed);
+
+  useLayoutEffect(() => {
+    const path = location.pathname;
+    const savedScrollY = routeWindowScrollPositions.get(path);
+    if (typeof savedScrollY === 'number' && savedScrollY > 0) {
+      window.scrollTo({top: savedScrollY, left: 0, behavior: 'auto'});
+    }
+
+    return () => {
+      routeWindowScrollPositions.set(path, window.scrollY);
+    };
+  }, [location.pathname]);
 
   return (
     <div className={appShellStyles.appShell}>
@@ -40,7 +72,6 @@ function AppShellLayout() {
         onToggleRail={() => setRailCollapsed(!isRailCollapsed)}
       />
       <main
-        key={location.pathname}
         className={`${appShellStyles.main} ${
           isRailCollapsed ? appShellStyles.mainCollapsed : appShellStyles.mainExpanded
         }`}
@@ -64,7 +95,7 @@ function AppRoutes() {
           <Route path='/lore' element={<LoreRoute />} />
           <Route path='/canon-decisions' element={<CanonDecisionsRoute />} />
           <Route path='/world-bible' element={<WorldBibleRoute />} />
-          <Route path='/ruleset' element={<RulesetRoute />} />
+          <Route path='/ruleset' element={<RulesetGate />} />
           <Route path='/characters' element={<CharactersHubRoute />} />
           <Route
             path='/character-sheets'

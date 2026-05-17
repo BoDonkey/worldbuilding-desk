@@ -55,6 +55,9 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
 
   const promptManager = useRef(new PromptManager());
 
+  const selectedText = context?.selectedText?.trim() ?? '';
+  const selectedTextPreview =
+    selectedText.length > 700 ? `${selectedText.slice(0, 700).trim()}...` : selectedText;
 
   const syncMemoryCache = useCallback(async () => {
     if (!shodhService.current) return;
@@ -203,8 +206,17 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
       return;
     }
 
-    const userMessage: LLMMessage = {role: 'user', content: promptText};
-    setMessages((prev) => [...prev, userMessage]);
+    const selectedTextInstruction = selectedText
+      ? 'The author has highlighted text in the editor. The selected text is available as reference context below. Use it when the author asks about the selection or uses phrases like "this", "these", "it", "them", "the characters", or "the locations". Do not assume the author wants expansion; answer the task they ask for.'
+      : '';
+    const displayedUserMessage: LLMMessage = {role: 'user', content: promptText};
+    const requestUserMessage: LLMMessage = {
+      role: 'user',
+      content: selectedTextInstruction
+        ? `${selectedTextInstruction}\n\nSelected text:\n"""\n${selectedText}\n"""\n\nAuthor request: ${promptText}`
+        : promptText
+    };
+    setMessages((prev) => [...prev, displayedUserMessage]);
     setInput('');
     setIsStreaming(true);
 
@@ -223,9 +235,9 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
       const contextChunks = [...shodhChunks, ...ragChunks];
 
       // Add selected text context if available
-      if (context?.selectedText) {
+      if (selectedText) {
         contextChunks.unshift({
-          content: context.selectedText,
+          content: selectedText,
           source: 'Selected text',
           relevance: 1.0
         });
@@ -251,7 +263,7 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
       setMessages((prev) => [...prev, {role: 'assistant', content: ''}]);
 
       for await (const chunk of llmService.current.stream({
-        messages: [userMessage],
+        messages: [requestUserMessage],
         context: contextChunks,
         systemPrompt: composedPrompt,
         model: consultationModel?.trim() || undefined,
@@ -277,11 +289,11 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
     consultationMaxTokens,
     consultationModel,
     context?.id,
-    context?.selectedText,
     context?.type,
     projectId,
     providerError,
     selectedToolIds,
+    selectedText,
     aiConfig?.promptTools
   ]);
 
@@ -311,6 +323,15 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
 
   return (
     <div className={styles.container}>
+      {selectedText && (
+        <div className={styles.contextCard}>
+          <div className={styles.contextHeader}>
+            <div className={styles.contextTitle}>Selected text</div>
+            <div className={styles.contextHint}>Used as reference for your prompt</div>
+          </div>
+          <p className={styles.contextText}>{selectedTextPreview}</p>
+        </div>
+      )}
       {(aiConfig?.promptTools?.filter((tool) => tool.enabled).length ?? 0) > 0 && (
         <div className={styles.toolsBar}>
           <div className={styles.toolsHeading}>Prompt Tools</div>

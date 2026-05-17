@@ -165,7 +165,7 @@ function CharactersHubRoute() {
   if (!activeProject) {
     return (
       <section>
-        <h1 style={{marginTop: 0}}>Characters</h1>
+        <h1 style={{marginTop: 0}}>Character Tools</h1>
         <p>
           No active project. Go to <strong>Projects</strong> to create or open a
           project first.
@@ -176,9 +176,11 @@ function CharactersHubRoute() {
 
   return (
     <section>
-      <h1 style={{marginTop: 0}}>Characters</h1>
-      <p style={{marginTop: 0, marginBottom: '0.9rem', color: '#4b5563'}}>
-        Manage roster profiles and gameplay-ready sheets in one place.
+      <h1 style={{marginTop: 0}}>Character Tools</h1>
+      <p style={{marginTop: 0, marginBottom: '0.9rem', color: 'var(--color-text-secondary)'}}>
+        Optional roster profiles and gameplay sheets live here after you open
+        them from a World Bible character. Canonical names, aliases, and
+        descriptive lore belong in World Bible.
       </p>
       {feedback && (
         <p
@@ -188,11 +190,11 @@ function CharactersHubRoute() {
             padding: '0.5rem 0.75rem',
             borderRadius: '6px',
             border: `1px solid ${
-              feedback.tone === 'error' ? '#fecaca' : '#bbf7d0'
+              feedback.tone === 'error' ? 'var(--color-error-soft-border)' : 'var(--color-success-soft-border)'
             }`,
             backgroundColor:
-              feedback.tone === 'error' ? '#fef2f2' : '#f0fdf4',
-            color: feedback.tone === 'error' ? '#991b1b' : '#166534'
+              feedback.tone === 'error' ? 'var(--color-error-soft-bg)' : 'var(--color-success-soft-bg)',
+            color: feedback.tone === 'error' ? 'var(--color-error)' : 'var(--color-success)'
           }}
         >
           {feedback.message}

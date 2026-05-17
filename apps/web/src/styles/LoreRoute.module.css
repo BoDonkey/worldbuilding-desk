@@ -18,7 +18,7 @@
   font-size: 0.78rem;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: #0f766e;
+  color: var(--color-success-soft-text);
   font-weight: 700;
 }
 
@@ -40,15 +40,15 @@
 }
 
 .feedbackSuccess {
-  border-color: #99f6e4;
-  background: #f0fdfa;
-  color: #115e59;
+  border-color: var(--color-success-soft-border);
+  background: var(--color-success-soft-bg);
+  color: var(--color-success-soft-text);
 }
 
 .feedbackError {
-  border-color: #fecaca;
-  background: #fef2f2;
-  color: #991b1b;
+  border-color: var(--color-error-soft-border);
+  background: var(--color-error-soft-bg);
+  color: var(--color-error);
 }
 
 .hiddenInput {
@@ -80,7 +80,7 @@
 .reviewCard {
   border: 1px solid var(--color-border);
   border-radius: 16px;
-  background: color-mix(in oklab, var(--color-bg-secondary) 90%, white);
+  background: color-mix(in oklab, var(--color-bg-secondary) 90%, var(--color-on-accent));
   padding: 1rem;
 }
 
@@ -122,8 +122,8 @@
   margin-bottom: 0.9rem;
   padding: 0.85rem;
   border-radius: 12px;
-  border: 1px dashed color-mix(in oklab, var(--color-border) 80%, #14b8a6);
-  background: linear-gradient(180deg, rgba(240, 253, 250, 0.85), rgba(255, 255, 255, 0.7));
+  border: 1px dashed color-mix(in oklab, var(--color-border) 80%, var(--color-success));
+  background: linear-gradient(180deg, color-mix(in oklab, var(--color-success-soft-bg) 85%, transparent), color-mix(in oklab, var(--color-bg-primary) 70%, transparent));
 }
 
 .subsectionHeader {
@@ -169,8 +169,8 @@
   min-width: 2rem;
   padding: 0.2rem 0.55rem;
   border-radius: 999px;
-  background: #ccfbf1;
-  color: #115e59;
+  background: var(--color-success-soft-bg);
+  color: var(--color-success-soft-text);
   text-align: center;
   font-weight: 700;
   font-size: 0.82rem;
@@ -182,7 +182,7 @@
 }
 
 .documentCard {
-  border: 1px solid color-mix(in oklab, var(--color-border) 85%, #d1fae5);
+  border: 1px solid color-mix(in oklab, var(--color-border) 85%, var(--color-success-soft-border));
   border-radius: 14px;
   background: var(--color-bg-primary);
   padding: 0.85rem;
@@ -202,7 +202,7 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: #0f766e;
+  color: var(--color-success-soft-text);
 }
 
 .documentSummary {
@@ -216,7 +216,7 @@
   gap: 0.8rem;
   margin-bottom: 0.55rem;
   font-size: 0.84rem;
-  color: #4b5563;
+  color: var(--color-text-secondary);
 }
 
 .inlineActions {
@@ -233,7 +233,7 @@
 
 .proposalCard,
 .factCard {
-  border: 1px solid color-mix(in oklab, var(--color-border) 82%, #bfdbfe);
+  border: 1px solid color-mix(in oklab, var(--color-border) 82%, var(--color-accent-soft-border));
   border-radius: 12px;
   background: var(--color-bg-primary);
   padding: 0.8rem;
@@ -256,15 +256,15 @@
 .proposalMeta {
   margin: 0 0 0.3rem;
   font-size: 0.84rem;
-  color: #4b5563;
+  color: var(--color-text-secondary);
 }
 
 .evidenceText {
   margin: 0 0 0.65rem;
   padding: 0.55rem 0.65rem;
   border-radius: 10px;
-  background: #f8fafc;
-  color: #475569;
+  background: var(--color-bg-secondary);
+  color: var(--color-text-secondary);
   font-size: 0.86rem;
   line-height: 1.4;
 }
@@ -273,8 +273,8 @@
   display: inline-flex;
   padding: 0.2rem 0.5rem;
   border-radius: 999px;
-  background: #e0f2fe;
-  color: #075985;
+  background: var(--color-accent-soft-bg);
+  color: var(--color-accent-soft-text);
   font-size: 0.78rem;
   text-transform: capitalize;
 }
@@ -289,9 +289,9 @@
   display: inline-flex;
   padding: 0.28rem 0.55rem;
   border-radius: 999px;
-  background: #ecfeff;
-  border: 1px solid #a5f3fc;
-  color: #155e75;
+  background: var(--color-success-soft-bg);
+  border: 1px solid var(--color-success-soft-border);
+  color: var(--color-success-soft-text);
   font-size: 0.8rem;
 }
 

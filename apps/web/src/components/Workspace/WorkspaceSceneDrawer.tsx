@@ -188,17 +188,13 @@ export function WorkspaceSceneDrawer({
         </p>
       )}
 
-      <ul style={{listStyle: 'none', padding: 0, margin: 0}}>
+      <ul className={styles.sceneList}>
         {documents.map((doc) => (
           <li
             key={doc.id}
-            style={{
-              marginBottom: '0.5rem',
-              padding: '0.5rem',
-              borderRadius: '4px',
-              backgroundColor: doc.id === selectedId ? '#eee' : 'transparent',
-              cursor: 'pointer'
-            }}
+            className={`${styles.sceneListItem} ${
+              doc.id === selectedId ? styles.sceneListItemActive : ''
+            }`}
           >
             <div
               onClick={() => handleSelectDocument(doc)}
@@ -220,16 +216,7 @@ export function WorkspaceSceneDrawer({
               </span>
               {(staleStateEventCountBySceneId[doc.id] ?? 0) > 0 && (
                 <span
-                  style={{
-                    marginLeft: '0.5rem',
-                    flexShrink: 0,
-                    fontSize: '0.72rem',
-                    color: '#92400e',
-                    backgroundColor: '#fffbeb',
-                    border: '1px solid #fcd34d',
-                    borderRadius: '999px',
-                    padding: '0.1rem 0.45rem'
-                  }}
+                  className={styles.sceneStateBadge}
                   title='Recorded state changes from this scene may be stale.'
                 >
                   State {staleStateEventCountBySceneId[doc.id]}

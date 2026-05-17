@@ -1496,11 +1496,11 @@ function CharacterSheetsRoute({
             padding: '0.5rem 0.75rem',
             borderRadius: '6px',
             border: `1px solid ${
-              feedback.tone === 'error' ? '#fecaca' : '#bbf7d0'
+              feedback.tone === 'error' ? 'var(--color-error-soft-border)' : 'var(--color-success-soft-border)'
             }`,
             backgroundColor:
-              feedback.tone === 'error' ? '#fef2f2' : '#f0fdf4',
-            color: feedback.tone === 'error' ? '#991b1b' : '#166534'
+              feedback.tone === 'error' ? 'var(--color-error-soft-bg)' : 'var(--color-success-soft-bg)',
+            color: feedback.tone === 'error' ? 'var(--color-error)' : 'var(--color-success)'
           }}
         >
           {feedback.message}
@@ -1564,11 +1564,11 @@ function CharacterSheetsRoute({
             style={{
               marginBottom: '0.85rem',
               padding: '0.75rem',
-              border: '1px solid #dbeafe',
+              border: '1px solid var(--color-accent-soft-bg)',
               borderRadius: '8px',
-              backgroundColor: '#f8fbff',
+              backgroundColor: 'var(--color-bg-secondary)',
               fontSize: '0.86rem',
-              color: '#334155'
+              color: 'var(--color-text-primary)'
             }}
           >
             This is the main place to track level, stats, resources like mana,
@@ -1606,7 +1606,7 @@ function CharacterSheetsRoute({
                 ))}
               </select>
             </label>
-            <div style={{fontSize: '0.8rem', color: '#64748b', marginTop: '0.25rem'}}>
+            <div style={{fontSize: '0.8rem', color: 'var(--color-text-secondary)', marginTop: '0.25rem'}}>
               Link a roster character first, then adjust the sheet-specific stats
               and resources here.
             </div>
@@ -1651,9 +1651,9 @@ function CharacterSheetsRoute({
             style={{
               marginBottom: '0.9rem',
               padding: '0.6rem 0.75rem',
-              border: '1px solid #dbeafe',
+              border: '1px solid var(--color-accent-soft-bg)',
               borderRadius: '6px',
-              backgroundColor: '#f8fbff',
+              backgroundColor: 'var(--color-bg-secondary)',
               fontSize: '0.85rem'
             }}
           >
@@ -1665,7 +1665,7 @@ function CharacterSheetsRoute({
                 : ` (base ${level})`}
             </div>
             {runtimeModifiers.notes.length > 0 && (
-              <div style={{marginTop: '0.25rem', color: '#4b5563'}}>
+              <div style={{marginTop: '0.25rem', color: 'var(--color-text-secondary)'}}>
                 {runtimeModifiers.notes.join(' ')}
               </div>
             )}
@@ -1691,7 +1691,7 @@ function CharacterSheetsRoute({
                         <span
                           style={{
                             fontSize: '0.85em',
-                            color: '#888',
+                            color: 'var(--color-text-tertiary)',
                             marginLeft: '0.5rem'
                           }}
                         >
@@ -1713,7 +1713,7 @@ function CharacterSheetsRoute({
                         style={{width: '100%'}}
                       />
                     </label>
-                    <div style={{fontSize: '0.8rem', color: '#4b5563'}}>
+                    <div style={{fontSize: '0.8rem', color: 'var(--color-text-secondary)'}}>
                       Effective: {effectiveValue}
                     </div>
                   </div>
@@ -1721,7 +1721,7 @@ function CharacterSheetsRoute({
               })}
             </div>
           ) : (
-            <div style={{marginBottom: '1rem', fontSize: '0.85rem', color: '#64748b'}}>
+            <div style={{marginBottom: '1rem', fontSize: '0.85rem', color: 'var(--color-text-secondary)'}}>
               No stat definitions are available in this ruleset yet.
             </div>
           )}
@@ -1750,7 +1750,7 @@ function CharacterSheetsRoute({
                         <span
                           style={{
                             fontSize: '0.85em',
-                            color: '#888',
+                            color: 'var(--color-text-tertiary)',
                             marginLeft: '0.5rem'
                           }}
                         >
@@ -1798,7 +1798,7 @@ function CharacterSheetsRoute({
                         />
                       </label>
                     </div>
-                    <div style={{fontSize: '0.8rem', color: '#4b5563'}}>
+                    <div style={{fontSize: '0.8rem', color: 'var(--color-text-secondary)'}}>
                       Effective: {effective.current}/{effective.max}
                     </div>
                   </div>
@@ -1806,7 +1806,7 @@ function CharacterSheetsRoute({
               })}
             </div>
           ) : (
-            <div style={{marginBottom: '1rem', fontSize: '0.85rem', color: '#64748b'}}>
+            <div style={{marginBottom: '1rem', fontSize: '0.85rem', color: 'var(--color-text-secondary)'}}>
               No resource definitions are available yet. Add things like Mana,
               Stamina, or Health in the ruleset to track them here.
             </div>
@@ -1815,13 +1815,13 @@ function CharacterSheetsRoute({
           <div
             style={{
               marginBottom: '1rem',
-              border: '1px solid #e5e7eb',
+              border: '1px solid var(--color-border)',
               borderRadius: '8px',
               padding: '0.75rem'
             }}
           >
             <h3 style={{marginTop: 0}}>Character State</h3>
-            <p style={{marginTop: 0, fontSize: '0.85rem', color: '#6b7280'}}>
+            <p style={{marginTop: 0, fontSize: '0.85rem', color: 'var(--color-text-secondary)'}}>
               Use Quick Add for low-friction tracking. Add from Catalog when an
               item or status should stay tied to optional mechanics data.
             </p>
@@ -2044,14 +2044,14 @@ function CharacterSheetsRoute({
           style={{
             flex: 1,
             maxWidth: 520,
-            border: '1px solid #e5e7eb',
+            border: '1px solid var(--color-border)',
             borderRadius: '10px',
             padding: '1rem',
-            backgroundColor: '#fafafa'
+            backgroundColor: 'var(--color-bg-secondary)'
           }}
         >
           <h2 style={{marginTop: 0}}>Record Scene State Change</h2>
-          <p style={{fontSize: '0.9rem', color: '#4b5563'}}>
+          <p style={{fontSize: '0.9rem', color: 'var(--color-text-secondary)'}}>
             Attach an accepted state mutation to a manuscript scene. This
             writes directly to the mutation ledger and becomes replayable
             history.
@@ -2062,9 +2062,9 @@ function CharacterSheetsRoute({
                 marginBottom: '0.75rem',
                 padding: '0.55rem 0.7rem',
                 borderRadius: '8px',
-                border: '1px solid #bfdbfe',
-                backgroundColor: '#eff6ff',
-                color: '#1d4ed8',
+                border: '1px solid var(--color-accent-soft-border)',
+                backgroundColor: 'var(--color-accent-soft-bg)',
+                color: 'var(--color-accent)',
                 fontSize: '0.88rem'
               }}
             >
@@ -2304,13 +2304,13 @@ function CharacterSheetsRoute({
               marginBottom: '0.9rem',
               padding: '0.75rem',
               borderRadius: '8px',
-              backgroundColor: '#fff',
-              border: '1px solid #e5e7eb',
+              backgroundColor: 'var(--color-bg-primary)',
+              border: '1px solid var(--color-border)',
               fontSize: '0.9rem'
             }}
           >
             <strong>Preview</strong>
-            <div style={{marginTop: '0.35rem', color: '#4b5563'}}>
+            <div style={{marginTop: '0.35rem', color: 'var(--color-text-secondary)'}}>
               {selectedMutationValueSummary ||
                 'Select a sheet, scene, and change details to preview the mutation.'}
             </div>
@@ -2318,7 +2318,7 @@ function CharacterSheetsRoute({
               <div
                 style={{
                   marginTop: '0.35rem',
-                  color: '#6b7280',
+                  color: 'var(--color-text-secondary)',
                   fontSize: '0.82rem'
                 }}
               >
@@ -2335,9 +2335,9 @@ function CharacterSheetsRoute({
                 marginBottom: '0.9rem',
                 padding: '0.75rem',
                 borderRadius: '8px',
-                border: '1px solid #fecaca',
-                backgroundColor: '#fef2f2',
-                color: '#991b1b',
+                border: '1px solid var(--color-error-soft-border)',
+                backgroundColor: 'var(--color-error-soft-bg)',
+                color: 'var(--color-error)',
                 fontSize: '0.9rem'
               }}
             >
@@ -2355,14 +2355,14 @@ function CharacterSheetsRoute({
               marginBottom: '0.9rem',
               padding: '0.75rem',
               borderRadius: '8px',
-              backgroundColor: '#fff',
-              border: '1px solid #e5e7eb',
+              backgroundColor: 'var(--color-bg-primary)',
+              border: '1px solid var(--color-border)',
               fontSize: '0.9rem'
             }}
           >
             <strong>State At Selected Scene</strong>
             {!replayedStateAtSelectedScene ? (
-              <div style={{marginTop: '0.35rem', color: '#6b7280'}}>
+              <div style={{marginTop: '0.35rem', color: 'var(--color-text-secondary)'}}>
                 Select a sheet and scene to inspect the replayed state timeline.
               </div>
             ) : (
@@ -2462,11 +2462,11 @@ function CharacterSheetsRoute({
           <div style={{marginTop: '1rem'}}>
             <h3 style={{marginBottom: '0.5rem'}}>Recorded State History</h3>
             {!mutationTargetSheetId ? (
-              <p style={{fontSize: '0.9rem', color: '#6b7280'}}>
+              <p style={{fontSize: '0.9rem', color: 'var(--color-text-secondary)'}}>
                 Select a character sheet to inspect its recorded mutation history.
               </p>
             ) : selectedSheetMutationHistory.length === 0 ? (
-              <p style={{fontSize: '0.9rem', color: '#6b7280'}}>
+              <p style={{fontSize: '0.9rem', color: 'var(--color-text-secondary)'}}>
                 No recorded state changes yet for this character sheet.
               </p>
             ) : (
@@ -2478,10 +2478,10 @@ function CharacterSheetsRoute({
                     style={{
                       marginBottom: '0.75rem',
                       padding: '0.75rem',
-                      border: '1px solid #e5e7eb',
+                      border: '1px solid var(--color-border)',
                       borderRadius: '8px',
                       backgroundColor:
-                        event.status === 'invalidated' ? '#f8fafc' : '#fff'
+                        event.status === 'invalidated' ? 'var(--color-bg-secondary)' : 'var(--color-bg-primary)'
                     }}
                   >
                     <div
@@ -2502,7 +2502,7 @@ function CharacterSheetsRoute({
                           style={{
                             marginTop: '0.25rem',
                             fontSize: '0.82rem',
-                            color: '#6b7280'
+                            color: 'var(--color-text-secondary)'
                           }}
                         >
                           Status: {event.status}
@@ -2516,9 +2516,9 @@ function CharacterSheetsRoute({
                               marginTop: '0.3rem',
                               display: 'inline-block',
                               fontSize: '0.78rem',
-                              color: '#92400e',
-                              backgroundColor: '#fffbeb',
-                              border: '1px solid #fcd34d',
+                              color: 'var(--color-warning)',
+                              backgroundColor: 'var(--color-warning-soft-bg)',
+                              border: '1px solid var(--color-warning-soft-border)',
                               borderRadius: '999px',
                               padding: '0.1rem 0.45rem'
                             }}
@@ -2613,7 +2613,7 @@ function CharacterSheetsRoute({
                 style={{
                   marginBottom: '1rem',
                   padding: '1rem',
-                  border: '1px solid #444',
+                  border: '1px solid var(--color-border)',
                   borderRadius: '4px'
                 }}
               >
@@ -2629,7 +2629,7 @@ function CharacterSheetsRoute({
                     <div
                       style={{
                         fontSize: '0.9em',
-                        color: '#888',
+                        color: 'var(--color-text-tertiary)',
                         marginTop: '0.5rem'
                       }}
                     >
@@ -2705,7 +2705,7 @@ function CharacterSheetsRoute({
                           margin: '0.5rem 0 0 0',
                           fontSize: '0.9em',
                           fontStyle: 'italic',
-                          color: '#ccc'
+                          color: 'var(--color-border)'
                         }}
                       >
                         {sheet.notes}

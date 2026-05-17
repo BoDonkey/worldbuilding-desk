@@ -22,6 +22,7 @@ import type {
   GuardrailIssue
 } from '../services/consistency';
 import {findCanonContradictions, saveAlias} from '../services/consistency';
+import {deriveFirstNameAlias} from '../services/worldBible/worldBibleCanonicalization';
 import type {WorldEngine} from '../services/worldEngine';
 import type {WorldEngineStatus} from '../services/worldEngine';
 import type {ReviewIssueAnnotation} from '../services/worldEngine';
@@ -1781,7 +1782,12 @@ export const useWorkspaceConsistency = ({
         }
 
         const now = Date.now();
-        const explicitCharacterSelection = selectedCategory?.slug === 'characters';
+        const explicitCharacterSelection = Boolean(
+          selectedCategory &&
+            ['character', 'characters', 'npc', 'person', 'people'].some((hint) =>
+              selectedCategory.slug.toLowerCase().includes(hint)
+            )
+        );
         if (explicitCharacterSelection) {
           const normalizedCharacterName = normalizeRecordName(normalizedName);
           const linkedCharacterEntity = entities.find(
@@ -1839,14 +1845,18 @@ export const useWorkspaceConsistency = ({
             await saveEntity(characterEntity);
             setEntities((prev) => [...prev, characterEntity]);
           }
+          const derivedNameAlias = deriveFirstNameAlias(normalizedName);
+          const aliasTexts = [
+            ...(normalizedName.toLowerCase() === normalizedSurface.toLowerCase()
+              ? []
+              : [normalizedName, normalizedSurface]),
+            ...(derivedNameAlias ? [derivedNameAlias] : [])
+          ];
           await attachAliasTexts({
             projectId: activeProject.id,
             targetId: characterEntity.id,
             targetType: 'entity',
-            aliasTexts:
-              normalizedName.toLowerCase() === normalizedSurface.toLowerCase()
-                ? []
-                : [normalizedName, normalizedSurface]
+            aliasTexts
           });
           setCharacters((prev) => [...prev, character]);
           setFeedback({
@@ -1898,6 +1908,10 @@ export const useWorkspaceConsistency = ({
           });
         }
         removeReviewSurface(normalizedSurface);
+        const derivedReviewSurface = deriveFirstNameAlias(normalizedName);
+        if (derivedReviewSurface) {
+          removeReviewSurface(derivedReviewSurface);
+        }
         setUnknownLinkSelection((prev) => {
           const copy = {...prev};
           delete copy[surface];
