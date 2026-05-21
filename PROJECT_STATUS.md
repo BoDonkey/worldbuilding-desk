@@ -1,6 +1,6 @@
 # Worldbuilding-Desk Project Status
 
-**Last Updated:** May 9, 2026
+**Last Updated:** May 20, 2026
 
 ## Project Overview
 
@@ -112,6 +112,9 @@ Under the hood, the app still includes rich systems for world data, rules, chara
   - `WorkspaceSceneDrawer`
   - `WorkspaceContextDrawer`
 - Zustand app store added to reduce `activeProject` prop drilling.
+- Zustand workspace UI store added for project-scoped drawer preferences, selected scene restoration, transient workspace modal state, export/import UI state, and scene create/delete operation flags.
+- `WorkspaceRoute` now groups workspace store subscriptions by concern instead of scattering individual selectors through the route body.
+- `useWorkspaceDocuments` now keeps persistence behavior local while using pure helpers for document selection initialization, editor-document assembly, change detection, and manual-save/autosave consistency mode selection.
 - Shared text matching contract added for smoke-critical lore/review matching paths.
 
 ### Current Assessment
@@ -140,8 +143,8 @@ Under the hood, the app still includes rich systems for world data, rules, chara
 ### Engineering
 *Ordering aligned with the 2026-04-18 architecture-review addendum.*
 
-- **Zustand store, slice by slice** — elevated above further route extraction. Start with `activeProject` and `projectSettings`; treat `localStorage` and `IndexedDB` as persistence adapters rather than direct state sources. De-risks every remaining route extraction.
-- Continue trimming `WorkspaceRoute` orchestration where extraction still leaks route-owned knowledge (export flow and canon sync are the next candidates; target under 800 lines for the route shell).
+- **Zustand store, slice by slice** — app shell and workspace UI slices are now in place. Continue with dedicated, behavior-preserving slices only; do not move editor `title`, `content`, `saveStatus`, or autosave ownership without a focused editor-state pass.
+- Continue trimming `WorkspaceRoute` orchestration where extraction still leaks route-owned knowledge; canon sync and larger editor-state orchestration remain candidates after the workspace UI shell settles.
 - Add targeted smoke coverage for the newer World Bible rename / alias / ignore resolution paths after the recent extraction and workflow pass.
 - Add targeted smoke coverage for the workspace import/review path after the recent extraction.
 - Add one Playwright Electron E2E covering the LLM streaming path — smallest change with the highest payoff against silent IPC regressions.
@@ -205,19 +208,23 @@ Under the hood, the app still includes rich systems for world data, rules, chara
   - alias lore highlights using canonical names instead of alias surfaces
   - possessive alias normalization mismatch between consistency scan and editor highlights
 - `@xenova/transformers` is already dynamically imported behind the RAG embedding path and builds as a separate Vite chunk.
+- Zustand workspace UI integration has been smoke-checked manually for Corkboard and Scratchpad memory saving, and the latest focused unit/build passes cover workspace store behavior plus document initialization/save helper behavior.
 
 ### Current Verification Notes
 - `pnpm --filter web lint` passes.
-- `pnpm --filter web test:unit` passes: 30 tests.
+- `pnpm --filter web test:unit -- --run` passes: 86 tests.
 - `pnpm --filter web build` passes with the existing Vite large-chunk and `onnxruntime-web` eval warnings.
 - `pnpm --filter web exec cypress run` passes: 18 tests across review matching, post-merge smoke, scratchpad, and workspace navigation lock.
+- Manual smoke for workspace scene restoration and in-scene search targeting passes after the latest Zustand workspace checkpoint.
 - The post-merge Cypress smoke selectors were updated to match the current writing-first UI: `Scenes` / `Context` drawer controls, collapsed `Settings` sections, `/projects` backup flow, and stat-block rebind popovers.
 - In the Codex desktop sandbox, Cypress GUI launch can still abort before startup; the suite passes when run outside that sandboxed GUI restriction.
 - Stop point for the current session:
   - backup/import validation, scratchpad, review matching, and workspace navigation checks are passing in Cypress
   - search is exposed and World Bible results behave correctly
-- workspace scene restore and in-scene search targeting still need a fresh manual retest
-- latest manual smoke indicates scene restore after `Workspace -> World Bible -> Workspace` is fixed, but it should still be rechecked after any future route-state changes
+- workspace scene restore and in-scene search targeting passed the latest manual smoke, but should still be rechecked after future route-state changes
+- Latest zustand checkpoint verification:
+  - `pnpm --filter web test:unit -- --run apps/web/src/hooks/useWorkspaceDocuments.test.ts apps/web/src/store/workspaceUiStore.test.ts` passes.
+  - `pnpm --filter web build` passes with the existing Vite large-chunk and `onnxruntime-web` eval warnings.
 - deterministic review proposals now feed scene-scoped mutation ledger events, but the long-scene manual UX pass still needs to confirm the passive review flow feels unobtrusive in practice
 
 ### Still Worth Rechecking

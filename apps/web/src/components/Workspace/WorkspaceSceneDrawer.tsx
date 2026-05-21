@@ -1,5 +1,5 @@
 import type {WritingDocument, WorkspaceImportMode} from '../../entityTypes';
-import type {WorkspaceImportSummary} from '../../hooks/useWorkspaceDocuments';
+import type {WorkspaceImportSummary} from '../../store/workspaceUiStore';
 import styles from '../../styles/WorkspaceRoute.module.css';
 
 interface WorkspaceSceneTimelineEntry {

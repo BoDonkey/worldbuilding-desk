@@ -1,14 +1,26 @@
 import {create} from 'zustand';
 import {persist, createJSONStorage} from 'zustand/middleware';
+import type {StateStorage} from 'zustand/middleware';
 import type {Project, ProjectSettings} from '../entityTypes';
 import {
   getOrCreateSettings,
   saveProjectSettings as persistProjectSettings
 } from '../settingsStorage';
 
+const noopStorage: StateStorage = {
+  getItem: () => null,
+  setItem: () => undefined,
+  removeItem: () => undefined
+};
+
+const getAppStorage = () =>
+  typeof window === 'undefined' ? noopStorage : window.localStorage;
+
 interface AppState {
   activeProject: Project | null;
   projectSettings: ProjectSettings | null;
+  projectSettingsStatus: 'idle' | 'loading' | 'ready' | 'error';
+  projectSettingsError: string | null;
   isRailCollapsed: boolean;
 
   setActiveProject: (project: Project | null) => Promise<void>;
@@ -20,56 +32,139 @@ interface AppState {
 
 export const useAppStore = create<AppState>()(
   persist(
-    (set) => ({
-      activeProject: null,
-      projectSettings: null,
-      isRailCollapsed: false,
+    (set, get) => {
+      let projectSettingsRequestId = 0;
 
-      setActiveProject: async (project) => {
-        set({activeProject: project, projectSettings: null});
-        if (project) {
-          const settings = await getOrCreateSettings(project.id);
-          set({projectSettings: settings});
-        }
-      },
+      return {
+        activeProject: null,
+        projectSettings: null,
+        projectSettingsStatus: 'idle',
+        projectSettingsError: null,
+        isRailCollapsed: false,
 
-      setProjectSettings: (settings) => set({projectSettings: settings}),
+        setActiveProject: async (project) => {
+          const requestId = ++projectSettingsRequestId;
+          set({
+            activeProject: project,
+            projectSettings: null,
+            projectSettingsStatus: project ? 'loading' : 'idle',
+            projectSettingsError: null
+          });
+          if (project) {
+            try {
+              const settings = await getOrCreateSettings(project.id);
+              if (
+                requestId === projectSettingsRequestId &&
+                get().activeProject?.id === project.id
+              ) {
+                set({
+                  projectSettings: settings,
+                  projectSettingsStatus: 'ready',
+                  projectSettingsError: null
+                });
+              }
+            } catch (error) {
+              if (
+                requestId === projectSettingsRequestId &&
+                get().activeProject?.id === project.id
+              ) {
+                set({
+                  projectSettingsStatus: 'error',
+                  projectSettingsError:
+                    error instanceof Error ? error.message : 'Unable to load project settings'
+                });
+              }
+            }
+          }
+        },
 
-      loadProjectSettings: async (projectId) => {
-        const settings = await getOrCreateSettings(projectId);
-        set((state) =>
-          state.activeProject?.id === projectId ? {projectSettings: settings} : {}
-        );
-        return settings;
-      },
+        setProjectSettings: (settings) =>
+          set({
+            projectSettings: settings,
+            projectSettingsStatus: settings ? 'ready' : 'idle',
+            projectSettingsError: null
+          }),
 
-      saveProjectSettings: async (settings) => {
-        await persistProjectSettings(settings);
-        set((state) =>
-          state.activeProject?.id === settings.projectId
-            ? {projectSettings: settings}
-            : {}
-        );
-        return settings;
-      },
+        loadProjectSettings: async (projectId) => {
+          const requestId = ++projectSettingsRequestId;
+          set((state) =>
+            state.activeProject?.id === projectId
+              ? {projectSettingsStatus: 'loading', projectSettingsError: null}
+              : {}
+          );
+          try {
+            const settings = await getOrCreateSettings(projectId);
+            set((state) =>
+              requestId === projectSettingsRequestId && state.activeProject?.id === projectId
+                ? {
+                    projectSettings: settings,
+                    projectSettingsStatus: 'ready',
+                    projectSettingsError: null
+                  }
+                : {}
+            );
+            return settings;
+          } catch (error) {
+            set((state) =>
+              requestId === projectSettingsRequestId && state.activeProject?.id === projectId
+                ? {
+                    projectSettingsStatus: 'error',
+                    projectSettingsError:
+                      error instanceof Error ? error.message : 'Unable to load project settings'
+                  }
+                : {}
+            );
+            throw error;
+          }
+        },
 
-      setRailCollapsed: (collapsed) => set({isRailCollapsed: collapsed}),
-    }),
+        saveProjectSettings: async (settings) => {
+          await persistProjectSettings(settings);
+          set((state) =>
+            state.activeProject?.id === settings.projectId
+              ? {
+                  projectSettings: settings,
+                  projectSettingsStatus: 'ready',
+                  projectSettingsError: null
+                }
+              : {}
+          );
+          return settings;
+        },
+
+        setRailCollapsed: (collapsed) => set({isRailCollapsed: collapsed}),
+      };
+    },
     {
       name: 'wbd-app-shell',
-      storage: createJSONStorage(() => localStorage),
+      storage: createJSONStorage(getAppStorage),
       partialize: (state) => ({
         activeProject: state.activeProject,
         isRailCollapsed: state.isRailCollapsed,
       }),
       onRehydrateStorage: () => (state) => {
         if (state?.activeProject) {
-          getOrCreateSettings(state.activeProject.id)
+          const rehydratedProjectId = state.activeProject.id;
+          state.projectSettingsStatus = 'loading';
+          state.projectSettingsError = null;
+          getOrCreateSettings(rehydratedProjectId)
             .then((settings) => {
-              useAppStore.setState({projectSettings: settings});
+              if (useAppStore.getState().activeProject?.id === settings.projectId) {
+                useAppStore.setState({
+                  projectSettings: settings,
+                  projectSettingsStatus: 'ready',
+                  projectSettingsError: null
+                });
+              }
             })
-            .catch(() => {
-              // Settings load failed; project stays set, settings stays null.
+            .catch((error) => {
+              if (useAppStore.getState().activeProject?.id === rehydratedProjectId) {
+                useAppStore.setState({
+                  projectSettingsStatus: 'error',
+                  projectSettingsError:
+                    error instanceof Error ? error.message : 'Unable to load project settings'
+                });
+              }
             });
         }
       },

@@ -1,6 +1,6 @@
 # Next Steps
 
-Last updated: 2026-05-11
+Last updated: 2026-05-20
 
 ## Current Baseline
 
@@ -82,29 +82,38 @@ Implemented recently:
 - World Bible import previews now preserve richer Markdown/HTML structure for longform lore fields instead of flattening everything into plain text.
 - World Bible import flow now supports document preview plus `Import and open` for single drafts.
 - World Bible list and review surfaces now show richer lore summaries with `Read more` expansion and structure-aware excerpts for lists, quotes, and simple tables.
+- Zustand app/workspace UI integration checkpoint:
+  - `activeProject` and project settings now live in the app store.
+  - Workspace drawer preferences, selected scene restoration, modal visibility, export/import UI state, and scene create/delete operation flags now live in `workspaceUiStore`.
+  - `WorkspaceRoute` store subscriptions are grouped by concern with shallow selectors.
+  - `useWorkspaceDocuments` now uses pure helpers for selection initialization, editor-document assembly, change detection, manual-save/autosave consistency modes, and autosave scheduling.
+  - Focused unit coverage exists for workspace store behavior and document selection/save helpers.
+  - Manual smoke now passes for workspace scene restoration and in-scene search targeting after the latest route/store changes.
 
 ## Recommended Priority Order
 
 1. Lore/canon decision smoke stabilization
 2. Canon decision merge review refinement
 3. Structural cleanup in active routes
-4. State mutation ledger integration
-5. Scratchpad access and lightweight planning surfaces
-6. App-wide search
-7. Editor readability and theme hardening
-8. Release confidence and reload safety
-9. Review-completion and World Bible polish
-10. Desktop packaging validation
-11. AI personas/tools
-12. First-run onboarding cleanup
+4. Finish dedicated editor-state persistence pass
+5. State mutation ledger integration
+6. Scratchpad access and lightweight planning surfaces
+7. App-wide search
+8. Editor readability and theme hardening
+9. Release confidence and reload safety
+10. Review-completion and World Bible polish
+11. Desktop packaging validation
+12. AI personas/tools
+13. First-run onboarding cleanup
 
 ## Planning Notes
 
 - Bias toward slices that complete the writing-first workflow instead of adding new optional systems.
 - Keep prioritizing lore-consistency trust failures over new settlement/mechanics work until alias, nickname, and review-refresh behavior feels boringly reliable in normal drafting.
 - Prefer feature work that also removes route-level complexity in `WorkspaceRoute.tsx` or `WorldBibleRoute.tsx`.
+- Do not move editor `title`, `content`, `saveStatus`, or autosave ownership into zustand casually. Treat that as a dedicated editor-state persistence pass with explicit reload/review-refresh verification.
 - Treat build/lint as baseline gates, but use smoke coverage for import, review, reload, and export as the real confidence bar.
-- Current automated browser smoke is green on the current tree. In the Codex desktop environment, Cypress may still need to launch outside the GUI sandbox restriction.
+- Current automated browser smoke and the latest manual workspace smoke are green on the current tree. In the Codex desktop environment, Cypress may still need to launch outside the GUI sandbox restriction.
 - Keep branch scope narrow enough that each slice can be reverted cleanly if the UX direction changes.
 - Scratchpad should become a quick-access popover/modal available from any workspace tab or route surface. The current context drawer tab is a first restoration step, not the final interaction model.
 - Future optional systems note: character inventory currently tracks item names, quantities, notes, and catalog links, while the rules-engine inventory has a `capacity` field but no per-item weight or surfaced encumbrance calculation. When system-heavy character support comes back into focus, add carry weight/encumbrance as an explicit inventory concern rather than treating quantity as enough.

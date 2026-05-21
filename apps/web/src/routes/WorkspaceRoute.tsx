@@ -1,5 +1,6 @@
 import {useEffect, useLayoutEffect, useState, useCallback, useMemo, useRef} from 'react';
 import {useLocation, useNavigate} from 'react-router-dom';
+import {useShallow} from 'zustand/react/shallow';
 import type {
   StatBlockInsertMode,
   StatBlockScopePreset,
@@ -46,6 +47,7 @@ import {
 } from '../hooks/useWorkspaceDrawers';
 import styles from '../styles/WorkspaceRoute.module.css';
 import {useAppStore} from '../store/appStore';
+import {useWorkspaceUiStore} from '../store/workspaceUiStore';
 import {WorkspaceContextDrawer} from '../components/Workspace/WorkspaceContextDrawer';
 import {WorkspaceSceneDrawer} from '../components/Workspace/WorkspaceSceneDrawer';
 import {
@@ -125,6 +127,53 @@ const workspaceScrollSnapshots = new Map<
   }
 >();
 
+const useWorkspaceModalUi = () =>
+  useWorkspaceUiStore(
+    useShallow((state) => ({
+      isScratchpadModalOpen: state.isScratchpadModalOpen,
+      setScratchpadModalOpen: state.setScratchpadModalOpen,
+      isCorkboardModalOpen: state.isCorkboardModalOpen,
+      setCorkboardModalOpen: state.setCorkboardModalOpen,
+      isStatBlockModalOpen: state.isStatBlockModalOpen,
+      setStatBlockModalOpen: state.setStatBlockModalOpen
+    }))
+  );
+
+const useWorkspaceExportUi = () =>
+  useWorkspaceUiStore(
+    useShallow((state) => ({
+      isExportModalOpen: state.isExportModalOpen,
+      exportFormat: state.exportFormat,
+      exportSelection: state.exportSelection,
+      closeExportModal: state.closeExportModal,
+      moveExportItem: state.moveExportItem,
+      toggleExportItem: state.toggleExportItem,
+      toggleAllExportItems: state.toggleAllExportItems
+    }))
+  );
+
+const useWorkspaceImportUi = () =>
+  useWorkspaceUiStore(
+    useShallow((state) => ({
+      importMode: state.importMode,
+      setImportMode: state.setImportMode,
+      skipImportSuggestions: state.skipImportSuggestions,
+      setSkipImportSuggestions: state.setSkipImportSuggestions,
+      importSummary: state.importSummary,
+      setImportSummary: state.setImportSummary,
+      retryImportFiles: state.retryImportFiles,
+      setRetryImportFiles: state.setRetryImportFiles
+    }))
+  );
+
+const useWorkspaceSceneOperationUi = () =>
+  useWorkspaceUiStore(
+    useShallow((state) => ({
+      isCreatingScene: state.isCreatingScene,
+      deletingDocumentId: state.deletingDocumentId
+    }))
+  );
+
 function WorkspaceRoute() {
   const activeProject = useAppStore((s) => s.activeProject);
   const navigate = useNavigate();
@@ -140,7 +189,14 @@ function WorkspaceRoute() {
   } | null>(null);
   const [isPromotingDocument, setIsPromotingDocument] = useState(false);
   const [isSyncingCanon, setIsSyncingCanon] = useState(false);
-  const [isStatBlockModalOpen, setStatBlockModalOpen] = useState(false);
+  const {
+    isScratchpadModalOpen,
+    setScratchpadModalOpen,
+    isCorkboardModalOpen,
+    setCorkboardModalOpen,
+    isStatBlockModalOpen,
+    setStatBlockModalOpen
+  } = useWorkspaceModalUi();
   const [systemHistoryEntries, setSystemHistoryEntries] = useState<SystemHistoryEntry[]>([]);
   const [activeAIContext, setActiveAIContext] = useState<WorkspaceAIContext | null>(null);
   const [queuedAssistantPrompt, setQueuedAssistantPrompt] = useState<string | null>(null);
@@ -158,8 +214,6 @@ function WorkspaceRoute() {
   } | null>(null);
   const [manualExistingTargetId, setManualExistingTargetId] = useState('');
   const [isReviewBannerDismissed, setReviewBannerDismissed] = useState(false);
-  const [isScratchpadModalOpen, setScratchpadModalOpen] = useState(false);
-  const [isCorkboardModalOpen, setCorkboardModalOpen] = useState(false);
   const {
     scratchpadContent,
     setScratchpadContent,
@@ -237,16 +291,16 @@ function WorkspaceRoute() {
   );
   const openScratchpadModal = useCallback(() => {
     setScratchpadModalOpen(true);
-  }, []);
+  }, [setScratchpadModalOpen]);
   const closeScratchpadModal = useCallback(() => {
     setScratchpadModalOpen(false);
-  }, []);
+  }, [setScratchpadModalOpen]);
   const openCorkboardModal = useCallback(() => {
     setCorkboardModalOpen(true);
-  }, []);
+  }, [setCorkboardModalOpen]);
   const closeCorkboardModal = useCallback(() => {
     setCorkboardModalOpen(false);
-  }, []);
+  }, [setCorkboardModalOpen]);
   const refreshSystemHistory = useCallback(() => {
     if (!activeProject) {
       setSystemHistoryEntries([]);
@@ -309,30 +363,13 @@ function WorkspaceRoute() {
     setWordCount,
     selectedDocument,
     importInputRef,
-    isCreatingScene,
     isImportingDocuments,
-    importMode,
-    setImportMode,
-    skipImportSuggestions,
-    setSkipImportSuggestions,
-    importSummary,
-    setImportSummary,
-    retryImportFiles,
-    setRetryImportFiles,
-    deletingDocumentId,
-    isExportModalOpen,
-    exportFormat,
-    exportSelection,
     initializeEditorState,
     handleNewDocument,
     handleImportDocuments,
     handleRetryFailedImports,
     handleSelectDocument,
     openExportModal,
-    closeExportModal,
-    moveExportItem,
-    toggleExportItem,
-    toggleAllExportItems,
     handleExportScenes,
     handleSave,
     handleDelete,
@@ -349,6 +386,26 @@ function WorkspaceRoute() {
     setFeedback,
     addSystemHistory
   });
+  const {
+    isExportModalOpen,
+    exportFormat,
+    exportSelection,
+    closeExportModal,
+    moveExportItem,
+    toggleExportItem,
+    toggleAllExportItems
+  } = useWorkspaceExportUi();
+  const {
+    importMode,
+    setImportMode,
+    skipImportSuggestions,
+    setSkipImportSuggestions,
+    importSummary,
+    setImportSummary,
+    retryImportFiles,
+    setRetryImportFiles
+  } = useWorkspaceImportUi();
+  const {isCreatingScene, deletingDocumentId} = useWorkspaceSceneOperationUi();
   const openImportPicker = useCallback(() => {
     importInputRef.current?.click();
   }, [importInputRef]);
@@ -1192,7 +1249,7 @@ function WorkspaceRoute() {
         onClick: handleRefreshStatTemplates
       }
     ],
-    [handleRefreshStatTemplates]
+    [handleRefreshStatTemplates, setStatBlockModalOpen]
   );
 
   const [focusQuery, setFocusQuery] = useState<string | null>(null);
@@ -1459,7 +1516,7 @@ function WorkspaceRoute() {
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [isScratchpadModalOpen]);
+  }, [isScratchpadModalOpen, setScratchpadModalOpen]);
 
   useEffect(() => {
     if (!isCorkboardModalOpen) return;
@@ -1470,7 +1527,7 @@ function WorkspaceRoute() {
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [isCorkboardModalOpen]);
+  }, [isCorkboardModalOpen, setCorkboardModalOpen]);
 
   useEffect(() => {
     const mediaQuery = window.matchMedia('(max-width: 1200px)');
