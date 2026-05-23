@@ -49,3 +49,12 @@ Storage and deletion:
    - no duplicate textarea-only forms.
 3. Reconcile review UI density from the reference branch without taking degraded functionality.
 4. Add smoke tests for character and review shape once the UI is restored.
+
+## Next Session Handoff
+
+- Stay on `codex/reconcile-temp-update-ui` unless there is a deliberate branch decision.
+- Do not wholesale merge `codex/review-completion-state`. It has some more polished UI, but not all of it is better, and its functionality is degraded compared with this branch.
+- Use `codex/review-completion-state` only as a visual/product reference. Port small pieces manually after checking them against current functionality and the guardrail contracts above.
+- Be especially careful with character UI: preserve the current functional base, then restore only the useful parts of the better UI shape.
+- The new targeted Cypress spec `apps/web/cypress/e2e/project-mode-guardrails.cy.ts` passes.
+- A broader Cypress run surfaced an existing `post-merge-smoke.cy.ts` failure around `Prompt Tools`; treat that as a known follow-up, not as a failure introduced by the project-mode guardrail slice.
