@@ -45,6 +45,7 @@ import {
   useWorkspaceDrawers,
   type WorkspaceContextDrawerView
 } from '../hooks/useWorkspaceDrawers';
+import {getProjectCapabilities} from '../projectMode';
 import styles from '../styles/WorkspaceRoute.module.css';
 import {useAppStore} from '../store/appStore';
 import {useWorkspaceUiStore} from '../store/workspaceUiStore';
@@ -1094,11 +1095,10 @@ function WorkspaceRoute() {
     });
     refreshSystemHistory();
   }, [activeProject, activePartySynergies, refreshSystemHistory]);
-  const showGameSystems =
-    projectSettings?.featureToggles.enableGameSystems !== false;
-  const showRuleAuthoring =
-    projectSettings?.featureToggles.enableRuleAuthoring !== false;
-  const isGeneralFictionProject = projectSettings?.projectMode === 'general';
+  const capabilities = getProjectCapabilities(projectSettings);
+  const showGameSystems = capabilities.canUseGameSystems;
+  const showRuleAuthoring = capabilities.canUseRuleAuthoring;
+  const isGeneralFictionProject = capabilities.isGeneralFiction;
   const reviewBannerTitle = hasBlockingUnknownGuardrailIssues
     ? isGeneralFictionProject
       ? 'This scene has names or places to review before strict save.'

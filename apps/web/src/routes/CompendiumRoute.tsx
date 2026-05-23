@@ -55,6 +55,7 @@ import {
 import {getCharacterSheetsByProject} from '../services/characters';
 import {getCharactersByProject} from '../characterStorage';
 import {getEntitiesByProject} from '../entityStorage';
+import {getProjectCapabilities} from '../projectMode';
 
 // activeProject and projectSettings read from store below
 
@@ -312,13 +313,10 @@ function CompendiumRoute() {
   const [showAdvancedSetup, setShowAdvancedSetup] = useState(false);
   const [activeMechanicsCharacterSheetId, setActiveMechanicsCharacterSheetId] = useState('');
   const [editingMechanicsEntryId, setEditingMechanicsEntryId] = useState<string | null>(null);
-  const enableGameSystems =
-    projectSettings?.featureToggles.enableGameSystems !== false;
-  const enableRuntimeModifiers =
-    projectSettings?.featureToggles.enableRuntimeModifiers !== false;
-  const enableWorldSystems =
-    enableGameSystems &&
-    projectSettings?.featureToggles.enableSettlementAndZoneSystems !== false;
+  const capabilities = getProjectCapabilities(projectSettings);
+  const enableGameSystems = capabilities.canUseGameSystems;
+  const enableRuntimeModifiers = capabilities.canUseRuntimeModifiers;
+  const enableWorldSystems = capabilities.canUseSettlementAndZoneSystems;
 
   useEffect(() => {
     if (!activeProject) {

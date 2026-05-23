@@ -2,6 +2,7 @@ import {useEffect, useState, useCallback, useRef, useMemo} from 'react';
 import type {FormEvent} from 'react';
 import {useLocation, useNavigate} from 'react-router-dom';
 import {useAppStore} from '../store/appStore';
+import {getProjectCapabilities} from '../projectMode';
 import type {Character, EntityCategory, WorldEntity} from '../entityTypes';
 import {getEntitiesByProject} from '../entityStorage';
 import {
@@ -269,8 +270,8 @@ function WorldBibleRoute() {
   const seriesConfig = activeProject
     ? getSeriesBibleConfig(activeProject)
     : null;
-  const showGameSystems =
-    projectSettings?.featureToggles.enableGameSystems !== false;
+  const capabilities = getProjectCapabilities(projectSettings);
+  const showGameSystems = capabilities.canUseGameSystems;
   const [canonState, setCanonState] = useState<{
     parentCanonVersion?: string;
     childLastSynced?: string;

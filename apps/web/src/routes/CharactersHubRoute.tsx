@@ -2,6 +2,7 @@ import {useEffect, useMemo, useRef, useState} from 'react';
 import type {ChangeEvent} from 'react';
 import {useLocation, useNavigate, useSearchParams} from 'react-router-dom';
 import {useAppStore} from '../store/appStore';
+import {getProjectCapabilities} from '../projectMode';
 import CharactersRoute from './CharactersRoute';
 import CharacterSheetsRoute from './CharacterSheetsRoute';
 import {getRulesetByProjectId} from '../services/rules';
@@ -12,6 +13,7 @@ import {
 
 function CharactersHubRoute() {
   const activeProject = useAppStore((s) => s.activeProject);
+  const projectSettings = useAppStore((s) => s.projectSettings);
   const location = useLocation();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -35,6 +37,8 @@ function CharactersHubRoute() {
   const view = useMemo(() => {
     return searchParams.get('view') === 'sheets' ? 'sheets' : 'roster';
   }, [searchParams]);
+  const capabilities = getProjectCapabilities(projectSettings);
+  const canUseSheets = hasRuleset && capabilities.canUseRuleAuthoring;
 
   useEffect(() => {
     const state = location.state as
@@ -51,14 +55,14 @@ function CharactersHubRoute() {
     appliedLocationPrefillRef.current = prefillCharacterId;
     setPendingCharacterId(prefillCharacterId);
     setPendingAutoCreateSheetCharacterId(state?.autoCreateSheetForCharacterId ?? null);
-    if (state?.preferredView === 'sheets' && hasRuleset) {
+    if (state?.preferredView === 'sheets' && canUseSheets) {
       setSearchParams({view: 'sheets'});
       return;
     }
     if (state?.preferredView === 'roster') {
       setSearchParams({});
     }
-  }, [hasRuleset, location.state, setSearchParams]);
+  }, [canUseSheets, location.state, setSearchParams]);
 
   useEffect(() => {
     let cancelled = false;
@@ -83,13 +87,13 @@ function CharactersHubRoute() {
   }, [activeProject]);
 
   useEffect(() => {
-    if (view === 'sheets' && activeProject && !hasRuleset) {
+    if (view === 'sheets' && activeProject && !canUseSheets) {
       setSearchParams({});
     }
-  }, [view, activeProject, hasRuleset, setSearchParams]);
+  }, [view, activeProject, canUseSheets, setSearchParams]);
 
   const openView = (next: 'roster' | 'sheets') => {
-    if (next === 'sheets' && activeProject && !hasRuleset) {
+    if (next === 'sheets' && activeProject && !canUseSheets) {
       return;
     }
     setSearchParams(next === 'sheets' ? {view: 'sheets'} : {});
@@ -216,13 +220,15 @@ function CharactersHubRoute() {
             ? 'Importing...'
             : 'Import Roster Only'}
         </button>
-        <button
-          type='button'
-          onClick={() => handleImportCharactersClick('full')}
-          disabled={isImportingCharacters}
-        >
-          {isImportingCharacters ? 'Importing...' : 'Import Roster + Sheets'}
-        </button>
+        {canUseSheets && (
+          <button
+            type='button'
+            onClick={() => handleImportCharactersClick('full')}
+            disabled={isImportingCharacters}
+          >
+            {isImportingCharacters ? 'Importing...' : 'Import Roster + Sheets'}
+          </button>
+        )}
         <input
           ref={importInputRef}
           type='file'
@@ -256,27 +262,29 @@ function CharactersHubRoute() {
         >
           Roster
         </button>
-        <button
-          type='button'
-          onClick={() => openView('sheets')}
-          disabled={!hasRuleset}
-          style={{
-            border:
-              view === 'sheets'
-                ? '1px solid var(--color-text-primary)'
-                : '1px solid var(--color-border)',
-            backgroundColor:
-              view === 'sheets'
-                ? 'var(--color-bg-secondary)'
-                : 'var(--color-bg-primary)',
-            opacity: hasRuleset ? 1 : 0.55,
-            color: 'var(--color-text-primary)'
-          }}
-        >
-          Sheets
-        </button>
+        {capabilities.canUseRuleAuthoring && (
+          <button
+            type='button'
+            onClick={() => openView('sheets')}
+            disabled={!canUseSheets}
+            style={{
+              border:
+                view === 'sheets'
+                  ? '1px solid var(--color-text-primary)'
+                  : '1px solid var(--color-border)',
+              backgroundColor:
+                view === 'sheets'
+                  ? 'var(--color-bg-secondary)'
+                  : 'var(--color-bg-primary)',
+              opacity: canUseSheets ? 1 : 0.55,
+              color: 'var(--color-text-primary)'
+            }}
+          >
+            Sheets
+          </button>
+        )}
       </div>
-      {!hasRuleset && (
+      {!hasRuleset && capabilities.canUseRuleAuthoring && (
         <div
           style={{
             marginBottom: '1rem',
@@ -311,16 +319,17 @@ function CharactersHubRoute() {
           embedded
           prefillCharacterId={pendingCharacterId}
           onPrefillConsumed={() => setPendingCharacterId(null)}
-          onOpenSheets={(characterId, options) => {
-            if (!hasRuleset) {
-              return;
-            }
-            setPendingCharacterId(characterId ?? null);
-            setPendingAutoCreateSheetCharacterId(
-              options?.autoCreate ? characterId ?? null : null
-            );
-            openView('sheets');
-          }}
+          onOpenSheets={
+            canUseSheets
+              ? (characterId, options) => {
+                  setPendingCharacterId(characterId ?? null);
+                  setPendingAutoCreateSheetCharacterId(
+                    options?.autoCreate ? characterId ?? null : null
+                  );
+                  openView('sheets');
+                }
+              : undefined
+          }
         />
       )}
       {view === 'sheets' && (

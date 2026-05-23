@@ -60,6 +60,7 @@ import {
 } from '../services/state/stateMutationStaleness';
 
 import {useAppStore} from '../store/appStore';
+import {getProjectCapabilities} from '../projectMode';
 
 interface CharacterSheetsRouteProps {
   embedded?: boolean;
@@ -164,6 +165,7 @@ function CharacterSheetsRoute({
   onAutoCreateConsumed
 }: CharacterSheetsRouteProps) {
   const activeProject = useAppStore((s) => s.activeProject);
+  const projectSettings = useAppStore((s) => s.projectSettings);
   const navigate = useNavigate();
   const [sheets, setSheets] = useState<CharacterSheet[]>([]);
   const [ruleset, setRuleset] = useState<StoredRuleset | null>(null);
@@ -201,6 +203,7 @@ function CharacterSheetsRoute({
     useState<ShodhMemoryProvider | null>(null);
   const [rulesetMemory, setRulesetMemory] = useState<MemoryEntry | null>(null);
   const [rulesetMemoryFilter, setRulesetMemoryFilter] = useState('');
+  const capabilities = getProjectCapabilities(projectSettings);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [deletingSheetId, setDeletingSheetId] = useState<string | null>(null);
   const [isLoaded, setIsLoaded] = useState(false);
@@ -1469,18 +1472,26 @@ function CharacterSheetsRoute({
     return (
       <div>
         {!embedded && <h1>Character Sheets</h1>}
-        <p>
-          This project doesn't have a ruleset yet. Character sheets require a
-          ruleset to define stats and resources.
-        </p>
-        <p>
-          Without a ruleset, you will not see base stats like Strength or
-          dynamic resources like Mana. Go to <strong>Ruleset</strong> and create
-          one for this project.
-        </p>
-        <button type='button' onClick={() => navigate('/ruleset')}>
-          Open Ruleset
-        </button>
+        {capabilities.canUseRuleAuthoring ? (
+          <>
+            <p>
+              This project doesn't have a ruleset yet. Character sheets require a
+              ruleset to define stats and resources.
+            </p>
+            <p>
+              Without a ruleset, you will not see base stats like Strength or
+              dynamic resources like Mana.
+            </p>
+            <button type='button' onClick={() => navigate('/ruleset')}>
+              Open Ruleset
+            </button>
+          </>
+        ) : (
+          <p>
+            Character sheets are disabled for this project mode. Use the roster
+            for story-facing character profiles.
+          </p>
+        )}
       </div>
     );
   }

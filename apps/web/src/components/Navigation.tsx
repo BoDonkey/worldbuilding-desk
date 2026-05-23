@@ -5,6 +5,7 @@ import {useCommandPalette} from '../contexts/commandPaletteApi';
 import {getEntitiesByProject} from '../entityStorage';
 import {getCompendiumEntriesByProject} from '../services/compendium';
 import {buildWorldReviewQueue, getAliasesByProject} from '../services/consistency';
+import {getProjectCapabilities} from '../projectMode';
 import {useAppStore} from '../store/appStore';
 import styles from '../assets/components/Navigation.module.css';
 
@@ -46,10 +47,7 @@ export const Navigation: FC<NavigationProps> = ({
     compendium: 0
   });
   const mobileMenuCloseRef = useRef<HTMLButtonElement | null>(null);
-  const showGameSystems =
-    !activeProject || projectSettings?.featureToggles.enableGameSystems !== false;
-  const showRuleAuthoring =
-    !activeProject || projectSettings?.featureToggles.enableRuleAuthoring !== false;
+  const capabilities = getProjectCapabilities(activeProject ? projectSettings : null);
   const loadPendingCounts = useCallback(() => {
     if (!activeProject) {
       setPendingCounts({world: 0, compendium: 0});
@@ -99,14 +97,21 @@ export const Navigation: FC<NavigationProps> = ({
       {to: '/lore', label: 'Lore', icon: 'LR'},
       {to: '/canon-decisions', label: 'Canon', icon: 'CD'},
       {to: '/world-bible', label: 'World', icon: 'WB', badgeCount: pendingCounts.world},
-      ...(showRuleAuthoring ? [{to: '/ruleset', label: 'Ruleset', icon: 'RS'}] : []),
+      ...(capabilities.canUseRuleAuthoring
+        ? [{to: '/ruleset', label: 'Ruleset', icon: 'RS'}]
+        : []),
       {to: '/workspace', label: 'Workspace', icon: 'WS'},
-      ...(showGameSystems
+      ...(capabilities.canUseGameSystems
         ? [{to: '/compendium', label: 'Compendium', icon: 'CP', badgeCount: pendingCounts.compendium}]
         : []),
       {to: '/settings', label: 'Settings', icon: 'ST'}
     ],
-    [pendingCounts.compendium, pendingCounts.world, showGameSystems, showRuleAuthoring]
+    [
+      capabilities.canUseGameSystems,
+      capabilities.canUseRuleAuthoring,
+      pendingCounts.compendium,
+      pendingCounts.world
+    ]
   );
 
   const mobileBarItems = useMemo(

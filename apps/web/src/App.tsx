@@ -14,6 +14,7 @@ import {ThemeProvider} from './contexts/ThemeContext';
 import {AccessibilityProvider} from './contexts/AccessibilityContext';
 import {CommandPaletteProvider} from './contexts/CommandPaletteContext';
 import {useAppStore} from './store/appStore';
+import {getProjectCapabilities} from './projectMode';
 import {useRouteDebug} from './utils/routeDebug';
 import ProjectsRoute from './routes/ProjectsRoute';
 import WorldBibleRoute from './routes/WorldBibleRoute';
@@ -36,12 +37,9 @@ function HomeRoute() {
 function RulesetGate() {
   const activeProject = useAppStore((s) => s.activeProject);
   const projectSettings = useAppStore((s) => s.projectSettings);
+  const capabilities = getProjectCapabilities(activeProject ? projectSettings : null);
 
-  if (
-    activeProject &&
-    projectSettings &&
-    projectSettings.featureToggles.enableRuleAuthoring === false
-  ) {
+  if (activeProject && !capabilities.canUseRuleAuthoring) {
     return <Navigate to='/workspace' replace />;
   }
 

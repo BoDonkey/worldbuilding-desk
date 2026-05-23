@@ -1,5 +1,6 @@
 import type {NavigateFunction} from 'react-router-dom';
 import type {Project, ProjectSettings} from '../entityTypes';
+import {getProjectCapabilities} from '../projectMode';
 import {dispatchWorkspaceCommand} from './workspaceCommands';
 
 export interface AppCommand {
@@ -25,10 +26,7 @@ export const createAppCommands = ({
   activeProject,
   projectSettings
 }: CreateAppCommandsOptions): AppCommand[] => {
-  const showGameSystems =
-    !activeProject || projectSettings?.featureToggles.enableGameSystems !== false;
-  const showRuleAuthoring =
-    !activeProject || projectSettings?.featureToggles.enableRuleAuthoring !== false;
+  const capabilities = getProjectCapabilities(activeProject ? projectSettings : null);
 
   const navigationCommands: AppCommand[] = [
     {
@@ -61,7 +59,7 @@ export const createAppCommands = ({
     }
   ];
 
-  if (showGameSystems) {
+  if (capabilities.canUseGameSystems) {
     navigationCommands.splice(5, 0, {
       id: 'nav-compendium',
       label: 'Go to Compendium',
@@ -71,7 +69,7 @@ export const createAppCommands = ({
     });
   }
 
-  if (showRuleAuthoring) {
+  if (capabilities.canUseRuleAuthoring) {
     navigationCommands.splice(2, 0, {
       id: 'nav-ruleset',
       label: 'Go to Ruleset',
@@ -195,7 +193,7 @@ export const createAppCommands = ({
     }
   ];
 
-  if (showGameSystems) {
+  if (capabilities.canUseGameSystems) {
     workspaceCommands.splice(7, 0, {
       id: 'workspace-context-compendium',
       label: 'Workspace: Open Context - Compendium',
@@ -205,7 +203,7 @@ export const createAppCommands = ({
     });
   }
 
-  if (showRuleAuthoring) {
+  if (capabilities.canUseRuleAuthoring) {
     workspaceCommands.splice(7, 0, {
       id: 'workspace-context-ruleset',
       label: 'Workspace: Open Context - Ruleset',
