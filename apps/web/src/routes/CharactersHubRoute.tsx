@@ -10,6 +10,7 @@ import {
   exportCharactersJson,
   importCharactersJson
 } from '../services/characters';
+import styles from '../styles/CharactersRoute.module.css';
 
 function CharactersHubRoute() {
   const activeProject = useAppStore((s) => s.activeProject);
@@ -168,8 +169,8 @@ function CharactersHubRoute() {
 
   if (!activeProject) {
     return (
-      <section>
-        <h1 style={{marginTop: 0}}>Characters</h1>
+      <section className={styles.page}>
+        <h1 className={styles.title}>Characters</h1>
         <p>
           No active project. Go to <strong>Projects</strong> to create or open a
           project first.
@@ -179,9 +180,9 @@ function CharactersHubRoute() {
   }
 
   return (
-    <section>
-      <h1 style={{marginTop: 0}}>Characters</h1>
-      <p style={{marginTop: 0, marginBottom: '0.9rem', color: 'var(--color-text-secondary)'}}>
+    <section className={styles.page}>
+      <h1 className={styles.title}>Characters</h1>
+      <p className={styles.lead}>
         {canUseSheets
           ? 'Manage cast profiles here, with gameplay sheets available only for projects that explicitly use them. Canonical names, aliases, and descriptive lore belong in World Bible.'
           : 'Manage cast profiles here. Canonical names, aliases, and descriptive lore belong in World Bible.'}
@@ -189,24 +190,16 @@ function CharactersHubRoute() {
       {feedback && (
         <p
           role='status'
-          style={{
-            marginBottom: '0.9rem',
-            padding: '0.5rem 0.75rem',
-            borderRadius: '6px',
-            border: `1px solid ${
-              feedback.tone === 'error' ? 'var(--color-error-soft-border)' : 'var(--color-success-soft-border)'
-            }`,
-            backgroundColor:
-              feedback.tone === 'error' ? 'var(--color-error-soft-bg)' : 'var(--color-success-soft-bg)',
-            color: feedback.tone === 'error' ? 'var(--color-error)' : 'var(--color-success)'
-          }}
+          className={`${styles.feedback} ${
+            feedback.tone === 'error' ? styles.feedbackError : styles.feedbackSuccess
+          }`}
         >
           {feedback.message}
         </p>
       )}
-      <div style={{display: 'flex', gap: '0.5rem', marginBottom: '0.9rem'}}>
+      <div className={styles.toolbar}>
         <button type='button' onClick={() => void handleExportRosterOnly()}>
-          Export Roster Only
+          Export Roster
         </button>
         {canUseSheets && (
           <button type='button' onClick={() => void handleExportCharacters()}>
@@ -220,7 +213,7 @@ function CharactersHubRoute() {
         >
           {isImportingCharacters
             ? 'Importing...'
-            : 'Import Roster Only'}
+            : 'Import Roster'}
         </button>
         {canUseSheets && (
           <button
@@ -239,76 +232,33 @@ function CharactersHubRoute() {
           style={{display: 'none'}}
         />
       </div>
-      <div
-        style={{
-          display: 'flex',
-          gap: '0.5rem',
-          marginBottom: '0.9rem',
-          flexWrap: 'wrap'
-        }}
-      >
-        <button
-          type='button'
-          onClick={() => openView('roster')}
-          style={{
-            border:
-              view === 'roster'
-                ? '1px solid var(--color-text-primary)'
-                : '1px solid var(--color-border)',
-            backgroundColor:
-              view === 'roster'
-                ? 'var(--color-bg-secondary)'
-                : 'var(--color-bg-primary)',
-            color: 'var(--color-text-primary)'
-          }}
-        >
-          Roster
-        </button>
-        {capabilities.canUseRuleAuthoring && (
+      {capabilities.canUseRuleAuthoring && (
+        <div className={styles.tabRow}>
+          <button
+            type='button'
+            onClick={() => openView('roster')}
+            className={view === 'roster' ? styles.tabButtonActive : ''}
+          >
+            Roster
+          </button>
           <button
             type='button'
             onClick={() => openView('sheets')}
             disabled={!canUseSheets}
-            style={{
-              border:
-                view === 'sheets'
-                  ? '1px solid var(--color-text-primary)'
-                  : '1px solid var(--color-border)',
-              backgroundColor:
-                view === 'sheets'
-                  ? 'var(--color-bg-secondary)'
-                  : 'var(--color-bg-primary)',
-              opacity: canUseSheets ? 1 : 0.55,
-              color: 'var(--color-text-primary)'
-            }}
+            className={view === 'sheets' ? styles.tabButtonActive : ''}
+            style={{opacity: canUseSheets ? 1 : 0.55}}
           >
             Sheets
           </button>
-        )}
-      </div>
+        </div>
+      )}
       {!hasRuleset && capabilities.canUseRuleAuthoring && (
-        <div
-          style={{
-            marginBottom: '1rem',
-            padding: '0.55rem 0.7rem',
-            border: '1px solid var(--color-border)',
-            borderRadius: '6px',
-            backgroundColor: 'var(--color-bg-secondary)',
-            color: 'var(--color-text-secondary)',
-            fontSize: '0.85rem'
-          }}
-        >
+        <div className={styles.notice}>
           Sheets are disabled until this project has a ruleset.
           <button
             type='button'
             onClick={() => navigate('/ruleset')}
-            style={{
-              marginLeft: '0.5rem',
-              fontSize: '0.8rem',
-              color: 'var(--color-text-primary)',
-              background: 'var(--color-bg-primary)',
-              border: '1px solid var(--color-border)'
-            }}
+            style={{marginLeft: '0.5rem'}}
           >
             Open Ruleset
           </button>

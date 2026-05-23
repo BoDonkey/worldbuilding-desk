@@ -25,6 +25,7 @@ import {
   extractPlainTextFromRichText,
   normalizeRichTextValue
 } from '../services/worldBible/worldBibleEntityHelpers';
+import styles from '../styles/CharactersRoute.module.css';
 
 interface CharactersRouteProps {
   embedded?: boolean;
@@ -593,39 +594,27 @@ function CharactersRoute({
     activeAssistField === 'description' ? 'Description' : activeAssistField === 'notes' ? 'Notes' : '';
   const isFocusedCharacterTask = Boolean(editingId || creationMode === 'manual');
   const content = (
-    <>
-      {!embedded && <h1>Characters</h1>}
-      <p style={{marginTop: 0, marginBottom: '1rem', color: 'var(--color-text-secondary)'}}>
-        {canUseSheets
-          ? 'Build story-facing cast profiles here, with optional sheets available for system-heavy projects. Keep canonical names, aliases, and merge decisions in World Bible.'
-          : 'Build story-facing cast profiles here. Keep canonical names, aliases, and merge decisions in World Bible.'}
-      </p>
+    <div className={styles.page}>
+      {!embedded && <h1 className={styles.title}>Characters</h1>}
+      {!embedded && (
+        <p className={styles.lead}>
+          {canUseSheets
+            ? 'Build story-facing cast profiles here, with optional sheets available for system-heavy projects. Keep canonical names, aliases, and merge decisions in World Bible.'
+            : 'Build story-facing cast profiles here. Keep canonical names, aliases, and merge decisions in World Bible.'}
+        </p>
+      )}
       {feedback && (
         <p
           role='status'
-          style={{
-            marginBottom: '1rem',
-            padding: '0.5rem 0.75rem',
-            borderRadius: '6px',
-            border: `1px solid ${feedback.tone === 'error' ? 'var(--color-error-soft-border)' : 'var(--color-success-soft-border)'}`,
-            backgroundColor: feedback.tone === 'error' ? 'var(--color-error-soft-bg)' : 'var(--color-success-soft-bg)',
-            color: feedback.tone === 'error' ? 'var(--color-error)' : 'var(--color-success)'
-          }}
+          className={`${styles.feedback} ${
+            feedback.tone === 'error' ? styles.feedbackError : styles.feedbackSuccess
+          }`}
         >
           {feedback.message}
         </p>
       )}
       {showMigrationNotice && migrationCandidates.length > 0 && (
-        <div
-          style={{
-            marginBottom: '1rem',
-            padding: '0.85rem',
-            border: '1px solid var(--color-border)',
-            borderRadius: '8px',
-            backgroundColor: 'var(--color-bg-secondary)',
-            color: 'var(--color-text-primary)'
-          }}
-        >
+        <div className={styles.notice}>
           <div style={{display: 'flex', justifyContent: 'space-between', gap: '0.75rem', alignItems: 'flex-start'}}>
             <div>
               <strong>Characters is optional here</strong>
@@ -649,16 +638,7 @@ function CharactersRoute({
             {migrationCandidates.slice(0, 8).map((entity) => (
               <div
                 key={entity.id}
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'flex-start',
-                  gap: '0.75rem',
-                  padding: '0.7rem',
-                  border: '1px solid var(--color-border)',
-                  borderRadius: '8px',
-                  backgroundColor: 'var(--color-bg-primary)'
-                }}
+                className={styles.listCard}
               >
                 <div>
                   <strong>{entity.name}</strong>
@@ -694,24 +674,10 @@ function CharactersRoute({
       )}
 
       {!isFocusedCharacterTask && (
-        <div
-          style={{
-            marginBottom: '1rem',
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-            gap: '1rem'
-          }}
-        >
-          <section
-            style={{
-              padding: '1rem',
-              border: '1px solid var(--color-border)',
-              borderRadius: '8px',
-              backgroundColor: 'var(--color-bg-secondary)'
-            }}
-          >
-            <h2 style={{margin: '0 0 0.35rem 0', fontSize: '1rem'}}>Manual Character</h2>
-            <p style={{margin: 0, color: 'var(--color-text-secondary)', fontSize: '0.9rem'}}>
+        <div className={styles.taskGrid}>
+          <section className={styles.panel}>
+            <h2 className={styles.panelTitle}>Manual Character</h2>
+            <p className={styles.lead}>
               Start with a name, profile, notes, and optional dialogue style.
             </p>
             <button
@@ -722,16 +688,9 @@ function CharactersRoute({
               Create Manually
             </button>
           </section>
-          <section
-            style={{
-              padding: '1rem',
-              border: '1px solid var(--color-border)',
-              borderRadius: '8px',
-              backgroundColor: 'var(--color-bg-secondary)'
-            }}
-          >
-            <h2 style={{margin: '0 0 0.35rem 0', fontSize: '1rem'}}>Import Character</h2>
-            <p style={{margin: 0, color: 'var(--color-text-secondary)', fontSize: '0.9rem'}}>
+          <section className={styles.panel}>
+            <h2 className={styles.panelTitle}>Import Character</h2>
+            <p className={styles.lead}>
               Review long-form sheets, pasted notes, or dossier drafts before saving.
             </p>
             <button
@@ -743,16 +702,9 @@ function CharactersRoute({
               Import Or Paste
             </button>
           </section>
-          <section
-            style={{
-              padding: '1rem',
-              border: '1px solid var(--color-border)',
-              borderRadius: '8px',
-              backgroundColor: 'var(--color-bg-secondary)'
-            }}
-          >
-            <h2 style={{margin: '0 0 0.35rem 0', fontSize: '1rem'}}>AI-Assisted Draft</h2>
-            <p style={{margin: 0, color: 'var(--color-text-secondary)', fontSize: '0.9rem'}}>
+          <section className={styles.panel}>
+            <h2 className={styles.panelTitle}>AI-Assisted Draft</h2>
+            <p className={styles.lead}>
               Generate a draft from your premise, then edit and approve it yourself.
             </p>
             <button
@@ -768,33 +720,49 @@ function CharactersRoute({
       )}
 
       {isFocusedCharacterTask && (
-        <form onSubmit={handleSubmit} style={{ maxWidth: 980, minWidth: 0 }}>
+        <form onSubmit={handleSubmit} className={styles.formPanel}>
           <h2>{editingId ? 'Edit Character' : 'New Character'}</h2>
-          <div style={{ marginBottom: '0.75rem' }}>
-            <label>
-              Name *<br />
+          <div className={styles.fieldGrid} style={{marginBottom: '0.9rem'}}>
+            <label className={styles.fieldLabel}>
+              Name *
               <input
+                className={styles.softInput}
                 type="text"
                 value={name}
                 onChange={e => setName(e.target.value)}
                 required
                 disabled={editingCharacterHasCanonRecord}
-                style={{ width: '100%' }}
+              />
+            </label>
+            <label className={styles.fieldLabel}>
+              Age
+              <input
+                className={styles.softInput}
+                type="text"
+                value={age}
+                onChange={e => setAge(e.target.value)}
+              />
+            </label>
+            <label className={styles.fieldLabel}>
+              Role
+              <input
+                className={styles.softInput}
+                type="text"
+                value={role}
+                onChange={e => setRole(e.target.value)}
+                placeholder="e.g., Protagonist, Mentor, Antagonist"
               />
             </label>
           </div>
 
-          <div style={{ marginBottom: '0.75rem' }}>
+          <div className={styles.richField} style={{marginBottom: '0.9rem'}}>
             <WorldBibleRichTextField
               label='Description'
               value={description}
               onChange={setDescription}
             />
-            <div style={{display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginTop: '0.5rem'}}>
-              <button
-                type='button'
-                onClick={() => openFieldAssistant('description')}
-              >
+            <div className={styles.actionRow}>
+              <button type='button' onClick={() => openFieldAssistant('description')}>
                 AI Assist
               </button>
               <button
@@ -806,38 +774,13 @@ function CharactersRoute({
             </div>
           </div>
 
-          <div style={{ marginBottom: '0.75rem' }}>
-            <label>
-              Age<br />
-              <input
-                type="text"
-                value={age}
-                onChange={e => setAge(e.target.value)}
-                style={{ width: '100%' }}
-              />
-            </label>
-          </div>
-
-          <div style={{ marginBottom: '0.75rem' }}>
-            <label>
-              Role<br />
-              <input
-                type="text"
-                value={role}
-                onChange={e => setRole(e.target.value)}
-                placeholder="e.g., Protagonist, Mentor, Antagonist"
-                style={{ width: '100%' }}
-              />
-            </label>
-          </div>
-
-          <div style={{ marginBottom: '0.75rem' }}>
-            <label>
-              Dialogue Style<br />
+          <div className={styles.fieldGrid} style={{marginBottom: '0.9rem'}}>
+            <label className={styles.fieldLabel}>
+              Dialogue Style
               <select
+                className={styles.softSelect}
                 value={characterStyleId}
                 onChange={e => setCharacterStyleId(e.target.value)}
-                style={{ width: '100%' }}
               >
                 <option value="">None</option>
                 {settings?.characterStyles.map(style => (
@@ -849,17 +792,14 @@ function CharactersRoute({
             </label>
           </div>
 
-          <div style={{ marginBottom: '0.75rem' }}>
+          <div className={styles.richField} style={{marginBottom: '0.9rem'}}>
             <WorldBibleRichTextField
               label='Notes'
               value={notes}
               onChange={setNotes}
             />
-            <div style={{display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginTop: '0.5rem'}}>
-              <button
-                type='button'
-                onClick={() => openFieldAssistant('notes')}
-              >
+            <div className={styles.actionRow}>
+              <button type='button' onClick={() => openFieldAssistant('notes')}>
                 AI Assist
               </button>
               <button
@@ -872,16 +812,8 @@ function CharactersRoute({
           </div>
 
           {activeAssistField && activeProject && (
-            <div
-              style={{
-                marginBottom: '1rem',
-                border: '1px solid var(--color-border)',
-                borderRadius: '8px',
-                padding: '0.75rem',
-                backgroundColor: 'var(--color-bg-secondary)'
-              }}
-            >
-              <div style={{display: 'flex', justifyContent: 'space-between', gap: '0.75rem', alignItems: 'center', marginBottom: '0.65rem'}}>
+            <div className={styles.assistantPanel}>
+              <div className={styles.assistantHeader}>
                 <strong>AI assist: {assistantFieldLabel}</strong>
                 <button type='button' onClick={() => setActiveAssistField(null)}>
                   Close
@@ -907,7 +839,7 @@ function CharactersRoute({
             </div>
           )}
 
-          <div style={{ display: 'flex', gap: '0.5rem' }}>
+          <div className={styles.bottomActions}>
             <button type="submit">
               {editingId ? 'Save Changes' : 'Create Character'}
             </button>
@@ -920,7 +852,7 @@ function CharactersRoute({
 
       {!isFocusedCharacterTask && (
         <div>
-          <h2>Roster</h2>
+          <h2>Character List</h2>
           {characters.length === 0 && (
             <p>
               {canUseSheets
@@ -928,26 +860,16 @@ function CharactersRoute({
                 : 'No characters yet. Create one manually to keep a story-facing profile here.'}
             </p>
           )}
-          <ul style={{ listStyle: 'none', padding: 0 }}>
+          <ul className={styles.list}>
             {characters.map((character) => {
               const hasLinkedLore = characterLoreEntityIdByCharacterId.has(character.id);
               const characterAliases = characterAliasesById.get(character.id) ?? [];
               return (
-              <li key={character.id} style={{ 
-                marginBottom: '1rem', 
-                padding: '1rem',
-                border: '1px solid var(--color-border)',
-                borderRadius: '4px'
-              }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              <li key={character.id} className={styles.listCard}>
+                <div className={styles.listCardHeader}>
                   <div style={{ flex: 1 }}>
                     <strong style={{ fontSize: '1.2em' }}>{character.name}</strong>
-                    {character.description && (
-                      <p style={{ margin: '0.5rem 0', color: 'var(--color-text-secondary)' }}>
-                        {extractPlainTextFromRichText(character.description)}
-                      </p>
-                    )}
-                    <div style={{ fontSize: '0.9em', color: 'var(--color-text-tertiary)' }}>
+                    <div className={styles.listCardMeta}>
                       {characterAliases.length > 0 && (
                         <div>Aliases: {characterAliases.join(', ')}</div>
                       )}
@@ -957,13 +879,29 @@ function CharactersRoute({
                         <div>Dialogue Style: {getStyleName(character.characterStyleId)}</div>
                       )}
                     </div>
-                    {character.fields.notes && (
-                      <p style={{ margin: '0.5rem 0 0 0', fontSize: '0.9em', fontStyle: 'italic' }}>
-                        {extractPlainTextFromRichText(character.fields.notes)}
-                      </p>
+                    {(character.description || character.fields.notes) && (
+                      <details className={styles.detailsBlock}>
+                        <summary>Details</summary>
+                        {character.description && (
+                          <div style={{marginTop: '0.5rem'}}>
+                            <strong>Profile Summary</strong>
+                            <p className={styles.mutedText}>
+                              {extractPlainTextFromRichText(character.description)}
+                            </p>
+                          </div>
+                        )}
+                        {character.fields.notes && (
+                          <div style={{marginTop: '0.6rem'}}>
+                            <strong>Notes</strong>
+                            <p className={styles.italicText}>
+                              {extractPlainTextFromRichText(character.fields.notes)}
+                            </p>
+                          </div>
+                        )}
+                      </details>
                     )}
                   </div>
-                  <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  <div className={styles.actionRow}>
                     {canUseSheets && (
                       <button type="button" onClick={() => handleCreateSheet(character)}>
                         Open Sheet
@@ -992,7 +930,7 @@ function CharactersRoute({
 
       {/* Character Styles section */}
       {settings && !isFocusedCharacterTask && (
-        <div style={{ marginTop: '3rem', paddingTop: '2rem', borderTop: '2px solid var(--color-border)' }}>
+        <div className={styles.characterStyles}>
           <CharacterStyleList
             styles={settings.characterStyles}
             onUpdate={handleUpdateStyle}
@@ -1000,7 +938,7 @@ function CharactersRoute({
           />
         </div>
       )}
-    </>
+    </div>
   );
 
   return embedded ? <>{content}</> : <section>{content}</section>;
