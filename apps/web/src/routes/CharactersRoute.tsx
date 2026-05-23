@@ -22,6 +22,7 @@ import { useAppStore } from '../store/appStore';
 interface CharactersRouteProps {
   embedded?: boolean;
   onOpenSheets?: (characterId?: string, options?: {autoCreate?: boolean}) => void;
+  canUseSheets?: boolean;
   prefillCharacterId?: string | null;
   onPrefillConsumed?: () => void;
 }
@@ -50,6 +51,7 @@ const DEFAULT_CHARACTER_FIELD_SCHEMA: EntityCategory['fieldSchema'] = [
 function CharactersRoute({
   embedded = false,
   onOpenSheets,
+  canUseSheets = Boolean(onOpenSheets),
   prefillCharacterId = null,
   onPrefillConsumed
 }: CharactersRouteProps) {
@@ -536,8 +538,9 @@ function CharactersRoute({
     <>
       {!embedded && <h1>Character Tools</h1>}
       <p style={{marginTop: 0, marginBottom: '1rem', color: 'var(--color-text-secondary)'}}>
-        Use this area for roster-linked profiles, sheets, and supporting tools. Set
-        canonical names, aliases, and merge decisions in World Bible.
+        {canUseSheets
+          ? 'Use this area for roster-linked profiles, sheets, and supporting tools. Set canonical names, aliases, and merge decisions in World Bible.'
+          : 'Use this area for roster-linked profiles. Set canonical names, aliases, and merge decisions in World Bible.'}
       </p>
       {feedback && (
         <p
@@ -571,8 +574,13 @@ function CharactersRoute({
               <p style={{margin: '0.4rem 0 0.75rem 0', fontSize: '0.9rem', color: 'var(--color-text-secondary)'}}>
                 These canon records already exist in World Bible. If you want to keep writing,
                 dismiss this and continue. If you want a tools profile here, click
-                <strong> Open Character Tools</strong>. If you want a sheet immediately, click
-                <strong> Open/Create Sheet</strong>.
+                <strong> Open Character Tools</strong>.
+                {canUseSheets && (
+                  <>
+                    {' '}If you want a sheet immediately, click
+                    <strong> Open/Create Sheet</strong>.
+                  </>
+                )}
               </p>
             </div>
             <button type='button' onClick={() => setShowMigrationNotice(false)}>
@@ -611,13 +619,15 @@ function CharactersRoute({
                   >
                     {importingEntityId === entity.id ? 'Opening...' : 'Open Character Tools'}
                   </button>
-                  <button
-                    type='button'
-                    onClick={() => void handleImportWorldEntity(entity, {autoCreateSheet: true})}
-                    disabled={importingEntityId === entity.id}
-                  >
-                    {importingEntityId === entity.id ? 'Opening...' : 'Open/Create Sheet'}
-                  </button>
+                  {canUseSheets && (
+                    <button
+                      type='button'
+                      onClick={() => void handleImportWorldEntity(entity, {autoCreateSheet: true})}
+                      disabled={importingEntityId === entity.id}
+                    >
+                      {importingEntityId === entity.id ? 'Opening...' : 'Open/Create Sheet'}
+                    </button>
+                  )}
                 </div>
               </div>
             ))}
@@ -725,8 +735,9 @@ function CharactersRoute({
           <h2>Roster</h2>
           {characters.length === 0 && (
             <p>
-              No characters yet. Create one on the left, then open Sheets to
-              build stat blocks from your ruleset.
+              {canUseSheets
+                ? 'No characters yet. Create one on the left, then open Sheets to build stat blocks from your ruleset.'
+                : 'No characters yet. Create one on the left to keep a story-facing profile here.'}
             </p>
           )}
           <ul style={{ listStyle: 'none', padding: 0 }}>
@@ -765,9 +776,11 @@ function CharactersRoute({
                     )}
                   </div>
                   <div style={{ display: 'flex', gap: '0.5rem' }}>
-                    <button type="button" onClick={() => handleCreateSheet(character)}>
-                      Open Sheet
-                    </button>
+                    {canUseSheets && (
+                      <button type="button" onClick={() => handleCreateSheet(character)}>
+                        Open Sheet
+                      </button>
+                    )}
                     <button
                       type="button"
                       onClick={() => void handleOpenWorldLore(character)}

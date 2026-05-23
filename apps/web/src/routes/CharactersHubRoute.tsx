@@ -182,9 +182,9 @@ function CharactersHubRoute() {
     <section>
       <h1 style={{marginTop: 0}}>Character Tools</h1>
       <p style={{marginTop: 0, marginBottom: '0.9rem', color: 'var(--color-text-secondary)'}}>
-        Optional roster profiles and gameplay sheets live here after you open
-        them from a World Bible character. Canonical names, aliases, and
-        descriptive lore belong in World Bible.
+        {canUseSheets
+          ? 'Optional roster profiles and gameplay sheets live here after you open them from a World Bible character. Canonical names, aliases, and descriptive lore belong in World Bible.'
+          : 'Optional roster profiles live here after you open them from a World Bible character. Canonical names, aliases, and descriptive lore belong in World Bible.'}
       </p>
       {feedback && (
         <p
@@ -208,9 +208,11 @@ function CharactersHubRoute() {
         <button type='button' onClick={() => void handleExportRosterOnly()}>
           Export Roster Only
         </button>
-        <button type='button' onClick={() => void handleExportCharacters()}>
-          Export Roster + Sheets
-        </button>
+        {canUseSheets && (
+          <button type='button' onClick={() => void handleExportCharacters()}>
+            Export Roster + Sheets
+          </button>
+        )}
         <button
           type='button'
           onClick={() => handleImportCharactersClick('roster')}
@@ -317,6 +319,7 @@ function CharactersHubRoute() {
         <CharactersRoute
           key={`roster-${dataVersion}`}
           embedded
+          canUseSheets={canUseSheets}
           prefillCharacterId={pendingCharacterId}
           onPrefillConsumed={() => setPendingCharacterId(null)}
           onOpenSheets={
