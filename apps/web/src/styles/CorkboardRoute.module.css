@@ -1,0 +1,233 @@
+.page {
+  width: 100%;
+  max-width: 1240px;
+  margin: 0 auto;
+  display: grid;
+  gap: 1rem;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.title {
+  margin: 0;
+}
+
+.intro {
+  margin: 0.35rem 0 0;
+  color: var(--color-text-secondary);
+  max-width: 70ch;
+  line-height: 1.5;
+}
+
+.headerActions,
+.actionRow,
+.metaRow,
+.cardActions,
+.beatActions {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.status {
+  font-size: 0.84rem;
+  color: var(--color-text-secondary);
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: minmax(260px, 340px) minmax(0, 1fr);
+  gap: 1rem;
+  align-items: start;
+}
+
+.panel {
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-bg-secondary);
+  padding: 1rem;
+}
+
+.listPanel {
+  position: sticky;
+  top: 1rem;
+}
+
+.panelHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.panelTitle {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.countChip,
+.orderChip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  padding: 0.15rem 0.5rem;
+  font-size: 0.78rem;
+  color: var(--color-text-secondary);
+  background: var(--color-bg-primary);
+}
+
+.chapterList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 0.5rem;
+}
+
+.chapterButton {
+  width: 100%;
+  text-align: left;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-bg-primary);
+  color: var(--color-text-primary);
+  padding: 0.7rem;
+}
+
+.chapterButtonActive {
+  border-color: var(--color-text-primary);
+  background: color-mix(in oklab, var(--color-bg-primary) 70%, var(--color-bg-secondary));
+}
+
+.chapterButtonTop {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  align-items: center;
+  margin-bottom: 0.35rem;
+}
+
+.chapterTitle {
+  display: block;
+  font-weight: 700;
+}
+
+.chapterSummary {
+  display: block;
+  margin-top: 0.35rem;
+  color: var(--color-text-secondary);
+  font-size: 0.88rem;
+  line-height: 1.4;
+}
+
+.emptyState {
+  margin: 0;
+  color: var(--color-text-secondary);
+  line-height: 1.5;
+}
+
+.editorPanel {
+  display: grid;
+  gap: 1rem;
+}
+
+.formGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(160px, 220px);
+  gap: 0.75rem;
+}
+
+.field {
+  display: grid;
+  gap: 0.35rem;
+  color: var(--color-text-primary);
+}
+
+.field input,
+.field select,
+.field textarea {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  background: var(--color-bg-primary);
+  color: var(--color-text-primary);
+  font: inherit;
+  padding: 0.55rem 0.65rem;
+}
+
+.field textarea {
+  min-height: 7rem;
+  resize: vertical;
+  line-height: 1.5;
+}
+
+.beatSection {
+  display: grid;
+  gap: 0.75rem;
+  border-top: 1px solid var(--color-border);
+  padding-top: 1rem;
+}
+
+.beatEditor {
+  display: grid;
+  gap: 0.75rem;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-bg-primary);
+  padding: 0.85rem;
+}
+
+.beatList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 0.55rem;
+}
+
+.beatItem {
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-bg-primary);
+  padding: 0.75rem;
+}
+
+.beatTop {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
+.beatTitle {
+  font-weight: 700;
+}
+
+.beatNotes {
+  margin-top: 0.4rem;
+  color: var(--color-text-secondary);
+  white-space: pre-wrap;
+  line-height: 1.45;
+}
+
+@media (max-width: 900px) {
+  .layout,
+  .formGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .listPanel {
+    position: static;
+  }
+}

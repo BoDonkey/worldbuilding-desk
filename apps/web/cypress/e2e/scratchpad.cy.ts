@@ -14,12 +14,17 @@ describe('Workspace scratchpad', () => {
     cy.contains('h1', 'Writing Workspace').should('be.visible');
     cy.contains('button', /^Scratchpad$/).first().click();
 
-    cy.get('textarea[aria-label="Project scratchpad"]').clear().type(note);
+    cy.get('[aria-label="Project scratchpad"] .tiptap-editor')
+      .clear()
+      .type(note);
     cy.contains('[role="status"]', 'Scratchpad saved').should('be.visible');
 
     cy.reload();
     cy.contains('h1', 'Writing Workspace').should('be.visible');
     cy.contains('button', /^Scratchpad$/).first().click();
-    cy.get('textarea[aria-label="Project scratchpad"]').should('have.value', note);
+    cy.get('[aria-label="Project scratchpad"] .tiptap-editor').should(
+      'contain.text',
+      note
+    );
   });
 });

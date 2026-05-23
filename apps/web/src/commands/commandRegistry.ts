@@ -51,6 +51,13 @@ export const createAppCommands = ({
       run: () => navigate('/workspace')
     },
     {
+      id: 'nav-corkboard',
+      label: 'Go to Corkboard',
+      section: 'Navigation',
+      keywords: ['corkboard', 'planning', 'chapters', 'outline', 'beats'],
+      run: () => navigate('/corkboard')
+    },
+    {
       id: 'nav-settings',
       label: 'Go to Settings',
       section: 'Navigation',

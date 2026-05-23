@@ -19,6 +19,7 @@ import {useRouteDebug} from './utils/routeDebug';
 import ProjectsRoute from './routes/ProjectsRoute';
 import WorldBibleRoute from './routes/WorldBibleRoute';
 import WorkspaceRoute from './routes/WorkspaceRoute';
+import CorkboardRoute from './routes/CorkboardRoute';
 import SettingsRoute from './routes/SettingsRoute';
 import CharactersHubRoute from './routes/CharactersHubRoute';
 import CompendiumRoute from './routes/CompendiumRoute';
@@ -100,6 +101,7 @@ function AppRoutes() {
             element={<Navigate to='/characters?view=sheets' replace />}
           />
           <Route path='/workspace' element={<WorkspaceRoute />} />
+          <Route path='/corkboard' element={<CorkboardRoute />} />
           <Route path='/compendium' element={<CompendiumRoute />} />
           <Route path='/settings' element={<SettingsRoute />} />
           <Route path='*' element={<Navigate to='/' replace />} />

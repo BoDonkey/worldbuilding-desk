@@ -40,6 +40,12 @@ Character authoring:
 - Keep canonical names, aliases, and merge decisions in World Bible unless a project-specific workflow explicitly requires otherwise.
 - Keep character sheets and game-system state surfaces behind `getProjectCapabilities`; general fiction should show a single story-facing character area.
 
+Planning surfaces:
+
+- Treat Corkboard as a first-class story-arc planning route while preserving quick workspace modal access to the same underlying cards.
+- Keep Scratchpad and Corkboard writing-friendly; they are author planning tools, not game-system surfaces.
+- Do not regress the current writing workspace rail defaults while recovering the friendlier planning UI from `codex/review-completion-state`.
+
 Code optimization and refactors:
 
 - Do not optimize by broad route rewrites, file moves, or state ownership changes inside recovery slices.

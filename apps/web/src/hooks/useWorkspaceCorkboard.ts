@@ -171,7 +171,10 @@ export function useWorkspaceCorkboard(projectId: string | null) {
   );
 
   const addPlotPoint = useCallback(
-    (cardId: string) => {
+    (
+      cardId: string,
+      initial?: Partial<Pick<PlotPoint, 'title' | 'notes'>>
+    ) => {
       const now = Date.now();
       updateCards((prev) =>
         prev.map((card) =>
@@ -184,8 +187,8 @@ export function useWorkspaceCorkboard(projectId: string | null) {
                   {
                     id: crypto.randomUUID(),
                     chapterCardId: cardId,
-                    title: '',
-                    notes: '',
+                    title: initial?.title ?? '',
+                    notes: initial?.notes ?? '',
                     order: card.plotPoints.length,
                     createdAt: now,
                     updatedAt: now

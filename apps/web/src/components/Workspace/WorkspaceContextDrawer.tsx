@@ -16,6 +16,7 @@ import {LoreInspectorPanel} from '../Editor/LoreInspectorPanel';
 import type {LoreInspectorRecord} from '../Editor/LoreInspectorPanel';
 import {SystemHistoryPanel} from '../Editor/SystemHistoryPanel';
 import {ShodhMemoryPanel} from '../ShodhMemoryPanel';
+import TipTapEditor from '../TipTapEditor';
 import type {MemoryEntry} from '../../services/shodh/ShodhMemoryService';
 import type {WorkspaceContextDrawerView} from '../../hooks/useWorkspaceDrawers';
 import type {
@@ -24,6 +25,7 @@ import type {
   StateMutationReviewItem
 } from '../../hooks/useWorkspaceConsistency';
 import type {ReviewIssueAnnotation} from '../../services/worldEngine';
+import {normalizeRichTextValue} from '../../services/worldBible/worldBibleEntityHelpers';
 import styles from '../../styles/WorkspaceRoute.module.css';
 
 interface ConsistencyReviewItem {
@@ -595,13 +597,12 @@ export function WorkspaceContextDrawer({
               Private project notes that stay out of scenes and canon.
             </div>
           </div>
-          <textarea
-            className={styles.scratchpadTextarea}
-            value={scratchpadContent}
-            onChange={(event) => setScratchpadContent(event.target.value)}
-            placeholder='Loose notes, fragments, reminders, questions...'
-            aria-label='Project scratchpad'
-          />
+          <div className={styles.scratchpadEditorShell} aria-label='Project scratchpad'>
+            <TipTapEditor
+              content={normalizeRichTextValue(scratchpadContent)}
+              onChange={setScratchpadContent}
+            />
+          </div>
           <div className={styles.scratchpadStatus} role='status'>
             {scratchpadStatus === 'loading'
               ? 'Loading scratchpad...'

@@ -101,6 +101,7 @@ export const Navigation: FC<NavigationProps> = ({
         ? [{to: '/ruleset', label: 'Ruleset', icon: 'RS'}]
         : []),
       {to: '/workspace', label: 'Workspace', icon: 'WS'},
+      {to: '/corkboard', label: 'Corkboard', icon: 'CB'},
       ...(capabilities.canUseGameSystems
         ? [{to: '/compendium', label: 'Compendium', icon: 'CP', badgeCount: pendingCounts.compendium}]
         : []),
@@ -117,7 +118,7 @@ export const Navigation: FC<NavigationProps> = ({
   const mobileBarItems = useMemo(
     () =>
       navItems.filter((item) =>
-        ['/projects', '/lore', '/world-bible', '/workspace'].includes(item.to)
+        ['/projects', '/lore', '/world-bible', '/workspace', '/corkboard'].includes(item.to)
           || item.to === '/canon-decisions'
       ),
     [navItems]

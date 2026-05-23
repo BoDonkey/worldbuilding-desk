@@ -10,6 +10,7 @@ import type {
   WritingDocument
 } from '../entityTypes';
 import {EditorWithAI} from '../components/Editor/EditorWithAI';
+import TipTapEditor from '../components/TipTapEditor';
 import {ContextPopover} from '../components/Editor/ContextPopover';
 import type {LoreInspectorRecord} from '../components/Editor/LoreInspectorPanel';
 import {useWorkspaceMemories} from '../hooks/useWorkspaceMemories';
@@ -68,6 +69,7 @@ import {useWorkspaceProjectData} from '../hooks/useWorkspaceProjectData';
 import {useWorkspaceLoreSnippets} from '../hooks/useWorkspaceLoreSnippets';
 import {useWorkspaceScratchpad} from '../hooks/useWorkspaceScratchpad';
 import {useWorkspaceCorkboard} from '../hooks/useWorkspaceCorkboard';
+import {normalizeRichTextValue} from '../services/worldBible/worldBibleEntityHelpers';
 
 declare global {
   interface Window {
@@ -3012,13 +3014,15 @@ function WorkspaceRoute() {
                 Close
               </button>
             </div>
-            <textarea
-              className={`${styles.scratchpadTextarea} ${styles.scratchpadModalTextarea}`}
-              value={scratchpadContent}
-              onChange={(event) => setScratchpadContent(event.target.value)}
-              placeholder='Loose notes, fragments, reminders, questions...'
+            <div
+              className={`${styles.scratchpadEditorShell} ${styles.scratchpadModalEditorShell}`}
               aria-label='Project scratchpad'
-            />
+            >
+              <TipTapEditor
+                content={normalizeRichTextValue(scratchpadContent)}
+                onChange={setScratchpadContent}
+              />
+            </div>
             <div className={styles.scratchpadModalFooter}>
               <div className={styles.scratchpadStatus} role='status'>
                 {scratchpadStatusLabel}
