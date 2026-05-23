@@ -169,7 +169,7 @@ function CharactersHubRoute() {
   if (!activeProject) {
     return (
       <section>
-        <h1 style={{marginTop: 0}}>Character Tools</h1>
+        <h1 style={{marginTop: 0}}>Characters</h1>
         <p>
           No active project. Go to <strong>Projects</strong> to create or open a
           project first.
@@ -180,11 +180,11 @@ function CharactersHubRoute() {
 
   return (
     <section>
-      <h1 style={{marginTop: 0}}>Character Tools</h1>
+      <h1 style={{marginTop: 0}}>Characters</h1>
       <p style={{marginTop: 0, marginBottom: '0.9rem', color: 'var(--color-text-secondary)'}}>
         {canUseSheets
-          ? 'Optional roster profiles and gameplay sheets live here after you open them from a World Bible character. Canonical names, aliases, and descriptive lore belong in World Bible.'
-          : 'Optional roster profiles live here after you open them from a World Bible character. Canonical names, aliases, and descriptive lore belong in World Bible.'}
+          ? 'Manage cast profiles here, with gameplay sheets available only for projects that explicitly use them. Canonical names, aliases, and descriptive lore belong in World Bible.'
+          : 'Manage cast profiles here. Canonical names, aliases, and descriptive lore belong in World Bible.'}
       </p>
       {feedback && (
         <p

@@ -18,6 +18,13 @@ import { CharacterStyleList } from '../components/CharacterStyleList';
 import type { CharacterStyle } from '../entityTypes';
 import { useNavigate } from 'react-router-dom';
 import { useAppStore } from '../store/appStore';
+import {WorldBibleRichTextField} from '../components/WorldBibleRichTextField';
+import {AIAssistant} from '../components/AIAssistant/AIAssistant';
+import {
+  convertPlainTextToRichHtml,
+  extractPlainTextFromRichText,
+  normalizeRichTextValue
+} from '../services/worldBible/worldBibleEntityHelpers';
 
 interface CharactersRouteProps {
   embedded?: boolean;
@@ -47,6 +54,18 @@ const DEFAULT_CHARACTER_FIELD_SCHEMA: EntityCategory['fieldSchema'] = [
   {key: 'role', label: 'Role', type: 'text'},
   {key: 'notes', label: 'Notes', type: 'textarea'}
 ];
+
+type CharacterAssistField = 'description' | 'notes';
+type CharacterCreationMode = 'idle' | 'manual';
+
+const appendAssistantText = (currentValue: string, assistantText: string): string => {
+  const addition = convertPlainTextToRichHtml(assistantText);
+  const current = normalizeRichTextValue(currentValue);
+  if (extractPlainTextFromRichText(current).trim().length === 0) {
+    return addition;
+  }
+  return `${current}${addition}`;
+};
 
 function CharactersRoute({
   embedded = false,
@@ -78,6 +97,9 @@ function CharactersRoute({
   const [role, setRole] = useState('');
   const [notes, setNotes] = useState('');
   const [characterStyleId, setCharacterStyleId] = useState<string>('');
+  const [creationMode, setCreationMode] = useState<CharacterCreationMode>('idle');
+  const [activeAssistField, setActiveAssistField] = useState<CharacterAssistField | null>(null);
+  const [queuedAssistantPrompt, setQueuedAssistantPrompt] = useState<string | null>(null);
 
   useEffect(() => {
     if (!activeProject) {
@@ -211,6 +233,7 @@ function CharactersRoute({
     }
 
     setEditingId(character.id);
+    setCreationMode('manual');
     setName(character.name);
     setDescription(character.description ?? '');
     setAge(character.fields.age ?? '');
@@ -226,12 +249,33 @@ function CharactersRoute({
 
   const resetForm = () => {
     setEditingId(null);
+    setCreationMode('idle');
     setName('');
     setDescription('');
     setAge('');
     setRole('');
     setNotes('');
     setCharacterStyleId('');
+    setActiveAssistField(null);
+    setQueuedAssistantPrompt(null);
+  };
+
+  const openFieldAssistant = (
+    field: CharacterAssistField,
+    prompt?: string
+  ) => {
+    setActiveAssistField(field);
+    setQueuedAssistantPrompt(prompt ?? null);
+  };
+
+  const handleInsertAssistantText = (text: string) => {
+    if (activeAssistField === 'description') {
+      setDescription((current) => appendAssistantText(current, text));
+      return;
+    }
+    if (activeAssistField === 'notes') {
+      setNotes((current) => appendAssistantText(current, text));
+    }
   };
 
   const handleSubmit = async (event: FormEvent) => {
@@ -266,12 +310,16 @@ function CharactersRoute({
       id,
       projectId: activeProject.id,
       name: name.trim(),
-      description: description.trim() || undefined,
+      description: extractPlainTextFromRichText(description).trim()
+        ? normalizeRichTextValue(description)
+        : undefined,
       characterStyleId: characterStyleId || undefined,
       fields: {
         age: age.trim() || undefined,
         role: role.trim() || undefined,
-        notes: notes.trim() || undefined,
+        notes: extractPlainTextFromRichText(notes).trim()
+          ? normalizeRichTextValue(notes)
+          : undefined,
       },
       createdAt: existing?.createdAt ?? now,
       updatedAt: now
@@ -446,8 +494,8 @@ function CharactersRoute({
       setFeedback({
         tone: 'success',
         message: existing
-          ? `"${entity.name}" already exists in Character Tools.`
-          : `"${entity.name}" is now available in Character Tools without changing its World Bible canon record.`
+          ? `"${entity.name}" already exists in Characters.`
+          : `"${entity.name}" is now available in Characters without changing its World Bible canon record.`
       });
 
       if (options?.autoCreateSheet) {
@@ -475,6 +523,7 @@ function CharactersRoute({
 
   const handleEdit = (character: Character) => {
     setEditingId(character.id);
+    setCreationMode('manual');
     setName(character.name);
     setDescription(character.description ?? '');
     setAge(character.fields.age ?? '');
@@ -534,13 +583,22 @@ function CharactersRoute({
   const editingCharacterHasCanonRecord = Boolean(
     editingId && characterLoreEntityIdByCharacterId.has(editingId)
   );
+  const assistantSelectedText =
+    activeAssistField === 'description'
+      ? extractPlainTextFromRichText(description)
+      : activeAssistField === 'notes'
+        ? extractPlainTextFromRichText(notes)
+        : '';
+  const assistantFieldLabel =
+    activeAssistField === 'description' ? 'Description' : activeAssistField === 'notes' ? 'Notes' : '';
+  const isFocusedCharacterTask = Boolean(editingId || creationMode === 'manual');
   const content = (
     <>
-      {!embedded && <h1>Character Tools</h1>}
+      {!embedded && <h1>Characters</h1>}
       <p style={{marginTop: 0, marginBottom: '1rem', color: 'var(--color-text-secondary)'}}>
         {canUseSheets
-          ? 'Use this area for roster-linked profiles, sheets, and supporting tools. Set canonical names, aliases, and merge decisions in World Bible.'
-          : 'Use this area for roster-linked profiles. Set canonical names, aliases, and merge decisions in World Bible.'}
+          ? 'Build story-facing cast profiles here, with optional sheets available for system-heavy projects. Keep canonical names, aliases, and merge decisions in World Bible.'
+          : 'Build story-facing cast profiles here. Keep canonical names, aliases, and merge decisions in World Bible.'}
       </p>
       {feedback && (
         <p
@@ -570,11 +628,11 @@ function CharactersRoute({
         >
           <div style={{display: 'flex', justifyContent: 'space-between', gap: '0.75rem', alignItems: 'flex-start'}}>
             <div>
-              <strong>Character Tools is optional here</strong>
+              <strong>Characters is optional here</strong>
               <p style={{margin: '0.4rem 0 0.75rem 0', fontSize: '0.9rem', color: 'var(--color-text-secondary)'}}>
                 These canon records already exist in World Bible. If you want to keep writing,
                 dismiss this and continue. If you want a tools profile here, click
-                <strong> Open Character Tools</strong>.
+                <strong> Open Characters</strong>.
                 {canUseSheets && (
                   <>
                     {' '}If you want a sheet immediately, click
@@ -617,7 +675,7 @@ function CharactersRoute({
                     onClick={() => void handleImportWorldEntity(entity)}
                     disabled={importingEntityId === entity.id}
                   >
-                    {importingEntityId === entity.id ? 'Opening...' : 'Open Character Tools'}
+                    {importingEntityId === entity.id ? 'Opening...' : 'Open Characters'}
                   </button>
                   {canUseSheets && (
                     <button
@@ -635,9 +693,83 @@ function CharactersRoute({
         </div>
       )}
 
-      <div style={{ display: 'flex', gap: '2rem', alignItems: 'flex-start' }}>
-        <form onSubmit={handleSubmit} style={{ maxWidth: 400 }}>
-          <h2>{editingId ? 'Edit Character Tools Profile' : 'New Character Tools Profile'}</h2>
+      {!isFocusedCharacterTask && (
+        <div
+          style={{
+            marginBottom: '1rem',
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+            gap: '1rem'
+          }}
+        >
+          <section
+            style={{
+              padding: '1rem',
+              border: '1px solid var(--color-border)',
+              borderRadius: '8px',
+              backgroundColor: 'var(--color-bg-secondary)'
+            }}
+          >
+            <h2 style={{margin: '0 0 0.35rem 0', fontSize: '1rem'}}>Manual Character</h2>
+            <p style={{margin: 0, color: 'var(--color-text-secondary)', fontSize: '0.9rem'}}>
+              Start with a name, profile, notes, and optional dialogue style.
+            </p>
+            <button
+              type='button'
+              onClick={() => setCreationMode('manual')}
+              style={{marginTop: '0.75rem'}}
+            >
+              Create Manually
+            </button>
+          </section>
+          <section
+            style={{
+              padding: '1rem',
+              border: '1px solid var(--color-border)',
+              borderRadius: '8px',
+              backgroundColor: 'var(--color-bg-secondary)'
+            }}
+          >
+            <h2 style={{margin: '0 0 0.35rem 0', fontSize: '1rem'}}>Import Character</h2>
+            <p style={{margin: 0, color: 'var(--color-text-secondary)', fontSize: '0.9rem'}}>
+              Review long-form sheets, pasted notes, or dossier drafts before saving.
+            </p>
+            <button
+              type='button'
+              disabled
+              title='Planned for a later recovery slice'
+              style={{marginTop: '0.75rem'}}
+            >
+              Import Or Paste
+            </button>
+          </section>
+          <section
+            style={{
+              padding: '1rem',
+              border: '1px solid var(--color-border)',
+              borderRadius: '8px',
+              backgroundColor: 'var(--color-bg-secondary)'
+            }}
+          >
+            <h2 style={{margin: '0 0 0.35rem 0', fontSize: '1rem'}}>AI-Assisted Draft</h2>
+            <p style={{margin: 0, color: 'var(--color-text-secondary)', fontSize: '0.9rem'}}>
+              Generate a draft from your premise, then edit and approve it yourself.
+            </p>
+            <button
+              type='button'
+              disabled
+              title='Planned for a later recovery slice'
+              style={{marginTop: '0.75rem'}}
+            >
+              Start With AI
+            </button>
+          </section>
+        </div>
+      )}
+
+      {isFocusedCharacterTask && (
+        <form onSubmit={handleSubmit} style={{ maxWidth: 980, minWidth: 0 }}>
+          <h2>{editingId ? 'Edit Character' : 'New Character'}</h2>
           <div style={{ marginBottom: '0.75rem' }}>
             <label>
               Name *<br />
@@ -653,15 +785,25 @@ function CharactersRoute({
           </div>
 
           <div style={{ marginBottom: '0.75rem' }}>
-            <label>
-              Description<br />
-              <textarea
-                value={description}
-                onChange={e => setDescription(e.target.value)}
-                rows={3}
-                style={{ width: '100%' }}
-              />
-            </label>
+            <WorldBibleRichTextField
+              label='Description'
+              value={description}
+              onChange={setDescription}
+            />
+            <div style={{display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginTop: '0.5rem'}}>
+              <button
+                type='button'
+                onClick={() => openFieldAssistant('description')}
+              >
+                AI Assist
+              </button>
+              <button
+                type='button'
+                onClick={() => openFieldAssistant('description', 'Suggest a richer character description that preserves the existing facts and voice.')}
+              >
+                Suggest Expansion
+              </button>
+            </div>
           </div>
 
           <div style={{ marginBottom: '0.75rem' }}>
@@ -708,36 +850,82 @@ function CharactersRoute({
           </div>
 
           <div style={{ marginBottom: '0.75rem' }}>
-            <label>
-              Notes<br />
-              <textarea
-                value={notes}
-                onChange={e => setNotes(e.target.value)}
-                rows={4}
-                style={{ width: '100%' }}
-              />
-            </label>
+            <WorldBibleRichTextField
+              label='Notes'
+              value={notes}
+              onChange={setNotes}
+            />
+            <div style={{display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginTop: '0.5rem'}}>
+              <button
+                type='button'
+                onClick={() => openFieldAssistant('notes')}
+              >
+                AI Assist
+              </button>
+              <button
+                type='button'
+                onClick={() => openFieldAssistant('notes', 'Find useful character-development gaps, contradictions, or follow-up questions from these notes.')}
+              >
+                Review Notes
+              </button>
+            </div>
           </div>
+
+          {activeAssistField && activeProject && (
+            <div
+              style={{
+                marginBottom: '1rem',
+                border: '1px solid var(--color-border)',
+                borderRadius: '8px',
+                padding: '0.75rem',
+                backgroundColor: 'var(--color-bg-secondary)'
+              }}
+            >
+              <div style={{display: 'flex', justifyContent: 'space-between', gap: '0.75rem', alignItems: 'center', marginBottom: '0.65rem'}}>
+                <strong>AI assist: {assistantFieldLabel}</strong>
+                <button type='button' onClick={() => setActiveAssistField(null)}>
+                  Close
+                </button>
+              </div>
+              <AIAssistant
+                projectId={activeProject.id}
+                aiConfig={projectSettings?.aiSettings}
+                projectMode={projectSettings?.projectMode}
+                context={{
+                  type: 'character',
+                  id: editingId ?? 'new-character',
+                  selectedText: assistantSelectedText
+                }}
+                onInsert={handleInsertAssistantText}
+                queuedPrompt={queuedAssistantPrompt}
+                onQueuedPromptConsumed={() => setQueuedAssistantPrompt(null)}
+                consultationModel={projectSettings?.aiSettings?.inspectorSettings?.lowCostModel}
+                consultationMaxTokens={
+                  projectSettings?.aiSettings?.inspectorSettings?.maxResponseTokens
+                }
+              />
+            </div>
+          )}
 
           <div style={{ display: 'flex', gap: '0.5rem' }}>
             <button type="submit">
               {editingId ? 'Save Changes' : 'Create Character'}
             </button>
-            {editingId && (
-              <button type="button" onClick={resetForm}>
-                Cancel
-              </button>
-            )}
+            <button type="button" onClick={resetForm}>
+              Cancel
+            </button>
           </div>
         </form>
+      )}
 
-        <div style={{ flex: 1 }}>
+      {!isFocusedCharacterTask && (
+        <div>
           <h2>Roster</h2>
           {characters.length === 0 && (
             <p>
               {canUseSheets
-                ? 'No characters yet. Create one on the left, then open Sheets to build stat blocks from your ruleset.'
-                : 'No characters yet. Create one on the left to keep a story-facing profile here.'}
+                ? 'No characters yet. Create one manually, then open Sheets if the project needs system stats.'
+                : 'No characters yet. Create one manually to keep a story-facing profile here.'}
             </p>
           )}
           <ul style={{ listStyle: 'none', padding: 0 }}>
@@ -756,7 +944,7 @@ function CharactersRoute({
                     <strong style={{ fontSize: '1.2em' }}>{character.name}</strong>
                     {character.description && (
                       <p style={{ margin: '0.5rem 0', color: 'var(--color-text-secondary)' }}>
-                        {character.description}
+                        {extractPlainTextFromRichText(character.description)}
                       </p>
                     )}
                     <div style={{ fontSize: '0.9em', color: 'var(--color-text-tertiary)' }}>
@@ -771,7 +959,7 @@ function CharactersRoute({
                     </div>
                     {character.fields.notes && (
                       <p style={{ margin: '0.5rem 0 0 0', fontSize: '0.9em', fontStyle: 'italic' }}>
-                        {character.fields.notes}
+                        {extractPlainTextFromRichText(character.fields.notes)}
                       </p>
                     )}
                   </div>
@@ -800,10 +988,10 @@ function CharactersRoute({
             })}
           </ul>
         </div>
-      </div>
+      )}
 
       {/* Character Styles section */}
-      {settings && (
+      {settings && !isFocusedCharacterTask && (
         <div style={{ marginTop: '3rem', paddingTop: '2rem', borderTop: '2px solid var(--color-border)' }}>
           <CharacterStyleList
             styles={settings.characterStyles}

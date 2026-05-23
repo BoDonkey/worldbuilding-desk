@@ -58,11 +58,22 @@ describe('Project mode guardrails', () => {
     cy.contains('nav a', 'Compendium').should('not.exist');
 
     cy.visit('/characters');
-    cy.contains('h1', 'Character Tools').should('be.visible');
+    cy.contains('h1', 'Characters').should('be.visible');
+    cy.contains('button', 'Create Manually').should('be.visible');
+    cy.contains('button', 'Create Manually').click();
     cy.contains('button', 'Sheets').should('not.exist');
     cy.contains('button', 'Export Roster + Sheets').should('not.exist');
     cy.contains('button', 'Import Roster + Sheets').should('not.exist');
     cy.contains('button', 'Open Sheet').should('not.exist');
+    cy.contains('span', 'Description')
+      .closest('[class*="container"]')
+      .find('.tiptap-editor')
+      .should('exist');
+    cy.contains('span', 'Notes')
+      .closest('[class*="container"]')
+      .find('.tiptap-editor')
+      .should('exist');
+    cy.get('form textarea').should('not.exist');
 
     cy.visit('/ruleset');
     cy.location('pathname').should('eq', '/workspace');

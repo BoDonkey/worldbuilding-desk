@@ -34,6 +34,19 @@ World Bible and review surfaces:
 - Avoid returning to large review cards with repeated action buttons unless there is a specific workflow reason.
 - Preserve focused review queues and minimal notification surfaces from `temp-update` where they are functionally stronger.
 
+Character authoring:
+
+- Default long-form character writing to TipTap-backed rich fields with AI assistance, not textarea-heavy forms.
+- Keep canonical names, aliases, and merge decisions in World Bible unless a project-specific workflow explicitly requires otherwise.
+- Keep character sheets and game-system state surfaces behind `getProjectCapabilities`; general fiction should show a single story-facing character area.
+
+Code optimization and refactors:
+
+- Do not optimize by broad route rewrites, file moves, or state ownership changes inside recovery slices.
+- Any shared abstraction must remove concrete duplication or encode an existing guardrail; otherwise keep the change local.
+- Add a focused automated contract before or with any optimization that changes navigation, project-mode capabilities, storage cleanup, editor ownership, or review/character UI shape.
+- Preserve current behavior first, then improve presentation. If a reference branch has better UI but weaker behavior, port the UI manually instead of cherry-picking the regression.
+
 Storage and deletion:
 
 - Project deletion must remove project-scoped IndexedDB records, per-project localStorage preferences, and per-project RAG/Shodh databases.
