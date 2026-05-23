@@ -188,9 +188,9 @@ function ProjectsRoute() {
     setDeletingProjectId(project.id);
     setFeedback(null);
     try {
-      // Delete ruleset if it exists
-      if (project.rulesetId) {
-        await deleteRuleset(project.rulesetId, project.id);
+      const ruleset = await getRulesetByProjectId(project.id);
+      if (ruleset) {
+        await deleteRuleset(ruleset.id, project.id);
       }
 
       await deleteProjectFromStore(project.id);
