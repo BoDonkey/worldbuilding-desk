@@ -60,20 +60,48 @@ Storage and deletion:
 
 ## Next Slices
 
-1. Add automated coverage for project-mode capabilities.
-2. Reconcile character UI against the intended shape:
-   - one character place,
-   - long-form description editor,
-   - alias resolution,
-   - no duplicate textarea-only forms.
+Completed recovery checkpoints on `codex/reconcile-temp-update-ui`:
+
+1. `f22a60b` - initial character UI recovery checkpoint.
+2. `cec3063` - planning surfaces recovery:
+   - Scratchpad modal and context drawer use shared TipTap editing.
+   - `/corkboard` is a first-class route, with navigation and command-palette access.
+   - Corkboard route and workspace modal share the current `useWorkspaceCorkboard` storage.
+   - Added Cypress coverage for `/corkboard` and updated Scratchpad coverage.
+3. `898f40d` - refined Characters UI shell:
+   - Characters now follows the friendlier `codex/review-completion-state` task-card/list visual shape.
+   - The current branch's richer behavior is preserved: project-mode gating, roster import/export, alias/canon handoff, character sheets behind capabilities, and TipTap-backed Description/Notes fields.
+   - The general-fiction Characters hub no longer shows a lonely tab row.
+
+Verified for the current checkpoint:
+
+- `pnpm --filter web exec tsc --noEmit`
+- `pnpm --filter web lint` passes with the existing unrelated warning in `apps/web/src/hooks/useWorkspaceDocuments.ts`.
+- `pnpm --filter web exec cypress run --spec cypress/e2e/project-mode-guardrails.cy.ts`
+- Browser smoke on `http://localhost:5173/characters`: hub layout and manual character form render coherently, and long-form fields are TipTap editors.
+
+Recommended next slices:
+
+1. Restore/import Character "Import Or Paste" deliberately:
+   - Keep it route-local and review-first.
+   - Reuse existing roster/import primitives where possible.
+   - Do not introduce textarea-first long-form editing; imported long-form content should land in TipTap-compatible rich text.
+   - Keep sheets/game-system data behind `getProjectCapabilities`.
+2. Restore Character AI-assisted draft deliberately:
+   - Author-invoked only.
+   - No background generation.
+   - Draft output must land in editable rich fields before save.
+   - Preserve provider/settings guardrails and failure messaging.
 3. Reconcile review UI density from the reference branch without taking degraded functionality.
-4. Add smoke tests for character and review shape once the UI is restored.
+4. Add smoke tests for character import, AI-assisted draft entry state, and review shape once those UI paths are restored.
 
 ## Next Session Handoff
 
 - Stay on `codex/reconcile-temp-update-ui` unless there is a deliberate branch decision.
+- The working tree was clean after commit `898f40d Refine characters UI shell`.
 - Do not wholesale merge `codex/review-completion-state`. It has some more polished UI, but not all of it is better, and its functionality is degraded compared with this branch.
 - Use `codex/review-completion-state` only as a visual/product reference. Port small pieces manually after checking them against current functionality and the guardrail contracts above.
-- Be especially careful with character UI: preserve the current functional base, then restore only the useful parts of the better UI shape.
+- Be especially careful with character import and AI generation: these should return as focused workflows, not as broad form-heavy surfaces.
+- The writing workspace from the current branch remains preferred; do not replace it with the `codex/review-completion-state` workspace.
 - The new targeted Cypress spec `apps/web/cypress/e2e/project-mode-guardrails.cy.ts` passes.
 - A broader Cypress run surfaced an existing `post-merge-smoke.cy.ts` failure around `Prompt Tools`; treat that as a known follow-up, not as a failure introduced by the project-mode guardrail slice.
