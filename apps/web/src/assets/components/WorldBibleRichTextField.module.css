@@ -44,12 +44,38 @@
 }
 
 .container :global(.control-group) {
-  top: 0.4rem;
+  position: static;
+  top: auto;
+  margin-bottom: 0.55rem;
+  border-radius: 10px;
+  padding: 0.42rem;
+  background: color-mix(in srgb, var(--color-bg-primary) 84%, var(--color-bg-secondary) 16%);
+}
+
+.container :global(.button-group) {
+  align-items: center;
+  gap: 0.32rem;
+}
+
+.container :global(.toolbar-select) {
+  width: auto;
+  min-width: 7.25rem;
+  max-width: 8.5rem;
+  padding: 0.32rem 0.55rem;
+  border-radius: 8px;
+  font-size: 0.78rem;
+}
+
+.container :global(.button-group button) {
+  padding: 0.32rem 0.55rem;
+  border-radius: 8px;
+  font-size: 0.78rem;
 }
 
 .container :global(.tiptap-editor) {
   min-height: 220px;
   box-shadow: none;
+  border-radius: 12px;
 }
 
 .container :global(.ProseMirror) {

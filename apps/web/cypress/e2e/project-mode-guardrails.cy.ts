@@ -61,6 +61,11 @@ describe('Project mode guardrails', () => {
     cy.location('pathname').should('eq', '/world-bible');
     cy.contains('h1', 'World Bible').should('be.visible');
     cy.contains('h2', 'Characters').should('be.visible');
+    cy.get('section[aria-label="Cast canon"]').find('button').should('have.length', 3);
+    cy.contains('h2', 'New Character').should('not.exist');
+    cy.contains('h2', 'Characters')
+      .parents('section[aria-label="Cast canon"]')
+      .should('be.visible');
     cy.contains('button', 'Create Manually').should('be.visible');
     cy.contains('button', 'Create Manually').click();
     cy.get('form').then(($form) => {

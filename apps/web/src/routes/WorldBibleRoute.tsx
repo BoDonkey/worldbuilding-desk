@@ -64,6 +64,7 @@ import {
 
 type WorldBibleViewMode = 'category' | 'review';
 type CharacterImportStep = 'idle' | 'input' | 'review';
+type CharacterAuthoringMode = 'idle' | 'manual' | 'import';
 
 const getPreferredImportField = (
   category: EntityCategory
@@ -348,6 +349,8 @@ function WorldBibleRoute() {
   const [activeImportPreviewId, setActiveImportPreviewId] = useState<string | null>(null);
   const [characterImportStep, setCharacterImportStep] =
     useState<CharacterImportStep>('idle');
+  const [characterAuthoringMode, setCharacterAuthoringMode] =
+    useState<CharacterAuthoringMode>('idle');
   const [pastedCharacterImportText, setPastedCharacterImportText] = useState('');
   const [characterImportDraft, setCharacterImportDraft] =
     useState<CharacterImportDraft | null>(null);
@@ -753,6 +756,9 @@ function WorldBibleRoute() {
     : null;
   const currentCharacterLabel =
     name.trim() || selectedEntity?.name || activeCategory?.name.slice(0, -1) || 'this record';
+  const isFocusedCharacterTask = activeCategoryIsCharacterLike
+    ? Boolean(editingId || characterAuthoringMode !== 'idle')
+    : true;
   const isCanonicalRenameDraft = Boolean(
     selectedEntity &&
       name.trim().length > 0 &&
@@ -817,6 +823,7 @@ function WorldBibleRoute() {
     setFieldValues({});
     setPendingReviewFocus(null);
     setIsSelectedSummaryExpanded(false);
+    setCharacterAuthoringMode('idle');
     setCharacterImportStep('idle');
     setCharacterImportDraft(null);
     setCharacterImportSections([]);
@@ -834,6 +841,7 @@ function WorldBibleRoute() {
     setEditingId(null);
     setName('');
     setFieldValues({});
+    setCharacterAuthoringMode('manual');
     setCharacterImportStep('idle');
     setCharacterImportDraft(null);
     setCharacterImportSections([]);
@@ -844,6 +852,7 @@ function WorldBibleRoute() {
       openCharacterCategory();
       setEditingId(null);
       setName(draft.detectedName);
+      setCharacterAuthoringMode('import');
       const customFieldValues = buildCharacterImportCustomFieldValues(
         sections,
         characterImportDestinationFields
@@ -957,6 +966,10 @@ function WorldBibleRoute() {
 
   const handleEdit = useCallback((entity: WorldEntity, focus: 'general' | 'aliases' = 'general') => {
     setEditingId(entity.id);
+    const entityCategory = categoryById.get(entity.categoryId);
+    setCharacterAuthoringMode(
+      entityCategory && isCharacterCategory(entityCategory) ? 'manual' : 'idle'
+    );
     setPendingReviewFocus(focus);
     setIsSelectedSummaryExpanded(false);
     setName(entity.name);
@@ -989,7 +1002,7 @@ function WorldBibleRoute() {
       ...normalizedFields,
       [ALTERNATIVE_NAMES_KEY]: mergedAlternativeNames
     });
-  }, [aliasMapByEntityId, categories]);
+  }, [aliasMapByEntityId, categories, categoryById]);
 
   const handleOpenReviewItem = useCallback(
     (entity: WorldEntity, focus: 'general' | 'aliases' = 'general') => {
@@ -1589,23 +1602,6 @@ function WorldBibleRoute() {
                 remain optional system tools.
               </p>
             </div>
-            <div className={styles.castHeaderActions}>
-              <button type='button' onClick={startNewCharacterCanonRecord}>
-                Manual Character
-              </button>
-              <button
-                type='button'
-                onClick={() => {
-                  openCharacterCategory();
-                  setCharacterImportStep('input');
-                }}
-              >
-                Import Or Paste
-              </button>
-              <button type='button' disabled title='Planned for the AI-assisted draft slice'>
-                AI-Assisted Draft
-              </button>
-            </div>
           </div>
           <div className={styles.castTaskGrid}>
             <div className={styles.castTask}>
@@ -1622,6 +1618,7 @@ function WorldBibleRoute() {
                 type='button'
                 onClick={() => {
                   openCharacterCategory();
+                  setCharacterAuthoringMode('import');
                   setCharacterImportStep('input');
                 }}
               >
@@ -1649,7 +1646,13 @@ function WorldBibleRoute() {
                 fill World Bible rich fields before you save.
               </p>
             </div>
-            <button type='button' onClick={() => setCharacterImportStep('idle')}>
+            <button
+              type='button'
+              onClick={() => {
+                setCharacterImportStep('idle');
+                setCharacterAuthoringMode('idle');
+              }}
+            >
               Close
             </button>
           </div>
@@ -1694,7 +1697,13 @@ function WorldBibleRoute() {
                 already populated; save only after reviewing the rich fields.
               </p>
             </div>
-            <button type='button' onClick={() => setCharacterImportStep('idle')}>
+            <button
+              type='button'
+              onClick={() => {
+                setCharacterImportStep('idle');
+                setCharacterAuthoringMode('idle');
+              }}
+            >
               Close
             </button>
           </div>
@@ -2341,6 +2350,7 @@ function WorldBibleRoute() {
             activeCategoryIsCharacterLike ? styles.castContent : ''
           }`}
         >
+          {(!activeCategoryIsCharacterLike || isFocusedCharacterTask || viewMode === 'review') && (
           <div className={styles.formSection}>
             {viewMode === 'review' && !editingId ? (
               <div className={styles.reviewFocusPanel}>
@@ -2881,7 +2891,7 @@ function WorldBibleRoute() {
                       : 'Rename to canonical + next'}
                   </button>
                 )}
-                {editingId && (
+                {(editingId || activeCategoryIsCharacterLike) && (
                   <button type='button' onClick={resetForm} disabled={isSubmittingEntity}>
                     Cancel
                   </button>
@@ -2933,8 +2943,9 @@ function WorldBibleRoute() {
               />
             )}
           </div>
+          )}
 
-          {(!activeCategoryIsCharacterLike || (!editingId && characterImportStep === 'idle')) && (
+          {(!activeCategoryIsCharacterLike || !isFocusedCharacterTask) && (
           <div
             className={`${styles.listSection} ${
               activeCategoryIsCharacterLike ? styles.castListSection : ''
