@@ -82,6 +82,13 @@ const CATEGORY_SUMMARY_PRIORITY: Record<string, string[]> = {
 const CHARACTER_CATEGORY_HINTS = ['character', 'characters', 'npc', 'person', 'people'];
 const CHARACTER_NOTES_FIELD = 'notes';
 
+const slugifyFieldKey = (value: string): string =>
+  value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '') || 'section';
+
 const isCharacterCategory = (category: EntityCategory): boolean => {
   const slug = category.slug.toLowerCase();
   const name = category.name.toLowerCase();
@@ -328,6 +335,7 @@ function WorldBibleRoute() {
     CharacterImportSectionDraft[]
   >([]);
   const [isImportingCharacterDoc, setIsImportingCharacterDoc] = useState(false);
+  const [newCharacterSectionName, setNewCharacterSectionName] = useState('');
   const [expandedSummaryEntityIds, setExpandedSummaryEntityIds] = useState<string[]>([]);
   const [isSelectedSummaryExpanded, setIsSelectedSummaryExpanded] = useState(false);
   const [ragService, setRagService] = useState<RAGProvider | null>(null);
@@ -773,6 +781,7 @@ function WorldBibleRoute() {
     setCharacterImportStep('idle');
     setCharacterImportDraft(null);
     setCharacterImportSections([]);
+    setNewCharacterSectionName('');
   };
 
   const openCharacterCategory = useCallback(() => {
@@ -857,6 +866,44 @@ function WorldBibleRoute() {
     );
     setCharacterImportSections(nextSections);
     applyCharacterImportDraftToFields(characterImportDraft, nextSections);
+  };
+
+  const handleAddCharacterSection = async () => {
+    if (!activeCategory || !activeCategoryIsCharacterLike) return;
+    const label = newCharacterSectionName.trim();
+    if (!label) {
+      setFeedback({tone: 'error', message: 'Name the character section first.'});
+      return;
+    }
+
+    const existingKeys = new Set(activeCategory.fieldSchema.map((field) => field.key));
+    const baseKey = slugifyFieldKey(label);
+    let key = baseKey;
+    let suffix = 2;
+    while (existingKeys.has(key)) {
+      key = `${baseKey}_${suffix}`;
+      suffix += 1;
+    }
+
+    const updatedCategory: EntityCategory = {
+      ...activeCategory,
+      fieldSchema: [
+        ...activeCategory.fieldSchema,
+        {key, label, type: 'textarea'}
+      ]
+    };
+    await saveCategory(updatedCategory);
+    setCategories((prev) =>
+      prev.map((category) =>
+        category.id === updatedCategory.id ? updatedCategory : category
+      )
+    );
+    setFieldValues((prev) => ({
+      ...prev,
+      [key]: normalizeRichTextValue('')
+    }));
+    setNewCharacterSectionName('');
+    setFeedback({tone: 'success', message: `Added "${label}" to character records.`});
   };
 
   const handleEdit = useCallback((entity: WorldEntity, focus: 'general' | 'aliases' = 'general') => {
@@ -2112,7 +2159,11 @@ function WorldBibleRoute() {
       )}
 
       {activeCategory && (
-        <div className={styles.content}>
+        <div
+          className={`${styles.content} ${
+            activeCategoryIsCharacterLike ? styles.castContent : ''
+          }`}
+        >
           <div className={styles.formSection}>
             {viewMode === 'review' && !editingId ? (
               <div className={styles.reviewFocusPanel}>
@@ -2331,6 +2382,32 @@ function WorldBibleRoute() {
                   </div>
                 )}
               </div>
+
+              {activeCategoryIsCharacterLike && (
+                <div className={styles.characterSectionBuilder}>
+                  <div>
+                    <strong>Add character section</strong>
+                    <p>
+                      Create a reusable rich section for this project, such as
+                      Education, Traumas, Addictions, Relationships, or Voice.
+                    </p>
+                  </div>
+                  <div className={styles.characterSectionControls}>
+                    <input
+                      type='text'
+                      value={newCharacterSectionName}
+                      onChange={(event) => setNewCharacterSectionName(event.target.value)}
+                      placeholder='Education, Traumas, Addictions...'
+                    />
+                    <button
+                      type='button'
+                      onClick={() => void handleAddCharacterSection()}
+                    >
+                      Add Section
+                    </button>
+                  </div>
+                </div>
+              )}
 
               {canonicalResolutionMatches.length > 0 && (
                 <div className={styles.matchPanel}>
@@ -2660,7 +2737,12 @@ function WorldBibleRoute() {
             )}
           </div>
 
-          <div className={styles.listSection}>
+          {(!activeCategoryIsCharacterLike || (!editingId && characterImportStep === 'idle')) && (
+          <div
+            className={`${styles.listSection} ${
+              activeCategoryIsCharacterLike ? styles.castListSection : ''
+            }`}
+          >
             <h2>{viewMode === 'review' ? 'Review Queue Items' : activeCategory.name}</h2>
             {viewMode === 'review' && (
               <p className={styles.reviewListSummary}>
@@ -2879,6 +2961,7 @@ function WorldBibleRoute() {
               })}
             </ul>
           </div>
+          )}
         </div>
       )}
     </section>

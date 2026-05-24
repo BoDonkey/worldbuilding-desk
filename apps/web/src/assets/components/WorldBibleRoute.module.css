@@ -646,6 +646,40 @@
   color: var(--color-text-primary);
 }
 
+.characterSectionBuilder {
+  display: grid;
+  gap: 0.75rem;
+  margin-bottom: 0.9rem;
+  padding: 0.85rem;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-bg-primary);
+}
+
+.characterSectionBuilder p {
+  margin: 0.3rem 0 0 0;
+  color: var(--color-text-secondary);
+  line-height: 1.5;
+  font-size: 0.9rem;
+}
+
+.characterSectionControls {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.5rem;
+}
+
+.characterSectionControls input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.55rem 0.65rem;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  background: var(--color-bg-primary);
+  color: var(--color-text-primary);
+  font: inherit;
+}
+
 @media (max-width: 900px) {
   .importDraftFields {
     grid-template-columns: 1fr;
@@ -687,9 +721,23 @@
   align-items: flex-start;
 }
 
+.castContent {
+  display: grid;
+  grid-template-columns: 1fr;
+}
+
 .formSection {
   max-width: 760px;
   flex: 1 1 620px;
+}
+
+.castContent .formSection {
+  width: 100%;
+  max-width: 980px;
+}
+
+.castListSection {
+  width: 100%;
 }
 
 .form {

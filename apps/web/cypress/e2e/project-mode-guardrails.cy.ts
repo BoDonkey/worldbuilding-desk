@@ -75,6 +75,14 @@ describe('Project mode guardrails', () => {
       .closest('[class*="container"]')
       .find('.tiptap-editor')
       .should('exist');
+    cy.contains('strong', 'Add character section').should('be.visible');
+    cy.get('input[placeholder="Education, Traumas, Addictions..."]').type('Education');
+    cy.contains('button', 'Add Section').click();
+    cy.contains('span', 'Education')
+      .closest('[class*="container"]')
+      .find('.tiptap-editor')
+      .should('exist');
+    cy.get('[class*="content"]').should('have.css', 'display', 'grid');
 
     cy.visit('/ruleset');
     cy.location('pathname').should('eq', '/workspace');
