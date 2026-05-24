@@ -14,6 +14,7 @@
 3. Commit each slice before starting the next one.
 4. Add a guardrail test or written UI contract for every regression class before broad UI work.
 5. Treat `codex/review-completion-state` as reference material for selected UI restoration, especially character and review surfaces.
+6. Track future copy, i18n, rounded-system-language, and accessibility work in `docs/ui-language-i18n-a11y-audit.md` rather than folding it into broad recovery rewrites.
 
 ## Guardrail Contracts
 
@@ -52,6 +53,7 @@ Code optimization and refactors:
 - Any shared abstraction must remove concrete duplication or encode an existing guardrail; otherwise keep the change local.
 - Add a focused automated contract before or with any optimization that changes navigation, project-mode capabilities, storage cleanup, editor ownership, or review/character UI shape.
 - Preserve current behavior first, then improve presentation. If a reference branch has better UI but weaker behavior, port the UI manually instead of cherry-picking the regression.
+- Use `docs/ui-language-i18n-a11y-audit.md` as the cross-cutting checklist when a recovery slice touches shared copy, visual language, focus behavior, dialog behavior, or accessibility semantics.
 
 Storage and deletion:
 
@@ -72,6 +74,19 @@ Completed recovery checkpoints on `codex/reconcile-temp-update-ui`:
    - Characters now follows the friendlier `codex/review-completion-state` task-card/list visual shape.
    - The current branch's richer behavior is preserved: project-mode gating, roster import/export, alias/canon handoff, character sheets behind capabilities, and TipTap-backed Description/Notes fields.
    - The general-fiction Characters hub no longer shows a lonely tab row.
+4. `19e45b5` - restored character import review flow:
+   - Character import/paste is route-local and review-first.
+   - Imported long-form content lands in TipTap-backed Description/Notes fields before save.
+5. `99662af` - cleared stale active project after deletion:
+   - Deleted final projects no longer leave an active project summary/workspace entry point behind.
+6. `a80609d` - moved general character authoring into World Bible:
+   - General-fiction `/characters` redirects to World Bible/Cast.
+   - Canonical names, aliases, rich Description/Notes, and import entry points live in World Bible.
+7. `a0b42cf` - refined World Bible cast authoring:
+   - Cast editing no longer shows a persistent character right rail.
+   - Authors can add reusable rich-text character sections such as Education, Traumas, or Addictions.
+8. `4329142` - documented the Cast UI parity target:
+   - `docs/character-cast-ui-parity-checklist.md` defines the target order, visual structure, import destinations, and guardrails for matching the reference character tab.
 
 Verified for the current checkpoint:
 

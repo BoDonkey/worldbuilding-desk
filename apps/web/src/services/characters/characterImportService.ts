@@ -1,6 +1,10 @@
 import {parseRtfToText} from '../../utils/importText';
 
-export type CharacterImportSectionAction = 'description' | 'notes' | 'ignore';
+export type CharacterImportSectionAction =
+  | 'description'
+  | 'notes'
+  | 'ignore'
+  | (string & {});
 
 export interface CharacterImportSectionDraft {
   id: string;

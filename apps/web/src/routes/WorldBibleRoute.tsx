@@ -81,6 +81,13 @@ const CATEGORY_SUMMARY_PRIORITY: Record<string, string[]> = {
 };
 const CHARACTER_CATEGORY_HINTS = ['character', 'characters', 'npc', 'person', 'people'];
 const CHARACTER_NOTES_FIELD = 'notes';
+const CHARACTER_IDENTITY_FIELD_KEYS = ['age', 'role'];
+const CHARACTER_AUTHORING_FIELD_KEYS = new Set([
+  'description',
+  CHARACTER_NOTES_FIELD,
+  ...CHARACTER_IDENTITY_FIELD_KEYS,
+  ALTERNATIVE_NAMES_KEY
+]);
 
 const slugifyFieldKey = (value: string): string =>
   value
@@ -307,6 +314,19 @@ const buildCharacterImportNotes = (
     .filter(Boolean);
   const residue = draft.unmatchedText.trim();
   return [...noteBlocks, residue ? `Source Notes\n${residue}` : ''].filter(Boolean).join('\n\n');
+};
+
+const buildCharacterImportCustomFieldValues = (
+  sections: CharacterImportSectionDraft[],
+  customFields: EntityCategory['fieldSchema']
+): Record<string, string> => {
+  const customFieldKeys = new Set(customFields.map((field) => field.key));
+  return sections.reduce<Record<string, string>>((values, section) => {
+    if (!customFieldKeys.has(section.action)) return values;
+    const existing = values[section.action];
+    values[section.action] = [existing, section.content.trim()].filter(Boolean).join('\n\n');
+    return values;
+  }, {});
 };
 
 function WorldBibleRoute() {
@@ -602,6 +622,25 @@ function WorldBibleRoute() {
       (hint) => slug.includes(hint) || categoryName.includes(hint)
     );
   }, [activeCategory?.name, activeCategory?.slug]);
+  const characterDescriptionField = activeCategoryIsCharacterLike
+    ? activeCategory?.fieldSchema.find((field) => field.key === 'description') ?? null
+    : null;
+  const characterNotesField = activeCategoryIsCharacterLike
+    ? activeCategory?.fieldSchema.find((field) => field.key === CHARACTER_NOTES_FIELD) ?? null
+    : null;
+  const characterIdentityFields = activeCategoryIsCharacterLike
+    ? CHARACTER_IDENTITY_FIELD_KEYS.map((key) =>
+        activeCategory?.fieldSchema.find((field) => field.key === key)
+      ).filter((field): field is EntityCategory['fieldSchema'][number] => Boolean(field))
+    : [];
+  const characterCustomFields = activeCategoryIsCharacterLike
+    ? activeCategory?.fieldSchema.filter(
+        (field) => !CHARACTER_AUTHORING_FIELD_KEYS.has(field.key)
+      ) ?? []
+    : [];
+  const characterImportDestinationFields = characterCustomFields.filter(
+    (field) => field.type === 'textarea'
+  );
   const categoryById = useMemo(
     () => new Map(categories.map((category) => [category.id, category])),
     [categories]
@@ -805,16 +844,26 @@ function WorldBibleRoute() {
       openCharacterCategory();
       setEditingId(null);
       setName(draft.detectedName);
+      const customFieldValues = buildCharacterImportCustomFieldValues(
+        sections,
+        characterImportDestinationFields
+      );
       setFieldValues({
         description: normalizeRichTextValue(buildCharacterImportDescription(draft, sections)),
         age: draft.detectedAge,
         role: draft.detectedRole,
         [CHARACTER_NOTES_FIELD]: normalizeRichTextValue(
           buildCharacterImportNotes(draft, sections)
+        ),
+        ...Object.fromEntries(
+          Object.entries(customFieldValues).map(([key, value]) => [
+            key,
+            normalizeRichTextValue(value)
+          ])
         )
       });
     },
-    [openCharacterCategory]
+    [characterImportDestinationFields, openCharacterCategory]
   );
 
   const reviewCharacterImportDraft = useCallback(
@@ -1223,6 +1272,129 @@ function WorldBibleRoute() {
     );
   };
 
+  const renderEntityField = (field: EntityCategory['fieldSchema'][number]) => (
+    <div key={field.key} className={styles.formGroup}>
+      {field.type === 'textarea' ? (
+        <WorldBibleRichTextField
+          label={field.label}
+          required={field.required}
+          value={fieldValues[field.key] || ''}
+          onChange={(value) =>
+            setFieldValues({
+              ...fieldValues,
+              [field.key]: value
+            })
+          }
+        />
+      ) : (
+        <label>
+          {field.label}
+          {field.required && ' *'}
+          {field.type === 'select' ? (
+            <select
+              value={fieldValues[field.key] || ''}
+              onChange={(e) =>
+                setFieldValues({
+                  ...fieldValues,
+                  [field.key]: e.target.value
+                })
+              }
+              required={field.required}
+            >
+              <option value=''>-- Select --</option>
+              {field.options?.map((opt) => (
+                <option key={opt} value={opt}>
+                  {opt}
+                </option>
+              ))}
+            </select>
+          ) : field.type === 'multiselect' ? (
+            <div className={styles.multiselectContainer}>
+              {field.options?.map((opt) => (
+                <label key={opt} className={styles.multiselectOption}>
+                  <input
+                    type='checkbox'
+                    checked={(fieldValues[field.key] || '')
+                      .split(',')
+                      .includes(opt)}
+                    onChange={(e) => {
+                      const current = (fieldValues[field.key] || '')
+                        .split(',')
+                        .filter(Boolean);
+                      const updated = e.target.checked
+                        ? [...current, opt]
+                        : current.filter((v) => v !== opt);
+                      setFieldValues({
+                        ...fieldValues,
+                        [field.key]: updated.join(',')
+                      });
+                    }}
+                  />
+                  <span>{opt}</span>
+                </label>
+              ))}
+            </div>
+          ) : field.type === 'checkbox' ? (
+            <input
+              type='checkbox'
+              checked={fieldValues[field.key] === 'true'}
+              onChange={(e) =>
+                setFieldValues({
+                  ...fieldValues,
+                  [field.key]: e.target.checked ? 'true' : 'false'
+                })
+              }
+            />
+          ) : field.type === 'dice' ? (
+            <input
+              type='text'
+              value={fieldValues[field.key] || ''}
+              onChange={(e) =>
+                setFieldValues({
+                  ...fieldValues,
+                  [field.key]: e.target.value
+                })
+              }
+              placeholder={
+                field.diceConfig?.allowMultipleDice
+                  ? 'e.g., 3d6, 2d8+1d4'
+                  : 'e.g., 1d20'
+              }
+              pattern={field.diceConfig?.allowMultipleDice ? '.*' : '1d\\d+'}
+              required={field.required}
+            />
+          ) : field.type === 'modifier' ? (
+            <input
+              type='text'
+              value={fieldValues[field.key] || ''}
+              onChange={(e) =>
+                setFieldValues({
+                  ...fieldValues,
+                  [field.key]: e.target.value
+                })
+              }
+              placeholder='e.g., +5, -2'
+              pattern='[+-]?\\d+'
+              required={field.required}
+            />
+          ) : (
+            <input
+              type={field.type}
+              value={fieldValues[field.key] || ''}
+              onChange={(e) =>
+                setFieldValues({
+                  ...fieldValues,
+                  [field.key]: e.target.value
+                })
+              }
+              required={field.required}
+            />
+          )}
+        </label>
+      )}
+    </div>
+  );
+
   if (!activeProject) {
     return (
       <section className={styles.noProject}>
@@ -1552,6 +1724,11 @@ function WorldBibleRoute() {
                     >
                       <option value='notes'>Notes</option>
                       <option value='description'>Description</option>
+                      {characterImportDestinationFields.map((field) => (
+                        <option key={field.key} value={field.key}>
+                          {field.label}
+                        </option>
+                      ))}
                       <option value='ignore'>Ignore</option>
                     </select>
                   </label>
@@ -2337,310 +2514,330 @@ function WorldBibleRoute() {
                 </div>
               )}
 
-              <div className={styles.formGroup}>
-                <label>
-                  Name
-                  <input
-                    type='text'
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    required
-                  />
-                </label>
-                {isCanonicalRenameDraft && selectedEntity && (
-                  <div className={styles.reviewHint}>
-                    Saving this rename will keep <strong>{selectedEntity.name}</strong> as an
-                    alternative name.
+              {activeCategoryIsCharacterLike ? (
+                <>
+                  <div className={styles.identityGrid}>
+                    <div className={styles.formGroup}>
+                      <label>
+                        Name
+                        <input
+                          type='text'
+                          value={name}
+                          onChange={(e) => setName(e.target.value)}
+                          required
+                        />
+                      </label>
+                      {isCanonicalRenameDraft && selectedEntity && (
+                        <div className={styles.reviewHint}>
+                          Saving this rename will keep <strong>{selectedEntity.name}</strong> as an
+                          alternative name.
+                        </div>
+                      )}
+                    </div>
+                    {characterIdentityFields.map(renderEntityField)}
                   </div>
-                )}
-              </div>
 
-              <div className={styles.formGroup}>
-                <label>
-                  Alternative names
-                  <textarea
-                    ref={aliasTextareaRef}
-                    value={fieldValues[ALTERNATIVE_NAMES_KEY] || ''}
-                    onChange={(e) =>
-                      setFieldValues({
-                        ...fieldValues,
-                        [ALTERNATIVE_NAMES_KEY]: e.target.value
-                      })
-                    }
-                    rows={3}
-                    placeholder={
-                      activeCategoryIsCharacterLike
-                        ? 'Comma-separated nicknames, titles, short forms, or alternate spellings'
-                        : 'Comma-separated aliases, titles, or shorthand references'
-                    }
-                  />
-                </label>
-                {activeCategoryIsCharacterLike && (
-                  <div className={styles.reviewHint}>
-                    Use alternative names for short forms like first-name references,
-                    titles, nicknames, and prior canonical forms after a rename.
-                  </div>
-                )}
-              </div>
+                  {characterDescriptionField && renderEntityField(characterDescriptionField)}
 
-              {activeCategoryIsCharacterLike && (
-                <div className={styles.characterSectionBuilder}>
-                  <div>
-                    <strong>Add character section</strong>
-                    <p>
-                      Create a reusable rich section for this project, such as
-                      Education, Traumas, Addictions, Relationships, or Voice.
-                    </p>
-                  </div>
-                  <div className={styles.characterSectionControls}>
-                    <input
-                      type='text'
-                      value={newCharacterSectionName}
-                      onChange={(event) => setNewCharacterSectionName(event.target.value)}
-                      placeholder='Education, Traumas, Addictions...'
-                    />
-                    <button
-                      type='button'
-                      onClick={() => void handleAddCharacterSection()}
-                    >
-                      Add Section
+                  <div className={styles.fieldActionRow} aria-label='Description actions'>
+                    <button type='button' disabled title='Planned for the AI-assisted draft slice'>
+                      AI Assist
+                    </button>
+                    <button type='button' disabled title='Planned for the AI-assisted draft slice'>
+                      Suggest Expansion
                     </button>
                   </div>
-                </div>
-              )}
 
-              {canonicalResolutionMatches.length > 0 && (
-                <div className={styles.matchPanel}>
-                  <strong>
-                    {activeCategoryIsCharacterLike
-                      ? 'Possible canonical character overlaps'
-                      : 'Possible duplicate or alias matches'}
-                  </strong>
-                  <p>
-                    {activeCategoryIsCharacterLike
-                      ? `This character draft overlaps with existing canon. Choose whether ${currentCharacterLabel} should stay canonical, another matching record should stay canonical, both should remain separate people, or the suggestion should be ignored.`
-                      : 'This draft overlaps with existing canon. Choose one action for each match: merge duplicates, convert this record into an alias, keep both records as separate canon, or ignore a noisy suggestion.'}
-                  </p>
-                  <div className={styles.matchList}>
-                    {canonicalResolutionMatches.slice(0, 4).map((match) => (
-                      <div key={match.entity.id} className={styles.matchCard}>
-                        <div>
-                          <strong>{match.entity.name}</strong>
-                          <div className={styles.matchReasons}>
-                            {match.reasons.join(' · ')}
-                          </div>
-                          <div className={styles.reviewHint}>
-                            {activeCategoryIsCharacterLike
-                              ? `Keep ${currentCharacterLabel} canonical to preserve this record, or keep ${match.entity.name} canonical to make ${currentCharacterLabel} an alias.`
-                              : `Recommended: ${getReviewResolutionLabel(match.recommendedResolution)}.`}
-                          </div>
-                        </div>
-                        <div className={styles.reviewToolbarActions}>
-                          <button
-                            type='button'
-                            onClick={() => handleEdit(match.entity)}
-                          >
-                            {activeCategoryIsCharacterLike
-                              ? 'Open other canon record'
-                              : 'Open other record'}
-                          </button>
-                          <button
-                            type='button'
-                            onClick={() => handleEdit(match.entity, 'aliases')}
-                          >
-                            {activeCategoryIsCharacterLike ? 'Open other aliases' : 'Open aliases'}
-                          </button>
-                          {editingId && match.matchKey && (
-                            <button
-                              type='button'
-                              onClick={() => void handleKeepSeparateMatch(match.entity)}
-                            >
-                              {activeCategoryIsCharacterLike
-                                ? 'Keep separate characters'
-                                : 'Keep both records'}
-                            </button>
-                          )}
-                          {editingId && match.matchKey && (
-                            <button
-                              type='button'
-                              onClick={() => void handleIgnoreEntityMatch(match.entity)}
-                            >
-                              Ignore this suggestion
-                            </button>
-                          )}
-                          {editingId && (
-                            <button
-                              type='button'
-                              onClick={() => void handleMergeMatchIntoCurrentEntity(match.entity)}
-                              disabled={mergingEntityTargetId === match.entity.id}
-                            >
-                              {mergingEntityTargetId === match.entity.id
-                                ? 'Merging...'
-                                : activeCategoryIsCharacterLike
-                                  ? `Keep ${currentCharacterLabel} canonical`
-                                  : 'Merge match into this record'}
-                            </button>
-                          )}
-                          {editingId && (
-                            <button
-                              type='button'
-                              onClick={() => void handleMergeEntityIntoMatch(match.entity)}
-                              disabled={mergingEntityTargetId === match.entity.id}
-                            >
-                              {mergingEntityTargetId === match.entity.id
-                                ? 'Merging...'
-                                : activeCategoryIsCharacterLike
-                                  ? `Keep ${match.entity.name} canonical`
-                                  : 'Merge this record into match'}
-                            </button>
-                          )}
-                          {editingId && (
-                            <button
-                              type='button'
-                              onClick={() => void handleConvertEntityToAlias(match.entity)}
-                              disabled={
-                                aliasingEntityTargetId === match.entity.id ||
-                                mergingEntityTargetId === match.entity.id
-                              }
-                            >
-                              {aliasingEntityTargetId === match.entity.id
-                                ? 'Converting...'
-                                : activeCategoryIsCharacterLike
-                                  ? `Make ${currentCharacterLabel} an alias`
-                                  : 'Convert this record into an alias'}
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    ))}
+                  {characterNotesField && renderEntityField(characterNotesField)}
+
+                  <div className={styles.fieldActionRow} aria-label='Notes actions'>
+                    <button type='button' disabled title='Planned for the AI-assisted draft slice'>
+                      AI Assist
+                    </button>
+                    <button type='button' disabled title='Planned for review-note polish'>
+                      Review Notes
+                    </button>
                   </div>
-                </div>
-              )}
 
-              {activeCategory.fieldSchema.map((field) => (
-                <div key={field.key} className={styles.formGroup}>
-                  {field.type === 'textarea' ? (
-                    <WorldBibleRichTextField
-                      label={field.label}
-                      required={field.required}
-                      value={fieldValues[field.key] || ''}
-                      onChange={(value) =>
-                        setFieldValues({
-                          ...fieldValues,
-                          [field.key]: value
-                        })
-                      }
-                    />
-                  ) : (
+                  {characterCustomFields.map(renderEntityField)}
+
+                  <div className={styles.characterSectionBuilder}>
+                    <div>
+                      <strong>Add character section</strong>
+                      <p>
+                        Create a reusable rich section for this project, such as
+                        Education, Traumas, Addictions, Relationships, or Voice.
+                      </p>
+                    </div>
+                    <div className={styles.characterSectionControls}>
+                      <input
+                        type='text'
+                        value={newCharacterSectionName}
+                        onChange={(event) => setNewCharacterSectionName(event.target.value)}
+                        placeholder='Education, Traumas, Addictions...'
+                      />
+                      <button
+                        type='button'
+                        onClick={() => void handleAddCharacterSection()}
+                      >
+                        Add Section
+                      </button>
+                    </div>
+                  </div>
+
+                  <section className={styles.canonSection} aria-label='Canonical names and aliases'>
+                    <div className={styles.canonSectionHeader}>
+                      <strong>Canon and aliases</strong>
+                      <span>Secondary controls for names, overlap review, and merge decisions.</span>
+                    </div>
+                    <div className={styles.formGroup}>
+                      <label>
+                        Alternative names
+                        <textarea
+                          ref={aliasTextareaRef}
+                          value={fieldValues[ALTERNATIVE_NAMES_KEY] || ''}
+                          onChange={(e) =>
+                            setFieldValues({
+                              ...fieldValues,
+                              [ALTERNATIVE_NAMES_KEY]: e.target.value
+                            })
+                          }
+                          rows={3}
+                          placeholder='Comma-separated nicknames, titles, short forms, or alternate spellings'
+                        />
+                      </label>
+                      <div className={styles.reviewHint}>
+                        Use alternative names for short forms like first-name references,
+                        titles, nicknames, and prior canonical forms after a rename.
+                      </div>
+                    </div>
+
+                    {canonicalResolutionMatches.length > 0 && (
+                      <div className={styles.matchPanel}>
+                        <strong>Possible canonical character overlaps</strong>
+                        <p>
+                          This character draft overlaps with existing canon. Choose whether
+                          {' '}{currentCharacterLabel} should stay canonical, another matching
+                          record should stay canonical, both should remain separate people, or
+                          the suggestion should be ignored.
+                        </p>
+                        <div className={styles.matchList}>
+                          {canonicalResolutionMatches.slice(0, 4).map((match) => (
+                            <div key={match.entity.id} className={styles.matchCard}>
+                              <div>
+                                <strong>{match.entity.name}</strong>
+                                <div className={styles.matchReasons}>
+                                  {match.reasons.join(' · ')}
+                                </div>
+                                <div className={styles.reviewHint}>
+                                  Keep {currentCharacterLabel} canonical to preserve this
+                                  record, or keep {match.entity.name} canonical to make
+                                  {' '}{currentCharacterLabel} an alias.
+                                </div>
+                              </div>
+                              <div className={styles.reviewToolbarActions}>
+                                <button
+                                  type='button'
+                                  onClick={() => handleEdit(match.entity)}
+                                >
+                                  Open other canon record
+                                </button>
+                                <button
+                                  type='button'
+                                  onClick={() => handleEdit(match.entity, 'aliases')}
+                                >
+                                  Open other aliases
+                                </button>
+                                {editingId && match.matchKey && (
+                                  <button
+                                    type='button'
+                                    onClick={() => void handleKeepSeparateMatch(match.entity)}
+                                  >
+                                    Keep separate characters
+                                  </button>
+                                )}
+                                {editingId && match.matchKey && (
+                                  <button
+                                    type='button'
+                                    onClick={() => void handleIgnoreEntityMatch(match.entity)}
+                                  >
+                                    Ignore this suggestion
+                                  </button>
+                                )}
+                                {editingId && (
+                                  <button
+                                    type='button'
+                                    onClick={() => void handleMergeMatchIntoCurrentEntity(match.entity)}
+                                    disabled={mergingEntityTargetId === match.entity.id}
+                                  >
+                                    {mergingEntityTargetId === match.entity.id
+                                      ? 'Merging...'
+                                      : `Keep ${currentCharacterLabel} canonical`}
+                                  </button>
+                                )}
+                                {editingId && (
+                                  <button
+                                    type='button'
+                                    onClick={() => void handleMergeEntityIntoMatch(match.entity)}
+                                    disabled={mergingEntityTargetId === match.entity.id}
+                                  >
+                                    {mergingEntityTargetId === match.entity.id
+                                      ? 'Merging...'
+                                      : `Keep ${match.entity.name} canonical`}
+                                  </button>
+                                )}
+                                {editingId && (
+                                  <button
+                                    type='button'
+                                    onClick={() => void handleConvertEntityToAlias(match.entity)}
+                                    disabled={
+                                      aliasingEntityTargetId === match.entity.id ||
+                                      mergingEntityTargetId === match.entity.id
+                                    }
+                                  >
+                                    {aliasingEntityTargetId === match.entity.id
+                                      ? 'Converting...'
+                                      : `Make ${currentCharacterLabel} an alias`}
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </section>
+                </>
+              ) : (
+                <>
+                  <div className={styles.formGroup}>
                     <label>
-                      {field.label}
-                      {field.required && ' *'}
-                      {field.type === 'select' ? (
-                      <select
-                        value={fieldValues[field.key] || ''}
+                      Name
+                      <input
+                        type='text'
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                        required
+                      />
+                    </label>
+                    {isCanonicalRenameDraft && selectedEntity && (
+                      <div className={styles.reviewHint}>
+                        Saving this rename will keep <strong>{selectedEntity.name}</strong> as an
+                        alternative name.
+                      </div>
+                    )}
+                  </div>
+
+                  <div className={styles.formGroup}>
+                    <label>
+                      Alternative names
+                      <textarea
+                        ref={aliasTextareaRef}
+                        value={fieldValues[ALTERNATIVE_NAMES_KEY] || ''}
                         onChange={(e) =>
                           setFieldValues({
                             ...fieldValues,
-                            [field.key]: e.target.value
+                            [ALTERNATIVE_NAMES_KEY]: e.target.value
                           })
                         }
-                        required={field.required}
-                      >
-                        <option value=''>-- Select --</option>
-                        {field.options?.map((opt) => (
-                          <option key={opt} value={opt}>
-                            {opt}
-                          </option>
-                        ))}
-                      </select>
-                    ) : field.type === 'multiselect' ? (
-                      <div className={styles.multiselectContainer}>
-                        {field.options?.map((opt) => (
-                          <label key={opt} className={styles.multiselectOption}>
-                            <input
-                              type='checkbox'
-                              checked={(fieldValues[field.key] || '')
-                                .split(',')
-                                .includes(opt)}
-                              onChange={(e) => {
-                                const current = (fieldValues[field.key] || '')
-                                  .split(',')
-                                  .filter(Boolean);
-                                const updated = e.target.checked
-                                  ? [...current, opt]
-                                  : current.filter((v) => v !== opt);
-                                setFieldValues({
-                                  ...fieldValues,
-                                  [field.key]: updated.join(',')
-                                });
-                              }}
-                            />
-                            <span>{opt}</span>
-                          </label>
+                        rows={3}
+                        placeholder='Comma-separated aliases, titles, or shorthand references'
+                      />
+                    </label>
+                  </div>
+
+                  {canonicalResolutionMatches.length > 0 && (
+                    <div className={styles.matchPanel}>
+                      <strong>Possible duplicate or alias matches</strong>
+                      <p>
+                        This draft overlaps with existing canon. Choose one action for
+                        each match: merge duplicates, convert this record into an alias,
+                        keep both records as separate canon, or ignore a noisy suggestion.
+                      </p>
+                      <div className={styles.matchList}>
+                        {canonicalResolutionMatches.slice(0, 4).map((match) => (
+                          <div key={match.entity.id} className={styles.matchCard}>
+                            <div>
+                              <strong>{match.entity.name}</strong>
+                              <div className={styles.matchReasons}>
+                                {match.reasons.join(' · ')}
+                              </div>
+                              <div className={styles.reviewHint}>
+                                Recommended: {getReviewResolutionLabel(match.recommendedResolution)}.
+                              </div>
+                            </div>
+                            <div className={styles.reviewToolbarActions}>
+                              <button type='button' onClick={() => handleEdit(match.entity)}>
+                                Open other record
+                              </button>
+                              <button
+                                type='button'
+                                onClick={() => handleEdit(match.entity, 'aliases')}
+                              >
+                                Open aliases
+                              </button>
+                              {editingId && match.matchKey && (
+                                <button
+                                  type='button'
+                                  onClick={() => void handleKeepSeparateMatch(match.entity)}
+                                >
+                                  Keep both records
+                                </button>
+                              )}
+                              {editingId && match.matchKey && (
+                                <button
+                                  type='button'
+                                  onClick={() => void handleIgnoreEntityMatch(match.entity)}
+                                >
+                                  Ignore this suggestion
+                                </button>
+                              )}
+                              {editingId && (
+                                <button
+                                  type='button'
+                                  onClick={() => void handleMergeMatchIntoCurrentEntity(match.entity)}
+                                  disabled={mergingEntityTargetId === match.entity.id}
+                                >
+                                  {mergingEntityTargetId === match.entity.id
+                                    ? 'Merging...'
+                                    : 'Merge match into this record'}
+                                </button>
+                              )}
+                              {editingId && (
+                                <button
+                                  type='button'
+                                  onClick={() => void handleMergeEntityIntoMatch(match.entity)}
+                                  disabled={mergingEntityTargetId === match.entity.id}
+                                >
+                                  {mergingEntityTargetId === match.entity.id
+                                    ? 'Merging...'
+                                    : 'Merge this record into match'}
+                                </button>
+                              )}
+                              {editingId && (
+                                <button
+                                  type='button'
+                                  onClick={() => void handleConvertEntityToAlias(match.entity)}
+                                  disabled={
+                                    aliasingEntityTargetId === match.entity.id ||
+                                    mergingEntityTargetId === match.entity.id
+                                  }
+                                >
+                                  {aliasingEntityTargetId === match.entity.id
+                                    ? 'Converting...'
+                                    : 'Convert this record into an alias'}
+                                </button>
+                              )}
+                            </div>
+                          </div>
                         ))}
                       </div>
-                    ) : field.type === 'checkbox' ? (
-                      <input
-                        type='checkbox'
-                        checked={fieldValues[field.key] === 'true'}
-                        onChange={(e) =>
-                          setFieldValues({
-                            ...fieldValues,
-                            [field.key]: e.target.checked ? 'true' : 'false'
-                          })
-                        }
-                      />
-                    ) : field.type === 'dice' ? (
-                      <input
-                        type='text'
-                        value={fieldValues[field.key] || ''}
-                        onChange={(e) =>
-                          setFieldValues({
-                            ...fieldValues,
-                            [field.key]: e.target.value
-                          })
-                        }
-                        placeholder={
-                          field.diceConfig?.allowMultipleDice
-                            ? 'e.g., 3d6, 2d8+1d4'
-                            : 'e.g., 1d20'
-                        }
-                        pattern={
-                          field.diceConfig?.allowMultipleDice ? '.*' : '1d\\d+'
-                        }
-                        required={field.required}
-                      />
-                    ) : field.type === 'modifier' ? (
-                      <input
-                        type='text'
-                        value={fieldValues[field.key] || ''}
-                        onChange={(e) =>
-                          setFieldValues({
-                            ...fieldValues,
-                            [field.key]: e.target.value
-                          })
-                        }
-                        placeholder='e.g., +5, -2'
-                        pattern='[+-]?\\d+'
-                        required={field.required}
-                      />
-                    ) : (
-                      <input
-                        type={field.type}
-                        value={fieldValues[field.key] || ''}
-                        onChange={(e) =>
-                          setFieldValues({
-                            ...fieldValues,
-                            [field.key]: e.target.value
-                          })
-                        }
-                        required={field.required}
-                      />
-                      )}
-                    </label>
+                    </div>
                   )}
-                </div>
-              ))}
+
+                  {activeCategory.fieldSchema.map(renderEntityField)}
+                </>
+              )}
 
               <div className={styles.formActions}>
                 <button

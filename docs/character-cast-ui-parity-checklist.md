@@ -96,6 +96,7 @@ For the general-fiction Cast editor, fields should appear in this order:
 - `/characters` should continue routing general-fiction projects to World Bible/Cast.
 - Character sheets remain available only behind project capabilities.
 - Any UI reordering must preserve rich text persistence, alias handling, import behavior, and review queue behavior.
+- Fresh copy, rounded-system-language, i18n readiness, and accessibility work should follow `docs/ui-language-i18n-a11y-audit.md`.
 
 ## Implementation Slices
 
