@@ -99,17 +99,65 @@
 }
 
 .softInput,
-.softSelect {
+.softSelect,
+.softTextarea {
   box-sizing: border-box;
   width: 100%;
   max-width: 100%;
-  min-height: 2.6rem;
   border-radius: 6px;
   border: 1px solid var(--color-border);
   background: var(--color-bg-primary);
   color: var(--color-text-primary);
   padding: 0.6rem 0.7rem;
   font: inherit;
+}
+
+.softInput,
+.softSelect {
+  min-height: 2.6rem;
+}
+
+.softTextarea {
+  min-height: 12rem;
+  resize: vertical;
+  line-height: 1.5;
+}
+
+.fileButton {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.35rem;
+  padding: 0.45rem 0.8rem;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  background: var(--color-bg-primary);
+  color: var(--color-text-primary);
+  cursor: pointer;
+}
+
+.fileButton input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.importReviewList {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.importReviewCard {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(160px, 220px);
+  gap: 0.75rem;
+  align-items: start;
+  padding: 0.85rem;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-bg-primary);
 }
 
 .richField {
@@ -191,5 +239,9 @@
 @media (max-width: 900px) {
   .listCardHeader {
     display: grid;
+  }
+
+  .importReviewCard {
+    grid-template-columns: 1fr;
   }
 }

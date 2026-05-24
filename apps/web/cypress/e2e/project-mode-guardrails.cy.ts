@@ -80,6 +80,40 @@ describe('Project mode guardrails', () => {
     cy.contains('h1', 'Writing Workspace').should('be.visible');
   });
 
+  it('imports pasted character notes into rich review fields for general fiction', () => {
+    cy.visit('/characters');
+    cy.contains('button', 'Import Or Paste').should('be.visible').click();
+    cy.contains('h2', 'Import Character').should('be.visible');
+    cy.get('textarea').type(
+      [
+        'Name: Mira Voss',
+        'Age: 34',
+        'Role: Cartographer',
+        '',
+        'Background:',
+        'Mira mapped the undercity after the lantern guild vanished.',
+        '',
+        'Voice:',
+        'Dry, precise, and fond of unfinished jokes.'
+      ].join('\n')
+    );
+    cy.contains('button', 'Review Paste').click();
+
+    cy.contains('h2', 'Review Import').should('be.visible');
+    cy.get('input[value="Mira Voss"]').should('be.visible');
+    cy.contains('button', 'Edit Rich Fields').click();
+    cy.contains('h2', 'New Character').should('be.visible');
+    cy.contains('span', 'Description')
+      .closest('[class*="container"]')
+      .find('.tiptap-editor')
+      .should('contain.text', 'Mira mapped the undercity');
+    cy.contains('span', 'Notes')
+      .closest('[class*="container"]')
+      .find('.tiptap-editor')
+      .should('contain.text', 'Dry, precise');
+    cy.get('form textarea').should('not.exist');
+  });
+
   it('omits ruleset and compendium commands for general fiction', () => {
     cy.visit('/workspace');
     cy.get('body').type('{ctrl}k');

@@ -1,6 +1,6 @@
 // apps/web/src/routes/CharactersRoute.tsx - NEW FILE
 import { useEffect, useMemo, useState } from 'react';
-import type { FormEvent } from 'react';
+import type { ChangeEvent, FormEvent } from 'react';
 import type {
   Character,
   EntityCategory,
@@ -25,6 +25,12 @@ import {
   extractPlainTextFromRichText,
   normalizeRichTextValue
 } from '../services/worldBible/worldBibleEntityHelpers';
+import {
+  parseCharacterImportText,
+  readCharacterImportFile,
+  type CharacterImportDraft,
+  type CharacterImportSectionDraft
+} from '../services/characters/characterImportService';
 import styles from '../styles/CharactersRoute.module.css';
 
 interface CharactersRouteProps {
@@ -57,7 +63,7 @@ const DEFAULT_CHARACTER_FIELD_SCHEMA: EntityCategory['fieldSchema'] = [
 ];
 
 type CharacterAssistField = 'description' | 'notes';
-type CharacterCreationMode = 'idle' | 'manual';
+type CharacterCreationMode = 'idle' | 'manual' | 'import';
 
 const appendAssistantText = (currentValue: string, assistantText: string): string => {
   const addition = convertPlainTextToRichHtml(assistantText);
@@ -66,6 +72,29 @@ const appendAssistantText = (currentValue: string, assistantText: string): strin
     return addition;
   }
   return `${current}${addition}`;
+};
+
+const buildImportNotes = (
+  draft: CharacterImportDraft,
+  sections: CharacterImportSectionDraft[]
+): string => {
+  const noteBlocks = sections
+    .filter((section) => section.action === 'notes')
+    .map((section) => `${section.title}\n${section.content.trim()}`)
+    .filter(Boolean);
+  const residue = draft.unmatchedText.trim();
+  return [...noteBlocks, residue ? `Source Notes\n${residue}` : ''].filter(Boolean).join('\n\n');
+};
+
+const buildImportDescription = (
+  draft: CharacterImportDraft,
+  sections: CharacterImportSectionDraft[]
+): string => {
+  const descriptionBlocks = sections
+    .filter((section) => section.action === 'description')
+    .map((section) => section.content.trim())
+    .filter(Boolean);
+  return descriptionBlocks.join('\n\n') || draft.detectedDescription;
 };
 
 function CharactersRoute({
@@ -101,6 +130,10 @@ function CharactersRoute({
   const [creationMode, setCreationMode] = useState<CharacterCreationMode>('idle');
   const [activeAssistField, setActiveAssistField] = useState<CharacterAssistField | null>(null);
   const [queuedAssistantPrompt, setQueuedAssistantPrompt] = useState<string | null>(null);
+  const [pastedImportText, setPastedImportText] = useState('');
+  const [importDraft, setImportDraft] = useState<CharacterImportDraft | null>(null);
+  const [importSections, setImportSections] = useState<CharacterImportSectionDraft[]>([]);
+  const [isImportingCharacterDoc, setIsImportingCharacterDoc] = useState(false);
 
   useEffect(() => {
     if (!activeProject) {
@@ -259,6 +292,10 @@ function CharactersRoute({
     setCharacterStyleId('');
     setActiveAssistField(null);
     setQueuedAssistantPrompt(null);
+    setPastedImportText('');
+    setImportDraft(null);
+    setImportSections([]);
+    setIsImportingCharacterDoc(false);
   };
 
   const openFieldAssistant = (
@@ -277,6 +314,65 @@ function CharactersRoute({
     if (activeAssistField === 'notes') {
       setNotes((current) => appendAssistantText(current, text));
     }
+  };
+
+  const reviewImportDraft = (draft: CharacterImportDraft) => {
+    setImportDraft(draft);
+    setImportSections(draft.sections);
+    setName(draft.detectedName);
+    setAge(draft.detectedAge);
+    setRole(draft.detectedRole);
+    setDescription(convertPlainTextToRichHtml(buildImportDescription(draft, draft.sections)));
+    setNotes(convertPlainTextToRichHtml(buildImportNotes(draft, draft.sections)));
+    setCreationMode('import');
+    setFeedback(null);
+  };
+
+  const handleReviewPastedImport = () => {
+    const source = pastedImportText.trim();
+    if (!source) {
+      setFeedback({tone: 'error', message: 'Paste character notes before reviewing.'});
+      return;
+    }
+    reviewImportDraft(parseCharacterImportText(source));
+  };
+
+  const handleImportFile = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+    setIsImportingCharacterDoc(true);
+    setFeedback(null);
+    try {
+      const source = await readCharacterImportFile(file);
+      reviewImportDraft(parseCharacterImportText(source, file.name));
+      setPastedImportText(source);
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'Unable to import this character document.';
+      setFeedback({tone: 'error', message});
+    } finally {
+      setIsImportingCharacterDoc(false);
+    }
+  };
+
+  const updateImportSectionAction = (
+    sectionId: string,
+    action: CharacterImportSectionDraft['action']
+  ) => {
+    if (!importDraft) return;
+    const nextSections = importSections.map((section) =>
+      section.id === sectionId ? {...section, action} : section
+    );
+    setImportSections(nextSections);
+    setDescription(convertPlainTextToRichHtml(buildImportDescription(importDraft, nextSections)));
+    setNotes(convertPlainTextToRichHtml(buildImportNotes(importDraft, nextSections)));
+  };
+
+  const startManualFromImportDraft = () => {
+    setCreationMode('manual');
+    setImportDraft(null);
+    setImportSections([]);
   };
 
   const handleSubmit = async (event: FormEvent) => {
@@ -695,8 +791,7 @@ function CharactersRoute({
             </p>
             <button
               type='button'
-              disabled
-              title='Planned for a later recovery slice'
+              onClick={() => setCreationMode('import')}
               style={{marginTop: '0.75rem'}}
             >
               Import Or Paste
@@ -717,6 +812,125 @@ function CharactersRoute({
             </button>
           </section>
         </div>
+      )}
+
+      {creationMode === 'import' && !importDraft && (
+        <section className={styles.formPanel} aria-label='Import character'>
+          <h2>Import Character</h2>
+          <p className={styles.lead}>
+            Paste a profile or import a character document, then review the parsed draft before it becomes a character.
+          </p>
+          <label className={styles.fieldLabel}>
+            Character notes
+            <textarea
+              className={styles.softTextarea}
+              value={pastedImportText}
+              onChange={(event) => setPastedImportText(event.target.value)}
+              rows={10}
+              placeholder='Name: Mira Voss&#10;Role: Cartographer&#10;&#10;Background: ...'
+            />
+          </label>
+          <div className={styles.bottomActions}>
+            <button type='button' onClick={handleReviewPastedImport}>
+              Review Paste
+            </button>
+            <label className={styles.fileButton}>
+              {isImportingCharacterDoc ? 'Importing...' : 'Import File'}
+              <input
+                type='file'
+                accept='.txt,.md,.rtf,.html,.htm,.docx,text/plain,text/markdown,text/rtf,text/html,application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+                onChange={(event) => void handleImportFile(event)}
+                disabled={isImportingCharacterDoc}
+              />
+            </label>
+            <button type='button' onClick={resetForm}>
+              Cancel
+            </button>
+          </div>
+        </section>
+      )}
+
+      {creationMode === 'import' && importDraft && (
+        <section className={styles.formPanel} aria-label='Review character import'>
+          <h2>Review Import</h2>
+          <p className={styles.lead}>
+            Confirm the extracted fields. Sections marked Description or Notes are copied into the rich editor below.
+          </p>
+          {importDraft.warnings.length > 0 && (
+            <div className={styles.notice}>
+              {importDraft.warnings.map((warning) => (
+                <div key={warning}>{warning}</div>
+              ))}
+            </div>
+          )}
+          <div className={styles.fieldGrid}>
+            <label className={styles.fieldLabel}>
+              Name *
+              <input
+                className={styles.softInput}
+                type='text'
+                value={name}
+                onChange={(event) => setName(event.target.value)}
+                required
+              />
+            </label>
+            <label className={styles.fieldLabel}>
+              Age
+              <input
+                className={styles.softInput}
+                type='text'
+                value={age}
+                onChange={(event) => setAge(event.target.value)}
+              />
+            </label>
+            <label className={styles.fieldLabel}>
+              Role
+              <input
+                className={styles.softInput}
+                type='text'
+                value={role}
+                onChange={(event) => setRole(event.target.value)}
+              />
+            </label>
+          </div>
+          {importSections.length > 0 && (
+            <div className={styles.importReviewList}>
+              {importSections.map((section) => (
+                <div key={section.id} className={styles.importReviewCard}>
+                  <div>
+                    <strong>{section.title}</strong>
+                    <p className={styles.mutedText}>{section.content}</p>
+                  </div>
+                  <label className={styles.fieldLabel}>
+                    Destination
+                    <select
+                      className={styles.softSelect}
+                      value={section.action}
+                      onChange={(event) =>
+                        updateImportSectionAction(
+                          section.id,
+                          event.target.value as CharacterImportSectionDraft['action']
+                        )
+                      }
+                    >
+                      <option value='notes'>Notes</option>
+                      <option value='description'>Description</option>
+                      <option value='ignore'>Ignore</option>
+                    </select>
+                  </label>
+                </div>
+              ))}
+            </div>
+          )}
+          <div className={styles.bottomActions}>
+            <button type='button' onClick={startManualFromImportDraft}>
+              Edit Rich Fields
+            </button>
+            <button type='button' onClick={resetForm}>
+              Cancel
+            </button>
+          </div>
+        </section>
       )}
 
       {isFocusedCharacterTask && (
