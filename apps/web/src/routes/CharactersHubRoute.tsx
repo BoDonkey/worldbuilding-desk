@@ -1,6 +1,6 @@
 import {useEffect, useMemo, useRef, useState} from 'react';
 import type {ChangeEvent} from 'react';
-import {useLocation, useNavigate, useSearchParams} from 'react-router-dom';
+import {Navigate, useLocation, useNavigate, useSearchParams} from 'react-router-dom';
 import {useAppStore} from '../store/appStore';
 import {getProjectCapabilities} from '../projectMode';
 import CharactersRoute from './CharactersRoute';
@@ -176,6 +176,16 @@ function CharactersHubRoute() {
           project first.
         </p>
       </section>
+    );
+  }
+
+  if (capabilities.isGeneralFiction) {
+    return (
+      <Navigate
+        to='/world-bible'
+        replace
+        state={{focusCategorySlug: 'characters'}}
+      />
     );
   }
 

@@ -58,7 +58,9 @@ describe('Project mode guardrails', () => {
     cy.contains('nav a', 'Compendium').should('not.exist');
 
     cy.visit('/characters');
-    cy.contains('h1', 'Characters').should('be.visible');
+    cy.location('pathname').should('eq', '/world-bible');
+    cy.contains('h1', 'World Bible').should('be.visible');
+    cy.contains('h2', 'Characters').should('be.visible');
     cy.contains('button', 'Create Manually').should('be.visible');
     cy.contains('button', 'Create Manually').click();
     cy.contains('button', 'Sheets').should('not.exist');
@@ -73,7 +75,6 @@ describe('Project mode guardrails', () => {
       .closest('[class*="container"]')
       .find('.tiptap-editor')
       .should('exist');
-    cy.get('form textarea').should('not.exist');
 
     cy.visit('/ruleset');
     cy.location('pathname').should('eq', '/workspace');
@@ -82,9 +83,14 @@ describe('Project mode guardrails', () => {
 
   it('imports pasted character notes into rich review fields for general fiction', () => {
     cy.visit('/characters');
-    cy.contains('button', 'Import Or Paste').should('be.visible').click();
+    cy.location('pathname').should('eq', '/world-bible');
+    cy.get('section[aria-label="Cast canon"]').should('be.visible');
+    cy.get('section[aria-label="Cast canon"]')
+      .contains('button', 'Import Or Paste')
+      .should('be.visible')
+      .click();
     cy.contains('h2', 'Import Character').should('be.visible');
-    cy.get('textarea').type(
+    cy.get('section[aria-label="Import character"] textarea').type(
       [
         'Name: Mira Voss',
         'Age: 34',
@@ -99,9 +105,8 @@ describe('Project mode guardrails', () => {
     );
     cy.contains('button', 'Review Paste').click();
 
-    cy.contains('h2', 'Review Import').should('be.visible');
+    cy.contains('h2', 'Review Character Import').should('be.visible');
     cy.get('input[value="Mira Voss"]').should('be.visible');
-    cy.contains('button', 'Edit Rich Fields').click();
     cy.contains('h2', 'New Character').should('be.visible');
     cy.contains('span', 'Description')
       .closest('[class*="container"]')
@@ -111,7 +116,6 @@ describe('Project mode guardrails', () => {
       .closest('[class*="container"]')
       .find('.tiptap-editor')
       .should('contain.text', 'Dry, precise');
-    cy.get('form textarea').should('not.exist');
   });
 
   it('clears the active project summary after deleting the last project', () => {

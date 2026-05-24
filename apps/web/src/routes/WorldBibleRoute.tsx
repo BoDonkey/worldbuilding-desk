@@ -1,5 +1,5 @@
 import {useEffect, useState, useCallback, useRef, useMemo} from 'react';
-import type {FormEvent} from 'react';
+import type {ChangeEvent, FormEvent} from 'react';
 import {useLocation, useNavigate} from 'react-router-dom';
 import {useAppStore} from '../store/appStore';
 import {getProjectCapabilities} from '../projectMode';
@@ -53,10 +53,17 @@ import {
   getReviewResolutionLabel,
   type ReviewResolution
 } from '../services/worldBible/worldBibleReviewHelpers';
+import {
+  parseCharacterImportText,
+  readCharacterImportFile,
+  type CharacterImportDraft,
+  type CharacterImportSectionDraft
+} from '../services/characters/characterImportService';
 
 // activeProject read from store below
 
 type WorldBibleViewMode = 'category' | 'review';
+type CharacterImportStep = 'idle' | 'input' | 'review';
 
 const getPreferredImportField = (
   category: EntityCategory
@@ -73,6 +80,45 @@ const CATEGORY_SUMMARY_PRIORITY: Record<string, string[]> = {
   concepts: ['description', 'notes']
 };
 const CHARACTER_CATEGORY_HINTS = ['character', 'characters', 'npc', 'person', 'people'];
+const CHARACTER_NOTES_FIELD = 'notes';
+
+const isCharacterCategory = (category: EntityCategory): boolean => {
+  const slug = category.slug.toLowerCase();
+  const name = category.name.toLowerCase();
+  return CHARACTER_CATEGORY_HINTS.some(
+    (hint) => slug.includes(hint) || name.includes(hint)
+  );
+};
+
+const ensureCharacterCategoryLongFormFields = async (
+  categories: EntityCategory[]
+): Promise<EntityCategory[]> => {
+  let changed = false;
+  const updatedCategories = categories.map((category) => {
+    if (!isCharacterCategory(category)) {
+      return category;
+    }
+    if (category.fieldSchema.some((field) => field.key === CHARACTER_NOTES_FIELD)) {
+      return category;
+    }
+    changed = true;
+    return {
+      ...category,
+      fieldSchema: [
+        ...category.fieldSchema,
+        {key: CHARACTER_NOTES_FIELD, label: 'Notes', type: 'textarea' as const}
+      ]
+    };
+  });
+
+  if (changed) {
+    await Promise.all(updatedCategories.map((category, index) =>
+      category === categories[index] ? Promise.resolve() : saveCategory(category)
+    ));
+  }
+
+  return updatedCategories;
+};
 
 const buildEntityCardSummary = (
   entity: WorldEntity,
@@ -233,6 +279,29 @@ const buildEntityContent = (entity: WorldEntity) => {
   return `${entity.name}\n${fieldText}`;
 };
 
+const buildCharacterImportDescription = (
+  draft: CharacterImportDraft,
+  sections: CharacterImportSectionDraft[]
+): string => {
+  const descriptionBlocks = sections
+    .filter((section) => section.action === 'description')
+    .map((section) => section.content.trim())
+    .filter(Boolean);
+  return descriptionBlocks.join('\n\n') || draft.detectedDescription;
+};
+
+const buildCharacterImportNotes = (
+  draft: CharacterImportDraft,
+  sections: CharacterImportSectionDraft[]
+): string => {
+  const noteBlocks = sections
+    .filter((section) => section.action === 'notes')
+    .map((section) => `${section.title}\n${section.content.trim()}`)
+    .filter(Boolean);
+  const residue = draft.unmatchedText.trim();
+  return [...noteBlocks, residue ? `Source Notes\n${residue}` : ''].filter(Boolean).join('\n\n');
+};
+
 function WorldBibleRoute() {
   const activeProject = useAppStore((s) => s.activeProject);
   const projectSettings = useAppStore((s) => s.projectSettings);
@@ -250,6 +319,15 @@ function WorldBibleRoute() {
   const [showCategoryManager, setShowCategoryManager] = useState(false);
   const [aliases, setAliases] = useState<ConsistencyAlias[]>([]);
   const [activeImportPreviewId, setActiveImportPreviewId] = useState<string | null>(null);
+  const [characterImportStep, setCharacterImportStep] =
+    useState<CharacterImportStep>('idle');
+  const [pastedCharacterImportText, setPastedCharacterImportText] = useState('');
+  const [characterImportDraft, setCharacterImportDraft] =
+    useState<CharacterImportDraft | null>(null);
+  const [characterImportSections, setCharacterImportSections] = useState<
+    CharacterImportSectionDraft[]
+  >([]);
+  const [isImportingCharacterDoc, setIsImportingCharacterDoc] = useState(false);
   const [expandedSummaryEntityIds, setExpandedSummaryEntityIds] = useState<string[]>([]);
   const [isSelectedSummaryExpanded, setIsSelectedSummaryExpanded] = useState(false);
   const [ragService, setRagService] = useState<RAGProvider | null>(null);
@@ -287,6 +365,7 @@ function WorldBibleRoute() {
   >(new Set());
   const importInputRef = useRef<HTMLInputElement | null>(null);
   const jsonImportInputRef = useRef<HTMLInputElement | null>(null);
+  const characterImportInputRef = useRef<HTMLInputElement | null>(null);
   const aliasTextareaRef = useRef<HTMLTextAreaElement | null>(null);
   const focusedEntityKeyRef = useRef<string | null>(null);
   const refreshMemories = useCallback(async () => {
@@ -338,9 +417,10 @@ function WorldBibleRoute() {
         getAliasesByProject(projectId),
         getCharactersByProject(projectId)
       ]);
+      const normalizedCategories = await ensureCharacterCategoryLongFormFields(cats);
 
       if (!cancelled) {
-        setCategories(cats);
+        setCategories(normalizedCategories);
         setEntities(ents);
         setAliases(loadedAliases);
         setCharacters(loadedCharacters);
@@ -503,10 +583,17 @@ function WorldBibleRoute() {
   }, [entities, ragService]);
 
   const activeCategory = categories.find((c) => c.id === activeTab);
+  const characterCategory = useMemo(
+    () => categories.find((category) => isCharacterCategory(category)) ?? null,
+    [categories]
+  );
   const activeCategoryIsCharacterLike = useMemo(() => {
     const slug = (activeCategory?.slug ?? '').toLowerCase();
-    return CHARACTER_CATEGORY_HINTS.some((hint) => slug.includes(hint));
-  }, [activeCategory?.slug]);
+    const categoryName = (activeCategory?.name ?? '').toLowerCase();
+    return CHARACTER_CATEGORY_HINTS.some(
+      (hint) => slug.includes(hint) || categoryName.includes(hint)
+    );
+  }, [activeCategory?.name, activeCategory?.slug]);
   const categoryById = useMemo(
     () => new Map(categories.map((category) => [category.id, category])),
     [categories]
@@ -683,6 +770,93 @@ function WorldBibleRoute() {
     setFieldValues({});
     setPendingReviewFocus(null);
     setIsSelectedSummaryExpanded(false);
+    setCharacterImportStep('idle');
+    setCharacterImportDraft(null);
+    setCharacterImportSections([]);
+  };
+
+  const openCharacterCategory = useCallback(() => {
+    if (!characterCategory) return;
+    setViewMode('category');
+    setActiveTab(characterCategory.id);
+  }, [characterCategory]);
+
+  const startNewCharacterCanonRecord = useCallback(() => {
+    openCharacterCategory();
+    setEditingId(null);
+    setName('');
+    setFieldValues({});
+    setCharacterImportStep('idle');
+    setCharacterImportDraft(null);
+    setCharacterImportSections([]);
+  }, [openCharacterCategory]);
+
+  const applyCharacterImportDraftToFields = useCallback(
+    (draft: CharacterImportDraft, sections: CharacterImportSectionDraft[]) => {
+      openCharacterCategory();
+      setEditingId(null);
+      setName(draft.detectedName);
+      setFieldValues({
+        description: normalizeRichTextValue(buildCharacterImportDescription(draft, sections)),
+        age: draft.detectedAge,
+        role: draft.detectedRole,
+        [CHARACTER_NOTES_FIELD]: normalizeRichTextValue(
+          buildCharacterImportNotes(draft, sections)
+        )
+      });
+    },
+    [openCharacterCategory]
+  );
+
+  const reviewCharacterImportDraft = useCallback(
+    (draft: CharacterImportDraft) => {
+      setCharacterImportDraft(draft);
+      setCharacterImportSections(draft.sections);
+      applyCharacterImportDraftToFields(draft, draft.sections);
+      setCharacterImportStep('review');
+      setFeedback(null);
+    },
+    [applyCharacterImportDraftToFields]
+  );
+
+  const handleReviewPastedCharacterImport = () => {
+    const source = pastedCharacterImportText.trim();
+    if (!source) {
+      setFeedback({tone: 'error', message: 'Paste character notes before reviewing.'});
+      return;
+    }
+    reviewCharacterImportDraft(parseCharacterImportText(source));
+  };
+
+  const handleCharacterImportFile = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+    setIsImportingCharacterDoc(true);
+    setFeedback(null);
+    try {
+      const source = await readCharacterImportFile(file);
+      setPastedCharacterImportText(source);
+      reviewCharacterImportDraft(parseCharacterImportText(source, file.name));
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'Unable to import this character document.';
+      setFeedback({tone: 'error', message});
+    } finally {
+      setIsImportingCharacterDoc(false);
+    }
+  };
+
+  const updateCharacterImportSectionAction = (
+    sectionId: string,
+    action: CharacterImportSectionDraft['action']
+  ) => {
+    if (!characterImportDraft) return;
+    const nextSections = characterImportSections.map((section) =>
+      section.id === sectionId ? {...section, action} : section
+    );
+    setCharacterImportSections(nextSections);
+    applyCharacterImportDraftToFields(characterImportDraft, nextSections);
   };
 
   const handleEdit = useCallback((entity: WorldEntity, focus: 'general' | 'aliases' = 'general') => {
@@ -903,11 +1077,25 @@ function WorldBibleRoute() {
   useEffect(() => {
     const state = location.state as {
       focusEntityId?: string;
+      focusCategorySlug?: string;
+      startCharacterImport?: boolean;
       focus?: 'general' | 'aliases';
       handoffKind?: 'character-canonicalization';
       handoffSourceName?: string;
       handoffMatchEntityId?: string;
     } | null;
+    if (state?.focusCategorySlug && categories.length > 0) {
+      const targetCategory = categories.find(
+        (category) => category.slug === state.focusCategorySlug
+      );
+      if (targetCategory && activeTab !== targetCategory.id) {
+        setActiveTab(targetCategory.id);
+      }
+      setViewMode('category');
+      if (state.startCharacterImport && characterImportStep === 'idle') {
+        setCharacterImportStep('input');
+      }
+    }
     const focusEntityId = state?.focusEntityId;
     if (!focusEntityId) return;
     const focus = state?.focus ?? 'general';
@@ -928,7 +1116,7 @@ function WorldBibleRoute() {
       });
     }
     focusedEntityKeyRef.current = focusKey;
-  }, [entities, handleEdit, location.key, location.state]);
+  }, [activeTab, categories, characterImportStep, entities, handleEdit, location.key, location.state]);
 
   const handleApplyImportDrafts = async (options?: {
     draftIds?: string[];
@@ -1169,6 +1357,163 @@ function WorldBibleRoute() {
           </p>
         </div>
       </details>
+
+      {activeCategoryIsCharacterLike && (
+        <section className={styles.castPanel} aria-label='Cast canon'>
+          <div className={styles.castHeader}>
+            <div>
+              <div className={styles.castEyebrow}>Cast canon</div>
+              <h2>Characters</h2>
+              <p>
+                Build story-facing character records here. Canonical names,
+                aliases, description, role, and notes stay in World Bible; sheets
+                remain optional system tools.
+              </p>
+            </div>
+            <div className={styles.castHeaderActions}>
+              <button type='button' onClick={startNewCharacterCanonRecord}>
+                Manual Character
+              </button>
+              <button
+                type='button'
+                onClick={() => {
+                  openCharacterCategory();
+                  setCharacterImportStep('input');
+                }}
+              >
+                Import Or Paste
+              </button>
+              <button type='button' disabled title='Planned for the AI-assisted draft slice'>
+                AI-Assisted Draft
+              </button>
+            </div>
+          </div>
+          <div className={styles.castTaskGrid}>
+            <div className={styles.castTask}>
+              <h3>Manual Character</h3>
+              <p>Start with a canonical name, long-form description, aliases, and notes.</p>
+              <button type='button' onClick={startNewCharacterCanonRecord}>
+                Create Manually
+              </button>
+            </div>
+            <div className={styles.castTask}>
+              <h3>Import Character</h3>
+              <p>Review pasted profiles or dossier drafts before they enter rich canon fields.</p>
+              <button
+                type='button'
+                onClick={() => {
+                  openCharacterCategory();
+                  setCharacterImportStep('input');
+                }}
+              >
+                Import Or Paste
+              </button>
+            </div>
+            <div className={styles.castTask}>
+              <h3>AI-Assisted Draft</h3>
+              <p>Generate a draft from your premise, then edit and approve it yourself.</p>
+              <button type='button' disabled title='Planned for the AI-assisted draft slice'>
+                Start With AI
+              </button>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {activeCategoryIsCharacterLike && characterImportStep === 'input' && (
+        <section className={styles.characterImportPanel} aria-label='Import character'>
+          <div className={styles.importPanelHeader}>
+            <div>
+              <h2>Import Character</h2>
+              <p className={styles.importSummary}>
+                Paste a profile or import a character document. The parsed draft will
+                fill World Bible rich fields before you save.
+              </p>
+            </div>
+            <button type='button' onClick={() => setCharacterImportStep('idle')}>
+              Close
+            </button>
+          </div>
+          <label className={styles.characterImportLabel}>
+            Character notes
+            <textarea
+              value={pastedCharacterImportText}
+              onChange={(event) => setPastedCharacterImportText(event.target.value)}
+              rows={10}
+              placeholder={'Name: Mira Voss\nRole: Cartographer\n\nBackground:\n...'}
+            />
+          </label>
+          <div className={styles.importPanelActions}>
+            <button type='button' onClick={handleReviewPastedCharacterImport}>
+              Review Paste
+            </button>
+            <button
+              type='button'
+              onClick={() => characterImportInputRef.current?.click()}
+              disabled={isImportingCharacterDoc}
+            >
+              {isImportingCharacterDoc ? 'Importing...' : 'Import File'}
+            </button>
+            <input
+              ref={characterImportInputRef}
+              type='file'
+              accept='.txt,.md,.rtf,.html,.htm,.docx,text/plain,text/markdown,text/rtf,text/html,application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+              onChange={(event) => void handleCharacterImportFile(event)}
+              style={{display: 'none'}}
+            />
+          </div>
+        </section>
+      )}
+
+      {activeCategoryIsCharacterLike && characterImportStep === 'review' && characterImportDraft && (
+        <section className={styles.characterImportPanel} aria-label='Review character import'>
+          <div className={styles.importPanelHeader}>
+            <div>
+              <h2>Review Character Import</h2>
+              <p className={styles.importSummary}>
+                Confirm the extracted name and section destinations. The editor below is
+                already populated; save only after reviewing the rich fields.
+              </p>
+            </div>
+            <button type='button' onClick={() => setCharacterImportStep('idle')}>
+              Close
+            </button>
+          </div>
+          {characterImportDraft.warnings.length > 0 && (
+            <div className={styles.importError}>
+              {characterImportDraft.warnings.join(' ')}
+            </div>
+          )}
+          {characterImportSections.length > 0 && (
+            <div className={styles.characterImportReviewList}>
+              {characterImportSections.map((section) => (
+                <div key={section.id} className={styles.characterImportReviewCard}>
+                  <div>
+                    <strong>{section.title}</strong>
+                    <p>{section.content}</p>
+                  </div>
+                  <label>
+                    Destination
+                    <select
+                      value={section.action}
+                      onChange={(event) =>
+                        updateCharacterImportSectionAction(
+                          section.id,
+                          event.target.value as CharacterImportSectionDraft['action']
+                        )
+                      }
+                    >
+                      <option value='notes'>Notes</option>
+                      <option value='description'>Description</option>
+                      <option value='ignore'>Ignore</option>
+                    </select>
+                  </label>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
 
       {importDrafts.length > 0 && (
         <section className={styles.importPanel}>
