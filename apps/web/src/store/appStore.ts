@@ -6,6 +6,7 @@ import {
   getOrCreateSettings,
   saveProjectSettings as persistProjectSettings
 } from '../settingsStorage';
+import {getProjectById} from '../projectStorage';
 
 const noopStorage: StateStorage = {
   getItem: () => null,
@@ -147,9 +148,30 @@ export const useAppStore = create<AppState>()(
           const rehydratedProjectId = state.activeProject.id;
           state.projectSettingsStatus = 'loading';
           state.projectSettingsError = null;
-          getOrCreateSettings(rehydratedProjectId)
+          getProjectById(rehydratedProjectId)
+            .then((project) => {
+              if (useAppStore.getState().activeProject?.id !== rehydratedProjectId) {
+                return null;
+              }
+
+              if (!project) {
+                useAppStore.setState({
+                  activeProject: null,
+                  projectSettings: null,
+                  projectSettingsStatus: 'idle',
+                  projectSettingsError: null
+                });
+                return null;
+              }
+
+              useAppStore.setState({activeProject: project});
+              return getOrCreateSettings(project.id);
+            })
             .then((settings) => {
-              if (useAppStore.getState().activeProject?.id === settings.projectId) {
+              if (
+                settings &&
+                useAppStore.getState().activeProject?.id === settings.projectId
+              ) {
                 useAppStore.setState({
                   projectSettings: settings,
                   projectSettingsStatus: 'ready',

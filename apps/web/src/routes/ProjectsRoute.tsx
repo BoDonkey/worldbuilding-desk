@@ -100,6 +100,9 @@ function ProjectsRoute() {
   const loadProjects = useCallback(async () => {
     const all = await getAllProjects();
     setProjects(all);
+    if (activeProject && !all.some((project) => project.id === activeProject.id)) {
+      await onSelectProject(null);
+    }
 
     const rulesetMap = new Map<string, WorldRuleset>();
     const countsMap = new Map<string, {worldEntries: number; scenes: number}>();
@@ -119,7 +122,7 @@ function ProjectsRoute() {
     }
     setProjectRulesets(rulesetMap);
     setProjectCounts(countsMap);
-  }, []);
+  }, [activeProject, onSelectProject]);
 
   useEffect(() => {
     void loadProjects();
@@ -202,7 +205,7 @@ function ProjectsRoute() {
       });
 
       if (activeProject && activeProject.id === project.id) {
-        onSelectProject(null);
+        await onSelectProject(null);
       }
       setFeedback({tone: 'success', message: 'Project deleted.'});
     } catch (error) {
@@ -495,7 +498,7 @@ function ProjectsRoute() {
           {feedback.message}
         </p>
       )}
-      {activeProject && (
+      {activeProject && projects.some((project) => project.id === activeProject.id) && (
         <section className={styles.heroCard}>
           <div className={styles.heroHeader}>
             <div>

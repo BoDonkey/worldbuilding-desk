@@ -6,10 +6,16 @@ vi.mock('../settingsStorage', () => ({
   saveProjectSettings: vi.fn(async (settings: ProjectSettings) => settings)
 }));
 
+vi.mock('../projectStorage', () => ({
+  getProjectById: vi.fn()
+}));
+
 const {getOrCreateSettings} = await import('../settingsStorage');
+const {getProjectById} = await import('../projectStorage');
 const {useAppStore} = await import('./appStore');
 
 const mockedGetOrCreateSettings = vi.mocked(getOrCreateSettings);
+const mockedGetProjectById = vi.mocked(getProjectById);
 
 const makeProject = (id: string): Project => ({
   id,
@@ -56,6 +62,7 @@ describe('useAppStore', () => {
   it('ignores stale project settings loads when active project changes', async () => {
     useAppStore.setState(useAppStore.getInitialState(), true);
     mockedGetOrCreateSettings.mockReset();
+    mockedGetProjectById.mockReset();
 
     const firstSettings = makeSettings('first');
     const secondSettings = makeSettings('second');
@@ -85,6 +92,7 @@ describe('useAppStore', () => {
   it('exposes settings load failures without clearing the selected project', async () => {
     useAppStore.setState(useAppStore.getInitialState(), true);
     mockedGetOrCreateSettings.mockReset();
+    mockedGetProjectById.mockReset();
     mockedGetOrCreateSettings.mockRejectedValue(new Error('settings unavailable'));
 
     await useAppStore.getState().setActiveProject(makeProject('broken'));

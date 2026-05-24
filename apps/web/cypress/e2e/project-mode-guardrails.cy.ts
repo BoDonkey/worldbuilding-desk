@@ -114,6 +114,28 @@ describe('Project mode guardrails', () => {
     cy.get('form textarea').should('not.exist');
   });
 
+  it('clears the active project summary after deleting the last project', () => {
+    cy.visit('/projects');
+    cy.contains('button', 'Open Workspace').should('be.visible');
+    cy.window().then((win) => {
+      cy.stub(win, 'confirm').returns(true);
+    });
+
+    cy.get('li')
+      .filter(':contains("Cypress Smoke Project")')
+      .first()
+      .within(() => {
+        cy.contains('button', 'Delete').click();
+      });
+
+    cy.contains('[role="status"]', 'Project deleted.').should('be.visible');
+    cy.contains('No projects yet. Create one to get started.').should('be.visible');
+    cy.contains('button', 'Open Workspace').should('not.exist');
+
+    cy.visit('/workspace');
+    cy.contains('No active project.').should('be.visible');
+  });
+
   it('omits ruleset and compendium commands for general fiction', () => {
     cy.visit('/workspace');
     cy.get('body').type('{ctrl}k');
