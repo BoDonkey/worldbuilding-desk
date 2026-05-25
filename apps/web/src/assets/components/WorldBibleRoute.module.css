@@ -515,9 +515,9 @@
 .castPanel {
   margin-bottom: 1rem;
   padding: 1rem;
-  border: 1px solid var(--color-border);
-  border-radius: 8px;
-  background: var(--color-bg-secondary);
+  border: 1px solid var(--surface-border-soft);
+  border-radius: 16px;
+  background: var(--surface-panel);
 }
 
 .castHeader {
@@ -533,6 +533,7 @@
   color: var(--color-text-secondary);
   font-size: 0.78rem;
   font-weight: 700;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
 }
 
@@ -564,10 +565,10 @@
   display: grid;
   gap: 0.65rem;
   align-content: start;
-  padding: 0.85rem;
-  border: 1px solid var(--color-border);
-  border-radius: 8px;
-  background: var(--color-bg-primary);
+  padding: 0.9rem;
+  border: 1px solid var(--surface-border-soft);
+  border-radius: 14px;
+  background: var(--surface-panel-elevated);
 }
 
 .castTask h3 {
@@ -580,12 +581,31 @@
   justify-self: start;
 }
 
+.castTask button {
+  border: 1px solid var(--button-primary-border);
+  border-radius: 12px;
+  background: var(--button-primary-bg);
+  color: var(--button-primary-text);
+  box-shadow: var(--button-shadow);
+}
+
+.castTask button:hover:not(:disabled) {
+  background: var(--button-primary-bg-hover);
+  transform: translateY(-1px);
+}
+
+.castTask button:disabled {
+  border-color: var(--button-secondary-border);
+  background: var(--button-secondary-bg);
+  color: var(--button-secondary-text);
+}
+
 .characterImportPanel {
   margin-bottom: 1rem;
   padding: 1rem;
-  border: 1px solid var(--color-border);
-  border-radius: 8px;
-  background: var(--color-bg-secondary);
+  border: 1px solid var(--surface-border-soft);
+  border-radius: 16px;
+  background: var(--surface-panel);
 }
 
 .characterImportLabel {
@@ -601,12 +621,18 @@
   box-sizing: border-box;
   resize: vertical;
   padding: 0.65rem;
-  border: 1px solid var(--color-border);
-  border-radius: 6px;
-  background: var(--color-bg-primary);
-  color: var(--color-text-primary);
+  border: 1px solid var(--input-border);
+  border-radius: 10px;
+  background: var(--input-bg);
+  color: var(--input-text);
   font: inherit;
   line-height: 1.5;
+}
+
+.characterImportLabel textarea:focus {
+  outline: none;
+  border-color: var(--input-border-focus);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--input-border-focus) 28%, transparent);
 }
 
 .characterImportReviewList {
@@ -620,9 +646,9 @@
   gap: 0.75rem;
   align-items: start;
   padding: 0.85rem;
-  border: 1px solid var(--color-border);
-  border-radius: 8px;
-  background: var(--color-bg-primary);
+  border: 1px solid var(--surface-border-soft);
+  border-radius: 14px;
+  background: var(--surface-panel-elevated);
 }
 
 .characterImportReviewCard p {
@@ -640,10 +666,10 @@
 .characterImportReviewCard select {
   width: 100%;
   padding: 0.5rem;
-  border: 1px solid var(--color-border);
-  border-radius: 6px;
-  background: var(--color-bg-primary);
-  color: var(--color-text-primary);
+  border: 1px solid var(--input-border);
+  border-radius: 10px;
+  background: var(--input-bg);
+  color: var(--input-text);
 }
 
 .characterSectionBuilder {
@@ -651,9 +677,9 @@
   gap: 0.75rem;
   margin-bottom: 0.9rem;
   padding: 0.85rem;
-  border: 1px solid var(--color-border);
-  border-radius: 8px;
-  background: var(--color-bg-primary);
+  border: 1px solid var(--surface-border-soft);
+  border-radius: 14px;
+  background: var(--surface-panel-elevated);
 }
 
 .characterSectionBuilder p {
@@ -673,11 +699,17 @@
   width: 100%;
   box-sizing: border-box;
   padding: 0.55rem 0.65rem;
-  border: 1px solid var(--color-border);
-  border-radius: 6px;
-  background: var(--color-bg-primary);
-  color: var(--color-text-primary);
+  border: 1px solid var(--input-border);
+  border-radius: 10px;
+  background: var(--input-bg);
+  color: var(--input-text);
   font: inherit;
+}
+
+.characterSectionControls input:focus {
+  outline: none;
+  border-color: var(--input-border-focus);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--input-border-focus) 28%, transparent);
 }
 
 @media (max-width: 900px) {
@@ -740,6 +772,12 @@
   width: 100%;
   max-width: 860px;
   justify-self: center;
+}
+
+.castContent .form {
+  background: var(--surface-panel);
+  border-color: var(--surface-border-soft);
+  box-shadow: 0 18px 45px color-mix(in srgb, var(--color-shadow) 24%, transparent);
 }
 
 .castListSection {
@@ -895,11 +933,21 @@
 
 .formActions button {
   padding: 0.5rem 1rem;
-  border: 1px solid var(--color-border);
-  border-radius: 999px;
+  border: 1px solid var(--button-secondary-border);
+  border-radius: 12px;
   cursor: pointer;
-  background-color: var(--color-bg-primary);
-  color: var(--color-text-primary);
+  background-color: var(--button-secondary-bg);
+  color: var(--button-secondary-text);
+  box-shadow: var(--button-shadow);
+  transition:
+    background-color 0.18s ease,
+    border-color 0.18s ease,
+    transform 0.18s ease;
+}
+
+.formActions button:hover:not(:disabled) {
+  background-color: var(--button-secondary-bg-hover);
+  transform: translateY(-1px);
 }
 
 .fieldActionRow {
@@ -912,17 +960,19 @@
 
 .fieldActionRow button {
   border-radius: 999px;
+  border-color: var(--button-secondary-border);
+  background: var(--button-secondary-bg);
   padding: 0.34rem 0.8rem;
   font-size: 0.8rem;
-  color: var(--color-text-secondary);
+  color: var(--button-secondary-text);
 }
 
 .canonSection {
   margin-top: 1rem;
   padding: 0.9rem;
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--surface-border-soft);
   border-radius: 14px;
-  background: color-mix(in srgb, var(--color-bg-primary) 78%, var(--color-bg-secondary) 22%);
+  background: color-mix(in srgb, var(--surface-panel-elevated) 80%, var(--surface-panel) 20%);
 }
 
 .canonSectionHeader {
@@ -941,13 +991,13 @@
 }
 
 .formActions .primaryButton {
-  background-color: var(--color-success);
-  color: var(--color-on-accent);
-  border-color: var(--color-success);
+  background-color: var(--button-primary-bg);
+  color: var(--button-primary-text);
+  border-color: var(--button-primary-border);
 }
 
 .formActions .primaryButton:hover {
-  background-color: var(--color-success);
+  background-color: var(--button-primary-bg-hover);
 }
 
 .listSection {
