@@ -2465,9 +2465,11 @@ function WorldBibleRoute() {
           </div>
           <div className={styles.reviewList}>
             {filteredReviewQueue.slice(0, viewMode === 'review' ? filteredReviewQueue.length : 12).map(({entity, aliasCount, reasons}) => (
-              <div key={entity.id} className={styles.reviewCard}>
+              <div key={entity.id} className={styles.reviewCard} data-cy='world-bible-review-card'>
                 {(() => {
                   const insight = reviewEntityInsightsById.get(entity.id);
+                  const shouldShowAliasAction =
+                    reasons.includes('aliasFollowUp') || aliasCount > 0 || Boolean(insight?.matchCount);
                   return (
                     <>
                 <div className={styles.reviewCardHeader}>
@@ -2513,18 +2515,12 @@ function WorldBibleRoute() {
                   >
                     Review details
                   </button>
-                  <button
-                    type='button'
-                    onClick={() => handleOpenReviewItem(entity, 'aliases')}
-                  >
-                    Review aliases
-                  </button>
-                  {insight && insight.matchCount > 0 && (
+                  {shouldShowAliasAction && (
                     <button
                       type='button'
-                      onClick={() => handleOpenReviewItem(entity)}
+                      onClick={() => handleOpenReviewItem(entity, 'aliases')}
                     >
-                      Merge matches
+                      Review aliases
                     </button>
                   )}
                   <button
@@ -2532,12 +2528,6 @@ function WorldBibleRoute() {
                     onClick={() => void handleMarkEntityComplete(entity)}
                   >
                     Mark reviewed
-                  </button>
-                  <button
-                    type='button'
-                    onClick={() => void handleMarkEntityComplete(entity, {openNext: true})}
-                  >
-                    Mark reviewed + next
                   </button>
                 </div>
                     </>

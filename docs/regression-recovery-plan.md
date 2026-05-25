@@ -87,6 +87,19 @@ Completed recovery checkpoints on `codex/reconcile-temp-update-ui`:
    - Authors can add reusable rich-text character sections such as Education, Traumas, or Addictions.
 8. `4329142` - documented the Cast UI parity target:
    - `docs/character-cast-ui-parity-checklist.md` defines the target order, visual structure, import destinations, and guardrails for matching the reference character tab.
+9. `0e79d32` - added UI style guide guardrails:
+   - Root agent instructions now require consulting `docs/style-bible.md` for UI/CSS work.
+   - Recovered reference-branch surface/button/input/badge tokens into the shared theme.
+10. `712de54` - refined Cast editor visual parity:
+   - Cast task cards, import panels, editor shell, actions, and canon section now use the shared style-bible tokens.
+11. `2af1ef4` - added Cast rich field variant:
+   - Description, Notes, and custom Cast sections use a compact character-dossier rich-field variant.
+12. `46873d6` - restored Cast AI-assisted draft:
+   - AI draft entry is author-invoked, failure-safe, and lands in editable Cast fields before save.
+13. Review queue density pass:
+   - World Bible review cards now keep repeated workflow actions out of the card list.
+   - Focused review mode still owns next-item and detailed alias/merge workflows.
+   - `project-mode-guardrails.cy.ts` includes a review-card density guardrail.
 
 Verified for the current checkpoint:
 
@@ -97,26 +110,17 @@ Verified for the current checkpoint:
 
 Recommended next slices:
 
-1. Restore/import Character "Import Or Paste" deliberately:
-   - Keep it route-local and review-first.
-   - Reuse existing roster/import primitives where possible.
-   - Do not introduce textarea-first long-form editing; imported long-form content should land in TipTap-compatible rich text.
-   - Keep sheets/game-system data behind `getProjectCapabilities`.
-2. Restore Character AI-assisted draft deliberately:
-   - Author-invoked only.
-   - No background generation.
-   - Draft output must land in editable rich fields before save.
-   - Preserve provider/settings guardrails and failure messaging.
-3. Reconcile review UI density from the reference branch without taking degraded functionality.
-4. Add smoke tests for character import, AI-assisted draft entry state, and review shape once those UI paths are restored.
+1. Revisit workspace review drawer density only after the World Bible queue is stable; do not replace the current writing workspace with the reference branch workspace.
+2. Run a broader review-completion smoke pass before further review UI changes.
+3. Decide whether any remaining `codex/review-completion-state` review styling is worth porting now that the high-density card actions are removed.
 
 ## Next Session Handoff
 
 - Stay on `codex/reconcile-temp-update-ui` unless there is a deliberate branch decision.
-- The working tree was clean after commit `898f40d Refine characters UI shell`.
+- The working tree was clean after commit `46873d6 Restore Cast AI draft workflow`.
 - Do not wholesale merge `codex/review-completion-state`. It has some more polished UI, but not all of it is better, and its functionality is degraded compared with this branch.
 - Use `codex/review-completion-state` only as a visual/product reference. Port small pieces manually after checking them against current functionality and the guardrail contracts above.
-- Be especially careful with character import and AI generation: these should return as focused workflows, not as broad form-heavy surfaces.
+- Character import and AI generation have returned as focused Cast workflows; keep future changes in that model.
 - The writing workspace from the current branch remains preferred; do not replace it with the `codex/review-completion-state` workspace.
-- The new targeted Cypress spec `apps/web/cypress/e2e/project-mode-guardrails.cy.ts` passes.
+- The targeted Cypress spec `apps/web/cypress/e2e/project-mode-guardrails.cy.ts` passes with Cast import, AI draft entry, custom-section, and project-mode guardrails.
 - A broader Cypress run surfaced an existing `post-merge-smoke.cy.ts` failure around `Prompt Tools`; treat that as a known follow-up, not as a failure introduced by the project-mode guardrail slice.

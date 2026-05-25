@@ -106,9 +106,9 @@
 
 .reviewPanel {
   margin-bottom: 1rem;
-  border: 1px solid var(--color-border);
-  border-radius: 8px;
-  background-color: var(--color-bg-secondary);
+  border: 1px solid var(--surface-border-soft);
+  border-radius: 16px;
+  background-color: var(--surface-panel);
   padding: 0.9rem;
 }
 
@@ -136,8 +136,9 @@
   align-items: center;
   padding: 0.2rem 0.55rem;
   border-radius: 999px;
-  background: var(--color-bg-tertiary);
-  color: var(--color-text-primary);
+  border: 1px solid var(--badge-info-border);
+  background: var(--badge-info-bg);
+  color: var(--badge-info-text);
   font-size: 0.78rem;
   font-weight: 700;
 }
@@ -158,9 +159,9 @@
 }
 
 .reviewFilterButton {
-  border: 1px solid var(--color-border);
-  background: var(--color-bg-primary);
-  color: var(--color-text-secondary);
+  border: 1px solid var(--button-secondary-border);
+  background: var(--button-secondary-bg);
+  color: var(--button-secondary-text);
   border-radius: 999px;
   padding: 0.32rem 0.7rem;
   font-size: 0.8rem;
@@ -168,9 +169,9 @@
 }
 
 .reviewFilterButtonActive {
-  border-color: var(--color-accent);
-  background: var(--color-accent-soft-bg);
-  color: var(--color-accent);
+  border-color: var(--button-primary-border);
+  background: var(--button-primary-bg);
+  color: var(--button-primary-text);
   font-weight: 700;
 }
 
@@ -187,9 +188,9 @@
 }
 
 .reviewCard {
-  border: 1px solid var(--color-border);
-  border-radius: 8px;
-  background: var(--color-bg-primary);
+  border: 1px solid var(--surface-border-soft);
+  border-radius: 14px;
+  background: var(--surface-panel-elevated);
   padding: 0.75rem;
 }
 
@@ -235,6 +236,15 @@
   display: flex;
   gap: 0.45rem;
   flex-wrap: wrap;
+}
+
+.reviewActions button {
+  border: 1px solid var(--button-secondary-border);
+  border-radius: 12px;
+  background: var(--button-secondary-bg);
+  color: var(--button-secondary-text);
+  padding: 0.38rem 0.7rem;
+  font-size: 0.8rem;
 }
 
 .importPanel {

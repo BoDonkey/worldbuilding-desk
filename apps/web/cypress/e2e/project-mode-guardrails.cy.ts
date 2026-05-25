@@ -43,6 +43,60 @@ function setSeededProjectToGeneralFiction(): Cypress.Chainable<void> {
   );
 }
 
+function seedWorldBibleReviewQueueItem(): Cypress.Chainable<void> {
+  return cy.window().then(
+    (win) =>
+      new Cypress.Promise<void>((resolve, reject) => {
+        const now = Date.now();
+        const openRequest = win.indexedDB.open(DB_NAME, DB_VERSION);
+        openRequest.onerror = () => reject(openRequest.error);
+        openRequest.onsuccess = () => {
+          const db = openRequest.result;
+          const tx = db.transaction(['entityCategories', 'entities'], 'readwrite');
+          tx.objectStore('entityCategories').put({
+            id: 'characters',
+            projectId: 'cypress-project-1',
+            name: 'Characters',
+            slug: 'characters',
+            fieldSchema: [
+              {key: 'description', label: 'Description', type: 'textarea', required: true},
+              {key: 'age', label: 'Age', type: 'text'},
+              {key: 'role', label: 'Role', type: 'text'},
+              {key: 'notes', label: 'Notes', type: 'textarea'}
+            ],
+            createdAt: now
+          });
+          tx.objectStore('entities').put({
+            id: 'entity-review-kael',
+            projectId: 'cypress-project-1',
+            categoryId: 'characters',
+            name: 'Kael Review',
+            fields: {
+              age: '31',
+              role: 'Scout'
+            },
+            needsCompletion: true,
+            links: [],
+            createdAt: now,
+            updatedAt: now
+          });
+          tx.oncomplete = () => {
+            db.close();
+            resolve();
+          };
+          tx.onerror = () => {
+            db.close();
+            reject(tx.error);
+          };
+          tx.onabort = () => {
+            db.close();
+            reject(tx.error);
+          };
+        };
+      })
+  );
+}
+
 describe('Project mode guardrails', () => {
   beforeEach(() => {
     cy.viewport(1400, 1000);
@@ -182,6 +236,20 @@ describe('Project mode guardrails', () => {
     cy.contains('button', 'Generate Draft').should('be.enabled').click();
     cy.contains('[role="status"]', /API key is missing|Unable to generate/i).should('be.visible');
     cy.contains('label', 'Name').find('input').should('have.value', '');
+  });
+
+  it('keeps World Bible review queue cards low density', () => {
+    seedWorldBibleReviewQueueItem();
+    cy.visit('/world-bible');
+    cy.contains('button', /Review Queue \(1\)/).click();
+    cy.contains('h2', 'Review Queue').should('be.visible');
+    cy.contains('[data-cy="world-bible-review-card"]', 'Kael Review').within(() => {
+      cy.contains('button', 'Review details').should('be.visible');
+      cy.contains('button', 'Mark reviewed').should('be.visible');
+      cy.contains('button', 'Mark reviewed + next').should('not.exist');
+      cy.contains('button', 'Merge matches').should('not.exist');
+      cy.contains('button', 'Review aliases').should('not.exist');
+    });
   });
 
   it('clears the active project summary after deleting the last project', () => {
