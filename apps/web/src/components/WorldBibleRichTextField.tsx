@@ -11,13 +11,15 @@ interface WorldBibleRichTextFieldProps {
   value: string;
   onChange: (value: string) => void;
   required?: boolean;
+  variant?: 'default' | 'character';
 }
 
 export function WorldBibleRichTextField({
   label,
   value,
   onChange,
-  required = false
+  required = false,
+  variant = 'default'
 }: WorldBibleRichTextFieldProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const plainTextLength = useMemo(() => extractPlainTextFromRichText(value).length, [value]);
@@ -46,7 +48,12 @@ export function WorldBibleRichTextField({
 
   return (
     <>
-      <div className={styles.container}>
+      <div
+        className={`${styles.container} ${
+          variant === 'character' ? styles.characterField : ''
+        }`}
+        data-rich-text-variant={variant}
+      >
         <div className={styles.header}>
           <span className={styles.label}>
             {label}
@@ -78,7 +85,10 @@ export function WorldBibleRichTextField({
           onClick={() => setIsExpanded(false)}
         >
           <div
-            className={styles.overlayCard}
+            className={`${styles.overlayCard} ${
+              variant === 'character' ? styles.characterOverlayCard : ''
+            }`}
+            data-rich-text-variant={variant}
             onClick={(event) => event.stopPropagation()}
           >
             <div className={styles.overlayHeader}>

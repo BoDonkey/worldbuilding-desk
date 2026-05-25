@@ -88,10 +88,12 @@ describe('Project mode guardrails', () => {
     cy.contains('button', 'Open Sheet').should('not.exist');
     cy.contains('span', 'Description')
       .closest('[class*="container"]')
+      .should('have.attr', 'data-rich-text-variant', 'character')
       .find('.tiptap-editor')
       .should('exist');
     cy.contains('span', 'Notes')
       .closest('[class*="container"]')
+      .should('have.attr', 'data-rich-text-variant', 'character')
       .find('.tiptap-editor')
       .should('exist');
     cy.contains('strong', 'Add character section').should('be.visible');
@@ -99,6 +101,7 @@ describe('Project mode guardrails', () => {
     cy.contains('button', 'Add Section').click();
     cy.contains('span', 'Education')
       .closest('[class*="container"]')
+      .should('have.attr', 'data-rich-text-variant', 'character')
       .find('.tiptap-editor')
       .should('exist');
     cy.get('form').then(($form) => {
@@ -150,14 +153,17 @@ describe('Project mode guardrails', () => {
     cy.contains('h2', 'New Character').should('be.visible');
     cy.contains('span', 'Description')
       .closest('[class*="container"]')
+      .should('have.attr', 'data-rich-text-variant', 'character')
       .find('.tiptap-editor')
       .should('contain.text', 'Mira mapped the undercity');
     cy.contains('span', 'Notes')
       .closest('[class*="container"]')
+      .should('have.attr', 'data-rich-text-variant', 'character')
       .find('.tiptap-editor')
       .should('not.contain.text', 'Dry, precise');
     cy.contains('span', 'Education')
       .closest('[class*="container"]')
+      .should('have.attr', 'data-rich-text-variant', 'character')
       .find('.tiptap-editor')
       .should('contain.text', 'Dry, precise');
   });

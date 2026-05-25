@@ -1292,6 +1292,7 @@ function WorldBibleRoute() {
           label={field.label}
           required={field.required}
           value={fieldValues[field.key] || ''}
+          variant={activeCategoryIsCharacterLike ? 'character' : 'default'}
           onChange={(value) =>
             setFieldValues({
               ...fieldValues,
