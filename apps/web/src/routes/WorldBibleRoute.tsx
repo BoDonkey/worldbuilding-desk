@@ -59,12 +59,13 @@ import {
   type CharacterImportDraft,
   type CharacterImportSectionDraft
 } from '../services/characters/characterImportService';
+import {LLMService} from '../services/llm/LLMService';
 
 // activeProject read from store below
 
 type WorldBibleViewMode = 'category' | 'review';
 type CharacterImportStep = 'idle' | 'input' | 'review';
-type CharacterAuthoringMode = 'idle' | 'manual' | 'import';
+type CharacterAuthoringMode = 'idle' | 'manual' | 'import' | 'ai';
 
 const getPreferredImportField = (
   category: EntityCategory
@@ -330,6 +331,56 @@ const buildCharacterImportCustomFieldValues = (
   }, {});
 };
 
+type CharacterAiDraftSection = {
+  title: string;
+  content: string;
+};
+
+type CharacterAiDraft = {
+  name?: string;
+  age?: string;
+  role?: string;
+  description?: string;
+  notes?: string;
+  sections?: CharacterAiDraftSection[];
+};
+
+const stripCodeFence = (value: string): string =>
+  value
+    .trim()
+    .replace(/^```(?:json)?\s*/i, '')
+    .replace(/\s*```$/i, '')
+    .trim();
+
+const parseCharacterAiDraft = (raw: string): CharacterAiDraft => {
+  const fenced = stripCodeFence(raw);
+  const jsonMatch = fenced.match(/\{[\s\S]*\}/);
+  const json = jsonMatch ? jsonMatch[0] : fenced;
+  const parsed = JSON.parse(json) as Record<string, unknown>;
+  const readString = (key: string) =>
+    typeof parsed[key] === 'string' ? String(parsed[key]).trim() : undefined;
+  const sections = Array.isArray(parsed.sections)
+    ? parsed.sections
+        .map((section): CharacterAiDraftSection | null => {
+          if (!section || typeof section !== 'object') return null;
+          const record = section as Record<string, unknown>;
+          const title = typeof record.title === 'string' ? record.title.trim() : '';
+          const content = typeof record.content === 'string' ? record.content.trim() : '';
+          return title && content ? {title, content} : null;
+        })
+        .filter((section): section is CharacterAiDraftSection => Boolean(section))
+    : undefined;
+
+  return {
+    name: readString('name'),
+    age: readString('age'),
+    role: readString('role'),
+    description: readString('description'),
+    notes: readString('notes'),
+    sections
+  };
+};
+
 function WorldBibleRoute() {
   const activeProject = useAppStore((s) => s.activeProject);
   const projectSettings = useAppStore((s) => s.projectSettings);
@@ -358,6 +409,8 @@ function WorldBibleRoute() {
     CharacterImportSectionDraft[]
   >([]);
   const [isImportingCharacterDoc, setIsImportingCharacterDoc] = useState(false);
+  const [characterAiPrompt, setCharacterAiPrompt] = useState('');
+  const [isGeneratingCharacterDraft, setIsGeneratingCharacterDraft] = useState(false);
   const [newCharacterSectionName, setNewCharacterSectionName] = useState('');
   const [expandedSummaryEntityIds, setExpandedSummaryEntityIds] = useState<string[]>([]);
   const [isSelectedSummaryExpanded, setIsSelectedSummaryExpanded] = useState(false);
@@ -827,6 +880,8 @@ function WorldBibleRoute() {
     setCharacterImportStep('idle');
     setCharacterImportDraft(null);
     setCharacterImportSections([]);
+    setCharacterAiPrompt('');
+    setIsGeneratingCharacterDraft(false);
     setNewCharacterSectionName('');
   };
 
@@ -845,6 +900,18 @@ function WorldBibleRoute() {
     setCharacterImportStep('idle');
     setCharacterImportDraft(null);
     setCharacterImportSections([]);
+  }, [openCharacterCategory]);
+
+  const startCharacterAiDraft = useCallback(() => {
+    openCharacterCategory();
+    setEditingId(null);
+    setName('');
+    setFieldValues({});
+    setCharacterAuthoringMode('ai');
+    setCharacterImportStep('idle');
+    setCharacterImportDraft(null);
+    setCharacterImportSections([]);
+    setFeedback(null);
   }, [openCharacterCategory]);
 
   const applyCharacterImportDraftToFields = useCallback(
@@ -911,6 +978,95 @@ function WorldBibleRoute() {
       setFeedback({tone: 'error', message});
     } finally {
       setIsImportingCharacterDoc(false);
+    }
+  };
+
+  const handleGenerateCharacterDraft = async () => {
+    const premise = characterAiPrompt.trim();
+    if (!premise) {
+      setFeedback({tone: 'error', message: 'Describe the character before generating a draft.'});
+      return;
+    }
+
+    setIsGeneratingCharacterDraft(true);
+    setFeedback(null);
+    try {
+      const customSectionLabels = characterImportDestinationFields
+        .map((field) => field.label)
+        .join(', ');
+      const service = new LLMService(projectSettings?.aiSettings);
+      const response = await service.complete({
+        temperature: 0.7,
+        maxTokens: 900,
+        systemPrompt:
+          'You create concise, editable character dossier drafts for fiction authors. Return only valid JSON with no markdown.',
+        messages: [
+          {
+            role: 'user',
+            content: [
+              'Create a character draft from this author brief.',
+              '',
+              premise,
+              '',
+              'Return JSON with this shape:',
+              '{"name":"","age":"","role":"","description":"","notes":"","sections":[{"title":"","content":""}]}',
+              '',
+              'Keep prose useful but not final-scene prose. Description should be 2-4 paragraphs. Notes should be short development notes, tensions, questions, or hooks.',
+              customSectionLabels
+                ? `If relevant, use existing custom section titles from: ${customSectionLabels}.`
+                : 'Use sections only for clearly useful dossier material.'
+            ].join('\n')
+          }
+        ]
+      });
+      const draft = parseCharacterAiDraft(response.content);
+      const labelToField = new Map(
+        characterImportDestinationFields.map((field) => [
+          field.label.trim().toLowerCase(),
+          field
+        ])
+      );
+      const customFieldValues: Record<string, string> = {};
+      const noteSections: string[] = [];
+      draft.sections?.forEach((section) => {
+        const field = labelToField.get(section.title.trim().toLowerCase());
+        if (field) {
+          customFieldValues[field.key] = [customFieldValues[field.key], section.content]
+            .filter(Boolean)
+            .join('\n\n');
+        } else {
+          noteSections.push(`${section.title}\n${section.content}`);
+        }
+      });
+
+      setName(draft.name ?? '');
+      setCharacterAuthoringMode('ai');
+      setFieldValues({
+        description: normalizeRichTextValue(draft.description ?? ''),
+        age: draft.age ?? '',
+        role: draft.role ?? '',
+        [CHARACTER_NOTES_FIELD]: normalizeRichTextValue(
+          [draft.notes, ...noteSections].filter(Boolean).join('\n\n')
+        ),
+        ...Object.fromEntries(
+          Object.entries(customFieldValues).map(([key, value]) => [
+            key,
+            normalizeRichTextValue(value)
+          ])
+        )
+      });
+      setFeedback({
+        tone: 'success',
+        message: 'AI draft generated. Review and edit the rich fields before saving.'
+      });
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : 'Unable to generate a character draft. Check AI settings and try again.';
+      setFeedback({tone: 'error', message});
+    } finally {
+      setIsGeneratingCharacterDraft(false);
     }
   };
 
@@ -1629,10 +1785,63 @@ function WorldBibleRoute() {
             <div className={styles.castTask}>
               <h3>AI-Assisted Draft</h3>
               <p>Generate a draft from your premise, then edit and approve it yourself.</p>
-              <button type='button' disabled title='Planned for the AI-assisted draft slice'>
+              <button type='button' onClick={startCharacterAiDraft}>
                 Start With AI
               </button>
             </div>
+          </div>
+        </section>
+      )}
+
+      {activeCategoryIsCharacterLike && characterAuthoringMode === 'ai' && (
+        <section className={styles.characterAiPanel} aria-label='AI-assisted character draft'>
+          <div className={styles.importPanelHeader}>
+            <div>
+              <h2>AI-Assisted Draft</h2>
+              <p className={styles.importSummary}>
+                Describe the character you need. The draft fills editable Cast fields only after you generate it.
+              </p>
+            </div>
+            <button
+              type='button'
+              onClick={() => {
+                setCharacterAuthoringMode('idle');
+                setCharacterAiPrompt('');
+                setFieldValues({});
+                setName('');
+              }}
+            >
+              Close
+            </button>
+          </div>
+          <label className={styles.characterImportLabel}>
+            Character brief
+            <textarea
+              value={characterAiPrompt}
+              onChange={(event) => setCharacterAiPrompt(event.target.value)}
+              rows={7}
+              placeholder='A disgraced royal cartographer who knows the city has been redrawn overnight...'
+            />
+          </label>
+          <div className={styles.importPanelActions}>
+            <button
+              type='button'
+              onClick={() => void handleGenerateCharacterDraft()}
+              disabled={isGeneratingCharacterDraft || !characterAiPrompt.trim()}
+            >
+              {isGeneratingCharacterDraft ? 'Generating...' : 'Generate Draft'}
+            </button>
+            <button
+              type='button'
+              onClick={() => {
+                setCharacterAiPrompt('');
+                setFieldValues({});
+                setName('');
+              }}
+              disabled={isGeneratingCharacterDraft}
+            >
+              Clear
+            </button>
           </div>
         </section>
       )}

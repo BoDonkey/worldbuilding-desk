@@ -608,6 +608,14 @@
   background: var(--surface-panel);
 }
 
+.characterAiPanel {
+  margin-bottom: 1rem;
+  padding: 1rem;
+  border: 1px solid var(--surface-border-soft);
+  border-radius: 16px;
+  background: var(--surface-panel);
+}
+
 .characterImportLabel {
   display: grid;
   gap: 0.4rem;

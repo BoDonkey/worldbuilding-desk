@@ -105,5 +105,5 @@ For the general-fiction Cast editor, fields should appear in this order:
 3. Done: render custom sections after Notes and update import destination choices to include them.
 4. Done: tune Cast/editor CSS toward the reference branch card/panel feel using the shared style-bible tokens.
 5. Done: decide and implement the character rich-field toolbar variant.
-6. Restore AI-Assisted Draft into this final Cast surface.
-7. Done: add Cypress checks for field order, no persistent rail, custom section persistence, import-to-custom-section, and character rich-field variant usage.
+6. Done: restore AI-Assisted Draft into this final Cast surface as an author-invoked draft panel that fills editable rich fields after generation.
+7. Done: add Cypress checks for field order, no persistent rail, custom section persistence, import-to-custom-section, character rich-field variant usage, and AI-assisted draft entry/failure-safe behavior.

@@ -168,6 +168,22 @@ describe('Project mode guardrails', () => {
       .should('contain.text', 'Dry, precise');
   });
 
+  it('opens AI-assisted character draft without background generation', () => {
+    cy.visit('/characters');
+    cy.location('pathname').should('eq', '/world-bible');
+    cy.get('section[aria-label="Cast canon"]').should('be.visible');
+    cy.contains('button', 'Start With AI').should('be.enabled').click();
+    cy.contains('h2', 'AI-Assisted Draft').should('be.visible');
+    cy.contains('h2', 'New Character').should('be.visible');
+    cy.contains('button', 'Generate Draft').should('be.disabled');
+    cy.get('section[aria-label="AI-assisted character draft"] textarea').type(
+      'A disgraced royal cartographer who suspects the capital was redrawn overnight.'
+    );
+    cy.contains('button', 'Generate Draft').should('be.enabled').click();
+    cy.contains('[role="status"]', /API key is missing|Unable to generate/i).should('be.visible');
+    cy.contains('label', 'Name').find('input').should('have.value', '');
+  });
+
   it('clears the active project summary after deleting the last project', () => {
     cy.visit('/projects');
     cy.contains('button', 'Open Workspace').should('be.visible');
