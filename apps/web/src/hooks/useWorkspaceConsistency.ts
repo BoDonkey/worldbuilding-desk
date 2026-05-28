@@ -30,6 +30,7 @@ import type {ShodhMemoryProvider} from '../services/shodh/ShodhMemoryService';
 import {normalizeCanonText} from '../services/consistency/textMatcher';
 import {htmlToPlainText} from '../utils/textHelpers';
 import {buildDerivedStateMutationEvents} from '../services/state/stateMutationDerivation';
+import {getProjectCapabilities} from '../projectMode';
 import {
   invalidateStateMutationEventById,
   replaceSceneStateMutationEventsBySourceType,
@@ -192,6 +193,22 @@ const canonicalizeUnknownSurface = normalizeCanonText;
 const hasUppercaseLetter = (value: string): boolean => /[A-Z]/.test(value);
 const normalizeRecordName = (value: string): string =>
   value.trim().toLowerCase().replace(/\s+/g, ' ');
+const isLikelyShortFormOfRecord = (shortName: string, fullName: string): boolean => {
+  const normalizedShort = normalizeRecordName(shortName);
+  const normalizedFull = normalizeRecordName(fullName);
+  if (!normalizedShort || !normalizedFull || normalizedShort === normalizedFull) return false;
+  if (normalizedShort.includes(' ') || !normalizedFull.includes(' ')) return false;
+  return normalizedFull.split(/\s+/).filter(Boolean)[0] === normalizedShort;
+};
+const namesLikelyReferToSameCharacter = (left: string, right: string): boolean => {
+  const normalizedLeft = normalizeRecordName(left);
+  const normalizedRight = normalizeRecordName(right);
+  return (
+    normalizedLeft === normalizedRight ||
+    isLikelyShortFormOfRecord(normalizedLeft, normalizedRight) ||
+    isLikelyShortFormOfRecord(normalizedRight, normalizedLeft)
+  );
+};
 
 const LOCATION_HINT_TOKENS = new Set([
   'archive',
@@ -646,6 +663,10 @@ export const useWorkspaceConsistency = ({
       ),
     [categories]
   );
+  const shouldUseCharacterToolsAsCanon = useMemo(
+    () => !getProjectCapabilities(projectSettings).isGeneralFiction,
+    [projectSettings]
+  );
 
   const characterLoreEntityIdByCharacterId = useMemo(() => {
     const linkedEntityIdByCharacterId = new Map<string, string>();
@@ -673,11 +694,13 @@ export const useWorkspaceConsistency = ({
         name: entity.name,
         type: 'entity' as const
       })),
-      ...characters.map((character) => ({
-        id: character.id,
-        name: character.name,
-        type: 'character' as const
-      })),
+      ...(shouldUseCharacterToolsAsCanon
+        ? characters.map((character) => ({
+            id: character.id,
+            name: character.name,
+            type: 'character' as const
+          }))
+        : []),
       ...aliases
         .map((alias) => {
           if (alias.targetType === 'character') {
@@ -692,6 +715,9 @@ export const useWorkspaceConsistency = ({
                 name: alias.alias,
                 type: 'entity' as const
               };
+            }
+            if (!shouldUseCharacterToolsAsCanon) {
+              return null;
             }
           }
           const linkedRecord =
@@ -712,7 +738,13 @@ export const useWorkspaceConsistency = ({
             Boolean(entry)
       )
     ];
-  }, [aliases, characterLoreEntityIdByCharacterId, characters, entities]);
+  }, [
+    aliases,
+    characterLoreEntityIdByCharacterId,
+    characters,
+    entities,
+    shouldUseCharacterToolsAsCanon
+  ]);
 
   const knownConsistencySurfaceSet = useMemo(
     () =>
@@ -1692,6 +1724,14 @@ export const useWorkspaceConsistency = ({
         if (linkedEntityId && candidatesByKey.has(`entity:${linkedEntityId}`)) {
           return;
         }
+        const matchingCharacterEntity = entities.find(
+          (entity) =>
+            characterCategoryIds.has(entity.categoryId) &&
+            namesLikelyReferToSameCharacter(character.name, entity.name)
+        );
+        if (matchingCharacterEntity) {
+          return;
+        }
         candidatesByKey.set(`character:${character.id}`, {
           id: character.id,
           name: character.name,
@@ -1716,7 +1756,14 @@ export const useWorkspaceConsistency = ({
       optionMap[surface] = ranked.slice(0, 20);
     });
     return optionMap;
-  }, [categories, characterLoreEntityIdByCharacterId, characters, entities, unknownGuardrailIssues]);
+  }, [
+    categories,
+    characterCategoryIds,
+    characterLoreEntityIdByCharacterId,
+    characters,
+    entities,
+    unknownGuardrailIssues
+  ]);
 
   const closeUnknownLinkOptions = useMemo(() => {
     const optionMap: Record<
@@ -1729,13 +1776,15 @@ export const useWorkspaceConsistency = ({
       const normalizedSurface = surface.toLowerCase();
       const candidates = unknownLinkOptions[surface] ?? [];
       optionMap[surface] = candidates.filter((record) => {
-        const normalizedName = record.name.toLowerCase();
-        if (normalizedName === normalizedSurface) {
+        const normalizedName = normalizeRecordName(record.name);
+        if (normalizedName === normalizeRecordName(normalizedSurface)) {
           return true;
         }
         return (
           normalizedName.includes(normalizedSurface) ||
-          normalizedSurface.includes(normalizedName)
+          normalizedSurface.includes(normalizedName) ||
+          isLikelyShortFormOfRecord(normalizedSurface, normalizedName) ||
+          isLikelyShortFormOfRecord(normalizedName, normalizedSurface)
         );
       });
     });
@@ -1795,20 +1844,34 @@ export const useWorkspaceConsistency = ({
               entity.categoryId === chosenCategory.id &&
               normalizeRecordName(entity.name) === normalizedCharacterName
           );
-          const closeCharacterMatch = [...characters]
+          const closeCharacterEntityMatch = [...entities]
             .filter(
-              (candidate) =>
-                normalizeRecordName(candidate.name) !== normalizedCharacterName
+              (candidate) => {
+                if (
+                  candidate.categoryId !== chosenCategory.id ||
+                  normalizeRecordName(candidate.name) === normalizedCharacterName
+                ) {
+                  return false;
+                }
+                const candidateName = normalizeRecordName(candidate.name);
+                return (
+                  namesLikelyReferToSameCharacter(candidateName, normalizedCharacterName) ||
+                  candidateName.includes(normalizedCharacterName) ||
+                  normalizedCharacterName.includes(candidateName)
+                );
+              }
             )
             .sort((left, right) => {
               const leftName = normalizeRecordName(left.name);
               const rightName = normalizeRecordName(right.name);
               const leftClose =
+                namesLikelyReferToSameCharacter(leftName, normalizedCharacterName) ||
                 leftName.includes(normalizedCharacterName) ||
                 normalizedCharacterName.includes(leftName)
                   ? 0
                   : 1;
               const rightClose =
+                namesLikelyReferToSameCharacter(rightName, normalizedCharacterName) ||
                 rightName.includes(normalizedCharacterName) ||
                 normalizedCharacterName.includes(rightName)
                   ? 0
@@ -1864,13 +1927,13 @@ export const useWorkspaceConsistency = ({
             message: `"${normalizedName}" added to World Bible Characters and Character Tools.`
           });
           setResolverNotice({
-            message: closeCharacterMatch
-              ? `"${normalizedName}" added to World Bible Characters. Review possible match with "${closeCharacterMatch.name}".`
+            message: closeCharacterEntityMatch
+              ? `"${normalizedName}" added to World Bible Characters. Review possible match with "${closeCharacterEntityMatch.name}".`
               : `"${normalizedName}" added to World Bible Characters.`,
-            primaryLabel: closeCharacterMatch ? 'Review Character Match' : undefined,
+            primaryLabel: closeCharacterEntityMatch ? 'Review Character Match' : undefined,
             destination: 'world-bible',
             targetId: characterEntity.id,
-            matchEntityId: closeCharacterMatch?.id,
+            matchEntityId: closeCharacterEntityMatch?.id,
             sourceName: normalizedName
           });
         } else {
@@ -1940,7 +2003,6 @@ export const useWorkspaceConsistency = ({
       activeProject,
       attachAliasTexts,
       categories,
-      characters,
       entities,
       getSuggestedUnknownCategoryId,
       removeReviewSurface,
@@ -2115,7 +2177,7 @@ export const useWorkspaceConsistency = ({
             ? entities.find(
                 (entity) =>
                   characterCategoryIds.has(entity.categoryId) &&
-                  normalizeRecordName(entity.name) === normalizeRecordName(selectedCharacter.name)
+                  namesLikelyReferToSameCharacter(entity.name, selectedCharacter.name)
               )
             : null;
           if (linkedEntity) {

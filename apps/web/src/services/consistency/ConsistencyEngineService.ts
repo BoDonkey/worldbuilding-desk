@@ -116,7 +116,8 @@ const COMMON_SENTENCE_START_WORDS = new Set([
   'dont',
   "don't",
   'look',
-  'some'
+  'some',
+  'whatever'
 ]);
 
 const CARDINAL_NUMBER_WORDS = new Set([
@@ -147,7 +148,7 @@ const normalizePhrase = normalizeCanonText;
 
 const NAME_TOKEN_PATTERN = String.raw`\p{Lu}[\p{L}\p{M}\p{N}'_-]*`;
 const NAME_PARTICLE_PATTERN = String.raw`(?:d[aeiou]s?|de|del|der|di|dos|du|el|la|las|le|of|the|van|von)`;
-const NAME_SEQUENCE_PATTERN = String.raw`${NAME_TOKEN_PATTERN}(?:\s+(?:(?:${NAME_PARTICLE_PATTERN})\s+)?${NAME_TOKEN_PATTERN}){0,2}`;
+const NAME_SEQUENCE_PATTERN = String.raw`${NAME_TOKEN_PATTERN}(?:\s+(?:(?:${NAME_PARTICLE_PATTERN})\s+)?${NAME_TOKEN_PATTERN}){0,4}`;
 const TITLE_PATTERN = String.raw`(?:Detective|Dr|Mr|Mrs|Ms|Mx|Officer|Prof|Professor)`;
 const WORD_TOKEN_PATTERN = String.raw`[\p{L}\p{M}][\p{L}\p{M}\p{N}'_-]*`;
 const TEXT_BOUNDARY_PREFIX = String.raw`(^|[^\p{L}\p{N}_])`;

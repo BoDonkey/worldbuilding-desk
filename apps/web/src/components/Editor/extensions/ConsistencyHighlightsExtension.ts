@@ -11,6 +11,11 @@ export interface ConsistencyHighlightIssue {
   severity: 'blocking' | 'warning';
 }
 
+export interface KnownHighlightSurface {
+  id: string;
+  surface: string;
+}
+
 const consistencyHighlightsKey = new PluginKey('consistency-highlights');
 type HighlightSource<T> = T[] | (() => T[]);
 
@@ -18,7 +23,8 @@ const resolveHighlightSource = <T,>(source: HighlightSource<T>): T[] =>
   typeof source === 'function' ? source() : source;
 
 export const createConsistencyHighlightsExtension = (
-  issues: HighlightSource<ConsistencyHighlightIssue>
+  issues: HighlightSource<ConsistencyHighlightIssue>,
+  knownSurfaces: HighlightSource<KnownHighlightSurface> = []
 ) =>
   Extension.create({
     name: 'consistencyHighlights',
@@ -33,6 +39,7 @@ export const createConsistencyHighlightsExtension = (
               if (currentIssues.length === 0) {
                 return DecorationSet.empty;
               }
+              const currentKnownSurfaces = resolveHighlightSource(knownSurfaces);
 
               const decorations: Decoration[] = [];
 
@@ -43,6 +50,15 @@ export const createConsistencyHighlightsExtension = (
                 if (!node.isText || !node.text) {
                   return;
                 }
+
+                const knownMatches = findTextMatches(
+                  node.text,
+                  currentKnownSurfaces.map((entry) => ({
+                    id: entry.id,
+                    surface: entry.surface,
+                    kind: 'known' as const
+                  }))
+                );
 
                 findTextMatches(
                   node.text,
@@ -57,6 +73,15 @@ export const createConsistencyHighlightsExtension = (
                     | ConsistencyHighlightIssue
                     | undefined;
                   if (!issue) return;
+                  const overlapsLongerKnownSurface = knownMatches.some(
+                    (knownMatch) =>
+                      match.from >= knownMatch.from &&
+                      match.to <= knownMatch.to &&
+                      knownMatch.to - knownMatch.from > match.to - match.from
+                  );
+                  if (overlapsLongerKnownSurface) {
+                    return;
+                  }
                   decorations.push(
                     Decoration.inline(pos + match.from, pos + match.to, {
                       class:

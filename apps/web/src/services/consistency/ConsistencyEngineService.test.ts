@@ -96,6 +96,17 @@ describe('buildExtractedProposal', () => {
     expect(surfaces).toContain('Garcia de Terra');
   });
 
+  it('keeps longer multiword proper names as one candidate', () => {
+    const surfaces = surfacesFor(
+      'Magical Substance Control Agency revised the case file.',
+      [],
+      'workspace-save'
+    );
+
+    expect(surfaces).toContain('Magical Substance Control Agency');
+    expect(surfaces).not.toContain('Magical Substance Control');
+  });
+
   it('treats detective titles as part of titled names', () => {
     const entities = entityRefsFor(
       'Detective Moreland waited near the loading bay.',
@@ -152,7 +163,7 @@ describe('buildExtractedProposal', () => {
 
   it('suppresses common sentence-start words that otherwise highlight every instance', () => {
     const surfaces = surfacesFor(
-      "Look at the notes again. Some of the conclusions don't apply. I don't think the old look matters.",
+      "Look at the notes again. Some of the conclusions don't apply. Whatever happened next was ordinary. I don't think the old look matters.",
       [],
       'import'
     );
@@ -161,6 +172,7 @@ describe('buildExtractedProposal', () => {
     expect(surfaces).not.toContain('Some');
     expect(surfaces).not.toContain("Don");
     expect(surfaces).not.toContain("Don't");
+    expect(surfaces).not.toContain('Whatever');
   });
 
   it('records repeated unknowns as the detection reason', () => {

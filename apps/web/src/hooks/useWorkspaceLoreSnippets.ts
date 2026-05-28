@@ -4,6 +4,7 @@ import type {
   Character,
   CharacterSheet,
   EntityCategory,
+  ProjectSettings,
   StatBlockStyle,
   SystemHistoryEntry,
   WorldEntity
@@ -12,6 +13,7 @@ import type {LoreInspectorRecord} from '../components/Editor/LoreInspectorPanel'
 import type {ConsistencyAlias} from '../services/consistency';
 import type {Project} from '../entityTypes';
 import {getCachedSynopsis, setCachedSynopsis} from '../services/editor';
+import {getProjectCapabilities} from '../projectMode';
 
 type SnippetEntry = {name: string; html: string; lore: LoreInspectorRecord};
 
@@ -29,6 +31,7 @@ interface UseWorkspaceLoreSnippetsParams {
   canonicalFacts: CanonicalFact[];
   aliases: ConsistencyAlias[];
   systemHistoryEntries: SystemHistoryEntry[];
+  projectSettings: ProjectSettings | null;
   resolveCharacterBlock: (sheet: CharacterSheet, style: StatBlockStyle) => string;
   resolveItemBlock: (entity: WorldEntity, style: StatBlockStyle) => string;
 }
@@ -42,6 +45,7 @@ export function useWorkspaceLoreSnippets({
   canonicalFacts,
   aliases,
   systemHistoryEntries,
+  projectSettings,
   resolveCharacterBlock,
   resolveItemBlock
 }: UseWorkspaceLoreSnippetsParams): LoreSnippets {
@@ -65,6 +69,8 @@ export function useWorkspaceLoreSnippets({
         .map((category) => category.id)
     );
     const characterById = new Map(characters.map((character) => [character.id, character]));
+    const shouldUseCharacterToolsAsCanon =
+      !getProjectCapabilities(projectSettings).isGeneralFiction;
     const characterSheetByCharacterId = new Map(
       characterSheets
         .filter((sheet): sheet is CharacterSheet & {characterId: string} => Boolean(sheet.characterId))
@@ -294,26 +300,28 @@ export function useWorkspaceLoreSnippets({
       surnameCandidates.set(trailing, existing);
     };
 
-    characterSheets.forEach((sheet) => {
-      const entry = {
-        name: sheet.name,
-        html: resolveCharacterBlock(sheet, 'compact'),
-        lore: buildCharacterLore(sheet)
-      };
-      registerEntry('characters', sheet.name, entry);
-    });
+    if (shouldUseCharacterToolsAsCanon) {
+      characterSheets.forEach((sheet) => {
+        const entry = {
+          name: sheet.name,
+          html: resolveCharacterBlock(sheet, 'compact'),
+          lore: buildCharacterLore(sheet)
+        };
+        registerEntry('characters', sheet.name, entry);
+      });
 
-    characters.forEach((character) => {
-      if (characterSheetByCharacterId.has(character.id)) {
-        return;
-      }
-      const entry = {
-        name: character.name,
-        html: buildCharacterSnippetFromCharacter(character),
-        lore: buildCharacterLoreFromCharacter(character)
-      };
-      registerEntry('characters', character.name, entry);
-    });
+      characters.forEach((character) => {
+        if (characterSheetByCharacterId.has(character.id)) {
+          return;
+        }
+        const entry = {
+          name: character.name,
+          html: buildCharacterSnippetFromCharacter(character),
+          lore: buildCharacterLoreFromCharacter(character)
+        };
+        registerEntry('characters', character.name, entry);
+      });
+    }
 
     entities.forEach((entity) => {
       const entry = {
@@ -327,6 +335,9 @@ export function useWorkspaceLoreSnippets({
     aliases.forEach((alias) => {
       if (alias.targetType === 'character') {
         if (linkedEntityIdByCharacterId.has(alias.targetId)) {
+          return;
+        }
+        if (!shouldUseCharacterToolsAsCanon) {
           return;
         }
         const sheet = characterSheetByCharacterId.get(alias.targetId);
@@ -404,6 +415,7 @@ export function useWorkspaceLoreSnippets({
     characters,
     characterSheets,
     entities,
+    projectSettings,
     resolveCharacterBlock,
     resolveItemBlock,
     systemHistoryEntries

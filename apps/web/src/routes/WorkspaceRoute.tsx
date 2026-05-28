@@ -1189,6 +1189,7 @@ function WorkspaceRoute() {
     canonicalFacts,
     aliases,
     systemHistoryEntries,
+    projectSettings,
     resolveCharacterBlock,
     resolveItemBlock
   });

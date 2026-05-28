@@ -47,6 +47,11 @@ describe('worldBibleReviewHelpers', () => {
     expect(getRecommendedMatchResolution(['Same name as an existing record'])).toBe('merge');
     expect(getRecommendedMatchResolution(['Current name already exists as an alias'])).toBe('alias');
     expect(
+      getRecommendedMatchResolution([
+        'Current name looks like a short form of an existing record'
+      ])
+    ).toBe('alias');
+    expect(
       getRecommendedMatchResolution(['One or more aliases overlap with another record'])
     ).toBe('ignore');
     expect(getReviewResolutionLabel('alias')).toBe('Convert to alias');
@@ -107,6 +112,34 @@ describe('worldBibleReviewHelpers', () => {
         matchKey: null,
         reasons: ['One or more aliases overlap with another record'],
         recommendedResolution: 'ignore'
+      }
+    ]);
+  });
+
+  it('finds first-name drafts that should become aliases of full-name canon', () => {
+    const entities = [
+      makeEntity({id: '1', name: 'Garcia de Terra'}),
+      makeEntity({id: '2', name: 'Mira Voss'})
+    ];
+
+    const matches = buildPotentialEntityMatches({
+      entities,
+      aliasMapByEntityId: new Map(),
+      editingId: null,
+      name: 'Garcia',
+      fieldValues: {},
+      alternativeNamesKey: ALTERNATIVE_NAMES_KEY,
+      ignoredEntityMatchKeys: new Set(),
+      normalizeName,
+      parseAlternativeNames
+    });
+
+    expect(matches).toEqual([
+      {
+        entity: entities[0],
+        matchKey: null,
+        reasons: ['Current name looks like a short form of an existing record'],
+        recommendedResolution: 'alias'
       }
     ]);
   });

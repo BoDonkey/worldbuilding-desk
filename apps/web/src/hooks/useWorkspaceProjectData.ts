@@ -440,12 +440,19 @@ export function useWorkspaceProjectData({
           categories: loadedCategories
         }).then((migratedAliases) => {
           setAliases(migratedAliases);
+          setCharacters(loadedCharacters);
+          setEntities(loadedEntities);
+          setCategories(loadedCategories);
         });
       });
     };
     window.addEventListener('wbd:alias-records-changed', refresh);
+    window.addEventListener('wbd:entity-records-changed', refresh);
+    window.addEventListener('wbd:character-records-changed', refresh);
     return () => {
       window.removeEventListener('wbd:alias-records-changed', refresh);
+      window.removeEventListener('wbd:entity-records-changed', refresh);
+      window.removeEventListener('wbd:character-records-changed', refresh);
     };
   }, [activeProject]);
 

@@ -271,7 +271,9 @@ export const useWorldBibleEntityActions = ({
           return copy;
         });
         setAliases((prev) => [
-          ...prev.filter((alias) => alias.entityId !== entity.id),
+          ...prev.filter(
+            (alias) => alias.targetType !== 'entity' || alias.targetId !== entity.id
+          ),
           ...savedAliases
         ]);
 
@@ -369,7 +371,9 @@ export const useWorldBibleEntityActions = ({
           await refreshMemories();
         }
         setEntities((prev) => prev.filter((entity) => entity.id !== id));
-        setAliases((prev) => prev.filter((alias) => alias.entityId !== id));
+        setAliases((prev) =>
+          prev.filter((alias) => alias.targetType !== 'entity' || alias.targetId !== id)
+        );
         if (editingId === id) resetForm();
         setFeedback({tone: 'success', message: 'Entry deleted.'});
       } catch (error) {

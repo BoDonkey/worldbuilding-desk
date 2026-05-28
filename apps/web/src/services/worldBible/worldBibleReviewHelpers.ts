@@ -38,10 +38,19 @@ export const getRecommendedMatchResolution = (reasons: string[]): ReviewResoluti
   if (reasons.includes('Same name as an existing record')) {
     return 'merge';
   }
-  if (reasons.includes('Current name already exists as an alias')) {
+  if (
+    reasons.includes('Current name already exists as an alias') ||
+    reasons.includes('Current name looks like a short form of an existing record')
+  ) {
     return 'alias';
   }
   return 'ignore';
+};
+
+const isLikelyShortFormOf = (shortName: string, fullName: string): boolean => {
+  if (!shortName || !fullName || shortName === fullName) return false;
+  if (shortName.includes(' ') || !fullName.includes(' ')) return false;
+  return fullName.split(/\s+/).filter(Boolean)[0] === shortName;
 };
 
 export const getMissingRequiredFieldLabels = (
@@ -114,6 +123,9 @@ export const buildPotentialEntityMatches = (params: {
       if (normalizedName && entityAliases.includes(normalizedName)) {
         reasons.add('Current name already exists as an alias');
       }
+      if (normalizedName && isLikelyShortFormOf(normalizedName, entityName)) {
+        reasons.add('Current name looks like a short form of an existing record');
+      }
       if (normalizedAliases.includes(entityName)) {
         reasons.add('One of your aliases matches an existing record name');
       }
@@ -185,6 +197,8 @@ export const buildReviewEntityInsightsById = (params: {
       if (
         normalizedCandidateName === normalizedEntityName ||
         candidateAliasSet.has(normalizedEntityName) ||
+        isLikelyShortFormOf(normalizedEntityName, normalizedCandidateName) ||
+        isLikelyShortFormOf(normalizedCandidateName, normalizedEntityName) ||
         entityAliasSet.has(normalizedCandidateName) ||
         candidateAliases.some((alias) => entityAliasSet.has(alias))
       ) {
@@ -196,6 +210,8 @@ export const buildReviewEntityInsightsById = (params: {
         if (
           recommendedResolution !== 'merge' &&
           (candidateAliasSet.has(normalizedEntityName) ||
+            isLikelyShortFormOf(normalizedEntityName, normalizedCandidateName) ||
+            isLikelyShortFormOf(normalizedCandidateName, normalizedEntityName) ||
             entityAliasSet.has(normalizedCandidateName))
         ) {
           recommendedResolution = 'alias';

@@ -97,6 +97,71 @@ function seedWorldBibleReviewQueueItem(): Cypress.Chainable<void> {
   );
 }
 
+function seedShortNameAliasReviewItem(): Cypress.Chainable<void> {
+  return cy.window().then(
+    (win) =>
+      new Cypress.Promise<void>((resolve, reject) => {
+        const now = Date.now();
+        const openRequest = win.indexedDB.open(DB_NAME, DB_VERSION);
+        openRequest.onerror = () => reject(openRequest.error);
+        openRequest.onsuccess = () => {
+          const db = openRequest.result;
+          const tx = db.transaction(['entityCategories', 'entities'], 'readwrite');
+          tx.objectStore('entityCategories').put({
+            id: 'characters',
+            projectId: 'cypress-project-1',
+            name: 'Characters',
+            slug: 'characters',
+            fieldSchema: [
+              {key: 'description', label: 'Description', type: 'textarea', required: true},
+              {key: 'age', label: 'Age', type: 'text'},
+              {key: 'role', label: 'Role', type: 'text'},
+              {key: 'notes', label: 'Notes', type: 'textarea'}
+            ],
+            createdAt: now
+          });
+          tx.objectStore('entities').put({
+            id: 'entity-garcia-full',
+            projectId: 'cypress-project-1',
+            categoryId: 'characters',
+            name: 'Garcia de Terra',
+            fields: {
+              description: '<p>Royal envoy.</p>',
+              role: 'Envoy'
+            },
+            needsCompletion: false,
+            links: [],
+            createdAt: now,
+            updatedAt: now
+          });
+          tx.objectStore('entities').put({
+            id: 'entity-garcia-short',
+            projectId: 'cypress-project-1',
+            categoryId: 'characters',
+            name: 'Garcia',
+            fields: {},
+            needsCompletion: true,
+            links: [],
+            createdAt: now + 1,
+            updatedAt: now + 1
+          });
+          tx.oncomplete = () => {
+            db.close();
+            resolve();
+          };
+          tx.onerror = () => {
+            db.close();
+            reject(tx.error);
+          };
+          tx.onabort = () => {
+            db.close();
+            reject(tx.error);
+          };
+        };
+      })
+  );
+}
+
 describe('Project mode guardrails', () => {
   beforeEach(() => {
     cy.viewport(1400, 1000);
@@ -243,13 +308,31 @@ describe('Project mode guardrails', () => {
     cy.visit('/world-bible');
     cy.contains('button', /Review Queue \(1\)/).click();
     cy.contains('h2', 'Review Queue').should('be.visible');
+    cy.get('section[aria-label="Cast canon"]').should('not.exist');
+    cy.contains('h2', 'Queue Focus').should('not.exist');
+    cy.contains('h2', 'Review Queue Items').should('not.exist');
+    cy.contains('button', 'Open queue mode').should('not.exist');
+    cy.contains('button', 'Focus first item').should('not.exist');
+    cy.contains('button', /^Ignore \(/).should('not.exist');
     cy.contains('[data-cy="world-bible-review-card"]', 'Kael Review').within(() => {
       cy.contains('button', 'Review details').should('be.visible');
       cy.contains('button', 'Mark reviewed').should('be.visible');
       cy.contains('button', 'Mark reviewed + next').should('not.exist');
       cy.contains('button', 'Merge matches').should('not.exist');
       cy.contains('button', 'Review aliases').should('not.exist');
+      cy.contains('button', 'Resolve names').should('not.exist');
     });
+  });
+
+  it('offers a direct short-name to full-name alias action in review', () => {
+    seedShortNameAliasReviewItem();
+    cy.visit('/world-bible');
+    cy.contains('button', /Review Queue \(1\)/).click();
+    cy.contains('[data-cy="world-bible-review-card"]', 'Garcia').within(() => {
+      cy.contains('button', 'Resolve names').click();
+    });
+    cy.contains('strong', 'Possible canonical character overlaps').should('be.visible');
+    cy.contains('button', 'Make Garcia an alias of Garcia de Terra').should('be.visible');
   });
 
   it('clears the active project summary after deleting the last project', () => {

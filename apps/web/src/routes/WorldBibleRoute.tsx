@@ -263,15 +263,6 @@ const reviewReasonLabels: Record<ReviewQueueReason, string> = {
   aliasFollowUp: 'Review alternative names'
 };
 
-const reviewResolutionLabels: Record<'all' | ReviewResolution, string> = {
-  all: 'All recommendations',
-  complete: 'Complete fields',
-  rename: 'Rename to canonical',
-  alias: 'Convert to alias',
-  merge: 'Merge records',
-  ignore: 'Ignore match'
-};
-
 const triggerJsonDownload = (fileName: string, data: unknown): void => {
   const blob = new Blob([JSON.stringify(data, null, 2)], {
     type: 'application/json'
@@ -428,7 +419,7 @@ function WorldBibleRoute() {
     matchEntityId?: string;
   } | null>(null);
   const [reviewFilter, setReviewFilter] = useState<'all' | ReviewQueueReason>('all');
-  const [recommendedFilter, setRecommendedFilter] = useState<'all' | ReviewResolution>('all');
+  const [recommendedFilter] = useState<'all' | ReviewResolution>('all');
   const seriesConfig = activeProject
     ? getSeriesBibleConfig(activeProject)
     : null;
@@ -821,7 +812,6 @@ function WorldBibleRoute() {
     reviewQueue,
     filteredReviewQueue,
     reviewCounts,
-    recommendedCounts,
     potentialEntityMatches,
     reviewEntityInsightsById,
     visibleEntities,
@@ -1747,7 +1737,7 @@ function WorldBibleRoute() {
         </div>
       </details>
 
-      {activeCategoryIsCharacterLike && (
+      {activeCategoryIsCharacterLike && viewMode === 'category' && (
         <section className={styles.castPanel} aria-label='Cast canon'>
           <div className={styles.castHeader}>
             <div>
@@ -2361,12 +2351,12 @@ function WorldBibleRoute() {
             <div>
               <h2>Review Queue</h2>
               <p>
-                Finish incomplete canon records here. This queue combines entries that
-                still need required canon details with records whose aliases or duplicate
-                matches still need a decision.
+                Finish review-created canon records and alias follow-up here. Manual
+                records you create and save are already accepted canon, so they do not
+                appear in this queue unless they are later flagged for completion or
+                alias review.
               </p>
             </div>
-            <div className={styles.reviewCount}>{reviewQueue.length} open</div>
           </div>
           <div className={styles.reviewToolbar}>
             <div className={styles.reviewFilterGroup}>
@@ -2401,66 +2391,6 @@ function WorldBibleRoute() {
               >
                 Alias follow-up ({reviewCounts.aliasFollowUp})
               </button>
-            </div>
-            <div className={styles.reviewFilterGroup}>
-              <button
-                type='button'
-                onClick={() => setRecommendedFilter('all')}
-                className={`${styles.reviewFilterButton} ${
-                  recommendedFilter === 'all' ? styles.reviewFilterButtonActive : ''
-                }`}
-              >
-                All recommendations ({recommendedCounts.all})
-              </button>
-              <button
-                type='button'
-                onClick={() => setRecommendedFilter('complete')}
-                className={`${styles.reviewFilterButton} ${
-                  recommendedFilter === 'complete' ? styles.reviewFilterButtonActive : ''
-                }`}
-              >
-                Complete ({recommendedCounts.complete})
-              </button>
-              <button
-                type='button'
-                onClick={() => setRecommendedFilter('alias')}
-                className={`${styles.reviewFilterButton} ${
-                  recommendedFilter === 'alias' ? styles.reviewFilterButtonActive : ''
-                }`}
-              >
-                Alias ({recommendedCounts.alias})
-              </button>
-              <button
-                type='button'
-                onClick={() => setRecommendedFilter('merge')}
-                className={`${styles.reviewFilterButton} ${
-                  recommendedFilter === 'merge' ? styles.reviewFilterButtonActive : ''
-                }`}
-              >
-                Merge ({recommendedCounts.merge})
-              </button>
-              <button
-                type='button'
-                onClick={() => setRecommendedFilter('ignore')}
-                className={`${styles.reviewFilterButton} ${
-                  recommendedFilter === 'ignore' ? styles.reviewFilterButtonActive : ''
-                }`}
-              >
-                Ignore ({recommendedCounts.ignore})
-              </button>
-            </div>
-            <div className={styles.reviewToolbarActions}>
-              <button type='button' onClick={() => setViewMode('review')}>
-                Open queue mode
-              </button>
-              {filteredReviewQueue.length > 0 && (
-                <button
-                  type='button'
-                  onClick={() => handleOpenReviewItem(filteredReviewQueue[0].entity)}
-                >
-                  Focus first item
-                </button>
-              )}
             </div>
           </div>
           <div className={styles.reviewList}>
@@ -2501,13 +2431,6 @@ function WorldBibleRoute() {
                       : ''}
                   </div>
                 )}
-                {insight && (
-                  <div className={styles.reviewHint}>
-                    {insight.matchCount > 0
-                      ? `Recommended: ${getReviewResolutionLabel(insight.recommendedResolution)}.`
-                      : ''}
-                  </div>
-                )}
                 <div className={styles.reviewActions}>
                   <button
                     type='button'
@@ -2520,7 +2443,7 @@ function WorldBibleRoute() {
                       type='button'
                       onClick={() => handleOpenReviewItem(entity, 'aliases')}
                     >
-                      Review aliases
+                      Resolve names
                     </button>
                   )}
                   <button
@@ -2550,37 +2473,10 @@ function WorldBibleRoute() {
             activeCategoryIsCharacterLike ? styles.castContent : ''
           }`}
         >
-          {(!activeCategoryIsCharacterLike || isFocusedCharacterTask || viewMode === 'review') && (
+          {(!activeCategoryIsCharacterLike ||
+            isFocusedCharacterTask ||
+            (viewMode === 'review' && editingId)) && (
           <div className={styles.formSection}>
-            {viewMode === 'review' && !editingId ? (
-              <div className={styles.reviewFocusPanel}>
-                <h2>Queue Focus</h2>
-                <p>
-                  Pick a queue item to review. The editor on this side will switch to
-                  the selected record so you can complete canon details or refine
-                  alternative names.
-                </p>
-                <div className={styles.reviewToolbarActions}>
-                  {filteredReviewQueue.length > 0 && (
-                    <button
-                      type='button'
-                      onClick={() => handleOpenReviewItem(filteredReviewQueue[0].entity)}
-                    >
-                      Open first queue item
-                    </button>
-                  )}
-                  <button
-                    type='button'
-                    onClick={() => {
-                      setViewMode('category');
-                      resetForm();
-                    }}
-                  >
-                    Return to category view
-                  </button>
-                </div>
-              </div>
-            ) : (
             <form onSubmit={handleSubmit} className={styles.form}>
               <h2>
                 {editingId ? 'Edit' : 'New'} {activeCategory.name.slice(0, -1)}
@@ -2826,10 +2722,8 @@ function WorldBibleRoute() {
                       <div className={styles.matchPanel}>
                         <strong>Possible canonical character overlaps</strong>
                         <p>
-                          This character draft overlaps with existing canon. Choose whether
-                          {' '}{currentCharacterLabel} should stay canonical, another matching
-                          record should stay canonical, both should remain separate people, or
-                          the suggestion should be ignored.
+                          This character may already exist. If this is a short name,
+                          make it an alternative name of the full canon record.
                         </p>
                         <div className={styles.matchList}>
                           {canonicalResolutionMatches.slice(0, 4).map((match) => (
@@ -2840,49 +2734,25 @@ function WorldBibleRoute() {
                                   {match.reasons.join(' · ')}
                                 </div>
                                 <div className={styles.reviewHint}>
-                                  Keep {currentCharacterLabel} canonical to preserve this
-                                  record, or keep {match.entity.name} canonical to make
-                                  {' '}{currentCharacterLabel} an alias.
+                                  Use this when {currentCharacterLabel} is a nickname,
+                                  first-name reference, title, or alternate spelling for
+                                  {' '}{match.entity.name}.
                                 </div>
                               </div>
                               <div className={styles.reviewToolbarActions}>
-                                <button
-                                  type='button'
-                                  onClick={() => handleEdit(match.entity)}
-                                >
-                                  Open other canon record
-                                </button>
-                                <button
-                                  type='button'
-                                  onClick={() => handleEdit(match.entity, 'aliases')}
-                                >
-                                  Open other aliases
-                                </button>
-                                {editingId && match.matchKey && (
-                                  <button
-                                    type='button'
-                                    onClick={() => void handleKeepSeparateMatch(match.entity)}
-                                  >
-                                    Keep separate characters
-                                  </button>
-                                )}
-                                {editingId && match.matchKey && (
-                                  <button
-                                    type='button'
-                                    onClick={() => void handleIgnoreEntityMatch(match.entity)}
-                                  >
-                                    Ignore this suggestion
-                                  </button>
-                                )}
                                 {editingId && (
                                   <button
                                     type='button'
-                                    onClick={() => void handleMergeMatchIntoCurrentEntity(match.entity)}
-                                    disabled={mergingEntityTargetId === match.entity.id}
+                                    className={styles.primaryButton}
+                                    onClick={() => void handleConvertEntityToAlias(match.entity)}
+                                    disabled={
+                                      aliasingEntityTargetId === match.entity.id ||
+                                      mergingEntityTargetId === match.entity.id
+                                    }
                                   >
-                                    {mergingEntityTargetId === match.entity.id
-                                      ? 'Merging...'
-                                      : `Keep ${currentCharacterLabel} canonical`}
+                                    {aliasingEntityTargetId === match.entity.id
+                                      ? 'Converting...'
+                                      : `Make ${currentCharacterLabel} an alias of ${match.entity.name}`}
                                   </button>
                                 )}
                                 {editingId && (
@@ -2893,23 +2763,31 @@ function WorldBibleRoute() {
                                   >
                                     {mergingEntityTargetId === match.entity.id
                                       ? 'Merging...'
-                                      : `Keep ${match.entity.name} canonical`}
+                                      : `Merge details into ${match.entity.name}`}
                                   </button>
                                 )}
-                                {editingId && (
+                                {editingId && match.matchKey && (
                                   <button
                                     type='button'
-                                    onClick={() => void handleConvertEntityToAlias(match.entity)}
-                                    disabled={
-                                      aliasingEntityTargetId === match.entity.id ||
-                                      mergingEntityTargetId === match.entity.id
-                                    }
+                                    onClick={() => void handleKeepSeparateMatch(match.entity)}
                                   >
-                                    {aliasingEntityTargetId === match.entity.id
-                                      ? 'Converting...'
-                                      : `Make ${currentCharacterLabel} an alias`}
+                                    Keep separate
                                   </button>
                                 )}
+                                {editingId && match.matchKey && (
+                                  <button
+                                    type='button'
+                                    onClick={() => void handleIgnoreEntityMatch(match.entity)}
+                                  >
+                                    Ignore suggestion
+                                  </button>
+                                )}
+                                <button
+                                  type='button'
+                                  onClick={() => handleEdit(match.entity)}
+                                >
+                                  Open {match.entity.name}
+                                </button>
                               </div>
                             </div>
                           ))}
@@ -3107,7 +2985,6 @@ function WorldBibleRoute() {
                 )}
               </div>
             </form>
-            )}
             {editingId && (
               <ShodhMemoryPanel
                 title='Canon summary'
@@ -3145,7 +3022,7 @@ function WorldBibleRoute() {
           </div>
           )}
 
-          {(!activeCategoryIsCharacterLike || !isFocusedCharacterTask) && (
+          {viewMode !== 'review' && (!activeCategoryIsCharacterLike || !isFocusedCharacterTask) && (
           <div
             className={`${styles.listSection} ${
               activeCategoryIsCharacterLike ? styles.castListSection : ''
@@ -3156,18 +3033,9 @@ function WorldBibleRoute() {
               <p className={styles.reviewListSummary}>
                 Showing {visibleEntities.length} queue item
                 {visibleEntities.length === 1 ? '' : 's'}
-                {reviewFilter === 'all' && recommendedFilter === 'all'
+                {reviewFilter === 'all'
                   ? ''
-                  : ` filtered by ${[
-                      reviewFilter === 'all'
-                        ? null
-                        : reviewReasonLabels[reviewFilter].toLowerCase(),
-                      recommendedFilter === 'all'
-                        ? null
-                        : reviewResolutionLabels[recommendedFilter].toLowerCase()
-                    ]
-                      .filter(Boolean)
-                      .join(' + ')}`}
+                  : ` filtered by ${reviewReasonLabels[reviewFilter].toLowerCase()}`}
                 .
               </p>
             )}

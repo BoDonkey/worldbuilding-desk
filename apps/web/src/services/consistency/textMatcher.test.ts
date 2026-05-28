@@ -83,4 +83,19 @@ describe('textMatcher', () => {
 
     expect(matches).toEqual([]);
   });
+
+  it('matches lowercase particles and longer organization names as complete surfaces', () => {
+    const matches = findTextMatches(
+      'Garcia de Terra briefed the Magical Substance Control Agency.',
+      [
+        {id: 'garcia', surface: 'Garcia de Terra', kind: 'known'},
+        {id: 'agency', surface: 'Magical Substance Control Agency', kind: 'known'}
+      ]
+    );
+
+    expect(matches.map((match) => match.surface)).toEqual([
+      'Garcia de Terra',
+      'Magical Substance Control Agency'
+    ]);
+  });
 });

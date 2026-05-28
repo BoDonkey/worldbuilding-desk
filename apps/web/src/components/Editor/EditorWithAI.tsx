@@ -244,7 +244,10 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
       extensions: [
       ...config.extensions,
       AIExpandMenu,
-      createConsistencyHighlightsExtension(() => consistencyHighlightsRef.current),
+      createConsistencyHighlightsExtension(
+        () => consistencyHighlightsRef.current,
+        () => loreHighlightsRef.current
+      ),
         createLoreHighlightsExtension(
           () => loreHighlightsRef.current,
           () => consistencyHighlightsRef.current

@@ -1,8 +1,132 @@
+const DB_NAME = 'worldbuilding-db';
+const DB_VERSION = 24;
+
+function setSeededProjectToGeneralFiction(): Cypress.Chainable<void> {
+  return cy.window().then(
+    (win) =>
+      new Cypress.Promise<void>((resolve, reject) => {
+        const openRequest = win.indexedDB.open(DB_NAME, DB_VERSION);
+        openRequest.onerror = () => reject(openRequest.error);
+        openRequest.onsuccess = () => {
+          const db = openRequest.result;
+          const tx = db.transaction(['projectSettings'], 'readwrite');
+          const store = tx.objectStore('projectSettings');
+          const getRequest = store.get('settings-cypress-project-1');
+
+          getRequest.onerror = () => reject(getRequest.error);
+          getRequest.onsuccess = () => {
+            store.put({
+              ...getRequest.result,
+              projectMode: 'general',
+              featureToggles: {
+                enableGameSystems: false,
+                enableRuntimeModifiers: false,
+                enableSettlementAndZoneSystems: false,
+                enableRuleAuthoring: false
+              }
+            });
+          };
+          tx.oncomplete = () => {
+            db.close();
+            resolve();
+          };
+          tx.onerror = () => {
+            db.close();
+            reject(tx.error);
+          };
+          tx.onabort = () => {
+            db.close();
+            reject(tx.error);
+          };
+        };
+      })
+  );
+}
+
+function seedWorldBibleCharacterWithToolsProfile(params: {
+  entityId: string;
+  characterId: string;
+  name: string;
+  alias?: string;
+}): Cypress.Chainable<void> {
+  return cy.window().then(
+    (win) =>
+      new Cypress.Promise<void>((resolve, reject) => {
+        const now = Date.now();
+        const openRequest = win.indexedDB.open(DB_NAME, DB_VERSION);
+        openRequest.onerror = () => reject(openRequest.error);
+        openRequest.onsuccess = () => {
+          const db = openRequest.result;
+          const stores = ['entityCategories', 'entities', 'characters', 'consistency_aliases'];
+          const tx = db.transaction(stores, 'readwrite');
+          tx.objectStore('entityCategories').put({
+            id: 'characters',
+            projectId: 'cypress-project-1',
+            name: 'Characters',
+            slug: 'characters',
+            fieldSchema: [
+              {key: 'description', label: 'Description', type: 'textarea', required: true},
+              {key: 'age', label: 'Age', type: 'text'},
+              {key: 'role', label: 'Role', type: 'text'},
+              {key: 'notes', label: 'Notes', type: 'textarea'}
+            ],
+            createdAt: now
+          });
+          tx.objectStore('entities').put({
+            id: params.entityId,
+            projectId: 'cypress-project-1',
+            categoryId: 'characters',
+            name: params.name,
+            fields: {description: '<p>Seeded canon character.</p>'},
+            needsCompletion: false,
+            links: [],
+            createdAt: now,
+            updatedAt: now
+          });
+          tx.objectStore('characters').put({
+            id: params.characterId,
+            projectId: 'cypress-project-1',
+            name: params.name,
+            description: 'Seeded tools profile.',
+            fields: {},
+            createdAt: now,
+            updatedAt: now
+          });
+          if (params.alias) {
+            tx.objectStore('consistency_aliases').put({
+              id: `alias-${params.entityId}`,
+              projectId: 'cypress-project-1',
+              targetId: params.entityId,
+              targetType: 'entity',
+              entityId: params.entityId,
+              alias: params.alias,
+              createdAt: now,
+              updatedAt: now
+            });
+          }
+          tx.oncomplete = () => {
+            db.close();
+            resolve();
+          };
+          tx.onerror = () => {
+            db.close();
+            reject(tx.error);
+          };
+          tx.onabort = () => {
+            db.close();
+            reject(tx.error);
+          };
+        };
+      })
+  );
+}
+
 describe('Lore and review matching', () => {
   beforeEach(() => {
     cy.viewport(1400, 1000);
     cy.visit('/');
     cy.seedSmokeProjectData();
+    setSeededProjectToGeneralFiction();
     cy.reload();
     cy.contains('strong', 'Cypress Smoke Project').should('be.visible');
   });
@@ -138,18 +262,11 @@ describe('Lore and review matching', () => {
       expect(texts.some((text) => text.includes('Blatnor'))).to.equal(true);
     });
 
-    cy.visit('/characters');
-    cy.contains('h1', 'Character Tools').should('be.visible');
-    cy.get('input[type="text"]').first().clear().type('Kaelor');
-    cy.contains('button', 'Create Character').click();
-    cy.contains('strong', 'Kaelor').should('be.visible');
-    cy.contains('strong', 'Kaelor')
-      .closest('li')
-      .within(() => {
-        cy.contains('button', 'Create Canon Record').click();
-      });
-
-    cy.contains('h2', 'Edit Character').should('be.visible');
+    seedWorldBibleCharacterWithToolsProfile({
+      entityId: 'entity-kaelor',
+      characterId: 'character-kaelor',
+      name: 'Kaelor'
+    });
 
     cy.visit('/workspace');
     cy.contains('Beta Scene').click();
@@ -163,5 +280,40 @@ describe('Lore and review matching', () => {
     });
     cy.contains('.tiptap-editor [data-lore-id]', 'Kaelor').should('be.visible');
     cy.get('button[aria-label^="Open review drawer"]').should('contain.text', '1 review item');
+  });
+
+  it('removes lore highlights after deleting World Bible canon even if a tools profile remains', () => {
+    seedWorldBibleCharacterWithToolsProfile({
+      entityId: 'entity-garcia-full',
+      characterId: 'character-garcia-full',
+      name: 'Garcia de Terra',
+      alias: 'Garcia'
+    });
+    cy.reload();
+    cy.visit('/workspace');
+    cy.contains('h1', 'Writing Workspace').should('be.visible');
+
+    cy.get('.tiptap-editor')
+      .click()
+      .type('{selectall}Garcia de Terra entered quietly. Garcia checked the seal.', {
+        delay: 0
+      });
+
+    cy.contains('.tiptap-editor [data-lore-id]', 'Garcia de Terra').should('be.visible');
+    cy.contains('.tiptap-editor [data-lore-id]', 'Garcia').should('be.visible');
+
+    cy.visit('/world-bible');
+    cy.contains('h1', 'World Bible').should('be.visible');
+    cy.on('window:confirm', () => true);
+    cy.contains('li', 'Garcia de Terra')
+      .contains('button', 'Delete')
+      .click();
+    cy.contains('[role="status"]', 'Entry deleted.').should('be.visible');
+
+    cy.visit('/workspace');
+    cy.contains('h1', 'Writing Workspace').should('be.visible');
+
+    cy.contains('.tiptap-editor [data-lore-id]', 'Garcia de Terra').should('not.exist');
+    cy.contains('.tiptap-editor [data-lore-id]', 'Garcia').should('not.exist');
   });
 });
