@@ -100,13 +100,17 @@ Completed recovery checkpoints on `codex/reconcile-temp-update-ui`:
    - World Bible review cards now keep repeated workflow actions out of the card list.
    - Focused review mode still owns next-item and detailed alias/merge workflows.
    - `project-mode-guardrails.cy.ts` includes a review-card density guardrail.
-14. In-progress review/alias UX cleanup:
+14. `f7c2f19` - stabilized World Bible review aliases:
    - Review Queue no longer renders Cast creation cards, Queue Focus, duplicate queue list panels, recommendation filter pills, `Open queue mode`, or `Focus first item`.
    - Review Queue cards now keep only core filters plus `Review details`, contextual `Resolve names`, and `Mark reviewed`.
    - First-name/full-name character overlap detection now surfaces a direct action such as `Make Garcia an alias of Garcia de Terra`.
    - Workspace link target assembly now suppresses duplicate Character Tools targets when a matching World Bible character entity exists, including first-name/full-name pairs.
    - Character Tools deletion now says `Remove Tools Profile` when a World Bible canon record exists, because deleting tools does not remove canon aliases or workspace highlights.
    - World Bible entity save/delete now clears in-memory aliases by `targetId`, not the legacy `entityId` field.
+   - General-fiction Workspace canon highlighting no longer treats orphan Character Tools records as blue-highlight canon after the World Bible record is deleted.
+   - Inline review popover controls now keep stable rows when category selection changes.
+   - Unknown extraction now keeps longer proper names such as `Magical Substance Control Agency` and suppresses common sentence-start `Whatever`.
+   - `lore-review-matching.cy.ts` now reflects current general-fiction `/characters` routing and covers World Bible canon deletion removing alias/highlight surfaces.
 
 Verified for the current checkpoint:
 
@@ -114,20 +118,15 @@ Verified for the current checkpoint:
 - `pnpm --filter web lint` passes with the existing unrelated warning in `apps/web/src/hooks/useWorkspaceDocuments.ts`.
 - `pnpm --filter web exec cypress run --spec cypress/e2e/project-mode-guardrails.cy.ts`
 - `pnpm --filter web test:unit -- --run`
+- `pnpm --filter web exec cypress run --spec cypress/e2e/lore-review-matching.cy.ts`
 - Browser smoke on `http://localhost:5173/characters`: hub layout and manual character form render coherently, and long-form fields are TipTap editors.
 
 Recommended next slices:
 
-1. Resume manual review/alias smoke from the workspace:
-   - create or detect a short-name character such as `Garcia`
-   - confirm only one link target appears when both Character Tools and World Bible have related records
-   - confirm `Resolve names` opens World Bible review details and shows `Make Garcia an alias of Garcia de Terra`
-   - confirm using that action removes the duplicate review item and leaves the full canon record highlighted normally
-2. Confirm deletion semantics:
-   - removing a Character Tools profile should not remove workspace highlights
-   - deleting the World Bible canon record should remove related aliases/highlights after returning to Workspace or refreshing review state
-3. Run or repair broader review-completion smoke coverage before further review UI changes.
-4. Revisit workspace review drawer density only after the World Bible queue is stable; do not replace the current writing workspace with the reference branch workspace.
+1. Run or repair broader review-completion smoke coverage before further review UI changes.
+2. Revisit workspace review drawer density only after the World Bible queue is stable; do not replace the current writing workspace with the reference branch workspace.
+3. Compare current review surfaces against `codex/review-completion-state` for narrow copy/density improvements only.
+4. Audit the known `post-merge-smoke.cy.ts` Prompt Tools failure and decide whether the expectation or implementation is stale.
 
 ## Next Session Handoff
 
@@ -139,5 +138,5 @@ Recommended next slices:
 - The writing workspace from the current branch remains preferred; do not replace it with the `codex/review-completion-state` workspace.
 - The targeted Cypress spec `apps/web/cypress/e2e/project-mode-guardrails.cy.ts` passes with Cast import, AI draft entry, custom-section, and project-mode guardrails.
 - A broader Cypress run surfaced an existing `post-merge-smoke.cy.ts` failure around `Prompt Tools`; treat that as a known follow-up, not as a failure introduced by the project-mode guardrail slice.
-- A focused `lore-review-matching.cy.ts` run passed the first four workspace matching checks, then failed on a stale expectation that `/characters` shows `Character Tools`; general-fiction `/characters` now routes into World Bible/Cast on this branch.
-- Current working tree intentionally has uncommitted review/alias UX changes in route, hook, helper, and Cypress files. Review them before starting another unrelated slice.
+- `lore-review-matching.cy.ts` now passes after updating the stale `/characters` expectation and adding the World Bible canon deletion regression.
+- The working tree was clean after commit `f7c2f19 Stabilize World Bible review aliases`.
