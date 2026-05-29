@@ -476,7 +476,6 @@ function WorkspaceRoute() {
     setAliases,
     resolvedActionCues,
     characters,
-    setCharacters,
     characterSheets,
     ruleset,
     settlementState,
@@ -608,7 +607,6 @@ function WorkspaceRoute() {
     aliases,
     setAliases,
     characters,
-    setCharacters,
     canonicalFacts,
     characterSheets,
     ruleset,
@@ -1169,7 +1167,10 @@ function WorkspaceRoute() {
     : null;
   const reviewCreateActionLabel =
     activeSuggestedCategory
-      ? `Add ${toSingularLabel(activeSuggestedCategory.name)}`
+      ? activeSuggestedCategory.slug.toLowerCase().includes('character') ||
+        activeSuggestedCategory.name.toLowerCase().includes('character')
+        ? 'Add Character'
+        : `Add ${toSingularLabel(activeSuggestedCategory.name)}`
       : reviewCreateLabel;
   const activeCloseCharacterMatches =
     activeConsistencyPopoverIssue
@@ -1178,7 +1179,11 @@ function WorkspaceRoute() {
         )
       : [];
   const showCharacterCanonicalizationHint =
-    activeSuggestedCategory?.slug === 'characters' &&
+    Boolean(
+      activeSuggestedCategory &&
+      (activeSuggestedCategory.slug.toLowerCase().includes('character') ||
+        activeSuggestedCategory.name.toLowerCase().includes('character'))
+    ) &&
     activeCloseCharacterMatches.length > 0;
   const selectionQuickSnippets = useWorkspaceLoreSnippets({
     activeProject,
@@ -1200,26 +1205,79 @@ function WorkspaceRoute() {
       .replace(/[^\p{L}\p{N}\s'-]/gu, ' ')
       .replace(/\s+/g, ' ')
       .trim(), []);
+  const knownWorldBibleLoreHighlights = useMemo(() => {
+    const entityById = new Map(entities.map((entity) => [entity.id, entity]));
+    const highlights = entities.map((entity) => ({
+      id: entity.id,
+      surface: entity.name,
+      type: 'entity' as const
+    }));
+
+    aliases.forEach((alias) => {
+      if ((alias.targetType ?? 'entity') !== 'entity') {
+        return;
+      }
+      const entity = entityById.get(alias.targetId);
+      if (!entity) {
+        return;
+      }
+      highlights.push({
+        id: entity.id,
+        surface: alias.alias,
+        type: 'entity' as const
+      });
+    });
+
+    return highlights;
+  }, [aliases, entities]);
   const manualCaptureExistingEntity = manualWorldCapture
     ? selectionQuickSnippets.entities[
         normalizeCaptureSelection(manualWorldCapture.draftText)
-      ] ?? null
+      ] ??
+      entities.find(
+        (entity) =>
+          normalizeCaptureSelection(entity.name) ===
+          normalizeCaptureSelection(manualWorldCapture.draftText)
+      ) ??
+      null
     : null;
   const manualCaptureLinkOptions = useMemo(() => {
     if (!manualWorldCapture) return [];
 
     const normalizedSelection = normalizeCaptureSelection(manualWorldCapture.draftText);
+    const categoryLabelById = new Map(
+      categories.map((category) => [category.id, category.name])
+    );
+    const characterCategoryIds = new Set(
+      categories
+        .filter((category) => {
+          const slug = category.slug.toLowerCase();
+          const name = category.name.toLowerCase();
+          return slug.includes('character') || name.includes('character');
+        })
+        .map((category) => category.id)
+    );
     const candidates = [
       ...entities.map((entity) => ({
         id: `entity:${entity.id}`,
         name: entity.name,
-        type: 'Entity'
+        type: categoryLabelById.get(entity.categoryId) ?? 'World Bible'
       })),
-      ...characters.map((character) => ({
-        id: `character:${character.id}`,
-        name: character.name,
-        type: 'Character'
-      }))
+      ...characters
+        .filter((character) => {
+          const matchingCharacterEntity = entities.find(
+            (entity) =>
+              characterCategoryIds.has(entity.categoryId) &&
+              normalizeCaptureSelection(entity.name) ===
+                normalizeCaptureSelection(character.name)
+          );
+          return !matchingCharacterEntity;
+        })
+        .map((character) => ({
+          id: `character:${character.id}`,
+          name: character.name,
+          type: 'Character Tools'
+        }))
     ];
 
     return candidates
@@ -1238,7 +1296,7 @@ function WorkspaceRoute() {
       })
       .sort((a, b) => a.score - b.score || a.name.localeCompare(b.name))
       .slice(0, 30);
-  }, [characters, entities, manualWorldCapture, normalizeCaptureSelection]);
+  }, [categories, characters, entities, manualWorldCapture, normalizeCaptureSelection]);
   const toolbarActions = useMemo(
     () => [
       {
@@ -2105,6 +2163,7 @@ function WorkspaceRoute() {
                     setStatBlockInsertContent(null);
                   }}
                   selectionQuickSnippets={selectionQuickSnippets}
+                  knownLoreHighlights={knownWorldBibleLoreHighlights}
                   characterStateHoverCardsByLoreId={characterStateHoverCardsByLoreId}
                   presentStatBlockToken={getStatBlockTokenPresentation}
                   getStatBlockPreviewData={getStatBlockPreviewData}
@@ -2194,7 +2253,7 @@ function WorkspaceRoute() {
                       <div className={styles.consistencyPopoverNote}>
                         Possible existing character match:{' '}
                         <strong>{activeCloseCharacterMatches[0]?.name}</strong>. Add this
-                        as a character, then use <strong>Review Character Match</strong> to
+                        as World Bible character canon, then use <strong>Review Character Match</strong> to
                         decide whether "{activeWorldCaptureDraft}" should become an alias.
                       </div>
                     )}

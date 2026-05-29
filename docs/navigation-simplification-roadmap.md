@@ -1,6 +1,6 @@
 # Navigation Simplification Roadmap
 
-Last updated: 2026-05-12
+Last updated: 2026-05-28
 
 ## Purpose
 
@@ -250,12 +250,21 @@ Priority smoke paths:
 
 ## Working Recommendation
 
-If only one simplification slice is started next, start with:
+Updated 2026-05-28:
 
-**Phase 1: Collapse Character Canon Into World Bible**
+**Phase 1: Collapse Character Canon Into World Bible** is implemented in the current working tree.
+
+Next validation:
+
+- run [character-canon-unification-smoke-test.md](/Volumes/T7/Development/worldbuilding-desk/docs/character-canon-unification-smoke-test.md)
+- fix any smoke findings before starting Phase 2
+
+Next simplification phase after smoke:
+
+**Phase 2: Reframe Lore As Lore Documents**
 
 Reason:
 
-- it removes the most immediate user confusion
-- it simplifies later canon-vs-lore cleanup
-- it directly supports the writing-first roadmap instead of expanding surface area
+- character canon now has one primary home
+- the next likely confusion is whether `Lore` is another canon database
+- the change can stay copy/IA-focused before adding linked-lore behavior

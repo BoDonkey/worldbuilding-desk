@@ -128,6 +128,18 @@ export const useWorldBibleEntityActions = ({
     string | null
   >(null);
 
+  const isCharacterLikeEntity = useCallback(
+    (entity: WorldEntity): boolean => {
+      const category = categories.find((item) => item.id === entity.categoryId);
+      const slug = (category?.slug ?? '').toLowerCase();
+      const categoryName = (category?.name ?? '').toLowerCase();
+      return CHARACTER_CATEGORY_HINTS.some(
+        (hint) => slug.includes(hint) || categoryName.includes(hint)
+      );
+    },
+    [categories]
+  );
+
   const openNextReviewItem = useCallback(
     (currentEntityId: string) => {
       const currentIndex = filteredReviewQueue.findIndex(
@@ -338,11 +350,12 @@ export const useWorldBibleEntityActions = ({
           prev.map((item) => (item.id === entity.id ? next : item))
         );
         const openedNext = options?.openNext ? openNextReviewItem(entity.id) : false;
+        const subject = isCharacterLikeEntity(entity) ? 'character canon' : 'record';
         setFeedback({
           tone: 'success',
           message: openedNext
-            ? `"${entity.name}" marked reviewed. Opened the next queue item.`
-            : `"${entity.name}" marked reviewed.`
+            ? `"${entity.name}" ${subject} marked reviewed. Opened the next queue item.`
+            : `"${entity.name}" ${subject} marked reviewed.`
         });
       } catch (error) {
         const message =
@@ -350,7 +363,7 @@ export const useWorldBibleEntityActions = ({
         setFeedback({tone: 'error', message});
       }
     },
-    [openNextReviewItem, setEntities, setFeedback]
+    [isCharacterLikeEntity, openNextReviewItem, setEntities, setFeedback]
   );
 
   const handleDeleteEntity = useCallback(
@@ -787,15 +800,6 @@ export const useWorldBibleEntityActions = ({
     ]
   );
 
-  const isCharacterLikeEntity = useCallback(
-    (entity: WorldEntity): boolean => {
-      const category = categories.find((item) => item.id === entity.categoryId);
-      const slug = (category?.slug ?? '').toLowerCase();
-      return CHARACTER_CATEGORY_HINTS.some((hint) => slug.includes(hint));
-    },
-    [categories]
-  );
-
   const isLocationLikeEntity = useCallback(
     (entity: WorldEntity): boolean => {
       const category = categories.find((item) => item.id === entity.categoryId);
@@ -836,14 +840,13 @@ export const useWorldBibleEntityActions = ({
           setCharacters((prev) => [...prev, character]);
         }
 
-        setFeedback({
-          tone: 'success',
-          message: existingCharacter
-            ? `"${entity.name}" is already linked to Character Tools. World Bible remains the canonical record.`
-            : `"${entity.name}" is now linked to Character Tools. World Bible remains the canonical record.`
-        });
-
         if (options?.autoCreateSheet && hasRuleset) {
+          setFeedback({
+            tone: 'success',
+            message: existingCharacter
+              ? `"${entity.name}" is already linked to Character Tools. Opening sheet and state tracking.`
+              : `"${entity.name}" is now linked to Character Tools. Opening sheet and state tracking.`
+          });
           navigate('/characters?view=sheets', {
             state: {
               prefillCharacterId: character.id,
@@ -853,6 +856,13 @@ export const useWorldBibleEntityActions = ({
           });
           return;
         }
+
+        setFeedback({
+          tone: 'success',
+          message: existingCharacter
+            ? `"${entity.name}" is already linked to Character Tools. World Bible remains the canonical record.`
+            : `"${entity.name}" is now linked to Character Tools. World Bible remains the canonical record.`
+        });
 
         navigate('/characters', {
           state: {

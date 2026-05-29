@@ -47,6 +47,7 @@ interface EditorWithAIProps {
     characters: Record<string, {name: string; html: string; lore: LoreInspectorRecord}>;
     entities: Record<string, {name: string; html: string; lore: LoreInspectorRecord}>;
   };
+  knownLoreHighlights?: LoreHighlightEntry[];
   characterStateHoverCardsByLoreId?: Record<
     string,
     {
@@ -149,6 +150,7 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
   insertContext = null,
   onTextInserted,
   selectionQuickSnippets,
+  knownLoreHighlights = [],
   presentStatBlockToken,
   getStatBlockPreviewData,
   onRebindStatBlockToken,
@@ -215,8 +217,15 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
         type: 'entity' as const
       })
     );
-    return [...characterEntries, ...entityEntries];
-  }, [selectionQuickSnippets]);
+    const deduped = new Map<string, LoreHighlightEntry>();
+    [...characterEntries, ...entityEntries, ...knownLoreHighlights].forEach((entry) => {
+      const key = `${entry.type}:${entry.id}:${entry.surface.trim().toLowerCase()}`;
+      if (entry.surface.trim()) {
+        deduped.set(key, entry);
+      }
+    });
+    return Array.from(deduped.values());
+  }, [knownLoreHighlights, selectionQuickSnippets]);
 
   useEffect(() => {
     consistencyHighlightsRef.current = consistencyHighlights;

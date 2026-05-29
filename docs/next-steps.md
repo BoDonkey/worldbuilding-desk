@@ -1,6 +1,6 @@
 # Next Steps
 
-Last updated: 2026-05-20
+Last updated: 2026-05-29
 
 ## Current Baseline
 
@@ -82,6 +82,10 @@ Implemented recently:
 - World Bible import previews now preserve richer Markdown/HTML structure for longform lore fields instead of flattening everything into plain text.
 - World Bible import flow now supports document preview plus `Import and open` for single drafts.
 - World Bible list and review surfaces now show richer lore summaries with `Read more` expansion and structure-aware excerpts for lists, quotes, and simple tables.
+- Phase 1 character-canon unification now frames `World Bible > Characters` as the canonical home for character names, aliases, duplicate cleanup, and review-created records.
+- `Characters` is now framed as secondary `Character Tools` for tool profiles, sheets, and state tracking rather than the primary character database.
+- Workspace unknown-character intake now creates World Bible character canon first, and alias linking stays in the workspace instead of forcing a review detour.
+- Character-canon smoke exposed a broader fragility in the split highlighting/review pipeline. Natural prose can still produce fragment highlights such as title-only words, sentence fragments, or ordinary capitalized terms. Treat the next pass as a unified annotation redesign rather than another round of one-off regex exceptions.
 - Zustand app/workspace UI integration checkpoint:
   - `activeProject` and project settings now live in the app store.
   - Workspace drawer preferences, selected scene restoration, modal visibility, export/import UI state, and scene create/delete operation flags now live in `workspaceUiStore`.
@@ -92,19 +96,22 @@ Implemented recently:
 
 ## Recommended Priority Order
 
-1. Lore/canon decision smoke stabilization
-2. Canon decision merge review refinement
-3. Structural cleanup in active routes
-4. Finish dedicated editor-state persistence pass
-5. State mutation ledger integration
-6. Scratchpad access and lightweight planning surfaces
-7. App-wide search
-8. Editor readability and theme hardening
-9. Release confidence and reload safety
-10. Review-completion and World Bible polish
-11. Desktop packaging validation
-12. AI personas/tools
-13. First-run onboarding cleanup
+1. Unified workspace annotation redesign
+2. Character-canon unification smoke pass
+3. Lore/canon decision smoke stabilization
+4. Lore Documents IA reframing
+5. Canon decision merge review refinement
+6. Structural cleanup in active routes
+7. Finish dedicated editor-state persistence pass
+8. State mutation ledger integration
+9. Scratchpad access and lightweight planning surfaces
+10. App-wide search
+11. Editor readability and theme hardening
+12. Release confidence and reload safety
+13. Review-completion and World Bible polish
+14. Desktop packaging validation
+15. AI personas/tools
+16. First-run onboarding cleanup
 
 ## Planning Notes
 
@@ -114,6 +121,8 @@ Implemented recently:
 - Do not move editor `title`, `content`, `saveStatus`, or autosave ownership into zustand casually. Treat that as a dedicated editor-state persistence pass with explicit reload/review-refresh verification.
 - Treat build/lint as baseline gates, but use smoke coverage for import, review, reload, and export as the real confidence bar.
 - Current automated browser smoke and the latest manual workspace smoke are green on the current tree. In the Codex desktop environment, Cypress may still need to launch outside the GUI sandbox restriction.
+- Do not continue patching individual highlight edge cases indefinitely. The next review/highlight slice should consolidate known canon, aliases, titled forms, and unknown candidates into one annotation decision pass with longest-match priority.
+- Run the focused character-canon smoke checklist in `docs/character-canon-unification-smoke-test.md` after the annotation redesign, before starting the Lore Documents IA reframing.
 - Keep branch scope narrow enough that each slice can be reverted cleanly if the UX direction changes.
 - Scratchpad should become a quick-access popover/modal available from any workspace tab or route surface. The current context drawer tab is a first restoration step, not the final interaction model.
 - Future optional systems note: character inventory currently tracks item names, quantities, notes, and catalog links, while the rules-engine inventory has a `capacity` field but no per-item weight or surfaced encumbrance calculation. When system-heavy character support comes back into focus, add carry weight/encumbrance as an explicit inventory concern rather than treating quantity as enough.
@@ -1077,15 +1086,17 @@ Goal: make entity intake ownership coherent so accepting a detected reference cr
 
 See `entity-ownership-intake-refactor-plan.md` for detailed slices, file-level implementation notes, and dogfood findings from May 2026.
 
+2026-05-28 update: the character-canon portion of this direction has moved into the Phase 1 character-canon unification work. Character intake now creates World Bible canon first, while Character Tools remain secondary for sheets, state, and tool profiles. Use the new smoke checklist before taking on the remaining non-character intake and compendium-mechanics slices.
+
 Summary of slices:
 - **Slice 1**: Stop duplicate intake — remove automatic compendium creation from workspace review acceptance.
 - **Slice 2**: Add explicit intake classification (`character` / `location` / `item` / `creature`).
-- **Slice 3**: Character-first intake completion — `Character` + optional `CharacterSheet` in one flow.
-- **Slice 4**: Reframe compendium as optional mechanics attachment; rename `Add to Compendium` → `Add mechanics`.
+- **Slice 3**: Character-first intake completion — now superseded by World Bible character canon first, with optional sheet/state handoff.
+- **Slice 4**: Reframe compendium as optional mechanics attachment; rename `Add to Compendium` -> `Add mechanics`.
 - **Slice 5**: Character sheet discoverability and stat editing.
-- **World Bible follow-up**: canonical rename with alias preservation, lighter location review treatment, lore-handling rethink.
+- **World Bible follow-up**: character canonical rename with alias preservation is implemented; lighter location review treatment and lore-handling rethink remain.
 
-Recommended execution order: Slice 1 → 3 → 4 → 5 → 2 → World Bible follow-up.
+Recommended execution order for remaining work: smoke character-canon unification -> Slice 1 -> Slice 4 -> Slice 5 -> Slice 2 -> remaining World Bible/lore follow-up.
 
 Suggested branch: `codex/entity-intake-ownership`
 
@@ -1095,17 +1106,18 @@ Suggested branch: `codex/entity-intake-ownership`
 
 Recommended order for the next active branches:
 
-1. `codex/world-bible-review-queue`
-2. `codex/world-bible-review-actions`
-3. `codex/review-ignore-persistence`
-4. `codex/review-highlight-correctness`
-5. `codex/review-completion-smoke`
-6. `codex/scratchpad-popover-access`
-7. `codex/scratchpad-backup-smoke`
-8. `codex/corkboard-lite`
-9. `codex/app-shell-search-entry`
-10. `codex/unified-search-results`
-11. `codex/search-alias-routing`
+1. `codex/character-canon-smoke`
+2. `codex/lore-documents-ia`
+3. `codex/canon-decision-merge-review`
+4. `codex/review-ignore-persistence`
+5. `codex/review-highlight-correctness`
+6. `codex/review-completion-smoke`
+7. `codex/scratchpad-popover-access`
+8. `codex/scratchpad-backup-smoke`
+9. `codex/corkboard-lite`
+10. `codex/app-shell-search-entry`
+11. `codex/unified-search-results`
+12. `codex/search-alias-routing`
 
 ## Branch and Commit Workflow (Keep)
 

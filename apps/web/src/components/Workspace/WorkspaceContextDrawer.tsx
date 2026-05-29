@@ -192,7 +192,7 @@ const MEMORIES_PER_PAGE = 5;
 const CONTEXT_DRAWER_TABS: Array<{id: WorkspaceContextDrawerView; label: string}> = [
   {id: 'world-bible', label: 'World Bible'},
   {id: 'ruleset', label: 'Ruleset'},
-  {id: 'characters', label: 'Characters'},
+  {id: 'characters', label: 'Character Tools'},
   {id: 'compendium', label: 'Compendium'},
   {id: 'review', label: 'Review'},
   {id: 'scratchpad', label: 'Scratchpad'},
@@ -330,7 +330,7 @@ export function WorkspaceContextDrawer({
             <strong>{characterSheets.length}</strong>
           </p>
           <button type='button' onClick={() => navigate('/characters')}>
-            Open Character Sheets
+            Open Character Tools
           </button>
         </div>
       );

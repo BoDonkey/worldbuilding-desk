@@ -50,17 +50,20 @@ function CharactersHubRoute() {
         }
       | null;
     const prefillCharacterId = state?.prefillCharacterId ?? null;
-    if (!prefillCharacterId || appliedLocationPrefillRef.current === prefillCharacterId) {
+    if (!prefillCharacterId) {
       return;
     }
-    appliedLocationPrefillRef.current = prefillCharacterId;
-    setPendingCharacterId(prefillCharacterId);
-    setPendingAutoCreateSheetCharacterId(state?.autoCreateSheetForCharacterId ?? null);
+    const alreadyApplied = appliedLocationPrefillRef.current === prefillCharacterId;
+    if (!alreadyApplied) {
+      appliedLocationPrefillRef.current = prefillCharacterId;
+      setPendingCharacterId(prefillCharacterId);
+      setPendingAutoCreateSheetCharacterId(state?.autoCreateSheetForCharacterId ?? null);
+    }
     if (state?.preferredView === 'sheets' && canUseSheets) {
       setSearchParams({view: 'sheets'});
       return;
     }
-    if (state?.preferredView === 'roster') {
+    if (!alreadyApplied && state?.preferredView === 'roster') {
       setSearchParams({});
     }
   }, [canUseSheets, location.state, setSearchParams]);
@@ -125,10 +128,10 @@ function CharactersHubRoute() {
         projectName: activeProject.name,
         includeSheets: false
       });
-      setFeedback({tone: 'success', message: 'Roster exported.'});
+      setFeedback({tone: 'success', message: 'Tool profiles exported.'});
     } catch (error) {
       const message =
-        error instanceof Error ? error.message : 'Unable to export roster.';
+        error instanceof Error ? error.message : 'Unable to export tool profiles.';
       setFeedback({tone: 'error', message});
     }
   };
@@ -155,8 +158,8 @@ function CharactersHubRoute() {
         tone: 'success',
         message:
           pendingImportMode === 'full'
-            ? `Imported ${result.charactersImported} characters and ${result.sheetsImported} sheets.`
-            : `Imported ${result.charactersImported} characters (roster only).`
+            ? `Imported ${result.charactersImported} tool profiles and ${result.sheetsImported} sheets.`
+            : `Imported ${result.charactersImported} tool profiles.`
       });
     } catch (error) {
       const message =
@@ -170,7 +173,7 @@ function CharactersHubRoute() {
   if (!activeProject) {
     return (
       <section className={styles.page}>
-        <h1 className={styles.title}>Characters</h1>
+        <h1 className={styles.title}>Character Tools</h1>
         <p>
           No active project. Go to <strong>Projects</strong> to create or open a
           project first.
@@ -191,11 +194,11 @@ function CharactersHubRoute() {
 
   return (
     <section className={styles.page}>
-      <h1 className={styles.title}>Characters</h1>
+      <h1 className={styles.title}>Character Tools</h1>
       <p className={styles.lead}>
         {canUseSheets
-          ? 'Manage cast profiles here, with gameplay sheets available only for projects that explicitly use them. Canonical names, aliases, and descriptive lore belong in World Bible.'
-          : 'Manage cast profiles here. Canonical names, aliases, and descriptive lore belong in World Bible.'}
+          ? 'Use this secondary workspace for tool-profile exports, sheets, and state tracking. Canonical names, aliases, and descriptive lore belong in World Bible.'
+          : 'Use this secondary workspace for tool-profile exports. Canonical names, aliases, and descriptive lore belong in World Bible.'}
       </p>
       {feedback && (
         <p
@@ -209,11 +212,11 @@ function CharactersHubRoute() {
       )}
       <div className={styles.toolbar}>
         <button type='button' onClick={() => void handleExportRosterOnly()}>
-          Export Roster
+          Export Tool Profiles
         </button>
         {canUseSheets && (
           <button type='button' onClick={() => void handleExportCharacters()}>
-            Export Roster + Sheets
+            Export Tool Profiles + Sheets
           </button>
         )}
         <button
@@ -223,7 +226,7 @@ function CharactersHubRoute() {
         >
           {isImportingCharacters
             ? 'Importing...'
-            : 'Import Roster'}
+            : 'Import Tool Profiles'}
         </button>
         {canUseSheets && (
           <button
@@ -231,7 +234,7 @@ function CharactersHubRoute() {
             onClick={() => handleImportCharactersClick('full')}
             disabled={isImportingCharacters}
           >
-            {isImportingCharacters ? 'Importing...' : 'Import Roster + Sheets'}
+            {isImportingCharacters ? 'Importing...' : 'Import Tool Profiles + Sheets'}
           </button>
         )}
         <input
@@ -249,7 +252,7 @@ function CharactersHubRoute() {
             onClick={() => openView('roster')}
             className={view === 'roster' ? styles.tabButtonActive : ''}
           >
-            Roster
+            Tool Profiles
           </button>
           <button
             type='button'
@@ -258,13 +261,13 @@ function CharactersHubRoute() {
             className={view === 'sheets' ? styles.tabButtonActive : ''}
             style={{opacity: canUseSheets ? 1 : 0.55}}
           >
-            Sheets
+            Sheets + State
           </button>
         </div>
       )}
       {!hasRuleset && capabilities.canUseRuleAuthoring && (
         <div className={styles.notice}>
-          Sheets are disabled until this project has a ruleset.
+          Sheets and state tracking are disabled until this project has a ruleset.
           <button
             type='button'
             onClick={() => navigate('/ruleset')}

@@ -1,6 +1,25 @@
 # Phase 1: Character Canon Unification
 
-Last updated: 2026-05-14
+Last updated: 2026-05-29
+
+## Current Status
+
+Implementation slices A, B, D, C, and E are complete in the current working tree.
+
+What is now true:
+
+- app navigation and command/context labels no longer present `Characters` as a peer canon destination
+- `World Bible > Characters` is framed as the home for canonical names, aliases, duplicate cleanup, review-created character records, and story-facing lore
+- World Bible character records expose optional handoff actions for Character Tools, sheets, and state tracking
+- `Characters` is reframed as `Character Tools`, with route copy focused on tool profiles, sheets, exports, and state rather than canonical identity
+- workspace unknown-character intake creates World Bible character canon instead of also creating a Character Tools profile
+- workspace alias linking stays in the workspace, clears the immediate prompt, and avoids duplicate Character Tools / World Bible options when a pair exists
+
+Next work:
+
+- Do a focused redesign of workspace text annotation before continuing smoke. The current split between known-lore highlights and unknown-review highlights is too fragile for natural fiction prose.
+- Re-run the focused manual smoke checklist in [character-canon-unification-smoke-test.md](/Volumes/T7/Development/worldbuilding-desk/docs/character-canon-unification-smoke-test.md).
+- Use any remaining smoke findings to decide whether Slice E needs small follow-up fixes before starting Phase 2 (`Lore` -> `Lore Documents`).
 
 ## Purpose
 
@@ -208,7 +227,9 @@ Reason:
 
 ## Verification Plan
 
-Manual smoke:
+Manual smoke is now tracked in [character-canon-unification-smoke-test.md](/Volumes/T7/Development/worldbuilding-desk/docs/character-canon-unification-smoke-test.md).
+
+Smoke path summary:
 
 1. Unknown character appears in workspace review
 2. Accept/create in canon flow
@@ -218,7 +239,7 @@ Manual smoke:
 6. Confirm known-lore highlighting updates in workspace
 7. Open sheet/state tooling from the World Bible character record if needed
 8. Link an alias from a workspace highlight and confirm the author stays in the workspace
-9. Open World Bible normally and confirm the large review queue appears only after selecting `Review Queue`
+9. Open World Bible normally and confirm the large review panel appears only after selecting `Needs Review`
 
 Specific regression cases:
 

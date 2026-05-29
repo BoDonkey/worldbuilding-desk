@@ -96,6 +96,23 @@ describe('buildExtractedProposal', () => {
     expect(surfaces).toContain('Garcia de Terra');
   });
 
+  it('keeps joined lowercase particles inside character names', () => {
+    const entities = entityRefsFor(
+      '"It\'s Garcia deTerra, Detective Moreland. If you\'re going to address me,"',
+      [],
+      'workspace-save'
+    );
+    const surfaces = entities.map((entity) => entity.surface);
+
+    expect(surfaces).toContain('Garcia deTerra');
+    expect(surfaces).toContain('Detective Moreland');
+    expect(surfaces).not.toContain('Garcia');
+    expect(
+      entities.find((entity) => entity.surface === 'Garcia deTerra')
+        ?.detectionReason
+    ).toBe('multiword_proper_candidate');
+  });
+
   it('keeps longer multiword proper names as one candidate', () => {
     const surfaces = surfacesFor(
       'Magical Substance Control Agency revised the case file.',
@@ -121,6 +138,23 @@ describe('buildExtractedProposal', () => {
       entities.find((entity) => entity.surface === 'Detective Moreland')
         ?.detectionReason
     ).toBe('titled_name');
+  });
+
+  it('resolves titled character mentions to existing untitled canon', () => {
+    const entities = entityRefsFor(
+      'Detective Garcia deTerra waited near the loading bay.',
+      [{id: 'garcia', name: 'Garcia deTerra', type: 'entity'}],
+      'workspace-save'
+    );
+    const mention = entities.find(
+      (entity) => entity.surface === 'Detective Garcia deTerra'
+    );
+
+    expect(mention).toMatchObject({
+      entityId: 'garcia',
+      entityName: 'Garcia deTerra',
+      detectionReason: 'known_entity'
+    });
   });
 
   it('does not widen an unknown candidate to include a lowercase boundary word', () => {

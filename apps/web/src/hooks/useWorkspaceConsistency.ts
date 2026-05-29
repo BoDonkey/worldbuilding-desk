@@ -15,7 +15,6 @@ import type {
 import {saveWritingDocument} from '../writingStorage';
 import {getCategoriesByProject, initializeDefaultCategories} from '../categoryStorage';
 import {saveEntity} from '../entityStorage';
-import {saveCharacter} from '../characterStorage';
 import type {RAGProvider} from '../services/rag/RAGService';
 import type {
   ConsistencyAlias,
@@ -30,7 +29,6 @@ import type {ShodhMemoryProvider} from '../services/shodh/ShodhMemoryService';
 import {normalizeCanonText} from '../services/consistency/textMatcher';
 import {htmlToPlainText} from '../utils/textHelpers';
 import {buildDerivedStateMutationEvents} from '../services/state/stateMutationDerivation';
-import {getProjectCapabilities} from '../projectMode';
 import {
   invalidateStateMutationEventById,
   replaceSceneStateMutationEventsBySourceType,
@@ -147,7 +145,6 @@ interface UseWorkspaceConsistencyParams {
   aliases: ConsistencyAlias[];
   setAliases: Dispatch<SetStateAction<ConsistencyAlias[]>>;
   characters: Character[];
-  setCharacters: Dispatch<SetStateAction<Character[]>>;
   canonicalFacts: CanonicalFact[];
   characterSheets: CharacterSheet[];
   ruleset: StoredRuleset | null;
@@ -458,7 +455,6 @@ export const useWorkspaceConsistency = ({
   aliases,
   setAliases,
   characters,
-  setCharacters,
   canonicalFacts,
   characterSheets,
   ruleset,
@@ -658,16 +654,15 @@ export const useWorkspaceConsistency = ({
     () =>
       new Set(
         categories
-          .filter((category) => category.slug.toLowerCase().includes('character'))
+          .filter((category) => {
+            const slug = category.slug.toLowerCase();
+            const name = category.name.toLowerCase();
+            return slug.includes('character') || name.includes('character');
+          })
           .map((category) => category.id)
       ),
     [categories]
   );
-  const shouldUseCharacterToolsAsCanon = useMemo(
-    () => !getProjectCapabilities(projectSettings).isGeneralFiction,
-    [projectSettings]
-  );
-
   const characterLoreEntityIdByCharacterId = useMemo(() => {
     const linkedEntityIdByCharacterId = new Map<string, string>();
     entities.forEach((entity) => {
@@ -687,20 +682,12 @@ export const useWorkspaceConsistency = ({
 
   const knownConsistencyEntities = useMemo(() => {
     const entityById = new Map(entities.map((entity) => [entity.id, entity]));
-    const characterById = new Map(characters.map((character) => [character.id, character]));
     return [
       ...entities.map((entity) => ({
         id: entity.id,
         name: entity.name,
         type: 'entity' as const
       })),
-      ...(shouldUseCharacterToolsAsCanon
-        ? characters.map((character) => ({
-            id: character.id,
-            name: character.name,
-            type: 'character' as const
-          }))
-        : []),
       ...aliases
         .map((alias) => {
           if (alias.targetType === 'character') {
@@ -716,34 +703,27 @@ export const useWorkspaceConsistency = ({
                 type: 'entity' as const
               };
             }
-            if (!shouldUseCharacterToolsAsCanon) {
-              return null;
-            }
+            return null;
           }
-          const linkedRecord =
-            alias.targetType === 'character'
-              ? characterById.get(alias.targetId)
-              : entityById.get(alias.targetId);
+          const linkedRecord = entityById.get(alias.targetId);
           if (!linkedRecord) {
             return null;
           }
           return {
             id: linkedRecord.id,
             name: alias.alias,
-            type: alias.targetType === 'character' ? ('character' as const) : ('entity' as const)
+            type: 'entity' as const
           };
         })
         .filter(
-          (entry): entry is {id: string; name: string; type: 'character' | 'entity'} =>
+          (entry): entry is {id: string; name: string; type: 'entity'} =>
             Boolean(entry)
       )
     ];
   }, [
     aliases,
     characterLoreEntityIdByCharacterId,
-    characters,
-    entities,
-    shouldUseCharacterToolsAsCanon
+    entities
   ]);
 
   const knownConsistencySurfaceSet = useMemo(
@@ -1736,7 +1716,7 @@ export const useWorkspaceConsistency = ({
           id: character.id,
           name: character.name,
           type: 'character',
-          label: 'Character'
+          label: 'Character Tools'
         });
       });
       const candidates = Array.from(candidatesByKey.values());
@@ -1834,7 +1814,8 @@ export const useWorkspaceConsistency = ({
         const explicitCharacterSelection = Boolean(
           selectedCategory &&
             ['character', 'characters', 'npc', 'person', 'people'].some((hint) =>
-              selectedCategory.slug.toLowerCase().includes(hint)
+              selectedCategory.slug.toLowerCase().includes(hint) ||
+              selectedCategory.name.toLowerCase().includes(hint)
             )
         );
         if (explicitCharacterSelection) {
@@ -1881,15 +1862,6 @@ export const useWorkspaceConsistency = ({
               }
               return left.name.localeCompare(right.name);
             })[0] ?? null;
-          const character: Character = {
-            id: crypto.randomUUID(),
-            projectId: activeProject.id,
-            name: normalizedName,
-            fields: {},
-            createdAt: now,
-            updatedAt: now
-          };
-          await saveCharacter(character);
           const characterEntity =
             linkedCharacterEntity ??
             ({
@@ -1921,10 +1893,9 @@ export const useWorkspaceConsistency = ({
             targetType: 'entity',
             aliasTexts
           });
-          setCharacters((prev) => [...prev, character]);
           setFeedback({
             tone: 'success',
-            message: `"${normalizedName}" added to World Bible Characters and Character Tools.`
+            message: `"${normalizedName}" added to World Bible Characters.`
           });
           setResolverNotice({
             message: closeCharacterEntityMatch
@@ -2007,7 +1978,6 @@ export const useWorkspaceConsistency = ({
       getSuggestedUnknownCategoryId,
       removeReviewSurface,
       setCategories,
-      setCharacters,
       setEntities,
       setFeedback
     ]
@@ -2149,7 +2119,7 @@ export const useWorkspaceConsistency = ({
       if (!selectedEntityId) {
         setFeedback({
           tone: 'error',
-          message: `Select an entity before linking "${surface}".`
+          message: `Select an existing record before linking "${surface}".`
         });
         return false;
       }
@@ -2166,7 +2136,11 @@ export const useWorkspaceConsistency = ({
         }
         const characterCategoryIds = new Set(
           categories
-            .filter((category) => category.slug.toLowerCase().includes('character'))
+            .filter((category) => {
+              const slug = category.slug.toLowerCase();
+              const name = category.name.toLowerCase();
+              return slug.includes('character') || name.includes('character');
+            })
             .map((category) => category.id)
         );
         let targetType: 'entity' | 'character' = selectedTargetType;
@@ -2209,7 +2183,7 @@ export const useWorkspaceConsistency = ({
         );
         setFeedback({
           tone: 'success',
-          message: `Connected "${surface}" to an existing record. Save again to validate.`
+          message: `Connected "${surface}" as an alias of an existing record. The review prompt has been cleared.`
         });
         setResolverNotice(null);
         return {

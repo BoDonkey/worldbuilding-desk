@@ -1,6 +1,6 @@
 # Worldbuilding-Desk Project Status
 
-**Last Updated:** May 20, 2026
+**Last Updated:** May 29, 2026
 
 ## Project Overview
 
@@ -130,6 +130,9 @@ Under the hood, the app still includes rich systems for world data, rules, chara
 - Make the writing workspace the clearest default entry point.
 - Reduce visible system complexity on first load.
 - Revisit panel defaults and route emphasis to match the writing-first UX docs.
+- Phase 1 character-canon unification is implemented: character canon now belongs in World Bible, Character Tools is secondary, and workspace character intake creates World Bible canon first.
+- Redesign workspace text annotation before continuing character-canon smoke: known canon, aliases, titled forms, and unknown candidates need one longest-match decision pass rather than split highlight/review regex paths.
+- Run the focused character-canon smoke checklist in `docs/character-canon-unification-smoke-test.md` after the annotation redesign and before beginning the Lore/Lore Documents IA phase.
 - Continue moving alias/review acceptance into a stronger World Bible workflow.
 - Manually retest the new World Bible recommended-action filters and resolution paths against the review-completion smoke checklist.
 - Extend the passive review-needed indicator into changed-word plus idle-pause background cadence.

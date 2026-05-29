@@ -78,7 +78,13 @@ export const createLoreHighlightsExtension = (
                   const from = pos + match.from;
                   const to = pos + match.to;
                   const overlapsConsistency = blockedRanges.some(
-                    (range) => from < range.to && to > range.from
+                    (range) => {
+                      const knownContainsShorterReview =
+                        range.from >= from &&
+                        range.to <= to &&
+                        to - from > range.to - range.from;
+                      return from < range.to && to > range.from && !knownContainsShorterReview;
+                    }
                   );
                   if (overlapsConsistency) {
                     return;

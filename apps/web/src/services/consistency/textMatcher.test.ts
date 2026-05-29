@@ -98,4 +98,12 @@ describe('textMatcher', () => {
       'Magical Substance Control Agency'
     ]);
   });
+
+  it('matches camel-cased particles in character names', () => {
+    const matches = findTextMatches('Garcia deTerra entered the hall.', [
+      {id: 'garcia-deterra', surface: 'Garcia deTerra', kind: 'known'}
+    ]);
+
+    expect(matches.map((match) => match.surface)).toEqual(['Garcia deTerra']);
+  });
 });

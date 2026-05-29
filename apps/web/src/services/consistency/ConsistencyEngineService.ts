@@ -146,8 +146,9 @@ const CARDINAL_NUMBER_WORDS = new Set([
 
 const normalizePhrase = normalizeCanonText;
 
-const NAME_TOKEN_PATTERN = String.raw`\p{Lu}[\p{L}\p{M}\p{N}'_-]*`;
 const NAME_PARTICLE_PATTERN = String.raw`(?:d[aeiou]s?|de|del|der|di|dos|du|el|la|las|le|of|the|van|von)`;
+const JOINED_PARTICLE_NAME_TOKEN_PATTERN = String.raw`(?:d[aeiou]s?|de|del|der|di|dos|du|van|von)\p{Lu}[\p{L}\p{M}\p{N}'_-]*`;
+const NAME_TOKEN_PATTERN = String.raw`(?:\p{Lu}[\p{L}\p{M}\p{N}'_-]*|${JOINED_PARTICLE_NAME_TOKEN_PATTERN})`;
 const NAME_SEQUENCE_PATTERN = String.raw`${NAME_TOKEN_PATTERN}(?:\s+(?:(?:${NAME_PARTICLE_PATTERN})\s+)?${NAME_TOKEN_PATTERN}){0,4}`;
 const TITLE_PATTERN = String.raw`(?:Detective|Dr|Mr|Mrs|Ms|Mx|Officer|Prof|Professor)`;
 const WORD_TOKEN_PATTERN = String.raw`[\p{L}\p{M}][\p{L}\p{M}\p{N}'_-]*`;
@@ -425,6 +426,24 @@ const countEntityNameParts = (value: string): number =>
 const isPronounContraction = (token: string): boolean =>
   /^(?:i|you|we|they|he|she|it)(?:'m|'re|'ve|'d|'ll|'s)$/.test(token);
 
+const LEADING_PRONOUN_CONTRACTION_PATTERN =
+  /^(?:I|You|We|They|He|She|It)(?:['’]m|['’]re|['’]ve|['’]d|['’]ll|['’]s)\s+/u;
+
+const trimLeadingPronounContraction = (
+  surface: string,
+  start: number
+): {surface: string; start: number} => {
+  const match = surface.match(LEADING_PRONOUN_CONTRACTION_PATTERN);
+  if (!match) {
+    return {surface, start};
+  }
+  const prefix = match[0] ?? '';
+  return {
+    surface: surface.slice(prefix.length).trimStart(),
+    start: start + prefix.length
+  };
+};
+
 const isNonEntityToken = (token: string): boolean =>
   NON_ENTITY_BOUNDARY_TOKENS.has(token) ||
   COMMON_SENTENCE_START_WORDS.has(token) ||
@@ -519,13 +538,15 @@ const extractCandidateMentions = (text: string): CandidateMention[] => {
   return matches
     .map((match) => {
       const prefix = match[1] ?? '';
-      const surface = (match[2] ?? '').trim();
+      const rawSurface = (match[2] ?? '').trim();
       const start = (match.index ?? 0) + prefix.length;
-      const end = start + surface.length;
+      const trimmed = trimLeadingPronounContraction(rawSurface, start);
+      const surface = trimmed.surface;
+      const end = trimmed.start + surface.length;
       return {
         surface,
         normalized: normalizePhrase(surface),
-        start,
+        start: trimmed.start,
         end,
         detectionReason: 'multiword_proper_candidate' as const
       };
@@ -863,6 +884,28 @@ const resolveSingleKnownMatch = (matches: KnownEntityRef[]): KnownEntityRef | un
   return undefined;
 };
 
+const stripNormalizedTitle = (value: string): string =>
+  value.replace(
+    /^(?:detective|dr|mr|mrs|ms|mx|officer|prof|professor)\s+/u,
+    ''
+  );
+
+const getKnownMatchesForMention = (
+  normalizedMention: string,
+  knownEntityMap: Map<string, KnownEntityRef[]>
+): KnownEntityRef[] => {
+  const directMatches = knownEntityMap.get(normalizedMention) ?? [];
+  if (directMatches.length > 0) {
+    return directMatches;
+  }
+
+  const untitledMention = stripNormalizedTitle(normalizedMention);
+  if (untitledMention === normalizedMention) {
+    return [];
+  }
+  return knownEntityMap.get(untitledMention) ?? [];
+};
+
 export function buildExtractedProposal(
   input: ExtractProposalInput,
   options: {
@@ -896,7 +939,7 @@ export function buildExtractedProposal(
 
   const entities = mergedMentions
     .map((mention) => {
-      const rawMatches = knownEntityMap.get(mention.normalized) ?? [];
+      const rawMatches = getKnownMatchesForMention(mention.normalized, knownEntityMap);
       const knownMatches = Array.from(
         new Map(rawMatches.map((match) => [match.id, match])).values()
       );

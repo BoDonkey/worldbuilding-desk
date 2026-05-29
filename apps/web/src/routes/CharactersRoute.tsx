@@ -535,7 +535,7 @@ function CharactersRoute({
       setWorldEntities((prev) => [...prev, entity]);
       setFeedback({
         tone: 'success',
-        message: `"${character.name}" now has a World Bible lore entry.`
+        message: `"${character.name}" now has a World Bible character record.`
       });
       navigate('/world-bible', {
         state: {
@@ -591,8 +591,8 @@ function CharactersRoute({
       setFeedback({
         tone: 'success',
         message: existing
-          ? `"${entity.name}" already exists in Characters.`
-          : `"${entity.name}" is now available in Characters without changing its World Bible canon record.`
+          ? `"${entity.name}" already has a Character Tools profile.`
+          : `"${entity.name}" is now available in Character Tools without changing its World Bible canon record.`
       });
 
       if (options?.autoCreateSheet) {
@@ -703,12 +703,12 @@ function CharactersRoute({
   const isFocusedCharacterTask = Boolean(editingId || creationMode === 'manual');
   const content = (
     <div className={styles.page}>
-      {!embedded && <h1 className={styles.title}>Characters</h1>}
+      {!embedded && <h1 className={styles.title}>Character Tools</h1>}
       {!embedded && (
         <p className={styles.lead}>
           {canUseSheets
-            ? 'Build story-facing cast profiles here, with optional sheets available for system-heavy projects. Keep canonical names, aliases, and merge decisions in World Bible.'
-            : 'Build story-facing cast profiles here. Keep canonical names, aliases, and merge decisions in World Bible.'}
+            ? 'Use this secondary workspace for dialogue style, exportable tool profiles, sheets, and state. Create and edit canonical names, aliases, and lore in World Bible.'
+            : 'Use this secondary workspace for dialogue style and exportable tool profiles. Create and edit canonical names, aliases, and lore in World Bible.'}
         </p>
       )}
       {feedback && (
@@ -725,15 +725,15 @@ function CharactersRoute({
         <div className={styles.notice}>
           <div style={{display: 'flex', justifyContent: 'space-between', gap: '0.75rem', alignItems: 'flex-start'}}>
             <div>
-              <strong>Characters is optional here</strong>
+              <strong>Character Tools is optional here</strong>
               <p style={{margin: '0.4rem 0 0.75rem 0', fontSize: '0.9rem', color: 'var(--color-text-secondary)'}}>
                 These canon records already exist in World Bible. If you want to keep writing,
                 dismiss this and continue. If you want a tools profile here, click
-                <strong> Open Characters</strong>.
+                <strong> Open Tools Profile</strong>.
                 {canUseSheets && (
                   <>
                     {' '}If you want a sheet immediately, click
-                    <strong> Open/Create Sheet</strong>.
+                    <strong> Create/Open Sheet + State</strong>.
                   </>
                 )}
               </p>
@@ -763,7 +763,7 @@ function CharactersRoute({
                     onClick={() => void handleImportWorldEntity(entity)}
                     disabled={importingEntityId === entity.id}
                   >
-                    {importingEntityId === entity.id ? 'Opening...' : 'Open Characters'}
+                    {importingEntityId === entity.id ? 'Opening...' : 'Open Tools Profile'}
                   </button>
                   {canUseSheets && (
                     <button
@@ -771,7 +771,7 @@ function CharactersRoute({
                       onClick={() => void handleImportWorldEntity(entity, {autoCreateSheet: true})}
                       disabled={importingEntityId === entity.id}
                     >
-                      {importingEntityId === entity.id ? 'Opening...' : 'Open/Create Sheet'}
+                      {importingEntityId === entity.id ? 'Opening...' : 'Create/Open Sheet + State'}
                     </button>
                   )}
                 </div>
@@ -784,22 +784,37 @@ function CharactersRoute({
       {!isFocusedCharacterTask && (
         <div className={styles.taskGrid}>
           <section className={styles.panel}>
-            <h2 className={styles.panelTitle}>Manual Character</h2>
+            <h2 className={styles.panelTitle}>Character Canon</h2>
             <p className={styles.lead}>
-              Start with a name, profile, notes, and optional dialogue style.
+              Start or revise identity, aliases, duplicate cleanup, and story-facing
+              lore in World Bible.
+            </p>
+            <button
+              type='button'
+              onClick={() => navigate('/world-bible', {state: {focusCategorySlug: 'characters'}})}
+              style={{marginTop: '0.75rem'}}
+            >
+              Open World Bible
+            </button>
+          </section>
+          <section className={styles.panel}>
+            <h2 className={styles.panelTitle}>Tool Profile</h2>
+            <p className={styles.lead}>
+              Add secondary metadata such as dialogue style after the canon record
+              exists in World Bible.
             </p>
             <button
               type='button'
               onClick={() => setCreationMode('manual')}
               style={{marginTop: '0.75rem'}}
             >
-              Create Manually
+              Add Tool Profile
             </button>
           </section>
           <section className={styles.panel}>
-            <h2 className={styles.panelTitle}>Import Character</h2>
+            <h2 className={styles.panelTitle}>Import Tool Metadata</h2>
             <p className={styles.lead}>
-              Review long-form sheets, pasted notes, or dossier drafts before saving.
+              Bring in tool metadata without making this the canonical character home.
             </p>
             <button
               type='button'
@@ -812,7 +827,7 @@ function CharactersRoute({
           <section className={styles.panel}>
             <h2 className={styles.panelTitle}>AI-Assisted Draft</h2>
             <p className={styles.lead}>
-              Generate a draft from your premise, then edit and approve it yourself.
+              Generate secondary tool notes from your premise, then edit and approve them yourself.
             </p>
             <button
               type='button'
@@ -828,9 +843,9 @@ function CharactersRoute({
 
       {creationMode === 'import' && !importDraft && (
         <section className={styles.formPanel} aria-label='Import character'>
-          <h2>Import Character</h2>
+          <h2>Import Tool Metadata</h2>
           <p className={styles.lead}>
-            Paste a profile or import a character document, then review the parsed draft before it becomes a character.
+            Paste a profile or import a character document, then review the parsed draft before it becomes secondary tool metadata.
           </p>
           <label className={styles.fieldLabel}>
             Character notes
@@ -947,7 +962,11 @@ function CharactersRoute({
 
       {isFocusedCharacterTask && (
         <form onSubmit={handleSubmit} className={styles.formPanel}>
-          <h2>{editingId ? 'Edit Character' : 'New Character'}</h2>
+          <h2>{editingId ? 'Edit Tool Metadata' : 'New Tool Metadata'}</h2>
+          <p className={styles.lead}>
+            This form does not own character canon. Use World Bible for canonical
+            names, aliases, lore, and merge decisions.
+          </p>
           <div className={styles.fieldGrid} style={{marginBottom: '0.9rem'}}>
             <label className={styles.fieldLabel}>
               Name *
@@ -1067,7 +1086,7 @@ function CharactersRoute({
 
           <div className={styles.bottomActions}>
             <button type="submit">
-              {editingId ? 'Save Changes' : 'Create Character'}
+              {editingId ? 'Save Tool Metadata' : 'Create Tool Metadata'}
             </button>
             <button type="button" onClick={resetForm}>
               Cancel
@@ -1078,12 +1097,12 @@ function CharactersRoute({
 
       {!isFocusedCharacterTask && (
         <div>
-          <h2>Character List</h2>
+          <h2>Tool Profiles</h2>
           {characters.length === 0 && (
             <p>
               {canUseSheets
-                ? 'No characters yet. Create one manually, then open Sheets if the project needs system stats.'
-                : 'No characters yet. Create one manually to keep a story-facing profile here.'}
+                ? 'No tool profiles yet. Start in World Bible, then open sheets or state tracking from a character canon record when needed.'
+                : 'No tool profiles yet. Start in World Bible, then add secondary tool metadata only when needed.'}
             </p>
           )}
           <ul className={styles.list}>
@@ -1130,17 +1149,17 @@ function CharactersRoute({
                   <div className={styles.actionRow}>
                     {canUseSheets && (
                       <button type="button" onClick={() => handleCreateSheet(character)}>
-                        Open Sheet
+                        Open Sheet + State
                       </button>
                     )}
                     <button
                       type="button"
                       onClick={() => void handleOpenWorldLore(character)}
                     >
-                      {hasLinkedLore ? 'Open Canon Record' : 'Create Canon Record'}
+                      {hasLinkedLore ? 'Open Canon in World Bible' : 'Create Canon in World Bible'}
                     </button>
                     <button type="button" onClick={() => handleEdit(character)}>
-                      Edit
+                      Edit Tool Metadata
                     </button>
                     <button
                       type="button"

@@ -2,8 +2,10 @@
   position: fixed;
   z-index: 1300;
   width: min(360px, calc(100vw - 2rem));
+  box-sizing: border-box;
   max-height: calc(100vh - 1.5rem);
   overflow-y: auto;
+  overflow-x: hidden;
   padding: 0.75rem;
   border-radius: 10px;
   border: 1px solid var(--color-warning-soft-border);
@@ -17,11 +19,15 @@
 .title {
   font-weight: 700;
   color: var(--color-warning);
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .message {
   font-size: 0.84rem;
   color: var(--color-warning);
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .closeButton {

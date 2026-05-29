@@ -144,9 +144,9 @@ export const createAppCommands = ({
     },
     {
       id: 'workspace-context-characters',
-      label: 'Workspace: Open Context - Characters',
+      label: 'Workspace: Open Context - Character Tools',
       section: 'Workspace',
-      keywords: ['context', 'characters', 'drawer'],
+      keywords: ['context', 'characters', 'character', 'tools', 'sheets', 'drawer'],
       run: () => dispatchWorkspaceCommand('open-context-characters')
     },
     {
