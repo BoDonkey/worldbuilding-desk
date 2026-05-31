@@ -40,7 +40,8 @@ export const getRecommendedMatchResolution = (reasons: string[]): ReviewResoluti
   }
   if (
     reasons.includes('Current name already exists as an alias') ||
-    reasons.includes('Current name looks like a short form of an existing record')
+    reasons.includes('Current name looks like a short form of an existing record') ||
+    reasons.includes('Existing record looks like a short form of the current name')
   ) {
     return 'alias';
   }
@@ -48,9 +49,36 @@ export const getRecommendedMatchResolution = (reasons: string[]): ReviewResoluti
 };
 
 const isLikelyShortFormOf = (shortName: string, fullName: string): boolean => {
-  if (!shortName || !fullName || shortName === fullName) return false;
-  if (shortName.includes(' ') || !fullName.includes(' ')) return false;
-  return fullName.split(/\s+/).filter(Boolean)[0] === shortName;
+  const shortTokens = tokenizeComparableName(shortName);
+  const fullTokens = tokenizeComparableName(fullName);
+  if (shortTokens.length === 0 || fullTokens.length === 0) return false;
+  if (shortTokens.join(' ') === fullTokens.join(' ')) return false;
+  if (shortTokens.length >= fullTokens.length) return false;
+  return startsWithTokens(fullTokens, shortTokens) || endsWithTokens(fullTokens, shortTokens);
+};
+
+export const normalizeComparableName = (value: string): string =>
+  value
+    .trim()
+    .toLowerCase()
+    .replace(/['’]s\b/g, '')
+    .replace(/s['’]\b/g, 's')
+    .replace(/[^\p{L}\p{N}\s-]+/gu, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+const tokenizeComparableName = (value: string): string[] =>
+  normalizeComparableName(value)
+    .split(/[\s-]+/)
+    .map((token) => token.trim())
+    .filter(Boolean);
+
+const startsWithTokens = (fullTokens: string[], variantTokens: string[]): boolean =>
+  variantTokens.every((token, index) => fullTokens[index] === token);
+
+const endsWithTokens = (fullTokens: string[], variantTokens: string[]): boolean => {
+  const offset = fullTokens.length - variantTokens.length;
+  return variantTokens.every((token, index) => fullTokens[offset + index] === token);
 };
 
 export const getMissingRequiredFieldLabels = (
@@ -125,6 +153,9 @@ export const buildPotentialEntityMatches = (params: {
       }
       if (normalizedName && isLikelyShortFormOf(normalizedName, entityName)) {
         reasons.add('Current name looks like a short form of an existing record');
+      }
+      if (normalizedName && isLikelyShortFormOf(entityName, normalizedName)) {
+        reasons.add('Existing record looks like a short form of the current name');
       }
       if (normalizedAliases.includes(entityName)) {
         reasons.add('One of your aliases matches an existing record name');

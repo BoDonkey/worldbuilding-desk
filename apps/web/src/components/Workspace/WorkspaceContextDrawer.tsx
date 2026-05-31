@@ -35,6 +35,7 @@ interface ConsistencyReviewItem {
   issue: {
     code: string;
     message: string;
+    severity?: 'blocking' | 'warning';
     detectionReason?: string;
     relatedEntities?: Array<{id: string; name: string; type: 'character' | 'entity'}>;
   };
@@ -378,11 +379,24 @@ export function WorkspaceContextDrawer({
             <>
               <div className={styles.consistencyDescription}>
                 <strong>Review issues</strong>
+                {reviewReadiness.passiveCount > 0 && (
+                  <>
+                    {' '}
+                    {reviewReadiness.passiveCount} low-priority candidate
+                    {reviewReadiness.passiveCount === 1 ? '' : 's'} saved for later.
+                  </>
+                )}
               </div>
               <ul className={styles.consistencyList}>
                 {consistencyReviewItems.slice(0, 24).map((item) => (
                   <li key={item.id} className={styles.consistencyListItem}>
                     <strong>{getIssueLabel(item.issue.code)}</strong>{' '}
+                    {item.issue.code === 'UNKNOWN_ENTITY' &&
+                      item.issue.severity === 'warning' && (
+                        <span className={styles.consistencyReason}>
+                          Review later
+                        </span>
+                      )}
                     <button
                       type='button'
                       onClick={() => {

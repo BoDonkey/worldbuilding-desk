@@ -20,12 +20,20 @@
   "license": "ISC",
   "packageManager": "pnpm@10.15.0",
   "dependencies": {
-    "@tiptap/core": "^3.15.3",
-    "@tiptap/extension-text-style": "^3.15.3",
-    "@tiptap/react": "^3.15.3",
-    "@tiptap/starter-kit": "^3.15.3"
+    "@tiptap/core": "^3.23.6",
+    "@tiptap/extension-text-style": "^3.23.6",
+    "@tiptap/react": "^3.23.6",
+    "@tiptap/starter-kit": "^3.23.6"
   },
   "devDependencies": {
-    "baseline-browser-mapping": "^2.9.19"
+    "baseline-browser-mapping": "^2.10.32"
+  },
+  "pnpm": {
+    "overrides": {
+      "prosemirror-model": "1.25.4",
+      "prosemirror-state": "1.4.4",
+      "prosemirror-transform": "1.11.0",
+      "prosemirror-view": "1.41.6"
+    }
   }
 }

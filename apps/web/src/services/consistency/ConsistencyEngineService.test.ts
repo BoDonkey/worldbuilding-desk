@@ -219,6 +219,58 @@ describe('buildExtractedProposal', () => {
     expect(entity?.detectionReason).toBe('repeated_unknown');
   });
 
+  it('carries place-list cues across conjoined one-word names', () => {
+    const entities = entityRefsFor(
+      "This place smells horrible. Why can't murders happen more often in Waltham or Newton where people don't crap in the streets?",
+      [],
+      'workspace-save'
+    );
+
+    expect(entities.map((entity) => entity.surface)).toEqual([
+      'Waltham',
+      'Newton'
+    ]);
+    expect(
+      entities.find((entity) => entity.surface === 'Waltham')?.detectionReason
+    ).toBe('leading_entity_cue');
+    expect(
+      entities.find((entity) => entity.surface === 'Newton')?.detectionReason
+    ).toBe('leading_entity_cue');
+  });
+
+  it('uses common-English words as a demotion instead of a hard ban', () => {
+    const noisySurfaces = surfacesFor(
+      "Thanks, please review my Master's thesis. Harmony smiled politely.",
+      [],
+      'workspace-save'
+    );
+
+    expect(noisySurfaces).not.toContain('Thanks');
+    expect(noisySurfaces).not.toContain("Master's");
+    expect(noisySurfaces).not.toContain('Harmony');
+
+    const placeCueSurfaces = surfacesFor(
+      "This place smells horrible. Why can't murders happen more often in Waltham or Newton?",
+      [],
+      'workspace-save'
+    );
+
+    expect(placeCueSurfaces).toEqual(['Waltham', 'Newton']);
+  });
+
+  it('still resolves known canon names that are common English words', () => {
+    const entities = entityRefsFor(
+      'Harmony smiled politely before Harmony opened the archive.',
+      [{id: 'character-harmony', name: 'Harmony', type: 'character'}],
+      'workspace-save'
+    );
+
+    expect(entities.map((entity) => [entity.surface, entity.entityId])).toEqual([
+      ['Harmony', 'character-harmony'],
+      ['Harmony', 'character-harmony']
+    ]);
+  });
+
   it('keeps likely one-off character names without reopening generic sentence starts', () => {
     const entities = entityRefsFor(
       "Kael fought against the mad rabbit for his life. Zippy could feel depression coming on. It was Kaelor's fault.",

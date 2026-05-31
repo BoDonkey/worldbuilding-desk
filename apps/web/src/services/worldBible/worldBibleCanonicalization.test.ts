@@ -4,6 +4,7 @@ import {ALTERNATIVE_NAMES_KEY, normalizeName, parseAlternativeNames} from './wor
 import {
   buildCanonicalAliasList,
   buildEntityMergePlan,
+  deriveCharacterAliasSuggestions,
   deriveFirstNameAlias,
   getAliasConversionPlan,
   mergeEntityFields
@@ -51,6 +52,14 @@ describe('worldBibleCanonicalization', () => {
     expect(deriveFirstNameAlias('Detective Moreland')).toBe('Moreland');
     expect(deriveFirstNameAlias('Li Chen')).toBeNull();
     expect(deriveFirstNameAlias('Kael')).toBeNull();
+  });
+
+  it('suggests first-name, possessive, and surname aliases for full character names', () => {
+    expect(deriveCharacterAliasSuggestions('Camila Garcia deTerra')).toEqual([
+      'Camila',
+      "Camila's",
+      'Garcia deTerra'
+    ]);
   });
 
   it('fills empty fields and merges alternative names without clobbering populated data', () => {

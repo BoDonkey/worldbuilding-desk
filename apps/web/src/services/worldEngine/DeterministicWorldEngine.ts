@@ -66,7 +66,7 @@ function classifyIssue(issue: GuardrailIssue, sourceText: string): ReviewClassif
     : undefined;
   const classification = {
     issueCode: issue.code,
-    confidence: issue.code === 'UNKNOWN_ENTITY' ? 0.86 : 0.78,
+    confidence: issue.confidence ?? (issue.code === 'UNKNOWN_ENTITY' ? 0.86 : 0.78),
     summary: issue.message,
     evidence
   };

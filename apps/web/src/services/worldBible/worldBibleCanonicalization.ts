@@ -85,6 +85,33 @@ export const deriveFirstNameAlias = (name: string): string | null => {
   return firstMeaningfulToken;
 };
 
+export const deriveCharacterAliasSuggestions = (name: string): string[] => {
+  const tokens = name
+    .trim()
+    .split(/\s+/)
+    .map((token) => token.replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu, ''))
+    .filter(Boolean);
+  const firstName = deriveFirstNameAlias(name);
+  const suggestions = [
+    firstName,
+    firstName ? `${firstName}'s` : null
+  ];
+
+  if (tokens.length >= 3) {
+    suggestions.push(tokens.slice(1).join(' '));
+  }
+
+  const canonical = name.trim().toLowerCase();
+  return Array.from(
+    new Map(
+      suggestions
+        .filter((alias): alias is string => Boolean(alias?.trim()))
+        .filter((alias) => alias.trim().toLowerCase() !== canonical)
+        .map((alias) => [alias.trim().toLowerCase(), alias.trim()])
+    ).values()
+  );
+};
+
 const parseCommaSeparatedAliases = (value: string): string[] =>
   Array.from(
     new Map(

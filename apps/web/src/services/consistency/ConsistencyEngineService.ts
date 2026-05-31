@@ -11,6 +11,7 @@ import {
   isInProgressCanonPrefix,
   normalizeCanonText
 } from './textMatcher';
+import {isCommonEnglishWord} from './commonEnglishWords';
 
 interface CandidateMention {
   surface: string;
@@ -652,6 +653,13 @@ const hasLeadingCueWord = (text: string, mentionStart: number): boolean => {
   if (!prefix) return false;
   const match = prefix.match(/([A-Za-z]+)$/);
   const prevWord = (match?.[1] ?? '').toLowerCase();
+  if (prevWord === 'and' || prevWord === 'or') {
+    const conjoinedPattern = new RegExp(
+      `(?:^|[^\\p{L}\\p{N}_])(${Array.from(LEADING_ENTITY_CUE_WORDS).join('|')})\\s+${NAME_SEQUENCE_PATTERN}\\s+(?:and|or)$`,
+      'iu'
+    );
+    return conjoinedPattern.test(prefix);
+  }
   return LEADING_ENTITY_CUE_WORDS.has(prevWord);
 };
 
@@ -765,10 +773,16 @@ const looksLikeNumericOrRoman = (value: string): boolean => {
   return /^(?:[ivxlcdm]+)$/i.test(value);
 };
 
+const isCommonSingleWordUnknown = (normalized: string): boolean => {
+  const tokens = tokenizeNormalized(normalized);
+  return tokens.length === 1 && isCommonEnglishWord(tokens[0] ?? '');
+};
+
 const shouldSuppressUnknownMention = (mention: {
   normalized: string;
   surface: string;
   confidence: number;
+  detectionReason: CandidateDetectionReason;
 }): boolean => {
   const tokens = tokenizeNormalized(mention.normalized);
   if (tokens.length === 0) return true;
@@ -790,6 +804,14 @@ const shouldSuppressUnknownMention = (mention: {
     if (!first || first.length < 4) return true;
     if (GENERIC_UNKNOWN_TERMS.has(first)) return true;
     if (looksLikeNumericOrRoman(first)) return true;
+    if (
+      isCommonEnglishWord(first) &&
+      mention.detectionReason !== 'leading_entity_cue' &&
+      mention.detectionReason !== 'repeated_unknown' &&
+      mention.detectionReason !== 'titled_name'
+    ) {
+      return true;
+    }
   }
 
   return false;
@@ -822,6 +844,10 @@ const isEligibleSingleWordUnknown = (params: {
 
   if (mentionCount > 1) {
     return true;
+  }
+
+  if (isCommonSingleWordUnknown(normalized)) {
+    return hasLeadingCueWord(text, start);
   }
 
   if (hasCharacterContextCue(text, {surface, start, end})) {
@@ -928,7 +954,9 @@ export function buildExtractedProposal(
       dedupedMentions.set(key, mention);
     }
   });
-  const mergedMentions = Array.from(dedupedMentions.values());
+  const mergedMentions = Array.from(dedupedMentions.values()).sort(
+    (left, right) => left.start - right.start || right.end - left.end
+  );
   const mentionCounts = new Map<string, number>();
   mergedMentions.forEach((mention) => {
     mentionCounts.set(
@@ -1068,7 +1096,8 @@ export class ConsistencyEngineService {
         message: `Entity '${mention.surface}' not found. Create it before saving.`,
         span: mention.span,
         surface: mention.surface,
-        detectionReason: mention.detectionReason
+        detectionReason: mention.detectionReason,
+        confidence: mention.confidence
       })
     );
 
@@ -1094,6 +1123,7 @@ export class ConsistencyEngineService {
         span: mention.span,
         surface: mention.surface,
         detectionReason: mention.detectionReason,
+        confidence: mention.confidence,
         relatedEntities
       });
     });

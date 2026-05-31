@@ -2,13 +2,22 @@ import {Extension} from '@tiptap/core';
 import {Plugin, PluginKey} from 'prosemirror-state';
 import {Decoration, DecorationSet} from 'prosemirror-view';
 import type {EditorState} from 'prosemirror-state';
-import {findTextMatches} from '../../../services/consistency/textMatcher';
+import {getVisibleWorkspaceAnnotations} from '../../../services/consistency/workspaceAnnotations';
+import type {
+  WorkspaceAnnotationSource,
+  WorkspaceReviewInlineMode
+} from '../../../services/consistency/workspaceAnnotations';
+import type {GuardrailIssueCode} from '../../../services/consistency/types';
 
 export interface ConsistencyHighlightIssue {
   id: string;
   surface: string;
   message: string;
   severity: 'blocking' | 'warning';
+  issueCode?: GuardrailIssueCode;
+  source?: WorkspaceAnnotationSource;
+  confidence?: number;
+  inlineMode?: WorkspaceReviewInlineMode;
 }
 
 export interface KnownHighlightSurface {
@@ -51,48 +60,41 @@ export const createConsistencyHighlightsExtension = (
                   return;
                 }
 
-                const knownMatches = findTextMatches(
-                  node.text,
-                  currentKnownSurfaces.map((entry) => ({
+                getVisibleWorkspaceAnnotations({
+                  text: node.text,
+                  knownSurfaces: currentKnownSurfaces.map((entry) => ({
                     id: entry.id,
-                    surface: entry.surface,
-                    kind: 'known' as const
-                  }))
-                );
-
-                findTextMatches(
-                  node.text,
-                  currentIssues.map((issue) => ({
+                    surface: entry.surface
+                  })),
+                  reviewSurfaces: currentIssues.map((issue) => ({
                     id: issue.id,
                     surface: issue.surface,
-                    kind: 'review' as const,
-                    metadata: {issue}
+                    message: issue.message,
+                    severity: issue.severity,
+                    issueCode: issue.issueCode,
+                    source: issue.source,
+                    confidence: issue.confidence,
+                    inlineMode: issue.inlineMode,
+                    metadata: issue
                   }))
-                ).forEach((match) => {
-                  const issue = match.pattern.metadata?.issue as
-                    | ConsistencyHighlightIssue
-                    | undefined;
-                  if (!issue) return;
-                  const overlapsLongerKnownSurface = knownMatches.some(
-                    (knownMatch) =>
-                      match.from >= knownMatch.from &&
-                      match.to <= knownMatch.to &&
-                      knownMatch.to - knownMatch.from > match.to - match.from
-                  );
-                  if (overlapsLongerKnownSurface) {
-                    return;
-                  }
-                  decorations.push(
-                    Decoration.inline(pos + match.from, pos + match.to, {
-                      class:
-                        issue.severity === 'blocking'
-                          ? 'consistency-highlight consistency-highlight-blocking'
-                          : 'consistency-highlight consistency-highlight-warning',
-                      'data-consistency-id': issue.id,
-                      title: issue.message
-                    })
-                  );
-                });
+                })
+                  .filter((annotation) => annotation.kind === 'review-candidate')
+                  .forEach((annotation) => {
+                    const issue = annotation.data as
+                      | ConsistencyHighlightIssue
+                      | undefined;
+                    if (!issue) return;
+                    decorations.push(
+                      Decoration.inline(pos + annotation.from, pos + annotation.to, {
+                        class:
+                          issue.severity === 'blocking'
+                            ? 'consistency-highlight consistency-highlight-blocking'
+                            : 'consistency-highlight consistency-highlight-warning',
+                        'data-consistency-id': issue.id,
+                        title: issue.message
+                      })
+                    );
+                  });
               });
 
               return DecorationSet.create(state.doc, decorations);

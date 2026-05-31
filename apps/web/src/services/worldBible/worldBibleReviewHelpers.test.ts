@@ -144,6 +144,92 @@ describe('worldBibleReviewHelpers', () => {
     ]);
   });
 
+  it('finds possessive and surname variants of full-name character canon', () => {
+    const entities = [
+      makeEntity({id: '1', name: 'Camila Garcia deTerra'}),
+      makeEntity({id: '2', name: 'Mira Voss'})
+    ];
+
+    const possessiveMatches = buildPotentialEntityMatches({
+      entities,
+      aliasMapByEntityId: new Map(),
+      editingId: null,
+      name: "Camila's",
+      fieldValues: {},
+      alternativeNamesKey: ALTERNATIVE_NAMES_KEY,
+      ignoredEntityMatchKeys: new Set(),
+      normalizeName,
+      parseAlternativeNames
+    });
+    const surnameMatches = buildPotentialEntityMatches({
+      entities,
+      aliasMapByEntityId: new Map(),
+      editingId: null,
+      name: 'Garcia deTerra',
+      fieldValues: {},
+      alternativeNamesKey: ALTERNATIVE_NAMES_KEY,
+      ignoredEntityMatchKeys: new Set(),
+      normalizeName,
+      parseAlternativeNames
+    });
+
+    expect(possessiveMatches).toEqual([
+      {
+        entity: entities[0],
+        matchKey: null,
+        reasons: ['Current name looks like a short form of an existing record'],
+        recommendedResolution: 'alias'
+      }
+    ]);
+    expect(surnameMatches).toEqual([
+      {
+        entity: entities[0],
+        matchKey: null,
+        reasons: ['Current name looks like a short form of an existing record'],
+        recommendedResolution: 'alias'
+      }
+    ]);
+
+    const canonicalMatches = buildPotentialEntityMatches({
+      entities: [
+        entities[0],
+        makeEntity({id: '3', name: "Camila's"}),
+        makeEntity({id: '4', name: 'Garcia deTerra'})
+      ],
+      aliasMapByEntityId: new Map(),
+      editingId: '1',
+      name: 'Camila Garcia deTerra',
+      fieldValues: {},
+      alternativeNamesKey: ALTERNATIVE_NAMES_KEY,
+      ignoredEntityMatchKeys: new Set(),
+      normalizeName,
+      parseAlternativeNames
+    });
+
+    expect(canonicalMatches).toEqual([
+      {
+        entity: {
+          ...entities[0],
+          id: '3',
+          name: "Camila's"
+        },
+        matchKey: buildEntityMatchKey('1', '3'),
+        reasons: ['Existing record looks like a short form of the current name'],
+        recommendedResolution: 'alias'
+      },
+      {
+        entity: {
+          ...entities[0],
+          id: '4',
+          name: 'Garcia deTerra'
+        },
+        matchKey: buildEntityMatchKey('1', '4'),
+        reasons: ['Existing record looks like a short form of the current name'],
+        recommendedResolution: 'alias'
+      }
+    ]);
+  });
+
   it('filters ignored match pairs out of draft matches and review insights', () => {
     const entities = [
       makeEntity({

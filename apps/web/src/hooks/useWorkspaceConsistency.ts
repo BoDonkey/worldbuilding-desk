@@ -27,6 +27,12 @@ import type {WorldEngineStatus} from '../services/worldEngine';
 import type {ReviewIssueAnnotation} from '../services/worldEngine';
 import type {ShodhMemoryProvider} from '../services/shodh/ShodhMemoryService';
 import {normalizeCanonText} from '../services/consistency/textMatcher';
+import type {
+  WorkspaceAnnotationSource,
+  WorkspaceAnnotationSummary,
+  WorkspaceReviewInlineMode
+} from '../services/consistency/workspaceAnnotations';
+import {summarizeWorkspaceReviewSurfaces} from '../services/consistency/workspaceAnnotations';
 import {htmlToPlainText} from '../utils/textHelpers';
 import {buildDerivedStateMutationEvents} from '../services/state/stateMutationDerivation';
 import {
@@ -93,6 +99,25 @@ interface ConsistencyReviewItem {
   reviewAnnotation?: ReviewIssueAnnotation;
 }
 
+interface HighlightableUnknownIssue {
+  id: string;
+  surface: string;
+  message: string;
+  severity: 'blocking' | 'warning';
+  issueCode: GuardrailIssue['code'];
+  source: WorkspaceAnnotationSource;
+  confidence?: number;
+  inlineMode: WorkspaceReviewInlineMode;
+}
+
+const EMPTY_ANNOTATION_SUMMARY: WorkspaceAnnotationSummary = {
+  totalCount: 0,
+  inlineVisibleCount: 0,
+  passiveCount: 0,
+  suppressedCount: 0,
+  blockingCount: 0
+};
+
 export interface StateMutationReviewItem {
   id: string;
   sceneId: string;
@@ -130,6 +155,9 @@ export type ReviewReadinessState =
 export interface ReviewReadiness {
   state: ReviewReadinessState;
   count: number;
+  activeCount: number;
+  passiveCount: number;
+  suppressedCount: number;
   label: string;
   detail: string;
 }
@@ -387,6 +415,35 @@ const getReviewIssueKey = (issue: GuardrailIssue): string =>
     issue.code,
     canonicalizeUnknownSurface(issue.surface ?? issue.message)
   ].join(':');
+
+const getAnnotationSourceForReview = (
+  reviewAnnotation?: ReviewIssueAnnotation
+): WorkspaceAnnotationSource =>
+  reviewAnnotation?.source === 'local-ai'
+    ? 'local-ai-review'
+    : 'deterministic-review';
+
+const buildHighlightableUnknownIssue = (
+  issue: GuardrailIssue,
+  reviewAnnotation?: ReviewIssueAnnotation
+): HighlightableUnknownIssue | null => {
+  if (
+    (issue.code !== 'UNKNOWN_ENTITY' && issue.code !== 'AMBIGUOUS_REFERENCE') ||
+    !issue.surface
+  ) {
+    return null;
+  }
+  return {
+    id: `${issue.code}:${issue.surface}`,
+    surface: issue.surface,
+    message: issue.message,
+    severity: issue.severity,
+    issueCode: issue.code,
+    source: getAnnotationSourceForReview(reviewAnnotation),
+    confidence: reviewAnnotation?.confidence ?? issue.confidence,
+    inlineMode: 'visible'
+  };
+};
 
 const getReviewSourceForDocument = (
   doc: WritingDocument
@@ -1190,56 +1247,60 @@ export const useWorkspaceConsistency = ({
   );
 
   const highlightableUnknownIssues = useMemo(() => {
-    const issueMap = new Map<
-      string,
-      {
-        id: string;
-        surface: string;
-        message: string;
-        severity: 'blocking' | 'warning';
-      }
-    >();
-    const addIssue = (issue: GuardrailIssue) => {
-      if (issue.code !== 'UNKNOWN_ENTITY' || !issue.surface) return;
+    const issueMap = new Map<string, HighlightableUnknownIssue>();
+    const addIssue = (
+      issue: GuardrailIssue,
+      reviewAnnotation?: ReviewIssueAnnotation
+    ) => {
       const key = getReviewIssueKey(issue);
       if (issueMap.has(key)) return;
-      issueMap.set(key, {
-        id: `${issue.code}:${issue.surface}`,
-        surface: issue.surface,
-        message: issue.message,
-        severity: issue.severity
-      });
+      const highlightable = buildHighlightableUnknownIssue(issue, reviewAnnotation);
+      if (!highlightable) return;
+      issueMap.set(key, highlightable);
     };
 
-    unknownGuardrailIssues.forEach(addIssue);
+    unknownGuardrailIssues.forEach((issue) => addIssue(issue));
     if (selectedDocumentId) {
       consistencyReviewItems
         .filter((item) => item.sceneId === selectedDocumentId)
         .filter((item) => !isKnownConsistencyIssue(item.issue))
-        .forEach((item) => addIssue(item.issue));
+        .forEach((item) => addIssue(item.issue, item.reviewAnnotation));
     }
 
     return Array.from(issueMap.values());
   }, [consistencyReviewItems, isKnownConsistencyIssue, selectedDocumentId, unknownGuardrailIssues]);
 
+  const reviewAnnotationSummary = useMemo(
+    () =>
+      highlightableUnknownIssues.length > 0
+        ? summarizeWorkspaceReviewSurfaces(highlightableUnknownIssues)
+        : EMPTY_ANNOTATION_SUMMARY,
+    [highlightableUnknownIssues]
+  );
+
   const reviewReadiness = useMemo<ReviewReadiness>(() => {
-    const issueKeys = new Set<string>();
-    unknownGuardrailIssues.forEach((issue) => {
-      issueKeys.add(getReviewIssueKey(issue));
-    });
-    consistencyReviewItems
-      .filter((item) => !isKnownConsistencyIssue(item.issue))
-      .forEach((item) => {
-        issueKeys.add(getReviewIssueKey(item.issue));
-      });
     const stateMutationItemCount = stateMutationEvents.filter(
       (event) => event.status === 'proposed' && event.sourceType === 'deterministic-review'
     ).length;
-    const count = issueKeys.size + stateMutationItemCount;
+    const activeCount = reviewAnnotationSummary.inlineVisibleCount + stateMutationItemCount;
+    const passiveCount = reviewAnnotationSummary.passiveCount;
+    const suppressedCount = reviewAnnotationSummary.suppressedCount;
+    const count = activeCount + passiveCount;
+    const label =
+      activeCount > 0 && passiveCount > 0
+        ? `${activeCount} active, ${passiveCount} later`
+        : activeCount > 0
+          ? activeCount === 1 ? '1 review item' : `${activeCount} review items`
+          : passiveCount > 0
+            ? passiveCount === 1 ? '1 review later' : `${passiveCount} review later`
+            : 'Review clear';
     if (worldEngineStatus && worldEngineStatus.state !== 'available') {
       return {
         state: 'unavailable',
         count,
+        activeCount,
+        passiveCount,
+        suppressedCount,
         label: 'Review unavailable',
         detail:
           worldEngineStatus.state === 'notInstalled'
@@ -1251,6 +1312,9 @@ export const useWorkspaceConsistency = ({
       return {
         state: 'running',
         count,
+        activeCount,
+        passiveCount,
+        suppressedCount,
         label: 'Review running',
         detail: 'Review is checking the current project.'
       };
@@ -1259,30 +1323,48 @@ export const useWorkspaceConsistency = ({
       return {
         state: 'attention',
         count,
-        label: count === 1 ? '1 review item' : `${count} review items`,
+        activeCount,
+        passiveCount,
+        suppressedCount,
+        label,
         detail: 'Some review items need attention before a strict save can finish.'
       };
     }
-    if (count > 0) {
+    if (activeCount > 0) {
       return {
         state: 'ready',
         count,
-        label: count === 1 ? '1 review item' : `${count} review items`,
+        activeCount,
+        passiveCount,
+        suppressedCount,
+        label,
         detail: 'Review items are ready when you want to check them.'
+      };
+    }
+    if (passiveCount > 0) {
+      return {
+        state: 'ready',
+        count,
+        activeCount,
+        passiveCount,
+        suppressedCount,
+        label,
+        detail: 'Low-priority review candidates are saved for later without inline drafting noise.'
       };
     }
     return {
       state: 'idle',
       count: 0,
+      activeCount: 0,
+      passiveCount: 0,
+      suppressedCount,
       label: 'Review clear',
       detail: 'No open review items.'
     };
   }, [
-    consistencyReviewItems,
     hasBlockingUnknownGuardrailIssues,
-    isKnownConsistencyIssue,
     isRunningConsistencyReview,
-    unknownGuardrailIssues,
+    reviewAnnotationSummary,
     stateMutationEvents,
     worldEngineStatus
   ]);

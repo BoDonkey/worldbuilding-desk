@@ -104,147 +104,44 @@
   margin: 0 0 0.5rem 0;
 }
 
-.reviewPanel {
-  margin-bottom: 1rem;
-  border: 1px solid var(--surface-border-soft);
-  border-radius: 16px;
-  background-color: var(--surface-panel);
-  padding: 0.9rem;
-}
-
-.reviewPanelHeader {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 0.75rem;
-  margin-bottom: 0.75rem;
-}
-
-.reviewPanelHeader h2 {
-  margin: 0 0 0.35rem 0;
-  font-size: 1rem;
-}
-
-.reviewPanelHeader p {
-  margin: 0;
-  font-size: 0.86rem;
-  color: var(--color-text-secondary);
-}
-
-.reviewCount {
-  display: inline-flex;
-  align-items: center;
-  padding: 0.2rem 0.55rem;
-  border-radius: 999px;
-  border: 1px solid var(--badge-info-border);
-  background: var(--badge-info-bg);
-  color: var(--badge-info-text);
-  font-size: 0.78rem;
-  font-weight: 700;
-}
-
-.reviewToolbar {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 0.75rem;
-  margin-bottom: 0.8rem;
-  flex-wrap: wrap;
-}
-
-.reviewFilterGroup {
-  display: flex;
-  gap: 0.45rem;
-  flex-wrap: wrap;
-}
-
-.reviewFilterButton {
-  border: 1px solid var(--button-secondary-border);
-  background: var(--button-secondary-bg);
-  color: var(--button-secondary-text);
-  border-radius: 999px;
-  padding: 0.32rem 0.7rem;
-  font-size: 0.8rem;
-  cursor: pointer;
-}
-
-.reviewFilterButtonActive {
-  border-color: var(--button-primary-border);
-  background: var(--button-primary-bg);
-  color: var(--button-primary-text);
-  font-weight: 700;
-}
-
 .reviewToolbarActions {
   display: flex;
   gap: 0.45rem;
   flex-wrap: wrap;
 }
 
-.reviewList {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: 0.75rem;
-}
-
-.reviewCard {
-  border: 1px solid var(--surface-border-soft);
-  border-radius: 14px;
-  background: var(--surface-panel-elevated);
-  padding: 0.75rem;
-}
-
-.reviewCardHeader {
-  display: flex;
-  justify-content: space-between;
-  gap: 0.5rem;
-  align-items: center;
-  margin-bottom: 0.45rem;
-}
-
-.reviewMeta {
-  font-size: 0.78rem;
-  color: var(--color-text-tertiary);
-}
-
-.reviewReasonList {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.35rem;
-  margin-bottom: 0.45rem;
-}
-
-.reviewReasonChip {
-  display: inline-flex;
-  align-items: center;
-  padding: 0.16rem 0.45rem;
-  border-radius: 999px;
-  border: 1px solid var(--color-warning-soft-border);
-  background: var(--color-warning-soft-bg);
-  color: var(--color-warning);
-  font-size: 0.76rem;
-  font-weight: 700;
-}
-
-.reviewHint {
-  font-size: 0.82rem;
-  color: var(--color-text-secondary);
-  margin-bottom: 0.55rem;
-}
-
-.reviewActions {
-  display: flex;
-  gap: 0.45rem;
-  flex-wrap: wrap;
-}
-
-.reviewActions button {
+.reviewToolbarActions button {
   border: 1px solid var(--button-secondary-border);
   border-radius: 12px;
   background: var(--button-secondary-bg);
   color: var(--button-secondary-text);
   padding: 0.38rem 0.7rem;
   font-size: 0.8rem;
+  cursor: pointer;
+  transition:
+    background-color 0.18s ease,
+    transform 0.18s ease;
+}
+
+.reviewToolbarActions button:hover:not(:disabled) {
+  background: var(--button-secondary-bg-hover);
+  transform: translateY(-1px);
+}
+
+.reviewToolbarActions .primaryButton {
+  border-color: var(--button-primary-border);
+  background: var(--button-primary-bg);
+  color: var(--button-primary-text);
+}
+
+.reviewToolbarActions .primaryButton:hover:not(:disabled) {
+  background: var(--button-primary-bg-hover);
+}
+
+.reviewHint {
+  font-size: 0.82rem;
+  color: var(--color-text-secondary);
+  margin-bottom: 0.55rem;
 }
 
 .importPanel {
@@ -994,18 +891,119 @@
 }
 
 .canonSectionHeader {
-  display: grid;
-  gap: 0.25rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.75rem;
   margin-bottom: 0.8rem;
 }
 
 .canonSectionHeader strong {
+  display: block;
   color: var(--color-text-primary);
 }
 
 .canonSectionHeader span {
   color: var(--color-text-secondary);
   font-size: 0.84rem;
+}
+
+.canonSectionHeader button {
+  flex: 0 0 auto;
+  border: 1px solid var(--button-secondary-border);
+  border-radius: 12px;
+  background: var(--button-secondary-bg);
+  color: var(--button-secondary-text);
+  padding: 0.38rem 0.75rem;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition:
+    background-color 0.18s ease,
+    transform 0.18s ease;
+}
+
+.canonSectionHeader button:hover:not(:disabled) {
+  background: var(--button-secondary-bg-hover);
+  transform: translateY(-1px);
+}
+
+.aliasSuggestionPanel {
+  display: grid;
+  gap: 0.45rem;
+  margin-top: 0.55rem;
+}
+
+.nameResolverPanel {
+  display: grid;
+  gap: 0.65rem;
+  margin-bottom: 0.9rem;
+  padding: 0.75rem;
+  border: 1px solid var(--surface-border-soft);
+  border-radius: 12px;
+  background: var(--surface-panel);
+}
+
+.nameResolverPanel > strong {
+  color: var(--color-text-primary);
+}
+
+.nameResolverPanel p {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: 0.84rem;
+  line-height: 1.45;
+}
+
+.nameResolverPanel label {
+  display: grid;
+  gap: 0.35rem;
+  color: var(--color-text-primary);
+  font-size: 0.84rem;
+  font-weight: 600;
+}
+
+.nameResolverPanel select {
+  border: 1px solid var(--input-border);
+  border-radius: 10px;
+  background: var(--input-bg);
+  color: var(--color-text-primary);
+  padding: 0.48rem 0.65rem;
+  font-size: 0.9rem;
+}
+
+.nameResolverPanel select:focus {
+  outline: none;
+  border-color: var(--input-border-focus);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--input-border-focus) 22%, transparent);
+}
+
+.aliasSuggestionPanel > span {
+  color: var(--color-text-secondary);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.aliasSuggestionList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.aliasSuggestionList button {
+  border: 1px solid var(--button-secondary-border);
+  border-radius: 999px;
+  background: var(--button-secondary-bg);
+  color: var(--button-secondary-text);
+  padding: 0.3rem 0.65rem;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.aliasSuggestionList button:hover:not(:disabled) {
+  background: var(--button-secondary-bg-hover);
+  transform: translateY(-1px);
 }
 
 .formActions .primaryButton {
@@ -1108,6 +1106,29 @@
   font-weight: 700;
 }
 
+.aliasMatchBadge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.18rem 0.5rem;
+  border-radius: 999px;
+  border: 1px solid var(--badge-info-border);
+  background: var(--badge-info-bg);
+  color: var(--badge-info-text);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.entityAttentionNote {
+  margin: 0.45rem 0 0.7rem;
+  padding: 0.55rem 0.65rem;
+  border: 1px solid var(--color-accent-soft-border);
+  border-radius: 10px;
+  background: var(--color-accent-soft-bg);
+  color: var(--color-accent-soft-text);
+  font-size: 0.84rem;
+  line-height: 1.45;
+}
+
 .entityField {
   font-size: 0.85rem;
   color: var(--color-text-secondary);
@@ -1144,21 +1165,6 @@
   text-decoration: underline;
 }
 
-.reviewListSummary {
-  margin: 0 0 0.85rem 0;
-  font-size: 0.85rem;
-  color: var(--color-text-secondary);
-}
-
-.reviewEntityMeta {
-  display: flex;
-  gap: 0.75rem;
-  flex-wrap: wrap;
-  font-size: 0.8rem;
-  color: var(--color-text-secondary);
-  margin-bottom: 0.55rem;
-}
-
 .entityActions {
   margin-top: 0.75rem;
   display: flex;
@@ -1170,7 +1176,7 @@
   font-size: 0.85rem;
   padding: 0.4rem 0.8rem;
   border: 1px solid var(--color-border);
-  border-radius: 4px;
+  border-radius: 12px;
   cursor: pointer;
   background-color: var(--color-bg-primary);
   color: var(--color-text-primary);
@@ -1178,6 +1184,17 @@
 
 .entityActions button:hover {
   background-color: var(--color-bg-tertiary);
+}
+
+.entityActions .primaryButton {
+  border-color: var(--button-primary-border);
+  background: var(--button-primary-bg);
+  color: var(--button-primary-text);
+}
+
+.entityActions .primaryButton:hover {
+  background: var(--button-primary-bg-hover);
+  transform: translateY(-1px);
 }
 
 .entityActions .deleteButton {

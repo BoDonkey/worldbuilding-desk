@@ -59,6 +59,7 @@ export interface GuardrailIssue {
   };
   surface?: string;
   detectionReason?: CandidateDetectionReason;
+  confidence?: number;
   relatedEntities?: Array<{
     id: string;
     name: string;

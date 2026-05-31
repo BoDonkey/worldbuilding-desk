@@ -296,7 +296,7 @@ export const useWorldBibleEntityActions = ({
           tone: 'success',
           message: openedNext
             ? options?.successMessageWithNext ??
-              `"${savedName}" saved. Opened the next queue item.`
+              `"${savedName}" saved. Opened the next record.`
             : (options?.successMessage ?? (editingId ? 'Entry updated.' : 'Entry created.'))
         });
       } catch (error) {
@@ -354,7 +354,7 @@ export const useWorldBibleEntityActions = ({
         setFeedback({
           tone: 'success',
           message: openedNext
-            ? `"${entity.name}" ${subject} marked reviewed. Opened the next queue item.`
+            ? `"${entity.name}" ${subject} marked reviewed. Opened the next record.`
             : `"${entity.name}" ${subject} marked reviewed.`
         });
       } catch (error) {
@@ -764,7 +764,7 @@ export const useWorldBibleEntityActions = ({
         setFeedback({
           tone: 'success',
           message: openedNext
-            ? `"${sourceName}" converted into an alias of "${target.name}". Opened the next queue item.`
+            ? `"${sourceName}" converted into an alias of "${target.name}". Opened the next record.`
             : `"${sourceName}" converted into an alias of "${target.name}".`
         });
       } catch (error) {
