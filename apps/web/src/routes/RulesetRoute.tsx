@@ -44,9 +44,9 @@ class RulesetWizardErrorBoundary extends Component<
           style={{
             padding: '1rem',
             borderRadius: '8px',
-            border: '1px solid #fecaca',
-            backgroundColor: '#fef2f2',
-            color: '#991b1b'
+            border: '1px solid var(--color-error-soft-border)',
+            backgroundColor: 'var(--color-error-soft-bg)',
+            color: 'var(--color-error)'
           }}
         >
           <h2 style={{marginTop: 0}}>Ruleset editor failed to load.</h2>
@@ -205,7 +205,7 @@ function RulesetRoute() {
   return (
     <section style={{height: 'calc(100vh - 120px)', display: 'flex', flexDirection: 'column'}}>
       <h1 style={{marginTop: 0, marginBottom: '0.5rem'}}>World Ruleset</h1>
-      <p style={{marginTop: 0, marginBottom: '0.75rem', color: '#4b5563'}}>
+      <p style={{marginTop: 0, marginBottom: '0.75rem', color: 'var(--color-text-secondary)'}}>
         {ruleset ? 'Editing existing ruleset.' : 'No ruleset yet. Create one for this project.'}
       </p>
       <div style={{display: 'flex', gap: '0.5rem', marginBottom: '0.9rem'}}>
@@ -239,11 +239,11 @@ function RulesetRoute() {
             padding: '0.5rem 0.75rem',
             borderRadius: '6px',
             border: `1px solid ${
-              feedback.tone === 'error' ? '#fecaca' : '#bbf7d0'
+              feedback.tone === 'error' ? 'var(--color-error-soft-border)' : 'var(--color-success-soft-border)'
             }`,
             backgroundColor:
-              feedback.tone === 'error' ? '#fef2f2' : '#f0fdf4',
-            color: feedback.tone === 'error' ? '#991b1b' : '#166534'
+              feedback.tone === 'error' ? 'var(--color-error-soft-bg)' : 'var(--color-success-soft-bg)',
+            color: feedback.tone === 'error' ? 'var(--color-error)' : 'var(--color-success)'
           }}
         >
           {feedback.message}

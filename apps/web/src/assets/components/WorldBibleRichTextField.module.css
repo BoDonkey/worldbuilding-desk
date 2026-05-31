@@ -1,0 +1,240 @@
+.container {
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: var(--color-bg-primary);
+  padding: 0.75rem;
+}
+
+.characterField {
+  border-color: var(--surface-border-soft);
+  border-radius: 14px;
+  background: var(--surface-panel-elevated);
+  padding: 0.85rem;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.65rem;
+}
+
+.label {
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.characterField .label {
+  font-size: 0.9rem;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.meta {
+  font-size: 0.76rem;
+  color: var(--color-text-tertiary);
+}
+
+.toggle {
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: var(--color-bg-primary);
+  color: var(--color-text-secondary);
+  padding: 0.3rem 0.75rem;
+  cursor: pointer;
+  font-size: 0.8rem;
+}
+
+.toggle:hover {
+  background: var(--color-bg-secondary);
+}
+
+.characterField .toggle {
+  border-color: var(--button-secondary-border);
+  border-radius: 12px;
+  background: var(--button-secondary-bg);
+  color: var(--button-secondary-text);
+  box-shadow: var(--button-shadow);
+}
+
+.characterField .toggle:hover {
+  background: var(--button-secondary-bg-hover);
+  transform: translateY(-1px);
+}
+
+.container :global(.control-group) {
+  position: static;
+  top: auto;
+  margin-bottom: 0.55rem;
+  border-radius: 10px;
+  padding: 0.42rem;
+  background: color-mix(in srgb, var(--color-bg-primary) 84%, var(--color-bg-secondary) 16%);
+}
+
+.characterField :global(.control-group) {
+  border-color: var(--surface-border-soft);
+  border-radius: 12px;
+  padding: 0.36rem;
+  background: color-mix(in srgb, var(--surface-panel-elevated) 84%, var(--surface-panel) 16%);
+  backdrop-filter: none;
+}
+
+.container :global(.button-group) {
+  align-items: center;
+  gap: 0.32rem;
+}
+
+.container :global(.toolbar-select) {
+  width: auto;
+  min-width: 7.25rem;
+  max-width: 8.5rem;
+  padding: 0.32rem 0.55rem;
+  border-radius: 8px;
+  font-size: 0.78rem;
+}
+
+.characterField :global(.toolbar-select) {
+  min-width: 6.75rem;
+  max-width: 8rem;
+  border-color: var(--input-border);
+  border-radius: 10px;
+  background: var(--input-bg);
+  color: var(--input-text);
+}
+
+.container :global(.button-group button) {
+  padding: 0.32rem 0.55rem;
+  border-radius: 8px;
+  font-size: 0.78rem;
+}
+
+.characterField :global(.button-group button) {
+  border-color: var(--button-secondary-border);
+  border-radius: 10px;
+  background: var(--button-secondary-bg);
+  color: var(--button-secondary-text);
+  box-shadow: none;
+}
+
+.characterField :global(.button-group button:hover:not(:disabled)) {
+  background: var(--button-secondary-bg-hover);
+  border-color: var(--button-secondary-border);
+}
+
+.container :global(.tiptap-editor) {
+  min-height: 220px;
+  box-shadow: none;
+  border-radius: 12px;
+}
+
+.characterField :global(.tiptap-editor) {
+  min-height: 240px;
+  border-color: var(--editor-surface-border);
+  border-radius: 14px;
+  box-shadow: none;
+}
+
+.container :global(.ProseMirror) {
+  max-width: none;
+}
+
+.characterField :global(.ProseMirror) {
+  min-height: 240px;
+}
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  background: var(--color-overlay);
+  backdrop-filter: blur(6px);
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  padding: 1.25rem;
+}
+
+.overlayCard {
+  width: min(1100px, 100%);
+  height: 100%;
+  max-height: 100%;
+  background: linear-gradient(
+    180deg,
+    color-mix(in oklab, var(--color-bg-secondary) 92%, var(--color-on-accent)) 0%,
+    var(--color-bg-secondary) 100%
+  );
+  border: 1px solid var(--color-border);
+  border-radius: 18px;
+  box-shadow: 0 28px 70px var(--color-shadow);
+  padding: 1rem;
+  overflow: auto;
+}
+
+.characterOverlayCard {
+  border-color: var(--surface-border-soft);
+  background: var(--surface-panel);
+}
+
+.characterOverlayCard :global(.control-group) {
+  background: color-mix(in srgb, var(--surface-panel-elevated) 86%, var(--surface-panel) 14%);
+}
+
+.overlayHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: 0.8rem;
+}
+
+.overlayEyebrow {
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-text-tertiary);
+  margin-bottom: 0.35rem;
+}
+
+.overlayTitle {
+  margin: 0;
+  font-size: 1.45rem;
+  line-height: 1.2;
+  color: var(--color-text-primary);
+}
+
+.overlayCard :global(.tiptap-wrapper) {
+  min-height: calc(100% - 4.5rem);
+}
+
+.overlayCard :global(.tiptap-editor) {
+  min-height: calc(100vh - 13rem);
+}
+
+.overlayCard :global(.ProseMirror) {
+  max-width: 840px;
+}
+
+@media (max-width: 700px) {
+  .overlay {
+    padding: 0.5rem;
+  }
+
+  .overlayCard {
+    padding: 0.75rem;
+    border-radius: 14px;
+  }
+
+  .overlayHeader {
+    flex-direction: column;
+  }
+
+  .overlayCard :global(.tiptap-editor) {
+    min-height: calc(100vh - 11rem);
+  }
+}

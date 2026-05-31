@@ -1,10 +1,11 @@
 import {useCallback, useEffect, useState} from 'react';
 import type {Dispatch, SetStateAction} from 'react';
 import type {
+  CanonicalFact,
   Character,
   CharacterSheet,
   EntityCategory,
-  ProjectSettings,
+  StateMutationEvent,
   StatBlockGroup,
   StatBlockInsertMode,
   StatBlockScopePreset,
@@ -22,7 +23,7 @@ import {getEntitiesByProject} from '../entityStorage';
 import {getCategoriesByProject, initializeDefaultCategories} from '../categoryStorage';
 import {getCharactersByProject} from '../characterStorage';
 import {getCharacterSheetsByProject} from '../services/characters';
-import {getOrCreateSettings, getResolvedConsistencyActionCues} from '../settingsStorage';
+import {getResolvedConsistencyActionCues} from '../settingsStorage';
 import {getRulesetByProjectId} from '../services/rules';
 import {
   getCompendiumActionLogs,
@@ -35,11 +36,18 @@ import {
   getSeriesBibleConfig,
   getCanonSyncState
 } from '../services/seriesBible/SeriesBibleService';
-import {getAliasesByProject, type ConsistencyAlias} from '../services/consistency';
+import {
+  getAliasesByProject,
+  migrateCharacterAliasesToEntities,
+  type ConsistencyAlias
+} from '../services/consistency';
 import {appendSystemHistoryEntry} from '../services/system';
+import {getStateMutationEventsByProject} from '../services/state/stateMutationLedger';
+import {getCanonicalFactsByProject} from '../services/lore/loreFactStorage';
 import type {RAGProvider} from '../services/rag/RAGService';
 import {getRAGService} from '../services/rag/getRAGService';
 import type {Project} from '../entityTypes';
+import {useAppStore} from '../store/appStore';
 
 interface UseWorkspaceProjectDataParams {
   activeProject: Project | null;
@@ -64,7 +72,10 @@ export function useWorkspaceProjectData({
   const [toolbarButtons, setToolbarButtons] = useState<
     Array<{id: string; label: string; markName: string}>
   >([]);
-  const [projectSettings, setProjectSettings] = useState<ProjectSettings | null>(null);
+  const projectSettings = useAppStore((s) => s.projectSettings);
+  const setProjectSettings = useAppStore((s) => s.setProjectSettings);
+  const loadProjectSettings = useAppStore((s) => s.loadProjectSettings);
+  const saveProjectSettings = useAppStore((s) => s.saveProjectSettings);
   const [entities, setEntities] = useState<WorldEntity[]>([]);
   const [categories, setCategories] = useState<EntityCategory[]>([]);
   const [aliases, setAliases] = useState<ConsistencyAlias[]>([]);
@@ -84,6 +95,8 @@ export function useWorkspaceProjectData({
     childLastSynced?: string;
     parentName?: string;
   }>({});
+  const [stateMutationEvents, setStateMutationEvents] = useState<StateMutationEvent[]>([]);
+  const [canonicalFacts, setCanonicalFacts] = useState<CanonicalFact[]>([]);
 
   // StatBlock preference state — owned here, loaded from settings, also mutated by
   // useWorkspaceStatBlocks at runtime (user selections).
@@ -163,6 +176,8 @@ export function useWorkspaceProjectData({
       setRuleset(null);
       setSettlementState(null);
       setSettlementModules([]);
+      setStateMutationEvents([]);
+      setCanonicalFacts([]);
       setSelectedStatCharacterId('');
       setSelectedStatEntityId('');
       setStatBlockSourceType('character');
@@ -185,7 +200,6 @@ export function useWorkspaceProjectData({
       await initializeDefaultCategories(activeProject.id);
       const [
         docs,
-        settings,
         resolvedCues,
         loadedEntities,
         loadedCategories,
@@ -194,10 +208,11 @@ export function useWorkspaceProjectData({
         loadedSheets,
         loadedRuleset,
         loadedSettlementState,
-        loadedSettlementModules
+        loadedSettlementModules,
+        loadedStateMutationEvents,
+        loadedCanonicalFacts
       ] = await Promise.all([
         getDocumentsByProject(activeProject.id),
-        getOrCreateSettings(activeProject.id),
         getResolvedConsistencyActionCues(activeProject),
         getEntitiesByProject(activeProject.id),
         getCategoriesByProject(activeProject.id),
@@ -206,8 +221,18 @@ export function useWorkspaceProjectData({
         getCharacterSheetsByProject(activeProject.id),
         getRulesetByProjectId(activeProject.id),
         getOrCreateSettlementState(activeProject.id),
-        getSettlementModulesByProject(activeProject.id)
+        getSettlementModulesByProject(activeProject.id),
+        getStateMutationEventsByProject(activeProject.id),
+        getCanonicalFactsByProject(activeProject.id)
       ]);
+      const settings = await loadProjectSettings(activeProject.id);
+      const migratedAliases = await migrateCharacterAliasesToEntities({
+        projectId: activeProject.id,
+        aliases: loadedAliases,
+        characters: loadedCharacters,
+        entities: loadedEntities,
+        categories: loadedCategories
+      });
 
       if (cancelled) return;
 
@@ -218,7 +243,7 @@ export function useWorkspaceProjectData({
       setSkipImportSuggestions(settings.defaultSkipImportSuggestions ?? false);
       setResolvedActionCues(resolvedCues);
       setCategories(loadedCategories);
-      setAliases(loadedAliases);
+      setAliases(migratedAliases);
       setStatBlockSourceType(settings.statBlockPreferences?.sourceType ?? 'character');
       setStatBlockStyle(settings.statBlockPreferences?.style ?? 'full');
       setStatBlockInsertMode(settings.statBlockPreferences?.insertMode ?? 'block');
@@ -233,6 +258,8 @@ export function useWorkspaceProjectData({
       setRuleset(loadedRuleset);
       setSettlementState(loadedSettlementState);
       setSettlementModules(loadedSettlementModules);
+      setStateMutationEvents(loadedStateMutationEvents);
+      setCanonicalFacts(loadedCanonicalFacts);
       setSelectedStatCharacterId(loadedSheets[0]?.id ?? '');
       setSelectedStatEntityId(loadedEntities[0]?.id ?? '');
       setStatPreferencesHydrated(true);
@@ -245,7 +272,6 @@ export function useWorkspaceProjectData({
       setToolbarButtons(buttons);
 
       refreshSystemHistory();
-      initializeEditorState(docs[0] ?? null);
     })();
 
     return () => {
@@ -258,7 +284,9 @@ export function useWorkspaceProjectData({
     setImportMode,
     setSkipImportSuggestions,
     refreshSystemHistory,
-    onProjectReset
+    onProjectReset,
+    loadProjectSettings,
+    setProjectSettings
   ]);
 
   // Sync canon state when parent project relationship changes.
@@ -332,11 +360,24 @@ export function useWorkspaceProjectData({
   useEffect(() => {
     if (!activeProject || !ragService) return;
 
+    const factsByTarget = new Map<string, string[]>();
+    canonicalFacts.forEach((fact) => {
+      const key = fact.targetId;
+      const current = factsByTarget.get(key) ?? [];
+      const value =
+        typeof fact.value === 'string'
+          ? fact.value
+          : [fact.value.label, fact.value.value].filter(Boolean).join(' ');
+      current.push(value);
+      factsByTarget.set(key, current);
+    });
+
     const vocabulary = [
       ...entities.map((entity) => ({
         id: entity.id,
         terms: [
           entity.name,
+          ...(factsByTarget.get(entity.id) ?? []),
           ...Object.values(entity.fields).filter(
             (value): value is string => typeof value === 'string'
           )
@@ -346,6 +387,7 @@ export function useWorkspaceProjectData({
         id: character.id,
         terms: [
           character.name,
+          ...(factsByTarget.get(character.id) ?? []),
           character.fields?.role ?? '',
           character.fields?.notes ?? ''
         ].filter(Boolean) as string[]
@@ -353,7 +395,66 @@ export function useWorkspaceProjectData({
     ];
 
     ragService.setEntityVocabulary(vocabulary);
-  }, [activeProject, ragService, entities, characters]);
+  }, [activeProject, ragService, entities, characters, canonicalFacts]);
+
+  useEffect(() => {
+    if (!activeProject) return;
+    const refresh = () => {
+      void getStateMutationEventsByProject(activeProject.id).then((events) => {
+        setStateMutationEvents(events);
+      });
+    };
+    window.addEventListener('wbd:state-mutation-events-changed', refresh);
+    return () => {
+      window.removeEventListener('wbd:state-mutation-events-changed', refresh);
+    };
+  }, [activeProject]);
+
+  useEffect(() => {
+    if (!activeProject) return;
+    const refresh = () => {
+      void getCanonicalFactsByProject(activeProject.id).then((facts) => {
+        setCanonicalFacts(facts);
+      });
+    };
+    window.addEventListener('wbd:lore-fact-records-changed', refresh);
+    return () => {
+      window.removeEventListener('wbd:lore-fact-records-changed', refresh);
+    };
+  }, [activeProject]);
+
+  useEffect(() => {
+    if (!activeProject) return;
+    const refresh = () => {
+      void Promise.all([
+        getAliasesByProject(activeProject.id),
+        getCharactersByProject(activeProject.id),
+        getEntitiesByProject(activeProject.id),
+        getCategoriesByProject(activeProject.id)
+      ]).then(([loadedAliases, loadedCharacters, loadedEntities, loadedCategories]) => {
+        void migrateCharacterAliasesToEntities({
+          projectId: activeProject.id,
+          aliases: loadedAliases,
+          characters: loadedCharacters,
+          entities: loadedEntities,
+          categories: loadedCategories
+        }).then((migratedAliases) => {
+          setAliases(migratedAliases);
+          setCharacters(loadedCharacters);
+          setEntities(loadedEntities);
+          setCategories(loadedCategories);
+        });
+      });
+    };
+    window.addEventListener('wbd:alias-records-changed', refresh);
+    window.addEventListener('wbd:entity-records-changed', refresh);
+    window.addEventListener('wbd:character-records-changed', refresh);
+    return () => {
+      window.removeEventListener('wbd:alias-records-changed', refresh);
+      window.removeEventListener('wbd:entity-records-changed', refresh);
+      window.removeEventListener('wbd:character-records-changed', refresh);
+    };
+  }, [activeProject]);
 
   return {
     // Editor
@@ -362,7 +463,7 @@ export function useWorkspaceProjectData({
 
     // Project settings (setter needed by useWorkspaceStatBlocks)
     projectSettings,
-    setProjectSettings,
+    saveProjectSettings,
 
     // World data (setters needed by useWorkspaceConsistency)
     entities,
@@ -373,6 +474,7 @@ export function useWorkspaceProjectData({
     setAliases,
     resolvedActionCues,
     characters,
+    setCharacters,
     characterSheets,
     ruleset,
 
@@ -386,6 +488,8 @@ export function useWorkspaceProjectData({
     // Canon sync (setter needed by handleCanonSync in route)
     canonState,
     setCanonState,
+    stateMutationEvents,
+    canonicalFacts,
 
     // StatBlock preferences (all setters needed by useWorkspaceStatBlocks)
     statBlockSourceType,

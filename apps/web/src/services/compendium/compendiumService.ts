@@ -4,6 +4,7 @@ import type {
   CompendiumEntry,
   CompendiumDomain,
   CompendiumMilestone,
+  MechanicsProgressScope,
   CompendiumProgress,
   FortressTierDefinition,
   PartySynergyRule,
@@ -89,6 +90,7 @@ export interface RecordZoneExposureParams {
   biomeKey: string;
   exposureSeconds: number;
   pointsPerMinute?: number;
+  characterSheetId?: string;
 }
 
 export interface RecordZoneExposureResult {
@@ -320,6 +322,8 @@ export async function upsertCompendiumEntryFromEntity(params: {
   domain: CompendiumDomain;
   defaultActions?: CompendiumEntry['actions'];
   needsCompletion?: boolean;
+  mechanicKind?: CompendiumEntry['mechanicKind'];
+  progressScope?: MechanicsProgressScope;
 }): Promise<CompendiumEntry> {
   const existing = (await getCompendiumEntriesByProject(params.projectId)).find(
     (entry) => entry.sourceEntityId === params.entity.id
@@ -340,6 +344,8 @@ export async function upsertCompendiumEntryFromEntity(params: {
         ? params.entity.fields.description
         : undefined,
     tags: existing?.tags ?? [],
+    mechanicKind: existing?.mechanicKind ?? params.mechanicKind ?? 'discovery',
+    progressScope: existing?.progressScope ?? params.progressScope ?? 'character',
     needsCompletion: params.needsCompletion ?? existing?.needsCompletion ?? false,
     actions: existing?.actions ?? params.defaultActions ?? fallbackActions,
     createdAt: existing?.createdAt ?? now,
@@ -847,8 +853,10 @@ function zoneProfileId(projectId: string, biomeKey: string): string {
   return `zone-profile:${projectId}:${biomeKey}`;
 }
 
-function zoneProgressId(projectId: string, biomeKey: string): string {
-  return `zone-progress:${projectId}:${biomeKey}`;
+function zoneProgressId(projectId: string, biomeKey: string, characterSheetId?: string): string {
+  return characterSheetId
+    ? `zone-progress:${projectId}:${biomeKey}:sheet:${characterSheetId}`
+    : `zone-progress:${projectId}:${biomeKey}:global`;
 }
 
 export async function getZoneAffinityProfilesByProject(
@@ -876,6 +884,8 @@ export async function upsertZoneAffinityProfile(params: {
   projectId: string;
   biomeKey: string;
   name: string;
+  sourceEntityId?: string;
+  progressScope?: MechanicsProgressScope;
   maxAffinityPoints?: number;
   milestones?: ZoneAffinityProfile['milestones'];
 }): Promise<ZoneAffinityProfile> {
@@ -892,6 +902,8 @@ export async function upsertZoneAffinityProfile(params: {
     projectId: params.projectId,
     biomeKey: params.biomeKey,
     name: params.name,
+    sourceEntityId: params.sourceEntityId ?? existing?.sourceEntityId,
+    progressScope: params.progressScope ?? existing?.progressScope ?? 'character',
     maxAffinityPoints: params.maxAffinityPoints ?? existing?.maxAffinityPoints ?? 100,
     milestones: params.milestones ?? existing?.milestones ?? [],
     createdAt: existing?.createdAt ?? now,
@@ -915,9 +927,10 @@ export async function getZoneAffinityProgressByProject(
 
 export async function getZoneAffinityProgress(
   projectId: string,
-  biomeKey: string
+  biomeKey: string,
+  characterSheetId?: string
 ): Promise<ZoneAffinityProgress> {
-  const id = zoneProgressId(projectId, biomeKey);
+  const id = zoneProgressId(projectId, biomeKey, characterSheetId);
   const db = await openDb();
   const tx = db.transaction(ZONE_AFFINITY_PROGRESS_STORE_NAME, 'readwrite');
   const store = tx.objectStore(ZONE_AFFINITY_PROGRESS_STORE_NAME);
@@ -929,6 +942,7 @@ export async function getZoneAffinityProgress(
     id,
     projectId,
     biomeKey,
+    characterSheetId,
     affinityPoints: 0,
     totalExposureSeconds: 0,
     unlockedMilestoneIds: [],
@@ -953,7 +967,11 @@ export async function recordZoneExposure(
 
   const pointsPerMinute = params.pointsPerMinute ?? 1;
   const pointsToAdd = (params.exposureSeconds / 60) * pointsPerMinute;
-  const progress = await getZoneAffinityProgress(params.projectId, params.biomeKey);
+  const progress = await getZoneAffinityProgress(
+    params.projectId,
+    params.biomeKey,
+    params.characterSheetId
+  );
 
   const unlockedMilestoneSet = new Set(progress.unlockedMilestoneIds);
   const unlockedMilestoneIds: string[] = [];
@@ -987,8 +1005,10 @@ export async function recordZoneExposure(
   };
 }
 
-function settlementStateId(projectId: string): string {
-  return `settlement:${projectId}`;
+function settlementStateId(projectId: string, sourceEntityId?: string): string {
+  return sourceEntityId
+    ? `settlement:${projectId}:entity:${sourceEntityId}`
+    : `settlement:${projectId}:global`;
 }
 
 export async function getSettlementModulesByProject(
@@ -1012,12 +1032,13 @@ export async function saveSettlementModule(module: SettlementModule): Promise<vo
 
 export async function getOrCreateSettlementState(
   projectId: string,
-  name = 'Main Base'
+  name = 'Main Base',
+  sourceEntityId?: string
 ): Promise<SettlementState> {
   const db = await openDb();
   const tx = db.transaction(SETTLEMENT_STATE_STORE_NAME, 'readwrite');
   const store = tx.objectStore(SETTLEMENT_STATE_STORE_NAME);
-  const id = settlementStateId(projectId);
+  const id = settlementStateId(projectId, sourceEntityId);
   const existing = (await requestToPromise(
     store.get(id)
   )) as SettlementState | undefined;
@@ -1032,6 +1053,7 @@ export async function getOrCreateSettlementState(
     id,
     projectId,
     name,
+    sourceEntityId,
     fortressLevel: 1,
     baseStats: createDefaultSettlementBaseStats(),
     moduleIds: [],
@@ -1051,8 +1073,13 @@ export async function saveSettlementState(state: SettlementState): Promise<void>
 export async function updateSettlementFortressLevel(params: {
   projectId: string;
   level: number;
+  sourceEntityId?: string;
 }): Promise<SettlementState> {
-  const state = await getOrCreateSettlementState(params.projectId);
+  const state = await getOrCreateSettlementState(
+    params.projectId,
+    'Main Base',
+    params.sourceEntityId
+  );
   const next: SettlementState = {
     ...state,
     fortressLevel: Math.max(1, Math.floor(params.level)),
@@ -1065,8 +1092,13 @@ export async function updateSettlementFortressLevel(params: {
 export async function updateSettlementBaseStats(params: {
   projectId: string;
   baseStats: Partial<SettlementState['baseStats']>;
+  sourceEntityId?: string;
 }): Promise<SettlementState> {
-  const state = await getOrCreateSettlementState(params.projectId);
+  const state = await getOrCreateSettlementState(
+    params.projectId,
+    'Main Base',
+    params.sourceEntityId
+  );
   const next: SettlementState = {
     ...state,
     baseStats: normalizeSettlementBaseStats({...state.baseStats, ...params.baseStats}),
@@ -1076,11 +1108,46 @@ export async function updateSettlementBaseStats(params: {
   return next;
 }
 
+export async function updateSettlementLocation(params: {
+  projectId: string;
+  sourceEntityId?: string;
+  name?: string;
+  previousSourceEntityId?: string;
+}): Promise<SettlementState> {
+  const existingState = await getOrCreateSettlementState(
+    params.projectId,
+    params.name?.trim() || 'Main Base',
+    params.sourceEntityId
+  );
+  const previousState =
+    params.previousSourceEntityId !== params.sourceEntityId
+      ? await getOrCreateSettlementState(
+          params.projectId,
+          existingState.name,
+          params.previousSourceEntityId
+        )
+      : existingState;
+  const next: SettlementState = {
+    ...previousState,
+    id: settlementStateId(params.projectId, params.sourceEntityId),
+    sourceEntityId: params.sourceEntityId,
+    name: params.name?.trim() || previousState.name,
+    updatedAt: Date.now()
+  };
+  await saveSettlementState(next);
+  return next;
+}
+
 export async function attachModuleToSettlement(params: {
   projectId: string;
   moduleId: string;
+  sourceEntityId?: string;
 }): Promise<SettlementState> {
-  const state = await getOrCreateSettlementState(params.projectId);
+  const state = await getOrCreateSettlementState(
+    params.projectId,
+    'Main Base',
+    params.sourceEntityId
+  );
   if (state.moduleIds.includes(params.moduleId)) {
     return state;
   }

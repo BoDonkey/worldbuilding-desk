@@ -66,7 +66,8 @@ export function initializeDefaultCategories(projectId: string): Promise<void> {
         fieldSchema: [
           {key: 'description', label: 'Description', type: 'textarea'},
           {key: 'age', label: 'Age', type: 'text'},
-          {key: 'role', label: 'Role', type: 'text'}
+          {key: 'role', label: 'Role', type: 'text'},
+          {key: 'notes', label: 'Notes', type: 'textarea'}
         ]
       },
       {

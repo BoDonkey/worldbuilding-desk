@@ -1,5 +1,6 @@
 import type {NavigateFunction} from 'react-router-dom';
 import type {Project, ProjectSettings} from '../entityTypes';
+import {getProjectCapabilities} from '../projectMode';
 import {dispatchWorkspaceCommand} from './workspaceCommands';
 
 export interface AppCommand {
@@ -9,7 +10,7 @@ export interface AppCommand {
   keywords: string[];
   description?: string;
   shortcut?: string;
-  run: () => void;
+  run: (query?: string) => void;
 }
 
 interface CreateAppCommandsOptions {
@@ -25,8 +26,7 @@ export const createAppCommands = ({
   activeProject,
   projectSettings
 }: CreateAppCommandsOptions): AppCommand[] => {
-  const showGameSystems =
-    !activeProject || projectSettings?.featureToggles.enableGameSystems !== false;
+  const capabilities = getProjectCapabilities(activeProject ? projectSettings : null);
 
   const navigationCommands: AppCommand[] = [
     {
@@ -44,25 +44,18 @@ export const createAppCommands = ({
       run: () => navigate('/world-bible')
     },
     {
-      id: 'nav-ruleset',
-      label: 'Go to Ruleset',
-      section: 'Navigation',
-      keywords: ['rules', 'system', 'mechanics'],
-      run: () => navigate('/ruleset')
-    },
-    {
-      id: 'nav-characters',
-      label: 'Go to Characters',
-      section: 'Navigation',
-      keywords: ['characters', 'sheets', 'party'],
-      run: () => navigate('/characters')
-    },
-    {
       id: 'nav-workspace',
       label: 'Go to Writing Workspace',
       section: 'Navigation',
       keywords: ['workspace', 'writing', 'editor', 'scenes'],
       run: () => navigate('/workspace')
+    },
+    {
+      id: 'nav-corkboard',
+      label: 'Go to Corkboard',
+      section: 'Navigation',
+      keywords: ['corkboard', 'planning', 'chapters', 'outline', 'beats'],
+      run: () => navigate('/corkboard')
     },
     {
       id: 'nav-settings',
@@ -73,13 +66,23 @@ export const createAppCommands = ({
     }
   ];
 
-  if (showGameSystems) {
+  if (capabilities.canUseGameSystems) {
     navigationCommands.splice(5, 0, {
       id: 'nav-compendium',
       label: 'Go to Compendium',
       section: 'Navigation',
       keywords: ['compendium', 'items', 'systems', 'modules'],
       run: () => navigate('/compendium')
+    });
+  }
+
+  if (capabilities.canUseRuleAuthoring) {
+    navigationCommands.splice(2, 0, {
+      id: 'nav-ruleset',
+      label: 'Go to Ruleset',
+      section: 'Navigation',
+      keywords: ['rules', 'system', 'mechanics'],
+      run: () => navigate('/ruleset')
     });
   }
 
@@ -105,6 +108,20 @@ export const createAppCommands = ({
       run: () => dispatchWorkspaceCommand('save-scene')
     },
     {
+      id: 'workspace-open-scratchpad',
+      label: 'Workspace: Open Scratchpad',
+      section: 'Workspace',
+      keywords: ['scratchpad', 'notes', 'planning', 'modal'],
+      run: () => dispatchWorkspaceCommand('open-scratchpad')
+    },
+    {
+      id: 'workspace-open-corkboard',
+      label: 'Workspace: Open Corkboard',
+      section: 'Workspace',
+      keywords: ['corkboard', 'cards', 'outline', 'chapters', 'planning'],
+      run: () => dispatchWorkspaceCommand('open-corkboard')
+    },
+    {
       id: 'workspace-toggle-left-drawer',
       label: 'Workspace: Toggle Scene Drawer',
       section: 'Workspace',
@@ -126,17 +143,10 @@ export const createAppCommands = ({
       run: () => dispatchWorkspaceCommand('open-context-world-bible')
     },
     {
-      id: 'workspace-context-ruleset',
-      label: 'Workspace: Open Context - Ruleset',
-      section: 'Workspace',
-      keywords: ['context', 'ruleset', 'drawer'],
-      run: () => dispatchWorkspaceCommand('open-context-ruleset')
-    },
-    {
       id: 'workspace-context-characters',
-      label: 'Workspace: Open Context - Characters',
+      label: 'Workspace: Open Context - Character Tools',
       section: 'Workspace',
-      keywords: ['context', 'characters', 'drawer'],
+      keywords: ['context', 'characters', 'character', 'tools', 'sheets', 'drawer'],
       run: () => dispatchWorkspaceCommand('open-context-characters')
     },
     {
@@ -190,13 +200,23 @@ export const createAppCommands = ({
     }
   ];
 
-  if (showGameSystems) {
+  if (capabilities.canUseGameSystems) {
     workspaceCommands.splice(7, 0, {
       id: 'workspace-context-compendium',
       label: 'Workspace: Open Context - Compendium',
       section: 'Workspace',
       keywords: ['context', 'compendium', 'drawer'],
       run: () => dispatchWorkspaceCommand('open-context-compendium')
+    });
+  }
+
+  if (capabilities.canUseRuleAuthoring) {
+    workspaceCommands.splice(7, 0, {
+      id: 'workspace-context-ruleset',
+      label: 'Workspace: Open Context - Ruleset',
+      section: 'Workspace',
+      keywords: ['context', 'ruleset', 'drawer'],
+      run: () => dispatchWorkspaceCommand('open-context-ruleset')
     });
   }
 

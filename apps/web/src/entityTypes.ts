@@ -31,6 +31,38 @@ export interface WritingDocument {
   updatedAt: number;
 }
 
+export interface ScratchpadDocument {
+  id: string;
+  projectId: string;
+  content: string;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export type ChapterCardStatus = 'planned' | 'draft' | 'written';
+
+export interface PlotPoint {
+  id: string;
+  chapterCardId: string;
+  title: string;
+  notes?: string;
+  order: number;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface ChapterCard {
+  id: string;
+  projectId: string;
+  title: string;
+  summary: string;
+  status: ChapterCardStatus;
+  order: number;
+  plotPoints: PlotPoint[];
+  createdAt: number;
+  updatedAt: number;
+}
+
 export type SystemHistoryCategory =
   | 'scene'
   | 'consistency'
@@ -90,6 +122,8 @@ export interface ProjectAISettings {
 
 export interface InspectorSettings {
   enableAIConsultation: boolean;
+  reviewEngineMode?: 'deterministic' | 'local-ai-preview';
+  canonDecisionProviderMode?: 'project-provider' | 'local-ollama';
   maxConsultationsPerDay: number;
   maxContextChars: number;
   maxResponseTokens: number;
@@ -139,18 +173,27 @@ export interface StatBlockPreferences {
   groups?: StatBlockGroup[];
 }
 
+export type InlineHighlightsMode = 'visible' | 'subtle' | 'hidden-while-typing';
+
+export interface EditorFeedbackSettings {
+  inlineHighlightsMode: InlineHighlightsMode;
+}
+
 export interface ProjectSettings {
   id: string;
   projectId: string;
   characterStyles: CharacterStyle[];
   aiSettings: ProjectAISettings;
   consistencyActionCues: string[];
+  ignoredUnknownSurfaces?: string[];
+  ignoredEntityMatchKeys?: string[];
   activeSkills: string[];
   projectMode: ProjectMode;
   featureToggles: ProjectFeatureToggles;
   defaultImportMode?: WorkspaceImportMode;
   defaultSkipImportSuggestions?: boolean;
   statBlockPreferences?: StatBlockPreferences;
+  editorFeedback?: EditorFeedbackSettings;
   createdAt: number;
   updatedAt: number;
 }
@@ -231,6 +274,89 @@ export interface CharacterSheet {
   updatedAt: number;
 }
 
+export type StateMutationActorId = string;
+export type StateMutationInventoryQuantity = number;
+
+export type ResourceChangeStateMutationCommand = {
+  type: 'resource_change';
+  actorId: StateMutationActorId;
+  resourceDefinitionId: string;
+  delta: number;
+};
+
+export type ResourceSetStateMutationCommand = {
+  type: 'resource_set';
+  actorId: StateMutationActorId;
+  resourceDefinitionId: string;
+  value: number;
+};
+
+export type StatChangeStateMutationCommand = {
+  type: 'stat_change';
+  actorId: StateMutationActorId;
+  statDefinitionId: string;
+  delta: number | boolean | string;
+};
+
+export type StatSetStateMutationCommand = {
+  type: 'stat_set';
+  actorId: StateMutationActorId;
+  statDefinitionId: string;
+  value: number | boolean | string;
+};
+
+export type StatusStateMutationCommand = {
+  type: 'status_apply' | 'status_remove';
+  actorId: StateMutationActorId;
+  statusName: string;
+};
+
+export type InventoryQuantityStateMutationCommand = {
+  type: 'inventory_add' | 'inventory_remove' | 'inventory_consume';
+  actorId: StateMutationActorId;
+  itemName: string;
+  quantity?: StateMutationInventoryQuantity;
+};
+
+export type InventoryEquipStateMutationCommand = {
+  type: 'inventory_equip' | 'inventory_unequip';
+  actorId: StateMutationActorId;
+  itemName: string;
+};
+
+export type LocationSetStateMutationCommand = {
+  type: 'location_set';
+  actorId: StateMutationActorId;
+  locationName: string;
+};
+
+export type StateMutationCommand =
+  | ResourceChangeStateMutationCommand
+  | ResourceSetStateMutationCommand
+  | StatChangeStateMutationCommand
+  | StatSetStateMutationCommand
+  | StatusStateMutationCommand
+  | InventoryQuantityStateMutationCommand
+  | InventoryEquipStateMutationCommand
+  | LocationSetStateMutationCommand;
+
+export interface StateMutationEvent {
+  id: string;
+  projectId: string;
+  sceneId: string;
+  sceneTitle?: string;
+  sceneOrder?: number;
+  sceneSequence?: number;
+  sourceType?: 'manual' | 'deterministic-review';
+  sourceRevision: number;
+  sourceHash: string;
+  status: 'proposed' | 'accepted' | 'invalidated';
+  commands: StateMutationCommand[];
+  createdAt: number;
+  invalidatedAt?: number;
+  invalidationReason?: string;
+}
+
 export interface EntityCategory {
   id: string;
   projectId: string;
@@ -258,9 +384,182 @@ export interface WorldEntity {
   categoryId: string;
   name: string;
   fields: EntityFields;
+  isNew?: boolean;
   needsCompletion?: boolean;
+  aliasesReviewedAt?: number;
   links: string[];
   createdAt: number;
+  updatedAt: number;
+}
+
+export type LoreDocumentKind =
+  | 'character_dossier'
+  | 'place_history'
+  | 'faction_notes'
+  | 'item_history'
+  | 'myth'
+  | 'timeline'
+  | 'general_lore';
+
+export type LoreDocumentFormat = 'plain_text' | 'markdown' | 'html';
+
+export interface LoreDocument {
+  id: string;
+  projectId: string;
+  title: string;
+  kind: LoreDocumentKind;
+  format: LoreDocumentFormat;
+  content: string;
+  summary?: string;
+  source:
+    | {type: 'manual'}
+    | {type: 'import'; fileName: string; mimeType?: string}
+    | {type: 'ai-session'; sessionId: string};
+  status: 'active' | 'archived';
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface LoreDocumentLink {
+  id: string;
+  projectId: string;
+  loreDocumentId: string;
+  targetType: 'character' | 'entity';
+  targetId: string;
+  relationship: 'primary_subject' | 'secondary_subject' | 'mentions' | 'supports';
+  createdAt: number;
+}
+
+export type CanonicalFactValue =
+  | string
+  | {
+      label: string;
+      value: string;
+    };
+
+export type CanonicalFactType =
+  | 'alias'
+  | 'age'
+  | 'occupation'
+  | 'membership'
+  | 'heritage'
+  | 'appearance'
+  | 'trait'
+  | 'ability'
+  | 'relationship'
+  | 'goal'
+  | 'background';
+
+export interface LoreFactProposal {
+  id: string;
+  projectId: string;
+  loreDocumentId: string;
+  targetType?: 'character' | 'entity';
+  targetId?: string;
+  targetName?: string;
+  factType: CanonicalFactType;
+  value: CanonicalFactValue;
+  confidence: number;
+  evidence: {
+    start: number;
+    end: number;
+    text: string;
+  };
+  status: 'proposed' | 'accepted' | 'rejected';
+  createdAt: number;
+  updatedAt: number;
+}
+
+export type LoreEntityKind =
+  | 'character'
+  | 'location'
+  | 'item'
+  | 'faction'
+  | 'concept';
+
+export interface LoreEntityProposal {
+  id: string;
+  projectId: string;
+  loreDocumentId: string;
+  name: string;
+  entityKind: LoreEntityKind;
+  confidence: number;
+  evidence: {
+    start: number;
+    end: number;
+    text: string;
+  };
+  targetType?: 'character' | 'entity';
+  targetId?: string;
+  status: 'proposed' | 'accepted' | 'rejected';
+  createdAt: number;
+  updatedAt: number;
+}
+
+export type CanonDecisionKind = 'entity_identity' | 'fact_conflict';
+
+export type CanonDecisionResolution =
+  | 'merge'
+  | 'alias'
+  | 'keep_separate'
+  | 'accept_new'
+  | 'accept_update'
+  | 'reject'
+  | 'defer';
+
+export interface CanonDecisionClusterMemberRef {
+  type:
+    | 'lore_entity_proposal'
+    | 'lore_fact_proposal'
+    | 'canonical_fact'
+    | 'character'
+    | 'world_entity';
+  id: string;
+}
+
+export interface CanonDecisionCluster {
+  id: string;
+  projectId: string;
+  kind: CanonDecisionKind;
+  title: string;
+  summary: string;
+  memberRefs: CanonDecisionClusterMemberRef[];
+  status: 'open' | 'resolved' | 'deferred';
+  suggestedResolution?: CanonDecisionResolution;
+  resolution?: CanonDecisionResolution;
+  reasonCodes: string[];
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface CanonDecisionSuppression {
+  id: string;
+  projectId: string;
+  kind: 'entity_identity' | 'fact_conflict';
+  key: string;
+  resolution: Extract<
+    CanonDecisionResolution,
+    'alias' | 'keep_separate' | 'reject' | 'accept_update'
+  >;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface CanonicalFact {
+  id: string;
+  projectId: string;
+  targetType: 'character' | 'entity';
+  targetId: string;
+  targetName?: string;
+  loreDocumentId?: string;
+  sourceLoreDocumentTitle?: string;
+  sourceProposalId?: string;
+  factType: CanonicalFactType;
+  value: CanonicalFactValue;
+  evidenceText?: string;
+  evidenceStart?: number;
+  evidenceEnd?: number;
+  acceptedAt: number;
   updatedAt: number;
 }
 
@@ -283,6 +582,9 @@ export interface CompendiumActionDefinition {
   repeatable?: boolean;
 }
 
+export type MechanicsProgressScope = 'global' | 'character' | 'party';
+export type CompendiumMechanicKind = 'discovery' | 'zone' | 'settlement' | 'general';
+
 export interface CompendiumEntry {
   id: string;
   projectId: string;
@@ -291,6 +593,8 @@ export interface CompendiumEntry {
   sourceEntityId?: string;
   description?: string;
   tags?: string[];
+  mechanicKind?: CompendiumMechanicKind;
+  progressScope?: MechanicsProgressScope;
   needsCompletion?: boolean;
   actions: CompendiumActionDefinition[];
   createdAt: number;
@@ -373,6 +677,8 @@ export interface ZoneAffinityProfile {
   projectId: string;
   biomeKey: string;
   name: string;
+  sourceEntityId?: string;
+  progressScope?: MechanicsProgressScope;
   maxAffinityPoints: number;
   milestones: ZoneAffinityMilestone[];
   createdAt: number;
@@ -383,6 +689,7 @@ export interface ZoneAffinityProgress {
   id: string;
   projectId: string;
   biomeKey: string;
+  characterSheetId?: string;
   affinityPoints: number;
   totalExposureSeconds: number;
   unlockedMilestoneIds: string[];
@@ -420,6 +727,7 @@ export interface SettlementState {
   id: string;
   projectId: string;
   name: string;
+  sourceEntityId?: string;
   fortressLevel: number;
   baseStats: {
     defense: number;

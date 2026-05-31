@@ -1,12 +1,21 @@
 const DB_NAME = 'worldbuilding-db';
-const DB_VERSION = 13;
+const DB_VERSION = 24;
 
 const STORE_NAMES = [
   'entities',
   'entityCategories',
   'projects',
   'writingDocuments',
+  'scratchpads',
+  'corkboard_chapter_cards',
   'projectSettings',
+  'lore_documents',
+  'lore_document_links',
+  'lore_fact_proposals',
+  'lore_entity_proposals',
+  'canonical_facts',
+  'canon_decision_clusters',
+  'canon_decision_suppressions',
   'characters',
   'character_sheets',
   'compendium_entries',
@@ -20,7 +29,8 @@ const STORE_NAMES = [
   'settlement_state',
   'consistency_proposals',
   'consistency_events',
-  'consistency_aliases'
+  'consistency_aliases',
+  'state_mutation_events'
 ] as const;
 
 interface SeedProject {
@@ -249,6 +259,18 @@ Cypress.Commands.add('seedSmokeProjectData', () => {
         links: [],
         createdAt: now,
         updatedAt: now
+      },
+      {
+        id: 'entity-ember-archive',
+        projectId: project.id,
+        categoryId: 'locations',
+        name: 'Ember Archive',
+        fields: {
+          description: 'A known lore location used by review smoke tests.'
+        },
+        links: [],
+        createdAt: now + 1,
+        updatedAt: now + 1
       }
     ];
     const characterSheets: SeedCharacterSheet[] = [
@@ -287,6 +309,16 @@ Cypress.Commands.add('seedSmokeProjectData', () => {
       .then(() => {
         // App.tsx reads this key to restore active project on load.
         win.localStorage.setItem('activeProject', JSON.stringify(project));
+        win.localStorage.setItem(
+          'wbd-app-shell',
+          JSON.stringify({
+            state: {
+              activeProject: project,
+              isRailCollapsed: false
+            },
+            version: 0
+          })
+        );
       });
   });
 });

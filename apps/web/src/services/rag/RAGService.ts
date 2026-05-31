@@ -176,10 +176,11 @@ export class RAGService implements RAGProvider {
   private async loadEmbeddingPipeline(): Promise<EmbeddingPipeline> {
     if (!this.embeddingPipelinePromise) {
       this.embeddingPipelinePromise = (async () => {
-        // Cypress runs in a constrained test browser where model fetches are flaky.
-        // Use a deterministic lightweight embedding so e2e tests exercise flows
-        // without depending on transformer model downloads.
-        if ((globalThis as {Cypress?: unknown}).Cypress) {
+        // In dev and Cypress, prefer the deterministic local embedding fallback.
+        // Browser transformer asset resolution is noisy under Vite dev and
+        // constrained test browsers, while the fallback is sufficient for local
+        // indexing and smoke-path verification.
+        if (import.meta.env.DEV || (globalThis as {Cypress?: unknown}).Cypress) {
           return async () => ({data: Float32Array.from([1])});
         }
         try {
@@ -190,8 +191,7 @@ export class RAGService implements RAGProvider {
           );
         } catch (error) {
           console.warn(
-            'Falling back to lightweight local embeddings because transformer model loading failed.',
-            error
+            'Falling back to lightweight local embeddings because transformer model loading failed.'
           );
           return createFallbackEmbeddingPipeline();
         }

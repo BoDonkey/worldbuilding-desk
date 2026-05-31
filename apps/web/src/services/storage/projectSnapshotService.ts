@@ -1,15 +1,25 @@
 import type {
+  CanonDecisionCluster,
+  CanonDecisionSuppression,
+  ChapterCard,
   Character,
   CharacterSheet,
+  CanonicalFact,
   CompendiumActionLog,
   CompendiumEntry,
   CompendiumMilestone,
   CompendiumProgress,
   EntityCategory,
+  LoreDocument,
+  LoreDocumentLink,
+  LoreEntityProposal,
+  LoreFactProposal,
   Project,
   ProjectSettings,
+  StateMutationEvent,
   SettlementModule,
   SettlementState,
+  ScratchpadDocument,
   UnlockableRecipe,
   WorldEntity,
   WritingDocument,
@@ -20,6 +30,7 @@ import type {
 import {
   openDb,
   CATEGORY_STORE_NAME,
+  CORKBOARD_CHAPTER_CARD_STORE_NAME,
   CHARACTER_SHEET_STORE_NAME,
   CHARACTER_STORE_NAME,
   COMPENDIUM_ACTION_LOG_STORE_NAME,
@@ -27,10 +38,19 @@ import {
   COMPENDIUM_MILESTONE_STORE_NAME,
   COMPENDIUM_PROGRESS_STORE_NAME,
   COMPENDIUM_RECIPE_STORE_NAME,
+  CANONICAL_FACT_STORE_NAME,
+  CANON_DECISION_CLUSTER_STORE_NAME,
+  CANON_DECISION_SUPPRESSION_STORE_NAME,
   ENTITY_STORE_NAME,
+  LORE_DOCUMENT_LINK_STORE_NAME,
+  LORE_DOCUMENT_STORE_NAME,
+  LORE_ENTITY_PROPOSAL_STORE_NAME,
+  LORE_FACT_PROPOSAL_STORE_NAME,
   SETTINGS_STORE_NAME,
   SETTLEMENT_MODULE_STORE_NAME,
   SETTLEMENT_STATE_STORE_NAME,
+  SCRATCHPAD_STORE_NAME,
+  STATE_MUTATION_EVENT_STORE_NAME,
   WRITING_STORE_NAME,
   ZONE_AFFINITY_PROFILE_STORE_NAME,
   ZONE_AFFINITY_PROGRESS_STORE_NAME
@@ -49,8 +69,17 @@ export interface ProjectSnapshot {
     categories: EntityCategory[];
     entities: WorldEntity[];
     writingDocuments: WritingDocument[];
+    scratchpads: ScratchpadDocument[];
+    corkboardChapterCards: ChapterCard[];
     characters: Character[];
     characterSheets: CharacterSheet[];
+    loreDocuments: LoreDocument[];
+    loreDocumentLinks: LoreDocumentLink[];
+    loreEntityProposals: LoreEntityProposal[];
+    loreFactProposals: LoreFactProposal[];
+    canonicalFacts: CanonicalFact[];
+    canonDecisionClusters: CanonDecisionCluster[];
+    canonDecisionSuppressions: CanonDecisionSuppression[];
     compendiumEntries: CompendiumEntry[];
     compendiumMilestones: CompendiumMilestone[];
     compendiumRecipes: UnlockableRecipe[];
@@ -60,13 +89,23 @@ export interface ProjectSnapshot {
     zoneAffinityProgressRecords: ZoneAffinityProgress[];
     settlementModules: SettlementModule[];
     settlementStateRecords: SettlementState[];
+    stateMutationEvents: StateMutationEvent[];
   };
   counts: {
     categories: number;
     entities: number;
     writingDocuments: number;
+    scratchpads: number;
+    corkboardChapterCards: number;
     characters: number;
     characterSheets: number;
+    loreDocuments: number;
+    loreDocumentLinks: number;
+    loreEntityProposals: number;
+    loreFactProposals: number;
+    canonicalFacts: number;
+    canonDecisionClusters: number;
+    canonDecisionSuppressions: number;
     compendiumEntries: number;
     compendiumMilestones: number;
     compendiumRecipes: number;
@@ -76,6 +115,7 @@ export interface ProjectSnapshot {
     zoneAffinityProgressRecords: number;
     settlementModules: number;
     settlementStateRecords: number;
+    stateMutationEvents: number;
     hasSettings: boolean;
     hasRuleset: boolean;
   };
@@ -116,8 +156,17 @@ export async function buildProjectSnapshot(projectId: string): Promise<ProjectSn
     categories,
     entities,
     writingDocuments,
+    scratchpads,
+    corkboardChapterCards,
     characters,
     characterSheets,
+    loreDocuments,
+    loreDocumentLinks,
+    loreEntityProposals,
+    loreFactProposals,
+    canonicalFacts,
+    canonDecisionClusters,
+    canonDecisionSuppressions,
     compendiumEntries,
     compendiumMilestones,
     compendiumRecipes,
@@ -126,15 +175,28 @@ export async function buildProjectSnapshot(projectId: string): Promise<ProjectSn
     zoneAffinityProfiles,
     zoneAffinityProgressRecords,
     settlementModules,
-    settlementStateRecords
+    settlementStateRecords,
+    stateMutationEvents
   ] = await Promise.all([
     getProjectScopedRecords<ProjectSettings>(SETTINGS_STORE_NAME, projectId),
     getRulesetByProjectId(projectId),
     getProjectScopedRecords<EntityCategory>(CATEGORY_STORE_NAME, projectId),
     getProjectScopedRecords<WorldEntity>(ENTITY_STORE_NAME, projectId),
     getProjectScopedRecords<WritingDocument>(WRITING_STORE_NAME, projectId),
+    getProjectScopedRecords<ScratchpadDocument>(SCRATCHPAD_STORE_NAME, projectId),
+    getProjectScopedRecords<ChapterCard>(CORKBOARD_CHAPTER_CARD_STORE_NAME, projectId),
     getProjectScopedRecords<Character>(CHARACTER_STORE_NAME, projectId),
     getProjectScopedRecords<CharacterSheet>(CHARACTER_SHEET_STORE_NAME, projectId),
+    getProjectScopedRecords<LoreDocument>(LORE_DOCUMENT_STORE_NAME, projectId),
+    getProjectScopedRecords<LoreDocumentLink>(LORE_DOCUMENT_LINK_STORE_NAME, projectId),
+    getProjectScopedRecords<LoreEntityProposal>(LORE_ENTITY_PROPOSAL_STORE_NAME, projectId),
+    getProjectScopedRecords<LoreFactProposal>(LORE_FACT_PROPOSAL_STORE_NAME, projectId),
+    getProjectScopedRecords<CanonicalFact>(CANONICAL_FACT_STORE_NAME, projectId),
+    getProjectScopedRecords<CanonDecisionCluster>(CANON_DECISION_CLUSTER_STORE_NAME, projectId),
+    getProjectScopedRecords<CanonDecisionSuppression>(
+      CANON_DECISION_SUPPRESSION_STORE_NAME,
+      projectId
+    ),
     getProjectScopedRecords<CompendiumEntry>(COMPENDIUM_ENTRY_STORE_NAME, projectId),
     getProjectScopedRecords<CompendiumMilestone>(
       COMPENDIUM_MILESTONE_STORE_NAME,
@@ -158,7 +220,8 @@ export async function buildProjectSnapshot(projectId: string): Promise<ProjectSn
       projectId
     ),
     getProjectScopedRecords<SettlementModule>(SETTLEMENT_MODULE_STORE_NAME, projectId),
-    getProjectScopedRecords<SettlementState>(SETTLEMENT_STATE_STORE_NAME, projectId)
+    getProjectScopedRecords<SettlementState>(SETTLEMENT_STATE_STORE_NAME, projectId),
+    getProjectScopedRecords<StateMutationEvent>(STATE_MUTATION_EVENT_STORE_NAME, projectId)
   ]);
 
   const settings = settingsRecords[0] ?? null;
@@ -174,8 +237,17 @@ export async function buildProjectSnapshot(projectId: string): Promise<ProjectSn
       categories,
       entities,
       writingDocuments,
+      scratchpads,
+      corkboardChapterCards,
       characters,
       characterSheets,
+      loreDocuments,
+      loreDocumentLinks,
+      loreEntityProposals,
+      loreFactProposals,
+      canonicalFacts,
+      canonDecisionClusters,
+      canonDecisionSuppressions,
       compendiumEntries,
       compendiumMilestones,
       compendiumRecipes,
@@ -184,14 +256,24 @@ export async function buildProjectSnapshot(projectId: string): Promise<ProjectSn
       zoneAffinityProfiles,
       zoneAffinityProgressRecords,
       settlementModules,
-      settlementStateRecords
+      settlementStateRecords,
+      stateMutationEvents
     },
     counts: {
       categories: categories.length,
       entities: entities.length,
       writingDocuments: writingDocuments.length,
+      scratchpads: scratchpads.length,
+      corkboardChapterCards: corkboardChapterCards.length,
       characters: characters.length,
       characterSheets: characterSheets.length,
+      loreDocuments: loreDocuments.length,
+      loreDocumentLinks: loreDocumentLinks.length,
+      loreEntityProposals: loreEntityProposals.length,
+      loreFactProposals: loreFactProposals.length,
+      canonicalFacts: canonicalFacts.length,
+      canonDecisionClusters: canonDecisionClusters.length,
+      canonDecisionSuppressions: canonDecisionSuppressions.length,
       compendiumEntries: compendiumEntries.length,
       compendiumMilestones: compendiumMilestones.length,
       compendiumRecipes: compendiumRecipes.length,
@@ -201,6 +283,7 @@ export async function buildProjectSnapshot(projectId: string): Promise<ProjectSn
       zoneAffinityProgressRecords: zoneAffinityProgressRecords.length,
       settlementModules: settlementModules.length,
       settlementStateRecords: settlementStateRecords.length,
+      stateMutationEvents: stateMutationEvents.length,
       hasSettings: Boolean(settings),
       hasRuleset: Boolean(ruleset)
     }
@@ -218,8 +301,17 @@ export function validateSnapshotCounts(snapshot: ProjectSnapshot): SnapshotCount
     categories: snapshot.data.categories.length,
     entities: snapshot.data.entities.length,
     writingDocuments: snapshot.data.writingDocuments.length,
+    scratchpads: snapshot.data.scratchpads.length,
+    corkboardChapterCards: snapshot.data.corkboardChapterCards.length,
     characters: snapshot.data.characters.length,
     characterSheets: snapshot.data.characterSheets.length,
+    loreDocuments: snapshot.data.loreDocuments.length,
+    loreDocumentLinks: snapshot.data.loreDocumentLinks.length,
+    loreEntityProposals: snapshot.data.loreEntityProposals.length,
+    loreFactProposals: snapshot.data.loreFactProposals.length,
+    canonicalFacts: snapshot.data.canonicalFacts.length,
+    canonDecisionClusters: snapshot.data.canonDecisionClusters.length,
+    canonDecisionSuppressions: snapshot.data.canonDecisionSuppressions.length,
     compendiumEntries: snapshot.data.compendiumEntries.length,
     compendiumMilestones: snapshot.data.compendiumMilestones.length,
     compendiumRecipes: snapshot.data.compendiumRecipes.length,
@@ -229,6 +321,7 @@ export function validateSnapshotCounts(snapshot: ProjectSnapshot): SnapshotCount
     zoneAffinityProgressRecords: snapshot.data.zoneAffinityProgressRecords.length,
     settlementModules: snapshot.data.settlementModules.length,
     settlementStateRecords: snapshot.data.settlementStateRecords.length,
+    stateMutationEvents: snapshot.data.stateMutationEvents.length,
     hasSettings: Boolean(snapshot.data.settings),
     hasRuleset: Boolean(snapshot.data.ruleset)
   };

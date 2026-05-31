@@ -5,7 +5,7 @@ const TOOL_NAMES = {
 } as const;
 
 const DB_NAME = 'worldbuilding-db';
-const DB_VERSION = 13;
+const DB_VERSION = 24;
 
 function mutateSmokeDb(
   mutator: (db: IDBDatabase) => void | Promise<void>
@@ -96,8 +96,8 @@ function assertDefaultActiveForTool(
 }
 
 function setProjectMode(modeValue: 'litrpg' | 'game' | 'general'): void {
-  cy.contains('h2', 'Project Mode')
-    .closest('div')
+  cy.contains('summary', 'Project Mode')
+    .closest('details')
     .within(() => {
       // Settings route uses mode values, while labels are "LitRPG Author", etc.
       cy.get('select').first().select(modeValue);
@@ -107,7 +107,17 @@ function setProjectMode(modeValue: 'litrpg' | 'game' | 'general'): void {
 function openAssistantAndAssertSelectedTool(
   selectedToolName: string
 ): void {
-  cy.contains('button', 'AI Assistant').click();
+  cy.window().then((win) => {
+    win.localStorage.setItem(
+      'workspaceDrawers:cypress-project-1',
+      JSON.stringify({
+        leftDrawerOpen: false,
+        rightDrawerOpen: true,
+        activeContextView: 'ai'
+      })
+    );
+  });
+  cy.reload();
   cy.contains('div', 'Prompt Tools').should('be.visible');
 
   // We verify one selected tool per mode to confirm project-mode defaults apply.
@@ -125,11 +135,26 @@ function openAssistantAndAssertSelectedTool(
     .find('input')
     .should(
       selectedToolName === TOOL_NAMES.general ? 'be.checked' : 'not.be.checked'
-  );
+    );
+}
+
+function ensureSettingsSectionOpen(sectionTitle: string): void {
+  cy.contains('summary', sectionTitle)
+    .closest('details')
+    .then(($details) => {
+      if (!$details.attr('open')) {
+        cy.wrap($details).find('summary').click();
+      }
+    });
+}
+
+function openScenesDrawer(): void {
+  cy.contains('button', /^Scenes$/).first().click();
 }
 
 describe('Post-merge smoke checklist', () => {
   beforeEach(() => {
+    cy.viewport(1400, 1000);
     cy.visit('/');
     cy.seedSmokeProjectData();
     cy.reload();
@@ -138,7 +163,7 @@ describe('Post-merge smoke checklist', () => {
 
   it('exports markdown with selected scenes in chosen order', () => {
     cy.visit('/workspace');
-    cy.contains('button', 'Show scenes').click();
+    openScenesDrawer();
 
     // Capture the blob that the app prepares for download.
     cy.window().then((win) => {
@@ -180,7 +205,7 @@ describe('Post-merge smoke checklist', () => {
 
   it('exports docx as a non-empty zip payload', () => {
     cy.visit('/workspace');
-    cy.contains('button', 'Show scenes').click();
+    openScenesDrawer();
 
     cy.window().then((win) => {
       cy.stub(win.URL, 'createObjectURL')
@@ -215,7 +240,7 @@ describe('Post-merge smoke checklist', () => {
 
   it('exports epub as a valid ebook-shaped zip payload', () => {
     cy.visit('/workspace');
-    cy.contains('button', 'Show scenes').click();
+    openScenesDrawer();
 
     cy.window().then((win) => {
       cy.stub(win.URL, 'createObjectURL')
@@ -259,6 +284,8 @@ describe('Post-merge smoke checklist', () => {
 
   it('keeps mode defaults isolated and applies them in the assistant', () => {
     cy.visit('/settings');
+    ensureSettingsSectionOpen('AI Settings');
+    ensureSettingsSectionOpen('Project Mode');
 
     addPromptTool(TOOL_NAMES.litrpg, 'Prioritize LitRPG progression, stats, and systems coherence.');
     addPromptTool(TOOL_NAMES.game, 'Prioritize gameplay loops, balance pressure, and tuning clarity.');
@@ -297,21 +324,25 @@ describe('Post-merge smoke checklist', () => {
 
     setProjectMode('litrpg');
     cy.visit('/workspace');
+    cy.reload();
     openAssistantAndAssertSelectedTool(TOOL_NAMES.litrpg);
 
     cy.visit('/settings');
     setProjectMode('game');
     cy.visit('/workspace');
+    cy.reload();
     openAssistantAndAssertSelectedTool(TOOL_NAMES.game);
 
     cy.visit('/settings');
     setProjectMode('general');
     cy.visit('/workspace');
+    cy.reload();
     openAssistantAndAssertSelectedTool(TOOL_NAMES.general);
   });
 
   it('runs ollama diagnostics and applies a detected local model', () => {
     cy.visit('/settings');
+    ensureSettingsSectionOpen('AI Settings');
 
     cy.window().then((win) => {
       const originalFetch = win.fetch.bind(win);
@@ -357,7 +388,20 @@ describe('Post-merge smoke checklist', () => {
   });
 
   it('exports, validates, and imports a project backup with count check success', () => {
-    cy.visit('/');
+    const scratchpadNote = [
+      'Loose planning note: Kaelor should discover the Ember Archive map fragment here.',
+      '',
+      '- Revisit opening tension',
+      '- Confirm Glass Harbor timeline'
+    ].join('\n');
+
+    cy.visit('/workspace');
+    cy.contains('button', /^Scratchpad$/).first().click();
+    cy.get('textarea[aria-label="Project scratchpad"]').clear().type(scratchpadNote);
+    cy.contains('[role="status"]', 'Scratchpad saved').should('be.visible');
+    cy.contains('button', 'Done').click();
+
+    cy.visit('/projects');
 
     cy.window().then((win) => {
       cy.stub(win.URL, 'createObjectURL')
@@ -368,7 +412,10 @@ describe('Post-merge smoke checklist', () => {
         .as('createBackupObjectURL');
     });
 
-    cy.contains('li', 'Cypress Smoke Project').within(() => {
+    cy.get('li')
+      .filter(':contains("Cypress Smoke Project")')
+      .first()
+      .within(() => {
       cy.contains('button', 'Export Backup (.zip)').click();
     });
 
@@ -401,14 +448,18 @@ describe('Post-merge smoke checklist', () => {
     cy.contains('button', 'Apply Import').click();
     cy.contains('[role="status"]', 'Count check passed.').should('be.visible');
     cy.contains('strong', 'Cypress Smoke Project (Imported)').should('be.visible');
+
+    cy.visit('/workspace');
+    cy.contains('button', /^Scratchpad$/).first().click();
+    cy.get('textarea[aria-label="Project scratchpad"]').should('have.value', scratchpadNote);
   });
 
   it('blocks world bible JSON import on duplicate-name conflicts until a resolution is chosen', () => {
     cy.visit('/world-bible');
 
     cy.get('input[type="text"]').first().clear().type('Conflict Entry');
-    cy.contains('label', 'Description').find('textarea').first().clear().type('Original description');
-    cy.contains('button', 'Create Entry').click();
+    cy.get('.tiptap-editor').first().click().type('Original description');
+    cy.contains('button', /Create (Entry|Canon Record)/).click();
     cy.contains('[role="status"]', 'Entry created.').should('be.visible');
 
     const jsonPayload = JSON.stringify({
@@ -447,14 +498,12 @@ describe('Post-merge smoke checklist', () => {
       'be.visible'
     );
     cy.contains('Conflict Entry').should('be.visible');
-    cy.contains('strong', 'description:').parent().should(
-      'contain.text',
-      'Imported replacement description'
-    );
+    cy.contains('p', 'Imported replacement description').should('be.visible');
   });
 
   it('round-trips tool pack with replace and append without breaking defaults', () => {
     cy.visit('/settings');
+    ensureSettingsSectionOpen('AI Settings');
 
     addPromptTool(TOOL_NAMES.litrpg, 'LitRPG default tool');
     addPromptTool(TOOL_NAMES.game, 'Game default tool');
@@ -544,6 +593,7 @@ describe('Post-merge smoke checklist', () => {
 
   it('inserts rendered character status blocks into the scene editor', () => {
     cy.visit('/settings');
+    ensureSettingsSectionOpen('Project Mode');
     setProjectMode('general');
     cy.visit('/workspace');
 
@@ -567,6 +617,7 @@ describe('Post-merge smoke checklist', () => {
 
   it('inserts template tokens and refreshes them into live stat blocks', () => {
     cy.visit('/settings');
+    ensureSettingsSectionOpen('Project Mode');
     setProjectMode('general');
     cy.visit('/workspace');
 
@@ -636,6 +687,7 @@ describe('Post-merge smoke checklist', () => {
     cy.get('.tiptap-editor .stat-block-token-chip--ambiguous')
       .should('contain.text', 'Needs rebind')
       .click();
+    cy.contains('button', 'Rebind Token').click();
 
     cy.get('[aria-label="Status Block Builder"]').within(() => {
       cy.contains('h3', 'Rebind Status Block').should('be.visible');
@@ -674,6 +726,7 @@ describe('Post-merge smoke checklist', () => {
     cy.get('.tiptap-editor .stat-block-token-chip--missing')
       .should('contain.text', 'Missing source')
       .click();
+    cy.contains('button', 'Rebind Token').click();
 
     cy.get('[aria-label="Status Block Builder"]').within(() => {
       cy.contains('h3', 'Rebind Status Block').should('be.visible');

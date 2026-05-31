@@ -1,25 +1,52 @@
 import {useCallback, useEffect, useMemo, useState} from 'react';
 import type {Dispatch, MutableRefObject, SetStateAction} from 'react';
 import type {
+  CanonicalFact,
   Character,
+  CharacterSheet,
   EntityCategory,
   Project,
+  ProjectSettings,
+  StateMutationEvent,
+  StoredRuleset,
   WorldEntity,
   WritingDocument
 } from '../entityTypes';
 import {saveWritingDocument} from '../writingStorage';
 import {getCategoriesByProject, initializeDefaultCategories} from '../categoryStorage';
 import {saveEntity} from '../entityStorage';
-import {upsertCompendiumEntryFromEntity} from '../services/compendium';
 import type {RAGProvider} from '../services/rag/RAGService';
 import type {
   ConsistencyAlias,
-  ConsistencyEngineService,
   GuardrailIssue
 } from '../services/consistency';
 import {findCanonContradictions, saveAlias} from '../services/consistency';
+import {deriveFirstNameAlias} from '../services/worldBible/worldBibleCanonicalization';
+import type {WorldEngine} from '../services/worldEngine';
+import type {WorldEngineStatus} from '../services/worldEngine';
+import type {ReviewIssueAnnotation} from '../services/worldEngine';
 import type {ShodhMemoryProvider} from '../services/shodh/ShodhMemoryService';
+import {normalizeCanonText} from '../services/consistency/textMatcher';
+import type {
+  WorkspaceAnnotationSource,
+  WorkspaceAnnotationSummary,
+  WorkspaceReviewInlineMode
+} from '../services/consistency/workspaceAnnotations';
+import {summarizeWorkspaceReviewSurfaces} from '../services/consistency/workspaceAnnotations';
 import {htmlToPlainText} from '../utils/textHelpers';
+import {buildDerivedStateMutationEvents} from '../services/state/stateMutationDerivation';
+import {
+  invalidateStateMutationEventById,
+  replaceSceneStateMutationEventsBySourceType,
+  saveStateMutationEvent
+} from '../services/state/stateMutationLedger';
+import {describeStateMutationEventStaleness, getStateMutationEventStaleness} from '../services/state/stateMutationStaleness';
+import {
+  buildStateMutationPreview,
+  computeBatchAcceptableStateMutationEventIds,
+  describeStateMutationAcceptance,
+  summarizeStateMutationCommand
+} from '../services/state/stateMutationPresentation';
 
 type FeedbackState = {
   tone: 'success' | 'error';
@@ -28,13 +55,87 @@ type FeedbackState = {
 
 interface ResolverNotice {
   message: string;
+  primaryLabel?: string;
+  destination?:
+    | 'world-bible'
+    | 'characters'
+    | 'character-sheets'
+    | 'character-sheet-create';
+  targetId?: string;
+  matchEntityId?: string;
+  sourceName?: string;
 }
+
+interface LinkUnknownEntityResult {
+  destination: 'world-bible' | 'characters' | 'character-sheets' | 'character-sheet-create';
+  targetId?: string;
+  focus?: 'general' | 'aliases';
+}
+
+type LinkTargetOption = {
+  id: string;
+  name: string;
+  type: 'character' | 'entity';
+  label: string;
+};
+
+type SuggestedUnknownCategory =
+  | 'character'
+  | 'location'
+  | 'item'
+  | 'creature'
+  | 'faction'
+  | 'flora'
+  | 'mineral'
+  | 'artifact'
+  | 'concept'
+  | null;
 
 interface ConsistencyReviewItem {
   id: string;
   sceneId: string;
   sceneTitle: string;
   issue: GuardrailIssue;
+  reviewAnnotation?: ReviewIssueAnnotation;
+}
+
+interface HighlightableUnknownIssue {
+  id: string;
+  surface: string;
+  message: string;
+  severity: 'blocking' | 'warning';
+  issueCode: GuardrailIssue['code'];
+  source: WorkspaceAnnotationSource;
+  confidence?: number;
+  inlineMode: WorkspaceReviewInlineMode;
+}
+
+const EMPTY_ANNOTATION_SUMMARY: WorkspaceAnnotationSummary = {
+  totalCount: 0,
+  inlineVisibleCount: 0,
+  passiveCount: 0,
+  suppressedCount: 0,
+  blockingCount: 0
+};
+
+export interface StateMutationReviewItem {
+  id: string;
+  sceneId: string;
+  sceneTitle: string;
+  sceneSequence?: number;
+  actorLabel: string;
+  summaryLines: string[];
+  effectLines: string[];
+  validationIssues: string[];
+  canAccept: boolean;
+  canAcceptInBatch: boolean;
+  acceptanceHint: string | null;
+  isStale: boolean;
+  staleLabel: string | null;
+}
+
+export interface StateMutationReviewGroupHiddenCounts {
+  [sceneId: string]: number;
 }
 
 interface ConsistencyPopoverState {
@@ -42,6 +143,23 @@ interface ConsistencyPopoverState {
   surface: string;
   left: number;
   top: number;
+}
+
+export type ReviewReadinessState =
+  | 'idle'
+  | 'running'
+  | 'ready'
+  | 'attention'
+  | 'unavailable';
+
+export interface ReviewReadiness {
+  state: ReviewReadinessState;
+  count: number;
+  activeCount: number;
+  passiveCount: number;
+  suppressedCount: number;
+  label: string;
+  detail: string;
 }
 
 interface UseWorkspaceConsistencyParams {
@@ -55,8 +173,15 @@ interface UseWorkspaceConsistencyParams {
   aliases: ConsistencyAlias[];
   setAliases: Dispatch<SetStateAction<ConsistencyAlias[]>>;
   characters: Character[];
+  canonicalFacts: CanonicalFact[];
+  characterSheets: CharacterSheet[];
+  ruleset: StoredRuleset | null;
+  stateMutationEvents: StateMutationEvent[];
+  selectedDocumentId: string | null;
+  projectSettings: ProjectSettings | null;
+  saveProjectSettings: (settings: ProjectSettings) => Promise<ProjectSettings>;
   resolvedActionCues: string[];
-  consistencyEngine: ConsistencyEngineService;
+  worldEngine: WorldEngine;
   ragService: RAGProvider | null;
   shodhService: ShodhMemoryProvider | null;
   refreshMemories: () => Promise<void>;
@@ -77,25 +202,304 @@ const downgradeUnknownIssuesToWarnings = (
   issues: GuardrailIssue[]
 ): GuardrailIssue[] =>
   issues.map((issue) =>
-    issue.code === 'UNKNOWN_ENTITY'
+        issue.code === 'UNKNOWN_ENTITY'
       ? {
           ...issue,
           severity: 'warning',
           message: issue.surface
-            ? `Review "${issue.surface}" before canonizing this scene.`
-            : 'Review this unknown entity before canonizing this scene.'
+            ? `Review "${issue.surface}" when you are ready to add or ignore this scene context.`
+            : 'Review this name or world term when you are ready to add or ignore it.'
         }
       : issue
   );
 
-const canonicalizeUnknownSurface = (value: string): string =>
-  value
-    .trim()
-    .toLowerCase()
-    .replace(/['’]s\b/g, '')
-    .replace(/s['’]\b/g, 's')
-    .replace(/\s+/g, ' ')
-    .trim();
+const canonicalizeUnknownSurface = normalizeCanonText;
+
+const hasUppercaseLetter = (value: string): boolean => /[A-Z]/.test(value);
+const normalizeRecordName = (value: string): string =>
+  value.trim().toLowerCase().replace(/\s+/g, ' ');
+const isLikelyShortFormOfRecord = (shortName: string, fullName: string): boolean => {
+  const normalizedShort = normalizeRecordName(shortName);
+  const normalizedFull = normalizeRecordName(fullName);
+  if (!normalizedShort || !normalizedFull || normalizedShort === normalizedFull) return false;
+  if (normalizedShort.includes(' ') || !normalizedFull.includes(' ')) return false;
+  return normalizedFull.split(/\s+/).filter(Boolean)[0] === normalizedShort;
+};
+const namesLikelyReferToSameCharacter = (left: string, right: string): boolean => {
+  const normalizedLeft = normalizeRecordName(left);
+  const normalizedRight = normalizeRecordName(right);
+  return (
+    normalizedLeft === normalizedRight ||
+    isLikelyShortFormOfRecord(normalizedLeft, normalizedRight) ||
+    isLikelyShortFormOfRecord(normalizedRight, normalizedLeft)
+  );
+};
+
+const LOCATION_HINT_TOKENS = new Set([
+  'archive',
+  'bay',
+  'camp',
+  'capital',
+  'castle',
+  'cavern',
+  'cave',
+  'city',
+  'district',
+  'empire',
+  'farm',
+  'forest',
+  'fort',
+  'fortress',
+  'garden',
+  'hall',
+  'harbor',
+  'hollow',
+  'inn',
+  'island',
+  'keep',
+  'kingdom',
+  'lake',
+  'library',
+  'manor',
+  'market',
+  'marsh',
+  'mine',
+  'monastery',
+  'mountain',
+  'outpost',
+  'palace',
+  'realm',
+  'river',
+  'road',
+  'ruins',
+  'sanctum',
+  'settlement',
+  'shore',
+  'square',
+  'street',
+  'swamp',
+  'temple',
+  'tower',
+  'town',
+  'vale',
+  'village',
+  'woods'
+]);
+
+const ITEM_HINT_TOKENS = new Set([
+  'amulet',
+  'armor',
+  'armour',
+  'axe',
+  'blade',
+  'book',
+  'bow',
+  'bracelet',
+  'charm',
+  'cloak',
+  'coin',
+  'crown',
+  'dagger',
+  'elixir',
+  'gem',
+  'grimoire',
+  'hammer',
+  'helm',
+  'helmet',
+  'herb',
+  'key',
+  'knife',
+  'lantern',
+  'map',
+  'medallion',
+  'necklace',
+  'orb',
+  'potion',
+  'relic',
+  'ring',
+  'robe',
+  'scroll',
+  'shield',
+  'spear',
+  'staff',
+  'stone',
+  'sword',
+  'talisman',
+  'tome',
+  'vial',
+  'wand'
+]);
+
+const CREATURE_HINT_TOKENS = new Set([
+  'bear',
+  'beast',
+  'boar',
+  'cat',
+  'creature',
+  'crow',
+  'deer',
+  'demon',
+  'dog',
+  'dragon',
+  'drake',
+  'eagle',
+  'fiend',
+  'fox',
+  'giant',
+  'goblin',
+  'griffin',
+  'hawk',
+  'hound',
+  'monster',
+  'owl',
+  'phantom',
+  'rat',
+  'serpent',
+  'shade',
+  'spider',
+  'spirit',
+  'stag',
+  'tiger',
+  'wolf',
+  'wyrm'
+]);
+
+const FACTION_HINT_TOKENS = new Set([
+  'alliance',
+  'band',
+  'brotherhood',
+  'clan',
+  'company',
+  'council',
+  'court',
+  'cult',
+  'dynasty',
+  'faction',
+  'family',
+  'fellowship',
+  'fleet',
+  'guild',
+  'house',
+  'kingdom',
+  'legion',
+  'order',
+  'syndicate',
+  'tribe'
+]);
+
+const CATEGORY_SEMANTIC_SLUG_HINTS: Record<
+  Exclude<SuggestedUnknownCategory, null>,
+  string[]
+> = {
+  character: ['character', 'npc', 'person', 'people'],
+  location: ['location', 'place', 'city', 'town', 'region', 'landmark'],
+  item: ['item', 'object', 'gear', 'equipment', 'tool', 'weapon'],
+  creature: ['creature', 'monster', 'beast', 'enemy', 'mob', 'species'],
+  faction: ['faction', 'guild', 'clan', 'house', 'group', 'order'],
+  flora: ['flora', 'plant', 'herb'],
+  mineral: ['mineral', 'ore', 'rock', 'metal'],
+  artifact: ['artifact', 'relic'],
+  concept: ['concept', 'lore', 'rule', 'history', 'culture']
+};
+
+const hashString = (value: string): string => {
+  let hash = 5381;
+  for (let index = 0; index < value.length; index += 1) {
+    hash = (hash * 33) ^ value.charCodeAt(index);
+  }
+  return `h${(hash >>> 0).toString(16)}`;
+};
+
+const getReviewIssueKey = (issue: GuardrailIssue): string =>
+  [
+    issue.code,
+    canonicalizeUnknownSurface(issue.surface ?? issue.message)
+  ].join(':');
+
+const getAnnotationSourceForReview = (
+  reviewAnnotation?: ReviewIssueAnnotation
+): WorkspaceAnnotationSource =>
+  reviewAnnotation?.source === 'local-ai'
+    ? 'local-ai-review'
+    : 'deterministic-review';
+
+const buildHighlightableUnknownIssue = (
+  issue: GuardrailIssue,
+  reviewAnnotation?: ReviewIssueAnnotation
+): HighlightableUnknownIssue | null => {
+  if (
+    (issue.code !== 'UNKNOWN_ENTITY' && issue.code !== 'AMBIGUOUS_REFERENCE') ||
+    !issue.surface
+  ) {
+    return null;
+  }
+  return {
+    id: `${issue.code}:${issue.surface}`,
+    surface: issue.surface,
+    message: issue.message,
+    severity: issue.severity,
+    issueCode: issue.code,
+    source: getAnnotationSourceForReview(reviewAnnotation),
+    confidence: reviewAnnotation?.confidence ?? issue.confidence,
+    inlineMode: 'visible'
+  };
+};
+
+const getReviewSourceForDocument = (
+  doc: WritingDocument
+): 'workspace-save' | 'import' =>
+  doc.consistencyReviewMode === 'deferred' ? 'import' : 'workspace-save';
+
+function findCategoryIdForSuggestedKind(
+  availableCategories: EntityCategory[],
+  suggested: SuggestedUnknownCategory
+): string | undefined {
+  if (!suggested) {
+    return undefined;
+  }
+  const slugHints = CATEGORY_SEMANTIC_SLUG_HINTS[suggested];
+  const exactMatch = availableCategories.find((category) =>
+    slugHints.some((hint) => category.slug.toLowerCase() === hint)
+  );
+  if (exactMatch) {
+    return exactMatch.id;
+  }
+  return availableCategories.find((category) =>
+    slugHints.some((hint) => category.slug.toLowerCase().includes(hint))
+  )?.id;
+}
+
+function normalizeForStorage(value: unknown): unknown {
+  if (Array.isArray(value)) {
+    return value.map(normalizeForStorage);
+  }
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(
+      Object.entries(value as Record<string, unknown>)
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([key, nestedValue]) => [key, normalizeForStorage(nestedValue)])
+    );
+  }
+  return value;
+}
+
+function getHiddenStateMutationReviewKey(event: {
+  sceneId: string;
+  sourceHash: string;
+  commands: StateMutationEvent['commands'];
+}): string {
+  return JSON.stringify({
+    sceneId: event.sceneId,
+    sourceHash: event.sourceHash,
+    commands: event.commands.map((command) => normalizeForStorage(command))
+  });
+}
+
+const makeReviewItemId = (
+  docId: string,
+  issue: GuardrailIssue,
+  index: number
+): string => `${docId}:${getReviewIssueKey(issue)}:${index}`;
 
 export const useWorkspaceConsistency = ({
   activeProject,
@@ -108,8 +512,15 @@ export const useWorkspaceConsistency = ({
   aliases,
   setAliases,
   characters,
+  canonicalFacts,
+  characterSheets,
+  ruleset,
+  stateMutationEvents,
+  selectedDocumentId,
+  projectSettings,
+  saveProjectSettings,
   resolvedActionCues,
-  consistencyEngine,
+  worldEngine,
   ragService,
   shodhService,
   refreshMemories,
@@ -124,7 +535,9 @@ export const useWorkspaceConsistency = ({
   const [dismissedUnknownByDocument, setDismissedUnknownByDocument] = useState<
     Record<string, string[]>
   >({});
-  const [ignoredUnknownSurfaces, setIgnoredUnknownSurfaces] = useState<string[]>([]);
+  const [hiddenStateMutationReviewKeys, setHiddenStateMutationReviewKeys] = useState<string[]>(
+    []
+  );
   const [isReviewPrefsHydrated, setReviewPrefsHydrated] = useState(false);
   const [resolvingUnknown, setResolvingUnknown] = useState<string | null>(null);
   const [linkingUnknown, setLinkingUnknown] = useState<string | null>(null);
@@ -144,39 +557,59 @@ export const useWorkspaceConsistency = ({
   );
   const [consistencyPopover, setConsistencyPopover] =
     useState<ConsistencyPopoverState | null>(null);
+  const [worldEngineStatus, setWorldEngineStatus] =
+    useState<WorldEngineStatus | null>(null);
+  const [applyingStateMutationReviewId, setApplyingStateMutationReviewId] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    void worldEngine
+      .getStatus()
+      .then((status) => {
+        if (!cancelled) {
+          setWorldEngineStatus(status);
+        }
+      })
+      .catch((error) => {
+        if (!cancelled) {
+          setWorldEngineStatus({
+            state: 'installedUnavailable',
+            reason:
+              error instanceof Error
+                ? error.message
+                : 'Review engine status could not be checked.'
+          });
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [worldEngine]);
 
   useEffect(() => {
     if (!activeProject) {
-      setIgnoredUnknownSurfaces([]);
       setDismissedUnknownByDocument({});
+      setHiddenStateMutationReviewKeys([]);
       setReviewPrefsHydrated(true);
       return;
     }
     try {
       const raw = localStorage.getItem(`workspaceReviewPrefs:${activeProject.id}`);
       if (!raw) {
-        setIgnoredUnknownSurfaces([]);
         setDismissedUnknownByDocument({});
         setReviewPrefsHydrated(true);
         return;
       }
       const parsed = JSON.parse(raw) as unknown;
       if (!parsed || typeof parsed !== 'object') {
-        setIgnoredUnknownSurfaces([]);
         setDismissedUnknownByDocument({});
         setReviewPrefsHydrated(true);
         return;
       }
       const prefs = parsed as {
-        ignoredUnknownSurfaces?: unknown;
         dismissedUnknownByDocument?: unknown;
+        hiddenStateMutationReviewKeys?: unknown;
       };
-      setIgnoredUnknownSurfaces(
-        (Array.isArray(prefs.ignoredUnknownSurfaces) ? prefs.ignoredUnknownSurfaces : [])
-          .filter((value): value is string => typeof value === 'string')
-          .map((value) => value.trim())
-          .filter(Boolean)
-      );
       const nextDismissed: Record<string, string[]> = {};
       if (
         prefs.dismissedUnknownByDocument &&
@@ -192,28 +625,74 @@ export const useWorkspaceConsistency = ({
           }
         );
       }
+      const nextHiddenKeys = Array.isArray(prefs.hiddenStateMutationReviewKeys)
+        ? prefs.hiddenStateMutationReviewKeys.filter(
+            (value): value is string => typeof value === 'string' && value.trim().length > 0
+          )
+        : [];
       setDismissedUnknownByDocument(nextDismissed);
+      setHiddenStateMutationReviewKeys(nextHiddenKeys);
     } catch {
-      setIgnoredUnknownSurfaces([]);
       setDismissedUnknownByDocument({});
+      setHiddenStateMutationReviewKeys([]);
     } finally {
       setReviewPrefsHydrated(true);
     }
   }, [activeProject]);
 
   useEffect(() => {
+    if (!activeProject || !projectSettings || !isReviewPrefsHydrated) return;
+    try {
+      const raw = localStorage.getItem(`workspaceReviewPrefs:${activeProject.id}`);
+      if (!raw) return;
+      const parsed = JSON.parse(raw) as
+        | {
+            ignoredUnknownSurfaces?: unknown;
+          }
+        | null;
+      const legacyIgnoredValues = parsed?.ignoredUnknownSurfaces;
+      const legacyIgnored = (
+        Array.isArray(legacyIgnoredValues) ? legacyIgnoredValues : []
+      )
+        .filter((value): value is string => typeof value === 'string')
+        .map((value) => value.trim().toLowerCase())
+        .filter(Boolean);
+      if (legacyIgnored.length === 0) return;
+
+      const mergedIgnored = Array.from(
+        new Set([...(projectSettings.ignoredUnknownSurfaces ?? []), ...legacyIgnored])
+      );
+      if (mergedIgnored.length === (projectSettings.ignoredUnknownSurfaces ?? []).length) {
+        return;
+      }
+
+      const nextSettings: ProjectSettings = {
+        ...projectSettings,
+        ignoredUnknownSurfaces: mergedIgnored,
+        updatedAt: Date.now()
+      };
+      void saveProjectSettings(nextSettings)
+        .catch(() => {
+          // Ignore migration errors and continue using current settings.
+        });
+    } catch {
+      // Ignore malformed legacy local storage.
+    }
+  }, [activeProject, isReviewPrefsHydrated, projectSettings, saveProjectSettings]);
+
+  useEffect(() => {
     if (!activeProject || !isReviewPrefsHydrated) return;
     localStorage.setItem(
       `workspaceReviewPrefs:${activeProject.id}`,
       JSON.stringify({
-        ignoredUnknownSurfaces,
-        dismissedUnknownByDocument
+        dismissedUnknownByDocument,
+        hiddenStateMutationReviewKeys
       })
     );
   }, [
     activeProject,
     dismissedUnknownByDocument,
-    ignoredUnknownSurfaces,
+    hiddenStateMutationReviewKeys,
     isReviewPrefsHydrated
   ]);
 
@@ -228,41 +707,101 @@ export const useWorkspaceConsistency = ({
     };
   }, [consistencyPopover]);
 
+  const characterCategoryIds = useMemo(
+    () =>
+      new Set(
+        categories
+          .filter((category) => {
+            const slug = category.slug.toLowerCase();
+            const name = category.name.toLowerCase();
+            return slug.includes('character') || name.includes('character');
+          })
+          .map((category) => category.id)
+      ),
+    [categories]
+  );
+  const characterLoreEntityIdByCharacterId = useMemo(() => {
+    const linkedEntityIdByCharacterId = new Map<string, string>();
+    entities.forEach((entity) => {
+      if (!characterCategoryIds.has(entity.categoryId)) {
+        return;
+      }
+      const normalizedEntityName = normalizeRecordName(entity.name);
+      const matchingCharacter = characters.find(
+        (character) => normalizeRecordName(character.name) === normalizedEntityName
+      );
+      if (matchingCharacter) {
+        linkedEntityIdByCharacterId.set(matchingCharacter.id, entity.id);
+      }
+    });
+    return linkedEntityIdByCharacterId;
+  }, [characterCategoryIds, characters, entities]);
+
   const knownConsistencyEntities = useMemo(() => {
     const entityById = new Map(entities.map((entity) => [entity.id, entity]));
-    const characterById = new Map(characters.map((character) => [character.id, character]));
     return [
       ...entities.map((entity) => ({
         id: entity.id,
         name: entity.name,
         type: 'entity' as const
       })),
-      ...characters.map((character) => ({
-        id: character.id,
-        name: character.name,
-        type: 'character' as const
-      })),
       ...aliases
         .map((alias) => {
-          const linkedRecord =
-            alias.targetType === 'character'
-              ? characterById.get(alias.targetId)
-              : entityById.get(alias.targetId);
+          if (alias.targetType === 'character') {
+            const linkedEntityId = characterLoreEntityIdByCharacterId.get(alias.targetId);
+            if (linkedEntityId) {
+              const linkedEntity = entityById.get(linkedEntityId);
+              if (!linkedEntity) {
+                return null;
+              }
+              return {
+                id: linkedEntity.id,
+                name: alias.alias,
+                type: 'entity' as const
+              };
+            }
+            return null;
+          }
+          const linkedRecord = entityById.get(alias.targetId);
           if (!linkedRecord) {
             return null;
           }
           return {
             id: linkedRecord.id,
             name: alias.alias,
-            type: alias.targetType === 'character' ? ('character' as const) : ('entity' as const)
+            type: 'entity' as const
           };
         })
         .filter(
-          (entry): entry is {id: string; name: string; type: 'character' | 'entity'} =>
+          (entry): entry is {id: string; name: string; type: 'entity'} =>
             Boolean(entry)
-        )
+      )
     ];
-  }, [aliases, characters, entities]);
+  }, [
+    aliases,
+    characterLoreEntityIdByCharacterId,
+    entities
+  ]);
+
+  const knownConsistencySurfaceSet = useMemo(
+    () =>
+      new Set(
+        knownConsistencyEntities
+          .map((entity) => canonicalizeUnknownSurface(entity.name))
+          .filter(Boolean)
+      ),
+    [knownConsistencyEntities]
+  );
+
+  const isKnownConsistencyIssue = useCallback(
+    (issue: GuardrailIssue): boolean => {
+      if (issue.code !== 'UNKNOWN_ENTITY' || !issue.surface) {
+        return false;
+      }
+      return knownConsistencySurfaceSet.has(canonicalizeUnknownSurface(issue.surface));
+    },
+    [knownConsistencySurfaceSet]
+  );
 
   const filterDismissedUnknownIssues = useCallback(
     (docId: string, issues: GuardrailIssue[]): GuardrailIssue[] => {
@@ -272,7 +811,9 @@ export const useWorkspaceConsistency = ({
         )
       );
       const ignored = new Set(
-        ignoredUnknownSurfaces.map((surface) => canonicalizeUnknownSurface(surface))
+        (projectSettings?.ignoredUnknownSurfaces ?? []).map((surface) =>
+          canonicalizeUnknownSurface(surface)
+        )
       );
       if (dismissed.size === 0 && ignored.size === 0) {
         return issues;
@@ -285,7 +826,36 @@ export const useWorkspaceConsistency = ({
         return !surface || (!dismissed.has(surface) && !ignored.has(surface));
       });
     },
-    [dismissedUnknownByDocument, ignoredUnknownSurfaces]
+    [dismissedUnknownByDocument, projectSettings?.ignoredUnknownSurfaces]
+  );
+
+  const removeReviewSurface = useCallback(
+    (
+      surface: string,
+      options?: {
+        docId?: string;
+      }
+    ) => {
+      const normalized = canonicalizeUnknownSurface(surface);
+      if (!normalized) return;
+      const shouldKeepIssue = (issue: GuardrailIssue) => {
+        const issueSurface = canonicalizeUnknownSurface(issue.surface ?? '');
+        if (!issueSurface) {
+          return true;
+        }
+        return issueSurface !== normalized;
+      };
+      setGuardrailIssues((prev) => prev.filter(shouldKeepIssue));
+      setConsistencyReviewItems((prev) =>
+        prev.filter((item) => {
+          if (options?.docId && item.sceneId !== options.docId) {
+            return true;
+          }
+          return shouldKeepIssue(item.issue);
+        })
+      );
+    },
+    []
   );
 
   const attachAliasTexts = useCallback(
@@ -335,47 +905,91 @@ export const useWorkspaceConsistency = ({
     ): Promise<{unresolvedCount: number; consistencyRun: boolean}> => {
       const source = options?.source ?? 'workspace-save';
       const consistencyMode = options?.consistencyMode ?? 'strict';
+      const isImport = source === 'import';
       let unresolvedCount = 0;
 
+      if (isImport) {
+        await saveWritingDocument(doc);
+      }
+
       if (consistencyMode !== 'lenient') {
-        const proposal = await consistencyEngine.extractProposal({
-          projectId: doc.projectId,
-          text: htmlToPlainText(doc.content),
-          source,
-          knownEntities: knownConsistencyEntities,
-          actionCues: resolvedActionCues
-        });
-        const validation = await consistencyEngine.validateProposal(proposal);
-      const presentedIssues =
-          consistencyMode === 'strict'
-            ? validation.issues
-            : downgradeUnknownIssuesToWarnings(validation.issues);
-        setGuardrailIssues(filterDismissedUnknownIssues(doc.id, presentedIssues));
-        unresolvedCount = validation.issues.filter(
-          (issue) => issue.code === 'UNKNOWN_ENTITY'
-        ).length;
+        try {
+          const {proposal, validation, observations} = await worldEngine.reviewText({
+            projectId: doc.projectId,
+            text: htmlToPlainText(doc.content),
+            source,
+            knownEntities: knownConsistencyEntities,
+            actionCues: resolvedActionCues
+          });
+          const presentedIssues =
+            consistencyMode === 'strict'
+              ? validation.issues
+              : downgradeUnknownIssuesToWarnings(validation.issues);
+          setGuardrailIssues(filterDismissedUnknownIssues(doc.id, presentedIssues));
+          unresolvedCount = validation.issues.filter(
+            (issue) => issue.code === 'UNKNOWN_ENTITY'
+          ).length;
 
-        if (!validation.allowCommit && consistencyMode === 'strict') {
-          const visibleUnknowns = validation.issues
-            .map((issue) => issue.surface)
-            .filter((surface): surface is string => Boolean(surface))
-            .slice(0, 3);
-          const suffix =
-            validation.issues.length > 3
-              ? ` (+${validation.issues.length - 3} more)`
-              : '';
-          const summary = visibleUnknowns.join(', ');
-          throw new Error(
-            `Commit blocked by consistency check: unknown ${validation.issues.length === 1 ? 'entity' : 'entities'} (${summary}${suffix}).`
-          );
-        }
+          if (!validation.allowCommit && consistencyMode === 'strict' && !isImport) {
+            const visibleUnknowns = validation.issues
+              .map((issue) => issue.surface)
+              .filter((surface): surface is string => Boolean(surface))
+              .slice(0, 3);
+            const suffix =
+              validation.issues.length > 3
+                ? ` (+${validation.issues.length - 3} more)`
+                : '';
+            const summary = visibleUnknowns.join(', ');
+            throw new Error(
+              `Scene save needs review first: ${validation.issues.length} unknown ${validation.issues.length === 1 ? 'name or world term' : 'names or world terms'} (${summary}${suffix}).`
+            );
+          }
 
-        if (validation.allowCommit) {
-          await consistencyEngine.applyProposal(proposal, validation);
+          if (validation.allowCommit) {
+            await worldEngine.applyAcceptedProposal(proposal, validation);
+            const orderedDocuments = documents
+              .slice()
+              .sort((a, b) => a.createdAt - b.createdAt);
+            const sceneOrder =
+              orderedDocuments.findIndex((entry) => entry.id === doc.id) + 1;
+            if (sceneOrder > 0) {
+              try {
+                const nextDerivedEvents = buildDerivedStateMutationEvents({
+                  projectId: doc.projectId,
+                  sceneId: doc.id,
+                  sceneTitle: doc.title,
+                  sceneOrder,
+                  sourceRevision: doc.updatedAt,
+                  sourceHash: hashString(doc.content),
+                  observations,
+                  characterSheets,
+                  ruleset,
+                  existingEvents: stateMutationEvents
+                });
+                await replaceSceneStateMutationEventsBySourceType({
+                  projectId: doc.projectId,
+                  sceneId: doc.id,
+                  sourceType: 'deterministic-review',
+                  nextEvents: nextDerivedEvents,
+                  invalidationReason:
+                    'Replaced deterministic review-derived state changes after scene save.'
+                });
+              } catch (error) {
+                console.warn('State mutation derivation failed for scene', doc.id, error);
+              }
+            }
+          }
+        } catch (error) {
+          if (!isImport) {
+            throw error;
+          }
+          console.warn('Import review failed after scene persistence', doc.id, error);
         }
       }
 
-      await saveWritingDocument(doc);
+      if (!isImport) {
+        await saveWritingDocument(doc);
+      }
 
       try {
         if (ragService) {
@@ -418,7 +1032,7 @@ export const useWorkspaceConsistency = ({
       setSelectedCreatedAt(doc.createdAt);
       setSaveStatus('saved');
       setLastSavedAt(Date.now());
-      if (consistencyMode === 'strict') {
+      if (consistencyMode === 'strict' && !isImport) {
         setGuardrailIssues([]);
       }
       lastAutosaveErrorRef.current = null;
@@ -428,42 +1042,92 @@ export const useWorkspaceConsistency = ({
       };
     },
     [
-      consistencyEngine,
+      filterDismissedUnknownIssues,
+      documents,
+      characterSheets,
       knownConsistencyEntities,
+      ruleset,
       resolvedActionCues,
       ragService,
       shodhService,
       refreshMemories,
+      stateMutationEvents,
       setDocuments,
       setLastSavedAt,
       setSaveStatus,
       setSelectedCreatedAt,
-      lastAutosaveErrorRef
+      lastAutosaveErrorRef,
+      worldEngine
     ]
   );
 
   const refreshDeferredReview = useCallback(
     async (doc: WritingDocument) => {
-      const proposal = await consistencyEngine.extractProposal({
+      const {validation} = await worldEngine.reviewText({
         projectId: doc.projectId,
         text: htmlToPlainText(doc.content),
-        source: 'workspace-save',
+        source: getReviewSourceForDocument(doc),
         knownEntities: knownConsistencyEntities,
         actionCues: resolvedActionCues
       });
-      const validation = await consistencyEngine.validateProposal(proposal);
-      setGuardrailIssues(
-        filterDismissedUnknownIssues(
-          doc.id,
-          downgradeUnknownIssuesToWarnings(validation.issues)
-        )
+      const presentedIssues = filterDismissedUnknownIssues(
+        doc.id,
+        downgradeUnknownIssuesToWarnings(validation.issues)
       );
+      setGuardrailIssues(presentedIssues);
+      setConsistencyReviewItems((prev) => [
+        ...prev.filter((item) => item.sceneId !== doc.id),
+        ...presentedIssues.map((issue, index) => ({
+          id: makeReviewItemId(doc.id, issue, index),
+          sceneId: doc.id,
+          sceneTitle: doc.title || 'Untitled scene',
+          issue
+        }))
+      ]);
     },
     [
-      consistencyEngine,
       filterDismissedUnknownIssues,
       knownConsistencyEntities,
-      resolvedActionCues
+      resolvedActionCues,
+      worldEngine
+    ]
+  );
+
+  const refreshActiveDraftReview = useCallback(
+    async (doc: WritingDocument) => {
+      setIsRunningConsistencyReview(true);
+      try {
+        const {validation, issueAnnotations} = await worldEngine.reviewText({
+          projectId: doc.projectId,
+          text: htmlToPlainText(doc.content),
+          source: 'workspace-autosave',
+          knownEntities: knownConsistencyEntities,
+          actionCues: resolvedActionCues
+        });
+        const presentedIssues = filterDismissedUnknownIssues(
+          doc.id,
+          downgradeUnknownIssuesToWarnings(validation.issues)
+        );
+        setGuardrailIssues(presentedIssues);
+        setConsistencyReviewItems((prev) => [
+          ...prev.filter((item) => item.sceneId !== doc.id),
+          ...presentedIssues.map((issue, index) => ({
+            id: makeReviewItemId(doc.id, issue, index),
+            sceneId: doc.id,
+            sceneTitle: doc.title || 'Untitled scene',
+            issue,
+            reviewAnnotation: issueAnnotations[index]
+          }))
+        ]);
+      } finally {
+        setIsRunningConsistencyReview(false);
+      }
+    },
+    [
+      filterDismissedUnknownIssues,
+      knownConsistencyEntities,
+      resolvedActionCues,
+      worldEngine
     ]
   );
 
@@ -485,20 +1149,21 @@ export const useWorkspaceConsistency = ({
     try {
       const items: ConsistencyReviewItem[] = [];
       for (const doc of documents) {
-        const proposal = await consistencyEngine.extractProposal({
+        const {validation, issueAnnotations} = await worldEngine.reviewText({
           projectId: activeProject.id,
           text: htmlToPlainText(doc.content),
-          source: 'workspace-save',
+          source: getReviewSourceForDocument(doc),
           knownEntities: knownConsistencyEntities,
           actionCues: resolvedActionCues
         });
-        const validation = await consistencyEngine.validateProposal(proposal);
-        validation.issues.forEach((issue, index) => {
+        const presentedIssues = filterDismissedUnknownIssues(doc.id, validation.issues);
+        presentedIssues.forEach((issue, index) => {
           items.push({
-            id: `${doc.id}:${issue.code}:${issue.surface ?? 'issue'}:${index}`,
+            id: makeReviewItemId(doc.id, issue, index),
             sceneId: doc.id,
             sceneTitle: doc.title || 'Untitled scene',
-            issue
+            issue,
+            reviewAnnotation: issueAnnotations[index]
           });
         });
       }
@@ -507,6 +1172,7 @@ export const useWorkspaceConsistency = ({
         documents,
         entities,
         characters,
+        canonicalFacts,
         knownEntities: knownConsistencyEntities
       });
       const combinedItems = [...items, ...contradictionItems];
@@ -526,7 +1192,7 @@ export const useWorkspaceConsistency = ({
         const contradictionCount = contradictionItems.length;
         const firstSceneId = combinedItems[0]?.sceneId;
         const message =
-          `Consistency review found ${combinedItems.length} issue(s) across ${documents.length} scene(s).` +
+          `Project review found ${combinedItems.length} item(s) across ${documents.length} scene(s).` +
           (contradictionCount > 0
             ? ` ${contradictionCount} contradiction${contradictionCount === 1 ? '' : 's'} with canon records.`
             : '');
@@ -549,19 +1215,22 @@ export const useWorkspaceConsistency = ({
   }, [
     activeProject,
     addSystemHistory,
+    canonicalFacts,
     characters,
-    consistencyEngine,
     documents,
     entities,
+    filterDismissedUnknownIssues,
     knownConsistencyEntities,
     resolvedActionCues,
-    setFeedback
+    setFeedback,
+    worldEngine
   ]);
 
   const unknownGuardrailIssues = useMemo(() => {
     const seen = new Set<string>();
     return guardrailIssues
       .filter((issue) => issue.code === 'UNKNOWN_ENTITY' && Boolean(issue.surface))
+      .filter((issue) => !isKnownConsistencyIssue(issue))
       .filter((issue) => {
         const key = canonicalizeUnknownSurface(issue.surface ?? '');
         if (!key || seen.has(key)) {
@@ -570,25 +1239,595 @@ export const useWorkspaceConsistency = ({
         seen.add(key);
         return true;
       });
-  }, [guardrailIssues]);
+  }, [guardrailIssues, isKnownConsistencyIssue]);
 
   const hasBlockingUnknownGuardrailIssues = useMemo(
     () => unknownGuardrailIssues.some((issue) => issue.severity === 'blocking'),
     [unknownGuardrailIssues]
   );
 
-  const highlightableUnknownIssues = useMemo(
+  const highlightableUnknownIssues = useMemo(() => {
+    const issueMap = new Map<string, HighlightableUnknownIssue>();
+    const addIssue = (
+      issue: GuardrailIssue,
+      reviewAnnotation?: ReviewIssueAnnotation
+    ) => {
+      const key = getReviewIssueKey(issue);
+      if (issueMap.has(key)) return;
+      const highlightable = buildHighlightableUnknownIssue(issue, reviewAnnotation);
+      if (!highlightable) return;
+      issueMap.set(key, highlightable);
+    };
+
+    unknownGuardrailIssues.forEach((issue) => addIssue(issue));
+    if (selectedDocumentId) {
+      consistencyReviewItems
+        .filter((item) => item.sceneId === selectedDocumentId)
+        .filter((item) => !isKnownConsistencyIssue(item.issue))
+        .forEach((item) => addIssue(item.issue, item.reviewAnnotation));
+    }
+
+    return Array.from(issueMap.values());
+  }, [consistencyReviewItems, isKnownConsistencyIssue, selectedDocumentId, unknownGuardrailIssues]);
+
+  const reviewAnnotationSummary = useMemo(
     () =>
-      unknownGuardrailIssues.map((issue) => ({
-        id: `${issue.code}:${issue.surface ?? ''}`,
-        surface: issue.surface ?? '',
-        message: issue.message,
-        severity: issue.severity
-      })),
-    [unknownGuardrailIssues]
+      highlightableUnknownIssues.length > 0
+        ? summarizeWorkspaceReviewSurfaces(highlightableUnknownIssues)
+        : EMPTY_ANNOTATION_SUMMARY,
+    [highlightableUnknownIssues]
+  );
+
+  const reviewReadiness = useMemo<ReviewReadiness>(() => {
+    const stateMutationItemCount = stateMutationEvents.filter(
+      (event) => event.status === 'proposed' && event.sourceType === 'deterministic-review'
+    ).length;
+    const activeCount = reviewAnnotationSummary.inlineVisibleCount + stateMutationItemCount;
+    const passiveCount = reviewAnnotationSummary.passiveCount;
+    const suppressedCount = reviewAnnotationSummary.suppressedCount;
+    const count = activeCount + passiveCount;
+    const label =
+      activeCount > 0 && passiveCount > 0
+        ? `${activeCount} active, ${passiveCount} later`
+        : activeCount > 0
+          ? activeCount === 1 ? '1 review item' : `${activeCount} review items`
+          : passiveCount > 0
+            ? passiveCount === 1 ? '1 review later' : `${passiveCount} review later`
+            : 'Review clear';
+    if (worldEngineStatus && worldEngineStatus.state !== 'available') {
+      return {
+        state: 'unavailable',
+        count,
+        activeCount,
+        passiveCount,
+        suppressedCount,
+        label: 'Review unavailable',
+        detail:
+          worldEngineStatus.state === 'notInstalled'
+            ? 'Local review engine is not installed.'
+            : worldEngineStatus.reason
+      };
+    }
+    if (isRunningConsistencyReview) {
+      return {
+        state: 'running',
+        count,
+        activeCount,
+        passiveCount,
+        suppressedCount,
+        label: 'Review running',
+        detail: 'Review is checking the current project.'
+      };
+    }
+    if (hasBlockingUnknownGuardrailIssues) {
+      return {
+        state: 'attention',
+        count,
+        activeCount,
+        passiveCount,
+        suppressedCount,
+        label,
+        detail: 'Some review items need attention before a strict save can finish.'
+      };
+    }
+    if (activeCount > 0) {
+      return {
+        state: 'ready',
+        count,
+        activeCount,
+        passiveCount,
+        suppressedCount,
+        label,
+        detail: 'Review items are ready when you want to check them.'
+      };
+    }
+    if (passiveCount > 0) {
+      return {
+        state: 'ready',
+        count,
+        activeCount,
+        passiveCount,
+        suppressedCount,
+        label,
+        detail: 'Low-priority review candidates are saved for later without inline drafting noise.'
+      };
+    }
+    return {
+      state: 'idle',
+      count: 0,
+      activeCount: 0,
+      passiveCount: 0,
+      suppressedCount,
+      label: 'Review clear',
+      detail: 'No open review items.'
+    };
+  }, [
+    hasBlockingUnknownGuardrailIssues,
+    isRunningConsistencyReview,
+    reviewAnnotationSummary,
+    stateMutationEvents,
+    worldEngineStatus
+  ]);
+
+  const getSuggestedUnknownCategory = useCallback(
+    (surface: string): SuggestedUnknownCategory => {
+      const normalizedSurface = canonicalizeUnknownSurface(surface);
+      if (!normalizedSurface) {
+        return null;
+      }
+      const issue = unknownGuardrailIssues.find(
+        (candidate) =>
+          candidate.code === 'UNKNOWN_ENTITY' &&
+          canonicalizeUnknownSurface(candidate.surface ?? '') === normalizedSurface
+      );
+      const detectionReason = issue?.detectionReason ?? null;
+      if (
+        detectionReason === 'titled_name' ||
+        detectionReason === 'character_context_candidate'
+      ) {
+        return 'character';
+      }
+      if (detectionReason === 'action_object_candidate') {
+        return 'item';
+      }
+
+      const tokens = normalizedSurface.split(/\s+/).filter(Boolean);
+      const lastToken = tokens[tokens.length - 1] ?? '';
+      const originalSurfaceLooksNamed = hasUppercaseLetter(surface);
+      if (lastToken && LOCATION_HINT_TOKENS.has(lastToken) && originalSurfaceLooksNamed) {
+        return 'location';
+      }
+      if (lastToken && ITEM_HINT_TOKENS.has(lastToken)) {
+        return 'item';
+      }
+      if (lastToken && CREATURE_HINT_TOKENS.has(lastToken)) {
+        return 'creature';
+      }
+      if (lastToken && FACTION_HINT_TOKENS.has(lastToken)) {
+        return 'faction';
+      }
+
+      const issueDocument =
+        issue && selectedDocumentId
+          ? documents.find((document) => document.id === selectedDocumentId) ?? null
+          : null;
+      if (issue?.span && issueDocument) {
+        const prefix = issueDocument.content
+          .slice(Math.max(0, issue.span.start - 32), issue.span.start)
+          .replace(/<[^>]+>/g, ' ')
+          .toLowerCase();
+        if (/\b(from|to|into|toward|towards|at|in|near|inside|outside)\s*$/u.test(prefix)) {
+          return 'location';
+        }
+        if (/\b(with|using|equip(?:ped)?|wield(?:ed)?|drink|drank|grab(?:bed)?|draw|drew|throw|threw|cast)\s*$/u.test(prefix)) {
+          return 'item';
+        }
+        if (/\b(named|called)\s*$/u.test(prefix)) {
+          return 'character';
+        }
+      }
+
+      return null;
+    },
+    [documents, selectedDocumentId, unknownGuardrailIssues]
+  );
+
+  const getSuggestedUnknownCategoryId = useCallback(
+    (surface: string): string | undefined => {
+      const suggested = getSuggestedUnknownCategory(surface);
+      return findCategoryIdForSuggestedKind(categories, suggested);
+    },
+    [categories, getSuggestedUnknownCategory]
+  );
+
+  const stateMutationReviewItems = useMemo<StateMutationReviewItem[]>(() => {
+    const actorLabelById = new Map<string, string>();
+    const sheetByActorId = new Map<string, CharacterSheet>();
+    characterSheets.forEach((sheet) => {
+      actorLabelById.set(sheet.id, sheet.name);
+      sheetByActorId.set(sheet.id, sheet);
+      if (sheet.characterId) {
+        actorLabelById.set(sheet.characterId, sheet.name);
+        sheetByActorId.set(sheet.characterId, sheet);
+      }
+    });
+    const resourceDefinitionNameById = new Map(
+      (ruleset?.resourceDefinitions ?? []).map((definition) => [definition.id, definition.name])
+    );
+    const statDefinitionNameById = new Map(
+      (ruleset?.statDefinitions ?? []).map((definition) => [definition.id, definition.name])
+    );
+    const acceptedEvents = stateMutationEvents.filter((event) => event.status === 'accepted');
+    const batchAcceptableIds = computeBatchAcceptableStateMutationEventIds({
+      proposedEvents: stateMutationEvents.filter(
+        (event) => event.status === 'proposed' && event.sourceType === 'deterministic-review'
+      ),
+      acceptedEvents,
+      characterSheets,
+      ruleset,
+      labels: {
+        resourceDefinitionNameById,
+        statDefinitionNameById
+      }
+    });
+
+    return stateMutationEvents
+      .filter(
+        (event) => event.status === 'proposed' && event.sourceType === 'deterministic-review'
+      )
+      .filter(
+        (event) =>
+          !hiddenStateMutationReviewKeys.includes(getHiddenStateMutationReviewKey(event))
+      )
+      .map((event) => {
+        const staleness = getStateMutationEventStaleness({
+          event,
+          documents
+        });
+        const primaryCommand = event.commands[0];
+        const sheet = primaryCommand ? sheetByActorId.get(primaryCommand.actorId) ?? null : null;
+        const sceneOrder = event.sceneOrder ?? Number.MAX_SAFE_INTEGER;
+        const preview =
+          sheet && primaryCommand
+            ? buildStateMutationPreview({
+                sheet,
+                ruleset,
+                events: acceptedEvents,
+                target: {
+                  actorId: primaryCommand.actorId,
+                  characterId: sheet.characterId,
+                  sheetId: sheet.id,
+                  actorName: sheet.name
+                },
+                command: primaryCommand,
+                upToSceneOrder: sceneOrder,
+                labels: {
+                  resourceDefinitionNameById,
+                  statDefinitionNameById
+                }
+              })
+            : null;
+        const canAccept = (preview?.validationIssues.length ?? 0) === 0;
+        const canAcceptInBatch = batchAcceptableIds.has(event.id);
+        return {
+          id: event.id,
+          sceneId: event.sceneId,
+          sceneTitle: event.sceneTitle || 'Untitled scene',
+          sceneSequence: event.sceneSequence,
+          actorLabel:
+            actorLabelById.get(event.commands[0]?.actorId ?? '') ?? 'Unknown actor',
+          summaryLines: event.commands.map((command) =>
+            summarizeStateMutationCommand({
+              command,
+              labels: {
+                resourceDefinitionNameById,
+                statDefinitionNameById
+              }
+            })
+          ),
+          effectLines: preview?.effectLines ?? [],
+          validationIssues: preview?.validationIssues ?? [],
+          canAccept,
+          canAcceptInBatch,
+          acceptanceHint: describeStateMutationAcceptance({
+            canAccept,
+            canAcceptInBatch,
+            validationIssues: preview?.validationIssues ?? []
+          }),
+          isStale: staleness.isStale,
+          staleLabel: describeStateMutationEventStaleness(staleness)
+        };
+      })
+      .sort((a, b) => {
+        if (a.sceneTitle !== b.sceneTitle) {
+          return a.sceneTitle.localeCompare(b.sceneTitle);
+        }
+        return (a.sceneSequence ?? Number.MAX_SAFE_INTEGER) - (b.sceneSequence ?? Number.MAX_SAFE_INTEGER);
+      });
+  }, [characterSheets, documents, hiddenStateMutationReviewKeys, ruleset, stateMutationEvents]);
+
+  const hiddenStateMutationReviewCountBySceneId =
+    useMemo<StateMutationReviewGroupHiddenCounts>(() => {
+      const counts: StateMutationReviewGroupHiddenCounts = {};
+      stateMutationEvents
+        .filter(
+          (event) =>
+            event.status === 'proposed' && event.sourceType === 'deterministic-review'
+        )
+        .forEach((event) => {
+          if (!hiddenStateMutationReviewKeys.includes(getHiddenStateMutationReviewKey(event))) {
+            return;
+          }
+          counts[event.sceneId] = (counts[event.sceneId] ?? 0) + 1;
+        });
+      return counts;
+    }, [hiddenStateMutationReviewKeys, stateMutationEvents]);
+
+  const hiddenStateMutationReviewCount = useMemo(
+    () =>
+      Object.values(hiddenStateMutationReviewCountBySceneId).reduce(
+        (sum, count) => sum + count,
+        0
+      ),
+    [hiddenStateMutationReviewCountBySceneId]
+  );
+
+  const acceptStateMutationReviewItem = useCallback(
+    async (eventId: string, applyingId?: string) => {
+      const event = stateMutationEvents.find((entry) => entry.id === eventId);
+      if (!event || event.status !== 'proposed') {
+        return;
+      }
+      setApplyingStateMutationReviewId(applyingId ?? eventId);
+      setFeedback(null);
+      try {
+        await saveStateMutationEvent({
+          ...event,
+          status: 'accepted',
+          invalidatedAt: undefined,
+          invalidationReason: undefined
+        });
+        setFeedback({
+          tone: 'success',
+          message: `Accepted suggested state change from "${event.sceneTitle || 'scene'}".`
+        });
+        addSystemHistory({
+          category: 'consistency',
+          message: `Accepted suggested state change from "${event.sceneTitle || 'scene'}".`,
+          sceneId: event.sceneId
+        });
+      } catch (error) {
+        setFeedback({
+          tone: 'error',
+          message:
+            error instanceof Error
+              ? error.message
+              : 'Unable to accept suggested state change.'
+        });
+      } finally {
+        setApplyingStateMutationReviewId(null);
+      }
+    },
+    [addSystemHistory, setFeedback, stateMutationEvents]
+  );
+
+  const rejectStateMutationReviewItem = useCallback(
+    async (eventId: string, applyingId?: string) => {
+      const event = stateMutationEvents.find((entry) => entry.id === eventId);
+      if (!event || event.status !== 'proposed') {
+        return;
+      }
+      setApplyingStateMutationReviewId(applyingId ?? eventId);
+      setFeedback(null);
+      try {
+        await invalidateStateMutationEventById({
+          eventId,
+          reason: 'Rejected from Project Review suggested state changes.'
+        });
+        setFeedback({
+          tone: 'success',
+          message: `Rejected suggested state change from "${event.sceneTitle || 'scene'}".`
+        });
+        addSystemHistory({
+          category: 'consistency',
+          message: `Rejected suggested state change from "${event.sceneTitle || 'scene'}".`,
+          sceneId: event.sceneId
+        });
+      } catch (error) {
+        setFeedback({
+          tone: 'error',
+          message:
+            error instanceof Error
+              ? error.message
+              : 'Unable to reject suggested state change.'
+        });
+      } finally {
+        setApplyingStateMutationReviewId(null);
+      }
+    },
+    [addSystemHistory, setFeedback, stateMutationEvents]
+  );
+
+  const hideStateMutationReviewItem = useCallback(
+    (eventId: string) => {
+      const event = stateMutationEvents.find((entry) => entry.id === eventId);
+      if (!event || event.status !== 'proposed') {
+        return;
+      }
+      const hiddenKey = getHiddenStateMutationReviewKey(event);
+      setHiddenStateMutationReviewKeys((prev) =>
+        prev.includes(hiddenKey) ? prev : [...prev, hiddenKey]
+      );
+      setFeedback({
+        tone: 'success',
+        message: `Hidden suggested state change from "${event.sceneTitle || 'scene'}" until the scene changes.`
+      });
+    },
+    [setFeedback, stateMutationEvents]
+  );
+
+  const restoreHiddenStateMutationReviewItems = useCallback(
+    (sceneId: string) => {
+      const hiddenKeysForScene = stateMutationEvents
+        .filter(
+          (event) =>
+            event.sceneId === sceneId &&
+            event.status === 'proposed' &&
+            event.sourceType === 'deterministic-review'
+        )
+        .map((event) => getHiddenStateMutationReviewKey(event))
+        .filter((key) => hiddenStateMutationReviewKeys.includes(key));
+      if (hiddenKeysForScene.length === 0) {
+        setFeedback({
+          tone: 'error',
+          message: 'No hidden suggested state changes to restore in this scene.'
+        });
+        return;
+      }
+      setHiddenStateMutationReviewKeys((prev) =>
+        prev.filter((key) => !hiddenKeysForScene.includes(key))
+      );
+      const sceneTitle =
+        stateMutationEvents.find((event) => event.sceneId === sceneId)?.sceneTitle || 'scene';
+      setFeedback({
+        tone: 'success',
+        message: `Restored hidden suggested state changes from "${sceneTitle}".`
+      });
+    },
+    [hiddenStateMutationReviewKeys, setFeedback, stateMutationEvents]
+  );
+
+  const restoreAllHiddenStateMutationReviewItems = useCallback(() => {
+    if (hiddenStateMutationReviewCount === 0) {
+      setFeedback({
+        tone: 'error',
+        message: 'No hidden suggested state changes to restore.'
+      });
+      return;
+    }
+    setHiddenStateMutationReviewKeys([]);
+    setFeedback({
+      tone: 'success',
+      message: `Restored ${hiddenStateMutationReviewCount} hidden suggested state change${hiddenStateMutationReviewCount === 1 ? '' : 's'}.`
+    });
+  }, [hiddenStateMutationReviewCount, setFeedback]);
+
+  const acceptSceneStateMutationReviewItems = useCallback(
+    async (sceneId: string) => {
+      const applyingId = `scene:${sceneId}:accept`;
+      const sceneItems = stateMutationReviewItems
+        .filter((item) => item.sceneId === sceneId)
+        .sort(
+          (a, b) =>
+            (a.sceneSequence ?? Number.MAX_SAFE_INTEGER) -
+            (b.sceneSequence ?? Number.MAX_SAFE_INTEGER)
+        );
+      const batchAcceptableItems = sceneItems.filter((item) => item.canAcceptInBatch);
+      if (batchAcceptableItems.length === 0) {
+        setFeedback({
+          tone: 'error',
+          message: 'No valid suggested state changes to accept in this scene.'
+        });
+        return;
+      }
+      for (const item of batchAcceptableItems) {
+        await acceptStateMutationReviewItem(item.id, applyingId);
+      }
+      setFeedback({
+        tone: 'success',
+        message: `Accepted ${batchAcceptableItems.length} suggested state change${batchAcceptableItems.length === 1 ? '' : 's'} from "${batchAcceptableItems[0]?.sceneTitle || 'scene'}".`
+      });
+    },
+    [acceptStateMutationReviewItem, setFeedback, stateMutationReviewItems]
+  );
+
+  const rejectSceneStateMutationReviewItems = useCallback(
+    async (sceneId: string) => {
+      const applyingId = `scene:${sceneId}:reject`;
+      const sceneItems = stateMutationReviewItems.filter((item) => item.sceneId === sceneId);
+      if (sceneItems.length === 0) {
+        setFeedback({
+          tone: 'error',
+          message: 'No suggested state changes to reject in this scene.'
+        });
+        return;
+      }
+      for (const item of sceneItems) {
+        await rejectStateMutationReviewItem(item.id, applyingId);
+      }
+      setFeedback({
+        tone: 'success',
+        message: `Rejected ${sceneItems.length} suggested state change${sceneItems.length === 1 ? '' : 's'} from "${sceneItems[0]?.sceneTitle || 'scene'}".`
+      });
+    },
+    [rejectStateMutationReviewItem, setFeedback, stateMutationReviewItems]
   );
 
   const unknownLinkOptions = useMemo(() => {
+    const optionMap: Record<string, LinkTargetOption[]> = {};
+    const categoryLabelById = new Map(
+      categories.map((category) => [category.id, category.name])
+    );
+    unknownGuardrailIssues.forEach((issue) => {
+      const surface = (issue.surface ?? '').trim();
+      if (!surface) return;
+      const normalizedSurface = surface.toLowerCase();
+      const candidatesByKey = new Map<string, LinkTargetOption>();
+      entities.forEach((entity) => {
+        candidatesByKey.set(`entity:${entity.id}`, {
+          id: entity.id,
+          name: entity.name,
+          type: 'entity',
+          label: categoryLabelById.get(entity.categoryId) ?? 'World Bible'
+        });
+      });
+      characters.forEach((character) => {
+        const linkedEntityId = characterLoreEntityIdByCharacterId.get(character.id);
+        if (linkedEntityId && candidatesByKey.has(`entity:${linkedEntityId}`)) {
+          return;
+        }
+        const matchingCharacterEntity = entities.find(
+          (entity) =>
+            characterCategoryIds.has(entity.categoryId) &&
+            namesLikelyReferToSameCharacter(character.name, entity.name)
+        );
+        if (matchingCharacterEntity) {
+          return;
+        }
+        candidatesByKey.set(`character:${character.id}`, {
+          id: character.id,
+          name: character.name,
+          type: 'character',
+          label: 'Character Tools'
+        });
+      });
+      const candidates = Array.from(candidatesByKey.values());
+      const ranked = [...candidates].sort((a, b) => {
+        const aName = a.name.toLowerCase();
+        const bName = b.name.toLowerCase();
+        const aExact = aName === normalizedSurface ? 0 : 1;
+        const bExact = bName === normalizedSurface ? 0 : 1;
+        if (aExact !== bExact) return aExact - bExact;
+        const aClose =
+          aName.includes(normalizedSurface) || normalizedSurface.includes(aName) ? 0 : 1;
+        const bClose =
+          bName.includes(normalizedSurface) || normalizedSurface.includes(bName) ? 0 : 1;
+        if (aClose !== bClose) return aClose - bClose;
+        return a.name.localeCompare(b.name);
+      });
+      optionMap[surface] = ranked.slice(0, 20);
+    });
+    return optionMap;
+  }, [
+    categories,
+    characterCategoryIds,
+    characterLoreEntityIdByCharacterId,
+    characters,
+    entities,
+    unknownGuardrailIssues
+  ]);
+
+  const closeUnknownLinkOptions = useMemo(() => {
     const optionMap: Record<
       string,
       Array<{id: string; name: string; type: 'character' | 'entity'}>
@@ -597,37 +1836,22 @@ export const useWorkspaceConsistency = ({
       const surface = (issue.surface ?? '').trim();
       if (!surface) return;
       const normalizedSurface = surface.toLowerCase();
-      const candidates = [
-        ...entities.map((entity) => ({id: entity.id, name: entity.name, type: 'entity' as const})),
-        ...characters.map((character) => ({
-          id: character.id,
-          name: character.name,
-          type: 'character' as const
-        }))
-      ];
-      const filtered = candidates.filter((record) => {
-        const normalizedName = record.name.toLowerCase();
-        if (normalizedName === normalizedSurface) {
+      const candidates = unknownLinkOptions[surface] ?? [];
+      optionMap[surface] = candidates.filter((record) => {
+        const normalizedName = normalizeRecordName(record.name);
+        if (normalizedName === normalizeRecordName(normalizedSurface)) {
           return true;
         }
         return (
           normalizedName.includes(normalizedSurface) ||
-          normalizedSurface.includes(normalizedName)
+          normalizedSurface.includes(normalizedName) ||
+          isLikelyShortFormOfRecord(normalizedSurface, normalizedName) ||
+          isLikelyShortFormOfRecord(normalizedName, normalizedSurface)
         );
       });
-      const ranked = [...filtered].sort((a, b) => {
-        const aExact = a.name.toLowerCase() === normalizedSurface ? 0 : 1;
-        const bExact = b.name.toLowerCase() === normalizedSurface ? 0 : 1;
-        if (aExact !== bExact) return aExact - bExact;
-        const aIncludes = a.name.toLowerCase().includes(normalizedSurface) ? 0 : 1;
-        const bIncludes = b.name.toLowerCase().includes(normalizedSurface) ? 0 : 1;
-        if (aIncludes !== bIncludes) return aIncludes - bIncludes;
-        return a.name.localeCompare(b.name);
-      });
-      optionMap[surface] = ranked.slice(0, 20);
     });
     return optionMap;
-  }, [characters, entities, unknownGuardrailIssues]);
+  }, [unknownGuardrailIssues, unknownLinkOptions]);
 
   const resolveUnknownEntity = useCallback(
     async (
@@ -651,10 +1875,14 @@ export const useWorkspaceConsistency = ({
           setCategories(availableCategories);
         }
 
+        const inferredCategoryId = getSuggestedUnknownCategoryId(normalizedSurface);
+        const selectedCategory = categoryId
+          ? availableCategories.find((c) => c.id === categoryId)
+          : inferredCategoryId
+            ? availableCategories.find((c) => c.id === inferredCategoryId) ?? null
+            : null;
         const chosenCategory =
-          (categoryId
-            ? availableCategories.find((c) => c.id === categoryId)
-            : null) ??
+          selectedCategory ??
           availableCategories.find((category) =>
             ['characters', 'locations', 'items'].includes(category.slug)
           ) ??
@@ -665,41 +1893,141 @@ export const useWorkspaceConsistency = ({
         }
 
         const now = Date.now();
-        const entity: WorldEntity = {
-          id: crypto.randomUUID(),
-          projectId: activeProject.id,
-          categoryId: chosenCategory.id,
-          name: normalizedName,
-          fields: {},
-          needsCompletion: true,
-          links: [],
-          createdAt: now,
-          updatedAt: now
-        };
-        await saveEntity(entity);
-        await upsertCompendiumEntryFromEntity({
-          projectId: activeProject.id,
-          entity,
-          domain: 'custom',
-          needsCompletion: true
-        });
-        await attachAliasTexts({
-          projectId: activeProject.id,
-          targetId: entity.id,
-          targetType: 'entity',
-          aliasTexts:
-            normalizedName.toLowerCase() === normalizedSurface.toLowerCase()
-              ? [normalizedName]
-              : [normalizedName, normalizedSurface]
-        });
-        setEntities((prev) => [...prev, entity]);
-        setGuardrailIssues((prev) =>
-          prev.filter(
-            (issue) =>
-              canonicalizeUnknownSurface(issue.surface ?? '') !==
-              canonicalizeUnknownSurface(normalizedSurface)
-          )
+        const explicitCharacterSelection = Boolean(
+          selectedCategory &&
+            ['character', 'characters', 'npc', 'person', 'people'].some((hint) =>
+              selectedCategory.slug.toLowerCase().includes(hint) ||
+              selectedCategory.name.toLowerCase().includes(hint)
+            )
         );
+        if (explicitCharacterSelection) {
+          const normalizedCharacterName = normalizeRecordName(normalizedName);
+          const linkedCharacterEntity = entities.find(
+            (entity) =>
+              entity.categoryId === chosenCategory.id &&
+              normalizeRecordName(entity.name) === normalizedCharacterName
+          );
+          const closeCharacterEntityMatch = [...entities]
+            .filter(
+              (candidate) => {
+                if (
+                  candidate.categoryId !== chosenCategory.id ||
+                  normalizeRecordName(candidate.name) === normalizedCharacterName
+                ) {
+                  return false;
+                }
+                const candidateName = normalizeRecordName(candidate.name);
+                return (
+                  namesLikelyReferToSameCharacter(candidateName, normalizedCharacterName) ||
+                  candidateName.includes(normalizedCharacterName) ||
+                  normalizedCharacterName.includes(candidateName)
+                );
+              }
+            )
+            .sort((left, right) => {
+              const leftName = normalizeRecordName(left.name);
+              const rightName = normalizeRecordName(right.name);
+              const leftClose =
+                namesLikelyReferToSameCharacter(leftName, normalizedCharacterName) ||
+                leftName.includes(normalizedCharacterName) ||
+                normalizedCharacterName.includes(leftName)
+                  ? 0
+                  : 1;
+              const rightClose =
+                namesLikelyReferToSameCharacter(rightName, normalizedCharacterName) ||
+                rightName.includes(normalizedCharacterName) ||
+                normalizedCharacterName.includes(rightName)
+                  ? 0
+                  : 1;
+              if (leftClose !== rightClose) {
+                return leftClose - rightClose;
+              }
+              return left.name.localeCompare(right.name);
+            })[0] ?? null;
+          const characterEntity =
+            linkedCharacterEntity ??
+            ({
+              id: crypto.randomUUID(),
+              projectId: activeProject.id,
+              categoryId: chosenCategory.id,
+              name: normalizedName,
+              fields: {},
+              isNew: true,
+              needsCompletion: false,
+              links: [],
+              createdAt: now,
+              updatedAt: now
+            } satisfies WorldEntity);
+          if (!linkedCharacterEntity) {
+            await saveEntity(characterEntity);
+            setEntities((prev) => [...prev, characterEntity]);
+          }
+          const derivedNameAlias = deriveFirstNameAlias(normalizedName);
+          const aliasTexts = [
+            ...(normalizedName.toLowerCase() === normalizedSurface.toLowerCase()
+              ? []
+              : [normalizedName, normalizedSurface]),
+            ...(derivedNameAlias ? [derivedNameAlias] : [])
+          ];
+          await attachAliasTexts({
+            projectId: activeProject.id,
+            targetId: characterEntity.id,
+            targetType: 'entity',
+            aliasTexts
+          });
+          setFeedback({
+            tone: 'success',
+            message: `"${normalizedName}" added to World Bible Characters.`
+          });
+          setResolverNotice({
+            message: closeCharacterEntityMatch
+              ? `"${normalizedName}" added to World Bible Characters. Review possible match with "${closeCharacterEntityMatch.name}".`
+              : `"${normalizedName}" added to World Bible Characters.`,
+            primaryLabel: closeCharacterEntityMatch ? 'Review Character Match' : undefined,
+            destination: 'world-bible',
+            targetId: characterEntity.id,
+            matchEntityId: closeCharacterEntityMatch?.id,
+            sourceName: normalizedName
+          });
+        } else {
+          const entity: WorldEntity = {
+            id: crypto.randomUUID(),
+            projectId: activeProject.id,
+            categoryId: chosenCategory.id,
+            name: normalizedName,
+            fields: {},
+            isNew: true,
+            needsCompletion: false,
+            links: [],
+            createdAt: now,
+            updatedAt: now
+          };
+          await saveEntity(entity);
+          await attachAliasTexts({
+            projectId: activeProject.id,
+            targetId: entity.id,
+            targetType: 'entity',
+            aliasTexts:
+              normalizedName.toLowerCase() === normalizedSurface.toLowerCase()
+                ? []
+                : [normalizedName, normalizedSurface]
+          });
+          setEntities((prev) => [...prev, entity]);
+          setFeedback({
+            tone: 'success',
+            message: `"${normalizedName}" added to ${chosenCategory.name}. It will stay marked new until you open the lore entry and save it.`
+          });
+          setResolverNotice({
+            message: `"${normalizedName}" added to your world.`,
+            destination: 'world-bible',
+            targetId: entity.id
+          });
+        }
+        removeReviewSurface(normalizedSurface);
+        const derivedReviewSurface = deriveFirstNameAlias(normalizedName);
+        if (derivedReviewSurface) {
+          removeReviewSurface(derivedReviewSurface);
+        }
         setUnknownLinkSelection((prev) => {
           const copy = {...prev};
           delete copy[surface];
@@ -716,13 +2044,6 @@ export const useWorkspaceConsistency = ({
             ? null
             : prev
         );
-        setFeedback({
-          tone: 'success',
-          message: `"${normalizedName}" added to ${chosenCategory.name} and marked for later completion.`
-        });
-        setResolverNotice({
-          message: `"${normalizedName}" added to your world.`
-        });
       } catch (error) {
         const message =
           error instanceof Error ? error.message : 'Unable to create entity.';
@@ -731,8 +2052,22 @@ export const useWorkspaceConsistency = ({
         setResolvingUnknown(null);
       }
     },
-    [activeProject, attachAliasTexts, categories, setCategories, setEntities, setFeedback]
+    [
+      activeProject,
+      attachAliasTexts,
+      categories,
+      entities,
+      getSuggestedUnknownCategoryId,
+      removeReviewSurface,
+      setCategories,
+      setEntities,
+      setFeedback
+    ]
   );
+
+  const clearUnknownSurface = useCallback((surface: string) => {
+    removeReviewSurface(surface, {docId: selectedDocumentId ?? undefined});
+  }, [removeReviewSurface, selectedDocumentId]);
 
   const resolveAllUnknownEntities = useCallback(async () => {
     const surfaces = unknownGuardrailIssues
@@ -768,7 +2103,15 @@ export const useWorkspaceConsistency = ({
     }
     setGuardrailIssues((prev) =>
       prev.filter((issue) => {
-        const surface = issue.surface?.trim().toLowerCase();
+        const surface = issue.surface ? canonicalizeUnknownSurface(issue.surface) : '';
+        return !surface || !blocked.has(surface);
+      })
+    );
+    setConsistencyReviewItems((prev) =>
+      prev.filter((item) => {
+        const surface = item.issue.surface
+          ? canonicalizeUnknownSurface(item.issue.surface)
+          : '';
         return !surface || !blocked.has(surface);
       })
     );
@@ -787,34 +2130,64 @@ export const useWorkspaceConsistency = ({
         [docId]: Array.from(new Set([...(prev[docId] ?? []), surface.trim()]))
       }));
     }
-    setGuardrailIssues((prev) =>
-      prev.filter(
-        (issue) => canonicalizeUnknownSurface(issue.surface ?? '') !== normalized
-      )
-    );
+    removeReviewSurface(surface, {docId});
     setConsistencyPopover((prev) =>
       canonicalizeUnknownSurface(prev?.surface ?? '') === normalized ? null : prev
     );
-  }, []);
+  }, [removeReviewSurface]);
 
   const ignoreUnknownSurfaceProjectWide = useCallback(
     (surface: string, docId?: string) => {
       const normalized = surface.trim();
       if (!normalized) return;
-      setIgnoredUnknownSurfaces((prev) => {
-        const existing = new Set(prev.map((entry) => entry.trim().toLowerCase()));
-        if (existing.has(normalized.toLowerCase())) {
-          return prev;
-        }
-        return [...prev, normalized];
-      });
-      dismissUnknownEntity(surface, docId);
-      setFeedback({
-        tone: 'success',
-        message: `"${normalized}" will be ignored for this project in future reviews.`
-      });
+      if (!projectSettings || !activeProject) {
+        setFeedback({
+          tone: 'error',
+          message: 'Project settings are not available yet. Try again in a moment.'
+        });
+        return;
+      }
+      const mergedIgnored = Array.from(
+        new Set([...(projectSettings.ignoredUnknownSurfaces ?? []), normalized.toLowerCase()])
+      );
+      if (docId) {
+        setDismissedUnknownByDocument((prev) => ({
+          ...prev,
+          [docId]: Array.from(new Set([...(prev[docId] ?? []), surface.trim()]))
+        }));
+      }
+      removeReviewSurface(surface);
+      setConsistencyPopover((prev) =>
+        canonicalizeUnknownSurface(prev?.surface ?? '') ===
+        canonicalizeUnknownSurface(surface)
+          ? null
+          : prev
+      );
+      const nextSettings: ProjectSettings = {
+        ...projectSettings,
+        ignoredUnknownSurfaces: mergedIgnored,
+        updatedAt: Date.now()
+      };
+      void saveProjectSettings(nextSettings)
+        .then(() => {
+          setFeedback({
+            tone: 'success',
+            message: `"${normalized}" will be ignored for this project in future reviews.`
+          });
+        })
+        .catch((error) => {
+          const message =
+            error instanceof Error ? error.message : 'Unable to save project review settings.';
+          setFeedback({tone: 'error', message});
+        });
     },
-    [dismissUnknownEntity, setFeedback]
+    [
+      activeProject,
+      projectSettings,
+      removeReviewSurface,
+      setFeedback,
+      saveProjectSettings
+    ]
   );
 
   const linkUnknownEntity = useCallback(
@@ -822,15 +2195,15 @@ export const useWorkspaceConsistency = ({
       surface: string,
       explicitEntityId?: string,
       preferredAlias?: string
-    ) => {
-      if (!activeProject) return;
+    ): Promise<LinkUnknownEntityResult | false> => {
+      if (!activeProject) return false;
       const selectedEntityId = explicitEntityId ?? unknownLinkSelection[surface];
       if (!selectedEntityId) {
         setFeedback({
           tone: 'error',
-          message: `Select an entity before linking "${surface}".`
+          message: `Select an existing record before linking "${surface}".`
         });
-        return;
+        return false;
       }
 
       setLinkingUnknown(surface);
@@ -843,23 +2216,42 @@ export const useWorkspaceConsistency = ({
         ) {
           throw new Error('Invalid link target selected.');
         }
+        const characterCategoryIds = new Set(
+          categories
+            .filter((category) => {
+              const slug = category.slug.toLowerCase();
+              const name = category.name.toLowerCase();
+              return slug.includes('character') || name.includes('character');
+            })
+            .map((category) => category.id)
+        );
+        let targetType: 'entity' | 'character' = selectedTargetType;
+        let targetId = selectedTargetId;
+        if (selectedTargetType === 'character') {
+          const selectedCharacter = characters.find((character) => character.id === selectedTargetId);
+          const linkedEntity = selectedCharacter
+            ? entities.find(
+                (entity) =>
+                  characterCategoryIds.has(entity.categoryId) &&
+                  namesLikelyReferToSameCharacter(entity.name, selectedCharacter.name)
+              )
+            : null;
+          if (linkedEntity) {
+            targetType = 'entity';
+            targetId = linkedEntity.id;
+          }
+        }
         const aliasTexts =
           preferredAlias && preferredAlias.trim()
             ? [preferredAlias.trim(), surface]
             : [surface];
         await attachAliasTexts({
           projectId: activeProject.id,
-          targetId: selectedTargetId,
-          targetType: selectedTargetType,
+          targetId,
+          targetType,
           aliasTexts
         });
-        setGuardrailIssues((prev) =>
-          prev.filter(
-            (issue) =>
-              canonicalizeUnknownSurface(issue.surface ?? '') !==
-              canonicalizeUnknownSurface(surface)
-          )
-        );
+        removeReviewSurface(surface);
         setUnknownLinkSelection((prev) => {
           const copy = {...prev};
           delete copy[surface];
@@ -873,20 +2265,44 @@ export const useWorkspaceConsistency = ({
         );
         setFeedback({
           tone: 'success',
-          message: `Connected "${surface}" to an existing record. Save again to validate.`
+          message: `Connected "${surface}" as an alias of an existing record. The review prompt has been cleared.`
         });
-        setResolverNotice({
-          message: `"${surface}" connected to an existing record.`
-        });
+        setResolverNotice(null);
+        return {
+          destination:
+            targetType === 'character'
+              ? ruleset
+                ? 'character-sheet-create'
+                : 'characters'
+              : 'world-bible',
+          targetId,
+          focus:
+            selectedTargetType === 'character' || selectedTargetType === 'entity'
+              ? selectedTargetType === 'character'
+                ? 'aliases'
+                : 'general'
+              : 'general'
+        };
       } catch (error) {
         const message =
           error instanceof Error ? error.message : 'Unable to link alias.';
         setFeedback({tone: 'error', message});
+        return false;
       } finally {
         setLinkingUnknown(null);
       }
     },
-    [activeProject, attachAliasTexts, setFeedback, unknownLinkSelection]
+    [
+      activeProject,
+      attachAliasTexts,
+      categories,
+      characters,
+      entities,
+      ruleset,
+      removeReviewSurface,
+      setFeedback,
+      unknownLinkSelection
+    ]
   );
 
   const activeConsistencyPopoverIssue = consistencyPopover
@@ -907,10 +2323,18 @@ export const useWorkspaceConsistency = ({
       });
       setUnknownLinkSelection((prev) => ({
         ...prev,
-        [surface]: prev[surface] ?? unknownLinkOptions[surface]?.[0]?.id ?? ''
+        [surface]:
+          prev[surface] ??
+          (unknownLinkOptions[surface]?.[0]
+            ? `${unknownLinkOptions[surface][0].type}:${unknownLinkOptions[surface][0].id}`
+            : '')
+      }));
+      setUnknownCategorySelection((prev) => ({
+        ...prev,
+        [surface]: prev[surface] ?? getSuggestedUnknownCategoryId(surface) ?? ''
       }));
     },
-    [unknownLinkOptions]
+    [getSuggestedUnknownCategoryId, unknownLinkOptions]
   );
 
   return {
@@ -920,31 +2344,47 @@ export const useWorkspaceConsistency = ({
     linkingUnknown,
     resolverNotice,
     setResolverNotice,
+    getSuggestedUnknownCategoryId,
     unknownLinkSelection,
     setUnknownLinkSelection,
     unknownCategorySelection,
     setUnknownCategorySelection,
     isRunningConsistencyReview,
     consistencyReviewItems,
+    stateMutationReviewItems,
+    hiddenStateMutationReviewCountBySceneId,
+    hiddenStateMutationReviewCount,
+    applyingStateMutationReviewId,
     lastConsistencyReviewAt,
+    reviewReadiness,
     consistencyPopover,
     setConsistencyPopover,
     knownConsistencyEntities,
     persistDoc,
     refreshDeferredReview,
+    refreshActiveDraftReview,
     handleRunConsistencyReview,
     unknownGuardrailIssues,
     hasBlockingUnknownGuardrailIssues,
     highlightableUnknownIssues,
     isReviewPrefsHydrated,
     unknownLinkOptions,
+    closeUnknownLinkOptions,
     resolveUnknownEntity,
     resolveAllUnknownEntities,
     dismissAllUnknownEntities,
     dismissUnknownEntity,
     ignoreUnknownSurfaceProjectWide,
     linkUnknownEntity,
+    clearUnknownSurface,
     activeConsistencyPopoverIssue,
-    openConsistencyPopover
+    openConsistencyPopover,
+    acceptStateMutationReviewItem,
+    rejectStateMutationReviewItem,
+    acceptSceneStateMutationReviewItems,
+    rejectSceneStateMutationReviewItems,
+    hideStateMutationReviewItem,
+    restoreHiddenStateMutationReviewItems,
+    restoreAllHiddenStateMutationReviewItems
   };
 };

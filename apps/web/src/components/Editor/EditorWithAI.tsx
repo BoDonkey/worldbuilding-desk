@@ -15,6 +15,7 @@ import {
 import type {EditorConfig} from '../../config/editorConfig';
 import type {StatBlockTokenPresentation} from '../../utils/statBlockTemplates';
 import type {StatBlockPreviewData} from '../../hooks/useWorkspaceStatBlocks';
+import type {InlineHighlightsMode} from '../../entityTypes';
 import styles from '../../assets/components/AISettings.module.css';
 
 interface AIContextType {
@@ -28,6 +29,7 @@ interface AIContextType {
 interface EditorWithAIProps {
   documentId: string;
   content: string;
+  focusQuery?: string | null;
   onChange: (content: string) => void;
   onWordCountChange?: (count: number) => void;
   consistencyHighlights?: ConsistencyHighlightIssue[];
@@ -45,15 +47,29 @@ interface EditorWithAIProps {
     characters: Record<string, {name: string; html: string; lore: LoreInspectorRecord}>;
     entities: Record<string, {name: string; html: string; lore: LoreInspectorRecord}>;
   };
+  knownLoreHighlights?: LoreHighlightEntry[];
+  characterStateHoverCardsByLoreId?: Record<
+    string,
+    {
+      title: string;
+      sceneLabel: string;
+      resources: string[];
+      stats: string[];
+      statuses: string[];
+      location?: string;
+    }
+  >;
   presentStatBlockToken?: (rawToken: string) => StatBlockTokenPresentation;
   getStatBlockPreviewData?: (rawToken: string) => StatBlockPreviewData;
   onRebindStatBlockToken?: (rawToken: string) => void;
-  onOpenAIContext?: (context: AIContextType) => void;
+  onOpenAIContext?: (context: AIContextType, prompt?: string | null) => void;
   onOpenLoreInspector?: (record: LoreInspectorRecord) => void;
   onOpenWorldCapture?: (
     draftText: string,
     anchorRect: {left: number; top: number; bottom: number}
   ) => void;
+  inlineHighlightsMode?: InlineHighlightsMode;
+  suppressSelectionBubble?: boolean;
 }
 
 interface SelectionBubbleState {
@@ -67,9 +83,62 @@ interface SelectionBubbleState {
   matchRecord?: {name: string; html: string; lore: LoreInspectorRecord};
 }
 
+declare global {
+  interface Window {
+    __wbdEditorScrollPositions?: Record<string, number>;
+    __wbdLastWorkspaceEditorScrollTop?: number;
+    __wbdLastWorkspaceScrollSnapshot?: {
+      elements: Array<{key: string; top: number; left: number}>;
+      windowY: number;
+    };
+  }
+}
+
+const editorScrollPositions = new Map<string, number>();
+
+const getWindowEditorScrollStore = () => {
+  if (typeof window === 'undefined') return null;
+  window.__wbdEditorScrollPositions ??= {};
+  return window.__wbdEditorScrollPositions;
+};
+
+const getSnapshotEditorScrollTop = () => {
+  if (typeof window === 'undefined') return undefined;
+  return window.__wbdLastWorkspaceScrollSnapshot?.elements.find(
+    (element) => element.key === 'workspace-editor'
+  )?.top;
+};
+
+const readSavedEditorScrollTop = (scrollKey: string) => {
+  const store = getWindowEditorScrollStore();
+  const candidates = [
+    editorScrollPositions.get(scrollKey),
+    store?.[scrollKey],
+    getSnapshotEditorScrollTop(),
+    typeof window === 'undefined' ? undefined : window.__wbdLastWorkspaceEditorScrollTop
+  ];
+
+  return candidates.find(
+    (candidate): candidate is number =>
+      typeof candidate === 'number' && Number.isFinite(candidate) && candidate > 0
+  ) ?? 0;
+};
+
+const writeSavedEditorScrollTop = (scrollKey: string, scrollTop: number) => {
+  if (!Number.isFinite(scrollTop)) return;
+  editorScrollPositions.set(scrollKey, scrollTop);
+  const store = getWindowEditorScrollStore();
+  if (!store) return;
+  store[scrollKey] = scrollTop;
+  if (scrollTop > 0) {
+    window.__wbdLastWorkspaceEditorScrollTop = scrollTop;
+  }
+};
+
 export const EditorWithAI: React.FC<EditorWithAIProps> = ({
   documentId,
   content,
+  focusQuery = null,
   onChange,
   onWordCountChange,
   consistencyHighlights = [],
@@ -81,12 +150,16 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
   insertContext = null,
   onTextInserted,
   selectionQuickSnippets,
+  knownLoreHighlights = [],
   presentStatBlockToken,
   getStatBlockPreviewData,
   onRebindStatBlockToken,
   onOpenAIContext,
   onOpenLoreInspector,
-  onOpenWorldCapture
+  onOpenWorldCapture,
+  characterStateHoverCardsByLoreId = {},
+  inlineHighlightsMode = 'visible',
+  suppressSelectionBubble = false
 }) => {
   const [textToInsertFromAI, setTextToInsertFromAI] = useState<string | null>(null);
   const [selectionBubble, setSelectionBubble] = useState<SelectionBubbleState | null>(
@@ -102,7 +175,32 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
     left: number;
     top: number;
   } | null>(null);
+  const [characterStateHoverCard, setCharacterStateHoverCard] = useState<{
+    card: {
+      title: string;
+      sceneLabel: string;
+      resources: string[];
+      stats: string[];
+      statuses: string[];
+      location?: string;
+    };
+    left: number;
+    top: number;
+  } | null>(null);
+  const [isActivelyTyping, setIsActivelyTyping] = useState(false);
   const editorRef = useRef<TipTapEditorInstance | null>(null);
+  const editorScrollRef = useRef<HTMLDivElement | null>(null);
+  const isRestoringEditorScrollRef = useRef(false);
+  const editorMountedAtRef = useRef(Date.now());
+  const consistencyHighlightsRef = useRef(consistencyHighlights);
+  const loreHighlightsRef = useRef<LoreHighlightEntry[]>([]);
+  const typingIdleTimeoutRef = useRef<number | null>(null);
+  const editorScrollKey = `workspace-editor-scroll:${documentId}`;
+
+  const effectiveInlineHighlightsMode =
+    inlineHighlightsMode === 'hidden-while-typing' && isActivelyTyping
+      ? 'hidden'
+      : inlineHighlightsMode;
 
   const loreHighlights = React.useMemo<LoreHighlightEntry[]>(() => {
     const characterEntries = Object.values(selectionQuickSnippets?.characters ?? {}).map(
@@ -119,8 +217,23 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
         type: 'entity' as const
       })
     );
-    return [...characterEntries, ...entityEntries];
-  }, [selectionQuickSnippets]);
+    const deduped = new Map<string, LoreHighlightEntry>();
+    [...characterEntries, ...entityEntries, ...knownLoreHighlights].forEach((entry) => {
+      const key = `${entry.type}:${entry.id}:${entry.surface.trim().toLowerCase()}`;
+      if (entry.surface.trim()) {
+        deduped.set(key, entry);
+      }
+    });
+    return Array.from(deduped.values());
+  }, [knownLoreHighlights, selectionQuickSnippets]);
+
+  useEffect(() => {
+    consistencyHighlightsRef.current = consistencyHighlights;
+    loreHighlightsRef.current = loreHighlights;
+    const editor = editorRef.current;
+    if (!editor || editor.isDestroyed) return;
+    editor.view.dispatch(editor.state.tr.setMeta('highlight-refresh', Date.now()));
+  }, [consistencyHighlights, loreHighlights]);
 
   const loreRecordById = React.useMemo(() => {
     const records = [
@@ -129,18 +242,6 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
     ];
     return new Map(records.map((entry) => [entry.lore.id, entry.lore]));
   }, [selectionQuickSnippets]);
-
-  const editorRenderKey = React.useMemo(() => {
-    const consistencyKey = consistencyHighlights
-      .map((issue) => `${issue.id}:${issue.surface}:${issue.severity}`)
-      .sort()
-      .join('|');
-    const loreKey = loreHighlights
-      .map((entry) => `${entry.id}:${entry.surface}:${entry.type}`)
-      .sort()
-      .join('|');
-    return `${documentId}::${consistencyKey}::${loreKey}`;
-  }, [consistencyHighlights, documentId, loreHighlights]);
 
   // Merge AIExpandMenu with config extensions
   const mergedConfig = React.useMemo(() => {
@@ -152,11 +253,17 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
       extensions: [
       ...config.extensions,
       AIExpandMenu,
-      createConsistencyHighlightsExtension(consistencyHighlights),
-        createLoreHighlightsExtension(loreHighlights, consistencyHighlights)
+      createConsistencyHighlightsExtension(
+        () => consistencyHighlightsRef.current,
+        () => loreHighlightsRef.current
+      ),
+        createLoreHighlightsExtension(
+          () => loreHighlightsRef.current,
+          () => consistencyHighlightsRef.current
+        )
       ]
     };
-  }, [config, consistencyHighlights, loreHighlights]);
+  }, [config]);
 
   useEffect(() => {
     const handleAIRequest = (event: Event) => {
@@ -183,9 +290,124 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
 
   useEffect(() => {
     return () => {
+      if (typingIdleTimeoutRef.current !== null) {
+        window.clearTimeout(typingIdleTimeoutRef.current);
+      }
       editorRef.current = null;
     };
   }, []);
+
+  useEffect(() => {
+    const scrollElement = editorScrollRef.current;
+    if (!scrollElement) return;
+
+    let animationFrame: number | null = null;
+    const saveScrollPosition = () => {
+      if (isRestoringEditorScrollRef.current) {
+        return;
+      }
+      const nextScrollTop = scrollElement.scrollTop;
+      const savedScrollTop = readSavedEditorScrollTop(editorScrollKey);
+      const isEarlyZeroAfterRemount =
+        nextScrollTop === 0 &&
+        savedScrollTop > 0 &&
+        Date.now() - editorMountedAtRef.current < 1500;
+
+      if (isEarlyZeroAfterRemount) {
+        scrollElement.dataset.wbdSavedScrollTop = String(savedScrollTop);
+        scrollElement.dataset.wbdSkippedZeroScrollSave = 'true';
+        return;
+      }
+
+      writeSavedEditorScrollTop(editorScrollKey, nextScrollTop);
+      scrollElement.dataset.wbdSavedScrollTop = String(nextScrollTop);
+      delete scrollElement.dataset.wbdSkippedZeroScrollSave;
+    };
+    const handleScroll = () => {
+      if (animationFrame !== null) return;
+      animationFrame = window.requestAnimationFrame(() => {
+        animationFrame = null;
+        saveScrollPosition();
+      });
+    };
+
+    scrollElement.addEventListener('scroll', handleScroll, {passive: true});
+    return () => {
+      if (animationFrame !== null) {
+        window.cancelAnimationFrame(animationFrame);
+      }
+      isRestoringEditorScrollRef.current = false;
+      saveScrollPosition();
+      scrollElement.removeEventListener('scroll', handleScroll);
+    };
+  }, [editorScrollKey]);
+
+  useEffect(() => {
+    const scrollElement = editorScrollRef.current;
+    if (!scrollElement || focusQuery?.trim()) return;
+
+    const storedScrollTop = readSavedEditorScrollTop(editorScrollKey);
+    if (!Number.isFinite(storedScrollTop) || storedScrollTop <= 0) return;
+
+    let cancelled = false;
+    let userInterrupted = false;
+    const startedAt = Date.now();
+    const frameIds: number[] = [];
+    isRestoringEditorScrollRef.current = true;
+    scrollElement.dataset.wbdRestoreTarget = String(storedScrollTop);
+
+    const restoreScrollPosition = () => {
+      if (cancelled || userInterrupted) {
+        isRestoringEditorScrollRef.current = false;
+        return;
+      }
+
+      const maxScrollTop = Math.max(0, scrollElement.scrollHeight - scrollElement.clientHeight);
+      const nextScrollTop = Math.min(storedScrollTop, maxScrollTop);
+      scrollElement.scrollTop = nextScrollTop;
+      scrollElement.dataset.wbdRestoredScrollTop = String(nextScrollTop);
+
+      if (Date.now() - startedAt < 2500) {
+        frameIds.push(window.requestAnimationFrame(restoreScrollPosition));
+        return;
+      }
+
+      isRestoringEditorScrollRef.current = false;
+    };
+    const markUserInterrupted = () => {
+      userInterrupted = true;
+      isRestoringEditorScrollRef.current = false;
+      writeSavedEditorScrollTop(editorScrollKey, scrollElement.scrollTop);
+      scrollElement.dataset.wbdSavedScrollTop = String(scrollElement.scrollTop);
+    };
+
+    scrollElement.addEventListener('wheel', markUserInterrupted, {passive: true});
+    scrollElement.addEventListener('touchstart', markUserInterrupted, {passive: true});
+    scrollElement.addEventListener('keydown', markUserInterrupted);
+    frameIds.push(
+      window.requestAnimationFrame(() =>
+        frameIds.push(window.requestAnimationFrame(restoreScrollPosition))
+      )
+    );
+
+    return () => {
+      cancelled = true;
+      isRestoringEditorScrollRef.current = false;
+      frameIds.forEach((frameId) => window.cancelAnimationFrame(frameId));
+      scrollElement.removeEventListener('wheel', markUserInterrupted);
+      scrollElement.removeEventListener('touchstart', markUserInterrupted);
+      scrollElement.removeEventListener('keydown', markUserInterrupted);
+    };
+  }, [documentId, editorReadyToken, editorScrollKey, focusQuery, content]);
+
+  useEffect(() => {
+    const scrollElement = editorScrollRef.current;
+    return () => {
+      if (scrollElement) {
+        writeSavedEditorScrollTop(editorScrollKey, scrollElement.scrollTop);
+      }
+    };
+  }, [editorScrollKey]);
 
   useEffect(() => {
     if (!selectionBubble) return;
@@ -199,11 +421,12 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
   }, [selectionBubble]);
 
   useEffect(() => {
-    if (!lorePopoverAnchor && !statBlockPopover) return;
+    if (!lorePopoverAnchor && !statBlockPopover && !characterStateHoverCard) return;
     const close = () => {
       setLorePopoverAnchor(null);
       setLorePopoverRecord(null);
       setStatBlockPopover(null);
+      setCharacterStateHoverCard(null);
     };
     window.addEventListener('scroll', close, true);
     window.addEventListener('resize', close);
@@ -211,7 +434,7 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
       window.removeEventListener('scroll', close, true);
       window.removeEventListener('resize', close);
     };
-  }, [lorePopoverAnchor, statBlockPopover]);
+  }, [characterStateHoverCard, lorePopoverAnchor, statBlockPopover]);
 
   useEffect(() => {
     const reposition = () => {
@@ -254,6 +477,10 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
   );
 
   const updateSelectionBubble = useCallback(() => {
+    if (suppressSelectionBubble) {
+      setSelectionBubble(null);
+      return;
+    }
     const editor = editorRef.current;
     if (!editor) return;
     const {from, to} = editor.state.selection;
@@ -284,7 +511,13 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
       matchName: matchRecord?.name,
       matchRecord
     });
-  }, [normalizeSelectionSurface, selectionQuickSnippets]);
+  }, [normalizeSelectionSurface, selectionQuickSnippets, suppressSelectionBubble]);
+
+  useEffect(() => {
+    if (suppressSelectionBubble) {
+      setSelectionBubble(null);
+    }
+  }, [suppressSelectionBubble]);
 
   const handleEditorReady = useCallback((editorInstance: TipTapEditorInstance) => {
     editorRef.current = editorInstance;
@@ -294,6 +527,7 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
 
   const handleLoreHighlightClick = useCallback(
     (loreId: string, anchorRect: {left: number; top: number; bottom: number}) => {
+      setCharacterStateHoverCard(null);
       const record = loreRecordById.get(loreId);
       if (!record) {
         return;
@@ -306,6 +540,29 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
     },
     [loreRecordById]
   );
+
+  const handleLoreHighlightHover = useCallback(
+    (loreId: string, anchorRect: {left: number; top: number; bottom: number}) => {
+      const card = characterStateHoverCardsByLoreId[loreId];
+      if (!card) {
+        setCharacterStateHoverCard(null);
+        return;
+      }
+      setLorePopoverAnchor(null);
+      setLorePopoverRecord(null);
+      setStatBlockPopover(null);
+      setCharacterStateHoverCard({
+        card,
+        left: anchorRect.left,
+        top: anchorRect.bottom + 8
+      });
+    },
+    [characterStateHoverCardsByLoreId]
+  );
+
+  const handleLoreHighlightLeave = useCallback(() => {
+    setCharacterStateHoverCard(null);
+  }, []);
 
   const handleStatBlockTokenClick = useCallback(
     (rawToken: string, anchorRect: {left: number; top: number; bottom: number}) => {
@@ -334,18 +591,80 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
     };
   }, [editorReadyToken, updateSelectionBubble]);
 
+  useEffect(() => {
+    const query = focusQuery?.trim();
+    const editor = editorRef.current;
+    if (!editor || !query) return;
+
+    const loweredQuery = query.toLowerCase();
+    let match: {from: number; to: number} | null = null;
+
+    editor.state.doc.descendants((node, pos) => {
+      if (match || !node.isText || !node.text) {
+        return;
+      }
+      const index = node.text.toLowerCase().indexOf(loweredQuery);
+      if (index < 0) {
+        return;
+      }
+      match = {
+        from: pos + index,
+        to: pos + index + query.length
+      };
+    });
+
+    if (!match) return;
+
+    editor.commands.focus();
+    editor.commands.setTextSelection(match);
+    editor.view.dispatch(editor.state.tr.scrollIntoView());
+  }, [documentId, editorReadyToken, focusQuery]);
+
+  const handleTypingActivity = useCallback(() => {
+    if (inlineHighlightsMode !== 'hidden-while-typing') {
+      return;
+    }
+    setIsActivelyTyping(true);
+    if (typingIdleTimeoutRef.current !== null) {
+      window.clearTimeout(typingIdleTimeoutRef.current);
+    }
+    typingIdleTimeoutRef.current = window.setTimeout(() => {
+      setIsActivelyTyping(false);
+      typingIdleTimeoutRef.current = null;
+    }, 3000);
+  }, [inlineHighlightsMode]);
+
+  useEffect(() => {
+    if (inlineHighlightsMode === 'hidden-while-typing') {
+      return;
+    }
+    setIsActivelyTyping(false);
+    if (typingIdleTimeoutRef.current !== null) {
+      window.clearTimeout(typingIdleTimeoutRef.current);
+      typingIdleTimeoutRef.current = null;
+    }
+  }, [inlineHighlightsMode]);
+
   return (
     <div className={styles.container}>
-      <div className={styles.editor}>
+      <div
+        className={styles.editor}
+        ref={editorScrollRef}
+        data-wbd-scroll-key='workspace-editor'
+      >
         <TipTapEditor
-          key={editorRenderKey}
+          key={documentId}
           content={content}
           onChange={onChange}
           onWordCountChange={onWordCountChange}
           onConsistencyHighlightClick={onConsistencyHighlightClick}
           onLoreHighlightClick={handleLoreHighlightClick}
+          onLoreHighlightHover={handleLoreHighlightHover}
+          onLoreHighlightLeave={handleLoreHighlightLeave}
           onStatBlockTokenClick={handleStatBlockTokenClick}
           onEditorReady={handleEditorReady}
+          onTypingActivity={handleTypingActivity}
+          inlineHighlightsMode={effectiveInlineHighlightsMode}
           config={mergedConfig}
           toolbarButtons={toolbarButtons}
           toolbarActions={toolbarActions}
@@ -580,6 +899,43 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
                 </button>
               </div>
             )}
+          </ContextPopover>
+        )}
+        {characterStateHoverCard && (
+          <ContextPopover
+            title={characterStateHoverCard.card.title}
+            message={`State at ${characterStateHoverCard.card.sceneLabel}`}
+            left={characterStateHoverCard.left}
+            top={characterStateHoverCard.top}
+            onClose={() => setCharacterStateHoverCard(null)}
+          >
+            {characterStateHoverCard.card.resources.length > 0 && (
+              <div className={styles.lorePeekList}>
+                <div>
+                  <strong>Resources:</strong> {characterStateHoverCard.card.resources.join(' · ')}
+                </div>
+              </div>
+            )}
+            {characterStateHoverCard.card.stats.length > 0 && (
+              <div className={styles.lorePeekList}>
+                <div>
+                  <strong>Stats:</strong> {characterStateHoverCard.card.stats.join(' · ')}
+                </div>
+              </div>
+            )}
+            <div className={styles.lorePeekList}>
+              <div>
+                <strong>Statuses:</strong>{' '}
+                {characterStateHoverCard.card.statuses.length > 0
+                  ? characterStateHoverCard.card.statuses.join(', ')
+                  : 'none'}
+              </div>
+              {characterStateHoverCard.card.location && (
+                <div>
+                  <strong>Location:</strong> {characterStateHoverCard.card.location}
+                </div>
+              )}
+            </div>
           </ContextPopover>
         )}
       </div>

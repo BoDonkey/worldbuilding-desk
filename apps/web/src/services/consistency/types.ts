@@ -1,10 +1,20 @@
 export type ProposalSource = 'workspace-save' | 'workspace-autosave' | 'import';
 
+export type CandidateDetectionReason =
+  | 'known_entity'
+  | 'titled_name'
+  | 'repeated_unknown'
+  | 'leading_entity_cue'
+  | 'character_context_candidate'
+  | 'multiword_proper_candidate'
+  | 'action_object_candidate';
+
 export interface ProposalEntityRef {
   surface: string;
   normalized: string;
   entityId?: string;
   entityType?: 'character' | 'entity';
+  entityName?: string;
   candidateEntities?: Array<{
     id: string;
     name: string;
@@ -15,6 +25,7 @@ export interface ProposalEntityRef {
     start: number;
     end: number;
   };
+  detectionReason: CandidateDetectionReason;
 }
 
 export interface ExtractedProposal {
@@ -34,6 +45,7 @@ export interface ExtractedProposal {
 export type GuardrailIssueCode =
   | 'UNKNOWN_ENTITY'
   | 'AMBIGUOUS_REFERENCE'
+  | 'UNEXPECTED_SCENE_PRESENCE'
   | 'STATE_CONFLICT'
   | 'INVALID_MUTATION';
 
@@ -46,6 +58,8 @@ export interface GuardrailIssue {
     end: number;
   };
   surface?: string;
+  detectionReason?: CandidateDetectionReason;
+  confidence?: number;
   relatedEntities?: Array<{
     id: string;
     name: string;

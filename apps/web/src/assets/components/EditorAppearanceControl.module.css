@@ -51,6 +51,6 @@
 
 .buttonGroup button.active {
   background-color: var(--color-accent);
-  color: white;
+  color: var(--color-on-accent);
   border-color: var(--color-accent);
 }

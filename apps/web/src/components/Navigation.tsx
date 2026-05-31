@@ -1,8 +1,11 @@
 import {useCallback, useEffect, useMemo, useRef, useState, type FC} from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { ThemeToggle } from './ThemeToggle';
+import {useCommandPalette} from '../contexts/commandPaletteApi';
 import {getEntitiesByProject} from '../entityStorage';
 import {getCompendiumEntriesByProject} from '../services/compendium';
+import {buildWorldReviewQueue, getAliasesByProject} from '../services/consistency';
+import {getProjectCapabilities} from '../projectMode';
 import {useAppStore} from '../store/appStore';
 import styles from '../assets/components/Navigation.module.css';
 
@@ -19,10 +22,22 @@ interface NavItem {
   badgeCount?: number;
 }
 
+interface WorkspaceScrollSnapshot {
+  elements: Array<{key: string; top: number; left: number}>;
+  windowY: number;
+}
+
+declare global {
+  interface Window {
+    __wbdLastWorkspaceScrollSnapshot?: WorkspaceScrollSnapshot;
+  }
+}
+
 export const Navigation: FC<NavigationProps> = ({
   isRailCollapsed = false,
   onToggleRail
 }) => {
+  const {openPalette} = useCommandPalette();
   const activeProject = useAppStore((s) => s.activeProject);
   const projectSettings = useAppStore((s) => s.projectSettings);
   const location = useLocation();
@@ -32,8 +47,7 @@ export const Navigation: FC<NavigationProps> = ({
     compendium: 0
   });
   const mobileMenuCloseRef = useRef<HTMLButtonElement | null>(null);
-  const showGameSystems =
-    !activeProject || projectSettings?.featureToggles.enableGameSystems !== false;
+  const capabilities = getProjectCapabilities(activeProject ? projectSettings : null);
   const loadPendingCounts = useCallback(() => {
     if (!activeProject) {
       setPendingCounts({world: 0, compendium: 0});
@@ -42,11 +56,12 @@ export const Navigation: FC<NavigationProps> = ({
 
     return Promise.all([
       getEntitiesByProject(activeProject.id),
+      getAliasesByProject(activeProject.id),
       getCompendiumEntriesByProject(activeProject.id)
     ])
-      .then(([entities, entries]) => {
+      .then(([entities, aliases, entries]) => {
         setPendingCounts({
-          world: entities.filter((entity) => entity.needsCompletion).length,
+          world: buildWorldReviewQueue(entities, aliases).length,
           compendium: entries.filter((entry) => entry.needsCompletion).length
         });
       })
@@ -65,11 +80,13 @@ export const Navigation: FC<NavigationProps> = ({
       void loadPendingCounts();
     };
     window.addEventListener('wbd:entity-records-changed', handleRecordsChanged);
+    window.addEventListener('wbd:alias-records-changed', handleRecordsChanged);
     window.addEventListener('wbd:compendium-records-changed', handleRecordsChanged);
 
     return () => {
       cancelled = true;
       window.removeEventListener('wbd:entity-records-changed', handleRecordsChanged);
+      window.removeEventListener('wbd:alias-records-changed', handleRecordsChanged);
       window.removeEventListener('wbd:compendium-records-changed', handleRecordsChanged);
     };
   }, [loadPendingCounts, location.pathname]);
@@ -77,22 +94,32 @@ export const Navigation: FC<NavigationProps> = ({
   const navItems = useMemo<NavItem[]>(
     () => [
       {to: '/projects', label: 'Projects', icon: 'PR'},
+      {to: '/lore', label: 'Lore', icon: 'LR'},
+      {to: '/canon-decisions', label: 'Canon', icon: 'CD'},
       {to: '/world-bible', label: 'World', icon: 'WB', badgeCount: pendingCounts.world},
-      {to: '/ruleset', label: 'Ruleset', icon: 'RS'},
-      {to: '/characters', label: 'Characters', icon: 'CH'},
+      ...(capabilities.canUseRuleAuthoring
+        ? [{to: '/ruleset', label: 'Ruleset', icon: 'RS'}]
+        : []),
       {to: '/workspace', label: 'Workspace', icon: 'WS'},
-      ...(showGameSystems
+      {to: '/corkboard', label: 'Corkboard', icon: 'CB'},
+      ...(capabilities.canUseGameSystems
         ? [{to: '/compendium', label: 'Compendium', icon: 'CP', badgeCount: pendingCounts.compendium}]
         : []),
       {to: '/settings', label: 'Settings', icon: 'ST'}
     ],
-    [pendingCounts.compendium, pendingCounts.world, showGameSystems]
+    [
+      capabilities.canUseGameSystems,
+      capabilities.canUseRuleAuthoring,
+      pendingCounts.compendium,
+      pendingCounts.world
+    ]
   );
 
   const mobileBarItems = useMemo(
     () =>
       navItems.filter((item) =>
-        ['/projects', '/world-bible', '/workspace', '/characters'].includes(item.to)
+        ['/projects', '/lore', '/world-bible', '/workspace', '/corkboard'].includes(item.to)
+          || item.to === '/canon-decisions'
       ),
     [navItems]
   );
@@ -112,6 +139,24 @@ export const Navigation: FC<NavigationProps> = ({
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [isMobileMenuOpen]);
 
+  const captureRouteScroll = useCallback(() => {
+    if (location.pathname === '/workspace') {
+      window.__wbdLastWorkspaceScrollSnapshot = {
+        windowY: window.scrollY,
+        elements: Array.from(
+          document.querySelectorAll<HTMLElement>('[data-wbd-scroll-key]')
+        )
+          .map((element) => ({
+            key: element.dataset.wbdScrollKey ?? '',
+            top: element.scrollTop,
+            left: element.scrollLeft
+          }))
+          .filter((entry) => entry.key)
+      };
+    }
+    window.dispatchEvent(new CustomEvent('wbd:capture-workspace-scroll'));
+  }, [location.pathname]);
+
   return (
     <>
       {!isRailCollapsed && (
@@ -119,6 +164,15 @@ export const Navigation: FC<NavigationProps> = ({
           <div className={styles.brand} title='Worldbuilding Desk'>
             WBD
           </div>
+          <button
+            type='button'
+            className={styles.searchLauncher}
+            onClick={openPalette}
+            title='Search scenes and world records'
+          >
+            <span className={styles.icon}>SR</span>
+            <span className={styles.label}>Search</span>
+          </button>
           <nav className={styles.railLinks} aria-label='Primary navigation'>
             {navItems.map((item) => (
               <NavLink
@@ -126,6 +180,8 @@ export const Navigation: FC<NavigationProps> = ({
                 to={item.to}
                 end={item.end}
                 title={item.label}
+                onMouseDownCapture={captureRouteScroll}
+                onClickCapture={captureRouteScroll}
                 className={({isActive}) => `${styles.railLink} ${isActive ? styles.active : ''}`}
               >
                 <span className={styles.icon}>{item.icon}</span>
@@ -179,6 +235,8 @@ export const Navigation: FC<NavigationProps> = ({
             key={item.to}
             to={item.to}
             end={item.end}
+            onMouseDownCapture={captureRouteScroll}
+            onClickCapture={captureRouteScroll}
             className={({isActive}) => `${styles.mobileItem} ${isActive ? styles.active : ''}`}
           >
             <span className={styles.icon}>{item.icon}</span>
@@ -206,11 +264,24 @@ export const Navigation: FC<NavigationProps> = ({
           >
             <h2 className={styles.mobileMenuTitle}>Navigation</h2>
             <div className={styles.mobileMenuLinks}>
+              <button
+                type='button'
+                className={styles.mobileMenuAction}
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  openPalette();
+                }}
+              >
+                <span>Search scenes and world records</span>
+                <span className={styles.mobileMenuActionMeta}>Cmd/Ctrl+K</span>
+              </button>
               {navItems.map((item) => (
                 <NavLink
                   key={`mobile-${item.to}`}
                   to={item.to}
                   end={item.end}
+                  onMouseDownCapture={captureRouteScroll}
+                  onClickCapture={captureRouteScroll}
                   className={({isActive}) =>
                     `${styles.mobileMenuLink} ${isActive ? styles.active : ''}`
                   }

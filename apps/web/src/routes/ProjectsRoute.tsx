@@ -2,7 +2,7 @@ import {useCallback, useEffect, useRef, useState} from 'react';
 import type {ChangeEvent, FormEvent} from 'react';
 import {useNavigate} from 'react-router-dom';
 import type {Project, ProjectMode} from '../entityTypes';
-import {createDefaultSettings, saveProjectSettings} from '../settingsStorage';
+import {createDefaultSettings} from '../settingsStorage';
 import {getDefaultFeatureToggles} from '../projectMode';
 import type {WorldRuleset} from '@litrpg-tool/rules-engine';
 import {
@@ -43,6 +43,7 @@ import styles from '../styles/ProjectsRoute.module.css';
 function ProjectsRoute() {
   const activeProject = useAppStore((s) => s.activeProject);
   const onSelectProject = useAppStore((s) => s.setActiveProject);
+  const persistProjectSettings = useAppStore((s) => s.saveProjectSettings);
   const navigate = useNavigate();
   const [projects, setProjects] = useState<Project[]>([]);
   const [projectRulesets, setProjectRulesets] = useState<
@@ -74,9 +75,34 @@ function ProjectsRoute() {
   const importFileInputRef = useRef<HTMLInputElement | null>(null);
   const validateFileInputRef = useRef<HTMLInputElement | null>(null);
 
+  const openHiddenFileInput = (
+    input: HTMLInputElement | null,
+    failureMessage: string
+  ) => {
+    if (!input) {
+      setFeedback({tone: 'error', message: failureMessage});
+      return;
+    }
+
+    try {
+      if (typeof input.showPicker === 'function') {
+        input.showPicker();
+        return;
+      }
+      input.click();
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : failureMessage;
+      setFeedback({tone: 'error', message});
+    }
+  };
+
   const loadProjects = useCallback(async () => {
     const all = await getAllProjects();
     setProjects(all);
+    if (activeProject && !all.some((project) => project.id === activeProject.id)) {
+      await onSelectProject(null);
+    }
 
     const rulesetMap = new Map<string, WorldRuleset>();
     const countsMap = new Map<string, {worldEntries: number; scenes: number}>();
@@ -96,7 +122,7 @@ function ProjectsRoute() {
     }
     setProjectRulesets(rulesetMap);
     setProjectCounts(countsMap);
-  }, []);
+  }, [activeProject, onSelectProject]);
 
   useEffect(() => {
     void loadProjects();
@@ -123,7 +149,7 @@ function ProjectsRoute() {
 
       const defaultSettings = await createDefaultSettings(project.id);
       if (newProjectMode !== defaultSettings.projectMode) {
-        await saveProjectSettings({
+        await persistProjectSettings({
           ...defaultSettings,
           projectMode: newProjectMode,
           featureToggles: getDefaultFeatureToggles(newProjectMode)
@@ -165,9 +191,9 @@ function ProjectsRoute() {
     setDeletingProjectId(project.id);
     setFeedback(null);
     try {
-      // Delete ruleset if it exists
-      if (project.rulesetId) {
-        await deleteRuleset(project.rulesetId, project.id);
+      const ruleset = await getRulesetByProjectId(project.id);
+      if (ruleset) {
+        await deleteRuleset(ruleset.id, project.id);
       }
 
       await deleteProjectFromStore(project.id);
@@ -179,7 +205,7 @@ function ProjectsRoute() {
       });
 
       if (activeProject && activeProject.id === project.id) {
-        onSelectProject(null);
+        await onSelectProject(null);
       }
       setFeedback({tone: 'success', message: 'Project deleted.'});
     } catch (error) {
@@ -325,11 +351,17 @@ function ProjectsRoute() {
   };
 
   const handleSelectBackupFile = () => {
-    importFileInputRef.current?.click();
+    openHiddenFileInput(
+      importFileInputRef.current,
+      'Could not open the backup import file picker.'
+    );
   };
 
   const handleSelectValidateFile = () => {
-    validateFileInputRef.current?.click();
+    openHiddenFileInput(
+      validateFileInputRef.current,
+      'Could not open the backup validation file picker.'
+    );
   };
 
   const handleBackupFileChange = async (event: ChangeEvent<HTMLInputElement>) => {
@@ -466,7 +498,7 @@ function ProjectsRoute() {
           {feedback.message}
         </p>
       )}
-      {activeProject && (
+      {activeProject && projects.some((project) => project.id === activeProject.id) && (
         <section className={styles.heroCard}>
           <div className={styles.heroHeader}>
             <div>
@@ -537,7 +569,9 @@ function ProjectsRoute() {
               type='file'
               accept='.zip,application/zip'
               onChange={(e) => void handleBackupFileChange(e)}
-              style={{display: 'none'}}
+              className={styles.hiddenFileInput}
+              tabIndex={-1}
+              aria-hidden='true'
             />
             <button
               type='button'
@@ -551,7 +585,9 @@ function ProjectsRoute() {
               type='file'
               accept='.zip,application/zip'
               onChange={(e) => void handleValidateBackupFile(e)}
-              style={{display: 'none'}}
+              className={styles.hiddenFileInput}
+              tabIndex={-1}
+              aria-hidden='true'
             />
           </div>
           <p>

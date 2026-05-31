@@ -116,7 +116,10 @@ export const CommandPalette = ({
     );
     setRecentCommandIds(nextRecent);
     localStorage.setItem(RECENT_COMMANDS_KEY, JSON.stringify(nextRecent));
-    onExecute(command);
+    onExecute({
+      ...command,
+      run: () => command.run(query.trim())
+    });
   };
 
   const executeActive = () => {

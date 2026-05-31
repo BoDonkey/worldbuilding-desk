@@ -1,5 +1,6 @@
-import {useEffect, useState, useCallback, useMemo, useRef} from 'react';
+import {useEffect, useLayoutEffect, useState, useCallback, useMemo, useRef} from 'react';
 import {useLocation, useNavigate} from 'react-router-dom';
+import {useShallow} from 'zustand/react/shallow';
 import type {
   StatBlockInsertMode,
   StatBlockScopePreset,
@@ -9,6 +10,7 @@ import type {
   WritingDocument
 } from '../entityTypes';
 import {EditorWithAI} from '../components/Editor/EditorWithAI';
+import TipTapEditor from '../components/TipTapEditor';
 import {ContextPopover} from '../components/Editor/ContextPopover';
 import type {LoreInspectorRecord} from '../components/Editor/LoreInspectorPanel';
 import {useWorkspaceMemories} from '../hooks/useWorkspaceMemories';
@@ -27,7 +29,7 @@ import {
   promoteDocumentToParent,
   syncChildWithParent
 } from '../services/seriesBible/SeriesBibleService';
-import {getConsistencyEngineService} from '../services/consistency';
+import {getWorldEngine} from '../services/worldEngine';
 import {
   appendSystemHistoryEntry,
   getSystemHistoryEntries
@@ -44,18 +46,40 @@ import {
   useWorkspaceDrawers,
   type WorkspaceContextDrawerView
 } from '../hooks/useWorkspaceDrawers';
+import {getProjectCapabilities} from '../projectMode';
 import styles from '../styles/WorkspaceRoute.module.css';
 import {useAppStore} from '../store/appStore';
+import {useWorkspaceUiStore} from '../store/workspaceUiStore';
 import {WorkspaceContextDrawer} from '../components/Workspace/WorkspaceContextDrawer';
 import {WorkspaceSceneDrawer} from '../components/Workspace/WorkspaceSceneDrawer';
+import {
+  describeStateMutationEventStaleness,
+  getStateMutationEventStaleness
+} from '../services/state/stateMutationStaleness';
+import {
+  applyStateMutationCommand,
+  compareStateMutationEvents,
+  replayCharacterState
+} from '../services/state/stateReplay';
+import {
+  summarizeStateMutationCommand,
+  summarizeStateMutationEffects
+} from '../services/state/stateMutationPresentation';
 import {useWorkspaceProjectData} from '../hooks/useWorkspaceProjectData';
 import {useWorkspaceLoreSnippets} from '../hooks/useWorkspaceLoreSnippets';
+import {useWorkspaceScratchpad} from '../hooks/useWorkspaceScratchpad';
+import {useWorkspaceCorkboard} from '../hooks/useWorkspaceCorkboard';
+import {normalizeRichTextValue} from '../services/worldBible/worldBibleEntityHelpers';
 
 declare global {
   interface Window {
     __wbdWorkspaceMountedAt?: number;
     __wbdWorkspaceRenderCount?: number;
     __wbdWorkspaceUnmountedAt?: number;
+    __wbdLastWorkspaceScrollSnapshot?: {
+      elements: Array<{key: string; top: number; left: number}>;
+      windowY: number;
+    };
   }
 }
 
@@ -70,6 +94,23 @@ const summarizeContent = (html: string, limit = 500): string => {
   return text.slice(0, limit);
 };
 
+const toSingularLabel = (value: string): string => {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return 'Record';
+  }
+  if (/ies$/i.test(trimmed)) {
+    return trimmed.replace(/ies$/i, 'y');
+  }
+  if (/ses$/i.test(trimmed)) {
+    return trimmed.replace(/es$/i, '');
+  }
+  if (/s$/i.test(trimmed) && !/ss$/i.test(trimmed)) {
+    return trimmed.slice(0, -1);
+  }
+  return trimmed;
+};
+
 type FeedbackTone = 'success' | 'error';
 type ContextDrawerView = WorkspaceContextDrawerView;
 type WorkspaceAIContext = {
@@ -80,11 +121,67 @@ type WorkspaceAIContext = {
   to: number;
 };
 
+const workspaceWindowScrollPositions = new Map<string, number>();
+const workspaceScrollSnapshots = new Map<
+  string,
+  {
+    windowY: number;
+    elements: Array<{key: string; top: number; left: number}>;
+  }
+>();
+
+const useWorkspaceModalUi = () =>
+  useWorkspaceUiStore(
+    useShallow((state) => ({
+      isScratchpadModalOpen: state.isScratchpadModalOpen,
+      setScratchpadModalOpen: state.setScratchpadModalOpen,
+      isCorkboardModalOpen: state.isCorkboardModalOpen,
+      setCorkboardModalOpen: state.setCorkboardModalOpen,
+      isStatBlockModalOpen: state.isStatBlockModalOpen,
+      setStatBlockModalOpen: state.setStatBlockModalOpen
+    }))
+  );
+
+const useWorkspaceExportUi = () =>
+  useWorkspaceUiStore(
+    useShallow((state) => ({
+      isExportModalOpen: state.isExportModalOpen,
+      exportFormat: state.exportFormat,
+      exportSelection: state.exportSelection,
+      closeExportModal: state.closeExportModal,
+      moveExportItem: state.moveExportItem,
+      toggleExportItem: state.toggleExportItem,
+      toggleAllExportItems: state.toggleAllExportItems
+    }))
+  );
+
+const useWorkspaceImportUi = () =>
+  useWorkspaceUiStore(
+    useShallow((state) => ({
+      importMode: state.importMode,
+      setImportMode: state.setImportMode,
+      skipImportSuggestions: state.skipImportSuggestions,
+      setSkipImportSuggestions: state.setSkipImportSuggestions,
+      importSummary: state.importSummary,
+      setImportSummary: state.setImportSummary,
+      retryImportFiles: state.retryImportFiles,
+      setRetryImportFiles: state.setRetryImportFiles
+    }))
+  );
+
+const useWorkspaceSceneOperationUi = () =>
+  useWorkspaceUiStore(
+    useShallow((state) => ({
+      isCreatingScene: state.isCreatingScene,
+      deletingDocumentId: state.deletingDocumentId
+    }))
+  );
+
 function WorkspaceRoute() {
   const activeProject = useAppStore((s) => s.activeProject);
   const navigate = useNavigate();
   const location = useLocation();
-  const consistencyEngine = useMemo(() => getConsistencyEngineService(), []);
+  const workspaceRootRef = useRef<HTMLElement | null>(null);
   const [documents, setDocuments] = useState<WritingDocument[]>([]);
   const seriesBibleConfig = activeProject
     ? getSeriesBibleConfig(activeProject)
@@ -95,7 +192,14 @@ function WorkspaceRoute() {
   } | null>(null);
   const [isPromotingDocument, setIsPromotingDocument] = useState(false);
   const [isSyncingCanon, setIsSyncingCanon] = useState(false);
-  const [isStatBlockModalOpen, setStatBlockModalOpen] = useState(false);
+  const {
+    isScratchpadModalOpen,
+    setScratchpadModalOpen,
+    isCorkboardModalOpen,
+    setCorkboardModalOpen,
+    isStatBlockModalOpen,
+    setStatBlockModalOpen
+  } = useWorkspaceModalUi();
   const [systemHistoryEntries, setSystemHistoryEntries] = useState<SystemHistoryEntry[]>([]);
   const [activeAIContext, setActiveAIContext] = useState<WorkspaceAIContext | null>(null);
   const [queuedAssistantPrompt, setQueuedAssistantPrompt] = useState<string | null>(null);
@@ -111,6 +215,28 @@ function WorkspaceRoute() {
     left: number;
     top: number;
   } | null>(null);
+  const [manualExistingTargetId, setManualExistingTargetId] = useState('');
+  const [isReviewBannerDismissed, setReviewBannerDismissed] = useState(false);
+  const {
+    scratchpadContent,
+    setScratchpadContent,
+    scratchpadStatus,
+    scratchpadLastSavedAt
+  } = useWorkspaceScratchpad(activeProject?.id ?? null);
+  const {
+    corkboardCards,
+    corkboardStatus,
+    corkboardLastSavedAt,
+    corkboardPlotPointCount,
+    createCorkboardCard,
+    updateCorkboardCard,
+    deleteCorkboardCard,
+    moveCorkboardCard,
+    addCorkboardPlotPoint,
+    updateCorkboardPlotPoint,
+    deleteCorkboardPlotPoint,
+    moveCorkboardPlotPoint
+  } = useWorkspaceCorkboard(activeProject?.id ?? null);
   const [isNarrowViewport, setNarrowViewport] = useState(() =>
     typeof window !== 'undefined'
       ? window.matchMedia('(max-width: 1200px)').matches
@@ -166,6 +292,18 @@ function WorkspaceRoute() {
     },
     [isNarrowViewport, setActiveContextView, setContextDrawerOpen, setSceneDrawerOpen]
   );
+  const openScratchpadModal = useCallback(() => {
+    setScratchpadModalOpen(true);
+  }, [setScratchpadModalOpen]);
+  const closeScratchpadModal = useCallback(() => {
+    setScratchpadModalOpen(false);
+  }, [setScratchpadModalOpen]);
+  const openCorkboardModal = useCallback(() => {
+    setCorkboardModalOpen(true);
+  }, [setCorkboardModalOpen]);
+  const closeCorkboardModal = useCallback(() => {
+    setCorkboardModalOpen(false);
+  }, [setCorkboardModalOpen]);
   const refreshSystemHistory = useCallback(() => {
     if (!activeProject) {
       setSystemHistoryEntries([]);
@@ -228,30 +366,13 @@ function WorkspaceRoute() {
     setWordCount,
     selectedDocument,
     importInputRef,
-    isCreatingScene,
     isImportingDocuments,
-    importMode,
-    setImportMode,
-    skipImportSuggestions,
-    setSkipImportSuggestions,
-    importSummary,
-    setImportSummary,
-    retryImportFiles,
-    setRetryImportFiles,
-    deletingDocumentId,
-    isExportModalOpen,
-    exportFormat,
-    exportSelection,
     initializeEditorState,
     handleNewDocument,
     handleImportDocuments,
     handleRetryFailedImports,
     handleSelectDocument,
     openExportModal,
-    closeExportModal,
-    moveExportItem,
-    toggleExportItem,
-    toggleAllExportItems,
     handleExportScenes,
     handleSave,
     handleDelete,
@@ -268,6 +389,26 @@ function WorkspaceRoute() {
     setFeedback,
     addSystemHistory
   });
+  const {
+    isExportModalOpen,
+    exportFormat,
+    exportSelection,
+    closeExportModal,
+    moveExportItem,
+    toggleExportItem,
+    toggleAllExportItems
+  } = useWorkspaceExportUi();
+  const {
+    importMode,
+    setImportMode,
+    skipImportSuggestions,
+    setSkipImportSuggestions,
+    importSummary,
+    setImportSummary,
+    retryImportFiles,
+    setRetryImportFiles
+  } = useWorkspaceImportUi();
+  const {isCreatingScene, deletingDocumentId} = useWorkspaceSceneOperationUi();
   const openImportPicker = useCallback(() => {
     importInputRef.current?.click();
   }, [importInputRef]);
@@ -318,13 +459,15 @@ function WorkspaceRoute() {
     setPendingAIInsert(null);
     setWorldCaptureDrafts({});
     setManualWorldCapture(null);
+    setManualExistingTargetId('');
+    setReviewBannerDismissed(false);
   }, []);
 
   const {
     editorConfig,
     toolbarButtons,
     projectSettings,
-    setProjectSettings,
+    saveProjectSettings,
     entities,
     setEntities,
     categories,
@@ -340,6 +483,8 @@ function WorkspaceRoute() {
     ragService,
     canonState,
     setCanonState,
+    stateMutationEvents,
+    canonicalFacts,
     statBlockSourceType,
     setStatBlockSourceType,
     statBlockStyle,
@@ -376,6 +521,33 @@ function WorkspaceRoute() {
     refreshSystemHistory,
     onProjectReset: handleProjectReset
   });
+  const worldEngine = useMemo(
+    () =>
+      getWorldEngine(
+        projectSettings?.aiSettings?.inspectorSettings?.reviewEngineMode ??
+          'deterministic',
+        projectSettings?.aiSettings
+      ),
+    [projectSettings?.aiSettings]
+  );
+
+  const staleStateEventCountBySceneId = useMemo(() => {
+    const counts: Record<string, number> = {};
+    stateMutationEvents.forEach((event) => {
+      if (event.status !== 'accepted') {
+        return;
+      }
+      const staleness = getStateMutationEventStaleness({
+        event,
+        documents
+      });
+      if (!staleness.isStale) {
+        return;
+      }
+      counts[event.sceneId] = (counts[event.sceneId] ?? 0) + 1;
+    });
+    return counts;
+  }, [documents, stateMutationEvents]);
 
   const {
     setGuardrailIssues,
@@ -389,25 +561,41 @@ function WorkspaceRoute() {
     setUnknownCategorySelection,
     isRunningConsistencyReview,
     consistencyReviewItems,
+    stateMutationReviewItems,
+    hiddenStateMutationReviewCountBySceneId,
+    hiddenStateMutationReviewCount,
+    applyingStateMutationReviewId,
     lastConsistencyReviewAt,
     consistencyPopover,
     setConsistencyPopover,
     persistDoc,
     refreshDeferredReview,
+    refreshActiveDraftReview,
     handleRunConsistencyReview,
     unknownGuardrailIssues,
     hasBlockingUnknownGuardrailIssues,
     highlightableUnknownIssues,
     isReviewPrefsHydrated,
     unknownLinkOptions,
+    closeUnknownLinkOptions,
+    getSuggestedUnknownCategoryId,
     resolveUnknownEntity,
     resolveAllUnknownEntities,
     dismissAllUnknownEntities,
     dismissUnknownEntity,
     ignoreUnknownSurfaceProjectWide,
     linkUnknownEntity,
+    clearUnknownSurface,
     activeConsistencyPopoverIssue,
-    openConsistencyPopover
+    reviewReadiness,
+    openConsistencyPopover,
+    acceptStateMutationReviewItem,
+    rejectStateMutationReviewItem,
+    acceptSceneStateMutationReviewItems,
+    rejectSceneStateMutationReviewItems,
+    hideStateMutationReviewItem,
+    restoreHiddenStateMutationReviewItems,
+    restoreAllHiddenStateMutationReviewItems
   } = useWorkspaceConsistency({
     activeProject,
     documents,
@@ -419,8 +607,15 @@ function WorkspaceRoute() {
     aliases,
     setAliases,
     characters,
+    canonicalFacts,
+    characterSheets,
+    ruleset,
+    stateMutationEvents,
+    selectedDocumentId: selectedId,
+    projectSettings,
+    saveProjectSettings,
     resolvedActionCues,
-    consistencyEngine,
+    worldEngine,
     ragService,
     shodhService,
     refreshMemories,
@@ -431,6 +626,72 @@ function WorkspaceRoute() {
     setFeedback,
     addSystemHistory
   });
+  const runConsistencyReviewFromUi = useCallback(async () => {
+    setReviewBannerDismissed(false);
+    await handleRunConsistencyReview();
+  }, [handleRunConsistencyReview]);
+  const openResolverNoticeDestination = useCallback(() => {
+    if (!resolverNotice) {
+      return;
+    }
+    if (resolverNotice.destination === 'character-sheet-create') {
+      navigate('/characters?view=sheets', {
+        state: {
+          prefillCharacterId: resolverNotice.targetId,
+          preferredView: 'sheets',
+          autoCreateSheetForCharacterId: resolverNotice.targetId
+        }
+      });
+      return;
+    }
+    if (resolverNotice.destination === 'character-sheets') {
+      navigate('/characters?view=sheets', {
+        state: {
+          prefillCharacterId: resolverNotice.targetId,
+          preferredView: 'sheets'
+        }
+      });
+      return;
+    }
+    if (resolverNotice.destination === 'characters') {
+      navigate('/characters', {
+        state: {
+          prefillCharacterId: resolverNotice.targetId,
+          preferredView: 'roster'
+        }
+      });
+      return;
+    }
+    navigate('/world-bible', {
+      state: resolverNotice.targetId
+        ? {
+            focusEntityId: resolverNotice.targetId,
+            focus:
+              resolverNotice.primaryLabel === 'Review Character Match'
+                ? 'aliases'
+                : 'general',
+            handoffKind:
+              resolverNotice.primaryLabel === 'Review Character Match'
+                ? 'character-canonicalization'
+                : undefined,
+            handoffSourceName:
+              resolverNotice.primaryLabel === 'Review Character Match'
+                ? resolverNotice.sourceName
+                : undefined,
+            handoffMatchEntityId: resolverNotice.matchEntityId
+          }
+        : undefined
+    });
+  }, [navigate, resolverNotice]);
+  const resolverNoticePrimaryLabel =
+    resolverNotice?.primaryLabel ??
+    (resolverNotice?.destination === 'character-sheet-create'
+      ? 'Create Character Sheet'
+      : resolverNotice?.destination === 'character-sheets'
+      ? 'Open Character Sheet'
+      : resolverNotice?.destination === 'characters'
+        ? 'Open Character Tools'
+        : 'View in World Bible');
   persistDocRef.current = persistDoc;
   refreshDeferredReviewRef.current = refreshDeferredReview;
   setGuardrailIssuesRef.current = setGuardrailIssues as typeof setGuardrailIssuesRef.current;
@@ -493,7 +754,7 @@ function WorkspaceRoute() {
   } = useWorkspaceStatBlocks({
     activeProject,
     projectSettings,
-    setProjectSettings,
+    saveProjectSettings,
     isStatPreferencesHydrated,
     statBlockSourceType,
     setStatBlockSourceType,
@@ -537,6 +798,281 @@ function WorkspaceRoute() {
     getEffectiveResourceValues
   });
 
+  const selectedSceneTimeline = useMemo(() => {
+    if (!selectedDocument) {
+      return null;
+    }
+
+    const selectedSceneEvents = stateMutationEvents
+      .filter(
+        (
+          event
+        ): event is typeof event & {
+          status: 'accepted' | 'invalidated';
+        } => event.sceneId === selectedDocument.id && event.status !== 'proposed'
+      )
+      .slice()
+      .sort(compareStateMutationEvents);
+    const acceptedEvents = stateMutationEvents
+      .filter((event) => event.status === 'accepted')
+      .slice()
+      .sort(compareStateMutationEvents);
+    const sheetByActorId = new Map<string, typeof characterSheets[number]>();
+    characterSheets.forEach((sheet) => {
+      sheetByActorId.set(sheet.id, sheet);
+      if (sheet.characterId) {
+        sheetByActorId.set(sheet.characterId, sheet);
+      }
+    });
+
+    const actorStateById = new Map<
+      string,
+      ReturnType<typeof replayCharacterState>
+    >();
+    const actorIdsTouchedInSelectedScene = new Set<string>();
+    const entries: Array<{
+      id: string;
+      status: 'accepted' | 'invalidated';
+      stepLabel: string;
+      actorLabel: string;
+      summaryLines: string[];
+      effectLines: string[];
+      isStale: boolean;
+      staleLabel: string;
+    }> = [];
+
+    for (const event of acceptedEvents) {
+      for (const command of event.commands) {
+        const sheet = sheetByActorId.get(command.actorId);
+        if (!sheet) {
+          continue;
+        }
+        const actorStateKey = sheet.id;
+        const before =
+          actorStateById.get(actorStateKey) ??
+          replayCharacterState({
+            sheet,
+            ruleset,
+            events: [],
+            target: {
+              actorId: command.actorId,
+              characterId: sheet.characterId,
+              sheetId: sheet.id,
+              actorName: sheet.name
+            }
+          });
+        const after = applyStateMutationCommand(before, command);
+        actorStateById.set(actorStateKey, after);
+
+        if (event.sceneId === selectedDocument.id) {
+          actorIdsTouchedInSelectedScene.add(actorStateKey);
+          const existingEntry = entries.find((entry) => entry.id === event.id);
+          const summaryLine = summarizeStateMutationCommand({
+            command,
+            labels: {
+              resourceDefinitionNameById,
+              statDefinitionNameById
+            }
+          });
+          const effectLines = summarizeStateMutationEffects({
+            before,
+            after,
+            command,
+            labels: {
+              resourceDefinitionNameById,
+              statDefinitionNameById
+            }
+          });
+          if (existingEntry) {
+            if (existingEntry.actorLabel !== sheet.name) {
+              existingEntry.actorLabel = 'Multiple actors';
+            }
+            existingEntry.summaryLines.push(summaryLine);
+            existingEntry.effectLines.push(...effectLines);
+          } else {
+            const staleness = getStateMutationEventStaleness({
+              event,
+              documents
+            });
+            entries.push({
+              id: event.id,
+              status: 'accepted',
+              stepLabel: `Step ${event.sceneSequence ?? '?'}`,
+              actorLabel: sheet.name,
+              summaryLines: [summaryLine],
+              effectLines,
+              isStale: staleness.isStale,
+              staleLabel: describeStateMutationEventStaleness(staleness) ?? ''
+            });
+          }
+        }
+      }
+    }
+
+    selectedSceneEvents
+      .filter((event) => event.status === 'invalidated')
+      .forEach((event) => {
+        const actorLabel =
+          event.commands
+            .map((command) => sheetByActorId.get(command.actorId)?.name)
+            .find(Boolean) ?? 'Unknown actor';
+        const staleness = getStateMutationEventStaleness({
+          event,
+          documents
+        });
+        entries.push({
+          id: event.id,
+          status: event.status,
+          stepLabel: `Step ${event.sceneSequence ?? '?'}`,
+          actorLabel,
+          summaryLines: event.commands.map((command) =>
+            summarizeStateMutationCommand({
+              command,
+              labels: {
+                resourceDefinitionNameById,
+                statDefinitionNameById
+              }
+            })
+          ),
+          effectLines: [],
+          isStale: staleness.isStale,
+          staleLabel: describeStateMutationEventStaleness(staleness) ?? ''
+        });
+      });
+
+    entries.sort((a, b) => {
+      const aEvent = selectedSceneEvents.find((event) => event.id === a.id);
+      const bEvent = selectedSceneEvents.find((event) => event.id === b.id);
+      if (!aEvent || !bEvent) {
+        return 0;
+      }
+      return compareStateMutationEvents(aEvent, bEvent);
+    });
+
+    const selectedSceneOrder =
+      selectedDocument &&
+      documents
+        .slice()
+        .sort((a, b) => a.createdAt - b.createdAt)
+        .findIndex((doc) => doc.id === selectedDocument.id) + 1;
+
+    const snapshots = Array.from(actorIdsTouchedInSelectedScene)
+      .map((actorStateKey) => {
+        const sheet = sheetByActorId.get(actorStateKey);
+        if (!sheet) {
+          return null;
+        }
+        const finalState = replayCharacterState({
+          sheet,
+          ruleset,
+          events: acceptedEvents,
+          target: {
+            actorId: sheet.id,
+            characterId: sheet.characterId,
+            sheetId: sheet.id,
+            actorName: sheet.name
+          },
+          upToSceneOrder: selectedSceneOrder
+        });
+        const resourceLines = Object.entries(finalState.resources.current)
+          .slice(0, 3)
+          .map(([resourceId, value]) => {
+            const label = resourceDefinitionNameById.get(resourceId) ?? resourceId;
+            const max = finalState.resources.max[resourceId];
+            return `${label} ${value}${typeof max === 'number' ? `/${max}` : ''}`;
+          });
+        const lines = [
+          ...resourceLines,
+          finalState.locationName ? `Location ${finalState.locationName}` : '',
+          finalState.statuses.length > 0
+            ? `Statuses ${finalState.statuses.join(', ')}`
+            : ''
+        ].filter(Boolean);
+        return {
+          actorLabel: sheet.name,
+          lines: lines.length > 0 ? lines : ['No tracked changes visible.']
+        };
+      })
+      .filter(Boolean) as Array<{actorLabel: string; lines: string[]}>;
+
+    return {
+      sceneTitle: selectedDocument.title || 'Untitled scene',
+      entries,
+      snapshots
+    };
+  }, [
+    characterSheets,
+    documents,
+    resourceDefinitionNameById,
+    ruleset,
+    selectedDocument,
+    statDefinitionNameById,
+    stateMutationEvents
+  ]);
+
+  const characterStateHoverCardsByLoreId = useMemo(() => {
+    if (!selectedDocument) {
+      return {};
+    }
+    const orderedSceneIds = documents
+      .slice()
+      .sort((a, b) => a.createdAt - b.createdAt)
+      .map((doc) => doc.id);
+    const selectedSceneOrder = orderedSceneIds.findIndex((id) => id === selectedDocument.id) + 1;
+    if (selectedSceneOrder <= 0) {
+      return {};
+    }
+
+    return Object.fromEntries(
+      characterSheets.map((sheet) => {
+        const replayed = replayCharacterState({
+          sheet,
+          ruleset,
+          events: stateMutationEvents,
+          target: {
+            actorId: sheet.id,
+            characterId: sheet.characterId,
+            sheetId: sheet.id,
+            actorName: sheet.name
+          },
+          upToSceneOrder: selectedSceneOrder
+        });
+        const resources = Object.entries(replayed.resources.current)
+          .slice(0, 4)
+          .map(([resourceId, value]) => {
+            const label = resourceDefinitionNameById.get(resourceId) ?? resourceId;
+            const max = replayed.resources.max[resourceId];
+            return `${label} ${value}${typeof max === 'number' ? `/${max}` : ''}`;
+          });
+        const stats = Object.entries(replayed.stats)
+          .slice(0, 4)
+          .map(([statId, value]) => {
+            const label = statDefinitionNameById.get(statId) ?? statId;
+            return `${label} ${String(value)}`;
+          });
+        return [
+          sheet.id,
+          {
+            title: sheet.name,
+            sceneLabel: selectedDocument.title || 'this scene',
+            resources,
+            stats,
+            statuses: replayed.statuses,
+            location: replayed.locationName
+          }
+        ];
+      })
+    );
+  }, [
+    characterSheets,
+    documents,
+    resourceDefinitionNameById,
+    ruleset,
+    selectedDocument,
+    statDefinitionNameById,
+    stateMutationEvents
+  ]);
+
   useEffect(() => {
     if (!activeProject) return;
     const activeRules = activePartySynergies
@@ -559,16 +1095,17 @@ function WorkspaceRoute() {
     });
     refreshSystemHistory();
   }, [activeProject, activePartySynergies, refreshSystemHistory]);
-  const showGameSystems =
-    projectSettings?.featureToggles.enableGameSystems !== false;
-  const isGeneralFictionProject = projectSettings?.projectMode === 'general';
+  const capabilities = getProjectCapabilities(projectSettings);
+  const showGameSystems = capabilities.canUseGameSystems;
+  const showRuleAuthoring = capabilities.canUseRuleAuthoring;
+  const isGeneralFictionProject = capabilities.isGeneralFiction;
   const reviewBannerTitle = hasBlockingUnknownGuardrailIssues
     ? isGeneralFictionProject
-      ? 'A few names or places need a quick review before this draft is fully checked.'
-      : 'A few detected references need a quick review before this draft is fully checked.'
+      ? 'This scene has names or places to review before strict save.'
+      : 'This scene has detected references to review before strict save.'
     : isGeneralFictionProject
-      ? 'A few names or places were noticed in this scene.'
-      : 'A few detected references were noticed in this scene.';
+      ? 'Project review found names or places in this scene.'
+      : 'Project review found detected references in this scene.';
   const reviewBannerBody = isGeneralFictionProject
     ? 'Click an underline in the editor to add it to your world, connect it to something existing, or ignore it for now.'
     : 'Click an underline in the editor to add it to the world, connect it to an existing record, or ignore it for now.';
@@ -593,22 +1130,173 @@ function WorkspaceRoute() {
     0,
     unknownGuardrailIssues.length - visibleReviewSurfaces.length
   );
+  const showReviewBanner =
+    hasBlockingUnknownGuardrailIssues && !isReviewBannerDismissed;
+  const scratchpadStatusLabel =
+    scratchpadStatus === 'loading'
+      ? 'Loading scratchpad...'
+      : scratchpadStatus === 'saving'
+        ? 'Saving scratchpad...'
+        : scratchpadStatus === 'error'
+          ? 'Scratchpad could not be saved.'
+          : scratchpadLastSavedAt
+            ? `Scratchpad saved at ${new Date(scratchpadLastSavedAt).toLocaleTimeString()}`
+            : 'Scratchpad ready.';
+  const corkboardStatusLabel =
+    corkboardStatus === 'loading'
+      ? 'Loading corkboard...'
+      : corkboardStatus === 'saving'
+        ? 'Saving corkboard...'
+        : corkboardStatus === 'error'
+          ? 'Corkboard could not be saved.'
+          : corkboardLastSavedAt
+            ? `Corkboard saved at ${new Date(corkboardLastSavedAt).toLocaleTimeString()}`
+            : 'Corkboard ready.';
   const activeWorldCaptureDraft =
     (activeConsistencyPopoverIssue &&
       worldCaptureDrafts[activeConsistencyPopoverIssue.surface]) ||
     activeConsistencyPopoverIssue?.surface ||
     '';
+  const activeSuggestedCategoryId = activeConsistencyPopoverIssue
+    ? unknownCategorySelection[activeConsistencyPopoverIssue.surface] ||
+      getSuggestedUnknownCategoryId(activeConsistencyPopoverIssue.surface) ||
+      ''
+    : '';
+  const activeSuggestedCategory = activeSuggestedCategoryId
+    ? categories.find((category) => category.id === activeSuggestedCategoryId) ?? null
+    : null;
+  const reviewCreateActionLabel =
+    activeSuggestedCategory
+      ? activeSuggestedCategory.slug.toLowerCase().includes('character') ||
+        activeSuggestedCategory.name.toLowerCase().includes('character')
+        ? 'Add Character'
+        : `Add ${toSingularLabel(activeSuggestedCategory.name)}`
+      : reviewCreateLabel;
+  const activeCloseCharacterMatches =
+    activeConsistencyPopoverIssue
+      ? (closeUnknownLinkOptions[activeConsistencyPopoverIssue.surface] ?? []).filter(
+          (entry) => entry.type === 'character'
+        )
+      : [];
+  const showCharacterCanonicalizationHint =
+    Boolean(
+      activeSuggestedCategory &&
+      (activeSuggestedCategory.slug.toLowerCase().includes('character') ||
+        activeSuggestedCategory.name.toLowerCase().includes('character'))
+    ) &&
+    activeCloseCharacterMatches.length > 0;
   const selectionQuickSnippets = useWorkspaceLoreSnippets({
     activeProject,
     categories,
     characters,
     characterSheets,
     entities,
+    canonicalFacts,
     aliases,
     systemHistoryEntries,
+    projectSettings,
     resolveCharacterBlock,
     resolveItemBlock
   });
+  const normalizeCaptureSelection = useCallback((input: string) =>
+    input
+      .trim()
+      .toLowerCase()
+      .replace(/[^\p{L}\p{N}\s'-]/gu, ' ')
+      .replace(/\s+/g, ' ')
+      .trim(), []);
+  const knownWorldBibleLoreHighlights = useMemo(() => {
+    const entityById = new Map(entities.map((entity) => [entity.id, entity]));
+    const highlights = entities.map((entity) => ({
+      id: entity.id,
+      surface: entity.name,
+      type: 'entity' as const
+    }));
+
+    aliases.forEach((alias) => {
+      if ((alias.targetType ?? 'entity') !== 'entity') {
+        return;
+      }
+      const entity = entityById.get(alias.targetId);
+      if (!entity) {
+        return;
+      }
+      highlights.push({
+        id: entity.id,
+        surface: alias.alias,
+        type: 'entity' as const
+      });
+    });
+
+    return highlights;
+  }, [aliases, entities]);
+  const manualCaptureExistingEntity = manualWorldCapture
+    ? selectionQuickSnippets.entities[
+        normalizeCaptureSelection(manualWorldCapture.draftText)
+      ] ??
+      entities.find(
+        (entity) =>
+          normalizeCaptureSelection(entity.name) ===
+          normalizeCaptureSelection(manualWorldCapture.draftText)
+      ) ??
+      null
+    : null;
+  const manualCaptureLinkOptions = useMemo(() => {
+    if (!manualWorldCapture) return [];
+
+    const normalizedSelection = normalizeCaptureSelection(manualWorldCapture.draftText);
+    const categoryLabelById = new Map(
+      categories.map((category) => [category.id, category.name])
+    );
+    const characterCategoryIds = new Set(
+      categories
+        .filter((category) => {
+          const slug = category.slug.toLowerCase();
+          const name = category.name.toLowerCase();
+          return slug.includes('character') || name.includes('character');
+        })
+        .map((category) => category.id)
+    );
+    const candidates = [
+      ...entities.map((entity) => ({
+        id: `entity:${entity.id}`,
+        name: entity.name,
+        type: categoryLabelById.get(entity.categoryId) ?? 'World Bible'
+      })),
+      ...characters
+        .filter((character) => {
+          const matchingCharacterEntity = entities.find(
+            (entity) =>
+              characterCategoryIds.has(entity.categoryId) &&
+              normalizeCaptureSelection(entity.name) ===
+                normalizeCaptureSelection(character.name)
+          );
+          return !matchingCharacterEntity;
+        })
+        .map((character) => ({
+          id: `character:${character.id}`,
+          name: character.name,
+          type: 'Character Tools'
+        }))
+    ];
+
+    return candidates
+      .map((candidate) => {
+        const normalizedName = normalizeCaptureSelection(candidate.name);
+        const exactScore = normalizedName === normalizedSelection ? 0 : 1;
+        const overlapScore =
+          normalizedName.includes(normalizedSelection) ||
+          normalizedSelection.includes(normalizedName)
+            ? 0
+            : 1;
+        return {
+          ...candidate,
+          score: exactScore + overlapScore
+        };
+      })
+      .sort((a, b) => a.score - b.score || a.name.localeCompare(b.name))
+      .slice(0, 30);
+  }, [categories, characters, entities, manualWorldCapture, normalizeCaptureSelection]);
   const toolbarActions = useMemo(
     () => [
       {
@@ -622,39 +1310,285 @@ function WorkspaceRoute() {
         onClick: handleRefreshStatTemplates
       }
     ],
-    [handleRefreshStatTemplates]
+    [handleRefreshStatTemplates, setStatBlockModalOpen]
   );
 
+  const [focusQuery, setFocusQuery] = useState<string | null>(null);
+  const workspaceWindowScrollKey =
+    activeProject && selectedId
+      ? `wbd:workspace-window-scroll:${activeProject.id}:${selectedId}`
+      : null;
+  const workspaceScrollSnapshotKey =
+    activeProject && selectedId
+      ? `workspace-scroll:${activeProject.id}:${selectedId}`
+      : null;
+
   useEffect(() => {
-    const state = location.state as {focusDocumentId?: string} | null;
+    const state = location.state as {focusDocumentId?: string; focusQuery?: string} | null;
     const focusDocumentId = state?.focusDocumentId;
     if (!focusDocumentId) return;
     const target = documents.find((doc) => doc.id === focusDocumentId);
     if (!target) return;
+    setFocusQuery(state?.focusQuery?.trim() || null);
     if (selectedId !== target.id) {
-      handleSelectDocument(target);
+    handleSelectDocument(target);
     }
     navigate(location.pathname, {replace: true, state: {}});
   }, [documents, handleSelectDocument, location.pathname, location.state, navigate, selectedId]);
 
   useEffect(() => {
-    if (
-      !isReviewPrefsHydrated ||
-      !selectedDocument ||
-      selectedDocument.consistencyReviewMode !== 'deferred'
-    ) {
+    if (!workspaceWindowScrollKey) return;
+
+    let animationFrame: number | null = null;
+    const saveScrollPosition = () => {
+      workspaceWindowScrollPositions.set(workspaceWindowScrollKey, window.scrollY);
+    };
+    const handleScroll = () => {
+      if (animationFrame !== null) return;
+      animationFrame = window.requestAnimationFrame(() => {
+        animationFrame = null;
+        saveScrollPosition();
+      });
+    };
+
+    window.addEventListener('scroll', handleScroll, {passive: true});
+    return () => {
+      if (animationFrame !== null) {
+        window.cancelAnimationFrame(animationFrame);
+      }
+      saveScrollPosition();
+      window.removeEventListener('scroll', handleScroll);
+    };
+  }, [workspaceWindowScrollKey]);
+
+  useEffect(() => {
+    if (!workspaceWindowScrollKey || focusQuery?.trim()) return;
+
+    const storedScrollY = workspaceWindowScrollPositions.get(workspaceWindowScrollKey) ?? 0;
+    if (!Number.isFinite(storedScrollY) || storedScrollY <= 0) return;
+
+    const frameIds: number[] = [];
+    const timeoutIds: number[] = [];
+    const restoreScrollPosition = () => {
+      frameIds.push(
+        window.requestAnimationFrame(() => {
+        window.scrollTo({top: storedScrollY, left: 0, behavior: 'auto'});
+        })
+      );
+    };
+
+    frameIds.push(window.requestAnimationFrame(restoreScrollPosition));
+    [50, 150, 300].forEach((delay) => {
+      timeoutIds.push(window.setTimeout(restoreScrollPosition, delay));
+    });
+
+    return () => {
+      frameIds.forEach((frameId) => window.cancelAnimationFrame(frameId));
+      timeoutIds.forEach((timeoutId) => window.clearTimeout(timeoutId));
+    };
+  }, [focusQuery, workspaceWindowScrollKey]);
+
+  const captureWorkspaceScroll = useCallback(() => {
+    if (!workspaceScrollSnapshotKey) return;
+    const root = workspaceRootRef.current;
+    const elements = root
+      ? Array.from(root.querySelectorAll<HTMLElement>('[data-wbd-scroll-key]'))
+          .map((element) => ({
+            key: element.dataset.wbdScrollKey ?? '',
+            top: element.scrollTop,
+            left: element.scrollLeft
+          }))
+          .filter((entry) => entry.key)
+      : [];
+
+    workspaceScrollSnapshots.set(workspaceScrollSnapshotKey, {
+      windowY: window.scrollY,
+      elements
+    });
+  }, [workspaceScrollSnapshotKey]);
+
+  useEffect(() => {
+    window.addEventListener('wbd:capture-workspace-scroll', captureWorkspaceScroll);
+    return () => {
+      captureWorkspaceScroll();
+      window.removeEventListener('wbd:capture-workspace-scroll', captureWorkspaceScroll);
+    };
+  }, [captureWorkspaceScroll]);
+
+  useLayoutEffect(() => {
+    if (!workspaceScrollSnapshotKey || focusQuery?.trim()) return;
+    const snapshot =
+      workspaceScrollSnapshots.get(workspaceScrollSnapshotKey) ??
+      window.__wbdLastWorkspaceScrollSnapshot;
+    if (!snapshot) return;
+
+    const frameIds: number[] = [];
+    const timeoutIds: number[] = [];
+    const restore = () => {
+      window.scrollTo({top: snapshot.windowY, left: 0, behavior: 'auto'});
+      const root = workspaceRootRef.current;
+      if (!root) return;
+      snapshot.elements.forEach((entry) => {
+        const element = root.querySelector<HTMLElement>(
+          `[data-wbd-scroll-key="${entry.key}"]`
+        );
+        if (element) {
+          element.scrollTop = entry.top;
+          element.scrollLeft = entry.left;
+          element.dataset.wbdRestoreTarget = String(entry.top);
+          element.dataset.wbdRestoredScrollTop = String(element.scrollTop);
+        }
+      });
+    };
+
+    frameIds.push(window.requestAnimationFrame(restore));
+    [50, 150, 300, 600].forEach((delay) => {
+      timeoutIds.push(window.setTimeout(restore, delay));
+    });
+
+    return () => {
+      frameIds.forEach((frameId) => window.cancelAnimationFrame(frameId));
+      timeoutIds.forEach((timeoutId) => window.clearTimeout(timeoutId));
+    };
+  }, [content, focusQuery, workspaceScrollSnapshotKey]);
+
+  const selectedDocumentRef = useRef(selectedDocument);
+  selectedDocumentRef.current = selectedDocument;
+  const draftTitleRef = useRef(title);
+  draftTitleRef.current = title;
+  const draftContentRef = useRef(content);
+  draftContentRef.current = content;
+  const lastIdleReviewSignatureRef = useRef<string | null>(null);
+  const idleReviewDelayMs = 2500;
+  const reviewRefreshSignature = useMemo(
+    () =>
+      [
+        ...entities.map((entity) =>
+          `entity:${entity.id}:${entity.name}:${entity.updatedAt}:${entity.needsCompletion ?? false}`
+        ),
+        ...aliases.map((alias) =>
+          `alias:${alias.id}:${alias.targetId}:${alias.targetType}:${alias.alias}:${alias.updatedAt}`
+        ),
+        ...characters.map((character) =>
+          `character:${character.id}:${character.name}:${character.updatedAt}`
+        )
+      ]
+        .sort()
+        .join('|'),
+    [aliases, characters, entities]
+  );
+
+  useEffect(() => {
+    if (!isReviewPrefsHydrated || !selectedId) {
       return;
     }
-    void refreshDeferredReview(selectedDocument).catch((error) => {
-      console.warn('Deferred review rehydrate failed', error);
+    const doc = selectedDocumentRef.current;
+    if (!doc || doc.id !== selectedId) {
+      return;
+    }
+    const draftTitle = draftTitleRef.current.trim() || doc.title || 'Untitled scene';
+    const draftContent = draftContentRef.current;
+    const draftDoc =
+      draftTitle === doc.title && draftContent === doc.content
+        ? doc
+        : {
+            ...doc,
+            title: draftTitle,
+            content: draftContent,
+            updatedAt: Date.now()
+          };
+
+    const refresh =
+      draftDoc.consistencyReviewMode === 'deferred'
+        ? refreshDeferredReview(draftDoc)
+        : refreshActiveDraftReview(draftDoc);
+
+    void refresh.catch((error) => {
+      console.warn('Active scene review refresh failed', error);
     });
-  }, [isReviewPrefsHydrated, refreshDeferredReview, selectedDocument]);
+  }, [
+    isReviewPrefsHydrated,
+    refreshActiveDraftReview,
+    refreshDeferredReview,
+    reviewRefreshSignature,
+    selectedId
+  ]);
+
+  useEffect(() => {
+    if (!isReviewPrefsHydrated || !selectedId) {
+      return;
+    }
+    const persistedDoc = selectedDocumentRef.current;
+    if (!persistedDoc || persistedDoc.id !== selectedId) {
+      return;
+    }
+    if (persistedDoc.consistencyReviewMode === 'deferred') {
+      return;
+    }
+
+    const draftTitle = title.trim() || 'Untitled scene';
+    const hasDraftChanges =
+      persistedDoc.title !== draftTitle || persistedDoc.content !== content;
+    if (!hasDraftChanges) {
+      lastIdleReviewSignatureRef.current = null;
+      return;
+    }
+
+    const draftSignature = `${selectedId}:${draftTitle}:${content}`;
+    const timeoutId = window.setTimeout(() => {
+      if (lastIdleReviewSignatureRef.current === draftSignature) {
+        return;
+      }
+      lastIdleReviewSignatureRef.current = draftSignature;
+      void refreshActiveDraftReview({
+        ...persistedDoc,
+        title: draftTitle,
+        content,
+        updatedAt: Date.now()
+      }).catch((error) => {
+        lastIdleReviewSignatureRef.current = null;
+        console.warn('Idle draft review failed', error);
+      });
+    }, idleReviewDelayMs);
+
+    return () => {
+      clearTimeout(timeoutId);
+    };
+  }, [
+    content,
+    isReviewPrefsHydrated,
+    refreshActiveDraftReview,
+    selectedId,
+    title
+  ]);
 
   useEffect(() => {
     if (!showGameSystems && activeContextView === 'compendium') {
       setActiveContextView('world-bible');
     }
   }, [showGameSystems, activeContextView, setActiveContextView]);
+
+  useEffect(() => {
+    if (!isScratchpadModalOpen) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setScratchpadModalOpen(false);
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [isScratchpadModalOpen, setScratchpadModalOpen]);
+
+  useEffect(() => {
+    if (!isCorkboardModalOpen) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setCorkboardModalOpen(false);
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [isCorkboardModalOpen, setCorkboardModalOpen]);
 
   useEffect(() => {
     const mediaQuery = window.matchMedia('(max-width: 1200px)');
@@ -706,6 +1640,12 @@ function WorkspaceRoute() {
         case 'save-scene':
           void handleSave();
           break;
+        case 'open-scratchpad':
+          openScratchpadModal();
+          break;
+        case 'open-corkboard':
+          openCorkboardModal();
+          break;
         case 'toggle-left-drawer':
           toggleSceneDrawer();
           break;
@@ -716,7 +1656,9 @@ function WorkspaceRoute() {
           openContextDrawer('world-bible');
           break;
         case 'open-context-ruleset':
-          openContextDrawer('ruleset');
+          if (showRuleAuthoring) {
+            openContextDrawer('ruleset');
+          }
           break;
         case 'open-context-characters':
           openContextDrawer('characters');
@@ -727,7 +1669,7 @@ function WorkspaceRoute() {
           }
           break;
         case 'run-consistency-review':
-          void handleRunConsistencyReview();
+          void runConsistencyReviewFromUi();
           break;
         case 'export-markdown':
           openExportModalWithDrawerHandling('markdown');
@@ -758,13 +1700,15 @@ function WorkspaceRoute() {
     };
   }, [
     handleNewDocument,
+    openCorkboardModal,
     openContextDrawer,
-    handleRunConsistencyReview,
+    openScratchpadModal,
+    runConsistencyReviewFromUi,
     handleSave,
     openMemoryModal,
     openExportModalWithDrawerHandling,
     showGameSystems,
-    openContextDrawer,
+    showRuleAuthoring,
     toggleContextDrawer,
     toggleSceneDrawer
   ]);
@@ -789,6 +1733,7 @@ function WorkspaceRoute() {
   );
   const handleOpenManualWorldCapture = useCallback(
     (draftText: string, anchorRect: {left: number; top: number; bottom: number}) => {
+      setManualExistingTargetId('');
       setManualWorldCapture({
         draftText,
         left: anchorRect.left,
@@ -924,7 +1869,7 @@ function WorkspaceRoute() {
     } finally {
       setIsSyncingCanon(false);
     }
-  }, [activeProject, addSystemHistory]);
+  }, [activeProject, addSystemHistory, setCanonState]);
 
   if (!activeProject) {
     return (
@@ -948,7 +1893,12 @@ function WorkspaceRoute() {
   }
 
   return (
-    <section data-workspace-root='true' className={styles.workspaceRoot}>
+    <section
+      data-workspace-root='true'
+      data-wbd-scroll-key='workspace-root'
+      className={styles.workspaceRoot}
+      ref={workspaceRootRef}
+    >
       <input
         ref={importInputRef}
         type='file'
@@ -982,6 +1932,30 @@ function WorkspaceRoute() {
           </button>
           <button
             type='button'
+            className={`${styles.reviewIndicator} ${styles[`reviewIndicator_${reviewReadiness.state}`]}`}
+            onClick={() => openContextDrawer('review')}
+            title={reviewReadiness.detail}
+            aria-label={`Open review drawer: ${reviewReadiness.detail}`}
+          >
+            <span className={styles.reviewIndicatorDot} />
+            <span>{reviewReadiness.label}</span>
+          </button>
+          <button
+            type='button'
+            className={styles.drawerTopButton}
+            onClick={openScratchpadModal}
+          >
+            Scratchpad
+          </button>
+          <button
+            type='button'
+            className={styles.drawerTopButton}
+            onClick={openCorkboardModal}
+          >
+            Corkboard
+          </button>
+          <button
+            type='button'
             className={styles.drawerTopButton}
             onClick={toggleSceneDrawer}
           >
@@ -997,24 +1971,32 @@ function WorkspaceRoute() {
         </div>
       </div>
       {feedback && (
-        <p
+        <div
           role='status'
           className={`${styles.feedbackBanner} ${
             feedback.tone === 'error' ? styles.feedbackError : styles.feedbackSuccess
           }`}
         >
-          {feedback.message}
-        </p>
+          <span>{feedback.message}</span>
+          <button
+            type='button'
+            onClick={() => setFeedback(null)}
+            className={styles.feedbackDismissButton}
+            aria-label='Dismiss notification'
+          >
+            Dismiss
+          </button>
+        </div>
       )}
       {resolverNotice && (
         <div role='status' className={styles.resolverNotice}>
           <span>{resolverNotice.message}</span>
           <button
             type='button'
-            onClick={() => navigate('/world-bible')}
+            onClick={openResolverNoticeDestination}
             className={styles.resolverButtonPrimary}
           >
-            View in World Bible
+            {resolverNoticePrimaryLabel}
           </button>
           <button
             type='button'
@@ -1025,9 +2007,19 @@ function WorkspaceRoute() {
           </button>
         </div>
       )}
-      {unknownGuardrailIssues.length > 0 && (
+      {showReviewBanner && (
         <div className={styles.unknownPanel}>
-          <strong>{reviewBannerTitle}</strong>
+          <div className={styles.unknownPanelHeader}>
+            <strong>{reviewBannerTitle}</strong>
+            <button
+              type='button'
+              onClick={() => setReviewBannerDismissed(true)}
+              className={styles.unknownPanelDismissButton}
+              aria-label='Dismiss review notice'
+            >
+              Dismiss
+            </button>
+          </div>
           <div className={styles.unknownSummary}>
             {unknownGuardrailIssues.length} item
             {unknownGuardrailIssues.length === 1 ? '' : 's'} highlighted. {reviewBannerBody}
@@ -1094,8 +2086,8 @@ function WorkspaceRoute() {
         </div>
       )}
 
-      <div className={styles.workspaceFrame}>
-        <div className={styles.workspaceLayout}>
+      <div className={styles.workspaceFrame} data-wbd-scroll-key='workspace-frame'>
+        <div className={styles.workspaceLayout} data-wbd-scroll-key='workspace-layout'>
         {isSceneDrawerOpen && !isNarrowViewport && (
           <aside className={styles.sceneDrawerDesktop}>
             <WorkspaceSceneDrawer
@@ -1118,11 +2110,13 @@ function WorkspaceRoute() {
               handleSelectDocument={handleSelectDocument}
               handleDelete={handleDelete}
               deletingDocumentId={deletingDocumentId}
+              staleStateEventCountBySceneId={staleStateEventCountBySceneId}
+              selectedSceneTimeline={selectedSceneTimeline}
             />
           </aside>
         )}
 
-        <div className={styles.editorColumn}>
+        <div className={styles.editorColumn} data-wbd-scroll-key='workspace-editor-column'>
           {selectedId ? (
             <>
               <div className={styles.editorTitleRow}>
@@ -1138,12 +2132,16 @@ function WorkspaceRoute() {
                 </label>
               </div>
 
-              <div className={styles.editorPane}>
+              <div className={styles.editorPane} data-wbd-scroll-key='workspace-editor-pane'>
                 <EditorWithAI
                   documentId={selectedId}
                   content={content}
+                  focusQuery={focusQuery}
                   onChange={handleContentChange}
                   onWordCountChange={setWordCount}
+                  inlineHighlightsMode={
+                    projectSettings?.editorFeedback?.inlineHighlightsMode ?? 'visible'
+                  }
                   consistencyHighlights={highlightableUnknownIssues}
                   onConsistencyHighlightClick={(issueId, anchorRect) => {
                     const issue = highlightableUnknownIssues.find(
@@ -1165,12 +2163,15 @@ function WorkspaceRoute() {
                     setStatBlockInsertContent(null);
                   }}
                   selectionQuickSnippets={selectionQuickSnippets}
+                  knownLoreHighlights={knownWorldBibleLoreHighlights}
+                  characterStateHoverCardsByLoreId={characterStateHoverCardsByLoreId}
                   presentStatBlockToken={getStatBlockTokenPresentation}
                   getStatBlockPreviewData={getStatBlockPreviewData}
                   onRebindStatBlockToken={openStatBlockRebind}
                   onOpenAIContext={handleOpenAIContext}
                   onOpenLoreInspector={handleOpenLoreInspector}
                   onOpenWorldCapture={handleOpenManualWorldCapture}
+                  suppressSelectionBubble={Boolean(manualWorldCapture)}
                 />
                 {consistencyPopover && activeConsistencyPopoverIssue && (
                   <ContextPopover
@@ -1183,7 +2184,7 @@ function WorkspaceRoute() {
                     <div className={styles.consistencyPopoverActions}>
                       {categories.length > 0 && (
                         <select
-                          value={unknownCategorySelection[activeConsistencyPopoverIssue.surface] ?? ''}
+                          value={activeSuggestedCategoryId}
                           onChange={(e) =>
                             setUnknownCategorySelection((prev) => ({
                               ...prev,
@@ -1216,14 +2217,14 @@ function WorkspaceRoute() {
                         type='button'
                         onClick={() => void resolveUnknownEntity(
                           activeConsistencyPopoverIssue.surface,
-                          unknownCategorySelection[activeConsistencyPopoverIssue.surface] || undefined,
+                          activeSuggestedCategoryId || undefined,
                           activeWorldCaptureDraft
                         )}
                         disabled={resolvingUnknown === activeConsistencyPopoverIssue.surface}
                       >
                         {resolvingUnknown === activeConsistencyPopoverIssue.surface
                           ? 'Adding...'
-                          : reviewCreateLabel}
+                          : reviewCreateActionLabel}
                       </button>
                       <button
                         type='button'
@@ -1248,6 +2249,14 @@ function WorkspaceRoute() {
                         Always ignore
                       </button>
                     </div>
+                    {showCharacterCanonicalizationHint && (
+                      <div className={styles.consistencyPopoverNote}>
+                        Possible existing character match:{' '}
+                        <strong>{activeCloseCharacterMatches[0]?.name}</strong>. Add this
+                        as World Bible character canon, then use <strong>Review Character Match</strong> to
+                        decide whether "{activeWorldCaptureDraft}" should become an alias.
+                      </div>
+                    )}
                     {unknownLinkOptions[activeConsistencyPopoverIssue.surface]?.length ? (
                       <div className={styles.consistencyPopoverLinkRow}>
                         <select
@@ -1269,7 +2278,7 @@ function WorkspaceRoute() {
                                 key={`${entity.type}-${entity.id}`}
                                 value={`${entity.type}:${entity.id}`}
                               >
-                                {entity.name} {entity.type === 'character' ? '· Character' : '· World'}
+                                {entity.name} · {entity.label}
                               </option>
                             )
                           )}
@@ -1292,10 +2301,15 @@ function WorkspaceRoute() {
                             ? 'Connecting...'
                             : reviewLinkLabel}
                         </button>
+                        {closeUnknownLinkOptions[activeConsistencyPopoverIssue.surface]?.length ? null : (
+                          <span className={styles.consistencyPopoverNote}>
+                            No close match found. Showing recent records.
+                          </span>
+                        )}
                       </div>
                     ) : (
                       <div className={styles.consistencyPopoverNote}>
-                        No close existing matches available yet.
+                        No existing records available yet.
                       </div>
                     )}
                   </ContextPopover>
@@ -1331,11 +2345,12 @@ function WorkspaceRoute() {
                       <input
                         type='text'
                         value={manualWorldCapture.draftText}
-                        onChange={(event) =>
+                        onChange={(event) => {
+                          setManualExistingTargetId('');
                           setManualWorldCapture((prev) =>
                             prev ? {...prev, draftText: event.target.value} : prev
-                          )
-                        }
+                          );
+                        }}
                         placeholder='Name or place'
                         className={styles.captureNameInput}
                       />
@@ -1354,6 +2369,64 @@ function WorkspaceRoute() {
                           ? 'Adding...'
                           : reviewCreateLabel}
                       </button>
+                      {manualCaptureExistingEntity && (
+                        <button
+                          type='button'
+                          onClick={() => {
+                            clearUnknownSurface(manualWorldCapture.draftText);
+                            setManualWorldCapture(null);
+                            setFeedback({
+                              tone: 'success',
+                              message: `"${manualWorldCapture.draftText}" matched ${manualCaptureExistingEntity.name}.`
+                            });
+                          }}
+                        >
+                          Use existing
+                        </button>
+                      )}
+                      {manualCaptureLinkOptions.length > 0 && (
+                        <div className={styles.manualExistingLinkControls}>
+                          <select
+                            value={manualExistingTargetId}
+                            onChange={(event) =>
+                              setManualExistingTargetId(event.target.value)
+                            }
+                            aria-label='Existing world record'
+                          >
+                            <option value=''>Link to existing...</option>
+                            {manualCaptureLinkOptions.map((option) => (
+                              <option key={option.id} value={option.id}>
+                                {option.name} ({option.type})
+                              </option>
+                            ))}
+                          </select>
+                          <button
+                            type='button'
+                            onClick={() => {
+                              const selectedTargetId = manualExistingTargetId;
+                              const selectedSurface = manualWorldCapture.draftText;
+                              void linkUnknownEntity(
+                                selectedSurface,
+                                selectedTargetId,
+                                selectedSurface
+                              ).then((linked) => {
+                                if (!linked) return;
+                                clearUnknownSurface(selectedSurface);
+                                setManualExistingTargetId('');
+                                setManualWorldCapture(null);
+                              });
+                            }}
+                            disabled={
+                              !manualExistingTargetId ||
+                              linkingUnknown === manualWorldCapture.draftText
+                            }
+                          >
+                            {linkingUnknown === manualWorldCapture.draftText
+                              ? 'Linking...'
+                              : 'Link selected'}
+                          </button>
+                        </div>
+                      )}
                     </div>
                   </ContextPopover>
                 )}
@@ -1391,6 +2464,20 @@ function WorkspaceRoute() {
                   {wordCount} words
                 </span>
                 <div className={styles.editorFooterUtilities}>
+                  <button
+                    type='button'
+                    className={styles.drawerTopButton}
+                    onClick={openScratchpadModal}
+                  >
+                    Scratchpad
+                  </button>
+                  <button
+                    type='button'
+                    className={styles.drawerTopButton}
+                    onClick={openCorkboardModal}
+                  >
+                    Corkboard
+                  </button>
                   <button
                     type='button'
                     className={styles.drawerTopButton}
@@ -1433,6 +2520,20 @@ function WorkspaceRoute() {
                 <button
                   type='button'
                   className={styles.drawerTopButton}
+                  onClick={openScratchpadModal}
+                >
+                  Open Scratchpad
+                </button>
+                <button
+                  type='button'
+                  className={styles.drawerTopButton}
+                  onClick={openCorkboardModal}
+                >
+                  Open Corkboard
+                </button>
+                <button
+                  type='button'
+                  className={styles.drawerTopButton}
                   onClick={toggleSceneDrawer}
                 >
                   Browse Scenes
@@ -1448,18 +2549,35 @@ function WorkspaceRoute() {
               activeContextView={activeContextView}
               setActiveContextView={setActiveContextView}
               showGameSystems={showGameSystems}
+              showRuleAuthoring={showRuleAuthoring}
               entities={entities}
               categories={categories}
               ruleset={ruleset}
               characters={characters}
               characterSheets={characterSheets}
-              handleRunConsistencyReview={handleRunConsistencyReview}
+              handleRunConsistencyReview={runConsistencyReviewFromUi}
               isRunningConsistencyReview={isRunningConsistencyReview}
               lastConsistencyReviewAt={lastConsistencyReviewAt}
               consistencyReviewItems={consistencyReviewItems}
+              stateMutationReviewItems={stateMutationReviewItems}
+              hiddenStateMutationReviewCountBySceneId={hiddenStateMutationReviewCountBySceneId}
+              hiddenStateMutationReviewCount={hiddenStateMutationReviewCount}
+              applyingStateMutationReviewId={applyingStateMutationReviewId}
+              reviewReadiness={reviewReadiness}
+              acceptStateMutationReviewItem={acceptStateMutationReviewItem}
+              rejectStateMutationReviewItem={rejectStateMutationReviewItem}
+              acceptSceneStateMutationReviewItems={acceptSceneStateMutationReviewItems}
+              rejectSceneStateMutationReviewItems={rejectSceneStateMutationReviewItems}
+              hideStateMutationReviewItem={hideStateMutationReviewItem}
+              restoreHiddenStateMutationReviewItems={restoreHiddenStateMutationReviewItems}
+              restoreAllHiddenStateMutationReviewItems={restoreAllHiddenStateMutationReviewItems}
               documents={documents}
               handleSelectDocument={handleSelectDocument}
               openWorldRecord={openWorldRecord}
+              scratchpadContent={scratchpadContent}
+              setScratchpadContent={setScratchpadContent}
+              scratchpadStatus={scratchpadStatus}
+              scratchpadLastSavedAt={scratchpadLastSavedAt}
               activeProject={activeProject}
               projectSettings={projectSettings}
               activeAIContext={activeAIContext}
@@ -1531,6 +2649,8 @@ function WorkspaceRoute() {
               handleSelectDocument={handleSelectDocument}
               handleDelete={handleDelete}
               deletingDocumentId={deletingDocumentId}
+              staleStateEventCountBySceneId={staleStateEventCountBySceneId}
+              selectedSceneTimeline={selectedSceneTimeline}
             />
           </aside>
         </div>
@@ -1558,18 +2678,35 @@ function WorkspaceRoute() {
               activeContextView={activeContextView}
               setActiveContextView={setActiveContextView}
               showGameSystems={showGameSystems}
+              showRuleAuthoring={showRuleAuthoring}
               entities={entities}
               categories={categories}
               ruleset={ruleset}
               characters={characters}
               characterSheets={characterSheets}
-              handleRunConsistencyReview={handleRunConsistencyReview}
+              handleRunConsistencyReview={runConsistencyReviewFromUi}
               isRunningConsistencyReview={isRunningConsistencyReview}
               lastConsistencyReviewAt={lastConsistencyReviewAt}
               consistencyReviewItems={consistencyReviewItems}
+              stateMutationReviewItems={stateMutationReviewItems}
+              hiddenStateMutationReviewCountBySceneId={hiddenStateMutationReviewCountBySceneId}
+              hiddenStateMutationReviewCount={hiddenStateMutationReviewCount}
+              applyingStateMutationReviewId={applyingStateMutationReviewId}
+              reviewReadiness={reviewReadiness}
+              acceptStateMutationReviewItem={acceptStateMutationReviewItem}
+              rejectStateMutationReviewItem={rejectStateMutationReviewItem}
+              acceptSceneStateMutationReviewItems={acceptSceneStateMutationReviewItems}
+              rejectSceneStateMutationReviewItems={rejectSceneStateMutationReviewItems}
+              hideStateMutationReviewItem={hideStateMutationReviewItem}
+              restoreHiddenStateMutationReviewItems={restoreHiddenStateMutationReviewItems}
+              restoreAllHiddenStateMutationReviewItems={restoreAllHiddenStateMutationReviewItems}
               documents={documents}
               handleSelectDocument={handleSelectDocument}
               openWorldRecord={openWorldRecord}
+              scratchpadContent={scratchpadContent}
+              setScratchpadContent={setScratchpadContent}
+              scratchpadStatus={scratchpadStatus}
+              scratchpadLastSavedAt={scratchpadLastSavedAt}
               activeProject={activeProject}
               projectSettings={projectSettings}
               activeAIContext={activeAIContext}
@@ -1887,7 +3024,7 @@ function WorkspaceRoute() {
                     className={styles.statInsertHintButton}
                   >
                     {statBlockSourceType === 'character'
-                      ? 'Go to Characters'
+                      ? 'Go to Character Sheets'
                       : 'Go to World Bible'}
                   </button>
                 </div>
@@ -1904,6 +3041,302 @@ function WorkspaceRoute() {
               </button>
               <button type='button' onClick={handleInsertStatBlock} disabled={!canInsertStatBlock}>
                 {pendingStatBlockRebindToken ? 'Rebind token' : 'Insert'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isScratchpadModalOpen && (
+        <div
+          role='dialog'
+          aria-modal='true'
+          aria-label='Project scratchpad'
+          onClick={closeScratchpadModal}
+          className={styles.modalOverlay}
+        >
+          <div
+            onClick={(event) => event.stopPropagation()}
+            className={`${styles.modalCard} ${styles.scratchpadModalCard}`}
+          >
+            <div className={styles.scratchpadModalHeader}>
+              <div>
+                <h3 className={styles.modalTitle}>Scratchpad</h3>
+                <p className={styles.modalDescription}>
+                  Loose project notes that stay outside scenes and canon.
+                </p>
+              </div>
+              <button
+                type='button'
+                className={styles.modalSecondaryAction}
+                onClick={closeScratchpadModal}
+              >
+                Close
+              </button>
+            </div>
+            <div
+              className={`${styles.scratchpadEditorShell} ${styles.scratchpadModalEditorShell}`}
+              aria-label='Project scratchpad'
+            >
+              <TipTapEditor
+                content={normalizeRichTextValue(scratchpadContent)}
+                onChange={setScratchpadContent}
+              />
+            </div>
+            <div className={styles.scratchpadModalFooter}>
+              <div className={styles.scratchpadStatus} role='status'>
+                {scratchpadStatusLabel}
+              </div>
+              <div className={styles.scratchpadModalActions}>
+                <button
+                  type='button'
+                  className={styles.modalSecondaryAction}
+                  onClick={() => {
+                    setActiveContextView('scratchpad');
+                    setContextDrawerOpen(true);
+                    if (isNarrowViewport) {
+                      setSceneDrawerOpen(false);
+                    }
+                    closeScratchpadModal();
+                  }}
+                >
+                  Open in Context Drawer
+                </button>
+                <button type='button' onClick={closeScratchpadModal}>
+                  Done
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isCorkboardModalOpen && (
+        <div
+          role='dialog'
+          aria-modal='true'
+          aria-label='Project corkboard'
+          onClick={closeCorkboardModal}
+          className={styles.modalOverlay}
+        >
+          <div
+            onClick={(event) => event.stopPropagation()}
+            className={`${styles.modalCard} ${styles.corkboardModalCard}`}
+          >
+            <div className={styles.corkboardModalHeader}>
+              <div>
+                <h3 className={styles.modalTitle}>Corkboard</h3>
+                <p className={styles.modalDescription}>
+                  Lightweight chapter planning with cards, summaries, status, and plot points.
+                </p>
+              </div>
+              <div className={styles.corkboardHeaderActions}>
+                <button
+                  type='button'
+                  className={styles.modalSecondaryAction}
+                  onClick={createCorkboardCard}
+                >
+                  New Card
+                </button>
+                <button
+                  type='button'
+                  className={styles.modalSecondaryAction}
+                  onClick={closeCorkboardModal}
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+
+            <div className={styles.corkboardMetaRow}>
+              <span>
+                {corkboardCards.length} card{corkboardCards.length === 1 ? '' : 's'}
+              </span>
+              <span>
+                {corkboardPlotPointCount} plot point{corkboardPlotPointCount === 1 ? '' : 's'}
+              </span>
+              <span>{corkboardStatusLabel}</span>
+            </div>
+
+            {corkboardCards.length === 0 ? (
+              <div className={styles.corkboardEmptyState}>
+                <p className={styles.corkboardEmptyTitle}>Start with a chapter card.</p>
+                <p className={styles.corkboardEmptyCopy}>
+                  Sketch scenes, chapter beats, or loose sequence ideas without leaving the writing workspace.
+                </p>
+                <button type='button' onClick={createCorkboardCard}>
+                  Create first card
+                </button>
+              </div>
+            ) : (
+              <div className={styles.corkboardCardList}>
+                {corkboardCards.map((card, index) => (
+                  <section key={card.id} className={styles.corkboardCard}>
+                    <div className={styles.corkboardCardHeader}>
+                      <div className={styles.corkboardCardTitleRow}>
+                        <span className={styles.corkboardCardIndex}>Card {index + 1}</span>
+                        <input
+                          type='text'
+                          value={card.title}
+                          onChange={(event) =>
+                            updateCorkboardCard(card.id, {title: event.target.value})
+                          }
+                          placeholder='Chapter or sequence title'
+                          className={styles.corkboardTitleInput}
+                        />
+                      </div>
+                      <div className={styles.corkboardCardActions}>
+                        <button
+                          type='button'
+                          className={styles.modalSecondaryAction}
+                          onClick={() => moveCorkboardCard(card.id, -1)}
+                          disabled={index === 0}
+                        >
+                          Up
+                        </button>
+                        <button
+                          type='button'
+                          className={styles.modalSecondaryAction}
+                          onClick={() => moveCorkboardCard(card.id, 1)}
+                          disabled={index === corkboardCards.length - 1}
+                        >
+                          Down
+                        </button>
+                        <button
+                          type='button'
+                          className={styles.modalSecondaryAction}
+                          onClick={() => deleteCorkboardCard(card.id)}
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className={styles.corkboardCardFields}>
+                      <label className={styles.corkboardField}>
+                        <span>Status</span>
+                        <select
+                          value={card.status}
+                          onChange={(event) =>
+                            updateCorkboardCard(card.id, {
+                              status: event.target.value as 'planned' | 'draft' | 'written'
+                            })
+                          }
+                        >
+                          <option value='planned'>Planned</option>
+                          <option value='draft'>Draft</option>
+                          <option value='written'>Written</option>
+                        </select>
+                      </label>
+                      <label className={styles.corkboardField}>
+                        <span>Summary</span>
+                        <textarea
+                          value={card.summary}
+                          onChange={(event) =>
+                            updateCorkboardCard(card.id, {summary: event.target.value})
+                          }
+                          placeholder='What happens in this chapter or scene sequence?'
+                          className={styles.corkboardSummaryTextarea}
+                        />
+                      </label>
+                    </div>
+
+                    <div className={styles.corkboardPlotSection}>
+                      <div className={styles.corkboardPlotHeader}>
+                        <strong>Plot points</strong>
+                        <button
+                          type='button'
+                          className={styles.modalSecondaryAction}
+                          onClick={() => addCorkboardPlotPoint(card.id)}
+                        >
+                          Add plot point
+                        </button>
+                      </div>
+                      {card.plotPoints.length === 0 ? (
+                        <p className={styles.corkboardPlotEmpty}>
+                          No plot points yet.
+                        </p>
+                      ) : (
+                        <div className={styles.corkboardPlotList}>
+                          {card.plotPoints.map((plotPoint, plotIndex) => (
+                            <div key={plotPoint.id} className={styles.corkboardPlotPoint}>
+                              <div className={styles.corkboardPlotPointHeader}>
+                                <span className={styles.corkboardPlotIndex}>
+                                  {plotIndex + 1}
+                                </span>
+                                <input
+                                  type='text'
+                                  value={plotPoint.title}
+                                  onChange={(event) =>
+                                    updateCorkboardPlotPoint(card.id, plotPoint.id, {
+                                      title: event.target.value
+                                    })
+                                  }
+                                  placeholder='Beat or turning point'
+                                  className={styles.corkboardPlotTitleInput}
+                                />
+                                <div className={styles.corkboardPlotActions}>
+                                  <button
+                                    type='button'
+                                    className={styles.modalSecondaryAction}
+                                    onClick={() =>
+                                      moveCorkboardPlotPoint(card.id, plotPoint.id, -1)
+                                    }
+                                    disabled={plotIndex === 0}
+                                  >
+                                    Up
+                                  </button>
+                                  <button
+                                    type='button'
+                                    className={styles.modalSecondaryAction}
+                                    onClick={() =>
+                                      moveCorkboardPlotPoint(card.id, plotPoint.id, 1)
+                                    }
+                                    disabled={plotIndex === card.plotPoints.length - 1}
+                                  >
+                                    Down
+                                  </button>
+                                  <button
+                                    type='button'
+                                    className={styles.modalSecondaryAction}
+                                    onClick={() =>
+                                      deleteCorkboardPlotPoint(card.id, plotPoint.id)
+                                    }
+                                  >
+                                    Delete
+                                  </button>
+                                </div>
+                              </div>
+                              <textarea
+                                value={plotPoint.notes ?? ''}
+                                onChange={(event) =>
+                                  updateCorkboardPlotPoint(card.id, plotPoint.id, {
+                                    notes: event.target.value
+                                  })
+                                }
+                                placeholder='Optional note or reminder'
+                                className={styles.corkboardPlotNotes}
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </section>
+                ))}
+              </div>
+            )}
+
+            <div className={styles.corkboardFooterActions}>
+              <button
+                type='button'
+                className={styles.modalSecondaryAction}
+                onClick={openScratchpadModal}
+              >
+                Open Scratchpad
+              </button>
+              <button type='button' onClick={closeCorkboardModal}>
+                Done
               </button>
             </div>
           </div>

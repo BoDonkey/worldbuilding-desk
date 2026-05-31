@@ -1,4 +1,8 @@
-import type {ProjectFeatureToggles, ProjectMode} from './entityTypes';
+import type {
+  ProjectFeatureToggles,
+  ProjectMode,
+  ProjectSettings
+} from './entityTypes';
 
 export const PROJECT_MODE_OPTIONS: Array<{value: ProjectMode; label: string}> = [
   {value: 'litrpg', label: 'LitRPG Author'},
@@ -45,5 +49,30 @@ export function normalizeFeatureToggles(params: {
   return {
     ...getDefaultFeatureToggles(params.mode),
     ...(params.featureToggles ?? {})
+  };
+}
+
+export interface ProjectCapabilities {
+  canUseGameSystems: boolean;
+  canUseRuntimeModifiers: boolean;
+  canUseSettlementAndZoneSystems: boolean;
+  canUseRuleAuthoring: boolean;
+  isGeneralFiction: boolean;
+}
+
+export function getProjectCapabilities(
+  settings: ProjectSettings | null | undefined
+): ProjectCapabilities {
+  const toggles = settings?.featureToggles;
+  const canUseGameSystems = toggles?.enableGameSystems === true;
+
+  return {
+    canUseGameSystems,
+    canUseRuntimeModifiers:
+      canUseGameSystems && toggles?.enableRuntimeModifiers === true,
+    canUseSettlementAndZoneSystems:
+      canUseGameSystems && toggles?.enableSettlementAndZoneSystems === true,
+    canUseRuleAuthoring: toggles?.enableRuleAuthoring === true,
+    isGeneralFiction: settings?.projectMode === 'general'
   };
 }

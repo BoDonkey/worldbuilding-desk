@@ -5,7 +5,7 @@ export interface DocumentChunk {
   content: string;
   embedding?: number[];
   metadata: {
-    type: 'worldbible' | 'scene' | 'rule';
+    type: 'worldbible' | 'scene' | 'rule' | 'lore' | 'canon_fact';
     entityIds?: string[];
     tags?: string[];
   };

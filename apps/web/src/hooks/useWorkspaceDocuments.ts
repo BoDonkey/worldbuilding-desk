@@ -23,37 +23,18 @@ import {
   parseDocxToText,
   parsePagesToText
 } from '../utils/workspaceImport';
+import {
+  useWorkspaceUiStore,
+  type WorkspaceExportFormat,
+  type WorkspaceImportFailureItem
+} from '../store/workspaceUiStore';
 type SaveStatus = 'idle' | 'saving' | 'saved';
-type ExportFormat = 'markdown' | 'docx' | 'epub';
 type ImportMode = WorkspaceImportMode;
 
 type FeedbackState = {
   tone: 'success' | 'error';
   message: string;
 } | null;
-
-interface SceneExportItem {
-  id: string;
-  title: string;
-  included: boolean;
-}
-
-export interface WorkspaceImportFailureItem {
-  fileName: string;
-  reason: 'legacy-doc' | 'apple-pages' | 'parse-failed';
-  detail?: string;
-}
-
-export interface WorkspaceImportSummary {
-  importedCount: number;
-  failedCount: number;
-  unresolvedCount: number;
-  mode: ImportMode;
-  suggestionsSkipped: boolean;
-  openedTitle?: string;
-  failures: WorkspaceImportFailureItem[];
-  createdAt: number;
-}
 
 interface UseWorkspaceDocumentsParams {
   activeProject: Project | null;
@@ -82,6 +63,88 @@ interface UseWorkspaceDocumentsParams {
   }) => void;
 }
 
+type WorkspaceDocumentInitialization =
+  | {type: 'clear'}
+  | {type: 'reset-empty'}
+  | {type: 'initialize'; document: WritingDocument}
+  | {type: 'none'};
+
+export const resolveWorkspaceDocumentInitialization = ({
+  hasActiveProject,
+  documents,
+  selectedId,
+  initializedSelectedId
+}: {
+  hasActiveProject: boolean;
+  documents: WritingDocument[];
+  selectedId: string | null;
+  initializedSelectedId: string | null;
+}): WorkspaceDocumentInitialization => {
+  if (!hasActiveProject) {
+    return {type: 'clear'};
+  }
+
+  if (documents.length === 0) {
+    return {type: 'reset-empty'};
+  }
+
+  const selectedDocument = selectedId
+    ? documents.find((doc) => doc.id === selectedId) ?? null
+    : null;
+  const nextDocument = selectedDocument ?? documents[0];
+
+  if (
+    selectedId === nextDocument.id &&
+    initializedSelectedId === nextDocument.id
+  ) {
+    return {type: 'none'};
+  }
+
+  return {type: 'initialize', document: nextDocument};
+};
+
+export const buildWorkspaceEditorDocument = ({
+  projectId,
+  selectedId,
+  selectedCreatedAt,
+  title,
+  content,
+  existingDocument,
+  now
+}: {
+  projectId: string;
+  selectedId: string;
+  selectedCreatedAt: number | null;
+  title: string;
+  content: string;
+  existingDocument: WritingDocument | null;
+  now: number;
+}): WritingDocument => ({
+  id: selectedId,
+  projectId,
+  title: title.trim() || 'Untitled scene',
+  content,
+  consistencyReviewMode: existingDocument?.consistencyReviewMode ?? 'default',
+  createdAt: selectedCreatedAt ?? now,
+  updatedAt: now
+});
+
+export const hasWorkspaceDocumentChanges = (
+  existingDocument: WritingDocument | null,
+  nextDocument: WritingDocument
+): boolean =>
+  !existingDocument ||
+  existingDocument.title !== nextDocument.title ||
+  existingDocument.content !== nextDocument.content;
+
+export const getWorkspaceManualSaveConsistencyMode = (
+  doc: Pick<WritingDocument, 'consistencyReviewMode'>
+): ImportMode => (doc.consistencyReviewMode === 'deferred' ? 'balanced' : 'strict');
+
+export const getWorkspaceAutosaveConsistencyMode = (
+  doc: Pick<WritingDocument, 'consistencyReviewMode'>
+): ImportMode => (doc.consistencyReviewMode === 'deferred' ? 'balanced' : 'lenient');
+
 export const useWorkspaceDocuments = ({
   activeProject,
   documents,
@@ -94,25 +157,45 @@ export const useWorkspaceDocuments = ({
   setFeedback,
   addSystemHistory
 }: UseWorkspaceDocumentsParams) => {
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const selectedId = useWorkspaceUiStore((state) =>
+    activeProject ? state.selectedDocumentIdByProjectId[activeProject.id] ?? null : null
+  );
+  const setStoreSelectedDocumentId = useWorkspaceUiStore(
+    (state) => state.setSelectedDocumentId
+  );
+  const exportFormat = useWorkspaceUiStore((state) => state.exportFormat);
+  const exportSelection = useWorkspaceUiStore((state) => state.exportSelection);
+  const openStoreExportModal = useWorkspaceUiStore((state) => state.openExportModal);
+  const closeStoreExportModal = useWorkspaceUiStore((state) => state.closeExportModal);
+  const importMode = useWorkspaceUiStore((state) => state.importMode);
+  const skipImportSuggestions = useWorkspaceUiStore(
+    (state) => state.skipImportSuggestions
+  );
+  const retryImportFiles = useWorkspaceUiStore((state) => state.retryImportFiles);
+  const setImportSummary = useWorkspaceUiStore((state) => state.setImportSummary);
+  const setRetryImportFiles = useWorkspaceUiStore(
+    (state) => state.setRetryImportFiles
+  );
+  const setCreatingScene = useWorkspaceUiStore((state) => state.setCreatingScene);
+  const setDeletingDocumentId = useWorkspaceUiStore(
+    (state) => state.setDeletingDocumentId
+  );
+  const setSelectedId = useCallback(
+    (update: SetStateAction<string | null>) => {
+      setStoreSelectedDocumentId(activeProject?.id ?? null, update);
+    },
+    [activeProject?.id, setStoreSelectedDocumentId]
+  );
   const [selectedCreatedAt, setSelectedCreatedAt] = useState<number | null>(null);
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
   const [lastSavedAt, setLastSavedAt] = useState<number | null>(null);
   const [wordCount, setWordCount] = useState(0);
-  const [isCreatingScene, setIsCreatingScene] = useState(false);
   const [isImportingDocuments, setIsImportingDocuments] = useState(false);
-  const [importMode, setImportMode] = useState<ImportMode>('balanced');
-  const [skipImportSuggestions, setSkipImportSuggestions] = useState(false);
-  const [importSummary, setImportSummary] = useState<WorkspaceImportSummary | null>(null);
-  const [retryImportFiles, setRetryImportFiles] = useState<File[]>([]);
-  const [deletingDocumentId, setDeletingDocumentId] = useState<string | null>(null);
-  const [isExportModalOpen, setExportModalOpen] = useState(false);
-  const [exportFormat, setExportFormat] = useState<ExportFormat>('markdown');
-  const [exportSelection, setExportSelection] = useState<SceneExportItem[]>([]);
   const importInputRef = useRef<HTMLInputElement | null>(null);
   const lastAutosaveErrorRef = useRef<string | null>(null);
+  const initializedSelectedIdRef = useRef<string | null>(null);
 
   const clearGuardrailIssues = useCallback(() => {
     setGuardrailIssuesRef.current?.([]);
@@ -127,43 +210,62 @@ export const useWorkspaceDocuments = ({
     [documents, selectedId]
   );
 
-  const resetEditor = useCallback(() => {
+  const resetEditor = useCallback((options?: {clearPersistedSelection?: boolean}) => {
     setSelectedId(null);
+    if (options?.clearPersistedSelection) {
+      initializedSelectedIdRef.current = null;
+    }
     setSelectedCreatedAt(null);
     setTitle('');
     setContent('');
     setSaveStatus('idle');
     setLastSavedAt(null);
-  }, []);
+  }, [setSelectedId]);
 
-  const resolveDocumentConsistencyMode = useCallback(
-    (doc: WritingDocument): ImportMode =>
-      doc.consistencyReviewMode === 'deferred' ? 'balanced' : 'strict',
-    []
+  const initializeEditorState = useCallback(
+    (doc: WritingDocument | null) => {
+      if (!doc) {
+        setSelectedId(null);
+        initializedSelectedIdRef.current = null;
+        setSelectedCreatedAt(null);
+        setTitle('');
+        setContent('');
+        setSaveStatus('idle');
+        setLastSavedAt(null);
+        return;
+      }
+      setSelectedId(doc.id);
+      initializedSelectedIdRef.current = doc.id;
+      setSelectedCreatedAt(doc.createdAt);
+      setTitle(doc.title);
+      setContent(doc.content);
+      setSaveStatus('idle');
+      setWordCount(countWords(doc.content));
+    },
+    [setSelectedId]
   );
 
-  const initializeEditorState = useCallback((doc: WritingDocument | null) => {
-    if (!doc) {
-      setSelectedId(null);
-      setSelectedCreatedAt(null);
-      setTitle('');
-      setContent('');
-      setSaveStatus('idle');
-      setLastSavedAt(null);
-      return;
+  useEffect(() => {
+    const initialization = resolveWorkspaceDocumentInitialization({
+      hasActiveProject: Boolean(activeProject),
+      documents,
+      selectedId,
+      initializedSelectedId: initializedSelectedIdRef.current
+    });
+
+    if (initialization.type === 'clear') {
+      initializeEditorState(null);
+    } else if (initialization.type === 'reset-empty') {
+      resetEditor({clearPersistedSelection: true});
+    } else if (initialization.type === 'initialize') {
+      initializeEditorState(initialization.document);
     }
-    setSelectedId(doc.id);
-    setSelectedCreatedAt(doc.createdAt);
-    setTitle(doc.title);
-    setContent(doc.content);
-    setSaveStatus('idle');
-    setWordCount(countWords(doc.content));
-  }, []);
+  }, [activeProject, documents, initializeEditorState, resetEditor, selectedId]);
 
   const handleNewDocument = useCallback(async () => {
     if (!activeProject) return;
 
-    setIsCreatingScene(true);
+    setCreatingScene(true);
     setFeedback(null);
     try {
       const now = Date.now();
@@ -194,9 +296,16 @@ export const useWorkspaceDocuments = ({
         error instanceof Error ? error.message : 'Unable to create scene.';
       setFeedback({tone: 'error', message});
     } finally {
-      setIsCreatingScene(false);
+      setCreatingScene(false);
     }
-  }, [activeProject, addSystemHistory, initializeEditorState, setDocuments, setFeedback]);
+  }, [
+    activeProject,
+    addSystemHistory,
+    initializeEditorState,
+    setCreatingScene,
+    setDocuments,
+    setFeedback
+  ]);
 
   const runImportBatch = useCallback(
     async (files: File[]) => {
@@ -351,47 +460,16 @@ export const useWorkspaceDocuments = ({
   );
 
   const openExportModal = useCallback(
-    (format: ExportFormat) => {
+    (format: WorkspaceExportFormat) => {
       const selection = documents.map((doc) => ({
         id: doc.id,
         title: doc.title || 'Untitled scene',
         included: true
       }));
-      setExportSelection(selection);
-      setExportFormat(format);
-      setExportModalOpen(true);
+      openStoreExportModal(format, selection);
     },
-    [documents]
+    [documents, openStoreExportModal]
   );
-
-  const closeExportModal = useCallback(() => {
-    setExportModalOpen(false);
-  }, []);
-
-  const moveExportItem = useCallback((id: string, direction: -1 | 1) => {
-    setExportSelection((prev) => {
-      const index = prev.findIndex((item) => item.id === id);
-      if (index < 0) return prev;
-      const nextIndex = index + direction;
-      if (nextIndex < 0 || nextIndex >= prev.length) return prev;
-      const copy = [...prev];
-      const [item] = copy.splice(index, 1);
-      copy.splice(nextIndex, 0, item);
-      return copy;
-    });
-  }, []);
-
-  const toggleExportItem = useCallback((id: string) => {
-    setExportSelection((prev) =>
-      prev.map((item) =>
-        item.id === id ? {...item, included: !item.included} : item
-      )
-    );
-  }, []);
-
-  const toggleAllExportItems = useCallback((included: boolean) => {
-    setExportSelection((prev) => prev.map((item) => ({...item, included})));
-  }, []);
 
   const handleExportScenes = useCallback(() => {
     if (!activeProject) return;
@@ -416,7 +494,7 @@ export const useWorkspaceDocuments = ({
       exportScenesAsEpub({projectName: activeProject.name, scenes: selectedScenes});
     }
 
-    setExportModalOpen(false);
+    closeStoreExportModal();
     const exportMessage =
       exportFormat === 'markdown'
         ? `Exported ${selectedScenes.length} scene(s) to Markdown.`
@@ -429,34 +507,35 @@ export const useWorkspaceDocuments = ({
       message: exportMessage,
       insertText: `System Export: ${exportMessage}`
     });
-  }, [activeProject, addSystemHistory, documents, exportFormat, exportSelection, setFeedback]);
+  }, [
+    activeProject,
+    addSystemHistory,
+    closeStoreExportModal,
+    documents,
+    exportFormat,
+    exportSelection,
+    setFeedback
+  ]);
 
   const handleSave = useCallback(async () => {
     if (!activeProject || !selectedId) return;
     const existingDocument = documents.find((doc) => doc.id === selectedId);
-    const nextTitle = title.trim() || 'Untitled scene';
-    if (
-      existingDocument &&
-      existingDocument.title === nextTitle &&
-      existingDocument.content === content
-    ) {
+    const now = Date.now();
+    const doc = buildWorkspaceEditorDocument({
+      projectId: activeProject.id,
+      selectedId,
+      selectedCreatedAt,
+      title,
+      content,
+      existingDocument: existingDocument ?? null,
+      now
+    });
+    if (!hasWorkspaceDocumentChanges(existingDocument ?? null, doc)) {
       setSaveStatus('saved');
       setLastSavedAt(Date.now());
       setFeedback({tone: 'success', message: 'Scene already saved.'});
       return;
     }
-
-    const now = Date.now();
-    const createdAt = selectedCreatedAt ?? now;
-    const doc: WritingDocument = {
-      id: selectedId,
-      projectId: activeProject.id,
-      title: nextTitle,
-      content,
-      consistencyReviewMode: existingDocument?.consistencyReviewMode ?? 'default',
-      createdAt,
-      updatedAt: now
-    };
 
     setSaveStatus('saving');
     setFeedback(null);
@@ -467,7 +546,7 @@ export const useWorkspaceDocuments = ({
       }
       await save(doc, {
         source: 'workspace-save',
-        consistencyMode: resolveDocumentConsistencyMode(doc)
+        consistencyMode: getWorkspaceManualSaveConsistencyMode(doc)
       });
       setFeedback({tone: 'success', message: 'Scene saved.'});
     } catch (error) {
@@ -481,7 +560,6 @@ export const useWorkspaceDocuments = ({
     content,
     documents,
     persistDocRef,
-    resolveDocumentConsistencyMode,
     selectedCreatedAt,
     selectedId,
     setFeedback,
@@ -501,7 +579,7 @@ export const useWorkspaceDocuments = ({
         setDocuments((prev) => prev.filter((entry) => entry.id !== doc.id));
 
         if (selectedId === doc.id) {
-          resetEditor();
+          resetEditor({clearPersistedSelection: true});
         }
         setFeedback({tone: 'success', message: 'Scene deleted.'});
       } catch (error) {
@@ -516,6 +594,7 @@ export const useWorkspaceDocuments = ({
       deleteDocumentSideEffectsRef,
       resetEditor,
       selectedId,
+      setDeletingDocumentId,
       setDocuments,
       setFeedback
     ]
@@ -532,62 +611,60 @@ export const useWorkspaceDocuments = ({
     [clearGuardrailIssues, closeConsistencyPopover]
   );
 
+  const scheduleAutosave = useCallback(
+    (doc: WritingDocument) => {
+      const timeoutId = window.setTimeout(() => {
+        setSaveStatus('saving');
+        const save = persistDocRef.current;
+        if (!save) {
+          return;
+        }
+        void save(doc, {
+          source: 'workspace-autosave',
+          consistencyMode: getWorkspaceAutosaveConsistencyMode(doc)
+        }).catch((error) => {
+          const message =
+            error instanceof Error ? error.message : 'Unable to save scene.';
+          setSaveStatus('idle');
+          if (lastAutosaveErrorRef.current !== message) {
+            lastAutosaveErrorRef.current = message;
+            setFeedback({tone: 'error', message});
+          }
+        });
+      }, 800);
+
+      return () => {
+        clearTimeout(timeoutId);
+      };
+    },
+    [persistDocRef, setFeedback]
+  );
+
   useEffect(() => {
     if (!activeProject || !selectedId) return;
     const existingDocument = documents.find((doc) => doc.id === selectedId);
-    const nextTitle = title.trim() || 'Untitled scene';
-    if (
-      existingDocument &&
-      existingDocument.title === nextTitle &&
-      existingDocument.content === content
-    ) {
+    const now = Date.now();
+    const doc = buildWorkspaceEditorDocument({
+      projectId: activeProject.id,
+      selectedId,
+      selectedCreatedAt,
+      title,
+      content,
+      existingDocument: existingDocument ?? null,
+      now
+    });
+    if (!hasWorkspaceDocumentChanges(existingDocument ?? null, doc)) {
       return;
     }
 
-    const now = Date.now();
-    const createdAt = selectedCreatedAt ?? now;
-    const doc: WritingDocument = {
-      id: selectedId,
-      projectId: activeProject.id,
-      title: nextTitle,
-      content,
-      consistencyReviewMode: existingDocument?.consistencyReviewMode ?? 'default',
-      createdAt,
-      updatedAt: now
-    };
-
-    const timeoutId = window.setTimeout(() => {
-      setSaveStatus('saving');
-      const save = persistDocRef.current;
-      if (!save) {
-        return;
-      }
-      void save(doc, {
-        source: 'workspace-autosave',
-        consistencyMode: resolveDocumentConsistencyMode(doc)
-      }).catch((error) => {
-        const message =
-          error instanceof Error ? error.message : 'Unable to save scene.';
-        setSaveStatus('idle');
-        if (lastAutosaveErrorRef.current !== message) {
-          lastAutosaveErrorRef.current = message;
-          setFeedback({tone: 'error', message});
-        }
-      });
-    }, 800);
-
-    return () => {
-      clearTimeout(timeoutId);
-    };
+    return scheduleAutosave(doc);
   }, [
     activeProject,
     content,
     documents,
-    persistDocRef,
-    resolveDocumentConsistencyMode,
+    scheduleAutosave,
     selectedCreatedAt,
     selectedId,
-    setFeedback,
     title
   ]);
 
@@ -608,20 +685,7 @@ export const useWorkspaceDocuments = ({
     setWordCount,
     selectedDocument,
     importInputRef: importInputRef as RefObject<HTMLInputElement>,
-    isCreatingScene,
     isImportingDocuments,
-    importMode,
-    setImportMode,
-    skipImportSuggestions,
-    setSkipImportSuggestions,
-    importSummary,
-    setImportSummary,
-    retryImportFiles,
-    setRetryImportFiles,
-    deletingDocumentId,
-    isExportModalOpen,
-    exportFormat,
-    exportSelection,
     resetEditor,
     initializeEditorState,
     handleNewDocument,
@@ -629,10 +693,6 @@ export const useWorkspaceDocuments = ({
     handleRetryFailedImports,
     handleSelectDocument,
     openExportModal,
-    closeExportModal,
-    moveExportItem,
-    toggleExportItem,
-    toggleAllExportItems,
     handleExportScenes,
     handleSave,
     handleDelete,

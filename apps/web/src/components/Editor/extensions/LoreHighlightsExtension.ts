@@ -3,6 +3,7 @@ import {Plugin, PluginKey} from 'prosemirror-state';
 import {Decoration, DecorationSet} from 'prosemirror-view';
 import type {EditorState} from 'prosemirror-state';
 import type {ConsistencyHighlightIssue} from './ConsistencyHighlightsExtension';
+import {getVisibleWorkspaceAnnotations} from '../../../services/consistency/workspaceAnnotations';
 
 export interface LoreHighlightEntry {
   id: string;
@@ -11,56 +12,29 @@ export interface LoreHighlightEntry {
 }
 
 const loreHighlightsKey = new PluginKey('lore-highlights');
+type HighlightSource<T> = T[] | (() => T[]);
 
-const normalize = (value: string): string =>
-  value
-    .trim()
-    .toLowerCase()
-    .replace(/['’]s\b/g, '')
-    .replace(/s['’]\b/g, 's')
-    .replace(/\s+/g, ' ')
-    .trim();
-
-const escapeRegex = (value: string): string =>
-  value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const resolveHighlightSource = <T,>(source: HighlightSource<T>): T[] =>
+  typeof source === 'function' ? source() : source;
 
 export const createLoreHighlightsExtension = (
-  entries: LoreHighlightEntry[],
-  consistencyIssues: ConsistencyHighlightIssue[] = []
+  entries: HighlightSource<LoreHighlightEntry>,
+  consistencyIssues: HighlightSource<ConsistencyHighlightIssue> = []
 ) =>
   Extension.create({
     name: 'loreHighlights',
 
     addProseMirrorPlugins() {
-      const normalizedConsistencyIssues = consistencyIssues
-        .map((issue) => ({
-          ...issue,
-          normalizedSurface: normalize(issue.surface),
-          matcher: new RegExp(
-            `(^|[^\\p{L}\\p{N}_])(${escapeRegex(normalize(issue.surface))})(?:['’]s|s['’])?(?=$|[^\\p{L}\\p{N}_])`,
-            'giu'
-          )
-        }))
-        .filter((issue) => issue.normalizedSurface.length > 0);
-      const normalizedEntries = entries
-        .map((entry) => ({
-          ...entry,
-          normalizedSurface: normalize(entry.surface),
-          matcher: new RegExp(
-            `(^|[^\\p{L}\\p{N}_])(${escapeRegex(normalize(entry.surface))})(?:['’]s|s['’])?(?=$|[^\\p{L}\\p{N}_])`,
-            'giu'
-          )
-        }))
-        .filter((entry) => entry.normalizedSurface.length > 0);
-
       return [
         new Plugin({
           key: loreHighlightsKey,
           props: {
             decorations(state: EditorState) {
-              if (normalizedEntries.length === 0) {
+              const currentEntries = resolveHighlightSource(entries);
+              if (currentEntries.length === 0) {
                 return DecorationSet.empty;
               }
+              const currentConsistencyIssues = resolveHighlightSource(consistencyIssues);
 
               const decorations: Decoration[] = [];
 
@@ -72,51 +46,38 @@ export const createLoreHighlightsExtension = (
                   return;
                 }
 
-                const text = node.text;
-                const normalizedText = text
-                  .toLowerCase()
-                  .replace(/\s+/g, ' ');
-                const blockedRanges: Array<{from: number; to: number}> = [];
-
-                normalizedConsistencyIssues.forEach((issue) => {
-                  issue.matcher.lastIndex = 0;
-                  let match: RegExpExecArray | null = null;
-                  while ((match = issue.matcher.exec(normalizedText))) {
-                    const prefix = match[1] ?? '';
-                    const matchedText = match[0] ?? '';
-                    const matchIndex = match.index + prefix.length;
-                    blockedRanges.push({
-                      from: pos + matchIndex,
-                      to: pos + matchIndex + (matchedText.length - prefix.length)
-                    });
-                  }
-                });
-
-                normalizedEntries.forEach((entry) => {
-                  entry.matcher.lastIndex = 0;
-                  let match: RegExpExecArray | null = null;
-                  while ((match = entry.matcher.exec(normalizedText))) {
-                    const prefix = match[1] ?? '';
-                    const matchedText = match[0] ?? '';
-                    const matchIndex = match.index + prefix.length;
-                    const from = pos + matchIndex;
-                    const to = from + (matchedText.length - prefix.length);
-                    const overlapsConsistency = blockedRanges.some(
-                      (range) => from < range.to && to > range.from
-                    );
-                    if (overlapsConsistency) {
-                      continue;
-                    }
+                getVisibleWorkspaceAnnotations({
+                  text: node.text,
+                  knownSurfaces: currentEntries.map((entry) => ({
+                    id: entry.id,
+                    surface: entry.surface,
+                    metadata: entry
+                  })),
+                  reviewSurfaces: currentConsistencyIssues.map((issue) => ({
+                    id: issue.id,
+                    surface: issue.surface,
+                    message: issue.message,
+                    severity: issue.severity,
+                    issueCode: issue.issueCode,
+                    source: issue.source,
+                    confidence: issue.confidence,
+                    inlineMode: issue.inlineMode,
+                    metadata: issue
+                  }))
+                })
+                  .filter((annotation) => annotation.kind === 'known-canon')
+                  .forEach((annotation) => {
+                    const entry = annotation.data as LoreHighlightEntry | undefined;
+                    if (!entry) return;
                     decorations.push(
-                      Decoration.inline(from, to, {
+                      Decoration.inline(pos + annotation.from, pos + annotation.to, {
                         class: 'lore-highlight',
                         'data-lore-id': entry.id,
                         'data-lore-type': entry.type,
                         title: `Open lore for ${entry.surface}`
                       })
                     );
-                  }
-                });
+                  });
               });
 
               return DecorationSet.create(state.doc, decorations);

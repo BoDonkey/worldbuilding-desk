@@ -6,12 +6,11 @@ import type {
   ProjectAISettings,
   ProjectFeatureToggles,
   ProjectMode,
-  WorkspaceImportMode
+  WorkspaceImportMode,
+  InlineHighlightsMode
 } from '../entityTypes';
 import {
-  getInheritedConsistencyActionCues,
-  getOrCreateSettings,
-  saveProjectSettings
+  getInheritedConsistencyActionCues
 } from '../settingsStorage';
 import {CharacterStyleList} from '../components/CharacterStyleList';
 import {AISettings} from '../components/Settings/AISettings';
@@ -41,7 +40,10 @@ function SettingsSection({title, defaultOpen = false, children}: SettingsSection
 
 function SettingsRoute() {
   const activeProject = useAppStore((s) => s.activeProject);
+  const projectSettings = useAppStore((s) => s.projectSettings);
   const setProjectSettings = useAppStore((s) => s.setProjectSettings);
+  const loadProjectSettings = useAppStore((s) => s.loadProjectSettings);
+  const saveProjectSettings = useAppStore((s) => s.saveProjectSettings);
   const [settings, setSettings] = useState<ProjectSettings | null>(null);
   const [newStyleName, setNewStyleName] = useState('');
   const [expandedStyleId, setExpandedStyleId] = useState<string | null>(null);
@@ -60,20 +62,30 @@ function SettingsRoute() {
     let cancelled = false;
 
     (async () => {
-      const projectSettings = await getOrCreateSettings(activeProject.id);
+      const nextProjectSettings =
+        projectSettings && projectSettings.projectId === activeProject.id
+          ? projectSettings
+          : await loadProjectSettings(activeProject.id);
       const inheritedCues = await getInheritedConsistencyActionCues(activeProject);
       if (!cancelled) {
-        setSettings(projectSettings);
-        setConsistencyCuesDraft(projectSettings.consistencyActionCues.join('\n'));
+        setSettings(nextProjectSettings);
+        setConsistencyCuesDraft(nextProjectSettings.consistencyActionCues.join('\n'));
         setInheritedConsistencyCues(inheritedCues);
-        setProjectSettings(projectSettings);
       }
     })();
 
     return () => {
       cancelled = true;
     };
-  }, [activeProject]);
+  }, [activeProject, loadProjectSettings, projectSettings, setProjectSettings]);
+
+  useEffect(() => {
+    if (!projectSettings || !activeProject || projectSettings.projectId !== activeProject.id) {
+      return;
+    }
+    setSettings(projectSettings);
+    setConsistencyCuesDraft(projectSettings.consistencyActionCues.join('\n'));
+  }, [activeProject, projectSettings]);
 
   const handleAddStyle = async () => {
     if (!settings || !newStyleName.trim()) return;
@@ -83,7 +95,7 @@ function SettingsRoute() {
       name: newStyleName.trim(),
       markName: newStyleName.toLowerCase().replace(/\s+/g, '-'),
       styles: {
-        color: '#ffffff',
+        color: 'var(--color-bg-primary)',
         fontStyle: 'normal',
         fontWeight: 'normal'
       }
@@ -97,7 +109,6 @@ function SettingsRoute() {
 
     await saveProjectSettings(updated);
     setSettings(updated);
-    setProjectSettings(updated);
     setNewStyleName('');
     setExpandedStyleId(newStyle.id);
   };
@@ -118,7 +129,6 @@ function SettingsRoute() {
 
     await saveProjectSettings(updated);
     setSettings(updated);
-    setProjectSettings(updated);
   };
 
   const handleDeleteStyle = async (styleId: string) => {
@@ -132,7 +142,6 @@ function SettingsRoute() {
 
     await saveProjectSettings(updated);
     setSettings(updated);
-    setProjectSettings(updated);
     if (expandedStyleId === styleId) {
       setExpandedStyleId(null);
     }
@@ -149,7 +158,6 @@ function SettingsRoute() {
 
     await saveProjectSettings(updated);
     setSettings(updated);
-    setProjectSettings(updated);
   };
 
   const handleProjectModeChange = async (mode: ProjectMode) => {
@@ -162,7 +170,6 @@ function SettingsRoute() {
     };
     await saveProjectSettings(updated);
     setSettings(updated);
-    setProjectSettings(updated);
   };
 
   const handleFeatureToggleChange = async (
@@ -180,7 +187,6 @@ function SettingsRoute() {
     };
     await saveProjectSettings(updated);
     setSettings(updated);
-    setProjectSettings(updated);
   };
 
   const handleConsistencyCueSave = async () => {
@@ -198,7 +204,6 @@ function SettingsRoute() {
     await saveProjectSettings(updated);
     setSettings(updated);
     setConsistencyCuesDraft(updated.consistencyActionCues.join('\n'));
-    setProjectSettings(updated);
   };
 
   const handleImportDefaultsChange = async (
@@ -214,7 +219,19 @@ function SettingsRoute() {
     };
     await saveProjectSettings(updated);
     setSettings(updated);
-    setProjectSettings(updated);
+  };
+
+  const handleInlineHighlightsModeChange = async (mode: InlineHighlightsMode) => {
+    if (!settings) return;
+    const updated: ProjectSettings = {
+      ...settings,
+      editorFeedback: {
+        inlineHighlightsMode: mode
+      },
+      updatedAt: Date.now()
+    };
+    await saveProjectSettings(updated);
+    setSettings(updated);
   };
 
   if (!activeProject) {
@@ -271,6 +288,33 @@ function SettingsRoute() {
         <SettingsSection title='Reading & Editor' defaultOpen={true}>
           <FontSizeControl />
           <EditorAppearanceControl />
+          <div className={styles.helperList}>
+            <div><strong>Inline feedback</strong></div>
+            <div>
+              Control how lore and review highlights appear while drafting in the
+              manuscript editor.
+            </div>
+          </div>
+          <label className={styles.fieldLabel}>
+            Highlight visibility
+            <select
+              value={settings.editorFeedback?.inlineHighlightsMode ?? 'visible'}
+              onChange={(e) =>
+                void handleInlineHighlightsModeChange(
+                  e.target.value as InlineHighlightsMode
+                )
+              }
+              className={styles.styleInput}
+            >
+              <option value='visible'>Visible</option>
+              <option value='subtle'>Subtle</option>
+              <option value='hidden-while-typing'>Hidden while typing</option>
+            </select>
+          </label>
+          <p className={styles.helperText}>
+            Hidden while typing restores highlights automatically after a short idle
+            pause, so review stays available without crowding the draft.
+          </p>
         </SettingsSection>
 
         <SettingsSection title='AI Settings'>

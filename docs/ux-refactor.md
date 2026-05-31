@@ -88,6 +88,83 @@ Refactor the application to:
 
 ---
 
+# AMBIENT UI PATTERNS (NEW)
+
+## PATTERN 1 — The "Gutter Ghost" (Ambient Context)
+
+### Concept:
+Move all passive feedback (lore hits, linter warnings, system suggestions) out of the main text area and into the editor gutter.
+
+### Implementation:
+* **Remove:** Wavy underlines (red/blue) in the main text area.
+* **Add:** Faint, low-contrast icons in the vertical gutter to the left of the line numbers.
+* **Interaction:** 
+  * Icons remain "faint" unless the line is active or hovered.
+  * Hovering an icon reveals a **Context Bubble** with a summary (e.g., "Lore: Elara has blue eyes").
+  * Clicking an icon opens the **Omni-Rail** to the relevant entry.
+
+---
+
+## PATTERN 2 — The "Seedling" (Zero-UI Lore Capture)
+
+### Concept:
+Allow authors to capture new lore or entities without leaving the drafting flow or filling out forms.
+
+### Implementation:
+* **Action:** When text is selected, show a single **[Seed]** button in the selection popover.
+* **Behind the Scenes:** 
+  * Clicking [Seed] creates a "Draft Entity" in the background.
+  * The system uses RAG/Shodh to auto-populate a summary from the surrounding context.
+* **No Blocking:** Never open a full form or navigate away from the editor during a "Seed" action.
+
+---
+
+## PATTERN 3 — The "Omni-Rail" (Tab Consolidation)
+
+### Concept:
+Replace multiple static tabs (Lore, Rules, World Bible) with a single, dynamic sidebar that responds to cursor focus.
+
+### Implementation:
+* **Context Awareness:** The Omni-Rail updates its content based on the current cursor position or active line.
+* **Dynamic Content:**
+  * Near Character → Show **Character Mini-Sheet** (Stats, Status).
+  * Near Game Mechanic → Show **Rule Trigger** (Dice, Formulas).
+  * Near Location → Show **Atmospheric Anchors** (Shodh memories).
+* **Deep Access:** Provide an "Edit Source" button for each card that opens the full World Bible/Rules view in a modal or separate route.
+
+---
+
+## PATTERN 4 — The "Lore Document" (Rich-Text Lore)
+
+### Concept:
+Treat lore entry as a writing task, not a data entry task. Replace basic form text areas with a robust, TipTap-based rich text editor.
+
+### Status note (2026-05-11):
+This is now partially implemented in the shipped app.
+
+Implemented:
+* World Bible longform `textarea` fields now use a TipTap-backed rich-text surface.
+* Longform fields support **Expand to document** full-width editing.
+* Import flows now preserve richer Markdown/HTML structure for longform lore fields and support document preview before apply.
+* World Bible browse/review cards now show better lore summaries, including structure-aware excerpts and inline expansion.
+
+Still open:
+* Category editor fields are not fully converted to rich text.
+* The larger "Omni-Rail" consolidation remains a future shell/navigation decision, not part of the current implementation.
+
+### Implementation:
+* **Replace:** Standard `<textarea>` elements in the World Bible and Category editors with a scoped instance of the **TipTap Editor**.
+* **Unified Experience:** Authors should have the same formatting tools, keyboard shortcuts, and "feel" in the World Bible as they do in the manuscript.
+* **Fullscreen Expansion:** 
+  * For long-form backstories or detailed histories, provide an **"Expand to Document"** button.
+  * This opens the lore entry in a distraction-free, full-width editor view.
+* **Benefits:** 
+  * Encourages deeper worldbuilding directly within the app.
+  * Better indexing for Shodh (richer structure).
+  * No need for authors to "write elsewhere and import."
+
+---
+
 # EDITOR FLOW REFACTOR
 
 ## GOAL
@@ -102,12 +179,12 @@ User can type immediately with zero setup.
 
 Ensure layout is:
 
-[ optional left nav ]  [ EDITOR (dominant) ]  [ optional right panel ]
+[ optional left nav ]  [ EDITOR (dominant) ]  [ Omni-Rail (right) ]
 
 ### Constraints:
 
 * Editor must occupy ≥ 70% width
-* Sidebars must be collapsible
+* Omni-Rail must be collapsible and default to closed.
 
 ---
 
@@ -137,7 +214,7 @@ Search for:
 
 ### Replace with:
 
-* inline indicators (underline, icon, tooltip)
+* Gutter Ghost indicators
 
 ---
 
@@ -151,6 +228,16 @@ Preserve existing detection logic, but reduce UX friction.
 
 ## Step 1 — Convert Detection to Passive
 
+### Status note (2026-05-11):
+The current mitigation path is no longer "replace everything with gutter-only markers first."
+
+Implemented:
+* Inline feedback now has project-level visibility modes: `Visible`, `Subtle`, and `Hidden while typing`.
+* This preserves the existing highlight/review pipeline while letting authors suppress visual noise during active drafting.
+
+Still open:
+* A true gutter-only redesign remains optional future work if visibility controls still feel too intrusive after real usage.
+
 ### If current behavior is:
 
 * modal popup
@@ -159,13 +246,13 @@ Preserve existing detection logic, but reduce UX friction.
 
 ### Change to:
 
-* inline highlight only
+* Gutter Ghost marker only
 
 ---
 
 ## Step 2 — Add Lightweight Interaction
 
-### On hover or click:
+### On hover or click (via Gutter Ghost):
 
 Show:
 
@@ -199,15 +286,27 @@ No user input required.
 
 ---
 
-# CODEX REFACTOR
+# CODEX & MECHANICS REFACTOR
 
 ## GOAL
 
-Codex is read-only first, editable second
+The World Bible/Codex is a deep reference library, not a mandatory chore.
 
 ---
 
-## Step 1 — Remove Mandatory Fields
+## Step 1 — Preserve Deep Customization (CRITICAL)
+
+### Action:
+Ensure that while the primary UI is "clean," the underlying **LitRPG Mechanics** (stats, progression, formulas) remain fully editable for power users.
+
+### Guidelines:
+* **Stats & Progression:** Do not "gate out" customization. Authors must be able to define custom stat sheets and progression logic in the World Bible/Rules views.
+* **The "Deep Link":** Every card in the Omni-Rail should have a clear path to its "Full Editor" in the World Bible.
+* **Complexity Nesting:** Use "Advanced" toggles to hide complexity *within* forms, but do not remove the capabilities themselves.
+
+---
+
+## Step 2 — Remove Mandatory Fields
 
 ### Action
 
@@ -225,7 +324,7 @@ Find schema validation requiring:
 
 ---
 
-## Step 2 — Simplify Codex UI
+## Step 3 — Simplify Codex UI
 
 ### Replace complex form with:
 
@@ -233,21 +332,6 @@ Name
 Short description (optional)
 Recent mentions (auto)
 Notes (free text)
-
----
-
-## Step 3 — Collapse Advanced Fields
-
-### Move to:
-
-* accordion sections
-* "Advanced" toggle
-
-Examples:
-
-* stats
-* relationships
-* rule bindings
 
 ---
 
@@ -313,7 +397,10 @@ Every linter issue must support:
 
 ---
 
-## Step 4 — Move Linter to Side Panel
+## Step 4 — Move Linter to Gutter Ghost
+
+### Status note (2026-05-11):
+Not implemented as written. Current direction is to soften the existing inline system before attempting a full gutter rewrite.
 
 ### DO NOT:
 
@@ -321,8 +408,8 @@ Every linter issue must support:
 
 ### DO:
 
-* show summary in side panel
-* highlight inline text
+* show marker in gutter
+* show summary in Omni-Rail when the line is active
 
 ---
 
@@ -382,7 +469,7 @@ Reduce cognitive load
 ### Target:
 
 Write
-Codex
+World Bible (formerly Codex)
 Review
 
 ---
@@ -391,7 +478,7 @@ Review
 
 Move under:
 
-* Codex
+* World Bible
 * Settings
 * Advanced
 
@@ -496,11 +583,12 @@ After validation:
 4. System:
 
    * detects entities
-   * highlights softly
+   * highlights softly in the gutter
 5. User optionally:
 
-   * views codex
-   * sees suggestions
+   * clicks gutter icon to view context in Omni-Rail
+   * seeds new lore from selection
+   * jumps to World Bible for deep stat customization
 6. No interruptions occur
 
 ---
@@ -514,7 +602,7 @@ After refactor, confirm:
 * Are there ZERO required setup steps?
 * Can all system feedback be ignored?
 * Does AI only act when asked?
-* Is Codex optional?
+* Can power users still access deep stat/rule customization?
 
 If any answer is NO → continue refactoring
 
@@ -539,8 +627,8 @@ If a new user says:
 
 The refactor succeeded.
 
-If they say:
+If a power user says:
 
-“I wasn’t sure what to do first”
+"I can't find where to edit my character's Strength formula"
 
 The refactor failed.

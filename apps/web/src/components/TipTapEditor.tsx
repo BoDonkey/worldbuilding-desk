@@ -1,6 +1,7 @@
 import type {Editor, Extension} from '@tiptap/core';
 import {EditorContent, useEditor} from '@tiptap/react';
 import {useEffect, useRef} from 'react';
+import type {InlineHighlightsMode} from '../entityTypes';
 
 import '../assets/TipTapEditor.css';
 import {
@@ -44,6 +45,11 @@ interface TipTapEditorProps {
     loreId: string,
     anchorRect: {left: number; top: number; bottom: number}
   ) => void;
+  onLoreHighlightHover?: (
+    loreId: string,
+    anchorRect: {left: number; top: number; bottom: number}
+  ) => void;
+  onLoreHighlightLeave?: () => void;
   onStatBlockTokenClick?: (
     rawToken: string,
     anchorRect: {left: number; top: number; bottom: number}
@@ -56,6 +62,8 @@ interface TipTapEditorProps {
   onTextInserted?: () => void;
   insertContext?: {from: number; to: number} | null;
   presentStatBlockToken?: (rawToken: string) => StatBlockTokenPresentation;
+  onTypingActivity?: () => void;
+  inlineHighlightsMode?: InlineHighlightsMode | 'hidden';
 }
 
 function MenuBar({editor, customButtons, actionButtons}: MenuBarProps) {
@@ -189,7 +197,7 @@ function MenuBar({editor, customButtons, actionButtons}: MenuBarProps) {
             style={{
               width: '2px',
               height: '24px',
-              backgroundColor: '#ccc',
+              backgroundColor: 'var(--color-border)',
               margin: '0 0.5rem'
             }}
           />
@@ -246,6 +254,11 @@ interface TipTapEditorProps {
     loreId: string,
     anchorRect: {left: number; top: number; bottom: number}
   ) => void;
+  onLoreHighlightHover?: (
+    loreId: string,
+    anchorRect: {left: number; top: number; bottom: number}
+  ) => void;
+  onLoreHighlightLeave?: () => void;
   onStatBlockTokenClick?: (
     rawToken: string,
     anchorRect: {left: number; top: number; bottom: number}
@@ -263,6 +276,8 @@ function TipTapEditor({
   onWordCountChange,
   onConsistencyHighlightClick,
   onLoreHighlightClick,
+  onLoreHighlightHover,
+  onLoreHighlightLeave,
   onStatBlockTokenClick,
   config = defaultEditorConfig,
   toolbarButtons = [],
@@ -270,7 +285,9 @@ function TipTapEditor({
   textToInsert,
   onTextInserted,
   insertContext,
-  presentStatBlockToken = getDefaultStatBlockTokenPresentation
+  presentStatBlockToken = getDefaultStatBlockTokenPresentation,
+  onTypingActivity,
+  inlineHighlightsMode = 'visible'
 }: TipTapEditorProps) {
   const isInternalUpdate = useRef(false);
   const onEditorReadyRef = useRef(onEditorReady);
@@ -291,6 +308,7 @@ function TipTapEditor({
 
     onUpdate({editor}) {
       isInternalUpdate.current = true;
+      onTypingActivity?.();
 
       if (onChange) {
         onChange(editor.getHTML());
@@ -354,6 +372,46 @@ function TipTapEditor({
           bottom: rect.bottom
         });
         return false;
+      },
+      handleDOMEvents: {
+        mouseover(_view, event) {
+          if (!(event.target instanceof HTMLElement)) {
+            return false;
+          }
+          const loreTarget = event.target.closest<HTMLElement>('[data-lore-id]');
+          if (!loreTarget) {
+            return false;
+          }
+          const loreId = loreTarget.dataset.loreId;
+          if (!loreId) {
+            return false;
+          }
+          const rect = loreTarget.getBoundingClientRect();
+          onLoreHighlightHover?.(loreId, {
+            left: rect.left,
+            top: rect.top,
+            bottom: rect.bottom
+          });
+          return false;
+        },
+        mouseout(_view, event) {
+          if (!(event.target instanceof HTMLElement)) {
+            return false;
+          }
+          const loreTarget = event.target.closest<HTMLElement>('[data-lore-id]');
+          if (!loreTarget) {
+            return false;
+          }
+          const relatedTarget = event.relatedTarget;
+          if (
+            relatedTarget instanceof Node &&
+            loreTarget.contains(relatedTarget)
+          ) {
+            return false;
+          }
+          onLoreHighlightLeave?.();
+          return false;
+        }
       }
     }
   });
@@ -362,6 +420,11 @@ function TipTapEditor({
     if (editor) {
       onEditorReadyRef.current?.(editor);
     }
+  }, [editor]);
+
+  useEffect(() => {
+    if (!editor) return;
+    editor.view.dom.setAttribute('spellcheck', 'false');
   }, [editor]);
 
   // keep external content in sync
@@ -410,7 +473,10 @@ function TipTapEditor({
         customButtons={toolbarButtons}
         actionButtons={toolbarActions}
       />
-      <EditorContent editor={editor} />
+      <EditorContent
+        editor={editor}
+        className={`inline-highlights-mode-${inlineHighlightsMode}`}
+      />
     </div>
   );
 }

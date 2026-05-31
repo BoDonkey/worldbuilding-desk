@@ -1,16 +1,19 @@
 import {useEffect, useState, useCallback, useRef, useMemo} from 'react';
 import type {ChangeEvent, FormEvent} from 'react';
-import {useLocation} from 'react-router-dom';
+import {useLocation, useNavigate} from 'react-router-dom';
 import {useAppStore} from '../store/appStore';
-import type {EntityCategory, WorldEntity} from '../entityTypes';
-import {getEntitiesByProject, saveEntity, deleteEntity} from '../entityStorage';
+import {getProjectCapabilities} from '../projectMode';
+import type {Character, EntityCategory, WorldEntity} from '../entityTypes';
+import {getEntitiesByProject} from '../entityStorage';
 import {
   getCategoriesByProject,
   saveCategory,
   deleteCategory,
   initializeDefaultCategories
 } from '../categoryStorage';
+import {getCharactersByProject} from '../characterStorage';
 import CategoryEditor from '../components/CategoryEditor';
+import {WorldBibleRichTextField} from '../components/WorldBibleRichTextField';
 import styles from '../assets/components/WorldBibleRoute.module.css';
 import type {RAGProvider} from '../services/rag/RAGService';
 import {getRAGService} from '../services/rag/getRAGService';
@@ -21,250 +24,226 @@ import type {
 import {getShodhService} from '../services/shodh/getShodhService';
 import {emitShodhMemoriesUpdated} from '../services/shodh/shodhEvents';
 import {ShodhMemoryPanel} from '../components/ShodhMemoryPanel';
-import {
-  getCompendiumEntriesByProject,
-  upsertCompendiumEntryFromEntity
-} from '../services/compendium';
-import type {CompendiumDomain} from '../entityTypes';
+import {getCompendiumEntriesByProject} from '../services/compendium';
 import type {ConsistencyAlias} from '../services/consistency';
+import {getAliasesByProject} from '../services/consistency';
+import {useWorldBibleReview} from '../hooks/useWorldBibleReview';
 import {
-  deleteAliasesForEntity,
-  getAliasesByProject,
-  replaceAliasesForEntity
-} from '../services/consistency';
+  useWorldBibleImports,
+  type ImportMode,
+  type JsonImportConflictResolution
+} from '../hooks/useWorldBibleImports';
+import {useWorldBibleEntityActions} from '../hooks/useWorldBibleEntityActions';
 import {
   getSeriesBibleConfig,
   promoteMemoryToParent,
-  promoteDocumentToParent,
-  getCanonSyncState,
-  syncChildWithParent
+  getCanonSyncState
 } from '../services/seriesBible/SeriesBibleService';
+import {
+  ALTERNATIVE_NAMES_KEY,
+  extractPlainTextFromRichText,
+  extractStructuredSummaryFromRichText,
+  formatAlternativeNames,
+  normalizeRichTextValue,
+  normalizeName,
+  parseAlternativeNames
+} from '../services/worldBible/worldBibleEntityHelpers';
+import {
+  buildEntityMatchKey,
+  getReviewResolutionLabel
+} from '../services/worldBible/worldBibleReviewHelpers';
+import {deriveCharacterAliasSuggestions} from '../services/worldBible/worldBibleCanonicalization';
+import {
+  parseCharacterImportText,
+  readCharacterImportFile,
+  type CharacterImportDraft,
+  type CharacterImportSectionDraft
+} from '../services/characters/characterImportService';
+import {LLMService} from '../services/llm/LLMService';
 
 // activeProject read from store below
 
-type ImportMode = 'create' | 'upsert';
+type WorldBibleViewMode = 'category' | 'review';
+type CharacterImportStep = 'idle' | 'input' | 'review';
+type CharacterAuthoringMode = 'idle' | 'manual' | 'import' | 'ai';
 
-interface WorldBibleImportDraft {
-  id: string;
-  fileName: string;
-  name: string;
-  text: string;
-  preview: string;
-  categoryId: string;
-  mode: ImportMode;
-  include: boolean;
-  parseError?: string;
-}
+const getPreferredImportField = (
+  category: EntityCategory
+): EntityCategory['fieldSchema'][number] | undefined =>
+  category.fieldSchema.find((field) => field.key === 'description') ??
+  category.fieldSchema.find((field) => field.type === 'textarea') ??
+  category.fieldSchema.find((field) => field.type === 'text');
 
-interface JsonImportRowInput {
-  rowIndex: number;
-  record: Record<string, unknown>;
-}
-
-interface JsonImportSession {
-  fileName: string;
-  rows: JsonImportRowInput[];
-  keys: string[];
-  categoryId: string;
-  mode: ImportMode;
-  nameKey: string;
-  fieldMap: Record<string, string>;
-}
-
-type JsonImportConflictResolution = ImportMode | 'skip';
-
-interface JsonImportConflict {
-  kind: 'existing' | 'batch-duplicate';
-  message: string;
-}
-
-interface JsonImportPreparedRow {
-  rowIndex: number;
-  name: string;
-  fields: Record<string, string>;
-  errors: string[];
-  existingEntityId?: string;
-  conflict?: JsonImportConflict;
-  resolution: JsonImportConflictResolution;
-}
-
-const fileNameToEntityName = (name: string): string => {
-  const base = name.replace(/\.[^.]+$/, '').trim();
-  return base || 'Imported entry';
+const CATEGORY_SUMMARY_PRIORITY: Record<string, string[]> = {
+  characters: ['description', 'role', 'age', 'notes'],
+  locations: ['description', 'climate', 'population', 'notes'],
+  items: ['description', 'rarity', 'notes'],
+  factions: ['description', 'notes'],
+  concepts: ['description', 'notes']
 };
+const CHARACTER_CATEGORY_HINTS = ['character', 'characters', 'npc', 'person', 'people'];
+const CHARACTER_NOTES_FIELD = 'notes';
+const CHARACTER_IDENTITY_FIELD_KEYS = ['age', 'role'];
+const CHARACTER_AUTHORING_FIELD_KEYS = new Set([
+  'description',
+  CHARACTER_NOTES_FIELD,
+  ...CHARACTER_IDENTITY_FIELD_KEYS,
+  ALTERNATIVE_NAMES_KEY
+]);
 
-const htmlToText = (raw: string): string => {
-  const parser = new DOMParser();
-  const parsed = parser.parseFromString(raw, 'text/html');
-  return parsed.body.textContent?.trim() ?? '';
-};
+const slugifyFieldKey = (value: string): string =>
+  value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '') || 'section';
 
-const readU16LE = (bytes: Uint8Array, offset: number): number =>
-  bytes[offset] | (bytes[offset + 1] << 8);
-
-const readU32LE = (bytes: Uint8Array, offset: number): number =>
-  (bytes[offset] |
-    (bytes[offset + 1] << 8) |
-    (bytes[offset + 2] << 16) |
-    (bytes[offset + 3] << 24)) >>> 0;
-
-const findDocxDocumentEntry = (
-  bytes: Uint8Array
-): {
-  compressionMethod: number;
-  compressedData: Uint8Array;
-} | null => {
-  const eocdSignature = 0x06054b50;
-  const centralSignature = 0x02014b50;
-  const localSignature = 0x04034b50;
-
-  const minEocdSize = 22;
-  const maxCommentLength = 0xffff;
-  const searchStart = Math.max(0, bytes.length - (minEocdSize + maxCommentLength));
-  let eocdOffset = -1;
-  for (let i = bytes.length - minEocdSize; i >= searchStart; i -= 1) {
-    if (readU32LE(bytes, i) === eocdSignature) {
-      eocdOffset = i;
-      break;
-    }
-  }
-  if (eocdOffset === -1) return null;
-
-  const centralDirectorySize = readU32LE(bytes, eocdOffset + 12);
-  const centralDirectoryOffset = readU32LE(bytes, eocdOffset + 16);
-  const centralDirectoryEnd = centralDirectoryOffset + centralDirectorySize;
-  if (centralDirectoryEnd > bytes.length) return null;
-
-  const decoder = new TextDecoder('utf-8');
-  let cursor = centralDirectoryOffset;
-
-  while (cursor + 46 <= centralDirectoryEnd) {
-    if (readU32LE(bytes, cursor) !== centralSignature) {
-      break;
-    }
-    const compressionMethod = readU16LE(bytes, cursor + 10);
-    const compressedSize = readU32LE(bytes, cursor + 20);
-    const fileNameLength = readU16LE(bytes, cursor + 28);
-    const extraLength = readU16LE(bytes, cursor + 30);
-    const commentLength = readU16LE(bytes, cursor + 32);
-    const localHeaderOffset = readU32LE(bytes, cursor + 42);
-    const fileNameStart = cursor + 46;
-    const fileNameEnd = fileNameStart + fileNameLength;
-    if (fileNameEnd > bytes.length) return null;
-
-    const fileName = decoder.decode(bytes.slice(fileNameStart, fileNameEnd));
-    cursor = fileNameEnd + extraLength + commentLength;
-
-    if (fileName !== 'word/document.xml') continue;
-    if (localHeaderOffset + 30 > bytes.length) return null;
-    if (readU32LE(bytes, localHeaderOffset) !== localSignature) return null;
-
-    const localNameLength = readU16LE(bytes, localHeaderOffset + 26);
-    const localExtraLength = readU16LE(bytes, localHeaderOffset + 28);
-    const dataStart = localHeaderOffset + 30 + localNameLength + localExtraLength;
-    const dataEnd = dataStart + compressedSize;
-    if (dataEnd > bytes.length) return null;
-
-    return {
-      compressionMethod,
-      compressedData: bytes.slice(dataStart, dataEnd)
-    };
-  }
-
-  return null;
-};
-
-const inflateRaw = async (compressedData: Uint8Array): Promise<Uint8Array> => {
-  const copy = new Uint8Array(compressedData.byteLength);
-  copy.set(compressedData);
-  const stream = new Blob([copy.buffer]).stream().pipeThrough(
-    new DecompressionStream('deflate-raw')
+const isCharacterCategory = (category: EntityCategory): boolean => {
+  const slug = category.slug.toLowerCase();
+  const name = category.name.toLowerCase();
+  return CHARACTER_CATEGORY_HINTS.some(
+    (hint) => slug.includes(hint) || name.includes(hint)
   );
-  const decompressed = await new Response(stream).arrayBuffer();
-  return new Uint8Array(decompressed);
 };
 
-const docxXmlToText = (xml: string): string => {
-  const withBreaks = xml
-    .replace(/<w:tab\b[^>]*\/>/g, '\t')
-    .replace(/<w:br\b[^>]*\/>/g, '\n')
-    .replace(/<w:cr\b[^>]*\/>/g, '\n')
-    .replace(/<\/w:p>/g, '\n\n');
-  const withoutTags = withBreaks.replace(/<[^>]+>/g, '');
-  const parser = new DOMParser();
-  const decoded = parser.parseFromString(
-    `<!doctype html><body>${withoutTags}`,
-    'text/html'
-  ).body.textContent;
-  return decoded?.trim() ?? '';
-};
-
-const parseDocxToText = async (file: File): Promise<string> => {
-  const bytes = new Uint8Array(await file.arrayBuffer());
-  const entry = findDocxDocumentEntry(bytes);
-  if (!entry) {
-    throw new Error('Could not read DOCX structure.');
-  }
-
-  let xmlBytes: Uint8Array;
-  if (entry.compressionMethod === 0) {
-    xmlBytes = entry.compressedData;
-  } else if (entry.compressionMethod === 8) {
-    xmlBytes = await inflateRaw(entry.compressedData);
-  } else {
-    throw new Error(`Unsupported DOCX compression method (${entry.compressionMethod}).`);
-  }
-
-  const xml = new TextDecoder('utf-8').decode(xmlBytes);
-  return docxXmlToText(xml);
-};
-
-const mapImportedTextToFields = (
-  category: EntityCategory,
-  text: string
-): Record<string, string> => {
-  const normalized = text.trim();
-  const fields: Record<string, string> = {};
-  const preferredField =
-    category.fieldSchema.find((field) => field.key === 'description') ??
-    category.fieldSchema.find((field) => field.type === 'textarea') ??
-    category.fieldSchema.find((field) => field.type === 'text');
-
-  if (preferredField) {
-    fields[preferredField.key] = normalized;
-  } else {
-    fields.description = normalized;
-  }
-
-  return fields;
-};
-
-const buildPreview = (text: string, limit = 180): string => {
-  const normalized = text.replace(/\s+/g, ' ').trim();
-  if (!normalized) return '(empty)';
-  return normalized.length > limit
-    ? `${normalized.slice(0, limit)}...`
-    : normalized;
-};
-
-const valueToString = (value: unknown): string => {
-  if (value === null || value === undefined) return '';
-  if (typeof value === 'string') return value.trim();
-  if (typeof value === 'number' || typeof value === 'boolean') {
-    return String(value);
-  }
-  if (Array.isArray(value)) {
-    return value.map((item) => valueToString(item)).filter(Boolean).join(', ');
-  }
-  if (typeof value === 'object') {
-    try {
-      return JSON.stringify(value);
-    } catch {
-      return '';
+const ensureCharacterCategoryLongFormFields = async (
+  categories: EntityCategory[]
+): Promise<EntityCategory[]> => {
+  let changed = false;
+  const updatedCategories = categories.map((category) => {
+    if (!isCharacterCategory(category)) {
+      return category;
     }
+    if (category.fieldSchema.some((field) => field.key === CHARACTER_NOTES_FIELD)) {
+      return category;
+    }
+    changed = true;
+    return {
+      ...category,
+      fieldSchema: [
+        ...category.fieldSchema,
+        {key: CHARACTER_NOTES_FIELD, label: 'Notes', type: 'textarea' as const}
+      ]
+    };
+  });
+
+  if (changed) {
+    await Promise.all(updatedCategories.map((category, index) =>
+      category === categories[index] ? Promise.resolve() : saveCategory(category)
+    ));
   }
-  return '';
+
+  return updatedCategories;
 };
+
+const buildEntityCardSummary = (
+  entity: WorldEntity,
+  category: EntityCategory | null | undefined,
+  aliasTexts: string[] = []
+): {
+  primarySummary: string | null;
+  fullSummary: string | null;
+  summaryIsTruncated: boolean;
+  secondaryFields: Array<{label: string; value: string}>;
+} => {
+  const labelByKey = new Map(
+    [
+      ...(category?.fieldSchema ?? []).map((field) => [field.key, field.label] as const),
+      [ALTERNATIVE_NAMES_KEY, 'Alternative names'] as const
+    ]
+  );
+  const richTextKeys = new Set(
+    (category?.fieldSchema ?? [])
+      .filter((field) => field.type === 'textarea')
+      .map((field) => field.key)
+  );
+
+  const summaryPriority = [
+    ...(category ? CATEGORY_SUMMARY_PRIORITY[category.slug] ?? [] : []),
+    'description',
+    'summary',
+    'notes'
+  ];
+  const dedupedSummaryKeys = Array.from(new Set(summaryPriority));
+  const summarySourceKey =
+    dedupedSummaryKeys.find((key) => {
+      const value = entity.fields[key];
+      return typeof value === 'string' && extractPlainTextFromRichText(value).length > 0;
+    }) ??
+    Array.from(richTextKeys).find((key) => {
+      const value = entity.fields[key];
+      return typeof value === 'string' && extractPlainTextFromRichText(value).length > 0;
+    }) ??
+    null;
+
+  const primarySummary =
+    summarySourceKey && typeof entity.fields[summarySourceKey] === 'string'
+      ? extractStructuredSummaryFromRichText(entity.fields[summarySourceKey] as string)
+      : null;
+
+  const secondaryPriority = Array.from(
+    new Set([
+      ...(category?.fieldSchema.map((field) => field.key) ?? []),
+      ...(aliasTexts.length > 0 ? [ALTERNATIVE_NAMES_KEY] : []),
+      ...Object.keys(entity.fields)
+    ])
+  );
+
+  const secondaryFields = secondaryPriority
+    .filter((key) => key !== summarySourceKey)
+    .map((key) => {
+      if (key === ALTERNATIVE_NAMES_KEY) {
+        const fieldAliases = parseAlternativeNames(
+          typeof entity.fields[ALTERNATIVE_NAMES_KEY] === 'string'
+            ? String(entity.fields[ALTERNATIVE_NAMES_KEY])
+            : ''
+        );
+        return {
+          label: labelByKey.get(key) ?? key,
+          value: formatAlternativeNames(
+            parseAlternativeNames([...fieldAliases, ...aliasTexts].join(', '))
+          )
+        };
+      }
+      const value = entity.fields[key];
+      if (typeof value === 'string') {
+        return {
+          label: labelByKey.get(key) ?? key,
+          value: extractPlainTextFromRichText(value)
+        };
+      }
+      if (Array.isArray(value)) {
+        return {
+          label: labelByKey.get(key) ?? key,
+          value: value.map((item) => String(item)).filter(Boolean).join(', ')
+        };
+      }
+      if (typeof value === 'boolean') {
+        return {
+          label: labelByKey.get(key) ?? key,
+          value: value ? 'Yes' : 'No'
+        };
+      }
+      return {
+        label: labelByKey.get(key) ?? key,
+        value: String(value ?? '')
+      };
+    })
+    .filter((field) => field.value.trim().length > 0)
+    .slice(0, 4);
+
+  return {
+    primarySummary: primarySummary
+      ? primarySummary.length > 280
+        ? `${primarySummary.slice(0, 280)}...`
+        : primarySummary
+      : null,
+    fullSummary: primarySummary,
+    summaryIsTruncated: Boolean(primarySummary && primarySummary.length > 280),
+    secondaryFields
+  };
+};
+
 
 const getFieldTemplateValue = (field: EntityCategory['fieldSchema'][number]): unknown => {
   if (field.type === 'checkbox') return false;
@@ -278,21 +257,6 @@ const getFieldTemplateValue = (field: EntityCategory['fieldSchema'][number]): un
   if (field.type === 'textarea') return 'Detailed notes here';
   return '';
 };
-
-const ALTERNATIVE_NAMES_KEY = 'alternativeNames';
-
-const parseAlternativeNames = (value: string): string[] =>
-  Array.from(
-    new Map(
-      value
-        .split(',')
-        .map((item) => item.trim())
-        .filter(Boolean)
-        .map((item) => [item.toLowerCase(), item])
-    ).values()
-  );
-
-const formatAlternativeNames = (names: string[]): string => names.join(', ');
 
 const triggerJsonDownload = (fileName: string, data: unknown): void => {
   const blob = new Blob([JSON.stringify(data, null, 2)], {
@@ -308,17 +272,135 @@ const triggerJsonDownload = (fileName: string, data: unknown): void => {
   URL.revokeObjectURL(url);
 };
 
+const buildEntityContent = (entity: WorldEntity) => {
+  const fieldText = Object.entries(entity.fields)
+    .map(([key, value]) =>
+      `${key}: ${typeof value === 'string' ? extractPlainTextFromRichText(value) : value ?? ''}`
+    )
+    .join('\n');
+  return `${entity.name}\n${fieldText}`;
+};
+
+const buildCharacterImportDescription = (
+  draft: CharacterImportDraft,
+  sections: CharacterImportSectionDraft[]
+): string => {
+  const descriptionBlocks = sections
+    .filter((section) => section.action === 'description')
+    .map((section) => section.content.trim())
+    .filter(Boolean);
+  return descriptionBlocks.join('\n\n') || draft.detectedDescription;
+};
+
+const buildCharacterImportNotes = (
+  draft: CharacterImportDraft,
+  sections: CharacterImportSectionDraft[]
+): string => {
+  const noteBlocks = sections
+    .filter((section) => section.action === 'notes')
+    .map((section) => `${section.title}\n${section.content.trim()}`)
+    .filter(Boolean);
+  const residue = draft.unmatchedText.trim();
+  return [...noteBlocks, residue ? `Source Notes\n${residue}` : ''].filter(Boolean).join('\n\n');
+};
+
+const buildCharacterImportCustomFieldValues = (
+  sections: CharacterImportSectionDraft[],
+  customFields: EntityCategory['fieldSchema']
+): Record<string, string> => {
+  const customFieldKeys = new Set(customFields.map((field) => field.key));
+  return sections.reduce<Record<string, string>>((values, section) => {
+    if (!customFieldKeys.has(section.action)) return values;
+    const existing = values[section.action];
+    values[section.action] = [existing, section.content.trim()].filter(Boolean).join('\n\n');
+    return values;
+  }, {});
+};
+
+type CharacterAiDraftSection = {
+  title: string;
+  content: string;
+};
+
+type CharacterAiDraft = {
+  name?: string;
+  age?: string;
+  role?: string;
+  description?: string;
+  notes?: string;
+  sections?: CharacterAiDraftSection[];
+};
+
+const stripCodeFence = (value: string): string =>
+  value
+    .trim()
+    .replace(/^```(?:json)?\s*/i, '')
+    .replace(/\s*```$/i, '')
+    .trim();
+
+const parseCharacterAiDraft = (raw: string): CharacterAiDraft => {
+  const fenced = stripCodeFence(raw);
+  const jsonMatch = fenced.match(/\{[\s\S]*\}/);
+  const json = jsonMatch ? jsonMatch[0] : fenced;
+  const parsed = JSON.parse(json) as Record<string, unknown>;
+  const readString = (key: string) =>
+    typeof parsed[key] === 'string' ? String(parsed[key]).trim() : undefined;
+  const sections = Array.isArray(parsed.sections)
+    ? parsed.sections
+        .map((section): CharacterAiDraftSection | null => {
+          if (!section || typeof section !== 'object') return null;
+          const record = section as Record<string, unknown>;
+          const title = typeof record.title === 'string' ? record.title.trim() : '';
+          const content = typeof record.content === 'string' ? record.content.trim() : '';
+          return title && content ? {title, content} : null;
+        })
+        .filter((section): section is CharacterAiDraftSection => Boolean(section))
+    : undefined;
+
+  return {
+    name: readString('name'),
+    age: readString('age'),
+    role: readString('role'),
+    description: readString('description'),
+    notes: readString('notes'),
+    sections
+  };
+};
+
 function WorldBibleRoute() {
   const activeProject = useAppStore((s) => s.activeProject);
+  const projectSettings = useAppStore((s) => s.projectSettings);
+  const saveProjectSettings = useAppStore((s) => s.saveProjectSettings);
   const location = useLocation();
+  const navigate = useNavigate();
   const [categories, setCategories] = useState<EntityCategory[]>([]);
   const [activeTab, setActiveTab] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<WorldBibleViewMode>('category');
   const [entities, setEntities] = useState<WorldEntity[]>([]);
+  const [characters, setCharacters] = useState<Character[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [name, setName] = useState('');
   const [fieldValues, setFieldValues] = useState<Record<string, string>>({});
   const [showCategoryManager, setShowCategoryManager] = useState(false);
   const [aliases, setAliases] = useState<ConsistencyAlias[]>([]);
+  const [activeImportPreviewId, setActiveImportPreviewId] = useState<string | null>(null);
+  const [characterImportStep, setCharacterImportStep] =
+    useState<CharacterImportStep>('idle');
+  const [characterAuthoringMode, setCharacterAuthoringMode] =
+    useState<CharacterAuthoringMode>('idle');
+  const [pastedCharacterImportText, setPastedCharacterImportText] = useState('');
+  const [characterImportDraft, setCharacterImportDraft] =
+    useState<CharacterImportDraft | null>(null);
+  const [characterImportSections, setCharacterImportSections] = useState<
+    CharacterImportSectionDraft[]
+  >([]);
+  const [isImportingCharacterDoc, setIsImportingCharacterDoc] = useState(false);
+  const [characterAiPrompt, setCharacterAiPrompt] = useState('');
+  const [isGeneratingCharacterDraft, setIsGeneratingCharacterDraft] = useState(false);
+  const [newCharacterSectionName, setNewCharacterSectionName] = useState('');
+  const [expandedSummaryEntityIds, setExpandedSummaryEntityIds] = useState<string[]>([]);
+  const [isNameResolverOpen, setIsNameResolverOpen] = useState(false);
+  const [manualResolutionTargetId, setManualResolutionTargetId] = useState('');
   const [ragService, setRagService] = useState<RAGProvider | null>(null);
   const [shodhService, setShodhService] =
     useState<ShodhMemoryProvider | null>(null);
@@ -327,9 +409,19 @@ function WorldBibleRoute() {
   const [pendingReviewFocus, setPendingReviewFocus] = useState<'general' | 'aliases' | null>(
     null
   );
+  const [handoffGuidance, setHandoffGuidance] = useState<{
+    kind: 'character-canonicalization';
+    sourceName: string;
+    matchEntityId?: string;
+  } | null>(null);
+  const reviewFilter = 'all' as const;
+  const recommendedFilter = 'all' as const;
   const seriesConfig = activeProject
     ? getSeriesBibleConfig(activeProject)
     : null;
+  const capabilities = getProjectCapabilities(projectSettings);
+  const showGameSystems = capabilities.canUseGameSystems;
+  const showCharacterTools = capabilities.canUseRuleAuthoring;
   const [canonState, setCanonState] = useState<{
     parentCanonVersion?: string;
     childLastSynced?: string;
@@ -339,30 +431,13 @@ function WorldBibleRoute() {
     tone: 'success' | 'error';
     message: string;
   } | null>(null);
-  const [isSubmittingEntity, setIsSubmittingEntity] = useState(false);
-  const [deletingEntityId, setDeletingEntityId] = useState<string | null>(null);
-  const [promotingEntityId, setPromotingEntityId] = useState<string | null>(null);
   const [promotingMemoryId, setPromotingMemoryId] = useState<string | null>(null);
-  const [isSyncingCanon, setIsSyncingCanon] = useState(false);
-  const [linkingCompendiumEntityId, setLinkingCompendiumEntityId] = useState<
-    string | null
-  >(null);
   const [compendiumLinkedEntityIds, setCompendiumLinkedEntityIds] = useState<
     Set<string>
   >(new Set());
-  const [isImportingEntities, setIsImportingEntities] = useState(false);
-  const [isApplyingImports, setIsApplyingImports] = useState(false);
-  const [importDrafts, setImportDrafts] = useState<WorldBibleImportDraft[]>([]);
-  const [isImportingJson, setIsImportingJson] = useState(false);
-  const [isApplyingJsonImport, setIsApplyingJsonImport] = useState(false);
-  const [jsonImportSession, setJsonImportSession] = useState<JsonImportSession | null>(
-    null
-  );
-  const [jsonImportConflictResolutions, setJsonImportConflictResolutions] = useState<
-    Record<number, JsonImportConflictResolution>
-  >({});
   const importInputRef = useRef<HTMLInputElement | null>(null);
   const jsonImportInputRef = useRef<HTMLInputElement | null>(null);
+  const characterImportInputRef = useRef<HTMLInputElement | null>(null);
   const aliasTextareaRef = useRef<HTMLTextAreaElement | null>(null);
   const focusedEntityKeyRef = useRef<string | null>(null);
   const refreshMemories = useCallback(async () => {
@@ -398,9 +473,6 @@ function WorldBibleRoute() {
 
   useEffect(() => {
     if (!activeProject) {
-      setImportDrafts([]);
-      setJsonImportSession(null);
-      setJsonImportConflictResolutions({});
       return;
     }
 
@@ -411,16 +483,19 @@ function WorldBibleRoute() {
 
       await initializeDefaultCategories(projectId);
 
-      const [cats, ents, loadedAliases] = await Promise.all([
+      const [cats, ents, loadedAliases, loadedCharacters] = await Promise.all([
         getCategoriesByProject(projectId),
         getEntitiesByProject(projectId),
-        getAliasesByProject(projectId)
+        getAliasesByProject(projectId),
+        getCharactersByProject(projectId)
       ]);
+      const normalizedCategories = await ensureCharacterCategoryLongFormFields(cats);
 
       if (!cancelled) {
-        setCategories(cats);
+        setCategories(normalizedCategories);
         setEntities(ents);
         setAliases(loadedAliases);
+        setCharacters(loadedCharacters);
       }
     })();
 
@@ -580,95 +655,98 @@ function WorldBibleRoute() {
   }, [entities, ragService]);
 
   const activeCategory = categories.find((c) => c.id === activeTab);
-  const activeJsonCategory = useMemo(
-    () =>
-      jsonImportSession
-        ? categories.find((category) => category.id === jsonImportSession.categoryId) ?? null
-        : null,
-    [categories, jsonImportSession]
+  const characterCategory = useMemo(
+    () => categories.find((category) => isCharacterCategory(category)) ?? null,
+    [categories]
   );
-  const preparedJsonRows = useMemo<JsonImportPreparedRow[]>(() => {
-    if (!jsonImportSession || !activeJsonCategory) return [];
-    const existingByName = new Map(
-      entities
-        .filter((entity) => entity.categoryId === jsonImportSession.categoryId)
-        .map((entity) => [entity.name.trim().toLowerCase(), entity])
+  const activeCategoryIsCharacterLike = useMemo(() => {
+    const slug = (activeCategory?.slug ?? '').toLowerCase();
+    const categoryName = (activeCategory?.name ?? '').toLowerCase();
+    return CHARACTER_CATEGORY_HINTS.some(
+      (hint) => slug.includes(hint) || categoryName.includes(hint)
     );
-    const duplicateNameCounts = new Map<string, number>();
-    jsonImportSession.rows.forEach((row) => {
-      const nameRaw = valueToString(row.record[jsonImportSession.nameKey]);
-      const normalized = nameRaw.trim().toLowerCase();
-      if (!normalized) return;
-      duplicateNameCounts.set(normalized, (duplicateNameCounts.get(normalized) ?? 0) + 1);
-    });
-
-    return jsonImportSession.rows.map((row) => {
-      const errors: string[] = [];
-      const nameRaw = valueToString(row.record[jsonImportSession.nameKey]);
-      const name = nameRaw.trim();
-      if (!name) {
-        errors.push('Missing name value.');
-      }
-
-      const fields: Record<string, string> = {};
-      for (const field of activeJsonCategory.fieldSchema) {
-        const mappedKey = jsonImportSession.fieldMap[field.key];
-        if (!mappedKey) {
-          if (field.required) {
-            errors.push(`Required field "${field.label}" is not mapped.`);
+  }, [activeCategory?.name, activeCategory?.slug]);
+  const characterDescriptionField = activeCategoryIsCharacterLike
+    ? activeCategory?.fieldSchema.find((field) => field.key === 'description') ?? null
+    : null;
+  const characterNotesField = activeCategoryIsCharacterLike
+    ? activeCategory?.fieldSchema.find((field) => field.key === CHARACTER_NOTES_FIELD) ?? null
+    : null;
+  const characterIdentityFields = activeCategoryIsCharacterLike
+    ? CHARACTER_IDENTITY_FIELD_KEYS.map((key) =>
+        activeCategory?.fieldSchema.find((field) => field.key === key)
+      ).filter((field): field is EntityCategory['fieldSchema'][number] => Boolean(field))
+    : [];
+  const characterCustomFields = activeCategoryIsCharacterLike
+    ? activeCategory?.fieldSchema.filter(
+        (field) => !CHARACTER_AUTHORING_FIELD_KEYS.has(field.key)
+      ) ?? []
+    : [];
+  const characterImportDestinationFields = characterCustomFields.filter(
+    (field) => field.type === 'textarea'
+  );
+  const categoryById = useMemo(
+    () => new Map(categories.map((category) => [category.id, category])),
+    [categories]
+  );
+  const {
+    isImportingEntities,
+    isApplyingImports,
+    importDrafts,
+    clearImportDrafts,
+    isImportingJson,
+    isApplyingJsonImport,
+    jsonImportSession,
+    jsonImportConflictResolutions,
+    activeJsonCategory,
+    preparedJsonRows,
+    jsonImportValidCount,
+    jsonImportConflictCount,
+    unresolvedJsonConflictCount,
+    handleImportEntities,
+    updateImportDraft,
+    applyImportDrafts,
+    applyJsonImport,
+    handleJsonImportFile,
+    handleJsonCategoryChange,
+    handleJsonNameKeyChange,
+    handleJsonModeChange,
+    handleJsonFieldMapChange,
+    handleJsonConflictResolutionChange,
+    clearJsonImportSession
+  } = useWorldBibleImports({
+    activeProjectId: activeProject?.id ?? null,
+    activeCategory: activeCategory ?? null,
+    categories,
+    entities,
+    setEntities,
+    setFeedback,
+    onEntitySaved: async (entity, category) => {
+      const content = buildEntityContent(entity);
+      if (ragService) {
+        await ragService.indexDocument(
+          entity.id,
+          entity.name,
+          content,
+          'worldbible',
+          {
+            tags: [category.slug],
+            entityIds: [entity.id]
           }
-          continue;
-        }
-        const value = valueToString(row.record[mappedKey]);
-        if (field.required && !value) {
-          errors.push(`Required field "${field.label}" is empty.`);
-        }
-        if (value) {
-          fields[field.key] = value;
-        }
+        );
       }
-      const normalizedName = name.trim().toLowerCase();
-      const existingEntity = normalizedName
-        ? existingByName.get(normalizedName)
-        : undefined;
-      const hasBatchDuplicate = normalizedName
-        ? (duplicateNameCounts.get(normalizedName) ?? 0) > 1
-        : false;
-      const conflict =
-        jsonImportSession.mode === 'create' && existingEntity
-          ? {
-              kind: 'existing' as const,
-              message: `Matches existing ${activeJsonCategory.name.slice(0, -1).toLowerCase()} "${existingEntity.name}". Choose whether to create a duplicate, update it, or skip this row.`
-            }
-          : hasBatchDuplicate
-            ? {
-                kind: 'batch-duplicate' as const,
-                message:
-                  'Another JSON row uses this same name in the selected category. Choose whether to create, update by name, or skip this row.'
-              }
-            : undefined;
-      const resolution =
-        jsonImportConflictResolutions[row.rowIndex] ??
-        (conflict ? ('skip' as const) : jsonImportSession.mode);
-      return {
-        rowIndex: row.rowIndex,
-        name,
-        fields,
-        errors,
-        existingEntityId: existingEntity?.id,
-        conflict,
-        resolution
-      };
-    });
-  }, [activeJsonCategory, entities, jsonImportConflictResolutions, jsonImportSession]);
-  const jsonImportValidCount = preparedJsonRows.filter(
-    (row) => row.errors.length === 0
-  ).length;
-  const jsonImportConflictCount = preparedJsonRows.filter((row) => row.conflict).length;
-  const unresolvedJsonConflictCount = preparedJsonRows.filter(
-    (row) => row.conflict && !jsonImportConflictResolutions[row.rowIndex]
-  ).length;
-  const filteredEntities = entities.filter((e) => e.categoryId === activeTab);
+      if (shodhService) {
+        await shodhService.captureAutoMemory({
+          projectId: entity.projectId,
+          documentId: entity.id,
+          title: entity.name,
+          content,
+          tags: ['worldbible', category.slug]
+        });
+      }
+    },
+    onEntitiesChanged: refreshMemories
+  });
   const currentEntityMemories = editingId
     ? memories.filter((memory) => memory.documentId === editingId)
     : [];
@@ -679,34 +757,123 @@ function WorldBibleRoute() {
         return;
       }
       const current = map.get(alias.targetId) ?? [];
-      current.push(alias.alias);
-      map.set(alias.targetId, current);
+      map.set(
+        alias.targetId,
+        parseAlternativeNames([...current, alias.alias].join(', '))
+      );
     });
     return map;
   }, [aliases]);
-  const reviewQueue = useMemo(
+
+  const ignoredEntityMatchKeys = useMemo(
+    () => new Set(projectSettings?.ignoredEntityMatchKeys ?? []),
+    [projectSettings?.ignoredEntityMatchKeys]
+  );
+  const richImportDraftCount = useMemo(
+    () =>
+      importDrafts.filter((draft) => {
+        const category = categoryById.get(draft.categoryId);
+        const preferredField = category ? getPreferredImportField(category) : null;
+        return preferredField?.type === 'textarea';
+      }).length,
+    [categoryById, importDrafts]
+  );
+  const activeImportPreviewDraft = useMemo(
+    () => importDrafts.find((draft) => draft.id === activeImportPreviewId) ?? null,
+    [activeImportPreviewId, importDrafts]
+  );
+  const selectedEntity = editingId
+    ? entities.find((entity) => entity.id === editingId) ?? null
+    : null;
+  const activeCategoryRecordLabel =
+    activeCategory?.name.replace(/s$/i, '').toLowerCase() || 'record';
+  const currentCharacterLabel =
+    name.trim() || selectedEntity?.name || activeCategory?.name.slice(0, -1) || 'this record';
+  const isFocusedCharacterTask = activeCategoryIsCharacterLike
+    ? Boolean(editingId || characterAuthoringMode !== 'idle')
+    : true;
+  const isCanonicalRenameDraft = Boolean(
+    selectedEntity &&
+      name.trim().length > 0 &&
+      normalizeName(selectedEntity.name) !== normalizeName(name)
+  );
+  const suggestedCharacterAliases = useMemo(() => {
+    if (!activeCategoryIsCharacterLike) {
+      return [];
+    }
+    const currentName = name.trim();
+    if (!currentName) {
+      return [];
+    }
+    const existingAliases = new Set(
+      parseAlternativeNames(fieldValues[ALTERNATIVE_NAMES_KEY] || '')
+        .map((alias) => normalizeName(alias))
+        .filter(Boolean)
+    );
+    return deriveCharacterAliasSuggestions(currentName).filter(
+      (alias) =>
+        normalizeName(alias) !== normalizeName(currentName) &&
+        !existingAliases.has(normalizeName(alias))
+    );
+  }, [activeCategoryIsCharacterLike, fieldValues, name]);
+  const manualResolutionTargets = useMemo(
     () =>
       entities
-        .map((entity) => {
-          const aliasCount = (aliasMapByEntityId.get(entity.id) ?? []).length;
-          const reasons: string[] = [];
-          if (entity.needsCompletion) {
-            reasons.push('Needs completion');
-          }
-          if (aliasCount === 0) {
-            reasons.push('Alternative names not reviewed');
-          }
-          return {entity, aliasCount, reasons};
-        })
-        .filter((item) => item.reasons.length > 0)
-        .sort((a, b) => {
-          if (a.entity.needsCompletion !== b.entity.needsCompletion) {
-            return a.entity.needsCompletion ? -1 : 1;
-          }
-          return a.entity.name.localeCompare(b.entity.name);
-        }),
-    [aliasMapByEntityId, entities]
+        .filter((entity) => entity.categoryId === activeTab && entity.id !== editingId)
+        .sort((a, b) => a.name.localeCompare(b.name)),
+    [activeTab, editingId, entities]
   );
+  const manualResolutionTarget =
+    manualResolutionTargets.find((entity) => entity.id === manualResolutionTargetId) ??
+    manualResolutionTargets[0] ??
+    null;
+  const {
+    filteredReviewQueue,
+    potentialEntityMatches,
+    reviewEntityInsightsById,
+    visibleEntities,
+    selectedEntityQueueItem
+  } = useWorldBibleReview({
+    entities,
+    aliases,
+    categories,
+    aliasMapByEntityId,
+    activeTab,
+    viewMode,
+    reviewFilter,
+    recommendedFilter,
+    editingId,
+    name,
+    fieldValues,
+    selectedEntity,
+    alternativeNamesKey: ALTERNATIVE_NAMES_KEY,
+    ignoredEntityMatchKeys,
+    normalizeName,
+    parseAlternativeNames
+  });
+  const canonicalResolutionMatches = useMemo(() => {
+    if (!editingId) {
+      return potentialEntityMatches;
+    }
+    const handoffMatch = handoffGuidance?.matchEntityId
+      ? entities.find((entity) => entity.id === handoffGuidance.matchEntityId)
+      : null;
+    if (!handoffMatch || handoffMatch.id === editingId) {
+      return potentialEntityMatches;
+    }
+    if (potentialEntityMatches.some((match) => match.entity.id === handoffMatch.id)) {
+      return potentialEntityMatches;
+    }
+    return [
+      {
+        entity: handoffMatch,
+        matchKey: buildEntityMatchKey(editingId, handoffMatch.id),
+        reasons: [`Linked from ${handoffGuidance?.sourceName ?? 'Character Tools'}`],
+        recommendedResolution: 'merge' as const
+      },
+      ...potentialEntityMatches
+    ];
+  }, [editingId, entities, handoffGuidance, potentialEntityMatches]);
   const memoryPanelEmpty =
     'This entry has no captured memories yet. Save it to generate one or adjust the filter.';
 
@@ -715,98 +882,279 @@ function WorldBibleRoute() {
     setName('');
     setFieldValues({});
     setPendingReviewFocus(null);
+    setIsNameResolverOpen(false);
+    setManualResolutionTargetId('');
+    setCharacterAuthoringMode('idle');
+    setCharacterImportStep('idle');
+    setCharacterImportDraft(null);
+    setCharacterImportSections([]);
+    setCharacterAiPrompt('');
+    setIsGeneratingCharacterDraft(false);
+    setNewCharacterSectionName('');
   };
 
-  const handleSubmit = async (event: FormEvent) => {
-    event.preventDefault();
-    if (!activeProject || !activeCategory) return;
+  const openCharacterCategory = useCallback(() => {
+    if (!characterCategory) return;
+    setViewMode('category');
+    setActiveTab(characterCategory.id);
+  }, [characterCategory]);
 
-    setIsSubmittingEntity(true);
+  const startNewCharacterCanonRecord = useCallback(() => {
+    openCharacterCategory();
+    setEditingId(null);
+    setName('');
+    setFieldValues({});
+    setCharacterAuthoringMode('manual');
+    setCharacterImportStep('idle');
+    setCharacterImportDraft(null);
+    setCharacterImportSections([]);
+  }, [openCharacterCategory]);
+
+  const startNewCategoryRecord = useCallback(() => {
+    if (!activeCategory) return;
+    setViewMode('category');
+    setEditingId(null);
+    setName('');
+    setFieldValues({});
+    setPendingReviewFocus(null);
+    setIsNameResolverOpen(false);
+    setManualResolutionTargetId('');
+    setCharacterAuthoringMode('idle');
+    setCharacterImportStep('idle');
+    setCharacterImportDraft(null);
+    setCharacterImportSections([]);
+  }, [activeCategory]);
+
+  const startCharacterAiDraft = useCallback(() => {
+    openCharacterCategory();
+    setEditingId(null);
+    setName('');
+    setFieldValues({});
+    setCharacterAuthoringMode('ai');
+    setCharacterImportStep('idle');
+    setCharacterImportDraft(null);
+    setCharacterImportSections([]);
     setFeedback(null);
-    try {
-      const now = Date.now();
-      const id = editingId ?? crypto.randomUUID();
-      const existing = entities.find((e) => e.id === id);
-      const alternativeNames = parseAlternativeNames(
-        fieldValues[ALTERNATIVE_NAMES_KEY] || ''
+  }, [openCharacterCategory]);
+
+  const applyCharacterImportDraftToFields = useCallback(
+    (draft: CharacterImportDraft, sections: CharacterImportSectionDraft[]) => {
+      openCharacterCategory();
+      setEditingId(null);
+      setName(draft.detectedName);
+      setCharacterAuthoringMode('import');
+      const customFieldValues = buildCharacterImportCustomFieldValues(
+        sections,
+        characterImportDestinationFields
       );
-      const nextFields = {...fieldValues};
-      if (alternativeNames.length > 0) {
-        nextFields[ALTERNATIVE_NAMES_KEY] = formatAlternativeNames(alternativeNames);
-      } else {
-        delete nextFields[ALTERNATIVE_NAMES_KEY];
-      }
-
-      const entity: WorldEntity = {
-        id,
-        projectId: activeProject.id,
-        categoryId: activeCategory.id,
-        name,
-        fields: nextFields,
-        needsCompletion: false,
-        links: existing?.links ?? [],
-        createdAt: existing?.createdAt ?? now,
-        updatedAt: now
-      };
-
-      await saveEntity(entity);
-      const savedAliases = await replaceAliasesForEntity({
-        projectId: activeProject.id,
-        entityId: entity.id,
-        aliases: alternativeNames.filter(
-          (alias) => alias.trim().toLowerCase() !== entity.name.trim().toLowerCase()
+      setFieldValues({
+        description: normalizeRichTextValue(buildCharacterImportDescription(draft, sections)),
+        age: draft.detectedAge,
+        role: draft.detectedRole,
+        [CHARACTER_NOTES_FIELD]: normalizeRichTextValue(
+          buildCharacterImportNotes(draft, sections)
+        ),
+        ...Object.fromEntries(
+          Object.entries(customFieldValues).map(([key, value]) => [
+            key,
+            normalizeRichTextValue(value)
+          ])
         )
       });
-      if (ragService) {
-        await ragService.indexDocument(
-          entity.id,
-          entity.name,
-          buildEntityContent(entity),
-          'worldbible',
-          {
-            tags: [activeCategory.slug],
-            entityIds: [entity.id]
-          }
-        );
-      }
-      if (shodhService) {
-        await shodhService.captureAutoMemory({
-          projectId: activeProject.id,
-          documentId: entity.id,
-          title: entity.name,
-          content: buildEntityContent(entity),
-          tags: ['worldbible', activeCategory.slug]
-        });
-        await refreshMemories();
-      }
+    },
+    [characterImportDestinationFields, openCharacterCategory]
+  );
 
-      setEntities((prev) => {
-        const idx = prev.findIndex((e) => e.id === id);
-        if (idx === -1) return [...prev, entity];
-        const copy = [...prev];
-        copy[idx] = entity;
-        return copy;
-      });
-      setAliases((prev) => [
-        ...prev.filter((alias) => alias.entityId !== entity.id),
-        ...savedAliases
-      ]);
+  const reviewCharacterImportDraft = useCallback(
+    (draft: CharacterImportDraft) => {
+      setCharacterImportDraft(draft);
+      setCharacterImportSections(draft.sections);
+      applyCharacterImportDraftToFields(draft, draft.sections);
+      setCharacterImportStep('review');
+      setFeedback(null);
+    },
+    [applyCharacterImportDraftToFields]
+  );
 
-      resetForm();
-      setFeedback({
-        tone: 'success',
-        message: editingId ? 'Entry updated.' : 'Entry created.'
-      });
+  const handleReviewPastedCharacterImport = () => {
+    const source = pastedCharacterImportText.trim();
+    if (!source) {
+      setFeedback({tone: 'error', message: 'Paste character notes before reviewing.'});
+      return;
+    }
+    reviewCharacterImportDraft(parseCharacterImportText(source));
+  };
+
+  const handleCharacterImportFile = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+    setIsImportingCharacterDoc(true);
+    setFeedback(null);
+    try {
+      const source = await readCharacterImportFile(file);
+      setPastedCharacterImportText(source);
+      reviewCharacterImportDraft(parseCharacterImportText(source, file.name));
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unable to save entry.';
+      const message =
+        error instanceof Error ? error.message : 'Unable to import this character document.';
       setFeedback({tone: 'error', message});
     } finally {
-      setIsSubmittingEntity(false);
+      setIsImportingCharacterDoc(false);
     }
+  };
+
+  const handleGenerateCharacterDraft = async () => {
+    const premise = characterAiPrompt.trim();
+    if (!premise) {
+      setFeedback({tone: 'error', message: 'Describe the character before generating a draft.'});
+      return;
+    }
+
+    setIsGeneratingCharacterDraft(true);
+    setFeedback(null);
+    try {
+      const customSectionLabels = characterImportDestinationFields
+        .map((field) => field.label)
+        .join(', ');
+      const service = new LLMService(projectSettings?.aiSettings);
+      const response = await service.complete({
+        temperature: 0.7,
+        maxTokens: 900,
+        systemPrompt:
+          'You create concise, editable character dossier drafts for fiction authors. Return only valid JSON with no markdown.',
+        messages: [
+          {
+            role: 'user',
+            content: [
+              'Create a character draft from this author brief.',
+              '',
+              premise,
+              '',
+              'Return JSON with this shape:',
+              '{"name":"","age":"","role":"","description":"","notes":"","sections":[{"title":"","content":""}]}',
+              '',
+              'Keep prose useful but not final-scene prose. Description should be 2-4 paragraphs. Notes should be short development notes, tensions, questions, or hooks.',
+              customSectionLabels
+                ? `If relevant, use existing custom section titles from: ${customSectionLabels}.`
+                : 'Use sections only for clearly useful dossier material.'
+            ].join('\n')
+          }
+        ]
+      });
+      const draft = parseCharacterAiDraft(response.content);
+      const labelToField = new Map(
+        characterImportDestinationFields.map((field) => [
+          field.label.trim().toLowerCase(),
+          field
+        ])
+      );
+      const customFieldValues: Record<string, string> = {};
+      const noteSections: string[] = [];
+      draft.sections?.forEach((section) => {
+        const field = labelToField.get(section.title.trim().toLowerCase());
+        if (field) {
+          customFieldValues[field.key] = [customFieldValues[field.key], section.content]
+            .filter(Boolean)
+            .join('\n\n');
+        } else {
+          noteSections.push(`${section.title}\n${section.content}`);
+        }
+      });
+
+      setName(draft.name ?? '');
+      setCharacterAuthoringMode('ai');
+      setFieldValues({
+        description: normalizeRichTextValue(draft.description ?? ''),
+        age: draft.age ?? '',
+        role: draft.role ?? '',
+        [CHARACTER_NOTES_FIELD]: normalizeRichTextValue(
+          [draft.notes, ...noteSections].filter(Boolean).join('\n\n')
+        ),
+        ...Object.fromEntries(
+          Object.entries(customFieldValues).map(([key, value]) => [
+            key,
+            normalizeRichTextValue(value)
+          ])
+        )
+      });
+      setFeedback({
+        tone: 'success',
+        message: 'AI draft generated. Review and edit the rich fields before saving.'
+      });
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : 'Unable to generate a character draft. Check AI settings and try again.';
+      setFeedback({tone: 'error', message});
+    } finally {
+      setIsGeneratingCharacterDraft(false);
+    }
+  };
+
+  const updateCharacterImportSectionAction = (
+    sectionId: string,
+    action: CharacterImportSectionDraft['action']
+  ) => {
+    if (!characterImportDraft) return;
+    const nextSections = characterImportSections.map((section) =>
+      section.id === sectionId ? {...section, action} : section
+    );
+    setCharacterImportSections(nextSections);
+    applyCharacterImportDraftToFields(characterImportDraft, nextSections);
+  };
+
+  const handleAddCharacterSection = async () => {
+    if (!activeCategory) return;
+    const label = newCharacterSectionName.trim();
+    if (!label) {
+      setFeedback({
+        tone: 'error',
+        message: `Name the ${activeCategoryRecordLabel} section first.`
+      });
+      return;
+    }
+
+    const existingKeys = new Set(activeCategory.fieldSchema.map((field) => field.key));
+    const baseKey = slugifyFieldKey(label);
+    let key = baseKey;
+    let suffix = 2;
+    while (existingKeys.has(key)) {
+      key = `${baseKey}_${suffix}`;
+      suffix += 1;
+    }
+
+    const updatedCategory: EntityCategory = {
+      ...activeCategory,
+      fieldSchema: [
+        ...activeCategory.fieldSchema,
+        {key, label, type: 'textarea'}
+      ]
+    };
+    await saveCategory(updatedCategory);
+    setCategories((prev) =>
+      prev.map((category) =>
+        category.id === updatedCategory.id ? updatedCategory : category
+      )
+    );
+    setFieldValues((prev) => ({
+      ...prev,
+      [key]: normalizeRichTextValue('')
+    }));
+    setNewCharacterSectionName('');
+    setFeedback({
+      tone: 'success',
+      message: `Added "${label}" to ${activeCategory.name.toLowerCase()} records.`
+    });
   };
 
   const handleEdit = useCallback((entity: WorldEntity, focus: 'general' | 'aliases' = 'general') => {
     setEditingId(entity.id);
+    const entityCategory = categoryById.get(entity.categoryId);
+    setCharacterAuthoringMode(
+      entityCategory && isCharacterCategory(entityCategory) ? 'manual' : 'idle'
+    );
     setPendingReviewFocus(focus);
     setName(entity.name);
     const persistedAlternativeNames =
@@ -814,42 +1162,186 @@ function WorldBibleRoute() {
         ? entity.fields[ALTERNATIVE_NAMES_KEY]
         : '';
     const indexedAlternativeNames = aliasMapByEntityId.get(entity.id) ?? [];
-    const mergedAlternativeNames = formatAlternativeNames([
-      ...parseAlternativeNames(persistedAlternativeNames),
-      ...indexedAlternativeNames
-    ]);
+    const mergedAlternativeNames = formatAlternativeNames(
+      parseAlternativeNames(
+        [...parseAlternativeNames(persistedAlternativeNames), ...indexedAlternativeNames]
+          .filter((alias) => alias.trim().toLowerCase() !== entity.name.trim().toLowerCase())
+          .join(', ')
+      )
+    );
+    const normalizedFields = Object.fromEntries(
+      Object.entries(entity.fields as Record<string, string>).map(([key, value]) => {
+        const fieldType = categories
+          .find((category) => category.id === entity.categoryId)
+          ?.fieldSchema.find((field) => field.key === key)?.type;
+        return [
+          key,
+          fieldType === 'textarea'
+            ? normalizeRichTextValue(String(value ?? ''))
+            : String(value ?? '')
+        ];
+      })
+    );
     setFieldValues({
-      ...(entity.fields as Record<string, string>),
+      ...normalizedFields,
       [ALTERNATIVE_NAMES_KEY]: mergedAlternativeNames
     });
-  }, [aliasMapByEntityId]);
+  }, [aliasMapByEntityId, categories, categoryById]);
 
-  const handleMarkEntityComplete = useCallback(
-    async (entity: WorldEntity) => {
-      const next: WorldEntity = {
-        ...entity,
-        needsCompletion: false,
-        updatedAt: Date.now()
+  const handleOpenReviewItem = useCallback(
+    (entity: WorldEntity, focus: 'general' | 'aliases' = 'general') => {
+      setViewMode('category');
+      setActiveTab(entity.categoryId);
+      handleEdit(entity, focus);
+    },
+    [handleEdit]
+  );
+
+  const hasRuleset = Boolean(activeProject?.rulesetId);
+
+  const {
+    isSubmittingEntity,
+    deletingEntityId,
+    promotingEntityId,
+    importingCharacterEntityId,
+    mergingEntityTargetId,
+    aliasingEntityTargetId,
+    isSyncingCanon,
+    linkingCompendiumEntityId,
+    saveEntityDraft,
+    handleMarkEntityComplete,
+    handleDeleteEntity,
+    handleMergeEntityIntoMatch,
+    handleMergeMatchIntoCurrentEntity,
+    handleConvertEntityToAlias,
+    handleImportEntityToCharacters,
+    handleAddEntityToCompendium,
+    handlePromoteEntity,
+    handleCanonSync,
+    isCharacterLikeEntity
+  } = useWorldBibleEntityActions({
+    activeProject,
+    activeCategory: activeCategory ?? null,
+    categories,
+    entities,
+    characters,
+    setCharacters,
+    setEntities,
+    setAliases,
+    setFeedback,
+    setViewMode,
+    setCanonState,
+    ragService,
+    shodhService,
+    refreshMemories,
+    editingId,
+    name,
+    fieldValues,
+    viewMode,
+    selectedEntityQueueItem,
+    filteredReviewQueue,
+    aliasMapByEntityId,
+    compendiumLinkedEntityIds,
+    setCompendiumLinkedEntityIds,
+    hasRuleset,
+    seriesParentProjectId: seriesConfig?.parentProjectId ?? null,
+    normalizeName,
+    parseAlternativeNames,
+    formatAlternativeNames,
+    buildEntityContent,
+    alternativeNamesKey: ALTERNATIVE_NAMES_KEY,
+    openReviewItem: handleOpenReviewItem,
+    handleEdit,
+    resetForm,
+    navigate: (to, options) => navigate(to, options as never)
+  });
+
+  const handleSubmit = async (event: FormEvent) => {
+    event.preventDefault();
+    await saveEntityDraft();
+  };
+
+  const persistIgnoredEntityMatch = useCallback(
+    async (otherEntityId: string) => {
+      if (!activeProject || !projectSettings || !editingId) {
+        throw new Error('Project settings are not ready.');
+      }
+
+      const matchKey = buildEntityMatchKey(editingId, otherEntityId);
+      const nextSettings = {
+        ...projectSettings,
+        ignoredEntityMatchKeys: Array.from(
+          new Set([...(projectSettings.ignoredEntityMatchKeys ?? []), matchKey])
+        )
       };
+      await saveProjectSettings(nextSettings);
+      return matchKey;
+    },
+    [activeProject, editingId, projectSettings, saveProjectSettings]
+  );
 
-      setFeedback(null);
+  const handleKeepSeparateMatch = useCallback(
+    async (otherEntity: WorldEntity) => {
       try {
-        await saveEntity(next);
-        setEntities((prev) =>
-          prev.map((item) => (item.id === entity.id ? next : item))
-        );
+        await persistIgnoredEntityMatch(otherEntity.id);
         setFeedback({
           tone: 'success',
-          message: `"${entity.name}" marked complete.`
+          message: `"${selectedEntity?.name ?? 'This entry'}" and "${otherEntity.name}" will stay separate.`
         });
       } catch (error) {
         const message =
-          error instanceof Error ? error.message : 'Unable to update entry.';
+          error instanceof Error ? error.message : 'Unable to keep these records separate.';
         setFeedback({tone: 'error', message});
       }
     },
-    []
+    [
+      persistIgnoredEntityMatch,
+      selectedEntity,
+      setFeedback
+    ]
   );
+
+  const handleIgnoreEntityMatch = useCallback(
+    async (otherEntity: WorldEntity) => {
+      try {
+        await persistIgnoredEntityMatch(otherEntity.id);
+        setFeedback({
+          tone: 'success',
+          message: `Ignored the match between "${selectedEntity?.name ?? 'this entry'}" and "${otherEntity.name}".`
+        });
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : 'Unable to ignore this match.';
+        setFeedback({tone: 'error', message});
+      }
+    },
+    [
+      persistIgnoredEntityMatch,
+      selectedEntity,
+      setFeedback
+    ]
+  );
+
+  const handleAddSuggestedCharacterAlias = useCallback(
+    (alias: string) => {
+      const aliases = parseAlternativeNames(
+        [fieldValues[ALTERNATIVE_NAMES_KEY] || '', alias].filter(Boolean).join(', ')
+      );
+      setFieldValues((prev) => ({
+        ...prev,
+        [ALTERNATIVE_NAMES_KEY]: formatAlternativeNames(aliases)
+      }));
+    },
+    [fieldValues, formatAlternativeNames, parseAlternativeNames]
+  );
+
+  useEffect(() => {
+    setManualResolutionTargetId((targetId) =>
+      manualResolutionTargets.some((entity) => entity.id === targetId)
+        ? targetId
+        : manualResolutionTargets[0]?.id ?? ''
+    );
+  }, [manualResolutionTargets]);
 
   useEffect(() => {
     if (pendingReviewFocus !== 'aliases') return;
@@ -862,456 +1354,59 @@ function WorldBibleRoute() {
   }, [editingId, pendingReviewFocus]);
 
   useEffect(() => {
-    const state = location.state as {focusEntityId?: string} | null;
+    const state = location.state as {
+      focusEntityId?: string;
+      focusCategorySlug?: string;
+      startCharacterImport?: boolean;
+      focus?: 'general' | 'aliases';
+      handoffKind?: 'character-canonicalization';
+      handoffSourceName?: string;
+      handoffMatchEntityId?: string;
+    } | null;
+    if (state?.focusCategorySlug && categories.length > 0) {
+      const targetCategory = categories.find(
+        (category) => category.slug === state.focusCategorySlug
+      );
+      if (targetCategory && activeTab !== targetCategory.id) {
+        setActiveTab(targetCategory.id);
+      }
+      setViewMode('category');
+      if (state.startCharacterImport && characterImportStep === 'idle') {
+        setCharacterImportStep('input');
+      }
+    }
     const focusEntityId = state?.focusEntityId;
     if (!focusEntityId) return;
-    const focusKey = `${location.key}:${focusEntityId}`;
+    const focus = state?.focus ?? 'general';
+    const focusKey = `${location.key}:${focusEntityId}:${focus}`;
     if (focusedEntityKeyRef.current === focusKey) {
       return;
     }
     const target = entities.find((entity) => entity.id === focusEntityId);
     if (!target) return;
     setActiveTab(target.categoryId);
-    handleEdit(target);
+    setViewMode('category');
+    handleEdit(target, focus);
+    if (state?.handoffKind === 'character-canonicalization' && state.handoffSourceName) {
+      setHandoffGuidance({
+        kind: 'character-canonicalization',
+        sourceName: state.handoffSourceName,
+        matchEntityId: state.handoffMatchEntityId
+      });
+    }
     focusedEntityKeyRef.current = focusKey;
-  }, [entities, handleEdit, location.key, location.state]);
+  }, [activeTab, categories, characterImportStep, entities, handleEdit, location.key, location.state]);
 
-  const handleImportEntities = async (event: ChangeEvent<HTMLInputElement>) => {
-    if (!activeProject || !activeCategory) return;
-    const fileList = event.target.files;
-    if (!fileList || fileList.length === 0) return;
-
-    setIsImportingEntities(true);
-    setFeedback(null);
-    const drafts: WorldBibleImportDraft[] = [];
-    let parseFailures = 0;
-
-    try {
-      const files = Array.from(fileList);
-      for (const file of files) {
-        const lower = file.name.toLowerCase();
-        try {
-          if (lower.endsWith('.doc')) {
-            parseFailures += 1;
-            drafts.push({
-              id: crypto.randomUUID(),
-              fileName: file.name,
-              name: fileNameToEntityName(file.name),
-              text: '',
-              preview: '',
-              categoryId: activeCategory.id,
-              mode: 'create',
-              include: false,
-              parseError:
-                'Legacy .doc files are not supported yet. Convert to .docx, .txt, or .md.'
-            });
-            continue;
-          }
-          const raw = lower.endsWith('.docx')
-            ? await parseDocxToText(file)
-            : await file.text();
-          const text =
-            lower.endsWith('.html') || lower.endsWith('.htm')
-              ? htmlToText(raw)
-              : raw.trim();
-          drafts.push({
-            id: crypto.randomUUID(),
-            fileName: file.name,
-            name: fileNameToEntityName(file.name),
-            text,
-            preview: buildPreview(text),
-            categoryId: activeCategory.id,
-            mode: 'create',
-            include: true
-          });
-        } catch {
-          parseFailures += 1;
-          drafts.push({
-            id: crypto.randomUUID(),
-            fileName: file.name,
-            name: fileNameToEntityName(file.name),
-            text: '',
-            preview: '',
-            categoryId: activeCategory.id,
-            mode: 'create',
-            include: false,
-            parseError: 'Failed to parse this file.'
-          });
-        }
-      }
-      setImportDrafts(drafts);
-      setFeedback({
-        tone: parseFailures > 0 ? 'error' : 'success',
-        message:
-          parseFailures > 0
-            ? `Prepared ${drafts.length - parseFailures} import draft(s); ${parseFailures} file(s) need attention.`
-            : `Prepared ${drafts.length} import draft(s). Review and apply when ready.`
-      });
-    } finally {
-      setIsImportingEntities(false);
-      event.target.value = '';
-    }
-  };
-
-  const updateImportDraft = (
-    draftId: string,
-    updates: Partial<WorldBibleImportDraft>
-  ) => {
-    setImportDrafts((prev) =>
-      prev.map((draft) => (draft.id === draftId ? {...draft, ...updates} : draft))
-    );
-  };
-
-  const handleApplyImportDrafts = async () => {
-    if (!activeProject) return;
-    const queuedDrafts = importDrafts.filter((draft) => draft.include && !draft.parseError);
-    if (queuedDrafts.length === 0) {
-      setFeedback({
-        tone: 'error',
-        message: 'No valid import drafts selected.'
-      });
-      return;
-    }
-
-    setIsApplyingImports(true);
-    setFeedback(null);
-    const nextEntities = [...entities];
-    let createdCount = 0;
-    let updatedCount = 0;
-    let failedCount = 0;
-
-    try {
-      for (const draft of queuedDrafts) {
-        const category = categories.find((item) => item.id === draft.categoryId);
-        if (!category) {
-          failedCount += 1;
-          continue;
-        }
-
-        try {
-          const now = Date.now();
-          const normalizedName = draft.name.trim().toLowerCase();
-          const existing =
-            draft.mode === 'upsert'
-              ? nextEntities.find(
-                  (entity) =>
-                    entity.categoryId === draft.categoryId &&
-                    entity.name.trim().toLowerCase() === normalizedName
-                )
-              : undefined;
-
-          const entity: WorldEntity = existing
-            ? {
-                ...existing,
-                fields: {
-                  ...existing.fields,
-                  ...mapImportedTextToFields(category, draft.text)
-                },
-                updatedAt: now
-              }
-            : {
-                id: crypto.randomUUID(),
-                projectId: activeProject.id,
-                categoryId: draft.categoryId,
-                name: draft.name.trim() || fileNameToEntityName(draft.fileName),
-                fields: mapImportedTextToFields(category, draft.text),
-                needsCompletion: false,
-                links: [],
-                createdAt: now,
-                updatedAt: now
-              };
-
-          await saveEntity(entity);
-          if (ragService) {
-            await ragService.indexDocument(
-              entity.id,
-              entity.name,
-              buildEntityContent(entity),
-              'worldbible',
-              {
-                tags: [category.slug],
-                entityIds: [entity.id]
-              }
-            );
-          }
-          if (shodhService) {
-            await shodhService.captureAutoMemory({
-              projectId: activeProject.id,
-              documentId: entity.id,
-              title: entity.name,
-              content: buildEntityContent(entity),
-              tags: ['worldbible', category.slug]
-            });
-          }
-
-          if (existing) {
-            const idx = nextEntities.findIndex((item) => item.id === existing.id);
-            if (idx !== -1) nextEntities[idx] = entity;
-            updatedCount += 1;
-          } else {
-            nextEntities.push(entity);
-            createdCount += 1;
-          }
-        } catch {
-          failedCount += 1;
-        }
-      }
-
-      setEntities(nextEntities);
-      if (createdCount + updatedCount > 0) {
-        await refreshMemories();
-      }
-
-      setFeedback({
-        tone: failedCount > 0 ? 'error' : 'success',
-        message:
-          `Imported ${createdCount} new entr${
-            createdCount === 1 ? 'y' : 'ies'
-          } and updated ${updatedCount}.` +
-          (failedCount > 0 ? ` ${failedCount} failed.` : '')
-      });
-
-      if (failedCount === 0) {
-        setImportDrafts([]);
-      }
-    } finally {
-      setIsApplyingImports(false);
-    }
-  };
-
-  const handleJsonImportFile = async (event: ChangeEvent<HTMLInputElement>) => {
-    if (!activeProject || !activeCategory) return;
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    setIsImportingJson(true);
-    setFeedback(null);
-    try {
-      const raw = await file.text();
-      const parsed = JSON.parse(raw) as unknown;
-      const recordsSource = Array.isArray(parsed)
-        ? parsed
-        : typeof parsed === 'object' && parsed !== null
-          ? ((parsed as Record<string, unknown>).entries ??
-            (parsed as Record<string, unknown>).items ??
-            (parsed as Record<string, unknown>).rows)
-          : null;
-
-      if (!Array.isArray(recordsSource)) {
-        throw new Error(
-          'JSON must be an array of objects or an object with entries/items/rows.'
-        );
-      }
-
-      const rows: JsonImportRowInput[] = [];
-      const keySet = new Set<string>();
-      recordsSource.forEach((item, index) => {
-        if (!item || typeof item !== 'object' || Array.isArray(item)) return;
-        const record = item as Record<string, unknown>;
-        Object.keys(record).forEach((key) => keySet.add(key));
-        rows.push({
-          rowIndex: index + 1,
-          record
-        });
-      });
-
-      if (rows.length === 0) {
-        throw new Error('No object rows found in JSON.');
-      }
-
-      const keys = Array.from(keySet).sort();
-      const defaultNameKey = keys.includes('name') ? 'name' : (keys[0] ?? '');
-      const defaultFieldMap: Record<string, string> = {};
-      activeCategory.fieldSchema.forEach((field) => {
-        defaultFieldMap[field.key] = keys.includes(field.key) ? field.key : '';
-      });
-
-      setJsonImportSession({
-        fileName: file.name,
-        rows,
-        keys,
-        categoryId: activeCategory.id,
-        mode: 'create',
-        nameKey: defaultNameKey,
-        fieldMap: defaultFieldMap
-      });
-      setJsonImportConflictResolutions({});
-      setFeedback({
-        tone: 'success',
-        message: `Loaded ${rows.length} JSON row(s). Map fields and apply when ready.`
-      });
-    } catch (error) {
-      const message =
-        error instanceof Error ? error.message : 'Unable to parse JSON import file.';
-      setFeedback({tone: 'error', message});
-      setJsonImportSession(null);
-      setJsonImportConflictResolutions({});
-    } finally {
-      setIsImportingJson(false);
-      event.target.value = '';
-    }
-  };
-
-  const handleJsonCategoryChange = (categoryId: string) => {
-    const category = categories.find((item) => item.id === categoryId);
-    setJsonImportSession((prev) => {
-      if (!prev) return prev;
-      const nextFieldMap: Record<string, string> = {};
-      if (category) {
-        category.fieldSchema.forEach((field) => {
-          nextFieldMap[field.key] = prev.keys.includes(field.key) ? field.key : '';
-        });
-      }
-      return {
-        ...prev,
-        categoryId,
-        fieldMap: nextFieldMap
-      };
-    });
-    setJsonImportConflictResolutions({});
-  };
-
-  const handleJsonFieldMapChange = (fieldKey: string, sourceKey: string) => {
-    setJsonImportSession((prev) => {
-      if (!prev) return prev;
-      return {
-        ...prev,
-        fieldMap: {
-          ...prev.fieldMap,
-          [fieldKey]: sourceKey
-        }
-      };
-    });
-  };
-
-  const handleJsonConflictResolutionChange = (
-    rowIndex: number,
-    resolution: JsonImportConflictResolution
-  ) => {
-    setJsonImportConflictResolutions((prev) => ({
-      ...prev,
-      [rowIndex]: resolution
-    }));
-  };
-
-  const handleApplyJsonImport = async () => {
-    if (!activeProject || !jsonImportSession || !activeJsonCategory) return;
-    const validRows = preparedJsonRows.filter((row) => row.errors.length === 0);
-    if (validRows.length === 0) {
-      setFeedback({
-        tone: 'error',
-        message: 'No valid JSON rows to import. Fix mapping/validation first.'
-      });
-      return;
-    }
-    if (unresolvedJsonConflictCount > 0) {
-      setFeedback({
-        tone: 'error',
-        message: `Review ${unresolvedJsonConflictCount} conflicting JSON row(s) before importing.`
-      });
-      return;
-    }
-
-    setIsApplyingJsonImport(true);
-    setFeedback(null);
-    const nextEntities = [...entities];
-    let createdCount = 0;
-    let updatedCount = 0;
-    let failedCount = 0;
-    let skippedCount = 0;
-
-    try {
-      for (const row of validRows) {
-        try {
-          if (row.resolution === 'skip') {
-            skippedCount += 1;
-            continue;
-          }
-          const now = Date.now();
-          const normalizedName = row.name.trim().toLowerCase();
-          const existing =
-            row.resolution === 'upsert'
-              ? nextEntities.find(
-                  (entity) =>
-                    entity.categoryId === jsonImportSession.categoryId &&
-                    entity.name.trim().toLowerCase() === normalizedName
-                )
-              : undefined;
-
-          const entity: WorldEntity = existing
-            ? {
-                ...existing,
-                fields: {
-                  ...existing.fields,
-                  ...row.fields
-                },
-                updatedAt: now
-              }
-            : {
-                id: crypto.randomUUID(),
-                projectId: activeProject.id,
-                categoryId: jsonImportSession.categoryId,
-                name: row.name,
-                fields: row.fields,
-                needsCompletion: false,
-                links: [],
-                createdAt: now,
-                updatedAt: now
-              };
-
-          await saveEntity(entity);
-          if (ragService) {
-            await ragService.indexDocument(
-              entity.id,
-              entity.name,
-              buildEntityContent(entity),
-              'worldbible',
-              {
-                tags: [activeJsonCategory.slug],
-                entityIds: [entity.id]
-              }
-            );
-          }
-          if (shodhService) {
-            await shodhService.captureAutoMemory({
-              projectId: activeProject.id,
-              documentId: entity.id,
-              title: entity.name,
-              content: buildEntityContent(entity),
-              tags: ['worldbible', activeJsonCategory.slug]
-            });
-          }
-
-          if (existing) {
-            const idx = nextEntities.findIndex((item) => item.id === existing.id);
-            if (idx !== -1) nextEntities[idx] = entity;
-            updatedCount += 1;
-          } else {
-            nextEntities.push(entity);
-            createdCount += 1;
-          }
-        } catch {
-          failedCount += 1;
-        }
-      }
-
-      setEntities(nextEntities);
-      await refreshMemories();
-      setFeedback({
-        tone: failedCount > 0 ? 'error' : 'success',
-        message:
-          `JSON import created ${createdCount} entr${
-            createdCount === 1 ? 'y' : 'ies'
-          } and updated ${updatedCount}.` +
-          (skippedCount > 0 ? ` Skipped ${skippedCount}.` : '') +
-          (failedCount > 0 ? ` ${failedCount} failed.` : '')
-      });
-      if (failedCount === 0) {
-        setJsonImportSession(null);
-        setJsonImportConflictResolutions({});
-      }
-    } finally {
-      setIsApplyingJsonImport(false);
+  const handleApplyImportDrafts = async (options?: {
+    draftIds?: string[];
+    openFirstImported?: boolean;
+  }) => {
+    const firstImportedEntity = await applyImportDrafts(options);
+    if (options?.openFirstImported && firstImportedEntity) {
+      setActiveImportPreviewId(null);
+      setViewMode('category');
+      setActiveTab(firstImportedEntity.categoryId);
+      handleEdit(firstImportedEntity);
     }
   };
 
@@ -1360,134 +1455,129 @@ function WorldBibleRoute() {
     );
   };
 
-  const handleDeleteEntity = async (id: string) => {
-    if (!confirm('Delete this entity?')) return;
-    setDeletingEntityId(id);
-    setFeedback(null);
-    try {
-      if (activeProject) {
-        await deleteAliasesForEntity(activeProject.id, id);
-      }
-      await deleteEntity(id);
-      if (ragService) {
-        await ragService.deleteDocument(id);
-      }
-      if (shodhService) {
-        await shodhService.deleteMemoriesForDocument(id);
-        await refreshMemories();
-      }
-      setEntities((prev) => prev.filter((e) => e.id !== id));
-      setAliases((prev) => prev.filter((alias) => alias.entityId !== id));
-      if (editingId === id) resetForm();
-      setFeedback({tone: 'success', message: 'Entry deleted.'});
-    } catch (error) {
-      const message =
-        error instanceof Error ? error.message : 'Unable to delete entry.';
-      setFeedback({tone: 'error', message});
-    } finally {
-      setDeletingEntityId(null);
-    }
-  };
-
-  const buildEntityContent = (entity: WorldEntity) => {
-    const fieldText = Object.entries(entity.fields)
-      .map(([key, value]) => `${key}: ${value ?? ''}`)
-      .join('\n');
-    return `${entity.name}\n${fieldText}`;
-  };
-
-  const inferCompendiumDomain = (entity: WorldEntity): CompendiumDomain => {
-    const category = categories.find((item) => item.id === entity.categoryId);
-    const slug = (category?.slug ?? '').toLowerCase();
-    if (slug.includes('monster') || slug.includes('beast') || slug.includes('creature')) {
-      return 'beast';
-    }
-    if (slug.includes('plant') || slug.includes('flora') || slug.includes('herb')) {
-      return 'flora';
-    }
-    if (slug.includes('ore') || slug.includes('mineral') || slug.includes('rock')) {
-      return 'mineral';
-    }
-    if (slug.includes('artifact') || slug.includes('relic')) {
-      return 'artifact';
-    }
-    return 'custom';
-  };
-
-  const handleAddEntityToCompendium = async (entity: WorldEntity) => {
-    if (!activeProject) return;
-    setLinkingCompendiumEntityId(entity.id);
-    setFeedback(null);
-    try {
-      await upsertCompendiumEntryFromEntity({
-        projectId: activeProject.id,
-        entity,
-        domain: inferCompendiumDomain(entity),
-        needsCompletion: entity.needsCompletion ?? false
-      });
-      setCompendiumLinkedEntityIds((prev) => {
-        const next = new Set(prev);
-        next.add(entity.id);
-        return next;
-      });
-      setFeedback({
-        tone: 'success',
-        message: `"${entity.name}" linked to Compendium.`
-      });
-    } catch (error) {
-      const message =
-        error instanceof Error
-          ? error.message
-          : 'Unable to link entity to compendium.';
-      setFeedback({tone: 'error', message});
-    } finally {
-      setLinkingCompendiumEntityId(null);
-    }
-  };
-
-  const handlePromoteEntity = async (entity: WorldEntity) => {
-    if (!seriesConfig?.parentProjectId) return;
-    setPromotingEntityId(entity.id);
-    setFeedback(null);
-    try {
-      await promoteDocumentToParent({
-        parentProjectId: seriesConfig.parentProjectId,
-        documentId: entity.id,
-        title: entity.name,
-        content: buildEntityContent(entity),
-        type: 'worldbible',
-        tags: [activeCategory?.slug ?? 'worldbible']
-      });
-      setFeedback({tone: 'success', message: 'Entry promoted to parent canon.'});
-    } catch (error) {
-      const message =
-        error instanceof Error ? error.message : 'Unable to promote entry.';
-      setFeedback({tone: 'error', message});
-    } finally {
-      setPromotingEntityId(null);
-    }
-  };
-  const handleCanonSync = async () => {
-    if (!activeProject) return;
-    setIsSyncingCanon(true);
-    setFeedback(null);
-    try {
-      const updated = await syncChildWithParent(activeProject.id);
-      if (updated) {
-        setCanonState((prev) => ({
-          ...prev,
-          childLastSynced: updated.lastSyncedCanon
-        }));
-      }
-      setFeedback({tone: 'success', message: 'Canon sync state updated.'});
-    } catch (error) {
-      const message =
-        error instanceof Error ? error.message : 'Unable to mark canon as synced.';
-      setFeedback({tone: 'error', message});
-    } finally {
-      setIsSyncingCanon(false);
-    }
-  };
+  const renderEntityField = (field: EntityCategory['fieldSchema'][number]) => (
+    <div key={field.key} className={styles.formGroup}>
+      {field.type === 'textarea' ? (
+        <WorldBibleRichTextField
+          label={field.label}
+          required={field.required}
+          value={fieldValues[field.key] || ''}
+          variant={activeCategoryIsCharacterLike ? 'character' : 'default'}
+          onChange={(value) =>
+            setFieldValues({
+              ...fieldValues,
+              [field.key]: value
+            })
+          }
+        />
+      ) : (
+        <label>
+          {field.label}
+          {field.required && ' *'}
+          {field.type === 'select' ? (
+            <select
+              value={fieldValues[field.key] || ''}
+              onChange={(e) =>
+                setFieldValues({
+                  ...fieldValues,
+                  [field.key]: e.target.value
+                })
+              }
+              required={field.required}
+            >
+              <option value=''>-- Select --</option>
+              {field.options?.map((opt) => (
+                <option key={opt} value={opt}>
+                  {opt}
+                </option>
+              ))}
+            </select>
+          ) : field.type === 'multiselect' ? (
+            <div className={styles.multiselectContainer}>
+              {field.options?.map((opt) => (
+                <label key={opt} className={styles.multiselectOption}>
+                  <input
+                    type='checkbox'
+                    checked={(fieldValues[field.key] || '')
+                      .split(',')
+                      .includes(opt)}
+                    onChange={(e) => {
+                      const current = (fieldValues[field.key] || '')
+                        .split(',')
+                        .filter(Boolean);
+                      const updated = e.target.checked
+                        ? [...current, opt]
+                        : current.filter((v) => v !== opt);
+                      setFieldValues({
+                        ...fieldValues,
+                        [field.key]: updated.join(',')
+                      });
+                    }}
+                  />
+                  <span>{opt}</span>
+                </label>
+              ))}
+            </div>
+          ) : field.type === 'checkbox' ? (
+            <input
+              type='checkbox'
+              checked={fieldValues[field.key] === 'true'}
+              onChange={(e) =>
+                setFieldValues({
+                  ...fieldValues,
+                  [field.key]: e.target.checked ? 'true' : 'false'
+                })
+              }
+            />
+          ) : field.type === 'dice' ? (
+            <input
+              type='text'
+              value={fieldValues[field.key] || ''}
+              onChange={(e) =>
+                setFieldValues({
+                  ...fieldValues,
+                  [field.key]: e.target.value
+                })
+              }
+              placeholder={
+                field.diceConfig?.allowMultipleDice
+                  ? 'e.g., 3d6, 2d8+1d4'
+                  : 'e.g., 1d20'
+              }
+              pattern={field.diceConfig?.allowMultipleDice ? '.*' : '1d\\d+'}
+              required={field.required}
+            />
+          ) : field.type === 'modifier' ? (
+            <input
+              type='text'
+              value={fieldValues[field.key] || ''}
+              onChange={(e) =>
+                setFieldValues({
+                  ...fieldValues,
+                  [field.key]: e.target.value
+                })
+              }
+              placeholder='e.g., +5, -2'
+              pattern='[+-]?\\d+'
+              required={field.required}
+            />
+          ) : (
+            <input
+              type={field.type}
+              value={fieldValues[field.key] || ''}
+              onChange={(e) =>
+                setFieldValues({
+                  ...fieldValues,
+                  [field.key]: e.target.value
+                })
+              }
+              required={field.required}
+            />
+          )}
+        </label>
+      )}
+    </div>
+  );
 
   if (!activeProject) {
     return (
@@ -1557,11 +1647,11 @@ function WorldBibleRoute() {
             padding: '0.5rem 0.75rem',
             borderRadius: '6px',
             border: `1px solid ${
-              feedback.tone === 'error' ? '#fecaca' : '#bbf7d0'
+              feedback.tone === 'error' ? 'var(--color-error-soft-border)' : 'var(--color-success-soft-border)'
             }`,
             backgroundColor:
-              feedback.tone === 'error' ? '#fef2f2' : '#f0fdf4',
-            color: feedback.tone === 'error' ? '#991b1b' : '#166534'
+              feedback.tone === 'error' ? 'var(--color-error-soft-bg)' : 'var(--color-success-soft-bg)',
+            color: feedback.tone === 'error' ? 'var(--color-error)' : 'var(--color-success)'
           }}
         >
           {feedback.message}
@@ -1615,9 +1705,13 @@ function WorldBibleRoute() {
         {categories.map((cat) => (
           <button
             key={cat.id}
-            onClick={() => setActiveTab(cat.id)}
+            type='button'
+            onClick={() => {
+              setViewMode('category');
+              setActiveTab(cat.id);
+            }}
             className={`${styles.tab} ${
-              activeTab === cat.id ? styles.active : ''
+              viewMode === 'category' && activeTab === cat.id ? styles.active : ''
             }`}
           >
             {cat.name}
@@ -1659,6 +1753,263 @@ function WorldBibleRoute() {
         </div>
       </details>
 
+      {activeCategory && viewMode === 'category' && (
+        <section className={styles.castPanel} aria-label={`${activeCategory.name} canon`}>
+          <div className={styles.castHeader}>
+            <div>
+              <div className={styles.castEyebrow}>{activeCategory.name} canon</div>
+              <h2>{activeCategory.name}</h2>
+              {activeCategoryIsCharacterLike ? (
+                <p>
+                  Build story-facing character records here. Canonical names,
+                  aliases, description, role, and notes stay in World Bible; sheets
+                  remain optional system tools.
+                </p>
+              ) : (
+                <p>
+                  Build story-facing {activeCategory.name.toLowerCase()} here.
+                  Canonical names, aliases, descriptions, and notes stay in World
+                  Bible.
+                </p>
+              )}
+            </div>
+          </div>
+          <div className={styles.castTaskGrid}>
+            <div className={styles.castTask}>
+              <h3>Manual {activeCategory.name.replace(/s$/i, '')}</h3>
+              <p>Start with a canonical name, aliases, and the core canon fields.</p>
+              <button
+                type='button'
+                onClick={
+                  activeCategoryIsCharacterLike
+                    ? startNewCharacterCanonRecord
+                    : startNewCategoryRecord
+                }
+              >
+                Create Manually
+              </button>
+            </div>
+            <div className={styles.castTask}>
+              <h3>Import {activeCategory.name.replace(/s$/i, '')}</h3>
+              {activeCategoryIsCharacterLike ? (
+                <>
+                  <p>Review pasted profiles or dossier drafts before they enter rich canon fields.</p>
+                  <button
+                    type='button'
+                    onClick={() => {
+                      openCharacterCategory();
+                      setCharacterAuthoringMode('import');
+                      setCharacterImportStep('input');
+                    }}
+                  >
+                    Import Or Paste
+                  </button>
+                </>
+              ) : (
+                <>
+                  <p>Import documents into this tab, then review each generated canon record.</p>
+                  <button
+                    type='button'
+                    onClick={() => importInputRef.current?.click()}
+                    disabled={isImportingEntities}
+                  >
+                    {isImportingEntities ? 'Importing...' : 'Import Docs'}
+                  </button>
+                </>
+              )}
+            </div>
+            <div className={styles.castTask}>
+              {activeCategoryIsCharacterLike ? (
+                <>
+                  <h3>AI-Assisted Draft</h3>
+                  <p>Generate a draft from your premise, then edit and approve it yourself.</p>
+                  <button type='button' onClick={startCharacterAiDraft}>
+                    Start With AI
+                  </button>
+                </>
+              ) : (
+                <>
+                  <h3>Import JSON</h3>
+                  <p>Use structured rows when you already have names and fields.</p>
+                  <button
+                    type='button'
+                    onClick={() => jsonImportInputRef.current?.click()}
+                    disabled={isImportingJson}
+                  >
+                    {isImportingJson ? 'Loading JSON...' : 'Import JSON'}
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {activeCategoryIsCharacterLike && characterAuthoringMode === 'ai' && (
+        <section className={styles.characterAiPanel} aria-label='AI-assisted character draft'>
+          <div className={styles.importPanelHeader}>
+            <div>
+              <h2>AI-Assisted Draft</h2>
+              <p className={styles.importSummary}>
+                Describe the character you need. The draft fills editable Cast fields only after you generate it.
+              </p>
+            </div>
+            <button
+              type='button'
+              onClick={() => {
+                setCharacterAuthoringMode('idle');
+                setCharacterAiPrompt('');
+                setFieldValues({});
+                setName('');
+              }}
+            >
+              Close
+            </button>
+          </div>
+          <label className={styles.characterImportLabel}>
+            Character brief
+            <textarea
+              value={characterAiPrompt}
+              onChange={(event) => setCharacterAiPrompt(event.target.value)}
+              rows={7}
+              placeholder='A disgraced royal cartographer who knows the city has been redrawn overnight...'
+            />
+          </label>
+          <div className={styles.importPanelActions}>
+            <button
+              type='button'
+              onClick={() => void handleGenerateCharacterDraft()}
+              disabled={isGeneratingCharacterDraft || !characterAiPrompt.trim()}
+            >
+              {isGeneratingCharacterDraft ? 'Generating...' : 'Generate Draft'}
+            </button>
+            <button
+              type='button'
+              onClick={() => {
+                setCharacterAiPrompt('');
+                setFieldValues({});
+                setName('');
+              }}
+              disabled={isGeneratingCharacterDraft}
+            >
+              Clear
+            </button>
+          </div>
+        </section>
+      )}
+
+      {activeCategoryIsCharacterLike && characterImportStep === 'input' && (
+        <section className={styles.characterImportPanel} aria-label='Import character'>
+          <div className={styles.importPanelHeader}>
+            <div>
+              <h2>Import Character</h2>
+              <p className={styles.importSummary}>
+                Paste a profile or import a character document. The parsed draft will
+                fill World Bible rich fields before you save.
+              </p>
+            </div>
+            <button
+              type='button'
+              onClick={() => {
+                setCharacterImportStep('idle');
+                setCharacterAuthoringMode('idle');
+              }}
+            >
+              Close
+            </button>
+          </div>
+          <label className={styles.characterImportLabel}>
+            Character notes
+            <textarea
+              value={pastedCharacterImportText}
+              onChange={(event) => setPastedCharacterImportText(event.target.value)}
+              rows={10}
+              placeholder={'Name: Mira Voss\nRole: Cartographer\n\nBackground:\n...'}
+            />
+          </label>
+          <div className={styles.importPanelActions}>
+            <button type='button' onClick={handleReviewPastedCharacterImport}>
+              Review Paste
+            </button>
+            <button
+              type='button'
+              onClick={() => characterImportInputRef.current?.click()}
+              disabled={isImportingCharacterDoc}
+            >
+              {isImportingCharacterDoc ? 'Importing...' : 'Import File'}
+            </button>
+            <input
+              ref={characterImportInputRef}
+              type='file'
+              accept='.txt,.md,.rtf,.html,.htm,.docx,text/plain,text/markdown,text/rtf,text/html,application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+              onChange={(event) => void handleCharacterImportFile(event)}
+              style={{display: 'none'}}
+            />
+          </div>
+        </section>
+      )}
+
+      {activeCategoryIsCharacterLike && characterImportStep === 'review' && characterImportDraft && (
+        <section className={styles.characterImportPanel} aria-label='Review character import'>
+          <div className={styles.importPanelHeader}>
+            <div>
+              <h2>Review Character Import</h2>
+              <p className={styles.importSummary}>
+                Confirm the extracted name and section destinations. The editor below is
+                already populated; save only after reviewing the rich fields.
+              </p>
+            </div>
+            <button
+              type='button'
+              onClick={() => {
+                setCharacterImportStep('idle');
+                setCharacterAuthoringMode('idle');
+              }}
+            >
+              Close
+            </button>
+          </div>
+          {characterImportDraft.warnings.length > 0 && (
+            <div className={styles.importError}>
+              {characterImportDraft.warnings.join(' ')}
+            </div>
+          )}
+          {characterImportSections.length > 0 && (
+            <div className={styles.characterImportReviewList}>
+              {characterImportSections.map((section) => (
+                <div key={section.id} className={styles.characterImportReviewCard}>
+                  <div>
+                    <strong>{section.title}</strong>
+                    <p>{section.content}</p>
+                  </div>
+                  <label>
+                    Destination
+                    <select
+                      value={section.action}
+                      onChange={(event) =>
+                        updateCharacterImportSectionAction(
+                          section.id,
+                          event.target.value as CharacterImportSectionDraft['action']
+                        )
+                      }
+                    >
+                      <option value='notes'>Notes</option>
+                      <option value='description'>Description</option>
+                      {characterImportDestinationFields.map((field) => (
+                        <option key={field.key} value={field.key}>
+                          {field.label}
+                        </option>
+                      ))}
+                      <option value='ignore'>Ignore</option>
+                    </select>
+                  </label>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
+
       {importDrafts.length > 0 && (
         <section className={styles.importPanel}>
           <div className={styles.importPanelHeader}>
@@ -1673,7 +2024,7 @@ function WorldBibleRoute() {
               </button>
               <button
                 type='button'
-                onClick={() => setImportDrafts([])}
+                onClick={clearImportDrafts}
                 disabled={isApplyingImports}
               >
                 Clear
@@ -1683,76 +2034,225 @@ function WorldBibleRoute() {
           <p className={styles.importSummary}>
             {importDrafts.filter((draft) => draft.include && !draft.parseError).length}{' '}
             selected · {importDrafts.filter((draft) => draft.parseError).length} with
-            errors
+            errors · {richImportDraftCount} targeting rich-text lore fields
           </p>
           <ul className={styles.importDraftList}>
-            {importDrafts.map((draft) => (
-              <li key={draft.id} className={styles.importDraftCard}>
-                <div className={styles.importDraftTop}>
-                  <label>
-                    <input
-                      type='checkbox'
-                      checked={draft.include}
-                      disabled={Boolean(draft.parseError) || isApplyingImports}
-                      onChange={(e) =>
-                        updateImportDraft(draft.id, {include: e.target.checked})
-                      }
-                    />
-                    <span>{draft.fileName}</span>
-                  </label>
-                </div>
-                <div className={styles.importDraftFields}>
-                  <label>
-                    Entry Name
-                    <input
-                      type='text'
-                      value={draft.name}
-                      disabled={Boolean(draft.parseError) || isApplyingImports}
-                      onChange={(e) =>
-                        updateImportDraft(draft.id, {name: e.target.value})
-                      }
-                    />
-                  </label>
-                  <label>
-                    Category
-                    <select
-                      value={draft.categoryId}
-                      disabled={Boolean(draft.parseError) || isApplyingImports}
-                      onChange={(e) =>
-                        updateImportDraft(draft.id, {categoryId: e.target.value})
-                      }
-                    >
-                      {categories.map((category) => (
-                        <option key={category.id} value={category.id}>
-                          {category.name}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <label>
-                    Behavior
-                    <select
-                      value={draft.mode}
-                      disabled={Boolean(draft.parseError) || isApplyingImports}
-                      onChange={(e) =>
-                        updateImportDraft(draft.id, {mode: e.target.value as ImportMode})
-                      }
-                    >
-                      <option value='create'>Create New</option>
-                      <option value='upsert'>Update by Name</option>
-                    </select>
-                  </label>
-                </div>
-                {draft.parseError ? (
-                  <p className={styles.importError}>{draft.parseError}</p>
-                ) : (
-                  <p className={styles.importPreview}>{draft.preview}</p>
-                )}
-              </li>
-            ))}
+            {importDrafts.map((draft) => {
+              const category = categoryById.get(draft.categoryId) ?? null;
+              const preferredField = category ? getPreferredImportField(category) : null;
+              const landsAsRichText = preferredField?.type === 'textarea';
+              const sourceKind = draft.fileName.toLowerCase().endsWith('.html') ||
+                draft.fileName.toLowerCase().endsWith('.htm')
+                ? 'HTML'
+                : draft.fileName.toLowerCase().endsWith('.md') ||
+                    draft.fileName.toLowerCase().endsWith('.markdown')
+                  ? 'Markdown'
+                  : draft.fileName.toLowerCase().endsWith('.docx')
+                    ? 'DOCX'
+                    : 'Text';
+              return (
+                <li key={draft.id} className={styles.importDraftCard}>
+                  <div className={styles.importDraftTop}>
+                    <label>
+                      <input
+                        type='checkbox'
+                        checked={draft.include}
+                        disabled={Boolean(draft.parseError) || isApplyingImports}
+                        onChange={(e) =>
+                          updateImportDraft(draft.id, {include: e.target.checked})
+                        }
+                      />
+                      <span>{draft.fileName}</span>
+                    </label>
+                    <div className={styles.importChipRow}>
+                      <span className={styles.importChip}>{sourceKind}</span>
+                      {preferredField && (
+                        <span
+                          className={`${styles.importChip} ${
+                            landsAsRichText ? styles.importChipRich : styles.importChipPlain
+                          }`}
+                        >
+                          {landsAsRichText
+                            ? `Rich text -> ${preferredField.label}`
+                            : `Plain field -> ${preferredField.label}`}
+                        </span>
+                      )}
+                      <span className={styles.importChip}>
+                        {draft.mode === 'upsert' ? 'Update by name' : 'Create new'}
+                      </span>
+                    </div>
+                  </div>
+                  <div className={styles.importDraftFields}>
+                    <label>
+                      Entry Name
+                      <input
+                        type='text'
+                        value={draft.name}
+                        disabled={Boolean(draft.parseError) || isApplyingImports}
+                        onChange={(e) =>
+                          updateImportDraft(draft.id, {name: e.target.value})
+                        }
+                      />
+                    </label>
+                    <label>
+                      Category
+                      <select
+                        value={draft.categoryId}
+                        disabled={Boolean(draft.parseError) || isApplyingImports}
+                        onChange={(e) =>
+                          updateImportDraft(draft.id, {categoryId: e.target.value})
+                        }
+                      >
+                        {categories.map((categoryOption) => (
+                          <option key={categoryOption.id} value={categoryOption.id}>
+                            {categoryOption.name}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <label>
+                      Behavior
+                      <select
+                        value={draft.mode}
+                        disabled={Boolean(draft.parseError) || isApplyingImports}
+                        onChange={(e) =>
+                          updateImportDraft(draft.id, {mode: e.target.value as ImportMode})
+                        }
+                      >
+                        <option value='create'>Create New</option>
+                        <option value='upsert'>Update by Name</option>
+                      </select>
+                    </label>
+                  </div>
+                  {draft.parseError ? (
+                    <p className={styles.importError}>{draft.parseError}</p>
+                  ) : (
+                    <>
+                      <div className={styles.importDraftActions}>
+                        <button
+                          type='button'
+                          className={styles.importPreviewButton}
+                          onClick={() =>
+                            void handleApplyImportDrafts({
+                              draftIds: [draft.id],
+                              openFirstImported: true
+                            })
+                          }
+                          disabled={isApplyingImports}
+                        >
+                          Import and open
+                        </button>
+                        {draft.richTextHtml && (
+                          <button
+                            type='button'
+                            className={styles.importPreviewButton}
+                            onClick={() => setActiveImportPreviewId(draft.id)}
+                            disabled={isApplyingImports}
+                          >
+                            Open document preview
+                          </button>
+                        )}
+                      </div>
+                      <p className={styles.importPreview}>{draft.preview}</p>
+                      <p className={styles.importDraftNote}>
+                        {landsAsRichText
+                          ? 'This import will preserve richer prose structure in the target lore field.'
+                          : 'This import will land as plain text in the target field.'}
+                      </p>
+                    </>
+                  )}
+                </li>
+              );
+            })}
           </ul>
         </section>
       )}
+
+      {activeImportPreviewDraft && (() => {
+        const previewCategory = categoryById.get(activeImportPreviewDraft.categoryId) ?? null;
+        const previewField = previewCategory ? getPreferredImportField(previewCategory) : null;
+        const previewSourceKind =
+          activeImportPreviewDraft.fileName.toLowerCase().endsWith('.html') ||
+          activeImportPreviewDraft.fileName.toLowerCase().endsWith('.htm')
+            ? 'HTML'
+            : activeImportPreviewDraft.fileName.toLowerCase().endsWith('.md') ||
+                activeImportPreviewDraft.fileName.toLowerCase().endsWith('.markdown')
+              ? 'Markdown'
+              : activeImportPreviewDraft.fileName.toLowerCase().endsWith('.docx')
+                ? 'DOCX'
+                : 'Text';
+        return (
+          <div
+            className={styles.importPreviewOverlay}
+            role='dialog'
+            aria-modal='true'
+            aria-label='Import document preview'
+            onClick={() => setActiveImportPreviewId(null)}
+          >
+            <div
+              className={styles.importPreviewCard}
+              onClick={(event) => event.stopPropagation()}
+            >
+              <div className={styles.importPreviewHeader}>
+                <div>
+                  <div className={styles.importPreviewEyebrow}>Import document preview</div>
+                  <h3 className={styles.importPreviewTitle}>
+                    {activeImportPreviewDraft.name || activeImportPreviewDraft.fileName}
+                  </h3>
+                  <div className={styles.importChipRow}>
+                    <span className={styles.importChip}>{previewSourceKind}</span>
+                    {previewField && (
+                      <span
+                        className={`${styles.importChip} ${
+                          previewField.type === 'textarea'
+                            ? styles.importChipRich
+                            : styles.importChipPlain
+                        }`}
+                      >
+                        {previewField.type === 'textarea'
+                          ? `Rich text -> ${previewField.label}`
+                          : `Plain field -> ${previewField.label}`}
+                      </span>
+                    )}
+                    <span className={styles.importChip}>{activeImportPreviewDraft.fileName}</span>
+                  </div>
+                </div>
+                <button
+                  type='button'
+                  className={styles.importPreviewButton}
+                  onClick={() =>
+                    void handleApplyImportDrafts({
+                      draftIds: [activeImportPreviewDraft.id],
+                      openFirstImported: true
+                    })
+                  }
+                  disabled={isApplyingImports}
+                >
+                  Import and open
+                </button>
+                <button
+                  type='button'
+                  className={styles.importPreviewButton}
+                  onClick={() => setActiveImportPreviewId(null)}
+                  disabled={isApplyingImports}
+                >
+                  Close preview
+                </button>
+              </div>
+              <div className={styles.importPreviewDocument}>
+                <article
+                  className={styles.importPreviewContent}
+                  dangerouslySetInnerHTML={{
+                    __html:
+                      activeImportPreviewDraft.richTextHtml ||
+                      normalizeRichTextValue(activeImportPreviewDraft.text)
+                  }}
+                />
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {jsonImportSession && (
         <section className={styles.importPanel}>
@@ -1764,14 +2264,14 @@ function WorldBibleRoute() {
             <div className={styles.importPanelActions}>
               <button
                 type='button'
-                onClick={() => void handleApplyJsonImport()}
+                onClick={() => void applyJsonImport()}
                 disabled={isApplyingJsonImport}
               >
                 {isApplyingJsonImport ? 'Importing...' : 'Apply JSON Import'}
               </button>
               <button
                 type='button'
-                onClick={() => setJsonImportSession(null)}
+                onClick={clearJsonImportSession}
                 disabled={isApplyingJsonImport}
               >
                 Clear
@@ -1809,11 +2309,7 @@ function WorldBibleRoute() {
               Row Name Key
               <select
                 value={jsonImportSession.nameKey}
-                onChange={(e) =>
-                  setJsonImportSession((prev) =>
-                    prev ? {...prev, nameKey: e.target.value} : prev
-                  )
-                }
+                onChange={(e) => handleJsonNameKeyChange(e.target.value)}
                 disabled={isApplyingJsonImport}
               >
                 <option value=''>-- Select key --</option>
@@ -1828,11 +2324,7 @@ function WorldBibleRoute() {
               Behavior
               <select
                 value={jsonImportSession.mode}
-                onChange={(e) =>
-                  setJsonImportSession((prev) =>
-                    prev ? {...prev, mode: e.target.value as ImportMode} : prev
-                  )
-                }
+                onChange={(e) => handleJsonModeChange(e.target.value as ImportMode)}
                 disabled={isApplyingJsonImport}
               >
                 <option value='create'>Create New</option>
@@ -1915,235 +2407,672 @@ function WorldBibleRoute() {
         />
       )}
 
-      {reviewQueue.length > 0 && (
-        <section className={styles.reviewPanel}>
-          <div className={styles.reviewPanelHeader}>
-            <div>
-              <h2>Review Queue</h2>
-              <p>
-                Finish incomplete canon records here. This queue combines entries that
-                still need completion with records that have not had alternative names
-                reviewed yet.
-              </p>
-            </div>
-            <div className={styles.reviewCount}>{reviewQueue.length} open</div>
-          </div>
-          <div className={styles.reviewList}>
-            {reviewQueue.slice(0, 12).map(({entity, aliasCount, reasons}) => (
-              <div key={entity.id} className={styles.reviewCard}>
-                <div className={styles.reviewCardHeader}>
-                  <strong>{entity.name}</strong>
-                  <span className={styles.reviewMeta}>
-                    {categories.find((category) => category.id === entity.categoryId)?.name ??
-                      'Record'}
-                  </span>
-                </div>
-                <div className={styles.reviewReasonList}>
-                  {reasons.map((reason) => (
-                    <span key={`${entity.id}-${reason}`} className={styles.reviewReasonChip}>
-                      {reason}
-                    </span>
-                  ))}
-                </div>
-                <div className={styles.reviewHint}>
-                  {aliasCount > 0
-                    ? `${aliasCount} alternative name${aliasCount === 1 ? '' : 's'} saved.`
-                    : 'No alternative names saved yet.'}
-                </div>
-                <div className={styles.reviewActions}>
-                  <button
-                    type='button'
-                    onClick={() => {
-                      setActiveTab(entity.categoryId);
-                      handleEdit(entity);
-                    }}
-                  >
-                    Review entry
-                  </button>
-                  <button
-                    type='button'
-                    onClick={() => {
-                      setActiveTab(entity.categoryId);
-                      handleEdit(entity, 'aliases');
-                    }}
-                  >
-                    Review aliases
-                  </button>
-                  {entity.needsCompletion && (
-                    <button
-                      type='button'
-                      onClick={() => void handleMarkEntityComplete(entity)}
-                    >
-                      Mark complete
-                    </button>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
-
       {activeCategory && (
-        <div className={styles.content}>
+        <div
+          className={`${styles.content} ${styles.castContent}`}
+        >
+          {(!activeCategoryIsCharacterLike || isFocusedCharacterTask) && (
           <div className={styles.formSection}>
             <form onSubmit={handleSubmit} className={styles.form}>
               <h2>
-                {editingId ? 'Edit' : 'New'} {activeCategory.name.slice(0, -1)}
+                {activeCategoryIsCharacterLike
+                  ? editingId
+                    ? 'Edit Character Canon'
+                    : 'New Character Canon'
+                  : `${editingId ? 'Edit' : 'New'} ${activeCategory.name.slice(0, -1)}`}
               </h2>
+              {activeCategoryIsCharacterLike && (
+                <div className={styles.reviewHint}>
+                  This World Bible record is the canonical character profile. Resolve
+                  the stable name, aliases, duplicate cast records, and story-facing
+                  lore here
+                  {showCharacterTools
+                    ? '; open Character Tools later only for sheets, stats, inventory, or resources.'
+                    : '.'}
+                </div>
+              )}
+              {activeCategoryIsCharacterLike && handoffGuidance?.kind === 'character-canonicalization' && (
+                <div className={styles.handoffBanner}>
+                  <div>
+                    <strong>Resolve {handoffGuidance.sourceName}</strong>
+                    <p>
+                      World Bible owns character identity. If this is the same person
+                      as an existing character, make the shorter name an alias. If not,
+                      keep them separate.
+                    </p>
+                  </div>
+                  {canonicalResolutionMatches.length === 0 && selectedEntity && (
+                    <button
+                      type='button'
+                      onClick={() =>
+                        void handleMarkEntityComplete(selectedEntity).then(() => {
+                          setHandoffGuidance(null);
+                        })
+                      }
+                    >
+                      Keep {currentCharacterLabel} canonical
+                    </button>
+                  )}
+                  <button
+                    type='button'
+                    className={styles.dismissButton}
+                    onClick={() => setHandoffGuidance(null)}
+                  >
+                    Dismiss
+                  </button>
+                </div>
+              )}
 
-              <div className={styles.formGroup}>
-                <label>
-                  Name
-                  <input
-                    type='text'
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    required
-                  />
-                </label>
-              </div>
+              {activeCategoryIsCharacterLike ? (
+                <>
+                  <div className={styles.identityGrid}>
+                    <div className={styles.formGroup}>
+                      <label>
+                        Name
+                        <input
+                          type='text'
+                          value={name}
+                          onChange={(e) => setName(e.target.value)}
+                          required
+                        />
+                      </label>
+                      {isCanonicalRenameDraft && selectedEntity && (
+                        <div className={styles.reviewHint}>
+                          Saving this rename will keep <strong>{selectedEntity.name}</strong> as an
+                          alternative name.
+                        </div>
+                      )}
+                    </div>
+                    {characterIdentityFields.map(renderEntityField)}
+                  </div>
 
-              <div className={styles.formGroup}>
-                <label>
-                  Alternative names
-                  <textarea
-                    ref={aliasTextareaRef}
-                    value={fieldValues[ALTERNATIVE_NAMES_KEY] || ''}
-                    onChange={(e) =>
-                      setFieldValues({
-                        ...fieldValues,
-                        [ALTERNATIVE_NAMES_KEY]: e.target.value
-                      })
-                    }
-                    rows={3}
-                    placeholder='Comma-separated aliases, titles, or shorthand references'
-                  />
-                </label>
-              </div>
+                  {characterDescriptionField && renderEntityField(characterDescriptionField)}
 
-              {activeCategory.fieldSchema.map((field) => (
-                <div key={field.key} className={styles.formGroup}>
-                  <label>
-                    {field.label}
-                    {field.required && ' *'}
-                    {field.type === 'textarea' ? (
-                      <textarea
-                        value={fieldValues[field.key] || ''}
-                        onChange={(e) =>
-                          setFieldValues({
-                            ...fieldValues,
-                            [field.key]: e.target.value
-                          })
-                        }
-                        rows={4}
-                        required={field.required}
+                  <div className={styles.fieldActionRow} aria-label='Description actions'>
+                    <button type='button' disabled title='Planned for the AI-assisted draft slice'>
+                      AI Assist
+                    </button>
+                    <button type='button' disabled title='Planned for the AI-assisted draft slice'>
+                      Suggest Expansion
+                    </button>
+                  </div>
+
+                  {characterNotesField && renderEntityField(characterNotesField)}
+
+                  <div className={styles.fieldActionRow} aria-label='Notes actions'>
+                    <button type='button' disabled title='Planned for the AI-assisted draft slice'>
+                      AI Assist
+                    </button>
+                    <button type='button' disabled title='Planned for review-note polish'>
+                      Review Notes
+                    </button>
+                  </div>
+
+                  {characterCustomFields.map(renderEntityField)}
+
+                  <div className={styles.characterSectionBuilder}>
+                    <div>
+                      <strong>Add character section</strong>
+                      <p>
+                        Create a reusable rich section for this project, such as
+                        Education, Traumas, Addictions, Relationships, or Voice.
+                      </p>
+                    </div>
+                    <div className={styles.characterSectionControls}>
+                      <input
+                        type='text'
+                        value={newCharacterSectionName}
+                        onChange={(event) => setNewCharacterSectionName(event.target.value)}
+                        placeholder='Education, Traumas, Addictions...'
                       />
-                    ) : field.type === 'select' ? (
-                      <select
-                        value={fieldValues[field.key] || ''}
+                      <button
+                        type='button'
+                        onClick={() => void handleAddCharacterSection()}
+                      >
+                        Add Section
+                      </button>
+                    </div>
+                  </div>
+
+                  <section className={styles.canonSection} aria-label='Canonical names and aliases'>
+                    <div className={styles.canonSectionHeader}>
+                      <div>
+                        <strong>Canon and aliases</strong>
+                        <span>Canonical name, aliases, overlap review, and merge decisions for this character.</span>
+                      </div>
+                      <button
+                        type='button'
+                        onClick={() => setIsNameResolverOpen((value) => !value)}
+                      >
+                        {isNameResolverOpen ? 'Hide resolver' : 'Resolve names'}
+                      </button>
+                    </div>
+                    <div className={styles.formGroup}>
+                      <label>
+                        Alternative names
+                        <textarea
+                          ref={aliasTextareaRef}
+                          value={fieldValues[ALTERNATIVE_NAMES_KEY] || ''}
+                          onChange={(e) =>
+                            setFieldValues({
+                              ...fieldValues,
+                              [ALTERNATIVE_NAMES_KEY]: e.target.value
+                            })
+                          }
+                          rows={3}
+                          placeholder='Comma-separated nicknames, titles, short forms, or alternate spellings'
+                        />
+                      </label>
+                      <div className={styles.reviewHint}>
+                        Use alternative names for short forms like first-name references,
+                        titles, nicknames, and prior canonical forms after a rename.
+                      </div>
+                      {suggestedCharacterAliases.length > 0 && (
+                        <div className={styles.aliasSuggestionPanel}>
+                          <span>Suggested aliases</span>
+                          <div className={styles.aliasSuggestionList}>
+                            {suggestedCharacterAliases.map((alias) => (
+                              <button
+                                key={alias}
+                                type='button'
+                                onClick={() => handleAddSuggestedCharacterAlias(alias)}
+                              >
+                                Add {alias}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {isNameResolverOpen && (
+                      <div className={styles.nameResolverPanel}>
+                        <strong>Resolve against another character</strong>
+                        <p>
+                          Pick any character in this category when the app cannot infer the
+                          relationship. You choose which name stays canonical.
+                        </p>
+                        {editingId ? (
+                          manualResolutionTargets.length > 0 ? (
+                            <>
+                              <label>
+                                Character
+                                <select
+                                  value={manualResolutionTarget?.id ?? ''}
+                                  onChange={(event) =>
+                                    setManualResolutionTargetId(event.target.value)
+                                  }
+                                >
+                                  {manualResolutionTargets.map((entity) => (
+                                    <option key={entity.id} value={entity.id}>
+                                      {entity.name}
+                                    </option>
+                                  ))}
+                                </select>
+                              </label>
+                              {manualResolutionTarget && (
+                                <div className={styles.reviewToolbarActions}>
+                                  <button
+                                    type='button'
+                                    className={styles.primaryButton}
+                                    onClick={() =>
+                                      void handleConvertEntityToAlias(manualResolutionTarget)
+                                    }
+                                    disabled={
+                                      aliasingEntityTargetId === manualResolutionTarget.id
+                                    }
+                                  >
+                                    {aliasingEntityTargetId === manualResolutionTarget.id
+                                      ? 'Saving...'
+                                      : `Make ${currentCharacterLabel} an alias of ${manualResolutionTarget.name}`}
+                                  </button>
+                                  <button
+                                    type='button'
+                                    onClick={() =>
+                                      void handleMergeMatchIntoCurrentEntity(manualResolutionTarget)
+                                    }
+                                    disabled={
+                                      mergingEntityTargetId === manualResolutionTarget.id
+                                    }
+                                  >
+                                    {mergingEntityTargetId === manualResolutionTarget.id
+                                      ? 'Saving...'
+                                      : `Make ${manualResolutionTarget.name} an alias of ${currentCharacterLabel}`}
+                                  </button>
+                                  <button
+                                    type='button'
+                                    onClick={() => handleEdit(manualResolutionTarget, 'aliases')}
+                                  >
+                                    Open {manualResolutionTarget.name}
+                                  </button>
+                                </div>
+                              )}
+                            </>
+                          ) : (
+                            <div className={styles.reviewHint}>
+                              No other characters exist in this category yet.
+                            </div>
+                          )
+                        ) : (
+                          <div className={styles.reviewHint}>
+                            Save this character before resolving it against another record.
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {canonicalResolutionMatches.length > 0 && (
+                      <div className={styles.matchPanel}>
+                        <strong>Possible canonical character overlaps</strong>
+                        <p>
+                          This character may already exist. If this is the same person,
+                          make the shorter name an alias of the full canon record.
+                        </p>
+                        <div className={styles.matchList}>
+                          {canonicalResolutionMatches.slice(0, 4).map((match) => (
+                            <div key={match.entity.id} className={styles.matchCard}>
+                              <div>
+                                <strong>{match.entity.name}</strong>
+                                <div className={styles.matchReasons}>
+                                  {match.reasons.join(' · ')}
+                                </div>
+                                <div className={styles.reviewHint}>
+                                  Alias is safest when {currentCharacterLabel} is a nickname,
+                                  first-name reference, title, or alternate spelling for
+                                  {' '}{match.entity.name}.
+                                </div>
+                              </div>
+                              <div className={styles.reviewToolbarActions}>
+                                {activeCategoryIsCharacterLike ? (
+                                  <>
+                                    {editingId && (
+                                      <button
+                                        type='button'
+                                        className={styles.primaryButton}
+                                        onClick={() => void handleConvertEntityToAlias(match.entity)}
+                                        disabled={aliasingEntityTargetId === match.entity.id}
+                                      >
+                                        {aliasingEntityTargetId === match.entity.id
+                                          ? 'Saving...'
+                                          : `Make ${currentCharacterLabel} an alias of ${match.entity.name}`}
+                                      </button>
+                                    )}
+                                    {editingId && (
+                                      <button
+                                        type='button'
+                                        onClick={() => void handleMergeMatchIntoCurrentEntity(match.entity)}
+                                        disabled={mergingEntityTargetId === match.entity.id}
+                                      >
+                                        {mergingEntityTargetId === match.entity.id
+                                          ? 'Saving...'
+                                          : `Make ${match.entity.name} an alias of ${currentCharacterLabel}`}
+                                      </button>
+                                    )}
+                                    {editingId && match.matchKey && (
+                                      <button
+                                        type='button'
+                                        onClick={() => void handleKeepSeparateMatch(match.entity)}
+                                      >
+                                        No, keep separate
+                                      </button>
+                                    )}
+                                  </>
+                                ) : (
+                                  <>
+                                    {editingId && (
+                                      <button
+                                        type='button'
+                                        className={styles.primaryButton}
+                                        onClick={() => void handleConvertEntityToAlias(match.entity)}
+                                        disabled={
+                                          aliasingEntityTargetId === match.entity.id ||
+                                          mergingEntityTargetId === match.entity.id
+                                        }
+                                      >
+                                        {aliasingEntityTargetId === match.entity.id
+                                          ? 'Converting...'
+                                          : `Make ${currentCharacterLabel} an alias of ${match.entity.name}`}
+                                      </button>
+                                    )}
+                                    {editingId && (
+                                      <button
+                                        type='button'
+                                        onClick={() => void handleMergeEntityIntoMatch(match.entity)}
+                                        disabled={mergingEntityTargetId === match.entity.id}
+                                      >
+                                        {mergingEntityTargetId === match.entity.id
+                                          ? 'Merging...'
+                                          : `Merge details into ${match.entity.name}`}
+                                      </button>
+                                    )}
+                                    {editingId && match.matchKey && (
+                                      <button
+                                        type='button'
+                                        onClick={() => void handleKeepSeparateMatch(match.entity)}
+                                      >
+                                        Keep separate
+                                      </button>
+                                    )}
+                                    {editingId && match.matchKey && (
+                                      <button
+                                        type='button'
+                                        onClick={() => void handleIgnoreEntityMatch(match.entity)}
+                                      >
+                                        Ignore suggestion
+                                      </button>
+                                    )}
+                                  </>
+                                )}
+                                <button
+                                  type='button'
+                                  onClick={() => handleEdit(match.entity)}
+                                >
+                                  Open {match.entity.name}
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </section>
+
+                  {selectedEntity && showCharacterTools && (
+                    <section className={styles.canonSection} aria-label='Optional character tools'>
+                      <div className={styles.canonSectionHeader}>
+                        <strong>Optional tools and state</strong>
+                        <span>
+                          Open sheets, stats, inventory, resources, or replayed state
+                          only when this character needs operational tracking.
+                        </span>
+                      </div>
+                      <div className={styles.reviewHint}>
+                        World Bible remains the source for canonical name, aliases,
+                        lore, and merge decisions. Character Tools uses this canon
+                        record as its starting point.
+                      </div>
+                      <div className={styles.reviewToolbarActions}>
+                        <button
+                          type='button'
+                          onClick={() => void handleImportEntityToCharacters(selectedEntity)}
+                          disabled={importingCharacterEntityId === selectedEntity.id}
+                        >
+                          {importingCharacterEntityId === selectedEntity.id
+                            ? 'Opening...'
+                            : 'Open optional tools'}
+                        </button>
+                        {hasRuleset ? (
+                          <button
+                            type='button'
+                            onClick={() =>
+                              void handleImportEntityToCharacters(selectedEntity, {
+                                autoCreateSheet: true
+                              })
+                            }
+                            disabled={importingCharacterEntityId === selectedEntity.id}
+                          >
+                            {importingCharacterEntityId === selectedEntity.id
+                              ? 'Opening...'
+                              : 'Create/open sheet + state'}
+                          </button>
+                        ) : (
+                          <span className={styles.reviewHint}>
+                            Sheets and state unlock after this project has a ruleset.
+                          </span>
+                        )}
+                      </div>
+                    </section>
+                  )}
+                </>
+              ) : (
+                <>
+                  <section className={styles.canonSection} aria-label='Names and aliases'>
+                    <div className={styles.canonSectionHeader}>
+                      <div>
+                        <strong>Names and aliases</strong>
+                        <span>
+                          Canonical name, alternate names, overlap review, and merge
+                          decisions for this {activeCategoryRecordLabel}.
+                        </span>
+                      </div>
+                      <button
+                        type='button'
+                        onClick={() => setIsNameResolverOpen((value) => !value)}
+                      >
+                        {isNameResolverOpen ? 'Hide resolver' : 'Resolve names'}
+                      </button>
+                    </div>
+
+                    <div className={styles.formGroup}>
+                    <label>
+                      Name
+                      <input
+                        type='text'
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                        required
+                      />
+                    </label>
+                    {isCanonicalRenameDraft && selectedEntity && (
+                      <div className={styles.reviewHint}>
+                        Saving this rename will keep <strong>{selectedEntity.name}</strong> as an
+                        alternative name.
+                      </div>
+                    )}
+                    </div>
+
+                    <div className={styles.formGroup}>
+                    <label>
+                      Alternative names
+                      <textarea
+                        ref={aliasTextareaRef}
+                        value={fieldValues[ALTERNATIVE_NAMES_KEY] || ''}
                         onChange={(e) =>
                           setFieldValues({
                             ...fieldValues,
-                            [field.key]: e.target.value
+                            [ALTERNATIVE_NAMES_KEY]: e.target.value
                           })
                         }
-                        required={field.required}
-                      >
-                        <option value=''>-- Select --</option>
-                        {field.options?.map((opt) => (
-                          <option key={opt} value={opt}>
-                            {opt}
-                          </option>
-                        ))}
-                      </select>
-                    ) : field.type === 'multiselect' ? (
-                      <div className={styles.multiselectContainer}>
-                        {field.options?.map((opt) => (
-                          <label key={opt} className={styles.multiselectOption}>
-                            <input
-                              type='checkbox'
-                              checked={(fieldValues[field.key] || '')
-                                .split(',')
-                                .includes(opt)}
-                              onChange={(e) => {
-                                const current = (fieldValues[field.key] || '')
-                                  .split(',')
-                                  .filter(Boolean);
-                                const updated = e.target.checked
-                                  ? [...current, opt]
-                                  : current.filter((v) => v !== opt);
-                                setFieldValues({
-                                  ...fieldValues,
-                                  [field.key]: updated.join(',')
-                                });
-                              }}
-                            />
-                            <span>{opt}</span>
-                          </label>
+                        rows={3}
+                        placeholder='Comma-separated aliases, titles, or shorthand references'
+                      />
+                    </label>
+                    </div>
+
+                    {isNameResolverOpen && (
+                    <div className={styles.nameResolverPanel}>
+                      <strong>Resolve against another {activeCategoryRecordLabel}</strong>
+                      <p>
+                        Pick any {activeCategoryRecordLabel} in this category when the app
+                        cannot infer the relationship. You choose which name stays canonical.
+                      </p>
+                      {editingId ? (
+                        manualResolutionTargets.length > 0 ? (
+                          <>
+                            <label>
+                              {activeCategory?.name ?? 'Records'}
+                              <select
+                                value={manualResolutionTarget?.id ?? ''}
+                                onChange={(event) =>
+                                  setManualResolutionTargetId(event.target.value)
+                                }
+                              >
+                                {manualResolutionTargets.map((entity) => (
+                                  <option key={entity.id} value={entity.id}>
+                                    {entity.name}
+                                  </option>
+                                ))}
+                              </select>
+                            </label>
+                            {manualResolutionTarget && (
+                              <div className={styles.reviewToolbarActions}>
+                                <button
+                                  type='button'
+                                  className={styles.primaryButton}
+                                  onClick={() =>
+                                    void handleConvertEntityToAlias(manualResolutionTarget)
+                                  }
+                                  disabled={
+                                    aliasingEntityTargetId === manualResolutionTarget.id ||
+                                    mergingEntityTargetId === manualResolutionTarget.id
+                                  }
+                                >
+                                  {aliasingEntityTargetId === manualResolutionTarget.id
+                                    ? 'Converting...'
+                                    : `Make ${name.trim() || selectedEntity?.name || 'this record'} an alias of ${manualResolutionTarget.name}`}
+                                </button>
+                                <button
+                                  type='button'
+                                  onClick={() =>
+                                    void handleMergeMatchIntoCurrentEntity(manualResolutionTarget)
+                                  }
+                                  disabled={mergingEntityTargetId === manualResolutionTarget.id}
+                                >
+                                  {mergingEntityTargetId === manualResolutionTarget.id
+                                    ? 'Merging...'
+                                    : `Merge ${manualResolutionTarget.name} into this record`}
+                                </button>
+                                <button
+                                  type='button'
+                                  onClick={() => handleEdit(manualResolutionTarget, 'aliases')}
+                                >
+                                  Open {manualResolutionTarget.name}
+                                </button>
+                              </div>
+                            )}
+                          </>
+                        ) : (
+                          <div className={styles.reviewHint}>
+                            No other {activeCategory?.name.toLowerCase() ?? 'records'} exist in
+                            this category yet.
+                          </div>
+                        )
+                      ) : (
+                        <div className={styles.reviewHint}>
+                          Save this {activeCategoryRecordLabel} before resolving it against
+                          another record.
+                        </div>
+                      )}
+                    </div>
+                    )}
+
+                    {canonicalResolutionMatches.length > 0 && (
+                    <div className={styles.matchPanel}>
+                      <strong>Possible duplicate or alias matches</strong>
+                      <p>
+                        This draft overlaps with existing canon. Choose one action for
+                        each match: merge duplicates, convert this record into an alias,
+                        keep both records as separate canon, or ignore a noisy suggestion.
+                      </p>
+                      <div className={styles.matchList}>
+                        {canonicalResolutionMatches.slice(0, 4).map((match) => (
+                          <div key={match.entity.id} className={styles.matchCard}>
+                            <div>
+                              <strong>{match.entity.name}</strong>
+                              <div className={styles.matchReasons}>
+                                {match.reasons.join(' · ')}
+                              </div>
+                              <div className={styles.reviewHint}>
+                                Recommended: {getReviewResolutionLabel(match.recommendedResolution)}.
+                              </div>
+                            </div>
+                            <div className={styles.reviewToolbarActions}>
+                              <button type='button' onClick={() => handleEdit(match.entity)}>
+                                Open other record
+                              </button>
+                              <button
+                                type='button'
+                                onClick={() => handleEdit(match.entity, 'aliases')}
+                              >
+                                Open aliases
+                              </button>
+                              {editingId && match.matchKey && (
+                                <button
+                                  type='button'
+                                  onClick={() => void handleKeepSeparateMatch(match.entity)}
+                                >
+                                  Keep both records
+                                </button>
+                              )}
+                              {editingId && match.matchKey && (
+                                <button
+                                  type='button'
+                                  onClick={() => void handleIgnoreEntityMatch(match.entity)}
+                                >
+                                  Ignore this suggestion
+                                </button>
+                              )}
+                              {editingId && (
+                                <button
+                                  type='button'
+                                  onClick={() => void handleMergeMatchIntoCurrentEntity(match.entity)}
+                                  disabled={mergingEntityTargetId === match.entity.id}
+                                >
+                                  {mergingEntityTargetId === match.entity.id
+                                    ? 'Merging...'
+                                    : 'Merge match into this record'}
+                                </button>
+                              )}
+                              {editingId && (
+                                <button
+                                  type='button'
+                                  onClick={() => void handleMergeEntityIntoMatch(match.entity)}
+                                  disabled={mergingEntityTargetId === match.entity.id}
+                                >
+                                  {mergingEntityTargetId === match.entity.id
+                                    ? 'Merging...'
+                                    : 'Merge this record into match'}
+                                </button>
+                              )}
+                              {editingId && (
+                                <button
+                                  type='button'
+                                  onClick={() => void handleConvertEntityToAlias(match.entity)}
+                                  disabled={
+                                    aliasingEntityTargetId === match.entity.id ||
+                                    mergingEntityTargetId === match.entity.id
+                                  }
+                                >
+                                  {aliasingEntityTargetId === match.entity.id
+                                    ? 'Converting...'
+                                    : 'Convert this record into an alias'}
+                                </button>
+                              )}
+                            </div>
+                          </div>
                         ))}
                       </div>
-                    ) : field.type === 'checkbox' ? (
-                      <input
-                        type='checkbox'
-                        checked={fieldValues[field.key] === 'true'}
-                        onChange={(e) =>
-                          setFieldValues({
-                            ...fieldValues,
-                            [field.key]: e.target.checked ? 'true' : 'false'
-                          })
-                        }
-                      />
-                    ) : field.type === 'dice' ? (
-                      <input
-                        type='text'
-                        value={fieldValues[field.key] || ''}
-                        onChange={(e) =>
-                          setFieldValues({
-                            ...fieldValues,
-                            [field.key]: e.target.value
-                          })
-                        }
-                        placeholder={
-                          field.diceConfig?.allowMultipleDice
-                            ? 'e.g., 3d6, 2d8+1d4'
-                            : 'e.g., 1d20'
-                        }
-                        pattern={
-                          field.diceConfig?.allowMultipleDice ? '.*' : '1d\\d+'
-                        }
-                        required={field.required}
-                      />
-                    ) : field.type === 'modifier' ? (
-                      <input
-                        type='text'
-                        value={fieldValues[field.key] || ''}
-                        onChange={(e) =>
-                          setFieldValues({
-                            ...fieldValues,
-                            [field.key]: e.target.value
-                          })
-                        }
-                        placeholder='e.g., +5, -2'
-                        pattern='[+-]?\\d+'
-                        required={field.required}
-                      />
-                    ) : (
-                      <input
-                        type={field.type}
-                        value={fieldValues[field.key] || ''}
-                        onChange={(e) =>
-                          setFieldValues({
-                            ...fieldValues,
-                            [field.key]: e.target.value
-                          })
-                        }
-                        required={field.required}
-                      />
+                    </div>
                     )}
-                  </label>
-                </div>
-              ))}
+                  </section>
+
+                  {activeCategory.fieldSchema.map(renderEntityField)}
+
+                  <div className={styles.characterSectionBuilder}>
+                    <div>
+                      <strong>Add {activeCategoryRecordLabel} section</strong>
+                      <p>
+                        Create a reusable rich section for this tab, such as
+                        History, Reputation, Rules, Relationships, or Notes.
+                      </p>
+                    </div>
+                    <div className={styles.characterSectionControls}>
+                      <input
+                        type='text'
+                        value={newCharacterSectionName}
+                        onChange={(event) => setNewCharacterSectionName(event.target.value)}
+                        placeholder='History, Reputation, Rules...'
+                      />
+                      <button
+                        type='button'
+                        onClick={() => void handleAddCharacterSection()}
+                      >
+                        Add Section
+                      </button>
+                    </div>
+                  </div>
+                </>
+              )}
 
               <div className={styles.formActions}>
                 <button
@@ -2154,10 +3083,14 @@ function WorldBibleRoute() {
                   {isSubmittingEntity
                     ? 'Saving...'
                     : editingId
-                      ? 'Save Changes'
-                      : 'Create Entry'}
+                      ? activeCategoryIsCharacterLike
+                        ? 'Save Canon Changes'
+                        : 'Save Changes'
+                      : activeCategoryIsCharacterLike
+                        ? 'Create Canon Record'
+                        : 'Create Entry'}
                 </button>
-                {editingId && (
+                {(editingId || activeCategoryIsCharacterLike) && (
                   <button type='button' onClick={resetForm} disabled={isSubmittingEntity}>
                     Cancel
                   </button>
@@ -2199,30 +3132,97 @@ function WorldBibleRoute() {
               />
             )}
           </div>
+          )}
 
-          <div className={styles.listSection}>
+          {viewMode !== 'review' && (!activeCategoryIsCharacterLike || !isFocusedCharacterTask) && (
+          <div
+            className={`${styles.listSection} ${styles.castListSection}`}
+          >
             <h2>{activeCategory.name}</h2>
-            {filteredEntities.length === 0 && (
+            {visibleEntities.length === 0 && (
               <p className={styles.emptyState}>
-                No {activeCategory.name.toLowerCase()} yet. Add one on the left.
+                {`No ${activeCategory.name.toLowerCase()} yet. Add one on the left.`}
               </p>
             )}
             <ul className={styles.entityList}>
-              {filteredEntities.map((entity) => (
+              {visibleEntities.map((entity) => {
+                const entityCategory =
+                  categories.find((category) => category.id === entity.categoryId) ?? null;
+                const {primarySummary, fullSummary, summaryIsTruncated, secondaryFields} = buildEntityCardSummary(
+                  entity,
+                  entityCategory,
+                  aliasMapByEntityId.get(entity.id) ?? []
+                );
+                const isSummaryExpanded = expandedSummaryEntityIds.includes(entity.id);
+                const displayedSummary = isSummaryExpanded ? fullSummary : primarySummary;
+                const entityIsCharacterLike = isCharacterLikeEntity(entity);
+                const entityInsight = reviewEntityInsightsById.get(entity.id);
+                const hasNameResolutionMatch =
+                  entityIsCharacterLike && (entityInsight?.matchCount ?? 0) > 0;
+
+                return (
                 <li key={entity.id} className={styles.entityCard}>
                   <div className={styles.entityHeader}>
                     <div className={styles.entityName}>{entity.name}</div>
+                    {entity.isNew && (
+                      <span className={styles.newBadge}>New</span>
+                    )}
                     {entity.needsCompletion && (
                       <span className={styles.completionBadge}>Needs completion</span>
                     )}
+                    {hasNameResolutionMatch && (
+                      <span className={styles.aliasMatchBadge}>Possible alias</span>
+                    )}
                   </div>
-                  {Object.entries(entity.fields).map(([key, value]) => (
-                    <div key={key} className={styles.entityField}>
-                      <strong>{key}:</strong> {String(value)}
+                  {hasNameResolutionMatch && (
+                    <div className={styles.entityAttentionNote}>
+                      This character looks related to{' '}
+                      {entityInsight?.matchCount === 1
+                        ? 'another canon record'
+                        : `${entityInsight?.matchCount ?? 0} canon records`}
+                      . Use Resolve names to merge duplicates or convert short forms into aliases.
+                    </div>
+                  )}
+                  {displayedSummary && (
+                    <div className={styles.entitySummaryBlock}>
+                      <p className={styles.entitySummary}>{displayedSummary}</p>
+                      {summaryIsTruncated && (
+                        <button
+                          type='button'
+                          className={styles.entitySummaryToggle}
+                          onClick={() =>
+                            setExpandedSummaryEntityIds((prev) =>
+                              prev.includes(entity.id)
+                                ? prev.filter((id) => id !== entity.id)
+                                : [...prev, entity.id]
+                            )
+                          }
+                        >
+                          {isSummaryExpanded ? 'Show less' : 'Read more'}
+                        </button>
+                      )}
+                    </div>
+                  )}
+                  {secondaryFields.map((field) => (
+                    <div key={field.label} className={styles.entityField}>
+                      <strong>{field.label}:</strong> {field.value}
                     </div>
                   ))}
                   <div className={styles.entityActions}>
-                    <button onClick={() => handleEdit(entity)}>Edit</button>
+                    <button
+                      onClick={() => handleEdit(entity)}
+                    >
+                      Edit
+                    </button>
+                    {hasNameResolutionMatch && (
+                      <button
+                        type='button'
+                        className={styles.primaryButton}
+                        onClick={() => handleEdit(entity, 'aliases')}
+                      >
+                        Resolve names
+                      </button>
+                    )}
                     <button
                       onClick={() => handleDeleteEntity(entity.id)}
                       disabled={deletingEntityId === entity.id}
@@ -2241,22 +3241,55 @@ function WorldBibleRoute() {
                           : 'Promote to parent'}
                       </button>
                     )}
-                    <button
-                      type='button'
-                      onClick={() => void handleAddEntityToCompendium(entity)}
-                      disabled={linkingCompendiumEntityId === entity.id}
-                    >
-                      {linkingCompendiumEntityId === entity.id
-                        ? 'Linking...'
-                        : compendiumLinkedEntityIds.has(entity.id)
-                          ? 'Update Compendium'
-                          : 'Add to Compendium'}
-                    </button>
+                    {entityIsCharacterLike && showCharacterTools && (
+                      <button
+                        type='button'
+                        onClick={() => void handleImportEntityToCharacters(entity)}
+                        disabled={importingCharacterEntityId === entity.id}
+                        title='Open optional character tools for roster details. World Bible remains the canonical record.'
+                      >
+                        {importingCharacterEntityId === entity.id
+                          ? 'Opening...'
+                          : 'Open optional tools'}
+                      </button>
+                    )}
+                    {entityIsCharacterLike && showCharacterTools && hasRuleset && (
+                      <button
+                        type='button'
+                        onClick={() =>
+                          void handleImportEntityToCharacters(entity, {
+                            autoCreateSheet: true
+                          })
+                        }
+                        disabled={importingCharacterEntityId === entity.id}
+                        title='Open or create sheet and state tracking for this World Bible character. World Bible remains the canonical record.'
+                      >
+                        {importingCharacterEntityId === entity.id
+                          ? 'Opening...'
+                          : 'Create/open sheet + state'}
+                      </button>
+                    )}
+                    {showGameSystems && (
+                      <button
+                        type='button'
+                        onClick={() => void handleAddEntityToCompendium(entity)}
+                        disabled={linkingCompendiumEntityId === entity.id}
+                        title='Attach optional progression, crafting, discovery, or bestiary mechanics.'
+                      >
+                        {linkingCompendiumEntityId === entity.id
+                          ? 'Linking...'
+                          : compendiumLinkedEntityIds.has(entity.id)
+                            ? 'Update Mechanics'
+                            : 'Add Mechanics'}
+                      </button>
+                    )}
                   </div>
                 </li>
-              ))}
+                );
+              })}
             </ul>
           </div>
+          )}
         </div>
       )}
     </section>

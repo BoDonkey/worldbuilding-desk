@@ -1,7 +1,8 @@
 import {useEffect, useMemo, useRef, useState} from 'react';
 import type {ChangeEvent} from 'react';
-import {useNavigate, useSearchParams} from 'react-router-dom';
+import {Navigate, useLocation, useNavigate, useSearchParams} from 'react-router-dom';
 import {useAppStore} from '../store/appStore';
+import {getProjectCapabilities} from '../projectMode';
 import CharactersRoute from './CharactersRoute';
 import CharacterSheetsRoute from './CharacterSheetsRoute';
 import {getRulesetByProjectId} from '../services/rules';
@@ -9,15 +10,20 @@ import {
   exportCharactersJson,
   importCharactersJson
 } from '../services/characters';
+import styles from '../styles/CharactersRoute.module.css';
 
 function CharactersHubRoute() {
   const activeProject = useAppStore((s) => s.activeProject);
+  const projectSettings = useAppStore((s) => s.projectSettings);
+  const location = useLocation();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [hasRuleset, setHasRuleset] = useState(false);
   const [pendingCharacterId, setPendingCharacterId] = useState<string | null>(
     null
   );
+  const [pendingAutoCreateSheetCharacterId, setPendingAutoCreateSheetCharacterId] =
+    useState<string | null>(null);
   const [isImportingCharacters, setIsImportingCharacters] = useState(false);
   const [pendingImportMode, setPendingImportMode] = useState<
     'roster' | 'full'
@@ -28,9 +34,39 @@ function CharactersHubRoute() {
     message: string;
   } | null>(null);
   const importInputRef = useRef<HTMLInputElement | null>(null);
+  const appliedLocationPrefillRef = useRef<string | null>(null);
   const view = useMemo(() => {
     return searchParams.get('view') === 'sheets' ? 'sheets' : 'roster';
   }, [searchParams]);
+  const capabilities = getProjectCapabilities(projectSettings);
+  const canUseSheets = hasRuleset && capabilities.canUseRuleAuthoring;
+
+  useEffect(() => {
+    const state = location.state as
+      | {
+          prefillCharacterId?: string;
+          preferredView?: 'roster' | 'sheets';
+          autoCreateSheetForCharacterId?: string;
+        }
+      | null;
+    const prefillCharacterId = state?.prefillCharacterId ?? null;
+    if (!prefillCharacterId) {
+      return;
+    }
+    const alreadyApplied = appliedLocationPrefillRef.current === prefillCharacterId;
+    if (!alreadyApplied) {
+      appliedLocationPrefillRef.current = prefillCharacterId;
+      setPendingCharacterId(prefillCharacterId);
+      setPendingAutoCreateSheetCharacterId(state?.autoCreateSheetForCharacterId ?? null);
+    }
+    if (state?.preferredView === 'sheets' && canUseSheets) {
+      setSearchParams({view: 'sheets'});
+      return;
+    }
+    if (!alreadyApplied && state?.preferredView === 'roster') {
+      setSearchParams({});
+    }
+  }, [canUseSheets, location.state, setSearchParams]);
 
   useEffect(() => {
     let cancelled = false;
@@ -55,13 +91,13 @@ function CharactersHubRoute() {
   }, [activeProject]);
 
   useEffect(() => {
-    if (view === 'sheets' && activeProject && !hasRuleset) {
+    if (view === 'sheets' && activeProject && !canUseSheets) {
       setSearchParams({});
     }
-  }, [view, activeProject, hasRuleset, setSearchParams]);
+  }, [view, activeProject, canUseSheets, setSearchParams]);
 
   const openView = (next: 'roster' | 'sheets') => {
-    if (next === 'sheets' && activeProject && !hasRuleset) {
+    if (next === 'sheets' && activeProject && !canUseSheets) {
       return;
     }
     setSearchParams(next === 'sheets' ? {view: 'sheets'} : {});
@@ -92,10 +128,10 @@ function CharactersHubRoute() {
         projectName: activeProject.name,
         includeSheets: false
       });
-      setFeedback({tone: 'success', message: 'Roster exported.'});
+      setFeedback({tone: 'success', message: 'Tool profiles exported.'});
     } catch (error) {
       const message =
-        error instanceof Error ? error.message : 'Unable to export roster.';
+        error instanceof Error ? error.message : 'Unable to export tool profiles.';
       setFeedback({tone: 'error', message});
     }
   };
@@ -122,8 +158,8 @@ function CharactersHubRoute() {
         tone: 'success',
         message:
           pendingImportMode === 'full'
-            ? `Imported ${result.charactersImported} characters and ${result.sheetsImported} sheets.`
-            : `Imported ${result.charactersImported} characters (roster only).`
+            ? `Imported ${result.charactersImported} tool profiles and ${result.sheetsImported} sheets.`
+            : `Imported ${result.charactersImported} tool profiles.`
       });
     } catch (error) {
       const message =
@@ -136,8 +172,8 @@ function CharactersHubRoute() {
 
   if (!activeProject) {
     return (
-      <section>
-        <h1 style={{marginTop: 0}}>Characters</h1>
+      <section className={styles.page}>
+        <h1 className={styles.title}>Character Tools</h1>
         <p>
           No active project. Go to <strong>Projects</strong> to create or open a
           project first.
@@ -146,37 +182,43 @@ function CharactersHubRoute() {
     );
   }
 
+  if (capabilities.isGeneralFiction) {
+    return (
+      <Navigate
+        to='/world-bible'
+        replace
+        state={{focusCategorySlug: 'characters'}}
+      />
+    );
+  }
+
   return (
-    <section>
-      <h1 style={{marginTop: 0}}>Characters</h1>
-      <p style={{marginTop: 0, marginBottom: '0.9rem', color: '#4b5563'}}>
-        Manage roster profiles and gameplay-ready sheets in one place.
+    <section className={styles.page}>
+      <h1 className={styles.title}>Character Tools</h1>
+      <p className={styles.lead}>
+        {canUseSheets
+          ? 'Use this secondary workspace for tool-profile exports, sheets, and state tracking. Canonical names, aliases, and descriptive lore belong in World Bible.'
+          : 'Use this secondary workspace for tool-profile exports. Canonical names, aliases, and descriptive lore belong in World Bible.'}
       </p>
       {feedback && (
         <p
           role='status'
-          style={{
-            marginBottom: '0.9rem',
-            padding: '0.5rem 0.75rem',
-            borderRadius: '6px',
-            border: `1px solid ${
-              feedback.tone === 'error' ? '#fecaca' : '#bbf7d0'
-            }`,
-            backgroundColor:
-              feedback.tone === 'error' ? '#fef2f2' : '#f0fdf4',
-            color: feedback.tone === 'error' ? '#991b1b' : '#166534'
-          }}
+          className={`${styles.feedback} ${
+            feedback.tone === 'error' ? styles.feedbackError : styles.feedbackSuccess
+          }`}
         >
           {feedback.message}
         </p>
       )}
-      <div style={{display: 'flex', gap: '0.5rem', marginBottom: '0.9rem'}}>
+      <div className={styles.toolbar}>
         <button type='button' onClick={() => void handleExportRosterOnly()}>
-          Export Roster Only
+          Export Tool Profiles
         </button>
-        <button type='button' onClick={() => void handleExportCharacters()}>
-          Export Roster + Sheets
-        </button>
+        {canUseSheets && (
+          <button type='button' onClick={() => void handleExportCharacters()}>
+            Export Tool Profiles + Sheets
+          </button>
+        )}
         <button
           type='button'
           onClick={() => handleImportCharactersClick('roster')}
@@ -184,15 +226,17 @@ function CharactersHubRoute() {
         >
           {isImportingCharacters
             ? 'Importing...'
-            : 'Import Roster Only'}
+            : 'Import Tool Profiles'}
         </button>
-        <button
-          type='button'
-          onClick={() => handleImportCharactersClick('full')}
-          disabled={isImportingCharacters}
-        >
-          {isImportingCharacters ? 'Importing...' : 'Import Roster + Sheets'}
-        </button>
+        {canUseSheets && (
+          <button
+            type='button'
+            onClick={() => handleImportCharactersClick('full')}
+            disabled={isImportingCharacters}
+          >
+            {isImportingCharacters ? 'Importing...' : 'Import Tool Profiles + Sheets'}
+          </button>
+        )}
         <input
           ref={importInputRef}
           type='file'
@@ -201,74 +245,33 @@ function CharactersHubRoute() {
           style={{display: 'none'}}
         />
       </div>
-      <div
-        style={{
-          display: 'flex',
-          gap: '0.5rem',
-          marginBottom: '0.9rem',
-          flexWrap: 'wrap'
-        }}
-      >
-        <button
-          type='button'
-          onClick={() => openView('roster')}
-          style={{
-            border:
-              view === 'roster'
-                ? '1px solid var(--color-text-primary)'
-                : '1px solid var(--color-border)',
-            backgroundColor:
-              view === 'roster'
-                ? 'var(--color-bg-secondary)'
-                : 'var(--color-bg-primary)',
-            color: 'var(--color-text-primary)'
-          }}
-        >
-          Roster
-        </button>
-        <button
-          type='button'
-          onClick={() => openView('sheets')}
-          disabled={!hasRuleset}
-          style={{
-            border:
-              view === 'sheets'
-                ? '1px solid var(--color-text-primary)'
-                : '1px solid var(--color-border)',
-            backgroundColor:
-              view === 'sheets'
-                ? 'var(--color-bg-secondary)'
-                : 'var(--color-bg-primary)',
-            opacity: hasRuleset ? 1 : 0.55,
-            color: 'var(--color-text-primary)'
-          }}
-        >
-          Sheets
-        </button>
-      </div>
-      {!hasRuleset && (
-        <div
-          style={{
-            marginBottom: '1rem',
-            padding: '0.55rem 0.7rem',
-            border: '1px solid var(--color-border)',
-            borderRadius: '6px',
-            backgroundColor: 'var(--color-bg-secondary)',
-            color: 'var(--color-text-secondary)',
-            fontSize: '0.85rem'
-          }}
-        >
-          Sheets are disabled until this project has a ruleset.
+      {capabilities.canUseRuleAuthoring && (
+        <div className={styles.tabRow}>
+          <button
+            type='button'
+            onClick={() => openView('roster')}
+            className={view === 'roster' ? styles.tabButtonActive : ''}
+          >
+            Tool Profiles
+          </button>
+          <button
+            type='button'
+            onClick={() => openView('sheets')}
+            disabled={!canUseSheets}
+            className={view === 'sheets' ? styles.tabButtonActive : ''}
+            style={{opacity: canUseSheets ? 1 : 0.55}}
+          >
+            Sheets + State
+          </button>
+        </div>
+      )}
+      {!hasRuleset && capabilities.canUseRuleAuthoring && (
+        <div className={styles.notice}>
+          Sheets and state tracking are disabled until this project has a ruleset.
           <button
             type='button'
             onClick={() => navigate('/ruleset')}
-            style={{
-              marginLeft: '0.5rem',
-              fontSize: '0.8rem',
-              color: 'var(--color-text-primary)',
-              background: 'var(--color-bg-primary)',
-              border: '1px solid var(--color-border)'
-            }}
+            style={{marginLeft: '0.5rem'}}
           >
             Open Ruleset
           </button>
@@ -279,13 +282,20 @@ function CharactersHubRoute() {
         <CharactersRoute
           key={`roster-${dataVersion}`}
           embedded
-          onOpenSheets={(characterId) => {
-            if (!hasRuleset) {
-              return;
-            }
-            setPendingCharacterId(characterId ?? null);
-            openView('sheets');
-          }}
+          canUseSheets={canUseSheets}
+          prefillCharacterId={pendingCharacterId}
+          onPrefillConsumed={() => setPendingCharacterId(null)}
+          onOpenSheets={
+            canUseSheets
+              ? (characterId, options) => {
+                  setPendingCharacterId(characterId ?? null);
+                  setPendingAutoCreateSheetCharacterId(
+                    options?.autoCreate ? characterId ?? null : null
+                  );
+                  openView('sheets');
+                }
+              : undefined
+          }
         />
       )}
       {view === 'sheets' && (
@@ -294,6 +304,8 @@ function CharactersHubRoute() {
           embedded
           prefillCharacterId={pendingCharacterId}
           onPrefillConsumed={() => setPendingCharacterId(null)}
+          autoCreateSheetCharacterId={pendingAutoCreateSheetCharacterId}
+          onAutoCreateConsumed={() => setPendingAutoCreateSheetCharacterId(null)}
         />
       )}
     </section>

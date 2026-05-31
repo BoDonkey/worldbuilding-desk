@@ -29,6 +29,7 @@ export async function saveWritingDocument(doc: WritingDocument): Promise<void> {
     const request = store.put(doc);
 
     request.onsuccess = () => {
+      window.dispatchEvent(new CustomEvent('wbd:writing-records-changed'));
       resolve();
     };
 
@@ -47,6 +48,7 @@ export async function deleteWritingDocument(id: string): Promise<void> {
     const request = store.delete(id);
 
     request.onsuccess = () => {
+      window.dispatchEvent(new CustomEvent('wbd:writing-records-changed'));
       resolve();
     };
 

@@ -1,6 +1,6 @@
 # Table-Stakes Release Checklist
 
-Last updated: 2026-04-10
+Last updated: 2026-04-22
 
 ## Goal
 
@@ -29,6 +29,7 @@ Evidence:
 - Backup export exists in `Projects` route and storage services.
 - Backup import exists with `new` and `merge` modes.
 - Snapshot count validation utilities exist.
+- Scratchpad records are included in project snapshot/export/import paths.
 
 References:
 
@@ -47,8 +48,9 @@ Release gate:
 
 Remaining work:
 
-- Confirm all expected stores are included, especially newer review/alias-related data
+- Confirm all expected stores are included, especially newer review/alias/scratchpad-related data
 - Tighten user-facing validation/result messaging if any mismatch path is unclear
+- Add smoke coverage for scratchpad backup round-trip.
 
 ### 1.2 No obvious data-loss path on reload
 
@@ -74,6 +76,7 @@ Remaining work:
 
 - Run end-to-end smoke coverage around project switching, workspace reload, and import/save flows
 - Decide whether store consolidation is required before release or acceptable as post-release debt
+- Keep Scratchpad quick-access UX on the release-readiness list: it currently works from the workspace context drawer, but should become a popover/modal that can open without changing the active tab or drawer context.
 
 ## 2. Manuscript Export and Publishing Path
 
@@ -219,10 +222,12 @@ Release gate:
 - Review-created records are easy to find and finish later
 - `Refresh review` and `Resume strict review` are clearly distinct
 - Authors do not lose track of review work after reload or route changes
+- Authors can see that review is ready through a passive indicator without being interrupted while drafting
 
 Remaining work:
 
 - Clarify review actions in workspace UX
+- Add the passive review-needed indicator state model from `docs/next-steps.md` Slice 1F
 - Decide whether to persist a review queue
 
 ### 4.2 Canon contradiction review

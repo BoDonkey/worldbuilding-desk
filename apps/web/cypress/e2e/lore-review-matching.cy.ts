@@ -1,0 +1,319 @@
+const DB_NAME = 'worldbuilding-db';
+const DB_VERSION = 24;
+
+function setSeededProjectToGeneralFiction(): Cypress.Chainable<void> {
+  return cy.window().then(
+    (win) =>
+      new Cypress.Promise<void>((resolve, reject) => {
+        const openRequest = win.indexedDB.open(DB_NAME, DB_VERSION);
+        openRequest.onerror = () => reject(openRequest.error);
+        openRequest.onsuccess = () => {
+          const db = openRequest.result;
+          const tx = db.transaction(['projectSettings'], 'readwrite');
+          const store = tx.objectStore('projectSettings');
+          const getRequest = store.get('settings-cypress-project-1');
+
+          getRequest.onerror = () => reject(getRequest.error);
+          getRequest.onsuccess = () => {
+            store.put({
+              ...getRequest.result,
+              projectMode: 'general',
+              featureToggles: {
+                enableGameSystems: false,
+                enableRuntimeModifiers: false,
+                enableSettlementAndZoneSystems: false,
+                enableRuleAuthoring: false
+              }
+            });
+          };
+          tx.oncomplete = () => {
+            db.close();
+            resolve();
+          };
+          tx.onerror = () => {
+            db.close();
+            reject(tx.error);
+          };
+          tx.onabort = () => {
+            db.close();
+            reject(tx.error);
+          };
+        };
+      })
+  );
+}
+
+function seedWorldBibleCharacterWithToolsProfile(params: {
+  entityId: string;
+  characterId: string;
+  name: string;
+  alias?: string;
+}): Cypress.Chainable<void> {
+  return cy.window().then(
+    (win) =>
+      new Cypress.Promise<void>((resolve, reject) => {
+        const now = Date.now();
+        const openRequest = win.indexedDB.open(DB_NAME, DB_VERSION);
+        openRequest.onerror = () => reject(openRequest.error);
+        openRequest.onsuccess = () => {
+          const db = openRequest.result;
+          const stores = ['entityCategories', 'entities', 'characters', 'consistency_aliases'];
+          const tx = db.transaction(stores, 'readwrite');
+          tx.objectStore('entityCategories').put({
+            id: 'characters',
+            projectId: 'cypress-project-1',
+            name: 'Characters',
+            slug: 'characters',
+            fieldSchema: [
+              {key: 'description', label: 'Description', type: 'textarea', required: true},
+              {key: 'age', label: 'Age', type: 'text'},
+              {key: 'role', label: 'Role', type: 'text'},
+              {key: 'notes', label: 'Notes', type: 'textarea'}
+            ],
+            createdAt: now
+          });
+          tx.objectStore('entities').put({
+            id: params.entityId,
+            projectId: 'cypress-project-1',
+            categoryId: 'characters',
+            name: params.name,
+            fields: {description: '<p>Seeded canon character.</p>'},
+            needsCompletion: false,
+            links: [],
+            createdAt: now,
+            updatedAt: now
+          });
+          tx.objectStore('characters').put({
+            id: params.characterId,
+            projectId: 'cypress-project-1',
+            name: params.name,
+            description: 'Seeded tools profile.',
+            fields: {},
+            createdAt: now,
+            updatedAt: now
+          });
+          if (params.alias) {
+            tx.objectStore('consistency_aliases').put({
+              id: `alias-${params.entityId}`,
+              projectId: 'cypress-project-1',
+              targetId: params.entityId,
+              targetType: 'entity',
+              entityId: params.entityId,
+              alias: params.alias,
+              createdAt: now,
+              updatedAt: now
+            });
+          }
+          tx.oncomplete = () => {
+            db.close();
+            resolve();
+          };
+          tx.onerror = () => {
+            db.close();
+            reject(tx.error);
+          };
+          tx.onabort = () => {
+            db.close();
+            reject(tx.error);
+          };
+        };
+      })
+  );
+}
+
+describe('Lore and review matching', () => {
+  beforeEach(() => {
+    cy.viewport(1400, 1000);
+    cy.visit('/');
+    cy.seedSmokeProjectData();
+    setSeededProjectToGeneralFiction();
+    cy.reload();
+    cy.contains('strong', 'Cypress Smoke Project').should('be.visible');
+  });
+
+  it('highlights known lore and does not review incomplete known-name prefixes', () => {
+    cy.visit('/workspace');
+    cy.contains('h1', 'Writing Workspace').should('be.visible');
+    cy.contains('Cypress Smoke Project · Alpha Scene').should('be.visible');
+
+    cy.get('.tiptap-editor')
+      .click()
+      .type('{selectall}The Ember Archive stands.{enter}The Ember Archiv stands.', {
+        delay: 0
+      });
+
+    cy.contains('button', 'Save now').click();
+    cy.contains('[role="status"]', 'Scene saved.').should('be.visible');
+
+    cy.get('.tiptap-editor [data-lore-id="entity-ember-archive"]')
+      .should('contain.text', 'Ember Archive');
+    cy.contains('.tiptap-editor [data-consistency-id]', 'Ember Archiv')
+      .should('not.exist');
+    cy.contains('Commit blocked by consistency check').should('not.exist');
+  });
+
+  it('highlights manual review results in the active editor scene', () => {
+    cy.visit('/workspace');
+    cy.contains('h1', 'Writing Workspace').should('be.visible');
+    cy.contains('Cypress Smoke Project · Alpha Scene').should('be.visible');
+
+    cy.get('.tiptap-editor')
+      .click()
+      .type(
+        '{selectall}Kaelor crossed the Glass Harbor before dawn.{enter}At the edge of Glass Harbor, Kaelor found the Ember Archive.',
+        {delay: 0}
+      );
+
+    cy.wait(1000);
+    cy.get('button[aria-label^="Open review drawer"]').click();
+    cy.contains('button', 'Run project review').click();
+
+    cy.contains('Project review found').should('be.visible');
+    cy.contains('.tiptap-editor [data-consistency-id]', 'Kaelor')
+      .should('be.visible');
+  });
+
+  it('keeps remaining review highlights after creating one reviewed record', () => {
+    cy.visit('/workspace');
+    cy.contains('h1', 'Writing Workspace').should('be.visible');
+    cy.contains('Cypress Smoke Project · Alpha Scene').should('be.visible');
+
+    cy.get('.tiptap-editor')
+      .click()
+      .type(
+        '{selectall}Kaelor crossed the Glass Harbor before dawn.{enter}At the edge of Glass Harbor, Kaelor found the Ember Archive.',
+        {delay: 0}
+      );
+
+    cy.wait(1000);
+    cy.get('button[aria-label^="Open review drawer"]').click();
+    cy.contains('button', 'Run project review').click();
+    cy.contains('Project review found').should('be.visible');
+
+    cy.contains('.tiptap-editor [data-consistency-id]', 'Kaelor')
+      .click();
+    cy.contains('button', /Add Character|Add to World|Create record/).click();
+    cy.contains('[role="status"]', 'Kaelor').should('be.visible');
+
+    cy.contains('.tiptap-editor [data-consistency-id]', 'Kaelor')
+      .should('not.exist');
+    cy.contains('.tiptap-editor [data-lore-id]', 'Kaelor')
+      .should('be.visible');
+    cy.contains('.tiptap-editor [data-consistency-id]', 'Glass Harbor')
+      .should('be.visible');
+  });
+
+  it('surfaces idle review as underlines and badge state without showing the large review panel', () => {
+    cy.visit('/workspace');
+    cy.contains('h1', 'Writing Workspace').should('be.visible');
+    cy.contains('Cypress Smoke Project · Alpha Scene').should('be.visible');
+
+    cy.get('.tiptap-editor')
+      .click()
+      .type('{selectall}Kael hated the dungeon.{enter}All he wanted was a muffin.', {
+        delay: 0
+      });
+
+    cy.wait(3200);
+
+    cy.contains('.tiptap-editor [data-consistency-id]', 'Kael').should('be.visible');
+    cy.get('button[aria-label^="Open review drawer"]')
+      .should('contain.text', '1 review item');
+    cy.get('.unknownPanel').should('not.exist');
+  });
+
+  it('keeps review counts and highlights in sync after character canonicalization across scenes', () => {
+    cy.visit('/workspace');
+    cy.contains('h1', 'Writing Workspace').should('be.visible');
+    cy.contains('Cypress Smoke Project · Alpha Scene').should('be.visible');
+
+    cy.get('.tiptap-editor')
+      .click()
+      .type('{selectall}Kael hated the dungeon.{enter}All he wanted was a muffin.', {
+        delay: 0
+      });
+
+    cy.wait(3200);
+    cy.contains('.tiptap-editor [data-consistency-id]', 'Kael')
+      .click();
+    cy.contains('button', /Add Character|Add to World|Create record/).click();
+    cy.contains('[role="status"]', 'Kael').should('be.visible');
+    cy.contains('.tiptap-editor [data-lore-id]', 'Kael').should('be.visible');
+    cy.get('button[aria-label^="Open review drawer"]')
+      .invoke('text')
+      .should('match', /Review clear/);
+
+    cy.contains('button', /^Scenes$/).first().click();
+    cy.contains('Beta Scene').click();
+    cy.contains('Cypress Smoke Project · Beta Scene').should('be.visible');
+
+    cy.get('.tiptap-editor')
+      .click()
+      .type(
+        '{selectall}"Kaelor, get your head in the game!" Blatnor shouted.{enter}Kael thought to himself, "no."',
+        {delay: 0}
+      );
+
+    cy.get('button[aria-label^="Open review drawer"]', {timeout: 10000})
+      .should('contain.text', '2 review items');
+    cy.get('.tiptap-editor [data-consistency-id]', {timeout: 10000}).should(($highlights) => {
+      const texts = [...$highlights].map((node) => node.textContent ?? '');
+      expect(texts.some((text) => text.includes('Kaelor'))).to.equal(true);
+      expect(texts.some((text) => text.includes('Blatnor'))).to.equal(true);
+    });
+
+    seedWorldBibleCharacterWithToolsProfile({
+      entityId: 'entity-kaelor',
+      characterId: 'character-kaelor',
+      name: 'Kaelor'
+    });
+
+    cy.visit('/workspace');
+    cy.contains('Beta Scene').click();
+    cy.contains('Cypress Smoke Project · Beta Scene').should('be.visible');
+    cy.wait(1000);
+
+    cy.get('.tiptap-editor [data-consistency-id]').should(($highlights) => {
+      const texts = [...$highlights].map((node) => node.textContent ?? '');
+      expect(texts.some((text) => text.includes('Kaelor'))).to.equal(false);
+      expect(texts.some((text) => text.includes('Blatnor'))).to.equal(true);
+    });
+    cy.contains('.tiptap-editor [data-lore-id]', 'Kaelor').should('be.visible');
+    cy.get('button[aria-label^="Open review drawer"]').should('contain.text', '1 review item');
+  });
+
+  it('removes lore highlights after deleting World Bible canon even if a tools profile remains', () => {
+    seedWorldBibleCharacterWithToolsProfile({
+      entityId: 'entity-garcia-full',
+      characterId: 'character-garcia-full',
+      name: 'Garcia de Terra',
+      alias: 'Garcia'
+    });
+    cy.reload();
+    cy.visit('/workspace');
+    cy.contains('h1', 'Writing Workspace').should('be.visible');
+
+    cy.get('.tiptap-editor')
+      .click()
+      .type('{selectall}Garcia de Terra entered quietly. Garcia checked the seal.', {
+        delay: 0
+      });
+
+    cy.contains('.tiptap-editor [data-lore-id]', 'Garcia de Terra').should('be.visible');
+    cy.contains('.tiptap-editor [data-lore-id]', 'Garcia').should('be.visible');
+
+    cy.visit('/world-bible');
+    cy.contains('h1', 'World Bible').should('be.visible');
+    cy.on('window:confirm', () => true);
+    cy.contains('li', 'Garcia de Terra')
+      .contains('button', 'Delete')
+      .click();
+    cy.contains('[role="status"]', 'Entry deleted.').should('be.visible');
+
+    cy.visit('/workspace');
+    cy.contains('h1', 'Writing Workspace').should('be.visible');
+
+    cy.contains('.tiptap-editor [data-lore-id]', 'Garcia de Terra').should('not.exist');
+    cy.contains('.tiptap-editor [data-lore-id]', 'Garcia').should('not.exist');
+  });
+});
