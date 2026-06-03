@@ -131,16 +131,15 @@ function CorkboardRoute() {
         eyebrow='Planning'
         title='Corkboard'
         description='Plan story arcs, chapters, and turning points without changing the writing workspace. The quick workspace modal uses these same cards.'
-        actions={
-          <>
-            <ProjectScratchpadButton projectId={activeProject.id} />
-            <span className={styles.status} role='status'>{statusLabel}</span>
-            <button type='button' onClick={handleCreateCard} disabled={isCorkboardLoading}>
-              New Chapter Card
-            </button>
-          </>
-        }
+        actions={<ProjectScratchpadButton projectId={activeProject.id} />}
       />
+
+      <div className={styles.utilityRow}>
+        <span className={styles.status} role='status'>{statusLabel}</span>
+        <button type='button' onClick={handleCreateCard} disabled={isCorkboardLoading}>
+          New Chapter Card
+        </button>
+      </div>
 
       <div className={styles.metaRow}>
         <span className={styles.countChip}>
