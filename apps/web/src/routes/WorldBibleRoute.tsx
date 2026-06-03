@@ -14,6 +14,8 @@ import {
 import {getCharactersByProject} from '../characterStorage';
 import CategoryEditor from '../components/CategoryEditor';
 import {WorldBibleRichTextField} from '../components/WorldBibleRichTextField';
+import {ProjectScratchpadButton} from '../components/ProjectScratchpadButton';
+import {PageHeader} from '../components/PageHeader';
 import styles from '../assets/components/WorldBibleRoute.module.css';
 import type {RAGProvider} from '../services/rag/RAGService';
 import {getRAGService} from '../services/rag/getRAGService';
@@ -66,6 +68,7 @@ import {LLMService} from '../services/llm/LLMService';
 type WorldBibleViewMode = 'category' | 'review';
 type CharacterImportStep = 'idle' | 'input' | 'review';
 type CharacterAuthoringMode = 'idle' | 'manual' | 'import' | 'ai';
+type RecordAuthoringMode = 'idle' | 'manual';
 
 const getPreferredImportField = (
   category: EntityCategory
@@ -388,6 +391,8 @@ function WorldBibleRoute() {
     useState<CharacterImportStep>('idle');
   const [characterAuthoringMode, setCharacterAuthoringMode] =
     useState<CharacterAuthoringMode>('idle');
+  const [recordAuthoringMode, setRecordAuthoringMode] =
+    useState<RecordAuthoringMode>('idle');
   const [pastedCharacterImportText, setPastedCharacterImportText] = useState('');
   const [characterImportDraft, setCharacterImportDraft] =
     useState<CharacterImportDraft | null>(null);
@@ -791,7 +796,13 @@ function WorldBibleRoute() {
     name.trim() || selectedEntity?.name || activeCategory?.name.slice(0, -1) || 'this record';
   const isFocusedCharacterTask = activeCategoryIsCharacterLike
     ? Boolean(editingId || characterAuthoringMode !== 'idle')
-    : true;
+    : false;
+  const isFocusedRecordTask = !activeCategoryIsCharacterLike
+    ? Boolean(
+        recordAuthoringMode !== 'idle' ||
+          (editingId && selectedEntity?.categoryId === activeCategory?.id)
+      )
+    : false;
   const isCanonicalRenameDraft = Boolean(
     selectedEntity &&
       name.trim().length > 0 &&
@@ -885,12 +896,19 @@ function WorldBibleRoute() {
     setIsNameResolverOpen(false);
     setManualResolutionTargetId('');
     setCharacterAuthoringMode('idle');
+    setRecordAuthoringMode('idle');
     setCharacterImportStep('idle');
     setCharacterImportDraft(null);
     setCharacterImportSections([]);
     setCharacterAiPrompt('');
     setIsGeneratingCharacterDraft(false);
     setNewCharacterSectionName('');
+  };
+
+  const handleSelectCategoryTab = (categoryId: string) => {
+    setViewMode('category');
+    setActiveTab(categoryId);
+    resetForm();
   };
 
   const openCharacterCategory = useCallback(() => {
@@ -905,6 +923,7 @@ function WorldBibleRoute() {
     setName('');
     setFieldValues({});
     setCharacterAuthoringMode('manual');
+    setRecordAuthoringMode('idle');
     setCharacterImportStep('idle');
     setCharacterImportDraft(null);
     setCharacterImportSections([]);
@@ -920,6 +939,7 @@ function WorldBibleRoute() {
     setIsNameResolverOpen(false);
     setManualResolutionTargetId('');
     setCharacterAuthoringMode('idle');
+    setRecordAuthoringMode('manual');
     setCharacterImportStep('idle');
     setCharacterImportDraft(null);
     setCharacterImportSections([]);
@@ -931,6 +951,7 @@ function WorldBibleRoute() {
     setName('');
     setFieldValues({});
     setCharacterAuthoringMode('ai');
+    setRecordAuthoringMode('idle');
     setCharacterImportStep('idle');
     setCharacterImportDraft(null);
     setCharacterImportSections([]);
@@ -1152,9 +1173,13 @@ function WorldBibleRoute() {
   const handleEdit = useCallback((entity: WorldEntity, focus: 'general' | 'aliases' = 'general') => {
     setEditingId(entity.id);
     const entityCategory = categoryById.get(entity.categoryId);
-    setCharacterAuthoringMode(
-      entityCategory && isCharacterCategory(entityCategory) ? 'manual' : 'idle'
+    const entityIsCharacterCategory = Boolean(
+      entityCategory && isCharacterCategory(entityCategory)
     );
+    setCharacterAuthoringMode(
+      entityIsCharacterCategory ? 'manual' : 'idle'
+    );
+    setRecordAuthoringMode(entityIsCharacterCategory ? 'idle' : 'manual');
     setPendingReviewFocus(focus);
     setName(entity.name);
     const persistedAlternativeNames =
@@ -1593,52 +1618,113 @@ function WorldBibleRoute() {
 
   return (
     <section className={styles.container}>
-      <div className={styles.header}>
-        <h1>World Bible</h1>
-        {activeCategory && (
-          <>
-            <div className={styles.headerActions}>
-              <button
-                type='button'
-                onClick={() => importInputRef.current?.click()}
-                disabled={isImportingEntities}
-              >
-                {isImportingEntities
-                  ? 'Importing...'
-                  : `Import Docs into ${activeCategory.name}`}
-              </button>
-              <button
-                type='button'
-                onClick={() => jsonImportInputRef.current?.click()}
-                disabled={isImportingJson}
-              >
-                {isImportingJson ? 'Loading JSON...' : 'Import JSON'}
-              </button>
-              <button type='button' onClick={handleDownloadJsonTemplate}>
-                Download JSON Template
-              </button>
-              <button type='button' onClick={handleDownloadJsonSample}>
-                Download JSON Sample
-              </button>
+      <PageHeader
+        eyebrow='Structured canon'
+        title='World Bible'
+        description='Browse, import, and refine story-facing canon records without leaving the current project.'
+        actions={<ProjectScratchpadButton projectId={activeProject.id} />}
+      />
+      {activeCategory && (
+        <>
+          <input
+            ref={importInputRef}
+            type='file'
+            accept='.txt,.md,.markdown,.html,.htm,.docx,.doc,text/plain,text/markdown,text/html,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/msword'
+            multiple
+            onChange={(e) => void handleImportEntities(e)}
+            style={{display: 'none'}}
+          />
+          <input
+            ref={jsonImportInputRef}
+            type='file'
+            accept='.json,application/json'
+            onChange={(e) => void handleJsonImportFile(e)}
+            style={{display: 'none'}}
+          />
+        </>
+      )}
+      <div className={styles.routeShell}>
+        <aside className={styles.sideRail} aria-label='World Bible tools'>
+          {activeCategory && (
+            <details className={styles.railPanel} open>
+              <summary>Import & Export</summary>
+              <p className={styles.railHint}>
+                Active category: <strong>{activeCategory.name}</strong>
+              </p>
+              <div className={styles.headerActions}>
+                <button
+                  type='button'
+                  onClick={() => importInputRef.current?.click()}
+                  disabled={isImportingEntities}
+                >
+                  {isImportingEntities
+                    ? 'Importing...'
+                    : `Import Docs into ${activeCategory.name}`}
+                </button>
+                <button
+                  type='button'
+                  onClick={() => jsonImportInputRef.current?.click()}
+                  disabled={isImportingJson}
+                >
+                  {isImportingJson ? 'Loading JSON...' : 'Import JSON'}
+                </button>
+                <button type='button' onClick={handleDownloadJsonTemplate}>
+                  Download JSON Template
+                </button>
+                <button type='button' onClick={handleDownloadJsonSample}>
+                  Download JSON Sample
+                </button>
+              </div>
+            </details>
+          )}
+          <details className={styles.railPanel}>
+            <summary>Onboarding</summary>
+            <div className={styles.helpBody}>
+              <p>
+                Start here when you need stable canon before writing. Add only the records
+                you need for the next scene, then expand later.
+              </p>
+              <p>
+                Fast path: choose a category, create a record, and capture names,
+                alternative names, status, and one or two high-value facts the workspace
+                should recognize.
+              </p>
+              <p>
+                Import path: use <strong>Import Docs</strong> for prose notes or{' '}
+                <strong>Import JSON</strong> for batch records, then review anything marked
+                as needing completion.
+              </p>
             </div>
-            <input
-              ref={importInputRef}
-              type='file'
-              accept='.txt,.md,.markdown,.html,.htm,.docx,.doc,text/plain,text/markdown,text/html,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/msword'
-              multiple
-              onChange={(e) => void handleImportEntities(e)}
-              style={{display: 'none'}}
-            />
-            <input
-              ref={jsonImportInputRef}
-              type='file'
-              accept='.json,application/json'
-              onChange={(e) => void handleJsonImportFile(e)}
-              style={{display: 'none'}}
-            />
-          </>
-        )}
-      </div>
+          </details>
+          <details className={styles.railPanel}>
+            <summary>Workflow Help</summary>
+            <div className={styles.helpBody}>
+              <p>
+                Step 1: pick or create categories, then choose the active tab.
+              </p>
+              <p>
+                Step 2: add entries manually or import docs/JSON in batch.
+              </p>
+              <p>
+                Step 3: review/edit entries and optionally link to Compendium.
+              </p>
+              <p>
+                Step 4: for multi-project canon, promote key entries or sync parent canon.
+              </p>
+              <p>
+                Import JSON accepts: <code>[{"{...}"}]</code>,{' '}
+                <code>{"{"}entries: [{"{...}"}]{"}"}</code>,{' '}
+                <code>{"{"}items: [{"{...}"}]{"}"}</code>,{' '}
+                <code>{"{"}rows: [{"{...}"}]{"}"}</code>.
+              </p>
+              <p>
+                Use <strong>Download JSON Template</strong> to get the exact field keys
+                for the selected category.
+              </p>
+            </div>
+          </details>
+        </aside>
+        <div className={styles.mainColumn}>
       {feedback && (
         <p
           role='status'
@@ -1657,25 +1743,6 @@ function WorldBibleRoute() {
           {feedback.message}
         </p>
       )}
-      <details className={styles.helpPanel}>
-        <summary>World Bible Onboarding</summary>
-        <div className={styles.helpBody}>
-          <p>
-            Start here when you need stable canon before writing. Add only the records
-            you need for the next scene, then expand later.
-          </p>
-          <p>
-            Fast path: choose a category, create a record, and capture names,
-            alternative names, status, and one or two high-value facts the workspace
-            should recognize.
-          </p>
-          <p>
-            Import path: use <strong>Import Docs</strong> for prose notes or{' '}
-            <strong>Import JSON</strong> for batch records, then review anything marked
-            as needing completion.
-          </p>
-        </div>
-      </details>
       {seriesConfig?.parentProjectId && (
         <div className={styles.banner}>
           <strong>Parent canon:</strong> {canonState.parentName ?? 'Unknown'} ·
@@ -1706,10 +1773,7 @@ function WorldBibleRoute() {
           <button
             key={cat.id}
             type='button'
-            onClick={() => {
-              setViewMode('category');
-              setActiveTab(cat.id);
-            }}
+            onClick={() => handleSelectCategoryTab(cat.id)}
             className={`${styles.tab} ${
               viewMode === 'category' && activeTab === cat.id ? styles.active : ''
             }`}
@@ -1724,34 +1788,6 @@ function WorldBibleRoute() {
           {showCategoryManager ? 'Close' : 'Manage Categories'}
         </button>
       </div>
-
-      <details className={styles.helpPanel}>
-        <summary>World Bible Workflow Help</summary>
-        <div className={styles.helpBody}>
-          <p>
-            Step 1: pick or create categories, then choose the active tab.
-          </p>
-          <p>
-            Step 2: add entries manually or import docs/JSON in batch.
-          </p>
-          <p>
-            Step 3: review/edit entries and optionally link to Compendium.
-          </p>
-          <p>
-            Step 4: for multi-project canon, promote key entries or sync parent canon.
-          </p>
-          <p>
-            Import JSON accepts: <code>[{"{...}"}]</code>,{' '}
-            <code>{"{"}entries: [{"{...}"}]{"}"}</code>,{' '}
-            <code>{"{"}items: [{"{...}"}]{"}"}</code>,{' '}
-            <code>{"{"}rows: [{"{...}"}]{"}"}</code>.
-          </p>
-          <p>
-            Use <strong>Download JSON Template</strong> to get the exact field keys
-            for the selected category.
-          </p>
-        </div>
-      </details>
 
       {activeCategory && viewMode === 'category' && (
         <section className={styles.castPanel} aria-label={`${activeCategory.name} canon`}>
@@ -2411,7 +2447,7 @@ function WorldBibleRoute() {
         <div
           className={`${styles.content} ${styles.castContent}`}
         >
-          {(!activeCategoryIsCharacterLike || isFocusedCharacterTask) && (
+          {(activeCategoryIsCharacterLike ? isFocusedCharacterTask : isFocusedRecordTask) && (
           <div className={styles.formSection}>
             <form onSubmit={handleSubmit} className={styles.form}>
               <h2>
@@ -3090,7 +3126,7 @@ function WorldBibleRoute() {
                         ? 'Create Canon Record'
                         : 'Create Entry'}
                 </button>
-                {(editingId || activeCategoryIsCharacterLike) && (
+                {(editingId || activeCategoryIsCharacterLike || recordAuthoringMode !== 'idle') && (
                   <button type='button' onClick={resetForm} disabled={isSubmittingEntity}>
                     Cancel
                   </button>
@@ -3134,14 +3170,14 @@ function WorldBibleRoute() {
           </div>
           )}
 
-          {viewMode !== 'review' && (!activeCategoryIsCharacterLike || !isFocusedCharacterTask) && (
+          {viewMode !== 'review' && (activeCategoryIsCharacterLike ? !isFocusedCharacterTask : !isFocusedRecordTask) && (
           <div
             className={`${styles.listSection} ${styles.castListSection}`}
           >
             <h2>{activeCategory.name}</h2>
             {visibleEntities.length === 0 && (
               <p className={styles.emptyState}>
-                {`No ${activeCategory.name.toLowerCase()} yet. Add one on the left.`}
+                {`No ${activeCategory.name.toLowerCase()} yet. Use Create Manually above when you are ready.`}
               </p>
             )}
             <ul className={styles.entityList}>
@@ -3292,6 +3328,8 @@ function WorldBibleRoute() {
           )}
         </div>
       )}
+        </div>
+      </div>
     </section>
   );
 }

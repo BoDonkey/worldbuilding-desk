@@ -1,6 +1,6 @@
 # Next Steps
 
-Last updated: 2026-05-29
+Last updated: 2026-06-03
 
 ## Current Baseline
 
@@ -93,6 +93,12 @@ Implemented recently:
   - `useWorkspaceDocuments` now uses pure helpers for selection initialization, editor-document assembly, change detection, manual-save/autosave consistency modes, and autosave scheduling.
   - Focused unit coverage exists for workspace store behavior and document selection/save helpers.
   - Manual smoke now passes for workspace scene restoration and in-scene search targeting after the latest route/store changes.
+- UI chrome checkpoint:
+  - Workspace, World Bible, Lore, and Canon Decisions now share a reusable page-header component for eyebrow/title/meta/action placement.
+  - Workspace keeps the current scene primary by limiting its header action to the passive review badge; new scene/import/planning controls remain in empty-state, footer, drawer, modal, and command surfaces.
+  - World Bible now uses shared page chrome, a compact utility rail for import/help, list-first category tabs, and explicit create/edit form reveal.
+  - Scratchpad quick access is available from World Bible, Lore, and Canon Decisions through the shared project scratchpad modal.
+  - The latest browser smoke confirmed shared headers on `/workspace`, `/world-bible`, `/lore`, and `/canon-decisions` on 2026-06-03.
 
 ## Recommended Priority Order
 
@@ -104,7 +110,7 @@ Implemented recently:
 6. Structural cleanup in active routes
 7. Finish dedicated editor-state persistence pass
 8. State mutation ledger integration
-9. Scratchpad access and lightweight planning surfaces
+9. Scratchpad organization and lightweight planning surfaces
 10. App-wide search
 11. Editor readability and theme hardening
 12. Release confidence and reload safety
@@ -124,7 +130,7 @@ Implemented recently:
 - Do not continue patching individual highlight edge cases indefinitely. The next review/highlight slice should consolidate known canon, aliases, titled forms, and unknown candidates into one annotation decision pass with longest-match priority.
 - Run the focused character-canon smoke checklist in `docs/character-canon-unification-smoke-test.md` after the annotation redesign, before starting the Lore Documents IA reframing.
 - Keep branch scope narrow enough that each slice can be reverted cleanly if the UX direction changes.
-- Scratchpad should become a quick-access popover/modal available from any workspace tab or route surface. The current context drawer tab is a first restoration step, not the final interaction model.
+- Scratchpad quick access now exists on the main writing/canon/lore/review surfaces. The next scratchpad question is lightweight organization and capture flows, especially AI-to-Scratchpad, rather than basic availability.
 - Future optional systems note: character inventory currently tracks item names, quantities, notes, and catalog links, while the rules-engine inventory has a `capacity` field but no per-item weight or surfaced encumbrance calculation. When system-heavy character support comes back into focus, add carry weight/encumbrance as an explicit inventory concern rather than treating quantity as enough.
 - The background review path is only worth keeping if it remains bounded: proposal-only, local-first, and subordinate to deterministic validation. Avoid broadening it into an unbounded “project manager AI.”
 - Lore/canon reminder: freeform lore documents are author-facing source material, extracted entity/fact proposals are candidates, and only accepted anchors plus accepted canonical facts count as source-of-truth canon.

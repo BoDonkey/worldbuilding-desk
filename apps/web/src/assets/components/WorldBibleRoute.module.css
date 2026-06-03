@@ -2,18 +2,85 @@
   padding: 1rem;
 }
 
-.header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+.routeShell {
+  display: grid;
+  grid-template-columns: minmax(13rem, 16rem) minmax(0, 1fr);
+  gap: 1rem;
+  align-items: start;
+}
+
+.sideRail {
+  position: sticky;
+  top: 1rem;
+  display: grid;
   gap: 0.75rem;
-  margin-bottom: 1.5rem;
+}
+
+.mainColumn {
+  min-width: 0;
+}
+
+.railPanel {
+  border: 1px solid var(--surface-border-soft);
+  border-radius: 14px;
+  background: var(--surface-panel);
+  color: var(--color-text-primary);
+  overflow: hidden;
+}
+
+.railPanel summary {
+  cursor: pointer;
+  padding: 0.7rem 0.8rem;
+  color: var(--color-text-primary);
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.railPanel[open] summary {
+  border-bottom: 1px solid var(--surface-border-soft);
+}
+
+.railHint {
+  margin: 0;
+  padding: 0.75rem 0.8rem 0;
+  color: var(--color-text-secondary);
+  font-size: 0.82rem;
+  line-height: 1.4;
 }
 
 .headerActions {
-  display: flex;
+  display: grid;
   gap: 0.5rem;
-  flex-wrap: wrap;
+  padding: 0.75rem 0.8rem 0.8rem;
+}
+
+.headerActions button {
+  width: 100%;
+  border: 1px solid var(--button-secondary-border);
+  border-radius: 12px;
+  background: var(--button-secondary-bg);
+  color: var(--button-secondary-text);
+  padding: 0.45rem 0.7rem;
+  font-size: 0.82rem;
+  line-height: 1.25;
+  text-align: left;
+  box-shadow: var(--button-shadow);
+  cursor: pointer;
+  transition:
+    background-color 0.18s ease,
+    transform 0.18s ease;
+}
+
+.headerActions button:hover:not(:disabled) {
+  background: var(--button-secondary-bg-hover);
+  transform: translateY(-1px);
+}
+
+.headerActions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.72;
 }
 
 .banner {
@@ -455,6 +522,10 @@
   line-height: 1.5;
 }
 
+.castHeader p {
+  min-height: 3em;
+}
+
 .castHeaderActions {
   display: flex;
   gap: 0.5rem;
@@ -470,6 +541,7 @@
 
 .castTask {
   display: grid;
+  grid-template-rows: auto minmax(3em, auto) auto;
   gap: 0.65rem;
   align-content: start;
   padding: 0.9rem;
@@ -628,6 +700,22 @@
 }
 
 @media (max-width: 900px) {
+  .routeShell {
+    grid-template-columns: 1fr;
+  }
+
+  .sideRail {
+    position: static;
+  }
+
+  .headerActions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .headerActions button {
+    text-align: center;
+  }
+
   .importDraftFields {
     grid-template-columns: 1fr;
   }
@@ -663,6 +751,12 @@
   .formSection {
     max-width: none;
     width: 100%;
+  }
+}
+
+@media (max-width: 560px) {
+  .headerActions {
+    grid-template-columns: 1fr;
   }
 }
 

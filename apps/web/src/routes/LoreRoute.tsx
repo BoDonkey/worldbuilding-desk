@@ -43,6 +43,8 @@ import {
 import {acceptLoreEntityProposal} from '../services/lore/entityProposalActions';
 import {getRAGService} from '../services/rag/getRAGService';
 import type {RAGProvider} from '../services/rag/RAGService';
+import {ProjectScratchpadButton} from '../components/ProjectScratchpadButton';
+import {PageHeader} from '../components/PageHeader';
 import styles from '../styles/LoreRoute.module.css';
 
 type LinkDraft = {
@@ -664,19 +666,25 @@ function LoreRoute() {
 
   return (
     <section className={styles.page}>
-      <header className={styles.pageHeader}>
-        <div>
-          <p className={styles.eyebrow}>Free-form worldbuilding</p>
-          <h1 className={styles.pageTitle}>Lore</h1>
-          <p className={styles.pageIntro}>
+      <PageHeader
+        eyebrow='Free-form worldbuilding'
+        title='Lore'
+        description={
+          <>
             Store dossiers, timelines, myths, and deep reference notes without forcing
             them into a rigid World Bible form. Extraction runs locally and produces
             reviewable fact proposals before anything becomes canon.
-          </p>
-        </div>
-        <button type='button' onClick={handleImportClick} disabled={isImporting}>
-          {isImporting ? 'Importing...' : 'Import Lore File'}
-        </button>
+          </>
+        }
+        actions={
+          <>
+          <ProjectScratchpadButton projectId={activeProject.id} />
+          <button type='button' onClick={handleImportClick} disabled={isImporting}>
+            {isImporting ? 'Importing...' : 'Import Lore File'}
+          </button>
+          </>
+        }
+      />
         <input
           ref={importInputRef}
           type='file'
@@ -684,7 +692,6 @@ function LoreRoute() {
           className={styles.hiddenInput}
           onChange={handleImport}
         />
-      </header>
 
       {feedback ? (
         <p

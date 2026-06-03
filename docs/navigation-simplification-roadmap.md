@@ -1,6 +1,6 @@
 # Navigation Simplification Roadmap
 
-Last updated: 2026-05-28
+Last updated: 2026-06-03
 
 ## Purpose
 
@@ -39,6 +39,16 @@ From [navigation-ia-decision.md](/Volumes/T7/Development/worldbuilding-desk/docs
 - `Characters` stops being a separate primary canon destination.
 - `Lore` is reframed as `Lore Documents`.
 - `Ruleset` stays top-level for now as an advanced, distinct system surface.
+
+## Current UI Chrome Checkpoint
+
+As of June 3, 2026:
+
+- Workspace, World Bible, Lore, and Canon Decisions share a reusable page-header component for active-project surfaces.
+- Workspace is the model for the global feel: calm header, current scene/project context, and only the passive review badge as persistent header action.
+- World Bible keeps the stronger canon workflow model: category browsing is list-first, manual forms open only after create/edit selection, and import/help tools live in a compact utility rail.
+- Scratchpad is available from World Bible, Lore, and Canon Decisions through a shared project scratchpad modal, while Workspace retains its existing modal/context drawer access.
+- Future route work should reuse shared page chrome before adding local page-header patterns.
 
 ## Success Criteria
 

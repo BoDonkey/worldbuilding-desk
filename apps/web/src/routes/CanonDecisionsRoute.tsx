@@ -50,6 +50,8 @@ import {
   getInspectorConsultationUsage,
   incrementInspectorConsultationUsage
 } from '../services/editor';
+import {ProjectScratchpadButton} from '../components/ProjectScratchpadButton';
+import {PageHeader} from '../components/PageHeader';
 import styles from '../styles/CanonDecisionsRoute.module.css';
 
 const PROVIDER_LABELS = {
@@ -641,16 +643,17 @@ function CanonDecisionsRoute() {
 
   return (
     <section className={styles.page}>
-      <header className={styles.pageHeader}>
-        <div>
-          <p className={styles.eyebrow}>Source of truth review</p>
-          <h1 className={styles.pageTitle}>Canon Decisions</h1>
-          <p className={styles.pageIntro}>
-            Resolve likely duplicate entities and conflicting facts before they turn into noisy canon.
-          </p>
-        </div>
-        <span className={styles.countBadge}>{clusters.length}</span>
-      </header>
+      <PageHeader
+        eyebrow='Source of truth review'
+        title='Canon Decisions'
+        description='Resolve likely duplicate entities and conflicting facts before they turn into noisy canon.'
+        actions={
+          <>
+          <ProjectScratchpadButton projectId={activeProject.id} />
+          <span className={styles.countBadge}>{clusters.length}</span>
+          </>
+        }
+      />
 
       {feedback ? (
         <p
