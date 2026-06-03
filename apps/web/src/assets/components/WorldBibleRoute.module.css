@@ -65,51 +65,14 @@
   font-weight: 700;
 }
 
-.utilityStack {
-  display: grid;
-  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) minmax(0, 1fr);
-  gap: 0.75rem;
-  align-items: start;
-}
-
-.utilityPanel {
-  border: 1px solid var(--surface-border-soft);
-  border-radius: 14px;
-  background: var(--surface-panel);
-  color: var(--color-text-primary);
-  overflow: hidden;
-}
-
-.utilityPanel summary {
-  cursor: pointer;
-  padding: 0.7rem 0.8rem;
-  color: var(--color-text-primary);
-  font-size: 0.82rem;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
-
-.utilityPanel[open] summary {
-  border-bottom: 1px solid var(--surface-border-soft);
-}
-
-.utilityHint {
-  margin: 0;
-  padding: 0.75rem 0.8rem 0;
-  color: var(--color-text-secondary);
-  font-size: 0.82rem;
-  line-height: 1.4;
-}
-
-.headerActions {
+.railActions {
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
-  padding: 0.75rem 0.8rem 0.8rem;
 }
 
-.headerActions button {
+.railActions button {
+  width: 100%;
   border: 1px solid var(--button-secondary-border);
   border-radius: 12px;
   background: var(--button-secondary-bg);
@@ -124,14 +87,39 @@
     transform 0.18s ease;
 }
 
-.headerActions button:hover:not(:disabled) {
+.railActions button:hover:not(:disabled) {
   background: var(--button-secondary-bg-hover);
   transform: translateY(-1px);
 }
 
-.headerActions button:disabled {
-  cursor: not-allowed;
-  opacity: 0.72;
+.categoryRailSection {
+  display: grid;
+  gap: 0.6rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--surface-border-soft);
+}
+
+.categoryRailSection h3 {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.railHelpPanel {
+  border-top: 1px solid var(--surface-border-soft);
+  padding-top: 0.65rem;
+}
+
+.railHelpPanel summary {
+  cursor: pointer;
+  color: var(--color-text-primary);
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
 .mainColumn {
@@ -764,19 +752,6 @@
     position: static;
   }
 
-  .utilityStack {
-    grid-template-columns: 1fr;
-  }
-
-  .headerActions {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .headerActions button {
-    text-align: center;
-  }
-
   .importDraftFields {
     grid-template-columns: 1fr;
   }
@@ -812,12 +787,6 @@
   .formSection {
     max-width: none;
     width: 100%;
-  }
-}
-
-@media (max-width: 560px) {
-  .headerActions {
-    grid-template-columns: 1fr;
   }
 }
 

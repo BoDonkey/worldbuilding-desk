@@ -1667,86 +1667,6 @@ function WorldBibleRoute() {
           />
         </>
       )}
-      <div className={styles.utilityStack}>
-        {activeCategory && (
-          <details className={styles.utilityPanel} open>
-            <summary>Import & Export</summary>
-            <p className={styles.utilityHint}>
-              Active category: <strong>{activeCategory.name}</strong>
-            </p>
-            <div className={styles.headerActions}>
-              <button
-                type='button'
-                onClick={() => importInputRef.current?.click()}
-                disabled={isImportingEntities}
-              >
-                {isImportingEntities
-                  ? 'Importing...'
-                  : `Import Docs into ${activeCategory.name}`}
-              </button>
-              <button
-                type='button'
-                onClick={() => jsonImportInputRef.current?.click()}
-                disabled={isImportingJson}
-              >
-                {isImportingJson ? 'Loading JSON...' : 'Import JSON'}
-              </button>
-              <button type='button' onClick={handleDownloadJsonTemplate}>
-                Download JSON Template
-              </button>
-              <button type='button' onClick={handleDownloadJsonSample}>
-                Download JSON Sample
-              </button>
-            </div>
-          </details>
-        )}
-        <details className={styles.utilityPanel}>
-          <summary>Onboarding</summary>
-          <div className={styles.helpBody}>
-            <p>
-              Start here when you need stable canon before writing. Add only the records
-              you need for the next scene, then expand later.
-            </p>
-            <p>
-              Fast path: choose a category, create a record, and capture names,
-              alternative names, status, and one or two high-value facts the workspace
-              should recognize.
-            </p>
-            <p>
-              Import path: use <strong>Import Docs</strong> for prose notes or{' '}
-              <strong>Import JSON</strong> for batch records, then review anything marked
-              as needing completion.
-            </p>
-          </div>
-        </details>
-        <details className={styles.utilityPanel}>
-          <summary>Workflow Help</summary>
-          <div className={styles.helpBody}>
-            <p>
-              Step 1: pick or create categories, then choose the active tab.
-            </p>
-            <p>
-              Step 2: add entries manually or import docs/JSON in batch.
-            </p>
-            <p>
-              Step 3: review/edit entries and optionally link to Compendium.
-            </p>
-            <p>
-              Step 4: for multi-project canon, promote key entries or sync parent canon.
-            </p>
-            <p>
-              Import JSON accepts: <code>[{"{...}"}]</code>,{' '}
-              <code>{"{"}entries: [{"{...}"}]{"}"}</code>,{' '}
-              <code>{"{"}items: [{"{...}"}]{"}"}</code>,{' '}
-              <code>{"{"}rows: [{"{...}"}]{"}"}</code>.
-            </p>
-            <p>
-              Use <strong>Download JSON Template</strong> to get the exact field keys
-              for the selected category.
-            </p>
-          </div>
-        </details>
-      </div>
       <div className={styles.contextRailControls}>
         <button type='button' onClick={handleToggleCategoryRail}>
           {isCategoryRailCollapsed ? 'Show Categories' : 'Hide Categories'}
@@ -1783,6 +1703,58 @@ function WorldBibleRoute() {
                 {showCategoryManager ? 'Close' : 'Manage Categories'}
               </button>
             </div>
+            <div className={styles.categoryRailSection}>
+              <h3>Templates</h3>
+              <div className={styles.railActions}>
+                <button type='button' onClick={handleDownloadJsonTemplate}>
+                  Download JSON Template
+                </button>
+                <button type='button' onClick={handleDownloadJsonSample}>
+                  Download JSON Sample
+                </button>
+              </div>
+            </div>
+            <details className={styles.railHelpPanel}>
+              <summary>Onboarding</summary>
+              <div className={styles.helpBody}>
+                <p>
+                  Start here when you need stable canon before writing. Add only the records
+                  you need for the next scene, then expand later.
+                </p>
+                <p>
+                  Fast path: choose a category, create a record, and capture names,
+                  alternative names, status, and one or two high-value facts the workspace
+                  should recognize.
+                </p>
+                <p>
+                  Import path: use the import cards in the active category, then review
+                  anything marked as needing completion.
+                </p>
+              </div>
+            </details>
+            <details className={styles.railHelpPanel}>
+              <summary>Workflow Help</summary>
+              <div className={styles.helpBody}>
+                <p>
+                  Step 1: pick or create categories, then choose the active tab.
+                </p>
+                <p>
+                  Step 2: add entries manually or import docs/JSON in batch.
+                </p>
+                <p>
+                  Step 3: review/edit entries and optionally link to Compendium.
+                </p>
+                <p>
+                  Step 4: for multi-project canon, promote key entries or sync parent canon.
+                </p>
+                <p>
+                  Import JSON accepts: <code>[{"{...}"}]</code>,{' '}
+                  <code>{"{"}entries: [{"{...}"}]{"}"}</code>,{' '}
+                  <code>{"{"}items: [{"{...}"}]{"}"}</code>,{' '}
+                  <code>{"{"}rows: [{"{...}"}]{"}"}</code>.
+                </p>
+              </div>
+            </details>
           </aside>
         )}
         <div className={styles.mainColumn}>
