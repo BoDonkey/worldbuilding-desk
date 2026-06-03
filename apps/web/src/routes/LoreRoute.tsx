@@ -116,6 +116,7 @@ function LoreRoute() {
   } | null>(null);
   const [isDocumentRailCollapsed, setIsDocumentRailCollapsed] = useState(false);
   const importInputRef = useRef<HTMLInputElement | null>(null);
+  const titleInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     if (!activeProject) {
@@ -667,6 +668,14 @@ function LoreRoute() {
     setLinkDrafts((current) => current.filter((_, draftIndex) => draftIndex !== index));
   };
 
+  const focusLoreEditor = () => {
+    document.getElementById('lore-document-editor')?.scrollIntoView({
+      behavior: 'smooth',
+      block: 'start'
+    });
+    window.setTimeout(() => titleInputRef.current?.focus(), 120);
+  };
+
   const handleToggleDocumentRail = () => {
     setIsDocumentRailCollapsed((current) => {
       const next = !current;
@@ -728,6 +737,48 @@ function LoreRoute() {
           {feedback.message}
         </p>
       ) : null}
+
+      <section className={styles.starterPanel} aria-label='Lore starting points'>
+        <div className={styles.starterHeader}>
+          <div>
+            <div className={styles.starterEyebrow}>Start here</div>
+            <h2>Lore Intake</h2>
+            <p>
+              Capture freeform source material first, then extract only the facts and
+              entities you want to promote into canon.
+            </p>
+          </div>
+        </div>
+        <div className={styles.starterGrid}>
+          <div className={styles.starterCard}>
+            <h3>Write Manually</h3>
+            <p>Start a dossier, timeline, myth, or world note from a blank document.</p>
+            <button type='button' onClick={focusLoreEditor}>
+              Start Writing
+            </button>
+          </div>
+          <div className={styles.starterCard}>
+            <h3>Import Dossier</h3>
+            <p>Bring in DOCX, Markdown, or plain text notes before reviewing them.</p>
+            <button type='button' onClick={handleImportClick} disabled={isImporting}>
+              {isImporting ? 'Importing...' : 'Import File'}
+            </button>
+          </div>
+          <div className={styles.starterCard}>
+            <h3>Extract Canon</h3>
+            <p>Turn the active saved document into reviewable entity and fact candidates.</p>
+            <button
+              type='button'
+              onClick={() => editingDocument && void handleExtractFacts(editingDocument)}
+              disabled={!editingDocument || extractingId === editingDocument.id}
+            >
+              {editingDocument && extractingId === editingDocument.id
+                ? 'Extracting...'
+                : 'Extract Facts'}
+            </button>
+          </div>
+        </div>
+      </section>
 
       <div
         className={`${styles.layout} ${
@@ -812,7 +863,11 @@ function LoreRoute() {
         </aside>
         )}
         <div className={styles.editorStack}>
-          <form className={styles.editorCard} onSubmit={handleSubmit}>
+          <form
+            id='lore-document-editor'
+            className={styles.editorCard}
+            onSubmit={handleSubmit}
+          >
             <div className={styles.cardHeader}>
               <h2>{editingId ? 'Edit Lore Document' : 'New Lore Document'}</h2>
               <div className={styles.inlineActions}>
@@ -835,7 +890,11 @@ function LoreRoute() {
 
             <label className={styles.fieldLabel}>
               Title
-              <input value={title} onChange={(event) => setTitle(event.target.value)} />
+              <input
+                ref={titleInputRef}
+                value={title}
+                onChange={(event) => setTitle(event.target.value)}
+              />
             </label>
 
             <label className={styles.fieldLabel}>
