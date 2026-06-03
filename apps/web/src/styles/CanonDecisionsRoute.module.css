@@ -2,6 +2,8 @@
   width: 100%;
   max-width: 1240px;
   margin: 0 auto;
+  display: grid;
+  gap: 1rem;
 }
 
 .pageHeader {
@@ -42,7 +44,6 @@
 }
 
 .feedback {
-  margin-bottom: 1rem;
   padding: 0.7rem 0.85rem;
   border-radius: 10px;
   border: 1px solid var(--color-border);
@@ -58,6 +59,17 @@
   border-color: var(--color-error-soft-border);
   background: var(--color-error-soft-bg);
   color: var(--color-error);
+}
+
+.utilityRow {
+  display: flex;
+  justify-content: flex-start;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  padding: 0.75rem 0.85rem;
+  border: 1px solid var(--surface-border-soft);
+  border-radius: 12px;
+  background: var(--surface-panel);
 }
 
 .emptyPanel {

@@ -647,13 +647,11 @@ function CanonDecisionsRoute() {
         eyebrow='Source of truth review'
         title='Canon Decisions'
         description='Resolve likely duplicate entities and conflicting facts before they turn into noisy canon.'
-        actions={
-          <>
-          <ProjectScratchpadButton projectId={activeProject.id} />
-          <span className={styles.countBadge}>{clusters.length}</span>
-          </>
-        }
+        actions={<ProjectScratchpadButton projectId={activeProject.id} />}
       />
+      <div className={styles.utilityRow}>
+        <span className={styles.countBadge}>{clusters.length}</span>
+      </div>
 
       {feedback ? (
         <p

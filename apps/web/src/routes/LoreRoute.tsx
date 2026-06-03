@@ -676,22 +676,20 @@ function LoreRoute() {
             reviewable fact proposals before anything becomes canon.
           </>
         }
-        actions={
-          <>
-          <ProjectScratchpadButton projectId={activeProject.id} />
-          <button type='button' onClick={handleImportClick} disabled={isImporting}>
-            {isImporting ? 'Importing...' : 'Import Lore File'}
-          </button>
-          </>
-        }
+        actions={<ProjectScratchpadButton projectId={activeProject.id} />}
       />
-        <input
-          ref={importInputRef}
-          type='file'
-          accept='.docx,.txt,.md,text/plain,text/markdown,application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-          className={styles.hiddenInput}
-          onChange={handleImport}
-        />
+      <div className={styles.utilityRow}>
+        <button type='button' onClick={handleImportClick} disabled={isImporting}>
+          {isImporting ? 'Importing...' : 'Import Lore File'}
+        </button>
+      </div>
+      <input
+        ref={importInputRef}
+        type='file'
+        accept='.docx,.txt,.md,text/plain,text/markdown,application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+        className={styles.hiddenInput}
+        onChange={handleImport}
+      />
 
       {feedback ? (
         <p
