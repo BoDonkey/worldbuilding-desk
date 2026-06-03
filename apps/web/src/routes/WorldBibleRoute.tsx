@@ -94,6 +94,9 @@ const CHARACTER_AUTHORING_FIELD_KEYS = new Set([
   ALTERNATIVE_NAMES_KEY
 ]);
 
+const getWorldBibleRailStorageKey = (projectId: string) =>
+  `wbd:world-bible:category-rail-collapsed:${projectId}`;
+
 const slugifyFieldKey = (value: string): string =>
   value
     .trim()
@@ -436,6 +439,7 @@ function WorldBibleRoute() {
     tone: 'success' | 'error';
     message: string;
   } | null>(null);
+  const [isCategoryRailCollapsed, setIsCategoryRailCollapsed] = useState(false);
   const [promotingMemoryId, setPromotingMemoryId] = useState<string | null>(null);
   const [compendiumLinkedEntityIds, setCompendiumLinkedEntityIds] = useState<
     Set<string>
@@ -443,6 +447,16 @@ function WorldBibleRoute() {
   const importInputRef = useRef<HTMLInputElement | null>(null);
   const jsonImportInputRef = useRef<HTMLInputElement | null>(null);
   const characterImportInputRef = useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => {
+    if (!activeProject) {
+      setIsCategoryRailCollapsed(false);
+      return;
+    }
+    setIsCategoryRailCollapsed(
+      window.localStorage.getItem(getWorldBibleRailStorageKey(activeProject.id)) === 'true'
+    );
+  }, [activeProject]);
   const aliasTextareaRef = useRef<HTMLTextAreaElement | null>(null);
   const focusedEntityKeyRef = useRef<string | null>(null);
   const refreshMemories = useCallback(async () => {
@@ -909,6 +923,16 @@ function WorldBibleRoute() {
     setViewMode('category');
     setActiveTab(categoryId);
     resetForm();
+  };
+
+  const handleToggleCategoryRail = () => {
+    setIsCategoryRailCollapsed((current) => {
+      const next = !current;
+      if (activeProject) {
+        window.localStorage.setItem(getWorldBibleRailStorageKey(activeProject.id), String(next));
+      }
+      return next;
+    });
   };
 
   const openCharacterCategory = useCallback(() => {
@@ -1723,7 +1747,44 @@ function WorldBibleRoute() {
           </div>
         </details>
       </div>
-      <div className={styles.routeShell}>
+      <div className={styles.contextRailControls}>
+        <button type='button' onClick={handleToggleCategoryRail}>
+          {isCategoryRailCollapsed ? 'Show Categories' : 'Hide Categories'}
+        </button>
+      </div>
+      <div
+        className={`${styles.routeShell} ${
+          isCategoryRailCollapsed ? styles.routeShellRailCollapsed : ''
+        }`}
+      >
+        {!isCategoryRailCollapsed && (
+          <aside className={styles.categoryRail} aria-label='World Bible categories'>
+            <div className={styles.categoryRailHeader}>
+              <h2>Categories</h2>
+              <span className={styles.categoryRailCount}>{categories.length}</span>
+            </div>
+            <div className={styles.tabNav}>
+              {categories.map((cat) => (
+                <button
+                  key={cat.id}
+                  type='button'
+                  onClick={() => handleSelectCategoryTab(cat.id)}
+                  className={`${styles.tab} ${
+                    viewMode === 'category' && activeTab === cat.id ? styles.active : ''
+                  }`}
+                >
+                  {cat.name}
+                </button>
+              ))}
+              <button
+                onClick={() => setShowCategoryManager(!showCategoryManager)}
+                className={styles.manageButton}
+              >
+                {showCategoryManager ? 'Close' : 'Manage Categories'}
+              </button>
+            </div>
+          </aside>
+        )}
         <div className={styles.mainColumn}>
       {feedback && (
         <p
@@ -1767,27 +1828,6 @@ function WorldBibleRoute() {
           </div>
         </div>
       )}
-
-      <div className={styles.tabNav}>
-        {categories.map((cat) => (
-          <button
-            key={cat.id}
-            type='button'
-            onClick={() => handleSelectCategoryTab(cat.id)}
-            className={`${styles.tab} ${
-              viewMode === 'category' && activeTab === cat.id ? styles.active : ''
-            }`}
-          >
-            {cat.name}
-          </button>
-        ))}
-        <button
-          onClick={() => setShowCategoryManager(!showCategoryManager)}
-          className={styles.manageButton}
-        >
-          {showCategoryManager ? 'Close' : 'Manage Categories'}
-        </button>
-      </div>
 
       {activeCategory && viewMode === 'category' && (
         <section className={styles.castPanel} aria-label={`${activeCategory.name} canon`}>

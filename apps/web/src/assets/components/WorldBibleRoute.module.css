@@ -7,7 +7,62 @@
 }
 
 .routeShell {
+  display: grid;
+  grid-template-columns: minmax(220px, 300px) minmax(0, 1fr);
+  gap: 1rem;
+  align-items: start;
   min-width: 0;
+}
+
+.routeShellRailCollapsed {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.contextRailControls {
+  display: flex;
+  justify-content: flex-start;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  padding: 0.75rem 0.85rem;
+  border: 1px solid var(--surface-border-soft);
+  border-radius: 12px;
+  background: var(--surface-panel);
+}
+
+.categoryRail {
+  position: sticky;
+  top: 1rem;
+  display: grid;
+  gap: 0.75rem;
+  border: 1px solid var(--surface-border-soft);
+  border-radius: 14px;
+  background: var(--surface-panel);
+  padding: 1rem;
+}
+
+.categoryRailHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.categoryRailHeader h2 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.categoryRailCount {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2rem;
+  border: 1px solid var(--surface-border-soft);
+  border-radius: 999px;
+  padding: 0.15rem 0.45rem;
+  color: var(--color-text-secondary);
+  font-size: 0.78rem;
+  font-weight: 700;
 }
 
 .utilityStack {
@@ -107,19 +162,19 @@
 }
 
 .tabNav {
-  display: flex;
+  display: grid;
   gap: 0.5rem;
-  border-bottom: 2px solid var(--color-border);
-  margin-bottom: 1rem;
 }
 
 .tab {
-  padding: 0.5rem 1rem;
+  width: 100%;
+  padding: 0.55rem 0.7rem;
   background: var(--color-bg-primary);
   color: var(--color-text-primary);
   border: 1px solid var(--color-border);
-  border-radius: 4px 4px 0 0;
+  border-radius: 10px;
   cursor: pointer;
+  text-align: left;
   transition: background-color 0.2s;
 }
 
@@ -134,17 +189,18 @@
 }
 
 .manageButton {
-  margin-left: auto;
-  padding: 0.5rem 1rem;
-  background-color: var(--color-text-secondary);
-  color: var(--color-on-accent);
-  border: none;
-  border-radius: 4px;
+  width: 100%;
+  padding: 0.55rem 0.7rem;
+  background-color: var(--button-secondary-bg);
+  color: var(--button-secondary-text);
+  border: 1px solid var(--button-secondary-border);
+  border-radius: 10px;
   cursor: pointer;
+  text-align: left;
 }
 
 .manageButton:hover {
-  background-color: var(--color-text-secondary);
+  background-color: var(--button-secondary-bg-hover);
 }
 
 .helpPanel {
@@ -700,6 +756,14 @@
 }
 
 @media (max-width: 900px) {
+  .routeShell {
+    grid-template-columns: 1fr;
+  }
+
+  .categoryRail {
+    position: static;
+  }
+
   .utilityStack {
     grid-template-columns: 1fr;
   }

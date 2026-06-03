@@ -82,6 +82,10 @@
   align-items: start;
 }
 
+.layoutRailCollapsed {
+  grid-template-columns: minmax(0, 1fr);
+}
+
 .editorStack {
   display: grid;
   gap: 1rem;
@@ -94,6 +98,11 @@
   border-radius: 16px;
   background: color-mix(in oklab, var(--color-bg-secondary) 90%, var(--color-on-accent));
   padding: 1rem;
+}
+
+.listCard {
+  position: sticky;
+  top: 1rem;
 }
 
 .cardHeader {
@@ -310,6 +319,10 @@
 @media (max-width: 980px) {
   .layout {
     grid-template-columns: 1fr;
+  }
+
+  .listCard {
+    position: static;
   }
 }
 

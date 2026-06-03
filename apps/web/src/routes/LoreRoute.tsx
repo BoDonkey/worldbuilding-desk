@@ -84,6 +84,9 @@ const summarizeContent = (content: string, limit = 220): string => {
 const formatFactValue = (value: CanonicalFact['value'] | LoreFactProposal['value']): string =>
   typeof value === 'string' ? value : `${value.label}: ${value.value}`;
 
+const getLoreRailStorageKey = (projectId: string) =>
+  `wbd:lore:document-rail-collapsed:${projectId}`;
+
 function LoreRoute() {
   const activeProject = useAppStore((state) => state.activeProject);
   const [documents, setDocuments] = useState<LoreDocument[]>([]);
@@ -111,7 +114,18 @@ function LoreRoute() {
     tone: 'success' | 'error';
     message: string;
   } | null>(null);
+  const [isDocumentRailCollapsed, setIsDocumentRailCollapsed] = useState(false);
   const importInputRef = useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => {
+    if (!activeProject) {
+      setIsDocumentRailCollapsed(false);
+      return;
+    }
+    setIsDocumentRailCollapsed(
+      window.localStorage.getItem(getLoreRailStorageKey(activeProject.id)) === 'true'
+    );
+  }, [activeProject]);
 
   useEffect(() => {
     if (!activeProject) {
@@ -653,6 +667,16 @@ function LoreRoute() {
     setLinkDrafts((current) => current.filter((_, draftIndex) => draftIndex !== index));
   };
 
+  const handleToggleDocumentRail = () => {
+    setIsDocumentRailCollapsed((current) => {
+      const next = !current;
+      if (activeProject) {
+        window.localStorage.setItem(getLoreRailStorageKey(activeProject.id), String(next));
+      }
+      return next;
+    });
+  };
+
   if (!activeProject) {
     return (
       <section className={styles.page}>
@@ -679,6 +703,9 @@ function LoreRoute() {
         actions={<ProjectScratchpadButton projectId={activeProject.id} />}
       />
       <div className={styles.utilityRow}>
+        <button type='button' onClick={handleToggleDocumentRail}>
+          {isDocumentRailCollapsed ? 'Show Lore Documents' : 'Hide Lore Documents'}
+        </button>
         <button type='button' onClick={handleImportClick} disabled={isImporting}>
           {isImporting ? 'Importing...' : 'Import Lore File'}
         </button>
@@ -702,7 +729,88 @@ function LoreRoute() {
         </p>
       ) : null}
 
-      <div className={styles.layout}>
+      <div
+        className={`${styles.layout} ${
+          isDocumentRailCollapsed ? styles.layoutRailCollapsed : ''
+        }`}
+      >
+        {!isDocumentRailCollapsed && (
+        <aside className={styles.listCard} aria-label='Lore documents'>
+          <div className={styles.cardHeader}>
+            <h2>Project Lore</h2>
+            <span className={styles.countBadge}>{documents.length}</span>
+          </div>
+          {documents.length === 0 ? (
+            <p className={styles.emptyState}>
+              No lore documents yet. Import a dossier or start a longform world note.
+            </p>
+          ) : (
+            <div className={styles.documentList}>
+              {documents.map((document) => {
+                const links = linksByDocumentId.get(document.id) ?? [];
+                const documentEntityProposals = entityProposalsByDocumentId.get(document.id) ?? [];
+                const documentProposals = proposalsByDocumentId.get(document.id) ?? [];
+                const documentFacts = canonicalFactsByDocumentId.get(document.id) ?? [];
+                return (
+                  <article key={document.id} className={styles.documentCard}>
+                    <div className={styles.documentHeader}>
+                      <div>
+                        <p className={styles.documentKind}>
+                          {LORE_KIND_OPTIONS.find((option) => option.value === document.kind)?.label ??
+                            'Lore'}
+                        </p>
+                        <h3>{document.title}</h3>
+                      </div>
+                      <div className={styles.inlineActions}>
+                        <button type='button' onClick={() => beginEdit(document)}>
+                          Edit
+                        </button>
+                        <button
+                          type='button'
+                          onClick={() => void handleExtractFacts(document)}
+                          disabled={extractingId === document.id}
+                        >
+                          {extractingId === document.id ? 'Extracting...' : 'Extract'}
+                        </button>
+                        <button
+                          type='button'
+                          onClick={() => void handleDelete(document)}
+                          disabled={deletingId === document.id}
+                        >
+                          {deletingId === document.id ? 'Deleting...' : 'Delete'}
+                        </button>
+                      </div>
+                    </div>
+                    <p className={styles.documentSummary}>
+                      {document.summary || summarizeContent(document.content)}
+                    </p>
+                    <div className={styles.metaRow}>
+                      <span>{documentEntityProposals.length} entity candidates</span>
+                      <span>{documentProposals.length} fact candidates</span>
+                      <span>{documentFacts.length} accepted</span>
+                    </div>
+                    {links.length > 0 ? (
+                      <div className={styles.linkBadges}>
+                        {links.map((link) => {
+                          const label =
+                            link.targetType === 'character'
+                              ? characters.find((character) => character.id === link.targetId)?.name
+                              : entities.find((entity) => entity.id === link.targetId)?.name;
+                          return (
+                            <span key={link.id} className={styles.linkBadge}>
+                              {link.relationship.replace(/_/g, ' ')}: {label ?? 'Unknown'}
+                            </span>
+                          );
+                        })}
+                      </div>
+                    ) : null}
+                  </article>
+                );
+              })}
+            </div>
+          )}
+        </aside>
+        )}
         <div className={styles.editorStack}>
           <form className={styles.editorCard} onSubmit={handleSubmit}>
             <div className={styles.cardHeader}>
@@ -954,81 +1062,6 @@ function LoreRoute() {
           ) : null}
         </div>
 
-        <div className={styles.listCard}>
-          <div className={styles.cardHeader}>
-            <h2>Project Lore</h2>
-            <span className={styles.countBadge}>{documents.length}</span>
-          </div>
-          {documents.length === 0 ? (
-            <p className={styles.emptyState}>
-              No lore documents yet. Import a dossier or start a longform world note.
-            </p>
-          ) : (
-            <div className={styles.documentList}>
-              {documents.map((document) => {
-                const links = linksByDocumentId.get(document.id) ?? [];
-                const documentEntityProposals = entityProposalsByDocumentId.get(document.id) ?? [];
-                const documentProposals = proposalsByDocumentId.get(document.id) ?? [];
-                const documentFacts = canonicalFactsByDocumentId.get(document.id) ?? [];
-                return (
-                  <article key={document.id} className={styles.documentCard}>
-                    <div className={styles.documentHeader}>
-                      <div>
-                        <p className={styles.documentKind}>
-                          {LORE_KIND_OPTIONS.find((option) => option.value === document.kind)?.label ??
-                            'Lore'}
-                        </p>
-                        <h3>{document.title}</h3>
-                      </div>
-                      <div className={styles.inlineActions}>
-                        <button type='button' onClick={() => beginEdit(document)}>
-                          Edit
-                        </button>
-                        <button
-                          type='button'
-                          onClick={() => void handleExtractFacts(document)}
-                          disabled={extractingId === document.id}
-                        >
-                          {extractingId === document.id ? 'Extracting...' : 'Extract'}
-                        </button>
-                        <button
-                          type='button'
-                          onClick={() => void handleDelete(document)}
-                          disabled={deletingId === document.id}
-                        >
-                          {deletingId === document.id ? 'Deleting...' : 'Delete'}
-                        </button>
-                      </div>
-                    </div>
-                    <p className={styles.documentSummary}>
-                      {document.summary || summarizeContent(document.content)}
-                    </p>
-                    <div className={styles.metaRow}>
-                      <span>{documentEntityProposals.length} entity candidates</span>
-                      <span>{documentProposals.length} fact candidates</span>
-                      <span>{documentFacts.length} accepted</span>
-                    </div>
-                    {links.length > 0 ? (
-                      <div className={styles.linkBadges}>
-                        {links.map((link) => {
-                          const label =
-                            link.targetType === 'character'
-                              ? characters.find((character) => character.id === link.targetId)?.name
-                              : entities.find((entity) => entity.id === link.targetId)?.name;
-                          return (
-                            <span key={link.id} className={styles.linkBadge}>
-                              {link.relationship.replace(/_/g, ' ')}: {label ?? 'Unknown'}
-                            </span>
-                          );
-                        })}
-                      </div>
-                    ) : null}
-                  </article>
-                );
-              })}
-            </div>
-          )}
-        </div>
       </div>
     </section>
   );
