@@ -26,6 +26,14 @@
   background: var(--surface-panel);
 }
 
+.utilityActions {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
 .status {
   font-size: 0.84rem;
   color: var(--color-text-secondary);
@@ -36,6 +44,10 @@
   grid-template-columns: minmax(260px, 340px) minmax(0, 1fr);
   gap: 1rem;
   align-items: start;
+}
+
+.layoutRailCollapsed {
+  grid-template-columns: minmax(0, 1fr);
 }
 
 .panel {
@@ -215,6 +227,14 @@
   .layout,
   .formGrid {
     grid-template-columns: 1fr;
+  }
+
+  .utilityRow {
+    align-items: flex-start;
+  }
+
+  .utilityActions {
+    justify-content: flex-start;
   }
 
   .listPanel {
