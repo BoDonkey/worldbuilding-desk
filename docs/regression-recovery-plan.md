@@ -6,6 +6,7 @@
 - `temp-update`: functional base for recovery. It forks from `main` at `7153ab0 Update workspace review` and includes the newer Zustand store work.
 - `codex/review-completion-state`: richer UI/reference branch. Use it for selective product-shape recovery only, not as the base branch.
 - `codex/reconcile-temp-update-ui`: active recovery branch, based on `temp-update`.
+- `codex/dictionary-highlight-filter`: current continuation branch for the June 3 active-project chrome/rail slice, based on the reconciled UI baseline.
 
 ## Recovery Approach
 
@@ -111,6 +112,13 @@ Completed recovery checkpoints on `codex/reconcile-temp-update-ui`:
    - Inline review popover controls now keep stable rows when category selection changes.
    - Unknown extraction now keeps longer proper names such as `Magical Substance Control Agency` and suppresses common sentence-start `Whatever`.
    - `lore-review-matching.cy.ts` now reflects current general-fiction `/characters` routing and covers World Bible canon deletion removing alias/highlight surfaces.
+15. June 3 active-project chrome and rail checkpoints on `codex/dictionary-highlight-filter`:
+   - `69dbb88` unified active-project page chrome with shared header placement.
+   - `616ff78`, `85c29fa`, `5b4071e`, and `8a1e922` aligned secondary route headers, added Scratchpad access to planning/review surfaces, stabilized Corkboard header actions, and normalized Lore/Canon utility placement.
+   - `96faf81` added a collapsible Corkboard chapter-card rail so the card list can be hidden while planning.
+   - `9c02c1e` added context rails to Lore and World Bible using the Workspace rail pattern.
+   - `b85e8ae` moved World Bible import/help/template utilities from the top header into the rail.
+   - `931bf51` added Lore starter cards for manual writing, dossier import, and canon extraction.
 
 Verified for the current checkpoint:
 
@@ -140,3 +148,9 @@ Recommended next slices:
 - A broader Cypress run surfaced an existing `post-merge-smoke.cy.ts` failure around `Prompt Tools`; treat that as a known follow-up, not as a failure introduced by the project-mode guardrail slice.
 - `lore-review-matching.cy.ts` now passes after updating the stale `/characters` expectation and adding the World Bible canon deletion regression.
 - The working tree was clean after commit `f7c2f19 Stabilize World Bible review aliases`.
+- The active-project chrome/rail slice was committed through `931bf51 Add lore starter cards` on `codex/dictionary-highlight-filter`.
+- Verified in that slice:
+  - `pnpm run build:web`
+  - browser smoke on `/workspace`, `/world-bible`, `/lore`, `/corkboard`, and `/canon-decisions`
+  - Lore starter cards render; `Start Writing` focuses the editor title input; `Extract Facts` remains disabled until an active document exists.
+- Next product question: decide how Cast-style author-invoked AI drafting generalizes to non-character World Bible categories such as races, faeries, factions, species, or organizations without treating every category as an individual character list or silently creating canon.

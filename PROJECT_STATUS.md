@@ -119,6 +119,9 @@ Under the hood, the app still includes rich systems for world data, rules, chara
 - Zustand workspace UI store added for project-scoped drawer preferences, selected scene restoration, transient workspace modal state, export/import UI state, and scene create/delete operation flags.
 - Shared page chrome component added for Workspace, World Bible, Lore, and Canon Decisions so primary writing/canon surfaces now share title, eyebrow, description/meta, and action placement.
 - Shared project scratchpad modal/button component added for non-workspace surfaces while reusing the existing project-scoped scratchpad persistence path.
+- Shared context rails now exist on World Bible, Lore, and Corkboard, following the Workspace-side-rail pattern where it helps hide secondary lists/tools without losing access.
+- World Bible import/help/template utilities moved out of the top header into the side rail; route headers should stay focused on page identity plus the shared Scratchpad action.
+- Lore now has starter cards for manual writing, dossier import, and canon extraction, matching the task-card pattern used by World Bible while keeping extracted facts/entities as candidates until accepted.
 - `WorkspaceRoute` now groups workspace store subscriptions by concern instead of scattering individual selectors through the route body.
 - `useWorkspaceDocuments` now keeps persistence behavior local while using pure helpers for document selection initialization, editor-document assembly, change detection, and manual-save/autosave consistency mode selection.
 - Shared text matching contract added for smoke-critical lore/review matching paths.
@@ -148,6 +151,7 @@ Under the hood, the app still includes rich systems for world data, rules, chara
 - Decide whether Corkboard graduates from a quick-access modal into a dedicated planning tab/route while keeping the modal for in-scene reference.
 - Add a deliberate AI-to-Scratchpad capture action so planning thoughts from right-rail conversations are easy to retain.
 - Define the next Scratchpad evolution: quick access is now broadly available, so the remaining question is lightweight organization rather than one flat note forever.
+- Revisit AI authoring for non-character World Bible categories before adding more category-specific flows. Categories such as races, faeries, factions, or custom species may need the same author-invoked draft assistance that Cast has, but the interaction should be generalized around category schema/entity type rather than assuming "character."
 - Finish the first search UX pass by manually retesting scene-result restore/jump behavior and deciding whether Compendium should join unified search results.
 
 ### Engineering
@@ -209,6 +213,8 @@ Under the hood, the app still includes rich systems for world data, rules, chara
 - Scratchpad backup export/import round-trip is covered by the Cypress post-merge smoke.
 - Scratchpad is included in project backup snapshot/import paths.
 - Shared page chrome and scratchpad access were browser-smoke-checked on Workspace, World Bible, Lore, and Canon Decisions on June 3, 2026.
+- Context rail/header unification was browser-smoke-checked on Workspace, World Bible, Lore, Corkboard, and Canon Decisions on June 3, 2026.
+- Lore starter cards were browser-smoke-checked on June 3, 2026: cards render, Scratchpad remains the only header utility, `Extract Facts` is disabled without an active document, and `Start Writing` focuses the editor title input.
 - Project backup smoke now explicitly covers Scratchpad and Corkboard round-trip, and the latest manual pass is green after fixing scratchpad import identity plus merge-category duplication.
 - App-shell search is visible from the rail/mobile nav, scene search reloads after writing changes, and World Bible search focus now switches to the correct category tab.
 - During the smoke pass, the following review/alias issues were fixed:

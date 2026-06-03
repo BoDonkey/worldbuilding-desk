@@ -46,8 +46,11 @@ As of June 3, 2026:
 
 - Workspace, World Bible, Lore, and Canon Decisions share a reusable page-header component for active-project surfaces.
 - Workspace is the model for the global feel: calm header, current scene/project context, and only the passive review badge as persistent header action.
-- World Bible keeps the stronger canon workflow model: category browsing is list-first, manual forms open only after create/edit selection, and import/help tools live in a compact utility rail.
-- Scratchpad is available from World Bible, Lore, and Canon Decisions through a shared project scratchpad modal, while Workspace retains its existing modal/context drawer access.
+- World Bible keeps the stronger canon workflow model: category browsing is list-first, manual forms open only after create/edit selection, and import/help/template tools live in a compact context rail.
+- Lore and World Bible now use context rails aligned with the Workspace side-rail model.
+- Corkboard now has a collapsible chapter-card rail so the card list can be hidden while planning.
+- Scratchpad is available from World Bible, Lore, Corkboard, and Canon Decisions through a shared project scratchpad modal, while Workspace retains its existing modal/context drawer access.
+- Lore has starter cards for writing manually, importing a dossier, or extracting canon candidates from the active saved document.
 - Future route work should reuse shared page chrome before adding local page-header patterns.
 
 ## Success Criteria
@@ -72,7 +75,7 @@ Do now:
 Do not do in this roadmap:
 
 - new mechanics systems
-- new AI workflows beyond necessary relabeling
+- new AI workflows beyond necessary relabeling unless a selected slice explicitly generalizes the existing author-invoked Cast draft flow for other World Bible categories
 - deep ruleset redesign
 - large editor-shell rearchitecture not required for the tab simplification
 
@@ -160,6 +163,25 @@ What this checks off:
 - World Bible as real lore-writing surface
 - Pattern 4 follow-through without needing a new top-level concept
 - stronger longform lore direction already captured in architecture docs
+
+### Phase 3A: Generalize World Bible AI Drafting
+
+Goal:
+
+- decide how AI assistance should work for non-character categories before adding more category-specific controls
+
+Why here:
+
+- Cast already has an author-invoked AI draft flow
+- custom categories can represent races, faeries, factions, species, organizations, or other entity families
+- authors may want individual characters organized under those categories, but the app should not assume every category is a character list
+
+Implementation stance:
+
+1. Keep AI drafting explicit and author-invoked.
+2. Prefer schema-aware category/entity drafting over hardcoded character-only prompts.
+3. Preserve World Bible as the structured canon home; model output should fill editable draft fields, not silently create canon.
+4. Decide how category hierarchy should work before exposing AI flows that imply races/species/factions are the same thing as individual character records.
 
 ### Phase 4: Reframe Characters Route As Secondary Tooling Or Remove It
 

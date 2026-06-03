@@ -96,9 +96,11 @@ Implemented recently:
 - UI chrome checkpoint:
   - Workspace, World Bible, Lore, and Canon Decisions now share a reusable page-header component for eyebrow/title/meta/action placement.
   - Workspace keeps the current scene primary by limiting its header action to the passive review badge; new scene/import/planning controls remain in empty-state, footer, drawer, modal, and command surfaces.
-  - World Bible now uses shared page chrome, a compact utility rail for import/help, list-first category tabs, and explicit create/edit form reveal.
-  - Scratchpad quick access is available from World Bible, Lore, and Canon Decisions through the shared project scratchpad modal.
-  - The latest browser smoke confirmed shared headers on `/workspace`, `/world-bible`, `/lore`, and `/canon-decisions` on 2026-06-03.
+  - World Bible now uses shared page chrome, a compact context rail for import/help/template utilities, list-first category tabs, and explicit create/edit form reveal.
+  - Lore and World Bible now use context rails aligned with the Workspace side-rail model; Corkboard has a collapsible chapter-card rail so the card list can be hidden while planning.
+  - Scratchpad quick access is available from World Bible, Lore, Corkboard, and Canon Decisions through the shared project scratchpad modal.
+  - Lore now has starter cards for writing manually, importing a dossier, or extracting canon candidates from the active saved document.
+  - The latest browser smoke confirmed shared headers/rails on `/workspace`, `/world-bible`, `/lore`, `/corkboard`, and `/canon-decisions` on 2026-06-03.
 
 ## Recommended Priority Order
 
@@ -131,6 +133,8 @@ Implemented recently:
 - Run the focused character-canon smoke checklist in `docs/character-canon-unification-smoke-test.md` after the annotation redesign, before starting the Lore Documents IA reframing.
 - Keep branch scope narrow enough that each slice can be reverted cleanly if the UX direction changes.
 - Scratchpad quick access now exists on the main writing/canon/lore/review surfaces. The next scratchpad question is lightweight organization and capture flows, especially AI-to-Scratchpad, rather than basic availability.
+- UI shell stop point: the active-project header/rail pass is complete enough to pause. Continue future route work by reusing `PageHeader`, `ProjectScratchpadButton`, and the route context-rail pattern instead of adding local header utilities.
+- World Bible AI follow-up: Cast has an author-invoked AI draft flow, but non-character categories still need a product decision. Custom categories such as races, faeries, factions, species, or organizations may need schema-aware draft assistance and entity organization without treating all of them as individual characters.
 - Future optional systems note: character inventory currently tracks item names, quantities, notes, and catalog links, while the rules-engine inventory has a `capacity` field but no per-item weight or surfaced encumbrance calculation. When system-heavy character support comes back into focus, add carry weight/encumbrance as an explicit inventory concern rather than treating quantity as enough.
 - The background review path is only worth keeping if it remains bounded: proposal-only, local-first, and subordinate to deterministic validation. Avoid broadening it into an unbounded “project manager AI.”
 - Lore/canon reminder: freeform lore documents are author-facing source material, extracted entity/fact proposals are candidates, and only accepted anchors plus accepted canonical facts count as source-of-truth canon.
