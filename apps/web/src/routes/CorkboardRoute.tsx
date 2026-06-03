@@ -3,6 +3,7 @@ import type {FormEvent} from 'react';
 import type {ChapterCardStatus, PlotPoint} from '../entityTypes';
 import {useAppStore} from '../store/appStore';
 import {useWorkspaceCorkboard} from '../hooks/useWorkspaceCorkboard';
+import {PageHeader} from '../components/PageHeader';
 import styles from '../styles/CorkboardRoute.module.css';
 
 const STATUS_LABELS: Record<ChapterCardStatus, string> = {
@@ -114,31 +115,30 @@ function CorkboardRoute() {
   if (!activeProject) {
     return (
       <section className={styles.page}>
-        <h1 className={styles.title}>Corkboard</h1>
-        <p className={styles.intro}>
-          Open or create a project first to plan story arcs and chapter beats.
-        </p>
+        <PageHeader
+          eyebrow='Planning'
+          title='Corkboard'
+          description='Open or create a project first to plan story arcs and chapter beats.'
+        />
       </section>
     );
   }
 
   return (
     <section className={styles.page}>
-      <header className={styles.header}>
-        <div>
-          <h1 className={styles.title}>Corkboard</h1>
-          <p className={styles.intro}>
-            Plan story arcs, chapters, and turning points without changing the writing workspace.
-            The quick workspace modal uses these same cards.
-          </p>
-        </div>
-        <div className={styles.headerActions}>
+      <PageHeader
+        eyebrow='Planning'
+        title='Corkboard'
+        description='Plan story arcs, chapters, and turning points without changing the writing workspace. The quick workspace modal uses these same cards.'
+        actions={
+          <>
           <span className={styles.status} role='status'>{statusLabel}</span>
           <button type='button' onClick={handleCreateCard} disabled={isCorkboardLoading}>
             New Chapter Card
           </button>
-        </div>
-      </header>
+          </>
+        }
+      />
 
       <div className={styles.metaRow}>
         <span className={styles.countChip}>

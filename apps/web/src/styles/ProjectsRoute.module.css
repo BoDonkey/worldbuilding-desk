@@ -1,24 +1,12 @@
 .page {
   width: 100%;
-  max-width: 1180px;
+  max-width: 1240px;
   margin: 0 auto;
-}
-
-.pageHeader {
-  margin-bottom: 1rem;
-}
-
-.pageHeader h1 {
-  margin: 0 0 0.35rem;
-}
-
-.pageIntro {
-  margin: 0;
-  color: var(--color-text-secondary);
+  display: grid;
+  gap: 1rem;
 }
 
 .feedback {
-  margin-bottom: 1rem;
   padding: 0.65rem 0.8rem;
   border-radius: 8px;
   border: 1px solid var(--color-border);
@@ -37,7 +25,6 @@
 }
 
 .helpPanel {
-  margin-bottom: 1rem;
   border: 1px solid var(--color-border);
   border-radius: 10px;
   background: color-mix(in oklab, var(--color-bg-secondary) 88%, var(--color-on-accent));
@@ -60,7 +47,6 @@
 }
 
 .heroCard {
-  margin-bottom: 1rem;
   border: 1px solid var(--color-accent-soft-border);
   border-radius: 14px;
   background: linear-gradient(135deg, var(--color-accent-soft-bg) 0%, var(--color-bg-secondary) 100%);

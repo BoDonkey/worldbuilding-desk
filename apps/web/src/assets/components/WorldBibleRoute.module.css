@@ -1,5 +1,9 @@
 .container {
-  padding: 1rem;
+  width: 100%;
+  max-width: 1240px;
+  margin: 0 auto;
+  display: grid;
+  gap: 1rem;
 }
 
 .routeShell {

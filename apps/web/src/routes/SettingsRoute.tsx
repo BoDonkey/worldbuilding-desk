@@ -21,6 +21,7 @@ import {
   PROJECT_MODE_OPTIONS
 } from '../projectMode';
 import {useAppStore} from '../store/appStore';
+import {PageHeader} from '../components/PageHeader';
 import styles from '../styles/SettingsRoute.module.css';
 
 interface SettingsSectionProps {
@@ -237,11 +238,16 @@ function SettingsRoute() {
   if (!activeProject) {
     return (
       <section className={styles.container}>
-        <h1>Settings</h1>
-        <p>
-          No active project. Go to <strong>Projects</strong> to create or open a
-          project first.
-        </p>
+        <PageHeader
+          eyebrow='Project controls'
+          title='Settings'
+          description={
+            <>
+              No active project. Go to <strong>Projects</strong> to create or open a
+              project first.
+            </>
+          }
+        />
       </section>
     );
   }
@@ -249,15 +255,22 @@ function SettingsRoute() {
   if (!settings) {
     return (
       <section className={styles.container}>
-        <h1>Settings</h1>
-        <p>Loading settings...</p>
+        <PageHeader
+          eyebrow='Project controls'
+          title='Settings'
+          description='Loading settings...'
+        />
       </section>
     );
   }
 
   return (
     <section className={styles.container}>
-      <h1>Settings for {activeProject.name}</h1>
+      <PageHeader
+        eyebrow='Project controls'
+        title='Settings'
+        meta={activeProject.name}
+      />
       <details className={styles.helpPanel}>
         <summary>Settings Wizard Help</summary>
         <div className={styles.helpBody}>

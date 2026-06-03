@@ -38,6 +38,7 @@ import {
   validateSnapshotCounts
 } from '../services/storage';
 import {useAppStore} from '../store/appStore';
+import {PageHeader} from '../components/PageHeader';
 import styles from '../styles/ProjectsRoute.module.css';
 
 function ProjectsRoute() {
@@ -482,12 +483,11 @@ function ProjectsRoute() {
 
   return (
     <section className={styles.page}>
-      <div className={styles.pageHeader}>
-        <h1>Projects</h1>
-        <p className={styles.pageIntro}>
-          Open a project and get back to writing. Create new worlds here; use the utility tools only when you need backup or migration work.
-        </p>
-      </div>
+      <PageHeader
+        eyebrow='Project library'
+        title='Projects'
+        description='Open a project and get back to writing. Create new worlds here; use the utility tools only when you need backup or migration work.'
+      />
       {feedback && (
         <p
           role='status'

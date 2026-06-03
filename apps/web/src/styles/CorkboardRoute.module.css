@@ -6,25 +6,6 @@
   gap: 1rem;
 }
 
-.header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 1rem;
-  flex-wrap: wrap;
-}
-
-.title {
-  margin: 0;
-}
-
-.intro {
-  margin: 0.35rem 0 0;
-  color: var(--color-text-secondary);
-  max-width: 70ch;
-  line-height: 1.5;
-}
-
 .headerActions,
 .actionRow,
 .metaRow,

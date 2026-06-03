@@ -1,17 +1,12 @@
 .container {
   width: 100%;
-  max-width: 1200px;
+  max-width: 1240px;
   margin: 0 auto;
-}
-
-.container h1 {
-  margin-top: 0;
-  margin-bottom: 2rem;
-  color: var(--color-text-primary);
+  display: grid;
+  gap: 1rem;
 }
 
 .helpPanel {
-  margin-bottom: 1.25rem;
   border: 1px solid var(--color-border);
   border-radius: 8px;
   background-color: var(--color-bg-secondary);
@@ -36,7 +31,7 @@
 .settingsGrid {
   display: flex;
   flex-direction: column;
-  gap: 2rem;
+  gap: 1rem;
 }
 
 .section {
