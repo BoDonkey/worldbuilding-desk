@@ -1918,16 +1918,25 @@ function WorkspaceRoute() {
           </>
         }
         actions={
-          <button
-            type='button'
-            className={`${styles.reviewIndicator} ${styles[`reviewIndicator_${reviewReadiness.state}`]}`}
-            onClick={() => openContextDrawer('review')}
-            title={reviewReadiness.detail}
-            aria-label={`Open review drawer: ${reviewReadiness.detail}`}
-          >
-            <span className={styles.reviewIndicatorDot} />
-            <span>{reviewReadiness.label}</span>
-          </button>
+          <>
+            <button
+              type='button'
+              className={`${styles.reviewIndicator} ${styles[`reviewIndicator_${reviewReadiness.state}`]}`}
+              onClick={() => openContextDrawer('review')}
+              title={reviewReadiness.detail}
+              aria-label={`Open review drawer: ${reviewReadiness.detail}`}
+            >
+              <span className={styles.reviewIndicatorDot} />
+              <span>{reviewReadiness.label}</span>
+            </button>
+            <button
+              type='button'
+              className={styles.scratchpadHeaderButton}
+              onClick={openScratchpadModal}
+            >
+              Scratchpad
+            </button>
+          </>
         }
       />
       {feedback && (

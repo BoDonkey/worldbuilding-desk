@@ -46,6 +46,27 @@
   color: var(--color-text-primary);
 }
 
+.scratchpadHeaderButton {
+  border: 1px solid var(--button-secondary-border);
+  border-radius: 12px;
+  background: var(--button-secondary-bg);
+  color: var(--button-secondary-text);
+  padding: 0.45rem 0.75rem;
+  font: inherit;
+  font-size: 0.86rem;
+  line-height: 1.25;
+  box-shadow: var(--button-shadow);
+  cursor: pointer;
+  transition:
+    background-color 0.18s ease,
+    transform 0.18s ease;
+}
+
+.scratchpadHeaderButton:hover {
+  background: var(--button-secondary-bg-hover);
+  transform: translateY(-1px);
+}
+
 .reviewIndicator {
   display: inline-flex;
   align-items: center;

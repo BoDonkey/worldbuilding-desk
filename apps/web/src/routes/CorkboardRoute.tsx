@@ -4,6 +4,7 @@ import type {ChapterCardStatus, PlotPoint} from '../entityTypes';
 import {useAppStore} from '../store/appStore';
 import {useWorkspaceCorkboard} from '../hooks/useWorkspaceCorkboard';
 import {PageHeader} from '../components/PageHeader';
+import {ProjectScratchpadButton} from '../components/ProjectScratchpadButton';
 import styles from '../styles/CorkboardRoute.module.css';
 
 const STATUS_LABELS: Record<ChapterCardStatus, string> = {
@@ -132,10 +133,11 @@ function CorkboardRoute() {
         description='Plan story arcs, chapters, and turning points without changing the writing workspace. The quick workspace modal uses these same cards.'
         actions={
           <>
-          <span className={styles.status} role='status'>{statusLabel}</span>
-          <button type='button' onClick={handleCreateCard} disabled={isCorkboardLoading}>
-            New Chapter Card
-          </button>
+            <ProjectScratchpadButton projectId={activeProject.id} />
+            <span className={styles.status} role='status'>{statusLabel}</span>
+            <button type='button' onClick={handleCreateCard} disabled={isCorkboardLoading}>
+              New Chapter Card
+            </button>
           </>
         }
       />
