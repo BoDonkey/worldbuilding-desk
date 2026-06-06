@@ -56,6 +56,10 @@ import {
 } from '../services/worldBible/worldBibleReviewHelpers';
 import {deriveCharacterAliasSuggestions} from '../services/worldBible/worldBibleCanonicalization';
 import {
+  buildWorldBibleAiDraftPrompt,
+  parseWorldBibleAiDraft
+} from '../services/worldBible/worldBibleAiDraft';
+import {
   parseCharacterImportText,
   readCharacterImportFile,
   type CharacterImportDraft,
@@ -68,7 +72,7 @@ import {LLMService} from '../services/llm/LLMService';
 type WorldBibleViewMode = 'category' | 'review';
 type CharacterImportStep = 'idle' | 'input' | 'review';
 type CharacterAuthoringMode = 'idle' | 'manual' | 'import' | 'ai';
-type RecordAuthoringMode = 'idle' | 'manual';
+type RecordAuthoringMode = 'idle' | 'manual' | 'ai';
 
 const getPreferredImportField = (
   category: EntityCategory
@@ -405,6 +409,8 @@ function WorldBibleRoute() {
   const [isImportingCharacterDoc, setIsImportingCharacterDoc] = useState(false);
   const [characterAiPrompt, setCharacterAiPrompt] = useState('');
   const [isGeneratingCharacterDraft, setIsGeneratingCharacterDraft] = useState(false);
+  const [recordAiPrompt, setRecordAiPrompt] = useState('');
+  const [isGeneratingRecordDraft, setIsGeneratingRecordDraft] = useState(false);
   const [newCharacterSectionName, setNewCharacterSectionName] = useState('');
   const [expandedSummaryEntityIds, setExpandedSummaryEntityIds] = useState<string[]>([]);
   const [isNameResolverOpen, setIsNameResolverOpen] = useState(false);
@@ -916,6 +922,8 @@ function WorldBibleRoute() {
     setCharacterImportSections([]);
     setCharacterAiPrompt('');
     setIsGeneratingCharacterDraft(false);
+    setRecordAiPrompt('');
+    setIsGeneratingRecordDraft(false);
     setNewCharacterSectionName('');
   };
 
@@ -968,6 +976,23 @@ function WorldBibleRoute() {
     setCharacterImportDraft(null);
     setCharacterImportSections([]);
   }, [activeCategory]);
+
+  const startCategoryAiDraft = useCallback(() => {
+    if (!activeCategory || activeCategoryIsCharacterLike) return;
+    setViewMode('category');
+    setEditingId(null);
+    setName('');
+    setFieldValues({});
+    setPendingReviewFocus(null);
+    setIsNameResolverOpen(false);
+    setManualResolutionTargetId('');
+    setCharacterAuthoringMode('idle');
+    setRecordAuthoringMode('ai');
+    setCharacterImportStep('idle');
+    setCharacterImportDraft(null);
+    setCharacterImportSections([]);
+    setFeedback(null);
+  }, [activeCategory, activeCategoryIsCharacterLike]);
 
   const startCharacterAiDraft = useCallback(() => {
     openCharacterCategory();
@@ -1135,6 +1160,53 @@ function WorldBibleRoute() {
       setFeedback({tone: 'error', message});
     } finally {
       setIsGeneratingCharacterDraft(false);
+    }
+  };
+
+  const handleGenerateRecordDraft = async () => {
+    if (!activeCategory || activeCategoryIsCharacterLike) return;
+    const premise = recordAiPrompt.trim();
+    if (!premise) {
+      setFeedback({
+        tone: 'error',
+        message: `Describe the ${activeCategory.name.toLowerCase()} record before generating a draft.`
+      });
+      return;
+    }
+
+    setIsGeneratingRecordDraft(true);
+    setFeedback(null);
+    try {
+      const service = new LLMService(projectSettings?.aiSettings);
+      const response = await service.complete({
+        temperature: 0.7,
+        maxTokens: 900,
+        systemPrompt:
+          'You create concise, editable World Bible canon drafts for fiction authors. Return only valid JSON with no markdown.',
+        messages: [
+          {
+            role: 'user',
+            content: buildWorldBibleAiDraftPrompt(activeCategory, premise)
+          }
+        ]
+      });
+      const draft = parseWorldBibleAiDraft(response.content, activeCategory);
+
+      setName(draft.name ?? '');
+      setRecordAuthoringMode('ai');
+      setFieldValues(draft.fields);
+      setFeedback({
+        tone: 'success',
+        message: 'AI draft generated. Review and edit the World Bible fields before saving.'
+      });
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : 'Unable to generate this World Bible draft. Check AI settings and try again.';
+      setFeedback({tone: 'error', message});
+    } finally {
+      setIsGeneratingRecordDraft(false);
     }
   };
 
@@ -1373,15 +1445,16 @@ function WorldBibleRoute() {
 
   const handleAddSuggestedCharacterAlias = useCallback(
     (alias: string) => {
-      const aliases = parseAlternativeNames(
-        [fieldValues[ALTERNATIVE_NAMES_KEY] || '', alias].filter(Boolean).join(', ')
-      );
       setFieldValues((prev) => ({
         ...prev,
-        [ALTERNATIVE_NAMES_KEY]: formatAlternativeNames(aliases)
+        [ALTERNATIVE_NAMES_KEY]: formatAlternativeNames(
+          parseAlternativeNames(
+            [prev[ALTERNATIVE_NAMES_KEY] || '', alias].filter(Boolean).join(', ')
+          )
+        )
       }));
     },
-    [fieldValues, formatAlternativeNames, parseAlternativeNames]
+    []
   );
 
   useEffect(() => {
@@ -1706,6 +1779,20 @@ function WorldBibleRoute() {
             <div className={styles.categoryRailSection}>
               <h3>Templates</h3>
               <div className={styles.railActions}>
+                <button
+                  type='button'
+                  onClick={() => importInputRef.current?.click()}
+                  disabled={isImportingEntities}
+                >
+                  {isImportingEntities ? 'Importing...' : 'Import Docs'}
+                </button>
+                <button
+                  type='button'
+                  onClick={() => jsonImportInputRef.current?.click()}
+                  disabled={isImportingJson}
+                >
+                  {isImportingJson ? 'Loading JSON...' : 'Import JSON'}
+                </button>
                 <button type='button' onClick={handleDownloadJsonTemplate}>
                   Download JSON Template
                 </button>
@@ -1877,14 +1964,10 @@ function WorldBibleRoute() {
                 </>
               ) : (
                 <>
-                  <h3>Import JSON</h3>
-                  <p>Use structured rows when you already have names and fields.</p>
-                  <button
-                    type='button'
-                    onClick={() => jsonImportInputRef.current?.click()}
-                    disabled={isImportingJson}
-                  >
-                    {isImportingJson ? 'Loading JSON...' : 'Import JSON'}
+                  <h3>AI-Assisted Draft</h3>
+                  <p>Generate an editable draft from this category schema before saving canon.</p>
+                  <button type='button' onClick={startCategoryAiDraft}>
+                    Start With AI
                   </button>
                 </>
               )}
@@ -1939,6 +2022,59 @@ function WorldBibleRoute() {
                 setName('');
               }}
               disabled={isGeneratingCharacterDraft}
+            >
+              Clear
+            </button>
+          </div>
+        </section>
+      )}
+
+      {activeCategory && !activeCategoryIsCharacterLike && recordAuthoringMode === 'ai' && (
+        <section className={styles.characterAiPanel} aria-label='AI-assisted World Bible draft'>
+          <div className={styles.importPanelHeader}>
+            <div>
+              <h2>AI-Assisted {activeCategoryRecordLabel} Draft</h2>
+              <p className={styles.importSummary}>
+                Describe the record you need. The draft fills editable World Bible fields only after you generate it.
+              </p>
+            </div>
+            <button
+              type='button'
+              onClick={() => {
+                setRecordAuthoringMode('idle');
+                setRecordAiPrompt('');
+                setFieldValues({});
+                setName('');
+              }}
+            >
+              Close
+            </button>
+          </div>
+          <label className={styles.characterImportLabel}>
+            {activeCategoryRecordLabel} brief
+            <textarea
+              value={recordAiPrompt}
+              onChange={(event) => setRecordAiPrompt(event.target.value)}
+              rows={7}
+              placeholder={`A ${activeCategoryRecordLabel} with history, tensions, relationships, and story hooks...`}
+            />
+          </label>
+          <div className={styles.importPanelActions}>
+            <button
+              type='button'
+              onClick={() => void handleGenerateRecordDraft()}
+              disabled={isGeneratingRecordDraft || !recordAiPrompt.trim()}
+            >
+              {isGeneratingRecordDraft ? 'Generating...' : 'Generate Draft'}
+            </button>
+            <button
+              type='button'
+              onClick={() => {
+                setRecordAiPrompt('');
+                setFieldValues({});
+                setName('');
+              }}
+              disabled={isGeneratingRecordDraft}
             >
               Clear
             </button>

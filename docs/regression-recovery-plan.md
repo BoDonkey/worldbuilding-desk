@@ -119,6 +119,11 @@ Completed recovery checkpoints on `codex/reconcile-temp-update-ui`:
    - `9c02c1e` added context rails to Lore and World Bible using the Workspace rail pattern.
    - `b85e8ae` moved World Bible import/help/template utilities from the top header into the rail.
    - `931bf51` added Lore starter cards for manual writing, dossier import, and canon extraction.
+16. Current working slice - generalized non-character World Bible AI drafts:
+   - Non-character category task cards now expose author-invoked AI drafting instead of treating JSON import as the only third path.
+   - The draft prompt is generated from the active category schema, uses declared field keys/options, and ignores unknown model-returned fields.
+   - Generated drafts fill editable World Bible form state before save; no canon record is created automatically.
+   - Document and JSON import entry points remain available from the World Bible utility rail.
 
 Verified for the current checkpoint:
 
@@ -128,13 +133,20 @@ Verified for the current checkpoint:
 - `pnpm --filter web test:unit -- --run`
 - `pnpm --filter web exec cypress run --spec cypress/e2e/lore-review-matching.cy.ts`
 - Browser smoke on `http://localhost:5173/characters`: hub layout and manual character form render coherently, and long-form fields are TipTap editors.
+- Current schema-aware World Bible AI draft slice:
+  - `pnpm --filter web exec tsc --noEmit`
+  - `pnpm --filter web test:unit -- --run`
+  - `pnpm --filter web lint` passes with the existing unrelated warning in `apps/web/src/hooks/useWorkspaceDocuments.ts`.
+  - `pnpm --filter web build`
+  - Browser smoke on `/world-bible`: `Locations` exposes the AI draft task/panel, rail import actions remain visible, and missing-provider generation errors surface without saving canon.
 
 Recommended next slices:
 
-1. Run or repair broader review-completion smoke coverage before further review UI changes.
-2. Revisit workspace review drawer density only after the World Bible queue is stable; do not replace the current writing workspace with the reference branch workspace.
-3. Compare current review surfaces against `codex/review-completion-state` for narrow copy/density improvements only.
-4. Audit the known `post-merge-smoke.cy.ts` Prompt Tools failure and decide whether the expectation or implementation is stale.
+1. Browser-smoke the new non-character World Bible AI draft path on at least Locations/Items plus one custom category with select or multiselect fields.
+2. Run or repair broader review-completion smoke coverage before further review UI changes.
+3. Revisit workspace review drawer density only after the World Bible queue is stable; do not replace the current writing workspace with the reference branch workspace.
+4. Compare current review surfaces against `codex/review-completion-state` for narrow copy/density improvements only.
+5. Audit the known `post-merge-smoke.cy.ts` Prompt Tools failure and decide whether the expectation or implementation is stale.
 
 ## Next Session Handoff
 
@@ -153,4 +165,4 @@ Recommended next slices:
   - `pnpm run build:web`
   - browser smoke on `/workspace`, `/world-bible`, `/lore`, `/corkboard`, and `/canon-decisions`
   - Lore starter cards render; `Start Writing` focuses the editor title input; `Extract Facts` remains disabled until an active document exists.
-- Next product question: decide how Cast-style author-invoked AI drafting generalizes to non-character World Bible categories such as races, faeries, factions, species, or organizations without treating every category as an individual character list or silently creating canon.
+- Next product question: after browser smoke, decide whether schema-aware AI drafting needs category-specific prompt presets or whether the generic field-schema prompt is enough for races, faeries, factions, species, and organizations.

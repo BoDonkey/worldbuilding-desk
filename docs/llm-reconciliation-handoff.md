@@ -30,10 +30,12 @@ Do not wholesale merge or cherry-pick `codex/review-completion-state`. It has so
 - `9c02c1e` - added context rails to lore and world bible.
 - `b85e8ae` - moved world bible utilities into rail.
 - `931bf51` - added lore starter cards.
+- Current uncommitted slice - generalized non-character World Bible AI drafts.
 
 ## Current Checkpoint
 
 The active-project chrome/rail slice is committed through `931bf51`. The working tree was clean after that commit.
+The current working slice adds schema-aware AI drafting for non-character World Bible categories. It is not committed yet in this handoff state.
 
 Included areas:
 
@@ -57,6 +59,8 @@ Included areas:
 - `apps/web/src/components/Editor/extensions/ConsistencyHighlightsExtension.ts`
 - `apps/web/src/services/worldBible/worldBibleReviewHelpers.ts`
 - `apps/web/src/services/worldBible/worldBibleReviewHelpers.test.ts`
+- `apps/web/src/services/worldBible/worldBibleAiDraft.ts`
+- `apps/web/src/services/worldBible/worldBibleAiDraft.test.ts`
 - `apps/web/src/services/consistency/ConsistencyEngineService.ts`
 - `apps/web/src/services/consistency/ConsistencyEngineService.test.ts`
 - `apps/web/src/services/consistency/textMatcher.test.ts`
@@ -85,6 +89,10 @@ Implemented in the checkpoint:
 - Workspace general-fiction canon highlighting now treats World Bible character entities as canon and does not keep orphan Character Tools profiles highlighted after World Bible canon deletion.
 - Unknown extraction now keeps longer proper names such as `Magical Substance Control Agency` and suppresses the common sentence-start word `Whatever`.
 - Inline review popovers now keep Add / Ignore / Always ignore controls stable when the category dropdown changes.
+- Non-character World Bible category task cards now offer `AI-Assisted Draft`.
+- Schema-aware AI draft prompts are generated from the active category field schema and declared select/multiselect options.
+- AI output is parsed into editable World Bible form fields before save; unknown fields are ignored and canon is not created automatically.
+- World Bible document and JSON imports remain available from the utility rail.
 
 Verified after the checkpoint:
 
@@ -96,6 +104,12 @@ Verified after the checkpoint:
 - `pnpm --filter web lint` passes with one existing `useWorkspaceDocuments.ts` hook warning.
 - `pnpm --filter web exec cypress run --spec cypress/e2e/project-mode-guardrails.cy.ts` passes 7 tests.
 - `pnpm --filter web exec cypress run --spec cypress/e2e/lore-review-matching.cy.ts` passes 6 tests.
+- Current schema-aware World Bible AI draft slice:
+  - `pnpm --filter web exec tsc --noEmit`
+  - `pnpm --filter web test:unit -- --run` passes 110 tests.
+  - `pnpm --filter web lint` passes with the existing `useWorkspaceDocuments.ts` hook warning.
+  - `pnpm --filter web build` passes with existing Vite large-chunk and `onnxruntime-web` eval warnings.
+  - Browser smoke on `/world-bible` confirms `Locations` exposes the AI draft task/panel, rail import actions remain visible, and missing-provider generation errors surface without saving canon.
 
 Known verification note:
 
@@ -104,10 +118,11 @@ Known verification note:
 Next thing to resume:
 
 - Start a fresh narrow slice. Good candidates:
-  1. decide how Cast-style author-invoked AI drafting generalizes to non-character World Bible categories such as races, faeries, factions, species, or organizations
-  2. run or repair broader review-completion smoke coverage, including `post-merge-smoke.cy.ts` if Prompt Tools are still expected
-  3. compare current review surfaces against `codex/review-completion-state` for only narrow density/copy improvements
-  4. do a dedicated manual smoke of import -> review -> World Bible queue completion after the alias stabilization checkpoint
+  1. browser-smoke the non-character World Bible AI draft path on built-in and custom categories, especially select/multiselect fields
+  2. decide whether category-specific prompt presets are necessary after the generic schema-aware prompt is tested
+  3. run or repair broader review-completion smoke coverage, including `post-merge-smoke.cy.ts` if Prompt Tools are still expected
+  4. compare current review surfaces against `codex/review-completion-state` for only narrow density/copy improvements
+  5. do a dedicated manual smoke of import -> review -> World Bible queue completion after the alias stabilization checkpoint
 
 ## Required Reading
 
@@ -144,6 +159,7 @@ The build still emits existing Vite large-chunk warnings and an `onnxruntime-web
 - Audit docs for stale recovery-plan statements.
 - Identify risky reference-branch code that should not be ported.
 - Propose a schema-aware World Bible AI drafting model for non-character categories without implementing it broadly.
+- Browser-smoke the implemented schema-aware World Bible AI drafting path and report category-specific prompt gaps.
 
 ## Risky Tasks To Avoid
 

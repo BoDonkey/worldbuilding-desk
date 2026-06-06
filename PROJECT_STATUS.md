@@ -1,6 +1,6 @@
 # Worldbuilding-Desk Project Status
 
-**Last Updated:** June 3, 2026
+**Last Updated:** June 6, 2026
 
 ## Project Overview
 
@@ -67,6 +67,7 @@ Under the hood, the app still includes rich systems for world data, rules, chara
 - World Bible with dynamic categories and custom field schemas.
 - World Bible now follows shared page chrome, uses a compact utility rail for import/help tools, opens category tabs in browse/list mode by default, and reveals manual entry forms only after explicit create/edit selection.
 - World Bible category task cards reserve stable description height so switching between Characters, Locations, and Items does not shift the list below.
+- Non-character World Bible categories now have an explicit, schema-aware AI draft path. Generated output fills editable category fields before save, uses declared field keys/options, and does not create canon automatically.
 - Character records and character sheets.
 - Alias tracking and consistency storage.
 - Review linking can now target either World Bible entries or characters.
@@ -151,7 +152,7 @@ Under the hood, the app still includes rich systems for world data, rules, chara
 - Decide whether Corkboard graduates from a quick-access modal into a dedicated planning tab/route while keeping the modal for in-scene reference.
 - Add a deliberate AI-to-Scratchpad capture action so planning thoughts from right-rail conversations are easy to retain.
 - Define the next Scratchpad evolution: quick access is now broadly available, so the remaining question is lightweight organization rather than one flat note forever.
-- Revisit AI authoring for non-character World Bible categories before adding more category-specific flows. Categories such as races, faeries, factions, or custom species may need the same author-invoked draft assistance that Cast has, but the interaction should be generalized around category schema/entity type rather than assuming "character."
+- Browser-smoke and harden the new schema-aware AI draft path for non-character World Bible categories before adding more category-specific flows.
 - Finish the first search UX pass by manually retesting scene-result restore/jump behavior and deciding whether Compendium should join unified search results.
 
 ### Engineering
@@ -173,6 +174,7 @@ Under the hood, the app still includes rich systems for world data, rules, chara
 - Dual LLM review direction is captured in `docs/dual-llm-review-architecture.md`: local World Engine for passive structured review, BYOK providers for explicit creative work.
 - Near-term state-tracking direction is now grounded by persisted mutation-ledger scaffolding rather than docs alone: future accepted state deltas can be tied to `sceneId`, `sceneOrder`, `sourceRevision`, and `sourceHash`.
 - The current review UX direction for deterministic state suggestions is passive-by-default: proposals stay out of the writing flow, do not affect replay until accepted, and can be hidden and later restored without rejecting them.
+- AI drafting for World Bible canon should remain explicit and author-invoked. Cast keeps the richer character-specific draft flow; non-character categories use schema-aware field drafting that lands in editable record fields before save.
 
 ---
 
@@ -228,9 +230,11 @@ Under the hood, the app still includes rich systems for world data, rules, chara
 - Zustand workspace UI integration has been smoke-checked manually for Corkboard and Scratchpad memory saving, and the latest focused unit/build passes cover workspace store behavior plus document initialization/save helper behavior.
 
 ### Current Verification Notes
-- `pnpm --filter web lint` passes.
-- `pnpm --filter web test:unit -- --run` passes: 86 tests.
+- `pnpm --filter web lint` passes on June 6, 2026 with the existing `useWorkspaceDocuments.ts` hook warning.
+- `pnpm --filter web exec tsc --noEmit` passes after the schema-aware World Bible AI draft slice.
+- `pnpm --filter web test:unit -- --run` passes 110 tests, including `worldBibleAiDraft` schema parsing coverage.
 - `pnpm --filter web build` passes with the existing Vite large-chunk and `onnxruntime-web` eval warnings.
+- Browser smoke on `/world-bible` confirms non-character `Locations` shows the AI draft task/panel, rail import actions remain visible, and missing-provider generation errors surface without saving canon.
 - `pnpm --filter web exec cypress run` passes: 18 tests across review matching, post-merge smoke, scratchpad, and workspace navigation lock.
 - Manual smoke for workspace scene restoration and in-scene search targeting passes after the latest Zustand workspace checkpoint.
 - The post-merge Cypress smoke selectors were updated to match the current writing-first UI: `Scenes` / `Context` drawer controls, collapsed `Settings` sections, `/projects` backup flow, and stat-block rebind popovers.

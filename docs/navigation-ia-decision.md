@@ -122,7 +122,7 @@ AI drafting implication:
 
 - Character/Cast AI drafting should not remain the only pattern.
 - Custom World Bible categories may represent races, faeries, factions, species, organizations, or other grouped entity types.
-- Future AI entry points should be schema-aware and author-invoked: model output fills editable draft fields or candidate proposals, then the author decides what becomes canon.
+- AI entry points should be schema-aware and author-invoked: model output fills editable draft fields or candidate proposals, then the author decides what becomes canon. The first non-character World Bible draft path now follows the active category field schema; browser smoke should determine whether category-specific prompt presets are needed.
 - Do not model every non-character category as an individual character list. Category hierarchy and entity type should be resolved before adding more category-specific AI buttons.
 
 This supports the desired user flow:
