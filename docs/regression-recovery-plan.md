@@ -119,10 +119,13 @@ Completed recovery checkpoints on `codex/reconcile-temp-update-ui`:
    - `9c02c1e` added context rails to Lore and World Bible using the Workspace rail pattern.
    - `b85e8ae` moved World Bible import/help/template utilities from the top header into the rail.
    - `931bf51` added Lore starter cards for manual writing, dossier import, and canon extraction.
-16. Current working slice - generalized non-character World Bible AI drafts:
-   - Non-character category task cards now expose author-invoked AI drafting instead of treating JSON import as the only third path.
-   - The draft prompt is generated from the active category schema, uses declared field keys/options, and ignores unknown model-returned fields.
-   - Generated drafts fill editable World Bible form state before save; no canon record is created automatically.
+16. Current working slice - World Bible AI helper and import structure:
+   - World Bible category task cards keep manual/import as the primary authoring paths.
+   - The old non-character AI draft task-card path has been removed from this slice; future AI field/schema work should arrive through the helper proposal/action model.
+   - The current helper is an explicit floating chat opened from manual/import contexts, with selected assistant text applied only after the author chooses a destination.
+   - Assistant output can set the editable name, append aliases, or apply text to existing fields, but it still does not save canon automatically.
+   - Document import can deliberately map detected headings into category fields before imported records are saved.
+   - DOCX/HTML/text imports preserve intro/unmapped text in Description while detected top-level headings can become separate fields.
    - Document and JSON import entry points remain available from the World Bible utility rail.
 
 Verified for the current checkpoint:
@@ -133,16 +136,16 @@ Verified for the current checkpoint:
 - `pnpm --filter web test:unit -- --run`
 - `pnpm --filter web exec cypress run --spec cypress/e2e/lore-review-matching.cy.ts`
 - Browser smoke on `http://localhost:5173/characters`: hub layout and manual character form render coherently, and long-form fields are TipTap editors.
-- Current schema-aware World Bible AI draft slice:
+- Current World Bible AI helper/import slice:
   - `pnpm --filter web exec tsc --noEmit`
   - `pnpm --filter web test:unit -- --run`
   - `pnpm --filter web lint` passes with the existing unrelated warning in `apps/web/src/hooks/useWorkspaceDocuments.ts`.
   - `pnpm --filter web build`
-  - Browser smoke on `/world-bible`: `Locations` exposes the AI draft task/panel, rail import actions remain visible, and missing-provider generation errors surface without saving canon.
+  - Browser smoke on `/world-bible`: manual/import remain the primary category task cards, the helper opens from the record form, and selected assistant text applies to editable destinations without saving canon.
 
 Recommended next slices:
 
-1. Browser-smoke the new non-character World Bible AI draft path on at least Locations/Items plus one custom category with select or multiselect fields.
+1. Replace the interim selected-text apply bar with a model-proposed action system for fields, aliases, names, and new sections.
 2. Run or repair broader review-completion smoke coverage before further review UI changes.
 3. Revisit workspace review drawer density only after the World Bible queue is stable; do not replace the current writing workspace with the reference branch workspace.
 4. Compare current review surfaces against `codex/review-completion-state` for narrow copy/density improvements only.
@@ -165,4 +168,4 @@ Recommended next slices:
   - `pnpm run build:web`
   - browser smoke on `/workspace`, `/world-bible`, `/lore`, `/corkboard`, and `/canon-decisions`
   - Lore starter cards render; `Start Writing` focuses the editor title input; `Extract Facts` remains disabled until an active document exists.
-- Next product question: after browser smoke, decide whether schema-aware AI drafting needs category-specific prompt presets or whether the generic field-schema prompt is enough for races, faeries, factions, species, and organizations.
+- Next product question: after the helper action model exists, decide whether model-proposed category presets are needed for races, faeries, factions, species, and organizations.

@@ -16,6 +16,7 @@ import CategoryEditor from '../components/CategoryEditor';
 import {WorldBibleRichTextField} from '../components/WorldBibleRichTextField';
 import {ProjectScratchpadButton} from '../components/ProjectScratchpadButton';
 import {PageHeader} from '../components/PageHeader';
+import {AIAssistant} from '../components/AIAssistant/AIAssistant';
 import styles from '../assets/components/WorldBibleRoute.module.css';
 import type {RAGProvider} from '../services/rag/RAGService';
 import {getRAGService} from '../services/rag/getRAGService';
@@ -54,25 +55,24 @@ import {
   buildEntityMatchKey,
   getReviewResolutionLabel
 } from '../services/worldBible/worldBibleReviewHelpers';
-import {deriveCharacterAliasSuggestions} from '../services/worldBible/worldBibleCanonicalization';
 import {
-  buildWorldBibleAiDraftPrompt,
-  parseWorldBibleAiDraft
-} from '../services/worldBible/worldBibleAiDraft';
+  buildCanonicalAliasList,
+  deriveCharacterAliasSuggestions
+} from '../services/worldBible/worldBibleCanonicalization';
 import {
   parseCharacterImportText,
   readCharacterImportFile,
   type CharacterImportDraft,
   type CharacterImportSectionDraft
 } from '../services/characters/characterImportService';
-import {LLMService} from '../services/llm/LLMService';
 
 // activeProject read from store below
 
 type WorldBibleViewMode = 'category' | 'review';
 type CharacterImportStep = 'idle' | 'input' | 'review';
-type CharacterAuthoringMode = 'idle' | 'manual' | 'import' | 'ai';
-type RecordAuthoringMode = 'idle' | 'manual' | 'ai';
+type CharacterAuthoringMode = 'idle' | 'manual' | 'import';
+type RecordAuthoringMode = 'idle' | 'manual';
+type AiHelperApplyTarget = 'name' | 'aliases' | `field:${string}`;
 
 const getPreferredImportField = (
   category: EntityCategory
@@ -327,56 +327,6 @@ const buildCharacterImportCustomFieldValues = (
   }, {});
 };
 
-type CharacterAiDraftSection = {
-  title: string;
-  content: string;
-};
-
-type CharacterAiDraft = {
-  name?: string;
-  age?: string;
-  role?: string;
-  description?: string;
-  notes?: string;
-  sections?: CharacterAiDraftSection[];
-};
-
-const stripCodeFence = (value: string): string =>
-  value
-    .trim()
-    .replace(/^```(?:json)?\s*/i, '')
-    .replace(/\s*```$/i, '')
-    .trim();
-
-const parseCharacterAiDraft = (raw: string): CharacterAiDraft => {
-  const fenced = stripCodeFence(raw);
-  const jsonMatch = fenced.match(/\{[\s\S]*\}/);
-  const json = jsonMatch ? jsonMatch[0] : fenced;
-  const parsed = JSON.parse(json) as Record<string, unknown>;
-  const readString = (key: string) =>
-    typeof parsed[key] === 'string' ? String(parsed[key]).trim() : undefined;
-  const sections = Array.isArray(parsed.sections)
-    ? parsed.sections
-        .map((section): CharacterAiDraftSection | null => {
-          if (!section || typeof section !== 'object') return null;
-          const record = section as Record<string, unknown>;
-          const title = typeof record.title === 'string' ? record.title.trim() : '';
-          const content = typeof record.content === 'string' ? record.content.trim() : '';
-          return title && content ? {title, content} : null;
-        })
-        .filter((section): section is CharacterAiDraftSection => Boolean(section))
-    : undefined;
-
-  return {
-    name: readString('name'),
-    age: readString('age'),
-    role: readString('role'),
-    description: readString('description'),
-    notes: readString('notes'),
-    sections
-  };
-};
-
 function WorldBibleRoute() {
   const activeProject = useAppStore((s) => s.activeProject);
   const projectSettings = useAppStore((s) => s.projectSettings);
@@ -407,10 +357,11 @@ function WorldBibleRoute() {
     CharacterImportSectionDraft[]
   >([]);
   const [isImportingCharacterDoc, setIsImportingCharacterDoc] = useState(false);
-  const [characterAiPrompt, setCharacterAiPrompt] = useState('');
-  const [isGeneratingCharacterDraft, setIsGeneratingCharacterDraft] = useState(false);
-  const [recordAiPrompt, setRecordAiPrompt] = useState('');
-  const [isGeneratingRecordDraft, setIsGeneratingRecordDraft] = useState(false);
+  const [isRecordAiHelperOpen, setIsRecordAiHelperOpen] = useState(false);
+  const [isImportAiHelperOpen, setIsImportAiHelperOpen] = useState(false);
+  const [aiHelperSelectedText, setAiHelperSelectedText] = useState('');
+  const [aiHelperApplyTarget, setAiHelperApplyTarget] =
+    useState<AiHelperApplyTarget>('name');
   const [newCharacterSectionName, setNewCharacterSectionName] = useState('');
   const [expandedSummaryEntityIds, setExpandedSummaryEntityIds] = useState<string[]>([]);
   const [isNameResolverOpen, setIsNameResolverOpen] = useState(false);
@@ -463,6 +414,7 @@ function WorldBibleRoute() {
       window.localStorage.getItem(getWorldBibleRailStorageKey(activeProject.id)) === 'true'
     );
   }, [activeProject]);
+
   const aliasTextareaRef = useRef<HTMLTextAreaElement | null>(null);
   const focusedEntityKeyRef = useRef<string | null>(null);
   const refreshMemories = useCallback(async () => {
@@ -744,6 +696,7 @@ function WorldBibleRoute() {
     activeCategory: activeCategory ?? null,
     categories,
     entities,
+    setCategories,
     setEntities,
     setFeedback,
     onEntitySaved: async (entity, category) => {
@@ -812,6 +765,43 @@ function WorldBibleRoute() {
     : null;
   const activeCategoryRecordLabel =
     activeCategory?.name.replace(/s$/i, '').toLowerCase() || 'record';
+  const currentRecordAiContext = useMemo(() => {
+    if (!activeCategory) return '';
+    return [
+      `Category: ${activeCategory.name}`,
+      name.trim() ? `Current name: ${name.trim()}` : ''
+    ]
+      .filter(Boolean)
+      .join('\n\n');
+  }, [activeCategory, name]);
+  const aiHelperApplyTargets = useMemo(() => {
+    if (!activeCategory) return [];
+    return [
+      {value: 'name' as AiHelperApplyTarget, label: 'Name'},
+      {value: 'aliases' as AiHelperApplyTarget, label: 'Alternative names'},
+      ...activeCategory.fieldSchema.map((field) => ({
+        value: `field:${field.key}` as AiHelperApplyTarget,
+        label: field.label
+      }))
+    ];
+  }, [activeCategory]);
+  const importAiContext = useMemo(() => {
+    if (importDrafts.length === 0) return '';
+    return importDrafts
+      .slice(0, 8)
+      .map((draft) => {
+        const category = categoryById.get(draft.categoryId);
+        return [
+          `File: ${draft.fileName}`,
+          category ? `Target category: ${category.name}` : '',
+          draft.name.trim() ? `Detected name: ${draft.name.trim()}` : '',
+          draft.parseError ? `Error: ${draft.parseError}` : `Preview: ${draft.preview}`
+        ]
+          .filter(Boolean)
+          .join('\n');
+      })
+      .join('\n\n---\n\n');
+  }, [categoryById, importDrafts]);
   const currentCharacterLabel =
     name.trim() || selectedEntity?.name || activeCategory?.name.slice(0, -1) || 'this record';
   const isFocusedCharacterTask = activeCategoryIsCharacterLike
@@ -847,6 +837,16 @@ function WorldBibleRoute() {
         !existingAliases.has(normalizeName(alias))
     );
   }, [activeCategoryIsCharacterLike, fieldValues, name]);
+  const canonicalRenameAliasPreview = useMemo(() => {
+    if (!isCanonicalRenameDraft || !selectedEntity) {
+      return [];
+    }
+    return buildCanonicalAliasList({
+      previousName: selectedEntity.name,
+      nextName: name,
+      aliases: parseAlternativeNames(fieldValues[ALTERNATIVE_NAMES_KEY] || '')
+    });
+  }, [fieldValues, isCanonicalRenameDraft, name, selectedEntity]);
   const manualResolutionTargets = useMemo(
     () =>
       entities
@@ -859,6 +859,7 @@ function WorldBibleRoute() {
     manualResolutionTargets[0] ??
     null;
   const {
+    reviewQueue,
     filteredReviewQueue,
     potentialEntityMatches,
     reviewEntityInsightsById,
@@ -920,10 +921,10 @@ function WorldBibleRoute() {
     setCharacterImportStep('idle');
     setCharacterImportDraft(null);
     setCharacterImportSections([]);
-    setCharacterAiPrompt('');
-    setIsGeneratingCharacterDraft(false);
-    setRecordAiPrompt('');
-    setIsGeneratingRecordDraft(false);
+    setIsRecordAiHelperOpen(false);
+    setIsImportAiHelperOpen(false);
+    setAiHelperSelectedText('');
+    setAiHelperApplyTarget('name');
     setNewCharacterSectionName('');
   };
 
@@ -959,6 +960,9 @@ function WorldBibleRoute() {
     setCharacterImportStep('idle');
     setCharacterImportDraft(null);
     setCharacterImportSections([]);
+    setIsRecordAiHelperOpen(false);
+    setAiHelperSelectedText('');
+    setAiHelperApplyTarget('name');
   }, [openCharacterCategory]);
 
   const startNewCategoryRecord = useCallback(() => {
@@ -975,37 +979,10 @@ function WorldBibleRoute() {
     setCharacterImportStep('idle');
     setCharacterImportDraft(null);
     setCharacterImportSections([]);
+    setIsRecordAiHelperOpen(false);
+    setAiHelperSelectedText('');
+    setAiHelperApplyTarget('name');
   }, [activeCategory]);
-
-  const startCategoryAiDraft = useCallback(() => {
-    if (!activeCategory || activeCategoryIsCharacterLike) return;
-    setViewMode('category');
-    setEditingId(null);
-    setName('');
-    setFieldValues({});
-    setPendingReviewFocus(null);
-    setIsNameResolverOpen(false);
-    setManualResolutionTargetId('');
-    setCharacterAuthoringMode('idle');
-    setRecordAuthoringMode('ai');
-    setCharacterImportStep('idle');
-    setCharacterImportDraft(null);
-    setCharacterImportSections([]);
-    setFeedback(null);
-  }, [activeCategory, activeCategoryIsCharacterLike]);
-
-  const startCharacterAiDraft = useCallback(() => {
-    openCharacterCategory();
-    setEditingId(null);
-    setName('');
-    setFieldValues({});
-    setCharacterAuthoringMode('ai');
-    setRecordAuthoringMode('idle');
-    setCharacterImportStep('idle');
-    setCharacterImportDraft(null);
-    setCharacterImportSections([]);
-    setFeedback(null);
-  }, [openCharacterCategory]);
 
   const applyCharacterImportDraftToFields = useCallback(
     (draft: CharacterImportDraft, sections: CharacterImportSectionDraft[]) => {
@@ -1074,141 +1051,118 @@ function WorldBibleRoute() {
     }
   };
 
-  const handleGenerateCharacterDraft = async () => {
-    const premise = characterAiPrompt.trim();
-    if (!premise) {
-      setFeedback({tone: 'error', message: 'Describe the character before generating a draft.'});
-      return;
-    }
-
-    setIsGeneratingCharacterDraft(true);
-    setFeedback(null);
-    try {
-      const customSectionLabels = characterImportDestinationFields
-        .map((field) => field.label)
-        .join(', ');
-      const service = new LLMService(projectSettings?.aiSettings);
-      const response = await service.complete({
-        temperature: 0.7,
-        maxTokens: 900,
-        systemPrompt:
-          'You create concise, editable character dossier drafts for fiction authors. Return only valid JSON with no markdown.',
-        messages: [
-          {
-            role: 'user',
-            content: [
-              'Create a character draft from this author brief.',
-              '',
-              premise,
-              '',
-              'Return JSON with this shape:',
-              '{"name":"","age":"","role":"","description":"","notes":"","sections":[{"title":"","content":""}]}',
-              '',
-              'Keep prose useful but not final-scene prose. Description should be 2-4 paragraphs. Notes should be short development notes, tensions, questions, or hooks.',
-              customSectionLabels
-                ? `If relevant, use existing custom section titles from: ${customSectionLabels}.`
-                : 'Use sections only for clearly useful dossier material.'
-            ].join('\n')
-          }
-        ]
-      });
-      const draft = parseCharacterAiDraft(response.content);
-      const labelToField = new Map(
-        characterImportDestinationFields.map((field) => [
-          field.label.trim().toLowerCase(),
-          field
-        ])
-      );
-      const customFieldValues: Record<string, string> = {};
-      const noteSections: string[] = [];
-      draft.sections?.forEach((section) => {
-        const field = labelToField.get(section.title.trim().toLowerCase());
-        if (field) {
-          customFieldValues[field.key] = [customFieldValues[field.key], section.content]
-            .filter(Boolean)
-            .join('\n\n');
-        } else {
-          noteSections.push(`${section.title}\n${section.content}`);
-        }
-      });
-
-      setName(draft.name ?? '');
-      setCharacterAuthoringMode('ai');
-      setFieldValues({
-        description: normalizeRichTextValue(draft.description ?? ''),
-        age: draft.age ?? '',
-        role: draft.role ?? '',
-        [CHARACTER_NOTES_FIELD]: normalizeRichTextValue(
-          [draft.notes, ...noteSections].filter(Boolean).join('\n\n')
-        ),
-        ...Object.fromEntries(
-          Object.entries(customFieldValues).map(([key, value]) => [
-            key,
-            normalizeRichTextValue(value)
-          ])
-        )
-      });
-      setFeedback({
-        tone: 'success',
-        message: 'AI draft generated. Review and edit the rich fields before saving.'
-      });
-    } catch (error) {
-      const message =
-        error instanceof Error
-          ? error.message
-          : 'Unable to generate a character draft. Check AI settings and try again.';
-      setFeedback({tone: 'error', message});
-    } finally {
-      setIsGeneratingCharacterDraft(false);
-    }
-  };
-
-  const handleGenerateRecordDraft = async () => {
-    if (!activeCategory || activeCategoryIsCharacterLike) return;
-    const premise = recordAiPrompt.trim();
-    if (!premise) {
+  const handleApplyAiHelperSelection = useCallback(() => {
+    if (!activeCategory) return;
+    const selectedText = aiHelperSelectedText.trim();
+    if (!selectedText) {
       setFeedback({
         tone: 'error',
-        message: `Describe the ${activeCategory.name.toLowerCase()} record before generating a draft.`
+        message: 'Highlight text in the assistant response before applying it.'
       });
       return;
     }
 
-    setIsGeneratingRecordDraft(true);
-    setFeedback(null);
-    try {
-      const service = new LLMService(projectSettings?.aiSettings);
-      const response = await service.complete({
-        temperature: 0.7,
-        maxTokens: 900,
-        systemPrompt:
-          'You create concise, editable World Bible canon drafts for fiction authors. Return only valid JSON with no markdown.',
-        messages: [
-          {
-            role: 'user',
-            content: buildWorldBibleAiDraftPrompt(activeCategory, premise)
-          }
-        ]
-      });
-      const draft = parseWorldBibleAiDraft(response.content, activeCategory);
-
-      setName(draft.name ?? '');
-      setRecordAuthoringMode('ai');
-      setFieldValues(draft.fields);
+    if (aiHelperApplyTarget === 'name') {
+      setName(selectedText);
       setFeedback({
         tone: 'success',
-        message: 'AI draft generated. Review and edit the World Bible fields before saving.'
+        message: `Set the ${activeCategoryRecordLabel} name from selected assistant text. Review before saving.`
       });
-    } catch (error) {
-      const message =
-        error instanceof Error
-          ? error.message
-          : 'Unable to generate this World Bible draft. Check AI settings and try again.';
-      setFeedback({tone: 'error', message});
-    } finally {
-      setIsGeneratingRecordDraft(false);
+      return;
     }
-  };
+
+    if (aiHelperApplyTarget === 'aliases') {
+      setFieldValues((currentValues) => {
+        const existingAliases = parseAlternativeNames(
+          currentValues[ALTERNATIVE_NAMES_KEY] || ''
+        );
+        const nextAliases = formatAlternativeNames(
+          parseAlternativeNames([...existingAliases, selectedText].join(', '))
+        );
+        return {
+          ...currentValues,
+          [ALTERNATIVE_NAMES_KEY]: nextAliases
+        };
+      });
+      setFeedback({
+        tone: 'success',
+        message: 'Added selected assistant text to alternative names. Review before saving.'
+      });
+      return;
+    }
+
+    const fieldKey = aiHelperApplyTarget.replace(/^field:/, '');
+    const targetField = activeCategory.fieldSchema.find((field) => field.key === fieldKey);
+    if (!targetField) {
+      setFeedback({
+        tone: 'error',
+        message: 'Choose a valid destination field before applying assistant text.'
+      });
+      return;
+    }
+
+    setFieldValues((currentValues) => {
+      const existing = currentValues[targetField.key]?.trim();
+      const shouldAppend = targetField.type === 'textarea';
+      const nextValue = shouldAppend
+        ? [existing, selectedText].filter(Boolean).join('\n\n')
+        : selectedText;
+      return {
+        ...currentValues,
+        [targetField.key]:
+          targetField.type === 'textarea'
+            ? normalizeRichTextValue(nextValue)
+            : nextValue
+      };
+    });
+    setFeedback({
+      tone: 'success',
+      message: `Applied selected assistant text to ${targetField.label}. Review before saving.`
+    });
+  }, [
+    activeCategory,
+    activeCategoryRecordLabel,
+    aiHelperApplyTarget,
+    aiHelperSelectedText
+  ]);
+
+  const detectedSectionImportDraftCount = useMemo(
+    () =>
+      importDrafts.filter(
+        (draft) =>
+          draft.include &&
+          !draft.parseError &&
+          (draft.detectedSections?.length ?? 0) > 0
+      ).length,
+    [importDrafts]
+  );
+
+  const handleUseDetectedSectionsForImportDrafts = useCallback(() => {
+    const draftsToUpdate = importDrafts.filter(
+      (draft) =>
+        draft.include &&
+        !draft.parseError &&
+        (draft.detectedSections?.length ?? 0) > 0
+    );
+    if (draftsToUpdate.length === 0) {
+      setFeedback({
+        tone: 'error',
+        message: 'No selected import drafts have detected headings to apply.'
+      });
+      return;
+    }
+
+    draftsToUpdate.forEach((draft) => {
+      updateImportDraft(draft.id, {useDetectedSections: true});
+    });
+    setFeedback({
+      tone: 'success',
+      message:
+        draftsToUpdate.length === 1
+          ? 'Detected headings will be created as fields when you apply this import.'
+          : `Detected headings will be created as fields for ${draftsToUpdate.length} selected imports.`
+    });
+  }, [importDrafts, updateImportDraft]);
 
   const updateCharacterImportSectionAction = (
     sectionId: string,
@@ -1376,6 +1330,11 @@ function WorldBibleRoute() {
     resetForm,
     navigate: (to, options) => navigate(to, options as never)
   });
+
+  const handleSaveCanonicalRename = useCallback(async () => {
+    await saveEntityDraft({successMessage: 'Canonical name updated.'});
+    setIsNameResolverOpen(false);
+  }, [saveEntityDraft]);
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
@@ -1719,7 +1678,18 @@ function WorldBibleRoute() {
         eyebrow='Structured canon'
         title='World Bible'
         description='Browse, import, and refine story-facing canon records without leaving the current project.'
-        actions={<ProjectScratchpadButton projectId={activeProject.id} />}
+        actions={
+          <>
+            <ProjectScratchpadButton projectId={activeProject.id} />
+            <button
+              type='button'
+              className={styles.categoryRailToggle}
+              onClick={handleToggleCategoryRail}
+            >
+              {isCategoryRailCollapsed ? 'Show categories' : 'Hide categories'}
+            </button>
+          </>
+        }
       />
       {activeCategory && (
         <>
@@ -1740,11 +1710,6 @@ function WorldBibleRoute() {
           />
         </>
       )}
-      <div className={styles.contextRailControls}>
-        <button type='button' onClick={handleToggleCategoryRail}>
-          {isCategoryRailCollapsed ? 'Show Categories' : 'Hide Categories'}
-        </button>
-      </div>
       <div
         className={`${styles.routeShell} ${
           isCategoryRailCollapsed ? styles.routeShellRailCollapsed : ''
@@ -1953,131 +1918,6 @@ function WorldBibleRoute() {
                 </>
               )}
             </div>
-            <div className={styles.castTask}>
-              {activeCategoryIsCharacterLike ? (
-                <>
-                  <h3>AI-Assisted Draft</h3>
-                  <p>Generate a draft from your premise, then edit and approve it yourself.</p>
-                  <button type='button' onClick={startCharacterAiDraft}>
-                    Start With AI
-                  </button>
-                </>
-              ) : (
-                <>
-                  <h3>AI-Assisted Draft</h3>
-                  <p>Generate an editable draft from this category schema before saving canon.</p>
-                  <button type='button' onClick={startCategoryAiDraft}>
-                    Start With AI
-                  </button>
-                </>
-              )}
-            </div>
-          </div>
-        </section>
-      )}
-
-      {activeCategoryIsCharacterLike && characterAuthoringMode === 'ai' && (
-        <section className={styles.characterAiPanel} aria-label='AI-assisted character draft'>
-          <div className={styles.importPanelHeader}>
-            <div>
-              <h2>AI-Assisted Draft</h2>
-              <p className={styles.importSummary}>
-                Describe the character you need. The draft fills editable Cast fields only after you generate it.
-              </p>
-            </div>
-            <button
-              type='button'
-              onClick={() => {
-                setCharacterAuthoringMode('idle');
-                setCharacterAiPrompt('');
-                setFieldValues({});
-                setName('');
-              }}
-            >
-              Close
-            </button>
-          </div>
-          <label className={styles.characterImportLabel}>
-            Character brief
-            <textarea
-              value={characterAiPrompt}
-              onChange={(event) => setCharacterAiPrompt(event.target.value)}
-              rows={7}
-              placeholder='A disgraced royal cartographer who knows the city has been redrawn overnight...'
-            />
-          </label>
-          <div className={styles.importPanelActions}>
-            <button
-              type='button'
-              onClick={() => void handleGenerateCharacterDraft()}
-              disabled={isGeneratingCharacterDraft || !characterAiPrompt.trim()}
-            >
-              {isGeneratingCharacterDraft ? 'Generating...' : 'Generate Draft'}
-            </button>
-            <button
-              type='button'
-              onClick={() => {
-                setCharacterAiPrompt('');
-                setFieldValues({});
-                setName('');
-              }}
-              disabled={isGeneratingCharacterDraft}
-            >
-              Clear
-            </button>
-          </div>
-        </section>
-      )}
-
-      {activeCategory && !activeCategoryIsCharacterLike && recordAuthoringMode === 'ai' && (
-        <section className={styles.characterAiPanel} aria-label='AI-assisted World Bible draft'>
-          <div className={styles.importPanelHeader}>
-            <div>
-              <h2>AI-Assisted {activeCategoryRecordLabel} Draft</h2>
-              <p className={styles.importSummary}>
-                Describe the record you need. The draft fills editable World Bible fields only after you generate it.
-              </p>
-            </div>
-            <button
-              type='button'
-              onClick={() => {
-                setRecordAuthoringMode('idle');
-                setRecordAiPrompt('');
-                setFieldValues({});
-                setName('');
-              }}
-            >
-              Close
-            </button>
-          </div>
-          <label className={styles.characterImportLabel}>
-            {activeCategoryRecordLabel} brief
-            <textarea
-              value={recordAiPrompt}
-              onChange={(event) => setRecordAiPrompt(event.target.value)}
-              rows={7}
-              placeholder={`A ${activeCategoryRecordLabel} with history, tensions, relationships, and story hooks...`}
-            />
-          </label>
-          <div className={styles.importPanelActions}>
-            <button
-              type='button'
-              onClick={() => void handleGenerateRecordDraft()}
-              disabled={isGeneratingRecordDraft || !recordAiPrompt.trim()}
-            >
-              {isGeneratingRecordDraft ? 'Generating...' : 'Generate Draft'}
-            </button>
-            <button
-              type='button'
-              onClick={() => {
-                setRecordAiPrompt('');
-                setFieldValues({});
-                setName('');
-              }}
-              disabled={isGeneratingRecordDraft}
-            >
-              Clear
-            </button>
           </div>
         </section>
       )}
@@ -2092,16 +1932,56 @@ function WorldBibleRoute() {
                 fill World Bible rich fields before you save.
               </p>
             </div>
-            <button
-              type='button'
-              onClick={() => {
-                setCharacterImportStep('idle');
-                setCharacterAuthoringMode('idle');
-              }}
-            >
-              Close
-            </button>
+            <div className={styles.importPanelActions}>
+              <button
+                type='button'
+                onClick={() => setIsImportAiHelperOpen((value) => !value)}
+                aria-expanded={isImportAiHelperOpen}
+              >
+                {isImportAiHelperOpen ? 'Hide AI helper' : 'AI helper'}
+              </button>
+              <button
+                type='button'
+                onClick={() => {
+                  setCharacterImportStep('idle');
+                  setCharacterAuthoringMode('idle');
+                  setIsImportAiHelperOpen(false);
+                }}
+              >
+                Close
+              </button>
+            </div>
           </div>
+          {isImportAiHelperOpen && (
+            <section className={styles.aiHelperPanel} aria-label='Import AI helper'>
+              <div className={styles.aiHelperHeader}>
+                <div>
+                  <strong>Import AI helper</strong>
+                  <p>
+                    Ask how to clean up, split, or map this source before reviewing
+                    the parsed fields.
+                  </p>
+                </div>
+                <button
+                  type='button'
+                  onClick={() => setIsImportAiHelperOpen(false)}
+                >
+                  Close
+                </button>
+              </div>
+              <AIAssistant
+                projectId={activeProject.id}
+                aiConfig={projectSettings?.aiSettings}
+                projectMode={projectSettings?.projectMode}
+                context={{
+                  type: 'world-bible',
+                  id: activeCategory?.id ?? activeProject.id,
+                  selectedText: pastedCharacterImportText
+                }}
+                showContextPreview={false}
+              />
+            </section>
+          )}
           <label className={styles.characterImportLabel}>
             Character notes
             <textarea
@@ -2143,16 +2023,61 @@ function WorldBibleRoute() {
                 already populated; save only after reviewing the rich fields.
               </p>
             </div>
-            <button
-              type='button'
-              onClick={() => {
-                setCharacterImportStep('idle');
-                setCharacterAuthoringMode('idle');
-              }}
-            >
-              Close
-            </button>
+            <div className={styles.importPanelActions}>
+              <button
+                type='button'
+                onClick={() => setIsImportAiHelperOpen((value) => !value)}
+                aria-expanded={isImportAiHelperOpen}
+              >
+                {isImportAiHelperOpen ? 'Hide AI helper' : 'AI helper'}
+              </button>
+              <button
+                type='button'
+                onClick={() => {
+                  setCharacterImportStep('idle');
+                  setCharacterAuthoringMode('idle');
+                  setIsImportAiHelperOpen(false);
+                }}
+              >
+                Close
+              </button>
+            </div>
           </div>
+          {isImportAiHelperOpen && (
+            <section className={styles.aiHelperPanel} aria-label='Import review AI helper'>
+              <div className={styles.aiHelperHeader}>
+                <div>
+                  <strong>Import AI helper</strong>
+                  <p>
+                    Ask for section mapping, cleanup, field suggestions, or gaps to
+                    resolve before saving.
+                  </p>
+                </div>
+                <button
+                  type='button'
+                  onClick={() => setIsImportAiHelperOpen(false)}
+                >
+                  Close
+                </button>
+              </div>
+              <AIAssistant
+                projectId={activeProject.id}
+                aiConfig={projectSettings?.aiSettings}
+                projectMode={projectSettings?.projectMode}
+                context={{
+                  type: 'world-bible',
+                  id: activeCategory?.id ?? activeProject.id,
+                  selectedText: [
+                    `Detected name: ${characterImportDraft.detectedName}`,
+                    ...characterImportSections.map(
+                      (section) => `${section.title} -> ${section.action}\n${section.content}`
+                    )
+                  ].join('\n\n')
+                }}
+                showContextPreview={false}
+              />
+            </section>
+          )}
           {characterImportDraft.warnings.length > 0 && (
             <div className={styles.importError}>
               {characterImportDraft.warnings.join(' ')}
@@ -2201,6 +2126,13 @@ function WorldBibleRoute() {
             <div className={styles.importPanelActions}>
               <button
                 type='button'
+                onClick={() => setIsImportAiHelperOpen((value) => !value)}
+                aria-expanded={isImportAiHelperOpen}
+              >
+                {isImportAiHelperOpen ? 'Hide AI helper' : 'AI helper'}
+              </button>
+              <button
+                type='button'
                 onClick={() => void handleApplyImportDrafts()}
                 disabled={isApplyingImports}
               >
@@ -2220,6 +2152,59 @@ function WorldBibleRoute() {
             selected · {importDrafts.filter((draft) => draft.parseError).length} with
             errors · {richImportDraftCount} targeting rich-text lore fields
           </p>
+          {isImportAiHelperOpen && (
+            <section className={styles.aiHelperPanel} aria-label='Import AI helper'>
+              <div className={styles.aiHelperHeader}>
+                <div>
+                  <strong>Import AI helper</strong>
+                  <p>
+                    Ask about field mapping, cleanup, duplicate handling, or whether
+                    these drafts should become one record or several.
+                  </p>
+                </div>
+                <button
+                  type='button'
+                  onClick={() => setIsImportAiHelperOpen(false)}
+                >
+                  Close
+                </button>
+              </div>
+              <div className={styles.importHelperActions}>
+                <div>
+                  <strong>Apply structure to pending imports</strong>
+                  <p>
+                    The helper can advise, but field changes are staged through the
+                    import draft before anything is saved.
+                  </p>
+                </div>
+                <button
+                  type='button'
+                  onClick={handleUseDetectedSectionsForImportDrafts}
+                  disabled={detectedSectionImportDraftCount === 0 || isApplyingImports}
+                >
+                  Use detected headings
+                </button>
+                <span>
+                  {detectedSectionImportDraftCount > 0
+                    ? `${detectedSectionImportDraftCount} selected draft${
+                        detectedSectionImportDraftCount === 1 ? '' : 's'
+                      } with headings`
+                    : 'No selected drafts have detected headings'}
+                </span>
+              </div>
+              <AIAssistant
+                projectId={activeProject.id}
+                aiConfig={projectSettings?.aiSettings}
+                projectMode={projectSettings?.projectMode}
+                context={{
+                  type: 'world-bible',
+                  id: activeCategory?.id ?? activeProject.id,
+                  selectedText: importAiContext
+                }}
+                showContextPreview={false}
+              />
+            </section>
+          )}
           <ul className={styles.importDraftList}>
             {importDrafts.map((draft) => {
               const category = categoryById.get(draft.categoryId) ?? null;
@@ -2259,6 +2244,11 @@ function WorldBibleRoute() {
                           {landsAsRichText
                             ? `Rich text -> ${preferredField.label}`
                             : `Plain field -> ${preferredField.label}`}
+                        </span>
+                      )}
+                      {draft.detectedSections && draft.detectedSections.length > 0 && (
+                        <span className={`${styles.importChip} ${styles.importChipRich}`}>
+                          {draft.detectedSections.length} section fields detected
                         </span>
                       )}
                       <span className={styles.importChip}>
@@ -2312,6 +2302,28 @@ function WorldBibleRoute() {
                     <p className={styles.importError}>{draft.parseError}</p>
                   ) : (
                     <>
+                      {draft.detectedSections && draft.detectedSections.length > 0 && (
+                        <div className={styles.importSectionMapping}>
+                          <label>
+                            <input
+                              type='checkbox'
+                              checked={draft.useDetectedSections ?? false}
+                              disabled={isApplyingImports}
+                              onChange={(event) =>
+                                updateImportDraft(draft.id, {
+                                  useDetectedSections: event.target.checked
+                                })
+                              }
+                            />
+                            <span>Create fields from detected headings</span>
+                          </label>
+                          <div className={styles.importSectionList}>
+                            {draft.detectedSections.slice(0, 8).map((section) => (
+                              <span key={section.id}>{section.title}</span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                       <div className={styles.importDraftActions}>
                         <button
                           type='button'
@@ -2333,15 +2345,17 @@ function WorldBibleRoute() {
                             onClick={() => setActiveImportPreviewId(draft.id)}
                             disabled={isApplyingImports}
                           >
-                            Open document preview
+                            Preview source document
                           </button>
                         )}
                       </div>
                       <p className={styles.importPreview}>{draft.preview}</p>
                       <p className={styles.importDraftNote}>
-                        {landsAsRichText
-                          ? 'This import will preserve richer prose structure in the target lore field.'
-                          : 'This import will land as plain text in the target field.'}
+                        {draft.useDetectedSections && (draft.detectedSections?.length ?? 0) > 0
+                          ? 'Description keeps intro or unmapped text. Detected top-level headings are copied into separate fields.'
+                          : landsAsRichText
+                            ? 'This import will preserve richer prose structure in the target lore field.'
+                            : 'This import will land as plain text in the target field.'}
                       </p>
                     </>
                   )}
@@ -2598,13 +2612,87 @@ function WorldBibleRoute() {
           {(activeCategoryIsCharacterLike ? isFocusedCharacterTask : isFocusedRecordTask) && (
           <div className={styles.formSection}>
             <form onSubmit={handleSubmit} className={styles.form}>
-              <h2>
-                {activeCategoryIsCharacterLike
-                  ? editingId
-                    ? 'Edit Character Canon'
-                    : 'New Character Canon'
-                  : `${editingId ? 'Edit' : 'New'} ${activeCategory.name.slice(0, -1)}`}
-              </h2>
+              <div className={styles.formHeadingRow}>
+                <h2>
+                  {activeCategoryIsCharacterLike
+                    ? editingId
+                      ? 'Edit Character Canon'
+                      : 'New Character Canon'
+                    : `${editingId ? 'Edit' : 'New'} ${activeCategory.name.slice(0, -1)}`}
+                </h2>
+                <button
+                  type='button'
+                  onClick={() => {
+                    setAiHelperSelectedText('');
+                    setIsRecordAiHelperOpen((value) => !value);
+                  }}
+                  aria-expanded={isRecordAiHelperOpen}
+                >
+                  {isRecordAiHelperOpen ? 'Hide AI helper' : 'AI helper'}
+                </button>
+              </div>
+              {isRecordAiHelperOpen && (
+                <section className={styles.aiHelperPanel} aria-label='World Bible AI helper'>
+                  <div className={styles.aiHelperHeader}>
+                    <div>
+                      <strong>AI helper</strong>
+                      <p>
+                        Ask for names, descriptions, field ideas, revisions, cleanup,
+                        or new sections. Highlight assistant text, choose a destination,
+                        then apply it.
+                      </p>
+                    </div>
+                    <button
+                      type='button'
+                      onClick={() => {
+                        setAiHelperSelectedText('');
+                        setIsRecordAiHelperOpen(false);
+                      }}
+                    >
+                      Close
+                    </button>
+                  </div>
+                  <div className={styles.aiHelperApplyBar}>
+                    <label>
+                      Apply to
+                      <select
+                        value={aiHelperApplyTarget}
+                        onChange={(event) =>
+                          setAiHelperApplyTarget(event.target.value as AiHelperApplyTarget)
+                        }
+                      >
+                        {aiHelperApplyTargets.map((target) => (
+                          <option key={target.value} value={target.value}>
+                            {target.label}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <div className={styles.aiHelperSelectionPreview}>
+                      {aiHelperSelectedText.trim() || 'Highlight text in an assistant response'}
+                    </div>
+                    <button
+                      type='button'
+                      onClick={handleApplyAiHelperSelection}
+                      disabled={!aiHelperSelectedText.trim()}
+                    >
+                      Apply selected text
+                    </button>
+                  </div>
+                  <AIAssistant
+                    projectId={activeProject.id}
+                    aiConfig={projectSettings?.aiSettings}
+                    projectMode={projectSettings?.projectMode}
+                    context={{
+                      type: 'world-bible',
+                      id: editingId ?? activeCategory.id,
+                      selectedText: currentRecordAiContext
+                    }}
+                    onAssistantSelectionChange={setAiHelperSelectedText}
+                    showContextPreview={false}
+                  />
+                </section>
+              )}
               {activeCategoryIsCharacterLike && (
                 <div className={styles.reviewHint}>
                   This World Bible record is the canonical character profile. Resolve
@@ -2649,7 +2737,19 @@ function WorldBibleRoute() {
 
               {activeCategoryIsCharacterLike ? (
                 <>
-                  <div className={styles.identityGrid}>
+                  <section className={styles.canonSection} aria-label='Canonical names and aliases'>
+                    <div className={styles.canonSectionHeader}>
+                      <div>
+                        <strong>Canon and aliases</strong>
+                        <span>Canonical name, aliases, overlap review, and merge decisions for this character.</span>
+                      </div>
+                      <button
+                        type='button'
+                        onClick={() => setIsNameResolverOpen((value) => !value)}
+                      >
+                        {isNameResolverOpen ? 'Hide resolver' : 'Resolve names'}
+                      </button>
+                    </div>
                     <div className={styles.formGroup}>
                       <label>
                         Name
@@ -2666,70 +2766,6 @@ function WorldBibleRoute() {
                           alternative name.
                         </div>
                       )}
-                    </div>
-                    {characterIdentityFields.map(renderEntityField)}
-                  </div>
-
-                  {characterDescriptionField && renderEntityField(characterDescriptionField)}
-
-                  <div className={styles.fieldActionRow} aria-label='Description actions'>
-                    <button type='button' disabled title='Planned for the AI-assisted draft slice'>
-                      AI Assist
-                    </button>
-                    <button type='button' disabled title='Planned for the AI-assisted draft slice'>
-                      Suggest Expansion
-                    </button>
-                  </div>
-
-                  {characterNotesField && renderEntityField(characterNotesField)}
-
-                  <div className={styles.fieldActionRow} aria-label='Notes actions'>
-                    <button type='button' disabled title='Planned for the AI-assisted draft slice'>
-                      AI Assist
-                    </button>
-                    <button type='button' disabled title='Planned for review-note polish'>
-                      Review Notes
-                    </button>
-                  </div>
-
-                  {characterCustomFields.map(renderEntityField)}
-
-                  <div className={styles.characterSectionBuilder}>
-                    <div>
-                      <strong>Add character section</strong>
-                      <p>
-                        Create a reusable rich section for this project, such as
-                        Education, Traumas, Addictions, Relationships, or Voice.
-                      </p>
-                    </div>
-                    <div className={styles.characterSectionControls}>
-                      <input
-                        type='text'
-                        value={newCharacterSectionName}
-                        onChange={(event) => setNewCharacterSectionName(event.target.value)}
-                        placeholder='Education, Traumas, Addictions...'
-                      />
-                      <button
-                        type='button'
-                        onClick={() => void handleAddCharacterSection()}
-                      >
-                        Add Section
-                      </button>
-                    </div>
-                  </div>
-
-                  <section className={styles.canonSection} aria-label='Canonical names and aliases'>
-                    <div className={styles.canonSectionHeader}>
-                      <div>
-                        <strong>Canon and aliases</strong>
-                        <span>Canonical name, aliases, overlap review, and merge decisions for this character.</span>
-                      </div>
-                      <button
-                        type='button'
-                        onClick={() => setIsNameResolverOpen((value) => !value)}
-                      >
-                        {isNameResolverOpen ? 'Hide resolver' : 'Resolve names'}
-                      </button>
                     </div>
                     <div className={styles.formGroup}>
                       <label>
@@ -2776,6 +2812,33 @@ function WorldBibleRoute() {
                           Pick any character in this category when the app cannot infer the
                           relationship. You choose which name stays canonical.
                         </p>
+                        {isCanonicalRenameDraft && selectedEntity && (
+                          <div className={styles.canonicalRenameSummary}>
+                            <div>
+                              <strong>Rename this character instead</strong>
+                              <p>
+                                Save <strong>{name.trim()}</strong> as the canonical name
+                                for this record. The old name and listed alternatives stay
+                                attached as aliases.
+                              </p>
+                            </div>
+                            {canonicalRenameAliasPreview.length > 0 && (
+                              <div className={styles.aliasPreviewList}>
+                                {canonicalRenameAliasPreview.map((alias) => (
+                                  <span key={alias}>{alias}</span>
+                                ))}
+                              </div>
+                            )}
+                            <button
+                              type='button'
+                              className={styles.primaryButton}
+                              onClick={() => void handleSaveCanonicalRename()}
+                              disabled={isSubmittingEntity}
+                            >
+                              {isSubmittingEntity ? 'Saving...' : 'Save canonical rename'}
+                            </button>
+                          </div>
+                        )}
                         {editingId ? (
                           manualResolutionTargets.length > 0 ? (
                             <>
@@ -2960,6 +3023,42 @@ function WorldBibleRoute() {
                       </div>
                     )}
                   </section>
+
+                  {characterIdentityFields.length > 0 && (
+                    <div className={styles.identityGrid}>
+                      {characterIdentityFields.map(renderEntityField)}
+                    </div>
+                  )}
+
+                  {characterDescriptionField && renderEntityField(characterDescriptionField)}
+
+                  {characterNotesField && renderEntityField(characterNotesField)}
+
+                  {characterCustomFields.map(renderEntityField)}
+
+                  <div className={styles.characterSectionBuilder}>
+                    <div>
+                      <strong>Add character section</strong>
+                      <p>
+                        Create a reusable rich section for this project, such as
+                        Education, Traumas, Addictions, Relationships, or Voice.
+                      </p>
+                    </div>
+                    <div className={styles.characterSectionControls}>
+                      <input
+                        type='text'
+                        value={newCharacterSectionName}
+                        onChange={(event) => setNewCharacterSectionName(event.target.value)}
+                        placeholder='Education, Traumas, Addictions...'
+                      />
+                      <button
+                        type='button'
+                        onClick={() => void handleAddCharacterSection()}
+                      >
+                        Add Section
+                      </button>
+                    </div>
+                  </div>
 
                   {selectedEntity && showCharacterTools && (
                     <section className={styles.canonSection} aria-label='Optional character tools'>
@@ -3341,8 +3440,17 @@ function WorldBibleRoute() {
                 const displayedSummary = isSummaryExpanded ? fullSummary : primarySummary;
                 const entityIsCharacterLike = isCharacterLikeEntity(entity);
                 const entityInsight = reviewEntityInsightsById.get(entity.id);
+                const entityQueueItem = reviewQueue.find((item) => item.entity.id === entity.id);
+                const needsAliasReview = Boolean(
+                  entityQueueItem?.reasons.includes('aliasFollowUp')
+                );
+                const needsCompletionReview = Boolean(
+                  entityQueueItem?.reasons.includes('needsCompletion') || entity.needsCompletion
+                );
                 const hasNameResolutionMatch =
                   entityIsCharacterLike && (entityInsight?.matchCount ?? 0) > 0;
+                const needsNameReview = needsAliasReview || hasNameResolutionMatch;
+                const hasReviewBadge = needsCompletionReview || needsNameReview;
 
                 return (
                 <li key={entity.id} className={styles.entityCard}>
@@ -3351,11 +3459,11 @@ function WorldBibleRoute() {
                     {entity.isNew && (
                       <span className={styles.newBadge}>New</span>
                     )}
-                    {entity.needsCompletion && (
+                    {needsCompletionReview && (
                       <span className={styles.completionBadge}>Needs completion</span>
                     )}
-                    {hasNameResolutionMatch && (
-                      <span className={styles.aliasMatchBadge}>Possible alias</span>
+                    {needsNameReview && (
+                      <span className={styles.aliasMatchBadge}>Names need review</span>
                     )}
                   </div>
                   {hasNameResolutionMatch && (
@@ -3405,6 +3513,14 @@ function WorldBibleRoute() {
                         onClick={() => handleEdit(entity, 'aliases')}
                       >
                         Resolve names
+                      </button>
+                    )}
+                    {hasReviewBadge && (
+                      <button
+                        type='button'
+                        onClick={() => void handleMarkEntityComplete(entity)}
+                      >
+                        Mark reviewed
                       </button>
                     )}
                     <button

@@ -1,14 +1,19 @@
 // apps/desktop/src/main/apiHandler.ts
 import {ipcMain} from 'electron';
 import {randomUUID} from 'node:crypto';
-import {createStreamingAdapter, ProviderId, LLMRequestPayload} from './providers/ProviderRegistry';
+import {
+  createCompletionAdapter,
+  createStreamingAdapter,
+  ProviderId,
+  LLMRequestPayload
+} from './providers/ProviderRegistry';
 
 type RendererMessage = LLMRequestPayload['messages'][number];
 type RendererContextChunk = NonNullable<LLMRequestPayload['context']>[number];
 
-interface LLMStreamPayload {
+interface LLMPayload {
   providerId: ProviderId;
-  apiKey: string;
+  apiKey?: string;
   request: LLMRequestPayload;
   providerConfig?: {
     baseUrl?: string;
@@ -16,7 +21,7 @@ interface LLMStreamPayload {
   requestId?: string;
 }
 
-function validatePayload(payload: unknown): asserts payload is LLMStreamPayload {
+function validatePayload(payload: unknown): asserts payload is LLMPayload {
   if (!payload || typeof payload !== 'object') {
     throw new Error('Payload must be an object');
   }
@@ -27,8 +32,11 @@ function validatePayload(payload: unknown): asserts payload is LLMStreamPayload 
     throw new Error('providerId must be provided');
   }
 
-  // Validate apiKey
-  if (typeof p.apiKey !== 'string' || p.apiKey.trim().length === 0) {
+  // Validate apiKey. Ollama is local and does not need one.
+  if (
+    p.providerId !== 'ollama' &&
+    (typeof p.apiKey !== 'string' || p.apiKey.trim().length === 0)
+  ) {
     throw new Error('apiKey must be a non-empty string');
   }
 
@@ -66,6 +74,23 @@ function validatePayload(payload: unknown): asserts payload is LLMStreamPayload 
 
   if (request.model !== undefined && typeof request.model !== 'string') {
     throw new Error('model must be a string if provided');
+  }
+
+  if (
+    request.responseFormat !== undefined &&
+    request.responseFormat !== 'json'
+  ) {
+    throw new Error('responseFormat must be json if provided');
+  }
+
+  if (
+    request.think !== undefined &&
+    typeof request.think !== 'boolean' &&
+    request.think !== 'low' &&
+    request.think !== 'medium' &&
+    request.think !== 'high'
+  ) {
+    throw new Error('think must be a boolean or low, medium, or high if provided');
   }
 
   if (request.context !== undefined && !Array.isArray(request.context)) {
@@ -118,13 +143,30 @@ function validatePayload(payload: unknown): asserts payload is LLMStreamPayload 
 }
 
 export function setupAPIHandlers() {
-  ipcMain.handle('llm:stream', async (event, payload: LLMStreamPayload) => {
+  ipcMain.handle('llm:complete', async (_event, payload: LLMPayload) => {
     validatePayload(payload);
 
-    const {apiKey, providerId, request, requestId = randomUUID()} = payload;
+    const {apiKey, providerId, request, providerConfig} = payload;
+    const adapter = createCompletionAdapter(providerId, {
+      apiKey,
+      baseUrl: providerConfig?.baseUrl,
+      request
+    });
+
+    return adapter.complete();
+  });
+
+  ipcMain.handle('llm:stream', async (event, payload: LLMPayload) => {
+    validatePayload(payload);
+
+    const {apiKey, providerId, request, providerConfig, requestId = randomUUID()} = payload;
 
     try {
-      const adapter = createStreamingAdapter(providerId, {apiKey, request});
+      const adapter = createStreamingAdapter(providerId, {
+        apiKey,
+        baseUrl: providerConfig?.baseUrl,
+        request
+      });
       const chunks: string[] = [];
 
       for await (const chunk of adapter.stream()) {

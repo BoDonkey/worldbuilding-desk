@@ -104,10 +104,10 @@ Implemented recently:
 
 ## Recommended Priority Order
 
-1. Unified workspace annotation redesign
-2. Character-canon unification smoke pass
-3. Lore/canon decision smoke stabilization
-4. Lore Documents IA reframing
+1. Calm shell and navigation simplification
+2. Unified workspace annotation redesign
+3. Character-canon unification smoke pass
+4. Lore/canon decision smoke stabilization
 5. Canon decision merge review refinement
 6. Structural cleanup in active routes
 7. Finish dedicated editor-state persistence pass
@@ -133,14 +133,40 @@ Implemented recently:
 - Run the focused character-canon smoke checklist in `docs/character-canon-unification-smoke-test.md` after the annotation redesign, before starting the Lore Documents IA reframing.
 - Keep branch scope narrow enough that each slice can be reverted cleanly if the UX direction changes.
 - Scratchpad quick access now exists on the main writing/canon/lore/review surfaces. The next scratchpad question is lightweight organization and capture flows, especially AI-to-Scratchpad, rather than basic availability.
-- UI shell stop point: the active-project header/rail pass is complete enough to pause. Continue future route work by reusing `PageHeader`, `ProjectScratchpadButton`, and the route context-rail pattern instead of adding local header utilities.
-- World Bible AI follow-up: Cast has an author-invoked AI draft flow, and non-character categories now have a first schema-aware draft path. Next, browser-smoke built-in and custom categories, then decide whether races, faeries, factions, species, or organizations need category-specific prompt presets beyond the generic field-schema prompt.
+- UI shell is the active product priority again: reduce top-level navigation noise, keep Workspace first, move persistent utilities into shared page-header actions where they must remain visible, and avoid adding local utility bands or always-open panels.
+- World Bible AI follow-up: do not keep polishing the current helper as a form-like insertion tool. The desired model is closer to Workspace text popovers: authors can brainstorm freely in a floating chat, then highlight generated text or accept model-proposed actions such as "set this as Name", "append this to Description", "create a new section", or "add this to field X". The current floating helper / selected-text apply bar is an interim bridge only.
+- Local-model writing quality follow-up: Ollama currently exposes base URL/model selection but not creative sampling controls. Add advanced, optional settings for `top_p` and repetition controls so authors can reduce repeated generic phrasing without editing an Ollama Modelfile by hand.
 - Future optional systems note: character inventory currently tracks item names, quantities, notes, and catalog links, while the rules-engine inventory has a `capacity` field but no per-item weight or surfaced encumbrance calculation. When system-heavy character support comes back into focus, add carry weight/encumbrance as an explicit inventory concern rather than treating quantity as enough.
 - The background review path is only worth keeping if it remains bounded: proposal-only, local-first, and subordinate to deterministic validation. Avoid broadening it into an unbounded “project manager AI.”
 - Lore/canon reminder: freeform lore documents are author-facing source material, extracted entity/fact proposals are candidates, and only accepted anchors plus accepted canonical facts count as source-of-truth canon.
 - Canon-decision AI reminder: the LLM may explain tradeoffs, overlaps, and risks, but it must not silently mutate canon state. Canon-decision consultation is explicit and provider-controlled.
 
-## 0) Lore/Canon Decision Smoke Stabilization
+## 0) Calm Shell and Navigation Simplification
+
+Goal: make the app feel like a writing desk first and a system manager only when the author asks for one.
+
+Targets:
+
+- Keep active-project navigation ordered around `Workspace`, `World Bible`, and `Lore Documents`.
+- Keep `World Bible` as the structured canon home and label longform `Lore Documents` as source material, not a second canon database.
+- Move route-specific utilities out of standalone control bands when they can live in shared page-header actions.
+- Keep review, planning, rules, and system-heavy surfaces available without making them the first things an author has to parse.
+- Preserve existing route behavior and storage; this is a presentation and emphasis pass, not a data-model rewrite.
+
+Acceptance criteria:
+
+- Opening an active project makes writing feel like the primary task.
+- Top-level navigation no longer presents Lore, World Bible, and canon review as equally broad databases.
+- Lore Documents can be explained as "longform source notes that may produce canon proposals."
+- The slice does not touch the current World Bible AI/LLM plumbing beyond avoiding new UI density around it.
+
+Status:
+
+- Started by reordering navigation around Workspace, World Bible, and Lore Docs.
+- Moved Canon Review, Corkboard, Settings, and optional system-heavy routes behind a desktop rail `More` menu so the primary rail stays focused on writing and canon.
+- Started by renaming the Lore route copy to Lore Documents and moving import/list utilities into the shared page header.
+
+## 0A) Lore/Canon Decision Smoke Stabilization
 
 Goal: keep author trust high now that freeform lore intake, canon extraction, suppression memory, and explicit AI consultation are all interacting in live authoring.
 
@@ -173,7 +199,7 @@ Status:
 - Active-scene review refresh and workspace scene-return regressions were fixed on 2026-05-09.
 - New lore/canon architecture is implemented enough to warrant a dedicated manual smoke pass before broader extraction sophistication work.
 
-## 0A) Canon Decision Merge Review Refinement
+## 0B) Canon Decision Merge Review Refinement
 
 Goal: make the new canon-decision workflow feel like a trustworthy source-of-truth layer instead of a noisy duplicate detector.
 
@@ -195,6 +221,38 @@ Status:
 
 - Deterministic clustering, suppression memory, and explicit AI consultation are implemented.
 - Remaining follow-up is manual smoke, queue polish, and better consolidation behavior across multiple lore documents.
+
+## 0C) World Bible AI Helper Action Model
+
+Goal: make AI assistance feel like a conversational collaborator that proposes reversible actions, not a restrictive form path or text-transcription workflow.
+
+Targets:
+
+- Keep brainstorming fully open-ended. The helper should be useful even when the author is not ready to add anything to canon.
+- Let the author highlight assistant-generated text and apply it to an explicit destination, matching the Workspace selection-to-action model.
+- Add model-proposed action chips/cards where appropriate:
+  - set selected text as record name
+  - add selected text as an alias
+  - append or replace a field value
+  - create a new field/section with a suggested label
+  - add content to a newly created section
+- Let the assistant ask permission for concrete actions, such as "Do you want me to add this new section?" or "Do you want me to add this to Description?"
+- Require author confirmation for every canon/schema mutation.
+- Keep generated content editable before save. AI must not silently create records, fields, aliases, or canon facts.
+- Treat import helper and manual helper as the same interaction pattern with different context.
+- Add optional provider-specific creative controls for Ollama/local models, starting with `top_p` and repetition controls, and pass them through the renderer/direct-provider and desktop payload paths.
+
+Acceptance criteria:
+
+- An author can brainstorm without apply controls feeling like the primary purpose of chat.
+- Applying generated text does not require retyping it into a separate input.
+- Proposed field/section additions are visible, confirmable, and reversible before save.
+- The helper does not auto-run and does not mutate canon or schema without an explicit author action.
+
+Status:
+
+- Interim floating helper exists with selected-text apply to current fields.
+- Next slice should replace the interim apply bar with a proposal/action model before adding more AI-specific category presets.
 
 ## 1) Review Completion Workflow + World Bible Intake
 

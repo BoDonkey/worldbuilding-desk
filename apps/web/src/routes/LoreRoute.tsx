@@ -689,9 +689,9 @@ function LoreRoute() {
   if (!activeProject) {
     return (
       <section className={styles.page}>
-        <h1 className={styles.pageTitle}>Lore</h1>
+        <h1 className={styles.pageTitle}>Lore Documents</h1>
         <p className={styles.pageIntro}>
-          Open a project first to create free-form lore documents.
+          Open a project first to create longform source documents.
         </p>
       </section>
     );
@@ -701,7 +701,7 @@ function LoreRoute() {
     <section className={styles.page}>
       <PageHeader
         eyebrow='Free-form worldbuilding'
-        title='Lore'
+        title='Lore Documents'
         description={
           <>
             Store dossiers, timelines, myths, and deep reference notes without forcing
@@ -709,16 +709,18 @@ function LoreRoute() {
             reviewable fact proposals before anything becomes canon.
           </>
         }
-        actions={<ProjectScratchpadButton projectId={activeProject.id} />}
+        actions={
+          <>
+            <ProjectScratchpadButton projectId={activeProject.id} />
+            <button type='button' onClick={handleToggleDocumentRail}>
+              {isDocumentRailCollapsed ? 'Show Documents' : 'Hide Documents'}
+            </button>
+            <button type='button' onClick={handleImportClick} disabled={isImporting}>
+              {isImporting ? 'Importing...' : 'Import Document'}
+            </button>
+          </>
+        }
       />
-      <div className={styles.utilityRow}>
-        <button type='button' onClick={handleToggleDocumentRail}>
-          {isDocumentRailCollapsed ? 'Show Lore Documents' : 'Hide Lore Documents'}
-        </button>
-        <button type='button' onClick={handleImportClick} disabled={isImporting}>
-          {isImporting ? 'Importing...' : 'Import Lore File'}
-        </button>
-      </div>
       <input
         ref={importInputRef}
         type='file'
@@ -742,7 +744,7 @@ function LoreRoute() {
         <div className={styles.starterHeader}>
           <div>
             <div className={styles.starterEyebrow}>Start here</div>
-            <h2>Lore Intake</h2>
+            <h2>Document Intake</h2>
             <p>
               Capture freeform source material first, then extract only the facts and
               entities you want to promote into canon.
@@ -788,7 +790,7 @@ function LoreRoute() {
         {!isDocumentRailCollapsed && (
         <aside className={styles.listCard} aria-label='Lore documents'>
           <div className={styles.cardHeader}>
-            <h2>Project Lore</h2>
+            <h2>Documents</h2>
             <span className={styles.countBadge}>{documents.length}</span>
           </div>
           {documents.length === 0 ? (

@@ -21,7 +21,8 @@ export class OllamaProvider implements LLMProvider {
     const response = await fetch(`${this.getBaseUrl(request)}/api/chat`, {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify(payload)
+      body: JSON.stringify(payload),
+      signal: request.signal
     });
 
     if (!response.ok) {
@@ -38,7 +39,8 @@ export class OllamaProvider implements LLMProvider {
     const response = await fetch(`${this.getBaseUrl(request)}/api/chat`, {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify(payload)
+      body: JSON.stringify(payload),
+      signal: request.signal
     });
 
     if (!response.ok || !response.body) {
@@ -57,6 +59,10 @@ export class OllamaProvider implements LLMProvider {
         if (!line.trim()) continue;
         try {
           const parsed = JSON.parse(line);
+          const thinking = parsed.message?.thinking;
+          if (thinking) {
+            yield `<think>${thinking}</think>`;
+          }
           const text = parsed.message?.content;
           if (text) {
             yield text;
@@ -70,10 +76,26 @@ export class OllamaProvider implements LLMProvider {
 
   private async buildPayload(request: LLMRequest, stream: boolean) {
     const model = await this.resolveModel(request);
+    const options: Record<string, number> = {};
+    if (typeof request.maxTokens === 'number') {
+      options.num_predict = request.maxTokens;
+    }
+    if (typeof request.temperature === 'number') {
+      options.temperature = request.temperature;
+    }
+
     return {
       model,
       stream,
-      messages: request.messages.map((m) => ({role: m.role, content: m.content}))
+      ...(request.think !== undefined ? {think: request.think} : {}),
+      ...(request.responseFormat === 'json' ? {format: 'json'} : {}),
+      ...(Object.keys(options).length ? {options} : {}),
+      messages: [
+        ...(request.systemPrompt
+          ? [{role: 'system' as const, content: request.systemPrompt}]
+          : []),
+        ...request.messages.map((m) => ({role: m.role, content: m.content}))
+      ]
     };
   }
 
@@ -83,7 +105,9 @@ export class OllamaProvider implements LLMProvider {
       return explicitModel;
     }
 
-    const response = await fetch(`${this.getBaseUrl(request)}/api/tags`);
+    const response = await fetch(`${this.getBaseUrl(request)}/api/tags`, {
+      signal: request.signal
+    });
     if (!response.ok) {
       throw new Error(`Ollama model lookup failed: ${response.status} ${response.statusText}`);
     }

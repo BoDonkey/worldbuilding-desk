@@ -35,7 +35,8 @@ export class OpenAIProvider implements LLMProvider {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${this.apiKey}`
       },
-      body: JSON.stringify(payload)
+      body: JSON.stringify(payload),
+      signal: request.signal
     });
 
     if (!response.ok) {
@@ -65,7 +66,8 @@ export class OpenAIProvider implements LLMProvider {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${this.apiKey}`
       },
-      body: JSON.stringify(payload)
+      body: JSON.stringify(payload),
+      signal: request.signal
     });
 
     if (!response.ok || !response.body) {
@@ -116,6 +118,9 @@ export class OpenAIProvider implements LLMProvider {
       temperature: request.temperature ?? 0.7,
       max_tokens: request.maxTokens ?? 4096,
       stream,
+      ...(request.responseFormat === 'json'
+        ? {response_format: {type: 'json_object'}}
+        : {}),
       messages
     };
   }

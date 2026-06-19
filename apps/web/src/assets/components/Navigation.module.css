@@ -78,6 +78,65 @@
   color: var(--color-text-primary);
 }
 
+.moreWrapper {
+  position: relative;
+}
+
+.moreButton {
+  font: inherit;
+  background: transparent;
+  cursor: pointer;
+}
+
+.secondaryMenu {
+  position: absolute;
+  left: calc(100% + 0.6rem);
+  top: 0;
+  width: 190px;
+  z-index: 1750;
+  display: grid;
+  gap: 0.25rem;
+  padding: 0.65rem;
+  border: 1px solid var(--surface-border-soft);
+  border-radius: 14px;
+  background: var(--surface-panel-elevated);
+  box-shadow: 0 16px 36px var(--color-shadow);
+}
+
+.secondaryMenuLabel {
+  padding: 0 0.15rem 0.25rem;
+  color: var(--color-text-secondary);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.secondaryMenuLink {
+  min-height: 40px;
+  display: grid;
+  grid-template-columns: 1.8rem minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.45rem 0.5rem;
+  border-radius: 10px;
+  color: var(--color-text-secondary);
+  text-decoration: none;
+  position: relative;
+}
+
+.secondaryMenuLink:hover {
+  background: var(--color-bg-secondary);
+  color: var(--color-text-primary);
+}
+
+.secondaryMenuIcon {
+  color: inherit;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+
 .icon {
   font-size: 10px;
   font-weight: 700;

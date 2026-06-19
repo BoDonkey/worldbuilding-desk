@@ -2,9 +2,7 @@ import {useCallback, useEffect, useMemo, useRef, useState, type FC} from 'react'
 import { NavLink, useLocation } from 'react-router-dom';
 import { ThemeToggle } from './ThemeToggle';
 import {useCommandPalette} from '../contexts/commandPaletteApi';
-import {getEntitiesByProject} from '../entityStorage';
 import {getCompendiumEntriesByProject} from '../services/compendium';
-import {buildWorldReviewQueue, getAliasesByProject} from '../services/consistency';
 import {getProjectCapabilities} from '../projectMode';
 import {useAppStore} from '../store/appStore';
 import styles from '../assets/components/Navigation.module.css';
@@ -42,33 +40,24 @@ export const Navigation: FC<NavigationProps> = ({
   const projectSettings = useAppStore((s) => s.projectSettings);
   const location = useLocation();
   const [isMobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [pendingCounts, setPendingCounts] = useState<{world: number; compendium: number}>({
-    world: 0,
-    compendium: 0
-  });
+  const [isSecondaryMenuOpen, setSecondaryMenuOpen] = useState(false);
+  const [compendiumPendingCount, setCompendiumPendingCount] = useState(0);
   const mobileMenuCloseRef = useRef<HTMLButtonElement | null>(null);
   const capabilities = getProjectCapabilities(activeProject ? projectSettings : null);
   const loadPendingCounts = useCallback(() => {
-    if (!activeProject) {
-      setPendingCounts({world: 0, compendium: 0});
+    if (!activeProject || !capabilities.canUseGameSystems) {
+      setCompendiumPendingCount(0);
       return Promise.resolve();
     }
 
-    return Promise.all([
-      getEntitiesByProject(activeProject.id),
-      getAliasesByProject(activeProject.id),
-      getCompendiumEntriesByProject(activeProject.id)
-    ])
-      .then(([entities, aliases, entries]) => {
-        setPendingCounts({
-          world: buildWorldReviewQueue(entities, aliases).length,
-          compendium: entries.filter((entry) => entry.needsCompletion).length
-        });
+    return getCompendiumEntriesByProject(activeProject.id)
+      .then((entries) => {
+        setCompendiumPendingCount(entries.filter((entry) => entry.needsCompletion).length);
       })
       .catch(() => {
-        setPendingCounts({world: 0, compendium: 0});
+        setCompendiumPendingCount(0);
       });
-  }, [activeProject]);
+  }, [activeProject, capabilities.canUseGameSystems]);
 
   useEffect(() => {
     let cancelled = false;
@@ -79,65 +68,76 @@ export const Navigation: FC<NavigationProps> = ({
     const handleRecordsChanged = () => {
       void loadPendingCounts();
     };
-    window.addEventListener('wbd:entity-records-changed', handleRecordsChanged);
-    window.addEventListener('wbd:alias-records-changed', handleRecordsChanged);
     window.addEventListener('wbd:compendium-records-changed', handleRecordsChanged);
 
     return () => {
       cancelled = true;
-      window.removeEventListener('wbd:entity-records-changed', handleRecordsChanged);
-      window.removeEventListener('wbd:alias-records-changed', handleRecordsChanged);
       window.removeEventListener('wbd:compendium-records-changed', handleRecordsChanged);
     };
   }, [loadPendingCounts, location.pathname]);
 
-  const navItems = useMemo<NavItem[]>(
+  const primaryNavItems = useMemo<NavItem[]>(
     () => [
       {to: '/projects', label: 'Projects', icon: 'PR'},
-      {to: '/lore', label: 'Lore', icon: 'LR'},
-      {to: '/canon-decisions', label: 'Canon', icon: 'CD'},
-      {to: '/world-bible', label: 'World', icon: 'WB', badgeCount: pendingCounts.world},
+      {to: '/workspace', label: 'Workspace', icon: 'WS'},
+      {to: '/world-bible', label: 'World Bible', icon: 'WB'},
+      {to: '/lore', label: 'Lore Docs', icon: 'LD'}
+    ],
+    []
+  );
+
+  const secondaryNavItems = useMemo<NavItem[]>(
+    () => [
+      {to: '/canon-decisions', label: 'Canon Review', icon: 'CR'},
+      {to: '/corkboard', label: 'Corkboard', icon: 'CB'},
       ...(capabilities.canUseRuleAuthoring
         ? [{to: '/ruleset', label: 'Ruleset', icon: 'RS'}]
         : []),
-      {to: '/workspace', label: 'Workspace', icon: 'WS'},
-      {to: '/corkboard', label: 'Corkboard', icon: 'CB'},
       ...(capabilities.canUseGameSystems
-        ? [{to: '/compendium', label: 'Compendium', icon: 'CP', badgeCount: pendingCounts.compendium}]
+        ? [{to: '/compendium', label: 'Compendium', icon: 'CP', badgeCount: compendiumPendingCount}]
         : []),
       {to: '/settings', label: 'Settings', icon: 'ST'}
     ],
     [
       capabilities.canUseGameSystems,
       capabilities.canUseRuleAuthoring,
-      pendingCounts.compendium,
-      pendingCounts.world
+      compendiumPendingCount
     ]
   );
 
+  const navItems = useMemo<NavItem[]>(
+    () => [...primaryNavItems, ...secondaryNavItems],
+    [primaryNavItems, secondaryNavItems]
+  );
+
+  const secondaryBadgeCount = useMemo(
+    () => secondaryNavItems.reduce((total, item) => total + (item.badgeCount ?? 0), 0),
+    [secondaryNavItems]
+  );
+
+  const isSecondaryRouteActive = secondaryNavItems.some((item) => location.pathname === item.to);
+
   const mobileBarItems = useMemo(
-    () =>
-      navItems.filter((item) =>
-        ['/projects', '/lore', '/world-bible', '/workspace', '/corkboard'].includes(item.to)
-          || item.to === '/canon-decisions'
-      ),
-    [navItems]
+    () => primaryNavItems,
+    [primaryNavItems]
   );
   useEffect(() => {
     setMobileMenuOpen(false);
+    setSecondaryMenuOpen(false);
   }, [location.pathname]);
 
   useEffect(() => {
-    if (!isMobileMenuOpen) return;
+    if (!isMobileMenuOpen && !isSecondaryMenuOpen) return;
     mobileMenuCloseRef.current?.focus();
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         setMobileMenuOpen(false);
+        setSecondaryMenuOpen(false);
       }
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [isMobileMenuOpen]);
+  }, [isMobileMenuOpen, isSecondaryMenuOpen]);
 
   const captureRouteScroll = useCallback(() => {
     if (location.pathname === '/workspace') {
@@ -168,13 +168,13 @@ export const Navigation: FC<NavigationProps> = ({
             type='button'
             className={styles.searchLauncher}
             onClick={openPalette}
-            title='Search scenes and world records'
+            title='Search scenes and canon records'
           >
             <span className={styles.icon}>SR</span>
             <span className={styles.label}>Search</span>
           </button>
           <nav className={styles.railLinks} aria-label='Primary navigation'>
-            {navItems.map((item) => (
+            {primaryNavItems.map((item) => (
               <NavLink
                 key={item.to}
                 to={item.to}
@@ -191,6 +191,49 @@ export const Navigation: FC<NavigationProps> = ({
                 ) : null}
               </NavLink>
             ))}
+            <div className={styles.moreWrapper}>
+              <button
+                type='button'
+                className={`${styles.railLink} ${styles.moreButton} ${
+                  isSecondaryRouteActive ? styles.active : ''
+                }`}
+                onClick={() => setSecondaryMenuOpen((prev) => !prev)}
+                aria-expanded={isSecondaryMenuOpen}
+                aria-haspopup='menu'
+                title='More destinations'
+              >
+                <span className={styles.icon}>MO</span>
+                <span className={styles.label}>More</span>
+                {secondaryBadgeCount ? (
+                  <span className={styles.navBadge}>{secondaryBadgeCount}</span>
+                ) : null}
+              </button>
+              {isSecondaryMenuOpen ? (
+                <div className={styles.secondaryMenu} role='menu'>
+                  <div className={styles.secondaryMenuLabel}>More</div>
+                  {secondaryNavItems.map((item) => (
+                    <NavLink
+                      key={`secondary-${item.to}`}
+                      to={item.to}
+                      end={item.end}
+                      title={item.label}
+                      onMouseDownCapture={captureRouteScroll}
+                      onClickCapture={captureRouteScroll}
+                      className={({isActive}) =>
+                        `${styles.secondaryMenuLink} ${isActive ? styles.active : ''}`
+                      }
+                      role='menuitem'
+                    >
+                      <span className={styles.secondaryMenuIcon}>{item.icon}</span>
+                      <span>{item.label}</span>
+                      {item.badgeCount ? (
+                        <span className={styles.mobileMenuBadge}>{item.badgeCount}</span>
+                      ) : null}
+                    </NavLink>
+                  ))}
+                </div>
+              ) : null}
+            </div>
           </nav>
           <div className={styles.railFooter}>
             <button
@@ -272,7 +315,7 @@ export const Navigation: FC<NavigationProps> = ({
                   openPalette();
                 }}
               >
-                <span>Search scenes and world records</span>
+                <span>Search scenes and canon records</span>
                 <span className={styles.mobileMenuActionMeta}>Cmd/Ctrl+K</span>
               </button>
               {navItems.map((item) => (
