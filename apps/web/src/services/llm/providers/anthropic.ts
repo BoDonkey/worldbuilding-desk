@@ -48,7 +48,8 @@ export class AnthropicProvider implements LLMProvider {
         temperature: request.temperature || 0.7,
         system: systemPrompt,
         messages: request.messages.filter((m) => m.role !== 'system')
-      })
+      }),
+      signal: request.signal
     });
 
     if (!response.ok) {
@@ -84,7 +85,8 @@ export class AnthropicProvider implements LLMProvider {
           temperature: request.temperature,
           model: request.model ?? this.model
         }
-      })
+      }),
+      signal: request.signal
     });
 
     if (!response.ok) {

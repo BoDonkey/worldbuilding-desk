@@ -18,16 +18,25 @@ interface AIAssistantProps {
   aiConfig?: ProjectAISettings;
   projectMode?: ProjectMode;
   context?: {
-    type: 'document' | 'rule' | 'character';
+    type: 'document' | 'rule' | 'rules' | 'character' | 'world-bible';
     id: string;
     selectedText?: string;
   };
   onInsert?: (text: string) => void;
+  onAssistantSelectionChange?: (text: string) => void;
   queuedPrompt?: string | null;
   onQueuedPromptConsumed?: () => void;
   consultationModel?: string;
   consultationMaxTokens?: number;
+  showContextPreview?: boolean;
 }
+
+export const stripAssistantThinking = (content: string): string =>
+  content
+    .replace(/<think>[\s\S]*?<\/think>/gi, '')
+    .replace(/<think>[\s\S]*$/gi, '')
+    .replace(/^[\s\S]*?<\/think>/i, '')
+    .trimStart();
 
 export const AIAssistant: React.FC<AIAssistantProps> = ({
   projectId,
@@ -35,10 +44,12 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
   projectMode = 'litrpg',
   context,
   onInsert,
+  onAssistantSelectionChange,
   queuedPrompt,
   onQueuedPromptConsumed,
   consultationModel,
-  consultationMaxTokens
+  consultationMaxTokens,
+  showContextPreview = true
 }) => {
   const [messages, setMessages] = useState<LLMMessage[]>([]);
   const [input, setInput] = useState('');
@@ -46,7 +57,7 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
   const [providerError, setProviderError] = useState<string | null>(null);
   const [memoryCache, setMemoryCache] = useState<MemoryEntry[]>([]);
   const [selectedToolIds, setSelectedToolIds] = useState<string[]>([]);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesRef = useRef<HTMLDivElement>(null);
 
   const llmService = useRef<LLMService | null>(null);
   const ragService = useRef<RAGProvider | null>(null);
@@ -135,9 +146,35 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
     };
   }, [syncMemoryCache]);
 
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({behavior: 'smooth'});
-  }, [messages]);
+  const scrollMessagesToBottom = useCallback(() => {
+    window.requestAnimationFrame(() => {
+      const element = messagesRef.current;
+      if (!element) return;
+      element.scrollTop = element.scrollHeight;
+    });
+  }, []);
+
+  const handleAssistantSelectionChange = useCallback(() => {
+    if (!onAssistantSelectionChange) return;
+    const selection = window.getSelection();
+    const selectedText = selection?.toString().trim() ?? '';
+    const anchorNode = selection?.anchorNode;
+    const focusNode = selection?.focusNode;
+    const messagesElement = messagesRef.current;
+    if (
+      !selectedText ||
+      !messagesElement ||
+      !anchorNode ||
+      !focusNode ||
+      !messagesElement.contains(anchorNode) ||
+      !messagesElement.contains(focusNode)
+    ) {
+      onAssistantSelectionChange('');
+      return;
+    }
+
+    onAssistantSelectionChange(stripAssistantThinking(selectedText));
+  }, [onAssistantSelectionChange]);
 
   const buildMemoryChunks = useCallback(
     async (query: string) => {
@@ -219,6 +256,7 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
     setMessages((prev) => [...prev, displayedUserMessage]);
     setInput('');
     setIsStreaming(true);
+    scrollMessagesToBottom();
 
     try {
       // Get relevant context from RAG
@@ -243,7 +281,8 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
         });
       }
 
-      const basePrompt = await promptManager.current.getPrompt(context?.type || 'document');
+      const promptType = context?.type === 'rule' ? 'rules' : context?.type || 'document';
+      const basePrompt = await promptManager.current.getPrompt(promptType);
       const activeTools = ((aiConfig?.promptTools ?? []) as PromptTool[])
         .filter((tool) => tool.enabled && selectedToolIds.includes(tool.id));
       const toolPrompt =
@@ -259,21 +298,25 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
 
 
       // Stream response
-      let assistantMessage = '';
+      let rawAssistantMessage = '';
       setMessages((prev) => [...prev, {role: 'assistant', content: ''}]);
+      scrollMessagesToBottom();
 
       for await (const chunk of llmService.current.stream({
         messages: [requestUserMessage],
         context: contextChunks,
         systemPrompt: composedPrompt,
         model: consultationModel?.trim() || undefined,
-        maxTokens: consultationMaxTokens
+        maxTokens: consultationMaxTokens,
+        think: false
       })) {
-        assistantMessage += chunk;
+        rawAssistantMessage += chunk;
+        const assistantMessage = stripAssistantThinking(rawAssistantMessage);
         setMessages((prev) => [
           ...prev.slice(0, -1),
           {role: 'assistant', content: assistantMessage}
         ]);
+        scrollMessagesToBottom();
       }
     } catch (error) {
       console.error('AI request failed:', error);
@@ -292,6 +335,7 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
     context?.type,
     projectId,
     providerError,
+    scrollMessagesToBottom,
     selectedToolIds,
     selectedText,
     aiConfig?.promptTools
@@ -317,13 +361,13 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
       .reverse()
       .find((m) => m.role === 'assistant');
     if (lastAssistantMessage && onInsert) {
-      onInsert(lastAssistantMessage.content);
+      onInsert(stripAssistantThinking(lastAssistantMessage.content));
     }
   };
 
   return (
     <div className={styles.container}>
-      {selectedText && (
+      {showContextPreview && selectedText && (
         <div className={styles.contextCard}>
           <div className={styles.contextHeader}>
             <div className={styles.contextTitle}>Selected text</div>
@@ -362,13 +406,17 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
           <p>{providerError}</p>
         </div>
       )}
-      <div className={styles.messages}>
+      <div
+        className={styles.messages}
+        ref={messagesRef}
+        onMouseUp={handleAssistantSelectionChange}
+        onKeyUp={handleAssistantSelectionChange}
+      >
         {messages.map((msg, i) => (
           <div key={i} className={styles[msg.role]}>
             <div className={styles.messageContent}>{msg.content}</div>
           </div>
         ))}
-        <div ref={messagesEndRef} />
       </div>
 
       <div className={styles.inputArea}>

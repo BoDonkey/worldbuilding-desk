@@ -1,6 +1,6 @@
 # Navigation IA Decision
 
-Last updated: 2026-05-12
+Last updated: 2026-06-03
 
 ## Goal
 
@@ -31,6 +31,7 @@ Accepted model:
 - `Characters`, `Locations`, `Items`, `Factions`, `Creatures`, `Concepts`, and custom categories live inside `World Bible`.
 - Each World Bible record can optionally link to a **Lore Document** for deeper, longform writing.
 - `Lore Documents` are source material and deep notes, not a second competing canon database.
+- AI assistance should follow the same ownership model: it can help draft or extract candidates, but accepted World Bible records and accepted canonical facts remain the source of truth.
 - The app should prefer an **automagic** author experience:
   - authors should not have to decide between multiple canon homes
   - structure should appear progressively
@@ -117,6 +118,13 @@ Recommended record relationship:
   - may produce extractable proposals
   - does not become canon automatically
 
+AI drafting implication:
+
+- Character/Cast AI drafting should not remain the only pattern.
+- Custom World Bible categories may represent races, faeries, factions, species, organizations, or other grouped entity types.
+- AI entry points should be schema-aware and author-invoked: model output fills editable draft fields or candidate proposals, then the author decides what becomes canon. The first non-character World Bible draft path now streams a concept for author review before extracting into the active category field schema; browser smoke and prompt review should determine whether category-specific presets are needed.
+- Do not model every non-character category as an individual character list. Category hierarchy and entity type should be resolved before adding more category-specific AI buttons.
+
 This supports the desired user flow:
 
 1. Add or accept a canon record in `World Bible`
@@ -175,8 +183,9 @@ Until the full navigation simplification lands, use these rules:
 5. Add explicit linked-lore affordances inside World Bible records:
    - `Create linked lore document`
    - `Open linked lore document`
-6. Stop presenting `Characters` and `World Bible > Characters` as two equally primary homes for character canon.
-7. Add a record-level entry point for optional character-sheet/state tooling from World Bible character records.
+6. Decide how author-invoked AI drafting generalizes beyond Cast to other World Bible categories without silently creating canon.
+7. Stop presenting `Characters` and `World Bible > Characters` as two equally primary homes for character canon.
+8. Add a record-level entry point for optional character-sheet/state tooling from World Bible character records.
 
 ## Working Recommendation
 

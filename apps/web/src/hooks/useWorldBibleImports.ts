@@ -2,9 +2,9 @@ import {useCallback, useEffect, useMemo, useState} from 'react';
 import type {ChangeEvent, Dispatch, SetStateAction} from 'react';
 import type {EntityCategory, WorldEntity} from '../entityTypes';
 import {saveEntity} from '../entityStorage';
+import {saveCategory} from '../categoryStorage';
 import {
   convertPlainTextToRichHtml,
-  extractPlainTextFromRichText,
   normalizeRichTextValue
 } from '../services/worldBible/worldBibleEntityHelpers';
 
@@ -20,7 +20,15 @@ export interface WorldBibleImportDraft {
   categoryId: string;
   mode: ImportMode;
   include: boolean;
+  detectedSections?: WorldBibleImportSectionDraft[];
+  useDetectedSections?: boolean;
   parseError?: string;
+}
+
+export interface WorldBibleImportSectionDraft {
+  id: string;
+  title: string;
+  content: string;
 }
 
 interface JsonImportRowInput {
@@ -65,6 +73,7 @@ interface UseWorldBibleImportsParams {
   activeCategory: EntityCategory | null;
   categories: EntityCategory[];
   entities: WorldEntity[];
+  setCategories: Dispatch<SetStateAction<EntityCategory[]>>;
   setEntities: Dispatch<SetStateAction<WorldEntity[]>>;
   setFeedback: Dispatch<SetStateAction<FeedbackState>>;
   onEntitySaved?: (entity: WorldEntity, category: EntityCategory) => Promise<void>;
@@ -72,8 +81,199 @@ interface UseWorldBibleImportsParams {
 }
 
 const fileNameToEntityName = (name: string): string => {
-  const base = name.replace(/\.[^.]+$/, '').trim();
+  const base = name
+    .replace(/\.[^.]+$/, '')
+    .replace(/[_-]+/g, ' ')
+    .replace(/^\s*(?:race|species|character|item|location|faction)\s+sheet\s*/i, '')
+    .trim();
   return base || 'Imported entry';
+};
+
+const normalizeImportLine = (line: string): string =>
+  line
+    .replace(/^[\s\u200f\u200e]+/g, '')
+    .replace(/^[•*·▪◦]\s*/u, '')
+    .replace(/\t+/g, ' ')
+    .trim();
+
+const parseImportLabelValue = (line: string): {label: string; value: string} | null => {
+  const match = line.match(/^([^:]{1,80}):\s*(.+)$/);
+  if (!match) return null;
+  return {label: match[1].trim(), value: match[2].trim()};
+};
+
+const IMPORT_NAME_LABELS = new Set(['name', 'title', 'concept', 'race', 'species']);
+const COLLAPSED_SECTION_HEADING_PATTERN =
+  /\b(Background(?:\s+and\s+[A-Z][A-Za-z'’/-]+)?|[A-Z][A-Za-z'’/-]+\s+and\s+[A-Z][A-Za-z'’/-]+|Interaction\s+with\s+[A-Z][A-Za-z'’/-]+(?:\s+[A-Z][A-Za-z'’/-]+)*|Role\s+in\s+[A-Z][A-Za-z'’/-]+(?:\s+[A-Z][A-Za-z'’/-]+)*|Broader\s+Implications|Inclusion\s+of\s+[A-Z][A-Za-z'’/-]+(?:\s+[A-Z][A-Za-z'’/-]+)*):\s/gi;
+const INLINE_LABEL_PATTERN = /^[A-Z][A-Za-z'’/-]{1,32}(?:\s+[A-Z][A-Za-z'’/-]{1,32}){0,2}$/;
+
+const looksLikeImportSectionHeading = (
+  line: string,
+  previousLine: string,
+  nextLine: string
+): boolean => {
+  if (!line.endsWith(':')) return false;
+  const candidate = line.slice(0, -1).trim();
+  if (!candidate || candidate.includes(':') || candidate.includes('  ')) return false;
+  if (IMPORT_NAME_LABELS.has(candidate.toLowerCase())) return false;
+  if (candidate.length > 72) return false;
+  if (INLINE_LABEL_PATTERN.test(candidate) && !/\b(and|with|in|of)\b/i.test(candidate)) {
+    return !previousLine && Boolean(nextLine) && !parseImportLabelValue(nextLine);
+  }
+  return true;
+};
+
+const slugifyFieldKey = (value: string): string =>
+  value.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '') ||
+  crypto.randomUUID();
+
+const isExistingFieldMatch = (
+  field: EntityCategory['fieldSchema'][number],
+  sectionTitle: string
+): boolean => {
+  const normalizedTitle = slugifyFieldKey(sectionTitle);
+  return field.key === normalizedTitle || slugifyFieldKey(field.label) === normalizedTitle;
+};
+
+const canMapImportField = (field: EntityCategory['fieldSchema'][number]): boolean =>
+  field.type === 'textarea' || field.type === 'text';
+
+const trimCollapsedSectionTextFromName = (value: string): string => {
+  const normalized = value.replace(/\s+/g, ' ').trim();
+  const nextHeadingMatch = normalized.match(
+    /\s+(?:Background|Origin|Appearance|Traits|Culture|Cultural|Society|Interaction|Relations|Relationships|Role|Broader|Implications|History|Notes|Description|Personality|Abilities|Magic|Pheromones|Trafficking|Inclusion)(?:\s+[A-Z][A-Za-z'’/&-]*|\s+and|\s+or|\s+of|\s+with|\s+in|\s+the){0,8}:\s/i
+  );
+  const candidate = nextHeadingMatch
+    ? normalized.slice(0, nextHeadingMatch.index).trim()
+    : normalized;
+  return candidate.length <= 80 ? candidate : '';
+};
+
+export const detectImportDocumentName = (text: string, fileName: string): string => {
+  const lines = text.replace(/\r/g, '').split('\n').map(normalizeImportLine);
+  for (const line of lines.slice(0, 12)) {
+    const pair = parseImportLabelValue(line);
+    if (pair && IMPORT_NAME_LABELS.has(pair.label.toLowerCase()) && pair.value.trim()) {
+      const name = trimCollapsedSectionTextFromName(pair.value);
+      if (name) return name;
+    }
+  }
+  return fileNameToEntityName(fileName);
+};
+
+const detectCollapsedImportSections = (text: string): WorldBibleImportSectionDraft[] => {
+  const normalized = text.replace(/\s+/g, ' ').trim();
+  const matches = Array.from(normalized.matchAll(COLLAPSED_SECTION_HEADING_PATTERN));
+  if (matches.length === 0) {
+    return [];
+  }
+
+  return matches
+    .map((match, index) => {
+      const title = match[1]?.trim() ?? '';
+      const contentStart = (match.index ?? 0) + match[0].length;
+      const contentEnd =
+        index + 1 < matches.length ? matches[index + 1].index ?? normalized.length : normalized.length;
+      return {
+        id: `${slugifyFieldKey(title)}-${index}`,
+        title,
+        content: normalized.slice(contentStart, contentEnd).trim()
+      };
+    })
+    .filter((section) => section.title && section.content);
+};
+
+export const detectImportSections = (text: string): WorldBibleImportSectionDraft[] => {
+  const lines = text.replace(/\r/g, '').split('\n').map(normalizeImportLine);
+  const sections: Array<{title: string; contentLines: string[]}> = [];
+  let currentSection: {title: string; contentLines: string[]} | null = null;
+
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index];
+    if (!line) {
+      if (currentSection) currentSection.contentLines.push('');
+      continue;
+    }
+
+    const previousLine = lines[index - 1] ?? '';
+    const nextLine = lines.slice(index + 1).find(Boolean) ?? '';
+    if (looksLikeImportSectionHeading(line, previousLine, nextLine)) {
+      currentSection = {title: line.slice(0, -1).trim(), contentLines: []};
+      sections.push(currentSection);
+      continue;
+    }
+
+    if (currentSection) {
+      currentSection.contentLines.push(line);
+    }
+  }
+
+  const lineSections = sections
+    .map((section, index) => ({
+      id: `${slugifyFieldKey(section.title)}-${index}`,
+      title: section.title,
+      content: section.contentLines.join('\n').trim()
+    }))
+    .filter((section) => section.content.length > 0);
+  return lineSections.length > 0 ? lineSections : detectCollapsedImportSections(text);
+};
+
+const findFirstLineSectionIndex = (lines: string[]): number => {
+  const normalizedLines = lines.map(normalizeImportLine);
+  return normalizedLines.findIndex((line, index) => {
+    if (!line) return false;
+    const previousLine = normalizedLines[index - 1] ?? '';
+    const nextLine = normalizedLines.slice(index + 1).find(Boolean) ?? '';
+    return looksLikeImportSectionHeading(line, previousLine, nextLine);
+  });
+};
+
+const getImportIntroText = (
+  text: string,
+  sections: WorldBibleImportSectionDraft[]
+): string => {
+  if (sections.length === 0) return text.trim();
+  const lines = text.replace(/\r/g, '').split('\n');
+  const firstLineSectionIndex = findFirstLineSectionIndex(lines);
+  if (firstLineSectionIndex >= 0) {
+    return lines.slice(0, firstLineSectionIndex).join('\n').trim();
+  }
+
+  const normalized = text.replace(/\s+/g, ' ').trim();
+  const firstCollapsedSection = normalized.match(
+    new RegExp(COLLAPSED_SECTION_HEADING_PATTERN.source, 'i')
+  );
+  return firstCollapsedSection && firstCollapsedSection.index
+    ? normalized.slice(0, firstCollapsedSection.index).trim()
+    : '';
+};
+
+const mapInlineLabelsToExistingFields = (
+  category: EntityCategory,
+  fields: Record<string, string>,
+  sections: WorldBibleImportSectionDraft[]
+): void => {
+  sections.forEach((section) => {
+    section.content
+      .replace(/\r/g, '')
+      .split('\n')
+      .map(normalizeImportLine)
+      .forEach((line) => {
+        const pair = parseImportLabelValue(line);
+        if (!pair) return;
+        const field = category.fieldSchema.find(
+          (candidate) =>
+            canMapImportField(candidate) &&
+            !fields[candidate.key] &&
+            isExistingFieldMatch(candidate, pair.label)
+        );
+        if (!field) return;
+        fields[field.key] =
+          field.type === 'textarea'
+            ? normalizeRichTextValue(pair.value)
+            : pair.value;
+      });
+  });
 };
 
 const htmlToText = (raw: string): string => {
@@ -199,7 +399,7 @@ const buildMarkdownTableHtml = (rows: string[]): string => {
   );
 };
 
-const markdownToRichHtml = (raw: string): string => {
+export const markdownToRichHtml = (raw: string): string => {
   const normalized = raw.replace(/\r\n/g, '\n').trim();
   if (!normalized) {
     return '<p></p>';
@@ -214,7 +414,7 @@ const markdownToRichHtml = (raw: string): string => {
 
   const flushParagraph = () => {
     if (!paragraphLines.length) return;
-    blocks.push(`<p>${renderMarkdownInline(paragraphLines.join('<br />'))}</p>`);
+    blocks.push(`<p>${renderMarkdownInline(paragraphLines.join('\n')).replace(/\n/g, '<br />')}</p>`);
     paragraphLines = [];
   };
 
@@ -227,7 +427,7 @@ const markdownToRichHtml = (raw: string): string => {
   const flushBlockquote = () => {
     if (!blockquoteLines.length) return;
     blocks.push(
-      `<blockquote><p>${renderMarkdownInline(blockquoteLines.join('<br />'))}</p></blockquote>`
+      `<blockquote><p>${renderMarkdownInline(blockquoteLines.join('\n')).replace(/\n/g, '<br />')}</p></blockquote>`
     );
     blockquoteLines = [];
   };
@@ -486,28 +686,78 @@ const valueToString = (value: unknown): string => {
   return '';
 };
 
-const mapImportedTextToFields = (
+export const mapImportedTextToFields = (
   category: EntityCategory,
   text: string,
-  richTextHtml?: string
+  richTextHtml?: string,
+  sections: WorldBibleImportSectionDraft[] = []
 ): Record<string, string> => {
   const normalized = text.trim();
   const fields: Record<string, string> = {};
-  const preferredField =
-    category.fieldSchema.find((field) => field.key === 'description') ??
-    category.fieldSchema.find((field) => field.type === 'textarea') ??
-    category.fieldSchema.find((field) => field.type === 'text');
 
-  if (preferredField) {
+  sections.forEach((section) => {
+    const field = category.fieldSchema.find((candidate) =>
+      canMapImportField(candidate) && isExistingFieldMatch(candidate, section.title)
+    );
+    if (!field) return;
+    fields[field.key] =
+      field.type === 'textarea' ? normalizeRichTextValue(section.content) : section.content;
+  });
+  mapInlineLabelsToExistingFields(category, fields, sections);
+
+  const preferredField =
+    sections.length > 0
+      ? category.fieldSchema.find((field) => field.key === 'description')
+      : category.fieldSchema.find((field) => field.key === 'description') ??
+        category.fieldSchema.find((field) => field.type === 'textarea') ??
+        category.fieldSchema.find((field) => field.type === 'text');
+  const descriptionText = sections.length > 0
+    ? getImportIntroText(text, sections)
+    : normalized;
+
+  if (descriptionText && preferredField) {
     fields[preferredField.key] =
       preferredField.type === 'textarea'
-        ? richTextHtml || normalizeRichTextValue(normalized)
-        : normalized;
-  } else {
+        ? sections.length > 0
+          ? normalizeRichTextValue(descriptionText)
+          : richTextHtml || normalizeRichTextValue(descriptionText)
+        : descriptionText;
+  } else if (!sections.length && !preferredField) {
     fields.description = richTextHtml || normalizeRichTextValue(normalized);
   }
 
   return fields;
+};
+
+const ensureSectionFields = async (
+  category: EntityCategory,
+  sections: WorldBibleImportSectionDraft[]
+): Promise<EntityCategory> => {
+  if (sections.length === 0) return category;
+  const existingKeys = new Set(category.fieldSchema.map((field) => field.key));
+  const nextFields = [...category.fieldSchema];
+  let changed = false;
+
+  sections.forEach((section) => {
+    const existing = nextFields.find((field) => isExistingFieldMatch(field, section.title));
+    if (existing) return;
+
+    const baseKey = slugifyFieldKey(section.title);
+    let key = baseKey;
+    let suffix = 2;
+    while (existingKeys.has(key)) {
+      key = `${baseKey}_${suffix}`;
+      suffix += 1;
+    }
+    existingKeys.add(key);
+    nextFields.push({key, label: section.title, type: 'textarea'});
+    changed = true;
+  });
+
+  if (!changed) return category;
+  const updatedCategory = {...category, fieldSchema: nextFields};
+  await saveCategory(updatedCategory);
+  return updatedCategory;
 };
 
 interface ApplyImportDraftOptions {
@@ -519,6 +769,7 @@ export const useWorldBibleImports = ({
   activeCategory,
   categories,
   entities,
+  setCategories,
   setEntities,
   setFeedback,
   onEntitySaved,
@@ -678,17 +929,20 @@ export const useWorldBibleImports = ({
           const text =
             lower.endsWith('.html') || lower.endsWith('.htm')
               ? htmlToText(raw)
-              : extractPlainTextFromRichText(richTextHtml);
+              : raw.trim();
+          const detectedSections = detectImportSections(text);
           drafts.push({
             id: crypto.randomUUID(),
             fileName: file.name,
-            name: fileNameToEntityName(file.name),
+            name: detectImportDocumentName(text, file.name),
             text,
             richTextHtml,
             preview: buildPreview(text),
             categoryId: activeCategory.id,
             mode: 'create',
-            include: true
+            include: true,
+            detectedSections,
+            useDetectedSections: detectedSections.length > 0
           });
         } catch {
           parseFailures += 1;
@@ -879,20 +1133,30 @@ export const useWorldBibleImports = ({
     setIsApplyingImports(true);
     setFeedback(null);
     const nextEntities = [...entities];
+    const categoryById = new Map(categories.map((category) => [category.id, category]));
     let createdCount = 0;
     let updatedCount = 0;
     let failedCount = 0;
+    let categoriesChanged = false;
     let firstImportedEntity: WorldEntity | null = null;
 
     try {
       for (const draft of queuedDrafts) {
-        const category = categories.find((item) => item.id === draft.categoryId);
+        const category = categoryById.get(draft.categoryId);
         if (!category) {
           failedCount += 1;
           continue;
         }
 
         try {
+          const sectionDrafts = draft.useDetectedSections
+            ? draft.detectedSections ?? []
+            : [];
+          const importCategory = await ensureSectionFields(category, sectionDrafts);
+          if (importCategory !== category) {
+            categoryById.set(importCategory.id, importCategory);
+            categoriesChanged = true;
+          }
           const now = Date.now();
           const normalizedName = draft.name.trim().toLowerCase();
           const existing =
@@ -909,7 +1173,12 @@ export const useWorldBibleImports = ({
                 ...existing,
                 fields: {
                   ...existing.fields,
-                  ...mapImportedTextToFields(category, draft.text, draft.richTextHtml)
+                  ...mapImportedTextToFields(
+                    importCategory,
+                    draft.text,
+                    draft.richTextHtml,
+                    sectionDrafts
+                  )
                 },
                 updatedAt: now
               }
@@ -918,7 +1187,12 @@ export const useWorldBibleImports = ({
                 projectId: activeProjectId,
                 categoryId: draft.categoryId,
                 name: draft.name.trim() || fileNameToEntityName(draft.fileName),
-                fields: mapImportedTextToFields(category, draft.text, draft.richTextHtml),
+                fields: mapImportedTextToFields(
+                  importCategory,
+                  draft.text,
+                  draft.richTextHtml,
+                  sectionDrafts
+                ),
                 needsCompletion: false,
                 links: [],
                 createdAt: now,
@@ -926,7 +1200,7 @@ export const useWorldBibleImports = ({
               };
 
           await saveEntity(entity);
-          await onEntitySaved?.(entity, category);
+          await onEntitySaved?.(entity, importCategory);
           if (!firstImportedEntity) {
             firstImportedEntity = entity;
           }
@@ -945,6 +1219,9 @@ export const useWorldBibleImports = ({
       }
 
       setEntities(nextEntities);
+      if (categoriesChanged) {
+        setCategories(Array.from(categoryById.values()));
+      }
       if (createdCount + updatedCount > 0) {
         await onEntitiesChanged?.();
       }
@@ -979,6 +1256,7 @@ export const useWorldBibleImports = ({
     importDrafts,
     onEntitiesChanged,
     onEntitySaved,
+    setCategories,
     setEntities,
     setFeedback
   ]);

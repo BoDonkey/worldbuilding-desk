@@ -6,7 +6,8 @@ Use this document when handing reconciliation work to another LLM or reviewer. T
 
 ## Branches
 
-- Active branch: `codex/reconcile-temp-update-ui`
+- Active branch: `codex/dictionary-highlight-filter`
+- Prior reconciliation baseline: `codex/reconcile-temp-update-ui`
 - Reference branch only: `codex/review-completion-state`
 - Functional base: `temp-update`
 
@@ -20,20 +21,41 @@ Do not wholesale merge or cherry-pick `codex/review-completion-state`. It has so
 - `46873d6` - restored Cast AI draft workflow.
 - `9b28d58` - reduced World Bible review card density.
 - `f7c2f19` - stabilized World Bible review aliases.
+- `69dbb88` - unified active project page chrome.
+- `616ff78` - aligned secondary route headers.
+- `85c29fa` - added scratchpad access to planning headers.
+- `5b4071e` - stabilized corkboard header actions.
+- `8a1e922` - normalized lore and canon header utilities.
+- `96faf81` - added collapsible corkboard chapter rail.
+- `9c02c1e` - added context rails to lore and world bible.
+- `b85e8ae` - moved world bible utilities into rail.
+- `931bf51` - added lore starter cards.
+- Current uncommitted slice - World Bible AI authoring/helper redesign.
 
 ## Current Checkpoint
 
-The review/alias stabilization slice is committed in `f7c2f19`. The working tree was clean after that commit.
+The active-project chrome/rail slice is committed through `931bf51`. The working tree was clean after that commit.
+The current working slice has moved away from schema-aware AI draft task cards toward a discrete World Bible AI helper. It is not committed yet in this handoff state.
 
 Included areas:
 
+- `apps/web/src/components/PageHeader.tsx`
+- `apps/web/src/components/ProjectScratchpadButton.tsx`
 - `apps/web/src/routes/WorldBibleRoute.tsx`
+- `apps/web/src/routes/LoreRoute.tsx`
+- `apps/web/src/routes/CorkboardRoute.tsx`
+- `apps/web/src/routes/CanonDecisionsRoute.tsx`
+- `apps/web/src/routes/WorkspaceRoute.tsx`
+- `apps/web/src/styles/WorldBibleRoute.module.css`
+- `apps/web/src/styles/LoreRoute.module.css`
+- `apps/web/src/styles/CorkboardRoute.module.css`
+- `apps/web/src/styles/CanonDecisionsRoute.module.css`
+- `apps/web/src/styles/WorkspaceRoute.module.css`
 - `apps/web/src/hooks/useWorkspaceConsistency.ts`
 - `apps/web/src/hooks/useWorkspaceLoreSnippets.ts`
 - `apps/web/src/hooks/useWorkspaceProjectData.ts`
 - `apps/web/src/hooks/useWorldBibleEntityActions.ts`
 - `apps/web/src/routes/CharactersRoute.tsx`
-- `apps/web/src/routes/WorkspaceRoute.tsx`
 - `apps/web/src/components/Editor/extensions/ConsistencyHighlightsExtension.ts`
 - `apps/web/src/services/worldBible/worldBibleReviewHelpers.ts`
 - `apps/web/src/services/worldBible/worldBibleReviewHelpers.test.ts`
@@ -42,10 +64,17 @@ Included areas:
 - `apps/web/src/services/consistency/textMatcher.test.ts`
 - `apps/web/cypress/e2e/lore-review-matching.cy.ts`
 - `apps/web/cypress/e2e/project-mode-guardrails.cy.ts`
-- `apps/web/src/styles/WorkspaceRoute.module.css`
 
 Implemented in the checkpoint:
 
+- Workspace, World Bible, Lore, Corkboard, and Canon Decisions now share the active-project header rhythm.
+- Scratchpad quick access is available from World Bible, Lore, Corkboard, and Canon Decisions.
+- Corkboard keeps Scratchpad in the upper-right header area and moves chapter-card list/status controls into a calmer secondary row/rail.
+- Corkboard has a collapsible chapter-card rail so the card list can be hidden while planning.
+- World Bible and Lore now have context rails aligned with the Workspace side-rail model.
+- World Bible import/help/template controls moved out of the top header into the rail; import/export actions that already live in top cards were not duplicated there.
+- Lore has starter cards for `Write Manually`, `Import Dossier`, and `Extract Canon`.
+- The Lore manual starter moves focus into the editor title input; extraction remains disabled until there is an active saved document.
 - Review Queue is reduced to one primary queue surface.
 - Cast creation cards, Queue Focus, duplicate queue item panels, recommendation filter pills, `Open queue mode`, and `Focus first item` are removed from review mode.
 - Review card action copy now uses `Resolve names` when a duplicate/alias decision is available.
@@ -58,14 +87,31 @@ Implemented in the checkpoint:
 - Workspace general-fiction canon highlighting now treats World Bible character entities as canon and does not keep orphan Character Tools profiles highlighted after World Bible canon deletion.
 - Unknown extraction now keeps longer proper names such as `Magical Substance Control Agency` and suppresses the common sentence-start word `Whatever`.
 - Inline review popovers now keep Add / Ignore / Always ignore controls stable when the category dropdown changes.
+- World Bible category task cards are back to manual/import as the primary paths.
+- AI is discrete and author-invoked from manual/import contexts.
+- The current helper is a floating chat with selected-text apply to existing editable destinations.
+- The current helper is explicitly interim. The desired next slice is a Workspace-like proposal/action model where the assistant can ask permission to add a section, apply text to a field, set a name, or add an alias, with every mutation confirmed by the author.
+- Model output must not silently create records, fields, aliases, or canon facts.
+- World Bible document and JSON imports remain available from the utility rail.
 
 Verified after the checkpoint:
 
+- `pnpm run build:web`
+- Browser smoke on `/workspace`, `/world-bible`, `/lore`, `/corkboard`, and `/canon-decisions` for shared header/rail placement.
+- Browser smoke on `/lore`: starter cards render, `Start Writing` focuses the editor title input, `Extract Facts` is disabled without an active document, and no console errors were observed.
 - `pnpm --filter web exec tsc --noEmit`
 - `pnpm --filter web test:unit -- --run` passes 89 tests.
 - `pnpm --filter web lint` passes with one existing `useWorkspaceDocuments.ts` hook warning.
 - `pnpm --filter web exec cypress run --spec cypress/e2e/project-mode-guardrails.cy.ts` passes 7 tests.
 - `pnpm --filter web exec cypress run --spec cypress/e2e/lore-review-matching.cy.ts` passes 6 tests.
+- Current World Bible AI helper slice:
+  - `pnpm --filter web exec tsc --noEmit`
+  - `pnpm --filter web test:unit -- --run` passes 110 tests.
+  - `pnpm --filter web lint` passes with the existing `useWorkspaceDocuments.ts` hook warning.
+  - `pnpm --filter web build` passes with existing Vite large-chunk and `onnxruntime-web` eval warnings.
+  - Browser smoke on `/world-bible` confirms manual/import remain the primary task cards.
+  - Browser smoke confirms the helper opens as a fixed floating panel with an apply destination picker and no old `AI-Assisted Draft` card.
+  - Focused checks run during the helper slice include `pnpm --filter web exec tsc --noEmit` and focused AIAssistant/Ollama tests.
 
 Known verification note:
 
@@ -74,9 +120,12 @@ Known verification note:
 Next thing to resume:
 
 - Start a fresh narrow slice. Good candidates:
-  1. run or repair broader review-completion smoke coverage, including `post-merge-smoke.cy.ts` if Prompt Tools are still expected
-  2. compare current review surfaces against `codex/review-completion-state` for only narrow density/copy improvements
-  3. do a dedicated manual smoke of import -> review -> World Bible queue completion after the alias stabilization checkpoint
+  1. replace the interim selected-text apply bar with a model-proposed action system
+  2. support assistant proposals such as adding a new section, setting a name, adding aliases, and applying text to a field
+  3. keep every AI-proposed canon/schema mutation author-confirmed and editable before save
+  4. run or repair broader review-completion smoke coverage, including `post-merge-smoke.cy.ts` if Prompt Tools are still expected
+  5. compare current review surfaces against `codex/review-completion-state` for only narrow density/copy improvements
+  6. do a dedicated manual smoke of import -> review -> World Bible queue completion after the alias stabilization checkpoint
 
 ## Required Reading
 
@@ -95,11 +144,14 @@ Next thing to resume:
 - Do not do broad route rewrites, state ownership changes, or file moves during recovery slices.
 - If reference branch UI is better but behavior is weaker, port manually and narrowly.
 - For UI/CSS work, consult `docs/style-bible.md` and use shared theme tokens rather than hardcoded colors.
+- Keep future active-project route work on `PageHeader`, `ProjectScratchpadButton`, and the context-rail pattern unless a route has a concrete reason to diverge.
+- AI flows remain explicit and author-invoked. Model output should fill editable drafts or review candidates; it should not silently mutate canon.
 
 ## Verified Recently
 
 - `pnpm build:web`
 - `pnpm --filter web exec cypress run --spec cypress/e2e/project-mode-guardrails.cy.ts`
+- Browser smoke on the June 3 active-project chrome/rail slice.
 
 The build still emits existing Vite large-chunk warnings and an `onnxruntime-web` eval warning. Treat those as pre-existing unless a change directly affects bundling.
 
@@ -109,6 +161,8 @@ The build still emits existing Vite large-chunk warnings and an `onnxruntime-web
 - Run or outline broader review-completion smoke coverage.
 - Audit docs for stale recovery-plan statements.
 - Identify risky reference-branch code that should not be ported.
+- Propose model-proposed World Bible helper actions for fields, aliases, names, and new sections without implementing broad background generation.
+- Browser-smoke the current World Bible helper/import path and report where the interim selected-text apply flow feels too form-like.
 
 ## Risky Tasks To Avoid
 

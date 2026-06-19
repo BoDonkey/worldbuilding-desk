@@ -65,7 +65,7 @@ export class LLMService {
       return {content: cached};
     }
 
-    const response = await this.provider.generateCompletion(normalizedRequest);
+    const response = await this.getCompletion(normalizedRequest);
     if (response.content) {
       llmCache.set(cacheKey, response.content);
     }
@@ -215,12 +215,22 @@ export class LLMService {
     return this.provider.streamCompletion(request);
   }
 
+  private async getCompletion(request: LLMRequest): Promise<LLMResponse> {
+    if (this.providerId !== 'gemini' && this.electronAPI?.llmComplete) {
+      return {content: await this.completeViaElectron(request)};
+    }
+
+    return this.provider.generateCompletion(request);
+  }
+
   private buildCacheKey(request: LLMRequest): string {
     const payload = {
       provider: this.providerId,
       model: request.model,
       maxTokens: request.maxTokens,
       temperature: request.temperature,
+      responseFormat: request.responseFormat,
+      think: request.think,
       systemPrompt: request.systemPrompt,
       baseUrl: request.baseUrl,
       messages: request.messages.map((message) => ({
@@ -258,6 +268,16 @@ export class LLMService {
       pendingResolver?.();
       pendingResolver = null;
     };
+    const abortStream = () => {
+      fatalError = new DOMException('The operation was aborted.', 'AbortError');
+      done = true;
+      wake();
+    };
+
+    if (request.signal?.aborted) {
+      abortStream();
+    }
+    request.signal?.addEventListener('abort', abortStream, {once: true});
 
     const unsubscribeChunk = api.onLLMChunk?.((payload) => {
       if (payload.requestId !== requestId) return;
@@ -283,9 +303,9 @@ export class LLMService {
         .llmStream({
           providerId: this.providerId,
           apiKey: this.providerApiKey,
-          request,
+          request: this.buildElectronRequest(request),
           providerConfig: {
-            baseUrl: this.providerBaseUrl
+            baseUrl: request.baseUrl
           },
           requestId
         })
@@ -315,9 +335,50 @@ export class LLMService {
         throw fatalError;
       }
     } finally {
+      request.signal?.removeEventListener('abort', abortStream);
       unsubscribeChunk?.();
       unsubscribeComplete?.();
       unsubscribeError?.();
     }
+  }
+
+  private async completeViaElectron(request: LLMRequest): Promise<string> {
+    const api = this.electronAPI;
+    if (!api?.llmComplete) {
+      throw new Error('Electron bridge is unavailable');
+    }
+
+    if (request.signal?.aborted) {
+      throw new DOMException('The operation was aborted.', 'AbortError');
+    }
+
+    const completion = api.llmComplete({
+      providerId: this.providerId,
+      apiKey: this.providerApiKey,
+      request: this.buildElectronRequest(request),
+      providerConfig: {
+        baseUrl: request.baseUrl
+      }
+    });
+
+    if (!request.signal) {
+      return completion;
+    }
+
+    return new Promise<string>((resolve, reject) => {
+      const abort = () => {
+        reject(new DOMException('The operation was aborted.', 'AbortError'));
+      };
+
+      request.signal?.addEventListener('abort', abort, {once: true});
+      completion.then(resolve, reject).finally(() => {
+        request.signal?.removeEventListener('abort', abort);
+      });
+    });
+  }
+
+  private buildElectronRequest(request: LLMRequest) {
+    const {baseUrl: _baseUrl, signal: _signal, ...payload} = request;
+    return payload;
   }
 }

@@ -19,6 +19,9 @@ export interface LLMRequest {
   temperature?: number;
   model?: string;
   baseUrl?: string;
+  signal?: AbortSignal;
+  responseFormat?: 'json';
+  think?: boolean | 'low' | 'medium' | 'high';
 }
 
 export interface LLMResponse {

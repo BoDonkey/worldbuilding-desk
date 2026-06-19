@@ -70,6 +70,7 @@ import {useWorkspaceLoreSnippets} from '../hooks/useWorkspaceLoreSnippets';
 import {useWorkspaceScratchpad} from '../hooks/useWorkspaceScratchpad';
 import {useWorkspaceCorkboard} from '../hooks/useWorkspaceCorkboard';
 import {normalizeRichTextValue} from '../services/worldBible/worldBibleEntityHelpers';
+import {PageHeader} from '../components/PageHeader';
 
 declare global {
   interface Window {
@@ -1907,69 +1908,37 @@ function WorkspaceRoute() {
         onChange={(e) => void handleImportDocuments(e)}
         style={{display: 'none'}}
       />
-      <div className={styles.workspaceHeader}>
-        <div>
-          <h1 className={styles.workspaceTitle}>Writing Workspace</h1>
-          <p className={styles.workspaceSubtitle}>
+      <PageHeader
+        eyebrow='Current manuscript'
+        title='Writing Workspace'
+        meta={
+          <>
             {activeProject.name}
             {selectedDocument ? ` · ${selectedDocument.title || 'Untitled scene'}` : ''}
-          </p>
-        </div>
-        <div className={styles.workspaceHeaderActions}>
-          <button
-            type='button'
-            onClick={() => void handleNewDocument()}
-            disabled={isCreatingScene}
-          >
-            {isCreatingScene ? 'Creating...' : 'New Scene'}
-          </button>
-          <button
-            type='button'
-            onClick={openImportPicker}
-            disabled={isImportingDocuments}
-          >
-            {isImportingDocuments ? 'Importing...' : 'Import'}
-          </button>
-          <button
-            type='button'
-            className={`${styles.reviewIndicator} ${styles[`reviewIndicator_${reviewReadiness.state}`]}`}
-            onClick={() => openContextDrawer('review')}
-            title={reviewReadiness.detail}
-            aria-label={`Open review drawer: ${reviewReadiness.detail}`}
-          >
-            <span className={styles.reviewIndicatorDot} />
-            <span>{reviewReadiness.label}</span>
-          </button>
-          <button
-            type='button'
-            className={styles.drawerTopButton}
-            onClick={openScratchpadModal}
-          >
-            Scratchpad
-          </button>
-          <button
-            type='button'
-            className={styles.drawerTopButton}
-            onClick={openCorkboardModal}
-          >
-            Corkboard
-          </button>
-          <button
-            type='button'
-            className={styles.drawerTopButton}
-            onClick={toggleSceneDrawer}
-          >
-            Scenes
-          </button>
-          <button
-            type='button'
-            className={styles.drawerTopButton}
-            onClick={toggleContextDrawer}
-          >
-            Context
-          </button>
-        </div>
-      </div>
+          </>
+        }
+        actions={
+          <>
+            <button
+              type='button'
+              className={`${styles.reviewIndicator} ${styles[`reviewIndicator_${reviewReadiness.state}`]}`}
+              onClick={() => openContextDrawer('review')}
+              title={reviewReadiness.detail}
+              aria-label={`Open review drawer: ${reviewReadiness.detail}`}
+            >
+              <span className={styles.reviewIndicatorDot} />
+              <span>{reviewReadiness.label}</span>
+            </button>
+            <button
+              type='button'
+              className={styles.scratchpadHeaderButton}
+              onClick={openScratchpadModal}
+            >
+              Scratchpad
+            </button>
+          </>
+        }
+      />
       {feedback && (
         <div
           role='status'

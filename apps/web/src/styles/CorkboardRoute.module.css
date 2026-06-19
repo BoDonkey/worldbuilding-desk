@@ -6,27 +6,9 @@
   gap: 1rem;
 }
 
-.header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 1rem;
-  flex-wrap: wrap;
-}
-
-.title {
-  margin: 0;
-}
-
-.intro {
-  margin: 0.35rem 0 0;
-  color: var(--color-text-secondary);
-  max-width: 70ch;
-  line-height: 1.5;
-}
-
 .headerActions,
 .actionRow,
+.utilityRow,
 .metaRow,
 .cardActions,
 .beatActions {
@@ -34,6 +16,22 @@
   gap: 0.5rem;
   align-items: center;
   flex-wrap: wrap;
+}
+
+.utilityRow {
+  justify-content: space-between;
+  padding: 0.75rem 0.85rem;
+  border: 1px solid var(--surface-border-soft);
+  border-radius: 12px;
+  background: var(--surface-panel);
+}
+
+.utilityActions {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 .status {
@@ -46,6 +44,10 @@
   grid-template-columns: minmax(260px, 340px) minmax(0, 1fr);
   gap: 1rem;
   align-items: start;
+}
+
+.layoutRailCollapsed {
+  grid-template-columns: minmax(0, 1fr);
 }
 
 .panel {
@@ -225,6 +227,14 @@
   .layout,
   .formGrid {
     grid-template-columns: 1fr;
+  }
+
+  .utilityRow {
+    align-items: flex-start;
+  }
+
+  .utilityActions {
+    justify-content: flex-start;
   }
 
   .listPanel {

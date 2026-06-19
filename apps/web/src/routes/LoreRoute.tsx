@@ -43,6 +43,8 @@ import {
 import {acceptLoreEntityProposal} from '../services/lore/entityProposalActions';
 import {getRAGService} from '../services/rag/getRAGService';
 import type {RAGProvider} from '../services/rag/RAGService';
+import {ProjectScratchpadButton} from '../components/ProjectScratchpadButton';
+import {PageHeader} from '../components/PageHeader';
 import styles from '../styles/LoreRoute.module.css';
 
 type LinkDraft = {
@@ -82,6 +84,9 @@ const summarizeContent = (content: string, limit = 220): string => {
 const formatFactValue = (value: CanonicalFact['value'] | LoreFactProposal['value']): string =>
   typeof value === 'string' ? value : `${value.label}: ${value.value}`;
 
+const getLoreRailStorageKey = (projectId: string) =>
+  `wbd:lore:document-rail-collapsed:${projectId}`;
+
 function LoreRoute() {
   const activeProject = useAppStore((state) => state.activeProject);
   const [documents, setDocuments] = useState<LoreDocument[]>([]);
@@ -109,7 +114,19 @@ function LoreRoute() {
     tone: 'success' | 'error';
     message: string;
   } | null>(null);
+  const [isDocumentRailCollapsed, setIsDocumentRailCollapsed] = useState(false);
   const importInputRef = useRef<HTMLInputElement | null>(null);
+  const titleInputRef = useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => {
+    if (!activeProject) {
+      setIsDocumentRailCollapsed(false);
+      return;
+    }
+    setIsDocumentRailCollapsed(
+      window.localStorage.getItem(getLoreRailStorageKey(activeProject.id)) === 'true'
+    );
+  }, [activeProject]);
 
   useEffect(() => {
     if (!activeProject) {
@@ -651,12 +668,30 @@ function LoreRoute() {
     setLinkDrafts((current) => current.filter((_, draftIndex) => draftIndex !== index));
   };
 
+  const focusLoreEditor = () => {
+    document.getElementById('lore-document-editor')?.scrollIntoView({
+      behavior: 'smooth',
+      block: 'start'
+    });
+    window.setTimeout(() => titleInputRef.current?.focus(), 120);
+  };
+
+  const handleToggleDocumentRail = () => {
+    setIsDocumentRailCollapsed((current) => {
+      const next = !current;
+      if (activeProject) {
+        window.localStorage.setItem(getLoreRailStorageKey(activeProject.id), String(next));
+      }
+      return next;
+    });
+  };
+
   if (!activeProject) {
     return (
       <section className={styles.page}>
-        <h1 className={styles.pageTitle}>Lore</h1>
+        <h1 className={styles.pageTitle}>Lore Documents</h1>
         <p className={styles.pageIntro}>
-          Open a project first to create free-form lore documents.
+          Open a project first to create longform source documents.
         </p>
       </section>
     );
@@ -664,27 +699,35 @@ function LoreRoute() {
 
   return (
     <section className={styles.page}>
-      <header className={styles.pageHeader}>
-        <div>
-          <p className={styles.eyebrow}>Free-form worldbuilding</p>
-          <h1 className={styles.pageTitle}>Lore</h1>
-          <p className={styles.pageIntro}>
+      <PageHeader
+        eyebrow='Free-form worldbuilding'
+        title='Lore Documents'
+        description={
+          <>
             Store dossiers, timelines, myths, and deep reference notes without forcing
             them into a rigid World Bible form. Extraction runs locally and produces
             reviewable fact proposals before anything becomes canon.
-          </p>
-        </div>
-        <button type='button' onClick={handleImportClick} disabled={isImporting}>
-          {isImporting ? 'Importing...' : 'Import Lore File'}
-        </button>
-        <input
-          ref={importInputRef}
-          type='file'
-          accept='.docx,.txt,.md,text/plain,text/markdown,application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-          className={styles.hiddenInput}
-          onChange={handleImport}
-        />
-      </header>
+          </>
+        }
+        actions={
+          <>
+            <ProjectScratchpadButton projectId={activeProject.id} />
+            <button type='button' onClick={handleToggleDocumentRail}>
+              {isDocumentRailCollapsed ? 'Show Documents' : 'Hide Documents'}
+            </button>
+            <button type='button' onClick={handleImportClick} disabled={isImporting}>
+              {isImporting ? 'Importing...' : 'Import Document'}
+            </button>
+          </>
+        }
+      />
+      <input
+        ref={importInputRef}
+        type='file'
+        accept='.docx,.txt,.md,text/plain,text/markdown,application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+        className={styles.hiddenInput}
+        onChange={handleImport}
+      />
 
       {feedback ? (
         <p
@@ -697,9 +740,136 @@ function LoreRoute() {
         </p>
       ) : null}
 
-      <div className={styles.layout}>
+      <section className={styles.starterPanel} aria-label='Lore starting points'>
+        <div className={styles.starterHeader}>
+          <div>
+            <div className={styles.starterEyebrow}>Start here</div>
+            <h2>Document Intake</h2>
+            <p>
+              Capture freeform source material first, then extract only the facts and
+              entities you want to promote into canon.
+            </p>
+          </div>
+        </div>
+        <div className={styles.starterGrid}>
+          <div className={styles.starterCard}>
+            <h3>Write Manually</h3>
+            <p>Start a dossier, timeline, myth, or world note from a blank document.</p>
+            <button type='button' onClick={focusLoreEditor}>
+              Start Writing
+            </button>
+          </div>
+          <div className={styles.starterCard}>
+            <h3>Import Dossier</h3>
+            <p>Bring in DOCX, Markdown, or plain text notes before reviewing them.</p>
+            <button type='button' onClick={handleImportClick} disabled={isImporting}>
+              {isImporting ? 'Importing...' : 'Import File'}
+            </button>
+          </div>
+          <div className={styles.starterCard}>
+            <h3>Extract Canon</h3>
+            <p>Turn the active saved document into reviewable entity and fact candidates.</p>
+            <button
+              type='button'
+              onClick={() => editingDocument && void handleExtractFacts(editingDocument)}
+              disabled={!editingDocument || extractingId === editingDocument.id}
+            >
+              {editingDocument && extractingId === editingDocument.id
+                ? 'Extracting...'
+                : 'Extract Facts'}
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <div
+        className={`${styles.layout} ${
+          isDocumentRailCollapsed ? styles.layoutRailCollapsed : ''
+        }`}
+      >
+        {!isDocumentRailCollapsed && (
+        <aside className={styles.listCard} aria-label='Lore documents'>
+          <div className={styles.cardHeader}>
+            <h2>Documents</h2>
+            <span className={styles.countBadge}>{documents.length}</span>
+          </div>
+          {documents.length === 0 ? (
+            <p className={styles.emptyState}>
+              No lore documents yet. Import a dossier or start a longform world note.
+            </p>
+          ) : (
+            <div className={styles.documentList}>
+              {documents.map((document) => {
+                const links = linksByDocumentId.get(document.id) ?? [];
+                const documentEntityProposals = entityProposalsByDocumentId.get(document.id) ?? [];
+                const documentProposals = proposalsByDocumentId.get(document.id) ?? [];
+                const documentFacts = canonicalFactsByDocumentId.get(document.id) ?? [];
+                return (
+                  <article key={document.id} className={styles.documentCard}>
+                    <div className={styles.documentHeader}>
+                      <div>
+                        <p className={styles.documentKind}>
+                          {LORE_KIND_OPTIONS.find((option) => option.value === document.kind)?.label ??
+                            'Lore'}
+                        </p>
+                        <h3>{document.title}</h3>
+                      </div>
+                      <div className={styles.inlineActions}>
+                        <button type='button' onClick={() => beginEdit(document)}>
+                          Edit
+                        </button>
+                        <button
+                          type='button'
+                          onClick={() => void handleExtractFacts(document)}
+                          disabled={extractingId === document.id}
+                        >
+                          {extractingId === document.id ? 'Extracting...' : 'Extract'}
+                        </button>
+                        <button
+                          type='button'
+                          onClick={() => void handleDelete(document)}
+                          disabled={deletingId === document.id}
+                        >
+                          {deletingId === document.id ? 'Deleting...' : 'Delete'}
+                        </button>
+                      </div>
+                    </div>
+                    <p className={styles.documentSummary}>
+                      {document.summary || summarizeContent(document.content)}
+                    </p>
+                    <div className={styles.metaRow}>
+                      <span>{documentEntityProposals.length} entity candidates</span>
+                      <span>{documentProposals.length} fact candidates</span>
+                      <span>{documentFacts.length} accepted</span>
+                    </div>
+                    {links.length > 0 ? (
+                      <div className={styles.linkBadges}>
+                        {links.map((link) => {
+                          const label =
+                            link.targetType === 'character'
+                              ? characters.find((character) => character.id === link.targetId)?.name
+                              : entities.find((entity) => entity.id === link.targetId)?.name;
+                          return (
+                            <span key={link.id} className={styles.linkBadge}>
+                              {link.relationship.replace(/_/g, ' ')}: {label ?? 'Unknown'}
+                            </span>
+                          );
+                        })}
+                      </div>
+                    ) : null}
+                  </article>
+                );
+              })}
+            </div>
+          )}
+        </aside>
+        )}
         <div className={styles.editorStack}>
-          <form className={styles.editorCard} onSubmit={handleSubmit}>
+          <form
+            id='lore-document-editor'
+            className={styles.editorCard}
+            onSubmit={handleSubmit}
+          >
             <div className={styles.cardHeader}>
               <h2>{editingId ? 'Edit Lore Document' : 'New Lore Document'}</h2>
               <div className={styles.inlineActions}>
@@ -722,7 +892,11 @@ function LoreRoute() {
 
             <label className={styles.fieldLabel}>
               Title
-              <input value={title} onChange={(event) => setTitle(event.target.value)} />
+              <input
+                ref={titleInputRef}
+                value={title}
+                onChange={(event) => setTitle(event.target.value)}
+              />
             </label>
 
             <label className={styles.fieldLabel}>
@@ -949,81 +1123,6 @@ function LoreRoute() {
           ) : null}
         </div>
 
-        <div className={styles.listCard}>
-          <div className={styles.cardHeader}>
-            <h2>Project Lore</h2>
-            <span className={styles.countBadge}>{documents.length}</span>
-          </div>
-          {documents.length === 0 ? (
-            <p className={styles.emptyState}>
-              No lore documents yet. Import a dossier or start a longform world note.
-            </p>
-          ) : (
-            <div className={styles.documentList}>
-              {documents.map((document) => {
-                const links = linksByDocumentId.get(document.id) ?? [];
-                const documentEntityProposals = entityProposalsByDocumentId.get(document.id) ?? [];
-                const documentProposals = proposalsByDocumentId.get(document.id) ?? [];
-                const documentFacts = canonicalFactsByDocumentId.get(document.id) ?? [];
-                return (
-                  <article key={document.id} className={styles.documentCard}>
-                    <div className={styles.documentHeader}>
-                      <div>
-                        <p className={styles.documentKind}>
-                          {LORE_KIND_OPTIONS.find((option) => option.value === document.kind)?.label ??
-                            'Lore'}
-                        </p>
-                        <h3>{document.title}</h3>
-                      </div>
-                      <div className={styles.inlineActions}>
-                        <button type='button' onClick={() => beginEdit(document)}>
-                          Edit
-                        </button>
-                        <button
-                          type='button'
-                          onClick={() => void handleExtractFacts(document)}
-                          disabled={extractingId === document.id}
-                        >
-                          {extractingId === document.id ? 'Extracting...' : 'Extract'}
-                        </button>
-                        <button
-                          type='button'
-                          onClick={() => void handleDelete(document)}
-                          disabled={deletingId === document.id}
-                        >
-                          {deletingId === document.id ? 'Deleting...' : 'Delete'}
-                        </button>
-                      </div>
-                    </div>
-                    <p className={styles.documentSummary}>
-                      {document.summary || summarizeContent(document.content)}
-                    </p>
-                    <div className={styles.metaRow}>
-                      <span>{documentEntityProposals.length} entity candidates</span>
-                      <span>{documentProposals.length} fact candidates</span>
-                      <span>{documentFacts.length} accepted</span>
-                    </div>
-                    {links.length > 0 ? (
-                      <div className={styles.linkBadges}>
-                        {links.map((link) => {
-                          const label =
-                            link.targetType === 'character'
-                              ? characters.find((character) => character.id === link.targetId)?.name
-                              : entities.find((entity) => entity.id === link.targetId)?.name;
-                          return (
-                            <span key={link.id} className={styles.linkBadge}>
-                              {link.relationship.replace(/_/g, ' ')}: {label ?? 'Unknown'}
-                            </span>
-                          );
-                        })}
-                      </div>
-                    ) : null}
-                  </article>
-                );
-              })}
-            </div>
-          )}
-        </div>
       </div>
     </section>
   );

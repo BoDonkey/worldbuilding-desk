@@ -66,7 +66,7 @@ export function WorldBibleRichTextField({
               className={styles.toggle}
               onClick={() => setIsExpanded(true)}
             >
-              Expand to document
+              Open larger editor
             </button>
           </div>
         </div>
@@ -93,7 +93,7 @@ export function WorldBibleRichTextField({
           >
             <div className={styles.overlayHeader}>
               <div>
-                <div className={styles.overlayEyebrow}>World Bible document</div>
+                <div className={styles.overlayEyebrow}>Larger editor</div>
                 <h3 className={styles.overlayTitle}>
                   {label}
                   {required ? ' *' : ''}
@@ -106,7 +106,7 @@ export function WorldBibleRichTextField({
                   className={styles.toggle}
                   onClick={() => setIsExpanded(false)}
                 >
-                  Close document
+                  Close editor
                 </button>
               </div>
             </div>

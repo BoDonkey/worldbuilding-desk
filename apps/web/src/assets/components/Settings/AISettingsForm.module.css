@@ -76,6 +76,48 @@
   cursor: pointer;
 }
 
+.diagnosticsPanel {
+  display: grid;
+  gap: 0.5rem;
+  border: 1px solid var(--surface-border-soft);
+  border-radius: 10px;
+  padding: 0.75rem;
+}
+
+.diagnosticsPanel strong {
+  color: inherit;
+}
+
+.diagnosticsPanel ul {
+  margin: 0 0 0 1rem;
+  padding: 0;
+}
+
+.diagnosticsSuccess {
+  border-color: var(--color-success-soft-border);
+  background: var(--color-success-soft-bg);
+  color: var(--color-success-soft-text);
+}
+
+.diagnosticsError {
+  border-color: var(--color-error-soft-border);
+  background: var(--color-error-soft-bg);
+  color: var(--color-error-soft-text);
+}
+
+.diagnosticsNotice {
+  border-color: var(--badge-info-border);
+  background: var(--badge-info-bg);
+  color: var(--badge-info-text);
+}
+
+.detectedModelActions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-top: 0.25rem;
+}
+
 .toolPackActions {
   display: flex;
   gap: 0.5rem;

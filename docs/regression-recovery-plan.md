@@ -6,6 +6,7 @@
 - `temp-update`: functional base for recovery. It forks from `main` at `7153ab0 Update workspace review` and includes the newer Zustand store work.
 - `codex/review-completion-state`: richer UI/reference branch. Use it for selective product-shape recovery only, not as the base branch.
 - `codex/reconcile-temp-update-ui`: active recovery branch, based on `temp-update`.
+- `codex/dictionary-highlight-filter`: current continuation branch for the June 3 active-project chrome/rail slice, based on the reconciled UI baseline.
 
 ## Recovery Approach
 
@@ -111,6 +112,21 @@ Completed recovery checkpoints on `codex/reconcile-temp-update-ui`:
    - Inline review popover controls now keep stable rows when category selection changes.
    - Unknown extraction now keeps longer proper names such as `Magical Substance Control Agency` and suppresses common sentence-start `Whatever`.
    - `lore-review-matching.cy.ts` now reflects current general-fiction `/characters` routing and covers World Bible canon deletion removing alias/highlight surfaces.
+15. June 3 active-project chrome and rail checkpoints on `codex/dictionary-highlight-filter`:
+   - `69dbb88` unified active-project page chrome with shared header placement.
+   - `616ff78`, `85c29fa`, `5b4071e`, and `8a1e922` aligned secondary route headers, added Scratchpad access to planning/review surfaces, stabilized Corkboard header actions, and normalized Lore/Canon utility placement.
+   - `96faf81` added a collapsible Corkboard chapter-card rail so the card list can be hidden while planning.
+   - `9c02c1e` added context rails to Lore and World Bible using the Workspace rail pattern.
+   - `b85e8ae` moved World Bible import/help/template utilities from the top header into the rail.
+   - `931bf51` added Lore starter cards for manual writing, dossier import, and canon extraction.
+16. Current working slice - World Bible AI helper and import structure:
+   - World Bible category task cards keep manual/import as the primary authoring paths.
+   - The old non-character AI draft task-card path has been removed from this slice; future AI field/schema work should arrive through the helper proposal/action model.
+   - The current helper is an explicit floating chat opened from manual/import contexts, with selected assistant text applied only after the author chooses a destination.
+   - Assistant output can set the editable name, append aliases, or apply text to existing fields, but it still does not save canon automatically.
+   - Document import can deliberately map detected headings into category fields before imported records are saved.
+   - DOCX/HTML/text imports preserve intro/unmapped text in Description while detected top-level headings can become separate fields.
+   - Document and JSON import entry points remain available from the World Bible utility rail.
 
 Verified for the current checkpoint:
 
@@ -120,13 +136,20 @@ Verified for the current checkpoint:
 - `pnpm --filter web test:unit -- --run`
 - `pnpm --filter web exec cypress run --spec cypress/e2e/lore-review-matching.cy.ts`
 - Browser smoke on `http://localhost:5173/characters`: hub layout and manual character form render coherently, and long-form fields are TipTap editors.
+- Current World Bible AI helper/import slice:
+  - `pnpm --filter web exec tsc --noEmit`
+  - `pnpm --filter web test:unit -- --run`
+  - `pnpm --filter web lint` passes with the existing unrelated warning in `apps/web/src/hooks/useWorkspaceDocuments.ts`.
+  - `pnpm --filter web build`
+  - Browser smoke on `/world-bible`: manual/import remain the primary category task cards, the helper opens from the record form, and selected assistant text applies to editable destinations without saving canon.
 
 Recommended next slices:
 
-1. Run or repair broader review-completion smoke coverage before further review UI changes.
-2. Revisit workspace review drawer density only after the World Bible queue is stable; do not replace the current writing workspace with the reference branch workspace.
-3. Compare current review surfaces against `codex/review-completion-state` for narrow copy/density improvements only.
-4. Audit the known `post-merge-smoke.cy.ts` Prompt Tools failure and decide whether the expectation or implementation is stale.
+1. Replace the interim selected-text apply bar with a model-proposed action system for fields, aliases, names, and new sections.
+2. Run or repair broader review-completion smoke coverage before further review UI changes.
+3. Revisit workspace review drawer density only after the World Bible queue is stable; do not replace the current writing workspace with the reference branch workspace.
+4. Compare current review surfaces against `codex/review-completion-state` for narrow copy/density improvements only.
+5. Audit the known `post-merge-smoke.cy.ts` Prompt Tools failure and decide whether the expectation or implementation is stale.
 
 ## Next Session Handoff
 
@@ -140,3 +163,9 @@ Recommended next slices:
 - A broader Cypress run surfaced an existing `post-merge-smoke.cy.ts` failure around `Prompt Tools`; treat that as a known follow-up, not as a failure introduced by the project-mode guardrail slice.
 - `lore-review-matching.cy.ts` now passes after updating the stale `/characters` expectation and adding the World Bible canon deletion regression.
 - The working tree was clean after commit `f7c2f19 Stabilize World Bible review aliases`.
+- The active-project chrome/rail slice was committed through `931bf51 Add lore starter cards` on `codex/dictionary-highlight-filter`.
+- Verified in that slice:
+  - `pnpm run build:web`
+  - browser smoke on `/workspace`, `/world-bible`, `/lore`, `/corkboard`, and `/canon-decisions`
+  - Lore starter cards render; `Start Writing` focuses the editor title input; `Extract Facts` remains disabled until an active document exists.
+- Next product question: after the helper action model exists, decide whether model-proposed category presets are needed for races, faeries, factions, species, and organizations.

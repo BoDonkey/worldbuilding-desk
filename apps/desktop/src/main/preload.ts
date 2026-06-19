@@ -9,6 +9,7 @@ function subscribe<T>(channel: string, listener: Listener<T>) {
 }
 
 contextBridge.exposeInMainWorld('electronAPI', {
+  llmComplete: (payload: unknown) => ipcRenderer.invoke('llm:complete', payload),
   llmStream: (payload: unknown) => ipcRenderer.invoke('llm:stream', payload),
   onLLMChunk: (callback: Listener<{requestId: string; text: string}>) =>
     subscribe('llm:stream:chunk', callback),

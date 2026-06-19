@@ -41,7 +41,7 @@ interface PromptToolPack {
 }
 
 interface ProviderDiagnosticsState {
-  tone: 'success' | 'error';
+  tone: 'success' | 'error' | 'notice';
   summary: string;
   details: string[];
   detectedModels?: string[];
@@ -142,7 +142,23 @@ export const AISettings: React.FC<AISettingsProps> = ({
     });
   };
 
-  const handleModelChange = (model: string) => {
+  const markDiagnosticsNeedsRerun = (model: string) => {
+    setDiagnostics((prev) =>
+      prev
+        ? {
+            tone: 'notice',
+            summary: `Selected "${model || 'automatic model detection'}". Run diagnostics again to verify this configuration.`,
+            details: [
+              'The previous diagnostics result was for the old model setting.',
+              'The model field has been updated, but this new configuration has not been checked yet.'
+            ],
+            detectedModels: prev.detectedModels
+          }
+        : prev
+    );
+  };
+
+  const handleModelChange = (model: string, options?: {markDiagnosticsStale?: boolean}) => {
     const currentProvider = aiSettings.provider;
     onSettingsChange({
       ...aiSettings,
@@ -154,18 +170,13 @@ export const AISettings: React.FC<AISettingsProps> = ({
         }
       }
     });
+    if (options?.markDiagnosticsStale) {
+      markDiagnosticsNeedsRerun(model.trim());
+    }
   };
 
   const handleUseDetectedModel = (model: string) => {
-    handleModelChange(model);
-    setDiagnostics((prev) =>
-      prev
-        ? {
-            ...prev,
-            summary: `Selected detected Ollama model "${model}".`
-          }
-        : prev
-    );
+    handleModelChange(model, {markDiagnosticsStale: true});
   };
 
   const handleRunDiagnostics = async () => {
@@ -628,7 +639,7 @@ export const AISettings: React.FC<AISettingsProps> = ({
           type='text'
           className={styles.input}
           value={currentModel}
-          onChange={(e) => handleModelChange(e.target.value)}
+          onChange={(e) => handleModelChange(e.target.value, {markDiagnosticsStale: true})}
           placeholder={PROVIDER_MODEL_PLACEHOLDERS[aiSettings.provider]}
         />
         <p className={styles.help}>
@@ -650,23 +661,22 @@ export const AISettings: React.FC<AISettingsProps> = ({
 
       {diagnostics && (
         <div
-          className={styles.field}
-          style={{
-            border: `1px solid ${diagnostics.tone === 'error' ? '#fecaca' : '#bbf7d0'}`,
-            backgroundColor: diagnostics.tone === 'error' ? '#fef2f2' : '#f0fdf4',
-            color: diagnostics.tone === 'error' ? '#991b1b' : '#166534',
-            borderRadius: '8px',
-            padding: '0.75rem'
-          }}
+          className={`${styles.diagnosticsPanel} ${
+            diagnostics.tone === 'error'
+              ? styles.diagnosticsError
+              : diagnostics.tone === 'notice'
+                ? styles.diagnosticsNotice
+                : styles.diagnosticsSuccess
+          }`}
         >
           <strong>{diagnostics.summary}</strong>
-          <ul style={{margin: '0.5rem 0 0 1rem', padding: 0}}>
+          <ul>
             {diagnostics.details.map((detail) => (
               <li key={detail}>{detail}</li>
             ))}
           </ul>
           {aiSettings.provider === 'ollama' && diagnostics.detectedModels?.length ? (
-            <div style={{marginTop: '0.75rem', display: 'flex', gap: '0.5rem', flexWrap: 'wrap'}}>
+            <div className={styles.detectedModelActions}>
               {diagnostics.detectedModels.slice(0, 6).map((model) => (
                 <button
                   key={model}
@@ -677,6 +687,16 @@ export const AISettings: React.FC<AISettingsProps> = ({
                   Use {model}
                 </button>
               ))}
+              {diagnostics.tone === 'notice' && (
+                <button
+                  type='button'
+                  className={styles.saveButton}
+                  onClick={() => void handleRunDiagnostics()}
+                  disabled={isRunningDiagnostics}
+                >
+                  {isRunningDiagnostics ? 'Running Diagnostics...' : 'Run Diagnostics Again'}
+                </button>
+              )}
             </div>
           ) : null}
         </div>

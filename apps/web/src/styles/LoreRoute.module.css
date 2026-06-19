@@ -2,6 +2,8 @@
   width: 100%;
   max-width: 1240px;
   margin: 0 auto;
+  display: grid;
+  gap: 1rem;
 }
 
 .pageHeader {
@@ -33,7 +35,6 @@
 }
 
 .feedback {
-  margin-bottom: 1rem;
   padding: 0.7rem 0.85rem;
   border-radius: 10px;
   border: 1px solid var(--color-border);
@@ -52,15 +53,85 @@
 }
 
 .hiddenInput {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  white-space: nowrap;
-  border: 0;
+  display: none;
+}
+
+.starterPanel {
+  display: grid;
+  gap: 1rem;
+  padding: 1rem;
+  border: 1px solid var(--surface-border-soft);
+  border-radius: 16px;
+  background: var(--surface-panel);
+}
+
+.starterHeader {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: flex-start;
+}
+
+.starterEyebrow {
+  margin-bottom: 0.3rem;
+  color: var(--color-text-secondary);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.starterHeader h2 {
+  margin: 0 0 0.4rem 0;
+}
+
+.starterHeader p,
+.starterCard p {
+  margin: 0;
+  color: var(--color-text-secondary);
+  line-height: 1.5;
+}
+
+.starterGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 0.75rem;
+}
+
+.starterCard {
+  display: grid;
+  grid-template-rows: auto minmax(3em, auto) auto;
+  gap: 0.65rem;
+  align-content: start;
+  padding: 0.9rem;
+  border: 1px solid var(--surface-border-soft);
+  border-radius: 14px;
+  background: var(--surface-panel-elevated);
+}
+
+.starterCard h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.starterCard button {
+  justify-self: start;
+  border: 1px solid var(--button-primary-border);
+  border-radius: 12px;
+  background: var(--button-primary-bg);
+  color: var(--button-primary-text);
+  box-shadow: var(--button-shadow);
+}
+
+.starterCard button:hover:not(:disabled) {
+  background: var(--button-primary-bg-hover);
+  transform: translateY(-1px);
+}
+
+.starterCard button:disabled {
+  border-color: var(--button-secondary-border);
+  background: var(--button-secondary-bg);
+  color: var(--button-secondary-text);
 }
 
 .layout {
@@ -68,6 +139,10 @@
   grid-template-columns: minmax(340px, 430px) minmax(0, 1fr);
   gap: 1rem;
   align-items: start;
+}
+
+.layoutRailCollapsed {
+  grid-template-columns: minmax(0, 1fr);
 }
 
 .editorStack {
@@ -82,6 +157,11 @@
   border-radius: 16px;
   background: color-mix(in oklab, var(--color-bg-secondary) 90%, var(--color-on-accent));
   padding: 1rem;
+}
+
+.listCard {
+  position: sticky;
+  top: 1rem;
 }
 
 .cardHeader {
@@ -298,6 +378,10 @@
 @media (max-width: 980px) {
   .layout {
     grid-template-columns: 1fr;
+  }
+
+  .listCard {
+    position: static;
   }
 }
 

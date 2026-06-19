@@ -3,6 +3,8 @@ import type {FormEvent} from 'react';
 import type {ChapterCardStatus, PlotPoint} from '../entityTypes';
 import {useAppStore} from '../store/appStore';
 import {useWorkspaceCorkboard} from '../hooks/useWorkspaceCorkboard';
+import {PageHeader} from '../components/PageHeader';
+import {ProjectScratchpadButton} from '../components/ProjectScratchpadButton';
 import styles from '../styles/CorkboardRoute.module.css';
 
 const STATUS_LABELS: Record<ChapterCardStatus, string> = {
@@ -18,6 +20,9 @@ const summarize = (value: string, limit = 140): string => {
   }
   return `${normalized.slice(0, limit).trim()}...`;
 };
+
+const getChapterRailStorageKey = (projectId: string) =>
+  `wbd:corkboard:chapter-rail-collapsed:${projectId}`;
 
 function CorkboardRoute() {
   const activeProject = useAppStore((s) => s.activeProject);
@@ -39,6 +44,17 @@ function CorkboardRoute() {
   const [editingBeatId, setEditingBeatId] = useState<string | null>(null);
   const [beatTitle, setBeatTitle] = useState('');
   const [beatNotes, setBeatNotes] = useState('');
+  const [isChapterRailCollapsed, setIsChapterRailCollapsed] = useState(false);
+
+  useEffect(() => {
+    if (!activeProject) {
+      setIsChapterRailCollapsed(false);
+      return;
+    }
+    setIsChapterRailCollapsed(
+      window.localStorage.getItem(getChapterRailStorageKey(activeProject.id)) === 'true'
+    );
+  }, [activeProject]);
 
   useEffect(() => {
     if (corkboardCards.length === 0) {
@@ -71,6 +87,16 @@ function CorkboardRoute() {
 
   const handleCreateCard = () => {
     createCorkboardCard();
+  };
+
+  const handleToggleChapterRail = () => {
+    setIsChapterRailCollapsed((current) => {
+      const next = !current;
+      if (activeProject) {
+        window.localStorage.setItem(getChapterRailStorageKey(activeProject.id), String(next));
+      }
+      return next;
+    });
   };
 
   const handleSelectCard = (cardId: string) => {
@@ -114,31 +140,40 @@ function CorkboardRoute() {
   if (!activeProject) {
     return (
       <section className={styles.page}>
-        <h1 className={styles.title}>Corkboard</h1>
-        <p className={styles.intro}>
-          Open or create a project first to plan story arcs and chapter beats.
-        </p>
+        <PageHeader
+          eyebrow='Planning'
+          title='Corkboard'
+          description='Open or create a project first to plan story arcs and chapter beats.'
+        />
       </section>
     );
   }
 
   return (
     <section className={styles.page}>
-      <header className={styles.header}>
-        <div>
-          <h1 className={styles.title}>Corkboard</h1>
-          <p className={styles.intro}>
-            Plan story arcs, chapters, and turning points without changing the writing workspace.
-            The quick workspace modal uses these same cards.
-          </p>
-        </div>
-        <div className={styles.headerActions}>
-          <span className={styles.status} role='status'>{statusLabel}</span>
+      <PageHeader
+        eyebrow='Planning'
+        title='Corkboard'
+        description='Plan story arcs, chapters, and turning points without changing the writing workspace. The quick workspace modal uses these same cards.'
+        actions={<ProjectScratchpadButton projectId={activeProject.id} />}
+      />
+
+      <div className={styles.utilityRow}>
+        <span className={styles.status} role='status'>{statusLabel}</span>
+        <div className={styles.utilityActions}>
+          {corkboardCards.length > 0 && (
+            <button
+              type='button'
+              onClick={handleToggleChapterRail}
+            >
+              {isChapterRailCollapsed ? 'Show Chapter Cards' : 'Hide Chapter Cards'}
+            </button>
+          )}
           <button type='button' onClick={handleCreateCard} disabled={isCorkboardLoading}>
             New Chapter Card
           </button>
         </div>
-      </header>
+      </div>
 
       <div className={styles.metaRow}>
         <span className={styles.countChip}>
@@ -164,37 +199,43 @@ function CorkboardRoute() {
           </button>
         </div>
       ) : (
-        <div className={styles.layout}>
-          <aside className={`${styles.panel} ${styles.listPanel}`}>
-            <div className={styles.panelHeader}>
-              <h2 className={styles.panelTitle}>Chapters</h2>
-              <span className={styles.countChip}>{corkboardCards.length}</span>
-            </div>
-            <ul className={styles.chapterList}>
-              {corkboardCards.map((card, index) => (
-                <li key={card.id}>
-                  <button
-                    type='button'
-                    className={`${styles.chapterButton} ${
-                      card.id === selectedCard?.id ? styles.chapterButtonActive : ''
-                    }`}
-                    onClick={() => handleSelectCard(card.id)}
-                  >
-                    <div className={styles.chapterButtonTop}>
-                      <span className={styles.orderChip}>Ch {index + 1}</span>
-                      <span className={styles.status}>{STATUS_LABELS[card.status]}</span>
-                    </div>
-                    <span className={styles.chapterTitle}>
-                      {card.title.trim() || 'Untitled chapter'}
-                    </span>
-                    {card.summary.trim() && (
-                      <span className={styles.chapterSummary}>{summarize(card.summary)}</span>
-                    )}
-                  </button>
-                </li>
-              ))}
-            </ul>
-          </aside>
+        <div
+          className={`${styles.layout} ${
+            isChapterRailCollapsed ? styles.layoutRailCollapsed : ''
+          }`}
+        >
+          {!isChapterRailCollapsed && (
+            <aside className={`${styles.panel} ${styles.listPanel}`} aria-label='Chapter cards'>
+              <div className={styles.panelHeader}>
+                <h2 className={styles.panelTitle}>Chapters</h2>
+                <span className={styles.countChip}>{corkboardCards.length}</span>
+              </div>
+              <ul className={styles.chapterList}>
+                {corkboardCards.map((card, index) => (
+                  <li key={card.id}>
+                    <button
+                      type='button'
+                      className={`${styles.chapterButton} ${
+                        card.id === selectedCard?.id ? styles.chapterButtonActive : ''
+                      }`}
+                      onClick={() => handleSelectCard(card.id)}
+                    >
+                      <div className={styles.chapterButtonTop}>
+                        <span className={styles.orderChip}>Ch {index + 1}</span>
+                        <span className={styles.status}>{STATUS_LABELS[card.status]}</span>
+                      </div>
+                      <span className={styles.chapterTitle}>
+                        {card.title.trim() || 'Untitled chapter'}
+                      </span>
+                      {card.summary.trim() && (
+                        <span className={styles.chapterSummary}>{summarize(card.summary)}</span>
+                      )}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </aside>
+          )}
 
           {selectedCard && (
             <div className={`${styles.panel} ${styles.editorPanel}`}>
