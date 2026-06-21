@@ -109,11 +109,19 @@ function openAssistantAndAssertSelectedTool(
 ): void {
   cy.window().then((win) => {
     win.localStorage.setItem(
-      'workspaceDrawers:cypress-project-1',
+      'wbd-workspace-ui',
       JSON.stringify({
-        leftDrawerOpen: false,
-        rightDrawerOpen: true,
-        activeContextView: 'ai'
+        state: {
+          drawerPreferencesByProjectId: {
+            'cypress-project-1': {
+              leftDrawerOpen: false,
+              rightDrawerOpen: true,
+              activeContextView: 'ai'
+            }
+          },
+          selectedDocumentIdByProjectId: {}
+        },
+        version: 0
       })
     );
   });
@@ -388,16 +396,12 @@ describe('Post-merge smoke checklist', () => {
   });
 
   it('exports, validates, and imports a project backup with count check success', () => {
-    const scratchpadNote = [
-      'Loose planning note: Kaelor should discover the Ember Archive map fragment here.',
-      '',
-      '- Revisit opening tension',
-      '- Confirm Glass Harbor timeline'
-    ].join('\n');
+    const scratchpadNote =
+      'Loose planning note: Kaelor should discover the Ember Archive map fragment here.';
 
     cy.visit('/workspace');
     cy.contains('button', /^Scratchpad$/).first().click();
-    cy.get('textarea[aria-label="Project scratchpad"]').clear().type(scratchpadNote);
+    cy.get('[aria-label="Project scratchpad"] .tiptap-editor').clear().type(scratchpadNote);
     cy.contains('[role="status"]', 'Scratchpad saved').should('be.visible');
     cy.contains('button', 'Done').click();
 
@@ -451,12 +455,16 @@ describe('Post-merge smoke checklist', () => {
 
     cy.visit('/workspace');
     cy.contains('button', /^Scratchpad$/).first().click();
-    cy.get('textarea[aria-label="Project scratchpad"]').should('have.value', scratchpadNote);
+    cy.get('[aria-label="Project scratchpad"] .tiptap-editor').should(
+      'contain.text',
+      scratchpadNote
+    );
   });
 
   it('blocks world bible JSON import on duplicate-name conflicts until a resolution is chosen', () => {
     cy.visit('/world-bible');
 
+    cy.contains('button', 'Create Manually').click();
     cy.get('input[type="text"]').first().clear().type('Conflict Entry');
     cy.get('.tiptap-editor').first().click().type('Original description');
     cy.contains('button', /Create (Entry|Canon Record)/).click();

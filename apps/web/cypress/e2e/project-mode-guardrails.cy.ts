@@ -180,26 +180,22 @@ describe('Project mode guardrails', () => {
     cy.location('pathname').should('eq', '/world-bible');
     cy.contains('h1', 'World Bible').should('be.visible');
     cy.contains('h2', 'Characters').should('be.visible');
-    cy.get('section[aria-label="Cast canon"]').find('button').should('have.length', 3);
+    cy.get('section[aria-label="Characters canon"]').find('button').should('have.length', 3);
     cy.contains('h2', 'New Character').should('not.exist');
     cy.contains('h2', 'Characters')
-      .parents('section[aria-label="Cast canon"]')
+      .parents('section[aria-label="Characters canon"]')
       .should('be.visible');
     cy.contains('button', 'Create Manually').should('be.visible');
     cy.contains('button', 'Create Manually').click();
     cy.get('form').then(($form) => {
       const formText = $form.text();
+      expect(formText).to.include('Canon and aliases');
+      expect(formText).to.include('Name');
+      expect(formText).to.include('Alternative names');
       expect(formText.indexOf('Name')).to.be.lessThan(formText.indexOf('Age'));
       expect(formText.indexOf('Age')).to.be.lessThan(formText.indexOf('Role'));
       expect(formText.indexOf('Role')).to.be.lessThan(formText.indexOf('Description'));
       expect(formText.indexOf('Description')).to.be.lessThan(formText.indexOf('Notes'));
-      expect(formText.indexOf('Notes')).to.be.lessThan(formText.indexOf('Add character section'));
-      expect(formText.indexOf('Add character section')).to.be.lessThan(
-        formText.indexOf('Canon and aliases')
-      );
-      expect(formText.indexOf('Canon and aliases')).to.be.lessThan(
-        formText.indexOf('Alternative names')
-      );
     });
     cy.contains('button', 'Sheets').should('not.exist');
     cy.contains('button', 'Export Roster + Sheets').should('not.exist');
@@ -240,16 +236,13 @@ describe('Project mode guardrails', () => {
   it('imports pasted character notes into rich review fields for general fiction', () => {
     cy.visit('/characters');
     cy.location('pathname').should('eq', '/world-bible');
-    cy.get('section[aria-label="Cast canon"]').should('be.visible');
-    cy.contains('button', 'Create Manually').click();
-    cy.get('input[placeholder="Education, Traumas, Addictions..."]').type('Education');
-    cy.contains('button', 'Add Section').click();
-    cy.get('section[aria-label="Cast canon"]')
-      .contains('button', 'Import Or Paste')
+    cy.get('section[aria-label="Characters canon"]').should('be.visible');
+    cy.get('section[aria-label="Characters canon"]')
+      .contains('button', 'Paste Text')
       .should('be.visible')
       .click();
-    cy.contains('h2', 'Import Character').should('be.visible');
-    cy.get('section[aria-label="Import character"] textarea').type(
+    cy.contains('h2', 'Paste Character').should('be.visible');
+    cy.get('section[aria-label="Paste import text"] textarea').type(
       [
         'Name: Mira Voss',
         'Age: 34',
@@ -264,75 +257,101 @@ describe('Project mode guardrails', () => {
     );
     cy.contains('button', 'Review Paste').click();
 
-    cy.contains('h2', 'Review Character Import').should('be.visible');
-    cy.contains('[class*="characterImportReviewCard"]', 'Voice')
-      .find('select')
-      .select('Education');
+    cy.contains('h2', 'Import Preview').should('be.visible');
     cy.get('input[value="Mira Voss"]').should('be.visible');
-    cy.contains('h2', 'New Character').should('be.visible');
+    cy.contains('span', '2 headings detected').should('be.visible');
+    cy.contains('strong', 'Classify detected headings').should('be.visible');
+    cy.contains('strong', 'Background')
+      .closest('[class*="importSectionItem"]')
+      .find('select')
+      .should('have.value', 'new-field');
+    cy.contains('strong', 'Voice')
+      .closest('[class*="importSectionItem"]')
+      .find('select')
+      .select('Reusable field');
+    cy.contains('button', 'Import and open').click();
+
+    cy.contains('h2', 'Edit Character Canon').should('be.visible');
+    cy.contains('label', 'Name').find('input').should('have.value', 'Mira Voss');
     cy.contains('span', 'Description')
       .closest('[class*="container"]')
       .should('have.attr', 'data-rich-text-variant', 'character')
       .find('.tiptap-editor')
-      .should('contain.text', 'Mira mapped the undercity');
-    cy.contains('span', 'Notes')
+      .should('contain.text', 'Name: Mira Voss')
+      .should('not.contain.text', 'Mira mapped the undercity');
+    cy.contains('span', 'Background')
       .closest('[class*="container"]')
       .should('have.attr', 'data-rich-text-variant', 'character')
       .find('.tiptap-editor')
-      .should('not.contain.text', 'Dry, precise');
-    cy.contains('span', 'Education')
+      .should('contain.text', 'Mira mapped the undercity');
+    cy.contains('span', 'Voice')
       .closest('[class*="container"]')
       .should('have.attr', 'data-rich-text-variant', 'character')
       .find('.tiptap-editor')
       .should('contain.text', 'Dry, precise');
   });
 
-  it('opens AI-assisted character draft without background generation', () => {
+  it('opens the form AI helper without background generation', () => {
     cy.visit('/characters');
     cy.location('pathname').should('eq', '/world-bible');
-    cy.get('section[aria-label="Cast canon"]').should('be.visible');
-    cy.contains('button', 'Start With AI').should('be.enabled').click();
-    cy.contains('h2', 'AI-Assisted Draft').should('be.visible');
-    cy.contains('h2', 'New Character').should('be.visible');
-    cy.contains('button', 'Generate Draft').should('be.disabled');
-    cy.get('section[aria-label="AI-assisted character draft"] textarea').type(
-      'A disgraced royal cartographer who suspects the capital was redrawn overnight.'
-    );
-    cy.contains('button', 'Generate Draft').should('be.enabled').click();
-    cy.contains('[role="status"]', /API key is missing|Unable to generate/i).should('be.visible');
-    cy.contains('label', 'Name').find('input').should('have.value', '');
+    cy.get('section[aria-label="Characters canon"]').should('be.visible');
+    cy.contains('button', 'Create Manually').click();
+    cy.contains('h2', 'New Character Canon').should('be.visible');
+    cy.contains('button', 'AI helper').click();
+    cy.get('section[aria-label="World Bible AI helper"]').within(() => {
+      cy.contains('strong', 'AI helper').should('be.visible');
+      cy.contains('Highlight text in an assistant response').should('be.visible');
+      cy.contains('button', 'Preview action').should('be.disabled');
+    });
+    cy.get('form').find('input').first().should('have.value', '');
   });
 
-  it('keeps World Bible review queue cards low density', () => {
+  it('keeps World Bible review cards low density and clears completion state', () => {
     seedWorldBibleReviewQueueItem();
     cy.visit('/world-bible');
-    cy.contains('button', /Review Queue \(1\)/).click();
-    cy.contains('h2', 'Review Queue').should('be.visible');
-    cy.get('section[aria-label="Cast canon"]').should('not.exist');
     cy.contains('h2', 'Queue Focus').should('not.exist');
     cy.contains('h2', 'Review Queue Items').should('not.exist');
     cy.contains('button', 'Open queue mode').should('not.exist');
     cy.contains('button', 'Focus first item').should('not.exist');
     cy.contains('button', /^Ignore \(/).should('not.exist');
-    cy.contains('[data-cy="world-bible-review-card"]', 'Kael Review').within(() => {
-      cy.contains('button', 'Review details').should('be.visible');
+    cy.contains('li', 'Kael Review').within(() => {
+      cy.contains('span', 'Needs completion').should('be.visible');
+      cy.contains('button', 'Edit').should('be.visible');
       cy.contains('button', 'Mark reviewed').should('be.visible');
+      cy.contains('button', 'Delete').should('be.visible');
       cy.contains('button', 'Mark reviewed + next').should('not.exist');
       cy.contains('button', 'Merge matches').should('not.exist');
       cy.contains('button', 'Review aliases').should('not.exist');
       cy.contains('button', 'Resolve names').should('not.exist');
+      cy.contains('button', 'Mark reviewed').click();
+      cy.contains('span', 'Needs completion').should('not.exist');
+      cy.contains('button', 'Mark reviewed').should('not.exist');
     });
   });
 
-  it('offers a direct short-name to full-name alias action in review', () => {
+  it('offers and completes a direct short-name to full-name alias action', () => {
     seedShortNameAliasReviewItem();
-    cy.visit('/world-bible');
-    cy.contains('button', /Review Queue \(1\)/).click();
-    cy.contains('[data-cy="world-bible-review-card"]', 'Garcia').within(() => {
-      cy.contains('button', 'Resolve names').click();
+    cy.window().then((win) => {
+      cy.stub(win, 'confirm').returns(true);
     });
+    cy.visit('/world-bible');
+    cy.contains('[class*="entityName"]', /^Garcia$/)
+      .parents('li')
+      .first()
+      .within(() => {
+        cy.contains('span', 'Needs completion').should('be.visible');
+        cy.contains('span', 'Names need review').should('be.visible');
+        cy.contains('button', 'Resolve names').click();
+      });
     cy.contains('strong', 'Possible canonical character overlaps').should('be.visible');
-    cy.contains('button', 'Make Garcia an alias of Garcia de Terra').should('be.visible');
+    cy.contains('button', 'Make Garcia an alias of Garcia de Terra')
+      .should('be.visible')
+      .click();
+    cy.contains('[class*="entityName"]', /^Garcia$/).should('not.exist');
+    cy.contains('li', 'Garcia de Terra').within(() => {
+      cy.contains('span', 'Names need review').should('not.exist');
+      cy.contains('button', 'Mark reviewed').should('not.exist');
+    });
   });
 
   it('clears the active project summary after deleting the last project', () => {
