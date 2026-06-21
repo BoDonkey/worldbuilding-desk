@@ -89,10 +89,13 @@ Implemented in the checkpoint:
 - Inline review popovers now keep Add / Ignore / Always ignore controls stable when the category dropdown changes.
 - World Bible category task cards are back to manual/import as the primary paths.
 - AI is discrete and author-invoked from manual/import contexts.
-- The current helper is a floating chat with selected-text apply to existing editable destinations.
-- The current helper is explicitly interim. The desired next slice is a Workspace-like proposal/action model where the assistant can ask permission to add a section, apply text to a field, set a name, or add an alias, with every mutation confirmed by the author.
+- The current helper is a floating chat where selected assistant text becomes a previewed proposal before the author confirms a name, alias, field, or new-section action.
+- Model output can ask permission to add a rich-text section, apply text to a field, set a name, or add aliases, with every mutation confirmed by the author.
 - Model output must not silently create records, fields, aliases, or canon facts.
-- World Bible document and JSON imports remain available from the utility rail.
+- World Bible document, pasted-text, and JSON imports remain available from the utility rail/task cards.
+- Shared import preview now handles Cast and non-Cast categories. Headings are classified as existing fields, record-local sections, reusable fields, or ignored content before import.
+- Record-specific headings such as `Sireneans and Trafficking` stay inside the record by default instead of becoming reusable category fields.
+- World Bible list cards now show compact summaries instead of full long-form record bodies.
 
 Verified after the checkpoint:
 
@@ -106,12 +109,13 @@ Verified after the checkpoint:
 - `pnpm --filter web exec cypress run --spec cypress/e2e/lore-review-matching.cy.ts` passes 6 tests.
 - Current World Bible AI helper slice:
   - `pnpm --filter web exec tsc --noEmit`
-  - `pnpm --filter web test:unit -- --run` passes 110 tests.
+  - `pnpm --filter web test:unit -- --run apps/web/src/components/AIAssistant/AIAssistant.test.ts apps/web/src/hooks/useWorldBibleImports.test.ts` passes 125 tests.
   - `pnpm --filter web lint` passes with the existing `useWorkspaceDocuments.ts` hook warning.
   - `pnpm --filter web build` passes with existing Vite large-chunk and `onnxruntime-web` eval warnings.
+  - `git diff --check`
   - Browser smoke on `/world-bible` confirms manual/import remain the primary task cards.
   - Browser smoke confirms the helper opens as a fixed floating panel with an apply destination picker and no old `AI-Assisted Draft` card.
-  - Focused checks run during the helper slice include `pnpm --filter web exec tsc --noEmit` and focused AIAssistant/Ollama tests.
+  - The latest importer cleanup was validated by automated checks only; do a fresh browser smoke before committing if possible.
 
 Known verification note:
 
@@ -120,12 +124,11 @@ Known verification note:
 Next thing to resume:
 
 - Start a fresh narrow slice. Good candidates:
-  1. replace the interim selected-text apply bar with a model-proposed action system
-  2. support assistant proposals such as adding a new section, setting a name, adding aliases, and applying text to a field
+  1. browser-smoke the shared import path with one Cast paste/import and one non-Cast import
+  2. run or repair broader review-completion smoke coverage, including `post-merge-smoke.cy.ts` if Prompt Tools are still expected
   3. keep every AI-proposed canon/schema mutation author-confirmed and editable before save
-  4. run or repair broader review-completion smoke coverage, including `post-merge-smoke.cy.ts` if Prompt Tools are still expected
-  5. compare current review surfaces against `codex/review-completion-state` for only narrow density/copy improvements
-  6. do a dedicated manual smoke of import -> review -> World Bible queue completion after the alias stabilization checkpoint
+  4. compare current review surfaces against `codex/review-completion-state` for only narrow density/copy improvements
+  5. do a dedicated manual smoke of import -> review -> World Bible queue completion after the alias stabilization checkpoint
 
 ## Required Reading
 
@@ -161,8 +164,7 @@ The build still emits existing Vite large-chunk warnings and an `onnxruntime-web
 - Run or outline broader review-completion smoke coverage.
 - Audit docs for stale recovery-plan statements.
 - Identify risky reference-branch code that should not be ported.
-- Propose model-proposed World Bible helper actions for fields, aliases, names, and new sections without implementing broad background generation.
-- Browser-smoke the current World Bible helper/import path and report where the interim selected-text apply flow feels too form-like.
+- Browser-smoke the current World Bible helper/import path and report any unclear labels, cramped panels, or confusing section classification states.
 
 ## Risky Tasks To Avoid
 
