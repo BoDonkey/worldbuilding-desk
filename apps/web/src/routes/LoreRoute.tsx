@@ -700,13 +700,13 @@ function LoreRoute() {
   return (
     <section className={styles.page}>
       <PageHeader
-        eyebrow='Free-form worldbuilding'
+        eyebrow='Source notes'
         title='Lore Documents'
         description={
           <>
-            Store dossiers, timelines, myths, and deep reference notes without forcing
-            them into a rigid World Bible form. Extraction runs locally and produces
-            reviewable fact proposals before anything becomes canon.
+            Keep dossiers, timelines, myths, and deep reference notes here as
+            source material. World Bible remains the structured canon home;
+            extraction only creates review candidates until you accept them.
           </>
         }
         actions={
@@ -744,31 +744,31 @@ function LoreRoute() {
         <div className={styles.starterHeader}>
           <div>
             <div className={styles.starterEyebrow}>Start here</div>
-            <h2>Document Intake</h2>
+            <h2>Source Document Intake</h2>
             <p>
-              Capture freeform source material first, then extract only the facts and
-              entities you want to promote into canon.
+              Capture longform material first, then decide which extracted facts
+              and entities are worth promoting into canon.
             </p>
           </div>
         </div>
         <div className={styles.starterGrid}>
           <div className={styles.starterCard}>
             <h3>Write Manually</h3>
-            <p>Start a dossier, timeline, myth, or world note from a blank document.</p>
+            <p>Draft a dossier, timeline, myth, or background note without shaping it into fields.</p>
             <button type='button' onClick={focusLoreEditor}>
               Start Writing
             </button>
           </div>
           <div className={styles.starterCard}>
             <h3>Import Dossier</h3>
-            <p>Bring in DOCX, Markdown, or plain text notes before reviewing them.</p>
+            <p>Bring in DOCX, Markdown, or plain text source notes, then save what belongs here.</p>
             <button type='button' onClick={handleImportClick} disabled={isImporting}>
               {isImporting ? 'Importing...' : 'Import File'}
             </button>
           </div>
           <div className={styles.starterCard}>
-            <h3>Extract Canon</h3>
-            <p>Turn the active saved document into reviewable entity and fact candidates.</p>
+            <h3>Extract Candidates</h3>
+            <p>Scan the active saved document for entity and fact proposals without changing canon.</p>
             <button
               type='button'
               onClick={() => editingDocument && void handleExtractFacts(editingDocument)}
@@ -918,8 +918,8 @@ function LoreRoute() {
                 </button>
               </div>
               <p className={styles.subsectionCopy}>
-                Link a dossier to existing characters or world records now. Extraction uses
-                these links to decide where accepted facts belong.
+                Link a source document to existing characters or World Bible records.
+                Extraction uses these links to suggest where accepted facts belong.
               </p>
               {linkDrafts.length === 0 ? (
                 <p className={styles.emptyHint}>No links yet.</p>
@@ -989,8 +989,8 @@ function LoreRoute() {
                 </span>
               </div>
               <p className={styles.subsectionCopy}>
-                Proposed facts are local, deterministic interpretations. Accept only what
-                should become canon.
+                These local proposals do not change World Bible or accepted canon
+                until you explicitly accept one.
               </p>
               <div className={styles.acceptedSection}>
                 <div className={styles.cardHeader}>

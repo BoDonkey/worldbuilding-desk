@@ -11,12 +11,18 @@ describe('Lore Documents', () => {
     cy.visit('/lore');
     cy.contains('h1', 'Lore Documents').should('be.visible');
     cy.contains(
-      'Store dossiers, timelines, myths, and deep reference notes without forcing them into a rigid World Bible form.'
+      'Keep dossiers, timelines, myths, and deep reference notes here as source material.'
     ).should('be.visible');
-    cy.contains('h2', 'Document Intake').should('be.visible');
+    cy.contains(
+      'World Bible remains the structured canon home; extraction only creates review candidates until you accept them.'
+    ).should('be.visible');
+    cy.contains('h2', 'Source Document Intake').should('be.visible');
     cy.contains('h3', 'Write Manually').should('be.visible');
     cy.contains('h3', 'Import Dossier').should('be.visible');
-    cy.contains('h3', 'Extract Canon').should('be.visible');
+    cy.contains('h3', 'Extract Candidates').should('be.visible');
+    cy.contains('Scan the active saved document for entity and fact proposals without changing canon.').should(
+      'be.visible'
+    );
     cy.contains('button', 'Extract Facts').should('be.disabled');
 
     cy.contains('button', 'Start Writing').click();
@@ -94,6 +100,9 @@ describe('Lore Documents', () => {
     });
 
     cy.contains('h2', 'Extraction Review').should('be.visible');
+    cy.contains(
+      'These local proposals do not change World Bible or accepted canon until you explicitly accept one.'
+    ).should('be.visible');
     cy.contains('h3', 'Entity Candidates').should('be.visible');
     cy.contains('Mira Voss').should('be.visible');
     cy.contains('Glass Harbor').should('be.visible');
