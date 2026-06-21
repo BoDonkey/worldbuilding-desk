@@ -7,6 +7,19 @@ import {
 } from './useWorldBibleImports';
 import type {EntityCategory} from '../entityTypes';
 
+const markExistingFieldSections = (
+  sections: ReturnType<typeof detectImportSections>,
+  category: EntityCategory
+): ReturnType<typeof detectImportSections> =>
+  sections.map((section) => {
+    const normalizedTitle = section.title.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
+    const matchesField = category.fieldSchema.some((field) => {
+      const normalizedLabel = field.label.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
+      return field.key === normalizedTitle || normalizedLabel === normalizedTitle;
+    });
+    return matchesField ? {...section, action: 'existing-field'} : section;
+  });
+
 describe('markdownToRichHtml', () => {
   it('renders common AI concept markdown without exposing raw syntax', () => {
     const html = markdownToRichHtml(
@@ -82,7 +95,20 @@ describe('document import structure detection', () => {
     );
   });
 
-  it('detects inline section headings when DOCX text collapses paragraphs', () => {
+  it('detects character names from shared World Bible imports', () => {
+    const source = [
+      'Character Name: Camila Garcia deTerra',
+      '',
+      'Appearance:',
+      'Camila carries herself like a practiced courtier.'
+    ].join('\n');
+
+    expect(detectImportDocumentName(source, 'Character Sheet_ Unknown.docx')).toBe(
+      'Camila Garcia deTerra'
+    );
+  });
+
+  it('classifies specific inline headings as record sections when DOCX text collapses paragraphs', () => {
     const source =
       'Concept: The Sireneans Background and Traits: Origin: The Sireneans could hail from a mystical region. Appearance: They might resemble humans. Cultural Aspects: Their society is complex. Sireneans and Trafficking: The exploitation of Sireneans is a dark aspect. Interaction with Other Races: Humans mistrust them. Role in the Story: Their plight highlights consent.';
 
@@ -93,6 +119,9 @@ describe('document import structure detection', () => {
       'Interaction with Other Races',
       'Role in the Story'
     ]);
+    expect(sections.find((section) => section.title === 'Sireneans and Trafficking')?.action).toBe(
+      'record-section'
+    );
     expect(sections[0]?.content).toContain('Cultural Aspects');
   });
 
@@ -141,7 +170,7 @@ describe('document import structure detection', () => {
       ]
     };
 
-    const sections = detectImportSections(source);
+    const sections = markExistingFieldSections(detectImportSections(source), category);
     const fields = mapImportedTextToFields(category, source, undefined, sections);
 
     expect(fields.description).toContain('Concept: The Sireneans');
@@ -149,6 +178,38 @@ describe('document import structure detection', () => {
     expect(fields.background_and_traits).toContain('Cultural Aspects');
     expect(fields.interaction_with_other_races).toContain('Humans mistrust them.');
     expect(fields).not.toHaveProperty('cultural_aspects');
+  });
+
+  it('keeps record-specific detected headings in description instead of creating schema fields', () => {
+    const source = [
+      'Concept: The Sireneans',
+      '',
+      'Background and Traits:',
+      'Origin: The Sireneans could hail from a mystical region.',
+      '',
+      'Sireneans and Trafficking:',
+      'The exploitation of Sireneans is a dark aspect of their history.'
+    ].join('\n');
+    const category: EntityCategory = {
+      id: 'races',
+      projectId: 'project',
+      name: 'Races',
+      slug: 'races',
+      createdAt: 1,
+      fieldSchema: [
+        {key: 'description', label: 'Description', type: 'textarea'},
+        {key: 'background_and_traits', label: 'Background and Traits', type: 'textarea'}
+      ]
+    };
+
+    const sections = markExistingFieldSections(detectImportSections(source), category);
+    const fields = mapImportedTextToFields(category, source, undefined, sections);
+
+    expect(fields.background_and_traits).toContain('mystical region');
+    expect(fields.description).toContain('Concept: The Sireneans');
+    expect(fields.description).toContain('Sireneans and Trafficking');
+    expect(fields.description).toContain('dark aspect of their history');
+    expect(fields).not.toHaveProperty('sireneans_and_trafficking');
   });
 
   it('fills existing fields from nested label lines without creating new section fields', () => {
@@ -176,7 +237,7 @@ describe('document import structure detection', () => {
       ]
     };
 
-    const sections = detectImportSections(source);
+    const sections = markExistingFieldSections(detectImportSections(source), category);
     const fields = mapImportedTextToFields(category, source, undefined, sections);
 
     expect(sections.map((section) => section.title)).toEqual([

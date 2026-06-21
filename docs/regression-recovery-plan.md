@@ -122,10 +122,12 @@ Completed recovery checkpoints on `codex/reconcile-temp-update-ui`:
 16. Current working slice - World Bible AI helper and import structure:
    - World Bible category task cards keep manual/import as the primary authoring paths.
    - The old non-character AI draft task-card path has been removed from this slice; future AI field/schema work should arrive through the helper proposal/action model.
-   - The current helper is an explicit floating chat opened from manual/import contexts, with selected assistant text applied only after the author chooses a destination.
-   - Assistant output can set the editable name, append aliases, or apply text to existing fields, but it still does not save canon automatically.
-   - Document import can deliberately map detected headings into category fields before imported records are saved.
-   - DOCX/HTML/text imports preserve intro/unmapped text in Description while detected top-level headings can become separate fields.
+   - The current helper is an explicit floating chat opened from manual/import contexts. Selected assistant text now becomes a previewed proposal before the author confirms a name, alias, field, or new-section action.
+   - Assistant output can set the editable name, append aliases, apply text to existing fields, or create a new rich-text section, but it still does not save canon automatically.
+   - Document and pasted-text imports use the shared World Bible import preview for all categories, including Cast.
+   - Import heading detection now classifies sections as existing fields, record-local sections, reusable fields, or ignored content before imported records are saved.
+   - DOCX/HTML/text imports preserve intro/unmapped and record-local text in Description while reusable headings can become separate fields.
+   - World Bible list cards now show compact summaries instead of full long-form record bodies.
    - Document and JSON import entry points remain available from the World Bible utility rail.
 
 Verified for the current checkpoint:
@@ -138,14 +140,15 @@ Verified for the current checkpoint:
 - Browser smoke on `http://localhost:5173/characters`: hub layout and manual character form render coherently, and long-form fields are TipTap editors.
 - Current World Bible AI helper/import slice:
   - `pnpm --filter web exec tsc --noEmit`
-  - `pnpm --filter web test:unit -- --run`
+  - `pnpm --filter web test:unit -- --run apps/web/src/components/AIAssistant/AIAssistant.test.ts apps/web/src/hooks/useWorldBibleImports.test.ts`
   - `pnpm --filter web lint` passes with the existing unrelated warning in `apps/web/src/hooks/useWorkspaceDocuments.ts`.
   - `pnpm --filter web build`
+  - `git diff --check`
   - Browser smoke on `/world-bible`: manual/import remain the primary category task cards, the helper opens from the record form, and selected assistant text applies to editable destinations without saving canon.
 
 Recommended next slices:
 
-1. Replace the interim selected-text apply bar with a model-proposed action system for fields, aliases, names, and new sections.
+1. Browser-smoke the shared import path with one Cast paste/import and one non-Cast import before committing the slice.
 2. Run or repair broader review-completion smoke coverage before further review UI changes.
 3. Revisit workspace review drawer density only after the World Bible queue is stable; do not replace the current writing workspace with the reference branch workspace.
 4. Compare current review surfaces against `codex/review-completion-state` for narrow copy/density improvements only.

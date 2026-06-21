@@ -1,5 +1,5 @@
 import {useEffect, useState, useCallback, useRef, useMemo} from 'react';
-import type {ChangeEvent, FormEvent} from 'react';
+import type {FormEvent} from 'react';
 import {useLocation, useNavigate} from 'react-router-dom';
 import {useAppStore} from '../store/appStore';
 import {getProjectCapabilities} from '../projectMode';
@@ -34,6 +34,7 @@ import {useWorldBibleReview} from '../hooks/useWorldBibleReview';
 import {
   useWorldBibleImports,
   type ImportMode,
+  type WorldBibleImportSectionAction,
   type JsonImportConflictResolution
 } from '../hooks/useWorldBibleImports';
 import {useWorldBibleEntityActions} from '../hooks/useWorldBibleEntityActions';
@@ -59,20 +60,34 @@ import {
   buildCanonicalAliasList,
   deriveCharacterAliasSuggestions
 } from '../services/worldBible/worldBibleCanonicalization';
-import {
-  parseCharacterImportText,
-  readCharacterImportFile,
-  type CharacterImportDraft,
-  type CharacterImportSectionDraft
-} from '../services/characters/characterImportService';
 
 // activeProject read from store below
 
 type WorldBibleViewMode = 'category' | 'review';
-type CharacterImportStep = 'idle' | 'input' | 'review';
-type CharacterAuthoringMode = 'idle' | 'manual' | 'import';
+type CharacterAuthoringMode = 'idle' | 'manual';
 type RecordAuthoringMode = 'idle' | 'manual';
-type AiHelperApplyTarget = 'name' | 'aliases' | `field:${string}`;
+type AiHelperActionTarget = 'name' | 'aliases' | 'new-section' | `field:${string}`;
+type AiHelperProposal =
+  | {
+      kind: 'name';
+      text: string;
+    }
+  | {
+      kind: 'aliases';
+      text: string;
+    }
+  | {
+      kind: 'field';
+      text: string;
+      fieldKey: string;
+      fieldLabel: string;
+      fieldType: EntityCategory['fieldSchema'][number]['type'];
+    }
+  | {
+      kind: 'new-section';
+      text: string;
+      label: string;
+    };
 
 const getPreferredImportField = (
   category: EntityCategory
@@ -107,6 +122,45 @@ const slugifyFieldKey = (value: string): string =>
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '_')
     .replace(/^_+|_+$/g, '') || 'section';
+
+const deriveAiSectionLabel = (selectedText: string): string => {
+  const firstLine = selectedText
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .find(Boolean);
+  if (!firstLine) return '';
+  return firstLine
+    .replace(/^#+\s*/, '')
+    .replace(/[:.!?]+$/, '')
+    .slice(0, 48)
+    .trim();
+};
+
+const IMPORT_SECTION_ACTION_LABELS: Record<WorldBibleImportSectionAction, string> = {
+  'existing-field': 'Existing field',
+  'record-section': 'Record section',
+  'new-field': 'Reusable field',
+  ignore: 'Ignore'
+};
+
+const IMPORT_SECTION_ACTION_HELP: Record<WorldBibleImportSectionAction, string> = {
+  'existing-field': 'Copies this heading into the matching category field.',
+  'record-section': 'Keeps this heading inside this record without changing the category schema.',
+  'new-field': 'Creates a reusable field on this category before import.',
+  ignore: 'Skips this heading and content during structured import.'
+};
+
+const formatAiFieldContextValue = (value: string): string => {
+  const plainText = extractPlainTextFromRichText(value).trim();
+  if (!plainText) return '(empty)';
+  return plainText.length > 2500 ? `${plainText.slice(0, 2500).trim()}...` : plainText;
+};
+
+const compactEntityCardText = (value: string, maxLength = 140): string => {
+  const compact = value.replace(/\s+/g, ' ').trim();
+  if (compact.length <= maxLength) return compact;
+  return `${compact.slice(0, maxLength).trim()}...`;
+};
 
 const isCharacterCategory = (category: EntityCategory): boolean => {
   const slug = category.slug.toLowerCase();
@@ -152,9 +206,10 @@ const buildEntityCardSummary = (
   aliasTexts: string[] = []
 ): {
   primarySummary: string | null;
-  fullSummary: string | null;
+  summarySourceLabel: string | null;
   summaryIsTruncated: boolean;
   secondaryFields: Array<{label: string; value: string}>;
+  hiddenFieldCount: number;
 } => {
   const labelByKey = new Map(
     [
@@ -199,7 +254,7 @@ const buildEntityCardSummary = (
     ])
   );
 
-  const secondaryFields = secondaryPriority
+  const allSecondaryFields = secondaryPriority
     .filter((key) => key !== summarySourceKey)
     .map((key) => {
       if (key === ALTERNATIVE_NAMES_KEY) {
@@ -239,18 +294,20 @@ const buildEntityCardSummary = (
         value: String(value ?? '')
       };
     })
-    .filter((field) => field.value.trim().length > 0)
-    .slice(0, 4);
+    .filter((field) => field.value.trim().length > 0);
+  const secondaryFields = allSecondaryFields.slice(0, 3);
 
   return {
     primarySummary: primarySummary
-      ? primarySummary.length > 280
-        ? `${primarySummary.slice(0, 280)}...`
-        : primarySummary
+      ? compactEntityCardText(primarySummary, 180)
       : null,
-    fullSummary: primarySummary,
-    summaryIsTruncated: Boolean(primarySummary && primarySummary.length > 280),
-    secondaryFields
+    summarySourceLabel: summarySourceKey ? labelByKey.get(summarySourceKey) ?? summarySourceKey : null,
+    summaryIsTruncated: Boolean(primarySummary && primarySummary.length > 180),
+    secondaryFields: secondaryFields.map((field) => ({
+      ...field,
+      value: compactEntityCardText(field.value, 96)
+    })),
+    hiddenFieldCount: Math.max(0, allSecondaryFields.length - secondaryFields.length)
   };
 };
 
@@ -291,42 +348,6 @@ const buildEntityContent = (entity: WorldEntity) => {
   return `${entity.name}\n${fieldText}`;
 };
 
-const buildCharacterImportDescription = (
-  draft: CharacterImportDraft,
-  sections: CharacterImportSectionDraft[]
-): string => {
-  const descriptionBlocks = sections
-    .filter((section) => section.action === 'description')
-    .map((section) => section.content.trim())
-    .filter(Boolean);
-  return descriptionBlocks.join('\n\n') || draft.detectedDescription;
-};
-
-const buildCharacterImportNotes = (
-  draft: CharacterImportDraft,
-  sections: CharacterImportSectionDraft[]
-): string => {
-  const noteBlocks = sections
-    .filter((section) => section.action === 'notes')
-    .map((section) => `${section.title}\n${section.content.trim()}`)
-    .filter(Boolean);
-  const residue = draft.unmatchedText.trim();
-  return [...noteBlocks, residue ? `Source Notes\n${residue}` : ''].filter(Boolean).join('\n\n');
-};
-
-const buildCharacterImportCustomFieldValues = (
-  sections: CharacterImportSectionDraft[],
-  customFields: EntityCategory['fieldSchema']
-): Record<string, string> => {
-  const customFieldKeys = new Set(customFields.map((field) => field.key));
-  return sections.reduce<Record<string, string>>((values, section) => {
-    if (!customFieldKeys.has(section.action)) return values;
-    const existing = values[section.action];
-    values[section.action] = [existing, section.content.trim()].filter(Boolean).join('\n\n');
-    return values;
-  }, {});
-};
-
 function WorldBibleRoute() {
   const activeProject = useAppStore((s) => s.activeProject);
   const projectSettings = useAppStore((s) => s.projectSettings);
@@ -344,26 +365,22 @@ function WorldBibleRoute() {
   const [showCategoryManager, setShowCategoryManager] = useState(false);
   const [aliases, setAliases] = useState<ConsistencyAlias[]>([]);
   const [activeImportPreviewId, setActiveImportPreviewId] = useState<string | null>(null);
-  const [characterImportStep, setCharacterImportStep] =
-    useState<CharacterImportStep>('idle');
   const [characterAuthoringMode, setCharacterAuthoringMode] =
     useState<CharacterAuthoringMode>('idle');
   const [recordAuthoringMode, setRecordAuthoringMode] =
     useState<RecordAuthoringMode>('idle');
-  const [pastedCharacterImportText, setPastedCharacterImportText] = useState('');
-  const [characterImportDraft, setCharacterImportDraft] =
-    useState<CharacterImportDraft | null>(null);
-  const [characterImportSections, setCharacterImportSections] = useState<
-    CharacterImportSectionDraft[]
-  >([]);
-  const [isImportingCharacterDoc, setIsImportingCharacterDoc] = useState(false);
+  const [isPasteImportOpen, setIsPasteImportOpen] = useState(false);
+  const [pastedImportText, setPastedImportText] = useState('');
   const [isRecordAiHelperOpen, setIsRecordAiHelperOpen] = useState(false);
   const [isImportAiHelperOpen, setIsImportAiHelperOpen] = useState(false);
   const [aiHelperSelectedText, setAiHelperSelectedText] = useState('');
-  const [aiHelperApplyTarget, setAiHelperApplyTarget] =
-    useState<AiHelperApplyTarget>('name');
+  const [aiHelperActionTarget, setAiHelperActionTarget] =
+    useState<AiHelperActionTarget>('name');
+  const [aiHelperNewSectionLabel, setAiHelperNewSectionLabel] = useState('');
+  const [aiHelperProposal, setAiHelperProposal] = useState<AiHelperProposal | null>(
+    null
+  );
   const [newCharacterSectionName, setNewCharacterSectionName] = useState('');
-  const [expandedSummaryEntityIds, setExpandedSummaryEntityIds] = useState<string[]>([]);
   const [isNameResolverOpen, setIsNameResolverOpen] = useState(false);
   const [manualResolutionTargetId, setManualResolutionTargetId] = useState('');
   const [ragService, setRagService] = useState<RAGProvider | null>(null);
@@ -403,7 +420,6 @@ function WorldBibleRoute() {
   >(new Set());
   const importInputRef = useRef<HTMLInputElement | null>(null);
   const jsonImportInputRef = useRef<HTMLInputElement | null>(null);
-  const characterImportInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     if (!activeProject) {
@@ -659,9 +675,6 @@ function WorldBibleRoute() {
         (field) => !CHARACTER_AUTHORING_FIELD_KEYS.has(field.key)
       ) ?? []
     : [];
-  const characterImportDestinationFields = characterCustomFields.filter(
-    (field) => field.type === 'textarea'
-  );
   const categoryById = useMemo(
     () => new Map(categories.map((category) => [category.id, category])),
     [categories]
@@ -681,7 +694,9 @@ function WorldBibleRoute() {
     jsonImportConflictCount,
     unresolvedJsonConflictCount,
     handleImportEntities,
+    preparePastedImportDraft,
     updateImportDraft,
+    updateImportSectionAction,
     applyImportDrafts,
     applyJsonImport,
     handleJsonImportFile,
@@ -767,22 +782,34 @@ function WorldBibleRoute() {
     activeCategory?.name.replace(/s$/i, '').toLowerCase() || 'record';
   const currentRecordAiContext = useMemo(() => {
     if (!activeCategory) return '';
+    const fieldContext = activeCategory.fieldSchema.map((field) => {
+      const value = fieldValues[field.key] ?? '';
+      return [
+        `Field: ${field.label}`,
+        `Key: ${field.key}`,
+        `Current content:\n${formatAiFieldContextValue(value)}`
+      ].join('\n');
+    });
     return [
       `Category: ${activeCategory.name}`,
-      name.trim() ? `Current name: ${name.trim()}` : ''
+      name.trim() ? `Current name: ${name.trim()}` : '',
+      fieldContext.length > 0
+        ? `Editable fields:\n\n${fieldContext.join('\n\n---\n\n')}`
+        : ''
     ]
       .filter(Boolean)
       .join('\n\n');
-  }, [activeCategory, name]);
+  }, [activeCategory, fieldValues, name]);
   const aiHelperApplyTargets = useMemo(() => {
     if (!activeCategory) return [];
     return [
-      {value: 'name' as AiHelperApplyTarget, label: 'Name'},
-      {value: 'aliases' as AiHelperApplyTarget, label: 'Alternative names'},
+      {value: 'name' as AiHelperActionTarget, label: 'Name'},
+      {value: 'aliases' as AiHelperActionTarget, label: 'Alternative names'},
       ...activeCategory.fieldSchema.map((field) => ({
-        value: `field:${field.key}` as AiHelperApplyTarget,
+        value: `field:${field.key}` as AiHelperActionTarget,
         label: field.label
-      }))
+      })),
+      {value: 'new-section' as AiHelperActionTarget, label: 'New section'}
     ];
   }, [activeCategory]);
   const importAiContext = useMemo(() => {
@@ -918,13 +945,14 @@ function WorldBibleRoute() {
     setManualResolutionTargetId('');
     setCharacterAuthoringMode('idle');
     setRecordAuthoringMode('idle');
-    setCharacterImportStep('idle');
-    setCharacterImportDraft(null);
-    setCharacterImportSections([]);
+    setIsPasteImportOpen(false);
+    setPastedImportText('');
     setIsRecordAiHelperOpen(false);
     setIsImportAiHelperOpen(false);
     setAiHelperSelectedText('');
-    setAiHelperApplyTarget('name');
+    setAiHelperActionTarget('name');
+    setAiHelperNewSectionLabel('');
+    setAiHelperProposal(null);
     setNewCharacterSectionName('');
   };
 
@@ -957,12 +985,13 @@ function WorldBibleRoute() {
     setFieldValues({});
     setCharacterAuthoringMode('manual');
     setRecordAuthoringMode('idle');
-    setCharacterImportStep('idle');
-    setCharacterImportDraft(null);
-    setCharacterImportSections([]);
+    setIsPasteImportOpen(false);
+    setPastedImportText('');
     setIsRecordAiHelperOpen(false);
     setAiHelperSelectedText('');
-    setAiHelperApplyTarget('name');
+    setAiHelperActionTarget('name');
+    setAiHelperNewSectionLabel('');
+    setAiHelperProposal(null);
   }, [openCharacterCategory]);
 
   const startNewCategoryRecord = useCallback(() => {
@@ -976,82 +1005,25 @@ function WorldBibleRoute() {
     setManualResolutionTargetId('');
     setCharacterAuthoringMode('idle');
     setRecordAuthoringMode('manual');
-    setCharacterImportStep('idle');
-    setCharacterImportDraft(null);
-    setCharacterImportSections([]);
+    setIsPasteImportOpen(false);
+    setPastedImportText('');
     setIsRecordAiHelperOpen(false);
     setAiHelperSelectedText('');
-    setAiHelperApplyTarget('name');
+    setAiHelperActionTarget('name');
+    setAiHelperNewSectionLabel('');
+    setAiHelperProposal(null);
   }, [activeCategory]);
 
-  const applyCharacterImportDraftToFields = useCallback(
-    (draft: CharacterImportDraft, sections: CharacterImportSectionDraft[]) => {
-      openCharacterCategory();
-      setEditingId(null);
-      setName(draft.detectedName);
-      setCharacterAuthoringMode('import');
-      const customFieldValues = buildCharacterImportCustomFieldValues(
-        sections,
-        characterImportDestinationFields
-      );
-      setFieldValues({
-        description: normalizeRichTextValue(buildCharacterImportDescription(draft, sections)),
-        age: draft.detectedAge,
-        role: draft.detectedRole,
-        [CHARACTER_NOTES_FIELD]: normalizeRichTextValue(
-          buildCharacterImportNotes(draft, sections)
-        ),
-        ...Object.fromEntries(
-          Object.entries(customFieldValues).map(([key, value]) => [
-            key,
-            normalizeRichTextValue(value)
-          ])
-        )
-      });
-    },
-    [characterImportDestinationFields, openCharacterCategory]
-  );
-
-  const reviewCharacterImportDraft = useCallback(
-    (draft: CharacterImportDraft) => {
-      setCharacterImportDraft(draft);
-      setCharacterImportSections(draft.sections);
-      applyCharacterImportDraftToFields(draft, draft.sections);
-      setCharacterImportStep('review');
-      setFeedback(null);
-    },
-    [applyCharacterImportDraftToFields]
-  );
-
-  const handleReviewPastedCharacterImport = () => {
-    const source = pastedCharacterImportText.trim();
-    if (!source) {
-      setFeedback({tone: 'error', message: 'Paste character notes before reviewing.'});
-      return;
-    }
-    reviewCharacterImportDraft(parseCharacterImportText(source));
-  };
-
-  const handleCharacterImportFile = async (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    event.target.value = '';
-    if (!file) return;
-    setIsImportingCharacterDoc(true);
-    setFeedback(null);
-    try {
-      const source = await readCharacterImportFile(file);
-      setPastedCharacterImportText(source);
-      reviewCharacterImportDraft(parseCharacterImportText(source, file.name));
-    } catch (error) {
-      const message =
-        error instanceof Error ? error.message : 'Unable to import this character document.';
-      setFeedback({tone: 'error', message});
-    } finally {
-      setIsImportingCharacterDoc(false);
+  const handlePreparePastedImportDraft = () => {
+    if (!activeCategory) return;
+    preparePastedImportDraft(pastedImportText, `Pasted ${activeCategory.name.replace(/s$/i, '')}`);
+    if (pastedImportText.trim()) {
+      setIsPasteImportOpen(false);
+      setPastedImportText('');
     }
   };
 
-  const handleApplyAiHelperSelection = useCallback(() => {
+  const handleDraftAiHelperProposal = useCallback(() => {
     if (!activeCategory) return;
     const selectedText = aiHelperSelectedText.trim();
     if (!selectedText) {
@@ -1062,8 +1034,73 @@ function WorldBibleRoute() {
       return;
     }
 
-    if (aiHelperApplyTarget === 'name') {
+    if (aiHelperActionTarget === 'name') {
+      setAiHelperProposal({kind: 'name', text: selectedText});
+      setFeedback(null);
+      return;
+    }
+
+    if (aiHelperActionTarget === 'aliases') {
+      setAiHelperProposal({kind: 'aliases', text: selectedText});
+      setFeedback(null);
+      return;
+    }
+
+    if (aiHelperActionTarget === 'new-section') {
+      const label =
+        aiHelperNewSectionLabel.trim() || deriveAiSectionLabel(selectedText);
+      if (!label) {
+        setFeedback({
+          tone: 'error',
+          message: 'Name the new section before previewing this action.'
+        });
+        return;
+      }
+      setAiHelperProposal({
+        kind: 'new-section',
+        text: selectedText,
+        label
+      });
+      setFeedback(null);
+      return;
+    }
+
+    const fieldKey = aiHelperActionTarget.replace(/^field:/, '');
+    const targetField = activeCategory.fieldSchema.find((field) => field.key === fieldKey);
+    if (!targetField) {
+      setFeedback({
+        tone: 'error',
+        message: 'Choose a valid destination field before previewing this action.'
+      });
+      return;
+    }
+
+    setAiHelperProposal({
+      kind: 'field',
+      text: selectedText,
+      fieldKey: targetField.key,
+      fieldLabel: targetField.label,
+      fieldType: targetField.type
+    });
+    setFeedback(null);
+  }, [
+    activeCategory,
+    aiHelperActionTarget,
+    aiHelperNewSectionLabel,
+    aiHelperSelectedText
+  ]);
+
+  const handleConfirmAiHelperProposal = useCallback(async () => {
+    if (!activeCategory || !aiHelperProposal) return;
+    const selectedText = aiHelperProposal.text.trim();
+    if (!selectedText) {
+      setAiHelperProposal(null);
+      return;
+    }
+
+    if (aiHelperProposal.kind === 'name') {
       setName(selectedText);
+      setAiHelperProposal(null);
       setFeedback({
         tone: 'success',
         message: `Set the ${activeCategoryRecordLabel} name from selected assistant text. Review before saving.`
@@ -1071,7 +1108,7 @@ function WorldBibleRoute() {
       return;
     }
 
-    if (aiHelperApplyTarget === 'aliases') {
+    if (aiHelperProposal.kind === 'aliases') {
       setFieldValues((currentValues) => {
         const existingAliases = parseAlternativeNames(
           currentValues[ALTERNATIVE_NAMES_KEY] || ''
@@ -1088,16 +1125,64 @@ function WorldBibleRoute() {
         tone: 'success',
         message: 'Added selected assistant text to alternative names. Review before saving.'
       });
+      setAiHelperProposal(null);
       return;
     }
 
-    const fieldKey = aiHelperApplyTarget.replace(/^field:/, '');
-    const targetField = activeCategory.fieldSchema.find((field) => field.key === fieldKey);
+    if (aiHelperProposal.kind === 'new-section') {
+      const label = aiHelperProposal.label.trim();
+      if (!label) {
+        setFeedback({
+          tone: 'error',
+          message: 'Name the new section before confirming this action.'
+        });
+        return;
+      }
+
+      const existingKeys = new Set(activeCategory.fieldSchema.map((field) => field.key));
+      const baseKey = slugifyFieldKey(label);
+      let key = baseKey;
+      let suffix = 2;
+      while (existingKeys.has(key)) {
+        key = `${baseKey}_${suffix}`;
+        suffix += 1;
+      }
+
+      const updatedCategory: EntityCategory = {
+        ...activeCategory,
+        fieldSchema: [
+          ...activeCategory.fieldSchema,
+          {key, label, type: 'textarea'}
+        ]
+      };
+      await saveCategory(updatedCategory);
+      setCategories((prev) =>
+        prev.map((category) =>
+          category.id === updatedCategory.id ? updatedCategory : category
+        )
+      );
+      setFieldValues((currentValues) => ({
+        ...currentValues,
+        [key]: normalizeRichTextValue(selectedText)
+      }));
+      setAiHelperNewSectionLabel('');
+      setAiHelperProposal(null);
+      setFeedback({
+        tone: 'success',
+        message: `Added "${label}" as a new section. Review before saving.`
+      });
+      return;
+    }
+
+    const targetField = activeCategory.fieldSchema.find(
+      (field) => field.key === aiHelperProposal.fieldKey
+    );
     if (!targetField) {
       setFeedback({
         tone: 'error',
-        message: 'Choose a valid destination field before applying assistant text.'
+        message: 'This destination field no longer exists. Choose another action.'
       });
+      setAiHelperProposal(null);
       return;
     }
 
@@ -1119,11 +1204,11 @@ function WorldBibleRoute() {
       tone: 'success',
       message: `Applied selected assistant text to ${targetField.label}. Review before saving.`
     });
+    setAiHelperProposal(null);
   }, [
     activeCategory,
     activeCategoryRecordLabel,
-    aiHelperApplyTarget,
-    aiHelperSelectedText
+    aiHelperProposal
   ]);
 
   const detectedSectionImportDraftCount = useMemo(
@@ -1132,7 +1217,7 @@ function WorldBibleRoute() {
         (draft) =>
           draft.include &&
           !draft.parseError &&
-          (draft.detectedSections?.length ?? 0) > 0
+          (draft.detectedSections?.some((section) => section.action !== 'ignore') ?? false)
       ).length,
     [importDrafts]
   );
@@ -1142,7 +1227,7 @@ function WorldBibleRoute() {
       (draft) =>
         draft.include &&
         !draft.parseError &&
-        (draft.detectedSections?.length ?? 0) > 0
+        (draft.detectedSections?.some((section) => section.action !== 'ignore') ?? false)
     );
     if (draftsToUpdate.length === 0) {
       setFeedback({
@@ -1163,18 +1248,6 @@ function WorldBibleRoute() {
           : `Detected headings will be created as fields for ${draftsToUpdate.length} selected imports.`
     });
   }, [importDrafts, updateImportDraft]);
-
-  const updateCharacterImportSectionAction = (
-    sectionId: string,
-    action: CharacterImportSectionDraft['action']
-  ) => {
-    if (!characterImportDraft) return;
-    const nextSections = characterImportSections.map((section) =>
-      section.id === sectionId ? {...section, action} : section
-    );
-    setCharacterImportSections(nextSections);
-    applyCharacterImportDraftToFields(characterImportDraft, nextSections);
-  };
 
   const handleAddCharacterSection = async () => {
     if (!activeCategory) return;
@@ -1231,6 +1304,9 @@ function WorldBibleRoute() {
     );
     setRecordAuthoringMode(entityIsCharacterCategory ? 'idle' : 'manual');
     setPendingReviewFocus(focus);
+    setAiHelperSelectedText('');
+    setAiHelperNewSectionLabel('');
+    setAiHelperProposal(null);
     setName(entity.name);
     const persistedAlternativeNames =
       typeof entity.fields[ALTERNATIVE_NAMES_KEY] === 'string'
@@ -1452,8 +1528,8 @@ function WorldBibleRoute() {
         setActiveTab(targetCategory.id);
       }
       setViewMode('category');
-      if (state.startCharacterImport && characterImportStep === 'idle') {
-        setCharacterImportStep('input');
+      if (state.startCharacterImport && !isPasteImportOpen) {
+        setIsPasteImportOpen(true);
       }
     }
     const focusEntityId = state?.focusEntityId;
@@ -1476,7 +1552,7 @@ function WorldBibleRoute() {
       });
     }
     focusedEntityKeyRef.current = focusKey;
-  }, [activeTab, categories, characterImportStep, entities, handleEdit, location.key, location.state]);
+  }, [activeTab, categories, entities, handleEdit, isPasteImportOpen, location.key, location.state]);
 
   const handleApplyImportDrafts = async (options?: {
     draftIds?: string[];
@@ -1891,231 +1967,63 @@ function WorldBibleRoute() {
             </div>
             <div className={styles.castTask}>
               <h3>Import {activeCategory.name.replace(/s$/i, '')}</h3>
-              {activeCategoryIsCharacterLike ? (
-                <>
-                  <p>Review pasted profiles or dossier drafts before they enter rich canon fields.</p>
-                  <button
-                    type='button'
-                    onClick={() => {
-                      openCharacterCategory();
-                      setCharacterAuthoringMode('import');
-                      setCharacterImportStep('input');
-                    }}
-                  >
-                    Import Or Paste
-                  </button>
-                </>
-              ) : (
-                <>
-                  <p>Import documents into this tab, then review each generated canon record.</p>
-                  <button
-                    type='button'
-                    onClick={() => importInputRef.current?.click()}
-                    disabled={isImportingEntities}
-                  >
-                    {isImportingEntities ? 'Importing...' : 'Import Docs'}
-                  </button>
-                </>
-              )}
+              <p>Import documents or pasted dossiers, then review each generated canon record.</p>
+              <div className={styles.castTaskActions}>
+                <button
+                  type='button'
+                  onClick={() => importInputRef.current?.click()}
+                  disabled={isImportingEntities}
+                >
+                  {isImportingEntities ? 'Importing...' : 'Import Docs'}
+                </button>
+                <button
+                  type='button'
+                  onClick={() => setIsPasteImportOpen(true)}
+                >
+                  Paste Text
+                </button>
+              </div>
             </div>
           </div>
         </section>
       )}
 
-      {activeCategoryIsCharacterLike && characterImportStep === 'input' && (
-        <section className={styles.characterImportPanel} aria-label='Import character'>
+      {activeCategory && isPasteImportOpen && (
+        <section className={styles.characterImportPanel} aria-label='Paste import text'>
           <div className={styles.importPanelHeader}>
             <div>
-              <h2>Import Character</h2>
+              <h2>Paste {activeCategory.name.replace(/s$/i, '')}</h2>
               <p className={styles.importSummary}>
-                Paste a profile or import a character document. The parsed draft will
-                fill World Bible rich fields before you save.
+                Paste a dossier or notes. The shared import preview will classify headings
+                before anything is saved.
               </p>
             </div>
             <div className={styles.importPanelActions}>
               <button
                 type='button'
-                onClick={() => setIsImportAiHelperOpen((value) => !value)}
-                aria-expanded={isImportAiHelperOpen}
-              >
-                {isImportAiHelperOpen ? 'Hide AI helper' : 'AI helper'}
-              </button>
-              <button
-                type='button'
                 onClick={() => {
-                  setCharacterImportStep('idle');
-                  setCharacterAuthoringMode('idle');
-                  setIsImportAiHelperOpen(false);
+                  setIsPasteImportOpen(false);
+                  setPastedImportText('');
                 }}
               >
                 Close
               </button>
             </div>
           </div>
-          {isImportAiHelperOpen && (
-            <section className={styles.aiHelperPanel} aria-label='Import AI helper'>
-              <div className={styles.aiHelperHeader}>
-                <div>
-                  <strong>Import AI helper</strong>
-                  <p>
-                    Ask how to clean up, split, or map this source before reviewing
-                    the parsed fields.
-                  </p>
-                </div>
-                <button
-                  type='button'
-                  onClick={() => setIsImportAiHelperOpen(false)}
-                >
-                  Close
-                </button>
-              </div>
-              <AIAssistant
-                projectId={activeProject.id}
-                aiConfig={projectSettings?.aiSettings}
-                projectMode={projectSettings?.projectMode}
-                context={{
-                  type: 'world-bible',
-                  id: activeCategory?.id ?? activeProject.id,
-                  selectedText: pastedCharacterImportText
-                }}
-                showContextPreview={false}
-              />
-            </section>
-          )}
           <label className={styles.characterImportLabel}>
-            Character notes
+            Import text
             <textarea
-              value={pastedCharacterImportText}
-              onChange={(event) => setPastedCharacterImportText(event.target.value)}
+              value={pastedImportText}
+              onChange={(event) => setPastedImportText(event.target.value)}
               rows={10}
-              placeholder={'Name: Mira Voss\nRole: Cartographer\n\nBackground:\n...'}
+              placeholder={'Name: Mira Voss\n\nBackground:\n...'}
             />
           </label>
           <div className={styles.importPanelActions}>
-            <button type='button' onClick={handleReviewPastedCharacterImport}>
+            <button type='button' onClick={handlePreparePastedImportDraft}>
               Review Paste
             </button>
-            <button
-              type='button'
-              onClick={() => characterImportInputRef.current?.click()}
-              disabled={isImportingCharacterDoc}
-            >
-              {isImportingCharacterDoc ? 'Importing...' : 'Import File'}
-            </button>
-            <input
-              ref={characterImportInputRef}
-              type='file'
-              accept='.txt,.md,.rtf,.html,.htm,.docx,text/plain,text/markdown,text/rtf,text/html,application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-              onChange={(event) => void handleCharacterImportFile(event)}
-              style={{display: 'none'}}
-            />
           </div>
-        </section>
-      )}
-
-      {activeCategoryIsCharacterLike && characterImportStep === 'review' && characterImportDraft && (
-        <section className={styles.characterImportPanel} aria-label='Review character import'>
-          <div className={styles.importPanelHeader}>
-            <div>
-              <h2>Review Character Import</h2>
-              <p className={styles.importSummary}>
-                Confirm the extracted name and section destinations. The editor below is
-                already populated; save only after reviewing the rich fields.
-              </p>
-            </div>
-            <div className={styles.importPanelActions}>
-              <button
-                type='button'
-                onClick={() => setIsImportAiHelperOpen((value) => !value)}
-                aria-expanded={isImportAiHelperOpen}
-              >
-                {isImportAiHelperOpen ? 'Hide AI helper' : 'AI helper'}
-              </button>
-              <button
-                type='button'
-                onClick={() => {
-                  setCharacterImportStep('idle');
-                  setCharacterAuthoringMode('idle');
-                  setIsImportAiHelperOpen(false);
-                }}
-              >
-                Close
-              </button>
-            </div>
-          </div>
-          {isImportAiHelperOpen && (
-            <section className={styles.aiHelperPanel} aria-label='Import review AI helper'>
-              <div className={styles.aiHelperHeader}>
-                <div>
-                  <strong>Import AI helper</strong>
-                  <p>
-                    Ask for section mapping, cleanup, field suggestions, or gaps to
-                    resolve before saving.
-                  </p>
-                </div>
-                <button
-                  type='button'
-                  onClick={() => setIsImportAiHelperOpen(false)}
-                >
-                  Close
-                </button>
-              </div>
-              <AIAssistant
-                projectId={activeProject.id}
-                aiConfig={projectSettings?.aiSettings}
-                projectMode={projectSettings?.projectMode}
-                context={{
-                  type: 'world-bible',
-                  id: activeCategory?.id ?? activeProject.id,
-                  selectedText: [
-                    `Detected name: ${characterImportDraft.detectedName}`,
-                    ...characterImportSections.map(
-                      (section) => `${section.title} -> ${section.action}\n${section.content}`
-                    )
-                  ].join('\n\n')
-                }}
-                showContextPreview={false}
-              />
-            </section>
-          )}
-          {characterImportDraft.warnings.length > 0 && (
-            <div className={styles.importError}>
-              {characterImportDraft.warnings.join(' ')}
-            </div>
-          )}
-          {characterImportSections.length > 0 && (
-            <div className={styles.characterImportReviewList}>
-              {characterImportSections.map((section) => (
-                <div key={section.id} className={styles.characterImportReviewCard}>
-                  <div>
-                    <strong>{section.title}</strong>
-                    <p>{section.content}</p>
-                  </div>
-                  <label>
-                    Destination
-                    <select
-                      value={section.action}
-                      onChange={(event) =>
-                        updateCharacterImportSectionAction(
-                          section.id,
-                          event.target.value as CharacterImportSectionDraft['action']
-                        )
-                      }
-                    >
-                      <option value='notes'>Notes</option>
-                      <option value='description'>Description</option>
-                      {characterImportDestinationFields.map((field) => (
-                        <option key={field.key} value={field.key}>
-                          {field.label}
-                        </option>
-                      ))}
-                      <option value='ignore'>Ignore</option>
-                    </select>
-                  </label>
-                </div>
-              ))}
-            </div>
-          )}
         </section>
       )}
 
@@ -2248,7 +2156,7 @@ function WorldBibleRoute() {
                       )}
                       {draft.detectedSections && draft.detectedSections.length > 0 && (
                         <span className={`${styles.importChip} ${styles.importChipRich}`}>
-                          {draft.detectedSections.length} section fields detected
+                          {draft.detectedSections.length} headings detected
                         </span>
                       )}
                       <span className={styles.importChip}>
@@ -2304,22 +2212,64 @@ function WorldBibleRoute() {
                     <>
                       {draft.detectedSections && draft.detectedSections.length > 0 && (
                         <div className={styles.importSectionMapping}>
-                          <label>
-                            <input
-                              type='checkbox'
-                              checked={draft.useDetectedSections ?? false}
-                              disabled={isApplyingImports}
-                              onChange={(event) =>
-                                updateImportDraft(draft.id, {
-                                  useDetectedSections: event.target.checked
-                                })
-                              }
-                            />
-                            <span>Create fields from detected headings</span>
-                          </label>
+                          <div className={styles.importSectionMappingHeader}>
+                            <div>
+                              <strong>Classify detected headings</strong>
+                              <p>
+                                Specific topics stay inside this record by default.
+                                Promote only reusable headings to category fields.
+                              </p>
+                            </div>
+                            <label>
+                              <input
+                                type='checkbox'
+                                checked={draft.useDetectedSections ?? false}
+                                disabled={isApplyingImports}
+                                onChange={(event) =>
+                                  updateImportDraft(draft.id, {
+                                    useDetectedSections: event.target.checked
+                                  })
+                                }
+                              />
+                              <span>Use structured headings</span>
+                            </label>
+                          </div>
                           <div className={styles.importSectionList}>
                             {draft.detectedSections.slice(0, 8).map((section) => (
-                              <span key={section.id}>{section.title}</span>
+                              <div key={section.id} className={styles.importSectionItem}>
+                                <div>
+                                  <strong>{section.title}</strong>
+                                  <span>
+                                    {IMPORT_SECTION_ACTION_HELP[section.action]}
+                                  </span>
+                                </div>
+                                <select
+                                  value={section.action}
+                                  disabled={
+                                    isApplyingImports || !(draft.useDetectedSections ?? false)
+                                  }
+                                  onChange={(event) =>
+                                    updateImportSectionAction(
+                                      draft.id,
+                                      section.id,
+                                      event.target.value as WorldBibleImportSectionAction
+                                    )
+                                  }
+                                >
+                                  {(
+                                    [
+                                      'existing-field',
+                                      'record-section',
+                                      'new-field',
+                                      'ignore'
+                                    ] as WorldBibleImportSectionAction[]
+                                  ).map((action) => (
+                                    <option key={action} value={action}>
+                                      {IMPORT_SECTION_ACTION_LABELS[action]}
+                                    </option>
+                                  ))}
+                                </select>
+                              </div>
                             ))}
                           </div>
                         </div>
@@ -2352,7 +2302,7 @@ function WorldBibleRoute() {
                       <p className={styles.importPreview}>{draft.preview}</p>
                       <p className={styles.importDraftNote}>
                         {draft.useDetectedSections && (draft.detectedSections?.length ?? 0) > 0
-                          ? 'Description keeps intro or unmapped text. Detected top-level headings are copied into separate fields.'
+                          ? 'Description keeps intro and record-section headings. Only reusable field headings change the category schema.'
                           : landsAsRichText
                             ? 'This import will preserve richer prose structure in the target lore field.'
                             : 'This import will land as plain text in the target field.'}
@@ -2624,6 +2574,7 @@ function WorldBibleRoute() {
                   type='button'
                   onClick={() => {
                     setAiHelperSelectedText('');
+                    setAiHelperProposal(null);
                     setIsRecordAiHelperOpen((value) => !value);
                   }}
                   aria-expanded={isRecordAiHelperOpen}
@@ -2638,14 +2589,16 @@ function WorldBibleRoute() {
                       <strong>AI helper</strong>
                       <p>
                         Ask for names, descriptions, field ideas, revisions, cleanup,
-                        or new sections. Highlight assistant text, choose a destination,
-                        then apply it.
+                        or new sections. Highlight assistant text, preview an action,
+                        then confirm it.
                       </p>
                     </div>
                     <button
                       type='button'
                       onClick={() => {
                         setAiHelperSelectedText('');
+                        setAiHelperNewSectionLabel('');
+                        setAiHelperProposal(null);
                         setIsRecordAiHelperOpen(false);
                       }}
                     >
@@ -2654,12 +2607,13 @@ function WorldBibleRoute() {
                   </div>
                   <div className={styles.aiHelperApplyBar}>
                     <label>
-                      Apply to
+                      Use selection as
                       <select
-                        value={aiHelperApplyTarget}
-                        onChange={(event) =>
-                          setAiHelperApplyTarget(event.target.value as AiHelperApplyTarget)
-                        }
+                        value={aiHelperActionTarget}
+                        onChange={(event) => {
+                          setAiHelperActionTarget(event.target.value as AiHelperActionTarget);
+                          setAiHelperProposal(null);
+                        }}
                       >
                         {aiHelperApplyTargets.map((target) => (
                           <option key={target.value} value={target.value}>
@@ -2668,17 +2622,79 @@ function WorldBibleRoute() {
                         ))}
                       </select>
                     </label>
-                    <div className={styles.aiHelperSelectionPreview}>
+                    {aiHelperActionTarget === 'new-section' && (
+                      <label>
+                        Section label
+                        <input
+                          type='text'
+                          value={aiHelperNewSectionLabel}
+                          onChange={(event) => {
+                            setAiHelperNewSectionLabel(event.target.value);
+                            setAiHelperProposal(null);
+                          }}
+                          placeholder={
+                            deriveAiSectionLabel(aiHelperSelectedText) || 'e.g., Customs'
+                          }
+                        />
+                      </label>
+                    )}
+                    <div
+                      className={`${styles.aiHelperSelectionPreview} ${
+                        aiHelperActionTarget === 'new-section'
+                          ? styles.aiHelperSelectionPreviewWithSection
+                          : ''
+                      }`}
+                    >
                       {aiHelperSelectedText.trim() || 'Highlight text in an assistant response'}
                     </div>
                     <button
                       type='button'
-                      onClick={handleApplyAiHelperSelection}
+                      onClick={handleDraftAiHelperProposal}
                       disabled={!aiHelperSelectedText.trim()}
                     >
-                      Apply selected text
+                      Preview action
                     </button>
                   </div>
+                  {aiHelperProposal && (
+                    <div className={styles.aiHelperProposalCard} role='status'>
+                      <div>
+                        <span className={styles.aiHelperProposalEyebrow}>
+                          Pending action
+                        </span>
+                        <strong>
+                          {aiHelperProposal.kind === 'name' &&
+                            `Set ${activeCategoryRecordLabel} name`}
+                          {aiHelperProposal.kind === 'aliases' &&
+                            'Add alternative name'}
+                          {aiHelperProposal.kind === 'field' &&
+                            `${
+                              aiHelperProposal.fieldType === 'textarea'
+                                ? 'Append to'
+                                : 'Set'
+                            } ${aiHelperProposal.fieldLabel}`}
+                          {aiHelperProposal.kind === 'new-section' &&
+                            `Create section "${aiHelperProposal.label}"`}
+                        </strong>
+                      </div>
+                      <p>{aiHelperProposal.text}</p>
+                      <div className={styles.aiHelperProposalActions}>
+                        <button
+                          type='button'
+                          className={styles.secondaryButton}
+                          onClick={() => setAiHelperProposal(null)}
+                        >
+                          Dismiss
+                        </button>
+                        <button
+                          type='button'
+                          className={styles.primaryButton}
+                          onClick={() => void handleConfirmAiHelperProposal()}
+                        >
+                          Confirm action
+                        </button>
+                      </div>
+                    </div>
+                  )}
                   <AIAssistant
                     projectId={activeProject.id}
                     aiConfig={projectSettings?.aiSettings}
@@ -2688,7 +2704,10 @@ function WorldBibleRoute() {
                       id: editingId ?? activeCategory.id,
                       selectedText: currentRecordAiContext
                     }}
-                    onAssistantSelectionChange={setAiHelperSelectedText}
+                    onAssistantSelectionChange={(selectedText) => {
+                      setAiHelperSelectedText(selectedText);
+                      setAiHelperProposal(null);
+                    }}
                     showContextPreview={false}
                   />
                 </section>
@@ -3431,13 +3450,17 @@ function WorldBibleRoute() {
               {visibleEntities.map((entity) => {
                 const entityCategory =
                   categories.find((category) => category.id === entity.categoryId) ?? null;
-                const {primarySummary, fullSummary, summaryIsTruncated, secondaryFields} = buildEntityCardSummary(
+                const {
+                  primarySummary,
+                  summarySourceLabel,
+                  summaryIsTruncated,
+                  secondaryFields,
+                  hiddenFieldCount
+                } = buildEntityCardSummary(
                   entity,
                   entityCategory,
                   aliasMapByEntityId.get(entity.id) ?? []
                 );
-                const isSummaryExpanded = expandedSummaryEntityIds.includes(entity.id);
-                const displayedSummary = isSummaryExpanded ? fullSummary : primarySummary;
                 const entityIsCharacterLike = isCharacterLikeEntity(entity);
                 const entityInsight = reviewEntityInsightsById.get(entity.id);
                 const entityQueueItem = reviewQueue.find((item) => item.entity.id === entity.id);
@@ -3475,23 +3498,18 @@ function WorldBibleRoute() {
                       . Use Resolve names to merge duplicates or convert short forms into aliases.
                     </div>
                   )}
-                  {displayedSummary && (
+                  {primarySummary && (
                     <div className={styles.entitySummaryBlock}>
-                      <p className={styles.entitySummary}>{displayedSummary}</p>
+                      {summarySourceLabel && (
+                        <span className={styles.entitySummaryLabel}>
+                          {summarySourceLabel}
+                        </span>
+                      )}
+                      <p className={styles.entitySummary}>{primarySummary}</p>
                       {summaryIsTruncated && (
-                        <button
-                          type='button'
-                          className={styles.entitySummaryToggle}
-                          onClick={() =>
-                            setExpandedSummaryEntityIds((prev) =>
-                              prev.includes(entity.id)
-                                ? prev.filter((id) => id !== entity.id)
-                                : [...prev, entity.id]
-                            )
-                          }
-                        >
-                          {isSummaryExpanded ? 'Show less' : 'Read more'}
-                        </button>
+                        <span className={styles.entitySummaryHint}>
+                          Open to read full text
+                        </span>
                       )}
                     </div>
                   )}
@@ -3500,6 +3518,11 @@ function WorldBibleRoute() {
                       <strong>{field.label}:</strong> {field.value}
                     </div>
                   ))}
+                  {hiddenFieldCount > 0 && (
+                    <div className={styles.entityFieldMore}>
+                      + {hiddenFieldCount} more field{hiddenFieldCount === 1 ? '' : 's'}
+                    </div>
+                  )}
                   <div className={styles.entityActions}>
                     <button
                       onClick={() => handleEdit(entity)}
