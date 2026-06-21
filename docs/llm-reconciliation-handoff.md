@@ -6,7 +6,7 @@ Use this document when handing reconciliation work to another LLM or reviewer. T
 
 ## Branches
 
-- Active branch: `codex/dictionary-highlight-filter`
+- Active branch: `codex/lore-docs-smoke-ia`
 - Prior reconciliation baseline: `codex/reconcile-temp-update-ui`
 - Reference branch only: `codex/review-completion-state`
 - Functional base: `temp-update`
@@ -30,12 +30,15 @@ Do not wholesale merge or cherry-pick `codex/review-completion-state`. It has so
 - `9c02c1e` - added context rails to lore and world bible.
 - `b85e8ae` - moved world bible utilities into rail.
 - `931bf51` - added lore starter cards.
-- Current uncommitted slice - World Bible AI authoring/helper redesign.
+- `6cc5ebd` - added Lore Documents smoke coverage.
+- `01e9ab1` - clarified Lore Documents source-note IA.
+- `6cb0602` - added World Bible linked Lore Document workflow and smoke coverage.
+- Current uncommitted slice - documentation refresh for the Lore Documents IA checkpoint.
 
 ## Current Checkpoint
 
-The active-project chrome/rail slice is committed through `931bf51`. The working tree was clean after that commit.
-The current working slice has moved away from schema-aware AI draft task cards toward a discrete World Bible AI helper. It is not committed yet in this handoff state.
+The active-project chrome/rail slice is committed through `931bf51`. The World Bible AI helper/import work landed on `world-bible-ai` and is already merged to `main`.
+The current branch starts from `main` after the review-completion smoke merge and focuses on Lore Documents IA and smoke stabilization.
 
 Included areas:
 
@@ -75,6 +78,12 @@ Implemented in the checkpoint:
 - World Bible import/help/template controls moved out of the top header into the rail; import/export actions that already live in top cards were not duplicated there.
 - Lore has starter cards for `Write Manually`, `Import Dossier`, and `Extract Canon`.
 - The Lore manual starter moves focus into the editor title input; extraction remains disabled until there is an active saved document.
+- Lore route copy now consistently frames the surface as Lore Documents: longform source notes and imported dossiers that can produce candidates, not source-of-truth canon by themselves.
+- Lore Documents utilities now sit in the shared page-header pattern rather than a local control band.
+- Cypress smoke covers manual Lore Document creation/edit/delete, dossier import, extraction candidate review, and confirms extracted lore does not write World Bible canon automatically.
+- World Bible records can create or open a linked Lore Document for longform source notes.
+- Lore Documents can navigate back to a linked World Bible record through the existing `focusEntityId` route-state path.
+- Cypress smoke covers the World Bible -> Lore Document -> World Bible round trip.
 - Review Queue is reduced to one primary queue surface.
 - Cast creation cards, Queue Focus, duplicate queue item panels, recommendation filter pills, `Open queue mode`, and `Focus first item` are removed from review mode.
 - Review card action copy now uses `Resolve names` when a duplicate/alias decision is available.
@@ -107,6 +116,11 @@ Verified after the checkpoint:
 - `pnpm --filter web lint` passes with one existing `useWorkspaceDocuments.ts` hook warning.
 - `pnpm --filter web exec cypress run --spec cypress/e2e/project-mode-guardrails.cy.ts` passes 7 tests.
 - `pnpm --filter web exec cypress run --spec cypress/e2e/lore-review-matching.cy.ts` passes 6 tests.
+- `pnpm --filter web exec cypress run --spec cypress/e2e/lore-documents.cy.ts` passes 3 tests.
+- Latest Lore Documents IA slice:
+  - `pnpm --filter web exec tsc --noEmit`
+  - `pnpm --filter web lint` passes with the existing `useWorkspaceDocuments.ts` hook warning.
+  - `git diff --check`
 - Current World Bible AI helper slice:
   - `pnpm --filter web exec tsc --noEmit`
   - `pnpm --filter web test:unit -- --run apps/web/src/components/AIAssistant/AIAssistant.test.ts apps/web/src/hooks/useWorldBibleImports.test.ts` passes 125 tests.
@@ -124,11 +138,11 @@ Known verification note:
 Next thing to resume:
 
 - Start a fresh narrow slice. Good candidates:
-  1. browser-smoke the shared import path with one Cast paste/import and one non-Cast import
-  2. run or repair broader review-completion smoke coverage, including `post-merge-smoke.cy.ts` if Prompt Tools are still expected
-  3. keep every AI-proposed canon/schema mutation author-confirmed and editable before save
-  4. compare current review surfaces against `codex/review-completion-state` for only narrow density/copy improvements
-  5. do a dedicated manual smoke of import -> review -> World Bible queue completion after the alias stabilization checkpoint
+  1. commit the documentation refresh if it is still uncommitted
+  2. merge `codex/lore-docs-smoke-ia` to `main` after reviewing the docs diff
+  3. run a realistic manual Lore Documents import -> extraction -> accepted canon smoke, especially with more than one linked World Bible record
+  4. start `codex/canon-decision-merge-review` or `codex/character-canon-smoke` as the next narrow branch
+  5. keep every AI-proposed canon/schema mutation author-confirmed and editable before save
 
 ## Required Reading
 
@@ -164,7 +178,7 @@ The build still emits existing Vite large-chunk warnings and an `onnxruntime-web
 - Run or outline broader review-completion smoke coverage.
 - Audit docs for stale recovery-plan statements.
 - Identify risky reference-branch code that should not be ported.
-- Browser-smoke the current World Bible helper/import path and report any unclear labels, cramped panels, or confusing section classification states.
+- Browser-smoke the current Lore Documents import/extraction/linking path and report any unclear source-note/canon boundary labels.
 
 ## Risky Tasks To Avoid
 

@@ -1,6 +1,6 @@
 # Next Steps
 
-Last updated: 2026-06-03
+Last updated: 2026-06-21
 
 ## Current Baseline
 
@@ -101,6 +101,11 @@ Implemented recently:
   - Scratchpad quick access is available from World Bible, Lore, Corkboard, and Canon Decisions through the shared project scratchpad modal.
   - Lore now has starter cards for writing manually, importing a dossier, or extracting canon candidates from the active saved document.
   - The latest browser smoke confirmed shared headers/rails on `/workspace`, `/world-bible`, `/lore`, `/corkboard`, and `/canon-decisions` on 2026-06-03.
+  - Lore Documents IA checkpoint:
+    - Navigation, page copy, and starter cards now frame Lore Documents as source notes and dossier intake, not a second canon database.
+    - Import/list utilities moved into the shared page-header pattern.
+    - World Bible records can create/open linked Lore Documents, and Lore Documents can navigate back to the linked World Bible record.
+    - Cypress covers manual document lifecycle, import/extraction candidates, and the World Bible linked-document round trip.
 
 ## Recommended Priority Order
 
@@ -130,7 +135,7 @@ Implemented recently:
 - Treat build/lint as baseline gates, but use smoke coverage for import, review, reload, and export as the real confidence bar.
 - Current automated browser smoke and the latest manual workspace smoke are green on the current tree. In the Codex desktop environment, Cypress may still need to launch outside the GUI sandbox restriction.
 - Do not continue patching individual highlight edge cases indefinitely. The next review/highlight slice should consolidate known canon, aliases, titled forms, and unknown candidates into one annotation decision pass with longest-match priority.
-- Run the focused character-canon smoke checklist in `docs/character-canon-unification-smoke-test.md` after the annotation redesign, before starting the Lore Documents IA reframing.
+- Run the focused character-canon smoke checklist in `docs/character-canon-unification-smoke-test.md` after the annotation redesign.
 - Keep branch scope narrow enough that each slice can be reverted cleanly if the UX direction changes.
 - Scratchpad quick access now exists on the main writing/canon/lore/review surfaces. The next scratchpad question is lightweight organization and capture flows, especially AI-to-Scratchpad, rather than basic availability.
 - UI shell is the active product priority again: reduce top-level navigation noise, keep Workspace first, move persistent utilities into shared page-header actions where they must remain visible, and avoid adding local utility bands or always-open panels.
@@ -164,7 +169,10 @@ Status:
 
 - Started by reordering navigation around Workspace, World Bible, and Lore Docs.
 - Moved Canon Review, Corkboard, Settings, and optional system-heavy routes behind a desktop rail `More` menu so the primary rail stays focused on writing and canon.
-- Started by renaming the Lore route copy to Lore Documents and moving import/list utilities into the shared page header.
+- Lore route copy now uses Lore Documents/source-note framing, and import/list utilities live in the shared page-header pattern.
+- World Bible to Lore Documents linking is implemented for structured canon records that need longform notes.
+- Automated smoke coverage now verifies Lore Documents manual lifecycle, dossier import/extraction, and World Bible linked-document round trips.
+- Remaining: manually smoke a realistic multi-document lore import where extracted facts/entities are accepted into canon, then decide whether the Lore document list needs stronger grouping/filtering before broader canon-decision refinement.
 
 ## 0A) Lore/Canon Decision Smoke Stabilization
 
@@ -1175,17 +1183,16 @@ Suggested branch: `codex/entity-intake-ownership`
 Recommended order for the next active branches:
 
 1. `codex/character-canon-smoke`
-2. `codex/lore-documents-ia`
-3. `codex/canon-decision-merge-review`
-4. `codex/review-ignore-persistence`
-5. `codex/review-highlight-correctness`
-6. `codex/review-completion-smoke`
-7. `codex/scratchpad-popover-access`
-8. `codex/scratchpad-backup-smoke`
-9. `codex/corkboard-lite`
-10. `codex/app-shell-search-entry`
-11. `codex/unified-search-results`
-12. `codex/search-alias-routing`
+2. `codex/canon-decision-merge-review`
+3. `codex/review-ignore-persistence`
+4. `codex/review-highlight-correctness`
+5. `codex/review-completion-smoke`
+6. `codex/scratchpad-popover-access`
+7. `codex/scratchpad-backup-smoke`
+8. `codex/corkboard-lite`
+9. `codex/app-shell-search-entry`
+10. `codex/unified-search-results`
+11. `codex/search-alias-routing`
 
 ## Branch and Commit Workflow (Keep)
 
