@@ -22,11 +22,17 @@ const similarity = (left: string, right: string): number => {
   const rightTokens = new Set(tokenize(right));
   if (leftTokens.size === 0 || rightTokens.size === 0) return 0;
   let overlap = 0;
+  let shortestSharedTokenLength = Infinity;
   leftTokens.forEach((token) => {
     if (rightTokens.has(token)) {
       overlap += 1;
+      shortestSharedTokenLength = Math.min(shortestSharedTokenLength, token.length);
     }
   });
+  const smallerSize = Math.min(leftTokens.size, rightTokens.size);
+  if (overlap === smallerSize && shortestSharedTokenLength >= 4) {
+    return smallerSize === 1 ? 0.75 : 0.85;
+  }
   return overlap / Math.max(leftTokens.size, rightTokens.size);
 };
 
