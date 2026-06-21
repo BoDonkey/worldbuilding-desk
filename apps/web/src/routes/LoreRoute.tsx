@@ -1,5 +1,6 @@
-import {useEffect, useMemo, useRef, useState} from 'react';
+import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import type {ChangeEvent, FormEvent} from 'react';
+import {useLocation, useNavigate} from 'react-router-dom';
 import {useAppStore} from '../store/appStore';
 import type {
   CanonicalFact,
@@ -89,6 +90,8 @@ const getLoreRailStorageKey = (projectId: string) =>
 
 function LoreRoute() {
   const activeProject = useAppStore((state) => state.activeProject);
+  const location = useLocation();
+  const navigate = useNavigate();
   const [documents, setDocuments] = useState<LoreDocument[]>([]);
   const [documentLinks, setDocumentLinks] = useState<LoreDocumentLink[]>([]);
   const [characters, setCharacters] = useState<Character[]>([]);
@@ -117,6 +120,7 @@ function LoreRoute() {
   const [isDocumentRailCollapsed, setIsDocumentRailCollapsed] = useState(false);
   const importInputRef = useRef<HTMLInputElement | null>(null);
   const titleInputRef = useRef<HTMLInputElement | null>(null);
+  const focusedLoreDocumentKeyRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (!activeProject) {
@@ -297,7 +301,7 @@ function LoreRoute() {
     setLinkDrafts([]);
   };
 
-  const beginEdit = (document: LoreDocument) => {
+  const beginEdit = useCallback((document: LoreDocument) => {
     setEditingId(document.id);
     setTitle(document.title);
     setKind(document.kind);
@@ -311,7 +315,25 @@ function LoreRoute() {
       }))
     );
     setFeedback(null);
-  };
+  }, [linksByDocumentId]);
+
+  useEffect(() => {
+    const state = location.state as {focusLoreDocumentId?: string} | null;
+    const focusLoreDocumentId = state?.focusLoreDocumentId;
+    if (!focusLoreDocumentId) return;
+    const focusKey = `${location.key}:${focusLoreDocumentId}`;
+    if (focusedLoreDocumentKeyRef.current === focusKey) return;
+    const target = documents.find((document) => document.id === focusLoreDocumentId);
+    if (!target) return;
+    beginEdit(target);
+    focusedLoreDocumentKeyRef.current = focusKey;
+    navigate(location.pathname, {replace: true, state: {}});
+  }, [beginEdit, documents, location.key, location.pathname, location.state, navigate]);
+
+  const openLinkedWorldBibleRecord = useCallback((link: LoreDocumentLink) => {
+    if (link.targetType !== 'entity') return;
+    navigate('/world-bible', {state: {focusEntityId: link.targetId}});
+  }, [navigate]);
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
@@ -852,6 +874,15 @@ function LoreRoute() {
                           return (
                             <span key={link.id} className={styles.linkBadge}>
                               {link.relationship.replace(/_/g, ' ')}: {label ?? 'Unknown'}
+                              {link.targetType === 'entity' ? (
+                                <button
+                                  type='button'
+                                  className={styles.linkBadgeAction}
+                                  onClick={() => openLinkedWorldBibleRecord(link)}
+                                >
+                                  Open in World Bible
+                                </button>
+                              ) : null}
                             </span>
                           );
                         })}

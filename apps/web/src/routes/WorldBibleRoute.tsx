@@ -3,7 +3,14 @@ import type {FormEvent} from 'react';
 import {useLocation, useNavigate} from 'react-router-dom';
 import {useAppStore} from '../store/appStore';
 import {getProjectCapabilities} from '../projectMode';
-import type {Character, EntityCategory, WorldEntity} from '../entityTypes';
+import type {
+  Character,
+  EntityCategory,
+  LoreDocument,
+  LoreDocumentKind,
+  LoreDocumentLink,
+  WorldEntity
+} from '../entityTypes';
 import {getEntitiesByProject} from '../entityStorage';
 import {
   getCategoriesByProject,
@@ -12,6 +19,12 @@ import {
   initializeDefaultCategories
 } from '../categoryStorage';
 import {getCharactersByProject} from '../characterStorage';
+import {
+  getLoreDocumentLinksByProject,
+  getLoreDocumentsByProject,
+  saveLoreDocument,
+  saveLoreDocumentLinks
+} from '../loreStorage';
 import CategoryEditor from '../components/CategoryEditor';
 import {WorldBibleRichTextField} from '../components/WorldBibleRichTextField';
 import {ProjectScratchpadButton} from '../components/ProjectScratchpadButton';
@@ -115,6 +128,37 @@ const CHARACTER_AUTHORING_FIELD_KEYS = new Set([
 
 const getWorldBibleRailStorageKey = (projectId: string) =>
   `wbd:world-bible:category-rail-collapsed:${projectId}`;
+
+const inferLoreKindForCategory = (category: EntityCategory | null): LoreDocumentKind => {
+  const slug = category?.slug.toLowerCase() ?? '';
+  if (slug.includes('character') || slug.includes('cast')) return 'character_dossier';
+  if (slug.includes('location') || slug.includes('place')) return 'place_history';
+  if (slug.includes('faction') || slug.includes('organization')) return 'faction_notes';
+  if (slug.includes('item') || slug.includes('artifact')) return 'item_history';
+  return 'general_lore';
+};
+
+const summarizeEntityForLore = (
+  entity: WorldEntity,
+  category: EntityCategory | null
+): string => {
+  const fieldLines = Object.entries(entity.fields)
+    .map(([key, value]) => {
+      const field = category?.fieldSchema.find((candidate) => candidate.key === key);
+      const label = field?.label ?? key;
+      const plainValue =
+        typeof value === 'string' ? extractPlainTextFromRichText(value) : String(value ?? '');
+      return plainValue.trim() ? `${label}: ${plainValue.trim()}` : '';
+    })
+    .filter(Boolean);
+  return [
+    `${entity.name} source notes`,
+    '',
+    'Use this linked Lore Document for longform background, source excerpts, timelines, and exploratory notes.',
+    '',
+    ...fieldLines
+  ].join('\n');
+};
 
 const slugifyFieldKey = (value: string): string =>
   value
@@ -359,6 +403,8 @@ function WorldBibleRoute() {
   const [viewMode, setViewMode] = useState<WorldBibleViewMode>('category');
   const [entities, setEntities] = useState<WorldEntity[]>([]);
   const [characters, setCharacters] = useState<Character[]>([]);
+  const [loreDocuments, setLoreDocuments] = useState<LoreDocument[]>([]);
+  const [loreDocumentLinks, setLoreDocumentLinks] = useState<LoreDocumentLink[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [name, setName] = useState('');
   const [fieldValues, setFieldValues] = useState<Record<string, string>>({});
@@ -383,6 +429,7 @@ function WorldBibleRoute() {
   const [newCharacterSectionName, setNewCharacterSectionName] = useState('');
   const [isNameResolverOpen, setIsNameResolverOpen] = useState(false);
   const [manualResolutionTargetId, setManualResolutionTargetId] = useState('');
+  const [linkingLoreEntityId, setLinkingLoreEntityId] = useState<string | null>(null);
   const [ragService, setRagService] = useState<RAGProvider | null>(null);
   const [shodhService, setShodhService] =
     useState<ShodhMemoryProvider | null>(null);
@@ -463,6 +510,35 @@ function WorldBibleRoute() {
     },
     [seriesConfig?.parentProjectId, refreshMemories]
   );
+
+  useEffect(() => {
+    if (!activeProject) {
+      setLoreDocuments([]);
+      setLoreDocumentLinks([]);
+      return;
+    }
+
+    let cancelled = false;
+
+    const loadLoreLinks = async () => {
+      const [loadedDocuments, loadedLinks] = await Promise.all([
+        getLoreDocumentsByProject(activeProject.id),
+        getLoreDocumentLinksByProject(activeProject.id)
+      ]);
+      if (!cancelled) {
+        setLoreDocuments(loadedDocuments);
+        setLoreDocumentLinks(loadedLinks);
+      }
+    };
+
+    void loadLoreLinks();
+    window.addEventListener('wbd:lore-records-changed', loadLoreLinks);
+
+    return () => {
+      cancelled = true;
+      window.removeEventListener('wbd:lore-records-changed', loadLoreLinks);
+    };
+  }, [activeProject]);
 
   useEffect(() => {
     if (!activeProject) {
@@ -778,6 +854,17 @@ function WorldBibleRoute() {
   const selectedEntity = editingId
     ? entities.find((entity) => entity.id === editingId) ?? null
     : null;
+  const linkedLoreDocumentByEntityId = useMemo(() => {
+    const documentsById = new Map(loreDocuments.map((document) => [document.id, document]));
+    const map = new Map<string, LoreDocument>();
+    loreDocumentLinks.forEach((link) => {
+      if (link.targetType !== 'entity') return;
+      const document = documentsById.get(link.loreDocumentId);
+      if (!document || map.has(link.targetId)) return;
+      map.set(link.targetId, document);
+    });
+    return map;
+  }, [loreDocumentLinks, loreDocuments]);
   const activeCategoryRecordLabel =
     activeCategory?.name.replace(/s$/i, '').toLowerCase() || 'record';
   const currentRecordAiContext = useMemo(() => {
@@ -831,6 +918,60 @@ function WorldBibleRoute() {
   }, [categoryById, importDrafts]);
   const currentCharacterLabel =
     name.trim() || selectedEntity?.name || activeCategory?.name.slice(0, -1) || 'this record';
+  const handleOpenOrCreateLinkedLoreDocument = useCallback(
+    async (entity: WorldEntity) => {
+      if (!activeProject) return;
+      const existingDocument = linkedLoreDocumentByEntityId.get(entity.id);
+      if (existingDocument) {
+        navigate('/lore', {state: {focusLoreDocumentId: existingDocument.id}});
+        return;
+      }
+
+      const category = categoryById.get(entity.categoryId) ?? null;
+      const now = Date.now();
+      const documentId = crypto.randomUUID();
+      const nextDocument: LoreDocument = {
+        id: documentId,
+        projectId: activeProject.id,
+        title: `${entity.name} Dossier`,
+        kind: inferLoreKindForCategory(category),
+        format: 'plain_text',
+        content: summarizeEntityForLore(entity, category),
+        summary: `Linked source notes for ${entity.name}.`,
+        source: {type: 'manual'},
+        status: 'active',
+        createdAt: now,
+        updatedAt: now
+      };
+      const link: LoreDocumentLink = {
+        id: crypto.randomUUID(),
+        projectId: activeProject.id,
+        loreDocumentId: documentId,
+        targetType: 'entity',
+        targetId: entity.id,
+        relationship: 'primary_subject',
+        createdAt: now
+      };
+
+      setLinkingLoreEntityId(entity.id);
+      try {
+        await saveLoreDocument(nextDocument);
+        await saveLoreDocumentLinks([link]);
+        setFeedback({
+          tone: 'success',
+          message: `Created a linked Lore Document for "${entity.name}".`
+        });
+        navigate('/lore', {state: {focusLoreDocumentId: documentId}});
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : 'Unable to create linked Lore Document.';
+        setFeedback({tone: 'error', message});
+      } finally {
+        setLinkingLoreEntityId(null);
+      }
+    },
+    [activeProject, categoryById, linkedLoreDocumentByEntityId, navigate]
+  );
   const isFocusedCharacterTask = activeCategoryIsCharacterLike
     ? Boolean(editingId || characterAuthoringMode !== 'idle')
     : false;
@@ -3376,6 +3517,36 @@ function WorldBibleRoute() {
                 </>
               )}
 
+              {selectedEntity && (
+                <section className={styles.canonSection} aria-label='Linked Lore Document'>
+                  <div className={styles.canonSectionHeader}>
+                    <div>
+                      <strong>Linked Lore Document</strong>
+                      <span>
+                        Keep longform source notes, history, timelines, and exploratory
+                        background in Lore Documents while this record stays structured canon.
+                      </span>
+                    </div>
+                    <button
+                      type='button'
+                      onClick={() => void handleOpenOrCreateLinkedLoreDocument(selectedEntity)}
+                      disabled={linkingLoreEntityId === selectedEntity.id}
+                    >
+                      {linkingLoreEntityId === selectedEntity.id
+                        ? 'Creating...'
+                        : linkedLoreDocumentByEntityId.has(selectedEntity.id)
+                          ? 'Open linked document'
+                          : 'Create linked document'}
+                    </button>
+                  </div>
+                  <div className={styles.reviewHint}>
+                    {linkedLoreDocumentByEntityId.get(selectedEntity.id)
+                      ? `Linked to "${linkedLoreDocumentByEntityId.get(selectedEntity.id)?.title}".`
+                      : 'No linked Lore Document yet.'}
+                  </div>
+                </section>
+              )}
+
               <div className={styles.formActions}>
                 <button
                   type='submit'
@@ -3474,6 +3645,7 @@ function WorldBibleRoute() {
                   entityIsCharacterLike && (entityInsight?.matchCount ?? 0) > 0;
                 const needsNameReview = needsAliasReview || hasNameResolutionMatch;
                 const hasReviewBadge = needsCompletionReview || needsNameReview;
+                const linkedLoreDocument = linkedLoreDocumentByEntityId.get(entity.id) ?? null;
 
                 return (
                 <li key={entity.id} className={styles.entityCard}>
@@ -3523,6 +3695,11 @@ function WorldBibleRoute() {
                       + {hiddenFieldCount} more field{hiddenFieldCount === 1 ? '' : 's'}
                     </div>
                   )}
+                  {linkedLoreDocument && (
+                    <div className={styles.entityField}>
+                      <strong>Lore Document:</strong> {linkedLoreDocument.title}
+                    </div>
+                  )}
                   <div className={styles.entityActions}>
                     <button
                       onClick={() => handleEdit(entity)}
@@ -3546,6 +3723,17 @@ function WorldBibleRoute() {
                         Mark reviewed
                       </button>
                     )}
+                    <button
+                      type='button'
+                      onClick={() => void handleOpenOrCreateLinkedLoreDocument(entity)}
+                      disabled={linkingLoreEntityId === entity.id}
+                    >
+                      {linkingLoreEntityId === entity.id
+                        ? 'Creating...'
+                        : linkedLoreDocument
+                          ? 'Open Lore Document'
+                          : 'Create linked Lore Document'}
+                    </button>
                     <button
                       onClick={() => handleDeleteEntity(entity.id)}
                       disabled={deletingEntityId === entity.id}

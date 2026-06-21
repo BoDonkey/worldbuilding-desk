@@ -115,4 +115,40 @@ describe('Lore Documents', () => {
     cy.visit('/world-bible');
     cy.contains('Mira Voss').should('not.exist');
   });
+
+  it('creates and opens a linked Lore Document from a World Bible record', () => {
+    cy.visit('/world-bible');
+    cy.contains('button', 'Locations').click();
+    cy.get('section[aria-label="Locations canon"]').within(() => {
+      cy.contains('button', 'Create Manually').click();
+    });
+    cy.contains('h2', 'New Location').should('be.visible');
+    cy.contains('label', 'Name').find('input').type('Crystal Vault');
+    cy.contains('button', /Create (Entry|Canon Record)/).click();
+    cy.contains('[role="status"]', 'Entry created.').should('be.visible');
+
+    cy.contains('li', 'Crystal Vault').within(() => {
+      cy.contains('button', 'Create linked Lore Document').click();
+    });
+    cy.location('pathname').should('eq', '/lore');
+    cy.contains('h2', 'Edit Lore Document').should('be.visible');
+    cy.contains('label', 'Title').find('input').should('have.value', 'Crystal Vault Dossier');
+    cy.get('textarea').should('contain.value', 'Crystal Vault source notes');
+    cy.contains('primary subject: Crystal Vault').should('be.visible');
+    cy.contains('button', 'Open in World Bible').click();
+    cy.location('pathname').should('eq', '/world-bible');
+    cy.contains('h2', 'Edit Location').should('be.visible');
+    cy.contains('label', 'Name').find('input').should('have.value', 'Crystal Vault');
+
+    cy.visit('/world-bible');
+    cy.contains('button', 'Locations').click();
+    cy.contains('li', 'Crystal Vault').within(() => {
+      cy.contains('Lore Document:').should('be.visible');
+      cy.contains('Crystal Vault Dossier').should('be.visible');
+      cy.contains('button', 'Open Lore Document').click();
+    });
+    cy.location('pathname').should('eq', '/lore');
+    cy.contains('h2', 'Edit Lore Document').should('be.visible');
+    cy.contains('label', 'Title').find('input').should('have.value', 'Crystal Vault Dossier');
+  });
 });
