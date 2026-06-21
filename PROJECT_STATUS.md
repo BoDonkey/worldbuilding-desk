@@ -1,6 +1,6 @@
 # Worldbuilding-Desk Project Status
 
-**Last Updated:** June 13, 2026
+**Last Updated:** June 21, 2026
 
 ## Project Overview
 
@@ -58,6 +58,8 @@ Under the hood, the app still includes rich systems for world data, rules, chara
 - Hidden deterministic state suggestions now surface only as lightweight review summaries with per-scene and project-level restore actions.
 - Project scratchpad is available as an autosaved quick-access modal and remains available from the workspace context drawer.
 - Scratchpad quick access is now available from active-project chrome on World Bible, Lore, and Canon Decisions so loose ideas can move into structured canon, longform lore, or review decisions without navigating back to Workspace.
+- Lore Documents are now framed as source-note intake rather than a parallel canon database, with manual writing, dossier import, and extraction paths kept separate from accepted canon.
+- World Bible records can create or open a linked Lore Document for longform source notes, and Lore Documents can navigate back to the linked World Bible record.
 - Scratchpad records are included in project backup snapshots and restore paths.
 - Lightweight Corkboard is back as a workspace planning modal for chapter cards and plot points.
 - Corkboard chapter-card records are included in project backup snapshots and restore paths.
@@ -123,6 +125,7 @@ Under the hood, the app still includes rich systems for world data, rules, chara
 - Shared context rails now exist on World Bible, Lore, and Corkboard, following the Workspace-side-rail pattern where it helps hide secondary lists/tools without losing access.
 - World Bible import/help/template utilities moved out of the top header into the side rail; route headers should stay focused on page identity plus the shared Scratchpad action.
 - Lore now has starter cards for manual writing, dossier import, and canon extraction, matching the task-card pattern used by World Bible while keeping extracted facts/entities as candidates until accepted.
+- Lore Documents now has focused Cypress smoke coverage for manual document lifecycle, dossier import/extraction, and World Bible linked-document round trips.
 - `WorkspaceRoute` now groups workspace store subscriptions by concern instead of scattering individual selectors through the route body.
 - `useWorkspaceDocuments` now keeps persistence behavior local while using pure helpers for document selection initialization, editor-document assembly, change detection, and manual-save/autosave consistency mode selection.
 - Shared text matching contract added for smoke-critical lore/review matching paths.
@@ -144,7 +147,8 @@ Under the hood, the app still includes rich systems for world data, rules, chara
 - Keep the new shared page chrome as the active-project baseline; future route-specific UI should plug into shared title/meta/action placement before inventing local header patterns.
 - Phase 1 character-canon unification is implemented: character canon now belongs in World Bible, Character Tools is secondary, and workspace character intake creates World Bible canon first.
 - Redesign workspace text annotation before continuing character-canon smoke: known canon, aliases, titled forms, and unknown candidates need one longest-match decision pass rather than split highlight/review regex paths.
-- Run the focused character-canon smoke checklist in `docs/character-canon-unification-smoke-test.md` after the annotation redesign and before beginning the Lore/Lore Documents IA phase.
+- Run the focused character-canon smoke checklist in `docs/character-canon-unification-smoke-test.md` after the annotation redesign.
+- Follow the Lore Documents IA slice with a manual smoke pass for realistic import -> extraction -> accepted canon workflows, especially when multiple linked records reference the same source note.
 - Continue moving alias/review acceptance into a stronger World Bible workflow.
 - Manually retest the new World Bible recommended-action filters and resolution paths against the review-completion smoke checklist.
 - Extend the passive review-needed indicator into changed-word plus idle-pause background cadence.
@@ -218,6 +222,7 @@ Under the hood, the app still includes rich systems for world data, rules, chara
 - Shared page chrome and scratchpad access were browser-smoke-checked on Workspace, World Bible, Lore, and Canon Decisions on June 3, 2026.
 - Context rail/header unification was browser-smoke-checked on Workspace, World Bible, Lore, Corkboard, and Canon Decisions on June 3, 2026.
 - Lore starter cards were browser-smoke-checked on June 3, 2026: cards render, Scratchpad remains the only header utility, `Extract Facts` is disabled without an active document, and `Start Writing` focuses the editor title input.
+- Lore Documents Cypress smoke passes on June 21, 2026: manual document lifecycle, import/extract candidate flow, and World Bible linked-document round trip.
 - Project backup smoke now explicitly covers Scratchpad and Corkboard round-trip, and the latest manual pass is green after fixing scratchpad import identity plus merge-category duplication.
 - App-shell search is visible from the rail/mobile nav, scene search reloads after writing changes, and World Bible search focus now switches to the correct category tab.
 - During the smoke pass, the following review/alias issues were fixed:
