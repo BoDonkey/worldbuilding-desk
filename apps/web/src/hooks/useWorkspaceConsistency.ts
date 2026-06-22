@@ -441,7 +441,10 @@ const buildHighlightableUnknownIssue = (
     issueCode: issue.code,
     source: getAnnotationSourceForReview(reviewAnnotation),
     confidence: reviewAnnotation?.confidence ?? issue.confidence,
-    inlineMode: 'visible'
+    inlineMode:
+      issue.code === 'UNKNOWN_ENTITY' && issue.severity === 'warning'
+        ? 'passive'
+        : 'visible'
   };
 };
 
