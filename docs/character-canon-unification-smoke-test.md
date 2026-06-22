@@ -1,10 +1,10 @@
 # Character Canon Unification Smoke Test
 
-Last updated: 2026-05-29
+Last updated: 2026-06-22
 
 Purpose: verify that character canon now lives in `World Bible > Characters`, while `Character Tools`, sheets, and state tracking stay secondary.
 
-Status note: this checklist is not yet green. Character canon ownership and route framing are implemented, but workspace highlighting/review remains fragile for natural prose edge cases. Examples seen during smoke include titled or partial forms such as `Detective Garcia deTerra`, sentence fragments such as `open.`, and ordinary capitalized words such as `Traffic`. Pause further one-off regex patching and come back with a unified annotation pass that resolves known canon, aliases, titled forms, and unknown candidates together with longest-match priority.
+Status note: the core character-canon paths are now covered by automated smoke. Workspace review creates World Bible character canon first, workspace alias linking targets World Bible character records without duplicating Character Tools targets, and idle/deferred review candidates stay in the review drawer instead of adding noisy inline underlines. Continue treating new natural-prose false positives as annotation-policy work, not one-off regex patching.
 
 ## Preconditions
 
@@ -72,9 +72,15 @@ Status note: this checklist is not yet green. Character canon ownership and rout
 
 - `pnpm --filter web lint`
 - `pnpm --filter web build`
+- `pnpm --filter web exec cypress run --spec cypress/e2e/lore-review-matching.cy.ts`
+- `pnpm --filter web exec cypress run --spec cypress/e2e/project-mode-guardrails.cy.ts`
 - `pnpm --filter web test:unit -- --run src/services/consistency/reviewQueue.test.ts src/services/consistency/textMatcher.test.ts src/services/worldBible/worldBibleCanonicalization.test.ts`
 
 Current expected warnings:
 
-- Existing lint warning in `apps/web/src/hooks/useWorkspaceDocuments.ts` about `setImportSummary` and `setRetryImportFiles`.
 - Existing Vite build warnings for `onnxruntime-web` eval and large chunks.
+
+## Automated Coverage Notes
+
+- `lore-review-matching.cy.ts` covers primary Workspace -> World Bible character intake, alias preservation after canonical rename, workspace alias linking to World Bible character canon, duplicate Character Tools target suppression, and known-lore refresh after alias/canon changes.
+- `project-mode-guardrails.cy.ts` covers general-fiction character route reduction, World Bible review-card density, direct short-name/full-name alias resolution, and review completion clearing.
