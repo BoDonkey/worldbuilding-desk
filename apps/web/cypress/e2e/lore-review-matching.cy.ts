@@ -232,6 +232,56 @@ describe('Lore and review matching', () => {
     cy.contains('button', 'Alpha Scene').should('be.visible');
   });
 
+  it('creates World Bible character canon from workspace review and preserves aliases after rename', () => {
+    cy.visit('/workspace');
+    cy.contains('h1', 'Writing Workspace').should('be.visible');
+    cy.contains('Cypress Smoke Project · Alpha Scene').should('be.visible');
+
+    cy.get('.tiptap-editor')
+      .click()
+      .type(
+        '{selectall}"Garcia, get your head in the game!" Blatnor shouted.{enter}Garcia checked the seal.',
+        {delay: 0}
+      );
+
+    cy.wait(1000);
+    cy.get('button[aria-label^="Open review drawer"]').click();
+    cy.contains('button', 'Run project review').click();
+    cy.contains('Project review found').should('be.visible');
+    cy.contains('.tiptap-editor [data-consistency-id]', 'Garcia').click();
+    cy.get('select[aria-label="World category"]').select('Characters');
+    cy.contains('button', 'Add Character').click();
+    cy.contains('[role="status"]', 'Garcia').should('be.visible');
+    cy.location('pathname').should('eq', '/workspace');
+    cy.contains('.tiptap-editor [data-consistency-id]', 'Garcia').should('not.exist');
+    cy.contains('.tiptap-editor [data-lore-id]', 'Garcia').should('be.visible');
+
+    cy.contains('button', 'Save now').click();
+    cy.contains('[role="status"]', /Scene (saved|already saved)\./).should('be.visible');
+
+    cy.visit('/world-bible');
+    cy.contains('h1', 'World Bible').should('be.visible');
+    cy.contains('button', 'Characters').click();
+    cy.contains('[class*="entityName"]', /^Garcia$/)
+      .parents('li')
+      .first()
+      .within(() => {
+        cy.contains('button', 'Edit').click();
+      });
+    cy.get('form').within(() => {
+      cy.contains('label', 'Name').find('input').clear().type('Garcia de Terra');
+      cy.contains('Saving this rename will keep').should('contain.text', 'Garcia');
+      cy.contains('button', 'Save Canon Changes').click();
+    });
+    cy.contains('[role="status"]', 'Entry updated.').should('be.visible');
+    cy.contains('li', 'Garcia de Terra').should('be.visible');
+
+    cy.visit('/workspace');
+    cy.contains('Cypress Smoke Project · Alpha Scene').should('be.visible');
+    cy.contains('.tiptap-editor [data-lore-id]', 'Garcia').should('be.visible');
+    cy.contains('.tiptap-editor [data-consistency-id]', 'Garcia').should('not.exist');
+  });
+
   it('keeps review counts and highlights in sync after character canonicalization across scenes', () => {
     cy.visit('/workspace');
     cy.contains('h1', 'Writing Workspace').should('be.visible');
