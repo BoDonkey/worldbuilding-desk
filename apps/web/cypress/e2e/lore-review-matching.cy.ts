@@ -282,6 +282,48 @@ describe('Lore and review matching', () => {
     cy.contains('.tiptap-editor [data-consistency-id]', 'Garcia').should('not.exist');
   });
 
+  it('links a workspace unknown alias to World Bible character canon without duplicate tools targets', () => {
+    seedWorldBibleCharacterWithToolsProfile({
+      entityId: 'entity-garcia-full',
+      characterId: 'character-garcia-full',
+      name: 'Garcia de Terra'
+    });
+    cy.reload();
+    cy.visit('/workspace');
+    cy.contains('h1', 'Writing Workspace').should('be.visible');
+    cy.contains('Cypress Smoke Project · Alpha Scene').should('be.visible');
+
+    cy.get('.tiptap-editor')
+      .click()
+      .type(
+        '{selectall}"Garcia, get your head in the game!" Blatnor shouted.{enter}Garcia checked the seal.',
+        {delay: 0}
+      );
+
+    cy.wait(1000);
+    cy.get('button[aria-label^="Open review drawer"]').click();
+    cy.contains('button', 'Run project review').click();
+    cy.contains('Project review found').should('be.visible');
+    cy.contains('.tiptap-editor [data-consistency-id]', 'Garcia').click();
+
+    cy.contains('option', 'Garcia de Terra · Characters').should('exist');
+    cy.contains('option', 'Garcia de Terra · Character Tools').should('not.exist');
+    cy.contains('select option', 'Garcia de Terra · Characters')
+      .invoke('val')
+      .then((value) => {
+        expect(value).to.be.a('string').and.match(/^entity:/);
+        cy.contains('select option', 'Garcia de Terra · Characters')
+          .parent()
+          .select(value as string);
+      });
+    cy.contains('button', 'Connect to existing').click();
+    cy.contains('[role="status"]', 'Connected "Garcia" as an alias').should('be.visible');
+    cy.location('pathname').should('eq', '/workspace');
+    cy.contains('.tiptap-editor [data-consistency-id]', 'Garcia').should('not.exist');
+    cy.contains('.tiptap-editor [data-lore-id]', 'Garcia').should('be.visible');
+    cy.contains('button', 'Connect to existing').should('not.exist');
+  });
+
   it('keeps review counts and highlights in sync after character canonicalization across scenes', () => {
     cy.visit('/workspace');
     cy.contains('h1', 'Writing Workspace').should('be.visible');
