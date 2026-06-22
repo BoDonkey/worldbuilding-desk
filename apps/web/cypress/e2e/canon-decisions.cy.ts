@@ -87,6 +87,30 @@ function seedFactConflict(): Cypress.Chainable<void> {
   });
 }
 
+function readStoreRecords<T>(storeName: string): Cypress.Chainable<T[]> {
+  return cy.window({log: false}).then((win) => {
+    return new Cypress.Promise<T[]>((resolve, reject) => {
+      const openRequest = win.indexedDB.open(DB_NAME, DB_VERSION);
+
+      openRequest.onerror = () => reject(openRequest.error);
+      openRequest.onsuccess = () => {
+        const db = openRequest.result;
+        const tx = db.transaction(storeName, 'readonly');
+        const request = tx.objectStore(storeName).getAll();
+
+        request.onsuccess = () => {
+          db.close();
+          resolve(request.result as T[]);
+        };
+        request.onerror = () => {
+          db.close();
+          reject(request.error);
+        };
+      };
+    });
+  });
+}
+
 describe('Canon Decisions', () => {
   beforeEach(() => {
     cy.viewport(1400, 1000);
@@ -119,6 +143,45 @@ describe('Canon Decisions', () => {
     cy.contains('[role="status"]', 'Cluster marked keep separate.').should('be.visible');
     cy.contains('h2', 'No open canon decisions').should('be.visible');
     cy.contains('background conflict for Ember Archive').should('not.exist');
+
+    cy.reload();
+    cy.contains('h2', 'No open canon decisions').should('be.visible');
+    cy.contains('background conflict for Ember Archive').should('not.exist');
+  });
+
+  it('accepts a proposed fact update and keeps the resolved conflict hidden after reload', () => {
+    seedFactConflict();
+
+    cy.visit('/canon-decisions');
+    cy.contains('h2', 'background conflict for Ember Archive').should('be.visible');
+    cy.contains('button', 'Accept Update').click();
+    cy.contains('[role="status"]', 'Canonical fact updated.').should('be.visible');
+    cy.contains('h2', 'No open canon decisions').should('be.visible');
+
+    readStoreRecords<{
+      id: string;
+      targetId: string;
+      factType: string;
+      value: string;
+      sourceProposalId: string;
+    }>('canonical_facts').then((facts) => {
+      const emberFacts = facts.filter(
+        (fact) => fact.targetId === TARGET_ID && fact.factType === 'background'
+      );
+      expect(emberFacts).to.have.length(1);
+      expect(emberFacts[0]).to.include({
+        value: 'Founded in the old watchtower.',
+        sourceProposalId: 'proposal-ember-background-conflict'
+      });
+      expect(emberFacts[0].id).not.to.equal('canonical-fact-ember-background');
+    });
+
+    readStoreRecords<{id: string; status: string}>('lore_fact_proposals').then((proposals) => {
+      const proposal = proposals.find(
+        (candidate) => candidate.id === 'proposal-ember-background-conflict'
+      );
+      expect(proposal?.status).to.equal('accepted');
+    });
 
     cy.reload();
     cy.contains('h2', 'No open canon decisions').should('be.visible');
