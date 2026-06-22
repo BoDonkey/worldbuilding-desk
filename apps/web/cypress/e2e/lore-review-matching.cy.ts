@@ -173,7 +173,7 @@ describe('Lore and review matching', () => {
       .should('be.visible');
   });
 
-  it('keeps remaining review highlights after creating one reviewed record', () => {
+  it('keeps remaining review candidates after creating one reviewed record', () => {
     cy.visit('/workspace');
     cy.contains('h1', 'Writing Workspace').should('be.visible');
     cy.contains('Cypress Smoke Project · Alpha Scene').should('be.visible');
@@ -200,10 +200,15 @@ describe('Lore and review matching', () => {
     cy.contains('.tiptap-editor [data-lore-id]', 'Kaelor')
       .should('be.visible');
     cy.contains('.tiptap-editor [data-consistency-id]', 'Glass Harbor')
-      .should('be.visible');
+      .should('not.exist');
+    cy.get('button[aria-label^="Open review drawer"]')
+      .should('contain.text', '1 review later');
+    cy.contains('li', 'Glass Harbor').within(() => {
+      cy.contains('Review later').should('be.visible');
+    });
   });
 
-  it('surfaces idle review as underlines and badge state without showing the large review panel', () => {
+  it('keeps idle review as later-review badge state without inline underline noise', () => {
     cy.visit('/workspace');
     cy.contains('h1', 'Writing Workspace').should('be.visible');
     cy.contains('Cypress Smoke Project · Alpha Scene').should('be.visible');
@@ -216,10 +221,15 @@ describe('Lore and review matching', () => {
 
     cy.wait(3200);
 
-    cy.contains('.tiptap-editor [data-consistency-id]', 'Kael').should('be.visible');
+    cy.contains('.tiptap-editor [data-consistency-id]', 'Kael').should('not.exist');
     cy.get('button[aria-label^="Open review drawer"]')
-      .should('contain.text', '1 review item');
+      .should('contain.text', '1 review later');
     cy.get('.unknownPanel').should('not.exist');
+
+    cy.get('button[aria-label^="Open review drawer"]').click();
+    cy.contains('Review issues').should('be.visible');
+    cy.contains('Review later').should('be.visible');
+    cy.contains('button', 'Alpha Scene').should('be.visible');
   });
 
   it('keeps review counts and highlights in sync after character canonicalization across scenes', () => {
@@ -233,7 +243,10 @@ describe('Lore and review matching', () => {
         delay: 0
       });
 
-    cy.wait(3200);
+    cy.wait(1000);
+    cy.get('button[aria-label^="Open review drawer"]').click();
+    cy.contains('button', 'Run project review').click();
+    cy.contains('Project review found').should('be.visible');
     cy.contains('.tiptap-editor [data-consistency-id]', 'Kael')
       .click();
     cy.contains('button', /Add Character|Add to World|Create record/).click();
@@ -255,12 +268,9 @@ describe('Lore and review matching', () => {
       );
 
     cy.get('button[aria-label^="Open review drawer"]', {timeout: 10000})
-      .should('contain.text', '2 review items');
-    cy.get('.tiptap-editor [data-consistency-id]', {timeout: 10000}).should(($highlights) => {
-      const texts = [...$highlights].map((node) => node.textContent ?? '');
-      expect(texts.some((text) => text.includes('Kaelor'))).to.equal(true);
-      expect(texts.some((text) => text.includes('Blatnor'))).to.equal(true);
-    });
+      .should('contain.text', '2 review later');
+    cy.contains('.tiptap-editor [data-consistency-id]', 'Kaelor').should('not.exist');
+    cy.contains('.tiptap-editor [data-consistency-id]', 'Blatnor').should('not.exist');
 
     seedWorldBibleCharacterWithToolsProfile({
       entityId: 'entity-kaelor',
@@ -273,13 +283,10 @@ describe('Lore and review matching', () => {
     cy.contains('Cypress Smoke Project · Beta Scene').should('be.visible');
     cy.wait(1000);
 
-    cy.get('.tiptap-editor [data-consistency-id]').should(($highlights) => {
-      const texts = [...$highlights].map((node) => node.textContent ?? '');
-      expect(texts.some((text) => text.includes('Kaelor'))).to.equal(false);
-      expect(texts.some((text) => text.includes('Blatnor'))).to.equal(true);
-    });
+    cy.contains('.tiptap-editor [data-consistency-id]', 'Kaelor').should('not.exist');
+    cy.contains('.tiptap-editor [data-consistency-id]', 'Blatnor').should('not.exist');
     cy.contains('.tiptap-editor [data-lore-id]', 'Kaelor').should('be.visible');
-    cy.get('button[aria-label^="Open review drawer"]').should('contain.text', '1 review item');
+    cy.get('button[aria-label^="Open review drawer"]').should('contain.text', '1 review later');
   });
 
   it('removes lore highlights after deleting World Bible canon even if a tools profile remains', () => {
