@@ -420,6 +420,8 @@ export const useWorkspaceDocuments = ({
       initializeEditorState,
       persistDocRef,
       setFeedback,
+      setImportSummary,
+      setRetryImportFiles,
       skipImportSuggestions
     ]
   );
