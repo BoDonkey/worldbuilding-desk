@@ -4,11 +4,14 @@ import {useLocation, useNavigate} from 'react-router-dom';
 import {useAppStore} from '../store/appStore';
 import {getProjectCapabilities} from '../projectMode';
 import type {
+  CanonicalFact,
   Character,
   EntityCategory,
   LoreDocument,
   LoreDocumentKind,
   LoreDocumentLink,
+  StateMutationEvent,
+  WritingDocument,
   WorldEntity
 } from '../entityTypes';
 import {getEntitiesByProject} from '../entityStorage';
@@ -19,6 +22,7 @@ import {
   initializeDefaultCategories
 } from '../categoryStorage';
 import {getCharactersByProject} from '../characterStorage';
+import {getDocumentsByProject} from '../writingStorage';
 import {
   getLoreDocumentLinksByProject,
   getLoreDocumentsByProject,
@@ -73,6 +77,11 @@ import {
   buildCanonicalAliasList,
   deriveCharacterAliasSuggestions
 } from '../services/worldBible/worldBibleCanonicalization';
+import {buildCanonicalFactSummary} from '../services/lore/canonicalFactActions';
+import {getCanonicalFactsByProject} from '../services/lore/loreFactStorage';
+import {getStateMutationEventsByProject} from '../services/state/stateMutationLedger';
+import type {RAGSearchResult} from '../services/rag/types';
+import {htmlToPlainText} from '../utils/textHelpers';
 
 // activeProject read from store below
 
@@ -128,6 +137,22 @@ const CHARACTER_AUTHORING_FIELD_KEYS = new Set([
 
 const getWorldBibleRailStorageKey = (projectId: string) =>
   `wbd:world-bible:category-rail-collapsed:${projectId}`;
+
+const escapeRegExp = (value: string): string =>
+  value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+const countTermMentions = (text: string, terms: string[]): number => {
+  const uniqueTerms = Array.from(
+    new Set(terms.map((term) => term.trim()).filter((term) => term.length > 1))
+  );
+  return uniqueTerms.reduce((count, term) => {
+    const matches = text.match(new RegExp(`\\b${escapeRegExp(term)}\\b`, 'gi'));
+    return count + (matches?.length ?? 0);
+  }, 0);
+};
+
+const formatFactValue = (fact: CanonicalFact): string =>
+  typeof fact.value === 'string' ? fact.value : `${fact.value.label}: ${fact.value.value}`;
 
 const inferLoreKindForCategory = (category: EntityCategory | null): LoreDocumentKind => {
   const slug = category?.slug.toLowerCase() ?? '';
@@ -403,6 +428,9 @@ function WorldBibleRoute() {
   const [viewMode, setViewMode] = useState<WorldBibleViewMode>('category');
   const [entities, setEntities] = useState<WorldEntity[]>([]);
   const [characters, setCharacters] = useState<Character[]>([]);
+  const [writingDocuments, setWritingDocuments] = useState<WritingDocument[]>([]);
+  const [canonicalFacts, setCanonicalFacts] = useState<CanonicalFact[]>([]);
+  const [stateMutationEvents, setStateMutationEvents] = useState<StateMutationEvent[]>([]);
   const [loreDocuments, setLoreDocuments] = useState<LoreDocument[]>([]);
   const [loreDocumentLinks, setLoreDocumentLinks] = useState<LoreDocumentLink[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -435,6 +463,10 @@ function WorldBibleRoute() {
     useState<ShodhMemoryProvider | null>(null);
   const [memories, setMemories] = useState<MemoryEntry[]>([]);
   const [memoryFilter, setMemoryFilter] = useState('');
+  const [characterHealthProbeResults, setCharacterHealthProbeResults] = useState<
+    RAGSearchResult[]
+  >([]);
+  const [characterHealthProbeRunning, setCharacterHealthProbeRunning] = useState(false);
   const [pendingReviewFocus, setPendingReviewFocus] = useState<'general' | 'aliases' | null>(
     null
   );
@@ -542,6 +574,13 @@ function WorldBibleRoute() {
 
   useEffect(() => {
     if (!activeProject) {
+      setCategories([]);
+      setEntities([]);
+      setAliases([]);
+      setCharacters([]);
+      setWritingDocuments([]);
+      setCanonicalFacts([]);
+      setStateMutationEvents([]);
       return;
     }
 
@@ -552,11 +591,22 @@ function WorldBibleRoute() {
 
       await initializeDefaultCategories(projectId);
 
-      const [cats, ents, loadedAliases, loadedCharacters] = await Promise.all([
+      const [
+        cats,
+        ents,
+        loadedAliases,
+        loadedCharacters,
+        loadedWritingDocuments,
+        loadedCanonicalFacts,
+        loadedStateMutationEvents
+      ] = await Promise.all([
         getCategoriesByProject(projectId),
         getEntitiesByProject(projectId),
         getAliasesByProject(projectId),
-        getCharactersByProject(projectId)
+        getCharactersByProject(projectId),
+        getDocumentsByProject(projectId),
+        getCanonicalFactsByProject(projectId),
+        getStateMutationEventsByProject(projectId)
       ]);
       const normalizedCategories = await ensureCharacterCategoryLongFormFields(cats);
 
@@ -565,11 +615,34 @@ function WorldBibleRoute() {
         setEntities(ents);
         setAliases(loadedAliases);
         setCharacters(loadedCharacters);
+        setWritingDocuments(loadedWritingDocuments);
+        setCanonicalFacts(loadedCanonicalFacts);
+        setStateMutationEvents(loadedStateMutationEvents);
       }
     })();
 
+    const refreshProjectHealthData = () => {
+      void Promise.all([
+        getDocumentsByProject(activeProject.id),
+        getCanonicalFactsByProject(activeProject.id),
+        getStateMutationEventsByProject(activeProject.id)
+      ]).then(([loadedWritingDocuments, loadedCanonicalFacts, loadedStateMutationEvents]) => {
+        if (cancelled) return;
+        setWritingDocuments(loadedWritingDocuments);
+        setCanonicalFacts(loadedCanonicalFacts);
+        setStateMutationEvents(loadedStateMutationEvents);
+      });
+    };
+
+    window.addEventListener('wbd:writing-records-changed', refreshProjectHealthData);
+    window.addEventListener('wbd:lore-fact-records-changed', refreshProjectHealthData);
+    window.addEventListener('wbd:state-mutation-events-changed', refreshProjectHealthData);
+
     return () => {
       cancelled = true;
+      window.removeEventListener('wbd:writing-records-changed', refreshProjectHealthData);
+      window.removeEventListener('wbd:lore-fact-records-changed', refreshProjectHealthData);
+      window.removeEventListener('wbd:state-mutation-events-changed', refreshProjectHealthData);
     };
   }, [activeProject]);
 
@@ -854,6 +927,15 @@ function WorldBibleRoute() {
   const selectedEntity = editingId
     ? entities.find((entity) => entity.id === editingId) ?? null
     : null;
+  const selectedEntityCharacterToolProfile = useMemo(
+    () =>
+      selectedEntity
+        ? characters.find(
+            (character) => normalizeName(character.name) === normalizeName(selectedEntity.name)
+          ) ?? null
+        : null,
+    [characters, selectedEntity]
+  );
   const linkedLoreDocumentByEntityId = useMemo(() => {
     const documentsById = new Map(loreDocuments.map((document) => [document.id, document]));
     const map = new Map<string, LoreDocument>();
@@ -865,6 +947,105 @@ function WorldBibleRoute() {
     });
     return map;
   }, [loreDocumentLinks, loreDocuments]);
+  const linkedLoreDocumentsForSelectedEntity = useMemo(() => {
+    if (!selectedEntity) return [];
+    const documentsById = new Map(loreDocuments.map((document) => [document.id, document]));
+    const targetKeys = new Set([
+      `entity:${selectedEntity.id}`,
+      ...(selectedEntityCharacterToolProfile
+        ? [`character:${selectedEntityCharacterToolProfile.id}`]
+        : [])
+    ]);
+    return loreDocumentLinks
+      .filter((link) => targetKeys.has(`${link.targetType}:${link.targetId}`))
+      .map((link) => {
+        const document = documentsById.get(link.loreDocumentId);
+        return document ? {link, document} : null;
+      })
+      .filter((entry): entry is {link: LoreDocumentLink; document: LoreDocument} => Boolean(entry));
+  }, [loreDocumentLinks, loreDocuments, selectedEntity, selectedEntityCharacterToolProfile]);
+  const selectedEntityAliases = useMemo(
+    () =>
+      selectedEntity
+        ? buildCanonicalAliasList({
+            nextName: selectedEntity.name,
+            aliases: aliasMapByEntityId.get(selectedEntity.id) ?? [],
+            suggestedAliases: parseAlternativeNames(
+              String(selectedEntity.fields[ALTERNATIVE_NAMES_KEY] ?? '')
+            )
+          })
+        : [],
+    [aliasMapByEntityId, selectedEntity]
+  );
+  const selectedEntityFacts = useMemo(
+    () => {
+      if (!selectedEntity) return [];
+      const targetKeys = new Set([
+        `entity:${selectedEntity.id}`,
+        ...(selectedEntityCharacterToolProfile
+          ? [`character:${selectedEntityCharacterToolProfile.id}`]
+          : [])
+      ]);
+      return canonicalFacts
+        .filter((fact) => targetKeys.has(`${fact.targetType}:${fact.targetId}`))
+        .sort((left, right) => left.factType.localeCompare(right.factType));
+    },
+    [canonicalFacts, selectedEntity, selectedEntityCharacterToolProfile]
+  );
+  const selectedEntitySceneMentions = useMemo(() => {
+    if (!selectedEntity) return [];
+    const terms = [selectedEntity.name, ...selectedEntityAliases];
+    return writingDocuments
+      .map((document) => ({
+        document,
+        mentionCount: countTermMentions(htmlToPlainText(document.content), terms)
+      }))
+      .filter((entry) => entry.mentionCount > 0)
+      .sort((left, right) => right.mentionCount - left.mentionCount);
+  }, [selectedEntity, selectedEntityAliases, writingDocuments]);
+  const selectedEntityStateEvents = useMemo(() => {
+    if (!selectedEntity) return [];
+    const actorIds = new Set(
+      [selectedEntity.id, selectedEntityCharacterToolProfile?.id].filter(
+        (id): id is string => Boolean(id)
+      )
+    );
+    return stateMutationEvents.filter((event) =>
+      event.commands.some((command) => actorIds.has(command.actorId))
+    );
+  }, [selectedEntity, selectedEntityCharacterToolProfile, stateMutationEvents]);
+  const selectedEntityAcceptedStateEventCount = useMemo(
+    () => selectedEntityStateEvents.filter((event) => event.status === 'accepted').length,
+    [selectedEntityStateEvents]
+  );
+  const selectedEntityProposedStateEventCount = useMemo(
+    () => selectedEntityStateEvents.filter((event) => event.status !== 'accepted').length,
+    [selectedEntityStateEvents]
+  );
+  const handleCharacterHealthProbe = useCallback(async () => {
+    if (!selectedEntity || !ragService) {
+      setCharacterHealthProbeResults([]);
+      return;
+    }
+    const query = [selectedEntity.name, ...selectedEntityAliases].join(' ').trim();
+    if (!query) {
+      setCharacterHealthProbeResults([]);
+      return;
+    }
+
+    setCharacterHealthProbeRunning(true);
+    try {
+      setCharacterHealthProbeResults(await ragService.search(query, 5));
+    } catch (error) {
+      console.warn('Character detail health probe failed', error);
+      setCharacterHealthProbeResults([]);
+    } finally {
+      setCharacterHealthProbeRunning(false);
+    }
+  }, [ragService, selectedEntity, selectedEntityAliases]);
+  useEffect(() => {
+    setCharacterHealthProbeResults([]);
+  }, [selectedEntity?.id]);
   const activeCategoryRecordLabel =
     activeCategory?.name.replace(/s$/i, '').toLowerCase() || 'record';
   const currentRecordAiContext = useMemo(() => {
@@ -3195,6 +3376,182 @@ function WorldBibleRoute() {
                   {characterNotesField && renderEntityField(characterNotesField)}
 
                   {characterCustomFields.map(renderEntityField)}
+
+                  {selectedEntity && (
+                    <section
+                      className={styles.characterHealthPanel}
+                      aria-label='Character detail health'
+                    >
+                      <div className={styles.characterHealthHeader}>
+                        <div>
+                          <strong>Character detail health</strong>
+                          <span>Canon, source notes, scenes, memory, and state for this character.</span>
+                        </div>
+                        <button
+                          type='button'
+                          onClick={() => void handleCharacterHealthProbe()}
+                          disabled={characterHealthProbeRunning || !ragService}
+                        >
+                          {characterHealthProbeRunning ? 'Searching...' : 'Probe context'}
+                        </button>
+                      </div>
+
+                      <div className={styles.characterHealthMetrics}>
+                        <div className={styles.characterHealthMetric}>
+                          <span>Aliases</span>
+                          <strong>{selectedEntityAliases.length}</strong>
+                        </div>
+                        <div className={styles.characterHealthMetric}>
+                          <span>Facts</span>
+                          <strong>{selectedEntityFacts.length}</strong>
+                        </div>
+                        <div className={styles.characterHealthMetric}>
+                          <span>Lore docs</span>
+                          <strong>{linkedLoreDocumentsForSelectedEntity.length}</strong>
+                        </div>
+                        <div className={styles.characterHealthMetric}>
+                          <span>Scenes</span>
+                          <strong>{selectedEntitySceneMentions.length}</strong>
+                        </div>
+                        <div className={styles.characterHealthMetric}>
+                          <span>Memories</span>
+                          <strong>{currentEntityMemories.length}</strong>
+                        </div>
+                        <div className={styles.characterHealthMetric}>
+                          <span>State</span>
+                          <strong>{selectedEntityStateEvents.length}</strong>
+                        </div>
+                      </div>
+
+                      <div className={styles.characterHealthColumns}>
+                        <div className={styles.characterHealthCard}>
+                          <strong>Aliases</strong>
+                          {selectedEntityAliases.length > 0 ? (
+                            <div className={styles.characterHealthChipRow}>
+                              {selectedEntityAliases.map((alias) => (
+                                <span key={alias} className={styles.characterHealthChip}>
+                                  {alias}
+                                </span>
+                              ))}
+                            </div>
+                          ) : (
+                            <p>No aliases recorded.</p>
+                          )}
+                        </div>
+
+                        <div className={styles.characterHealthCard}>
+                          <strong>Accepted facts</strong>
+                          {selectedEntityFacts.length > 0 ? (
+                            <ul className={styles.characterHealthList}>
+                              {selectedEntityFacts.slice(0, 5).map((fact) => (
+                                <li key={fact.id} title={buildCanonicalFactSummary(fact)}>
+                                  <span>{fact.factType.replace(/_/g, ' ')}</span>
+                                  <strong>{formatFactValue(fact)}</strong>
+                                  {fact.sourceLoreDocumentTitle && (
+                                    <small>{fact.sourceLoreDocumentTitle}</small>
+                                  )}
+                                </li>
+                              ))}
+                            </ul>
+                          ) : (
+                            <p>No accepted facts yet.</p>
+                          )}
+                        </div>
+
+                        <div className={styles.characterHealthCard}>
+                          <strong>Linked lore docs</strong>
+                          {linkedLoreDocumentsForSelectedEntity.length > 0 ? (
+                            <ul className={styles.characterHealthList}>
+                              {linkedLoreDocumentsForSelectedEntity.slice(0, 5).map(({link, document}) => (
+                                <li key={link.id}>
+                                  <span>{document.title}</span>
+                                  <small>{document.kind.replace(/_/g, ' ')}</small>
+                                </li>
+                              ))}
+                            </ul>
+                          ) : (
+                            <p>No linked lore docs.</p>
+                          )}
+                        </div>
+
+                        <div className={styles.characterHealthCard}>
+                          <strong>Scene mentions</strong>
+                          {selectedEntitySceneMentions.length > 0 ? (
+                            <ul className={styles.characterHealthList}>
+                              {selectedEntitySceneMentions.slice(0, 5).map(({document, mentionCount}) => (
+                                <li key={document.id}>
+                                  <span>{document.title}</span>
+                                  <small>
+                                    {mentionCount} {mentionCount === 1 ? 'mention' : 'mentions'}
+                                  </small>
+                                </li>
+                              ))}
+                            </ul>
+                          ) : (
+                            <p>No scene mentions found.</p>
+                          )}
+                        </div>
+
+                        <div className={styles.characterHealthCard}>
+                          <strong>Shodh memory</strong>
+                          {currentEntityMemories.length > 0 ? (
+                            <ul className={styles.characterHealthList}>
+                              {currentEntityMemories.slice(0, 5).map((memory) => (
+                                <li key={memory.id}>
+                                  <span>{memory.title}</span>
+                                  <small>{memory.tags?.join(', ') || 'memory'}</small>
+                                </li>
+                              ))}
+                            </ul>
+                          ) : (
+                            <p>No memories captured for this record.</p>
+                          )}
+                        </div>
+
+                        <div className={styles.characterHealthCard}>
+                          <strong>State events</strong>
+                          {selectedEntityStateEvents.length > 0 ? (
+                            <>
+                              <div className={styles.characterHealthChipRow}>
+                                <span className={styles.characterHealthChip}>
+                                  {selectedEntityAcceptedStateEventCount} accepted
+                                </span>
+                                <span className={styles.characterHealthChip}>
+                                  {selectedEntityProposedStateEventCount} pending
+                                </span>
+                              </div>
+                              <ul className={styles.characterHealthList}>
+                                {selectedEntityStateEvents.slice(0, 5).map((event) => (
+                                  <li key={event.id}>
+                                    <span>{event.sceneTitle ?? 'Untitled scene'}</span>
+                                    <small>{event.status}</small>
+                                  </li>
+                                ))}
+                              </ul>
+                            </>
+                          ) : (
+                            <p>No state events found.</p>
+                          )}
+                        </div>
+                      </div>
+
+                      {characterHealthProbeResults.length > 0 && (
+                        <div className={styles.characterHealthProbeResults}>
+                          <strong>RAG probe hits</strong>
+                          <ul className={styles.characterHealthList}>
+                            {characterHealthProbeResults.map((result) => (
+                              <li key={result.chunk.id}>
+                                <span>{result.chunk.documentTitle}</span>
+                                <small>
+                                  {result.chunk.metadata.type} · score {result.score.toFixed(2)}
+                                </small>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                    </section>
+                  )}
 
                   <div className={styles.characterSectionBuilder}>
                     <div>

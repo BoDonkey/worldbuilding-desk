@@ -886,6 +886,181 @@
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--input-border-focus) 28%, transparent);
 }
 
+.characterHealthPanel {
+  display: grid;
+  gap: 0.85rem;
+  margin-bottom: 0.9rem;
+  padding: 0.9rem;
+  border: 1px solid var(--surface-border-soft);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--surface-panel-elevated) 86%, var(--surface-panel) 14%);
+}
+
+.characterHealthHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
+.characterHealthHeader strong {
+  display: block;
+  color: var(--color-text-primary);
+}
+
+.characterHealthHeader span {
+  color: var(--color-text-secondary);
+  font-size: 0.84rem;
+}
+
+.characterHealthHeader button {
+  flex: 0 0 auto;
+  border: 1px solid var(--button-secondary-border);
+  border-radius: 12px;
+  background: var(--button-secondary-bg);
+  color: var(--button-secondary-text);
+  padding: 0.38rem 0.75rem;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition:
+    background-color 0.18s ease,
+    transform 0.18s ease;
+}
+
+.characterHealthHeader button:hover:not(:disabled) {
+  background: var(--button-secondary-bg-hover);
+  transform: translateY(-1px);
+}
+
+.characterHealthHeader button:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
+.characterHealthMetrics {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+
+.characterHealthMetric {
+  display: grid;
+  gap: 0.15rem;
+  min-width: 0;
+  padding: 0.55rem;
+  border: 1px solid var(--surface-border-soft);
+  border-radius: 10px;
+  background: var(--surface-panel);
+}
+
+.characterHealthMetric span {
+  color: var(--color-text-secondary);
+  font-size: 0.74rem;
+  font-weight: 700;
+  line-height: 1.2;
+  text-transform: uppercase;
+}
+
+.characterHealthMetric strong {
+  color: var(--color-text-primary);
+  font-size: 1.2rem;
+  line-height: 1.1;
+}
+
+.characterHealthColumns {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.65rem;
+}
+
+.characterHealthCard,
+.characterHealthProbeResults {
+  display: grid;
+  gap: 0.5rem;
+  min-width: 0;
+  padding: 0.7rem;
+  border: 1px solid var(--surface-border-soft);
+  border-radius: 12px;
+  background: var(--surface-panel);
+}
+
+.characterHealthCard > strong,
+.characterHealthProbeResults > strong {
+  color: var(--color-text-primary);
+  font-size: 0.9rem;
+}
+
+.characterHealthCard p {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: 0.84rem;
+  line-height: 1.4;
+}
+
+.characterHealthChipRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.characterHealthChip {
+  min-width: 0;
+  border: 1px solid var(--badge-info-border);
+  border-radius: 999px;
+  background: var(--badge-info-bg);
+  color: var(--badge-info-text);
+  padding: 0.18rem 0.5rem;
+  font-size: 0.76rem;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.characterHealthList {
+  display: grid;
+  gap: 0.4rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.characterHealthList li {
+  display: grid;
+  gap: 0.1rem;
+  min-width: 0;
+  padding-top: 0.4rem;
+  border-top: 1px solid var(--surface-border-soft);
+}
+
+.characterHealthList li:first-child {
+  padding-top: 0;
+  border-top: 0;
+}
+
+.characterHealthList span,
+.characterHealthList strong,
+.characterHealthList small {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.characterHealthList span {
+  color: var(--color-text-primary);
+  font-size: 0.84rem;
+  line-height: 1.35;
+}
+
+.characterHealthList strong {
+  color: var(--color-text-primary);
+  font-size: 0.84rem;
+  line-height: 1.35;
+}
+
+.characterHealthList small {
+  color: var(--color-text-secondary);
+  font-size: 0.76rem;
+  line-height: 1.3;
+}
+
 @media (max-width: 900px) {
   .routeShell {
     grid-template-columns: 1fr;
@@ -917,6 +1092,22 @@
 
   .castHeaderActions {
     justify-content: flex-start;
+  }
+
+  .characterHealthHeader {
+    display: grid;
+  }
+
+  .characterHealthHeader button {
+    justify-self: start;
+  }
+
+  .characterHealthMetrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .characterHealthColumns {
+    grid-template-columns: 1fr;
   }
 
   .characterImportReviewCard {
