@@ -152,7 +152,8 @@ Under the hood, the app still includes rich systems for world data, rules, chara
 - Keep the new shared page chrome as the active-project baseline; future route-specific UI should plug into shared title/meta/action placement before inventing local header patterns.
 - Phase 1 character-canon unification is implemented: character canon now belongs in World Bible, Character Tools is secondary, and workspace character intake creates World Bible canon first.
 - Character-canon annotation smoke is now covered after the shared annotation integration. Known `Garcia deTerra` prose, titled mentions such as `Detective Garcia deTerra`, and ordinary sentence-start prose stay out of stray review highlights.
-- Follow the Lore Documents IA slice with a manual smoke pass for realistic import -> extraction -> accepted canon workflows, especially when multiple linked records reference the same source note.
+- Product health is now the active priority: use `docs/product-health-audit.md` to guide Lore Documents, RAG, Shodh memory, character detail consistency, and docs source-of-truth cleanup.
+- The docs source-of-truth map now lives in `docs/README.md`; keep `PROJECT_STATUS.md` and `docs/next-steps.md` as the current status and roadmap pair.
 - Continue moving alias/review acceptance into a stronger World Bible workflow.
 - Manually retest the new World Bible recommended-action filters and resolution paths against the review-completion smoke checklist.
 - Extend the passive review-needed indicator into changed-word plus idle-pause background cadence.

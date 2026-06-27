@@ -122,24 +122,27 @@ Implemented recently:
 
 ## Recommended Priority Order
 
-1. Calm shell and navigation simplification
-2. Lore/canon decision smoke stabilization
-3. Canon decision merge review refinement
-4. Structural cleanup in active routes
-5. Finish dedicated editor-state persistence pass
-6. State mutation ledger integration
-7. Scratchpad organization and lightweight planning surfaces
-8. App-wide search
-9. Editor readability and theme hardening
-10. Release confidence and reload safety
-11. Review-completion and World Bible polish
-12. Desktop packaging validation
-13. AI personas/tools
-14. First-run onboarding cleanup
+1. Product health and docs source-of-truth audit
+2. Lore/RAG/Shodh diagnostics and rebuild path
+3. Character detail health view
+4. Calm shell and navigation simplification
+5. Canon decision merge review refinement
+6. Structural cleanup in active routes
+7. Finish dedicated editor-state persistence pass
+8. State mutation ledger integration
+9. Scratchpad organization and lightweight planning surfaces
+10. App-wide search
+11. Editor readability and theme hardening
+12. Release confidence and reload safety
+13. Review-completion and World Bible polish
+14. Desktop packaging validation
+15. AI personas/tools
+16. First-run onboarding cleanup
 
 ## Planning Notes
 
 - Bias toward slices that complete the writing-first workflow instead of adding new optional systems.
+- Use `docs/product-health-audit.md` as the current guide for Lore Documents, RAG, Shodh memory, character detail consistency, and docs source-of-truth cleanup.
 - Keep prioritizing lore-consistency trust failures over new settlement/mechanics work until alias, nickname, and review-refresh behavior feels boringly reliable in normal drafting.
 - Prefer feature work that also removes route-level complexity in `WorkspaceRoute.tsx` or `WorldBibleRoute.tsx`.
 - Do not move editor `title`, `content`, `saveStatus`, or autosave ownership into zustand casually. Treat that as a dedicated editor-state persistence pass with explicit reload/review-refresh verification.
@@ -157,6 +160,21 @@ Implemented recently:
 - The background review path is only worth keeping if it remains bounded: proposal-only, local-first, and subordinate to deterministic validation. Avoid broadening it into an unbounded “project manager AI.”
 - Lore/canon reminder: freeform lore documents are author-facing source material, extracted entity/fact proposals are candidates, and only accepted anchors plus accepted canonical facts count as source-of-truth canon.
 - Canon-decision AI reminder: the LLM may explain tradeoffs, overlaps, and risks, but it must not silently mutate canon state. Canon-decision consultation is explicit and provider-controlled.
+
+## 00) Product Health And Docs Source Of Truth
+
+Goal: answer whether the current product actually keeps lore and character details coherent across chapters, and make the documentation set navigable again.
+
+Status:
+
+- Current audit captured in `docs/product-health-audit.md`.
+- Current docs authority map captured in `docs/README.md`.
+
+Next implementation slices:
+
+1. Add a Lore/RAG/Shodh health panel or debug drawer with document-type counts, recent indexed titles, Shodh memory counts, a search probe, and a rebuild action from source project data.
+2. Add a Character Detail Health view for one World Bible character: canonical name, aliases, accepted facts, linked Lore Documents, scene mentions, memory/index presence, and state events.
+3. After those product-health surfaces exist, archive or demote stale top-level docs that are not listed as active in `docs/README.md`.
 
 ## 0) Calm Shell and Navigation Simplification
 
