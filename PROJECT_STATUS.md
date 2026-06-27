@@ -1,6 +1,6 @@
 # Worldbuilding-Desk Project Status
 
-**Last Updated:** June 26, 2026
+**Last Updated:** June 27, 2026
 
 ## Project Overview
 
@@ -81,6 +81,7 @@ Under the hood, the app still includes rich systems for world data, rules, chara
 - World Bible review actions now support explicit canonical rename, alias conversion, persistent `keep separate` / `ignore this match`, and recommended next-action guidance.
 - System history and lore inspection surfaces.
 - Shared lore/review text matcher now owns canon normalization, possessives, longer-match priority, and in-progress known-name prefix suppression.
+- Workspace editor annotations now use the shared lore/review annotation decision pass, so known canon and unresolved review candidates are arbitrated together before TipTap decorations render.
 - Full-name, hyphenated-name, and alias smoke coverage now exists for cases such as `Mira Voss`, `Lantern-Mira`, `Iron Warrens`, and `Warrens`.
 - Parent/child canon inheritance with promotion and sync flows.
 - Project backup export/import with validation and conflict review.
@@ -150,8 +151,7 @@ Under the hood, the app still includes rich systems for world data, rules, chara
 - Revisit panel defaults and route emphasis to match the writing-first UX docs.
 - Keep the new shared page chrome as the active-project baseline; future route-specific UI should plug into shared title/meta/action placement before inventing local header patterns.
 - Phase 1 character-canon unification is implemented: character canon now belongs in World Bible, Character Tools is secondary, and workspace character intake creates World Bible canon first.
-- Continue the character-canon smoke pass from the completed Review drawer checkpoint. The drawer/import/navigation bugs are stabilized, but the broader annotation redesign is still the next larger trust slice for fragment highlights and false positives.
-- Run the focused character-canon smoke checklist in `docs/character-canon-unification-smoke-test.md` after the annotation redesign.
+- Character-canon annotation smoke is now covered after the shared annotation integration. Known `Garcia deTerra` prose, titled mentions such as `Detective Garcia deTerra`, and ordinary sentence-start prose stay out of stray review highlights.
 - Follow the Lore Documents IA slice with a manual smoke pass for realistic import -> extraction -> accepted canon workflows, especially when multiple linked records reference the same source note.
 - Continue moving alias/review acceptance into a stronger World Bible workflow.
 - Manually retest the new World Bible recommended-action filters and resolution paths against the review-completion smoke checklist.
@@ -223,6 +223,7 @@ Under the hood, the app still includes rich systems for world data, rules, chara
 - Cypress coverage verifies `Ember Archive` highlights as known lore and partial `Ember Archiv` does not become a review underline.
 - Cypress coverage was added for manual Project Review highlighting and for preserving remaining review highlights after creating one reviewed record.
 - Cypress coverage now includes passive Review drawer context actions, import-while-drawer-open refresh, cross-document review navigation, and a three-document import/navigation regression.
+- Cypress coverage now verifies natural prose around known character canon highlights as lore without adding stray review marks or passive review counts.
 - Unit coverage now verifies review annotations remain paired with the correct issue after filtering/dismissal.
 - Scratchpad autosave/reload behavior is covered by Cypress.
 - Scratchpad backup export/import round-trip is covered by the Cypress post-merge smoke.
