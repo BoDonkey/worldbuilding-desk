@@ -8,7 +8,7 @@ Purpose: reset the next work away from accumulating smoke tests and toward the p
 
 The current codebase has more lore infrastructure than the UI currently proves. Lore Documents can import, save, extract entity/fact proposals, accept facts, create/link World Bible records, and feed Canon Decisions. RAG indexes scenes, World Bible records, Lore Documents, rules, and accepted canon facts. Shodh memory captures scene, World Bible, and ruleset summaries, but not Lore Documents or accepted canon facts. Character consistency is currently strongest for names, aliases, age, occupation, and simple contradictions; richer character details such as relationships, goals, heritage, traits, and evolving state are present as accepted facts or state events but are not yet a coherent author-facing character-detail experience.
 
-The next feature slice should be a product-health pass, not another broad test pass.
+The first product-health slice is now implemented on Lore Documents: the route exposes RAG document/chunk counts, indexed document type counts, Shodh memory counts, project data counts, and a retrieval probe.
 
 ## Current Source Of Truth
 
@@ -39,8 +39,8 @@ Gaps:
 
 Recommended next feature slice:
 
-- Add a Lore/RAG/Shodh health panel or debug drawer that shows, for the active project, counts and recent entries for RAG chunks, Shodh memories, Lore Documents, accepted canon facts, and indexed document types.
-- Then manually audit a realistic imported lore set through: import -> extract -> accept/link -> ask assistant -> write chapter -> run review.
+- Use the new Lore Documents health panel to manually audit a realistic imported lore set through: import -> extract -> accept/link -> ask assistant -> write chapter -> run review.
+- Decide whether Lore Documents should also auto-capture Shodh summaries, since they are currently RAG-indexed but not Shodh-mirrored.
 
 ## RAG Health
 
@@ -55,6 +55,10 @@ What exists:
 - Rulesets are indexed from `rulesetService`.
 - Project deletion deletes the auxiliary `rag-${projectId}` database.
 
+Current diagnostics:
+
+- Lore Documents now shows RAG document/chunk counts, counts by indexed document type, and a retrieval probe powered by `RAGService.search(...)`.
+
 Risks:
 
 - There is no in-app way to inspect whether RAG is populated, stale, or missing document types.
@@ -64,7 +68,7 @@ Risks:
 
 Recommended next feature slice:
 
-- Add a rebuildable RAG diagnostics view: document type counts, last indexed titles, search probe, and "rebuild from project data."
+- Add a rebuild action from source project data if the health panel exposes stale or missing index coverage during manual audit.
 
 ## Shodh Memory Health
 
@@ -84,9 +88,13 @@ Gaps:
 - Shodh memory is summary-based, not semantic retrieval; the assistant combines Shodh chunks and RAG chunks, but there is no UI to explain what context was used.
 - There is no stale-memory indicator if a document changes and memory capture fails.
 
+Current diagnostics:
+
+- Lore Documents now shows Shodh memory counts and local-memory counts alongside RAG diagnostics.
+
 Recommended next feature slice:
 
-- Add memory provenance to assistant context and a health view showing which project surfaces have Shodh memories.
+- Add memory provenance to assistant context so authors can see which Shodh/RAG context was used in an answer.
 - Decide whether Lore Documents should auto-capture Shodh summaries or remain RAG-only.
 
 ## Character Detail Consistency

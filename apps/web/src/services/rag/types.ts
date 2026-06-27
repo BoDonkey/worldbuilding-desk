@@ -15,3 +15,19 @@ export interface RAGSearchResult {
   chunk: DocumentChunk;
   score: number;
 }
+
+export interface RAGDocumentDiagnostic {
+  documentId: string;
+  documentTitle: string;
+  type: DocumentChunk['metadata']['type'];
+  chunkCount: number;
+  tags: string[];
+  entityIds: string[];
+}
+
+export interface RAGDiagnostics {
+  chunkCount: number;
+  documentCount: number;
+  countsByType: Record<DocumentChunk['metadata']['type'], number>;
+  documents: RAGDocumentDiagnostic[];
+}

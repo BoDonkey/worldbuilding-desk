@@ -64,6 +64,7 @@ Under the hood, the app still includes rich systems for world data, rules, chara
 - Scratchpad quick access is now available from active-project chrome on World Bible, Lore, and Canon Decisions so loose ideas can move into structured canon, longform lore, or review decisions without navigating back to Workspace.
 - Lore Documents are now framed as source-note intake rather than a parallel canon database, with manual writing, dossier import, and extraction paths kept separate from accepted canon.
 - World Bible records can create or open a linked Lore Document for longform source notes, and Lore Documents can navigate back to the linked World Bible record.
+- Lore Documents now has a project context health panel that shows RAG document/chunk counts, indexed document type counts, Shodh memory counts, project data counts, and a retrieval probe.
 - Scratchpad records are included in project backup snapshots and restore paths.
 - Lightweight Corkboard is back as a workspace planning modal for chapter cards and plot points.
 - Corkboard chapter-card records are included in project backup snapshots and restore paths.
@@ -152,7 +153,7 @@ Under the hood, the app still includes rich systems for world data, rules, chara
 - Keep the new shared page chrome as the active-project baseline; future route-specific UI should plug into shared title/meta/action placement before inventing local header patterns.
 - Phase 1 character-canon unification is implemented: character canon now belongs in World Bible, Character Tools is secondary, and workspace character intake creates World Bible canon first.
 - Character-canon annotation smoke is now covered after the shared annotation integration. Known `Garcia deTerra` prose, titled mentions such as `Detective Garcia deTerra`, and ordinary sentence-start prose stay out of stray review highlights.
-- Product health is now the active priority: use `docs/product-health-audit.md` to guide Lore Documents, RAG, Shodh memory, character detail consistency, and docs source-of-truth cleanup.
+- Product health is now the active priority: the Lore/RAG/Shodh health panel is implemented, and the next product-health slice should focus on character detail consistency.
 - The docs source-of-truth map now lives in `docs/README.md`; keep `PROJECT_STATUS.md` and `docs/next-steps.md` as the current status and roadmap pair.
 - Continue moving alias/review acceptance into a stronger World Bible workflow.
 - Manually retest the new World Bible recommended-action filters and resolution paths against the review-completion smoke checklist.

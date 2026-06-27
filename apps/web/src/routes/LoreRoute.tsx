@@ -44,6 +44,12 @@ import {
 import {acceptLoreEntityProposal} from '../services/lore/entityProposalActions';
 import {getRAGService} from '../services/rag/getRAGService';
 import type {RAGProvider} from '../services/rag/RAGService';
+import type {RAGDiagnostics, RAGSearchResult} from '../services/rag/types';
+import {getShodhService} from '../services/shodh/getShodhService';
+import type {
+  MemoryEntry,
+  ShodhMemoryProvider
+} from '../services/shodh/ShodhMemoryService';
 import {ProjectScratchpadButton} from '../components/ProjectScratchpadButton';
 import {PageHeader} from '../components/PageHeader';
 import styles from '../styles/LoreRoute.module.css';
@@ -88,6 +94,14 @@ const formatFactValue = (value: CanonicalFact['value'] | LoreFactProposal['value
 const getLoreRailStorageKey = (projectId: string) =>
   `wbd:lore:document-rail-collapsed:${projectId}`;
 
+const RAG_TYPE_LABELS: Array<{type: keyof RAGDiagnostics['countsByType']; label: string}> = [
+  {type: 'scene', label: 'Scenes'},
+  {type: 'worldbible', label: 'World Bible'},
+  {type: 'lore', label: 'Lore Docs'},
+  {type: 'canon_fact', label: 'Canon Facts'},
+  {type: 'rule', label: 'Rules'}
+];
+
 function LoreRoute() {
   const activeProject = useAppStore((state) => state.activeProject);
   const location = useLocation();
@@ -100,6 +114,13 @@ function LoreRoute() {
   const [proposals, setProposals] = useState<LoreFactProposal[]>([]);
   const [canonicalFacts, setCanonicalFacts] = useState<CanonicalFact[]>([]);
   const [ragService, setRagService] = useState<RAGProvider | null>(null);
+  const [shodhService, setShodhService] = useState<ShodhMemoryProvider | null>(null);
+  const [ragDiagnostics, setRagDiagnostics] = useState<RAGDiagnostics | null>(null);
+  const [shodhMemories, setShodhMemories] = useState<MemoryEntry[]>([]);
+  const [healthLoading, setHealthLoading] = useState(false);
+  const [healthProbe, setHealthProbe] = useState('');
+  const [healthProbeResults, setHealthProbeResults] = useState<RAGSearchResult[]>([]);
+  const [healthProbeRunning, setHealthProbeRunning] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [title, setTitle] = useState('');
   const [kind, setKind] = useState<LoreDocumentKind>('general_lore');
@@ -141,6 +162,10 @@ function LoreRoute() {
       setProposals([]);
       setCanonicalFacts([]);
       setRagService(null);
+      setShodhService(null);
+      setRagDiagnostics(null);
+      setShodhMemories([]);
+      setHealthProbeResults([]);
       return;
     }
 
@@ -154,7 +179,8 @@ function LoreRoute() {
         loadedEntityProposals,
         loadedProposals,
         loadedFacts,
-        nextRagService
+        nextRagService,
+        nextShodhService
       ] = await Promise.all([
         getLoreDocumentsByProject(activeProject.id),
         getLoreDocumentLinksByProject(activeProject.id),
@@ -167,6 +193,11 @@ function LoreRoute() {
           projectId: activeProject.id,
           inheritFromParent: activeProject.inheritRag,
           parentProjectId: activeProject.parentProjectId
+        }),
+        getShodhService({
+          projectId: activeProject.id,
+          inheritFromParent: activeProject.inheritShodh,
+          parentProjectId: activeProject.parentProjectId
         })
       ]);
       if (cancelled) return;
@@ -178,6 +209,7 @@ function LoreRoute() {
       setProposals(loadedProposals);
       setCanonicalFacts(loadedFacts);
       setRagService(nextRagService);
+      setShodhService(nextShodhService);
     };
 
     void load();
@@ -199,6 +231,50 @@ function LoreRoute() {
       window.removeEventListener('wbd:alias-records-changed', handleChanged);
     };
   }, [activeProject]);
+
+  useEffect(() => {
+    if (!activeProject || !ragService || !shodhService) {
+      setRagDiagnostics(null);
+      setShodhMemories([]);
+      return;
+    }
+
+    let cancelled = false;
+    const loadHealth = async () => {
+      setHealthLoading(true);
+      try {
+        const [diagnostics, memories] = await Promise.all([
+          ragService.getDiagnostics(),
+          shodhService.listMemories()
+        ]);
+        if (cancelled) return;
+        setRagDiagnostics(diagnostics);
+        setShodhMemories(memories);
+      } catch (error) {
+        console.warn('Unable to load project context health', error);
+        if (!cancelled) {
+          setRagDiagnostics(null);
+          setShodhMemories([]);
+        }
+      } finally {
+        if (!cancelled) {
+          setHealthLoading(false);
+        }
+      }
+    };
+
+    void loadHealth();
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    activeProject,
+    canonicalFacts.length,
+    documents.length,
+    entities.length,
+    ragService,
+    shodhService
+  ]);
 
   const linkableTargets = useMemo(
     () => [
@@ -708,6 +784,22 @@ function LoreRoute() {
     });
   };
 
+  const handleHealthProbe = async () => {
+    if (!ragService || !healthProbe.trim()) {
+      setHealthProbeResults([]);
+      return;
+    }
+    setHealthProbeRunning(true);
+    try {
+      setHealthProbeResults(await ragService.search(healthProbe.trim(), 5));
+    } catch (error) {
+      console.warn('Project context probe failed', error);
+      setHealthProbeResults([]);
+    } finally {
+      setHealthProbeRunning(false);
+    }
+  };
+
   if (!activeProject) {
     return (
       <section className={styles.page}>
@@ -1155,6 +1247,89 @@ function LoreRoute() {
         </div>
 
       </div>
+
+      <section className={styles.healthPanel} aria-label='Project context health'>
+        <div className={styles.healthHeader}>
+          <div>
+            <div className={styles.starterEyebrow}>Context health</div>
+            <h2>Lore, Memory, and Retrieval</h2>
+            <p>
+              Check whether source notes, accepted canon, scene text, and memories are visible
+              to the assistant context systems.
+            </p>
+          </div>
+          <span className={styles.statusBadge}>
+            {healthLoading ? 'Refreshing' : 'Current'}
+          </span>
+        </div>
+
+        <div className={styles.healthMetricGrid}>
+          <div className={styles.healthMetric}>
+            <span>RAG documents</span>
+            <strong>{ragDiagnostics?.documentCount ?? 0}</strong>
+            <small>{ragDiagnostics?.chunkCount ?? 0} chunks</small>
+          </div>
+          <div className={styles.healthMetric}>
+            <span>Shodh memories</span>
+            <strong>{shodhMemories.length}</strong>
+            <small>
+              {shodhMemories.filter((memory) => memory.projectId === activeProject.id).length} local
+            </small>
+          </div>
+          <div className={styles.healthMetric}>
+            <span>Lore documents</span>
+            <strong>{documents.length}</strong>
+            <small>{canonicalFacts.length} accepted facts</small>
+          </div>
+          <div className={styles.healthMetric}>
+            <span>World records</span>
+            <strong>{entities.length}</strong>
+            <small>{characters.length} character tools profiles</small>
+          </div>
+        </div>
+
+        <div className={styles.healthBreakdown}>
+          {RAG_TYPE_LABELS.map((entry) => (
+            <span key={entry.type} className={styles.healthChip}>
+              {entry.label}: {ragDiagnostics?.countsByType[entry.type] ?? 0}
+            </span>
+          ))}
+        </div>
+
+        <form
+          className={styles.healthProbe}
+          onSubmit={(event) => {
+            event.preventDefault();
+            void handleHealthProbe();
+          }}
+        >
+          <label>
+            Probe retrieval
+            <input
+              value={healthProbe}
+              onChange={(event) => setHealthProbe(event.target.value)}
+              placeholder='Try a character, place, alias, or lore phrase'
+            />
+          </label>
+          <button type='submit' disabled={healthProbeRunning || !healthProbe.trim()}>
+            {healthProbeRunning ? 'Searching...' : 'Search Context'}
+          </button>
+        </form>
+
+        {healthProbeResults.length > 0 ? (
+          <div className={styles.healthResults}>
+            {healthProbeResults.map((result) => (
+              <article key={result.chunk.id} className={styles.healthResult}>
+                <div>
+                  <strong>{result.chunk.documentTitle}</strong>
+                  <span>{result.chunk.metadata.type.replace(/_/g, ' ')}</span>
+                </div>
+                <p>{summarizeContent(result.chunk.content, 180)}</p>
+              </article>
+            ))}
+          </div>
+        ) : null}
+      </section>
     </section>
   );
 }
