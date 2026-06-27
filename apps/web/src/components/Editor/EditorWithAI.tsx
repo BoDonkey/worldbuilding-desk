@@ -5,13 +5,12 @@ import type {LoreInspectorRecord} from './LoreInspectorPanel';
 import {ContextPopover} from './ContextPopover';
 import {AIExpandMenu} from './extensions/AIExpandMenu';
 import {
-  createConsistencyHighlightsExtension,
   type ConsistencyHighlightIssue
 } from './extensions/ConsistencyHighlightsExtension';
 import {
-  createLoreHighlightsExtension,
   type LoreHighlightEntry
 } from './extensions/LoreHighlightsExtension';
+import {createWorkspaceAnnotationsExtension} from './extensions/WorkspaceAnnotationsExtension';
 import {
   createReviewFocusFlashExtension,
   reviewFocusFlashKey,
@@ -274,14 +273,10 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
     return {
       ...config,
       extensions: [
-      ...config.extensions,
-      AIExpandMenu,
-      createReviewFocusFlashExtension(),
-      createConsistencyHighlightsExtension(
-        () => consistencyHighlightsRef.current,
-        () => loreHighlightsRef.current
-      ),
-        createLoreHighlightsExtension(
+        ...config.extensions,
+        AIExpandMenu,
+        createReviewFocusFlashExtension(),
+        createWorkspaceAnnotationsExtension(
           () => loreHighlightsRef.current,
           () => consistencyHighlightsRef.current
         )
