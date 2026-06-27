@@ -500,9 +500,22 @@ function getHiddenStateMutationReviewKey(event: {
 
 const makeReviewItemId = (
   docId: string,
-  issue: GuardrailIssue,
-  index: number
-): string => `${docId}:${getReviewIssueKey(issue)}:${index}`;
+  issue: GuardrailIssue
+): string => `${docId}:${getReviewIssueKey(issue)}`;
+
+export const mapReviewAnnotationsByIssueKey = (
+  issues: GuardrailIssue[],
+  issueAnnotations: ReviewIssueAnnotation[]
+): Map<string, ReviewIssueAnnotation> => {
+  const annotationsByIssueKey = new Map<string, ReviewIssueAnnotation>();
+  issues.forEach((issue, index) => {
+    const annotation = issueAnnotations[index];
+    if (annotation) {
+      annotationsByIssueKey.set(getReviewIssueKey(issue), annotation);
+    }
+  });
+  return annotationsByIssueKey;
+};
 
 export const useWorkspaceConsistency = ({
   activeProject,
@@ -917,18 +930,37 @@ export const useWorkspaceConsistency = ({
 
       if (consistencyMode !== 'lenient') {
         try {
-          const {proposal, validation, observations} = await worldEngine.reviewText({
-            projectId: doc.projectId,
-            text: htmlToPlainText(doc.content),
-            source,
-            knownEntities: knownConsistencyEntities,
-            actionCues: resolvedActionCues
-          });
+          const {proposal, validation, observations, issueAnnotations} =
+            await worldEngine.reviewText({
+              projectId: doc.projectId,
+              text: htmlToPlainText(doc.content),
+              source,
+              knownEntities: knownConsistencyEntities,
+              actionCues: resolvedActionCues
+            });
           const presentedIssues =
             consistencyMode === 'strict'
               ? validation.issues
               : downgradeUnknownIssuesToWarnings(validation.issues);
-          setGuardrailIssues(filterDismissedUnknownIssues(doc.id, presentedIssues));
+          const annotationsByIssueKey = mapReviewAnnotationsByIssueKey(
+            validation.issues,
+            issueAnnotations
+          );
+          const dismissedPresentedIssues = filterDismissedUnknownIssues(
+            doc.id,
+            presentedIssues
+          );
+          setGuardrailIssues(dismissedPresentedIssues);
+          setConsistencyReviewItems((prev) => [
+            ...prev.filter((item) => item.sceneId !== doc.id),
+            ...dismissedPresentedIssues.map((issue) => ({
+              id: makeReviewItemId(doc.id, issue),
+              sceneId: doc.id,
+              sceneTitle: doc.title || 'Untitled scene',
+              issue,
+              reviewAnnotation: annotationsByIssueKey.get(getReviewIssueKey(issue))
+            }))
+          ]);
           unresolvedCount = validation.issues.filter(
             (issue) => issue.code === 'UNKNOWN_ENTITY'
           ).length;
@@ -1037,6 +1069,9 @@ export const useWorkspaceConsistency = ({
       setLastSavedAt(Date.now());
       if (consistencyMode === 'strict' && !isImport) {
         setGuardrailIssues([]);
+        setConsistencyReviewItems((prev) =>
+          prev.filter((item) => item.sceneId !== doc.id)
+        );
       }
       lastAutosaveErrorRef.current = null;
       return {
@@ -1066,13 +1101,17 @@ export const useWorkspaceConsistency = ({
 
   const refreshDeferredReview = useCallback(
     async (doc: WritingDocument) => {
-      const {validation} = await worldEngine.reviewText({
+      const {validation, issueAnnotations} = await worldEngine.reviewText({
         projectId: doc.projectId,
         text: htmlToPlainText(doc.content),
         source: getReviewSourceForDocument(doc),
         knownEntities: knownConsistencyEntities,
         actionCues: resolvedActionCues
       });
+      const annotationsByIssueKey = mapReviewAnnotationsByIssueKey(
+        validation.issues,
+        issueAnnotations
+      );
       const presentedIssues = filterDismissedUnknownIssues(
         doc.id,
         downgradeUnknownIssuesToWarnings(validation.issues)
@@ -1080,11 +1119,12 @@ export const useWorkspaceConsistency = ({
       setGuardrailIssues(presentedIssues);
       setConsistencyReviewItems((prev) => [
         ...prev.filter((item) => item.sceneId !== doc.id),
-        ...presentedIssues.map((issue, index) => ({
-          id: makeReviewItemId(doc.id, issue, index),
+        ...presentedIssues.map((issue) => ({
+          id: makeReviewItemId(doc.id, issue),
           sceneId: doc.id,
           sceneTitle: doc.title || 'Untitled scene',
-          issue
+          issue,
+          reviewAnnotation: annotationsByIssueKey.get(getReviewIssueKey(issue))
         }))
       ]);
     },
@@ -1111,15 +1151,19 @@ export const useWorkspaceConsistency = ({
           doc.id,
           downgradeUnknownIssuesToWarnings(validation.issues)
         );
+        const annotationsByIssueKey = mapReviewAnnotationsByIssueKey(
+          validation.issues,
+          issueAnnotations
+        );
         setGuardrailIssues(presentedIssues);
         setConsistencyReviewItems((prev) => [
           ...prev.filter((item) => item.sceneId !== doc.id),
-          ...presentedIssues.map((issue, index) => ({
-            id: makeReviewItemId(doc.id, issue, index),
+          ...presentedIssues.map((issue) => ({
+            id: makeReviewItemId(doc.id, issue),
             sceneId: doc.id,
             sceneTitle: doc.title || 'Untitled scene',
             issue,
-            reviewAnnotation: issueAnnotations[index]
+            reviewAnnotation: annotationsByIssueKey.get(getReviewIssueKey(issue))
           }))
         ]);
       } finally {
@@ -1159,14 +1203,18 @@ export const useWorkspaceConsistency = ({
           knownEntities: knownConsistencyEntities,
           actionCues: resolvedActionCues
         });
+        const annotationsByIssueKey = mapReviewAnnotationsByIssueKey(
+          validation.issues,
+          issueAnnotations
+        );
         const presentedIssues = filterDismissedUnknownIssues(doc.id, validation.issues);
-        presentedIssues.forEach((issue, index) => {
+        presentedIssues.forEach((issue) => {
           items.push({
-            id: makeReviewItemId(doc.id, issue, index),
+            id: makeReviewItemId(doc.id, issue),
             sceneId: doc.id,
             sceneTitle: doc.title || 'Untitled scene',
             issue,
-            reviewAnnotation: issueAnnotations[index]
+            reviewAnnotation: annotationsByIssueKey.get(getReviewIssueKey(issue))
           });
         });
       }
@@ -1771,8 +1819,21 @@ export const useWorkspaceConsistency = ({
     const categoryLabelById = new Map(
       categories.map((category) => [category.id, category.name])
     );
+    const reviewSurfaces = new Set<string>();
     unknownGuardrailIssues.forEach((issue) => {
       const surface = (issue.surface ?? '').trim();
+      if (surface) {
+        reviewSurfaces.add(surface);
+      }
+    });
+    consistencyReviewItems.forEach((item) => {
+      if (item.issue.code !== 'UNKNOWN_ENTITY') return;
+      const surface = (item.issue.surface ?? '').trim();
+      if (surface) {
+        reviewSurfaces.add(surface);
+      }
+    });
+    reviewSurfaces.forEach((surface) => {
       if (!surface) return;
       const normalizedSurface = surface.toLowerCase();
       const candidatesByKey = new Map<string, LinkTargetOption>();
@@ -1826,6 +1887,7 @@ export const useWorkspaceConsistency = ({
     characterCategoryIds,
     characterLoreEntityIdByCharacterId,
     characters,
+    consistencyReviewItems,
     entities,
     unknownGuardrailIssues
   ]);

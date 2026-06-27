@@ -192,6 +192,7 @@ export const useWorkspaceDocuments = ({
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
   const [lastSavedAt, setLastSavedAt] = useState<number | null>(null);
   const [wordCount, setWordCount] = useState(0);
+  const [editorScrollResetToken, setEditorScrollResetToken] = useState(0);
   const [isImportingDocuments, setIsImportingDocuments] = useState(false);
   const importInputRef = useRef<HTMLInputElement | null>(null);
   const lastAutosaveErrorRef = useRef<string | null>(null);
@@ -282,6 +283,7 @@ export const useWorkspaceDocuments = ({
 
       setDocuments((prev) => [...prev, doc]);
       initializeEditorState(doc);
+      setEditorScrollResetToken((prev) => prev + 1);
       setSaveStatus('saved');
       setLastSavedAt(Date.now());
       setWordCount(0);
@@ -374,6 +376,7 @@ export const useWorkspaceDocuments = ({
 
         if (lastImported) {
           initializeEditorState(lastImported);
+          setEditorScrollResetToken((prev) => prev + 1);
         }
 
         setImportSummary({
@@ -685,6 +688,7 @@ export const useWorkspaceDocuments = ({
     setLastSavedAt,
     wordCount,
     setWordCount,
+    editorScrollResetToken,
     selectedDocument,
     importInputRef: importInputRef as RefObject<HTMLInputElement>,
     isImportingDocuments,

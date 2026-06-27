@@ -196,6 +196,30 @@
   text-decoration-color: var(--editor-highlight-blocking-line);
 }
 
+.ProseMirror .review-focus-flash {
+  animation: review-focus-flash 1.8s ease-out;
+  background: var(--editor-highlight-warning-bg);
+  border-radius: 0.25rem;
+  box-shadow: 0 0 0 2px var(--editor-highlight-warning-line);
+}
+
+@keyframes review-focus-flash {
+  0% {
+    background: var(--editor-highlight-warning-bg);
+    box-shadow: 0 0 0 3px var(--editor-highlight-warning-line);
+  }
+
+  65% {
+    background: var(--editor-highlight-warning-bg);
+    box-shadow: 0 0 0 2px var(--editor-highlight-warning-line);
+  }
+
+  100% {
+    background: transparent;
+    box-shadow: 0 0 0 0 transparent;
+  }
+}
+
 .ProseMirror .lore-highlight {
   border-radius: 0.25rem;
   cursor: pointer;

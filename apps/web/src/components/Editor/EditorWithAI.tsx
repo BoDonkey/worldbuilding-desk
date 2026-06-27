@@ -12,6 +12,12 @@ import {
   createLoreHighlightsExtension,
   type LoreHighlightEntry
 } from './extensions/LoreHighlightsExtension';
+import {
+  createReviewFocusFlashExtension,
+  reviewFocusFlashKey,
+  setReviewFocusFlash
+} from './extensions/ReviewFocusFlashExtension';
+import {TextSelection} from 'prosemirror-state';
 import type {EditorConfig} from '../../config/editorConfig';
 import type {StatBlockTokenPresentation} from '../../utils/statBlockTemplates';
 import type {StatBlockPreviewData} from '../../hooks/useWorkspaceStatBlocks';
@@ -30,6 +36,8 @@ interface EditorWithAIProps {
   documentId: string;
   content: string;
   focusQuery?: string | null;
+  focusToken?: number;
+  resetScrollToken?: number;
   onChange: (content: string) => void;
   onWordCountChange?: (count: number) => void;
   consistencyHighlights?: ConsistencyHighlightIssue[];
@@ -95,6 +103,7 @@ declare global {
 }
 
 const editorScrollPositions = new Map<string, number>();
+const REVIEW_FOCUS_TOP_OFFSET = 120;
 
 const getWindowEditorScrollStore = () => {
   if (typeof window === 'undefined') return null;
@@ -135,10 +144,23 @@ const writeSavedEditorScrollTop = (scrollKey: string, scrollTop: number) => {
   }
 };
 
+const clearSavedEditorScrollTop = (scrollKey: string) => {
+  editorScrollPositions.set(scrollKey, 0);
+  const store = getWindowEditorScrollStore();
+  if (store) {
+    store[scrollKey] = 0;
+  }
+  if (typeof window !== 'undefined') {
+    window.__wbdLastWorkspaceEditorScrollTop = 0;
+  }
+};
+
 export const EditorWithAI: React.FC<EditorWithAIProps> = ({
   documentId,
   content,
   focusQuery = null,
+  focusToken = 0,
+  resetScrollToken = 0,
   onChange,
   onWordCountChange,
   consistencyHighlights = [],
@@ -196,6 +218,7 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
   const loreHighlightsRef = useRef<LoreHighlightEntry[]>([]);
   const typingIdleTimeoutRef = useRef<number | null>(null);
   const editorScrollKey = `workspace-editor-scroll:${documentId}`;
+  const appliedScrollResetKeyRef = useRef<string | null>(null);
 
   const effectiveInlineHighlightsMode =
     inlineHighlightsMode === 'hidden-while-typing' && isActivelyTyping
@@ -253,6 +276,7 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
       extensions: [
       ...config.extensions,
       AIExpandMenu,
+      createReviewFocusFlashExtension(),
       createConsistencyHighlightsExtension(
         () => consistencyHighlightsRef.current,
         () => loreHighlightsRef.current
@@ -345,6 +369,8 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
   useEffect(() => {
     const scrollElement = editorScrollRef.current;
     if (!scrollElement || focusQuery?.trim()) return;
+    const resetKey = resetScrollToken ? `${documentId}:${resetScrollToken}` : null;
+    if (resetKey && appliedScrollResetKeyRef.current !== resetKey) return;
 
     const storedScrollTop = readSavedEditorScrollTop(editorScrollKey);
     if (!Number.isFinite(storedScrollTop) || storedScrollTop <= 0) return;
@@ -398,7 +424,49 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
       scrollElement.removeEventListener('touchstart', markUserInterrupted);
       scrollElement.removeEventListener('keydown', markUserInterrupted);
     };
-  }, [documentId, editorReadyToken, editorScrollKey, focusQuery, content]);
+  }, [
+    documentId,
+    editorReadyToken,
+    editorScrollKey,
+    focusQuery,
+    content,
+    resetScrollToken
+  ]);
+
+  useEffect(() => {
+    if (!resetScrollToken) return;
+    const resetKey = `${documentId}:${resetScrollToken}`;
+    if (appliedScrollResetKeyRef.current === resetKey) return;
+    const scrollElement = editorScrollRef.current;
+    if (!scrollElement) return;
+    appliedScrollResetKeyRef.current = resetKey;
+    let cancelled = false;
+    const frameIds: number[] = [];
+    const timeoutIds: number[] = [];
+    const resetToTop = () => {
+      if (cancelled) return;
+      isRestoringEditorScrollRef.current = false;
+      scrollElement.scrollTop = 0;
+      scrollElement.dataset.wbdSavedScrollTop = '0';
+      scrollElement.dataset.wbdRestoredScrollTop = '0';
+      clearSavedEditorScrollTop(editorScrollKey);
+    };
+    resetToTop();
+    frameIds.push(window.requestAnimationFrame(resetToTop));
+    frameIds.push(
+      window.requestAnimationFrame(() =>
+        frameIds.push(window.requestAnimationFrame(resetToTop))
+      )
+    );
+    [50, 150, 300].forEach((delay) => {
+      timeoutIds.push(window.setTimeout(resetToTop, delay));
+    });
+    return () => {
+      cancelled = true;
+      frameIds.forEach((frameId) => window.cancelAnimationFrame(frameId));
+      timeoutIds.forEach((timeoutId) => window.clearTimeout(timeoutId));
+    };
+  }, [documentId, editorReadyToken, editorScrollKey, resetScrollToken]);
 
   useEffect(() => {
     const scrollElement = editorScrollRef.current;
@@ -597,28 +665,82 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
     if (!editor || !query) return;
 
     const loweredQuery = query.toLowerCase();
-    let match: {from: number; to: number} | null = null;
+    let matchFrom = -1;
+    let matchTo = -1;
 
     editor.state.doc.descendants((node, pos) => {
-      if (match || !node.isText || !node.text) {
+      if (matchFrom >= 0 || !node.isText || !node.text) {
         return;
       }
       const index = node.text.toLowerCase().indexOf(loweredQuery);
       if (index < 0) {
         return;
       }
-      match = {
-        from: pos + index,
-        to: pos + index + query.length
-      };
+      matchFrom = pos + index;
+      matchTo = pos + index + query.length;
     });
 
-    if (!match) return;
+    if (matchFrom < 0 || matchTo <= matchFrom) return;
 
     editor.commands.focus();
-    editor.commands.setTextSelection(match);
-    editor.view.dispatch(editor.state.tr.scrollIntoView());
-  }, [documentId, editorReadyToken, focusQuery]);
+    const flashToken = focusToken || Date.now();
+    editor.view.dispatch(
+      setReviewFocusFlash(editor.state.tr.setSelection(
+        TextSelection.create(editor.state.doc, matchFrom, matchTo)
+      ), {
+        from: matchFrom,
+        to: matchTo,
+        token: flashToken
+      }).scrollIntoView()
+    );
+    window.requestAnimationFrame(() => {
+      const scrollElement = editorScrollRef.current;
+      if (!scrollElement) return;
+      const editorRect = scrollElement.getBoundingClientRect();
+      const focusRect = editor.view.coordsAtPos(matchFrom);
+      const desiredTop = editorRect.top + REVIEW_FOCUS_TOP_OFFSET;
+      if (focusRect.top < desiredTop) {
+        const nextScrollTop = Math.max(0, scrollElement.scrollTop - (desiredTop - focusRect.top));
+        scrollElement.scrollTop = nextScrollTop;
+        writeSavedEditorScrollTop(editorScrollKey, nextScrollTop);
+      }
+
+      const flashSelector = `[data-review-focus-token="${flashToken}"]`;
+      if (!editor.view.dom.querySelector(flashSelector)) {
+        const domAtMatch = editor.view.domAtPos(matchFrom);
+        const fallbackElement =
+          domAtMatch.node.nodeType === Node.TEXT_NODE
+            ? domAtMatch.node.parentElement
+            : domAtMatch.node instanceof HTMLElement
+              ? domAtMatch.node
+              : null;
+        fallbackElement?.classList.add('review-focus-flash');
+        fallbackElement?.setAttribute(
+          'data-review-focus-fallback-token',
+          String(flashToken)
+        );
+      }
+    });
+    const clearFallbackFlash = () => {
+      editor.view.dom
+        .querySelectorAll(`[data-review-focus-fallback-token="${flashToken}"]`)
+        .forEach((element) => {
+          element.classList.remove('review-focus-flash');
+          element.removeAttribute('data-review-focus-fallback-token');
+        });
+    };
+    const clearToken = window.setTimeout(() => {
+      const current = reviewFocusFlashKey.getState(editor.state);
+      if (current?.token === flashToken) {
+        editor.view.dispatch(setReviewFocusFlash(editor.state.tr, null));
+      }
+      clearFallbackFlash();
+    }, 1800);
+    return () => {
+      window.clearTimeout(clearToken);
+      clearFallbackFlash();
+    };
+  }, [documentId, editorReadyToken, focusQuery, focusToken]);
 
   const handleTypingActivity = useCallback(() => {
     if (inlineHighlightsMode !== 'hidden-while-typing') {

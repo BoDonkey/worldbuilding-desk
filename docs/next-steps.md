@@ -1,6 +1,6 @@
 # Next Steps
 
-Last updated: 2026-06-21
+Last updated: 2026-06-26
 
 ## Current Baseline
 
@@ -106,6 +106,16 @@ Implemented recently:
     - Import/list utilities moved into the shared page-header pattern.
     - World Bible records can create/open linked Lore Documents, and Lore Documents can navigate back to the linked World Bible record.
     - Cypress covers manual document lifecycle, import/extraction candidates, and the World Bible linked-document round trip.
+- Workspace Review drawer checkpoint:
+  - Passive review no longer keeps persistent blue inline highlights unless the author asks for context.
+  - `Show context` and document/title buttons in Review drawer items switch to the correct scene, scroll to the reviewed term, and briefly flash the term.
+  - Review drawer issues now split into `Current document` and `Other documents`, removing the previous "random" adaptive ordering.
+  - Importing while the Review drawer is open refreshes the drawer with the newly imported document's review items.
+  - New/imported documents reset editor scroll to the top.
+  - Review annotations now pair by stable issue key instead of array index, so a filtered neighboring item cannot leak its summary onto another review term.
+  - Manual smoke with a realistic three-chapter set passed on 2026-06-26: context jumps preserved the target scene, drawer ordering stayed stable, selected rows stayed pinned in view, and flash highlights cleared without persistent inline marks.
+  - Late-line context flashes now use a single selection-plus-flash transaction with guarded fallback cleanup after manual smoke found a selected term could occasionally miss the visible flash.
+  - Focused checks currently passing: `pnpm --filter web lint`, `pnpm --filter web build`, `pnpm --filter web exec vitest run src/hooks/useWorkspaceConsistency.test.ts`, and `pnpm --filter web exec cypress run --spec cypress/e2e/lore-review-matching.cy.ts`.
 
 ## Recommended Priority Order
 
@@ -133,6 +143,7 @@ Implemented recently:
 - Prefer feature work that also removes route-level complexity in `WorkspaceRoute.tsx` or `WorldBibleRoute.tsx`.
 - Do not move editor `title`, `content`, `saveStatus`, or autosave ownership into zustand casually. Treat that as a dedicated editor-state persistence pass with explicit reload/review-refresh verification.
 - Treat build/lint as baseline gates, but use smoke coverage for import, review, reload, and export as the real confidence bar.
+- Review drawer manual smoke is complete for this checkpoint. Next review/highlight work should move to the unified annotation redesign rather than another drawer polish pass.
 - Current automated browser smoke and the latest manual workspace smoke are green on the current tree. In the Codex desktop environment, Cypress may still need to launch outside the GUI sandbox restriction.
 - Do not continue patching individual highlight edge cases indefinitely. The next review/highlight slice should consolidate known canon, aliases, titled forms, and unknown candidates into one annotation decision pass with longest-match priority.
 - Run the focused character-canon smoke checklist in `docs/character-canon-unification-smoke-test.md` after the annotation redesign.

@@ -44,6 +44,7 @@ interface WorkspaceSceneDrawerProps {
   handleSelectDocument: (doc: WritingDocument) => void;
   handleDelete: (doc: WritingDocument) => void;
   deletingDocumentId: string | null;
+  reviewItemCountBySceneId?: Record<string, number>;
   staleStateEventCountBySceneId?: Record<string, number>;
   selectedSceneTimeline?: WorkspaceSceneTimelineData | null;
 }
@@ -68,6 +69,7 @@ export function WorkspaceSceneDrawer({
   handleSelectDocument,
   handleDelete,
   deletingDocumentId,
+  reviewItemCountBySceneId = {},
   staleStateEventCountBySceneId = {},
   selectedSceneTimeline = null
 }: WorkspaceSceneDrawerProps) {
@@ -214,14 +216,24 @@ export function WorkspaceSceneDrawer({
               >
                 {doc.title || 'Untitled scene'}
               </span>
-              {(staleStateEventCountBySceneId[doc.id] ?? 0) > 0 && (
-                <span
-                  className={styles.sceneStateBadge}
-                  title='Recorded state changes from this scene may be stale.'
-                >
-                  State {staleStateEventCountBySceneId[doc.id]}
-                </span>
-              )}
+              <span className={styles.sceneBadgeGroup}>
+                {(reviewItemCountBySceneId[doc.id] ?? 0) > 0 && (
+                  <span
+                    className={styles.sceneReviewBadge}
+                    title='Open review items for this scene.'
+                  >
+                    Review {reviewItemCountBySceneId[doc.id]}
+                  </span>
+                )}
+                {(staleStateEventCountBySceneId[doc.id] ?? 0) > 0 && (
+                  <span
+                    className={styles.sceneStateBadge}
+                    title='Recorded state changes from this scene may be stale.'
+                  >
+                    State {staleStateEventCountBySceneId[doc.id]}
+                  </span>
+                )}
+              </span>
             </div>
             <button
               type='button'

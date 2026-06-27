@@ -1,6 +1,6 @@
 # Worldbuilding-Desk Project Status
 
-**Last Updated:** June 21, 2026
+**Last Updated:** June 26, 2026
 
 ## Project Overview
 
@@ -53,6 +53,10 @@ Under the hood, the app still includes rich systems for world data, rules, chara
 - World Bible review queue now supports queue filtering by review reason and recommended action (`complete`, `alias`, `merge`, `ignore`).
 - Editor appearance controls for width, surface style, and serif/sans presentation.
 - Passive review readiness indicator in the workspace header and Review drawer tab.
+- Review drawer issues now split into explicit `Current document` and `Other documents` sections so document scope is visible instead of implied by changing sort order.
+- Review drawer context actions now switch to the target scene, scroll to the reviewed term with a header offset, briefly flash the term, and keep the chosen review row in view inside the drawer.
+- Review focus now applies selection and flash in one editor transaction, with guarded fallback cleanup, so late-line context jumps do not silently select without a visible flash.
+- Imported/new scenes reset editor scroll to the top, and importing while the Review drawer is open refreshes the drawer with the newly imported scene's review candidates.
 - Workspace page chrome now uses the shared page-header rhythm and keeps the active scene primary: the top header carries project/scene context plus the passive review badge, while new scene/import/planning actions live in empty-state, footer, drawer, modal, and command surfaces.
 - Deterministic state-change suggestions stay in the Review drawer, can be accepted or rejected explicitly, support per-scene batch actions, and can be hidden until the source scene changes so drafting is not blocked.
 - Hidden deterministic state suggestions now surface only as lightweight review summaries with per-scene and project-level restore actions.
@@ -146,7 +150,7 @@ Under the hood, the app still includes rich systems for world data, rules, chara
 - Revisit panel defaults and route emphasis to match the writing-first UX docs.
 - Keep the new shared page chrome as the active-project baseline; future route-specific UI should plug into shared title/meta/action placement before inventing local header patterns.
 - Phase 1 character-canon unification is implemented: character canon now belongs in World Bible, Character Tools is secondary, and workspace character intake creates World Bible canon first.
-- Redesign workspace text annotation before continuing character-canon smoke: known canon, aliases, titled forms, and unknown candidates need one longest-match decision pass rather than split highlight/review regex paths.
+- Continue the character-canon smoke pass from the completed Review drawer checkpoint. The drawer/import/navigation bugs are stabilized, but the broader annotation redesign is still the next larger trust slice for fragment highlights and false positives.
 - Run the focused character-canon smoke checklist in `docs/character-canon-unification-smoke-test.md` after the annotation redesign.
 - Follow the Lore Documents IA slice with a manual smoke pass for realistic import -> extraction -> accepted canon workflows, especially when multiple linked records reference the same source note.
 - Continue moving alias/review acceptance into a stronger World Bible workflow.
@@ -208,6 +212,8 @@ Under the hood, the app still includes rich systems for world data, rules, chara
 - Project Review UI now uses author-facing issue labels such as `Unknown name`, `Repeated name`, and `Context clue` instead of raw internal codes such as `UNKNOWN_ENTITY` and `repeated_unknown`.
 - Deferred imported scenes use stricter import-source extraction when rehydrated or reviewed from the sidebar.
 - Review readiness counts dedupe the same issue across inline and sidebar review sources, and the context sidebar scrolls independently.
+- Review drawer annotation summaries now pair by stable issue key rather than filtered array index, preventing a neighboring item's summary from appearing under the wrong review term.
+- Manual Review drawer smoke with a realistic three-chapter set passed on June 26, 2026: passive candidates stayed out of the editor until context was requested, `Current document` / `Other documents` ordering stayed stable across scene jumps, selected rows stayed visible, and flash highlights cleared without persistent inline review marks.
 - Manual Project Review results now underline in the active editor scene instead of appearing only in the side rail.
 - Creating/linking/dismissing one review item no longer drops remaining unresolved underlines from the active editor scene.
 - Returning from World Bible after accepting records now refreshes active-scene review state so known canon turns blue while remaining unknowns stay reviewable.
@@ -216,6 +222,8 @@ Under the hood, the app still includes rich systems for world data, rules, chara
 - Shared lore/review matcher now covers known-lore highlights, review highlights, possessive forms, and in-progress known-name prefix suppression.
 - Cypress coverage verifies `Ember Archive` highlights as known lore and partial `Ember Archiv` does not become a review underline.
 - Cypress coverage was added for manual Project Review highlighting and for preserving remaining review highlights after creating one reviewed record.
+- Cypress coverage now includes passive Review drawer context actions, import-while-drawer-open refresh, cross-document review navigation, and a three-document import/navigation regression.
+- Unit coverage now verifies review annotations remain paired with the correct issue after filtering/dismissal.
 - Scratchpad autosave/reload behavior is covered by Cypress.
 - Scratchpad backup export/import round-trip is covered by the Cypress post-merge smoke.
 - Scratchpad is included in project backup snapshot/import paths.
