@@ -87,6 +87,68 @@ function seedFactConflict(): Cypress.Chainable<void> {
   });
 }
 
+function seedEntityIdentityDecision(): Cypress.Chainable<void> {
+  return cy.window({log: false}).then((win) => {
+    const now = Date.now();
+
+    return new Cypress.Promise<void>((resolve, reject) => {
+      const openRequest = win.indexedDB.open(DB_NAME, DB_VERSION);
+
+      openRequest.onerror = () => reject(openRequest.error);
+      openRequest.onsuccess = () => {
+        const db = openRequest.result;
+        const tx = db.transaction(
+          ['lore_documents', 'lore_entity_proposals'],
+          'readwrite'
+        );
+
+        tx.objectStore('lore_documents').put({
+          id: 'lore-doc-ember-shortform',
+          projectId: PROJECT_ID,
+          title: 'Ember Archive Field Glossary',
+          kind: 'general_lore',
+          format: 'plain_text',
+          content: 'Ember is the field shorthand for the Ember Archive.',
+          summary: 'Short-form notes for Ember Archive.',
+          status: 'active',
+          createdAt: now,
+          updatedAt: now
+        });
+
+        tx.objectStore('lore_entity_proposals').put({
+          id: 'proposal-ember-shortform',
+          projectId: PROJECT_ID,
+          loreDocumentId: 'lore-doc-ember-shortform',
+          name: 'Ember',
+          entityKind: 'concept',
+          confidence: 0.82,
+          evidence: {
+            start: 0,
+            end: 5,
+            text: 'Ember'
+          },
+          status: 'proposed',
+          createdAt: now,
+          updatedAt: now
+        });
+
+        tx.oncomplete = () => {
+          db.close();
+          resolve();
+        };
+        tx.onerror = () => {
+          db.close();
+          reject(tx.error);
+        };
+        tx.onabort = () => {
+          db.close();
+          reject(tx.error);
+        };
+      };
+    });
+  });
+}
+
 function readStoreRecords<T>(storeName: string): Cypress.Chainable<T[]> {
   return cy.window({log: false}).then((win) => {
     return new Cypress.Promise<T[]>((resolve, reject) => {
@@ -147,6 +209,59 @@ describe('Canon Decisions', () => {
     cy.reload();
     cy.contains('h2', 'No open canon decisions').should('be.visible');
     cy.contains('background conflict for Ember Archive').should('not.exist');
+  });
+
+  it('aliases an extracted entity identity decision and keeps it suppressed after reload', () => {
+    seedEntityIdentityDecision();
+
+    cy.visit('/canon-decisions');
+    cy.contains('h1, h2', 'Canon Decisions').should('be.visible');
+    cy.contains('h2', 'Ember may match Ember Archive').should('be.visible');
+    cy.contains(
+      'Ember looks similar to existing world record "Ember Archive". Decide whether to alias, keep separate, or accept as new.'
+    ).should('be.visible');
+    cy.contains('strong', 'Candidate:')
+      .parent()
+      .should('contain.text', 'Ember');
+    cy.contains('strong', 'Existing match:')
+      .parent()
+      .should('contain.text', 'Ember Archive');
+
+    cy.contains('button', 'Alias To Existing').click();
+    cy.contains('[role="status"]', '"Ember" aliased to existing canon.').should('be.visible');
+    cy.contains('h2', 'No open canon decisions').should('be.visible');
+    cy.contains('Ember may match Ember Archive').should('not.exist');
+
+    readStoreRecords<{
+      targetId: string;
+      targetType: string;
+      alias: string;
+    }>('consistency_aliases').then((aliases) => {
+      expect(
+        aliases.some(
+          (alias) =>
+            alias.targetId === TARGET_ID &&
+            alias.targetType === 'entity' &&
+            alias.alias === 'Ember'
+        )
+      ).to.equal(true);
+    });
+
+    readStoreRecords<{id: string; status: string; targetId?: string}>(
+      'lore_entity_proposals'
+    ).then((proposals) => {
+      const proposal = proposals.find(
+        (candidate) => candidate.id === 'proposal-ember-shortform'
+      );
+      expect(proposal).to.include({
+        status: 'accepted',
+        targetId: TARGET_ID
+      });
+    });
+
+    cy.reload();
+    cy.contains('h2', 'No open canon decisions').should('be.visible');
+    cy.contains('Ember may match Ember Archive').should('not.exist');
   });
 
   it('accepts a proposed fact update and keeps the resolved conflict hidden after reload', () => {

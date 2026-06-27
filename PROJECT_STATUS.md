@@ -232,6 +232,7 @@ Under the hood, the app still includes rich systems for world data, rules, chara
 - Context rail/header unification was browser-smoke-checked on Workspace, World Bible, Lore, Corkboard, and Canon Decisions on June 3, 2026.
 - Lore starter cards were browser-smoke-checked on June 3, 2026: cards render, Scratchpad remains the only header utility, `Extract Facts` is disabled without an active document, and `Start Writing` focuses the editor title input.
 - Lore Documents Cypress smoke passes on June 21, 2026: manual document lifecycle, import/extract candidate flow, and World Bible linked-document round trip.
+- Canon Decisions Cypress smoke now covers entity identity aliasing from extracted lore, alias persistence to the existing World Bible record, and reload suppression for the resolved decision.
 - Project backup smoke now explicitly covers Scratchpad and Corkboard round-trip, and the latest manual pass is green after fixing scratchpad import identity plus merge-category duplication.
 - App-shell search is visible from the rail/mobile nav, scene search reloads after writing changes, and World Bible search focus now switches to the correct category tab.
 - During the smoke pass, the following review/alias issues were fixed:

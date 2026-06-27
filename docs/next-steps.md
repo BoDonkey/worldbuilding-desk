@@ -217,6 +217,7 @@ Status:
 
 - Latest smoke regressions for `Mira Voss`, `Lantern-Mira`, `Iron Warrens`, and `Warrens` are now covered in unit tests.
 - Active-scene review refresh and workspace scene-return regressions were fixed on 2026-05-09.
+- Canon Decisions smoke now covers extracted lore entity aliasing, alias persistence to existing World Bible canon, and reload suppression for resolved entity-identity decisions.
 - New lore/canon architecture is implemented enough to warrant a dedicated manual smoke pass before broader extraction sophistication work.
 
 ## 0B) Canon Decision Merge Review Refinement
