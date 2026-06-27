@@ -134,6 +134,133 @@
   color: var(--button-secondary-text);
 }
 
+.healthPanel {
+  display: grid;
+  gap: 0.9rem;
+  padding: 1rem;
+  border: 1px solid var(--surface-border-soft);
+  border-radius: 16px;
+  background: var(--surface-panel);
+}
+
+.healthHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.healthHeader h2 {
+  margin: 0 0 0.35rem;
+}
+
+.healthHeader p {
+  margin: 0;
+  color: var(--color-text-secondary);
+  line-height: 1.45;
+}
+
+.healthMetricGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 0.65rem;
+}
+
+.healthMetric {
+  display: grid;
+  gap: 0.2rem;
+  min-height: 5.4rem;
+  padding: 0.75rem;
+  border: 1px solid var(--surface-border-soft);
+  border-radius: 14px;
+  background: var(--surface-panel-elevated);
+}
+
+.healthMetric span,
+.healthMetric small {
+  color: var(--color-text-secondary);
+}
+
+.healthMetric span {
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.healthMetric strong {
+  font-size: 1.6rem;
+  line-height: 1;
+}
+
+.healthBreakdown {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.healthChip {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.22rem 0.55rem;
+  border: 1px solid var(--color-accent-soft-border);
+  border-radius: 999px;
+  background: var(--color-accent-soft-bg);
+  color: var(--color-accent-soft-text);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.healthProbe {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.65rem;
+  align-items: end;
+}
+
+.healthProbe label {
+  display: grid;
+  gap: 0.35rem;
+  font-size: 0.92rem;
+}
+
+.healthProbe input {
+  width: 100%;
+}
+
+.healthResults {
+  display: grid;
+  gap: 0.6rem;
+}
+
+.healthResult {
+  display: grid;
+  gap: 0.4rem;
+  padding: 0.75rem;
+  border: 1px solid color-mix(in oklab, var(--color-border) 82%, var(--color-accent-soft-border));
+  border-radius: 12px;
+  background: var(--color-bg-primary);
+}
+
+.healthResult div {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.healthResult span {
+  color: var(--color-text-secondary);
+  font-size: 0.8rem;
+  text-transform: capitalize;
+}
+
+.healthResult p {
+  margin: 0;
+  color: var(--color-text-secondary);
+  line-height: 1.4;
+}
+
 .layout {
   display: grid;
   grid-template-columns: minmax(340px, 430px) minmax(0, 1fr);
@@ -399,5 +526,16 @@
 @media (max-width: 720px) {
   .linkRow {
     grid-template-columns: 1fr;
+  }
+
+  .healthProbe {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+  }
+
+  .healthHeader,
+  .healthResult div {
+    flex-direction: column;
+    align-items: flex-start;
   }
 }

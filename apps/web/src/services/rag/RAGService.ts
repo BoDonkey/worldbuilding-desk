@@ -1,6 +1,6 @@
 import {openDB} from 'idb';
 import type {DBSchema, IDBPDatabase} from 'idb';
-import type {DocumentChunk, RAGSearchResult} from './types';
+import type {DocumentChunk, RAGDiagnostics, RAGDocumentDiagnostic, RAGSearchResult} from './types';
 
 interface RAGDatabase extends DBSchema {
   chunks: {
@@ -44,6 +44,7 @@ export interface RAGProvider {
     options?: {tags?: string[]; entityIds?: string[]}
   ): Promise<void>;
   search(query: string, limit?: number): Promise<RAGSearchResult[]>;
+  getDiagnostics(): Promise<RAGDiagnostics>;
 }
 
 export class RAGService implements RAGProvider {
@@ -127,6 +128,11 @@ export class RAGService implements RAGProvider {
       .slice(0, limit);
   }
 
+  async getDiagnostics(): Promise<RAGDiagnostics> {
+    const chunks = await this.requireDb().getAll('chunks');
+    return buildRagDiagnostics(chunks);
+  }
+
   private chunkDocument(content: string, maxChunkSize: number = 1000, overlap = 120): string[] {
     const chunks: string[] = [];
     let start = 0;
@@ -189,7 +195,7 @@ export class RAGService implements RAGProvider {
             'feature-extraction',
             'Xenova/all-MiniLM-L6-v2'
           );
-        } catch (error) {
+        } catch {
           console.warn(
             'Falling back to lightweight local embeddings because transformer model loading failed.'
           );
@@ -289,4 +295,96 @@ export class CompositeRAGService implements RAGProvider {
       .sort((a, b) => b.score - a.score)
       .slice(0, limit);
   }
+
+  async getDiagnostics(): Promise<RAGDiagnostics> {
+    const [local, ...parentDiagnostics] = await Promise.all([
+      this.primary.getDiagnostics(),
+      ...this.parents.map((parent) => parent.getDiagnostics())
+    ]);
+    const documents = new Map<string, RAGDocumentDiagnostic>();
+    let chunkCount = local.chunkCount;
+
+    const mergeDocument = (document: RAGDocumentDiagnostic) => {
+      const key = `${document.type}:${document.documentId}`;
+      const current = documents.get(key);
+      if (!current) {
+        documents.set(key, {...document});
+        return;
+      }
+      documents.set(key, {
+        ...current,
+        chunkCount: current.chunkCount + document.chunkCount,
+        tags: Array.from(new Set([...current.tags, ...document.tags])),
+        entityIds: Array.from(new Set([...current.entityIds, ...document.entityIds]))
+      });
+    };
+
+    local.documents.forEach(mergeDocument);
+    parentDiagnostics.forEach((diagnostic) => {
+      chunkCount += diagnostic.chunkCount;
+      diagnostic.documents.forEach(mergeDocument);
+    });
+
+    return buildRagDiagnosticsFromDocuments(chunkCount, Array.from(documents.values()));
+  }
+}
+
+function emptyCountsByType(): Record<DocumentChunk['metadata']['type'], number> {
+  return {
+    scene: 0,
+    worldbible: 0,
+    lore: 0,
+    rule: 0,
+    canon_fact: 0
+  };
+}
+
+function buildRagDiagnostics(chunks: DocumentChunk[]): RAGDiagnostics {
+  const documents = new Map<string, RAGDocumentDiagnostic>();
+  chunks.forEach((chunk) => {
+    const key = `${chunk.metadata.type}:${chunk.documentId}`;
+    const tags = chunk.metadata.tags ?? [];
+    const entityIds = chunk.metadata.entityIds ?? [];
+    const current = documents.get(key);
+    if (!current) {
+      documents.set(key, {
+        documentId: chunk.documentId,
+        documentTitle: chunk.documentTitle,
+        type: chunk.metadata.type,
+        chunkCount: 1,
+        tags: Array.from(new Set(tags)),
+        entityIds: Array.from(new Set(entityIds))
+      });
+      return;
+    }
+    documents.set(key, {
+      ...current,
+      documentTitle: chunk.documentTitle,
+      chunkCount: current.chunkCount + 1,
+      tags: Array.from(new Set([...current.tags, ...tags])),
+      entityIds: Array.from(new Set([...current.entityIds, ...entityIds]))
+    });
+  });
+
+  return buildRagDiagnosticsFromDocuments(chunks.length, Array.from(documents.values()));
+}
+
+function buildRagDiagnosticsFromDocuments(
+  chunkCount: number,
+  documents: RAGDocumentDiagnostic[]
+): RAGDiagnostics {
+  const countsByType = emptyCountsByType();
+  documents.forEach((document) => {
+    countsByType[document.type] += 1;
+  });
+
+  return {
+    chunkCount,
+    documentCount: documents.length,
+    countsByType,
+    documents: documents.sort((left, right) =>
+      left.type.localeCompare(right.type) ||
+      left.documentTitle.localeCompare(right.documentTitle)
+    )
+  };
 }

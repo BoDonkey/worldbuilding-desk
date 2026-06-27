@@ -122,9 +122,9 @@ Implemented recently:
 
 ## Recommended Priority Order
 
-1. Product health and docs source-of-truth audit
-2. Lore/RAG/Shodh diagnostics and rebuild path
-3. Character detail health view
+1. Character detail health view
+2. Lore/RAG/Shodh manual audit and rebuild path
+3. Memory provenance for assistant context
 4. Calm shell and navigation simplification
 5. Canon decision merge review refinement
 6. Structural cleanup in active routes
@@ -169,12 +169,14 @@ Status:
 
 - Current audit captured in `docs/product-health-audit.md`.
 - Current docs authority map captured in `docs/README.md`.
+- Lore Documents now includes a project context health panel with RAG counts, indexed document type counts, Shodh memory counts, and a retrieval probe.
 
 Next implementation slices:
 
-1. Add a Lore/RAG/Shodh health panel or debug drawer with document-type counts, recent indexed titles, Shodh memory counts, a search probe, and a rebuild action from source project data.
-2. Add a Character Detail Health view for one World Bible character: canonical name, aliases, accepted facts, linked Lore Documents, scene mentions, memory/index presence, and state events.
-3. After those product-health surfaces exist, archive or demote stale top-level docs that are not listed as active in `docs/README.md`.
+1. Add a Character Detail Health view for one World Bible character: canonical name, aliases, accepted facts, linked Lore Documents, scene mentions, memory/index presence, and state events.
+2. Use the Lore Documents health panel to manually audit a realistic imported lore set, then add a rebuild action from source project data if stale/missing RAG coverage appears.
+3. Add assistant context provenance so Shodh memories and RAG chunks used in an answer are visible.
+4. After those product-health surfaces exist, archive or demote stale top-level docs that are not listed as active in `docs/README.md`.
 
 ## 0) Calm Shell and Navigation Simplification
 
