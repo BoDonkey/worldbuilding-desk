@@ -154,8 +154,25 @@
   color: var(--color-text-primary);
 }
 
-.sceneStateBadge {
+.sceneBadgeGroup {
+  display: inline-flex;
+  flex-shrink: 0;
+  gap: 0.3rem;
+  align-items: center;
   margin-left: 0.5rem;
+}
+
+.sceneReviewBadge {
+  flex-shrink: 0;
+  font-size: 0.72rem;
+  color: var(--color-accent-hover);
+  background-color: var(--color-accent-soft-bg);
+  border: 1px solid var(--color-accent-soft-border);
+  border-radius: 999px;
+  padding: 0.1rem 0.45rem;
+}
+
+.sceneStateBadge {
   flex-shrink: 0;
   font-size: 0.72rem;
   color: var(--color-warning);
@@ -572,8 +589,51 @@
   padding: 0;
 }
 
+.reviewIssueSection {
+  margin-top: 0.75rem;
+}
+
+.reviewIssueSectionHeader {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
 .consistencyListItem {
-  margin-bottom: 0.45rem;
+  margin-bottom: 0.55rem;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  padding: 0.35rem 0.4rem;
+}
+
+.consistencyListItemActive {
+  border-color: var(--color-accent-soft-border);
+  background: var(--color-accent-soft-bg);
+}
+
+.consistencyItemHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.consistencyItemBody {
+  margin-top: 0.25rem;
+}
+
+.consistencyItemTitle {
+  color: var(--color-text-primary);
+}
+
+.consistencyMessage {
+  display: block;
+  margin-top: 0.18rem;
+  color: var(--color-text-secondary);
+  font-size: 0.82rem;
+  line-height: 1.35;
 }
 
 .consistencySceneButton {
@@ -634,6 +694,57 @@
 .consistencyRelatedButton {
   margin-right: 0.35rem;
   font-size: 0.78rem;
+}
+
+.reviewActionPanel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 0.55rem;
+  padding: 0.6rem;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: var(--surface-panel);
+}
+
+.reviewActionField {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  color: var(--color-text-secondary);
+  font-size: 0.78rem;
+}
+
+.reviewActionField input,
+.reviewActionField select,
+.reviewActionRow select {
+  width: 100%;
+  border: 1px solid var(--input-border);
+  border-radius: 10px;
+  background: var(--input-bg);
+  color: var(--color-text-primary);
+  padding: 0.35rem 0.45rem;
+  font: inherit;
+  font-size: 0.82rem;
+}
+
+.reviewActionField input:focus,
+.reviewActionField select:focus,
+.reviewActionRow select:focus {
+  border-color: var(--input-border-focus);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--input-border-focus) 24%, transparent);
+  outline: none;
+}
+
+.reviewActionRow {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.reviewActionRow select {
+  flex: 1 1 11rem;
 }
 
 .unknownPanel {

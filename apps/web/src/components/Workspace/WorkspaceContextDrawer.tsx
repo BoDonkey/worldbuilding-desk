@@ -1,4 +1,4 @@
-import {useEffect, useMemo} from 'react';
+import {useEffect, useMemo, useRef, useState} from 'react';
 import {useNavigate} from 'react-router-dom';
 import {clearSystemHistoryEntries} from '../../services/system';
 import type {
@@ -24,6 +24,7 @@ import type {
   StateMutationReviewGroupHiddenCounts,
   StateMutationReviewItem
 } from '../../hooks/useWorkspaceConsistency';
+import type {GuardrailIssue} from '../../services/consistency/types';
 import type {ReviewIssueAnnotation} from '../../services/worldEngine';
 import {normalizeRichTextValue} from '../../services/worldBible/worldBibleEntityHelpers';
 import styles from '../../styles/WorkspaceRoute.module.css';
@@ -32,13 +33,7 @@ interface ConsistencyReviewItem {
   id: string;
   sceneId: string;
   sceneTitle: string;
-  issue: {
-    code: string;
-    message: string;
-    severity?: 'blocking' | 'warning';
-    detectionReason?: string;
-    relatedEntities?: Array<{id: string; name: string; type: 'character' | 'entity'}>;
-  };
+  issue: GuardrailIssue;
   reviewAnnotation?: ReviewIssueAnnotation;
 }
 
@@ -104,6 +99,13 @@ interface PendingAIInsert {
   context: {from: number; to: number} | null;
 }
 
+interface LinkTargetOption {
+  id: string;
+  name: string;
+  type: 'character' | 'entity';
+  label: string;
+}
+
 interface WorkspaceContextDrawerProps {
   activeContextView: WorkspaceContextDrawerView;
   setActiveContextView: (view: WorkspaceContextDrawerView) => void;
@@ -140,6 +142,38 @@ interface WorkspaceContextDrawerProps {
   restoreAllHiddenStateMutationReviewItems: () => void;
   documents: WritingDocument[];
   handleSelectDocument: (doc: WritingDocument) => void;
+  onFocusReviewItem: (item: ConsistencyReviewItem) => void;
+  activeReviewItemId: string | null;
+  reviewCreateLabel: string;
+  reviewLinkLabel: string;
+  resolvingUnknown: string | null;
+  linkingUnknown: string | null;
+  unknownCategorySelection: Record<string, string>;
+  setUnknownCategorySelection: (
+    updater: (prev: Record<string, string>) => Record<string, string>
+  ) => void;
+  worldCaptureDrafts: Record<string, string>;
+  setWorldCaptureDrafts: (
+    updater: (prev: Record<string, string>) => Record<string, string>
+  ) => void;
+  unknownLinkSelection: Record<string, string>;
+  setUnknownLinkSelection: (
+    updater: (prev: Record<string, string>) => Record<string, string>
+  ) => void;
+  unknownLinkOptions: Record<string, LinkTargetOption[]>;
+  getSuggestedUnknownCategoryId: (surface: string) => string | undefined;
+  resolveUnknownEntity: (
+    surface: string,
+    categoryId?: string,
+    displayName?: string
+  ) => Promise<void>;
+  dismissUnknownEntity: (surface: string, documentId?: string) => void;
+  ignoreUnknownSurfaceProjectWide: (surface: string, documentId?: string) => void;
+  linkUnknownEntity: (
+    surface: string,
+    targetValue?: string,
+    displayName?: string
+  ) => Promise<unknown>;
   openWorldRecord: (target: {id: string; type: 'character' | 'entity'}) => void;
 
   // Scratchpad view
@@ -230,6 +264,24 @@ export function WorkspaceContextDrawer({
   restoreAllHiddenStateMutationReviewItems,
   documents,
   handleSelectDocument,
+  onFocusReviewItem,
+  activeReviewItemId,
+  reviewCreateLabel,
+  reviewLinkLabel,
+  resolvingUnknown,
+  linkingUnknown,
+  unknownCategorySelection,
+  setUnknownCategorySelection,
+  worldCaptureDrafts,
+  setWorldCaptureDrafts,
+  unknownLinkSelection,
+  setUnknownLinkSelection,
+  unknownLinkOptions,
+  getSuggestedUnknownCategoryId,
+  resolveUnknownEntity,
+  dismissUnknownEntity,
+  ignoreUnknownSurfaceProjectWide,
+  linkUnknownEntity,
   openWorldRecord,
   scratchpadContent,
   setScratchpadContent,
@@ -264,6 +316,8 @@ export function WorkspaceContextDrawer({
   isPromotingMemoryId
 }: WorkspaceContextDrawerProps) {
   const navigate = useNavigate();
+  const [expandedReviewActionId, setExpandedReviewActionId] = useState<string | null>(null);
+  const activeReviewItemRef = useRef<HTMLLIElement | null>(null);
 
   const visibleTabs = useMemo(
     () =>
@@ -274,11 +328,52 @@ export function WorkspaceContextDrawer({
       ),
     [showGameSystems, showRuleAuthoring]
   );
+  const currentDocument = useMemo(
+    () => documents.find((document) => document.id === selectedId) ?? null,
+    [documents, selectedId]
+  );
+  const orderedConsistencyReviewItems = useMemo(() => {
+    const activeItem = activeReviewItemId
+      ? consistencyReviewItems.find((item) => item.id === activeReviewItemId) ?? null
+      : null;
+    return activeItem
+      ? [
+          activeItem,
+          ...consistencyReviewItems.filter((item) => item.id !== activeItem.id)
+        ]
+      : consistencyReviewItems;
+  }, [activeReviewItemId, consistencyReviewItems]);
+  const currentDocumentReviewItems = useMemo(
+    () =>
+      selectedId
+        ? orderedConsistencyReviewItems.filter((item) => item.sceneId === selectedId)
+        : orderedConsistencyReviewItems,
+    [orderedConsistencyReviewItems, selectedId]
+  );
+  const otherDocumentReviewItems = useMemo(
+    () =>
+      selectedId
+        ? orderedConsistencyReviewItems.filter((item) => item.sceneId !== selectedId)
+        : [],
+    [orderedConsistencyReviewItems, selectedId]
+  );
   useEffect(() => {
     if (!visibleTabs.some((tab) => tab.id === activeContextView)) {
       setActiveContextView('world-bible');
     }
   }, [activeContextView, setActiveContextView, visibleTabs]);
+  useEffect(() => {
+    if (activeContextView !== 'review' || !activeReviewItemId) {
+      return;
+    }
+    const frameId = window.requestAnimationFrame(() => {
+      activeReviewItemRef.current?.scrollIntoView({
+        block: 'start',
+        behavior: 'auto'
+      });
+    });
+    return () => window.cancelAnimationFrame(frameId);
+  }, [activeContextView, activeReviewItemId, currentDocumentReviewItems, otherDocumentReviewItems]);
   const stateMutationReviewGroups = stateMutationReviewItems.reduce<
     Array<{sceneId: string; sceneTitle: string; items: StateMutationReviewItem[]}>
   >((groups, item) => {
@@ -294,6 +389,213 @@ export function WorkspaceContextDrawer({
     });
     return groups;
   }, []);
+
+  const renderConsistencyReviewItem = (item: ConsistencyReviewItem) => {
+    const surface = item.issue.surface?.trim() ?? '';
+    const actionSurface = surface || item.issue.message;
+    const isActive = activeReviewItemId === item.id;
+    const isExpanded = expandedReviewActionId === item.id || isActive;
+    const selectedCategoryId =
+      unknownCategorySelection[actionSurface] ||
+      (surface ? getSuggestedUnknownCategoryId(surface) : '') ||
+      '';
+    const draftName = worldCaptureDrafts[actionSurface] || actionSurface;
+    const selectedLinkValue = unknownLinkSelection[actionSurface] ?? '';
+    const linkOptions = unknownLinkOptions[actionSurface] ?? [];
+    const issueTitle = surface || getIssueLabel(item.issue.code);
+    const reviewAnnotation = item.reviewAnnotation;
+    const reviewSummary = reviewAnnotation?.summary;
+    const shouldShowReviewSummary =
+      reviewSummary &&
+      !(
+        item.issue.code === 'UNKNOWN_ENTITY' &&
+        item.issue.severity === 'warning' &&
+        reviewAnnotation?.source === 'deterministic'
+      );
+
+    return (
+      <li
+        key={item.id}
+        ref={isActive ? activeReviewItemRef : undefined}
+        className={`${styles.consistencyListItem} ${
+          isActive ? styles.consistencyListItemActive : ''
+        }`}
+      >
+        <div className={styles.consistencyItemHeader}>
+          <div>
+            <strong className={styles.consistencyItemTitle}>{issueTitle}</strong>
+            {item.issue.code === 'UNKNOWN_ENTITY' &&
+              item.issue.severity === 'warning' && (
+                <span className={styles.consistencyReason}>Review later</span>
+              )}
+          </div>
+          <button
+            type='button'
+            onClick={() => {
+              onFocusReviewItem(item);
+              setExpandedReviewActionId(item.id);
+            }}
+            className={styles.consistencySceneButton}
+            title={surface ? `Show "${surface}" in ${item.sceneTitle}` : `Open ${item.sceneTitle}`}
+          >
+            Show context
+          </button>
+        </div>
+        <div className={styles.consistencyItemBody}>
+          <button
+            type='button'
+            onClick={() => {
+              onFocusReviewItem(item);
+              setExpandedReviewActionId(item.id);
+            }}
+            className={styles.consistencySceneButton}
+            title={surface ? `Show "${surface}" in ${item.sceneTitle}` : `Open ${item.sceneTitle}`}
+          >
+            {item.sceneTitle}
+          </button>
+          {surface ? (
+            <span className={styles.consistencyMessage}>{item.issue.message}</span>
+          ) : (
+            <>: {item.issue.message}</>
+          )}
+        </div>
+        {shouldShowReviewSummary && (
+          <div className={styles.consistencyDescription}>
+            {reviewSummary}
+          </div>
+        )}
+        {item.reviewAnnotation && (
+          <span className={styles.consistencyReason}>
+            {item.reviewAnnotation.engineLabel}
+          </span>
+        )}
+        {item.issue.detectionReason && (
+          <span
+            className={styles.consistencyReason}
+            title={getDetectionReason(item.issue.detectionReason).title}
+          >
+            {getDetectionReason(item.issue.detectionReason).label}
+          </span>
+        )}
+        {item.issue.relatedEntities && item.issue.relatedEntities.length > 0 && (
+          <span className={styles.consistencyRelated}>
+            {item.issue.relatedEntities.slice(0, 3).map((target) => (
+              <button
+                key={`${item.id}-${target.id}`}
+                type='button'
+                onClick={() => openWorldRecord(target)}
+                className={styles.consistencyRelatedButton}
+              >
+                Open {target.name}
+              </button>
+            ))}
+          </span>
+        )}
+        {surface && isExpanded && (
+          <div className={styles.reviewActionPanel}>
+            <label className={styles.reviewActionField}>
+              Type
+              <select
+                value={selectedCategoryId}
+                onChange={(event) =>
+                  setUnknownCategorySelection((prev) => ({
+                    ...prev,
+                    [actionSurface]: event.target.value
+                  }))
+                }
+              >
+                <option value=''>Choose a type</option>
+                {categories.map((category) => (
+                  <option key={category.id} value={category.id}>
+                    {category.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className={styles.reviewActionField}>
+              Name
+              <input
+                type='text'
+                value={draftName}
+                onChange={(event) =>
+                  setWorldCaptureDrafts((prev) => ({
+                    ...prev,
+                    [actionSurface]: event.target.value
+                  }))
+                }
+              />
+            </label>
+            <div className={styles.reviewActionRow}>
+              <button
+                type='button'
+                onClick={() =>
+                  void resolveUnknownEntity(
+                    actionSurface,
+                    selectedCategoryId || undefined,
+                    draftName
+                  )
+                }
+                disabled={resolvingUnknown === actionSurface}
+              >
+                {resolvingUnknown === actionSurface ? 'Adding...' : reviewCreateLabel}
+              </button>
+              <button
+                type='button'
+                onClick={() => dismissUnknownEntity(actionSurface, item.sceneId)}
+              >
+                Ignore
+              </button>
+              <button
+                type='button'
+                onClick={() =>
+                  ignoreUnknownSurfaceProjectWide(actionSurface, item.sceneId)
+                }
+              >
+                Always ignore
+              </button>
+            </div>
+            {linkOptions.length > 0 ? (
+              <div className={styles.reviewActionRow}>
+                <select
+                  value={selectedLinkValue}
+                  onChange={(event) =>
+                    setUnknownLinkSelection((prev) => ({
+                      ...prev,
+                      [actionSurface]: event.target.value
+                    }))
+                  }
+                  aria-label='Existing world record'
+                >
+                  <option value=''>Select existing record...</option>
+                  {linkOptions.map((option) => (
+                    <option
+                      key={`${option.type}-${option.id}`}
+                      value={`${option.type}:${option.id}`}
+                    >
+                      {option.name} · {option.label}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  type='button'
+                  onClick={() =>
+                    void linkUnknownEntity(actionSurface, selectedLinkValue, draftName)
+                  }
+                  disabled={linkingUnknown === actionSurface || !selectedLinkValue}
+                >
+                  {linkingUnknown === actionSurface ? 'Connecting...' : reviewLinkLabel}
+                </button>
+              </div>
+            ) : (
+              <div className={styles.consistencyDescription}>
+                No existing records available yet.
+              </div>
+            )}
+          </div>
+        )}
+      </li>
+    );
+  };
 
   const content = (() => {
     if (activeContextView === 'world-bible') {
@@ -387,63 +689,27 @@ export function WorkspaceContextDrawer({
                   </>
                 )}
               </div>
-              <ul className={styles.consistencyList}>
-                {consistencyReviewItems.slice(0, 24).map((item) => (
-                  <li key={item.id} className={styles.consistencyListItem}>
-                    <strong>{getIssueLabel(item.issue.code)}</strong>{' '}
-                    {item.issue.code === 'UNKNOWN_ENTITY' &&
-                      item.issue.severity === 'warning' && (
-                        <span className={styles.consistencyReason}>
-                          Review later
-                        </span>
-                      )}
-                    <button
-                      type='button'
-                      onClick={() => {
-                        const doc = documents.find((entry) => entry.id === item.sceneId);
-                        if (doc) handleSelectDocument(doc);
-                      }}
-                      className={styles.consistencySceneButton}
-                      title={`Open ${item.sceneTitle}`}
-                    >
-                      {item.sceneTitle}
-                    </button>
-                    : {item.issue.message}
-                    {item.reviewAnnotation?.summary && (
-                      <div className={styles.consistencyDescription}>
-                        {item.reviewAnnotation.summary}
-                      </div>
-                    )}
-                    {item.reviewAnnotation && (
-                      <span className={styles.consistencyReason}>
-                        {item.reviewAnnotation.engineLabel}
-                      </span>
-                    )}
-                    {item.issue.detectionReason && (
-                      <span
-                        className={styles.consistencyReason}
-                        title={getDetectionReason(item.issue.detectionReason).title}
-                      >
-                        {getDetectionReason(item.issue.detectionReason).label}
-                      </span>
-                    )}
-                    {item.issue.relatedEntities && item.issue.relatedEntities.length > 0 && (
-                      <span className={styles.consistencyRelated}>
-                        {item.issue.relatedEntities.slice(0, 3).map((target) => (
-                          <button
-                            key={`${item.id}-${target.id}`}
-                            type='button'
-                            onClick={() => openWorldRecord(target)}
-                            className={styles.consistencyRelatedButton}
-                          >
-                            Open {target.name}
-                          </button>
-                        ))}
-                      </span>
-                    )}
-                  </li>
-                ))}
-              </ul>
+              {currentDocumentReviewItems.length > 0 && (
+                <section className={styles.reviewIssueSection}>
+                  <div className={styles.reviewIssueSectionHeader}>
+                    Current document
+                    {currentDocument ? ` · ${currentDocument.title || 'Untitled scene'}` : ''}
+                  </div>
+                  <ul className={styles.consistencyList}>
+                    {currentDocumentReviewItems.map(renderConsistencyReviewItem)}
+                  </ul>
+                </section>
+              )}
+              {otherDocumentReviewItems.length > 0 && (
+                <section className={styles.reviewIssueSection}>
+                  <div className={styles.reviewIssueSectionHeader}>
+                    Other documents
+                  </div>
+                  <ul className={styles.consistencyList}>
+                    {otherDocumentReviewItems.map(renderConsistencyReviewItem)}
+                  </ul>
+                </section>
+              )}
             </>
           )}
           {stateMutationReviewItems.length > 0 && (

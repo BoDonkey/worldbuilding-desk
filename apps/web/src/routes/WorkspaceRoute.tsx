@@ -365,6 +365,7 @@ function WorkspaceRoute() {
     setLastSavedAt,
     wordCount,
     setWordCount,
+    editorScrollResetToken,
     selectedDocument,
     importInputRef,
     isImportingDocuments,
@@ -549,7 +550,6 @@ function WorkspaceRoute() {
     });
     return counts;
   }, [documents, stateMutationEvents]);
-
   const {
     setGuardrailIssues,
     resolvingUnknown,
@@ -627,6 +627,13 @@ function WorkspaceRoute() {
     setFeedback,
     addSystemHistory
   });
+  const reviewItemCountBySceneId = useMemo(() => {
+    const counts: Record<string, number> = {};
+    consistencyReviewItems.forEach((item) => {
+      counts[item.sceneId] = (counts[item.sceneId] ?? 0) + 1;
+    });
+    return counts;
+  }, [consistencyReviewItems]);
   const runConsistencyReviewFromUi = useCallback(async () => {
     setReviewBannerDismissed(false);
     await handleRunConsistencyReview();
@@ -1314,7 +1321,12 @@ function WorkspaceRoute() {
     [handleRefreshStatTemplates, setStatBlockModalOpen]
   );
 
-  const [focusQuery, setFocusQuery] = useState<string | null>(null);
+  const [focusRequest, setFocusRequest] = useState<{
+    query: string;
+    token: number;
+  } | null>(null);
+  const [activeReviewItemId, setActiveReviewItemId] = useState<string | null>(null);
+  const focusQuery = focusRequest?.query ?? null;
   const workspaceWindowScrollKey =
     activeProject && selectedId
       ? `wbd:workspace-window-scroll:${activeProject.id}:${selectedId}`
@@ -1330,12 +1342,45 @@ function WorkspaceRoute() {
     if (!focusDocumentId) return;
     const target = documents.find((doc) => doc.id === focusDocumentId);
     if (!target) return;
-    setFocusQuery(state?.focusQuery?.trim() || null);
+    const query = state?.focusQuery?.trim();
+    setFocusRequest(query ? {query, token: Date.now()} : null);
     if (selectedId !== target.id) {
-    handleSelectDocument(target);
+      handleSelectDocument(target);
     }
     navigate(location.pathname, {replace: true, state: {}});
   }, [documents, handleSelectDocument, location.pathname, location.state, navigate, selectedId]);
+
+  const focusReviewItemInScene = useCallback(
+    (item: (typeof consistencyReviewItems)[number]) => {
+      const target = documents.find((doc) => doc.id === item.sceneId);
+      if (target && selectedId !== target.id) {
+        handleSelectDocument(target);
+      }
+      const query = item.issue.surface?.trim();
+      if (query) {
+        setFocusRequest({query, token: Date.now()});
+      }
+      setActiveReviewItemId(item.id);
+      setActiveContextView('review');
+      if (!isContextDrawerOpen) {
+        setContextDrawerOpen(true);
+      }
+    },
+    [
+      documents,
+      handleSelectDocument,
+      isContextDrawerOpen,
+      selectedId,
+      setActiveContextView,
+      setContextDrawerOpen
+    ]
+  );
+
+  useEffect(() => {
+    if (editorScrollResetToken > 0) {
+      setActiveReviewItemId(null);
+    }
+  }, [editorScrollResetToken]);
 
   useEffect(() => {
     if (!workspaceWindowScrollKey) return;
@@ -2079,6 +2124,7 @@ function WorkspaceRoute() {
               handleSelectDocument={handleSelectDocument}
               handleDelete={handleDelete}
               deletingDocumentId={deletingDocumentId}
+              reviewItemCountBySceneId={reviewItemCountBySceneId}
               staleStateEventCountBySceneId={staleStateEventCountBySceneId}
               selectedSceneTimeline={selectedSceneTimeline}
             />
@@ -2106,6 +2152,8 @@ function WorkspaceRoute() {
                   documentId={selectedId}
                   content={content}
                   focusQuery={focusQuery}
+                  focusToken={focusRequest?.token ?? 0}
+                  resetScrollToken={editorScrollResetToken}
                   onChange={handleContentChange}
                   onWordCountChange={setWordCount}
                   inlineHighlightsMode={
@@ -2542,6 +2590,24 @@ function WorkspaceRoute() {
               restoreAllHiddenStateMutationReviewItems={restoreAllHiddenStateMutationReviewItems}
               documents={documents}
               handleSelectDocument={handleSelectDocument}
+              onFocusReviewItem={focusReviewItemInScene}
+              activeReviewItemId={activeReviewItemId}
+              reviewCreateLabel={reviewCreateLabel}
+              reviewLinkLabel={reviewLinkLabel}
+              resolvingUnknown={resolvingUnknown}
+              linkingUnknown={linkingUnknown}
+              unknownCategorySelection={unknownCategorySelection}
+              setUnknownCategorySelection={setUnknownCategorySelection}
+              worldCaptureDrafts={worldCaptureDrafts}
+              setWorldCaptureDrafts={setWorldCaptureDrafts}
+              unknownLinkSelection={unknownLinkSelection}
+              setUnknownLinkSelection={setUnknownLinkSelection}
+              unknownLinkOptions={unknownLinkOptions}
+              getSuggestedUnknownCategoryId={getSuggestedUnknownCategoryId}
+              resolveUnknownEntity={resolveUnknownEntity}
+              dismissUnknownEntity={dismissUnknownEntity}
+              ignoreUnknownSurfaceProjectWide={ignoreUnknownSurfaceProjectWide}
+              linkUnknownEntity={linkUnknownEntity}
               openWorldRecord={openWorldRecord}
               scratchpadContent={scratchpadContent}
               setScratchpadContent={setScratchpadContent}
@@ -2618,6 +2684,7 @@ function WorkspaceRoute() {
               handleSelectDocument={handleSelectDocument}
               handleDelete={handleDelete}
               deletingDocumentId={deletingDocumentId}
+              reviewItemCountBySceneId={reviewItemCountBySceneId}
               staleStateEventCountBySceneId={staleStateEventCountBySceneId}
               selectedSceneTimeline={selectedSceneTimeline}
             />
@@ -2671,6 +2738,24 @@ function WorkspaceRoute() {
               restoreAllHiddenStateMutationReviewItems={restoreAllHiddenStateMutationReviewItems}
               documents={documents}
               handleSelectDocument={handleSelectDocument}
+              onFocusReviewItem={focusReviewItemInScene}
+              activeReviewItemId={activeReviewItemId}
+              reviewCreateLabel={reviewCreateLabel}
+              reviewLinkLabel={reviewLinkLabel}
+              resolvingUnknown={resolvingUnknown}
+              linkingUnknown={linkingUnknown}
+              unknownCategorySelection={unknownCategorySelection}
+              setUnknownCategorySelection={setUnknownCategorySelection}
+              worldCaptureDrafts={worldCaptureDrafts}
+              setWorldCaptureDrafts={setWorldCaptureDrafts}
+              unknownLinkSelection={unknownLinkSelection}
+              setUnknownLinkSelection={setUnknownLinkSelection}
+              unknownLinkOptions={unknownLinkOptions}
+              getSuggestedUnknownCategoryId={getSuggestedUnknownCategoryId}
+              resolveUnknownEntity={resolveUnknownEntity}
+              dismissUnknownEntity={dismissUnknownEntity}
+              ignoreUnknownSurfaceProjectWide={ignoreUnknownSurfaceProjectWide}
+              linkUnknownEntity={linkUnknownEntity}
               openWorldRecord={openWorldRecord}
               scratchpadContent={scratchpadContent}
               setScratchpadContent={setScratchpadContent}

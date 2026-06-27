@@ -232,6 +232,125 @@ describe('Lore and review matching', () => {
     cy.contains('button', 'Alpha Scene').should('be.visible');
   });
 
+  it('opens passive review context from the drawer without requiring manual selection', () => {
+    cy.visit('/workspace');
+    cy.contains('h1', 'Writing Workspace').should('be.visible');
+    cy.contains('Cypress Smoke Project · Alpha Scene').should('be.visible');
+
+    cy.get('.tiptap-editor')
+      .click()
+      .type('{selectall}Kael hated the dungeon.{enter}All he wanted was a muffin.', {
+        delay: 0
+      });
+
+    cy.wait(3200);
+
+    cy.contains('.tiptap-editor [data-consistency-id]', 'Kael').should('not.exist');
+    cy.get('button[aria-label^="Open review drawer"]').click();
+    cy.contains('Review issues').should('be.visible');
+
+    cy.contains('li', 'Kael').within(() => {
+      cy.contains('button', 'Show context').click();
+    });
+
+    cy.contains('.tiptap-editor .review-focus-flash', 'Kael').should('be.visible');
+    cy.contains('li', 'Kael').within(() => {
+      cy.contains('button', 'Add to World').should('be.visible');
+      cy.contains('button', 'Ignore').should('be.visible');
+      cy.contains('button', 'Always ignore').should('be.visible');
+      cy.contains('label', 'Name').find('input').should('have.value', 'Kael');
+    });
+  });
+
+  it('adds imported scene review candidates while the review drawer stays open', () => {
+    cy.visit('/workspace');
+    cy.contains('h1', 'Writing Workspace').should('be.visible');
+    cy.contains('Cypress Smoke Project · Alpha Scene').should('be.visible');
+
+    cy.get('.tiptap-editor')
+      .click()
+      .type('{selectall}Kael hated the dungeon.{enter}All he wanted was a muffin.', {
+        delay: 0
+      });
+
+    cy.wait(3200);
+    cy.get('button[aria-label^="Open review drawer"]').click();
+    cy.contains('Review issues').should('be.visible');
+    cy.contains('li', 'Kael').should('be.visible');
+
+    cy.get('input[type="file"]').selectFile(
+      {
+        contents: Cypress.Buffer.from(
+          'Kaelor crossed the Glass Harbor before dawn. Kaelor checked the seal.'
+        ),
+        fileName: 'second-scene.txt',
+        mimeType: 'text/plain',
+        lastModified: Date.now()
+      },
+      {force: true}
+    );
+
+    cy.contains('[role="status"]', 'Imported 1 document(s).').should('be.visible');
+    cy.contains('Cypress Smoke Project · second-scene').should('be.visible');
+    cy.contains('li', 'Kael').should('be.visible');
+    cy.contains('li', 'Kaelor').should('be.visible');
+    cy.contains('li', 'second-scene').should('be.visible');
+
+    cy.contains('[class*="consistencyItemTitle"]', /^Kaelor$/)
+      .parents('li')
+      .first()
+      .within(() => {
+      cy.contains('button', 'second-scene').click();
+    });
+    cy.contains('.tiptap-editor .review-focus-flash', 'Kaelor').should('be.visible');
+    cy.get('[class*="consistencyList"]').first().find('li').first()
+      .should('contain.text', 'Kaelor');
+
+    cy.contains('[class*="consistencyItemTitle"]', /^Kael$/)
+      .parents('li')
+      .first()
+      .within(() => {
+      cy.contains('button', 'Alpha Scene').click();
+    });
+    cy.contains('.tiptap-editor .review-focus-flash', 'Kael').should('be.visible');
+    cy.get('[class*="consistencyList"]').first().find('li').first()
+      .should('contain.text', 'Kael');
+    cy.contains('[class*="consistencyItemTitle"]', /^Kael$/).should('be.visible');
+    cy.contains('[class*="consistencyItemTitle"]', /^Kaelor$/).should('be.visible');
+
+    cy.get('input[type="file"]').selectFile(
+      {
+        contents: Cypress.Buffer.from(
+          'Miralin crossed the Silent Gate before dawn. Miralin checked the seal.'
+        ),
+        fileName: 'third-scene.txt',
+        mimeType: 'text/plain',
+        lastModified: Date.now()
+      },
+      {force: true}
+    );
+
+    cy.contains('[role="status"]', 'Imported 1 document(s).').should('be.visible');
+    cy.contains('Cypress Smoke Project · third-scene').should('be.visible');
+    cy.contains('[class*="consistencyItemTitle"]', /^Miralin$/).should('be.visible');
+    cy.contains('[class*="consistencyItemTitle"]', /^Kael$/).should('exist');
+    cy.contains('[class*="consistencyItemTitle"]', /^Kaelor$/).should('exist');
+
+    cy.contains('[class*="consistencyItemTitle"]', /^Kael$/)
+      .scrollIntoView()
+      .parents('li')
+      .first()
+      .within(() => {
+        cy.contains('button', 'Alpha Scene').click();
+      });
+    cy.contains('.tiptap-editor .review-focus-flash', 'Kael').should('be.visible');
+    cy.get('[class*="consistencyList"]').first().find('li').first()
+      .should('contain.text', 'Kael');
+    cy.contains('[class*="consistencyItemTitle"]', /^Kael$/).should('be.visible');
+    cy.contains('[class*="consistencyItemTitle"]', /^Kaelor$/).should('exist');
+    cy.contains('[class*="consistencyItemTitle"]', /^Miralin$/).should('exist');
+  });
+
   it('creates World Bible character canon from workspace review and preserves aliases after rename', () => {
     cy.visit('/workspace');
     cy.contains('h1', 'Writing Workspace').should('be.visible');
