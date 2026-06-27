@@ -443,6 +443,42 @@ describe('Lore and review matching', () => {
     cy.contains('button', 'Connect to existing').should('not.exist');
   });
 
+  it('keeps natural prose around known character canon out of stray review highlights', () => {
+    seedWorldBibleCharacterWithToolsProfile({
+      entityId: 'entity-garcia-deterra',
+      characterId: 'character-garcia-deterra',
+      name: 'Garcia deTerra'
+    });
+    cy.reload();
+    cy.visit('/workspace');
+    cy.contains('h1', 'Writing Workspace').should('be.visible');
+    cy.contains('Cypress Smoke Project · Alpha Scene').should('be.visible');
+
+    cy.get('.tiptap-editor')
+      .click()
+      .type(
+        "{selectall}It's Garcia deTerra, Detective Garcia deTerra. Ordinary traffic opened around the station.",
+        {delay: 0}
+      );
+
+    cy.get('.tiptap-editor [data-lore-id="entity-garcia-deterra"]')
+      .should('have.length', 2);
+    cy.contains('.tiptap-editor [data-lore-id="entity-garcia-deterra"]', 'Garcia deTerra')
+      .should('be.visible');
+    cy.contains('.tiptap-editor [data-lore-id="entity-garcia-deterra"]', 'Detective Garcia deTerra')
+      .should('be.visible');
+    cy.contains('.tiptap-editor [data-consistency-id]', /^Garcia$/)
+      .should('not.exist');
+    cy.contains('.tiptap-editor [data-consistency-id]', /^Detective$/)
+      .should('not.exist');
+    cy.contains('.tiptap-editor [data-consistency-id]', /^Ordinary$/)
+      .should('not.exist');
+
+    cy.wait(3200);
+    cy.get('button[aria-label^="Open review drawer"]')
+      .should('contain.text', 'Review clear');
+  });
+
   it('keeps review counts and highlights in sync after character canonicalization across scenes', () => {
     cy.visit('/workspace');
     cy.contains('h1', 'Writing Workspace').should('be.visible');

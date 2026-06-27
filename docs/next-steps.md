@@ -1,6 +1,6 @@
 # Next Steps
 
-Last updated: 2026-06-26
+Last updated: 2026-06-27
 
 ## Current Baseline
 
@@ -116,25 +116,26 @@ Implemented recently:
   - Manual smoke with a realistic three-chapter set passed on 2026-06-26: context jumps preserved the target scene, drawer ordering stayed stable, selected rows stayed pinned in view, and flash highlights cleared without persistent inline marks.
   - Late-line context flashes now use a single selection-plus-flash transaction with guarded fallback cleanup after manual smoke found a selected term could occasionally miss the visible flash.
   - Focused checks currently passing: `pnpm --filter web lint`, `pnpm --filter web build`, `pnpm --filter web exec vitest run src/hooks/useWorkspaceConsistency.test.ts`, and `pnpm --filter web exec cypress run --spec cypress/e2e/lore-review-matching.cy.ts`.
+- Workspace annotation / character-canon smoke checkpoint:
+  - The editor now renders known lore and unresolved review highlights through the shared workspace annotation decision pass instead of separate TipTap decoration paths.
+  - Automated smoke now covers natural prose around known character canon: `It's Garcia deTerra`, `Detective Garcia deTerra`, and ordinary sentence-start prose stay out of stray review highlights and passive review counts.
 
 ## Recommended Priority Order
 
 1. Calm shell and navigation simplification
-2. Unified workspace annotation redesign
-3. Character-canon unification smoke pass
-4. Lore/canon decision smoke stabilization
-5. Canon decision merge review refinement
-6. Structural cleanup in active routes
-7. Finish dedicated editor-state persistence pass
-8. State mutation ledger integration
-9. Scratchpad organization and lightweight planning surfaces
-10. App-wide search
-11. Editor readability and theme hardening
-12. Release confidence and reload safety
-13. Review-completion and World Bible polish
-14. Desktop packaging validation
-15. AI personas/tools
-16. First-run onboarding cleanup
+2. Lore/canon decision smoke stabilization
+3. Canon decision merge review refinement
+4. Structural cleanup in active routes
+5. Finish dedicated editor-state persistence pass
+6. State mutation ledger integration
+7. Scratchpad organization and lightweight planning surfaces
+8. App-wide search
+9. Editor readability and theme hardening
+10. Release confidence and reload safety
+11. Review-completion and World Bible polish
+12. Desktop packaging validation
+13. AI personas/tools
+14. First-run onboarding cleanup
 
 ## Planning Notes
 
@@ -145,8 +146,8 @@ Implemented recently:
 - Treat build/lint as baseline gates, but use smoke coverage for import, review, reload, and export as the real confidence bar.
 - Review drawer manual smoke is complete for this checkpoint. Next review/highlight work should move to the unified annotation redesign rather than another drawer polish pass.
 - Current automated browser smoke and the latest manual workspace smoke are green on the current tree. In the Codex desktop environment, Cypress may still need to launch outside the GUI sandbox restriction.
-- Do not continue patching individual highlight edge cases indefinitely. The next review/highlight slice should consolidate known canon, aliases, titled forms, and unknown candidates into one annotation decision pass with longest-match priority.
-- Run the focused character-canon smoke checklist in `docs/character-canon-unification-smoke-test.md` after the annotation redesign.
+- Do not continue patching individual highlight edge cases indefinitely. The current shared annotation pass now consolidates known canon, aliases, titled forms, and unknown candidates before rendering; future highlight fixes should extend that shared decision layer instead of adding route-local exceptions.
+- The focused character-canon smoke checklist in `docs/character-canon-unification-smoke-test.md` is covered by automated smoke for the known-name natural prose cases that blocked the annotation checkpoint.
 - Keep branch scope narrow enough that each slice can be reverted cleanly if the UX direction changes.
 - Scratchpad quick access now exists on the main writing/canon/lore/review surfaces. The next scratchpad question is lightweight organization and capture flows, especially AI-to-Scratchpad, rather than basic availability.
 - UI shell is the active product priority again: reduce top-level navigation noise, keep Workspace first, move persistent utilities into shared page-header actions where they must remain visible, and avoid adding local utility bands or always-open panels.

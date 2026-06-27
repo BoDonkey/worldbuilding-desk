@@ -1,10 +1,10 @@
 # Character Canon Unification Smoke Test
 
-Last updated: 2026-06-22
+Last updated: 2026-06-27
 
 Purpose: verify that character canon now lives in `World Bible > Characters`, while `Character Tools`, sheets, and state tracking stay secondary.
 
-Status note: the core character-canon paths are now covered by automated smoke. Workspace review creates World Bible character canon first, workspace alias linking targets World Bible character records without duplicating Character Tools targets, and idle/deferred review candidates stay in the review drawer instead of adding noisy inline underlines. Continue treating new natural-prose false positives as annotation-policy work, not one-off regex patching.
+Status note: the core character-canon paths are now covered by automated smoke. Workspace review creates World Bible character canon first, workspace alias linking targets World Bible character records without duplicating Character Tools targets, idle/deferred review candidates stay in the review drawer instead of adding noisy inline underlines, and natural prose around known character canon no longer fragments into stray review highlights for the `Garcia deTerra` smoke cases. Continue treating new natural-prose false positives as annotation-policy work, not one-off regex patching.
 
 ## Preconditions
 
@@ -66,7 +66,7 @@ Status note: the core character-canon paths are now covered by automated smoke. 
 - `Needs Review` remains opt-in and does not open as a forced detour after alias linking.
 - Workspace -> World Bible -> Workspace preserves the selected scene.
 - Unlinked Character Tools profiles do not suppress workspace unknown-name review as canon.
-- Natural prose should not fragment known or unknown names into stray review highlights. Before marking this smoke path complete, verify cases like `It's Garcia deTerra`, `Detective Garcia deTerra`, and ordinary non-name sentence words.
+- Natural prose should not fragment known or unknown names into stray review highlights. Automated smoke now verifies `It's Garcia deTerra`, `Detective Garcia deTerra`, and ordinary sentence-start prose around the known canon record.
 
 ## Automated Checks To Run
 
@@ -82,5 +82,5 @@ Current expected warnings:
 
 ## Automated Coverage Notes
 
-- `lore-review-matching.cy.ts` covers primary Workspace -> World Bible character intake, alias preservation after canonical rename, workspace alias linking to World Bible character canon, duplicate Character Tools target suppression, and known-lore refresh after alias/canon changes.
+- `lore-review-matching.cy.ts` covers primary Workspace -> World Bible character intake, alias preservation after canonical rename, workspace alias linking to World Bible character canon, duplicate Character Tools target suppression, natural-prose annotation handling around known character canon, and known-lore refresh after alias/canon changes.
 - `project-mode-guardrails.cy.ts` covers general-fiction character route reduction, World Bible review-card density, direct short-name/full-name alias resolution, and review completion clearing.
