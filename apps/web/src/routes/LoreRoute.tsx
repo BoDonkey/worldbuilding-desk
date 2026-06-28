@@ -21,6 +21,7 @@ import {
   replaceLoreDocumentLinks,
   saveLoreDocument
 } from '../loreStorage';
+import {getDocumentsByProject} from '../writingStorage';
 import {parseLoreImport} from '../services/lore/loreImport';
 import {
   deleteCanonicalFact,
@@ -50,6 +51,10 @@ import type {
   MemoryEntry,
   ShodhMemoryProvider
 } from '../services/shodh/ShodhMemoryService';
+import {
+  rebuildProjectContextHealth,
+  type ContextHealthRebuildResult
+} from '../services/contextHealth/contextHealthRebuild';
 import {ProjectScratchpadButton} from '../components/ProjectScratchpadButton';
 import {PageHeader} from '../components/PageHeader';
 import styles from '../styles/LoreRoute.module.css';
@@ -121,6 +126,11 @@ function LoreRoute() {
   const [healthProbe, setHealthProbe] = useState('');
   const [healthProbeResults, setHealthProbeResults] = useState<RAGSearchResult[]>([]);
   const [healthProbeRunning, setHealthProbeRunning] = useState(false);
+  const [healthProbeSearched, setHealthProbeSearched] = useState(false);
+  const [healthRebuilding, setHealthRebuilding] = useState(false);
+  const [healthRebuildResult, setHealthRebuildResult] =
+    useState<ContextHealthRebuildResult | null>(null);
+  const [healthSourceSceneCount, setHealthSourceSceneCount] = useState(0);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [title, setTitle] = useState('');
   const [kind, setKind] = useState<LoreDocumentKind>('general_lore');
@@ -166,6 +176,9 @@ function LoreRoute() {
       setRagDiagnostics(null);
       setShodhMemories([]);
       setHealthProbeResults([]);
+      setHealthProbeSearched(false);
+      setHealthRebuildResult(null);
+      setHealthSourceSceneCount(0);
       return;
     }
 
@@ -179,6 +192,7 @@ function LoreRoute() {
         loadedEntityProposals,
         loadedProposals,
         loadedFacts,
+        loadedScenes,
         nextRagService,
         nextShodhService
       ] = await Promise.all([
@@ -189,6 +203,7 @@ function LoreRoute() {
         getLoreEntityProposalsByProject(activeProject.id),
         getLoreFactProposalsByProject(activeProject.id),
         getCanonicalFactsByProject(activeProject.id),
+        getDocumentsByProject(activeProject.id),
         getRAGService({
           projectId: activeProject.id,
           inheritFromParent: activeProject.inheritRag,
@@ -208,6 +223,7 @@ function LoreRoute() {
       setEntityProposals(loadedEntityProposals);
       setProposals(loadedProposals);
       setCanonicalFacts(loadedFacts);
+      setHealthSourceSceneCount(loadedScenes.length);
       setRagService(nextRagService);
       setShodhService(nextShodhService);
     };
@@ -221,6 +237,7 @@ function LoreRoute() {
     window.addEventListener('wbd:character-records-changed', handleChanged);
     window.addEventListener('wbd:entity-records-changed', handleChanged);
     window.addEventListener('wbd:alias-records-changed', handleChanged);
+    window.addEventListener('wbd:writing-records-changed', handleChanged);
 
     return () => {
       cancelled = true;
@@ -229,6 +246,7 @@ function LoreRoute() {
       window.removeEventListener('wbd:character-records-changed', handleChanged);
       window.removeEventListener('wbd:entity-records-changed', handleChanged);
       window.removeEventListener('wbd:alias-records-changed', handleChanged);
+      window.removeEventListener('wbd:writing-records-changed', handleChanged);
     };
   }, [activeProject]);
 
@@ -354,6 +372,33 @@ function LoreRoute() {
     () => (editingId ? canonicalFactsByDocumentId.get(editingId) ?? [] : []),
     [canonicalFactsByDocumentId, editingId]
   );
+
+  const contextStaleReasons = useMemo(() => {
+    if (!ragDiagnostics) return [];
+    const counts = ragDiagnostics.countsByType;
+    const reasons: string[] = [];
+    if (healthSourceSceneCount > 0 && counts.scene < healthSourceSceneCount) {
+      reasons.push('some saved scenes are missing from retrieval');
+    }
+    if (entities.length > 0 && counts.worldbible < entities.length) {
+      reasons.push('some World Bible records are missing from retrieval');
+    }
+    if (documents.length > 0 && counts.lore < documents.length) {
+      reasons.push('some Lore Documents are missing from retrieval');
+    }
+    if (canonicalFacts.length > 0 && counts.canon_fact < canonicalFacts.length) {
+      reasons.push('some accepted canon facts are missing from retrieval');
+    }
+    return reasons;
+  }, [
+    canonicalFacts.length,
+    documents.length,
+    entities.length,
+    healthSourceSceneCount,
+    ragDiagnostics
+  ]);
+
+  const contextMayNeedRebuild = contextStaleReasons.length > 0;
 
   const indexLoreDocument = async (document: LoreDocument, links: LoreDocumentLink[]) => {
     if (!ragService) return;
@@ -787,9 +832,11 @@ function LoreRoute() {
   const handleHealthProbe = async () => {
     if (!ragService || !healthProbe.trim()) {
       setHealthProbeResults([]);
+      setHealthProbeSearched(false);
       return;
     }
     setHealthProbeRunning(true);
+    setHealthProbeSearched(true);
     try {
       setHealthProbeResults(await ragService.search(healthProbe.trim(), 5));
     } catch (error) {
@@ -797,6 +844,101 @@ function LoreRoute() {
       setHealthProbeResults([]);
     } finally {
       setHealthProbeRunning(false);
+    }
+  };
+
+  const openHealthProbeResult = (result: RAGSearchResult) => {
+    const {chunk} = result;
+    if (chunk.metadata.type === 'scene') {
+      navigate('/workspace', {
+        state: {
+          focusDocumentId: chunk.documentId,
+          focusQuery: healthProbe.trim()
+        }
+      });
+      return;
+    }
+    if (chunk.metadata.type === 'worldbible') {
+      navigate('/world-bible', {state: {focusEntityId: chunk.documentId}});
+      return;
+    }
+    if (chunk.metadata.type === 'lore') {
+      const documentId = chunk.documentId.replace(/^lore:/, '');
+      const document = documents.find((entry) => entry.id === documentId);
+      if (document) {
+        beginEdit(document);
+        focusLoreEditor();
+      }
+      return;
+    }
+    if (chunk.metadata.type === 'canon_fact') {
+      const factId = chunk.documentId.replace(/^canon-fact:/, '');
+      const fact = canonicalFacts.find((entry) => entry.id === factId);
+      const document = fact?.loreDocumentId
+        ? documents.find((entry) => entry.id === fact.loreDocumentId)
+        : null;
+      if (document) {
+        beginEdit(document);
+        focusLoreEditor();
+      }
+    }
+  };
+
+  const canOpenHealthProbeResult = (result: RAGSearchResult) => {
+    const {chunk} = result;
+    if (chunk.metadata.type === 'scene' || chunk.metadata.type === 'worldbible') {
+      return true;
+    }
+    if (chunk.metadata.type === 'lore') {
+      const documentId = chunk.documentId.replace(/^lore:/, '');
+      return documents.some((entry) => entry.id === documentId);
+    }
+    if (chunk.metadata.type === 'canon_fact') {
+      const factId = chunk.documentId.replace(/^canon-fact:/, '');
+      const fact = canonicalFacts.find((entry) => entry.id === factId);
+      return Boolean(
+        fact?.loreDocumentId && documents.some((entry) => entry.id === fact.loreDocumentId)
+      );
+    }
+    return false;
+  };
+
+  const refreshProjectContextHealth = async () => {
+    if (!ragService || !shodhService) return;
+    const [diagnostics, memories] = await Promise.all([
+      ragService.getDiagnostics(),
+      shodhService.listMemories()
+    ]);
+    setRagDiagnostics(diagnostics);
+    setShodhMemories(memories);
+  };
+
+  const handleRebuildProjectContext = async () => {
+    if (!activeProject || !ragService || !shodhService || healthRebuilding) return;
+    setHealthRebuilding(true);
+    setFeedback(null);
+    try {
+      const result = await rebuildProjectContextHealth({
+        project: activeProject,
+        ragService,
+        shodhService
+      });
+      setHealthRebuildResult(result);
+      await refreshProjectContextHealth();
+      setFeedback({
+        tone: 'success',
+        message:
+          `Context rebuilt from source data: ${result.scenes} scene${result.scenes === 1 ? '' : 's'}, ` +
+          `${result.worldRecords} World Bible record${result.worldRecords === 1 ? '' : 's'}, ` +
+          `${result.loreDocuments} lore document${result.loreDocuments === 1 ? '' : 's'}, ` +
+          `${result.canonFacts} canon fact${result.canonFacts === 1 ? '' : 's'}.`
+      });
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'Unable to rebuild project context.';
+      setFeedback({tone: 'error', message});
+    } finally {
+      setHealthRebuilding(false);
     }
   };
 
@@ -1258,8 +1400,18 @@ function LoreRoute() {
               to the assistant context systems.
             </p>
           </div>
-          <span className={styles.statusBadge}>
-            {healthLoading ? 'Refreshing' : 'Current'}
+          <span
+            className={`${styles.statusBadge} ${
+              contextMayNeedRebuild ? styles.statusBadgeWarning : ''
+            }`}
+          >
+            {healthRebuilding
+              ? 'Rebuilding'
+              : healthLoading
+                ? 'Refreshing'
+                : contextMayNeedRebuild
+                  ? 'May need rebuild'
+                  : 'Current'}
           </span>
         </div>
 
@@ -1296,6 +1448,60 @@ function LoreRoute() {
           ))}
         </div>
 
+        <div
+          className={`${styles.healthGuidance} ${
+            contextMayNeedRebuild ? styles.healthGuidanceWarning : ''
+          }`}
+        >
+          <strong>
+            {contextMayNeedRebuild ? 'Context may be stale' : 'When to rebuild'}
+          </strong>
+          {contextMayNeedRebuild ? (
+            <p>
+              Rebuild because {contextStaleReasons.join(', ')}. This refreshes
+              derived context without changing saved story or canon records.
+            </p>
+          ) : (
+            <p>
+              Rebuild after importing or restoring a project, making large canon
+              changes, deleting many records, or when retrieval results look stale.
+            </p>
+          )}
+        </div>
+
+        <div className={styles.healthActions}>
+          <div>
+            <strong>Rebuild derived context</strong>
+            <p>
+              Refresh RAG from saved scenes, World Bible records, Lore Documents,
+              accepted canon facts, and rules. Shodh summaries are refreshed for
+              scenes, World Bible records, and rules.
+            </p>
+          </div>
+          <button
+            type='button'
+            onClick={handleRebuildProjectContext}
+            disabled={healthRebuilding || !ragService || !shodhService}
+          >
+            {healthRebuilding ? 'Rebuilding...' : 'Rebuild Context'}
+          </button>
+        </div>
+
+        {healthRebuildResult ? (
+          <div className={styles.healthRebuildSummary} role='status'>
+            Rebuilt {healthRebuildResult.scenes} scene
+            {healthRebuildResult.scenes === 1 ? '' : 's'}, {healthRebuildResult.worldRecords}{' '}
+            World Bible record
+            {healthRebuildResult.worldRecords === 1 ? '' : 's'}, {healthRebuildResult.loreDocuments}{' '}
+            lore document
+            {healthRebuildResult.loreDocuments === 1 ? '' : 's'}, {healthRebuildResult.canonFacts}{' '}
+            canon fact
+            {healthRebuildResult.canonFacts === 1 ? '' : 's'}, and {healthRebuildResult.rulesets}{' '}
+            ruleset
+            {healthRebuildResult.rulesets === 1 ? '' : 's'}.
+          </div>
+        ) : null}
+
         <form
           className={styles.healthProbe}
           onSubmit={(event) => {
@@ -1307,17 +1513,30 @@ function LoreRoute() {
             Probe retrieval
             <input
               value={healthProbe}
-              onChange={(event) => setHealthProbe(event.target.value)}
+              onChange={(event) => {
+                setHealthProbe(event.target.value);
+                setHealthProbeSearched(false);
+              }}
               placeholder='Try a character, place, alias, or lore phrase'
             />
           </label>
           <button type='submit' disabled={healthProbeRunning || !healthProbe.trim()}>
-            {healthProbeRunning ? 'Searching...' : 'Search Context'}
+            {healthProbeRunning ? 'Running...' : 'Run Probe'}
           </button>
         </form>
+        <p className={styles.healthProbeHint}>
+          Shows up to 5 indexed chunks to test retrieval health. If expected material is
+          missing, rebuild context first; if it is still missing, confirm the source was
+          saved, accepted into canon, or indexed by the relevant workflow.
+        </p>
 
         {healthProbeResults.length > 0 ? (
           <div className={styles.healthResults}>
+            <p className={styles.healthResultSummary}>
+              Showing {healthProbeResults.length} indexed context chunk
+              {healthProbeResults.length === 1 ? '' : 's'}. Multiple chunks can come from
+              the same source.
+            </p>
             {healthProbeResults.map((result) => (
               <article key={result.chunk.id} className={styles.healthResult}>
                 <div>
@@ -1325,9 +1544,23 @@ function LoreRoute() {
                   <span>{result.chunk.metadata.type.replace(/_/g, ' ')}</span>
                 </div>
                 <p>{summarizeContent(result.chunk.content, 180)}</p>
+                {canOpenHealthProbeResult(result) ? (
+                  <button
+                    type='button'
+                    className={styles.healthResultAction}
+                    onClick={() => openHealthProbeResult(result)}
+                  >
+                    Open Source
+                  </button>
+                ) : null}
               </article>
             ))}
           </div>
+        ) : healthProbeSearched && !healthProbeRunning ? (
+          <p className={styles.healthNoResults} role='status'>
+            No matching indexed context found. Rebuild if the phrase exists in saved
+            source material; otherwise save or accept the source content before probing again.
+          </p>
         ) : null}
       </section>
     </section>

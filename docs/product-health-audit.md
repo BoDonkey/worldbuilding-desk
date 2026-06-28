@@ -58,17 +58,19 @@ What exists:
 Current diagnostics:
 
 - Lore Documents now shows RAG document/chunk counts, counts by indexed document type, and a retrieval probe powered by `RAGService.search(...)`.
+- Lore Documents now includes an explicit rebuild action that refreshes RAG from saved scenes, World Bible records, Lore Documents, accepted canon facts, and rulesets.
+- The health panel shows when to rebuild and only switches to `May need rebuild` when source data counts are greater than indexed RAG counts, keeping the warning local to the diagnostic surface.
+- Retrieval probes now require lexical evidence when vector scores are tied, avoiding unrelated fallback results for named searches. The probe is explicitly framed as a capped health diagnostic that shows up to five indexed chunks, and hits can open their source scene, Lore Document, World Bible record, or source Lore Document for accepted facts.
 
 Risks:
 
-- There is no in-app way to inspect whether RAG is populated, stale, or missing document types.
 - Dev and Cypress use a deterministic one-dimensional embedding fallback, so local smoke can prove indexing calls happen but not prove useful semantic retrieval quality.
 - Production falls back to lightweight local embeddings if the transformer model fails, but there is no visible warning or health state for the author.
 - Backup/export includes primary project data, but RAG is derived auxiliary storage and is not the source of truth.
 
 Recommended next feature slice:
 
-- Add a rebuild action from source project data if the health panel exposes stale or missing index coverage during manual audit.
+- Use realistic author material to verify that rebuild makes stale/missing RAG coverage visible and recoverable before adding more diagnostics.
 
 ## Shodh Memory Health
 
@@ -91,6 +93,7 @@ Gaps:
 Current diagnostics:
 
 - Lore Documents now shows Shodh memory counts and local-memory counts alongside RAG diagnostics.
+- The context rebuild action refreshes Shodh summaries for saved scenes, World Bible records, and rulesets, matching the current automatic capture paths.
 
 Recommended next feature slice:
 
@@ -114,7 +117,7 @@ Gaps:
 - Relationships, heritage, goals, traits, abilities, and appearance now surface as accepted facts on the character health panel, but they are not yet grouped into a richer character-detail reading view.
 - Character Tools still show only a small subset of detail fields in list cards, so accepted character facts can feel hidden unless the author knows where to look.
 - Cross-chapter consistency for character details beyond names/simple assertions still needs real author-material evaluation.
-- The new health panel surfaces current evidence, but it does not yet explain stale or missing RAG/Shodh coverage or provide rebuild actions.
+- The new health panel surfaces current evidence, but it does not yet explain which specific assistant answer used which RAG/Shodh evidence.
 
 Current diagnostics:
 
@@ -122,7 +125,7 @@ Current diagnostics:
 
 Recommended next feature slice:
 
-- Use the Lore Documents health panel and Character detail health panel to manually audit a realistic imported lore set across import, extraction, accepted facts, assistant context, chapter drafting, and review. Add a rebuild action from source project data if stale/missing RAG coverage appears.
+- Use the Lore Documents health panel, context rebuild action, and Character detail health panel to manually audit a realistic imported lore set across import, extraction, accepted facts, assistant context, chapter drafting, and review.
 
 ## Documentation Health
 
