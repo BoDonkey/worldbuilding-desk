@@ -18,6 +18,13 @@ interface NavItem {
   icon: string;
   end?: boolean;
   badgeCount?: number;
+  activePath?: string;
+  activeSearch?: string;
+}
+
+interface NavSection {
+  label: string;
+  items: NavItem[];
 }
 
 interface WorkspaceScrollSnapshot {
@@ -86,28 +93,45 @@ export const Navigation: FC<NavigationProps> = ({
     []
   );
 
-  const secondaryNavItems = useMemo<NavItem[]>(
-    () => [
+  const secondaryNavSections = useMemo<NavSection[]>(() => {
+    const planningItems: NavItem[] = [
       {to: '/canon-decisions', label: 'Canon Review', icon: 'CR'},
-      {to: '/corkboard', label: 'Corkboard', icon: 'CB'},
+      {to: '/corkboard', label: 'Corkboard', icon: 'CB'}
+    ];
+    const systemsItems: NavItem[] = [
       ...(capabilities.canUseRuleAuthoring
-        ? [{to: '/ruleset', label: 'Ruleset', icon: 'RS'}]
+        ? [
+          {to: '/ruleset', label: 'Rules', icon: 'RL'},
+          {
+            to: '/characters?view=sheets',
+            label: 'Sheets',
+            icon: 'SH',
+            activePath: '/characters',
+            activeSearch: '?view=sheets'
+          }
+        ]
         : []),
       ...(capabilities.canUseGameSystems
-        ? [{to: '/compendium', label: 'Compendium', icon: 'CP', badgeCount: compendiumPendingCount}]
-        : []),
-      {to: '/settings', label: 'Settings', icon: 'ST'}
-    ],
-    [
-      capabilities.canUseGameSystems,
-      capabilities.canUseRuleAuthoring,
-      compendiumPendingCount
-    ]
-  );
+        ? [{to: '/compendium', label: 'Mechanics', icon: 'MX', badgeCount: compendiumPendingCount}]
+        : [])
+    ];
+    const sections: NavSection[] = [
+      {label: 'Planning', items: planningItems}
+    ];
+    if (systemsItems.length > 0) {
+      sections.push({label: 'Systems', items: systemsItems});
+    }
+    sections.push({label: 'App', items: [{to: '/settings', label: 'Settings', icon: 'ST'}]});
+    return sections;
+  }, [
+    capabilities.canUseGameSystems,
+    capabilities.canUseRuleAuthoring,
+    compendiumPendingCount
+  ]);
 
-  const navItems = useMemo<NavItem[]>(
-    () => [...primaryNavItems, ...secondaryNavItems],
-    [primaryNavItems, secondaryNavItems]
+  const secondaryNavItems = useMemo<NavItem[]>(
+    () => secondaryNavSections.flatMap((section) => section.items),
+    [secondaryNavSections]
   );
 
   const secondaryBadgeCount = useMemo(
@@ -115,7 +139,13 @@ export const Navigation: FC<NavigationProps> = ({
     [secondaryNavItems]
   );
 
-  const isSecondaryRouteActive = secondaryNavItems.some((item) => location.pathname === item.to);
+  const isNavItemActive = useCallback((item: NavItem) => {
+    const matchesPath = location.pathname === (item.activePath ?? item.to);
+    if (!matchesPath) return false;
+    return item.activeSearch ? location.search === item.activeSearch : true;
+  }, [location.pathname, location.search]);
+
+  const isSecondaryRouteActive = secondaryNavItems.some(isNavItemActive);
 
   const mobileBarItems = useMemo(
     () => primaryNavItems,
@@ -211,25 +241,32 @@ export const Navigation: FC<NavigationProps> = ({
               {isSecondaryMenuOpen ? (
                 <div className={styles.secondaryMenu} role='menu'>
                   <div className={styles.secondaryMenuLabel}>More</div>
-                  {secondaryNavItems.map((item) => (
-                    <NavLink
-                      key={`secondary-${item.to}`}
-                      to={item.to}
-                      end={item.end}
-                      title={item.label}
-                      onMouseDownCapture={captureRouteScroll}
-                      onClickCapture={captureRouteScroll}
-                      className={({isActive}) =>
-                        `${styles.secondaryMenuLink} ${isActive ? styles.active : ''}`
-                      }
-                      role='menuitem'
-                    >
-                      <span className={styles.secondaryMenuIcon}>{item.icon}</span>
-                      <span>{item.label}</span>
-                      {item.badgeCount ? (
-                        <span className={styles.mobileMenuBadge}>{item.badgeCount}</span>
-                      ) : null}
-                    </NavLink>
+                  {secondaryNavSections.map((section) => (
+                    <div key={section.label} className={styles.secondaryMenuSection}>
+                      <div className={styles.secondaryMenuSectionLabel}>{section.label}</div>
+                      {section.items.map((item) => (
+                        <NavLink
+                          key={`secondary-${item.to}`}
+                          to={item.to}
+                          end={item.end}
+                          title={item.label}
+                          onMouseDownCapture={captureRouteScroll}
+                          onClickCapture={captureRouteScroll}
+                          className={({isActive}) =>
+                            `${styles.secondaryMenuLink} ${
+                              isActive || isNavItemActive(item) ? styles.active : ''
+                            }`
+                          }
+                          role='menuitem'
+                        >
+                          <span className={styles.secondaryMenuIcon}>{item.icon}</span>
+                          <span>{item.label}</span>
+                          {item.badgeCount ? (
+                            <span className={styles.mobileMenuBadge}>{item.badgeCount}</span>
+                          ) : null}
+                        </NavLink>
+                      ))}
+                    </div>
                   ))}
                 </div>
               ) : null}
@@ -318,9 +355,9 @@ export const Navigation: FC<NavigationProps> = ({
                 <span>Search scenes and canon records</span>
                 <span className={styles.mobileMenuActionMeta}>Cmd/Ctrl+K</span>
               </button>
-              {navItems.map((item) => (
+              {primaryNavItems.map((item) => (
                 <NavLink
-                  key={`mobile-${item.to}`}
+                  key={`mobile-primary-${item.to}`}
                   to={item.to}
                   end={item.end}
                   onMouseDownCapture={captureRouteScroll}
@@ -334,6 +371,30 @@ export const Navigation: FC<NavigationProps> = ({
                     <span className={styles.mobileMenuBadge}>{item.badgeCount}</span>
                   ) : null}
                 </NavLink>
+              ))}
+              {secondaryNavSections.map((section) => (
+                <div key={`mobile-section-${section.label}`} className={styles.mobileMenuSection}>
+                  <div className={styles.mobileMenuSectionLabel}>{section.label}</div>
+                  {section.items.map((item) => (
+                    <NavLink
+                      key={`mobile-${item.to}`}
+                      to={item.to}
+                      end={item.end}
+                      onMouseDownCapture={captureRouteScroll}
+                      onClickCapture={captureRouteScroll}
+                      className={({isActive}) =>
+                        `${styles.mobileMenuLink} ${
+                          isActive || isNavItemActive(item) ? styles.active : ''
+                        }`
+                      }
+                    >
+                      {item.label}
+                      {item.badgeCount ? (
+                        <span className={styles.mobileMenuBadge}>{item.badgeCount}</span>
+                      ) : null}
+                    </NavLink>
+                  ))}
+                </div>
               ))}
             </div>
             <div className={styles.mobileMenuMeta}>

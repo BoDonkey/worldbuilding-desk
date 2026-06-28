@@ -162,6 +162,7 @@ Implemented recently:
 - The background review path is only worth keeping if it remains bounded: proposal-only, local-first, and subordinate to deterministic validation. Avoid broadening it into an unbounded “project manager AI.”
 - Lore/canon reminder: freeform lore documents are author-facing source material, extracted entity/fact proposals are candidates, and only accepted anchors plus accepted canonical facts count as source-of-truth canon.
 - Canon-decision AI reminder: the LLM may explain tradeoffs, overlaps, and risks, but it must not silently mutate canon state. Canon-decision consultation is explicit and provider-controlled.
+- Optional systems navigation checkpoint: LitRPG/progression mechanics are a product differentiator, but existing `Ruleset`, mechanics/compendium, sheets/state, and settlement surfaces should stay grouped and gated as an optional systems cluster instead of becoming default peer tabs. Use `docs/optional-systems-navigation-audit.md` for the current implementation state and smoke handoff.
 
 ## 00) Product Health And Docs Source Of Truth
 

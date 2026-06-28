@@ -226,9 +226,9 @@ const MEMORIES_PER_PAGE = 5;
 
 const CONTEXT_DRAWER_TABS: Array<{id: WorkspaceContextDrawerView; label: string}> = [
   {id: 'world-bible', label: 'World Bible'},
-  {id: 'ruleset', label: 'Ruleset'},
+  {id: 'ruleset', label: 'Rules'},
   {id: 'characters', label: 'Character Tools'},
-  {id: 'compendium', label: 'Compendium'},
+  {id: 'compendium', label: 'Mechanics'},
   {id: 'review', label: 'Review'},
   {id: 'scratchpad', label: 'Scratchpad'},
   {id: 'ai', label: 'AI'},

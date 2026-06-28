@@ -106,6 +106,7 @@ Under the hood, the app still includes rich systems for world data, rules, chara
 - Ruleset builder and runtime stat/resource evaluation.
 - Settlement progression, synergy logic, and compendium systems.
 - Character/runtime previews for effective stat and resource values.
+- Current IA decision: keep these as optional, project-mode-gated systems attached to writing and canon workflows. Existing rules, mechanics, sheets/state, and settlement surfaces now group under optional systems navigation before any new mechanics depth is added.
 
 ---
 

@@ -1,6 +1,6 @@
 # Navigation Simplification Roadmap
 
-Last updated: 2026-06-03
+Last updated: 2026-06-28
 
 ## Purpose
 
@@ -78,6 +78,10 @@ Do not do in this roadmap:
 - new AI workflows beyond necessary relabeling unless a selected slice explicitly generalizes the existing author-invoked Cast draft flow for other World Bible categories
 - deep ruleset redesign
 - large editor-shell rearchitecture not required for the tab simplification
+
+Related optional-systems checkpoint:
+
+- [optional-systems-navigation-audit.md](/Volumes/T7/Development/worldbuilding-desk/docs/optional-systems-navigation-audit.md) records the current decision for LitRPG/mechanics exposure: keep `Workspace`, `World Bible`, and `Lore Docs` as the primary writing/canon surfaces, and make rules, mechanics, sheets/state, and settlement systems a mode-gated secondary cluster rather than peer defaults.
 
 ## Execution Order
 

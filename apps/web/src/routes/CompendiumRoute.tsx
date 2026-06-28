@@ -125,7 +125,7 @@ const COMPENDIUM_TABS: Array<{
   {
     id: 'entries',
     label: 'Entries',
-    subtitle: 'Create/import entries and record compendium actions.'
+    subtitle: 'Create/import mechanics entries and record progression actions.'
   },
   {
     id: 'progression',
@@ -1244,7 +1244,7 @@ function CompendiumRoute() {
   if (!activeProject) {
     return (
       <section>
-        <h1>Compendium</h1>
+        <h1>Mechanics</h1>
         <p>
           No active project. Go to <strong>Projects</strong> to create or open a
           project first.
@@ -1256,7 +1256,7 @@ function CompendiumRoute() {
   if (!enableGameSystems) {
     return (
       <section>
-        <h1>Compendium</h1>
+        <h1>Mechanics</h1>
         <p>
           Mechanics are hidden because <strong>Enable Game Systems</strong> is
           turned off for this project.
@@ -1470,7 +1470,7 @@ function CompendiumRoute() {
   const CompendiumEntriesSection = () => (
     <>
       <p style={{marginTop: 0, marginBottom: '0.9rem', color: 'var(--color-text-secondary)'}}>
-        Create new compendium records or import from World Bible, then log actions
+        Create new mechanics records or import from World Bible, then log actions
         from each entry card.
       </p>
       <section
@@ -1663,7 +1663,7 @@ function CompendiumRoute() {
               <div>
                 <strong>Review Queue</strong>
                 <div style={{fontSize: '0.84rem', color: 'var(--color-text-secondary)', marginTop: '0.25rem'}}>
-                  Finish imported or placeholder entries before treating the compendium as
+                  Finish imported or placeholder entries before treating mechanics as
                   complete.
                 </div>
               </div>
@@ -1736,7 +1736,7 @@ function CompendiumRoute() {
             }}
           >
             <p style={{marginTop: 0, marginBottom: '0.6rem'}}>
-              No compendium entries yet.
+              No mechanics entries yet.
             </p>
             <div style={{display: 'flex', gap: '0.5rem', flexWrap: 'wrap'}}>
               <button
@@ -2915,7 +2915,7 @@ function CompendiumRoute() {
 
   return (
     <section>
-      <h1>Compendium</h1>
+      <h1>Mechanics</h1>
       {feedback && (
         <p
           role='status'
