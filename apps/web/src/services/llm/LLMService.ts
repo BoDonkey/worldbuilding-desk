@@ -6,6 +6,7 @@ import {OllamaProvider} from './providers/ollama';
 import {GeminiProvider} from './providers/gemini';
 import {llmCache} from './LLMCache';
 import {
+  DEFAULT_AI_PROVIDER,
   PROVIDER_DEFAULT_BASE_URLS,
   PROVIDER_FALLBACK_MODELS
 } from './providerConfig';
@@ -120,7 +121,7 @@ export class LLMService {
   }
 
   private resolveProviderCredentials(settings?: ProjectAISettings): ProviderCredentials {
-    const providerId: AIProviderId = settings?.provider ?? 'anthropic';
+    const providerId: AIProviderId = settings?.provider ?? DEFAULT_AI_PROVIDER;
 
     switch (providerId) {
       case 'anthropic': {

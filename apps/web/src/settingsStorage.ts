@@ -13,44 +13,13 @@ import { openDb, SETTINGS_STORE_NAME } from './db';
 import {getDefaultFeatureToggles, normalizeFeatureToggles} from './projectMode';
 import {getProjectById} from './projectStorage';
 import {
+  DEFAULT_AI_PROVIDER,
   PROVIDER_DEFAULT_BASE_URLS,
   PROVIDER_FALLBACK_MODELS,
   normalizeConfiguredModel
 } from './services/llm/providerConfig';
 
-const DEFAULT_AI_SETTINGS: ProjectAISettings = {
-  provider: 'anthropic',
-  configs: {
-    anthropic: {
-      model: PROVIDER_FALLBACK_MODELS.anthropic
-    },
-    openai: {
-      model: PROVIDER_FALLBACK_MODELS.openai
-    },
-    gemini: {
-      model: PROVIDER_FALLBACK_MODELS.gemini
-    },
-    ollama: {
-      baseUrl: PROVIDER_DEFAULT_BASE_URLS.ollama
-    }
-  },
-  promptTools: [],
-  defaultToolIds: [],
-  defaultToolIdsByMode: {
-    litrpg: [],
-    game: [],
-    general: []
-  },
-  inspectorSettings: {
-    enableAIConsultation: true,
-    reviewEngineMode: 'deterministic',
-    canonDecisionProviderMode: 'project-provider',
-    maxConsultationsPerDay: 20,
-    maxContextChars: 1800,
-    maxResponseTokens: 500,
-    lowCostModel: ''
-  }
-};
+const LAST_AI_PROVIDER_STORAGE_KEY = 'wbd:ai:last-provider';
 
 const DEFAULT_INSPECTOR_SETTINGS: InspectorSettings = {
   enableAIConsultation: true,
@@ -81,6 +50,62 @@ const DEFAULT_EDITOR_FEEDBACK: EditorFeedbackSettings = {
 };
 const DEFAULT_IMPORT_MODE: WorkspaceImportMode = 'balanced';
 const DEFAULT_SKIP_IMPORT_SUGGESTIONS = false;
+
+function isAIProviderId(value: unknown): value is ProjectAISettings['provider'] {
+  return (
+    value === 'anthropic' ||
+    value === 'openai' ||
+    value === 'gemini' ||
+    value === 'ollama'
+  );
+}
+
+export function rememberDefaultAIProvider(provider: ProjectAISettings['provider']): void {
+  if (typeof localStorage === 'undefined') return;
+  try {
+    localStorage.setItem(LAST_AI_PROVIDER_STORAGE_KEY, provider);
+  } catch {
+    // Provider preference is a convenience; failed storage should not block saves.
+  }
+}
+
+export function getDefaultAIProvider(): ProjectAISettings['provider'] {
+  if (typeof localStorage === 'undefined') return DEFAULT_AI_PROVIDER;
+  try {
+    const stored = localStorage.getItem(LAST_AI_PROVIDER_STORAGE_KEY);
+    return isAIProviderId(stored) ? stored : DEFAULT_AI_PROVIDER;
+  } catch {
+    return DEFAULT_AI_PROVIDER;
+  }
+}
+
+export function createDefaultAISettings(): ProjectAISettings {
+  return {
+    provider: getDefaultAIProvider(),
+    configs: {
+      anthropic: {
+        model: PROVIDER_FALLBACK_MODELS.anthropic
+      },
+      openai: {
+        model: PROVIDER_FALLBACK_MODELS.openai
+      },
+      gemini: {
+        model: PROVIDER_FALLBACK_MODELS.gemini
+      },
+      ollama: {
+        baseUrl: PROVIDER_DEFAULT_BASE_URLS.ollama
+      }
+    },
+    promptTools: [],
+    defaultToolIds: [],
+    defaultToolIdsByMode: {
+      litrpg: [],
+      game: [],
+      general: []
+    },
+    inspectorSettings: {...DEFAULT_INSPECTOR_SETTINGS}
+  };
+}
 
 function normalizeStatBlockGroups(groups: StatBlockGroup[] | undefined): StatBlockGroup[] {
   if (!Array.isArray(groups)) return [];
@@ -128,11 +153,11 @@ function normalizeIgnoredEntityMatchKeys(keys: string[] | undefined): string[] {
 
 function ensureAISettings(settings: ProjectSettings): ProjectSettings {
   const aiSettings: ProjectAISettings = {
-    ...(settings.aiSettings ?? {...DEFAULT_AI_SETTINGS})
+    ...(settings.aiSettings ?? createDefaultAISettings())
   };
 
   aiSettings.configs = {
-    ...DEFAULT_AI_SETTINGS.configs,
+    ...createDefaultAISettings().configs,
     ...(aiSettings.configs ?? {})
   };
   aiSettings.configs = {
@@ -290,13 +315,15 @@ export async function getProjectSettings(projectId: string): Promise<ProjectSett
 
 export async function saveProjectSettings(settings: ProjectSettings): Promise<void> {
   const db = await openDb();
+  const normalizedSettings = ensureAISettings(settings);
 
   return new Promise((resolve, reject) => {
     const tx = db.transaction(SETTINGS_STORE_NAME, 'readwrite');
     const store = tx.objectStore(SETTINGS_STORE_NAME);
-    const request = store.put(settings);
+    const request = store.put(normalizedSettings);
 
     request.onsuccess = () => {
+      rememberDefaultAIProvider(normalizedSettings.aiSettings.provider);
       resolve();
     };
 
@@ -312,7 +339,7 @@ export async function createDefaultSettings(projectId: string): Promise<ProjectS
     id: crypto.randomUUID(),
     projectId,
     characterStyles: [],
-    aiSettings: {...DEFAULT_AI_SETTINGS},
+    aiSettings: createDefaultAISettings(),
     consistencyActionCues: [...DEFAULT_CONSISTENCY_ACTION_CUES],
     ignoredUnknownSurfaces: [...DEFAULT_IGNORED_UNKNOWN_SURFACES],
     ignoredEntityMatchKeys: [...DEFAULT_IGNORED_ENTITY_MATCH_KEYS],

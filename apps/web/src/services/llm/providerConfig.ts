@@ -1,5 +1,7 @@
 import type {AIProviderId} from '../../entityTypes';
 
+export const DEFAULT_AI_PROVIDER: AIProviderId = 'ollama';
+
 export const PROVIDER_FALLBACK_MODELS: Partial<Record<AIProviderId, string>> = {
   anthropic: 'claude-sonnet-4-20250514',
   openai: 'gpt-4o-mini',
