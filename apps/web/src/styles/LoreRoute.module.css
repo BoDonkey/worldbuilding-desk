@@ -211,6 +211,70 @@
   font-weight: 700;
 }
 
+.healthGuidance {
+  display: grid;
+  gap: 0.25rem;
+  padding: 0.75rem 0.85rem;
+  border: 1px solid var(--surface-border-soft);
+  border-radius: 14px;
+  background: var(--surface-panel-elevated);
+}
+
+.healthGuidance strong {
+  color: var(--color-text-primary);
+}
+
+.healthGuidance p {
+  margin: 0;
+  color: var(--color-text-secondary);
+  line-height: 1.4;
+}
+
+.healthGuidanceWarning {
+  border-color: var(--color-warning-soft-border);
+  background: var(--color-warning-soft-bg);
+}
+
+.healthGuidanceWarning strong,
+.healthGuidanceWarning p {
+  color: var(--color-warning-soft-text);
+}
+
+.healthActions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.85rem;
+  border: 1px solid var(--surface-border-soft);
+  border-radius: 14px;
+  background: var(--surface-panel-elevated);
+}
+
+.healthActions strong {
+  display: block;
+  margin-bottom: 0.25rem;
+}
+
+.healthActions p {
+  margin: 0;
+  color: var(--color-text-secondary);
+  line-height: 1.4;
+}
+
+.healthActions button {
+  flex: 0 0 auto;
+}
+
+.healthRebuildSummary {
+  padding: 0.65rem 0.8rem;
+  border: 1px solid var(--color-accent-soft-border);
+  border-radius: 12px;
+  background: var(--color-accent-soft-bg);
+  color: var(--color-accent-soft-text);
+  font-weight: 700;
+}
+
 .healthProbe {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
@@ -228,9 +292,23 @@
   width: 100%;
 }
 
+.healthProbeHint {
+  margin: -0.25rem 0 0;
+  color: var(--color-text-secondary);
+  font-size: 0.86rem;
+  line-height: 1.4;
+}
+
 .healthResults {
   display: grid;
   gap: 0.6rem;
+}
+
+.healthResultSummary {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: 0.86rem;
+  line-height: 1.4;
 }
 
 .healthResult {
@@ -257,6 +335,27 @@
 
 .healthResult p {
   margin: 0;
+  color: var(--color-text-secondary);
+  line-height: 1.4;
+}
+
+.healthResultAction {
+  justify-self: start;
+  border-color: var(--button-secondary-border);
+  background: var(--button-secondary-bg);
+  color: var(--button-secondary-text);
+}
+
+.healthResultAction:hover {
+  background: var(--button-secondary-bg-hover);
+}
+
+.healthNoResults {
+  margin: 0;
+  padding: 0.75rem 0.85rem;
+  border: 1px solid var(--surface-border-soft);
+  border-radius: 12px;
+  background: var(--surface-panel-elevated);
   color: var(--color-text-secondary);
   line-height: 1.4;
 }
@@ -486,6 +585,12 @@
   text-transform: capitalize;
 }
 
+.statusBadgeWarning {
+  border: 1px solid var(--color-warning-soft-border);
+  background: var(--color-warning-soft-bg);
+  color: var(--color-warning-soft-text);
+}
+
 .linkBadges {
   display: flex;
   gap: 0.45rem;
@@ -534,6 +639,7 @@
   }
 
   .healthHeader,
+  .healthActions,
   .healthResult div {
     flex-direction: column;
     align-items: flex-start;

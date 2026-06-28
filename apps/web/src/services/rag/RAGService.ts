@@ -119,12 +119,28 @@ export class RAGService implements RAGProvider {
     const queryEmbedding = await this.getEmbedding(query);
     const allChunks = await this.requireDb().getAll('chunks');
 
-    return allChunks
+    const ranked = allChunks
       .map((chunk) => ({
         chunk,
-        score: this.cosineSimilarity(queryEmbedding, chunk.embedding!)
+        score: this.cosineSimilarity(queryEmbedding, chunk.embedding!),
+        lexicalScore: getLexicalSearchScore(query, `${chunk.documentTitle}\n${chunk.content}`)
       }))
-      .sort((a, b) => b.score - a.score)
+      .map((result) => ({
+        chunk: result.chunk,
+        score: result.score + result.lexicalScore
+      }))
+      .sort((a, b) => b.score - a.score);
+    const lexicalMatches = ranked.filter((result) =>
+      getLexicalSearchScore(query, `${result.chunk.documentTitle}\n${result.chunk.content}`) > 0
+    );
+    const hasMeaningfulVectorRanking = ranked.some(
+      (result) => Math.abs(result.score - ranked[0]!.score) > 0.000001
+    );
+    if (lexicalMatches.length === 0 && !hasMeaningfulVectorRanking) {
+      return [];
+    }
+
+    return (lexicalMatches.length > 0 ? lexicalMatches : ranked)
       .slice(0, limit);
   }
 
@@ -250,6 +266,42 @@ export class RAGService implements RAGProvider {
     }
     return this.db;
   }
+}
+
+export function getLexicalSearchScore(query: string, content: string): number {
+  const normalizedQuery = normalizeSearchText(query);
+  if (!normalizedQuery) return 0;
+  const normalizedContent = normalizeSearchText(content);
+  const terms = tokenizeSearchText(normalizedQuery);
+  const contentTerms = tokenizeSearchText(normalizedContent);
+  const contentTermSet = new Set(contentTerms);
+  if (terms.length === 0) return 0;
+
+  let score = containsTokenPhrase(contentTerms, terms) ? 4 : 0;
+  for (const term of terms) {
+    if (contentTermSet.has(term)) {
+      score += 1;
+    }
+  }
+  return score / terms.length;
+}
+
+function normalizeSearchText(value: string): string {
+  return value.toLowerCase().replace(/[^a-z0-9]+/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
+function tokenizeSearchText(value: string): string[] {
+  return value.split(' ').filter((term) => term.length >= 3);
+}
+
+function containsTokenPhrase(contentTerms: string[], queryTerms: string[]): boolean {
+  if (queryTerms.length === 0 || queryTerms.length > contentTerms.length) return false;
+  for (let index = 0; index <= contentTerms.length - queryTerms.length; index += 1) {
+    if (queryTerms.every((term, termIndex) => contentTerms[index + termIndex] === term)) {
+      return true;
+    }
+  }
+  return false;
 }
 
 export class CompositeRAGService implements RAGProvider {

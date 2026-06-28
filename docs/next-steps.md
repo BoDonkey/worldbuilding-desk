@@ -173,10 +173,12 @@ Status:
 - Current docs authority map captured in `docs/README.md`.
 - Lore Documents now includes a project context health panel with RAG counts, indexed document type counts, Shodh memory counts, and a retrieval probe.
 - World Bible character records now include a selected-character health panel for aliases, accepted facts, linked Lore Documents, scene mentions, Shodh memories, RAG probe hits, and state events.
+- Lore Documents now has an explicit context rebuild action that refreshes RAG from saved scenes, World Bible records, Lore Documents, accepted canon facts, and rulesets, while refreshing Shodh summaries for scenes, World Bible records, and rulesets.
+- The rebuild action stays local to the health panel: it shows author guidance and a quiet `May need rebuild` state only when source counts exceed indexed RAG counts, avoiding app-wide badge noise.
 
 Next implementation slices:
 
-1. Use the Lore Documents health panel and Character detail health panel to manually audit a realistic imported lore set, then add a rebuild action from source project data if stale/missing RAG coverage appears.
+1. Use the Lore Documents health panel, context rebuild action, and Character detail health panel to manually audit a realistic imported lore set across import, extraction, accepted facts, assistant context, chapter drafting, and review.
 2. Add assistant context provenance so Shodh memories and RAG chunks used in an answer are visible.
 3. After those product-health surfaces exist, archive or demote stale top-level docs that are not listed as active in `docs/README.md`.
 
