@@ -6,9 +6,9 @@ Purpose: reset the next work away from accumulating smoke tests and toward the p
 
 ## Summary
 
-The current codebase has more lore infrastructure than the UI currently proves. Lore Documents can import, save, extract entity/fact proposals, accept facts, create/link World Bible records, and feed Canon Decisions. RAG indexes scenes, World Bible records, Lore Documents, rules, and accepted canon facts. Shodh memory captures scene, World Bible, and ruleset summaries, but not Lore Documents or accepted canon facts. Character consistency is currently strongest for names, aliases, age, occupation, and simple contradictions; richer character details such as relationships, goals, heritage, traits, and evolving state are present as accepted facts or state events but are not yet a coherent author-facing character-detail experience.
+The current codebase has more lore infrastructure than the UI currently proves. Lore Documents can import, save, extract entity/fact proposals, accept facts, create/link World Bible records, and feed Canon Decisions. RAG indexes scenes, World Bible records, Lore Documents, rules, and accepted canon facts. Shodh memory captures scene, World Bible, and ruleset summaries, but not Lore Documents or accepted canon facts. Character consistency is currently strongest for names, aliases, age, occupation, and simple contradictions; richer character details such as relationships, goals, heritage, traits, and evolving state now have a selected-character diagnostic surface, but still need realistic cross-chapter evaluation.
 
-The first product-health slice is now implemented on Lore Documents: the route exposes RAG document/chunk counts, indexed document type counts, Shodh memory counts, project data counts, and a retrieval probe.
+The first product-health slices are now implemented on Lore Documents and World Bible character records: Lore Documents exposes RAG document/chunk counts, indexed document type counts, Shodh memory counts, project data counts, and a retrieval probe; World Bible character records expose aliases, accepted facts, linked Lore Documents, scene mentions, Shodh memories, state events, and explicit RAG probe hits for the selected character.
 
 ## Current Source Of Truth
 
@@ -107,17 +107,22 @@ What exists:
 - Accepted alias facts create consistency aliases.
 - Workspace contradiction review can compare simple assertions like `Name is descriptor` against accepted facts and record fields.
 - State mutation ledger/replay can track accepted scene-scoped state changes for rules-heavy character state.
+- World Bible character records now include a selected-character health panel that shows aliases, accepted facts, linked Lore Documents, scene mentions across writing documents, Shodh memories tied to the record, state events, and explicit RAG probe hits.
 
 Gaps:
 
-- Relationships, heritage, goals, traits, abilities, and appearance can become accepted canon facts, but they do not yet become an obvious character-detail surface.
+- Relationships, heritage, goals, traits, abilities, and appearance now surface as accepted facts on the character health panel, but they are not yet grouped into a richer character-detail reading view.
 - Character Tools still show only a small subset of detail fields in list cards, so accepted character facts can feel hidden unless the author knows where to look.
-- There is no single character consistency view that answers: "What does the app currently believe about this character across chapters, Lore Documents, World Bible, and state?"
 - Cross-chapter consistency for character details beyond names/simple assertions still needs real author-material evaluation.
+- The new health panel surfaces current evidence, but it does not yet explain stale or missing RAG/Shodh coverage or provide rebuild actions.
+
+Current diagnostics:
+
+- The selected World Bible character panel reads from primary project records, accepted canonical facts, Lore Document links, writing documents, Shodh memories, the state mutation ledger, and `RAGService.search(...)`.
 
 Recommended next feature slice:
 
-- Build a Character Detail Health view for one selected World Bible character: canonical name, aliases, accepted facts grouped by type, linked Lore Documents, scene mentions, Shodh memories, RAG probe hits, and state events.
+- Use the Lore Documents health panel and Character detail health panel to manually audit a realistic imported lore set across import, extraction, accepted facts, assistant context, chapter drafting, and review. Add a rebuild action from source project data if stale/missing RAG coverage appears.
 
 ## Documentation Health
 

@@ -119,25 +119,27 @@ Implemented recently:
 - Workspace annotation / character-canon smoke checkpoint:
   - The editor now renders known lore and unresolved review highlights through the shared workspace annotation decision pass instead of separate TipTap decoration paths.
   - Automated smoke now covers natural prose around known character canon: `It's Garcia deTerra`, `Detective Garcia deTerra`, and ordinary sentence-start prose stay out of stray review highlights and passive review counts.
+- Character detail health checkpoint:
+  - World Bible character records now show a selected-character health panel covering aliases, accepted facts, linked Lore Documents, scene mentions, Shodh memories, state events, and explicit RAG probe hits.
+  - The panel reads from primary project data plus derived RAG/Shodh diagnostics instead of creating new canon.
 
 ## Recommended Priority Order
 
-1. Character detail health view
-2. Lore/RAG/Shodh manual audit and rebuild path
-3. Memory provenance for assistant context
-4. Calm shell and navigation simplification
-5. Canon decision merge review refinement
-6. Structural cleanup in active routes
-7. Finish dedicated editor-state persistence pass
-8. State mutation ledger integration
-9. Scratchpad organization and lightweight planning surfaces
-10. App-wide search
-11. Editor readability and theme hardening
-12. Release confidence and reload safety
-13. Review-completion and World Bible polish
-14. Desktop packaging validation
-15. AI personas/tools
-16. First-run onboarding cleanup
+1. Lore/RAG/Shodh manual audit and rebuild path
+2. Memory provenance for assistant context
+3. Calm shell and navigation simplification
+4. Canon decision merge review refinement
+5. Structural cleanup in active routes
+6. Finish dedicated editor-state persistence pass
+7. State mutation ledger integration
+8. Scratchpad organization and lightweight planning surfaces
+9. App-wide search
+10. Editor readability and theme hardening
+11. Release confidence and reload safety
+12. Review-completion and World Bible polish
+13. Desktop packaging validation
+14. AI personas/tools
+15. First-run onboarding cleanup
 
 ## Planning Notes
 
@@ -170,13 +172,13 @@ Status:
 - Current audit captured in `docs/product-health-audit.md`.
 - Current docs authority map captured in `docs/README.md`.
 - Lore Documents now includes a project context health panel with RAG counts, indexed document type counts, Shodh memory counts, and a retrieval probe.
+- World Bible character records now include a selected-character health panel for aliases, accepted facts, linked Lore Documents, scene mentions, Shodh memories, RAG probe hits, and state events.
 
 Next implementation slices:
 
-1. Add a Character Detail Health view for one World Bible character: canonical name, aliases, accepted facts, linked Lore Documents, scene mentions, memory/index presence, and state events.
-2. Use the Lore Documents health panel to manually audit a realistic imported lore set, then add a rebuild action from source project data if stale/missing RAG coverage appears.
-3. Add assistant context provenance so Shodh memories and RAG chunks used in an answer are visible.
-4. After those product-health surfaces exist, archive or demote stale top-level docs that are not listed as active in `docs/README.md`.
+1. Use the Lore Documents health panel and Character detail health panel to manually audit a realistic imported lore set, then add a rebuild action from source project data if stale/missing RAG coverage appears.
+2. Add assistant context provenance so Shodh memories and RAG chunks used in an answer are visible.
+3. After those product-health surfaces exist, archive or demote stale top-level docs that are not listed as active in `docs/README.md`.
 
 ## 0) Calm Shell and Navigation Simplification
 
