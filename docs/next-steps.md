@@ -157,6 +157,7 @@ Implemented recently:
 - Scratchpad quick access now exists on the main writing/canon/lore/review surfaces. The next scratchpad question is lightweight organization and capture flows, especially AI-to-Scratchpad, rather than basic availability.
 - UI shell is the active product priority again: reduce top-level navigation noise, keep Workspace first, move persistent utilities into shared page-header actions where they must remain visible, and avoid adding local utility bands or always-open panels.
 - World Bible AI follow-up: do not keep polishing the current helper as a form-like insertion tool. The desired model is closer to Workspace text popovers: authors can brainstorm freely in a floating chat, then highlight generated text or accept model-proposed actions such as "set this as Name", "append this to Description", "create a new section", or "add this to field X". The current floating helper / selected-text apply bar is an interim bridge only.
+- AI adapter/tooling direction: before adding more AI entry points, move toward a capability-aware provider boundary with typed content parts, schema-validated structured output, manual tool/action proposals, normalized provenance, named workflow routes/profiles, provider-side prompt caching policy, and a shared read-only project-context extraction layer. The product rule remains: AI proposes, app services validate, authors confirm mutations.
 - Local-model writing quality follow-up: Ollama currently exposes base URL/model selection but not creative sampling controls. Add advanced, optional settings for `top_p` and repetition controls so authors can reduce repeated generic phrasing without editing an Ollama Modelfile by hand.
 - Future optional systems note: character inventory currently tracks item names, quantities, notes, and catalog links, while the rules-engine inventory has a `capacity` field but no per-item weight or surfaced encumbrance calculation. When system-heavy character support comes back into focus, add carry weight/encumbrance as an explicit inventory concern rather than treating quantity as enough.
 - The background review path is only worth keeping if it remains bounded: proposal-only, local-first, and subordinate to deterministic validation. Avoid broadening it into an unbounded “project manager AI.”
@@ -286,6 +287,9 @@ Targets:
 - Require author confirmation for every canon/schema mutation.
 - Keep generated content editable before save. AI must not silently create records, fields, aliases, or canon facts.
 - Treat import helper and manual helper as the same interaction pattern with different context.
+- Model these proposals as manual tool/action calls internally: the model can request an action, but route-owned handlers validate the target, build a preview, and wait for author confirmation.
+- Use schema validation for proposed action payloads instead of parsing prose or trusting provider-specific tool-call behavior.
+- Keep the proposal action layer provider-neutral so hosted providers and Ollama/local models can share the same UX even when their native tool support differs.
 - Add optional provider-specific creative controls for Ollama/local models, starting with `top_p` and repetition controls, and pass them through the renderer/direct-provider and desktop payload paths.
 
 Acceptance criteria:
@@ -294,11 +298,12 @@ Acceptance criteria:
 - Applying generated text does not require retyping it into a separate input.
 - Proposed field/section additions are visible, confirmable, and reversible before save.
 - The helper does not auto-run and does not mutate canon or schema without an explicit author action.
+- Invalid or unsupported model action payloads degrade to editable assistant text, not partial field/schema changes.
 
 Status:
 
 - Interim floating helper exists with selected-text apply to current fields.
-- Next slice should replace the interim apply bar with a proposal/action model before adding more AI-specific category presets.
+- Next slice should replace the interim apply bar with a provider-neutral proposal/action model before adding more AI-specific category presets.
 
 ## 1) Review Completion Workflow + World Bible Intake
 
@@ -1021,10 +1026,29 @@ Implementation backlog:
 Scope:
 
 - Define how personas/tools are stored at the project level and surfaced in the editor assistant.
+- Define persona/tool metadata in terms of prompt template, allowed context tags, expected structured output, allowed proposed actions, provider capability requirements, and confirmation policy.
+- Define AI route/profile metadata separately from persona copy: route id, provider policy, model override, reasoning/thinking level, token limits, required capabilities, context include/exclude tags, cache policy, and fallback behavior.
 
 Acceptance criteria:
 
 - A project can opt into a named persona/tool set without breaking existing assistant behavior.
+- Persona/tool definitions can run against hosted providers or local/Ollama providers when their required capabilities are available.
+- A workflow can choose a cheaper model with deeper reasoning, a stronger model with medium reasoning, or forced-local execution without changing global provider settings.
+- Hosted-provider workflows can default to provider-side prompt caching for stable prefixes while allowing route-level `auto` / `off` / `force` policy; local routes can safely ignore cache policy unless supported.
+
+### Slice 8C: Project context extraction service
+
+Scope:
+
+- Add a shared read-only context extractor for AI workflows.
+- Return tagged, stable-source chunks from scenes, World Bible records, Lore Documents, accepted canon facts, rules, Scratchpad, review context, and later game-state surfaces.
+- Keep source-specific extraction mechanics close to the source services, while consumers request context through include/exclude tags, limits, and per-call transforms.
+
+Acceptance criteria:
+
+- AI workflows no longer hand-roll prompt context from unrelated route code.
+- Extracted items carry enough identity for evidence display and debugging: source type, source id, source title/label, path/field id where applicable, tags, text or structured payload, and revision/hash when available.
+- The extractor never mutates canon, lore, scenes, state, or rules; it only feeds assistant context and proposal workflows.
 
 Suggested branch:
 

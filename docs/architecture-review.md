@@ -331,6 +331,45 @@ type WorldEngineStatus =
 
 ---
 
+### AI Adapter and Tool Boundary
+
+The current provider abstraction is serviceable for chat and streaming, but future AI work should not keep adding feature-specific prompt wrappers. Use the Apostrophe-style adapter lesson: separate provider dialects from product capabilities.
+
+**Core principle:** AI can inspect, reason, and propose typed actions. App-owned systems validate those actions, enforce permissions, and require author confirmation before any canon, schema, or state mutation.
+
+**Provider capability registry:** Add provider/model capability metadata before expanding AI tools further. Capabilities should include at least:
+- `streaming`
+- `structuredOutput`
+- `toolCalling`
+- `visionInput`
+- `embeddings`
+- `localRuntime`
+- optional model controls such as `thinking`, `top_p`, and repetition controls
+
+Do not assume every configured provider or local model supports the same features. Ollama/local models should remain first-class, but capability-variable.
+
+**AI routes/profiles:** Do not reduce model selection to a single global provider or three fixed `low` / `medium` / `high` effort labels. Those labels are useful presets, but the durable app model should be named workflow routes such as `creativeAssistant`, `worldBibleHelper`, `canonDecisionConsultation`, `localReviewAnnotation`, `criticPersona`, and future `gameEngineNarration` / `gameEngineRules`. A route should resolve to provider policy, model, reasoning/thinking level, token limits, required capabilities, context tags, and confirmation policy. This keeps "cheaper model with deeper reasoning" and "stronger model with medium reasoning" expressible without exposing a noisy global settings panel.
+
+**Prompt caching:** Hosted-provider routes should support a provider-neutral cache policy before we build heavier multi-turn, tool-loop, or large-context workflows. Default to `cachePolicy: 'auto'` for hosted routes, allow `'off'` and `'force'`, and ignore it for local/Ollama routes unless the backend exposes an equivalent. The cacheable prefix should be separated from volatile user input: system instructions, tool definitions, stable extracted context, and unchanged prior turns are candidates; current user text and user/project-sensitive volatile state are not. Prefer provider-side prompt caching over any custom shared app cache, and keep project/user/context boundaries explicit. Usage metadata should include cached input/read/write token fields when providers report them.
+
+**Typed content and tool parts:** Move the internal LLM contract beyond plain `{ role, content }` strings when the next AI slice needs tools or multimodal input. Preferred normalized parts:
+- `text`
+- `image`
+- `toolCall`
+- `toolResult`
+
+Feature code should talk to this normalized shape. Provider adapters translate to Anthropic/OpenAI/Gemini/Ollama dialects.
+
+**Manual tool mode:** Treat model-proposed World Bible actions, critic suggestions, canon-decision consultation, and future game-engine hooks as manual tool calls by default. The model may propose `setName`, `addAlias`, `appendField`, `createSection`, `extractObservation`, or `classifyReviewItem`, but handlers must return proposals unless an explicit author/app policy allows execution.
+
+**Structured output:** Prefer schema-validated structured results over "JSON mode" alone for imports, review annotations, critic output, and tool arguments. Invalid model output should fail closed into editable prose or a recoverable error, not partial mutation.
+
+**Context extraction:** Add a shared project-context extraction layer before adding more bespoke AI features. It should be read-only and return tagged chunks from scenes, World Bible records, Lore Documents, accepted canon facts, rules, Scratchpad, and review context. AI features should request tags and limits instead of rebuilding prompt context locally. Borrow the useful parts of Apostrophe's `apos.schema.extract` design: extractor mechanics live with the source type, extractability/context policy is separate, callers use `include` / `exclude` tags, and per-consumer transforms are per-call rather than global overrides. The item shape should include stable source identity and provenance fields such as project/document id, source type, source path or field id, title/label, tags, text or structured payload, and revision/hash where available.
+
+**Provenance envelope:** Every AI call should make provider, model, usage, finish reason, cache read/write metadata, and tool-step metadata available to the caller. Storage/audit policy can remain feature-specific, but the data should be normalized at the LLM boundary.
+
+---
+
 ### State Mutation Ledger
 
 Accepted state changes are recorded as durable typed mutation commands with scene provenance. The ledger supports:
