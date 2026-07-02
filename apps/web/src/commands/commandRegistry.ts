@@ -69,9 +69,9 @@ export const createAppCommands = ({
   if (capabilities.canUseGameSystems) {
     navigationCommands.splice(5, 0, {
       id: 'nav-compendium',
-      label: 'Go to Compendium',
+      label: 'Go to Mechanics',
       section: 'Navigation',
-      keywords: ['compendium', 'items', 'systems', 'modules'],
+      keywords: ['mechanics', 'compendium', 'items', 'systems', 'modules'],
       run: () => navigate('/compendium')
     });
   }
@@ -79,10 +79,17 @@ export const createAppCommands = ({
   if (capabilities.canUseRuleAuthoring) {
     navigationCommands.splice(2, 0, {
       id: 'nav-ruleset',
-      label: 'Go to Ruleset',
+      label: 'Go to Rules',
       section: 'Navigation',
-      keywords: ['rules', 'system', 'mechanics'],
+      keywords: ['rules', 'ruleset', 'system', 'mechanics'],
       run: () => navigate('/ruleset')
+    });
+    navigationCommands.splice(3, 0, {
+      id: 'nav-character-sheets',
+      label: 'Go to Sheets',
+      section: 'Navigation',
+      keywords: ['sheets', 'state', 'stats', 'resources', 'characters'],
+      run: () => navigate('/characters?view=sheets')
     });
   }
 
@@ -203,9 +210,9 @@ export const createAppCommands = ({
   if (capabilities.canUseGameSystems) {
     workspaceCommands.splice(7, 0, {
       id: 'workspace-context-compendium',
-      label: 'Workspace: Open Context - Compendium',
+      label: 'Workspace: Open Context - Mechanics',
       section: 'Workspace',
-      keywords: ['context', 'compendium', 'drawer'],
+      keywords: ['context', 'mechanics', 'compendium', 'drawer'],
       run: () => dispatchWorkspaceCommand('open-context-compendium')
     });
   }
@@ -213,9 +220,9 @@ export const createAppCommands = ({
   if (capabilities.canUseRuleAuthoring) {
     workspaceCommands.splice(7, 0, {
       id: 'workspace-context-ruleset',
-      label: 'Workspace: Open Context - Ruleset',
+      label: 'Workspace: Open Context - Rules',
       section: 'Workspace',
-      keywords: ['context', 'ruleset', 'drawer'],
+      keywords: ['context', 'rules', 'ruleset', 'drawer'],
       run: () => dispatchWorkspaceCommand('open-context-ruleset')
     });
   }

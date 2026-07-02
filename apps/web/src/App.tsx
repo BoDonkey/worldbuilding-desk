@@ -1,5 +1,6 @@
 import {
-  useLayoutEffect
+  useLayoutEffect,
+  type ReactNode
 } from 'react';
 import {
   BrowserRouter,
@@ -35,16 +36,26 @@ function HomeRoute() {
   return <Navigate to={activeProject ? '/workspace' : '/projects'} replace />;
 }
 
-function RulesetGate() {
+function OptionalSystemsGate({
+  children,
+  capability
+}: {
+  children: ReactNode;
+  capability: 'gameSystems' | 'ruleAuthoring';
+}) {
   const activeProject = useAppStore((s) => s.activeProject);
   const projectSettings = useAppStore((s) => s.projectSettings);
   const capabilities = getProjectCapabilities(activeProject ? projectSettings : null);
+  const enabled =
+    capability === 'gameSystems'
+      ? capabilities.canUseGameSystems
+      : capabilities.canUseRuleAuthoring;
 
-  if (activeProject && !capabilities.canUseRuleAuthoring) {
+  if (activeProject && !enabled) {
     return <Navigate to='/workspace' replace />;
   }
 
-  return <RulesetRoute />;
+  return <>{children}</>;
 }
 
 function AppShellLayout() {
@@ -94,15 +105,33 @@ function AppRoutes() {
           <Route path='/lore' element={<LoreRoute />} />
           <Route path='/canon-decisions' element={<CanonDecisionsRoute />} />
           <Route path='/world-bible' element={<WorldBibleRoute />} />
-          <Route path='/ruleset' element={<RulesetGate />} />
+          <Route
+            path='/ruleset'
+            element={
+              <OptionalSystemsGate capability='ruleAuthoring'>
+                <RulesetRoute />
+              </OptionalSystemsGate>
+            }
+          />
           <Route path='/characters' element={<CharactersHubRoute />} />
           <Route
             path='/character-sheets'
-            element={<Navigate to='/characters?view=sheets' replace />}
+            element={
+              <OptionalSystemsGate capability='ruleAuthoring'>
+                <Navigate to='/characters?view=sheets' replace />
+              </OptionalSystemsGate>
+            }
           />
           <Route path='/workspace' element={<WorkspaceRoute />} />
           <Route path='/corkboard' element={<CorkboardRoute />} />
-          <Route path='/compendium' element={<CompendiumRoute />} />
+          <Route
+            path='/compendium'
+            element={
+              <OptionalSystemsGate capability='gameSystems'>
+                <CompendiumRoute />
+              </OptionalSystemsGate>
+            }
+          />
           <Route path='/settings' element={<SettingsRoute />} />
           <Route path='*' element={<Navigate to='/' replace />} />
         </Route>

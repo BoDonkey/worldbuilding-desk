@@ -130,6 +130,29 @@
   color: var(--color-text-primary);
 }
 
+.secondaryMenuSection {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.secondaryMenuSection + .secondaryMenuSection {
+  padding-top: 0.35rem;
+  border-top: 1px solid var(--surface-border-soft);
+}
+
+.secondaryMenuSectionLabel,
+.mobileMenuSectionLabel {
+  color: var(--color-text-tertiary);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.secondaryMenuSectionLabel {
+  padding: 0.1rem 0.15rem;
+}
+
 .secondaryMenuIcon {
   color: inherit;
   font-size: 0.72rem;
@@ -281,6 +304,20 @@
   display: flex;
   flex-direction: column;
   gap: 0.35rem;
+}
+
+.mobileMenuSection {
+  display: grid;
+  gap: 0.25rem;
+  padding-top: 0.4rem;
+}
+
+.mobileMenuSection + .mobileMenuSection {
+  border-top: 1px solid var(--surface-border-soft);
+}
+
+.mobileMenuSectionLabel {
+  padding: 0.15rem 0.7rem 0;
 }
 
 .mobileMenuLink {
