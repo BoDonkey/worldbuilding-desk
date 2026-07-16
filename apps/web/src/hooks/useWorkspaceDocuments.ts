@@ -9,6 +9,8 @@ import type {
 import type {Project, WritingDocument, WorkspaceImportMode} from '../entityTypes';
 import {
   deleteWritingDocument,
+  getNextWritingDocumentOrder,
+  sortWritingDocuments,
   saveWritingDocument
 } from '../writingStorage';
 import {countWords} from '../utils/textHelpers';
@@ -125,6 +127,7 @@ export const buildWorkspaceEditorDocument = ({
   title: title.trim() || 'Untitled scene',
   content,
   consistencyReviewMode: existingDocument?.consistencyReviewMode ?? 'default',
+  order: existingDocument?.order,
   createdAt: selectedCreatedAt ?? now,
   updatedAt: now
 });
@@ -275,13 +278,14 @@ export const useWorkspaceDocuments = ({
         projectId: activeProject.id,
         title: 'Untitled scene',
         content: '<p></p>',
+        order: getNextWritingDocumentOrder(documents),
         createdAt: now,
         updatedAt: now
       };
 
       await saveWritingDocument(doc);
 
-      setDocuments((prev) => [...prev, doc]);
+      setDocuments((prev) => sortWritingDocuments([...prev, doc]));
       initializeEditorState(doc);
       setEditorScrollResetToken((prev) => prev + 1);
       setSaveStatus('saved');
@@ -303,6 +307,7 @@ export const useWorkspaceDocuments = ({
   }, [
     activeProject,
     addSystemHistory,
+    documents,
     initializeEditorState,
     setCreatingScene,
     setDocuments,
@@ -318,6 +323,7 @@ export const useWorkspaceDocuments = ({
       let importedCount = 0;
       let failedCount = 0;
       let unresolvedCount = 0;
+      let nextOrder = getNextWritingDocumentOrder(documents);
       let lastImported: WritingDocument | null = null;
       const failures: WorkspaceImportFailureItem[] = [];
       const failedFiles: File[] = [];
@@ -348,6 +354,7 @@ export const useWorkspaceDocuments = ({
               content: fileToHtml(file.name, raw),
               consistencyReviewMode:
                 consistencyModeForBatch === 'strict' ? 'default' : 'deferred',
+              order: nextOrder,
               createdAt: now,
               updatedAt: now
             };
@@ -361,6 +368,7 @@ export const useWorkspaceDocuments = ({
             importedCount += 1;
             unresolvedCount += result.unresolvedCount;
             lastImported = doc;
+            nextOrder += 1;
           } catch (error) {
             const detail =
               error instanceof Error ? error.message : 'Unknown import error.';
@@ -419,6 +427,7 @@ export const useWorkspaceDocuments = ({
     },
     [
       activeProject,
+      documents,
       importMode,
       initializeEditorState,
       persistDocRef,
@@ -462,6 +471,48 @@ export const useWorkspaceDocuments = ({
       initializeEditorState,
       refreshDeferredReviewRef
     ]
+  );
+
+  const handleMoveDocument = useCallback(
+    async (doc: WritingDocument, direction: -1 | 1) => {
+      const orderedDocuments = sortWritingDocuments(documents);
+      const currentIndex = orderedDocuments.findIndex((entry) => entry.id === doc.id);
+      const nextIndex = currentIndex + direction;
+
+      if (currentIndex < 0 || nextIndex < 0 || nextIndex >= orderedDocuments.length) {
+        return;
+      }
+
+      const normalizedDocuments = orderedDocuments.map((entry, index) => ({
+        ...entry,
+        order: index
+      }));
+      const reorderedDocuments = [...normalizedDocuments];
+      const [movedDocument] = reorderedDocuments.splice(currentIndex, 1);
+      reorderedDocuments.splice(nextIndex, 0, movedDocument);
+      const nextDocuments = reorderedDocuments.map((entry, index) => ({
+        ...entry,
+        order: index,
+        updatedAt: entry.id === movedDocument.id ? Date.now() : entry.updatedAt
+      }));
+      const changedDocuments = nextDocuments.filter((entry) => {
+        const previous = documents.find((candidate) => candidate.id === entry.id);
+        return previous?.order !== entry.order || previous?.updatedAt !== entry.updatedAt;
+      });
+
+      setDocuments(nextDocuments);
+      setFeedback(null);
+      try {
+        await Promise.all(changedDocuments.map((entry) => saveWritingDocument(entry)));
+        setFeedback({tone: 'success', message: 'Scene order updated.'});
+      } catch (error) {
+        setDocuments(documents);
+        const message =
+          error instanceof Error ? error.message : 'Unable to reorder scenes.';
+        setFeedback({tone: 'error', message});
+      }
+    },
+    [documents, setDocuments, setFeedback]
   );
 
   const openExportModal = useCallback(
@@ -698,6 +749,7 @@ export const useWorkspaceDocuments = ({
     handleImportDocuments,
     handleRetryFailedImports,
     handleSelectDocument,
+    handleMoveDocument,
     openExportModal,
     handleExportScenes,
     handleSave,

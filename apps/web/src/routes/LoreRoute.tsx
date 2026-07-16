@@ -10,6 +10,7 @@ import type {
   LoreDocumentLink,
   LoreEntityProposal,
   LoreFactProposal,
+  WritingDocument,
   WorldEntity
 } from '../entityTypes';
 import {getCharactersByProject} from '../characterStorage';
@@ -40,7 +41,9 @@ import {extractLoreFactProposals} from '../services/lore/loreFactExtraction';
 import {extractLoreEntityProposals} from '../services/lore/loreEntityExtraction';
 import {
   applyCanonicalFactSideEffects,
-  buildCanonicalFactSummary
+  buildCanonicalFactSummary,
+  captureCanonicalFactMemory,
+  deleteCanonicalFactMemory
 } from '../services/lore/canonicalFactActions';
 import {acceptLoreEntityProposal} from '../services/lore/entityProposalActions';
 import {getRAGService} from '../services/rag/getRAGService';
@@ -51,10 +54,16 @@ import type {
   MemoryEntry,
   ShodhMemoryProvider
 } from '../services/shodh/ShodhMemoryService';
+import {emitShodhMemoriesUpdated} from '../services/shodh/shodhEvents';
 import {
   rebuildProjectContextHealth,
   type ContextHealthRebuildResult
 } from '../services/contextHealth/contextHealthRebuild';
+import {
+  hasIndexableContextContent,
+  summarizeMissingContextDocuments,
+  type ExpectedContextDocument
+} from '../services/contextHealth/contextHealthCoverage';
 import {ProjectScratchpadButton} from '../components/ProjectScratchpadButton';
 import {PageHeader} from '../components/PageHeader';
 import styles from '../styles/LoreRoute.module.css';
@@ -65,15 +74,10 @@ type LinkDraft = {
   relationship: LoreDocumentLink['relationship'];
 };
 
-const LORE_KIND_OPTIONS: Array<{value: LoreDocumentKind; label: string}> = [
-  {value: 'character_dossier', label: 'Character dossier'},
-  {value: 'place_history', label: 'Place history'},
-  {value: 'faction_notes', label: 'Faction notes'},
-  {value: 'item_history', label: 'Item history'},
-  {value: 'myth', label: 'Myth or religion'},
-  {value: 'timeline', label: 'Timeline'},
-  {value: 'general_lore', label: 'General lore'}
-];
+type FactTargetDraft = {
+  targetType: 'character' | 'entity';
+  targetId: string;
+};
 
 const RELATIONSHIP_OPTIONS: Array<{
   value: LoreDocumentLink['relationship'];
@@ -102,7 +106,7 @@ const getLoreRailStorageKey = (projectId: string) =>
 const RAG_TYPE_LABELS: Array<{type: keyof RAGDiagnostics['countsByType']; label: string}> = [
   {type: 'scene', label: 'Scenes'},
   {type: 'worldbible', label: 'World Bible'},
-  {type: 'lore', label: 'Lore Docs'},
+  {type: 'lore', label: 'Source Notes'},
   {type: 'canon_fact', label: 'Canon Facts'},
   {type: 'rule', label: 'Rules'}
 ];
@@ -122,6 +126,7 @@ function LoreRoute() {
   const [shodhService, setShodhService] = useState<ShodhMemoryProvider | null>(null);
   const [ragDiagnostics, setRagDiagnostics] = useState<RAGDiagnostics | null>(null);
   const [shodhMemories, setShodhMemories] = useState<MemoryEntry[]>([]);
+  const [sourceScenes, setSourceScenes] = useState<WritingDocument[]>([]);
   const [healthLoading, setHealthLoading] = useState(false);
   const [healthProbe, setHealthProbe] = useState('');
   const [healthProbeResults, setHealthProbeResults] = useState<RAGSearchResult[]>([]);
@@ -130,13 +135,13 @@ function LoreRoute() {
   const [healthRebuilding, setHealthRebuilding] = useState(false);
   const [healthRebuildResult, setHealthRebuildResult] =
     useState<ContextHealthRebuildResult | null>(null);
-  const [healthSourceSceneCount, setHealthSourceSceneCount] = useState(0);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [title, setTitle] = useState('');
   const [kind, setKind] = useState<LoreDocumentKind>('general_lore');
   const [content, setContent] = useState('');
   const [draftSource, setDraftSource] = useState<LoreDocument['source']>({type: 'manual'});
   const [linkDrafts, setLinkDrafts] = useState<LinkDraft[]>([]);
+  const [factTargetDrafts, setFactTargetDrafts] = useState<Record<string, FactTargetDraft>>({});
   const [isImporting, setIsImporting] = useState(false);
   const [saving, setSaving] = useState(false);
   const [extractingId, setExtractingId] = useState<string | null>(null);
@@ -175,10 +180,10 @@ function LoreRoute() {
       setShodhService(null);
       setRagDiagnostics(null);
       setShodhMemories([]);
+      setSourceScenes([]);
       setHealthProbeResults([]);
       setHealthProbeSearched(false);
       setHealthRebuildResult(null);
-      setHealthSourceSceneCount(0);
       return;
     }
 
@@ -223,7 +228,7 @@ function LoreRoute() {
       setEntityProposals(loadedEntityProposals);
       setProposals(loadedProposals);
       setCanonicalFacts(loadedFacts);
-      setHealthSourceSceneCount(loadedScenes.length);
+      setSourceScenes(loadedScenes);
       setRagService(nextRagService);
       setShodhService(nextShodhService);
     };
@@ -298,13 +303,13 @@ function LoreRoute() {
     () => [
       ...characters.map((character) => ({
         key: `character:${character.id}`,
-        label: `${character.name} (Character)`,
+        label: `${character.name} (Character Tools)`,
         targetType: 'character' as const,
         targetId: character.id
       })),
       ...entities.map((entity) => ({
         key: `entity:${entity.id}`,
-        label: `${entity.name} (World)`,
+        label: `${entity.name} (World Bible)`,
         targetType: 'entity' as const,
         targetId: entity.id
       }))
@@ -325,6 +330,7 @@ function LoreRoute() {
   const proposalsByDocumentId = useMemo(() => {
     const map = new Map<string, LoreFactProposal[]>();
     proposals.forEach((proposal) => {
+      if (proposal.status !== 'proposed') return;
       const current = map.get(proposal.loreDocumentId) ?? [];
       current.push(proposal);
       map.set(proposal.loreDocumentId, current);
@@ -335,6 +341,7 @@ function LoreRoute() {
   const entityProposalsByDocumentId = useMemo(() => {
     const map = new Map<string, LoreEntityProposal[]>();
     entityProposals.forEach((proposal) => {
+      if (proposal.status !== 'proposed') return;
       const current = map.get(proposal.loreDocumentId) ?? [];
       current.push(proposal);
       map.set(proposal.loreDocumentId, current);
@@ -375,26 +382,59 @@ function LoreRoute() {
 
   const contextStaleReasons = useMemo(() => {
     if (!ragDiagnostics) return [];
-    const counts = ragDiagnostics.countsByType;
+    const expectedDocuments: ExpectedContextDocument[] = [
+      ...sourceScenes
+        .filter((scene) => hasIndexableContextContent(scene.content))
+        .map((scene) => ({
+          documentId: scene.id,
+          type: 'scene' as const
+        })),
+      ...entities.map((entity) => ({
+        documentId: entity.id,
+        type: 'worldbible' as const
+      })),
+      ...documents
+        .filter((document) => hasIndexableContextContent(document.content))
+        .map((document) => ({
+          documentId: `lore:${document.id}`,
+          type: 'lore' as const
+        })),
+      ...canonicalFacts.map((fact) => ({
+        documentId: `canon-fact:${fact.id}`,
+        type: 'canon_fact' as const
+      }))
+    ];
+    const missing = summarizeMissingContextDocuments({
+      diagnostics: ragDiagnostics,
+      expectedDocuments
+    });
     const reasons: string[] = [];
-    if (healthSourceSceneCount > 0 && counts.scene < healthSourceSceneCount) {
-      reasons.push('some saved scenes are missing from retrieval');
+    if (missing.scene > 0) {
+      reasons.push(
+        `${missing.scene} saved scene${missing.scene === 1 ? ' is' : 's are'} missing from retrieval`
+      );
     }
-    if (entities.length > 0 && counts.worldbible < entities.length) {
-      reasons.push('some World Bible records are missing from retrieval');
+    if (missing.worldbible > 0) {
+      reasons.push(
+        `${missing.worldbible} World Bible record${missing.worldbible === 1 ? ' is' : 's are'} missing from retrieval`
+      );
     }
-    if (documents.length > 0 && counts.lore < documents.length) {
-      reasons.push('some Lore Documents are missing from retrieval');
+    if (missing.lore > 0) {
+      reasons.push(
+        `${missing.lore} Source Note${missing.lore === 1 ? ' is' : 's are'} missing from retrieval`
+      );
     }
-    if (canonicalFacts.length > 0 && counts.canon_fact < canonicalFacts.length) {
-      reasons.push('some accepted canon facts are missing from retrieval');
+    if (missing.canon_fact > 0) {
+      reasons.push(
+        `${missing.canon_fact} accepted canon fact${missing.canon_fact === 1 ? ' is' : 's are'} missing from retrieval`
+      );
     }
     return reasons;
   }, [
-    canonicalFacts.length,
-    documents.length,
-    entities.length,
-    healthSourceSceneCount,
+    canonicalFacts,
+    documents,
+    entities,
+    sourceScenes,
     ragDiagnostics
   ]);
 
@@ -420,6 +460,7 @@ function LoreRoute() {
     setContent('');
     setDraftSource({type: 'manual'});
     setLinkDrafts([]);
+    setFactTargetDrafts({});
   };
 
   const beginEdit = useCallback((document: LoreDocument) => {
@@ -435,6 +476,7 @@ function LoreRoute() {
         relationship: link.relationship
       }))
     );
+    setFactTargetDrafts({});
     setFeedback(null);
   }, [linksByDocumentId]);
 
@@ -450,11 +492,6 @@ function LoreRoute() {
     focusedLoreDocumentKeyRef.current = focusKey;
     navigate(location.pathname, {replace: true, state: {}});
   }, [beginEdit, documents, location.key, location.pathname, location.state, navigate]);
-
-  const openLinkedWorldBibleRecord = useCallback((link: LoreDocumentLink) => {
-    if (link.targetType !== 'entity') return;
-    navigate('/world-bible', {state: {focusEntityId: link.targetId}});
-  }, [navigate]);
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
@@ -498,9 +535,13 @@ function LoreRoute() {
       await replaceLoreDocumentLinks({loreDocumentId: documentId, links: nextLinks});
       await indexLoreDocument(nextDocument, nextLinks);
       resetForm();
+      const placementMessage =
+        nextLinks.length > 0
+          ? `Linked to ${nextLinks.length} canon target${nextLinks.length === 1 ? '' : 's'}.`
+          : 'Saved as general project source material.';
       setFeedback({
         tone: 'success',
-        message: editingId ? 'Lore document updated.' : 'Lore document created.'
+        message: `${editingId ? 'Source Note updated.' : 'Source Note created.'} ${placementMessage}`
       });
     } catch (error) {
       const message =
@@ -512,7 +553,7 @@ function LoreRoute() {
   };
 
   const handleDelete = async (document: LoreDocument) => {
-    if (!window.confirm(`Delete lore document "${document.title}"?`)) return;
+    if (!window.confirm(`Delete Source Note "${document.title}"?`)) return;
     setDeletingId(document.id);
     setFeedback(null);
     try {
@@ -531,10 +572,10 @@ function LoreRoute() {
       if (editingId === document.id) {
         resetForm();
       }
-      setFeedback({tone: 'success', message: 'Lore document deleted.'});
+      setFeedback({tone: 'success', message: 'Source Note deleted.'});
     } catch (error) {
       const message =
-        error instanceof Error ? error.message : 'Unable to delete lore document.';
+        error instanceof Error ? error.message : 'Unable to delete Source Note.';
       setFeedback({tone: 'error', message});
     } finally {
       setDeletingId(null);
@@ -566,7 +607,7 @@ function LoreRoute() {
       setLinkDrafts([]);
       setFeedback({
         tone: 'success',
-        message: `Imported "${parsed.fileName}". Review and save when ready.`
+        message: `Imported "${parsed.fileName}". Add a canon link or leave it as general source material, then save.`
       });
     } catch (error) {
       const message =
@@ -618,6 +659,20 @@ function LoreRoute() {
         loreDocumentId: document.id,
         proposals: nextProposals
       });
+      setEntityProposals((current) => [
+        ...current.filter(
+          (proposal) =>
+            proposal.projectId !== activeProject.id || proposal.loreDocumentId !== document.id
+        ),
+        ...nextEntityProposals
+      ]);
+      setProposals((current) => [
+        ...current.filter(
+          (proposal) =>
+            proposal.projectId !== activeProject.id || proposal.loreDocumentId !== document.id
+        ),
+        ...nextProposals
+      ]);
       setFeedback({
         tone: 'success',
         message:
@@ -634,11 +689,33 @@ function LoreRoute() {
     }
   };
 
+  const getFactProposalTarget = (proposal: LoreFactProposal) => {
+    if (proposal.targetType && proposal.targetId) {
+      return {
+        targetType: proposal.targetType,
+        targetId: proposal.targetId,
+        targetName: proposal.targetName
+      };
+    }
+    const draft = factTargetDrafts[proposal.id];
+    if (!draft) return null;
+    const target = linkableTargets.find(
+      (entry) => entry.targetType === draft.targetType && entry.targetId === draft.targetId
+    );
+    if (!target) return null;
+    return {
+      targetType: target.targetType,
+      targetId: target.targetId,
+      targetName: target.label.replace(/\s+\((?:Character Tools|World Bible)\)$/, '')
+    };
+  };
+
   const handleAcceptProposal = async (proposal: LoreFactProposal) => {
-    if (!activeProject || !proposal.targetType || !proposal.targetId) {
+    const target = getFactProposalTarget(proposal);
+    if (!activeProject || !target) {
       setFeedback({
         tone: 'error',
-        message: 'This proposal needs a linked target before it can be accepted.'
+        message: 'Choose a target for this fact before accepting it.'
       });
       return;
     }
@@ -648,9 +725,9 @@ function LoreRoute() {
     const fact: CanonicalFact = {
       id: crypto.randomUUID(),
       projectId: activeProject.id,
-      targetType: proposal.targetType,
-      targetId: proposal.targetId,
-      targetName: proposal.targetName,
+      targetType: target.targetType,
+      targetId: target.targetId,
+      targetName: target.targetName,
       loreDocumentId: proposal.loreDocumentId,
       sourceLoreDocumentTitle:
         documents.find((document) => document.id === proposal.loreDocumentId)?.title ??
@@ -668,6 +745,9 @@ function LoreRoute() {
     const nextProposal: LoreFactProposal = {
       ...proposal,
       status: 'accepted',
+      targetType: target.targetType,
+      targetId: target.targetId,
+      targetName: target.targetName,
       updatedAt: now
     };
 
@@ -675,6 +755,12 @@ function LoreRoute() {
       await saveCanonicalFact(fact);
       await saveLoreFactProposal(nextProposal);
       await applyCanonicalFactSideEffects(activeProject.id, fact);
+      if (shodhService) {
+        await captureCanonicalFactMemory(shodhService, fact);
+        const memories = await shodhService.listMemories();
+        setShodhMemories(memories);
+        emitShodhMemoriesUpdated(memories);
+      }
       if (ragService) {
         await ragService.indexDocument(
           `canon-fact:${fact.id}`,
@@ -687,6 +773,15 @@ function LoreRoute() {
           }
         );
       }
+      setCanonicalFacts((current) => [fact, ...current]);
+      setProposals((current) =>
+        current.map((entry) => (entry.id === nextProposal.id ? nextProposal : entry))
+      );
+      setFactTargetDrafts((current) => {
+        const next = {...current};
+        delete next[proposal.id];
+        return next;
+      });
       setFeedback({tone: 'success', message: 'Fact accepted into canon.'});
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unable to accept fact.';
@@ -712,6 +807,19 @@ function LoreRoute() {
         targetId: acceptedTarget.targetId,
         updatedAt: Date.now()
       });
+      setEntityProposals((current) =>
+        current.map((entry) =>
+          entry.id === proposal.id
+            ? {
+                ...entry,
+                status: 'accepted',
+                targetType: acceptedTarget.targetType,
+                targetId: acceptedTarget.targetId,
+                updatedAt: Date.now()
+              }
+            : entry
+        )
+      );
       setFeedback({
         tone: 'success',
         message:
@@ -737,6 +845,13 @@ function LoreRoute() {
         status: 'rejected',
         updatedAt: Date.now()
       });
+      setEntityProposals((current) =>
+        current.map((entry) =>
+          entry.id === proposal.id
+            ? {...entry, status: 'rejected', updatedAt: Date.now()}
+            : entry
+        )
+      );
       setFeedback({tone: 'success', message: 'Entity proposal rejected.'});
     } catch (error) {
       const message =
@@ -756,6 +871,13 @@ function LoreRoute() {
         status: 'rejected',
         updatedAt: Date.now()
       });
+      setProposals((current) =>
+        current.map((entry) =>
+          entry.id === proposal.id
+            ? {...entry, status: 'rejected', updatedAt: Date.now()}
+            : entry
+        )
+      );
       setFeedback({tone: 'success', message: 'Proposal rejected.'});
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unable to reject proposal.';
@@ -773,15 +895,28 @@ function LoreRoute() {
       await deleteCanonicalFact(fact.id);
       const sourceProposal = proposals.find((proposal) => proposal.id === fact.sourceProposalId);
       if (sourceProposal) {
-        await saveLoreFactProposal({
+        const reopenedProposal: LoreFactProposal = {
           ...sourceProposal,
           status: 'proposed',
           updatedAt: Date.now()
-        });
+        };
+        await saveLoreFactProposal(reopenedProposal);
+        setProposals((current) =>
+          current.map((proposal) =>
+            proposal.id === reopenedProposal.id ? reopenedProposal : proposal
+          )
+        );
       }
       if (ragService) {
         await ragService.deleteDocument(`canon-fact:${fact.id}`);
       }
+      if (shodhService) {
+        await deleteCanonicalFactMemory(shodhService, fact.id);
+        const memories = await shodhService.listMemories();
+        setShodhMemories(memories);
+        emitShodhMemoriesUpdated(memories);
+      }
+      setCanonicalFacts((current) => current.filter((entry) => entry.id !== fact.id));
       setFeedback({tone: 'success', message: 'Accepted fact removed.'});
     } catch (error) {
       const message =
@@ -803,12 +938,33 @@ function LoreRoute() {
   const addLinkDraft = () => {
     setLinkDrafts((current) => [
       ...current,
-      {targetType: 'character', targetId: '', relationship: 'primary_subject'}
+      {targetType: 'entity', targetId: '', relationship: 'primary_subject'}
     ]);
   };
 
   const removeLinkDraft = (index: number) => {
     setLinkDrafts((current) => current.filter((_, draftIndex) => draftIndex !== index));
+  };
+
+  const updateFactTargetDraft = (proposalId: string, value: string) => {
+    setFactTargetDrafts((current) => {
+      if (!value) {
+        const next = {...current};
+        delete next[proposalId];
+        return next;
+      }
+      const [targetType, targetId] = value.split(':');
+      if ((targetType !== 'character' && targetType !== 'entity') || !targetId) {
+        return current;
+      }
+      return {
+        ...current,
+        [proposalId]: {
+          targetType,
+          targetId
+        }
+      };
+    });
   };
 
   const focusLoreEditor = () => {
@@ -945,7 +1101,7 @@ function LoreRoute() {
   if (!activeProject) {
     return (
       <section className={styles.page}>
-        <h1 className={styles.pageTitle}>Lore Documents</h1>
+        <h1 className={styles.pageTitle}>Source Notes</h1>
         <p className={styles.pageIntro}>
           Open a project first to create longform source documents.
         </p>
@@ -957,12 +1113,12 @@ function LoreRoute() {
     <section className={styles.page}>
       <PageHeader
         eyebrow='Source notes'
-        title='Lore Documents'
+        title='Source Notes'
         description={
           <>
             Keep dossiers, timelines, myths, and deep reference notes here as
-            source material. World Bible remains the structured canon home;
-            extraction only creates review candidates until you accept them.
+            source material. Link a note to a World Bible item when it belongs
+            to one record, or leave it general for project-wide context.
           </>
         }
         actions={
@@ -996,14 +1152,14 @@ function LoreRoute() {
         </p>
       ) : null}
 
-      <section className={styles.starterPanel} aria-label='Lore starting points'>
+      <section className={styles.starterPanel} aria-label='Source note starting points'>
         <div className={styles.starterHeader}>
           <div>
             <div className={styles.starterEyebrow}>Start here</div>
-            <h2>Source Document Intake</h2>
+            <h2>Source note intake</h2>
             <p>
               Capture longform material first, then decide which extracted facts
-              and entities are worth promoting into canon.
+              and entities are worth promoting into World Bible canon.
             </p>
           </div>
         </div>
@@ -1017,14 +1173,14 @@ function LoreRoute() {
           </div>
           <div className={styles.starterCard}>
             <h3>Import Dossier</h3>
-            <p>Bring in DOCX, Markdown, or plain text source notes, then save what belongs here.</p>
+            <p>Bring in DOCX, Markdown, or plain text as a linked or general Source Note.</p>
             <button type='button' onClick={handleImportClick} disabled={isImporting}>
               {isImporting ? 'Importing...' : 'Import File'}
             </button>
           </div>
           <div className={styles.starterCard}>
-            <h3>Extract Candidates</h3>
-            <p>Scan the active saved document for entity and fact proposals without changing canon.</p>
+            <h3>Review Later</h3>
+            <p>Optionally scan a saved Source Note for canon candidates after placement is clear.</p>
             <button
               type='button'
               onClick={() => editingDocument && void handleExtractFacts(editingDocument)}
@@ -1044,14 +1200,14 @@ function LoreRoute() {
         }`}
       >
         {!isDocumentRailCollapsed && (
-        <aside className={styles.listCard} aria-label='Lore documents'>
+        <aside className={styles.listCard} aria-label='Source notes'>
           <div className={styles.cardHeader}>
             <h2>Documents</h2>
             <span className={styles.countBadge}>{documents.length}</span>
           </div>
           {documents.length === 0 ? (
             <p className={styles.emptyState}>
-              No lore documents yet. Import a dossier or start a longform world note.
+              No Source Notes yet. Import a dossier or start a longform world note.
             </p>
           ) : (
             <div className={styles.documentList}>
@@ -1065,8 +1221,7 @@ function LoreRoute() {
                     <div className={styles.documentHeader}>
                       <div>
                         <p className={styles.documentKind}>
-                          {LORE_KIND_OPTIONS.find((option) => option.value === document.kind)?.label ??
-                            'Lore'}
+                          {links.length > 0 ? 'Linked source note' : 'General source note'}
                         </p>
                         <h3>{document.title}</h3>
                       </div>
@@ -1090,38 +1245,13 @@ function LoreRoute() {
                         </button>
                       </div>
                     </div>
-                    <p className={styles.documentSummary}>
-                      {document.summary || summarizeContent(document.content)}
-                    </p>
                     <div className={styles.metaRow}>
-                      <span>{documentEntityProposals.length} entity candidates</span>
-                      <span>{documentProposals.length} fact candidates</span>
+                      <span>
+                        {documentEntityProposals.length + documentProposals.length} pending
+                      </span>
                       <span>{documentFacts.length} accepted</span>
+                      {links.length > 0 ? <span>{links.length} linked</span> : null}
                     </div>
-                    {links.length > 0 ? (
-                      <div className={styles.linkBadges}>
-                        {links.map((link) => {
-                          const label =
-                            link.targetType === 'character'
-                              ? characters.find((character) => character.id === link.targetId)?.name
-                              : entities.find((entity) => entity.id === link.targetId)?.name;
-                          return (
-                            <span key={link.id} className={styles.linkBadge}>
-                              {link.relationship.replace(/_/g, ' ')}: {label ?? 'Unknown'}
-                              {link.targetType === 'entity' ? (
-                                <button
-                                  type='button'
-                                  className={styles.linkBadgeAction}
-                                  onClick={() => openLinkedWorldBibleRecord(link)}
-                                >
-                                  Open in World Bible
-                                </button>
-                              ) : null}
-                            </span>
-                          );
-                        })}
-                      </div>
-                    ) : null}
                   </article>
                 );
               })}
@@ -1136,7 +1266,7 @@ function LoreRoute() {
             onSubmit={handleSubmit}
           >
             <div className={styles.cardHeader}>
-              <h2>{editingId ? 'Edit Lore Document' : 'New Lore Document'}</h2>
+              <h2>{editingId ? 'Edit Source Note' : 'New Source Note'}</h2>
               <div className={styles.inlineActions}>
                 {editingDocument ? (
                   <button
@@ -1145,6 +1275,16 @@ function LoreRoute() {
                     disabled={extractingId === editingDocument.id}
                   >
                     {extractingId === editingDocument.id ? 'Extracting...' : 'Extract Facts'}
+                  </button>
+                ) : null}
+                {editingDocument ? (
+                  <button
+                    type='button'
+                    className={styles.dangerButton}
+                    onClick={() => void handleDelete(editingDocument)}
+                    disabled={deletingId === editingDocument.id}
+                  >
+                    {deletingId === editingDocument.id ? 'Deleting...' : 'Delete Source Note'}
                   </button>
                 ) : null}
                 {editingId ? (
@@ -1164,30 +1304,20 @@ function LoreRoute() {
               />
             </label>
 
-            <label className={styles.fieldLabel}>
-              Kind
-              <select value={kind} onChange={(event) => setKind(event.target.value as LoreDocumentKind)}>
-                {LORE_KIND_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </label>
-
             <div className={styles.linkSection}>
               <div className={styles.subsectionHeader}>
-                <h3>Linked Subjects</h3>
+                <h3>Placement</h3>
                 <button type='button' onClick={addLinkDraft}>
-                  Add Link
+                  Link Canon Record
                 </button>
               </div>
               <p className={styles.subsectionCopy}>
-                Link a source document to existing characters or World Bible records.
-                Extraction uses these links to suggest where accepted facts belong.
+                Leave this empty to keep the Source Note as general project context.
+                Add a link when the document is mainly about a character, location,
+                faction, item, or other World Bible record.
               </p>
               {linkDrafts.length === 0 ? (
-                <p className={styles.emptyHint}>No links yet.</p>
+                <p className={styles.emptyHint}>This will save as a general Source Note.</p>
               ) : null}
               {linkDrafts.map((draft, index) => (
                 <div key={`${draft.targetType}-${draft.targetId}-${index}`} className={styles.linkRow}>
@@ -1201,7 +1331,7 @@ function LoreRoute() {
                       });
                     }}
                   >
-                    <option value='character:'>Select target</option>
+                    <option value={`${draft.targetType}:`}>Select target</option>
                     {linkableTargets.map((target) => (
                       <option key={target.key} value={`${target.targetType}:${target.targetId}`}>
                         {target.label}
@@ -1240,7 +1370,7 @@ function LoreRoute() {
 
             <div className={styles.formActions}>
               <button type='submit' disabled={saving || !title.trim() || !content.trim()}>
-                {saving ? 'Saving...' : editingId ? 'Save Changes' : 'Create Lore Document'}
+                {saving ? 'Saving...' : editingId ? 'Save Changes' : 'Create Source Note'}
               </button>
             </div>
           </form>
@@ -1326,12 +1456,35 @@ function LoreRoute() {
                         <span className={styles.statusBadge}>{proposal.status}</span>
                       </div>
                       <p className={styles.proposalValue}>{formatFactValue(proposal.value)}</p>
-                      <p className={styles.proposalMeta}>
-                        Target:{' '}
-                        {proposal.targetName
-                          ? `${proposal.targetName} (${proposal.targetType})`
-                          : 'No resolved target'}
-                      </p>
+                      {proposal.targetName ? (
+                        <p className={styles.proposalMeta}>
+                          Target: {proposal.targetName} ({proposal.targetType})
+                        </p>
+                      ) : (
+                        <label className={styles.targetSelectLabel}>
+                          Target
+                          <select
+                            value={
+                              factTargetDrafts[proposal.id]
+                                ? `${factTargetDrafts[proposal.id].targetType}:${factTargetDrafts[proposal.id].targetId}`
+                                : ''
+                            }
+                            onChange={(event) =>
+                              updateFactTargetDraft(proposal.id, event.target.value)
+                            }
+                          >
+                            <option value=''>Choose target</option>
+                            {linkableTargets.map((target) => (
+                              <option
+                                key={target.key}
+                                value={`${target.targetType}:${target.targetId}`}
+                              >
+                                {target.label}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                      )}
                       <p className={styles.proposalMeta}>
                         Confidence: {Math.round(proposal.confidence * 100)}%
                       </p>
@@ -1341,9 +1494,14 @@ function LoreRoute() {
                           <button
                             type='button'
                             onClick={() => void handleAcceptProposal(proposal)}
-                            disabled={actingProposalId === proposal.id}
+                            disabled={
+                              actingProposalId === proposal.id ||
+                              (!proposal.targetId && !factTargetDrafts[proposal.id])
+                            }
                           >
-                            Accept
+                            {proposal.targetId || factTargetDrafts[proposal.id]
+                              ? 'Accept'
+                              : 'Choose Target'}
                           </button>
                           <button
                             type='button'
@@ -1429,7 +1587,7 @@ function LoreRoute() {
             </small>
           </div>
           <div className={styles.healthMetric}>
-            <span>Lore documents</span>
+            <span>Source notes</span>
             <strong>{documents.length}</strong>
             <small>{canonicalFacts.length} accepted facts</small>
           </div>
@@ -1473,9 +1631,9 @@ function LoreRoute() {
           <div>
             <strong>Rebuild derived context</strong>
             <p>
-              Refresh RAG from saved scenes, World Bible records, Lore Documents,
+              Refresh RAG from saved scenes, World Bible records, Source Notes,
               accepted canon facts, and rules. Shodh summaries are refreshed for
-              scenes, World Bible records, and rules.
+              scenes, World Bible records, accepted canon facts, and rules.
             </p>
           </div>
           <button

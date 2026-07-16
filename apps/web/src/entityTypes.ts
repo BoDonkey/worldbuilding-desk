@@ -27,6 +27,7 @@ export interface WritingDocument {
   title: string;
   content: string;
   consistencyReviewMode?: 'default' | 'deferred';
+  order?: number;
   createdAt: number;
   updatedAt: number;
 }

@@ -70,17 +70,15 @@ import {useWorkspaceLoreSnippets} from '../hooks/useWorkspaceLoreSnippets';
 import {useWorkspaceScratchpad} from '../hooks/useWorkspaceScratchpad';
 import {useWorkspaceCorkboard} from '../hooks/useWorkspaceCorkboard';
 import {normalizeRichTextValue} from '../services/worldBible/worldBibleEntityHelpers';
+import {buildCharacterCaptureAliasList} from '../services/worldBible/worldBibleCanonicalization';
 import {PageHeader} from '../components/PageHeader';
+import {sortWritingDocuments} from '../writingStorage';
 
 declare global {
   interface Window {
     __wbdWorkspaceMountedAt?: number;
     __wbdWorkspaceRenderCount?: number;
     __wbdWorkspaceUnmountedAt?: number;
-    __wbdLastWorkspaceScrollSnapshot?: {
-      elements: Array<{key: string; top: number; left: number}>;
-      windowY: number;
-    };
   }
 }
 
@@ -212,11 +210,15 @@ function WorkspaceRoute() {
   } | null>(null);
   const [worldCaptureDrafts, setWorldCaptureDrafts] = useState<Record<string, string>>({});
   const [manualWorldCapture, setManualWorldCapture] = useState<{
+    sourceText: string;
     draftText: string;
     left: number;
     top: number;
   } | null>(null);
   const [manualExistingTargetId, setManualExistingTargetId] = useState('');
+  const [rejectedAliasSuggestions, setRejectedAliasSuggestions] = useState<
+    Record<string, string[]>
+  >({});
   const [isReviewBannerDismissed, setReviewBannerDismissed] = useState(false);
   const {
     scratchpadContent,
@@ -374,6 +376,7 @@ function WorkspaceRoute() {
     handleImportDocuments,
     handleRetryFailedImports,
     handleSelectDocument,
+    handleMoveDocument,
     openExportModal,
     handleExportScenes,
     handleSave,
@@ -700,6 +703,24 @@ function WorkspaceRoute() {
       : resolverNotice?.destination === 'characters'
         ? 'Open Character Tools'
         : 'View in World Bible');
+  useEffect(() => {
+    if (!feedback || feedback.tone !== 'success') {
+      return;
+    }
+    const timeoutId = window.setTimeout(() => {
+      setFeedback((current) => (current === feedback ? null : current));
+    }, 3200);
+    return () => window.clearTimeout(timeoutId);
+  }, [feedback]);
+  useEffect(() => {
+    if (!resolverNotice) {
+      return;
+    }
+    const timeoutId = window.setTimeout(() => {
+      setResolverNotice((current) => (current === resolverNotice ? null : current));
+    }, resolverNotice.primaryLabel === 'Review Character Match' ? 7200 : 4200);
+    return () => window.clearTimeout(timeoutId);
+  }, [resolverNotice, setResolverNotice]);
   persistDocRef.current = persistDoc;
   refreshDeferredReviewRef.current = refreshDeferredReview;
   setGuardrailIssuesRef.current = setGuardrailIssues as typeof setGuardrailIssuesRef.current;
@@ -959,9 +980,7 @@ function WorkspaceRoute() {
 
     const selectedSceneOrder =
       selectedDocument &&
-      documents
-        .slice()
-        .sort((a, b) => a.createdAt - b.createdAt)
+      sortWritingDocuments(documents)
         .findIndex((doc) => doc.id === selectedDocument.id) + 1;
 
     const snapshots = Array.from(actorIdsTouchedInSelectedScene)
@@ -1022,10 +1041,7 @@ function WorkspaceRoute() {
     if (!selectedDocument) {
       return {};
     }
-    const orderedSceneIds = documents
-      .slice()
-      .sort((a, b) => a.createdAt - b.createdAt)
-      .map((doc) => doc.id);
+    const orderedSceneIds = sortWritingDocuments(documents).map((doc) => doc.id);
     const selectedSceneOrder = orderedSceneIds.findIndex((id) => id === selectedDocument.id) + 1;
     if (selectedSceneOrder <= 0) {
       return {};
@@ -1173,10 +1189,35 @@ function WorkspaceRoute() {
   const activeSuggestedCategory = activeSuggestedCategoryId
     ? categories.find((category) => category.id === activeSuggestedCategoryId) ?? null
     : null;
+  const normalizeCaptureSelection = useCallback((input: string) =>
+    input
+      .trim()
+      .toLowerCase()
+      .replace(/[^\p{L}\p{N}\s'-]/gu, ' ')
+      .replace(/\s+/g, ' ')
+      .trim(), []);
+  const isCharacterLikeCategory = useCallback((category: {slug: string; name: string} | null) => {
+    if (!category) return false;
+    const slug = category.slug.toLowerCase();
+    const name = category.name.toLowerCase();
+    return ['character', 'characters', 'npc', 'person', 'people'].some(
+      (hint) => slug.includes(hint) || name.includes(hint)
+    );
+  }, []);
+  const activeIsCharacterCapture = isCharacterLikeCategory(activeSuggestedCategory);
+  const activeRejectedAliases = activeConsistencyPopoverIssue
+    ? rejectedAliasSuggestions[activeConsistencyPopoverIssue.surface] ?? []
+    : [];
+  const activeAliasPreview = activeConsistencyPopoverIssue
+    ? buildCharacterCaptureAliasList({
+        surface: activeConsistencyPopoverIssue.surface,
+        canonicalName: activeWorldCaptureDraft,
+        rejectedAliases: activeRejectedAliases
+      })
+    : [];
   const reviewCreateActionLabel =
     activeSuggestedCategory
-      ? activeSuggestedCategory.slug.toLowerCase().includes('character') ||
-        activeSuggestedCategory.name.toLowerCase().includes('character')
+      ? activeIsCharacterCapture
         ? 'Add Character'
         : `Add ${toSingularLabel(activeSuggestedCategory.name)}`
       : reviewCreateLabel;
@@ -1206,13 +1247,6 @@ function WorkspaceRoute() {
     resolveCharacterBlock,
     resolveItemBlock
   });
-  const normalizeCaptureSelection = useCallback((input: string) =>
-    input
-      .trim()
-      .toLowerCase()
-      .replace(/[^\p{L}\p{N}\s'-]/gu, ' ')
-      .replace(/\s+/g, ' ')
-      .trim(), []);
   const knownWorldBibleLoreHighlights = useMemo(() => {
     const entityById = new Map(entities.map((entity) => [entity.id, entity]));
     const highlights = entities.map((entity) => ({
@@ -1305,6 +1339,21 @@ function WorkspaceRoute() {
       .sort((a, b) => a.score - b.score || a.name.localeCompare(b.name))
       .slice(0, 30);
   }, [categories, characters, entities, manualWorldCapture, normalizeCaptureSelection]);
+  const manualSelectedCategoryId = unknownCategorySelection.__manual__ ?? '';
+  const manualSelectedCategory = manualSelectedCategoryId
+    ? categories.find((category) => category.id === manualSelectedCategoryId) ?? null
+    : null;
+  const manualIsCharacterCapture = isCharacterLikeCategory(manualSelectedCategory);
+  const manualRejectedAliases = manualWorldCapture
+    ? rejectedAliasSuggestions[manualWorldCapture.sourceText] ?? []
+    : [];
+  const manualAliasPreview = manualWorldCapture && manualIsCharacterCapture
+    ? buildCharacterCaptureAliasList({
+        surface: manualWorldCapture.sourceText,
+        canonicalName: manualWorldCapture.draftText,
+        rejectedAliases: manualRejectedAliases
+      })
+    : [];
   const toolbarActions = useMemo(
     () => [
       {
@@ -1463,9 +1512,7 @@ function WorkspaceRoute() {
 
   useLayoutEffect(() => {
     if (!workspaceScrollSnapshotKey || focusQuery?.trim()) return;
-    const snapshot =
-      workspaceScrollSnapshots.get(workspaceScrollSnapshotKey) ??
-      window.__wbdLastWorkspaceScrollSnapshot;
+    const snapshot = workspaceScrollSnapshots.get(workspaceScrollSnapshotKey);
     if (!snapshot) return;
 
     const frameIds: number[] = [];
@@ -1781,6 +1828,7 @@ function WorkspaceRoute() {
     (draftText: string, anchorRect: {left: number; top: number; bottom: number}) => {
       setManualExistingTargetId('');
       setManualWorldCapture({
+        sourceText: draftText,
         draftText,
         left: anchorRect.left,
         top: anchorRect.bottom + 8
@@ -1984,41 +2032,48 @@ function WorkspaceRoute() {
           </>
         }
       />
-      {feedback && (
-        <div
-          role='status'
-          className={`${styles.feedbackBanner} ${
-            feedback.tone === 'error' ? styles.feedbackError : styles.feedbackSuccess
-          }`}
-        >
-          <span>{feedback.message}</span>
-          <button
-            type='button'
-            onClick={() => setFeedback(null)}
-            className={styles.feedbackDismissButton}
-            aria-label='Dismiss notification'
-          >
-            Dismiss
-          </button>
-        </div>
-      )}
-      {resolverNotice && (
-        <div role='status' className={styles.resolverNotice}>
-          <span>{resolverNotice.message}</span>
-          <button
-            type='button'
-            onClick={openResolverNoticeDestination}
-            className={styles.resolverButtonPrimary}
-          >
-            {resolverNoticePrimaryLabel}
-          </button>
-          <button
-            type='button'
-            onClick={() => setResolverNotice(null)}
-            className={styles.resolverButtonSecondary}
-          >
-            Dismiss
-          </button>
+      {(feedback || resolverNotice) && (
+        <div className={styles.workspaceToastViewport} aria-live='polite'>
+          {feedback && (
+            <div
+              role='status'
+              className={`${styles.feedbackBanner} ${
+                feedback.tone === 'error' ? styles.feedbackError : styles.feedbackSuccess
+              }`}
+            >
+              <span>{feedback.message}</span>
+              {feedback.tone === 'error' && (
+                <button
+                  type='button'
+                  onClick={() => setFeedback(null)}
+                  className={styles.feedbackDismissButton}
+                  aria-label='Dismiss notification'
+                >
+                  Dismiss
+                </button>
+              )}
+            </div>
+          )}
+          {resolverNotice && (
+            <div role='status' className={styles.resolverNotice}>
+              <span>{resolverNotice.message}</span>
+              <button
+                type='button'
+                onClick={openResolverNoticeDestination}
+                className={styles.resolverButtonPrimary}
+              >
+                {resolverNoticePrimaryLabel}
+              </button>
+              <button
+                type='button'
+                onClick={() => setResolverNotice(null)}
+                className={styles.resolverButtonSecondary}
+                aria-label='Dismiss notification'
+              >
+                Dismiss
+              </button>
+            </div>
+          )}
         </div>
       )}
       {showReviewBanner && (
@@ -2103,7 +2158,10 @@ function WorkspaceRoute() {
       <div className={styles.workspaceFrame} data-wbd-scroll-key='workspace-frame'>
         <div className={styles.workspaceLayout} data-wbd-scroll-key='workspace-layout'>
         {isSceneDrawerOpen && !isNarrowViewport && (
-          <aside className={styles.sceneDrawerDesktop}>
+          <aside
+            className={styles.sceneDrawerDesktop}
+            data-wbd-scroll-key='workspace-scene-drawer'
+          >
             <WorkspaceSceneDrawer
               handleNewDocument={handleNewDocument}
               isCreatingScene={isCreatingScene}
@@ -2122,6 +2180,7 @@ function WorkspaceRoute() {
               handleRetryFailedImports={handleRetryFailedImports}
               selectedId={selectedId}
               handleSelectDocument={handleSelectDocument}
+              handleMoveDocument={handleMoveDocument}
               handleDelete={handleDelete}
               deletingDocumentId={deletingDocumentId}
               reviewItemCountBySceneId={reviewItemCountBySceneId}
@@ -2218,30 +2277,81 @@ function WorkspaceRoute() {
                           ))}
                         </select>
                       )}
-                      <input
-                        type='text'
-                        value={activeWorldCaptureDraft}
-                        onChange={(event) =>
-                          setWorldCaptureDrafts((prev) => ({
-                            ...prev,
-                            [activeConsistencyPopoverIssue.surface]: event.target.value
-                          }))
-                        }
-                        placeholder='Name or place'
-                        className={styles.captureNameInput}
-                      />
+                      <label className={styles.captureNameField}>
+                        {activeIsCharacterCapture ? 'Canonical name' : 'Name or place'}
+                        <input
+                          type='text'
+                          value={activeWorldCaptureDraft}
+                          onChange={(event) =>
+                            setWorldCaptureDrafts((prev) => ({
+                              ...prev,
+                              [activeConsistencyPopoverIssue.surface]: event.target.value
+                            }))
+                          }
+                          placeholder={
+                            activeIsCharacterCapture
+                              ? 'Full canonical name'
+                              : 'Name or place'
+                          }
+                          className={styles.captureNameInput}
+                        />
+                      </label>
+                      {activeIsCharacterCapture && (
+                        <div className={styles.canonicalCaptureHint}>
+                          <strong>World Bible is the canon home.</strong>
+                          <span>
+                            Save the full name here, then keep or remove suggested aliases.
+                          </span>
+                          {activeAliasPreview.length > 0 && (
+                            <div className={styles.aliasPreviewList} aria-label='Suggested aliases'>
+                              {activeAliasPreview.map((alias) => (
+                                <span key={alias}>
+                                  {alias}
+                                  <button
+                                    type='button'
+                                    onClick={() =>
+                                      setRejectedAliasSuggestions((prev) => ({
+                                        ...prev,
+                                        [activeConsistencyPopoverIssue.surface]: [
+                                          ...(prev[activeConsistencyPopoverIssue.surface] ?? []),
+                                          alias
+                                        ]
+                                      }))
+                                    }
+                                    aria-label={`Remove alias ${alias}`}
+                                    title='Remove alias'
+                                  >
+                                    x
+                                  </button>
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      )}
                       <button
                         type='button'
-                        onClick={() => void resolveUnknownEntity(
-                          activeConsistencyPopoverIssue.surface,
-                          activeSuggestedCategoryId || undefined,
-                          activeWorldCaptureDraft
-                        )}
+                        onClick={() =>
+                          void resolveUnknownEntity(
+                            activeConsistencyPopoverIssue.surface,
+                            activeSuggestedCategoryId || undefined,
+                            activeWorldCaptureDraft,
+                            activeAliasPreview
+                          ).then(() =>
+                            setRejectedAliasSuggestions((prev) => {
+                              const copy = {...prev};
+                              delete copy[activeConsistencyPopoverIssue.surface];
+                              return copy;
+                            })
+                          )
+                        }
                         disabled={resolvingUnknown === activeConsistencyPopoverIssue.surface}
                       >
                         {resolvingUnknown === activeConsistencyPopoverIssue.surface
                           ? 'Adding...'
-                          : reviewCreateActionLabel}
+                          : activeIsCharacterCapture
+                            ? 'Create character'
+                            : reviewCreateActionLabel}
                       </button>
                       <button
                         type='button'
@@ -2359,42 +2469,90 @@ function WorkspaceRoute() {
                           ))}
                         </select>
                       )}
-                      <input
-                        type='text'
-                        value={manualWorldCapture.draftText}
-                        onChange={(event) => {
-                          setManualExistingTargetId('');
-                          setManualWorldCapture((prev) =>
-                            prev ? {...prev, draftText: event.target.value} : prev
-                          );
-                        }}
-                        placeholder='Name or place'
-                        className={styles.captureNameInput}
-                      />
+                      <label className={styles.captureNameField}>
+                        {manualIsCharacterCapture ? 'Canonical name' : 'Name or place'}
+                        <input
+                          type='text'
+                          value={manualWorldCapture.draftText}
+                          onChange={(event) => {
+                            setManualExistingTargetId('');
+                            setManualWorldCapture((prev) =>
+                              prev ? {...prev, draftText: event.target.value} : prev
+                            );
+                          }}
+                          placeholder={
+                            manualIsCharacterCapture ? 'Full canonical name' : 'Name or place'
+                          }
+                          className={styles.captureNameInput}
+                        />
+                      </label>
+                      {manualIsCharacterCapture && (
+                        <div className={styles.canonicalCaptureHint}>
+                          <strong>World Bible is the canon home.</strong>
+                          <span>
+                            Save the full name here, then keep or remove suggested aliases.
+                          </span>
+                          {manualAliasPreview.length > 0 && (
+                            <div className={styles.aliasPreviewList} aria-label='Suggested aliases'>
+                              {manualAliasPreview.map((alias) => (
+                                <span key={alias}>
+                                  {alias}
+                                  <button
+                                    type='button'
+                                    onClick={() =>
+                                      setRejectedAliasSuggestions((prev) => ({
+                                        ...prev,
+                                        [manualWorldCapture.sourceText]: [
+                                          ...(prev[manualWorldCapture.sourceText] ?? []),
+                                          alias
+                                        ]
+                                      }))
+                                    }
+                                    aria-label={`Remove alias ${alias}`}
+                                    title='Remove alias'
+                                  >
+                                    x
+                                  </button>
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      )}
                       <button
                         type='button'
                         onClick={() =>
                           void resolveUnknownEntity(
-                            manualWorldCapture.draftText,
+                            manualWorldCapture.sourceText,
                             unknownCategorySelection.__manual__ || undefined,
-                            manualWorldCapture.draftText
-                          ).then(() => setManualWorldCapture(null))
+                            manualWorldCapture.draftText,
+                            manualAliasPreview
+                          ).then(() => {
+                            setRejectedAliasSuggestions((prev) => {
+                              const copy = {...prev};
+                              delete copy[manualWorldCapture.sourceText];
+                              return copy;
+                            });
+                            setManualWorldCapture(null);
+                          })
                         }
-                        disabled={resolvingUnknown === manualWorldCapture.draftText}
+                        disabled={resolvingUnknown === manualWorldCapture.sourceText}
                       >
-                        {resolvingUnknown === manualWorldCapture.draftText
+                        {resolvingUnknown === manualWorldCapture.sourceText
                           ? 'Adding...'
-                          : reviewCreateLabel}
+                          : manualIsCharacterCapture
+                            ? 'Create character'
+                            : reviewCreateLabel}
                       </button>
                       {manualCaptureExistingEntity && (
                         <button
                           type='button'
                           onClick={() => {
-                            clearUnknownSurface(manualWorldCapture.draftText);
+                            clearUnknownSurface(manualWorldCapture.sourceText);
                             setManualWorldCapture(null);
                             setFeedback({
                               tone: 'success',
-                              message: `"${manualWorldCapture.draftText}" matched ${manualCaptureExistingEntity.name}.`
+                              message: `"${manualWorldCapture.sourceText}" matched ${manualCaptureExistingEntity.name}.`
                             });
                           }}
                         >
@@ -2421,7 +2579,7 @@ function WorkspaceRoute() {
                             type='button'
                             onClick={() => {
                               const selectedTargetId = manualExistingTargetId;
-                              const selectedSurface = manualWorldCapture.draftText;
+                              const selectedSurface = manualWorldCapture.sourceText;
                               void linkUnknownEntity(
                                 selectedSurface,
                                 selectedTargetId,
@@ -2435,10 +2593,10 @@ function WorkspaceRoute() {
                             }}
                             disabled={
                               !manualExistingTargetId ||
-                              linkingUnknown === manualWorldCapture.draftText
+                              linkingUnknown === manualWorldCapture.sourceText
                             }
                           >
-                            {linkingUnknown === manualWorldCapture.draftText
+                            {linkingUnknown === manualWorldCapture.sourceText
                               ? 'Linking...'
                               : 'Link selected'}
                           </button>
@@ -2657,6 +2815,7 @@ function WorkspaceRoute() {
           <aside
             onClick={(event) => event.stopPropagation()}
             className={styles.drawerPanelLeft}
+            data-wbd-scroll-key='workspace-scene-drawer'
           >
             <div className={styles.drawerPanelHeader}>
               <strong>Scenes</strong>
@@ -2682,6 +2841,7 @@ function WorkspaceRoute() {
               handleRetryFailedImports={handleRetryFailedImports}
               selectedId={selectedId}
               handleSelectDocument={handleSelectDocument}
+              handleMoveDocument={handleMoveDocument}
               handleDelete={handleDelete}
               deletingDocumentId={deletingDocumentId}
               reviewItemCountBySceneId={reviewItemCountBySceneId}

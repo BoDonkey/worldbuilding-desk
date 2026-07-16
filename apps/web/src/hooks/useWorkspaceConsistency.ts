@@ -12,7 +12,7 @@ import type {
   WorldEntity,
   WritingDocument
 } from '../entityTypes';
-import {saveWritingDocument} from '../writingStorage';
+import {saveWritingDocument, sortWritingDocuments} from '../writingStorage';
 import {getCategoriesByProject, initializeDefaultCategories} from '../categoryStorage';
 import {saveEntity} from '../entityStorage';
 import type {RAGProvider} from '../services/rag/RAGService';
@@ -21,7 +21,7 @@ import type {
   GuardrailIssue
 } from '../services/consistency';
 import {findCanonContradictions, saveAlias} from '../services/consistency';
-import {deriveFirstNameAlias} from '../services/worldBible/worldBibleCanonicalization';
+import {buildCharacterCaptureAliasList} from '../services/worldBible/worldBibleCanonicalization';
 import type {WorldEngine} from '../services/worldEngine';
 import type {WorldEngineStatus} from '../services/worldEngine';
 import type {ReviewIssueAnnotation} from '../services/worldEngine';
@@ -982,9 +982,7 @@ export const useWorkspaceConsistency = ({
 
           if (validation.allowCommit) {
             await worldEngine.applyAcceptedProposal(proposal, validation);
-            const orderedDocuments = documents
-              .slice()
-              .sort((a, b) => a.createdAt - b.createdAt);
+            const orderedDocuments = sortWritingDocuments(documents);
             const sceneOrder =
               orderedDocuments.findIndex((entry) => entry.id === doc.id) + 1;
             if (sceneOrder > 0) {
@@ -1057,11 +1055,11 @@ export const useWorkspaceConsistency = ({
       setDocuments((prev) => {
         const index = prev.findIndex((entry) => entry.id === doc.id);
         if (index === -1) {
-          return [...prev, doc];
+          return sortWritingDocuments([...prev, doc]);
         }
         const copy = [...prev];
         copy[index] = doc;
-        return copy;
+        return sortWritingDocuments(copy);
       });
 
       setSelectedCreatedAt(doc.createdAt);
@@ -1922,7 +1920,8 @@ export const useWorkspaceConsistency = ({
     async (
       surface: string,
       categoryId?: string,
-      preferredName?: string
+      preferredName?: string,
+      acceptedAliases?: string[]
     ) => {
       if (!activeProject) return;
 
@@ -1965,6 +1964,7 @@ export const useWorkspaceConsistency = ({
               selectedCategory.name.toLowerCase().includes(hint)
             )
         );
+        let acceptedReviewAliases: string[] = [];
         if (explicitCharacterSelection) {
           const normalizedCharacterName = normalizeRecordName(normalizedName);
           const linkedCharacterEntity = entities.find(
@@ -2027,22 +2027,16 @@ export const useWorkspaceConsistency = ({
             await saveEntity(characterEntity);
             setEntities((prev) => [...prev, characterEntity]);
           }
-          const derivedNameAlias = deriveFirstNameAlias(normalizedName);
-          const aliasTexts = [
-            ...(normalizedName.toLowerCase() === normalizedSurface.toLowerCase()
-              ? []
-              : [normalizedName, normalizedSurface]),
-            ...(derivedNameAlias ? [derivedNameAlias] : [])
-          ];
+          const aliasTexts = acceptedAliases ?? buildCharacterCaptureAliasList({
+            surface: normalizedSurface,
+            canonicalName: normalizedName
+          });
+          acceptedReviewAliases = aliasTexts;
           await attachAliasTexts({
             projectId: activeProject.id,
             targetId: characterEntity.id,
             targetType: 'entity',
             aliasTexts
-          });
-          setFeedback({
-            tone: 'success',
-            message: `"${normalizedName}" added to World Bible Characters.`
           });
           setResolverNotice({
             message: closeCharacterEntityMatch
@@ -2075,13 +2069,9 @@ export const useWorkspaceConsistency = ({
             aliasTexts:
               normalizedName.toLowerCase() === normalizedSurface.toLowerCase()
                 ? []
-                : [normalizedName, normalizedSurface]
+                : [normalizedSurface]
           });
           setEntities((prev) => [...prev, entity]);
-          setFeedback({
-            tone: 'success',
-            message: `"${normalizedName}" added to ${chosenCategory.name}. It will stay marked new until you open the lore entry and save it.`
-          });
           setResolverNotice({
             message: `"${normalizedName}" added to your world.`,
             destination: 'world-bible',
@@ -2089,10 +2079,7 @@ export const useWorkspaceConsistency = ({
           });
         }
         removeReviewSurface(normalizedSurface);
-        const derivedReviewSurface = deriveFirstNameAlias(normalizedName);
-        if (derivedReviewSurface) {
-          removeReviewSurface(derivedReviewSurface);
-        }
+        acceptedReviewAliases.forEach((alias) => removeReviewSurface(alias));
         setUnknownLinkSelection((prev) => {
           const copy = {...prev};
           delete copy[surface];
@@ -2328,11 +2315,16 @@ export const useWorkspaceConsistency = ({
             ? null
             : prev
         );
-        setFeedback({
-          tone: 'success',
-          message: `Connected "${surface}" as an alias of an existing record. The review prompt has been cleared.`
+        setResolverNotice({
+          message: `Connected "${surface}" as an alias of an existing record.`,
+          destination:
+            targetType === 'character'
+              ? ruleset
+                ? 'character-sheet-create'
+                : 'characters'
+              : 'world-bible',
+          targetId
         });
-        setResolverNotice(null);
         return {
           destination:
             targetType === 'character'

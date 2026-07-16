@@ -133,6 +133,12 @@
   width: 260px;
   border-right: 1px solid var(--color-border);
   padding-right: 1rem;
+  padding-bottom: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
 }
 
 .sceneList {
@@ -152,6 +158,48 @@
 .sceneListItemActive {
   background-color: var(--color-accent-soft-bg);
   color: var(--color-text-primary);
+}
+
+.sceneListItemActions {
+  margin-top: 0.35rem;
+  display: flex;
+  gap: 0.35rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.sceneOrderButton,
+.sceneDeleteButton {
+  border: 1px solid var(--button-border);
+  border-radius: 12px;
+  background: var(--button-bg);
+  color: var(--button-text);
+  padding: 0.2rem 0.45rem;
+  font-size: 0.8rem;
+  line-height: 1.2;
+  cursor: pointer;
+  transition:
+    background-color 0.18s ease,
+    transform 0.18s ease;
+}
+
+.sceneOrderButton {
+  width: 1.8rem;
+  min-width: 1.8rem;
+  padding-inline: 0;
+  font-weight: 700;
+}
+
+.sceneOrderButton:hover:not(:disabled),
+.sceneDeleteButton:hover:not(:disabled) {
+  background: var(--button-bg-hover);
+  transform: translateY(-1px);
+}
+
+.sceneOrderButton:disabled,
+.sceneDeleteButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
 }
 
 .sceneBadgeGroup {
@@ -331,15 +379,28 @@
   margin-bottom: 0.75rem;
 }
 
+.workspaceToastViewport {
+  position: fixed;
+  right: 1rem;
+  bottom: 1rem;
+  z-index: 1350;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  width: min(420px, calc(100vw - 2rem));
+  pointer-events: none;
+}
+
 .feedbackBanner {
-  margin-bottom: 1rem;
-  padding: 0.5rem 0.75rem;
-  border-radius: 6px;
+  padding: 0.55rem 0.75rem;
+  border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 0.75rem;
   flex-wrap: wrap;
+  box-shadow: var(--button-shadow);
+  pointer-events: auto;
 }
 
 .feedbackError {
@@ -357,7 +418,7 @@
 .feedbackDismissButton {
   margin-left: auto;
   border: 1px solid currentColor;
-  border-radius: 4px;
+  border-radius: 12px;
   background: transparent;
   color: inherit;
   padding: 0.18rem 0.45rem;
@@ -525,9 +586,8 @@
 }
 
 .resolverNotice {
-  margin-bottom: 1rem;
-  padding: 0.5rem 0.75rem;
-  border-radius: 6px;
+  padding: 0.55rem 0.75rem;
+  border-radius: 12px;
   border: 1px solid var(--color-success-soft-border);
   background-color: var(--color-success-soft-bg);
   color: var(--color-success);
@@ -535,11 +595,13 @@
   align-items: center;
   gap: 0.5rem;
   flex-wrap: wrap;
+  box-shadow: var(--button-shadow);
+  pointer-events: auto;
 }
 
 .resolverButtonPrimary {
   font-size: 0.8rem;
-  border-radius: 4px;
+  border-radius: 12px;
   border: 1px solid var(--color-success-soft-border);
   background: var(--color-bg-primary);
   color: var(--color-success);
@@ -549,12 +611,20 @@
 
 .resolverButtonSecondary {
   font-size: 0.8rem;
-  border-radius: 4px;
+  border-radius: 12px;
   border: 1px solid var(--color-success-soft-border);
   background-color: transparent;
   color: var(--color-success);
   padding: 0.2rem 0.45rem;
   cursor: pointer;
+}
+
+@media (max-width: 900px) {
+  .workspaceToastViewport {
+    right: 0.75rem;
+    bottom: calc(66px + 0.75rem + env(safe-area-inset-bottom));
+    width: calc(100vw - 1.5rem);
+  }
 }
 
 .consistencyPanel {
@@ -747,6 +817,14 @@
   flex: 1 1 11rem;
 }
 
+.reviewActionRow button {
+  flex: 1 1 8rem;
+  min-width: 0;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  line-height: 1.2;
+}
+
 .unknownPanel {
   margin-bottom: 0.75rem;
   padding: 0.65rem 0.75rem;
@@ -902,6 +980,7 @@
 }
 
 .consistencyPopoverActions select,
+.consistencyPopoverActions .captureNameField,
 .consistencyPopoverActions .captureNameInput {
   grid-column: 1 / -1;
   width: 100%;
@@ -910,8 +989,9 @@
 
 .consistencyPopoverActions button {
   min-width: 0;
-  white-space: nowrap;
-  overflow-wrap: normal;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  line-height: 1.2;
 }
 
 .captureNameInput {
@@ -923,6 +1003,68 @@
   border: 1px solid var(--color-border);
   border-radius: 10px;
   padding: 0.45rem 0.55rem;
+}
+
+.captureNameField {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  color: var(--color-text-secondary);
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.canonicalCaptureHint {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  border: 1px solid var(--color-accent-soft-border);
+  border-radius: 10px;
+  background: var(--color-accent-soft-bg);
+  color: var(--color-accent-soft-text);
+  padding: 0.5rem 0.6rem;
+  font-size: 0.8rem;
+  line-height: 1.35;
+}
+
+.aliasPreviewList {
+  display: flex;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+}
+
+.aliasPreviewList span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  border: 1px solid var(--color-accent-soft-border);
+  border-radius: 999px;
+  background: var(--color-bg-primary);
+  color: var(--color-accent-hover);
+  padding: 0.1rem 0.45rem;
+  font-size: 0.74rem;
+  font-weight: 700;
+}
+
+.aliasPreviewList button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1rem;
+  min-height: 1rem;
+  padding: 0;
+  border-radius: 999px;
+  border: 1px solid var(--color-accent-soft-border);
+  background: var(--surface-panel);
+  color: var(--color-text-secondary);
+  font-size: 0.68rem;
+  line-height: 1;
+}
+
+.aliasPreviewList button:hover {
+  border-color: var(--color-accent);
+  color: var(--color-accent-hover);
 }
 
 .manualExistingLinkControls {

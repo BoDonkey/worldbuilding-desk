@@ -122,19 +122,21 @@ export class RAGService implements RAGProvider {
     const ranked = allChunks
       .map((chunk) => ({
         chunk,
-        score: this.cosineSimilarity(queryEmbedding, chunk.embedding!),
-        lexicalScore: getLexicalSearchScore(query, `${chunk.documentTitle}\n${chunk.content}`)
+        vectorScore: this.cosineSimilarity(queryEmbedding, chunk.embedding!),
+        lexicalScore: getLexicalSearchScore(query, `${chunk.documentTitle}\n${chunk.content}`),
+        trustScore: getRagTrustRankingBoost(chunk.metadata.type)
       }))
       .map((result) => ({
         chunk: result.chunk,
-        score: result.score + result.lexicalScore
+        vectorScore: result.vectorScore,
+        score: result.vectorScore + result.lexicalScore + result.trustScore
       }))
       .sort((a, b) => b.score - a.score);
     const lexicalMatches = ranked.filter((result) =>
       getLexicalSearchScore(query, `${result.chunk.documentTitle}\n${result.chunk.content}`) > 0
     );
     const hasMeaningfulVectorRanking = ranked.some(
-      (result) => Math.abs(result.score - ranked[0]!.score) > 0.000001
+      (result) => Math.abs(result.vectorScore - ranked[0]!.vectorScore) > 0.000001
     );
     if (lexicalMatches.length === 0 && !hasMeaningfulVectorRanking) {
       return [];
@@ -302,6 +304,21 @@ function containsTokenPhrase(contentTerms: string[], queryTerms: string[]): bool
     }
   }
   return false;
+}
+
+export function getRagTrustRankingBoost(type: DocumentChunk['metadata']['type']): number {
+  switch (type) {
+    case 'canon_fact':
+      return 0.35;
+    case 'worldbible':
+      return 0.3;
+    case 'rule':
+      return 0.12;
+    case 'scene':
+      return 0.05;
+    case 'lore':
+      return 0;
+  }
 }
 
 export class CompositeRAGService implements RAGProvider {

@@ -10,7 +10,10 @@ import type {
 import {getLoreDocumentLinksByProject, getLoreDocumentsByProject} from '../../loreStorage';
 import {getDocumentsByProject} from '../../writingStorage';
 import {getCanonicalFactsByProject} from '../lore/loreFactStorage';
-import {buildCanonicalFactSummary} from '../lore/canonicalFactActions';
+import {
+  buildCanonicalFactSummary,
+  captureCanonicalFactMemory
+} from '../lore/canonicalFactActions';
 import type {RAGProvider} from '../rag/RAGService';
 import type {ShodhMemoryProvider} from '../shodh/ShodhMemoryService';
 import {emitShodhMemoriesUpdated} from '../shodh/shodhEvents';
@@ -137,6 +140,8 @@ export async function rebuildProjectContextHealth(params: {
         entityIds: [getFactTargetId(fact)]
       }
     );
+    await captureCanonicalFactMemory(shodhService, fact);
+    shodhMemories += 1;
   }
 
   if (ruleset) {

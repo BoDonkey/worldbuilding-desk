@@ -121,6 +121,32 @@
   color: var(--color-text-primary);
 }
 
+.contextSources {
+  margin-top: 0.35rem;
+  padding: 0.45rem 0.55rem;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--surface-panel);
+  color: var(--color-text-secondary);
+  font-size: 0.76rem;
+  line-height: 1.35;
+}
+
+.contextSources summary {
+  cursor: pointer;
+  color: var(--color-text-primary);
+  font-weight: 700;
+}
+
+.contextSources ul {
+  margin: 0.4rem 0 0;
+  padding-left: 1rem;
+}
+
+.contextSources li + li {
+  margin-top: 0.25rem;
+}
+
 .inputArea {
   min-width: 0;
   border-top: 1px solid var(--color-border);

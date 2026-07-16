@@ -121,6 +121,18 @@ const IMPORT_NAME_LABELS = new Set([
 const COLLAPSED_SECTION_HEADING_PATTERN =
   /\b(Background(?:\s+and\s+[A-Z][A-Za-z'’/-]+)?|[A-Z][A-Za-z'’/-]+\s+and\s+[A-Z][A-Za-z'’/-]+|Interaction\s+with\s+[A-Z][A-Za-z'’/-]+(?:\s+[A-Z][A-Za-z'’/-]+)*|Role\s+in\s+[A-Z][A-Za-z'’/-]+(?:\s+[A-Z][A-Za-z'’/-]+)*|Broader\s+Implications|Inclusion\s+of\s+[A-Z][A-Za-z'’/-]+(?:\s+[A-Z][A-Za-z'’/-]+)*):\s/gi;
 const INLINE_LABEL_PATTERN = /^[A-Z][A-Za-z'’/-]{1,32}(?:\s+[A-Z][A-Za-z'’/-]{1,32}){0,2}$/;
+const COMMON_IMPORT_SECTION_HEADINGS = new Set([
+  'basic information',
+  'physical description',
+  'personality',
+  'background',
+  'skills',
+  'special traits',
+  'social dynamics',
+  'goals and motivations',
+  'character arc',
+  'new additions'
+]);
 
 const looksLikeImportSectionHeading = (
   line: string,
@@ -132,6 +144,7 @@ const looksLikeImportSectionHeading = (
   if (!candidate || candidate.includes(':') || candidate.includes('  ')) return false;
   if (IMPORT_NAME_LABELS.has(candidate.toLowerCase())) return false;
   if (candidate.length > 72) return false;
+  if (COMMON_IMPORT_SECTION_HEADINGS.has(candidate.toLowerCase())) return true;
   if (INLINE_LABEL_PATTERN.test(candidate) && !/\b(and|with|in|of)\b/i.test(candidate)) {
     return !previousLine && Boolean(nextLine) && !parseImportLabelValue(nextLine);
   }

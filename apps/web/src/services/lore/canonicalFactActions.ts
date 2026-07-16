@@ -7,14 +7,51 @@ import type {
 import {getCharactersByProject, saveCharacter} from '../../characterStorage';
 import {getEntitiesByProject, saveEntity} from '../../entityStorage';
 import {saveAlias} from '../consistency';
+import type {ShodhMemoryProvider} from '../shodh/ShodhMemoryService';
 
 function canonicalFactValueText(fact: CanonicalFact | LoreFactProposal): string {
   return typeof fact.value === 'string' ? fact.value : `${fact.value.label}: ${fact.value.value}`;
 }
 
+export function getCanonicalFactMemoryDocumentId(factId: string): string {
+  return `canon-fact:${factId}`;
+}
+
 export function buildCanonicalFactSummary(fact: CanonicalFact): string {
   const label = fact.targetName ?? fact.targetId;
   return `${label} ${fact.factType.replace(/_/g, ' ')}: ${canonicalFactValueText(fact)}`;
+}
+
+export function buildCanonicalFactMemoryContent(fact: CanonicalFact): string {
+  return [
+    buildCanonicalFactSummary(fact),
+    fact.sourceLoreDocumentTitle
+      ? `Accepted from Source Note: ${fact.sourceLoreDocumentTitle}`
+      : null,
+    fact.evidenceText ? `Evidence: ${fact.evidenceText}` : null
+  ]
+    .filter((entry): entry is string => Boolean(entry?.trim()))
+    .join('\n');
+}
+
+export async function captureCanonicalFactMemory(
+  shodhService: ShodhMemoryProvider,
+  fact: CanonicalFact
+): Promise<void> {
+  await shodhService.captureAutoMemory({
+    projectId: fact.projectId,
+    documentId: getCanonicalFactMemoryDocumentId(fact.id),
+    title: `Canon fact: ${fact.targetName ?? fact.targetId}`,
+    content: buildCanonicalFactMemoryContent(fact),
+    tags: ['canon_fact', fact.factType]
+  });
+}
+
+export async function deleteCanonicalFactMemory(
+  shodhService: ShodhMemoryProvider,
+  factId: string
+): Promise<void> {
+  await shodhService.deleteMemoriesForDocument(getCanonicalFactMemoryDocumentId(factId));
 }
 
 export async function applyCanonicalFactSideEffects(

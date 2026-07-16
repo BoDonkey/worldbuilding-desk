@@ -81,10 +81,22 @@ function findExistingMatch(
 }
 
 const FACTION_PATTERNS: Array<{pattern: RegExp; kind: LoreEntityKind}> = [
-  {pattern: /\bmember of (?:the )?([A-Z][A-Za-zÀ-ÿ' -]+ clan)\b/g, kind: 'faction'},
-  {pattern: /\b([A-Z][A-Za-zÀ-ÿ' -]+ clan)\b/g, kind: 'faction'},
-  {pattern: /\b([A-Z][A-Za-zÀ-ÿ' -]+ police)\b/g, kind: 'faction'},
-  {pattern: /\b([A-Z][A-Za-zÀ-ÿ' -]+ force)\b/g, kind: 'faction'}
+  {
+    pattern: /\bmember of (?:the )?([A-Z][A-Za-zÀ-ÿ'’-]*(?:\s+[A-Z][A-Za-zÀ-ÿ'’-]*)*\s+clan)\b/g,
+    kind: 'faction'
+  },
+  {
+    pattern: /\b([A-Z][A-Za-zÀ-ÿ'’-]*(?:\s+[A-Z][A-Za-zÀ-ÿ'’-]*)*\s+clan)\b/g,
+    kind: 'faction'
+  },
+  {
+    pattern: /\b([A-Z][A-Za-zÀ-ÿ'’-]*(?:\s+[A-Z][A-Za-zÀ-ÿ'’-]*)*\s+police)\b/g,
+    kind: 'faction'
+  },
+  {
+    pattern: /\b([A-Z][A-Za-zÀ-ÿ'’-]*(?:\s+[A-Z][A-Za-zÀ-ÿ'’-]*)*\s+force)\b/g,
+    kind: 'faction'
+  }
 ];
 
 const CHARACTER_PATTERNS: Array<{pattern: RegExp; kind: LoreEntityKind}> = [

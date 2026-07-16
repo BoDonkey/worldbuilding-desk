@@ -27,6 +27,7 @@ import type {
 import type {GuardrailIssue} from '../../services/consistency/types';
 import type {ReviewIssueAnnotation} from '../../services/worldEngine';
 import {normalizeRichTextValue} from '../../services/worldBible/worldBibleEntityHelpers';
+import {buildCharacterCaptureAliasList} from '../../services/worldBible/worldBibleCanonicalization';
 import styles from '../../styles/WorkspaceRoute.module.css';
 
 interface ConsistencyReviewItem {
@@ -165,7 +166,8 @@ interface WorkspaceContextDrawerProps {
   resolveUnknownEntity: (
     surface: string,
     categoryId?: string,
-    displayName?: string
+    displayName?: string,
+    acceptedAliases?: string[]
   ) => Promise<void>;
   dismissUnknownEntity: (surface: string, documentId?: string) => void;
   ignoreUnknownSurfaceProjectWide: (surface: string, documentId?: string) => void;
@@ -233,8 +235,17 @@ const CONTEXT_DRAWER_TABS: Array<{id: WorkspaceContextDrawerView; label: string}
   {id: 'scratchpad', label: 'Scratchpad'},
   {id: 'ai', label: 'AI'},
   {id: 'system', label: 'System'},
-  {id: 'lore', label: 'Lore'}
+  {id: 'lore', label: 'Source Notes'}
 ];
+
+const isCharacterLikeCategory = (category: {slug: string; name: string} | null) => {
+  if (!category) return false;
+  const slug = category.slug.toLowerCase();
+  const name = category.name.toLowerCase();
+  return ['character', 'characters', 'npc', 'person', 'people'].some(
+    (hint) => slug.includes(hint) || name.includes(hint)
+  );
+};
 
 export function WorkspaceContextDrawer({
   activeContextView,
@@ -317,6 +328,9 @@ export function WorkspaceContextDrawer({
 }: WorkspaceContextDrawerProps) {
   const navigate = useNavigate();
   const [expandedReviewActionId, setExpandedReviewActionId] = useState<string | null>(null);
+  const [rejectedAliasSuggestions, setRejectedAliasSuggestions] = useState<
+    Record<string, string[]>
+  >({});
   const activeReviewItemRef = useRef<HTMLLIElement | null>(null);
 
   const visibleTabs = useMemo(
@@ -400,6 +414,18 @@ export function WorkspaceContextDrawer({
       (surface ? getSuggestedUnknownCategoryId(surface) : '') ||
       '';
     const draftName = worldCaptureDrafts[actionSurface] || actionSurface;
+    const selectedCategory = selectedCategoryId
+      ? categories.find((category) => category.id === selectedCategoryId) ?? null
+      : null;
+    const isCharacterCapture = isCharacterLikeCategory(selectedCategory);
+    const rejectedAliases = rejectedAliasSuggestions[actionSurface] ?? [];
+    const aliasPreview = isCharacterCapture
+      ? buildCharacterCaptureAliasList({
+          surface: actionSurface,
+          canonicalName: draftName,
+          rejectedAliases
+        })
+      : [];
     const selectedLinkValue = unknownLinkSelection[actionSurface] ?? '';
     const linkOptions = unknownLinkOptions[actionSurface] ?? [];
     const issueTitle = surface || getIssueLabel(item.issue.code);
@@ -513,7 +539,7 @@ export function WorkspaceContextDrawer({
               </select>
             </label>
             <label className={styles.reviewActionField}>
-              Name
+              {isCharacterCapture ? 'Canonical name' : 'Name'}
               <input
                 type='text'
                 value={draftName}
@@ -525,6 +551,39 @@ export function WorkspaceContextDrawer({
                 }
               />
             </label>
+            {isCharacterCapture && (
+              <div className={styles.canonicalCaptureHint}>
+                <strong>World Bible is the canon home.</strong>
+                <span>
+                  Save the full name here, then keep or remove suggested aliases.
+                </span>
+                {aliasPreview.length > 0 && (
+                  <div className={styles.aliasPreviewList} aria-label='Suggested aliases'>
+                    {aliasPreview.map((alias) => (
+                      <span key={alias}>
+                        {alias}
+                        <button
+                          type='button'
+                          onClick={() =>
+                            setRejectedAliasSuggestions((prev) => ({
+                              ...prev,
+                              [actionSurface]: [
+                                ...(prev[actionSurface] ?? []),
+                                alias
+                              ]
+                            }))
+                          }
+                          aria-label={`Remove alias ${alias}`}
+                          title='Remove alias'
+                        >
+                          x
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
             <div className={styles.reviewActionRow}>
               <button
                 type='button'
@@ -532,12 +591,23 @@ export function WorkspaceContextDrawer({
                   void resolveUnknownEntity(
                     actionSurface,
                     selectedCategoryId || undefined,
-                    draftName
+                    draftName,
+                    aliasPreview
+                  ).then(() =>
+                    setRejectedAliasSuggestions((prev) => {
+                      const copy = {...prev};
+                      delete copy[actionSurface];
+                      return copy;
+                    })
                   )
                 }
                 disabled={resolvingUnknown === actionSurface}
               >
-                {resolvingUnknown === actionSurface ? 'Adding...' : reviewCreateLabel}
+                {resolvingUnknown === actionSurface
+                  ? 'Adding...'
+                  : isCharacterCapture
+                    ? 'Create character'
+                    : reviewCreateLabel}
               </button>
               <button
                 type='button'

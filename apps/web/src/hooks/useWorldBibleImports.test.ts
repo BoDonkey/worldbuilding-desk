@@ -108,6 +108,87 @@ describe('document import structure detection', () => {
     );
   });
 
+  it('detects character sheet section headings even when followed by label rows', () => {
+    const source = [
+      'Character Sheet: Camila Garcia deTerra',
+      'Basic Information:',
+      'Name: Camila Garcia deTerra',
+      'Member of the Terra clan',
+      'Age: Mid-30s',
+      'Occupation: Detective partnered with Leo Muller-Sarkisian',
+      'Background: Hybrid with human and Dhemon heritage',
+      'Physical Description:',
+      'Height: 6 feet 3 inches',
+      'Build: Muscular but well-proportioned',
+      'Hair: Brunette with green streaks',
+      'Complexion: Dusky',
+      'Eyes: Brown with rings like a tree',
+      'Personality:',
+      'General Disposition: Precise, critical, nurturing, and protective.',
+      'Skills:',
+      'Investigative Skills: Sharp, detail-oriented.',
+      'Special Traits:',
+      'Magical sight: In low-light conditions, her eyes turn a burning orange.'
+    ].join('\n');
+
+    expect(detectImportSections(source).map((section) => section.title)).toEqual([
+      'Basic Information',
+      'Physical Description',
+      'Personality',
+      'Skills',
+      'Special Traits'
+    ]);
+  });
+
+  it('maps character sheet sections to existing fields instead of dumping everything into description', () => {
+    const source = [
+      'Character Sheet: Camila Garcia deTerra',
+      'Basic Information:',
+      'Name: Camila Garcia deTerra',
+      'Member of the Terra clan',
+      'Age: Mid-30s',
+      'Occupation: Detective partnered with Leo Muller-Sarkisian',
+      'Background: Hybrid with human and Dhemon heritage',
+      'Physical Description:',
+      'Height: 6 feet 3 inches',
+      'Build: Muscular but well-proportioned',
+      'Personality:',
+      'General Disposition: Precise, critical, nurturing, and protective.',
+      'Skills:',
+      'Investigative Skills: Sharp, detail-oriented.'
+    ].join('\n');
+    const category: EntityCategory = {
+      id: 'characters',
+      projectId: 'project',
+      name: 'Characters',
+      slug: 'characters',
+      createdAt: 1,
+      fieldSchema: [
+        {key: 'description', label: 'Description', type: 'textarea'},
+        {key: 'age', label: 'Age', type: 'text'},
+        {key: 'occupation', label: 'Occupation', type: 'text'},
+        {key: 'background', label: 'Background', type: 'textarea'},
+        {key: 'physical_description', label: 'Physical Description', type: 'textarea'},
+        {key: 'personality', label: 'Personality', type: 'textarea'},
+        {key: 'skills', label: 'Skills', type: 'textarea'}
+      ]
+    };
+
+    const sections = markExistingFieldSections(detectImportSections(source), category);
+    const fields = mapImportedTextToFields(category, source, undefined, sections);
+
+    expect(fields.description).toContain('Character Sheet: Camila Garcia deTerra');
+    expect(fields.description).toContain('Basic Information');
+    expect(fields.description).toContain('Member of the Terra clan');
+    expect(fields.description).not.toContain('Physical Description:');
+    expect(fields.age).toBe('Mid-30s');
+    expect(fields.occupation).toBe('Detective partnered with Leo Muller-Sarkisian');
+    expect(fields.background).toContain('Hybrid with human and Dhemon heritage');
+    expect(fields.physical_description).toContain('Height: 6 feet 3 inches');
+    expect(fields.personality).toContain('Precise, critical');
+    expect(fields.skills).toContain('Sharp, detail-oriented');
+  });
+
   it('classifies specific inline headings as record sections when DOCX text collapses paragraphs', () => {
     const source =
       'Concept: The Sireneans Background and Traits: Origin: The Sireneans could hail from a mystical region. Appearance: They might resemble humans. Cultural Aspects: Their society is complex. Sireneans and Trafficking: The exploitation of Sireneans is a dark aspect. Interaction with Other Races: Humans mistrust them. Role in the Story: Their plight highlights consent.';

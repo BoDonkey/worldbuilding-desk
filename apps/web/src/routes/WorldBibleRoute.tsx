@@ -14,7 +14,7 @@ import type {
   WritingDocument,
   WorldEntity
 } from '../entityTypes';
-import {getEntitiesByProject} from '../entityStorage';
+import {getEntitiesByProject, saveEntity} from '../entityStorage';
 import {
   getCategoriesByProject,
   saveCategory,
@@ -179,7 +179,7 @@ const summarizeEntityForLore = (
   return [
     `${entity.name} source notes`,
     '',
-    'Use this linked Lore Document for longform background, source excerpts, timelines, and exploratory notes.',
+    'Use this linked Source Note for longform background, source excerpts, timelines, and exploratory notes.',
     '',
     ...fieldLines
   ].join('\n');
@@ -457,6 +457,8 @@ function WorldBibleRoute() {
   const [newCharacterSectionName, setNewCharacterSectionName] = useState('');
   const [isNameResolverOpen, setIsNameResolverOpen] = useState(false);
   const [manualResolutionTargetId, setManualResolutionTargetId] = useState('');
+  const [moveCategoryTargetId, setMoveCategoryTargetId] = useState('');
+  const [movingEntityCategoryId, setMovingEntityCategoryId] = useState<string | null>(null);
   const [linkingLoreEntityId, setLinkingLoreEntityId] = useState<string | null>(null);
   const [ragService, setRagService] = useState<RAGProvider | null>(null);
   const [shodhService, setShodhService] =
@@ -1140,12 +1142,12 @@ function WorldBibleRoute() {
         await saveLoreDocumentLinks([link]);
         setFeedback({
           tone: 'success',
-          message: `Created a linked Lore Document for "${entity.name}".`
+          message: `Created a linked Source Note for "${entity.name}".`
         });
         navigate('/lore', {state: {focusLoreDocumentId: documentId}});
       } catch (error) {
         const message =
-          error instanceof Error ? error.message : 'Unable to create linked Lore Document.';
+          error instanceof Error ? error.message : 'Unable to create linked Source Note.';
         setFeedback({tone: 'error', message});
       } finally {
         setLinkingLoreEntityId(null);
@@ -1265,6 +1267,7 @@ function WorldBibleRoute() {
     setPendingReviewFocus(null);
     setIsNameResolverOpen(false);
     setManualResolutionTargetId('');
+    setMoveCategoryTargetId('');
     setCharacterAuthoringMode('idle');
     setRecordAuthoringMode('idle');
     setIsPasteImportOpen(false);
@@ -1630,6 +1633,7 @@ function WorldBibleRoute() {
     setAiHelperNewSectionLabel('');
     setAiHelperProposal(null);
     setName(entity.name);
+    setMoveCategoryTargetId(entity.categoryId);
     const persistedAlternativeNames =
       typeof entity.fields[ALTERNATIVE_NAMES_KEY] === 'string'
         ? entity.fields[ALTERNATIVE_NAMES_KEY]
@@ -1733,6 +1737,95 @@ function WorldBibleRoute() {
     await saveEntityDraft({successMessage: 'Canonical name updated.'});
     setIsNameResolverOpen(false);
   }, [saveEntityDraft]);
+
+  const handlePromoteAliasToCanonical = useCallback(
+    (alias: string) => {
+      if (!selectedEntity) return;
+      const nextName = alias.trim();
+      if (!nextName) return;
+      const previousName = name.trim() || selectedEntity.name;
+      const nextAliases = formatAlternativeNames(
+        parseAlternativeNames(
+          [
+            previousName,
+            fieldValues[ALTERNATIVE_NAMES_KEY] || '',
+            ...selectedEntityAliases
+          ]
+            .filter(Boolean)
+            .join(', ')
+        ).filter((candidate) => normalizeName(candidate) !== normalizeName(nextName))
+      );
+      setName(nextName);
+      setFieldValues((prev) => ({
+        ...prev,
+        [ALTERNATIVE_NAMES_KEY]: nextAliases
+      }));
+    },
+    [fieldValues, name, selectedEntity, selectedEntityAliases]
+  );
+
+  const handleMoveSelectedEntityCategory = useCallback(async () => {
+    if (!selectedEntity || !moveCategoryTargetId) return;
+    const targetCategory = categories.find((category) => category.id === moveCategoryTargetId);
+    if (!targetCategory || targetCategory.id === selectedEntity.categoryId) return;
+
+    setMovingEntityCategoryId(selectedEntity.id);
+    setFeedback(null);
+    try {
+      const nextEntity: WorldEntity = {
+        ...selectedEntity,
+        categoryId: targetCategory.id,
+        updatedAt: Date.now()
+      };
+      await saveEntity(nextEntity);
+      if (ragService) {
+        await ragService.indexDocument(
+          nextEntity.id,
+          nextEntity.name,
+          buildEntityContent(nextEntity),
+          'worldbible',
+          {
+            tags: [targetCategory.slug],
+            entityIds: [nextEntity.id]
+          }
+        );
+      }
+      if (shodhService) {
+        await shodhService.captureAutoMemory({
+          projectId: nextEntity.projectId,
+          documentId: nextEntity.id,
+          title: nextEntity.name,
+          content: buildEntityContent(nextEntity),
+          tags: ['worldbible', targetCategory.slug]
+        });
+        await refreshMemories();
+      }
+      setEntities((prev) =>
+        prev.map((entity) => (entity.id === nextEntity.id ? nextEntity : entity))
+      );
+      setActiveTab(targetCategory.id);
+      handleEdit(nextEntity);
+      setFeedback({
+        tone: 'success',
+        message: `Moved "${nextEntity.name}" to ${targetCategory.name}.`
+      });
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'Unable to move this record.';
+      setFeedback({tone: 'error', message});
+    } finally {
+      setMovingEntityCategoryId(null);
+    }
+  }, [
+    categories,
+    handleEdit,
+    moveCategoryTargetId,
+    ragService,
+    refreshMemories,
+    selectedEntity,
+    setEntities,
+    shodhService
+  ]);
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
@@ -2075,7 +2168,7 @@ function WorldBibleRoute() {
       <PageHeader
         eyebrow='Structured canon'
         title='World Bible'
-        description='Browse, import, and refine story-facing canon records without leaving the current project.'
+        description='Keep canonical names, aliases, and structured story facts here. Use Source Notes for longform dossiers and background material.'
         actions={
           <>
             <ProjectScratchpadButton projectId={activeProject.id} />
@@ -3144,7 +3237,56 @@ function WorldBibleRoute() {
                           </div>
                         </div>
                       )}
+                      {selectedEntity && selectedEntityAliases.length > 0 && (
+                        <div className={styles.aliasPromotionPanel}>
+                          <span>Current aliases</span>
+                          <div className={styles.aliasPromotionList}>
+                            {selectedEntityAliases.map((alias) => (
+                              <span key={alias} className={styles.aliasPromotionChip}>
+                                {alias}
+                                <button
+                                  type='button'
+                                  onClick={() => handlePromoteAliasToCanonical(alias)}
+                                >
+                                  Make canonical
+                                </button>
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
+
+                    {selectedEntity && (
+                      <div className={styles.categoryMovePanel}>
+                        <label>
+                          Category
+                          <select
+                            value={moveCategoryTargetId || selectedEntity.categoryId}
+                            onChange={(event) => setMoveCategoryTargetId(event.target.value)}
+                          >
+                            {categories.map((category) => (
+                              <option key={category.id} value={category.id}>
+                                {category.name}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                        <button
+                          type='button'
+                          onClick={() => void handleMoveSelectedEntityCategory()}
+                          disabled={
+                            movingEntityCategoryId === selectedEntity.id ||
+                            !moveCategoryTargetId ||
+                            moveCategoryTargetId === selectedEntity.categoryId
+                          }
+                        >
+                          {movingEntityCategoryId === selectedEntity.id
+                            ? 'Moving...'
+                            : 'Move to category'}
+                        </button>
+                      </div>
+                    )}
 
                     {isNameResolverOpen && (
                       <div className={styles.nameResolverPanel}>
@@ -3406,7 +3548,7 @@ function WorldBibleRoute() {
                           <strong>{selectedEntityFacts.length}</strong>
                         </div>
                         <div className={styles.characterHealthMetric}>
-                          <span>Lore docs</span>
+                          <span>Source notes</span>
                           <strong>{linkedLoreDocumentsForSelectedEntity.length}</strong>
                         </div>
                         <div className={styles.characterHealthMetric}>
@@ -3677,7 +3819,56 @@ function WorldBibleRoute() {
                         placeholder='Comma-separated aliases, titles, or shorthand references'
                       />
                     </label>
+                    {selectedEntity && selectedEntityAliases.length > 0 && (
+                      <div className={styles.aliasPromotionPanel}>
+                        <span>Current aliases</span>
+                        <div className={styles.aliasPromotionList}>
+                          {selectedEntityAliases.map((alias) => (
+                            <span key={alias} className={styles.aliasPromotionChip}>
+                              {alias}
+                              <button
+                                type='button'
+                                onClick={() => handlePromoteAliasToCanonical(alias)}
+                              >
+                                Make canonical
+                              </button>
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                     </div>
+
+                    {selectedEntity && (
+                      <div className={styles.categoryMovePanel}>
+                        <label>
+                          Category
+                          <select
+                            value={moveCategoryTargetId || selectedEntity.categoryId}
+                            onChange={(event) => setMoveCategoryTargetId(event.target.value)}
+                          >
+                            {categories.map((category) => (
+                              <option key={category.id} value={category.id}>
+                                {category.name}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                        <button
+                          type='button'
+                          onClick={() => void handleMoveSelectedEntityCategory()}
+                          disabled={
+                            movingEntityCategoryId === selectedEntity.id ||
+                            !moveCategoryTargetId ||
+                            moveCategoryTargetId === selectedEntity.categoryId
+                          }
+                        >
+                          {movingEntityCategoryId === selectedEntity.id
+                            ? 'Moving...'
+                            : 'Move to category'}
+                        </button>
+                      </div>
+                    )}
 
                     {isNameResolverOpen && (
                     <div className={styles.nameResolverPanel}>
@@ -3875,13 +4066,13 @@ function WorldBibleRoute() {
               )}
 
               {selectedEntity && (
-                <section className={styles.canonSection} aria-label='Linked Lore Document'>
+                <section className={styles.canonSection} aria-label='Linked Source Note'>
                   <div className={styles.canonSectionHeader}>
                     <div>
-                      <strong>Linked Lore Document</strong>
+                      <strong>Linked Source Note</strong>
                       <span>
                         Keep longform source notes, history, timelines, and exploratory
-                        background in Lore Documents while this record stays structured canon.
+                        background in Source Notes while this record stays structured canon.
                       </span>
                     </div>
                     <button
@@ -3899,7 +4090,7 @@ function WorldBibleRoute() {
                   <div className={styles.reviewHint}>
                     {linkedLoreDocumentByEntityId.get(selectedEntity.id)
                       ? `Linked to "${linkedLoreDocumentByEntityId.get(selectedEntity.id)?.title}".`
-                      : 'No linked Lore Document yet.'}
+                      : 'No linked Source Note yet.'}
                   </div>
                 </section>
               )}
@@ -4054,7 +4245,7 @@ function WorldBibleRoute() {
                   )}
                   {linkedLoreDocument && (
                     <div className={styles.entityField}>
-                      <strong>Lore Document:</strong> {linkedLoreDocument.title}
+                      <strong>Source Note:</strong> {linkedLoreDocument.title}
                     </div>
                   )}
                   <div className={styles.entityActions}>
@@ -4088,8 +4279,8 @@ function WorldBibleRoute() {
                       {linkingLoreEntityId === entity.id
                         ? 'Creating...'
                         : linkedLoreDocument
-                          ? 'Open Lore Document'
-                          : 'Create linked Lore Document'}
+                          ? 'Open Source Note'
+                          : 'Create linked Source Note'}
                     </button>
                     <button
                       onClick={() => handleDeleteEntity(entity.id)}

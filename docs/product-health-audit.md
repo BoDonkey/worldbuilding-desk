@@ -6,7 +6,7 @@ Purpose: reset the next work away from accumulating smoke tests and toward the p
 
 ## Summary
 
-The current codebase has more lore infrastructure than the UI currently proves. Lore Documents can import, save, extract entity/fact proposals, accept facts, create/link World Bible records, and feed Canon Decisions. RAG indexes scenes, World Bible records, Lore Documents, rules, and accepted canon facts. Shodh memory captures scene, World Bible, and ruleset summaries, but not Lore Documents or accepted canon facts. Character consistency is currently strongest for names, aliases, age, occupation, and simple contradictions; richer character details such as relationships, goals, heritage, traits, and evolving state now have a selected-character diagnostic surface, but still need realistic cross-chapter evaluation.
+The current codebase has more lore infrastructure than the UI currently proves. Lore Documents can import, save, extract entity/fact proposals, accept facts, create/link World Bible records, and feed Canon Decisions. RAG indexes scenes, World Bible records, Lore Documents, rules, and accepted canon facts. Shodh memory captures scene, World Bible, ruleset, and accepted canon fact summaries; Lore Documents remain RAG-only source material. Character consistency is currently strongest for names, aliases, age, occupation, and simple contradictions; richer character details such as relationships, goals, heritage, traits, and evolving state now have a selected-character diagnostic surface, but still need realistic cross-chapter evaluation.
 
 The first product-health slices are now implemented on Lore Documents and World Bible character records: Lore Documents exposes RAG document/chunk counts, indexed document type counts, Shodh memory counts, project data counts, and a retrieval probe; World Bible character records expose aliases, accepted facts, linked Lore Documents, scene mentions, Shodh memories, state events, and explicit RAG probe hits for the selected character.
 
@@ -40,7 +40,7 @@ Gaps:
 Recommended next feature slice:
 
 - Use the new Lore Documents health panel to manually audit a realistic imported lore set through: import -> extract -> accept/link -> ask assistant -> write chapter -> run review.
-- Decide whether Lore Documents should also auto-capture Shodh summaries, since they are currently RAG-indexed but not Shodh-mirrored.
+- Decide whether Lore Documents need an explicit author-triggered Shodh summary action; they are currently RAG-indexed but intentionally not Shodh-mirrored by default.
 
 ## RAG Health
 
@@ -61,6 +61,8 @@ Current diagnostics:
 - Lore Documents now includes an explicit rebuild action that refreshes RAG from saved scenes, World Bible records, Lore Documents, accepted canon facts, and rulesets.
 - The health panel shows when to rebuild and only switches to `May need rebuild` when source data counts are greater than indexed RAG counts, keeping the warning local to the diagnostic surface.
 - Retrieval probes now require lexical evidence when vector scores are tied, avoiding unrelated fallback results for named searches. The probe is explicitly framed as a capped health diagnostic that shows up to five indexed chunks, and hits can open their source scene, Lore Document, World Bible record, or source Lore Document for accepted facts.
+- Assistant RAG context now maps chunk metadata into trust labels before provider prompts are built, distinguishing accepted World Bible canon, accepted canon facts, linked Source Notes, general Source Notes, scene drafts, and rules references.
+- RAG search now applies a modest trust-tier ranking boost so accepted canon facts and World Bible records outrank Source Notes when similarity/lexical evidence is otherwise close.
 
 Risks:
 
@@ -86,19 +88,18 @@ What exists:
 
 Gaps:
 
-- Lore Documents and accepted canon facts are not captured into Shodh memory.
-- Shodh memory is summary-based, not semantic retrieval; the assistant combines Shodh chunks and RAG chunks, but there is no UI to explain what context was used.
+- Lore Documents are not captured into Shodh memory by default; accepted canon facts are captured when accepted or rebuilt.
+- Shodh memory is summary-based, not semantic retrieval. The assistant combines Shodh chunks and trust-labeled RAG chunks, and assistant answers now expose a collapsed `Sources used` list for the specific Shodh/RAG context sent with that answer.
 - There is no stale-memory indicator if a document changes and memory capture fails.
 
 Current diagnostics:
 
 - Lore Documents now shows Shodh memory counts and local-memory counts alongside RAG diagnostics.
-- The context rebuild action refreshes Shodh summaries for saved scenes, World Bible records, and rulesets, matching the current automatic capture paths.
+- The context rebuild action refreshes Shodh summaries for saved scenes, World Bible records, accepted canon facts, and rulesets, matching the current automatic capture paths.
 
 Recommended next feature slice:
 
-- Add memory provenance to assistant context so authors can see which Shodh/RAG context was used in an answer.
-- Decide whether Lore Documents should auto-capture Shodh summaries or remain RAG-only.
+- Audit the accepted-canon-fact Shodh summaries against realistic imported lore, and decide whether Source Notes need an explicit manual summary action beyond RAG indexing.
 
 ## Character Detail Consistency
 

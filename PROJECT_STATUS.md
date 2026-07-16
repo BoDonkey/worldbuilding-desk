@@ -1,6 +1,6 @@
 # Worldbuilding-Desk Project Status
 
-**Last Updated:** June 27, 2026
+**Last Updated:** July 4, 2026
 
 ## Project Overview
 
@@ -98,6 +98,7 @@ Under the hood, the app still includes rich systems for world data, rules, chara
 - Feature-flagged local review annotations now run through the `WorldEngine` boundary using project-scoped Ollama settings while keeping deterministic validation as the source of truth.
 - Local review annotation requests now use issue-local context windows instead of full-scene text, reducing latency on longer scenes and falling back cleanly to deterministic annotations on timeout or parse failure.
 - Dev-mode RAG embedding loads now default to deterministic lightweight fallback instead of noisy browser-transformer fetch failures.
+- Assistant RAG context now carries explicit trust-tier labels before provider prompts are built. World Bible records are labeled as accepted canon, accepted canon facts are labeled separately, linked Source Notes are labeled as source material, general Source Notes are labeled as project reference material, and scene/rules chunks remain clearly draft/reference context. RAG ranking now applies a modest trust boost so accepted canon and accepted canon facts win over Source Notes when matches are otherwise close.
 - Future AI expansion should follow the adapter/tool boundary now captured in `docs/architecture-review.md`: provider/model capabilities are explicit, named workflow routes can choose model/reasoning/capability/cache policies per feature, structured output is schema-validated, tool-like actions produce confirmable proposals, and shared read-only project-context extraction feeds features without silently mutating canon or state.
 - Scene-scoped state mutation tracking now exists as a project-scoped persistence layer with accepted/invalidation flow, replay, and workspace inspection surfaces.
 - Deterministic `state_delta_candidate` extraction now feeds the same typed mutation ledger as proposed `deterministic-review` events rather than mutating tracked state automatically.
@@ -157,6 +158,8 @@ Under the hood, the app still includes rich systems for world data, rules, chara
 - Phase 1 character-canon unification is implemented: character canon now belongs in World Bible, Character Tools is secondary, and workspace character intake creates World Bible canon first.
 - Character-canon annotation smoke is now covered after the shared annotation integration. Known `Garcia deTerra` prose, titled mentions such as `Detective Garcia deTerra`, and ordinary sentence-start prose stay out of stray review highlights.
 - Product health is now the active priority: the Lore/RAG/Shodh health panel and the World Bible Character detail health panel are implemented, and Lore Documents can now quietly flag likely stale retrieval coverage and rebuild derived RAG/Shodh context from saved source data.
+- Assistant prompt context now labels retrieved World Bible records, accepted canonical facts, linked/general Source Notes, scene drafts, and rules references by trust tier. Assistant answers also expose a collapsed `Sources used` list for the Shodh/RAG chunks sent with that answer. Pending and rejected Source Note proposals remain out of normal assistant context; include them only through an explicit future proposal-review flow.
+- Accepted canonical facts now capture Shodh summaries when accepted or rebuilt; Source Notes remain RAG-only source material by default.
 - The docs source-of-truth map now lives in `docs/README.md`; keep `PROJECT_STATUS.md` and `docs/next-steps.md` as the current status and roadmap pair.
 - Continue moving alias/review acceptance into a stronger World Bible workflow.
 - Manually retest the new World Bible recommended-action filters and resolution paths against the review-completion smoke checklist.
