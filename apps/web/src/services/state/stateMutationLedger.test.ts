@@ -12,6 +12,7 @@ function makeEvent(
     sceneTitle: overrides.sceneTitle ?? 'Scene 1',
     sceneOrder: overrides.sceneOrder ?? 1,
     sceneSequence: overrides.sceneSequence ?? 1,
+    scenePosition: overrides.scenePosition,
     sourceType: overrides.sourceType ?? 'deterministic-review',
     sourceRevision: overrides.sourceRevision ?? 10,
     sourceHash: overrides.sourceHash ?? 'h1',
@@ -93,6 +94,7 @@ describe('stateMutationLedger reconciliation', () => {
       {
         ...existingAccepted,
         sceneSequence: 5,
+        scenePosition: undefined,
         sourceRevision: 11,
         sourceHash: 'new-hash',
         invalidatedAt: undefined,

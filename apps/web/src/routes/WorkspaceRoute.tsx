@@ -1,4 +1,12 @@
-import {useEffect, useLayoutEffect, useState, useCallback, useMemo, useRef} from 'react';
+import {
+  useEffect,
+  useLayoutEffect,
+  useState,
+  useCallback,
+  useDeferredValue,
+  useMemo,
+  useRef
+} from 'react';
 import {useLocation, useNavigate} from 'react-router-dom';
 import {useShallow} from 'zustand/react/shallow';
 import type {
@@ -6,6 +14,7 @@ import type {
   StatBlockScopePreset,
   StatBlockSourceType,
   StatBlockStyle,
+  StateMutationEvent,
   SystemHistoryEntry,
   WritingDocument
 } from '../entityTypes';
@@ -52,6 +61,11 @@ import {useAppStore} from '../store/appStore';
 import {useWorkspaceUiStore} from '../store/workspaceUiStore';
 import {WorkspaceContextDrawer} from '../components/Workspace/WorkspaceContextDrawer';
 import {WorkspaceSceneDrawer} from '../components/Workspace/WorkspaceSceneDrawer';
+import type {
+  SceneRosterAddOption,
+  SceneRosterCharacterCard,
+  SceneRosterItemCard
+} from '../components/Workspace/SceneRosterPanel';
 import {
   describeStateMutationEventStaleness,
   getStateMutationEventStaleness
@@ -69,10 +83,16 @@ import {useWorkspaceProjectData} from '../hooks/useWorkspaceProjectData';
 import {useWorkspaceLoreSnippets} from '../hooks/useWorkspaceLoreSnippets';
 import {useWorkspaceScratchpad} from '../hooks/useWorkspaceScratchpad';
 import {useWorkspaceCorkboard} from '../hooks/useWorkspaceCorkboard';
+import {useSceneRosterPreferences} from '../hooks/useSceneRosterPreferences';
 import {normalizeRichTextValue} from '../services/worldBible/worldBibleEntityHelpers';
 import {buildCharacterCaptureAliasList} from '../services/worldBible/worldBibleCanonicalization';
 import {PageHeader} from '../components/PageHeader';
 import {sortWritingDocuments} from '../writingStorage';
+import {saveStateMutationEvent} from '../services/state/stateMutationLedger';
+import {
+  selectSceneRoster,
+  type SceneRosterCandidate
+} from '../services/workspace/sceneRoster';
 
 declare global {
   interface Window {
@@ -108,6 +128,45 @@ const toSingularLabel = (value: string): string => {
     return trimmed.slice(0, -1);
   }
   return trimmed;
+};
+
+const normalizeRosterName = (value: string): string =>
+  value.trim().toLocaleLowerCase().replace(/\s+/g, ' ');
+
+const displayRosterFieldValue = (value: unknown): string | null => {
+  if (typeof value === 'string') {
+    const text = value
+      .replace(/<br\s*\/?>/gi, ' ')
+      .replace(/<[^>]+>/g, ' ')
+      .replace(/&nbsp;/gi, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+    return text || null;
+  }
+  if (typeof value === 'number') return String(value);
+  if (typeof value === 'boolean') return value ? 'Yes' : 'No';
+  if (Array.isArray(value)) {
+    const values = value
+      .map((entry) => displayRosterFieldValue(entry))
+      .filter((entry): entry is string => Boolean(entry));
+    return values.length > 0 ? values.join(', ') : null;
+  }
+  if (value && typeof value === 'object') {
+    try {
+      return JSON.stringify(value);
+    } catch {
+      return null;
+    }
+  }
+  return null;
+};
+
+const hashSceneContent = (value: string): string => {
+  let hash = 5381;
+  for (let index = 0; index < value.length; index += 1) {
+    hash = (hash * 33) ^ value.charCodeAt(index);
+  }
+  return `h${(hash >>> 0).toString(16)}`;
 };
 
 type FeedbackTone = 'success' | 'error';
@@ -220,6 +279,16 @@ function WorkspaceRoute() {
     Record<string, string[]>
   >({});
   const [isReviewBannerDismissed, setReviewBannerDismissed] = useState(false);
+  const [sceneRosterStateMoment, setSceneRosterStateMoment] = useState<
+    'opening' | 'cursor' | 'ending'
+  >('opening');
+  const [sceneCursorPosition, setSceneCursorPosition] = useState(1);
+  const [pendingPositionedChange, setPendingPositionedChange] = useState<
+    SceneRosterCharacterCard | null
+  >(null);
+  const [positionedChangeStatId, setPositionedChangeStatId] = useState('');
+  const [positionedChangeDelta, setPositionedChangeDelta] = useState('');
+  const [isSavingPositionedChange, setSavingPositionedChange] = useState(false);
   const {
     scratchpadContent,
     setScratchpadContent,
@@ -394,6 +463,11 @@ function WorkspaceRoute() {
     setFeedback,
     addSystemHistory
   });
+  useEffect(() => {
+    setSceneCursorPosition(1);
+    setSceneRosterStateMoment('opening');
+    setPendingPositionedChange(null);
+  }, [selectedId]);
   const {
     isExportModalOpen,
     exportFormat,
@@ -526,6 +600,8 @@ function WorkspaceRoute() {
     refreshSystemHistory,
     onProjectReset: handleProjectReset
   });
+  const {getOverrides: getSceneRosterOverrides, updateOverride: updateSceneRosterOverride} =
+    useSceneRosterPreferences(activeProject?.id ?? null);
   const worldEngine = useMemo(
     () =>
       getWorldEngine(
@@ -826,6 +902,382 @@ function WorkspaceRoute() {
     getEffectiveStatValue,
     getEffectiveResourceValues
   });
+  const deferredRosterContent = useDeferredValue(content);
+
+  const sceneRosterModel = useMemo(() => {
+    const sceneTitle = selectedDocument?.title || (selectedDocument ? 'Untitled scene' : null);
+    if (!selectedDocument) {
+      return {
+        sceneTitle,
+        characters: [] as SceneRosterCharacterCard[],
+        items: [] as SceneRosterItemCard[],
+        addOptions: [] as SceneRosterAddOption[],
+        ambiguousSurfaces: [] as string[]
+      };
+    }
+
+    const characterCategoryIds = new Set(
+      categories
+        .filter((category) => {
+          const label = `${category.slug} ${category.name}`.toLocaleLowerCase();
+          return ['character', 'characters', 'npc', 'person', 'people'].some((hint) =>
+            label.includes(hint)
+          );
+        })
+        .map((category) => category.id)
+    );
+    const characterById = new Map(characters.map((character) => [character.id, character]));
+    const entityById = new Map(entities.map((entity) => [entity.id, entity]));
+    const categoryById = new Map(categories.map((category) => [category.id, category]));
+    const characterEntityByName = new Map(
+      entities
+        .filter((entity) => characterCategoryIds.has(entity.categoryId))
+        .map((entity) => [normalizeRosterName(entity.name), entity])
+    );
+    const sheetByCharacterId = new Map(
+      characterSheets
+        .filter((sheet) => Boolean(sheet.characterId))
+        .map((sheet) => [sheet.characterId as string, sheet])
+    );
+    const sheetByName = new Map(
+      characterSheets.map((sheet) => [normalizeRosterName(sheet.name), sheet])
+    );
+    const candidates: SceneRosterCandidate[] = [];
+    const characterSheetByKey = new Map<string, (typeof characterSheets)[number] | null>();
+    const characterRecordByKey = new Map<string, (typeof characters)[number] | null>();
+
+    characterSheets.forEach((sheet) => {
+      const character =
+        (sheet.characterId ? characterById.get(sheet.characterId) : null) ??
+        characters.find(
+          (entry) => normalizeRosterName(entry.name) === normalizeRosterName(sheet.name)
+        ) ??
+        null;
+      const characterEntity = characterEntityByName.get(normalizeRosterName(sheet.name));
+      const aliasValues = aliases
+        .filter(
+          (alias) =>
+            (alias.targetType === 'character' && alias.targetId === character?.id) ||
+            (alias.targetType === 'entity' && alias.targetId === characterEntity?.id)
+        )
+        .map((alias) => alias.alias);
+      const key = `character:${sheet.id}`;
+      candidates.push({
+        key,
+        type: 'character',
+        id: sheet.id,
+        name: sheet.name,
+        aliases: aliasValues
+      });
+      characterSheetByKey.set(key, sheet);
+      characterRecordByKey.set(key, character);
+    });
+
+    characters.forEach((character) => {
+      if (
+        sheetByCharacterId.has(character.id) ||
+        sheetByName.has(normalizeRosterName(character.name))
+      ) {
+        return;
+      }
+      const characterEntity = characterEntityByName.get(normalizeRosterName(character.name));
+      const key = `character-record:${character.id}`;
+      candidates.push({
+        key,
+        type: 'character',
+        id: character.id,
+        name: character.name,
+        aliases: aliases
+          .filter(
+            (alias) =>
+              (alias.targetType === 'character' && alias.targetId === character.id) ||
+              (alias.targetType === 'entity' && alias.targetId === characterEntity?.id)
+          )
+          .map((alias) => alias.alias)
+      });
+      characterSheetByKey.set(key, null);
+      characterRecordByKey.set(key, character);
+    });
+
+    entities
+      .filter((entity) => !characterCategoryIds.has(entity.categoryId))
+      .forEach((entity) => {
+        candidates.push({
+          key: `entity:${entity.id}`,
+          type: 'entity',
+          id: entity.id,
+          name: entity.name,
+          aliases: aliases
+            .filter(
+              (alias) => alias.targetType === 'entity' && alias.targetId === entity.id
+            )
+            .map((alias) => alias.alias)
+        });
+      });
+
+    const selection = selectSceneRoster({
+      content: deferredRosterContent,
+      candidates,
+      overrides: getSceneRosterOverrides(selectedDocument.id)
+    });
+    const orderedDocuments = sortWritingDocuments(documents);
+    const selectedSceneOrder =
+      orderedDocuments.findIndex((document) => document.id === selectedDocument.id) + 1;
+
+    const characterCards = selection.entries
+      .filter((entry) => entry.type === 'character')
+      .map((entry): SceneRosterCharacterCard => {
+        const sheet = characterSheetByKey.get(entry.key) ?? null;
+        const character = characterRecordByKey.get(entry.key) ?? null;
+        if (!sheet) {
+          return {
+            key: entry.key,
+            id: character?.id ?? entry.id,
+            name: entry.name,
+            role:
+              (typeof character?.fields.role === 'string' && character.fields.role.trim()) ||
+              'Role not set',
+            source: entry.source,
+            matchedSurface: entry.matchedSurface,
+            stats: [],
+            resources: [],
+            statuses: [],
+            hasSheet: false
+          };
+        }
+        const replayed = replayCharacterState({
+          sheet,
+          ruleset,
+          events: stateMutationEvents,
+          target: {
+            actorId: sheet.id,
+            characterId: sheet.characterId,
+            sheetId: sheet.id,
+            actorName: sheet.name
+          },
+          upToSceneOrder:
+            sceneRosterStateMoment === 'opening'
+              ? Math.max(0, selectedSceneOrder - 1)
+              : selectedSceneOrder,
+          upToScenePosition:
+            sceneRosterStateMoment === 'cursor' ? sceneCursorPosition : undefined
+        });
+        return {
+          key: entry.key,
+          id: character?.id ?? sheet.id,
+          sheetId: sheet.id,
+          name: entry.name,
+          role:
+            (typeof character?.fields.role === 'string' && character.fields.role.trim()) ||
+            'Role not set',
+          level: Math.max(1, sheet.level + runtimeModifiers.levelBonus),
+          source: entry.source,
+          matchedSurface: entry.matchedSurface,
+          stats: Object.entries(replayed.stats).map(([id, value]) => ({
+            id,
+            label: statDefinitionNameById.get(id) ?? id,
+            value:
+              typeof value === 'number'
+                ? String(
+                    getEffectiveStatValue({
+                      definitionId: id,
+                      baseValue: value,
+                      runtime: runtimeModifiers
+                    })
+                  )
+                : String(value)
+          })),
+          resources: Object.entries(replayed.resources.current).map(([id, current]) => {
+            const effective = getEffectiveResourceValues({
+              definitionId: id,
+              current,
+              max: replayed.resources.max[id] ?? current,
+              runtime: runtimeModifiers
+            });
+            return {
+              id,
+              label: resourceDefinitionNameById.get(id) ?? id,
+              current: effective.current,
+              max: effective.max
+            };
+          }),
+          statuses: Array.from(new Set([...replayed.statuses, ...runtimeModifiers.notes])),
+          location: replayed.locationName,
+          hasSheet: true
+        };
+      });
+
+    const itemCards = selection.entries
+      .filter((entry) => entry.type === 'entity')
+      .map((entry): SceneRosterItemCard | null => {
+        const entity = entityById.get(entry.id);
+        if (!entity) return null;
+        const category = categoryById.get(entity.categoryId);
+        const schemaKeys = new Set(category?.fieldSchema.map((field) => field.key) ?? []);
+        const schemaFields =
+          category?.fieldSchema.flatMap((field) => {
+            const value = displayRosterFieldValue(entity.fields[field.key]);
+            return value ? [{id: field.key, label: field.label, value}] : [];
+          }) ?? [];
+        const extraFields = Object.entries(entity.fields).flatMap(([key, rawValue]) => {
+          if (schemaKeys.has(key)) return [];
+          const value = displayRosterFieldValue(rawValue);
+          return value ? [{id: key, label: key.replace(/_/g, ' '), value}] : [];
+        });
+        return {
+          key: entry.key,
+          id: entity.id,
+          name: entity.name,
+          categoryLabel: category?.name ?? 'World entity',
+          icon: category?.icon,
+          source: entry.source,
+          matchedSurface: entry.matchedSurface,
+          fields: [...schemaFields, ...extraFields]
+        };
+      })
+      .filter((entry): entry is SceneRosterItemCard => Boolean(entry));
+
+    const selectedKeys = new Set(selection.entries.map((entry) => entry.key));
+    const addOptions = candidates
+      .filter((candidate) => !selectedKeys.has(candidate.key))
+      .map((candidate): SceneRosterAddOption => ({
+        key: candidate.key,
+        name: candidate.name,
+        group: candidate.type === 'character' ? 'Characters' : 'Items & entities'
+      }))
+      .sort((left, right) => left.name.localeCompare(right.name));
+
+    return {
+      sceneTitle,
+      characters: characterCards,
+      items: itemCards,
+      addOptions,
+      ambiguousSurfaces: selection.ambiguousSurfaces
+    };
+  }, [
+    aliases,
+    categories,
+    characterSheets,
+    characters,
+    deferredRosterContent,
+    documents,
+    entities,
+    getSceneRosterOverrides,
+    resourceDefinitionNameById,
+    ruleset,
+    runtimeModifiers,
+    sceneCursorPosition,
+    sceneRosterStateMoment,
+    selectedDocument,
+    statDefinitionNameById,
+    stateMutationEvents
+  ]);
+
+  const addSceneRosterEntry = useCallback(
+    (candidateKey: string) => {
+      if (!selectedDocument) return;
+      updateSceneRosterOverride(selectedDocument.id, candidateKey, 'pin');
+    },
+    [selectedDocument, updateSceneRosterOverride]
+  );
+  const hideSceneRosterEntry = useCallback(
+    (candidateKey: string) => {
+      if (!selectedDocument) return;
+      updateSceneRosterOverride(selectedDocument.id, candidateKey, 'hide');
+    },
+    [selectedDocument, updateSceneRosterOverride]
+  );
+  const recordSceneRosterChangeHere = useCallback(
+    (character: SceneRosterCharacterCard) => {
+      if (!character.sheetId || !selectedDocument) return;
+      if (selectedDocument.content !== content) {
+        setFeedback({
+          tone: 'error',
+          message: 'Save this scene before anchoring a state change to the cursor.'
+        });
+        return;
+      }
+      setPendingPositionedChange(character);
+      setPositionedChangeStatId(ruleset?.statDefinitions[0]?.id ?? '');
+      setPositionedChangeDelta('');
+      setSceneRosterStateMoment('cursor');
+    },
+    [content, ruleset?.statDefinitions, selectedDocument]
+  );
+
+  const savePositionedStatChange = useCallback(async () => {
+    if (
+      !activeProject ||
+      !selectedDocument ||
+      !pendingPositionedChange?.sheetId ||
+      !positionedChangeStatId
+    ) {
+      return;
+    }
+    const delta = Number(positionedChangeDelta);
+    if (!Number.isFinite(delta) || delta === 0) {
+      setFeedback({tone: 'error', message: 'Enter a non-zero numeric stat change.'});
+      return;
+    }
+    const orderedDocuments = sortWritingDocuments(documents);
+    const sceneOrder =
+      orderedDocuments.findIndex((document) => document.id === selectedDocument.id) + 1;
+    const sheet = characterSheets.find(
+      (candidate) => candidate.id === pendingPositionedChange.sheetId
+    );
+    if (!sheet || sceneOrder <= 0) return;
+    const event: StateMutationEvent = {
+      id: crypto.randomUUID(),
+      projectId: activeProject.id,
+      sceneId: selectedDocument.id,
+      sceneTitle: selectedDocument.title,
+      sceneOrder,
+      sceneSequence:
+        stateMutationEvents
+          .filter((entry) => entry.sceneId === selectedDocument.id)
+          .reduce((max, entry) => Math.max(max, entry.sceneSequence ?? 0), 0) + 1,
+      scenePosition: sceneCursorPosition,
+      sourceType: 'manual',
+      sourceRevision: selectedDocument.updatedAt,
+      sourceHash: hashSceneContent(selectedDocument.content),
+      status: 'accepted',
+      commands: [
+        {
+          type: 'stat_change',
+          actorId: sheet.characterId ?? sheet.id,
+          statDefinitionId: positionedChangeStatId,
+          delta
+        }
+      ],
+      createdAt: Date.now()
+    };
+    setSavingPositionedChange(true);
+    try {
+      await saveStateMutationEvent(event);
+      setPendingPositionedChange(null);
+      setFeedback({
+        tone: 'success',
+        message: `Recorded ${positionedChangeStatId} ${delta >= 0 ? '+' : ''}${delta} at cursor position ${sceneCursorPosition}.`
+      });
+    } catch (error) {
+      setFeedback({
+        tone: 'error',
+        message: error instanceof Error ? error.message : 'Unable to record state change.'
+      });
+    } finally {
+      setSavingPositionedChange(false);
+    }
+  }, [
+    activeProject,
+    characterSheets,
+    documents,
+    pendingPositionedChange,
+    positionedChangeDelta,
+    positionedChangeStatId,
+    sceneCursorPosition,
+    selectedDocument,
+    stateMutationEvents
+  ]);
 
   const selectedSceneTimeline = useMemo(() => {
     if (!selectedDocument) {
@@ -2215,6 +2667,7 @@ function WorkspaceRoute() {
                   resetScrollToken={editorScrollResetToken}
                   onChange={handleContentChange}
                   onWordCountChange={setWordCount}
+                  onCursorPositionChange={setSceneCursorPosition}
                   inlineHighlightsMode={
                     projectSettings?.editorFeedback?.inlineHighlightsMode ?? 'visible'
                   }
@@ -2730,6 +3183,17 @@ function WorkspaceRoute() {
               ruleset={ruleset}
               characters={characters}
               characterSheets={characterSheets}
+              sceneRosterTitle={sceneRosterModel.sceneTitle}
+              sceneRosterCharacters={sceneRosterModel.characters}
+              sceneRosterItems={sceneRosterModel.items}
+              sceneRosterAddOptions={sceneRosterModel.addOptions}
+              sceneRosterAmbiguousSurfaces={sceneRosterModel.ambiguousSurfaces}
+              addSceneRosterEntry={addSceneRosterEntry}
+              hideSceneRosterEntry={hideSceneRosterEntry}
+              sceneRosterStateMoment={sceneRosterStateMoment}
+              sceneRosterCursorPosition={sceneCursorPosition}
+              setSceneRosterStateMoment={setSceneRosterStateMoment}
+              recordSceneRosterChangeHere={recordSceneRosterChangeHere}
               handleRunConsistencyReview={runConsistencyReviewFromUi}
               isRunningConsistencyReview={isRunningConsistencyReview}
               lastConsistencyReviewAt={lastConsistencyReviewAt}
@@ -2880,6 +3344,17 @@ function WorkspaceRoute() {
               ruleset={ruleset}
               characters={characters}
               characterSheets={characterSheets}
+              sceneRosterTitle={sceneRosterModel.sceneTitle}
+              sceneRosterCharacters={sceneRosterModel.characters}
+              sceneRosterItems={sceneRosterModel.items}
+              sceneRosterAddOptions={sceneRosterModel.addOptions}
+              sceneRosterAmbiguousSurfaces={sceneRosterModel.ambiguousSurfaces}
+              addSceneRosterEntry={addSceneRosterEntry}
+              hideSceneRosterEntry={hideSceneRosterEntry}
+              sceneRosterStateMoment={sceneRosterStateMoment}
+              sceneRosterCursorPosition={sceneCursorPosition}
+              setSceneRosterStateMoment={setSceneRosterStateMoment}
+              recordSceneRosterChangeHere={recordSceneRosterChangeHere}
               handleRunConsistencyReview={runConsistencyReviewFromUi}
               isRunningConsistencyReview={isRunningConsistencyReview}
               lastConsistencyReviewAt={lastConsistencyReviewAt}
@@ -2950,6 +3425,67 @@ function WorkspaceRoute() {
               isPromotingMemoryId={isPromotingMemoryId}
             />
           </aside>
+        </div>
+      )}
+
+      {pendingPositionedChange && (
+        <div
+          role='dialog'
+          aria-modal='true'
+          aria-label='Record positioned state change'
+          onClick={() => setPendingPositionedChange(null)}
+          className={styles.modalOverlay}
+        >
+          <div
+            className={styles.modalCard}
+            onClick={(event) => event.stopPropagation()}
+          >
+            <h3 className={styles.modalTitle}>Record change here</h3>
+            <p className={styles.modalDescription}>
+              {pendingPositionedChange.name} · {selectedDocument?.title || 'Current scene'} ·
+              cursor position {sceneCursorPosition}
+            </p>
+            <div className={styles.positionedChangeGrid}>
+              <label>
+                Stat
+                <select
+                  value={positionedChangeStatId}
+                  onChange={(event) => setPositionedChangeStatId(event.target.value)}
+                >
+                  {ruleset?.statDefinitions.map((definition) => (
+                    <option key={definition.id} value={definition.id}>
+                      {definition.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                Change
+                <input
+                  type='number'
+                  value={positionedChangeDelta}
+                  onChange={(event) => setPositionedChangeDelta(event.target.value)}
+                  placeholder='+10 or -10'
+                />
+              </label>
+            </div>
+            <p className={styles.modalDescription}>
+              Use a positive value when an effect begins and a matching negative value
+              where a temporary effect ends.
+            </p>
+            <div className={styles.modalActions}>
+              <button type='button' onClick={() => setPendingPositionedChange(null)}>
+                Cancel
+              </button>
+              <button
+                type='button'
+                onClick={() => void savePositionedStatChange()}
+                disabled={isSavingPositionedChange || !positionedChangeStatId}
+              >
+                {isSavingPositionedChange ? 'Recording…' : 'Record at cursor'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

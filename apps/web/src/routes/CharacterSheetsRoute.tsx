@@ -61,6 +61,11 @@ import {
 
 import {useAppStore} from '../store/appStore';
 import {getProjectCapabilities} from '../projectMode';
+import {
+  reconcileCharacterResources,
+  reconcileCharacterStats
+} from '../services/characters/characterSheetRuleset';
+import styles from '../styles/CharacterSheetsRoute.module.css';
 
 interface CharacterSheetsRouteProps {
   embedded?: boolean;
@@ -108,24 +113,11 @@ function hashString(value: string): string {
 }
 
 function buildDefaultStats(ruleset: StoredRuleset | null): CharacterStat[] {
-  if (!ruleset) {
-    return [];
-  }
-  return ruleset.statDefinitions.map((def) => ({
-    definitionId: def.id,
-    value: typeof def.defaultValue === 'number' ? def.defaultValue : 0
-  }));
+  return reconcileCharacterStats(ruleset, []);
 }
 
 function buildDefaultResources(ruleset: StoredRuleset | null): CharacterResource[] {
-  if (!ruleset) {
-    return [];
-  }
-  return ruleset.resourceDefinitions.map((def) => ({
-    definitionId: def.id,
-    current: typeof def.defaultValue === 'number' ? def.defaultValue : 0,
-    max: typeof def.defaultValue === 'number' ? def.defaultValue : 0
-  }));
+  return reconcileCharacterResources(ruleset, []);
 }
 
 function summarizeMutationCommand(command: StateMutationCommand): string {
@@ -170,6 +162,7 @@ function CharacterSheetsRoute({
   const [sheets, setSheets] = useState<CharacterSheet[]>([]);
   const [ruleset, setRuleset] = useState<StoredRuleset | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [taskView, setTaskView] = useState<'setup' | 'scene-history'>('setup');
   const [name, setName] = useState('');
   const [level, setLevel] = useState(1);
   const [experience, setExperience] = useState(0);
@@ -293,8 +286,16 @@ function CharacterSheetsRoute({
 
       let shodh: ShodhMemoryProvider | null = null;
       if (!cancelled) {
-        setSheets(loadedSheets);
+        setSheets(
+          loadedSheets.map((sheet) => ({
+            ...sheet,
+            stats: reconcileCharacterStats(loadedRuleset, sheet.stats),
+            resources: reconcileCharacterResources(loadedRuleset, sheet.resources)
+          }))
+        );
         setRuleset(loadedRuleset);
+        setStats(buildDefaultStats(loadedRuleset));
+        setResources(buildDefaultResources(loadedRuleset));
         setCharacters(loadedCharacters);
         setSettlementState(loadedSettlementState);
         setSettlementModules(loadedSettlementModules);
@@ -374,8 +375,8 @@ function CharacterSheetsRoute({
       setName(existingSheet.name);
       setLevel(existingSheet.level);
       setExperience(existingSheet.experience);
-      setStats(existingSheet.stats);
-      setResources(existingSheet.resources);
+      setStats(reconcileCharacterStats(ruleset, existingSheet.stats));
+      setResources(reconcileCharacterResources(ruleset, existingSheet.resources));
       setNotes(existingSheet.notes || '');
       setInventoryEntries(
         mergeLegacyAndTracked(existingSheet.inventory, existingSheet.inventoryEntries)
@@ -423,8 +424,8 @@ function CharacterSheetsRoute({
         setName(sheet.name);
         setLevel(sheet.level);
         setExperience(sheet.experience);
-        setStats(sheet.stats);
-        setResources(sheet.resources);
+        setStats(reconcileCharacterStats(ruleset, sheet.stats));
+        setResources(reconcileCharacterResources(ruleset, sheet.resources));
         setNotes(sheet.notes || '');
         setInventoryEntries(
           mergeLegacyAndTracked(sheet.inventory, sheet.inventoryEntries)
@@ -635,8 +636,8 @@ function CharacterSheetsRoute({
       name: name.trim(),
       level,
       experience,
-      stats,
-      resources,
+      stats: reconcileCharacterStats(ruleset, stats),
+      resources: reconcileCharacterResources(ruleset, resources),
       inventory: toLegacyList(normalizedInventory),
       equipment: toLegacyList(normalizedEquipment),
       statuses: toLegacyList(normalizedStatuses),
@@ -674,13 +675,14 @@ function CharacterSheetsRoute({
   };
 
   const handleEdit = (sheet: CharacterSheet) => {
+    setTaskView('setup');
     setEditingId(sheet.id);
     setSelectedCharacterId(sheet.characterId || '');
     setName(sheet.name);
     setLevel(sheet.level);
     setExperience(sheet.experience);
-    setStats(sheet.stats);
-    setResources(sheet.resources);
+    setStats(reconcileCharacterStats(ruleset, sheet.stats));
+    setResources(reconcileCharacterResources(ruleset, sheet.resources));
     setNotes(sheet.notes || '');
     setInventoryEntries(
       mergeLegacyAndTracked(sheet.inventory, sheet.inventoryEntries)
@@ -1130,6 +1132,7 @@ function CharacterSheetsRoute({
 
   const loadMutationEventIntoForm = useCallback(
     (event: StateMutationEvent) => {
+      setTaskView('scene-history');
       const command = event.commands[0];
       if (!command) {
         return;
@@ -1513,7 +1516,9 @@ function CharacterSheetsRoute({
       )}
 
       {ruleset && (
-        <ShodhMemoryPanel
+        <details className={styles.rulesReference}>
+          <summary>Ruleset reference and memory</summary>
+          <ShodhMemoryPanel
           title={`${ruleset.name || 'World ruleset'} summary`}
           memories={rulesetMemory ? [rulesetMemory] : []}
           filterValue={rulesetMemoryFilter}
@@ -1549,7 +1554,8 @@ function CharacterSheetsRoute({
             }
             return null;
           }}
-        />
+          />
+        </details>
       )}
       {ruleset && activeProject?.parentProjectId && (
         <button
@@ -1561,9 +1567,35 @@ function CharacterSheetsRoute({
         </button>
       )}
 
-      <div style={{display: 'flex', gap: '2rem', alignItems: 'flex-start'}}>
+      <div className={styles.taskSwitch} aria-label='Character sheet task'>
+        <button
+          type='button'
+          onClick={() => setTaskView('setup')}
+          className={taskView === 'setup' ? styles.taskSwitchActive : ''}
+        >
+          Build character sheet
+        </button>
+        <button
+          type='button'
+          onClick={() => setTaskView('scene-history')}
+          className={taskView === 'scene-history' ? styles.taskSwitchActive : ''}
+        >
+          Record scene changes
+        </button>
+      </div>
+      <p className={styles.taskHint}>
+        {taskView === 'setup'
+          ? 'Set the character’s baseline level, attributes, resources, and optional equipment.'
+          : 'Advanced: record an accepted change that occurs during a specific manuscript scene.'}
+      </p>
+
+      <div className={styles.workspace}>
         {/* Character Sheet Editor */}
-        <form onSubmit={handleSubmit} style={{flex: 1, maxWidth: 500}}>
+        <form
+          onSubmit={handleSubmit}
+          className={styles.sheetForm}
+          style={{display: taskView === 'setup' ? 'block' : 'none'}}
+        >
           <h2>{editingId ? 'Edit Character Sheet' : 'New Character Sheet'}</h2>
           <div
             style={{
@@ -1679,7 +1711,12 @@ function CharacterSheetsRoute({
           {/* Stats */}
           {stats.length > 0 ? (
             <div style={{marginBottom: '1rem'}}>
-              <h3>Stats</h3>
+              <h3>Attributes</h3>
+              <p className={styles.sectionHint}>
+                Starting values from {ruleset.name || 'the active ruleset'}. Adjust them
+                for this character before saving.
+              </p>
+              <div className={styles.statEditorGrid}>
               {stats.map((stat) => {
                 const def = getStatDefinition(stat.definitionId);
                 if (!def) return null;
@@ -1689,7 +1726,7 @@ function CharacterSheetsRoute({
                   runtime: runtimeModifiers
                 });
                 return (
-                  <div key={stat.definitionId} style={{marginBottom: '0.5rem'}}>
+                  <div key={stat.definitionId} className={styles.statEditorCard}>
                     <label>
                       {def.name}
                       {def.description && (
@@ -1724,6 +1761,7 @@ function CharacterSheetsRoute({
                   </div>
                 );
               })}
+              </div>
             </div>
           ) : (
             <div style={{marginBottom: '1rem', fontSize: '0.85rem', color: 'var(--color-text-secondary)'}}>
@@ -1735,6 +1773,9 @@ function CharacterSheetsRoute({
           {resources.length > 0 ? (
             <div style={{marginBottom: '1rem'}}>
               <h3>Resources</h3>
+              <p className={styles.sectionHint}>
+                Set the character’s starting and maximum values.
+              </p>
               {resources.map((resource) => {
                 const def = getResourceDefinition(resource.definitionId);
                 if (!def) return null;
@@ -1817,18 +1858,11 @@ function CharacterSheetsRoute({
             </div>
           )}
 
-          <div
-            style={{
-              marginBottom: '1rem',
-              border: '1px solid var(--color-border)',
-              borderRadius: '8px',
-              padding: '0.75rem'
-            }}
-          >
-            <h3 style={{marginTop: 0}}>Character State</h3>
+          <details className={styles.optionalState}>
+            <summary>Inventory, equipment & statuses</summary>
             <p style={{marginTop: 0, fontSize: '0.85rem', color: 'var(--color-text-secondary)'}}>
-              Use Quick Add for low-friction tracking. Add from Catalog when an
-              item or status should stay tied to optional mechanics data.
+              Optional starting state. Type a simple entry, or choose a catalog record
+              when it should stay linked to Mechanics.
             </p>
 
             <div style={{marginBottom: '0.8rem'}}>
@@ -1856,7 +1890,7 @@ function CharacterSheetsRoute({
                     appendQuickEntry('inventory', quickInventoryName, quickInventoryQty)
                   }
                 >
-                  Add
+                  Add item
                 </button>
               </div>
               <div style={{display: 'flex', gap: '0.4rem', marginBottom: '0.35rem'}}>
@@ -1876,7 +1910,7 @@ function CharacterSheetsRoute({
                   type='button'
                   onClick={() => appendCatalogEntry('inventory', catalogInventoryId)}
                 >
-                  Add
+                  Add catalog item
                 </button>
               </div>
               {inventoryEntries.length > 0 && (
@@ -1915,7 +1949,7 @@ function CharacterSheetsRoute({
                   type='button'
                   onClick={() => appendQuickEntry('equipment', quickEquipmentName)}
                 >
-                  Add
+                  Add equipment
                 </button>
               </div>
               <div style={{display: 'flex', gap: '0.4rem', marginBottom: '0.35rem'}}>
@@ -1935,7 +1969,7 @@ function CharacterSheetsRoute({
                   type='button'
                   onClick={() => appendCatalogEntry('equipment', catalogEquipmentId)}
                 >
-                  Add
+                  Add catalog equipment
                 </button>
               </div>
               {equipmentEntries.length > 0 && (
@@ -1973,7 +2007,7 @@ function CharacterSheetsRoute({
                   type='button'
                   onClick={() => appendQuickEntry('status', quickStatusName)}
                 >
-                  Add
+                  Add status
                 </button>
               </div>
               <div style={{display: 'flex', gap: '0.4rem', marginBottom: '0.35rem'}}>
@@ -1993,7 +2027,7 @@ function CharacterSheetsRoute({
                   type='button'
                   onClick={() => appendCatalogEntry('status', catalogStatusId)}
                 >
-                  Add
+                  Add catalog status
                 </button>
               </div>
               {statusEntries.length > 0 && (
@@ -2014,7 +2048,7 @@ function CharacterSheetsRoute({
                 </ul>
               )}
             </div>
-          </div>
+          </details>
 
           <div style={{marginBottom: '0.75rem'}}>
             <label>
@@ -2046,13 +2080,9 @@ function CharacterSheetsRoute({
         </form>
 
         <section
+          className={styles.historyPanel}
           style={{
-            flex: 1,
-            maxWidth: 520,
-            border: '1px solid var(--color-border)',
-            borderRadius: '10px',
-            padding: '1rem',
-            backgroundColor: 'var(--color-bg-secondary)'
+            display: taskView === 'scene-history' ? 'block' : 'none'
           }}
         >
           <h2 style={{marginTop: 0}}>Record Scene State Change</h2>
@@ -2606,7 +2636,10 @@ function CharacterSheetsRoute({
         </section>
 
         {/* Character Sheet List */}
-        <div style={{flex: 1}}>
+        <div
+          className={styles.sheetList}
+          style={{display: taskView === 'setup' ? 'block' : 'none'}}
+        >
           <h2>Character Sheets</h2>
           {sheets.length === 0 && (
             <p>No character sheets yet. Add one on the left.</p>

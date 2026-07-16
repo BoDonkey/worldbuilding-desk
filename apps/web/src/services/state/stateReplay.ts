@@ -35,6 +35,10 @@ export function compareStateMutationEvents(a: StateMutationEvent, b: StateMutati
     (b.sceneOrder ?? Number.MAX_SAFE_INTEGER);
   if (orderDelta !== 0) return orderDelta;
   if (a.sceneId === b.sceneId) {
+    const positionDelta =
+      (a.scenePosition ?? Number.MAX_SAFE_INTEGER) -
+      (b.scenePosition ?? Number.MAX_SAFE_INTEGER);
+    if (positionDelta !== 0) return positionDelta;
     const sequenceDelta =
       (a.sceneSequence ?? Number.MAX_SAFE_INTEGER) -
       (b.sceneSequence ?? Number.MAX_SAFE_INTEGER);
@@ -240,6 +244,7 @@ export function replayCharacterState(params: {
   events: StateMutationEvent[];
   target: ReplayableCharacterTarget;
   upToSceneOrder?: number;
+  upToScenePosition?: number;
 }): CharacterReplayState {
   const baseline = buildCharacterReplayBaseline({
     sheet: params.sheet,
@@ -264,11 +269,20 @@ export function replayCharacterState(params: {
 
   const acceptedEvents = getAcceptedStateMutationEvents(params.events);
   for (const event of acceptedEvents) {
+    const eventSceneOrder = event.sceneOrder ?? Number.MAX_SAFE_INTEGER;
     if (
       typeof params.upToSceneOrder === 'number' &&
-      (event.sceneOrder ?? Number.MAX_SAFE_INTEGER) > params.upToSceneOrder
+      eventSceneOrder > params.upToSceneOrder
     ) {
       break;
+    }
+    if (
+      typeof params.upToSceneOrder === 'number' &&
+      typeof params.upToScenePosition === 'number' &&
+      eventSceneOrder === params.upToSceneOrder &&
+      (event.scenePosition === undefined || event.scenePosition > params.upToScenePosition)
+    ) {
+      continue;
     }
     for (const command of event.commands) {
       if (matchesActor(command.actorId, params.target)) {

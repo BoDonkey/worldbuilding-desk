@@ -39,6 +39,7 @@ interface EditorWithAIProps {
   resetScrollToken?: number;
   onChange: (content: string) => void;
   onWordCountChange?: (count: number) => void;
+  onCursorPositionChange?: (position: number) => void;
   consistencyHighlights?: ConsistencyHighlightIssue[];
   onConsistencyHighlightClick?: (
     issueId: string,
@@ -162,6 +163,7 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
   resetScrollToken = 0,
   onChange,
   onWordCountChange,
+  onCursorPositionChange,
   consistencyHighlights = [],
   onConsistencyHighlightClick,
   config,
@@ -540,13 +542,14 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
   );
 
   const updateSelectionBubble = useCallback(() => {
+    const editor = editorRef.current;
+    if (!editor) return;
+    const {from, to} = editor.state.selection;
+    onCursorPositionChange?.(from);
     if (suppressSelectionBubble) {
       setSelectionBubble(null);
       return;
     }
-    const editor = editorRef.current;
-    if (!editor) return;
-    const {from, to} = editor.state.selection;
     if (from === to) {
       setSelectionBubble(null);
       return;
@@ -574,7 +577,12 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
       matchName: matchRecord?.name,
       matchRecord
     });
-  }, [normalizeSelectionSurface, selectionQuickSnippets, suppressSelectionBubble]);
+  }, [
+    normalizeSelectionSurface,
+    onCursorPositionChange,
+    selectionQuickSnippets,
+    suppressSelectionBubble
+  ]);
 
   useEffect(() => {
     if (suppressSelectionBubble) {

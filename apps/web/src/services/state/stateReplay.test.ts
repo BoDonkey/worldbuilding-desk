@@ -53,6 +53,7 @@ function makeEvent(
     sceneTitle: overrides.sceneTitle ?? 'Scene 1',
     sceneOrder: overrides.sceneOrder ?? 1,
     sceneSequence: overrides.sceneSequence ?? 1,
+    scenePosition: overrides.scenePosition,
     sourceRevision: overrides.sourceRevision ?? 100,
     sourceHash: overrides.sourceHash ?? 'h1234',
     status: overrides.status ?? 'accepted',
@@ -64,7 +65,7 @@ function makeEvent(
 }
 
 describe('stateReplay', () => {
-  it('sorts accepted events by scene order, then same-scene sequence, then createdAt', () => {
+  it('sorts accepted events by scene order, then position, sequence, and createdAt', () => {
     const events = getAcceptedStateMutationEvents([
       makeEvent({
         id: 'later-scene',
@@ -110,6 +111,48 @@ describe('stateReplay', () => {
       'same-scene-second',
       'later-scene'
     ]);
+  });
+
+  it('replays positioned changes through the cursor while leaving legacy events at scene end', () => {
+    const events = [
+      makeEvent({
+        id: 'drink-potion',
+        scenePosition: 20,
+        sceneSequence: 1,
+        commands: [
+          {type: 'stat_change', actorId: 'sheet-1', statDefinitionId: 'hp', delta: 10}
+        ]
+      }),
+      makeEvent({
+        id: 'potion-expires',
+        scenePosition: 80,
+        sceneSequence: 2,
+        commands: [
+          {type: 'stat_change', actorId: 'sheet-1', statDefinitionId: 'hp', delta: -10}
+        ]
+      }),
+      makeEvent({
+        id: 'legacy-end-event',
+        sceneSequence: 3,
+        commands: [
+          {type: 'stat_change', actorId: 'sheet-1', statDefinitionId: 'hp', delta: 2}
+        ]
+      })
+    ];
+    const replayAt = (position?: number) =>
+      replayCharacterState({
+        sheet,
+        ruleset,
+        events,
+        target: {actorId: 'sheet-1'},
+        upToSceneOrder: 1,
+        upToScenePosition: position
+      }).stats.hp;
+
+    expect(replayAt(10)).toBe(12);
+    expect(replayAt(50)).toBe(22);
+    expect(replayAt(90)).toBe(12);
+    expect(replayAt()).toBe(14);
   });
 
   it('replays accepted mutations up to the requested scene boundary', () => {
