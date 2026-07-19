@@ -379,7 +379,9 @@ export class LLMService {
   }
 
   private buildElectronRequest(request: LLMRequest) {
-    const {baseUrl: _baseUrl, signal: _signal, ...payload} = request;
+    const payload = {...request};
+    delete payload.baseUrl;
+    delete payload.signal;
     return payload;
   }
 }
