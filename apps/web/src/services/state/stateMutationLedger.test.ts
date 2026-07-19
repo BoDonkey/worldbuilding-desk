@@ -95,6 +95,8 @@ describe('stateMutationLedger reconciliation', () => {
         ...existingAccepted,
         sceneSequence: 5,
         scenePosition: undefined,
+        sceneAnchor: undefined,
+        label: undefined,
         sourceRevision: 11,
         sourceHash: 'new-hash',
         invalidatedAt: undefined,

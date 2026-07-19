@@ -41,7 +41,7 @@ export const InventoryQuantityStateMutationCommandSchema = z.object({
   type: z.enum(['inventory_add', 'inventory_remove', 'inventory_consume']),
   actorId: z.string().min(1),
   itemName: z.string().min(1),
-  quantity: z.number().positive().optional()
+  quantity: z.number().int().positive().optional()
 });
 
 export const InventoryEquipStateMutationCommandSchema = z.object({
@@ -75,11 +75,20 @@ export const StateMutationEventSchema = z.object({
   sceneOrder: z.number().int().optional(),
   sceneSequence: z.number().int().positive().optional(),
   scenePosition: z.number().int().nonnegative().optional(),
+  sceneAnchor: z.object({before: z.string(), after: z.string()}).optional(),
+  label: z.string().optional(),
   sourceType: z.enum(['manual', 'deterministic-review']).optional(),
   sourceRevision: z.number().int().nonnegative(),
   sourceHash: z.string().min(1),
   status: z.enum(['proposed', 'accepted', 'invalidated']),
   commands: z.array(StateMutationCommandSchema),
+  consumableEffect: z.object({
+    definitionId: z.string().min(1),
+    itemName: z.string().min(1),
+    durationLabel: z.string().optional(),
+    phase: z.enum(['consume', 'expire']),
+    sourceEventId: z.string().min(1).optional()
+  }).optional(),
   createdAt: z.number().int().nonnegative(),
   invalidatedAt: z.number().int().nonnegative().optional(),
   invalidationReason: z.string().optional()
@@ -167,7 +176,7 @@ export interface CharacterStateReplayBaseline {
     max: Record<string, number>;
   };
   inventory: {
-    items: Array<{name: string; quantity: number}>;
+    items: Array<{name: string; quantity: number; definitionId?: string}>;
     equipped: string[];
   };
   statuses: string[];
@@ -207,7 +216,8 @@ export function buildCharacterReplayBaseline(params: {
   const inventoryItems =
     sheet.inventoryEntries?.map((entry) => ({
       name: entry.name,
-      quantity: entry.quantity ?? 1
+      quantity: entry.quantity ?? 1,
+      definitionId: entry.definitionId
     })) ?? [];
   const equipped = sheet.equipmentEntries?.map((entry) => entry.name) ?? [];
   const statuses =

@@ -33,7 +33,8 @@ import {
   SceneRosterPanel,
   type SceneRosterAddOption,
   type SceneRosterCharacterCard,
-  type SceneRosterItemCard
+  type SceneRosterItemCard,
+  type SceneRosterTimelineEvent
 } from './SceneRosterPanel';
 
 interface ConsistencyReviewItem {
@@ -142,6 +143,12 @@ interface WorkspaceContextDrawerProps {
   sceneRosterCursorPosition: number;
   setSceneRosterStateMoment: (moment: 'opening' | 'cursor' | 'ending') => void;
   recordSceneRosterChangeHere: (character: SceneRosterCharacterCard) => void;
+  consumeSceneRosterItemHere: Parameters<typeof SceneRosterPanel>[0]['onConsumeHere'];
+  sceneRosterTimeline: SceneRosterTimelineEvent[];
+  editSceneRosterTimelineEvent: (eventId: string) => void;
+  invalidateSceneRosterTimelineEvent: (eventId: string) => void;
+  reanchorSceneRosterTimelineEvent: (eventId: string) => void;
+  expireSceneRosterTimelineEvent: (eventId: string) => void;
 
   // Review view
   handleRunConsistencyReview: () => Promise<void>;
@@ -288,6 +295,12 @@ export function WorkspaceContextDrawer({
   sceneRosterCursorPosition,
   setSceneRosterStateMoment,
   recordSceneRosterChangeHere,
+  consumeSceneRosterItemHere,
+  sceneRosterTimeline,
+  editSceneRosterTimelineEvent,
+  invalidateSceneRosterTimelineEvent,
+  reanchorSceneRosterTimelineEvent,
+  expireSceneRosterTimelineEvent,
   handleRunConsistencyReview,
   isRunningConsistencyReview,
   lastConsistencyReviewAt,
@@ -714,6 +727,12 @@ export function WorkspaceContextDrawer({
           cursorPosition={sceneRosterCursorPosition}
           onStateMomentChange={setSceneRosterStateMoment}
           onRecordChangeHere={recordSceneRosterChangeHere}
+          onConsumeHere={consumeSceneRosterItemHere}
+          timeline={sceneRosterTimeline}
+          onEditTimelineEvent={editSceneRosterTimelineEvent}
+          onInvalidateTimelineEvent={invalidateSceneRosterTimelineEvent}
+          onReanchorTimelineEvent={reanchorSceneRosterTimelineEvent}
+          onExpireTimelineEvent={expireSceneRosterTimelineEvent}
         />
       );
     }

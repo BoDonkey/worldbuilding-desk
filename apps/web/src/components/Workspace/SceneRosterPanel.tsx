@@ -14,6 +14,17 @@ export interface SceneRosterResourceLine {
   max?: number;
 }
 
+export interface SceneRosterInventoryLine {
+  name: string;
+  quantity: number;
+  equipped: boolean;
+  definitionId?: string;
+  consumable?: {
+    definitionId: string;
+    durationLabel?: string;
+  };
+}
+
 export interface SceneRosterCharacterCard {
   key: string;
   id: string;
@@ -25,6 +36,7 @@ export interface SceneRosterCharacterCard {
   matchedSurface?: string;
   stats: SceneRosterStatLine[];
   resources: SceneRosterResourceLine[];
+  inventory: SceneRosterInventoryLine[];
   statuses: string[];
   location?: string;
   hasSheet: boolean;
@@ -47,6 +59,19 @@ export interface SceneRosterAddOption {
   group: 'Characters' | 'Items & entities';
 }
 
+export interface SceneRosterTimelineEvent {
+  id: string;
+  label: string;
+  actorLabel: string;
+  position?: number;
+  anchorStatus: 'exact' | 'moved' | 'unresolved' | 'legacy';
+  status: 'accepted' | 'invalidated';
+  summaries: string[];
+  canEdit: boolean;
+  canExpire: boolean;
+  durationLabel?: string;
+}
+
 interface SceneRosterPanelProps {
   sceneTitle: string | null;
   characters: SceneRosterCharacterCard[];
@@ -60,6 +85,12 @@ interface SceneRosterPanelProps {
   cursorPosition: number;
   onStateMomentChange: (moment: 'opening' | 'cursor' | 'ending') => void;
   onRecordChangeHere: (character: SceneRosterCharacterCard) => void;
+  onConsumeHere: (character: SceneRosterCharacterCard, item: SceneRosterInventoryLine) => void;
+  timeline: SceneRosterTimelineEvent[];
+  onEditTimelineEvent: (eventId: string) => void;
+  onInvalidateTimelineEvent: (eventId: string) => void;
+  onReanchorTimelineEvent: (eventId: string) => void;
+  onExpireTimelineEvent: (eventId: string) => void;
 }
 
 const initialsFor = (name: string): string =>
@@ -89,7 +120,13 @@ export function SceneRosterPanel({
   stateMoment,
   cursorPosition,
   onStateMomentChange,
-  onRecordChangeHere
+  onRecordChangeHere,
+  onConsumeHere,
+  timeline,
+  onEditTimelineEvent,
+  onInvalidateTimelineEvent,
+  onReanchorTimelineEvent,
+  onExpireTimelineEvent
 }: SceneRosterPanelProps) {
   const [selectedCandidateKey, setSelectedCandidateKey] = useState('');
   const groupedOptions = useMemo(
@@ -186,6 +223,66 @@ export function SceneRosterPanel({
         </div>
       )}
 
+      {timeline.length > 0 && (
+        <details className={styles.sceneRosterTimeline}>
+          <summary>Scene changes ({timeline.length})</summary>
+          <ol>
+            {timeline.map((event) => (
+              <li key={event.id} className={event.status === 'invalidated' ? styles.sceneRosterTimelineInvalid : ''}>
+                <div className={styles.sceneRosterTimelineHeader}>
+                  <div>
+                    <strong>{event.label}</strong>
+                    <span>
+                      {event.actorLabel} · {event.position === undefined ? 'Scene ending' : `Position ${event.position}`}
+                    </span>
+                    {event.anchorStatus !== 'legacy' && (
+                      <span className={`${styles.sceneRosterAnchorStatus} ${
+                        event.anchorStatus === 'unresolved'
+                          ? styles.sceneRosterAnchorStatusWarning
+                          : ''
+                      }`}>
+                        {event.anchorStatus === 'exact'
+                          ? 'Anchor exact'
+                          : event.anchorStatus === 'moved'
+                            ? 'Anchor moved with text'
+                            : 'Anchor needs review'}
+                      </span>
+                    )}
+                  </div>
+                  <div>
+                    {event.canEdit && event.status === 'accepted' && event.anchorStatus !== 'unresolved' && (
+                      <button type='button' onClick={() => onEditTimelineEvent(event.id)}>
+                        Edit
+                      </button>
+                    )}
+                    {event.canExpire && event.status === 'accepted' && (
+                      <button type='button' onClick={() => onExpireTimelineEvent(event.id)} title={event.durationLabel ? `Place expiration after ${event.durationLabel} of story time` : 'Place expiration at the current cursor'}>
+                        Expire here
+                      </button>
+                    )}
+                    {event.canEdit && event.status === 'accepted' && event.anchorStatus === 'unresolved' && (
+                      <button type='button' onClick={() => onReanchorTimelineEvent(event.id)}>
+                        Re-anchor here
+                      </button>
+                    )}
+                    {event.status === 'accepted' && (
+                      <button type='button' onClick={() => onInvalidateTimelineEvent(event.id)}>
+                        Invalidate
+                      </button>
+                    )}
+                  </div>
+                </div>
+                <ul>
+                  {event.summaries.map((summary, index) => (
+                    <li key={`${event.id}-${index}`}>{summary}</li>
+                  ))}
+                </ul>
+              </li>
+            ))}
+          </ol>
+        </details>
+      )}
+
       {isEmpty && (
         <div className={styles.sceneRosterEmpty}>
           <strong>No roster matches yet</strong>
@@ -277,7 +374,7 @@ export function SceneRosterPanel({
                     Record change here
                   </button>
                   <details className={styles.sceneRosterDetails}>
-                    <summary>Full opening state</summary>
+                    <summary>Full state at this moment</summary>
                     {character.location && (
                       <div className={styles.sceneRosterLocation}>
                         Location <strong>{character.location}</strong>
@@ -290,6 +387,29 @@ export function SceneRosterPanel({
                           <strong>{stat.value}</strong>
                         </div>
                       ))}
+                    </div>
+                    <div className={styles.sceneRosterInventory}>
+                      <strong>Inventory</strong>
+                      {character.inventory.length > 0 ? (
+                        <ul>
+                          {character.inventory.map((item) => (
+                            <li key={item.name}>
+                              <span>
+                                {item.name}
+                                {item.quantity > 1 ? ` ×${item.quantity}` : ''}
+                                {item.equipped ? ' · equipped' : ''}
+                              </span>
+                              {item.consumable && (
+                                <button type='button' onClick={() => onConsumeHere(character, item)}>
+                                  Consume here
+                                </button>
+                              )}
+                            </li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <span>None</span>
+                      )}
                     </div>
                   </details>
                   </>

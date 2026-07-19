@@ -14,11 +14,13 @@ import type {
   PartySynergySuggestion,
   SettlementModule,
   SettlementState,
+  StoredRuleset,
   UnlockableRecipe,
   WorldEntity,
   ZoneAffinityProfile,
   ZoneAffinityProgress
 } from '../entityTypes';
+import {ConsumableEffectEditor} from '../components/Mechanics/ConsumableEffectEditor';
 import {
   DEFAULT_FORTRESS_TIERS,
   DEFAULT_PARTY_SYNERGY_RULES,
@@ -56,6 +58,7 @@ import {getCharacterSheetsByProject} from '../services/characters';
 import {getCharactersByProject} from '../characterStorage';
 import {getEntitiesByProject} from '../entityStorage';
 import {getProjectCapabilities} from '../projectMode';
+import {getRulesetByProjectId} from '../services/rules';
 
 // activeProject and projectSettings read from store below
 
@@ -313,6 +316,7 @@ function CompendiumRoute() {
   const [showAdvancedSetup, setShowAdvancedSetup] = useState(false);
   const [activeMechanicsCharacterSheetId, setActiveMechanicsCharacterSheetId] = useState('');
   const [editingMechanicsEntryId, setEditingMechanicsEntryId] = useState<string | null>(null);
+  const [ruleset, setRuleset] = useState<StoredRuleset | null>(null);
   const capabilities = getProjectCapabilities(projectSettings);
   const enableGameSystems = capabilities.canUseGameSystems;
   const enableRuntimeModifiers = capabilities.canUseRuntimeModifiers;
@@ -336,6 +340,7 @@ function CompendiumRoute() {
       setCharacterSheets([]);
       setActivePartyCharacterIds([]);
       setActiveMechanicsCharacterSheetId('');
+      setRuleset(null);
       setBaseStatsDraft({
         defense: '10',
         storageCapacity: '100',
@@ -359,9 +364,10 @@ function CompendiumRoute() {
       getCompendiumActionLogs(activeProject.id),
       getEntitiesByProject(activeProject.id),
       getCharactersByProject(activeProject.id),
-      getCharacterSheetsByProject(activeProject.id)
+      getCharacterSheetsByProject(activeProject.id),
+      getRulesetByProjectId(activeProject.id)
     ])
-      .then(([loadedEntries, loadedMilestones, loadedRecipes, loadedZoneProfiles, loadedZoneProgress, loadedSettlementState, loadedSettlementModules, loadedGlobalLogs, loadedEntities, loadedCharacters, loadedCharacterSheets]) => {
+      .then(([loadedEntries, loadedMilestones, loadedRecipes, loadedZoneProfiles, loadedZoneProgress, loadedSettlementState, loadedSettlementModules, loadedGlobalLogs, loadedEntities, loadedCharacters, loadedCharacterSheets, loadedRuleset]) => {
         if (cancelled) return;
         setEntries(loadedEntries);
         setMilestones(loadedMilestones);
@@ -375,6 +381,7 @@ function CompendiumRoute() {
         setWorldEntities(loadedEntities);
         setCharacters(loadedCharacters);
         setCharacterSheets(loadedCharacterSheets);
+        setRuleset(loadedRuleset);
         setActiveMechanicsCharacterSheetId((prev) => {
           if (prev && loadedCharacterSheets.some((sheet) => sheet.id === prev)) {
             return prev;
@@ -809,7 +816,7 @@ function CompendiumRoute() {
 
   const handleUpdateEntryMechanics = async (
     entry: CompendiumEntry,
-    updates: Partial<Pick<CompendiumEntry, 'mechanicKind' | 'progressScope'>>
+    updates: Partial<Pick<CompendiumEntry, 'mechanicKind' | 'progressScope' | 'consumable'>>
   ) => {
     const next: CompendiumEntry = {
       ...entry,
@@ -1802,6 +1809,18 @@ function CompendiumRoute() {
               >
                 <strong>{entry.name}</strong>
                 <span style={{fontSize: '0.85rem', color: 'var(--color-text-secondary)'}}>[{entry.domain}]</span>
+                {entry.consumable && (
+                  <span style={{fontSize: '0.78rem', fontWeight: 600, border: '1px solid var(--color-border)', borderRadius: '999px', padding: '0.18rem 0.5rem'}}>
+                    Consumable · {entry.consumable.durationLabel ?? 'until expired'}
+                  </span>
+                )}
+                <button
+                  type='button'
+                  onClick={() => setEditingMechanicsEntryId((current) => current === entry.id ? null : entry.id)}
+                  style={{marginLeft: 'auto'}}
+                >
+                  {editingMechanicsEntryId === entry.id ? 'Close settings' : 'Edit settings'}
+                </button>
                 {entry.needsCompletion && (
                   <span
                     style={{
@@ -1980,6 +1999,11 @@ function CompendiumRoute() {
                       {activeMechanicsCharacterSheet?.name ?? 'No character sheet selected'}
                     </div>
                   )}
+                  <ConsumableEffectEditor
+                    entry={entry}
+                    ruleset={ruleset}
+                    onSave={(consumable) => void handleUpdateEntryMechanics(entry, {consumable})}
+                  />
                 </div>
               )}
               {entry.needsCompletion && (

@@ -454,6 +454,92 @@
   color: var(--badge-warning-text);
 }
 
+.sceneRosterTimeline {
+  border: 1px solid var(--surface-border-soft);
+  border-radius: 12px;
+  background: var(--surface-panel);
+  padding: 0.6rem;
+}
+
+.sceneRosterTimeline > summary {
+  cursor: pointer;
+  color: var(--color-text-primary);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.sceneRosterTimeline > ol {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  margin: 0.65rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.sceneRosterTimeline > ol > li {
+  padding: 0.55rem;
+  border: 1px solid var(--surface-border-soft);
+  border-radius: 10px;
+  background: var(--surface-panel-elevated);
+}
+
+.sceneRosterTimelineHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.sceneRosterTimelineHeader > div:first-child {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.sceneRosterTimelineHeader span {
+  color: var(--color-text-secondary);
+  font-size: 0.68rem;
+}
+
+.sceneRosterAnchorStatus {
+  width: fit-content;
+  padding: 0.12rem 0.36rem;
+  border: 1px solid var(--badge-info-border);
+  border-radius: 999px;
+  background: var(--badge-info-bg);
+  color: var(--badge-info-text) !important;
+  font-weight: 700;
+}
+
+.sceneRosterAnchorStatusWarning {
+  border-color: var(--badge-warning-border);
+  background: var(--badge-warning-bg);
+  color: var(--badge-warning-text) !important;
+}
+
+.sceneRosterTimelineHeader > div:last-child {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.sceneRosterTimelineHeader button {
+  padding: 0.24rem 0.4rem;
+  font-size: 0.66rem;
+}
+
+.sceneRosterTimeline ul {
+  margin: 0.45rem 0 0;
+  padding-left: 1rem;
+  color: var(--color-text-secondary);
+  font-size: 0.7rem;
+}
+
+.sceneRosterTimelineInvalid {
+  opacity: 0.62;
+}
+
 .sceneRosterEmpty strong,
 .sceneRosterNotice strong {
   color: inherit;
@@ -633,6 +719,45 @@
   margin-top: 0.55rem;
   color: var(--color-text-secondary);
   font-size: 0.72rem;
+}
+
+.sceneRosterInventory {
+  margin-top: 0.55rem;
+  padding: 0.5rem;
+  border: 1px solid var(--surface-border-soft);
+  border-radius: 10px;
+  background: var(--surface-panel);
+  color: var(--color-text-secondary);
+  font-size: 0.72rem;
+}
+
+.sceneRosterInventory > strong {
+  display: block;
+  margin-bottom: 0.3rem;
+  color: var(--color-text-primary);
+  font-size: 0.75rem;
+}
+
+.sceneRosterInventory ul {
+  margin: 0;
+  padding-left: 1rem;
+}
+
+.sceneRosterInventory li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.sceneRosterInventory li + li {
+  margin-top: 0.3rem;
+}
+
+.sceneRosterInventory button {
+  flex: 0 0 auto;
+  padding: 0.24rem 0.42rem;
+  font-size: 0.66rem;
 }
 
 .sceneRosterStatGrid {
@@ -1598,6 +1723,119 @@
   outline: none;
   border-color: var(--input-border-focus);
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--input-border-focus) 24%, transparent);
+}
+
+.changeComposerCard {
+  width: min(760px, calc(100vw - 2rem));
+  max-height: min(88vh, 880px);
+  overflow-y: auto;
+}
+
+.changeComposerLabel,
+.changeComposerFields label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  color: var(--color-text-secondary);
+  font-size: 0.78rem;
+  font-weight: 650;
+}
+
+.changeComposerLabel input,
+.changeComposerFields input,
+.changeComposerFields select {
+  width: 100%;
+  border: 1px solid var(--input-border);
+  border-radius: 10px;
+  background: var(--input-bg);
+  color: var(--input-text);
+  padding: 0.55rem 0.65rem;
+}
+
+.changeComposerRows {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  margin-top: 0.8rem;
+}
+
+.changeComposerRow {
+  padding: 0.7rem;
+  border: 1px solid var(--surface-border-soft);
+  border-radius: 12px;
+  background: var(--surface-panel);
+}
+
+.changeComposerRowHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+}
+
+.changeComposerRowHeader button {
+  padding: 0.25rem 0.45rem;
+  font-size: 0.68rem;
+}
+
+.changeComposerFields {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.55rem;
+}
+
+.changeComposerAddButton {
+  width: 100%;
+  margin-top: 0.65rem;
+}
+
+.changeComposerPreview {
+  margin-top: 0.8rem;
+  padding: 0.7rem;
+  border: 1px solid var(--surface-border-soft);
+  border-radius: 12px;
+  background: var(--surface-panel-accent);
+}
+
+.changeComposerPreview p {
+  margin: 0.4rem 0 0;
+  color: var(--color-text-secondary);
+  font-size: 0.78rem;
+}
+
+.changeComposerPreview ol {
+  margin: 0.5rem 0 0;
+  padding-left: 1.25rem;
+}
+
+.changeComposerPreview li {
+  margin-bottom: 0.4rem;
+}
+
+.changeComposerPreview li span,
+.changeComposerPreview li small {
+  display: block;
+}
+
+.changeComposerPreview li small {
+  margin-top: 0.1rem;
+  color: var(--color-text-secondary);
+}
+
+.changeComposerWarning {
+  margin-top: 0.55rem;
+  padding: 0.5rem;
+  border: 1px solid var(--badge-warning-border);
+  border-radius: 10px;
+  background: var(--badge-warning-bg);
+  color: var(--badge-warning-text);
+  font-size: 0.75rem;
+}
+
+@media (max-width: 700px) {
+  .changeComposerFields {
+    grid-template-columns: 1fr;
+  }
 }
 
 .modalSecondaryAction {

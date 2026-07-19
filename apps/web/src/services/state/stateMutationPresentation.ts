@@ -84,7 +84,7 @@ export function summarizeStateMutationCommand(params: {
     }
     case 'stat_change': {
       const label = statLabels?.get(command.statDefinitionId) ?? command.statDefinitionId;
-      return `${label} change ${String(command.delta)}`;
+      return `${label} ${typeof command.delta === 'number' && command.delta >= 0 ? '+' : ''}${String(command.delta)}`;
     }
     case 'stat_set': {
       const label = statLabels?.get(command.statDefinitionId) ?? command.statDefinitionId;

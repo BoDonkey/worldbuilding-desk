@@ -1,10 +1,28 @@
 import type {StateMutationEvent, WritingDocument} from '../../entityTypes';
+import {
+  resolveStateMutationAnchor,
+  textSnapshotFromPlainText,
+  type StateMutationAnchorResolution
+} from './stateMutationAnchor';
 
 export interface StateMutationEventStaleness {
   isMissingSourceScene: boolean;
   hasRevisionMismatch: boolean;
   hasHashMismatch: boolean;
+  anchorStatus: StateMutationAnchorResolution['status'] | 'legacy';
   isStale: boolean;
+}
+
+function plainTextFromHtml(value: string): string {
+  if (typeof DOMParser !== 'undefined') {
+    return new DOMParser().parseFromString(value, 'text/html').body.textContent ?? '';
+  }
+  return value
+    .replace(/<[^>]+>/g, '')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&amp;/gi, '&')
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>');
 }
 
 function hashString(value: string): string {
@@ -25,18 +43,31 @@ export function getStateMutationEventStaleness(params: {
       isMissingSourceScene: true,
       hasRevisionMismatch: false,
       hasHashMismatch: false,
+      anchorStatus: params.event.sceneAnchor ? 'unresolved' : 'legacy',
       isStale: true
     };
   }
 
   const hasRevisionMismatch = document.updatedAt !== params.event.sourceRevision;
   const hasHashMismatch = hashString(document.content) !== params.event.sourceHash;
+  const anchorResolution =
+    params.event.sceneAnchor && params.event.scenePosition !== undefined
+      ? resolveStateMutationAnchor({
+          snapshot: textSnapshotFromPlainText(plainTextFromHtml(document.content)),
+          anchor: params.event.sceneAnchor,
+          originalPosition: params.event.scenePosition
+        })
+      : null;
+  const anchorStatus = anchorResolution?.status ?? 'legacy';
+  const isStale = anchorStatus === 'unresolved' ||
+    (anchorStatus === 'legacy' && (hasRevisionMismatch || hasHashMismatch));
 
   return {
     isMissingSourceScene: false,
     hasRevisionMismatch,
     hasHashMismatch,
-    isStale: hasRevisionMismatch || hasHashMismatch
+    anchorStatus,
+    isStale
   };
 }
 
@@ -45,6 +76,9 @@ export function describeStateMutationEventStaleness(
 ): string | null {
   if (staleness.isMissingSourceScene) {
     return 'Source scene missing';
+  }
+  if (staleness.anchorStatus === 'unresolved') {
+    return 'Text anchor needs review';
   }
   if (staleness.hasRevisionMismatch && staleness.hasHashMismatch) {
     return 'Scene text changed';

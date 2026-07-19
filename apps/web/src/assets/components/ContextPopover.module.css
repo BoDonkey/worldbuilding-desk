@@ -16,6 +16,23 @@
   gap: 0.55rem;
 }
 
+.popoverNeutral {
+  border-color: var(--surface-border-soft);
+  background: var(--surface-panel-elevated);
+}
+
+.popoverNeutral .title {
+  color: var(--color-text-primary);
+}
+
+.popoverNeutral .message {
+  color: var(--color-text-secondary);
+}
+
+.popoverNeutral .closeButton {
+  color: var(--color-text-secondary);
+}
+
 .title {
   font-weight: 700;
   color: var(--color-warning);

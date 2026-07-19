@@ -4,6 +4,7 @@ import type {
   CanonicalFact,
   Character,
   CharacterSheet,
+  CompendiumEntry,
   EntityCategory,
   StateMutationEvent,
   StatBlockGroup,
@@ -82,6 +83,7 @@ export function useWorkspaceProjectData({
   const [resolvedActionCues, setResolvedActionCues] = useState<string[]>([]);
   const [characters, setCharacters] = useState<Character[]>([]);
   const [characterSheets, setCharacterSheets] = useState<CharacterSheet[]>([]);
+  const [compendiumEntries, setCompendiumEntries] = useState<CompendiumEntry[]>([]);
   const [ruleset, setRuleset] = useState<StoredRuleset | null>(null);
   const [settlementState, setSettlementState] = useState<Awaited<
     ReturnType<typeof getOrCreateSettlementState>
@@ -173,6 +175,7 @@ export function useWorkspaceProjectData({
       setResolvedActionCues([]);
       setCharacters([]);
       setCharacterSheets([]);
+      setCompendiumEntries([]);
       setRuleset(null);
       setSettlementState(null);
       setSettlementModules([]);
@@ -206,6 +209,7 @@ export function useWorkspaceProjectData({
         loadedAliases,
         loadedCharacters,
         loadedSheets,
+        loadedCompendiumEntries,
         loadedRuleset,
         loadedSettlementState,
         loadedSettlementModules,
@@ -219,6 +223,7 @@ export function useWorkspaceProjectData({
         getAliasesByProject(activeProject.id),
         getCharactersByProject(activeProject.id),
         getCharacterSheetsByProject(activeProject.id),
+        getCompendiumEntriesByProject(activeProject.id),
         getRulesetByProjectId(activeProject.id),
         getOrCreateSettlementState(activeProject.id),
         getSettlementModulesByProject(activeProject.id),
@@ -255,6 +260,7 @@ export function useWorkspaceProjectData({
       setEntities(loadedEntities);
       setCharacters(loadedCharacters);
       setCharacterSheets(loadedSheets);
+      setCompendiumEntries(loadedCompendiumEntries);
       setRuleset(loadedRuleset);
       setSettlementState(loadedSettlementState);
       setSettlementModules(loadedSettlementModules);
@@ -400,6 +406,15 @@ export function useWorkspaceProjectData({
   useEffect(() => {
     if (!activeProject) return;
     const refresh = () => {
+      void getCompendiumEntriesByProject(activeProject.id).then(setCompendiumEntries);
+    };
+    window.addEventListener('wbd:compendium-records-changed', refresh);
+    return () => window.removeEventListener('wbd:compendium-records-changed', refresh);
+  }, [activeProject]);
+
+  useEffect(() => {
+    if (!activeProject) return;
+    const refresh = () => {
       void getStateMutationEventsByProject(activeProject.id).then((events) => {
         setStateMutationEvents(events);
       });
@@ -476,6 +491,7 @@ export function useWorkspaceProjectData({
     characters,
     setCharacters,
     characterSheets,
+    compendiumEntries,
     ruleset,
 
     // Game systems

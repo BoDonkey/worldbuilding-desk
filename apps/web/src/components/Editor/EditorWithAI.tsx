@@ -22,6 +22,12 @@ import type {StatBlockTokenPresentation} from '../../utils/statBlockTemplates';
 import type {StatBlockPreviewData} from '../../hooks/useWorkspaceStatBlocks';
 import type {InlineHighlightsMode} from '../../entityTypes';
 import styles from '../../assets/components/AISettings.module.css';
+import {
+  captureStateMutationAnchor,
+  normalizeStateMutationPosition,
+  type EditorTextSnapshot,
+  type StateMutationTextAnchor
+} from '../../services/state/stateMutationAnchor';
 
 interface AIContextType {
   type: 'document';
@@ -39,7 +45,11 @@ interface EditorWithAIProps {
   resetScrollToken?: number;
   onChange: (content: string) => void;
   onWordCountChange?: (count: number) => void;
-  onCursorPositionChange?: (position: number) => void;
+  onCursorContextChange?: (context: {
+    position: number;
+    snapshot: EditorTextSnapshot;
+    anchor: StateMutationTextAnchor;
+  }) => void;
   consistencyHighlights?: ConsistencyHighlightIssue[];
   onConsistencyHighlightClick?: (
     issueId: string,
@@ -56,17 +66,17 @@ interface EditorWithAIProps {
     entities: Record<string, {name: string; html: string; lore: LoreInspectorRecord}>;
   };
   knownLoreHighlights?: LoreHighlightEntry[];
-  characterStateHoverCardsByLoreId?: Record<
-    string,
-    {
-      title: string;
-      sceneLabel: string;
-      resources: string[];
-      stats: string[];
-      statuses: string[];
-      location?: string;
-    }
-  >;
+  getCharacterStateHoverCard?: (
+    loreId: string,
+    editorPosition: number
+  ) => {
+    title: string;
+    sceneLabel: string;
+    resources: string[];
+    stats: string[];
+    statuses: string[];
+    location?: string;
+  } | null;
   presentStatBlockToken?: (rawToken: string) => StatBlockTokenPresentation;
   getStatBlockPreviewData?: (rawToken: string) => StatBlockPreviewData;
   onRebindStatBlockToken?: (rawToken: string) => void;
@@ -76,6 +86,11 @@ interface EditorWithAIProps {
     draftText: string,
     anchorRect: {left: number; top: number; bottom: number}
   ) => void;
+  onAddSelectionToInventory?: (input: {
+    itemName: string;
+    from: number;
+    to: number;
+  }) => void;
   inlineHighlightsMode?: InlineHighlightsMode;
   suppressSelectionBubble?: boolean;
 }
@@ -163,7 +178,7 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
   resetScrollToken = 0,
   onChange,
   onWordCountChange,
-  onCursorPositionChange,
+  onCursorContextChange,
   consistencyHighlights = [],
   onConsistencyHighlightClick,
   config,
@@ -180,7 +195,8 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
   onOpenAIContext,
   onOpenLoreInspector,
   onOpenWorldCapture,
-  characterStateHoverCardsByLoreId = {},
+  onAddSelectionToInventory,
+  getCharacterStateHoverCard,
   inlineHighlightsMode = 'visible',
   suppressSelectionBubble = false
 }) => {
@@ -209,6 +225,8 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
     };
     left: number;
     top: number;
+    anchorTop: number;
+    anchorBottom: number;
   } | null>(null);
   const [isActivelyTyping, setIsActivelyTyping] = useState(false);
   const editorRef = useRef<TipTapEditorInstance | null>(null);
@@ -545,7 +563,23 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
     const editor = editorRef.current;
     if (!editor) return;
     const {from, to} = editor.state.selection;
-    onCursorPositionChange?.(from);
+    const snapshot: EditorTextSnapshot = {text: '', spans: []};
+    editor.state.doc.descendants((node, position) => {
+      if (!node.isText || !node.text) return;
+      const textStart = snapshot.text.length;
+      snapshot.text += node.text;
+      snapshot.spans.push({
+        textStart,
+        textEnd: snapshot.text.length,
+        editorStart: position
+      });
+    });
+    const position = normalizeStateMutationPosition(snapshot, from);
+    onCursorContextChange?.({
+      position,
+      snapshot,
+      anchor: captureStateMutationAnchor(snapshot, position)
+    });
     if (suppressSelectionBubble) {
       setSelectionBubble(null);
       return;
@@ -579,7 +613,7 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
     });
   }, [
     normalizeSelectionSurface,
-    onCursorPositionChange,
+    onCursorContextChange,
     selectionQuickSnippets,
     suppressSelectionBubble
   ]);
@@ -613,8 +647,12 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
   );
 
   const handleLoreHighlightHover = useCallback(
-    (loreId: string, anchorRect: {left: number; top: number; bottom: number}) => {
-      const card = characterStateHoverCardsByLoreId[loreId];
+    (
+      loreId: string,
+      editorPosition: number,
+      anchorRect: {left: number; top: number; bottom: number}
+    ) => {
+      const card = getCharacterStateHoverCard?.(loreId, editorPosition);
       if (!card) {
         setCharacterStateHoverCard(null);
         return;
@@ -625,10 +663,12 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
       setCharacterStateHoverCard({
         card,
         left: anchorRect.left,
-        top: anchorRect.bottom + 8
+        top: anchorRect.bottom + 8,
+        anchorTop: anchorRect.top,
+        anchorBottom: anchorRect.bottom
       });
     },
-    [characterStateHoverCardsByLoreId]
+    [getCharacterStateHoverCard]
   );
 
   const handleLoreHighlightLeave = useCallback(() => {
@@ -927,6 +967,21 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
                 Add to World
               </button>
             )}
+            {onAddSelectionToInventory && (
+              <button
+                type='button'
+                onClick={() => {
+                  onAddSelectionToInventory({
+                    itemName: selectionBubble.selectedText,
+                    from: selectionBubble.from,
+                    to: selectionBubble.to
+                  });
+                  setSelectionBubble(null);
+                }}
+              >
+                Add to inventory
+              </button>
+            )}
             {selectionBubble.matchName && (
               <span className={styles.selectionHint}>{selectionBubble.matchName}</span>
             )}
@@ -1032,6 +1087,9 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
             message={`State at ${characterStateHoverCard.card.sceneLabel}`}
             left={characterStateHoverCard.left}
             top={characterStateHoverCard.top}
+            anchorTop={characterStateHoverCard.anchorTop}
+            anchorBottom={characterStateHoverCard.anchorBottom}
+            tone='neutral'
             onClose={() => setCharacterStateHoverCard(null)}
           >
             {characterStateHoverCard.card.resources.length > 0 && (
