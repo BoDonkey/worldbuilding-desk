@@ -22,6 +22,13 @@ export function buildCanonicalFactSummary(fact: CanonicalFact): string {
   return `${label} ${fact.factType.replace(/_/g, ' ')}: ${canonicalFactValueText(fact)}`;
 }
 
+export function prependUniqueCanonicalFact(
+  current: CanonicalFact[],
+  fact: CanonicalFact
+): CanonicalFact[] {
+  return [fact, ...current.filter((entry) => entry.id !== fact.id)];
+}
+
 export function buildCanonicalFactMemoryContent(fact: CanonicalFact): string {
   return [
     buildCanonicalFactSummary(fact),

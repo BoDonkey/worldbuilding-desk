@@ -5,7 +5,8 @@ import {
   buildCanonicalFactMemoryContent,
   captureCanonicalFactMemory,
   deleteCanonicalFactMemory,
-  getCanonicalFactMemoryDocumentId
+  getCanonicalFactMemoryDocumentId,
+  prependUniqueCanonicalFact
 } from './canonicalFactActions';
 
 function buildFact(overrides: Partial<CanonicalFact> = {}): CanonicalFact {
@@ -76,5 +77,12 @@ describe('canonical fact Shodh memory helpers', () => {
     await deleteCanonicalFactMemory(provider, 'fact-1');
 
     expect(provider.deleteMemoriesForDocument).toHaveBeenCalledWith('canon-fact:fact-1');
+  });
+
+  it('reconciles an accepted fact without duplicating an event-loaded record', () => {
+    const existing = buildFact();
+    const updated = buildFact({updatedAt: 2});
+
+    expect(prependUniqueCanonicalFact([existing], updated)).toEqual([updated]);
   });
 });

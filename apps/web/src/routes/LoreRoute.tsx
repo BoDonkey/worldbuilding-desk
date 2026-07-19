@@ -43,7 +43,8 @@ import {
   applyCanonicalFactSideEffects,
   buildCanonicalFactSummary,
   captureCanonicalFactMemory,
-  deleteCanonicalFactMemory
+  deleteCanonicalFactMemory,
+  prependUniqueCanonicalFact
 } from '../services/lore/canonicalFactActions';
 import {acceptLoreEntityProposal} from '../services/lore/entityProposalActions';
 import {getRAGService} from '../services/rag/getRAGService';
@@ -534,6 +535,7 @@ function LoreRoute() {
       await saveLoreDocument(nextDocument);
       await replaceLoreDocumentLinks({loreDocumentId: documentId, links: nextLinks});
       await indexLoreDocument(nextDocument, nextLinks);
+      await refreshProjectContextHealth();
       resetForm();
       const placementMessage =
         nextLinks.length > 0
@@ -569,6 +571,7 @@ function LoreRoute() {
         proposals: []
       });
       await deleteLoreRagDocument(document.id);
+      await refreshProjectContextHealth();
       if (editingId === document.id) {
         resetForm();
       }
@@ -773,7 +776,8 @@ function LoreRoute() {
           }
         );
       }
-      setCanonicalFacts((current) => [fact, ...current]);
+      await refreshProjectContextHealth();
+      setCanonicalFacts((current) => prependUniqueCanonicalFact(current, fact));
       setProposals((current) =>
         current.map((entry) => (entry.id === nextProposal.id ? nextProposal : entry))
       );
@@ -916,6 +920,7 @@ function LoreRoute() {
         setShodhMemories(memories);
         emitShodhMemoriesUpdated(memories);
       }
+      await refreshProjectContextHealth();
       setCanonicalFacts((current) => current.filter((entry) => entry.id !== fact.id));
       setFeedback({tone: 'success', message: 'Accepted fact removed.'});
     } catch (error) {
