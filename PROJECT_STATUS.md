@@ -1,6 +1,6 @@
 # Worldbuilding-Desk Project Status
 
-**Last Updated:** July 4, 2026
+**Last Updated:** July 20, 2026
 
 ## Project Overview
 
@@ -199,6 +199,8 @@ Under the hood, the app still includes rich systems for world data, rules, chara
 ## Verification Status
 
 ### Verified Recently
+- Pull-request CI now treats verification as blocking across three jobs: web lint/unit tests/rules-engine tests/web build, desktop build, and the full Cypress smoke suite.
+- PR #43 passed all three hosted jobs on July 20, 2026; the Cypress job passed all 42 tests after two consecutive 42/42 local runs.
 - `pnpm build:web` succeeds on the current tree.
 - Backup export/import coverage exists in the smoke checklist.
 - Manuscript export flows are covered in smoke documentation.
