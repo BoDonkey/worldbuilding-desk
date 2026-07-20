@@ -42,10 +42,14 @@ import {buildCanonDecisionConsultationPrompt} from '../services/lore/canonDecisi
 import {acceptLoreEntityProposal} from '../services/lore/entityProposalActions';
 import {
   applyCanonicalFactSideEffects,
-  buildCanonicalFactSummary
+  buildCanonicalFactSummary,
+  captureCanonicalFactMemory,
+  deleteCanonicalFactMemory
 } from '../services/lore/canonicalFactActions';
 import {getRAGService} from '../services/rag/getRAGService';
 import type {RAGProvider} from '../services/rag/RAGService';
+import {getShodhService} from '../services/shodh/getShodhService';
+import {emitShodhMemoriesUpdated} from '../services/shodh/shodhEvents';
 import {
   getInspectorConsultationUsage,
   incrementInspectorConsultationUsage
@@ -436,6 +440,18 @@ function CanonDecisionsRoute() {
         updatedAt: Date.now()
       });
       await applyCanonicalFactSideEffects(activeProject.id, nextFact);
+      try {
+        const shodh = await getShodhService({
+          projectId: activeProject.id,
+          inheritFromParent: activeProject.inheritShodh,
+          parentProjectId: activeProject.parentProjectId
+        });
+        await deleteCanonicalFactMemory(shodh, previousFact.id);
+        await captureCanonicalFactMemory(shodh, nextFact);
+        emitShodhMemoriesUpdated(await shodh.listMemories());
+      } catch (error) {
+        console.warn('Failed to refresh canonical fact memory', error);
+      }
       if (ragService) {
         await ragService.deleteDocument(`canon-fact:${previousFact.id}`);
         await ragService.indexDocument(

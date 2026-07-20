@@ -4,7 +4,9 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
+    "predev": "pnpm --filter @litrpg-tool/rules-engine build",
     "dev": "vite",
+    "prebuild": "pnpm --filter @litrpg-tool/rules-ui... build",
     "build": "tsc -b && vite build",
     "lint": "eslint src/**/*.{ts,tsx}",
     "lint:fix": "eslint src/**/*.{ts,tsx} --fix",

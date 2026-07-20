@@ -3,6 +3,7 @@ import type {WorldEntity} from '../../entityTypes';
 import {ALTERNATIVE_NAMES_KEY, normalizeName, parseAlternativeNames} from './worldBibleEntityHelpers';
 import {
   buildCanonicalAliasList,
+  buildCharacterCaptureAliasList,
   buildEntityMergePlan,
   deriveCharacterAliasSuggestions,
   deriveFirstNameAlias,
@@ -54,10 +55,43 @@ describe('worldBibleCanonicalization', () => {
     expect(deriveFirstNameAlias('Kael')).toBeNull();
   });
 
-  it('suggests first-name, possessive, and surname aliases for full character names', () => {
+  it('does not suggest title-only or title-led character capture aliases', () => {
+    expect(
+      buildCharacterCaptureAliasList({
+        surface: 'Detective',
+        canonicalName: 'Detective Moreland'
+      })
+    ).toEqual(['Moreland']);
+    expect(
+      buildCharacterCaptureAliasList({
+        surface: 'Detective Garcia deTerra',
+        canonicalName: 'Garcia deTerra'
+      })
+    ).toEqual(['Garcia']);
+  });
+
+  it('allows character capture aliases to be rejected before saving', () => {
+    expect(
+      buildCharacterCaptureAliasList({
+        surface: 'Detective',
+        canonicalName: 'Detective Moreland',
+        rejectedAliases: ['Moreland']
+      })
+    ).toEqual([]);
+  });
+
+  it('keeps epithet-style character aliases that are not title prefixes', () => {
+    expect(
+      buildCharacterCaptureAliasList({
+        surface: 'The Scout',
+        canonicalName: 'Kael Ardent'
+      })
+    ).toEqual(['The Scout', 'Kael']);
+  });
+
+  it('suggests first-name and surname aliases for full character names', () => {
     expect(deriveCharacterAliasSuggestions('Camila Garcia deTerra')).toEqual([
       'Camila',
-      "Camila's",
       'Garcia deTerra'
     ]);
   });

@@ -60,6 +60,26 @@ const NAME_ALIAS_STOP_WORDS = new Set([
   'von'
 ]);
 
+const TITLE_ALIAS_PREFIXES = new Set([
+  'captain',
+  'detective',
+  'lady',
+  'lord',
+  'madam',
+  'madame',
+  'master',
+  'miss',
+  'mister',
+  'mr',
+  'mrs',
+  'ms',
+  'mx',
+  'officer',
+  'prof',
+  'professor',
+  'sir'
+]);
+
 export const deriveFirstNameAlias = (name: string): string | null => {
   const tokens = name
     .trim()
@@ -85,6 +105,53 @@ export const deriveFirstNameAlias = (name: string): string | null => {
   return firstMeaningfulToken;
 };
 
+const isWeakCharacterAliasCandidate = (alias: string, canonicalName: string): boolean => {
+  const normalizedAlias = alias.trim().toLowerCase();
+  const normalizedCanonicalName = canonicalName.trim().toLowerCase();
+  if (!normalizedAlias || normalizedAlias === normalizedCanonicalName) {
+    return true;
+  }
+
+  const tokens = alias
+    .trim()
+    .split(/\s+/)
+    .map((token) => token.replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu, ''))
+    .filter(Boolean);
+  if (tokens.length === 0) {
+    return true;
+  }
+
+  if (TITLE_ALIAS_PREFIXES.has(tokens[0]!.toLowerCase())) {
+    return true;
+  }
+
+  return tokens.length === 1 && tokens[0]!.length < 3;
+};
+
+export const buildCharacterCaptureAliasList = (params: {
+  surface: string;
+  canonicalName: string;
+  rejectedAliases?: string[];
+}): string[] => {
+  const rejected = new Set(
+    (params.rejectedAliases ?? []).map((alias) => alias.trim().toLowerCase())
+  );
+  const derivedNameAlias = deriveFirstNameAlias(params.canonicalName);
+  const candidates = [
+    params.surface.trim(),
+    ...(derivedNameAlias ? [derivedNameAlias] : [])
+  ];
+
+  return Array.from(
+    new Map(
+      candidates
+        .filter((alias) => !isWeakCharacterAliasCandidate(alias, params.canonicalName))
+        .filter((alias) => !rejected.has(alias.trim().toLowerCase()))
+        .map((alias) => [alias.trim().toLowerCase(), alias.trim()])
+    ).values()
+  );
+};
+
 export const deriveCharacterAliasSuggestions = (name: string): string[] => {
   const tokens = name
     .trim()
@@ -94,7 +161,6 @@ export const deriveCharacterAliasSuggestions = (name: string): string[] => {
   const firstName = deriveFirstNameAlias(name);
   const suggestions = [
     firstName,
-    firstName ? `${firstName}'s` : null
   ];
 
   if (tokens.length >= 3) {

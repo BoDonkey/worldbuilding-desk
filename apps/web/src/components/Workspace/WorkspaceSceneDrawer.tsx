@@ -42,6 +42,7 @@ interface WorkspaceSceneDrawerProps {
   handleRetryFailedImports: () => Promise<void>;
   selectedId: string | null;
   handleSelectDocument: (doc: WritingDocument) => void;
+  handleMoveDocument: (doc: WritingDocument, direction: -1 | 1) => void;
   handleDelete: (doc: WritingDocument) => void;
   deletingDocumentId: string | null;
   reviewItemCountBySceneId?: Record<string, number>;
@@ -67,6 +68,7 @@ export function WorkspaceSceneDrawer({
   handleRetryFailedImports,
   selectedId,
   handleSelectDocument,
+  handleMoveDocument,
   handleDelete,
   deletingDocumentId,
   reviewItemCountBySceneId = {},
@@ -191,7 +193,7 @@ export function WorkspaceSceneDrawer({
       )}
 
       <ul className={styles.sceneList}>
-        {documents.map((doc) => (
+        {documents.map((doc, index) => (
           <li
             key={doc.id}
             className={`${styles.sceneListItem} ${
@@ -235,14 +237,36 @@ export function WorkspaceSceneDrawer({
                 )}
               </span>
             </div>
-            <button
-              type='button'
-              onClick={() => handleDelete(doc)}
-              disabled={deletingDocumentId === doc.id}
-              style={{marginTop: '0.25rem', fontSize: '0.8rem'}}
-            >
-              {deletingDocumentId === doc.id ? 'Deleting...' : 'Delete'}
-            </button>
+            <div className={styles.sceneListItemActions}>
+              <button
+                type='button'
+                className={styles.sceneOrderButton}
+                onClick={() => handleMoveDocument(doc, -1)}
+                disabled={index === 0 || deletingDocumentId === doc.id}
+                aria-label={`Move ${doc.title || 'Untitled scene'} earlier`}
+                title='Move earlier'
+              >
+                ↑
+              </button>
+              <button
+                type='button'
+                className={styles.sceneOrderButton}
+                onClick={() => handleMoveDocument(doc, 1)}
+                disabled={index === documents.length - 1 || deletingDocumentId === doc.id}
+                aria-label={`Move ${doc.title || 'Untitled scene'} later`}
+                title='Move later'
+              >
+                ↓
+              </button>
+              <button
+                type='button'
+                onClick={() => handleDelete(doc)}
+                disabled={deletingDocumentId === doc.id}
+                className={styles.sceneDeleteButton}
+              >
+                {deletingDocumentId === doc.id ? 'Deleting...' : 'Delete'}
+              </button>
+            </div>
           </li>
         ))}
       </ul>

@@ -167,6 +167,14 @@ function extractInlineHeritage(text: string): string | null {
   return null;
 }
 
+function isEducationSection(section: string): boolean {
+  return normalize(section) === 'education';
+}
+
+function isAgeRangeLabel(label: string): boolean {
+  return /^ages?(?:\b|\s|[-–—]\d)/i.test(label.trim());
+}
+
 export function extractLoreFactProposals(
   params: ExtractLoreFactParams
 ): LoreFactProposal[] {
@@ -202,7 +210,10 @@ export function extractLoreFactProposals(
     if (labelMatch) {
       const label = normalize(labelMatch[1]);
       const value = labelMatch[2].trim();
-      const factType = LABEL_TO_FACT_TYPE[label];
+      const factType =
+        isEducationSection(currentSection) && isAgeRangeLabel(labelMatch[1])
+          ? 'background'
+          : LABEL_TO_FACT_TYPE[label];
 
       if (factType) {
         pushProposal(proposals, dedupe, {
@@ -210,7 +221,10 @@ export function extractLoreFactProposals(
           documentId: params.document.id,
           target,
           factType,
-          value,
+          value:
+            isEducationSection(currentSection) && isAgeRangeLabel(labelMatch[1])
+              ? bulletBody
+              : value,
           confidence: 0.85,
           evidenceText: trimmed,
           evidenceStart: lineStart + rawLine.indexOf(labelMatch[2]),

@@ -201,21 +201,21 @@ describe('Project mode guardrails', () => {
     cy.contains('button', 'Export Roster + Sheets').should('not.exist');
     cy.contains('button', 'Import Roster + Sheets').should('not.exist');
     cy.contains('button', 'Open Sheet').should('not.exist');
-    cy.contains('span', 'Description')
-      .closest('[class*="container"]')
+    cy.contains('[data-rich-text-variant="character"] span', 'Description')
+      .closest('[data-rich-text-variant]')
       .should('have.attr', 'data-rich-text-variant', 'character')
       .find('.tiptap-editor')
       .should('exist');
-    cy.contains('span', 'Notes')
-      .closest('[class*="container"]')
+    cy.contains('[data-rich-text-variant="character"] span', 'Notes')
+      .closest('[data-rich-text-variant]')
       .should('have.attr', 'data-rich-text-variant', 'character')
       .find('.tiptap-editor')
       .should('exist');
     cy.contains('strong', 'Add character section').should('be.visible');
     cy.get('input[placeholder="Education, Traumas, Addictions..."]').type('Education');
     cy.contains('button', 'Add Section').click();
-    cy.contains('span', 'Education')
-      .closest('[class*="container"]')
+    cy.contains('[data-rich-text-variant="character"] span', 'Education')
+      .closest('[data-rich-text-variant]')
       .should('have.attr', 'data-rich-text-variant', 'character')
       .find('.tiptap-editor')
       .should('exist');

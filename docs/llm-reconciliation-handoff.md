@@ -40,6 +40,60 @@ Do not wholesale merge or cherry-pick `codex/review-completion-state`. It has so
 The active-project chrome/rail slice is committed through `931bf51`. The World Bible AI helper/import work landed on `world-bible-ai` and is already merged to `main`.
 The current branch starts from `main` after the review-completion smoke merge and focuses on Lore Documents IA and smoke stabilization.
 
+## 2026-07-04 Source Notes, World Bible, and AI Trust Stop Point
+
+Recent product decision:
+
+- Treat `World Bible` as the structured accepted canon home.
+- Treat `Source Notes` as intact source documents. A Source Note can be linked to a World Bible record or left as general project source material.
+- Importing into Source Notes should not force categorization. The first decision is placement: linked to a canon item, or general project context.
+- Importing into World Bible still means "turn this document into canon records." That import path can detect headings and map them into existing fields, record-local sections, reusable fields, or ignored content.
+- Extracted Source Note entities/facts are candidates only. They become canon only when the author accepts them.
+- Rejected suggestions are not canon. The original Source Note may still remain as source material.
+- AI must remain author-invoked and proposal-oriented. It should not silently promote Source Note content into canon or schema changes.
+
+Current implementation state:
+
+- Source Notes save intact document content and can persist links to characters/entities.
+- Source Notes are indexed into RAG as `lore` chunks.
+- World Bible records are indexed into RAG as `worldbible` chunks.
+- Accepted canonical facts are indexed into RAG as `canon_fact` chunks.
+- The Source Notes screen now frames imported documents as either linked source notes or general source notes.
+- The World Bible import path still performs deterministic structure detection. It now recognizes common character-sheet headings such as `Basic Information`, `Physical Description`, `Personality`, `Skills`, `Special Traits`, `Social Dynamics`, `Goals and Motivations`, `Character Arc`, and `New Additions`, even when followed immediately by label/value rows.
+- Character alias suggestions no longer include possessive aliases such as `Camila's`; possessive matching should be inferred by the matcher, not stored as an alias.
+
+Implemented assistant context trust checkpoint:
+
+- RAG chunk metadata stores the broad document type (`worldbible`, `lore`, `canon_fact`, `scene`, or `rule`), and `AIAssistant` now maps retrieved RAG hits through `contextProvenance` before provider prompts are built.
+- Provider prompts now receive source labels such as `[Source: Accepted canon: World Bible record - Camila Garcia deTerra]`, `[Source: Linked Source Note: source material, not automatically canon - Camila Dossier]`, or `[Source: Accepted canon fact - Camila Garcia deTerra]`.
+- For `lore` chunks, the mapper checks `LoreDocumentLink` data so linked Source Notes and general Source Notes are labeled differently.
+- Runtime context trust rules are appended to the system prompt even when a user already has older editable prompt templates stored in IndexedDB. New default prompts also include the same canon/source-note guidance.
+- RAG search now applies a modest trust-tier ranking boost so accepted canon facts and World Bible records outrank Source Notes when similarity/lexical evidence is otherwise close.
+- Assistant answers now expose a collapsed `Sources used` list for the Shodh/RAG context chunks sent with that answer.
+- Accepted canon facts now auto-capture Shodh summaries when accepted or rebuilt. Source Notes remain RAG-only source material unless a later author-triggered summary flow proves useful.
+- Pending and rejected Source Note proposals live in proposal storage and the Lore UI. They are not generally included in normal AI context as "under consideration" or "rejected".
+- Result: the LLM prompt now receives the stored trust distinction for retrieved RAG context, close-match retrieval prefers accepted canon sources, and authors can inspect which retrieved context was sent. Pending/rejected proposals remain intentionally absent from normal assistant context until a proposal-review route exists.
+
+Next narrow implementation slice:
+
+1. Tomorrow resume point: run a quick conflict/provenance smoke rather than a full detailed test. Use one realistic Source Note with at least two detectives or role-bearing characters, accept one or two facts, ask the assistant direct-fact, conflict-check, scene-planning, ambiguous-alias, and provenance questions, then confirm the visible `Sources used` list prefers accepted World Bible/Canon Fact sources over Source Notes when they disagree.
+2. If the smoke behaves correctly, build the pending-proposal assistant route next. It should be an explicit proposal-review flow that can include pending Source Note proposals with `Pending proposal: under consideration, not canon` labels, while keeping pending/rejected proposals out of ordinary assistant context.
+3. If the smoke reveals source-ranking or provenance problems, fix those first. Prioritize cases where Source Notes are flattened into canon, ambiguous titles such as `the detective` overcommit to one character, or accepted CanonicalFact Shodh summaries are missing/stale after accept/remove/rebuild.
+4. After that, audit accepted canon fact Shodh summaries against realistic imported lore; keep Source Notes RAG-only unless a manual summary action proves useful.
+
+Recent focused verification for this discussion:
+
+- `pnpm exec vitest run src/hooks/useWorldBibleImports.test.ts src/services/worldBible/worldBibleCanonicalization.test.ts`
+- `pnpm exec eslint src/hooks/useWorldBibleImports.ts src/hooks/useWorldBibleImports.test.ts src/services/worldBible/worldBibleCanonicalization.ts src/services/worldBible/worldBibleCanonicalization.test.ts`
+- `pnpm exec vitest run src/services/llm/contextProvenance.test.ts src/components/AIAssistant/AIAssistant.test.ts`
+- `pnpm exec vitest run src/services/rag/RAGService.test.ts src/services/llm/contextProvenance.test.ts src/components/AIAssistant/AIAssistant.test.ts`
+- `pnpm exec eslint src/services/rag/RAGService.ts src/services/rag/RAGService.test.ts src/components/AIAssistant/AIAssistant.tsx src/components/AIAssistant/AIAssistant.helpers.ts src/components/AIAssistant/AIAssistant.test.ts src/services/llm/contextProvenance.ts src/services/llm/contextProvenance.test.ts`
+- `pnpm exec eslint src/components/AIAssistant/AIAssistant.tsx src/components/AIAssistant/AIAssistant.helpers.ts src/components/AIAssistant/AIAssistant.test.ts src/services/llm/contextProvenance.ts src/services/llm/contextProvenance.test.ts src/services/prompts/defaultPrompts.ts`
+- `pnpm exec tsc -b`
+- `pnpm exec vite build`
+
+Build still emits the existing large-chunk and `onnxruntime-web` eval warnings.
+
 Included areas:
 
 - `apps/web/src/components/PageHeader.tsx`

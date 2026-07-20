@@ -86,14 +86,7 @@ export const StateMutationEventSchema = z.object({
 
 export type StateMutationCommandInput = z.input<typeof StateMutationCommandSchema>;
 
-const FIELD_KIND_BY_COMMAND_TYPE = {
-  resource_change: 'resource',
-  resource_set: 'resource',
-  stat_change: 'stat',
-  stat_set: 'stat'
-} as const;
-
-export type TrackedFieldKind = (typeof FIELD_KIND_BY_COMMAND_TYPE)[keyof typeof FIELD_KIND_BY_COMMAND_TYPE];
+export type TrackedFieldKind = 'resource' | 'stat';
 
 export function validateStateMutationEvent(event: StateMutationEvent): StateMutationEvent {
   return StateMutationEventSchema.parse(event);

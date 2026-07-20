@@ -41,7 +41,7 @@ import {
   getSettlementModulesByProject,
   getCompendiumEntriesByProject
 } from '../services/compendium';
-import {getDocumentsByProject} from '../writingStorage';
+import {getDocumentsByProject, sortWritingDocuments} from '../writingStorage';
 import {
   getStateMutationEventsByProject,
   invalidateStateMutationEventById,
@@ -773,13 +773,7 @@ function CharacterSheetsRoute({
   );
 
   const orderedDocuments = useMemo(
-    () =>
-      [...documents].sort((a, b) => {
-        if (a.createdAt !== b.createdAt) {
-          return a.createdAt - b.createdAt;
-        }
-        return a.updatedAt - b.updatedAt;
-      }),
+    () => sortWritingDocuments(documents),
     [documents]
   );
 

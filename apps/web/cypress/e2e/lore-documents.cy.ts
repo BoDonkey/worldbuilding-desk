@@ -1,4 +1,4 @@
-describe('Lore Documents', () => {
+describe('Source Notes', () => {
   beforeEach(() => {
     cy.viewport(1400, 1000);
     cy.visit('/');
@@ -7,20 +7,17 @@ describe('Lore Documents', () => {
     cy.contains('strong', 'Cypress Smoke Project').should('be.visible');
   });
 
-  it('keeps Lore Documents framed as source notes and supports manual document lifecycle', () => {
+  it('keeps Source Notes framed as source material and supports manual document lifecycle', () => {
     cy.visit('/lore');
-    cy.contains('h1', 'Lore Documents').should('be.visible');
+    cy.contains('h1', 'Source Notes').should('be.visible');
     cy.contains(
-      'Keep dossiers, timelines, myths, and deep reference notes here as source material.'
+      'Keep dossiers, timelines, myths, and deep reference notes here as source material. Link a note to a World Bible item when it belongs to one record, or leave it general for project-wide context.'
     ).should('be.visible');
-    cy.contains(
-      'World Bible remains the structured canon home; extraction only creates review candidates until you accept them.'
-    ).should('be.visible');
-    cy.contains('h2', 'Source Document Intake').should('be.visible');
+    cy.contains('h2', 'Source note intake').should('be.visible');
     cy.contains('h3', 'Write Manually').should('be.visible');
     cy.contains('h3', 'Import Dossier').should('be.visible');
-    cy.contains('h3', 'Extract Candidates').should('be.visible');
-    cy.contains('Scan the active saved document for entity and fact proposals without changing canon.').should(
+    cy.contains('h3', 'Review Later').should('be.visible');
+    cy.contains('Optionally scan a saved Source Note for canon candidates after placement is clear.').should(
       'be.visible'
     );
     cy.contains('button', 'Extract Facts').should('be.disabled');
@@ -38,11 +35,13 @@ describe('Lore Documents', () => {
         '- The first beacon failed at midnight.'
       ].join('\n')
     );
-    cy.contains('button', 'Create Lore Document').click();
-    cy.contains('[role="status"]', 'Lore document created.').should('be.visible');
+    cy.contains('button', 'Create Source Note').click();
+    cy.contains(
+      '[role="status"]',
+      'Source Note created. Saved as general project source material.'
+    ).should('be.visible');
     cy.contains('article', 'Glass Harbor Timeline').within(() => {
-      cy.contains('0 entity candidates').should('be.visible');
-      cy.contains('0 fact candidates').should('be.visible');
+      cy.contains('0 pending').should('be.visible');
       cy.contains('0 accepted').should('be.visible');
       cy.contains('button', 'Edit').should('be.visible');
       cy.contains('button', 'Delete').should('be.visible');
@@ -54,7 +53,7 @@ describe('Lore Documents', () => {
     cy.contains('article', 'Glass Harbor Timeline').within(() => {
       cy.contains('button', 'Delete').click();
     });
-    cy.contains('[role="status"]', 'Lore document deleted.').should('be.visible');
+    cy.contains('[role="status"]', 'Source Note deleted.').should('be.visible');
     cy.contains('article', 'Glass Harbor Timeline').should('not.exist');
   });
 
@@ -80,21 +79,24 @@ describe('Lore Documents', () => {
       },
       {force: true}
     );
-    cy.contains('[role="status"]', 'Imported "mira-voss-dossier.md". Review and save when ready.').should(
-      'be.visible'
-    );
+    cy.contains(
+      '[role="status"]',
+      'Imported "mira-voss-dossier.md". Add a canon link or leave it as general source material, then save.'
+    ).should('be.visible');
     cy.contains('label', 'Title').find('input').should('have.value', 'mira-voss-dossier');
     cy.get('textarea').should('contain.value', 'Character Sheet: Mira Voss');
-    cy.contains('button', 'Create Lore Document').click();
-    cy.contains('[role="status"]', 'Lore document created.').should('be.visible');
+    cy.contains('button', 'Create Source Note').click();
+    cy.contains(
+      '[role="status"]',
+      'Source Note created. Saved as general project source material.'
+    ).should('be.visible');
 
     cy.contains('article', 'mira-voss-dossier').within(() => {
       cy.contains('button', 'Extract').click();
     });
     cy.contains('[role="status"]', /Extracted \d+ entity proposal/).should('be.visible');
     cy.contains('article', 'mira-voss-dossier').within(() => {
-      cy.contains(/entity candidates/).should('be.visible');
-      cy.contains(/fact candidates/).should('be.visible');
+      cy.contains(/\d+ pending/).should('be.visible');
       cy.contains('0 accepted').should('be.visible');
       cy.contains('button', 'Edit').click();
     });
@@ -116,7 +118,7 @@ describe('Lore Documents', () => {
     cy.contains('Mira Voss').should('not.exist');
   });
 
-  it('creates and opens a linked Lore Document from a World Bible record', () => {
+  it('creates and opens a linked Source Note from a World Bible record', () => {
     cy.visit('/world-bible');
     cy.contains('button', 'Locations').click();
     cy.get('section[aria-label="Locations canon"]').within(() => {
@@ -128,27 +130,26 @@ describe('Lore Documents', () => {
     cy.contains('[role="status"]', 'Entry created.').should('be.visible');
 
     cy.contains('li', 'Crystal Vault').within(() => {
-      cy.contains('button', 'Create linked Lore Document').click();
+      cy.contains('button', 'Create linked Source Note').click();
     });
     cy.location('pathname').should('eq', '/lore');
-    cy.contains('h2', 'Edit Lore Document').should('be.visible');
+    cy.contains('h2', 'Edit Source Note').should('be.visible');
     cy.contains('label', 'Title').find('input').should('have.value', 'Crystal Vault Dossier');
     cy.get('textarea').should('contain.value', 'Crystal Vault source notes');
-    cy.contains('primary subject: Crystal Vault').should('be.visible');
-    cy.contains('button', 'Open in World Bible').click();
-    cy.location('pathname').should('eq', '/world-bible');
-    cy.contains('h2', 'Edit Location').should('be.visible');
-    cy.contains('label', 'Name').find('input').should('have.value', 'Crystal Vault');
+    cy.contains('option', 'Crystal Vault (World Bible)')
+      .parent('select')
+      .find('option:selected')
+      .should('have.text', 'Crystal Vault (World Bible)');
 
     cy.visit('/world-bible');
     cy.contains('button', 'Locations').click();
     cy.contains('li', 'Crystal Vault').within(() => {
-      cy.contains('Lore Document:').should('be.visible');
+      cy.contains('Source Note:').should('be.visible');
       cy.contains('Crystal Vault Dossier').should('be.visible');
-      cy.contains('button', 'Open Lore Document').click();
+      cy.contains('button', 'Open Source Note').click();
     });
     cy.location('pathname').should('eq', '/lore');
-    cy.contains('h2', 'Edit Lore Document').should('be.visible');
+    cy.contains('h2', 'Edit Source Note').should('be.visible');
     cy.contains('label', 'Title').find('input').should('have.value', 'Crystal Vault Dossier');
   });
 
@@ -160,15 +161,18 @@ describe('Lore Documents', () => {
     }) => {
       cy.contains('button', 'Start Writing').click();
       cy.contains('label', 'Title').find('input').clear().type(params.title);
-      cy.contains('button', 'Add Link').click();
-      cy.contains('option', `${params.target} (World)`)
+      cy.contains('button', 'Link Canon Record').click();
+      cy.contains('option', `${params.target} (World Bible)`)
         .parent('select')
-        .select(`${params.target} (World)`);
+        .select(`${params.target} (World Bible)`);
       cy.get('textarea').clear().type(params.content);
-      cy.contains('button', 'Create Lore Document').click();
-      cy.contains('[role="status"]', 'Lore document created.').should('be.visible');
+      cy.contains('button', 'Create Source Note').click();
+      cy.contains(
+        '[role="status"]',
+        'Source Note created. Linked to 1 canon target.'
+      ).should('be.visible');
       cy.contains('article', params.title).within(() => {
-        cy.contains(`primary subject: ${params.target}`).should('be.visible');
+        cy.contains('1 linked').should('be.visible');
       });
     };
 
@@ -182,7 +186,7 @@ describe('Lore Documents', () => {
       });
       cy.contains('[role="status"]', /Extracted \d+ entity proposal/).should('be.visible');
       cy.contains('article', params.title).within(() => {
-        cy.contains(/fact candidates/).should('be.visible');
+        cy.contains(/\d+ pending/).should('be.visible');
         cy.contains('button', 'Edit').click();
       });
       cy.contains('h2', 'Extraction Review')

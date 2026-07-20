@@ -192,7 +192,7 @@ describe('Lore and review matching', () => {
 
     cy.contains('.tiptap-editor [data-consistency-id]', 'Kaelor')
       .click();
-    cy.contains('button', /Add Character|Add to World|Create record/).click();
+    cy.contains('button', /Add Character|Add to World|Create character|Create record/).click();
     cy.contains('[role="status"]', 'Kaelor').should('be.visible');
 
     cy.contains('.tiptap-editor [data-consistency-id]', 'Kaelor')
@@ -255,10 +255,10 @@ describe('Lore and review matching', () => {
 
     cy.contains('.tiptap-editor .review-focus-flash', 'Kael').should('be.visible');
     cy.contains('li', 'Kael').within(() => {
-      cy.contains('button', 'Add to World').should('be.visible');
+      cy.contains('button', 'Create character').should('be.visible');
       cy.contains('button', 'Ignore').should('be.visible');
       cy.contains('button', 'Always ignore').should('be.visible');
-      cy.contains('label', 'Name').find('input').should('have.value', 'Kael');
+      cy.contains('label', 'Canonical name').find('input').should('have.value', 'Kael');
     });
   });
 
@@ -369,7 +369,7 @@ describe('Lore and review matching', () => {
     cy.contains('Project review found').should('be.visible');
     cy.contains('.tiptap-editor [data-consistency-id]', 'Garcia').click();
     cy.get('select[aria-label="World category"]').select('Characters');
-    cy.contains('button', 'Add Character').click();
+    cy.contains('button', 'Create character').click();
     cy.contains('[role="status"]', 'Garcia').should('be.visible');
     cy.location('pathname').should('eq', '/workspace');
     cy.contains('.tiptap-editor [data-consistency-id]', 'Garcia').should('not.exist');
@@ -496,7 +496,7 @@ describe('Lore and review matching', () => {
     cy.contains('Project review found').should('be.visible');
     cy.contains('.tiptap-editor [data-consistency-id]', 'Kael')
       .click();
-    cy.contains('button', /Add Character|Add to World|Create record/).click();
+    cy.contains('button', /Add Character|Add to World|Create character|Create record/).click();
     cy.contains('[role="status"]', 'Kael').should('be.visible');
     cy.contains('.tiptap-editor [data-lore-id]', 'Kael').should('be.visible');
     cy.get('button[aria-label^="Open review drawer"]')

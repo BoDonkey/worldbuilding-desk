@@ -9,9 +9,19 @@ import type {
 } from '../../services/shodh/ShodhMemoryService';
 import {getShodhService} from '../../services/shodh/getShodhService';
 import {SHODH_MEMORIES_EVENT} from '../../services/shodh/shodhEvents';
-import type {LLMMessage} from '../../services/llm/types';
+import type {LLMContextChunk, LLMMessage} from '../../services/llm/types';
+import {
+  appendContextTrustInstructions,
+  buildRagContextChunks
+} from '../../services/llm/contextProvenance';
 import {PromptManager} from '../../services/prompts/PromptManager';
 import type {ProjectAISettings, PromptTool, ProjectMode} from '../../entityTypes';
+import {
+  getContextInstruction,
+  getContextLabel,
+  selectWorldBibleContextForPrompt,
+  stripAssistantThinking
+} from './AIAssistant.helpers';
 
 interface AIAssistantProps {
   projectId: string;
@@ -31,84 +41,19 @@ interface AIAssistantProps {
   showContextPreview?: boolean;
 }
 
-type AIAssistantContextType = NonNullable<AIAssistantProps['context']>['type'];
-
-export const stripAssistantThinking = (content: string): string =>
-  content
-    .replace(/<think>[\s\S]*?<\/think>/gi, '')
-    .replace(/<think>[\s\S]*$/gi, '')
-    .replace(/^[\s\S]*?<\/think>/i, '')
-    .trimStart();
-
-const getContextLabel = (contextType?: AIAssistantContextType): string =>
-  contextType === 'world-bible' ? 'Current World Bible record context' : 'Selected text';
-
-const getContextInstruction = (
-  contextType: AIAssistantContextType | undefined,
-  contextLabel: string
-): string =>
-  contextType === 'world-bible'
-    ? `${contextLabel} is available below. It may include only the field most relevant to the author's request. Use the supplied field content as source material, but do not repeat field labels, keys, or unrelated record context in the answer. If rewriting or expanding a section, return the revised section text only unless the author asks for analysis.`
-    : `The author has highlighted text in the editor. The ${contextLabel.toLowerCase()} is available as reference context below. Use it when the author asks about the selection or uses phrases like "this", "these", "it", "them", "the characters", or "the locations". Do not assume the author wants expansion; answer the task they ask for.`;
-
-const normalizeContextToken = (value: string): string =>
-  value
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, ' ')
-    .trim();
-
-type WorldBibleContextField = {
-  label: string;
-  key: string;
-  content: string;
-  block: string;
+type ChatMessage = LLMMessage & {
+  contextSources?: string[];
 };
 
-export const selectWorldBibleContextForPrompt = (
-  contextText: string,
-  promptText: string
-): string => {
-  const editableFieldsMarker = 'Editable fields:';
-  if (!contextText.includes(editableFieldsMarker)) return contextText;
-
-  const [recordHeader, fieldsText = ''] = contextText.split(editableFieldsMarker);
-  const fields: WorldBibleContextField[] = fieldsText
-    .split(/\n\n---\n\n/g)
-    .map((block) => {
-      const label = block.match(/Field:\s*(.+)/)?.[1]?.trim() ?? '';
-      const key = block.match(/Key:\s*(.+)/)?.[1]?.trim() ?? '';
-      const content = block.match(/Current content:\n([\s\S]*)/)?.[1]?.trim() ?? '';
-      return {label, key, content, block: block.trim()};
-    })
-    .filter((field) => field.label && field.key);
-
-  if (fields.length === 0) return contextText;
-
-  const normalizedPrompt = normalizeContextToken(promptText);
-  const matchingFields = fields.filter((field) => {
-    const normalizedLabel = normalizeContextToken(field.label);
-    const normalizedKey = normalizeContextToken(field.key);
-    return (
-      normalizedLabel.length > 0 && normalizedPrompt.includes(normalizedLabel)
-    ) || (
-      normalizedKey.length > 0 && normalizedPrompt.includes(normalizedKey)
-    );
-  });
-  const selectedFields = matchingFields.length > 0 ? matchingFields : [];
-  const fieldIndex = fields
-    .map((field) => `- ${field.label} (${field.key})`)
-    .join('\n');
-
-  return [
-    recordHeader.trim(),
-    `Available fields:\n${fieldIndex}`,
-    selectedFields.length > 0
-      ? `Relevant field content:\n\n${selectedFields.map((field) => field.block).join('\n\n---\n\n')}`
-      : 'No exact field heading was matched. Ask a clarifying question or answer using the field list only.'
-  ]
-    .filter(Boolean)
-    .join('\n\n');
-};
+const getContextSourceSummaries = (chunks: LLMContextChunk[]): string[] =>
+  Array.from(
+    new Map(
+      chunks
+        .map((chunk) => chunk.source.trim())
+        .filter(Boolean)
+        .map((source) => [source.toLowerCase(), source])
+    ).values()
+  );
 
 export const AIAssistant: React.FC<AIAssistantProps> = ({
   projectId,
@@ -123,7 +68,7 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
   consultationMaxTokens,
   showContextPreview = true
 }) => {
-  const [messages, setMessages] = useState<LLMMessage[]>([]);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [isStreaming, setIsStreaming] = useState(false);
   const [providerError, setProviderError] = useState<string | null>(null);
@@ -150,7 +95,7 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
     } catch (error) {
       console.warn('Failed to load Shodh memories', error);
     }
-  }, [projectId]);
+  }, []);
 
   useEffect(() => {
     promptManager.current.init();
@@ -342,11 +287,7 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
         buildMemoryChunks(promptText)
       ]);
 
-      const ragChunks = ragResults.map((r) => ({
-        content: r.chunk.content,
-        source: r.chunk.documentTitle,
-        relevance: r.score
-      }));
+      const ragChunks = await buildRagContextChunks(projectId, ragResults);
       const contextChunks = [...shodhChunks, ...ragChunks];
 
       // Add selected text context if available
@@ -357,6 +298,7 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
           relevance: 1.0
         });
       }
+      const contextSources = getContextSourceSummaries(contextChunks);
 
       const promptType = context?.type === 'rule' ? 'rules' : context?.type || 'document';
       const basePrompt = await promptManager.current.getPrompt(promptType);
@@ -371,12 +313,15 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
               )
               .join('\n')}`
           : '';
-      const composedPrompt = `${basePrompt}${toolPrompt}`;
+      const composedPrompt = appendContextTrustInstructions(`${basePrompt}${toolPrompt}`);
 
 
       // Stream response
       let rawAssistantMessage = '';
-      setMessages((prev) => [...prev, {role: 'assistant', content: ''}]);
+      setMessages((prev) => [
+        ...prev,
+        {role: 'assistant', content: '', contextSources}
+      ]);
       scrollMessagesToBottom();
 
       for await (const chunk of llmService.current.stream({
@@ -391,7 +336,12 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
         const assistantMessage = stripAssistantThinking(rawAssistantMessage);
         setMessages((prev) => [
           ...prev.slice(0, -1),
-          {role: 'assistant', content: assistantMessage}
+          {
+            ...(prev[prev.length - 1]?.role === 'assistant'
+              ? prev[prev.length - 1]
+              : {role: 'assistant' as const, contextSources}),
+            content: assistantMessage
+          }
         ]);
         scrollMessagesToBottom();
       }
@@ -408,7 +358,6 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
     buildMemoryChunks,
     consultationMaxTokens,
     consultationModel,
-    context?.id,
     context?.type,
     projectId,
     providerError,
@@ -492,6 +441,16 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
         {messages.map((msg, i) => (
           <div key={i} className={styles[msg.role]}>
             <div className={styles.messageContent}>{msg.content}</div>
+            {msg.role === 'assistant' && msg.contextSources?.length ? (
+              <details className={styles.contextSources}>
+                <summary>Sources used</summary>
+                <ul>
+                  {msg.contextSources.map((source) => (
+                    <li key={source}>{source}</li>
+                  ))}
+                </ul>
+              </details>
+            ) : null}
           </div>
         ))}
       </div>

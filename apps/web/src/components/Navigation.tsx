@@ -27,17 +27,6 @@ interface NavSection {
   items: NavItem[];
 }
 
-interface WorkspaceScrollSnapshot {
-  elements: Array<{key: string; top: number; left: number}>;
-  windowY: number;
-}
-
-declare global {
-  interface Window {
-    __wbdLastWorkspaceScrollSnapshot?: WorkspaceScrollSnapshot;
-  }
-}
-
 export const Navigation: FC<NavigationProps> = ({
   isRailCollapsed = false,
   onToggleRail
@@ -88,7 +77,7 @@ export const Navigation: FC<NavigationProps> = ({
       {to: '/projects', label: 'Projects', icon: 'PR'},
       {to: '/workspace', label: 'Workspace', icon: 'WS'},
       {to: '/world-bible', label: 'World Bible', icon: 'WB'},
-      {to: '/lore', label: 'Lore Docs', icon: 'LD'}
+      {to: '/lore', label: 'Source Notes', icon: 'SN'}
     ],
     []
   );
@@ -170,22 +159,8 @@ export const Navigation: FC<NavigationProps> = ({
   }, [isMobileMenuOpen, isSecondaryMenuOpen]);
 
   const captureRouteScroll = useCallback(() => {
-    if (location.pathname === '/workspace') {
-      window.__wbdLastWorkspaceScrollSnapshot = {
-        windowY: window.scrollY,
-        elements: Array.from(
-          document.querySelectorAll<HTMLElement>('[data-wbd-scroll-key]')
-        )
-          .map((element) => ({
-            key: element.dataset.wbdScrollKey ?? '',
-            top: element.scrollTop,
-            left: element.scrollLeft
-          }))
-          .filter((entry) => entry.key)
-      };
-    }
     window.dispatchEvent(new CustomEvent('wbd:capture-workspace-scroll'));
-  }, [location.pathname]);
+  }, []);
 
   return (
     <>

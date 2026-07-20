@@ -65,6 +65,10 @@ function AppShellLayout() {
 
   useLayoutEffect(() => {
     const path = location.pathname;
+    if (path === '/workspace') {
+      return;
+    }
+
     const savedScrollY = routeWindowScrollPositions.get(path);
     if (typeof savedScrollY === 'number' && savedScrollY > 0) {
       window.scrollTo({top: savedScrollY, left: 0, behavior: 'auto'});

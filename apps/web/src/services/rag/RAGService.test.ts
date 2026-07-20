@@ -1,5 +1,5 @@
 import {describe, expect, it} from 'vitest';
-import {getLexicalSearchScore} from './RAGService';
+import {getLexicalSearchScore, getRagTrustRankingBoost} from './RAGService';
 
 describe('RAGService lexical search scoring', () => {
   it('scores exact named matches above unrelated chapter text', () => {
@@ -22,5 +22,15 @@ describe('RAGService lexical search scoring', () => {
   it('does not match search terms inside longer unrelated words', () => {
     expect(getLexicalSearchScore('Loa', 'A cloaked figure crossed the room.')).toBe(0);
     expect(getLexicalSearchScore('Reference to Loa', 'The Loa keep separate houses.')).toBeGreaterThan(0);
+  });
+
+  it('boosts accepted canon sources above source notes for close matches', () => {
+    expect(getRagTrustRankingBoost('canon_fact')).toBeGreaterThan(
+      getRagTrustRankingBoost('worldbible')
+    );
+    expect(getRagTrustRankingBoost('worldbible')).toBeGreaterThan(
+      getRagTrustRankingBoost('lore')
+    );
+    expect(getRagTrustRankingBoost('scene')).toBeGreaterThan(0);
   });
 });

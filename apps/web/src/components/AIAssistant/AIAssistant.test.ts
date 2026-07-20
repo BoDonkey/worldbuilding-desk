@@ -1,5 +1,8 @@
 import {describe, expect, it} from 'vitest';
-import {selectWorldBibleContextForPrompt, stripAssistantThinking} from './AIAssistant';
+import {
+  selectWorldBibleContextForPrompt,
+  stripAssistantThinking
+} from './AIAssistant.helpers';
 
 describe('stripAssistantThinking', () => {
   it('removes visible thinking markup while preserving the answer', () => {

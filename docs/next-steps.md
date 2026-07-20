@@ -1,6 +1,6 @@
 # Next Steps
 
-Last updated: 2026-06-27
+Last updated: 2026-07-04
 
 ## Current Baseline
 
@@ -162,6 +162,7 @@ Implemented recently:
 - Future optional systems note: character inventory currently tracks item names, quantities, notes, and catalog links, while the rules-engine inventory has a `capacity` field but no per-item weight or surfaced encumbrance calculation. When system-heavy character support comes back into focus, add carry weight/encumbrance as an explicit inventory concern rather than treating quantity as enough.
 - The background review path is only worth keeping if it remains bounded: proposal-only, local-first, and subordinate to deterministic validation. Avoid broadening it into an unbounded “project manager AI.”
 - Lore/canon reminder: freeform lore documents are author-facing source material, extracted entity/fact proposals are candidates, and only accepted anchors plus accepted canonical facts count as source-of-truth canon.
+- Source Notes / World Bible / AI trust reminder: Source Notes are intact source documents that may be linked to a World Bible record or left as general project context. World Bible records and accepted canonical facts are accepted canon. `AIAssistant` now passes explicit trust-tier labels into provider prompts for accepted canon, accepted canon facts, linked Source Notes, general Source Notes, scene drafts, and rules references. Pending/rejected Source Note proposals remain outside normal assistant context unless a future proposal-review flow includes them deliberately.
 - Canon-decision AI reminder: the LLM may explain tradeoffs, overlaps, and risks, but it must not silently mutate canon state. Canon-decision consultation is explicit and provider-controlled.
 - Optional systems navigation checkpoint: LitRPG/progression mechanics are a product differentiator, but existing `Ruleset`, mechanics/compendium, sheets/state, and settlement surfaces should stay grouped and gated as an optional systems cluster instead of becoming default peer tabs. Use `docs/optional-systems-navigation-audit.md` for the current implementation state and smoke handoff.
 
@@ -175,14 +176,17 @@ Status:
 - Current docs authority map captured in `docs/README.md`.
 - Lore Documents now includes a project context health panel with RAG counts, indexed document type counts, Shodh memory counts, and a retrieval probe.
 - World Bible character records now include a selected-character health panel for aliases, accepted facts, linked Lore Documents, scene mentions, Shodh memories, RAG probe hits, and state events.
-- Lore Documents now has an explicit context rebuild action that refreshes RAG from saved scenes, World Bible records, Lore Documents, accepted canon facts, and rulesets, while refreshing Shodh summaries for scenes, World Bible records, and rulesets.
+- Lore Documents now has an explicit context rebuild action that refreshes RAG from saved scenes, World Bible records, Lore Documents, accepted canon facts, and rulesets, while refreshing Shodh summaries for scenes, World Bible records, accepted canon facts, and rulesets.
 - The rebuild action stays local to the health panel: it shows author guidance and a quiet `May need rebuild` state only when source counts exceed indexed RAG counts, avoiding app-wide badge noise.
+- RAG ranking now gives accepted canon and accepted canon facts a modest trust boost over Source Notes for close matches, and assistant answers expose a collapsed `Sources used` list for the Shodh/RAG context sent with the answer.
 
 Next implementation slices:
 
-1. Use the Lore Documents health panel, context rebuild action, and Character detail health panel to manually audit a realistic imported lore set across import, extraction, accepted facts, assistant context, chapter drafting, and review.
-2. Add assistant context provenance so Shodh memories and RAG chunks used in an answer are visible.
-3. After those product-health surfaces exist, archive or demote stale top-level docs that are not listed as active in `docs/README.md`.
+1. Tomorrow resume point: run a quick conflict/provenance smoke instead of a full detailed test. Use one realistic Source Note with at least two detectives or role-bearing characters, accept one or two facts, ask the assistant direct-fact, conflict-check, scene-planning, ambiguous-alias, and provenance questions, then confirm the visible `Sources used` list prefers accepted World Bible/Canon Fact sources over Source Notes when they disagree.
+2. If the smoke behaves correctly, the next implementation slice is the pending-proposal assistant route: add an explicit proposal-review flow that can include pending Source Note proposals with `Pending proposal: under consideration, not canon` labels, while keeping pending/rejected proposals out of ordinary assistant context.
+3. If the smoke reveals source-ranking or provenance problems, fix those before adding the proposal-review route. Prioritize cases where Source Notes are flattened into canon, ambiguous titles such as `the detective` overcommit to one character, or accepted CanonicalFact Shodh summaries are missing/stale after accept/remove/rebuild.
+4. After that slice, audit accepted CanonicalFact Shodh summaries with realistic imported lore; Lore Documents remain RAG-only unless a later author-triggered Source Note summary action proves useful.
+5. After those product-health surfaces exist, archive or demote stale top-level docs that are not listed as active in `docs/README.md`.
 
 ## 0) Calm Shell and Navigation Simplification
 

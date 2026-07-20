@@ -502,7 +502,7 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
   useEffect(() => {
     const reposition = () => {
       const editor = editorRef.current;
-      if (!editor || !selectionBubble) return;
+      if (!editor || editor.isDestroyed || !selectionBubble) return;
       const {from, to} = editor.state.selection;
       if (from === to) {
         setSelectionBubble(null);

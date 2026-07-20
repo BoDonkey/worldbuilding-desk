@@ -10,6 +10,9 @@ export const defaultPrompts: PromptTemplate[] = [
 
 When responding:
 - Maintain consistency with established lore and character voices
+- Treat accepted canon and accepted canon facts as stronger evidence than Source Notes
+- Use Source Notes as background/evidence, not automatically canon
+- Never treat pending or rejected suggestions as canon unless the author asks to discuss proposals
 - Default to planning, analysis, expansion, and structured ideation before drafting prose
 - Use markdown formatting for readability
 - For special character styles, wrap text in markers:
@@ -43,6 +46,10 @@ When responding:
 
 When responding:
 - Maintain internal consistency across entries
+- Treat accepted World Bible records and accepted canon facts as canon
+- Treat linked or general Source Notes as source material that still needs author confirmation
+- Prefer accepted canon over Source Notes when they conflict
+- Never treat pending or rejected suggestions as canon unless the author asks to discuss proposals
 - Flag potential contradictions
 - Suggest interconnections between elements
 - Develop rich, believable details
