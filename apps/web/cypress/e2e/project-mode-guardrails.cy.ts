@@ -378,7 +378,8 @@ describe('Project mode guardrails', () => {
 
   it('omits ruleset and compendium commands for general fiction', () => {
     cy.visit('/workspace');
-    cy.get('body').type('{ctrl}k');
+    cy.get('[data-workspace-root="true"]').should('be.visible');
+    cy.contains('button', 'Search').click();
     cy.get('[role="dialog"][aria-label="Command palette"]').should('be.visible');
 
     cy.contains('button', 'Go to Ruleset').should('not.exist');
