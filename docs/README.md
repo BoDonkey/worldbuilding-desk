@@ -1,6 +1,6 @@
 # Documentation Map
 
-Last updated: 2026-06-27
+Last updated: 2026-07-20
 
 This folder contains current planning docs, smoke checklists, architecture notes, and older research. Use this map to avoid treating every file as equal source of truth.
 
@@ -22,6 +22,8 @@ This folder contains current planning docs, smoke checklists, architecture notes
 - `docs/project-backup-smoke-test.md` is the focused backup/import checklist.
 
 ## Historical Or Specialist Docs
+
+`docs/code-fitness-report-2026-07-19.md` is a dated, point-in-time engineering audit. Its disposition note records completed follow-up, but its original grades and measurements should not be treated as current status.
 
 The remaining top-level docs are useful when working on their specific area, but they should not override `PROJECT_STATUS.md`, `docs/next-steps.md`, or this map. Files under `docs/archive/` are historical unless a current task explicitly revives them.
 

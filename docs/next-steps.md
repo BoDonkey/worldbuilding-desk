@@ -143,12 +143,14 @@ Implemented recently:
 
 ## Planning Notes
 
+- Code-fitness checkpoint: CI trust gates are complete in PR #43. Pull requests now block on web lint, web unit tests, rules-engine tests, web build, desktop build, and the full Cypress suite; the July 20 hosted run passed all three jobs.
+- Next engineering-audit slice: refresh the production dependency audit against merged `main`, then plan dependency security, a supported Electron upgrade, and React peer-dependency alignment as separate, reviewable changes. Do not bundle those upgrades into one broad modernization branch.
 - Bias toward slices that complete the writing-first workflow instead of adding new optional systems.
 - Use `docs/product-health-audit.md` as the current guide for Lore Documents, RAG, Shodh memory, character detail consistency, and docs source-of-truth cleanup.
 - Keep prioritizing lore-consistency trust failures over new settlement/mechanics work until alias, nickname, and review-refresh behavior feels boringly reliable in normal drafting.
 - Prefer feature work that also removes route-level complexity in `WorkspaceRoute.tsx` or `WorldBibleRoute.tsx`.
 - Do not move editor `title`, `content`, `saveStatus`, or autosave ownership into zustand casually. Treat that as a dedicated editor-state persistence pass with explicit reload/review-refresh verification.
-- Treat build/lint as baseline gates, but use smoke coverage for import, review, reload, and export as the real confidence bar.
+- Treat blocking build/lint/unit/desktop checks as baseline gates, but use smoke coverage for import, review, reload, and export as the real confidence bar.
 - Review drawer manual smoke is complete for this checkpoint. Next review/highlight work should move to the unified annotation redesign rather than another drawer polish pass.
 - Current automated browser smoke and the latest manual workspace smoke are green on the current tree. In the Codex desktop environment, Cypress may still need to launch outside the GUI sandbox restriction.
 - Do not continue patching individual highlight edge cases indefinitely. The current shared annotation pass now consolidates known canon, aliases, titled forms, and unknown candidates before rendering; future highlight fixes should extend that shared decision layer instead of adding route-local exceptions.

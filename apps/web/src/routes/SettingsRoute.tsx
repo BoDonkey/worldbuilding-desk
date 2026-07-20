@@ -157,8 +157,8 @@ function SettingsRoute() {
       updatedAt: Date.now()
     };
 
-    await saveProjectSettings(updated);
     setSettings(updated);
+    await saveProjectSettings(updated);
   };
 
   const handleProjectModeChange = async (mode: ProjectMode) => {
