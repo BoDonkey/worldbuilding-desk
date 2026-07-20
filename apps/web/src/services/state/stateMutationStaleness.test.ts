@@ -21,6 +21,8 @@ function makeEvent(overrides: Partial<StateMutationEvent>): StateMutationEvent {
     sceneTitle: overrides.sceneTitle ?? 'Scene 1',
     sceneOrder: overrides.sceneOrder ?? 1,
     sceneSequence: overrides.sceneSequence ?? 1,
+    scenePosition: overrides.scenePosition,
+    sceneAnchor: overrides.sceneAnchor,
     sourceRevision: overrides.sourceRevision ?? 10,
     sourceHash: overrides.sourceHash ?? hashString('Original scene text'),
     status: overrides.status ?? 'accepted',
@@ -51,9 +53,30 @@ describe('stateMutationStaleness', () => {
       isMissingSourceScene: false,
       hasRevisionMismatch: false,
       hasHashMismatch: false,
+      anchorStatus: 'legacy',
       isStale: false
     });
     expect(describeStateMutationEventStaleness(staleness)).toBeNull();
+  });
+
+  it('keeps an anchored event usable when text moves and flags unresolved anchors', () => {
+    const anchored = makeEvent({
+      scenePosition: 8,
+      sceneAnchor: {before: 'Original', after: ' scene text'}
+    });
+    const moved = getStateMutationEventStaleness({
+      event: anchored,
+      documents: [{...document, content: 'New Original scene text', updatedAt: 11}]
+    });
+    const unresolved = getStateMutationEventStaleness({
+      event: anchored,
+      documents: [{...document, content: 'Entirely replaced', updatedAt: 11}]
+    });
+
+    expect(moved.anchorStatus).toBe('moved');
+    expect(moved.isStale).toBe(false);
+    expect(unresolved.anchorStatus).toBe('unresolved');
+    expect(describeStateMutationEventStaleness(unresolved)).toBe('Text anchor needs review');
   });
 
   it('marks missing source scenes as stale', () => {

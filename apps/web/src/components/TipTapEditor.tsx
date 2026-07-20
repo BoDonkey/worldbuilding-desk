@@ -47,6 +47,7 @@ interface TipTapEditorProps {
   ) => void;
   onLoreHighlightHover?: (
     loreId: string,
+    editorPosition: number,
     anchorRect: {left: number; top: number; bottom: number}
   ) => void;
   onLoreHighlightLeave?: () => void;
@@ -256,6 +257,7 @@ interface TipTapEditorProps {
   ) => void;
   onLoreHighlightHover?: (
     loreId: string,
+    editorPosition: number,
     anchorRect: {left: number; top: number; bottom: number}
   ) => void;
   onLoreHighlightLeave?: () => void;
@@ -374,7 +376,7 @@ function TipTapEditor({
         return false;
       },
       handleDOMEvents: {
-        mouseover(_view, event) {
+        mouseover(view, event) {
           if (!(event.target instanceof HTMLElement)) {
             return false;
           }
@@ -387,7 +389,8 @@ function TipTapEditor({
             return false;
           }
           const rect = loreTarget.getBoundingClientRect();
-          onLoreHighlightHover?.(loreId, {
+          const editorPosition = view.posAtDOM(loreTarget, 0);
+          onLoreHighlightHover?.(loreId, editorPosition, {
             left: rect.left,
             top: rect.top,
             bottom: rect.bottom

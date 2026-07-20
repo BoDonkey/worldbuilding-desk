@@ -15,7 +15,7 @@ export interface CharacterReplayState {
     max: Record<string, number>;
   };
   inventory: {
-    items: Array<{name: string; quantity: number}>;
+    items: Array<{name: string; quantity: number; definitionId?: string}>;
     equipped: string[];
   };
   statuses: string[];

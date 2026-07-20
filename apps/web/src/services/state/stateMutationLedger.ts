@@ -63,6 +63,8 @@ export function reconcileSceneStateMutationEvents(params: {
         sceneOrder: nextEvent.sceneOrder,
         sceneSequence: nextEvent.sceneSequence,
         scenePosition: nextEvent.scenePosition,
+        sceneAnchor: nextEvent.sceneAnchor,
+        label: nextEvent.label,
         sourceRevision: nextEvent.sourceRevision,
         sourceHash: nextEvent.sourceHash,
         invalidatedAt: undefined,

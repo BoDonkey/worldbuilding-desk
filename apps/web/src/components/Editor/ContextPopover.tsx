@@ -1,11 +1,15 @@
 import {useLayoutEffect, useRef, useState, type ReactNode} from 'react';
 import styles from '../../assets/components/ContextPopover.module.css';
+import {calculateContextPopoverPosition} from './contextPopoverPosition';
 
 interface ContextPopoverProps {
   title: string;
   message?: string;
   left: number;
   top: number;
+  anchorTop?: number;
+  anchorBottom?: number;
+  tone?: 'warning' | 'neutral';
   onClose: () => void;
   children?: ReactNode;
 }
@@ -15,6 +19,9 @@ export function ContextPopover({
   message,
   left,
   top,
+  anchorTop,
+  anchorBottom,
+  tone = 'warning',
   onClose,
   children
 }: ContextPopoverProps) {
@@ -29,15 +36,17 @@ export function ContextPopover({
         return;
       }
 
-      const margin = 12;
       const rect = popover.getBoundingClientRect();
-      const maxLeft = Math.max(margin, window.innerWidth - rect.width - margin);
-      const maxTop = Math.max(margin, window.innerHeight - rect.height - margin);
-
-      const nextPosition = {
-        left: Math.min(Math.max(left, margin), maxLeft),
-        top: Math.min(Math.max(top, margin), maxTop)
-      };
+      const nextPosition = calculateContextPopoverPosition({
+        left,
+        top,
+        popoverWidth: rect.width,
+        popoverHeight: rect.height,
+        viewportWidth: window.innerWidth,
+        viewportHeight: window.innerHeight,
+        anchorTop,
+        anchorBottom
+      });
       setPosition((prev) =>
         prev.left === nextPosition.left && prev.top === nextPosition.top
           ? prev
@@ -58,12 +67,12 @@ export function ContextPopover({
       resizeObserver?.disconnect();
       window.removeEventListener('resize', clampPosition);
     };
-  }, [left, top, title, message]);
+  }, [anchorBottom, anchorTop, left, top, title, message]);
 
   return (
     <div
       ref={popoverRef}
-      className={styles.popover}
+      className={`${styles.popover} ${tone === 'neutral' ? styles.popoverNeutral : ''}`}
       style={{
         left: `${position.left}px`,
         top: `${position.top}px`

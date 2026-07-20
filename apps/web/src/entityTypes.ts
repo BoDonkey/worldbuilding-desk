@@ -349,11 +349,23 @@ export interface StateMutationEvent {
   sceneOrder?: number;
   sceneSequence?: number;
   scenePosition?: number;
+  sceneAnchor?: {
+    before: string;
+    after: string;
+  };
+  label?: string;
   sourceType?: 'manual' | 'deterministic-review';
   sourceRevision: number;
   sourceHash: string;
   status: 'proposed' | 'accepted' | 'invalidated';
   commands: StateMutationCommand[];
+  consumableEffect?: {
+    definitionId: string;
+    itemName: string;
+    durationLabel?: string;
+    phase: 'consume' | 'expire';
+    sourceEventId?: string;
+  };
   createdAt: number;
   invalidatedAt?: number;
   invalidationReason?: string;
@@ -587,6 +599,24 @@ export interface CompendiumActionDefinition {
 export type MechanicsProgressScope = 'global' | 'character' | 'party';
 export type CompendiumMechanicKind = 'discovery' | 'zone' | 'settlement' | 'general';
 
+export type CompendiumConsumableEffect =
+  | {
+      type: 'stat_change';
+      definitionId: string;
+      delta: number;
+    }
+  | {
+      type: 'resource_change';
+      definitionId: string;
+      delta: number;
+    };
+
+export interface CompendiumConsumableDefinition {
+  durationLabel?: string;
+  statusName?: string;
+  effects: CompendiumConsumableEffect[];
+}
+
 export interface CompendiumEntry {
   id: string;
   projectId: string;
@@ -598,6 +628,7 @@ export interface CompendiumEntry {
   mechanicKind?: CompendiumMechanicKind;
   progressScope?: MechanicsProgressScope;
   needsCompletion?: boolean;
+  consumable?: CompendiumConsumableDefinition;
   actions: CompendiumActionDefinition[];
   createdAt: number;
   updatedAt: number;
