@@ -29,6 +29,12 @@ import type {ReviewIssueAnnotation} from '../../services/worldEngine';
 import {normalizeRichTextValue} from '../../services/worldBible/worldBibleEntityHelpers';
 import {buildCharacterCaptureAliasList} from '../../services/worldBible/worldBibleCanonicalization';
 import styles from '../../styles/WorkspaceRoute.module.css';
+import {
+  SceneRosterPanel,
+  type SceneRosterAddOption,
+  type SceneRosterCharacterCard,
+  type SceneRosterItemCard
+} from './SceneRosterPanel';
 
 interface ConsistencyReviewItem {
   id: string;
@@ -123,6 +129,19 @@ interface WorkspaceContextDrawerProps {
   // Characters view
   characters: Character[];
   characterSheets: CharacterSheet[];
+
+  // Current scene roster view
+  sceneRosterTitle: string | null;
+  sceneRosterCharacters: SceneRosterCharacterCard[];
+  sceneRosterItems: SceneRosterItemCard[];
+  sceneRosterAddOptions: SceneRosterAddOption[];
+  sceneRosterAmbiguousSurfaces: string[];
+  addSceneRosterEntry: (candidateKey: string) => void;
+  hideSceneRosterEntry: (candidateKey: string) => void;
+  sceneRosterStateMoment: 'opening' | 'cursor' | 'ending';
+  sceneRosterCursorPosition: number;
+  setSceneRosterStateMoment: (moment: 'opening' | 'cursor' | 'ending') => void;
+  recordSceneRosterChangeHere: (character: SceneRosterCharacterCard) => void;
 
   // Review view
   handleRunConsistencyReview: () => Promise<void>;
@@ -227,6 +246,7 @@ interface WorkspaceContextDrawerProps {
 const MEMORIES_PER_PAGE = 5;
 
 const CONTEXT_DRAWER_TABS: Array<{id: WorkspaceContextDrawerView; label: string}> = [
+  {id: 'scene-roster', label: 'Scene'},
   {id: 'world-bible', label: 'World Bible'},
   {id: 'ruleset', label: 'Rules'},
   {id: 'characters', label: 'Character Tools'},
@@ -257,6 +277,17 @@ export function WorkspaceContextDrawer({
   ruleset,
   characters,
   characterSheets,
+  sceneRosterTitle,
+  sceneRosterCharacters,
+  sceneRosterItems,
+  sceneRosterAddOptions,
+  sceneRosterAmbiguousSurfaces,
+  addSceneRosterEntry,
+  hideSceneRosterEntry,
+  sceneRosterStateMoment,
+  sceneRosterCursorPosition,
+  setSceneRosterStateMoment,
+  recordSceneRosterChangeHere,
   handleRunConsistencyReview,
   isRunningConsistencyReview,
   lastConsistencyReviewAt,
@@ -668,6 +699,24 @@ export function WorkspaceContextDrawer({
   };
 
   const content = (() => {
+    if (activeContextView === 'scene-roster') {
+      return (
+        <SceneRosterPanel
+          sceneTitle={sceneRosterTitle}
+          characters={sceneRosterCharacters}
+          items={sceneRosterItems}
+          addOptions={sceneRosterAddOptions}
+          ambiguousSurfaces={sceneRosterAmbiguousSurfaces}
+          onAdd={addSceneRosterEntry}
+          onHide={hideSceneRosterEntry}
+          onOpenRecord={openWorldRecord}
+          stateMoment={sceneRosterStateMoment}
+          cursorPosition={sceneRosterCursorPosition}
+          onStateMomentChange={setSceneRosterStateMoment}
+          onRecordChangeHere={recordSceneRosterChangeHere}
+        />
+      );
+    }
     if (activeContextView === 'world-bible') {
       return (
         <div className={styles.contextSummary}>

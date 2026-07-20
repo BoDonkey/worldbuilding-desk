@@ -74,6 +74,7 @@ export const StateMutationEventSchema = z.object({
   sceneTitle: z.string().optional(),
   sceneOrder: z.number().int().optional(),
   sceneSequence: z.number().int().positive().optional(),
+  scenePosition: z.number().int().nonnegative().optional(),
   sourceType: z.enum(['manual', 'deterministic-review']).optional(),
   sourceRevision: z.number().int().nonnegative(),
   sourceHash: z.string().min(1),

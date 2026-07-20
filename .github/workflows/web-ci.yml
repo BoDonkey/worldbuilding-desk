@@ -3,6 +3,7 @@ name: Web CI
 on:
   pull_request:
     paths:
+      - '.github/workflows/web-ci.yml'
       - 'apps/web/**'
       - 'packages/**'
       - 'pnpm-lock.yaml'
@@ -12,6 +13,7 @@ on:
     branches:
       - main
     paths:
+      - '.github/workflows/web-ci.yml'
       - 'apps/web/**'
       - 'packages/**'
       - 'pnpm-lock.yaml'
@@ -63,8 +65,17 @@ jobs:
           node-version: 22
           cache: pnpm
 
+      - name: Cache Cypress binary
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/Cypress
+          key: cypress-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+
+      - name: Install Cypress binary
+        run: pnpm --filter web exec cypress install
 
       - name: Run Cypress smoke tests
         uses: cypress-io/github-action@v6

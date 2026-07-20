@@ -15,7 +15,7 @@ describe('useWorkspaceUiStore', () => {
 
     useWorkspaceUiStore.getState().setWorkspaceDrawerContext('beta', false);
     expect(useWorkspaceUiStore.getState().isSceneDrawerOpen).toBe(false);
-    expect(useWorkspaceUiStore.getState().activeContextView).toBe('world-bible');
+    expect(useWorkspaceUiStore.getState().activeContextView).toBe('scene-roster');
 
     useWorkspaceUiStore.getState().setWorkspaceDrawerContext('alpha', false);
     expect(useWorkspaceUiStore.getState().isSceneDrawerOpen).toBe(true);

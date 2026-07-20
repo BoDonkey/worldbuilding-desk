@@ -348,6 +348,7 @@ export interface StateMutationEvent {
   sceneTitle?: string;
   sceneOrder?: number;
   sceneSequence?: number;
+  scenePosition?: number;
   sourceType?: 'manual' | 'deterministic-review';
   sourceRevision: number;
   sourceHash: string;

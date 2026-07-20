@@ -5,6 +5,7 @@ import type {StateStorage} from 'zustand/middleware';
 import type {WorkspaceImportMode} from '../entityTypes';
 
 export type WorkspaceContextDrawerView =
+  | 'scene-roster'
   | 'world-bible'
   | 'ruleset'
   | 'characters'
@@ -97,7 +98,7 @@ interface WorkspaceUiState {
 const DEFAULT_DRAWER_PREFERENCES: WorkspaceDrawerPreferences = {
   leftDrawerOpen: false,
   rightDrawerOpen: false,
-  activeContextView: 'world-bible'
+  activeContextView: 'scene-roster'
 };
 
 const resolveNextBoolean = (
@@ -171,7 +172,7 @@ export const useWorkspaceUiStore = create<WorkspaceUiState>()(
       isNarrowViewport: false,
       isSceneDrawerOpen: false,
       isContextDrawerOpen: false,
-      activeContextView: 'world-bible',
+      activeContextView: 'scene-roster',
       isScratchpadModalOpen: false,
       isCorkboardModalOpen: false,
       isStatBlockModalOpen: false,

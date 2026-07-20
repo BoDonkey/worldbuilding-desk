@@ -335,6 +335,361 @@
   flex-wrap: wrap;
 }
 
+.sceneRosterPanel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.sceneRosterHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.sceneRosterHeader h3 {
+  margin: 0.12rem 0 0;
+  color: var(--color-text-primary);
+  font-family: var(--editor-font-family);
+  line-height: 1.2;
+}
+
+.sceneRosterEyebrow,
+.sceneRosterSectionHeading {
+  color: var(--color-text-secondary);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.sceneRosterCount {
+  min-width: 1.85rem;
+  padding: 0.2rem 0.5rem;
+  border: 1px solid var(--badge-info-border);
+  border-radius: 999px;
+  background: var(--badge-info-bg);
+  color: var(--badge-info-text);
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+  text-align: center;
+}
+
+.sceneRosterIntro {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+.sceneRosterMomentSwitch {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.3rem;
+  padding: 0.3rem;
+  border: 1px solid var(--surface-border-soft);
+  border-radius: 12px;
+  background: var(--surface-panel);
+}
+
+.sceneRosterMomentSwitch button {
+  min-width: 0;
+  padding: 0.42rem 0.25rem;
+  font-size: 0.72rem;
+}
+
+.sceneRosterMomentActive {
+  border-color: var(--button-primary-border);
+  background: var(--button-primary-bg);
+  color: var(--button-primary-text);
+}
+
+.sceneRosterRecordButton {
+  width: 100%;
+  margin-top: 0.65rem;
+  border-color: var(--button-primary-border);
+  background: var(--button-primary-bg);
+  color: var(--button-primary-text);
+}
+
+.sceneRosterAddRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.45rem;
+}
+
+.sceneRosterAddRow select {
+  min-width: 0;
+  border: 1px solid var(--input-border);
+  border-radius: 10px;
+  background: var(--input-bg);
+  color: var(--input-text);
+  padding: 0.52rem 0.6rem;
+}
+
+.sceneRosterAddRow select:focus {
+  outline: none;
+  border-color: var(--input-border-focus);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--input-border-focus) 24%, transparent);
+}
+
+.sceneRosterNotice,
+.sceneRosterEmpty {
+  display: flex;
+  flex-direction: column;
+  gap: 0.28rem;
+  padding: 0.72rem;
+  border: 1px solid var(--surface-border-soft);
+  border-radius: 12px;
+  background: var(--surface-panel);
+  color: var(--color-text-secondary);
+  font-size: 0.8rem;
+  line-height: 1.4;
+}
+
+.sceneRosterNotice {
+  border-color: var(--badge-warning-border);
+  background: var(--badge-warning-bg);
+  color: var(--badge-warning-text);
+}
+
+.sceneRosterEmpty strong,
+.sceneRosterNotice strong {
+  color: inherit;
+}
+
+.sceneRosterEmpty p {
+  margin: 0;
+}
+
+.sceneRosterSection {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.sceneRosterCardList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.sceneRosterCard {
+  padding: 0.72rem;
+  border: 1px solid var(--surface-border-soft);
+  border-radius: 14px;
+  background: var(--surface-panel-elevated);
+}
+
+.sceneRosterCardHeader {
+  display: grid;
+  grid-template-columns: 2.25rem minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.sceneRosterAvatar {
+  display: grid;
+  width: 2.25rem;
+  height: 2.25rem;
+  place-items: center;
+  border: 1px solid var(--button-primary-border);
+  border-radius: 12px;
+  background: var(--button-primary-bg);
+  color: var(--button-primary-text);
+  font-size: 0.75rem;
+  font-weight: 800;
+}
+
+.sceneRosterIdentity {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 0.12rem;
+}
+
+.sceneRosterIdentity > span {
+  overflow: hidden;
+  color: var(--color-text-secondary);
+  font-size: 0.74rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sceneRosterNameButton {
+  overflow: hidden;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  color: var(--color-text-primary);
+  font-family: var(--editor-font-family);
+  font-size: 0.95rem;
+  font-weight: 750;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sceneRosterNameButton:hover {
+  background: transparent;
+  color: var(--color-accent);
+  transform: none;
+}
+
+.sceneRosterRemoveButton {
+  display: grid;
+  width: 1.7rem;
+  height: 1.7rem;
+  padding: 0;
+  place-items: center;
+  border-color: transparent;
+  background: transparent;
+  color: var(--color-text-secondary);
+  box-shadow: none;
+  font-size: 1.15rem;
+}
+
+.sceneRosterRemoveButton:hover {
+  border-color: var(--button-border);
+  background: var(--button-bg-hover);
+  color: var(--button-text);
+}
+
+.sceneRosterSource {
+  margin: 0.5rem 0;
+  color: var(--color-text-secondary);
+  font-size: 0.7rem;
+}
+
+.sceneRosterResources {
+  display: flex;
+  flex-direction: column;
+  gap: 0.48rem;
+  margin-top: 0.6rem;
+}
+
+.sceneRosterResource > div:first-child {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  color: var(--color-text-secondary);
+  font-size: 0.72rem;
+}
+
+.sceneRosterResource strong {
+  color: var(--color-text-primary);
+}
+
+.sceneRosterMeter {
+  height: 0.38rem;
+  margin-top: 0.22rem;
+  overflow: hidden;
+  border: 1px solid var(--surface-border-soft);
+  border-radius: 999px;
+  background: var(--surface-panel);
+}
+
+.sceneRosterMeter span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--button-primary-bg);
+}
+
+.sceneRosterChips {
+  display: flex;
+  gap: 0.3rem;
+  flex-wrap: wrap;
+  margin-top: 0.6rem;
+}
+
+.sceneRosterChips span {
+  padding: 0.18rem 0.45rem;
+  border: 1px solid var(--badge-info-border);
+  border-radius: 999px;
+  background: var(--badge-info-bg);
+  color: var(--badge-info-text);
+  font-size: 0.68rem;
+  font-weight: 700;
+}
+
+.sceneRosterDetails {
+  margin-top: 0.65rem;
+  border-top: 1px solid var(--surface-border-soft);
+  padding-top: 0.55rem;
+}
+
+.sceneRosterDetails summary {
+  cursor: pointer;
+  color: var(--color-text-secondary);
+  font-size: 0.74rem;
+  font-weight: 700;
+}
+
+.sceneRosterLocation {
+  margin-top: 0.55rem;
+  color: var(--color-text-secondary);
+  font-size: 0.72rem;
+}
+
+.sceneRosterStatGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.4rem;
+  margin-top: 0.55rem;
+}
+
+.sceneRosterStatGrid > div,
+.sceneRosterFieldList > div {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 0.12rem;
+  padding: 0.45rem;
+  border: 1px solid var(--surface-border-soft);
+  border-radius: 10px;
+  background: var(--surface-panel);
+}
+
+.sceneRosterStatGrid span,
+.sceneRosterFieldList span {
+  overflow: hidden;
+  color: var(--color-text-secondary);
+  font-size: 0.66rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sceneRosterStatGrid strong,
+.sceneRosterFieldList strong {
+  overflow-wrap: anywhere;
+  color: var(--color-text-primary);
+  font-size: 0.8rem;
+}
+
+.sceneRosterFieldList {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.4rem;
+  margin-top: 0.6rem;
+}
+
+.sceneRosterFieldList > div:last-child:nth-child(odd) {
+  grid-column: 1 / -1;
+}
+
+.sceneRosterMissing {
+  margin-top: 0.6rem;
+  padding: 0.5rem;
+  border-radius: 10px;
+  background: var(--surface-panel);
+  color: var(--color-text-secondary);
+  font-size: 0.72rem;
+}
+
 .drawerOverlay {
   position: fixed;
   inset: 0;
@@ -1210,6 +1565,39 @@
   display: flex;
   justify-content: flex-end;
   gap: 0.5rem;
+}
+
+.positionedChangeGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 0.75rem;
+  margin: 1rem 0;
+}
+
+.positionedChangeGrid label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  color: var(--color-text-secondary);
+  font-size: 0.82rem;
+  font-weight: 650;
+}
+
+.positionedChangeGrid input,
+.positionedChangeGrid select {
+  width: 100%;
+  border: 1px solid var(--input-border);
+  border-radius: 10px;
+  background: var(--input-bg);
+  color: var(--input-text);
+  padding: 0.55rem 0.65rem;
+}
+
+.positionedChangeGrid input:focus,
+.positionedChangeGrid select:focus {
+  outline: none;
+  border-color: var(--input-border-focus);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--input-border-focus) 24%, transparent);
 }
 
 .modalSecondaryAction {

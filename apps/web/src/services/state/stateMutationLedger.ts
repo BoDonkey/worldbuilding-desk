@@ -62,6 +62,7 @@ export function reconcileSceneStateMutationEvents(params: {
         sceneTitle: nextEvent.sceneTitle,
         sceneOrder: nextEvent.sceneOrder,
         sceneSequence: nextEvent.sceneSequence,
+        scenePosition: nextEvent.scenePosition,
         sourceRevision: nextEvent.sourceRevision,
         sourceHash: nextEvent.sourceHash,
         invalidatedAt: undefined,
@@ -110,6 +111,10 @@ export async function getStateMutationEventsByProject(
       const orderDelta = (a.sceneOrder ?? Number.MAX_SAFE_INTEGER) - (b.sceneOrder ?? Number.MAX_SAFE_INTEGER);
       if (orderDelta !== 0) return orderDelta;
       if (a.sceneId === b.sceneId) {
+        const positionDelta =
+          (a.scenePosition ?? Number.MAX_SAFE_INTEGER) -
+          (b.scenePosition ?? Number.MAX_SAFE_INTEGER);
+        if (positionDelta !== 0) return positionDelta;
         const sequenceDelta =
           (a.sceneSequence ?? Number.MAX_SAFE_INTEGER) -
           (b.sceneSequence ?? Number.MAX_SAFE_INTEGER);
