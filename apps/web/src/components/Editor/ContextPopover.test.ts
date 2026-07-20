@@ -1,5 +1,5 @@
 import {describe, expect, it} from 'vitest';
-import {calculateContextPopoverPosition} from './ContextPopover';
+import {calculateContextPopoverPosition} from './contextPopoverPosition';
 
 describe('calculateContextPopoverPosition', () => {
   it('places an anchored popover below a mention when there is room', () => {

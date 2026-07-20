@@ -1,6 +1,6 @@
 import {describe, expect, it} from 'vitest';
 import type {CharacterReplayState} from '../../services/state/stateReplay';
-import {inventoryChoicesForChange} from './PositionedStateChangeComposer';
+import {inventoryChoicesForChange} from './positionedStateChangeInventory';
 
 const before: CharacterReplayState = {
   actorId: 'hero',
