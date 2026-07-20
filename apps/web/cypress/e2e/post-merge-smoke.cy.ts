@@ -169,6 +169,39 @@ describe('Post-merge smoke checklist', () => {
     cy.contains('strong', 'Cypress Smoke Project').should('be.visible');
   });
 
+  it('builds a scene roster from canonical mentions and supports manual overrides', () => {
+    cy.visit('/workspace');
+    cy.get('.tiptap-editor')
+      .click()
+      .type('{selectall}Aria carries the Iron Sword through the Ember Archive.', {
+        delay: 0
+      });
+    cy.contains('button', 'Save now').click();
+    cy.contains('[role="status"]', /Scene (saved|already saved)\./).should('be.visible');
+
+    cy.contains('button', 'Context').click();
+    cy.contains('button', /^Scene$/).click();
+
+    cy.contains('article', 'Aria').within(() => {
+      cy.contains('Level 5').should('be.visible');
+      cy.contains('32 / 40').should('be.visible');
+    });
+    cy.contains('article', 'Iron Sword').scrollIntoView().within(() => {
+      cy.contains('Mentioned as “Iron Sword”').should('be.visible');
+      cy.contains(/damage/i).should('be.visible');
+      cy.contains('12').should('be.visible');
+      cy.contains(/rarity/i).should('be.visible');
+      cy.contains('Common').should('be.visible');
+      cy.get('button[aria-label="Hide Iron Sword from this scene roster"]').click();
+    });
+    cy.contains('article', 'Iron Sword').should('not.exist');
+
+    cy.get('select[aria-label="Add a character or item to this scene"]')
+      .select('Iron Sword');
+    cy.contains('button', /^Add$/).click();
+    cy.contains('article', 'Iron Sword').should('be.visible');
+  });
+
   it('exports markdown with selected scenes in chosen order', () => {
     cy.visit('/workspace');
     openScenesDrawer();
