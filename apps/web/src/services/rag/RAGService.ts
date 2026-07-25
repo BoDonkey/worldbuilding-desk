@@ -208,7 +208,7 @@ export class RAGService implements RAGProvider {
           return async () => ({data: Float32Array.from([1])});
         }
         try {
-          const transformers = await import('@xenova/transformers');
+          const transformers = await import('@huggingface/transformers');
           return await transformers.pipeline(
             'feature-extraction',
             'Xenova/all-MiniLM-L6-v2'

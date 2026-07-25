@@ -49,6 +49,7 @@ Updated 2026-07-25. Slices not listed here have not started.
 | 0 | Complete | Dependency hygiene landed in `d9cd1bd`; proxy hardening landed in `4721fb0` |
 | 1 | Complete | Guarded helper added and integrated; desktop build and focused protocol checks pass |
 | 2 | Complete | Electron 43 upgrade landed in `8137369` |
+| 3 | Complete | Migrated to `@huggingface/transformers` 4.2.0; real 384-dimension embedding passes; audit reduced 14 → 1 with only the unrelated React Router advisory remaining |
 
 ---
 
