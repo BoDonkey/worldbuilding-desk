@@ -1,6 +1,7 @@
 import {app, BrowserWindow, shell} from 'electron';
 import path from 'node:path';
 import {setupAPIHandlers} from './apiHandler';
+import {openExternalIfSafe} from './externalLinks';
 
 const isDevelopment = process.env.NODE_ENV === 'development' || !app.isPackaged;
 const devServerUrl = process.env.VITE_DEV_SERVER_URL;
@@ -38,7 +39,7 @@ async function createMainWindow() {
   });
 
   mainWindow.webContents.setWindowOpenHandler(({url}) => {
-    shell.openExternal(url);
+    openExternalIfSafe(url, (safeUrl) => shell.openExternal(safeUrl));
     return {action: 'deny'};
   });
 

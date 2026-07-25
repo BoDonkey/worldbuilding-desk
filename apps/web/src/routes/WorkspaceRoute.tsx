@@ -26,6 +26,8 @@ import {useWorkspaceMemories} from '../hooks/useWorkspaceMemories';
 import {useWorkspaceConsistency} from '../hooks/useWorkspaceConsistency';
 import {useWorkspaceDocuments} from '../hooks/useWorkspaceDocuments';
 import {useWorkspaceStatBlocks} from '../hooks/useWorkspaceStatBlocks';
+import {useEscapeToClose} from '../hooks/useEscapeToClose';
+import {useFocusTrap} from '../hooks/useFocusTrap';
 import {
   DEFAULT_PARTY_SYNERGY_RULES,
   deriveCharacterRuntimeModifiers,
@@ -274,6 +276,15 @@ function WorkspaceRoute() {
   const navigate = useNavigate();
   const location = useLocation();
   const workspaceRootRef = useRef<HTMLElement | null>(null);
+  const sceneDrawerDialogRef = useRef<HTMLDivElement | null>(null);
+  const contextDrawerDialogRef = useRef<HTMLDivElement | null>(null);
+  const positionedChangeDialogRef = useRef<HTMLDivElement | null>(null);
+  const inventoryCaptureDialogRef = useRef<HTMLDivElement | null>(null);
+  const statBlockDialogRef = useRef<HTMLDivElement | null>(null);
+  const scratchpadDialogRef = useRef<HTMLDivElement | null>(null);
+  const corkboardDialogRef = useRef<HTMLDivElement | null>(null);
+  const exportDialogRef = useRef<HTMLDivElement | null>(null);
+  const memoryDialogRef = useRef<HTMLDivElement | null>(null);
   const [documents, setDocuments] = useState<WritingDocument[]>([]);
   const seriesBibleConfig = activeProject
     ? getSeriesBibleConfig(activeProject)
@@ -2608,27 +2619,46 @@ function WorkspaceRoute() {
     }
   }, [showGameSystems, activeContextView, setActiveContextView]);
 
-  useEffect(() => {
-    if (!isScratchpadModalOpen) return;
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        setScratchpadModalOpen(false);
-      }
-    };
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
-  }, [isScratchpadModalOpen, setScratchpadModalOpen]);
+  const isPositionedChangeDialogOpen = Boolean(
+    pendingPositionedChange && pendingPositionedSheet && positionedChangeBefore
+  );
+  const closePositionedChangeDialog = useCallback(() => {
+    setPendingPositionedChange(null);
+  }, [setPendingPositionedChange]);
 
-  useEffect(() => {
-    if (!isCorkboardModalOpen) return;
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        setCorkboardModalOpen(false);
-      }
-    };
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
-  }, [isCorkboardModalOpen, setCorkboardModalOpen]);
+  const isInventoryCaptureDialogOpen = Boolean(pendingInventoryCapture);
+  const closeInventoryCaptureDialog = useCallback(() => {
+    setPendingInventoryCapture(null);
+  }, [setPendingInventoryCapture]);
+
+  const isMemoryDialogOpen = Boolean(isMemoryModalOpen && selectedDocument);
+  const closeMemoryDialog = useCallback(() => {
+    setMemoryModalOpen(false);
+  }, [setMemoryModalOpen]);
+
+  useEscapeToClose(closeScratchpadModal, isScratchpadModalOpen);
+  useFocusTrap(scratchpadDialogRef, isScratchpadModalOpen);
+
+  useEscapeToClose(closeCorkboardModal, isCorkboardModalOpen);
+  useFocusTrap(corkboardDialogRef, isCorkboardModalOpen);
+
+  useEscapeToClose(closeStatBlockModal, isStatBlockModalOpen);
+  useFocusTrap(statBlockDialogRef, isStatBlockModalOpen);
+
+  useEscapeToClose(closeExportModal, isExportModalOpen);
+  useFocusTrap(exportDialogRef, isExportModalOpen);
+
+  useEscapeToClose(closeMemoryDialog, isMemoryDialogOpen);
+  useFocusTrap(memoryDialogRef, isMemoryDialogOpen);
+
+  useEscapeToClose(closePositionedChangeDialog, isPositionedChangeDialogOpen);
+  useFocusTrap(positionedChangeDialogRef, isPositionedChangeDialogOpen);
+
+  useEscapeToClose(closeInventoryCaptureDialog, isInventoryCaptureDialogOpen);
+  useFocusTrap(inventoryCaptureDialogRef, isInventoryCaptureDialogOpen);
+
+  useFocusTrap(sceneDrawerDialogRef, isSceneDrawerOpen && isNarrowViewport);
+  useFocusTrap(contextDrawerDialogRef, isContextDrawerOpen && isNarrowViewport);
 
   useEffect(() => {
     const mediaQuery = window.matchMedia('(max-width: 1200px)');
@@ -3776,6 +3806,7 @@ function WorkspaceRoute() {
 
       {isSceneDrawerOpen && isNarrowViewport && (
         <div
+          ref={sceneDrawerDialogRef}
           role='dialog'
           aria-modal='true'
           aria-label='Workspace scene drawer'
@@ -3824,6 +3855,7 @@ function WorkspaceRoute() {
 
       {isContextDrawerOpen && isNarrowViewport && (
         <div
+          ref={contextDrawerDialogRef}
           role='dialog'
           aria-modal='true'
           aria-label='Workspace context drawer'
@@ -3942,6 +3974,7 @@ function WorkspaceRoute() {
 
       {pendingPositionedChange && pendingPositionedSheet && positionedChangeBefore && (
         <div
+          ref={positionedChangeDialogRef}
           role='dialog'
           aria-modal='true'
           aria-label='Record positioned state change'
@@ -3970,6 +4003,7 @@ function WorkspaceRoute() {
 
       {pendingInventoryCapture && (
         <div
+          ref={inventoryCaptureDialogRef}
           role='dialog'
           aria-modal='true'
           aria-label='Add selected item to inventory'
@@ -3991,6 +4025,7 @@ function WorkspaceRoute() {
 
       {isStatBlockModalOpen && (
         <div
+          ref={statBlockDialogRef}
           role='dialog'
           aria-modal='true'
           aria-label='Status Block Builder'
@@ -4299,6 +4334,7 @@ function WorkspaceRoute() {
 
       {isScratchpadModalOpen && (
         <div
+          ref={scratchpadDialogRef}
           role='dialog'
           aria-modal='true'
           aria-label='Project scratchpad'
@@ -4363,6 +4399,7 @@ function WorkspaceRoute() {
 
       {isCorkboardModalOpen && (
         <div
+          ref={corkboardDialogRef}
           role='dialog'
           aria-modal='true'
           aria-label='Project corkboard'
@@ -4595,6 +4632,7 @@ function WorkspaceRoute() {
 
       {isExportModalOpen && (
         <div
+          ref={exportDialogRef}
           role='dialog'
           aria-modal='true'
           className={styles.modalOverlay}
@@ -4679,6 +4717,7 @@ function WorkspaceRoute() {
 
       {isMemoryModalOpen && selectedDocument && (
         <div
+          ref={memoryDialogRef}
           role='dialog'
           aria-modal='true'
           className={styles.modalOverlay}

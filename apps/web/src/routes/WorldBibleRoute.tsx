@@ -1,6 +1,8 @@
 import {useEffect, useState, useCallback, useRef, useMemo} from 'react';
 import type {FormEvent} from 'react';
 import {useLocation, useNavigate} from 'react-router-dom';
+import {useEscapeToClose} from '../hooks/useEscapeToClose';
+import {useFocusTrap} from '../hooks/useFocusTrap';
 import {useAppStore} from '../store/appStore';
 import {getProjectCapabilities} from '../projectMode';
 import type {
@@ -926,6 +928,13 @@ function WorldBibleRoute() {
     () => importDrafts.find((draft) => draft.id === activeImportPreviewId) ?? null,
     [activeImportPreviewId, importDrafts]
   );
+  const importPreviewDialogRef = useRef<HTMLDivElement | null>(null);
+  const closeImportPreviewDialog = useCallback(() => {
+    setActiveImportPreviewId(null);
+  }, [setActiveImportPreviewId]);
+  const isImportPreviewDialogOpen = Boolean(activeImportPreviewDraft);
+  useEscapeToClose(closeImportPreviewDialog, isImportPreviewDialogOpen);
+  useFocusTrap(importPreviewDialogRef, isImportPreviewDialogOpen);
   const selectedEntity = editingId
     ? entities.find((entity) => entity.id === editingId) ?? null
     : null;
@@ -2746,6 +2755,7 @@ function WorldBibleRoute() {
                 : 'Text';
         return (
           <div
+            ref={importPreviewDialogRef}
             className={styles.importPreviewOverlay}
             role='dialog'
             aria-modal='true'
