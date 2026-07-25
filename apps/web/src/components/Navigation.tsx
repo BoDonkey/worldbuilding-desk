@@ -175,7 +175,7 @@ export const Navigation: FC<NavigationProps> = ({
             onClick={openPalette}
             title='Search scenes and canon records'
           >
-            <span className={styles.icon}>SR</span>
+            <span className={styles.icon} aria-hidden='true'>SR</span>
             <span className={styles.label}>Search</span>
           </button>
           <nav className={styles.railLinks} aria-label='Primary navigation'>
@@ -189,7 +189,7 @@ export const Navigation: FC<NavigationProps> = ({
                 onClickCapture={captureRouteScroll}
                 className={({isActive}) => `${styles.railLink} ${isActive ? styles.active : ''}`}
               >
-                <span className={styles.icon}>{item.icon}</span>
+                <span className={styles.icon} aria-hidden='true'>{item.icon}</span>
                 <span className={styles.label}>{item.label}</span>
                 {item.badgeCount ? (
                   <span className={styles.navBadge}>{item.badgeCount}</span>
@@ -207,7 +207,7 @@ export const Navigation: FC<NavigationProps> = ({
                 aria-haspopup='menu'
                 title='More destinations'
               >
-                <span className={styles.icon}>MO</span>
+                <span className={styles.icon} aria-hidden='true'>MO</span>
                 <span className={styles.label}>More</span>
                 {secondaryBadgeCount ? (
                   <span className={styles.navBadge}>{secondaryBadgeCount}</span>
@@ -234,7 +234,7 @@ export const Navigation: FC<NavigationProps> = ({
                           }
                           role='menuitem'
                         >
-                          <span className={styles.secondaryMenuIcon}>{item.icon}</span>
+                          <span className={styles.secondaryMenuIcon} aria-hidden='true'>{item.icon}</span>
                           <span>{item.label}</span>
                           {item.badgeCount ? (
                             <span className={styles.mobileMenuBadge}>{item.badgeCount}</span>
@@ -294,7 +294,7 @@ export const Navigation: FC<NavigationProps> = ({
             onClickCapture={captureRouteScroll}
             className={({isActive}) => `${styles.mobileItem} ${isActive ? styles.active : ''}`}
           >
-            <span className={styles.icon}>{item.icon}</span>
+            <span className={styles.icon} aria-hidden='true'>{item.icon}</span>
             <span className={styles.mobileLabel}>{item.label}</span>
             {item.badgeCount ? <span className={styles.navBadge}>{item.badgeCount}</span> : null}
           </NavLink>
@@ -306,7 +306,7 @@ export const Navigation: FC<NavigationProps> = ({
           aria-expanded={isMobileMenuOpen}
           aria-label='Toggle more navigation options'
         >
-          <span className={styles.icon}>MO</span>
+          <span className={styles.icon} aria-hidden='true'>MO</span>
           <span className={styles.mobileLabel}>More</span>
         </button>
       </nav>
