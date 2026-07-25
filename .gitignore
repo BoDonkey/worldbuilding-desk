@@ -50,3 +50,6 @@ coverage/
 .cache/
 .temp/
 apps/desktop/package-lock.json
+
+# Local git worktrees (per-agent isolated checkouts)
+.worktrees/
