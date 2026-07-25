@@ -5,6 +5,16 @@
 
 Each slice is a discrete, PR-sized unit with a self-contained prompt for an LLM agent (Claude Code / Codex with repo access).
 
+## Status (updated 2026-07-25)
+
+| Slice | Status | Commit |
+|---|---|---|
+| 1 — Modal a11y (Escape + focus trap) | Done | `6d2f6c5` (on `origin/main` via PR #45) |
+| 2 — Nav icon `aria-hidden` fix | Done | `76d384c` (local `main`, **not yet pushed to origin**) |
+| 3–11 | Not started | — |
+
+Next up: Slice 3 (shared ConfirmDialog + InlineAlert components). Local `main` is currently 2 commits ahead of `origin/main` (this Slice 2 commit plus an unrelated `.gitignore` tweak) — push before or alongside starting Slice 3.
+
 ## Verification commands (referenced by every prompt)
 
 ```bash
