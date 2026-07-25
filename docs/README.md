@@ -23,7 +23,7 @@ This folder contains current planning docs, smoke checklists, architecture notes
 
 ## Historical Or Specialist Docs
 
-`docs/code-fitness-report-2026-07-19.md` is a dated, point-in-time engineering audit. Its disposition note records completed follow-up, but its original grades and measurements should not be treated as current status.
+`docs/code-fitness-report-2026-07-19.md` and `docs/code-fitness-report-2026-07-24.md` are dated, point-in-time engineering audits (the 07-24 report is the most recent and includes a status table for the 07-19 findings). Their disposition notes record completed follow-up, but their original grades and measurements should not be treated as current status.
 
 The remaining top-level docs are useful when working on their specific area, but they should not override `PROJECT_STATUS.md`, `docs/next-steps.md`, or this map. Files under `docs/archive/` are historical unless a current task explicitly revives them.
 

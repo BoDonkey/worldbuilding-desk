@@ -1,6 +1,6 @@
 # Next Steps
 
-Last updated: 2026-07-04
+Last updated: 2026-07-24 (planning notes; baseline list 2026-07-04)
 
 ## Current Baseline
 
@@ -144,7 +144,8 @@ Implemented recently:
 ## Planning Notes
 
 - Code-fitness checkpoint: CI trust gates are complete in PR #43. Pull requests now block on web lint, web unit tests, rules-engine tests, web build, desktop build, and the full Cypress suite; the July 20 hosted run passed all three jobs.
-- Next engineering-audit slice: refresh the production dependency audit against merged `main`, then plan dependency security, a supported Electron upgrade, and React peer-dependency alignment as separate, reviewable changes. Do not bundle those upgrades into one broad modernization branch.
+- Code-fitness re-audit (2026-07-24, `docs/code-fitness-report-2026-07-24.md`): overall B. The dependency-security slice reduced prod vulns 30 → 13 (react-router-dom 7.18.1, mathjs 15.2.0, express-chain overrides), moved tiptap deps into apps/web, removed stray npm lockfiles, and hardened the dev proxy. A 2026-07-25 pre-commit audit reports 14: the same 13 protobufjs/sharp findings via `@xenova/transformers` (Node-only paths; accepted risk pending a `@huggingface/transformers` migration), plus a newly published React Router advisory whose listed fix requires 8.3.0+.
+- Next engineering-audit slices, as separate reviewable changes: a supported Electron upgrade (31 is EOL), React peer-dependency alignment in rules-ui (`^18 || ^19`, peer-only), an `https:` allowlist for `shell.openExternal` in the desktop main process, and incremental extraction from the god-component routes. Do not bundle these into one broad modernization branch.
 - Bias toward slices that complete the writing-first workflow instead of adding new optional systems.
 - Use `docs/product-health-audit.md` as the current guide for Lore Documents, RAG, Shodh memory, character detail consistency, and docs source-of-truth cleanup.
 - Keep prioritizing lore-consistency trust failures over new settlement/mechanics work until alias, nickname, and review-refresh behavior feels boringly reliable in normal drafting.

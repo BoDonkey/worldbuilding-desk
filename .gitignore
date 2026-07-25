@@ -22,6 +22,7 @@ release/
 Thumbs.db
 
 # IDE/Editor
+.claude/
 .vscode/
 .idea/
 *.swp
