@@ -1,5 +1,9 @@
 # Phase 1: Character Canon Unification
 
+> Archived 2026-07-26. The implementation slices are complete; retain this as
+> historical implementation context. Use `docs/navigation-ia-decision.md` for
+> the current ownership decision.
+
 Last updated: 2026-05-29
 
 ## Current Status
@@ -23,7 +27,8 @@ Next work:
 
 ## Purpose
 
-Implement Phase 1 from [navigation-simplification-roadmap.md](/Volumes/T7/Development/worldbuilding-desk/docs/navigation-simplification-roadmap.md):
+This phase implemented the first portion of the
+[archived navigation roadmap](navigation-simplification-roadmap.md):
 
 - collapse character canon into `World Bible`
 - stop making `Characters` a competing canonical home

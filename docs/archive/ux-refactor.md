@@ -1,5 +1,10 @@
 # Narrative Engine UX Refactor — Actionable Implementation Guide
 
+> Archived 2026-07-26. This plan contains historical implementation directives
+> and named interaction experiments. Use `docs/product-blueprint.md`,
+> `docs/navigation-ia-decision.md`, and `docs/style-bible.md` for current
+> product and UI direction.
+
 ## Purpose
 
 This document provides **concrete, code-level refactor instructions** to reduce UX complexity in the existing Narrative Engine codebase.

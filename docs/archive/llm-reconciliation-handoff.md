@@ -1,5 +1,8 @@
 # LLM Reconciliation Handoff
 
+> Archived 2026-07-26. This handoff describes a historical branch checkpoint.
+> Use `PROJECT_STATUS.md` and `docs/next-steps.md` for the current baseline.
+
 ## Purpose
 
 Use this document when handing reconciliation work to another LLM or reviewer. The safest role for another LLM is scout/reviewer: inspect the current branch, compare against the reference branch, identify narrow candidate slices, and report risks. Avoid assigning broad implementation unless the slice is very explicit.

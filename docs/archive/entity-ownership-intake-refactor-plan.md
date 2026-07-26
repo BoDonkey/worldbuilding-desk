@@ -1,5 +1,9 @@
 # Entity Ownership And Intake Refactor Plan
 
+> Archived 2026-07-26. Most implementation slices are complete or superseded.
+> The lasting ownership decisions are consolidated in
+> `docs/navigation-ia-decision.md`.
+
 _Drafted: April 30, 2026_
 
 ## Current status

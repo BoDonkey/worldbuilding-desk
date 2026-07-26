@@ -1,32 +1,103 @@
 # Documentation Map
 
-Last updated: 2026-07-20
+Last updated: 2026-07-26
 
-This folder contains current planning docs, smoke checklists, architecture notes, and older research. Use this map to avoid treating every file as equal source of truth.
+## Source Of Truth
 
-## Read First
+Read these first:
 
-- `PROJECT_STATUS.md` at the repo root is the current product and engineering status snapshot.
-- `docs/next-steps.md` is the active roadmap and branch-sequencing source of truth.
-- `docs/product-health-audit.md` is the current audit of Lore Documents, RAG, Shodh memory, character detail consistency, and documentation health.
-- `docs/style-bible.md` is the required design direction before UI, CSS, layout, or component styling changes.
+- `PROJECT_STATUS.md` — what is true in the current application
+- `docs/next-steps.md` — active priorities and execution order
+- `docs/architecture-review.md` — durable architecture boundaries and current
+  structural risks
+- `docs/product-blueprint.md` — product promise and writing-first principles
+- `docs/style-bible.md` — required UI and visual direction
 
-## Active Reference Docs
+If documents disagree, prefer this list in the order appropriate to the
+question: current implementation comes from `PROJECT_STATUS.md`; future work
+comes from `docs/next-steps.md`; durable product, architecture, and design
+decisions come from their named authority document.
 
-- `docs/navigation-simplification-roadmap.md` explains the writing-first navigation direction.
-- `docs/navigation-ia-decision.md` records the accepted information architecture.
-- `docs/freeform-lore-ingestion-architecture.md` explains Lore Documents, extraction candidates, accepted canon facts, and canon-decision flow.
-- `docs/canon-decision-workflow.md` explains duplicate/conflict review behavior.
-- `docs/character-canon-unification-smoke-test.md` is the focused character-canon checklist.
-- `docs/review-completion-smoke-test.md` is the focused review completion checklist.
-- `docs/project-backup-smoke-test.md` is the focused backup/import checklist.
+## Active Product And Domain References
 
-## Historical Or Specialist Docs
+- `docs/navigation-ia-decision.md` — canon ownership, navigation hierarchy, and
+  optional-systems placement
+- `docs/freeform-lore-ingestion-architecture.md` — Lore Documents, extracted
+  proposals, and accepted canonical facts
+- `docs/canon-decision-workflow.md` — duplicate, alias, conflict, and canon
+  decision behavior
+- `docs/customizable-state-model-spec.md` — manuscript-time state, mutation
+  events, and replay
+- `docs/ai-assisted-item-authoring.md` — description-first, review-gated item
+  creation and the later ruleset-authoring adapter direction
+- `docs/product-health-audit.md` — current lore/RAG/Shodh and character-detail
+  trust audit
+- `docs/multi-mode-directives.md` — fiction-first boundary and parked
+  nonfiction direction
 
-`docs/code-fitness-report-2026-07-19.md` and `docs/code-fitness-report-2026-07-24.md` are dated, point-in-time engineering audits (the 07-24 report is the most recent and includes a status table for the 07-19 findings). Their disposition notes record completed follow-up, but their original grades and measurements should not be treated as current status.
+These documents contain active constraints or proposals. A proposal does not
+enter the roadmap automatically; `docs/next-steps.md` determines priority.
 
-The remaining top-level docs are useful when working on their specific area, but they should not override `PROJECT_STATUS.md`, `docs/next-steps.md`, or this map. Files under `docs/archive/` are historical unless a current task explicitly revives them.
+## Active Work Plans
 
-## Maintenance Rule
+- `docs/ui-design-work-slices.md`
+- `docs/fitness-100-work-slices.md`
 
-When a branch changes product direction or the next-session stop point, update `PROJECT_STATUS.md` and `docs/next-steps.md`. When it changes which docs are canonical, update this map.
+These contain detailed, independently executable engineering slices. Their
+status tables are authoritative for those slices, but they do not override the
+product ordering in `docs/next-steps.md`.
+
+## Focused Audits And Guardrails
+
+- `docs/ui-language-i18n-a11y-audit.md`
+
+Keep these while their findings remain open. When the work is complete, retain
+any durable rules in the style bible or architecture reference and archive the
+execution checklist.
+
+## Smoke Procedures
+
+- `docs/project-backup-smoke-test.md`
+- `docs/review-completion-smoke-test.md`
+- `docs/character-canon-unification-smoke-test.md`
+
+Smoke documents should contain reusable procedures and current expected
+behavior. Historical run logs should be archived rather than accumulated in
+the procedure.
+
+## Archive
+
+`docs/archive/` contains:
+
+- completed implementation plans
+- superseded strategy and UX plans
+- branch-specific handoffs and recovery notes
+- dated audits
+- prior roadmap snapshots
+- historical research
+
+Archived documents preserve rationale but are not instructions for work from
+the current tree. Each newly archived document should carry a short archive
+banner explaining what replaced it.
+
+Notable July 26 archive changes:
+
+- the former 1,279-line roadmap is preserved as
+  `docs/archive/next-steps-through-2026-07-26.md`
+- the May architecture/action review is preserved as
+  `docs/archive/architecture-review-2026-05-10.md`
+- completed character-canon, import, entity-ownership, navigation, and UX plans
+  moved out of the active top level
+- dated code-fitness reports and the stale April release checklist moved into
+  the archive
+
+## Maintenance Rules
+
+- Keep `docs/next-steps.md` short and limited to open work.
+- Move completed status into `PROJECT_STATUS.md`; do not keep completion diaries
+  in the roadmap.
+- Record durable decisions in the relevant authority document.
+- Give new plans a status and date.
+- Archive completed or superseded plans instead of leaving them active-looking.
+- Update this map when authority or document placement changes.
+- Repair internal links whenever a document moves.

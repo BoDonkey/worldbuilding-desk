@@ -1,5 +1,8 @@
 # Regression Recovery Plan
 
+> Archived 2026-07-26. This records a completed branch-reconciliation period
+> and is not an instruction for work from the current `main` branch.
+
 ## Branch Map
 
 - `main`: last shared trunk before the current reconciliation work.

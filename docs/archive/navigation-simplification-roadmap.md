@@ -1,5 +1,8 @@
 # Navigation Simplification Roadmap
 
+> Archived 2026-07-26. This execution roadmap has been consolidated into the
+> current decision and status sections of `docs/navigation-ia-decision.md`.
+
 Last updated: 2026-06-28
 
 ## Purpose
@@ -25,7 +28,7 @@ This work is not a detour from the roadmap. It directly advances existing high-p
   - “Keep alias and review follow-up centered in World Bible”
   - “World Bible feels like a real lore-writing surface rather than a cramped metadata form”
   - “Bias toward slices that complete the writing-first workflow instead of adding new optional systems”
-- [docs/ux-refactor.md](/Volumes/T7/Development/worldbuilding-desk/docs/ux-refactor.md)
+- [archived UX refactor](ux-refactor.md)
   - Pattern 3: tab consolidation
   - Pattern 4: richer lore editing
 
@@ -81,7 +84,11 @@ Do not do in this roadmap:
 
 Related optional-systems checkpoint:
 
-- [optional-systems-navigation-audit.md](/Volumes/T7/Development/worldbuilding-desk/docs/optional-systems-navigation-audit.md) records the current decision for LitRPG/mechanics exposure: keep `Workspace`, `World Bible`, and `Lore Docs` as the primary writing/canon surfaces, and make rules, mechanics, sheets/state, and settlement systems a mode-gated secondary cluster rather than peer defaults.
+- [archived optional-systems navigation audit](optional-systems-navigation-audit.md)
+  records the decision at that checkpoint for LitRPG/mechanics exposure: keep
+  `Workspace`, `World Bible`, and `Lore Docs` as the primary writing/canon
+  surfaces, and make rules, mechanics, sheets/state, and settlement systems a
+  mode-gated secondary cluster rather than peer defaults.
 
 ## Execution Order
 
