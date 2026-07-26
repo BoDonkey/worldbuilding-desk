@@ -117,6 +117,9 @@ Under the hood, the app still includes rich systems for world data, rules, chara
 ### Stabilized
 - Service layer reorganized into domain folders with barrel exports.
 - `App.tsx` split into routing/layout composition and shared shell concerns.
+- `rules-ui` consumes React and React DOM as React 18/19 peer dependencies;
+  React 19 copies are development-only, so the web application owns the single
+  runtime React instance.
 - Workspace logic decomposed into focused hooks:
   - `useWorkspaceDrawers`
   - `useWorkspaceMemories`

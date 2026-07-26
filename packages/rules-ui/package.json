@@ -12,17 +12,17 @@
   },
   "dependencies": {
     "@litrpg-tool/rules-engine": "workspace:*",
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0",
     "zod": "^3.22.4"
   },
   "devDependencies": {
-    "@types/react": "^18.2.0",
-    "@types/react-dom": "^18.2.0",
+    "@types/react": "^19.2.5",
+    "@types/react-dom": "^19.2.3",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
     "typescript": "^5.3.0"
   },
   "peerDependencies": {
-    "react": "^18.0.0",
-    "react-dom": "^18.0.0"
+    "react": "^18.0.0 || ^19.0.0",
+    "react-dom": "^18.0.0 || ^19.0.0"
   }
 }
