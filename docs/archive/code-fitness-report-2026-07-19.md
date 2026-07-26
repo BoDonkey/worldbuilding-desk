@@ -1,5 +1,7 @@
 # Code Fitness Report — worldbuilding-desk
 
+> Archived 2026-07-26. Superseded by the July 24 fitness report.
+
 **Date:** 2026-07-19 · **Branch:** `codex/scene-state-change-composer` (18 modified files uncommitted)
 **Scope:** apps/web, apps/desktop, packages/rules-engine, packages/rules-ui (~70,600 lines of TypeScript)
 

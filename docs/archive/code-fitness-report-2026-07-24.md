@@ -1,5 +1,8 @@
 # Code Fitness Report — worldbuilding-desk
 
+> Archived 2026-07-26. This is a dated audit baseline; active engineering work
+> is tracked in `docs/fitness-100-work-slices.md` and `docs/next-steps.md`.
+
 **Date:** 2026-07-24 · **Branch:** `codex/ci-trust-gates` (clean tree)
 **Scope:** apps/web, apps/desktop, packages/rules-engine, packages/rules-ui (~70,800 lines of TypeScript)
 **Baseline:** [code-fitness-report-2026-07-19.md](code-fitness-report-2026-07-19.md)

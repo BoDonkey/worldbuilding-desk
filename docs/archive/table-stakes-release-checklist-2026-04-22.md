@@ -1,5 +1,9 @@
 # Table-Stakes Release Checklist
 
+> Archived 2026-07-26. Several status labels no longer match the current
+> application. Use `PROJECT_STATUS.md` and the release-confidence section of
+> `docs/next-steps.md` until a new release-candidate checklist is cut.
+
 Last updated: 2026-04-22
 
 ## Goal
@@ -171,7 +175,7 @@ References:
 
 - [WorkspaceRoute.tsx](/Volumes/T7/Development/worldbuilding-desk/apps/web/src/routes/WorkspaceRoute.tsx)
 - [workspaceImport.ts](/Volumes/T7/Development/worldbuilding-desk/apps/web/src/utils/workspaceImport.ts)
-- [import-pipeline-v2.md](/Volumes/T7/Development/worldbuilding-desk/docs/import-pipeline-v2.md)
+- [archived import-pipeline-v2.md](import-pipeline-v2.md)
 
 ### 3.2 World Bible structured import with conflict review
 

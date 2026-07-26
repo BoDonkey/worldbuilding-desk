@@ -1,5 +1,8 @@
 # Optional Systems Navigation Audit
 
+> Archived 2026-07-26. The accepted optional-systems decision is consolidated
+> in `docs/navigation-ia-decision.md`.
+
 Last updated: 2026-06-28
 
 ## Purpose

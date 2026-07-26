@@ -132,8 +132,17 @@ Recommended next feature slice:
 
 Current state:
 
-- There are many docs because the project has kept implementation plans, smoke checklists, product decisions, architecture notes, and research artifacts together.
-- `docs/archive/` already contains older material, but top-level docs still mix active roadmap, active checklists, and older plans.
+- The documentation set was consolidated on 2026-07-26.
+- `docs/README.md` now separates source-of-truth documents, active domain
+  references, work plans, guardrails, smoke procedures, and archive material.
+- The active roadmap was reduced to open work; its detailed history is archived
+  as `docs/archive/next-steps-through-2026-07-26.md`.
+- The architecture reference now contains durable boundaries and current risks;
+  its earlier action-review form is archived.
+- Completed implementation plans, branch handoffs, dated fitness audits, and
+  the stale April release checklist moved out of the active top level.
+- Historical review smoke execution notes were separated from the reusable
+  smoke procedure.
 
 Decision:
 
@@ -141,6 +150,10 @@ Decision:
 - Keep focused checklists in place while their workflows are active.
 - Treat older strategy/spec docs as reference, not marching orders, unless promoted in `docs/README.md`.
 
-Recommended next docs slice:
+Ongoing maintenance:
 
-- After the product-health feature pass, archive or demote stale top-level docs that are not listed in `docs/README.md`.
+- Keep completion history out of `docs/next-steps.md`.
+- Give new proposals and plans an explicit status and date.
+- Archive completed execution plans with a replacement note.
+- Revisit the larger domain specifications only when their implementation delta
+  becomes difficult to distinguish from their stable contract.

@@ -1,5 +1,9 @@
 # Character / Cast UI Parity Checklist
 
+> Archived 2026-07-26. All seven implementation slices are marked complete.
+> Durable character ownership remains in `docs/navigation-ia-decision.md`;
+> current visual direction remains in `docs/style-bible.md`.
+
 Target reference: `codex/review-completion-state` character tab.
 
 ## Why the Current UI Differs

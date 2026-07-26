@@ -1,6 +1,6 @@
 # Navigation IA Decision
 
-Last updated: 2026-06-03
+Last updated: 2026-07-26
 
 ## Goal
 
@@ -42,7 +42,7 @@ This means the app should communicate a simple hierarchy:
 1. `Workspace`: write
 2. `World Bible`: structured canon
 3. `Lore Documents`: longform background and supporting source material
-4. `Ruleset`: optional advanced systems
+4. `Systems`: optional LitRPG rules, sheets, mechanics, and progression tools
 
 ## What This Means For Tabs
 
@@ -88,7 +88,8 @@ That avoids the current ambiguity where `Characters` appears to be both:
 
 ### Ruleset
 
-`Ruleset` can remain top-level for now, but only as an explicitly advanced surface.
+`Ruleset` remains available as an explicitly advanced surface inside the
+optional systems cluster.
 
 Reason:
 
@@ -96,10 +97,51 @@ Reason:
 - Power users may need direct access.
 - It should not compete with `World Bible` for ordinary lore authoring.
 
-Longer-term possibility:
+It should not be a default peer destination for projects that do not use
+system-heavy fiction features.
 
-- Keep `Ruleset` top-level only when advanced systems are enabled.
-- Otherwise expose it from `World Bible` or an advanced menu.
+## Canonical Ownership By Concept
+
+The UI should route author intent without exposing storage terminology.
+
+| Author concept | Primary owner | Optional attachment or secondary tool |
+| --- | --- | --- |
+| Character identity, aliases, and story-facing facts | `World Bible > Characters` | Character sheet, tracked state, linked Lore Documents |
+| Location | World Bible | Zone, affinity, settlement, or discovery mechanics |
+| Item | World Bible | Item mechanics, recipe/crafting data, character inventory state |
+| Creature | World Bible | Bestiary, loot, hunt, or discovery mechanics |
+| Faction, concept, culture, or world rule | World Bible | Linked Lore Documents or optional mechanics |
+| Longform history, dossier, myth, or exploratory notes | Lore Documents | Extracted proposals that may later become canon |
+
+Creation or review should establish one primary canon anchor. Optional mechanics
+must attach deliberately; accepting a detected item, location, or creature
+should not automatically create a Compendium record.
+
+Character possession and equipment are not fields on the canonical item. They
+belong to character state and manuscript-time mutation events.
+
+## Optional Systems Decision
+
+LitRPG and system-heavy fiction remain a product differentiator, but the
+mechanics surfaces are subordinate to writing and canon.
+
+Accepted model:
+
+- `Workspace` remains the daily writing surface.
+- `World Bible` remains the structured canon home.
+- `Lore Documents` remains the longform source-material surface.
+- Rulesets, sheets/state, mechanics/Compendium, and settlement tools form an
+  optional systems cluster.
+- Optional-system routes remain reachable through `More`, contextual actions,
+  and record-level handoffs.
+- Projects may surface the cluster more strongly when LitRPG systems are
+  enabled, but general-fiction projects should not be framed as incomplete
+  without it.
+- Pending or actionable system state may use visible badges, provided those
+  badges do not turn every mechanics route into primary navigation.
+
+This preserves direct access for power users while keeping the default product
+shape writing-first.
 
 ## Record Model
 
@@ -152,7 +194,7 @@ The app should feel like one coherent writing tool, not a set of adjacent databa
 
 ## UX Implications
 
-This aligns with `ux-refactor.md` Pattern 3 and Pattern 4:
+This aligns with the writing-first principles in `docs/product-blueprint.md`:
 
 - fewer peer tabs
 - one primary canon surface
@@ -164,38 +206,57 @@ It also reduces the current ambiguity around actions like:
 - "If I rename a character canonically, which surface owns that truth?"
 - "Is Lore another canon database or just source notes?"
 
-## Near-Term Product Rules
-
-Until the full navigation simplification lands, use these rules:
+## Current Product Rules
 
 - New canon anchors should default toward `World Bible`.
 - Freeform background writing should default toward `Lore Documents`.
 - Review completion and alias cleanup should stay centered in `World Bible`.
-- Character sheet/state workflows may remain separate temporarily, but should be described as specialized tools, not the main character canon home.
+- Character sheet/state workflows are specialized tools, not the main character
+  canon home.
 - New UI should avoid asking the author to choose between `Characters` and `World Bible` for canon ownership.
+- Items, creatures, and locations gain mechanics only through an explicit
+  author action.
+- Optional-system navigation should stay grouped rather than expanding into a
+  row of default peer destinations.
 
-## Suggested Follow-Up Work
+## Implementation Status
 
-1. Rename `Lore` route copy to `Lore Documents`.
-2. Collapse character canon editing into `World Bible`.
-3. Reframe any remaining character-only route as sheet/state tooling, or remove it entirely.
-4. Update navigation copy and empty states to reflect the model above.
-5. Add explicit linked-lore affordances inside World Bible records:
-   - `Create linked lore document`
-   - `Open linked lore document`
-6. Decide how author-invoked AI drafting generalizes beyond Cast to other World Bible categories without silently creating canon.
-7. Stop presenting `Characters` and `World Bible > Characters` as two equally primary homes for character canon.
-8. Add a record-level entry point for optional character-sheet/state tooling from World Bible character records.
+Implemented:
+
+- Primary navigation is organized around Workspace, World Bible, and Lore
+  Documents.
+- Canon Review, Corkboard, Settings, and optional system-heavy routes are
+  grouped behind `More`.
+- Lore route copy uses Lore Documents/source-note framing.
+- World Bible is the character-canon home; Character Tools and sheets/state are
+  secondary.
+- World Bible records can create or open linked Lore Documents.
+- Workspace character intake creates World Bible canon first.
+- Generic intake no longer treats Compendium as a mandatory second destination.
+
+Remaining validation and refinement:
+
+- Manually verify optional-system discoverability and badges at desktop and
+  narrow breakpoints.
+- Validate navigation with projects that use no mechanics, light LitRPG
+  mechanics, and extensive system tracking.
+- Keep AI entry points schema-aware, author-invoked, and proposal-oriented.
+- Use `docs/ai-assisted-item-authoring.md` as the first description-first
+  mechanics-authoring pilot.
+- Resolve future character-tool reduction through this decision document rather
+  than another parallel navigation roadmap.
 
 ## Working Recommendation
 
-If a simplification pass starts now, the preferred top-level nav is:
+The preferred navigation hierarchy is:
 
 - `Projects`
 - `Workspace`
 - `World Bible`
 - `Lore Documents`
-- `Ruleset` (advanced / optional)
-- optional system-heavy surfaces only when enabled
+- `More`
+  - optional systems
+  - planning and review utilities
+  - settings
 
 This is the cleanest structure that still respects the current codebase direction and the desired automagic author experience.

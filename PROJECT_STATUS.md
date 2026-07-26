@@ -1,6 +1,6 @@
 # Worldbuilding-Desk Project Status
 
-**Last Updated:** July 20, 2026
+**Last Updated:** July 26, 2026
 
 ## Project Overview
 
@@ -161,6 +161,14 @@ Under the hood, the app still includes rich systems for world data, rules, chara
 - Assistant prompt context now labels retrieved World Bible records, accepted canonical facts, linked/general Source Notes, scene drafts, and rules references by trust tier. Assistant answers also expose a collapsed `Sources used` list for the Shodh/RAG chunks sent with that answer. Pending and rejected Source Note proposals remain out of normal assistant context; include them only through an explicit future proposal-review flow.
 - Accepted canonical facts now capture Shodh summaries when accepted or rebuilt; Source Notes remain RAG-only source material by default.
 - The docs source-of-truth map now lives in `docs/README.md`; keep `PROJECT_STATUS.md` and `docs/next-steps.md` as the current status and roadmap pair.
+- The active documentation set was consolidated on 2026-07-26: completed plans,
+  branch handoffs, dated audits, and the prior roadmap/architecture action logs
+  now live under `docs/archive/`; the active roadmap and architecture reference
+  contain only open work and durable boundaries.
+- AI-assisted item authoring is now captured as a product proposal:
+  description-first manual creation comes first, model output remains
+  evidence-backed and review-gated, and the shared proposal infrastructure
+  should later support domain-specific ruleset adapters.
 - Continue moving alias/review acceptance into a stronger World Bible workflow.
 - Manually retest the new World Bible recommended-action filters and resolution paths against the review-completion smoke checklist.
 - Extend the passive review-needed indicator into changed-word plus idle-pause background cadence.
@@ -173,7 +181,9 @@ Under the hood, the app still includes rich systems for world data, rules, chara
 - Finish the first search UX pass by manually retesting scene-result restore/jump behavior and deciding whether Compendium should join unified search results.
 
 ### Engineering
-*Ordering aligned with the 2026-04-18 architecture-review addendum.*
+
+*Ordering is maintained in `docs/next-steps.md`; durable boundaries are in
+`docs/architecture-review.md`.*
 
 - **Zustand store, slice by slice** — app shell and workspace UI slices are now in place. Continue with dedicated, behavior-preserving slices only; do not move editor `title`, `content`, `saveStatus`, or autosave ownership without a focused editor-state pass.
 - Continue trimming `WorkspaceRoute` orchestration where extraction still leaks route-owned knowledge; canon sync and larger editor-state orchestration remain candidates after the workspace UI shell settles.

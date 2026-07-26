@@ -1,6 +1,12 @@
 # Technical Implementation Strategy: Narrative Engine UX Refactor
 
-This document outlines the technical approach, effort estimation, and architectural decisions for implementing the "Writing-First" UX patterns defined in `docs/ux-refactor.md`.
+> Archived 2026-07-26. This strategy targeted an earlier UX-refactor phase.
+> Current product direction lives in `docs/product-blueprint.md`; current
+> architecture lives in `docs/architecture-review.md`.
+
+This document outlines the technical approach, effort estimation, and
+architectural decisions for implementing the historical writing-first UX
+patterns now archived alongside it in `ux-refactor.md`.
 
 ---
 

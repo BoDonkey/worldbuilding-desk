@@ -1,5 +1,9 @@
 # Import Pipeline v2
 
+> Archived 2026-07-26. The core import pipeline described here is implemented.
+> Current import behavior belongs in `PROJECT_STATUS.md`; retain this document
+> as design and regression context.
+
 ## Problem Statement
 Current import behavior in `WorkspaceRoute` is too tightly coupled to consistency extraction and unresolved-entity handling. This creates a poor author experience:
 
