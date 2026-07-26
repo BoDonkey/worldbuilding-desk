@@ -149,8 +149,8 @@ Near-term engineering concerns include:
 - replacing browser-native confirm/alert interactions with shared accessible
   components
 - completing narrow accessibility and visual-consistency work
-- upgrading the Electron baseline
-- migrating away from the older transformer dependency
+- finishing the remaining dependency/script hygiene slices after the completed
+  Electron, transformer, and React peer-dependency work
 - adding focused coverage around rules UI and high-risk application routes
 - continuing incremental decomposition of large route components
 - introducing storage schema versioning and migrations before risky persisted
