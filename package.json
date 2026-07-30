@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "pnpm --filter web test:unit && pnpm --filter @litrpg-tool/rules-engine test",
     "dev:web": "pnpm --filter web dev",
     "build:web": "pnpm --filter web build",
     "build:desktop": "pnpm --filter desktop build",
