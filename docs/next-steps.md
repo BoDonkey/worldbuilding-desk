@@ -149,7 +149,7 @@ Near-term engineering concerns include:
 - replacing browser-native confirm/alert interactions with shared accessible
   components
 - completing narrow accessibility and visual-consistency work
-- adding focused coverage around rules UI and high-risk application routes
+- adding focused coverage around high-risk application routes
 - continuing incremental decomposition of large route components
 - introducing storage schema versioning and migrations before risky persisted
   shape changes
