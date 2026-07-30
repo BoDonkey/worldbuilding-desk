@@ -57,6 +57,7 @@ Updated 2026-07-30. Slices not listed here have not started.
 | 8 | Complete | Added a real-provider `renderRoute` harness and 9 jsdom smoke tests covering Workspace, World Bible, Compendium, Character Sheets, Lore, Characters, Projects, Settings, and Compendium tab switching; all 196 web tests pass in under 5 seconds |
 | 9 | Complete | Extracted the behavior-preserving Compendium Overview and Entries panels into explicitly typed components, moved shared tab/scope constants alongside them, and reduced `CompendiumRoute.tsx` from 3,118 to 2,433 lines; lint, all 196 web tests, focused Compendium smoke tests, and the web build pass |
 | 10 | Complete | Extracted the behavior-preserving Progression and World Systems panels into explicitly typed components, moved presentation helpers into a tested service module, and reduced `CompendiumRoute.tsx` from 2,433 to 1,590 lines. The aspirational sub-800 target remains unmet because route-owned state and handlers account for most remaining lines; lint, all 201 web tests, focused Compendium smoke tests, and the web build pass |
+| 11 | Complete | Extracted the Workspace unknown-entity notice and parent-canon status panels into explicitly typed components that reuse the existing Workspace CSS module, reducing `WorkspaceRoute.tsx` from 4,761 to 4,708 lines; lint, all 201 web tests, the web build, and all 42 Cypress tests pass |
 
 ---
 
