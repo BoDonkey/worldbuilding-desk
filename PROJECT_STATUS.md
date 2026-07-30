@@ -121,7 +121,10 @@ Under the hood, the app still includes rich systems for world data, rules, chara
   React 19 copies are development-only, so the web application owns the single
   runtime React instance.
 - `rules-ui` owns its ESLint toolchain, and the root `pnpm test` command runs
-  the web and rules-engine test suites instead of a placeholder script.
+  the web, rules-engine, and rules-ui test suites instead of a placeholder
+  script.
+- `rules-ui` has jsdom-backed hook and component coverage for its wizard state,
+  ruleset mutations, stat/resource editors, and end-to-end world creation flow.
 - Web and rules-engine tests run on Vitest 4.1, and all workspaces use Zod
   3.25.76 while the breaking Zod 4 migration remains deliberately deferred.
 - Workspace logic decomposed into focused hooks:
