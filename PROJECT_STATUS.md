@@ -125,6 +125,8 @@ Under the hood, the app still includes rich systems for world data, rules, chara
   script.
 - `rules-ui` has jsdom-backed hook and component coverage for its wizard state,
   ruleset mutations, stat/resource editors, and end-to-end world creation flow.
+- Web tests now include provider-aware jsdom smoke coverage for all eight
+  high-risk application routes plus Compendium tab switching.
 - Web and rules-engine tests run on Vitest 4.1, and all workspaces use Zod
   3.25.76 while the breaking Zod 4 migration remains deliberately deferred.
 - Workspace logic decomposed into focused hooks:

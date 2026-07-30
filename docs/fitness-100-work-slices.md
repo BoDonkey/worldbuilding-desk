@@ -54,6 +54,7 @@ Updated 2026-07-30. Slices not listed here have not started.
 | 5 | Complete | `rules-ui` now owns its ESLint dependencies and passes its package lint command; root `pnpm test` runs 187 web tests and 6 rules-engine tests successfully |
 | 6 | Complete | Web and rules-engine use Vitest 4.1.10; all workspaces align on Zod 3.25.76; safe ESLint, TypeScript-ESLint, Vite 7, TSX, type, and browser-mapping updates pass the full battery. Zod 4 and other breaking majors remain deferred; React Hooks 7.1 is pinned out because its new compiler rules expose 14 existing violations |
 | 7 | Complete | Added Vitest/jsdom infrastructure and 12 behavior tests across both exported hooks and four rules-ui components; root tests and CI now include rules-ui. All 187 web, 6 rules-engine, 12 rules-ui, and 42 Cypress tests pass |
+| 8 | Complete | Added a real-provider `renderRoute` harness and 9 jsdom smoke tests covering Workspace, World Bible, Compendium, Character Sheets, Lore, Characters, Projects, Settings, and Compendium tab switching; all 196 web tests pass in under 5 seconds |
 
 ---
 
