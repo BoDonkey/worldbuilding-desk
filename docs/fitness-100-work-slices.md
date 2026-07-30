@@ -42,7 +42,7 @@ Cypress (8 specs) runs in CI via `web-ci.yml`; run `pnpm --filter web e2e:run` l
 
 ## Execution status
 
-Updated 2026-07-26. Slices not listed here have not started.
+Updated 2026-07-30. Slices not listed here have not started.
 
 | Slice | Status | Evidence / coordination note |
 |---|---|---|
@@ -51,6 +51,7 @@ Updated 2026-07-26. Slices not listed here have not started.
 | 2 | Complete | Electron 43 upgrade landed in `8137369` |
 | 3 | Complete | Migrated to `@huggingface/transformers` 4.2.0; real 384-dimension embedding passes; audit reduced 14 → 1 with only the unrelated React Router advisory remaining |
 | 4 | Complete | `rules-ui` now keeps React/React DOM as `^18 || ^19` peers with React 19 development dependencies; package/web builds and all 187 web unit tests pass; web resolves one React 19.2.4 instance |
+| 5 | Complete | `rules-ui` now owns its ESLint dependencies and passes its package lint command; root `pnpm test` runs 187 web tests and 6 rules-engine tests successfully |
 
 ---
 
