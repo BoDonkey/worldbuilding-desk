@@ -1,4 +1,4 @@
-import tsParser from '../rules-engine/node_modules/@typescript-eslint/parser/dist/index.js';
+import tsParser from '@typescript-eslint/parser';
 
 export default [
   {
