@@ -127,9 +127,10 @@ Under the hood, the app still includes rich systems for world data, rules, chara
   ruleset mutations, stat/resource editors, and end-to-end world creation flow.
 - Web tests now include provider-aware jsdom smoke coverage for all eight
   high-risk application routes plus Compendium tab switching.
-- Compendium Overview and Entries panels now live in focused, explicitly typed
-  components; `CompendiumRoute.tsx` has been reduced from 3,118 to 2,433 lines
-  without changing the rendered interface or route-owned state.
+- All four Compendium tab panels now live in focused, explicitly typed
+  components; `CompendiumRoute.tsx` has been reduced from 3,118 to 1,590 lines
+  without changing the rendered interface or route-owned state. The remaining
+  route size is primarily state, derived data, and persistence handlers.
 - Web and rules-engine tests run on Vitest 4.1, and all workspaces use Zod
   3.25.76 while the breaking Zod 4 migration remains deliberately deferred.
 - Workspace logic decomposed into focused hooks:
@@ -282,7 +283,7 @@ Under the hood, the app still includes rich systems for world data, rules, chara
 - Zustand workspace UI integration has been smoke-checked manually for Corkboard and Scratchpad memory saving, and the latest focused unit/build passes cover workspace store behavior plus document initialization/save helper behavior.
 
 ### Current Verification Notes
-- The Compendium Overview/Entries extraction passes web lint, all 196 web unit
+- The complete Compendium tab extraction passes web lint, all 201 web unit
   tests, both focused Compendium route smoke tests, and the production web build
   on July 30, 2026.
 - `pnpm --filter web lint` passes on June 6, 2026 with the existing `useWorkspaceDocuments.ts` hook warning.
