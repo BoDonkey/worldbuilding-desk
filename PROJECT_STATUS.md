@@ -122,6 +122,8 @@ Under the hood, the app still includes rich systems for world data, rules, chara
   runtime React instance.
 - `rules-ui` owns its ESLint toolchain, and the root `pnpm test` command runs
   the web and rules-engine test suites instead of a placeholder script.
+- Web and rules-engine tests run on Vitest 4.1, and all workspaces use Zod
+  3.25.76 while the breaking Zod 4 migration remains deliberately deferred.
 - Workspace logic decomposed into focused hooks:
   - `useWorkspaceDrawers`
   - `useWorkspaceMemories`

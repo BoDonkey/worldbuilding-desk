@@ -52,6 +52,7 @@ Updated 2026-07-30. Slices not listed here have not started.
 | 3 | Complete | Migrated to `@huggingface/transformers` 4.2.0; real 384-dimension embedding passes; audit reduced 14 → 1 with only the unrelated React Router advisory remaining |
 | 4 | Complete | `rules-ui` now keeps React/React DOM as `^18 || ^19` peers with React 19 development dependencies; package/web builds and all 187 web unit tests pass; web resolves one React 19.2.4 instance |
 | 5 | Complete | `rules-ui` now owns its ESLint dependencies and passes its package lint command; root `pnpm test` runs 187 web tests and 6 rules-engine tests successfully |
+| 6 | Complete | Web and rules-engine use Vitest 4.1.10; all workspaces align on Zod 3.25.76; safe ESLint, TypeScript-ESLint, Vite 7, TSX, type, and browser-mapping updates pass the full battery. Zod 4 and other breaking majors remain deferred; React Hooks 7.1 is pinned out because its new compiler rules expose 14 existing violations |
 
 ---
 

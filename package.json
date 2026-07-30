@@ -20,7 +20,7 @@
   "license": "ISC",
   "packageManager": "pnpm@10.15.0",
   "devDependencies": {
-    "baseline-browser-mapping": "^2.10.32"
+    "baseline-browser-mapping": "^2.11.7"
   },
   "pnpm": {
     "overrides": {
