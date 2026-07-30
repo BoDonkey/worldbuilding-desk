@@ -63,6 +63,8 @@ import {useAppStore} from '../store/appStore';
 import {useWorkspaceUiStore} from '../store/workspaceUiStore';
 import {WorkspaceContextDrawer} from '../components/Workspace/WorkspaceContextDrawer';
 import {WorkspaceSceneDrawer} from '../components/Workspace/WorkspaceSceneDrawer';
+import {CanonPanel} from '../components/Workspace/CanonPanel';
+import {UnknownEntityPanel} from '../components/Workspace/UnknownEntityPanel';
 import {PositionedStateChangeComposer} from '../components/Workspace/PositionedStateChangeComposer';
 import {SceneInventoryCapture} from '../components/Workspace/SceneInventoryCapture';
 import type {
@@ -3054,82 +3056,27 @@ function WorkspaceRoute() {
         </div>
       )}
       {showReviewBanner && (
-        <div className={styles.unknownPanel}>
-          <div className={styles.unknownPanelHeader}>
-            <strong>{reviewBannerTitle}</strong>
-            <button
-              type='button'
-              onClick={() => setReviewBannerDismissed(true)}
-              className={styles.unknownPanelDismissButton}
-              aria-label='Dismiss review notice'
-            >
-              Dismiss
-            </button>
-          </div>
-          <div className={styles.unknownSummary}>
-            {unknownGuardrailIssues.length} item
-            {unknownGuardrailIssues.length === 1 ? '' : 's'} highlighted. {reviewBannerBody}
-          </div>
-          {visibleReviewSurfaces.length > 0 && (
-            <div className={styles.unknownSurfaceList}>
-              {visibleReviewSurfaces.map((surface) => (
-                <span key={surface} className={styles.unknownSurfaceChip}>
-                  {surface}
-                </span>
-              ))}
-              {hiddenReviewSurfaceCount > 0 && (
-                <span className={styles.unknownSurfaceChipMuted}>
-                  +{hiddenReviewSurfaceCount} more
-                </span>
-              )}
-            </div>
-          )}
-          <div className={styles.unknownBulkActions}>
-            <button
-              type='button'
-              onClick={() => void resolveAllUnknownEntities()}
-              className={styles.unknownActionButton}
-            >
-              {reviewCreateAllLabel}
-            </button>
-            <button
-              type='button'
-              onClick={() => dismissAllUnknownEntities(selectedId ?? undefined)}
-              className={styles.unknownActionButtonSpaced}
-            >
-              {reviewDismissAllLabel}
-            </button>
-          </div>
-        </div>
+        <UnknownEntityPanel
+          hiddenReviewSurfaceCount={hiddenReviewSurfaceCount}
+          issueCount={unknownGuardrailIssues.length}
+          onDismissAll={() => dismissAllUnknownEntities(selectedId ?? undefined)}
+          onDismissNotice={() => setReviewBannerDismissed(true)}
+          onResolveAll={resolveAllUnknownEntities}
+          reviewBannerBody={reviewBannerBody}
+          reviewBannerTitle={reviewBannerTitle}
+          reviewCreateAllLabel={reviewCreateAllLabel}
+          reviewDismissAllLabel={reviewDismissAllLabel}
+          visibleReviewSurfaces={visibleReviewSurfaces}
+        />
       )}
       {seriesBibleConfig?.parentProjectId && (
-        <div className={styles.canonPanel}>
-          <div>
-            <strong>Parent canon:</strong>{' '}
-            {canonState.parentName ?? 'Unknown'} · Version{' '}
-            {canonState.parentCanonVersion ?? 'n/a'}
-            {canonState.parentCanonVersion &&
-              canonState.childLastSynced &&
-              canonState.parentCanonVersion !== canonState.childLastSynced && (
-                <span className={styles.canonOutOfSync}>
-                  Out of sync
-                </span>
-              )}
-          </div>
-          <div className={styles.canonMetaRow}>
-            <span>
-              Last synced:{' '}
-              {canonState.childLastSynced ?? 'never'}
-            </span>
-            <button
-              type='button'
-              onClick={() => void handleCanonSync()}
-              disabled={isSyncingCanon}
-            >
-              {isSyncingCanon ? 'Marking...' : 'Mark as synced'}
-            </button>
-          </div>
-        </div>
+        <CanonPanel
+          childLastSynced={canonState.childLastSynced}
+          isSyncingCanon={isSyncingCanon}
+          onSync={handleCanonSync}
+          parentCanonVersion={canonState.parentCanonVersion}
+          parentName={canonState.parentName}
+        />
       )}
 
       <div className={styles.workspaceFrame} data-wbd-scroll-key='workspace-frame'>

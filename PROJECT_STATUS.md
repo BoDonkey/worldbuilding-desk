@@ -144,6 +144,9 @@ Under the hood, the app still includes rich systems for world data, rules, chara
 - Workspace drawer UI extracted into:
   - `WorkspaceSceneDrawer`
   - `WorkspaceContextDrawer`
+- Workspace review/canon status UI now includes focused `UnknownEntityPanel` and
+  `CanonPanel` components while preserving the route-owned review and sync
+  workflows.
 - Zustand app store added to reduce `activeProject` prop drilling.
 - Zustand workspace UI store added for project-scoped drawer preferences, selected scene restoration, transient workspace modal state, export/import UI state, and scene create/delete operation flags.
 - Shared page chrome component added for Workspace, World Bible, Lore, and Canon Decisions so primary writing/canon surfaces now share title, eyebrow, description/meta, and action placement.
@@ -283,6 +286,9 @@ Under the hood, the app still includes rich systems for world data, rules, chara
 - Zustand workspace UI integration has been smoke-checked manually for Corkboard and Scratchpad memory saving, and the latest focused unit/build passes cover workspace store behavior plus document initialization/save helper behavior.
 
 ### Current Verification Notes
+- The Workspace unknown-entity/canon panel extraction passes web lint, all 201
+  web unit tests, the production web build, and all 42 Cypress tests on
+  July 30, 2026.
 - The complete Compendium tab extraction passes web lint, all 201 web unit
   tests, both focused Compendium route smoke tests, and the production web build
   on July 30, 2026.
