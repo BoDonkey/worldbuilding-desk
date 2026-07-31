@@ -62,6 +62,7 @@ import styles from '../styles/WorkspaceRoute.module.css';
 import {useAppStore} from '../store/appStore';
 import {useWorkspaceUiStore} from '../store/workspaceUiStore';
 import {WorkspaceContextDrawer} from '../components/Workspace/WorkspaceContextDrawer';
+import {WorkspaceDrawerPanel} from '../components/Workspace/WorkspaceDrawerPanel';
 import {WorkspaceSceneDrawer} from '../components/Workspace/WorkspaceSceneDrawer';
 import {CanonPanel} from '../components/Workspace/CanonPanel';
 import {UnknownEntityPanel} from '../components/Workspace/UnknownEntityPanel';
@@ -3752,26 +3753,15 @@ function WorkspaceRoute() {
       </div>
 
       {isSceneDrawerOpen && isNarrowViewport && (
-        <div
+        <WorkspaceDrawerPanel
           ref={sceneDrawerDialogRef}
-          role='dialog'
-          aria-modal='true'
-          aria-label='Workspace scene drawer'
-          onClick={() => setSceneDrawerOpen(false)}
-          className={`${styles.drawerOverlay} ${styles.sceneOverlay}`}
+          ariaLabel='Workspace scene drawer'
+          dataScrollKey='workspace-scene-drawer'
+          onClose={() => setSceneDrawerOpen(false)}
+          side='left'
+          title='Scenes'
         >
-          <aside
-            onClick={(event) => event.stopPropagation()}
-            className={styles.drawerPanelLeft}
-            data-wbd-scroll-key='workspace-scene-drawer'
-          >
-            <div className={styles.drawerPanelHeader}>
-              <strong>Scenes</strong>
-              <button type='button' onClick={() => setSceneDrawerOpen(false)}>
-                Close
-              </button>
-            </div>
-            <WorkspaceSceneDrawer
+          <WorkspaceSceneDrawer
               handleNewDocument={handleNewDocument}
               isCreatingScene={isCreatingScene}
               isImportingDocuments={isImportingDocuments}
@@ -3795,31 +3785,19 @@ function WorkspaceRoute() {
               reviewItemCountBySceneId={reviewItemCountBySceneId}
               staleStateEventCountBySceneId={staleStateEventCountBySceneId}
               selectedSceneTimeline={selectedSceneTimeline}
-            />
-          </aside>
-        </div>
+          />
+        </WorkspaceDrawerPanel>
       )}
 
       {isContextDrawerOpen && isNarrowViewport && (
-        <div
+        <WorkspaceDrawerPanel
           ref={contextDrawerDialogRef}
-          role='dialog'
-          aria-modal='true'
-          aria-label='Workspace context drawer'
-          onClick={() => setContextDrawerOpen(false)}
-          className={`${styles.drawerOverlay} ${styles.contextOverlay}`}
+          ariaLabel='Workspace context drawer'
+          onClose={() => setContextDrawerOpen(false)}
+          side='right'
+          title='Context Drawer'
         >
-          <aside
-            onClick={(event) => event.stopPropagation()}
-            className={styles.drawerPanelRight}
-          >
-            <div className={styles.drawerPanelHeader}>
-              <strong>Context Drawer</strong>
-              <button type='button' onClick={() => setContextDrawerOpen(false)}>
-                Close
-              </button>
-            </div>
-            <WorkspaceContextDrawer
+          <WorkspaceContextDrawer
               activeContextView={activeContextView}
               setActiveContextView={setActiveContextView}
               showGameSystems={showGameSystems}
@@ -3914,9 +3892,8 @@ function WorkspaceRoute() {
               seriesBibleConfig={seriesBibleConfig}
               handlePromoteMemory={handlePromoteMemory}
               isPromotingMemoryId={isPromotingMemoryId}
-            />
-          </aside>
-        </div>
+          />
+        </WorkspaceDrawerPanel>
       )}
 
       {pendingPositionedChange && pendingPositionedSheet && positionedChangeBefore && (
