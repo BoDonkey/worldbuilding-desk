@@ -1,6 +1,6 @@
 # Worldbuilding-Desk Project Status
 
-**Last Updated:** July 30, 2026
+**Last Updated:** July 31, 2026
 
 ## Project Overview
 
@@ -133,6 +133,8 @@ Under the hood, the app still includes rich systems for world data, rules, chara
   route size is primarily state, derived data, and persistence handlers.
 - Web and rules-engine tests run on Vitest 4.1, and all workspaces use Zod
   3.25.76 while the breaking Zod 4 migration remains deliberately deferred.
+- React Router is on the patched 8.3 line, React/React DOM are on 19.2, CI uses
+  the required Node 22.22 minimum, and the production dependency audit is clean.
 - Workspace logic decomposed into focused hooks:
   - `useWorkspaceDrawers`
   - `useWorkspaceMemories`
@@ -141,6 +143,13 @@ Under the hood, the app still includes rich systems for world data, rules, chara
   - `useWorkspaceDocuments`
   - `useWorkspaceProjectData`
   - `useWorkspaceLoreSnippets`
+  - `useWorkspaceCommands`
+  - `useWorkspaceSceneRoster`
+- World Bible orchestration is decomposed into focused hooks:
+  - `useWorldBibleProjectData`
+  - `useWorldBibleSelectedEntity`
+  - `useWorldBibleAuthoringAssistant`
+  - `useWorldBibleRecordResolution`
 - Workspace drawer UI extracted into:
   - `WorkspaceSceneDrawer`
   - `WorkspaceContextDrawer`
@@ -160,11 +169,16 @@ Under the hood, the app still includes rich systems for world data, rules, chara
 - `WorkspaceRoute` now groups workspace store subscriptions by concern instead of scattering individual selectors through the route body.
 - `useWorkspaceDocuments` now keeps persistence behavior local while using pure helpers for document selection initialization, editor-document assembly, change detection, and manual-save/autosave consistency mode selection.
 - Shared text matching contract added for smoke-critical lore/review matching paths.
+- Current targeted architecture sizes are `WorkspaceRoute.tsx` 3,424 lines,
+  `WorldBibleRoute.tsx` 3,011, `CharacterSheetsRoute.tsx` 2,374,
+  `CompendiumRoute.tsx` 1,590, and `useWorkspaceConsistency.ts` 1,990.
 
 ### Current Assessment
-- The route decomposition is viable and now builds cleanly again.
-- The latest local refactor had stopped in an intermediate state; that stabilization pass is now complete.
-- The remaining work is product-shaping work, not emergency architecture repair.
+- The completed fitness plan materially reduced the targeted architecture and
+  established tested extraction seams; three routes remain above the 2,000-line
+  target and should continue through bounded, behavior-preserving slices.
+- The remaining work is product shaping and incremental maintainability, not
+  emergency architecture repair.
 
 ---
 
@@ -207,14 +221,16 @@ Under the hood, the app still includes rich systems for world data, rules, chara
 `docs/architecture-review.md`.*
 
 - **Zustand store, slice by slice** — app shell and workspace UI slices are now in place. Continue with dedicated, behavior-preserving slices only; do not move editor `title`, `content`, `saveStatus`, or autosave ownership without a focused editor-state pass.
-- Continue trimming `WorkspaceRoute` orchestration where extraction still leaks route-owned knowledge; canon sync and larger editor-state orchestration remain candidates after the workspace UI shell settles.
+- Continue trimming `WorkspaceRoute`, `WorldBibleRoute`, and
+  `CharacterSheetsRoute` through cohesive orchestration or presentation
+  boundaries; canon sync and larger editor-state orchestration remain candidates
+  after the workspace UI shell settles.
 - Add targeted smoke coverage for the newer World Bible rename / alias / ignore resolution paths after the recent extraction and workflow pass.
 - Add targeted smoke coverage for the workspace import/review path after the recent extraction.
 - Add one Playwright Electron E2E covering the LLM streaming path — smallest change with the highest payoff against silent IPC regressions.
 - Decide auto-update strategy (Squirrel / electron-updater / manual) before the first externally shared build; affects main-process structure and code signing.
 - Re-enable suppressed React hook lint rules one at a time (`set-state-in-effect`, `purity`, `preserve-manual-memoization`); prefer targeted inline disables with a `// why:` comment over blanket config suppression.
 - Rename `@litrpg-tool/*` internal packages to match the writing-first product identity. Cheapest while the monorepo is still small.
-- Remove stray `@tiptap/*` dependencies from the root `package.json` (already correctly declared in `apps/web`).
 
 ### Documentation
 - Keep summary docs aligned with the writing-first UX direction.
@@ -230,6 +246,11 @@ Under the hood, the app still includes rich systems for world data, rules, chara
 ## Verification Status
 
 ### Verified Recently
+- The July 31 fitness close-out and follow-up extractions pass web lint, all 250
+  unit/package tests (232 web, 6 rules-engine, 12 rules-ui), the production web
+  build, and all 42 Cypress tests across eight specs.
+- `pnpm audit --prod` reports 0 vulnerabilities after the React Router 8.3
+  security upgrade and transformer migration.
 - Pull-request CI now treats verification as blocking across three jobs: web lint/unit tests/rules-engine tests/web build, desktop build, and the full Cypress smoke suite.
 - PR #43 passed all three hosted jobs on July 20, 2026; the Cypress job passed all 42 tests after two consecutive 42/42 local runs.
 - `pnpm build:web` succeeds on the current tree.
@@ -284,7 +305,7 @@ Under the hood, the app still includes rich systems for world data, rules, chara
   - duplicate alias display/counts in World Bible review queue
   - alias lore highlights using canonical names instead of alias surfaces
   - possessive alias normalization mismatch between consistency scan and editor highlights
-- `@xenova/transformers` is already dynamically imported behind the RAG embedding path and builds as a separate Vite chunk.
+- `@huggingface/transformers` is dynamically imported behind the RAG embedding path and builds as a separate Vite chunk.
 - Zustand workspace UI integration has been smoke-checked manually for Corkboard and Scratchpad memory saving, and the latest focused unit/build passes cover workspace store behavior plus document initialization/save helper behavior.
 
 ### Current Verification Notes
@@ -302,7 +323,7 @@ Under the hood, the app still includes rich systems for world data, rules, chara
 - `pnpm --filter web test:unit -- --run` passes after the World Bible helper/import slice.
 - `pnpm --filter web build` passes with the existing Vite large-chunk and `onnxruntime-web` eval warnings.
 - Browser smoke on `/world-bible` should confirm manual/import remain the primary category task cards, the helper opens from the record form, and selected assistant text applies only to editable destinations before save.
-- `pnpm --filter web exec cypress run` passes: 18 tests across review matching, post-merge smoke, scratchpad, and workspace navigation lock.
+- `pnpm --filter web e2e:run` passes all 42 tests across eight specs.
 - Manual smoke for workspace scene restoration and in-scene search targeting passes after the latest Zustand workspace checkpoint.
 - The post-merge Cypress smoke selectors were updated to match the current writing-first UI: `Scenes` / `Context` drawer controls, collapsed `Settings` sections, `/projects` backup flow, and stat-block rebind popovers.
 - In the Codex desktop sandbox, Cypress GUI launch can still abort before startup; the suite passes when run outside that sandboxed GUI restriction.

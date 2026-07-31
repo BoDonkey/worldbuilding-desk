@@ -1,6 +1,6 @@
 # Next Steps
 
-Last updated: 2026-07-30
+Last updated: 2026-07-31
 
 ## Purpose
 
@@ -136,12 +136,11 @@ Primary reference:
 
 ## 5. Active Engineering Work Plans
 
-Two focused work plans remain active:
+One focused work plan remains active:
 
 - `docs/ui-design-work-slices.md`
-- `docs/fitness-100-work-slices.md`
 
-Use their status tables for slice-level execution. They do not override the
+Use its status table for slice-level execution. It does not override the
 product priority order above.
 
 Near-term engineering concerns include:

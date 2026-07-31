@@ -1,6 +1,10 @@
 # Road to 100% Fitness — Work Slices
 
-**Date:** 2026-07-25 · **Baseline:** [code-fitness-report-2026-07-24.md](archive/code-fitness-report-2026-07-24.md) (grade B)
+> **Archived 2026-07-31:** All 18 planned slices are complete. The close-out
+> result is recorded in `code-fitness-report-2026-07-31.md`; remaining product
+> and engineering priorities are maintained in `../next-steps.md`.
+
+**Date:** 2026-07-25 · **Baseline:** [code-fitness-report-2026-07-24.md](code-fitness-report-2026-07-24.md) (grade B)
 **Repo state when written:** branch `codex/ci-trust-gates` with the July 24 dependency-pass changes still **uncommitted** in the working tree.
 
 Each slice below is a discrete, PR-sized unit of work with a self-contained prompt an LLM agent (Claude Code / Codex with repo access) can execute. Slices are ordered by dependency; within a phase they can run in parallel unless noted.
@@ -203,7 +207,7 @@ Five files carry most of the architecture debt: `WorkspaceRoute.tsx` (4,722 line
 
 **Prompt:**
 
-> Run a close-out fitness audit of worldbuilding-desk against the July 24 baseline (`docs/archive/code-fitness-report-2026-07-24.md`, grade B) and this plan (`docs/fitness-100-work-slices.md`). Verify each criterion and record actuals: (1) `pnpm audit --prod` → 0 vulnerabilities; (2) Electron in `apps/desktop/package.json` is a currently-supported major; (3) `packages/rules-ui/package.json` has React only in peerDependencies (`^18 || ^19`); (4) `shell.openExternal` call sites are protocol-guarded; (5) no `package-lock.json` anywhere (`git ls-files '*package-lock.json'` empty); (6) `@tiptap/*` deps live in apps/web, not root; (7) root `pnpm test` runs real tests; rules-ui lint runs its own eslint; (8) line counts: `wc -l` on WorkspaceRoute.tsx, WorldBibleRoute.tsx, CompendiumRoute.tsx, CharacterSheetsRoute.tsx, useWorkspaceConsistency.ts — each should be substantially reduced (targets: no file >2,000 lines; note any misses); (9) test counts by workspace (web unit, rules-engine, rules-ui, route smoke tests) all passing, and `.github/workflows/web-ci.yml` blocks on all of them plus Cypress; (10) `pnpm outdated -r` shows no major-version drift except deliberately deferred items (zod 4). Write the result as a dated audit under `docs/archive/` in the same format as the July 24 report, grading honestly—if anything missed target, list it as the new top issue rather than rounding up.
+> Run a close-out fitness audit of worldbuilding-desk against the July 24 baseline (`docs/archive/code-fitness-report-2026-07-24.md`, grade B) and this archived plan (`docs/archive/fitness-100-work-slices.md`). Verify each criterion and record actuals: (1) `pnpm audit --prod` → 0 vulnerabilities; (2) Electron in `apps/desktop/package.json` is a currently-supported major; (3) `packages/rules-ui/package.json` has React only in peerDependencies (`^18 || ^19`); (4) `shell.openExternal` call sites are protocol-guarded; (5) no `package-lock.json` anywhere (`git ls-files '*package-lock.json'` empty); (6) `@tiptap/*` deps live in apps/web, not root; (7) root `pnpm test` runs real tests; rules-ui lint runs its own eslint; (8) line counts: `wc -l` on WorkspaceRoute.tsx, WorldBibleRoute.tsx, CompendiumRoute.tsx, CharacterSheetsRoute.tsx, useWorkspaceConsistency.ts — each should be substantially reduced (targets: no file >2,000 lines; note any misses); (9) test counts by workspace (web unit, rules-engine, rules-ui, route smoke tests) all passing, and `.github/workflows/web-ci.yml` blocks on all of them plus Cypress; (10) `pnpm outdated -r` shows no major-version drift except deliberately deferred items (zod 4). Write the result as a dated audit under `docs/archive/` in the same format as the July 24 report, grading honestly—if anything missed target, list it as the new top issue rather than rounding up.
 
 ---
 
