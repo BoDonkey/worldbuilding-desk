@@ -1,6 +1,6 @@
 import {useEffect, useMemo, useRef, useState} from 'react';
 import type {ChangeEvent} from 'react';
-import {Navigate, useLocation, useNavigate, useSearchParams} from 'react-router-dom';
+import {Navigate, useLocation, useNavigate, useSearchParams} from 'react-router';
 import {useAppStore} from '../store/appStore';
 import {getProjectCapabilities} from '../projectMode';
 import CharactersRoute from './CharactersRoute';

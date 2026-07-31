@@ -1,5 +1,5 @@
 import {useEffect, useMemo, useState} from 'react';
-import {useLocation, useNavigate} from 'react-router-dom';
+import {useLocation, useNavigate} from 'react-router';
 import {useAppStore} from '../store/appStore';
 import {EntriesTab} from '../components/Compendium/EntriesTab';
 import {OverviewTab} from '../components/Compendium/OverviewTab';

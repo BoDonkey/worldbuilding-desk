@@ -1,4 +1,4 @@
-import type {NavigateFunction} from 'react-router-dom';
+import type {NavigateFunction} from 'react-router';
 import type {Project, ProjectSettings} from '../entityTypes';
 import {getProjectCapabilities} from '../projectMode';
 import {dispatchWorkspaceCommand} from './workspaceCommands';

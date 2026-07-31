@@ -1,6 +1,6 @@
 import {useEffect, useState, useCallback, useRef, useMemo} from 'react';
 import type {FormEvent} from 'react';
-import {useLocation, useNavigate} from 'react-router-dom';
+import {useLocation, useNavigate} from 'react-router';
 import {useEscapeToClose} from '../hooks/useEscapeToClose';
 import {useFocusTrap} from '../hooks/useFocusTrap';
 import {useAppStore} from '../store/appStore';

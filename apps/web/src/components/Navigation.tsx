@@ -1,5 +1,5 @@
 import {useCallback, useEffect, useMemo, useRef, useState, type FC} from 'react';
-import { NavLink, useLocation } from 'react-router-dom';
+import { NavLink, useLocation } from 'react-router';
 import { ThemeToggle } from './ThemeToggle';
 import {useCommandPalette} from '../contexts/commandPaletteApi';
 import {getCompendiumEntriesByProject} from '../services/compendium';

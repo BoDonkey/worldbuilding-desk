@@ -1,6 +1,6 @@
 import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import type {ChangeEvent, FormEvent} from 'react';
-import {useLocation, useNavigate} from 'react-router-dom';
+import {useLocation, useNavigate} from 'react-router';
 import {useAppStore} from '../store/appStore';
 import type {
   CanonicalFact,

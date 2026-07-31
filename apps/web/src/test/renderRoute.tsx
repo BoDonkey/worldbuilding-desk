@@ -2,9 +2,9 @@ import type {ReactElement} from 'react';
 import {render} from '@testing-library/react';
 import {
   createMemoryRouter,
-  RouterProvider,
   type InitialEntry
-} from 'react-router-dom';
+} from 'react-router';
+import {RouterProvider} from 'react-router/dom';
 import type {Project, ProjectSettings} from '../entityTypes';
 import {AccessibilityProvider} from '../contexts/AccessibilityContext';
 import {CommandPaletteProvider} from '../contexts/CommandPaletteContext';

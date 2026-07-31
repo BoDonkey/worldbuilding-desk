@@ -4,6 +4,8 @@
 **Scope:** apps/web, apps/desktop, packages/rules-engine, packages/rules-ui (~73,886 lines of TypeScript)
 **Baseline:** [code-fitness-report-2026-07-24.md](code-fitness-report-2026-07-24.md), grade B
 
+> **Disposition (2026-07-31, same day):** An immediate follow-up upgraded the app from `react-router-dom` 7.18.1 to `react-router` 8.3.0, raised React/React DOM to 19.2.8, migrated imports to the v8 package entry points, and pinned CI to React Router's Node 22.22.0 minimum. `pnpm audit --prod` now reports 0 vulnerabilities; web lint, all 250 unit tests, the production build, and all 42 Cypress tests pass. The B+ grade and findings below preserve the point-in-time close-out audit; the remaining top issues are route size and breaking-major toolchain drift.
+
 ## Overall grade: B+ (up from B)
 
 The fitness program materially improved the repository: Electron is supported, React ownership is correct, unsafe external protocols are blocked, package-manager hygiene is clean, the root test command is real, rules-ui has its own lint and tests, and CI blocks on unit, package, build, and Cypress checks. The tested surface grew from 193 unit tests at baseline to 250, plus 42 Cypress tests.

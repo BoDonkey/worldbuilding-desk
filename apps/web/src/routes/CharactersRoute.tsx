@@ -16,7 +16,7 @@ import {
 } from '../services/consistency';
 import { CharacterStyleList } from '../components/CharacterStyleList';
 import type { CharacterStyle } from '../entityTypes';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router';
 import { useAppStore } from '../store/appStore';
 import {WorldBibleRichTextField} from '../components/WorldBibleRichTextField';
 import {AIAssistant} from '../components/AIAssistant/AIAssistant';

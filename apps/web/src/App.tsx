@@ -9,7 +9,7 @@ import {
   Route,
   Routes,
   useLocation
-} from 'react-router-dom';
+} from 'react-router';
 import {Navigation} from './components/Navigation';
 import {ThemeProvider} from './contexts/ThemeContext';
 import {AccessibilityProvider} from './contexts/AccessibilityContext';
