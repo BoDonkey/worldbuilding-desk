@@ -20,7 +20,6 @@ import {getEntitiesByProject, saveEntity} from '../entityStorage';
 import {
   getCategoriesByProject,
   saveCategory,
-  deleteCategory,
   initializeDefaultCategories
 } from '../categoryStorage';
 import {getCharactersByProject} from '../characterStorage';
@@ -31,11 +30,12 @@ import {
   saveLoreDocument,
   saveLoreDocumentLinks
 } from '../loreStorage';
-import CategoryEditor from '../components/CategoryEditor';
-import {WorldBibleRichTextField} from '../components/WorldBibleRichTextField';
 import {ProjectScratchpadButton} from '../components/ProjectScratchpadButton';
 import {PageHeader} from '../components/PageHeader';
 import {AIAssistant} from '../components/AIAssistant/AIAssistant';
+import {CategoryManager} from '../components/WorldBible/CategoryManager';
+import {EntityFieldEditor} from '../components/WorldBible/EntityFieldEditor';
+import {ImportSectionPanel} from '../components/WorldBible/ImportSectionPanel';
 import styles from '../assets/components/WorldBibleRoute.module.css';
 import type {RAGProvider} from '../services/rag/RAGService';
 import {getRAGService} from '../services/rag/getRAGService';
@@ -53,7 +53,6 @@ import {useWorldBibleReview} from '../hooks/useWorldBibleReview';
 import {
   useWorldBibleImports,
   type ImportMode,
-  type WorldBibleImportSectionAction,
   type JsonImportConflictResolution
 } from '../hooks/useWorldBibleImports';
 import {useWorldBibleEntityActions} from '../hooks/useWorldBibleEntityActions';
@@ -65,7 +64,6 @@ import {
 import {
   ALTERNATIVE_NAMES_KEY,
   extractPlainTextFromRichText,
-  extractStructuredSummaryFromRichText,
   formatAlternativeNames,
   normalizeRichTextValue,
   normalizeName,
@@ -84,6 +82,13 @@ import {getCanonicalFactsByProject} from '../services/lore/loreFactStorage';
 import {getStateMutationEventsByProject} from '../services/state/stateMutationLedger';
 import type {RAGSearchResult} from '../services/rag/types';
 import {htmlToPlainText} from '../utils/textHelpers';
+import {
+  buildEntityCardSummary,
+  CHARACTER_AUTHORING_FIELD_KEYS,
+  CHARACTER_IDENTITY_FIELD_KEYS,
+  CHARACTER_NOTES_FIELD,
+  isCharacterCategory
+} from '../services/worldBible/worldBibleSummary';
 
 // activeProject read from store below
 
@@ -119,23 +124,6 @@ const getPreferredImportField = (
   category.fieldSchema.find((field) => field.key === 'description') ??
   category.fieldSchema.find((field) => field.type === 'textarea') ??
   category.fieldSchema.find((field) => field.type === 'text');
-
-const CATEGORY_SUMMARY_PRIORITY: Record<string, string[]> = {
-  characters: ['description', 'role', 'age', 'notes'],
-  locations: ['description', 'climate', 'population', 'notes'],
-  items: ['description', 'rarity', 'notes'],
-  factions: ['description', 'notes'],
-  concepts: ['description', 'notes']
-};
-const CHARACTER_CATEGORY_HINTS = ['character', 'characters', 'npc', 'person', 'people'];
-const CHARACTER_NOTES_FIELD = 'notes';
-const CHARACTER_IDENTITY_FIELD_KEYS = ['age', 'role'];
-const CHARACTER_AUTHORING_FIELD_KEYS = new Set([
-  'description',
-  CHARACTER_NOTES_FIELD,
-  ...CHARACTER_IDENTITY_FIELD_KEYS,
-  ALTERNATIVE_NAMES_KEY
-]);
 
 const getWorldBibleRailStorageKey = (projectId: string) =>
   `wbd:world-bible:category-rail-collapsed:${projectId}`;
@@ -207,38 +195,10 @@ const deriveAiSectionLabel = (selectedText: string): string => {
     .trim();
 };
 
-const IMPORT_SECTION_ACTION_LABELS: Record<WorldBibleImportSectionAction, string> = {
-  'existing-field': 'Existing field',
-  'record-section': 'Record section',
-  'new-field': 'Reusable field',
-  ignore: 'Ignore'
-};
-
-const IMPORT_SECTION_ACTION_HELP: Record<WorldBibleImportSectionAction, string> = {
-  'existing-field': 'Copies this heading into the matching category field.',
-  'record-section': 'Keeps this heading inside this record without changing the category schema.',
-  'new-field': 'Creates a reusable field on this category before import.',
-  ignore: 'Skips this heading and content during structured import.'
-};
-
 const formatAiFieldContextValue = (value: string): string => {
   const plainText = extractPlainTextFromRichText(value).trim();
   if (!plainText) return '(empty)';
   return plainText.length > 2500 ? `${plainText.slice(0, 2500).trim()}...` : plainText;
-};
-
-const compactEntityCardText = (value: string, maxLength = 140): string => {
-  const compact = value.replace(/\s+/g, ' ').trim();
-  if (compact.length <= maxLength) return compact;
-  return `${compact.slice(0, maxLength).trim()}...`;
-};
-
-const isCharacterCategory = (category: EntityCategory): boolean => {
-  const slug = category.slug.toLowerCase();
-  const name = category.name.toLowerCase();
-  return CHARACTER_CATEGORY_HINTS.some(
-    (hint) => slug.includes(hint) || name.includes(hint)
-  );
 };
 
 const ensureCharacterCategoryLongFormFields = async (
@@ -269,117 +229,6 @@ const ensureCharacterCategoryLongFormFields = async (
   }
 
   return updatedCategories;
-};
-
-const buildEntityCardSummary = (
-  entity: WorldEntity,
-  category: EntityCategory | null | undefined,
-  aliasTexts: string[] = []
-): {
-  primarySummary: string | null;
-  summarySourceLabel: string | null;
-  summaryIsTruncated: boolean;
-  secondaryFields: Array<{label: string; value: string}>;
-  hiddenFieldCount: number;
-} => {
-  const labelByKey = new Map(
-    [
-      ...(category?.fieldSchema ?? []).map((field) => [field.key, field.label] as const),
-      [ALTERNATIVE_NAMES_KEY, 'Alternative names'] as const
-    ]
-  );
-  const richTextKeys = new Set(
-    (category?.fieldSchema ?? [])
-      .filter((field) => field.type === 'textarea')
-      .map((field) => field.key)
-  );
-
-  const summaryPriority = [
-    ...(category ? CATEGORY_SUMMARY_PRIORITY[category.slug] ?? [] : []),
-    'description',
-    'summary',
-    'notes'
-  ];
-  const dedupedSummaryKeys = Array.from(new Set(summaryPriority));
-  const summarySourceKey =
-    dedupedSummaryKeys.find((key) => {
-      const value = entity.fields[key];
-      return typeof value === 'string' && extractPlainTextFromRichText(value).length > 0;
-    }) ??
-    Array.from(richTextKeys).find((key) => {
-      const value = entity.fields[key];
-      return typeof value === 'string' && extractPlainTextFromRichText(value).length > 0;
-    }) ??
-    null;
-
-  const primarySummary =
-    summarySourceKey && typeof entity.fields[summarySourceKey] === 'string'
-      ? extractStructuredSummaryFromRichText(entity.fields[summarySourceKey] as string)
-      : null;
-
-  const secondaryPriority = Array.from(
-    new Set([
-      ...(category?.fieldSchema.map((field) => field.key) ?? []),
-      ...(aliasTexts.length > 0 ? [ALTERNATIVE_NAMES_KEY] : []),
-      ...Object.keys(entity.fields)
-    ])
-  );
-
-  const allSecondaryFields = secondaryPriority
-    .filter((key) => key !== summarySourceKey)
-    .map((key) => {
-      if (key === ALTERNATIVE_NAMES_KEY) {
-        const fieldAliases = parseAlternativeNames(
-          typeof entity.fields[ALTERNATIVE_NAMES_KEY] === 'string'
-            ? String(entity.fields[ALTERNATIVE_NAMES_KEY])
-            : ''
-        );
-        return {
-          label: labelByKey.get(key) ?? key,
-          value: formatAlternativeNames(
-            parseAlternativeNames([...fieldAliases, ...aliasTexts].join(', '))
-          )
-        };
-      }
-      const value = entity.fields[key];
-      if (typeof value === 'string') {
-        return {
-          label: labelByKey.get(key) ?? key,
-          value: extractPlainTextFromRichText(value)
-        };
-      }
-      if (Array.isArray(value)) {
-        return {
-          label: labelByKey.get(key) ?? key,
-          value: value.map((item) => String(item)).filter(Boolean).join(', ')
-        };
-      }
-      if (typeof value === 'boolean') {
-        return {
-          label: labelByKey.get(key) ?? key,
-          value: value ? 'Yes' : 'No'
-        };
-      }
-      return {
-        label: labelByKey.get(key) ?? key,
-        value: String(value ?? '')
-      };
-    })
-    .filter((field) => field.value.trim().length > 0);
-  const secondaryFields = allSecondaryFields.slice(0, 3);
-
-  return {
-    primarySummary: primarySummary
-      ? compactEntityCardText(primarySummary, 180)
-      : null,
-    summarySourceLabel: summarySourceKey ? labelByKey.get(summarySourceKey) ?? summarySourceKey : null,
-    summaryIsTruncated: Boolean(primarySummary && primarySummary.length > 180),
-    secondaryFields: secondaryFields.map((field) => ({
-      ...field,
-      value: compactEntityCardText(field.value, 96)
-    })),
-    hiddenFieldCount: Math.max(0, allSecondaryFields.length - secondaryFields.length)
-  };
 };
 
 
@@ -805,13 +654,10 @@ function WorldBibleRoute() {
     () => categories.find((category) => isCharacterCategory(category)) ?? null,
     [categories]
   );
-  const activeCategoryIsCharacterLike = useMemo(() => {
-    const slug = (activeCategory?.slug ?? '').toLowerCase();
-    const categoryName = (activeCategory?.name ?? '').toLowerCase();
-    return CHARACTER_CATEGORY_HINTS.some(
-      (hint) => slug.includes(hint) || categoryName.includes(hint)
-    );
-  }, [activeCategory?.name, activeCategory?.slug]);
+  const activeCategoryIsCharacterLike = useMemo(
+    () => Boolean(activeCategory && isCharacterCategory(activeCategory)),
+    [activeCategory]
+  );
   const characterDescriptionField = activeCategoryIsCharacterLike
     ? activeCategory?.fieldSchema.find((field) => field.key === 'description') ?? null
     : null;
@@ -2037,127 +1883,13 @@ function WorldBibleRoute() {
   };
 
   const renderEntityField = (field: EntityCategory['fieldSchema'][number]) => (
-    <div key={field.key} className={styles.formGroup}>
-      {field.type === 'textarea' ? (
-        <WorldBibleRichTextField
-          label={field.label}
-          required={field.required}
-          value={fieldValues[field.key] || ''}
-          variant={activeCategoryIsCharacterLike ? 'character' : 'default'}
-          onChange={(value) =>
-            setFieldValues({
-              ...fieldValues,
-              [field.key]: value
-            })
-          }
-        />
-      ) : (
-        <label>
-          {field.label}
-          {field.required && ' *'}
-          {field.type === 'select' ? (
-            <select
-              value={fieldValues[field.key] || ''}
-              onChange={(e) =>
-                setFieldValues({
-                  ...fieldValues,
-                  [field.key]: e.target.value
-                })
-              }
-              required={field.required}
-            >
-              <option value=''>-- Select --</option>
-              {field.options?.map((opt) => (
-                <option key={opt} value={opt}>
-                  {opt}
-                </option>
-              ))}
-            </select>
-          ) : field.type === 'multiselect' ? (
-            <div className={styles.multiselectContainer}>
-              {field.options?.map((opt) => (
-                <label key={opt} className={styles.multiselectOption}>
-                  <input
-                    type='checkbox'
-                    checked={(fieldValues[field.key] || '')
-                      .split(',')
-                      .includes(opt)}
-                    onChange={(e) => {
-                      const current = (fieldValues[field.key] || '')
-                        .split(',')
-                        .filter(Boolean);
-                      const updated = e.target.checked
-                        ? [...current, opt]
-                        : current.filter((v) => v !== opt);
-                      setFieldValues({
-                        ...fieldValues,
-                        [field.key]: updated.join(',')
-                      });
-                    }}
-                  />
-                  <span>{opt}</span>
-                </label>
-              ))}
-            </div>
-          ) : field.type === 'checkbox' ? (
-            <input
-              type='checkbox'
-              checked={fieldValues[field.key] === 'true'}
-              onChange={(e) =>
-                setFieldValues({
-                  ...fieldValues,
-                  [field.key]: e.target.checked ? 'true' : 'false'
-                })
-              }
-            />
-          ) : field.type === 'dice' ? (
-            <input
-              type='text'
-              value={fieldValues[field.key] || ''}
-              onChange={(e) =>
-                setFieldValues({
-                  ...fieldValues,
-                  [field.key]: e.target.value
-                })
-              }
-              placeholder={
-                field.diceConfig?.allowMultipleDice
-                  ? 'e.g., 3d6, 2d8+1d4'
-                  : 'e.g., 1d20'
-              }
-              pattern={field.diceConfig?.allowMultipleDice ? '.*' : '1d\\d+'}
-              required={field.required}
-            />
-          ) : field.type === 'modifier' ? (
-            <input
-              type='text'
-              value={fieldValues[field.key] || ''}
-              onChange={(e) =>
-                setFieldValues({
-                  ...fieldValues,
-                  [field.key]: e.target.value
-                })
-              }
-              placeholder='e.g., +5, -2'
-              pattern='[+-]?\\d+'
-              required={field.required}
-            />
-          ) : (
-            <input
-              type={field.type}
-              value={fieldValues[field.key] || ''}
-              onChange={(e) =>
-                setFieldValues({
-                  ...fieldValues,
-                  [field.key]: e.target.value
-                })
-              }
-              required={field.required}
-            />
-          )}
-        </label>
-      )}
-    </div>
+    <EntityFieldEditor
+      key={field.key}
+      field={field}
+      fieldValues={fieldValues}
+      variant={activeCategoryIsCharacterLike ? 'character' : 'default'}
+      onFieldValuesChange={setFieldValues}
+    />
   );
 
   if (!activeProject) {
@@ -2634,70 +2366,12 @@ function WorldBibleRoute() {
                     <p className={styles.importError}>{draft.parseError}</p>
                   ) : (
                     <>
-                      {draft.detectedSections && draft.detectedSections.length > 0 && (
-                        <div className={styles.importSectionMapping}>
-                          <div className={styles.importSectionMappingHeader}>
-                            <div>
-                              <strong>Classify detected headings</strong>
-                              <p>
-                                Specific topics stay inside this record by default.
-                                Promote only reusable headings to category fields.
-                              </p>
-                            </div>
-                            <label>
-                              <input
-                                type='checkbox'
-                                checked={draft.useDetectedSections ?? false}
-                                disabled={isApplyingImports}
-                                onChange={(event) =>
-                                  updateImportDraft(draft.id, {
-                                    useDetectedSections: event.target.checked
-                                  })
-                                }
-                              />
-                              <span>Use structured headings</span>
-                            </label>
-                          </div>
-                          <div className={styles.importSectionList}>
-                            {draft.detectedSections.slice(0, 8).map((section) => (
-                              <div key={section.id} className={styles.importSectionItem}>
-                                <div>
-                                  <strong>{section.title}</strong>
-                                  <span>
-                                    {IMPORT_SECTION_ACTION_HELP[section.action]}
-                                  </span>
-                                </div>
-                                <select
-                                  value={section.action}
-                                  disabled={
-                                    isApplyingImports || !(draft.useDetectedSections ?? false)
-                                  }
-                                  onChange={(event) =>
-                                    updateImportSectionAction(
-                                      draft.id,
-                                      section.id,
-                                      event.target.value as WorldBibleImportSectionAction
-                                    )
-                                  }
-                                >
-                                  {(
-                                    [
-                                      'existing-field',
-                                      'record-section',
-                                      'new-field',
-                                      'ignore'
-                                    ] as WorldBibleImportSectionAction[]
-                                  ).map((action) => (
-                                    <option key={action} value={action}>
-                                      {IMPORT_SECTION_ACTION_LABELS[action]}
-                                    </option>
-                                  ))}
-                                </select>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
+                      <ImportSectionPanel
+                        draft={draft}
+                        isApplyingImports={isApplyingImports}
+                        onUpdateDraft={updateImportDraft}
+                        onUpdateSectionAction={updateImportSectionAction}
+                      />
                       <div className={styles.importDraftActions}>
                         <button
                           type='button'
@@ -4367,109 +4041,5 @@ function WorldBibleRoute() {
   );
 }
 
-interface CategoryManagerProps {
-  projectId: string;
-  categories: EntityCategory[];
-  onCategoriesChange: (cats: EntityCategory[]) => void;
-  onClose: () => void;
-}
-
-function CategoryManager({
-  projectId,
-  categories,
-  onCategoriesChange,
-  onClose
-}: CategoryManagerProps) {
-  const [newCatName, setNewCatName] = useState('');
-  const [editingCategory, setEditingCategory] = useState<EntityCategory | null>(
-    null
-  );
-
-  const handleAddCategory = async () => {
-    if (!newCatName.trim()) return;
-
-    const cat: EntityCategory = {
-      id: crypto.randomUUID(),
-      projectId,
-      name: newCatName,
-      slug: newCatName.toLowerCase().replace(/\s+/g, '-'),
-      fieldSchema: [
-        {key: 'description', label: 'Description', type: 'textarea'}
-      ],
-      createdAt: Date.now()
-    };
-
-    await saveCategory(cat);
-    onCategoriesChange([...categories, cat]);
-    setNewCatName('');
-  };
-
-  const handleDeleteCategory = async (id: string) => {
-    if (!confirm('Delete this category? All entities in it will be orphaned.'))
-      return;
-    await deleteCategory(id);
-    onCategoriesChange(categories.filter((c) => c.id !== id));
-  };
-
-  const handleSaveCategory = (updated: EntityCategory) => {
-    onCategoriesChange(
-      categories.map((c) => (c.id === updated.id ? updated : c))
-    );
-    setEditingCategory(null);
-  };
-
-  if (editingCategory) {
-    return (
-      <CategoryEditor
-        category={editingCategory}
-        onSave={handleSaveCategory}
-        onCancel={() => setEditingCategory(null)}
-      />
-    );
-  }
-
-  return (
-    <div className={styles.categoryManager}>
-      <h3>Manage Categories</h3>
-      <div className={styles.addCategoryForm}>
-        <input
-          type='text'
-          placeholder='New category name (e.g., Monsters)'
-          value={newCatName}
-          onChange={(e) => setNewCatName(e.target.value)}
-        />
-        <button onClick={handleAddCategory}>Add Category</button>
-      </div>
-
-      <ul className={styles.categoryList}>
-        {categories.map((cat) => (
-          <li key={cat.id} className={styles.categoryItem}>
-            <div className={styles.categoryInfo}>
-              <strong>{cat.name}</strong>
-              <span className={styles.categoryMeta}>
-                ({cat.fieldSchema.length} fields)
-              </span>
-            </div>
-            <div className={styles.categoryActions}>
-              <button onClick={() => setEditingCategory(cat)}>
-                Edit Fields
-              </button>
-              <button
-                onClick={() => handleDeleteCategory(cat.id)}
-                className={styles.deleteButton}
-              >
-                Delete
-              </button>
-            </div>
-          </li>
-        ))}
-      </ul>
-
-      <button onClick={onClose} className={styles.closeButton}>
-        Close
-      </button>
-    </div>
-  );
-}
 
 export default WorldBibleRoute;

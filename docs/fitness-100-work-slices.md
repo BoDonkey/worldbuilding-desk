@@ -60,6 +60,7 @@ Updated 2026-07-31. Slices not listed here have not started.
 | 11 | Complete | Extracted the Workspace unknown-entity notice and parent-canon status panels into explicitly typed components that reuse the existing Workspace CSS module, reducing `WorkspaceRoute.tsx` from 4,761 to 4,708 lines; lint, all 201 web tests, the web build, and all 42 Cypress tests pass |
 | 12 | Complete | Extracted the shared mobile Workspace drawer overlay, side-specific panel shell, header, close behavior, and focus-trap ref wiring into a compositional `WorkspaceDrawerPanel` while retaining the existing scene/context drawer components as children; `WorkspaceRoute.tsx` fell from 4,708 to 4,685 lines, and lint, all 201 web tests, the web build, and all 42 Cypress tests pass |
 | 13 | Complete | Extracted the Workspace command dispatcher/event subscription into `useWorkspaceCommands`; moved the scene-roster model, selected-scene timeline, and manual-capture link ranking into tested pure Workspace view services; `WorkspaceRoute.tsx` fell from 4,685 to 4,084 lines. Lint, all 207 web tests, the web build, and all 42 Cypress tests pass |
+| 14 | Complete | Extracted the World Bible category manager, entity-field editor, and detected-heading import mapper into explicitly typed components that retain the existing CSS module; moved character-category detection and entity-card summary logic into a service with 5 focused tests. `WorldBibleRoute.tsx` fell from 4,475 to 4,045 lines; lint, all 212 web tests, the web build, and all 42 Cypress tests pass |
 
 ---
 
