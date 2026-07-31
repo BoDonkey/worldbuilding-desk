@@ -9,6 +9,8 @@
 > **Post-plan follow-up:** Scene-roster and positioned-state-mutation orchestration moved from `WorkspaceRoute.tsx` into the cohesive `useWorkspaceSceneRoster` hook. The route fell from 4,084 to 3,424 lines; the new hook is 989 lines. No markup or styling changed, and web lint, all 250 unit tests, the production build, and all 42 Cypress tests pass.
 >
 > World Bible project-data lifecycle orchestration subsequently moved into `useWorldBibleProjectData`: category/entity/alias loading, character and scene health data, lore links, compendium links, RAG/Shodh services, memories, and series-canon sync state. `WorldBibleRoute.tsx` fell from 4,045 to 3,736 lines; the new hook is 376 lines. No markup or styling changed, and the same full verification battery passes.
+>
+> Selected-entity health and lore orchestration then moved into `useWorldBibleSelectedEntity`: canonical aliases/facts, scene mentions, mutation history, character context probing, and linked Source Note creation. `WorldBibleRoute.tsx` fell again from 3,736 to 3,534 lines; the new hook is 343 lines. No markup or styling changed, and the same full verification battery passes.
 
 ## Overall grade: B+ (up from B)
 
