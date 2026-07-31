@@ -10,7 +10,6 @@ import type {
   EntityCategory,
   WorldEntity
 } from '../entityTypes';
-import {saveEntity} from '../entityStorage';
 import {ProjectScratchpadButton} from '../components/ProjectScratchpadButton';
 import {PageHeader} from '../components/PageHeader';
 import {AIAssistant} from '../components/AIAssistant/AIAssistant';
@@ -40,13 +39,8 @@ import {
   parseAlternativeNames
 } from '../services/worldBible/worldBibleEntityHelpers';
 import {
-  buildEntityMatchKey,
   getReviewResolutionLabel
 } from '../services/worldBible/worldBibleReviewHelpers';
-import {
-  buildCanonicalAliasList,
-  deriveCharacterAliasSuggestions
-} from '../services/worldBible/worldBibleCanonicalization';
 import {buildCanonicalFactSummary} from '../services/lore/canonicalFactActions';
 import {
   buildEntityCardSummary,
@@ -62,6 +56,10 @@ import {
   useWorldBibleAuthoringAssistant,
   type AiHelperActionTarget
 } from '../hooks/useWorldBibleAuthoringAssistant';
+import {
+  useWorldBibleRecordResolution,
+  type WorldBibleCanonicalizationHandoff
+} from '../hooks/useWorldBibleRecordResolution';
 
 // activeProject read from store below
 
@@ -145,11 +143,8 @@ function WorldBibleRoute() {
   const [pendingReviewFocus, setPendingReviewFocus] = useState<'general' | 'aliases' | null>(
     null
   );
-  const [handoffGuidance, setHandoffGuidance] = useState<{
-    kind: 'character-canonicalization';
-    sourceName: string;
-    matchEntityId?: string;
-  } | null>(null);
+  const [handoffGuidance, setHandoffGuidance] =
+    useState<WorldBibleCanonicalizationHandoff | null>(null);
   const reviewFilter = 'all' as const;
   const recommendedFilter = 'all' as const;
   const seriesConfig = activeProject
@@ -438,51 +433,6 @@ function WorldBibleRoute() {
           (editingId && selectedEntity?.categoryId === activeCategory?.id)
       )
     : false;
-  const isCanonicalRenameDraft = Boolean(
-    selectedEntity &&
-      name.trim().length > 0 &&
-      normalizeName(selectedEntity.name) !== normalizeName(name)
-  );
-  const suggestedCharacterAliases = useMemo(() => {
-    if (!activeCategoryIsCharacterLike) {
-      return [];
-    }
-    const currentName = name.trim();
-    if (!currentName) {
-      return [];
-    }
-    const existingAliases = new Set(
-      parseAlternativeNames(fieldValues[ALTERNATIVE_NAMES_KEY] || '')
-        .map((alias) => normalizeName(alias))
-        .filter(Boolean)
-    );
-    return deriveCharacterAliasSuggestions(currentName).filter(
-      (alias) =>
-        normalizeName(alias) !== normalizeName(currentName) &&
-        !existingAliases.has(normalizeName(alias))
-    );
-  }, [activeCategoryIsCharacterLike, fieldValues, name]);
-  const canonicalRenameAliasPreview = useMemo(() => {
-    if (!isCanonicalRenameDraft || !selectedEntity) {
-      return [];
-    }
-    return buildCanonicalAliasList({
-      previousName: selectedEntity.name,
-      nextName: name,
-      aliases: parseAlternativeNames(fieldValues[ALTERNATIVE_NAMES_KEY] || '')
-    });
-  }, [fieldValues, isCanonicalRenameDraft, name, selectedEntity]);
-  const manualResolutionTargets = useMemo(
-    () =>
-      entities
-        .filter((entity) => entity.categoryId === activeTab && entity.id !== editingId)
-        .sort((a, b) => a.name.localeCompare(b.name)),
-    [activeTab, editingId, entities]
-  );
-  const manualResolutionTarget =
-    manualResolutionTargets.find((entity) => entity.id === manualResolutionTargetId) ??
-    manualResolutionTargets[0] ??
-    null;
   const {
     reviewQueue,
     filteredReviewQueue,
@@ -508,29 +458,6 @@ function WorldBibleRoute() {
     normalizeName,
     parseAlternativeNames
   });
-  const canonicalResolutionMatches = useMemo(() => {
-    if (!editingId) {
-      return potentialEntityMatches;
-    }
-    const handoffMatch = handoffGuidance?.matchEntityId
-      ? entities.find((entity) => entity.id === handoffGuidance.matchEntityId)
-      : null;
-    if (!handoffMatch || handoffMatch.id === editingId) {
-      return potentialEntityMatches;
-    }
-    if (potentialEntityMatches.some((match) => match.entity.id === handoffMatch.id)) {
-      return potentialEntityMatches;
-    }
-    return [
-      {
-        entity: handoffMatch,
-        matchKey: buildEntityMatchKey(editingId, handoffMatch.id),
-        reasons: [`Linked from ${handoffGuidance?.sourceName ?? 'Character Tools'}`],
-        recommendedResolution: 'merge' as const
-      },
-      ...potentialEntityMatches
-    ];
-  }, [editingId, entities, handoffGuidance, potentialEntityMatches]);
   const memoryPanelEmpty =
     'This entry has no captured memories yet. Save it to generate one or adjust the filter.';
 
@@ -758,187 +685,56 @@ function WorldBibleRoute() {
     navigate: (to, options) => navigate(to, options as never)
   });
 
-  const handleSaveCanonicalRename = useCallback(async () => {
-    await saveEntityDraft({successMessage: 'Canonical name updated.'});
-    setIsNameResolverOpen(false);
-  }, [saveEntityDraft]);
-
-  const handlePromoteAliasToCanonical = useCallback(
-    (alias: string) => {
-      if (!selectedEntity) return;
-      const nextName = alias.trim();
-      if (!nextName) return;
-      const previousName = name.trim() || selectedEntity.name;
-      const nextAliases = formatAlternativeNames(
-        parseAlternativeNames(
-          [
-            previousName,
-            fieldValues[ALTERNATIVE_NAMES_KEY] || '',
-            ...selectedEntityAliases
-          ]
-            .filter(Boolean)
-            .join(', ')
-        ).filter((candidate) => normalizeName(candidate) !== normalizeName(nextName))
-      );
-      setName(nextName);
-      setFieldValues((prev) => ({
-        ...prev,
-        [ALTERNATIVE_NAMES_KEY]: nextAliases
-      }));
-    },
-    [fieldValues, name, selectedEntity, selectedEntityAliases]
-  );
-
-  const handleMoveSelectedEntityCategory = useCallback(async () => {
-    if (!selectedEntity || !moveCategoryTargetId) return;
-    const targetCategory = categories.find((category) => category.id === moveCategoryTargetId);
-    if (!targetCategory || targetCategory.id === selectedEntity.categoryId) return;
-
-    setMovingEntityCategoryId(selectedEntity.id);
-    setFeedback(null);
-    try {
-      const nextEntity: WorldEntity = {
-        ...selectedEntity,
-        categoryId: targetCategory.id,
-        updatedAt: Date.now()
-      };
-      await saveEntity(nextEntity);
-      if (ragService) {
-        await ragService.indexDocument(
-          nextEntity.id,
-          nextEntity.name,
-          buildEntityContent(nextEntity),
-          'worldbible',
-          {
-            tags: [targetCategory.slug],
-            entityIds: [nextEntity.id]
-          }
-        );
-      }
-      if (shodhService) {
-        await shodhService.captureAutoMemory({
-          projectId: nextEntity.projectId,
-          documentId: nextEntity.id,
-          title: nextEntity.name,
-          content: buildEntityContent(nextEntity),
-          tags: ['worldbible', targetCategory.slug]
-        });
-        await refreshMemories();
-      }
-      setEntities((prev) =>
-        prev.map((entity) => (entity.id === nextEntity.id ? nextEntity : entity))
-      );
-      setActiveTab(targetCategory.id);
-      handleEdit(nextEntity);
-      setFeedback({
-        tone: 'success',
-        message: `Moved "${nextEntity.name}" to ${targetCategory.name}.`
-      });
-    } catch (error) {
-      const message =
-        error instanceof Error ? error.message : 'Unable to move this record.';
-      setFeedback({tone: 'error', message});
-    } finally {
-      setMovingEntityCategoryId(null);
-    }
-  }, [
-    categories,
-    handleEdit,
-    moveCategoryTargetId,
-    ragService,
-    refreshMemories,
+  const {
+    isCanonicalRenameDraft,
+    suggestedCharacterAliases,
+    canonicalRenameAliasPreview,
+    manualResolutionTargets,
+    manualResolutionTarget,
+    canonicalResolutionMatches,
+    handleSaveCanonicalRename,
+    handlePromoteAliasToCanonical,
+    handleMoveSelectedEntityCategory,
+    handleKeepSeparateMatch,
+    handleIgnoreEntityMatch,
+    handleAddSuggestedCharacterAlias
+  } = useWorldBibleRecordResolution({
+    activeProject,
+    projectSettings,
+    saveProjectSettings,
+    activeCategoryIsCharacterLike,
+    activeTab,
+    editingId,
+    name,
+    setName,
+    fieldValues,
+    setFieldValues,
     selectedEntity,
+    selectedEntityAliases,
+    entities,
     setEntities,
-    shodhService
-  ]);
+    categories,
+    potentialEntityMatches,
+    handoffGuidance,
+    manualResolutionTargetId,
+    setManualResolutionTargetId,
+    moveCategoryTargetId,
+    setMovingEntityCategoryId,
+    setActiveTab,
+    setIsNameResolverOpen,
+    setFeedback,
+    ragService,
+    shodhService,
+    refreshMemories,
+    buildEntityContent,
+    handleEdit,
+    saveEntityDraft
+  });
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
     await saveEntityDraft();
   };
-
-  const persistIgnoredEntityMatch = useCallback(
-    async (otherEntityId: string) => {
-      if (!activeProject || !projectSettings || !editingId) {
-        throw new Error('Project settings are not ready.');
-      }
-
-      const matchKey = buildEntityMatchKey(editingId, otherEntityId);
-      const nextSettings = {
-        ...projectSettings,
-        ignoredEntityMatchKeys: Array.from(
-          new Set([...(projectSettings.ignoredEntityMatchKeys ?? []), matchKey])
-        )
-      };
-      await saveProjectSettings(nextSettings);
-      return matchKey;
-    },
-    [activeProject, editingId, projectSettings, saveProjectSettings]
-  );
-
-  const handleKeepSeparateMatch = useCallback(
-    async (otherEntity: WorldEntity) => {
-      try {
-        await persistIgnoredEntityMatch(otherEntity.id);
-        setFeedback({
-          tone: 'success',
-          message: `"${selectedEntity?.name ?? 'This entry'}" and "${otherEntity.name}" will stay separate.`
-        });
-      } catch (error) {
-        const message =
-          error instanceof Error ? error.message : 'Unable to keep these records separate.';
-        setFeedback({tone: 'error', message});
-      }
-    },
-    [
-      persistIgnoredEntityMatch,
-      selectedEntity,
-      setFeedback
-    ]
-  );
-
-  const handleIgnoreEntityMatch = useCallback(
-    async (otherEntity: WorldEntity) => {
-      try {
-        await persistIgnoredEntityMatch(otherEntity.id);
-        setFeedback({
-          tone: 'success',
-          message: `Ignored the match between "${selectedEntity?.name ?? 'this entry'}" and "${otherEntity.name}".`
-        });
-      } catch (error) {
-        const message =
-          error instanceof Error ? error.message : 'Unable to ignore this match.';
-        setFeedback({tone: 'error', message});
-      }
-    },
-    [
-      persistIgnoredEntityMatch,
-      selectedEntity,
-      setFeedback
-    ]
-  );
-
-  const handleAddSuggestedCharacterAlias = useCallback(
-    (alias: string) => {
-      setFieldValues((prev) => ({
-        ...prev,
-        [ALTERNATIVE_NAMES_KEY]: formatAlternativeNames(
-          parseAlternativeNames(
-            [prev[ALTERNATIVE_NAMES_KEY] || '', alias].filter(Boolean).join(', ')
-          )
-        )
-      }));
-    },
-    []
-  );
-
-  useEffect(() => {
-    setManualResolutionTargetId((targetId) =>
-      manualResolutionTargets.some((entity) => entity.id === targetId)
-        ? targetId
-        : manualResolutionTargets[0]?.id ?? ''
-    );
-  }, [manualResolutionTargets]);
 
   useEffect(() => {
     if (pendingReviewFocus !== 'aliases') return;
