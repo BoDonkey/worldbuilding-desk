@@ -50,13 +50,10 @@ import {
   incrementInspectorConsultationUsage
 } from '../services/editor';
 import {
-  WORKSPACE_COMMAND_EVENT,
-  type WorkspaceCommandId
-} from '../commands/workspaceCommands';
-import {
   useWorkspaceDrawers,
   type WorkspaceContextDrawerView
 } from '../hooks/useWorkspaceDrawers';
+import {useWorkspaceCommands} from '../hooks/useWorkspaceCommands';
 import {getProjectCapabilities} from '../projectMode';
 import styles from '../styles/WorkspaceRoute.module.css';
 import {useAppStore} from '../store/appStore';
@@ -69,18 +66,14 @@ import {UnknownEntityPanel} from '../components/Workspace/UnknownEntityPanel';
 import {PositionedStateChangeComposer} from '../components/Workspace/PositionedStateChangeComposer';
 import {SceneInventoryCapture} from '../components/Workspace/SceneInventoryCapture';
 import type {
-  SceneRosterAddOption,
   SceneRosterCharacterCard,
   SceneRosterInventoryLine,
-  SceneRosterItemCard,
   SceneRosterTimelineEvent
 } from '../components/Workspace/SceneRosterPanel';
 import {
-  describeStateMutationEventStaleness,
   getStateMutationEventStaleness
 } from '../services/state/stateMutationStaleness';
 import {
-  applyStateMutationCommand,
   compareStateMutationEvents,
   replayCharacterState,
   validateStateMutationEventForRuleset
@@ -88,9 +81,9 @@ import {
 import {validateStateMutationEvent} from '../services/state/stateMutationSchemas';
 import {
   buildConsumableCommands,
-  buildConsumableExpirationCommands,
-  findConsumableEntry
+  buildConsumableExpirationCommands
 } from '../services/state/consumableEffects';
+import {summarizeStateMutationCommand} from '../services/state/stateMutationPresentation';
 import {
   captureStateMutationAnchor,
   normalizeStateMutationPosition,
@@ -99,10 +92,6 @@ import {
   type EditorTextSnapshot,
   type StateMutationTextAnchor
 } from '../services/state/stateMutationAnchor';
-import {
-  summarizeStateMutationCommand,
-  summarizeStateMutationEffects
-} from '../services/state/stateMutationPresentation';
 import {useWorkspaceProjectData} from '../hooks/useWorkspaceProjectData';
 import {useWorkspaceLoreSnippets} from '../hooks/useWorkspaceLoreSnippets';
 import {useWorkspaceScratchpad} from '../hooks/useWorkspaceScratchpad';
@@ -117,9 +106,12 @@ import {
   saveStateMutationEvent
 } from '../services/state/stateMutationLedger';
 import {
-  selectSceneRoster,
-  type SceneRosterCandidate
-} from '../services/workspace/sceneRoster';
+  buildManualCaptureLinkOptions,
+  buildSceneRosterModel,
+  buildSelectedSceneTimeline,
+  isCharacterLikeCategory,
+  normalizeCaptureSelection
+} from '../services/workspace/workspaceView';
 
 declare global {
   interface Window {
@@ -155,37 +147,6 @@ const toSingularLabel = (value: string): string => {
     return trimmed.slice(0, -1);
   }
   return trimmed;
-};
-
-const normalizeRosterName = (value: string): string =>
-  value.trim().toLocaleLowerCase().replace(/\s+/g, ' ');
-
-const displayRosterFieldValue = (value: unknown): string | null => {
-  if (typeof value === 'string') {
-    const text = value
-      .replace(/<br\s*\/?>/gi, ' ')
-      .replace(/<[^>]+>/g, ' ')
-      .replace(/&nbsp;/gi, ' ')
-      .replace(/\s+/g, ' ')
-      .trim();
-    return text || null;
-  }
-  if (typeof value === 'number') return String(value);
-  if (typeof value === 'boolean') return value ? 'Yes' : 'No';
-  if (Array.isArray(value)) {
-    const values = value
-      .map((entry) => displayRosterFieldValue(entry))
-      .filter((entry): entry is string => Boolean(entry));
-    return values.length > 0 ? values.join(', ') : null;
-  }
-  if (value && typeof value === 'object') {
-    try {
-      return JSON.stringify(value);
-    } catch {
-      return null;
-    }
-  }
-  return null;
 };
 
 const hashSceneContent = (value: string): string => {
@@ -1013,289 +974,47 @@ function WorkspaceRoute() {
     [stateMutationAnchorResolutionById, stateMutationEvents]
   );
 
-  const sceneRosterModel = useMemo(() => {
-    const sceneTitle = selectedDocument?.title || (selectedDocument ? 'Untitled scene' : null);
-    if (!selectedDocument) {
-      return {
-        sceneTitle,
-        characters: [] as SceneRosterCharacterCard[],
-        items: [] as SceneRosterItemCard[],
-        addOptions: [] as SceneRosterAddOption[],
-        ambiguousSurfaces: [] as string[]
-      };
-    }
-
-    const characterCategoryIds = new Set(
-      categories
-        .filter((category) => {
-          const label = `${category.slug} ${category.name}`.toLocaleLowerCase();
-          return ['character', 'characters', 'npc', 'person', 'people'].some((hint) =>
-            label.includes(hint)
-          );
-        })
-        .map((category) => category.id)
-    );
-    const characterById = new Map(characters.map((character) => [character.id, character]));
-    const entityById = new Map(entities.map((entity) => [entity.id, entity]));
-    const categoryById = new Map(categories.map((category) => [category.id, category]));
-    const characterEntityByName = new Map(
-      entities
-        .filter((entity) => characterCategoryIds.has(entity.categoryId))
-        .map((entity) => [normalizeRosterName(entity.name), entity])
-    );
-    const sheetByCharacterId = new Map(
-      characterSheets
-        .filter((sheet) => Boolean(sheet.characterId))
-        .map((sheet) => [sheet.characterId as string, sheet])
-    );
-    const sheetByName = new Map(
-      characterSheets.map((sheet) => [normalizeRosterName(sheet.name), sheet])
-    );
-    const candidates: SceneRosterCandidate[] = [];
-    const characterSheetByKey = new Map<string, (typeof characterSheets)[number] | null>();
-    const characterRecordByKey = new Map<string, (typeof characters)[number] | null>();
-
-    characterSheets.forEach((sheet) => {
-      const character =
-        (sheet.characterId ? characterById.get(sheet.characterId) : null) ??
-        characters.find(
-          (entry) => normalizeRosterName(entry.name) === normalizeRosterName(sheet.name)
-        ) ??
-        null;
-      const characterEntity = characterEntityByName.get(normalizeRosterName(sheet.name));
-      const aliasValues = aliases
-        .filter(
-          (alias) =>
-            (alias.targetType === 'character' && alias.targetId === character?.id) ||
-            (alias.targetType === 'entity' && alias.targetId === characterEntity?.id)
-        )
-        .map((alias) => alias.alias);
-      const key = `character:${sheet.id}`;
-      candidates.push({
-        key,
-        type: 'character',
-        id: sheet.id,
-        name: sheet.name,
-        aliases: aliasValues
-      });
-      characterSheetByKey.set(key, sheet);
-      characterRecordByKey.set(key, character);
-    });
-
-    characters.forEach((character) => {
-      if (
-        sheetByCharacterId.has(character.id) ||
-        sheetByName.has(normalizeRosterName(character.name))
-      ) {
-        return;
-      }
-      const characterEntity = characterEntityByName.get(normalizeRosterName(character.name));
-      const key = `character-record:${character.id}`;
-      candidates.push({
-        key,
-        type: 'character',
-        id: character.id,
-        name: character.name,
-        aliases: aliases
-          .filter(
-            (alias) =>
-              (alias.targetType === 'character' && alias.targetId === character.id) ||
-              (alias.targetType === 'entity' && alias.targetId === characterEntity?.id)
-          )
-          .map((alias) => alias.alias)
-      });
-      characterSheetByKey.set(key, null);
-      characterRecordByKey.set(key, character);
-    });
-
-    entities
-      .filter((entity) => !characterCategoryIds.has(entity.categoryId))
-      .forEach((entity) => {
-        candidates.push({
-          key: `entity:${entity.id}`,
-          type: 'entity',
-          id: entity.id,
-          name: entity.name,
-          aliases: aliases
-            .filter(
-              (alias) => alias.targetType === 'entity' && alias.targetId === entity.id
-            )
-            .map((alias) => alias.alias)
-        });
-      });
-
-    const selection = selectSceneRoster({
-      content: deferredRosterContent,
-      candidates,
-      overrides: getSceneRosterOverrides(selectedDocument.id)
-    });
-    const orderedDocuments = sortWritingDocuments(documents);
-    const selectedSceneOrder =
-      orderedDocuments.findIndex((document) => document.id === selectedDocument.id) + 1;
-
-    const characterCards = selection.entries
-      .filter((entry) => entry.type === 'character')
-      .map((entry): SceneRosterCharacterCard => {
-        const sheet = characterSheetByKey.get(entry.key) ?? null;
-        const character = characterRecordByKey.get(entry.key) ?? null;
-        if (!sheet) {
-          return {
-            key: entry.key,
-            id: character?.id ?? entry.id,
-            name: entry.name,
-            role:
-              (typeof character?.fields.role === 'string' && character.fields.role.trim()) ||
-              'Role not set',
-            source: entry.source,
-            matchedSurface: entry.matchedSurface,
-            stats: [],
-            resources: [],
-            inventory: [],
-            statuses: [],
-            hasSheet: false
-          };
-        }
-        const replayed = replayCharacterState({
-          sheet,
-          ruleset,
-          events: resolvedStateMutationEvents,
-          target: {
-            actorId: sheet.id,
-            characterId: sheet.characterId,
-            sheetId: sheet.id,
-            actorName: sheet.name
-          },
-          upToSceneOrder:
-            sceneRosterStateMoment === 'opening'
-              ? Math.max(0, selectedSceneOrder - 1)
-              : selectedSceneOrder,
-          upToScenePosition:
-            sceneRosterStateMoment === 'cursor' ? sceneCursorPosition : undefined
-        });
-        return {
-          key: entry.key,
-          id: character?.id ?? sheet.id,
-          sheetId: sheet.id,
-          name: entry.name,
-          role:
-            (typeof character?.fields.role === 'string' && character.fields.role.trim()) ||
-            'Role not set',
-          level: Math.max(1, sheet.level + runtimeModifiers.levelBonus),
-          source: entry.source,
-          matchedSurface: entry.matchedSurface,
-          stats: Object.entries(replayed.stats).map(([id, value]) => ({
-            id,
-            label: statDefinitionNameById.get(id) ?? id,
-            value:
-              typeof value === 'number'
-                ? String(
-                    getEffectiveStatValue({
-                      definitionId: id,
-                      baseValue: value,
-                      runtime: runtimeModifiers
-                    })
-                  )
-                : String(value)
-          })),
-          resources: Object.entries(replayed.resources.current).map(([id, current]) => {
-            const effective = getEffectiveResourceValues({
-              definitionId: id,
-              current,
-              max: replayed.resources.max[id] ?? current,
-              runtime: runtimeModifiers
-            });
-            return {
-              id,
-              label: resourceDefinitionNameById.get(id) ?? id,
-              current: effective.current,
-              max: effective.max
-            };
-          }),
-          inventory: replayed.inventory.items.map((item) => {
-            const consumableEntry = findConsumableEntry({entries: compendiumEntries, item});
-            return {
-              ...item,
-              equipped: replayed.inventory.equipped.some(
-                (name) => name.trim().toLocaleLowerCase() === item.name.trim().toLocaleLowerCase()
-              ),
-              consumable: consumableEntry?.consumable ? {
-                definitionId: consumableEntry.id,
-                durationLabel: consumableEntry.consumable.durationLabel
-              } : undefined
-            };
-          }),
-          statuses: Array.from(new Set([...replayed.statuses, ...runtimeModifiers.notes])),
-          location: replayed.locationName,
-          hasSheet: true
-        };
-      });
-
-    const itemCards = selection.entries
-      .filter((entry) => entry.type === 'entity')
-      .map((entry): SceneRosterItemCard | null => {
-        const entity = entityById.get(entry.id);
-        if (!entity) return null;
-        const category = categoryById.get(entity.categoryId);
-        const schemaKeys = new Set(category?.fieldSchema.map((field) => field.key) ?? []);
-        const schemaFields =
-          category?.fieldSchema.flatMap((field) => {
-            const value = displayRosterFieldValue(entity.fields[field.key]);
-            return value ? [{id: field.key, label: field.label, value}] : [];
-          }) ?? [];
-        const extraFields = Object.entries(entity.fields).flatMap(([key, rawValue]) => {
-          if (schemaKeys.has(key)) return [];
-          const value = displayRosterFieldValue(rawValue);
-          return value ? [{id: key, label: key.replace(/_/g, ' '), value}] : [];
-        });
-        return {
-          key: entry.key,
-          id: entity.id,
-          name: entity.name,
-          categoryLabel: category?.name ?? 'World entity',
-          icon: category?.icon,
-          source: entry.source,
-          matchedSurface: entry.matchedSurface,
-          fields: [...schemaFields, ...extraFields]
-        };
-      })
-      .filter((entry): entry is SceneRosterItemCard => Boolean(entry));
-
-    const selectedKeys = new Set(selection.entries.map((entry) => entry.key));
-    const addOptions = candidates
-      .filter((candidate) => !selectedKeys.has(candidate.key))
-      .map((candidate): SceneRosterAddOption => ({
-        key: candidate.key,
-        name: candidate.name,
-        group: candidate.type === 'character' ? 'Characters' : 'Items & entities'
-      }))
-      .sort((left, right) => left.name.localeCompare(right.name));
-
-    return {
-      sceneTitle,
-      characters: characterCards,
-      items: itemCards,
-      addOptions,
-      ambiguousSurfaces: selection.ambiguousSurfaces
-    };
-  }, [
-    aliases,
-    categories,
-    characterSheets,
-    characters,
-    compendiumEntries,
-    deferredRosterContent,
-    documents,
-    entities,
-    getSceneRosterOverrides,
-    resourceDefinitionNameById,
-    ruleset,
-    runtimeModifiers,
-    sceneCursorPosition,
-    sceneRosterStateMoment,
-    selectedDocument,
-    statDefinitionNameById,
-    resolvedStateMutationEvents
-  ]);
+  const sceneRosterModel = useMemo(
+    () =>
+      buildSceneRosterModel({
+        selectedDocument,
+        categories,
+        characters,
+        entities,
+        characterSheets,
+        aliases,
+        content: deferredRosterContent,
+        overrides: getSceneRosterOverrides(selectedDocument?.id ?? null),
+        documents,
+        ruleset,
+        stateMutationEvents: resolvedStateMutationEvents,
+        stateMoment: sceneRosterStateMoment,
+        cursorPosition: sceneCursorPosition,
+        runtimeModifiers,
+        statDefinitionNameById,
+        resourceDefinitionNameById,
+        compendiumEntries
+      }),
+    [
+      aliases,
+      categories,
+      characterSheets,
+      characters,
+      compendiumEntries,
+      deferredRosterContent,
+      documents,
+      entities,
+      getSceneRosterOverrides,
+      resourceDefinitionNameById,
+      ruleset,
+      runtimeModifiers,
+      sceneCursorPosition,
+      sceneRosterStateMoment,
+      selectedDocument,
+      statDefinitionNameById,
+      resolvedStateMutationEvents
+    ]
+  );
 
   const addSceneRosterEntry = useCallback(
     (candidateKey: string) => {
@@ -1773,215 +1492,27 @@ function WorkspaceRoute() {
     ruleset
   ]);
 
-  const selectedSceneTimeline = useMemo(() => {
-    if (!selectedDocument) {
-      return null;
-    }
-
-    const selectedSceneEvents = stateMutationEvents
-      .filter(
-        (
-          event
-        ): event is typeof event & {
-          status: 'accepted' | 'invalidated';
-        } => event.sceneId === selectedDocument.id && event.status !== 'proposed'
-      )
-      .slice()
-      .sort(compareStateMutationEvents);
-    const acceptedEvents = stateMutationEvents
-      .filter((event) => event.status === 'accepted')
-      .slice()
-      .sort(compareStateMutationEvents);
-    const sheetByActorId = new Map<string, typeof characterSheets[number]>();
-    characterSheets.forEach((sheet) => {
-      sheetByActorId.set(sheet.id, sheet);
-      if (sheet.characterId) {
-        sheetByActorId.set(sheet.characterId, sheet);
-      }
-    });
-
-    const actorStateById = new Map<
-      string,
-      ReturnType<typeof replayCharacterState>
-    >();
-    const actorIdsTouchedInSelectedScene = new Set<string>();
-    const entries: Array<{
-      id: string;
-      status: 'accepted' | 'invalidated';
-      stepLabel: string;
-      actorLabel: string;
-      summaryLines: string[];
-      effectLines: string[];
-      isStale: boolean;
-      staleLabel: string;
-    }> = [];
-
-    for (const event of acceptedEvents) {
-      for (const command of event.commands) {
-        const sheet = sheetByActorId.get(command.actorId);
-        if (!sheet) {
-          continue;
-        }
-        const actorStateKey = sheet.id;
-        const before =
-          actorStateById.get(actorStateKey) ??
-          replayCharacterState({
-            sheet,
-            ruleset,
-            events: [],
-            target: {
-              actorId: command.actorId,
-              characterId: sheet.characterId,
-              sheetId: sheet.id,
-              actorName: sheet.name
-            }
-          });
-        const after = applyStateMutationCommand(before, command);
-        actorStateById.set(actorStateKey, after);
-
-        if (event.sceneId === selectedDocument.id) {
-          actorIdsTouchedInSelectedScene.add(actorStateKey);
-          const existingEntry = entries.find((entry) => entry.id === event.id);
-          const summaryLine = summarizeStateMutationCommand({
-            command,
-            labels: {
-              resourceDefinitionNameById,
-              statDefinitionNameById
-            }
-          });
-          const effectLines = summarizeStateMutationEffects({
-            before,
-            after,
-            command,
-            labels: {
-              resourceDefinitionNameById,
-              statDefinitionNameById
-            }
-          });
-          if (existingEntry) {
-            if (existingEntry.actorLabel !== sheet.name) {
-              existingEntry.actorLabel = 'Multiple actors';
-            }
-            existingEntry.summaryLines.push(summaryLine);
-            existingEntry.effectLines.push(...effectLines);
-          } else {
-            const staleness = getStateMutationEventStaleness({
-              event,
-              documents
-            });
-            entries.push({
-              id: event.id,
-              status: 'accepted',
-              stepLabel: `Step ${event.sceneSequence ?? '?'}`,
-              actorLabel: sheet.name,
-              summaryLines: [summaryLine],
-              effectLines,
-              isStale: staleness.isStale,
-              staleLabel: describeStateMutationEventStaleness(staleness) ?? ''
-            });
-          }
-        }
-      }
-    }
-
-    selectedSceneEvents
-      .filter((event) => event.status === 'invalidated')
-      .forEach((event) => {
-        const actorLabel =
-          event.commands
-            .map((command) => sheetByActorId.get(command.actorId)?.name)
-            .find(Boolean) ?? 'Unknown actor';
-        const staleness = getStateMutationEventStaleness({
-          event,
-          documents
-        });
-        entries.push({
-          id: event.id,
-          status: event.status,
-          stepLabel: `Step ${event.sceneSequence ?? '?'}`,
-          actorLabel,
-          summaryLines: event.commands.map((command) =>
-            summarizeStateMutationCommand({
-              command,
-              labels: {
-                resourceDefinitionNameById,
-                statDefinitionNameById
-              }
-            })
-          ),
-          effectLines: [],
-          isStale: staleness.isStale,
-          staleLabel: describeStateMutationEventStaleness(staleness) ?? ''
-        });
-      });
-
-    entries.sort((a, b) => {
-      const aEvent = selectedSceneEvents.find((event) => event.id === a.id);
-      const bEvent = selectedSceneEvents.find((event) => event.id === b.id);
-      if (!aEvent || !bEvent) {
-        return 0;
-      }
-      return compareStateMutationEvents(aEvent, bEvent);
-    });
-
-    const selectedSceneOrder =
-      selectedDocument &&
-      sortWritingDocuments(documents)
-        .findIndex((doc) => doc.id === selectedDocument.id) + 1;
-
-    const snapshots = Array.from(actorIdsTouchedInSelectedScene)
-      .map((actorStateKey) => {
-        const sheet = sheetByActorId.get(actorStateKey);
-        if (!sheet) {
-          return null;
-        }
-        const finalState = replayCharacterState({
-          sheet,
-          ruleset,
-          events: acceptedEvents,
-          target: {
-            actorId: sheet.id,
-            characterId: sheet.characterId,
-            sheetId: sheet.id,
-            actorName: sheet.name
-          },
-          upToSceneOrder: selectedSceneOrder
-        });
-        const resourceLines = Object.entries(finalState.resources.current)
-          .slice(0, 3)
-          .map(([resourceId, value]) => {
-            const label = resourceDefinitionNameById.get(resourceId) ?? resourceId;
-            const max = finalState.resources.max[resourceId];
-            return `${label} ${value}${typeof max === 'number' ? `/${max}` : ''}`;
-          });
-        const lines = [
-          ...resourceLines,
-          finalState.locationName ? `Location ${finalState.locationName}` : '',
-          finalState.statuses.length > 0
-            ? `Statuses ${finalState.statuses.join(', ')}`
-            : ''
-        ].filter(Boolean);
-        return {
-          actorLabel: sheet.name,
-          lines: lines.length > 0 ? lines : ['No tracked changes visible.']
-        };
-      })
-      .filter(Boolean) as Array<{actorLabel: string; lines: string[]}>;
-
-    return {
-      sceneTitle: selectedDocument.title || 'Untitled scene',
-      entries,
-      snapshots
-    };
-  }, [
-    characterSheets,
-    documents,
-    resourceDefinitionNameById,
-    ruleset,
-    selectedDocument,
-    statDefinitionNameById,
-    stateMutationEvents
-  ]);
+  const selectedSceneTimeline = useMemo(
+    () =>
+      buildSelectedSceneTimeline({
+        selectedDocument,
+        stateMutationEvents,
+        characterSheets,
+        ruleset,
+        documents,
+        resourceDefinitionNameById,
+        statDefinitionNameById
+      }),
+    [
+      characterSheets,
+      documents,
+      resourceDefinitionNameById,
+      ruleset,
+      selectedDocument,
+      statDefinitionNameById,
+      stateMutationEvents
+    ]
+  );
 
   const getCharacterStateHoverCard = useCallback((
     loreId: string,
@@ -2150,21 +1681,6 @@ function WorkspaceRoute() {
   const activeSuggestedCategory = activeSuggestedCategoryId
     ? categories.find((category) => category.id === activeSuggestedCategoryId) ?? null
     : null;
-  const normalizeCaptureSelection = useCallback((input: string) =>
-    input
-      .trim()
-      .toLowerCase()
-      .replace(/[^\p{L}\p{N}\s'-]/gu, ' ')
-      .replace(/\s+/g, ' ')
-      .trim(), []);
-  const isCharacterLikeCategory = useCallback((category: {slug: string; name: string} | null) => {
-    if (!category) return false;
-    const slug = category.slug.toLowerCase();
-    const name = category.name.toLowerCase();
-    return ['character', 'characters', 'npc', 'person', 'people'].some(
-      (hint) => slug.includes(hint) || name.includes(hint)
-    );
-  }, []);
   const activeIsCharacterCapture = isCharacterLikeCategory(activeSuggestedCategory);
   const activeRejectedAliases = activeConsistencyPopoverIssue
     ? rejectedAliasSuggestions[activeConsistencyPopoverIssue.surface] ?? []
@@ -2244,62 +1760,16 @@ function WorkspaceRoute() {
       ) ??
       null
     : null;
-  const manualCaptureLinkOptions = useMemo(() => {
-    if (!manualWorldCapture) return [];
-
-    const normalizedSelection = normalizeCaptureSelection(manualWorldCapture.draftText);
-    const categoryLabelById = new Map(
-      categories.map((category) => [category.id, category.name])
-    );
-    const characterCategoryIds = new Set(
-      categories
-        .filter((category) => {
-          const slug = category.slug.toLowerCase();
-          const name = category.name.toLowerCase();
-          return slug.includes('character') || name.includes('character');
-        })
-        .map((category) => category.id)
-    );
-    const candidates = [
-      ...entities.map((entity) => ({
-        id: `entity:${entity.id}`,
-        name: entity.name,
-        type: categoryLabelById.get(entity.categoryId) ?? 'World Bible'
-      })),
-      ...characters
-        .filter((character) => {
-          const matchingCharacterEntity = entities.find(
-            (entity) =>
-              characterCategoryIds.has(entity.categoryId) &&
-              normalizeCaptureSelection(entity.name) ===
-                normalizeCaptureSelection(character.name)
-          );
-          return !matchingCharacterEntity;
-        })
-        .map((character) => ({
-          id: `character:${character.id}`,
-          name: character.name,
-          type: 'Character Tools'
-        }))
-    ];
-
-    return candidates
-      .map((candidate) => {
-        const normalizedName = normalizeCaptureSelection(candidate.name);
-        const exactScore = normalizedName === normalizedSelection ? 0 : 1;
-        const overlapScore =
-          normalizedName.includes(normalizedSelection) ||
-          normalizedSelection.includes(normalizedName)
-            ? 0
-            : 1;
-        return {
-          ...candidate,
-          score: exactScore + overlapScore
-        };
-      })
-      .sort((a, b) => a.score - b.score || a.name.localeCompare(b.name))
-      .slice(0, 30);
-  }, [categories, characters, entities, manualWorldCapture, normalizeCaptureSelection]);
+  const manualCaptureLinkOptions = useMemo(
+    () =>
+      buildManualCaptureLinkOptions({
+        draftText: manualWorldCapture?.draftText ?? null,
+        categories,
+        characters,
+        entities
+      }),
+    [categories, characters, entities, manualWorldCapture?.draftText]
+  );
   const manualSelectedCategoryId = unknownCategorySelection.__manual__ ?? '';
   const manualSelectedCategory = manualSelectedCategoryId
     ? categories.find((category) => category.id === manualSelectedCategoryId) ?? null
@@ -2700,91 +2170,20 @@ function WorkspaceRoute() {
     setSceneDrawerOpen
   ]);
 
-  useEffect(() => {
-    const onWorkspaceCommand = (event: Event) => {
-      const detail = (event as CustomEvent<{id?: WorkspaceCommandId}>).detail;
-      const commandId = detail?.id;
-      if (!commandId) return;
-
-      switch (commandId) {
-        case 'new-scene':
-          void handleNewDocument();
-          break;
-        case 'save-scene':
-          void handleSave();
-          break;
-        case 'open-scratchpad':
-          openScratchpadModal();
-          break;
-        case 'open-corkboard':
-          openCorkboardModal();
-          break;
-        case 'toggle-left-drawer':
-          toggleSceneDrawer();
-          break;
-        case 'toggle-right-drawer':
-          toggleContextDrawer();
-          break;
-        case 'open-context-world-bible':
-          openContextDrawer('world-bible');
-          break;
-        case 'open-context-ruleset':
-          if (showRuleAuthoring) {
-            openContextDrawer('ruleset');
-          }
-          break;
-        case 'open-context-characters':
-          openContextDrawer('characters');
-          break;
-        case 'open-context-compendium':
-          if (showGameSystems) {
-            openContextDrawer('compendium');
-          }
-          break;
-        case 'run-consistency-review':
-          void runConsistencyReviewFromUi();
-          break;
-        case 'export-markdown':
-          openExportModalWithDrawerHandling('markdown');
-          break;
-        case 'export-docx':
-          openExportModalWithDrawerHandling('docx');
-          break;
-        case 'export-epub':
-          openExportModalWithDrawerHandling('epub');
-          break;
-        case 'extract-memory':
-          openMemoryModal();
-          break;
-        case 'toggle-ai-panel':
-          openContextDrawer('ai');
-          break;
-        case 'toggle-system-history-panel':
-          openContextDrawer('system');
-          break;
-        default:
-          break;
-      }
-    };
-
-    window.addEventListener(WORKSPACE_COMMAND_EVENT, onWorkspaceCommand);
-    return () => {
-      window.removeEventListener(WORKSPACE_COMMAND_EVENT, onWorkspaceCommand);
-    };
-  }, [
+  useWorkspaceCommands({
     handleNewDocument,
-    openCorkboardModal,
-    openContextDrawer,
-    openScratchpadModal,
-    runConsistencyReviewFromUi,
     handleSave,
-    openMemoryModal,
-    openExportModalWithDrawerHandling,
-    showGameSystems,
-    showRuleAuthoring,
+    openScratchpadModal,
+    openCorkboardModal,
+    toggleSceneDrawer,
     toggleContextDrawer,
-    toggleSceneDrawer
-  ]);
+    openContextDrawer,
+    showRuleAuthoring,
+    showGameSystems,
+    runConsistencyReviewFromUi,
+    openExportModalWithDrawerHandling,
+    openMemoryModal
+  });
 
   const handleOpenAIContext = useCallback(
     (context: WorkspaceAIContext, prompt?: string | null) => {
