@@ -7,6 +7,8 @@
 > **Disposition (2026-07-31, same day):** An immediate follow-up upgraded the app from `react-router-dom` 7.18.1 to `react-router` 8.3.0, raised React/React DOM to 19.2.8, migrated imports to the v8 package entry points, and pinned CI to React Router's Node 22.22.0 minimum. `pnpm audit --prod` now reports 0 vulnerabilities; web lint, all 250 unit tests, the production build, and all 42 Cypress tests pass. The B+ grade and findings below preserve the point-in-time close-out audit; the remaining top issues are route size and breaking-major toolchain drift.
 >
 > **Post-plan follow-up:** Scene-roster and positioned-state-mutation orchestration moved from `WorkspaceRoute.tsx` into the cohesive `useWorkspaceSceneRoster` hook. The route fell from 4,084 to 3,424 lines; the new hook is 989 lines. No markup or styling changed, and web lint, all 250 unit tests, the production build, and all 42 Cypress tests pass.
+>
+> World Bible project-data lifecycle orchestration subsequently moved into `useWorldBibleProjectData`: category/entity/alias loading, character and scene health data, lore links, compendium links, RAG/Shodh services, memories, and series-canon sync state. `WorldBibleRoute.tsx` fell from 4,045 to 3,736 lines; the new hook is 376 lines. No markup or styling changed, and the same full verification battery passes.
 
 ## Overall grade: B+ (up from B)
 

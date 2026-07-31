@@ -7,26 +7,15 @@ import {useAppStore} from '../store/appStore';
 import {getProjectCapabilities} from '../projectMode';
 import type {
   CanonicalFact,
-  Character,
   EntityCategory,
   LoreDocument,
   LoreDocumentKind,
   LoreDocumentLink,
-  StateMutationEvent,
-  WritingDocument,
   WorldEntity
 } from '../entityTypes';
-import {getEntitiesByProject, saveEntity} from '../entityStorage';
+import {saveEntity} from '../entityStorage';
+import {saveCategory} from '../categoryStorage';
 import {
-  getCategoriesByProject,
-  saveCategory,
-  initializeDefaultCategories
-} from '../categoryStorage';
-import {getCharactersByProject} from '../characterStorage';
-import {getDocumentsByProject} from '../writingStorage';
-import {
-  getLoreDocumentLinksByProject,
-  getLoreDocumentsByProject,
   saveLoreDocument,
   saveLoreDocumentLinks
 } from '../loreStorage';
@@ -37,18 +26,8 @@ import {CategoryManager} from '../components/WorldBible/CategoryManager';
 import {EntityFieldEditor} from '../components/WorldBible/EntityFieldEditor';
 import {ImportSectionPanel} from '../components/WorldBible/ImportSectionPanel';
 import styles from '../assets/components/WorldBibleRoute.module.css';
-import type {RAGProvider} from '../services/rag/RAGService';
-import {getRAGService} from '../services/rag/getRAGService';
-import type {
-  ShodhMemoryProvider,
-  MemoryEntry
-} from '../services/shodh/ShodhMemoryService';
-import {getShodhService} from '../services/shodh/getShodhService';
-import {emitShodhMemoriesUpdated} from '../services/shodh/shodhEvents';
+import type {MemoryEntry} from '../services/shodh/ShodhMemoryService';
 import {ShodhMemoryPanel} from '../components/ShodhMemoryPanel';
-import {getCompendiumEntriesByProject} from '../services/compendium';
-import type {ConsistencyAlias} from '../services/consistency';
-import {getAliasesByProject} from '../services/consistency';
 import {useWorldBibleReview} from '../hooks/useWorldBibleReview';
 import {
   useWorldBibleImports,
@@ -58,8 +37,7 @@ import {
 import {useWorldBibleEntityActions} from '../hooks/useWorldBibleEntityActions';
 import {
   getSeriesBibleConfig,
-  promoteMemoryToParent,
-  getCanonSyncState
+  promoteMemoryToParent
 } from '../services/seriesBible/SeriesBibleService';
 import {
   ALTERNATIVE_NAMES_KEY,
@@ -78,8 +56,6 @@ import {
   deriveCharacterAliasSuggestions
 } from '../services/worldBible/worldBibleCanonicalization';
 import {buildCanonicalFactSummary} from '../services/lore/canonicalFactActions';
-import {getCanonicalFactsByProject} from '../services/lore/loreFactStorage';
-import {getStateMutationEventsByProject} from '../services/state/stateMutationLedger';
 import type {RAGSearchResult} from '../services/rag/types';
 import {htmlToPlainText} from '../utils/textHelpers';
 import {
@@ -89,6 +65,7 @@ import {
   CHARACTER_NOTES_FIELD,
   isCharacterCategory
 } from '../services/worldBible/worldBibleSummary';
+import {useWorldBibleProjectData} from '../hooks/useWorldBibleProjectData';
 
 // activeProject read from store below
 
@@ -201,37 +178,6 @@ const formatAiFieldContextValue = (value: string): string => {
   return plainText.length > 2500 ? `${plainText.slice(0, 2500).trim()}...` : plainText;
 };
 
-const ensureCharacterCategoryLongFormFields = async (
-  categories: EntityCategory[]
-): Promise<EntityCategory[]> => {
-  let changed = false;
-  const updatedCategories = categories.map((category) => {
-    if (!isCharacterCategory(category)) {
-      return category;
-    }
-    if (category.fieldSchema.some((field) => field.key === CHARACTER_NOTES_FIELD)) {
-      return category;
-    }
-    changed = true;
-    return {
-      ...category,
-      fieldSchema: [
-        ...category.fieldSchema,
-        {key: CHARACTER_NOTES_FIELD, label: 'Notes', type: 'textarea' as const}
-      ]
-    };
-  });
-
-  if (changed) {
-    await Promise.all(updatedCategories.map((category, index) =>
-      category === categories[index] ? Promise.resolve() : saveCategory(category)
-    ));
-  }
-
-  return updatedCategories;
-};
-
-
 const getFieldTemplateValue = (field: EntityCategory['fieldSchema'][number]): unknown => {
   if (field.type === 'checkbox') return false;
   if (field.type === 'number') return 0;
@@ -274,21 +220,12 @@ function WorldBibleRoute() {
   const saveProjectSettings = useAppStore((s) => s.saveProjectSettings);
   const location = useLocation();
   const navigate = useNavigate();
-  const [categories, setCategories] = useState<EntityCategory[]>([]);
   const [activeTab, setActiveTab] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<WorldBibleViewMode>('category');
-  const [entities, setEntities] = useState<WorldEntity[]>([]);
-  const [characters, setCharacters] = useState<Character[]>([]);
-  const [writingDocuments, setWritingDocuments] = useState<WritingDocument[]>([]);
-  const [canonicalFacts, setCanonicalFacts] = useState<CanonicalFact[]>([]);
-  const [stateMutationEvents, setStateMutationEvents] = useState<StateMutationEvent[]>([]);
-  const [loreDocuments, setLoreDocuments] = useState<LoreDocument[]>([]);
-  const [loreDocumentLinks, setLoreDocumentLinks] = useState<LoreDocumentLink[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [name, setName] = useState('');
   const [fieldValues, setFieldValues] = useState<Record<string, string>>({});
   const [showCategoryManager, setShowCategoryManager] = useState(false);
-  const [aliases, setAliases] = useState<ConsistencyAlias[]>([]);
   const [activeImportPreviewId, setActiveImportPreviewId] = useState<string | null>(null);
   const [characterAuthoringMode, setCharacterAuthoringMode] =
     useState<CharacterAuthoringMode>('idle');
@@ -311,10 +248,6 @@ function WorldBibleRoute() {
   const [moveCategoryTargetId, setMoveCategoryTargetId] = useState('');
   const [movingEntityCategoryId, setMovingEntityCategoryId] = useState<string | null>(null);
   const [linkingLoreEntityId, setLinkingLoreEntityId] = useState<string | null>(null);
-  const [ragService, setRagService] = useState<RAGProvider | null>(null);
-  const [shodhService, setShodhService] =
-    useState<ShodhMemoryProvider | null>(null);
-  const [memories, setMemories] = useState<MemoryEntry[]>([]);
   const [memoryFilter, setMemoryFilter] = useState('');
   const [characterHealthProbeResults, setCharacterHealthProbeResults] = useState<
     RAGSearchResult[]
@@ -336,20 +269,35 @@ function WorldBibleRoute() {
   const capabilities = getProjectCapabilities(projectSettings);
   const showGameSystems = capabilities.canUseGameSystems;
   const showCharacterTools = capabilities.canUseRuleAuthoring;
-  const [canonState, setCanonState] = useState<{
-    parentCanonVersion?: string;
-    childLastSynced?: string;
-    parentName?: string;
-  }>({});
   const [feedback, setFeedback] = useState<{
     tone: 'success' | 'error';
     message: string;
   } | null>(null);
   const [isCategoryRailCollapsed, setIsCategoryRailCollapsed] = useState(false);
   const [promotingMemoryId, setPromotingMemoryId] = useState<string | null>(null);
-  const [compendiumLinkedEntityIds, setCompendiumLinkedEntityIds] = useState<
-    Set<string>
-  >(new Set());
+  const {
+    categories,
+    setCategories,
+    entities,
+    setEntities,
+    characters,
+    setCharacters,
+    writingDocuments,
+    canonicalFacts,
+    stateMutationEvents,
+    loreDocuments,
+    loreDocumentLinks,
+    aliases,
+    setAliases,
+    ragService,
+    shodhService,
+    memories,
+    refreshMemories,
+    canonState,
+    setCanonState,
+    compendiumLinkedEntityIds,
+    setCompendiumLinkedEntityIds
+  } = useWorldBibleProjectData({activeProject, setFeedback});
   const importInputRef = useRef<HTMLInputElement | null>(null);
   const jsonImportInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -365,17 +313,6 @@ function WorldBibleRoute() {
 
   const aliasTextareaRef = useRef<HTMLTextAreaElement | null>(null);
   const focusedEntityKeyRef = useRef<string | null>(null);
-  const refreshMemories = useCallback(async () => {
-    if (!shodhService) {
-      setMemories([]);
-      emitShodhMemoriesUpdated([]);
-      return;
-    }
-    const list = await shodhService.listMemories();
-    setMemories(list);
-    emitShodhMemoriesUpdated(list);
-  }, [shodhService]);
-
   const handlePromoteMemory = useCallback(
     async (memory: MemoryEntry) => {
       if (!seriesConfig?.parentProjectId) return;
@@ -397,257 +334,10 @@ function WorldBibleRoute() {
   );
 
   useEffect(() => {
-    if (!activeProject) {
-      setLoreDocuments([]);
-      setLoreDocumentLinks([]);
-      return;
-    }
-
-    let cancelled = false;
-
-    const loadLoreLinks = async () => {
-      const [loadedDocuments, loadedLinks] = await Promise.all([
-        getLoreDocumentsByProject(activeProject.id),
-        getLoreDocumentLinksByProject(activeProject.id)
-      ]);
-      if (!cancelled) {
-        setLoreDocuments(loadedDocuments);
-        setLoreDocumentLinks(loadedLinks);
-      }
-    };
-
-    void loadLoreLinks();
-    window.addEventListener('wbd:lore-records-changed', loadLoreLinks);
-
-    return () => {
-      cancelled = true;
-      window.removeEventListener('wbd:lore-records-changed', loadLoreLinks);
-    };
-  }, [activeProject]);
-
-  useEffect(() => {
-    if (!activeProject) {
-      setCategories([]);
-      setEntities([]);
-      setAliases([]);
-      setCharacters([]);
-      setWritingDocuments([]);
-      setCanonicalFacts([]);
-      setStateMutationEvents([]);
-      return;
-    }
-
-    let cancelled = false;
-
-    (async () => {
-      const projectId = activeProject.id;
-
-      await initializeDefaultCategories(projectId);
-
-      const [
-        cats,
-        ents,
-        loadedAliases,
-        loadedCharacters,
-        loadedWritingDocuments,
-        loadedCanonicalFacts,
-        loadedStateMutationEvents
-      ] = await Promise.all([
-        getCategoriesByProject(projectId),
-        getEntitiesByProject(projectId),
-        getAliasesByProject(projectId),
-        getCharactersByProject(projectId),
-        getDocumentsByProject(projectId),
-        getCanonicalFactsByProject(projectId),
-        getStateMutationEventsByProject(projectId)
-      ]);
-      const normalizedCategories = await ensureCharacterCategoryLongFormFields(cats);
-
-      if (!cancelled) {
-        setCategories(normalizedCategories);
-        setEntities(ents);
-        setAliases(loadedAliases);
-        setCharacters(loadedCharacters);
-        setWritingDocuments(loadedWritingDocuments);
-        setCanonicalFacts(loadedCanonicalFacts);
-        setStateMutationEvents(loadedStateMutationEvents);
-      }
-    })();
-
-    const refreshProjectHealthData = () => {
-      void Promise.all([
-        getDocumentsByProject(activeProject.id),
-        getCanonicalFactsByProject(activeProject.id),
-        getStateMutationEventsByProject(activeProject.id)
-      ]).then(([loadedWritingDocuments, loadedCanonicalFacts, loadedStateMutationEvents]) => {
-        if (cancelled) return;
-        setWritingDocuments(loadedWritingDocuments);
-        setCanonicalFacts(loadedCanonicalFacts);
-        setStateMutationEvents(loadedStateMutationEvents);
-      });
-    };
-
-    window.addEventListener('wbd:writing-records-changed', refreshProjectHealthData);
-    window.addEventListener('wbd:lore-fact-records-changed', refreshProjectHealthData);
-    window.addEventListener('wbd:state-mutation-events-changed', refreshProjectHealthData);
-
-    return () => {
-      cancelled = true;
-      window.removeEventListener('wbd:writing-records-changed', refreshProjectHealthData);
-      window.removeEventListener('wbd:lore-fact-records-changed', refreshProjectHealthData);
-      window.removeEventListener('wbd:state-mutation-events-changed', refreshProjectHealthData);
-    };
-  }, [activeProject]);
-
-  useEffect(() => {
-    if (!activeProject) {
-      setAliases([]);
-      return;
-    }
-
-    let cancelled = false;
-    getAliasesByProject(activeProject.id)
-      .then((loadedAliases) => {
-        if (!cancelled) {
-          setAliases(loadedAliases);
-        }
-      })
-      .catch(() => {
-        if (!cancelled) {
-          setAliases([]);
-        }
-      });
-
-    const refreshAliases = () => {
-      void getAliasesByProject(activeProject.id)
-        .then((loadedAliases) => {
-          if (!cancelled) {
-            setAliases(loadedAliases);
-          }
-        })
-        .catch(() => {
-          if (!cancelled) {
-            setAliases([]);
-          }
-        });
-    };
-
-    window.addEventListener('wbd:alias-records-changed', refreshAliases);
-    return () => {
-      cancelled = true;
-      window.removeEventListener('wbd:alias-records-changed', refreshAliases);
-    };
-  }, [activeProject]);
-
-  useEffect(() => {
-    if (!activeProject) {
-      setCompendiumLinkedEntityIds(new Set());
-      return;
-    }
-
-    let cancelled = false;
-    getCompendiumEntriesByProject(activeProject.id)
-      .then((entries) => {
-        if (cancelled) return;
-        setCompendiumLinkedEntityIds(
-          new Set(entries.map((entry) => entry.sourceEntityId).filter(Boolean) as string[])
-        );
-      })
-      .catch((error) => {
-        if (cancelled) return;
-        const message =
-          error instanceof Error
-            ? error.message
-            : 'Unable to load compendium links.';
-        setFeedback({tone: 'error', message});
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [activeProject, entities.length]);
-
-  useEffect(() => {
-    void refreshMemories();
-  }, [refreshMemories]);
-
-  useEffect(() => {
     if (!activeTab && categories.length > 0) {
       setActiveTab(categories[0].id);
     }
   }, [categories, activeTab]);
-
-  useEffect(() => {
-    if (!activeProject) {
-      setRagService(null);
-      setShodhService(null);
-      return;
-    }
-
-    const bibleConfig = getSeriesBibleConfig(activeProject);
-    const ragOptions =
-      bibleConfig.parentProjectId && bibleConfig.inheritRag
-        ? {
-            projectId: activeProject.id,
-            inheritFromParent: true,
-            parentProjectId: bibleConfig.parentProjectId
-          }
-        : {projectId: activeProject.id};
-    const shodhOptions =
-      bibleConfig.parentProjectId && bibleConfig.inheritShodh
-        ? {
-            projectId: activeProject.id,
-            inheritFromParent: true,
-            parentProjectId: bibleConfig.parentProjectId
-          }
-        : {projectId: activeProject.id};
-
-    let cancelled = false;
-    Promise.all([getRAGService(ragOptions), getShodhService(shodhOptions)]).then(
-      ([rag, shodh]) => {
-        if (!cancelled) {
-          setRagService(rag);
-          setShodhService(shodh);
-        }
-      }
-    );
-
-    return () => {
-      cancelled = true;
-      setRagService(null);
-      setShodhService(null);
-    };
-  }, [activeProject]);
-
-  useEffect(() => {
-    let cancelled = false;
-    if (!activeProject || !seriesConfig?.parentProjectId) {
-      setCanonState({});
-      return;
-    }
-    getCanonSyncState(activeProject).then((state) => {
-      if (!cancelled) {
-        setCanonState(state);
-      }
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [activeProject, seriesConfig?.parentProjectId]);
-
-  useEffect(() => {
-    if (!ragService) return;
-    const vocabulary = entities.map((entity) => ({
-      id: entity.id,
-      terms: [
-        entity.name,
-        ...Object.values(entity.fields).filter(
-          (value): value is string => typeof value === 'string'
-        )
-      ]
-    }));
-    ragService.setEntityVocabulary(vocabulary);
-  }, [entities, ragService]);
 
   const activeCategory = categories.find((c) => c.id === activeTab);
   const characterCategory = useMemo(
@@ -1388,7 +1078,8 @@ function WorldBibleRoute() {
   }, [
     activeCategory,
     activeCategoryRecordLabel,
-    aiHelperProposal
+    aiHelperProposal,
+    setCategories
   ]);
 
   const detectedSectionImportDraftCount = useMemo(
