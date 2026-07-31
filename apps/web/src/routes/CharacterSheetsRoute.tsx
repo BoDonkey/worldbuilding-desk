@@ -65,6 +65,17 @@ import {
   reconcileCharacterResources,
   reconcileCharacterStats
 } from '../services/characters/characterSheetRuleset';
+import {
+  buildDefaultResources,
+  buildDefaultStats,
+  hashString,
+  summarizeMutationCommand
+} from '../services/characters/characterSheetDefaults';
+import {
+  MutationForm,
+  type MutationFormType
+} from '../components/CharacterSheets/MutationForm';
+import {CharacterSheetList} from '../components/CharacterSheets/CharacterSheetList';
 import styles from '../styles/CharacterSheetsRoute.module.css';
 
 interface CharacterSheetsRouteProps {
@@ -73,80 +84,6 @@ interface CharacterSheetsRouteProps {
   onPrefillConsumed?: () => void;
   autoCreateSheetCharacterId?: string | null;
   onAutoCreateConsumed?: () => void;
-}
-
-type MutationFormType =
-  | 'resource_change'
-  | 'resource_set'
-  | 'stat_change'
-  | 'stat_set'
-  | 'status_apply'
-  | 'status_remove'
-  | 'inventory_add'
-  | 'inventory_remove'
-  | 'inventory_consume'
-  | 'inventory_equip'
-  | 'inventory_unequip'
-  | 'location_set';
-
-const MUTATION_FORM_TYPES: Array<{value: MutationFormType; label: string}> = [
-  {value: 'resource_change', label: 'Resource change'},
-  {value: 'resource_set', label: 'Resource set'},
-  {value: 'stat_change', label: 'Stat change'},
-  {value: 'stat_set', label: 'Stat set'},
-  {value: 'status_apply', label: 'Apply status'},
-  {value: 'status_remove', label: 'Remove status'},
-  {value: 'inventory_add', label: 'Add inventory'},
-  {value: 'inventory_remove', label: 'Remove inventory'},
-  {value: 'inventory_consume', label: 'Consume inventory'},
-  {value: 'inventory_equip', label: 'Equip inventory'},
-  {value: 'inventory_unequip', label: 'Unequip inventory'},
-  {value: 'location_set', label: 'Set location'}
-];
-
-function hashString(value: string): string {
-  let hash = 5381;
-  for (let index = 0; index < value.length; index += 1) {
-    hash = (hash * 33) ^ value.charCodeAt(index);
-  }
-  return `h${(hash >>> 0).toString(16)}`;
-}
-
-function buildDefaultStats(ruleset: StoredRuleset | null): CharacterStat[] {
-  return reconcileCharacterStats(ruleset, []);
-}
-
-function buildDefaultResources(ruleset: StoredRuleset | null): CharacterResource[] {
-  return reconcileCharacterResources(ruleset, []);
-}
-
-function summarizeMutationCommand(command: StateMutationCommand): string {
-  switch (command.type) {
-    case 'resource_change':
-      return `Resource ${command.resourceDefinitionId} ${command.delta >= 0 ? '+' : ''}${command.delta}`;
-    case 'resource_set':
-      return `Resource ${command.resourceDefinitionId} = ${command.value}`;
-    case 'stat_change':
-      return `Stat ${command.statDefinitionId} -> delta ${String(command.delta)}`;
-    case 'stat_set':
-      return `Stat ${command.statDefinitionId} = ${String(command.value)}`;
-    case 'status_apply':
-      return `Apply status ${command.statusName}`;
-    case 'status_remove':
-      return `Remove status ${command.statusName}`;
-    case 'inventory_add':
-      return `Add ${command.itemName}${command.quantity ? ` x${command.quantity}` : ''}`;
-    case 'inventory_remove':
-      return `Remove ${command.itemName}${command.quantity ? ` x${command.quantity}` : ''}`;
-    case 'inventory_consume':
-      return `Consume ${command.itemName}${command.quantity ? ` x${command.quantity}` : ''}`;
-    case 'inventory_equip':
-      return `Equip ${command.itemName}`;
-    case 'inventory_unequip':
-      return `Unequip ${command.itemName}`;
-    case 'location_set':
-      return `Move to ${command.locationName}`;
-  }
 }
 
 function CharacterSheetsRoute({
@@ -2085,255 +2022,37 @@ function CharacterSheetsRoute({
             display: taskView === 'scene-history' ? 'block' : 'none'
           }}
         >
-          <h2 style={{marginTop: 0}}>Record Scene State Change</h2>
-          <p style={{fontSize: '0.9rem', color: 'var(--color-text-secondary)'}}>
-            Attach an accepted state mutation to a manuscript scene. This
-            writes directly to the mutation ledger and becomes replayable
-            history.
-          </p>
-          {editingMutationEventId && (
-            <div
-              style={{
-                marginBottom: '0.75rem',
-                padding: '0.55rem 0.7rem',
-                borderRadius: '8px',
-                border: '1px solid var(--color-accent-soft-border)',
-                backgroundColor: 'var(--color-accent-soft-bg)',
-                color: 'var(--color-accent)',
-                fontSize: '0.88rem'
-              }}
-            >
-              Editing existing state step.
-            </div>
-          )}
-
-          <div style={{marginBottom: '0.75rem'}}>
-            <label>
-              Character Sheet
-              <br />
-              <select
-                value={mutationTargetSheetId}
-                onChange={(e) => setMutationTargetSheetId(e.target.value)}
-                style={{width: '100%'}}
-              >
-                <option value=''>Select a sheet...</option>
-                {sheets.map((sheet) => (
-                  <option key={sheet.id} value={sheet.id}>
-                    {sheet.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-          </div>
-
-          <div style={{marginBottom: '0.75rem'}}>
-            <label>
-              Source Scene
-              <br />
-              <select
-                value={mutationSceneId}
-                onChange={(e) => setMutationSceneId(e.target.value)}
-                style={{width: '100%'}}
-              >
-                <option value=''>Select a scene...</option>
-                {orderedDocuments.map((document, index) => (
-                  <option key={document.id} value={document.id}>
-                    {index + 1}. {document.title}
-                  </option>
-                ))}
-              </select>
-            </label>
-          </div>
-
-          <div style={{marginBottom: '0.75rem'}}>
-            <label>
-              Change Type
-              <br />
-              <select
-                value={mutationType}
-                onChange={(e) => setMutationType(e.target.value as MutationFormType)}
-                style={{width: '100%'}}
-              >
-                {MUTATION_FORM_TYPES.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </label>
-          </div>
-
-          {(mutationType === 'resource_change' ||
-            mutationType === 'resource_set') && (
-            <>
-              <div style={{marginBottom: '0.75rem'}}>
-                <label>
-                  Resource
-                  <br />
-                  <select
-                    value={mutationResourceDefinitionId}
-                    onChange={(e) => setMutationResourceDefinitionId(e.target.value)}
-                    style={{width: '100%'}}
-                  >
-                    <option value=''>Select a resource...</option>
-                    {ruleset.resourceDefinitions.map((definition) => (
-                      <option key={definition.id} value={definition.id}>
-                        {definition.name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              </div>
-              <div style={{marginBottom: '0.75rem'}}>
-                <label>
-                  {mutationType === 'resource_change' ? 'Delta' : 'Value'}
-                  <br />
-                  <input
-                    type='number'
-                    value={mutationNumberValue}
-                    onChange={(e) => setMutationNumberValue(e.target.value)}
-                    style={{width: '100%'}}
-                  />
-                </label>
-              </div>
-            </>
-          )}
-
-          {(mutationType === 'stat_change' || mutationType === 'stat_set') && (
-            <>
-              <div style={{marginBottom: '0.75rem'}}>
-                <label>
-                  Stat
-                  <br />
-                  <select
-                    value={mutationStatDefinitionId}
-                    onChange={(e) => setMutationStatDefinitionId(e.target.value)}
-                    style={{width: '100%'}}
-                  >
-                    <option value=''>Select a stat...</option>
-                    {ruleset.statDefinitions.map((definition) => (
-                      <option key={definition.id} value={definition.id}>
-                        {definition.name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              </div>
-              {selectedMutationStatDefinition?.type === 'boolean' ? (
-                <div style={{marginBottom: '0.75rem'}}>
-                  <label
-                    style={{display: 'flex', gap: '0.5rem', alignItems: 'center'}}
-                  >
-                    <input
-                      type='checkbox'
-                      checked={mutationBooleanValue}
-                      onChange={(e) => setMutationBooleanValue(e.target.checked)}
-                    />
-                    Value
-                  </label>
-                </div>
-              ) : selectedMutationStatDefinition?.type === 'text' ? (
-                <div style={{marginBottom: '0.75rem'}}>
-                  <label>
-                    {mutationType === 'stat_change' ? 'Delta text' : 'Value'}
-                    <br />
-                    <input
-                      type='text'
-                      value={mutationTextValue}
-                      onChange={(e) => setMutationTextValue(e.target.value)}
-                      style={{width: '100%'}}
-                    />
-                  </label>
-                </div>
-              ) : (
-                <div style={{marginBottom: '0.75rem'}}>
-                  <label>
-                    {mutationType === 'stat_change' ? 'Delta' : 'Value'}
-                    <br />
-                    <input
-                      type='number'
-                      value={mutationNumberValue}
-                      onChange={(e) => setMutationNumberValue(e.target.value)}
-                      style={{width: '100%'}}
-                    />
-                  </label>
-                </div>
-              )}
-            </>
-          )}
-
-          {(mutationType === 'status_apply' ||
-            mutationType === 'status_remove') && (
-            <div style={{marginBottom: '0.75rem'}}>
-              <label>
-                Status name
-                <br />
-                <input
-                  type='text'
-                  value={mutationStatusName}
-                  onChange={(e) => setMutationStatusName(e.target.value)}
-                  placeholder='Poisoned'
-                  style={{width: '100%'}}
-                />
-              </label>
-            </div>
-          )}
-
-          {(mutationType === 'inventory_add' ||
-            mutationType === 'inventory_remove' ||
-            mutationType === 'inventory_consume' ||
-            mutationType === 'inventory_equip' ||
-            mutationType === 'inventory_unequip') && (
-            <>
-              <div style={{marginBottom: '0.75rem'}}>
-                <label>
-                  Item name
-                  <br />
-                  <input
-                    type='text'
-                    value={mutationItemName}
-                    onChange={(e) => setMutationItemName(e.target.value)}
-                    placeholder='Iron Key'
-                    style={{width: '100%'}}
-                  />
-                </label>
-              </div>
-              {(mutationType === 'inventory_add' ||
-                mutationType === 'inventory_remove' ||
-                mutationType === 'inventory_consume') && (
-                <div style={{marginBottom: '0.75rem'}}>
-                  <label>
-                    Quantity
-                    <br />
-                    <input
-                      type='number'
-                      min={1}
-                      value={mutationQuantity}
-                      onChange={(e) => setMutationQuantity(e.target.value)}
-                      style={{width: '100%'}}
-                    />
-                  </label>
-                </div>
-              )}
-            </>
-          )}
-
-          {mutationType === 'location_set' && (
-            <div style={{marginBottom: '0.75rem'}}>
-              <label>
-                Location
-                <br />
-                <input
-                  type='text'
-                  value={mutationLocationName}
-                  onChange={(e) => setMutationLocationName(e.target.value)}
-                  placeholder='South Gate'
-                  style={{width: '100%'}}
-                />
-              </label>
-            </div>
-          )}
-
+          <MutationForm
+            editingMutationEventId={editingMutationEventId}
+            mutationTargetSheetId={mutationTargetSheetId}
+            setMutationTargetSheetId={setMutationTargetSheetId}
+            sheets={sheets}
+            mutationSceneId={mutationSceneId}
+            setMutationSceneId={setMutationSceneId}
+            orderedDocuments={orderedDocuments}
+            mutationType={mutationType}
+            setMutationType={setMutationType}
+            mutationResourceDefinitionId={mutationResourceDefinitionId}
+            setMutationResourceDefinitionId={setMutationResourceDefinitionId}
+            mutationStatDefinitionId={mutationStatDefinitionId}
+            setMutationStatDefinitionId={setMutationStatDefinitionId}
+            mutationNumberValue={mutationNumberValue}
+            setMutationNumberValue={setMutationNumberValue}
+            mutationTextValue={mutationTextValue}
+            setMutationTextValue={setMutationTextValue}
+            mutationBooleanValue={mutationBooleanValue}
+            setMutationBooleanValue={setMutationBooleanValue}
+            mutationStatusName={mutationStatusName}
+            setMutationStatusName={setMutationStatusName}
+            mutationItemName={mutationItemName}
+            setMutationItemName={setMutationItemName}
+            mutationQuantity={mutationQuantity}
+            setMutationQuantity={setMutationQuantity}
+            mutationLocationName={mutationLocationName}
+            setMutationLocationName={setMutationLocationName}
+            ruleset={ruleset}
+            selectedMutationStatDefinition={selectedMutationStatDefinition}
+          />
           <div
             style={{
               marginBottom: '0.9rem',
@@ -2636,172 +2355,15 @@ function CharacterSheetsRoute({
         </section>
 
         {/* Character Sheet List */}
-        <div
-          className={styles.sheetList}
-          style={{display: taskView === 'setup' ? 'block' : 'none'}}
-        >
-          <h2>Character Sheets</h2>
-          {sheets.length === 0 && (
-            <p>No character sheets yet. Add one on the left.</p>
-          )}
-          <ul style={{listStyle: 'none', padding: 0}}>
-            {sheets.map((sheet) => (
-              <li
-                key={sheet.id}
-                style={{
-                  marginBottom: '1rem',
-                  padding: '1rem',
-                  border: '1px solid var(--color-border)',
-                  borderRadius: '4px'
-                }}
-              >
-                <div
-                  style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'flex-start'
-                  }}
-                >
-                  <div style={{flex: 1}}>
-                    <strong style={{fontSize: '1.2em'}}>{sheet.name}</strong>
-                    <div
-                      style={{
-                        fontSize: '0.9em',
-                        color: 'var(--color-text-tertiary)',
-                        marginTop: '0.5rem'
-                      }}
-                    >
-                      Level {Math.max(1, sheet.level + runtimeModifiers.levelBonus)}
-                      {runtimeModifiers.levelBonus > 0
-                        ? ` (base ${sheet.level})`
-                        : ''}
-                      {' | '}
-                      {sheet.experience} XP
-                    </div>
-
-                    {sheet.stats.length > 0 && (
-                      <div style={{marginTop: '0.5rem', fontSize: '0.9em'}}>
-                        <strong>Stats:</strong>
-                        <div
-                          style={{
-                            display: 'grid',
-                            gridTemplateColumns: 'repeat(3, 1fr)',
-                            gap: '0.25rem',
-                            marginTop: '0.25rem'
-                          }}
-                        >
-                          {sheet.stats.map((stat) => {
-                            const def = getStatDefinition(stat.definitionId);
-                            const effectiveValue = getEffectiveStatValue({
-                              definitionId: stat.definitionId,
-                              baseValue: stat.value,
-                              runtime: runtimeModifiers
-                            });
-                            return def ? (
-                              <span key={stat.definitionId}>
-                                {def.name}: {stat.value}
-                                {effectiveValue !== stat.value
-                                  ? ` (${effectiveValue})`
-                                  : ''}
-                              </span>
-                            ) : null;
-                          })}
-                        </div>
-                      </div>
-                    )}
-
-                    {sheet.resources.length > 0 && (
-                      <div style={{marginTop: '0.5rem', fontSize: '0.9em'}}>
-                        <strong>Resources:</strong>
-                        <div style={{marginTop: '0.25rem'}}>
-                          {sheet.resources.map((resource) => {
-                            const def = getResourceDefinition(
-                              resource.definitionId
-                            );
-                            const effective = getEffectiveResourceValues({
-                              definitionId: resource.definitionId,
-                              current: resource.current,
-                              max: resource.max,
-                              runtime: runtimeModifiers
-                            });
-                            return def ? (
-                              <div key={resource.definitionId}>
-                                {def.name}: {resource.current}/{resource.max}
-                                {(effective.current !== resource.current ||
-                                  effective.max !== resource.max) &&
-                                  ` (${effective.current}/${effective.max})`}
-                              </div>
-                            ) : null;
-                          })}
-                        </div>
-                      </div>
-                    )}
-
-                    {sheet.notes && (
-                      <p
-                        style={{
-                          margin: '0.5rem 0 0 0',
-                          fontSize: '0.9em',
-                          fontStyle: 'italic',
-                          color: 'var(--color-border)'
-                        }}
-                      >
-                        {sheet.notes}
-                      </p>
-                    )}
-                    {((sheet.inventoryEntries?.length ?? 0) > 0 ||
-                      (sheet.inventory?.length ?? 0) > 0) && (
-                      <div style={{marginTop: '0.5rem', fontSize: '0.9em'}}>
-                        <strong>Inventory:</strong>{' '}
-                        {(sheet.inventoryEntries?.length
-                          ? sheet.inventoryEntries.map((entry) =>
-                              entry.quantity && entry.quantity > 1
-                                ? `${entry.name} x${entry.quantity}`
-                                : entry.name
-                            )
-                          : sheet.inventory
-                        ).join(', ')}
-                      </div>
-                    )}
-                    {((sheet.equipmentEntries?.length ?? 0) > 0 ||
-                      (sheet.equipment?.length ?? 0) > 0) && (
-                      <div style={{marginTop: '0.5rem', fontSize: '0.9em'}}>
-                        <strong>Equipment:</strong>{' '}
-                        {(sheet.equipmentEntries?.length
-                          ? sheet.equipmentEntries.map((entry) => entry.name)
-                          : sheet.equipment
-                        )?.join(', ')}
-                      </div>
-                    )}
-                    {((sheet.statusEntries?.length ?? 0) > 0 ||
-                      (sheet.statuses?.length ?? 0) > 0) && (
-                      <div style={{marginTop: '0.5rem', fontSize: '0.9em'}}>
-                        <strong>Statuses:</strong>{' '}
-                        {(sheet.statusEntries?.length
-                          ? sheet.statusEntries.map((entry) => entry.name)
-                          : sheet.statuses
-                        )?.join(', ')}
-                      </div>
-                    )}
-                  </div>
-
-                  <div style={{display: 'flex', gap: '0.5rem'}}>
-                    <button type='button' onClick={() => handleEdit(sheet)}>
-                      Edit
-                    </button>
-                    <button
-                      type='button'
-                      onClick={() => handleDelete(sheet.id)}
-                      disabled={deletingSheetId === sheet.id}
-                    >
-                      {deletingSheetId === sheet.id ? 'Deleting...' : 'Delete'}
-                    </button>
-                  </div>
-                </div>
-              </li>
-            ))}
-          </ul>
-        </div>
+        <CharacterSheetList
+          taskView={taskView}
+          sheets={sheets}
+          ruleset={ruleset}
+          runtimeModifiers={runtimeModifiers}
+          deletingSheetId={deletingSheetId}
+          onEdit={handleEdit}
+          onDelete={handleDelete}
+        />
       </div>
     </>
   );
