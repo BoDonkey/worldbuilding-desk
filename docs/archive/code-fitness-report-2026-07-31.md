@@ -11,6 +11,8 @@
 > World Bible project-data lifecycle orchestration subsequently moved into `useWorldBibleProjectData`: category/entity/alias loading, character and scene health data, lore links, compendium links, RAG/Shodh services, memories, and series-canon sync state. `WorldBibleRoute.tsx` fell from 4,045 to 3,736 lines; the new hook is 376 lines. No markup or styling changed, and the same full verification battery passes.
 >
 > Selected-entity health and lore orchestration then moved into `useWorldBibleSelectedEntity`: canonical aliases/facts, scene mentions, mutation history, character context probing, and linked Source Note creation. `WorldBibleRoute.tsx` fell again from 3,736 to 3,534 lines; the new hook is 343 lines. No markup or styling changed, and the same full verification battery passes.
+>
+> World Bible AI/import authoring-assistant orchestration then moved into `useWorldBibleAuthoringAssistant`: assistant state and context, proposal preview/application, detected-section import actions, and custom-section creation. `WorldBibleRoute.tsx` fell from 3,534 to 3,215 lines; the new hook is 453 lines. No markup or styling changed, and web lint, all 250 unit tests, the production build, and all 42 Cypress tests pass.
 
 ## Overall grade: B+ (up from B)
 
