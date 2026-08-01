@@ -153,17 +153,17 @@ only accepted records/facts are canon; context rebuilds stay explicit and
 recoverable. References: `docs/domain-model.md`,
 `docs/archive/product-health-audit.md`.
 
-**1.1 Realistic-project trust dogfood.** Build or import a realistic project
-(multiple chapters, dossiers, partial notes, deliberate contradictions,
-repeated character references). Run the full pipeline: import → extract →
-accept/link → ask assistant → write chapter → run review. Use the Lore
-Documents health panel, context rebuild action, and Character detail health
-panel throughout. Verify: accepted World Bible records and canonical facts
-outrank conflicting Source Notes in assistant context; pending/rejected
-proposals stay out of ordinary context; rebuild makes stale retrieval
-coverage visible and recoverable; cross-chapter character-detail consistency
-(relationships, heritage, goals, traits) behaves sensibly. Record findings in
-a dated dogfood log in this repo.
+**1.1 Realistic-project trust dogfood.** A complete scripted fixture exists
+at `fixtures/trust-dogfood/`: five-chapter LitRPG manuscript, four lore
+documents with planted contradictions, importable ruleset, state-event
+script, an answer key enumerating every planted issue (unknown detection,
+alias chains, fact conflicts, speculation containment, trust-tier ranking,
+replay, health panels), and a session-by-session runbook with pass/fail
+recording. Run the runbook (`fixtures/trust-dogfood/README.md`); it covers
+the full pipeline: import → extract → accept/link → canon decisions →
+assistant trust checks → state replay → health/rebuild. Record results in
+the runbook's log. False positives (flags not in the answer key) are
+first-class findings.
 
 **1.2 Fix trust-path failures.** Turn every source-ranking, stale-summary, or
 provenance failure from 1.1 into its own bounded fix slice before adding any

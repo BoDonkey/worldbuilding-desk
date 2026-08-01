@@ -1,0 +1,110 @@
+{
+  "schemaVersion": 1,
+  "kind": "ruleset",
+  "exportedAt": 1785600000000,
+  "sourceProjectName": "Trust Dogfood Fixture",
+  "data": {
+    "ruleset": {
+      "id": "ember-ledger-fixture-v1",
+      "name": "The Ember Ledger",
+      "description": "Fixture ruleset for the road-to-market 1.1 trust dogfood. Matches the stats, resources, and statuses referenced in the fixture manuscript.",
+      "version": "1.0.0",
+      "statDefinitions": [
+        {
+          "id": "level",
+          "name": "Level",
+          "type": "number",
+          "defaultValue": 1,
+          "min": 1,
+          "description": "Ledger-recognized delver level.",
+          "category": "Progression"
+        },
+        {
+          "id": "might",
+          "name": "Might",
+          "type": "number",
+          "defaultValue": 10,
+          "min": 1,
+          "category": "Attributes"
+        },
+        {
+          "id": "finesse",
+          "name": "Finesse",
+          "type": "number",
+          "defaultValue": 10,
+          "min": 1,
+          "category": "Attributes"
+        },
+        {
+          "id": "resonance",
+          "name": "Resonance",
+          "type": "number",
+          "defaultValue": 5,
+          "min": 0,
+          "description": "Sensitivity to Vault aether. Custom stat — tests non-generic vocabulary.",
+          "category": "Attributes"
+        },
+        {
+          "id": "class",
+          "name": "Class",
+          "type": "text",
+          "defaultValue": "Unbound",
+          "description": "Ledger class. Sera becomes Delver.",
+          "category": "Progression"
+        },
+        {
+          "id": "ledger_marked",
+          "name": "Ledger-Marked",
+          "type": "boolean",
+          "defaultValue": false,
+          "description": "Whether the character sees Ledger stat-lines.",
+          "category": "Progression"
+        }
+      ],
+      "resourceDefinitions": [
+        {
+          "id": "health",
+          "name": "Health",
+          "type": "number",
+          "defaultValue": 100,
+          "min": 0,
+          "max": 100,
+          "category": "Pools"
+        },
+        {
+          "id": "aether",
+          "name": "Aether",
+          "type": "number",
+          "defaultValue": 30,
+          "min": 0,
+          "max": 50,
+          "category": "Pools",
+          "regeneration": {
+            "enabled": true,
+            "rate": 1,
+            "interval": 60
+          }
+        },
+        {
+          "id": "stamina",
+          "name": "Stamina",
+          "type": "number",
+          "defaultValue": 100,
+          "min": 0,
+          "max": 100,
+          "category": "Pools"
+        }
+      ],
+      "rules": [],
+      "itemTemplates": [],
+      "statusTemplates": [],
+      "compendium": {
+        "enabled": false,
+        "entryDomains": [],
+        "milestones": []
+      },
+      "createdAt": 1785600000000,
+      "updatedAt": 1785600000000
+    }
+  }
+}
