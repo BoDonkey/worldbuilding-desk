@@ -1,3 +1,5 @@
+> **Archived 2026-08-01.** Consolidated into `docs/smoke-tests.md`; full step-by-step procedure and fixtures remain here.
+
 # Review Completion Smoke Test
 
 Last updated: 2026-05-14

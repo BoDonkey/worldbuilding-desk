@@ -1,3 +1,5 @@
+> **Archived 2026-08-01.** Fiction-first boundary rules moved into `docs/product-blueprint.md`.
+
 # Multi-Mode Product Directives
 
 Last updated: 2026-02-26

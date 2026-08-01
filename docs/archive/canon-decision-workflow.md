@@ -1,3 +1,5 @@
+> **Archived 2026-08-01.** Durable contracts distilled into `docs/domain-model.md`; full design rationale remains here.
+
 # Canon Decision Workflow
 
 _Drafted: May 10, 2026_

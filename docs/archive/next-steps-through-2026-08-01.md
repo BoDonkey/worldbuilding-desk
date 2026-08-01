@@ -1,3 +1,5 @@
+> **Archived 2026-08-01.** Superseded by `docs/road-to-market.md` (single master plan).
+
 # Next Steps
 
 Last updated: 2026-07-31

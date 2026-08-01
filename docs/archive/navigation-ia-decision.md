@@ -1,3 +1,5 @@
+> **Archived 2026-08-01.** Decisions and current rules moved into `docs/product-blueprint.md` (navigation/IA section).
+
 # Navigation IA Decision
 
 Last updated: 2026-07-26

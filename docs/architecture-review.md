@@ -10,8 +10,8 @@ risks. It is not a completed-work log or sprint roadmap.
 Use:
 
 - `PROJECT_STATUS.md` for the current implementation snapshot
-- `docs/next-steps.md` for execution order
-- domain specifications for detailed contracts
+- `docs/road-to-market.md` for execution order
+- `docs/domain-model.md` for detailed domain contracts
 - `docs/archive/architecture-review-2026-05-10.md` for the prior point-in-time
   review and its completed action history
 
@@ -84,10 +84,8 @@ Normal assistant context should distinguish:
 Pending and rejected proposals are excluded unless the author enters an
 explicit proposal-review workflow.
 
-Primary references:
-
-- `docs/freeform-lore-ingestion-architecture.md`
-- `docs/canon-decision-workflow.md`
+Primary reference: `docs/domain-model.md` (§ lore/canon model and canon
+decision workflow).
 
 ## Ruleset and State Boundary
 
@@ -102,10 +100,8 @@ Proposal extraction must remain separate from accepted mutation persistence.
 Do not create parallel field-definition or item-schema systems when the current
 ruleset/state models can be extended.
 
-Primary references:
-
-- `docs/customizable-state-model-spec.md`
-- `docs/ai-assisted-item-authoring.md`
+Primary reference: `docs/domain-model.md` (§ state model and AI proposal
+boundary).
 
 ## Persistence
 
@@ -156,10 +152,8 @@ Shared page chrome, dialogs, alerts, focus behavior, and form primitives should
 be reused across routes. The product must remain operable at the mobile
 breakpoint and by keyboard.
 
-Design authority:
-
-- `docs/style-bible.md`
-- `docs/navigation-ia-decision.md`
+Design authority: `docs/product-blueprint.md` (design system and
+navigation/IA sections).
 
 ## Verification Strategy
 
@@ -187,13 +181,12 @@ every visual detail.
 5. Electron and transformer dependencies need supported upgrade paths.
 6. Some assistant/retrieval behavior still needs realistic provenance testing.
 
-These risks are prioritized and scheduled in `docs/next-steps.md` and the
-focused engineering work plans.
+These risks are prioritized and scheduled in `docs/road-to-market.md`.
 
 ## Change Rule
 
 Update this document only when a durable architecture boundary changes.
 
 Implementation status belongs in `PROJECT_STATUS.md`; execution tasks belong in
-`docs/next-steps.md`; point-in-time audits and completed plans belong in
+`docs/road-to-market.md`; point-in-time audits and completed plans belong in
 `docs/archive/`.

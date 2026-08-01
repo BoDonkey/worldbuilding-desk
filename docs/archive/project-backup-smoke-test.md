@@ -1,3 +1,5 @@
+> **Archived 2026-08-01.** Consolidated into `docs/smoke-tests.md`; full step-by-step procedure remains here.
+
 # Project Backup Smoke Test
 
 Last updated: 2026-04-25

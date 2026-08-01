@@ -1,3 +1,5 @@
+> **Archived 2026-08-01.** Design system moved into `docs/product-blueprint.md` (Design System section).
+
 # UI Design System & Style Bible
 
 This guide defines the visual direction for UI work in this project. Consult it before creating or altering UI, CSS, layout, or visual component styling.

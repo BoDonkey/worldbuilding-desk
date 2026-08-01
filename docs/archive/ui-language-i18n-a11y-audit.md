@@ -1,3 +1,5 @@
+> **Archived 2026-08-01.** Durable guardrails moved into `docs/product-blueprint.md`; remaining execution items are in `docs/road-to-market.md` Phase 2.
+
 # UI Language, i18n Readiness, and A11y Baseline
 
 This checklist is a future-facing guardrail for the fresh UI pass. It should be used when rounding surfaces, simplifying system language, or extracting shared UI patterns.

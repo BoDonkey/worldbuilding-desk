@@ -1,3 +1,5 @@
+> **Archived 2026-08-01.** Distilled into `docs/domain-model.md` § 4; full proposal remains here. Slice 1 is scheduled as road-to-market 4.1.
+
 # AI-Assisted Item Authoring
 
 _Status: Product proposal_

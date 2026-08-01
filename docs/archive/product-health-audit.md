@@ -1,3 +1,5 @@
+> **Archived 2026-08-01.** Open items converted into `docs/road-to-market.md` Phase 1 (trust validation).
+
 # Product Health Audit
 
 Last updated: 2026-06-27

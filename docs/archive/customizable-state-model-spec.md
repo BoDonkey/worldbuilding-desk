@@ -1,3 +1,5 @@
+> **Archived 2026-08-01.** Durable contracts distilled into `docs/domain-model.md`; full spec and implementation delta remain here.
+
 # Customizable State Model Spec
 
 _Created: 2026-04-28_

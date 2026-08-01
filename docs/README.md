@@ -1,106 +1,82 @@
 # Documentation Map
 
-Last updated: 2026-07-26
+Last updated: 2026-08-01
 
-## Source Of Truth
+The active documentation set was consolidated on 2026-08-01 down to six
+documents. Everything else lives in `docs/archive/` with a banner pointing at
+its replacement.
 
-Read these first:
+## Active Documents
 
-- `PROJECT_STATUS.md` — what is true in the current application
-- `docs/next-steps.md` — active priorities and execution order
-- `docs/architecture-review.md` — durable architecture boundaries and current
-  structural risks
-- `docs/product-blueprint.md` — product promise and writing-first principles
-- `docs/style-bible.md` — required UI and visual direction
+Read in this order:
 
-If documents disagree, prefer this list in the order appropriate to the
-question: current implementation comes from `PROJECT_STATUS.md`; future work
-comes from `docs/next-steps.md`; durable product, architecture, and design
-decisions come from their named authority document.
+1. `PROJECT_STATUS.md` (repo root) — what is true in the current application.
+2. `docs/road-to-market.md` — the single active roadmap and slice plan, from
+   trust validation through beta and launch. Its status board is authoritative
+   for open work.
+3. `docs/product-blueprint.md` — product thesis, positioning, UX principles,
+   navigation/IA decisions, fiction-first boundary, UI language and a11y
+   guardrails, and the design system (style bible).
+4. `docs/architecture-review.md` — durable architecture boundaries and current
+   structural risks.
+5. `docs/domain-model.md` — the lore/canon model, canon decision workflow,
+   manuscript-time state model, and the AI proposal boundary (including the
+   item-authoring direction).
+6. `docs/smoke-tests.md` — reusable manual smoke procedures for backup
+   round-trip, review completion, and character canon unification.
 
-## Active Product And Domain References
+If documents disagree: current implementation truth comes from
+`PROJECT_STATUS.md`; open work and its order come from
+`docs/road-to-market.md`; durable product/UX/design decisions from
+`docs/product-blueprint.md`; durable architecture boundaries from
+`docs/architecture-review.md`; domain contracts from `docs/domain-model.md`.
 
-- `docs/navigation-ia-decision.md` — canon ownership, navigation hierarchy, and
-  optional-systems placement
-- `docs/freeform-lore-ingestion-architecture.md` — Lore Documents, extracted
-  proposals, and accepted canonical facts
-- `docs/canon-decision-workflow.md` — duplicate, alias, conflict, and canon
-  decision behavior
-- `docs/customizable-state-model-spec.md` — manuscript-time state, mutation
-  events, and replay
-- `docs/ai-assisted-item-authoring.md` — description-first, review-gated item
-  creation and the later ruleset-authoring adapter direction
-- `docs/product-health-audit.md` — current lore/RAG/Shodh and character-detail
-  trust audit
-- `docs/multi-mode-directives.md` — fiction-first boundary and parked
-  nonfiction direction
+Other files:
 
-These documents contain active constraints or proposals. A proposal does not
-enter the roadmap automatically; `docs/next-steps.md` determines priority.
-
-## Active Work Plans
-
-- `docs/ui-design-work-slices.md`
-
-This contains detailed, independently executable engineering slices. Its
-status table is authoritative for those slices, but it does not override the
-product ordering in `docs/next-steps.md`.
-
-## Focused Audits And Guardrails
-
-- `docs/ui-language-i18n-a11y-audit.md`
-
-Keep these while their findings remain open. When the work is complete, retain
-any durable rules in the style bible or architecture reference and archive the
-execution checklist.
-
-## Smoke Procedures
-
-- `docs/project-backup-smoke-test.md`
-- `docs/review-completion-smoke-test.md`
-- `docs/character-canon-unification-smoke-test.md`
-
-Smoke documents should contain reusable procedures and current expected
-behavior. Historical run logs should be archived rather than accumulated in
-the procedure.
+- `AGENTS.md` (root) — instructions for coding agents; points here.
+- `smoke-review-sample.md` (root) — regression fixture text used by the
+  review-completion smoke.
+- `apps/web/editor-config.md` — developer reference for TipTap editor/toolbar
+  customization (moved from the repo root).
 
 ## Archive
 
-`docs/archive/` contains:
+`docs/archive/` contains completed implementation plans, superseded strategy
+and UX documents, dated audits and fitness reports, historical research, and
+the full-length originals behind the 2026-08-01 consolidation:
 
-- completed implementation plans
-- superseded strategy and UX plans
-- branch-specific handoffs and recovery notes
-- dated audits
-- prior roadmap snapshots
-- historical research
+- `next-steps-through-2026-08-01.md` and the prior
+  `next-steps-through-2026-07-26.md` — roadmap history.
+- `ui-design-work-slices.md` and `fitness-a-work-slices.md` — full
+  self-contained agent prompts for the slices imported into
+  `docs/road-to-market.md` Phases 0, 2, and 3.
+- `code-fitness-report-2026-08-01.md` — current fitness baseline (grade A−).
+- `freeform-lore-ingestion-architecture.md`, `canon-decision-workflow.md`,
+  `customizable-state-model-spec.md`, `ai-assisted-item-authoring.md` — full
+  design rationale behind `docs/domain-model.md`.
+- `product-blueprint-2026-07-26.md`, `navigation-ia-decision.md`,
+  `style-bible.md`, `multi-mode-directives.md`,
+  `ui-language-i18n-a11y-audit.md`, `readme-map-2026-07-26.md` — sources of
+  `docs/product-blueprint.md` and the prior doc map.
+- `product-health-audit.md` — source of the road-to-market Phase 1 trust
+  slices.
+- The three full smoke procedures behind `docs/smoke-tests.md`, plus
+  historical smoke run logs.
 
 Archived documents preserve rationale but are not instructions for work from
-the current tree. Each newly archived document should carry a short archive
-banner explaining what replaced it.
-
-Notable July 26 archive changes:
-
-- the former 1,279-line roadmap is preserved as
-  `docs/archive/next-steps-through-2026-07-26.md`
-- the May architecture/action review is preserved as
-  `docs/archive/architecture-review-2026-05-10.md`
-- completed character-canon, import, entity-ownership, navigation, and UX plans
-  moved out of the active top level
-- dated code-fitness reports and the stale April release checklist moved into
-  the archive
-
-The completed 18-slice fitness plan was archived on July 31 as
-`docs/archive/fitness-100-work-slices.md`; its close-out result is
-`docs/archive/code-fitness-report-2026-07-31.md`.
+the current tree.
 
 ## Maintenance Rules
 
-- Keep `docs/next-steps.md` short and limited to open work.
-- Move completed status into `PROJECT_STATUS.md`; do not keep completion diaries
-  in the roadmap.
-- Record durable decisions in the relevant authority document.
-- Give new plans a status and date.
-- Archive completed or superseded plans instead of leaving them active-looking.
-- Update this map when authority or document placement changes.
-- Repair internal links whenever a document moves.
+- Keep `docs/road-to-market.md` limited to open work; move completed status
+  into `PROJECT_STATUS.md` and mark slices done on the status board rather
+  than keeping completion diaries.
+- Record durable decisions in the relevant authority document (blueprint,
+  architecture, domain model).
+- Archive completed or superseded documents with a short banner naming the
+  replacement; repair internal links whenever a document moves.
+- Do not create new parallel roadmaps, navigation plans, or spec forks; extend
+  the six active documents instead. If a new large proposal is genuinely
+  needed, give it a status and date, and fold its durable outcome back into
+  the authority docs when decided.
+- Update this map when authority or placement changes.

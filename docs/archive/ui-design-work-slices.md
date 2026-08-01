@@ -1,3 +1,5 @@
+> **Archived 2026-08-01.** Open slices absorbed into `docs/road-to-market.md` Phase 2; full agent prompts remain here.
+
 # UI/UX Design Fixes — Work Slices
 
 **Date:** 2026-07-25 · **Baseline:** static code review of `apps/web/src` (app not running), findings below.

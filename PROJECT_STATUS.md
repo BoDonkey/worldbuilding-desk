@@ -195,7 +195,7 @@ Under the hood, the app still includes rich systems for world data, rules, chara
 - Product health is now the active priority: the Lore/RAG/Shodh health panel and the World Bible Character detail health panel are implemented, and Lore Documents can now quietly flag likely stale retrieval coverage and rebuild derived RAG/Shodh context from saved source data.
 - Assistant prompt context now labels retrieved World Bible records, accepted canonical facts, linked/general Source Notes, scene drafts, and rules references by trust tier. Assistant answers also expose a collapsed `Sources used` list for the Shodh/RAG chunks sent with that answer. Pending and rejected Source Note proposals remain out of normal assistant context; include them only through an explicit future proposal-review flow.
 - Accepted canonical facts now capture Shodh summaries when accepted or rebuilt; Source Notes remain RAG-only source material by default.
-- The docs source-of-truth map now lives in `docs/README.md`; keep `PROJECT_STATUS.md` and `docs/next-steps.md` as the current status and roadmap pair.
+- The docs source-of-truth map now lives in `docs/README.md`; keep `PROJECT_STATUS.md` and `docs/road-to-market.md` as the current status and roadmap pair. The documentation set was consolidated again on 2026-08-01 to six active documents.
 - The active documentation set was consolidated on 2026-07-26: completed plans,
   branch handoffs, dated audits, and the prior roadmap/architecture action logs
   now live under `docs/archive/`; the active roadmap and architecture reference
@@ -217,7 +217,7 @@ Under the hood, the app still includes rich systems for world data, rules, chara
 
 ### Engineering
 
-*Ordering is maintained in `docs/next-steps.md`; durable boundaries are in
+*Ordering is maintained in `docs/road-to-market.md`; durable boundaries are in
 `docs/architecture-review.md`.*
 
 - **Zustand store, slice by slice** — app shell and workspace UI slices are now in place. Continue with dedicated, behavior-preserving slices only; do not move editor `title`, `content`, `saveStatus`, or autosave ownership without a focused editor-state pass.
@@ -235,11 +235,11 @@ Under the hood, the app still includes rich systems for world data, rules, chara
 ### Documentation
 - Keep summary docs aligned with the writing-first UX direction.
 - Treat older “functional IDE” language as implementation heritage, not the main pitch.
-- Dual LLM review direction is captured in `docs/dual-llm-review-architecture.md`: local World Engine for passive structured review, BYOK providers for explicit creative work.
+- Dual LLM review direction is captured in `docs/archive/dual-llm-review-architecture.md`: local World Engine for passive structured review, BYOK providers for explicit creative work.
 - Near-term state-tracking direction is now grounded by persisted mutation-ledger scaffolding rather than docs alone: future accepted state deltas can be tied to `sceneId`, `sceneOrder`, `sourceRevision`, and `sourceHash`.
 - The current review UX direction for deterministic state suggestions is passive-by-default: proposals stay out of the writing flow, do not affect replay until accepted, and can be hidden and later restored without rejecting them.
 - AI assistance for World Bible canon should remain explicit and author-invoked. The direction is not a separate AI draft path per category; it is a floating helper that supports brainstorming and proposes confirmable actions against the current record/schema. Model output must not silently create records, fields, aliases, or canon facts.
-- Project-specific AI adapter feedback is documented in `docs/architecture-review.md` and `docs/next-steps.md`: keep Ollama/local providers first-class but capability-variable, normalize tool/action proposals above provider-specific tool calling, prefer named AI routes/profiles over fixed effort buckets, default hosted routes toward provider-side prompt caching for stable prefixes, use tagged read-only context extraction, and treat future game-engine or persona hooks as typed app-owned capabilities rather than freeform prompt buttons.
+- Project-specific AI adapter feedback is documented in `docs/architecture-review.md` and `docs/road-to-market.md`: keep Ollama/local providers first-class but capability-variable, normalize tool/action proposals above provider-specific tool calling, prefer named AI routes/profiles over fixed effort buckets, default hosted routes toward provider-side prompt caching for stable prefixes, use tagged read-only context extraction, and treat future game-engine or persona hooks as typed app-owned capabilities rather than freeform prompt buttons.
 
 ---
 
