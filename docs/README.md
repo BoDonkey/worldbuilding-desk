@@ -2,7 +2,7 @@
 
 Last updated: 2026-08-01
 
-The active documentation set was consolidated on 2026-08-01 down to six
+The active documentation set was consolidated on 2026-08-01 down to seven
 documents. Everything else lives in `docs/archive/` with a banner pointing at
 its replacement.
 
@@ -24,6 +24,8 @@ Read in this order:
    item-authoring direction).
 6. `docs/smoke-tests.md` — reusable manual smoke procedures for backup
    round-trip, review completion, and character canon unification.
+7. `docs/marketing-plan.md` — positioning, audience, pricing, and launch
+   channels; companion to road-to-market Phase 6.
 
 If documents disagree: current implementation truth comes from
 `PROJECT_STATUS.md`; open work and its order come from
