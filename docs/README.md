@@ -41,10 +41,9 @@ enter the roadmap automatically; `docs/next-steps.md` determines priority.
 ## Active Work Plans
 
 - `docs/ui-design-work-slices.md`
-- `docs/fitness-100-work-slices.md`
 
-These contain detailed, independently executable engineering slices. Their
-status tables are authoritative for those slices, but they do not override the
+This contains detailed, independently executable engineering slices. Its
+status table is authoritative for those slices, but it does not override the
 product ordering in `docs/next-steps.md`.
 
 ## Focused Audits And Guardrails
@@ -90,6 +89,10 @@ Notable July 26 archive changes:
   moved out of the active top level
 - dated code-fitness reports and the stale April release checklist moved into
   the archive
+
+The completed 18-slice fitness plan was archived on July 31 as
+`docs/archive/fitness-100-work-slices.md`; its close-out result is
+`docs/archive/code-fitness-report-2026-07-31.md`.
 
 ## Maintenance Rules
 
