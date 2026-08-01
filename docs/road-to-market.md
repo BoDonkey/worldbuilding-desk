@@ -57,6 +57,34 @@ pnpm --filter desktop build
 pnpm --filter web e2e:run       # for slices touching routed UI
 ```
 
+## Executing a Slice (instructions for agents)
+
+1. **Claim it.** Set the slice to `WIP` on the status board below before
+   starting. Respect phase ordering and the noted dependencies (2.2 after
+   2.1; 2.7 after 2.5; 3.5–3.8 sequentially; Phase 6 strictly ordered).
+2. **Get the full prompt.** Slices marked _[prompt: archive/... § Slice N]_
+   have complete, self-contained agent prompts in the archived plan. Use
+   them, but apply these remaps — the archived docs predate the 2026-08-01
+   consolidation:
+   - Any instruction to update a status/execution table **in the archived
+     plan itself** (including ui-design Slice 11's "append a status table"
+     and fitness Slice 9's "update the execution-status table in this file")
+     applies to **this file's status board instead**. Do not edit archived
+     documents except to add an archive banner.
+   - References to `docs/next-steps.md` → this file.
+   - References to `docs/style-bible.md` or `docs/navigation-ia-decision.md`
+     → `docs/product-blueprint.md`.
+   - References to the lore/canon/state/item specs → `docs/domain-model.md`.
+   - References to `docs/code-fitness-report-2026-08-01.md` →
+     `docs/archive/code-fitness-report-2026-08-01.md`. New dated reports
+     (fitness Slice 9 / 3.9) are written directly to `docs/archive/` and
+     linked from the status board.
+3. **Verify.** Run the battery above (plus local Cypress for routed-UI
+   slices); report counts in the commit message.
+4. **Close out.** Mark the slice `Done <commit>` on the board. Update
+   `PROJECT_STATUS.md` if application truth changed. Never round a partial
+   result up to done — record the honest state in the board's note column.
+
 ## Status Board
 
 Update as slices land. Statuses: `—` not started, `WIP`, `Done <commit>`.
