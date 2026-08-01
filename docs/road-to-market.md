@@ -91,7 +91,7 @@ Update as slices land. Statuses: `—` not started, `WIP`, `Done <commit>`.
 
 | # | Slice | Phase | Size | Status |
 |---|---|---|---|---|
-| 0.1 | Branch/worktree cleanup | 0 | XS | — |
+| 0.1 | Branch/worktree cleanup | 0 | XS | Done — "chore: local branch/worktree cleanup (slice 0.1)" on local `main`, pending push |
 | 1.1 | Realistic-project trust dogfood | 1 | M | — |
 | 1.2 | Fix trust-path failures found in 1.1 | 1 | ? | — |
 | 1.3 | Calm-shell navigation validation | 1 | S | — |
