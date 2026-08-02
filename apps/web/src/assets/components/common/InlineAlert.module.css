@@ -1,0 +1,49 @@
+.banner {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.6rem;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  padding: 0.6rem 0.75rem;
+  font-size: var(--font-size-sm);
+  line-height: 1.4;
+}
+
+.message {
+  flex: 1;
+}
+
+.dismissButton {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 1rem;
+  line-height: 1;
+  color: inherit;
+  padding: 0 0.15rem;
+}
+
+.dismissButton:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--color-focus) 45%, transparent);
+  border-radius: 6px;
+}
+
+.error {
+  background: var(--color-error-soft-bg);
+  border-color: var(--color-error-soft-border);
+  color: var(--color-error-soft-text);
+}
+
+.success {
+  background: var(--color-success-soft-bg);
+  border-color: var(--color-success-soft-border);
+  color: var(--color-success-soft-text);
+}
+
+.info {
+  background: var(--badge-info-bg);
+  border-color: var(--badge-info-border);
+  color: var(--badge-info-text);
+}
