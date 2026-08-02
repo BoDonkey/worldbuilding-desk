@@ -558,10 +558,14 @@ describe('Lore and review matching', () => {
 
     cy.visit('/world-bible');
     cy.contains('h1', 'World Bible').should('be.visible');
-    cy.on('window:confirm', () => true);
     cy.contains('li', 'Garcia de Terra')
       .contains('button', 'Delete')
       .click();
+    cy.contains('[role="dialog"]', 'Delete this entity?')
+      .should('be.visible')
+      .within(() => {
+        cy.contains('button', 'Delete').click();
+      });
     cy.contains('[role="status"]', 'Entry deleted.').should('be.visible');
 
     cy.visit('/workspace');

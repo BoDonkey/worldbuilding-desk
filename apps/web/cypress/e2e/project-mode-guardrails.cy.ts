@@ -331,9 +331,6 @@ describe('Project mode guardrails', () => {
 
   it('offers and completes a direct short-name to full-name alias action', () => {
     seedShortNameAliasReviewItem();
-    cy.window().then((win) => {
-      cy.stub(win, 'confirm').returns(true);
-    });
     cy.visit('/world-bible');
     cy.contains('[class*="entityName"]', /^Garcia$/)
       .parents('li')
@@ -347,6 +344,11 @@ describe('Project mode guardrails', () => {
     cy.contains('button', 'Make Garcia an alias of Garcia de Terra')
       .should('be.visible')
       .click();
+    cy.contains('[role="dialog"]', 'Convert "Garcia" into an alias of "Garcia de Terra"?')
+      .should('be.visible')
+      .within(() => {
+        cy.contains('button', 'Convert').click();
+      });
     cy.contains('[class*="entityName"]', /^Garcia$/).should('not.exist');
     cy.contains('li', 'Garcia de Terra').within(() => {
       cy.contains('span', 'Names need review').should('not.exist');
@@ -357,13 +359,16 @@ describe('Project mode guardrails', () => {
   it('clears the active project summary after deleting the last project', () => {
     cy.visit('/projects');
     cy.contains('button', 'Open Workspace').should('be.visible');
-    cy.window().then((win) => {
-      cy.stub(win, 'confirm').returns(true);
-    });
 
     cy.get('li')
       .filter(':contains("Cypress Smoke Project")')
       .first()
+      .within(() => {
+        cy.contains('button', 'Delete').click();
+      });
+
+    cy.contains('[role="dialog"]', 'Delete project "Cypress Smoke Project"?')
+      .should('be.visible')
       .within(() => {
         cy.contains('button', 'Delete').click();
       });

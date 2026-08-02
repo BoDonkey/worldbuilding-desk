@@ -47,12 +47,14 @@ describe('Source Notes', () => {
       cy.contains('button', 'Delete').should('be.visible');
     });
 
-    cy.window().then((win) => {
-      cy.stub(win, 'confirm').returns(true);
-    });
     cy.contains('article', 'Glass Harbor Timeline').within(() => {
       cy.contains('button', 'Delete').click();
     });
+    cy.contains('[role="dialog"]', 'Delete Source Note "Glass Harbor Timeline"?')
+      .should('be.visible')
+      .within(() => {
+        cy.contains('button', 'Delete').click();
+      });
     cy.contains('[role="status"]', 'Source Note deleted.').should('be.visible');
     cy.contains('article', 'Glass Harbor Timeline').should('not.exist');
   });

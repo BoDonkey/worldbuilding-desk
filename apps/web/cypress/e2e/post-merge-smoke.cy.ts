@@ -572,12 +572,6 @@ describe('Post-merge smoke checklist', () => {
           return 'blob:cypress-tool-pack';
         })
         .as('createObjectURL');
-      cy.stub(win, 'confirm')
-        .onFirstCall()
-        .returns(true)
-        .onSecondCall()
-        .returns(false)
-        .as('confirmStub');
     });
 
     cy.contains('button', 'Export Tool Pack').click();
@@ -599,7 +593,13 @@ describe('Post-merge smoke checklist', () => {
         force: true
       });
 
-      cy.get('@confirmStub').should('have.been.calledOnce');
+      // The importer offers a Replace/Append choice via the shared confirm
+      // dialog instead of a native confirm() — choose Replace here.
+      cy.contains('[role="dialog"]', 'Replace existing prompt tools with imported tools?')
+        .should('be.visible')
+        .within(() => {
+          cy.contains('button', 'Replace').click();
+        });
 
       // Defaults should still map one-to-one by mode after replace.
       selectDefaultsMode('LitRPG');
@@ -612,9 +612,14 @@ describe('Post-merge smoke checklist', () => {
       cy.get('input[type="file"][accept*="application/json"]').first().selectFile(file, {
         force: true
       });
-    });
 
-    cy.get('@confirmStub').should('have.been.calledTwice');
+      // Second import: choose Append instead of Replace.
+      cy.contains('[role="dialog"]', 'Replace existing prompt tools with imported tools?')
+        .should('be.visible')
+        .within(() => {
+          cy.contains('button', 'Append').click();
+        });
+    });
 
     // Append intentionally duplicates tools by name with new IDs. We only assert this does not break defaults.
     cy.get('strong').then(($strongNodes) => {
