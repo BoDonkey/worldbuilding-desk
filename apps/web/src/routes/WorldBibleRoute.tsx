@@ -3,6 +3,7 @@ import type {FormEvent} from 'react';
 import {useLocation, useNavigate} from 'react-router';
 import {useEscapeToClose} from '../hooks/useEscapeToClose';
 import {useFocusTrap} from '../hooks/useFocusTrap';
+import {useConfirmDialog} from '../hooks/useConfirmDialog';
 import {useAppStore} from '../store/appStore';
 import {getProjectCapabilities} from '../projectMode';
 import type {
@@ -122,6 +123,7 @@ function WorldBibleRoute() {
   const saveProjectSettings = useAppStore((s) => s.saveProjectSettings);
   const location = useLocation();
   const navigate = useNavigate();
+  const {requestConfirm, confirmDialog} = useConfirmDialog();
   const [activeTab, setActiveTab] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<WorldBibleViewMode>('category');
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -649,6 +651,7 @@ function WorldBibleRoute() {
     handleCanonSync,
     isCharacterLikeEntity
   } = useWorldBibleEntityActions({
+    requestConfirm,
     activeProject,
     activeCategory: activeCategory ?? null,
     categories,
@@ -3003,6 +3006,8 @@ function WorldBibleRoute() {
       )}
         </div>
       </div>
+
+      {confirmDialog}
     </section>
   );
 }

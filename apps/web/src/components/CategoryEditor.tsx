@@ -1,6 +1,7 @@
 import {useState} from 'react';
 import type {EntityCategory, FieldDefinition} from '../entityTypes';
 import {saveCategory} from '../categoryStorage';
+import {InlineAlert} from './common';
 import styles from '../assets/components/CategoryEditor.module.css';
 
 interface CategoryEditorProps {
@@ -15,6 +16,7 @@ function CategoryEditor({category, onSave, onCancel}: CategoryEditorProps) {
   const [editingFieldIndex, setEditingFieldIndex] = useState<number | null>(
     null
   );
+  const [validationError, setValidationError] = useState<string | null>(null);
 
   const handleAddField = () => {
     setFields([
@@ -55,17 +57,18 @@ function CategoryEditor({category, onSave, onCancel}: CategoryEditorProps) {
 
   const handleSave = async () => {
     if (!name.trim()) {
-      alert('Category name is required');
+      setValidationError('Category name is required.');
       return;
     }
 
     for (const field of fields) {
       if (!field.key.trim() || !field.label.trim()) {
-        alert('All fields must have a key and label');
+        setValidationError('All fields must have a key and label.');
         return;
       }
     }
 
+    setValidationError(null);
     const updated: EntityCategory = {
       ...category,
       name: name.trim(),
@@ -80,6 +83,14 @@ function CategoryEditor({category, onSave, onCancel}: CategoryEditorProps) {
   return (
     <div className={styles.container}>
       <h3>Edit Category: {category.name}</h3>
+
+      {validationError && (
+        <InlineAlert
+          variant='error'
+          message={validationError}
+          onDismiss={() => setValidationError(null)}
+        />
+      )}
 
       <div className={styles.header}>
         <label>

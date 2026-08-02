@@ -1,4 +1,5 @@
 import type { CharacterStyle } from '../entityTypes';
+import {useConfirmDialog} from '../hooks/useConfirmDialog';
 
 interface CharacterStyleEditorProps {
   style: CharacterStyle;
@@ -15,6 +16,8 @@ export function CharacterStyleEditor({
   expanded = false,
   onToggleExpand
 }: CharacterStyleEditorProps) {
+  const {requestConfirm, confirmDialog} = useConfirmDialog();
+
   const handleToggle = () => {
     if (onToggleExpand) {
       onToggleExpand(expanded ? null : style.id);
@@ -23,6 +26,16 @@ export function CharacterStyleEditor({
 
   const handleStyleChange = (key: keyof CharacterStyle['styles'], value: string) => {
     onUpdate(style.id, { [key]: value });
+  };
+
+  const handleDeleteClick = () => {
+    requestConfirm({
+      title: `Delete "${style.name}"?`,
+      message: 'This character style will be permanently removed.',
+      confirmLabel: 'Delete',
+      variant: 'danger',
+      onConfirm: () => onDelete(style.id)
+    });
   };
 
   return (
@@ -49,8 +62,8 @@ export function CharacterStyleEditor({
           >
             {expanded ? 'Collapse' : 'Edit'}
           </button>
-          <button 
-            onClick={() => onDelete(style.id)}
+          <button
+            onClick={handleDeleteClick}
             style={{ fontSize: '0.85rem' }}
           >
             Delete
@@ -168,6 +181,8 @@ export function CharacterStyleEditor({
           </div>
         </div>
       )}
+
+      {confirmDialog}
     </li>
   );
 }

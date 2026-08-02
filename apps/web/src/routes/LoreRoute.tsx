@@ -68,6 +68,7 @@ import {
 import {ProjectScratchpadButton} from '../components/ProjectScratchpadButton';
 import {PageHeader} from '../components/PageHeader';
 import styles from '../styles/LoreRoute.module.css';
+import {useConfirmDialog} from '../hooks/useConfirmDialog';
 
 type LinkDraft = {
   targetType: 'character' | 'entity';
@@ -113,6 +114,7 @@ const RAG_TYPE_LABELS: Array<{type: keyof RAGDiagnostics['countsByType']; label:
 ];
 
 function LoreRoute() {
+  const {requestConfirm, confirmDialog} = useConfirmDialog();
   const activeProject = useAppStore((state) => state.activeProject);
   const location = useLocation();
   const navigate = useNavigate();
@@ -554,35 +556,42 @@ function LoreRoute() {
     }
   };
 
-  const handleDelete = async (document: LoreDocument) => {
-    if (!window.confirm(`Delete Source Note "${document.title}"?`)) return;
-    setDeletingId(document.id);
-    setFeedback(null);
-    try {
-      await deleteLoreDocument(document.id);
-      await replaceLoreEntityProposals({
-        projectId: document.projectId,
-        loreDocumentId: document.id,
-        proposals: []
-      });
-      await replaceLoreFactProposals({
-        projectId: document.projectId,
-        loreDocumentId: document.id,
-        proposals: []
-      });
-      await deleteLoreRagDocument(document.id);
-      await refreshProjectContextHealth();
-      if (editingId === document.id) {
-        resetForm();
+  const handleDelete = (document: LoreDocument) => {
+    requestConfirm({
+      title: `Delete Source Note "${document.title}"?`,
+      message: 'This removes the note and any lore/fact proposals extracted from it.',
+      confirmLabel: 'Delete',
+      variant: 'danger',
+      onConfirm: async () => {
+        setDeletingId(document.id);
+        setFeedback(null);
+        try {
+          await deleteLoreDocument(document.id);
+          await replaceLoreEntityProposals({
+            projectId: document.projectId,
+            loreDocumentId: document.id,
+            proposals: []
+          });
+          await replaceLoreFactProposals({
+            projectId: document.projectId,
+            loreDocumentId: document.id,
+            proposals: []
+          });
+          await deleteLoreRagDocument(document.id);
+          await refreshProjectContextHealth();
+          if (editingId === document.id) {
+            resetForm();
+          }
+          setFeedback({tone: 'success', message: 'Source Note deleted.'});
+        } catch (error) {
+          const message =
+            error instanceof Error ? error.message : 'Unable to delete Source Note.';
+          setFeedback({tone: 'error', message});
+        } finally {
+          setDeletingId(null);
+        }
       }
-      setFeedback({tone: 'success', message: 'Source Note deleted.'});
-    } catch (error) {
-      const message =
-        error instanceof Error ? error.message : 'Unable to delete Source Note.';
-      setFeedback({tone: 'error', message});
-    } finally {
-      setDeletingId(null);
-    }
+    });
   };
 
   const handleImportClick = () => {
@@ -891,45 +900,52 @@ function LoreRoute() {
     }
   };
 
-  const handleRemoveFact = async (fact: CanonicalFact) => {
-    if (!window.confirm('Remove this accepted fact from canon?')) return;
-    setRemovingFactId(fact.id);
-    setFeedback(null);
-    try {
-      await deleteCanonicalFact(fact.id);
-      const sourceProposal = proposals.find((proposal) => proposal.id === fact.sourceProposalId);
-      if (sourceProposal) {
-        const reopenedProposal: LoreFactProposal = {
-          ...sourceProposal,
-          status: 'proposed',
-          updatedAt: Date.now()
-        };
-        await saveLoreFactProposal(reopenedProposal);
-        setProposals((current) =>
-          current.map((proposal) =>
-            proposal.id === reopenedProposal.id ? reopenedProposal : proposal
-          )
-        );
+  const handleRemoveFact = (fact: CanonicalFact) => {
+    requestConfirm({
+      title: 'Remove this accepted fact from canon?',
+      message: 'The source proposal will reopen for review instead of being discarded.',
+      confirmLabel: 'Remove',
+      variant: 'danger',
+      onConfirm: async () => {
+        setRemovingFactId(fact.id);
+        setFeedback(null);
+        try {
+          await deleteCanonicalFact(fact.id);
+          const sourceProposal = proposals.find((proposal) => proposal.id === fact.sourceProposalId);
+          if (sourceProposal) {
+            const reopenedProposal: LoreFactProposal = {
+              ...sourceProposal,
+              status: 'proposed',
+              updatedAt: Date.now()
+            };
+            await saveLoreFactProposal(reopenedProposal);
+            setProposals((current) =>
+              current.map((proposal) =>
+                proposal.id === reopenedProposal.id ? reopenedProposal : proposal
+              )
+            );
+          }
+          if (ragService) {
+            await ragService.deleteDocument(`canon-fact:${fact.id}`);
+          }
+          if (shodhService) {
+            await deleteCanonicalFactMemory(shodhService, fact.id);
+            const memories = await shodhService.listMemories();
+            setShodhMemories(memories);
+            emitShodhMemoriesUpdated(memories);
+          }
+          await refreshProjectContextHealth();
+          setCanonicalFacts((current) => current.filter((entry) => entry.id !== fact.id));
+          setFeedback({tone: 'success', message: 'Accepted fact removed.'});
+        } catch (error) {
+          const message =
+            error instanceof Error ? error.message : 'Unable to remove accepted fact.';
+          setFeedback({tone: 'error', message});
+        } finally {
+          setRemovingFactId(null);
+        }
       }
-      if (ragService) {
-        await ragService.deleteDocument(`canon-fact:${fact.id}`);
-      }
-      if (shodhService) {
-        await deleteCanonicalFactMemory(shodhService, fact.id);
-        const memories = await shodhService.listMemories();
-        setShodhMemories(memories);
-        emitShodhMemoriesUpdated(memories);
-      }
-      await refreshProjectContextHealth();
-      setCanonicalFacts((current) => current.filter((entry) => entry.id !== fact.id));
-      setFeedback({tone: 'success', message: 'Accepted fact removed.'});
-    } catch (error) {
-      const message =
-        error instanceof Error ? error.message : 'Unable to remove accepted fact.';
-      setFeedback({tone: 'error', message});
-    } finally {
-      setRemovingFactId(null);
-    }
+    });
   };
 
   const updateLinkDraft = (index: number, next: Partial<LinkDraft>) => {
@@ -1726,6 +1742,8 @@ function LoreRoute() {
           </p>
         ) : null}
       </section>
+
+      {confirmDialog}
     </section>
   );
 }

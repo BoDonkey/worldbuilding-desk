@@ -56,6 +56,7 @@ import {
 } from '../services/workspace/workspaceView';
 import type {SceneRosterOverrides} from '../services/workspace/sceneRoster';
 import {sortWritingDocuments} from '../writingStorage';
+import type {ConfirmRequest} from './useConfirmDialog';
 
 export interface PendingPositionedChange {
   character: SceneRosterCharacterCard;
@@ -118,6 +119,7 @@ interface UseWorkspaceSceneRosterOptions {
   >;
   setSavingInventoryCapture: Dispatch<SetStateAction<boolean>>;
   setFeedback: (feedback: WorkspaceSceneFeedback) => void;
+  requestConfirm: (request: ConfirmRequest) => void;
 }
 
 const hashSceneContent = (value: string): string => {
@@ -171,7 +173,8 @@ export function useWorkspaceSceneRoster({
   pendingInventoryCapture,
   setPendingInventoryCapture,
   setSavingInventoryCapture,
-  setFeedback
+  setFeedback,
+  requestConfirm
 }: UseWorkspaceSceneRosterOptions) {
   const deferredRosterContent = useDeferredValue(content);
   const stateMutationAnchorResolutionById = useMemo(() => {
@@ -658,23 +661,29 @@ export function useWorkspaceSceneRoster({
   );
 
   const invalidateSceneRosterTimelineEvent = useCallback(
-    async (eventId: string) => {
+    (eventId: string) => {
       const event = stateMutationEvents.find((entry) => entry.id === eventId);
-      if (!event || !window.confirm(`Invalidate “${event.label || 'this scene change'}”?`)) {
-        return;
-      }
-      const updated = await invalidateStateMutationEventById({
-        eventId,
-        reason: 'Invalidated from the scene roster timeline.'
+      if (!event) return;
+      requestConfirm({
+        title: `Invalidate “${event.label || 'this scene change'}”?`,
+        message: 'This state change will be marked invalid and excluded from replay.',
+        confirmLabel: 'Invalidate',
+        variant: 'danger',
+        onConfirm: async () => {
+          const updated = await invalidateStateMutationEventById({
+            eventId,
+            reason: 'Invalidated from the scene roster timeline.'
+          });
+          if (updated) {
+            setFeedback({
+              tone: 'success',
+              message: `Invalidated “${event.label || 'scene change'}”.`
+            });
+          }
+        }
       });
-      if (updated) {
-        setFeedback({
-          tone: 'success',
-          message: `Invalidated “${event.label || 'scene change'}”.`
-        });
-      }
     },
-    [setFeedback, stateMutationEvents]
+    [requestConfirm, setFeedback, stateMutationEvents]
   );
 
   const reanchorSceneRosterTimelineEvent = useCallback(

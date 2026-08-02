@@ -2,6 +2,7 @@ import {useState} from 'react';
 import type {EntityCategory} from '../../entityTypes';
 import {deleteCategory, saveCategory} from '../../categoryStorage';
 import CategoryEditor from '../CategoryEditor';
+import {useConfirmDialog} from '../../hooks/useConfirmDialog';
 import styles from '../../assets/components/WorldBibleRoute.module.css';
 
 interface CategoryManagerProps {
@@ -21,6 +22,7 @@ export function CategoryManager({
   const [editingCategory, setEditingCategory] = useState<EntityCategory | null>(
     null
   );
+  const {requestConfirm, confirmDialog} = useConfirmDialog();
 
   const handleAddCategory = async () => {
     if (!newCatName.trim()) return;
@@ -41,11 +43,17 @@ export function CategoryManager({
     setNewCatName('');
   };
 
-  const handleDeleteCategory = async (id: string) => {
-    if (!confirm('Delete this category? All entities in it will be orphaned.'))
-      return;
-    await deleteCategory(id);
-    onCategoriesChange(categories.filter((category) => category.id !== id));
+  const handleDeleteCategory = (id: string) => {
+    requestConfirm({
+      title: 'Delete this category?',
+      message: 'All entities in it will be orphaned.',
+      confirmLabel: 'Delete',
+      variant: 'danger',
+      onConfirm: async () => {
+        await deleteCategory(id);
+        onCategoriesChange(categories.filter((category) => category.id !== id));
+      }
+    });
   };
 
   const handleSaveCategory = (updated: EntityCategory) => {
@@ -59,11 +67,14 @@ export function CategoryManager({
 
   if (editingCategory) {
     return (
-      <CategoryEditor
-        category={editingCategory}
-        onSave={handleSaveCategory}
-        onCancel={() => setEditingCategory(null)}
-      />
+      <>
+        <CategoryEditor
+          category={editingCategory}
+          onSave={handleSaveCategory}
+          onCancel={() => setEditingCategory(null)}
+        />
+        {confirmDialog}
+      </>
     );
   }
 
@@ -107,6 +118,8 @@ export function CategoryManager({
       <button onClick={onClose} className={styles.closeButton}>
         Close
       </button>
+
+      {confirmDialog}
     </div>
   );
 }

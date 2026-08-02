@@ -30,6 +30,7 @@ import {
   type WorkspaceExportFormat,
   type WorkspaceImportFailureItem
 } from '../store/workspaceUiStore';
+import type {ConfirmRequest} from './useConfirmDialog';
 type SaveStatus = 'idle' | 'saving' | 'saved';
 type ImportMode = WorkspaceImportMode;
 
@@ -57,6 +58,7 @@ interface UseWorkspaceDocumentsParams {
   setConsistencyPopoverRef: MutableRefObject<Dispatch<SetStateAction<unknown>> | null>;
   deleteDocumentSideEffectsRef: MutableRefObject<((docId: string) => Promise<void>) | null>;
   setFeedback: Dispatch<SetStateAction<FeedbackState>>;
+  requestConfirm: (request: ConfirmRequest) => void;
   addSystemHistory: (input: {
     category: 'scene' | 'consistency' | 'resource' | 'quest' | 'system';
     message: string;
@@ -158,6 +160,7 @@ export const useWorkspaceDocuments = ({
   setConsistencyPopoverRef,
   deleteDocumentSideEffectsRef,
   setFeedback,
+  requestConfirm,
   addSystemHistory
 }: UseWorkspaceDocumentsParams) => {
   const selectedId = useWorkspaceUiStore((state) =>
@@ -623,31 +626,37 @@ export const useWorkspaceDocuments = ({
   ]);
 
   const handleDelete = useCallback(
-    async (doc: WritingDocument) => {
-      const confirmed = window.confirm(`Delete "${doc.title || 'Untitled scene'}"?`);
-      if (!confirmed) return;
+    (doc: WritingDocument) => {
+      requestConfirm({
+        title: `Delete "${doc.title || 'Untitled scene'}"?`,
+        message: 'This scene will be permanently removed from the project.',
+        confirmLabel: 'Delete',
+        variant: 'danger',
+        onConfirm: async () => {
+          setDeletingDocumentId(doc.id);
+          setFeedback(null);
+          try {
+            await deleteWritingDocument(doc.id);
+            await deleteDocumentSideEffectsRef.current?.(doc.id);
+            setDocuments((prev) => prev.filter((entry) => entry.id !== doc.id));
 
-      setDeletingDocumentId(doc.id);
-      setFeedback(null);
-      try {
-        await deleteWritingDocument(doc.id);
-        await deleteDocumentSideEffectsRef.current?.(doc.id);
-        setDocuments((prev) => prev.filter((entry) => entry.id !== doc.id));
-
-        if (selectedId === doc.id) {
-          resetEditor({clearPersistedSelection: true});
+            if (selectedId === doc.id) {
+              resetEditor({clearPersistedSelection: true});
+            }
+            setFeedback({tone: 'success', message: 'Scene deleted.'});
+          } catch (error) {
+            const message =
+              error instanceof Error ? error.message : 'Unable to delete scene.';
+            setFeedback({tone: 'error', message});
+          } finally {
+            setDeletingDocumentId(null);
+          }
         }
-        setFeedback({tone: 'success', message: 'Scene deleted.'});
-      } catch (error) {
-        const message =
-          error instanceof Error ? error.message : 'Unable to delete scene.';
-        setFeedback({tone: 'error', message});
-      } finally {
-        setDeletingDocumentId(null);
-      }
+      });
     },
     [
       deleteDocumentSideEffectsRef,
+      requestConfirm,
       resetEditor,
       selectedId,
       setDeletingDocumentId,

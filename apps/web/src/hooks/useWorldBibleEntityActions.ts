@@ -27,6 +27,7 @@ import type {
 } from '../services/shodh/ShodhMemoryService';
 import {upsertCompendiumEntryFromEntity} from '../services/compendium';
 import {promoteDocumentToParent, syncChildWithParent} from '../services/seriesBible/SeriesBibleService';
+import type {ConfirmRequest} from './useConfirmDialog';
 
 type FeedbackState = {
   tone: 'success' | 'error';
@@ -43,6 +44,7 @@ interface UseWorldBibleEntityActionsParams {
   setEntities: Dispatch<SetStateAction<WorldEntity[]>>;
   setAliases: Dispatch<SetStateAction<ConsistencyAlias[]>>;
   setFeedback: Dispatch<SetStateAction<FeedbackState>>;
+  requestConfirm: (request: ConfirmRequest) => void;
   setViewMode: Dispatch<SetStateAction<'category' | 'review'>>;
   setCanonState: Dispatch<
     SetStateAction<{
@@ -89,6 +91,7 @@ export const useWorldBibleEntityActions = ({
   setEntities,
   setAliases,
   setFeedback,
+  requestConfirm,
   setViewMode,
   setCanonState,
   ragService,
@@ -367,41 +370,49 @@ export const useWorldBibleEntityActions = ({
   );
 
   const handleDeleteEntity = useCallback(
-    async (id: string) => {
-      if (!confirm('Delete this entity?')) return;
-      setDeletingEntityId(id);
-      setFeedback(null);
-      try {
-        if (activeProject) {
-          await deleteAliasesForEntity(activeProject.id, id);
+    (id: string) => {
+      requestConfirm({
+        title: 'Delete this entity?',
+        message: 'This removes the World Bible record and its aliases.',
+        confirmLabel: 'Delete',
+        variant: 'danger',
+        onConfirm: async () => {
+          setDeletingEntityId(id);
+          setFeedback(null);
+          try {
+            if (activeProject) {
+              await deleteAliasesForEntity(activeProject.id, id);
+            }
+            await deleteEntity(id);
+            if (ragService) {
+              await ragService.deleteDocument(id);
+            }
+            if (shodhService) {
+              await shodhService.deleteMemoriesForDocument(id);
+              await refreshMemories();
+            }
+            setEntities((prev) => prev.filter((entity) => entity.id !== id));
+            setAliases((prev) =>
+              prev.filter((alias) => alias.targetType !== 'entity' || alias.targetId !== id)
+            );
+            if (editingId === id) resetForm();
+            setFeedback({tone: 'success', message: 'Entry deleted.'});
+          } catch (error) {
+            const message =
+              error instanceof Error ? error.message : 'Unable to delete entry.';
+            setFeedback({tone: 'error', message});
+          } finally {
+            setDeletingEntityId(null);
+          }
         }
-        await deleteEntity(id);
-        if (ragService) {
-          await ragService.deleteDocument(id);
-        }
-        if (shodhService) {
-          await shodhService.deleteMemoriesForDocument(id);
-          await refreshMemories();
-        }
-        setEntities((prev) => prev.filter((entity) => entity.id !== id));
-        setAliases((prev) =>
-          prev.filter((alias) => alias.targetType !== 'entity' || alias.targetId !== id)
-        );
-        if (editingId === id) resetForm();
-        setFeedback({tone: 'success', message: 'Entry deleted.'});
-      } catch (error) {
-        const message =
-          error instanceof Error ? error.message : 'Unable to delete entry.';
-        setFeedback({tone: 'error', message});
-      } finally {
-        setDeletingEntityId(null);
-      }
+      });
     },
     [
       activeProject,
       editingId,
       ragService,
       refreshMemories,
+      requestConfirm,
       resetForm,
       setAliases,
       setEntities,
@@ -411,105 +422,109 @@ export const useWorldBibleEntityActions = ({
   );
 
   const handleMergeEntityIntoMatch = useCallback(
-    async (target: WorldEntity) => {
+    (target: WorldEntity) => {
       if (!activeProject || !editingId) return;
 
       const source = entities.find((entity) => entity.id === editingId);
       if (!source || source.id === target.id) return;
 
-      if (!confirm(`Merge "${source.name}" into "${target.name}" and remove the duplicate record?`)) {
-        return;
-      }
+      requestConfirm({
+        title: `Merge "${source.name}" into "${target.name}"?`,
+        message: 'The duplicate record will be removed.',
+        confirmLabel: 'Merge',
+        variant: 'danger',
+        onConfirm: async () => {
+          setMergingEntityTargetId(target.id);
+          setFeedback(null);
 
-      setMergingEntityTargetId(target.id);
-      setFeedback(null);
+          try {
+            const sourceName = name.trim() || source.name;
+            const sourceDraftFields: Record<string, unknown> = {
+              ...source.fields,
+              ...fieldValues
+            };
+            const {mergedEntity, aliases: mergedAliasTexts} = buildEntityMergePlan({
+              source,
+              target,
+              sourceName,
+              sourceFields: sourceDraftFields,
+              targetFields: target.fields,
+              sourceIndexedAliases: aliasMapByEntityId.get(source.id) ?? [],
+              targetIndexedAliases: aliasMapByEntityId.get(target.id) ?? [],
+              alternativeNamesKey,
+              normalizeName,
+              parseAlternativeNames,
+              aliasesReviewedAt: Math.max(
+                target.aliasesReviewedAt ?? 0,
+                source.aliasesReviewedAt ?? 0
+              ) || undefined
+            });
 
-      try {
-        const sourceName = name.trim() || source.name;
-        const sourceDraftFields: Record<string, unknown> = {
-          ...source.fields,
-          ...fieldValues
-        };
-        const {mergedEntity, aliases: mergedAliasTexts} = buildEntityMergePlan({
-          source,
-          target,
-          sourceName,
-          sourceFields: sourceDraftFields,
-          targetFields: target.fields,
-          sourceIndexedAliases: aliasMapByEntityId.get(source.id) ?? [],
-          targetIndexedAliases: aliasMapByEntityId.get(target.id) ?? [],
-          alternativeNamesKey,
-          normalizeName,
-          parseAlternativeNames,
-          aliasesReviewedAt: Math.max(
-            target.aliasesReviewedAt ?? 0,
-            source.aliasesReviewedAt ?? 0
-          ) || undefined
-        });
+            await saveEntity(mergedEntity);
+            const mergedAliases = await replaceAliasesForEntity({
+              projectId: activeProject.id,
+              entityId: target.id,
+              aliases: mergedAliasTexts
+            });
+            await deleteAliasesForEntity(activeProject.id, source.id);
+            await deleteEntity(source.id);
 
-        await saveEntity(mergedEntity);
-        const mergedAliases = await replaceAliasesForEntity({
-          projectId: activeProject.id,
-          entityId: target.id,
-          aliases: mergedAliasTexts
-        });
-        await deleteAliasesForEntity(activeProject.id, source.id);
-        await deleteEntity(source.id);
-
-        if (ragService) {
-          await ragService.indexDocument(
-            mergedEntity.id,
-            mergedEntity.name,
-            buildEntityContent(mergedEntity),
-            'worldbible',
-            {
-              tags: [
-                categories.find((category) => category.id === mergedEntity.categoryId)?.slug ?? ''
-              ].filter(Boolean),
-              entityIds: [mergedEntity.id]
+            if (ragService) {
+              await ragService.indexDocument(
+                mergedEntity.id,
+                mergedEntity.name,
+                buildEntityContent(mergedEntity),
+                'worldbible',
+                {
+                  tags: [
+                    categories.find((category) => category.id === mergedEntity.categoryId)?.slug ?? ''
+                  ].filter(Boolean),
+                  entityIds: [mergedEntity.id]
+                }
+              );
+              await ragService.deleteDocument(source.id);
             }
-          );
-          await ragService.deleteDocument(source.id);
-        }
-        if (shodhService) {
-          await shodhService.captureAutoMemory({
-            projectId: activeProject.id,
-            documentId: mergedEntity.id,
-            title: mergedEntity.name,
-            content: buildEntityContent(mergedEntity),
-            tags: [
-              'worldbible',
-              categories.find((category) => category.id === mergedEntity.categoryId)?.slug ?? ''
-            ].filter(Boolean)
-          });
-          await shodhService.deleteMemoriesForDocument(source.id);
-          await refreshMemories();
-        }
+            if (shodhService) {
+              await shodhService.captureAutoMemory({
+                projectId: activeProject.id,
+                documentId: mergedEntity.id,
+                title: mergedEntity.name,
+                content: buildEntityContent(mergedEntity),
+                tags: [
+                  'worldbible',
+                  categories.find((category) => category.id === mergedEntity.categoryId)?.slug ?? ''
+                ].filter(Boolean)
+              });
+              await shodhService.deleteMemoriesForDocument(source.id);
+              await refreshMemories();
+            }
 
-        setEntities((prev) =>
-          prev
-            .filter((entity) => entity.id !== source.id)
-            .map((entity) => (entity.id === target.id ? mergedEntity : entity))
-        );
-        setAliases((prev) => [
-          ...prev.filter(
-            (alias) => alias.targetId !== source.id && alias.targetId !== target.id
-          ),
-          ...mergedAliases
-        ]);
-        setViewMode('category');
-        handleEdit(mergedEntity, 'aliases');
-        setFeedback({
-          tone: 'success',
-          message: `"${sourceName}" merged into "${target.name}".`
-        });
-      } catch (error) {
-        const message =
-          error instanceof Error ? error.message : 'Unable to merge records.';
-        setFeedback({tone: 'error', message});
-      } finally {
-        setMergingEntityTargetId(null);
-      }
+            setEntities((prev) =>
+              prev
+                .filter((entity) => entity.id !== source.id)
+                .map((entity) => (entity.id === target.id ? mergedEntity : entity))
+            );
+            setAliases((prev) => [
+              ...prev.filter(
+                (alias) => alias.targetId !== source.id && alias.targetId !== target.id
+              ),
+              ...mergedAliases
+            ]);
+            setViewMode('category');
+            handleEdit(mergedEntity, 'aliases');
+            setFeedback({
+              tone: 'success',
+              message: `"${sourceName}" merged into "${target.name}".`
+            });
+          } catch (error) {
+            const message =
+              error instanceof Error ? error.message : 'Unable to merge records.';
+            setFeedback({tone: 'error', message});
+          } finally {
+            setMergingEntityTargetId(null);
+          }
+        }
+      });
     },
     [
       activeProject,
@@ -526,6 +541,7 @@ export const useWorldBibleEntityActions = ({
       parseAlternativeNames,
       ragService,
       refreshMemories,
+      requestConfirm,
       setAliases,
       setEntities,
       setFeedback,
@@ -535,100 +551,105 @@ export const useWorldBibleEntityActions = ({
   );
 
   const handleMergeMatchIntoCurrentEntity = useCallback(
-    async (source: WorldEntity) => {
+    (source: WorldEntity) => {
       if (!activeProject || !editingId) return;
 
       const target = entities.find((entity) => entity.id === editingId);
       if (!target || source.id === target.id) return;
 
       const targetName = name.trim() || target.name;
-      if (!confirm(`Keep "${targetName}" canonical, merge "${source.name}" into it, and remove the duplicate record?`)) {
-        return;
-      }
 
-      setMergingEntityTargetId(source.id);
-      setFeedback(null);
+      requestConfirm({
+        title: `Keep "${targetName}" canonical?`,
+        message: `"${source.name}" will be merged into it and the duplicate record removed.`,
+        confirmLabel: 'Merge',
+        variant: 'danger',
+        onConfirm: async () => {
+          setMergingEntityTargetId(source.id);
+          setFeedback(null);
 
-      try {
-        const now = Date.now();
-        const targetDraftFields: Record<string, unknown> = {
-          ...target.fields,
-          ...fieldValues
-        };
-        const {mergedEntity, aliases: mergedAliasTexts} = buildEntityMergePlan({
-          source,
-          target,
-          targetName,
-          sourceFields: source.fields,
-          targetFields: targetDraftFields,
-          sourceIndexedAliases: aliasMapByEntityId.get(source.id) ?? [],
-          targetIndexedAliases: aliasMapByEntityId.get(target.id) ?? [],
-          alternativeNamesKey,
-          normalizeName,
-          parseAlternativeNames,
-          aliasesReviewedAt: now
-        });
+          try {
+            const now = Date.now();
+            const targetDraftFields: Record<string, unknown> = {
+              ...target.fields,
+              ...fieldValues
+            };
+            const {mergedEntity, aliases: mergedAliasTexts} = buildEntityMergePlan({
+              source,
+              target,
+              targetName,
+              sourceFields: source.fields,
+              targetFields: targetDraftFields,
+              sourceIndexedAliases: aliasMapByEntityId.get(source.id) ?? [],
+              targetIndexedAliases: aliasMapByEntityId.get(target.id) ?? [],
+              alternativeNamesKey,
+              normalizeName,
+              parseAlternativeNames,
+              aliasesReviewedAt: now
+            });
 
-        await saveEntity(mergedEntity);
-        const mergedAliases = await replaceAliasesForEntity({
-          projectId: activeProject.id,
-          entityId: target.id,
-          aliases: mergedAliasTexts
-        });
-        await deleteAliasesForEntity(activeProject.id, source.id);
-        await deleteEntity(source.id);
+            await saveEntity(mergedEntity);
+            const mergedAliases = await replaceAliasesForEntity({
+              projectId: activeProject.id,
+              entityId: target.id,
+              aliases: mergedAliasTexts
+            });
+            await deleteAliasesForEntity(activeProject.id, source.id);
+            await deleteEntity(source.id);
 
-        const targetCategorySlug =
-          categories.find((category) => category.id === target.categoryId)?.slug ?? '';
-        if (ragService) {
-          await ragService.indexDocument(
-            mergedEntity.id,
-            mergedEntity.name,
-            buildEntityContent(mergedEntity),
-            'worldbible',
-            {
-              tags: [targetCategorySlug].filter(Boolean),
-              entityIds: [mergedEntity.id]
+            const targetCategorySlug =
+              categories.find((category) => category.id === target.categoryId)?.slug ?? '';
+            if (ragService) {
+              await ragService.indexDocument(
+                mergedEntity.id,
+                mergedEntity.name,
+                buildEntityContent(mergedEntity),
+                'worldbible',
+                {
+                  tags: [targetCategorySlug].filter(Boolean),
+                  entityIds: [mergedEntity.id]
+                }
+              );
+              await ragService.deleteDocument(source.id);
             }
-          );
-          await ragService.deleteDocument(source.id);
-        }
-        if (shodhService) {
-          await shodhService.captureAutoMemory({
-            projectId: activeProject.id,
-            documentId: mergedEntity.id,
-            title: mergedEntity.name,
-            content: buildEntityContent(mergedEntity),
-            tags: ['worldbible', targetCategorySlug].filter(Boolean)
-          });
-          await shodhService.deleteMemoriesForDocument(source.id);
-          await refreshMemories();
-        }
+            if (shodhService) {
+              await shodhService.captureAutoMemory({
+                projectId: activeProject.id,
+                documentId: mergedEntity.id,
+                title: mergedEntity.name,
+                content: buildEntityContent(mergedEntity),
+                tags: ['worldbible', targetCategorySlug].filter(Boolean)
+              });
+              await shodhService.deleteMemoriesForDocument(source.id);
+              await refreshMemories();
+            }
 
-        setEntities((prev) =>
-          prev
-            .filter((entity) => entity.id !== source.id)
-            .map((entity) => (entity.id === target.id ? mergedEntity : entity))
-        );
-        setAliases((prev) => [
-          ...prev.filter(
-            (alias) => alias.targetId !== source.id && alias.targetId !== target.id
-          ),
-          ...mergedAliases
-        ]);
-        setViewMode('category');
-        handleEdit(mergedEntity, 'aliases');
-        setFeedback({
-          tone: 'success',
-          message: `"${source.name}" merged into "${targetName}".`
-        });
-      } catch (error) {
-        const message =
-          error instanceof Error ? error.message : 'Unable to merge records.';
-        setFeedback({tone: 'error', message});
-      } finally {
-        setMergingEntityTargetId(null);
-      }
+            setEntities((prev) =>
+              prev
+                .filter((entity) => entity.id !== source.id)
+                .map((entity) => (entity.id === target.id ? mergedEntity : entity))
+            );
+            setAliases((prev) => [
+              ...prev.filter(
+                (alias) => alias.targetId !== source.id && alias.targetId !== target.id
+              ),
+              ...mergedAliases
+            ]);
+            setViewMode('category');
+            handleEdit(mergedEntity, 'aliases');
+            setFeedback({
+              tone: 'success',
+              message: `"${source.name}" merged into "${targetName}".`
+            });
+          } catch (error) {
+            const message =
+              error instanceof Error ? error.message : 'Unable to merge records.';
+            setFeedback({tone: 'error', message});
+          } finally {
+            setMergingEntityTargetId(null);
+          }
+        }
+      });
     },
     [
       activeProject,
@@ -645,6 +666,7 @@ export const useWorldBibleEntityActions = ({
       parseAlternativeNames,
       ragService,
       refreshMemories,
+      requestConfirm,
       setAliases,
       setEntities,
       setFeedback,
@@ -654,7 +676,7 @@ export const useWorldBibleEntityActions = ({
   );
 
   const handleConvertEntityToAlias = useCallback(
-    async (target: WorldEntity, options?: {openNext?: boolean}) => {
+    (target: WorldEntity, options?: {openNext?: boolean}) => {
       if (!activeProject || !editingId) return;
 
       const source = entities.find((entity) => entity.id === editingId);
@@ -687,93 +709,95 @@ export const useWorldBibleEntityActions = ({
         return;
       }
 
-      if (
-        !confirm(`Convert "${sourceName}" into an alias of "${target.name}" and remove the duplicate record?`)
-      ) {
-        return;
-      }
+      requestConfirm({
+        title: `Convert "${sourceName}" into an alias of "${target.name}"?`,
+        message: 'The duplicate record will be removed.',
+        confirmLabel: 'Convert',
+        variant: 'danger',
+        onConfirm: async () => {
+          setAliasingEntityTargetId(target.id);
+          setFeedback(null);
 
-      setAliasingEntityTargetId(target.id);
-      setFeedback(null);
+          try {
+            const now = Date.now();
+            const targetCategorySlug =
+              categories.find((category) => category.id === target.categoryId)?.slug ?? '';
+            const nextTarget: WorldEntity = {
+              ...target,
+              links: plan.mergedLinks,
+              isNew: false,
+              needsCompletion: false,
+              aliasesReviewedAt: now,
+              updatedAt: now
+            };
 
-      try {
-        const now = Date.now();
-        const targetCategorySlug =
-          categories.find((category) => category.id === target.categoryId)?.slug ?? '';
-        const nextTarget: WorldEntity = {
-          ...target,
-          links: plan.mergedLinks,
-          isNew: false,
-          needsCompletion: false,
-          aliasesReviewedAt: now,
-          updatedAt: now
-        };
+            await saveEntity(nextTarget);
+            const savedAliases = await replaceAliasesForEntity({
+              projectId: activeProject.id,
+              entityId: target.id,
+              aliases: plan.transferAliases
+            });
+            await deleteAliasesForEntity(activeProject.id, source.id);
+            await deleteEntity(source.id);
 
-        await saveEntity(nextTarget);
-        const savedAliases = await replaceAliasesForEntity({
-          projectId: activeProject.id,
-          entityId: target.id,
-          aliases: plan.transferAliases
-        });
-        await deleteAliasesForEntity(activeProject.id, source.id);
-        await deleteEntity(source.id);
-
-        if (ragService) {
-          await ragService.indexDocument(
-            nextTarget.id,
-            nextTarget.name,
-            buildEntityContent(nextTarget),
-            'worldbible',
-            {
-              tags: [targetCategorySlug].filter(Boolean),
-              entityIds: [nextTarget.id]
+            if (ragService) {
+              await ragService.indexDocument(
+                nextTarget.id,
+                nextTarget.name,
+                buildEntityContent(nextTarget),
+                'worldbible',
+                {
+                  tags: [targetCategorySlug].filter(Boolean),
+                  entityIds: [nextTarget.id]
+                }
+              );
+              await ragService.deleteDocument(source.id);
             }
-          );
-          await ragService.deleteDocument(source.id);
-        }
-        if (shodhService) {
-          await shodhService.captureAutoMemory({
-            projectId: activeProject.id,
-            documentId: nextTarget.id,
-            title: nextTarget.name,
-            content: buildEntityContent(nextTarget),
-            tags: ['worldbible', targetCategorySlug].filter(Boolean)
-          });
-          await shodhService.deleteMemoriesForDocument(source.id);
-          await refreshMemories();
-        }
+            if (shodhService) {
+              await shodhService.captureAutoMemory({
+                projectId: activeProject.id,
+                documentId: nextTarget.id,
+                title: nextTarget.name,
+                content: buildEntityContent(nextTarget),
+                tags: ['worldbible', targetCategorySlug].filter(Boolean)
+              });
+              await shodhService.deleteMemoriesForDocument(source.id);
+              await refreshMemories();
+            }
 
-        setEntities((prev) =>
-          prev
-            .filter((entity) => entity.id !== source.id)
-            .map((entity) => (entity.id === target.id ? nextTarget : entity))
-        );
-        setAliases((prev) => [
-          ...prev.filter(
-            (alias) => alias.targetId !== source.id && alias.targetId !== target.id
-          ),
-          ...savedAliases
-        ]);
+            setEntities((prev) =>
+              prev
+                .filter((entity) => entity.id !== source.id)
+                .map((entity) => (entity.id === target.id ? nextTarget : entity))
+            );
+            setAliases((prev) => [
+              ...prev.filter(
+                (alias) => alias.targetId !== source.id && alias.targetId !== target.id
+              ),
+              ...savedAliases
+            ]);
 
-        resetForm();
-        const openedNext = options?.openNext !== false ? openNextReviewItem(source.id) : false;
-        if (!openedNext) {
-          setViewMode('category');
-          handleEdit(nextTarget, 'aliases');
+            resetForm();
+            const openedNext = options?.openNext !== false ? openNextReviewItem(source.id) : false;
+            if (!openedNext) {
+              setViewMode('category');
+              handleEdit(nextTarget, 'aliases');
+            }
+            setFeedback({
+              tone: 'success',
+              message: openedNext
+                ? `"${sourceName}" converted into an alias of "${target.name}". Opened the next record.`
+                : `"${sourceName}" converted into an alias of "${target.name}".`
+            });
+          } catch (error) {
+            const message =
+              error instanceof Error ? error.message : 'Unable to convert record into an alias.';
+            setFeedback({tone: 'error', message});
+          } finally {
+            setAliasingEntityTargetId(null);
+          }
         }
-        setFeedback({
-          tone: 'success',
-          message: openedNext
-            ? `"${sourceName}" converted into an alias of "${target.name}". Opened the next record.`
-            : `"${sourceName}" converted into an alias of "${target.name}".`
-        });
-      } catch (error) {
-        const message =
-          error instanceof Error ? error.message : 'Unable to convert record into an alias.';
-        setFeedback({tone: 'error', message});
-      } finally {
-        setAliasingEntityTargetId(null);
-      }
+      });
     },
     [
       activeProject,
@@ -791,6 +815,7 @@ export const useWorldBibleEntityActions = ({
       parseAlternativeNames,
       ragService,
       refreshMemories,
+      requestConfirm,
       resetForm,
       setAliases,
       setEntities,

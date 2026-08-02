@@ -97,7 +97,7 @@ Update as slices land. Statuses: `—` not started, `WIP`, `Done <commit>`.
 | 1.3 | Calm-shell navigation validation | 1 | S | — |
 | 1.4 | Proposal-review assistant route (conditional) | 1 | M | — |
 | 2.1 | ConfirmDialog + InlineAlert components | 2 | S | Done `38db7df` |
-| 2.2 | Migrate confirm/alert call sites | 2 | M | — |
+| 2.2 | Migrate confirm/alert call sites | 2 | M | Done — Cypress not run locally, see note |
 | 2.3 | Inline field-level validation | 2 | S | — |
 | 2.4 | Theme CharacterStyle editor family | 2 | S | — |
 | 2.5 | CompendiumRoute off inline styles | 2 | M | — |

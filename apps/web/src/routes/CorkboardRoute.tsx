@@ -5,6 +5,7 @@ import {useAppStore} from '../store/appStore';
 import {useWorkspaceCorkboard} from '../hooks/useWorkspaceCorkboard';
 import {PageHeader} from '../components/PageHeader';
 import {ProjectScratchpadButton} from '../components/ProjectScratchpadButton';
+import {useConfirmDialog} from '../hooks/useConfirmDialog';
 import styles from '../styles/CorkboardRoute.module.css';
 
 const STATUS_LABELS: Record<ChapterCardStatus, string> = {
@@ -40,6 +41,7 @@ function CorkboardRoute() {
     deleteCorkboardPlotPoint,
     moveCorkboardPlotPoint
   } = useWorkspaceCorkboard(activeProject?.id ?? null);
+  const {requestConfirm, confirmDialog} = useConfirmDialog();
   const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
   const [editingBeatId, setEditingBeatId] = useState<string | null>(null);
   const [beatTitle, setBeatTitle] = useState('');
@@ -87,6 +89,26 @@ function CorkboardRoute() {
 
   const handleCreateCard = () => {
     createCorkboardCard();
+  };
+
+  const handleDeleteCard = (cardId: string, cardTitle: string) => {
+    requestConfirm({
+      title: `Delete "${cardTitle || 'this chapter card'}"?`,
+      message: 'This chapter card and its plot points will be permanently removed.',
+      confirmLabel: 'Delete',
+      variant: 'danger',
+      onConfirm: () => deleteCorkboardCard(cardId)
+    });
+  };
+
+  const handleDeleteBeat = (cardId: string, pointId: string, pointTitle: string) => {
+    requestConfirm({
+      title: `Delete "${pointTitle || 'this plot point'}"?`,
+      message: 'This plot point will be permanently removed.',
+      confirmLabel: 'Delete',
+      variant: 'danger',
+      onConfirm: () => deleteCorkboardPlotPoint(cardId, pointId)
+    });
   };
 
   const handleToggleChapterRail = () => {
@@ -256,7 +278,10 @@ function CorkboardRoute() {
                   >
                     Move Down
                   </button>
-                  <button type='button' onClick={() => deleteCorkboardCard(selectedCard.id)}>
+                  <button
+                    type='button'
+                    onClick={() => handleDeleteCard(selectedCard.id, selectedCard.title)}
+                  >
                     Delete
                   </button>
                 </div>
@@ -369,7 +394,9 @@ function CorkboardRoute() {
                             </button>
                             <button
                               type='button'
-                              onClick={() => deleteCorkboardPlotPoint(selectedCard.id, point.id)}
+                              onClick={() =>
+                                handleDeleteBeat(selectedCard.id, point.id, point.title)
+                              }
                             >
                               Delete
                             </button>
@@ -384,6 +411,8 @@ function CorkboardRoute() {
           )}
         </div>
       )}
+
+      {confirmDialog}
     </section>
   );
 }

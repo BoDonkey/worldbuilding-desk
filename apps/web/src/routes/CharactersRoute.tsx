@@ -32,6 +32,7 @@ import {
   type CharacterImportSectionDraft
 } from '../services/characters/characterImportService';
 import styles from '../styles/CharactersRoute.module.css';
+import {useConfirmDialog} from '../hooks/useConfirmDialog';
 
 interface CharactersRouteProps {
   embedded?: boolean;
@@ -109,6 +110,7 @@ function CharactersRoute({
   const loadProjectSettings = useAppStore((s) => s.loadProjectSettings);
   const saveProjectSettings = useAppStore((s) => s.saveProjectSettings);
   const navigate = useNavigate();
+  const {requestConfirm, confirmDialog} = useConfirmDialog();
   const [characters, setCharacters] = useState<Character[]>([]);
   const [worldEntities, setWorldEntities] = useState<WorldEntity[]>([]);
   const [categories, setCategories] = useState<EntityCategory[]>([]);
@@ -378,7 +380,7 @@ function CharactersRoute({
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
     if (!activeProject) {
-      alert('Select or create a project first.');
+      setFeedback({tone: 'error', message: 'Select or create a project first.'});
       return;
     }
 
@@ -629,25 +631,35 @@ function CharactersRoute({
     setCharacterStyleId(character.characterStyleId ?? '');
   };
 
-  const handleDelete = async (id: string, options?: {hasLinkedLore?: boolean}) => {
-    if (options?.hasLinkedLore) {
-      const confirmed = confirm(
-        'Remove this Character Tools profile? The World Bible canon record and aliases will stay, so the name will still highlight in the workspace.'
-      );
-      if (!confirmed) return;
-    }
-    await deleteCharacter(id);
-    setCharacters(prev => prev.filter(c => c.id !== id));
-    setFeedback({
-      tone: 'success',
-      message: options?.hasLinkedLore
-        ? 'Character Tools profile removed. Delete the World Bible canon record to remove workspace highlights.'
-        : 'Character deleted.'
-    });
+  const handleDelete = (id: string, options?: {hasLinkedLore?: boolean}) => {
+    const performDelete = async () => {
+      await deleteCharacter(id);
+      setCharacters(prev => prev.filter(c => c.id !== id));
+      setFeedback({
+        tone: 'success',
+        message: options?.hasLinkedLore
+          ? 'Character Tools profile removed. Delete the World Bible canon record to remove workspace highlights.'
+          : 'Character deleted.'
+      });
 
-    if (editingId === id) {
-      resetForm();
+      if (editingId === id) {
+        resetForm();
+      }
+    };
+
+    if (options?.hasLinkedLore) {
+      requestConfirm({
+        title: 'Remove this Character Tools profile?',
+        message:
+          'The World Bible canon record and aliases will stay, so the name will still highlight in the workspace.',
+        confirmLabel: 'Remove',
+        variant: 'danger',
+        onConfirm: performDelete
+      });
+      return;
     }
+
+    void performDelete();
   };
 
   const handleUpdateStyle = async (styleId: string, updates: Partial<CharacterStyle['styles']>) => {
@@ -1189,7 +1201,17 @@ function CharactersRoute({
     </div>
   );
 
-  return embedded ? <>{content}</> : <section>{content}</section>;
+  return embedded ? (
+    <>
+      {content}
+      {confirmDialog}
+    </>
+  ) : (
+    <section>
+      {content}
+      {confirmDialog}
+    </section>
+  );
 }
 
 export default CharactersRoute;

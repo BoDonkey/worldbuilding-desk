@@ -77,6 +77,7 @@ import {
 } from '../components/CharacterSheets/MutationForm';
 import {CharacterSheetList} from '../components/CharacterSheets/CharacterSheetList';
 import styles from '../styles/CharacterSheetsRoute.module.css';
+import {useConfirmDialog} from '../hooks/useConfirmDialog';
 
 interface CharacterSheetsRouteProps {
   embedded?: boolean;
@@ -96,6 +97,7 @@ function CharacterSheetsRoute({
   const activeProject = useAppStore((s) => s.activeProject);
   const projectSettings = useAppStore((s) => s.projectSettings);
   const navigate = useNavigate();
+  const {requestConfirm, confirmDialog} = useConfirmDialog();
   const [sheets, setSheets] = useState<CharacterSheet[]>([]);
   const [ruleset, setRuleset] = useState<StoredRuleset | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -548,7 +550,7 @@ function CharacterSheetsRoute({
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
     if (!activeProject) {
-      alert('Select or create a project first.');
+      setFeedback({tone: 'error', message: 'Select or create a project first.'});
       return;
     }
 
@@ -640,24 +642,31 @@ function CharacterSheetsRoute({
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Delete this character sheet?')) return;
-    setDeletingSheetId(id);
-    setFeedback(null);
-    try {
-      await deleteCharacterSheet(id);
-      setSheets((prev) => prev.filter((s) => s.id !== id));
-      if (editingId === id) resetForm();
-      setFeedback({tone: 'success', message: 'Character sheet deleted.'});
-    } catch (error) {
-      const message =
-        error instanceof Error
-          ? error.message
-          : 'Unable to delete character sheet.';
-      setFeedback({tone: 'error', message});
-    } finally {
-      setDeletingSheetId(null);
-    }
+  const handleDelete = (id: string) => {
+    requestConfirm({
+      title: 'Delete this character sheet?',
+      message: 'This cannot be undone.',
+      confirmLabel: 'Delete',
+      variant: 'danger',
+      onConfirm: async () => {
+        setDeletingSheetId(id);
+        setFeedback(null);
+        try {
+          await deleteCharacterSheet(id);
+          setSheets((prev) => prev.filter((s) => s.id !== id));
+          if (editingId === id) resetForm();
+          setFeedback({tone: 'success', message: 'Character sheet deleted.'});
+        } catch (error) {
+          const message =
+            error instanceof Error
+              ? error.message
+              : 'Unable to delete character sheet.';
+          setFeedback({tone: 'error', message});
+        } finally {
+          setDeletingSheetId(null);
+        }
+      }
+    });
   };
 
   const updateStatValue = (definitionId: string, value: number) => {
@@ -2368,7 +2377,17 @@ function CharacterSheetsRoute({
     </>
   );
 
-  return embedded ? <>{content}</> : <section>{content}</section>;
+  return embedded ? (
+    <>
+      {content}
+      {confirmDialog}
+    </>
+  ) : (
+    <section>
+      {content}
+      {confirmDialog}
+    </section>
+  );
 }
 
 export default CharacterSheetsRoute;

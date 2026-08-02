@@ -13,6 +13,8 @@ import {
   PROVIDER_MODEL_PLACEHOLDERS,
   normalizeConfiguredModel
 } from '../../services/llm/providerConfig';
+import {useConfirmDialog} from '../../hooks/useConfirmDialog';
+import {InlineAlert, type InlineAlertVariant} from '../common';
 
 interface AISettingsProps {
   aiSettings: ProjectAISettings;
@@ -97,6 +99,10 @@ export const AISettings: React.FC<AISettingsProps> = ({
   const [editingToolContent, setEditingToolContent] = useState('');
   const [defaultsMode, setDefaultsMode] = useState<ProjectMode>(projectMode);
   const [isRunningDiagnostics, setIsRunningDiagnostics] = useState(false);
+  const {requestConfirm, confirmDialog} = useConfirmDialog();
+  const [statusMessage, setStatusMessage] = useState<
+    {variant: InlineAlertVariant; message: string} | null
+  >(null);
   const [diagnostics, setDiagnostics] = useState<ProviderDiagnosticsState | null>(null);
 
   useEffect(() => {
@@ -122,7 +128,7 @@ export const AISettings: React.FC<AISettingsProps> = ({
       localStorage.removeItem('gemini_api_key');
     }
 
-    alert('API keys saved');
+    setStatusMessage({variant: 'success', message: 'API keys saved.'});
   };
 
   const handleProviderChange = (provider: AIProviderId) => {
@@ -479,7 +485,7 @@ export const AISettings: React.FC<AISettingsProps> = ({
     }));
 
     if (additions.length === 0) {
-      alert('Preset tools are already installed.');
+      setStatusMessage({variant: 'info', message: 'Preset tools are already installed.'});
       return;
     }
 
@@ -539,11 +545,7 @@ export const AISettings: React.FC<AISettingsProps> = ({
         throw new Error('No valid tools found in pack.');
       }
 
-      const replace = window.confirm(
-        'Replace existing prompt tools with imported tools?\n\nChoose Cancel to append imported tools.'
-      );
-
-      if (replace) {
+      const replaceWithImportedTools = () => {
         const enabledImportedIds = importedTools
           .filter((tool) => tool.enabled)
           .map((tool) => tool.id);
@@ -579,7 +581,9 @@ export const AISettings: React.FC<AISettingsProps> = ({
             defaultToolIdsByMode: normalizedImportedDefaultsByMode
           })
         );
-      } else {
+      };
+
+      const appendImportedTools = () => {
         const enabledImportedIds = importedTools
           .filter((tool) => tool.enabled)
           .map((tool) => tool.id);
@@ -603,18 +607,38 @@ export const AISettings: React.FC<AISettingsProps> = ({
             }
           })
         );
-      }
+      };
+
+      // Reset the file input now — we've already read its contents, and the
+      // choice below is made asynchronously via the confirm dialog.
+      event.target.value = '';
+
+      requestConfirm({
+        title: 'Replace existing prompt tools with imported tools?',
+        message: 'Choose Append instead to add the imported tools alongside your existing ones.',
+        confirmLabel: 'Replace',
+        cancelLabel: 'Append',
+        onConfirm: replaceWithImportedTools,
+        onCancel: appendImportedTools
+      });
     } catch (error) {
       const message =
         error instanceof Error ? error.message : 'Unable to import tool pack.';
-      alert(message);
-    } finally {
+      setStatusMessage({variant: 'error', message});
       event.target.value = '';
     }
   };
 
   return (
     <div className={styles.container}>
+      {statusMessage && (
+        <InlineAlert
+          variant={statusMessage.variant}
+          message={statusMessage.message}
+          onDismiss={() => setStatusMessage(null)}
+          autoDismissMs={statusMessage.variant === 'error' ? undefined : 4000}
+        />
+      )}
       <div className={styles.field}>
         <label className={styles.label}>Active Provider</label>
         <select
@@ -1126,6 +1150,8 @@ export const AISettings: React.FC<AISettingsProps> = ({
           </ul>
         )}
       </div>
+
+      {confirmDialog}
     </div>
   );
 };

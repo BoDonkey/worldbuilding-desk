@@ -26,6 +26,7 @@ import {useWorkspaceDocuments} from '../hooks/useWorkspaceDocuments';
 import {useWorkspaceStatBlocks} from '../hooks/useWorkspaceStatBlocks';
 import {useEscapeToClose} from '../hooks/useEscapeToClose';
 import {useFocusTrap} from '../hooks/useFocusTrap';
+import {useConfirmDialog} from '../hooks/useConfirmDialog';
 import {
   DEFAULT_PARTY_SYNERGY_RULES,
   deriveCharacterRuntimeModifiers,
@@ -396,6 +397,7 @@ function WorkspaceRoute() {
     useRef<
       Parameters<typeof useWorkspaceDocuments>[0]['deleteDocumentSideEffectsRef']['current']
     >(null);
+  const {requestConfirm, confirmDialog} = useConfirmDialog();
   const {
     selectedId,
     setSelectedCreatedAt,
@@ -434,6 +436,7 @@ function WorkspaceRoute() {
     setConsistencyPopoverRef,
     deleteDocumentSideEffectsRef,
     setFeedback,
+    requestConfirm,
     addSystemHistory
   });
   useEffect(() => {
@@ -927,7 +930,8 @@ function WorkspaceRoute() {
     pendingInventoryCapture,
     setPendingInventoryCapture,
     setSavingInventoryCapture,
-    setFeedback
+    setFeedback,
+    requestConfirm
   });
   useEffect(() => {
     if (!activeProject) return;
@@ -3417,6 +3421,8 @@ function WorkspaceRoute() {
           </div>
         </div>
       )}
+
+      {confirmDialog}
     </section>
   );
 }

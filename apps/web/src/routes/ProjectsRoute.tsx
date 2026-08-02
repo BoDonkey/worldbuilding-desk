@@ -40,8 +40,10 @@ import {
 import {useAppStore} from '../store/appStore';
 import {PageHeader} from '../components/PageHeader';
 import styles from '../styles/ProjectsRoute.module.css';
+import {useConfirmDialog} from '../hooks/useConfirmDialog';
 
 function ProjectsRoute() {
+  const {requestConfirm, confirmDialog} = useConfirmDialog();
   const activeProject = useAppStore((s) => s.activeProject);
   const onSelectProject = useAppStore((s) => s.setActiveProject);
   const persistProjectSettings = useAppStore((s) => s.saveProjectSettings);
@@ -185,37 +187,42 @@ function ProjectsRoute() {
     ? projectRulesets.has(activeProject.id)
     : false;
 
-  const handleDelete = async (project: Project) => {
-    const confirmed = window.confirm(`Delete project "${project.name}"?`);
-    if (!confirmed) return;
+  const handleDelete = (project: Project) => {
+    requestConfirm({
+      title: `Delete project "${project.name}"?`,
+      message: 'This removes the project and its ruleset. This cannot be undone.',
+      confirmLabel: 'Delete',
+      variant: 'danger',
+      onConfirm: async () => {
+        setDeletingProjectId(project.id);
+        setFeedback(null);
+        try {
+          const ruleset = await getRulesetByProjectId(project.id);
+          if (ruleset) {
+            await deleteRuleset(ruleset.id, project.id);
+          }
 
-    setDeletingProjectId(project.id);
-    setFeedback(null);
-    try {
-      const ruleset = await getRulesetByProjectId(project.id);
-      if (ruleset) {
-        await deleteRuleset(ruleset.id, project.id);
+          await deleteProjectFromStore(project.id);
+          setProjects((prev) => prev.filter((p) => p.id !== project.id));
+          setProjectRulesets((prev) => {
+            const newMap = new Map(prev);
+            newMap.delete(project.id);
+            return newMap;
+          });
+
+          if (activeProject && activeProject.id === project.id) {
+            await onSelectProject(null);
+          }
+          setFeedback({tone: 'success', message: 'Project deleted.'});
+        } catch (error) {
+          const message =
+            error instanceof Error ? error.message : 'Unable to delete project.';
+          setFeedback({tone: 'error', message});
+        } finally {
+          setDeletingProjectId(null);
+        }
       }
-
-      await deleteProjectFromStore(project.id);
-      setProjects((prev) => prev.filter((p) => p.id !== project.id));
-      setProjectRulesets((prev) => {
-        const newMap = new Map(prev);
-        newMap.delete(project.id);
-        return newMap;
-      });
-
-      if (activeProject && activeProject.id === project.id) {
-        await onSelectProject(null);
-      }
-      setFeedback({tone: 'success', message: 'Project deleted.'});
-    } catch (error) {
-      const message =
-        error instanceof Error ? error.message : 'Unable to delete project.';
-      setFeedback({tone: 'error', message});
-    } finally {
-      setDeletingProjectId(null);
-    }
+    });
   };
 
   const updateProjectState = (updated: Project | null) => {
@@ -851,6 +858,8 @@ function ProjectsRoute() {
       </ul>
         </section>
       </div>
+
+      {confirmDialog}
     </section>
   );
 }
