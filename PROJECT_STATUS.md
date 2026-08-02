@@ -52,6 +52,7 @@ Under the hood, the app still includes rich systems for world data, rules, chara
 - World Bible review queue for finishing review-created records and alias follow-up.
 - World Bible review queue now supports queue filtering by review reason and recommended action (`complete`, `alias`, `merge`, `ignore`).
 - Editor appearance controls for width, surface style, and serif/sans presentation.
+- Shared themed `ConfirmDialog`/`InlineAlert` components (`src/components/common/`) now replace native `window.confirm`/`alert` across the app (delete/merge/replace confirmations, validation and status messages), wired through a reusable `useConfirmDialog` hook; delete actions that previously had no confirmation (character style, corkboard chapter card, corkboard plot point) now do.
 - Passive review readiness indicator in the workspace header and Review drawer tab.
 - Review drawer issues now split into explicit `Current document` and `Other documents` sections so document scope is visible instead of implied by changing sort order.
 - Review drawer context actions now switch to the target scene, scroll to the reviewed term with a header offset, briefly flash the term, and keep the chosen review row in view inside the drawer.
@@ -309,6 +310,7 @@ Under the hood, the app still includes rich systems for world data, rules, chara
 - Zustand workspace UI integration has been smoke-checked manually for Corkboard and Scratchpad memory saving, and the latest focused unit/build passes cover workspace store behavior plus document initialization/save helper behavior.
 
 ### Current Verification Notes
+- The shared dialog system (`ConfirmDialog`/`InlineAlert`) and its migration off native `window.confirm`/`alert` pass web lint, tsc build, and 249/249 web unit tests as of the road-to-market slice 2.1/2.2 commits; Cypress e2e for this change has not yet been run (sandbox disk constraint) and should be run before treating it as release-ready.
 - The shared Workspace mobile drawer panel extraction passes web lint, all 201
   web unit tests, the production web build, and all 42 Cypress tests on
   July 30, 2026.
