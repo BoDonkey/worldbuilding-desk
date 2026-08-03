@@ -1,0 +1,142 @@
+.listItem {
+  margin-bottom: 0.75rem;
+  padding: 1rem;
+  border: 1px solid var(--surface-border-soft);
+  border-radius: 12px;
+  background: var(--surface-panel);
+  color: var(--color-text-primary);
+}
+
+.summaryRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+}
+
+.identity {
+  display: grid;
+  flex: 1;
+  gap: 0.2rem;
+  min-width: 0;
+}
+
+.markName {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+  overflow-wrap: anywhere;
+}
+
+.actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.actionButton {
+  padding: 0.4rem 0.75rem;
+  border: 1px solid var(--button-border);
+  border-radius: 12px;
+  background: var(--button-bg);
+  color: var(--button-text);
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+  transition: background-color 0.2s ease, transform 0.2s ease;
+}
+
+.actionButton:hover {
+  background: var(--button-bg-hover);
+  transform: translateY(-1px);
+}
+
+.actionButton:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--color-focus) 35%, transparent);
+  outline-offset: 2px;
+}
+
+.deleteButton {
+  border-color: var(--button-danger-border);
+  background: var(--button-danger-bg);
+  color: var(--button-danger-text);
+}
+
+.deleteButton:hover {
+  background: var(--button-danger-bg-hover);
+}
+
+.editor {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--surface-border-soft);
+}
+
+.controlsGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.control {
+  display: grid;
+  gap: 0.35rem;
+  color: var(--color-text-primary);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+}
+
+.controlInput,
+.colorInput {
+  width: 100%;
+  min-height: 2.5rem;
+  border: 1px solid var(--input-border);
+  border-radius: 10px;
+  background: var(--input-bg);
+  color: var(--input-text);
+}
+
+.controlInput {
+  padding: 0.5rem 0.65rem;
+}
+
+.colorInput {
+  padding: 0.25rem;
+  cursor: pointer;
+}
+
+.controlInput:focus-visible,
+.colorInput:focus-visible {
+  border-color: var(--input-border-focus);
+  outline: 3px solid color-mix(in srgb, var(--color-focus) 25%, transparent);
+  outline-offset: 1px;
+}
+
+.previewSection {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--surface-border-soft);
+}
+
+.previewLabel {
+  display: block;
+  margin-bottom: 0.5rem;
+  color: var(--color-text-primary);
+}
+
+.preview {
+  padding: 0.75rem;
+  border: 1px solid var(--surface-border-soft);
+  border-radius: 10px;
+  background: var(--surface-panel-elevated);
+  color: var(--color-text-primary);
+}
+
+@media (max-width: 700px) {
+  .summaryRow {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .controlsGrid {
+    grid-template-columns: 1fr;
+  }
+}

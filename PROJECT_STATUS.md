@@ -52,6 +52,9 @@ Under the hood, the app still includes rich systems for world data, rules, chara
 - World Bible review queue for finishing review-created records and alias follow-up.
 - World Bible review queue now supports queue filtering by review reason and recommended action (`complete`, `alias`, `merge`, `ignore`).
 - Editor appearance controls for width, surface style, and serif/sans presentation.
+- Character dialogue style list/editor surfaces now use responsive CSS modules
+  and shared theme tokens in place of hardcoded colors; author-configured style
+  values remain dynamic in the live preview.
 - Shared themed `ConfirmDialog`/`InlineAlert` components (`src/components/common/`) now replace native `window.confirm`/`alert` across the app (delete/merge/replace confirmations, validation and status messages), wired through a reusable `useConfirmDialog` hook; delete actions that previously had no confirmation (character style, corkboard chapter card, corkboard plot point) now do.
 - Category editing now renders missing category-name and field key/label errors
   beside the offending inputs with themed error styling and accessible
@@ -255,6 +258,10 @@ Under the hood, the app still includes rich systems for world data, rules, chara
 ## Verification Status
 
 ### Verified Recently
+- Road-to-market Slice 2.4 Character Style theming passes web lint, all 255 web
+  unit tests, 6 rules-engine tests, 12 rules-ui tests, web and desktop builds,
+  the full 42-test Cypress suite, and manual light/dark browser checks with no
+  console warnings or errors.
 - Road-to-market Slice 2.3 inline field-level validation passes web lint, all
   252 web unit tests (including three focused Category Editor validation
   tests), 6 rules-engine tests, 12 rules-ui tests, web and desktop builds, all
@@ -322,7 +329,10 @@ Under the hood, the app still includes rich systems for world data, rules, chara
 - Zustand workspace UI integration has been smoke-checked manually for Corkboard and Scratchpad memory saving, and the latest focused unit/build passes cover workspace store behavior plus document initialization/save helper behavior.
 
 ### Current Verification Notes
-- The shared dialog system (`ConfirmDialog`/`InlineAlert`) and its migration off native `window.confirm`/`alert` pass web lint, tsc build, and 249/249 web unit tests as of the road-to-market slice 2.1/2.2 commits; Cypress e2e for this change has not yet been run (sandbox disk constraint) and should be run before treating it as release-ready.
+- The shared dialog system (`ConfirmDialog`/`InlineAlert`) and its migration off
+  native `window.confirm`/`alert` pass web lint, tsc build, 249/249 web unit
+  tests, and the later full 42-test Cypress rerun recorded for road-to-market
+  Slice 2.2.
 - The shared Workspace mobile drawer panel extraction passes web lint, all 201
   web unit tests, the production web build, and all 42 Cypress tests on
   July 30, 2026.

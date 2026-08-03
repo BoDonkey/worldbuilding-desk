@@ -96,7 +96,7 @@ function SettingsRoute() {
       name: newStyleName.trim(),
       markName: newStyleName.toLowerCase().replace(/\s+/g, '-'),
       styles: {
-        color: 'var(--color-bg-primary)',
+        color: 'var(--color-text-primary)',
         fontStyle: 'normal',
         fontWeight: 'normal'
       }

@@ -1,17 +1,26 @@
-import type { CharacterStyle } from '../entityTypes';
+import type {CharacterStyle} from '../entityTypes';
 import {useConfirmDialog} from '../hooks/useConfirmDialog';
+import styles from '../assets/components/CharacterStyleEditor.module.css';
 
 interface CharacterStyleEditorProps {
   style: CharacterStyle;
-  onUpdate: (styleId: string, updates: Partial<CharacterStyle['styles']>) => void;
+  onUpdate: (
+    styleId: string,
+    updates: Partial<CharacterStyle['styles']>
+  ) => void;
   onDelete: (styleId: string) => void;
   expanded?: boolean;
   onToggleExpand?: (styleId: string | null) => void;
 }
 
+const COLOR_VALUE_PATTERN = /^#[0-9a-f]{6}$/i;
+
+const getColorInputValue = (value: string | undefined): string =>
+  COLOR_VALUE_PATTERN.test(value ?? '') ? value ?? '' : '';
+
 export function CharacterStyleEditor({
-  style, 
-  onUpdate, 
+  style,
+  onUpdate,
   onDelete,
   expanded = false,
   onToggleExpand
@@ -24,8 +33,11 @@ export function CharacterStyleEditor({
     }
   };
 
-  const handleStyleChange = (key: keyof CharacterStyle['styles'], value: string) => {
-    onUpdate(style.id, { [key]: value });
+  const handleStyleChange = (
+    key: keyof CharacterStyle['styles'],
+    value: string
+  ) => {
+    onUpdate(style.id, {[key]: value});
   };
 
   const handleDeleteClick = () => {
@@ -39,32 +51,24 @@ export function CharacterStyleEditor({
   };
 
   return (
-    <li
-      style={{
-        padding: '1rem',
-        border: '1px solid #444',
-        borderRadius: '4px',
-        marginBottom: '0.5rem'
-      }}
-    >
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div style={{ flex: 1 }}>
+    <li className={styles.listItem}>
+      <div className={styles.summaryRow}>
+        <div className={styles.identity}>
           <strong>{style.name}</strong>
-          <br />
-          <code style={{ fontSize: '0.85rem', color: '#888' }}>
-            {style.markName}
-          </code>
+          <code className={styles.markName}>{style.markName}</code>
         </div>
-        <div style={{ display: 'flex', gap: '0.5rem' }}>
-          <button 
+        <div className={styles.actions}>
+          <button
+            type='button'
             onClick={handleToggle}
-            style={{ fontSize: '0.85rem' }}
+            className={styles.actionButton}
           >
             {expanded ? 'Collapse' : 'Edit'}
           </button>
           <button
+            type='button'
             onClick={handleDeleteClick}
-            style={{ fontSize: '0.85rem' }}
+            className={`${styles.actionButton} ${styles.deleteButton}`}
           >
             Delete
           </button>
@@ -72,110 +76,102 @@ export function CharacterStyleEditor({
       </div>
 
       {expanded && (
-        <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid #444' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-            <div>
-              <label>
-                Font Family
-                <br />
-                <select
-                  value={style.styles.fontFamily || 'inherit'}
-                  onChange={(e) => handleStyleChange('fontFamily', e.target.value)}
-                  style={{ width: '100%', marginTop: '0.25rem' }}
-                >
-                  <option value="inherit">Default</option>
-                  <option value="'Courier New', monospace">Monospace</option>
-                  <option value="Georgia, serif">Serif</option>
-                  <option value="Arial, sans-serif">Sans-serif</option>
-                </select>
-              </label>
-            </div>
+        <div className={styles.editor}>
+          <div className={styles.controlsGrid}>
+            <label className={styles.control}>
+              Font Family
+              <select
+                value={style.styles.fontFamily || 'inherit'}
+                onChange={(event) =>
+                  handleStyleChange('fontFamily', event.target.value)
+                }
+                className={styles.controlInput}
+              >
+                <option value='inherit'>Default</option>
+                <option value="'Courier New', monospace">Monospace</option>
+                <option value='Georgia, serif'>Serif</option>
+                <option value='Arial, sans-serif'>Sans-serif</option>
+              </select>
+            </label>
 
-            <div>
-              <label>
-                Font Size
-                <br />
-                <select
-                  value={style.styles.fontSize || 'inherit'}
-                  onChange={(e) => handleStyleChange('fontSize', e.target.value)}
-                  style={{ width: '100%', marginTop: '0.25rem' }}
-                >
-                  <option value="inherit">Default</option>
-                  <option value="0.9em">Small</option>
-                  <option value="1.1em">Large</option>
-                  <option value="1.3em">Extra Large</option>
-                </select>
-              </label>
-            </div>
+            <label className={styles.control}>
+              Font Size
+              <select
+                value={style.styles.fontSize || 'inherit'}
+                onChange={(event) =>
+                  handleStyleChange('fontSize', event.target.value)
+                }
+                className={styles.controlInput}
+              >
+                <option value='inherit'>Default</option>
+                <option value='0.9em'>Small</option>
+                <option value='1.1em'>Large</option>
+                <option value='1.3em'>Extra Large</option>
+              </select>
+            </label>
 
-            <div>
-              <label>
-                Text Color
-                <br />
-                <input
-                  type="color"
-                  value={style.styles.color || '#ffffff'}
-                  onChange={(e) => handleStyleChange('color', e.target.value)}
-                  style={{ width: '100%', marginTop: '0.25rem' }}
-                />
-              </label>
-            </div>
+            <label className={styles.control}>
+              Text Color
+              <input
+                type='color'
+                value={getColorInputValue(style.styles.color)}
+                onChange={(event) =>
+                  handleStyleChange('color', event.target.value)
+                }
+                className={styles.colorInput}
+              />
+            </label>
 
-            <div>
-              <label>
-                Background Color
-                <br />
-                <input
-                  type="color"
-                  value={style.styles.backgroundColor || '#000000'}
-                  onChange={(e) => handleStyleChange('backgroundColor', e.target.value)}
-                  style={{ width: '100%', marginTop: '0.25rem' }}
-                />
-              </label>
-            </div>
+            <label className={styles.control}>
+              Background Color
+              <input
+                type='color'
+                value={getColorInputValue(style.styles.backgroundColor)}
+                onChange={(event) =>
+                  handleStyleChange('backgroundColor', event.target.value)
+                }
+                className={styles.colorInput}
+              />
+            </label>
 
-            <div>
-              <label>
-                Font Weight
-                <br />
-                <select
-                  value={style.styles.fontWeight || 'normal'}
-                  onChange={(e) => handleStyleChange('fontWeight', e.target.value as 'normal' | 'bold')}
-                  style={{ width: '100%', marginTop: '0.25rem' }}
-                >
-                  <option value="normal">Normal</option>
-                  <option value="bold">Bold</option>
-                </select>
-              </label>
-            </div>
+            <label className={styles.control}>
+              Font Weight
+              <select
+                value={style.styles.fontWeight || 'normal'}
+                onChange={(event) =>
+                  handleStyleChange(
+                    'fontWeight',
+                    event.target.value as 'normal' | 'bold'
+                  )
+                }
+                className={styles.controlInput}
+              >
+                <option value='normal'>Normal</option>
+                <option value='bold'>Bold</option>
+              </select>
+            </label>
 
-            <div>
-              <label>
-                Font Style
-                <br />
-                <select
-                  value={style.styles.fontStyle || 'normal'}
-                  onChange={(e) => handleStyleChange('fontStyle', e.target.value as 'normal' | 'italic')}
-                  style={{ width: '100%', marginTop: '0.25rem' }}
-                >
-                  <option value="normal">Normal</option>
-                  <option value="italic">Italic</option>
-                </select>
-              </label>
-            </div>
+            <label className={styles.control}>
+              Font Style
+              <select
+                value={style.styles.fontStyle || 'normal'}
+                onChange={(event) =>
+                  handleStyleChange(
+                    'fontStyle',
+                    event.target.value as 'normal' | 'italic'
+                  )
+                }
+                className={styles.controlInput}
+              >
+                <option value='normal'>Normal</option>
+                <option value='italic'>Italic</option>
+              </select>
+            </label>
           </div>
 
-          {/* Preview */}
-          <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid #555' }}>
-            <strong style={{ display: 'block', marginBottom: '0.5rem' }}>Preview:</strong>
-            <div
-              style={{
-                ...style.styles,
-                padding: '0.5rem',
-                borderRadius: '4px',
-                backgroundColor: style.styles.backgroundColor || 'transparent'
-              }}
-            >
+          <div className={styles.previewSection}>
+            <strong className={styles.previewLabel}>Preview:</strong>
+            <div className={styles.preview} style={{...style.styles}}>
               Sample text in this style
             </div>
           </div>
