@@ -103,7 +103,7 @@ and required revisit point, `WIP`, `Done <commit>`.
 | 2.3 | Inline field-level validation | 2 | S | Done `45a163f` — lint; 252 web + 6 engine + 12 UI tests; web/desktop builds; Cypress 42/42; manual browser checks |
 | 2.4 | Theme CharacterStyle editor family | 2 | S | Done `6e0454a` — lint; 255 web + 6 engine + 12 UI tests; web/desktop builds; Cypress 42/42; light/dark browser checks |
 | 2.5 | CompendiumRoute off inline styles | 2 | M | Done `83374f2` — zero inline styles; lint; 255 web + 6 engine + 12 UI tests; web/desktop builds; Cypress 42/42; three-tab before/after browser comparison |
-| 2.6 | CharacterSheetsRoute off inline styles | 2 | M | — |
+| 2.6 | CharacterSheetsRoute off inline styles | 2 | M | Done `effb82e` — zero inline styles; lint; 255 web + 6 engine + 12 UI tests; web/desktop builds; Cypress 42/42; build/history before/after browser comparison |
 | 2.7 | Compendium sub-list search/filter | 2 | S | — |
 | 2.8 | Primary nav / "More" badge visibility | 2 | S | — |
 | 2.9 | UI close-out audit | 2 | XS | — |
