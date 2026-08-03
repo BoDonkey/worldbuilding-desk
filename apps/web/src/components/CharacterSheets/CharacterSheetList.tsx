@@ -34,39 +34,27 @@ export function CharacterSheetList({
 
   return (
     <div
-      className={styles.sheetList}
-      style={{display: taskView === 'setup' ? 'block' : 'none'}}
+      className={`${styles.sheetList} ${
+        taskView === 'setup' ? '' : styles.hidden
+      }`}
     >
       <h2>Character Sheets</h2>
       {sheets.length === 0 && (
         <p>No character sheets yet. Add one on the left.</p>
       )}
-      <ul style={{listStyle: 'none', padding: 0}}>
+      <ul className={`${styles.inlineListStyleNone} ${styles.inlinePadding0}`}>
         {sheets.map((sheet) => (
           <li
             key={sheet.id}
-            style={{
-              marginBottom: '1rem',
-              padding: '1rem',
-              border: '1px solid var(--color-border)',
-              borderRadius: '4px'
-            }}
+            className={`${styles.inlineMarginBottom1rem} ${styles.inlinePadding1rem} ${styles.inlineBorder1pxSolidVarColorBorder} ${styles.inlineBorderRadius4px}`}
           >
             <div
-              style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'flex-start'
-              }}
+              className={`${styles.inlineDisplayFlex} ${styles.inlineJustifyContentSpaceBetween} ${styles.inlineAlignItemsFlexStart}`}
             >
-              <div style={{flex: 1}}>
-                <strong style={{fontSize: '1.2em'}}>{sheet.name}</strong>
+              <div className={styles.inlineFlex1}>
+                <strong className={styles.inlineFontSize12em}>{sheet.name}</strong>
                 <div
-                  style={{
-                    fontSize: '0.9em',
-                    color: 'var(--color-text-tertiary)',
-                    marginTop: '0.5rem'
-                  }}
+                  className={`${styles.inlineFontSize09em} ${styles.inlineColorVarColorTextTertiary} ${styles.inlineMarginTop05rem}`}
                 >
                   Level {Math.max(1, sheet.level + runtimeModifiers.levelBonus)}
                   {runtimeModifiers.levelBonus > 0
@@ -77,15 +65,10 @@ export function CharacterSheetList({
                 </div>
 
                 {sheet.stats.length > 0 && (
-                  <div style={{marginTop: '0.5rem', fontSize: '0.9em'}}>
+                  <div className={`${styles.inlineMarginTop05rem} ${styles.inlineFontSize09em}`}>
                     <strong>Stats:</strong>
                     <div
-                      style={{
-                        display: 'grid',
-                        gridTemplateColumns: 'repeat(3, 1fr)',
-                        gap: '0.25rem',
-                        marginTop: '0.25rem'
-                      }}
+                      className={`${styles.inlineDisplayGrid} ${styles.inlineGridTemplateColumnsRepeat31fr} ${styles.inlineGap025rem} ${styles.inlineMarginTop025rem}`}
                     >
                       {sheet.stats.map((stat) => {
                         const def = getStatDefinition(stat.definitionId);
@@ -108,9 +91,9 @@ export function CharacterSheetList({
                 )}
 
                 {sheet.resources.length > 0 && (
-                  <div style={{marginTop: '0.5rem', fontSize: '0.9em'}}>
+                  <div className={`${styles.inlineMarginTop05rem} ${styles.inlineFontSize09em}`}>
                     <strong>Resources:</strong>
-                    <div style={{marginTop: '0.25rem'}}>
+                    <div className={styles.inlineMarginTop025rem}>
                       {sheet.resources.map((resource) => {
                         const def = getResourceDefinition(
                           resource.definitionId
@@ -136,19 +119,14 @@ export function CharacterSheetList({
 
                 {sheet.notes && (
                   <p
-                    style={{
-                      margin: '0.5rem 0 0 0',
-                      fontSize: '0.9em',
-                      fontStyle: 'italic',
-                      color: 'var(--color-border)'
-                    }}
+                    className={`${styles.inlineMargin05rem000} ${styles.inlineFontSize09em} ${styles.inlineFontStyleItalic} ${styles.inlineColorVarColorBorder}`}
                   >
                     {sheet.notes}
                   </p>
                 )}
                 {((sheet.inventoryEntries?.length ?? 0) > 0 ||
                   (sheet.inventory?.length ?? 0) > 0) && (
-                  <div style={{marginTop: '0.5rem', fontSize: '0.9em'}}>
+                  <div className={`${styles.inlineMarginTop05rem} ${styles.inlineFontSize09em}`}>
                     <strong>Inventory:</strong>{' '}
                     {(sheet.inventoryEntries?.length
                       ? sheet.inventoryEntries.map((entry) =>
@@ -162,7 +140,7 @@ export function CharacterSheetList({
                 )}
                 {((sheet.equipmentEntries?.length ?? 0) > 0 ||
                   (sheet.equipment?.length ?? 0) > 0) && (
-                  <div style={{marginTop: '0.5rem', fontSize: '0.9em'}}>
+                  <div className={`${styles.inlineMarginTop05rem} ${styles.inlineFontSize09em}`}>
                     <strong>Equipment:</strong>{' '}
                     {(sheet.equipmentEntries?.length
                       ? sheet.equipmentEntries.map((entry) => entry.name)
@@ -172,7 +150,7 @@ export function CharacterSheetList({
                 )}
                 {((sheet.statusEntries?.length ?? 0) > 0 ||
                   (sheet.statuses?.length ?? 0) > 0) && (
-                  <div style={{marginTop: '0.5rem', fontSize: '0.9em'}}>
+                  <div className={`${styles.inlineMarginTop05rem} ${styles.inlineFontSize09em}`}>
                     <strong>Statuses:</strong>{' '}
                     {(sheet.statusEntries?.length
                       ? sheet.statusEntries.map((entry) => entry.name)
@@ -182,7 +160,7 @@ export function CharacterSheetList({
                 )}
               </div>
 
-              <div style={{display: 'flex', gap: '0.5rem'}}>
+              <div className={`${styles.inlineDisplayFlex} ${styles.inlineGap05rem}`}>
                 <button type='button' onClick={() => onEdit(sheet)}>
                   Edit
                 </button>

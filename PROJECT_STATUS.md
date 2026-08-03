@@ -118,6 +118,9 @@ Under the hood, the app still includes rich systems for world data, rules, chara
 - The Mechanics/Compendium route and its four extracted tab components now use
   a shared CSS module with zero remaining inline `style` attributes while
   preserving the existing presentation.
+- The Character Sheets route, sheet list, and scene-mutation form now use the
+  existing shared route CSS module with zero remaining inline `style`
+  attributes while preserving both build/edit and scene-history presentation.
 - Character/runtime previews for effective stat and resource values.
 - Current IA decision: keep these as optional, project-mode-gated systems attached to writing and canon workflows. Existing rules, mechanics, sheets/state, and settlement surfaces now group under optional systems navigation before any new mechanics depth is added.
 
@@ -261,6 +264,11 @@ Under the hood, the app still includes rich systems for world data, rules, chara
 ## Verification Status
 
 ### Verified Recently
+- Road-to-market Slice 2.6 Character Sheets styling extraction passes web
+  lint, all 255 web unit tests, 6 rules-engine tests, 12 rules-ui tests, web and
+  desktop builds, the full 42-test Cypress suite, and before/after browser
+  comparison of build/edit and scene-history views with no console warnings or
+  errors.
 - Road-to-market Slice 2.5 Compendium styling extraction passes web lint, all
   255 web unit tests, 6 rules-engine tests, 12 rules-ui tests, web and desktop
   builds, the full 42-test Cypress suite, and before/after browser comparison

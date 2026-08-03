@@ -1445,17 +1445,11 @@ function CharacterSheetsRoute({
       {feedback && (
         <p
           role='status'
-          style={{
-            marginBottom: '1rem',
-            padding: '0.5rem 0.75rem',
-            borderRadius: '6px',
-            border: `1px solid ${
-              feedback.tone === 'error' ? 'var(--color-error-soft-border)' : 'var(--color-success-soft-border)'
-            }`,
-            backgroundColor:
-              feedback.tone === 'error' ? 'var(--color-error-soft-bg)' : 'var(--color-success-soft-bg)',
-            color: feedback.tone === 'error' ? 'var(--color-error)' : 'var(--color-success)'
-          }}
+          className={`${styles.feedback} ${
+            feedback.tone === 'error'
+              ? styles.feedbackError
+              : styles.feedbackSuccess
+          }`}
         >
           {feedback.message}
         </p>
@@ -1492,7 +1486,7 @@ function CharacterSheetsRoute({
                       refreshRulesetMemory()
                     );
                   }}
-                  style={{fontSize: '0.8rem'}}
+                  className={styles.inlineFontSize08rem}
                 >
                   Promote
                 </button>
@@ -1506,7 +1500,7 @@ function CharacterSheetsRoute({
       {ruleset && activeProject?.parentProjectId && (
         <button
           type='button'
-          style={{marginBottom: '1rem'}}
+          className={styles.inlineMarginBottom1rem}
           onClick={() => void handlePromoteRuleset()}
         >
           Promote ruleset to parent
@@ -1539,26 +1533,19 @@ function CharacterSheetsRoute({
         {/* Character Sheet Editor */}
         <form
           onSubmit={handleSubmit}
-          className={styles.sheetForm}
-          style={{display: taskView === 'setup' ? 'block' : 'none'}}
+          className={`${styles.sheetForm} ${
+            taskView === 'setup' ? '' : styles.hidden
+          }`}
         >
           <h2>{editingId ? 'Edit Character Sheet' : 'New Character Sheet'}</h2>
           <div
-            style={{
-              marginBottom: '0.85rem',
-              padding: '0.75rem',
-              border: '1px solid var(--color-accent-soft-bg)',
-              borderRadius: '8px',
-              backgroundColor: 'var(--color-bg-secondary)',
-              fontSize: '0.86rem',
-              color: 'var(--color-text-primary)'
-            }}
+            className={`${styles.inlineMarginBottom085rem} ${styles.inlinePadding075rem} ${styles.inlineBorder1pxSolidVarColorAccentSoftBg} ${styles.inlineBorderRadius8px} ${styles.inlineBackgroundColorVarColorBgSecondary} ${styles.inlineFontSize086rem} ${styles.inlineColorVarColorTextPrimary}`}
           >
             This is the main place to track level, stats, resources like mana,
             inventory, equipment, and statuses for a character.
           </div>
 
-          <div style={{marginBottom: '0.75rem'}}>
+          <div className={styles.inlineMarginBottom075rem}>
             <label>
               Name *
               <br />
@@ -1567,19 +1554,19 @@ function CharacterSheetsRoute({
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 required
-                style={{width: '100%'}}
+                className={styles.inlineWidth100}
               />
             </label>
           </div>
 
-          <div style={{marginBottom: '0.75rem'}}>
+          <div className={styles.inlineMarginBottom075rem}>
             <label>
               Link to Character
               <br />
               <select
                 value={selectedCharacterId}
                 onChange={(e) => handleCharacterSelect(e.target.value)}
-                style={{width: '100%'}}
+                className={styles.inlineWidth100}
               >
                 <option value=''>-- None (create new) --</option>
                 {characters.map((char) => (
@@ -1589,19 +1576,14 @@ function CharacterSheetsRoute({
                 ))}
               </select>
             </label>
-            <div style={{fontSize: '0.8rem', color: 'var(--color-text-secondary)', marginTop: '0.25rem'}}>
+            <div className={`${styles.inlineFontSize08rem} ${styles.inlineColorVarColorTextSecondary} ${styles.inlineMarginTop025rem}`}>
               Link a roster character first, then adjust the sheet-specific stats
               and resources here.
             </div>
           </div>
 
           <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: '1fr 1fr',
-              gap: '0.75rem',
-              marginBottom: '0.75rem'
-            }}
+            className={`${styles.inlineDisplayGrid} ${styles.inlineGridTemplateColumns1fr1fr} ${styles.inlineGap075rem} ${styles.inlineMarginBottom075rem}`}
           >
             <label>
               Level *
@@ -1612,7 +1594,7 @@ function CharacterSheetsRoute({
                 onChange={(e) => setLevel(Number(e.target.value))}
                 min={1}
                 required
-                style={{width: '100%'}}
+                className={styles.inlineWidth100}
               />
             </label>
 
@@ -1625,30 +1607,23 @@ function CharacterSheetsRoute({
                 onChange={(e) => setExperience(Number(e.target.value))}
                 min={0}
                 required
-                style={{width: '100%'}}
+                className={styles.inlineWidth100}
               />
             </label>
           </div>
 
           <div
-            style={{
-              marginBottom: '0.9rem',
-              padding: '0.6rem 0.75rem',
-              border: '1px solid var(--color-accent-soft-bg)',
-              borderRadius: '6px',
-              backgroundColor: 'var(--color-bg-secondary)',
-              fontSize: '0.85rem'
-            }}
+            className={`${styles.inlineMarginBottom09rem} ${styles.inlinePadding06rem075rem} ${styles.inlineBorder1pxSolidVarColorAccentSoftBg} ${styles.inlineBorderRadius6px} ${styles.inlineBackgroundColorVarColorBgSecondary} ${styles.inlineFontSize085rem}`}
           >
             <strong>Runtime Effects (Preview)</strong>
-            <div style={{marginTop: '0.25rem'}}>
+            <div className={styles.inlineMarginTop025rem}>
               Effective level: {effectiveLevel}
               {runtimeModifiers.levelBonus > 0
                 ? ` (base ${level} + ${runtimeModifiers.levelBonus})`
                 : ` (base ${level})`}
             </div>
             {runtimeModifiers.notes.length > 0 && (
-              <div style={{marginTop: '0.25rem', color: 'var(--color-text-secondary)'}}>
+              <div className={`${styles.inlineMarginTop025rem} ${styles.inlineColorVarColorTextSecondary}`}>
                 {runtimeModifiers.notes.join(' ')}
               </div>
             )}
@@ -1656,7 +1631,7 @@ function CharacterSheetsRoute({
 
           {/* Stats */}
           {stats.length > 0 ? (
-            <div style={{marginBottom: '1rem'}}>
+            <div className={styles.inlineMarginBottom1rem}>
               <h3>Attributes</h3>
               <p className={styles.sectionHint}>
                 Starting values from {ruleset.name || 'the active ruleset'}. Adjust them
@@ -1677,11 +1652,7 @@ function CharacterSheetsRoute({
                       {def.name}
                       {def.description && (
                         <span
-                          style={{
-                            fontSize: '0.85em',
-                            color: 'var(--color-text-tertiary)',
-                            marginLeft: '0.5rem'
-                          }}
+                          className={`${styles.inlineFontSize085em} ${styles.inlineColorVarColorTextTertiary} ${styles.inlineMarginLeft05rem}`}
                         >
                           ({def.description})
                         </span>
@@ -1698,10 +1669,10 @@ function CharacterSheetsRoute({
                         }
                         min={def.min}
                         max={def.max}
-                        style={{width: '100%'}}
+                        className={styles.inlineWidth100}
                       />
                     </label>
-                    <div style={{fontSize: '0.8rem', color: 'var(--color-text-secondary)'}}>
+                    <div className={`${styles.inlineFontSize08rem} ${styles.inlineColorVarColorTextSecondary}`}>
                       Effective: {effectiveValue}
                     </div>
                   </div>
@@ -1710,14 +1681,14 @@ function CharacterSheetsRoute({
               </div>
             </div>
           ) : (
-            <div style={{marginBottom: '1rem', fontSize: '0.85rem', color: 'var(--color-text-secondary)'}}>
+            <div className={`${styles.inlineMarginBottom1rem} ${styles.inlineFontSize085rem} ${styles.inlineColorVarColorTextSecondary}`}>
               No stat definitions are available in this ruleset yet.
             </div>
           )}
 
           {/* Resources */}
           {resources.length > 0 ? (
-            <div style={{marginBottom: '1rem'}}>
+            <div className={styles.inlineMarginBottom1rem}>
               <h3>Resources</h3>
               <p className={styles.sectionHint}>
                 Set the character’s starting and maximum values.
@@ -1734,28 +1705,20 @@ function CharacterSheetsRoute({
                 return (
                   <div
                     key={resource.definitionId}
-                    style={{marginBottom: '0.75rem'}}
+                    className={styles.inlineMarginBottom075rem}
                   >
                     <label>
                       {def.name}
                       {def.description && (
                         <span
-                          style={{
-                            fontSize: '0.85em',
-                            color: 'var(--color-text-tertiary)',
-                            marginLeft: '0.5rem'
-                          }}
+                          className={`${styles.inlineFontSize085em} ${styles.inlineColorVarColorTextTertiary} ${styles.inlineMarginLeft05rem}`}
                         >
                           ({def.description})
                         </span>
                       )}
                     </label>
                     <div
-                      style={{
-                        display: 'grid',
-                        gridTemplateColumns: '1fr 1fr',
-                        gap: '0.5rem'
-                      }}
+                      className={`${styles.inlineDisplayGrid} ${styles.inlineGridTemplateColumns1fr1fr} ${styles.inlineGap05rem}`}
                     >
                       <label>
                         Current
@@ -1770,7 +1733,7 @@ function CharacterSheetsRoute({
                             )
                           }
                           min={0}
-                          style={{width: '100%'}}
+                          className={styles.inlineWidth100}
                         />
                       </label>
                       <label>
@@ -1786,11 +1749,11 @@ function CharacterSheetsRoute({
                             )
                           }
                           min={0}
-                          style={{width: '100%'}}
+                          className={styles.inlineWidth100}
                         />
                       </label>
                     </div>
-                    <div style={{fontSize: '0.8rem', color: 'var(--color-text-secondary)'}}>
+                    <div className={`${styles.inlineFontSize08rem} ${styles.inlineColorVarColorTextSecondary}`}>
                       Effective: {effective.current}/{effective.max}
                     </div>
                   </div>
@@ -1798,7 +1761,7 @@ function CharacterSheetsRoute({
               })}
             </div>
           ) : (
-            <div style={{marginBottom: '1rem', fontSize: '0.85rem', color: 'var(--color-text-secondary)'}}>
+            <div className={`${styles.inlineMarginBottom1rem} ${styles.inlineFontSize085rem} ${styles.inlineColorVarColorTextSecondary}`}>
               No resource definitions are available yet. Add things like Mana,
               Stamina, or Health in the ruleset to track them here.
             </div>
@@ -1806,29 +1769,29 @@ function CharacterSheetsRoute({
 
           <details className={styles.optionalState}>
             <summary>Inventory, equipment & statuses</summary>
-            <p style={{marginTop: 0, fontSize: '0.85rem', color: 'var(--color-text-secondary)'}}>
+            <p className={`${styles.inlineMarginTop0} ${styles.inlineFontSize085rem} ${styles.inlineColorVarColorTextSecondary}`}>
               Optional starting state. Type a simple entry, or choose a catalog record
               when it should stay linked to Mechanics.
             </p>
 
-            <div style={{marginBottom: '0.8rem'}}>
-              <strong style={{display: 'block', marginBottom: '0.35rem'}}>
+            <div className={styles.inlineMarginBottom08rem}>
+              <strong className={`${styles.inlineDisplayBlock} ${styles.inlineMarginBottom035rem}`}>
                 Inventory
               </strong>
-              <div style={{display: 'flex', gap: '0.4rem', marginBottom: '0.35rem'}}>
+              <div className={`${styles.inlineDisplayFlex} ${styles.inlineGap04rem} ${styles.inlineMarginBottom035rem}`}>
                 <input
                   type='text'
                   value={quickInventoryName}
                   onChange={(e) => setQuickInventoryName(e.target.value)}
                   placeholder='Quick add item'
-                  style={{flex: 1}}
+                  className={styles.inlineFlex1}
                 />
                 <input
                   type='number'
                   min={1}
                   value={quickInventoryQty}
                   onChange={(e) => setQuickInventoryQty(Math.max(1, Number(e.target.value) || 1))}
-                  style={{width: '5rem'}}
+                  className={styles.inlineWidth5rem}
                 />
                 <button
                   type='button'
@@ -1839,11 +1802,11 @@ function CharacterSheetsRoute({
                   Add item
                 </button>
               </div>
-              <div style={{display: 'flex', gap: '0.4rem', marginBottom: '0.35rem'}}>
+              <div className={`${styles.inlineDisplayFlex} ${styles.inlineGap04rem} ${styles.inlineMarginBottom035rem}`}>
                 <select
                   value={catalogInventoryId}
                   onChange={(e) => setCatalogInventoryId(e.target.value)}
-                  style={{flex: 1}}
+                  className={styles.inlineFlex1}
                 >
                   <option value=''>Add from Mechanics...</option>
                   {compendiumEntries.map((entry) => (
@@ -1860,7 +1823,7 @@ function CharacterSheetsRoute({
                 </button>
               </div>
               {inventoryEntries.length > 0 && (
-                <ul style={{margin: 0, paddingLeft: '1rem'}}>
+                <ul className={`${styles.inlineMargin0} ${styles.inlinePaddingLeft1rem}`}>
                   {inventoryEntries.map((entry) => (
                     <li key={entry.id}>
                       {entry.name}
@@ -1869,7 +1832,7 @@ function CharacterSheetsRoute({
                       <button
                         type='button'
                         onClick={() => removeTrackedEntry('inventory', entry.id)}
-                        style={{marginLeft: '0.45rem', fontSize: '0.75rem'}}
+                        className={`${styles.inlineMarginLeft045rem} ${styles.inlineFontSize075rem}`}
                       >
                         remove
                       </button>
@@ -1879,17 +1842,17 @@ function CharacterSheetsRoute({
               )}
             </div>
 
-            <div style={{marginBottom: '0.8rem'}}>
-              <strong style={{display: 'block', marginBottom: '0.35rem'}}>
+            <div className={styles.inlineMarginBottom08rem}>
+              <strong className={`${styles.inlineDisplayBlock} ${styles.inlineMarginBottom035rem}`}>
                 Equipment
               </strong>
-              <div style={{display: 'flex', gap: '0.4rem', marginBottom: '0.35rem'}}>
+              <div className={`${styles.inlineDisplayFlex} ${styles.inlineGap04rem} ${styles.inlineMarginBottom035rem}`}>
                 <input
                   type='text'
                   value={quickEquipmentName}
                   onChange={(e) => setQuickEquipmentName(e.target.value)}
                   placeholder='Quick add equipment'
-                  style={{flex: 1}}
+                  className={styles.inlineFlex1}
                 />
                 <button
                   type='button'
@@ -1898,11 +1861,11 @@ function CharacterSheetsRoute({
                   Add equipment
                 </button>
               </div>
-              <div style={{display: 'flex', gap: '0.4rem', marginBottom: '0.35rem'}}>
+              <div className={`${styles.inlineDisplayFlex} ${styles.inlineGap04rem} ${styles.inlineMarginBottom035rem}`}>
                 <select
                   value={catalogEquipmentId}
                   onChange={(e) => setCatalogEquipmentId(e.target.value)}
-                  style={{flex: 1}}
+                  className={styles.inlineFlex1}
                 >
                   <option value=''>Add from Mechanics...</option>
                   {compendiumEntries.map((entry) => (
@@ -1919,7 +1882,7 @@ function CharacterSheetsRoute({
                 </button>
               </div>
               {equipmentEntries.length > 0 && (
-                <ul style={{margin: 0, paddingLeft: '1rem'}}>
+                <ul className={`${styles.inlineMargin0} ${styles.inlinePaddingLeft1rem}`}>
                   {equipmentEntries.map((entry) => (
                     <li key={entry.id}>
                       {entry.name}
@@ -1927,7 +1890,7 @@ function CharacterSheetsRoute({
                       <button
                         type='button'
                         onClick={() => removeTrackedEntry('equipment', entry.id)}
-                        style={{marginLeft: '0.45rem', fontSize: '0.75rem'}}
+                        className={`${styles.inlineMarginLeft045rem} ${styles.inlineFontSize075rem}`}
                       >
                         remove
                       </button>
@@ -1938,16 +1901,16 @@ function CharacterSheetsRoute({
             </div>
 
             <div>
-              <strong style={{display: 'block', marginBottom: '0.35rem'}}>
+              <strong className={`${styles.inlineDisplayBlock} ${styles.inlineMarginBottom035rem}`}>
                 Statuses
               </strong>
-              <div style={{display: 'flex', gap: '0.4rem', marginBottom: '0.35rem'}}>
+              <div className={`${styles.inlineDisplayFlex} ${styles.inlineGap04rem} ${styles.inlineMarginBottom035rem}`}>
                 <input
                   type='text'
                   value={quickStatusName}
                   onChange={(e) => setQuickStatusName(e.target.value)}
                   placeholder='Quick add status'
-                  style={{flex: 1}}
+                  className={styles.inlineFlex1}
                 />
                 <button
                   type='button'
@@ -1956,11 +1919,11 @@ function CharacterSheetsRoute({
                   Add status
                 </button>
               </div>
-              <div style={{display: 'flex', gap: '0.4rem', marginBottom: '0.35rem'}}>
+              <div className={`${styles.inlineDisplayFlex} ${styles.inlineGap04rem} ${styles.inlineMarginBottom035rem}`}>
                 <select
                   value={catalogStatusId}
                   onChange={(e) => setCatalogStatusId(e.target.value)}
-                  style={{flex: 1}}
+                  className={styles.inlineFlex1}
                 >
                   <option value=''>Add status from Mechanics...</option>
                   {statusCatalogOptions.map((entry) => (
@@ -1977,7 +1940,7 @@ function CharacterSheetsRoute({
                 </button>
               </div>
               {statusEntries.length > 0 && (
-                <ul style={{margin: 0, paddingLeft: '1rem'}}>
+                <ul className={`${styles.inlineMargin0} ${styles.inlinePaddingLeft1rem}`}>
                   {statusEntries.map((entry) => (
                     <li key={entry.id}>
                       {entry.name}
@@ -1985,7 +1948,7 @@ function CharacterSheetsRoute({
                       <button
                         type='button'
                         onClick={() => removeTrackedEntry('status', entry.id)}
-                        style={{marginLeft: '0.45rem', fontSize: '0.75rem'}}
+                        className={`${styles.inlineMarginLeft045rem} ${styles.inlineFontSize075rem}`}
                       >
                         remove
                       </button>
@@ -1996,7 +1959,7 @@ function CharacterSheetsRoute({
             </div>
           </details>
 
-          <div style={{marginBottom: '0.75rem'}}>
+          <div className={styles.inlineMarginBottom075rem}>
             <label>
               Notes
               <br />
@@ -2004,12 +1967,12 @@ function CharacterSheetsRoute({
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
                 rows={4}
-                style={{width: '100%'}}
+                className={styles.inlineWidth100}
               />
             </label>
           </div>
 
-          <div style={{display: 'flex', gap: '0.5rem'}}>
+          <div className={`${styles.inlineDisplayFlex} ${styles.inlineGap05rem}`}>
             <button type='submit' disabled={isSubmitting}>
               {isSubmitting
                 ? 'Saving...'
@@ -2026,10 +1989,9 @@ function CharacterSheetsRoute({
         </form>
 
         <section
-          className={styles.historyPanel}
-          style={{
-            display: taskView === 'scene-history' ? 'block' : 'none'
-          }}
+          className={`${styles.historyPanel} ${
+            taskView === 'scene-history' ? '' : styles.hidden
+          }`}
         >
           <MutationForm
             editingMutationEventId={editingMutationEventId}
@@ -2063,27 +2025,16 @@ function CharacterSheetsRoute({
             selectedMutationStatDefinition={selectedMutationStatDefinition}
           />
           <div
-            style={{
-              marginBottom: '0.9rem',
-              padding: '0.75rem',
-              borderRadius: '8px',
-              backgroundColor: 'var(--color-bg-primary)',
-              border: '1px solid var(--color-border)',
-              fontSize: '0.9rem'
-            }}
+            className={`${styles.inlineMarginBottom09rem} ${styles.inlinePadding075rem} ${styles.inlineBorderRadius8px} ${styles.inlineBackgroundColorVarColorBgPrimary} ${styles.inlineBorder1pxSolidVarColorBorder} ${styles.inlineFontSize09rem}`}
           >
             <strong>Preview</strong>
-            <div style={{marginTop: '0.35rem', color: 'var(--color-text-secondary)'}}>
+            <div className={`${styles.inlineMarginTop035rem} ${styles.inlineColorVarColorTextSecondary}`}>
               {selectedMutationValueSummary ||
                 'Select a sheet, scene, and change details to preview the mutation.'}
             </div>
             {selectedMutationScene && (
               <div
-                style={{
-                  marginTop: '0.35rem',
-                  color: 'var(--color-text-secondary)',
-                  fontSize: '0.82rem'
-                }}
+                className={`${styles.inlineMarginTop035rem} ${styles.inlineColorVarColorTextSecondary} ${styles.inlineFontSize082rem}`}
               >
                 Scene revision source: {selectedMutationScene.updatedAt} · hash{' '}
                 {hashString(selectedMutationScene.content)}
@@ -2094,18 +2045,10 @@ function CharacterSheetsRoute({
           {mutationPreviewIssues.length > 0 && (
             <div
               role='alert'
-              style={{
-                marginBottom: '0.9rem',
-                padding: '0.75rem',
-                borderRadius: '8px',
-                border: '1px solid var(--color-error-soft-border)',
-                backgroundColor: 'var(--color-error-soft-bg)',
-                color: 'var(--color-error)',
-                fontSize: '0.9rem'
-              }}
+              className={`${styles.inlineMarginBottom09rem} ${styles.inlinePadding075rem} ${styles.inlineBorderRadius8px} ${styles.inlineBorder1pxSolidVarColorErrorSoftBorder} ${styles.inlineBackgroundColorVarColorErrorSoftBg} ${styles.inlineColorVarColorError} ${styles.inlineFontSize09rem}`}
             >
               <strong>Mutation warning</strong>
-              <ul style={{margin: '0.5rem 0 0 1rem', padding: 0}}>
+              <ul className={`${styles.inlineMargin05rem001rem} ${styles.inlinePadding0}`}>
                 {mutationPreviewIssues.map((issue) => (
                   <li key={issue}>{issue}</li>
                 ))}
@@ -2114,31 +2057,19 @@ function CharacterSheetsRoute({
           )}
 
           <div
-            style={{
-              marginBottom: '0.9rem',
-              padding: '0.75rem',
-              borderRadius: '8px',
-              backgroundColor: 'var(--color-bg-primary)',
-              border: '1px solid var(--color-border)',
-              fontSize: '0.9rem'
-            }}
+            className={`${styles.inlineMarginBottom09rem} ${styles.inlinePadding075rem} ${styles.inlineBorderRadius8px} ${styles.inlineBackgroundColorVarColorBgPrimary} ${styles.inlineBorder1pxSolidVarColorBorder} ${styles.inlineFontSize09rem}`}
           >
             <strong>State At Selected Scene</strong>
             {!replayedStateAtSelectedScene ? (
-              <div style={{marginTop: '0.35rem', color: 'var(--color-text-secondary)'}}>
+              <div className={`${styles.inlineMarginTop035rem} ${styles.inlineColorVarColorTextSecondary}`}>
                 Select a sheet and scene to inspect the replayed state timeline.
               </div>
             ) : (
               <>
-                <div style={{marginTop: '0.4rem'}}>
+                <div className={styles.inlineMarginTop04rem}>
                   <strong>Stats:</strong>
                   <div
-                    style={{
-                      display: 'grid',
-                      gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
-                      gap: '0.25rem',
-                      marginTop: '0.25rem'
-                    }}
+                    className={`${styles.inlineDisplayGrid} ${styles.inlineGridTemplateColumnsRepeat2Minmax01fr} ${styles.inlineGap025rem} ${styles.inlineMarginTop025rem}`}
                   >
                     {Object.entries(replayedStateAtSelectedScene.stats).map(
                       ([key, value]) => (
@@ -2150,15 +2081,10 @@ function CharacterSheetsRoute({
                   </div>
                 </div>
 
-                <div style={{marginTop: '0.6rem'}}>
+                <div className={styles.inlineMarginTop06rem}>
                   <strong>Resources:</strong>
                   <div
-                    style={{
-                      display: 'grid',
-                      gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
-                      gap: '0.25rem',
-                      marginTop: '0.25rem'
-                    }}
+                    className={`${styles.inlineDisplayGrid} ${styles.inlineGridTemplateColumnsRepeat2Minmax01fr} ${styles.inlineGap025rem} ${styles.inlineMarginTop025rem}`}
                   >
                     {Object.entries(replayedStateAtSelectedScene.resources.current).map(
                       ([key, current]) => (
@@ -2171,12 +2097,12 @@ function CharacterSheetsRoute({
                   </div>
                 </div>
 
-                <div style={{marginTop: '0.6rem'}}>
+                <div className={styles.inlineMarginTop06rem}>
                   <strong>Statuses:</strong>{' '}
                   {replayedStateAtSelectedScene.statuses.join(', ') || 'none'}
                 </div>
 
-                <div style={{marginTop: '0.6rem'}}>
+                <div className={styles.inlineMarginTop06rem}>
                   <strong>Inventory:</strong>{' '}
                   {replayedStateAtSelectedScene.inventory.items.length > 0
                     ? replayedStateAtSelectedScene.inventory.items
@@ -2189,13 +2115,13 @@ function CharacterSheetsRoute({
                     : 'none'}
                 </div>
 
-                <div style={{marginTop: '0.6rem'}}>
+                <div className={styles.inlineMarginTop06rem}>
                   <strong>Equipped:</strong>{' '}
                   {replayedStateAtSelectedScene.inventory.equipped.join(', ') ||
                     'none'}
                 </div>
 
-                <div style={{marginTop: '0.6rem'}}>
+                <div className={styles.inlineMarginTop06rem}>
                   <strong>Location:</strong>{' '}
                   {replayedStateAtSelectedScene.locationName || 'unset'}
                 </div>
@@ -2203,7 +2129,7 @@ function CharacterSheetsRoute({
             )}
           </div>
 
-          <div style={{display: 'flex', gap: '0.75rem'}}>
+          <div className={`${styles.inlineDisplayFlex} ${styles.inlineGap075rem}`}>
             <button
               type='button'
               onClick={() => void handleSaveMutation()}
@@ -2222,51 +2148,39 @@ function CharacterSheetsRoute({
             </button>
           </div>
 
-          <div style={{marginTop: '1rem'}}>
-            <h3 style={{marginBottom: '0.5rem'}}>Recorded State History</h3>
+          <div className={styles.inlineMarginTop1rem}>
+            <h3 className={styles.inlineMarginBottom05rem}>Recorded State History</h3>
             {!mutationTargetSheetId ? (
-              <p style={{fontSize: '0.9rem', color: 'var(--color-text-secondary)'}}>
+              <p className={`${styles.inlineFontSize09rem} ${styles.inlineColorVarColorTextSecondary}`}>
                 Select a character sheet to inspect its recorded mutation history.
               </p>
             ) : selectedSheetMutationHistory.length === 0 ? (
-              <p style={{fontSize: '0.9rem', color: 'var(--color-text-secondary)'}}>
+              <p className={`${styles.inlineFontSize09rem} ${styles.inlineColorVarColorTextSecondary}`}>
                 No recorded state changes yet for this character sheet.
               </p>
             ) : (
-              <ul style={{listStyle: 'none', padding: 0, margin: 0}}>
+              <ul className={`${styles.inlineListStyleNone} ${styles.inlinePadding0} ${styles.inlineMargin0}`}>
                 {selectedSheetMutationHistory.map(
                   ({event, canMoveUp, canMoveDown, staleness, stalenessLabel}) => (
                   <li
                     key={event.id}
-                    style={{
-                      marginBottom: '0.75rem',
-                      padding: '0.75rem',
-                      border: '1px solid var(--color-border)',
-                      borderRadius: '8px',
-                      backgroundColor:
-                        event.status === 'invalidated' ? 'var(--color-bg-secondary)' : 'var(--color-bg-primary)'
-                    }}
+                    className={`${styles.mutationEvent} ${
+                      event.status === 'invalidated'
+                        ? styles.mutationEventInvalidated
+                        : ''
+                    }`}
                   >
                     <div
-                      style={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        gap: '0.75rem',
-                        alignItems: 'flex-start'
-                      }}
+                      className={`${styles.inlineDisplayFlex} ${styles.inlineJustifyContentSpaceBetween} ${styles.inlineGap075rem} ${styles.inlineAlignItemsFlexStart}`}
                     >
-                      <div style={{flex: 1}}>
-                        <div style={{fontSize: '0.92rem', fontWeight: 600}}>
+                      <div className={styles.inlineFlex1}>
+                        <div className={`${styles.inlineFontSize092rem} ${styles.inlineFontWeight600}`}>
                           {event.sceneOrder ? `${event.sceneOrder}. ` : ''}
                           {event.sceneTitle || 'Untitled scene'}
                           {event.sceneSequence ? ` · Step ${event.sceneSequence}` : ''}
                         </div>
                         <div
-                          style={{
-                            marginTop: '0.25rem',
-                            fontSize: '0.82rem',
-                            color: 'var(--color-text-secondary)'
-                          }}
+                          className={`${styles.inlineMarginTop025rem} ${styles.inlineFontSize082rem} ${styles.inlineColorVarColorTextSecondary}`}
                         >
                           Status: {event.status}
                           {event.invalidationReason
@@ -2275,26 +2189,13 @@ function CharacterSheetsRoute({
                         </div>
                         {stalenessLabel && event.status !== 'invalidated' && (
                           <div
-                            style={{
-                              marginTop: '0.3rem',
-                              display: 'inline-block',
-                              fontSize: '0.78rem',
-                              color: 'var(--color-warning)',
-                              backgroundColor: 'var(--color-warning-soft-bg)',
-                              border: '1px solid var(--color-warning-soft-border)',
-                              borderRadius: '999px',
-                              padding: '0.1rem 0.45rem'
-                            }}
+                            className={`${styles.inlineMarginTop03rem} ${styles.inlineDisplayInlineBlock} ${styles.inlineFontSize078rem} ${styles.inlineColorVarColorWarning} ${styles.inlineBackgroundColorVarColorWarningSoftBg} ${styles.inlineBorder1pxSolidVarColorWarningSoftBorder} ${styles.inlineBorderRadius999px} ${styles.inlinePadding01rem045rem}`}
                           >
                             Stale: {stalenessLabel}
                           </div>
                         )}
                         <ul
-                          style={{
-                            margin: '0.5rem 0 0 0',
-                            paddingLeft: '1rem',
-                            fontSize: '0.9rem'
-                          }}
+                          className={`${styles.inlineMargin05rem000} ${styles.inlinePaddingLeft1rem} ${styles.inlineFontSize09rem}`}
                         >
                           {event.commands.map((command, index) => (
                             <li key={`${event.id}-${index}`}>
@@ -2307,7 +2208,7 @@ function CharacterSheetsRoute({
                         <button
                           type='button'
                           onClick={() => loadMutationEventIntoForm(event)}
-                          style={{fontSize: '0.8rem', marginRight: '0.35rem'}}
+                          className={`${styles.inlineFontSize08rem} ${styles.inlineMarginRight035rem}`}
                           disabled={event.status === 'invalidated'}
                         >
                           Edit
@@ -2315,7 +2216,7 @@ function CharacterSheetsRoute({
                         <button
                           type='button'
                           onClick={() => void handleMoveMutationEvent(event, -1)}
-                          style={{fontSize: '0.8rem', marginRight: '0.35rem'}}
+                          className={`${styles.inlineFontSize08rem} ${styles.inlineMarginRight035rem}`}
                           disabled={
                             !canMoveUp ||
                             event.status === 'invalidated' ||
@@ -2327,7 +2228,7 @@ function CharacterSheetsRoute({
                         <button
                           type='button'
                           onClick={() => void handleMoveMutationEvent(event, 1)}
-                          style={{fontSize: '0.8rem', marginRight: '0.35rem'}}
+                          className={`${styles.inlineFontSize08rem} ${styles.inlineMarginRight035rem}`}
                           disabled={
                             !canMoveDown ||
                             event.status === 'invalidated' ||
@@ -2343,7 +2244,7 @@ function CharacterSheetsRoute({
                             event.status === 'invalidated' ||
                             invalidatingMutationEventId === event.id
                           }
-                          style={{fontSize: '0.8rem'}}
+                          className={styles.inlineFontSize08rem}
                         >
                           {invalidatingMutationEventId === event.id
                             ? 'Invalidating...'

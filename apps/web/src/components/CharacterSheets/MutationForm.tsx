@@ -1,3 +1,4 @@
+import styles from '../../styles/CharacterSheetsRoute.module.css';
 import type {
   CharacterSheet,
   StoredRuleset,
@@ -100,36 +101,28 @@ export function MutationForm({
 }: MutationFormProps) {
   return (
     <>
-      <h2 style={{marginTop: 0}}>Record Scene State Change</h2>
-      <p style={{fontSize: '0.9rem', color: 'var(--color-text-secondary)'}}>
+      <h2 className={styles.inlineMarginTop0}>Record Scene State Change</h2>
+      <p className={`${styles.inlineFontSize09rem} ${styles.inlineColorVarColorTextSecondary}`}>
         Attach an accepted state mutation to a manuscript scene. This
         writes directly to the mutation ledger and becomes replayable
         history.
       </p>
       {editingMutationEventId && (
         <div
-          style={{
-            marginBottom: '0.75rem',
-            padding: '0.55rem 0.7rem',
-            borderRadius: '8px',
-            border: '1px solid var(--color-accent-soft-border)',
-            backgroundColor: 'var(--color-accent-soft-bg)',
-            color: 'var(--color-accent)',
-            fontSize: '0.88rem'
-          }}
+          className={`${styles.inlineMarginBottom075rem} ${styles.inlinePadding055rem07rem} ${styles.inlineBorderRadius8px} ${styles.inlineBorder1pxSolidVarColorAccentSoftBorder} ${styles.inlineBackgroundColorVarColorAccentSoftBg} ${styles.inlineColorVarColorAccent} ${styles.inlineFontSize088rem}`}
         >
           Editing existing state step.
         </div>
       )}
 
-      <div style={{marginBottom: '0.75rem'}}>
+      <div className={styles.inlineMarginBottom075rem}>
         <label>
           Character Sheet
           <br />
           <select
             value={mutationTargetSheetId}
             onChange={(e) => setMutationTargetSheetId(e.target.value)}
-            style={{width: '100%'}}
+            className={styles.inlineWidth100}
           >
             <option value=''>Select a sheet...</option>
             {sheets.map((sheet) => (
@@ -141,14 +134,14 @@ export function MutationForm({
         </label>
       </div>
 
-      <div style={{marginBottom: '0.75rem'}}>
+      <div className={styles.inlineMarginBottom075rem}>
         <label>
           Source Scene
           <br />
           <select
             value={mutationSceneId}
             onChange={(e) => setMutationSceneId(e.target.value)}
-            style={{width: '100%'}}
+            className={styles.inlineWidth100}
           >
             <option value=''>Select a scene...</option>
             {orderedDocuments.map((document, index) => (
@@ -160,14 +153,14 @@ export function MutationForm({
         </label>
       </div>
 
-      <div style={{marginBottom: '0.75rem'}}>
+      <div className={styles.inlineMarginBottom075rem}>
         <label>
           Change Type
           <br />
           <select
             value={mutationType}
             onChange={(e) => setMutationType(e.target.value as MutationFormType)}
-            style={{width: '100%'}}
+            className={styles.inlineWidth100}
           >
             {MUTATION_FORM_TYPES.map((option) => (
               <option key={option.value} value={option.value}>
@@ -181,14 +174,14 @@ export function MutationForm({
       {(mutationType === 'resource_change' ||
         mutationType === 'resource_set') && (
         <>
-          <div style={{marginBottom: '0.75rem'}}>
+          <div className={styles.inlineMarginBottom075rem}>
             <label>
               Resource
               <br />
               <select
                 value={mutationResourceDefinitionId}
                 onChange={(e) => setMutationResourceDefinitionId(e.target.value)}
-                style={{width: '100%'}}
+                className={styles.inlineWidth100}
               >
                 <option value=''>Select a resource...</option>
                 {ruleset.resourceDefinitions.map((definition) => (
@@ -199,7 +192,7 @@ export function MutationForm({
               </select>
             </label>
           </div>
-          <div style={{marginBottom: '0.75rem'}}>
+          <div className={styles.inlineMarginBottom075rem}>
             <label>
               {mutationType === 'resource_change' ? 'Delta' : 'Value'}
               <br />
@@ -207,7 +200,7 @@ export function MutationForm({
                 type='number'
                 value={mutationNumberValue}
                 onChange={(e) => setMutationNumberValue(e.target.value)}
-                style={{width: '100%'}}
+                className={styles.inlineWidth100}
               />
             </label>
           </div>
@@ -216,14 +209,14 @@ export function MutationForm({
 
       {(mutationType === 'stat_change' || mutationType === 'stat_set') && (
         <>
-          <div style={{marginBottom: '0.75rem'}}>
+          <div className={styles.inlineMarginBottom075rem}>
             <label>
               Stat
               <br />
               <select
                 value={mutationStatDefinitionId}
                 onChange={(e) => setMutationStatDefinitionId(e.target.value)}
-                style={{width: '100%'}}
+                className={styles.inlineWidth100}
               >
                 <option value=''>Select a stat...</option>
                 {ruleset.statDefinitions.map((definition) => (
@@ -235,9 +228,9 @@ export function MutationForm({
             </label>
           </div>
           {selectedMutationStatDefinition?.type === 'boolean' ? (
-            <div style={{marginBottom: '0.75rem'}}>
+            <div className={styles.inlineMarginBottom075rem}>
               <label
-                style={{display: 'flex', gap: '0.5rem', alignItems: 'center'}}
+                className={`${styles.inlineDisplayFlex} ${styles.inlineGap05rem} ${styles.inlineAlignItemsCenter}`}
               >
                 <input
                   type='checkbox'
@@ -248,7 +241,7 @@ export function MutationForm({
               </label>
             </div>
           ) : selectedMutationStatDefinition?.type === 'text' ? (
-            <div style={{marginBottom: '0.75rem'}}>
+            <div className={styles.inlineMarginBottom075rem}>
               <label>
                 {mutationType === 'stat_change' ? 'Delta text' : 'Value'}
                 <br />
@@ -256,12 +249,12 @@ export function MutationForm({
                   type='text'
                   value={mutationTextValue}
                   onChange={(e) => setMutationTextValue(e.target.value)}
-                  style={{width: '100%'}}
+                  className={styles.inlineWidth100}
                 />
               </label>
             </div>
           ) : (
-            <div style={{marginBottom: '0.75rem'}}>
+            <div className={styles.inlineMarginBottom075rem}>
               <label>
                 {mutationType === 'stat_change' ? 'Delta' : 'Value'}
                 <br />
@@ -269,7 +262,7 @@ export function MutationForm({
                   type='number'
                   value={mutationNumberValue}
                   onChange={(e) => setMutationNumberValue(e.target.value)}
-                  style={{width: '100%'}}
+                  className={styles.inlineWidth100}
                 />
               </label>
             </div>
@@ -279,7 +272,7 @@ export function MutationForm({
 
       {(mutationType === 'status_apply' ||
         mutationType === 'status_remove') && (
-        <div style={{marginBottom: '0.75rem'}}>
+        <div className={styles.inlineMarginBottom075rem}>
           <label>
             Status name
             <br />
@@ -288,7 +281,7 @@ export function MutationForm({
               value={mutationStatusName}
               onChange={(e) => setMutationStatusName(e.target.value)}
               placeholder='Poisoned'
-              style={{width: '100%'}}
+              className={styles.inlineWidth100}
             />
           </label>
         </div>
@@ -300,7 +293,7 @@ export function MutationForm({
         mutationType === 'inventory_equip' ||
         mutationType === 'inventory_unequip') && (
         <>
-          <div style={{marginBottom: '0.75rem'}}>
+          <div className={styles.inlineMarginBottom075rem}>
             <label>
               Item name
               <br />
@@ -309,14 +302,14 @@ export function MutationForm({
                 value={mutationItemName}
                 onChange={(e) => setMutationItemName(e.target.value)}
                 placeholder='Iron Key'
-                style={{width: '100%'}}
+                className={styles.inlineWidth100}
               />
             </label>
           </div>
           {(mutationType === 'inventory_add' ||
             mutationType === 'inventory_remove' ||
             mutationType === 'inventory_consume') && (
-            <div style={{marginBottom: '0.75rem'}}>
+            <div className={styles.inlineMarginBottom075rem}>
               <label>
                 Quantity
                 <br />
@@ -325,7 +318,7 @@ export function MutationForm({
                   min={1}
                   value={mutationQuantity}
                   onChange={(e) => setMutationQuantity(e.target.value)}
-                  style={{width: '100%'}}
+                  className={styles.inlineWidth100}
                 />
               </label>
             </div>
@@ -334,7 +327,7 @@ export function MutationForm({
       )}
 
       {mutationType === 'location_set' && (
-        <div style={{marginBottom: '0.75rem'}}>
+        <div className={styles.inlineMarginBottom075rem}>
           <label>
             Location
             <br />
@@ -343,7 +336,7 @@ export function MutationForm({
               value={mutationLocationName}
               onChange={(e) => setMutationLocationName(e.target.value)}
               placeholder='South Gate'
-              style={{width: '100%'}}
+              className={styles.inlineWidth100}
             />
           </label>
         </div>
