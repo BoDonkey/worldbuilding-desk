@@ -1,7 +1,7 @@
 # Road to Market — Master Work Plan
 
-**Created:** 2026-08-01 · **Baseline:** `main` at `4b33eed` (clean, in sync
-with origin) · fitness grade A− per
+**Created:** 2026-08-01 · **Reconciled:** 2026-08-03 · **Baseline:** `main` at
+`4b33eed` (clean, in sync with origin) · fitness grade A− per
 `docs/archive/code-fitness-report-2026-08-01.md`
 
 This is the single active roadmap and slice plan. It absorbs the former
@@ -43,7 +43,8 @@ ecosystems, Zod 4 migration.
   verification battery before commit (see battery below).
 - Update `PROJECT_STATUS.md` when application truth changes; update this file
   when priority or remaining work changes; archive completed phases.
-- Start from current dogfood evidence, not archived implementation plans.
+- Trust dogfooding is required before beta but is deferred while current
+  capacity is focused elsewhere. It does not block unrelated Phase 2–5 work.
 
 Verification battery:
 
@@ -87,18 +88,19 @@ pnpm --filter web e2e:run       # for slices touching routed UI
 
 ## Status Board
 
-Update as slices land. Statuses: `—` not started, `WIP`, `Done <commit>`.
+Update as slices land. Statuses: `—` not started, `Deferred` with the reason
+and required revisit point, `WIP`, `Done <commit>`.
 
 | # | Slice | Phase | Size | Status |
 |---|---|---|---|---|
-| 0.1 | Branch/worktree cleanup | 0 | XS | Done — "chore: local branch/worktree cleanup (slice 0.1)" on local `main`, pending push |
-| 1.1 | Realistic-project trust dogfood | 1 | M | — |
-| 1.2 | Fix trust-path failures found in 1.1 | 1 | ? | — |
+| 0.1 | Branch/worktree cleanup | 0 | XS | Done `51d1586` |
+| 1.1 | Realistic-project trust dogfood | 1 | M | Deferred — required before beta; not a current blocker |
+| 1.2 | Fix trust-path failures found in 1.1 | 1 | ? | — (if needed after 1.1) |
 | 1.3 | Calm-shell navigation validation | 1 | S | — |
-| 1.4 | Proposal-review assistant route (conditional) | 1 | M | — |
+| 1.4 | Proposal-review assistant route (conditional on product need) | 1 | M | — |
 | 2.1 | ConfirmDialog + InlineAlert components | 2 | S | Done `38db7df` |
-| 2.2 | Migrate confirm/alert call sites | 2 | M | Done `9c278a3` + test fix `ab14f63` — Bob's local Cypress run found 5 failures (specs stubbing `window.confirm`, now bypassed by the dialog migration); fixed in `ab14f63`, pending a re-run to confirm 42/42 |
-| 2.3 | Inline field-level validation | 2 | S | — |
+| 2.2 | Migrate confirm/alert call sites | 2 | M | Done `9c278a3` + test fix `ab14f63` — Cypress re-run 2026-08-03: 42/42 passing |
+| 2.3 | Inline field-level validation | 2 | S | WIP |
 | 2.4 | Theme CharacterStyle editor family | 2 | S | — |
 | 2.5 | CompendiumRoute off inline styles | 2 | M | — |
 | 2.6 | CharacterSheetsRoute off inline styles | 2 | M | — |
@@ -125,15 +127,17 @@ Update as slices land. Statuses: `—` not started, `WIP`, `Done <commit>`.
 | 5.6 | Opt-in error reporting | 5 | S | — |
 | 5.7 | Trial + license key gate | 5 | M | — |
 | 5.8 | Help/docs baseline | 5 | S | — |
+| 5.9 | Landing page + demo assets | 5 | M | — |
 | 6.1 | Beta build + cohort recruitment | 6 | M | — |
 | 6.2 | Beta feedback triage + fix slices | 6 | ? | — |
 | 6.3 | Release-readiness checklist + RC | 6 | M | — |
 | 6.4 | Launch | 6 | S | — |
 
 Phases 2 and 3 can interleave; within Phase 3, slices 3.5–3.8 run
-sequentially. Phase 1 should start immediately — it is the top product risk
-and informs everything else. Phase 5 slices mostly parallelize. Phase 6 is
-strictly ordered.
+sequentially. Phase 1 addresses the top product risk, but its dogfood run is
+currently deferred for capacity and does not block unrelated Phase 2–5 work;
+it must be completed, and release-relevant findings resolved, before the beta
+build in 6.1. Phase 5 slices mostly parallelize. Phase 6 is strictly ordered.
 
 ---
 
@@ -144,7 +148,7 @@ branches, prune 8 stale worktrees (keep the locked `.worktrees/ui-fixes`),
 delete merged remote branches. No source changes.
 _[prompt: archive/fitness-a-work-slices.md § Slice 0]_
 
-## Phase 1 — Trust Validation (top priority)
+## Phase 1 — Trust Validation (dogfood required before beta; currently deferred)
 
 Goal: demonstrate that the app preserves the distinction between source
 material, proposals, accepted canon, and manuscript state across a realistic
@@ -166,8 +170,10 @@ the runbook's log. False positives (flags not in the answer key) are
 first-class findings.
 
 **1.2 Fix trust-path failures.** Turn every source-ranking, stale-summary, or
-provenance failure from 1.1 into its own bounded fix slice before adding any
-assistant context features. Size unknown until 1.1 lands.
+provenance failure from 1.1 into its own bounded fix slice. Release-relevant
+findings must be resolved before beta; completion of 1.1 is not a prerequisite
+for unrelated current assistant, UI, or release-engineering work. Size unknown
+until 1.1 lands.
 
 **1.3 Calm-shell navigation validation.** Manually verify primary navigation
 and `More` grouping at desktop and narrow breakpoints across projects with no
@@ -177,9 +183,10 @@ confirm optional-system badges stay discoverable without promoting mechanics
 routes. Resolve any changes through `docs/product-blueprint.md` navigation
 rules.
 
-**1.4 Proposal-review assistant route (conditional).** Only if 1.1–1.2 show
-the trust path holds: add an explicit assistant route that can discuss
-pending proposals without presenting them as canon.
+**1.4 Proposal-review assistant route (conditional).** If product use and the
+trust model justify it, add an explicit assistant route that can discuss
+pending proposals without presenting them as canon. Dogfood findings may
+inform this slice, but do not gate deciding or designing it.
 
 ## Phase 2 — UI, Dialogs, and Accessibility
 
@@ -269,6 +276,11 @@ Zod 4 stays deferred as its own future migration.
 - **5.8 Help/docs baseline.** In-app or web help covering projects/backup,
   import, review workflow, World Bible/Lore model, AI setup, and the trust
   model in author language.
+- **5.9 Landing page + demo assets.** Build the simple landing page and a
+  60–90 second demo of the implemented core loop; include privacy/data-flow
+  copy, analytics and download/checkout paths, and a plan for collecting
+  permissioned beta proof. Claims must stay within verified product behavior;
+  quantified performance claims wait for dogfood or beta evidence.
 
 ## Phase 6 — Beta, RC, Launch
 

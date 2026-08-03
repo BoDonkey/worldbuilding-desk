@@ -1,6 +1,6 @@
 # Domain Model — Lore, Canon, State, and AI Proposals
 
-Last updated: 2026-08-01
+Last updated: 2026-08-03
 
 This is the domain specification authority. It consolidates the durable
 contracts from `freeform-lore-ingestion-architecture.md`,
@@ -18,7 +18,7 @@ proposal. The standing trust rule for everything here:
 
 Three layers separate "written in notes" from "accepted as canon":
 
-1. **`LoreDocument`** — author-facing free-form source of truth: dossiers,
+1. **`LoreDocument`** — author-facing free-form source material: dossiers,
    place histories, faction notes, timelines, imported `.docx`/`.txt`/`.md`.
    Stored immediately, links to characters/entities, never auto-canon.
 2. **`FactProposal` / `LoreEntityProposal`** — internal, schema-validated,
@@ -39,10 +39,11 @@ Key rules:
   rebuilt from facts.
 - Alias extraction is a special fact path that writes to alias storage on
   acceptance, keeping consistency matching and lore extraction aligned.
-- Blocking consistency checks rely only on accepted canon (records, aliases,
-  canonical facts, accepted state mutations) — never on raw lore text, which
-  legitimately contains brainstorming and contradictions. Raw lore may appear
-  as supporting context only.
+- Canon-grounded consistency checks rely only on accepted canon (records,
+  aliases, canonical facts, accepted state mutations) — never on raw lore
+  text, which legitimately contains brainstorming and contradictions. Raw lore
+  may appear as supporting context only. Consistency findings remain advisory
+  and never block drafting.
 
 ### Retrieval integration
 

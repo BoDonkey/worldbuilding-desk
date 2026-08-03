@@ -1,6 +1,6 @@
 # Marketing Plan — Worldbuilding Desk v1
 
-Last updated: 2026-08-01 · Companion to `docs/road-to-market.md` Phase 6.
+Last updated: 2026-08-03 · Companion to `docs/road-to-market.md` Phases 5–6.
 
 Grounded in `docs/archive/deep-research-report.md` (2026-05 market analysis).
 Supersedes `docs/archive/brand-positioning.md`: the February "Consistency
@@ -42,13 +42,16 @@ Narrative designers are not a wedge.
 1. **Flow-preserving continuity.** Review flags, never blocks; suggestions
    are dismissible. "Like a linter for canon — except it never stops you
    writing." Precision over recall: a noisy tool is a dead tool.
-2. **Your world, one surface.** The World Bible grows from the manuscript;
-   lore is useful in the moment of drafting, not in another tab.
+2. **Your world, one connected workspace.** The World Bible grows from the
+   manuscript; lore remains useful in the moment of drafting instead of
+   becoming a disconnected reference chore.
 3. **Human authority.** AI proposes with evidence; nothing becomes canon
    without the author's explicit acceptance. No silent rewrites, ever.
-4. **Local-first, BYOK.** Manuscripts live on the author's machine; AI runs
-   on their own keys or fully local via Ollama; no training on their work.
-   Supporting pillar — pair it with workflow value, don't lead with it.
+4. **Local-first, BYOK.** Manuscripts live on the author's machine. Only the
+   context needed for an author-invoked request is sent to the provider they
+   configure, or AI can run fully locally through Ollama. Provider retention
+   and training claims must be qualified against that provider's current API
+   terms. Supporting pillar — pair it with workflow value, don't lead with it.
 
 Do **not** say: "AI writing assistant," "AI co-author," "all-in-one authoring
 IDE," "worldbuilding database," "project management for writers," or anything
@@ -88,13 +91,16 @@ one-time (Scrivener ≈ $60). BYOK means zero AI COGS, so one-time works.
 
 Every demo, video, and screenshot sequence shows, in order: (1) open the app
 and just write; (2) a soft underline appears on an unknown name — no modal,
-no block; (3) one click turns it into canon or an alias; (4) the assistant
-answers a story question citing accepted canon, not notes; (5) optional: a
-character sheet replaying state at a chosen scene, for the LitRPG audience.
+no block; (3) a quick, editable review turns it into canon or an alias; (4)
+the assistant answers a story question by prioritizing accepted canon and
+clearly distinguishing any supporting Source Notes; (5) optional: a character
+sheet replaying state at a chosen scene, for the LitRPG audience.
 
 ## Sequencing
 
-Marketing work stays behind product truth: no landing page claims about
-continuity catching until the Phase 1 trust dogfood holds. Order: beta
-recruitment copy (with 6.1) → landing page + demo video (during Phase 5) →
-case studies from beta (during 6.2) → launch announcement (6.4).
+Marketing work stays behind product truth: landing-page claims must describe
+implemented, verified behavior. Trust dogfooding remains required before beta
+but is currently deferred and does not block building the page or demo;
+quantified performance claims and case studies require dogfood or beta
+evidence. Order: landing page + demo video (5.9) → beta recruitment copy (with
+6.1) → case studies from beta (during 6.2) → launch announcement (6.4).

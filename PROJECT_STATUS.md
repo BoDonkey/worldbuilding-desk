@@ -1,6 +1,6 @@
 # Worldbuilding-Desk Project Status
 
-**Last Updated:** July 31, 2026
+**Last Updated:** August 3, 2026
 
 ## Project Overview
 
@@ -196,7 +196,11 @@ Under the hood, the app still includes rich systems for world data, rules, chara
 - Product health is now the active priority: the Lore/RAG/Shodh health panel and the World Bible Character detail health panel are implemented, and Lore Documents can now quietly flag likely stale retrieval coverage and rebuild derived RAG/Shodh context from saved source data.
 - Assistant prompt context now labels retrieved World Bible records, accepted canonical facts, linked/general Source Notes, scene drafts, and rules references by trust tier. Assistant answers also expose a collapsed `Sources used` list for the Shodh/RAG chunks sent with that answer. Pending and rejected Source Note proposals remain out of normal assistant context; include them only through an explicit future proposal-review flow.
 - Accepted canonical facts now capture Shodh summaries when accepted or rebuilt; Source Notes remain RAG-only source material by default.
-- The docs source-of-truth map now lives in `docs/README.md`; keep `PROJECT_STATUS.md` and `docs/road-to-market.md` as the current status and roadmap pair. The documentation set was consolidated again on 2026-08-01 to six active documents.
+- The docs source-of-truth map now lives in `docs/README.md`; keep
+  `PROJECT_STATUS.md` and `docs/road-to-market.md` as the current status and
+  roadmap pair. The documentation set was consolidated again on 2026-08-01 to
+  six active files under `docs/`, plus `PROJECT_STATUS.md` at the repository
+  root.
 - The active documentation set was consolidated on 2026-07-26: completed plans,
   branch handoffs, dated audits, and the prior roadmap/architecture action logs
   now live under `docs/archive/`; the active roadmap and architecture reference

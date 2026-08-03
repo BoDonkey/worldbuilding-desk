@@ -1,6 +1,6 @@
 # Documentation Map
 
-Last updated: 2026-08-01
+Last updated: 2026-08-03
 
 The active documentation set was consolidated on 2026-08-01 down to seven
 documents. Everything else lives in `docs/archive/` with a banner pointing at
@@ -78,7 +78,7 @@ the current tree.
 - Archive completed or superseded documents with a short banner naming the
   replacement; repair internal links whenever a document moves.
 - Do not create new parallel roadmaps, navigation plans, or spec forks; extend
-  the six active documents instead. If a new large proposal is genuinely
-  needed, give it a status and date, and fold its durable outcome back into
-  the authority docs when decided.
+  the six active files under `docs/` instead. If a new large proposal is
+  genuinely needed, give it a status and date, and fold its durable outcome
+  back into the authority docs when decided.
 - Update this map when authority or placement changes.
