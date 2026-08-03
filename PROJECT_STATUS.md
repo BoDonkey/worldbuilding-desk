@@ -53,6 +53,10 @@ Under the hood, the app still includes rich systems for world data, rules, chara
 - World Bible review queue now supports queue filtering by review reason and recommended action (`complete`, `alias`, `merge`, `ignore`).
 - Editor appearance controls for width, surface style, and serif/sans presentation.
 - Shared themed `ConfirmDialog`/`InlineAlert` components (`src/components/common/`) now replace native `window.confirm`/`alert` across the app (delete/merge/replace confirmations, validation and status messages), wired through a reusable `useConfirmDialog` hook; delete actions that previously had no confirmation (character style, corkboard chapter card, corkboard plot point) now do.
+- Category editing now renders missing category-name and field key/label errors
+  beside the offending inputs with themed error styling and accessible
+  `aria-invalid` / description links. API-key save feedback now appears beside
+  the save action instead of at the top of the full AI settings panel.
 - Passive review readiness indicator in the workspace header and Review drawer tab.
 - Review drawer issues now split into explicit `Current document` and `Other documents` sections so document scope is visible instead of implied by changing sort order.
 - Review drawer context actions now switch to the target scene, scroll to the reviewed term with a header offset, briefly flash the term, and keep the chosen review row in view inside the drawer.
@@ -251,6 +255,10 @@ Under the hood, the app still includes rich systems for world data, rules, chara
 ## Verification Status
 
 ### Verified Recently
+- Road-to-market Slice 2.3 inline field-level validation passes web lint, all
+  252 web unit tests (including three focused Category Editor validation
+  tests), 6 rules-engine tests, 12 rules-ui tests, web and desktop builds, all
+  42 Cypress tests, and manual browser checks of each changed feedback state.
 - The July 31 fitness close-out and follow-up extractions pass web lint, all 250
   unit/package tests (232 web, 6 rules-engine, 12 rules-ui), the production web
   build, and all 42 Cypress tests across eight specs.

@@ -103,6 +103,7 @@ export const AISettings: React.FC<AISettingsProps> = ({
   const [statusMessage, setStatusMessage] = useState<
     {variant: InlineAlertVariant; message: string} | null
   >(null);
+  const [apiKeysSaved, setApiKeysSaved] = useState(false);
   const [diagnostics, setDiagnostics] = useState<ProviderDiagnosticsState | null>(null);
 
   useEffect(() => {
@@ -128,7 +129,7 @@ export const AISettings: React.FC<AISettingsProps> = ({
       localStorage.removeItem('gemini_api_key');
     }
 
-    setStatusMessage({variant: 'success', message: 'API keys saved.'});
+    setApiKeysSaved(true);
   };
 
   const handleProviderChange = (provider: AIProviderId) => {
@@ -902,7 +903,10 @@ export const AISettings: React.FC<AISettingsProps> = ({
         <input
           type='password'
           value={anthropicKey}
-          onChange={(e) => setAnthropicKey(e.target.value)}
+          onChange={(e) => {
+            setAnthropicKey(e.target.value);
+            setApiKeysSaved(false);
+          }}
           placeholder='sk-ant-...'
           className={styles.input}
         />
@@ -919,7 +923,10 @@ export const AISettings: React.FC<AISettingsProps> = ({
         <input
           type='password'
           value={openaiKey}
-          onChange={(e) => setOpenaiKey(e.target.value)}
+          onChange={(e) => {
+            setOpenaiKey(e.target.value);
+            setApiKeysSaved(false);
+          }}
           placeholder='sk-...'
           className={styles.input}
         />
@@ -936,7 +943,10 @@ export const AISettings: React.FC<AISettingsProps> = ({
         <input
           type='password'
           value={geminiKey}
-          onChange={(e) => setGeminiKey(e.target.value)}
+          onChange={(e) => {
+            setGeminiKey(e.target.value);
+            setApiKeysSaved(false);
+          }}
           placeholder='AIza...'
           className={styles.input}
         />
@@ -948,9 +958,19 @@ export const AISettings: React.FC<AISettingsProps> = ({
         </p>
       </div>
 
-      <button onClick={handleSaveKeys} className={styles.saveButton}>
-        Save API Keys
-      </button>
+      <div className={styles.apiKeyActions}>
+        <button onClick={handleSaveKeys} className={styles.saveButton}>
+          Save API Keys
+        </button>
+        {apiKeysSaved && (
+          <InlineAlert
+            variant='success'
+            message='API keys saved.'
+            onDismiss={() => setApiKeysSaved(false)}
+            autoDismissMs={4000}
+          />
+        )}
+      </div>
 
       <div className={styles.toolsSection}>
         <h3 className={styles.toolsHeading}>Prompt Tools</h3>

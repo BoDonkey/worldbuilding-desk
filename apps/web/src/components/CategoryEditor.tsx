@@ -1,7 +1,6 @@
 import {useState} from 'react';
 import type {EntityCategory, FieldDefinition} from '../entityTypes';
 import {saveCategory} from '../categoryStorage';
-import {InlineAlert} from './common';
 import styles from '../assets/components/CategoryEditor.module.css';
 
 interface CategoryEditorProps {
@@ -10,15 +9,26 @@ interface CategoryEditorProps {
   onCancel: () => void;
 }
 
+type ValidationError =
+  | {scope: 'name'}
+  | {
+      scope: 'field';
+      index: number;
+      missingKey: boolean;
+      missingLabel: boolean;
+    };
+
 function CategoryEditor({category, onSave, onCancel}: CategoryEditorProps) {
   const [name, setName] = useState(category.name);
   const [fields, setFields] = useState<FieldDefinition[]>(category.fieldSchema);
   const [editingFieldIndex, setEditingFieldIndex] = useState<number | null>(
     null
   );
-  const [validationError, setValidationError] = useState<string | null>(null);
+  const [validationError, setValidationError] =
+    useState<ValidationError | null>(null);
 
   const handleAddField = () => {
+    setValidationError(null);
     setFields([
       ...fields,
       {
@@ -38,9 +48,13 @@ function CategoryEditor({category, onSave, onCancel}: CategoryEditorProps) {
     const updated = [...fields];
     updated[index] = {...updated[index], ...updates};
     setFields(updated);
+    if (validationError?.scope === 'field' && validationError.index === index) {
+      setValidationError(null);
+    }
   };
 
   const handleDeleteField = (index: number) => {
+    setValidationError(null);
     setFields(fields.filter((_, i) => i !== index));
     if (editingFieldIndex === index) setEditingFieldIndex(null);
   };
@@ -53,17 +67,24 @@ function CategoryEditor({category, onSave, onCancel}: CategoryEditorProps) {
     const newIndex = direction === 'up' ? index - 1 : index + 1;
     [updated[index], updated[newIndex]] = [updated[newIndex], updated[index]];
     setFields(updated);
+    setValidationError(null);
   };
 
   const handleSave = async () => {
     if (!name.trim()) {
-      setValidationError('Category name is required.');
+      setValidationError({scope: 'name'});
       return;
     }
 
-    for (const field of fields) {
+    for (const [index, field] of fields.entries()) {
       if (!field.key.trim() || !field.label.trim()) {
-        setValidationError('All fields must have a key and label.');
+        setValidationError({
+          scope: 'field',
+          index,
+          missingKey: !field.key.trim(),
+          missingLabel: !field.label.trim()
+        });
+        setEditingFieldIndex(index);
         return;
       }
     }
@@ -84,14 +105,6 @@ function CategoryEditor({category, onSave, onCancel}: CategoryEditorProps) {
     <div className={styles.container}>
       <h3>Edit Category: {category.name}</h3>
 
-      {validationError && (
-        <InlineAlert
-          variant='error'
-          message={validationError}
-          onDismiss={() => setValidationError(null)}
-        />
-      )}
-
       <div className={styles.header}>
         <label>
           Category Name
@@ -99,10 +112,32 @@ function CategoryEditor({category, onSave, onCancel}: CategoryEditorProps) {
           <input
             type='text'
             value={name}
-            onChange={(e) => setName(e.target.value)}
-            className={styles.nameInput}
+            onChange={(e) => {
+              setName(e.target.value);
+              if (validationError?.scope === 'name') {
+                setValidationError(null);
+              }
+            }}
+            className={`${styles.nameInput} ${
+              validationError?.scope === 'name' ? styles.invalidInput : ''
+            }`}
+            aria-invalid={validationError?.scope === 'name' || undefined}
+            aria-describedby={
+              validationError?.scope === 'name'
+                ? 'category-name-error'
+                : undefined
+            }
           />
         </label>
+        {validationError?.scope === 'name' && (
+          <p
+            id='category-name-error'
+            className={styles.fieldError}
+            role='alert'
+          >
+            Category name is required.
+          </p>
+        )}
       </div>
 
       <div className={styles.fieldsSection}>
@@ -170,8 +205,39 @@ function CategoryEditor({category, onSave, onCancel}: CategoryEditorProps) {
                         handleUpdateField(index, {key: e.target.value})
                       }
                       placeholder='e.g., powerLevel'
+                      className={
+                        validationError?.scope === 'field' &&
+                        validationError.index === index &&
+                        validationError.missingKey
+                          ? styles.invalidInput
+                          : undefined
+                      }
+                      aria-invalid={
+                        (validationError?.scope === 'field' &&
+                          validationError.index === index &&
+                          validationError.missingKey) ||
+                        undefined
+                      }
+                      aria-describedby={
+                        validationError?.scope === 'field' &&
+                        validationError.index === index &&
+                        validationError.missingKey
+                          ? `field-${index}-key-error`
+                          : undefined
+                      }
                     />
                   </label>
+                  {validationError?.scope === 'field' &&
+                    validationError.index === index &&
+                    validationError.missingKey && (
+                      <p
+                        id={`field-${index}-key-error`}
+                        className={styles.fieldError}
+                        role='alert'
+                      >
+                        Field key is required.
+                      </p>
+                    )}
                 </div>
 
                 <div>
@@ -185,8 +251,39 @@ function CategoryEditor({category, onSave, onCancel}: CategoryEditorProps) {
                         handleUpdateField(index, {label: e.target.value})
                       }
                       placeholder='e.g., Power Level'
+                      className={
+                        validationError?.scope === 'field' &&
+                        validationError.index === index &&
+                        validationError.missingLabel
+                          ? styles.invalidInput
+                          : undefined
+                      }
+                      aria-invalid={
+                        (validationError?.scope === 'field' &&
+                          validationError.index === index &&
+                          validationError.missingLabel) ||
+                        undefined
+                      }
+                      aria-describedby={
+                        validationError?.scope === 'field' &&
+                        validationError.index === index &&
+                        validationError.missingLabel
+                          ? `field-${index}-label-error`
+                          : undefined
+                      }
                     />
                   </label>
+                  {validationError?.scope === 'field' &&
+                    validationError.index === index &&
+                    validationError.missingLabel && (
+                      <p
+                        id={`field-${index}-label-error`}
+                        className={styles.fieldError}
+                        role='alert'
+                      >
+                        Field label is required.
+                      </p>
+                    )}
                 </div>
 
                 <div>

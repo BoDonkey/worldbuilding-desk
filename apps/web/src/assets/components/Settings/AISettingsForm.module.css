@@ -65,6 +65,13 @@
   background-color: var(--color-accent-hover);
 }
 
+.apiKeyActions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
 .secondaryButton {
   width: fit-content;
   padding: 8px 14px;
