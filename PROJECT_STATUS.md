@@ -115,6 +115,9 @@ Under the hood, the app still includes rich systems for world data, rules, chara
 - Standalone `rules-engine` package with stats, resources, formulas, effects, and dice.
 - Ruleset builder and runtime stat/resource evaluation.
 - Settlement progression, synergy logic, and compendium systems.
+- The Mechanics/Compendium route and its four extracted tab components now use
+  a shared CSS module with zero remaining inline `style` attributes while
+  preserving the existing presentation.
 - Character/runtime previews for effective stat and resource values.
 - Current IA decision: keep these as optional, project-mode-gated systems attached to writing and canon workflows. Existing rules, mechanics, sheets/state, and settlement surfaces now group under optional systems navigation before any new mechanics depth is added.
 
@@ -258,6 +261,10 @@ Under the hood, the app still includes rich systems for world data, rules, chara
 ## Verification Status
 
 ### Verified Recently
+- Road-to-market Slice 2.5 Compendium styling extraction passes web lint, all
+  255 web unit tests, 6 rules-engine tests, 12 rules-ui tests, web and desktop
+  builds, the full 42-test Cypress suite, and before/after browser comparison
+  of Entries, Progression, and World Systems with no console warnings/errors.
 - Road-to-market Slice 2.4 Character Style theming passes web lint, all 255 web
   unit tests, 6 rules-engine tests, 12 rules-ui tests, web and desktop builds,
   the full 42-test Cypress suite, and manual light/dark browser checks with no

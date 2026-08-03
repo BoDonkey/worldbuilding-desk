@@ -1,3 +1,4 @@
+import styles from '../../assets/components/CompendiumRoute.module.css';
 import type {Dispatch, SetStateAction} from 'react';
 import type {
   Character,
@@ -180,9 +181,9 @@ export function WorldSystemsTab({
     if (!enableWorldSystems) {
       return (
         <section
-          style={{padding: '1rem', border: '1px solid var(--color-border)', borderRadius: '8px'}}
+          className={`${styles.padding1rem} ${styles.border1pxSolidVarColorBorder} ${styles.borderRadius8px}`}
         >
-          <p style={{margin: 0, color: 'var(--color-text-secondary)'}}>
+          <p className={`${styles.margin0} ${styles.colorVarColorTextSecondary}`}>
             Settlement and zone systems are hidden for this project. Enable
             <strong> Settlement/Zone Systems</strong> in Settings to access them.
           </p>
@@ -191,22 +192,22 @@ export function WorldSystemsTab({
     }
 
     return (
-      <div style={{display: 'grid', gap: '1rem'}}>
-        <p style={{marginTop: 0, marginBottom: 0, color: 'var(--color-text-secondary)'}}>
+      <div className={`${styles.displayGrid} ${styles.gap1rem}`}>
+        <p className={`${styles.marginTop0} ${styles.marginBottom0} ${styles.colorVarColorTextSecondary}`}>
           Advanced systems are optional. Enable and tune only when you need
           simulation depth for progression balancing.
         </p>
-        <section style={{padding: '1rem', border: '1px solid var(--color-border)', borderRadius: '8px'}}>
-          <h2 style={{marginTop: 0}}>Zone Affinity</h2>
-          <p style={{marginTop: 0, fontSize: '0.85rem', color: 'var(--color-text-secondary)'}}>
+        <section className={`${styles.padding1rem} ${styles.border1pxSolidVarColorBorder} ${styles.borderRadius8px}`}>
+          <h2 className={styles.marginTop0}>Zone Affinity</h2>
+          <p className={`${styles.marginTop0} ${styles.fontSize085rem} ${styles.colorVarColorTextSecondary}`}>
             Track zone exposure and unlock biome-specific milestones over time.
           </p>
-          <label style={{display: 'block', marginBottom: '0.5rem'}}>
+          <label className={`${styles.displayBlock} ${styles.marginBottom05rem}`}>
             Linked location
             <select
               value={zoneSourceEntityId}
               onChange={(e) => setZoneSourceEntityId(e.target.value)}
-              style={{width: '100%'}}
+              className={styles.width100}
             >
               <option value=''>No linked location</option>
               {worldEntities.map((entity) => (
@@ -216,14 +217,14 @@ export function WorldSystemsTab({
               ))}
             </select>
           </label>
-          <label style={{display: 'block', marginBottom: '0.5rem'}}>
+          <label className={`${styles.displayBlock} ${styles.marginBottom05rem}`}>
             Progress scope
             <select
               value={zoneProgressScope === 'party' ? 'global' : zoneProgressScope}
               onChange={(e) =>
                 setZoneProgressScope(e.target.value as MechanicsProgressScope)
               }
-              style={{width: '100%'}}
+              className={styles.width100}
             >
               {MECHANICS_SCOPE_OPTIONS.map((option) => (
                 <option key={option.value} value={option.value}>
@@ -233,12 +234,12 @@ export function WorldSystemsTab({
             </select>
           </label>
           {zoneProgressScope === 'character' && (
-            <label style={{display: 'block', marginBottom: '0.75rem'}}>
+            <label className={`${styles.displayBlock} ${styles.marginBottom075rem}`}>
               Active character sheet
               <select
                 value={activeMechanicsCharacterSheetId}
                 onChange={(e) => setActiveMechanicsCharacterSheetId(e.target.value)}
-                style={{width: '100%'}}
+                className={styles.width100}
               >
                 <option value=''>No character selected</option>
                 {characterSheets.map((sheet) => (
@@ -249,34 +250,34 @@ export function WorldSystemsTab({
               </select>
             </label>
           )}
-          <label style={{display: 'block', marginBottom: '0.5rem'}}>
+          <label className={`${styles.displayBlock} ${styles.marginBottom05rem}`}>
             Zone Name
             <input
               type='text'
               value={zoneName}
               onChange={(e) => setZoneName(e.target.value)}
               placeholder='Bee Cave'
-              style={{width: '100%'}}
+              className={styles.width100}
             />
           </label>
-          <label style={{display: 'block', marginBottom: '0.5rem'}}>
+          <label className={`${styles.displayBlock} ${styles.marginBottom05rem}`}>
             Zone Key
             <input
               type='text'
               value={zoneKey}
               onChange={(e) => setZoneKey(e.target.value)}
               placeholder='bee_cave'
-              style={{width: '100%'}}
+              className={styles.width100}
             />
           </label>
-          <label style={{display: 'block', marginBottom: '0.75rem'}}>
+          <label className={`${styles.displayBlock} ${styles.marginBottom075rem}`}>
             Max Affinity Points
             <input
               type='number'
               min={1}
               value={zoneMaxPoints}
               onChange={(e) => setZoneMaxPoints(Number(e.target.value))}
-              style={{width: '100%'}}
+              className={styles.width100}
             />
           </label>
           <button type='button' onClick={() => void handleCreateZoneProfile()}>
@@ -284,15 +285,9 @@ export function WorldSystemsTab({
           </button>
           {zoneProfiles.length === 0 && (
             <div
-              style={{
-                marginTop: '0.75rem',
-                padding: '0.65rem',
-                border: '1px solid var(--color-border)',
-                borderRadius: '6px',
-                backgroundColor: 'var(--color-bg-secondary)'
-              }}
+              className={`${styles.marginTop075rem} ${styles.padding065rem} ${styles.border1pxSolidVarColorBorder} ${styles.borderRadius6px} ${styles.backgroundColorVarColorBgSecondary}`}
             >
-              <p style={{marginTop: 0, marginBottom: '0.5rem'}}>
+              <p className={`${styles.marginTop0} ${styles.marginBottom05rem}`}>
                 No zone profiles yet.
               </p>
               <button
@@ -306,13 +301,13 @@ export function WorldSystemsTab({
               </button>
             </div>
           )}
-          <hr style={{margin: '0.9rem 0'}} />
-          <label style={{display: 'block', marginBottom: '0.5rem'}}>
+          <hr className={styles.margin09rem0} />
+          <label className={`${styles.displayBlock} ${styles.marginBottom05rem}`}>
             Active Zone
             <select
               value={selectedZoneKey}
               onChange={(e) => setSelectedZoneKey(e.target.value)}
-              style={{width: '100%'}}
+              className={styles.width100}
             >
               <option value=''>Select zone</option>
               {zoneProfiles.map((profile) => (
@@ -322,14 +317,14 @@ export function WorldSystemsTab({
               ))}
             </select>
           </label>
-          <label style={{display: 'block', marginBottom: '0.75rem'}}>
+          <label className={`${styles.displayBlock} ${styles.marginBottom075rem}`}>
             Exposure Minutes
             <input
               type='number'
               min={1}
               value={zoneExposureMinutes}
               onChange={(e) => setZoneExposureMinutes(Number(e.target.value))}
-              style={{width: '100%'}}
+              className={styles.width100}
             />
           </label>
           <button
@@ -339,7 +334,7 @@ export function WorldSystemsTab({
           >
             {isRecordingZone ? 'Recording...' : 'Record Exposure'}
           </button>
-          <ul style={{listStyle: 'none', padding: 0, marginTop: '0.75rem'}}>
+          <ul className={`${styles.listStyleNone} ${styles.padding0} ${styles.marginTop075rem}`}>
             {zoneProfiles.map((profile) => {
               const progressKey = `${profile.biomeKey}:${
                 profile.progressScope === 'character'
@@ -364,25 +359,21 @@ export function WorldSystemsTab({
               return (
                 <li
                   key={`zone-${profile.id}`}
-                  style={{
-                    marginBottom: '0.65rem',
-                    paddingBottom: '0.55rem',
-                    borderBottom: '1px solid var(--color-border)'
-                  }}
+                  className={`${styles.marginBottom065rem} ${styles.paddingBottom055rem} ${styles.borderBottom1pxSolidVarColorBorder}`}
                 >
                   <strong>{profile.name}</strong> ({percent.toFixed(1)}%)
                   {profile.sourceEntityId && (
-                    <div style={{fontSize: '0.8rem', color: 'var(--color-text-secondary)'}}>
+                    <div className={`${styles.fontSize08rem} ${styles.colorVarColorTextSecondary}`}>
                       Linked location:{' '}
                       {worldEntityById.get(profile.sourceEntityId)?.name ?? profile.sourceEntityId}
                     </div>
                   )}
-                  <div style={{fontSize: '0.82rem', color: 'var(--color-text-secondary)'}}>
+                  <div className={`${styles.fontSize082rem} ${styles.colorVarColorTextSecondary}`}>
                     Scope: {profile.progressScope ?? 'character'}
                     {' · '}
                     Exposure: {(progressItem.totalExposureSeconds / 60).toFixed(1)} minutes
                   </div>
-                  <div style={{fontSize: '0.82rem'}}>
+                  <div className={styles.fontSize082rem}>
                     {profile.milestones.map((milestone) => (
                       <div key={milestone.id}>
                         {unlocked.has(milestone.id) ? 'Unlocked' : 'Locked'}{' '}
@@ -396,25 +387,25 @@ export function WorldSystemsTab({
           </ul>
         </section>
 
-        <section style={{padding: '1rem', border: '1px solid var(--color-border)', borderRadius: '8px'}}>
-          <h2 style={{marginTop: 0}}>Community / Logistics</h2>
-          <p style={{marginTop: 0, fontSize: '0.85rem', color: 'var(--color-text-secondary)'}}>
+        <section className={`${styles.padding1rem} ${styles.border1pxSolidVarColorBorder} ${styles.borderRadius8px}`}>
+          <h2 className={styles.marginTop0}>Community / Logistics</h2>
+          <p className={`${styles.marginTop0} ${styles.fontSize085rem} ${styles.colorVarColorTextSecondary}`}>
             Shared party synergy buffs driven by role combinations. Select the
             currently active party to preview concrete in-scene combo effects.
           </p>
-          <div style={{fontSize: '0.85rem', marginBottom: '0.5rem'}}>
+          <div className={`${styles.fontSize085rem} ${styles.marginBottom05rem}`}>
             <strong>Active Party Members</strong>
           </div>
-          <div style={{display: 'grid', gap: '0.35rem', marginBottom: '0.8rem'}}>
+          <div className={`${styles.displayGrid} ${styles.gap035rem} ${styles.marginBottom08rem}`}>
             {characters.length === 0 ? (
-              <div style={{fontSize: '0.82rem', color: 'var(--color-text-secondary)'}}>
+              <div className={`${styles.fontSize082rem} ${styles.colorVarColorTextSecondary}`}>
                 No characters yet. Add role-tagged characters to enable synergy.
               </div>
             ) : (
               characters.map((character) => (
                 <label
                   key={character.id}
-                  style={{display: 'flex', alignItems: 'center', gap: '0.45rem'}}
+                  className={`${styles.displayFlex} ${styles.alignItemsCenter} ${styles.gap045rem}`}
                 >
                   <input
                     type='checkbox'
@@ -423,7 +414,7 @@ export function WorldSystemsTab({
                   />
                   <span>
                     {character.name}
-                    <span style={{fontSize: '0.8rem', color: 'var(--color-text-secondary)'}}>
+                    <span className={`${styles.fontSize08rem} ${styles.colorVarColorTextSecondary}`}>
                       {' '}
                       ({getCharacterRole(character) || 'no role'})
                     </span>
@@ -432,53 +423,53 @@ export function WorldSystemsTab({
               ))
             )}
           </div>
-          <div style={{fontSize: '0.85rem', marginBottom: '0.45rem'}}>
+          <div className={`${styles.fontSize085rem} ${styles.marginBottom045rem}`}>
             <strong>Active Combo Buffs</strong>
           </div>
-          <ul style={{listStyle: 'none', padding: 0, marginTop: 0}}>
+          <ul className={`${styles.listStyleNone} ${styles.padding0} ${styles.marginTop0}`}>
             {activePartySynergies.filter((item) => item.missingRoles.length === 0).length ===
             0 ? (
-              <li style={{fontSize: '0.82rem', color: 'var(--color-text-secondary)'}}>
+              <li className={`${styles.fontSize082rem} ${styles.colorVarColorTextSecondary}`}>
                 No active combos for the current party selection.
               </li>
             ) : (
               activePartySynergies
                 .filter((item) => item.missingRoles.length === 0)
                 .map((suggestion) => (
-                  <li key={suggestion.ruleId} style={{marginBottom: '0.55rem'}}>
+                  <li key={suggestion.ruleId} className={styles.marginBottom055rem}>
                     <strong>{suggestion.ruleName}</strong>
                     {suggestion.maxDistanceMeters ? (
-                      <span style={{fontSize: '0.8rem', color: 'var(--color-text-secondary)'}}>
+                      <span className={`${styles.fontSize08rem} ${styles.colorVarColorTextSecondary}`}>
                         {' '}
                         ({suggestion.maxDistanceMeters}m proximity)
                       </span>
                     ) : null}
-                    <div style={{fontSize: '0.82rem'}}>{suggestion.effectDescription}</div>
-                    <div style={{fontSize: '0.8rem', color: 'var(--color-text-secondary)'}}>
+                    <div className={styles.fontSize082rem}>{suggestion.effectDescription}</div>
+                    <div className={`${styles.fontSize08rem} ${styles.colorVarColorTextSecondary}`}>
                       {formatSynergyStatus(suggestion, characterById)}
                     </div>
                   </li>
                 ))
             )}
           </ul>
-          <div style={{fontSize: '0.85rem', marginBottom: '0.45rem'}}>
+          <div className={`${styles.fontSize085rem} ${styles.marginBottom045rem}`}>
             <strong>Roster Opportunities</strong>
           </div>
-          <ul style={{listStyle: 'none', padding: 0, marginTop: 0, marginBottom: 0}}>
+          <ul className={`${styles.listStyleNone} ${styles.padding0} ${styles.marginTop0} ${styles.marginBottom0}`}>
             {rosterSynergyOpportunities.length === 0 ? (
-              <li style={{fontSize: '0.82rem', color: 'var(--color-text-secondary)'}}>
+              <li className={`${styles.fontSize082rem} ${styles.colorVarColorTextSecondary}`}>
                 Full roster can already satisfy all default synergy rules.
               </li>
             ) : (
               rosterSynergyOpportunities.map((suggestion) => (
-                <li key={`roster-${suggestion.ruleId}`} style={{marginBottom: '0.55rem'}}>
+                <li key={`roster-${suggestion.ruleId}`} className={styles.marginBottom055rem}>
                   <strong>{suggestion.ruleName}</strong>
-                  <div style={{fontSize: '0.82rem'}}>{suggestion.effectDescription}</div>
-                  <div style={{fontSize: '0.8rem', color: 'var(--color-text-secondary)'}}>
+                  <div className={styles.fontSize082rem}>{suggestion.effectDescription}</div>
+                  <div className={`${styles.fontSize08rem} ${styles.colorVarColorTextSecondary}`}>
                     {formatSynergyStatus(suggestion, characterById)}
                   </div>
                   {suggestion.questPrompt && (
-                    <div style={{fontSize: '0.8rem', color: 'var(--color-text-secondary)'}}>
+                    <div className={`${styles.fontSize08rem} ${styles.colorVarColorTextSecondary}`}>
                       Prompt seed: {suggestion.questPrompt}
                     </div>
                   )}
@@ -488,18 +479,18 @@ export function WorldSystemsTab({
           </ul>
         </section>
 
-        <section style={{padding: '1rem', border: '1px solid var(--color-border)', borderRadius: '8px'}}>
-          <h2 style={{marginTop: 0}}>Settlement Progression</h2>
-          <p style={{marginTop: 0, fontSize: '0.85rem', color: 'var(--color-text-secondary)'}}>
+        <section className={`${styles.padding1rem} ${styles.border1pxSolidVarColorBorder} ${styles.borderRadius8px}`}>
+          <h2 className={styles.marginTop0}>Settlement Progression</h2>
+          <p className={`${styles.marginTop0} ${styles.fontSize085rem} ${styles.colorVarColorTextSecondary}`}>
             Generalized settlement buffs. Trophies are one source type, alongside
             structures, stations, totems, and custom modules.
           </p>
-          <label style={{display: 'block', marginBottom: '0.75rem'}}>
+          <label className={`${styles.displayBlock} ${styles.marginBottom075rem}`}>
             Linked location
             <select
               value={selectedSettlementLocationId}
               onChange={(e) => setSelectedSettlementLocationId(e.target.value)}
-              style={{width: '100%'}}
+              className={styles.width100}
             >
               <option value=''>No linked location</option>
               {worldEntities.map((entity) => (
@@ -510,7 +501,7 @@ export function WorldSystemsTab({
             </select>
           </label>
           {settlementState?.sourceEntityId && (
-            <div style={{fontSize: '0.82rem', color: 'var(--color-text-secondary)', marginBottom: '0.65rem'}}>
+            <div className={`${styles.fontSize082rem} ${styles.colorVarColorTextSecondary} ${styles.marginBottom065rem}`}>
               Settlement systems are currently attached to{' '}
               <strong>
                 {worldEntityById.get(settlementState.sourceEntityId)?.name ??
@@ -519,24 +510,24 @@ export function WorldSystemsTab({
               .
             </div>
           )}
-          <label style={{display: 'block', marginBottom: '0.5rem'}}>
+          <label className={`${styles.displayBlock} ${styles.marginBottom05rem}`}>
             Module Name
             <input
               type='text'
               value={moduleName}
               onChange={(e) => setModuleName(e.target.value)}
               placeholder='Cave Worm Trophy'
-              style={{width: '100%'}}
+              className={styles.width100}
             />
           </label>
-          <label style={{display: 'block', marginBottom: '0.5rem'}}>
+          <label className={`${styles.displayBlock} ${styles.marginBottom05rem}`}>
             Source Type
             <select
               value={moduleSourceType}
               onChange={(e) =>
                 setModuleSourceType(e.target.value as SettlementModule['sourceType'])
               }
-              style={{width: '100%'}}
+              className={styles.width100}
             >
               {SETTLEMENT_SOURCE_OPTIONS.map((option) => (
                 <option key={option} value={option}>
@@ -545,8 +536,8 @@ export function WorldSystemsTab({
               ))}
             </select>
           </label>
-          <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem'}}>
-            <label style={{display: 'block', marginBottom: '0.5rem'}}>
+          <div className={`${styles.displayGrid} ${styles.gridTemplateColumns1fr1fr} ${styles.gap05rem}`}>
+            <label className={`${styles.displayBlock} ${styles.marginBottom05rem}`}>
               Target Type
               <select
                 value={moduleTargetType}
@@ -555,7 +546,7 @@ export function WorldSystemsTab({
                     e.target.value as SettlementModule['effects'][number]['targetType']
                   )
                 }
-                style={{width: '100%'}}
+                className={styles.width100}
               >
                 {SETTLEMENT_EFFECT_TARGET_OPTIONS.map((option) => (
                   <option key={option} value={option}>
@@ -564,19 +555,19 @@ export function WorldSystemsTab({
                 ))}
               </select>
             </label>
-            <label style={{display: 'block', marginBottom: '0.5rem'}}>
+            <label className={`${styles.displayBlock} ${styles.marginBottom05rem}`}>
               Target ID
               <input
                 type='text'
                 value={moduleTargetId}
                 onChange={(e) => setModuleTargetId(e.target.value)}
                 placeholder='poison'
-                style={{width: '100%'}}
+                className={styles.width100}
               />
             </label>
           </div>
-          <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem'}}>
-            <label style={{display: 'block', marginBottom: '0.75rem'}}>
+          <div className={`${styles.displayGrid} ${styles.gridTemplateColumns1fr1fr} ${styles.gap05rem}`}>
+            <label className={`${styles.displayBlock} ${styles.marginBottom075rem}`}>
               Operation
               <select
                 value={moduleOperation}
@@ -585,7 +576,7 @@ export function WorldSystemsTab({
                     e.target.value as SettlementModule['effects'][number]['operation']
                   )
                 }
-                style={{width: '100%'}}
+                className={styles.width100}
               >
                 {SETTLEMENT_EFFECT_OPERATION_OPTIONS.map((option) => (
                   <option key={option} value={option}>
@@ -594,14 +585,14 @@ export function WorldSystemsTab({
                 ))}
               </select>
             </label>
-            <label style={{display: 'block', marginBottom: '0.75rem'}}>
+            <label className={`${styles.displayBlock} ${styles.marginBottom075rem}`}>
               Value
               <input
                 type='text'
                 value={moduleValue}
                 onChange={(e) => setModuleValue(e.target.value)}
                 placeholder='5'
-                style={{width: '100%'}}
+                className={styles.width100}
               />
             </label>
           </div>
@@ -612,11 +603,11 @@ export function WorldSystemsTab({
           >
             {isSavingModule ? 'Adding...' : 'Add Settlement Module'}
           </button>
-          <hr style={{margin: '0.9rem 0'}} />
-          <div style={{fontSize: '0.85rem', marginBottom: '0.5rem'}}>
+          <hr className={styles.margin09rem0} />
+          <div className={`${styles.fontSize085rem} ${styles.marginBottom05rem}`}>
             <strong>Settlement Tier Level:</strong> {settlementState?.fortressLevel ?? 1}
           </div>
-          <div style={{display: 'flex', gap: '0.5rem', marginBottom: '0.65rem'}}>
+          <div className={`${styles.displayFlex} ${styles.gap05rem} ${styles.marginBottom065rem}`}>
             <button
               type='button'
               onClick={() => void handleAdjustFortressLevel(-1)}
@@ -632,25 +623,20 @@ export function WorldSystemsTab({
               + Tier
             </button>
           </div>
-          <div style={{fontSize: '0.82rem', color: 'var(--color-text-secondary)', marginBottom: '0.6rem'}}>
+          <div className={`${styles.fontSize082rem} ${styles.colorVarColorTextSecondary} ${styles.marginBottom06rem}`}>
             {nextFortressTier
               ? `Next tier at level ${nextFortressTier.levelRequired}: ${nextFortressTier.name}`
               : 'All configured settlement tiers unlocked.'}
           </div>
-          <div style={{fontSize: '0.85rem', marginBottom: '0.35rem'}}>
+          <div className={`${styles.fontSize085rem} ${styles.marginBottom035rem}`}>
             <strong>Base Stats</strong>
           </div>
           {settlementState && (
             <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: '1fr 1fr',
-                gap: '0.45rem',
-                marginBottom: '0.65rem'
-              }}
+              className={`${styles.displayGrid} ${styles.gridTemplateColumns1fr1fr} ${styles.gap045rem} ${styles.marginBottom065rem}`}
             >
               {BASE_STAT_KEYS.map((key) => (
-                <label key={`base-${key}`} style={{fontSize: '0.82rem'}}>
+                <label key={`base-${key}`} className={styles.fontSize082rem}>
                   {key}
                   <input
                     type='number'
@@ -659,13 +645,13 @@ export function WorldSystemsTab({
                     step={1}
                     value={baseStatsDraft[key]}
                     onChange={(e) => handleBaseStatDraftChange(key, e.target.value)}
-                    style={{width: '100%'}}
+                    className={styles.width100}
                   />
                 </label>
               ))}
             </div>
           )}
-          <div style={{display: 'flex', gap: '0.45rem', marginBottom: '0.7rem'}}>
+          <div className={`${styles.displayFlex} ${styles.gap045rem} ${styles.marginBottom07rem}`}>
             <button
               type='button'
               onClick={() => void handleSaveBaseStats()}
@@ -681,65 +667,65 @@ export function WorldSystemsTab({
               Reset
             </button>
           </div>
-          <div style={{fontSize: '0.85rem', marginBottom: '0.5rem'}}>
+          <div className={`${styles.fontSize085rem} ${styles.marginBottom05rem}`}>
             <strong>Settlement Tier Effects:</strong>{' '}
             {settlementComputedEffects.fortressEffects.length}
           </div>
-          <ul style={{listStyle: 'none', padding: 0, margin: 0}}>
+          <ul className={`${styles.listStyleNone} ${styles.padding0} ${styles.margin0}`}>
             {settlementComputedEffects.fortressEffects.length === 0 ? (
-              <li style={{fontSize: '0.82rem', color: 'var(--color-text-secondary)'}}>
+              <li className={`${styles.fontSize082rem} ${styles.colorVarColorTextSecondary}`}>
                 No tier effects unlocked yet.
               </li>
             ) : (
               settlementComputedEffects.fortressEffects.map((effect, index) => (
                 <li
                   key={`tier-effect-${effect.targetType}-${effect.targetId}-${index}`}
-                  style={{marginBottom: '0.35rem'}}
+                  className={styles.marginBottom035rem}
                 >
                   {formatSettlementEffectLabel(effect)}
                 </li>
               ))
             )}
           </ul>
-          <div style={{fontSize: '0.85rem', marginTop: '0.65rem', marginBottom: '0.5rem'}}>
+          <div className={`${styles.fontSize085rem} ${styles.marginTop065rem} ${styles.marginBottom05rem}`}>
             <strong>Active Aura Effects:</strong> {activeSettlementEffects.length}
           </div>
-          <ul style={{listStyle: 'none', padding: 0, margin: 0}}>
+          <ul className={`${styles.listStyleNone} ${styles.padding0} ${styles.margin0}`}>
             {activeSettlementEffects.length === 0 ? (
-              <li style={{fontSize: '0.82rem', color: 'var(--color-text-secondary)'}}>
+              <li className={`${styles.fontSize082rem} ${styles.colorVarColorTextSecondary}`}>
                 No active module effects yet.
               </li>
             ) : (
               activeSettlementEffects.map((effect, index) => (
                 <li
                   key={`active-effect-${effect.targetType}-${effect.targetId}-${index}`}
-                  style={{marginBottom: '0.35rem'}}
+                  className={styles.marginBottom035rem}
                 >
                   {formatSettlementEffectLabel(effect)}
                 </li>
               ))
             )}
           </ul>
-          <div style={{fontSize: '0.85rem', marginTop: '0.65rem', marginBottom: '0.5rem'}}>
+          <div className={`${styles.fontSize085rem} ${styles.marginTop065rem} ${styles.marginBottom05rem}`}>
             <strong>Total Active Effects:</strong> {settlementComputedEffects.allEffects.length}
           </div>
-          <div style={{fontSize: '0.82rem', color: 'var(--color-text-secondary)', marginBottom: '0.65rem'}}>
+          <div className={`${styles.fontSize082rem} ${styles.colorVarColorTextSecondary} ${styles.marginBottom065rem}`}>
             Includes settlement progression + aura modules.
           </div>
-          <div style={{fontSize: '0.85rem', marginBottom: '0.35rem'}}>
+          <div className={`${styles.fontSize085rem} ${styles.marginBottom035rem}`}>
             <strong>Unlocked Settlement Tiers</strong>
           </div>
-          <ul style={{listStyle: 'none', padding: 0, margin: 0}}>
+          <ul className={`${styles.listStyleNone} ${styles.padding0} ${styles.margin0}`}>
             {unlockedFortressTiers.length === 0 ? (
-              <li style={{fontSize: '0.82rem', color: 'var(--color-text-secondary)'}}>None yet.</li>
+              <li className={`${styles.fontSize082rem} ${styles.colorVarColorTextSecondary}`}>None yet.</li>
             ) : (
               unlockedFortressTiers.map((tier) => (
-                <li key={tier.id} style={{marginBottom: '0.45rem'}}>
+                <li key={tier.id} className={styles.marginBottom045rem}>
                   <strong>
                     L{tier.levelRequired} {tier.name}
                   </strong>
                   {tier.description && (
-                    <div style={{fontSize: '0.8rem', color: 'var(--color-text-secondary)'}}>
+                    <div className={`${styles.fontSize08rem} ${styles.colorVarColorTextSecondary}`}>
                       {tier.description}
                     </div>
                   )}
@@ -747,25 +733,25 @@ export function WorldSystemsTab({
               ))
             )}
           </ul>
-          <div style={{fontSize: '0.82rem', marginTop: '0.75rem'}}>
+          <div className={`${styles.fontSize082rem} ${styles.marginTop075rem}`}>
             <strong>Installed Modules:</strong>
           </div>
-          <ul style={{listStyle: 'none', padding: 0, marginTop: '0.35rem', marginBottom: 0}}>
+          <ul className={`${styles.listStyleNone} ${styles.padding0} ${styles.marginTop035rem} ${styles.marginBottom0}`}>
             {settlementModules.length === 0 ? (
-              <li style={{fontSize: '0.82rem', color: 'var(--color-text-secondary)'}}>
+              <li className={`${styles.fontSize082rem} ${styles.colorVarColorTextSecondary}`}>
                 No modules installed.
               </li>
             ) : (
               settlementModules.map((module) => (
-                <li key={module.id} style={{marginBottom: '0.45rem'}}>
+                <li key={module.id} className={styles.marginBottom045rem}>
                   <strong>{module.name}</strong>{' '}
-                  <span style={{fontSize: '0.8rem', color: 'var(--color-text-secondary)'}}>
+                  <span className={`${styles.fontSize08rem} ${styles.colorVarColorTextSecondary}`}>
                     [{module.sourceType}]
                   </span>
                   {module.effects.map((effect, effectIndex) => (
                     <div
                       key={`${module.id}-effect-${effectIndex}`}
-                      style={{fontSize: '0.8rem', color: 'var(--color-text-secondary)'}}
+                      className={`${styles.fontSize08rem} ${styles.colorVarColorTextSecondary}`}
                     >
                       {formatSettlementEffectLabel(effect)}
                     </div>

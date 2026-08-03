@@ -1,3 +1,4 @@
+import styles from '../../assets/components/CompendiumRoute.module.css';
 import type {Dispatch, SetStateAction} from 'react';
 import type {NavigateFunction} from 'react-router';
 import type {
@@ -127,29 +128,23 @@ export function EntriesTab({
 }: EntriesTabProps) {
   return (
     <>
-      <p style={{marginTop: 0, marginBottom: '0.9rem', color: 'var(--color-text-secondary)'}}>
+      <p className={`${styles.marginTop0} ${styles.marginBottom09rem} ${styles.colorVarColorTextSecondary}`}>
         Create new mechanics records or import from World Bible, then log actions
         from each entry card.
       </p>
       <section
-        style={{
-          marginBottom: '1rem',
-          padding: '0.85rem',
-          border: '1px solid var(--color-border)',
-          borderRadius: '8px',
-          backgroundColor: 'var(--color-bg-secondary)'
-        }}
+        className={`${styles.marginBottom1rem} ${styles.padding085rem} ${styles.border1pxSolidVarColorBorder} ${styles.borderRadius8px} ${styles.backgroundColorVarColorBgSecondary}`}
       >
         <strong>Discovery Scope</strong>
-        <div style={{fontSize: '0.84rem', color: 'var(--color-text-secondary)', marginTop: '0.25rem', marginBottom: '0.55rem'}}>
+        <div className={`${styles.fontSize084rem} ${styles.colorVarColorTextSecondary} ${styles.marginTop025rem} ${styles.marginBottom055rem}`}>
           Character-scoped discovery and progression use the selected actor below.
         </div>
-        <label style={{display: 'block', maxWidth: '320px'}}>
+        <label className={`${styles.displayBlock} ${styles.maxWidth320px}`}>
           Active character sheet
           <select
             value={activeMechanicsCharacterSheetId}
             onChange={(e) => setActiveMechanicsCharacterSheetId(e.target.value)}
-            style={{width: '100%'}}
+            className={styles.width100}
           >
             <option value=''>No character selected</option>
             {characterSheets.map((sheet) => (
@@ -161,34 +156,29 @@ export function EntriesTab({
         </label>
       </section>
       <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
-          gap: '1rem',
-          marginBottom: '1rem'
-        }}
+        className={`${styles.displayGrid} ${styles.gridTemplateColumnsRepeatAutoFitMinmax280px1fr} ${styles.gap1rem} ${styles.marginBottom1rem}`}
       >
-        <article style={{padding: '1rem', border: '1px solid var(--color-border)', borderRadius: '8px'}}>
-          <h2 style={{marginTop: 0}}>Add Entry</h2>
-          <p style={{marginTop: 0, fontSize: '0.85rem', color: 'var(--color-text-secondary)'}}>
+        <article className={`${styles.padding1rem} ${styles.border1pxSolidVarColorBorder} ${styles.borderRadius8px}`}>
+          <h2 className={styles.marginTop0}>Add Entry</h2>
+          <p className={`${styles.marginTop0} ${styles.fontSize085rem} ${styles.colorVarColorTextSecondary}`}>
             Use this for custom creatures, resources, or artifacts not yet in the
             World Bible.
           </p>
-          <label style={{display: 'block', marginBottom: '0.5rem'}}>
+          <label className={`${styles.displayBlock} ${styles.marginBottom05rem}`}>
             Name
             <input
               type='text'
               value={entryName}
               onChange={(e) => setEntryName(e.target.value)}
-              style={{width: '100%'}}
+              className={styles.width100}
             />
           </label>
-          <label style={{display: 'block', marginBottom: '0.75rem'}}>
+          <label className={`${styles.displayBlock} ${styles.marginBottom075rem}`}>
             Domain
             <select
               value={entryDomain}
               onChange={(e) => setEntryDomain(e.target.value as CompendiumDomain)}
-              style={{width: '100%'}}
+              className={styles.width100}
             >
               {DOMAIN_OPTIONS.map((option) => (
                 <option key={option.value} value={option.value}>
@@ -202,17 +192,17 @@ export function EntriesTab({
           </button>
         </article>
 
-        <article style={{padding: '1rem', border: '1px solid var(--color-border)', borderRadius: '8px'}}>
-          <h2 style={{marginTop: 0}}>Import from World Bible</h2>
-          <p style={{marginTop: 0, fontSize: '0.85rem', color: 'var(--color-text-secondary)'}}>
+        <article className={`${styles.padding1rem} ${styles.border1pxSolidVarColorBorder} ${styles.borderRadius8px}`}>
+          <h2 className={styles.marginTop0}>Import from World Bible</h2>
+          <p className={`${styles.marginTop0} ${styles.fontSize085rem} ${styles.colorVarColorTextSecondary}`}>
             Best for existing entities so names stay aligned across tools. Choose what kind of mechanics this record should gain.
           </p>
-          <label style={{display: 'block', marginBottom: '0.5rem'}}>
+          <label className={`${styles.displayBlock} ${styles.marginBottom05rem}`}>
             Entity
             <select
               value={entityToImportId}
               onChange={(e) => setEntityToImportId(e.target.value)}
-              style={{width: '100%'}}
+              className={styles.width100}
             >
               <option value=''>Select an entity</option>
               {worldEntities.map((entity) => (
@@ -222,14 +212,14 @@ export function EntriesTab({
               ))}
             </select>
           </label>
-          <label style={{display: 'block', marginBottom: '0.5rem'}}>
+          <label className={`${styles.displayBlock} ${styles.marginBottom05rem}`}>
             Mechanics type
             <select
               value={importMechanicKind}
               onChange={(e) =>
                 setImportMechanicKind(e.target.value as CompendiumMechanicKind)
               }
-              style={{width: '100%'}}
+              className={styles.width100}
             >
               {MECHANIC_KIND_OPTIONS.map((option) => (
                 <option key={option.value} value={option.value}>
@@ -239,14 +229,14 @@ export function EntriesTab({
             </select>
           </label>
           {importMechanicKind !== 'settlement' && (
-            <label style={{display: 'block', marginBottom: '0.5rem'}}>
+            <label className={`${styles.displayBlock} ${styles.marginBottom05rem}`}>
               Progress scope
               <select
                 value={importProgressScope === 'party' ? 'global' : importProgressScope}
                 onChange={(e) =>
                   setImportProgressScope(e.target.value as MechanicsProgressScope)
                 }
-                style={{width: '100%'}}
+                className={styles.width100}
               >
                 {MECHANICS_SCOPE_OPTIONS.map((option) => (
                   <option key={option.value} value={option.value}>
@@ -257,12 +247,12 @@ export function EntriesTab({
             </label>
           )}
           {importProgressScope === 'character' && importMechanicKind !== 'settlement' && (
-            <label style={{display: 'block', marginBottom: '0.5rem'}}>
+            <label className={`${styles.displayBlock} ${styles.marginBottom05rem}`}>
               Active character sheet
               <select
                 value={activeMechanicsCharacterSheetId}
                 onChange={(e) => setActiveMechanicsCharacterSheetId(e.target.value)}
-                style={{width: '100%'}}
+                className={styles.width100}
               >
                 <option value=''>No character selected</option>
                 {characterSheets.map((sheet) => (
@@ -273,12 +263,12 @@ export function EntriesTab({
               </select>
             </label>
           )}
-          <label style={{display: 'block', marginBottom: '0.75rem'}}>
+          <label className={`${styles.displayBlock} ${styles.marginBottom075rem}`}>
             Domain
             <select
               value={importDomain}
               onChange={(e) => setImportDomain(e.target.value as CompendiumDomain)}
-              style={{width: '100%'}}
+              className={styles.width100}
             >
               {DOMAIN_OPTIONS.map((option) => (
                 <option key={option.value} value={option.value}>
@@ -297,70 +287,44 @@ export function EntriesTab({
         </article>
       </div>
 
-      <section style={{padding: '1rem', border: '1px solid var(--color-border)', borderRadius: '8px'}}>
-        <h2 style={{marginTop: 0}}>Entries</h2>
+      <section className={`${styles.padding1rem} ${styles.border1pxSolidVarColorBorder} ${styles.borderRadius8px}`}>
+        <h2 className={styles.marginTop0}>Entries</h2>
         {reviewEntries.length > 0 && (
           <div
-            style={{
-              marginBottom: '0.85rem',
-              padding: '0.85rem',
-              border: '1px solid var(--color-border)',
-              borderRadius: '8px',
-              backgroundColor: 'var(--color-bg-secondary)'
-            }}
+            className={`${styles.marginBottom085rem} ${styles.padding085rem} ${styles.border1pxSolidVarColorBorder} ${styles.borderRadius8px} ${styles.backgroundColorVarColorBgSecondary}`}
           >
             <div
-              style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'flex-start',
-                gap: '0.75rem',
-                flexWrap: 'wrap'
-              }}
+              className={`${styles.displayFlex} ${styles.justifyContentSpaceBetween} ${styles.alignItemsFlexStart} ${styles.gap075rem} ${styles.flexWrapWrap}`}
             >
               <div>
                 <strong>Review Queue</strong>
-                <div style={{fontSize: '0.84rem', color: 'var(--color-text-secondary)', marginTop: '0.25rem'}}>
+                <div className={`${styles.fontSize084rem} ${styles.colorVarColorTextSecondary} ${styles.marginTop025rem}`}>
                   Finish imported or placeholder entries before treating mechanics as
                   complete.
                 </div>
               </div>
               <span
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  padding: '0.2rem 0.55rem',
-                  borderRadius: '999px',
-                  backgroundColor: 'var(--color-bg-tertiary)',
-                  color: 'var(--color-text-primary)',
-                  fontSize: '0.78rem',
-                  fontWeight: 700
-                }}
+                className={`${styles.displayInlineFlex} ${styles.alignItemsCenter} ${styles.padding02rem055rem} ${styles.borderRadius999px} ${styles.backgroundColorVarColorBgTertiary} ${styles.colorVarColorTextPrimary} ${styles.fontSize078rem} ${styles.fontWeight700}`}
               >
                 {reviewEntries.length} open
               </span>
             </div>
-            <div style={{display: 'grid', gap: '0.6rem', marginTop: '0.75rem'}}>
+            <div className={`${styles.displayGrid} ${styles.gap06rem} ${styles.marginTop075rem}`}>
               {reviewEntries.slice(0, 8).map((entry) => (
                 <div
                   key={`review-${entry.id}`}
-                  style={{
-                    border: '1px solid var(--color-bg-tertiary)',
-                    borderRadius: '8px',
-                    backgroundColor: 'var(--color-bg-primary)',
-                    padding: '0.7rem'
-                  }}
+                  className={`${styles.border1pxSolidVarColorBgTertiary} ${styles.borderRadius8px} ${styles.backgroundColorVarColorBgPrimary} ${styles.padding07rem}`}
                 >
-                  <div style={{display: 'flex', justifyContent: 'space-between', gap: '0.5rem'}}>
+                  <div className={`${styles.displayFlex} ${styles.justifyContentSpaceBetween} ${styles.gap05rem}`}>
                     <strong>{entry.name}</strong>
-                    <span style={{fontSize: '0.78rem', color: 'var(--color-text-secondary)'}}>[{entry.domain}]</span>
+                    <span className={`${styles.fontSize078rem} ${styles.colorVarColorTextSecondary}`}>[{entry.domain}]</span>
                   </div>
-                  <div style={{fontSize: '0.82rem', color: 'var(--color-text-secondary)', marginTop: '0.35rem'}}>
+                  <div className={`${styles.fontSize082rem} ${styles.colorVarColorTextSecondary} ${styles.marginTop035rem}`}>
                     {entry.sourceEntityId
                       ? 'Linked from World Bible. Add or adjust the optional mechanics details, then mark complete when ready.'
                       : 'Created directly in mechanics. Fill out the entry intent and mark complete when ready.'}
                   </div>
-                  <div style={{display: 'flex', gap: '0.45rem', flexWrap: 'wrap', marginTop: '0.6rem'}}>
+                  <div className={`${styles.displayFlex} ${styles.gap045rem} ${styles.flexWrapWrap} ${styles.marginTop06rem}`}>
                     {entry.sourceEntityId && (
                       <button
                         type='button'
@@ -385,18 +349,12 @@ export function EntriesTab({
         )}
         {entries.length === 0 && (
           <div
-            style={{
-              marginBottom: '0.85rem',
-              padding: '0.75rem',
-              border: '1px solid var(--color-border)',
-              borderRadius: '6px',
-              backgroundColor: 'var(--color-bg-secondary)'
-            }}
+            className={`${styles.marginBottom085rem} ${styles.padding075rem} ${styles.border1pxSolidVarColorBorder} ${styles.borderRadius6px} ${styles.backgroundColorVarColorBgSecondary}`}
           >
-            <p style={{marginTop: 0, marginBottom: '0.6rem'}}>
+            <p className={`${styles.marginTop0} ${styles.marginBottom06rem}`}>
               No mechanics entries yet.
             </p>
-            <div style={{display: 'flex', gap: '0.5rem', flexWrap: 'wrap'}}>
+            <div className={`${styles.displayFlex} ${styles.gap05rem} ${styles.flexWrapWrap}`}>
               <button
                 type='button'
                 onClick={() => {
@@ -419,7 +377,7 @@ export function EntriesTab({
             </div>
           </div>
         )}
-        <ul style={{listStyle: 'none', padding: 0, margin: 0}}>
+        <ul className={`${styles.listStyleNone} ${styles.padding0} ${styles.margin0}`}>
           {entries.map((entry) => {
             const sourceEntity = entry.sourceEntityId
               ? worldEntityById.get(entry.sourceEntityId) ?? null
@@ -434,82 +392,50 @@ export function EntriesTab({
               <li
                 key={entry.id}
                 id={`compendium-entry-${entry.id}`}
-                style={{
-                  border:
-                    highlightedEntryId === entry.id
-                      ? '1px solid var(--color-accent)'
-                      : '1px solid var(--color-border)',
-                  borderRadius: '6px',
-                  padding: '0.75rem',
-                  marginBottom: '0.75rem',
-                  backgroundColor:
-                    highlightedEntryId === entry.id ? 'var(--color-accent-soft-bg)' : 'transparent',
-                  boxShadow:
-                    highlightedEntryId === entry.id
-                      ? '0 0 0 1px color-mix(in oklab, var(--color-accent) 10%, transparent)'
-                      : 'none'
-                }}
+                className={`${styles.entryCard} ${
+                  highlightedEntryId === entry.id
+                    ? styles.entryCardHighlighted
+                    : ''
+                }`}
               >
                 <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.5rem',
-                    flexWrap: 'wrap'
-                  }}
+                  className={`${styles.displayFlex} ${styles.alignItemsCenter} ${styles.gap05rem} ${styles.flexWrapWrap}`}
                 >
                   <strong>{entry.name}</strong>
-                  <span style={{fontSize: '0.85rem', color: 'var(--color-text-secondary)'}}>[{entry.domain}]</span>
+                  <span className={`${styles.fontSize085rem} ${styles.colorVarColorTextSecondary}`}>[{entry.domain}]</span>
                   {entry.consumable && (
-                    <span style={{fontSize: '0.78rem', fontWeight: 600, border: '1px solid var(--color-border)', borderRadius: '999px', padding: '0.18rem 0.5rem'}}>
+                    <span className={`${styles.fontSize078rem} ${styles.fontWeight600} ${styles.border1pxSolidVarColorBorder} ${styles.borderRadius999px} ${styles.padding018rem05rem}`}>
                       Consumable · {entry.consumable.durationLabel ?? 'until expired'}
                     </span>
                   )}
                   <button
                     type='button'
                     onClick={() => setEditingMechanicsEntryId((current) => current === entry.id ? null : entry.id)}
-                    style={{marginLeft: 'auto'}}
+                    className={styles.marginLeftAuto}
                   >
                     {editingMechanicsEntryId === entry.id ? 'Close settings' : 'Edit settings'}
                   </button>
                   {entry.needsCompletion && (
                     <span
-                      style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        padding: '0.18rem 0.5rem',
-                        borderRadius: '999px',
-                        backgroundColor: 'var(--color-warning-soft-bg)',
-                        border: '1px solid var(--color-warning-soft-border)',
-                        color: 'var(--color-warning)',
-                        fontSize: '0.78rem',
-                        fontWeight: 600
-                      }}
+                      className={`${styles.displayInlineFlex} ${styles.alignItemsCenter} ${styles.padding018rem05rem} ${styles.borderRadius999px} ${styles.backgroundColorVarColorWarningSoftBg} ${styles.border1pxSolidVarColorWarningSoftBorder} ${styles.colorVarColorWarning} ${styles.fontSize078rem} ${styles.fontWeight600}`}
                     >
                       Needs completion
                     </span>
                   )}
                 </div>
                 {entry.sourceEntityId && (
-                  <div style={{fontSize: '0.8rem', color: 'var(--color-text-secondary)'}}>
+                  <div className={`${styles.fontSize08rem} ${styles.colorVarColorTextSecondary}`}>
                     Linked to World Bible entity
                   </div>
                 )}
                 {entry.sourceEntityId && (
                   <div
-                    style={{
-                      marginTop: '0.55rem',
-                      marginBottom: '0.55rem',
-                      padding: '0.75rem',
-                      border: '1px solid var(--color-accent-soft-bg)',
-                      borderRadius: '8px',
-                      backgroundColor: 'var(--color-bg-secondary)'
-                    }}
+                    className={`${styles.marginTop055rem} ${styles.marginBottom055rem} ${styles.padding075rem} ${styles.border1pxSolidVarColorAccentSoftBg} ${styles.borderRadius8px} ${styles.backgroundColorVarColorBgSecondary}`}
                   >
-                    <div style={{display: 'flex', justifyContent: 'space-between', gap: '0.75rem', flexWrap: 'wrap'}}>
+                    <div className={`${styles.displayFlex} ${styles.justifyContentSpaceBetween} ${styles.gap075rem} ${styles.flexWrapWrap}`}>
                       <div>
                         <strong>Location Mechanics Summary</strong>
-                        <div style={{fontSize: '0.82rem', color: 'var(--color-text-secondary)', marginTop: '0.25rem'}}>
+                        <div className={`${styles.fontSize082rem} ${styles.colorVarColorTextSecondary} ${styles.marginTop025rem}`}>
                           {sourceEntity?.name ?? entry.name}
                           {' · '}
                           {entry.mechanicKind === 'zone'
@@ -521,7 +447,7 @@ export function EntriesTab({
                                 : 'General mechanics'}
                         </div>
                       </div>
-                      <div style={{display: 'flex', gap: '0.45rem', flexWrap: 'wrap'}}>
+                      <div className={`${styles.displayFlex} ${styles.gap045rem} ${styles.flexWrapWrap}`}>
                         <button
                           type='button'
                           onClick={() =>
@@ -559,14 +485,7 @@ export function EntriesTab({
                       </div>
                     </div>
                     <div
-                      style={{
-                        display: 'grid',
-                        gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
-                        gap: '0.5rem',
-                        marginTop: '0.65rem',
-                        fontSize: '0.82rem',
-                        color: 'var(--color-text-secondary)'
-                      }}
+                      className={`${styles.displayGrid} ${styles.gridTemplateColumnsRepeatAutoFitMinmax180px1fr} ${styles.gap05rem} ${styles.marginTop065rem} ${styles.fontSize082rem} ${styles.colorVarColorTextSecondary}`}
                     >
                       <div>
                         <strong>Scope:</strong>{' '}
@@ -593,19 +512,9 @@ export function EntriesTab({
                 )}
                 {editingMechanicsEntryId === entry.id && (
                   <div
-                    style={{
-                      display: 'grid',
-                      gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
-                      gap: '0.5rem',
-                      marginTop: '0.55rem',
-                      marginBottom: '0.55rem',
-                      padding: '0.75rem',
-                      border: '1px solid var(--color-border)',
-                      borderRadius: '8px',
-                      backgroundColor: 'var(--color-bg-secondary)'
-                    }}
+                    className={`${styles.displayGrid} ${styles.gridTemplateColumnsRepeatAutoFitMinmax180px1fr} ${styles.gap05rem} ${styles.marginTop055rem} ${styles.marginBottom055rem} ${styles.padding075rem} ${styles.border1pxSolidVarColorBorder} ${styles.borderRadius8px} ${styles.backgroundColorVarColorBgSecondary}`}
                   >
-                    <label style={{fontSize: '0.82rem', color: 'var(--color-text-secondary)'}}>
+                    <label className={`${styles.fontSize082rem} ${styles.colorVarColorTextSecondary}`}>
                       Mechanics type
                       <select
                         value={entry.mechanicKind ?? 'discovery'}
@@ -614,7 +523,7 @@ export function EntriesTab({
                             mechanicKind: e.target.value as CompendiumEntry['mechanicKind']
                           })
                         }
-                        style={{width: '100%'}}
+                        className={styles.width100}
                       >
                         <option value='discovery'>Discovery</option>
                         <option value='zone'>Zone</option>
@@ -622,7 +531,7 @@ export function EntriesTab({
                         <option value='general'>General</option>
                       </select>
                     </label>
-                    <label style={{fontSize: '0.82rem', color: 'var(--color-text-secondary)'}}>
+                    <label className={`${styles.fontSize082rem} ${styles.colorVarColorTextSecondary}`}>
                       Progress scope
                       <select
                         value={
@@ -635,7 +544,7 @@ export function EntriesTab({
                             progressScope: e.target.value as MechanicsProgressScope
                           })
                         }
-                        style={{width: '100%'}}
+                        className={styles.width100}
                       >
                         {MECHANICS_SCOPE_OPTIONS.map((option) => (
                           <option key={option.value} value={option.value}>
@@ -645,7 +554,7 @@ export function EntriesTab({
                       </select>
                     </label>
                     {entry.progressScope === 'character' && (
-                      <div style={{fontSize: '0.8rem', color: 'var(--color-text-secondary)', gridColumn: '1 / -1'}}>
+                      <div className={`${styles.fontSize08rem} ${styles.colorVarColorTextSecondary} ${styles.gridColumn11}`}>
                         Recording for:{' '}
                         {activeMechanicsCharacterSheet?.name ?? 'No character sheet selected'}
                       </div>
@@ -658,7 +567,7 @@ export function EntriesTab({
                   </div>
                 )}
                 {entry.needsCompletion && (
-                  <div style={{marginTop: '0.5rem'}}>
+                  <div className={styles.marginTop05rem}>
                     <button
                       type='button'
                       onClick={() => void handleMarkEntryComplete(entry)}
@@ -667,7 +576,7 @@ export function EntriesTab({
                     </button>
                   </div>
                 )}
-                <div style={{display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginTop: '0.5rem'}}>
+                <div className={`${styles.displayFlex} ${styles.gap05rem} ${styles.flexWrapWrap} ${styles.marginTop05rem}`}>
                   {entry.actions.map((action) => {
                     const key = `${entry.id}:${action.id}`;
                     const alreadyDone =
@@ -678,7 +587,7 @@ export function EntriesTab({
                       isRecordingKey === key || (!action.repeatable && alreadyDone);
                     const quantity = Math.max(1, Math.floor(quantityByActionKey[key] || 1));
                     return (
-                      <div key={key} style={{display: 'flex', alignItems: 'center', gap: '0.35rem'}}>
+                      <div key={key} className={`${styles.displayFlex} ${styles.alignItemsCenter} ${styles.gap035rem}`}>
                         {action.repeatable && (
                           <input
                             type='number'
@@ -690,7 +599,7 @@ export function EntriesTab({
                                 [key]: Number(e.target.value)
                               }))
                             }
-                            style={{width: '58px'}}
+                            className={styles.width58px}
                           />
                         )}
                         <button

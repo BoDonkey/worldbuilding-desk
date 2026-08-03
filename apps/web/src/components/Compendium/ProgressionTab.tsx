@@ -1,3 +1,4 @@
+import styles from '../../assets/components/CompendiumRoute.module.css';
 import type {Dispatch, SetStateAction} from 'react';
 import type {
   CompendiumMilestone,
@@ -81,40 +82,35 @@ export function ProgressionTab({
 }: ProgressionTabProps) {
   return (
     <>
-      <p style={{marginTop: 0, marginBottom: '0.9rem', color: 'var(--color-text-secondary)'}}>
+      <p className={`${styles.marginTop0} ${styles.marginBottom09rem} ${styles.colorVarColorTextSecondary}`}>
         Define unlock rules first, then validate craftability using current
         progression and runtime modifiers.
       </p>
       <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: '2fr 1fr',
-          gap: '1rem',
-          alignItems: 'start'
-        }}
+        className={`${styles.displayGrid} ${styles.gridTemplateColumns2fr1fr} ${styles.gap1rem} ${styles.alignItemsStart}`}
       >
-      <section style={{padding: '1rem', border: '1px solid var(--color-border)', borderRadius: '8px'}}>
-        <h2 style={{marginTop: 0}}>Recipes</h2>
-        <p style={{marginTop: 0, fontSize: '0.85rem', color: 'var(--color-text-secondary)'}}>
+      <section className={`${styles.padding1rem} ${styles.border1pxSolidVarColorBorder} ${styles.borderRadius8px}`}>
+        <h2 className={styles.marginTop0}>Recipes</h2>
+        <p className={`${styles.marginTop0} ${styles.fontSize085rem} ${styles.colorVarColorTextSecondary}`}>
           Recipes define what can be unlocked and what requirements must be met.
         </p>
-        <label style={{display: 'block', marginBottom: '0.5rem'}}>
+        <label className={`${styles.displayBlock} ${styles.marginBottom05rem}`}>
           Name
           <input
             type='text'
             value={recipeName}
             onChange={(e) => setRecipeName(e.target.value)}
-            style={{width: '100%'}}
+            className={styles.width100}
           />
         </label>
-        <label style={{display: 'block', marginBottom: '0.75rem'}}>
+        <label className={`${styles.displayBlock} ${styles.marginBottom075rem}`}>
           Category
           <select
             value={recipeCategory}
             onChange={(e) =>
               setRecipeCategory(e.target.value as UnlockableRecipe['category'])
             }
-            style={{width: '100%'}}
+            className={styles.width100}
           >
             {RECIPE_CATEGORY_OPTIONS.map((category) => (
               <option key={category} value={category}>
@@ -123,23 +119,23 @@ export function ProgressionTab({
             ))}
           </select>
         </label>
-        <label style={{display: 'block', marginBottom: '0.5rem'}}>
+        <label className={`${styles.displayBlock} ${styles.marginBottom05rem}`}>
           Min Character Level
           <input
             type='number'
             min={1}
             value={recipeMinLevel}
             onChange={(e) => setRecipeMinLevel(Number(e.target.value))}
-            style={{width: '100%'}}
+            className={styles.width100}
           />
         </label>
-        <label style={{display: 'block', marginBottom: '0.75rem'}}>
+        <label className={`${styles.displayBlock} ${styles.marginBottom075rem}`}>
           Required Milestone IDs (comma-separated)
           <input
             type='text'
             value={recipeRequiredMilestones}
             onChange={(e) => setRecipeRequiredMilestones(e.target.value)}
-            style={{width: '100%'}}
+            className={styles.width100}
           />
         </label>
         <button type='button' onClick={() => void handleCreateRecipe()}>
@@ -147,15 +143,9 @@ export function ProgressionTab({
         </button>
         {recipes.length === 0 && (
           <div
-            style={{
-              marginTop: '0.75rem',
-              padding: '0.65rem',
-              border: '1px solid var(--color-border)',
-              borderRadius: '6px',
-              backgroundColor: 'var(--color-bg-secondary)'
-            }}
+            className={`${styles.marginTop075rem} ${styles.padding065rem} ${styles.border1pxSolidVarColorBorder} ${styles.borderRadius6px} ${styles.backgroundColorVarColorBgSecondary}`}
           >
-            <p style={{marginTop: 0, marginBottom: '0.5rem'}}>
+            <p className={`${styles.marginTop0} ${styles.marginBottom05rem}`}>
               No recipes yet. Create one to test unlock and craftability flow.
             </p>
             <button
@@ -168,9 +158,9 @@ export function ProgressionTab({
             </button>
           </div>
         )}
-        <ul style={{listStyle: 'none', padding: 0, marginTop: '0.75rem'}}>
+        <ul className={`${styles.listStyleNone} ${styles.padding0} ${styles.marginTop075rem}`}>
           {recipes.map((recipe) => (
-            <li key={recipe.id} style={{marginBottom: '0.35rem'}}>
+            <li key={recipe.id} className={styles.marginBottom035rem}>
               {unlockedRecipeSet.has(recipe.id) ? 'Unlocked' : 'Locked'}: {recipe.name}
               {recipe.requirements?.minCharacterLevel ? (
                 <> (lvl {recipe.requirements.minCharacterLevel}+)</>
@@ -180,47 +170,47 @@ export function ProgressionTab({
         </ul>
       </section>
 
-      <div style={{display: 'grid', gap: '1rem'}}>
-        <section style={{padding: '1rem', border: '1px solid var(--color-border)', borderRadius: '8px'}}>
-          <h2 style={{marginTop: 0}}>Milestones</h2>
-          <p style={{marginTop: 0, fontSize: '0.85rem', color: 'var(--color-text-secondary)'}}>
+      <div className={`${styles.displayGrid} ${styles.gap1rem}`}>
+        <section className={`${styles.padding1rem} ${styles.border1pxSolidVarColorBorder} ${styles.borderRadius8px}`}>
+          <h2 className={styles.marginTop0}>Milestones</h2>
+          <p className={`${styles.marginTop0} ${styles.fontSize085rem} ${styles.colorVarColorTextSecondary}`}>
             Milestones convert point totals into explicit progression beats.
           </p>
-          <label style={{display: 'block', marginBottom: '0.5rem'}}>
+          <label className={`${styles.displayBlock} ${styles.marginBottom05rem}`}>
             Name
             <input
               type='text'
               value={milestoneName}
               onChange={(e) => setMilestoneName(e.target.value)}
-              style={{width: '100%'}}
+              className={styles.width100}
             />
           </label>
-          <label style={{display: 'block', marginBottom: '0.5rem'}}>
+          <label className={`${styles.displayBlock} ${styles.marginBottom05rem}`}>
             Points Required
             <input
               type='number'
               min={0}
               value={milestonePoints}
               onChange={(e) => setMilestonePoints(Number(e.target.value))}
-              style={{width: '100%'}}
+              className={styles.width100}
             />
           </label>
-          <label style={{display: 'block', marginBottom: '0.5rem'}}>
+          <label className={`${styles.displayBlock} ${styles.marginBottom05rem}`}>
             Description
             <input
               type='text'
               value={milestoneDescription}
               onChange={(e) => setMilestoneDescription(e.target.value)}
-              style={{width: '100%'}}
+              className={styles.width100}
             />
           </label>
-          <label style={{display: 'block', marginBottom: '0.75rem'}}>
+          <label className={`${styles.displayBlock} ${styles.marginBottom075rem}`}>
             Unlock Recipe IDs (comma-separated)
             <input
               type='text'
               value={milestoneRecipeIds}
               onChange={(e) => setMilestoneRecipeIds(e.target.value)}
-              style={{width: '100%'}}
+              className={styles.width100}
             />
           </label>
           <button type='button' onClick={() => void handleCreateMilestone()}>
@@ -228,15 +218,9 @@ export function ProgressionTab({
           </button>
           {milestones.length === 0 && (
             <div
-              style={{
-                marginTop: '0.75rem',
-                padding: '0.65rem',
-                border: '1px solid var(--color-border)',
-                borderRadius: '6px',
-                backgroundColor: 'var(--color-bg-secondary)'
-              }}
+              className={`${styles.marginTop075rem} ${styles.padding065rem} ${styles.border1pxSolidVarColorBorder} ${styles.borderRadius6px} ${styles.backgroundColorVarColorBgSecondary}`}
             >
-              <p style={{marginTop: 0, marginBottom: '0.5rem'}}>
+              <p className={`${styles.marginTop0} ${styles.marginBottom05rem}`}>
                 No milestones yet. Add a threshold to make progression visible.
               </p>
               <button
@@ -249,9 +233,9 @@ export function ProgressionTab({
               </button>
             </div>
           )}
-          <ul style={{listStyle: 'none', padding: 0, marginTop: '0.75rem'}}>
+          <ul className={`${styles.listStyleNone} ${styles.padding0} ${styles.marginTop075rem}`}>
             {milestones.map((milestone) => (
-              <li key={milestone.id} style={{marginBottom: '0.35rem'}}>
+              <li key={milestone.id} className={styles.marginBottom035rem}>
                 {unlockedMilestoneSet.has(milestone.id) ? 'Unlocked' : 'Locked'}:{' '}
                 {milestone.name} ({milestone.pointsRequired} pts)
               </li>
@@ -259,50 +243,43 @@ export function ProgressionTab({
           </ul>
         </section>
 
-        <section style={{padding: '1rem', border: '1px solid var(--color-border)', borderRadius: '8px'}}>
-          <h2 style={{marginTop: 0}}>Craftability Preview</h2>
-          <p style={{marginTop: 0, fontSize: '0.85rem', color: 'var(--color-text-secondary)'}}>
+        <section className={`${styles.padding1rem} ${styles.border1pxSolidVarColorBorder} ${styles.borderRadius8px}`}>
+          <h2 className={styles.marginTop0}>Craftability Preview</h2>
+          <p className={`${styles.marginTop0} ${styles.fontSize085rem} ${styles.colorVarColorTextSecondary}`}>
             Check if recipes are craftable for a sample character and material loadout.
           </p>
-          <label style={{display: 'block', marginBottom: '0.5rem'}}>
+          <label className={`${styles.displayBlock} ${styles.marginBottom05rem}`}>
             Character Level
             <input
               type='number'
               min={1}
               value={previewLevel}
               onChange={(e) => setPreviewLevel(Number(e.target.value))}
-              style={{width: '100%'}}
+              className={styles.width100}
             />
           </label>
-          <label style={{display: 'block', marginBottom: '0.75rem'}}>
+          <label className={`${styles.displayBlock} ${styles.marginBottom075rem}`}>
             Materials (one per line: <code>itemId:quantity</code>)
             <textarea
               rows={5}
               value={previewMaterialsText}
               onChange={(e) => setPreviewMaterialsText(e.target.value)}
               placeholder={'wolf_pelt:4\niron_ore:12'}
-              style={{width: '100%'}}
+              className={styles.width100}
             />
           </label>
           <div
-            style={{
-              fontSize: '0.82rem',
-              color: 'var(--color-text-secondary)',
-              marginBottom: '0.65rem',
-              padding: '0.5rem',
-              border: '1px solid var(--color-border)',
-              borderRadius: '6px'
-            }}
+            className={`${styles.fontSize082rem} ${styles.colorVarColorTextSecondary} ${styles.marginBottom065rem} ${styles.padding05rem} ${styles.border1pxSolidVarColorBorder} ${styles.borderRadius6px}`}
           >
             Runtime modifiers: +{craftingRuntimeModifiers.levelBonus} effective level,
             material cost x{craftingRuntimeModifiers.materialCostMultiplier.toFixed(2)}
             {craftingRuntimeModifiers.notes.length > 0 && (
-              <div style={{marginTop: '0.3rem'}}>
+              <div className={styles.marginTop03rem}>
                 {craftingRuntimeModifiers.notes.join(' ')}
               </div>
             )}
           </div>
-          <ul style={{listStyle: 'none', padding: 0, margin: 0}}>
+          <ul className={`${styles.listStyleNone} ${styles.padding0} ${styles.margin0}`}>
             {recipes.map((recipe) => {
               const check = canCraftRecipe(recipe, {
                 progress,
@@ -313,26 +290,22 @@ export function ProgressionTab({
               return (
                 <li
                   key={`preview-${recipe.id}`}
-                  style={{
-                    marginBottom: '0.5rem',
-                    paddingBottom: '0.5rem',
-                    borderBottom: '1px solid var(--color-border)'
-                  }}
+                  className={`${styles.marginBottom05rem} ${styles.paddingBottom05rem} ${styles.borderBottom1pxSolidVarColorBorder}`}
                 >
                   <strong>{recipe.name}</strong>{' '}
                   <span
-                    style={{
-                      color: check.craftable ? 'var(--color-success)' : 'var(--color-error)'
-                    }}
+                    className={
+                      check.craftable ? styles.craftable : styles.notCraftable
+                    }
                   >
                     {check.craftable ? 'craftable' : 'not craftable'}
                   </span>
-                  <div style={{fontSize: '0.78rem', color: 'var(--color-text-secondary)'}}>
+                  <div className={`${styles.fontSize078rem} ${styles.colorVarColorTextSecondary}`}>
                     Effective level: {check.effectiveCharacterLevel}
                     {' · '}Material multiplier: x{check.materialCostMultiplier.toFixed(2)}
                   </div>
                   {!check.craftable && check.reasons.length > 0 && (
-                    <div style={{fontSize: '0.82rem', color: 'var(--color-text-secondary)'}}>
+                    <div className={`${styles.fontSize082rem} ${styles.colorVarColorTextSecondary}`}>
                       {check.reasons.join(' ')}
                     </div>
                   )}

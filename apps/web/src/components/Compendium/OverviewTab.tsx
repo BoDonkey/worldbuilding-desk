@@ -1,3 +1,4 @@
+import styles from '../../assets/components/CompendiumRoute.module.css';
 import type {
   CompendiumActionLog,
   CompendiumEntry,
@@ -28,43 +29,38 @@ export function OverviewTab({
 }: OverviewTabProps) {
   return (
     <>
-      <p style={{marginTop: 0, marginBottom: '0.9rem', color: 'var(--color-text-secondary)'}}>
+      <p className={`${styles.marginTop0} ${styles.marginBottom09rem} ${styles.colorVarColorTextSecondary}`}>
         Use this snapshot to see progress at a glance, then jump into the next
         task without scanning every advanced system.
       </p>
       <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-          gap: '0.75rem',
-          marginBottom: '1rem'
-        }}
+        className={`${styles.displayGrid} ${styles.gridTemplateColumnsRepeatAutoFitMinmax220px1fr} ${styles.gap075rem} ${styles.marginBottom1rem}`}
       >
-        <article style={{padding: '0.85rem', border: '1px solid var(--color-border)', borderRadius: '8px'}}>
-          <h3 style={{marginTop: 0, marginBottom: '0.45rem'}}>Total Points</h3>
-          <div style={{fontSize: '1.1rem', fontWeight: 700}}>
+        <article className={`${styles.padding085rem} ${styles.border1pxSolidVarColorBorder} ${styles.borderRadius8px}`}>
+          <h3 className={`${styles.marginTop0} ${styles.marginBottom045rem}`}>Total Points</h3>
+          <div className={`${styles.fontSize11rem} ${styles.fontWeight700}`}>
             {isLoading || !progress ? '...' : progress.totalPoints}
           </div>
         </article>
-        <article style={{padding: '0.85rem', border: '1px solid var(--color-border)', borderRadius: '8px'}}>
-          <h3 style={{marginTop: 0, marginBottom: '0.45rem'}}>Milestones Unlocked</h3>
-          <div style={{fontSize: '1.1rem', fontWeight: 700}}>
+        <article className={`${styles.padding085rem} ${styles.border1pxSolidVarColorBorder} ${styles.borderRadius8px}`}>
+          <h3 className={`${styles.marginTop0} ${styles.marginBottom045rem}`}>Milestones Unlocked</h3>
+          <div className={`${styles.fontSize11rem} ${styles.fontWeight700}`}>
             {isLoading || !progress ? '...' : progress.unlockedMilestoneIds.length}
           </div>
         </article>
-        <article style={{padding: '0.85rem', border: '1px solid var(--color-border)', borderRadius: '8px'}}>
-          <h3 style={{marginTop: 0, marginBottom: '0.45rem'}}>Recipes Unlocked</h3>
-          <div style={{fontSize: '1.1rem', fontWeight: 700}}>
+        <article className={`${styles.padding085rem} ${styles.border1pxSolidVarColorBorder} ${styles.borderRadius8px}`}>
+          <h3 className={`${styles.marginTop0} ${styles.marginBottom045rem}`}>Recipes Unlocked</h3>
+          <div className={`${styles.fontSize11rem} ${styles.fontWeight700}`}>
             {isLoading || !progress ? '...' : progress.unlockedRecipeIds.length}
           </div>
         </article>
       </div>
 
-      <section style={{padding: '1rem', border: '1px solid var(--color-border)', borderRadius: '8px', marginBottom: '1rem'}}>
-        <h2 style={{marginTop: 0}}>What To Do Next</h2>
-        <ul style={{listStyle: 'none', padding: 0, margin: 0}}>
+      <section className={`${styles.padding1rem} ${styles.border1pxSolidVarColorBorder} ${styles.borderRadius8px} ${styles.marginBottom1rem}`}>
+        <h2 className={styles.marginTop0}>What To Do Next</h2>
+        <ul className={`${styles.listStyleNone} ${styles.padding0} ${styles.margin0}`}>
           {nextStepItems.map((step) => (
-            <li key={step.id} style={{marginBottom: '0.45rem'}}>
+            <li key={step.id} className={styles.marginBottom045rem}>
               {step.done ? 'Done' : 'Next'}: {step.label}{' '}
               {!step.done && (
                 <button
@@ -79,11 +75,11 @@ export function OverviewTab({
         </ul>
       </section>
 
-      <section style={{padding: '1rem', border: '1px solid var(--color-border)', borderRadius: '8px'}}>
-        <h2 style={{marginTop: 0}}>Recent Actions</h2>
+      <section className={`${styles.padding1rem} ${styles.border1pxSolidVarColorBorder} ${styles.borderRadius8px}`}>
+        <h2 className={styles.marginTop0}>Recent Actions</h2>
         {logs.length === 0 ? (
           <>
-            <p style={{marginBottom: '0.65rem'}}>No actions logged yet.</p>
+            <p className={styles.marginBottom065rem}>No actions logged yet.</p>
             <button
               type='button'
               onClick={() => openTabWithSmartDefaults('entries', 'log-action')}
@@ -92,9 +88,9 @@ export function OverviewTab({
             </button>
           </>
         ) : (
-          <ul style={{listStyle: 'none', padding: 0, margin: 0}}>
+          <ul className={`${styles.listStyleNone} ${styles.padding0} ${styles.margin0}`}>
             {logs.slice(0, 12).map((log) => (
-              <li key={log.id} style={{marginBottom: '0.35rem'}}>
+              <li key={log.id} className={styles.marginBottom035rem}>
                 {(() => {
                   const entry = entryById.get(log.entryId);
                   const actionLabel =

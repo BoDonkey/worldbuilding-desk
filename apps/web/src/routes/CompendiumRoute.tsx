@@ -1,3 +1,4 @@
+import styles from '../assets/components/CompendiumRoute.module.css';
 import {useEffect, useMemo, useState} from 'react';
 import {useLocation, useNavigate} from 'react-router';
 import {useAppStore} from '../store/appStore';
@@ -1269,59 +1270,41 @@ function CompendiumRoute() {
       {feedback && (
         <p
           role='status'
-          style={{
-            marginBottom: '1rem',
-            padding: '0.5rem 0.75rem',
-            borderRadius: '6px',
-            border: `1px solid ${
-              feedback.tone === 'error' ? 'var(--color-error-soft-border)' : 'var(--color-success-soft-border)'
-            }`,
-            backgroundColor:
-              feedback.tone === 'error' ? 'var(--color-error-soft-bg)' : 'var(--color-success-soft-bg)',
-            color: feedback.tone === 'error' ? 'var(--color-error)' : 'var(--color-success)'
-          }}
+          className={`${styles.feedback} ${
+            feedback.tone === 'error'
+              ? styles.feedbackError
+              : styles.feedbackSuccess
+          }`}
         >
           {feedback.message}
         </p>
       )}
       <details
-        style={{
-          marginBottom: '1rem',
-          border: '1px solid var(--color-border)',
-          borderRadius: '8px',
-          padding: '0.7rem 0.85rem',
-          backgroundColor: 'var(--color-bg-secondary)'
-        }}
+        className={`${styles.marginBottom1rem} ${styles.border1pxSolidVarColorBorder} ${styles.borderRadius8px} ${styles.padding07rem085rem} ${styles.backgroundColorVarColorBgSecondary}`}
       >
-        <summary style={{cursor: 'pointer', fontWeight: 600}}>
+        <summary className={`${styles.cursorPointer} ${styles.fontWeight600}`}>
           Mechanics Setup Help
         </summary>
-        <div style={{marginTop: '0.6rem', fontSize: '0.9rem', color: 'var(--color-text-primary)'}}>
-          <p style={{margin: '0 0 0.4rem 0'}}>
+        <div className={`${styles.marginTop06rem} ${styles.fontSize09rem} ${styles.colorVarColorTextPrimary}`}>
+          <p className={styles.margin0004rem0}>
             Step 1: link a world record only when it truly needs mechanics.
           </p>
-          <p style={{margin: '0 0 0.4rem 0'}}>
+          <p className={styles.margin0004rem0}>
             Step 2: stay in Entries for lightweight setup.
           </p>
-          <p style={{margin: 0}}>
+          <p className={styles.margin0}>
             Step 3: open advanced setup only when you need progression, recipes, zones, or simulation.
           </p>
         </div>
       </details>
       {!showAdvancedSetup && (
         <section
-          style={{
-            marginBottom: '0.85rem',
-            padding: '0.85rem',
-            border: '1px solid var(--color-accent-soft-bg)',
-            borderRadius: '8px',
-            backgroundColor: 'var(--color-bg-secondary)'
-          }}
+          className={`${styles.marginBottom085rem} ${styles.padding085rem} ${styles.border1pxSolidVarColorAccentSoftBg} ${styles.borderRadius8px} ${styles.backgroundColorVarColorBgSecondary}`}
         >
-          <div style={{display: 'flex', justifyContent: 'space-between', gap: '0.75rem', flexWrap: 'wrap'}}>
+          <div className={`${styles.displayFlex} ${styles.justifyContentSpaceBetween} ${styles.gap075rem} ${styles.flexWrapWrap}`}>
             <div>
               <strong>Start Small</strong>
-              <div style={{fontSize: '0.88rem', color: 'var(--color-text-secondary)', marginTop: '0.25rem'}}>
+              <div className={`${styles.fontSize088rem} ${styles.colorVarColorTextSecondary} ${styles.marginTop025rem}`}>
                 You only need the <strong>Entries</strong> tab right now unless this project truly needs progression or world simulation.
               </div>
             </div>
@@ -1331,59 +1314,42 @@ function CompendiumRoute() {
           </div>
         </section>
       )}
-      <div style={{display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '0.8rem'}}>
+      <div className={`${styles.displayFlex} ${styles.gap05rem} ${styles.flexWrapWrap} ${styles.marginBottom08rem}`}>
         {visibleTabs.map((tab) => (
           <button
             key={tab.id}
             type='button'
             onClick={() => setActiveTab(tab.id)}
-            style={{
-              padding: '0.4rem 0.65rem',
-              borderRadius: '999px',
-              border:
-                activeTab === tab.id
-                  ? '1px solid var(--color-text-primary)'
-                  : '1px solid var(--color-border)',
-              backgroundColor:
-                activeTab === tab.id
-                  ? 'var(--color-bg-secondary)'
-                  : 'var(--color-bg-primary)',
-              color: 'var(--color-text-primary)',
-              cursor: 'pointer'
-            }}
+            className={`${styles.tabButton} ${
+              activeTab === tab.id ? styles.tabButtonActive : ''
+            }`}
           >
             {tab.label}
           </button>
         ))}
       </div>
-      <div style={{fontSize: '0.9rem', color: 'var(--color-text-secondary)', marginBottom: '0.5rem'}}>
+      <div className={`${styles.fontSize09rem} ${styles.colorVarColorTextSecondary} ${styles.marginBottom05rem}`}>
         {currentTab.subtitle}
       </div>
       <section
-        style={{
-          marginBottom: '0.85rem',
-          padding: '0.75rem 0.85rem',
-          border: '1px solid var(--color-border)',
-          borderRadius: '8px',
-          backgroundColor: 'var(--color-bg-secondary)'
-        }}
+        className={`${styles.marginBottom085rem} ${styles.padding075rem085rem} ${styles.border1pxSolidVarColorBorder} ${styles.borderRadius8px} ${styles.backgroundColorVarColorBgSecondary}`}
       >
-        <h2 style={{marginTop: 0, marginBottom: '0.45rem', fontSize: '1rem'}}>
+        <h2 className={`${styles.marginTop0} ${styles.marginBottom045rem} ${styles.fontSize1rem}`}>
           Next Steps For {currentTab.label}
         </h2>
         {activeTab !== 'overview' && activeTabTotalCount > 0 && (
-          <p style={{marginTop: 0, marginBottom: '0.55rem', fontSize: '0.82rem', color: 'var(--color-text-secondary)'}}>
+          <p className={`${styles.marginTop0} ${styles.marginBottom055rem} ${styles.fontSize082rem} ${styles.colorVarColorTextSecondary}`}>
             Completed in this section: {activeTabDoneCount}/{activeTabTotalCount}
           </p>
         )}
         {compactNextSteps.length === 0 ? (
-          <p style={{margin: 0, fontSize: '0.88rem', color: 'var(--color-text-primary)'}}>
+          <p className={`${styles.margin0} ${styles.fontSize088rem} ${styles.colorVarColorTextPrimary}`}>
             This section is in good shape. Move to another tab for additional setup.
           </p>
         ) : (
-          <ul style={{listStyle: 'none', margin: 0, padding: 0}}>
+          <ul className={`${styles.listStyleNone} ${styles.margin0} ${styles.padding0}`}>
             {compactNextSteps.slice(0, 3).map((item) => (
-              <li key={`tab-next-${item.id}`} style={{marginBottom: '0.35rem'}}>
+              <li key={`tab-next-${item.id}`} className={styles.marginBottom035rem}>
                 Next: {item.label}
                 {activeTab === 'overview' && (
                   <>
@@ -1401,24 +1367,14 @@ function CompendiumRoute() {
           </ul>
         )}
       </section>
-      <div style={{display: 'flex', gap: '0.4rem', flexWrap: 'wrap', marginBottom: '1rem'}}>
+      <div className={`${styles.displayFlex} ${styles.gap04rem} ${styles.flexWrapWrap} ${styles.marginBottom1rem}`}>
         <span
-          style={{
-            fontSize: '0.75rem',
-            border: '1px solid var(--color-border)',
-            borderRadius: '999px',
-            padding: '0.15rem 0.45rem'
-          }}
+          className={`${styles.fontSize075rem} ${styles.border1pxSolidVarColorBorder} ${styles.borderRadius999px} ${styles.padding015rem045rem}`}
         >
           Game Systems: {enableGameSystems ? 'On' : 'Off'}
         </span>
         <span
-          style={{
-            fontSize: '0.75rem',
-            border: '1px solid var(--color-border)',
-            borderRadius: '999px',
-            padding: '0.15rem 0.45rem'
-          }}
+          className={`${styles.fontSize075rem} ${styles.border1pxSolidVarColorBorder} ${styles.borderRadius999px} ${styles.padding015rem045rem}`}
         >
           Runtime Modifiers: {enableRuntimeModifiers ? 'On' : 'Off'}
         </span>
@@ -1428,7 +1384,7 @@ function CompendiumRoute() {
         recipes.length === 0 &&
         zoneProfiles.length === 0 &&
         settlementModules.length === 0 && (
-          <p style={{marginTop: 0, marginBottom: '0.85rem', fontSize: '0.84rem', color: 'var(--color-text-secondary)'}}>
+          <p className={`${styles.marginTop0} ${styles.marginBottom085rem} ${styles.fontSize084rem} ${styles.colorVarColorTextSecondary}`}>
             Advanced mechanics are hidden until you ask for them.
           </p>
         )}
