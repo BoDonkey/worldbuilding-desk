@@ -100,7 +100,7 @@ and required revisit point, `WIP`, `Done <commit>`.
 | 1.4 | Proposal-review assistant route (conditional on product need) | 1 | M | — |
 | 2.1 | ConfirmDialog + InlineAlert components | 2 | S | Done `38db7df` |
 | 2.2 | Migrate confirm/alert call sites | 2 | M | Done `9c278a3` + test fix `ab14f63` — Cypress re-run 2026-08-03: 42/42 passing |
-| 2.3 | Inline field-level validation | 2 | S | WIP |
+| 2.3 | Inline field-level validation | 2 | S | Done `45a163f` — lint; 252 web + 6 engine + 12 UI tests; web/desktop builds; Cypress 42/42; manual browser checks |
 | 2.4 | Theme CharacterStyle editor family | 2 | S | — |
 | 2.5 | CompendiumRoute off inline styles | 2 | M | — |
 | 2.6 | CharacterSheetsRoute off inline styles | 2 | M | — |
