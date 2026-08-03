@@ -1,5 +1,5 @@
 import styles from '../../assets/components/CompendiumRoute.module.css';
-import type {Dispatch, SetStateAction} from 'react';
+import {useMemo, useState, type Dispatch, type SetStateAction} from 'react';
 import type {
   Character,
   CharacterSheet,
@@ -22,6 +22,7 @@ import {
 import {
   BASE_STAT_KEYS,
   BASE_STAT_LIMITS,
+  filterNamedItems,
   MECHANICS_SCOPE_OPTIONS,
   type BaseStatKey
 } from './constants';
@@ -178,6 +179,12 @@ export function WorldSystemsTab({
   zoneProgressScope,
   zoneSourceEntityId
 }: WorldSystemsTabProps) {
+    const [zoneFilter, setZoneFilter] = useState('');
+    const filteredZoneProfiles = useMemo(
+      () => filterNamedItems(zoneProfiles, zoneFilter),
+      [zoneFilter, zoneProfiles]
+    );
+
     if (!enableWorldSystems) {
       return (
         <section
@@ -334,8 +341,23 @@ export function WorldSystemsTab({
           >
             {isRecordingZone ? 'Recording...' : 'Record Exposure'}
           </button>
+          <label className={styles.listFilter}>
+            <span>Filter zone profiles</span>
+            <input
+              type='search'
+              value={zoneFilter}
+              onChange={(event) => setZoneFilter(event.target.value)}
+              placeholder='Search by zone name'
+              className={styles.listFilterInput}
+            />
+          </label>
+          {zoneProfiles.length > 0 && filteredZoneProfiles.length === 0 && (
+            <p className={styles.filterEmpty}>
+              No zone profiles match this filter.
+            </p>
+          )}
           <ul className={`${styles.listStyleNone} ${styles.padding0} ${styles.marginTop075rem}`}>
-            {zoneProfiles.map((profile) => {
+            {filteredZoneProfiles.map((profile) => {
               const progressKey = `${profile.biomeKey}:${
                 profile.progressScope === 'character'
                   ? activeMechanicsCharacterSheetId || 'global'

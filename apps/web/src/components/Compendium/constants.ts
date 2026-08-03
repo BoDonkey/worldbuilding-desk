@@ -68,3 +68,15 @@ export const BASE_STAT_LIMITS: Record<
   craftingThroughput: {min: 0, max: 100000},
   morale: {min: 0, max: 100000}
 };
+
+export function filterNamedItems<T extends {name: string}>(
+  items: T[],
+  query: string
+): T[] {
+  const normalizedQuery = query.trim().toLowerCase();
+  if (!normalizedQuery) return items;
+
+  return items.filter((item) =>
+    item.name.toLowerCase().includes(normalizedQuery)
+  );
+}

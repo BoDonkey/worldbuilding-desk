@@ -429,3 +429,35 @@
 .width58px {
   width: 58px;
 }
+
+.listFilter {
+  display: grid;
+  gap: 0.35rem;
+  margin: 0.85rem 0 0.75rem;
+  color: var(--color-text-primary);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.listFilterInput {
+  width: 100%;
+  min-height: 2.5rem;
+  padding: 0.5rem 0.65rem;
+  border: 1px solid var(--input-border);
+  border-radius: 8px;
+  background: var(--input-bg);
+  color: var(--input-text);
+}
+
+.listFilterInput:focus-visible {
+  border-color: var(--input-border-focus);
+  outline: 3px solid color-mix(in srgb, var(--color-focus) 25%, transparent);
+  outline-offset: 1px;
+}
+
+.filterEmpty {
+  margin: 0.75rem 0;
+  color: var(--color-text-secondary);
+  font-size: 0.85rem;
+  font-style: italic;
+}

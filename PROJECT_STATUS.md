@@ -118,6 +118,9 @@ Under the hood, the app still includes rich systems for world data, rules, chara
 - The Mechanics/Compendium route and its four extracted tab components now use
   a shared CSS module with zero remaining inline `style` attributes while
   preserving the existing presentation.
+- Mechanics entries, recipes, milestones, and zone profiles now have local,
+  case-insensitive name filters with clear no-match feedback; clearing a
+  filter restores the full saved list without changing stored data.
 - The Character Sheets route, sheet list, and scene-mutation form now use the
   existing shared route CSS module with zero remaining inline `style`
   attributes while preserving both build/edit and scene-history presentation.
@@ -264,6 +267,11 @@ Under the hood, the app still includes rich systems for world data, rules, chara
 ## Verification Status
 
 ### Verified Recently
+- Road-to-market Slice 2.7 Compendium sub-list filtering passes web lint, all
+  258 web unit tests (including three focused name-filter tests), 6
+  rules-engine tests, 12 rules-ui tests, web and desktop builds, the full
+  42-test Cypress suite, and manual entry/recipe filter-and-clear checks with
+  no console warnings or errors.
 - Road-to-market Slice 2.6 Character Sheets styling extraction passes web
   lint, all 255 web unit tests, 6 rules-engine tests, 12 rules-ui tests, web and
   desktop builds, the full 42-test Cypress suite, and before/after browser

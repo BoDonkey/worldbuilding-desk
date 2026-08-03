@@ -1,5 +1,5 @@
 import styles from '../../assets/components/CompendiumRoute.module.css';
-import type {Dispatch, SetStateAction} from 'react';
+import {useMemo, useState, type Dispatch, type SetStateAction} from 'react';
 import type {NavigateFunction} from 'react-router';
 import type {
   CharacterSheet,
@@ -14,7 +14,7 @@ import type {
   ZoneAffinityProfile
 } from '../../entityTypes';
 import {ConsumableEffectEditor} from '../Mechanics/ConsumableEffectEditor';
-import {MECHANICS_SCOPE_OPTIONS} from './constants';
+import {filterNamedItems, MECHANICS_SCOPE_OPTIONS} from './constants';
 
 const DOMAIN_OPTIONS: Array<{value: CompendiumDomain; label: string}> = [
   {value: 'beast', label: 'Beast'},
@@ -126,6 +126,16 @@ export function EntriesTab({
   worldEntityById,
   zoneProfileBySourceEntityId
 }: EntriesTabProps) {
+  const [entryFilter, setEntryFilter] = useState('');
+  const filteredEntries = useMemo(
+    () => filterNamedItems(entries, entryFilter),
+    [entries, entryFilter]
+  );
+  const filteredReviewEntries = useMemo(
+    () => filterNamedItems(reviewEntries, entryFilter),
+    [reviewEntries, entryFilter]
+  );
+
   return (
     <>
       <p className={`${styles.marginTop0} ${styles.marginBottom09rem} ${styles.colorVarColorTextSecondary}`}>
@@ -289,7 +299,17 @@ export function EntriesTab({
 
       <section className={`${styles.padding1rem} ${styles.border1pxSolidVarColorBorder} ${styles.borderRadius8px}`}>
         <h2 className={styles.marginTop0}>Entries</h2>
-        {reviewEntries.length > 0 && (
+        <label className={styles.listFilter}>
+          <span>Filter entries</span>
+          <input
+            type='search'
+            value={entryFilter}
+            onChange={(event) => setEntryFilter(event.target.value)}
+            placeholder='Search by entry name'
+            className={styles.listFilterInput}
+          />
+        </label>
+        {filteredReviewEntries.length > 0 && (
           <div
             className={`${styles.marginBottom085rem} ${styles.padding085rem} ${styles.border1pxSolidVarColorBorder} ${styles.borderRadius8px} ${styles.backgroundColorVarColorBgSecondary}`}
           >
@@ -306,11 +326,11 @@ export function EntriesTab({
               <span
                 className={`${styles.displayInlineFlex} ${styles.alignItemsCenter} ${styles.padding02rem055rem} ${styles.borderRadius999px} ${styles.backgroundColorVarColorBgTertiary} ${styles.colorVarColorTextPrimary} ${styles.fontSize078rem} ${styles.fontWeight700}`}
               >
-                {reviewEntries.length} open
+                {filteredReviewEntries.length} open
               </span>
             </div>
             <div className={`${styles.displayGrid} ${styles.gap06rem} ${styles.marginTop075rem}`}>
-              {reviewEntries.slice(0, 8).map((entry) => (
+              {filteredReviewEntries.slice(0, 8).map((entry) => (
                 <div
                   key={`review-${entry.id}`}
                   className={`${styles.border1pxSolidVarColorBgTertiary} ${styles.borderRadius8px} ${styles.backgroundColorVarColorBgPrimary} ${styles.padding07rem}`}
@@ -377,8 +397,11 @@ export function EntriesTab({
             </div>
           </div>
         )}
+        {entries.length > 0 && filteredEntries.length === 0 && (
+          <p className={styles.filterEmpty}>No entries match this filter.</p>
+        )}
         <ul className={`${styles.listStyleNone} ${styles.padding0} ${styles.margin0}`}>
-          {entries.map((entry) => {
+          {filteredEntries.map((entry) => {
             const sourceEntity = entry.sourceEntityId
               ? worldEntityById.get(entry.sourceEntityId) ?? null
               : null;

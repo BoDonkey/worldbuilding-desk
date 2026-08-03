@@ -1,5 +1,5 @@
 import styles from '../../assets/components/CompendiumRoute.module.css';
-import type {Dispatch, SetStateAction} from 'react';
+import {useMemo, useState, type Dispatch, type SetStateAction} from 'react';
 import type {
   CompendiumMilestone,
   CompendiumProgress,
@@ -9,6 +9,7 @@ import {
   canCraftRecipe,
   type deriveCraftingRuntimeModifiers
 } from '../../services/compendium';
+import {filterNamedItems} from './constants';
 
 const RECIPE_CATEGORY_OPTIONS: UnlockableRecipe['category'][] = [
   'food',
@@ -80,6 +81,17 @@ export function ProgressionTab({
   unlockedMilestoneSet,
   unlockedRecipeSet
 }: ProgressionTabProps) {
+  const [recipeFilter, setRecipeFilter] = useState('');
+  const [milestoneFilter, setMilestoneFilter] = useState('');
+  const filteredRecipes = useMemo(
+    () => filterNamedItems(recipes, recipeFilter),
+    [recipeFilter, recipes]
+  );
+  const filteredMilestones = useMemo(
+    () => filterNamedItems(milestones, milestoneFilter),
+    [milestoneFilter, milestones]
+  );
+
   return (
     <>
       <p className={`${styles.marginTop0} ${styles.marginBottom09rem} ${styles.colorVarColorTextSecondary}`}>
@@ -141,6 +153,16 @@ export function ProgressionTab({
         <button type='button' onClick={() => void handleCreateRecipe()}>
           Add Recipe
         </button>
+        <label className={styles.listFilter}>
+          <span>Filter recipes</span>
+          <input
+            type='search'
+            value={recipeFilter}
+            onChange={(event) => setRecipeFilter(event.target.value)}
+            placeholder='Search by recipe name'
+            className={styles.listFilterInput}
+          />
+        </label>
         {recipes.length === 0 && (
           <div
             className={`${styles.marginTop075rem} ${styles.padding065rem} ${styles.border1pxSolidVarColorBorder} ${styles.borderRadius6px} ${styles.backgroundColorVarColorBgSecondary}`}
@@ -158,8 +180,11 @@ export function ProgressionTab({
             </button>
           </div>
         )}
+        {recipes.length > 0 && filteredRecipes.length === 0 && (
+          <p className={styles.filterEmpty}>No recipes match this filter.</p>
+        )}
         <ul className={`${styles.listStyleNone} ${styles.padding0} ${styles.marginTop075rem}`}>
-          {recipes.map((recipe) => (
+          {filteredRecipes.map((recipe) => (
             <li key={recipe.id} className={styles.marginBottom035rem}>
               {unlockedRecipeSet.has(recipe.id) ? 'Unlocked' : 'Locked'}: {recipe.name}
               {recipe.requirements?.minCharacterLevel ? (
@@ -216,6 +241,16 @@ export function ProgressionTab({
           <button type='button' onClick={() => void handleCreateMilestone()}>
             Add Milestone
           </button>
+          <label className={styles.listFilter}>
+            <span>Filter milestones</span>
+            <input
+              type='search'
+              value={milestoneFilter}
+              onChange={(event) => setMilestoneFilter(event.target.value)}
+              placeholder='Search by milestone name'
+              className={styles.listFilterInput}
+            />
+          </label>
           {milestones.length === 0 && (
             <div
               className={`${styles.marginTop075rem} ${styles.padding065rem} ${styles.border1pxSolidVarColorBorder} ${styles.borderRadius6px} ${styles.backgroundColorVarColorBgSecondary}`}
@@ -233,8 +268,13 @@ export function ProgressionTab({
               </button>
             </div>
           )}
+          {milestones.length > 0 && filteredMilestones.length === 0 && (
+            <p className={styles.filterEmpty}>
+              No milestones match this filter.
+            </p>
+          )}
           <ul className={`${styles.listStyleNone} ${styles.padding0} ${styles.marginTop075rem}`}>
-            {milestones.map((milestone) => (
+            {filteredMilestones.map((milestone) => (
               <li key={milestone.id} className={styles.marginBottom035rem}>
                 {unlockedMilestoneSet.has(milestone.id) ? 'Unlocked' : 'Locked'}:{' '}
                 {milestone.name} ({milestone.pointsRequired} pts)
