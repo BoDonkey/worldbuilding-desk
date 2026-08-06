@@ -1,6 +1,6 @@
 # Worldbuilding-Desk Project Status
 
-**Last Updated:** August 3, 2026
+**Last Updated:** August 6, 2026
 
 ## Project Overview
 
@@ -270,6 +270,16 @@ Under the hood, the app still includes rich systems for world data, rules, chara
 ## Verification Status
 
 ### Verified Recently
+- Road-to-market Slice 2.9 UI close-out confirms Slices 2.1–2.8 match the
+  current writing-first product rules: audited dialogs retain Escape/focus
+  behavior, production native confirms/alerts are eliminated, field errors
+  render inline, Character Style controls follow both themes, Mechanics and
+  Character Sheets have zero inline styles across their route/component
+  families, all four Mechanics filters render, and pending optional-system
+  work remains visible through `More`. Web lint, 259 web unit tests, 6
+  rules-engine tests, 12 rules-ui tests, web/desktop builds, and Cypress 43/43
+  pass; Scratchpad, Corkboard, shared confirmation, theme, filter, and nav
+  behavior were also browser-checked.
 - Road-to-market Slice 2.7 Compendium sub-list filtering passes web lint, all
   258 web unit tests (including three focused name-filter tests), 6
   rules-engine tests, 12 rules-ui tests, web and desktop builds, the full
