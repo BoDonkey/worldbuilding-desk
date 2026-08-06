@@ -200,15 +200,16 @@ Under the hood, the app still includes rich systems for world data, rules, chara
 - Lore Documents now has focused Cypress smoke coverage for manual document lifecycle, dossier import/extraction, and World Bible linked-document round trips.
 - `WorkspaceRoute` now groups workspace store subscriptions by concern instead of scattering individual selectors through the route body.
 - `useWorkspaceDocuments` now keeps persistence behavior local while using pure helpers for document selection initialization, editor-document assembly, change detection, and manual-save/autosave consistency mode selection.
+- `useCharacterSheetMutationPreview` now owns scene-mutation form state, deterministic preview/replay derivation, and mutation-history orchestration; pure mutation command construction lives in the tested character ruleset service.
 - Shared text matching contract added for smoke-critical lore/review matching paths.
 - Current targeted architecture sizes are `WorkspaceRoute.tsx` 1,976 lines,
-  `WorldBibleRoute.tsx` 1,957, `CharacterSheetsRoute.tsx` 2,374,
+  `WorldBibleRoute.tsx` 1,957, `CharacterSheetsRoute.tsx` 1,956,
   `CompendiumRoute.tsx` 1,590, and `useWorkspaceConsistency.ts` 1,990.
 
 ### Current Assessment
 - The completed fitness plan materially reduced the targeted architecture and
-  established tested extraction seams; three routes remain above the 2,000-line
-  target and should continue through bounded, behavior-preserving slices.
+  established tested extraction seams; all currently targeted routes and hooks
+  are below the 2,000-line threshold.
 - The remaining work is product shaping and incremental maintainability, not
   emergency architecture repair.
 

@@ -8,7 +8,6 @@ import type {
   CompendiumEntry,
   CharacterStat,
   CharacterResource,
-  StateMutationCommand,
   StateMutationEvent,
   WritingDocument
 } from '../entityTypes';
@@ -41,7 +40,7 @@ import {
   getSettlementModulesByProject,
   getCompendiumEntriesByProject
 } from '../services/compendium';
-import {getDocumentsByProject, sortWritingDocuments} from '../writingStorage';
+import {getDocumentsByProject} from '../writingStorage';
 import {
   getStateMutationEventsByProject,
   invalidateStateMutationEventById,
@@ -52,12 +51,7 @@ import {
   validateStateMutationCommandAgainstState,
   validateStateMutationEventForRuleset
 } from '../services/state/stateReplay';
-import {buildStateMutationPreview} from '../services/state/stateMutationPresentation';
 import {validateStateMutationEvent} from '../services/state/stateMutationSchemas';
-import {
-  describeStateMutationEventStaleness,
-  getStateMutationEventStaleness
-} from '../services/state/stateMutationStaleness';
 
 import {useAppStore} from '../store/appStore';
 import {getProjectCapabilities} from '../projectMode';
@@ -72,12 +66,12 @@ import {
   summarizeMutationCommand
 } from '../services/characters/characterSheetDefaults';
 import {
-  MutationForm,
-  type MutationFormType
+  MutationForm
 } from '../components/CharacterSheets/MutationForm';
 import {CharacterSheetList} from '../components/CharacterSheets/CharacterSheetList';
 import styles from '../styles/CharacterSheetsRoute.module.css';
 import {useConfirmDialog} from '../hooks/useConfirmDialog';
+import {useCharacterSheetMutationPreview} from '../hooks/useCharacterSheetMutationPreview';
 
 interface CharacterSheetsRouteProps {
   embedded?: boolean;
@@ -143,29 +137,26 @@ function CharacterSheetsRoute({
     tone: 'success' | 'error';
     message: string;
   } | null>(null);
-  const [mutationTargetSheetId, setMutationTargetSheetId] = useState('');
-  const [mutationSceneId, setMutationSceneId] = useState('');
-  const [mutationType, setMutationType] =
-    useState<MutationFormType>('resource_change');
-  const [mutationStatDefinitionId, setMutationStatDefinitionId] = useState('');
-  const [mutationResourceDefinitionId, setMutationResourceDefinitionId] =
-    useState('');
-  const [mutationNumberValue, setMutationNumberValue] = useState('0');
-  const [mutationTextValue, setMutationTextValue] = useState('');
-  const [mutationBooleanValue, setMutationBooleanValue] = useState(false);
-  const [mutationStatusName, setMutationStatusName] = useState('');
-  const [mutationItemName, setMutationItemName] = useState('');
-  const [mutationQuantity, setMutationQuantity] = useState('1');
-  const [mutationLocationName, setMutationLocationName] = useState('');
-  const [isSavingMutation, setIsSavingMutation] = useState(false);
-  const [invalidatingMutationEventId, setInvalidatingMutationEventId] =
-    useState<string | null>(null);
-  const [editingMutationEventId, setEditingMutationEventId] = useState<string | null>(
-    null
-  );
-  const [reorderingMutationEventId, setReorderingMutationEventId] = useState<
-    string | null
-  >(null);
+  const {
+    mutationTargetSheetId, setMutationTargetSheetId,
+    mutationSceneId, setMutationSceneId, mutationType, setMutationType,
+    mutationStatDefinitionId, setMutationStatDefinitionId,
+    mutationResourceDefinitionId, setMutationResourceDefinitionId,
+    mutationNumberValue, setMutationNumberValue, mutationTextValue, setMutationTextValue,
+    mutationBooleanValue, setMutationBooleanValue, mutationStatusName, setMutationStatusName,
+    mutationItemName, setMutationItemName, mutationQuantity, setMutationQuantity,
+    mutationLocationName, setMutationLocationName, isSavingMutation, setIsSavingMutation,
+    invalidatingMutationEventId, setInvalidatingMutationEventId,
+    editingMutationEventId, setEditingMutationEventId,
+    reorderingMutationEventId, setReorderingMutationEventId,
+    orderedDocuments, sceneOrderById, selectedMutationSheet, selectedMutationScene,
+    selectedMutationStatDefinition, selectedMutationResourceDefinition,
+    selectedMutationActorId, buildDraftMutationCommand, mutationPreview,
+    replayedStateAtSelectedScene, selectedMutationValueSummary, mutationPreviewIssues,
+    selectedSheetMutationHistory
+  } = useCharacterSheetMutationPreview({
+    sheets, ruleset, documents, stateMutationEvents
+  });
 
   useEffect(() => {
     let cancelled = false;
@@ -720,347 +711,6 @@ function CharacterSheetsRoute({
     [compendiumEntries]
   );
 
-  const orderedDocuments = useMemo(
-    () => sortWritingDocuments(documents),
-    [documents]
-  );
-
-  const sceneOrderById = useMemo(
-    () =>
-      new Map(
-        orderedDocuments.map((document, index) => [document.id, index + 1] as const)
-      ),
-    [orderedDocuments]
-  );
-
-  const selectedMutationSheet = useMemo(
-    () => sheets.find((sheet) => sheet.id === mutationTargetSheetId) ?? null,
-    [sheets, mutationTargetSheetId]
-  );
-
-  const selectedMutationScene = useMemo(
-    () =>
-      orderedDocuments.find((document) => document.id === mutationSceneId) ?? null,
-    [orderedDocuments, mutationSceneId]
-  );
-
-  const selectedMutationStatDefinition = useMemo(
-    () =>
-      ruleset?.statDefinitions.find(
-        (definition) => definition.id === mutationStatDefinitionId
-      ) ?? null,
-    [ruleset, mutationStatDefinitionId]
-  );
-
-  const selectedMutationResourceDefinition = useMemo(
-    () =>
-      ruleset?.resourceDefinitions.find(
-        (definition) => definition.id === mutationResourceDefinitionId
-      ) ?? null,
-    [ruleset, mutationResourceDefinitionId]
-  );
-
-  const selectedMutationActorId =
-    selectedMutationSheet?.characterId ?? selectedMutationSheet?.id ?? '';
-
-  const buildDraftMutationCommand = useCallback(
-    (params: {
-      actorId: string;
-      mutationType: MutationFormType;
-      statDefinition: StoredRuleset['statDefinitions'][number] | null;
-      resourceDefinition: StoredRuleset['resourceDefinitions'][number] | null;
-      numberValue: string;
-      textValue: string;
-      booleanValue: boolean;
-      statusName: string;
-      itemName: string;
-      quantity: string;
-      locationName: string;
-    }): StateMutationCommand | null => {
-      const actorId = params.actorId.trim();
-      if (!actorId) return null;
-      const numericValue = Number(params.numberValue);
-      const quantity = Math.max(1, Number(params.quantity) || 1);
-      const itemName = params.itemName.trim();
-      const statusName = params.statusName.trim();
-      const locationName = params.locationName.trim();
-
-      switch (params.mutationType) {
-        case 'resource_change':
-          return params.resourceDefinition && Number.isFinite(numericValue)
-            ? {
-                type: 'resource_change',
-                actorId,
-                resourceDefinitionId: params.resourceDefinition.id,
-                delta: numericValue
-              }
-            : null;
-        case 'resource_set':
-          return params.resourceDefinition && Number.isFinite(numericValue)
-            ? {
-                type: 'resource_set',
-                actorId,
-                resourceDefinitionId: params.resourceDefinition.id,
-                value: numericValue
-              }
-            : null;
-        case 'stat_change':
-          if (!params.statDefinition) return null;
-          if (
-            params.statDefinition.type === 'number' &&
-            Number.isFinite(numericValue)
-          ) {
-            return {
-              type: 'stat_change',
-              actorId,
-              statDefinitionId: params.statDefinition.id,
-              delta: numericValue
-            };
-          }
-          if (params.statDefinition.type === 'boolean') {
-            return {
-              type: 'stat_change',
-              actorId,
-              statDefinitionId: params.statDefinition.id,
-              delta: params.booleanValue
-            };
-          }
-          return {
-            type: 'stat_change',
-            actorId,
-            statDefinitionId: params.statDefinition.id,
-            delta: params.textValue
-          };
-        case 'stat_set':
-          if (!params.statDefinition) return null;
-          if (
-            params.statDefinition.type === 'number' &&
-            Number.isFinite(numericValue)
-          ) {
-            return {
-              type: 'stat_set',
-              actorId,
-              statDefinitionId: params.statDefinition.id,
-              value: numericValue
-            };
-          }
-          if (params.statDefinition.type === 'boolean') {
-            return {
-              type: 'stat_set',
-              actorId,
-              statDefinitionId: params.statDefinition.id,
-              value: params.booleanValue
-            };
-          }
-          return {
-            type: 'stat_set',
-            actorId,
-            statDefinitionId: params.statDefinition.id,
-            value: params.textValue
-          };
-        case 'status_apply':
-        case 'status_remove':
-          return statusName
-            ? {
-                type: params.mutationType,
-                actorId,
-                statusName
-              }
-            : null;
-        case 'inventory_add':
-        case 'inventory_remove':
-        case 'inventory_consume':
-          return itemName
-            ? {
-                type: params.mutationType,
-                actorId,
-                itemName,
-                quantity
-              }
-            : null;
-        case 'inventory_equip':
-        case 'inventory_unequip':
-          return itemName
-            ? {
-                type: params.mutationType,
-                actorId,
-                itemName
-              }
-            : null;
-        case 'location_set':
-          return locationName
-            ? {
-                type: 'location_set',
-                actorId,
-                locationName
-              }
-            : null;
-      }
-    },
-    []
-  );
-
-  const mutationPreview = useMemo(() => {
-    if (!selectedMutationSheet || !ruleset) {
-      return null;
-    }
-
-    const selectedSceneOrder = selectedMutationScene
-      ? (sceneOrderById.get(selectedMutationScene.id) ?? Number.MAX_SAFE_INTEGER)
-      : undefined;
-    const before = replayCharacterState({
-      sheet: selectedMutationSheet,
-      ruleset,
-      events: stateMutationEvents,
-      target: {
-        actorId: selectedMutationActorId,
-        characterId: selectedMutationSheet.characterId,
-        sheetId: selectedMutationSheet.id,
-        actorName: selectedMutationSheet.name
-      },
-      upToSceneOrder: selectedSceneOrder
-    });
-    const command = buildDraftMutationCommand({
-      actorId: selectedMutationActorId,
-      mutationType,
-      statDefinition: selectedMutationStatDefinition,
-      resourceDefinition: selectedMutationResourceDefinition,
-      numberValue: mutationNumberValue,
-      textValue: mutationTextValue,
-      booleanValue: mutationBooleanValue,
-      statusName: mutationStatusName,
-      itemName: mutationItemName,
-      quantity: mutationQuantity,
-      locationName: mutationLocationName
-    });
-
-    if (!command) {
-      return {
-        before,
-        command: null,
-        validationIssues: [],
-        after: null,
-        effectLines: [] as string[]
-      };
-    }
-
-    const preview = buildStateMutationPreview({
-      sheet: selectedMutationSheet,
-      ruleset,
-      events: stateMutationEvents,
-      target: {
-        actorId: selectedMutationActorId,
-        characterId: selectedMutationSheet.characterId,
-        sheetId: selectedMutationSheet.id,
-        actorName: selectedMutationSheet.name
-      },
-      command,
-      upToSceneOrder: selectedSceneOrder
-    });
-
-    return {
-      ...preview,
-      command
-    };
-  }, [
-    buildDraftMutationCommand,
-    mutationBooleanValue,
-    mutationItemName,
-    mutationLocationName,
-    mutationNumberValue,
-    mutationQuantity,
-    mutationStatusName,
-    mutationTextValue,
-    mutationType,
-    ruleset,
-    sceneOrderById,
-    selectedMutationActorId,
-    selectedMutationResourceDefinition,
-    selectedMutationScene,
-    selectedMutationSheet,
-    selectedMutationStatDefinition,
-    stateMutationEvents
-  ]);
-
-  const replayedStateAtSelectedScene = useMemo(() => {
-    if (!selectedMutationSheet || !selectedMutationScene || !ruleset) {
-      return null;
-    }
-    const selectedSceneOrder =
-      sceneOrderById.get(selectedMutationScene.id) ?? Number.MAX_SAFE_INTEGER;
-    return replayCharacterState({
-      sheet: selectedMutationSheet,
-      ruleset,
-      events: stateMutationEvents,
-      target: {
-        actorId: selectedMutationActorId,
-        characterId: selectedMutationSheet.characterId,
-        sheetId: selectedMutationSheet.id,
-        actorName: selectedMutationSheet.name
-      },
-      upToSceneOrder: selectedSceneOrder
-    });
-  }, [
-    ruleset,
-    sceneOrderById,
-    selectedMutationActorId,
-    selectedMutationScene,
-    selectedMutationSheet,
-    stateMutationEvents
-  ]);
-
-  const selectedMutationValueSummary = useMemo(() => {
-    if (!mutationPreview?.after) {
-      return null;
-    }
-    return mutationPreview.effectLines[0] ?? null;
-  }, [mutationPreview]);
-
-  const mutationPreviewIssues = mutationPreview?.validationIssues ?? [];
-
-  const selectedSheetMutationEvents = useMemo(() => {
-    if (!selectedMutationSheet) {
-      return [];
-    }
-    const candidateIds = new Set(
-      [selectedMutationSheet.id, selectedMutationSheet.characterId].filter(Boolean)
-    );
-    return stateMutationEvents.filter(
-      (event) =>
-        event.status !== 'proposed' &&
-        event.commands.some((command) => candidateIds.has(command.actorId))
-    );
-  }, [selectedMutationSheet, stateMutationEvents]);
-
-  const selectedSheetMutationHistory = useMemo(
-    () =>
-      selectedSheetMutationEvents.map((event) => {
-        const sameSceneOrdered = selectedSheetMutationEvents
-          .filter(
-            (entry) =>
-              entry.sceneId === event.sceneId && entry.status !== 'invalidated'
-          )
-          .sort(
-            (a, b) =>
-              (a.sceneSequence ?? Number.MAX_SAFE_INTEGER) -
-              (b.sceneSequence ?? Number.MAX_SAFE_INTEGER)
-          );
-        const sceneIndex = sameSceneOrdered.findIndex((entry) => entry.id === event.id);
-        const staleness = getStateMutationEventStaleness({
-          event,
-          documents: orderedDocuments
-        });
-        return {
-          event,
-          canMoveUp: sceneIndex > 0,
-          canMoveDown:
-            sceneIndex !== -1 && sceneIndex < sameSceneOrdered.length - 1,
-          staleness,
-          stalenessLabel: describeStateMutationEventStaleness(staleness)
-        };
-      }),
-    [orderedDocuments, selectedSheetMutationEvents]
-  );
 
   const resetMutationForm = useCallback(() => {
     setEditingMutationEventId(null);
@@ -1074,7 +724,12 @@ function CharacterSheetsRoute({
     setMutationItemName('');
     setMutationQuantity('1');
     setMutationLocationName('');
-  }, []);
+  }, [
+    setEditingMutationEventId, setMutationBooleanValue, setMutationItemName,
+    setMutationLocationName, setMutationNumberValue, setMutationQuantity,
+    setMutationResourceDefinitionId, setMutationStatDefinitionId,
+    setMutationStatusName, setMutationTextValue, setMutationType
+  ]);
 
   const loadMutationEventIntoForm = useCallback(
     (event: StateMutationEvent) => {
@@ -1157,7 +812,13 @@ function CharacterSheetsRoute({
           break;
       }
     },
-    [sheets]
+    [
+      sheets, setEditingMutationEventId, setMutationBooleanValue,
+      setMutationItemName, setMutationLocationName, setMutationNumberValue,
+      setMutationQuantity, setMutationResourceDefinitionId, setMutationSceneId,
+      setMutationStatDefinitionId, setMutationStatusName,
+      setMutationTargetSheetId, setMutationTextValue, setMutationType
+    ]
   );
 
   const handleSaveMutation = useCallback(async () => {
@@ -1293,7 +954,8 @@ function CharacterSheetsRoute({
     selectedMutationSheet,
     selectedMutationStatDefinition,
     stateMutationEvents,
-    mutationPreview
+    mutationPreview,
+    setIsSavingMutation
   ]);
 
   const handleInvalidateMutationEvent = useCallback(
@@ -1327,7 +989,7 @@ function CharacterSheetsRoute({
         setInvalidatingMutationEventId(null);
       }
     },
-    []
+    [setInvalidatingMutationEventId]
   );
 
   const handleMoveMutationEvent = useCallback(
@@ -1385,7 +1047,7 @@ function CharacterSheetsRoute({
         setReorderingMutationEventId(null);
       }
     },
-    [selectedSheetMutationHistory]
+    [selectedSheetMutationHistory, setReorderingMutationEventId]
   );
 
   const handlePromoteRuleset = useCallback(async () => {

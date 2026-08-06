@@ -1,6 +1,7 @@
 import {describe, expect, it} from 'vitest';
 import type {StoredRuleset} from '../../entityTypes';
 import {
+  buildCharacterSheetMutationCommand,
   reconcileCharacterResources,
   reconcileCharacterStats
 } from './characterSheetRuleset';
@@ -56,5 +57,102 @@ describe('character sheet ruleset reconciliation', () => {
         {definitionId: 'HP', current: 4, max: 12}
       ])
     ).toEqual([{definitionId: 'HP', current: 4, max: 12}]);
+  });
+});
+
+const commandInput = {
+  actorId: ' hero ',
+  mutationType: 'resource_change' as const,
+  statDefinition: ruleset.statDefinitions[0],
+  resourceDefinition: ruleset.resourceDefinitions[0],
+  numberValue: '3',
+  textValue: 'focused',
+  booleanValue: true,
+  statusName: ' Inspired ',
+  itemName: ' Potion ',
+  quantity: '2',
+  locationName: ' Old Keep '
+};
+
+describe('character sheet mutation command building', () => {
+  it('builds numeric resource and stat commands from form values', () => {
+    expect(buildCharacterSheetMutationCommand(commandInput)).toEqual({
+      type: 'resource_change',
+      actorId: 'hero',
+      resourceDefinitionId: 'HP',
+      delta: 3
+    });
+    expect(
+      buildCharacterSheetMutationCommand({
+        ...commandInput,
+        mutationType: 'stat_set',
+        numberValue: '17'
+      })
+    ).toEqual({
+      type: 'stat_set',
+      actorId: 'hero',
+      statDefinitionId: 'STR',
+      value: 17
+    });
+  });
+
+  it('preserves boolean and text stat value types', () => {
+    expect(
+      buildCharacterSheetMutationCommand({
+        ...commandInput,
+        mutationType: 'stat_change',
+        statDefinition: {...ruleset.statDefinitions[0], type: 'boolean'}
+      })
+    ).toMatchObject({delta: true});
+    expect(
+      buildCharacterSheetMutationCommand({
+        ...commandInput,
+        mutationType: 'stat_set',
+        statDefinition: {...ruleset.statDefinitions[0], type: 'text'}
+      })
+    ).toMatchObject({value: 'focused'});
+  });
+
+  it('normalizes named status, inventory, equipment, and location commands', () => {
+    expect(
+      buildCharacterSheetMutationCommand({...commandInput, mutationType: 'status_apply'})
+    ).toMatchObject({type: 'status_apply', statusName: 'Inspired'});
+    expect(
+      buildCharacterSheetMutationCommand({
+        ...commandInput,
+        mutationType: 'inventory_consume',
+        quantity: '0'
+      })
+    ).toMatchObject({type: 'inventory_consume', itemName: 'Potion', quantity: 1});
+    expect(
+      buildCharacterSheetMutationCommand({
+        ...commandInput,
+        mutationType: 'inventory_equip'
+      })
+    ).toMatchObject({type: 'inventory_equip', itemName: 'Potion'});
+    expect(
+      buildCharacterSheetMutationCommand({...commandInput, mutationType: 'location_set'})
+    ).toMatchObject({type: 'location_set', locationName: 'Old Keep'});
+  });
+
+  it('rejects commands with missing required form values', () => {
+    expect(buildCharacterSheetMutationCommand({...commandInput, actorId: ' '})).toBeNull();
+    expect(
+      buildCharacterSheetMutationCommand({...commandInput, resourceDefinition: null})
+    ).toBeNull();
+    expect(
+      buildCharacterSheetMutationCommand({
+        ...commandInput,
+        mutationType: 'stat_change',
+        statDefinition: null
+      })
+    ).toBeNull();
+    expect(
+      buildCharacterSheetMutationCommand({
+        ...commandInput,
+        mutationType: 'status_remove',
+        statusName: ' '
+      })
+    ).toBeNull();
   });
 });
