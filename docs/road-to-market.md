@@ -110,7 +110,7 @@ and required revisit point, `WIP`, `Done <commit>`.
 | 3.1 | WorkspaceRoute drawer/context extraction | 3 | M | Done `01eb811` — `WorkspaceRoute` 3,430→2,800; responsive drawer state/layout, focus restoration, context actions, system history, and UI selectors extracted; lint; 267 web + 6 engine + 12 UI tests; web/desktop builds; Cypress 43/43 |
 | 3.2 | WorkspaceRoute to <2,000 lines | 3 | M | Done `ef14984` — `WorkspaceRoute` 2,800→1,976; review refresh plus corkboard, scratchpad, export, memory, and status-block modal presentation extracted; lint; 267 web + 6 engine + 12 UI tests; web/desktop builds; Cypress 43/43 |
 | 3.3 | WorldBibleRoute to <2,000 lines | 3 | M | Done `b041561` — `WorldBibleRoute` 3,016→1,957; category rail, import workspace, record AI helper, character health, and entity list extracted; `useWorldBibleImports` unchanged at 1,631; lint; 267 web + 6 engine + 12 UI tests; web/desktop builds; Cypress 43/43 |
-| 3.4 | CharacterSheetsRoute to <2,000 lines | 3 | S | WIP |
+| 3.4 | CharacterSheetsRoute to <2,000 lines | 3 | S | Done `5f0560d` — `CharacterSheetsRoute` 2,294→1,956; mutation form state, preview/replay derivation, and history orchestration extracted to a 273-line hook; pure command construction moved to the tested character service; lint; 271 web + 6 engine + 12 UI tests; web/desktop builds; Cypress 43/43 |
 | 3.5 | ESLint 10 group upgrade | 3 | M | — |
 | 3.6 | Vite 8 + plugin-react 6 | 3 | S | — |
 | 3.7 | Cypress 15 | 3 | S | — |
