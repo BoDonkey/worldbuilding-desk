@@ -109,7 +109,7 @@ and required revisit point, `WIP`, `Done <commit>`.
 | 2.9 | UI close-out audit | 2 | XS | Done `6c32b22` — Slices 2.1–2.8 verified with no open gaps; lint; 259 web + 6 engine + 12 UI tests; web/desktop builds; Cypress 43/43; dialog/theme/filter/nav browser checks |
 | 3.1 | WorkspaceRoute drawer/context extraction | 3 | M | Done `01eb811` — `WorkspaceRoute` 3,430→2,800; responsive drawer state/layout, focus restoration, context actions, system history, and UI selectors extracted; lint; 267 web + 6 engine + 12 UI tests; web/desktop builds; Cypress 43/43 |
 | 3.2 | WorkspaceRoute to <2,000 lines | 3 | M | Done `ef14984` — `WorkspaceRoute` 2,800→1,976; review refresh plus corkboard, scratchpad, export, memory, and status-block modal presentation extracted; lint; 267 web + 6 engine + 12 UI tests; web/desktop builds; Cypress 43/43 |
-| 3.3 | WorldBibleRoute to <2,000 lines | 3 | M | — |
+| 3.3 | WorldBibleRoute to <2,000 lines | 3 | M | WIP |
 | 3.4 | CharacterSheetsRoute to <2,000 lines | 3 | S | — |
 | 3.5 | ESLint 10 group upgrade | 3 | M | — |
 | 3.6 | Vite 8 + plugin-react 6 | 3 | S | — |

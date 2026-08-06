@@ -6,25 +6,22 @@ import {useFocusTrap} from '../hooks/useFocusTrap';
 import {useConfirmDialog} from '../hooks/useConfirmDialog';
 import {useAppStore} from '../store/appStore';
 import {getProjectCapabilities} from '../projectMode';
-import type {
-  CanonicalFact,
-  EntityCategory,
-  WorldEntity
-} from '../entityTypes';
+import type {EntityCategory, WorldEntity} from '../entityTypes';
 import {ProjectScratchpadButton} from '../components/ProjectScratchpadButton';
 import {PageHeader} from '../components/PageHeader';
-import {AIAssistant} from '../components/AIAssistant/AIAssistant';
 import {CategoryManager} from '../components/WorldBible/CategoryManager';
 import {EntityFieldEditor} from '../components/WorldBible/EntityFieldEditor';
-import {ImportSectionPanel} from '../components/WorldBible/ImportSectionPanel';
+import {WorldBibleImportWorkspace} from '../components/WorldBible/WorldBibleImportWorkspace';
+import {WorldBibleEntityList} from '../components/WorldBible/WorldBibleEntityList';
+import {WorldBibleRecordAiHelper} from '../components/WorldBible/WorldBibleRecordAiHelper';
+import {WorldBibleCharacterHealth} from '../components/WorldBible/WorldBibleCharacterHealth';
+import {WorldBibleCategoryRail} from '../components/WorldBible/WorldBibleCategoryRail';
 import styles from '../assets/components/WorldBibleRoute.module.css';
 import type {MemoryEntry} from '../services/shodh/ShodhMemoryService';
 import {ShodhMemoryPanel} from '../components/ShodhMemoryPanel';
 import {useWorldBibleReview} from '../hooks/useWorldBibleReview';
 import {
-  useWorldBibleImports,
-  type ImportMode,
-  type JsonImportConflictResolution
+  useWorldBibleImports
 } from '../hooks/useWorldBibleImports';
 import {useWorldBibleEntityActions} from '../hooks/useWorldBibleEntityActions';
 import {
@@ -42,9 +39,7 @@ import {
 import {
   getReviewResolutionLabel
 } from '../services/worldBible/worldBibleReviewHelpers';
-import {buildCanonicalFactSummary} from '../services/lore/canonicalFactActions';
 import {
-  buildEntityCardSummary,
   CHARACTER_AUTHORING_FIELD_KEYS,
   CHARACTER_IDENTITY_FIELD_KEYS,
   CHARACTER_NOTES_FIELD,
@@ -53,9 +48,7 @@ import {
 import {useWorldBibleProjectData} from '../hooks/useWorldBibleProjectData';
 import {useWorldBibleSelectedEntity} from '../hooks/useWorldBibleSelectedEntity';
 import {
-  deriveAiSectionLabel,
-  useWorldBibleAuthoringAssistant,
-  type AiHelperActionTarget
+  useWorldBibleAuthoringAssistant
 } from '../hooks/useWorldBibleAuthoringAssistant';
 import {
   useWorldBibleRecordResolution,
@@ -77,9 +70,6 @@ const getPreferredImportField = (
 
 const getWorldBibleRailStorageKey = (projectId: string) =>
   `wbd:world-bible:category-rail-collapsed:${projectId}`;
-
-const formatFactValue = (fact: CanonicalFact): string =>
-  typeof fact.value === 'string' ? fact.value : `${fact.value.label}: ${fact.value.value}`;
 
 const getFieldTemplateValue = (field: EntityCategory['fieldSchema'][number]): unknown => {
   if (field.type === 'checkbox') return false;
@@ -254,34 +244,7 @@ function WorldBibleRoute() {
     () => new Map(categories.map((category) => [category.id, category])),
     [categories]
   );
-  const {
-    isImportingEntities,
-    isApplyingImports,
-    importDrafts,
-    clearImportDrafts,
-    isImportingJson,
-    isApplyingJsonImport,
-    jsonImportSession,
-    jsonImportConflictResolutions,
-    activeJsonCategory,
-    preparedJsonRows,
-    jsonImportValidCount,
-    jsonImportConflictCount,
-    unresolvedJsonConflictCount,
-    handleImportEntities,
-    preparePastedImportDraft,
-    updateImportDraft,
-    updateImportSectionAction,
-    applyImportDrafts,
-    applyJsonImport,
-    handleJsonImportFile,
-    handleJsonCategoryChange,
-    handleJsonNameKeyChange,
-    handleJsonModeChange,
-    handleJsonFieldMapChange,
-    handleJsonConflictResolutionChange,
-    clearJsonImportSession
-  } = useWorldBibleImports({
+  const worldBibleImports = useWorldBibleImports({
     activeProjectId: activeProject?.id ?? null,
     activeCategory: activeCategory ?? null,
     categories,
@@ -315,6 +278,16 @@ function WorldBibleRoute() {
     },
     onEntitiesChanged: refreshMemories
   });
+  const {
+    isImportingEntities,
+    importDrafts,
+    isImportingJson,
+    handleImportEntities,
+    preparePastedImportDraft,
+    updateImportDraft,
+    applyImportDrafts,
+    handleJsonImportFile,
+  } = worldBibleImports;
   const currentEntityMemories = editingId
     ? memories.filter((memory) => memory.documentId === editingId)
     : [];
@@ -388,32 +361,7 @@ function WorldBibleRoute() {
     navigate,
     setFeedback
   });
-  const {
-    isRecordAiHelperOpen,
-    setIsRecordAiHelperOpen,
-    isImportAiHelperOpen,
-    setIsImportAiHelperOpen,
-    aiHelperSelectedText,
-    setAiHelperSelectedText,
-    aiHelperActionTarget,
-    setAiHelperActionTarget,
-    aiHelperNewSectionLabel,
-    setAiHelperNewSectionLabel,
-    aiHelperProposal,
-    setAiHelperProposal,
-    newCharacterSectionName,
-    setNewCharacterSectionName,
-    activeCategoryRecordLabel,
-    currentRecordAiContext,
-    aiHelperApplyTargets,
-    importAiContext,
-    currentCharacterLabel,
-    handleDraftAiHelperProposal,
-    handleConfirmAiHelperProposal,
-    detectedSectionImportDraftCount,
-    handleUseDetectedSectionsForImportDrafts,
-    handleAddCharacterSection
-  } = useWorldBibleAuthoringAssistant({
+  const worldBibleAuthoring = useWorldBibleAuthoringAssistant({
     activeCategory: activeCategory ?? null,
     setCategories,
     selectedEntity,
@@ -426,6 +374,20 @@ function WorldBibleRoute() {
     updateImportDraft,
     setFeedback
   });
+  const {
+    isRecordAiHelperOpen,
+    setIsRecordAiHelperOpen,
+    setIsImportAiHelperOpen,
+    setAiHelperSelectedText,
+    setAiHelperActionTarget,
+    setAiHelperNewSectionLabel,
+    setAiHelperProposal,
+    newCharacterSectionName,
+    setNewCharacterSectionName,
+    activeCategoryRecordLabel,
+    currentCharacterLabel,
+    handleAddCharacterSection
+  } = worldBibleAuthoring;
   const isFocusedCharacterTask = activeCategoryIsCharacterLike
     ? Boolean(editingId || characterAuthoringMode !== 'idle')
     : false;
@@ -916,100 +878,18 @@ function WorldBibleRoute() {
           isCategoryRailCollapsed ? styles.routeShellRailCollapsed : ''
         }`}
       >
-        {!isCategoryRailCollapsed && (
-          <aside className={styles.categoryRail} aria-label='World Bible categories'>
-            <div className={styles.categoryRailHeader}>
-              <h2>Categories</h2>
-              <span className={styles.categoryRailCount}>{categories.length}</span>
-            </div>
-            <div className={styles.tabNav}>
-              {categories.map((cat) => (
-                <button
-                  key={cat.id}
-                  type='button'
-                  onClick={() => handleSelectCategoryTab(cat.id)}
-                  className={`${styles.tab} ${
-                    viewMode === 'category' && activeTab === cat.id ? styles.active : ''
-                  }`}
-                >
-                  {cat.name}
-                </button>
-              ))}
-              <button
-                onClick={() => setShowCategoryManager(!showCategoryManager)}
-                className={styles.manageButton}
-              >
-                {showCategoryManager ? 'Close' : 'Manage Categories'}
-              </button>
-            </div>
-            <div className={styles.categoryRailSection}>
-              <h3>Templates</h3>
-              <div className={styles.railActions}>
-                <button
-                  type='button'
-                  onClick={() => importInputRef.current?.click()}
-                  disabled={isImportingEntities}
-                >
-                  {isImportingEntities ? 'Importing...' : 'Import Docs'}
-                </button>
-                <button
-                  type='button'
-                  onClick={() => jsonImportInputRef.current?.click()}
-                  disabled={isImportingJson}
-                >
-                  {isImportingJson ? 'Loading JSON...' : 'Import JSON'}
-                </button>
-                <button type='button' onClick={handleDownloadJsonTemplate}>
-                  Download JSON Template
-                </button>
-                <button type='button' onClick={handleDownloadJsonSample}>
-                  Download JSON Sample
-                </button>
-              </div>
-            </div>
-            <details className={styles.railHelpPanel}>
-              <summary>Onboarding</summary>
-              <div className={styles.helpBody}>
-                <p>
-                  Start here when you need stable canon before writing. Add only the records
-                  you need for the next scene, then expand later.
-                </p>
-                <p>
-                  Fast path: choose a category, create a record, and capture names,
-                  alternative names, status, and one or two high-value facts the workspace
-                  should recognize.
-                </p>
-                <p>
-                  Import path: use the import cards in the active category, then review
-                  anything marked as needing completion.
-                </p>
-              </div>
-            </details>
-            <details className={styles.railHelpPanel}>
-              <summary>Workflow Help</summary>
-              <div className={styles.helpBody}>
-                <p>
-                  Step 1: pick or create categories, then choose the active tab.
-                </p>
-                <p>
-                  Step 2: add entries manually or import docs/JSON in batch.
-                </p>
-                <p>
-                  Step 3: review/edit entries and optionally link to Compendium.
-                </p>
-                <p>
-                  Step 4: for multi-project canon, promote key entries or sync parent canon.
-                </p>
-                <p>
-                  Import JSON accepts: <code>[{"{...}"}]</code>,{' '}
-                  <code>{"{"}entries: [{"{...}"}]{"}"}</code>,{' '}
-                  <code>{"{"}items: [{"{...}"}]{"}"}</code>,{' '}
-                  <code>{"{"}rows: [{"{...}"}]{"}"}</code>.
-                </p>
-              </div>
-            </details>
-          </aside>
-        )}
+        <WorldBibleCategoryRail
+          isCollapsed={isCategoryRailCollapsed} categories={categories}
+          viewMode={viewMode} activeTab={activeTab}
+          showCategoryManager={showCategoryManager}
+          isImportingEntities={isImportingEntities} isImportingJson={isImportingJson}
+          importInputRef={importInputRef} jsonImportInputRef={jsonImportInputRef}
+          onSelectCategory={handleSelectCategoryTab}
+          onToggleCategoryManager={() => setShowCategoryManager((value) => !value)}
+          onDownloadJsonTemplate={handleDownloadJsonTemplate}
+          onDownloadJsonSample={handleDownloadJsonSample}
+        />
+
         <div className={styles.mainColumn}>
       {feedback && (
         <p
@@ -1113,506 +993,20 @@ function WorldBibleRoute() {
         </section>
       )}
 
-      {activeCategory && isPasteImportOpen && (
-        <section className={styles.characterImportPanel} aria-label='Paste import text'>
-          <div className={styles.importPanelHeader}>
-            <div>
-              <h2>Paste {activeCategory.name.replace(/s$/i, '')}</h2>
-              <p className={styles.importSummary}>
-                Paste a dossier or notes. The shared import preview will classify headings
-                before anything is saved.
-              </p>
-            </div>
-            <div className={styles.importPanelActions}>
-              <button
-                type='button'
-                onClick={() => {
-                  setIsPasteImportOpen(false);
-                  setPastedImportText('');
-                }}
-              >
-                Close
-              </button>
-            </div>
-          </div>
-          <label className={styles.characterImportLabel}>
-            Import text
-            <textarea
-              value={pastedImportText}
-              onChange={(event) => setPastedImportText(event.target.value)}
-              rows={10}
-              placeholder={'Name: Mira Voss\n\nBackground:\n...'}
-            />
-          </label>
-          <div className={styles.importPanelActions}>
-            <button type='button' onClick={handlePreparePastedImportDraft}>
-              Review Paste
-            </button>
-          </div>
-        </section>
-      )}
+      <WorldBibleImportWorkspace
+        activeProject={activeProject} projectSettings={projectSettings}
+        activeCategory={activeCategory} categories={categories} categoryById={categoryById}
+        imports={worldBibleImports} authoring={worldBibleAuthoring}
+        isPasteImportOpen={isPasteImportOpen} setIsPasteImportOpen={setIsPasteImportOpen}
+        pastedImportText={pastedImportText} setPastedImportText={setPastedImportText}
+        handlePreparePastedImportDraft={handlePreparePastedImportDraft}
+        richImportDraftCount={richImportDraftCount}
+        activeImportPreviewDraft={activeImportPreviewDraft}
+        importPreviewDialogRef={importPreviewDialogRef}
+        setActiveImportPreviewId={setActiveImportPreviewId}
+        handleApplyImportDrafts={handleApplyImportDrafts}
+      />
 
-      {importDrafts.length > 0 && (
-        <section className={styles.importPanel}>
-          <div className={styles.importPanelHeader}>
-            <h2>Import Preview</h2>
-            <div className={styles.importPanelActions}>
-              <button
-                type='button'
-                onClick={() => setIsImportAiHelperOpen((value) => !value)}
-                aria-expanded={isImportAiHelperOpen}
-              >
-                {isImportAiHelperOpen ? 'Hide AI helper' : 'AI helper'}
-              </button>
-              <button
-                type='button'
-                onClick={() => void handleApplyImportDrafts()}
-                disabled={isApplyingImports}
-              >
-                {isApplyingImports ? 'Importing...' : 'Apply Imports'}
-              </button>
-              <button
-                type='button'
-                onClick={clearImportDrafts}
-                disabled={isApplyingImports}
-              >
-                Clear
-              </button>
-            </div>
-          </div>
-          <p className={styles.importSummary}>
-            {importDrafts.filter((draft) => draft.include && !draft.parseError).length}{' '}
-            selected · {importDrafts.filter((draft) => draft.parseError).length} with
-            errors · {richImportDraftCount} targeting rich-text lore fields
-          </p>
-          {isImportAiHelperOpen && (
-            <section className={styles.aiHelperPanel} aria-label='Import AI helper'>
-              <div className={styles.aiHelperHeader}>
-                <div>
-                  <strong>Import AI helper</strong>
-                  <p>
-                    Ask about field mapping, cleanup, duplicate handling, or whether
-                    these drafts should become one record or several.
-                  </p>
-                </div>
-                <button
-                  type='button'
-                  onClick={() => setIsImportAiHelperOpen(false)}
-                >
-                  Close
-                </button>
-              </div>
-              <div className={styles.importHelperActions}>
-                <div>
-                  <strong>Apply structure to pending imports</strong>
-                  <p>
-                    The helper can advise, but field changes are staged through the
-                    import draft before anything is saved.
-                  </p>
-                </div>
-                <button
-                  type='button'
-                  onClick={handleUseDetectedSectionsForImportDrafts}
-                  disabled={detectedSectionImportDraftCount === 0 || isApplyingImports}
-                >
-                  Use detected headings
-                </button>
-                <span>
-                  {detectedSectionImportDraftCount > 0
-                    ? `${detectedSectionImportDraftCount} selected draft${
-                        detectedSectionImportDraftCount === 1 ? '' : 's'
-                      } with headings`
-                    : 'No selected drafts have detected headings'}
-                </span>
-              </div>
-              <AIAssistant
-                projectId={activeProject.id}
-                aiConfig={projectSettings?.aiSettings}
-                projectMode={projectSettings?.projectMode}
-                context={{
-                  type: 'world-bible',
-                  id: activeCategory?.id ?? activeProject.id,
-                  selectedText: importAiContext
-                }}
-                showContextPreview={false}
-              />
-            </section>
-          )}
-          <ul className={styles.importDraftList}>
-            {importDrafts.map((draft) => {
-              const category = categoryById.get(draft.categoryId) ?? null;
-              const preferredField = category ? getPreferredImportField(category) : null;
-              const landsAsRichText = preferredField?.type === 'textarea';
-              const sourceKind = draft.fileName.toLowerCase().endsWith('.html') ||
-                draft.fileName.toLowerCase().endsWith('.htm')
-                ? 'HTML'
-                : draft.fileName.toLowerCase().endsWith('.md') ||
-                    draft.fileName.toLowerCase().endsWith('.markdown')
-                  ? 'Markdown'
-                  : draft.fileName.toLowerCase().endsWith('.docx')
-                    ? 'DOCX'
-                    : 'Text';
-              return (
-                <li key={draft.id} className={styles.importDraftCard}>
-                  <div className={styles.importDraftTop}>
-                    <label>
-                      <input
-                        type='checkbox'
-                        checked={draft.include}
-                        disabled={Boolean(draft.parseError) || isApplyingImports}
-                        onChange={(e) =>
-                          updateImportDraft(draft.id, {include: e.target.checked})
-                        }
-                      />
-                      <span>{draft.fileName}</span>
-                    </label>
-                    <div className={styles.importChipRow}>
-                      <span className={styles.importChip}>{sourceKind}</span>
-                      {preferredField && (
-                        <span
-                          className={`${styles.importChip} ${
-                            landsAsRichText ? styles.importChipRich : styles.importChipPlain
-                          }`}
-                        >
-                          {landsAsRichText
-                            ? `Rich text -> ${preferredField.label}`
-                            : `Plain field -> ${preferredField.label}`}
-                        </span>
-                      )}
-                      {draft.detectedSections && draft.detectedSections.length > 0 && (
-                        <span className={`${styles.importChip} ${styles.importChipRich}`}>
-                          {draft.detectedSections.length} headings detected
-                        </span>
-                      )}
-                      <span className={styles.importChip}>
-                        {draft.mode === 'upsert' ? 'Update by name' : 'Create new'}
-                      </span>
-                    </div>
-                  </div>
-                  <div className={styles.importDraftFields}>
-                    <label>
-                      Entry Name
-                      <input
-                        type='text'
-                        value={draft.name}
-                        disabled={Boolean(draft.parseError) || isApplyingImports}
-                        onChange={(e) =>
-                          updateImportDraft(draft.id, {name: e.target.value})
-                        }
-                      />
-                    </label>
-                    <label>
-                      Category
-                      <select
-                        value={draft.categoryId}
-                        disabled={Boolean(draft.parseError) || isApplyingImports}
-                        onChange={(e) =>
-                          updateImportDraft(draft.id, {categoryId: e.target.value})
-                        }
-                      >
-                        {categories.map((categoryOption) => (
-                          <option key={categoryOption.id} value={categoryOption.id}>
-                            {categoryOption.name}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                    <label>
-                      Behavior
-                      <select
-                        value={draft.mode}
-                        disabled={Boolean(draft.parseError) || isApplyingImports}
-                        onChange={(e) =>
-                          updateImportDraft(draft.id, {mode: e.target.value as ImportMode})
-                        }
-                      >
-                        <option value='create'>Create New</option>
-                        <option value='upsert'>Update by Name</option>
-                      </select>
-                    </label>
-                  </div>
-                  {draft.parseError ? (
-                    <p className={styles.importError}>{draft.parseError}</p>
-                  ) : (
-                    <>
-                      <ImportSectionPanel
-                        draft={draft}
-                        isApplyingImports={isApplyingImports}
-                        onUpdateDraft={updateImportDraft}
-                        onUpdateSectionAction={updateImportSectionAction}
-                      />
-                      <div className={styles.importDraftActions}>
-                        <button
-                          type='button'
-                          className={styles.importPreviewButton}
-                          onClick={() =>
-                            void handleApplyImportDrafts({
-                              draftIds: [draft.id],
-                              openFirstImported: true
-                            })
-                          }
-                          disabled={isApplyingImports}
-                        >
-                          Import and open
-                        </button>
-                        {draft.richTextHtml && (
-                          <button
-                            type='button'
-                            className={styles.importPreviewButton}
-                            onClick={() => setActiveImportPreviewId(draft.id)}
-                            disabled={isApplyingImports}
-                          >
-                            Preview source document
-                          </button>
-                        )}
-                      </div>
-                      <p className={styles.importPreview}>{draft.preview}</p>
-                      <p className={styles.importDraftNote}>
-                        {draft.useDetectedSections && (draft.detectedSections?.length ?? 0) > 0
-                          ? 'Description keeps intro and record-section headings. Only reusable field headings change the category schema.'
-                          : landsAsRichText
-                            ? 'This import will preserve richer prose structure in the target lore field.'
-                            : 'This import will land as plain text in the target field.'}
-                      </p>
-                    </>
-                  )}
-                </li>
-              );
-            })}
-          </ul>
-        </section>
-      )}
-
-      {activeImportPreviewDraft && (() => {
-        const previewCategory = categoryById.get(activeImportPreviewDraft.categoryId) ?? null;
-        const previewField = previewCategory ? getPreferredImportField(previewCategory) : null;
-        const previewSourceKind =
-          activeImportPreviewDraft.fileName.toLowerCase().endsWith('.html') ||
-          activeImportPreviewDraft.fileName.toLowerCase().endsWith('.htm')
-            ? 'HTML'
-            : activeImportPreviewDraft.fileName.toLowerCase().endsWith('.md') ||
-                activeImportPreviewDraft.fileName.toLowerCase().endsWith('.markdown')
-              ? 'Markdown'
-              : activeImportPreviewDraft.fileName.toLowerCase().endsWith('.docx')
-                ? 'DOCX'
-                : 'Text';
-        return (
-          <div
-            ref={importPreviewDialogRef}
-            className={styles.importPreviewOverlay}
-            role='dialog'
-            aria-modal='true'
-            aria-label='Import document preview'
-            onClick={() => setActiveImportPreviewId(null)}
-          >
-            <div
-              className={styles.importPreviewCard}
-              onClick={(event) => event.stopPropagation()}
-            >
-              <div className={styles.importPreviewHeader}>
-                <div>
-                  <div className={styles.importPreviewEyebrow}>Import document preview</div>
-                  <h3 className={styles.importPreviewTitle}>
-                    {activeImportPreviewDraft.name || activeImportPreviewDraft.fileName}
-                  </h3>
-                  <div className={styles.importChipRow}>
-                    <span className={styles.importChip}>{previewSourceKind}</span>
-                    {previewField && (
-                      <span
-                        className={`${styles.importChip} ${
-                          previewField.type === 'textarea'
-                            ? styles.importChipRich
-                            : styles.importChipPlain
-                        }`}
-                      >
-                        {previewField.type === 'textarea'
-                          ? `Rich text -> ${previewField.label}`
-                          : `Plain field -> ${previewField.label}`}
-                      </span>
-                    )}
-                    <span className={styles.importChip}>{activeImportPreviewDraft.fileName}</span>
-                  </div>
-                </div>
-                <button
-                  type='button'
-                  className={styles.importPreviewButton}
-                  onClick={() =>
-                    void handleApplyImportDrafts({
-                      draftIds: [activeImportPreviewDraft.id],
-                      openFirstImported: true
-                    })
-                  }
-                  disabled={isApplyingImports}
-                >
-                  Import and open
-                </button>
-                <button
-                  type='button'
-                  className={styles.importPreviewButton}
-                  onClick={() => setActiveImportPreviewId(null)}
-                  disabled={isApplyingImports}
-                >
-                  Close preview
-                </button>
-              </div>
-              <div className={styles.importPreviewDocument}>
-                <article
-                  className={styles.importPreviewContent}
-                  dangerouslySetInnerHTML={{
-                    __html:
-                      activeImportPreviewDraft.richTextHtml ||
-                      normalizeRichTextValue(activeImportPreviewDraft.text)
-                  }}
-                />
-              </div>
-            </div>
-          </div>
-        );
-      })()}
-
-      {jsonImportSession && (
-        <section className={styles.importPanel}>
-          <p className={styles.wizardStep}>
-            Step 2 of 3: map keys and resolve validation errors.
-          </p>
-          <div className={styles.importPanelHeader}>
-            <h2>JSON Import Mapping</h2>
-            <div className={styles.importPanelActions}>
-              <button
-                type='button'
-                onClick={() => void applyJsonImport()}
-                disabled={isApplyingJsonImport}
-              >
-                {isApplyingJsonImport ? 'Importing...' : 'Apply JSON Import'}
-              </button>
-              <button
-                type='button'
-                onClick={clearJsonImportSession}
-                disabled={isApplyingJsonImport}
-              >
-                Clear
-              </button>
-            </div>
-          </div>
-          <p className={styles.importSummary}>
-            File: {jsonImportSession.fileName} · Rows: {jsonImportSession.rows.length} ·
-            Valid: {jsonImportValidCount} · Invalid:{' '}
-            {preparedJsonRows.length - jsonImportValidCount} · Conflicts:{' '}
-            {jsonImportConflictCount}
-          </p>
-          {jsonImportConflictCount > 0 && (
-            <p className={styles.importError}>
-              Resolve duplicate-name conflicts before applying import. Unreviewed conflicts:{' '}
-              {unresolvedJsonConflictCount}
-            </p>
-          )}
-          <div className={styles.importDraftFields}>
-            <label>
-              Category
-              <select
-                value={jsonImportSession.categoryId}
-                onChange={(e) => handleJsonCategoryChange(e.target.value)}
-                disabled={isApplyingJsonImport}
-              >
-                {categories.map((category) => (
-                  <option key={category.id} value={category.id}>
-                    {category.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              Row Name Key
-              <select
-                value={jsonImportSession.nameKey}
-                onChange={(e) => handleJsonNameKeyChange(e.target.value)}
-                disabled={isApplyingJsonImport}
-              >
-                <option value=''>-- Select key --</option>
-                {jsonImportSession.keys.map((key) => (
-                  <option key={key} value={key}>
-                    {key}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              Behavior
-              <select
-                value={jsonImportSession.mode}
-                onChange={(e) => handleJsonModeChange(e.target.value as ImportMode)}
-                disabled={isApplyingJsonImport}
-              >
-                <option value='create'>Create New</option>
-                <option value='upsert'>Update by Name</option>
-              </select>
-            </label>
-          </div>
-
-          {activeJsonCategory && (
-            <div className={styles.mappingGrid}>
-              {activeJsonCategory.fieldSchema.map((field) => (
-                <label key={field.key}>
-                  Map to {field.label}
-                  <select
-                    value={jsonImportSession.fieldMap[field.key] ?? ''}
-                    onChange={(e) =>
-                      handleJsonFieldMapChange(field.key, e.target.value)
-                    }
-                    disabled={isApplyingJsonImport}
-                  >
-                    <option value=''>-- Unmapped --</option>
-                    {jsonImportSession.keys.map((key) => (
-                      <option key={`${field.key}:${key}`} value={key}>
-                        {key}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              ))}
-            </div>
-          )}
-
-          <ul className={styles.importDraftList}>
-            {preparedJsonRows.slice(0, 30).map((row) => (
-              <li key={`json-row-${row.rowIndex}`} className={styles.importDraftCard}>
-                <div className={styles.importDraftTop}>
-                  <strong>Row {row.rowIndex}</strong>
-                </div>
-                <p className={styles.importPreview}>
-                  {row.name ? row.name : '(no name)'}
-                </p>
-                {row.errors.length > 0 && (
-                  <p className={styles.importError}>{row.errors.join(' ')}</p>
-                )}
-                {row.conflict && (
-                  <>
-                    <p className={styles.importError}>{row.conflict.message}</p>
-                    <label>
-                      Conflict resolution
-                      <select
-                        value={jsonImportConflictResolutions[row.rowIndex] ?? ''}
-                        onChange={(e) =>
-                          handleJsonConflictResolutionChange(
-                            row.rowIndex,
-                            e.target.value as JsonImportConflictResolution
-                          )
-                        }
-                        disabled={isApplyingJsonImport}
-                      >
-                        <option value=''>-- Choose resolution --</option>
-                        <option value='skip'>Skip Row</option>
-                        <option value='upsert'>Update by Name</option>
-                        <option value='create'>Create Duplicate</option>
-                      </select>
-                    </label>
-                  </>
-                )}
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
 
       {showCategoryManager && (
         <CategoryManager
@@ -1650,136 +1044,12 @@ function WorldBibleRoute() {
                   {isRecordAiHelperOpen ? 'Hide AI helper' : 'AI helper'}
                 </button>
               </div>
-              {isRecordAiHelperOpen && (
-                <section className={styles.aiHelperPanel} aria-label='World Bible AI helper'>
-                  <div className={styles.aiHelperHeader}>
-                    <div>
-                      <strong>AI helper</strong>
-                      <p>
-                        Ask for names, descriptions, field ideas, revisions, cleanup,
-                        or new sections. Highlight assistant text, preview an action,
-                        then confirm it.
-                      </p>
-                    </div>
-                    <button
-                      type='button'
-                      onClick={() => {
-                        setAiHelperSelectedText('');
-                        setAiHelperNewSectionLabel('');
-                        setAiHelperProposal(null);
-                        setIsRecordAiHelperOpen(false);
-                      }}
-                    >
-                      Close
-                    </button>
-                  </div>
-                  <div className={styles.aiHelperApplyBar}>
-                    <label>
-                      Use selection as
-                      <select
-                        value={aiHelperActionTarget}
-                        onChange={(event) => {
-                          setAiHelperActionTarget(event.target.value as AiHelperActionTarget);
-                          setAiHelperProposal(null);
-                        }}
-                      >
-                        {aiHelperApplyTargets.map((target) => (
-                          <option key={target.value} value={target.value}>
-                            {target.label}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                    {aiHelperActionTarget === 'new-section' && (
-                      <label>
-                        Section label
-                        <input
-                          type='text'
-                          value={aiHelperNewSectionLabel}
-                          onChange={(event) => {
-                            setAiHelperNewSectionLabel(event.target.value);
-                            setAiHelperProposal(null);
-                          }}
-                          placeholder={
-                            deriveAiSectionLabel(aiHelperSelectedText) || 'e.g., Customs'
-                          }
-                        />
-                      </label>
-                    )}
-                    <div
-                      className={`${styles.aiHelperSelectionPreview} ${
-                        aiHelperActionTarget === 'new-section'
-                          ? styles.aiHelperSelectionPreviewWithSection
-                          : ''
-                      }`}
-                    >
-                      {aiHelperSelectedText.trim() || 'Highlight text in an assistant response'}
-                    </div>
-                    <button
-                      type='button'
-                      onClick={handleDraftAiHelperProposal}
-                      disabled={!aiHelperSelectedText.trim()}
-                    >
-                      Preview action
-                    </button>
-                  </div>
-                  {aiHelperProposal && (
-                    <div className={styles.aiHelperProposalCard} role='status'>
-                      <div>
-                        <span className={styles.aiHelperProposalEyebrow}>
-                          Pending action
-                        </span>
-                        <strong>
-                          {aiHelperProposal.kind === 'name' &&
-                            `Set ${activeCategoryRecordLabel} name`}
-                          {aiHelperProposal.kind === 'aliases' &&
-                            'Add alternative name'}
-                          {aiHelperProposal.kind === 'field' &&
-                            `${
-                              aiHelperProposal.fieldType === 'textarea'
-                                ? 'Append to'
-                                : 'Set'
-                            } ${aiHelperProposal.fieldLabel}`}
-                          {aiHelperProposal.kind === 'new-section' &&
-                            `Create section "${aiHelperProposal.label}"`}
-                        </strong>
-                      </div>
-                      <p>{aiHelperProposal.text}</p>
-                      <div className={styles.aiHelperProposalActions}>
-                        <button
-                          type='button'
-                          className={styles.secondaryButton}
-                          onClick={() => setAiHelperProposal(null)}
-                        >
-                          Dismiss
-                        </button>
-                        <button
-                          type='button'
-                          className={styles.primaryButton}
-                          onClick={() => void handleConfirmAiHelperProposal()}
-                        >
-                          Confirm action
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                  <AIAssistant
-                    projectId={activeProject.id}
-                    aiConfig={projectSettings?.aiSettings}
-                    projectMode={projectSettings?.projectMode}
-                    context={{
-                      type: 'world-bible',
-                      id: editingId ?? activeCategory.id,
-                      selectedText: currentRecordAiContext
-                    }}
-                    onAssistantSelectionChange={(selectedText) => {
-                      setAiHelperSelectedText(selectedText);
-                      setAiHelperProposal(null);
-                    }}
-                    showContextPreview={false}
-                  />
-                </section>
-              )}
+              <WorldBibleRecordAiHelper
+                activeProject={activeProject} projectSettings={projectSettings}
+                activeCategory={activeCategory} editingId={editingId}
+                authoring={worldBibleAuthoring}
+              />
+
               {activeCategoryIsCharacterLike && (
                 <div className={styles.reviewHint}>
                   This World Bible record is the canonical character profile. Resolve
@@ -2172,181 +1442,23 @@ function WorldBibleRoute() {
 
                   {characterCustomFields.map(renderEntityField)}
 
-                  {selectedEntity && (
-                    <section
-                      className={styles.characterHealthPanel}
-                      aria-label='Character detail health'
-                    >
-                      <div className={styles.characterHealthHeader}>
-                        <div>
-                          <strong>Character detail health</strong>
-                          <span>Canon, source notes, scenes, memory, and state for this character.</span>
-                        </div>
-                        <button
-                          type='button'
-                          onClick={() => void handleCharacterHealthProbe()}
-                          disabled={characterHealthProbeRunning || !ragService}
-                        >
-                          {characterHealthProbeRunning ? 'Searching...' : 'Probe context'}
-                        </button>
-                      </div>
+                  <WorldBibleCharacterHealth
+                    selectedEntity={selectedEntity}
+                    selectedEntityAliases={selectedEntityAliases}
+                    selectedEntityFacts={selectedEntityFacts}
+                    linkedLoreDocumentsForSelectedEntity={linkedLoreDocumentsForSelectedEntity}
+                    selectedEntitySceneMentions={selectedEntitySceneMentions}
+                    selectedEntityStateEvents={selectedEntityStateEvents}
+                    selectedEntityAcceptedStateEventCount={selectedEntityAcceptedStateEventCount}
+                    selectedEntityProposedStateEventCount={selectedEntityProposedStateEventCount}
+                    characterHealthProbeResults={characterHealthProbeResults}
+                    characterHealthProbeRunning={characterHealthProbeRunning}
+                    currentEntityMemories={currentEntityMemories}
+                    canProbe={Boolean(ragService)}
+                    handleCharacterHealthProbe={handleCharacterHealthProbe}
+                  />
 
-                      <div className={styles.characterHealthMetrics}>
-                        <div className={styles.characterHealthMetric}>
-                          <span>Aliases</span>
-                          <strong>{selectedEntityAliases.length}</strong>
-                        </div>
-                        <div className={styles.characterHealthMetric}>
-                          <span>Facts</span>
-                          <strong>{selectedEntityFacts.length}</strong>
-                        </div>
-                        <div className={styles.characterHealthMetric}>
-                          <span>Source notes</span>
-                          <strong>{linkedLoreDocumentsForSelectedEntity.length}</strong>
-                        </div>
-                        <div className={styles.characterHealthMetric}>
-                          <span>Scenes</span>
-                          <strong>{selectedEntitySceneMentions.length}</strong>
-                        </div>
-                        <div className={styles.characterHealthMetric}>
-                          <span>Memories</span>
-                          <strong>{currentEntityMemories.length}</strong>
-                        </div>
-                        <div className={styles.characterHealthMetric}>
-                          <span>State</span>
-                          <strong>{selectedEntityStateEvents.length}</strong>
-                        </div>
-                      </div>
 
-                      <div className={styles.characterHealthColumns}>
-                        <div className={styles.characterHealthCard}>
-                          <strong>Aliases</strong>
-                          {selectedEntityAliases.length > 0 ? (
-                            <div className={styles.characterHealthChipRow}>
-                              {selectedEntityAliases.map((alias) => (
-                                <span key={alias} className={styles.characterHealthChip}>
-                                  {alias}
-                                </span>
-                              ))}
-                            </div>
-                          ) : (
-                            <p>No aliases recorded.</p>
-                          )}
-                        </div>
-
-                        <div className={styles.characterHealthCard}>
-                          <strong>Accepted facts</strong>
-                          {selectedEntityFacts.length > 0 ? (
-                            <ul className={styles.characterHealthList}>
-                              {selectedEntityFacts.slice(0, 5).map((fact) => (
-                                <li key={fact.id} title={buildCanonicalFactSummary(fact)}>
-                                  <span>{fact.factType.replace(/_/g, ' ')}</span>
-                                  <strong>{formatFactValue(fact)}</strong>
-                                  {fact.sourceLoreDocumentTitle && (
-                                    <small>{fact.sourceLoreDocumentTitle}</small>
-                                  )}
-                                </li>
-                              ))}
-                            </ul>
-                          ) : (
-                            <p>No accepted facts yet.</p>
-                          )}
-                        </div>
-
-                        <div className={styles.characterHealthCard}>
-                          <strong>Linked lore docs</strong>
-                          {linkedLoreDocumentsForSelectedEntity.length > 0 ? (
-                            <ul className={styles.characterHealthList}>
-                              {linkedLoreDocumentsForSelectedEntity.slice(0, 5).map(({link, document}) => (
-                                <li key={link.id}>
-                                  <span>{document.title}</span>
-                                  <small>{document.kind.replace(/_/g, ' ')}</small>
-                                </li>
-                              ))}
-                            </ul>
-                          ) : (
-                            <p>No linked lore docs.</p>
-                          )}
-                        </div>
-
-                        <div className={styles.characterHealthCard}>
-                          <strong>Scene mentions</strong>
-                          {selectedEntitySceneMentions.length > 0 ? (
-                            <ul className={styles.characterHealthList}>
-                              {selectedEntitySceneMentions.slice(0, 5).map(({document, mentionCount}) => (
-                                <li key={document.id}>
-                                  <span>{document.title}</span>
-                                  <small>
-                                    {mentionCount} {mentionCount === 1 ? 'mention' : 'mentions'}
-                                  </small>
-                                </li>
-                              ))}
-                            </ul>
-                          ) : (
-                            <p>No scene mentions found.</p>
-                          )}
-                        </div>
-
-                        <div className={styles.characterHealthCard}>
-                          <strong>Shodh memory</strong>
-                          {currentEntityMemories.length > 0 ? (
-                            <ul className={styles.characterHealthList}>
-                              {currentEntityMemories.slice(0, 5).map((memory) => (
-                                <li key={memory.id}>
-                                  <span>{memory.title}</span>
-                                  <small>{memory.tags?.join(', ') || 'memory'}</small>
-                                </li>
-                              ))}
-                            </ul>
-                          ) : (
-                            <p>No memories captured for this record.</p>
-                          )}
-                        </div>
-
-                        <div className={styles.characterHealthCard}>
-                          <strong>State events</strong>
-                          {selectedEntityStateEvents.length > 0 ? (
-                            <>
-                              <div className={styles.characterHealthChipRow}>
-                                <span className={styles.characterHealthChip}>
-                                  {selectedEntityAcceptedStateEventCount} accepted
-                                </span>
-                                <span className={styles.characterHealthChip}>
-                                  {selectedEntityProposedStateEventCount} pending
-                                </span>
-                              </div>
-                              <ul className={styles.characterHealthList}>
-                                {selectedEntityStateEvents.slice(0, 5).map((event) => (
-                                  <li key={event.id}>
-                                    <span>{event.sceneTitle ?? 'Untitled scene'}</span>
-                                    <small>{event.status}</small>
-                                  </li>
-                                ))}
-                              </ul>
-                            </>
-                          ) : (
-                            <p>No state events found.</p>
-                          )}
-                        </div>
-                      </div>
-
-                      {characterHealthProbeResults.length > 0 && (
-                        <div className={styles.characterHealthProbeResults}>
-                          <strong>RAG probe hits</strong>
-                          <ul className={styles.characterHealthList}>
-                            {characterHealthProbeResults.map((result) => (
-                              <li key={result.chunk.id}>
-                                <span>{result.chunk.documentTitle}</span>
-                                <small>
-                                  {result.chunk.metadata.type} · score {result.score.toFixed(2)}
-                                </small>
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
-                    </section>
-                  )}
 
                   <div className={styles.characterSectionBuilder}>
                     <div>
@@ -2808,200 +1920,29 @@ function WorldBibleRoute() {
           </div>
           )}
 
-          {viewMode !== 'review' && (activeCategoryIsCharacterLike ? !isFocusedCharacterTask : !isFocusedRecordTask) && (
-          <div
-            className={`${styles.listSection} ${styles.castListSection}`}
-          >
-            <h2>{activeCategory.name}</h2>
-            {visibleEntities.length === 0 && (
-              <p className={styles.emptyState}>
-                {`No ${activeCategory.name.toLowerCase()} yet. Use Create Manually above when you are ready.`}
-              </p>
-            )}
-            <ul className={styles.entityList}>
-              {visibleEntities.map((entity) => {
-                const entityCategory =
-                  categories.find((category) => category.id === entity.categoryId) ?? null;
-                const {
-                  primarySummary,
-                  summarySourceLabel,
-                  summaryIsTruncated,
-                  secondaryFields,
-                  hiddenFieldCount
-                } = buildEntityCardSummary(
-                  entity,
-                  entityCategory,
-                  aliasMapByEntityId.get(entity.id) ?? []
-                );
-                const entityIsCharacterLike = isCharacterLikeEntity(entity);
-                const entityInsight = reviewEntityInsightsById.get(entity.id);
-                const entityQueueItem = reviewQueue.find((item) => item.entity.id === entity.id);
-                const needsAliasReview = Boolean(
-                  entityQueueItem?.reasons.includes('aliasFollowUp')
-                );
-                const needsCompletionReview = Boolean(
-                  entityQueueItem?.reasons.includes('needsCompletion') || entity.needsCompletion
-                );
-                const hasNameResolutionMatch =
-                  entityIsCharacterLike && (entityInsight?.matchCount ?? 0) > 0;
-                const needsNameReview = needsAliasReview || hasNameResolutionMatch;
-                const hasReviewBadge = needsCompletionReview || needsNameReview;
-                const linkedLoreDocument = linkedLoreDocumentByEntityId.get(entity.id) ?? null;
+          <WorldBibleEntityList
+            viewMode={viewMode} activeCategoryIsCharacterLike={activeCategoryIsCharacterLike}
+            isFocusedCharacterTask={isFocusedCharacterTask}
+            isFocusedRecordTask={isFocusedRecordTask} activeCategory={activeCategory}
+            categories={categories} visibleEntities={visibleEntities}
+            reviewEntityInsightsById={reviewEntityInsightsById} reviewQueue={reviewQueue}
+            aliasMapByEntityId={aliasMapByEntityId}
+            linkedLoreDocumentByEntityId={linkedLoreDocumentByEntityId}
+            linkingLoreEntityId={linkingLoreEntityId}
+            compendiumLinkedEntityIds={compendiumLinkedEntityIds}
+            seriesParentProjectId={seriesConfig?.parentProjectId ?? null}
+            showCharacterTools={showCharacterTools} showGameSystems={showGameSystems}
+            hasRuleset={hasRuleset}
+            actions={{
+              isCharacterLikeEntity, handleMarkEntityComplete, handleDeleteEntity,
+              handlePromoteEntity, handleImportEntityToCharacters, handleAddEntityToCompendium,
+              deletingEntityId, promotingEntityId, importingCharacterEntityId,
+              linkingCompendiumEntityId
+            }}
+            handleEdit={handleEdit}
+            handleOpenOrCreateLinkedLoreDocument={handleOpenOrCreateLinkedLoreDocument}
+          />
 
-                return (
-                <li key={entity.id} className={styles.entityCard}>
-                  <div className={styles.entityHeader}>
-                    <div className={styles.entityName}>{entity.name}</div>
-                    {entity.isNew && (
-                      <span className={styles.newBadge}>New</span>
-                    )}
-                    {needsCompletionReview && (
-                      <span className={styles.completionBadge}>Needs completion</span>
-                    )}
-                    {needsNameReview && (
-                      <span className={styles.aliasMatchBadge}>Names need review</span>
-                    )}
-                  </div>
-                  {hasNameResolutionMatch && (
-                    <div className={styles.entityAttentionNote}>
-                      This character looks related to{' '}
-                      {entityInsight?.matchCount === 1
-                        ? 'another canon record'
-                        : `${entityInsight?.matchCount ?? 0} canon records`}
-                      . Use Resolve names to merge duplicates or convert short forms into aliases.
-                    </div>
-                  )}
-                  {primarySummary && (
-                    <div className={styles.entitySummaryBlock}>
-                      {summarySourceLabel && (
-                        <span className={styles.entitySummaryLabel}>
-                          {summarySourceLabel}
-                        </span>
-                      )}
-                      <p className={styles.entitySummary}>{primarySummary}</p>
-                      {summaryIsTruncated && (
-                        <span className={styles.entitySummaryHint}>
-                          Open to read full text
-                        </span>
-                      )}
-                    </div>
-                  )}
-                  {secondaryFields.map((field) => (
-                    <div key={field.label} className={styles.entityField}>
-                      <strong>{field.label}:</strong> {field.value}
-                    </div>
-                  ))}
-                  {hiddenFieldCount > 0 && (
-                    <div className={styles.entityFieldMore}>
-                      + {hiddenFieldCount} more field{hiddenFieldCount === 1 ? '' : 's'}
-                    </div>
-                  )}
-                  {linkedLoreDocument && (
-                    <div className={styles.entityField}>
-                      <strong>Source Note:</strong> {linkedLoreDocument.title}
-                    </div>
-                  )}
-                  <div className={styles.entityActions}>
-                    <button
-                      onClick={() => handleEdit(entity)}
-                    >
-                      Edit
-                    </button>
-                    {hasNameResolutionMatch && (
-                      <button
-                        type='button'
-                        className={styles.primaryButton}
-                        onClick={() => handleEdit(entity, 'aliases')}
-                      >
-                        Resolve names
-                      </button>
-                    )}
-                    {hasReviewBadge && (
-                      <button
-                        type='button'
-                        onClick={() => void handleMarkEntityComplete(entity)}
-                      >
-                        Mark reviewed
-                      </button>
-                    )}
-                    <button
-                      type='button'
-                      onClick={() => void handleOpenOrCreateLinkedLoreDocument(entity)}
-                      disabled={linkingLoreEntityId === entity.id}
-                    >
-                      {linkingLoreEntityId === entity.id
-                        ? 'Creating...'
-                        : linkedLoreDocument
-                          ? 'Open Source Note'
-                          : 'Create linked Source Note'}
-                    </button>
-                    <button
-                      onClick={() => handleDeleteEntity(entity.id)}
-                      disabled={deletingEntityId === entity.id}
-                      className={styles.deleteButton}
-                    >
-                      {deletingEntityId === entity.id ? 'Deleting...' : 'Delete'}
-                    </button>
-                    {seriesConfig?.parentProjectId && (
-                      <button
-                        type='button'
-                        onClick={() => void handlePromoteEntity(entity)}
-                        disabled={promotingEntityId === entity.id}
-                      >
-                        {promotingEntityId === entity.id
-                          ? 'Promoting...'
-                          : 'Promote to parent'}
-                      </button>
-                    )}
-                    {entityIsCharacterLike && showCharacterTools && (
-                      <button
-                        type='button'
-                        onClick={() => void handleImportEntityToCharacters(entity)}
-                        disabled={importingCharacterEntityId === entity.id}
-                        title='Open optional character tools for roster details. World Bible remains the canonical record.'
-                      >
-                        {importingCharacterEntityId === entity.id
-                          ? 'Opening...'
-                          : 'Open optional tools'}
-                      </button>
-                    )}
-                    {entityIsCharacterLike && showCharacterTools && hasRuleset && (
-                      <button
-                        type='button'
-                        onClick={() =>
-                          void handleImportEntityToCharacters(entity, {
-                            autoCreateSheet: true
-                          })
-                        }
-                        disabled={importingCharacterEntityId === entity.id}
-                        title='Open or create sheet and state tracking for this World Bible character. World Bible remains the canonical record.'
-                      >
-                        {importingCharacterEntityId === entity.id
-                          ? 'Opening...'
-                          : 'Create/open sheet + state'}
-                      </button>
-                    )}
-                    {showGameSystems && (
-                      <button
-                        type='button'
-                        onClick={() => void handleAddEntityToCompendium(entity)}
-                        disabled={linkingCompendiumEntityId === entity.id}
-                        title='Attach optional progression, crafting, discovery, or bestiary mechanics.'
-                      >
-                        {linkingCompendiumEntityId === entity.id
-                          ? 'Linking...'
-                          : compendiumLinkedEntityIds.has(entity.id)
-                            ? 'Update Mechanics'
-                            : 'Add Mechanics'}
-                      </button>
-                    )}
-                  </div>
-                </li>
-                );
-              })}
-            </ul>
-          </div>
-          )}
         </div>
       )}
         </div>

@@ -175,6 +175,9 @@ Under the hood, the app still includes rich systems for world data, rules, chara
   - `useWorldBibleSelectedEntity`
   - `useWorldBibleAuthoringAssistant`
   - `useWorldBibleRecordResolution`
+- World Bible route presentation now delegates category navigation, import
+  preview/JSON workflows, record AI assistance, character health, and entity
+  list cards to focused components without expanding `useWorldBibleImports`.
 - Workspace drawer UI extracted into:
   - `WorkspaceSceneDrawer`
   - `WorkspaceContextDrawer`
@@ -199,7 +202,7 @@ Under the hood, the app still includes rich systems for world data, rules, chara
 - `useWorkspaceDocuments` now keeps persistence behavior local while using pure helpers for document selection initialization, editor-document assembly, change detection, and manual-save/autosave consistency mode selection.
 - Shared text matching contract added for smoke-critical lore/review matching paths.
 - Current targeted architecture sizes are `WorkspaceRoute.tsx` 1,976 lines,
-  `WorldBibleRoute.tsx` 3,011, `CharacterSheetsRoute.tsx` 2,374,
+  `WorldBibleRoute.tsx` 1,957, `CharacterSheetsRoute.tsx` 2,374,
   `CompendiumRoute.tsx` 1,590, and `useWorkspaceConsistency.ts` 1,990.
 
 ### Current Assessment
