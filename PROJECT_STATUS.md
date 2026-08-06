@@ -153,6 +153,11 @@ Under the hood, the app still includes rich systems for world data, rules, chara
   route size is primarily state, derived data, and persistence handlers.
 - Web and rules-engine tests run on Vitest 4.1, and all workspaces use Zod
   3.25.76 while the breaking Zod 4 migration remains deliberately deferred.
+- All linted workspaces use ESLint 10.8-compatible tooling and quoted recursive
+  source globs. Lint is clean apart from the existing three web
+  `exhaustive-deps` warnings; 77 React Compiler findings remain explicitly
+  deferred across `set-state-in-effect`, `purity`, and
+  `preserve-manual-memoization` for behavior-aware follow-up refactors.
 - React Router is on the patched 8.3 line, React/React DOM are on 19.2, CI uses
   the required Node 22.22 minimum, and the production dependency audit is clean.
 - Workspace logic decomposed into focused hooks:

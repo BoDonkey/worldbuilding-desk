@@ -70,8 +70,7 @@ export const findTextMatches = (
       `(^|[^\\p{L}\\p{N}_'-])(${escapeRegex(pattern.normalized)})(['’]s|s['’])?(?=$|[^\\p{L}\\p{N}_'-])`,
       'giu'
     );
-    let match: RegExpExecArray | null = null;
-    while ((match = matcher.exec(text))) {
+    for (const match of text.matchAll(matcher)) {
       const prefix = match[1] ?? '';
       const matchedSurface = match[2] ?? '';
       const possessiveSuffix = match[3] ?? '';

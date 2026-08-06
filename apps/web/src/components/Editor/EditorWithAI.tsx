@@ -297,7 +297,11 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
         AIExpandMenu,
         createReviewFocusFlashExtension(),
         createWorkspaceAnnotationsExtension(
+          // ProseMirror invokes these getters after render when it evaluates
+          // decorations; passing them here does not read either ref during render.
+          // eslint-disable-next-line react-hooks/refs
           () => loreHighlightsRef.current,
+          // eslint-disable-next-line react-hooks/refs
           () => consistencyHighlightsRef.current
         )
       ]

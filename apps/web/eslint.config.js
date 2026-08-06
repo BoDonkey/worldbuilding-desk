@@ -21,6 +21,9 @@ export default defineConfig([
     },
     rules: {
       '@typescript-eslint/no-explicit-any': 'off',
+      // Deferred: react-hooks 7.1 reports 77 existing findings across these
+      // three compiler rules. Resolve them through behavior-aware React
+      // refactors rather than mechanical changes in this toolchain upgrade.
       'react-hooks/set-state-in-effect': 'off',
       'react-hooks/purity': 'off',
       'react-hooks/preserve-manual-memoization': 'off'

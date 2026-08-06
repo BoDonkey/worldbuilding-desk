@@ -134,16 +134,10 @@ async function parseDocxToText(file: File): Promise<string> {
 
 export async function parseLoreImport(file: File): Promise<ParsedLoreImport> {
   const lowerName = file.name.toLowerCase();
-  let content = '';
-  let format: LoreDocumentFormat = 'plain_text';
-
-  if (lowerName.endsWith('.docx')) {
-    content = await parseDocxToText(file);
-    format = 'plain_text';
-  } else {
-    content = await file.text();
-    format = lowerName.endsWith('.md') ? 'markdown' : 'plain_text';
-  }
+  const isDocx = lowerName.endsWith('.docx');
+  const content = isDocx ? await parseDocxToText(file) : await file.text();
+  const format: LoreDocumentFormat =
+    !isDocx && lowerName.endsWith('.md') ? 'markdown' : 'plain_text';
 
   const normalized = content.trim();
   if (!normalized) {

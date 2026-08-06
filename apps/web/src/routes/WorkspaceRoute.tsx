@@ -1,6 +1,7 @@
 import {
   type ComponentProps,
   useEffect,
+  useLayoutEffect,
   useState,
   useCallback,
   useMemo,
@@ -207,7 +208,9 @@ function WorkspaceRoute() {
   }, []);
 
   // Lightweight diagnostics only, no state updates.
-  window.__wbdWorkspaceRenderCount = (window.__wbdWorkspaceRenderCount ?? 0) + 1;
+  useEffect(() => {
+    window.__wbdWorkspaceRenderCount = (window.__wbdWorkspaceRenderCount ?? 0) + 1;
+  });
   const openScratchpadModal = useCallback(() => {
     setScratchpadModalOpen(true);
   }, [setScratchpadModalOpen]);
@@ -436,7 +439,9 @@ function WorkspaceRoute() {
     selectedId,
     openContextDrawer
   });
-  resetContextActionsRef.current = resetContextActions;
+  useLayoutEffect(() => {
+    resetContextActionsRef.current = resetContextActions;
+  }, [resetContextActions]);
   const {getOverrides: getSceneRosterOverrides, updateOverride: updateSceneRosterOverride} =
     useSceneRosterPreferences(activeProject?.id ?? null);
   const worldEngine = useMemo(
@@ -634,17 +639,29 @@ function WorkspaceRoute() {
     }, resolverNotice.primaryLabel === 'Review Character Match' ? 7200 : 4200);
     return () => window.clearTimeout(timeoutId);
   }, [resolverNotice, setResolverNotice]);
-  persistDocRef.current = persistDoc;
-  refreshDeferredReviewRef.current = refreshDeferredReview;
-  setGuardrailIssuesRef.current = setGuardrailIssues as typeof setGuardrailIssuesRef.current;
-  setConsistencyPopoverRef.current = setConsistencyPopover as typeof setConsistencyPopoverRef.current;
-  deleteDocumentSideEffectsRef.current = async (docId: string) => {
-    await Promise.all([
-      ragService?.deleteDocument(docId) ?? Promise.resolve(),
-      shodhService?.deleteMemoriesForDocument(docId) ?? Promise.resolve()
-    ]);
-    await refreshMemories();
-  };
+  useLayoutEffect(() => {
+    persistDocRef.current = persistDoc;
+    refreshDeferredReviewRef.current = refreshDeferredReview;
+    setGuardrailIssuesRef.current =
+      setGuardrailIssues as typeof setGuardrailIssuesRef.current;
+    setConsistencyPopoverRef.current =
+      setConsistencyPopover as typeof setConsistencyPopoverRef.current;
+    deleteDocumentSideEffectsRef.current = async (docId: string) => {
+      await Promise.all([
+        ragService?.deleteDocument(docId) ?? Promise.resolve(),
+        shodhService?.deleteMemoriesForDocument(docId) ?? Promise.resolve()
+      ]);
+      await refreshMemories();
+    };
+  }, [
+    persistDoc,
+    ragService,
+    refreshDeferredReview,
+    refreshMemories,
+    setConsistencyPopover,
+    setGuardrailIssues,
+    shodhService
+  ]);
 
   const openWorldRecord = (target: {id: string; type: 'character' | 'entity'}) => {
     if (target.type === 'entity') {

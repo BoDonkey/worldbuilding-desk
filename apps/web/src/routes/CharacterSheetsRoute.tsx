@@ -81,6 +81,34 @@ interface CharacterSheetsRouteProps {
   onAutoCreateConsumed?: () => void;
 }
 
+const mergeLegacyAndTracked = (
+  legacy: string[] | undefined,
+  tracked: CharacterTrackedEntry[] | undefined
+): CharacterTrackedEntry[] => {
+  const fromTracked = tracked ?? [];
+  const seen = new Set(
+    fromTracked.map((entry) => `${entry.name}:${entry.quantity ?? 1}`)
+  );
+  const fromLegacy = (legacy ?? [])
+    .map((name) => name.trim())
+    .filter((name) => name.length > 0)
+    .filter((name) => {
+      const key = `${name}:1`;
+      if (seen.has(key)) {
+        return false;
+      }
+      seen.add(key);
+      return true;
+    })
+    .map((name) => ({
+      id: crypto.randomUUID(),
+      mode: 'quick' as const,
+      name,
+      quantity: 1
+    }));
+  return [...fromTracked, ...fromLegacy];
+};
+
 function CharacterSheetsRoute({
   embedded = false,
   prefillCharacterId,
@@ -214,7 +242,6 @@ function CharacterSheetsRoute({
             }
           : {projectId: activeProject.id};
 
-      let shodh: ShodhMemoryProvider | null = null;
       if (!cancelled) {
         setSheets(
           loadedSheets.map((sheet) => ({
@@ -232,7 +259,7 @@ function CharacterSheetsRoute({
         setCompendiumEntries(loadedCompendiumEntries);
         setDocuments(loadedDocuments);
         setStateMutationEvents(loadedStateMutationEvents);
-        shodh = await getShodhService(shodhOptions);
+        const shodh = await getShodhService(shodhOptions);
         if (!cancelled) {
           setShodhService(shodh);
         }
@@ -438,34 +465,6 @@ function CharacterSheetsRoute({
         ? `${entry.name} x${entry.quantity}`
         : entry.name
     );
-
-  const mergeLegacyAndTracked = (
-    legacy: string[] | undefined,
-    tracked: CharacterTrackedEntry[] | undefined
-  ): CharacterTrackedEntry[] => {
-    const fromTracked = tracked ?? [];
-    const seen = new Set(
-      fromTracked.map((entry) => `${entry.name}:${entry.quantity ?? 1}`)
-    );
-    const fromLegacy = (legacy ?? [])
-      .map((name) => name.trim())
-      .filter((name) => name.length > 0)
-      .filter((name) => {
-        const key = `${name}:1`;
-        if (seen.has(key)) {
-          return false;
-        }
-        seen.add(key);
-        return true;
-      })
-      .map((name) => ({
-        id: crypto.randomUUID(),
-        mode: 'quick' as const,
-        name,
-        quantity: 1
-      }));
-    return [...fromTracked, ...fromLegacy];
-  };
 
   const appendQuickEntry = (
     target: 'inventory' | 'equipment' | 'status',

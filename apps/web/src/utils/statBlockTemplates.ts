@@ -297,8 +297,7 @@ export function serializeStatBlockTokensAsChipHtml(
 export function extractStatBlockTokensFromHtml(html: string): string[] {
   const tokens: string[] = [];
   TOKEN_REGEX.lastIndex = 0;
-  let match: RegExpExecArray | null = null;
-  while ((match = TOKEN_REGEX.exec(html)) !== null) {
+  for (const match of html.matchAll(TOKEN_REGEX)) {
     tokens.push(match[0]);
   }
 

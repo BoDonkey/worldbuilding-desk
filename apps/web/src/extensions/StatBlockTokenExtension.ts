@@ -24,8 +24,7 @@ function findTokenReplacements(doc: {
       return;
     }
     STAT_BLOCK_TOKEN_REGEX.lastIndex = 0;
-    let match: RegExpExecArray | null = null;
-    while ((match = STAT_BLOCK_TOKEN_REGEX.exec(node.text)) !== null) {
+    for (const match of node.text.matchAll(STAT_BLOCK_TOKEN_REGEX)) {
       replacements.push({
         from: pos + match.index,
         to: pos + match.index + match[0].length,
