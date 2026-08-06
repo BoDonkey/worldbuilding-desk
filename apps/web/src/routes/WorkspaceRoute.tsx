@@ -7,15 +7,8 @@ import {
   useRef
 } from 'react';
 import {useNavigate} from 'react-router';
-import type {
-  StatBlockInsertMode,
-  StatBlockScopePreset,
-  StatBlockSourceType,
-  StatBlockStyle,
-  WritingDocument
-} from '../entityTypes';
+import type {WritingDocument} from '../entityTypes';
 import {EditorWithAI} from '../components/Editor/EditorWithAI';
-import TipTapEditor from '../components/TipTapEditor';
 import {ContextPopover} from '../components/Editor/ContextPopover';
 import {useWorkspaceMemories} from '../hooks/useWorkspaceMemories';
 import {useWorkspaceConsistency} from '../hooks/useWorkspaceConsistency';
@@ -45,6 +38,7 @@ import {
   useWorkspaceContextActions
 } from '../hooks/useWorkspaceContextActions';
 import {useWorkspaceSystemHistory} from '../hooks/useWorkspaceSystemHistory';
+import {useWorkspaceReviewRefresh} from '../hooks/useWorkspaceReviewRefresh';
 import {
   useWorkspaceExportUi,
   useWorkspaceImportUi,
@@ -56,6 +50,11 @@ import styles from '../styles/WorkspaceRoute.module.css';
 import {useAppStore} from '../store/appStore';
 import {WorkspaceContextDrawer} from '../components/Workspace/WorkspaceContextDrawer';
 import {WorkspaceDrawerLayout} from '../components/Workspace/WorkspaceDrawerLayout';
+import {WorkspaceCorkboardModal} from '../components/Workspace/WorkspaceCorkboardModal';
+import {WorkspaceScratchpadModal} from '../components/Workspace/WorkspaceScratchpadModal';
+import {WorkspaceExportModal} from '../components/Workspace/WorkspaceExportModal';
+import {WorkspaceMemoryModal} from '../components/Workspace/WorkspaceMemoryModal';
+import {WorkspaceStatBlockModal} from '../components/Workspace/WorkspaceStatBlockModal';
 import {WorkspaceSceneDrawer} from '../components/Workspace/WorkspaceSceneDrawer';
 import {CanonPanel} from '../components/Workspace/CanonPanel';
 import {UnknownEntityPanel} from '../components/Workspace/UnknownEntityPanel';
@@ -73,7 +72,6 @@ import {useWorkspaceLoreSnippets} from '../hooks/useWorkspaceLoreSnippets';
 import {useWorkspaceScratchpad} from '../hooks/useWorkspaceScratchpad';
 import {useWorkspaceCorkboard} from '../hooks/useWorkspaceCorkboard';
 import {useSceneRosterPreferences} from '../hooks/useSceneRosterPreferences';
-import {normalizeRichTextValue} from '../services/worldBible/worldBibleEntityHelpers';
 import {buildCharacterCaptureAliasList} from '../services/worldBible/worldBibleCanonicalization';
 import {PageHeader} from '../components/PageHeader';
 import {
@@ -134,6 +132,7 @@ function WorkspaceRoute() {
   } | null>(null);
   const [isPromotingDocument, setIsPromotingDocument] = useState(false);
   const [isSyncingCanon, setIsSyncingCanon] = useState(false);
+  const corkboard = useWorkspaceCorkboard(activeProject?.id ?? null);
   const {
     isScratchpadModalOpen,
     setScratchpadModalOpen,
@@ -180,20 +179,6 @@ function WorkspaceRoute() {
     scratchpadStatus,
     scratchpadLastSavedAt
   } = useWorkspaceScratchpad(activeProject?.id ?? null);
-  const {
-    corkboardCards,
-    corkboardStatus,
-    corkboardLastSavedAt,
-    corkboardPlotPointCount,
-    createCorkboardCard,
-    updateCorkboardCard,
-    deleteCorkboardCard,
-    moveCorkboardCard,
-    addCorkboardPlotPoint,
-    updateCorkboardPlotPoint,
-    deleteCorkboardPlotPoint,
-    moveCorkboardPlotPoint
-  } = useWorkspaceCorkboard(activeProject?.id ?? null);
   const {
     sceneDrawerDialogRef,
     contextDrawerDialogRef,
@@ -686,29 +671,7 @@ function WorkspaceRoute() {
       }),
     [settlementState, settlementModules, activePartySynergies]
   );
-  const {
-    statDefinitionNameById,
-    resourceDefinitionNameById,
-    selectedSheet,
-    activeProjectMode,
-    canInsertStatBlock,
-    selectedStatGroup,
-    activeSelectedStatSet,
-    activeSelectedResourceSet,
-    statBlockScopeValue,
-    resolveCharacterBlock,
-    resolveItemBlock,
-    getStatBlockTokenPresentation,
-    getStatBlockPreviewData,
-    handleRefreshStatTemplates,
-    handleInsertStatBlock,
-    openStatBlockRebind,
-    handleToggleStatSelection,
-    handleToggleResourceSelection,
-    handleSaveStatGroup,
-    handleDeleteStatGroup,
-    closeStatBlockModal
-  } = useWorkspaceStatBlocks({
+  const statBlocks = useWorkspaceStatBlocks({
     activeProject,
     projectSettings,
     saveProjectSettings,
@@ -754,6 +717,17 @@ function WorkspaceRoute() {
     getEffectiveStatValue,
     getEffectiveResourceValues
   });
+  const {
+    statDefinitionNameById,
+    resourceDefinitionNameById,
+    resolveCharacterBlock,
+    resolveItemBlock,
+    getStatBlockTokenPresentation,
+    getStatBlockPreviewData,
+    handleRefreshStatTemplates,
+    openStatBlockRebind,
+    closeStatBlockModal
+  } = statBlocks;
   const {
     sceneRosterModel,
     addSceneRosterEntry,
@@ -876,16 +850,6 @@ function WorkspaceRoute() {
           : scratchpadLastSavedAt
             ? `Scratchpad saved at ${new Date(scratchpadLastSavedAt).toLocaleTimeString()}`
             : 'Scratchpad ready.';
-  const corkboardStatusLabel =
-    corkboardStatus === 'loading'
-      ? 'Loading corkboard...'
-      : corkboardStatus === 'saving'
-        ? 'Saving corkboard...'
-        : corkboardStatus === 'error'
-          ? 'Corkboard could not be saved.'
-          : corkboardLastSavedAt
-            ? `Corkboard saved at ${new Date(corkboardLastSavedAt).toLocaleTimeString()}`
-            : 'Corkboard ready.';
   const activeWorldCaptureDraft =
     (activeConsistencyPopoverIssue &&
       worldCaptureDrafts[activeConsistencyPopoverIssue.surface]) ||
@@ -1037,115 +1001,10 @@ function WorkspaceRoute() {
     setContextDrawerOpen
   });
 
-  const selectedDocumentRef = useRef(selectedDocument);
-  selectedDocumentRef.current = selectedDocument;
-  const draftTitleRef = useRef(title);
-  draftTitleRef.current = title;
-  const draftContentRef = useRef(content);
-  draftContentRef.current = content;
-  const lastIdleReviewSignatureRef = useRef<string | null>(null);
-  const idleReviewDelayMs = 2500;
-  const reviewRefreshSignature = useMemo(
-    () =>
-      [
-        ...entities.map((entity) =>
-          `entity:${entity.id}:${entity.name}:${entity.updatedAt}:${entity.needsCompletion ?? false}`
-        ),
-        ...aliases.map((alias) =>
-          `alias:${alias.id}:${alias.targetId}:${alias.targetType}:${alias.alias}:${alias.updatedAt}`
-        ),
-        ...characters.map((character) =>
-          `character:${character.id}:${character.name}:${character.updatedAt}`
-        )
-      ]
-        .sort()
-        .join('|'),
-    [aliases, characters, entities]
-  );
-
-  useEffect(() => {
-    if (!isReviewPrefsHydrated || !selectedId) {
-      return;
-    }
-    const doc = selectedDocumentRef.current;
-    if (!doc || doc.id !== selectedId) {
-      return;
-    }
-    const draftTitle = draftTitleRef.current.trim() || doc.title || 'Untitled scene';
-    const draftContent = draftContentRef.current;
-    const draftDoc =
-      draftTitle === doc.title && draftContent === doc.content
-        ? doc
-        : {
-            ...doc,
-            title: draftTitle,
-            content: draftContent,
-            updatedAt: Date.now()
-          };
-
-    const refresh =
-      draftDoc.consistencyReviewMode === 'deferred'
-        ? refreshDeferredReview(draftDoc)
-        : refreshActiveDraftReview(draftDoc);
-
-    void refresh.catch((error) => {
-      console.warn('Active scene review refresh failed', error);
-    });
-  }, [
-    isReviewPrefsHydrated,
-    refreshActiveDraftReview,
-    refreshDeferredReview,
-    reviewRefreshSignature,
-    selectedId
-  ]);
-
-  useEffect(() => {
-    if (!isReviewPrefsHydrated || !selectedId) {
-      return;
-    }
-    const persistedDoc = selectedDocumentRef.current;
-    if (!persistedDoc || persistedDoc.id !== selectedId) {
-      return;
-    }
-    if (persistedDoc.consistencyReviewMode === 'deferred') {
-      return;
-    }
-
-    const draftTitle = title.trim() || 'Untitled scene';
-    const hasDraftChanges =
-      persistedDoc.title !== draftTitle || persistedDoc.content !== content;
-    if (!hasDraftChanges) {
-      lastIdleReviewSignatureRef.current = null;
-      return;
-    }
-
-    const draftSignature = `${selectedId}:${draftTitle}:${content}`;
-    const timeoutId = window.setTimeout(() => {
-      if (lastIdleReviewSignatureRef.current === draftSignature) {
-        return;
-      }
-      lastIdleReviewSignatureRef.current = draftSignature;
-      void refreshActiveDraftReview({
-        ...persistedDoc,
-        title: draftTitle,
-        content,
-        updatedAt: Date.now()
-      }).catch((error) => {
-        lastIdleReviewSignatureRef.current = null;
-        console.warn('Idle draft review failed', error);
-      });
-    }, idleReviewDelayMs);
-
-    return () => {
-      clearTimeout(timeoutId);
-    };
-  }, [
-    content,
-    isReviewPrefsHydrated,
-    refreshActiveDraftReview,
-    selectedId,
-    title
-  ]);
+  useWorkspaceReviewRefresh({
+    selectedId, selectedDocument, title, content, entities, aliases, characters,
+    isReviewPrefsHydrated, refreshDeferredReview, refreshActiveDraftReview
+  });
 
   useEffect(() => {
     if (!showGameSystems && activeContextView === 'compendium') {
@@ -2060,737 +1919,54 @@ function WorkspaceRoute() {
         </div>
       )}
 
-      {isStatBlockModalOpen && (
-        <div
-          ref={statBlockDialogRef}
-          role='dialog'
-          aria-modal='true'
-          aria-label='Status Block Builder'
-          onClick={closeStatBlockModal}
-          className={styles.modalOverlay}
-        >
-          <div
-            onClick={(event) => event.stopPropagation()}
-            className={`${styles.modalCard} ${styles.statModalCard}`}
-          >
-            <h3 className={styles.modalTitle}>
-              {pendingStatBlockRebindToken ? 'Rebind Status Block' : 'Insert Status Block'}
-            </h3>
-            <p className={styles.modalDescription}>
-              {pendingStatBlockRebindToken ? (
-                <>
-                  Choose the correct source and save it back into this placeholder token.
-                </>
-              ) : (
-                <>
-                  Choose what to insert. Use <strong>Reusable placeholder</strong> if you
-                  want to refresh it later.
-                </>
-              )}
-            </p>
-            {pendingStatBlockRebindToken && (
-              <div className={styles.statRebindNotice}>
-                Rebinding keeps this token as a reusable placeholder and updates only the
-                selected chip in the scene.
-              </div>
-            )}
+      <WorkspaceStatBlockModal
+        isOpen={isStatBlockModalOpen} dialogRef={statBlockDialogRef}
+        statBlocks={statBlocks} pendingRebindToken={pendingStatBlockRebindToken}
+        sourceType={statBlockSourceType} setSourceType={setStatBlockSourceType}
+        characterSheets={characterSheets} selectedCharacterId={selectedStatCharacterId}
+        setSelectedCharacterId={setSelectedStatCharacterId}
+        scopePreset={statBlockScopePreset} setScopePreset={setStatBlockScopePreset}
+        setSelectedGroupId={setSelectedStatGroupId} groups={statBlockGroups}
+        newGroupName={newStatGroupName} setNewGroupName={setNewStatGroupName}
+        entities={entities} selectedEntityId={selectedStatEntityId}
+        setSelectedEntityId={setSelectedStatEntityId}
+        style={statBlockStyle} setStyle={setStatBlockStyle}
+        insertMode={statBlockInsertMode} setInsertMode={setStatBlockInsertMode}
+        navigate={navigate}
+      />
 
-            <div className={styles.statFormGrid}>
-              <label>
-                Source type
-                <br />
-                <select
-                  id='stat-block-source-type'
-                  value={statBlockSourceType}
-                  onChange={(event) =>
-                    setStatBlockSourceType(event.target.value as StatBlockSourceType)
-                  }
-                  className={styles.fullWidthField}
-                >
-                  <option value='character'>Character</option>
-                  <option value='item'>Item/Entity</option>
-                </select>
-              </label>
+      <WorkspaceScratchpadModal
+        isOpen={isScratchpadModalOpen} dialogRef={scratchpadDialogRef}
+        content={scratchpadContent} statusLabel={scratchpadStatusLabel}
+        isNarrowViewport={isNarrowViewport} setContent={setScratchpadContent}
+        setActiveContextView={setActiveContextView}
+        setContextDrawerOpen={setContextDrawerOpen}
+        setSceneDrawerOpen={setSceneDrawerOpen} onClose={closeScratchpadModal}
+      />
 
-              {statBlockSourceType === 'character' ? (
-                <>
-                  <label>
-                    Character
-                    <br />
-                    <select
-                      id='stat-block-character'
-                      value={selectedStatCharacterId}
-                      onChange={(event) => setSelectedStatCharacterId(event.target.value)}
-                      disabled={characterSheets.length === 0}
-                      className={styles.fullWidthField}
-                    >
-                      {characterSheets.length === 0 ? (
-                        <option value=''>No character sheets</option>
-                      ) : (
-                        characterSheets.map((sheet) => (
-                          <option key={sheet.id} value={sheet.id}>
-                            {sheet.name}
-                          </option>
-                        ))
-                      )}
-                    </select>
-                  </label>
+      <WorkspaceCorkboardModal
+        isOpen={isCorkboardModalOpen}
+        dialogRef={corkboardDialogRef}
+        corkboard={corkboard}
+        onClose={closeCorkboardModal}
+        onOpenScratchpad={openScratchpadModal}
+      />
 
-                  <label>
-                    Block contents
-                    <br />
-                    <select
-                      id='stat-block-contents'
-                      value={statBlockScopeValue}
-                      onChange={(event) => {
-                        const value = event.target.value;
-                        if (value.startsWith('group:')) {
-                          setSelectedStatGroupId(value.slice('group:'.length));
-                          setStatBlockScopePreset('custom');
-                          return;
-                        }
-                        setSelectedStatGroupId('');
-                        setStatBlockScopePreset(value as StatBlockScopePreset);
-                      }}
-                      className={styles.fullWidthField}
-                    >
-                      <option value='all'>All stats + resources</option>
-                      <option value='stats'>Stats only</option>
-                      <option value='resources'>Resources only</option>
-                      <option value='custom'>Custom selection</option>
-                      {statBlockGroups.map((group) => (
-                        <option key={group.id} value={`group:${group.id}`}>
-                          Group: {group.name}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
+      <WorkspaceExportModal
+        isOpen={isExportModalOpen} dialogRef={exportDialogRef}
+        format={exportFormat} selection={exportSelection}
+        onClose={closeExportModal} onMove={moveExportItem}
+        onToggle={toggleExportItem} onToggleAll={toggleAllExportItems}
+        onExport={handleExportScenes}
+      />
 
-                  {statBlockScopePreset === 'custom' && !selectedStatGroup && (
-                    <div className={styles.statCustomCard}>
-                      <strong className={styles.statCustomTitle}>Custom pick</strong>
-                      <div className={styles.statCustomGrid}>
-                        <div>
-                          <div className={styles.statSectionLabel}>Stats</div>
-                          {selectedSheet?.stats.length ? (
-                            selectedSheet.stats.map((stat) => {
-                              const label =
-                                statDefinitionNameById.get(stat.definitionId) ??
-                                stat.definitionId;
-                              return (
-                                <label key={stat.definitionId} className={styles.statOptionLabel}>
-                                  <input
-                                    type='checkbox'
-                                    checked={activeSelectedStatSet.has(stat.definitionId)}
-                                    onChange={() =>
-                                      handleToggleStatSelection(stat.definitionId)
-                                    }
-                                  />{' '}
-                                  {label}
-                                </label>
-                              );
-                            })
-                          ) : (
-                            <span className={styles.statMutedText}>
-                              No stats on this character.
-                            </span>
-                          )}
-                        </div>
-                        <div>
-                          <div className={styles.statSectionLabel}>Resources</div>
-                          {selectedSheet?.resources.length ? (
-                            selectedSheet.resources.map((resource) => {
-                              const label =
-                                resourceDefinitionNameById.get(resource.definitionId) ??
-                                resource.definitionId;
-                              return (
-                                <label
-                                  key={resource.definitionId}
-                                  className={styles.statOptionLabel}
-                                >
-                                  <input
-                                    type='checkbox'
-                                    checked={activeSelectedResourceSet.has(
-                                      resource.definitionId
-                                    )}
-                                    onChange={() =>
-                                      handleToggleResourceSelection(resource.definitionId)
-                                    }
-                                  />{' '}
-                                  {label}
-                                </label>
-                              );
-                            })
-                          ) : (
-                            <span className={styles.statMutedText}>
-                              No resources on this character.
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  )}
 
-                  {selectedStatGroup && (
-                    <div className={styles.statGroupSummary}>
-                      <span>
-                        Group <strong>{selectedStatGroup.name}</strong> includes{' '}
-                        {activeSelectedStatSet.size} stat(s) and{' '}
-                        {activeSelectedResourceSet.size} resource(s).
-                      </span>
-                      <button
-                        type='button'
-                        onClick={() => handleDeleteStatGroup(selectedStatGroup.id)}
-                        className={styles.statGroupDeleteButton}
-                      >
-                        Delete group
-                      </button>
-                    </div>
-                  )}
+      <WorkspaceMemoryModal
+        isOpen={isMemoryDialogOpen} dialogRef={memoryDialogRef}
+        draft={memoryDraft} isSaving={isSavingMemory} setDraft={setMemoryDraft}
+        onClose={closeMemoryDialog} onSave={handleMemorySave}
+      />
 
-                  <div className={styles.statCustomCard}>
-                    <strong className={styles.statSaveGroupTitle}>Save current selection</strong>
-                    <div className={styles.statSaveGroupRow}>
-                      <input
-                        type='text'
-                        placeholder='Group name (e.g. Qi only)'
-                        value={newStatGroupName}
-                        onChange={(event) => setNewStatGroupName(event.target.value)}
-                        className={styles.statSaveGroupInput}
-                      />
-                      <button type='button' onClick={handleSaveStatGroup}>
-                        Save group
-                      </button>
-                    </div>
-                  </div>
-                </>
-              ) : (
-                <label>
-                  Item/Entity
-                  <br />
-                  <select
-                    id='stat-block-entity'
-                    value={selectedStatEntityId}
-                    onChange={(event) => setSelectedStatEntityId(event.target.value)}
-                    disabled={entities.length === 0}
-                    className={styles.fullWidthField}
-                  >
-                    {entities.length === 0 ? (
-                      <option value=''>No entities</option>
-                    ) : (
-                      entities.map((entity) => (
-                        <option key={entity.id} value={entity.id}>
-                          {entity.name}
-                        </option>
-                      ))
-                    )}
-                  </select>
-                </label>
-              )}
-
-              <label>
-                Detail level
-                <br />
-                <select
-                  id='stat-block-detail'
-                  value={statBlockStyle}
-                  onChange={(event) =>
-                    setStatBlockStyle(event.target.value as StatBlockStyle)
-                  }
-                  className={styles.fullWidthField}
-                >
-                  <option value='full'>All stats</option>
-                  <option value='buffs'>Current buffs only</option>
-                  <option value='compact'>Compact</option>
-                </select>
-              </label>
-
-              <label>
-                Insert as
-                <br />
-                <select
-                  id='stat-block-insert-as'
-                  value={statBlockInsertMode}
-                  onChange={(event) =>
-                    setStatBlockInsertMode(event.target.value as StatBlockInsertMode)
-                  }
-                  disabled={activeProjectMode === 'litrpg'}
-                  className={styles.fullWidthField}
-                >
-                  <option value='block'>Live block now</option>
-                  <option value='template'>Reusable placeholder</option>
-                </select>
-                {activeProjectMode === 'litrpg' && (
-                  <span className={styles.modeHint}>
-                    LitRPG mode always inserts live text for readability.
-                  </span>
-                )}
-              </label>
-            </div>
-            {!canInsertStatBlock && (
-              <div className={styles.statInsertHintCard}>
-                <p className={styles.statInsertHintText}>
-                  Add at least one {statBlockSourceType === 'character' ? 'character sheet' : 'entity'} before inserting a status block.
-                </p>
-                <div className={styles.statInsertHintActions}>
-                  <button
-                    type='button'
-                    onClick={() => {
-                      closeStatBlockModal();
-                      navigate(
-                        statBlockSourceType === 'character'
-                          ? '/characters?view=sheets'
-                          : '/world-bible'
-                      );
-                    }}
-                    className={styles.statInsertHintButton}
-                  >
-                    {statBlockSourceType === 'character'
-                      ? 'Go to Character Sheets'
-                      : 'Go to World Bible'}
-                  </button>
-                </div>
-              </div>
-            )}
-
-            <div className={styles.modalActions}>
-              <button
-                type='button'
-                onClick={closeStatBlockModal}
-                className={styles.modalSecondaryAction}
-              >
-                Cancel
-              </button>
-              <button type='button' onClick={handleInsertStatBlock} disabled={!canInsertStatBlock}>
-                {pendingStatBlockRebindToken ? 'Rebind token' : 'Insert'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {isScratchpadModalOpen && (
-        <div
-          ref={scratchpadDialogRef}
-          role='dialog'
-          aria-modal='true'
-          aria-label='Project scratchpad'
-          onClick={closeScratchpadModal}
-          className={styles.modalOverlay}
-        >
-          <div
-            onClick={(event) => event.stopPropagation()}
-            className={`${styles.modalCard} ${styles.scratchpadModalCard}`}
-          >
-            <div className={styles.scratchpadModalHeader}>
-              <div>
-                <h3 className={styles.modalTitle}>Scratchpad</h3>
-                <p className={styles.modalDescription}>
-                  Loose project notes that stay outside scenes and canon.
-                </p>
-              </div>
-              <button
-                type='button'
-                className={styles.modalSecondaryAction}
-                onClick={closeScratchpadModal}
-              >
-                Close
-              </button>
-            </div>
-            <div
-              className={`${styles.scratchpadEditorShell} ${styles.scratchpadModalEditorShell}`}
-              aria-label='Project scratchpad'
-            >
-              <TipTapEditor
-                content={normalizeRichTextValue(scratchpadContent)}
-                onChange={setScratchpadContent}
-              />
-            </div>
-            <div className={styles.scratchpadModalFooter}>
-              <div className={styles.scratchpadStatus} role='status'>
-                {scratchpadStatusLabel}
-              </div>
-              <div className={styles.scratchpadModalActions}>
-                <button
-                  type='button'
-                  className={styles.modalSecondaryAction}
-                  onClick={() => {
-                    setActiveContextView('scratchpad');
-                    setContextDrawerOpen(true);
-                    if (isNarrowViewport) {
-                      setSceneDrawerOpen(false);
-                    }
-                    closeScratchpadModal();
-                  }}
-                >
-                  Open in Context Drawer
-                </button>
-                <button type='button' onClick={closeScratchpadModal}>
-                  Done
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {isCorkboardModalOpen && (
-        <div
-          ref={corkboardDialogRef}
-          role='dialog'
-          aria-modal='true'
-          aria-label='Project corkboard'
-          onClick={closeCorkboardModal}
-          className={styles.modalOverlay}
-        >
-          <div
-            onClick={(event) => event.stopPropagation()}
-            className={`${styles.modalCard} ${styles.corkboardModalCard}`}
-          >
-            <div className={styles.corkboardModalHeader}>
-              <div>
-                <h3 className={styles.modalTitle}>Corkboard</h3>
-                <p className={styles.modalDescription}>
-                  Lightweight chapter planning with cards, summaries, status, and plot points.
-                </p>
-              </div>
-              <div className={styles.corkboardHeaderActions}>
-                <button
-                  type='button'
-                  className={styles.modalSecondaryAction}
-                  onClick={createCorkboardCard}
-                >
-                  New Card
-                </button>
-                <button
-                  type='button'
-                  className={styles.modalSecondaryAction}
-                  onClick={closeCorkboardModal}
-                >
-                  Close
-                </button>
-              </div>
-            </div>
-
-            <div className={styles.corkboardMetaRow}>
-              <span>
-                {corkboardCards.length} card{corkboardCards.length === 1 ? '' : 's'}
-              </span>
-              <span>
-                {corkboardPlotPointCount} plot point{corkboardPlotPointCount === 1 ? '' : 's'}
-              </span>
-              <span>{corkboardStatusLabel}</span>
-            </div>
-
-            {corkboardCards.length === 0 ? (
-              <div className={styles.corkboardEmptyState}>
-                <p className={styles.corkboardEmptyTitle}>Start with a chapter card.</p>
-                <p className={styles.corkboardEmptyCopy}>
-                  Sketch scenes, chapter beats, or loose sequence ideas without leaving the writing workspace.
-                </p>
-                <button type='button' onClick={createCorkboardCard}>
-                  Create first card
-                </button>
-              </div>
-            ) : (
-              <div className={styles.corkboardCardList}>
-                {corkboardCards.map((card, index) => (
-                  <section key={card.id} className={styles.corkboardCard}>
-                    <div className={styles.corkboardCardHeader}>
-                      <div className={styles.corkboardCardTitleRow}>
-                        <span className={styles.corkboardCardIndex}>Card {index + 1}</span>
-                        <input
-                          type='text'
-                          value={card.title}
-                          onChange={(event) =>
-                            updateCorkboardCard(card.id, {title: event.target.value})
-                          }
-                          placeholder='Chapter or sequence title'
-                          className={styles.corkboardTitleInput}
-                        />
-                      </div>
-                      <div className={styles.corkboardCardActions}>
-                        <button
-                          type='button'
-                          className={styles.modalSecondaryAction}
-                          onClick={() => moveCorkboardCard(card.id, -1)}
-                          disabled={index === 0}
-                        >
-                          Up
-                        </button>
-                        <button
-                          type='button'
-                          className={styles.modalSecondaryAction}
-                          onClick={() => moveCorkboardCard(card.id, 1)}
-                          disabled={index === corkboardCards.length - 1}
-                        >
-                          Down
-                        </button>
-                        <button
-                          type='button'
-                          className={styles.modalSecondaryAction}
-                          onClick={() => deleteCorkboardCard(card.id)}
-                        >
-                          Delete
-                        </button>
-                      </div>
-                    </div>
-
-                    <div className={styles.corkboardCardFields}>
-                      <label className={styles.corkboardField}>
-                        <span>Status</span>
-                        <select
-                          value={card.status}
-                          onChange={(event) =>
-                            updateCorkboardCard(card.id, {
-                              status: event.target.value as 'planned' | 'draft' | 'written'
-                            })
-                          }
-                        >
-                          <option value='planned'>Planned</option>
-                          <option value='draft'>Draft</option>
-                          <option value='written'>Written</option>
-                        </select>
-                      </label>
-                      <label className={styles.corkboardField}>
-                        <span>Summary</span>
-                        <textarea
-                          value={card.summary}
-                          onChange={(event) =>
-                            updateCorkboardCard(card.id, {summary: event.target.value})
-                          }
-                          placeholder='What happens in this chapter or scene sequence?'
-                          className={styles.corkboardSummaryTextarea}
-                        />
-                      </label>
-                    </div>
-
-                    <div className={styles.corkboardPlotSection}>
-                      <div className={styles.corkboardPlotHeader}>
-                        <strong>Plot points</strong>
-                        <button
-                          type='button'
-                          className={styles.modalSecondaryAction}
-                          onClick={() => addCorkboardPlotPoint(card.id)}
-                        >
-                          Add plot point
-                        </button>
-                      </div>
-                      {card.plotPoints.length === 0 ? (
-                        <p className={styles.corkboardPlotEmpty}>
-                          No plot points yet.
-                        </p>
-                      ) : (
-                        <div className={styles.corkboardPlotList}>
-                          {card.plotPoints.map((plotPoint, plotIndex) => (
-                            <div key={plotPoint.id} className={styles.corkboardPlotPoint}>
-                              <div className={styles.corkboardPlotPointHeader}>
-                                <span className={styles.corkboardPlotIndex}>
-                                  {plotIndex + 1}
-                                </span>
-                                <input
-                                  type='text'
-                                  value={plotPoint.title}
-                                  onChange={(event) =>
-                                    updateCorkboardPlotPoint(card.id, plotPoint.id, {
-                                      title: event.target.value
-                                    })
-                                  }
-                                  placeholder='Beat or turning point'
-                                  className={styles.corkboardPlotTitleInput}
-                                />
-                                <div className={styles.corkboardPlotActions}>
-                                  <button
-                                    type='button'
-                                    className={styles.modalSecondaryAction}
-                                    onClick={() =>
-                                      moveCorkboardPlotPoint(card.id, plotPoint.id, -1)
-                                    }
-                                    disabled={plotIndex === 0}
-                                  >
-                                    Up
-                                  </button>
-                                  <button
-                                    type='button'
-                                    className={styles.modalSecondaryAction}
-                                    onClick={() =>
-                                      moveCorkboardPlotPoint(card.id, plotPoint.id, 1)
-                                    }
-                                    disabled={plotIndex === card.plotPoints.length - 1}
-                                  >
-                                    Down
-                                  </button>
-                                  <button
-                                    type='button'
-                                    className={styles.modalSecondaryAction}
-                                    onClick={() =>
-                                      deleteCorkboardPlotPoint(card.id, plotPoint.id)
-                                    }
-                                  >
-                                    Delete
-                                  </button>
-                                </div>
-                              </div>
-                              <textarea
-                                value={plotPoint.notes ?? ''}
-                                onChange={(event) =>
-                                  updateCorkboardPlotPoint(card.id, plotPoint.id, {
-                                    notes: event.target.value
-                                  })
-                                }
-                                placeholder='Optional note or reminder'
-                                className={styles.corkboardPlotNotes}
-                              />
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  </section>
-                ))}
-              </div>
-            )}
-
-            <div className={styles.corkboardFooterActions}>
-              <button
-                type='button'
-                className={styles.modalSecondaryAction}
-                onClick={openScratchpadModal}
-              >
-                Open Scratchpad
-              </button>
-              <button type='button' onClick={closeCorkboardModal}>
-                Done
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {isExportModalOpen && (
-        <div
-          ref={exportDialogRef}
-          role='dialog'
-          aria-modal='true'
-          className={styles.modalOverlay}
-        >
-          <div className={`${styles.modalCard} ${styles.exportModalCard}`}>
-            <h3 className={styles.modalTitle}>
-              Export scenes as{' '}
-              {exportFormat === 'markdown'
-                ? 'Markdown'
-                : exportFormat === 'docx'
-                  ? 'DOCX'
-                  : 'EPUB'}
-            </h3>
-            <p className={styles.modalDescription}>
-              Choose which scenes to export and adjust their order for the final file.
-            </p>
-            <div className={styles.exportControlRow}>
-              <button type='button' onClick={() => toggleAllExportItems(true)}>
-                Select all
-              </button>
-              <button type='button' onClick={() => toggleAllExportItems(false)}>
-                Clear all
-              </button>
-            </div>
-            <div className={styles.exportListContainer}>
-              {exportSelection.length === 0 ? (
-                <p className={styles.exportEmpty}>
-                  No scenes available to export.
-                </p>
-              ) : (
-                <ul className={styles.exportList}>
-                  {exportSelection.map((item, index) => (
-                    <li key={item.id} className={styles.exportListItem}>
-                      <label className={styles.exportItemLabel}>
-                        <input
-                          type='checkbox'
-                          checked={item.included}
-                          onChange={() => toggleExportItem(item.id)}
-                        />
-                        <span className={styles.exportItemTitle}>
-                          {index + 1}. {item.title}
-                        </span>
-                      </label>
-                      <div className={styles.exportMoveActions}>
-                        <button
-                          type='button'
-                          onClick={() => moveExportItem(item.id, -1)}
-                          disabled={index === 0}
-                          className={styles.exportMoveButton}
-                        >
-                          Up
-                        </button>
-                        <button
-                          type='button'
-                          onClick={() => moveExportItem(item.id, 1)}
-                          disabled={index === exportSelection.length - 1}
-                          className={styles.exportMoveButton}
-                        >
-                          Down
-                        </button>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-            <div className={styles.modalActions}>
-              <button
-                type='button'
-                onClick={closeExportModal}
-                className={styles.modalSecondaryAction}
-              >
-                Cancel
-              </button>
-              <button type='button' onClick={handleExportScenes}>
-                Export
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {isMemoryModalOpen && selectedDocument && (
-        <div
-          ref={memoryDialogRef}
-          role='dialog'
-          aria-modal='true'
-          className={styles.modalOverlay}
-        >
-          <div className={`${styles.modalCard} ${styles.memoryModalCard}`}>
-            <h3 className={styles.modalTitle}>Capture Shodh memory</h3>
-            <p className={styles.modalDescription}>
-              Review or edit the summary before adding it to the project
-              canon.
-            </p>
-            <textarea
-              value={memoryDraft}
-              onChange={(e) => setMemoryDraft(e.target.value)}
-              rows={6}
-              className={styles.memoryTextarea}
-            />
-            <div className={styles.modalActions}>
-              <button
-                type='button'
-                onClick={() => setMemoryModalOpen(false)}
-                disabled={isSavingMemory}
-                className={styles.modalSecondaryAction}
-              >
-                Cancel
-              </button>
-              <button
-                type='button'
-                onClick={handleMemorySave}
-                disabled={isSavingMemory || !memoryDraft.trim()}
-              >
-                {isSavingMemory ? 'Saving...' : 'Save memory'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {confirmDialog}
     </section>
