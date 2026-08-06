@@ -165,6 +165,10 @@ Under the hood, the app still includes rich systems for world data, rules, chara
   - `useWorkspaceLoreSnippets`
   - `useWorkspaceCommands`
   - `useWorkspaceSceneRoster`
+  - `useWorkspaceDrawerFocus`
+  - `useWorkspaceContextActions`
+  - `useWorkspaceSystemHistory`
+  - `useWorkspaceUi`
 - World Bible orchestration is decomposed into focused hooks:
   - `useWorldBibleProjectData`
   - `useWorldBibleSelectedEntity`
@@ -173,6 +177,8 @@ Under the hood, the app still includes rich systems for world data, rules, chara
 - Workspace drawer UI extracted into:
   - `WorkspaceSceneDrawer`
   - `WorkspaceContextDrawer`
+  - `WorkspaceDrawerLayout` for shared desktop/mobile placement and responsive
+    shell composition
   - `WorkspaceDrawerPanel` for the shared mobile overlay, focus boundary,
     side-specific shell, header, and close behavior
 - Workspace review/canon status UI now includes focused `UnknownEntityPanel` and
@@ -189,7 +195,7 @@ Under the hood, the app still includes rich systems for world data, rules, chara
 - `WorkspaceRoute` now groups workspace store subscriptions by concern instead of scattering individual selectors through the route body.
 - `useWorkspaceDocuments` now keeps persistence behavior local while using pure helpers for document selection initialization, editor-document assembly, change detection, and manual-save/autosave consistency mode selection.
 - Shared text matching contract added for smoke-critical lore/review matching paths.
-- Current targeted architecture sizes are `WorkspaceRoute.tsx` 3,424 lines,
+- Current targeted architecture sizes are `WorkspaceRoute.tsx` 2,800 lines,
   `WorldBibleRoute.tsx` 3,011, `CharacterSheetsRoute.tsx` 2,374,
   `CompendiumRoute.tsx` 1,590, and `useWorkspaceConsistency.ts` 1,990.
 

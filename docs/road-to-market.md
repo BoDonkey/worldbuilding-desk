@@ -107,7 +107,7 @@ and required revisit point, `WIP`, `Done <commit>`.
 | 2.7 | Compendium sub-list search/filter | 2 | S | Done `b43aa19` — 4 name filters; lint; 258 web + 6 engine + 12 UI tests; web/desktop builds; Cypress 42/42; manual entry/recipe filter-clear checks |
 | 2.8 | Primary nav / "More" badge visibility | 2 | S | Done `4cb43b9` — narrow `More` now exposes the aggregate Mechanics completion count without promoting optional systems; lint; 259 web + 6 engine + 12 UI tests; web/desktop builds; Cypress 43/43; desktop/narrow browser checks |
 | 2.9 | UI close-out audit | 2 | XS | Done `6c32b22` — Slices 2.1–2.8 verified with no open gaps; lint; 259 web + 6 engine + 12 UI tests; web/desktop builds; Cypress 43/43; dialog/theme/filter/nav browser checks |
-| 3.1 | WorkspaceRoute drawer/context extraction | 3 | M | — |
+| 3.1 | WorkspaceRoute drawer/context extraction | 3 | M | WIP |
 | 3.2 | WorkspaceRoute to <2,000 lines | 3 | M | — |
 | 3.3 | WorldBibleRoute to <2,000 lines | 3 | M | — |
 | 3.4 | CharacterSheetsRoute to <2,000 lines | 3 | S | — |

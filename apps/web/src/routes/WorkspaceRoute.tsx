@@ -1,25 +1,22 @@
 import {
+  type ComponentProps,
   useEffect,
-  useLayoutEffect,
   useState,
   useCallback,
   useMemo,
   useRef
 } from 'react';
-import {useLocation, useNavigate} from 'react-router';
-import {useShallow} from 'zustand/react/shallow';
+import {useNavigate} from 'react-router';
 import type {
   StatBlockInsertMode,
   StatBlockScopePreset,
   StatBlockSourceType,
   StatBlockStyle,
-  SystemHistoryEntry,
   WritingDocument
 } from '../entityTypes';
 import {EditorWithAI} from '../components/Editor/EditorWithAI';
 import TipTapEditor from '../components/TipTapEditor';
 import {ContextPopover} from '../components/Editor/ContextPopover';
-import type {LoreInspectorRecord} from '../components/Editor/LoreInspectorPanel';
 import {useWorkspaceMemories} from '../hooks/useWorkspaceMemories';
 import {useWorkspaceConsistency} from '../hooks/useWorkspaceConsistency';
 import {useWorkspaceDocuments} from '../hooks/useWorkspaceDocuments';
@@ -40,25 +37,25 @@ import {
   syncChildWithParent
 } from '../services/seriesBible/SeriesBibleService';
 import {getWorldEngine} from '../services/worldEngine';
-import {
-  appendSystemHistoryEntry,
-  getSystemHistoryEntries
-} from '../services/system';
-import {
-  getInspectorConsultationUsage,
-  incrementInspectorConsultationUsage
-} from '../services/editor';
-import {
-  useWorkspaceDrawers,
-  type WorkspaceContextDrawerView
-} from '../hooks/useWorkspaceDrawers';
+import {useWorkspaceDrawers} from '../hooks/useWorkspaceDrawers';
 import {useWorkspaceCommands} from '../hooks/useWorkspaceCommands';
+import {useWorkspaceDrawerFocus} from '../hooks/useWorkspaceDrawerFocus';
+import {
+  summarizeContent,
+  useWorkspaceContextActions
+} from '../hooks/useWorkspaceContextActions';
+import {useWorkspaceSystemHistory} from '../hooks/useWorkspaceSystemHistory';
+import {
+  useWorkspaceExportUi,
+  useWorkspaceImportUi,
+  useWorkspaceModalUi,
+  useWorkspaceSceneOperationUi
+} from '../hooks/useWorkspaceUi';
 import {getProjectCapabilities} from '../projectMode';
 import styles from '../styles/WorkspaceRoute.module.css';
 import {useAppStore} from '../store/appStore';
-import {useWorkspaceUiStore} from '../store/workspaceUiStore';
 import {WorkspaceContextDrawer} from '../components/Workspace/WorkspaceContextDrawer';
-import {WorkspaceDrawerPanel} from '../components/Workspace/WorkspaceDrawerPanel';
+import {WorkspaceDrawerLayout} from '../components/Workspace/WorkspaceDrawerLayout';
 import {WorkspaceSceneDrawer} from '../components/Workspace/WorkspaceSceneDrawer';
 import {CanonPanel} from '../components/Workspace/CanonPanel';
 import {UnknownEntityPanel} from '../components/Workspace/UnknownEntityPanel';
@@ -98,17 +95,6 @@ declare global {
   }
 }
 
-const summarizeContent = (html: string, limit = 500): string => {
-  const text = html
-    .replace(/<br\s*\/?>/gi, '\n')
-    .replace(/<\/p>/gi, '\n\n')
-    .replace(/<[^>]+>/g, ' ')
-    .replace(/&nbsp;/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
-  return text.slice(0, limit);
-};
-
 const toSingularLabel = (value: string): string => {
   const trimmed = value.trim();
   if (!trimmed) {
@@ -127,78 +113,10 @@ const toSingularLabel = (value: string): string => {
 };
 
 type FeedbackTone = 'success' | 'error';
-type ContextDrawerView = WorkspaceContextDrawerView;
-type WorkspaceAIContext = {
-  type: 'document';
-  id: string;
-  selectedText?: string;
-  from: number;
-  to: number;
-};
-
-const workspaceWindowScrollPositions = new Map<string, number>();
-const workspaceScrollSnapshots = new Map<
-  string,
-  {
-    windowY: number;
-    elements: Array<{key: string; top: number; left: number}>;
-  }
->();
-
-const useWorkspaceModalUi = () =>
-  useWorkspaceUiStore(
-    useShallow((state) => ({
-      isScratchpadModalOpen: state.isScratchpadModalOpen,
-      setScratchpadModalOpen: state.setScratchpadModalOpen,
-      isCorkboardModalOpen: state.isCorkboardModalOpen,
-      setCorkboardModalOpen: state.setCorkboardModalOpen,
-      isStatBlockModalOpen: state.isStatBlockModalOpen,
-      setStatBlockModalOpen: state.setStatBlockModalOpen
-    }))
-  );
-
-const useWorkspaceExportUi = () =>
-  useWorkspaceUiStore(
-    useShallow((state) => ({
-      isExportModalOpen: state.isExportModalOpen,
-      exportFormat: state.exportFormat,
-      exportSelection: state.exportSelection,
-      closeExportModal: state.closeExportModal,
-      moveExportItem: state.moveExportItem,
-      toggleExportItem: state.toggleExportItem,
-      toggleAllExportItems: state.toggleAllExportItems
-    }))
-  );
-
-const useWorkspaceImportUi = () =>
-  useWorkspaceUiStore(
-    useShallow((state) => ({
-      importMode: state.importMode,
-      setImportMode: state.setImportMode,
-      skipImportSuggestions: state.skipImportSuggestions,
-      setSkipImportSuggestions: state.setSkipImportSuggestions,
-      importSummary: state.importSummary,
-      setImportSummary: state.setImportSummary,
-      retryImportFiles: state.retryImportFiles,
-      setRetryImportFiles: state.setRetryImportFiles
-    }))
-  );
-
-const useWorkspaceSceneOperationUi = () =>
-  useWorkspaceUiStore(
-    useShallow((state) => ({
-      isCreatingScene: state.isCreatingScene,
-      deletingDocumentId: state.deletingDocumentId
-    }))
-  );
 
 function WorkspaceRoute() {
   const activeProject = useAppStore((s) => s.activeProject);
   const navigate = useNavigate();
-  const location = useLocation();
-  const workspaceRootRef = useRef<HTMLElement | null>(null);
-  const sceneDrawerDialogRef = useRef<HTMLDivElement | null>(null);
-  const contextDrawerDialogRef = useRef<HTMLDivElement | null>(null);
   const positionedChangeDialogRef = useRef<HTMLDivElement | null>(null);
   const inventoryCaptureDialogRef = useRef<HTMLDivElement | null>(null);
   const statBlockDialogRef = useRef<HTMLDivElement | null>(null);
@@ -224,15 +142,8 @@ function WorkspaceRoute() {
     isStatBlockModalOpen,
     setStatBlockModalOpen
   } = useWorkspaceModalUi();
-  const [systemHistoryEntries, setSystemHistoryEntries] = useState<SystemHistoryEntry[]>([]);
-  const [activeAIContext, setActiveAIContext] = useState<WorkspaceAIContext | null>(null);
-  const [queuedAssistantPrompt, setQueuedAssistantPrompt] = useState<string | null>(null);
-  const [activeLoreRecord, setActiveLoreRecord] = useState<LoreInspectorRecord | null>(null);
-  const [aiBudgetUsed, setAIBudgetUsed] = useState(0);
-  const [pendingAIInsert, setPendingAIInsert] = useState<{
-    text: string;
-    context: {from: number; to: number} | null;
-  } | null>(null);
+  const {systemHistoryEntries, refreshSystemHistory, addSystemHistory} =
+    useWorkspaceSystemHistory(activeProject?.id ?? null);
   const [worldCaptureDrafts, setWorldCaptureDrafts] = useState<Record<string, string>>({});
   const [manualWorldCapture, setManualWorldCapture] = useState<{
     sourceText: string;
@@ -283,21 +194,23 @@ function WorkspaceRoute() {
     deleteCorkboardPlotPoint,
     moveCorkboardPlotPoint
   } = useWorkspaceCorkboard(activeProject?.id ?? null);
-  const [isNarrowViewport, setNarrowViewport] = useState(() =>
-    typeof window !== 'undefined'
-      ? window.matchMedia('(max-width: 1200px)').matches
-      : false
-  );
   const {
+    sceneDrawerDialogRef,
+    contextDrawerDialogRef,
+    isNarrowViewport,
     isSceneDrawerOpen,
     setSceneDrawerOpen,
     isContextDrawerOpen,
     setContextDrawerOpen,
     activeContextView,
-    setActiveContextView
+    setActiveContextView,
+    closeSceneDrawer,
+    closeContextDrawer,
+    toggleSceneDrawer,
+    toggleContextDrawer,
+    openContextDrawer
   } = useWorkspaceDrawers({
-    activeProjectId: activeProject?.id ?? null,
-    isNarrowViewport
+    activeProjectId: activeProject?.id ?? null
   });
 
   useEffect(() => {
@@ -310,34 +223,6 @@ function WorkspaceRoute() {
 
   // Lightweight diagnostics only, no state updates.
   window.__wbdWorkspaceRenderCount = (window.__wbdWorkspaceRenderCount ?? 0) + 1;
-  const toggleSceneDrawer = useCallback(() => {
-    setSceneDrawerOpen((prev) => {
-      const next = !prev;
-      if (isNarrowViewport && next) {
-        setContextDrawerOpen(false);
-      }
-      return next;
-    });
-  }, [isNarrowViewport, setContextDrawerOpen, setSceneDrawerOpen]);
-  const toggleContextDrawer = useCallback(() => {
-    setContextDrawerOpen((prev) => {
-      const next = !prev;
-      if (isNarrowViewport && next) {
-        setSceneDrawerOpen(false);
-      }
-      return next;
-    });
-  }, [isNarrowViewport, setContextDrawerOpen, setSceneDrawerOpen]);
-  const openContextDrawer = useCallback(
-    (view: ContextDrawerView) => {
-      setActiveContextView(view);
-      setContextDrawerOpen(true);
-      if (isNarrowViewport) {
-        setSceneDrawerOpen(false);
-      }
-    },
-    [isNarrowViewport, setActiveContextView, setContextDrawerOpen, setSceneDrawerOpen]
-  );
   const openScratchpadModal = useCallback(() => {
     setScratchpadModalOpen(true);
   }, [setScratchpadModalOpen]);
@@ -350,35 +235,6 @@ function WorkspaceRoute() {
   const closeCorkboardModal = useCallback(() => {
     setCorkboardModalOpen(false);
   }, [setCorkboardModalOpen]);
-  const refreshSystemHistory = useCallback(() => {
-    if (!activeProject) {
-      setSystemHistoryEntries([]);
-      return;
-    }
-    setSystemHistoryEntries(getSystemHistoryEntries(activeProject.id));
-  }, [activeProject]);
-
-  useEffect(() => {
-    if (!activeProject) {
-      setAIBudgetUsed(0);
-      return;
-    }
-    setAIBudgetUsed(getInspectorConsultationUsage(activeProject.id));
-  }, [activeProject]);
-
-  const addSystemHistory = useCallback(
-    (input: {
-      category: SystemHistoryEntry['category'];
-      message: string;
-      insertText?: string;
-      sceneId?: string;
-    }) => {
-      if (!activeProject) return;
-      appendSystemHistoryEntry(activeProject.id, input);
-      refreshSystemHistory();
-    },
-    [activeProject, refreshSystemHistory]
-  );
   const lastAutosaveErrorRef = useRef<string | null>(null);
   const persistDocRef = useRef<Parameters<typeof useWorkspaceDocuments>[0]['persistDocRef']['current']>(null);
   const refreshDeferredReviewRef =
@@ -507,11 +363,9 @@ function WorkspaceRoute() {
     setFeedback
   });
 
+  const resetContextActionsRef = useRef<() => void>(() => undefined);
   const handleProjectReset = useCallback(() => {
-    setActiveAIContext(null);
-    setQueuedAssistantPrompt(null);
-    setActiveLoreRecord(null);
-    setPendingAIInsert(null);
+    resetContextActionsRef.current();
     setWorldCaptureDrafts({});
     setManualWorldCapture(null);
     setPendingInventoryCapture(null);
@@ -578,6 +432,26 @@ function WorkspaceRoute() {
     refreshSystemHistory,
     onProjectReset: handleProjectReset
   });
+  const {
+    activeAIContext,
+    pendingAIInsert,
+    setPendingAIInsert,
+    queuedAssistantPrompt,
+    setQueuedAssistantPrompt,
+    activeLoreRecord,
+    aiBudgetUsed,
+    resetContextActions,
+    handleOpenAIContext,
+    handleOpenLoreInspector,
+    handleConsultationFromLore
+  } = useWorkspaceContextActions({
+    activeProjectId: activeProject?.id ?? null,
+    projectSettings,
+    content,
+    selectedId,
+    openContextDrawer
+  });
+  resetContextActionsRef.current = resetContextActions;
   const {getOverrides: getSceneRosterOverrides, updateOverride: updateSceneRosterOverride} =
     useSceneRosterPreferences(activeProject?.id ?? null);
   const worldEngine = useMemo(
@@ -946,7 +820,7 @@ function WorkspaceRoute() {
         ? 'Quest hook available from an active party synergy combo.'
         : `Quest hooks available from ${activeRules.length} active party synergy combos.`;
 
-    appendSystemHistoryEntry(activeProject.id, {
+    addSystemHistory({
       category: 'quest',
       message,
       insertText: `Quest Update: ${message}`,
@@ -954,7 +828,7 @@ function WorkspaceRoute() {
       createdAt: Date.now()
     });
     refreshSystemHistory();
-  }, [activeProject, activePartySynergies, refreshSystemHistory]);
+  }, [activeProject, activePartySynergies, addSystemHistory, refreshSystemHistory]);
   const capabilities = getProjectCapabilities(projectSettings);
   const showGameSystems = capabilities.canUseGameSystems;
   const showRuleAuthoring = capabilities.canUseRuleAuthoring;
@@ -1145,180 +1019,23 @@ function WorkspaceRoute() {
     [handleRefreshStatTemplates, setStatBlockModalOpen]
   );
 
-  const [focusRequest, setFocusRequest] = useState<{
-    query: string;
-    token: number;
-  } | null>(null);
-  const [activeReviewItemId, setActiveReviewItemId] = useState<string | null>(null);
-  const focusQuery = focusRequest?.query ?? null;
-  const workspaceWindowScrollKey =
-    activeProject && selectedId
-      ? `wbd:workspace-window-scroll:${activeProject.id}:${selectedId}`
-      : null;
-  const workspaceScrollSnapshotKey =
-    activeProject && selectedId
-      ? `workspace-scroll:${activeProject.id}:${selectedId}`
-      : null;
-
-  useEffect(() => {
-    const state = location.state as {focusDocumentId?: string; focusQuery?: string} | null;
-    const focusDocumentId = state?.focusDocumentId;
-    if (!focusDocumentId) return;
-    const target = documents.find((doc) => doc.id === focusDocumentId);
-    if (!target) return;
-    const query = state?.focusQuery?.trim();
-    setFocusRequest(query ? {query, token: Date.now()} : null);
-    if (selectedId !== target.id) {
-      handleSelectDocument(target);
-    }
-    navigate(location.pathname, {replace: true, state: {}});
-  }, [documents, handleSelectDocument, location.pathname, location.state, navigate, selectedId]);
-
-  const focusReviewItemInScene = useCallback(
-    (item: (typeof consistencyReviewItems)[number]) => {
-      const target = documents.find((doc) => doc.id === item.sceneId);
-      if (target && selectedId !== target.id) {
-        handleSelectDocument(target);
-      }
-      const query = item.issue.surface?.trim();
-      if (query) {
-        setFocusRequest({query, token: Date.now()});
-      }
-      setActiveReviewItemId(item.id);
-      setActiveContextView('review');
-      if (!isContextDrawerOpen) {
-        setContextDrawerOpen(true);
-      }
-    },
-    [
-      documents,
-      handleSelectDocument,
-      isContextDrawerOpen,
-      selectedId,
-      setActiveContextView,
-      setContextDrawerOpen
-    ]
-  );
-
-  useEffect(() => {
-    if (editorScrollResetToken > 0) {
-      setActiveReviewItemId(null);
-    }
-  }, [editorScrollResetToken]);
-
-  useEffect(() => {
-    if (!workspaceWindowScrollKey) return;
-
-    let animationFrame: number | null = null;
-    const saveScrollPosition = () => {
-      workspaceWindowScrollPositions.set(workspaceWindowScrollKey, window.scrollY);
-    };
-    const handleScroll = () => {
-      if (animationFrame !== null) return;
-      animationFrame = window.requestAnimationFrame(() => {
-        animationFrame = null;
-        saveScrollPosition();
-      });
-    };
-
-    window.addEventListener('scroll', handleScroll, {passive: true});
-    return () => {
-      if (animationFrame !== null) {
-        window.cancelAnimationFrame(animationFrame);
-      }
-      saveScrollPosition();
-      window.removeEventListener('scroll', handleScroll);
-    };
-  }, [workspaceWindowScrollKey]);
-
-  useEffect(() => {
-    if (!workspaceWindowScrollKey || focusQuery?.trim()) return;
-
-    const storedScrollY = workspaceWindowScrollPositions.get(workspaceWindowScrollKey) ?? 0;
-    if (!Number.isFinite(storedScrollY) || storedScrollY <= 0) return;
-
-    const frameIds: number[] = [];
-    const timeoutIds: number[] = [];
-    const restoreScrollPosition = () => {
-      frameIds.push(
-        window.requestAnimationFrame(() => {
-        window.scrollTo({top: storedScrollY, left: 0, behavior: 'auto'});
-        })
-      );
-    };
-
-    frameIds.push(window.requestAnimationFrame(restoreScrollPosition));
-    [50, 150, 300].forEach((delay) => {
-      timeoutIds.push(window.setTimeout(restoreScrollPosition, delay));
-    });
-
-    return () => {
-      frameIds.forEach((frameId) => window.cancelAnimationFrame(frameId));
-      timeoutIds.forEach((timeoutId) => window.clearTimeout(timeoutId));
-    };
-  }, [focusQuery, workspaceWindowScrollKey]);
-
-  const captureWorkspaceScroll = useCallback(() => {
-    if (!workspaceScrollSnapshotKey) return;
-    const root = workspaceRootRef.current;
-    const elements = root
-      ? Array.from(root.querySelectorAll<HTMLElement>('[data-wbd-scroll-key]'))
-          .map((element) => ({
-            key: element.dataset.wbdScrollKey ?? '',
-            top: element.scrollTop,
-            left: element.scrollLeft
-          }))
-          .filter((entry) => entry.key)
-      : [];
-
-    workspaceScrollSnapshots.set(workspaceScrollSnapshotKey, {
-      windowY: window.scrollY,
-      elements
-    });
-  }, [workspaceScrollSnapshotKey]);
-
-  useEffect(() => {
-    window.addEventListener('wbd:capture-workspace-scroll', captureWorkspaceScroll);
-    return () => {
-      captureWorkspaceScroll();
-      window.removeEventListener('wbd:capture-workspace-scroll', captureWorkspaceScroll);
-    };
-  }, [captureWorkspaceScroll]);
-
-  useLayoutEffect(() => {
-    if (!workspaceScrollSnapshotKey || focusQuery?.trim()) return;
-    const snapshot = workspaceScrollSnapshots.get(workspaceScrollSnapshotKey);
-    if (!snapshot) return;
-
-    const frameIds: number[] = [];
-    const timeoutIds: number[] = [];
-    const restore = () => {
-      window.scrollTo({top: snapshot.windowY, left: 0, behavior: 'auto'});
-      const root = workspaceRootRef.current;
-      if (!root) return;
-      snapshot.elements.forEach((entry) => {
-        const element = root.querySelector<HTMLElement>(
-          `[data-wbd-scroll-key="${entry.key}"]`
-        );
-        if (element) {
-          element.scrollTop = entry.top;
-          element.scrollLeft = entry.left;
-          element.dataset.wbdRestoreTarget = String(entry.top);
-          element.dataset.wbdRestoredScrollTop = String(element.scrollTop);
-        }
-      });
-    };
-
-    frameIds.push(window.requestAnimationFrame(restore));
-    [50, 150, 300, 600].forEach((delay) => {
-      timeoutIds.push(window.setTimeout(restore, delay));
-    });
-
-    return () => {
-      frameIds.forEach((frameId) => window.cancelAnimationFrame(frameId));
-      timeoutIds.forEach((timeoutId) => window.clearTimeout(timeoutId));
-    };
-  }, [content, focusQuery, workspaceScrollSnapshotKey]);
+  const {
+    workspaceRootRef,
+    focusRequest,
+    focusQuery,
+    activeReviewItemId,
+    focusReviewItemInScene
+  } = useWorkspaceDrawerFocus({
+    activeProjectId: activeProject?.id ?? null,
+    selectedId,
+    documents,
+    content,
+    editorScrollResetToken,
+    isContextDrawerOpen,
+    handleSelectDocument,
+    setActiveContextView,
+    setContextDrawerOpen
+  });
 
   const selectedDocumentRef = useRef(selectedDocument);
   selectedDocumentRef.current = selectedDocument;
@@ -1474,45 +1191,6 @@ function WorkspaceRoute() {
   useEscapeToClose(closeInventoryCaptureDialog, isInventoryCaptureDialogOpen);
   useFocusTrap(inventoryCaptureDialogRef, isInventoryCaptureDialogOpen);
 
-  useFocusTrap(sceneDrawerDialogRef, isSceneDrawerOpen && isNarrowViewport);
-  useFocusTrap(contextDrawerDialogRef, isContextDrawerOpen && isNarrowViewport);
-
-  useEffect(() => {
-    const mediaQuery = window.matchMedia('(max-width: 1200px)');
-    const update = () => setNarrowViewport(mediaQuery.matches);
-    update();
-    mediaQuery.addEventListener('change', update);
-    return () => mediaQuery.removeEventListener('change', update);
-  }, []);
-
-  useEffect(() => {
-    if (!isNarrowViewport) return;
-    setSceneDrawerOpen(false);
-    setContextDrawerOpen(false);
-  }, [isNarrowViewport, setContextDrawerOpen, setSceneDrawerOpen]);
-
-  useEffect(() => {
-    if (!isNarrowViewport || (!isContextDrawerOpen && !isSceneDrawerOpen)) return;
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        if (isContextDrawerOpen) {
-          setContextDrawerOpen(false);
-          return;
-        }
-        if (isSceneDrawerOpen) {
-          setSceneDrawerOpen(false);
-        }
-      }
-    };
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
-  }, [
-    isNarrowViewport,
-    isContextDrawerOpen,
-    isSceneDrawerOpen,
-    setContextDrawerOpen,
-    setSceneDrawerOpen
-  ]);
 
   useWorkspaceCommands({
     handleNewDocument,
@@ -1529,24 +1207,6 @@ function WorkspaceRoute() {
     openMemoryModal
   });
 
-  const handleOpenAIContext = useCallback(
-    (context: WorkspaceAIContext, prompt?: string | null) => {
-      setActiveAIContext(context);
-      if (prompt !== undefined) {
-        setQueuedAssistantPrompt(prompt);
-      }
-      openContextDrawer('ai');
-    },
-    [openContextDrawer]
-  );
-
-  const handleOpenLoreInspector = useCallback(
-    (record: LoreInspectorRecord) => {
-      setActiveLoreRecord(record);
-      openContextDrawer('lore');
-    },
-    [openContextDrawer]
-  );
   const handleOpenManualWorldCapture = useCallback(
     (draftText: string, anchorRect: {left: number; top: number; bottom: number}) => {
       setManualExistingTargetId('');
@@ -1558,80 +1218,6 @@ function WorkspaceRoute() {
       });
     },
     []
-  );
-
-  const handleConsultationFromLore = useCallback(
-    (
-      mode:
-        | 'consistency'
-        | 'reaction'
-        | 'outcome'
-        | 'worldbuilding'
-        | 'plotting'
-    ) => {
-      if (!activeProject || !activeLoreRecord) return;
-      const inspector = projectSettings?.aiSettings?.inspectorSettings;
-      if (inspector?.enableAIConsultation === false) {
-        return;
-      }
-      const maxConsultations = inspector?.maxConsultationsPerDay ?? 20;
-      const used = getInspectorConsultationUsage(activeProject.id);
-      if (used >= maxConsultations) {
-        return;
-      }
-
-      const nextUsed = incrementInspectorConsultationUsage(activeProject.id);
-      setAIBudgetUsed(nextUsed);
-
-      const maxContextChars = inspector?.maxContextChars ?? 1800;
-      const compactContext = summarizeContent(content).slice(0, maxContextChars);
-      const header =
-        mode === 'consistency'
-          ? 'Check consistency for this subject against the current scene context.'
-          : mode === 'reaction'
-            ? 'Suggest an in-character reaction aligned with this subject profile.'
-            : mode === 'outcome'
-              ? 'Calculate a plausible outcome grounded in current stats/resources.'
-              : mode === 'worldbuilding'
-                ? 'Expand the surrounding worldbuilding around this subject without inventing canon-breaking facts.'
-                : 'Generate plot hooks and scene pressure that naturally involve this subject.';
-      const outputGuide =
-        mode === 'worldbuilding'
-          ? 'Return 3 grounded expansions with headings: Social/Cultural, Environmental/Material, and Tension/Complication. Keep each brief and explicitly tie it to existing context.'
-          : mode === 'plotting'
-            ? 'Return 4 plot hooks. For each hook include: Hook, Why it matters now, Risk/complication, and Best-fit scene type. Do not write the scene itself.'
-            : mode === 'consistency'
-              ? 'Return a concise review with confirmed facts, possible conflicts, and one safe next-step suggestion.'
-              : mode === 'reaction'
-                ? 'Return 3 plausible reactions ranked from most likely to least likely, with a short reason for each.'
-                : 'Return one likely outcome, 2 alternate outcomes, and the key stat/resource pressures driving them.';
-      const prompt =
-        `${header}\n\n` +
-        `Subject: ${activeLoreRecord.name} (${activeLoreRecord.type})\n` +
-        `Vital Signs: ${activeLoreRecord.vitalSigns.join(' | ')}\n` +
-        `Goal: ${activeLoreRecord.synopsis.goal}\n` +
-        `Recent Event: ${activeLoreRecord.synopsis.recentEvent}\n` +
-        `Motivation: ${activeLoreRecord.synopsis.motivation}\n` +
-        `Scene Context: ${compactContext}\n\n` +
-        `Constraints:\n` +
-        `- Treat established details as canon unless explicitly marked uncertain.\n` +
-        `- Prefer extensions, implications, and tensions over replacement.\n` +
-        `- Do not write finished prose for the novel unless the request explicitly asks for insertable text.\n` +
-        `- Flag any assumption that is not directly grounded in the provided context.\n\n` +
-        `Output format:\n${outputGuide}`;
-
-      handleOpenAIContext(
-        {
-          type: 'document',
-          id: selectedId || activeProject.id,
-          selectedText: compactContext,
-          from: 0,
-          to: 0
-        },
-        prompt
-      );
-    },
-    [activeLoreRecord, activeProject, content, handleOpenAIContext, projectSettings?.aiSettings?.inspectorSettings, selectedId]
   );
 
   const handlePromoteDocument = useCallback(async () => {
@@ -1708,6 +1294,59 @@ function WorkspaceRoute() {
       </section>
     );
   }
+
+  const sceneDrawerProps: ComponentProps<typeof WorkspaceSceneDrawer> = {
+    handleNewDocument, isCreatingScene, isImportingDocuments, openImportPicker,
+    importMode, setImportMode, skipImportSuggestions, setSkipImportSuggestions,
+    openExportModalWithDrawerHandling, documents,
+    importSummary, setImportSummary, retryImportFiles, setRetryImportFiles,
+    handleRetryFailedImports, selectedId, handleSelectDocument, handleMoveDocument,
+    handleDelete, deletingDocumentId, reviewItemCountBySceneId,
+    staleStateEventCountBySceneId,
+    selectedSceneTimeline
+  };
+  const contextDrawerProps: ComponentProps<typeof WorkspaceContextDrawer> = {
+    activeContextView, setActiveContextView, showGameSystems, showRuleAuthoring,
+    entities, categories, ruleset, characters, characterSheets,
+    sceneRosterTitle: sceneRosterModel.sceneTitle,
+    sceneRosterCharacters: sceneRosterModel.characters,
+    sceneRosterItems: sceneRosterModel.items,
+    sceneRosterAddOptions: sceneRosterModel.addOptions,
+    sceneRosterAmbiguousSurfaces: sceneRosterModel.ambiguousSurfaces,
+    addSceneRosterEntry, hideSceneRosterEntry, sceneRosterStateMoment,
+    sceneRosterCursorPosition: sceneCursorPosition,
+    setSceneRosterStateMoment, recordSceneRosterChangeHere, consumeSceneRosterItemHere,
+    sceneRosterTimeline, editSceneRosterTimelineEvent,
+    invalidateSceneRosterTimelineEvent, reanchorSceneRosterTimelineEvent,
+    expireSceneRosterTimelineEvent,
+    handleRunConsistencyReview: runConsistencyReviewFromUi,
+    isRunningConsistencyReview, lastConsistencyReviewAt, consistencyReviewItems,
+    stateMutationReviewItems, hiddenStateMutationReviewCountBySceneId,
+    hiddenStateMutationReviewCount, applyingStateMutationReviewId, reviewReadiness,
+    acceptStateMutationReviewItem, rejectStateMutationReviewItem,
+    acceptSceneStateMutationReviewItems, rejectSceneStateMutationReviewItems,
+    hideStateMutationReviewItem, restoreHiddenStateMutationReviewItems,
+    restoreAllHiddenStateMutationReviewItems,
+    documents, handleSelectDocument,
+    onFocusReviewItem: focusReviewItemInScene,
+    activeReviewItemId, reviewCreateLabel, reviewLinkLabel, resolvingUnknown,
+    linkingUnknown, unknownCategorySelection, setUnknownCategorySelection,
+    worldCaptureDrafts, setWorldCaptureDrafts,
+    unknownLinkSelection, setUnknownLinkSelection, unknownLinkOptions,
+    getSuggestedUnknownCategoryId, resolveUnknownEntity, dismissUnknownEntity,
+    ignoreUnknownSurfaceProjectWide, linkUnknownEntity, openWorldRecord,
+    scratchpadContent, setScratchpadContent, scratchpadStatus, scratchpadLastSavedAt,
+    activeProject, projectSettings, activeAIContext, setPendingAIInsert,
+    queuedAssistantPrompt, setQueuedAssistantPrompt, systemHistoryEntries,
+    setFeedback, refreshSystemHistory, activeLoreRecord, aiBudgetUsed,
+    handleConsultationFromLore,
+    settlementModuleCount: settlementModules.length,
+    activePartySynergyCount: activePartySynergies.length,
+    selectedId, memoryCandidates, memoryFilter, setMemoryFilter,
+    memoryScope, setMemoryScope, scopeLabel, refreshMemories,
+    handleDeleteMemory, emptyMemoryMessage, seriesBibleConfig,
+    handlePromoteMemory, isPromotingMemoryId
+  };
 
   return (
     <section
@@ -1823,41 +1462,17 @@ function WorkspaceRoute() {
         />
       )}
 
-      <div className={styles.workspaceFrame} data-wbd-scroll-key='workspace-frame'>
-        <div className={styles.workspaceLayout} data-wbd-scroll-key='workspace-layout'>
-        {isSceneDrawerOpen && !isNarrowViewport && (
-          <aside
-            className={styles.sceneDrawerDesktop}
-            data-wbd-scroll-key='workspace-scene-drawer'
-          >
-            <WorkspaceSceneDrawer
-              handleNewDocument={handleNewDocument}
-              isCreatingScene={isCreatingScene}
-              isImportingDocuments={isImportingDocuments}
-              openImportPicker={openImportPicker}
-              importMode={importMode}
-              setImportMode={setImportMode}
-              skipImportSuggestions={skipImportSuggestions}
-              setSkipImportSuggestions={setSkipImportSuggestions}
-              openExportModalWithDrawerHandling={openExportModalWithDrawerHandling}
-              documents={documents}
-              importSummary={importSummary}
-              setImportSummary={setImportSummary}
-              retryImportFiles={retryImportFiles}
-              setRetryImportFiles={setRetryImportFiles}
-              handleRetryFailedImports={handleRetryFailedImports}
-              selectedId={selectedId}
-              handleSelectDocument={handleSelectDocument}
-              handleMoveDocument={handleMoveDocument}
-              handleDelete={handleDelete}
-              deletingDocumentId={deletingDocumentId}
-              reviewItemCountBySceneId={reviewItemCountBySceneId}
-              staleStateEventCountBySceneId={staleStateEventCountBySceneId}
-              selectedSceneTimeline={selectedSceneTimeline}
-            />
-          </aside>
-        )}
-
+      <WorkspaceDrawerLayout
+        isNarrowViewport={isNarrowViewport}
+        isSceneDrawerOpen={isSceneDrawerOpen}
+        isContextDrawerOpen={isContextDrawerOpen}
+        sceneDrawerDialogRef={sceneDrawerDialogRef}
+        contextDrawerDialogRef={contextDrawerDialogRef}
+        closeSceneDrawer={closeSceneDrawer}
+        closeContextDrawer={closeContextDrawer}
+        sceneDrawerProps={sceneDrawerProps}
+        contextDrawerProps={contextDrawerProps}
+      >
         <div className={styles.editorColumn} data-wbd-scroll-key='workspace-editor-column'>
           {selectedId ? (
             <>
@@ -2392,252 +2007,7 @@ function WorkspaceRoute() {
           )}
         </div>
 
-        {isContextDrawerOpen && !isNarrowViewport && (
-          <aside className={styles.contextDrawerDesktop}>
-            <WorkspaceContextDrawer
-              activeContextView={activeContextView}
-              setActiveContextView={setActiveContextView}
-              showGameSystems={showGameSystems}
-              showRuleAuthoring={showRuleAuthoring}
-              entities={entities}
-              categories={categories}
-              ruleset={ruleset}
-              characters={characters}
-              characterSheets={characterSheets}
-              sceneRosterTitle={sceneRosterModel.sceneTitle}
-              sceneRosterCharacters={sceneRosterModel.characters}
-              sceneRosterItems={sceneRosterModel.items}
-              sceneRosterAddOptions={sceneRosterModel.addOptions}
-              sceneRosterAmbiguousSurfaces={sceneRosterModel.ambiguousSurfaces}
-              addSceneRosterEntry={addSceneRosterEntry}
-              hideSceneRosterEntry={hideSceneRosterEntry}
-              sceneRosterStateMoment={sceneRosterStateMoment}
-              sceneRosterCursorPosition={sceneCursorPosition}
-              setSceneRosterStateMoment={setSceneRosterStateMoment}
-              recordSceneRosterChangeHere={recordSceneRosterChangeHere}
-              consumeSceneRosterItemHere={consumeSceneRosterItemHere}
-              sceneRosterTimeline={sceneRosterTimeline}
-              editSceneRosterTimelineEvent={editSceneRosterTimelineEvent}
-              invalidateSceneRosterTimelineEvent={invalidateSceneRosterTimelineEvent}
-              reanchorSceneRosterTimelineEvent={reanchorSceneRosterTimelineEvent}
-              expireSceneRosterTimelineEvent={expireSceneRosterTimelineEvent}
-              handleRunConsistencyReview={runConsistencyReviewFromUi}
-              isRunningConsistencyReview={isRunningConsistencyReview}
-              lastConsistencyReviewAt={lastConsistencyReviewAt}
-              consistencyReviewItems={consistencyReviewItems}
-              stateMutationReviewItems={stateMutationReviewItems}
-              hiddenStateMutationReviewCountBySceneId={hiddenStateMutationReviewCountBySceneId}
-              hiddenStateMutationReviewCount={hiddenStateMutationReviewCount}
-              applyingStateMutationReviewId={applyingStateMutationReviewId}
-              reviewReadiness={reviewReadiness}
-              acceptStateMutationReviewItem={acceptStateMutationReviewItem}
-              rejectStateMutationReviewItem={rejectStateMutationReviewItem}
-              acceptSceneStateMutationReviewItems={acceptSceneStateMutationReviewItems}
-              rejectSceneStateMutationReviewItems={rejectSceneStateMutationReviewItems}
-              hideStateMutationReviewItem={hideStateMutationReviewItem}
-              restoreHiddenStateMutationReviewItems={restoreHiddenStateMutationReviewItems}
-              restoreAllHiddenStateMutationReviewItems={restoreAllHiddenStateMutationReviewItems}
-              documents={documents}
-              handleSelectDocument={handleSelectDocument}
-              onFocusReviewItem={focusReviewItemInScene}
-              activeReviewItemId={activeReviewItemId}
-              reviewCreateLabel={reviewCreateLabel}
-              reviewLinkLabel={reviewLinkLabel}
-              resolvingUnknown={resolvingUnknown}
-              linkingUnknown={linkingUnknown}
-              unknownCategorySelection={unknownCategorySelection}
-              setUnknownCategorySelection={setUnknownCategorySelection}
-              worldCaptureDrafts={worldCaptureDrafts}
-              setWorldCaptureDrafts={setWorldCaptureDrafts}
-              unknownLinkSelection={unknownLinkSelection}
-              setUnknownLinkSelection={setUnknownLinkSelection}
-              unknownLinkOptions={unknownLinkOptions}
-              getSuggestedUnknownCategoryId={getSuggestedUnknownCategoryId}
-              resolveUnknownEntity={resolveUnknownEntity}
-              dismissUnknownEntity={dismissUnknownEntity}
-              ignoreUnknownSurfaceProjectWide={ignoreUnknownSurfaceProjectWide}
-              linkUnknownEntity={linkUnknownEntity}
-              openWorldRecord={openWorldRecord}
-              scratchpadContent={scratchpadContent}
-              setScratchpadContent={setScratchpadContent}
-              scratchpadStatus={scratchpadStatus}
-              scratchpadLastSavedAt={scratchpadLastSavedAt}
-              activeProject={activeProject}
-              projectSettings={projectSettings}
-              activeAIContext={activeAIContext}
-              setPendingAIInsert={setPendingAIInsert}
-              queuedAssistantPrompt={queuedAssistantPrompt}
-              setQueuedAssistantPrompt={setQueuedAssistantPrompt}
-              systemHistoryEntries={systemHistoryEntries}
-              setFeedback={setFeedback}
-              refreshSystemHistory={refreshSystemHistory}
-              activeLoreRecord={activeLoreRecord}
-              aiBudgetUsed={aiBudgetUsed}
-              handleConsultationFromLore={handleConsultationFromLore}
-              settlementModuleCount={settlementModules.length}
-              activePartySynergyCount={activePartySynergies.length}
-              selectedId={selectedId}
-              memoryCandidates={memoryCandidates}
-              memoryFilter={memoryFilter}
-              setMemoryFilter={setMemoryFilter}
-              memoryScope={memoryScope}
-              setMemoryScope={setMemoryScope}
-              scopeLabel={scopeLabel}
-              refreshMemories={refreshMemories}
-              handleDeleteMemory={handleDeleteMemory}
-              emptyMemoryMessage={emptyMemoryMessage}
-              seriesBibleConfig={seriesBibleConfig}
-              handlePromoteMemory={handlePromoteMemory}
-              isPromotingMemoryId={isPromotingMemoryId}
-            />
-          </aside>
-        )}
-        </div>
-      </div>
-
-      {isSceneDrawerOpen && isNarrowViewport && (
-        <WorkspaceDrawerPanel
-          ref={sceneDrawerDialogRef}
-          ariaLabel='Workspace scene drawer'
-          dataScrollKey='workspace-scene-drawer'
-          onClose={() => setSceneDrawerOpen(false)}
-          side='left'
-          title='Scenes'
-        >
-          <WorkspaceSceneDrawer
-              handleNewDocument={handleNewDocument}
-              isCreatingScene={isCreatingScene}
-              isImportingDocuments={isImportingDocuments}
-              openImportPicker={openImportPicker}
-              importMode={importMode}
-              setImportMode={setImportMode}
-              skipImportSuggestions={skipImportSuggestions}
-              setSkipImportSuggestions={setSkipImportSuggestions}
-              openExportModalWithDrawerHandling={openExportModalWithDrawerHandling}
-              documents={documents}
-              importSummary={importSummary}
-              setImportSummary={setImportSummary}
-              retryImportFiles={retryImportFiles}
-              setRetryImportFiles={setRetryImportFiles}
-              handleRetryFailedImports={handleRetryFailedImports}
-              selectedId={selectedId}
-              handleSelectDocument={handleSelectDocument}
-              handleMoveDocument={handleMoveDocument}
-              handleDelete={handleDelete}
-              deletingDocumentId={deletingDocumentId}
-              reviewItemCountBySceneId={reviewItemCountBySceneId}
-              staleStateEventCountBySceneId={staleStateEventCountBySceneId}
-              selectedSceneTimeline={selectedSceneTimeline}
-          />
-        </WorkspaceDrawerPanel>
-      )}
-
-      {isContextDrawerOpen && isNarrowViewport && (
-        <WorkspaceDrawerPanel
-          ref={contextDrawerDialogRef}
-          ariaLabel='Workspace context drawer'
-          onClose={() => setContextDrawerOpen(false)}
-          side='right'
-          title='Context Drawer'
-        >
-          <WorkspaceContextDrawer
-              activeContextView={activeContextView}
-              setActiveContextView={setActiveContextView}
-              showGameSystems={showGameSystems}
-              showRuleAuthoring={showRuleAuthoring}
-              entities={entities}
-              categories={categories}
-              ruleset={ruleset}
-              characters={characters}
-              characterSheets={characterSheets}
-              sceneRosterTitle={sceneRosterModel.sceneTitle}
-              sceneRosterCharacters={sceneRosterModel.characters}
-              sceneRosterItems={sceneRosterModel.items}
-              sceneRosterAddOptions={sceneRosterModel.addOptions}
-              sceneRosterAmbiguousSurfaces={sceneRosterModel.ambiguousSurfaces}
-              addSceneRosterEntry={addSceneRosterEntry}
-              hideSceneRosterEntry={hideSceneRosterEntry}
-              sceneRosterStateMoment={sceneRosterStateMoment}
-              sceneRosterCursorPosition={sceneCursorPosition}
-              setSceneRosterStateMoment={setSceneRosterStateMoment}
-              recordSceneRosterChangeHere={recordSceneRosterChangeHere}
-              consumeSceneRosterItemHere={consumeSceneRosterItemHere}
-              sceneRosterTimeline={sceneRosterTimeline}
-              editSceneRosterTimelineEvent={editSceneRosterTimelineEvent}
-              invalidateSceneRosterTimelineEvent={invalidateSceneRosterTimelineEvent}
-              reanchorSceneRosterTimelineEvent={reanchorSceneRosterTimelineEvent}
-              expireSceneRosterTimelineEvent={expireSceneRosterTimelineEvent}
-              handleRunConsistencyReview={runConsistencyReviewFromUi}
-              isRunningConsistencyReview={isRunningConsistencyReview}
-              lastConsistencyReviewAt={lastConsistencyReviewAt}
-              consistencyReviewItems={consistencyReviewItems}
-              stateMutationReviewItems={stateMutationReviewItems}
-              hiddenStateMutationReviewCountBySceneId={hiddenStateMutationReviewCountBySceneId}
-              hiddenStateMutationReviewCount={hiddenStateMutationReviewCount}
-              applyingStateMutationReviewId={applyingStateMutationReviewId}
-              reviewReadiness={reviewReadiness}
-              acceptStateMutationReviewItem={acceptStateMutationReviewItem}
-              rejectStateMutationReviewItem={rejectStateMutationReviewItem}
-              acceptSceneStateMutationReviewItems={acceptSceneStateMutationReviewItems}
-              rejectSceneStateMutationReviewItems={rejectSceneStateMutationReviewItems}
-              hideStateMutationReviewItem={hideStateMutationReviewItem}
-              restoreHiddenStateMutationReviewItems={restoreHiddenStateMutationReviewItems}
-              restoreAllHiddenStateMutationReviewItems={restoreAllHiddenStateMutationReviewItems}
-              documents={documents}
-              handleSelectDocument={handleSelectDocument}
-              onFocusReviewItem={focusReviewItemInScene}
-              activeReviewItemId={activeReviewItemId}
-              reviewCreateLabel={reviewCreateLabel}
-              reviewLinkLabel={reviewLinkLabel}
-              resolvingUnknown={resolvingUnknown}
-              linkingUnknown={linkingUnknown}
-              unknownCategorySelection={unknownCategorySelection}
-              setUnknownCategorySelection={setUnknownCategorySelection}
-              worldCaptureDrafts={worldCaptureDrafts}
-              setWorldCaptureDrafts={setWorldCaptureDrafts}
-              unknownLinkSelection={unknownLinkSelection}
-              setUnknownLinkSelection={setUnknownLinkSelection}
-              unknownLinkOptions={unknownLinkOptions}
-              getSuggestedUnknownCategoryId={getSuggestedUnknownCategoryId}
-              resolveUnknownEntity={resolveUnknownEntity}
-              dismissUnknownEntity={dismissUnknownEntity}
-              ignoreUnknownSurfaceProjectWide={ignoreUnknownSurfaceProjectWide}
-              linkUnknownEntity={linkUnknownEntity}
-              openWorldRecord={openWorldRecord}
-              scratchpadContent={scratchpadContent}
-              setScratchpadContent={setScratchpadContent}
-              scratchpadStatus={scratchpadStatus}
-              scratchpadLastSavedAt={scratchpadLastSavedAt}
-              activeProject={activeProject}
-              projectSettings={projectSettings}
-              activeAIContext={activeAIContext}
-              setPendingAIInsert={setPendingAIInsert}
-              queuedAssistantPrompt={queuedAssistantPrompt}
-              setQueuedAssistantPrompt={setQueuedAssistantPrompt}
-              systemHistoryEntries={systemHistoryEntries}
-              setFeedback={setFeedback}
-              refreshSystemHistory={refreshSystemHistory}
-              activeLoreRecord={activeLoreRecord}
-              aiBudgetUsed={aiBudgetUsed}
-              handleConsultationFromLore={handleConsultationFromLore}
-              settlementModuleCount={settlementModules.length}
-              activePartySynergyCount={activePartySynergies.length}
-              selectedId={selectedId}
-              memoryCandidates={memoryCandidates}
-              memoryFilter={memoryFilter}
-              setMemoryFilter={setMemoryFilter}
-              memoryScope={memoryScope}
-              setMemoryScope={setMemoryScope}
-              scopeLabel={scopeLabel}
-              refreshMemories={refreshMemories}
-              handleDeleteMemory={handleDeleteMemory}
-              emptyMemoryMessage={emptyMemoryMessage}
-              seriesBibleConfig={seriesBibleConfig}
-              handlePromoteMemory={handlePromoteMemory}
-              isPromotingMemoryId={isPromotingMemoryId}
-          />
-        </WorkspaceDrawerPanel>
-      )}
+      </WorkspaceDrawerLayout>
 
       {pendingPositionedChange && pendingPositionedSheet && positionedChangeBefore && (
         <div
