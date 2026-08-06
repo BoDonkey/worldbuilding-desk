@@ -78,6 +78,9 @@ Under the hood, the app still includes rich systems for world data, rules, chara
 - Lightweight Corkboard is back as a workspace planning modal for chapter cards and plot points.
 - Corkboard chapter-card records are included in project backup snapshots and restore paths.
 - App-shell search is now visibly exposed and returns unified scene plus World Bible results.
+- Pending Mechanics completion counts now aggregate onto the `More` navigation
+  control at both desktop and narrow breakpoints, keeping optional-system work
+  discoverable without promoting systems into the writing-first primary nav.
 
 ### Story Context Systems
 - World Bible with dynamic categories and custom field schemas.

@@ -96,7 +96,7 @@ and required revisit point, `WIP`, `Done <commit>`.
 | 0.1 | Branch/worktree cleanup | 0 | XS | Done `51d1586` |
 | 1.1 | Realistic-project trust dogfood | 1 | M | Deferred — required before beta; not a current blocker |
 | 1.2 | Fix trust-path failures found in 1.1 | 1 | ? | — (if needed after 1.1) |
-| 1.3 | Calm-shell navigation validation | 1 | S | WIP — desktop/narrow project-mode checks pass; 2.8 must expose the aggregate pending badge on narrow `More` without promoting optional systems |
+| 1.3 | Calm-shell navigation validation | 1 | S | Done `530b59f` — desktop/narrow project-mode checks pass; 2.8 must expose the aggregate pending badge on narrow `More` without promoting optional systems |
 | 1.4 | Proposal-review assistant route (conditional on product need) | 1 | M | — |
 | 2.1 | ConfirmDialog + InlineAlert components | 2 | S | Done `38db7df` |
 | 2.2 | Migrate confirm/alert call sites | 2 | M | Done `9c278a3` + test fix `ab14f63` — Cypress re-run 2026-08-03: 42/42 passing |
@@ -105,7 +105,7 @@ and required revisit point, `WIP`, `Done <commit>`.
 | 2.5 | CompendiumRoute off inline styles | 2 | M | Done `83374f2` — zero inline styles; lint; 255 web + 6 engine + 12 UI tests; web/desktop builds; Cypress 42/42; three-tab before/after browser comparison |
 | 2.6 | CharacterSheetsRoute off inline styles | 2 | M | Done `effb82e` — zero inline styles; lint; 255 web + 6 engine + 12 UI tests; web/desktop builds; Cypress 42/42; build/history before/after browser comparison |
 | 2.7 | Compendium sub-list search/filter | 2 | S | Done `b43aa19` — 4 name filters; lint; 258 web + 6 engine + 12 UI tests; web/desktop builds; Cypress 42/42; manual entry/recipe filter-clear checks |
-| 2.8 | Primary nav / "More" badge visibility | 2 | S | — |
+| 2.8 | Primary nav / "More" badge visibility | 2 | S | WIP |
 | 2.9 | UI close-out audit | 2 | XS | — |
 | 3.1 | WorkspaceRoute drawer/context extraction | 3 | M | — |
 | 3.2 | WorkspaceRoute to <2,000 lines | 3 | M | — |

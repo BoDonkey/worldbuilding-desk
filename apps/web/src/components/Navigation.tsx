@@ -304,10 +304,17 @@ export const Navigation: FC<NavigationProps> = ({
           className={styles.mobileItem}
           onClick={() => setMobileMenuOpen((prev) => !prev)}
           aria-expanded={isMobileMenuOpen}
-          aria-label='Toggle more navigation options'
+          aria-label={
+            secondaryBadgeCount > 0
+              ? `Toggle more navigation options, ${secondaryBadgeCount} pending mechanics ${secondaryBadgeCount === 1 ? 'item' : 'items'}`
+              : 'Toggle more navigation options'
+          }
         >
           <span className={styles.icon} aria-hidden='true'>MO</span>
           <span className={styles.mobileLabel}>More</span>
+          {secondaryBadgeCount ? (
+            <span className={styles.navBadge}>{secondaryBadgeCount}</span>
+          ) : null}
         </button>
       </nav>
 
