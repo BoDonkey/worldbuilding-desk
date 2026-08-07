@@ -52,7 +52,8 @@ the full-length originals behind the 2026-08-01 consolidation:
 - `ui-design-work-slices.md` and `fitness-a-work-slices.md` — full
   self-contained agent prompts for the slices imported into
   `docs/road-to-market.md` Phases 0, 2, and 3.
-- `code-fitness-report-2026-08-01.md` — current fitness baseline (grade A−).
+- `code-fitness-report-2026-08-07.md` — current fitness close-out (grade A);
+  the superseded 2026-08-01 A− baseline remains beside it for comparison.
 - `freeform-lore-ingestion-architecture.md`, `canon-decision-workflow.md`,
   `customizable-state-model-spec.md`, `ai-assisted-item-authoring.md` — full
   design rationale behind `docs/domain-model.md`.

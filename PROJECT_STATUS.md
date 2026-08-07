@@ -169,6 +169,11 @@ Under the hood, the app still includes rich systems for world data, rules, chara
   builds. Legacy `moduleResolution: node` settings have been replaced with
   Node16 resolution for Electron and bundler resolution for the rules packages;
   TypeScript 6 stable-ordering parity checks and unpacked desktop packaging pass.
+- The 2026-08-07 code-fitness close-out is grade A. All five targeted
+  architecture files are below 2,000 lines; full development and production
+  dependency audits report zero known vulnerabilities after targeted
+  development-tool overrides; lint remains at 0 errors and the 3 known web
+  warnings; 289 unit tests and all 43 Cypress tests pass.
 - All linted workspaces use ESLint 10.8-compatible tooling and quoted recursive
   source globs. Lint is clean apart from the existing three web
   `exhaustive-deps` warnings; 77 React Compiler findings remain explicitly
@@ -228,9 +233,11 @@ Under the hood, the app still includes rich systems for world data, rules, chara
   `CompendiumRoute.tsx` 1,590, and `useWorkspaceConsistency.ts` 1,990.
 
 ### Current Assessment
-- The completed fitness plan materially reduced the targeted architecture and
-  established tested extraction seams; all currently targeted routes and hooks
-  are below the 2,000-line threshold.
+- The completed grade-A fitness plan reduced the five targeted files from
+  17,564 to 9,441 lines, established tested extraction seams, landed the four
+  planned toolchain-major groups, and cleared both production and development
+  dependency audits. See
+  `docs/archive/code-fitness-report-2026-08-07.md`.
 - The remaining work is product shaping and incremental maintainability, not
   emergency architecture repair.
 

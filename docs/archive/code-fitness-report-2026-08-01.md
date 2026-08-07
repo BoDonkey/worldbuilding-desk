@@ -1,4 +1,5 @@
-> **Archived 2026-08-01.** Current baseline report; referenced by `docs/road-to-market.md`.
+> **Archived 2026-08-01.** Superseded by
+> [code-fitness-report-2026-08-07.md](code-fitness-report-2026-08-07.md).
 
 # Code Fitness Report — worldbuilding-desk
 
