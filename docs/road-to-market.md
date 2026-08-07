@@ -114,7 +114,7 @@ and required revisit point, `WIP`, `Done <commit>`.
 | 3.5 | ESLint 10 group upgrade | 3 | M | Done `70cdf21` — ESLint 10.8 group landed across web, engine, and UI with quoted recursive globs; new core/enabled compiler findings resolved; 3 existing `exhaustive-deps` warnings unchanged; 77 findings across 3 compiler rules explicitly deferred for behavior-aware refactors; 271 web + 6 engine + 12 UI tests; web/desktop builds; Cypress 43/43 |
 | 3.6 | Vite 8 + plugin-react 6 | 3 | S | Done `df38e97` — Vite 8.2.1 + plugin-react 6.0.5; `@types/node` held at 24.10.11; native-loader-safe config; dev audit 36→30; lint; 271 web + 6 engine + 12 UI tests; web/desktop builds; dev server + Electron production shell; Cypress 43/43 |
 | 3.7 | Cypress 15 | 3 | S | Done `8867c2b` — Cypress 15.20.0; binary verified; legacy `Cypress.env()` browser access disabled; CI cache/install flow retained; dev audit 30→29; lint; 271 web + 6 engine + 12 UI tests; web/desktop builds; Cypress 43/43 across 9 specs |
-| 3.8 | TypeScript 7 | 3 | M | WIP |
+| 3.8 | TypeScript 7 | 3 | M | Done `8611539` — TypeScript 7.0.2 builds in all four workspaces; TypeScript 6 compatibility API retained for `typescript-eslint`; legacy node resolution migrated; TypeScript 6 stable-ordering parity; lint with 3 baseline warnings; 271 web + 6 engine + 12 UI tests; web/desktop builds; unpacked desktop package; Cypress 43/43 |
 | 3.9 | Dev-audit sweep + fitness close-out | 3 | S | — |
 | 4.1 | Description-first manual item creation | 4 | S | — |
 | 4.2 | Storage schema versioning + migrations | 4 | M | — |
