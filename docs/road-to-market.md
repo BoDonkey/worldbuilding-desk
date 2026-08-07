@@ -112,7 +112,7 @@ and required revisit point, `WIP`, `Done <commit>`.
 | 3.3 | WorldBibleRoute to <2,000 lines | 3 | M | Done `b041561` — `WorldBibleRoute` 3,016→1,957; category rail, import workspace, record AI helper, character health, and entity list extracted; `useWorldBibleImports` unchanged at 1,631; lint; 267 web + 6 engine + 12 UI tests; web/desktop builds; Cypress 43/43 |
 | 3.4 | CharacterSheetsRoute to <2,000 lines | 3 | S | Done `5f0560d` — `CharacterSheetsRoute` 2,294→1,956; mutation form state, preview/replay derivation, and history orchestration extracted to a 273-line hook; pure command construction moved to the tested character service; lint; 271 web + 6 engine + 12 UI tests; web/desktop builds; Cypress 43/43 |
 | 3.5 | ESLint 10 group upgrade | 3 | M | Done `70cdf21` — ESLint 10.8 group landed across web, engine, and UI with quoted recursive globs; new core/enabled compiler findings resolved; 3 existing `exhaustive-deps` warnings unchanged; 77 findings across 3 compiler rules explicitly deferred for behavior-aware refactors; 271 web + 6 engine + 12 UI tests; web/desktop builds; Cypress 43/43 |
-| 3.6 | Vite 8 + plugin-react 6 | 3 | S | WIP |
+| 3.6 | Vite 8 + plugin-react 6 | 3 | S | Done `df38e97` — Vite 8.2.1 + plugin-react 6.0.5; `@types/node` held at 24.10.11; native-loader-safe config; dev audit 36→30; lint; 271 web + 6 engine + 12 UI tests; web/desktop builds; dev server + Electron production shell; Cypress 43/43 |
 | 3.7 | Cypress 15 | 3 | S | — |
 | 3.8 | TypeScript 7 | 3 | M | — |
 | 3.9 | Dev-audit sweep + fitness close-out | 3 | S | — |
