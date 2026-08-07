@@ -158,6 +158,11 @@ Under the hood, the app still includes rich systems for world data, rules, chara
   runtime. The migration reduced the full development audit from 36 findings
   to 30 by removing the prior Vite Rollup/PostCSS/esbuild and plugin Babel
   findings.
+- Cypress end-to-end coverage now runs on Cypress 15.20 with 43 tests across
+  nine specs. Legacy browser-side `Cypress.env()` access is disabled, and the
+  assistant default-tools smoke opens its target through the public command
+  palette instead of mutating persisted UI state. The migration reduced the
+  full development audit from 30 findings to 29.
 - All linted workspaces use ESLint 10.8-compatible tooling and quoted recursive
   source globs. Lint is clean apart from the existing three web
   `exhaustive-deps` warnings; 77 React Compiler findings remain explicitly

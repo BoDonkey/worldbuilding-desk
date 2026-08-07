@@ -107,25 +107,10 @@ function setProjectMode(modeValue: 'litrpg' | 'game' | 'general'): void {
 function openAssistantAndAssertSelectedTool(
   selectedToolName: string
 ): void {
-  cy.window().then((win) => {
-    win.localStorage.setItem(
-      'wbd-workspace-ui',
-      JSON.stringify({
-        state: {
-          drawerPreferencesByProjectId: {
-            'cypress-project-1': {
-              leftDrawerOpen: false,
-              rightDrawerOpen: true,
-              activeContextView: 'ai'
-            }
-          },
-          selectedDocumentIdByProjectId: {}
-        },
-        version: 0
-      })
-    );
-  });
-  cy.reload();
+  cy.contains('h1', 'Writing Workspace').should('be.visible');
+  cy.get('body').type('{ctrl}k');
+  cy.get('[role="dialog"][aria-label="Command palette"]').should('be.visible');
+  cy.contains('button', 'Workspace: Toggle AI Panel').click();
   cy.contains('div', 'Prompt Tools').should('be.visible');
 
   // We verify one selected tool per mode to confirm project-mode defaults apply.

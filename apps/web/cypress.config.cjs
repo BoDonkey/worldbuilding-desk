@@ -1,6 +1,7 @@
 const {defineConfig} = require('cypress');
 
 module.exports = defineConfig({
+  allowCypressEnv: false,
   e2e: {
     // Keep test discovery explicit so new specs have a predictable location.
     specPattern: 'cypress/e2e/**/*.cy.ts',
