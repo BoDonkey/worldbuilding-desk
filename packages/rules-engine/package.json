@@ -20,11 +20,12 @@
   "devDependencies": {
     "@types/mathjs": "^9.4.2",
     "@types/node": "^24.10.11",
+    "@typescript/native": "npm:typescript@^7.0.2",
     "@typescript-eslint/eslint-plugin": "^8.66.0",
     "@typescript-eslint/parser": "^8.66.0",
     "eslint": "^10.8.0",
     "tsx": "^4.23.1",
-    "typescript": "^5.3.0",
+    "typescript": "npm:@typescript/typescript6@^6.0.2",
     "vitest": "^4.1.10"
   }
 }

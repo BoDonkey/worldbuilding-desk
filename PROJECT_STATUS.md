@@ -163,6 +163,12 @@ Under the hood, the app still includes rich systems for world data, rules, chara
   assistant default-tools smoke opens its target through the public command
   palette instead of mutating persisted UI state. The migration reduced the
   full development audit from 30 findings to 29.
+- All four workspaces now compile with the native TypeScript 7.0 toolchain.
+  The three ESLint-owning workspaces keep Microsoft's TypeScript 6 compatibility
+  API side-by-side for `typescript-eslint`, while `tsc` resolves to 7.0 for
+  builds. Legacy `moduleResolution: node` settings have been replaced with
+  Node16 resolution for Electron and bundler resolution for the rules packages;
+  TypeScript 6 stable-ordering parity checks and unpacked desktop packaging pass.
 - All linted workspaces use ESLint 10.8-compatible tooling and quoted recursive
   source globs. Lint is clean apart from the existing three web
   `exhaustive-deps` warnings; 77 React Compiler findings remain explicitly

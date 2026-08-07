@@ -20,7 +20,7 @@
     "electron": "^43.2.0",
     "electron-builder": "^26.15.7",
     "electron-builder-squirrel-windows": "^26.15.7",
-    "typescript": "~5.9.3"
+    "typescript": "^7.0.2"
   },
   "build": {
     "appId": "com.worldbuildingdesk.app",
