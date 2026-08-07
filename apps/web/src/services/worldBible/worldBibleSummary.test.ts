@@ -2,7 +2,8 @@ import {describe, expect, it} from 'vitest';
 import type {EntityCategory, WorldEntity} from '../../entityTypes';
 import {
   buildEntityCardSummary,
-  isCharacterCategory
+  isCharacterCategory,
+  isItemCategory
 } from './worldBibleSummary';
 
 const category: EntityCategory = {
@@ -48,6 +49,19 @@ describe('isCharacterCategory', () => {
   it('rejects unrelated categories', () => {
     expect(
       isCharacterCategory({...category, slug: 'locations', name: 'Locations'})
+    ).toBe(false);
+  });
+});
+
+describe('isItemCategory', () => {
+  it('recognizes the canonical item category by slug or name', () => {
+    expect(isItemCategory({...category, slug: 'items', name: 'Artifacts'})).toBe(true);
+    expect(isItemCategory({...category, slug: 'custom', name: 'Items'})).toBe(true);
+  });
+
+  it('does not treat loosely related custom categories as item canon', () => {
+    expect(
+      isItemCategory({...category, slug: 'magic-items', name: 'Magic Items'})
     ).toBe(false);
   });
 });

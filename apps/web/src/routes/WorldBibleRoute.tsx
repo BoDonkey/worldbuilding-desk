@@ -16,6 +16,7 @@ import {WorldBibleEntityList} from '../components/WorldBible/WorldBibleEntityLis
 import {WorldBibleRecordAiHelper} from '../components/WorldBible/WorldBibleRecordAiHelper';
 import {WorldBibleCharacterHealth} from '../components/WorldBible/WorldBibleCharacterHealth';
 import {WorldBibleCategoryRail} from '../components/WorldBible/WorldBibleCategoryRail';
+import {ItemDescriptionFirstFields} from '../components/WorldBible/ItemDescriptionFirstFields';
 import styles from '../assets/components/WorldBibleRoute.module.css';
 import type {MemoryEntry} from '../services/shodh/ShodhMemoryService';
 import {ShodhMemoryPanel} from '../components/ShodhMemoryPanel';
@@ -43,7 +44,8 @@ import {
   CHARACTER_AUTHORING_FIELD_KEYS,
   CHARACTER_IDENTITY_FIELD_KEYS,
   CHARACTER_NOTES_FIELD,
-  isCharacterCategory
+  isCharacterCategory,
+  isItemCategory
 } from '../services/worldBible/worldBibleSummary';
 import {useWorldBibleProjectData} from '../hooks/useWorldBibleProjectData';
 import {useWorldBibleSelectedEntity} from '../hooks/useWorldBibleSelectedEntity';
@@ -54,8 +56,6 @@ import {
   useWorldBibleRecordResolution,
   type WorldBibleCanonicalizationHandoff
 } from '../hooks/useWorldBibleRecordResolution';
-
-// activeProject read from store below
 
 type WorldBibleViewMode = 'category' | 'review';
 type CharacterAuthoringMode = 'idle' | 'manual';
@@ -125,6 +125,7 @@ function WorldBibleRoute() {
     useState<CharacterAuthoringMode>('idle');
   const [recordAuthoringMode, setRecordAuthoringMode] =
     useState<RecordAuthoringMode>('idle');
+  const [areItemDetailsExpanded, setAreItemDetailsExpanded] = useState(false);
   const [isPasteImportOpen, setIsPasteImportOpen] = useState(false);
   const [pastedImportText, setPastedImportText] = useState('');
   const [isNameResolverOpen, setIsNameResolverOpen] = useState(false);
@@ -224,6 +225,11 @@ function WorldBibleRoute() {
     () => Boolean(activeCategory && isCharacterCategory(activeCategory)),
     [activeCategory]
   );
+  const activeCategoryIsItem = Boolean(activeCategory && isItemCategory(activeCategory));
+  const isDescriptionFirstItemDraft = activeCategoryIsItem && !editingId;
+  const itemDescriptionField = activeCategoryIsItem
+    ? activeCategory?.fieldSchema.find((field) => field.key === 'description') ?? null
+    : null;
   const characterDescriptionField = activeCategoryIsCharacterLike
     ? activeCategory?.fieldSchema.find((field) => field.key === 'description') ?? null
     : null;
@@ -435,6 +441,7 @@ function WorldBibleRoute() {
     setMoveCategoryTargetId('');
     setCharacterAuthoringMode('idle');
     setRecordAuthoringMode('idle');
+    setAreItemDetailsExpanded(false);
     setIsPasteImportOpen(false);
     setPastedImportText('');
     setIsRecordAiHelperOpen(false);
@@ -502,6 +509,7 @@ function WorldBibleRoute() {
     setManualResolutionTargetId('');
     setCharacterAuthoringMode('idle');
     setRecordAuthoringMode('manual');
+    setAreItemDetailsExpanded(false);
     setIsPasteImportOpen(false);
     setPastedImportText('');
     setIsRecordAiHelperOpen(false);
@@ -537,6 +545,7 @@ function WorldBibleRoute() {
       entityIsCharacterCategory ? 'manual' : 'idle'
     );
     setRecordAuthoringMode(entityIsCharacterCategory ? 'idle' : 'manual');
+    setAreItemDetailsExpanded(true);
     setPendingReviewFocus(focus);
     setAiHelperSelectedText('');
     setAiHelperNewSectionLabel('');
@@ -698,6 +707,10 @@ function WorldBibleRoute() {
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
+    if (activeCategoryIsItem && !editingId) {
+      await saveEntityDraft({successMessage: 'Item saved.'});
+      return;
+    }
     await saveEntityDraft();
   };
 
@@ -958,7 +971,11 @@ function WorldBibleRoute() {
           <div className={styles.castTaskGrid}>
             <div className={styles.castTask}>
               <h3>Manual {activeCategory.name.replace(/s$/i, '')}</h3>
-              <p>Start with a canonical name, aliases, and the core canon fields.</p>
+              <p>
+                {activeCategoryIsItem
+                  ? 'Describe the item first, then add structured details only when they help.'
+                  : 'Start with a canonical name, aliases, and the core canon fields.'}
+              </p>
               <button
                 type='button'
                 onClick={
@@ -1006,8 +1023,6 @@ function WorldBibleRoute() {
         setActiveImportPreviewId={setActiveImportPreviewId}
         handleApplyImportDrafts={handleApplyImportDrafts}
       />
-
-
       {showCategoryManager && (
         <CategoryManager
           projectId={activeProject.id}
@@ -1032,23 +1047,27 @@ function WorldBibleRoute() {
                       : 'New Character Canon'
                     : `${editingId ? 'Edit' : 'New'} ${activeCategory.name.slice(0, -1)}`}
                 </h2>
-                <button
-                  type='button'
-                  onClick={() => {
-                    setAiHelperSelectedText('');
-                    setAiHelperProposal(null);
-                    setIsRecordAiHelperOpen((value) => !value);
-                  }}
-                  aria-expanded={isRecordAiHelperOpen}
-                >
-                  {isRecordAiHelperOpen ? 'Hide AI helper' : 'AI helper'}
-                </button>
+                {(!isDescriptionFirstItemDraft || areItemDetailsExpanded) && (
+                  <button
+                    type='button'
+                    onClick={() => {
+                      setAiHelperSelectedText('');
+                      setAiHelperProposal(null);
+                      setIsRecordAiHelperOpen((value) => !value);
+                    }}
+                    aria-expanded={isRecordAiHelperOpen}
+                  >
+                    {isRecordAiHelperOpen ? 'Hide AI helper' : 'AI helper'}
+                  </button>
+                )}
               </div>
-              <WorldBibleRecordAiHelper
-                activeProject={activeProject} projectSettings={projectSettings}
-                activeCategory={activeCategory} editingId={editingId}
-                authoring={worldBibleAuthoring}
-              />
+              {(!isDescriptionFirstItemDraft || areItemDetailsExpanded) && (
+                <WorldBibleRecordAiHelper
+                  activeProject={activeProject} projectSettings={projectSettings}
+                  activeCategory={activeCategory} editingId={editingId}
+                  authoring={worldBibleAuthoring}
+                />
+              )}
 
               {activeCategoryIsCharacterLike && (
                 <div className={styles.reviewHint}>
@@ -1457,9 +1476,6 @@ function WorldBibleRoute() {
                     canProbe={Boolean(ragService)}
                     handleCharacterHealthProbe={handleCharacterHealthProbe}
                   />
-
-
-
                   <div className={styles.characterSectionBuilder}>
                     <div>
                       <strong>Add character section</strong>
@@ -1533,7 +1549,21 @@ function WorldBibleRoute() {
                 </>
               ) : (
                 <>
-                  <section className={styles.canonSection} aria-label='Names and aliases'>
+                  {isDescriptionFirstItemDraft && (
+                    <ItemDescriptionFirstFields
+                      name={name}
+                      descriptionField={itemDescriptionField}
+                      fieldValues={fieldValues}
+                      detailsExpanded={areItemDetailsExpanded}
+                      onNameChange={setName}
+                      onFieldValuesChange={setFieldValues}
+                      onToggleDetails={() => setAreItemDetailsExpanded((value) => !value)}
+                    />
+                  )}
+
+                  {(!isDescriptionFirstItemDraft || areItemDetailsExpanded) && (
+                    <div id='item-detailed-fields'>
+                    <section className={styles.canonSection} aria-label='Names and aliases'>
                     <div className={styles.canonSectionHeader}>
                       <div>
                         <strong>Names and aliases</strong>
@@ -1550,23 +1580,25 @@ function WorldBibleRoute() {
                       </button>
                     </div>
 
-                    <div className={styles.formGroup}>
-                    <label>
-                      Name
-                      <input
-                        type='text'
-                        value={name}
-                        onChange={(e) => setName(e.target.value)}
-                        required
-                      />
-                    </label>
-                    {isCanonicalRenameDraft && selectedEntity && (
-                      <div className={styles.reviewHint}>
-                        Saving this rename will keep <strong>{selectedEntity.name}</strong> as an
-                        alternative name.
+                    {!isDescriptionFirstItemDraft && (
+                      <div className={styles.formGroup}>
+                        <label>
+                          Name
+                          <input
+                            type='text'
+                            value={name}
+                            onChange={(e) => setName(e.target.value)}
+                            required
+                          />
+                        </label>
+                        {isCanonicalRenameDraft && selectedEntity && (
+                          <div className={styles.reviewHint}>
+                            Saving this rename will keep <strong>{selectedEntity.name}</strong> as an
+                            alternative name.
+                          </div>
+                        )}
                       </div>
                     )}
-                    </div>
 
                     <div className={styles.formGroup}>
                     <label>
@@ -1802,7 +1834,12 @@ function WorldBibleRoute() {
                     )}
                   </section>
 
-                  {activeCategory.fieldSchema.map(renderEntityField)}
+                  {activeCategory.fieldSchema
+                    .filter(
+                      (field) =>
+                        !isDescriptionFirstItemDraft || field.key !== itemDescriptionField?.key
+                    )
+                    .map(renderEntityField)}
 
                   <div className={styles.characterSectionBuilder}>
                     <div>
@@ -1827,6 +1864,8 @@ function WorldBibleRoute() {
                       </button>
                     </div>
                   </div>
+                    </div>
+                  )}
                 </>
               )}
 
@@ -1874,7 +1913,9 @@ function WorldBibleRoute() {
                         : 'Save Changes'
                       : activeCategoryIsCharacterLike
                         ? 'Create Canon Record'
-                        : 'Create Entry'}
+                        : activeCategoryIsItem
+                          ? 'Save Item'
+                          : 'Create Entry'}
                 </button>
                 {(editingId || activeCategoryIsCharacterLike || recordAuthoringMode !== 'idle') && (
                   <button type='button' onClick={resetForm} disabled={isSubmittingEntity}>
@@ -1952,6 +1993,4 @@ function WorldBibleRoute() {
     </section>
   );
 }
-
-
 export default WorldBibleRoute;

@@ -88,6 +88,9 @@ Under the hood, the app still includes rich systems for world data, rules, chara
 - World Bible category task cards reserve stable description height so switching between Characters, Locations, and Items does not shift the list below.
 - World Bible AI assistance is being reshaped away from top-level AI draft cards and toward an explicit helper model. The current helper is an interim floating chat with selected-text apply to editable fields; the target model is open brainstorming plus confirmable model-proposed actions for names, aliases, fields, and new sections.
 - Character records and character sheets.
+- New World Bible items now begin with a generous name-and-description draft
+  that saves without AI; aliases, rarity, custom sections, and the existing
+  full editor remain available through explicit progressive disclosure.
 - Alias tracking and consistency storage.
 - Review linking can now target either World Bible entries or characters.
 - World Bible review completion now treats saving or marking reviewed as clearing both record completion and alias follow-up.

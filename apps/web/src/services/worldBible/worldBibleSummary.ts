@@ -22,6 +22,7 @@ export const CHARACTER_CATEGORY_HINTS = [
   'person',
   'people'
 ];
+const ITEM_CATEGORY_NAMES = new Set(['item', 'items']);
 export const CHARACTER_NOTES_FIELD = 'notes';
 export const CHARACTER_IDENTITY_FIELD_KEYS = ['age', 'role'];
 export const CHARACTER_AUTHORING_FIELD_KEYS = new Set([
@@ -44,6 +45,10 @@ export const isCharacterCategory = (category: EntityCategory): boolean => {
     (hint) => slug.includes(hint) || name.includes(hint)
   );
 };
+
+export const isItemCategory = (category: EntityCategory): boolean =>
+  ITEM_CATEGORY_NAMES.has(category.slug.trim().toLowerCase()) ||
+  ITEM_CATEGORY_NAMES.has(category.name.trim().toLowerCase());
 
 export interface EntityCardSummary {
   primarySummary: string | null;

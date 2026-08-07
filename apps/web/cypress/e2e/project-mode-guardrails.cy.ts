@@ -306,6 +306,45 @@ describe('Project mode guardrails', () => {
     cy.get('form').find('input').first().should('have.value', '');
   });
 
+  it('creates an item from description before revealing the full editor', () => {
+    cy.visit('/world-bible');
+    cy.contains('button', 'Items').click();
+    cy.get('section[aria-label="Items canon"]')
+      .contains('button', 'Create Manually')
+      .click();
+
+    cy.contains('h3', 'Describe the item').should('be.visible');
+    cy.contains('button', 'AI helper').should('not.exist');
+    cy.contains('label', 'Alternative names').should('not.exist');
+    cy.contains('label', 'Rarity').should('not.exist');
+
+    cy.contains('label', 'Name').find('input').type('The Silver-Sewn Ring');
+    cy.contains('span', 'Description')
+      .closest('[class*="container"]')
+      .find('.ProseMirror')
+      .type('A weathered ring that warms near forgotten doors.');
+
+    cy.contains('button', 'Show all item details').click();
+    cy.contains('label', 'Alternative names').should('be.visible');
+    cy.contains('label', 'Rarity').should('be.visible');
+    cy.contains('button', 'Hide extra item details').click();
+    cy.contains('button', 'Save Item').click();
+
+    cy.contains('[role="status"]', 'Item saved.').should('be.visible');
+    cy.contains('li', 'The Silver-Sewn Ring').within(() => {
+      cy.contains('A weathered ring that warms near forgotten doors.').should('be.visible');
+      cy.contains('button', 'Edit').click();
+    });
+
+    cy.contains('h2', 'Edit Item').should('be.visible');
+    cy.contains('label', 'Alternative names').should('be.visible');
+    cy.contains('label', 'Rarity').should('be.visible');
+    cy.contains('span', 'Description')
+      .closest('[class*="container"]')
+      .find('.ProseMirror')
+      .should('contain.text', 'A weathered ring that warms near forgotten doors.');
+  });
+
   it('keeps World Bible review cards low density and clears completion state', () => {
     seedWorldBibleReviewQueueItem();
     cy.visit('/world-bible');
