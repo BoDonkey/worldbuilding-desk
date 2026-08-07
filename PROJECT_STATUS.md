@@ -1,6 +1,6 @@
 # Worldbuilding-Desk Project Status
 
-**Last Updated:** August 6, 2026
+**Last Updated:** August 7, 2026
 
 ## Project Overview
 
@@ -153,6 +153,11 @@ Under the hood, the app still includes rich systems for world data, rules, chara
   route size is primarily state, derived data, and persistence handlers.
 - Web and rules-engine tests run on Vitest 4.1, and all workspaces use Zod
   3.25.76 while the breaking Zod 4 migration remains deliberately deferred.
+- The web workspace now builds on Vite 8.2 and `@vitejs/plugin-react` 6 with
+  Rolldown/Oxc, while Node types remain aligned at 24.x with the Node 22
+  runtime. The migration reduced the full development audit from 36 findings
+  to 30 by removing the prior Vite Rollup/PostCSS/esbuild and plugin Babel
+  findings.
 - All linted workspaces use ESLint 10.8-compatible tooling and quoted recursive
   source globs. Lint is clean apart from the existing three web
   `exhaustive-deps` warnings; 77 React Compiler findings remain explicitly
