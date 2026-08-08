@@ -512,7 +512,7 @@ describe('Post-merge smoke checklist', () => {
     cy.contains('button', 'Create Manually').click();
     cy.get('input[type="text"]').first().clear().type('Conflict Entry');
     cy.get('.tiptap-editor').first().click().type('Original description');
-    cy.contains('button', /Create (Entry|Canon Record)/).click();
+    cy.contains('button', /Create (Entry|Canon Record)|Save Item/).click();
     cy.contains('[role="status"]', 'Entry created.').should('be.visible');
 
     const jsonPayload = JSON.stringify({

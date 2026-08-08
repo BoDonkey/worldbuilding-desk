@@ -318,8 +318,14 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
 
     try {
       // Get relevant context from RAG
+      const groundingRequired = requiresProjectGrounding(
+        promptText,
+        Boolean(selectedText)
+      );
       const [ragResults, shodhChunks] = await Promise.all([
-        ragService.current ? ragService.current.search(promptText, 3) : [],
+        ragService.current
+          ? ragService.current.search(promptText, groundingRequired ? 20 : 3)
+          : [],
         buildMemoryChunks(promptText)
       ]);
 
@@ -341,7 +347,7 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
         return;
       }
 
-      const ragChunks = await buildRagContextChunks(projectId, ragResults);
+      const ragChunks = await buildRagContextChunks(projectId, ragResults.slice(0, 3));
       const contextChunks = [...shodhChunks, ...ragChunks];
 
       // Add selected text context if available
@@ -354,7 +360,7 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
       }
       const contextSources = getContextSourceSummaries(contextChunks);
 
-      if (requiresProjectGrounding(promptText, Boolean(selectedText)) && contextSources.length === 0) {
+      if (groundingRequired && contextSources.length === 0) {
         setMessages((prev) => [
           ...prev,
           {

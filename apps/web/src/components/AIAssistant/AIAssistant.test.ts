@@ -58,6 +58,126 @@ describe('assistant grounding helpers', () => {
     expect(result?.content).toBe("Sera's eyes are gray.");
     expect(result?.results[0].chunk.documentId).toBe('sera');
   });
+
+  it('answers D-1 from the accepted occupation fact instead of creative context', () => {
+    const result = getDirectSavedFactAnswer(
+      'What did Sera do before she became a delver?',
+      [
+        {
+          score: 2,
+          chunk: {
+            id: 'sera-world-0',
+            documentId: 'sera',
+            documentTitle: 'Sera Kestrel',
+            content: 'Sera Kestrel description: Junior delver.',
+            metadata: {type: 'worldbible'}
+          }
+        },
+        {
+          score: 1.4,
+          chunk: {
+            id: 'sera-occupation-0',
+            documentId: 'canon-fact:occupation',
+            documentTitle: 'Sera Kestrel',
+            content: 'Sera Kestrel occupation: cartographer',
+            metadata: {type: 'canon_fact', tags: ['canon_fact', 'occupation']}
+          }
+        },
+        {
+          score: 1.2,
+          chunk: {
+            id: 'working-notes-0',
+            documentId: 'lore:working-notes',
+            documentTitle: 'Working Notes',
+            content: 'Earlier draft idea: Sera was a smuggler.',
+            metadata: {type: 'lore'}
+          }
+        }
+      ]
+    );
+
+    expect(result?.content).toBe('Sera was a cartographer before becoming a delver.');
+    expect(result?.results.map((entry) => entry.chunk.metadata.type)).toEqual([
+      'canon_fact'
+    ]);
+  });
+
+  it('answers accepted service length and treatment facts deterministically', () => {
+    const facts = [
+      {
+        score: 1.8,
+        chunk: {
+          id: 'brannic-service-0',
+          documentId: 'canon-fact:service',
+          documentTitle: 'Brannic Halloway',
+          content: 'Brannic Halloway background: Compact service: twenty years',
+          metadata: {type: 'canon_fact' as const}
+        }
+      },
+      {
+        score: 1.7,
+        chunk: {
+          id: 'vaultburn-treatment-0',
+          documentId: 'canon-fact:treatment',
+          documentTitle: 'The Undervault',
+          content:
+            'The Undervault background: Vaultburn treatment: salt, cedar oil, and whitethorn ash',
+          metadata: {type: 'canon_fact' as const}
+        }
+      }
+    ];
+
+    expect(
+      getDirectSavedFactAnswer('How long has Brannic served the Compact?', facts)
+        ?.content
+    ).toBe('Brannic has served the Compact for twenty years.');
+    expect(getDirectSavedFactAnswer('What cures Vaultburn?', facts)?.content).toBe(
+      'Vaultburn is treated with salt, cedar oil, and whitethorn ash.'
+    );
+  });
+
+  it('fails D-3 closed when no accepted membership fact exists', () => {
+    const result = getDirectSavedFactAnswer(
+      'Is Tam working for the Hollow Court?',
+      [
+        {
+          score: 2,
+          chunk: {
+            id: 'speculation-0',
+            documentId: 'lore:working-notes',
+            documentTitle: 'Working Notes',
+            content: 'What if Tam is Hollow Court?',
+            metadata: {type: 'lore'}
+          }
+        }
+      ]
+    );
+
+    expect(result?.content).toBe(
+      "Tam's connection with Hollow Court is not established in accepted canon."
+    );
+    expect(result?.results).toEqual([]);
+  });
+
+  it('reports conflicting accepted facts instead of selecting one', () => {
+    const result = getDirectSavedFactAnswer(
+      'What did Sera do before she became a delver?',
+      ['cartographer', 'smuggler'].map((value, index) => ({
+        score: 2 - index,
+        chunk: {
+          id: `occupation-${index}`,
+          documentId: `canon-fact:${index}`,
+          documentTitle: 'Sera Kestrel',
+          content: `Sera Kestrel occupation: ${value}`,
+          metadata: {type: 'canon_fact' as const}
+        }
+      }))
+    );
+
+    expect(result?.content).toContain('conflicting occupation facts');
+    expect(result?.content).toContain("won't choose one");
+    expect(result?.results).toHaveLength(2);
+  });
 });
 
 describe('stripAssistantThinking', () => {

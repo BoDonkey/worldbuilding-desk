@@ -26,6 +26,95 @@ const EXPLICIT_EYE_COLOR_PATTERN =
 const normalizeFactName = (value: string): string =>
   value.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
 
+type SavedFactIntent =
+  | {kind: 'eye-color'; subject: string}
+  | {kind: 'occupation'; subject: string; prior: boolean}
+  | {kind: 'service-length'; subject: string}
+  | {kind: 'membership'; subject: string; organization?: string}
+  | {kind: 'treatment'; subject: string};
+
+type ParsedCanonFact = {
+  result: RAGSearchResult;
+  target: string;
+  factType: string;
+  value: string;
+};
+
+const getSavedFactIntent = (promptText: string): SavedFactIntent | null => {
+  const prompt = promptText.trim();
+  const eyeQuestion = prompt.match(
+    /^what (?:color|colour) (?:are|is) (.+?)(?:['’]s) eyes\??$/i
+  );
+  if (eyeQuestion?.[1]) return {kind: 'eye-color', subject: eyeQuestion[1].trim()};
+
+  const priorOccupation = prompt.match(
+    /^what did (.+?) do before (?:he|she|they) became? (?:an? )?[^?]+\??$/i
+  );
+  if (priorOccupation?.[1]) {
+    return {kind: 'occupation', subject: priorOccupation[1].trim(), prior: true};
+  }
+
+  const occupation = prompt.match(
+    /^(?:what|which) (?:was|is) (.+?)(?:['’]s) (?:job|occupation|profession)\??$/i
+  );
+  if (occupation?.[1]) {
+    return {kind: 'occupation', subject: occupation[1].trim(), prior: false};
+  }
+
+  const service = prompt.match(/^how long has (.+?) served\b/i);
+  if (service?.[1]) return {kind: 'service-length', subject: service[1].trim()};
+
+  const membership = prompt.match(
+    /^is (.+?) (?:working for|a member of|part of) (?:the )?(.+?)\??$/i
+  );
+  if (membership?.[1]) {
+    return {
+      kind: 'membership',
+      subject: membership[1].trim(),
+      organization: membership[2]?.trim()
+    };
+  }
+
+  const treatment = prompt.match(/^what (?:cures|treats) (.+?)\??$/i);
+  if (treatment?.[1]) return {kind: 'treatment', subject: treatment[1].trim()};
+
+  return null;
+};
+
+const parseCanonFact = (result: RAGSearchResult): ParsedCanonFact | null => {
+  if (result.chunk.metadata.type !== 'canon_fact') return null;
+  const target = result.chunk.documentTitle.trim();
+  const prefix = `${target} `;
+  if (!result.chunk.content.toLowerCase().startsWith(prefix.toLowerCase())) {
+    return null;
+  }
+  const remainder = result.chunk.content.slice(prefix.length);
+  const separatorIndex = remainder.indexOf(':');
+  if (separatorIndex < 1) return null;
+  return {
+    result,
+    target,
+    factType: normalizeFactName(remainder.slice(0, separatorIndex)),
+    value: remainder.slice(separatorIndex + 1).trim()
+  };
+};
+
+const factMatchesSubject = (fact: ParsedCanonFact, subject: string): boolean => {
+  const normalizedSubject = normalizeFactName(subject);
+  const normalizedTarget = normalizeFactName(fact.target);
+  return (
+    normalizedTarget === normalizedSubject ||
+    normalizedTarget.startsWith(`${normalizedSubject} `)
+  );
+};
+
+const resolveSingleAcceptedFact = (
+  facts: ParsedCanonFact[]
+): ParsedCanonFact | null => {
+  const values = new Set(facts.map((fact) => normalizeFactName(fact.value)));
+  return values.size === 1 ? facts[0] ?? null : null;
+};
+
 export type DirectSavedFactAnswer = {
   content: string;
   results: RAGSearchResult[];
@@ -39,13 +128,104 @@ export const getDirectSavedFactAnswer = (
   promptText: string,
   results: RAGSearchResult[]
 ): DirectSavedFactAnswer | null => {
-  const eyeQuestion = promptText
-    .trim()
-    .match(/^what (?:color|colour) (?:are|is) (.+?)(?:['’]s) eyes\??$/i);
-  if (!eyeQuestion) return null;
+  const intent = getSavedFactIntent(promptText);
+  if (!intent) return null;
 
-  const subject = eyeQuestion[1].trim();
+  const subject = intent.subject;
   const normalizedSubject = normalizeFactName(subject);
+  const canonFacts = results
+    .map(parseCanonFact)
+    .filter((fact): fact is ParsedCanonFact => Boolean(fact));
+  const matchingFacts = canonFacts.filter((fact) => {
+    if (intent.kind === 'treatment') {
+      return (
+        fact.factType === 'background' &&
+        normalizeFactName(fact.value).includes(normalizeFactName(subject)) &&
+        /\btreatment\s*:/i.test(fact.value)
+      );
+    }
+    if (!factMatchesSubject(fact, subject)) return false;
+    switch (intent.kind) {
+      case 'occupation':
+        return fact.factType === 'occupation';
+      case 'service-length':
+        return fact.factType === 'background' && /\bservice\s*:/i.test(fact.value);
+      case 'membership':
+        return fact.factType === 'membership';
+      case 'eye-color':
+        return fact.factType === 'appearance' && EYE_COLOR_PATTERN.test(fact.value);
+    }
+  });
+  const acceptedFact = resolveSingleAcceptedFact(matchingFacts);
+
+  if (acceptedFact) {
+    switch (intent.kind) {
+      case 'occupation':
+        return {
+          content: intent.prior
+            ? `${subject} was a ${acceptedFact.value} before becoming a delver.`
+            : `${subject}'s accepted occupation is ${acceptedFact.value}.`,
+          results: [acceptedFact.result]
+        };
+      case 'service-length': {
+        const service = acceptedFact.value.match(/^(.+?)\s+service:\s*(.+)$/i);
+        if (service?.[1] && service[2]) {
+          return {
+            content: `${subject} has served the ${service[1]} for ${service[2]}.`,
+            results: [acceptedFact.result]
+          };
+        }
+        break;
+      }
+      case 'membership':
+        return {
+          content: `${subject}'s accepted canon membership is ${acceptedFact.value}.`,
+          results: [acceptedFact.result]
+        };
+      case 'treatment': {
+        const treatment = acceptedFact.value.match(/^.+?\s+treatment:\s*(.+)$/i);
+        if (treatment?.[1]) {
+          return {
+            content: `${subject} is treated with ${treatment[1]}.`,
+            results: [acceptedFact.result]
+          };
+        }
+        break;
+      }
+      case 'eye-color': {
+        const colorMatch = acceptedFact.value.match(EYE_COLOR_PATTERN);
+        if (colorMatch) {
+          const color = [colorMatch[1], colorMatch[2]]
+            .filter(Boolean)
+            .join('-')
+            .toLowerCase();
+          return {
+            content: `${subject}'s eyes are ${color}.`,
+            results: [acceptedFact.result]
+          };
+        }
+        break;
+      }
+    }
+  }
+
+  if (matchingFacts.length > 1) {
+    return {
+      content: `Accepted canon contains conflicting ${intent.kind.replace(/-/g, ' ')} facts for ${subject}, so I won't choose one.`,
+      results: matchingFacts.map((fact) => fact.result)
+    };
+  }
+
+  if (intent.kind === 'membership') {
+    const organization = intent.organization ? ` with ${intent.organization}` : '';
+    return {
+      content: `${subject}'s connection${organization} is not established in accepted canon.`,
+      results: []
+    };
+  }
+
+  if (intent.kind !== 'eye-color') return null;
+
   const acceptedMatches = results.filter((result) => {
     if (
       result.chunk.metadata.type !== 'worldbible' &&
