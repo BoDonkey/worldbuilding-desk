@@ -116,6 +116,8 @@ Under the hood, the app still includes rich systems for world data, rules, chara
 - Dev-mode RAG embedding loads now default to deterministic lightweight fallback instead of noisy browser-transformer fetch failures.
 - Assistant RAG context now carries explicit trust-tier labels before provider prompts are built. World Bible records are labeled as accepted canon, accepted canon facts are labeled separately, linked Source Notes are labeled as source material, general Source Notes are labeled as project reference material, and scene/rules chunks remain clearly draft/reference context. RAG ranking now applies a modest trust boost so accepted canon and accepted canon facts win over Source Notes when matches are otherwise close.
 - Assistant input now waits for project RAG/Shodh initialization, honors parent-context inheritance, labels relevant Shodh summaries by trust tier, and refuses to guess when a named factual question has no retrieved project source. Development retrieval uses the deterministic meaningful fallback embedding rather than constant vectors, and lexical ranking ignores common question-word noise.
+- Explicit saved eye-color facts are answered deterministically from matching accepted World Bible/canon-fact chunks, with the source shown, instead of allowing the provider to replace a clear field with a guess. Provider output also strips leaked silent-system scaffolding.
+- Workspace assistant conversations are retained in session-local, project-scoped storage, so navigating to World Bible or another route and returning restores the conversation immediately without mixing projects or persisting chat indefinitely.
 - Future AI expansion should follow the adapter/tool boundary now captured in `docs/architecture-review.md`: provider/model capabilities are explicit, named workflow routes can choose model/reasoning/capability/cache policies per feature, structured output is schema-validated, tool-like actions produce confirmable proposals, and shared read-only project-context extraction feeds features without silently mutating canon or state.
 - Scene-scoped state mutation tracking now exists as a project-scoped persistence layer with accepted/invalidation flow, replay, and workspace inspection surfaces.
 - Deterministic `state_delta_candidate` extraction now feeds the same typed mutation ledger as proposed `deterministic-review` events rather than mutating tracked state automatically.
@@ -164,7 +166,7 @@ Under the hood, the app still includes rich systems for world data, rules, chara
   runtime. The migration reduced the full development audit from 36 findings
   to 30 by removing the prior Vite Rollup/PostCSS/esbuild and plugin Babel
   findings.
-- Cypress end-to-end coverage now runs on Cypress 15.20 with 43 tests across
+- Cypress end-to-end coverage now runs on Cypress 15.20 with 45 tests across
   nine specs. Legacy browser-side `Cypress.env()` access is disabled, and the
   assistant default-tools smoke opens its target through the public command
   palette instead of mutating persisted UI state. The migration reduced the
@@ -179,7 +181,7 @@ Under the hood, the app still includes rich systems for world data, rules, chara
   architecture files are below 2,000 lines; full development and production
   dependency audits report zero known vulnerabilities after targeted
   development-tool overrides; lint remains at 0 errors and the 3 known web
-  warnings; 289 unit tests and all 43 Cypress tests pass.
+  warnings; 294 unit tests and all 45 Cypress tests pass.
 - All linted workspaces use ESLint 10.8-compatible tooling and quoted recursive
   source globs. Lint is clean apart from the existing three web
   `exhaustive-deps` warnings; 77 React Compiler findings remain explicitly

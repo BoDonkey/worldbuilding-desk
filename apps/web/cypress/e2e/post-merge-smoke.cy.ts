@@ -154,6 +154,33 @@ describe('Post-merge smoke checklist', () => {
     cy.contains('strong', 'Cypress Smoke Project').should('be.visible');
   });
 
+  it('restores project assistant history after navigating away from Workspace', () => {
+    cy.visit('/workspace');
+    cy.window().then((win) => {
+      win.sessionStorage.setItem(
+        'wbd:assistant-conversation:cypress-project-1',
+        JSON.stringify([
+          {role: 'user', content: "What color are Sera's eyes?"},
+          {
+            role: 'assistant',
+            content: "Sera's eyes are gray.",
+            contextSources: ['Accepted canon: World Bible record - Sera Kestrel']
+          }
+        ])
+      );
+    });
+    cy.contains('button', 'Context').click();
+    cy.contains('button', /^AI$/).click();
+    cy.contains("Sera's eyes are gray.").should('be.visible');
+
+    cy.visit('/world-bible');
+    cy.contains('h1', 'World Bible').should('be.visible');
+    cy.visit('/workspace');
+
+    cy.contains("What color are Sera's eyes?").should('be.visible');
+    cy.contains("Sera's eyes are gray.").should('be.visible');
+  });
+
   it('builds a scene roster from canonical mentions and supports manual overrides', () => {
     cy.visit('/workspace');
     cy.get('.tiptap-editor')

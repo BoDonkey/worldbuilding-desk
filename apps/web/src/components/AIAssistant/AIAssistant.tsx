@@ -10,6 +10,7 @@ import type {
 import {getShodhService} from '../../services/shodh/getShodhService';
 import {SHODH_MEMORIES_EVENT} from '../../services/shodh/shodhEvents';
 import type {LLMContextChunk, LLMMessage} from '../../services/llm/types';
+import {useAssistantConversation} from '../../hooks/useAssistantConversation';
 import {
   appendContextTrustInstructions,
   buildRagContextChunks
@@ -19,6 +20,7 @@ import type {ProjectAISettings, PromptTool, ProjectMode} from '../../entityTypes
 import {
   getContextInstruction,
   getContextLabel,
+  getDirectSavedFactAnswer,
   getMemoryQueryTerms,
   getShodhTrustLabel,
   requiresProjectGrounding,
@@ -47,10 +49,6 @@ interface AIAssistantProps {
   inheritShodh?: boolean;
 }
 
-type ChatMessage = LLMMessage & {
-  contextSources?: string[];
-};
-
 const getContextSourceSummaries = (chunks: LLMContextChunk[]): string[] =>
   Array.from(
     new Map(
@@ -77,7 +75,7 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
   inheritRag = false,
   inheritShodh = false
 }) => {
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [messages, setMessages] = useAssistantConversation(projectId);
   const [input, setInput] = useState('');
   const [isStreaming, setIsStreaming] = useState(false);
   const [providerError, setProviderError] = useState<string | null>(null);
@@ -325,6 +323,24 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
         buildMemoryChunks(promptText)
       ]);
 
+      const directSavedFact = getDirectSavedFactAnswer(promptText, ragResults);
+      if (directSavedFact) {
+        const directChunks = await buildRagContextChunks(
+          projectId,
+          directSavedFact.results
+        );
+        setMessages((prev) => [
+          ...prev,
+          {
+            role: 'assistant',
+            content: directSavedFact.content,
+            contextSources: getContextSourceSummaries(directChunks)
+          }
+        ]);
+        scrollMessagesToBottom();
+        return;
+      }
+
       const ragChunks = await buildRagContextChunks(projectId, ragResults);
       const contextChunks = [...shodhChunks, ...ragChunks];
 
@@ -413,6 +429,7 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
     projectId,
     providerError,
     scrollMessagesToBottom,
+    setMessages,
     selectedToolIds,
     selectedText,
     aiConfig?.promptTools

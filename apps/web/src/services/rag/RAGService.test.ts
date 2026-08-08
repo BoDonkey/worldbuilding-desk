@@ -1,5 +1,6 @@
+import 'fake-indexeddb/auto';
 import {describe, expect, it} from 'vitest';
-import {getLexicalSearchScore, getRagTrustRankingBoost} from './RAGService';
+import {getLexicalSearchScore, getRagTrustRankingBoost, RAGService} from './RAGService';
 
 describe('RAGService lexical search scoring', () => {
   it('scores exact named matches above unrelated chapter text', () => {
@@ -46,5 +47,28 @@ describe('RAGService lexical search scoring', () => {
       getRagTrustRankingBoost('lore')
     );
     expect(getRagTrustRankingBoost('scene')).toBeGreaterThan(0);
+  });
+
+  it('retrieves Sera eye color from a rebuilt World Bible record', async () => {
+    const rag = new RAGService();
+    await rag.init(`rag-eye-color-${crypto.randomUUID()}`);
+    await rag.indexDocument(
+      'sera',
+      'Sera Kestrel',
+      'Sera Kestrel\ndescription: A veteran delver.\nappearance: gray eyes',
+      'worldbible',
+      {tags: ['characters'], entityIds: ['sera']}
+    );
+    await rag.indexDocument(
+      'scene',
+      'Chapter One',
+      'A blue-eyed stranger watched the gate.',
+      'scene'
+    );
+
+    const results = await rag.search("What color are Sera's eyes?", 3);
+
+    expect(results[0].chunk.documentId).toBe('sera');
+    expect(results[0].chunk.content).toContain('appearance: gray eyes');
   });
 });

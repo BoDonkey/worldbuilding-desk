@@ -1,3 +1,5 @@
+import type {RAGSearchResult} from '../../services/rag/types';
+
 export type AIAssistantContextType =
   | 'document'
   | 'rule'
@@ -7,10 +9,75 @@ export type AIAssistantContextType =
 
 export const stripAssistantThinking = (content: string): string =>
   content
+    .replace(
+      /\*?SILENT SYSTEM MESSAGE\*?[\s\S]*?\*?END SYSTEM MESSAGE\*?/gi,
+      ''
+    )
     .replace(/<think>[\s\S]*?<\/think>/gi, '')
     .replace(/<think>[\s\S]*$/gi, '')
     .replace(/^[\s\S]*?<\/think>/i, '')
     .trimStart();
+
+const EYE_COLOR_PATTERN =
+  /\b(gray|grey|blue|brown|green|hazel|amber|black|violet|red|golden?|silver|white)(?:[- ](gray|grey|blue|brown|green|hazel|amber|black|violet|red|golden?|silver|white))?\s+eyes\b/i;
+const EXPLICIT_EYE_COLOR_PATTERN =
+  /\b(?:eye[_ ]?color|eyes)\s*:\s*(gray|grey|blue|brown|green|hazel|amber|black|violet|red|golden?|silver|white)(?:[- ](gray|grey|blue|brown|green|hazel|amber|black|violet|red|golden?|silver|white))?\b/i;
+
+const normalizeFactName = (value: string): string =>
+  value.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+
+export type DirectSavedFactAnswer = {
+  content: string;
+  results: RAGSearchResult[];
+};
+
+/**
+ * Resolve narrow, unambiguous factual questions directly from accepted saved
+ * context. This keeps the model from replacing an explicit field with a guess.
+ */
+export const getDirectSavedFactAnswer = (
+  promptText: string,
+  results: RAGSearchResult[]
+): DirectSavedFactAnswer | null => {
+  const eyeQuestion = promptText
+    .trim()
+    .match(/^what (?:color|colour) (?:are|is) (.+?)(?:['’]s) eyes\??$/i);
+  if (!eyeQuestion) return null;
+
+  const subject = eyeQuestion[1].trim();
+  const normalizedSubject = normalizeFactName(subject);
+  const acceptedMatches = results.filter((result) => {
+    if (
+      result.chunk.metadata.type !== 'worldbible' &&
+      result.chunk.metadata.type !== 'canon_fact'
+    ) {
+      return false;
+    }
+    const normalizedTitle = normalizeFactName(result.chunk.documentTitle);
+    return (
+      normalizedTitle === normalizedSubject ||
+      normalizedTitle.startsWith(`${normalizedSubject} `)
+    );
+  });
+
+  for (const result of acceptedMatches) {
+    const explicitColorMatch = result.chunk.content.match(EXPLICIT_EYE_COLOR_PATTERN);
+    const appearanceIndex = result.chunk.content.search(/\bappearance\s*:/i);
+    const appearanceContent =
+      appearanceIndex >= 0
+        ? result.chunk.content.slice(appearanceIndex)
+        : result.chunk.content;
+    const colorMatch = explicitColorMatch ?? appearanceContent.match(EYE_COLOR_PATTERN);
+    if (!colorMatch) continue;
+    const color = [colorMatch[1], colorMatch[2]].filter(Boolean).join('-').toLowerCase();
+    return {
+      content: `${subject}'s eyes are ${color}.`,
+      results: [result]
+    };
+  }
+
+  return null;
+};
 
 export const getContextLabel = (contextType?: AIAssistantContextType): string =>
   contextType === 'world-bible' ? 'Current World Bible record context' : 'Selected text';

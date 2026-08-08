@@ -1,5 +1,6 @@
 import {describe, expect, it} from 'vitest';
 import {
+  getDirectSavedFactAnswer,
   getMemoryQueryTerms,
   getShodhTrustLabel,
   requiresProjectGrounding,
@@ -29,6 +30,34 @@ describe('assistant grounding helpers', () => {
     expect(getShodhTrustLabel(['canon_fact', 'occupation'])).toBe('Accepted canon fact');
     expect(getShodhTrustLabel(['scene'])).toBe('Scene draft');
   });
+
+  it('answers an explicit saved eye-color field without delegating it to the model', () => {
+    const result = getDirectSavedFactAnswer("What color are Sera's eyes?", [
+      {
+        score: 1.5,
+        chunk: {
+          id: 'sera-0',
+          documentId: 'sera',
+          documentTitle: 'Sera Kestrel',
+          content: 'Sera Kestrel description: A delver. appearance: gray eyes',
+          metadata: {type: 'worldbible', tags: ['characters']}
+        }
+      },
+      {
+        score: 1,
+        chunk: {
+          id: 'scene-0',
+          documentId: 'scene',
+          documentTitle: 'Chapter One',
+          content: 'Blue eyes watched Sera from the doorway.',
+          metadata: {type: 'scene'}
+        }
+      }
+    ]);
+
+    expect(result?.content).toBe("Sera's eyes are gray.");
+    expect(result?.results[0].chunk.documentId).toBe('sera');
+  });
 });
 
 describe('stripAssistantThinking', () => {
@@ -42,6 +71,14 @@ describe('stripAssistantThinking', () => {
 
   it('hides incomplete streamed thinking blocks', () => {
     expect(stripAssistantThinking('<think>Still choosing')).toBe('');
+  });
+
+  it('removes leaked silent-system scaffolding from provider output', () => {
+    expect(
+      stripAssistantThinking(
+        '*SILENT SYSTEM MESSAGE*\nEYES_COLOR: SERA_EYES_COLOR\n*END SYSTEM MESSAGE*\n\nSera has gray eyes.'
+      )
+    ).toBe('Sera has gray eyes.');
   });
 });
 
