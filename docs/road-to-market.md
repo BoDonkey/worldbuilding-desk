@@ -95,7 +95,7 @@ and required revisit point, `WIP`, `Done <commit>`.
 |---|---|---|---|---|
 | 0.1 | Branch/worktree cleanup | 0 | XS | Done `51d1586` |
 | 1.1 | Realistic-project trust dogfood | 1 | M | Deferred — required before beta; not a current blocker |
-| 1.2 | Fix trust-path failures found in 1.1 | 1 | M | Done `f8d3d2e` + `545655c` + `1f1d2d7` + `813fb9c` — grounding/readiness, extraction/review precision, session chat continuity, and deterministic accepted-fact answers for D1/D2/D3/D5 plus eye color; lint baseline; 299 web + 6 engine + 12 UI tests; web/desktop builds; Cypress 45/45 |
+| 1.2 | Fix trust-path failures found in 1.1 | 1 | M | WIP — D-4 still delegated an explicit manuscript storage location to creative generation; adding evidence-extractive location lookup with conflict refusal |
 | 1.3 | Calm-shell navigation validation | 1 | S | Done `530b59f` — desktop/narrow project-mode checks pass; 2.8 must expose the aggregate pending badge on narrow `More` without promoting optional systems |
 | 1.4 | Proposal-review assistant route (conditional on product need) | 1 | M | — |
 | 2.1 | ConfirmDialog + InlineAlert components | 2 | S | Done `38db7df` |

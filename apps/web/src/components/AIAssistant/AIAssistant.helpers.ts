@@ -31,7 +31,8 @@ type SavedFactIntent =
   | {kind: 'occupation'; subject: string; prior: boolean}
   | {kind: 'service-length'; subject: string}
   | {kind: 'membership'; subject: string; organization?: string}
-  | {kind: 'treatment'; subject: string};
+  | {kind: 'treatment'; subject: string}
+  | {kind: 'storage-location'; subject: string};
 
 type ParsedCanonFact = {
   result: RAGSearchResult;
@@ -78,6 +79,13 @@ const getSavedFactIntent = (promptText: string): SavedFactIntent | null => {
   const treatment = prompt.match(/^what (?:cures|treats) (.+?)\??$/i);
   if (treatment?.[1]) return {kind: 'treatment', subject: treatment[1].trim()};
 
+  const storageLocation = prompt.match(
+    /^where (?:is|are|was|were) (.+?) (?:kept|stored|held|secured)\??$/i
+  );
+  if (storageLocation?.[1]) {
+    return {kind: 'storage-location', subject: storageLocation[1].trim()};
+  }
+
   return null;
 };
 
@@ -115,6 +123,85 @@ const resolveSingleAcceptedFact = (
   return values.size === 1 ? facts[0] ?? null : null;
 };
 
+type StorageLocationEvidence = {
+  location: string;
+  result: RAGSearchResult;
+};
+
+const STORAGE_CONTAINER =
+  "(?:[A-Z][A-Za-z'’-]+['’]s\\s+)?(?:deep\\s+)?(?:vault|cabinet|safe|armory|archive|locker|storehouse)";
+
+const extractStorageLocationEvidence = (
+  result: RAGSearchResult,
+  subject: string
+): StorageLocationEvidence[] => {
+  if (!['canon_fact', 'worldbible', 'scene'].includes(result.chunk.metadata.type)) {
+    return [];
+  }
+  const subjectTerms = normalizeFactName(subject).split(' ').filter(Boolean);
+  const normalizedContent = normalizeFactName(result.chunk.content);
+  const identifyingTerms = subjectTerms.filter((term) => term.length >= 3);
+  if (
+    identifyingTerms.length > 0 &&
+    !identifyingTerms.some((term) => normalizedContent.includes(term)) &&
+    !/\bthe key\b/i.test(result.chunk.content)
+  ) {
+    return [];
+  }
+
+  const patterns = [
+    new RegExp(`\\bsigned out of\\s+(${STORAGE_CONTAINER})`, 'gi'),
+    new RegExp(
+      `\\b(?:the\\s+)?key\\s+(?:goes|went|is|was)?\\s*(?:kept|stored|held|secured|put|placed)?\\s*(?:in|into|at|inside)\\s+(?:my\\s+|the\\s+)?(${STORAGE_CONTAINER})`,
+      'gi'
+    )
+  ];
+  const evidence: StorageLocationEvidence[] = [];
+  for (const pattern of patterns) {
+    for (const match of result.chunk.content.matchAll(pattern)) {
+      const location = match[1]?.trim();
+      if (location) evidence.push({location, result});
+    }
+  }
+  return evidence;
+};
+
+const resolveStorageLocation = (
+  subject: string,
+  results: RAGSearchResult[]
+): DirectSavedFactAnswer | null => {
+  const evidence = results.flatMap((result) =>
+    extractStorageLocationEvidence(result, subject)
+  );
+  if (evidence.length === 0) return null;
+
+  const unique = Array.from(
+    new Map(
+      evidence.map((entry) => [normalizeFactName(entry.location), entry])
+    ).values()
+  );
+  const mostSpecific = [...unique].sort(
+    (left, right) => right.location.length - left.location.length
+  )[0];
+  if (!mostSpecific) return null;
+  const normalizedMostSpecific = normalizeFactName(mostSpecific.location);
+  const compatible = unique.every((entry) =>
+    normalizedMostSpecific.endsWith(normalizeFactName(entry.location))
+  );
+  if (!compatible) {
+    return {
+      content: `Saved project passages give conflicting storage locations for ${subject}, so I won't choose one.`,
+      results: unique.map((entry) => entry.result)
+    };
+  }
+
+  const needsArticle = !/[’']s\b/i.test(mostSpecific.location);
+  return {
+    content: `${subject} is kept in ${needsArticle ? 'the ' : ''}${mostSpecific.location}.`,
+    results: [mostSpecific.result]
+  };
+};
+
 export type DirectSavedFactAnswer = {
   content: string;
   results: RAGSearchResult[];
@@ -130,6 +217,10 @@ export const getDirectSavedFactAnswer = (
 ): DirectSavedFactAnswer | null => {
   const intent = getSavedFactIntent(promptText);
   if (!intent) return null;
+
+  if (intent.kind === 'storage-location') {
+    return resolveStorageLocation(intent.subject, results);
+  }
 
   const subject = intent.subject;
   const normalizedSubject = normalizeFactName(subject);

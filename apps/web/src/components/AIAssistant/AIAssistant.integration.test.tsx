@@ -103,4 +103,54 @@ describe('AIAssistant factual lookup integration', () => {
       expect(screen.getByText('Accepted canon fact - Sera Kestrel')).toBeVisible();
     });
   });
+
+  it('answers D-4 from an explicit saved manuscript location without invoking the provider', async () => {
+    mocks.search.mockResolvedValue([
+      {
+        score: 2,
+        chunk: {
+          id: 'chapter-four-0',
+          documentId: 'chapter-four',
+          documentTitle: 'Chapter Four — Sorrowsteel',
+          content:
+            "Signed out of Odessa's deep vault that morning, the Key was due back by evening.",
+          metadata: {type: 'scene'}
+        }
+      },
+      {
+        score: 1.8,
+        chunk: {
+          id: 'invented-note-0',
+          documentId: 'lore:invented-note',
+          documentTitle: 'Loose Notes',
+          content: "The Emberglass Key is kept in the Archivist's vault.",
+          metadata: {type: 'lore'}
+        }
+      }
+    ]);
+    render(
+      <AIAssistant
+        projectId='project-d4'
+        aiConfig={{
+          provider: 'ollama',
+          configs: {},
+          promptTools: [],
+          defaultToolIds: []
+        }}
+      />
+    );
+
+    await screen.findByText('Project context ready.');
+    fireEvent.change(screen.getByRole('textbox'), {
+      target: {value: 'Where is the Emberglass Key kept?'}
+    });
+    fireEvent.click(screen.getByRole('button', {name: 'Send'}));
+
+    await screen.findByText("the Emberglass Key is kept in Odessa's deep vault.");
+    expect(mocks.search).toHaveBeenCalledWith(
+      'Where is the Emberglass Key kept?',
+      20
+    );
+    expect(mocks.stream).not.toHaveBeenCalled();
+  });
 });

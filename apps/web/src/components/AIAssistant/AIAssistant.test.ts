@@ -178,6 +178,71 @@ describe('assistant grounding helpers', () => {
     expect(result?.content).toContain("won't choose one");
     expect(result?.results).toHaveLength(2);
   });
+
+  it('answers D-4 from explicit saved custody language and ignores Source Note invention', () => {
+    const result = getDirectSavedFactAnswer(
+      'Where is the Emberglass Key kept?',
+      [
+        {
+          score: 2,
+          chunk: {
+            id: 'chapter-three-0',
+            documentId: 'chapter-three',
+            documentTitle: 'Chapter Three — The Weighing House',
+            content:
+              'The Key goes into my deep vault. Sera slid the Emberglass Key across the desk.',
+            metadata: {type: 'scene'}
+          }
+        },
+        {
+          score: 1.8,
+          chunk: {
+            id: 'chapter-four-0',
+            documentId: 'chapter-four',
+            documentTitle: 'Chapter Four — Sorrowsteel',
+            content:
+              "Signed out of Odessa's deep vault that morning, the Key was due back by evening.",
+            metadata: {type: 'scene'}
+          }
+        },
+        {
+          score: 1.7,
+          chunk: {
+            id: 'bad-note-0',
+            documentId: 'lore:bad-note',
+            documentTitle: 'Unconfirmed Notes',
+            content: "The Emberglass Key is kept in the Archivist's vault.",
+            metadata: {type: 'lore'}
+          }
+        }
+      ]
+    );
+
+    expect(result?.content).toBe(
+      "the Emberglass Key is kept in Odessa's deep vault."
+    );
+    expect(result?.results[0].chunk.documentId).toBe('chapter-four');
+  });
+
+  it('refuses to choose between incompatible explicit storage locations', () => {
+    const result = getDirectSavedFactAnswer(
+      'Where is the Emberglass Key stored?',
+      ['vault', 'armory'].map((location, index) => ({
+        score: 2 - index,
+        chunk: {
+          id: `location-${index}`,
+          documentId: `scene-${index}`,
+          documentTitle: `Scene ${index + 1}`,
+          content: `The Emberglass Key is stored in the ${location}.`,
+          metadata: {type: 'scene' as const}
+        }
+      }))
+    );
+
+    expect(result?.content).toContain('conflicting storage locations');
+    expect(result?.content).toContain("won't choose one");
+    expect(result?.results).toHaveLength(2);
+  });
 });
 
 describe('stripAssistantThinking', () => {
