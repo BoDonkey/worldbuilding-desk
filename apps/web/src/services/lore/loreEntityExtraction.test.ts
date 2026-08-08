@@ -60,4 +60,20 @@ describe('extractLoreEntityProposals', () => {
     );
     expect(proposals.some((proposal) => proposal.name.includes('Chartered Delving'))).toBe(false);
   });
+
+  it('finds the named resident in the dogfood place notes', () => {
+    const content = readFileSync(
+      new URL('../../../../../fixtures/trust-dogfood/lore/places-grayharbor-undervault.md', import.meta.url),
+      'utf8'
+    );
+    const proposals = extractLoreEntityProposals({
+      projectId: 'project-1',
+      document: {...makeDocument(content), title: 'Place Notes — Grayharbor and the Undervault'},
+      links: [],
+      characters: [],
+      entities: []
+    });
+
+    expect(proposals.map((proposal) => proposal.name)).toContain('Odessa Vane-Kir');
+  });
 });

@@ -223,6 +223,8 @@ function extractNaturalProseFacts(
   }
   flush();
 
+  let activeFallbackTarget = primaryTarget;
+
   const propose = (
     paragraph: string,
     start: number,
@@ -232,7 +234,7 @@ function extractNaturalProseFacts(
     target: ExtractionTarget | null = resolveMentionedTarget(
       paragraph,
       params.knownTargets,
-      primaryTarget
+      activeFallbackTarget
     )
   ) => {
     pushProposal(proposals, dedupe, {
@@ -253,6 +255,15 @@ function extractNaturalProseFacts(
     if (!paragraph) continue;
     const collapsed = paragraph.replace(/\s+/g, ' ');
     const start = block.start;
+    const headingMatch = collapsed.match(/^#{1,6}\s+(.+)$/);
+    if (headingMatch?.[1]) {
+      activeFallbackTarget = resolveMentionedTarget(
+        headingMatch[1],
+        params.knownTargets,
+        activeFallbackTarget
+      );
+      continue;
+    }
 
     if (/\btrained as a cartographer\b/i.test(collapsed)) {
       propose(paragraph, start, 'occupation', 'cartographer', 0.94);
@@ -284,6 +295,32 @@ function extractNaturalProseFacts(
     if (epithetMatch?.[1]) {
       propose(paragraph, start, 'alias', epithetMatch[1].replace(/[\s,;:.]+$/g, ''), 0.9);
     }
+    const calledAliasMatch = collapsed.match(
+      /\b([A-Z][A-Za-z'’-]+(?:\s+[A-Z][A-Za-z'’-]+)+),[^.]*?\bcalled ([A-Z][A-Za-z'’-]+) by\b/
+    );
+    if (calledAliasMatch?.[1] && calledAliasMatch[2]) {
+      propose(
+        paragraph,
+        start,
+        'alias',
+        calledAliasMatch[2],
+        0.91,
+        resolveMentionedTarget(calledAliasMatch[1], params.knownTargets, activeFallbackTarget)
+      );
+    }
+    const spokenAliasMatch = collapsed.match(
+      /^The ([A-Z][A-Za-z'’-]+)\s+—[^.]*?\bsay ["“]([^"”]+)["”]/
+    );
+    if (spokenAliasMatch?.[1] && spokenAliasMatch[2]) {
+      propose(
+        paragraph,
+        start,
+        'alias',
+        spokenAliasMatch[2],
+        0.93,
+        resolveMentionedTarget(spokenAliasMatch[1], params.knownTargets, activeFallbackTarget)
+      );
+    }
     const brotherMatch = collapsed.match(/\byounger brother ([A-Z][A-Za-z'-]+)\b/);
     if (brotherMatch?.[1]) {
       propose(
@@ -292,7 +329,7 @@ function extractNaturalProseFacts(
         'relationship',
         {label: 'brother', value: brotherMatch[1]},
         0.93,
-        primaryTarget
+        activeFallbackTarget
       );
     }
 

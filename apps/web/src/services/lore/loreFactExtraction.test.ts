@@ -133,4 +133,42 @@ describe('extractLoreFactProposals', () => {
       ])
     );
   });
+
+  it('extracts section-scoped aliases and treatment from the dogfood place notes', () => {
+    const content = readFileSync(
+      new URL('../../../../../fixtures/trust-dogfood/lore/places-grayharbor-undervault.md', import.meta.url),
+      'utf8'
+    );
+    const knownTargets = [
+      {type: 'entity' as const, id: 'grayharbor', name: 'Grayharbor'},
+      {type: 'entity' as const, id: 'undervault', name: 'Undervault'},
+      {type: 'character' as const, id: 'odessa', name: 'Odessa Vane-Kir'}
+    ];
+    const proposals = extractLoreFactProposals({
+      projectId: 'project-1',
+      document: {
+        ...makeDocument(content),
+        title: 'Place Notes — Grayharbor and the Undervault',
+        kind: 'place_history'
+      },
+      links: [
+        {...links[0]!, targetType: 'entity', targetId: 'grayharbor'},
+        {...links[0]!, id: 'link-2', targetType: 'entity', targetId: 'undervault', relationship: 'secondary_subject'}
+      ],
+      knownTargets,
+      existingFacts: []
+    });
+
+    expect(proposals).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({targetId: 'odessa', factType: 'alias', value: 'Dess'}),
+        expect.objectContaining({targetId: 'undervault', factType: 'alias', value: 'the Vault'}),
+        expect.objectContaining({
+          targetId: 'undervault',
+          factType: 'background',
+          value: expect.stringContaining('Vaultburn treatment: salt, cedar oil, and whitethorn ash')
+        })
+      ])
+    );
+  });
 });

@@ -126,6 +126,7 @@ const NATURAL_PROSE_PATTERNS: Array<{pattern: RegExp; kind: LoreEntityKind}> = [
   {pattern: /\b([A-Z][A-Za-z'’-]+(?:[ \t]+[A-Z][A-Za-z'’-]+)*[ \t]+(?:Key|Lantern|Draught))\b/g, kind: 'item'},
   {pattern: /\b([A-Z][A-Za-z'’-]+\s+knife)\b/g, kind: 'item'},
   {pattern: /\b(?:mother|father|brother|warden),?\s+([A-Z][A-Za-z'’-]+(?:\s+[A-Z][A-Za-z'’-]+)?)\b/g, kind: 'character'},
+  {pattern: /\bNotable residents[^:]*:\s+([A-Z][A-Za-z'’-]+(?:\s+[A-Z][A-Za-z'’-]+)+)\b/g, kind: 'character'},
   {pattern: /^([A-Z][A-Za-z'’-]+\s+[A-Z][A-Za-z'’-]+),\s+Warden\b/gm, kind: 'character'}
 ];
 
