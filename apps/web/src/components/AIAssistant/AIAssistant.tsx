@@ -16,6 +16,7 @@ import {
   buildRagContextChunks
 } from '../../services/llm/contextProvenance';
 import {PromptManager} from '../../services/prompts/PromptManager';
+import {buildUnverifiedFactualAnswer} from '../../services/assistant/factualQuestionBoundary';
 import type {ProjectAISettings, PromptTool, ProjectMode} from '../../entityTypes';
 import {
   getContextInstruction,
@@ -347,6 +348,24 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
         return;
       }
 
+      if (groundingRequired) {
+        const unverified = buildUnverifiedFactualAnswer(ragResults);
+        const reviewedChunks = await buildRagContextChunks(
+          projectId,
+          unverified.results
+        );
+        setMessages((prev) => [
+          ...prev,
+          {
+            role: 'assistant',
+            content: unverified.content,
+            contextSources: getContextSourceSummaries(reviewedChunks)
+          }
+        ]);
+        scrollMessagesToBottom();
+        return;
+      }
+
       const ragChunks = await buildRagContextChunks(projectId, ragResults.slice(0, 3));
       const contextChunks = [...shodhChunks, ...ragChunks];
 
@@ -359,18 +378,6 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
         });
       }
       const contextSources = getContextSourceSummaries(contextChunks);
-
-      if (groundingRequired && contextSources.length === 0) {
-        setMessages((prev) => [
-          ...prev,
-          {
-            role: 'assistant',
-            content:
-              "I couldn't find relevant saved project context for that question, so I won't guess. Confirm the material is saved and rebuild project context, or select the source text and ask again."
-          }
-        ]);
-        return;
-      }
 
       const promptType = context?.type === 'rule' ? 'rules' : context?.type || 'document';
       const basePrompt = await promptManager.current.getPrompt(promptType);

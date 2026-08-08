@@ -66,6 +66,13 @@ provider-neutral proposal/action contract rather than native provider behavior.
 Unsupported or malformed model output must degrade to editable text, an
 unresolved proposal, or a retry. It must not be repaired and silently committed.
 
+Factual assistant requests cross an evidence gate before provider prompting.
+Deterministic code may answer from an unambiguous accepted fact or explicit
+saved passage; otherwise the request fails closed with the retrieved sources
+reviewed. Unverified factual wording must never fall through to creative prompt
+tools or provider generation. Explicitly creative and analytical requests remain
+eligible for provider collaboration.
+
 ## Canon and Lore Boundary
 
 Lore Documents preserve author-written source material. Extraction may produce

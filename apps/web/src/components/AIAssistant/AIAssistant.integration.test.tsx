@@ -153,4 +153,42 @@ describe('AIAssistant factual lookup integration', () => {
     );
     expect(mocks.stream).not.toHaveBeenCalled();
   });
+
+  it('never sends an unsupported factual question to the creative provider', async () => {
+    mocks.search.mockResolvedValue([
+      {
+        score: 2,
+        chunk: {
+          id: 'chapter-five-0',
+          documentId: 'chapter-five',
+          documentTitle: 'Chapter Five — The Hollow Court',
+          content:
+            'They took an impression of the vault tag. The Emberglass Key remained the subject of argument.',
+          metadata: {type: 'scene'}
+        }
+      }
+    ]);
+    render(
+      <AIAssistant
+        projectId='project-unknown-fact'
+        aiConfig={{
+          provider: 'ollama',
+          configs: {},
+          promptTools: [],
+          defaultToolIds: []
+        }}
+      />
+    );
+
+    await screen.findByText('Project context ready.');
+    fireEvent.change(screen.getByRole('textbox'), {
+      target: {value: 'Who stole the Emberglass Key?'}
+    });
+    fireEvent.click(screen.getByRole('button', {name: 'Send'}));
+
+    await screen.findByText(/couldn't verify an explicit answer/i);
+    expect(screen.getByText(/won't invent one/i)).toBeVisible();
+    expect(mocks.search).toHaveBeenCalledWith('Who stole the Emberglass Key?', 20);
+    expect(mocks.stream).not.toHaveBeenCalled();
+  });
 });
