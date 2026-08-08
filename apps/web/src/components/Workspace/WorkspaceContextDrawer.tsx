@@ -5,6 +5,7 @@ import type {
   Character,
   CharacterSheet,
   EntityCategory,
+  Project,
   ProjectSettings,
   StoredRuleset,
   SystemHistoryEntry,
@@ -69,6 +70,10 @@ const DETECTION_REASON_LABELS: Record<string, {label: string; title: string}> = 
   leading_entity_cue: {
     label: 'Context clue',
     title: 'Nearby wording suggests this may be a place, object, person, or other story-world term.'
+  },
+  direct_address_candidate: {
+    label: 'Direct address',
+    title: 'Dialogue addresses this capitalized term as a name.'
   },
   character_context_candidate: {
     label: 'Character-like name',
@@ -211,7 +216,7 @@ interface WorkspaceContextDrawerProps {
   scratchpadLastSavedAt: number | null;
 
   // AI view
-  activeProject: {id: string};
+  activeProject: Pick<Project, 'id' | 'parentProjectId' | 'inheritRag' | 'inheritShodh'>;
   projectSettings: ProjectSettings | null;
   activeAIContext: AIContext | null;
   setPendingAIInsert: (val: PendingAIInsert | null) => void;
@@ -985,6 +990,9 @@ export function WorkspaceContextDrawer({
       return (
         <AIAssistant
           projectId={activeProject.id}
+          parentProjectId={activeProject.parentProjectId}
+          inheritRag={activeProject.inheritRag}
+          inheritShodh={activeProject.inheritShodh}
           aiConfig={projectSettings?.aiSettings}
           projectMode={projectSettings?.projectMode}
           context={activeAIContext ?? undefined}

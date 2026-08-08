@@ -1,4 +1,4 @@
-import React, {useState, useRef, useEffect, useCallback} from 'react';
+import React, {useState, useRef, useEffect, useCallback, useId} from 'react';
 import styles from '../../assets/components/AIAssistant.module.css';
 import {LLMService} from '../../services/llm/LLMService';
 import type {RAGProvider} from '../../services/rag/RAGService';
@@ -19,6 +19,9 @@ import type {ProjectAISettings, PromptTool, ProjectMode} from '../../entityTypes
 import {
   getContextInstruction,
   getContextLabel,
+  getMemoryQueryTerms,
+  getShodhTrustLabel,
+  requiresProjectGrounding,
   selectWorldBibleContextForPrompt,
   stripAssistantThinking
 } from './AIAssistant.helpers';
@@ -39,6 +42,9 @@ interface AIAssistantProps {
   consultationModel?: string;
   consultationMaxTokens?: number;
   showContextPreview?: boolean;
+  parentProjectId?: string;
+  inheritRag?: boolean;
+  inheritShodh?: boolean;
 }
 
 type ChatMessage = LLMMessage & {
@@ -66,7 +72,10 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
   onQueuedPromptConsumed,
   consultationModel,
   consultationMaxTokens,
-  showContextPreview = true
+  showContextPreview = true,
+  parentProjectId,
+  inheritRag = false,
+  inheritShodh = false
 }) => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
@@ -74,6 +83,8 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
   const [providerError, setProviderError] = useState<string | null>(null);
   const [memoryCache, setMemoryCache] = useState<MemoryEntry[]>([]);
   const [selectedToolIds, setSelectedToolIds] = useState<string[]>([]);
+  const [contextStatus, setContextStatus] = useState<'loading' | 'ready' | 'error'>('loading');
+  const contextStatusId = useId();
   const messagesRef = useRef<HTMLDivElement>(null);
 
   const llmService = useRef<LLMService | null>(null);
@@ -131,22 +142,33 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
 
   useEffect(() => {
     let cancelled = false;
-    Promise.all([getRAGService(projectId), getShodhService(projectId)]).then(
-      ([rag, shodh]) => {
+    ragService.current = null;
+    shodhService.current = null;
+    setMemoryCache([]);
+    setContextStatus('loading');
+    Promise.all([
+      getRAGService({projectId, parentProjectId, inheritFromParent: inheritRag}),
+      getShodhService({projectId, parentProjectId, inheritFromParent: inheritShodh})
+    ])
+      .then(([rag, shodh]) => {
         if (!cancelled) {
           ragService.current = rag;
           shodhService.current = shodh;
+          setContextStatus('ready');
           void syncMemoryCache();
         }
-      }
-    );
+      })
+      .catch((error) => {
+        console.error('Failed to initialize project context', error);
+        if (!cancelled) setContextStatus('error');
+      });
 
     return () => {
       cancelled = true;
       ragService.current = null;
       shodhService.current = null;
     };
-  }, [projectId, syncMemoryCache]);
+  }, [inheritRag, inheritShodh, parentProjectId, projectId, syncMemoryCache]);
 
   useEffect(() => {
     const handler = (event: Event) => {
@@ -207,17 +229,21 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
       const docMatches = context?.id
         ? allMemories.filter((memory) => memory.documentId === context.id)
         : [];
-      const normalizedQuery = query.trim().toLowerCase();
-      const queryMatches =
-        normalizedQuery.length > 2
-          ? allMemories.filter((memory) => {
-              if (memory.documentId === context?.id) return false;
-              const haystack = `${memory.title} ${memory.summary} ${
-                memory.tags?.join(' ') ?? ''
-              }`.toLowerCase();
-              return haystack.includes(normalizedQuery);
-            })
-          : [];
+      const queryTerms = getMemoryQueryTerms(query);
+      const queryMatches = allMemories
+        .filter((memory) => memory.documentId !== context?.id)
+        .map((memory) => {
+          const haystack = `${memory.title} ${memory.summary} ${
+            memory.tags?.join(' ') ?? ''
+          }`.toLowerCase();
+          const matchedTerms = queryTerms.filter((term) => haystack.includes(term));
+          return {
+            memory,
+            relevance: queryTerms.length > 0 ? matchedTerms.length / queryTerms.length : 0
+          };
+        })
+        .filter((entry) => entry.relevance > 0)
+        .sort((left, right) => right.relevance - left.relevance);
 
       const ordered: MemoryEntry[] = [];
       const seen = new Set<string>();
@@ -228,18 +254,17 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
       };
 
       docMatches.forEach(pushUnique);
-      queryMatches.forEach(pushUnique);
-      allMemories
-        .filter((memory) => !seen.has(memory.id))
-        .sort((a, b) => b.createdAt - a.createdAt)
-        .forEach(pushUnique);
+      queryMatches.forEach(({memory}) => pushUnique(memory));
 
       return ordered.slice(0, 3).map((memory) => ({
         content: memory.summary,
-        source: `${memory.title || 'Memory'} (${
+        source: `${getShodhTrustLabel(memory.tags)} (Shodh summary) - ${memory.title || 'Memory'} (${
           memory.projectId === projectId ? 'Local' : 'Parent'
-        } Shodh)`,
-        relevance: memory.documentId === context?.id ? 1 : 0.85
+        })`,
+        relevance:
+          memory.documentId === context?.id
+            ? 1
+            : queryMatches.find((entry) => entry.memory.id === memory.id)?.relevance ?? 0
       }));
     },
     [context?.id, memoryCache, projectId]
@@ -255,6 +280,19 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
           content:
             providerError ||
             'AI provider unavailable. Check your settings and try again.'
+        }
+      ]);
+      return;
+    }
+    if (contextStatus !== 'ready') {
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: 'assistant',
+          content:
+            contextStatus === 'error'
+              ? 'Project context could not be loaded. Reopen the assistant or rebuild project context before asking a project question.'
+              : 'Project context is still loading. Please try again in a moment.'
         }
       ]);
       return;
@@ -299,6 +337,18 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
         });
       }
       const contextSources = getContextSourceSummaries(contextChunks);
+
+      if (requiresProjectGrounding(promptText, Boolean(selectedText)) && contextSources.length === 0) {
+        setMessages((prev) => [
+          ...prev,
+          {
+            role: 'assistant',
+            content:
+              "I couldn't find relevant saved project context for that question, so I won't guess. Confirm the material is saved and rebuild project context, or select the source text and ask again."
+          }
+        ]);
+        return;
+      }
 
       const promptType = context?.type === 'rule' ? 'rules' : context?.type || 'document';
       const basePrompt = await promptManager.current.getPrompt(promptType);
@@ -359,6 +409,7 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
     consultationMaxTokens,
     consultationModel,
     context?.type,
+    contextStatus,
     projectId,
     providerError,
     scrollMessagesToBottom,
@@ -375,12 +426,13 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
     const next = queuedPrompt?.trim() ?? '';
     if (!next) return;
     if (isStreaming) return;
+    if (contextStatus !== 'ready') return;
     if (consumedQueuedPromptRef.current === next) return;
     consumedQueuedPromptRef.current = next;
     void handleSendPrompt(next).finally(() => {
       onQueuedPromptConsumed?.();
     });
-  }, [queuedPrompt, handleSendPrompt, isStreaming, onQueuedPromptConsumed]);
+  }, [queuedPrompt, handleSendPrompt, isStreaming, contextStatus, onQueuedPromptConsumed]);
 
   const handleInsert = () => {
     const lastAssistantMessage = [...messages]
@@ -466,10 +518,21 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
             }
           }}
           placeholder='Ask for help expanding, rewriting, or creating content...'
-          disabled={isStreaming}
+          disabled={isStreaming || contextStatus !== 'ready'}
+          aria-describedby={contextStatusId}
         />
+        <div id={contextStatusId} className={styles.contextStatus} role='status'>
+          {contextStatus === 'loading'
+            ? 'Loading project context…'
+            : contextStatus === 'error'
+              ? 'Project context unavailable. Reopen this assistant or rebuild context.'
+              : 'Project context ready.'}
+        </div>
         <div className={styles.actions}>
-          <button onClick={handleSend} disabled={isStreaming || !input.trim()}>
+          <button
+            onClick={handleSend}
+            disabled={isStreaming || contextStatus !== 'ready' || !input.trim()}
+          >
             Send
           </button>
           {onInsert && (

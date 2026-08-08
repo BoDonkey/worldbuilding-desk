@@ -1,4 +1,5 @@
 import {describe, expect, it} from 'vitest';
+import {readFileSync} from 'node:fs';
 import type {LoreDocument} from '../../entityTypes';
 import {extractLoreEntityProposals} from './loreEntityExtraction';
 
@@ -33,5 +34,30 @@ describe('extractLoreEntityProposals', () => {
     });
 
     expect(proposals.map((proposal) => proposal.name)).toEqual(['Lantern Guild Clan']);
+  });
+
+  it('finds typed entities in natural-prose dogfood faction notes', () => {
+    const content = readFileSync(
+      new URL('../../../../../fixtures/trust-dogfood/lore/faction-cinder-compact.md', import.meta.url),
+      'utf8'
+    );
+    const proposals = extractLoreEntityProposals({
+      projectId: 'project-1',
+      document: {...makeDocument(content), title: 'Faction Notes — The Cinder Compact'},
+      links: [],
+      characters: [],
+      entities: []
+    });
+
+    expect(proposals.map((proposal) => proposal.name)).toEqual(
+      expect.arrayContaining([
+        'Cinder Compact',
+        'Compact of Cinders',
+        'Terrace Council',
+        'Hollow Court',
+        'Brannic Halloway'
+      ])
+    );
+    expect(proposals.some((proposal) => proposal.name.includes('Chartered Delving'))).toBe(false);
   });
 });

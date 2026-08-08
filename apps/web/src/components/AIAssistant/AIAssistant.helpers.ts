@@ -23,6 +23,51 @@ export const getContextInstruction = (
     ? `${contextLabel} is available below. It may include only the field most relevant to the author's request. Use the supplied field content as source material, but do not repeat field labels, keys, or unrelated record context in the answer. If rewriting or expanding a section, return the revised section text only unless the author asks for analysis.`
     : `The author has highlighted text in the editor. The ${contextLabel.toLowerCase()} is available as reference context below. Use it when the author asks about the selection or uses phrases like "this", "these", "it", "them", "the characters", or "the locations". Do not assume the author wants expansion; answer the task they ask for.`;
 
+const FACT_QUESTION_PATTERN =
+  /^(?:what|who|where|when|why|how\s+(?:long|many|much|old)|is|are|was|were|did|does|do|has|have|had|can)\b/i;
+
+export const requiresProjectGrounding = (
+  promptText: string,
+  hasSelectedContext: boolean
+): boolean => {
+  if (hasSelectedContext) return false;
+  const prompt = promptText.trim();
+  if (!FACT_QUESTION_PATTERN.test(prompt)) return false;
+  if (/^(?:what\s+(?:should|could|might)|can you\s+(?:brainstorm|draft|generate|help|suggest|write))\b/i.test(prompt)) {
+    return false;
+  }
+  return true;
+};
+
+const MEMORY_QUERY_STOP_WORDS = new Set([
+  'are', 'can', 'did', 'does', 'for', 'from', 'had', 'has', 'have', 'how',
+  'before', 'he', 'her', 'hers', 'him', 'his', 'into', 'is', 'it', 'its',
+  'long', 'many', 'much', 'old', 'she', 'the', 'their', 'them', 'they', 'this',
+  'was', 'were',
+  'what', 'when', 'where', 'which', 'who', 'why', 'with', 'would'
+]);
+
+export const getMemoryQueryTerms = (query: string): string[] =>
+  Array.from(
+    new Set(
+      query
+        .toLowerCase()
+        .replace(/[^a-z0-9'-]+/g, ' ')
+        .split(/\s+/)
+        .map((term) => term.replace(/^['-]+|['-]+$/g, ''))
+        .filter((term) => term.length >= 3 && !MEMORY_QUERY_STOP_WORDS.has(term))
+    )
+  );
+
+export const getShodhTrustLabel = (tags: string[] | undefined): string => {
+  const normalizedTags = new Set((tags ?? []).map((tag) => tag.toLowerCase()));
+  if (normalizedTags.has('canon_fact')) return 'Accepted canon fact';
+  if (normalizedTags.has('worldbible')) return 'Accepted canon';
+  if (normalizedTags.has('rule')) return 'Rules reference';
+  if (normalizedTags.has('scene')) return 'Scene draft';
+  return 'Project memory';
+};
+
 const normalizeContextToken = (value: string): string =>
   value
     .toLowerCase()

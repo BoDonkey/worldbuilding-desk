@@ -95,7 +95,7 @@ and required revisit point, `WIP`, `Done <commit>`.
 |---|---|---|---|---|
 | 0.1 | Branch/worktree cleanup | 0 | XS | Done `51d1586` |
 | 1.1 | Realistic-project trust dogfood | 1 | M | Deferred — required before beta; not a current blocker |
-| 1.2 | Fix trust-path failures found in 1.1 | 1 | ? | — (if needed after 1.1) |
+| 1.2 | Fix trust-path failures found in 1.1 | 1 | ? | WIP — assistant grounding/readiness, natural-prose lore extraction, and review precision |
 | 1.3 | Calm-shell navigation validation | 1 | S | Done `530b59f` — desktop/narrow project-mode checks pass; 2.8 must expose the aggregate pending badge on narrow `More` without promoting optional systems |
 | 1.4 | Proposal-review assistant route (conditional on product need) | 1 | M | — |
 | 2.1 | ConfirmDialog + InlineAlert components | 2 | S | Done `38db7df` |

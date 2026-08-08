@@ -198,6 +198,19 @@ const ACTION_CUE_WORDS = [
   'throw'
 ];
 
+const ACTION_OBJECT_STOP_TOKENS = new Set([
+  'and', 'as', 'at', 'back', 'before', 'but', 'down', 'for', 'from', 'into',
+  'like', 'of', 'off', 'or', 'out', 'over', 'that', 'then', 'through', 'to',
+  'up', 'when', 'while', 'which', 'who', 'with'
+]);
+
+const TYPED_ENTITY_SUFFIX_TOKENS = new Set([
+  'archive', 'council', 'compact', 'court', 'door', 'draught', 'forest',
+  'guild', 'hall', 'harbor', 'house', 'inn', 'key', 'lantern', 'market',
+  'palace', 'river', 'road', 'row', 'stair', 'street', 'temple', 'tower',
+  'vale', 'vault', 'walk', 'woods'
+]);
+
 const CHARACTER_CONTEXT_CUE_WORDS = new Set([
   'arrived',
   'asked',
@@ -373,6 +386,13 @@ const GENERIC_UNKNOWN_TERMS = new Set([
   'squads',
   'party',
   'parties',
+  'compact',
+  'court',
+  'draught',
+  'key',
+  'lantern',
+  'ledger',
+  'vault',
   'people',
   'person',
   'man',
@@ -610,10 +630,19 @@ const extractActionObjectMentionsWithCues = (
 
   for (const match of text.matchAll(actionPattern)) {
     const full = match[0] ?? '';
-    const surface = (match[1] ?? '').trim();
-    if (!surface) {
+    const rawSurface = (match[1] ?? '').trim();
+    if (!rawSurface) {
       continue;
     }
+
+    const surfaceTokens = rawSurface.split(/\s+/);
+    const stopIndex = surfaceTokens.findIndex((token) =>
+      ACTION_OBJECT_STOP_TOKENS.has(normalizePhrase(token))
+    );
+    const surface = surfaceTokens
+      .slice(0, stopIndex >= 0 ? stopIndex : surfaceTokens.length)
+      .join(' ');
+    if (!surface) continue;
 
     const normalized = normalizePhrase(surface);
     if (!normalized) {
@@ -684,6 +713,15 @@ const hasCharacterContextCue = (
     .toLowerCase();
 
   return !!nextWord && CHARACTER_CONTEXT_CUE_WORDS.has(nextWord);
+};
+
+const hasDirectAddressCue = (
+  text: string,
+  mention: {start: number; end: number}
+): boolean => {
+  const suffix = text.slice(mention.end, mention.end + 8);
+  const prefix = text.slice(Math.max(0, mention.start - 8), mention.start);
+  return /^\s*,/u.test(suffix) && /["“‘]\s*$/u.test(prefix);
 };
 
 const countSceneSentencesBefore = (text: string, index: number): number =>
@@ -807,7 +845,7 @@ const shouldSuppressUnknownMention = (mention: {
     if (
       isCommonEnglishWord(first) &&
       mention.detectionReason !== 'leading_entity_cue' &&
-      mention.detectionReason !== 'repeated_unknown' &&
+      mention.detectionReason !== 'direct_address_candidate' &&
       mention.detectionReason !== 'titled_name'
     ) {
       return true;
@@ -825,8 +863,18 @@ const isEligibleSingleWordUnknown = (params: {
   surface: string;
   end: number;
   detectionReason: CandidateDetectionReason;
+  hasDirectAddress: boolean;
 }): boolean => {
-  const {text, normalized, mentionCount, start, surface, end, detectionReason} = params;
+  const {
+    text,
+    normalized,
+    mentionCount,
+    start,
+    surface,
+    end,
+    detectionReason,
+    hasDirectAddress
+  } = params;
   if (normalized.length < 4) {
     return false;
   }
@@ -838,16 +886,16 @@ const isEligibleSingleWordUnknown = (params: {
     return false;
   }
 
+  if (isCommonSingleWordUnknown(normalized)) {
+    return hasLeadingCueWord(text, start) || hasDirectAddress;
+  }
+
   if (detectionReason === 'action_object_candidate') {
     return true;
   }
 
   if (mentionCount > 1) {
     return true;
-  }
-
-  if (isCommonSingleWordUnknown(normalized)) {
-    return hasLeadingCueWord(text, start);
   }
 
   if (hasCharacterContextCue(text, {surface, start, end})) {
@@ -863,11 +911,25 @@ const getUnknownDetectionReason = (params: {
   mentionCount: number;
   hasCue: boolean;
   hasCharacterCue: boolean;
+  hasDirectAddress: boolean;
+  hasTypedSuffix: boolean;
   mentionReason: CandidateDetectionReason;
 }): CandidateDetectionReason | null => {
-  const {source, wordCount, mentionCount, hasCue, hasCharacterCue, mentionReason} = params;
+  const {
+    source,
+    wordCount,
+    mentionCount,
+    hasCue,
+    hasCharacterCue,
+    hasDirectAddress,
+    hasTypedSuffix,
+    mentionReason
+  } = params;
   if (mentionReason === 'titled_name' || mentionReason === 'action_object_candidate') {
     return mentionReason;
+  }
+  if (hasDirectAddress) {
+    return 'direct_address_candidate';
   }
   if (mentionCount > 1) {
     return 'repeated_unknown';
@@ -878,7 +940,7 @@ const getUnknownDetectionReason = (params: {
   if (hasCharacterCue) {
     return 'character_context_candidate';
   }
-  if (wordCount > 1 && source !== 'import') {
+  if (wordCount > 1 && (source !== 'import' || hasTypedSuffix)) {
     return 'multiword_proper_candidate';
   }
   return null;
@@ -975,7 +1037,12 @@ export function buildExtractedProposal(
       const mentionCount = mentionCounts.get(mention.normalized) ?? 0;
       const hasCue = hasLeadingCueWord(input.text, mention.start);
       const hasCharacterCue = hasCharacterContextCue(input.text, mention);
+      const hasDirectAddress = hasDirectAddressCue(input.text, mention);
       const wordCount = countEntityNameParts(mention.surface);
+      const normalizedTokens = tokenizeNormalized(mention.normalized);
+      const hasTypedSuffix = TYPED_ENTITY_SUFFIX_TOKENS.has(
+        normalizedTokens[normalizedTokens.length - 1] ?? ''
+      );
       const detectionReason =
         known || knownMatches.length > 1
           ? 'known_entity'
@@ -985,6 +1052,8 @@ export function buildExtractedProposal(
               mentionCount,
               hasCue,
               hasCharacterCue,
+              hasDirectAddress,
+              hasTypedSuffix,
               mentionReason: mention.detectionReason
             });
       const baseConfidence = known
@@ -1044,7 +1113,8 @@ export function buildExtractedProposal(
         start: entityRef.span.start,
         surface: entityRef.surface,
         end: entityRef.span.end,
-        detectionReason: entityRef.detectionReason
+        detectionReason: entityRef.detectionReason,
+        hasDirectAddress: hasDirectAddressCue(input.text, entityRef.span)
       });
     })
     .map((entityRef) => ({

@@ -5,6 +5,7 @@ export type CandidateDetectionReason =
   | 'titled_name'
   | 'repeated_unknown'
   | 'leading_entity_cue'
+  | 'direct_address_candidate'
   | 'character_context_candidate'
   | 'multiword_proper_candidate'
   | 'action_object_candidate';

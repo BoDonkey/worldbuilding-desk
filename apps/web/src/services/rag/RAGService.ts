@@ -205,7 +205,7 @@ export class RAGService implements RAGProvider {
         // constrained test browsers, while the fallback is sufficient for local
         // indexing and smoke-path verification.
         if (import.meta.env.DEV || (globalThis as {Cypress?: unknown}).Cypress) {
-          return async () => ({data: Float32Array.from([1])});
+          return createFallbackEmbeddingPipeline();
         }
         try {
           const transformers = await import('@huggingface/transformers');
@@ -292,8 +292,17 @@ function normalizeSearchText(value: string): string {
   return value.toLowerCase().replace(/[^a-z0-9]+/g, ' ').replace(/\s+/g, ' ').trim();
 }
 
+const SEARCH_STOP_WORDS = new Set([
+  'are', 'before', 'can', 'did', 'does', 'for', 'from', 'had', 'has', 'have',
+  'her', 'him', 'his', 'how', 'into', 'its', 'long', 'many', 'much', 'she',
+  'the', 'their', 'them', 'they', 'this', 'was', 'were', 'what', 'when',
+  'where', 'which', 'who', 'why', 'with', 'would'
+]);
+
 function tokenizeSearchText(value: string): string[] {
-  return value.split(' ').filter((term) => term.length >= 3);
+  return value
+    .split(' ')
+    .filter((term) => term.length >= 3 && !SEARCH_STOP_WORDS.has(term));
 }
 
 function containsTokenPhrase(contentTerms: string[], queryTerms: string[]): boolean {

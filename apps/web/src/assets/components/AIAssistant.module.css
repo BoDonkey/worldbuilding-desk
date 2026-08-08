@@ -175,6 +175,12 @@
   box-shadow: 0 0 0 0.2rem color-mix(in oklab, var(--color-accent) 25%, transparent);
 }
 
+.contextStatus {
+  margin-top: 0.35rem;
+  color: var(--color-text-secondary);
+  font-size: 0.75rem;
+}
+
 .actions {
   display: flex;
   gap: 0.5rem;

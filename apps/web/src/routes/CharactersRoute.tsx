@@ -1078,6 +1078,9 @@ function CharactersRoute({
               </div>
               <AIAssistant
                 projectId={activeProject.id}
+                parentProjectId={activeProject.parentProjectId}
+                inheritRag={activeProject.inheritRag}
+                inheritShodh={activeProject.inheritShodh}
                 aiConfig={projectSettings?.aiSettings}
                 projectMode={projectSettings?.projectMode}
                 context={{

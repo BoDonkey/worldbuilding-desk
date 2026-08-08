@@ -22,7 +22,13 @@ const titleCaseName = (value: string): string =>
   value
     .trim()
     .replace(/\s+/g, ' ')
-    .replace(/\b\w/g, (char) => char.toUpperCase());
+    .split(' ')
+    .map((word, index) =>
+      index > 0 && /^(?:a|an|de|of|the)$/i.test(word)
+        ? word.toLowerCase()
+        : word.replace(/^\w/, (char) => char.toUpperCase())
+    )
+    .join(' ');
 
 function pushProposal(
   proposals: LoreEntityProposal[],
@@ -112,6 +118,35 @@ const CONCEPT_PATTERNS: Array<{pattern: RegExp; kind: LoreEntityKind}> = [
   {pattern: /\b([A-Z][A-Za-zÀ-ÿ' -]+)\s*\(earth-based magical species\)/g, kind: 'concept'}
 ];
 
+const NATURAL_PROSE_PATTERNS: Array<{pattern: RegExp; kind: LoreEntityKind}> = [
+  {pattern: /\boriginal name,[ \t]+(?:the[ \t]+)?([A-Z][A-Za-z'’-]+(?:[ \t]+(?:of[ \t]+)?[A-Z][A-Za-z'’-]+)+)/g, kind: 'faction'},
+  {pattern: /\b(?:the[ \t]+)?([A-Z][A-Za-z'’-]+(?:[ \t]+(?:of[ \t]+)?[A-Z][A-Za-z'’-]+)*[ \t]+Compact)\b/g, kind: 'faction'},
+  {pattern: /\b(?:the[ \t]+)?([A-Z][A-Za-z'’-]+(?:[ \t]+[A-Z][A-Za-z'’-]+)*[ \t]+(?:Council|Court|Guild))\b(?![ \t]+clan)/g, kind: 'faction'},
+  {pattern: /\b(?:the[ \t]+)?([A-Z][A-Za-z'’-]+(?:[ \t]+[A-Z][A-Za-z'’-]+)*[ \t]+(?:Door|Harbor|House|Row|Vault|Walk))\b/g, kind: 'location'},
+  {pattern: /\b([A-Z][A-Za-z'’-]+(?:[ \t]+[A-Z][A-Za-z'’-]+)*[ \t]+(?:Key|Lantern|Draught))\b/g, kind: 'item'},
+  {pattern: /\b([A-Z][A-Za-z'’-]+\s+knife)\b/g, kind: 'item'},
+  {pattern: /\b(?:mother|father|brother|warden),?\s+([A-Z][A-Za-z'’-]+(?:\s+[A-Z][A-Za-z'’-]+)?)\b/g, kind: 'character'},
+  {pattern: /^([A-Z][A-Za-z'’-]+\s+[A-Z][A-Za-z'’-]+),\s+Warden\b/gm, kind: 'character'}
+];
+
+function extractTitleCandidates(document: LoreDocument): Array<{name: string; kind: LoreEntityKind}> {
+  const heading = document.content.match(/^#\s+(.+)$/m)?.[1] ?? document.title;
+  const subject = heading.split(/\s+[—–-]\s+/).slice(1).join(' — ').trim();
+  if (!subject) return [];
+  if (/^character dossier/i.test(heading)) {
+    return [{name: subject, kind: 'character'}];
+  }
+  if (/^faction notes/i.test(heading)) {
+    return [{name: subject.replace(/^the\s+/i, ''), kind: 'faction'}];
+  }
+  if (/^place notes/i.test(heading)) {
+    return subject
+      .split(/\s+and\s+/i)
+      .map((name) => ({name: name.replace(/^the\s+/i, ''), kind: 'location' as const}));
+  }
+  return [];
+}
+
 export function extractLoreEntityProposals(
   params: ExtractLoreEntityParams
 ): LoreEntityProposal[] {
@@ -119,6 +154,23 @@ export function extractLoreEntityProposals(
   const dedupe = new Set<string>();
   const text = params.document.content;
   const firstLinkedCharacter = params.links.find((link) => link.targetType === 'character');
+  const linkedTargetIds = new Set(params.links.map((link) => link.targetId));
+
+  for (const candidate of extractTitleCandidates(params.document)) {
+    const existingMatch = findExistingMatch(candidate.name, params.characters, params.entities);
+    if (existingMatch && linkedTargetIds.has(existingMatch.targetId)) continue;
+    const evidenceText = text.match(/^#\s+.+$/m)?.[0] ?? params.document.title;
+    pushProposal(proposals, dedupe, {
+      projectId: params.projectId,
+      documentId: params.document.id,
+      name: candidate.name,
+      entityKind: candidate.kind,
+      confidence: 0.96,
+      evidenceText,
+      evidenceStart: Math.max(0, text.indexOf(evidenceText)),
+      existingMatch
+    });
+  }
 
   if (params.document.kind === 'character_dossier' || /character sheet/i.test(params.document.title)) {
     const titleMatch =
@@ -143,13 +195,16 @@ export function extractLoreEntityProposals(
     ...FACTION_PATTERNS,
     ...CHARACTER_PATTERNS,
     ...LOCATION_PATTERNS,
-    ...CONCEPT_PATTERNS
+    ...CONCEPT_PATTERNS,
+    ...NATURAL_PROSE_PATTERNS
   ];
 
   for (const matcher of patternGroups) {
     for (const match of text.matchAll(matcher.pattern)) {
-      const candidateName = match[1]?.trim();
+      const candidateName = match[1]?.trim().replace(/^the\s+/i, '');
       if (!candidateName) continue;
+      const existingMatch = findExistingMatch(candidateName, params.characters, params.entities);
+      if (existingMatch && linkedTargetIds.has(existingMatch.targetId)) continue;
       pushProposal(proposals, dedupe, {
         projectId: params.projectId,
         documentId: params.document.id,
@@ -158,7 +213,7 @@ export function extractLoreEntityProposals(
         confidence: matcher.kind === 'character' ? 0.78 : 0.72,
         evidenceText: match[0],
         evidenceStart: match.index ?? 0,
-        existingMatch: findExistingMatch(candidateName, params.characters, params.entities)
+        existingMatch
       });
     }
   }

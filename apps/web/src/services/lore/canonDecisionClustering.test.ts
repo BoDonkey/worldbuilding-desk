@@ -105,6 +105,29 @@ describe('canonDecisionClustering', () => {
     expect(clusters).toEqual([]);
   });
 
+  it('clusters historical pluralized names from the trust dogfood fixture', () => {
+    const clusters = buildCanonDecisionClusters({
+      projectId,
+      entityProposals: [
+        makeEntityProposal({
+          id: 'proposal-compact',
+          name: 'Compact of Cinders',
+          entityKind: 'faction'
+        })
+      ],
+      factProposals: [],
+      canonicalFacts: [],
+      characters: [],
+      entities: [makeWorldEntity({id: 'compact', name: 'Cinder Compact'})]
+    });
+
+    expect(clusters).toHaveLength(1);
+    expect(clusters[0]).toMatchObject({
+      kind: 'entity_identity',
+      title: 'Compact of Cinders may match Cinder Compact'
+    });
+  });
+
   it('suppresses resolved short-form entity identity pairs', () => {
     const suppression: CanonDecisionSuppression = {
       id: 'suppression-1',

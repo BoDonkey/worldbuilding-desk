@@ -24,6 +24,20 @@ describe('RAGService lexical search scoring', () => {
     expect(getLexicalSearchScore('Reference to Loa', 'The Loa keep separate houses.')).toBeGreaterThan(0);
   });
 
+  it('ranks named factual terms without question-word noise', () => {
+    expect(
+      getLexicalSearchScore(
+        'What did Sera do before she became a delver?',
+        'Sera occupation: cartographer. She later became a delver.'
+      )
+    ).toBeGreaterThan(
+      getLexicalSearchScore(
+        'What did Sera do before she became a delver?',
+        'What happened before the tide turned was never recorded.'
+      )
+    );
+  });
+
   it('boosts accepted canon sources above source notes for close matches', () => {
     expect(getRagTrustRankingBoost('canon_fact')).toBeGreaterThan(
       getRagTrustRankingBoost('worldbible')

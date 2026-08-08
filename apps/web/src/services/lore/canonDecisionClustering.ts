@@ -15,6 +15,7 @@ const tokenize = (value: string): string[] =>
   normalize(value)
     .split(/\s+/)
     .map((token) => token.replace(/^[^a-z0-9]+|[^a-z0-9]+$/g, ''))
+    .map((token) => (token.length > 4 && token.endsWith('s') ? token.slice(0, -1) : token))
     .filter(Boolean);
 
 const similarity = (left: string, right: string): number => {

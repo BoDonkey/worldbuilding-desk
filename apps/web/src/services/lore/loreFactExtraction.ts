@@ -175,6 +175,187 @@ function isAgeRangeLabel(label: string): boolean {
   return /^ages?(?:\b|\s|[-–—]\d)/i.test(label.trim());
 }
 
+function resolveMentionedTarget(
+  text: string,
+  knownTargets: ExtractionTarget[],
+  fallback: ExtractionTarget | null
+): ExtractionTarget | null {
+  const normalizedText = normalize(text);
+  const matches = knownTargets
+    .filter((entry) => {
+      const normalizedName = normalize(entry.name);
+      if (normalizedText.includes(normalizedName)) return true;
+      const firstName = normalizedName.split(' ')[0];
+      return !!firstName && new RegExp(`(?:^|\\s)${firstName}(?:$|\\s)`, 'i').test(normalizedText);
+    })
+    .sort((left, right) => right.name.length - left.name.length);
+  return matches[0] ?? fallback;
+}
+
+function extractNaturalProseFacts(
+  params: ExtractLoreFactParams,
+  proposals: LoreFactProposal[],
+  dedupe: Set<string>,
+  primaryTarget: ExtractionTarget | null
+): void {
+  const paragraphs: Array<{text: string; start: number}> = [];
+  let current: {lines: string[]; start: number} | null = null;
+  let cursor = 0;
+  const flush = () => {
+    if (!current) return;
+    paragraphs.push({text: current.lines.join('\n'), start: current.start});
+    current = null;
+  };
+  for (const rawLine of params.document.content.split('\n')) {
+    const trimmed = rawLine.trim();
+    if (!trimmed) {
+      flush();
+      cursor += rawLine.length + 1;
+      continue;
+    }
+    const startsNewBlock = /^(?:#{1,6}\s+|[•*-]\s+)/.test(trimmed);
+    if (startsNewBlock) flush();
+    if (!current) {
+      current = {lines: [], start: cursor + rawLine.indexOf(trimmed)};
+    }
+    current.lines.push(trimmed);
+    cursor += rawLine.length + 1;
+  }
+  flush();
+
+  const propose = (
+    paragraph: string,
+    start: number,
+    factType: CanonicalFactType,
+    value: CanonicalFactValue,
+    confidence: number,
+    target: ExtractionTarget | null = resolveMentionedTarget(
+      paragraph,
+      params.knownTargets,
+      primaryTarget
+    )
+  ) => {
+    pushProposal(proposals, dedupe, {
+      projectId: params.projectId,
+      documentId: params.document.id,
+      target,
+      factType,
+      value,
+      confidence,
+      evidenceText: paragraph,
+      evidenceStart: start,
+      existingFacts: params.existingFacts
+    });
+  };
+
+  for (const block of paragraphs) {
+    const paragraph = block.text.trim();
+    if (!paragraph) continue;
+    const collapsed = paragraph.replace(/\s+/g, ' ');
+    const start = block.start;
+
+    if (/\btrained as a cartographer\b/i.test(collapsed)) {
+      propose(paragraph, start, 'occupation', 'cartographer', 0.94);
+    }
+    const earlierOccupationMatch = collapsed.match(
+      /\b([A-Z][A-Za-z'-]+) was (?:an?|the) ([a-z][a-z-]+) before the\b/
+    );
+    if (earlierOccupationMatch?.[1] && earlierOccupationMatch[2]) {
+      propose(
+        paragraph,
+        start,
+        'occupation',
+        earlierOccupationMatch[2].toLowerCase(),
+        0.66,
+        resolveMentionedTarget(earlierOccupationMatch[1], params.knownTargets, primaryTarget)
+      );
+    }
+
+    const eyesMatch = collapsed.match(/\beyes are ([a-z][a-z-]*)\b/i);
+    if (eyesMatch?.[1]) {
+      propose(paragraph, start, 'appearance', `${eyesMatch[1].toLowerCase()} eyes`, 0.92);
+    }
+
+    const friendAliasMatch = collapsed.match(/\bcall (?:her|him|them) ([A-Z][A-Za-z'-]+)\b/);
+    if (friendAliasMatch?.[1]) {
+      propose(paragraph, start, 'alias', friendAliasMatch[1], 0.91);
+    }
+    const epithetMatch = collapsed.match(/\bepithet ["“]([^"”]+)["”]/i);
+    if (epithetMatch?.[1]) {
+      propose(paragraph, start, 'alias', epithetMatch[1].replace(/[\s,;:.]+$/g, ''), 0.9);
+    }
+    const brotherMatch = collapsed.match(/\byounger brother ([A-Z][A-Za-z'-]+)\b/);
+    if (brotherMatch?.[1]) {
+      propose(
+        paragraph,
+        start,
+        'relationship',
+        {label: 'brother', value: brotherMatch[1]},
+        0.93,
+        primaryTarget
+      );
+    }
+
+    const serviceMatch = collapsed.match(
+      /\bserved the ([A-Z][A-Za-z'-]+(?:\s+[A-Z][A-Za-z'-]+)*) (?:for )?(a decade|[a-z-]+ years)\b/
+    );
+    if (serviceMatch?.[1] && serviceMatch[2]) {
+      const serviceTarget = resolveMentionedTarget(
+        paragraph,
+        params.knownTargets,
+        primaryTarget
+      );
+      propose(
+        paragraph,
+        start,
+        'background',
+        `${serviceMatch[1]} service: ${serviceMatch[2].toLowerCase()}`,
+        0.9,
+        serviceTarget
+      );
+    }
+
+    const foundedMatch = collapsed.match(
+      /\b(?:the\s+)?([A-Z][A-Za-z'-]+(?:\s+[A-Z][A-Za-z'-]+)*) was founded ([^,.]+)(?:,|\.)/
+    );
+    if (foundedMatch?.[2]) {
+      propose(paragraph, start, 'background', `Founded ${foundedMatch[2].trim()}`, 0.88);
+    }
+
+    const treatmentMatch = collapsed.match(
+      /\bEstablished treatment:\s*([^.;]+(?:ash|oil)[^.;]*)/i
+    );
+    if (treatmentMatch?.[1]) {
+      propose(
+        paragraph,
+        start,
+        'background',
+        `Vaultburn treatment: ${treatmentMatch[1].trim()}`,
+        0.94
+      );
+    }
+
+    const speculativeMembershipMatch = collapsed.match(
+      /\bWhat if ([A-Z][A-Za-z'-]+) is ([A-Z][A-Za-z'-]+(?:\s+[A-Z][A-Za-z'-]+)*)\?/
+    );
+    if (speculativeMembershipMatch?.[1] && speculativeMembershipMatch[2]) {
+      const speculativeTarget = resolveMentionedTarget(
+        speculativeMembershipMatch[1],
+        params.knownTargets,
+        null
+      );
+      propose(
+        paragraph,
+        start,
+        'membership',
+        speculativeMembershipMatch[2],
+        0.51,
+        speculativeTarget
+      );
+    }
+  }
+}
+
 export function extractLoreFactProposals(
   params: ExtractLoreFactParams
 ): LoreFactProposal[] {
@@ -189,7 +370,7 @@ export function extractLoreFactProposals(
   let cursor = 0;
   let currentSection = '';
 
-  for (const line of lines) {
+  for (const [lineIndex, line] of lines.entries()) {
     const rawLine = line;
     const trimmed = rawLine.trim();
     const lineStart = cursor;
@@ -208,6 +389,10 @@ export function extractLoreFactProposals(
 
     const labelMatch = bulletBody.match(/^([^:]+):\s*(.+)$/);
     if (labelMatch) {
+      const nextLine = lines[lineIndex + 1]?.trim() ?? '';
+      const isWrappedProseLabel =
+        !/^[•*-]\s*/.test(trimmed) && nextLine.length > 0 && /^[a-z]/.test(nextLine);
+      if (isWrappedProseLabel) continue;
       const label = normalize(labelMatch[1]);
       const value = labelMatch[2].trim();
       const factType =
@@ -349,6 +534,8 @@ export function extractLoreFactProposals(
       });
     }
   }
+
+  extractNaturalProseFacts(params, proposals, dedupe, target);
 
   return proposals.sort((left, right) => left.evidence.start - right.evidence.start);
 }

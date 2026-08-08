@@ -1,4 +1,5 @@
 import {describe, expect, it} from 'vitest';
+import {readFileSync} from 'node:fs';
 import {buildExtractedProposal} from './ConsistencyEngineService';
 import type {ExtractProposalInput} from './types';
 
@@ -219,6 +220,69 @@ describe('buildExtractedProposal', () => {
     expect(entity?.detectionReason).toBe('repeated_unknown');
   });
 
+  it('keeps common-list surnames when dialogue directly addresses them', () => {
+    const entity = entityRefsFor(
+      '"Garcia, get your head in the game!" Blatnor shouted. Garcia checked the seal.'
+    ).find((entry) => entry.surface === 'Garcia');
+
+    expect(entity?.detectionReason).toBe('direct_address_candidate');
+  });
+
+  it('does not turn verb complements into multiword item candidates', () => {
+    const surfaces = surfacesFor(
+      'The haze drew back like something alive. Warm hands wrap it carefully. She drank the Pale Draught and used the Emberglass Key.'
+    );
+
+    expect(surfaces).not.toContain('back like something');
+    expect(surfaces).not.toContain('Warm');
+    expect(surfaces).not.toContain('Wrap');
+    expect(surfaces).toContain('Pale Draught');
+    expect(surfaces).toContain('Emberglass Key');
+  });
+
+  it('keeps dogfood hazards quiet while retaining planted named candidates', () => {
+    const chapter = readFileSync(
+      new URL('../../../../../fixtures/trust-dogfood/chapters/01-the-salt-door.md', import.meta.url),
+      'utf8'
+    );
+    const surfaces = surfacesFor(chapter, [], 'import');
+
+    expect(surfaces).toEqual(
+      expect.arrayContaining([
+        'Sera Kestrel',
+        'Salt Door',
+        'The Cinder Compact',
+        'Pale Draught',
+        'Emberglass Key'
+      ])
+    );
+    expect(surfaces).not.toEqual(
+      expect.arrayContaining([
+        "Don't rush the last ten steps",
+        'Some of them',
+        'back like something',
+        'Warm',
+        'Wrap',
+        'Draught'
+      ])
+    );
+  });
+
+  it('surfaces the repeatedly named dogfood antagonist without promoting Ma', () => {
+    const chapter = readFileSync(
+      new URL('../../../../../fixtures/trust-dogfood/chapters/02-the-ledgerbound.md', import.meta.url),
+      'utf8'
+    );
+    const entities = entityRefsFor(chapter, [], 'import');
+    const surfaces = entities.map((entity) => entity.surface);
+
+    expect(surfaces).toContain('Corvo Lash');
+    expect(
+      entities.find((entity) => entity.surface === 'Corvo Lash')?.detectionReason
+    ).toBe('repeated_unknown');
+    expect(surfaces).not.toContain('Ma');
+  });
+
   it('carries place-list cues across conjoined one-word names', () => {
     const entities = entityRefsFor(
       "This place smells horrible. Why can't murders happen more often in Waltham or Newton where people don't crap in the streets?",
@@ -318,7 +382,7 @@ describe('buildExtractedProposal', () => {
     expect(entities.map((entity) => entity.surface)).toContain('Blatnor');
     expect(
       entities.find((entity) => entity.surface === 'Kaelor')?.detectionReason
-    ).toBe('character_context_candidate');
+    ).toBe('direct_address_candidate');
   });
 
   it('treats one-off hyphenated nicknames as multi-part unknowns during workspace review', () => {

@@ -1,8 +1,35 @@
 import {describe, expect, it} from 'vitest';
 import {
+  getMemoryQueryTerms,
+  getShodhTrustLabel,
+  requiresProjectGrounding,
   selectWorldBibleContextForPrompt,
   stripAssistantThinking
 } from './AIAssistant.helpers';
+
+describe('assistant grounding helpers', () => {
+  it('requires saved project grounding for named factual questions', () => {
+    expect(requiresProjectGrounding('What did Sera do before she became a delver?', false)).toBe(true);
+    expect(requiresProjectGrounding('Is Tam working for the Hollow Court?', false)).toBe(true);
+    expect(requiresProjectGrounding('what cures vaultburn?', false)).toBe(true);
+    expect(requiresProjectGrounding('Can you suggest five faction names?', false)).toBe(false);
+    expect(requiresProjectGrounding('Give me five complications for this scene.', false)).toBe(false);
+    expect(requiresProjectGrounding('What does this imply?', true)).toBe(false);
+  });
+
+  it('matches Shodh memories by meaningful query terms instead of the whole question', () => {
+    expect(getMemoryQueryTerms('What did Sera do before she became a delver?')).toEqual([
+      'sera',
+      'became',
+      'delver'
+    ]);
+  });
+
+  it('labels accepted fact memories at their trust tier', () => {
+    expect(getShodhTrustLabel(['canon_fact', 'occupation'])).toBe('Accepted canon fact');
+    expect(getShodhTrustLabel(['scene'])).toBe('Scene draft');
+  });
+});
 
 describe('stripAssistantThinking', () => {
   it('removes visible thinking markup while preserving the answer', () => {
