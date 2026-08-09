@@ -1,5 +1,5 @@
 export const DB_NAME = 'worldbuilding-db';
-export const DB_VERSION = 24;
+export const DB_VERSION = 25;
 export const ENTITY_STORE_NAME = 'entities';
 export const CATEGORY_STORE_NAME = 'entityCategories';
 export const PROJECT_STORE_NAME = 'projects';
@@ -29,6 +29,38 @@ export const CONSISTENCY_PROPOSAL_STORE_NAME = 'consistency_proposals';
 export const CONSISTENCY_EVENT_STORE_NAME = 'consistency_events';
 export const CONSISTENCY_ALIAS_STORE_NAME = 'consistency_aliases';
 export const STATE_MUTATION_EVENT_STORE_NAME = 'state_mutation_events';
+export const PROJECT_MIGRATION_BACKUP_STORE_NAME = 'project_migration_backups';
+
+export const PROJECT_SCOPED_STORE_NAMES = [
+  CATEGORY_STORE_NAME,
+  ENTITY_STORE_NAME,
+  WRITING_STORE_NAME,
+  SCRATCHPAD_STORE_NAME,
+  CORKBOARD_CHAPTER_CARD_STORE_NAME,
+  SETTINGS_STORE_NAME,
+  CHARACTER_STORE_NAME,
+  CHARACTER_SHEET_STORE_NAME,
+  LORE_DOCUMENT_STORE_NAME,
+  LORE_DOCUMENT_LINK_STORE_NAME,
+  LORE_ENTITY_PROPOSAL_STORE_NAME,
+  LORE_FACT_PROPOSAL_STORE_NAME,
+  CANONICAL_FACT_STORE_NAME,
+  CANON_DECISION_CLUSTER_STORE_NAME,
+  CANON_DECISION_SUPPRESSION_STORE_NAME,
+  COMPENDIUM_ENTRY_STORE_NAME,
+  COMPENDIUM_MILESTONE_STORE_NAME,
+  COMPENDIUM_RECIPE_STORE_NAME,
+  COMPENDIUM_PROGRESS_STORE_NAME,
+  COMPENDIUM_ACTION_LOG_STORE_NAME,
+  ZONE_AFFINITY_PROFILE_STORE_NAME,
+  ZONE_AFFINITY_PROGRESS_STORE_NAME,
+  SETTLEMENT_MODULE_STORE_NAME,
+  SETTLEMENT_STATE_STORE_NAME,
+  CONSISTENCY_PROPOSAL_STORE_NAME,
+  CONSISTENCY_EVENT_STORE_NAME,
+  CONSISTENCY_ALIAS_STORE_NAME,
+  STATE_MUTATION_EVENT_STORE_NAME
+] as const;
 
 export function openDb(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
@@ -169,6 +201,12 @@ export function openDb(): Promise<IDBDatabase> {
 
       if (!db.objectStoreNames.contains(STATE_MUTATION_EVENT_STORE_NAME)) {
         db.createObjectStore(STATE_MUTATION_EVENT_STORE_NAME, {
+          keyPath: 'id'
+        });
+      }
+
+      if (!db.objectStoreNames.contains(PROJECT_MIGRATION_BACKUP_STORE_NAME)) {
+        db.createObjectStore(PROJECT_MIGRATION_BACKUP_STORE_NAME, {
           keyPath: 'id'
         });
       }

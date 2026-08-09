@@ -10,6 +10,8 @@ export interface EntityFields {
 export interface Project {
   id: string;
   name: string;
+  /** Persisted application-data schema. Independent from IndexedDB DB_VERSION. */
+  storageSchemaVersion?: number;
   description?: string;
   rulesetId?: string;
   parentProjectId?: string;

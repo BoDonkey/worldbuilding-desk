@@ -1,67 +1,14 @@
 import type { Project } from './entityTypes';
 import {
   openDb,
-  CANON_DECISION_CLUSTER_STORE_NAME,
-  CANON_DECISION_SUPPRESSION_STORE_NAME,
-  CANONICAL_FACT_STORE_NAME,
-  CATEGORY_STORE_NAME,
-  CHARACTER_SHEET_STORE_NAME,
-  CHARACTER_STORE_NAME,
-  COMPENDIUM_ACTION_LOG_STORE_NAME,
-  COMPENDIUM_ENTRY_STORE_NAME,
-  COMPENDIUM_MILESTONE_STORE_NAME,
-  COMPENDIUM_PROGRESS_STORE_NAME,
-  COMPENDIUM_RECIPE_STORE_NAME,
-  CONSISTENCY_ALIAS_STORE_NAME,
-  CONSISTENCY_EVENT_STORE_NAME,
-  CONSISTENCY_PROPOSAL_STORE_NAME,
-  CORKBOARD_CHAPTER_CARD_STORE_NAME,
-  ENTITY_STORE_NAME,
-  LORE_DOCUMENT_LINK_STORE_NAME,
-  LORE_DOCUMENT_STORE_NAME,
-  LORE_ENTITY_PROPOSAL_STORE_NAME,
-  LORE_FACT_PROPOSAL_STORE_NAME,
+  PROJECT_MIGRATION_BACKUP_STORE_NAME,
+  PROJECT_SCOPED_STORE_NAMES,
   PROJECT_STORE_NAME,
-  SCRATCHPAD_STORE_NAME,
-  SETTINGS_STORE_NAME,
-  SETTLEMENT_MODULE_STORE_NAME,
-  SETTLEMENT_STATE_STORE_NAME,
-  STATE_MUTATION_EVENT_STORE_NAME,
-  WRITING_STORE_NAME,
-  ZONE_AFFINITY_PROFILE_STORE_NAME,
-  ZONE_AFFINITY_PROGRESS_STORE_NAME
 } from './db';
-
-const PROJECT_SCOPED_STORES = [
-  CATEGORY_STORE_NAME,
-  ENTITY_STORE_NAME,
-  WRITING_STORE_NAME,
-  SCRATCHPAD_STORE_NAME,
-  CORKBOARD_CHAPTER_CARD_STORE_NAME,
-  SETTINGS_STORE_NAME,
-  CHARACTER_STORE_NAME,
-  CHARACTER_SHEET_STORE_NAME,
-  LORE_DOCUMENT_STORE_NAME,
-  LORE_DOCUMENT_LINK_STORE_NAME,
-  LORE_ENTITY_PROPOSAL_STORE_NAME,
-  LORE_FACT_PROPOSAL_STORE_NAME,
-  CANONICAL_FACT_STORE_NAME,
-  CANON_DECISION_CLUSTER_STORE_NAME,
-  CANON_DECISION_SUPPRESSION_STORE_NAME,
-  COMPENDIUM_ENTRY_STORE_NAME,
-  COMPENDIUM_MILESTONE_STORE_NAME,
-  COMPENDIUM_RECIPE_STORE_NAME,
-  COMPENDIUM_PROGRESS_STORE_NAME,
-  COMPENDIUM_ACTION_LOG_STORE_NAME,
-  ZONE_AFFINITY_PROFILE_STORE_NAME,
-  ZONE_AFFINITY_PROGRESS_STORE_NAME,
-  SETTLEMENT_MODULE_STORE_NAME,
-  SETTLEMENT_STATE_STORE_NAME,
-  CONSISTENCY_PROPOSAL_STORE_NAME,
-  CONSISTENCY_EVENT_STORE_NAME,
-  CONSISTENCY_ALIAS_STORE_NAME,
-  STATE_MUTATION_EVENT_STORE_NAME
-] as const;
+import {
+  CURRENT_PROJECT_SCHEMA_VERSION,
+  ensureProjectStorageCurrent
+} from './services/storage/projectSchemaMigrations';
 
 const PROJECT_LOCAL_STORAGE_PREFIXES = [
   'systemHistory',
@@ -80,9 +27,13 @@ function transactionToPromise(tx: IDBTransaction): Promise<void> {
 
 async function deleteProjectScopedRecords(projectId: string): Promise<void> {
   const db = await openDb();
-  const tx = db.transaction([...PROJECT_SCOPED_STORES], 'readwrite');
+  const storesToClear = [
+    ...PROJECT_SCOPED_STORE_NAMES,
+    PROJECT_MIGRATION_BACKUP_STORE_NAME
+  ] as const;
+  const tx = db.transaction([...storesToClear], 'readwrite');
 
-  PROJECT_SCOPED_STORES.forEach((storeName) => {
+  storesToClear.forEach((storeName) => {
     const store = tx.objectStore(storeName);
     const request = store.getAll();
 
@@ -172,8 +123,18 @@ export async function getAllProjects(): Promise<Project[]> {
     const store = tx.objectStore(PROJECT_STORE_NAME);
     const request = store.getAll();
 
-    request.onsuccess = () => {
-      resolve(request.result as Project[]);
+    request.onsuccess = async () => {
+      try {
+        resolve(
+          await Promise.all(
+            (request.result as Project[]).map((project) =>
+              ensureProjectStorageCurrent(db, project)
+            )
+          )
+        );
+      } catch (error) {
+        reject(error);
+      }
     };
 
     request.onerror = () => {
@@ -190,8 +151,13 @@ export async function getProjectById(id: string): Promise<Project | null> {
     const store = tx.objectStore(PROJECT_STORE_NAME);
     const request = store.get(id);
 
-    request.onsuccess = () => {
-      resolve((request.result as Project) ?? null);
+    request.onsuccess = async () => {
+      try {
+        const project = (request.result as Project | undefined) ?? null;
+        resolve(project ? await ensureProjectStorageCurrent(db, project) : null);
+      } catch (error) {
+        reject(error);
+      }
     };
 
     request.onerror = () => {
@@ -202,11 +168,16 @@ export async function getProjectById(id: string): Promise<Project | null> {
 
 export async function saveProject(project: Project): Promise<void> {
   const db = await openDb();
+  const versionedProject = {
+    ...project,
+    storageSchemaVersion:
+      project.storageSchemaVersion ?? CURRENT_PROJECT_SCHEMA_VERSION
+  };
 
   return new Promise((resolve, reject) => {
     const tx = db.transaction(PROJECT_STORE_NAME, 'readwrite');
     const store = tx.objectStore(PROJECT_STORE_NAME);
-    const request = store.put(project);
+    const request = store.put(versionedProject);
 
     request.onsuccess = () => {
       resolve();

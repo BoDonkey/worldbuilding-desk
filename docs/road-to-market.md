@@ -118,7 +118,7 @@ and required revisit point, `WIP`, `Done <commit>`.
 | 3.8 | TypeScript 7 | 3 | M | Done `8611539` — TypeScript 7.0.2 builds in all four workspaces; TypeScript 6 compatibility API retained for `typescript-eslint`; legacy node resolution migrated; TypeScript 6 stable-ordering parity; lint with 3 baseline warnings; 271 web + 6 engine + 12 UI tests; web/desktop builds; unpacked desktop package; Cypress 43/43 |
 | 3.9 | Dev-audit sweep + fitness close-out | 3 | S | Done `c8d7c78` — grade A; development audit 29→0 and production audit remains 0 via targeted overrides; all 5 architecture targets below 2,000 lines; lint with 3 baseline warnings; 271 web + 6 engine + 12 UI tests; web/desktop builds; Cypress 43/43; [2026-08-07 report](archive/code-fitness-report-2026-08-07.md) |
 | 4.1 | Description-first manual item creation | 4 | S | Done `70fb72f` — focused manual item draft with progressive full-editor disclosure; lint with 3 baseline warnings; 275 web + 6 engine + 12 UI tests; web/desktop builds; Cypress 44/44; desktop/narrow browser checks |
-| 4.2 | Storage schema versioning + migrations | 4 | M | — |
+| 4.2 | Storage schema versioning + migrations | 4 | M | WIP |
 | 4.3 | Package rename off `@litrpg-tool/*` | 4 | S | — |
 | 4.4 | Character contract adoption (CX-1) | 4 | S | Done `c406b48` — stable-ID Character contract and migration invariants adopted in the domain authority; J1–J6 added to smoke coverage; superseded brief archived; lint baseline; 315 web + 6 engine + 12 UI tests; web/desktop builds |
 | 4.5 | Character identity links + classifier + resolver (CX-2) | 4 | M | — |

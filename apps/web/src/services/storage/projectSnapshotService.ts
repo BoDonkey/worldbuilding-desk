@@ -57,9 +57,10 @@ import {
 } from '../../db';
 import {getProjectById} from '../../projectStorage';
 import {getRulesetByProjectId} from '../rules/rulesetService';
+import {CURRENT_PROJECT_SNAPSHOT_SCHEMA_VERSION} from './projectSnapshotMigrations';
 
 export interface ProjectSnapshot {
-  schemaVersion: 1;
+  schemaVersion: typeof CURRENT_PROJECT_SNAPSHOT_SCHEMA_VERSION;
   generatedAt: number;
   projectId: string;
   project: Project;
@@ -227,7 +228,7 @@ export async function buildProjectSnapshot(projectId: string): Promise<ProjectSn
   const settings = settingsRecords[0] ?? null;
 
   return {
-    schemaVersion: 1,
+    schemaVersion: CURRENT_PROJECT_SNAPSHOT_SCHEMA_VERSION,
     generatedAt: Date.now(),
     projectId,
     project,

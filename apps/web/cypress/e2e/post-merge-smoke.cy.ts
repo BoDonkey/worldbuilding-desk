@@ -4,8 +4,7 @@ const TOOL_NAMES = {
   general: 'General Clarity Tool'
 } as const;
 
-const DB_NAME = 'worldbuilding-db';
-const DB_VERSION = 24;
+import {DB_NAME, DB_VERSION} from '../../src/db';
 
 function mutateSmokeDb(
   mutator: (db: IDBDatabase) => void | Promise<void>

@@ -1,5 +1,8 @@
-const DB_NAME = 'worldbuilding-db';
-const DB_VERSION = 24;
+import {
+  DB_NAME,
+  DB_VERSION,
+  PROJECT_MIGRATION_BACKUP_STORE_NAME
+} from '../../src/db';
 
 const STORE_NAMES = [
   'entities',
@@ -30,7 +33,8 @@ const STORE_NAMES = [
   'consistency_proposals',
   'consistency_events',
   'consistency_aliases',
-  'state_mutation_events'
+  'state_mutation_events',
+  PROJECT_MIGRATION_BACKUP_STORE_NAME
 ] as const;
 
 interface SeedProject {

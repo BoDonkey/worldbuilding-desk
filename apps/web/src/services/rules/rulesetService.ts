@@ -115,6 +115,32 @@ export async function getRulesetByProjectId(
   });
 }
 
+/** Recovery-only write that deliberately skips derived RAG/Shodh indexing. */
+export async function replaceRulesetSnapshot(
+  projectId: string,
+  ruleset: StoredRuleset | null
+): Promise<void> {
+  const database = await getDB();
+  const transaction = database.transaction([RULESET_STORE], 'readwrite');
+  const store = transaction.objectStore(RULESET_STORE);
+  const existingRequest = store.index('projectId').getAll(projectId);
+
+  return new Promise((resolve, reject) => {
+    existingRequest.onsuccess = () => {
+      (existingRequest.result as StoredRuleset[]).forEach((record) => {
+        store.delete(record.id);
+      });
+      if (ruleset) {
+        store.put({...ruleset, projectId});
+      }
+    };
+    existingRequest.onerror = () => reject(existingRequest.error);
+    transaction.oncomplete = () => resolve();
+    transaction.onerror = () => reject(transaction.error);
+    transaction.onabort = () => reject(transaction.error);
+  });
+}
+
 export async function deleteRuleset(
   rulesetId: string,
   projectId?: string

@@ -28,7 +28,9 @@ Procedure:
    two Corkboard cards with plot points.
 2. `Projects` → `Export Backup (.zip)` → confirm
    `<project>-backup-YYYY-MM-DD.zip` downloads → `Validate Backup (.zip)`
-   passes integrity checks.
+   passes integrity and supported-version checks. A fixture whose
+   `schemaVersion` is newer than the app supports must fail before preview or
+   import with an instruction to update the app.
 3. Import as `Create New Project`: new project created and selected, feedback
    includes `Count check passed.`
 4. Import again as `Merge Into Existing Project`: review conflict summary,

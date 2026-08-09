@@ -1,6 +1,6 @@
 # Architecture Reference — Worldbuilding Desk
 
-Last reviewed: 2026-07-26
+Last reviewed: 2026-08-09
 
 ## Purpose
 
@@ -120,10 +120,14 @@ an owning service or store already exists.
 Project backup is the portability boundary. Derived RAG/Shodh data may be
 rebuilt from primary records.
 
-Current structural risk:
-
-- persisted records and snapshots need an explicit schema-version and migration
-  contract before further high-impact shape changes
+IndexedDB's structural `DB_VERSION`, per-project `storageSchemaVersion`, and
+portable project-snapshot `schemaVersion` are separate contracts. Opening a
+project runs the deterministic per-project migration chain before consumers
+read project data. Migrations advance exactly one version, are idempotent, and
+checkpoint only after success; a recoverable project-scoped IndexedDB backup
+is captured before the first step. Projects or backups written by a newer app
+fail closed with an update instruction. Snapshot imports run their own
+ordered compatibility chain before validation and persistence.
 
 ## Application Boundaries
 
@@ -179,14 +183,13 @@ every visual detail.
 
 ## Current Architecture Risks
 
-1. Persisted schema versioning and migrations are incomplete.
-2. Several route components still own too much workflow state and orchestration.
-3. Provider capabilities are not yet normalized behind one proposal/action
+1. Several route components still own too much workflow state and orchestration.
+2. Provider capabilities are not yet normalized behind one proposal/action
    contract.
-4. Ruleset collections still contain weakly typed areas that should be tightened
+3. Ruleset collections still contain weakly typed areas that should be tightened
    before advanced AI generation.
-5. Electron and transformer dependencies need supported upgrade paths.
-6. Some assistant/retrieval behavior still needs realistic provenance testing.
+4. Electron and transformer dependencies need supported upgrade paths.
+5. Some assistant/retrieval behavior still needs realistic provenance testing.
 
 These risks are prioritized and scheduled in `docs/road-to-market.md`.
 

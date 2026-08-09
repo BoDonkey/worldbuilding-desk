@@ -45,6 +45,11 @@ import {
 import {saveProject, getProjectById, getAllProjects} from '../../projectStorage';
 import {getRulesetByProjectId, saveRuleset, deleteRuleset} from '../rules/rulesetService';
 import type {ProjectSnapshot} from './projectSnapshotService';
+import {migrateProjectSnapshotPayload} from './projectSnapshotMigrations';
+import {
+  CURRENT_PROJECT_SCHEMA_VERSION,
+  LEGACY_PROJECT_SCHEMA_VERSION
+} from './projectSchemaMigrations';
 import {extractSingleFileZip} from '../../utils/unzip';
 
 export type ProjectBackupImportMode = 'new' | 'merge';
@@ -90,18 +95,23 @@ async function getProjectRecords<T extends {projectId: string}>(
   return all.filter((item) => item.projectId === projectId);
 }
 
-function ensureProjectSnapshot(value: unknown): ProjectSnapshot {
-  if (!value || typeof value !== 'object') {
-    throw new Error('Invalid snapshot payload.');
-  }
-  const snapshot = value as Partial<ProjectSnapshot>;
-  if (snapshot.schemaVersion !== 1) {
-    throw new Error(
-      `Unsupported snapshot schema version (${String(snapshot.schemaVersion)}).`
-    );
-  }
+export function normalizeProjectSnapshot(value: unknown): ProjectSnapshot {
+  const snapshot = migrateProjectSnapshotPayload(value) as unknown as Partial<ProjectSnapshot>;
   if (!snapshot.project || !snapshot.project.id || !snapshot.project.name) {
     throw new Error('Snapshot project metadata is missing.');
+  }
+  const projectStorageVersion =
+    snapshot.project.storageSchemaVersion ?? LEGACY_PROJECT_SCHEMA_VERSION;
+  if (!Number.isInteger(projectStorageVersion) || projectStorageVersion < 1) {
+    throw new Error(
+      `Invalid project storage schema version (${String(projectStorageVersion)}).`
+    );
+  }
+  if (projectStorageVersion > CURRENT_PROJECT_SCHEMA_VERSION) {
+    throw new Error(
+      `Backup project data uses storage schema ${projectStorageVersion}, but this app supports ` +
+      `up to ${CURRENT_PROJECT_SCHEMA_VERSION}. Update the app before importing it.`
+    );
   }
   if (!snapshot.data || !snapshot.counts) {
     throw new Error('Snapshot data is incomplete.');
@@ -126,6 +136,7 @@ function ensureProjectSnapshot(value: unknown): ProjectSnapshot {
   snapshot.counts.canonDecisionSuppressions ??= snapshot.data.canonDecisionSuppressions.length;
   snapshot.data.stateMutationEvents ??= [];
   snapshot.counts.stateMutationEvents ??= snapshot.data.stateMutationEvents.length;
+  snapshot.project.storageSchemaVersion = CURRENT_PROJECT_SCHEMA_VERSION;
   return snapshot as ProjectSnapshot;
 }
 
@@ -357,7 +368,7 @@ export async function parseProjectBackupZip(file: File): Promise<{
   preview: ProjectSnapshotImportPreview;
 }> {
   const json = await readZipJson(file);
-  const snapshot = ensureProjectSnapshot(json);
+  const snapshot = normalizeProjectSnapshot(json);
   return {
     snapshot,
     preview: {

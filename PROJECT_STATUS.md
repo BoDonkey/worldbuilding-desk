@@ -104,6 +104,12 @@ Under the hood, the app still includes rich systems for world data, rules, chara
 - Lore extraction now proposes evidence-backed facts and typed entities from both structured labels and common natural-prose dossier/faction/place patterns, including the trust-dogfood occupation, aliases, relationships, appearance, service conflict, historical faction name, and explicitly speculative claims. All results remain review-only until author acceptance.
 - Parent/child canon inheritance with promotion and sync flows.
 - Project backup export/import with validation and conflict review.
+- Project records now carry an application-data schema version independent of
+  IndexedDB's structural version. Project load runs a deterministic,
+  one-version-at-a-time migration chain, fails closed on newer schemas, and
+  takes a restorable project-scoped backup before applying pending migrations.
+  Backup snapshot files use a separate version contract and compatibility
+  runner, with newer snapshot versions rejected before import writes begin.
 
 ### AI and Retrieval
 - Multi-provider abstraction for Anthropic, OpenAI, Ollama, and Gemini.

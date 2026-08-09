@@ -1,0 +1,335 @@
+import type {Project, StoredRuleset} from '../../entityTypes';
+import {
+  PROJECT_MIGRATION_BACKUP_STORE_NAME,
+  PROJECT_SCOPED_STORE_NAMES,
+  PROJECT_STORE_NAME
+} from '../../db';
+import {
+  getRulesetByProjectId,
+  replaceRulesetSnapshot
+} from '../rules/rulesetService';
+
+export const LEGACY_PROJECT_SCHEMA_VERSION = 1;
+export const CURRENT_PROJECT_SCHEMA_VERSION = 1;
+export const PROJECT_MIGRATION_BACKUP_SCHEMA_VERSION = 1;
+
+export interface ProjectMigrationContext {
+  db: IDBDatabase;
+  projectId: string;
+}
+
+export interface ProjectSchemaMigration {
+  fromVersion: number;
+  toVersion: number;
+  migrate: (context: ProjectMigrationContext) => Promise<void>;
+}
+
+export interface ProjectMigrationBackup {
+  id: string;
+  backupSchemaVersion: typeof PROJECT_MIGRATION_BACKUP_SCHEMA_VERSION;
+  projectId: string;
+  fromVersion: number;
+  toVersion: number;
+  createdAt: number;
+  project: Project;
+  ruleset: StoredRuleset | null;
+  stores: Partial<Record<(typeof PROJECT_SCOPED_STORE_NAMES)[number], unknown[]>>;
+}
+
+export interface ProjectMigrationReport {
+  fromVersion: number;
+  toVersion: number;
+  appliedVersions: number[];
+  backupId: string | null;
+}
+
+export class ProjectMigrationError extends Error {
+  readonly projectId: string;
+  readonly backupId: string;
+
+  constructor(params: {
+    projectId: string;
+    backupId: string;
+    cause: unknown;
+  }) {
+    const causeMessage =
+      params.cause instanceof Error ? params.cause.message : 'Unknown migration failure';
+    super(
+      `Project migration failed for "${params.projectId}". ` +
+      `Restore backup "${params.backupId}" before retrying. ${causeMessage}`,
+      {cause: params.cause}
+    );
+    this.name = 'ProjectMigrationError';
+    this.projectId = params.projectId;
+    this.backupId = params.backupId;
+  }
+}
+
+interface RunProjectMigrationPlanParams {
+  projectId: string;
+  fromVersion: number;
+  targetVersion: number;
+  migrations: readonly ProjectSchemaMigration[];
+  createBackup: () => Promise<string>;
+  writeVersion: (version: number) => Promise<void>;
+  context: ProjectMigrationContext;
+}
+
+const PROJECT_MIGRATIONS: readonly ProjectSchemaMigration[] = [];
+
+function requestToPromise<T>(request: IDBRequest<T>): Promise<T> {
+  return new Promise((resolve, reject) => {
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+}
+
+function transactionToPromise(transaction: IDBTransaction): Promise<void> {
+  return new Promise((resolve, reject) => {
+    transaction.oncomplete = () => resolve();
+    transaction.onerror = () => reject(transaction.error);
+    transaction.onabort = () => reject(transaction.error);
+  });
+}
+
+function assertSchemaVersion(version: number, label: string): void {
+  if (!Number.isInteger(version) || version < 1) {
+    throw new Error(`${label} must be a positive integer.`);
+  }
+}
+
+export async function runProjectMigrationPlan(
+  params: RunProjectMigrationPlanParams
+): Promise<ProjectMigrationReport> {
+  assertSchemaVersion(params.fromVersion, 'Stored project schema version');
+  assertSchemaVersion(params.targetVersion, 'Target project schema version');
+
+  if (params.fromVersion > params.targetVersion) {
+    throw new Error(
+      `Project "${params.projectId}" uses storage schema ${params.fromVersion}, ` +
+      `but this app supports up to ${params.targetVersion}. Update the app before opening it.`
+    );
+  }
+
+  if (params.fromVersion === params.targetVersion) {
+    return {
+      fromVersion: params.fromVersion,
+      toVersion: params.targetVersion,
+      appliedVersions: [],
+      backupId: null
+    };
+  }
+
+  const bySourceVersion = new Map<number, ProjectSchemaMigration>();
+  params.migrations.forEach((migration) => {
+    assertSchemaVersion(migration.fromVersion, 'Migration source version');
+    assertSchemaVersion(migration.toVersion, 'Migration target version');
+    if (migration.toVersion !== migration.fromVersion + 1) {
+      throw new Error(
+        `Project migration ${migration.fromVersion}->${migration.toVersion} must advance one version.`
+      );
+    }
+    if (bySourceVersion.has(migration.fromVersion)) {
+      throw new Error(`Duplicate project migration from version ${migration.fromVersion}.`);
+    }
+    bySourceVersion.set(migration.fromVersion, migration);
+  });
+
+  let version = params.fromVersion;
+  const orderedMigrations: ProjectSchemaMigration[] = [];
+  while (version < params.targetVersion) {
+    const migration = bySourceVersion.get(version);
+    if (!migration) {
+      throw new Error(
+        `No project migration is registered for schema ${version}->${version + 1}.`
+      );
+    }
+    orderedMigrations.push(migration);
+    version = migration.toVersion;
+  }
+
+  const backupId = await params.createBackup();
+  const appliedVersions: number[] = [];
+  try {
+    for (const migration of orderedMigrations) {
+      await migration.migrate(params.context);
+      await params.writeVersion(migration.toVersion);
+      appliedVersions.push(migration.toVersion);
+    }
+  } catch (error) {
+    throw new ProjectMigrationError({
+      projectId: params.projectId,
+      backupId,
+      cause: error
+    });
+  }
+
+  return {
+    fromVersion: params.fromVersion,
+    toVersion: params.targetVersion,
+    appliedVersions,
+    backupId
+  };
+}
+
+export async function createProjectMigrationBackup(params: {
+  db: IDBDatabase;
+  project: Project;
+  fromVersion: number;
+  toVersion: number;
+}): Promise<ProjectMigrationBackup> {
+  const transaction = params.db.transaction([...PROJECT_SCOPED_STORE_NAMES], 'readonly');
+  const completion = transactionToPromise(transaction);
+  const [entries, ruleset] = await Promise.all([
+    Promise.all(
+      PROJECT_SCOPED_STORE_NAMES.map(async (storeName) => {
+        const records = (await requestToPromise(
+          transaction.objectStore(storeName).getAll()
+        )) as Array<{projectId?: string}>;
+        return [
+          storeName,
+          records.filter((record) => record.projectId === params.project.id)
+        ] as const;
+      })
+    ),
+    getRulesetByProjectId(params.project.id)
+  ]);
+  await completion;
+
+  const backup: ProjectMigrationBackup = {
+    id: crypto.randomUUID(),
+    backupSchemaVersion: PROJECT_MIGRATION_BACKUP_SCHEMA_VERSION,
+    projectId: params.project.id,
+    fromVersion: params.fromVersion,
+    toVersion: params.toVersion,
+    createdAt: Date.now(),
+    project: structuredClone(params.project),
+    ruleset: ruleset ? structuredClone(ruleset) : null,
+    stores: Object.fromEntries(entries) as ProjectMigrationBackup['stores']
+  };
+
+  const write = params.db.transaction(PROJECT_MIGRATION_BACKUP_STORE_NAME, 'readwrite');
+  write.objectStore(PROJECT_MIGRATION_BACKUP_STORE_NAME).put(backup);
+  await transactionToPromise(write);
+  return backup;
+}
+
+function replaceProjectRecordsInStore(params: {
+  db: IDBDatabase;
+  storeName: (typeof PROJECT_SCOPED_STORE_NAMES)[number];
+  projectId: string;
+  records: unknown[];
+}): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const transaction = params.db.transaction(params.storeName, 'readwrite');
+    const store = transaction.objectStore(params.storeName);
+    const read = store.getAll();
+
+    read.onsuccess = () => {
+      (read.result as Array<{id?: string; projectId?: string}>)
+        .filter((record) => record.projectId === params.projectId && typeof record.id === 'string')
+        .forEach((record) => store.delete(record.id as string));
+      params.records.forEach((record) => store.put(record));
+    };
+    read.onerror = () => reject(read.error);
+    transaction.oncomplete = () => resolve();
+    transaction.onerror = () => reject(transaction.error);
+    transaction.onabort = () => reject(transaction.error);
+  });
+}
+
+export async function restoreProjectMigrationBackup(
+  db: IDBDatabase,
+  backupId: string
+): Promise<Project> {
+  const read = db.transaction(PROJECT_MIGRATION_BACKUP_STORE_NAME, 'readonly');
+  const backup = (await requestToPromise(
+    read.objectStore(PROJECT_MIGRATION_BACKUP_STORE_NAME).get(backupId)
+  )) as ProjectMigrationBackup | undefined;
+  if (!backup) {
+    throw new Error(`Project migration backup "${backupId}" was not found.`);
+  }
+  if (backup.backupSchemaVersion !== PROJECT_MIGRATION_BACKUP_SCHEMA_VERSION) {
+    throw new Error(
+      `Unsupported project migration backup schema (${String(backup.backupSchemaVersion)}).`
+    );
+  }
+
+  for (const storeName of PROJECT_SCOPED_STORE_NAMES) {
+    await replaceProjectRecordsInStore({
+      db,
+      storeName,
+      projectId: backup.projectId,
+      records: backup.stores[storeName] ?? []
+    });
+  }
+
+  const writeProject = db.transaction(PROJECT_STORE_NAME, 'readwrite');
+  writeProject.objectStore(PROJECT_STORE_NAME).put(backup.project);
+  await transactionToPromise(writeProject);
+  await replaceRulesetSnapshot(backup.projectId, backup.ruleset);
+  return structuredClone(backup.project);
+}
+
+export async function listProjectMigrationBackups(
+  db: IDBDatabase,
+  projectId: string
+): Promise<ProjectMigrationBackup[]> {
+  const transaction = db.transaction(PROJECT_MIGRATION_BACKUP_STORE_NAME, 'readonly');
+  const backups = (await requestToPromise(
+    transaction.objectStore(PROJECT_MIGRATION_BACKUP_STORE_NAME).getAll()
+  )) as ProjectMigrationBackup[];
+  return backups
+    .filter((backup) => backup.projectId === projectId)
+    .sort((left, right) => right.createdAt - left.createdAt);
+}
+
+async function writeProjectSchemaVersion(
+  db: IDBDatabase,
+  project: Project,
+  version: number
+): Promise<Project> {
+  const updated = {...project, storageSchemaVersion: version};
+  const transaction = db.transaction(PROJECT_STORE_NAME, 'readwrite');
+  transaction.objectStore(PROJECT_STORE_NAME).put(updated);
+  await transactionToPromise(transaction);
+  return updated;
+}
+
+export async function ensureProjectStorageCurrent(
+  db: IDBDatabase,
+  project: Project
+): Promise<Project> {
+  const storedVersion = project.storageSchemaVersion ?? LEGACY_PROJECT_SCHEMA_VERSION;
+  let currentProject = project;
+
+  const report = await runProjectMigrationPlan({
+    projectId: project.id,
+    fromVersion: storedVersion,
+    targetVersion: CURRENT_PROJECT_SCHEMA_VERSION,
+    migrations: PROJECT_MIGRATIONS,
+    context: {db, projectId: project.id},
+    createBackup: async () => {
+      const backup = await createProjectMigrationBackup({
+        db,
+        project: currentProject,
+        fromVersion: storedVersion,
+        toVersion: CURRENT_PROJECT_SCHEMA_VERSION
+      });
+      return backup.id;
+    },
+    writeVersion: async (version) => {
+      currentProject = await writeProjectSchemaVersion(db, currentProject, version);
+    }
+  });
+
+  if (report.appliedVersions.length === 0 && project.storageSchemaVersion === undefined) {
+    currentProject = await writeProjectSchemaVersion(
+      db,
+      project,
+      CURRENT_PROJECT_SCHEMA_VERSION
+    );
+  }
+
+  return currentProject;
+}

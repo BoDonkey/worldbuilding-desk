@@ -1,5 +1,4 @@
-const DB_NAME = 'worldbuilding-db';
-const DB_VERSION = 24;
+import {DB_NAME, DB_VERSION} from '../../src/db';
 const PROJECT_ID = 'cypress-project-1';
 const TARGET_ID = 'entity-ember-archive';
 const TARGET_NAME = 'Ember Archive';

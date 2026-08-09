@@ -1,5 +1,4 @@
-const DB_NAME = 'worldbuilding-db';
-const DB_VERSION = 24;
+import {DB_NAME, DB_VERSION} from '../../src/db';
 
 function setSeededProjectToGeneralFiction(): Cypress.Chainable<void> {
   return cy.window().then(
