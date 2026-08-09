@@ -1,6 +1,6 @@
 # Documentation Map
 
-Last updated: 2026-08-03
+Last updated: 2026-08-09
 
 The active documentation set was consolidated on 2026-08-01 down to seven
 documents. Everything else lives in `docs/archive/` with a banner pointing at
@@ -20,8 +20,8 @@ Read in this order:
 4. `docs/architecture-review.md` — durable architecture boundaries and current
    structural risks.
 5. `docs/domain-model.md` — the lore/canon model, canon decision workflow,
-   manuscript-time state model, and the AI proposal boundary (including the
-   item-authoring direction).
+   manuscript-time state model, Character identity contract, and the AI
+   proposal boundary (including the item-authoring direction).
 6. `docs/smoke-tests.md` — reusable manual smoke procedures for backup
    round-trip, review completion, and character canon unification.
 7. `docs/marketing-plan.md` — positioning, audience, pricing, and launch
@@ -41,11 +41,9 @@ Other files:
 - `apps/web/editor-config.md` — developer reference for TipTap editor/toolbar
   customization (moved from the repo root).
 - `docs/character-experience-design-review.md` — accepted decision record for
-  unifying characters around one canonical World Bible identity; the roadmap
-  remains authoritative for execution status.
-- `docs/character-experience-redesign-brief.md` — superseded problem brief
-  retained until Slice 4.4 folds its durable contract into the domain and
-  smoke-test authorities and archives the brief.
+  unifying characters around one canonical World Bible identity; its durable
+  contract and journey tests are folded into the authorities above, while the
+  roadmap remains authoritative for execution status.
 
 ## Archive
 
@@ -69,6 +67,9 @@ the full-length originals behind the 2026-08-01 consolidation:
   `docs/product-blueprint.md` and the prior doc map.
 - `product-health-audit.md` — source of the road-to-market Phase 1 trust
   slices.
+- `character-experience-redesign-brief.md` — superseded Character identity
+  problem brief; its accepted decisions remain in the design review and its
+  durable contract and journeys live in the domain and smoke authorities.
 - The three full smoke procedures behind `docs/smoke-tests.md`, plus
   historical smoke run logs.
 

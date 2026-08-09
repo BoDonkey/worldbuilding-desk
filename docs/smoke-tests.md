@@ -1,6 +1,6 @@
 # Manual Smoke Procedures
 
-Last updated: 2026-08-01
+Last updated: 2026-08-09
 
 Reusable manual smoke procedures targeting trust and data-loss boundaries.
 Consolidates the former `project-backup-smoke-test.md`,
@@ -121,3 +121,51 @@ Procedure:
 Focused automated coverage: `lore-review-matching.cy.ts`,
 `project-mode-guardrails.cy.ts`, plus unit suites for `reviewQueue`,
 `textMatcher`, and `worldBibleCanonicalization`.
+
+### Character identity journey suite (J1–J6)
+
+Run these acceptance journeys after the corresponding Character identity
+slices land. Until then, failures describe open roadmap work rather than
+current regressions.
+
+1. **J1 — General fiction, new character.** In a general-fiction project,
+   type a new character name in a scene, capture it from review, and accept it
+   into a character-kind World Bible category. Confirm one World Bible
+   character exists; no sheet, profile, stat, or resource surface interrupts
+   intake; the known-lore underline opens that record in one interaction; and
+   its description is editable in exactly one place.
+2. **J2 — LitRPG, add mechanics.** In a rules-enabled project, choose `Add
+   sheet` from World Bible character detail. Confirm no name entry is required,
+   exactly one sheet is linked by the character entity ID, its displayed name
+   comes from canon, scene mutations replay in continuity surfaces, and a
+   canonical rename updates every surface without re-linking.
+3. **J3 — Legacy project migration.** Open a pre-character-link fixture.
+   Confirm an automatic backup precedes migration; the report classifies every
+   tools, sheet, and World Bible record exactly once; totals reconcile with the
+   stores; tools-only, sheet-only, and ambiguous records enter the World Bible
+   resolution queue; available actions are link, create canon, and keep
+   separate; unresolved records are never presented as canon; and no source
+   records disappear.
+4. **J4 — Dialogue style capability.** From World Bible character detail,
+   assign and then remove a dialogue style. Confirm the operation creates no
+   second identity, exposes no independent descriptive editor, and neither
+   removing the style nor deleting an attached sheet alters the World Bible
+   record, facts, aliases, or lore links.
+5. **J5 — Backup round-trip.** Export a snapshot v2 project containing a
+   renamed character, aliases, facts, an extension, a sheet, and accepted state
+   events; wipe local project data; import it; and compare counts, explicit
+   links, and replay at each scene. Then import snapshot v1 and character
+   package v1 fixtures and confirm legacy content is preserved and classified,
+   with unresolved identities routed to review rather than silently merged.
+6. **J6 — Trust fixture (`Tam`).** Seed a tools-only `Tam` record with no World
+   Bible identity. Confirm `Tam` is not underlined as known lore and is absent
+   from assistant grounding, but appears in the identity resolution queue.
+   Resolve it once by linking to existing canon and once, in a fresh fixture,
+   by explicitly creating canon; after either author action, confirm all
+   surfaces resolve the same entity ID and no duplicate identity remains.
+
+Journey failure signals: any name-based link that changes after rename;
+automatic canon creation; an ambiguous silent merge; more than one sheet for
+one project/entity; accepted ledger events rewritten during migration;
+unresolved records treated as lore or grounding; missing aliases or links
+after backup; or pre/post-migration replay differences.

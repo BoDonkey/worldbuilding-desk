@@ -1,6 +1,6 @@
 # Domain Model — Lore, Canon, State, and AI Proposals
 
-Last updated: 2026-08-03
+Last updated: 2026-08-09
 
 This is the domain specification authority. It consolidates the durable
 contracts from `freeform-lore-ingestion-architecture.md`,
@@ -112,7 +112,82 @@ change; the mutation ledger says when it changed.
 - Subject scope is character-first; the event schema permits later expansion
   to locations, factions, items, and world.
 
-## 4. AI Proposal Boundary and Item Authoring
+## 4. Character Identity Contract
+
+_Status: adopted target contract. `PROJECT_STATUS.md` records which parts are
+implemented; `docs/road-to-market.md` owns the migration and delivery order._
+
+Authors have one character identity: a `WorldEntity` in a character-kind
+World Bible category. Dialogue styling, sheets, state, and transfer are
+optional capabilities attached to that identity by stable IDs, not separate
+author-facing identities.
+
+### Identity and capability records
+
+- **`WorldEntity` is the sole character identity.** `EntityCategory.kind`
+  explicitly distinguishes `'character'` from `'general'`; custom category
+  names and slugs remain free-form. Canonical name, aliases, accepted facts,
+  provenance, review state, and lore links key off `entity.id`.
+- **`Character` narrows to an extension record.** New records require an
+  `entityId` foreign key and retain only capability data that has no canon
+  home, currently `characterStyleId`. Legacy descriptive fields may remain
+  readable during migration but do not own name, description, age, role, or
+  notes. Creating or deleting an extension never creates, renames, or deletes
+  canon.
+- **`CharacterSheet` attaches to canon directly.** New sheets require
+  `characterEntityId`, unique per project and entity. `characterId` is a
+  legacy-read compatibility field; sheet display names derive from canon.
+  A character may exist without a sheet. A sheet cannot create a hidden
+  identity: if no canon record exists, creating one is an explicit author
+  action first.
+- **State events use canonical actor identity.** New commands store the
+  character entity ID as `actorId`. Accepted ledger events are immutable; a
+  persisted actor-resolution map translates legacy character and sheet IDs to
+  entity IDs during replay. Name-based actor matching is not part of the
+  target model.
+- **Facts, aliases, and lore links converge on entities.** All new writes use
+  the `entity` target. The legacy `character` target remains a compatibility
+  adapter only and resolves through the same identity map until retired.
+- **Parent/child inheritance covers canon only.** Inherited entities remain
+  read-only context. Character extensions, sheets, and state ledgers do not
+  inherit; importing a prior end state as a new baseline requires a future
+  explicit author action.
+
+One tested character link resolver owns entity ↔ extension ↔ sheet ↔
+legacy-ID resolution for roster, capture, review linking, health, inspector,
+grounding, and other consumers. Surfaces must not recreate normalized-name
+joins. Legacy records are classified exactly once as `already-linked`,
+`unambiguous-same-identity`, `tools-only-orphan`, `world-bible-only`,
+`ambiguous-collision`, or `sheet-only`. Unresolved records remain usable where
+safe but are never presented as canon or assistant grounding.
+
+### Migration invariants
+
+1. **Versioned and idempotent.** Character migration runs under the persisted
+   schema-version contract, takes an automatic backup first, and uses restore
+   as rollback.
+2. **No silent merges.** Automatic linking is allowed only for an exact
+   normalized-name match that is unique on both sides within character-kind
+   categories. Every other collision enters author resolution.
+3. **No canon invention.** Migration never creates a `WorldEntity`; only an
+   explicit author action can create canon.
+4. **Ledger immutability.** Accepted `StateMutationEvent`s are never rewritten;
+   legacy identity resolves through the actor-resolution map.
+5. **Replay parity.** For each linked character, replayed state at every scene
+   is byte-identical before and after migration.
+6. **Rename stability.** Renaming canon after migration changes no identity
+   linkage.
+7. **Conservation.** Every legacy character-related record receives exactly
+   one classification, and migration-report totals reconcile with store
+   counts.
+8. **Backup completeness.** Snapshot v2 includes consistency aliases and all
+   new link fields. Snapshot v1 and character-package v1 remain importable
+   through the classifier; round-trip preserves counts, links, and replay.
+
+These rules preserve the trust boundary: deterministic code classifies and
+validates possible links; the author resolves ambiguity and creates canon.
+
+## 5. AI Proposal Boundary and Item Authoring
 
 _Status: item authoring is a product proposal (2026-07-26); the shared
 proposal boundary is the reusable pattern for all author-invoked AI actions._

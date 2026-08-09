@@ -1,14 +1,14 @@
 # Character Experience Design Review — Decision Record
 
 **Status:** Decision record for the redesign proposed in
-`docs/character-experience-redesign-brief.md`
+`docs/archive/character-experience-redesign-brief.md`
 **Created:** 2026-08-09
 **Authority:** This document resolves the brief's ten open decisions and
 defines the target domain contract, migration invariants, author journeys, and
-acceptance criteria. Once accepted, the domain contract (§5–§6) should be
-folded into `docs/domain-model.md` and the brief archived. Open work remains
-authoritative only on the `docs/road-to-market.md` status board; this document
-carries no execution status.
+acceptance criteria. Its durable contract now lives in `docs/domain-model.md`
+and J1–J6 live in `docs/smoke-tests.md`; the original brief is archived. Open
+work remains authoritative only on the `docs/road-to-market.md` status board;
+this document carries no execution status.
 
 ## 1. Verdict on the Proposed Model
 

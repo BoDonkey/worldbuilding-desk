@@ -1,5 +1,11 @@
 # Character Experience Redesign Brief
 
+> **Archived 2026-08-09.** Superseded by the accepted decision record in
+> `docs/character-experience-design-review.md`. Durable identity and migration
+> contracts live in `docs/domain-model.md`; acceptance journeys J1–J6 live in
+> `docs/smoke-tests.md`; execution status lives only in
+> `docs/road-to-market.md`.
+
 **Status:** Problem brief and decision input — not an implementation plan
 **Created:** 2026-08-09
 **Authority:** Product, architecture, and domain decisions remain in
@@ -360,7 +366,7 @@ The redesign succeeds when:
 
 Use GPT-5.6 Sol at high or extra-high reasoning with the following task:
 
-> Review `docs/character-experience-redesign-brief.md` against
+> Review `docs/archive/character-experience-redesign-brief.md` against
 > `PROJECT_STATUS.md`, `docs/road-to-market.md`,
 > `docs/product-blueprint.md`, `docs/architecture-review.md`, and
 > `docs/domain-model.md`, plus the current character/entity/sheet persistence
