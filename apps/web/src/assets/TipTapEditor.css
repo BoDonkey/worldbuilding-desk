@@ -196,6 +196,13 @@
   text-decoration-color: var(--editor-highlight-blocking-line);
 }
 
+.ProseMirror .consistency-highlight-conflict {
+  background: var(--color-error-soft-bg);
+  text-decoration-color: var(--color-error);
+  text-decoration-style: double;
+  text-decoration-thickness: 1px;
+}
+
 .ProseMirror .review-focus-flash {
   animation: review-focus-flash 1.8s ease-out;
   background: var(--editor-highlight-warning-bg);
@@ -255,6 +262,11 @@
     var(--editor-highlight-blocking-line) 52%,
     transparent
   );
+}
+
+.inline-highlights-mode-subtle .ProseMirror .consistency-highlight-conflict {
+  text-decoration-color: color-mix(in oklab, var(--color-error) 62%, transparent);
+  text-decoration-style: double;
 }
 
 .inline-highlights-mode-subtle .ProseMirror .lore-highlight {

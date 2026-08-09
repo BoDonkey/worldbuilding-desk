@@ -16,7 +16,7 @@ export interface ConsistencyReviewItem {
   reviewAnnotation?: ReviewIssueAnnotation;
 }
 
-export interface HighlightableUnknownIssue {
+export interface HighlightableReviewIssue {
   id: string;
   surface: string;
   message: string;
@@ -52,6 +52,15 @@ export const makeReviewItemId = (
   issue: GuardrailIssue
 ): string => `${documentId}:${getReviewIssueKey(issue)}`;
 
+export const getReviewFocusText = (
+  issue: Pick<GuardrailIssue, 'focusText' | 'surface'>
+): string | null =>
+  issue.focusText?.trim() || issue.surface?.trim() || null;
+
+export const supportsWorldCaptureActions = (issue: GuardrailIssue): boolean =>
+  Boolean(issue.surface?.trim()) &&
+  (issue.code === 'UNKNOWN_ENTITY' || issue.code === 'AMBIGUOUS_REFERENCE');
+
 export function mapReviewAnnotationsByIssueKey(
   issues: GuardrailIssue[],
   issueAnnotations: ReviewIssueAnnotation[]
@@ -73,19 +82,26 @@ const getAnnotationSourceForReview = (
     ? 'local-ai-review'
     : 'deterministic-review';
 
-function buildHighlightableUnknownIssue(
+function buildHighlightableReviewIssue(
   issue: GuardrailIssue,
-  reviewAnnotation?: ReviewIssueAnnotation
-): HighlightableUnknownIssue | null {
+  reviewAnnotation?: ReviewIssueAnnotation,
+  id?: string
+): HighlightableReviewIssue | null {
   if (
-    (issue.code !== 'UNKNOWN_ENTITY' && issue.code !== 'AMBIGUOUS_REFERENCE') ||
-    !issue.surface
+    issue.code !== 'UNKNOWN_ENTITY' &&
+    issue.code !== 'AMBIGUOUS_REFERENCE' &&
+    issue.code !== 'STATE_CONFLICT'
   ) {
     return null;
   }
+  const surface =
+    issue.code === 'STATE_CONFLICT'
+      ? issue.focusText?.trim()
+      : issue.surface?.trim();
+  if (!surface) return null;
   return {
-    id: `${issue.code}:${issue.surface}`,
-    surface: issue.surface,
+    id: id ?? `${issue.code}:${surface}`,
+    surface,
     message: issue.message,
     severity: issue.severity,
     issueCode: issue.code,
@@ -117,20 +133,21 @@ export function filterUnknownGuardrailIssues(params: {
     });
 }
 
-export function buildHighlightableUnknownIssues(params: {
+export function buildHighlightableReviewIssues(params: {
   unknownGuardrailIssues: GuardrailIssue[];
   consistencyReviewItems: ConsistencyReviewItem[];
   selectedDocumentId: string | null;
   knownSurfaceSet: Set<string>;
-}): HighlightableUnknownIssue[] {
-  const issueMap = new Map<string, HighlightableUnknownIssue>();
+}): HighlightableReviewIssue[] {
+  const issueMap = new Map<string, HighlightableReviewIssue>();
   const addIssue = (
     issue: GuardrailIssue,
-    reviewAnnotation?: ReviewIssueAnnotation
+    reviewAnnotation?: ReviewIssueAnnotation,
+    id?: string
   ) => {
     const key = getReviewIssueKey(issue);
     if (issueMap.has(key)) return;
-    const highlightable = buildHighlightableUnknownIssue(issue, reviewAnnotation);
+    const highlightable = buildHighlightableReviewIssue(issue, reviewAnnotation, id);
     if (highlightable) issueMap.set(key, highlightable);
   };
 
@@ -145,7 +162,7 @@ export function buildHighlightableUnknownIssues(params: {
             normalizeCanonText(item.issue.surface ?? '')
           )
       )
-      .forEach((item) => addIssue(item.issue, item.reviewAnnotation));
+      .forEach((item) => addIssue(item.issue, item.reviewAnnotation, item.id));
   }
   return Array.from(issueMap.values());
 }

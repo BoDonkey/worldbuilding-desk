@@ -1,7 +1,7 @@
 const DB_NAME = 'worldbuilding-db';
 const DB_VERSION = 24;
 
-function setSeededProjectToGeneralFiction(): Cypress.Chainable<void> {
+function setSeededProjectMode(mode: 'litrpg' | 'general'): Cypress.Chainable<void> {
   return cy.window().then(
     (win) =>
       new Cypress.Promise<void>((resolve, reject) => {
@@ -17,12 +17,12 @@ function setSeededProjectToGeneralFiction(): Cypress.Chainable<void> {
           getRequest.onsuccess = () => {
             store.put({
               ...getRequest.result,
-              projectMode: 'general',
+              projectMode: mode,
               featureToggles: {
-                enableGameSystems: false,
-                enableRuntimeModifiers: false,
-                enableSettlementAndZoneSystems: false,
-                enableRuleAuthoring: false
+                enableGameSystems: mode === 'litrpg',
+                enableRuntimeModifiers: mode === 'litrpg',
+                enableSettlementAndZoneSystems: mode === 'litrpg',
+                enableRuleAuthoring: mode === 'litrpg'
               }
             });
           };
@@ -41,6 +41,10 @@ function setSeededProjectToGeneralFiction(): Cypress.Chainable<void> {
         };
       })
   );
+}
+
+function setSeededProjectToGeneralFiction(): Cypress.Chainable<void> {
+  return setSeededProjectMode('general');
 }
 
 function seedWorldBibleCharacterWithToolsProfile(params: {
@@ -121,6 +125,85 @@ function seedWorldBibleCharacterWithToolsProfile(params: {
   );
 }
 
+function seedCanonConflict(): Cypress.Chainable<void> {
+  return cy.window().then(
+    (win) =>
+      new Cypress.Promise<void>((resolve, reject) => {
+        const now = Date.now();
+        const openRequest = win.indexedDB.open(DB_NAME, DB_VERSION);
+        openRequest.onerror = () => reject(openRequest.error);
+        openRequest.onsuccess = () => {
+          const db = openRequest.result;
+          const tx = db.transaction(
+            ['entityCategories', 'entities', 'characters', 'canonical_facts', 'writingDocuments'],
+            'readwrite'
+          );
+          tx.objectStore('entityCategories').put({
+            id: 'characters',
+            projectId: 'cypress-project-1',
+            name: 'Characters',
+            slug: 'characters',
+            fieldSchema: [],
+            createdAt: now
+          });
+          tx.objectStore('entities').put({
+            id: 'entity-sera',
+            projectId: 'cypress-project-1',
+            categoryId: 'characters',
+            name: 'Sera Kestrel',
+            fields: {description: '<p>A delver.</p>'},
+            links: [],
+            createdAt: now,
+            updatedAt: now
+          });
+          tx.objectStore('characters').put({
+            id: 'character-tam-tools-only',
+            projectId: 'cypress-project-1',
+            name: 'Tam',
+            description: 'A secondary Character Tools profile without World Bible canon.',
+            fields: {},
+            createdAt: now,
+            updatedAt: now
+          });
+          tx.objectStore('canonical_facts').put({
+            id: 'fact-sera-eyes',
+            projectId: 'cypress-project-1',
+            targetType: 'entity',
+            targetId: 'entity-sera',
+            targetName: 'Sera Kestrel',
+            sourceLoreDocumentTitle: 'Sera dossier',
+            factType: 'appearance',
+            value: 'gray eyes',
+            acceptedAt: now,
+            updatedAt: now
+          });
+          tx.objectStore('writingDocuments').put({
+            id: 'scene-alpha',
+            projectId: 'cypress-project-1',
+            title: 'Alpha Scene',
+            content:
+              '<p>Sera Kestrel walked home beside Tam.</p>' +
+              '<p>"You look like Ma tonight," Tam said. "It\'s the eyes. Her same green."</p>',
+            createdAt: now,
+            updatedAt: now
+          });
+          tx.oncomplete = () => {
+            db.close();
+            resolve();
+          };
+          tx.onerror = () => {
+            db.close();
+            reject(tx.error);
+          };
+          tx.onabort = () => {
+            db.close();
+            reject(tx.error);
+          };
+        };
+      })
+  );
+}
+
 describe('Lore and review matching', () => {
   beforeEach(() => {
     cy.viewport(1400, 1000);
@@ -152,6 +235,21 @@ describe('Lore and review matching', () => {
     cy.contains('Commit blocked by consistency check').should('not.exist');
   });
 
+  it('opens a highlighted canon record at its World Bible editing surface', () => {
+    cy.visit('/workspace');
+    cy.contains('h1', 'Writing Workspace').should('be.visible');
+    cy.get('.tiptap-editor')
+      .click()
+      .type('{selectall}The Ember Archive stands.', {delay: 0});
+
+    cy.contains('.tiptap-editor [data-lore-id="entity-ember-archive"]', 'Ember Archive')
+      .click();
+    cy.contains('button', 'Open Lore Inspector').click();
+    cy.contains('button', 'Edit in World Bible').click();
+
+    cy.location('pathname').should('eq', '/world-bible');
+  });
+
   it('highlights manual review results in the active editor scene', () => {
     cy.visit('/workspace');
     cy.contains('h1', 'Writing Workspace').should('be.visible');
@@ -171,6 +269,49 @@ describe('Lore and review matching', () => {
     cy.contains('Project review found').should('be.visible');
     cy.contains('.tiptap-editor [data-consistency-id]', 'Kaelor')
       .should('be.visible');
+  });
+
+  it('highlights, distinguishes, and dismisses canon conflicts without capture actions', () => {
+    seedCanonConflict();
+    setSeededProjectMode('litrpg');
+    cy.reload();
+    cy.visit('/workspace');
+    cy.get('.tiptap-editor').click().type('{end} ', {delay: 0});
+    cy.contains('.tiptap-editor [data-lore-id]', 'Tam').should('not.exist');
+    cy.get('button[aria-label^="Open review drawer"]').click();
+    cy.contains('button', 'Run project review').click();
+
+    cy.contains('Project review found').should('be.visible');
+    cy.contains('li', 'Canon conflict').as('conflictRow');
+    cy.get('@conflictRow').should('have.attr', 'class').and('include', 'consistencyListItemConflict');
+    cy.get('@conflictRow').within(() => {
+      cy.contains('Needs attention').should('be.visible');
+      cy.contains('button', 'Open Sera Kestrel').should('be.visible');
+      cy.contains('button', 'Create character').should('not.exist');
+      cy.contains('button', 'Create record').should('not.exist');
+      cy.contains('button', 'Show context').click();
+    });
+
+    cy.contains('Cypress Smoke Project · Alpha Scene').should('be.visible');
+    cy.contains('.tiptap-editor [data-consistency-id]', 'same green')
+      .should('have.class', 'consistency-highlight-conflict')
+      .click();
+
+    cy.contains('li', 'Canon conflict').within(() => {
+      cy.contains('button', 'Dismiss').click();
+    });
+
+    cy.contains('li', 'Canon conflict').should('not.exist');
+    cy.contains('.tiptap-editor [data-consistency-id]', 'same green').should('not.exist');
+
+    cy.contains('button', /^Scenes$/).first().click();
+    cy.contains('Beta Scene').click();
+    cy.contains('Alpha Scene').click();
+    cy.contains('.tiptap-editor [data-consistency-id]', 'same green').should('not.exist');
+    cy.contains('li', 'Canon conflict').should('not.exist');
+
+    cy.contains('button', 'Run project review').click();
+    cy.contains('li', 'Canon conflict').should('be.visible');
   });
 
   it('keeps remaining review candidates after creating one reviewed record', () => {
@@ -543,6 +684,7 @@ describe('Lore and review matching', () => {
       name: 'Garcia de Terra',
       alias: 'Garcia'
     });
+    setSeededProjectMode('litrpg');
     cy.reload();
     cy.visit('/workspace');
     cy.contains('h1', 'Writing Workspace').should('be.visible');

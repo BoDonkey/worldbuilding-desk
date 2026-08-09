@@ -1163,11 +1163,28 @@
   background: var(--color-accent-soft-bg);
 }
 
+.consistencyListItemConflict {
+  border-color: var(--color-error-soft-border);
+  background: var(--color-error-soft-bg);
+}
+
+.consistencyListItemConflict.consistencyListItemActive {
+  border-color: var(--color-error);
+  box-shadow: 0 0 0 2px var(--color-error-soft-border);
+}
+
 .consistencyItemHeader {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: 0.5rem;
+}
+
+.consistencyHeaderActions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.3rem;
 }
 
 .consistencyItemBody {
@@ -1199,6 +1216,25 @@
   color: var(--color-accent-hover);
   padding: 0.08rem 0.38rem;
   font-size: 0.7rem;
+}
+
+.consistencyConflictBadge {
+  display: inline-flex;
+  margin-left: 0.4rem;
+  border: 1px solid var(--color-error-soft-border);
+  border-radius: 999px;
+  background: var(--color-error-soft-bg);
+  color: var(--color-error-soft-text);
+  padding: 0.08rem 0.38rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.consistencyDismissButton {
+  border-color: var(--button-danger-border);
+  background: var(--button-danger-bg);
+  color: var(--button-danger-text);
+  font-size: 0.78rem;
 }
 
 .consistencyBadgeReady {

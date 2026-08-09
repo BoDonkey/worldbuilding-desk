@@ -26,6 +26,7 @@ import type {
   StateMutationReviewItem
 } from '../../hooks/useWorkspaceConsistency';
 import type {GuardrailIssue} from '../../services/consistency/types';
+import {supportsWorldCaptureActions} from '../../services/consistency/reviewReadiness';
 import type {ReviewIssueAnnotation} from '../../services/worldEngine';
 import {normalizeRichTextValue} from '../../services/worldBible/worldBibleEntityHelpers';
 import {buildCharacterCaptureAliasList} from '../../services/worldBible/worldBibleCanonicalization';
@@ -201,6 +202,7 @@ interface WorkspaceContextDrawerProps {
     acceptedAliases?: string[]
   ) => Promise<void>;
   dismissUnknownEntity: (surface: string, documentId?: string) => void;
+  dismissConsistencyReviewItem: (itemId: string) => void;
   ignoreUnknownSurfaceProjectWide: (surface: string, documentId?: string) => void;
   linkUnknownEntity: (
     surface: string,
@@ -340,6 +342,7 @@ export function WorkspaceContextDrawer({
   getSuggestedUnknownCategoryId,
   resolveUnknownEntity,
   dismissUnknownEntity,
+  dismissConsistencyReviewItem,
   ignoreUnknownSurfaceProjectWide,
   linkUnknownEntity,
   openWorldRecord,
@@ -457,6 +460,7 @@ export function WorkspaceContextDrawer({
     const surface = item.issue.surface?.trim() ?? '';
     const actionSurface = surface || item.issue.message;
     const isActive = activeReviewItemId === item.id;
+    const isCanonConflict = item.issue.code === 'STATE_CONFLICT';
     const isExpanded = expandedReviewActionId === item.id || isActive;
     const selectedCategoryId =
       unknownCategorySelection[actionSurface] ||
@@ -493,28 +497,45 @@ export function WorkspaceContextDrawer({
         key={item.id}
         ref={isActive ? activeReviewItemRef : undefined}
         className={`${styles.consistencyListItem} ${
+          isCanonConflict ? styles.consistencyListItemConflict : ''
+        } ${
           isActive ? styles.consistencyListItemActive : ''
         }`}
       >
         <div className={styles.consistencyItemHeader}>
           <div>
             <strong className={styles.consistencyItemTitle}>{issueTitle}</strong>
+            {isCanonConflict && (
+              <span className={styles.consistencyConflictBadge}>Needs attention</span>
+            )}
             {item.issue.code === 'UNKNOWN_ENTITY' &&
               item.issue.severity === 'warning' && (
                 <span className={styles.consistencyReason}>Review later</span>
               )}
           </div>
-          <button
-            type='button'
-            onClick={() => {
-              onFocusReviewItem(item);
-              setExpandedReviewActionId(item.id);
-            }}
-            className={styles.consistencySceneButton}
-            title={surface ? `Show "${surface}" in ${item.sceneTitle}` : `Open ${item.sceneTitle}`}
-          >
-            Show context
-          </button>
+          <div className={styles.consistencyHeaderActions}>
+            <button
+              type='button'
+              onClick={() => {
+                onFocusReviewItem(item);
+                setExpandedReviewActionId(item.id);
+              }}
+              className={styles.consistencySceneButton}
+              title={surface ? `Show "${surface}" in ${item.sceneTitle}` : `Open ${item.sceneTitle}`}
+            >
+              Show context
+            </button>
+            {isCanonConflict && (
+              <button
+                type='button'
+                onClick={() => dismissConsistencyReviewItem(item.id)}
+                className={styles.consistencyDismissButton}
+                title='Dismiss until the next project review'
+              >
+                Dismiss
+              </button>
+            )}
+          </div>
         </div>
         <div className={styles.consistencyItemBody}>
           <button
@@ -566,7 +587,7 @@ export function WorkspaceContextDrawer({
             ))}
           </span>
         )}
-        {surface && isExpanded && (
+        {isExpanded && supportsWorldCaptureActions(item.issue) && (
           <div className={styles.reviewActionPanel}>
             <label className={styles.reviewActionField}>
               Type
@@ -1079,6 +1100,7 @@ export function WorkspaceContextDrawer({
       return (
         <LoreInspectorPanel
           record={activeLoreRecord}
+          onEditRecord={openWorldRecord}
           aiEnabled={
             projectSettings?.aiSettings?.inspectorSettings?.enableAIConsultation !== false
           }

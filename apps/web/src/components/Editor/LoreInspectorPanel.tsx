@@ -15,6 +15,7 @@ export interface LoreInspectorRecord {
 
 interface LoreInspectorPanelProps {
   record: LoreInspectorRecord | null;
+  onEditRecord: (record: LoreInspectorRecord) => void;
   aiEnabled: boolean;
   aiBudgetUsed: number;
   aiBudgetMax: number;
@@ -30,6 +31,7 @@ interface LoreInspectorPanelProps {
 
 export const LoreInspectorPanel = ({
   record,
+  onEditRecord,
   aiEnabled,
   aiBudgetUsed,
   aiBudgetMax,
@@ -60,6 +62,11 @@ export const LoreInspectorPanel = ({
               {item}
             </span>
           ))}
+        </div>
+        <div className={styles.systemActions}>
+          <button type='button' onClick={() => onEditRecord(record)}>
+            {record.type === 'entity' ? 'Edit in World Bible' : 'Edit in Character Tools'}
+          </button>
         </div>
       </div>
 

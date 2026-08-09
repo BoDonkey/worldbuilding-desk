@@ -7,12 +7,14 @@ import {
 } from 'react';
 import {useLocation, useNavigate} from 'react-router';
 import type {WritingDocument} from '../entityTypes';
+import {getReviewFocusText} from '../services/consistency/reviewReadiness';
+import type {GuardrailIssue} from '../services/consistency/types';
 import type {WorkspaceContextDrawerView} from './useWorkspaceDrawers';
 
 export interface WorkspaceReviewFocusItem {
   id: string;
   sceneId: string;
-  issue: {surface?: string};
+  issue: Pick<GuardrailIssue, 'focusText' | 'surface'>;
 }
 
 interface WorkspaceScrollSnapshot {
@@ -89,7 +91,7 @@ export function useWorkspaceDrawerFocus(params: {
     if (target && selectedId !== target.id) {
       handleSelectDocument(target);
     }
-    const query = item.issue.surface?.trim();
+    const query = getReviewFocusText(item.issue);
     if (query) {
       setFocusRequest({query, token: Date.now()});
     }

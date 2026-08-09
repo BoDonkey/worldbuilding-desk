@@ -496,7 +496,7 @@ function WorkspaceRoute() {
     handleRunConsistencyReview,
     unknownGuardrailIssues,
     hasBlockingUnknownGuardrailIssues,
-    highlightableUnknownIssues,
+    highlightableReviewIssues,
     isReviewPrefsHydrated,
     unknownLinkOptions,
     closeUnknownLinkOptions,
@@ -505,6 +505,7 @@ function WorkspaceRoute() {
     resolveAllUnknownEntities,
     dismissAllUnknownEntities,
     dismissUnknownEntity,
+    dismissConsistencyReviewItem,
     ignoreUnknownSurfaceProjectWide,
     linkUnknownEntity,
     clearUnknownSurface,
@@ -1210,6 +1211,7 @@ function WorkspaceRoute() {
     worldCaptureDrafts, setWorldCaptureDrafts,
     unknownLinkSelection, setUnknownLinkSelection, unknownLinkOptions,
     getSuggestedUnknownCategoryId, resolveUnknownEntity, dismissUnknownEntity,
+    dismissConsistencyReviewItem,
     ignoreUnknownSurfaceProjectWide, linkUnknownEntity, openWorldRecord,
     scratchpadContent, setScratchpadContent, scratchpadStatus, scratchpadLastSavedAt,
     activeProject, projectSettings, activeAIContext, setPendingAIInsert,
@@ -1382,12 +1384,21 @@ function WorkspaceRoute() {
                   inlineHighlightsMode={
                     projectSettings?.editorFeedback?.inlineHighlightsMode ?? 'visible'
                   }
-                  consistencyHighlights={highlightableUnknownIssues}
+                  consistencyHighlights={highlightableReviewIssues}
                   onConsistencyHighlightClick={(issueId, anchorRect) => {
-                    const issue = highlightableUnknownIssues.find(
+                    const issue = highlightableReviewIssues.find(
                       (entry) => entry.id === issueId
                     );
                     if (!issue) return;
+                    if (issue.issueCode === 'STATE_CONFLICT') {
+                      const reviewItem = consistencyReviewItems.find(
+                        (item) => item.id === issueId
+                      );
+                      if (reviewItem) {
+                        focusReviewItemInScene(reviewItem);
+                      }
+                      return;
+                    }
                     openConsistencyPopover(issueId, anchorRect, issue.surface);
                   }}
                   config={editorConfig}

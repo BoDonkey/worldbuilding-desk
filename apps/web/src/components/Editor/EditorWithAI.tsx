@@ -245,29 +245,17 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
       : inlineHighlightsMode;
 
   const loreHighlights = React.useMemo<LoreHighlightEntry[]>(() => {
-    const characterEntries = Object.values(selectionQuickSnippets?.characters ?? {}).map(
-      (entry) => ({
-        id: entry.lore.id,
-        surface: entry.name,
-        type: 'character' as const
-      })
-    );
-    const entityEntries = Object.values(selectionQuickSnippets?.entities ?? {}).map(
-      (entry) => ({
-        id: entry.lore.id,
-        surface: entry.name,
-        type: 'entity' as const
-      })
-    );
     const deduped = new Map<string, LoreHighlightEntry>();
-    [...characterEntries, ...entityEntries, ...knownLoreHighlights].forEach((entry) => {
+    // Selection snippets may come from secondary Character Tools records. Only
+    // records confirmed by the World Bible belong in automatic lore markup.
+    knownLoreHighlights.forEach((entry) => {
       const key = `${entry.type}:${entry.id}:${entry.surface.trim().toLowerCase()}`;
       if (entry.surface.trim()) {
         deduped.set(key, entry);
       }
     });
     return Array.from(deduped.values());
-  }, [knownLoreHighlights, selectionQuickSnippets]);
+  }, [knownLoreHighlights]);
 
   useEffect(() => {
     consistencyHighlightsRef.current = consistencyHighlights;

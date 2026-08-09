@@ -176,6 +176,8 @@ const LEADING_ENTITY_CUE_WORDS = new Set([
   'using'
 ]);
 
+const GENERIC_ARTICLE_CUE_WORDS = new Set(['a', 'an', 'the']);
+
 const ACTION_CUE_WORDS = [
   'swing',
   'swung',
@@ -692,6 +694,12 @@ const hasLeadingCueWord = (text: string, mentionStart: number): boolean => {
   return LEADING_ENTITY_CUE_WORDS.has(prevWord);
 };
 
+const hasSpecificLeadingCueWord = (text: string, mentionStart: number): boolean => {
+  const prefix = text.slice(0, mentionStart).trimEnd();
+  const prevWord = (prefix.match(/([A-Za-z]+)$/)?.[1] ?? '').toLowerCase();
+  return hasLeadingCueWord(text, mentionStart) && !GENERIC_ARTICLE_CUE_WORDS.has(prevWord);
+};
+
 const hasCharacterContextCue = (
   text: string,
   mention: {
@@ -706,7 +714,11 @@ const hasCharacterContextCue = (
 
   const suffix = text.slice(mention.end, mention.end + 48);
   const prefix = text.slice(Math.max(0, mention.start - 8), mention.start);
-  if (/^\s*,/u.test(suffix) && /["“‘]\s*$/u.test(prefix)) {
+  if (
+    /^\s*,/u.test(suffix) &&
+    !/^\s*,\s*["”’]/u.test(suffix) &&
+    /["“‘]\s*$/u.test(prefix)
+  ) {
     return true;
   }
   const nextWord = suffix.match(/^\s+(?:['’]s\s+)?([\p{L}\p{M}][\p{L}\p{M}\p{N}'_-]*)/u)?.[1]
@@ -721,7 +733,11 @@ const hasDirectAddressCue = (
 ): boolean => {
   const suffix = text.slice(mention.end, mention.end + 8);
   const prefix = text.slice(Math.max(0, mention.start - 8), mention.start);
-  return /^\s*,/u.test(suffix) && /["“‘]\s*$/u.test(prefix);
+  return (
+    /^\s*,/u.test(suffix) &&
+    !/^\s*,\s*["”’]/u.test(suffix) &&
+    /["“‘]\s*$/u.test(prefix)
+  );
 };
 
 const countSceneSentencesBefore = (text: string, index: number): number =>
@@ -887,7 +903,7 @@ const isEligibleSingleWordUnknown = (params: {
   }
 
   if (isCommonSingleWordUnknown(normalized)) {
-    return hasLeadingCueWord(text, start) || hasDirectAddress;
+    return hasSpecificLeadingCueWord(text, start) || hasDirectAddress;
   }
 
   if (detectionReason === 'action_object_candidate') {

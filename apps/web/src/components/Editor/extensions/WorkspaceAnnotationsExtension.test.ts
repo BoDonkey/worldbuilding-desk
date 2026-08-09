@@ -67,6 +67,31 @@ describe('buildWorkspaceAnnotationDecorationSpecs', () => {
     expect(specs).toEqual([]);
   });
 
+  it('gives canon-conflict evidence a distinct inline treatment', () => {
+    const specs = buildWorkspaceAnnotationDecorationSpecs({
+      text: 'Her same green eyes caught the light.',
+      knownSurfaces: [],
+      reviewSurfaces: [{
+        id: 'conflict-eyes',
+        surface: 'same green',
+        message: 'Conflicts with accepted gray eyes.',
+        severity: 'blocking',
+        issueCode: 'STATE_CONFLICT',
+        inlineMode: 'visible'
+      }]
+    });
+
+    expect(specs).toEqual([
+      expect.objectContaining({
+        attrs: expect.objectContaining({
+          class:
+            'consistency-highlight consistency-highlight-blocking consistency-highlight-conflict',
+          'data-consistency-id': 'conflict-eyes'
+        })
+      })
+    ]);
+  });
+
   it('emits non-overlapping lore and review decorations from one decision pass', () => {
     const specs = buildWorkspaceAnnotationDecorationSpecs({
       text: "Garcia deTerra's badge flashed near the Ember Archive.",

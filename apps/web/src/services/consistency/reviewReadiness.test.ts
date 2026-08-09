@@ -2,7 +2,9 @@ import {describe, expect, it} from 'vitest';
 import type {GuardrailIssue} from './types';
 import type {ReviewIssueAnnotation} from '../worldEngine';
 import {
-  buildHighlightableUnknownIssues,
+  getReviewFocusText,
+  supportsWorldCaptureActions,
+  buildHighlightableReviewIssues,
   buildReviewReadiness,
   filterUnknownGuardrailIssues,
   mapReviewAnnotationsByIssueKey
@@ -36,6 +38,23 @@ const emptySummary = {
 };
 
 describe('review issue modeling', () => {
+  it('keeps canon-conflict focus separate from world-capture actions', () => {
+    const conflict: GuardrailIssue = {
+      code: 'STATE_CONFLICT',
+      severity: 'blocking',
+      message: 'Canon conflict for Sera Kestrel.',
+      focusText: 'eyes. Her same green',
+      relatedEntities: [{id: 'sera', name: 'Sera Kestrel', type: 'character'}]
+    };
+
+    expect(getReviewFocusText(conflict)).toBe('eyes. Her same green');
+    expect(supportsWorldCaptureActions(conflict)).toBe(false);
+    expect(supportsWorldCaptureActions({...conflict, surface: 'Sera Kestrel'})).toBe(
+      false
+    );
+    expect(supportsWorldCaptureActions(issue('Corvo Lash'))).toBe(true);
+  });
+
   it('maps annotations to stable normalized issue keys', () => {
     expect(
       mapReviewAnnotationsByIssueKey([issue('Harrison')], [annotation]).get(
@@ -55,7 +74,7 @@ describe('review issue modeling', () => {
 
   it('deduplicates active-scene highlights and preserves annotation source', () => {
     const unknown = issue('Harrison', 'warning');
-    const highlights = buildHighlightableUnknownIssues({
+    const highlights = buildHighlightableReviewIssues({
       unknownGuardrailIssues: [unknown],
       consistencyReviewItems: [
         {
@@ -72,6 +91,35 @@ describe('review issue modeling', () => {
 
     expect(highlights).toHaveLength(1);
     expect(highlights[0]).toMatchObject({surface: 'Harrison', inlineMode: 'passive'});
+  });
+
+  it('turns any active-scene canon conflict evidence into a visible highlight', () => {
+    const conflict: GuardrailIssue = {
+      code: 'STATE_CONFLICT',
+      severity: 'blocking',
+      message: 'Canon conflict.',
+      focusText: 'Sera Kestrel is not ready'
+    };
+    const highlights = buildHighlightableReviewIssues({
+      unknownGuardrailIssues: [],
+      consistencyReviewItems: [{
+        id: 'scene-1:conflict:ready',
+        sceneId: 'scene-1',
+        sceneTitle: 'Scene',
+        issue: conflict
+      }],
+      selectedDocumentId: 'scene-1',
+      knownSurfaceSet: new Set()
+    });
+
+    expect(highlights).toEqual([
+      expect.objectContaining({
+        id: 'scene-1:conflict:ready',
+        surface: 'Sera Kestrel is not ready',
+        issueCode: 'STATE_CONFLICT',
+        inlineMode: 'visible'
+      })
+    ]);
   });
 });
 

@@ -67,10 +67,15 @@ export const buildWorkspaceAnnotationDecorationSpecs = (params: {
         from: annotation.from,
         to: annotation.to,
         attrs: {
-          class:
+          class: [
+            'consistency-highlight',
             issue.severity === 'blocking'
-              ? 'consistency-highlight consistency-highlight-blocking'
-              : 'consistency-highlight consistency-highlight-warning',
+              ? 'consistency-highlight-blocking'
+              : 'consistency-highlight-warning',
+            issue.issueCode === 'STATE_CONFLICT'
+              ? 'consistency-highlight-conflict'
+              : ''
+          ].filter(Boolean).join(' '),
           'data-consistency-id': issue.id,
           title: issue.message
         }

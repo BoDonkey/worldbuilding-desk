@@ -1,6 +1,6 @@
 # Worldbuilding-Desk Project Status
 
-**Last Updated:** August 8, 2026
+**Last Updated:** August 9, 2026
 
 ## Project Overview
 
@@ -48,7 +48,7 @@ Under the hood, the app still includes rich systems for world data, rules, chara
 - Editable review capture flow for detected names/places before adding to world records.
 - Manual selection-to-world capture from the editor for non-detected text.
 - Temporary dismiss and project-level `Always ignore` review actions.
-- Inline lore highlights and quick lore popovers for known entities and characters.
+- Inline lore highlights and quick lore popovers are reserved for World Bible entities and aliases; secondary Character Tools records remain available to selection tools without being presented as canon, and Lore Inspector links to the record's editing surface.
 - World Bible review queue for finishing review-created records and alias follow-up.
 - World Bible review queue now supports queue filtering by review reason and recommended action (`complete`, `alias`, `merge`, `ignore`).
 - Editor appearance controls for width, surface style, and serif/sans presentation.
@@ -98,6 +98,7 @@ Under the hood, the app still includes rich systems for world data, rules, chara
 - System history and lore inspection surfaces.
 - Shared lore/review text matcher now owns canon normalization, possessives, longer-match priority, and in-progress known-name prefix suppression.
 - Workspace editor annotations now use the shared lore/review annotation decision pass, so known canon and unresolved review candidates are arbitrated together before TipTap decorations render.
+- Deterministic project review now compares accepted eye-color appearance facts with unambiguous paragraph-local manuscript claims, including dialogue about an addressee, so conflicting categorical values surface as canon conflicts. All canon conflicts use a shared evidence contract: they focus and distinctly highlight the conflicting prose, render as high-attention review cards, present known records as related context, omit unknown-name capture actions, and can be dismissed until the next project review. Unknown-name review also distinguishes closing dialogue punctuation from direct address and no longer promotes common single-word nouns solely because an article precedes them.
 - Full-name, hyphenated-name, and alias smoke coverage now exists for cases such as `Mira Voss`, `Lantern-Mira`, `Iron Warrens`, and `Warrens`.
 - Imported-scene review now keeps strong typed multiword names such as named doors, factions, locations, and items while suppressing bare generic fragments and verb-complement phrases; the trust-dogfood chapters cover the planted hazards and unknowns directly.
 - Lore extraction now proposes evidence-backed facts and typed entities from both structured labels and common natural-prose dossier/faction/place patterns, including the trust-dogfood occupation, aliases, relationships, appearance, service conflict, historical faction name, and explicitly speculative claims. All results remain review-only until author acceptance.

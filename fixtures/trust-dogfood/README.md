@@ -140,3 +140,13 @@ fixes are needed).
 ## Results log
 
 _(append dated runs below)_
+A-1: Pass
+A-2: Partial. Import worked correctly, but the screen navigated away immediately, which feels like a UX issue.
+A-3: Partial: Created the character sheet in the world bible, but "class" and "ledger-marked" are numerical and test called for strings. Overall, the character sheet in the tools and the world bible seem too separate.
+A-4: Partial. The scene is uncluttered by review markup, but the review panel surfaces odd things like "back like something", "Warm", "Wrap", and "Draught".
+A-5: Partial. With each import, "Greyharbor" is automatically highlighted and there is a toolbar to add it to the lore. Note that there is a regression. When switching away from the workspace to another tab and back, it always goes to the first chapter and doesn't keep the scroll position. Right now there is no highlighting at all, only review notifications in the side bar. Tam is not in the review context, yet a lot of common words are. The "Cinder Compact" was never selected for review.
+A-6: Fail. Almost no facts are extracted for acceptance into cannon. One extracted fact for Sera was accepted, but does not show up in the cannon review route.
+
+Random findings:
+- If the window is too small, you can't get to the last items in the more menu, like settings.
+- If you ask the AI a question, then navigate away from the workspace, the conversation disappears.

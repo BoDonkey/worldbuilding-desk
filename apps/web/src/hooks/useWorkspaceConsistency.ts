@@ -1,4 +1,4 @@
-import {useCallback, useEffect, useMemo, useState} from 'react';
+import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import type {Dispatch, MutableRefObject, SetStateAction} from 'react';
 import type {
   CanonicalFact,
@@ -47,7 +47,7 @@ import {
   normalizeRecordName
 } from '../services/consistency/reviewLinkOptions';
 import {
-  buildHighlightableUnknownIssues,
+  buildHighlightableReviewIssues,
   buildReviewReadiness,
   filterUnknownGuardrailIssues,
   getReviewIssueKey,
@@ -430,6 +430,7 @@ export const useWorkspaceConsistency = ({
   const [consistencyReviewItems, setConsistencyReviewItems] = useState<
     ConsistencyReviewItem[]
   >([]);
+  const dismissedConflictItemIdsRef = useRef(new Set<string>());
   const [lastConsistencyReviewAt, setLastConsistencyReviewAt] = useState<number | null>(
     null
   );
@@ -912,6 +913,13 @@ export const useWorkspaceConsistency = ({
         doc.id,
         downgradeUnknownIssuesToWarnings(validation.issues)
       );
+      const contradictionItems = findCanonContradictions({
+        documents: [doc],
+        entities,
+        characters,
+        canonicalFacts,
+        knownEntities: knownConsistencyEntities
+      });
       setGuardrailIssues(presentedIssues);
       setConsistencyReviewItems((prev) => [
         ...prev.filter((item) => item.sceneId !== doc.id),
@@ -921,11 +929,17 @@ export const useWorkspaceConsistency = ({
           sceneTitle: doc.title || 'Untitled scene',
           issue,
           reviewAnnotation: annotationsByIssueKey.get(getReviewIssueKey(issue))
-        }))
+        })),
+        ...contradictionItems.filter(
+          (item) => !dismissedConflictItemIdsRef.current.has(item.id)
+        )
       ]);
     },
     [
       filterDismissedUnknownIssues,
+      canonicalFacts,
+      characters,
+      entities,
       knownConsistencyEntities,
       resolvedActionCues,
       worldEngine
@@ -951,6 +965,13 @@ export const useWorkspaceConsistency = ({
           validation.issues,
           issueAnnotations
         );
+        const contradictionItems = findCanonContradictions({
+          documents: [doc],
+          entities,
+          characters,
+          canonicalFacts,
+          knownEntities: knownConsistencyEntities
+        });
         setGuardrailIssues(presentedIssues);
         setConsistencyReviewItems((prev) => [
           ...prev.filter((item) => item.sceneId !== doc.id),
@@ -960,7 +981,10 @@ export const useWorkspaceConsistency = ({
             sceneTitle: doc.title || 'Untitled scene',
             issue,
             reviewAnnotation: annotationsByIssueKey.get(getReviewIssueKey(issue))
-          }))
+          })),
+          ...contradictionItems.filter(
+            (item) => !dismissedConflictItemIdsRef.current.has(item.id)
+          )
         ]);
       } finally {
         setIsRunningConsistencyReview(false);
@@ -968,6 +992,9 @@ export const useWorkspaceConsistency = ({
     },
     [
       filterDismissedUnknownIssues,
+      canonicalFacts,
+      characters,
+      entities,
       knownConsistencyEntities,
       resolvedActionCues,
       worldEngine
@@ -988,6 +1015,7 @@ export const useWorkspaceConsistency = ({
     }
 
     setIsRunningConsistencyReview(true);
+    dismissedConflictItemIdsRef.current.clear();
     setFeedback(null);
     try {
       const items: ConsistencyReviewItem[] = [];
@@ -1087,9 +1115,9 @@ export const useWorkspaceConsistency = ({
     [unknownGuardrailIssues]
   );
 
-  const highlightableUnknownIssues = useMemo(
+  const highlightableReviewIssues = useMemo(
     () =>
-      buildHighlightableUnknownIssues({
+      buildHighlightableReviewIssues({
         unknownGuardrailIssues,
         consistencyReviewItems,
         selectedDocumentId,
@@ -1105,10 +1133,10 @@ export const useWorkspaceConsistency = ({
 
   const reviewAnnotationSummary = useMemo(
     () =>
-      highlightableUnknownIssues.length > 0
-        ? summarizeWorkspaceReviewSurfaces(highlightableUnknownIssues)
+      highlightableReviewIssues.length > 0
+        ? summarizeWorkspaceReviewSurfaces(highlightableReviewIssues)
         : EMPTY_ANNOTATION_SUMMARY,
-    [highlightableUnknownIssues]
+    [highlightableReviewIssues]
   );
 
   const reviewReadiness = useMemo<ReviewReadiness>(
@@ -1731,6 +1759,16 @@ export const useWorkspaceConsistency = ({
     );
   }, [removeReviewSurface]);
 
+  const dismissConsistencyReviewItem = useCallback((itemId: string) => {
+    const item = consistencyReviewItems.find((entry) => entry.id === itemId);
+    if (item?.issue.code === 'STATE_CONFLICT') {
+      dismissedConflictItemIdsRef.current.add(itemId);
+    }
+    setConsistencyReviewItems((prev) =>
+      prev.filter((item) => item.id !== itemId)
+    );
+  }, [consistencyReviewItems]);
+
   const ignoreUnknownSurfaceProjectWide = useCallback(
     (surface: string, docId?: string) => {
       const normalized = surface.trim();
@@ -1906,7 +1944,7 @@ export const useWorkspaceConsistency = ({
   );
 
   const activeConsistencyPopoverIssue = consistencyPopover
-    ? highlightableUnknownIssues.find((issue) => issue.id === consistencyPopover.issueId) ?? null
+    ? highlightableReviewIssues.find((issue) => issue.id === consistencyPopover.issueId) ?? null
     : null;
 
   const openConsistencyPopover = useCallback(
@@ -1966,7 +2004,7 @@ export const useWorkspaceConsistency = ({
     handleRunConsistencyReview,
     unknownGuardrailIssues,
     hasBlockingUnknownGuardrailIssues,
-    highlightableUnknownIssues,
+    highlightableReviewIssues,
     isReviewPrefsHydrated,
     unknownLinkOptions,
     closeUnknownLinkOptions,
@@ -1974,6 +2012,7 @@ export const useWorkspaceConsistency = ({
     resolveAllUnknownEntities,
     dismissAllUnknownEntities,
     dismissUnknownEntity,
+    dismissConsistencyReviewItem,
     ignoreUnknownSurfaceProjectWide,
     linkUnknownEntity,
     clearUnknownSurface,

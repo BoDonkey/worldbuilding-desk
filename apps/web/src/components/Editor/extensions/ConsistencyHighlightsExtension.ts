@@ -86,10 +86,15 @@ export const createConsistencyHighlightsExtension = (
                     if (!issue) return;
                     decorations.push(
                       Decoration.inline(pos + annotation.from, pos + annotation.to, {
-                        class:
+                        class: [
+                          'consistency-highlight',
                           issue.severity === 'blocking'
-                            ? 'consistency-highlight consistency-highlight-blocking'
-                            : 'consistency-highlight consistency-highlight-warning',
+                            ? 'consistency-highlight-blocking'
+                            : 'consistency-highlight-warning',
+                          issue.issueCode === 'STATE_CONFLICT'
+                            ? 'consistency-highlight-conflict'
+                            : ''
+                        ].filter(Boolean).join(' '),
                         'data-consistency-id': issue.id,
                         title: issue.message
                       })

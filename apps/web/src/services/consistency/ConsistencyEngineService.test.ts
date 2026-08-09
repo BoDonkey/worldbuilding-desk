@@ -210,6 +210,28 @@ describe('buildExtractedProposal', () => {
     expect(surfaces).not.toContain('Whatever');
   });
 
+  it('does not mistake quoted predicates and ordinary titled nouns for names', () => {
+    const fixturePaths = [
+      '03-the-weighing-house.md',
+      '04-sorrowsteel.md',
+      '05-the-hollow-court.md'
+    ];
+    const surfaces = fixturePaths.flatMap((fileName) => {
+      const chapter = readFileSync(
+        new URL(
+          `../../../../../fixtures/trust-dogfood/chapters/${fileName}`,
+          import.meta.url
+        ),
+        'utf8'
+      );
+      return surfacesFor(chapter, [], 'import');
+    });
+
+    expect(surfaces).not.toEqual(
+      expect.arrayContaining(['Scheduled', 'Watch', 'Done'])
+    );
+  });
+
   it('records repeated unknowns as the detection reason', () => {
     const entity = entityRefsFor(
       'Kaelor crossed the harbor. Kaelor returned before dawn.',
