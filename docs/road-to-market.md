@@ -62,7 +62,8 @@ pnpm --filter web e2e:run       # for slices touching routed UI
 
 1. **Claim it.** Set the slice to `WIP` on the status board below before
    starting. Respect phase ordering and the noted dependencies (2.2 after
-   2.1; 2.7 after 2.5; 3.5–3.8 sequentially; Phase 6 strictly ordered).
+   2.1; 2.7 after 2.5; 3.5–3.8 sequentially; 4.5–4.11 after 4.2 with the
+   internal ordering noted in Phase 4; Phase 6 strictly ordered).
 2. **Get the full prompt.** Slices marked _[prompt: archive/... § Slice N]_
    have complete, self-contained agent prompts in the archived plan. Use
    them, but apply these remaps — the archived docs predate the 2026-08-01
@@ -119,6 +120,14 @@ and required revisit point, `WIP`, `Done <commit>`.
 | 4.1 | Description-first manual item creation | 4 | S | Done `70fb72f` — focused manual item draft with progressive full-editor disclosure; lint with 3 baseline warnings; 275 web + 6 engine + 12 UI tests; web/desktop builds; Cypress 44/44; desktop/narrow browser checks |
 | 4.2 | Storage schema versioning + migrations | 4 | M | — |
 | 4.3 | Package rename off `@litrpg-tool/*` | 4 | S | — |
+| 4.4 | Character contract adoption (CX-1) | 4 | S | — |
+| 4.5 | Character identity links + classifier + resolver (CX-2) | 4 | M | — |
+| 4.6 | Backup + character-package completeness (CX-3) | 4 | M | — |
+| 4.7 | Character intake convergence (CX-4) | 4 | M | — |
+| 4.8 | Character identity resolution queue (CX-5) | 4 | M | — |
+| 4.9 | Sheet + state identity rebinding (CX-6) | 4 | M | — |
+| 4.10 | Character capability routing (CX-7) | 4 | S | — |
+| 4.11 | Character identity dogfood addendum (CX-8) | 4 | M | — |
 | 5.1 | Auto-update decision + implementation | 5 | M | — |
 | 5.2 | Code signing + notarization, both platforms | 5 | M | — |
 | 5.3 | Packaged-app validation + Electron E2E | 5 | M | — |
@@ -251,6 +260,51 @@ Zod 4 stays deferred as its own future migration.
   the product identity; cheapest while the monorepo is small, and required
   before public builds leak the old name.
 
+### Character experience unification (4.4–4.11)
+
+Decisions, target domain contract, migration invariants, author journeys
+(J1–J6), and acceptance criteria live in
+`docs/character-experience-design-review.md`; the CX numbers below reference
+its slice table. All eight are required before the 6.1 beta build so beta
+projects never accumulate ambiguous character identity data. 4.2 must land
+first; then 4.5 → (4.6, 4.7, 4.9 in any order) → 4.8 → 4.10 → 4.11. Storage
+migration and UI change stay in separate slices; adapters added here are
+removed by the backlog legacy-retirement item.
+
+- **4.4 (CX-1) Contract adoption.** Fold the review's domain contract and
+  migration invariants into `docs/domain-model.md`; add journeys J1–J6 to the
+  smoke docs; archive the redesign brief.
+- **4.5 (CX-2) Identity links + classifier + resolver.** `EntityCategory.kind`,
+  `Character.entityId`, `CharacterSheet.characterEntityId`, persisted
+  actor-resolution map, deterministic legacy classifier with report, and the
+  shared character link-resolver service. Auto-link only on the exact-unique
+  normalized-name rule; everything else queues for the author. No new UI
+  beyond the report.
+- **4.6 (CX-3) Backup + package completeness.** Snapshot v2 including
+  consistency aliases (currently absent from backups — data loss) and the new
+  link fields; v1 snapshots and v1 character packages import through the
+  classifier; round-trip and replay-parity tests.
+- **4.7 (CX-4) Intake convergence.** Manual creation, review capture, lore
+  proposal acceptance, package import, and sheet creation all produce or link
+  a canonical World Bible identity; no path creates a free-standing
+  `Character`.
+- **4.8 (CX-5) Resolution queue.** Tools-only, sheet-only, and ambiguous
+  legacy records surface in the World Bible review queue with link / create
+  canon / keep-separate actions; unresolved records are never presented as
+  canon anywhere.
+- **4.9 (CX-6) Sheet + state rebinding.** New mutations carry canonical
+  entity actor IDs; replay resolves legacy IDs through the map; name-based
+  actor matching removed; one-sheet-per-character invariant enforced with
+  collisions surfaced; sheet names derived from canon.
+- **4.10 (CX-7) Capability routing.** World Bible character detail routes Add
+  sheet / Dialogue style / Export; Character Tools loses independent
+  create/rename/descriptive editing; "profile" retired from author-facing
+  copy.
+- **4.11 (CX-8) Identity dogfood addendum.** Extend `fixtures/trust-dogfood/`
+  and the character-canon smoke with the J1–J6 scenarios (Tam containment,
+  rename stability, migration round-trip, mode gating); feeds Slice 1.1
+  before 6.1.
+
 ## Phase 5 — Release Engineering
 
 - **5.1 Auto-update.** Decide Squirrel / electron-updater / manual (this
@@ -305,4 +359,7 @@ App-wide search beyond current entry points; AI-to-Scratchpad capture and
 Scratchpad organization; Corkboard graduation to a route; item authoring AI
 slices 2–6 and ruleset-domain adapters; advanced executable rule generation;
 carry weight/encumbrance; nonfiction product; persona/game-engine tool
-ecosystems; Zod 4.
+ecosystems; Zod 4; sectioned character detail experience (CX-9) and character
+legacy retirement — `'character'` fact/alias/link targets, remaining name
+joins, `/characters` route per the D10 evidence bar, extension store (CX-10,
+per `docs/character-experience-design-review.md`).

@@ -40,6 +40,12 @@ Other files:
   review-completion smoke.
 - `apps/web/editor-config.md` — developer reference for TipTap editor/toolbar
   customization (moved from the repo root).
+- `docs/character-experience-design-review.md` — accepted decision record for
+  unifying characters around one canonical World Bible identity; the roadmap
+  remains authoritative for execution status.
+- `docs/character-experience-redesign-brief.md` — superseded problem brief
+  retained until Slice 4.4 folds its durable contract into the domain and
+  smoke-test authorities and archives the brief.
 
 ## Archive
 
