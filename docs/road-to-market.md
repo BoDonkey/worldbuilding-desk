@@ -120,7 +120,7 @@ and required revisit point, `WIP`, `Done <commit>`.
 | 4.1 | Description-first manual item creation | 4 | S | Done `70fb72f` — focused manual item draft with progressive full-editor disclosure; lint with 3 baseline warnings; 275 web + 6 engine + 12 UI tests; web/desktop builds; Cypress 44/44; desktop/narrow browser checks |
 | 4.2 | Storage schema versioning + migrations | 4 | M | — |
 | 4.3 | Package rename off `@litrpg-tool/*` | 4 | S | — |
-| 4.4 | Character contract adoption (CX-1) | 4 | S | WIP |
+| 4.4 | Character contract adoption (CX-1) | 4 | S | Done `c406b48` — stable-ID Character contract and migration invariants adopted in the domain authority; J1–J6 added to smoke coverage; superseded brief archived; lint baseline; 315 web + 6 engine + 12 UI tests; web/desktop builds |
 | 4.5 | Character identity links + classifier + resolver (CX-2) | 4 | M | — |
 | 4.6 | Backup + character-package completeness (CX-3) | 4 | M | — |
 | 4.7 | Character intake convergence (CX-4) | 4 | M | — |
