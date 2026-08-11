@@ -96,6 +96,23 @@ some — accept only matching ones):
 | F2 | Edit a lore doc, then check the health panel | Stale/`May need rebuild` state appears when source counts exceed indexed counts; rebuild action recovers, and counts reconcile. |
 | F3 | Character detail health panel for Sera | Shows aliases (B1), accepted facts (occupation, eyes per C1 resolution, brother Tam), linked dossier, scene mentions across all 5 chapters, state events from E script, RAG probe hits. |
 
+## G — Character identity journeys
+
+| ID | Journey | Expected |
+|---|---|---|
+| G1 | J1 — General-fiction intake | Review creates exactly one character-kind World Bible entity. No sheet, stat, resource, or Character Tools form interrupts intake; World Bible remains the sole identity and description editor. |
+| G2 | J2 — Mode gating, mechanics, and rename | General Fiction hides `Add sheet` and redirects direct `/characters` navigation to World Bible. LitRPG offers `Add sheet` from character detail with no name re-entry and exactly one entity-linked sheet. Renaming canon updates sheet, state, hover, and tools surfaces without relinking while preserving the old name as an alias. |
+| G3 | J3 — Legacy classification | With one existing canonical `Maren Kestrel`, importing `legacy-identity-matrix.v1.json` classifies all five source records exactly once: 0 already-linked, 0 unambiguous same-identity, 1 tools-only orphan (`Pell`), 0 World Bible-only, 3 ambiguous collisions (the canonical Maren and both package Marens), and 1 sheet-only record (`Orin`). The four unresolved legacy records remain conserved and reviewable; the canonical entity report record is not queued, and no silent entity link, merge, or deletion occurs. |
+| G4 | J4 — Dialogue-style capability | Assigning/removing a dialogue style creates no second identity or descriptive editor and changes no entity, alias, fact, or lore-link count. Removing the style or an attached sheet leaves canon intact. |
+| G5 | J5 — Backup/package round-trip | Snapshot v2 preserves the entity-link graph, aliases, facts, dossier, extension, sheet, accepted events, and byte-identical replay at every chapter. Both v1 character packages import without loss; unresolved identities are classified for author review rather than silently merged. |
+| G6 | J6 — Tam containment | Before author resolution, importing `legacy-tam-tools-only.v1.json` yields exactly one tools-only orphan and invents no entity. Its unconfirmed Hollow Court note is neither known lore nor assistant grounding, and the assistant must not assert it. Both explicit link-existing and create-canon branches converge on one entity ID with no duplicate canon. |
+
+The exact matrix totals intentionally count the pre-existing World Bible Maren
+as one of the three collision records alongside the four imported legacy
+records: five records are classified, but only four require resolution. The
+Tam package's dangerous note is conserved for review while remaining outside
+canon and grounding until an author acts.
+
 ## Fixture consistency notes (not plants)
 
 Deliberately consistent details that must NOT be flagged: Brannic's knee

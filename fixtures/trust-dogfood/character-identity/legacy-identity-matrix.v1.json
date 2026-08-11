@@ -1,0 +1,53 @@
+{
+  "schemaVersion": 1,
+  "kind": "characters",
+  "packageType": "full",
+  "exportedAt": 1786435200000,
+  "sourceProjectName": "Ember Ledger Legacy Identity Matrix",
+  "data": {
+    "characters": [
+      {
+        "id": "legacy-character-maren-a",
+        "projectId": "legacy-ember-ledger",
+        "name": "Maren Kestrel",
+        "description": "First duplicate legacy tools record.",
+        "fields": {},
+        "createdAt": 1786435200000,
+        "updatedAt": 1786435200000
+      },
+      {
+        "id": "legacy-character-maren-b",
+        "projectId": "legacy-ember-ledger",
+        "name": "Maren Kestrel",
+        "description": "Second duplicate legacy tools record.",
+        "fields": {},
+        "createdAt": 1786435200001,
+        "updatedAt": 1786435200001
+      },
+      {
+        "id": "legacy-character-pell",
+        "projectId": "legacy-ember-ledger",
+        "name": "Pell",
+        "description": "A tools-only orphan used to verify conservation.",
+        "fields": {},
+        "createdAt": 1786435200002,
+        "updatedAt": 1786435200002
+      }
+    ],
+    "characterSheets": [
+      {
+        "id": "legacy-sheet-orin",
+        "projectId": "legacy-ember-ledger",
+        "name": "Orin",
+        "level": 2,
+        "experience": 20,
+        "stats": [],
+        "resources": [],
+        "inventory": [],
+        "notes": "A sheet-only legacy record used to verify review routing.",
+        "createdAt": 1786435200003,
+        "updatedAt": 1786435200003
+      }
+    ]
+  }
+}

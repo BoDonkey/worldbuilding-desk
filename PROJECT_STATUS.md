@@ -157,6 +157,11 @@ Under the hood, the app still includes rich systems for world data, rules, chara
   sheet/state, import/export, and legacy-removal workflows while deriving
   linked display names from World Bible canon. Character-package language has
   replaced author-facing character “profile” terminology.
+- The trust-dogfood fixture now includes importable v1 packages for the Tam
+  containment boundary and an exact legacy identity-classification matrix,
+  plus a scripted G1–G6 character-identity addendum mapped into the active
+  smoke procedure. Fixture contract tests lock conservation and classifier
+  expectations; the manual G1–G6 run remains explicitly pending for Phase 1.1.
 - Project records now carry an application-data schema version independent of
   IndexedDB's structural version. Project load runs a deterministic,
   one-version-at-a-time migration chain, fails closed on newer schemas, and

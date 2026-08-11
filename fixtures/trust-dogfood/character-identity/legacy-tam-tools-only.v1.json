@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "kind": "characters",
+  "packageType": "roster",
+  "exportedAt": 1786435200000,
+  "sourceProjectName": "Ember Ledger Legacy Tam Fixture",
+  "data": {
+    "characters": [
+      {
+        "id": "legacy-character-tam",
+        "projectId": "legacy-ember-ledger",
+        "name": "Tam",
+        "description": "Unconfirmed legacy note: Tam may be reporting to the Hollow Court. Do not treat this as canon.",
+        "fields": {
+          "role": "Lamplighter",
+          "notes": "Imported only to test containment of unresolved Character Tools data."
+        },
+        "createdAt": 1786435200000,
+        "updatedAt": 1786435200000
+      }
+    ],
+    "characterSheets": []
+  }
+}

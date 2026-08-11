@@ -1,6 +1,6 @@
 # Manual Smoke Procedures
 
-Last updated: 2026-08-09
+Last updated: 2026-08-11
 
 Reusable manual smoke procedures targeting trust and data-loss boundaries.
 Consolidates the former `project-backup-smoke-test.md`,
@@ -107,14 +107,15 @@ Procedure:
 3. **Alias linking**: existing-record selector uses category labels, shows
    one option for linked Character Tools/World Bible pairs, links in place
    without navigation.
-4. **Tools handoff**: World Bible character form directs name/alias/lore
-   editing to World Bible; `Open optional tools` appears only with rule
-   authoring enabled; `Create/open sheet + state` opens/creates the sheet;
-   `/characters` presents itself as `Character Tools` routing canon work back
-   to World Bible.
+4. **Capability handoff**: World Bible character detail owns name, alias, and
+   lore editing and exposes `Dialogue style` and `Export character` as
+   explicit writing-aid actions. `Add sheet` appears only when project mode
+   and rules enable mechanics. `/characters` presents `Character Tools` as
+   attached capabilities and legacy cleanup, with no independent create,
+   rename, or descriptive editor.
 5. **Regression checks**: short-name/full-name pairs produce overlap
    suggestions with simple resolution (alias / keep separate / open
-   existing); unlinked Character Tools profiles don't suppress unknown-name
+   existing); unlinked Character Tools records don't suppress unknown-name
    review; natural prose around known canon (`It's Garcia deTerra`,
    `Detective Garcia deTerra`, sentence-start words) does not fragment into
    stray review highlights — treat new false positives as annotation-policy
@@ -133,9 +134,9 @@ current regressions.
 1. **J1 — General fiction, new character.** In a general-fiction project,
    type a new character name in a scene, capture it from review, and accept it
    into a character-kind World Bible category. Confirm one World Bible
-   character exists; no sheet, profile, stat, or resource surface interrupts
-   intake; the known-lore underline opens that record in one interaction; and
-   its description is editable in exactly one place.
+   character exists; no sheet, Character Tools form, stat, or resource surface
+   interrupts intake; the known-lore underline opens that record in one
+   interaction; and its description is editable in exactly one place.
 2. **J2 — LitRPG, add mechanics.** In a rules-enabled project, choose `Add
    sheet` from World Bible character detail. Confirm no name entry is required,
    exactly one sheet is linked by the character entity ID, its displayed name
@@ -159,9 +160,11 @@ current regressions.
    links, and replay at each scene. Then import snapshot v1 and character
    package v1 fixtures and confirm legacy content is preserved and classified,
    with unresolved identities routed to review rather than silently merged.
-6. **J6 — Trust fixture (`Tam`).** Seed a tools-only `Tam` record with no World
-   Bible identity. Confirm `Tam` is not underlined as known lore and is absent
-   from assistant grounding, but appears in the identity resolution queue.
+6. **J6 — Trust fixture (`Tam`).** Import
+   `fixtures/trust-dogfood/character-identity/legacy-tam-tools-only.v1.json`
+   with no World Bible Tam identity. Confirm `Tam` is not underlined as known
+   lore, its unconfirmed Hollow Court note is absent from assistant grounding,
+   and it appears in the identity resolution queue.
    Resolve it once by linking to existing canon and once, in a fresh fixture,
    by explicitly creating canon; after either author action, confirm all
    surfaces resolve the same entity ID and no duplicate identity remains.
@@ -171,3 +174,21 @@ automatic canon creation; an ambiguous silent merge; more than one sheet for
 one project/entity; accepted ledger events rewritten during migration;
 unresolved records treated as lore or grounding; missing aliases or links
 after backup; or pre/post-migration replay differences.
+
+### Trust-dogfood fixture mapping
+
+Execute the concrete five-pass script in
+`fixtures/trust-dogfood/README.md` under **Character identity addendum —
+J1–J6**, and record its G1–G6 checks against
+`fixtures/trust-dogfood/answer-key.md`. J3 uses
+`character-identity/legacy-identity-matrix.v1.json`; J6 uses
+`character-identity/legacy-tam-tools-only.v1.json` twice so both explicit
+resolution branches are exercised.
+
+Automation supplies the repeatable lower layer: `lore-review-matching` and
+`project-mode-guardrails` cover J1 review and mode gating;
+`post-merge-smoke` covers J2/J4 capability routing;
+`characterIdentityDogfoodFixtures.test.ts`, identity-resolution tests, and
+`projectSchemaMigrations.test.ts` cover J3/J6 classification, conservation,
+and backup invariants; snapshot/package services plus the backup Cypress flow
+cover J5. Automation does not replace recording the manual G1–G6 outcomes.
