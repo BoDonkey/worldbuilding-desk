@@ -2106,6 +2106,77 @@
   color: var(--color-on-accent);
 }
 
+.reviewQueueStack {
+  display: grid;
+  gap: 1rem;
+}
+
+.identityQueue {
+  padding: 1rem;
+  border: 1px solid var(--surface-border-soft);
+  border-radius: 14px;
+  background: var(--surface-panel);
+}
+
+.identityQueueHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.identityQueueHeader h2,
+.identityQueueHeader p {
+  margin: 0;
+}
+
+.identityQueueHeader p,
+.identityQueueCard > p {
+  color: var(--color-text-secondary);
+  line-height: 1.45;
+}
+
+.identityQueueList {
+  display: grid;
+  gap: 0.75rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.identityQueueCard {
+  padding: 0.9rem;
+  border: 1px solid var(--surface-border-soft);
+  border-radius: 12px;
+  background: var(--color-bg-primary);
+}
+
+.identityLinkRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 0.75rem;
+}
+
+.identityLinkRow label {
+  display: grid;
+  gap: 0.35rem;
+  color: var(--color-text-secondary);
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.identityLinkRow select {
+  width: 100%;
+}
+
+@media (max-width: 900px) {
+  .identityLinkRow {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* Category Manager Styles */
 .categoryManager {
   padding: 1rem;

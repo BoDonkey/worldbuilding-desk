@@ -205,6 +205,119 @@ function seedCanonConflict(): Cypress.Chainable<void> {
   );
 }
 
+function seedCharacterIdentityResolutionFixture(): Cypress.Chainable<void> {
+  return cy.window().then(
+    (win) =>
+      new Cypress.Promise<void>((resolve, reject) => {
+        const now = Date.now();
+        const openRequest = win.indexedDB.open(DB_NAME, DB_VERSION);
+        openRequest.onerror = () => reject(openRequest.error);
+        openRequest.onsuccess = () => {
+          const db = openRequest.result;
+          const tx = db.transaction(
+            [
+              'entityCategories',
+              'entities',
+              'characters',
+              'character_sheets',
+              'character_identity_reports'
+            ],
+            'readwrite'
+          );
+          tx.objectStore('entityCategories').put({
+            id: 'characters',
+            projectId: 'cypress-project-1',
+            kind: 'character',
+            name: 'Characters',
+            slug: 'characters',
+            fieldSchema: [],
+            createdAt: now
+          });
+          tx.objectStore('entities').put({
+            id: 'entity-tamara',
+            projectId: 'cypress-project-1',
+            categoryId: 'characters',
+            name: 'Tamara Vale',
+            fields: {},
+            links: [],
+            createdAt: now,
+            updatedAt: now
+          });
+          ['Tam', 'Nia'].forEach((name) => {
+            tx.objectStore('characters').put({
+              id: `character-${name.toLowerCase()}`,
+              projectId: 'cypress-project-1',
+              name,
+              description: `${name} legacy notes`,
+              fields: {},
+              createdAt: now,
+              updatedAt: now
+            });
+          });
+          tx.objectStore('character_sheets').put({
+            id: 'sheet-orin',
+            projectId: 'cypress-project-1',
+            name: 'Orin',
+            level: 2,
+            experience: 20,
+            stats: [],
+            resources: [],
+            inventory: [],
+            notes: 'Orin sheet notes',
+            createdAt: now,
+            updatedAt: now
+          });
+          tx.objectStore('character_identity_reports').put({
+            id: 'cypress-project-1:character-identity:v1',
+            projectId: 'cypress-project-1',
+            schemaVersion: 1,
+            generatedAt: now,
+            categoryCounts: {character: 1, general: 0},
+            sourceCounts: {characterEntities: 1, characters: 2, sheets: 1},
+            classifiedRecordCount: 4,
+            countsByClassification: {
+              'already-linked': 0,
+              'unambiguous-same-identity': 0,
+              'tools-only-orphan': 2,
+              'world-bible-only': 1,
+              'ambiguous-collision': 0,
+              'sheet-only': 1
+            },
+            records: [
+              {
+                recordType: 'entity', recordId: 'entity-tamara', name: 'Tamara Vale',
+                classification: 'world-bible-only', entityId: 'entity-tamara', reason: 'Canon only.'
+              },
+              ...['Tam', 'Nia'].map((name) => ({
+                recordType: 'character',
+                recordId: `character-${name.toLowerCase()}`,
+                name,
+                classification: 'tools-only-orphan',
+                reason: 'No canonical character link.'
+              })),
+              {
+                recordType: 'sheet', recordId: 'sheet-orin', name: 'Orin',
+                classification: 'sheet-only', reason: 'No canonical character link.'
+              }
+            ]
+          });
+          tx.oncomplete = () => {
+            db.close();
+            resolve();
+          };
+          tx.onerror = () => {
+            db.close();
+            reject(tx.error);
+          };
+          tx.onabort = () => {
+            db.close();
+            reject(tx.error);
+          };
+        };
+      })
+  );
+}
+
 describe('Lore and review matching', () => {
   beforeEach(() => {
     cy.viewport(1400, 1000);
@@ -213,6 +326,89 @@ describe('Lore and review matching', () => {
     setSeededProjectToGeneralFiction();
     cy.reload();
     cy.contains('strong', 'Cypress Smoke Project').should('be.visible');
+  });
+
+  it('resolves legacy character identities from the World Bible review queue', () => {
+    seedCharacterIdentityResolutionFixture();
+    cy.visit('/world-bible');
+
+    cy.contains('button', 'Review').click();
+    cy.contains('h2', 'Needs canon link').should('be.visible');
+    cy.contains('strong', /^Tam$/).closest('li').within(() => {
+      cy.get('select').select('entity-tamara');
+      cy.contains('button', 'Link existing').click();
+    });
+    cy.contains('[role="status"]', 'Linked "Tam"').should('be.visible');
+    cy.contains('strong', /^Tam$/).should('not.exist');
+
+    cy.contains('strong', /^Orin$/).closest('li').within(() => {
+      cy.contains('button', 'Create canon record').should('be.enabled').click();
+    });
+    cy.get('[role="status"]')
+      .should('be.visible')
+      .invoke('text')
+      .should('contain', 'Created World Bible canon for "Orin"');
+    cy.contains('h2', 'Needs canon link')
+      .closest('section')
+      .within(() => {
+        cy.contains('strong', /^Orin$/).should('not.exist');
+      });
+    cy.contains('h2', 'World Bible records to review')
+      .closest('section')
+      .should('contain.text', 'Orin');
+
+    cy.contains('strong', /^Nia$/).closest('li').within(() => {
+      cy.contains('button', 'Keep separate').click();
+    });
+    cy.contains('[role="status"]', 'Kept "Nia" as an unresolved legacy record').should(
+      'be.visible'
+    );
+    cy.contains('strong', /^Nia$/).should('not.exist');
+
+    cy.reload();
+    cy.contains('button', 'Review').click();
+    cy.contains('h2', 'Needs canon link').should('be.visible');
+    cy.contains('strong', /^Nia$/).should('not.exist');
+
+    cy.window().then(
+      (win) =>
+        new Cypress.Promise<void>((resolve, reject) => {
+          const openRequest = win.indexedDB.open(DB_NAME, DB_VERSION);
+          openRequest.onerror = () => reject(openRequest.error);
+          openRequest.onsuccess = () => {
+            const db = openRequest.result;
+            const tx = db.transaction(
+              ['characters', 'character_sheets', 'entities', 'actor_resolutions'],
+              'readonly'
+            );
+            const tamRequest = tx.objectStore('characters').get('character-tam');
+            const orinSheetRequest = tx.objectStore('character_sheets').get('sheet-orin');
+            const entityRequest = tx.objectStore('entities').getAll();
+            const actorRequest = tx.objectStore('actor_resolutions').getAll();
+            tx.oncomplete = () => {
+              expect(tamRequest.result.entityId).to.equal('entity-tamara');
+              const orinEntity = entityRequest.result.find(
+                (entity: {name: string}) => entity.name === 'Orin'
+              );
+              expect(orinEntity).to.exist;
+              expect(orinSheetRequest.result.characterEntityId).to.equal(orinEntity.id);
+              expect(
+                actorRequest.result.some(
+                  (resolution: {legacyActorId: string; entityId: string}) =>
+                    resolution.legacyActorId === 'sheet-orin' &&
+                    resolution.entityId === orinEntity.id
+                )
+              ).to.equal(true);
+              db.close();
+              resolve();
+            };
+            tx.onerror = () => {
+              db.close();
+              reject(tx.error);
+            };
+          };
+        })
+    );
   });
 
   it('highlights known lore and does not review incomplete known-name prefixes', () => {

@@ -15,6 +15,7 @@ import {WorldBibleImportWorkspace} from '../components/WorldBible/WorldBibleImpo
 import {WorldBibleEntityList} from '../components/WorldBible/WorldBibleEntityList';
 import {WorldBibleRecordAiHelper} from '../components/WorldBible/WorldBibleRecordAiHelper';
 import {WorldBibleCharacterHealth} from '../components/WorldBible/WorldBibleCharacterHealth';
+import {CharacterIdentityResolutionQueue} from '../components/WorldBible/CharacterIdentityResolutionQueue';
 import {WorldBibleCategoryRail} from '../components/WorldBible/WorldBibleCategoryRail';
 import {ItemDescriptionFirstFields} from '../components/WorldBible/ItemDescriptionFirstFields';
 import styles from '../assets/components/WorldBibleRoute.module.css';
@@ -31,8 +32,10 @@ import {
 } from '../services/seriesBible/SeriesBibleService';
 import {
   ALTERNATIVE_NAMES_KEY,
-  extractPlainTextFromRichText,
+  buildWorldBibleEntityContent,
   formatAlternativeNames,
+  getPreferredImportField,
+  getWorldBibleFieldTemplateValue,
   normalizeRichTextValue,
   normalizeName,
   parseAlternativeNames
@@ -49,6 +52,7 @@ import {
 } from '../services/worldBible/worldBibleSummary';
 import {useWorldBibleProjectData} from '../hooks/useWorldBibleProjectData';
 import {useWorldBibleSelectedEntity} from '../hooks/useWorldBibleSelectedEntity';
+import {useCharacterIdentityResolutionQueue} from '../hooks/useCharacterIdentityResolutionQueue';
 import {
   useWorldBibleAuthoringAssistant
 } from '../hooks/useWorldBibleAuthoringAssistant';
@@ -61,28 +65,8 @@ type WorldBibleViewMode = 'category' | 'review';
 type CharacterAuthoringMode = 'idle' | 'manual';
 type RecordAuthoringMode = 'idle' | 'manual';
 
-const getPreferredImportField = (
-  category: EntityCategory
-): EntityCategory['fieldSchema'][number] | undefined =>
-  category.fieldSchema.find((field) => field.key === 'description') ??
-  category.fieldSchema.find((field) => field.type === 'textarea') ??
-  category.fieldSchema.find((field) => field.type === 'text');
-
 const getWorldBibleRailStorageKey = (projectId: string) =>
   `wbd:world-bible:category-rail-collapsed:${projectId}`;
-
-const getFieldTemplateValue = (field: EntityCategory['fieldSchema'][number]): unknown => {
-  if (field.type === 'checkbox') return false;
-  if (field.type === 'number') return 0;
-  if (field.type === 'select') return field.options?.[0] ?? '';
-  if (field.type === 'multiselect') return field.options?.slice(0, 2) ?? [];
-  if (field.type === 'dice') {
-    return field.diceConfig?.allowMultipleDice ? '2d6+1d4' : '1d20';
-  }
-  if (field.type === 'modifier') return '+2';
-  if (field.type === 'textarea') return 'Detailed notes here';
-  return '';
-};
 
 const triggerJsonDownload = (fileName: string, data: unknown): void => {
   const blob = new Blob([JSON.stringify(data, null, 2)], {
@@ -98,14 +82,6 @@ const triggerJsonDownload = (fileName: string, data: unknown): void => {
   URL.revokeObjectURL(url);
 };
 
-const buildEntityContent = (entity: WorldEntity) => {
-  const fieldText = Object.entries(entity.fields)
-    .map(([key, value]) =>
-      `${key}: ${typeof value === 'string' ? extractPlainTextFromRichText(value) : value ?? ''}`
-    )
-    .join('\n');
-  return `${entity.name}\n${fieldText}`;
-};
 
 function WorldBibleRoute() {
   const activeProject = useAppStore((s) => s.activeProject);
@@ -159,6 +135,8 @@ function WorldBibleRoute() {
     setEntities,
     characters,
     setCharacters,
+    characterSheets,
+    characterIdentityReport,
     writingDocuments,
     canonicalFacts,
     stateMutationEvents,
@@ -175,6 +153,10 @@ function WorldBibleRoute() {
     compendiumLinkedEntityIds,
     setCompendiumLinkedEntityIds
   } = useWorldBibleProjectData({activeProject, setFeedback});
+  const characterIdentityResolution = useCharacterIdentityResolutionQueue({
+    activeProject, projectSettings, saveProjectSettings, categories, entities,
+    characters, characterSheets, report: characterIdentityReport, setFeedback
+  });
   const importInputRef = useRef<HTMLInputElement | null>(null);
   const jsonImportInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -259,7 +241,7 @@ function WorldBibleRoute() {
     setEntities,
     setFeedback,
     onEntitySaved: async (entity, category) => {
-      const content = buildEntityContent(entity);
+      const content = buildWorldBibleEntityContent(entity);
       if (ragService) {
         await ragService.indexDocument(
           entity.id,
@@ -459,6 +441,8 @@ function WorldBibleRoute() {
     resetForm();
   };
 
+  const handleSelectReview = () => { setViewMode('review'); resetForm(); };
+
   const handleToggleCategoryRail = () => {
     setIsCategoryRailCollapsed((current) => {
       const next = !current;
@@ -651,7 +635,7 @@ function WorldBibleRoute() {
     normalizeName,
     parseAlternativeNames,
     formatAlternativeNames,
-    buildEntityContent,
+    buildEntityContent: buildWorldBibleEntityContent,
     alternativeNamesKey: ALTERNATIVE_NAMES_KEY,
     openReviewItem: handleOpenReviewItem,
     handleEdit,
@@ -700,7 +684,7 @@ function WorldBibleRoute() {
     ragService,
     shodhService,
     refreshMemories,
-    buildEntityContent,
+    buildEntityContent: buildWorldBibleEntityContent,
     handleEdit,
     saveEntityDraft
   });
@@ -787,7 +771,7 @@ function WorldBibleRoute() {
       name: `${activeCategory.name.slice(0, -1) || 'Entry'} Name`
     };
     activeCategory.fieldSchema.forEach((field) => {
-      row[field.key] = getFieldTemplateValue(field);
+      row[field.key] = getWorldBibleFieldTemplateValue(field);
     });
     triggerJsonDownload(
       `${activeCategory.slug || 'worldbible'}-template.json`,
@@ -809,7 +793,7 @@ function WorldBibleRoute() {
         name: `${baseName} ${index}`
       };
       activeCategory.fieldSchema.forEach((field) => {
-        const value = getFieldTemplateValue(field);
+        const value = getWorldBibleFieldTemplateValue(field);
         if (typeof value === 'string' && value.length > 0) {
           row[field.key] = `${value} ${index}`.trim();
         } else {
@@ -894,10 +878,12 @@ function WorldBibleRoute() {
         <WorldBibleCategoryRail
           isCollapsed={isCategoryRailCollapsed} categories={categories}
           viewMode={viewMode} activeTab={activeTab}
+          reviewCount={reviewQueue.length + characterIdentityResolution.queue.length}
           showCategoryManager={showCategoryManager}
           isImportingEntities={isImportingEntities} isImportingJson={isImportingJson}
           importInputRef={importInputRef} jsonImportInputRef={jsonImportInputRef}
           onSelectCategory={handleSelectCategoryTab}
+          onSelectReview={handleSelectReview}
           onToggleCategoryManager={() => setShowCategoryManager((value) => !value)}
           onDownloadJsonTemplate={handleDownloadJsonTemplate}
           onDownloadJsonSample={handleDownloadJsonSample}
@@ -945,6 +931,15 @@ function WorldBibleRoute() {
             </button>
           </div>
         </div>
+      )}
+
+      {viewMode === 'review' && (
+        <CharacterIdentityResolutionQueue
+          items={characterIdentityResolution.queue} canonicalCharacters={characterIdentityResolution.canonicalCharacters}
+          resolvingKey={characterIdentityResolution.resolvingKey} onLink={characterIdentityResolution.linkToCanon}
+          onCreateCanon={characterIdentityResolution.createCanon} onKeepSeparate={characterIdentityResolution.keepSeparate}
+          canonReviewItems={filteredReviewQueue} onOpenCanonReview={handleOpenReviewItem}
+        />
       )}
 
       {activeCategory && viewMode === 'category' && (

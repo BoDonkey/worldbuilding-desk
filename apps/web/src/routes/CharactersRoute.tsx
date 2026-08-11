@@ -1118,6 +1118,9 @@ function CharactersRoute({
                 <div className={styles.listCardHeader}>
                   <div style={{ flex: 1 }}>
                     <strong style={{ fontSize: '1.2em' }}>{character.name}</strong>
+                    {!character.entityId && (
+                      <span className={styles.unlinkedBadge}>Not linked to canon</span>
+                    )}
                     <div className={styles.listCardMeta}>
                       {characterAliases.length > 0 && (
                         <div>Aliases: {characterAliases.join(', ')}</div>

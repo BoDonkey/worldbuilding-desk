@@ -143,6 +143,13 @@ Under the hood, the app still includes rich systems for world data, rules, chara
   Linked sheet names derive from canon, duplicate sheets for one character are
   blocked on write, and any conserved legacy collisions surface in Character
   Tools for repair.
+- The World Bible review surface now includes a distinct `Needs canon link`
+  queue for tools-only, sheet-only, and ambiguous legacy character records.
+  Authors can link an existing World Bible character, explicitly create a
+  review-required canon draft from the legacy record, or keep the record
+  separate. Resolutions update extension/sheet links and legacy actor mappings
+  together; unresolved Character Tools records and sheets carry visible
+  `Not linked to canon` badges and remain excluded from canon presentation.
 - Project records now carry an application-data schema version independent of
   IndexedDB's structural version. Project load runs a deterministic,
   one-version-at-a-time migration chain, fails closed on newer schemas, and
@@ -212,7 +219,7 @@ Under the hood, the app still includes rich systems for world data, rules, chara
   runtime. The migration reduced the full development audit from 36 findings
   to 30 by removing the prior Vite Rollup/PostCSS/esbuild and plugin Babel
   findings.
-- Cypress end-to-end coverage now runs on Cypress 15.20 with 45 tests across
+- Cypress end-to-end coverage now runs on Cypress 15.20 with 49 tests across
   nine specs. Legacy browser-side `Cypress.env()` access is disabled, and the
   assistant default-tools smoke opens its target through the public command
   palette instead of mutating persisted UI state. The migration reduced the

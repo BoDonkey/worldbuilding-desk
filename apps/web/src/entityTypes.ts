@@ -190,6 +190,7 @@ export interface ProjectSettings {
   consistencyActionCues: string[];
   ignoredUnknownSurfaces?: string[];
   ignoredEntityMatchKeys?: string[];
+  keptSeparateCharacterIdentityKeys?: string[];
   activeSkills: string[];
   projectMode: ProjectMode;
   featureToggles: ProjectFeatureToggles;

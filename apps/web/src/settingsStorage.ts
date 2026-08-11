@@ -237,6 +237,9 @@ function ensureAISettings(settings: ProjectSettings): ProjectSettings {
     ignoredEntityMatchKeys: normalizeIgnoredEntityMatchKeys(
       settings.ignoredEntityMatchKeys ?? DEFAULT_IGNORED_ENTITY_MATCH_KEYS
     ),
+    keptSeparateCharacterIdentityKeys: normalizeIgnoredEntityMatchKeys(
+      settings.keptSeparateCharacterIdentityKeys ?? []
+    ),
     activeSkills: settings.activeSkills ?? [],
     projectMode: settings.projectMode ?? DEFAULT_PROJECT_MODE,
     featureToggles: normalizeFeatureToggles({
@@ -343,6 +346,7 @@ export async function createDefaultSettings(projectId: string): Promise<ProjectS
     consistencyActionCues: [...DEFAULT_CONSISTENCY_ACTION_CUES],
     ignoredUnknownSurfaces: [...DEFAULT_IGNORED_UNKNOWN_SURFACES],
     ignoredEntityMatchKeys: [...DEFAULT_IGNORED_ENTITY_MATCH_KEYS],
+    keptSeparateCharacterIdentityKeys: [],
     activeSkills: [],
     projectMode: DEFAULT_PROJECT_MODE,
     featureToggles: getDefaultFeatureToggles(DEFAULT_PROJECT_MODE),

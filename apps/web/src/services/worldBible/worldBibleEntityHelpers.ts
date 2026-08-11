@@ -1,4 +1,37 @@
+import type {EntityCategory, WorldEntity} from '../../entityTypes';
+
 export const ALTERNATIVE_NAMES_KEY = 'alternativeNames';
+
+export const getPreferredImportField = (
+  category: EntityCategory
+): EntityCategory['fieldSchema'][number] | undefined =>
+  category.fieldSchema.find((field) => field.key === 'description') ??
+  category.fieldSchema.find((field) => field.type === 'textarea') ??
+  category.fieldSchema.find((field) => field.type === 'text');
+
+export const getWorldBibleFieldTemplateValue = (
+  field: EntityCategory['fieldSchema'][number]
+): unknown => {
+  if (field.type === 'checkbox') return false;
+  if (field.type === 'number') return 0;
+  if (field.type === 'select') return field.options?.[0] ?? '';
+  if (field.type === 'multiselect') return field.options?.slice(0, 2) ?? [];
+  if (field.type === 'dice') {
+    return field.diceConfig?.allowMultipleDice ? '2d6+1d4' : '1d20';
+  }
+  if (field.type === 'modifier') return '+2';
+  if (field.type === 'textarea') return 'Detailed notes here';
+  return '';
+};
+
+export const buildWorldBibleEntityContent = (entity: WorldEntity): string => {
+  const fieldText = Object.entries(entity.fields)
+    .map(([key, value]) =>
+      `${key}: ${typeof value === 'string' ? extractPlainTextFromRichText(value) : value ?? ''}`
+    )
+    .join('\n');
+  return `${entity.name}\n${fieldText}`;
+};
 
 export const normalizeName = (value: string): string =>
   value.trim().toLowerCase().replace(/\s+/g, ' ');

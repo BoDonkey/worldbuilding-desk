@@ -2,6 +2,7 @@ import {useCallback, useEffect, useState, type Dispatch, type SetStateAction} fr
 import type {
   CanonicalFact,
   Character,
+  CharacterSheet,
   EntityCategory,
   LoreDocument,
   LoreDocumentLink,
@@ -12,6 +13,9 @@ import type {
 } from '../entityTypes';
 import {getCategoriesByProject, initializeDefaultCategories, saveCategory} from '../categoryStorage';
 import {getCharactersByProject} from '../characterStorage';
+import {getCharacterSheetsByProject} from '../services/characters/characterSheetService';
+import {getCharacterIdentityMigrationReport} from '../services/characters/characterIdentityStorage';
+import type {CharacterIdentityMigrationReport} from '../services/characters/characterIdentity';
 import {getEntitiesByProject} from '../entityStorage';
 import {getLoreDocumentLinksByProject, getLoreDocumentsByProject} from '../loreStorage';
 import {getDocumentsByProject} from '../writingStorage';
@@ -77,6 +81,9 @@ export function useWorldBibleProjectData({
   const [categories, setCategories] = useState<EntityCategory[]>([]);
   const [entities, setEntities] = useState<WorldEntity[]>([]);
   const [characters, setCharacters] = useState<Character[]>([]);
+  const [characterSheets, setCharacterSheets] = useState<CharacterSheet[]>([]);
+  const [characterIdentityReport, setCharacterIdentityReport] =
+    useState<CharacterIdentityMigrationReport | null>(null);
   const [writingDocuments, setWritingDocuments] = useState<WritingDocument[]>([]);
   const [canonicalFacts, setCanonicalFacts] = useState<CanonicalFact[]>([]);
   const [stateMutationEvents, setStateMutationEvents] = useState<StateMutationEvent[]>([]);
@@ -139,6 +146,8 @@ export function useWorldBibleProjectData({
       setEntities([]);
       setAliases([]);
       setCharacters([]);
+      setCharacterSheets([]);
+      setCharacterIdentityReport(null);
       setWritingDocuments([]);
       setCanonicalFacts([]);
       setStateMutationEvents([]);
@@ -156,7 +165,9 @@ export function useWorldBibleProjectData({
         loadedCharacters,
         loadedWritingDocuments,
         loadedCanonicalFacts,
-        loadedStateMutationEvents
+        loadedStateMutationEvents,
+        loadedCharacterSheets,
+        loadedCharacterIdentityReport
       ] = await Promise.all([
         getCategoriesByProject(projectId),
         getEntitiesByProject(projectId),
@@ -164,7 +175,9 @@ export function useWorldBibleProjectData({
         getCharactersByProject(projectId),
         getDocumentsByProject(projectId),
         getCanonicalFactsByProject(projectId),
-        getStateMutationEventsByProject(projectId)
+        getStateMutationEventsByProject(projectId),
+        getCharacterSheetsByProject(projectId),
+        getCharacterIdentityMigrationReport(projectId)
       ]);
       const normalizedCategories = await ensureCharacterCategoryLongFormFields(
         loadedCategories
@@ -175,6 +188,8 @@ export function useWorldBibleProjectData({
         setEntities(loadedEntities);
         setAliases(loadedAliases);
         setCharacters(loadedCharacters);
+        setCharacterSheets(loadedCharacterSheets);
+        setCharacterIdentityReport(loadedCharacterIdentityReport);
         setWritingDocuments(loadedWritingDocuments);
         setCanonicalFacts(loadedCanonicalFacts);
         setStateMutationEvents(loadedStateMutationEvents);
@@ -196,11 +211,32 @@ export function useWorldBibleProjectData({
       );
     };
 
+    const refreshCharacterIdentityData = () => {
+      void Promise.all([
+        getEntitiesByProject(activeProject.id),
+        getCharactersByProject(activeProject.id),
+        getCharacterSheetsByProject(activeProject.id),
+        getCharacterIdentityMigrationReport(activeProject.id)
+      ]).then(([nextEntities, nextCharacters, nextSheets, nextReport]) => {
+        if (cancelled) return;
+        setEntities(nextEntities);
+        setCharacters(nextCharacters);
+        setCharacterSheets(nextSheets);
+        setCharacterIdentityReport(nextReport);
+      });
+    };
+
     window.addEventListener('wbd:writing-records-changed', refreshProjectHealthData);
     window.addEventListener('wbd:lore-fact-records-changed', refreshProjectHealthData);
     window.addEventListener(
       'wbd:state-mutation-events-changed',
       refreshProjectHealthData
+    );
+    window.addEventListener('wbd:entity-records-changed', refreshCharacterIdentityData);
+    window.addEventListener('wbd:character-records-changed', refreshCharacterIdentityData);
+    window.addEventListener(
+      'wbd:character-sheet-records-changed',
+      refreshCharacterIdentityData
     );
     return () => {
       cancelled = true;
@@ -215,6 +251,12 @@ export function useWorldBibleProjectData({
       window.removeEventListener(
         'wbd:state-mutation-events-changed',
         refreshProjectHealthData
+      );
+      window.removeEventListener('wbd:entity-records-changed', refreshCharacterIdentityData);
+      window.removeEventListener('wbd:character-records-changed', refreshCharacterIdentityData);
+      window.removeEventListener(
+        'wbd:character-sheet-records-changed',
+        refreshCharacterIdentityData
       );
     };
   }, [activeProject]);
@@ -357,6 +399,8 @@ export function useWorldBibleProjectData({
     setEntities,
     characters,
     setCharacters,
+    characterSheets,
+    characterIdentityReport,
     writingDocuments,
     canonicalFacts,
     stateMutationEvents,

@@ -53,6 +53,9 @@ export function CharacterSheetList({
             >
               <div className={styles.inlineFlex1}>
                 <strong className={styles.inlineFontSize12em}>{sheet.name}</strong>
+                {!sheet.characterEntityId && (
+                  <span className={styles.unlinkedBadge}>Not linked to canon</span>
+                )}
                 <div
                   className={`${styles.inlineFontSize09em} ${styles.inlineColorVarColorTextTertiary} ${styles.inlineMarginTop05rem}`}
                 >

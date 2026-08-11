@@ -7,12 +7,14 @@ interface WorldBibleCategoryRailProps {
   categories: EntityCategory[];
   viewMode: 'category' | 'review';
   activeTab: string | null;
+  reviewCount: number;
   showCategoryManager: boolean;
   isImportingEntities: boolean;
   isImportingJson: boolean;
   importInputRef: RefObject<HTMLInputElement | null>;
   jsonImportInputRef: RefObject<HTMLInputElement | null>;
   onSelectCategory: (categoryId: string) => void;
+  onSelectReview: () => void;
   onToggleCategoryManager: () => void;
   onDownloadJsonTemplate: () => void;
   onDownloadJsonSample: () => void;
@@ -20,9 +22,10 @@ interface WorldBibleCategoryRailProps {
 
 export const WorldBibleCategoryRail = (props: WorldBibleCategoryRailProps) => {
   const {
-    isCollapsed: isCategoryRailCollapsed, categories, viewMode, activeTab,
+    isCollapsed: isCategoryRailCollapsed, categories, viewMode, activeTab, reviewCount,
     showCategoryManager, isImportingEntities, isImportingJson, importInputRef,
     jsonImportInputRef, onSelectCategory: handleSelectCategoryTab,
+    onSelectReview,
     onToggleCategoryManager, onDownloadJsonTemplate: handleDownloadJsonTemplate,
     onDownloadJsonSample: handleDownloadJsonSample
   } = props;
@@ -38,6 +41,16 @@ export const WorldBibleCategoryRail = (props: WorldBibleCategoryRailProps) => {
               <span className={styles.categoryRailCount}>{categories.length}</span>
             </div>
             <div className={styles.tabNav}>
+              <button
+                type='button'
+                onClick={onSelectReview}
+                className={`${styles.tab} ${viewMode === 'review' ? styles.active : ''}`}
+              >
+                Review
+                {reviewCount > 0 && (
+                  <span className={styles.categoryRailCount}>{reviewCount}</span>
+                )}
+              </button>
               {categories.map((cat) => (
                 <button
                   key={cat.id}
