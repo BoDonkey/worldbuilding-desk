@@ -14,7 +14,13 @@ import type {
   WorldEntity,
   WritingDocument,
 } from '../../entityTypes';
+import type {ConsistencyAlias} from '../consistency/aliasStorage';
+import type {
+  ActorResolution,
+  CharacterIdentityMigrationReport
+} from '../characters/characterIdentity';
 import {
+  ACTOR_RESOLUTION_STORE_NAME,
   openDb,
   CATEGORY_STORE_NAME,
   CORKBOARD_CHAPTER_CARD_STORE_NAME,
@@ -23,11 +29,13 @@ import {
   CANONICAL_FACT_STORE_NAME,
   CANON_DECISION_CLUSTER_STORE_NAME,
   CANON_DECISION_SUPPRESSION_STORE_NAME,
+  CHARACTER_IDENTITY_REPORT_STORE_NAME,
   COMPENDIUM_ACTION_LOG_STORE_NAME,
   COMPENDIUM_ENTRY_STORE_NAME,
   COMPENDIUM_MILESTONE_STORE_NAME,
   COMPENDIUM_PROGRESS_STORE_NAME,
   COMPENDIUM_RECIPE_STORE_NAME,
+  CONSISTENCY_ALIAS_STORE_NAME,
   ENTITY_STORE_NAME,
   LORE_DOCUMENT_LINK_STORE_NAME,
   LORE_DOCUMENT_STORE_NAME,
@@ -136,6 +144,13 @@ export function normalizeProjectSnapshot(value: unknown): ProjectSnapshot {
   snapshot.counts.canonDecisionSuppressions ??= snapshot.data.canonDecisionSuppressions.length;
   snapshot.data.stateMutationEvents ??= [];
   snapshot.counts.stateMutationEvents ??= snapshot.data.stateMutationEvents.length;
+  snapshot.data.consistencyAliases ??= [];
+  snapshot.counts.consistencyAliases ??= snapshot.data.consistencyAliases.length;
+  snapshot.data.actorResolutions ??= [];
+  snapshot.counts.actorResolutions ??= snapshot.data.actorResolutions.length;
+  snapshot.data.characterIdentityReports ??= [];
+  snapshot.counts.characterIdentityReports ??=
+    snapshot.data.characterIdentityReports.length;
   snapshot.project.storageSchemaVersion = CURRENT_PROJECT_SCHEMA_VERSION;
   return snapshot as ProjectSnapshot;
 }
@@ -188,6 +203,39 @@ function rewriteScratchpads(
   }));
 }
 
+function rewriteConsistencyAliases(
+  records: ConsistencyAlias[],
+  projectId: string
+): ConsistencyAlias[] {
+  return records.map((record) => ({
+    ...record,
+    id: `${projectId}:alias:${record.id}`,
+    projectId
+  }));
+}
+
+function rewriteActorResolutions(
+  records: ActorResolution[],
+  projectId: string
+): ActorResolution[] {
+  return records.map((record) => ({
+    ...record,
+    id: `${projectId}:${record.legacyActorType}:${record.legacyActorId}`,
+    projectId
+  }));
+}
+
+function rewriteCharacterIdentityReports(
+  records: CharacterIdentityMigrationReport[],
+  projectId: string
+): CharacterIdentityMigrationReport[] {
+  return records.map((record, index) => ({
+    ...record,
+    id: `${projectId}:character-identity-report:${record.generatedAt}:${index}`,
+    projectId
+  }));
+}
+
 async function saveProjectScopedRecords(params: {
   projectId: string;
   data: ProjectSnapshot['data'];
@@ -204,6 +252,9 @@ async function saveProjectScopedRecords(params: {
       CORKBOARD_CHAPTER_CARD_STORE_NAME,
       CHARACTER_STORE_NAME,
       CHARACTER_SHEET_STORE_NAME,
+      CONSISTENCY_ALIAS_STORE_NAME,
+      ACTOR_RESOLUTION_STORE_NAME,
+      CHARACTER_IDENTITY_REPORT_STORE_NAME,
       LORE_DOCUMENT_STORE_NAME,
       LORE_DOCUMENT_LINK_STORE_NAME,
       LORE_ENTITY_PROPOSAL_STORE_NAME,
@@ -268,6 +319,21 @@ async function saveProjectScopedRecords(params: {
   await putMany(
     CHARACTER_SHEET_STORE_NAME,
     rewriteProjectScoped(params.data.characterSheets, params.projectId)
+  );
+  await putMany(
+    CONSISTENCY_ALIAS_STORE_NAME,
+    rewriteConsistencyAliases(params.data.consistencyAliases ?? [], params.projectId)
+  );
+  await putMany(
+    ACTOR_RESOLUTION_STORE_NAME,
+    rewriteActorResolutions(params.data.actorResolutions ?? [], params.projectId)
+  );
+  await putMany(
+    CHARACTER_IDENTITY_REPORT_STORE_NAME,
+    rewriteCharacterIdentityReports(
+      params.data.characterIdentityReports ?? [],
+      params.projectId
+    )
   );
   await putMany(
     LORE_DOCUMENT_STORE_NAME,

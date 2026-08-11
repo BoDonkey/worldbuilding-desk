@@ -118,6 +118,17 @@ Under the hood, the app still includes rich systems for world data, rules, chara
 - Lore extraction now proposes evidence-backed facts and typed entities from both structured labels and common natural-prose dossier/faction/place patterns, including the trust-dogfood occupation, aliases, relationships, appearance, service conflict, historical faction name, and explicitly speculative claims. All results remain review-only until author acceptance.
 - Parent/child canon inheritance with promotion and sync flows.
 - Project backup export/import with validation and conflict review.
+- Project backup snapshots now use schema 2 and include consistency aliases,
+  canonical character link fields, persisted legacy actor resolutions, and
+  character identity migration reports. Schema-1 backups upgrade through the
+  deterministic character classifier before import, with replay parity
+  preserved.
+- Character package export now uses schema 2 and carries the canonical
+  character categories/entities, aliases, accepted facts, Character Tools
+  extensions, and optional sheets as one identity-linked unit. Schema-1
+  character packages remain importable through exact-unique classification;
+  unresolved records are conserved in the identity report instead of being
+  guessed into canon.
 - Project records now carry an application-data schema version independent of
   IndexedDB's structural version. Project load runs a deterministic,
   one-version-at-a-time migration chain, fails closed on newer schemas, and

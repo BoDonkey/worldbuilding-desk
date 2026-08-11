@@ -1,5 +1,14 @@
+import type {
+  Character,
+  CharacterSheet,
+  EntityCategory,
+  WorldEntity
+} from '../../entityTypes';
+import {classifyCharacterIdentities} from '../characters/characterIdentity';
+import {CURRENT_PROJECT_SCHEMA_VERSION} from './projectSchemaMigrations';
+
 export const MIN_SUPPORTED_PROJECT_SNAPSHOT_SCHEMA_VERSION = 1;
-export const CURRENT_PROJECT_SNAPSHOT_SCHEMA_VERSION = 1;
+export const CURRENT_PROJECT_SNAPSHOT_SCHEMA_VERSION = 2;
 
 export interface ProjectSnapshotMigration {
   fromVersion: number;
@@ -7,7 +16,67 @@ export interface ProjectSnapshotMigration {
   migrate: (snapshot: Record<string, unknown>) => Record<string, unknown>;
 }
 
-const PROJECT_SNAPSHOT_MIGRATIONS: readonly ProjectSnapshotMigration[] = [];
+function asRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === 'object' ? (value as Record<string, unknown>) : {};
+}
+
+function asArray<T>(value: unknown): T[] {
+  return Array.isArray(value) ? (value as T[]) : [];
+}
+
+export function migrateProjectSnapshotV1ToV2(
+  snapshot: Record<string, unknown>
+): Record<string, unknown> {
+  const project = asRecord(snapshot.project);
+  const data = asRecord(snapshot.data);
+  const counts = asRecord(snapshot.counts);
+  const projectId =
+    (typeof snapshot.projectId === 'string' && snapshot.projectId) ||
+    (typeof project.id === 'string' && project.id) ||
+    '';
+  const classification = classifyCharacterIdentities({
+    projectId,
+    categories: asArray<EntityCategory>(data.categories),
+    entities: asArray<WorldEntity>(data.entities),
+    characters: asArray<Character>(data.characters),
+    sheets: asArray<CharacterSheet>(data.characterSheets),
+    generatedAt:
+      typeof snapshot.generatedAt === 'number' ? snapshot.generatedAt : Date.now()
+  });
+  const consistencyAliases = asArray(data.consistencyAliases);
+
+  return {
+    ...snapshot,
+    schemaVersion: 2,
+    project: {
+      ...project,
+      storageSchemaVersion: CURRENT_PROJECT_SCHEMA_VERSION
+    },
+    data: {
+      ...data,
+      categories: classification.categories,
+      characters: classification.characters,
+      characterSheets: classification.sheets,
+      consistencyAliases,
+      actorResolutions: classification.actorResolutions,
+      characterIdentityReports: [classification.report]
+    },
+    counts: {
+      ...counts,
+      consistencyAliases: consistencyAliases.length,
+      actorResolutions: classification.actorResolutions.length,
+      characterIdentityReports: 1
+    }
+  };
+}
+
+const PROJECT_SNAPSHOT_MIGRATIONS: readonly ProjectSnapshotMigration[] = [
+  {
+    fromVersion: 1,
+    toVersion: 2,
+    migrate: migrateProjectSnapshotV1ToV2
+  }
+];
 
 function readSchemaVersion(value: unknown): number {
   if (!value || typeof value !== 'object') {

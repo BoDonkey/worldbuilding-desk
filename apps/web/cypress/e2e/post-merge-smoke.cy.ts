@@ -52,6 +52,15 @@ function getRecord<T>(db: IDBDatabase, storeName: string, id: string): Promise<T
   });
 }
 
+function getAllRecords<T>(db: IDBDatabase, storeName: string): Promise<T[]> {
+  return new Cypress.Promise<T[]>((resolve, reject) => {
+    const tx = db.transaction([storeName], 'readonly');
+    const request = tx.objectStore(storeName).getAll();
+    request.onsuccess = () => resolve(request.result as T[]);
+    request.onerror = () => reject(request.error);
+  });
+}
+
 function addPromptTool(name: string, instructions: string): void {
   // Use placeholders instead of label nesting to avoid DOM-structure brittleness.
   cy.get('input[placeholder="e.g., Literary Critic Persona"]').first().clear().type(name);
@@ -443,6 +452,19 @@ describe('Post-merge smoke checklist', () => {
     const scratchpadNote =
       'Loose planning note: Kaelor should discover the Ember Archive map fragment here.';
 
+    mutateSmokeDb((db) =>
+      putRecord(db, 'consistency_aliases', {
+        id: 'alias-backup-smoke',
+        projectId: 'cypress-project-1',
+        targetType: 'entity',
+        targetId: 'entity-ember-archive',
+        entityId: 'entity-ember-archive',
+        alias: 'The Archive of Embers',
+        createdAt: 1,
+        updatedAt: 1
+      })
+    );
+
     cy.visit('/workspace');
     cy.contains('button', /^Scratchpad$/).first().click();
     cy.get('[aria-label="Project scratchpad"] .tiptap-editor').clear().type(scratchpadNote);
@@ -496,6 +518,22 @@ describe('Post-merge smoke checklist', () => {
     cy.contains('button', 'Apply Import').click();
     cy.contains('[role="status"]', 'Count check passed.').should('be.visible');
     cy.contains('strong', 'Cypress Smoke Project (Imported)').should('be.visible');
+
+    mutateSmokeDb(async (db) => {
+      const aliases = await getAllRecords<{
+        id: string;
+        projectId: string;
+        targetId: string;
+        alias: string;
+      }>(db, 'consistency_aliases');
+      const importedAlias = aliases.find(
+        (record) =>
+          record.alias === 'The Archive of Embers' &&
+          record.projectId !== 'cypress-project-1'
+      );
+      expect(importedAlias).to.exist;
+      expect(importedAlias?.targetId).to.equal('entity-ember-archive');
+    });
 
     cy.visit('/workspace');
     cy.contains('button', /^Scratchpad$/).first().click();

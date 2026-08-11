@@ -28,6 +28,7 @@ import type {
   StoredRuleset
 } from '../../entityTypes';
 import {
+  ACTOR_RESOLUTION_STORE_NAME,
   openDb,
   CATEGORY_STORE_NAME,
   CORKBOARD_CHAPTER_CARD_STORE_NAME,
@@ -41,6 +42,8 @@ import {
   CANONICAL_FACT_STORE_NAME,
   CANON_DECISION_CLUSTER_STORE_NAME,
   CANON_DECISION_SUPPRESSION_STORE_NAME,
+  CHARACTER_IDENTITY_REPORT_STORE_NAME,
+  CONSISTENCY_ALIAS_STORE_NAME,
   ENTITY_STORE_NAME,
   LORE_DOCUMENT_LINK_STORE_NAME,
   LORE_DOCUMENT_STORE_NAME,
@@ -55,6 +58,11 @@ import {
   ZONE_AFFINITY_PROFILE_STORE_NAME,
   ZONE_AFFINITY_PROGRESS_STORE_NAME
 } from '../../db';
+import type {ConsistencyAlias} from '../consistency/aliasStorage';
+import type {
+  ActorResolution,
+  CharacterIdentityMigrationReport
+} from '../characters/characterIdentity';
 import {getProjectById} from '../../projectStorage';
 import {getRulesetByProjectId} from '../rules/rulesetService';
 import {CURRENT_PROJECT_SNAPSHOT_SCHEMA_VERSION} from './projectSnapshotMigrations';
@@ -74,6 +82,9 @@ export interface ProjectSnapshot {
     corkboardChapterCards: ChapterCard[];
     characters: Character[];
     characterSheets: CharacterSheet[];
+    consistencyAliases: ConsistencyAlias[];
+    actorResolutions: ActorResolution[];
+    characterIdentityReports: CharacterIdentityMigrationReport[];
     loreDocuments: LoreDocument[];
     loreDocumentLinks: LoreDocumentLink[];
     loreEntityProposals: LoreEntityProposal[];
@@ -100,6 +111,9 @@ export interface ProjectSnapshot {
     corkboardChapterCards: number;
     characters: number;
     characterSheets: number;
+    consistencyAliases: number;
+    actorResolutions: number;
+    characterIdentityReports: number;
     loreDocuments: number;
     loreDocumentLinks: number;
     loreEntityProposals: number;
@@ -161,6 +175,9 @@ export async function buildProjectSnapshot(projectId: string): Promise<ProjectSn
     corkboardChapterCards,
     characters,
     characterSheets,
+    consistencyAliases,
+    actorResolutions,
+    characterIdentityReports,
     loreDocuments,
     loreDocumentLinks,
     loreEntityProposals,
@@ -188,6 +205,12 @@ export async function buildProjectSnapshot(projectId: string): Promise<ProjectSn
     getProjectScopedRecords<ChapterCard>(CORKBOARD_CHAPTER_CARD_STORE_NAME, projectId),
     getProjectScopedRecords<Character>(CHARACTER_STORE_NAME, projectId),
     getProjectScopedRecords<CharacterSheet>(CHARACTER_SHEET_STORE_NAME, projectId),
+    getProjectScopedRecords<ConsistencyAlias>(CONSISTENCY_ALIAS_STORE_NAME, projectId),
+    getProjectScopedRecords<ActorResolution>(ACTOR_RESOLUTION_STORE_NAME, projectId),
+    getProjectScopedRecords<CharacterIdentityMigrationReport>(
+      CHARACTER_IDENTITY_REPORT_STORE_NAME,
+      projectId
+    ),
     getProjectScopedRecords<LoreDocument>(LORE_DOCUMENT_STORE_NAME, projectId),
     getProjectScopedRecords<LoreDocumentLink>(LORE_DOCUMENT_LINK_STORE_NAME, projectId),
     getProjectScopedRecords<LoreEntityProposal>(LORE_ENTITY_PROPOSAL_STORE_NAME, projectId),
@@ -242,6 +265,9 @@ export async function buildProjectSnapshot(projectId: string): Promise<ProjectSn
       corkboardChapterCards,
       characters,
       characterSheets,
+      consistencyAliases,
+      actorResolutions,
+      characterIdentityReports,
       loreDocuments,
       loreDocumentLinks,
       loreEntityProposals,
@@ -268,6 +294,9 @@ export async function buildProjectSnapshot(projectId: string): Promise<ProjectSn
       corkboardChapterCards: corkboardChapterCards.length,
       characters: characters.length,
       characterSheets: characterSheets.length,
+      consistencyAliases: consistencyAliases.length,
+      actorResolutions: actorResolutions.length,
+      characterIdentityReports: characterIdentityReports.length,
       loreDocuments: loreDocuments.length,
       loreDocumentLinks: loreDocumentLinks.length,
       loreEntityProposals: loreEntityProposals.length,
@@ -306,6 +335,9 @@ export function validateSnapshotCounts(snapshot: ProjectSnapshot): SnapshotCount
     corkboardChapterCards: snapshot.data.corkboardChapterCards.length,
     characters: snapshot.data.characters.length,
     characterSheets: snapshot.data.characterSheets.length,
+    consistencyAliases: snapshot.data.consistencyAliases.length,
+    actorResolutions: snapshot.data.actorResolutions.length,
+    characterIdentityReports: snapshot.data.characterIdentityReports.length,
     loreDocuments: snapshot.data.loreDocuments.length,
     loreDocumentLinks: snapshot.data.loreDocumentLinks.length,
     loreEntityProposals: snapshot.data.loreEntityProposals.length,
