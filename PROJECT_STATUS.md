@@ -161,7 +161,8 @@ Under the hood, the app still includes rich systems for world data, rules, chara
   containment boundary and an exact legacy identity-classification matrix,
   plus a scripted G1–G6 character-identity addendum mapped into the active
   smoke procedure. Fixture contract tests lock conservation and classifier
-  expectations; the manual G1–G6 run remains explicitly pending for Phase 1.1.
+  expectations; the manual A–G run is now the active Phase 1.1 checkpoint
+  before release-engineering work begins.
 - Project records now carry an application-data schema version independent of
   IndexedDB's structural version. Project load runs a deterministic,
   one-version-at-a-time migration chain, fails closed on newer schemas, and
@@ -323,6 +324,10 @@ Under the hood, the app still includes rich systems for world data, rules, chara
 ## Immediate Priorities
 
 ### Product / UX
+- Active handoff: dogfood the complete A–G trust fixture over several
+  sittings, record evidence and resume checkpoints in its runbook, and triage
+  every finding before claiming roadmap slice 5.1. Preserve ordinary findings
+  without fixing them mid-run so later sessions test one stable build.
 - Make the writing workspace the clearest default entry point.
 - Reduce visible system complexity on first load through a calm-shell navigation pass before adding more route features.
 - Keep `Workspace`, `World Bible`, and `Lore Documents` as the primary active-project mental model: write, structure canon, and keep longform source notes.

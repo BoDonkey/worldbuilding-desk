@@ -99,8 +99,9 @@ sheet replaying state at a chosen scene, for the LitRPG audience.
 ## Sequencing
 
 Marketing work stays behind product truth: landing-page claims must describe
-implemented, verified behavior. Trust dogfooding remains required before beta
-but is currently deferred and does not block building the page or demo;
-quantified performance claims and case studies require dogfood or beta
-evidence. Order: landing page + demo video (5.9) → beta recruitment copy (with
-6.1) → case studies from beta (during 6.2) → launch announcement (6.4).
+implemented, verified behavior. Trust dogfooding is now the active checkpoint
+before Phase 5; its triage determines which behaviors are safe to demonstrate
+or claim. Quantified performance claims and case studies require dogfood or
+beta evidence. Order: dogfood + triage (1.1) → landing page + demo video (5.9)
+→ beta recruitment copy (with 6.1) → case studies from beta (during 6.2) →
+launch announcement (6.4).

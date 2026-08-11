@@ -43,8 +43,9 @@ ecosystems, Zod 4 migration.
   verification battery before commit (see battery below).
 - Update `PROJECT_STATUS.md` when application truth changes; update this file
   when priority or remaining work changes; archive completed phases.
-- Trust dogfooding is required before beta but is deferred while current
-  capacity is focused elsewhere. It does not block unrelated Phase 2–5 work.
+- Trust dogfooding is the active checkpoint after Phase 4. Keep Phase 5
+  unclaimed until the 1.1 run is recorded and its findings are triaged; only
+  release-blocking trust or data-loss findings must be fixed before 5.1.
 
 Verification battery:
 
@@ -95,7 +96,7 @@ and required revisit point, `WIP`, `Done <commit>`.
 | # | Slice | Phase | Size | Status |
 |---|---|---|---|---|
 | 0.1 | Branch/worktree cleanup | 0 | XS | Done `51d1586` |
-| 1.1 | Realistic-project trust dogfood | 1 | M | Deferred — required before beta; not a current blocker |
+| 1.1 | Realistic-project trust dogfood | 1 | M | WIP — multi-day run active; use `fixtures/trust-dogfood/README.md`; record A–G and triage before claiming 5.1 |
 | 1.2 | Fix trust-path failures found in 1.1 | 1 | M | Done `f8d3d2e` + `545655c` + `1f1d2d7` + `813fb9c` + `aba657a` + `d6a22ea` — grounding/readiness, extraction/review precision, session continuity, deterministic supported answers, and a universal evidence gate that prevents all other factual questions from reaching creative generation; lint baseline; 306 web + 6 engine + 12 UI tests; web/desktop builds; Cypress 45/45 |
 | 1.3 | Calm-shell navigation validation | 1 | S | Done `530b59f` — desktop/narrow project-mode checks pass; 2.8 must expose the aggregate pending badge on narrow `More` without promoting optional systems |
 | 1.4 | Proposal-review assistant route (conditional on product need) | 1 | M | — |
@@ -143,10 +144,11 @@ and required revisit point, `WIP`, `Done <commit>`.
 | 6.4 | Launch | 6 | S | — |
 
 Phases 2 and 3 can interleave; within Phase 3, slices 3.5–3.8 run
-sequentially. Phase 1 addresses the top product risk, but its dogfood run is
-currently deferred for capacity and does not block unrelated Phase 2–5 work;
-it must be completed, and release-relevant findings resolved, before the beta
-build in 6.1. Phase 5 slices mostly parallelize. Phase 6 is strictly ordered.
+sequentially. Phase 4 is complete. The multi-day 1.1 dogfood run is now the
+checkpoint before Phase 5: complete and triage the run before claiming 5.1.
+Release-blocking trust or data-loss findings must be resolved first; recorded
+non-blocking UX findings may be scheduled without holding all of Phase 5.
+Phase 5 slices mostly parallelize. Phase 6 is strictly ordered.
 
 ---
 
@@ -157,7 +159,7 @@ branches, prune 8 stale worktrees (keep the locked `.worktrees/ui-fixes`),
 delete merged remote branches. No source changes.
 _[prompt: archive/fitness-a-work-slices.md § Slice 0]_
 
-## Phase 1 — Trust Validation (dogfood required before beta; currently deferred)
+## Phase 1 — Trust Validation (active pre-Phase-5 checkpoint)
 
 Goal: demonstrate that the app preserves the distinction between source
 material, proposals, accepted canon, and manuscript state across a realistic
@@ -178,11 +180,18 @@ assistant trust checks → state replay → health/rebuild. Record results in
 the runbook's log. False positives (flags not in the answer key) are
 first-class findings.
 
-**1.2 Fix trust-path failures.** Turn every source-ranking, stale-summary, or
-provenance failure from 1.1 into its own bounded fix slice. Release-relevant
-findings must be resolved before beta; completion of 1.1 is not a prerequisite
-for unrelated current assistant, UI, or release-engineering work. Size unknown
-until 1.1 lands.
+Current execution handoff: run this over several sittings using the checkpoint
+and results templates in the fixture runbook. Do not fix ordinary findings
+mid-run. Preserve evidence, finish A–G, then classify each finding as a
+release blocker, workflow blocker, UX friction, false positive, or fixture
+bug before changing the Phase 5 board.
+
+**1.2 Fix trust-path failures.** Prior trust fixes are complete on the status
+board. Turn every new source-ranking, stale-summary, provenance, identity, or
+data-loss failure from the current 1.1 run into a new bounded follow-up slice.
+Release-blocking findings must be resolved before 5.1; non-blocking findings
+may be scheduled honestly and must still be resolved before beta when they
+affect release trust. Size remains unknown until the current run lands.
 
 **1.3 Calm-shell navigation validation.** Manually verify primary navigation
 and `More` grouping at desktop and narrow breakpoints across projects with no

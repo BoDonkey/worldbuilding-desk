@@ -127,9 +127,9 @@ Focused automated coverage: `lore-review-matching.cy.ts`,
 
 ### Character identity journey suite (J1–J6)
 
-Run these acceptance journeys after the corresponding Character identity
-slices land. Until then, failures describe open roadmap work rather than
-current regressions.
+All corresponding Character identity slices have landed. Run these journeys
+as part of the active trust dogfood checkpoint; failures now describe current
+regressions or trust findings and belong in the A–G run log.
 
 1. **J1 — General fiction, new character.** In a general-fiction project,
    type a new character name in a scene, capture it from review, and accept it

@@ -1,6 +1,6 @@
 # Documentation Map
 
-Last updated: 2026-08-09
+Last updated: 2026-08-11
 
 The active documentation set was consolidated on 2026-08-01 down to seven
 documents. Everything else lives in `docs/archive/` with a banner pointing at
@@ -38,6 +38,8 @@ Other files:
 - `AGENTS.md` (root) — instructions for coding agents; points here.
 - `smoke-review-sample.md` (root) — regression fixture text used by the
   review-completion smoke.
+- `fixtures/trust-dogfood/README.md` — the active multi-day execution runbook,
+  resume checkpoint, and A–G results log for roadmap slice 1.1.
 - `apps/web/editor-config.md` — developer reference for TipTap editor/toolbar
   customization (moved from the repo root).
 - `docs/character-experience-design-review.md` — accepted decision record for

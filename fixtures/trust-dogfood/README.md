@@ -28,9 +28,57 @@ character-identity/legacy-identity-matrix.v1.json
 answer-key.md                 every planted issue + expected behavior
 ```
 
-Time estimate: 3–4 hours across two or three sittings. Suggested split:
-Session A (setup + intake), Session B (canon + assistant), Session C (state
-+ health + teardown checks).
+Time estimate: 5–7 hours across three to five sittings, including the
+character-identity addendum. A comfortable split is: Session A; Session B;
+Session C plus Identity Passes 1–2; Identity Passes 3–5; final triage.
+
+## Current multi-day handoff — started 2026-08-11
+
+This is the active roadmap slice. The partial run at the bottom is historical
+and predates the completed Phase 4 character work; start with fresh projects
+and record the new run separately.
+
+Before the first sitting:
+
+1. Keep one stable build for the whole run. Record `git rev-parse --short HEAD`
+   in the current-run template. Do not pull, switch commits, or patch the app
+   or fixture between sessions unless a stop condition below is hit.
+2. Prefer the desktop shell. For a development run, use `pnpm dev:web` in one
+   terminal and `pnpm start:desktop:dev` in another. If you use the browser
+   instead, record that once and stay on that surface for the core A–F run.
+3. Create fresh projects with the names suggested below. Do not reuse the
+   historical partial-run project or any project carrying prior ignore/review
+   state.
+4. Record the AI provider/model and whether local RAG/Shodh initialization
+   completed. Assistant results without this metadata are difficult to
+   compare later.
+
+At the end of every sitting:
+
+- Wait for saves to settle, export a project backup when the active project
+  contains meaningful work, and record its filename.
+- Fill the resume checkpoint: last completed step, active project(s), next
+  exact step, blockers, and evidence pointers. A screenshot filename plus a
+  one-line observation is enough; do not turn the run into a bug-writing
+  exercise.
+- Record failures and continue on the same build. Do not fix ordinary bugs or
+  fixture wording mid-run. That keeps later observations comparable.
+
+Stop the run and preserve the project/backup before changing anything if you
+observe data loss or corruption, an unresolved record being silently promoted
+to canon, rejected/pending material entering normal assistant grounding, or
+the J6 Hollow Court note being asserted before author resolution. Everything
+else should be logged and allowed to accumulate until final triage.
+
+Suggested resume points:
+
+| Sitting | Work | Safe stopping point |
+|---|---|---|
+| 1 | Session A | After A-7, with extraction decisions saved |
+| 2 | Session B | After D1–D5 and source lists are recorded |
+| 3 | Session C + Identity Passes 1–2 | After the rich-project backup and Sera rename checks |
+| 4 | Identity Passes 3–5 | After both Tam branches and imported-backup comparison |
+| 5 | Triage | Every A–G result classified; roadmap follow-ups written |
 
 ---
 
@@ -118,7 +166,7 @@ badges, invalidation, replay behavior).
 **C-5. Health panels.** Record **F1–F3** (retrieval probe ranking, stale →
 rebuild recovery, Sera's character detail panel completeness).
 
-**C-6. Backup round-trip (bonus).** Export project backup, validate, import
+**C-6. Backup round-trip (required for G5).** Export project backup, validate, import
 as new project. Confirm canon, aliases, accepted facts, lore links, and
 state events survive (this doubles as the `docs/smoke-tests.md` § 1
 procedure on rich data).
@@ -226,39 +274,108 @@ Treat C-6 as required for the identity addendum rather than bonus.
 
 ## Recording results
 
-Log results in a dated section appended to this file (or a copy in
-`docs/archive/` when done — the archive holds run logs, this file keeps the
-procedure). Per check: `ID — Pass/Fail/Partial — note`. Also log:
+During the run, log results in the dated current-run section below. When the
+run and triage are complete, move that dated log to `docs/archive/` and leave
+only a link plus the next blank template here. Per check:
+`ID — Pass/Fail/Partial — note — evidence`. Also log:
+
+Use the answer key's unhyphenated IDs (`A1`, `C4`, `G6`) for verdicts. If a
+setup step such as A-2 fails before its related check can run, add a finding
+with that hyphenated step label and mark the dependent verdicts blocked.
 
 - **False positives** — anything flagged that isn't in the answer key.
 - **Fixture bugs** — real inconsistencies I planted by accident. Fix the
   fixture, note it, and continue.
 - **Trust failures** — anything from C4/C5/D2/D3 leaking into canon or
-  assistant answers. These convert directly into slice 1.2 fix work and
-  block Phase 6 (beta) until resolved.
+  assistant answers. These become new bounded trust-fix slices and block
+  release engineering when they violate a stop condition above.
 - **Character identity failures** — any failed G1–G6 invariant, especially a
   pre-resolution Tam underline/grounding leak, rename-broken link, silent
   merge, duplicate sheet, missing round-trip link, or mode-gating leak. These
-  also become slice 1.2 work and block beta.
+  also become new bounded trust-fix slices and block beta.
 
-Exit condition for slice 1.1: every A–F check has a recorded result, and
-findings are triaged into road-to-market 1.2 slices (or a note that no
-fixes are needed).
+At final triage, classify each finding as one of:
+
+- **Release blocker** — data loss/corruption, trust-boundary violation,
+  silent canon promotion/merge, broken backup recovery, or unusable core flow.
+- **Workflow blocker** — the scripted journey cannot be completed, but saved
+  data remains intact and the trust boundary holds.
+- **UX friction** — confusing, noisy, or slow behavior with a viable path.
+- **False positive** — review/retrieval output not planted in the answer key.
+- **Fixture bug** — the fixture or instructions, rather than the app, are
+  inconsistent.
+
+Exit condition for slice 1.1: every A–G check has a recorded result; every
+finding is classified; release blockers have bounded follow-up slices (or a
+note that none were found); and the roadmap records whether 5.1 may begin.
+Do not mark 1.1 done merely because the planned sittings ended.
 
 ## Results log
 
-_(append dated runs below)_
-
-Identity addendum template (not yet run):
+### Current run — started 2026-08-11
 
 ```text
-G1 — Not run — general-fiction intake / one canon editing home
-G2 — Not run — mode gating, Add sheet, rename stability
-G3 — Not run — conserving legacy classification and resolution
-G4 — Not run — dialogue-style attachment/removal isolation
-G5 — Not run — rich v2 backup + v1 package round-trip
-G6 — Not run — Tam containment + link/create branches
+Build commit:
+Surface (desktop/browser):
+OS:
+AI provider/model:
+RAG/Shodh ready:
+Core project:
+Identity projects:
+
+A1 — Not run —
+A2 — Not run —
+A3 — Not run —
+A4 — Not run —
+B1 — Not run —
+B2 — Not run —
+B3 — Not run —
+B4 — Not run —
+B5 — Not run —
+C1 — Not run —
+C2 — Not run —
+C3 — Not run —
+C4 — Not run —
+C5 — Not run —
+D1 — Not run —
+D2 — Not run —
+D3 — Not run —
+D4 — Not run —
+D5 — Not run —
+E1 — Not run —
+E2 — Not run —
+E3 — Not run —
+E4 — Not run —
+E5 — Not run —
+F1 — Not run —
+F2 — Not run —
+F3 — Not run —
+G1 — Not run —
+G2 — Not run —
+G3 — Not run —
+G4 — Not run —
+G5 — Not run —
+G6 — Not run —
+
+Resume checkpoint
+Date/time:
+Completed through:
+Active project(s):
+Last backup:
+Blockers:
+Next exact step:
+Evidence pointers:
+
+Findings awaiting triage
+- [classification pending] ID/surface — observation — evidence
 ```
+
+### Prior partial run — historical, do not resume
+
+This run predates completion of the current character-identity and trust-path
+work. It is retained as evidence of earlier behavior, not as the verdict for
+the active slice.
+
 A-1: Pass
 A-2: Partial. Import worked correctly, but the screen navigated away immediately, which feels like a UX issue.
 A-3: Partial: Created the character sheet in the world bible, but "class" and "ledger-marked" are numerical and test called for strings. Overall, the character sheet in the tools and the world bible seem too separate.
