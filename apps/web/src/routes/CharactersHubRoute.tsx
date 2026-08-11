@@ -19,6 +19,7 @@ function CharactersHubRoute() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [hasRuleset, setHasRuleset] = useState(false);
+  const [hasLoadedRuleset, setHasLoadedRuleset] = useState(false);
   const [pendingCharacterId, setPendingCharacterId] = useState<string | null>(
     null
   );
@@ -47,6 +48,7 @@ function CharactersHubRoute() {
           prefillCharacterId?: string;
           preferredView?: 'roster' | 'sheets';
           autoCreateSheetForCharacterId?: string;
+          characterCapabilityIntent?: boolean;
         }
       | null;
     const prefillCharacterId = state?.prefillCharacterId ?? null;
@@ -72,17 +74,21 @@ function CharactersHubRoute() {
     let cancelled = false;
     if (!activeProject) {
       setHasRuleset(false);
+      setHasLoadedRuleset(true);
       return;
     }
+    setHasLoadedRuleset(false);
     getRulesetByProjectId(activeProject.id)
       .then((ruleset) => {
         if (!cancelled) {
           setHasRuleset(Boolean(ruleset));
+          setHasLoadedRuleset(true);
         }
       })
       .catch(() => {
         if (!cancelled) {
           setHasRuleset(false);
+          setHasLoadedRuleset(true);
         }
       });
     return () => {
@@ -91,10 +97,10 @@ function CharactersHubRoute() {
   }, [activeProject]);
 
   useEffect(() => {
-    if (view === 'sheets' && activeProject && !canUseSheets) {
+    if (view === 'sheets' && activeProject && hasLoadedRuleset && !canUseSheets) {
       setSearchParams({});
     }
-  }, [view, activeProject, canUseSheets, setSearchParams]);
+  }, [view, activeProject, canUseSheets, hasLoadedRuleset, setSearchParams]);
 
   const openView = (next: 'roster' | 'sheets') => {
     if (next === 'sheets' && activeProject && !canUseSheets) {
@@ -128,10 +134,10 @@ function CharactersHubRoute() {
         projectName: activeProject.name,
         includeSheets: false
       });
-      setFeedback({tone: 'success', message: 'Tool profiles exported.'});
+      setFeedback({tone: 'success', message: 'Character package exported.'});
     } catch (error) {
       const message =
-        error instanceof Error ? error.message : 'Unable to export tool profiles.';
+        error instanceof Error ? error.message : 'Unable to export character package.';
       setFeedback({tone: 'error', message});
     }
   };
@@ -158,8 +164,8 @@ function CharactersHubRoute() {
         tone: 'success',
         message:
           pendingImportMode === 'full'
-            ? `Imported ${result.charactersImported} tool profiles and ${result.sheetsImported} sheets.`
-            : `Imported ${result.charactersImported} tool profiles.`
+            ? `Imported ${result.charactersImported} character capability records and ${result.sheetsImported} sheets.`
+            : `Imported ${result.charactersImported} character capability records.`
       });
     } catch (error) {
       const message =
@@ -182,7 +188,8 @@ function CharactersHubRoute() {
     );
   }
 
-  if (capabilities.isGeneralFiction) {
+  const locationState = location.state as {characterCapabilityIntent?: boolean} | null;
+  if (capabilities.isGeneralFiction && !locationState?.characterCapabilityIntent) {
     return (
       <Navigate
         to='/world-bible'
@@ -197,8 +204,8 @@ function CharactersHubRoute() {
       <h1 className={styles.title}>Character Tools</h1>
       <p className={styles.lead}>
         {canUseSheets
-          ? 'Use this secondary workspace for tool-profile exports, sheets, and state tracking. Canonical names, aliases, and descriptive lore belong in World Bible.'
-          : 'Use this secondary workspace for tool-profile exports. Canonical names, aliases, and descriptive lore belong in World Bible.'}
+          ? 'Use this secondary workspace for dialogue styles, character export, sheets, and state tracking. Canonical names, aliases, and descriptive lore belong in World Bible.'
+          : 'Use this secondary workspace for dialogue styles and character export. Canonical names, aliases, and descriptive lore belong in World Bible.'}
       </p>
       {feedback && (
         <p
@@ -212,11 +219,11 @@ function CharactersHubRoute() {
       )}
       <div className={styles.toolbar}>
         <button type='button' onClick={() => void handleExportRosterOnly()}>
-          Export Tool Profiles
+          Export Characters
         </button>
         {canUseSheets && (
           <button type='button' onClick={() => void handleExportCharacters()}>
-            Export Tool Profiles + Sheets
+            Export Characters + Sheets
           </button>
         )}
         <button
@@ -226,7 +233,7 @@ function CharactersHubRoute() {
         >
           {isImportingCharacters
             ? 'Importing...'
-            : 'Import Tool Profiles'}
+            : 'Import Character Package'}
         </button>
         {canUseSheets && (
           <button
@@ -234,7 +241,7 @@ function CharactersHubRoute() {
             onClick={() => handleImportCharactersClick('full')}
             disabled={isImportingCharacters}
           >
-            {isImportingCharacters ? 'Importing...' : 'Import Tool Profiles + Sheets'}
+            {isImportingCharacters ? 'Importing...' : 'Import Characters + Sheets'}
           </button>
         )}
         <input
@@ -252,7 +259,7 @@ function CharactersHubRoute() {
             onClick={() => openView('roster')}
             className={view === 'roster' ? styles.tabButtonActive : ''}
           >
-            Tool Profiles
+            Dialogue + Export
           </button>
           <button
             type='button'

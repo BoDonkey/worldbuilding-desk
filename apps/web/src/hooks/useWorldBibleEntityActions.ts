@@ -32,6 +32,7 @@ import {
   createCharacterLinkResolver,
   isCharacterCategory
 } from '../services/characters/characterIdentity';
+import {exportCharactersJson} from '../services/characters/characterTransferService';
 
 type FeedbackState = {
   tone: 'success' | 'error';
@@ -126,6 +127,9 @@ export const useWorldBibleEntityActions = ({
   const [deletingEntityId, setDeletingEntityId] = useState<string | null>(null);
   const [promotingEntityId, setPromotingEntityId] = useState<string | null>(null);
   const [importingCharacterEntityId, setImportingCharacterEntityId] = useState<string | null>(
+    null
+  );
+  const [exportingCharacterEntityId, setExportingCharacterEntityId] = useState<string | null>(
     null
   );
   const [mergingEntityTargetId, setMergingEntityTargetId] = useState<string | null>(null);
@@ -864,15 +868,7 @@ export const useWorldBibleEntityActions = ({
           projectId: activeProject.id,
           entityId: entity.id,
           name: entity.name,
-          description:
-            typeof entity.fields.description === 'string'
-              ? entity.fields.description
-              : undefined,
-          fields: {
-            age: typeof entity.fields.age === 'string' ? entity.fields.age : undefined,
-            role: typeof entity.fields.role === 'string' ? entity.fields.role : undefined,
-            notes: typeof entity.fields.notes === 'string' ? entity.fields.notes : undefined
-          },
+          fields: {},
           createdAt: Date.now(),
           updatedAt: Date.now()
         };
@@ -892,14 +888,15 @@ export const useWorldBibleEntityActions = ({
           setFeedback({
             tone: 'success',
             message: existingCharacter
-              ? `"${entity.name}" is already linked to Character Tools. Opening sheet and state tracking.`
-              : `"${entity.name}" is now linked to Character Tools. Opening sheet and state tracking.`
+              ? `Opening sheet and state tracking for "${entity.name}".`
+              : `Optional character data attached to "${entity.name}". Opening sheet and state tracking.`
           });
           navigate('/characters?view=sheets', {
             state: {
               prefillCharacterId: character.id,
               preferredView: 'sheets',
-              autoCreateSheetForCharacterId: character.id
+              autoCreateSheetForCharacterId: character.id,
+              characterCapabilityIntent: true
             }
           });
           return;
@@ -908,14 +905,15 @@ export const useWorldBibleEntityActions = ({
         setFeedback({
           tone: 'success',
           message: existingCharacter
-            ? `"${entity.name}" is already linked to Character Tools. World Bible remains the canonical record.`
-            : `"${entity.name}" is now linked to Character Tools. World Bible remains the canonical record.`
+            ? `Opening dialogue style for "${entity.name}".`
+            : `Optional character data attached to "${entity.name}". World Bible remains canonical.`
         });
 
         navigate('/characters', {
           state: {
             prefillCharacterId: character.id,
-            preferredView: 'roster'
+            preferredView: 'roster',
+            characterCapabilityIntent: true
           }
         });
       } catch (error) {
@@ -927,6 +925,34 @@ export const useWorldBibleEntityActions = ({
       }
     },
     [activeProject, categories, characters, entities, hasRuleset, navigate, setCharacters, setFeedback]
+  );
+
+  const handleExportCharacter = useCallback(
+    async (entity: WorldEntity) => {
+      if (!activeProject) return;
+      setExportingCharacterEntityId(entity.id);
+      setFeedback(null);
+      try {
+        await exportCharactersJson({
+          projectId: activeProject.id,
+          projectName: activeProject.name,
+          includeSheets: true,
+          entityIds: [entity.id]
+        });
+        setFeedback({
+          tone: 'success',
+          message: `Exported "${entity.name}" with its attached character capabilities.`
+        });
+      } catch (error) {
+        setFeedback({
+          tone: 'error',
+          message: error instanceof Error ? error.message : 'Unable to export this character.'
+        });
+      } finally {
+        setExportingCharacterEntityId(null);
+      }
+    },
+    [activeProject, setFeedback]
   );
 
   const inferCompendiumDomain = useCallback(
@@ -1065,6 +1091,7 @@ export const useWorldBibleEntityActions = ({
     deletingEntityId,
     promotingEntityId,
     importingCharacterEntityId,
+    exportingCharacterEntityId,
     mergingEntityTargetId,
     aliasingEntityTargetId,
     isSyncingCanon,
@@ -1076,6 +1103,7 @@ export const useWorldBibleEntityActions = ({
     handleMergeMatchIntoCurrentEntity,
     handleConvertEntityToAlias,
     handleImportEntityToCharacters,
+    handleExportCharacter,
     handleAddEntityToCompendium,
     handlePromoteEntity,
     handleCanonSync,

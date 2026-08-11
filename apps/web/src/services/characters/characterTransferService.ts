@@ -127,6 +127,7 @@ function normalizeName(value: string): string {
 export function createCharacterTransferPayload(params: {
   projectName: string;
   includeSheets: boolean;
+  entityIds?: string[];
   exportedAt?: number;
   categories: EntityCategory[];
   entities: WorldEntity[];
@@ -141,24 +142,40 @@ export function createCharacterTransferPayload(params: {
     characters: params.characters,
     sheets: params.characterSheets
   });
-  const characterIds = new Set(params.characters.map((character) => character.id));
-  const entityIds = new Set<string>();
+  const selectedEntityIds = params.entityIds ? new Set(params.entityIds) : null;
+  const entityIds = new Set<string>(
+    selectedEntityIds
+      ? params.entities
+          .filter((entity) => selectedEntityIds.has(entity.id))
+          .map((entity) => entity.id)
+      : []
+  );
+  const characters = params.characters.filter((character) => {
+    if (!selectedEntityIds) return true;
+    const entityId = resolver.resolveEntityId({characterId: character.id});
+    return Boolean(entityId && selectedEntityIds.has(entityId));
+  });
+  const characterIds = new Set(characters.map((character) => character.id));
   const entityIdByCharacterId = new Map<string, string>();
-  params.characters.forEach((character) => {
+  characters.forEach((character) => {
     const entityId = resolver.resolveEntityId({characterId: character.id});
     if (!entityId) return;
     entityIds.add(entityId);
     entityIdByCharacterId.set(character.id, entityId);
   });
-  if (params.includeSheets) {
-    params.characterSheets.forEach((sheet) => {
-      const entityId = resolver.resolveEntityId({
-        sheetId: sheet.id,
-        characterId: sheet.characterId
-      });
-      if (entityId) entityIds.add(entityId);
-    });
-  }
+  const characterSheets = params.includeSheets
+    ? params.characterSheets.filter((sheet) => {
+        const entityId = resolver.resolveEntityId({
+          sheetId: sheet.id,
+          characterId: sheet.characterId
+        });
+        if (!selectedEntityIds) {
+          if (entityId) entityIds.add(entityId);
+          return true;
+        }
+        return Boolean(entityId && selectedEntityIds.has(entityId));
+      })
+    : [];
   const entities = params.entities.filter((entity) => entityIds.has(entity.id));
   const categoryIds = new Set(entities.map((entity) => entity.categoryId));
   const categories = params.categories.filter((category) => categoryIds.has(category.id));
@@ -204,21 +221,19 @@ export function createCharacterTransferPayload(params: {
       entities,
       consistencyAliases,
       canonicalFacts,
-      characters: params.characters.map((character) => ({
+      characters: characters.map((character) => ({
         ...character,
         entityId:
           resolver.resolveEntityId({characterId: character.id}) ?? character.entityId
       })),
-      characterSheets: params.includeSheets
-        ? params.characterSheets.map((sheet) => ({
-            ...sheet,
-            characterEntityId:
-              resolver.resolveEntityId({
-                sheetId: sheet.id,
-                characterId: sheet.characterId
-              }) ?? sheet.characterEntityId
-          }))
-        : []
+      characterSheets: characterSheets.map((sheet) => ({
+        ...sheet,
+        characterEntityId:
+          resolver.resolveEntityId({
+            sheetId: sheet.id,
+            characterId: sheet.characterId
+          }) ?? sheet.characterEntityId
+      }))
     }
   };
 }
@@ -227,6 +242,7 @@ export async function exportCharactersJson(params: {
   projectId: string;
   projectName: string;
   includeSheets?: boolean;
+  entityIds?: string[];
 }): Promise<void> {
   const includeSheets = params.includeSheets ?? true;
   const [categories, entities, aliases, canonicalFacts, characters, characterSheets] =
@@ -241,6 +257,7 @@ export async function exportCharactersJson(params: {
   const payload = createCharacterTransferPayload({
     projectName: params.projectName,
     includeSheets,
+    entityIds: params.entityIds,
     categories,
     entities,
     aliases,

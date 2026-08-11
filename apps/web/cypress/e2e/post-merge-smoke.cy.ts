@@ -189,31 +189,135 @@ describe('Post-merge smoke checklist', () => {
     cy.contains("Sera's eyes are gray.").should('be.visible');
   });
 
-  it('creates Character Tools metadata only after establishing World Bible canon', () => {
-    cy.visit('/characters');
-    cy.contains('button', 'Add Tool Profile').click();
-    cy.contains('h2', 'New Tool Metadata').should('be.visible');
-    cy.get('form').within(() => {
-      cy.contains('label', 'Name').find('input').type('Mira Voss');
-      cy.contains('label', 'Role').find('input').type('Cartographer');
-      cy.contains('button', 'Create Tool Metadata').click();
+  it('routes character capabilities from World Bible without descriptive editing', () => {
+    const now = Date.now();
+    mutateSmokeDb(async (db) => {
+      const [project, settings] = await Promise.all([
+        getRecord<{id: string; [key: string]: unknown}>(db, 'projects', 'cypress-project-1'),
+        getRecord<{id: string; [key: string]: unknown}>(
+          db,
+          'projectSettings',
+          'settings-cypress-project-1'
+        )
+      ]);
+      await putRecord(db, 'projects', {...project, rulesetId: 'ruleset-capabilities'});
+      await putRecord(db, 'projectSettings', {
+        ...settings,
+        characterStyles: [
+          {
+            id: 'style-quiet',
+            name: 'Quiet Voice',
+            styles: {fontStyle: 'italic'}
+          }
+        ],
+        updatedAt: now
+      });
+      await putRecord(db, 'entityCategories', {
+        id: 'characters', projectId: 'cypress-project-1', kind: 'character',
+        name: 'Characters', slug: 'characters', fieldSchema: [], createdAt: now
+      });
+      await putRecord(db, 'entities', {
+        id: 'entity-mira', projectId: 'cypress-project-1', categoryId: 'characters',
+        name: 'Mira Voss', fields: {description: 'Canonical description'}, links: [],
+        createdAt: now, updatedAt: now
+      });
+      await putRecord(db, 'characters', {
+        id: 'character-mira', projectId: 'cypress-project-1', entityId: 'entity-mira',
+        name: 'Stale legacy name', description: 'Frozen legacy description', fields: {},
+        createdAt: now, updatedAt: now
+      });
     });
-    cy.contains('[role="status"]', '"Mira Voss" created.').should('be.visible');
+    cy.window().then((win) => {
+      const activeProject = JSON.parse(win.localStorage.getItem('activeProject') ?? '{}');
+      const nextProject = {...activeProject, rulesetId: 'ruleset-capabilities'};
+      win.localStorage.setItem('activeProject', JSON.stringify(nextProject));
+      const shell = JSON.parse(win.localStorage.getItem('wbd-app-shell') ?? '{}');
+      win.localStorage.setItem(
+        'wbd-app-shell',
+        JSON.stringify({
+          ...shell,
+          state: {...shell.state, activeProject: nextProject}
+        })
+      );
+      return new Cypress.Promise<void>((resolve, reject) => {
+        const request = win.indexedDB.open('worldbuilding-desk', 2);
+        request.onupgradeneeded = () => {
+          const db = request.result;
+          if (!db.objectStoreNames.contains('rulesets')) {
+            const store = db.createObjectStore('rulesets', {keyPath: 'id'});
+            store.createIndex('projectId', 'projectId', {unique: false});
+          }
+        };
+        request.onerror = () => reject(request.error);
+        request.onsuccess = () => {
+          const db = request.result;
+          const tx = db.transaction(['rulesets'], 'readwrite');
+          tx.objectStore('rulesets').put({
+            id: 'ruleset-capabilities', projectId: 'cypress-project-1',
+            name: 'Capability Rules', version: '1',
+            statDefinitions: [], resourceDefinitions: [], rules: [], itemTemplates: [],
+            statusTemplates: [], createdAt: now, updatedAt: now
+          });
+          tx.oncomplete = () => {
+            db.close();
+            resolve();
+          };
+          tx.onerror = () => reject(tx.error);
+          tx.onabort = () => reject(tx.error);
+        };
+      });
+    });
+    cy.reload();
+
+    const openMira = () => {
+      cy.visit('/world-bible');
+      cy.contains('button', 'Characters').click();
+      cy.contains('[class*="entityName"]', /^Mira Voss$/)
+        .parents('li')
+        .first()
+        .within(() => cy.contains('button', 'Edit').click());
+    };
+
+    openMira();
+    cy.contains('strong', 'Character capabilities').should('be.visible');
+    cy.contains('button', 'Dialogue style').click();
+    cy.location('pathname').should('eq', '/characters');
+    cy.contains('h2', 'Dialogue style for Mira Voss').should('be.visible');
+    cy.contains('label', 'Dialogue style').find('select').select('style-quiet');
+    cy.contains('label', 'Name').should('not.exist');
+    cy.contains('label', 'Description').should('not.exist');
+    cy.contains('button', 'Add Tool Profile').should('not.exist');
+    cy.contains('button', 'Save dialogue style').click();
+    cy.contains('[role="status"]', 'Dialogue style assigned').should('be.visible');
 
     mutateSmokeDb(async (db) => {
-      const [categories, entities, characters] = await Promise.all([
-        getAllRecords<{id: string; kind: string}>(db, 'entityCategories'),
-        getAllRecords<{id: string; categoryId: string; name: string}>(db, 'entities'),
-        getAllRecords<{id: string; entityId?: string; name: string}>(db, 'characters')
+      const [character, entity] = await Promise.all([
+        getRecord<{name: string; characterStyleId?: string}>(
+          db,
+          'characters',
+          'character-mira'
+        ),
+        getRecord<{name: string; fields: {description: string}}>(
+          db,
+          'entities',
+          'entity-mira'
+        )
       ]);
-      const mira = entities.find((record) => record.name === 'Mira Voss');
-      const extension = characters.find((record) => record.name === 'Mira Voss');
-      expect(mira).to.exist;
-      expect(categories.find((record) => record.id === mira?.categoryId)?.kind).to.equal(
-        'character'
-      );
-      expect(extension?.entityId).to.equal(mira?.id);
+      expect(character.name).to.equal('Mira Voss');
+      expect(character.characterStyleId).to.equal('style-quiet');
+      expect(entity.name).to.equal('Mira Voss');
+      expect(entity.fields.description).to.equal('Canonical description');
     });
+
+    openMira();
+    cy.contains('button', 'Export character').click();
+    cy.contains('[role="status"]', 'Exported "Mira Voss"').should('be.visible');
+
+    openMira();
+    cy.contains('button', 'Add sheet').click();
+    cy.location('pathname').should('eq', '/characters');
+    cy.location('search').should('contain', 'view=sheets');
+    cy.contains('Mira Voss').should('be.visible');
   });
 
   it('builds a scene roster from canonical mentions and supports manual overrides', () => {

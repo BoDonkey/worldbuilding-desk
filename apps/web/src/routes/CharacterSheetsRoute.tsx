@@ -1174,7 +1174,7 @@ function CharacterSheetsRoute({
         ) : (
           <p>
             Character sheets are disabled for this project mode. Use the roster
-            for story-facing character profiles.
+            for story-facing character canon.
           </p>
         )}
       </div>

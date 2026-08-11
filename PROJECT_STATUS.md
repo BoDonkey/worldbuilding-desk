@@ -150,6 +150,13 @@ Under the hood, the app still includes rich systems for world data, rules, chara
   separate. Resolutions update extension/sheet links and legacy actor mappings
   together; unresolved Character Tools records and sheets carry visible
   `Not linked to canon` badges and remain excluded from canon presentation.
+- World Bible character detail now routes optional capabilities directly:
+  `Dialogue style`, `Add sheet`, and single-character export. Character Tools
+  no longer offers independent character creation, renaming, descriptions,
+  roles, ages, notes, or AI drafting; it manages attached dialogue-style,
+  sheet/state, import/export, and legacy-removal workflows while deriving
+  linked display names from World Bible canon. Character-package language has
+  replaced author-facing character “profile” terminology.
 - Project records now carry an application-data schema version independent of
   IndexedDB's structural version. Project load runs a deterministic,
   one-version-at-a-time migration chain, fails closed on newer schemas, and

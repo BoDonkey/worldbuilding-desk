@@ -1615,7 +1615,7 @@ function LoreRoute() {
           <div className={styles.healthMetric}>
             <span>World records</span>
             <strong>{entities.length}</strong>
-            <small>{characters.length} character tools profiles</small>
+            <small>{characters.length} character capability records</small>
           </div>
         </div>
 

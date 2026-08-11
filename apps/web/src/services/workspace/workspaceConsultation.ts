@@ -30,7 +30,7 @@ export const buildWorkspaceLoreConsultation = (params: {
     mode === 'consistency'
       ? 'Check consistency for this subject against the current scene context.'
       : mode === 'reaction'
-        ? 'Suggest an in-character reaction aligned with this subject profile.'
+        ? 'Suggest an in-character reaction aligned with this subject’s established characterization.'
         : mode === 'outcome'
           ? 'Calculate a plausible outcome grounded in current stats/resources.'
           : mode === 'worldbuilding'

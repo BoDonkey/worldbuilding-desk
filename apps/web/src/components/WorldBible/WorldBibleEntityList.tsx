@@ -200,11 +200,11 @@ export const WorldBibleEntityList = (props: WorldBibleEntityListProps) => {
                         type='button'
                         onClick={() => void handleImportEntityToCharacters(entity)}
                         disabled={importingCharacterEntityId === entity.id}
-                        title='Open optional character tools for roster details. World Bible remains the canonical record.'
+                        title='Assign a dialogue style. World Bible remains the canonical record.'
                       >
                         {importingCharacterEntityId === entity.id
                           ? 'Opening...'
-                          : 'Open optional tools'}
+                          : 'Dialogue style'}
                       </button>
                     )}
                     {entityIsCharacterLike && showCharacterTools && hasRuleset && (
@@ -216,11 +216,11 @@ export const WorldBibleEntityList = (props: WorldBibleEntityListProps) => {
                           })
                         }
                         disabled={importingCharacterEntityId === entity.id}
-                        title='Open or create sheet and state tracking for this World Bible character. World Bible remains the canonical record.'
+                        title='Add or open sheet and state tracking for this World Bible character.'
                       >
                         {importingCharacterEntityId === entity.id
                           ? 'Opening...'
-                          : 'Create/open sheet + state'}
+                          : 'Add sheet'}
                       </button>
                     )}
                     {showGameSystems && (

@@ -112,6 +112,46 @@ describe('character package transfer', () => {
     });
   });
 
+  it('exports one selected canonical character without requiring an extension', () => {
+    const orin = {...entity(), id: 'entity-orin', name: 'Orin'};
+    const payload = createCharacterTransferPayload({
+      projectName: 'Source',
+      includeSheets: true,
+      entityIds: ['entity-orin'],
+      exportedAt: 10,
+      categories: [category()],
+      entities: [entity(), orin],
+      aliases: [
+        {...alias, targetType: 'entity', targetId: 'entity-orin', entityId: 'entity-orin'}
+      ],
+      canonicalFacts: [
+        {...fact, targetType: 'entity', targetId: 'entity-orin', targetName: 'Orin'}
+      ],
+      characters: [character('entity-mira')],
+      characterSheets: [sheet('entity-mira')]
+    });
+
+    expect(payload.data.entities).toEqual([orin]);
+    expect(payload.data.categories).toEqual([category()]);
+    expect(payload.data.consistencyAliases).toHaveLength(1);
+    expect(payload.data.canonicalFacts).toHaveLength(1);
+    expect(payload.data.characters).toEqual([]);
+    expect(payload.data.characterSheets).toEqual([]);
+
+    const prepared = prepareCharacterTransferImport({
+      payload,
+      projectId: 'target',
+      includeSheets: true,
+      existingCategories: [],
+      existingEntities: [],
+      generatedAt: 20
+    });
+    expect(prepared.entities).toHaveLength(1);
+    expect(prepared.entities[0].name).toBe('Orin');
+    expect(prepared.characters).toEqual([]);
+    expect(prepared.characterSheets).toEqual([]);
+  });
+
   it('imports v1 through exact-unique classification and conserves unresolved records', () => {
     const payload: CharacterTransferPayloadV1 = {
       schemaVersion: 1,

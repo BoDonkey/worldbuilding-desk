@@ -590,6 +590,7 @@ function WorldBibleRoute() {
     deletingEntityId,
     promotingEntityId,
     importingCharacterEntityId,
+    exportingCharacterEntityId,
     mergingEntityTargetId,
     aliasingEntityTargetId,
     isSyncingCanon,
@@ -601,6 +602,7 @@ function WorldBibleRoute() {
     handleMergeMatchIntoCurrentEntity,
     handleConvertEntityToAlias,
     handleImportEntityToCharacters,
+    handleExportCharacter,
     handleAddEntityToCompendium,
     handlePromoteEntity,
     handleCanonSync,
@@ -1066,7 +1068,7 @@ function WorldBibleRoute() {
 
               {activeCategoryIsCharacterLike && (
                 <div className={styles.reviewHint}>
-                  This World Bible record is the canonical character profile. Resolve
+                  This World Bible record is the canonical character record. Resolve
                   the stable name, aliases, duplicate cast records, and story-facing
                   lore here
                   {showCharacterTools
@@ -1495,19 +1497,17 @@ function WorldBibleRoute() {
                     </div>
                   </div>
 
-                  {selectedEntity && showCharacterTools && (
+                  {selectedEntity && (
                     <section className={styles.canonSection} aria-label='Optional character tools'>
                       <div className={styles.canonSectionHeader}>
-                        <strong>Optional tools and state</strong>
+                        <strong>Character capabilities</strong>
                         <span>
-                          Open sheets, stats, inventory, resources, or replayed state
-                          only when this character needs operational tracking.
+                          Add only the writing aids, export, or mechanics this character needs.
                         </span>
                       </div>
                       <div className={styles.reviewHint}>
                         World Bible remains the source for canonical name, aliases,
-                        lore, and merge decisions. Character Tools uses this canon
-                        record as its starting point.
+                        descriptions, lore, and merge decisions.
                       </div>
                       <div className={styles.reviewToolbarActions}>
                         <button
@@ -1517,9 +1517,9 @@ function WorldBibleRoute() {
                         >
                           {importingCharacterEntityId === selectedEntity.id
                             ? 'Opening...'
-                            : 'Open optional tools'}
+                            : 'Dialogue style'}
                         </button>
-                        {hasRuleset ? (
+                        {showCharacterTools && hasRuleset ? (
                           <button
                             type='button'
                             onClick={() =>
@@ -1531,13 +1531,22 @@ function WorldBibleRoute() {
                           >
                             {importingCharacterEntityId === selectedEntity.id
                               ? 'Opening...'
-                              : 'Create/open sheet + state'}
+                              : 'Add sheet'}
                           </button>
-                        ) : (
+                        ) : showCharacterTools ? (
                           <span className={styles.reviewHint}>
                             Sheets and state unlock after this project has a ruleset.
                           </span>
-                        )}
+                        ) : null}
+                        <button
+                          type='button'
+                          onClick={() => void handleExportCharacter(selectedEntity)}
+                          disabled={exportingCharacterEntityId === selectedEntity.id}
+                        >
+                          {exportingCharacterEntityId === selectedEntity.id
+                            ? 'Exporting...'
+                            : 'Export character'}
+                        </button>
                       </div>
                     </section>
                   )}
@@ -1978,7 +1987,6 @@ function WorldBibleRoute() {
             handleEdit={handleEdit}
             handleOpenOrCreateLinkedLoreDocument={handleOpenOrCreateLinkedLoreDocument}
           />
-
         </div>
       )}
         </div>
