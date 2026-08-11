@@ -55,6 +55,7 @@ function seedWorldBibleReviewQueueItem(): Cypress.Chainable<void> {
           tx.objectStore('entityCategories').put({
             id: 'characters',
             projectId: 'cypress-project-1',
+            kind: 'character',
             name: 'Characters',
             slug: 'characters',
             fieldSchema: [
@@ -109,6 +110,7 @@ function seedShortNameAliasReviewItem(): Cypress.Chainable<void> {
           tx.objectStore('entityCategories').put({
             id: 'characters',
             projectId: 'cypress-project-1',
+            kind: 'character',
             name: 'Characters',
             slug: 'characters',
             fieldSchema: [

@@ -30,6 +30,7 @@ export function CategoryManager({
     const category: EntityCategory = {
       id: crypto.randomUUID(),
       projectId,
+      kind: 'general',
       name: newCatName,
       slug: newCatName.toLowerCase().replace(/\s+/g, '-'),
       fieldSchema: [

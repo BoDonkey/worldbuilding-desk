@@ -33,6 +33,10 @@ import {
 } from '../services/characters/characterImportService';
 import styles from '../styles/CharactersRoute.module.css';
 import {useConfirmDialog} from '../hooks/useConfirmDialog';
+import {
+  createCharacterLinkResolver,
+  isCharacterCategory
+} from '../services/characters/characterIdentity';
 
 interface CharactersRouteProps {
   embedded?: boolean;
@@ -185,11 +189,7 @@ function CharactersRoute({
   const migrationCandidates = useMemo(() => {
     const characterCategoryIds = new Set(
       categories
-        .filter((category) =>
-          CHARACTER_CATEGORY_HINTS.some((hint) =>
-            category.slug.toLowerCase().includes(hint)
-          )
-        )
+        .filter(isCharacterCategory)
         .map((category) => category.id)
     );
     if (characterCategoryIds.size === 0) {
@@ -206,34 +206,18 @@ function CharactersRoute({
   }, [categories, characters, worldEntities]);
 
   const characterLoreEntityIdByCharacterId = useMemo(() => {
-    const map = new Map<string, string>();
-    const characterCategoryIds = new Set(
-      categories
-        .filter((category) =>
-          CHARACTER_CATEGORY_HINTS.some((hint) =>
-            category.slug.toLowerCase().includes(hint)
-          )
-        )
-        .map((category) => category.id)
-    );
-    if (characterCategoryIds.size === 0) {
-      return map;
-    }
-
-    worldEntities.forEach((entity) => {
-      if (!characterCategoryIds.has(entity.categoryId)) {
-        return;
-      }
-      const normalizedEntityName = normalizeName(entity.name);
-      const matchingCharacter = characters.find(
-        (character) => normalizeName(character.name) === normalizedEntityName
-      );
-      if (matchingCharacter) {
-        map.set(matchingCharacter.id, entity.id);
-      }
+    const resolver = createCharacterLinkResolver({
+      categories,
+      entities: worldEntities,
+      characters,
+      sheets: []
     });
-
-    return map;
+    return new Map(
+      characters.flatMap((character) => {
+        const entityId = resolver.resolveEntityId({characterId: character.id});
+        return entityId ? [[character.id, entityId] as const] : [];
+      })
+    );
   }, [categories, characters, worldEntities]);
 
   const characterAliasesById = useMemo(() => {
@@ -469,6 +453,7 @@ function CharactersRoute({
     const category: EntityCategory = {
       id: crypto.randomUUID(),
       projectId: activeProject.id,
+      kind: 'character',
       name: 'Characters',
       slug: 'characters',
       fieldSchema: DEFAULT_CHARACTER_FIELD_SCHEMA,

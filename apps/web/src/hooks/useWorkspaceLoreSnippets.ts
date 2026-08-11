@@ -13,7 +13,7 @@ import type {LoreInspectorRecord} from '../components/Editor/LoreInspectorPanel'
 import type {ConsistencyAlias} from '../services/consistency';
 import type {Project} from '../entityTypes';
 import {getCachedSynopsis, setCachedSynopsis} from '../services/editor';
-import {getProjectCapabilities} from '../projectMode';
+import {createCharacterLinkResolver} from '../services/characters/characterIdentity';
 
 type SnippetEntry = {name: string; html: string; lore: LoreInspectorRecord};
 
@@ -45,7 +45,6 @@ export function useWorkspaceLoreSnippets({
   canonicalFacts,
   aliases,
   systemHistoryEntries,
-  projectSettings,
   resolveCharacterBlock,
   resolveItemBlock
 }: UseWorkspaceLoreSnippetsParams): LoreSnippets {
@@ -63,34 +62,26 @@ export function useWorkspaceLoreSnippets({
         .trim();
 
     const categoryNameById = new Map(categories.map((category) => [category.id, category.name]));
-    const characterCategoryIds = new Set(
-      categories
-        .filter((category) => category.slug.toLowerCase().includes('character'))
-        .map((category) => category.id)
-    );
     const characterById = new Map(characters.map((character) => [character.id, character]));
-    const shouldUseCharacterToolsAsCanon =
-      !getProjectCapabilities(projectSettings).isGeneralFiction;
     const characterSheetByCharacterId = new Map(
       characterSheets
         .filter((sheet): sheet is CharacterSheet & {characterId: string} => Boolean(sheet.characterId))
         .map((sheet) => [sheet.characterId, sheet])
     );
     const entityById = new Map(entities.map((entity) => [entity.id, entity]));
+    const characterResolver = createCharacterLinkResolver({
+      categories,
+      entities,
+      characters,
+      sheets: characterSheets
+    });
     const linkedCharacterIdByEntityId = new Map<string, string>();
     const linkedEntityIdByCharacterId = new Map<string, string>();
-    entities.forEach((entity) => {
-      if (!characterCategoryIds.has(entity.categoryId)) {
-        return;
-      }
-      const normalizedEntityName = normalize(entity.name);
-      const matchingCharacter = characters.find(
-        (character) => normalize(character.name) === normalizedEntityName
-      );
-      if (matchingCharacter) {
-        linkedCharacterIdByEntityId.set(entity.id, matchingCharacter.id);
-        linkedEntityIdByCharacterId.set(matchingCharacter.id, entity.id);
-      }
+    characters.forEach((character) => {
+      const entityId = characterResolver.resolveEntityId({characterId: character.id});
+      if (!entityId) return;
+      linkedCharacterIdByEntityId.set(entityId, character.id);
+      linkedEntityIdByCharacterId.set(character.id, entityId);
     });
     const canonicalFactsByTarget = new Map<string, CanonicalFact[]>();
     canonicalFacts.forEach((fact) => {
@@ -300,28 +291,28 @@ export function useWorkspaceLoreSnippets({
       surnameCandidates.set(trailing, existing);
     };
 
-    if (shouldUseCharacterToolsAsCanon) {
-      characterSheets.forEach((sheet) => {
-        const entry = {
-          name: sheet.name,
-          html: resolveCharacterBlock(sheet, 'compact'),
-          lore: buildCharacterLore(sheet)
-        };
-        registerEntry('characters', sheet.name, entry);
-      });
+    characterSheets.forEach((sheet) => {
+      if (!characterResolver.resolveEntityId({sheetId: sheet.id})) return;
+      const entry = {
+        name: sheet.name,
+        html: resolveCharacterBlock(sheet, 'compact'),
+        lore: buildCharacterLore(sheet)
+      };
+      registerEntry('characters', sheet.name, entry);
+    });
 
-      characters.forEach((character) => {
-        if (characterSheetByCharacterId.has(character.id)) {
-          return;
-        }
-        const entry = {
-          name: character.name,
-          html: buildCharacterSnippetFromCharacter(character),
-          lore: buildCharacterLoreFromCharacter(character)
-        };
-        registerEntry('characters', character.name, entry);
-      });
-    }
+    characters.forEach((character) => {
+      if (!linkedEntityIdByCharacterId.has(character.id)) return;
+      if (characterSheetByCharacterId.has(character.id)) {
+        return;
+      }
+      const entry = {
+        name: character.name,
+        html: buildCharacterSnippetFromCharacter(character),
+        lore: buildCharacterLoreFromCharacter(character)
+      };
+      registerEntry('characters', character.name, entry);
+    });
 
     entities.forEach((entity) => {
       const entry = {
@@ -334,12 +325,7 @@ export function useWorkspaceLoreSnippets({
 
     aliases.forEach((alias) => {
       if (alias.targetType === 'character') {
-        if (linkedEntityIdByCharacterId.has(alias.targetId)) {
-          return;
-        }
-        if (!shouldUseCharacterToolsAsCanon) {
-          return;
-        }
+        if (!linkedEntityIdByCharacterId.has(alias.targetId)) return;
         const sheet = characterSheetByCharacterId.get(alias.targetId);
         const character = characterById.get(alias.targetId);
         if (!sheet && !character) return;
@@ -415,7 +401,6 @@ export function useWorkspaceLoreSnippets({
     characters,
     characterSheets,
     entities,
-    projectSettings,
     resolveCharacterBlock,
     resolveItemBlock,
     systemHistoryEntries

@@ -1,4 +1,4 @@
-import {fireEvent, render, screen} from '@testing-library/react';
+import {fireEvent, render, screen, waitFor} from '@testing-library/react';
 import {describe, expect, it, vi} from 'vitest';
 import type {EntityCategory} from '../entityTypes';
 import CategoryEditor from './CategoryEditor';
@@ -10,6 +10,7 @@ vi.mock('../categoryStorage', () => ({
 const baseCategory: EntityCategory = {
   id: 'category-1',
   projectId: 'project-1',
+  kind: 'character',
   name: 'Characters',
   slug: 'characters',
   fieldSchema: [],
@@ -17,6 +18,28 @@ const baseCategory: EntityCategory = {
 };
 
 describe('CategoryEditor field validation', () => {
+  it('lets authors explicitly change whether a custom category contains characters', async () => {
+    const onSave = vi.fn();
+    render(
+      <CategoryEditor
+        category={{...baseCategory, kind: 'general', name: 'Protagonists'}}
+        onSave={onSave}
+        onCancel={vi.fn()}
+      />
+    );
+
+    fireEvent.change(screen.getByRole('combobox', {name: /category kind/i}), {
+      target: {value: 'character'}
+    });
+    fireEvent.click(screen.getByRole('button', {name: 'Save Category'}));
+
+    await waitFor(() =>
+      expect(onSave).toHaveBeenCalledWith(
+        expect.objectContaining({kind: 'character', name: 'Protagonists'})
+      )
+    );
+  });
+
   it('renders the missing category name error beside the name input', () => {
     render(
       <CategoryEditor

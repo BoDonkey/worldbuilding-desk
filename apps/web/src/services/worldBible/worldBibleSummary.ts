@@ -39,11 +39,7 @@ const compactEntityCardText = (value: string, maxLength = 140): string => {
 };
 
 export const isCharacterCategory = (category: EntityCategory): boolean => {
-  const slug = category.slug.toLowerCase();
-  const name = category.name.toLowerCase();
-  return CHARACTER_CATEGORY_HINTS.some(
-    (hint) => slug.includes(hint) || name.includes(hint)
-  );
+  return category.kind === 'character';
 };
 
 export const isItemCategory = (category: EntityCategory): boolean =>

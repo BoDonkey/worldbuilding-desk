@@ -47,6 +47,7 @@ import {
   useWorkspaceSceneOperationUi
 } from '../hooks/useWorkspaceUi';
 import {getProjectCapabilities} from '../projectMode';
+import {isCharacterCategory} from '../services/characters/characterIdentity';
 import styles from '../styles/WorkspaceRoute.module.css';
 import {useAppStore} from '../store/appStore';
 import {WorkspaceContextDrawer} from '../components/Workspace/WorkspaceContextDrawer';
@@ -907,8 +908,7 @@ function WorkspaceRoute() {
   const showCharacterCanonicalizationHint =
     Boolean(
       activeSuggestedCategory &&
-      (activeSuggestedCategory.slug.toLowerCase().includes('character') ||
-        activeSuggestedCategory.name.toLowerCase().includes('character'))
+      isCharacterCategory(activeSuggestedCategory)
     ) &&
     activeCloseCharacterMatches.length > 0;
   const selectionQuickSnippets = useWorkspaceLoreSnippets({

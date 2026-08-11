@@ -39,9 +39,7 @@ import {
   type SceneRosterCandidate,
   type SceneRosterOverrides
 } from './sceneRoster';
-
-const normalizeRosterName = (value: string): string =>
-  value.trim().toLocaleLowerCase().replace(/\s+/g, ' ');
+import {createCharacterLinkResolver, isCharacterCategory} from '../characters/characterIdentity';
 
 const displayRosterFieldValue = (value: unknown): string | null => {
   if (typeof value === 'string') {
@@ -112,12 +110,7 @@ export function buildSceneRosterModel(params: {
 
   const characterCategoryIds = new Set(
     params.categories
-      .filter((category) => {
-        const label = `${category.slug} ${category.name}`.toLocaleLowerCase();
-        return ['character', 'characters', 'npc', 'person', 'people'].some((hint) =>
-          label.includes(hint)
-        );
-      })
+      .filter(isCharacterCategory)
       .map((category) => category.id)
   );
   const characterById = new Map(
@@ -127,31 +120,33 @@ export function buildSceneRosterModel(params: {
   const categoryById = new Map(
     params.categories.map((category) => [category.id, category])
   );
-  const characterEntityByName = new Map(
-    params.entities
-      .filter((entity) => characterCategoryIds.has(entity.categoryId))
-      .map((entity) => [normalizeRosterName(entity.name), entity])
-  );
+  const characterResolver = createCharacterLinkResolver({
+    categories: params.categories,
+    entities: params.entities,
+    characters: params.characters,
+    sheets: params.characterSheets
+  });
   const sheetByCharacterId = new Map(
     params.characterSheets
       .filter((sheet) => Boolean(sheet.characterId))
       .map((sheet) => [sheet.characterId as string, sheet])
-  );
-  const sheetByName = new Map(
-    params.characterSheets.map((sheet) => [normalizeRosterName(sheet.name), sheet])
   );
   const candidates: SceneRosterCandidate[] = [];
   const characterSheetByKey = new Map<string, CharacterSheet | null>();
   const characterRecordByKey = new Map<string, Character | null>();
 
   params.characterSheets.forEach((sheet) => {
+    const characterEntityId = characterResolver.resolveEntityId({
+      sheetId: sheet.id,
+      characterId: sheet.characterId
+    });
     const character =
       (sheet.characterId ? characterById.get(sheet.characterId) : null) ??
-      params.characters.find(
-        (entry) => normalizeRosterName(entry.name) === normalizeRosterName(sheet.name)
-      ) ??
+      (characterEntityId ? characterResolver.getCharacter(characterEntityId) : null) ??
       null;
-    const characterEntity = characterEntityByName.get(normalizeRosterName(sheet.name));
+    const characterEntity = characterEntityId
+      ? characterResolver.getEntity(characterEntityId)
+      : undefined;
     const aliasValues = params.aliases
       .filter(
         (alias) =>
@@ -172,13 +167,18 @@ export function buildSceneRosterModel(params: {
   });
 
   params.characters.forEach((character) => {
+    const characterEntityId = characterResolver.resolveEntityId({
+      characterId: character.id
+    });
     if (
       sheetByCharacterId.has(character.id) ||
-      sheetByName.has(normalizeRosterName(character.name))
+      (characterEntityId && characterResolver.getSheet(characterEntityId))
     ) {
       return;
     }
-    const characterEntity = characterEntityByName.get(normalizeRosterName(character.name));
+    const characterEntity = characterEntityId
+      ? characterResolver.getEntity(characterEntityId)
+      : undefined;
     const key = `character-record:${character.id}`;
     candidates.push({
       key,
@@ -605,14 +605,9 @@ export const normalizeCaptureSelection = (input: string): string =>
     .trim();
 
 export const isCharacterLikeCategory = (
-  category: Pick<EntityCategory, 'slug' | 'name'> | null
+  category: Pick<EntityCategory, 'kind'> | null
 ): boolean => {
-  if (!category) return false;
-  const slug = category.slug.toLowerCase();
-  const name = category.name.toLowerCase();
-  return ['character', 'characters', 'npc', 'person', 'people'].some(
-    (hint) => slug.includes(hint) || name.includes(hint)
-  );
+  return Boolean(category && isCharacterCategory(category));
 };
 
 export interface ManualCaptureLinkOption {
@@ -634,11 +629,12 @@ export function buildManualCaptureLinkOptions(params: {
   const categoryLabelById = new Map(
     params.categories.map((category) => [category.id, category.name])
   );
-  const characterCategoryIds = new Set(
-    params.categories
-      .filter((category) => isCharacterLikeCategory(category))
-      .map((category) => category.id)
-  );
+  const resolver = createCharacterLinkResolver({
+    categories: params.categories,
+    entities: params.entities,
+    characters: params.characters,
+    sheets: []
+  });
   const candidates = [
     ...params.entities.map((entity) => ({
       id: `entity:${entity.id}`,
@@ -647,13 +643,7 @@ export function buildManualCaptureLinkOptions(params: {
     })),
     ...params.characters
       .filter((character) => {
-        const matchingCharacterEntity = params.entities.find(
-          (entity) =>
-            characterCategoryIds.has(entity.categoryId) &&
-            normalizeCaptureSelection(entity.name) ===
-              normalizeCaptureSelection(character.name)
-        );
-        return !matchingCharacterEntity;
+        return !resolver.resolveEntityId({characterId: character.id});
       })
       .map((character) => ({
         id: `character:${character.id}`,

@@ -1,16 +1,30 @@
-import type {Project, StoredRuleset} from '../../entityTypes';
+import type {
+  Character,
+  CharacterSheet,
+  EntityCategory,
+  Project,
+  StoredRuleset,
+  WorldEntity
+} from '../../entityTypes';
 import {
+  ACTOR_RESOLUTION_STORE_NAME,
+  CATEGORY_STORE_NAME,
+  CHARACTER_IDENTITY_REPORT_STORE_NAME,
+  CHARACTER_SHEET_STORE_NAME,
+  CHARACTER_STORE_NAME,
+  ENTITY_STORE_NAME,
   PROJECT_MIGRATION_BACKUP_STORE_NAME,
   PROJECT_SCOPED_STORE_NAMES,
   PROJECT_STORE_NAME
 } from '../../db';
+import {classifyCharacterIdentities} from '../characters/characterIdentity';
 import {
   getRulesetByProjectId,
   replaceRulesetSnapshot
 } from '../rules/rulesetService';
 
 export const LEGACY_PROJECT_SCHEMA_VERSION = 1;
-export const CURRENT_PROJECT_SCHEMA_VERSION = 1;
+export const CURRENT_PROJECT_SCHEMA_VERSION = 2;
 export const PROJECT_MIGRATION_BACKUP_SCHEMA_VERSION = 1;
 
 export interface ProjectMigrationContext {
@@ -75,7 +89,70 @@ interface RunProjectMigrationPlanParams {
   context: ProjectMigrationContext;
 }
 
-const PROJECT_MIGRATIONS: readonly ProjectSchemaMigration[] = [];
+async function readProjectRecords<T extends {projectId: string}>(
+  db: IDBDatabase,
+  storeName: string,
+  projectId: string
+): Promise<T[]> {
+  const transaction = db.transaction(storeName, 'readonly');
+  const records = (await requestToPromise(
+    transaction.objectStore(storeName).getAll()
+  )) as T[];
+  await transactionToPromise(transaction);
+  return records.filter((record) => record.projectId === projectId);
+}
+
+async function migrateCharacterIdentityLinks(
+  context: ProjectMigrationContext
+): Promise<void> {
+  const [categories, entities, characters, sheets] = await Promise.all([
+    readProjectRecords<EntityCategory>(context.db, CATEGORY_STORE_NAME, context.projectId),
+    readProjectRecords<WorldEntity>(context.db, ENTITY_STORE_NAME, context.projectId),
+    readProjectRecords<Character>(context.db, CHARACTER_STORE_NAME, context.projectId),
+    readProjectRecords<CharacterSheet>(
+      context.db,
+      CHARACTER_SHEET_STORE_NAME,
+      context.projectId
+    )
+  ]);
+  const result = classifyCharacterIdentities({
+    projectId: context.projectId,
+    categories,
+    entities,
+    characters,
+    sheets
+  });
+  const storeNames = [
+    CATEGORY_STORE_NAME,
+    CHARACTER_STORE_NAME,
+    CHARACTER_SHEET_STORE_NAME,
+    ACTOR_RESOLUTION_STORE_NAME,
+    CHARACTER_IDENTITY_REPORT_STORE_NAME
+  ];
+  const transaction = context.db.transaction(storeNames, 'readwrite');
+  result.categories.forEach((category) =>
+    transaction.objectStore(CATEGORY_STORE_NAME).put(category)
+  );
+  result.characters.forEach((character) =>
+    transaction.objectStore(CHARACTER_STORE_NAME).put(character)
+  );
+  result.sheets.forEach((sheet) =>
+    transaction.objectStore(CHARACTER_SHEET_STORE_NAME).put(sheet)
+  );
+  result.actorResolutions.forEach((resolution) =>
+    transaction.objectStore(ACTOR_RESOLUTION_STORE_NAME).put(resolution)
+  );
+  transaction.objectStore(CHARACTER_IDENTITY_REPORT_STORE_NAME).put(result.report);
+  await transactionToPromise(transaction);
+}
+
+const PROJECT_MIGRATIONS: readonly ProjectSchemaMigration[] = [
+  {
+    fromVersion: 1,
+    toVersion: 2,
+    migrate: migrateCharacterIdentityLinks
+  }
+];
 
 function requestToPromise<T>(request: IDBRequest<T>): Promise<T> {
   return new Promise((resolve, reject) => {

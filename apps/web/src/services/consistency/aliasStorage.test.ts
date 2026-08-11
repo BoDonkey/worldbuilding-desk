@@ -42,6 +42,7 @@ const makeEntity = (overrides: Partial<WorldEntity>): WorldEntity => ({
 const makeCategory = (overrides: Partial<EntityCategory>): EntityCategory => ({
   id: overrides.id ?? crypto.randomUUID(),
   projectId: overrides.projectId ?? 'project-1',
+  kind: overrides.kind ?? 'character',
   name: overrides.name ?? 'Characters',
   slug: overrides.slug ?? 'characters',
   fieldSchema: overrides.fieldSchema ?? [],

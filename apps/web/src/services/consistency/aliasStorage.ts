@@ -1,5 +1,6 @@
 import type {Character, EntityCategory, WorldEntity} from '../../entityTypes';
 import { CONSISTENCY_ALIAS_STORE_NAME, openDb } from '../../db';
+import {createCharacterLinkResolver, isCharacterCategory} from '../characters/characterIdentity';
 
 export interface ConsistencyAlias {
   id: string;
@@ -14,9 +15,6 @@ export interface ConsistencyAlias {
 
 const normalizeAlias = (value: string): string => value.trim().toLowerCase();
 
-const normalizeName = (value: string): string =>
-  value.trim().toLowerCase().replace(/\s+/g, ' ');
-
 export function resolveCharacterAliasEntityMigrations(params: {
   aliases: ConsistencyAlias[];
   characters: Character[];
@@ -25,7 +23,7 @@ export function resolveCharacterAliasEntityMigrations(params: {
 }): Array<{from: ConsistencyAlias; to: ConsistencyAlias | null}> {
   const characterCategoryIds = new Set(
     params.categories
-      .filter((category) => category.slug.toLowerCase().includes('character'))
+      .filter(isCharacterCategory)
       .map((category) => category.id)
   );
   if (characterCategoryIds.size === 0) {
@@ -33,15 +31,11 @@ export function resolveCharacterAliasEntityMigrations(params: {
   }
 
   const characterById = new Map(params.characters.map((character) => [character.id, character]));
-  const characterEntitiesByName = new Map<string, WorldEntity[]>();
-  params.entities.forEach((entity) => {
-    if (!characterCategoryIds.has(entity.categoryId)) {
-      return;
-    }
-    const key = normalizeName(entity.name);
-    const current = characterEntitiesByName.get(key) ?? [];
-    current.push(entity);
-    characterEntitiesByName.set(key, current);
+  const resolver = createCharacterLinkResolver({
+    categories: params.categories,
+    entities: params.entities,
+    characters: params.characters,
+    sheets: []
   });
 
   const normalizedEntityAliasKeys = new Set(
@@ -59,9 +53,9 @@ export function resolveCharacterAliasEntityMigrations(params: {
       if (!character) {
         return [];
       }
-      const [targetEntity, ...rest] =
-        characterEntitiesByName.get(normalizeName(character.name)) ?? [];
-      if (!targetEntity || rest.length > 0) {
+      const targetEntityId = resolver.resolveEntityId({characterId: character.id});
+      const targetEntity = targetEntityId ? resolver.getEntity(targetEntityId) : undefined;
+      if (!targetEntity) {
         return [];
       }
       const duplicateKey = `${targetEntity.id}:${normalizeAlias(alias.alias)}`;

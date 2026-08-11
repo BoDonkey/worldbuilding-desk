@@ -20,6 +20,7 @@ type ValidationError =
 
 function CategoryEditor({category, onSave, onCancel}: CategoryEditorProps) {
   const [name, setName] = useState(category.name);
+  const [kind, setKind] = useState<EntityCategory['kind']>(category.kind);
   const [fields, setFields] = useState<FieldDefinition[]>(category.fieldSchema);
   const [editingFieldIndex, setEditingFieldIndex] = useState<number | null>(
     null
@@ -92,6 +93,7 @@ function CategoryEditor({category, onSave, onCancel}: CategoryEditorProps) {
     setValidationError(null);
     const updated: EntityCategory = {
       ...category,
+      kind,
       name: name.trim(),
       slug: name.toLowerCase().replace(/\s+/g, '-'),
       fieldSchema: fields
@@ -138,6 +140,22 @@ function CategoryEditor({category, onSave, onCancel}: CategoryEditorProps) {
             Category name is required.
           </p>
         )}
+        <label className={styles.kindField}>
+          Category Kind
+          <select
+            value={kind}
+            onChange={(event) =>
+              setKind(event.target.value as EntityCategory['kind'])
+            }
+            className={styles.nameInput}
+          >
+            <option value='general'>General world record</option>
+            <option value='character'>Character</option>
+          </select>
+          <span className={styles.fieldMeta}>
+            Character categories participate in identity linking and character-aware review.
+          </span>
+        </label>
       </div>
 
       <div className={styles.fieldsSection}>

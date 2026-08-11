@@ -9,6 +9,7 @@ import {
 const category: EntityCategory = {
   id: 'characters',
   projectId: 'project-1',
+  kind: 'character',
   name: 'Characters',
   slug: 'characters',
   fieldSchema: [
@@ -39,7 +40,7 @@ const entity: WorldEntity = {
 };
 
 describe('isCharacterCategory', () => {
-  it('recognizes character-like slugs and names', () => {
+  it('recognizes explicit character-kind categories regardless of their label', () => {
     expect(isCharacterCategory(category)).toBe(true);
     expect(
       isCharacterCategory({...category, slug: 'cast', name: 'Important People'})
@@ -48,7 +49,7 @@ describe('isCharacterCategory', () => {
 
   it('rejects unrelated categories', () => {
     expect(
-      isCharacterCategory({...category, slug: 'locations', name: 'Locations'})
+      isCharacterCategory({...category, kind: 'general', slug: 'characters', name: 'Characters'})
     ).toBe(false);
   });
 });

@@ -61,6 +61,7 @@ export function initializeDefaultCategories(projectId: string): Promise<void> {
     const defaults: Omit<EntityCategory, 'id' | 'createdAt'>[] = [
       {
         projectId,
+        kind: 'character',
         name: 'Characters',
         slug: 'characters',
         fieldSchema: [
@@ -72,6 +73,7 @@ export function initializeDefaultCategories(projectId: string): Promise<void> {
       },
       {
         projectId,
+        kind: 'general',
         name: 'Locations',
         slug: 'locations',
         fieldSchema: [
@@ -82,6 +84,7 @@ export function initializeDefaultCategories(projectId: string): Promise<void> {
       },
       {
         projectId,
+        kind: 'general',
         name: 'Items',
         slug: 'items',
         fieldSchema: [

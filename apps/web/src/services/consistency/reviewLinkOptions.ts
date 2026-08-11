@@ -2,6 +2,7 @@ import type {Character, EntityCategory, WorldEntity} from '../../entityTypes';
 import type {ConsistencyAlias} from './aliasStorage';
 import type {GuardrailIssue} from './types';
 import type {ConsistencyReviewItem} from './reviewReadiness';
+import {createCharacterLinkResolver, isCharacterCategory} from '../characters/characterIdentity';
 
 export interface LinkTargetOption {
   id: string;
@@ -46,11 +47,7 @@ export function buildCharacterCategoryIds(
 ): Set<string> {
   return new Set(
     categories
-      .filter((category) => {
-        const slug = category.slug.toLowerCase();
-        const name = category.name.toLowerCase();
-        return slug.includes('character') || name.includes('character');
-      })
+      .filter(isCharacterCategory)
       .map((category) => category.id)
   );
 }
@@ -60,18 +57,28 @@ export function buildCharacterLoreEntityIdByCharacterId(params: {
   characters: Character[];
   entities: WorldEntity[];
 }): Map<string, string> {
-  const linkedEntityIdByCharacterId = new Map<string, string>();
-  params.entities.forEach((entity) => {
-    if (!params.characterCategoryIds.has(entity.categoryId)) return;
-    const normalizedEntityName = normalizeRecordName(entity.name);
-    const matchingCharacter = params.characters.find(
-      (character) => normalizeRecordName(character.name) === normalizedEntityName
-    );
-    if (matchingCharacter) {
-      linkedEntityIdByCharacterId.set(matchingCharacter.id, entity.id);
-    }
+  const projectId = params.characters[0]?.projectId ?? params.entities[0]?.projectId ?? '';
+  const categories: EntityCategory[] = Array.from(params.characterCategoryIds).map((id) => ({
+    id,
+    projectId,
+    kind: 'character',
+    name: 'Characters',
+    slug: 'characters',
+    fieldSchema: [],
+    createdAt: 0
+  }));
+  const resolver = createCharacterLinkResolver({
+    categories,
+    characters: params.characters,
+    entities: params.entities,
+    sheets: []
   });
-  return linkedEntityIdByCharacterId;
+  return new Map(
+    params.characters.flatMap((character) => {
+      const entityId = resolver.resolveEntityId({characterId: character.id});
+      return entityId ? [[character.id, entityId] as const] : [];
+    })
+  );
 }
 
 export function buildKnownConsistencyEntities(params: {

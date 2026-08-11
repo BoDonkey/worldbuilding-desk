@@ -1,6 +1,8 @@
 import 'fake-indexeddb/auto';
 import {afterEach, describe, expect, it} from 'vitest';
 import {
+  ACTOR_RESOLUTION_STORE_NAME,
+  CHARACTER_IDENTITY_REPORT_STORE_NAME,
   DB_NAME,
   DB_VERSION,
   openDb,
@@ -55,6 +57,8 @@ describe('openDb structural upgrade', () => {
     openedDb = await openDb();
     expect(openedDb.version).toBe(DB_VERSION);
     expect(openedDb.objectStoreNames.contains(PROJECT_MIGRATION_BACKUP_STORE_NAME)).toBe(true);
+    expect(openedDb.objectStoreNames.contains(ACTOR_RESOLUTION_STORE_NAME)).toBe(true);
+    expect(openedDb.objectStoreNames.contains(CHARACTER_IDENTITY_REPORT_STORE_NAME)).toBe(true);
     const storedProject = await requestToPromise(
       openedDb
         .transaction(PROJECT_STORE_NAME, 'readonly')

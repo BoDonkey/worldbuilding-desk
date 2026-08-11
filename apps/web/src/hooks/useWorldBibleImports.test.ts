@@ -160,6 +160,7 @@ describe('document import structure detection', () => {
     const category: EntityCategory = {
       id: 'characters',
       projectId: 'project',
+      kind: 'character',
       name: 'Characters',
       slug: 'characters',
       createdAt: 1,
@@ -237,6 +238,7 @@ describe('document import structure detection', () => {
     const category: EntityCategory = {
       id: 'races',
       projectId: 'project',
+      kind: 'general',
       name: 'Races',
       slug: 'races',
       createdAt: 1,
@@ -274,6 +276,7 @@ describe('document import structure detection', () => {
     const category: EntityCategory = {
       id: 'races',
       projectId: 'project',
+      kind: 'general',
       name: 'Races',
       slug: 'races',
       createdAt: 1,
@@ -307,6 +310,7 @@ describe('document import structure detection', () => {
     const category: EntityCategory = {
       id: 'races',
       projectId: 'project',
+      kind: 'general',
       name: 'Races',
       slug: 'races',
       createdAt: 1,

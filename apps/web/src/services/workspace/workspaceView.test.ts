@@ -50,6 +50,7 @@ const categories: EntityCategory[] = [
   {
     id: 'characters',
     projectId: 'project-1',
+    kind: 'character',
     name: 'Characters',
     slug: 'characters',
     fieldSchema: [],
@@ -58,6 +59,7 @@ const categories: EntityCategory[] = [
   {
     id: 'locations',
     projectId: 'project-1',
+    kind: 'general',
     name: 'Locations',
     slug: 'locations',
     fieldSchema: [{key: 'region', label: 'Region', type: 'text'}],

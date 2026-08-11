@@ -31,6 +31,7 @@ import type {
 } from '../services/consistency/workspaceAnnotations';
 import {summarizeWorkspaceReviewSurfaces} from '../services/consistency/workspaceAnnotations';
 import {htmlToPlainText} from '../utils/textHelpers';
+import {isCharacterCategory} from '../services/characters/characterIdentity';
 import {buildDerivedStateMutationEvents} from '../services/state/stateMutationDerivation';
 import {
   invalidateStateMutationEventById,
@@ -1851,11 +1852,7 @@ export const useWorkspaceConsistency = ({
         }
         const characterCategoryIds = new Set(
           categories
-            .filter((category) => {
-              const slug = category.slug.toLowerCase();
-              const name = category.name.toLowerCase();
-              return slug.includes('character') || name.includes('character');
-            })
+            .filter(isCharacterCategory)
             .map((category) => category.id)
         );
         let targetType: 'entity' | 'character' = selectedTargetType;

@@ -68,8 +68,8 @@ const countTermMentions = (text: string, terms: string[]): number => {
 const inferLoreKindForCategory = (
   category: EntityCategory | null
 ): LoreDocumentKind => {
+  if (category?.kind === 'character') return 'character_dossier';
   const slug = category?.slug.toLowerCase() ?? '';
-  if (slug.includes('character') || slug.includes('cast')) return 'character_dossier';
   if (slug.includes('location') || slug.includes('place')) return 'place_history';
   if (slug.includes('faction') || slug.includes('organization')) return 'faction_notes';
   if (slug.includes('item') || slug.includes('artifact')) return 'item_history';

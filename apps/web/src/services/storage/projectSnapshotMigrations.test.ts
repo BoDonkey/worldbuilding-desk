@@ -18,9 +18,9 @@ describe('migrateProjectSnapshotPayload', () => {
     expect(() =>
       normalizeProjectSnapshot({
         schemaVersion: 1,
-        project: {id: 'project-1', name: 'Future', storageSchemaVersion: 2}
+        project: {id: 'project-1', name: 'Future', storageSchemaVersion: 3}
       })
-    ).toThrow('Backup project data uses storage schema 2');
+    ).toThrow('Backup project data uses storage schema 3');
   });
 
   it('runs an explicit contiguous snapshot migration chain', () => {

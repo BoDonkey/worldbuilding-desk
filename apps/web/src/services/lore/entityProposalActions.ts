@@ -63,6 +63,7 @@ async function ensureCategoryForKind(
   const category: EntityCategory = {
     id: crypto.randomUUID(),
     projectId,
+    kind: 'general',
     name: config.name,
     slug: config.slug,
     fieldSchema: config.fieldSchema,

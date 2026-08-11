@@ -2,6 +2,12 @@ import 'fake-indexeddb/auto';
 import {afterEach, describe, expect, it, vi} from 'vitest';
 import type {Project, StoredRuleset} from '../../entityTypes';
 import {
+  ACTOR_RESOLUTION_STORE_NAME,
+  CATEGORY_STORE_NAME,
+  CHARACTER_IDENTITY_REPORT_STORE_NAME,
+  CHARACTER_SHEET_STORE_NAME,
+  CHARACTER_STORE_NAME,
+  ENTITY_STORE_NAME,
   PROJECT_MIGRATION_BACKUP_STORE_NAME,
   PROJECT_SCOPED_STORE_NAMES,
   PROJECT_STORE_NAME
@@ -203,7 +209,7 @@ describe('runProjectMigrationPlan', () => {
 });
 
 describe('project migration backup', () => {
-  it('stamps an unversioned legacy project at the current baseline', async () => {
+  it('migrates an unversioned legacy project and takes a restorable backup', async () => {
     const db = await createMigrationTestDb();
     const project: Project = {
       id: 'project-1',
@@ -224,9 +230,83 @@ describe('project migration backup', () => {
         .getAll()
     );
 
-    expect(current.storageSchemaVersion).toBe(1);
-    expect((stored as Project).storageSchemaVersion).toBe(1);
-    expect(backups).toEqual([]);
+    expect(current.storageSchemaVersion).toBe(2);
+    expect((stored as Project).storageSchemaVersion).toBe(2);
+    expect(backups).toHaveLength(1);
+  });
+
+  it('persists category kinds, exact-unique links, actor mappings, and a conserving report', async () => {
+    const db = await createMigrationTestDb();
+    const project: Project = {
+      id: 'project-identity',
+      name: 'Legacy identities',
+      storageSchemaVersion: 1,
+      createdAt: 1,
+      updatedAt: 1
+    };
+    await put(db, PROJECT_STORE_NAME, project);
+    await put(db, CATEGORY_STORE_NAME, {
+      id: 'cast',
+      projectId: project.id,
+      name: 'Important People',
+      slug: 'cast',
+      fieldSchema: [],
+      createdAt: 1
+    });
+    await put(db, ENTITY_STORE_NAME, {
+      id: 'entity-mira',
+      projectId: project.id,
+      categoryId: 'cast',
+      name: 'Mira Voss',
+      fields: {},
+      links: [],
+      createdAt: 1,
+      updatedAt: 1
+    });
+    await put(db, CHARACTER_STORE_NAME, {
+      id: 'character-mira',
+      projectId: project.id,
+      name: ' mira  voss ',
+      fields: {},
+      createdAt: 1,
+      updatedAt: 1
+    });
+    await put(db, CHARACTER_SHEET_STORE_NAME, {
+      id: 'sheet-mira',
+      projectId: project.id,
+      characterId: 'character-mira',
+      name: 'Mira',
+      level: 1,
+      experience: 0,
+      stats: [],
+      resources: [],
+      inventory: [],
+      createdAt: 1,
+      updatedAt: 1
+    });
+
+    await ensureProjectStorageCurrent(db, project);
+
+    const read = <T>(storeName: string, id: string) =>
+      requestToPromise<T>(db.transaction(storeName, 'readonly').objectStore(storeName).get(id));
+    expect((await read<{kind: string}>(CATEGORY_STORE_NAME, 'cast')).kind).toBe('character');
+    expect((await read<{entityId: string}>(CHARACTER_STORE_NAME, 'character-mira')).entityId).toBe(
+      'entity-mira'
+    );
+    expect(
+      (await read<{characterEntityId: string}>(CHARACTER_SHEET_STORE_NAME, 'sheet-mira'))
+        .characterEntityId
+    ).toBe('entity-mira');
+    const resolutions = await requestToPromise(
+      db.transaction(ACTOR_RESOLUTION_STORE_NAME, 'readonly').objectStore(ACTOR_RESOLUTION_STORE_NAME).getAll()
+    );
+    expect(resolutions).toHaveLength(2);
+    const report = await read<{
+      classifiedRecordCount: number;
+      sourceCounts: {characterEntities: number; characters: number; sheets: number};
+    }>(CHARACTER_IDENTITY_REPORT_STORE_NAME, `${project.id}:character-identity:v1`);
+    expect(report.classifiedRecordCount).toBe(3);
+    expect(report.sourceCounts).toEqual({characterEntities: 1, characters: 1, sheets: 1});
   });
 
   it('restores the project and its scoped records without touching another project', async () => {

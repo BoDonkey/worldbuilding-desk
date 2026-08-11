@@ -1,6 +1,6 @@
 # Worldbuilding-Desk Project Status
 
-**Last Updated:** August 9, 2026
+**Last Updated:** August 11, 2026
 
 ## Project Overview
 
@@ -88,6 +88,20 @@ Under the hood, the app still includes rich systems for world data, rules, chara
 - World Bible category task cards reserve stable description height so switching between Characters, Locations, and Items does not shift the list below.
 - World Bible AI assistance is being reshaped away from top-level AI draft cards and toward an explicit helper model. The current helper is an interim floating chat with selected-text apply to editable fields; the target model is open brainstorming plus confirmable model-proposed actions for names, aliases, fields, and new sections.
 - Character records and character sheets.
+- World Bible categories now carry an explicit `character` / `general` kind,
+  including an author-editable category-kind control; active character-aware
+  surfaces no longer infer category identity from names or slugs.
+- Character extensions and sheets now support canonical World Bible entity
+  links. Project storage schema 2 deterministically classifies legacy World
+  Bible characters, Character Tools records, and sheets; it auto-links only
+  exact normalized names that are unique on both sides, persists legacy
+  character/sheet actor-ID mappings, and retains a conserving migration report
+  for unresolved tools-only, sheet-only, and ambiguous records.
+- A shared character link resolver now owns explicit entity ↔ extension ↔
+  sheet resolution plus the exact-unique legacy fallback. Review linking,
+  alias migration, workspace capture/roster/lore snippets, and Character Tools
+  handoffs use it instead of independent name joins; unlinked tools records do
+  not enter character lore snippets.
 - New World Bible items now begin with a generous name-and-description draft
   that saves without AI; aliases, rarity, custom sections, and the existing
   full editor remain available through explicit progressive disclosure.

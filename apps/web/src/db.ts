@@ -1,5 +1,5 @@
 export const DB_NAME = 'worldbuilding-db';
-export const DB_VERSION = 25;
+export const DB_VERSION = 26;
 export const ENTITY_STORE_NAME = 'entities';
 export const CATEGORY_STORE_NAME = 'entityCategories';
 export const PROJECT_STORE_NAME = 'projects';
@@ -30,6 +30,8 @@ export const CONSISTENCY_EVENT_STORE_NAME = 'consistency_events';
 export const CONSISTENCY_ALIAS_STORE_NAME = 'consistency_aliases';
 export const STATE_MUTATION_EVENT_STORE_NAME = 'state_mutation_events';
 export const PROJECT_MIGRATION_BACKUP_STORE_NAME = 'project_migration_backups';
+export const ACTOR_RESOLUTION_STORE_NAME = 'actor_resolutions';
+export const CHARACTER_IDENTITY_REPORT_STORE_NAME = 'character_identity_reports';
 
 export const PROJECT_SCOPED_STORE_NAMES = [
   CATEGORY_STORE_NAME,
@@ -59,7 +61,9 @@ export const PROJECT_SCOPED_STORE_NAMES = [
   CONSISTENCY_PROPOSAL_STORE_NAME,
   CONSISTENCY_EVENT_STORE_NAME,
   CONSISTENCY_ALIAS_STORE_NAME,
-  STATE_MUTATION_EVENT_STORE_NAME
+  STATE_MUTATION_EVENT_STORE_NAME,
+  ACTOR_RESOLUTION_STORE_NAME,
+  CHARACTER_IDENTITY_REPORT_STORE_NAME
 ] as const;
 
 export function openDb(): Promise<IDBDatabase> {
@@ -209,6 +213,14 @@ export function openDb(): Promise<IDBDatabase> {
         db.createObjectStore(PROJECT_MIGRATION_BACKUP_STORE_NAME, {
           keyPath: 'id'
         });
+      }
+
+      if (!db.objectStoreNames.contains(ACTOR_RESOLUTION_STORE_NAME)) {
+        db.createObjectStore(ACTOR_RESOLUTION_STORE_NAME, {keyPath: 'id'});
+      }
+
+      if (!db.objectStoreNames.contains(CHARACTER_IDENTITY_REPORT_STORE_NAME)) {
+        db.createObjectStore(CHARACTER_IDENTITY_REPORT_STORE_NAME, {keyPath: 'id'});
       }
     };
 

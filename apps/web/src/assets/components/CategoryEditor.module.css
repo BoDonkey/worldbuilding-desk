@@ -9,6 +9,12 @@
   margin-bottom: 1rem;
 }
 
+.kindField {
+  display: grid;
+  gap: 0.35rem;
+  margin-top: 0.85rem;
+}
+
 .nameInput {
   width: 100%;
   padding: 0.5rem;

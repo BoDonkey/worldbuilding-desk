@@ -20,6 +20,7 @@ const categoryId = 'cat-1';
 const category: EntityCategory = {
   id: categoryId,
   projectId,
+  kind: 'character',
   name: 'People',
   slug: 'people',
   fieldSchema: [

@@ -204,6 +204,7 @@ export interface ProjectSettings {
 export interface Character {
   id: string;
   projectId: string;
+  entityId?: string;
   name: string;
   description?: string;
   characterStyleId?: string;
@@ -260,6 +261,7 @@ export interface CharacterTrackedEntry {
 export interface CharacterSheet {
   id: string;
   projectId: string;
+  characterEntityId?: string;
   characterId?: string;
   name: string;
   level: number;
@@ -376,6 +378,7 @@ export interface StateMutationEvent {
 export interface EntityCategory {
   id: string;
   projectId: string;
+  kind: 'character' | 'general';
   name: string;
   slug: string;
   fieldSchema: FieldDefinition[];

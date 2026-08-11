@@ -10,8 +10,8 @@ import {
 } from './reviewLinkOptions';
 
 const categories: EntityCategory[] = [
-  {id: 'characters', projectId: 'project', name: 'Characters', slug: 'characters', fieldSchema: [], createdAt: 1},
-  {id: 'places', projectId: 'project', name: 'Places', slug: 'locations', fieldSchema: [], createdAt: 1}
+  {id: 'characters', projectId: 'project', kind: 'character', name: 'Characters', slug: 'characters', fieldSchema: [], createdAt: 1},
+  {id: 'places', projectId: 'project', kind: 'general', name: 'Places', slug: 'locations', fieldSchema: [], createdAt: 1}
 ];
 const characters: Character[] = [
   {id: 'character', projectId: 'project', name: 'Harrison Vale', fields: {}, createdAt: 1, updatedAt: 1},
