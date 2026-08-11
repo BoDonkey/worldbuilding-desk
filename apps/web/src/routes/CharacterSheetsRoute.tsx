@@ -153,6 +153,13 @@ function CharacterSheetsRoute({
     ReturnType<typeof getSettlementModulesByProject>
   >>([]);
   const [selectedCharacterId, setSelectedCharacterId] = useState<string>('');
+  const availableCharacters = useMemo(
+    () =>
+      characters.filter(
+        (character) => character.entityId || character.id === selectedCharacterId
+      ),
+    [characters, selectedCharacterId]
+  );
   const [shodhService, setShodhService] =
     useState<ShodhMemoryProvider | null>(null);
   const [rulesetMemory, setRulesetMemory] = useState<MemoryEntry | null>(null);
@@ -280,7 +287,7 @@ function CharacterSheetsRoute({
       return;
     }
     const character = characters.find((c) => c.id === prefillCharacterId);
-    if (character) {
+    if (character?.entityId) {
       setEditingId(null);
       setSelectedCharacterId(prefillCharacterId);
       setName(character.name);
@@ -303,6 +310,11 @@ function CharacterSheetsRoute({
         tone: 'success',
         message: `"${character.name}" is ready for a sheet. Base stats and resources below come from the active ruleset.`
       });
+    } else if (character) {
+      setFeedback({
+        tone: 'error',
+        message: `Link "${character.name}" to a World Bible character before creating a sheet.`
+      });
     }
     onPrefillConsumed?.();
   }, [
@@ -320,6 +332,14 @@ function CharacterSheetsRoute({
     }
     const character = characters.find((entry) => entry.id === autoCreateSheetCharacterId);
     if (!character) {
+      onAutoCreateConsumed?.();
+      return;
+    }
+    if (!character.entityId) {
+      setFeedback({
+        tone: 'error',
+        message: `Link "${character.name}" to a World Bible character before creating a sheet.`
+      });
       onAutoCreateConsumed?.();
       return;
     }
@@ -356,6 +376,7 @@ function CharacterSheetsRoute({
     const sheet: CharacterSheet = {
       id: crypto.randomUUID(),
       projectId: activeProject.id,
+      characterEntityId: character.entityId,
       characterId: character.id,
       name: character.name,
       level: 1,
@@ -547,6 +568,17 @@ function CharacterSheetsRoute({
     const now = Date.now();
     const id = editingId ?? crypto.randomUUID();
     const existing = sheets.find((s) => s.id === id);
+    const selectedCharacter = characters.find(
+      (character) => character.id === selectedCharacterId
+    );
+    const characterEntityId = selectedCharacter?.entityId ?? existing?.characterEntityId;
+    if (!existing && !characterEntityId) {
+      setFeedback({
+        tone: 'error',
+        message: 'Choose a World Bible character before creating a sheet.'
+      });
+      return;
+    }
 
     const normalizedInventory = inventoryEntries.filter(
       (entry) => entry.name.trim().length > 0
@@ -561,6 +593,7 @@ function CharacterSheetsRoute({
     const sheet: CharacterSheet = {
       id,
       projectId: activeProject.id,
+      characterEntityId,
       characterId: selectedCharacterId || undefined,
       name: name.trim(),
       level,
@@ -1229,8 +1262,10 @@ function CharacterSheetsRoute({
                 onChange={(e) => handleCharacterSelect(e.target.value)}
                 className={styles.inlineWidth100}
               >
-                <option value=''>-- None (create new) --</option>
-                {characters.map((char) => (
+                <option value='' disabled={!editingId}>
+                  {editingId ? '-- Legacy unlinked sheet --' : '-- Choose World Bible character --'}
+                </option>
+                {availableCharacters.map((char) => (
                   <option key={char.id} value={char.id}>
                     {char.name}
                   </option>
@@ -1238,8 +1273,8 @@ function CharacterSheetsRoute({
               </select>
             </label>
             <div className={`${styles.inlineFontSize08rem} ${styles.inlineColorVarColorTextSecondary} ${styles.inlineMarginTop025rem}`}>
-              Link a roster character first, then adjust the sheet-specific stats
-              and resources here.
+              Choose a character with a canonical World Bible identity, then
+              adjust the sheet-specific stats and resources here.
             </div>
           </div>
 

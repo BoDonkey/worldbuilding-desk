@@ -28,6 +28,10 @@ import type {
 import {upsertCompendiumEntryFromEntity} from '../services/compendium';
 import {promoteDocumentToParent, syncChildWithParent} from '../services/seriesBible/SeriesBibleService';
 import type {ConfirmRequest} from './useConfirmDialog';
+import {
+  createCharacterLinkResolver,
+  isCharacterCategory
+} from '../services/characters/characterIdentity';
 
 type FeedbackState = {
   tone: 'success' | 'error';
@@ -840,12 +844,25 @@ export const useWorldBibleEntityActions = ({
       setImportingCharacterEntityId(entity.id);
       setFeedback(null);
       try {
-        const existingCharacter = characters.find(
-          (character) => normalizeName(character.name) === normalizeName(entity.name)
+        const entityCategory = categories.find(
+          (category) => category.id === entity.categoryId
         );
-        const character: Character = existingCharacter ?? {
+        if (!entityCategory || !isCharacterCategory(entityCategory)) {
+          throw new Error('Character Tools can only attach to a World Bible character.');
+        }
+        const resolver = createCharacterLinkResolver({
+          categories,
+          entities,
+          characters,
+          sheets: []
+        });
+        const existingCharacter = resolver.getCharacter(entity.id);
+        const character: Character = existingCharacter
+          ? {...existingCharacter, entityId: entity.id, updatedAt: Date.now()}
+          : {
           id: crypto.randomUUID(),
           projectId: activeProject.id,
+          entityId: entity.id,
           name: entity.name,
           description:
             typeof entity.fields.description === 'string'
@@ -860,9 +877,15 @@ export const useWorldBibleEntityActions = ({
           updatedAt: Date.now()
         };
 
+        await saveCharacter(character);
         if (!existingCharacter) {
-          await saveCharacter(character);
           setCharacters((prev) => [...prev, character]);
+        } else if (!existingCharacter.entityId) {
+          setCharacters((prev) =>
+            prev.map((record) =>
+              record.id === existingCharacter.id ? character : record
+            )
+          );
         }
 
         if (options?.autoCreateSheet && hasRuleset) {
@@ -903,7 +926,7 @@ export const useWorldBibleEntityActions = ({
         setImportingCharacterEntityId(null);
       }
     },
-    [activeProject, characters, hasRuleset, navigate, normalizeName, setCharacters, setFeedback]
+    [activeProject, categories, characters, entities, hasRuleset, navigate, setCharacters, setFeedback]
   );
 
   const inferCompendiumDomain = useCallback(

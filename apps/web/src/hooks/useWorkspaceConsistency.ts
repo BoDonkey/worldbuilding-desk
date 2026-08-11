@@ -1530,11 +1530,7 @@ export const useWorkspaceConsistency = ({
 
         const now = Date.now();
         const explicitCharacterSelection = Boolean(
-          selectedCategory &&
-            ['character', 'characters', 'npc', 'person', 'people'].some((hint) =>
-              selectedCategory.slug.toLowerCase().includes(hint) ||
-              selectedCategory.name.toLowerCase().includes(hint)
-            )
+          selectedCategory && isCharacterCategory(selectedCategory)
         );
         let acceptedReviewAliases: string[] = [];
         if (explicitCharacterSelection) {

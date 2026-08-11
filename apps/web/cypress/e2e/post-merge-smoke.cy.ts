@@ -189,6 +189,33 @@ describe('Post-merge smoke checklist', () => {
     cy.contains("Sera's eyes are gray.").should('be.visible');
   });
 
+  it('creates Character Tools metadata only after establishing World Bible canon', () => {
+    cy.visit('/characters');
+    cy.contains('button', 'Add Tool Profile').click();
+    cy.contains('h2', 'New Tool Metadata').should('be.visible');
+    cy.get('form').within(() => {
+      cy.contains('label', 'Name').find('input').type('Mira Voss');
+      cy.contains('label', 'Role').find('input').type('Cartographer');
+      cy.contains('button', 'Create Tool Metadata').click();
+    });
+    cy.contains('[role="status"]', '"Mira Voss" created.').should('be.visible');
+
+    mutateSmokeDb(async (db) => {
+      const [categories, entities, characters] = await Promise.all([
+        getAllRecords<{id: string; kind: string}>(db, 'entityCategories'),
+        getAllRecords<{id: string; categoryId: string; name: string}>(db, 'entities'),
+        getAllRecords<{id: string; entityId?: string; name: string}>(db, 'characters')
+      ]);
+      const mira = entities.find((record) => record.name === 'Mira Voss');
+      const extension = characters.find((record) => record.name === 'Mira Voss');
+      expect(mira).to.exist;
+      expect(categories.find((record) => record.id === mira?.categoryId)?.kind).to.equal(
+        'character'
+      );
+      expect(extension?.entityId).to.equal(mira?.id);
+    });
+  });
+
   it('builds a scene roster from canonical mentions and supports manual overrides', () => {
     cy.visit('/workspace');
     cy.get('.tiptap-editor')

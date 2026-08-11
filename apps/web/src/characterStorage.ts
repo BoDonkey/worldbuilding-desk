@@ -25,22 +25,46 @@ export async function getCharactersByProject(projectId: string): Promise<Charact
   });
 }
 
+export function validateCharacterWrite(
+  character: Character,
+  existing?: Character
+): void {
+  if (!character.entityId && !existing) {
+    throw new Error(
+      'New Character Tools records require a canonical World Bible character link.'
+    );
+  }
+  if (existing?.entityId && !character.entityId) {
+    throw new Error('A canonical character link cannot be removed.');
+  }
+}
+
 export async function saveCharacter(character: Character): Promise<void> {
   const db = await openDb();
 
   return new Promise((resolve, reject) => {
     const tx = db.transaction(CHARACTER_STORE_NAME, 'readwrite');
     const store = tx.objectStore(CHARACTER_STORE_NAME);
-    const request = store.put(character);
+    const existingRequest = store.get(character.id);
 
-    request.onsuccess = () => {
+    existingRequest.onsuccess = () => {
+      const existing = existingRequest.result as Character | undefined;
+      try {
+        validateCharacterWrite(character, existing);
+      } catch (error) {
+        reject(error);
+        tx.abort();
+        return;
+      }
+      const request = store.put(character);
+      request.onerror = () => reject(request.error);
+    };
+    existingRequest.onerror = () => reject(existingRequest.error);
+    tx.oncomplete = () => {
       emitCharacterRecordsChanged();
       resolve();
     };
-
-    request.onerror = () => {
-      reject(request.error);
-    };
+    tx.onerror = () => reject(tx.error);
   });
 }
 

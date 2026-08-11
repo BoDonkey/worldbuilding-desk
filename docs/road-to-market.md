@@ -123,7 +123,7 @@ and required revisit point, `WIP`, `Done <commit>`.
 | 4.4 | Character contract adoption (CX-1) | 4 | S | Done `c406b48` — stable-ID Character contract and migration invariants adopted in the domain authority; J1–J6 added to smoke coverage; superseded brief archived; lint baseline; 315 web + 6 engine + 12 UI tests; web/desktop builds |
 | 4.5 | Character identity links + classifier + resolver (CX-2) | 4 | M | Done `48e634a` — explicit character/general category kinds and author control; entity links on extensions/sheets; schema-2 exact-unique legacy classifier with conserving report and persisted actor map; shared resolver adopted across character-aware surfaces; lint baseline; 332 web + 6 engine + 12 UI tests; web/desktop builds; Cypress 47/47 |
 | 4.6 | Backup + character-package completeness (CX-3) | 4 | M | Done `b7c4776` — snapshot schema 2 now conserves aliases, character links, actor mappings, and classifier reports; character package schema 2 round-trips canonical identity, aliases, facts, extensions, and optional sheets while schema-1 imports classify conservatively; replay parity retained; lint baseline; 338 web + 6 engine + 12 UI tests; web/desktop builds; Cypress 47/47 |
-| 4.7 | Character intake convergence (CX-4) | 4 | M | — |
+| 4.7 | Character intake convergence (CX-4) | 4 | M | WIP |
 | 4.8 | Character identity resolution queue (CX-5) | 4 | M | — |
 | 4.9 | Sheet + state identity rebinding (CX-6) | 4 | M | — |
 | 4.10 | Character capability routing (CX-7) | 4 | S | — |

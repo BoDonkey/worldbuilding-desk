@@ -304,6 +304,15 @@ export function prepareCharacterTransferImport(params: {
 
   const characterIdMap = new Map<string, string>();
   const characters = params.payload.data.characters.map((character) => {
+    if (
+      params.payload.schemaVersion === 2 &&
+      character.entityId &&
+      !entityIdMap.has(character.entityId)
+    ) {
+      throw new Error(
+        `Character package record "${character.name}" references missing canonical identity "${character.entityId}".`
+      );
+    }
     const id = crypto.randomUUID();
     characterIdMap.set(character.id, id);
     return {

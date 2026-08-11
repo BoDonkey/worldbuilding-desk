@@ -129,6 +129,13 @@ Under the hood, the app still includes rich systems for world data, rules, chara
   character packages remain importable through exact-unique classification;
   unresolved records are conserved in the identity report instead of being
   guessed into canon.
+- Modern character intake now converges on World Bible identity: Character
+  Tools creation establishes or exact-uniquely links canon before writing its
+  extension, review capture writes character-kind entities, lore proposal
+  acceptance targets canonical entities, v2 packages reject broken claimed
+  identity links, and new sheets require a canonical entity link. Storage
+  guards prevent new free-standing Character Tools or sheet records while
+  still permitting unresolved legacy records to be updated and classified.
 - Project records now carry an application-data schema version independent of
   IndexedDB's structural version. Project load runs a deterministic,
   one-version-at-a-time migration chain, fails closed on newer schemas, and

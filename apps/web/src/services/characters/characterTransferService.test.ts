@@ -189,6 +189,31 @@ describe('character package transfer', () => {
     });
   });
 
+  it('rejects a v2 character whose claimed canonical identity is absent', () => {
+    const payload = createCharacterTransferPayload({
+      projectName: 'Source',
+      includeSheets: false,
+      exportedAt: 10,
+      categories: [category()],
+      entities: [entity()],
+      aliases: [],
+      canonicalFacts: [],
+      characters: [character('entity-mira')],
+      characterSheets: []
+    });
+    payload.data.entities = [];
+
+    expect(() =>
+      prepareCharacterTransferImport({
+        payload,
+        projectId: 'target',
+        includeSheets: false,
+        existingCategories: [],
+        existingEntities: []
+      })
+    ).toThrow('references missing canonical identity');
+  });
+
   it('round-trips v2 counts while remapping every identity link to the target project', () => {
     const payload = createCharacterTransferPayload({
       projectName: 'Source',

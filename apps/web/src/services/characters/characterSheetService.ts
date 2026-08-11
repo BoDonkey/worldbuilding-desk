@@ -40,21 +40,43 @@ export async function getCharacterSheet(id: string): Promise<CharacterSheet | un
   });
 }
 
+export function validateCharacterSheetWrite(
+  sheet: CharacterSheet,
+  existing?: CharacterSheet
+): void {
+  if (!sheet.characterEntityId && !existing) {
+    throw new Error(
+      'New character sheets require a canonical World Bible character link.'
+    );
+  }
+  if (existing?.characterEntityId && !sheet.characterEntityId) {
+    throw new Error('A canonical sheet link cannot be removed.');
+  }
+}
+
 export async function saveCharacterSheet(sheet: CharacterSheet): Promise<void> {
   const db = await openDb();
 
   return new Promise((resolve, reject) => {
     const tx = db.transaction(STORE_NAME, 'readwrite');
     const store = tx.objectStore(STORE_NAME);
-    const request = store.put(sheet);
+    const existingRequest = store.get(sheet.id);
 
-    request.onsuccess = () => {
-      resolve();
+    existingRequest.onsuccess = () => {
+      const existing = existingRequest.result as CharacterSheet | undefined;
+      try {
+        validateCharacterSheetWrite(sheet, existing);
+      } catch (error) {
+        reject(error);
+        tx.abort();
+        return;
+      }
+      const request = store.put(sheet);
+      request.onerror = () => reject(request.error);
     };
-
-    request.onerror = () => {
-      reject(request.error);
-    };
+    existingRequest.onerror = () => reject(existingRequest.error);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
   });
 }
 

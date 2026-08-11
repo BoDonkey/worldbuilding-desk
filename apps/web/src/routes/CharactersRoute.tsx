@@ -8,8 +8,8 @@ import type {
   WorldEntity
 } from '../entityTypes';
 import { getCharactersByProject, saveCharacter, deleteCharacter } from '../characterStorage';
-import { getEntitiesByProject, saveEntity } from '../entityStorage';
-import { getCategoriesByProject, saveCategory } from '../categoryStorage';
+import {getEntitiesByProject} from '../entityStorage';
+import {getCategoriesByProject} from '../categoryStorage';
 import {
   getAliasesByProject,
   type ConsistencyAlias
@@ -37,6 +37,7 @@ import {
   createCharacterLinkResolver,
   isCharacterCategory
 } from '../services/characters/characterIdentity';
+import {ensureCanonicalCharacterForIntake} from '../services/characters/characterIntakeService';
 
 interface CharactersRouteProps {
   embedded?: boolean;
@@ -58,14 +59,6 @@ const dedupeNames = (names: string[]): string[] =>
         .map((value) => [normalizeName(value), value])
     ).values()
   );
-
-const CHARACTER_CATEGORY_HINTS = ['character', 'characters', 'npc', 'person', 'people'];
-const DEFAULT_CHARACTER_FIELD_SCHEMA: EntityCategory['fieldSchema'] = [
-  {key: 'description', label: 'Description', type: 'textarea'},
-  {key: 'age', label: 'Age', type: 'text'},
-  {key: 'role', label: 'Role', type: 'text'},
-  {key: 'notes', label: 'Notes', type: 'textarea'}
-];
 
 type CharacterAssistField = 'description' | 'notes';
 type CharacterCreationMode = 'idle' | 'manual' | 'import';
@@ -389,10 +382,48 @@ function CharactersRoute({
       return;
     }
 
+    const characterFields = {
+      ...(extractPlainTextFromRichText(description).trim()
+        ? {description: normalizeRichTextValue(description)}
+        : {}),
+      ...(age.trim() ? {age: age.trim()} : {}),
+      ...(role.trim() ? {role: role.trim()} : {}),
+      ...(extractPlainTextFromRichText(notes).trim()
+        ? {notes: normalizeRichTextValue(notes)}
+        : {})
+    };
+    let canon: Awaited<ReturnType<typeof ensureCanonicalCharacterForIntake>>;
+    try {
+      canon = await ensureCanonicalCharacterForIntake({
+        projectId: activeProject.id,
+        name: name.trim(),
+        fields: characterFields,
+        preferredEntityId: linkedLoreEntity?.id,
+        categories,
+        entities: worldEntities
+      });
+    } catch (error) {
+      setFeedback({
+        tone: 'error',
+        message:
+          error instanceof Error
+            ? error.message
+            : 'Unable to establish the World Bible character identity.'
+      });
+      return;
+    }
+    if (canon.categoryToCreate) {
+      setCategories((prev) => [...prev, canon.categoryToCreate!]);
+    }
+    if (canon.entityToCreate) {
+      setWorldEntities((prev) => [...prev, canon.entityToCreate!]);
+    }
+
     const character: Character = {
       id,
       projectId: activeProject.id,
-      name: name.trim(),
+      entityId: canon.entity.id,
+      name: canon.entity.name,
       description: extractPlainTextFromRichText(description).trim()
         ? normalizeRichTextValue(description)
         : undefined,
@@ -436,35 +467,6 @@ function CharactersRoute({
     navigate('/characters?view=sheets');
   };
 
-  const ensureCharacterLoreCategory = async (): Promise<EntityCategory> => {
-    const existing = categories.find((category) =>
-      CHARACTER_CATEGORY_HINTS.some((hint) =>
-        category.slug.toLowerCase().includes(hint)
-      )
-    );
-    if (existing) {
-      return existing;
-    }
-
-    if (!activeProject) {
-      throw new Error('Select or create a project first.');
-    }
-
-    const category: EntityCategory = {
-      id: crypto.randomUUID(),
-      projectId: activeProject.id,
-      kind: 'character',
-      name: 'Characters',
-      slug: 'characters',
-      fieldSchema: DEFAULT_CHARACTER_FIELD_SCHEMA,
-      createdAt: Date.now()
-    };
-
-    await saveCategory(category);
-    setCategories((prev) => [...prev, category]);
-    return category;
-  };
-
   const handleOpenWorldLore = async (
     character: Character,
     options?: {focus?: 'general' | 'aliases'; matchEntityId?: string}
@@ -475,29 +477,8 @@ function CharactersRoute({
 
     setFeedback(null);
     try {
-      const existingEntity = worldEntities.find((entity) =>
-        normalizeName(entity.name) === normalizeName(character.name)
-      );
-
-      if (existingEntity) {
-        navigate('/world-bible', {
-          state: {
-            focusEntityId: existingEntity.id,
-            focus: options?.focus ?? 'general',
-            handoffKind: options?.focus === 'aliases' ? 'character-canonicalization' : undefined,
-            handoffSourceName: options?.focus === 'aliases' ? character.name : undefined,
-            handoffMatchEntityId: options?.matchEntityId
-          }
-        });
-        return;
-      }
-
-      const category = await ensureCharacterLoreCategory();
-      const now = Date.now();
-      const entity: WorldEntity = {
-        id: crypto.randomUUID(),
+      const canon = await ensureCanonicalCharacterForIntake({
         projectId: activeProject.id,
-        categoryId: category.id,
         name: character.name,
         fields: {
           ...(character.description ? {description: character.description} : {}),
@@ -511,22 +492,38 @@ function CharactersRoute({
             ? {notes: character.fields.notes}
             : {})
         },
-        isNew: true,
-        needsCompletion: false,
-        links: [],
-        createdAt: now,
-        updatedAt: now
-      };
-
-      await saveEntity(entity);
-      setWorldEntities((prev) => [...prev, entity]);
+        preferredEntityId: characterLoreEntityIdByCharacterId.get(character.id),
+        categories,
+        entities: worldEntities
+      });
+      if (canon.categoryToCreate) {
+        setCategories((prev) => [...prev, canon.categoryToCreate!]);
+      }
+      if (canon.entityToCreate) {
+        setWorldEntities((prev) => [...prev, canon.entityToCreate!]);
+      }
+      if (character.entityId !== canon.entity.id) {
+        const linkedCharacter = {
+          ...character,
+          entityId: canon.entity.id,
+          updatedAt: Date.now()
+        };
+        await saveCharacter(linkedCharacter);
+        setCharacters((prev) =>
+          prev.map((record) =>
+            record.id === linkedCharacter.id ? linkedCharacter : record
+          )
+        );
+      }
       setFeedback({
         tone: 'success',
-        message: `"${character.name}" now has a World Bible character record.`
+        message: canon.entityToCreate
+          ? `"${character.name}" now has a World Bible character record.`
+          : `Opened the World Bible character for "${canon.entity.name}".`
       });
       navigate('/world-bible', {
         state: {
-          focusEntityId: entity.id,
+          focusEntityId: canon.entity.id,
           focus: options?.focus ?? 'general',
           handoffKind: options?.focus === 'aliases' ? 'character-canonicalization' : undefined,
           handoffSourceName: options?.focus === 'aliases' ? character.name : undefined,
@@ -551,11 +548,14 @@ function CharactersRoute({
     setFeedback(null);
     try {
       const existing = characters.find(
-        (character) => normalizeName(character.name) === normalizeName(entity.name)
+        (character) => characterLoreEntityIdByCharacterId.get(character.id) === entity.id
       );
-      const character: Character = existing ?? {
+      const character: Character = existing
+        ? {...existing, entityId: entity.id, updatedAt: Date.now()}
+        : {
         id: crypto.randomUUID(),
         projectId: activeProject.id,
+        entityId: entity.id,
         name: entity.name,
         description:
           typeof entity.fields.description === 'string'
@@ -570,9 +570,13 @@ function CharactersRoute({
         updatedAt: Date.now()
       };
 
+      await saveCharacter(character);
       if (!existing) {
-        await saveCharacter(character);
         setCharacters((prev) => [...prev, character]);
+      } else if (!existing.entityId) {
+        setCharacters((prev) =>
+          prev.map((record) => (record.id === existing.id ? character : record))
+        );
       }
 
       setFeedback({

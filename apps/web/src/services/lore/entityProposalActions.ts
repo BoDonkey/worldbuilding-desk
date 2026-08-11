@@ -5,10 +5,11 @@ import type {
   LoreEntityProposal,
   WorldEntity
 } from '../../entityTypes';
-import {saveCharacter} from '../../characterStorage';
+import {getCharactersByProject, saveCharacter} from '../../characterStorage';
 import {getCategoriesByProject, saveCategory} from '../../categoryStorage';
 import {saveEntity} from '../../entityStorage';
 import {replaceLoreDocumentLinks} from '../../loreStorage';
+import {ensureCanonicalCharacterForIntake} from '../characters/characterIntakeService';
 
 const CATEGORY_CONFIG: Record<
   Exclude<LoreEntityKind, 'character'>,
@@ -78,21 +79,44 @@ export async function acceptLoreEntityProposal(params: {
   existingLinks: LoreDocumentLink[];
 }): Promise<{targetType: 'character' | 'entity'; targetId: string}> {
   const now = Date.now();
-  if (params.proposal.targetType && params.proposal.targetId) {
+  let targetType = params.proposal.targetType;
+  let targetId = params.proposal.targetId;
+
+  if (targetType === 'character' && targetId) {
+    const characters = await getCharactersByProject(params.proposal.projectId);
+    const character = characters.find((record) => record.id === targetId);
+    if (!character) {
+      throw new Error('The selected legacy character record could not be found.');
+    }
+    const canon = await ensureCanonicalCharacterForIntake({
+      projectId: params.proposal.projectId,
+      name: character.name,
+      fields: {
+        ...(character.description ? {description: character.description} : {}),
+        ...character.fields
+      },
+      preferredEntityId: character.entityId
+    });
+    await saveCharacter({...character, entityId: canon.entity.id, updatedAt: now});
+    targetType = 'entity';
+    targetId = canon.entity.id;
+  }
+
+  if (targetType && targetId) {
     const nextLinks = [
       ...params.existingLinks.filter(
         (link) =>
           !(
-            link.targetType === params.proposal.targetType &&
-            link.targetId === params.proposal.targetId
+            link.targetType === targetType &&
+            link.targetId === targetId
           )
       ),
       {
         id: crypto.randomUUID(),
         projectId: params.proposal.projectId,
         loreDocumentId: params.proposal.loreDocumentId,
-        targetType: params.proposal.targetType,
-        targetId: params.proposal.targetId,
+        targetType,
+        targetId,
         relationship: 'mentions' as const,
         createdAt: now
       }
@@ -102,21 +126,16 @@ export async function acceptLoreEntityProposal(params: {
       links: nextLinks
     });
     return {
-      targetType: params.proposal.targetType,
-      targetId: params.proposal.targetId
+      targetType,
+      targetId
     };
   }
 
   if (params.proposal.entityKind === 'character') {
-    const characterId = crypto.randomUUID();
-    await saveCharacter({
-      id: characterId,
+    const canon = await ensureCanonicalCharacterForIntake({
       projectId: params.proposal.projectId,
       name: params.proposal.name,
-      description: '',
-      fields: {},
-      createdAt: now,
-      updatedAt: now
+      fields: {}
     });
     await replaceLoreDocumentLinks({
       loreDocumentId: params.proposal.loreDocumentId,
@@ -126,14 +145,14 @@ export async function acceptLoreEntityProposal(params: {
           id: crypto.randomUUID(),
           projectId: params.proposal.projectId,
           loreDocumentId: params.proposal.loreDocumentId,
-          targetType: 'character',
-          targetId: characterId,
+          targetType: 'entity',
+          targetId: canon.entity.id,
           relationship: 'primary_subject',
           createdAt: now
         }
       ]
     });
-    return {targetType: 'character', targetId: characterId};
+    return {targetType: 'entity', targetId: canon.entity.id};
   }
 
   const category = await ensureCategoryForKind(params.proposal.projectId, params.proposal.entityKind);
