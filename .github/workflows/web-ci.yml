@@ -51,8 +51,8 @@ jobs:
 
       - name: Test rules packages
         run: |
-          pnpm --filter @litrpg-tool/rules-engine test
-          pnpm --filter @litrpg-tool/rules-ui test
+          pnpm --filter @worldbuilding-desk/rules-engine test
+          pnpm --filter @worldbuilding-desk/rules-ui test
 
       - name: Build web
         run: pnpm --filter web build

@@ -1,6 +1,6 @@
 import React, {useState} from 'react';
-import type {StatDefinition} from '@litrpg-tool/rules-engine';
-import {STAT_SYSTEM_PRESETS} from '@litrpg-tool/rules-engine';
+import type {StatDefinition} from '@worldbuilding-desk/rules-engine';
+import {STAT_SYSTEM_PRESETS} from '@worldbuilding-desk/rules-engine';
 import {StatEditor} from '../shared/StatEditor';
 import {TemplateSelector, type Template} from '../shared/TemplateSelector';
 

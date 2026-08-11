@@ -51,8 +51,8 @@ Verification battery:
 ```bash
 pnpm --filter web lint          # 0 errors (3 exhaustive-deps warnings baseline)
 pnpm --filter web test:unit     # 232+ tests
-pnpm --filter @litrpg-tool/rules-engine test
-pnpm --filter @litrpg-tool/rules-ui test
+pnpm --filter @worldbuilding-desk/rules-engine test
+pnpm --filter @worldbuilding-desk/rules-ui test
 pnpm --filter web build
 pnpm --filter desktop build
 pnpm --filter web e2e:run       # for slices touching routed UI
@@ -119,7 +119,7 @@ and required revisit point, `WIP`, `Done <commit>`.
 | 3.9 | Dev-audit sweep + fitness close-out | 3 | S | Done `c8d7c78` — grade A; development audit 29→0 and production audit remains 0 via targeted overrides; all 5 architecture targets below 2,000 lines; lint with 3 baseline warnings; 271 web + 6 engine + 12 UI tests; web/desktop builds; Cypress 43/43; [2026-08-07 report](archive/code-fitness-report-2026-08-07.md) |
 | 4.1 | Description-first manual item creation | 4 | S | Done `70fb72f` — focused manual item draft with progressive full-editor disclosure; lint with 3 baseline warnings; 275 web + 6 engine + 12 UI tests; web/desktop builds; Cypress 44/44; desktop/narrow browser checks |
 | 4.2 | Storage schema versioning + migrations | 4 | M | Done `965af19` — separate IndexedDB, project-data, and snapshot schema contracts; ordered project-load migration runner with restorable pre-migration backups including rulesets; newer schemas fail closed before writes; 327 web + 6 engine + 12 UI tests; lint baseline; web/desktop builds; Cypress 47/47 |
-| 4.3 | Package rename off `@litrpg-tool/*` | 4 | S | — |
+| 4.3 | Internal package namespace rename | 4 | S | WIP |
 | 4.4 | Character contract adoption (CX-1) | 4 | S | Done `c406b48` — stable-ID Character contract and migration invariants adopted in the domain authority; J1–J6 added to smoke coverage; superseded brief archived; lint baseline; 315 web + 6 engine + 12 UI tests; web/desktop builds |
 | 4.5 | Character identity links + classifier + resolver (CX-2) | 4 | M | Done `48e634a` — explicit character/general category kinds and author control; entity links on extensions/sheets; schema-2 exact-unique legacy classifier with conserving report and persisted actor map; shared resolver adopted across character-aware surfaces; lint baseline; 332 web + 6 engine + 12 UI tests; web/desktop builds; Cypress 47/47 |
 | 4.6 | Backup + character-package completeness (CX-3) | 4 | M | Done `b7c4776` — snapshot schema 2 now conserves aliases, character links, actor mappings, and classifier reports; character package schema 2 round-trips canonical identity, aliases, facts, extensions, and optional sheets while schema-1 imports classify conservatively; replay parity retained; lint baseline; 338 web + 6 engine + 12 UI tests; web/desktop builds; Cypress 47/47 |
@@ -256,9 +256,9 @@ Zod 4 stays deferred as its own future migration.
   further persisted-shape changes and before beta (beta users' projects must
   survive updates). Includes a migration test harness and a
   backup-import version check.
-- **4.3 Package rename.** Rename `@litrpg-tool/*` internal packages to match
-  the product identity; cheapest while the monorepo is small, and required
-  before public builds leak the old name.
+- **4.3 Package rename.** Use the `@worldbuilding-desk/*` scope for internal
+  packages so manifests, imports, scripts, CI, and build artifacts match the
+  product identity before public distribution.
 
 ### Character experience unification (4.4–4.11)
 

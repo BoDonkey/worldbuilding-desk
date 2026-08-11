@@ -8,7 +8,7 @@ export default defineConfig({
   plugins: [react()],
   resolve: {
     alias: {
-      '@litrpg-tool/rules-ui': path.resolve(import.meta.dirname, '../../packages/rules-ui/src/index.ts'),
+      '@worldbuilding-desk/rules-ui': path.resolve(import.meta.dirname, '../../packages/rules-ui/src/index.ts'),
       '@rules-ui': path.resolve(import.meta.dirname, '../../packages/rules-ui/src'),
       react: path.resolve(import.meta.dirname, 'node_modules/react'),
       'react-dom': path.resolve(import.meta.dirname, 'node_modules/react-dom'),

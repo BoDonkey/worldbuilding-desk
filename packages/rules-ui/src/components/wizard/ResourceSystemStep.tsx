@@ -1,5 +1,5 @@
 import React, {useState} from 'react';
-import type {ResourceDefinition} from '@litrpg-tool/rules-engine';
+import type {ResourceDefinition} from '@worldbuilding-desk/rules-engine';
 import {TemplateSelector, type Template} from '../shared/TemplateSelector';
 
 export interface ResourceSystemStepProps {

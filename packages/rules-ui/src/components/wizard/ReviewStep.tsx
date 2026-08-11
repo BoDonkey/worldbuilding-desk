@@ -1,5 +1,5 @@
 import React from 'react';
-import type {GameRule, ResourceDefinition, StatDefinition, WorldRuleset} from '@litrpg-tool/rules-engine';
+import type {GameRule, ResourceDefinition, StatDefinition, WorldRuleset} from '@worldbuilding-desk/rules-engine';
 
 export interface ReviewStepProps {
   ruleset: WorldRuleset;

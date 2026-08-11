@@ -4,8 +4,8 @@ import type {
   StatDefinition,
   ResourceDefinition,
   GameRule
-} from '@litrpg-tool/rules-engine';
-import {createEmptyRuleset} from '@litrpg-tool/rules-engine';
+} from '@worldbuilding-desk/rules-engine';
+import {createEmptyRuleset} from '@worldbuilding-desk/rules-engine';
 
 export function useRuleset(initialRuleset?: WorldRuleset) {
   const [ruleset, setRuleset] = useState<WorldRuleset>(

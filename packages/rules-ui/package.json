@@ -1,5 +1,5 @@
 {
-  "name": "@litrpg-tool/rules-ui",
+  "name": "@worldbuilding-desk/rules-ui",
   "version": "0.1.0",
   "type": "module",
   "main": "./dist/index.js",
@@ -12,7 +12,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@litrpg-tool/rules-engine": "workspace:*",
+    "@worldbuilding-desk/rules-engine": "workspace:*",
     "zod": "^3.25.76"
   },
   "devDependencies": {

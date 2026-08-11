@@ -1,5 +1,5 @@
 import React, {useState} from 'react';
-import type {StatDefinition} from '@litrpg-tool/rules-engine';
+import type {StatDefinition} from '@worldbuilding-desk/rules-engine';
 
 export interface StatEditorProps {
   stat: StatDefinition;

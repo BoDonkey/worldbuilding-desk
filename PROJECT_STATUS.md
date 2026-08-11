@@ -216,6 +216,10 @@ Under the hood, the app still includes rich systems for world data, rules, chara
 - `rules-ui` owns its ESLint toolchain, and the root `pnpm test` command runs
   the web, rules-engine, and rules-ui test suites instead of a placeholder
   script.
+- Internal rules packages use the product-aligned
+  `@worldbuilding-desk/rules-engine` and `@worldbuilding-desk/rules-ui`
+  namespace consistently across manifests, source imports, workspace scripts,
+  Vite resolution, CI, and the lockfile.
 - `rules-ui` has jsdom-backed hook and component coverage for its wizard state,
   ruleset mutations, stat/resource editors, and end-to-end world creation flow.
 - Web tests now include provider-aware jsdom smoke coverage for all eight
@@ -368,7 +372,6 @@ Under the hood, the app still includes rich systems for world data, rules, chara
 - Add one Playwright Electron E2E covering the LLM streaming path — smallest change with the highest payoff against silent IPC regressions.
 - Decide auto-update strategy (Squirrel / electron-updater / manual) before the first externally shared build; affects main-process structure and code signing.
 - Re-enable suppressed React hook lint rules one at a time (`set-state-in-effect`, `purity`, `preserve-manual-memoization`); prefer targeted inline disables with a `// why:` comment over blanket config suppression.
-- Rename `@litrpg-tool/*` internal packages to match the writing-first product identity. Cheapest while the monorepo is still small.
 
 ### Documentation
 - Keep summary docs aligned with the writing-first UX direction.

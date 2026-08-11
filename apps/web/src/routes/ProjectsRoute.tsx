@@ -4,7 +4,7 @@ import {useNavigate} from 'react-router';
 import type {Project, ProjectMode} from '../entityTypes';
 import {createDefaultSettings} from '../settingsStorage';
 import {getDefaultFeatureToggles} from '../projectMode';
-import type {WorldRuleset} from '@litrpg-tool/rules-engine';
+import type {WorldRuleset} from '@worldbuilding-desk/rules-engine';
 import {
   getAllProjects,
   getProjectById,

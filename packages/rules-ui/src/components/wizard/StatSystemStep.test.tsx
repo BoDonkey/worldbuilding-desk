@@ -1,5 +1,5 @@
 import {fireEvent, render, screen, within} from '@testing-library/react';
-import type {StatDefinition} from '@litrpg-tool/rules-engine';
+import type {StatDefinition} from '@worldbuilding-desk/rules-engine';
 import {describe, expect, it, vi} from 'vitest';
 import {StatSystemStep} from './StatSystemStep';
 

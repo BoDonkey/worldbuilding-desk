@@ -3,8 +3,8 @@ import type {
   WorldRuleset,
   StatDefinition,
   ResourceDefinition
-} from '@litrpg-tool/rules-engine';
-import {createEmptyRuleset} from '@litrpg-tool/rules-engine';
+} from '@worldbuilding-desk/rules-engine';
+import {createEmptyRuleset} from '@worldbuilding-desk/rules-engine';
 import {StatSystemStep} from './StatSystemStep';
 import {ResourceSystemStep} from './ResourceSystemStep';
 

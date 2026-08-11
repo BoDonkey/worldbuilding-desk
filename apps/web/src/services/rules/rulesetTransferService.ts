@@ -1,4 +1,4 @@
-import type {WorldRuleset} from '@litrpg-tool/rules-engine';
+import type {WorldRuleset} from '@worldbuilding-desk/rules-engine';
 import {
   downloadJsonFile,
   readJsonFile,

@@ -5,7 +5,7 @@ import {
   waitFor,
   within
 } from '@testing-library/react';
-import type {WorldRuleset} from '@litrpg-tool/rules-engine';
+import type {WorldRuleset} from '@worldbuilding-desk/rules-engine';
 import {describe, expect, it, vi} from 'vitest';
 import {WorldBuildingWizard} from './WorldBuildingWizard';
 

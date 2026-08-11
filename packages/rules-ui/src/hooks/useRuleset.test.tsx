@@ -4,7 +4,7 @@ import type {
   ResourceDefinition,
   StatDefinition,
   WorldRuleset
-} from '@litrpg-tool/rules-engine';
+} from '@worldbuilding-desk/rules-engine';
 import {describe, expect, it, vi} from 'vitest';
 import {useRuleset} from './useRuleset';
 

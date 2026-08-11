@@ -1,8 +1,8 @@
 import {Component, useEffect, useRef, useState} from 'react';
 import type {ChangeEvent, ReactNode} from 'react';
 import type {Project} from '../entityTypes';
-import type {WorldRuleset} from '@litrpg-tool/rules-engine';
-import {WorldBuildingWizard} from '@litrpg-tool/rules-ui';
+import type {WorldRuleset} from '@worldbuilding-desk/rules-engine';
+import {WorldBuildingWizard} from '@worldbuilding-desk/rules-ui';
 import '@rules-ui/styles/wizard.css';
 import {saveProject} from '../projectStorage';
 import {useAppStore} from '../store/appStore';
