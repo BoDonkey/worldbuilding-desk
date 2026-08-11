@@ -6,7 +6,11 @@ import type {
   WorldEntity
 } from '../../entityTypes';
 import {validateCharacterWrite} from '../../characterStorage';
-import {validateCharacterSheetWrite} from './characterSheetService';
+import {
+  deriveCharacterSheetNames,
+  findCharacterSheetCollisions,
+  validateCharacterSheetWrite
+} from './characterSheetService';
 import {planCharacterCanonIntake} from './characterIntakeService';
 
 const category = (
@@ -147,5 +151,40 @@ describe('character intake convergence', () => {
     expect(() =>
       validateCharacterSheetWrite(sheet(), sheet('entity-mira'))
     ).toThrow('cannot be removed');
+  });
+
+  it('rejects a second sheet for the same canonical character', () => {
+    expect(() =>
+      validateCharacterSheetWrite(
+        {...sheet('entity-mira'), id: 'sheet-new'},
+        undefined,
+        [sheet('entity-mira')]
+      )
+    ).toThrow('already has a sheet');
+  });
+
+  it('derives sheet display names from canonical World Bible entities', () => {
+    const canonical = entity('entity-mira', 'characters', 'Mira Renamed');
+    expect(
+      deriveCharacterSheetNames(
+        [{...sheet('entity-mira'), name: 'Old Sheet Name'}],
+        [canonical]
+      )[0].name
+    ).toBe('Mira Renamed');
+  });
+
+  it('surfaces existing one-sheet-per-character collisions', () => {
+    const collisions = findCharacterSheetCollisions([
+      sheet('entity-mira'),
+      {...sheet('entity-mira'), id: 'sheet-mira-duplicate'},
+      {...sheet('entity-tam'), id: 'sheet-tam'}
+    ]);
+
+    expect(collisions).toHaveLength(1);
+    expect(collisions[0].characterEntityId).toBe('entity-mira');
+    expect(collisions[0].sheets.map((entry) => entry.id)).toEqual([
+      'sheet-mira',
+      'sheet-mira-duplicate'
+    ]);
   });
 });

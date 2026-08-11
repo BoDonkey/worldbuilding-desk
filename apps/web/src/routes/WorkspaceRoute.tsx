@@ -376,6 +376,7 @@ function WorkspaceRoute() {
     resolvedActionCues,
     characters,
     characterSheets,
+    actorResolutions,
     compendiumEntries,
     ruleset,
     settlementState,
@@ -533,6 +534,7 @@ function WorkspaceRoute() {
     characters,
     canonicalFacts,
     characterSheets,
+    actorResolutions,
     ruleset,
     stateMutationEvents,
     selectedDocumentId: selectedId,
@@ -775,6 +777,7 @@ function WorkspaceRoute() {
     characters,
     entities,
     characterSheets,
+    actorResolutions,
     aliases,
     ruleset,
     stateMutationEvents,
@@ -1911,7 +1914,7 @@ function WorkspaceRoute() {
               characterName={pendingPositionedChange.character.name}
               sceneTitle={selectedDocument?.title || 'Current scene'}
               cursorPosition={pendingPositionedChange.event?.scenePosition ?? sceneCursorPosition}
-              actorId={pendingPositionedSheet.characterId ?? pendingPositionedSheet.id}
+              actorId={pendingPositionedSheet.characterEntityId ?? ''}
               ruleset={ruleset}
               before={positionedChangeBefore}
               existingEvent={pendingPositionedChange.event}

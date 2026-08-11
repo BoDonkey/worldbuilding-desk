@@ -142,26 +142,33 @@ describe('migrateProjectSnapshotPayload', () => {
       createdAt: 1,
       updatedAt: 1
     };
-    const replay = (sheet: CharacterSheet, events: StateMutationEvent[]) =>
+    const replay = (
+      sheet: CharacterSheet,
+      events: StateMutationEvent[],
+      actorResolutions = after.data.actorResolutions.slice(0, 0)
+    ) =>
       replayCharacterState({
         sheet,
         ruleset,
         events,
         target: {sheetId: sheet.id, characterId: sheet.characterId},
+        actorResolutions,
         upToSceneOrder: 1
       });
 
-    expect(
-      replay(
-        after.data.characterSheets[0],
-        after.data.stateMutationEvents
-      )
-    ).toEqual(
-      replay(
-        before.data.characterSheets[0] as CharacterSheet,
-        before.data.stateMutationEvents as StateMutationEvent[]
-      )
+    const beforeReplay = replay(
+      before.data.characterSheets[0] as CharacterSheet,
+      before.data.stateMutationEvents as StateMutationEvent[]
     );
+    const afterReplay = replay(
+      after.data.characterSheets[0],
+      after.data.stateMutationEvents,
+      after.data.actorResolutions
+    );
+
+    expect(afterReplay.actorId).toBe('entity-mira');
+    expect(beforeReplay.actorId).toBe('character-mira');
+    expect({...afterReplay, actorId: beforeReplay.actorId}).toEqual(beforeReplay);
   });
 
   it('runs an explicit contiguous snapshot migration chain', () => {

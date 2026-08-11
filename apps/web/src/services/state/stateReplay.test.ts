@@ -30,6 +30,7 @@ const sheet: CharacterSheet = {
   id: 'sheet-1',
   projectId: 'project-1',
   characterId: 'character-1',
+  characterEntityId: 'entity-1',
   name: 'Kael',
   level: 1,
   experience: 0,
@@ -216,6 +217,41 @@ describe('stateReplay', () => {
     expect(replayed.inventory.equipped).toEqual(['Torch']);
     expect(replayed.statuses).toEqual(['Inspired']);
     expect(replayed.inventory.items).toEqual([{name: 'Torch', quantity: 2}]);
+  });
+
+  it('replays immutable legacy actor IDs through the persisted resolution map', () => {
+    const legacyEvent = makeEvent({
+      id: 'legacy-character-event',
+      commands: [
+        {
+          type: 'resource_change',
+          actorId: 'character-1',
+          resourceDefinitionId: 'mana',
+          delta: 2
+        }
+      ]
+    });
+
+    const replayed = replayCharacterState({
+      sheet,
+      ruleset,
+      events: [legacyEvent],
+      target: {actorId: 'entity-1'},
+      actorResolutions: [
+        {
+          id: 'resolution-1',
+          projectId: 'project-1',
+          legacyActorId: 'character-1',
+          legacyActorType: 'character',
+          entityId: 'entity-1',
+          createdAt: 1
+        }
+      ]
+    });
+
+    expect(replayed.actorId).toBe('entity-1');
+    expect(replayed.resources.current.mana).toBe(6);
+    expect(legacyEvent.commands[0].actorId).toBe('character-1');
   });
 
   it('validates command semantics against current replay state', () => {

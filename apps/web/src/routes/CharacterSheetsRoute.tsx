@@ -9,15 +9,23 @@ import type {
   CharacterStat,
   CharacterResource,
   StateMutationEvent,
+  WorldEntity,
   WritingDocument
 } from '../entityTypes';
 import type {StoredRuleset} from '../entityTypes';
 import {
   getCharacterSheetsByProject,
+  deriveCharacterSheetNames,
+  findCharacterSheetCollisions,
   saveCharacterSheet,
   deleteCharacterSheet
 } from '../services/characters';
 import {getCharactersByProject} from '../characterStorage';
+import {getEntitiesByProject} from '../entityStorage';
+import {
+  getActorResolutionsByProject
+} from '../services/characters/characterIdentityStorage';
+import type {ActorResolution} from '../services/characters/characterIdentity';
 import {getRulesetByProjectId} from '../services/rules';
 import type {
   ShodhMemoryProvider,
@@ -146,6 +154,7 @@ function CharacterSheetsRoute({
   const [catalogEquipmentId, setCatalogEquipmentId] = useState('');
   const [catalogStatusId, setCatalogStatusId] = useState('');
   const [characters, setCharacters] = useState<Character[]>([]);
+  const [actorResolutions, setActorResolutions] = useState<ActorResolution[]>([]);
   const [settlementState, setSettlementState] = useState<Awaited<
     ReturnType<typeof getOrCreateSettlementState>
   > | null>(null);
@@ -190,7 +199,7 @@ function CharacterSheetsRoute({
     replayedStateAtSelectedScene, selectedMutationValueSummary, mutationPreviewIssues,
     selectedSheetMutationHistory
   } = useCharacterSheetMutationPreview({
-    sheets, ruleset, documents, stateMutationEvents
+    sheets, ruleset, documents, stateMutationEvents, actorResolutions
   });
 
   useEffect(() => {
@@ -202,6 +211,7 @@ function CharacterSheetsRoute({
           setSheets([]);
           setRuleset(null);
           setCharacters([]);
+          setActorResolutions([]);
           setSettlementState(null);
           setSettlementModules([]);
           setCompendiumEntries([]);
@@ -225,7 +235,9 @@ function CharacterSheetsRoute({
         loadedSettlementModules,
         loadedCompendiumEntries,
         loadedDocuments,
-        loadedStateMutationEvents
+        loadedStateMutationEvents,
+        loadedEntities,
+        loadedActorResolutions
       ] = await Promise.all(
         [
           getCharacterSheetsByProject(activeProject.id),
@@ -235,7 +247,9 @@ function CharacterSheetsRoute({
           getSettlementModulesByProject(activeProject.id),
           getCompendiumEntriesByProject(activeProject.id),
           getDocumentsByProject(activeProject.id),
-          getStateMutationEventsByProject(activeProject.id)
+          getStateMutationEventsByProject(activeProject.id),
+          getEntitiesByProject(activeProject.id),
+          getActorResolutionsByProject(activeProject.id)
         ]
       );
 
@@ -250,8 +264,11 @@ function CharacterSheetsRoute({
           : {projectId: activeProject.id};
 
       if (!cancelled) {
+        const entityNameById = new Map(
+          loadedEntities.map((entity: WorldEntity) => [entity.id, entity.name])
+        );
         setSheets(
-          loadedSheets.map((sheet) => ({
+          deriveCharacterSheetNames(loadedSheets, loadedEntities).map((sheet) => ({
             ...sheet,
             stats: reconcileCharacterStats(loadedRuleset, sheet.stats),
             resources: reconcileCharacterResources(loadedRuleset, sheet.resources)
@@ -260,7 +277,25 @@ function CharacterSheetsRoute({
         setRuleset(loadedRuleset);
         setStats(buildDefaultStats(loadedRuleset));
         setResources(buildDefaultResources(loadedRuleset));
-        setCharacters(loadedCharacters);
+        setCharacters(
+          loadedCharacters.map((character) => ({
+            ...character,
+            name:
+              (character.entityId
+                ? entityNameById.get(character.entityId)
+                : undefined) ?? character.name
+          }))
+        );
+        setActorResolutions(loadedActorResolutions);
+        const sheetCollisions = findCharacterSheetCollisions(loadedSheets);
+        if (sheetCollisions.length > 0) {
+          setFeedback({
+            tone: 'error',
+            message: `${sheetCollisions.length} World Bible character ${
+              sheetCollisions.length === 1 ? 'has' : 'have'
+            } more than one sheet. Keep one sheet per character before recording new state.`
+          });
+        }
         setSettlementState(loadedSettlementState);
         setSettlementModules(loadedSettlementModules);
         setCompendiumEntries(loadedCompendiumEntries);
@@ -345,7 +380,11 @@ function CharacterSheetsRoute({
     }
 
     const existingSheet =
-      sheets.find((sheet) => sheet.characterId === autoCreateSheetCharacterId) ?? null;
+      sheets.find(
+        (sheet) =>
+          sheet.characterEntityId === character.entityId ||
+          sheet.characterId === autoCreateSheetCharacterId
+      ) ?? null;
     if (existingSheet) {
       setEditingId(existingSheet.id);
       setSelectedCharacterId(existingSheet.characterId || '');
@@ -595,7 +634,7 @@ function CharacterSheetsRoute({
       projectId: activeProject.id,
       characterEntityId,
       characterId: selectedCharacterId || undefined,
-      name: name.trim(),
+      name: selectedCharacter?.name ?? name.trim(),
       level,
       experience,
       stats: reconcileCharacterStats(ruleset, stats),
@@ -861,6 +900,13 @@ function CharacterSheetsRoute({
       });
       return;
     }
+    if (!selectedMutationActorId) {
+      setFeedback({
+        tone: 'error',
+        message: 'Resolve this legacy sheet to a World Bible character before recording state.'
+      });
+      return;
+    }
 
     const command = buildDraftMutationCommand({
       actorId: selectedMutationActorId,
@@ -927,6 +973,7 @@ function CharacterSheetsRoute({
             sheetId: selectedMutationSheet.id,
             actorName: selectedMutationSheet.name
           },
+          actorResolutions,
           upToSceneOrder:
             sceneOrderById.get(selectedMutationScene.id) ?? Number.MAX_SAFE_INTEGER
         }),
@@ -966,6 +1013,7 @@ function CharacterSheetsRoute({
     }
   }, [
     activeProject,
+    actorResolutions,
     buildDraftMutationCommand,
     mutationBooleanValue,
     editingMutationEventId,
@@ -1241,15 +1289,21 @@ function CharacterSheetsRoute({
 
           <div className={styles.inlineMarginBottom075rem}>
             <label>
-              Name *
+              Canonical name *
               <br />
               <input
                 type='text'
                 value={name}
                 onChange={(e) => setName(e.target.value)}
+                readOnly={Boolean(selectedCharacterId)}
                 required
                 className={styles.inlineWidth100}
               />
+              {selectedCharacterId && (
+                <span className={styles.sectionHint}>
+                  Rename this character in the World Bible.
+                </span>
+              )}
             </label>
           </div>
 

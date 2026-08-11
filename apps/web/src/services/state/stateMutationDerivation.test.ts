@@ -21,6 +21,7 @@ const sheet: CharacterSheet = {
   id: 'sheet-1',
   projectId: 'project-1',
   characterId: 'character-1',
+  characterEntityId: 'entity-kael',
   name: 'Kael',
   level: 1,
   experience: 0,
@@ -43,7 +44,7 @@ function makeObservation(
     projectId: 'project-1',
     type: 'state_delta_candidate',
     operation: overrides.operation,
-    actor: overrides.actor ?? 'character-1',
+    actor: overrides.actor ?? 'entity-kael',
     target: overrides.target ?? 'Torch',
     amount: overrides.amount,
     confidence: overrides.confidence ?? 0.8,
@@ -129,7 +130,7 @@ describe('stateMutationDerivation', () => {
         sceneSequence: 3,
         command: {
           type: 'inventory_add',
-          actorId: 'character-1',
+          actorId: 'entity-kael',
           itemName: 'Rope',
           quantity: 1
         }
@@ -140,10 +141,33 @@ describe('stateMutationDerivation', () => {
         sceneSequence: 4,
         command: {
           type: 'inventory_equip',
-          actorId: 'character-1',
+          actorId: 'entity-kael',
           itemName: 'Rope'
         }
       }
     ]);
+  });
+
+  it('does not bind an observation to a sheet by display name', () => {
+    const derived = buildDerivedStateMutationEvents({
+      projectId: 'project-1',
+      sceneId: 'scene-1',
+      sceneOrder: 1,
+      sourceRevision: 10,
+      sourceHash: 'h2',
+      observations: [
+        makeObservation({
+          id: 'obs-by-name',
+          actor: 'Kael',
+          operation: 'inventory_add',
+          target: 'Rope'
+        })
+      ],
+      characterSheets: [sheet],
+      ruleset,
+      existingEvents: []
+    });
+
+    expect(derived).toEqual([]);
   });
 });

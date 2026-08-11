@@ -136,6 +136,13 @@ Under the hood, the app still includes rich systems for world data, rules, chara
   identity links, and new sheets require a canonical entity link. Storage
   guards prevent new free-standing Character Tools or sheet records while
   still permitting unresolved legacy records to be updated and classified.
+- Character sheets and tracked state now use canonical World Bible entity IDs
+  as the actor identity for every new mutation. Replay resolves immutable
+  legacy character/sheet actor IDs through the persisted identity map, and
+  deterministic state derivation no longer matches actors by display name.
+  Linked sheet names derive from canon, duplicate sheets for one character are
+  blocked on write, and any conserved legacy collisions surface in Character
+  Tools for repair.
 - Project records now carry an application-data schema version independent of
   IndexedDB's structural version. Project load runs a deterministic,
   one-version-at-a-time migration chain, fails closed on newer schemas, and

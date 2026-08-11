@@ -5,16 +5,13 @@ import type {
   StoredRuleset
 } from '../../entityTypes';
 import type {ObservationProposal} from '../worldEngine';
+import type {ActorResolution} from '../characters/characterIdentity';
 import {
   replayCharacterState,
   validateStateMutationCommandAgainstState,
   validateStateMutationEventForRuleset
 } from './stateReplay';
 import {validateStateMutationEvent} from './stateMutationSchemas';
-
-function normalize(value: string): string {
-  return value.trim().toLowerCase();
-}
 
 function findSheetForActor(
   actor: string | undefined,
@@ -23,13 +20,12 @@ function findSheetForActor(
   if (!actor) {
     return null;
   }
-  const normalizedActor = normalize(actor);
   return (
     characterSheets.find(
       (sheet) =>
-        normalize(sheet.id) === normalizedActor ||
-        normalize(sheet.characterId ?? '') === normalizedActor ||
-        normalize(sheet.name) === normalizedActor
+        sheet.characterEntityId === actor ||
+        sheet.id === actor ||
+        sheet.characterId === actor
     ) ?? null
   );
 }
@@ -98,6 +94,7 @@ export function buildDerivedStateMutationEvents(params: {
   characterSheets: CharacterSheet[];
   ruleset: StoredRuleset | null;
   existingEvents: StateMutationEvent[];
+  actorResolutions?: ActorResolution[];
   createdAt?: number;
 }): StateMutationEvent[] {
   const relevantObservations = params.observations.filter(
@@ -130,7 +127,10 @@ export function buildDerivedStateMutationEvents(params: {
     if (!sheet) {
       return;
     }
-    const actorId = sheet.characterId ?? sheet.id;
+    const actorId = sheet.characterEntityId;
+    if (!actorId) {
+      return;
+    }
     const command = observationToCommand(observation, actorId);
     if (!command) {
       return;
@@ -161,6 +161,7 @@ export function buildDerivedStateMutationEvents(params: {
         sheetId: sheet.id,
         actorName: sheet.name
       },
+      actorResolutions: params.actorResolutions,
       upToSceneOrder: params.sceneOrder
     });
     const ruleErrors = validateStateMutationEventForRuleset({

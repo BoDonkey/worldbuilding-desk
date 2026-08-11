@@ -125,7 +125,7 @@ and required revisit point, `WIP`, `Done <commit>`.
 | 4.6 | Backup + character-package completeness (CX-3) | 4 | M | Done `b7c4776` — snapshot schema 2 now conserves aliases, character links, actor mappings, and classifier reports; character package schema 2 round-trips canonical identity, aliases, facts, extensions, and optional sheets while schema-1 imports classify conservatively; replay parity retained; lint baseline; 338 web + 6 engine + 12 UI tests; web/desktop builds; Cypress 47/47 |
 | 4.7 | Character intake convergence (CX-4) | 4 | M | Done `ede3504` — canonical-first intake service now establishes or exact-uniquely links World Bible character identity before modern Character Tools writes; review capture uses explicit category kind; lore acceptance targets entities; World Bible handoffs persist explicit links; v2 packages reject broken claimed links; new sheets require canon while legacy unresolved records remain conservable; lint baseline; 346 web + 6 engine + 12 UI tests; web/desktop builds; Cypress 48/48 |
 | 4.8 | Character identity resolution queue (CX-5) | 4 | M | — |
-| 4.9 | Sheet + state identity rebinding (CX-6) | 4 | M | — |
+| 4.9 | Sheet + state identity rebinding (CX-6) | 4 | M | WIP |
 | 4.10 | Character capability routing (CX-7) | 4 | S | — |
 | 4.11 | Character identity dogfood addendum (CX-8) | 4 | M | — |
 | 5.1 | Auto-update decision + implementation | 5 | M | — |

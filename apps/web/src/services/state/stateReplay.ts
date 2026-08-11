@@ -1,4 +1,5 @@
 import type {CharacterSheet, StateMutationCommand, StateMutationEvent, StoredRuleset} from '../../entityTypes';
+import type {ActorResolution} from '../characters/characterIdentity';
 import {getStateMutationEventsByProject} from './stateMutationLedger';
 import {
   buildCharacterReplayBaseline,
@@ -27,6 +28,16 @@ export interface ReplayableCharacterTarget {
   sheetId?: string;
   actorId?: string;
   actorName?: string;
+}
+
+function resolveActorId(
+  actorId: string,
+  actorResolutions: ActorResolution[] | undefined
+): string {
+  return (
+    actorResolutions?.find((resolution) => resolution.legacyActorId === actorId)
+      ?.entityId ?? actorId
+  );
 }
 
 export function compareStateMutationEvents(a: StateMutationEvent, b: StateMutationEvent): number {
@@ -64,12 +75,20 @@ export async function getAcceptedStateMutationEventsByProject(
   return getAcceptedStateMutationEvents(events);
 }
 
-function matchesActor(commandActorId: string, target: ReplayableCharacterTarget): boolean {
+function matchesActor(
+  commandActorId: string,
+  target: ReplayableCharacterTarget,
+  actorResolutions: ActorResolution[] | undefined
+): boolean {
+  const resolvedCommandActorId = resolveActorId(commandActorId, actorResolutions);
   return [
     target.actorId,
     target.characterId,
     target.sheetId
-  ].filter(Boolean).includes(commandActorId);
+  ]
+    .filter(Boolean)
+    .map((actorId) => resolveActorId(actorId as string, actorResolutions))
+    .includes(resolvedCommandActorId);
 }
 
 function clampMinZero(value: number): number {
@@ -243,6 +262,7 @@ export function replayCharacterState(params: {
   ruleset: StoredRuleset | null;
   events: StateMutationEvent[];
   target: ReplayableCharacterTarget;
+  actorResolutions?: ActorResolution[];
   upToSceneOrder?: number;
   upToScenePosition?: number;
 }): CharacterReplayState {
@@ -285,7 +305,7 @@ export function replayCharacterState(params: {
       continue;
     }
     for (const command of event.commands) {
-      if (matchesActor(command.actorId, params.target)) {
+      if (matchesActor(command.actorId, params.target, params.actorResolutions)) {
         state = applyStateMutationCommand(state, command);
       }
     }

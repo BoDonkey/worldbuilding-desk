@@ -226,7 +226,7 @@ export function buildCharacterReplayBaseline(params: {
     [];
 
   return {
-    actorId: sheet.characterId ?? sheet.id,
+    actorId: sheet.characterEntityId ?? sheet.characterId ?? sheet.id,
     actorName: sheet.name,
     stats,
     resources: {

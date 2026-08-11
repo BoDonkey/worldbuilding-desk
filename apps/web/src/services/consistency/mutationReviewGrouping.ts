@@ -4,6 +4,7 @@ import type {
   StoredRuleset,
   WritingDocument
 } from '../../entityTypes';
+import type {ActorResolution} from '../characters/characterIdentity';
 import {
   buildStateMutationPreview,
   computeBatchAcceptableStateMutationEventIds,
@@ -61,6 +62,7 @@ export function getHiddenStateMutationReviewKey(event: {
 
 export function buildStateMutationReviewItems(params: {
   characterSheets: CharacterSheet[];
+  actorResolutions?: ActorResolution[];
   documents: WritingDocument[];
   hiddenReviewKeys: string[];
   ruleset: StoredRuleset | null;
@@ -74,6 +76,17 @@ export function buildStateMutationReviewItems(params: {
     if (sheet.characterId) {
       actorLabelById.set(sheet.characterId, sheet.name);
       sheetByActorId.set(sheet.characterId, sheet);
+    }
+    if (sheet.characterEntityId) {
+      actorLabelById.set(sheet.characterEntityId, sheet.name);
+      sheetByActorId.set(sheet.characterEntityId, sheet);
+    }
+  });
+  params.actorResolutions?.forEach((resolution) => {
+    const sheet = sheetByActorId.get(resolution.entityId);
+    if (sheet) {
+      actorLabelById.set(resolution.legacyActorId, sheet.name);
+      sheetByActorId.set(resolution.legacyActorId, sheet);
     }
   });
   const resourceDefinitionNameById = new Map(
@@ -100,6 +113,7 @@ export function buildStateMutationReviewItems(params: {
     proposedEvents,
     acceptedEvents,
     characterSheets: params.characterSheets,
+    actorResolutions: params.actorResolutions,
     ruleset: params.ruleset,
     labels: {resourceDefinitionNameById, statDefinitionNameById}
   });
@@ -130,6 +144,7 @@ export function buildStateMutationReviewItems(params: {
                 sheetId: sheet.id,
                 actorName: sheet.name
               },
+              actorResolutions: params.actorResolutions,
               command: primaryCommand,
               upToSceneOrder: event.sceneOrder ?? Number.MAX_SAFE_INTEGER,
               labels: {resourceDefinitionNameById, statDefinitionNameById}

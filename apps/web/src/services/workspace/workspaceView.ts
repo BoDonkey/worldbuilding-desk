@@ -39,7 +39,11 @@ import {
   type SceneRosterCandidate,
   type SceneRosterOverrides
 } from './sceneRoster';
-import {createCharacterLinkResolver, isCharacterCategory} from '../characters/characterIdentity';
+import {
+  createCharacterLinkResolver,
+  isCharacterCategory,
+  type ActorResolution
+} from '../characters/characterIdentity';
 
 const displayRosterFieldValue = (value: unknown): string | null => {
   if (typeof value === 'string') {
@@ -83,6 +87,7 @@ export function buildSceneRosterModel(params: {
   characters: Character[];
   entities: WorldEntity[];
   characterSheets: CharacterSheet[];
+  actorResolutions?: ActorResolution[];
   aliases: ConsistencyAlias[];
   content: string;
   overrides: SceneRosterOverrides;
@@ -124,7 +129,8 @@ export function buildSceneRosterModel(params: {
     categories: params.categories,
     entities: params.entities,
     characters: params.characters,
-    sheets: params.characterSheets
+    sheets: params.characterSheets,
+    actorResolutions: params.actorResolutions
   });
   const sheetByCharacterId = new Map(
     params.characterSheets
@@ -159,7 +165,7 @@ export function buildSceneRosterModel(params: {
       key,
       type: 'character',
       id: sheet.id,
-      name: sheet.name,
+      name: characterEntity?.name ?? sheet.name,
       aliases: aliasValues
     });
     characterSheetByKey.set(key, sheet);
@@ -251,11 +257,12 @@ export function buildSceneRosterModel(params: {
         ruleset: params.ruleset,
         events: params.stateMutationEvents,
         target: {
-          actorId: sheet.id,
+          actorId: sheet.characterEntityId,
           characterId: sheet.characterId,
           sheetId: sheet.id,
           actorName: sheet.name
         },
+        actorResolutions: params.actorResolutions,
         upToSceneOrder:
           params.stateMoment === 'opening'
             ? Math.max(0, selectedSceneOrder - 1)
@@ -397,6 +404,7 @@ export function buildSelectedSceneTimeline(params: {
   selectedDocument: WritingDocument | null;
   stateMutationEvents: StateMutationEvent[];
   characterSheets: CharacterSheet[];
+  actorResolutions?: ActorResolution[];
   ruleset: StoredRuleset | null;
   documents: WritingDocument[];
   resourceDefinitionNameById: Map<string, string>;
@@ -427,6 +435,13 @@ export function buildSelectedSceneTimeline(params: {
     if (sheet.characterId) {
       sheetByActorId.set(sheet.characterId, sheet);
     }
+    if (sheet.characterEntityId) {
+      sheetByActorId.set(sheet.characterEntityId, sheet);
+    }
+  });
+  params.actorResolutions?.forEach((resolution) => {
+    const sheet = sheetByActorId.get(resolution.entityId);
+    if (sheet) sheetByActorId.set(resolution.legacyActorId, sheet);
   });
 
   const actorStateById = new Map<
@@ -454,7 +469,8 @@ export function buildSelectedSceneTimeline(params: {
             characterId: sheet.characterId,
             sheetId: sheet.id,
             actorName: sheet.name
-          }
+          },
+          actorResolutions: params.actorResolutions
         });
       const after = applyStateMutationCommand(before, command);
       actorStateById.set(actorStateKey, after);
@@ -560,11 +576,12 @@ export function buildSelectedSceneTimeline(params: {
         ruleset: params.ruleset,
         events: acceptedEvents,
         target: {
-          actorId: sheet.id,
+          actorId: sheet.characterEntityId,
           characterId: sheet.characterId,
           sheetId: sheet.id,
           actorName: sheet.name
         },
+        actorResolutions: params.actorResolutions,
         upToSceneOrder: selectedSceneOrder
       });
       const resourceLines = Object.entries(finalState.resources.current)

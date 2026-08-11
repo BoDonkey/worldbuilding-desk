@@ -16,6 +16,7 @@ import type {
   WorldEntity,
   WritingDocument
 } from '../entityTypes';
+import type {ActorResolution} from '../services/characters/characterIdentity';
 import type {
   SceneRosterCharacterCard,
   SceneRosterInventoryLine,
@@ -86,6 +87,7 @@ interface UseWorkspaceSceneRosterOptions {
   characters: Character[];
   entities: WorldEntity[];
   characterSheets: CharacterSheet[];
+  actorResolutions: ActorResolution[];
   aliases: ConsistencyAlias[];
   ruleset: StoredRuleset | null;
   stateMutationEvents: StateMutationEvent[];
@@ -151,6 +153,7 @@ export function useWorkspaceSceneRoster({
   characters,
   entities,
   characterSheets,
+  actorResolutions,
   aliases,
   ruleset,
   stateMutationEvents,
@@ -226,6 +229,7 @@ export function useWorkspaceSceneRoster({
         characters,
         entities,
         characterSheets,
+        actorResolutions,
         aliases,
         content: deferredRosterContent,
         overrides: getSceneRosterOverrides(selectedDocument?.id ?? null),
@@ -243,6 +247,7 @@ export function useWorkspaceSceneRoster({
       aliases,
       categories,
       characterSheets,
+      actorResolutions,
       characters,
       compendiumEntries,
       deferredRosterContent,
@@ -325,6 +330,13 @@ export function useWorkspaceSceneRoster({
       if (!activeProject || !selectedDocument || !pendingInventoryCapture) return;
       const sheet = characterSheets.find((candidate) => candidate.id === input.sheetId);
       if (!sheet) return;
+      if (!sheet.characterEntityId) {
+        setFeedback({
+          tone: 'error',
+          message: 'Resolve this legacy sheet to a World Bible character before recording state.'
+        });
+        return;
+      }
       const sceneOrder =
         sortWritingDocuments(documents).findIndex(
           (document) => document.id === selectedDocument.id
@@ -350,7 +362,7 @@ export function useWorkspaceSceneRoster({
         commands: [
           {
             type: 'inventory_add',
-            actorId: sheet.characterId ?? sheet.id,
+            actorId: sheet.characterEntityId,
             itemName: input.itemName,
             quantity: input.quantity
           }
@@ -517,7 +529,14 @@ export function useWorkspaceSceneRoster({
         (candidate) => candidate.id === character.sheetId
       );
       if (!sheet) return;
-      const actorId = sheet.characterId ?? sheet.id;
+      if (!sheet.characterEntityId) {
+        setFeedback({
+          tone: 'error',
+          message: 'Resolve this legacy sheet to a World Bible character before recording state.'
+        });
+        return;
+      }
+      const actorId = sheet.characterEntityId;
       setPendingPositionedChange({
         character,
         initialLabel: `Consumes ${item.name}`,
@@ -776,16 +795,18 @@ export function useWorkspaceSceneRoster({
         return true;
       }),
       target: {
-        actorId: pendingPositionedSheet.id,
+        actorId: pendingPositionedSheet.characterEntityId,
         characterId: pendingPositionedSheet.characterId,
         sheetId: pendingPositionedSheet.id,
         actorName: pendingPositionedSheet.name
       },
+      actorResolutions,
       upToSceneOrder: sceneOrder,
       upToScenePosition:
         pendingPositionedChange?.event?.scenePosition ?? sceneCursorPosition
     });
   }, [
+    actorResolutions,
     documents,
     pendingPositionedChange,
     pendingPositionedSheet,
@@ -811,6 +832,14 @@ export function useWorkspaceSceneRoster({
           (document) => document.id === selectedDocument.id
         ) + 1;
       if (sceneOrder <= 0) return;
+      const canonicalActorId = pendingPositionedSheet.characterEntityId;
+      if (!canonicalActorId) {
+        setFeedback({
+          tone: 'error',
+          message: 'Resolve this legacy sheet to a World Bible character before recording state.'
+        });
+        return;
+      }
       const existingEvent = pendingPositionedChange.event ?? null;
       const event: StateMutationEvent = {
         id: existingEvent?.id ?? crypto.randomUUID(),
@@ -830,7 +859,10 @@ export function useWorkspaceSceneRoster({
         sourceRevision: selectedDocument.updatedAt,
         sourceHash: hashSceneContent(selectedDocument.content),
         status: 'accepted',
-        commands: input.commands,
+        commands: input.commands.map((command) => ({
+          ...command,
+          actorId: canonicalActorId
+        })),
         consumableEffect:
           pendingPositionedChange.consumableEffect ?? existingEvent?.consumableEffect,
         createdAt: existingEvent?.createdAt ?? Date.now()
@@ -884,12 +916,14 @@ export function useWorkspaceSceneRoster({
         selectedDocument,
         stateMutationEvents,
         characterSheets,
+        actorResolutions,
         ruleset,
         documents,
         resourceDefinitionNameById,
         statDefinitionNameById
       }),
     [
+      actorResolutions,
       characterSheets,
       documents,
       resourceDefinitionNameById,
@@ -918,11 +952,12 @@ export function useWorkspaceSceneRoster({
         ruleset,
         events: resolvedStateMutationEvents,
         target: {
-          actorId: sheet.id,
+          actorId: sheet.characterEntityId,
           characterId: sheet.characterId,
           sheetId: sheet.id,
           actorName: sheet.name
         },
+        actorResolutions,
         upToSceneOrder: selectedSceneOrder,
         upToScenePosition: editorPosition
       });
@@ -964,6 +999,7 @@ export function useWorkspaceSceneRoster({
       };
     },
     [
+      actorResolutions,
       characterSheets,
       documents,
       resourceDefinitionNameById,

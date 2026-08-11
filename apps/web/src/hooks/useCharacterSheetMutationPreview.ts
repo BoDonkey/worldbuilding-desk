@@ -10,6 +10,7 @@ import {sortWritingDocuments} from '../writingStorage';
 import {buildCharacterSheetMutationCommand} from '../services/characters/characterSheetRuleset';
 import {replayCharacterState} from '../services/state/stateReplay';
 import {buildStateMutationPreview} from '../services/state/stateMutationPresentation';
+import type {ActorResolution} from '../services/characters/characterIdentity';
 import {
   describeStateMutationEventStaleness,
   getStateMutationEventStaleness
@@ -20,8 +21,9 @@ export const useCharacterSheetMutationPreview = (params: {
   ruleset: StoredRuleset | null;
   documents: WritingDocument[];
   stateMutationEvents: StateMutationEvent[];
+  actorResolutions: ActorResolution[];
 }) => {
-  const {sheets, ruleset, documents, stateMutationEvents} = params;
+  const {sheets, ruleset, documents, stateMutationEvents, actorResolutions} = params;
   const [mutationTargetSheetId, setMutationTargetSheetId] = useState('');
   const [mutationSceneId, setMutationSceneId] = useState('');
   const [mutationType, setMutationType] =
@@ -87,7 +89,7 @@ export const useCharacterSheetMutationPreview = (params: {
   );
 
   const selectedMutationActorId =
-    selectedMutationSheet?.characterId ?? selectedMutationSheet?.id ?? '';
+    selectedMutationSheet?.characterEntityId ?? '';
 
   const buildDraftMutationCommand = buildCharacterSheetMutationCommand;
 
@@ -109,6 +111,7 @@ export const useCharacterSheetMutationPreview = (params: {
         sheetId: selectedMutationSheet.id,
         actorName: selectedMutationSheet.name
       },
+      actorResolutions,
       upToSceneOrder: selectedSceneOrder
     });
     const command = buildDraftMutationCommand({
@@ -145,6 +148,7 @@ export const useCharacterSheetMutationPreview = (params: {
         sheetId: selectedMutationSheet.id,
         actorName: selectedMutationSheet.name
       },
+      actorResolutions,
       command,
       upToSceneOrder: selectedSceneOrder
     });
@@ -170,7 +174,8 @@ export const useCharacterSheetMutationPreview = (params: {
     selectedMutationScene,
     selectedMutationSheet,
     selectedMutationStatDefinition,
-    stateMutationEvents
+    stateMutationEvents,
+    actorResolutions
   ]);
 
   const replayedStateAtSelectedScene = useMemo(() => {
@@ -189,6 +194,7 @@ export const useCharacterSheetMutationPreview = (params: {
         sheetId: selectedMutationSheet.id,
         actorName: selectedMutationSheet.name
       },
+      actorResolutions,
       upToSceneOrder: selectedSceneOrder
     });
   }, [
@@ -197,7 +203,8 @@ export const useCharacterSheetMutationPreview = (params: {
     selectedMutationActorId,
     selectedMutationScene,
     selectedMutationSheet,
-    stateMutationEvents
+    stateMutationEvents,
+    actorResolutions
   ]);
 
   const selectedMutationValueSummary = useMemo(() => {
@@ -214,14 +221,21 @@ export const useCharacterSheetMutationPreview = (params: {
       return [];
     }
     const candidateIds = new Set(
-      [selectedMutationSheet.id, selectedMutationSheet.characterId].filter(Boolean)
+      [
+        selectedMutationSheet.id,
+        selectedMutationSheet.characterId,
+        selectedMutationSheet.characterEntityId,
+        ...actorResolutions
+          .filter((resolution) => resolution.entityId === selectedMutationSheet.characterEntityId)
+          .map((resolution) => resolution.legacyActorId)
+      ].filter(Boolean)
     );
     return stateMutationEvents.filter(
       (event) =>
         event.status !== 'proposed' &&
         event.commands.some((command) => candidateIds.has(command.actorId))
     );
-  }, [selectedMutationSheet, stateMutationEvents]);
+  }, [actorResolutions, selectedMutationSheet, stateMutationEvents]);
 
   const selectedSheetMutationHistory = useMemo(
     () =>

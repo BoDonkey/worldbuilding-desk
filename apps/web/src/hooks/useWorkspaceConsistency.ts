@@ -32,6 +32,7 @@ import type {
 import {summarizeWorkspaceReviewSurfaces} from '../services/consistency/workspaceAnnotations';
 import {htmlToPlainText} from '../utils/textHelpers';
 import {isCharacterCategory} from '../services/characters/characterIdentity';
+import type {ActorResolution} from '../services/characters/characterIdentity';
 import {buildDerivedStateMutationEvents} from '../services/state/stateMutationDerivation';
 import {
   invalidateStateMutationEventById,
@@ -139,6 +140,7 @@ interface UseWorkspaceConsistencyParams {
   characters: Character[];
   canonicalFacts: CanonicalFact[];
   characterSheets: CharacterSheet[];
+  actorResolutions: ActorResolution[];
   ruleset: StoredRuleset | null;
   stateMutationEvents: StateMutationEvent[];
   selectedDocumentId: string | null;
@@ -393,6 +395,7 @@ export const useWorkspaceConsistency = ({
   characters,
   canonicalFacts,
   characterSheets,
+  actorResolutions,
   ruleset,
   stateMutationEvents,
   selectedDocumentId,
@@ -796,6 +799,7 @@ export const useWorkspaceConsistency = ({
                   sourceHash: hashString(doc.content),
                   observations,
                   characterSheets,
+                  actorResolutions,
                   ruleset,
                   existingEvents: stateMutationEvents
                 });
@@ -881,6 +885,7 @@ export const useWorkspaceConsistency = ({
       filterDismissedUnknownIssues,
       documents,
       characterSheets,
+      actorResolutions,
       knownConsistencyEntities,
       ruleset,
       resolvedActionCues,
@@ -1233,6 +1238,7 @@ export const useWorkspaceConsistency = ({
     () =>
       buildStateMutationReviewItems({
         characterSheets,
+        actorResolutions,
         documents,
         hiddenReviewKeys: hiddenStateMutationReviewKeys,
         ruleset,
@@ -1240,6 +1246,7 @@ export const useWorkspaceConsistency = ({
       }),
     [
       characterSheets,
+      actorResolutions,
       documents,
       hiddenStateMutationReviewKeys,
       ruleset,

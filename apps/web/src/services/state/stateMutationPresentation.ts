@@ -4,6 +4,7 @@ import type {
   StateMutationEvent,
   StoredRuleset
 } from '../../entityTypes';
+import type {ActorResolution} from '../characters/characterIdentity';
 import {
   applyStateMutationCommand,
   replayCharacterState,
@@ -49,6 +50,9 @@ function getSheetByActorId(characterSheets: CharacterSheet[]): Map<string, Chara
     map.set(sheet.id, sheet);
     if (sheet.characterId) {
       map.set(sheet.characterId, sheet);
+    }
+    if (sheet.characterEntityId) {
+      map.set(sheet.characterEntityId, sheet);
     }
   });
   return map;
@@ -165,12 +169,14 @@ export function buildStateMutationPreview(params: {
   command: StateMutationCommand;
   upToSceneOrder?: number;
   labels?: StateMutationLabelMaps;
+  actorResolutions?: ActorResolution[];
 }): StateMutationPreview {
   const before = replayCharacterState({
     sheet: params.sheet,
     ruleset: params.ruleset,
     events: params.events,
     target: params.target,
+    actorResolutions: params.actorResolutions,
     upToSceneOrder: params.upToSceneOrder
   });
   const after = applyStateMutationCommand(before, params.command);
@@ -201,6 +207,7 @@ export function computeBatchAcceptableStateMutationEventIds(params: {
   characterSheets: CharacterSheet[];
   ruleset: StoredRuleset | null;
   labels?: StateMutationLabelMaps;
+  actorResolutions?: ActorResolution[];
 }): Set<string> {
   const batchAcceptableIds = new Set<string>();
   const sheetByActorId = getSheetByActorId(params.characterSheets);
@@ -243,6 +250,7 @@ export function computeBatchAcceptableStateMutationEventIds(params: {
           sheetId: sheet.id,
           actorName: sheet.name
         },
+        actorResolutions: params.actorResolutions,
         command: primaryCommand,
         upToSceneOrder: event.sceneOrder ?? Number.MAX_SAFE_INTEGER,
         labels: params.labels

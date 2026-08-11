@@ -23,7 +23,12 @@ import {getDocumentsByProject} from '../writingStorage';
 import {getEntitiesByProject} from '../entityStorage';
 import {getCategoriesByProject, initializeDefaultCategories} from '../categoryStorage';
 import {getCharactersByProject} from '../characterStorage';
-import {getCharacterSheetsByProject} from '../services/characters';
+import {
+  deriveCharacterSheetNames,
+  getCharacterSheetsByProject
+} from '../services/characters';
+import {getActorResolutionsByProject} from '../services/characters/characterIdentityStorage';
+import type {ActorResolution} from '../services/characters/characterIdentity';
 import {getResolvedConsistencyActionCues} from '../settingsStorage';
 import {getRulesetByProjectId} from '../services/rules';
 import {
@@ -83,6 +88,7 @@ export function useWorkspaceProjectData({
   const [resolvedActionCues, setResolvedActionCues] = useState<string[]>([]);
   const [characters, setCharacters] = useState<Character[]>([]);
   const [characterSheets, setCharacterSheets] = useState<CharacterSheet[]>([]);
+  const [actorResolutions, setActorResolutions] = useState<ActorResolution[]>([]);
   const [compendiumEntries, setCompendiumEntries] = useState<CompendiumEntry[]>([]);
   const [ruleset, setRuleset] = useState<StoredRuleset | null>(null);
   const [settlementState, setSettlementState] = useState<Awaited<
@@ -175,6 +181,7 @@ export function useWorkspaceProjectData({
       setResolvedActionCues([]);
       setCharacters([]);
       setCharacterSheets([]);
+      setActorResolutions([]);
       setCompendiumEntries([]);
       setRuleset(null);
       setSettlementState(null);
@@ -214,7 +221,8 @@ export function useWorkspaceProjectData({
         loadedSettlementState,
         loadedSettlementModules,
         loadedStateMutationEvents,
-        loadedCanonicalFacts
+        loadedCanonicalFacts,
+        loadedActorResolutions
       ] = await Promise.all([
         getDocumentsByProject(activeProject.id),
         getResolvedConsistencyActionCues(activeProject),
@@ -228,7 +236,8 @@ export function useWorkspaceProjectData({
         getOrCreateSettlementState(activeProject.id),
         getSettlementModulesByProject(activeProject.id),
         getStateMutationEventsByProject(activeProject.id),
-        getCanonicalFactsByProject(activeProject.id)
+        getCanonicalFactsByProject(activeProject.id),
+        getActorResolutionsByProject(activeProject.id)
       ]);
       const settings = await loadProjectSettings(activeProject.id);
       const migratedAliases = await migrateCharacterAliasesToEntities({
@@ -259,7 +268,8 @@ export function useWorkspaceProjectData({
       setStatBlockGroups(settings.statBlockPreferences?.groups ?? []);
       setEntities(loadedEntities);
       setCharacters(loadedCharacters);
-      setCharacterSheets(loadedSheets);
+      setCharacterSheets(deriveCharacterSheetNames(loadedSheets, loadedEntities));
+      setActorResolutions(loadedActorResolutions);
       setCompendiumEntries(loadedCompendiumEntries);
       setRuleset(loadedRuleset);
       setSettlementState(loadedSettlementState);
@@ -471,6 +481,10 @@ export function useWorkspaceProjectData({
     };
   }, [activeProject]);
 
+  useEffect(() => {
+    setCharacterSheets((current) => deriveCharacterSheetNames(current, entities));
+  }, [entities]);
+
   return {
     // Editor
     editorConfig,
@@ -491,6 +505,7 @@ export function useWorkspaceProjectData({
     characters,
     setCharacters,
     characterSheets,
+    actorResolutions,
     compendiumEntries,
     ruleset,
 
