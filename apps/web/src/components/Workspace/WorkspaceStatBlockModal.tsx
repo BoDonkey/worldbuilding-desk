@@ -335,14 +335,14 @@ export const WorkspaceStatBlockModal = (props: WorkspaceStatBlockModalProps) => 
                       closeStatBlockModal();
                       navigate(
                         statBlockSourceType === 'character'
-                          ? '/characters?view=sheets'
+                          ? '/sheets'
                           : '/world-bible'
                       );
                     }}
                     className={styles.statInsertHintButton}
                   >
                     {statBlockSourceType === 'character'
-                      ? 'Go to Character Sheets'
+                      ? 'Go to Sheets'
                       : 'Go to World Bible'}
                   </button>
                 </div>

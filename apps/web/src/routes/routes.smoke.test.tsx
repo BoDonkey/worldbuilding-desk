@@ -2,7 +2,7 @@ import type {ReactElement} from 'react';
 import {fireEvent, screen, waitFor} from '@testing-library/react';
 import {beforeEach, describe, expect, it} from 'vitest';
 import CharacterSheetsRoute from './CharacterSheetsRoute';
-import CharactersRoute from './CharactersRoute';
+import CharacterPackagesRoute from './CharacterPackagesRoute';
 import CompendiumRoute from './CompendiumRoute';
 import LoreRoute from './LoreRoute';
 import ProjectsRoute from './ProjectsRoute';
@@ -42,7 +42,7 @@ describe('route smoke coverage', () => {
     },
     {
       name: 'CharacterSheetsRoute',
-      path: '/character-sheets',
+      path: '/sheets',
       route: <CharacterSheetsRoute />,
       heading: 'Character Sheets'
     },
@@ -53,10 +53,10 @@ describe('route smoke coverage', () => {
       heading: 'Source Notes'
     },
     {
-      name: 'CharactersRoute',
-      path: '/characters',
-      route: <CharactersRoute />,
-      heading: 'Character Tools'
+      name: 'CharacterPackagesRoute',
+      path: '/character-packages',
+      route: <CharacterPackagesRoute />,
+      heading: 'Character packages'
     },
     {
       name: 'ProjectsRoute',

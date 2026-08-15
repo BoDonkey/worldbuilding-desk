@@ -1,4 +1,4 @@
-import {useEffect, useState, useCallback, useMemo} from 'react';
+import {useEffect, useState, useCallback, useMemo, useRef} from 'react';
 import type {FormEvent} from 'react';
 import {useNavigate} from 'react-router';
 import type {
@@ -181,6 +181,7 @@ function CharacterSheetsRoute({
     tone: 'success' | 'error';
     message: string;
   } | null>(null);
+  const autoCreateInFlightRef = useRef<string | null>(null);
   const {
     mutationTargetSheetId, setMutationTargetSheetId,
     mutationSceneId, setMutationSceneId, mutationType, setMutationType,
@@ -362,11 +363,19 @@ function CharacterSheetsRoute({
   ]);
 
   useEffect(() => {
-    if (!autoCreateSheetCharacterId || editingId || !isLoaded || !activeProject) {
+    if (
+      !autoCreateSheetCharacterId ||
+      editingId ||
+      !isLoaded ||
+      !activeProject ||
+      autoCreateInFlightRef.current === autoCreateSheetCharacterId
+    ) {
       return;
     }
+    autoCreateInFlightRef.current = autoCreateSheetCharacterId;
     const character = characters.find((entry) => entry.id === autoCreateSheetCharacterId);
     if (!character) {
+      autoCreateInFlightRef.current = null;
       onAutoCreateConsumed?.();
       return;
     }
@@ -375,6 +384,7 @@ function CharacterSheetsRoute({
         tone: 'error',
         message: `Link "${character.name}" to a World Bible character before creating a sheet.`
       });
+      autoCreateInFlightRef.current = null;
       onAutoCreateConsumed?.();
       return;
     }
@@ -407,6 +417,7 @@ function CharacterSheetsRoute({
         tone: 'success',
         message: `Opened the existing sheet for "${character.name}".`
       });
+      autoCreateInFlightRef.current = null;
       onAutoCreateConsumed?.();
       return;
     }
@@ -466,6 +477,7 @@ function CharacterSheetsRoute({
         setFeedback({tone: 'error', message});
       })
       .finally(() => {
+        autoCreateInFlightRef.current = null;
         onAutoCreateConsumed?.();
       });
   }, [

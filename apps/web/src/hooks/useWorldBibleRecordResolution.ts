@@ -170,7 +170,7 @@ export function useWorldBibleRecordResolution({
       {
         entity: handoffMatch,
         matchKey: buildEntityMatchKey(editingId, handoffMatch.id),
-        reasons: [`Linked from ${handoffGuidance?.sourceName ?? 'Character Tools'}`],
+        reasons: [`Linked from ${handoffGuidance?.sourceName ?? 'older character data'}`],
         recommendedResolution: 'merge' as const
       },
       ...potentialEntityMatches

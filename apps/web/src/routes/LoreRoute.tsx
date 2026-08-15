@@ -306,7 +306,7 @@ function LoreRoute() {
     () => [
       ...characters.map((character) => ({
         key: `character:${character.id}`,
-        label: `${character.name} (Character Tools)`,
+        label: `${character.name} (Legacy character data)`,
         targetType: 'character' as const,
         targetId: character.id
       })),
@@ -718,7 +718,7 @@ function LoreRoute() {
     return {
       targetType: target.targetType,
       targetId: target.targetId,
-      targetName: target.label.replace(/\s+\((?:Character Tools|World Bible)\)$/, '')
+      targetName: target.label.replace(/\s+\((?:Legacy character data|World Bible)\)$/, '')
     };
   };
 

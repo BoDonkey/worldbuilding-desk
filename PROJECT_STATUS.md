@@ -48,7 +48,7 @@ Under the hood, the app still includes rich systems for world data, rules, chara
 - Editable review capture flow for detected names/places before adding to world records.
 - Manual selection-to-world capture from the editor for non-detected text.
 - Temporary dismiss and project-level `Always ignore` review actions.
-- Inline lore highlights and quick lore popovers are reserved for World Bible entities and aliases; secondary Character Tools records remain available to selection tools without being presented as canon, and Lore Inspector links to the record's editing surface.
+- Inline lore highlights and quick lore popovers are reserved for World Bible entities and aliases; unresolved legacy character capability records remain available to resolution tools without being presented as canon, and Lore Inspector routes them to World Bible resolution.
 - World Bible review queue for finishing review-created records and alias follow-up.
 - World Bible review queue now supports queue filtering by review reason and recommended action (`complete`, `alias`, `merge`, `ignore`).
 - Editor appearance controls for width, surface style, and serif/sans presentation.
@@ -141,22 +141,22 @@ Under the hood, the app still includes rich systems for world data, rules, chara
   legacy character/sheet actor IDs through the persisted identity map, and
   deterministic state derivation no longer matches actors by display name.
   Linked sheet names derive from canon, duplicate sheets for one character are
-  blocked on write, and any conserved legacy collisions surface in Character
-  Tools for repair.
+  blocked on write, and any conserved legacy collisions surface in World Bible
+  review for repair.
 - The World Bible review surface now includes a distinct `Needs canon link`
   queue for tools-only, sheet-only, and ambiguous legacy character records.
   Authors can link an existing World Bible character, explicitly create a
   review-required canon draft from the legacy record, or keep the record
   separate. Resolutions update extension/sheet links and legacy actor mappings
-  together; unresolved Character Tools records and sheets carry visible
+  together; unresolved legacy capability records and sheets carry visible
   `Not linked to canon` badges and remain excluded from canon presentation.
-- World Bible character detail now routes optional capabilities directly:
-  `Dialogue style`, `Add sheet`, and single-character export. Character Tools
-  no longer offers independent character creation, renaming, descriptions,
-  roles, ages, notes, or AI drafting; it manages attached dialogue-style,
-  sheet/state, import/export, and legacy-removal workflows while deriving
-  linked display names from World Bible canon. Character-package language has
-  replaced author-facing character “profile” terminology.
+- World Bible character detail now owns dialogue-style assignment and
+  single-character export directly. Sheet creation and character-scoped state
+  open in the project-gated `/sheets` optional-system surface with canonical
+  context prefilled. Batch import/export lives in the `Character packages`
+  utility under `More`; `/characters` is compatibility-only and redirects to
+  World Bible. The former Character Tools route and independent roster UI are
+  removed while storage adapters, v1 packages, and legacy resolution remain.
 - World Bible character detail is now one sectioned experience: `Canon`,
   `Notes`, `Continuity`, project-gated `Mechanics`, and `Writing aids`. New
   characters remain focused on Canon until the canonical record is saved;
@@ -341,10 +341,10 @@ Under the hood, the app still includes rich systems for world data, rules, chara
 - Keep `Workspace`, `World Bible`, and `Lore Documents` as the primary active-project mental model: write, structure canon, and keep longform source notes.
 - Revisit panel defaults and route emphasis to match the writing-first UX docs.
 - Keep the new shared page chrome as the active-project baseline; future route-specific UI should plug into shared title/meta/action placement before inventing local header patterns.
-- Character-canon unification through roadmap 4.12 is implemented: character
-  canon and the sectioned character experience now belong in World Bible,
-  Character Tools remains a temporary secondary destination pending 4.13,
-  and workspace character intake creates World Bible canon first.
+- Character-canon unification through roadmap 4.13 is implemented: character
+  canon, dialogue-style assignment, and single-character transfer belong in
+  World Bible; sheets/state are contextual optional mechanics; batch transfer
+  is a utility; and no separate Character Tools destination remains.
 - Character-canon annotation smoke is now covered after the shared annotation integration. Known `Garcia deTerra` prose, titled mentions such as `Detective Garcia deTerra`, and ordinary sentence-start prose stay out of stray review highlights.
 - Product health is now the active priority: the Lore/RAG/Shodh health panel and the World Bible Character detail health panel are implemented, and Lore Documents can now quietly flag likely stale retrieval coverage and rebuild derived RAG/Shodh context from saved source data.
 - Assistant prompt context now labels retrieved World Bible records, accepted canonical facts, linked/general Source Notes, scene drafts, and rules references by trust tier. Assistant answers also expose a collapsed `Sources used` list for the Shodh/RAG chunks sent with that answer. Pending and rejected Source Note proposals remain out of normal assistant context; include them only through an explicit future proposal-review flow.

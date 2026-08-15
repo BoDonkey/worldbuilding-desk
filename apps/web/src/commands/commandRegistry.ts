@@ -89,7 +89,7 @@ export const createAppCommands = ({
       label: 'Go to Sheets',
       section: 'Navigation',
       keywords: ['sheets', 'state', 'stats', 'resources', 'characters'],
-      run: () => navigate('/characters?view=sheets')
+      run: () => navigate('/sheets')
     });
   }
 
@@ -151,9 +151,9 @@ export const createAppCommands = ({
     },
     {
       id: 'workspace-context-characters',
-      label: 'Workspace: Open Context - Character Tools',
+      label: 'Workspace: Open Context - Characters',
       section: 'Workspace',
-      keywords: ['context', 'characters', 'character', 'tools', 'sheets', 'drawer'],
+      keywords: ['context', 'characters', 'character', 'canon', 'sheets', 'drawer'],
       run: () => dispatchWorkspaceCommand('open-context-characters')
     },
     {

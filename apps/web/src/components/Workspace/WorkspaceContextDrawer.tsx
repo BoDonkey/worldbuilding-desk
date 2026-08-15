@@ -263,7 +263,7 @@ const CONTEXT_DRAWER_TABS: Array<{id: WorkspaceContextDrawerView; label: string}
   {id: 'scene-roster', label: 'Scene'},
   {id: 'world-bible', label: 'World Bible'},
   {id: 'ruleset', label: 'Rules'},
-  {id: 'characters', label: 'Character Tools'},
+  {id: 'characters', label: 'Characters'},
   {id: 'compendium', label: 'Mechanics'},
   {id: 'review', label: 'Review'},
   {id: 'scratchpad', label: 'Scratchpad'},
@@ -796,8 +796,13 @@ export function WorkspaceContextDrawer({
             Roster: <strong>{characters.length}</strong> · Sheets:{' '}
             <strong>{characterSheets.length}</strong>
           </p>
-          <button type='button' onClick={() => navigate('/characters')}>
-            Open Character Tools
+          <button
+            type='button'
+            onClick={() =>
+              navigate('/world-bible', {state: {focusCategorySlug: 'characters'}})
+            }
+          >
+            Open World Bible characters
           </button>
         </div>
       );

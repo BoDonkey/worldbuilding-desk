@@ -16,6 +16,7 @@ import {WorldBibleEntityList} from '../components/WorldBible/WorldBibleEntityLis
 import {WorldBibleRecordAiHelper} from '../components/WorldBible/WorldBibleRecordAiHelper';
 import {WorldBibleCharacterHealth} from '../components/WorldBible/WorldBibleCharacterHealth';
 import {WorldBibleLinkedSourceNote} from '../components/WorldBible/WorldBibleLinkedSourceNote';
+import {WorldBibleDialogueStyleControl} from '../components/WorldBible/WorldBibleDialogueStyleControl';
 import {
   WorldBibleCharacterSections,
   type CharacterDetailSection
@@ -86,8 +87,6 @@ const triggerJsonDownload = (fileName: string, data: unknown): void => {
   document.body.removeChild(link);
   URL.revokeObjectURL(url);
 };
-
-
 function WorldBibleRoute() {
   const activeProject = useAppStore((s) => s.activeProject);
   const projectSettings = useAppStore((s) => s.projectSettings);
@@ -128,7 +127,7 @@ function WorldBibleRoute() {
     : null;
   const capabilities = getProjectCapabilities(projectSettings);
   const showGameSystems = capabilities.canUseGameSystems;
-  const showCharacterTools = capabilities.canUseRuleAuthoring;
+  const showCharacterMechanics = capabilities.canUseRuleAuthoring;
   const [feedback, setFeedback] = useState<{
     tone: 'success' | 'error';
     message: string;
@@ -731,6 +730,7 @@ function WorldBibleRoute() {
       focusCategorySlug?: string;
       startCharacterImport?: boolean;
       focus?: 'general' | 'aliases';
+      focusCharacterSection?: CharacterDetailSection;
       handoffKind?: 'character-canonicalization';
       handoffSourceName?: string;
       handoffMatchEntityId?: string;
@@ -750,7 +750,7 @@ function WorldBibleRoute() {
     const focusEntityId = state?.focusEntityId;
     if (!focusEntityId) return;
     const focus = state?.focus ?? 'general';
-    const focusKey = `${location.key}:${focusEntityId}:${focus}`;
+    const focusKey = `${location.key}:${focusEntityId}:${focus}:${state?.focusCharacterSection ?? ''}`;
     if (focusedEntityKeyRef.current === focusKey) {
       return;
     }
@@ -759,6 +759,9 @@ function WorldBibleRoute() {
     setActiveTab(target.categoryId);
     setViewMode('category');
     handleEdit(target, focus);
+    if (state?.focusCharacterSection) {
+      setCharacterDetailSection(state.focusCharacterSection);
+    }
     if (state?.handoffKind === 'character-canonicalization' && state.handoffSourceName) {
       setHandoffGuidance({
         kind: 'character-canonicalization',
@@ -1125,33 +1128,38 @@ function WorldBibleRoute() {
                   onSectionChange={setCharacterDetailSection}
                   isSaved={Boolean(selectedEntity)}
                   characterName={name.trim() || selectedEntity?.name || 'New character'}
-                  canUseMechanics={showCharacterTools}
+                  canUseMechanics={showCharacterMechanics}
                   hasRuleset={hasRuleset}
                   characterExtension={selectedEntityCharacterExtension}
                   characterSheet={selectedEntityCharacterSheet}
                   linkedNoteCount={linkedLoreDocumentsForSelectedEntity.length}
                   sceneMentionCount={selectedEntitySceneMentions.length}
                   stateEventCount={selectedEntityStateEvents.length}
-                  isOpeningCapability={Boolean(
-                    selectedEntity && importingCharacterEntityId === selectedEntity.id
-                  )}
-                  isExporting={Boolean(
-                    selectedEntity && exportingCharacterEntityId === selectedEntity.id
-                  )}
-                  onOpenDialogueStyle={() => {
-                    if (selectedEntity) void handleImportEntityToCharacters(selectedEntity);
-                  }}
+                  isOpeningCapability={Boolean(selectedEntity && importingCharacterEntityId === selectedEntity.id)}
+                  isExporting={Boolean(selectedEntity && exportingCharacterEntityId === selectedEntity.id)}
                   onOpenSheet={() => {
-                    if (selectedEntity) {
-                      void handleImportEntityToCharacters(selectedEntity, {
-                        autoCreateSheet: true
-                      });
-                    }
+                    if (selectedEntity) void handleImportEntityToCharacters(selectedEntity, {autoCreateSheet: true});
                   }}
                   onOpenRuleset={() => navigate('/ruleset')}
                   onExport={() => {
                     if (selectedEntity) void handleExportCharacter(selectedEntity);
                   }}
+                  dialogueStyleContent={
+                    selectedEntity ? (
+                      <WorldBibleDialogueStyleControl
+                        entity={selectedEntity}
+                        characterExtension={selectedEntityCharacterExtension}
+                        characterStyles={projectSettings?.characterStyles ?? []}
+                        onSaved={(character, message) => {
+                          setCharacters((current) => current.some((entry) => entry.id === character.id)
+                            ? current.map((entry) => entry.id === character.id ? character : entry)
+                            : [...current, character]);
+                          setFeedback({tone: 'success', message});
+                        }}
+                        onManageStyles={() => navigate('/settings')}
+                      />
+                    ) : null
+                  }
                   canonContent={
                     <>
                   <section className={styles.canonSection} aria-label='Canonical names and aliases'>
@@ -1963,7 +1971,7 @@ function WorldBibleRoute() {
             linkingLoreEntityId={linkingLoreEntityId}
             compendiumLinkedEntityIds={compendiumLinkedEntityIds}
             seriesParentProjectId={seriesConfig?.parentProjectId ?? null}
-            showCharacterTools={showCharacterTools} showGameSystems={showGameSystems}
+            showCharacterMechanics={showCharacterMechanics} showGameSystems={showGameSystems}
             hasRuleset={hasRuleset}
             actions={{
               isCharacterLikeEntity, handleMarkEntityComplete, handleDeleteEntity,
@@ -1972,6 +1980,10 @@ function WorldBibleRoute() {
               linkingCompendiumEntityId
             }}
             handleEdit={handleEdit}
+            handleOpenCharacterWritingAids={(entity) => {
+              handleEdit(entity);
+              setCharacterDetailSection('writing-aids');
+            }}
             handleOpenOrCreateLinkedLoreDocument={handleOpenOrCreateLinkedLoreDocument}
           />
         </div>

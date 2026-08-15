@@ -568,30 +568,25 @@ function WorkspaceRoute() {
       return;
     }
     if (resolverNotice.destination === 'character-sheet-create') {
-      navigate('/characters?view=sheets', {
+      navigate('/sheets', {
         state: {
           prefillCharacterId: resolverNotice.targetId,
-          preferredView: 'sheets',
           autoCreateSheetForCharacterId: resolverNotice.targetId
         }
       });
       return;
     }
     if (resolverNotice.destination === 'character-sheets') {
-      navigate('/characters?view=sheets', {
+      navigate('/sheets', {
         state: {
-          prefillCharacterId: resolverNotice.targetId,
-          preferredView: 'sheets'
+          prefillCharacterId: resolverNotice.targetId
         }
       });
       return;
     }
     if (resolverNotice.destination === 'characters') {
-      navigate('/characters', {
-        state: {
-          prefillCharacterId: resolverNotice.targetId,
-          preferredView: 'roster'
-        }
+      navigate('/world-bible', {
+        state: {focusCategorySlug: 'characters'}
       });
       return;
     }
@@ -623,7 +618,7 @@ function WorkspaceRoute() {
       : resolverNotice?.destination === 'character-sheets'
       ? 'Open Character Sheet'
       : resolverNotice?.destination === 'characters'
-        ? 'Open Character Tools'
+        ? 'Open World Bible Characters'
         : 'View in World Bible');
   useEffect(() => {
     if (!feedback || feedback.tone !== 'success') {
@@ -672,7 +667,7 @@ function WorkspaceRoute() {
       navigate('/world-bible', {state: {focusEntityId: target.id}});
       return;
     }
-    navigate('/characters');
+    navigate('/world-bible', {state: {focusCategorySlug: 'characters'}});
   };
 
   const activePartySynergies = useMemo(

@@ -68,7 +68,7 @@ Procedure:
    review does not open the large review panel; clicking an underline opens a
    popover offering create / ignore / `Always ignore` / link-to-existing, with
    options labeled by category (`Character`, `Location`, `Item`) and linked
-   Character Tools + World Bible pairs shown once.
+   legacy capability + World Bible pairs shown once.
 3. **Alias linking** stays in the workspace: alias connects to the canonical
    record, no auto-navigation to World Bible, no forced review-queue mode;
    after refresh the alias (including possessives) resolves as known lore.
@@ -87,14 +87,13 @@ Procedure:
 Failure signals: duplicate/conflicting signals between surfaces, queue items
 clearing in one surface but not another, badge/queue count mismatch, alias
 linking forcing navigation, generic `World` labels, duplicate rows for linked
-Character Tools/World Bible pairs, reload resurrecting completed or ignored
+legacy capability/World Bible pairs, reload resurrecting completed or ignored
 work.
 
 ## 3. Character Canon Unification
 
 Goal: verify character canon and the coherent character detail experience live
-in `World Bible > Characters` while Character Tools remains a temporary
-secondary capability destination until roadmap 4.13.
+in `World Bible > Characters`, with no separate character destination.
 
 Procedure:
 
@@ -106,22 +105,21 @@ Procedure:
    reviewed and returning, `Garcia` highlights as known canon and the scene
    selection is preserved.
 3. **Alias linking**: existing-record selector uses category labels, shows
-   one option for linked Character Tools/World Bible pairs, links in place
+   one option for linked legacy capability/World Bible pairs, links in place
    without navigation.
 4. **Sectioned detail**: a new character shows only `Canon` until it is saved.
    A saved character exposes `Canon`, `Notes`, `Continuity`, and `Writing
    aids`; mechanics-enabled projects also expose `Mechanics`, while general
    fiction never does. Switching sections preserves unsaved form values and
    remains keyboard-operable at desktop and narrow breakpoints.
-5. **Capability handoff**: World Bible character detail owns name, alias, and
-   lore editing. `Writing aids` exposes `Dialogue style` and `Export
-   character`; `Mechanics` exposes `Add sheet` or the attached sheet/state
-   handoff only when project mode enables mechanics. `/characters` presents
-   `Character Tools` as attached capabilities and legacy cleanup, with no
-   independent create, rename, or descriptive editor.
+5. **Capability handoff**: World Bible character detail owns name, alias, lore,
+   dialogue-style assignment, and single-character export. `Mechanics`
+   exposes `Add sheet` or the attached `/sheets` state handoff only when
+   project mode enables mechanics. Batch package transfer is a utility under
+   `More`; `/characters` is compatibility-only and redirects to World Bible.
 6. **Regression checks**: short-name/full-name pairs produce overlap
    suggestions with simple resolution (alias / keep separate / open
-   existing); unlinked Character Tools records don't suppress unknown-name
+   existing); unlinked legacy capability records don't suppress unknown-name
    review; natural prose around known canon (`It's Garcia deTerra`,
    `Detective Garcia deTerra`, sentence-start words) does not fragment into
    stray review highlights — treat new false positives as annotation-policy
@@ -141,7 +139,7 @@ regressions or trust findings and belong in the A–G run log.
 1. **J1 — General fiction, new character.** In a general-fiction project,
    type a new character name in a scene, capture it from review, and accept it
    into a character-kind World Bible category. Confirm one World Bible
-   character exists; no sheet, Character Tools form, stat, or resource surface
+   character exists; no sheet, secondary character form, stat, or resource surface
    interrupts intake; the known-lore underline opens that record in one
    interaction; and its description is editable in exactly one place.
 2. **J2 — LitRPG, add mechanics.** In a rules-enabled project, choose `Add

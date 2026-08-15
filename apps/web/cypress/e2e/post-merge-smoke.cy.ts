@@ -282,9 +282,7 @@ describe('Post-merge smoke checklist', () => {
     cy.contains('span', 'One character, one home').should('be.visible');
     cy.contains('[role="tab"]', 'Canon').should('have.attr', 'aria-selected', 'true');
     cy.contains('[role="tab"]', 'Writing aids').click();
-    cy.contains('button', 'Dialogue style').click();
-    cy.location('pathname').should('eq', '/characters');
-    cy.contains('h2', 'Dialogue style for Mira Voss').should('be.visible');
+    cy.location('pathname').should('eq', '/world-bible');
     cy.contains('label', 'Dialogue style').find('select').select('style-quiet');
     cy.contains('label', 'Name').should('not.exist');
     cy.contains('label', 'Description').should('not.exist');
@@ -319,8 +317,7 @@ describe('Post-merge smoke checklist', () => {
     openMira();
     cy.contains('[role="tab"]', 'Mechanics').click();
     cy.contains('button', 'Add sheet').click();
-    cy.location('pathname').should('eq', '/characters');
-    cy.location('search').should('contain', 'view=sheets');
+    cy.location('pathname').should('eq', '/sheets');
     cy.contains('Mira Voss').should('be.visible');
   });
 

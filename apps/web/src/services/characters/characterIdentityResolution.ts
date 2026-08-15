@@ -173,7 +173,7 @@ export async function resolveCharacterIdentity(params: {
         ? sheets.find((record) => record.id === params.item.recordId)
         : undefined;
     if (params.item.recordType === 'character' && !character) {
-      throw new Error('The legacy Character Tools record no longer exists.');
+      throw new Error('The legacy character capability record no longer exists.');
     }
     if (params.item.recordType === 'sheet' && !sourceSheet) {
       throw new Error('The legacy character sheet no longer exists.');

@@ -7,7 +7,7 @@ import styles from '../../assets/components/WorldBibleRoute.module.css';
 const classificationLabel = (
   classification: CharacterIdentityResolutionItem['classification']
 ): string => {
-  if (classification === 'tools-only-orphan') return 'Character Tools only';
+  if (classification === 'tools-only-orphan') return 'Legacy character data only';
   if (classification === 'sheet-only') return 'Sheet only';
   return 'Possible identity collision';
 };
@@ -32,7 +32,7 @@ export function CharacterIdentityResolutionQueue(props: {
           <div className={styles.castEyebrow}>Legacy character intake</div>
           <h2 id='character-identity-queue-title'>Needs canon link</h2>
           <p>
-            These older Character Tools or sheet records are not World Bible canon.
+            These older character capability or sheet records are not World Bible canon.
             Choose what each record means; nothing is linked or created automatically.
           </p>
         </div>

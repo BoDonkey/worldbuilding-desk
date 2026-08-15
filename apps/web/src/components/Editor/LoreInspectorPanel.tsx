@@ -65,7 +65,7 @@ export const LoreInspectorPanel = ({
         </div>
         <div className={styles.systemActions}>
           <button type='button' onClick={() => onEditRecord(record)}>
-            {record.type === 'entity' ? 'Edit in World Bible' : 'Edit in Character Tools'}
+            {record.type === 'entity' ? 'Edit in World Bible' : 'Resolve in World Bible'}
           </button>
         </div>
       </div>

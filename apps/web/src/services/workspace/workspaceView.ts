@@ -665,7 +665,7 @@ export function buildManualCaptureLinkOptions(params: {
       .map((character) => ({
         id: `character:${character.id}`,
         name: character.name,
-        type: 'Character Tools'
+        type: 'Legacy character data'
       }))
   ];
 

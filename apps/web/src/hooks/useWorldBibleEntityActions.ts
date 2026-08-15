@@ -862,7 +862,7 @@ export const useWorldBibleEntityActions = ({
           (category) => category.id === entity.categoryId
         );
         if (!entityCategory || !isCharacterCategory(entityCategory)) {
-          throw new Error('Character Tools can only attach to a World Bible character.');
+          throw new Error('Optional character capabilities require a World Bible character.');
         }
         const resolver = createCharacterLinkResolver({
           categories,
@@ -901,12 +901,10 @@ export const useWorldBibleEntityActions = ({
               ? `Opening sheet and state tracking for "${entity.name}".`
               : `Optional character data attached to "${entity.name}". Opening sheet and state tracking.`
           });
-          navigate('/characters?view=sheets', {
+          navigate('/sheets', {
             state: {
               prefillCharacterId: character.id,
-              preferredView: 'sheets',
               autoCreateSheetForCharacterId: character.id,
-              characterCapabilityIntent: true
             }
           });
           return;
@@ -919,11 +917,10 @@ export const useWorldBibleEntityActions = ({
             : `Optional character data attached to "${entity.name}". World Bible remains canonical.`
         });
 
-        navigate('/characters', {
+        navigate('/world-bible', {
           state: {
-            prefillCharacterId: character.id,
-            preferredView: 'roster',
-            characterCapabilityIntent: true
+            focusEntityId: entity.id,
+            focusCharacterSection: 'writing-aids'
           }
         });
       } catch (error) {

@@ -246,7 +246,7 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
 
   const loreHighlights = React.useMemo<LoreHighlightEntry[]>(() => {
     const deduped = new Map<string, LoreHighlightEntry>();
-    // Selection snippets may come from secondary Character Tools records. Only
+    // Selection snippets may come from legacy character capability records. Only
     // records confirmed by the World Bible belong in automatic lore markup.
     knownLoreHighlights.forEach((entry) => {
       const key = `${entry.type}:${entry.id}:${entry.surface.trim().toLowerCase()}`;

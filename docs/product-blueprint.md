@@ -1,6 +1,6 @@
 # Product Blueprint — Worldbuilding Desk
 
-Last updated: 2026-08-01
+Last updated: 2026-08-15
 
 This is the product, UX, navigation, and design authority. It consolidates the
 former `product-blueprint.md`, `navigation-ia-decision.md`, `style-bible.md`,
@@ -87,14 +87,15 @@ roadmaps — refine through this document):
 - `Lore Documents` — longform source material and deep notes, not a second
   canon database
 - `More` — optional systems (Ruleset, Sheets, Mechanics, Settlement), planning
-  and review utilities, settings
+  and review utilities, character-package transfer, settings
 
 Canonical ownership rules:
 
 - Characters, locations, items, factions, creatures, concepts, and custom
-  categories live inside World Bible. There is no second equal top-level canon
-  home; `Characters`/Character Tools is a secondary tool attached to World
-  Bible character records, never the canon owner.
+  categories live inside World Bible. There is no separate character
+  destination: dialogue-style assignment and single-character transfer live
+  in World Bible detail; sheets/state remain an optional system surface; batch
+  character-package transfer is a utility, never a canon owner.
 - If a surface is about identity, aliases, canon role, or descriptive editing,
   it belongs to World Bible. If it is about sheets, tracked state, resources,
   or progression, it is a secondary tool attached to a World Bible record.

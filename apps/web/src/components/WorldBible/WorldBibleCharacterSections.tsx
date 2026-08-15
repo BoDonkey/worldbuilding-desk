@@ -23,10 +23,10 @@ interface WorldBibleCharacterSectionsProps {
   stateEventCount: number;
   isOpeningCapability: boolean;
   isExporting: boolean;
-  onOpenDialogueStyle: () => void;
   onOpenSheet: () => void;
   onOpenRuleset: () => void;
   onExport: () => void;
+  dialogueStyleContent: ReactNode;
   canonContent: ReactNode;
   notesContent: ReactNode;
   continuityContent: ReactNode;
@@ -207,14 +207,8 @@ export const WorldBibleCharacterSections = (
                 <strong>Canon-linked</strong>
               </div>
             </div>
+            {props.dialogueStyleContent}
             <div className={styles.reviewToolbarActions}>
-              <button
-                type='button'
-                onClick={props.onOpenDialogueStyle}
-                disabled={props.isOpeningCapability}
-              >
-                {props.isOpeningCapability ? 'Opening...' : 'Dialogue style'}
-              </button>
               <button type='button' onClick={props.onExport} disabled={props.isExporting}>
                 {props.isExporting ? 'Exporting...' : 'Export character'}
               </button>

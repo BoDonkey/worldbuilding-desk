@@ -31,7 +31,7 @@ export function validateCharacterWrite(
 ): void {
   if (!character.entityId && !existing) {
     throw new Error(
-      'New Character Tools records require a canonical World Bible character link.'
+      'New character capability records require a canonical World Bible character link.'
     );
   }
   if (existing?.entityId && !character.entityId) {

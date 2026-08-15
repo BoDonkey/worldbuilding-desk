@@ -16,10 +16,10 @@ const baseProps = {
   stateEventCount: 0,
   isOpeningCapability: false,
   isExporting: false,
-  onOpenDialogueStyle: vi.fn(),
   onOpenSheet: vi.fn(),
   onOpenRuleset: vi.fn(),
   onExport: vi.fn(),
+  dialogueStyleContent: <p>Dialogue style control</p>,
   canonContent: <p>Canon content</p>,
   notesContent: <p>Notes content</p>,
   continuityContent: <p>Continuity content</p>

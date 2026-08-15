@@ -59,7 +59,7 @@ export function planCharacterCanonIntake(params: {
   );
   if (exactMatches.length > 1) {
     throw new Error(
-      `More than one World Bible character is named "${name}". Resolve that identity before adding Character Tools.`
+      `More than one World Bible character is named "${name}". Resolve that identity before adding optional character capabilities.`
     );
   }
   if (exactMatches.length === 1) {

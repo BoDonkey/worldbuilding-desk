@@ -22,7 +22,8 @@ import WorldBibleRoute from './routes/WorldBibleRoute';
 import WorkspaceRoute from './routes/WorkspaceRoute';
 import CorkboardRoute from './routes/CorkboardRoute';
 import SettingsRoute from './routes/SettingsRoute';
-import CharactersHubRoute from './routes/CharactersHubRoute';
+import CharacterSheetsPageRoute from './routes/CharacterSheetsPageRoute';
+import CharacterPackagesRoute from './routes/CharacterPackagesRoute';
 import CompendiumRoute from './routes/CompendiumRoute';
 import RulesetRoute from './routes/RulesetRoute';
 import LoreRoute from './routes/LoreRoute';
@@ -34,6 +35,20 @@ const routeWindowScrollPositions = new Map<string, number>();
 function HomeRoute() {
   const activeProject = useAppStore((s) => s.activeProject);
   return <Navigate to={activeProject ? '/workspace' : '/projects'} replace />;
+}
+
+function CharacterToolsCompatibilityRedirect() {
+  const location = useLocation();
+  if (new URLSearchParams(location.search).get('view') === 'sheets') {
+    return <Navigate to='/sheets' replace state={location.state} />;
+  }
+  return (
+    <Navigate
+      to='/world-bible'
+      replace
+      state={{focusCategorySlug: 'characters'}}
+    />
+  );
 }
 
 function OptionalSystemsGate({
@@ -117,15 +132,17 @@ function AppRoutes() {
               </OptionalSystemsGate>
             }
           />
-          <Route path='/characters' element={<CharactersHubRoute />} />
+          <Route path='/characters' element={<CharacterToolsCompatibilityRedirect />} />
           <Route
-            path='/character-sheets'
+            path='/sheets'
             element={
               <OptionalSystemsGate capability='ruleAuthoring'>
-                <Navigate to='/characters?view=sheets' replace />
+                <CharacterSheetsPageRoute />
               </OptionalSystemsGate>
             }
           />
+          <Route path='/character-sheets' element={<Navigate to='/sheets' replace />} />
+          <Route path='/character-packages' element={<CharacterPackagesRoute />} />
           <Route path='/workspace' element={<WorkspaceRoute />} />
           <Route path='/corkboard' element={<CorkboardRoute />} />
           <Route

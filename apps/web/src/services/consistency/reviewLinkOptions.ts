@@ -160,7 +160,7 @@ export function buildUnknownLinkOptions(params: {
         id: character.id,
         name: character.name,
         type: 'character',
-        label: 'Character Tools'
+        label: 'Legacy character data'
       });
     });
     optionMap[surface] = Array.from(candidatesByKey.values())

@@ -92,11 +92,9 @@ export const Navigation: FC<NavigationProps> = ({
         ? [
           {to: '/ruleset', label: 'Rules', icon: 'RL'},
           {
-            to: '/characters?view=sheets',
+            to: '/sheets',
             label: 'Sheets',
-            icon: 'SH',
-            activePath: '/characters',
-            activeSearch: '?view=sheets'
+            icon: 'SH'
           }
         ]
         : []),
@@ -110,6 +108,10 @@ export const Navigation: FC<NavigationProps> = ({
     if (systemsItems.length > 0) {
       sections.push({label: 'Systems', items: systemsItems});
     }
+    sections.push({
+      label: 'Utilities',
+      items: [{to: '/character-packages', label: 'Character packages', icon: 'CP'}]
+    });
     sections.push({label: 'App', items: [{to: '/settings', label: 'Settings', icon: 'ST'}]});
     return sections;
   }, [

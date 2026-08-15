@@ -20,7 +20,7 @@ interface WorldBibleEntityListProps {
   linkingLoreEntityId: string | null;
   compendiumLinkedEntityIds: Set<string>;
   seriesParentProjectId: string | null;
-  showCharacterTools: boolean;
+  showCharacterMechanics: boolean;
   showGameSystems: boolean;
   hasRuleset: boolean;
   actions: Pick<ReturnType<typeof useWorldBibleEntityActions>,
@@ -29,6 +29,7 @@ interface WorldBibleEntityListProps {
     'deletingEntityId' | 'promotingEntityId' | 'importingCharacterEntityId' |
     'linkingCompendiumEntityId'>;
   handleEdit: (entity: WorldEntity, focus?: 'general' | 'aliases') => void;
+  handleOpenCharacterWritingAids: (entity: WorldEntity) => void;
   handleOpenOrCreateLinkedLoreDocument: (entity: WorldEntity) => Promise<void>;
 }
 
@@ -38,8 +39,9 @@ export const WorldBibleEntityList = (props: WorldBibleEntityListProps) => {
     isFocusedRecordTask, activeCategory, categories, visibleEntities,
     reviewEntityInsightsById, reviewQueue, aliasMapByEntityId,
     linkedLoreDocumentByEntityId, linkingLoreEntityId, compendiumLinkedEntityIds,
-    seriesParentProjectId, showCharacterTools, showGameSystems, hasRuleset,
-    actions, handleEdit, handleOpenOrCreateLinkedLoreDocument
+    seriesParentProjectId, showCharacterMechanics, showGameSystems, hasRuleset,
+    actions, handleEdit, handleOpenCharacterWritingAids,
+    handleOpenOrCreateLinkedLoreDocument
   } = props;
   const {
     isCharacterLikeEntity, handleMarkEntityComplete, handleDeleteEntity,
@@ -195,10 +197,10 @@ export const WorldBibleEntityList = (props: WorldBibleEntityListProps) => {
                           : 'Promote to parent'}
                       </button>
                     )}
-                    {entityIsCharacterLike && showCharacterTools && (
+                    {entityIsCharacterLike && showCharacterMechanics && (
                       <button
                         type='button'
-                        onClick={() => void handleImportEntityToCharacters(entity)}
+                        onClick={() => handleOpenCharacterWritingAids(entity)}
                         disabled={importingCharacterEntityId === entity.id}
                         title='Assign a dialogue style. World Bible remains the canonical record.'
                       >
@@ -207,7 +209,7 @@ export const WorldBibleEntityList = (props: WorldBibleEntityListProps) => {
                           : 'Dialogue style'}
                       </button>
                     )}
-                    {entityIsCharacterLike && showCharacterTools && hasRuleset && (
+                    {entityIsCharacterLike && showCharacterMechanics && hasRuleset && (
                       <button
                         type='button'
                         onClick={() =>
