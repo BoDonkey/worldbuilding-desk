@@ -279,7 +279,9 @@ describe('Post-merge smoke checklist', () => {
     };
 
     openMira();
-    cy.contains('strong', 'Character capabilities').should('be.visible');
+    cy.contains('span', 'One character, one home').should('be.visible');
+    cy.contains('[role="tab"]', 'Canon').should('have.attr', 'aria-selected', 'true');
+    cy.contains('[role="tab"]', 'Writing aids').click();
     cy.contains('button', 'Dialogue style').click();
     cy.location('pathname').should('eq', '/characters');
     cy.contains('h2', 'Dialogue style for Mira Voss').should('be.visible');
@@ -310,10 +312,12 @@ describe('Post-merge smoke checklist', () => {
     });
 
     openMira();
+    cy.contains('[role="tab"]', 'Writing aids').click();
     cy.contains('button', 'Export character').click();
     cy.contains('[role="status"]', 'Exported "Mira Voss"').should('be.visible');
 
     openMira();
+    cy.contains('[role="tab"]', 'Mechanics').click();
     cy.contains('button', 'Add sheet').click();
     cy.location('pathname').should('eq', '/characters');
     cy.location('search').should('contain', 'view=sheets');

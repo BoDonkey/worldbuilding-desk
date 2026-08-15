@@ -10,6 +10,7 @@ import type {NavigateFunction} from 'react-router';
 import type {
   CanonicalFact,
   Character,
+  CharacterSheet,
   EntityCategory,
   LoreDocument,
   LoreDocumentKind,
@@ -21,10 +22,10 @@ import type {
 } from '../entityTypes';
 import {saveLoreDocument, saveLoreDocumentLinks} from '../loreStorage';
 import type {RAGProvider} from '../services/rag/RAGService';
+import {createCharacterLinkResolver} from '../services/characters/characterIdentity';
 import {
   ALTERNATIVE_NAMES_KEY,
   extractPlainTextFromRichText,
-  normalizeName,
   parseAlternativeNames
 } from '../services/worldBible/worldBibleEntityHelpers';
 import {buildCanonicalAliasList} from '../services/worldBible/worldBibleCanonicalization';
@@ -38,8 +39,10 @@ interface WorldBibleFeedback {
 interface UseWorldBibleSelectedEntityOptions {
   activeProject: Project | null;
   editingId: string | null;
+  categories: EntityCategory[];
   entities: WorldEntity[];
   characters: Character[];
+  characterSheets: CharacterSheet[];
   loreDocuments: LoreDocument[];
   loreDocumentLinks: LoreDocumentLink[];
   aliasMapByEntityId: Map<string, string[]>;
@@ -103,8 +106,10 @@ const summarizeEntityForLore = (
 export function useWorldBibleSelectedEntity({
   activeProject,
   editingId,
+  categories,
   entities,
   characters,
+  characterSheets,
   loreDocuments,
   loreDocumentLinks,
   aliasMapByEntityId,
@@ -125,16 +130,22 @@ export function useWorldBibleSelectedEntity({
   const selectedEntity = editingId
     ? entities.find((entity) => entity.id === editingId) ?? null
     : null;
-  const selectedEntityCharacterToolProfile = useMemo(
+  const characterResolver = useMemo(
     () =>
-      selectedEntity
-        ? characters.find(
-            (character) =>
-              normalizeName(character.name) === normalizeName(selectedEntity.name)
-          ) ?? null
-        : null,
-    [characters, selectedEntity]
+      createCharacterLinkResolver({
+        categories,
+        entities,
+        characters,
+        sheets: characterSheets
+      }),
+    [categories, characterSheets, characters, entities]
   );
+  const selectedEntityCharacterExtension = selectedEntity
+    ? characterResolver.getCharacter(selectedEntity.id) ?? null
+    : null;
+  const selectedEntityCharacterSheet = selectedEntity
+    ? characterResolver.getSheet(selectedEntity.id) ?? null
+    : null;
   const linkedLoreDocumentByEntityId = useMemo(() => {
     const documentsById = new Map(
       loreDocuments.map((document) => [document.id, document])
@@ -155,8 +166,8 @@ export function useWorldBibleSelectedEntity({
     );
     const targetKeys = new Set([
       `entity:${selectedEntity.id}`,
-      ...(selectedEntityCharacterToolProfile
-        ? [`character:${selectedEntityCharacterToolProfile.id}`]
+      ...(selectedEntityCharacterExtension
+        ? [`character:${selectedEntityCharacterExtension.id}`]
         : [])
     ]);
     return loreDocumentLinks
@@ -173,7 +184,7 @@ export function useWorldBibleSelectedEntity({
     loreDocumentLinks,
     loreDocuments,
     selectedEntity,
-    selectedEntityCharacterToolProfile
+    selectedEntityCharacterExtension
   ]);
   const selectedEntityAliases = useMemo(
     () =>
@@ -192,14 +203,14 @@ export function useWorldBibleSelectedEntity({
     if (!selectedEntity) return [];
     const targetKeys = new Set([
       `entity:${selectedEntity.id}`,
-      ...(selectedEntityCharacterToolProfile
-        ? [`character:${selectedEntityCharacterToolProfile.id}`]
+      ...(selectedEntityCharacterExtension
+        ? [`character:${selectedEntityCharacterExtension.id}`]
         : [])
     ]);
     return canonicalFacts
       .filter((fact) => targetKeys.has(`${fact.targetType}:${fact.targetId}`))
       .sort((left, right) => left.factType.localeCompare(right.factType));
-  }, [canonicalFacts, selectedEntity, selectedEntityCharacterToolProfile]);
+  }, [canonicalFacts, selectedEntity, selectedEntityCharacterExtension]);
   const selectedEntitySceneMentions = useMemo(() => {
     if (!selectedEntity) return [];
     const terms = [selectedEntity.name, ...selectedEntityAliases];
@@ -214,14 +225,23 @@ export function useWorldBibleSelectedEntity({
   const selectedEntityStateEvents = useMemo(() => {
     if (!selectedEntity) return [];
     const actorIds = new Set(
-      [selectedEntity.id, selectedEntityCharacterToolProfile?.id].filter(
+      [
+        selectedEntity.id,
+        selectedEntityCharacterExtension?.id,
+        selectedEntityCharacterSheet?.id
+      ].filter(
         (id): id is string => Boolean(id)
       )
     );
     return stateMutationEvents.filter((event) =>
       event.commands.some((command) => actorIds.has(command.actorId))
     );
-  }, [selectedEntity, selectedEntityCharacterToolProfile, stateMutationEvents]);
+  }, [
+    selectedEntity,
+    selectedEntityCharacterExtension,
+    selectedEntityCharacterSheet,
+    stateMutationEvents
+  ]);
   const selectedEntityAcceptedStateEventCount = useMemo(
     () =>
       selectedEntityStateEvents.filter((event) => event.status === 'accepted').length,
@@ -326,6 +346,8 @@ export function useWorldBibleSelectedEntity({
 
   return {
     selectedEntity,
+    selectedEntityCharacterExtension,
+    selectedEntityCharacterSheet,
     linkedLoreDocumentByEntityId,
     linkedLoreDocumentsForSelectedEntity,
     selectedEntityAliases,

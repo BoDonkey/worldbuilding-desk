@@ -92,8 +92,9 @@ work.
 
 ## 3. Character Canon Unification
 
-Goal: verify character canon lives in `World Bible > Characters` while
-Character Tools, sheets, and state stay secondary.
+Goal: verify character canon and the coherent character detail experience live
+in `World Bible > Characters` while Character Tools remains a temporary
+secondary capability destination until roadmap 4.13.
 
 Procedure:
 
@@ -107,13 +108,18 @@ Procedure:
 3. **Alias linking**: existing-record selector uses category labels, shows
    one option for linked Character Tools/World Bible pairs, links in place
    without navigation.
-4. **Capability handoff**: World Bible character detail owns name, alias, and
-   lore editing and exposes `Dialogue style` and `Export character` as
-   explicit writing-aid actions. `Add sheet` appears only when project mode
-   and rules enable mechanics. `/characters` presents `Character Tools` as
-   attached capabilities and legacy cleanup, with no independent create,
-   rename, or descriptive editor.
-5. **Regression checks**: short-name/full-name pairs produce overlap
+4. **Sectioned detail**: a new character shows only `Canon` until it is saved.
+   A saved character exposes `Canon`, `Notes`, `Continuity`, and `Writing
+   aids`; mechanics-enabled projects also expose `Mechanics`, while general
+   fiction never does. Switching sections preserves unsaved form values and
+   remains keyboard-operable at desktop and narrow breakpoints.
+5. **Capability handoff**: World Bible character detail owns name, alias, and
+   lore editing. `Writing aids` exposes `Dialogue style` and `Export
+   character`; `Mechanics` exposes `Add sheet` or the attached sheet/state
+   handoff only when project mode enables mechanics. `/characters` presents
+   `Character Tools` as attached capabilities and legacy cleanup, with no
+   independent create, rename, or descriptive editor.
+6. **Regression checks**: short-name/full-name pairs produce overlap
    suggestions with simple resolution (alias / keep separate / open
    existing); unlinked Character Tools records don't suppress unknown-name
    review; natural prose around known canon (`It's Garcia deTerra`,
@@ -122,8 +128,9 @@ Procedure:
    work, not regex patching.
 
 Focused automated coverage: `lore-review-matching.cy.ts`,
-`project-mode-guardrails.cy.ts`, plus unit suites for `reviewQueue`,
-`textMatcher`, and `worldBibleCanonicalization`.
+`post-merge-smoke.cy.ts`, `project-mode-guardrails.cy.ts`, plus unit suites for
+`WorldBibleCharacterSections`, `reviewQueue`, `textMatcher`, and
+`worldBibleCanonicalization`.
 
 ### Character identity journey suite (J1–J6)
 

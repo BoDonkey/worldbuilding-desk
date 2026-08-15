@@ -196,8 +196,10 @@ describe('Project mode guardrails', () => {
       expect(formText.indexOf('Name')).to.be.lessThan(formText.indexOf('Age'));
       expect(formText.indexOf('Age')).to.be.lessThan(formText.indexOf('Role'));
       expect(formText.indexOf('Role')).to.be.lessThan(formText.indexOf('Description'));
-      expect(formText.indexOf('Description')).to.be.lessThan(formText.indexOf('Notes'));
     });
+    cy.contains('[role="tab"]', 'Canon').should('have.attr', 'aria-selected', 'true');
+    cy.contains('[role="tab"]', 'Notes').should('not.exist');
+    cy.contains('[role="tab"]', 'Mechanics').should('not.exist');
     cy.contains('button', 'Sheets').should('not.exist');
     cy.contains('button', 'Export Roster + Sheets').should('not.exist');
     cy.contains('button', 'Import Roster + Sheets').should('not.exist');
@@ -207,6 +209,14 @@ describe('Project mode guardrails', () => {
       .should('have.attr', 'data-rich-text-variant', 'character')
       .find('.tiptap-editor')
       .should('exist');
+    cy.contains('[data-rich-text-variant="character"] span', 'Notes').should('not.exist');
+    cy.contains('label', 'Name').find('input').type('General Character');
+    cy.contains('button', 'Create Canon Record').click();
+    cy.contains('[class*="entityName"]', 'General Character')
+      .parents('li')
+      .first()
+      .within(() => cy.contains('button', 'Edit').click());
+    cy.contains('[role="tab"]', 'Notes').click();
     cy.contains('[data-rich-text-variant="character"] span', 'Notes')
       .closest('[data-rich-text-variant]')
       .should('have.attr', 'data-rich-text-variant', 'character')
@@ -280,6 +290,8 @@ describe('Project mode guardrails', () => {
       .find('.tiptap-editor')
       .should('contain.text', 'Name: Mira Voss')
       .should('not.contain.text', 'Mira mapped the undercity');
+    cy.contains('[role="tab"]', 'Mechanics').should('not.exist');
+    cy.contains('[role="tab"]', 'Notes').click();
     cy.contains('span', 'Background')
       .closest('[class*="container"]')
       .should('have.attr', 'data-rich-text-variant', 'character')
@@ -389,6 +401,11 @@ describe('Project mode guardrails', () => {
       .within(() => {
         cy.contains('button', 'Convert').click();
       });
+    cy.contains(
+      '[role="status"]',
+      '"Garcia" converted into an alias of "Garcia de Terra".'
+    ).should('be.visible');
+    cy.contains('button', 'Cancel').click();
     cy.contains('[class*="entityName"]', /^Garcia$/).should('not.exist');
     cy.contains('li', 'Garcia de Terra').within(() => {
       cy.contains('span', 'Names need review').should('not.exist');

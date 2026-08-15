@@ -1,6 +1,6 @@
 # Worldbuilding-Desk Project Status
 
-**Last Updated:** August 11, 2026
+**Last Updated:** August 15, 2026
 
 ## Project Overview
 
@@ -157,6 +157,14 @@ Under the hood, the app still includes rich systems for world data, rules, chara
   sheet/state, import/export, and legacy-removal workflows while deriving
   linked display names from World Bible canon. Character-package language has
   replaced author-facing character “profile” terminology.
+- World Bible character detail is now one sectioned experience: `Canon`,
+  `Notes`, `Continuity`, project-gated `Mechanics`, and `Writing aids`. New
+  characters remain focused on Canon until the canonical record is saved;
+  general-fiction projects do not see Mechanics; saved characters expose
+  linked notes, scene/state continuity, dialogue style, export, and sheet
+  handoffs without another identity or name-entry surface. The composition
+  resolves extensions and sheets through the shared stable-ID character
+  resolver rather than a display-name join.
 - The trust-dogfood fixture now includes importable v1 packages for the Tam
   containment boundary and an exact legacy identity-classification matrix,
   plus a scripted G1–G6 character-identity addendum mapped into the active
@@ -333,7 +341,10 @@ Under the hood, the app still includes rich systems for world data, rules, chara
 - Keep `Workspace`, `World Bible`, and `Lore Documents` as the primary active-project mental model: write, structure canon, and keep longform source notes.
 - Revisit panel defaults and route emphasis to match the writing-first UX docs.
 - Keep the new shared page chrome as the active-project baseline; future route-specific UI should plug into shared title/meta/action placement before inventing local header patterns.
-- Phase 1 character-canon unification is implemented: character canon now belongs in World Bible, Character Tools is secondary, and workspace character intake creates World Bible canon first.
+- Character-canon unification through roadmap 4.12 is implemented: character
+  canon and the sectioned character experience now belong in World Bible,
+  Character Tools remains a temporary secondary destination pending 4.13,
+  and workspace character intake creates World Bible canon first.
 - Character-canon annotation smoke is now covered after the shared annotation integration. Known `Garcia deTerra` prose, titled mentions such as `Detective Garcia deTerra`, and ordinary sentence-start prose stay out of stray review highlights.
 - Product health is now the active priority: the Lore/RAG/Shodh health panel and the World Bible Character detail health panel are implemented, and Lore Documents can now quietly flag likely stale retrieval coverage and rebuild derived RAG/Shodh context from saved source data.
 - Assistant prompt context now labels retrieved World Bible records, accepted canonical facts, linked/general Source Notes, scene drafts, and rules references by trust tier. Assistant answers also expose a collapsed `Sources used` list for the Shodh/RAG chunks sent with that answer. Pending and rejected Source Note proposals remain out of normal assistant context; include them only through an explicit future proposal-review flow.

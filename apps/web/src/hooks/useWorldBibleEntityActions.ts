@@ -745,6 +745,16 @@ export const useWorldBibleEntityActions = ({
               entityId: target.id,
               aliases: plan.transferAliases
             });
+            const reviewedTarget: WorldEntity = {
+              ...nextTarget,
+              aliasesReviewedAt: Math.max(
+                nextTarget.aliasesReviewedAt ?? 0,
+                ...savedAliases.map((alias) => alias.updatedAt ?? alias.createdAt)
+              )
+            };
+            if (reviewedTarget.aliasesReviewedAt !== nextTarget.aliasesReviewedAt) {
+              await saveEntity(reviewedTarget);
+            }
             await deleteAliasesForEntity(activeProject.id, source.id);
             await deleteEntity(source.id);
 
@@ -752,7 +762,7 @@ export const useWorldBibleEntityActions = ({
               await ragService.indexDocument(
                 nextTarget.id,
                 nextTarget.name,
-                buildEntityContent(nextTarget),
+                buildEntityContent(reviewedTarget),
                 'worldbible',
                 {
                   tags: [targetCategorySlug].filter(Boolean),
@@ -766,7 +776,7 @@ export const useWorldBibleEntityActions = ({
                 projectId: activeProject.id,
                 documentId: nextTarget.id,
                 title: nextTarget.name,
-                content: buildEntityContent(nextTarget),
+                content: buildEntityContent(reviewedTarget),
                 tags: ['worldbible', targetCategorySlug].filter(Boolean)
               });
               await shodhService.deleteMemoriesForDocument(source.id);
@@ -776,7 +786,7 @@ export const useWorldBibleEntityActions = ({
             setEntities((prev) =>
               prev
                 .filter((entity) => entity.id !== source.id)
-                .map((entity) => (entity.id === target.id ? nextTarget : entity))
+                .map((entity) => (entity.id === target.id ? reviewedTarget : entity))
             );
             setAliases((prev) => [
               ...prev.filter(
@@ -789,7 +799,7 @@ export const useWorldBibleEntityActions = ({
             const openedNext = options?.openNext !== false ? openNextReviewItem(source.id) : false;
             if (!openedNext) {
               setViewMode('category');
-              handleEdit(nextTarget, 'aliases');
+              handleEdit(reviewedTarget, 'aliases');
             }
             setFeedback({
               tone: 'success',

@@ -15,6 +15,11 @@ import {WorldBibleImportWorkspace} from '../components/WorldBible/WorldBibleImpo
 import {WorldBibleEntityList} from '../components/WorldBible/WorldBibleEntityList';
 import {WorldBibleRecordAiHelper} from '../components/WorldBible/WorldBibleRecordAiHelper';
 import {WorldBibleCharacterHealth} from '../components/WorldBible/WorldBibleCharacterHealth';
+import {WorldBibleLinkedSourceNote} from '../components/WorldBible/WorldBibleLinkedSourceNote';
+import {
+  WorldBibleCharacterSections,
+  type CharacterDetailSection
+} from '../components/WorldBible/WorldBibleCharacterSections';
 import {CharacterIdentityResolutionQueue} from '../components/WorldBible/CharacterIdentityResolutionQueue';
 import {WorldBibleCategoryRail} from '../components/WorldBible/WorldBibleCategoryRail';
 import {ItemDescriptionFirstFields} from '../components/WorldBible/ItemDescriptionFirstFields';
@@ -101,6 +106,8 @@ function WorldBibleRoute() {
     useState<CharacterAuthoringMode>('idle');
   const [recordAuthoringMode, setRecordAuthoringMode] =
     useState<RecordAuthoringMode>('idle');
+  const [characterDetailSection, setCharacterDetailSection] =
+    useState<CharacterDetailSection>('canon');
   const [areItemDetailsExpanded, setAreItemDetailsExpanded] = useState(false);
   const [isPasteImportOpen, setIsPasteImportOpen] = useState(false);
   const [pastedImportText, setPastedImportText] = useState('');
@@ -320,6 +327,8 @@ function WorldBibleRoute() {
   useFocusTrap(importPreviewDialogRef, isImportPreviewDialogOpen);
   const {
     selectedEntity,
+    selectedEntityCharacterExtension,
+    selectedEntityCharacterSheet,
     linkedLoreDocumentByEntityId,
     linkedLoreDocumentsForSelectedEntity,
     selectedEntityAliases,
@@ -336,8 +345,10 @@ function WorldBibleRoute() {
   } = useWorldBibleSelectedEntity({
     activeProject,
     editingId,
+    categories,
     entities,
     characters,
+    characterSheets,
     loreDocuments,
     loreDocumentLinks,
     aliasMapByEntityId,
@@ -422,6 +433,7 @@ function WorldBibleRoute() {
     setManualResolutionTargetId('');
     setMoveCategoryTargetId('');
     setCharacterAuthoringMode('idle');
+    setCharacterDetailSection('canon');
     setRecordAuthoringMode('idle');
     setAreItemDetailsExpanded(false);
     setIsPasteImportOpen(false);
@@ -465,6 +477,7 @@ function WorldBibleRoute() {
     setName('');
     setFieldValues({});
     setCharacterAuthoringMode('manual');
+    setCharacterDetailSection('canon');
     setRecordAuthoringMode('idle');
     setIsPasteImportOpen(false);
     setPastedImportText('');
@@ -492,6 +505,7 @@ function WorldBibleRoute() {
     setIsNameResolverOpen(false);
     setManualResolutionTargetId('');
     setCharacterAuthoringMode('idle');
+    setCharacterDetailSection('canon');
     setRecordAuthoringMode('manual');
     setAreItemDetailsExpanded(false);
     setIsPasteImportOpen(false);
@@ -528,6 +542,7 @@ function WorldBibleRoute() {
     setCharacterAuthoringMode(
       entityIsCharacterCategory ? 'manual' : 'idle'
     );
+    setCharacterDetailSection('canon');
     setRecordAuthoringMode(entityIsCharacterCategory ? 'idle' : 'manual');
     setAreItemDetailsExpanded(true);
     setPendingReviewFocus(focus);
@@ -1068,12 +1083,8 @@ function WorldBibleRoute() {
 
               {activeCategoryIsCharacterLike && (
                 <div className={styles.reviewHint}>
-                  This World Bible record is the canonical character record. Resolve
-                  the stable name, aliases, duplicate cast records, and story-facing
-                  lore here
-                  {showCharacterTools
-                    ? '; open Character Tools later only for sheets, stats, inventory, or resources.'
-                    : '.'}
+                  This is the character's canonical home. Use the sections below for
+                  story-facing canon and any optional capabilities attached to it.
                 </div>
               )}
               {activeCategoryIsCharacterLike && handoffGuidance?.kind === 'character-canonicalization' && (
@@ -1109,7 +1120,40 @@ function WorldBibleRoute() {
               )}
 
               {activeCategoryIsCharacterLike ? (
-                <>
+                <WorldBibleCharacterSections
+                  activeSection={characterDetailSection}
+                  onSectionChange={setCharacterDetailSection}
+                  isSaved={Boolean(selectedEntity)}
+                  characterName={name.trim() || selectedEntity?.name || 'New character'}
+                  canUseMechanics={showCharacterTools}
+                  hasRuleset={hasRuleset}
+                  characterExtension={selectedEntityCharacterExtension}
+                  characterSheet={selectedEntityCharacterSheet}
+                  linkedNoteCount={linkedLoreDocumentsForSelectedEntity.length}
+                  sceneMentionCount={selectedEntitySceneMentions.length}
+                  stateEventCount={selectedEntityStateEvents.length}
+                  isOpeningCapability={Boolean(
+                    selectedEntity && importingCharacterEntityId === selectedEntity.id
+                  )}
+                  isExporting={Boolean(
+                    selectedEntity && exportingCharacterEntityId === selectedEntity.id
+                  )}
+                  onOpenDialogueStyle={() => {
+                    if (selectedEntity) void handleImportEntityToCharacters(selectedEntity);
+                  }}
+                  onOpenSheet={() => {
+                    if (selectedEntity) {
+                      void handleImportEntityToCharacters(selectedEntity, {
+                        autoCreateSheet: true
+                      });
+                    }
+                  }}
+                  onOpenRuleset={() => navigate('/ruleset')}
+                  onExport={() => {
+                    if (selectedEntity) void handleExportCharacter(selectedEntity);
+                  }}
+                  canonContent={
+                    <>
                   <section className={styles.canonSection} aria-label='Canonical names and aliases'>
                     <div className={styles.canonSectionHeader}>
                       <div>
@@ -1453,104 +1497,67 @@ function WorldBibleRoute() {
                   )}
 
                   {characterDescriptionField && renderEntityField(characterDescriptionField)}
+                    </>
+                  }
+                  notesContent={
+                    <>
+                      {characterNotesField && renderEntityField(characterNotesField)}
 
-                  {characterNotesField && renderEntityField(characterNotesField)}
+                      {characterCustomFields.map(renderEntityField)}
 
-                  {characterCustomFields.map(renderEntityField)}
-
-                  <WorldBibleCharacterHealth
-                    selectedEntity={selectedEntity}
-                    selectedEntityAliases={selectedEntityAliases}
-                    selectedEntityFacts={selectedEntityFacts}
-                    linkedLoreDocumentsForSelectedEntity={linkedLoreDocumentsForSelectedEntity}
-                    selectedEntitySceneMentions={selectedEntitySceneMentions}
-                    selectedEntityStateEvents={selectedEntityStateEvents}
-                    selectedEntityAcceptedStateEventCount={selectedEntityAcceptedStateEventCount}
-                    selectedEntityProposedStateEventCount={selectedEntityProposedStateEventCount}
-                    characterHealthProbeResults={characterHealthProbeResults}
-                    characterHealthProbeRunning={characterHealthProbeRunning}
-                    currentEntityMemories={currentEntityMemories}
-                    canProbe={Boolean(ragService)}
-                    handleCharacterHealthProbe={handleCharacterHealthProbe}
-                  />
-                  <div className={styles.characterSectionBuilder}>
-                    <div>
-                      <strong>Add character section</strong>
-                      <p>
-                        Create a reusable rich section for this project, such as
-                        Education, Traumas, Addictions, Relationships, or Voice.
-                      </p>
-                    </div>
-                    <div className={styles.characterSectionControls}>
-                      <input
-                        type='text'
-                        value={newCharacterSectionName}
-                        onChange={(event) => setNewCharacterSectionName(event.target.value)}
-                        placeholder='Education, Traumas, Addictions...'
-                      />
-                      <button
-                        type='button'
-                        onClick={() => void handleAddCharacterSection()}
-                      >
-                        Add Section
-                      </button>
-                    </div>
-                  </div>
-
-                  {selectedEntity && (
-                    <section className={styles.canonSection} aria-label='Optional character tools'>
-                      <div className={styles.canonSectionHeader}>
-                        <strong>Character capabilities</strong>
-                        <span>
-                          Add only the writing aids, export, or mechanics this character needs.
-                        </span>
-                      </div>
-                      <div className={styles.reviewHint}>
-                        World Bible remains the source for canonical name, aliases,
-                        descriptions, lore, and merge decisions.
-                      </div>
-                      <div className={styles.reviewToolbarActions}>
-                        <button
-                          type='button'
-                          onClick={() => void handleImportEntityToCharacters(selectedEntity)}
-                          disabled={importingCharacterEntityId === selectedEntity.id}
-                        >
-                          {importingCharacterEntityId === selectedEntity.id
-                            ? 'Opening...'
-                            : 'Dialogue style'}
-                        </button>
-                        {showCharacterTools && hasRuleset ? (
+                      <div className={styles.characterSectionBuilder}>
+                        <div>
+                          <strong>Add character section</strong>
+                          <p>
+                            Create a reusable rich section for this project, such as
+                            Education, Traumas, Addictions, Relationships, or Voice.
+                          </p>
+                        </div>
+                        <div className={styles.characterSectionControls}>
+                          <input
+                            type='text'
+                            value={newCharacterSectionName}
+                            onChange={(event) => setNewCharacterSectionName(event.target.value)}
+                            placeholder='Education, Traumas, Addictions...'
+                          />
                           <button
                             type='button'
-                            onClick={() =>
-                              void handleImportEntityToCharacters(selectedEntity, {
-                                autoCreateSheet: true
-                              })
-                            }
-                            disabled={importingCharacterEntityId === selectedEntity.id}
+                            onClick={() => void handleAddCharacterSection()}
                           >
-                            {importingCharacterEntityId === selectedEntity.id
-                              ? 'Opening...'
-                              : 'Add sheet'}
+                            Add Section
                           </button>
-                        ) : showCharacterTools ? (
-                          <span className={styles.reviewHint}>
-                            Sheets and state unlock after this project has a ruleset.
-                          </span>
-                        ) : null}
-                        <button
-                          type='button'
-                          onClick={() => void handleExportCharacter(selectedEntity)}
-                          disabled={exportingCharacterEntityId === selectedEntity.id}
-                        >
-                          {exportingCharacterEntityId === selectedEntity.id
-                            ? 'Exporting...'
-                            : 'Export character'}
-                        </button>
+                        </div>
                       </div>
-                    </section>
-                  )}
-                </>
+
+                      {selectedEntity && (
+                        <WorldBibleLinkedSourceNote
+                          entity={selectedEntity}
+                          linkedDocument={linkedLoreDocumentByEntityId.get(selectedEntity.id) ?? null}
+                          isOpening={linkingLoreEntityId === selectedEntity.id}
+                          compactCopy
+                          onOpen={(entity) => void handleOpenOrCreateLinkedLoreDocument(entity)}
+                        />
+                      )}
+                    </>
+                  }
+                  continuityContent={
+                    <WorldBibleCharacterHealth
+                      selectedEntity={selectedEntity}
+                      selectedEntityAliases={selectedEntityAliases}
+                      selectedEntityFacts={selectedEntityFacts}
+                      linkedLoreDocumentsForSelectedEntity={linkedLoreDocumentsForSelectedEntity}
+                      selectedEntitySceneMentions={selectedEntitySceneMentions}
+                      selectedEntityStateEvents={selectedEntityStateEvents}
+                      selectedEntityAcceptedStateEventCount={selectedEntityAcceptedStateEventCount}
+                      selectedEntityProposedStateEventCount={selectedEntityProposedStateEventCount}
+                      characterHealthProbeResults={characterHealthProbeResults}
+                      characterHealthProbeRunning={characterHealthProbeRunning}
+                      currentEntityMemories={currentEntityMemories}
+                      canProbe={Boolean(ragService)}
+                      handleCharacterHealthProbe={handleCharacterHealthProbe}
+                    />
+                  }
+                />
               ) : (
                 <>
                   {isDescriptionFirstItemDraft && (
@@ -1873,34 +1880,13 @@ function WorldBibleRoute() {
                 </>
               )}
 
-              {selectedEntity && (
-                <section className={styles.canonSection} aria-label='Linked Source Note'>
-                  <div className={styles.canonSectionHeader}>
-                    <div>
-                      <strong>Linked Source Note</strong>
-                      <span>
-                        Keep longform source notes, history, timelines, and exploratory
-                        background in Source Notes while this record stays structured canon.
-                      </span>
-                    </div>
-                    <button
-                      type='button'
-                      onClick={() => void handleOpenOrCreateLinkedLoreDocument(selectedEntity)}
-                      disabled={linkingLoreEntityId === selectedEntity.id}
-                    >
-                      {linkingLoreEntityId === selectedEntity.id
-                        ? 'Creating...'
-                        : linkedLoreDocumentByEntityId.has(selectedEntity.id)
-                          ? 'Open linked document'
-                          : 'Create linked document'}
-                    </button>
-                  </div>
-                  <div className={styles.reviewHint}>
-                    {linkedLoreDocumentByEntityId.get(selectedEntity.id)
-                      ? `Linked to "${linkedLoreDocumentByEntityId.get(selectedEntity.id)?.title}".`
-                      : 'No linked Source Note yet.'}
-                  </div>
-                </section>
+              {selectedEntity && !activeCategoryIsCharacterLike && (
+                <WorldBibleLinkedSourceNote
+                  entity={selectedEntity}
+                  linkedDocument={linkedLoreDocumentByEntityId.get(selectedEntity.id) ?? null}
+                  isOpening={linkingLoreEntityId === selectedEntity.id}
+                  onOpen={(entity) => void handleOpenOrCreateLinkedLoreDocument(entity)}
+                />
               )}
 
               <div className={styles.formActions}>
@@ -1928,7 +1914,8 @@ function WorldBibleRoute() {
                 )}
               </div>
             </form>
-            {editingId && (
+            {editingId &&
+              (!activeCategoryIsCharacterLike || characterDetailSection === 'notes') && (
               <ShodhMemoryPanel
                 title='Canon summary'
                 memories={currentEntityMemories}

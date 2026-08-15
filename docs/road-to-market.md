@@ -1,6 +1,6 @@
 # Road to Market — Master Work Plan
 
-**Created:** 2026-08-01 · **Reconciled:** 2026-08-03 · **Baseline:** `main` at
+**Created:** 2026-08-01 · **Reconciled:** 2026-08-15 · **Baseline:** `main` at
 `4b33eed` (clean, in sync with origin) · fitness grade A− per
 `docs/archive/code-fitness-report-2026-08-01.md`
 
@@ -25,9 +25,11 @@ whether the canon/trust path holds up on realistic multi-document projects —
 is exactly what beta authors will exercise.
 
 v1 must include: trustworthy lore→canon→assistant pipeline, the calm
-writing-first shell, accessible dialogs/nav, packaged + signed installers for
-macOS and Windows, auto-update, storage schema versioning, first-run
-onboarding with a sample project, trial/license gate, and a help/docs baseline.
+writing-first shell, one coherent character experience centered in World
+Bible, progressively disclosed optional mechanics, accessible dialogs/nav,
+packaged + signed installers for macOS and Windows, auto-update, storage
+schema versioning, first-run onboarding with a sample project, trial/license
+gate, and a help/docs baseline.
 
 Explicitly **post-v1**: AI item-authoring slices beyond the manual
 description-first path, ruleset-domain adapters, app-wide search expansion,
@@ -64,7 +66,8 @@ pnpm --filter web e2e:run       # for slices touching routed UI
 1. **Claim it.** Set the slice to `WIP` on the status board below before
    starting. Respect phase ordering and the noted dependencies (2.2 after
    2.1; 2.7 after 2.5; 3.5–3.8 sequentially; 4.5–4.11 after 4.2 with the
-   internal ordering noted in Phase 4; Phase 6 strictly ordered).
+   internal ordering noted in Phase 4; 4.12 → 4.13 and 4.14 → 4.15;
+   Phase 6 strictly ordered).
 2. **Get the full prompt.** Slices marked _[prompt: archive/... § Slice N]_
    have complete, self-contained agent prompts in the archived plan. Use
    them, but apply these remaps — the archived docs predate the 2026-08-01
@@ -96,7 +99,7 @@ and required revisit point, `WIP`, `Done <commit>`.
 | # | Slice | Phase | Size | Status |
 |---|---|---|---|---|
 | 0.1 | Branch/worktree cleanup | 0 | XS | Done `51d1586` |
-| 1.1 | Realistic-project trust dogfood | 1 | M | WIP — multi-day run active; use `fixtures/trust-dogfood/README.md`; record A–G and triage before claiming 5.1 |
+| 1.1 | Realistic-project trust dogfood | 1 | M | Deferred — author paused the run on 2026-08-15 after promoting the character/onboarding/mechanics findings; preserve the current fixture log and resume before 6.1 |
 | 1.2 | Fix trust-path failures found in 1.1 | 1 | M | Done `f8d3d2e` + `545655c` + `1f1d2d7` + `813fb9c` + `aba657a` + `d6a22ea` — grounding/readiness, extraction/review precision, session continuity, deterministic supported answers, and a universal evidence gate that prevents all other factual questions from reaching creative generation; lint baseline; 306 web + 6 engine + 12 UI tests; web/desktop builds; Cypress 45/45 |
 | 1.3 | Calm-shell navigation validation | 1 | S | Done `530b59f` — desktop/narrow project-mode checks pass; 2.8 must expose the aggregate pending badge on narrow `More` without promoting optional systems |
 | 1.4 | Proposal-review assistant route (conditional on product need) | 1 | M | — |
@@ -129,10 +132,14 @@ and required revisit point, `WIP`, `Done <commit>`.
 | 4.9 | Sheet + state identity rebinding (CX-6) | 4 | M | Done `e6f2596` — new mutations use canonical entity actor IDs; replay resolves immutable legacy IDs through the persisted actor map; deterministic derivation has no name matching; linked sheet names derive from canon; one-sheet collisions are blocked and surfaced; lint baseline; 351 web + 6 engine + 12 UI tests; web/desktop builds; Cypress 48/48 |
 | 4.10 | Character capability routing (CX-7) | 4 | S | Done `e3ac404` — World Bible character detail routes dialogue style, sheet creation, and single-character export; Character Tools is narrowed to attached capabilities and legacy cleanup with canon-derived names and no independent identity/descriptive authoring; character-profile language retired; sheet-route load race fixed; lint baseline; 355 web + 6 engine + 12 UI tests; web/desktop builds; Cypress 49/49 |
 | 4.11 | Character identity dogfood addendum (CX-8) | 4 | M | Done `1fa4624` — importable v1 Tam-containment and legacy identity-matrix packages; exact classifier conservation and four-item queue contract tests; active smoke and trust-dogfood runbooks now script G1–G6 including mode gating, rename stability, both author-resolution branches, and rich backup round-trip; manual G1–G6 execution remains explicitly scheduled for 1.1; lint baseline; 357 web + 6 engine + 12 UI tests; web/desktop builds; Cypress 49/49 |
+| 4.12 | Sectioned World Bible character experience (CX-9) | 4 | L | WIP — claimed 2026-08-15; one character detail owns Canon, Notes, Continuity, Mechanics, and Writing aids with project-mode progressive disclosure |
+| 4.13 | Retire the separate Character Tools destination (CX-10a) | 4 | M | — promoted from backlog by dogfood: remove `/characters` as an author destination and route dialogue style, package transfer, sheets, and state through World Bible detail or contextual optional-system views; depends on 4.12 |
+| 4.14 | Mechanics first-use journey and complexity audit | 4 | S | — dogfood finding: specify and test the shortest author journey from no mechanics to one useful character sheet/state update; inventory terminology, prerequisites, empty states, and advanced-only controls |
+| 4.15 | Progressive mechanics experience | 4 | L | — implement the 4.14 basic path, contextual entry points, explanatory empty states, and explicit advanced disclosure across Ruleset, Sheets/State, Mechanics, and Settlement; general-fiction projects remain unaffected |
 | 5.1 | Auto-update decision + implementation | 5 | M | — |
 | 5.2 | Code signing + notarization, both platforms | 5 | M | — |
 | 5.3 | Packaged-app validation + Electron E2E | 5 | M | — |
-| 5.4 | First-run onboarding + sample project | 5 | M | — |
+| 5.4 | Progressive first-run onboarding + sample project | 5 | L | — depends on 4.13 and 4.15 so onboarding teaches the settled character/mechanics experience; no onboarding wall |
 | 5.5 | AI provider setup UX hardening | 5 | S | — |
 | 5.6 | Opt-in error reporting | 5 | S | — |
 | 5.7 | Trial + license key gate | 5 | M | — |
@@ -144,11 +151,14 @@ and required revisit point, `WIP`, `Done <commit>`.
 | 6.4 | Launch | 6 | S | — |
 
 Phases 2 and 3 can interleave; within Phase 3, slices 3.5–3.8 run
-sequentially. Phase 4 is complete. The multi-day 1.1 dogfood run is now the
-checkpoint before Phase 5: complete and triage the run before claiming 5.1.
-Release-blocking trust or data-loss findings must be resolved first; recorded
-non-blocking UX findings may be scheduled without holding all of Phase 5.
-Phase 5 slices mostly parallelize. Phase 6 is strictly ordered.
+sequentially. Phase 4's original product-completeness scope through 4.11 is
+complete; dogfood has promoted 4.12–4.15 as pre-beta experience work. The
+author paused 1.1 on 2026-08-15 and explicitly advanced 4.12; preserve the
+partial dogfood evidence and resume it before 6.1. Slices 4.12 and 4.14 may
+run in parallel; 4.13 follows 4.12 and 4.15 follows 4.14. Release-engineering
+work may run in parallel, but 5.4 waits for 4.13 and 4.15, and all four
+promoted slices must land before 6.1. Release-blocking trust or data-loss
+findings remain first priority. Phase 6 is strictly ordered.
 
 ---
 
@@ -314,6 +324,42 @@ removed by the backlog legacy-retirement item.
   rename stability, migration round-trip, mode gating); feeds Slice 1.1
   before 6.1.
 
+### Dogfood-promoted experience work (4.12–4.15)
+
+These slices are promoted from backlog or added from the active 1.1 dogfood
+because correct data ownership is not enough when the author still perceives
+multiple character-entry destinations or cannot discover a safe first step
+through mechanics. They are product-comprehension work, not new mechanics
+depth.
+
+- **4.12 (CX-9) Sectioned character experience.** Make World Bible character
+  detail the coherent home for Canon, Notes, Continuity, Mechanics, and
+  Writing aids. Default to canon and the capabilities relevant to the project
+  mode; disclose empty/advanced sections only after an explicit author action.
+  Reuse the existing character composition/resolver services rather than
+  duplicating reconciliation logic.
+- **4.13 (CX-10a) Character destination retirement.** Remove Character Tools
+  as a separate author-facing destination. Dialogue-style assignment,
+  single-character package transfer, sheet creation, and character-scoped
+  state open from the World Bible detail; any genuinely useful batch package
+  action lives as a utility under `More`. Preserve v1 imports and unresolved
+  legacy resolution. Retiring compatibility targets, name joins, and the
+  extension store remains a separate internal cleanup after reader coverage
+  proves removal safe.
+- **4.14 Mechanics first-use journey and complexity audit.** Walk the current
+  LitRPG journey from a project with no ruleset through one useful stat or
+  resource, one attached character sheet, and one scene-scoped state change.
+  Record every prerequisite, unexplained term, duplicate entry point, dead
+  end, and advanced control encountered. Define the shortest basic path and
+  author-verifiable desktop/narrow acceptance cases in this roadmap and the
+  relevant smoke authority before implementation.
+- **4.15 Progressive mechanics experience.** Implement the audited basic
+  path without reducing underlying power: contextual calls to action,
+  plain-language empty states, useful defaults, and a deliberate `Advanced`
+  reveal for formula/effect/runtime controls. Keep Ruleset, Sheets/State,
+  Mechanics, and Settlement optional and project-mode gated; do not imply
+  that a fiction project is incomplete without them.
+
 ## Phase 5 — Release Engineering
 
 - **5.1 Auto-update.** Decide Squirrel / electron-updater / manual (this
@@ -324,10 +370,14 @@ removed by the backlog legacy-retirement item.
 - **5.3 Packaged-app validation.** Playwright Electron E2E covering the LLM
   streaming IPC path (highest-payoff single test); packaged checks for file
   operations, external-link policy, provider diagnostics; both platforms.
-- **5.4 First-run onboarding + sample project.** Land the new author in a
-  draft-ready workspace with an optional pre-seeded sample project that
-  demonstrates canon capture, review, and assistant context without setup.
-  Must honor the no-onboarding-wall principle.
+- **5.4 Progressive first-run onboarding + sample project.** Land the new
+  author in a draft-ready workspace immediately, then teach the write →
+  capture canon → review loop through contextual, dismissible guidance and
+  an optional pre-seeded sample project. Mechanics are introduced only after
+  an explicit author choice, using the basic path established by 4.14–4.15;
+  onboarding must not present Character Tools as a second identity home or
+  require provider/ruleset setup before drafting. Guidance is resumable,
+  resettable, and never blocks normal use.
 - **5.5 AI provider setup UX hardening.** BYOK is a v1 differentiator and a
   support risk: clear provider setup, key validation, Ollama detection,
   actionable failure states, and a graceful zero-AI experience (the app must
@@ -368,7 +418,7 @@ App-wide search beyond current entry points; AI-to-Scratchpad capture and
 Scratchpad organization; Corkboard graduation to a route; item authoring AI
 slices 2–6 and ruleset-domain adapters; advanced executable rule generation;
 carry weight/encumbrance; nonfiction product; persona/game-engine tool
-ecosystems; Zod 4; sectioned character detail experience (CX-9) and character
-legacy retirement — `'character'` fact/alias/link targets, remaining name
-joins, `/characters` route per the D10 evidence bar, extension store (CX-10,
-per `docs/character-experience-design-review.md`).
+ecosystems; Zod 4; internal character compatibility retirement after 4.13 —
+`'character'` fact/alias/link targets, remaining name joins, and the extension
+store (CX-10b, after reader coverage proves removal safe; per
+`docs/character-experience-design-review.md`).

@@ -161,25 +161,30 @@ within one project's manuscript, and cross-project replay is undefined. A
 sequel wanting to start from a parent's end-state is a future explicit
 "promote snapshot as new baseline" action, not implicit inheritance.
 
-**D9. Pre-beta versus post-v1.** Pre-beta (trust: beta data must not
+**D9. Pre-beta versus post-v1.** Pre-beta (trust and comprehension: beta data
+must not
 accumulate on ambiguous identity): schema versioning (4.2), explicit FKs and
 the link resolver, deterministic legacy classification with author
 resolution, backup completeness including aliases, intake convergence,
 sheet/state rebinding for new events, single-sheet invariant, capability
 routing that removes independent identity editing, and dogfood coverage of
-the identity scenarios. Post-v1 (simplification): the fully sectioned
-character detail experience, retiring the `/characters` route, retiring
+the identity scenarios. Dogfood promoted the fully sectioned character detail
+experience and retirement of `/characters` as an author destination into the
+pre-beta scope. Post-v1/internal simplification retains retirement of
 `'character'` targets and remaining name-join code, dropping the extension
-store, read-model expansion to search/export, snapshot promotion.
+store, read-model expansion to search/export, and snapshot promotion.
 
 **D10. Evidence bar for keeping a separate Character Tools route.** Retain
-only if beta shows (a) recurring use of dialogue-style or package-export
-workflows as a *batch* activity across many characters at once, and (b) a
-concrete workflow that cannot be reached in ≤2 interactions from the World
-Bible character detail. Absent both, the route is retired post-v1 and its
-capabilities live on the character detail plus the existing `More` group.
-Style *definitions* (the `CharacterStyle` list) already have a home in
-settings; per-character assignment needs no route of its own.
+only if dogfood or beta shows (a) recurring use of dialogue-style or
+package-export workflows as a *batch* activity across many characters at
+once, and (b) a concrete workflow that cannot be reached in ≤2 interactions
+from the World Bible character detail. Active dogfood instead found the split
+destination confusing, so the route-retirement portion is promoted to pre-beta
+as CX-10a after CX-9. Its capabilities live on character detail plus the
+existing `More` group. Style *definitions* (the `CharacterStyle` list) already
+have a home in settings; per-character assignment needs no route of its own.
+Internal compatibility retirement is separated as CX-10b and remains backlog
+until reader coverage proves those adapters safe to remove.
 
 ## 4. Capabilities Lost or Simplified
 
@@ -302,13 +307,14 @@ and UI redesign stay in separate slices throughout.
 | CX-6 | Sheet + state rebinding | New mutations carry entity actor IDs; replay via resolution map; name-based actor matching removed; single-sheet invariant enforced with collision surfacing; sheet names derived from canon | CX-2 | M | Pre-beta |
 | CX-7 | Capability routing | Character detail routes Add sheet / Dialogue style / Export; Character Tools loses create/rename/descriptive editing; "profile" language retired from author-facing copy | CX-4, CX-5, CX-6 | S | Pre-beta |
 | CX-8 | Identity dogfood addendum | Extend `fixtures/trust-dogfood/` and the character-canon smoke with J1–J6 (Tam case, rename stability, migration round-trip, mode gating); feeds Slice 1.1 before 6.1 | CX-5, CX-6, CX-7 | M | Pre-beta |
-| CX-9 | Sectioned character experience | Full Canon / Notes / Continuity / Mechanics / Writing-aids detail with progressive disclosure per project mode | CX-7 | L | Post-v1 |
-| CX-10 | Legacy retirement | Retire `'character'` fact/alias/link targets, remaining name joins, the `/characters` route (per D10 evidence), and eventually the extension store | CX-9 + telemetry/tests showing no readers | M | Post-v1 |
+| CX-9 | Sectioned character experience | Full Canon / Notes / Continuity / Mechanics / Writing-aids detail with progressive disclosure per project mode | CX-7 | L | Pre-beta; promoted by dogfood as roadmap 4.12 |
+| CX-10a | Character destination retirement | Retire `/characters` as an author destination; move contextual capabilities to World Bible detail and justified batch utility to `More` while preserving compatibility adapters | CX-9 | M | Pre-beta; promoted by dogfood as roadmap 4.13 |
+| CX-10b | Internal compatibility retirement | Retire `'character'` fact/alias/link targets, remaining name joins, and eventually the extension store | CX-10a + tests showing no readers | M | Backlog |
 
 Deliberately **not** proposed: a standalone "unified read model" slice. The
 link resolver (CX-2) plus per-surface rebinding (CX-6, CX-7) delivers the
 shared composition where it pays; expanding it to search/export is part of
-CX-9/CX-10.
+CX-9/CX-10b.
 
 ## 9. Interaction with the Existing Roadmap
 
@@ -318,9 +324,9 @@ CX-9/CX-10.
 - **Slice 1.1 (trust dogfood) gains scope, not a new plan.** CX-8 extends the
   existing fixture and runbook; the character-canon smoke is expanded, never
   forked.
-- **Beta gate.** CX-1 through CX-8 must be `Done` before 6.1: beta authors'
-  projects must not accumulate ambiguous identity data that a post-beta
-  migration would have to guess about.
+- **Beta gate.** CX-1 through CX-10a must be `Done` before 6.1: beta authors'
+  projects must not accumulate ambiguous identity data or learn a split
+  character workflow that is already scheduled for removal.
 - **Compatibility adapters get exit conditions.** The actor-resolution map
-  and legacy target support are temporary; CX-10 is their explicit removal
+  and legacy target support are temporary; CX-10b is their explicit removal
   point.

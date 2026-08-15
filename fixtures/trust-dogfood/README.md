@@ -368,6 +368,9 @@ Evidence pointers:
 
 Findings awaiting triage
 - [classification pending] ID/surface — observation — evidence
+- [UX friction; promoted to 4.12–4.13] Cross-cutting/character experience — World Bible and Character Tools still read as split character-entry destinations despite canonical identity convergence — author dogfood 2026-08-15
+- [UX friction; promoted to 5.4] Cross-cutting/onboarding — first-use guidance does not yet make the writing-first path or optional nature of advanced systems sufficiently clear — author dogfood 2026-08-15
+- [UX friction; promoted to 4.14–4.15] Cross-cutting/optional mechanics — the mechanics system appears powerful but presents too much terminology, setup, and advanced capability before a clear first useful path — author dogfood 2026-08-15
 ```
 
 ### Prior partial run — historical, do not resume

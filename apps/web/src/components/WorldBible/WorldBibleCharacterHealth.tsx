@@ -37,12 +37,12 @@ export const WorldBibleCharacterHealth = (props: WorldBibleCharacterHealthProps)
                   {selectedEntity && (
                     <section
                       className={styles.characterHealthPanel}
-                      aria-label='Character detail health'
+                      aria-label='Character continuity overview'
                     >
                       <div className={styles.characterHealthHeader}>
                         <div>
-                          <strong>Character detail health</strong>
-                          <span>Canon, source notes, scenes, memory, and state for this character.</span>
+                          <strong>Continuity overview</strong>
+                          <span>Canon evidence, scene presence, memory, and state for this character.</span>
                         </div>
                         <button
                           type='button'

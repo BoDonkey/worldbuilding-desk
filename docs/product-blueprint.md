@@ -110,6 +110,22 @@ Canonical ownership rules:
   badges; general-fiction projects are never framed as incomplete without
   mechanics.
 
+Optional-system disclosure rules:
+
+- A first mechanics visit starts with one plain-language basic journey, not
+  the complete rules/runtime model. The basic journey is: define one useful
+  stat or resource, attach a sheet from a World Bible character, and record
+  one scene-scoped change.
+- Formula, effect, runtime, progression, recipe, milestone, zone, and
+  settlement controls remain available, but appear only when their
+  prerequisite exists or the author explicitly opens an advanced section.
+- Empty states explain what a capability changes in the manuscript workflow,
+  the minimum prerequisite, and the next action. They must not read like a
+  configuration error or unfinished-project warning.
+- First-run guidance teaches writing and canon before optional systems.
+  Mechanics guidance is contextual, dismissible, resumable, and entered only
+  after an explicit author choice.
+
 The automagic principle: the author should never have to reason about internal
 data ownership. Detect or create a character once, store it in one obvious
 canon home, and expose deeper options (sheets, linked lore documents) from that
