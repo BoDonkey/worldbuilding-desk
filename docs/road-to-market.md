@@ -134,7 +134,7 @@ and required revisit point, `WIP`, `Done <commit>`.
 | 4.11 | Character identity dogfood addendum (CX-8) | 4 | M | Done `1fa4624` — importable v1 Tam-containment and legacy identity-matrix packages; exact classifier conservation and four-item queue contract tests; active smoke and trust-dogfood runbooks now script G1–G6 including mode gating, rename stability, both author-resolution branches, and rich backup round-trip; manual G1–G6 execution remains explicitly scheduled for 1.1; lint baseline; 357 web + 6 engine + 12 UI tests; web/desktop builds; Cypress 49/49 |
 | 4.12 | Sectioned World Bible character experience (CX-9) | 4 | L | Done `569b88b` — World Bible character detail now sections Canon, Notes, Continuity, project-gated Mechanics, and Writing aids; unsaved characters stay canon-focused; stable-ID resolver composition replaces the detail name join; alias conversion review timestamps remain settled; lint baseline; 360 web + 6 engine + 12 UI tests; web/desktop builds; Cypress 49/49; desktop/narrow browser checks |
 | 4.13 | Retire the separate Character Tools destination (CX-10a) | 4 | M | — promoted from backlog by dogfood: remove `/characters` as an author destination and route dialogue style, package transfer, sheets, and state through World Bible detail or contextual optional-system views; depends on 4.12 |
-| 4.14 | Mechanics first-use journey and complexity audit | 4 | S | — dogfood finding: specify and test the shortest author journey from no mechanics to one useful character sheet/state update; inventory terminology, prerequisites, empty states, and advanced-only controls |
+| 4.14 | Mechanics first-use journey and complexity audit | 4 | S | **In progress (claimed 2026-08-15)** — dogfood finding: specify and test the shortest author journey from no mechanics to one useful character sheet/state update; inventory terminology, prerequisites, empty states, and advanced-only controls |
 | 4.15 | Progressive mechanics experience | 4 | L | — implement the 4.14 basic path, contextual entry points, explanatory empty states, and explicit advanced disclosure across Ruleset, Sheets/State, Mechanics, and Settlement; general-fiction projects remain unaffected |
 | 5.1 | Auto-update decision + implementation | 5 | M | — |
 | 5.2 | Code signing + notarization, both platforms | 5 | M | — |
@@ -353,6 +353,87 @@ depth.
   end, and advanced control encountered. Define the shortest basic path and
   author-verifiable desktop/narrow acceptance cases in this roadmap and the
   relevant smoke authority before implementation.
+
+  **Audit result and 4.15 implementation contract (2026-08-15).** The audit
+  used a fresh LitRPG project on the rendered desktop and narrow interfaces,
+  then traced the owning routes and services. The current path succeeds
+  deterministically, but requires the author to understand the product's
+  storage hierarchy before receiving useful narrative continuity:
+
+  1. A rules-enabled project mode is the first hidden prerequisite. `More`
+     then exposes three overlapping entry points — `Rules`, `Sheets`, and
+     `Mechanics` — while a World Bible character adds both list-level
+     `Add sheet` / `Add Mechanics` actions and a detail-level `Mechanics`
+     section. The difference between Rules, Mechanics, and sheet state is not
+     explained at the decision point.
+  2. `Rules` opens the complete World Ruleset editor. Before the first save it
+     requires a second world name, at least one stat, and at least one
+     resource. `Blank Slate` still leaves creation blocked, resources stay
+     locked until a stat exists, and `Create World` implies a new world rather
+     than enabling tracking in the current project. Templates expose D&D,
+     LitRPG, cultivation, regeneration, numeric/boolean/text types,
+     min/max/default values, duplicate/delete, import, and export before the
+     author has recorded one useful value.
+  3. Saving the first ruleset returns to Workspace instead of the initiating
+     character. The author must rediscover World Bible, reopen the character,
+     and select `Mechanics`. There is no resumable setup state or explicit
+     next step.
+  4. `Add sheet` correctly derives the canonical name and ruleset defaults,
+     but the handoff enters the separate Character Tools destination. The
+     automatic creation and route prefill race currently reports that the
+     character “already has a sheet” immediately after the requested success.
+     The resulting editor foregrounds Character Tools, package import/export,
+     level, XP, Runtime Effects, ruleset memory, promotion, inventory,
+     equipment, statuses, catalog links, and the full sheet list around the
+     one requested value.
+  5. Recording a scene change is a separate task view described as
+     `Advanced`. It requires manual choices for sheet, source scene, change
+     type, stat/resource, and delta/value. Primary copy exposes `state
+     mutation`, `mutation ledger`, `runtime`, revision timestamps, hashes,
+     internal definition IDs, `accepted`, and `invalidate`; the author must
+     leave the manuscript to record the change and must navigate back to
+     World Bible to see character continuity.
+  6. The standalone `Mechanics` destination is a compendium/progression
+     system, not the first character-stat journey. Its basic Overview still
+     asks for linked entries, compendium records, actions, points, milestones,
+     recipes, and zone profiles. Its existing `Show advanced setup` disclosure
+     is a useful pattern, but `Rules`, `Sheets + State`, and the World Bible
+     handoff do not yet share the same progressive model.
+
+  The 4.15 **basic path** is therefore one contextual, resumable flow:
+
+  1. From a saved World Bible character, choose `Add mechanics`. If the
+     project has no tracking setup, explain that mechanics are optional and
+     ask for one value to track: `Stat` (a relatively stable attribute) or
+     `Resource` (a value that changes, such as Health). Name it and accept a
+     useful default; project/ruleset identity and the unused definition kind
+     must not be required.
+  2. Create the minimal valid ruleset and the character's one linked sheet as
+     one author-confirmed operation. Keep canonical name derivation and the
+     one-sheet invariant. Return to the same character's Mechanics section
+     with the new value visible; never route through a successful duplicate
+     creation warning.
+  3. Offer `Record a scene change` from that character and from the active
+     scene's contextual review tools. Prefill character, sheet, and active
+     scene; present the tracked value plus plain-language `Change by` / `Set
+     to`, preview the before/after result, and require explicit author
+     confirmation before writing the existing immutable event ledger.
+  4. Show the confirmed change in the character's Continuity and Mechanics
+     sections with a direct return to the source scene. Preserve the current
+     deterministic validation, replay, stable actor IDs, and author-approval
+     boundary.
+  5. Put ruleset templates and definition types/limits under `Advanced
+     rules`; level/XP, runtime effects, inventory/equipment/statuses and
+     history repair under `Advanced sheet and state`; and compendium,
+     progression, recipes, milestones, zones, settlement, import/export, and
+     memory/promotion under their deliberate advanced or utility surfaces.
+     Existing projects and advanced capabilities remain fully editable.
+
+  Desktop and narrow author acceptance is defined in
+  `docs/smoke-tests.md` § 4. 4.15 is not complete if it merely restyles the
+  existing three-route sequence: it must remove repeated discovery and
+  prerequisite entry from the basic path while retaining deterministic
+  persistence and explicit author confirmation.
 - **4.15 Progressive mechanics experience.** Implement the audited basic
   path without reducing underlying power: contextual calls to action,
   plain-language empty states, useful defaults, and a deliberate `Advanced`

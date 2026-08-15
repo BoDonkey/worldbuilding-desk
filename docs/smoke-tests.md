@@ -1,6 +1,6 @@
 # Manual Smoke Procedures
 
-Last updated: 2026-08-11
+Last updated: 2026-08-15
 
 Reusable manual smoke procedures targeting trust and data-loss boundaries.
 Consolidates the former `project-backup-smoke-test.md`,
@@ -199,3 +199,65 @@ Automation supplies the repeatable lower layer: `lore-review-matching` and
 `projectSchemaMigrations.test.ts` cover J3/J6 classification, conservation,
 and backup invariants; snapshot/package services plus the backup Cypress flow
 cover J5. Automation does not replace recording the manual G1–G6 outcomes.
+
+## 4. Mechanics First-Use Journey
+
+Goal: verify that a LitRPG or rules-enabled author can go from one saved World
+Bible character and no ruleset to one useful tracked value, one linked sheet,
+and one scene-scoped change without learning the advanced system model. This
+is the manual acceptance authority for roadmap 4.15; run it at desktop and at
+the narrow/mobile breakpoint.
+
+1. **Mode boundary.** Open a general-fiction project and a LitRPG project
+   without ruleset data. General fiction shows no mechanics prompt, missing
+   setup warning, or completion badge. The LitRPG character's Mechanics
+   section explains that tracking is optional and offers one clear `Add
+   mechanics` action. Standalone Rules, Sheets, and Mechanics destinations do
+   not compete inside this first decision.
+2. **One-value setup.** Choose `Add mechanics`. The basic flow remains in the
+   character context and explains `Stat` versus `Resource` in author language.
+   Create either one stat or one resource with a name and useful default. The
+   flow does not require another world/project name, the unused definition
+   kind, a template, min/max, regeneration, formula, effect, runtime,
+   progression, compendium, settlement, import, or export choice.
+3. **Atomic attach and return.** Confirm once. A minimal ruleset and exactly
+   one sheet are persisted through the existing deterministic services; the
+   sheet uses the World Bible entity ID and canonical name. The UI returns to
+   that character's Mechanics section, displays the value, and reports
+   success. It never opens Character Tools, asks for the name again, or shows
+   an `already has a sheet` warning after successful creation. Reload and a
+   canonical rename preserve the attachment.
+4. **Scene-scoped change.** Create or open a manuscript scene and choose
+   `Record a scene change` from the active scene context or the character.
+   Character, sheet, and scene are preselected. Choose the tracked value, use
+   plain-language `Change by` or `Set to`, and verify the before/after preview.
+   No event is written before explicit confirmation; cancel leaves replay
+   unchanged.
+5. **Continuity result.** Confirm the change. The existing event ledger
+   records a stable actor ID, scene ID/order/revision evidence, and accepted
+   command; deterministic validation and replay still pass. Author-facing
+   confirmation avoids `mutation`, `ledger`, internal definition IDs,
+   timestamps, hashes, and `invalidate`. The new value appears in the
+   character's Continuity and Mechanics sections and can return to its source
+   scene.
+6. **Advanced disclosure.** Explicitly open advanced rules, sheet/state, and
+   mechanics controls. Existing definition types and limits, templates,
+   level/XP, runtime effects, inventory/equipment/statuses, history repair,
+   compendium, progression, recipes, milestones, zones, settlement,
+   import/export, and parent-memory tools remain available and editable. They
+   are absent from the untouched basic path and do not make the project appear
+   incomplete.
+7. **Desktop and narrow behavior.** At both breakpoints the setup order,
+   labels, defaults, success state, and persisted result are equivalent.
+   Keyboard focus follows the active step, validation is announced inline,
+   primary/cancel actions remain visible, controls do not overflow or hide
+   behind mobile navigation, and an interrupted flow resumes at the same
+   character and incomplete step. Back/Escape never commits an unconfirmed
+   operation.
+
+Failure signals: a mandatory second world name; both stat and resource being
+required; any route through Character Tools in the basic path; duplicate
+sheet warnings after success; manual re-selection of known character/sheet/
+scene context; advanced terminology or controls before disclosure; direct
+writes without author confirmation; general-fiction mechanics pressure;
+desktop/narrow behavior or persistence diverging.
