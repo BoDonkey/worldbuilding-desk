@@ -17,6 +17,7 @@ import {WorldBibleRecordAiHelper} from '../components/WorldBible/WorldBibleRecor
 import {WorldBibleCharacterHealth} from '../components/WorldBible/WorldBibleCharacterHealth';
 import {WorldBibleLinkedSourceNote} from '../components/WorldBible/WorldBibleLinkedSourceNote';
 import {WorldBibleDialogueStyleControl} from '../components/WorldBible/WorldBibleDialogueStyleControl';
+import {WorldBibleMechanicsPanel} from '../components/WorldBible/WorldBibleMechanicsPanel';
 import {
   WorldBibleCharacterSections,
   type CharacterDetailSection
@@ -66,6 +67,7 @@ import {
   useWorldBibleRecordResolution,
   type WorldBibleCanonicalizationHandoff
 } from '../hooks/useWorldBibleRecordResolution';
+import {createFirstCharacterMechanics} from '../services/characters';
 
 type WorldBibleViewMode = 'category' | 'review';
 type CharacterAuthoringMode = 'idle' | 'manual';
@@ -134,6 +136,7 @@ function WorldBibleRoute() {
   } | null>(null);
   const [isCategoryRailCollapsed, setIsCategoryRailCollapsed] = useState(false);
   const [promotingMemoryId, setPromotingMemoryId] = useState<string | null>(null);
+  const [isCreatingFirstMechanics, setIsCreatingFirstMechanics] = useState(false);
   const {
     categories,
     setCategories,
@@ -142,6 +145,9 @@ function WorldBibleRoute() {
     characters,
     setCharacters,
     characterSheets,
+    setCharacterSheets,
+    ruleset,
+    setRuleset,
     characterIdentityReport,
     writingDocuments,
     canonicalFacts,
@@ -1129,18 +1135,12 @@ function WorldBibleRoute() {
                   isSaved={Boolean(selectedEntity)}
                   characterName={name.trim() || selectedEntity?.name || 'New character'}
                   canUseMechanics={showCharacterMechanics}
-                  hasRuleset={hasRuleset}
                   characterExtension={selectedEntityCharacterExtension}
                   characterSheet={selectedEntityCharacterSheet}
                   linkedNoteCount={linkedLoreDocumentsForSelectedEntity.length}
                   sceneMentionCount={selectedEntitySceneMentions.length}
                   stateEventCount={selectedEntityStateEvents.length}
-                  isOpeningCapability={Boolean(selectedEntity && importingCharacterEntityId === selectedEntity.id)}
                   isExporting={Boolean(selectedEntity && exportingCharacterEntityId === selectedEntity.id)}
-                  onOpenSheet={() => {
-                    if (selectedEntity) void handleImportEntityToCharacters(selectedEntity, {autoCreateSheet: true});
-                  }}
-                  onOpenRuleset={() => navigate('/ruleset')}
                   onExport={() => {
                     if (selectedEntity) void handleExportCharacter(selectedEntity);
                   }}
@@ -1563,7 +1563,53 @@ function WorldBibleRoute() {
                       currentEntityMemories={currentEntityMemories}
                       canProbe={Boolean(ragService)}
                       handleCharacterHealthProbe={handleCharacterHealthProbe}
+                      onOpenScene={(sceneId) => navigate('/workspace', {state: {focusDocumentId: sceneId}})}
                     />
+                  }
+                  mechanicsContent={
+                    selectedEntity ? (
+                      <WorldBibleMechanicsPanel
+                        key={selectedEntity.id}
+                        characterSheet={selectedEntityCharacterSheet}
+                        ruleset={ruleset}
+                        hasRuleset={hasRuleset}
+                        stateEventCount={selectedEntityStateEvents.length}
+                        stateEvents={selectedEntityStateEvents}
+                        isSaving={isCreatingFirstMechanics}
+                        isOpeningSheet={Boolean(selectedEntity && importingCharacterEntityId === selectedEntity.id)}
+                        onCreate={async (input) => {
+                          if (!activeProject) return;
+                          setIsCreatingFirstMechanics(true);
+                          setFeedback(null);
+                          try {
+                            const created = await createFirstCharacterMechanics({
+                              project: activeProject,
+                              character: selectedEntity,
+                              ...input
+                            });
+                            useAppStore.setState({activeProject: created.project});
+                            setRuleset({...created.ruleset, projectId: activeProject.id});
+                            setCharacterSheets((current) => [...current, created.sheet]);
+                            window.localStorage.removeItem(`wbd:first-mechanics:${activeProject.id}:${selectedEntity.id}`);
+                            setFeedback({tone: 'success', message: `${input.name} is now tracked for ${selectedEntity.name}.`});
+                          } catch (error) {
+                            setFeedback({tone: 'error', message: error instanceof Error ? error.message : 'Unable to enable mechanics tracking.'});
+                          } finally {
+                            setIsCreatingFirstMechanics(false);
+                          }
+                        }}
+                        onRecordChange={() => navigate('/sheets', {state: {
+                          prefillSheetId: selectedEntityCharacterSheet?.id,
+                          initialTaskView: 'scene-history'
+                        }})}
+                        onOpenAdvanced={() => navigate('/sheets', {state: {
+                          prefillSheetId: selectedEntityCharacterSheet?.id,
+                          showAdvanced: true
+                        }})}
+                        onAddSheet={() => void handleImportEntityToCharacters(selectedEntity, {autoCreateSheet: true})}
+                        draftStorageKey={`wbd:first-mechanics:${activeProject?.id ?? 'none'}:${selectedEntity.id}`}
+                      />
+                    ) : null
                   }
                 />
               ) : (

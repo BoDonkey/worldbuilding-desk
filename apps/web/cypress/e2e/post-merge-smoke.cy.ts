@@ -316,9 +316,58 @@ describe('Post-merge smoke checklist', () => {
 
     openMira();
     cy.contains('[role="tab"]', 'Mechanics').click();
-    cy.contains('button', 'Add sheet').click();
+    cy.contains('button', 'Add mechanics to this character').click();
     cy.location('pathname').should('eq', '/sheets');
     cy.contains('Mira Voss').should('be.visible');
+  });
+
+  it('enables one tracked value from a World Bible character without advanced setup', () => {
+    cy.visit('/projects');
+    cy.contains('label', 'Project Name').find('input').type('First Mechanics Journey');
+    cy.contains('label', 'Project Type').find('select').select('litrpg');
+    cy.contains('button', 'Create Project').click();
+    cy.location('pathname').should('eq', '/workspace');
+    cy.visit('/world-bible');
+    cy.contains('button', 'Characters').should('be.visible');
+
+    mutateSmokeDb(async (db) => {
+      const projects = await getAllRecords<{id: string; name: string}>(db, 'projects');
+      const project = projects.find((entry) => entry.name === 'First Mechanics Journey');
+      expect(project).to.not.equal(undefined);
+      const categories = await getAllRecords<{id: string; projectId: string; kind: string}>(db, 'entityCategories');
+      const category = categories.find((entry) => entry.projectId === project!.id && entry.kind === 'character');
+      expect(category).to.not.equal(undefined);
+      await putRecord(db, 'entities', {
+        id: 'entity-first-mechanics', projectId: project!.id, categoryId: category!.id,
+        name: 'Tamsin Vale', fields: {}, links: [], createdAt: Date.now(), updatedAt: Date.now()
+      });
+    });
+    cy.reload();
+    cy.contains('button', 'Characters').click();
+    cy.contains('[class*="entityName"]', 'Tamsin Vale')
+      .parents('li').first().within(() => cy.contains('button', 'Edit').click());
+    cy.contains('[role="tab"]', 'Mechanics').click();
+    cy.contains('button', 'Add mechanics').click();
+    cy.contains('label', 'Value name').find('input').should('have.value', 'Health');
+    cy.viewport(390, 844);
+    cy.contains('button', 'Cancel').should('be.visible');
+    cy.contains('button', 'Enable tracking').should('be.visible');
+    cy.document().then((document) => {
+      expect(document.documentElement.scrollWidth).to.be.at.most(390);
+    });
+    cy.contains('button', 'Enable tracking').click();
+    cy.location('pathname').should('eq', '/world-bible');
+    cy.contains('[role="status"]', 'Health is now tracked for Tamsin Vale.').should('be.visible');
+    cy.contains('strong', '100 / 100').should('be.visible');
+    cy.contains('button', 'Record a scene change').should('be.visible');
+
+    mutateSmokeDb(async (db) => {
+      const projects = await getAllRecords<{id: string; name: string; rulesetId?: string}>(db, 'projects');
+      const project = projects.find((entry) => entry.name === 'First Mechanics Journey');
+      expect(project?.rulesetId).to.be.a('string');
+      const sheets = await getAllRecords<{projectId: string; characterEntityId?: string}>(db, 'character_sheets');
+      expect(sheets.filter((sheet) => sheet.projectId === project!.id && sheet.characterEntityId === 'entity-first-mechanics')).to.have.length(1);
+    });
   });
 
   it('builds a scene roster from canonical mentions and supports manual overrides', () => {

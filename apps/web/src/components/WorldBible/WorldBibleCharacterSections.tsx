@@ -15,21 +15,18 @@ interface WorldBibleCharacterSectionsProps {
   isSaved: boolean;
   characterName: string;
   canUseMechanics: boolean;
-  hasRuleset: boolean;
   characterExtension: Character | null;
   characterSheet: CharacterSheet | null;
   linkedNoteCount: number;
   sceneMentionCount: number;
   stateEventCount: number;
-  isOpeningCapability: boolean;
   isExporting: boolean;
-  onOpenSheet: () => void;
-  onOpenRuleset: () => void;
   onExport: () => void;
   dialogueStyleContent: ReactNode;
   canonContent: ReactNode;
   notesContent: ReactNode;
   continuityContent: ReactNode;
+  mechanicsContent: ReactNode;
 }
 
 interface SectionDefinition {
@@ -155,42 +152,7 @@ export const WorldBibleCharacterSections = (
         {activeSection === 'continuity' && props.continuityContent}
 
         {activeSection === 'mechanics' && (
-          <div className={styles.characterCapabilityPanel}>
-            <div className={styles.characterCapabilitySummary}>
-              <div>
-                <span>Character sheet</span>
-                <strong>{props.characterSheet ? 'Attached' : 'Not added'}</strong>
-              </div>
-              <div>
-                <span>State events</span>
-                <strong>{props.stateEventCount}</strong>
-              </div>
-            </div>
-            {props.hasRuleset ? (
-              <button
-                type='button'
-                className={styles.primaryButton}
-                onClick={props.onOpenSheet}
-                disabled={props.isOpeningCapability}
-              >
-                {props.isOpeningCapability
-                  ? 'Opening...'
-                  : props.characterSheet
-                    ? 'Open sheet and state'
-                    : 'Add sheet'}
-              </button>
-            ) : (
-              <div className={styles.characterCapabilityEmpty}>
-                <p>
-                  Add a project ruleset before creating a sheet. Canon and writing
-                  tools work without mechanics.
-                </p>
-                <button type='button' onClick={props.onOpenRuleset}>
-                  Set up ruleset
-                </button>
-              </div>
-            )}
-          </div>
+          props.mechanicsContent
         )}
 
         {activeSection === 'writing-aids' && (

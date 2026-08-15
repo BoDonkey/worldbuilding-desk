@@ -4,3 +4,4 @@ export * from './characterIdentity';
 export * from './characterIdentityStorage';
 export * from './characterIdentityResolution';
 export * from './characterIntakeService';
+export * from './characterMechanicsSetupService';

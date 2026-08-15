@@ -1264,6 +1264,25 @@ function CompendiumRoute() {
     }
   };
 
+  if (!showAdvancedSetup) {
+    return (
+      <section>
+        <h1>Mechanics</h1>
+        {feedback && <p role='status' className={`${styles.feedback} ${feedback.tone === 'error' ? styles.feedbackError : styles.feedbackSuccess}`}>{feedback.message}</p>}
+        <section className={`${styles.marginBottom085rem} ${styles.padding085rem} ${styles.border1pxSolidVarColorAccentSoftBg} ${styles.borderRadius8px} ${styles.backgroundColorVarColorBgSecondary}`}>
+          <strong>Character tracking starts in the World Bible</strong>
+          <p className={`${styles.fontSize088rem} ${styles.colorVarColorTextSecondary}`}>
+            Open a character’s Mechanics section to add a stat or resource and record scene changes. This destination is for advanced compendium entries, progression, recipes, milestones, zones, and settlement systems.
+          </p>
+          <div className={`${styles.displayFlex} ${styles.gap05rem} ${styles.flexWrapWrap}`}>
+            <button type='button' onClick={() => navigate('/world-bible')}>Open World Bible</button>
+            <button type='button' onClick={() => setShowAdvancedSetup(true)}>Advanced mechanics</button>
+          </div>
+        </section>
+      </section>
+    );
+  }
+
   return (
     <section>
       <h1>Mechanics</h1>
@@ -1297,23 +1316,9 @@ function CompendiumRoute() {
           </p>
         </div>
       </details>
-      {!showAdvancedSetup && (
-        <section
-          className={`${styles.marginBottom085rem} ${styles.padding085rem} ${styles.border1pxSolidVarColorAccentSoftBg} ${styles.borderRadius8px} ${styles.backgroundColorVarColorBgSecondary}`}
-        >
-          <div className={`${styles.displayFlex} ${styles.justifyContentSpaceBetween} ${styles.gap075rem} ${styles.flexWrapWrap}`}>
-            <div>
-              <strong>Start Small</strong>
-              <div className={`${styles.fontSize088rem} ${styles.colorVarColorTextSecondary} ${styles.marginTop025rem}`}>
-                You only need the <strong>Entries</strong> tab right now unless this project truly needs progression or world simulation.
-              </div>
-            </div>
-            <button type='button' onClick={() => setShowAdvancedSetup(true)}>
-              Show advanced setup
-            </button>
-          </div>
-        </section>
-      )}
+      <button type='button' className={styles.marginBottom085rem} onClick={() => setShowAdvancedSetup(false)}>
+        Hide advanced mechanics
+      </button>
       <div className={`${styles.displayFlex} ${styles.gap05rem} ${styles.flexWrapWrap} ${styles.marginBottom08rem}`}>
         {visibleTabs.map((tab) => (
           <button

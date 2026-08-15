@@ -28,6 +28,14 @@ const CHANGE_TYPES: Array<{value: PositionedChangeKind; label: string}> = [
   {value: 'inventory_unequip', label: 'Unequip item'},
   {value: 'location_set', label: 'Set location'}
 ];
+const BASIC_CHANGE_TYPES = CHANGE_TYPES.filter((entry) =>
+  ['stat_change', 'stat_set', 'resource_change', 'resource_set'].includes(entry.value)
+).map((entry) => ({
+  ...entry,
+  label: entry.value.endsWith('_set')
+    ? `Set to (${entry.value.startsWith('stat_') ? 'stat' : 'resource'})`
+    : `Change by (${entry.value.startsWith('stat_') ? 'stat' : 'resource'})`
+}));
 
 const draftFromCommand = (command: StateMutationCommand): PositionedChangeDraft => {
   const base = {id: crypto.randomUUID(), kind: command.type};
@@ -57,8 +65,12 @@ const draftFromCommand = (command: StateMutationCommand): PositionedChangeDraft 
 
 const newDraft = (ruleset: StoredRuleset | null): PositionedChangeDraft => ({
   id: crypto.randomUUID(),
-  kind: 'stat_change',
-  definitionId: ruleset?.statDefinitions[0]?.id ?? '',
+  kind: ruleset?.statDefinitions.some((definition) => definition.type === 'number')
+    ? 'stat_change'
+    : 'resource_change',
+  definitionId: ruleset?.statDefinitions.find((definition) => definition.type === 'number')?.id
+    ?? ruleset?.resourceDefinitions[0]?.id
+    ?? '',
   value: ''
 });
 
@@ -92,6 +104,9 @@ export function PositionedStateChangeComposer({
   onSave
 }: PositionedStateChangeComposerProps) {
   const [label, setLabel] = useState(existingEvent?.label ?? initialLabel ?? '');
+  const [showAdvanced, setShowAdvanced] = useState(Boolean(
+    existingEvent || (initialCommands?.length ?? 0) > 1 || initialCommands?.some((command) => !['stat_change', 'stat_set', 'resource_change', 'resource_set'].includes(command.type))
+  ));
   const [drafts, setDrafts] = useState<PositionedChangeDraft[]>(
     existingEvent?.commands.length
       ? existingEvent.commands.map(draftFromCommand)
@@ -135,9 +150,10 @@ export function PositionedStateChangeComposer({
         {existingEvent ? 'Edit scene change' : 'Record change here'}
       </h3>
       <p className={styles.modalDescription}>
-        {characterName} · {sceneTitle} · cursor position {cursorPosition}
+        {characterName} · {sceneTitle}{showAdvanced ? ` · position ${cursorPosition}` : ''}
       </p>
 
+      {showAdvanced && (
       <label className={styles.changeComposerLabel}>
         What happens here?
         <input
@@ -147,6 +163,7 @@ export function PositionedStateChangeComposer({
           placeholder='Drinks Potion of Giant Strength'
         />
       </label>
+      )}
 
       <div className={styles.changeComposerRows}>
         {drafts.map((draft, index) => {
@@ -209,7 +226,9 @@ export function PositionedStateChangeComposer({
                       updateDraft(draft.id, {
                         kind,
                         definitionId: kind.startsWith('stat_')
-                          ? ruleset?.statDefinitions[0]?.id ?? ''
+                          ? (showAdvanced
+                              ? ruleset?.statDefinitions[0]?.id
+                              : ruleset?.statDefinitions.find((definition) => definition.type === 'number')?.id) ?? ''
                           : kind.startsWith('resource_')
                             ? ruleset?.resourceDefinitions[0]?.id ?? ''
                             : undefined,
@@ -219,7 +238,7 @@ export function PositionedStateChangeComposer({
                       });
                     }}
                   >
-                    {CHANGE_TYPES.map((type) => (
+                    {(showAdvanced ? CHANGE_TYPES : BASIC_CHANGE_TYPES).map((type) => (
                       <option key={type.value} value={type.value}>{type.label}</option>
                     ))}
                   </select>
@@ -235,7 +254,9 @@ export function PositionedStateChangeComposer({
                         }
                       >
                         {(draft.kind.startsWith('stat_')
-                          ? ruleset?.statDefinitions
+                          ? showAdvanced
+                            ? ruleset?.statDefinitions
+                            : ruleset?.statDefinitions.filter((definition) => definition.type === 'number')
                           : ruleset?.resourceDefinitions
                         )?.map((definition) => (
                           <option key={definition.id} value={definition.id}>
@@ -322,13 +343,17 @@ export function PositionedStateChangeComposer({
         })}
       </div>
 
-      <button
+      {showAdvanced ? <button
         type='button'
         className={styles.changeComposerAddButton}
         onClick={() => setDrafts((current) => [...current, newDraft(ruleset)])}
       >
         Add another change
-      </button>
+      </button> : (
+        <button type='button' className={styles.changeComposerAddButton} onClick={() => setShowAdvanced(true)}>
+          Advanced changes
+        </button>
+      )}
 
       <div className={styles.changeComposerPreview}>
         <strong>Before → after</strong>
@@ -356,7 +381,7 @@ export function PositionedStateChangeComposer({
           onClick={() => onSave({label: label.trim(), commands})}
           disabled={isSaving || commands.length !== drafts.length || preview.issues.length > 0}
         >
-          {isSaving ? 'Saving…' : existingEvent ? 'Save changes' : 'Record at cursor'}
+          {isSaving ? 'Saving…' : existingEvent ? 'Save changes' : 'Confirm scene change'}
         </button>
       </div>
     </div>

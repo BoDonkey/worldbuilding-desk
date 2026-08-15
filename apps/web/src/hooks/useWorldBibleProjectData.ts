@@ -11,6 +11,7 @@ import type {
   WritingDocument,
   WorldEntity
 } from '../entityTypes';
+import type {StoredRuleset} from '../entityTypes';
 import {getCategoriesByProject, initializeDefaultCategories, saveCategory} from '../categoryStorage';
 import {getCharactersByProject} from '../characterStorage';
 import {getCharacterSheetsByProject} from '../services/characters/characterSheetService';
@@ -29,6 +30,7 @@ import type {MemoryEntry, ShodhMemoryProvider} from '../services/shodh/ShodhMemo
 import {emitShodhMemoriesUpdated} from '../services/shodh/shodhEvents';
 import {getShodhService} from '../services/shodh/getShodhService';
 import {getStateMutationEventsByProject} from '../services/state/stateMutationLedger';
+import {getRulesetByProjectId} from '../services/rules';
 import {
   CHARACTER_NOTES_FIELD,
   isCharacterCategory
@@ -82,6 +84,7 @@ export function useWorldBibleProjectData({
   const [entities, setEntities] = useState<WorldEntity[]>([]);
   const [characters, setCharacters] = useState<Character[]>([]);
   const [characterSheets, setCharacterSheets] = useState<CharacterSheet[]>([]);
+  const [ruleset, setRuleset] = useState<StoredRuleset | null>(null);
   const [characterIdentityReport, setCharacterIdentityReport] =
     useState<CharacterIdentityMigrationReport | null>(null);
   const [writingDocuments, setWritingDocuments] = useState<WritingDocument[]>([]);
@@ -147,6 +150,7 @@ export function useWorldBibleProjectData({
       setAliases([]);
       setCharacters([]);
       setCharacterSheets([]);
+      setRuleset(null);
       setCharacterIdentityReport(null);
       setWritingDocuments([]);
       setCanonicalFacts([]);
@@ -167,6 +171,7 @@ export function useWorldBibleProjectData({
         loadedCanonicalFacts,
         loadedStateMutationEvents,
         loadedCharacterSheets,
+        loadedRuleset,
         loadedCharacterIdentityReport
       ] = await Promise.all([
         getCategoriesByProject(projectId),
@@ -177,6 +182,7 @@ export function useWorldBibleProjectData({
         getCanonicalFactsByProject(projectId),
         getStateMutationEventsByProject(projectId),
         getCharacterSheetsByProject(projectId),
+        getRulesetByProjectId(projectId),
         getCharacterIdentityMigrationReport(projectId)
       ]);
       const normalizedCategories = await ensureCharacterCategoryLongFormFields(
@@ -189,6 +195,7 @@ export function useWorldBibleProjectData({
         setAliases(loadedAliases);
         setCharacters(loadedCharacters);
         setCharacterSheets(loadedCharacterSheets);
+        setRuleset(loadedRuleset);
         setCharacterIdentityReport(loadedCharacterIdentityReport);
         setWritingDocuments(loadedWritingDocuments);
         setCanonicalFacts(loadedCanonicalFacts);
@@ -400,6 +407,9 @@ export function useWorldBibleProjectData({
     characters,
     setCharacters,
     characterSheets,
+    setCharacterSheets,
+    ruleset,
+    setRuleset,
     characterIdentityReport,
     writingDocuments,
     canonicalFacts,

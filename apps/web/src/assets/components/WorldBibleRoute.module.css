@@ -2447,3 +2447,51 @@
 .noProject strong {
   color: var(--color-accent);
 }
+.firstMechanicsForm {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.firstMechanicsForm fieldset {
+  display: grid;
+  gap: 0.55rem;
+  margin: 0;
+  padding: 0.8rem;
+  border: 1px solid var(--surface-border-soft);
+  border-radius: 12px;
+}
+
+.firstMechanicsForm fieldset label {
+  display: flex;
+  gap: 0.65rem;
+  align-items: flex-start;
+}
+
+.firstMechanicsForm fieldset span,
+.firstMechanicsForm fieldset small {
+  display: block;
+}
+
+.firstMechanicsForm fieldset small {
+  margin-top: 0.15rem;
+  color: var(--color-text-secondary);
+}
+
+.firstMechanicsFields {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(8rem, 1fr);
+  gap: 0.65rem;
+}
+
+.firstMechanicsFields label,
+.firstMechanicsFields input {
+  display: block;
+  width: 100%;
+}
+
+.firstMechanicsFields input { margin-top: 0.3rem; }
+.firstMechanicsError { margin: 0; color: var(--color-error); }
+
+@media (max-width: 620px) {
+  .firstMechanicsFields { grid-template-columns: 1fr; }
+}

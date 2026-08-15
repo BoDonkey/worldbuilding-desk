@@ -21,6 +21,7 @@ interface WorldBibleCharacterHealthProps {
   currentEntityMemories: MemoryEntry[];
   canProbe: boolean;
   handleCharacterHealthProbe: () => Promise<void>;
+  onOpenScene: (sceneId: string) => void;
 }
 
 export const WorldBibleCharacterHealth = (props: WorldBibleCharacterHealthProps) => {
@@ -30,7 +31,7 @@ export const WorldBibleCharacterHealth = (props: WorldBibleCharacterHealthProps)
     selectedEntityStateEvents, selectedEntityAcceptedStateEventCount,
     selectedEntityProposedStateEventCount, characterHealthProbeResults,
     characterHealthProbeRunning, currentEntityMemories, canProbe,
-    handleCharacterHealthProbe
+    handleCharacterHealthProbe, onOpenScene
   } = props;
   return (
     <>
@@ -180,7 +181,9 @@ export const WorldBibleCharacterHealth = (props: WorldBibleCharacterHealthProps)
                               <ul className={styles.characterHealthList}>
                                 {selectedEntityStateEvents.slice(0, 5).map((event) => (
                                   <li key={event.id}>
-                                    <span>{event.sceneTitle ?? 'Untitled scene'}</span>
+                                    <button type='button' onClick={() => onOpenScene(event.sceneId)}>
+                                      {event.sceneTitle ?? 'Untitled scene'}
+                                    </button>
                                     <small>{event.status}</small>
                                   </li>
                                 ))}

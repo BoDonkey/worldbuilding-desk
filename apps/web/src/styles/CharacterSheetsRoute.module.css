@@ -491,3 +491,32 @@
 .inlineWidth5rem {
   width: 5rem;
 }
+.basicStatePanel {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 1rem;
+  border: 1px solid var(--surface-border-soft);
+  border-radius: 16px;
+  background: var(--surface-panel);
+}
+
+.basicStatePanel > header {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: flex-start;
+}
+
+.basicStatePanel header span { color: var(--color-text-secondary); font-size: 0.78rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; }
+.basicStatePanel h1 { margin: 0.2rem 0 0; }
+.basicStateFields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.8rem; margin-top: 1rem; }
+.basicStateFields label, .basicStateFields select, .basicStateFields input { display: block; width: 100%; }
+.basicStateFields select, .basicStateFields input { margin-top: 0.3rem; }
+.basicStatePreview, .basicStateEmpty { grid-column: 1 / -1; padding: 0.8rem; border: 1px solid var(--surface-border-soft); border-radius: 12px; background: var(--color-bg-secondary); }
+.basicStatePreview p, .basicStateEmpty p { margin: 0.35rem 0 0; color: var(--color-text-secondary); }
+.basicStateActions { grid-column: 1 / -1; display: flex; justify-content: flex-end; }
+
+@media (max-width: 620px) {
+  .basicStatePanel > header { flex-direction: column; }
+  .basicStateFields { grid-template-columns: 1fr; }
+}

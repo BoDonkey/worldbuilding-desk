@@ -87,6 +87,8 @@ describe('route smoke coverage', () => {
   it('switches CompendiumRoute from Overview to Entries', async () => {
     renderRoute(<CompendiumRoute />, '/compendium');
 
+    fireEvent.click(await screen.findByRole('button', {name: 'Advanced mechanics'}));
+
     expect(
       await screen.findByRole('heading', {name: 'What To Do Next', level: 2})
     ).toBeInTheDocument();

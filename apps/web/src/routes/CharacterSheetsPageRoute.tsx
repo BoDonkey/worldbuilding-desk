@@ -5,6 +5,10 @@ import CharacterSheetsRoute from './CharacterSheetsRoute';
 interface CharacterSheetsLocationState {
   prefillCharacterId?: string;
   autoCreateSheetForCharacterId?: string;
+  prefillSheetId?: string;
+  prefillSceneId?: string;
+  initialTaskView?: 'setup' | 'scene-history';
+  showAdvanced?: boolean;
 }
 
 function CharacterSheetsPageRoute() {
@@ -23,6 +27,10 @@ function CharacterSheetsPageRoute() {
       onPrefillConsumed={() => setPrefillCharacterId(null)}
       autoCreateSheetCharacterId={autoCreateSheetCharacterId}
       onAutoCreateConsumed={() => setAutoCreateSheetCharacterId(null)}
+      prefillSheetId={locationState?.prefillSheetId}
+      prefillSceneId={locationState?.prefillSceneId}
+      initialTaskView={locationState?.initialTaskView}
+      initialShowAdvanced={locationState?.showAdvanced}
     />
   );
 }

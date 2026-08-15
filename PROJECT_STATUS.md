@@ -165,6 +165,17 @@ Under the hood, the app still includes rich systems for world data, rules, chara
   handoffs without another identity or name-entry surface. The composition
   resolves extensions and sheets through the shared stable-ID character
   resolver rather than a display-name join.
+- Rules-enabled projects now start character mechanics inside the saved World
+  Bible character: one author-confirmed Stat or Resource creates a minimal
+  project ruleset plus exactly one canon-linked sheet through a deterministic
+  setup service with partial-write rollback. The character stays in context,
+  shows the tracked value, and resumes an interrupted first-setup draft.
+- Rules, Sheets/State, and Mechanics now open with calm contextual guidance.
+  First-use scene changes use plain-language `Change by` / `Set to`, replay
+  preview, stable actor identity, and explicit confirmation. Templates and
+  limits, level/XP/runtime/history repair, compendium, progression, recipes,
+  zones, settlement, transfer, and memory/promotion remain available behind
+  explicit advanced reveals; general-fiction projects remain unaffected.
 - The trust-dogfood fixture now includes importable v1 packages for the Tam
   containment boundary and an exact legacy identity-classification matrix,
   plus a scripted G1–G6 character-identity addendum mapped into the active

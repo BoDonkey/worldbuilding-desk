@@ -74,9 +74,11 @@ import {
   summarizeMutationCommand
 } from '../services/characters/characterSheetDefaults';
 import {
-  MutationForm
+  MutationForm,
+  type MutationFormType
 } from '../components/CharacterSheets/MutationForm';
 import {CharacterSheetList} from '../components/CharacterSheets/CharacterSheetList';
+import {BasicCharacterStatePanel} from '../components/CharacterSheets/BasicCharacterStatePanel';
 import styles from '../styles/CharacterSheetsRoute.module.css';
 import {useConfirmDialog} from '../hooks/useConfirmDialog';
 import {useCharacterSheetMutationPreview} from '../hooks/useCharacterSheetMutationPreview';
@@ -87,6 +89,10 @@ interface CharacterSheetsRouteProps {
   onPrefillConsumed?: () => void;
   autoCreateSheetCharacterId?: string | null;
   onAutoCreateConsumed?: () => void;
+  prefillSheetId?: string | null;
+  prefillSceneId?: string | null;
+  initialTaskView?: 'setup' | 'scene-history';
+  initialShowAdvanced?: boolean;
 }
 
 const mergeLegacyAndTracked = (
@@ -122,7 +128,11 @@ function CharacterSheetsRoute({
   prefillCharacterId,
   onPrefillConsumed,
   autoCreateSheetCharacterId,
-  onAutoCreateConsumed
+  onAutoCreateConsumed,
+  prefillSheetId,
+  prefillSceneId,
+  initialTaskView,
+  initialShowAdvanced = false
 }: CharacterSheetsRouteProps) {
   const activeProject = useAppStore((s) => s.activeProject);
   const projectSettings = useAppStore((s) => s.projectSettings);
@@ -131,7 +141,8 @@ function CharacterSheetsRoute({
   const [sheets, setSheets] = useState<CharacterSheet[]>([]);
   const [ruleset, setRuleset] = useState<StoredRuleset | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [taskView, setTaskView] = useState<'setup' | 'scene-history'>('setup');
+  const [taskView, setTaskView] = useState<'setup' | 'scene-history'>(initialTaskView ?? 'setup');
+  const [showAdvancedSheetState, setShowAdvancedSheetState] = useState(initialShowAdvanced);
   const [name, setName] = useState('');
   const [level, setLevel] = useState(1);
   const [experience, setExperience] = useState(0);
@@ -202,6 +213,31 @@ function CharacterSheetsRoute({
   } = useCharacterSheetMutationPreview({
     sheets, ruleset, documents, stateMutationEvents, actorResolutions
   });
+
+  useEffect(() => {
+    if (!isLoaded || !ruleset) return;
+    if (prefillSheetId && sheets.some((sheet) => sheet.id === prefillSheetId)) {
+      setMutationTargetSheetId(prefillSheetId);
+    }
+    if (prefillSceneId && documents.some((document) => document.id === prefillSceneId)) {
+      setMutationSceneId(prefillSceneId);
+    }
+    if (!mutationStatDefinitionId && !mutationResourceDefinitionId) {
+      if (ruleset.resourceDefinitions[0]) {
+        setMutationType('resource_change');
+        setMutationResourceDefinitionId(ruleset.resourceDefinitions[0].id);
+      } else if (ruleset.statDefinitions.find((definition) => definition.type === 'number')) {
+        const firstStat = ruleset.statDefinitions.find((definition) => definition.type === 'number');
+        setMutationType('stat_change');
+        setMutationStatDefinitionId(firstStat?.id ?? '');
+      }
+    }
+  }, [
+    documents, isLoaded, mutationResourceDefinitionId, mutationStatDefinitionId,
+    prefillSceneId, prefillSheetId, ruleset, setMutationResourceDefinitionId,
+    setMutationSceneId, setMutationStatDefinitionId, setMutationTargetSheetId,
+    setMutationType, sheets
+  ]);
 
   useEffect(() => {
     let cancelled = false;
@@ -396,6 +432,7 @@ function CharacterSheetsRoute({
           sheet.characterId === autoCreateSheetCharacterId
       ) ?? null;
     if (existingSheet) {
+      setMutationTargetSheetId(existingSheet.id);
       setEditingId(existingSheet.id);
       setSelectedCharacterId(existingSheet.characterId || '');
       setName(existingSheet.name);
@@ -446,6 +483,7 @@ function CharacterSheetsRoute({
 
     void saveCharacterSheet(sheet)
       .then(() => {
+        setMutationTargetSheetId(sheet.id);
         setSheets((prev) => [...prev, sheet]);
         setEditingId(sheet.id);
         setSelectedCharacterId(sheet.characterId || '');
@@ -488,6 +526,7 @@ function CharacterSheetsRoute({
     isLoaded,
     onAutoCreateConsumed,
     ruleset,
+    setMutationTargetSheetId,
     sheets
   ]);
 
@@ -1193,9 +1232,54 @@ function CharacterSheetsRoute({
     );
   }
 
+  if (!showAdvancedSheetState) {
+    return (
+      <BasicCharacterStatePanel
+        sheets={sheets}
+        ruleset={ruleset}
+        documents={orderedDocuments}
+        sheetId={mutationTargetSheetId}
+        sceneId={mutationSceneId}
+        mutationType={mutationType}
+        statDefinitionId={mutationStatDefinitionId}
+        resourceDefinitionId={mutationResourceDefinitionId}
+        numberValue={mutationNumberValue}
+        previewSummary={selectedMutationValueSummary}
+        previewIssues={mutationPreviewIssues}
+        feedback={feedback}
+        isSaving={isSavingMutation}
+        onSheetChange={setMutationTargetSheetId}
+        onSceneChange={setMutationSceneId}
+        onTrackedValueChange={(value) => {
+          const [kind, definitionId] = value.split(':');
+          if (kind === 'stat') {
+            setMutationStatDefinitionId(definitionId ?? '');
+            setMutationResourceDefinitionId('');
+            setMutationType(mutationType.endsWith('_set') ? 'stat_set' : 'stat_change');
+          } else {
+            setMutationResourceDefinitionId(definitionId ?? '');
+            setMutationStatDefinitionId('');
+            setMutationType(mutationType.endsWith('_set') ? 'resource_set' : 'resource_change');
+          }
+        }}
+        onOperationChange={(operation) => {
+          const kind = mutationStatDefinitionId ? 'stat' : 'resource';
+          setMutationType(`${kind}_${operation}` as MutationFormType);
+        }}
+        onNumberValueChange={setMutationNumberValue}
+        onConfirm={() => void handleSaveMutation()}
+        onOpenAdvanced={() => setShowAdvancedSheetState(true)}
+        onOpenWorldBible={() => navigate('/world-bible')}
+      />
+    );
+  }
+
   const content = (
     <>
-      {!embedded && <h1>Character Sheets</h1>}
+      {!embedded && <h1>Advanced sheet and state</h1>}
+      <button type='button' onClick={() => setShowAdvancedSheetState(false)}>
+        Return to simple scene changes
+      </button>
       {feedback && (
         <p
           role='status'
@@ -1280,7 +1364,7 @@ function CharacterSheetsRoute({
       <p className={styles.taskHint}>
         {taskView === 'setup'
           ? 'Set the character’s baseline level, attributes, resources, and optional equipment.'
-          : 'Advanced: record an accepted change that occurs during a specific manuscript scene.'}
+          : 'Record or repair a detailed accepted change tied to a manuscript scene.'}
       </p>
 
       <div className={styles.workspace}>

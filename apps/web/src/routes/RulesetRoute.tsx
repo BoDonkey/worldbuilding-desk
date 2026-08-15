@@ -1,5 +1,6 @@
 import {Component, useEffect, useRef, useState} from 'react';
 import type {ChangeEvent, ReactNode} from 'react';
+import {useNavigate} from 'react-router';
 import type {Project} from '../entityTypes';
 import type {WorldRuleset} from '@worldbuilding-desk/rules-engine';
 import {WorldBuildingWizard} from '@worldbuilding-desk/rules-ui';
@@ -73,6 +74,7 @@ class RulesetWizardErrorBoundary extends Component<
 
 function RulesetRoute() {
   const activeProject = useAppStore((s) => s.activeProject);
+  const navigate = useNavigate();
   const setActiveProject = useAppStore((s) => s.setActiveProject);
   const [ruleset, setRuleset] = useState<WorldRuleset | null>(null);
   const [loading, setLoading] = useState(false);
@@ -82,6 +84,7 @@ function RulesetRoute() {
     message: string;
   } | null>(null);
   const importInputRef = useRef<HTMLInputElement | null>(null);
+  const [showAdvancedRules, setShowAdvancedRules] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -206,8 +209,28 @@ function RulesetRoute() {
     <section style={{height: 'calc(100vh - 120px)', display: 'flex', flexDirection: 'column'}}>
       <h1 style={{marginTop: 0, marginBottom: '0.5rem'}}>World Ruleset</h1>
       <p style={{marginTop: 0, marginBottom: '0.75rem', color: 'var(--color-text-secondary)'}}>
-        {ruleset ? 'Editing existing ruleset.' : 'No ruleset yet. Create one for this project.'}
+        {ruleset
+          ? `${ruleset.statDefinitions.length + ruleset.resourceDefinitions.length} tracked values are available to character mechanics.`
+          : 'Tracking is optional. The quickest start is one value on a saved World Bible character.'}
       </p>
+      {!showAdvancedRules ? (
+        <div style={{maxWidth: '680px', padding: '1rem', border: '1px solid var(--surface-border-soft)', borderRadius: '14px', background: 'var(--surface-panel)'}}>
+          <h2 style={{marginTop: 0}}>{ruleset ? 'Rules are ready' : 'Start with a character'}</h2>
+          <p style={{color: 'var(--color-text-secondary)'}}>
+            {ruleset
+              ? 'Use World Bible → Character → Mechanics to track values and record scene changes. Open advanced rules only to edit definitions, templates, types, limits, or transfer files.'
+              : 'Open a saved character, choose Mechanics, then Add mechanics. You will name one Stat or Resource and confirm once; the project setup and linked sheet are created together.'}
+          </p>
+          <div style={{display: 'flex', gap: '0.5rem', flexWrap: 'wrap'}}>
+            <button type='button' onClick={() => navigate('/world-bible')}>Open World Bible</button>
+            <button type='button' onClick={() => setShowAdvancedRules(true)}>Advanced rules</button>
+          </div>
+        </div>
+      ) : (
+      <>
+      <button type='button' onClick={() => setShowAdvancedRules(false)} style={{alignSelf: 'flex-start', marginBottom: '0.75rem'}}>
+        Hide advanced rules
+      </button>
       <div style={{display: 'flex', gap: '0.5rem', marginBottom: '0.9rem'}}>
         <button
           type='button'
@@ -261,6 +284,8 @@ function RulesetRoute() {
             />
           </RulesetWizardErrorBoundary>
         </div>
+      )}
+      </>
       )}
     </section>
   );

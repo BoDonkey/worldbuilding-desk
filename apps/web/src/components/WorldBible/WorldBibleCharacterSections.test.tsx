@@ -1,4 +1,4 @@
-import {fireEvent, render, screen} from '@testing-library/react';
+import {render, screen} from '@testing-library/react';
 import {describe, expect, it, vi} from 'vitest';
 import {WorldBibleCharacterSections} from './WorldBibleCharacterSections';
 
@@ -8,21 +8,18 @@ const baseProps = {
   isSaved: true,
   characterName: 'Mira Voss',
   canUseMechanics: true,
-  hasRuleset: true,
   characterExtension: null,
   characterSheet: null,
   linkedNoteCount: 0,
   sceneMentionCount: 0,
   stateEventCount: 0,
-  isOpeningCapability: false,
   isExporting: false,
-  onOpenSheet: vi.fn(),
-  onOpenRuleset: vi.fn(),
   onExport: vi.fn(),
   dialogueStyleContent: <p>Dialogue style control</p>,
   canonContent: <p>Canon content</p>,
   notesContent: <p>Notes content</p>,
-  continuityContent: <p>Continuity content</p>
+  continuityContent: <p>Continuity content</p>,
+  mechanicsContent: <p>Mechanics content</p>
 };
 
 describe('WorldBibleCharacterSections', () => {
@@ -41,17 +38,15 @@ describe('WorldBibleCharacterSections', () => {
     expect(screen.queryByRole('tab', {name: 'Mechanics'})).not.toBeInTheDocument();
   });
 
-  it('routes sheet work from the mechanics section', () => {
-    const onOpenSheet = vi.fn();
+  it('renders the contextual mechanics experience in the mechanics section', () => {
     render(
       <WorldBibleCharacterSections
         {...baseProps}
         activeSection='mechanics'
-        onOpenSheet={onOpenSheet}
+        mechanicsContent={<button type='button'>Record a scene change</button>}
       />
     );
 
-    fireEvent.click(screen.getByRole('button', {name: 'Add sheet'}));
-    expect(onOpenSheet).toHaveBeenCalledOnce();
+    expect(screen.getByRole('button', {name: 'Record a scene change'})).toBeInTheDocument();
   });
 });
