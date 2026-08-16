@@ -137,8 +137,8 @@ and required revisit point, `WIP`, `Done <commit>`.
 | 4.14 | Mechanics first-use journey and complexity audit | 4 | S | Done `5c09713` — fresh LitRPG desktop/narrow walkthrough plus route/service trace inventoried prerequisites, overlapping entry points, jargon, context loss, duplicate-sheet success warning, and advanced controls; 4.15 basic-path contract and seven-case manual smoke authority defined; docs diff check clean |
 | 4.15 | Progressive mechanics experience | 4 | L | Done `f378a14` — one-value World Bible setup creates a minimal ruleset plus canon-linked sheet as one confirmed rollback-safe operation; character and active-scene changes use plain language, replay preview, explicit confirm, current-value replay, and source-scene return; advanced Rules, Sheets/State, compendium/progression/settlement, transfer, and memory controls remain available behind deliberate reveals; general fiction unchanged; lint with 3 baseline warnings; 367 web + 6 engine + 12 UI tests; web/desktop builds; Cypress 50/50; desktop/narrow browser checks |
 | 4.16 | Prose-proximate item and state authoring | 4 | L | WIP — decomposed into 4.16a–c; accepted UX/domain contract in blueprint, domain model, and smoke § 5 |
-| 4.16a | Stable item references + atomic orchestration | 4 | M | WIP — storage/replay/snapshot foundation and rollback-safe service |
-| 4.16b | In-workspace acquisition proposal | 4 | M | — depends on 4.16a |
+| 4.16a | Stable item references + atomic orchestration | 4 | M | Done `70c9b6b` — optional stable World Bible/Compendium inventory references; reference-aware replay and resolved labels; project/snapshot schema 3; exact/ambiguous resolver; validated atomic three-store writer; lint baseline; 370 web + 6 engine + 12 UI tests; web/desktop builds |
+| 4.16b | In-workspace acquisition proposal | 4 | M | WIP — depends on 4.16a |
 | 4.16c | Consumption effect authoring + prose integration | 4 | L | — depends on 4.16a–b; closes 4.16 after full smoke |
 | 5.1 | Auto-update decision + implementation | 5 | M | — |
 | 5.2 | Code signing + notarization, both platforms | 5 | M | — |

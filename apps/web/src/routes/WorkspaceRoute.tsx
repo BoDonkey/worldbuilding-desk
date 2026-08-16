@@ -69,12 +69,14 @@ import {
   type EditorTextSnapshot,
   type StateMutationTextAnchor
 } from '../services/state/stateMutationAnchor';
+import {resolveReusableItem} from '../services/state/itemStateAuthoringService';
 import {useWorkspaceProjectData} from '../hooks/useWorkspaceProjectData';
 import {useWorkspaceLoreSnippets} from '../hooks/useWorkspaceLoreSnippets';
 import {useWorkspaceScratchpad} from '../hooks/useWorkspaceScratchpad';
 import {useWorkspaceCorkboard} from '../hooks/useWorkspaceCorkboard';
 import {useSceneRosterPreferences} from '../hooks/useSceneRosterPreferences';
 import {buildCharacterCaptureAliasList} from '../services/worldBible/worldBibleCanonicalization';
+import {isItemCategory} from '../services/worldBible/worldBibleSummary';
 import {PageHeader} from '../components/PageHeader';
 import {
   buildManualCaptureLinkOptions,
@@ -973,6 +975,23 @@ function WorkspaceRoute() {
     ? categories.find((category) => category.id === manualSelectedCategoryId) ?? null
     : null;
   const manualIsCharacterCapture = isCharacterLikeCategory(manualSelectedCategory);
+  const pendingInventoryResolution = useMemo(
+    () => pendingInventoryCapture
+      ? resolveReusableItem({
+          itemName: pendingInventoryCapture.itemName,
+          categories,
+          entities,
+          compendiumEntries
+        })
+      : null,
+    [categories, compendiumEntries, entities, pendingInventoryCapture]
+  );
+  const exactReusableInventoryEntity = pendingInventoryResolution?.status === 'exact' &&
+    pendingInventoryResolution.sourceEntityId
+    ? entities.find(
+        (entity) => entity.id === pendingInventoryResolution.sourceEntityId
+      ) ?? null
+    : null;
   const manualRejectedAliases = manualWorldCapture
     ? rejectedAliasSuggestions[manualWorldCapture.sourceText] ?? []
     : [];
@@ -1937,6 +1956,11 @@ function WorkspaceRoute() {
               key={`${pendingInventoryCapture.position}:${pendingInventoryCapture.itemName}`}
               itemName={pendingInventoryCapture.itemName}
               characters={inventoryCaptureCharacters}
+              evidenceText={pendingInventoryCapture.evidenceText}
+              suggestedSheetId={pendingInventoryCapture.suggestedSheetId}
+              exactReusableItem={exactReusableInventoryEntity}
+              reusableItemMatches={pendingInventoryResolution?.entityMatches ?? []}
+              canCreateReusableItem={categories.some(isItemCategory)}
               isSaving={isSavingInventoryCapture}
               onCancel={() => setPendingInventoryCapture(null)}
               onSave={(input) => void saveSelectionInventoryCapture(input)}

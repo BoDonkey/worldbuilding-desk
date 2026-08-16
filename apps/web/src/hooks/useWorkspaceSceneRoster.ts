@@ -33,6 +33,11 @@ import {
   buildConsumableExpirationCommands
 } from '../services/state/consumableEffects';
 import {
+  applyItemStateAuthoringPlan,
+  resolveReusableItem
+} from '../services/state/itemStateAuthoringService';
+import {detectProseItemAction} from '../services/state/proseItemStateDetection';
+import {
   captureStateMutationAnchor,
   normalizeStateMutationPosition,
   resolveStateMutationAnchor,
@@ -58,6 +63,7 @@ import {
 import type {SceneRosterOverrides} from '../services/workspace/sceneRoster';
 import {sortWritingDocuments} from '../writingStorage';
 import type {ConfirmRequest} from './useConfirmDialog';
+import {isItemCategory} from '../services/worldBible/worldBibleSummary';
 
 export interface PendingPositionedChange {
   character: SceneRosterCharacterCard;
@@ -69,6 +75,9 @@ export interface PendingPositionedChange {
 
 export interface PendingInventoryCapture {
   itemName: string;
+  evidenceText: string;
+  suggestedSheetId?: string;
+  action: 'acquire' | 'consume';
   position: number;
   anchor: StateMutationTextAnchor;
 }
@@ -309,15 +318,22 @@ export function useWorkspaceSceneRoster({
         });
         return;
       }
+      const detected = detectProseItemAction({
+        text: input.itemName,
+        characters: inventoryCaptureCharacters
+      });
       setPendingInventoryCapture({
-        itemName: input.itemName.trim(),
+        itemName: detected?.itemName ?? input.itemName.trim(),
+        evidenceText: input.itemName.trim(),
+        suggestedSheetId: detected?.sheetId,
+        action: detected?.action ?? 'acquire',
         position,
         anchor
       });
     },
     [
       content,
-      inventoryCaptureCharacters.length,
+      inventoryCaptureCharacters,
       sceneCursorSnapshot,
       selectedDocument,
       setFeedback,
@@ -326,8 +342,22 @@ export function useWorkspaceSceneRoster({
   );
 
   const saveSelectionInventoryCapture = useCallback(
-    async (input: {sheetId: string; itemName: string; quantity: number}) => {
+    async (input: {
+      sheetId: string;
+      itemName: string;
+      quantity: number;
+      saveReusable: boolean;
+      reusableEntityId?: string;
+      canonicalName: string;
+    }) => {
       if (!activeProject || !selectedDocument || !pendingInventoryCapture) return;
+      if (pendingInventoryCapture.action !== 'acquire') {
+        setFeedback({
+          tone: 'error',
+          message: 'Use the consumption proposal to record this item use.'
+        });
+        return;
+      }
       const sheet = characterSheets.find((candidate) => candidate.id === input.sheetId);
       if (!sheet) return;
       if (!sheet.characterEntityId) {
@@ -342,6 +372,58 @@ export function useWorkspaceSceneRoster({
           (document) => document.id === selectedDocument.id
         ) + 1;
       if (sceneOrder <= 0) return;
+      const resolution = resolveReusableItem({
+        itemName: input.itemName,
+        categories,
+        entities,
+        compendiumEntries
+      });
+      const itemCategory = categories.find(isItemCategory) ?? null;
+      const selectedEntity = input.reusableEntityId
+        ? entities.find((entity) => entity.id === input.reusableEntityId) ?? null
+        : null;
+      if (input.saveReusable && !selectedEntity && !itemCategory) {
+        setFeedback({
+          tone: 'error',
+          message: 'Create an Items category before saving a reusable world item.'
+        });
+        return;
+      }
+      const now = Date.now();
+      const entityToSave: WorldEntity | undefined =
+        input.saveReusable && !selectedEntity && itemCategory
+          ? {
+              id: crypto.randomUUID(),
+              projectId: activeProject.id,
+              categoryId: itemCategory.id,
+              name: input.canonicalName || input.itemName,
+              fields: {description: ''},
+              needsCompletion: true,
+              links: [],
+              createdAt: now,
+              updatedAt: now
+            }
+          : undefined;
+      const sourceEntityId =
+        selectedEntity?.id ??
+        entityToSave?.id ??
+        (resolution.status === 'exact' ? resolution.sourceEntityId : undefined);
+      const normalizedItemName = input.itemName.trim().toLocaleLowerCase();
+      const linkedDefinitions = compendiumEntries.filter(
+        (entry) =>
+          entry.name.trim().toLocaleLowerCase() === normalizedItemName &&
+          (!sourceEntityId || entry.sourceEntityId === sourceEntityId)
+      );
+      const exactDefinition =
+        linkedDefinitions.length === 1
+          ? linkedDefinitions[0]
+          : resolution.status === 'exact' && resolution.definitionId
+            ? compendiumEntries.find((entry) => entry.id === resolution.definitionId) ?? null
+            : null;
+      const compendiumEntryToSave =
+        input.saveReusable && sourceEntityId && exactDefinition && !exactDefinition.sourceEntityId
+          ? {...exactDefinition, sourceEntityId, updatedAt: now}
+          : undefined;
       const event: StateMutationEvent = {
         id: crypto.randomUUID(),
         projectId: activeProject.id,
@@ -364,15 +446,24 @@ export function useWorkspaceSceneRoster({
             type: 'inventory_add',
             actorId: sheet.characterEntityId,
             itemName: input.itemName,
-            quantity: input.quantity
+            quantity: input.quantity,
+            sourceEntityId,
+            definitionId: exactDefinition?.id
           }
         ],
         createdAt: Date.now()
       };
       setSavingInventoryCapture(true);
       try {
-        validateStateMutationEvent(event);
-        await saveStateMutationEvent(event);
+        await applyItemStateAuthoringPlan({
+          plan: {
+            projectId: activeProject.id,
+            event,
+            entityToSave,
+            compendiumEntryToSave
+          },
+          ruleset
+        });
         setPendingInventoryCapture(null);
         setFeedback({
           tone: 'success',
@@ -392,9 +483,13 @@ export function useWorkspaceSceneRoster({
     },
     [
       activeProject,
+      categories,
       characterSheets,
+      compendiumEntries,
       documents,
+      entities,
       pendingInventoryCapture,
+      ruleset,
       selectedDocument,
       setFeedback,
       setPendingInventoryCapture,
