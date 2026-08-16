@@ -230,8 +230,8 @@ describe('project migration backup', () => {
         .getAll()
     );
 
-    expect(current.storageSchemaVersion).toBe(2);
-    expect((stored as Project).storageSchemaVersion).toBe(2);
+    expect(current.storageSchemaVersion).toBe(3);
+    expect((stored as Project).storageSchemaVersion).toBe(3);
     expect(backups).toHaveLength(1);
   });
 

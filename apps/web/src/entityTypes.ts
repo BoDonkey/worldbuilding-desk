@@ -255,6 +255,7 @@ export interface CharacterTrackedEntry {
   name: string;
   quantity?: number;
   notes?: string;
+  sourceEntityId?: string;
   definitionId?: string;
 }
 
@@ -322,12 +323,16 @@ export type InventoryQuantityStateMutationCommand = {
   actorId: StateMutationActorId;
   itemName: string;
   quantity?: StateMutationInventoryQuantity;
+  sourceEntityId?: string;
+  definitionId?: string;
 };
 
 export type InventoryEquipStateMutationCommand = {
   type: 'inventory_equip' | 'inventory_unequip';
   actorId: StateMutationActorId;
   itemName: string;
+  sourceEntityId?: string;
+  definitionId?: string;
 };
 
 export type LocationSetStateMutationCommand = {

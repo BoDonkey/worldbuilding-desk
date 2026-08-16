@@ -1,6 +1,6 @@
 # Road to Market — Master Work Plan
 
-**Created:** 2026-08-01 · **Reconciled:** 2026-08-15 · **Baseline:** `main` at
+**Created:** 2026-08-01 · **Reconciled:** 2026-08-16 · **Baseline:** `main` at
 `4b33eed` (clean, in sync with origin) · fitness grade A− per
 `docs/archive/code-fitness-report-2026-08-01.md`
 
@@ -136,6 +136,10 @@ and required revisit point, `WIP`, `Done <commit>`.
 | 4.13 | Retire the separate Character Tools destination (CX-10a) | 4 | M | Done `0354b09` — removed the Character Tools roster/hub UI; `/characters` is compatibility-only; dialogue style and single-character export live in World Bible; `/sheets` owns contextual sheet/state work; batch v1/v2 transfer lives under `More`; legacy resolution/adapters preserved; lint with 3 baseline warnings; 361 web + 6 engine + 12 UI tests; web/desktop builds; Cypress 49/49; desktop/narrow browser checks |
 | 4.14 | Mechanics first-use journey and complexity audit | 4 | S | Done `5c09713` — fresh LitRPG desktop/narrow walkthrough plus route/service trace inventoried prerequisites, overlapping entry points, jargon, context loss, duplicate-sheet success warning, and advanced controls; 4.15 basic-path contract and seven-case manual smoke authority defined; docs diff check clean |
 | 4.15 | Progressive mechanics experience | 4 | L | Done `f378a14` — one-value World Bible setup creates a minimal ruleset plus canon-linked sheet as one confirmed rollback-safe operation; character and active-scene changes use plain language, replay preview, explicit confirm, current-value replay, and source-scene return; advanced Rules, Sheets/State, compendium/progression/settlement, transfer, and memory controls remain available behind deliberate reveals; general fiction unchanged; lint with 3 baseline warnings; 367 web + 6 engine + 12 UI tests; web/desktop builds; Cypress 50/50; desktop/narrow browser checks |
+| 4.16 | Prose-proximate item and state authoring | 4 | L | WIP — decomposed into 4.16a–c; accepted UX/domain contract in blueprint, domain model, and smoke § 5 |
+| 4.16a | Stable item references + atomic orchestration | 4 | M | WIP — storage/replay/snapshot foundation and rollback-safe service |
+| 4.16b | In-workspace acquisition proposal | 4 | M | — depends on 4.16a |
+| 4.16c | Consumption effect authoring + prose integration | 4 | L | — depends on 4.16a–b; closes 4.16 after full smoke |
 | 5.1 | Auto-update decision + implementation | 5 | M | — |
 | 5.2 | Code signing + notarization, both platforms | 5 | M | — |
 | 5.3 | Packaged-app validation + Electron E2E | 5 | M | — |
@@ -152,13 +156,14 @@ and required revisit point, `WIP`, `Done <commit>`.
 
 Phases 2 and 3 can interleave; within Phase 3, slices 3.5–3.8 run
 sequentially. Phase 4's original product-completeness scope through 4.11 is
-complete; dogfood has promoted 4.12–4.15 as pre-beta experience work. The
+complete; dogfood has promoted 4.12–4.15 as pre-beta experience work, and the
+author accepted prose-proximate item/state authoring as 4.16. The
 author paused 1.1 on 2026-08-15 and explicitly advanced 4.12; preserve the
 partial dogfood evidence and resume it before 6.1. Slices 4.12 and 4.14 may
 run in parallel; 4.13 follows 4.12 and 4.15 follows 4.14. Release-engineering
-work may run in parallel, but 5.4 waits for 4.13 and 4.15, and all four
-promoted slices must land before 6.1. Release-blocking trust or data-loss
-findings remain first priority. Phase 6 is strictly ordered.
+work may run in parallel, but 4.16 follows 4.1 and 4.15, 5.4 waits for 4.13
+and 4.15, and 4.12–4.16 must land before 6.1. Release-blocking trust or
+data-loss findings remain first priority. Phase 6 is strictly ordered.
 
 ---
 
@@ -440,6 +445,51 @@ depth.
   reveal for formula/effect/runtime controls. Keep Ruleset, Sheets/State,
   Mechanics, and Settlement optional and project-mode gated; do not imply
   that a fiction project is incomplete without them.
+
+### Prose-proximate item and state authoring (4.16)
+
+Execution order: **4.16a → 4.16b → 4.16c**. Each child slice receives its
+focused automated coverage and commit; the umbrella closes only after the
+full verification battery and desktop/narrow smoke authority pass.
+
+- **4.16 Prose-proximate item and state authoring.** Let acquisition, use,
+  equipment, and consumption prose open a compact Workspace proposal at the
+  selection/cursor rather than requiring navigation to World Bible, Sheets,
+  or Compendium. For a first mention such as `Bill found a health potion`,
+  default to the scene-scoped inventory event and offer explicit reusable
+  World Bible item creation/linking. For a first use such as `Bill drank a
+  health potion`, offer an editable tracked-attribute effect and an explicit
+  `remember this effect` choice; later exact linked uses may prefill the
+  approved effect. Show the combined before/after preview and commit all
+  requested definitions/links plus the accepted state event through one
+  deterministic rollback-safe confirmation. Handle ambiguous matches,
+  absent inventory, cancellation, stale prose, and general-fiction mode
+  without silent canon, mechanics, acquisition, or state writes. Preserve
+  definition/event separation and stable-ID rename behavior from
+  `docs/domain-model.md`; implement the desktop/narrow acceptance authority
+  in `docs/smoke-tests.md` § 5. Determine whether persisted links require a
+  schema migration before UI work. Persist stable reusable-item references
+  through inventory commands/state, replay, snapshot, backup, and rename;
+  include migration coverage for every changed persisted shape.
+- **4.16a Stable item references + atomic orchestration.** Add optional stable
+  World Bible/Compendium references to reusable inventory commands and replay
+  state while retaining name-only quick entries. Version and migrate every
+  persisted contract that requires it. Add exact/ambiguous resolution and a
+  deterministic service that validates the full requested item/effect/event
+  plan, applies it in dependency order, and restores prior state on failure.
+- **4.16b In-workspace acquisition proposal.** Extend the existing positioned
+  state-change composer so selected/cursor acquisition prose prefills actor,
+  item, quantity, evidence, and before/after inventory result. Default to
+  state-only; disclose reusable World Bible item creation/linking explicitly.
+  Keep the interaction in Workspace and preserve focus, cancellation, stale
+  evidence, desktop, and narrow behavior.
+- **4.16c Consumption effect authoring + prose integration.** Resolve exact
+  approved consumables, offer first-use attribute/effect authoring and
+  `remember this effect`, combine inventory and effect preview, and handle
+  missing inventory with the three explicit branches. Wire deterministic
+  acquisition/consumption observations into the same editable proposal,
+  never direct persistence. Close with duplicate/ambiguity/rename/rollback
+  tests, routed UI coverage, full battery, and smoke § 5.
 
 ## Phase 5 — Release Engineering
 

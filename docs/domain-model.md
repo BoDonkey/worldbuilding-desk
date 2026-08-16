@@ -1,6 +1,6 @@
 # Domain Model — Lore, Canon, State, and AI Proposals
 
-Last updated: 2026-08-09
+Last updated: 2026-08-16
 
 This is the domain specification authority. It consolidates the durable
 contracts from `freeform-lore-ingestion-architecture.md`,
@@ -228,6 +228,64 @@ Delivery slices (detail in `docs/archive/ai-assisted-item-authoring.md`):
 5. Workspace-to-item and state-event handoff (item definition changes stay
    separate from character acquisition/equipment/consumption events)
 6. Advanced conditional mechanics — only after fixture evaluation
+
+### Prose-proximate item and state handoff
+
+_Status: accepted product/domain direction (2026-08-16); implementation is
+owned by roadmap Slice 4.16._
+
+Item prose can initiate three related but independent outcomes:
+
+1. **Reusable identity/canon.** A World Bible item answers what the item is in
+   the setting. Creating one is optional and author-confirmed; ordinary or
+   one-off inventory objects need not become canon.
+2. **Reusable mechanics.** A Compendium consumable/effect definition answers
+   what the item does when used. It may link to a canonical item, but it is
+   never created merely because an entity was detected and no effect value is
+   inferred from genre convention.
+3. **Manuscript-time occurrence.** One or more `StateMutationEvent` commands
+   answer what happened to a character at a specific point: acquire, consume,
+   equip, change a stat/resource, or apply a status. These events do not edit
+   the reusable item definition.
+
+The workspace handoff follows these rules:
+
+- Evidence such as `Bill found a health potion` may prepare an inventory-add
+  proposal. State-only tracking is the default; `Save as a reusable world
+  item` is an explicit option, not a prerequisite.
+- Evidence such as `Bill drank a health potion` may prepare a consumption
+  proposal. An exact, stable link to previously approved mechanics may
+  prefill inventory and stat/resource effects. If no mechanics exist, the
+  author can choose an existing tracked attribute, select `Change by` or `Set
+  to`, enter the value, and explicitly choose whether to remember that effect
+  for later uses.
+- Selection or cursor context supplies the evidence span and scene position;
+  known character, sheet, scene, item, and current replayed values are
+  preselected. The author sees the complete before/after result and may edit
+  every proposed destination before confirming without leaving Workspace.
+- One confirmation may run a deterministic, rollback-safe orchestration that
+  creates or links the explicitly requested reusable records and then writes
+  the accepted scene event. Validation failure leaves all destinations
+  unchanged; cancellation writes nothing.
+- Exact unique matches may resolve automatically for proposal preparation.
+  Ambiguous item/canon/mechanics matches require author resolution and never
+  silently merge. Stable IDs, not display names, carry accepted links through
+  later renames.
+- State-only inventory entries may remain name-based quick entries. Once the
+  author links or creates a reusable World Bible item or mechanics definition,
+  the accepted inventory command/state retains the corresponding stable
+  reference; display labels resolve from the linked definition. Backup,
+  import, replay, and rename behavior must preserve those references.
+- If consumption is proposed for an item absent from replayed inventory, the
+  author chooses `Add one and consume it`, `Consume without inventory
+  tracking`, or cancel. The application does not invent an acquisition event.
+- Later scene edits make affected proposals stale and use the existing
+  invalidation/review behavior. Accepted ledger events remain immutable and
+  reusable definitions are not deleted or rewritten as a side effect.
+
+Deterministic phrase detection is sufficient for the basic path; model help
+may broaden proposal generation only through the same evidence, schema,
+validation, and author-approval boundary.
 
 Non-goals: automatically designing balanced items or whole rulesets, inferring
 genre-standard mechanics as canon, JSON as an author-facing format, requiring

@@ -1,6 +1,6 @@
 # Product Blueprint — Worldbuilding Desk
 
-Last updated: 2026-08-15
+Last updated: 2026-08-16
 
 This is the product, UX, navigation, and design authority. It consolidates the
 former `product-blueprint.md`, `navigation-ia-decision.md`, `style-bible.md`,
@@ -107,6 +107,15 @@ Canonical ownership rules:
   record.
 - Character possession and equipment are not fields on the canonical item;
   they belong to character state and manuscript-time mutation events.
+- Prose that introduces, acquires, equips, uses, or consumes an item may
+  prepare an in-workspace proposal beside the relevant text. The proposal may
+  coordinate an inventory event, an optional reusable World Bible item, and
+  optional mechanics, but those remain distinct records and nothing is
+  created or applied before author confirmation.
+- A named inventory item does not require a World Bible record. Generic or
+  one-off objects default to state-only tracking so the app does not turn
+  every rope, cup, or ordinary weapon into canon. Creating or linking a
+  reusable canonical item is an explicit choice in the proposal.
 - Optional-system routes stay grouped behind `More` with actionable-state
   badges; general-fiction projects are never framed as incomplete without
   mechanics.
@@ -126,11 +135,23 @@ Optional-system disclosure rules:
 - First-run guidance teaches writing and canon before optional systems.
   Mechanics guidance is contextual, dismissible, resumable, and entered only
   after an explicit author choice.
+- Once mechanics are enabled, the shortest state-change path stays in the
+  writing workspace. Selecting or acting on prose such as `Bill drank a
+  health potion` opens a compact, keyboard-accessible proposal with actor,
+  item, attribute, `Change by` / `Set to`, inventory effect, and before/after
+  preview prefilled where deterministic evidence allows. New or ambiguous
+  item definitions are resolved in that proposal without forcing navigation
+  to World Bible, Sheets, or Compendium.
+- Exact author-approved item mechanics may be reused automatically to prepare
+  later proposals. Detection and prefill may be automatic; accepting canon,
+  defining mechanics, and changing manuscript-time state never are.
 
 The automagic principle: the author should never have to reason about internal
 data ownership. Detect or create a character once, store it in one obvious
 canon home, and expose deeper options (sheets, linked lore documents) from that
-record when they become relevant.
+record when they become relevant. Likewise, let prose initiate an item or
+state workflow while deterministic application code keeps reusable canon,
+mechanics definitions, and scene-scoped state changes correctly separated.
 
 ## Fiction-First Product Boundary
 

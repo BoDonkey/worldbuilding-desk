@@ -310,12 +310,21 @@ export function buildSceneRosterModel(params: {
           };
         }),
         inventory: replayed.inventory.items.map((item) => {
+          const linkedEntry = item.definitionId
+            ? params.compendiumEntries.find((entry) => entry.id === item.definitionId) ?? null
+            : null;
+          const linkedEntityId = item.sourceEntityId ?? linkedEntry?.sourceEntityId;
+          const linkedEntity = linkedEntityId ? entityById.get(linkedEntityId) ?? null : null;
+          const resolvedItem = {
+            ...item,
+            name: linkedEntity?.name ?? linkedEntry?.name ?? item.name
+          };
           const consumableEntry = findConsumableEntry({
             entries: params.compendiumEntries,
-            item
+            item: resolvedItem
           });
           return {
-            ...item,
+            ...resolvedItem,
             equipped: replayed.inventory.equipped.some(
               (name) =>
                 name.trim().toLocaleLowerCase() === item.name.trim().toLocaleLowerCase()

@@ -16,7 +16,12 @@ export interface CharacterReplayState {
     max: Record<string, number>;
   };
   inventory: {
-    items: Array<{name: string; quantity: number; definitionId?: string}>;
+    items: Array<{
+      name: string;
+      quantity: number;
+      sourceEntityId?: string;
+      definitionId?: string;
+    }>;
     equipped: string[];
   };
   statuses: string[];
@@ -97,10 +102,22 @@ function clampMinZero(value: number): number {
 
 function findInventoryItemIndex(
   items: CharacterReplayState['inventory']['items'],
-  itemName: string
+  reference: {itemName: string; sourceEntityId?: string; definitionId?: string}
 ): number {
-  return items.findIndex(
-    (item) => item.name.trim().toLowerCase() === itemName.trim().toLowerCase()
+  if (reference.definitionId) {
+    const definitionMatch = items.findIndex(
+      (item) => item.definitionId === reference.definitionId
+    );
+    if (definitionMatch >= 0) return definitionMatch;
+  }
+  if (reference.sourceEntityId) {
+    const entityMatch = items.findIndex(
+      (item) => item.sourceEntityId === reference.sourceEntityId
+    );
+    if (entityMatch >= 0) return entityMatch;
+  }
+  return items.findIndex((item) =>
+    item.name.trim().toLowerCase() === reference.itemName.trim().toLowerCase()
   );
 }
 
@@ -164,18 +181,25 @@ export function applyStateMutationCommand(
       next.statuses = next.statuses.filter((status) => status !== command.statusName);
       return next;
     case 'inventory_add': {
-      const existingIndex = findInventoryItemIndex(next.inventory.items, command.itemName);
+      const existingIndex = findInventoryItemIndex(next.inventory.items, command);
       const quantity = command.quantity ?? 1;
       if (existingIndex >= 0) {
         next.inventory.items[existingIndex].quantity += quantity;
+        next.inventory.items[existingIndex].sourceEntityId ??= command.sourceEntityId;
+        next.inventory.items[existingIndex].definitionId ??= command.definitionId;
       } else {
-        next.inventory.items.push({name: command.itemName, quantity});
+        next.inventory.items.push({
+          name: command.itemName,
+          quantity,
+          sourceEntityId: command.sourceEntityId,
+          definitionId: command.definitionId
+        });
       }
       return next;
     }
     case 'inventory_remove':
     case 'inventory_consume': {
-      const existingIndex = findInventoryItemIndex(next.inventory.items, command.itemName);
+      const existingIndex = findInventoryItemIndex(next.inventory.items, command);
       if (existingIndex < 0) {
         return next;
       }
@@ -232,9 +256,8 @@ export function validateStateMutationCommandAgainstState(params: {
         : [];
     case 'inventory_remove':
     case 'inventory_consume': {
-      const existing = state.inventory.items.find(
-        (item) => item.name.trim().toLowerCase() === command.itemName.trim().toLowerCase()
-      );
+      const existingIndex = findInventoryItemIndex(state.inventory.items, command);
+      const existing = existingIndex >= 0 ? state.inventory.items[existingIndex] : undefined;
       const quantity = command.quantity ?? 1;
       if (!existing) {
         return [`Item "${command.itemName}" is not present in inventory.`];
@@ -247,9 +270,8 @@ export function validateStateMutationCommandAgainstState(params: {
       return [];
     }
     case 'inventory_equip': {
-      const existing = state.inventory.items.find(
-        (item) => item.name.trim().toLowerCase() === command.itemName.trim().toLowerCase()
-      );
+      const existingIndex = findInventoryItemIndex(state.inventory.items, command);
+      const existing = existingIndex >= 0 ? state.inventory.items[existingIndex] : undefined;
       return existing ? [] : [`Item "${command.itemName}" is not present in inventory.`];
     }
     default:

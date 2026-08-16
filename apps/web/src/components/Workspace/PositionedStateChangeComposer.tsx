@@ -54,10 +54,21 @@ const draftFromCommand = (command: StateMutationCommand): PositionedChangeDraft 
     case 'inventory_add':
     case 'inventory_remove':
     case 'inventory_consume':
-      return {...base, name: command.itemName, quantity: String(command.quantity ?? 1)};
+      return {
+        ...base,
+        name: command.itemName,
+        quantity: String(command.quantity ?? 1),
+        sourceEntityId: command.sourceEntityId,
+        definitionId: command.definitionId
+      };
     case 'inventory_equip':
     case 'inventory_unequip':
-      return {...base, name: command.itemName};
+      return {
+        ...base,
+        name: command.itemName,
+        sourceEntityId: command.sourceEntityId,
+        definitionId: command.definitionId
+      };
     case 'location_set':
       return {...base, name: command.locationName};
   }

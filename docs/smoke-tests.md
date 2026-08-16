@@ -1,6 +1,6 @@
 # Manual Smoke Procedures
 
-Last updated: 2026-08-15
+Last updated: 2026-08-16
 
 Reusable manual smoke procedures targeting trust and data-loss boundaries.
 Consolidates the former `project-backup-smoke-test.md`,
@@ -259,3 +259,66 @@ sheet warnings after success; manual re-selection of known character/sheet/
 scene context; advanced terminology or controls before disclosure; direct
 writes without author confirmation; general-fiction mechanics pressure;
 desktop/narrow behavior or persistence diverging.
+
+## 5. Prose-Proximate Item and State Authoring
+
+Goal: verify that acquisition and consumption prose can create an editable,
+author-confirmed item/state proposal without leaving Workspace or collapsing
+World Bible canon, reusable mechanics, and manuscript-time state into one
+record. This is the manual acceptance authority for roadmap 4.16; run it at
+desktop and at the narrow/mobile breakpoint.
+
+1. **First acquisition, state only.** In a rules-enabled project with a
+   canon-linked Bill sheet, write `Bill found a health potion.` Select or
+   invoke the contextual action on that prose. Confirm Bill, the active scene,
+   evidence span, cursor position, item name, quantity `1`, and inventory-add
+   outcome are prefilled. Accept with reusable World Bible item creation off.
+   Replay shows one Health Potion in inventory; no World Bible or Compendium
+   record was created and Workspace never navigated away.
+2. **First acquisition, reusable item.** Repeat in a fresh scene/project and
+   enable `Save as a reusable world item`. Edit the proposed canonical name
+   before confirmation. Confirm once; exactly one World Bible item and one
+   accepted acquisition event are written with a stable reusable-item link.
+   A later canonical rename updates the resolved inventory label, preserves
+   the relationship, and creates no duplicate.
+3. **First consumption and remembered effect.** With Health as a tracked
+   resource and one Health Potion in inventory, write `Bill drank a health
+   potion.` Open the prose action. With no approved consumable definition,
+   choose Health, `Change by`, `+25`, and `Remember this effect`. Verify the
+   combined preview shows inventory `1 → 0` and the clamped/validated Health
+   before/after value. Confirm once; exactly one reusable effect definition
+   and one accepted scene event containing the consumption and Health change
+   are written.
+4. **Repeated consumption.** Add another Health Potion through an accepted
+   event, then write a later consumption. Confirm the exact linked approved
+   effect is prefilled but editable. Cancel once and verify no destination
+   changes; reopen and confirm, then verify the event replays once and the
+   reusable definition is neither duplicated nor silently rewritten.
+5. **Missing inventory.** With zero Health Potions in replayed inventory,
+   invoke the consumption proposal. Verify the app offers `Add one and
+   consume it`, `Consume without inventory tracking`, and cancel. Exercise
+   each author branch in a fresh baseline. No branch invents a prior hidden
+   acquisition; cancel writes nothing.
+6. **Ambiguity and generic-item containment.** Seed two possible reusable
+   Potion matches and verify the proposal requires an explicit choice or a
+   new/separate item; it never name-merges. Then write `Bill found a rope.`
+   Confirm state-only inventory tracking is the default and no World Bible or
+   Compendium clutter is created unless explicitly requested.
+7. **Trust and stale-source behavior.** Edit the source sentence after a
+   proposal is prepared and verify it becomes stale or refreshes before
+   confirmation. Edit it after acceptance and verify the existing ledger
+   invalidation/review path preserves audit history. Detection alone, review
+   refresh, Escape/Back, and dismissal never write canon, mechanics, or
+   state. General-fiction projects receive no mechanics pressure.
+8. **Desktop, narrow, and keyboard behavior.** At both breakpoints the
+   proposal stays visibly anchored to the writing task, preserves the same
+   defaults and results, traps/restores focus, announces validation and
+   success, keeps confirm/cancel visible, and does not overflow behind mobile
+   navigation. The complete basic path is keyboard operable.
+
+Failure signals: navigation away from Workspace for the basic path; automatic
+World Bible or Compendium creation; inferred genre-standard effect values;
+silent ambiguous matching; display-name-only links that break after rename;
+partial writes after validation failure; consumption of absent inventory with
+no explicit author choice; duplicate definitions/events; cancellation or
+stale prose writing data; or different desktop/narrow results.

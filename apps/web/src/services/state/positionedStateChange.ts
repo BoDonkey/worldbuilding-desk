@@ -22,6 +22,7 @@ export interface PositionedChangeDraft {
   value?: string;
   name?: string;
   quantity?: string;
+  sourceEntityId?: string;
 }
 
 export interface CompoundChangePreviewStep {
@@ -111,10 +112,23 @@ export function buildPositionedStateCommand(params: {
     case 'inventory_add':
     case 'inventory_remove':
     case 'inventory_consume':
-      return name ? {type: draft.kind, actorId, itemName: name, quantity} : null;
+      return name ? {
+        type: draft.kind,
+        actorId,
+        itemName: name,
+        quantity,
+        sourceEntityId: draft.sourceEntityId,
+        definitionId: draft.definitionId
+      } : null;
     case 'inventory_equip':
     case 'inventory_unequip':
-      return name ? {type: draft.kind, actorId, itemName: name} : null;
+      return name ? {
+        type: draft.kind,
+        actorId,
+        itemName: name,
+        sourceEntityId: draft.sourceEntityId,
+        definitionId: draft.definitionId
+      } : null;
     case 'location_set':
       return name ? {type: 'location_set', actorId, locationName: name} : null;
   }

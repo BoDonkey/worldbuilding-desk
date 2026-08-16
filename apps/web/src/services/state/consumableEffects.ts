@@ -22,12 +22,15 @@ export function buildConsumableCommands(params: {
   actorId: string;
   itemName: string;
   definition: CompendiumConsumableDefinition;
+  itemReference?: {sourceEntityId?: string; definitionId?: string};
 }): StateMutationCommand[] {
   const commands: StateMutationCommand[] = [{
     type: 'inventory_consume',
     actorId: params.actorId,
     itemName: params.itemName,
-    quantity: 1
+    quantity: 1,
+    sourceEntityId: params.itemReference?.sourceEntityId,
+    definitionId: params.itemReference?.definitionId
   }];
   params.definition.effects.forEach((effect) => {
     commands.push(effect.type === 'stat_change'

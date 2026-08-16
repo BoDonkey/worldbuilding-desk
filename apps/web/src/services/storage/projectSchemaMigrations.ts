@@ -24,7 +24,7 @@ import {
 } from '../rules/rulesetService';
 
 export const LEGACY_PROJECT_SCHEMA_VERSION = 1;
-export const CURRENT_PROJECT_SCHEMA_VERSION = 2;
+export const CURRENT_PROJECT_SCHEMA_VERSION = 3;
 export const PROJECT_MIGRATION_BACKUP_SCHEMA_VERSION = 1;
 
 export interface ProjectMigrationContext {
@@ -151,6 +151,14 @@ const PROJECT_MIGRATIONS: readonly ProjectSchemaMigration[] = [
     fromVersion: 1,
     toVersion: 2,
     migrate: migrateCharacterIdentityLinks
+  },
+  {
+    fromVersion: 2,
+    toVersion: 3,
+    // Stable item references are additive optional fields. Existing quick
+    // inventory remains name-based, so the version checkpoint and automatic
+    // backup are the complete deterministic migration.
+    migrate: async () => undefined
   }
 ];
 

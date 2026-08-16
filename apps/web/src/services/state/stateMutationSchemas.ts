@@ -41,13 +41,17 @@ export const InventoryQuantityStateMutationCommandSchema = z.object({
   type: z.enum(['inventory_add', 'inventory_remove', 'inventory_consume']),
   actorId: z.string().min(1),
   itemName: z.string().min(1),
-  quantity: z.number().int().positive().optional()
+  quantity: z.number().int().positive().optional(),
+  sourceEntityId: z.string().min(1).optional(),
+  definitionId: z.string().min(1).optional()
 });
 
 export const InventoryEquipStateMutationCommandSchema = z.object({
   type: z.enum(['inventory_equip', 'inventory_unequip']),
   actorId: z.string().min(1),
-  itemName: z.string().min(1)
+  itemName: z.string().min(1),
+  sourceEntityId: z.string().min(1).optional(),
+  definitionId: z.string().min(1).optional()
 });
 
 export const LocationSetStateMutationCommandSchema = z.object({
@@ -176,7 +180,12 @@ export interface CharacterStateReplayBaseline {
     max: Record<string, number>;
   };
   inventory: {
-    items: Array<{name: string; quantity: number; definitionId?: string}>;
+    items: Array<{
+      name: string;
+      quantity: number;
+      sourceEntityId?: string;
+      definitionId?: string;
+    }>;
     equipped: string[];
   };
   statuses: string[];
@@ -217,6 +226,7 @@ export function buildCharacterReplayBaseline(params: {
     sheet.inventoryEntries?.map((entry) => ({
       name: entry.name,
       quantity: entry.quantity ?? 1,
+      sourceEntityId: entry.sourceEntityId,
       definitionId: entry.definitionId
     })) ?? [];
   const equipped = sheet.equipmentEntries?.map((entry) => entry.name) ?? [];

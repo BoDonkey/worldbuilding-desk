@@ -90,29 +90,29 @@ const legacySnapshot = () => ({
 
 describe('migrateProjectSnapshotPayload', () => {
   it('accepts the current snapshot schema unchanged', () => {
-    const snapshot = {schemaVersion: 2, project: {id: 'project-1'}};
+    const snapshot = {schemaVersion: 3, project: {id: 'project-1'}};
     expect(migrateProjectSnapshotPayload(snapshot)).toBe(snapshot);
   });
 
   it('rejects snapshots created by a newer app with an actionable error', () => {
-    expect(() => migrateProjectSnapshotPayload({schemaVersion: 3})).toThrow(
+    expect(() => migrateProjectSnapshotPayload({schemaVersion: 4})).toThrow(
       'Update the app before importing it.'
     );
-    expect(() => normalizeProjectSnapshot({schemaVersion: 3})).toThrow(
+    expect(() => normalizeProjectSnapshot({schemaVersion: 4})).toThrow(
       'Update the app before importing it.'
     );
     expect(() =>
       normalizeProjectSnapshot({
-        schemaVersion: 2,
-        project: {id: 'project-1', name: 'Future', storageSchemaVersion: 3}
+        schemaVersion: 3,
+        project: {id: 'project-1', name: 'Future', storageSchemaVersion: 4}
       })
-    ).toThrow('Backup project data uses storage schema 3');
+    ).toThrow('Backup project data uses storage schema 4');
   });
 
   it('classifies v1 character identities and adds complete v2 backup fields', () => {
     const snapshot = normalizeProjectSnapshot(legacySnapshot());
 
-    expect(snapshot.schemaVersion).toBe(2);
+    expect(snapshot.schemaVersion).toBe(3);
     expect(snapshot.data.categories[0].kind).toBe('character');
     expect(snapshot.data.characters[0].entityId).toBe('entity-mira');
     expect(snapshot.data.characterSheets[0].characterEntityId).toBe('entity-mira');
