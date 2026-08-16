@@ -30,6 +30,7 @@ export interface StateMutationReviewItem {
   acceptanceHint: string | null;
   isStale: boolean;
   staleLabel: string | null;
+  canEditInWorkspace: boolean;
 }
 
 export interface StateMutationReviewGroupHiddenCounts {
@@ -175,7 +176,10 @@ export function buildStateMutationReviewItems(params: {
           validationIssues: preview?.validationIssues ?? []
         }),
         isStale: staleness.isStale,
-        staleLabel: describeStateMutationEventStaleness(staleness)
+        staleLabel: describeStateMutationEventStaleness(staleness),
+        canEditInWorkspace: event.commands.some((command) =>
+          command.type === 'inventory_add' || command.type === 'inventory_consume'
+        )
       };
     })
     .sort((a, b) => {

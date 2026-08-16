@@ -971,7 +971,7 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
                   setSelectionBubble(null);
                 }}
               >
-                Add to inventory
+                Record item/state
               </button>
             )}
             {selectionBubble.matchName && (

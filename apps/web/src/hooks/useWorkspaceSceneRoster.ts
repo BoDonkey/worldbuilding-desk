@@ -10,6 +10,7 @@ import type {
   CharacterSheet,
   CompendiumEntry,
   EntityCategory,
+  InventoryQuantityStateMutationCommand,
   Project,
   StateMutationEvent,
   StoredRuleset,
@@ -74,10 +75,13 @@ export interface PendingPositionedChange {
 }
 
 export interface PendingInventoryCapture {
+  sceneId: string;
+  sourceHash: string;
   itemName: string;
   evidenceText: string;
   suggestedSheetId?: string;
   action: 'acquire' | 'consume';
+  proposalEventId?: string;
   position: number;
   anchor: StateMutationTextAnchor;
 }
@@ -292,6 +296,47 @@ export function useWorkspaceSceneRoster({
     [sceneRosterModel.characters]
   );
 
+  const inventoryCaptureContexts = useMemo(() => {
+    if (!selectedDocument) return [];
+    const sceneOrder =
+      sortWritingDocuments(documents).findIndex(
+        (document) => document.id === selectedDocument.id
+      ) + 1;
+    if (sceneOrder <= 0) return [];
+    return inventoryCaptureCharacters.flatMap((character) => {
+      const sheet = characterSheets.find((entry) => entry.id === character.sheetId);
+      if (!sheet?.characterEntityId) return [];
+      return [{
+        ...character,
+        actorId: sheet.characterEntityId,
+        before: replayCharacterState({
+          sheet,
+          ruleset,
+          events: resolvedStateMutationEvents,
+          target: {
+            actorId: sheet.characterEntityId,
+            characterId: sheet.characterId,
+            sheetId: sheet.id,
+            actorName: sheet.name
+          },
+          actorResolutions,
+          upToSceneOrder: sceneOrder,
+          upToScenePosition: pendingInventoryCapture?.position ?? sceneCursorPosition
+        })
+      }];
+    });
+  }, [
+    actorResolutions,
+    characterSheets,
+    documents,
+    inventoryCaptureCharacters,
+    pendingInventoryCapture?.position,
+    resolvedStateMutationEvents,
+    ruleset,
+    sceneCursorPosition,
+    selectedDocument
+  ]);
+
   const openSelectionInventoryCapture = useCallback(
     (input: {itemName: string; from: number; to: number}) => {
       if (!selectedDocument) return;
@@ -323,6 +368,8 @@ export function useWorkspaceSceneRoster({
         characters: inventoryCaptureCharacters
       });
       setPendingInventoryCapture({
+        sceneId: selectedDocument.id,
+        sourceHash: hashSceneContent(selectedDocument.content),
         itemName: detected?.itemName ?? input.itemName.trim(),
         evidenceText: input.itemName.trim(),
         suggestedSheetId: detected?.sheetId,
@@ -355,6 +402,16 @@ export function useWorkspaceSceneRoster({
         setFeedback({
           tone: 'error',
           message: 'Use the consumption proposal to record this item use.'
+        });
+        return;
+      }
+      if (
+        pendingInventoryCapture.sceneId !== selectedDocument.id ||
+        pendingInventoryCapture.sourceHash !== hashSceneContent(content)
+      ) {
+        setFeedback({
+          tone: 'error',
+          message: 'The source prose changed. Close this proposal and reopen it from the current text.'
         });
         return;
       }
@@ -455,12 +512,25 @@ export function useWorkspaceSceneRoster({
       };
       setSavingInventoryCapture(true);
       try {
+        const proposalEvent = pendingInventoryCapture.proposalEventId
+          ? stateMutationEvents.find(
+              (entry) => entry.id === pendingInventoryCapture.proposalEventId
+            )
+          : undefined;
         await applyItemStateAuthoringPlan({
           plan: {
             projectId: activeProject.id,
             event,
             entityToSave,
-            compendiumEntryToSave
+            compendiumEntryToSave,
+            eventToInvalidate: proposalEvent
+              ? {
+                  ...proposalEvent,
+                  status: 'invalidated',
+                  invalidatedAt: Date.now(),
+                  invalidationReason: 'Replaced by author-confirmed Workspace item proposal.'
+                }
+              : undefined
           },
           ruleset
         });
@@ -486,6 +556,7 @@ export function useWorkspaceSceneRoster({
       categories,
       characterSheets,
       compendiumEntries,
+      content,
       documents,
       entities,
       pendingInventoryCapture,
@@ -497,6 +568,241 @@ export function useWorkspaceSceneRoster({
       stateMutationEvents
     ]
   );
+
+  const saveSelectionConsumptionCapture = useCallback(
+    async (input: {
+      sheetId: string;
+      itemName: string;
+      commands: StateMutationEvent['commands'];
+      rememberedConsumable?: CompendiumEntry['consumable'];
+      saveReusable: boolean;
+      reusableEntityId?: string;
+      canonicalName: string;
+    }) => {
+      if (
+        !activeProject ||
+        !selectedDocument ||
+        !pendingInventoryCapture ||
+        pendingInventoryCapture.action !== 'consume'
+      ) return;
+      if (
+        pendingInventoryCapture.sceneId !== selectedDocument.id ||
+        pendingInventoryCapture.sourceHash !== hashSceneContent(content)
+      ) {
+        setFeedback({
+          tone: 'error',
+          message: 'The source prose changed. Close this proposal and reopen it from the current text.'
+        });
+        return;
+      }
+      const sheet = characterSheets.find((candidate) => candidate.id === input.sheetId);
+      if (!sheet?.characterEntityId) {
+        setFeedback({
+          tone: 'error',
+          message: 'Resolve this character sheet to World Bible canon before recording state.'
+        });
+        return;
+      }
+      const sceneOrder =
+        sortWritingDocuments(documents).findIndex(
+          (document) => document.id === selectedDocument.id
+        ) + 1;
+      if (sceneOrder <= 0) return;
+      const resolution = resolveReusableItem({
+        itemName: input.itemName,
+        categories,
+        entities,
+        compendiumEntries
+      });
+      const itemCategory = categories.find(isItemCategory) ?? null;
+      const selectedEntity = input.reusableEntityId
+        ? entities.find((entity) => entity.id === input.reusableEntityId) ?? null
+        : null;
+      if (input.saveReusable && !selectedEntity && !itemCategory) {
+        setFeedback({
+          tone: 'error',
+          message: 'Create an Items category before saving a reusable world item.'
+        });
+        return;
+      }
+      const now = Date.now();
+      const entityToSave: WorldEntity | undefined =
+        input.saveReusable && !selectedEntity && itemCategory
+          ? {
+              id: crypto.randomUUID(),
+              projectId: activeProject.id,
+              categoryId: itemCategory.id,
+              name: input.canonicalName || input.itemName,
+              fields: {description: ''},
+              needsCompletion: true,
+              links: [],
+              createdAt: now,
+              updatedAt: now
+            }
+          : undefined;
+      const sourceEntityId =
+        selectedEntity?.id ??
+        entityToSave?.id ??
+        (resolution.status === 'exact' ? resolution.sourceEntityId : undefined);
+      const existingDefinition = resolution.status === 'exact' && resolution.definitionId
+        ? compendiumEntries.find((entry) => entry.id === resolution.definitionId) ?? null
+        : sourceEntityId
+          ? compendiumEntries.find((entry) => entry.sourceEntityId === sourceEntityId) ?? null
+          : null;
+      const definitionId =
+        existingDefinition?.id ?? (input.rememberedConsumable ? crypto.randomUUID() : undefined);
+      const compendiumEntryToSave: CompendiumEntry | undefined =
+        input.rememberedConsumable
+          ? {
+              id: definitionId as string,
+              projectId: activeProject.id,
+              name: entityToSave?.name ?? selectedEntity?.name ?? input.itemName,
+              domain: existingDefinition?.domain ?? 'artifact',
+              sourceEntityId,
+              description: existingDefinition?.description,
+              tags: existingDefinition?.tags ?? [],
+              mechanicKind: existingDefinition?.mechanicKind ?? 'general',
+              progressScope: existingDefinition?.progressScope ?? 'character',
+              needsCompletion: false,
+              consumable: input.rememberedConsumable,
+              actions: existingDefinition?.actions ?? [],
+              createdAt: existingDefinition?.createdAt ?? now,
+              updatedAt: now
+            }
+          : existingDefinition && sourceEntityId && !existingDefinition.sourceEntityId
+            ? {...existingDefinition, sourceEntityId, updatedAt: now}
+            : undefined;
+      const commands = input.commands.map((command) =>
+        command.type.startsWith('inventory_')
+          ? {
+              ...command,
+              actorId: sheet.characterEntityId as string,
+              sourceEntityId,
+              definitionId
+            }
+          : {...command, actorId: sheet.characterEntityId as string}
+      );
+      const event: StateMutationEvent = {
+        id: crypto.randomUUID(),
+        projectId: activeProject.id,
+        sceneId: selectedDocument.id,
+        sceneTitle: selectedDocument.title,
+        sceneOrder,
+        sceneSequence:
+          stateMutationEvents
+            .filter((entry) => entry.sceneId === selectedDocument.id)
+            .reduce((max, entry) => Math.max(max, entry.sceneSequence ?? 0), 0) + 1,
+        scenePosition: pendingInventoryCapture.position,
+        sceneAnchor: pendingInventoryCapture.anchor,
+        label: `Consumes ${input.itemName}`,
+        sourceType: 'manual',
+        sourceRevision: selectedDocument.updatedAt,
+        sourceHash: hashSceneContent(selectedDocument.content),
+        status: 'accepted',
+        commands,
+        consumableEffect: definitionId
+          ? {
+              definitionId,
+              itemName: input.itemName,
+              phase: 'consume'
+            }
+          : undefined,
+        createdAt: now
+      };
+      const before = inventoryCaptureContexts.find(
+        (entry) => entry.sheetId === input.sheetId
+      )?.before;
+      setSavingInventoryCapture(true);
+      try {
+        const proposalEvent = pendingInventoryCapture.proposalEventId
+          ? stateMutationEvents.find(
+              (entry) => entry.id === pendingInventoryCapture.proposalEventId
+            )
+          : undefined;
+        await applyItemStateAuthoringPlan({
+          plan: {
+            projectId: activeProject.id,
+            event,
+            entityToSave,
+            compendiumEntryToSave,
+            eventToInvalidate: proposalEvent
+              ? {
+                  ...proposalEvent,
+                  status: 'invalidated',
+                  invalidatedAt: Date.now(),
+                  invalidationReason: 'Replaced by author-confirmed Workspace item proposal.'
+                }
+              : undefined
+          },
+          ruleset,
+          before
+        });
+        setPendingInventoryCapture(null);
+        setFeedback({
+          tone: 'success',
+          message: `Recorded ${sheet.name} using ${input.itemName}.`
+        });
+      } catch (error) {
+        setFeedback({
+          tone: 'error',
+          message: error instanceof Error ? error.message : 'Unable to record item use.'
+        });
+      } finally {
+        setSavingInventoryCapture(false);
+      }
+    },
+    [
+      activeProject,
+      categories,
+      characterSheets,
+      compendiumEntries,
+      content,
+      documents,
+      entities,
+      inventoryCaptureContexts,
+      pendingInventoryCapture,
+      ruleset,
+      selectedDocument,
+      setFeedback,
+      setPendingInventoryCapture,
+      setSavingInventoryCapture,
+      stateMutationEvents
+    ]
+  );
+
+  const openDetectedItemStateProposal = useCallback((eventId: string) => {
+    const event = stateMutationEvents.find(
+      (entry) =>
+        entry.id === eventId &&
+        entry.status === 'proposed' &&
+        entry.sourceType === 'deterministic-review'
+    );
+    const command = event?.commands[0];
+    if (
+      !event ||
+      !command ||
+      !['inventory_add', 'inventory_consume'].includes(command.type)
+    ) return;
+    const inventoryCommand = command as InventoryQuantityStateMutationCommand;
+    const sheet = characterSheets.find(
+      (entry) =>
+        entry.characterEntityId === inventoryCommand.actorId ||
+        entry.characterId === inventoryCommand.actorId ||
+        entry.id === inventoryCommand.actorId
+    );
+    if (!sheet) return;
+    setPendingInventoryCapture({
+      sceneId: event.sceneId,
+      sourceHash: event.sourceHash,
+      itemName: inventoryCommand.itemName,
+      evidenceText: event.label ?? `${sheet.name} · ${inventoryCommand.itemName}`,
+      suggestedSheetId: sheet.id,
+      action: inventoryCommand.type === 'inventory_consume' ? 'consume' : 'acquire',
+      proposalEventId: event.id,
+      position: event.scenePosition ?? 0,
+      anchor: event.sceneAnchor ?? {before: '', after: ''}
+    });
+  }, [characterSheets, setPendingInventoryCapture, stateMutationEvents]);
 
   const sceneRosterTimeline = useMemo<SceneRosterTimelineEvent[]>(() => {
     if (!selectedDocument) return [];
@@ -1110,8 +1416,11 @@ export function useWorkspaceSceneRoster({
     sceneRosterModel,
     addSceneRosterEntry,
     inventoryCaptureCharacters,
+    inventoryCaptureContexts,
     openSelectionInventoryCapture,
     saveSelectionInventoryCapture,
+    saveSelectionConsumptionCapture,
+    openDetectedItemStateProposal,
     sceneRosterTimeline,
     hideSceneRosterEntry,
     recordSceneRosterChangeHere,

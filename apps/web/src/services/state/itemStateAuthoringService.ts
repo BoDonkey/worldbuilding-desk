@@ -84,6 +84,7 @@ export function resolveReusableItem(params: {
 export interface ItemStateAuthoringWritePlan {
   projectId: string;
   event: StateMutationEvent;
+  eventToInvalidate?: StateMutationEvent;
   entityToSave?: WorldEntity;
   compendiumEntryToSave?: CompendiumEntry;
 }
@@ -97,6 +98,12 @@ export function validateItemStateAuthoringPlan(params: {
   if (!plan.projectId.trim()) throw new Error('Project is required.');
   if (plan.event.projectId !== plan.projectId) {
     throw new Error('Scene change belongs to a different project.');
+  }
+  if (
+    plan.eventToInvalidate?.projectId !== undefined &&
+    plan.eventToInvalidate.projectId !== plan.projectId
+  ) {
+    throw new Error('Superseded proposal belongs to a different project.');
   }
   if (plan.entityToSave?.projectId !== undefined &&
       plan.entityToSave.projectId !== plan.projectId) {
@@ -158,6 +165,11 @@ export async function applyItemStateAuthoringPlan(params: {
       .put(plan.compendiumEntryToSave);
   }
   transaction.objectStore(STATE_MUTATION_EVENT_STORE_NAME).put(plan.event);
+  if (plan.eventToInvalidate) {
+    transaction
+      .objectStore(STATE_MUTATION_EVENT_STORE_NAME)
+      .put(plan.eventToInvalidate);
+  }
   await transactionToPromise(transaction);
 
   if (typeof window !== 'undefined') {

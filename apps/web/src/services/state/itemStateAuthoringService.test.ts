@@ -38,6 +38,12 @@ const event: StateMutationEvent = {
     sourceEntityId: entity.id, definitionId: definition.id
   }]
 };
+const proposalEvent: StateMutationEvent = {
+  ...event,
+  id: 'proposal-1',
+  status: 'proposed',
+  sourceType: 'deterministic-review'
+};
 
 async function clearStores(): Promise<void> {
   const db = await openDb();
@@ -90,6 +96,28 @@ describe('prose-proximate item/state foundation', () => {
     expect(await read(ENTITY_STORE_NAME, entity.id)).toEqual(entity);
     expect(await read(COMPENDIUM_ENTRY_STORE_NAME, definition.id)).toEqual(definition);
     expect(await read(STATE_MUTATION_EVENT_STORE_NAME, event.id)).toEqual(event);
+  });
+
+  it('atomically supersedes the reviewed proposal with the confirmed event', async () => {
+    await applyItemStateAuthoringPlan({
+      plan: {
+        projectId: 'project-1',
+        event,
+        eventToInvalidate: {
+          ...proposalEvent,
+          status: 'invalidated',
+          invalidatedAt: 2,
+          invalidationReason: 'Replaced by author-confirmed Workspace item proposal.'
+        }
+      },
+      ruleset: null
+    });
+
+    expect(await read(STATE_MUTATION_EVENT_STORE_NAME, event.id)).toEqual(event);
+    expect(await read(STATE_MUTATION_EVENT_STORE_NAME, proposalEvent.id)).toMatchObject({
+      status: 'invalidated',
+      invalidatedAt: 2
+    });
   });
 
   it('validates the complete plan before opening a write transaction', async () => {

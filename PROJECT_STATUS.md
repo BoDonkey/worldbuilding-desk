@@ -1,6 +1,6 @@
 # Worldbuilding-Desk Project Status
 
-**Last Updated:** August 15, 2026
+**Last Updated:** August 16, 2026
 
 ## Project Overview
 
@@ -67,6 +67,18 @@ Under the hood, the app still includes rich systems for world data, rules, chara
 - Imported/new scenes reset editor scroll to the top, and importing while the Review drawer is open refreshes the drawer with the newly imported scene's review candidates.
 - Workspace page chrome now uses the shared page-header rhythm and keeps the active scene primary: the top header carries project/scene context plus the passive review badge, while new scene/import/planning actions live in empty-state, footer, drawer, modal, and command surfaces.
 - Deterministic state-change suggestions stay in the Review drawer, can be accepted or rejected explicitly, support per-scene batch actions, and can be hidden until the source scene changes so drafting is not blocked.
+- In mechanics-enabled projects, selecting acquisition or consumption prose now
+  opens an editable item/state proposal inside Workspace. Acquisition defaults
+  to a scene-scoped inventory entry; reusable World Bible creation/linking is
+  explicit. Consumption offers a combined inventory-and-attribute preview,
+  reusable effects only when the author chooses to remember them, and explicit
+  absent-inventory branches. General-fiction selection tools do not introduce
+  this mechanics action.
+- Deterministically detected acquisition and consumption observations can open
+  the same Workspace proposal from Review. Detection remains proposal-only;
+  confirmation validates the current source hash and atomically writes the
+  accepted event plus any author-requested item/effect records while
+  superseding the reviewed proposal.
 - Hidden deterministic state suggestions now surface only as lightweight review summaries with per-scene and project-level restore actions.
 - Project scratchpad is available as an autosaved quick-access modal and remains available from the workspace context drawer.
 - Scratchpad quick access is now available from active-project chrome on World Bible, Lore, and Canon Decisions so loose ideas can move into structured canon, longform lore, or review decisions without navigating back to Workspace.
@@ -118,9 +130,11 @@ Under the hood, the app still includes rich systems for world data, rules, chara
 - Lore extraction now proposes evidence-backed facts and typed entities from both structured labels and common natural-prose dossier/faction/place patterns, including the trust-dogfood occupation, aliases, relationships, appearance, service conflict, historical faction name, and explicitly speculative claims. All results remain review-only until author acceptance.
 - Parent/child canon inheritance with promotion and sync flows.
 - Project backup export/import with validation and conflict review.
-- Project backup snapshots now use schema 2 and include consistency aliases,
+- Project backup snapshots now use schema 3 and include consistency aliases,
   canonical character link fields, persisted legacy actor resolutions, and
-  character identity migration reports. Schema-1 backups upgrade through the
+  character identity migration reports plus stable optional World
+  Bible/Compendium references for reusable inventory items. Earlier backups
+  upgrade through deterministic migrations, including the
   deterministic character classifier before import, with replay parity
   preserved.
 - Character package export now uses schema 2 and carries the canonical
@@ -143,6 +157,10 @@ Under the hood, the app still includes rich systems for world data, rules, chara
   Linked sheet names derive from canon, duplicate sheets for one character are
   blocked on write, and any conserved legacy collisions surface in World Bible
   review for repair.
+- Inventory commands and replayed inventory entries now support optional stable
+  World Bible item and Compendium definition IDs while retaining name-only
+  quick entries. Project storage schema 3 migrates earlier state without
+  guessing links, and linked inventory labels follow canonical item renames.
 - The World Bible review surface now includes a distinct `Needs canon link`
   queue for tools-only, sheet-only, and ambiguous legacy character records.
   Authors can link an existing World Bible character, explicitly create a

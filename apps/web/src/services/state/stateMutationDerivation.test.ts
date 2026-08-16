@@ -170,4 +170,36 @@ describe('stateMutationDerivation', () => {
 
     expect(derived).toEqual([]);
   });
+
+  it('keeps missing-inventory consumption as an editable proposal', () => {
+    const derived = buildDerivedStateMutationEvents({
+      projectId: 'project-1',
+      sceneId: 'scene-1',
+      sceneTitle: 'Scene 1',
+      sceneOrder: 1,
+      sourceRevision: 10,
+      sourceHash: 'h2',
+      observations: [makeObservation({
+        id: 'drink-potion',
+        operation: 'inventory_consume',
+        target: 'Health Potion',
+        evidence: {start: 4, end: 35, text: 'Kael drank a Health Potion'}
+      })],
+      characterSheets: [sheet],
+      ruleset,
+      existingEvents: []
+    });
+
+    expect(derived).toHaveLength(1);
+    expect(derived[0]).toMatchObject({
+      label: 'Kael drank a Health Potion',
+      scenePosition: 35,
+      status: 'proposed',
+      commands: [{
+        type: 'inventory_consume',
+        actorId: 'entity-kael',
+        itemName: 'Health Potion'
+      }]
+    });
+  });
 });

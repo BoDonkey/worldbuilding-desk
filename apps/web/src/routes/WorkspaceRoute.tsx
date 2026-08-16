@@ -62,6 +62,7 @@ import {CanonPanel} from '../components/Workspace/CanonPanel';
 import {UnknownEntityPanel} from '../components/Workspace/UnknownEntityPanel';
 import {PositionedStateChangeComposer} from '../components/Workspace/PositionedStateChangeComposer';
 import {SceneInventoryCapture} from '../components/Workspace/SceneInventoryCapture';
+import {SceneConsumptionCapture} from '../components/Workspace/SceneConsumptionCapture';
 import {
   getStateMutationEventStaleness
 } from '../services/state/stateMutationStaleness';
@@ -750,8 +751,11 @@ function WorkspaceRoute() {
     sceneRosterModel,
     addSceneRosterEntry,
     inventoryCaptureCharacters,
+    inventoryCaptureContexts,
     openSelectionInventoryCapture,
     saveSelectionInventoryCapture,
+    saveSelectionConsumptionCapture,
+    openDetectedItemStateProposal,
     sceneRosterTimeline,
     hideSceneRosterEntry,
     recordSceneRosterChangeHere,
@@ -800,6 +804,14 @@ function WorkspaceRoute() {
     setFeedback,
     requestConfirm
   });
+  const editStateMutationReviewItem = useCallback(
+    (item: (typeof stateMutationReviewItems)[number]) => {
+      const document = documents.find((entry) => entry.id === item.sceneId);
+      if (document) handleSelectDocument(document);
+      openDetectedItemStateProposal(item.id);
+    },
+    [documents, handleSelectDocument, openDetectedItemStateProposal]
+  );
   useEffect(() => {
     if (!activeProject) return;
     const activeRules = activePartySynergies
@@ -990,6 +1002,12 @@ function WorkspaceRoute() {
     pendingInventoryResolution.sourceEntityId
     ? entities.find(
         (entity) => entity.id === pendingInventoryResolution.sourceEntityId
+      ) ?? null
+    : null;
+  const pendingConsumableEntry = pendingInventoryResolution?.status === 'exact' &&
+    pendingInventoryResolution.definitionId
+    ? compendiumEntries.find(
+        (entry) => entry.id === pendingInventoryResolution.definitionId
       ) ?? null
     : null;
   const manualRejectedAliases = manualWorldCapture
@@ -1219,6 +1237,7 @@ function WorkspaceRoute() {
     hiddenStateMutationReviewCount, applyingStateMutationReviewId, reviewReadiness,
     acceptStateMutationReviewItem, rejectStateMutationReviewItem,
     acceptSceneStateMutationReviewItems, rejectSceneStateMutationReviewItems,
+    editStateMutationReviewItem,
     hideStateMutationReviewItem, restoreHiddenStateMutationReviewItems,
     restoreAllHiddenStateMutationReviewItems,
     documents, handleSelectDocument,
@@ -1439,7 +1458,9 @@ function WorkspaceRoute() {
                   onOpenAIContext={handleOpenAIContext}
                   onOpenLoreInspector={handleOpenLoreInspector}
                   onOpenWorldCapture={handleOpenManualWorldCapture}
-                  onAddSelectionToInventory={openSelectionInventoryCapture}
+                  onAddSelectionToInventory={isGeneralFictionProject
+                    ? undefined
+                    : openSelectionInventoryCapture}
                   suppressSelectionBubble={Boolean(manualWorldCapture)}
                 />
                 {consistencyPopover && activeConsistencyPopoverIssue && (
@@ -1947,24 +1968,52 @@ function WorkspaceRoute() {
           ref={inventoryCaptureDialogRef}
           role='dialog'
           aria-modal='true'
-          aria-label='Add selected item to inventory'
+          aria-label={pendingInventoryCapture.action === 'consume'
+            ? 'Record selected item use'
+            : 'Add selected item to inventory'}
           onClick={() => setPendingInventoryCapture(null)}
           className={styles.modalOverlay}
         >
           <div onClick={(event) => event.stopPropagation()}>
-            <SceneInventoryCapture
-              key={`${pendingInventoryCapture.position}:${pendingInventoryCapture.itemName}`}
-              itemName={pendingInventoryCapture.itemName}
-              characters={inventoryCaptureCharacters}
-              evidenceText={pendingInventoryCapture.evidenceText}
-              suggestedSheetId={pendingInventoryCapture.suggestedSheetId}
-              exactReusableItem={exactReusableInventoryEntity}
-              reusableItemMatches={pendingInventoryResolution?.entityMatches ?? []}
-              canCreateReusableItem={categories.some(isItemCategory)}
-              isSaving={isSavingInventoryCapture}
-              onCancel={() => setPendingInventoryCapture(null)}
-              onSave={(input) => void saveSelectionInventoryCapture(input)}
-            />
+            {pendingInventoryCapture.action === 'consume' ? (
+              <SceneConsumptionCapture
+                key={`consume:${pendingInventoryCapture.position}:${pendingInventoryCapture.itemName}`}
+                itemName={pendingInventoryCapture.itemName}
+                evidenceText={pendingInventoryCapture.evidenceText}
+                contexts={inventoryCaptureContexts}
+                suggestedSheetId={pendingInventoryCapture.suggestedSheetId}
+                ruleset={ruleset}
+                approvedEntry={pendingConsumableEntry}
+                itemReference={{
+                  sourceEntityId: pendingInventoryResolution?.status === 'exact'
+                    ? pendingInventoryResolution.sourceEntityId
+                    : undefined,
+                  definitionId: pendingInventoryResolution?.status === 'exact'
+                    ? pendingInventoryResolution.definitionId
+                    : undefined
+                }}
+                exactReusableItem={exactReusableInventoryEntity}
+                reusableItemMatches={pendingInventoryResolution?.entityMatches ?? []}
+                canCreateReusableItem={categories.some(isItemCategory)}
+                isSaving={isSavingInventoryCapture}
+                onCancel={() => setPendingInventoryCapture(null)}
+                onSave={(input) => void saveSelectionConsumptionCapture(input)}
+              />
+            ) : (
+              <SceneInventoryCapture
+                key={`acquire:${pendingInventoryCapture.position}:${pendingInventoryCapture.itemName}`}
+                itemName={pendingInventoryCapture.itemName}
+                characters={inventoryCaptureCharacters}
+                evidenceText={pendingInventoryCapture.evidenceText}
+                suggestedSheetId={pendingInventoryCapture.suggestedSheetId}
+                exactReusableItem={exactReusableInventoryEntity}
+                reusableItemMatches={pendingInventoryResolution?.entityMatches ?? []}
+                canCreateReusableItem={categories.some(isItemCategory)}
+                isSaving={isSavingInventoryCapture}
+                onCancel={() => setPendingInventoryCapture(null)}
+                onSave={(input) => void saveSelectionInventoryCapture(input)}
+              />
+            )}
           </div>
         </div>
       )}

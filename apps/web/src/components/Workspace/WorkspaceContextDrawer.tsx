@@ -167,6 +167,7 @@ interface WorkspaceContextDrawerProps {
   applyingStateMutationReviewId: string | null;
   reviewReadiness: ReviewReadiness;
   acceptStateMutationReviewItem: (eventId: string) => Promise<void>;
+  editStateMutationReviewItem: (item: StateMutationReviewItem) => void;
   rejectStateMutationReviewItem: (eventId: string) => Promise<void>;
   acceptSceneStateMutationReviewItems: (sceneId: string) => Promise<void>;
   rejectSceneStateMutationReviewItems: (sceneId: string) => Promise<void>;
@@ -318,6 +319,7 @@ export function WorkspaceContextDrawer({
   applyingStateMutationReviewId,
   reviewReadiness,
   acceptStateMutationReviewItem,
+  editStateMutationReviewItem,
   rejectStateMutationReviewItem,
   acceptSceneStateMutationReviewItems,
   rejectSceneStateMutationReviewItems,
@@ -967,6 +969,16 @@ export function WorkspaceContextDrawer({
                             </div>
                           ))}
                           <div className={styles.consistencyRelated}>
+                            {item.canEditInWorkspace && (
+                              <button
+                                type='button'
+                                onClick={() => editStateMutationReviewItem(item)}
+                                disabled={applyingStateMutationReviewId === item.id}
+                                className={styles.consistencyRelatedButton}
+                              >
+                                Review here
+                              </button>
+                            )}
                             <button
                               type='button'
                               onClick={() => void acceptStateMutationReviewItem(item.id)}

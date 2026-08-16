@@ -143,6 +143,8 @@ export function buildDerivedStateMutationEvents(params: {
       sceneTitle: params.sceneTitle,
       sceneOrder: params.sceneOrder,
       sceneSequence: sceneSequenceStart + index,
+      scenePosition: observation.evidence.end,
+      label: observation.evidence.text,
       sourceType: 'deterministic-review',
       sourceRevision: params.sourceRevision,
       sourceHash: params.sourceHash,
@@ -173,7 +175,9 @@ export function buildDerivedStateMutationEvents(params: {
       command
     });
 
-    if (ruleErrors.length > 0 || stateErrors.length > 0) {
+    const reviewableMissingInventory =
+      command.type === 'inventory_consume' && stateErrors.length > 0;
+    if (ruleErrors.length > 0 || (stateErrors.length > 0 && !reviewableMissingInventory)) {
       return;
     }
 
