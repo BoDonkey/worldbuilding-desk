@@ -128,9 +128,14 @@ function WorkspaceRoute() {
   const exportDialogRef = useRef<HTMLDivElement | null>(null);
   const memoryDialogRef = useRef<HTMLDivElement | null>(null);
   const [documents, setDocuments] = useState<WritingDocument[]>([]);
+  const [loadedDocumentsProjectId, setLoadedDocumentsProjectId] = useState<
+    string | null
+  >(null);
   const seriesBibleConfig = activeProject
     ? getSeriesBibleConfig(activeProject)
     : null;
+  const documentsLoaded =
+    Boolean(activeProject) && loadedDocumentsProjectId === activeProject?.id;
   const [feedback, setFeedback] = useState<{
     tone: FeedbackTone;
     message: string;
@@ -260,10 +265,10 @@ function WorkspaceRoute() {
     wordCount,
     setWordCount,
     editorScrollResetToken,
+    isSelectedDocumentInitialized,
     selectedDocument,
     importInputRef,
     isImportingDocuments,
-    initializeEditorState,
     handleNewDocument,
     handleImportDocuments,
     handleRetryFailedImports,
@@ -276,6 +281,7 @@ function WorkspaceRoute() {
     handleContentChange
   } = useWorkspaceDocuments({
     activeProject,
+    documentsLoaded,
     documents,
     setDocuments,
     persistDocRef,
@@ -418,8 +424,8 @@ function WorkspaceRoute() {
     isStatPreferencesHydrated
   } = useWorkspaceProjectData({
     activeProject,
-    initializeEditorState,
     setDocuments,
+    onDocumentsLoaded: setLoadedDocumentsProjectId,
     setImportMode,
     setSkipImportSuggestions,
     refreshSystemHistory,
@@ -1055,7 +1061,8 @@ function WorkspaceRoute() {
   });
 
   useWorkspaceReviewRefresh({
-    selectedId, selectedDocument, title, content, entities, aliases, characters,
+    selectedId, selectedDocument, isSelectedDocumentInitialized,
+    title, content, entities, aliases, characters,
     isReviewPrefsHydrated, refreshDeferredReview, refreshActiveDraftReview
   });
 
@@ -1388,7 +1395,11 @@ function WorkspaceRoute() {
         contextDrawerProps={contextDrawerProps}
       >
         <div className={styles.editorColumn} data-wbd-scroll-key='workspace-editor-column'>
-          {selectedId ? (
+          {!documentsLoaded || (selectedId && !isSelectedDocumentInitialized) ? (
+            <div className={styles.emptyWorkspaceState} role='status'>
+              Loading scenes…
+            </div>
+          ) : selectedId ? (
             <>
               <div className={styles.editorTitleRow}>
                 <label>
@@ -1405,6 +1416,7 @@ function WorkspaceRoute() {
 
               <div className={styles.editorPane} data-wbd-scroll-key='workspace-editor-pane'>
                 <EditorWithAI
+                  projectId={activeProject.id}
                   documentId={selectedId}
                   content={content}
                   focusQuery={focusQuery}

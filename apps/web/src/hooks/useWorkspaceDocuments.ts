@@ -41,6 +41,7 @@ type FeedbackState = {
 
 interface UseWorkspaceDocumentsParams {
   activeProject: Project | null;
+  documentsLoaded: boolean;
   documents: WritingDocument[];
   setDocuments: Dispatch<SetStateAction<WritingDocument[]>>;
   persistDocRef: MutableRefObject<
@@ -75,17 +76,23 @@ type WorkspaceDocumentInitialization =
 
 export const resolveWorkspaceDocumentInitialization = ({
   hasActiveProject,
+  documentsLoaded,
   documents,
   selectedId,
   initializedSelectedId
 }: {
   hasActiveProject: boolean;
+  documentsLoaded: boolean;
   documents: WritingDocument[];
   selectedId: string | null;
   initializedSelectedId: string | null;
 }): WorkspaceDocumentInitialization => {
   if (!hasActiveProject) {
     return {type: 'clear'};
+  }
+
+  if (!documentsLoaded) {
+    return {type: 'none'};
   }
 
   if (documents.length === 0) {
@@ -152,6 +159,7 @@ export const getWorkspaceAutosaveConsistencyMode = (
 
 export const useWorkspaceDocuments = ({
   activeProject,
+  documentsLoaded,
   documents,
   setDocuments,
   persistDocRef,
@@ -198,6 +206,9 @@ export const useWorkspaceDocuments = ({
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
   const [lastSavedAt, setLastSavedAt] = useState<number | null>(null);
   const [wordCount, setWordCount] = useState(0);
+  const [initializedDocumentId, setInitializedDocumentId] = useState<string | null>(
+    null
+  );
   const [editorScrollResetToken, setEditorScrollResetToken] = useState(0);
   const [isImportingDocuments, setIsImportingDocuments] = useState(false);
   const importInputRef = useRef<HTMLInputElement | null>(null);
@@ -219,6 +230,7 @@ export const useWorkspaceDocuments = ({
 
   const resetEditor = useCallback((options?: {clearPersistedSelection?: boolean}) => {
     setSelectedId(null);
+    setInitializedDocumentId(null);
     if (options?.clearPersistedSelection) {
       initializedSelectedIdRef.current = null;
     }
@@ -233,6 +245,7 @@ export const useWorkspaceDocuments = ({
     (doc: WritingDocument | null) => {
       if (!doc) {
         setSelectedId(null);
+        setInitializedDocumentId(null);
         initializedSelectedIdRef.current = null;
         setSelectedCreatedAt(null);
         setTitle('');
@@ -242,6 +255,7 @@ export const useWorkspaceDocuments = ({
         return;
       }
       setSelectedId(doc.id);
+      setInitializedDocumentId(doc.id);
       initializedSelectedIdRef.current = doc.id;
       setSelectedCreatedAt(doc.createdAt);
       setTitle(doc.title);
@@ -255,6 +269,7 @@ export const useWorkspaceDocuments = ({
   useEffect(() => {
     const initialization = resolveWorkspaceDocumentInitialization({
       hasActiveProject: Boolean(activeProject),
+      documentsLoaded,
       documents,
       selectedId,
       initializedSelectedId: initializedSelectedIdRef.current
@@ -267,7 +282,14 @@ export const useWorkspaceDocuments = ({
     } else if (initialization.type === 'initialize') {
       initializeEditorState(initialization.document);
     }
-  }, [activeProject, documents, initializeEditorState, resetEditor, selectedId]);
+  }, [
+    activeProject,
+    documents,
+    documentsLoaded,
+    initializeEditorState,
+    resetEditor,
+    selectedId
+  ]);
 
   const handleNewDocument = useCallback(async () => {
     if (!activeProject) return;
@@ -458,6 +480,9 @@ export const useWorkspaceDocuments = ({
 
   const handleSelectDocument = useCallback(
     (doc: WritingDocument) => {
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('wbd:capture-workspace-scroll'));
+      }
       initializeEditorState(doc);
       closeConsistencyPopover();
       if (doc.consistencyReviewMode === 'deferred') {
@@ -749,6 +774,8 @@ export const useWorkspaceDocuments = ({
     wordCount,
     setWordCount,
     editorScrollResetToken,
+    isSelectedDocumentInitialized:
+      selectedId !== null && initializedDocumentId === selectedId,
     selectedDocument,
     importInputRef: importInputRef as RefObject<HTMLInputElement>,
     isImportingDocuments,

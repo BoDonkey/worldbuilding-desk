@@ -26,6 +26,7 @@ describe('resolveWorkspaceDocumentInitialization', () => {
     expect(
       resolveWorkspaceDocumentInitialization({
         hasActiveProject: false,
+        documentsLoaded: true,
         documents,
         selectedId: 'first',
         initializedSelectedId: 'first'
@@ -37,6 +38,7 @@ describe('resolveWorkspaceDocumentInitialization', () => {
     expect(
       resolveWorkspaceDocumentInitialization({
         hasActiveProject: true,
+        documentsLoaded: true,
         documents: [],
         selectedId: 'missing',
         initializedSelectedId: 'missing'
@@ -44,10 +46,23 @@ describe('resolveWorkspaceDocumentInitialization', () => {
     ).toEqual({type: 'reset-empty'});
   });
 
+  it('preserves persisted selection while project documents are loading', () => {
+    expect(
+      resolveWorkspaceDocumentInitialization({
+        hasActiveProject: true,
+        documentsLoaded: false,
+        documents: [],
+        selectedId: 'second',
+        initializedSelectedId: null
+      })
+    ).toEqual({type: 'none'});
+  });
+
   it('keeps the editor unchanged when the selected document is already initialized', () => {
     expect(
       resolveWorkspaceDocumentInitialization({
         hasActiveProject: true,
+        documentsLoaded: true,
         documents,
         selectedId: 'second',
         initializedSelectedId: 'second'
@@ -59,6 +74,7 @@ describe('resolveWorkspaceDocumentInitialization', () => {
     expect(
       resolveWorkspaceDocumentInitialization({
         hasActiveProject: true,
+        documentsLoaded: true,
         documents,
         selectedId: 'second',
         initializedSelectedId: null
@@ -70,6 +86,7 @@ describe('resolveWorkspaceDocumentInitialization', () => {
     expect(
       resolveWorkspaceDocumentInitialization({
         hasActiveProject: true,
+        documentsLoaded: true,
         documents,
         selectedId: 'missing',
         initializedSelectedId: 'first'

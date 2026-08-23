@@ -12,6 +12,10 @@ import {
 } from './extensions/LoreHighlightsExtension';
 import {createWorkspaceAnnotationsExtension} from './extensions/WorkspaceAnnotationsExtension';
 import {
+  createCurrentSceneFindExtension,
+  setCurrentSceneFind
+} from './extensions/CurrentSceneFindExtension';
+import {
   createReviewFocusFlashExtension,
   reviewFocusFlashKey,
   setReviewFocusFlash
@@ -28,6 +32,12 @@ import {
   type EditorTextSnapshot,
   type StateMutationTextAnchor
 } from '../../services/state/stateMutationAnchor';
+import {getWorkspaceSceneScrollKey} from '../../services/workspace/workspaceScroll';
+import {
+  findCurrentSceneMatches,
+  resolveCurrentSceneFindIndex,
+  type CurrentSceneFindMatch
+} from '../../services/workspace/currentSceneFind';
 
 interface AIContextType {
   type: 'document';
@@ -38,6 +48,7 @@ interface AIContextType {
 }
 
 interface EditorWithAIProps {
+  projectId: string;
   documentId: string;
   content: string;
   focusQuery?: string | null;
@@ -109,11 +120,6 @@ interface SelectionBubbleState {
 declare global {
   interface Window {
     __wbdEditorScrollPositions?: Record<string, number>;
-    __wbdLastWorkspaceEditorScrollTop?: number;
-    __wbdLastWorkspaceScrollSnapshot?: {
-      elements: Array<{key: string; top: number; left: number}>;
-      windowY: number;
-    };
   }
 }
 
@@ -126,20 +132,11 @@ const getWindowEditorScrollStore = () => {
   return window.__wbdEditorScrollPositions;
 };
 
-const getSnapshotEditorScrollTop = () => {
-  if (typeof window === 'undefined') return undefined;
-  return window.__wbdLastWorkspaceScrollSnapshot?.elements.find(
-    (element) => element.key === 'workspace-editor'
-  )?.top;
-};
-
 const readSavedEditorScrollTop = (scrollKey: string) => {
   const store = getWindowEditorScrollStore();
   const candidates = [
     editorScrollPositions.get(scrollKey),
-    store?.[scrollKey],
-    getSnapshotEditorScrollTop(),
-    typeof window === 'undefined' ? undefined : window.__wbdLastWorkspaceEditorScrollTop
+    store?.[scrollKey]
   ];
 
   return candidates.find(
@@ -154,9 +151,6 @@ const writeSavedEditorScrollTop = (scrollKey: string, scrollTop: number) => {
   const store = getWindowEditorScrollStore();
   if (!store) return;
   store[scrollKey] = scrollTop;
-  if (scrollTop > 0) {
-    window.__wbdLastWorkspaceEditorScrollTop = scrollTop;
-  }
 };
 
 const clearSavedEditorScrollTop = (scrollKey: string) => {
@@ -165,12 +159,10 @@ const clearSavedEditorScrollTop = (scrollKey: string) => {
   if (store) {
     store[scrollKey] = 0;
   }
-  if (typeof window !== 'undefined') {
-    window.__wbdLastWorkspaceEditorScrollTop = 0;
-  }
 };
 
 export const EditorWithAI: React.FC<EditorWithAIProps> = ({
+  projectId,
   documentId,
   content,
   focusQuery = null,
@@ -229,15 +221,69 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
     anchorBottom: number;
   } | null>(null);
   const [isActivelyTyping, setIsActivelyTyping] = useState(false);
+  const [isCurrentSceneFindOpen, setCurrentSceneFindOpen] = useState(false);
+  const [currentSceneFindQuery, setCurrentSceneFindQuery] = useState('');
+  const [currentSceneFindMatches, setCurrentSceneFindMatches] = useState<
+    CurrentSceneFindMatch[]
+  >([]);
+  const [currentSceneFindIndex, setCurrentSceneFindIndex] = useState(-1);
   const editorRef = useRef<TipTapEditorInstance | null>(null);
   const editorScrollRef = useRef<HTMLDivElement | null>(null);
+  const currentSceneFindInputRef = useRef<HTMLInputElement | null>(null);
   const isRestoringEditorScrollRef = useRef(false);
   const editorMountedAtRef = useRef(Date.now());
   const consistencyHighlightsRef = useRef(consistencyHighlights);
   const loreHighlightsRef = useRef<LoreHighlightEntry[]>([]);
   const typingIdleTimeoutRef = useRef<number | null>(null);
-  const editorScrollKey = `workspace-editor-scroll:${documentId}`;
+  const editorScrollKey = getWorkspaceSceneScrollKey(
+    'workspace-editor-scroll',
+    projectId,
+    documentId
+  );
   const appliedScrollResetKeyRef = useRef<string | null>(null);
+
+  const openCurrentSceneFind = useCallback(() => {
+    setCurrentSceneFindOpen(true);
+    window.requestAnimationFrame(() => {
+      currentSceneFindInputRef.current?.focus();
+      currentSceneFindInputRef.current?.select();
+    });
+  }, []);
+
+  const closeCurrentSceneFind = useCallback(() => {
+    setCurrentSceneFindOpen(false);
+    setCurrentSceneFindQuery('');
+    setCurrentSceneFindMatches([]);
+    setCurrentSceneFindIndex(-1);
+    window.requestAnimationFrame(() => {
+      editorRef.current?.view.dom.focus({preventScroll: true});
+    });
+  }, []);
+
+  const navigateCurrentSceneFind = useCallback(
+    (direction: 'next' | 'previous') => {
+      setCurrentSceneFindIndex((currentIndex) =>
+        resolveCurrentSceneFindIndex(
+          currentIndex,
+          currentSceneFindMatches.length,
+          direction
+        )
+      );
+    },
+    [currentSceneFindMatches.length]
+  );
+
+  const effectiveToolbarActions = React.useMemo(
+    () => [
+      ...toolbarActions,
+      {
+        id: 'find-current-scene',
+        label: 'Find in scene',
+        onClick: openCurrentSceneFind
+      }
+    ],
+    [openCurrentSceneFind, toolbarActions]
+  );
 
   const effectiveInlineHighlightsMode =
     inlineHighlightsMode === 'hidden-while-typing' && isActivelyTyping
@@ -283,6 +329,7 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
       extensions: [
         ...config.extensions,
         AIExpandMenu,
+        createCurrentSceneFindExtension(),
         createReviewFocusFlashExtension(),
         createWorkspaceAnnotationsExtension(
           // ProseMirror invokes these getters after render when it evaluates
@@ -333,11 +380,12 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
     if (!scrollElement) return;
 
     let animationFrame: number | null = null;
+    let lastObservedScrollTop = readSavedEditorScrollTop(editorScrollKey);
     const saveScrollPosition = () => {
       if (isRestoringEditorScrollRef.current) {
         return;
       }
-      const nextScrollTop = scrollElement.scrollTop;
+      const nextScrollTop = lastObservedScrollTop;
       const savedScrollTop = readSavedEditorScrollTop(editorScrollKey);
       const isEarlyZeroAfterRemount =
         nextScrollTop === 0 &&
@@ -355,21 +403,32 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
       delete scrollElement.dataset.wbdSkippedZeroScrollSave;
     };
     const handleScroll = () => {
+      if (isRestoringEditorScrollRef.current) return;
+      lastObservedScrollTop = scrollElement.scrollTop;
       if (animationFrame !== null) return;
       animationFrame = window.requestAnimationFrame(() => {
         animationFrame = null;
         saveScrollPosition();
       });
     };
+    const captureScrollPosition = () => {
+      lastObservedScrollTop = scrollElement.scrollTop;
+      writeSavedEditorScrollTop(editorScrollKey, lastObservedScrollTop);
+    };
 
     scrollElement.addEventListener('scroll', handleScroll, {passive: true});
+    window.addEventListener('wbd:capture-workspace-scroll', captureScrollPosition);
     return () => {
       if (animationFrame !== null) {
         window.cancelAnimationFrame(animationFrame);
       }
       isRestoringEditorScrollRef.current = false;
+      if (scrollElement.scrollTop > 0) {
+        lastObservedScrollTop = scrollElement.scrollTop;
+      }
       saveScrollPosition();
       scrollElement.removeEventListener('scroll', handleScroll);
+      window.removeEventListener('wbd:capture-workspace-scroll', captureScrollPosition);
     };
   }, [editorScrollKey]);
 
@@ -380,7 +439,14 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
     if (resetKey && appliedScrollResetKeyRef.current !== resetKey) return;
 
     const storedScrollTop = readSavedEditorScrollTop(editorScrollKey);
-    if (!Number.isFinite(storedScrollTop) || storedScrollTop <= 0) return;
+    if (storedScrollTop <= 0) {
+      if (scrollElement.scrollTop !== 0) {
+        scrollElement.scrollTop = 0;
+      }
+      scrollElement.dataset.wbdRestoreTarget = '0';
+      scrollElement.dataset.wbdRestoredScrollTop = '0';
+      return;
+    }
 
     let cancelled = false;
     let userInterrupted = false;
@@ -416,6 +482,7 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
 
     scrollElement.addEventListener('wheel', markUserInterrupted, {passive: true});
     scrollElement.addEventListener('touchstart', markUserInterrupted, {passive: true});
+    scrollElement.addEventListener('pointerdown', markUserInterrupted);
     scrollElement.addEventListener('keydown', markUserInterrupted);
     frameIds.push(
       window.requestAnimationFrame(() =>
@@ -429,6 +496,7 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
       frameIds.forEach((frameId) => window.cancelAnimationFrame(frameId));
       scrollElement.removeEventListener('wheel', markUserInterrupted);
       scrollElement.removeEventListener('touchstart', markUserInterrupted);
+      scrollElement.removeEventListener('pointerdown', markUserInterrupted);
       scrollElement.removeEventListener('keydown', markUserInterrupted);
     };
   }, [
@@ -476,15 +544,6 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
   }, [documentId, editorReadyToken, editorScrollKey, resetScrollToken]);
 
   useEffect(() => {
-    const scrollElement = editorScrollRef.current;
-    return () => {
-      if (scrollElement) {
-        writeSavedEditorScrollTop(editorScrollKey, scrollElement.scrollTop);
-      }
-    };
-  }, [editorScrollKey]);
-
-  useEffect(() => {
     if (!selectionBubble) return;
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
@@ -503,9 +562,12 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
       setStatBlockPopover(null);
       setCharacterStateHoverCard(null);
     };
-    window.addEventListener('scroll', close, true);
-    window.addEventListener('resize', close);
+    const frameId = window.requestAnimationFrame(() => {
+      window.addEventListener('scroll', close, true);
+      window.addEventListener('resize', close);
+    });
     return () => {
+      window.cancelAnimationFrame(frameId);
       window.removeEventListener('scroll', close, true);
       window.removeEventListener('resize', close);
     };
@@ -621,6 +683,103 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
     setEditorReadyToken((prev) => prev + 1);
     updateSelectionBubble();
   }, [updateSelectionBubble]);
+
+  useEffect(() => {
+    const handleFindShortcut = (event: KeyboardEvent) => {
+      if (
+        (event.metaKey || event.ctrlKey) &&
+        !event.altKey &&
+        event.key.toLocaleLowerCase() === 'f'
+      ) {
+        event.preventDefault();
+        openCurrentSceneFind();
+        return;
+      }
+      if (event.key === 'Escape' && isCurrentSceneFindOpen) {
+        event.preventDefault();
+        closeCurrentSceneFind();
+      }
+    };
+    window.addEventListener('keydown', handleFindShortcut);
+    return () => window.removeEventListener('keydown', handleFindShortcut);
+  }, [closeCurrentSceneFind, isCurrentSceneFindOpen, openCurrentSceneFind]);
+
+  useEffect(() => {
+    setCurrentSceneFindOpen(false);
+    setCurrentSceneFindQuery('');
+    setCurrentSceneFindMatches([]);
+    setCurrentSceneFindIndex(-1);
+  }, [documentId]);
+
+  useEffect(() => {
+    const editor = editorRef.current;
+    if (!editor || !isCurrentSceneFindOpen || !currentSceneFindQuery.trim()) {
+      setCurrentSceneFindMatches([]);
+      setCurrentSceneFindIndex(-1);
+      return;
+    }
+
+    const segments: Array<{text: string; position: number}> = [];
+    editor.state.doc.descendants((node, position) => {
+      if (node.isText && node.text) {
+        segments.push({text: node.text, position});
+      }
+    });
+    const matches = findCurrentSceneMatches(segments, currentSceneFindQuery);
+    setCurrentSceneFindMatches(matches);
+    setCurrentSceneFindIndex((currentIndex) => {
+      if (!matches.length) return -1;
+      return currentIndex >= 0 && currentIndex < matches.length ? currentIndex : 0;
+    });
+  }, [content, currentSceneFindQuery, editorReadyToken, isCurrentSceneFindOpen]);
+
+  useEffect(() => {
+    const editor = editorRef.current;
+    if (!editor || editor.isDestroyed) return;
+    if (!isCurrentSceneFindOpen || !currentSceneFindMatches.length) {
+      editor.view.dispatch(setCurrentSceneFind(editor.state.tr, null));
+      return;
+    }
+
+    const activeMatch = currentSceneFindMatches[currentSceneFindIndex];
+    let transaction = setCurrentSceneFind(editor.state.tr, {
+      matches: currentSceneFindMatches,
+      activeIndex: currentSceneFindIndex
+    });
+    if (activeMatch) {
+      transaction = transaction
+        .setSelection(
+          TextSelection.create(editor.state.doc, activeMatch.from, activeMatch.to)
+        )
+        .scrollIntoView();
+    }
+    editor.view.dispatch(transaction);
+
+    if (!activeMatch) return;
+    window.requestAnimationFrame(() => {
+      const scrollElement = editorScrollRef.current;
+      if (scrollElement) {
+        const editorRect = scrollElement.getBoundingClientRect();
+        const matchRect = editor.view.coordsAtPos(activeMatch.from);
+        const desiredTop = editorRect.top + REVIEW_FOCUS_TOP_OFFSET;
+        if (matchRect.top < desiredTop) {
+          const nextScrollTop = Math.max(
+            0,
+            scrollElement.scrollTop - (desiredTop - matchRect.top)
+          );
+          scrollElement.scrollTop = nextScrollTop;
+          writeSavedEditorScrollTop(editorScrollKey, nextScrollTop);
+        }
+      }
+      currentSceneFindInputRef.current?.focus();
+    });
+  }, [
+    currentSceneFindIndex,
+    currentSceneFindMatches,
+    editorReadyToken,
+    editorScrollKey,
+    isCurrentSceneFindOpen
+  ]);
 
   const handleLoreHighlightClick = useCallback(
     (loreId: string, anchorRect: {left: number; top: number; bottom: number}) => {
@@ -775,7 +934,7 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
       window.clearTimeout(clearToken);
       clearFallbackFlash();
     };
-  }, [documentId, editorReadyToken, focusQuery, focusToken]);
+  }, [documentId, editorReadyToken, editorScrollKey, focusQuery, focusToken]);
 
   const handleTypingActivity = useCallback(() => {
     if (inlineHighlightsMode !== 'hidden-while-typing') {
@@ -804,6 +963,65 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
 
   return (
     <div className={styles.container}>
+      {isCurrentSceneFindOpen && (
+        <div className={styles.currentSceneFindBar} role='search' aria-label='Find in current scene'>
+          <label className={styles.currentSceneFindField}>
+            <span>Find in scene</span>
+            <input
+              ref={currentSceneFindInputRef}
+              type='search'
+              value={currentSceneFindQuery}
+              onChange={(event) => {
+                setCurrentSceneFindQuery(event.target.value);
+                setCurrentSceneFindIndex(0);
+              }}
+              onKeyDown={(event) => {
+                if (event.key !== 'Enter') return;
+                event.preventDefault();
+                navigateCurrentSceneFind(event.shiftKey ? 'previous' : 'next');
+              }}
+              aria-describedby='current-scene-find-status'
+            />
+          </label>
+          <span
+            id='current-scene-find-status'
+            className={styles.currentSceneFindStatus}
+            role='status'
+            aria-live='polite'
+          >
+            {!currentSceneFindQuery.trim()
+              ? 'Type to find'
+              : currentSceneFindMatches.length === 0
+                ? 'No matches'
+                : `${currentSceneFindIndex + 1} of ${currentSceneFindMatches.length}`}
+          </span>
+          <div className={styles.currentSceneFindActions}>
+            <button
+              type='button'
+              onClick={() => navigateCurrentSceneFind('previous')}
+              disabled={!currentSceneFindMatches.length}
+              aria-label='Previous match in scene'
+            >
+              Previous
+            </button>
+            <button
+              type='button'
+              onClick={() => navigateCurrentSceneFind('next')}
+              disabled={!currentSceneFindMatches.length}
+              aria-label='Next match in scene'
+            >
+              Next
+            </button>
+            <button
+              type='button'
+              onClick={closeCurrentSceneFind}
+              aria-label='Close find in scene'
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
       <div
         className={styles.editor}
         ref={editorScrollRef}
@@ -824,7 +1042,7 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
           inlineHighlightsMode={effectiveInlineHighlightsMode}
           config={mergedConfig}
           toolbarButtons={toolbarButtons}
-          toolbarActions={toolbarActions}
+          toolbarActions={effectiveToolbarActions}
           textToInsert={externalTextToInsert ?? textToInsertFromAI}
           onTextInserted={() => {
             if (externalTextToInsert) {

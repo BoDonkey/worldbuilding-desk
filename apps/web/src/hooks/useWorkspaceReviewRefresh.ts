@@ -5,6 +5,7 @@ import type {ConsistencyAlias} from '../services/consistency/aliasStorage';
 export const useWorkspaceReviewRefresh = (params: {
   selectedId: string | null;
   selectedDocument: WritingDocument | null;
+  isSelectedDocumentInitialized: boolean;
   title: string;
   content: string;
   entities: WorldEntity[];
@@ -15,7 +16,8 @@ export const useWorkspaceReviewRefresh = (params: {
   refreshActiveDraftReview: (document: WritingDocument) => Promise<unknown>;
 }) => {
   const {
-    selectedId, selectedDocument, title, content, entities, aliases, characters,
+    selectedId, selectedDocument, isSelectedDocumentInitialized,
+    title, content, entities, aliases, characters,
     isReviewPrefsHydrated, refreshDeferredReview, refreshActiveDraftReview
   } = params;
   const selectedDocumentRef = useRef(selectedDocument);
@@ -43,7 +45,7 @@ export const useWorkspaceReviewRefresh = (params: {
   );
 
   useEffect(() => {
-    if (!isReviewPrefsHydrated || !selectedId) return;
+    if (!isReviewPrefsHydrated || !selectedId || !isSelectedDocumentInitialized) return;
     const doc = selectedDocumentRef.current;
     if (!doc || doc.id !== selectedId) return;
     const draftTitle = draftTitleRef.current.trim() || doc.title || 'Untitled scene';
@@ -58,12 +60,13 @@ export const useWorkspaceReviewRefresh = (params: {
       console.warn('Active scene review refresh failed', error);
     });
   }, [
-    isReviewPrefsHydrated, refreshActiveDraftReview, refreshDeferredReview,
+    isReviewPrefsHydrated, isSelectedDocumentInitialized,
+    refreshActiveDraftReview, refreshDeferredReview,
     reviewRefreshSignature, selectedId
   ]);
 
   useEffect(() => {
-    if (!isReviewPrefsHydrated || !selectedId) return;
+    if (!isReviewPrefsHydrated || !selectedId || !isSelectedDocumentInitialized) return;
     const persistedDoc = selectedDocumentRef.current;
     if (!persistedDoc || persistedDoc.id !== selectedId) return;
     if (persistedDoc.consistencyReviewMode === 'deferred') return;
@@ -84,5 +87,12 @@ export const useWorkspaceReviewRefresh = (params: {
       });
     }, 2500);
     return () => clearTimeout(timeoutId);
-  }, [content, isReviewPrefsHydrated, refreshActiveDraftReview, selectedId, title]);
+  }, [
+    content,
+    isReviewPrefsHydrated,
+    isSelectedDocumentInitialized,
+    refreshActiveDraftReview,
+    selectedId,
+    title
+  ]);
 };

@@ -57,8 +57,8 @@ import {useAppStore} from '../store/appStore';
 
 interface UseWorkspaceProjectDataParams {
   activeProject: Project | null;
-  initializeEditorState: (doc: WritingDocument | null) => void;
   setDocuments: Dispatch<SetStateAction<WritingDocument[]>>;
+  onDocumentsLoaded: (projectId: string | null) => void;
   setImportMode: (mode: WorkspaceImportMode) => void;
   setSkipImportSuggestions: (val: boolean) => void;
   refreshSystemHistory: () => void;
@@ -67,8 +67,8 @@ interface UseWorkspaceProjectDataParams {
 
 export function useWorkspaceProjectData({
   activeProject,
-  initializeEditorState,
   setDocuments,
+  onDocumentsLoaded,
   setImportMode,
   setSkipImportSuggestions,
   refreshSystemHistory,
@@ -200,6 +200,7 @@ export function useWorkspaceProjectData({
       setStatBlockGroups([]);
       setNewStatGroupName('');
       setStatPreferencesHydrated(false);
+      onDocumentsLoaded(null);
       onProjectReset();
       return;
     }
@@ -251,6 +252,7 @@ export function useWorkspaceProjectData({
       if (cancelled) return;
 
       setDocuments(docs);
+      onDocumentsLoaded(activeProject.id);
       setEditorConfig(createEditorConfigWithStyles(settings.characterStyles));
       setProjectSettings(settings);
       setImportMode(settings.defaultImportMode ?? 'balanced');
@@ -295,8 +297,8 @@ export function useWorkspaceProjectData({
     };
   }, [
     activeProject,
-    initializeEditorState,
     setDocuments,
+    onDocumentsLoaded,
     setImportMode,
     setSkipImportSuggestions,
     refreshSystemHistory,

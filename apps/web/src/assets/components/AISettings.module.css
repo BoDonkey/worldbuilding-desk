@@ -1,9 +1,56 @@
 .container {
   display: flex;
+  flex-direction: column;
   width: 100%;
   height: 100%;
   min-height: 0;
   position: relative;
+}
+
+.currentSceneFindBar {
+  display: flex;
+  align-items: end;
+  gap: 0.65rem;
+  padding: 0.65rem 0.75rem;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-bg-secondary);
+  flex-wrap: wrap;
+}
+
+.currentSceneFindField {
+  display: grid;
+  gap: 0.25rem;
+  min-width: min(16rem, 100%);
+  color: var(--color-text-secondary);
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.currentSceneFindField input {
+  min-width: 0;
+}
+
+.currentSceneFindStatus {
+  min-width: 5rem;
+  padding-bottom: 0.45rem;
+  color: var(--color-text-secondary);
+  font-size: 0.82rem;
+}
+
+.currentSceneFindActions {
+  display: flex;
+  gap: 0.4rem;
+  margin-left: auto;
+}
+
+@media (max-width: 720px) {
+  .currentSceneFindField {
+    flex: 1 1 100%;
+  }
+
+  .currentSceneFindActions {
+    margin-left: 0;
+  }
 }
 
 .editor {

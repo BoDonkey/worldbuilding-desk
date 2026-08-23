@@ -357,7 +357,7 @@ function TipTapEditor({
               bottom: rect.bottom
             });
           }
-          return false;
+          return true;
         }
         const target = event.target.closest<HTMLElement>('[data-consistency-id]');
         if (!target) {

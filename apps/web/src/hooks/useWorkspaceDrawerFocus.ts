@@ -10,6 +10,7 @@ import type {WritingDocument} from '../entityTypes';
 import {getReviewFocusText} from '../services/consistency/reviewReadiness';
 import type {GuardrailIssue} from '../services/consistency/types';
 import type {WorkspaceContextDrawerView} from './useWorkspaceDrawers';
+import {getWorkspaceSceneScrollKey} from '../services/workspace/workspaceScroll';
 
 export interface WorkspaceReviewFocusItem {
   id: string;
@@ -58,11 +59,15 @@ export function useWorkspaceDrawerFocus(params: {
   const focusQuery = focusRequest?.query ?? null;
   const workspaceWindowScrollKey =
     activeProjectId && selectedId
-      ? `wbd:workspace-window-scroll:${activeProjectId}:${selectedId}`
+      ? getWorkspaceSceneScrollKey(
+          'wbd:workspace-window-scroll',
+          activeProjectId,
+          selectedId
+        )
       : null;
   const workspaceScrollSnapshotKey =
     activeProjectId && selectedId
-      ? `workspace-scroll:${activeProjectId}:${selectedId}`
+      ? getWorkspaceSceneScrollKey('workspace-scroll', activeProjectId, selectedId)
       : null;
 
   useEffect(() => {
@@ -119,10 +124,12 @@ export function useWorkspaceDrawerFocus(params: {
     if (!workspaceWindowScrollKey) return;
 
     let animationFrame: number | null = null;
+    let lastObservedWindowY = window.scrollY;
     const saveScrollPosition = () => {
-      workspaceWindowScrollPositions.set(workspaceWindowScrollKey, window.scrollY);
+      workspaceWindowScrollPositions.set(workspaceWindowScrollKey, lastObservedWindowY);
     };
     const handleScroll = () => {
+      lastObservedWindowY = window.scrollY;
       if (animationFrame !== null) return;
       animationFrame = window.requestAnimationFrame(() => {
         animationFrame = null;
@@ -144,14 +151,15 @@ export function useWorkspaceDrawerFocus(params: {
     if (!workspaceWindowScrollKey || focusQuery?.trim()) return;
 
     const storedScrollY = workspaceWindowScrollPositions.get(workspaceWindowScrollKey) ?? 0;
-    if (!Number.isFinite(storedScrollY) || storedScrollY <= 0) return;
 
     const frameIds: number[] = [];
     const timeoutIds: number[] = [];
     const restoreScrollPosition = () => {
       frameIds.push(
         window.requestAnimationFrame(() => {
-          window.scrollTo({top: storedScrollY, left: 0, behavior: 'auto'});
+          if (window.scrollY !== storedScrollY) {
+            window.scrollTo({top: storedScrollY, left: 0, behavior: 'auto'});
+          }
         })
       );
     };
@@ -196,27 +204,45 @@ export function useWorkspaceDrawerFocus(params: {
 
   useLayoutEffect(() => {
     if (!workspaceScrollSnapshotKey || focusQuery?.trim()) return;
-    const snapshot = workspaceScrollSnapshots.get(workspaceScrollSnapshotKey);
-    if (!snapshot) return;
+    const snapshot = workspaceScrollSnapshots.get(workspaceScrollSnapshotKey) ?? {
+      windowY: 0,
+      elements: []
+    };
 
     const frameIds: number[] = [];
     const timeoutIds: number[] = [];
+    let userInterrupted = false;
     const restore = () => {
-      window.scrollTo({top: snapshot.windowY, left: 0, behavior: 'auto'});
+      if (userInterrupted) return;
+      if (window.scrollY !== snapshot.windowY) {
+        window.scrollTo({top: snapshot.windowY, left: 0, behavior: 'auto'});
+      }
       const root = workspaceRootRef.current;
       if (!root) return;
-      snapshot.elements.forEach((entry) => {
-        const element = root.querySelector<HTMLElement>(
-          `[data-wbd-scroll-key="${entry.key}"]`
-        );
-        if (element) {
-          element.scrollTop = entry.top;
-          element.scrollLeft = entry.left;
-          element.dataset.wbdRestoreTarget = String(entry.top);
-          element.dataset.wbdRestoredScrollTop = String(element.scrollTop);
+      const positions = new Map(snapshot.elements.map((entry) => [entry.key, entry]));
+      root.querySelectorAll<HTMLElement>('[data-wbd-scroll-key]').forEach((element) => {
+        const key = element.dataset.wbdScrollKey ?? '';
+        const entry = positions.get(key);
+        const targetTop = entry?.top ?? 0;
+        const targetLeft = entry?.left ?? 0;
+        if (element.scrollTop !== targetTop) {
+          element.scrollTop = targetTop;
         }
+        if (element.scrollLeft !== targetLeft) {
+          element.scrollLeft = targetLeft;
+        }
+        element.dataset.wbdRestoreTarget = String(targetTop);
+        element.dataset.wbdRestoredScrollTop = String(element.scrollTop);
       });
     };
+    const markUserInterrupted = () => {
+      userInterrupted = true;
+    };
+    const root = workspaceRootRef.current;
+    root?.addEventListener('wheel', markUserInterrupted, {passive: true});
+    root?.addEventListener('touchstart', markUserInterrupted, {passive: true});
+    root?.addEventListener('pointerdown', markUserInterrupted);
+    root?.addEventListener('keydown', markUserInterrupted);
 
     frameIds.push(window.requestAnimationFrame(restore));
     [50, 150, 300, 600].forEach((delay) => {
@@ -226,6 +252,10 @@ export function useWorkspaceDrawerFocus(params: {
     return () => {
       frameIds.forEach((frameId) => window.cancelAnimationFrame(frameId));
       timeoutIds.forEach((timeoutId) => window.clearTimeout(timeoutId));
+      root?.removeEventListener('wheel', markUserInterrupted);
+      root?.removeEventListener('touchstart', markUserInterrupted);
+      root?.removeEventListener('pointerdown', markUserInterrupted);
+      root?.removeEventListener('keydown', markUserInterrupted);
     };
   }, [content, focusQuery, workspaceScrollSnapshotKey]);
 
