@@ -6,6 +6,7 @@ import type {
   LoreEntityProposal,
   WorldEntity
 } from '../../entityTypes';
+import {normalizeCanonText} from '../consistency/textMatcher';
 
 interface ExtractLoreEntityParams {
   projectId: string;
@@ -15,8 +16,7 @@ interface ExtractLoreEntityParams {
   entities: WorldEntity[];
 }
 
-const normalize = (value: string): string =>
-  value.trim().toLowerCase().replace(/\s+/g, ' ');
+const normalize = normalizeCanonText;
 
 const titleCaseName = (value: string): string =>
   value

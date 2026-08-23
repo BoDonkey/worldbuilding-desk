@@ -4,6 +4,7 @@ import {
   LORE_DOCUMENT_LINK_STORE_NAME,
   LORE_DOCUMENT_STORE_NAME
 } from './db';
+import {normalizeLoreDocumentLinks} from './services/lore/loreDocumentLinks';
 
 function emitLoreRecordsChanged(): void {
   if (typeof window === 'undefined') return;
@@ -67,7 +68,7 @@ export async function saveLoreDocument(document: LoreDocument): Promise<void> {
 export async function saveLoreDocumentLinks(links: LoreDocumentLink[]): Promise<void> {
   const db = await openDb();
   const tx = db.transaction(LORE_DOCUMENT_LINK_STORE_NAME, 'readwrite');
-  for (const link of links) {
+  for (const link of normalizeLoreDocumentLinks(links)) {
     await requestToPromise(tx.objectStore(LORE_DOCUMENT_LINK_STORE_NAME).put(link));
   }
   await new Promise<void>((resolve, reject) => {
@@ -91,7 +92,7 @@ export async function replaceLoreDocumentLinks(params: {
       await requestToPromise(store.delete(link.id));
     }
   }
-  for (const link of params.links) {
+  for (const link of normalizeLoreDocumentLinks(params.links)) {
     await requestToPromise(store.put(link));
   }
   await new Promise<void>((resolve, reject) => {

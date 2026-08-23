@@ -60,6 +60,7 @@ import {WorkspaceStatBlockModal} from '../components/Workspace/WorkspaceStatBloc
 import {WorkspaceSceneDrawer} from '../components/Workspace/WorkspaceSceneDrawer';
 import {CanonPanel} from '../components/Workspace/CanonPanel';
 import {UnknownEntityPanel} from '../components/Workspace/UnknownEntityPanel';
+import {WorldCategorySelect} from '../components/Workspace/WorldCategorySelect';
 import {PositionedStateChangeComposer} from '../components/Workspace/PositionedStateChangeComposer';
 import {SceneInventoryCapture} from '../components/Workspace/SceneInventoryCapture';
 import {SceneConsumptionCapture} from '../components/Workspace/SceneConsumptionCapture';
@@ -512,6 +513,7 @@ function WorkspaceRoute() {
     unknownLinkOptions,
     closeUnknownLinkOptions,
     getSuggestedUnknownCategoryId,
+    createWorldCategory,
     resolveUnknownEntity,
     resolveAllUnknownEntities,
     dismissAllUnknownEntities,
@@ -1253,7 +1255,7 @@ function WorkspaceRoute() {
     linkingUnknown, unknownCategorySelection, setUnknownCategorySelection,
     worldCaptureDrafts, setWorldCaptureDrafts,
     unknownLinkSelection, setUnknownLinkSelection, unknownLinkOptions,
-    getSuggestedUnknownCategoryId, resolveUnknownEntity, dismissUnknownEntity,
+    getSuggestedUnknownCategoryId, createWorldCategory, resolveUnknownEntity, dismissUnknownEntity,
     dismissConsistencyReviewItem,
     ignoreUnknownSurfaceProjectWide, linkUnknownEntity, openWorldRecord,
     scratchpadContent, setScratchpadContent, scratchpadStatus, scratchpadLastSavedAt,
@@ -1484,25 +1486,18 @@ function WorkspaceRoute() {
                     onClose={() => setConsistencyPopover(null)}
                   >
                     <div className={styles.consistencyPopoverActions}>
-                      {categories.length > 0 && (
-                        <select
-                          value={activeSuggestedCategoryId}
-                          onChange={(e) =>
-                            setUnknownCategorySelection((prev) => ({
-                              ...prev,
-                              [activeConsistencyPopoverIssue.surface]: e.target.value
-                            }))
-                          }
-                          aria-label='World category'
-                        >
-                          <option value=''>Choose a type</option>
-                          {categories.map((cat) => (
-                            <option key={cat.id} value={cat.id}>
-                              {cat.name}
-                            </option>
-                          ))}
-                        </select>
-                      )}
+                      <WorldCategorySelect
+                        categories={categories}
+                        value={activeSuggestedCategoryId}
+                        onChange={(categoryId) =>
+                          setUnknownCategorySelection((prev) => ({
+                            ...prev,
+                            [activeConsistencyPopoverIssue.surface]: categoryId
+                          }))
+                        }
+                        onCreate={createWorldCategory}
+                        ariaLabel='World Bible type'
+                      />
                       <label className={styles.captureNameField}>
                         {activeIsCharacterCapture ? 'Canonical name' : 'Name or place'}
                         <input
@@ -1676,25 +1671,18 @@ function WorkspaceRoute() {
                     onClose={() => setManualWorldCapture(null)}
                   >
                     <div className={styles.consistencyPopoverActions}>
-                      {categories.length > 0 && (
-                        <select
-                          value={unknownCategorySelection.__manual__ ?? ''}
-                          onChange={(e) =>
-                            setUnknownCategorySelection((prev) => ({
-                              ...prev,
-                              __manual__: e.target.value
-                            }))
-                          }
-                          aria-label='World category'
-                        >
-                          <option value=''>Choose a type</option>
-                          {categories.map((cat) => (
-                            <option key={cat.id} value={cat.id}>
-                              {cat.name}
-                            </option>
-                          ))}
-                        </select>
-                      )}
+                      <WorldCategorySelect
+                        categories={categories}
+                        value={unknownCategorySelection.__manual__ ?? ''}
+                        onChange={(categoryId) =>
+                          setUnknownCategorySelection((prev) => ({
+                            ...prev,
+                            __manual__: categoryId
+                          }))
+                        }
+                        onCreate={createWorldCategory}
+                        ariaLabel='World Bible type'
+                      />
                       <label className={styles.captureNameField}>
                         {manualIsCharacterCapture ? 'Canonical name' : 'Name or place'}
                         <input

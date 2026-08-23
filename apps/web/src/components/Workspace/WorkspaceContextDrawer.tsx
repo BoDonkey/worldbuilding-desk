@@ -29,6 +29,7 @@ import type {GuardrailIssue} from '../../services/consistency/types';
 import {supportsWorldCaptureActions} from '../../services/consistency/reviewReadiness';
 import type {ReviewIssueAnnotation} from '../../services/worldEngine';
 import {normalizeRichTextValue} from '../../services/worldBible/worldBibleEntityHelpers';
+import {WorldCategorySelect} from './WorldCategorySelect';
 import {buildCharacterCaptureAliasList} from '../../services/worldBible/worldBibleCanonicalization';
 import styles from '../../styles/WorkspaceRoute.module.css';
 import {
@@ -196,6 +197,7 @@ interface WorkspaceContextDrawerProps {
   ) => void;
   unknownLinkOptions: Record<string, LinkTargetOption[]>;
   getSuggestedUnknownCategoryId: (surface: string) => string | undefined;
+  createWorldCategory: (name: string) => Promise<EntityCategory>;
   resolveUnknownEntity: (
     surface: string,
     categoryId?: string,
@@ -342,6 +344,7 @@ export function WorkspaceContextDrawer({
   setUnknownLinkSelection,
   unknownLinkOptions,
   getSuggestedUnknownCategoryId,
+  createWorldCategory,
   resolveUnknownEntity,
   dismissUnknownEntity,
   dismissConsistencyReviewItem,
@@ -592,23 +595,18 @@ export function WorkspaceContextDrawer({
         {isExpanded && supportsWorldCaptureActions(item.issue) && (
           <div className={styles.reviewActionPanel}>
             <label className={styles.reviewActionField}>
-              Type
-              <select
+              World Bible type
+              <WorldCategorySelect
+                categories={categories}
                 value={selectedCategoryId}
-                onChange={(event) =>
+                onChange={(categoryId) =>
                   setUnknownCategorySelection((prev) => ({
                     ...prev,
-                    [actionSurface]: event.target.value
+                    [actionSurface]: categoryId
                   }))
                 }
-              >
-                <option value=''>Choose a type</option>
-                {categories.map((category) => (
-                  <option key={category.id} value={category.id}>
-                    {category.name}
-                  </option>
-                ))}
-              </select>
+                onCreate={createWorldCategory}
+              />
             </label>
             <label className={styles.reviewActionField}>
               {isCharacterCapture ? 'Canonical name' : 'Name'}

@@ -356,15 +356,26 @@ Under the hood, the app still includes rich systems for world data, rules, chara
 - Shared project scratchpad modal/button component added for non-workspace surfaces while reusing the existing project-scoped scratchpad persistence path.
 - Shared context rails now exist on World Bible, Lore, and Corkboard, following the Workspace-side-rail pattern where it helps hide secondary lists/tools without losing access.
 - World Bible import/help/template utilities moved out of the top header into the side rail; route headers should stay focused on page identity plus the shared Scratchpad action.
-- Lore now has starter cards for manual writing, dossier import, and canon extraction, matching the task-card pattern used by World Bible while keeping extracted facts/entities as candidates until accepted.
-- Lore Documents now has focused Cypress smoke coverage for manual document lifecycle, dossier import/extraction, and World Bible linked-document round trips.
+- Source Notes now expose one intake import action and one saved-note extraction
+  action. Document context links are explicitly retrieval/proposal-targeting
+  metadata rather than canon acceptance or World Bible relationships; only one
+  primary subject is persisted, unsaved edits block re-extraction, and accepted
+  review candidates are clearly distinguished from the source text itself.
+- Workspace review can create and immediately select a World Bible type such as
+  Factions without abandoning the open candidate. Article-equivalent identity
+  matching prevents `Salt Door`/`the Salt Door` duplicates, while shared
+  longest-match and word-boundary arbitration prevents a short alias such as
+  `Bran` from decorating inside `Brannic Halloway`.
+- Source Notes and Workspace review have focused Cypress coverage for manual
+  document lifecycle, dossier import/extraction, World Bible linked-document
+  round trips, and in-place review category creation.
 - `WorkspaceRoute` now groups workspace store subscriptions by concern instead of scattering individual selectors through the route body.
 - `useWorkspaceDocuments` now keeps persistence behavior local while using pure helpers for document selection initialization, editor-document assembly, change detection, and manual-save/autosave consistency mode selection.
 - `useCharacterSheetMutationPreview` now owns scene-mutation form state, deterministic preview/replay derivation, and mutation-history orchestration; pure mutation command construction lives in the tested character ruleset service.
 - Shared text matching contract added for smoke-critical lore/review matching paths.
-- Current targeted architecture sizes are `WorkspaceRoute.tsx` 1,976 lines,
-  `WorldBibleRoute.tsx` 1,957, `CharacterSheetsRoute.tsx` 1,956,
-  `CompendiumRoute.tsx` 1,590, and `useWorkspaceConsistency.ts` 1,990.
+- Current targeted architecture sizes are `WorkspaceRoute.tsx` 2,075 lines,
+  `WorldBibleRoute.tsx` 2,044, `CharacterSheetsRoute.tsx` 2,140,
+  `CompendiumRoute.tsx` 1,551, and `useWorkspaceConsistency.ts` 2,072.
 
 ### Current Assessment
 - The completed grade-A fitness plan reduced the five targeted files from
@@ -382,8 +393,8 @@ Under the hood, the app still includes rich systems for world data, rules, chara
 ### Product / UX
 - Active handoff: the August 22–23 A–G dogfood run is stopped and preserved in
   its fixture runbook after exposing release-blocking fact-target and temporal
-  custody failures. The 1.2a–1.2c target, custody, and Workspace-continuity
-  repairs are complete; finish 1.2d–1.2e, then restart the contaminated A–F run
+  custody failures. The 1.2a–1.2d target, custody, Workspace-continuity, and
+  lore-intake repairs are complete; finish 1.2e, then restart the contaminated A–F run
   on one stable post-fix build before claiming roadmap slice 5.1.
 - Make the writing workspace the clearest default entry point.
 - Reduce visible system complexity on first load through a calm-shell navigation pass before adding more route features.

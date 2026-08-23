@@ -76,4 +76,29 @@ describe('extractLoreEntityProposals', () => {
 
     expect(proposals.map((proposal) => proposal.name)).toContain('Odessa Vane-Kir');
   });
+
+  it('treats a leading article as the same entity identity', () => {
+    const proposals = extractLoreEntityProposals({
+      projectId: 'project-1',
+      document: makeDocument('The keeper barred the Salt Door before dawn.'),
+      links: [],
+      characters: [],
+      entities: [
+        {
+          id: 'salt-door',
+          projectId: 'project-1',
+          categoryId: 'locations',
+          name: 'the Salt Door',
+          fields: {},
+          links: [],
+          createdAt: 1,
+          updatedAt: 1
+        }
+      ]
+    });
+
+    expect(proposals).toEqual([
+      expect.objectContaining({name: 'Salt Door', targetId: 'salt-door'})
+    ]);
+  });
 });

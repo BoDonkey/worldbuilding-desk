@@ -84,6 +84,21 @@ describe('textMatcher', () => {
     expect(matches).toEqual([]);
   });
 
+  it('does not decorate a short alias inside a longer canonical name', () => {
+    const matches = findTextMatches(
+      'Brannic Halloway met Bran after dusk.',
+      [
+        {id: 'brannic', surface: 'Brannic Halloway', kind: 'known'},
+        {id: 'bran', surface: 'Bran', kind: 'known'}
+      ]
+    );
+
+    expect(matches.map((match) => [match.pattern.id, match.surface])).toEqual([
+      ['brannic', 'Brannic Halloway'],
+      ['bran', 'Bran']
+    ]);
+  });
+
   it('matches lowercase particles and longer organization names as complete surfaces', () => {
     const matches = findTextMatches(
       'Garcia de Terra briefed the Magical Substance Control Agency.',

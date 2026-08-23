@@ -13,7 +13,11 @@ import type {
   WritingDocument
 } from '../entityTypes';
 import {saveWritingDocument, sortWritingDocuments} from '../writingStorage';
-import {getCategoriesByProject, initializeDefaultCategories} from '../categoryStorage';
+import {
+  getCategoriesByProject,
+  initializeDefaultCategories,
+  saveCategory
+} from '../categoryStorage';
 import {saveEntity} from '../entityStorage';
 import type {RAGProvider} from '../services/rag/RAGService';
 import type {
@@ -22,6 +26,10 @@ import type {
 } from '../services/consistency';
 import {findCanonContradictions, saveAlias} from '../services/consistency';
 import {buildCharacterCaptureAliasList} from '../services/worldBible/worldBibleCanonicalization';
+import {
+  buildWorldCategory,
+  normalizeWorldCategoryName
+} from '../services/worldBible/categoryAuthoring';
 import type {WorldEngine} from '../services/worldEngine';
 import type {WorldEngineStatus} from '../services/worldEngine';
 import type {ShodhMemoryProvider} from '../services/shodh/ShodhMemoryService';
@@ -1234,6 +1242,40 @@ export const useWorkspaceConsistency = ({
     [categories, getSuggestedUnknownCategory]
   );
 
+  const createWorldCategory = useCallback(
+    async (name: string): Promise<EntityCategory> => {
+      if (!activeProject) {
+        throw new Error('Open a project before creating a World Bible type.');
+      }
+
+      const normalizedName = normalizeWorldCategoryName(name);
+      const existing = categories.find(
+        (category) => category.name.toLowerCase() === normalizedName.toLowerCase()
+      );
+      if (existing) {
+        return existing;
+      }
+
+      const category = buildWorldCategory({
+        projectId: activeProject.id,
+        name: normalizedName
+      });
+      const slugMatch = categories.find((entry) => entry.slug === category.slug);
+      if (slugMatch) {
+        return slugMatch;
+      }
+
+      await saveCategory(category);
+      setCategories((current) => [...current, category]);
+      setFeedback({
+        tone: 'success',
+        message: `${category.name} is ready. The review candidate is still open.`
+      });
+      return category;
+    },
+    [activeProject, categories, setCategories, setFeedback]
+  );
+
   const stateMutationReviewItems = useMemo<StateMutationReviewItem[]>(
     () =>
       buildStateMutationReviewItems({
@@ -1983,6 +2025,7 @@ export const useWorkspaceConsistency = ({
     resolverNotice,
     setResolverNotice,
     getSuggestedUnknownCategoryId,
+    createWorldCategory,
     unknownLinkSelection,
     setUnknownLinkSelection,
     unknownCategorySelection,

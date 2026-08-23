@@ -48,6 +48,7 @@ import {
   revertCanonicalFactSideEffects
 } from '../services/lore/canonicalFactActions';
 import {acceptLoreEntityProposal} from '../services/lore/entityProposalActions';
+import {normalizeLoreDocumentLinks} from '../services/lore/loreDocumentLinks';
 import {getRAGService} from '../services/rag/getRAGService';
 import type {RAGProvider} from '../services/rag/RAGService';
 import type {RAGDiagnostics, RAGSearchResult} from '../services/rag/types';
@@ -87,10 +88,13 @@ const RELATIONSHIP_OPTIONS: Array<{
   label: string;
 }> = [
   {value: 'primary_subject', label: 'Primary subject'},
-  {value: 'secondary_subject', label: 'Secondary subject'},
-  {value: 'mentions', label: 'Mentions'},
-  {value: 'supports', label: 'Supports canon'}
+  {value: 'secondary_subject', label: 'Additional subject'},
+  {value: 'mentions', label: 'Mentioned record'},
+  {value: 'supports', label: 'Supporting source'}
 ];
+
+const getLinkDraftKey = (draft: LinkDraft): string =>
+  `${draft.targetType}:${draft.targetId}:${draft.relationship}`;
 
 const summarizeContent = (content: string, limit = 220): string => {
   const normalized = content.replace(/\s+/g, ' ').trim();
@@ -379,6 +383,23 @@ function LoreRoute() {
     [documents, editingId]
   );
 
+  const hasUnsavedEditorChanges = useMemo(() => {
+    if (!editingDocument) return false;
+    const savedLinks = (linksByDocumentId.get(editingDocument.id) ?? [])
+      .map((link) => getLinkDraftKey(link))
+      .sort();
+    const draftLinks = linkDrafts
+      .filter((draft) => draft.targetId)
+      .map(getLinkDraftKey)
+      .sort();
+    return (
+      title !== editingDocument.title ||
+      kind !== editingDocument.kind ||
+      content !== editingDocument.content ||
+      JSON.stringify(savedLinks) !== JSON.stringify(draftLinks)
+    );
+  }, [content, editingDocument, kind, linkDrafts, linksByDocumentId, title]);
+
   const editingDocumentProposals = useMemo(
     () => (editingId ? proposalsByDocumentId.get(editingId) ?? [] : []),
     [editingId, proposalsByDocumentId]
@@ -532,9 +553,8 @@ function LoreRoute() {
       updatedAt: now
     };
 
-    const nextLinks: LoreDocumentLink[] = linkDrafts
-      .filter((draft) => draft.targetId)
-      .map((draft) => ({
+    const nextLinks = normalizeLoreDocumentLinks(
+      linkDrafts.map((draft) => ({
         id: crypto.randomUUID(),
         projectId: activeProject.id,
         loreDocumentId: documentId,
@@ -542,7 +562,8 @@ function LoreRoute() {
         targetId: draft.targetId,
         relationship: draft.relationship,
         createdAt: now
-      }));
+      }))
+    );
 
     try {
       await saveLoreDocument(nextDocument);
@@ -630,7 +651,7 @@ function LoreRoute() {
       setLinkDrafts([]);
       setFeedback({
         tone: 'success',
-        message: `Imported "${parsed.fileName}". Add a canon link or leave it as general source material, then save.`
+        message: `Imported "${parsed.fileName}". Add document context links if useful, then save the Source Note.`
       });
     } catch (error) {
       const message =
@@ -643,6 +664,13 @@ function LoreRoute() {
 
   const handleExtractFacts = async (document: LoreDocument) => {
     if (!activeProject) return;
+    if (document.id === editingId && hasUnsavedEditorChanges) {
+      setFeedback({
+        tone: 'error',
+        message: 'Save this Source Note before extracting again so the scan uses your latest text and context links.'
+      });
+      return;
+    }
     setExtractingId(document.id);
     setFeedback(null);
     try {
@@ -996,17 +1024,29 @@ function LoreRoute() {
   };
 
   const updateLinkDraft = (index: number, next: Partial<LinkDraft>) => {
-    setLinkDrafts((current) =>
-      current.map((draft, draftIndex) =>
+    setLinkDrafts((current) => {
+      const updated = current.map((draft, draftIndex) =>
         draftIndex === index ? {...draft, ...next} : draft
-      )
-    );
+      );
+      if (next.relationship !== 'primary_subject') return updated;
+      return updated.map((draft, draftIndex) =>
+        draftIndex !== index && draft.relationship === 'primary_subject'
+          ? {...draft, relationship: 'secondary_subject'}
+          : draft
+      );
+    });
   };
 
   const addLinkDraft = () => {
     setLinkDrafts((current) => [
       ...current,
-      {targetType: 'entity', targetId: '', relationship: 'primary_subject'}
+      {
+        targetType: 'entity',
+        targetId: '',
+        relationship: current.some((draft) => draft.relationship === 'primary_subject')
+          ? 'secondary_subject'
+          : 'primary_subject'
+      }
     ]);
   };
 
@@ -1185,8 +1225,9 @@ function LoreRoute() {
         description={
           <>
             Keep dossiers, timelines, myths, and deep reference notes here as
-            source material. Link a note to a World Bible item when it belongs
-            to one record, or leave it general for project-wide context.
+            source material. Context links help retrieval and extraction target
+            the right World Bible records; they do not accept canon or create
+            relationships between those records.
           </>
         }
         actions={
@@ -1194,9 +1235,6 @@ function LoreRoute() {
             <ProjectScratchpadButton projectId={activeProject.id} />
             <button type='button' onClick={handleToggleDocumentRail}>
               {isDocumentRailCollapsed ? 'Show Documents' : 'Hide Documents'}
-            </button>
-            <button type='button' onClick={handleImportClick} disabled={isImporting}>
-              {isImporting ? 'Importing...' : 'Import Document'}
             </button>
           </>
         }
@@ -1248,16 +1286,7 @@ function LoreRoute() {
           </div>
           <div className={styles.starterCard}>
             <h3>Review Later</h3>
-            <p>Optionally scan a saved Source Note for canon candidates after placement is clear.</p>
-            <button
-              type='button'
-              onClick={() => editingDocument && void handleExtractFacts(editingDocument)}
-              disabled={!editingDocument || extractingId === editingDocument.id}
-            >
-              {editingDocument && extractingId === editingDocument.id
-                ? 'Extracting...'
-                : 'Extract Facts'}
-            </button>
+            <p>Save a Source Note, open it for editing, then extract candidates from the one saved version in view.</p>
           </div>
         </div>
       </section>
@@ -1299,13 +1328,6 @@ function LoreRoute() {
                         </button>
                         <button
                           type='button'
-                          onClick={() => void handleExtractFacts(document)}
-                          disabled={extractingId === document.id}
-                        >
-                          {extractingId === document.id ? 'Extracting...' : 'Extract'}
-                        </button>
-                        <button
-                          type='button'
                           onClick={() => void handleDelete(document)}
                           disabled={deletingId === document.id}
                         >
@@ -1340,9 +1362,13 @@ function LoreRoute() {
                   <button
                     type='button'
                     onClick={() => void handleExtractFacts(editingDocument)}
-                    disabled={extractingId === editingDocument.id}
+                    disabled={
+                      extractingId === editingDocument.id || hasUnsavedEditorChanges
+                    }
                   >
-                    {extractingId === editingDocument.id ? 'Extracting...' : 'Extract Facts'}
+                    {extractingId === editingDocument.id
+                      ? 'Extracting...'
+                      : 'Extract Candidates'}
                   </button>
                 ) : null}
                 {editingDocument ? (
@@ -1357,7 +1383,7 @@ function LoreRoute() {
                 ) : null}
                 {editingId ? (
                   <button type='button' onClick={resetForm}>
-                    New Document
+                    Start Another Note
                   </button>
                 ) : null}
               </div>
@@ -1374,16 +1400,25 @@ function LoreRoute() {
 
             <div className={styles.linkSection}>
               <div className={styles.subsectionHeader}>
-                <h3>Placement</h3>
+                <h3>Document context links</h3>
                 <button type='button' onClick={addLinkDraft}>
-                  Link Canon Record
+                  Add context link
                 </button>
               </div>
               <p className={styles.subsectionCopy}>
-                Leave this empty to keep the Source Note as general project context.
-                Add a link when the document is mainly about a character, location,
-                faction, item, or other World Bible record.
+                These saved links help retrieval and proposal targeting. They do not
+                accept facts as canon or create relationships between World Bible
+                records. Only one link can be the primary subject; extraction uses it
+                as the fallback target. Candidate suggestions remain in review until
+                you explicitly accept them.
               </p>
+              {editingDocument ? (
+                <p className={styles.subsectionCopy}>
+                  {hasUnsavedEditorChanges
+                    ? 'Save changes before extracting again; extraction uses the last saved text and links.'
+                    : 'This note is saved and ready to extract.'}
+                </p>
+              ) : null}
               {linkDrafts.length === 0 ? (
                 <p className={styles.emptyHint}>This will save as a general Source Note.</p>
               ) : null}
@@ -1391,6 +1426,7 @@ function LoreRoute() {
                 <div key={`${draft.targetType}-${draft.targetId}-${index}`} className={styles.linkRow}>
                   <select
                     value={`${draft.targetType}:${draft.targetId}`}
+                    aria-label={`Context link ${index + 1} record`}
                     onChange={(event) => {
                       const [nextType, nextId] = event.target.value.split(':');
                       updateLinkDraft(index, {
@@ -1408,6 +1444,7 @@ function LoreRoute() {
                   </select>
                   <select
                     value={draft.relationship}
+                    aria-label={`Context link ${index + 1} purpose`}
                     onChange={(event) =>
                       updateLinkDraft(index, {
                         relationship: event.target.value as LoreDocumentLink['relationship']
@@ -1452,8 +1489,10 @@ function LoreRoute() {
                 </span>
               </div>
               <p className={styles.subsectionCopy}>
-                These local proposals do not change World Bible or accepted canon
-                until you explicitly accept one.
+                Source Note text is not canon by itself. These local candidates do
+                not change the World Bible or accepted canon until you explicitly
+                accept one; an accepted candidate can then become a World Bible
+                record or canon fact.
               </p>
               <div className={styles.acceptedSection}>
                 <div className={styles.cardHeader}>

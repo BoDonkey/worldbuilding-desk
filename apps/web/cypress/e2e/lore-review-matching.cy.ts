@@ -706,7 +706,21 @@ describe('Lore and review matching', () => {
     cy.contains('button', 'Run project review').click();
     cy.contains('Project review found').should('be.visible');
     cy.contains('.tiptap-editor [data-consistency-id]', 'Garcia').click();
-    cy.get('select[aria-label="World category"]').select('Characters');
+    cy.get('select[aria-label="World Bible type"]').select('Create a new type…');
+    cy.get('input[aria-label="New World Bible type name"]').type('Factions');
+    cy.contains('button', 'Add type').click();
+    cy.contains('[role="status"]', 'Factions is ready. The review candidate is still open.')
+      .should('be.visible');
+    cy.contains('[class*="consistencyItemTitle"]', /^Garcia$/)
+      .parents('li')
+      .first()
+      .within(() => {
+        cy.contains('button', 'Show context').click();
+      });
+    cy.get('select[aria-label="World Bible type"]')
+      .find('option:selected')
+      .should('have.text', 'Factions');
+    cy.get('select[aria-label="World Bible type"]').select('Characters');
     cy.contains('button', 'Create character').click();
     cy.contains('[role="status"]', 'Garcia').should('be.visible');
     cy.location('pathname').should('eq', '/workspace');

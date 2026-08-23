@@ -464,6 +464,20 @@ describe('buildExtractedProposal', () => {
     ]);
   });
 
+  it('resolves article-equivalent canon names without proposing a duplicate', () => {
+    const entities = entityRefsFor(
+      'Sera waited beside the Salt Door.',
+      [{id: 'salt-door', name: 'the Salt Door', type: 'entity'}],
+      'workspace-autosave'
+    );
+
+    expect(entities.find((entity) => entity.surface === 'Salt Door')).toMatchObject({
+      entityId: 'salt-door',
+      entityName: 'the Salt Door',
+      detectionReason: 'known_entity'
+    });
+  });
+
   it('does not mark linked exact-name character and world bible records as ambiguous', () => {
     const entities = entityRefsFor(
       '"Kaelor, get your head in the game!" Blatnor shouted. Kael thought to himself, "no."',

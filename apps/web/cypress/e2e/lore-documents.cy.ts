@@ -11,16 +11,17 @@ describe('Source Notes', () => {
     cy.visit('/lore');
     cy.contains('h1', 'Source Notes').should('be.visible');
     cy.contains(
-      'Keep dossiers, timelines, myths, and deep reference notes here as source material. Link a note to a World Bible item when it belongs to one record, or leave it general for project-wide context.'
+      'Keep dossiers, timelines, myths, and deep reference notes here as source material. Context links help retrieval and extraction target the right World Bible records; they do not accept canon or create relationships between those records.'
     ).should('be.visible');
     cy.contains('h2', 'Source note intake').should('be.visible');
     cy.contains('h3', 'Write Manually').should('be.visible');
     cy.contains('h3', 'Import Dossier').should('be.visible');
     cy.contains('h3', 'Review Later').should('be.visible');
-    cy.contains('Optionally scan a saved Source Note for canon candidates after placement is clear.').should(
+    cy.contains('Save a Source Note, open it for editing, then extract candidates from the one saved version in view.').should(
       'be.visible'
     );
-    cy.contains('button', 'Extract Facts').should('be.disabled');
+    cy.contains('button', 'Import File').should('have.length', 1);
+    cy.contains('button', 'Extract Candidates').should('not.exist');
 
     cy.contains('button', 'Start Writing').click();
     cy.contains('label', 'Title')
@@ -83,7 +84,7 @@ describe('Source Notes', () => {
     );
     cy.contains(
       '[role="status"]',
-      'Imported "mira-voss-dossier.md". Add a canon link or leave it as general source material, then save.'
+      'Imported "mira-voss-dossier.md". Add document context links if useful, then save the Source Note.'
     ).should('be.visible');
     cy.contains('label', 'Title').find('input').should('have.value', 'mira-voss-dossier');
     cy.get('textarea').should('contain.value', 'Character Sheet: Mira Voss');
@@ -94,8 +95,9 @@ describe('Source Notes', () => {
     ).should('be.visible');
 
     cy.contains('article', 'mira-voss-dossier').within(() => {
-      cy.contains('button', 'Extract').click();
+      cy.contains('button', 'Edit').click();
     });
+    cy.contains('button', 'Extract Candidates').click();
     cy.contains('[role="status"]', /Extracted \d+ entity proposal/).should('be.visible');
     cy.contains('article', 'mira-voss-dossier').within(() => {
       cy.contains(/\d+ pending/).should('be.visible');
@@ -105,7 +107,7 @@ describe('Source Notes', () => {
 
     cy.contains('h2', 'Extraction Review').should('be.visible');
     cy.contains(
-      'These local proposals do not change World Bible or accepted canon until you explicitly accept one.'
+      'Source Note text is not canon by itself. These local candidates do not change the World Bible or accepted canon until you explicitly accept one; an accepted candidate can then become a World Bible record or canon fact.'
     ).should('be.visible');
     cy.contains('h3', 'Entity Candidates').should('be.visible');
     cy.contains('Mira Voss').should('be.visible');
@@ -163,7 +165,7 @@ describe('Source Notes', () => {
     }) => {
       cy.contains('button', 'Start Writing').click();
       cy.contains('label', 'Title').find('input').clear().type(params.title);
-      cy.contains('button', 'Link Canon Record').click();
+      cy.contains('button', 'Add context link').click();
       cy.contains('option', `${params.target} (World Bible)`)
         .parent('select')
         .select(`${params.target} (World Bible)`);
@@ -184,8 +186,9 @@ describe('Source Notes', () => {
       acceptedSummary: string;
     }) => {
       cy.contains('article', params.title).within(() => {
-        cy.contains('button', 'Extract').click();
+        cy.contains('button', 'Edit').click();
       });
+      cy.contains('button', 'Extract Candidates').click();
       cy.contains('[role="status"]', /Extracted \d+ entity proposal/).should('be.visible');
       cy.contains('article', params.title).within(() => {
         cy.contains(/\d+ pending/).should('be.visible');
@@ -206,7 +209,7 @@ describe('Source Notes', () => {
             cy.contains(params.acceptedSummary).should('be.visible');
           });
         });
-      cy.contains('button', 'New Document').click();
+      cy.contains('button', 'Start Another Note').click();
       cy.contains('article', params.title).within(() => {
         cy.contains('1 accepted').should('be.visible');
       });
@@ -251,7 +254,7 @@ describe('Source Notes', () => {
     cy.visit('/lore');
     cy.contains('button', 'Start Writing').click();
     cy.contains('label', 'Title').find('input').type('Retargeting Check');
-    cy.contains('button', 'Link Canon Record').click();
+    cy.contains('button', 'Add context link').click();
     cy.contains('option', 'Ember Archive (World Bible)')
       .parent('select')
       .select('Ember Archive (World Bible)');
@@ -259,8 +262,9 @@ describe('Source Notes', () => {
     cy.contains('button', 'Create Source Note').click();
 
     cy.contains('article', 'Retargeting Check').within(() => {
-      cy.contains('button', 'Extract').click();
+      cy.contains('button', 'Edit').click();
     });
+    cy.contains('button', 'Extract Candidates').click();
     cy.contains('[role="status"]', /and \d+ fact proposal/).should('be.visible');
     cy.contains('article', 'Retargeting Check').within(() => {
       cy.contains('button', 'Edit').click();
@@ -303,8 +307,9 @@ describe('Source Notes', () => {
     );
     cy.contains('button', 'Create Source Note').click();
     cy.contains('article', 'Odessa Dossier').within(() => {
-      cy.contains('button', 'Extract').click();
+      cy.contains('button', 'Edit').click();
     });
+    cy.contains('button', 'Extract Candidates').click();
     cy.contains('[role="status"]', /Extracted 1 entity proposal and 1 fact proposal/)
       .should('be.visible');
     cy.contains('article', 'Odessa Dossier').within(() => {
