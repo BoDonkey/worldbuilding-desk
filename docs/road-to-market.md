@@ -105,7 +105,7 @@ and required revisit point, `WIP`, `Done <commit>`.
 | 1.2b | Temporal custody + conflicting-location grounding | 1 | M | Done `a92baa2` — storage questions inspect ordered primary saved scenes; designated storage, sign-out, pocket possession, and later use remain distinct; D4 reports current-custody uncertainty with chapters 3–5 cited and no provider call; accepted canon is fallback-only; lint baseline; 390 web + 6 engine + 12 UI tests; web/desktop builds; Cypress 56/56 |
 | 1.2c | Workspace scene continuity + Find | 1 | S | Done `8d299e3` — persisted scene selection now survives Workspace route remounts; editor/window/element scroll state is isolated by project and scene with no fallback; current-scene Find has toolbar and Cmd/Ctrl+F entry, wrapped keyboard navigation, Escape focus return, match highlighting, and route-remount coverage; lint with 2 baseline warnings; 398 web + 6 engine + 12 UI tests; web/desktop builds; Cypress 57/57 |
 | 1.2d | Lore intake/review clarity + matcher precision | 1 | M | Done `f86bd83` — article-equivalent entity identity prevents Salt Door duplicates; shared boundary/longest-match arbitration covers Bran/Brannic; review creates and selects World Bible types in place; Source Notes have consolidated intake/extraction actions, saved document-context language, one primary subject, and save-before-extract enforcement; lint with 2 baseline warnings; 406 web + 6 engine + 12 UI tests; web/desktop builds; Cypress 57/57 |
-| 1.2e | State/replay dogfood journey | 1 | S | WIP — tracing every Session E stat/resource, inventory, equipment, status, and location event to the current explicit previewed scene-scoped replay workflow; rewriting the runbook and closing only the smallest remaining contextual handoff |
+| 1.2e | State/replay dogfood journey | 1 | S | Done `d9cb7e3` — simple Character continuity now hands directly to detailed inventory/equipment/status/location changes while keeping the selected character and scene; the detailed form uses author-facing actions with explicit preview, recording, scene scope, and replay; Session C maps every E event to exact current UI labels and adds the required Pale Draught baseline; lint with 2 baseline warnings; 407 web + 6 engine + 12 UI tests; web/desktop builds; Cypress 57/57 |
 | 1.3 | Calm-shell navigation validation | 1 | S | Done `530b59f` — desktop/narrow project-mode checks pass; 2.8 must expose the aggregate pending badge on narrow `More` without promoting optional systems |
 | 1.4 | Proposal-review assistant route (conditional on product need) | 1 | M | — |
 | 2.1 | ConfirmDialog + InlineAlert components | 2 | S | Done `38db7df` |
@@ -166,8 +166,8 @@ author accepted prose-proximate item/state authoring as 4.16. The author
 paused 1.1 on 2026-08-15 and explicitly advanced 4.12, then resumed the run
 on 2026-08-22–23 after 4.12–4.16 landed. The resumed run found
 release-blocking fact-target corruption and temporally stale custody answers.
-Preserve that evidence; 1.2a–1.2d are fixed, 1.2e blocks E1–E5, and all 1.2
-follow-ups land before 6.1. Slices 4.12 and 4.14 may
+Preserve that evidence; 1.2a–1.2e are fixed, and the A–F trust run now resumes
+on one fresh stable build before 6.1. Slices 4.12 and 4.14 may
 run in parallel; 4.13 follows 4.12 and 4.15 follows 4.14. Release-engineering
 work may run in parallel, but 4.16 follows 4.1 and 4.15, 5.4 waits for 4.13
 and 4.15, and 4.12–4.16 must land before 6.1. Release-blocking trust or

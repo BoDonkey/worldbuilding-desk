@@ -392,8 +392,8 @@ Date/time: 2026-08-23
 Completed through: Lore intake and partial Canon/Assistant review; Session D stopped early
 Active project(s): Not recorded
 Last backup: Not recorded — preserve/export the stopped project if still available
-Blockers: Session E state/replay route remains unclear
-Next exact step: Complete roadmap 1.2e's state/replay journey, then restart the contaminated A–F run on one stable post-fix build
+Blockers: None from the stopped build remain unresolved; do not resume its contaminated partial A–F project as evidence
+Next exact step: Start a fresh A–F run on implementation `d9cb7e3` or a later stable build, beginning at A-1 and using the corrected A-3/C-1 state journey
 Evidence pointers: fixtures/trust-dogfood/Dogfood notes.md
 
 Findings awaiting triage
@@ -403,7 +403,7 @@ Findings awaiting triage
 - [resolved release blocker; 1.2b `a92baa2`] D4/storage custody — all five chapters were saved, but the assistant confidently answered Odessa's vault without surfacing later Brannic-pocket and Sera-possession/use evidence — author dogfood 2026-08-23
 - [resolved workflow blocker; 1.2c `8d299e3`] Workspace continuity — selected scenes and per-scene scroll now survive route changes, and current-scene Find is available — author dogfood 2026-08-22
 - [resolved workflow blocker; 1.2d `f86bd83`] A-6/A-7 lore intake — article variants now share identity, category creation keeps review open, and Source Note actions/context-link language expose the safe saved-note path — author dogfood 2026-08-22–23
-- [workflow blocker; 1.2e] Session E — the runbook and UI did not provide an understandable route for the scripted state events, so E1–E5 were not run — author dogfood 2026-08-23
+- [resolved workflow blocker; 1.2e `d9cb7e3`] Session E — Character continuity now hands directly to the author-facing detailed scene-change form, and the corrected runbook maps every scripted event to explicit previewed, scene-scoped, replay-backed entry — author dogfood 2026-08-23
 - [UX friction; separate product decision] World Bible relationships — descriptive custom fields cannot provide stable-ID, reciprocal, rename-safe canon relationships — author dogfood 2026-08-22
 - [UX friction; route to 5.5/5.8] AI consultation budget — shared daily limit, consumers, and reset timing are not explained at the point of use — author dogfood 2026-08-23
 - [UX friction; promoted to 4.12–4.13] Cross-cutting/character experience — World Bible and Character Tools still read as split character-entry destinations despite canonical identity convergence — author dogfood 2026-08-15
