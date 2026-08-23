@@ -45,6 +45,17 @@ Under the hood, the app still includes rich systems for world data, rules, chara
 - Resolving, linking, dismissing, or ignoring a review surface now clears both the active editor highlight and the project review rail item.
 - Active-scene review refreshes when canon, aliases, or characters change, including after returning from World Bible.
 - Returning from World Bible now restores the previously selected scene instead of resetting to scene one.
+- Workspace scene initialization now waits for the active project's documents
+  before resolving persisted selection, so returning to Workspace restores the
+  selected scene without briefly initializing or reviewing an empty draft.
+- Editor, window, and workspace-element scroll snapshots are isolated by both
+  project and scene. Switching scenes with no saved position resets to the top
+  instead of inheriting another scene's scroll, while route remounts restore the
+  exact selected scene snapshot.
+- A distinct current-scene Find surface is available from the editor toolbar or
+  Cmd/Ctrl+F. It highlights all matches, supports Enter/Shift+Enter wrapping,
+  reports the active match count, and returns focus to the editor on Escape;
+  app-shell search remains the separate scene/World Bible search surface.
 - Editable review capture flow for detected names/places before adding to world records.
 - Manual selection-to-world capture from the editor for non-detected text.
 - Temporary dismiss and project-level `Always ignore` review actions.
@@ -371,10 +382,9 @@ Under the hood, the app still includes rich systems for world data, rules, chara
 ### Product / UX
 - Active handoff: the August 22–23 A–G dogfood run is stopped and preserved in
   its fixture runbook after exposing release-blocking fact-target and temporal
-  custody failures. Both release blockers are now repaired under slices 1.2a
-  and 1.2b; complete the relevant 1.2c–1.2e workflow slices, then restart the
-  contaminated A–F run on one stable post-fix build before claiming roadmap
-  slice 5.1.
+  custody failures. The 1.2a–1.2c target, custody, and Workspace-continuity
+  repairs are complete; finish 1.2d–1.2e, then restart the contaminated A–F run
+  on one stable post-fix build before claiming roadmap slice 5.1.
 - Make the writing workspace the clearest default entry point.
 - Reduce visible system complexity on first load through a calm-shell navigation pass before adding more route features.
 - Keep `Workspace`, `World Bible`, and `Lore Documents` as the primary active-project mental model: write, structure canon, and keep longform source notes.
