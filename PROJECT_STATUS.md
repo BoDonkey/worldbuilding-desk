@@ -227,7 +227,7 @@ Under the hood, the app still includes rich systems for world data, rules, chara
 - Dev-mode RAG embedding loads now default to deterministic lightweight fallback instead of noisy browser-transformer fetch failures.
 - Assistant RAG context now carries explicit trust-tier labels before provider prompts are built. World Bible records are labeled as accepted canon, accepted canon facts are labeled separately, linked Source Notes are labeled as source material, general Source Notes are labeled as project reference material, and scene/rules chunks remain clearly draft/reference context. RAG ranking now applies a modest trust boost so accepted canon and accepted canon facts win over Source Notes when matches are otherwise close.
 - Assistant input now waits for project RAG/Shodh initialization, honors parent-context inheritance, labels relevant Shodh summaries by trust tier, and refuses to guess when a named factual question has no retrieved project source. Development retrieval uses the deterministic meaningful fallback embedding rather than constant vectors, and lexical ranking ignores common question-word noise.
-- All factual project questions now cross a universal evidence gate before provider prompting. Recognized lookups for accepted occupation, service-length, membership, treatment, and eye-color facts are answered deterministically, and storage-location questions can extract explicit custody language from saved canon/manuscript passages while excluding Source Notes. Any other factual wording that cannot be deterministically verified fails closed with the retrieved sources reviewed; it never reaches prompt tools or a creative provider. Missing membership canon fails closed, conflicting facts/locations are surfaced rather than chosen, and provider output strips leaked silent-system scaffolding.
+- All factual project questions now cross a universal evidence gate before provider prompting. Recognized lookups for accepted occupation, service-length, membership, treatment, and eye-color facts are answered deterministically. Storage/custody questions bypass retrieval rank and inspect all primary saved scenes in manuscript order, distinguishing designated storage from later sign-out, named possession, and use; incompatible later custody returns explicit uncertainty with every relevant scene cited. Accepted canon remains a fallback only when saved scenes contain no custody evidence, and Source Notes cannot supply the answer. Any other factual wording that cannot be deterministically verified fails closed with the retrieved sources reviewed; it never reaches prompt tools or a creative provider. Missing membership canon fails closed, conflicting facts/locations are surfaced rather than chosen, and provider output strips leaked silent-system scaffolding.
 - Workspace assistant conversations are retained in session-local, project-scoped storage, so navigating to World Bible or another route and returning restores the conversation immediately without mixing projects or persisting chat indefinitely.
 - Future AI expansion should follow the adapter/tool boundary now captured in `docs/architecture-review.md`: provider/model capabilities are explicit, named workflow routes can choose model/reasoning/capability/cache policies per feature, structured output is schema-validated, tool-like actions produce confirmable proposals, and shared read-only project-context extraction feeds features without silently mutating canon or state.
 - Scene-scoped state mutation tracking now exists as a project-scoped persistence layer with accepted/invalidation flow, replay, and workspace inspection surfaces.
@@ -371,10 +371,10 @@ Under the hood, the app still includes rich systems for world data, rules, chara
 ### Product / UX
 - Active handoff: the August 22–23 A–G dogfood run is stopped and preserved in
   its fixture runbook after exposing release-blocking fact-target and temporal
-  custody failures. Fact-target integrity and reversible acceptance are now
-  repaired under slice 1.2a; complete 1.2b and the relevant workflow slices,
-  then restart the contaminated A–F run on one stable post-fix build before
-  claiming roadmap slice 5.1.
+  custody failures. Both release blockers are now repaired under slices 1.2a
+  and 1.2b; complete the relevant 1.2c–1.2e workflow slices, then restart the
+  contaminated A–F run on one stable post-fix build before claiming roadmap
+  slice 5.1.
 - Make the writing workspace the clearest default entry point.
 - Reduce visible system complexity on first load through a calm-shell navigation pass before adding more route features.
 - Keep `Workspace`, `World Bible`, and `Lore Documents` as the primary active-project mental model: write, structure canon, and keep longform source notes.
@@ -442,6 +442,14 @@ Under the hood, the app still includes rich systems for world data, rules, chara
 ## Verification Status
 
 ### Verified Recently
+- Road-to-market Slice 1.2b routes storage/custody questions through all
+  primary saved scenes in manuscript order instead of the highest-ranked RAG
+  chunks. The five-chapter D4 fixture now distinguishes Odessa's designated
+  vault from chapter 4's sign-out/Brannic pocket and chapter 5's Sera use,
+  reports the undocumented handoff as current-custody uncertainty, and cites
+  all three scenes without invoking a provider. Web lint passes with the three
+  existing hook warnings; 390 web unit tests, 6 rules-engine tests, 12
+  rules-ui tests, web/desktop production builds, and Cypress 56/56 pass.
 - Road-to-market Slice 1.2a makes every inferred fact target editable, keeps
   new canonical fact identity on World Bible entity IDs, fails closed for an
   unresolved explicit subject, refreshes sibling facts after entity

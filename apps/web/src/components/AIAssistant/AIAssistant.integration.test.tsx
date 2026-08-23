@@ -3,8 +3,13 @@ import {beforeEach, describe, expect, it, vi} from 'vitest';
 import {AIAssistant} from './AIAssistant';
 
 const mocks = vi.hoisted(() => ({
+  getDocumentsByProject: vi.fn(),
   search: vi.fn(),
   stream: vi.fn()
+}));
+
+vi.mock('../../writingStorage', () => ({
+  getDocumentsByProject: mocks.getDocumentsByProject
 }));
 
 vi.mock('../../services/rag/getRAGService', () => ({
@@ -37,6 +42,8 @@ vi.mock('../../services/llm/LLMService', () => ({
 
 describe('AIAssistant factual lookup integration', () => {
   beforeEach(() => {
+    mocks.getDocumentsByProject.mockReset();
+    mocks.getDocumentsByProject.mockResolvedValue([]);
     mocks.search.mockReset();
     mocks.stream.mockReset();
     mocks.search.mockResolvedValue([
@@ -104,16 +111,46 @@ describe('AIAssistant factual lookup integration', () => {
     });
   });
 
-  it('answers D-4 from an explicit saved manuscript location without invoking the provider', async () => {
+  it('answers D-4 from ordered saved custody evidence without invoking the provider', async () => {
+    mocks.getDocumentsByProject.mockResolvedValue([
+      {
+        id: 'chapter-three',
+        projectId: 'project-d4',
+        title: 'Chapter Three — The Weighing House',
+        content: 'Odessa tapped the desk. "The Key goes into my deep vault."',
+        order: 3,
+        createdAt: 3,
+        updatedAt: 3
+      },
+      {
+        id: 'chapter-four',
+        projectId: 'project-d4',
+        title: 'Chapter Four — Sorrowsteel',
+        content:
+          "Signed out of Odessa's deep vault that morning, the Key had gone back into Brannic's breast pocket after.",
+        order: 4,
+        createdAt: 4,
+        updatedAt: 4
+      },
+      {
+        id: 'chapter-five',
+        projectId: 'project-d4',
+        title: 'Chapter Five — The Hollow Court',
+        content:
+          'Sera came down the antechamber slowly.\n\nShe stopped at the gate. She pressed the Emberglass Key into the lock.',
+        order: 5,
+        createdAt: 5,
+        updatedAt: 5
+      }
+    ]);
     mocks.search.mockResolvedValue([
       {
         score: 2,
         chunk: {
-          id: 'chapter-four-0',
-          documentId: 'chapter-four',
-          documentTitle: 'Chapter Four — Sorrowsteel',
-          content:
-            "Signed out of Odessa's deep vault that morning, the Key was due back by evening.",
+          id: 'chapter-three-0',
+          documentId: 'chapter-three',
+          documentTitle: 'Chapter Three — The Weighing House',
+          content: 'The Key goes into my deep vault.',
           metadata: {type: 'scene'}
         }
       },
@@ -146,12 +183,20 @@ describe('AIAssistant factual lookup integration', () => {
     });
     fireEvent.click(screen.getByRole('button', {name: 'Send'}));
 
-    await screen.findByText("the Emberglass Key is kept in Odessa's deep vault.");
+    await screen.findByText(/designated storage.*Odessa's deep vault/i);
+    expect(screen.getByText(/Brannic has it in a pocket/i)).toBeVisible();
+    expect(screen.getByText(/Sera uses it/i)).toBeVisible();
+    expect(screen.getByText(/current custody is uncertain/i)).toBeVisible();
     expect(mocks.search).toHaveBeenCalledWith(
       'Where is the Emberglass Key kept?',
       20
     );
+    expect(mocks.getDocumentsByProject).toHaveBeenCalledWith('project-d4');
     expect(mocks.stream).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByText('Sources used'));
+    expect(screen.getByText('Scene draft - Chapter Three — The Weighing House')).toBeVisible();
+    expect(screen.getByText('Scene draft - Chapter Four — Sorrowsteel')).toBeVisible();
+    expect(screen.getByText('Scene draft - Chapter Five — The Hollow Court')).toBeVisible();
   });
 
   it('never sends an unsupported factual question to the creative provider', async () => {

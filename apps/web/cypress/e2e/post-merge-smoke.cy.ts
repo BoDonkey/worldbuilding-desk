@@ -189,6 +189,79 @@ describe('Post-merge smoke checklist', () => {
     cy.contains("Sera's eyes are gray.").should('be.visible');
   });
 
+  it('grounds custody answers in ordered saved scenes instead of retrieval rank', () => {
+    const now = Date.now();
+    mutateSmokeDb(async (db) => {
+      const settings = await getRecord<{
+        id: string;
+        aiSettings: {
+          configs: {anthropic: Record<string, unknown>};
+          [key: string]: unknown;
+        };
+        [key: string]: unknown;
+      }>(db, 'projectSettings', 'settings-cypress-project-1');
+      await putRecord(db, 'projectSettings', {
+        ...settings,
+        aiSettings: {
+          ...settings.aiSettings,
+          configs: {
+            ...settings.aiSettings.configs,
+            anthropic: {
+              ...settings.aiSettings.configs.anthropic,
+              apiKey: 'cypress-not-used'
+            }
+          }
+        }
+      });
+      await putRecord(db, 'writingDocuments', {
+        id: 'custody-chapter-three',
+        projectId: 'cypress-project-1',
+        title: 'Chapter Three — The Weighing House',
+        content: 'Odessa tapped the desk. "The Key goes into my deep vault."',
+        order: 3,
+        createdAt: now + 3,
+        updatedAt: now + 3
+      });
+      await putRecord(db, 'writingDocuments', {
+        id: 'custody-chapter-four',
+        projectId: 'cypress-project-1',
+        title: 'Chapter Four — Sorrowsteel',
+        content:
+          "Signed out of Odessa's deep vault that morning, the Key had gone back into Brannic's breast pocket after.",
+        order: 4,
+        createdAt: now + 4,
+        updatedAt: now + 4
+      });
+      await putRecord(db, 'writingDocuments', {
+        id: 'custody-chapter-five',
+        projectId: 'cypress-project-1',
+        title: 'Chapter Five — The Hollow Court',
+        content:
+          'Sera came down the antechamber slowly.\n\nShe stopped at the gate. She pressed the Emberglass Key into the lock.',
+        order: 5,
+        createdAt: now + 5,
+        updatedAt: now + 5
+      });
+    });
+
+    cy.visit('/workspace');
+    cy.contains('button', 'Context').click();
+    cy.contains('button', /^AI$/).click();
+    cy.contains('[role="status"]', 'Project context ready.').should('be.visible');
+    cy.get('textarea[placeholder^="Ask for help"]')
+      .type('Where is the Emberglass Key kept?');
+    cy.contains('button', 'Send').click();
+
+    cy.contains(/designated storage.*Odessa's deep vault/i).should('be.visible');
+    cy.contains(/Brannic has it in a pocket/i).should('be.visible');
+    cy.contains(/Sera uses it/i).should('be.visible');
+    cy.contains(/current custody is uncertain/i).should('be.visible');
+    cy.contains('summary', 'Sources used').click();
+    cy.contains('Scene draft - Chapter Three — The Weighing House').should('be.visible');
+    cy.contains('Scene draft - Chapter Four — Sorrowsteel').should('be.visible');
+    cy.contains('Scene draft - Chapter Five — The Hollow Court').should('be.visible');
+  });
+
   it('routes character capabilities from World Bible without descriptive editing', () => {
     const now = Date.now();
     mutateSmokeDb(async (db) => {

@@ -17,6 +17,11 @@ import {
 } from '../../services/llm/contextProvenance';
 import {PromptManager} from '../../services/prompts/PromptManager';
 import {buildUnverifiedFactualAnswer} from '../../services/assistant/factualQuestionBoundary';
+import {
+  getTemporalCustodySubject,
+  resolveTemporalCustodyAnswer
+} from '../../services/assistant/temporalCustody';
+import {getDocumentsByProject} from '../../writingStorage';
 import type {ProjectAISettings, PromptTool, ProjectMode} from '../../entityTypes';
 import {
   getContextInstruction,
@@ -323,14 +328,23 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
         promptText,
         Boolean(selectedText)
       );
-      const [ragResults, shodhChunks] = await Promise.all([
+      const needsOrderedScenes = Boolean(getTemporalCustodySubject(promptText));
+      const [ragResults, shodhChunks, orderedScenes] = await Promise.all([
         ragService.current
           ? ragService.current.search(promptText, groundingRequired ? 20 : 3)
           : [],
-        buildMemoryChunks(promptText)
+        buildMemoryChunks(promptText),
+        needsOrderedScenes
+          ? getDocumentsByProject(projectId).catch((error) => {
+              console.warn('Unable to load ordered saved scenes for custody grounding.', error);
+              return [];
+            })
+          : []
       ]);
 
-      const directSavedFact = getDirectSavedFactAnswer(promptText, ragResults);
+      const directSavedFact =
+        resolveTemporalCustodyAnswer(promptText, orderedScenes, ragResults) ??
+        getDirectSavedFactAnswer(promptText, ragResults);
       if (directSavedFact) {
         const directChunks = await buildRagContextChunks(
           projectId,
