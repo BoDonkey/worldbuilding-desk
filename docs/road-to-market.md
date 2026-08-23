@@ -99,8 +99,13 @@ and required revisit point, `WIP`, `Done <commit>`.
 | # | Slice | Phase | Size | Status |
 |---|---|---|---|---|
 | 0.1 | Branch/worktree cleanup | 0 | XS | Done `51d1586` |
-| 1.1 | Realistic-project trust dogfood | 1 | M | Deferred — author paused the run on 2026-08-15 after promoting the character/onboarding/mechanics findings; preserve the current fixture log and resume before 6.1 |
+| 1.1 | Realistic-project trust dogfood | 1 | M | Deferred — author resumed on 2026-08-22–23, completed setup through A-4 and partial lore/canon/assistant review, then stopped on systemic fact-target corruption and an unsafe D4 custody answer; preserve the project/evidence and resume on a fresh post-fix build after the blocking 1.2 follow-ups |
 | 1.2 | Fix trust-path failures found in 1.1 | 1 | M | Done `f8d3d2e` + `545655c` + `1f1d2d7` + `813fb9c` + `aba657a` + `d6a22ea` — grounding/readiness, extraction/review precision, session continuity, deterministic supported answers, and a universal evidence gate that prevents all other factual questions from reaching creative generation; lint baseline; 306 web + 6 engine + 12 UI tests; web/desktop builds; Cypress 45/45 |
+| 1.2a | Fact-target integrity + reversible acceptance | 1 | M | WIP — release blocker from the 2026-08-22–23 run; wrong-target Sera/Brannic/Dess facts, locked inferred targets, broken conflict formation, and fact-owned field residue |
+| 1.2b | Temporal custody + conflicting-location grounding | 1 | M | — release blocker; D4 confidently reported Odessa's vault despite later saved Brannic/Sera custody evidence; blocks 5.1 |
+| 1.2c | Workspace scene continuity + Find | 1 | S | — selected-scene and per-scene scroll regressions plus no reliable current-scene Find; required before beta |
+| 1.2d | Lore intake/review clarity + matcher precision | 1 | M | — article-equivalent entity matching, Bran/Brannic arbitration, review-time category creation, and Source Note action/Placement clarity; required before resuming A-6/A-7 |
+| 1.2e | State/replay dogfood journey | 1 | S | — Session E has no understandable author-facing route for the scripted inventory/status/location events; fix the runbook and any remaining contextual dead end before resuming E1–E5 |
 | 1.3 | Calm-shell navigation validation | 1 | S | Done `530b59f` — desktop/narrow project-mode checks pass; 2.8 must expose the aggregate pending badge on narrow `More` without promoting optional systems |
 | 1.4 | Proposal-review assistant route (conditional on product need) | 1 | M | — |
 | 2.1 | ConfirmDialog + InlineAlert components | 2 | S | Done `38db7df` |
@@ -157,9 +162,12 @@ and required revisit point, `WIP`, `Done <commit>`.
 Phases 2 and 3 can interleave; within Phase 3, slices 3.5–3.8 run
 sequentially. Phase 4's original product-completeness scope through 4.11 is
 complete; dogfood has promoted 4.12–4.15 as pre-beta experience work, and the
-author accepted prose-proximate item/state authoring as 4.16. The
-author paused 1.1 on 2026-08-15 and explicitly advanced 4.12; preserve the
-partial dogfood evidence and resume it before 6.1. Slices 4.12 and 4.14 may
+author accepted prose-proximate item/state authoring as 4.16. The author
+paused 1.1 on 2026-08-15 and explicitly advanced 4.12, then resumed the run
+on 2026-08-22–23 after 4.12–4.16 landed. The resumed run found
+release-blocking fact-target corruption and temporally stale custody answers.
+Preserve that evidence; 1.2a and 1.2b block 5.1, 1.2d blocks a clean A-6/A-7
+rerun, 1.2e blocks E1–E5, and all 1.2 follow-ups land before 6.1. Slices 4.12 and 4.14 may
 run in parallel; 4.13 follows 4.12 and 4.15 follows 4.14. Release-engineering
 work may run in parallel, but 4.16 follows 4.1 and 4.15, 5.4 waits for 4.13
 and 4.15, and 4.12–4.16 must land before 6.1. Release-blocking trust or
@@ -207,6 +215,52 @@ data-loss failure from the current 1.1 run into a new bounded follow-up slice.
 Release-blocking findings must be resolved before 5.1; non-blocking findings
 may be scheduled honestly and must still be resolved before beta when they
 affect release trust. Size remains unknown until the current run lands.
+
+**1.2a Fact-target integrity and reversible acceptance.** Treat inferred fact
+targets as editable proposals, never as locked truth. New fact writes target
+canonical World Bible entity IDs. Resolve an explicit grammatical subject when
+it exists; if that subject has not been accepted from a sibling entity proposal
+or the paragraph is ambiguous, leave the fact unresolved instead of falling
+back to another linked record. Resolve/reject entity candidates before fact
+acceptance and refresh fact candidates against the resulting authoritative
+records. Retargeting must persist on acceptance and allow the Brannic
+service-length proposals to form one conflict cluster. Removing or superseding
+a fact must conservatively undo only the user-facing side effects owned by that
+fact; accepting new background/appearance/trait/ability facts must not append
+untracked text into hidden Notes. Lock the Sera occupation, Brannic service,
+Dess alias, conflict-clustering, and removal paths with service and routed-UI
+coverage. Preserve the author-approval boundary throughout.
+
+**1.2b Temporal custody and conflicting-location grounding.** Storage/custody
+answers must inspect ordered saved manuscript evidence rather than choosing the
+most specific recognized container by retrieval score. Distinguish designated
+storage from later sign-out, pocket possession, carrying, transfer, and use.
+With chapters 1–5 present, D4 must report the temporal conflict/current custody
+uncertainty (and cite the relevant scenes), never confidently answer only
+Odessa's vault. Accepted replay may strengthen an answer when available but is
+not required to notice explicit manuscript custody changes.
+
+**1.2c Workspace scene continuity and Find.** Preserve the selected scene when
+leaving and returning to Workspace. Key every editor/window/element scroll
+snapshot by project and scene with no cross-scene fallback. Define and test a
+current-scene Find interaction distinct from app-shell scene/World Bible
+search, including keyboard behavior and route remounts.
+
+**1.2d Lore intake/review clarity and matcher precision.** Normalize leading
+articles for entity identity so `Salt Door` and `the Salt Door` do not create a
+duplicate proposal; ensure short aliases never decorate inside longer words or
+canonical names. Let review choose or create the appropriate World Bible
+category (including Factions) without abandoning the candidate. Consolidate
+duplicate Source Note import/extract calls to action and explain document links
+in author language, including the single primary-subject rule, save-before-
+extract behavior, and the fact that placement is neither accepted canon nor an
+entity-to-entity relationship.
+
+**1.2e State/replay dogfood journey.** Rewrite Session E with the exact current
+author-facing route for each scripted stat/resource, inventory, equipment,
+status, and location event. Add the smallest contextual handoff needed if the
+current advanced route still strands the author. Keep accepted event entry
+explicit, previewed, scene-scoped, and replay-backed.
 
 **1.3 Calm-shell navigation validation.** Manually verify primary navigation
 and `More` grouping at desktop and narrow breakpoints across projects with no

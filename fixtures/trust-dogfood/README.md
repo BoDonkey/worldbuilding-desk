@@ -312,16 +312,18 @@ Do not mark 1.1 done merely because the planned sittings ended.
 
 ## Results log
 
-### Current run — started 2026-08-11
+### Current run — resumed 2026-08-22, stopped 2026-08-23
 
 ```text
-Build commit:
+Build commit: Not recorded (repo tip after the run: f6d3105)
 Surface (desktop/browser):
 OS:
 AI provider/model:
 RAG/Shodh ready:
 Core project:
 Identity projects:
+
+Setup A-1–A-4 — Pass — author completed project/ruleset/sheet/chapter-1 setup
 
 A1 — Not run —
 A2 — Not run —
@@ -337,11 +339,11 @@ C2 — Not run —
 C3 — Not run —
 C4 — Not run —
 C5 — Not run —
-D1 — Not run —
-D2 — Not run —
-D3 — Not run —
-D4 — Not run —
-D5 — Not run —
+D1 — Fail — cartographer fact was attached to Cinder Compact, so the assistant could not verify Sera's prior occupation
+D2 — Fail (safe refusal) — Brannic service facts had different/wrong targets, so no conflict resolved and the assistant could not verify twenty years
+D3 — Pass — assistant said Tam's Hollow Court membership was not established in canon
+D4 — Fail — with chapters 1–5 saved, assistant confidently reported Odessa's vault without surfacing later Brannic/Sera custody evidence
+D5 — Pass — assistant correctly reported the Vaultburn treatment
 E1 — Not run —
 E2 — Not run —
 E3 — Not run —
@@ -358,16 +360,24 @@ G5 — Not run —
 G6 — Not run —
 
 Resume checkpoint
-Date/time:
-Completed through:
-Active project(s):
-Last backup:
-Blockers:
-Next exact step:
-Evidence pointers:
+Date/time: 2026-08-23
+Completed through: Lore intake and partial Canon/Assistant review; Session D stopped early
+Active project(s): Not recorded
+Last backup: Not recorded — preserve/export the stopped project if still available
+Blockers: Wrong and locked fact targets; fact-owned Notes residue; unsafe temporal custody answer; Session E route unclear
+Next exact step: Complete roadmap 1.2a–1.2b and relevant workflow fixes, then restart the contaminated A–F run on one stable post-fix build
+Evidence pointers: fixtures/trust-dogfood/Dogfood notes.md
 
 Findings awaiting triage
 - [classification pending] ID/surface — observation — evidence
+- [release blocker; 1.2a] A-6/A-7/D1 — Sera occupation, Brannic service, and Dess alias facts bound to the wrong record; inferred targets could not be edited — author dogfood 2026-08-22–23
+- [release blocker; 1.2a] Accepted-fact removal — deleting the canonical fact left fact-owned text materialized in a World Bible Notes field, where it may remain hidden and grounded as canon — author dogfood 2026-08-23
+- [release blocker; 1.2b] D4/storage custody — all five chapters were saved, but the assistant confidently answered Odessa's vault without surfacing later Brannic-pocket and Sera-possession/use evidence — author dogfood 2026-08-23
+- [workflow blocker; 1.2c] Workspace continuity — route changes lost the selected scene and cross-applied another scene's scroll position; current-scene Find did not work — author dogfood 2026-08-22
+- [workflow blocker; 1.2d] A-6/A-7 lore intake — article variants duplicated records, category creation stranded review, and repeated Source Note actions/Placement terminology obscured the safe path — author dogfood 2026-08-22–23
+- [workflow blocker; 1.2e] Session E — the runbook and UI did not provide an understandable route for the scripted state events, so E1–E5 were not run — author dogfood 2026-08-23
+- [UX friction; separate product decision] World Bible relationships — descriptive custom fields cannot provide stable-ID, reciprocal, rename-safe canon relationships — author dogfood 2026-08-22
+- [UX friction; route to 5.5/5.8] AI consultation budget — shared daily limit, consumers, and reset timing are not explained at the point of use — author dogfood 2026-08-23
 - [UX friction; promoted to 4.12–4.13] Cross-cutting/character experience — World Bible and Character Tools still read as split character-entry destinations despite canonical identity convergence — author dogfood 2026-08-15
 - [UX friction; promoted to 5.4] Cross-cutting/onboarding — first-use guidance does not yet make the writing-first path or optional nature of advanced systems sufficiently clear — author dogfood 2026-08-15
 - [UX friction; promoted to 4.14–4.15] Cross-cutting/optional mechanics — the mechanics system appears powerful but presents too much terminology, setup, and advanced capability before a clear first useful path — author dogfood 2026-08-15
