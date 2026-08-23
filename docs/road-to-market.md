@@ -101,7 +101,7 @@ and required revisit point, `WIP`, `Done <commit>`.
 | 0.1 | Branch/worktree cleanup | 0 | XS | Done `51d1586` |
 | 1.1 | Realistic-project trust dogfood | 1 | M | Deferred — author resumed on 2026-08-22–23, completed setup through A-4 and partial lore/canon/assistant review, then stopped on systemic fact-target corruption and an unsafe D4 custody answer; preserve the project/evidence and resume on a fresh post-fix build after the blocking 1.2 follow-ups |
 | 1.2 | Fix trust-path failures found in 1.1 | 1 | M | Done `f8d3d2e` + `545655c` + `1f1d2d7` + `813fb9c` + `aba657a` + `d6a22ea` — grounding/readiness, extraction/review precision, session continuity, deterministic supported answers, and a universal evidence gate that prevents all other factual questions from reaching creative generation; lint baseline; 306 web + 6 engine + 12 UI tests; web/desktop builds; Cypress 45/45 |
-| 1.2a | Fact-target integrity + reversible acceptance | 1 | M | WIP — release blocker from the 2026-08-22–23 run; wrong-target Sera/Brannic/Dess facts, locked inferred targets, broken conflict formation, and fact-owned field residue |
+| 1.2a | Fact-target integrity + reversible acceptance | 1 | M | Done `ce427b9` — editable World Bible entity targets; unresolved-subject fail-closed and sibling refresh; Sera/Brannic/Dess targeting and Brannic conflict coverage; conservative acceptance reversal without new hidden Notes copies; lint baseline; 387 web + 6 engine + 12 UI tests; web/desktop builds; Cypress 55/55 |
 | 1.2b | Temporal custody + conflicting-location grounding | 1 | M | — release blocker; D4 confidently reported Odessa's vault despite later saved Brannic/Sera custody evidence; blocks 5.1 |
 | 1.2c | Workspace scene continuity + Find | 1 | S | — selected-scene and per-scene scroll regressions plus no reliable current-scene Find; required before beta |
 | 1.2d | Lore intake/review clarity + matcher precision | 1 | M | — article-equivalent entity matching, Bran/Brannic arbitration, review-time category creation, and Source Note action/Placement clarity; required before resuming A-6/A-7 |
@@ -166,7 +166,7 @@ author accepted prose-proximate item/state authoring as 4.16. The author
 paused 1.1 on 2026-08-15 and explicitly advanced 4.12, then resumed the run
 on 2026-08-22–23 after 4.12–4.16 landed. The resumed run found
 release-blocking fact-target corruption and temporally stale custody answers.
-Preserve that evidence; 1.2a and 1.2b block 5.1, 1.2d blocks a clean A-6/A-7
+Preserve that evidence; 1.2a is fixed, 1.2b still blocks 5.1, 1.2d blocks a clean A-6/A-7
 rerun, 1.2e blocks E1–E5, and all 1.2 follow-ups land before 6.1. Slices 4.12 and 4.14 may
 run in parallel; 4.13 follows 4.12 and 4.15 follows 4.14. Release-engineering
 work may run in parallel, but 4.16 follows 4.1 and 4.15, 5.4 waits for 4.13
