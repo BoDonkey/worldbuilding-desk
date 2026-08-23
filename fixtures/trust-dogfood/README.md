@@ -364,8 +364,8 @@ Date/time: 2026-08-23
 Completed through: Lore intake and partial Canon/Assistant review; Session D stopped early
 Active project(s): Not recorded
 Last backup: Not recorded — preserve/export the stopped project if still available
-Blockers: Lore-intake/workspace continuity issues; Session E route unclear
-Next exact step: Complete the relevant roadmap 1.2c–1.2e workflow fixes, then restart the contaminated A–F run on one stable post-fix build
+Blockers: Session E state/replay route remains unclear
+Next exact step: Complete roadmap 1.2e's state/replay journey, then restart the contaminated A–F run on one stable post-fix build
 Evidence pointers: fixtures/trust-dogfood/Dogfood notes.md
 
 Findings awaiting triage
@@ -373,8 +373,8 @@ Findings awaiting triage
 - [resolved release blocker; 1.2a `ce427b9`] A-6/A-7/D1 — Sera occupation, Brannic service, and Dess alias facts bound to the wrong record; inferred targets could not be edited — author dogfood 2026-08-22–23
 - [resolved release blocker; 1.2a `ce427b9`] Accepted-fact removal — deleting the canonical fact left fact-owned text materialized in a World Bible Notes field, where it may remain hidden and grounded as canon — author dogfood 2026-08-23
 - [resolved release blocker; 1.2b `a92baa2`] D4/storage custody — all five chapters were saved, but the assistant confidently answered Odessa's vault without surfacing later Brannic-pocket and Sera-possession/use evidence — author dogfood 2026-08-23
-- [workflow blocker; 1.2c] Workspace continuity — route changes lost the selected scene and cross-applied another scene's scroll position; current-scene Find did not work — author dogfood 2026-08-22
-- [workflow blocker; 1.2d] A-6/A-7 lore intake — article variants duplicated records, category creation stranded review, and repeated Source Note actions/Placement terminology obscured the safe path — author dogfood 2026-08-22–23
+- [resolved workflow blocker; 1.2c `8d299e3`] Workspace continuity — selected scenes and per-scene scroll now survive route changes, and current-scene Find is available — author dogfood 2026-08-22
+- [resolved workflow blocker; 1.2d `f86bd83`] A-6/A-7 lore intake — article variants now share identity, category creation keeps review open, and Source Note actions/context-link language expose the safe saved-note path — author dogfood 2026-08-22–23
 - [workflow blocker; 1.2e] Session E — the runbook and UI did not provide an understandable route for the scripted state events, so E1–E5 were not run — author dogfood 2026-08-23
 - [UX friction; separate product decision] World Bible relationships — descriptive custom fields cannot provide stable-ID, reciprocal, rename-safe canon relationships — author dogfood 2026-08-22
 - [UX friction; route to 5.5/5.8] AI consultation budget — shared daily limit, consumers, and reset timing are not explained at the point of use — author dogfood 2026-08-23
