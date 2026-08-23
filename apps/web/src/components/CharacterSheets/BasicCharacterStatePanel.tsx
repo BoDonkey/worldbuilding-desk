@@ -22,7 +22,8 @@ interface BasicCharacterStatePanelProps {
   onOperationChange: (operation: 'change' | 'set') => void;
   onNumberValueChange: (value: string) => void;
   onConfirm: () => void;
-  onOpenAdvanced: () => void;
+  onOpenAdvancedSetup: () => void;
+  onOpenDetailedChanges: () => void;
   onOpenWorldBible: () => void;
 }
 
@@ -37,7 +38,7 @@ export function BasicCharacterStatePanel(props: BasicCharacterStatePanelProps) {
     <section className={styles.basicStatePanel}>
       <header>
         <div><span>Character continuity</span><h1>Record a scene change</h1></div>
-        <button type='button' onClick={props.onOpenAdvanced}>Advanced sheet and state</button>
+        <button type='button' onClick={props.onOpenAdvancedSetup}>Advanced sheet setup</button>
       </header>
       <p>
         Choose what changed in the manuscript. The app previews the result and
@@ -79,6 +80,9 @@ export function BasicCharacterStatePanel(props: BasicCharacterStatePanelProps) {
             {props.previewIssues.length > 0 && <p role='alert'>{props.previewIssues.join(' ')}</p>}
           </div>
           <div className={styles.basicStateActions}>
+            <button type='button' onClick={props.onOpenDetailedChanges}>
+              Inventory, equipment, status, or location
+            </button>
             <button type='button' onClick={props.onConfirm} disabled={props.isSaving || !props.sheetId || !props.sceneId || !selectedValue || props.previewIssues.length > 0}>
               {props.isSaving ? 'Recording…' : 'Confirm scene change'}
             </button>

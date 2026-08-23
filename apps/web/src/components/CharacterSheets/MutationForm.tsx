@@ -20,17 +20,17 @@ export type MutationFormType =
   | 'location_set';
 
 const MUTATION_FORM_TYPES: Array<{value: MutationFormType; label: string}> = [
-  {value: 'resource_change', label: 'Resource change'},
-  {value: 'resource_set', label: 'Resource set'},
-  {value: 'stat_change', label: 'Stat change'},
-  {value: 'stat_set', label: 'Stat set'},
-  {value: 'status_apply', label: 'Apply status'},
+  {value: 'resource_change', label: 'Change resource by'},
+  {value: 'resource_set', label: 'Set resource to'},
+  {value: 'stat_change', label: 'Change stat by'},
+  {value: 'stat_set', label: 'Set stat to'},
+  {value: 'status_apply', label: 'Add status'},
   {value: 'status_remove', label: 'Remove status'},
-  {value: 'inventory_add', label: 'Add inventory'},
-  {value: 'inventory_remove', label: 'Remove inventory'},
-  {value: 'inventory_consume', label: 'Consume inventory'},
-  {value: 'inventory_equip', label: 'Equip inventory'},
-  {value: 'inventory_unequip', label: 'Unequip inventory'},
+  {value: 'inventory_add', label: 'Add item'},
+  {value: 'inventory_remove', label: 'Remove item'},
+  {value: 'inventory_consume', label: 'Consume item'},
+  {value: 'inventory_equip', label: 'Equip item'},
+  {value: 'inventory_unequip', label: 'Unequip item'},
   {value: 'location_set', label: 'Set location'}
 ];
 
@@ -101,23 +101,23 @@ export function MutationForm({
 }: MutationFormProps) {
   return (
     <>
-      <h2 className={styles.inlineMarginTop0}>Record Scene State Change</h2>
+      <h2 className={styles.inlineMarginTop0}>Record a detailed scene change</h2>
       <p className={`${styles.inlineFontSize09rem} ${styles.inlineColorVarColorTextSecondary}`}>
-        Attach an accepted state mutation to a manuscript scene. This
-        writes directly to the mutation ledger and becomes replayable
-        history.
+        Choose what changed in one manuscript scene. Nothing is recorded until
+        the preview is valid and you choose Record state change; recorded changes
+        build the replayed timeline.
       </p>
       {editingMutationEventId && (
         <div
           className={`${styles.inlineMarginBottom075rem} ${styles.inlinePadding055rem07rem} ${styles.inlineBorderRadius8px} ${styles.inlineBorder1pxSolidVarColorAccentSoftBorder} ${styles.inlineBackgroundColorVarColorAccentSoftBg} ${styles.inlineColorVarColorAccent} ${styles.inlineFontSize088rem}`}
         >
-          Editing existing state step.
+          Editing an existing scene change.
         </div>
       )}
 
       <div className={styles.inlineMarginBottom075rem}>
         <label>
-          Character Sheet
+          Character
           <br />
           <select
             value={mutationTargetSheetId}
@@ -136,7 +136,7 @@ export function MutationForm({
 
       <div className={styles.inlineMarginBottom075rem}>
         <label>
-          Source Scene
+          Scene
           <br />
           <select
             value={mutationSceneId}
@@ -155,7 +155,7 @@ export function MutationForm({
 
       <div className={styles.inlineMarginBottom075rem}>
         <label>
-          Change Type
+          What changed?
           <br />
           <select
             value={mutationType}

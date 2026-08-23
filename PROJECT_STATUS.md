@@ -213,6 +213,12 @@ Under the hood, the app still includes rich systems for world data, rules, chara
   limits, level/XP/runtime/history repair, compendium, progression, recipes,
   zones, settlement, transfer, and memory/promotion remain available behind
   explicit advanced reveals; general-fiction projects remain unaffected.
+- Character continuity now hands authors directly from the simple numeric
+  change form to detailed inventory, equipment, status, and location changes.
+  The detailed form uses author-facing action labels, retains character/scene
+  context, previews every change, shows replay at the selected scene, and keeps
+  recording explicit and scene-scoped; advanced sheet setup remains a separate
+  destination.
 - The trust-dogfood fixture now includes importable v1 packages for the Tam
   containment boundary and an exact legacy identity-classification matrix,
   plus a scripted G1–G6 character-identity addendum mapped into the active

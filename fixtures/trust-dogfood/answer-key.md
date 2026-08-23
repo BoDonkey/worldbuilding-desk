@@ -67,18 +67,28 @@ sentence-start "Don't rush…", "Some of them…", "Look at any delver's…",
 
 Baseline sheet for Sera (set before entering events): Level 3, Might 14,
 Finesse 16, Resonance 9, Class "Delver", Ledger-Marked true, Health 100/100,
-Aether 30/50, Stamina 100/100.
+Aether 30/50, Stamina 100/100, inventory: Pale Draught ×1.
 
 Event script (enter manually per scene; deterministic review may propose
-some — accept only matching ones):
+some — accept only matching ones). Each table row is one explicit scene change;
+preview and record the rows in order:
 
-| Scene | Events (in order) |
-|---|---|
-| Ch 1 | inventory_consume "Pale Draught"; resource_set health 62; inventory_add "Emberglass Key" |
-| Ch 2 | resource_set aether 18; stat_set level 4; status_apply "Vaultburn" |
-| Ch 3 | status_remove "Vaultburn"; resource_set health 100; inventory_remove "Emberglass Key" |
-| Ch 4 | inventory_add "Sorrowsteel knife"; inventory_equip "Sorrowsteel knife"; location_set "the Undervault"; resource_set health 71 |
-| Ch 5 | resource_set aether 6 |
+| Scene | What changed? | Value |
+|---|---|---|
+| Ch 1 | Consume item | Pale Draught |
+| Ch 1 | Set resource to | Health: 62 |
+| Ch 1 | Add item | Emberglass Key |
+| Ch 2 | Set resource to | Aether: 18 |
+| Ch 2 | Set stat to | Level: 4 |
+| Ch 2 | Add status | Vaultburn |
+| Ch 3 | Remove status | Vaultburn |
+| Ch 3 | Set resource to | Health: 100 |
+| Ch 3 | Remove item | Emberglass Key |
+| Ch 4 | Add item | Sorrowsteel knife |
+| Ch 4 | Equip item | Sorrowsteel knife |
+| Ch 4 | Set location | the Undervault |
+| Ch 4 | Set resource to | Health: 71 |
+| Ch 5 | Set resource to | Aether: 6 |
 
 | ID | Check | Expected |
 |---|---|---|

@@ -1268,7 +1268,14 @@ function CharacterSheetsRoute({
         }}
         onNumberValueChange={setMutationNumberValue}
         onConfirm={() => void handleSaveMutation()}
-        onOpenAdvanced={() => setShowAdvancedSheetState(true)}
+        onOpenAdvancedSetup={() => {
+          setTaskView('setup');
+          setShowAdvancedSheetState(true);
+        }}
+        onOpenDetailedChanges={() => {
+          setTaskView('scene-history');
+          setShowAdvancedSheetState(true);
+        }}
         onOpenWorldBible={() => navigate('/world-bible')}
       />
     );
@@ -1893,7 +1900,7 @@ function CharacterSheetsRoute({
               role='alert'
               className={`${styles.inlineMarginBottom09rem} ${styles.inlinePadding075rem} ${styles.inlineBorderRadius8px} ${styles.inlineBorder1pxSolidVarColorErrorSoftBorder} ${styles.inlineBackgroundColorVarColorErrorSoftBg} ${styles.inlineColorVarColorError} ${styles.inlineFontSize09rem}`}
             >
-              <strong>Mutation warning</strong>
+              <strong>Change needs attention</strong>
               <ul className={`${styles.inlineMargin05rem001rem} ${styles.inlinePadding0}`}>
                 {mutationPreviewIssues.map((issue) => (
                   <li key={issue}>{issue}</li>
@@ -1905,7 +1912,7 @@ function CharacterSheetsRoute({
           <div
             className={`${styles.inlineMarginBottom09rem} ${styles.inlinePadding075rem} ${styles.inlineBorderRadius8px} ${styles.inlineBackgroundColorVarColorBgPrimary} ${styles.inlineBorder1pxSolidVarColorBorder} ${styles.inlineFontSize09rem}`}
           >
-            <strong>State At Selected Scene</strong>
+            <strong>Replayed state at end of selected scene</strong>
             {!replayedStateAtSelectedScene ? (
               <div className={`${styles.inlineMarginTop035rem} ${styles.inlineColorVarColorTextSecondary}`}>
                 Select a sheet and scene to inspect the replayed state timeline.
@@ -1995,14 +2002,14 @@ function CharacterSheetsRoute({
           </div>
 
           <div className={styles.inlineMarginTop1rem}>
-            <h3 className={styles.inlineMarginBottom05rem}>Recorded State History</h3>
+            <h3 className={styles.inlineMarginBottom05rem}>Recorded scene changes</h3>
             {!mutationTargetSheetId ? (
               <p className={`${styles.inlineFontSize09rem} ${styles.inlineColorVarColorTextSecondary}`}>
-                Select a character sheet to inspect its recorded mutation history.
+                Select a character to inspect recorded scene changes.
               </p>
             ) : selectedSheetMutationHistory.length === 0 ? (
               <p className={`${styles.inlineFontSize09rem} ${styles.inlineColorVarColorTextSecondary}`}>
-                No recorded state changes yet for this character sheet.
+                No recorded scene changes yet for this character.
               </p>
             ) : (
               <ul className={`${styles.inlineListStyleNone} ${styles.inlinePadding0} ${styles.inlineMargin0}`}>

@@ -94,10 +94,14 @@ If import rejects the file, that is a finding (the payload matches
 `rulesetTransferService`'s schema v1).
 
 **A-3. Character sheet baseline.** After A-6 creates Sera's canon record,
-open that World Bible character and choose **Add sheet**; do not create an
-independent character first and do not enter Sera's name again.
+open that World Bible character, open **Mechanics**, and choose **Add mechanics
+to this character**; do not create an independent character first and do not
+enter Sera's name again. On Character Sheets, choose **Advanced sheet setup**.
 Set: Level 3, Might 14, Finesse 16, Resonance 9, Class "Delver",
-Ledger-Marked true, Health 100/100, Aether 30/50, Stamina 100/100.
+Ledger-Marked true, Health 100/100, Aether 30/50, Stamina 100/100. Expand
+**Inventory, equipment & statuses**, add **Pale Draught** to inventory, and
+save the sheet. The draught is required so ch 1's consume-item change can pass
+deterministic validation.
 
 **A-4. Chapter 1 import — pre-lore unknowns.** Workspace → Import →
 `01-the-salt-door.md` (balanced mode). Let review settle.
@@ -146,22 +150,46 @@ Notes?).
 
 ## Session C — State, health, and teardown
 
-**C-1. State events.** Enter the event script from the answer key (§ E)
-scene by scene via Character Sheets manual mutation entry. If deterministic
-review proposed matching state suggestions during Session A, accept those
-instead where they match the script exactly; reject non-matching ones and
-note what they got wrong.
+**C-1. State events.** Start from World Bible → Characters → Sera Kestrel →
+**Mechanics** → **Record a scene change**. Character Sheets opens with Sera
+selected on the simple **Character continuity** form. Choose **Inventory,
+equipment, status, or location** to open **Record scene changes**; Sera remains
+selected.
 
-**C-2. Replay checks.** Record **E1, E2, E5** (replay values at ch 2 / ch 3
-/ hover card in ch 4).
+Enter the answer-key script (§ E) one row at a time, in the listed order:
 
-**C-3. The Key contradiction.** Read ch 5 with the state timeline open.
-Record **E3**: which surface (if any) made the Emberglass Key possession
-contradiction catchable. Be honest — "nothing caught it, I only knew from
-the answer key" is the most valuable possible result.
+1. Select Sera and the chapter in **Scene**.
+2. Select the author-facing action in **What changed?** and enter its value.
+3. Read **Preview** and **Replayed state at end of selected scene**. If
+   **Change needs attention** appears, correct the input rather than recording
+   it.
+4. Choose **Record State Change**. Confirm it appears under **Recorded scene
+   changes** before entering the next row.
 
-**C-4. Stale events.** Edit one sentence in ch 2, record **E4** (stale
-badges, invalidation, replay behavior).
+Each accepted row must remain an explicit, previewed change attached to one
+scene. If deterministic review proposed a matching state suggestion during
+Session A, accept it only when its action, value, character, and scene match
+the script exactly; reject non-matching suggestions and note what they got
+wrong.
+
+**C-2. Replay checks.** Stay in **Record scene changes**. Select Sera and ch 2,
+then ch 3, and record **E1** and **E2** from **Replayed state at end of selected
+scene**. For **E5**, open Workspace → ch 4 → **Scene** → **Ending**, then hover
+Sera's lore highlight and compare the card with the ch 4 replay. It must show
+the state at ch 4, not the baseline or final state.
+
+**C-3. The Key contradiction.** Open Workspace → ch 5 → **Scene** →
+**Ending**. Compare Sera's hover card and the detailed Character Sheets replay
+at ch 5 with the prose claiming she produces the Emberglass Key. Record
+**E3**: which surface (if any) made the possession contradiction catchable.
+Be honest — "nothing caught it, I only knew from the answer key" is the most
+valuable possible result.
+
+**C-4. Stale events.** Edit one sentence in ch 2 and save it. Return to
+Character Sheets → **Record scene changes**, select Sera and ch 2, and record
+**E4**: the ch 2 rows show stale status, invalidation works, replay excludes
+invalidated rows, and the replacement change must be previewed and explicitly
+recorded again.
 
 **C-5. Health panels.** Record **F1–F3** (retrieval probe ranking, stale →
 rebuild recovery, Sera's character detail panel completeness).

@@ -514,7 +514,7 @@
 .basicStateFields select, .basicStateFields input { margin-top: 0.3rem; }
 .basicStatePreview, .basicStateEmpty { grid-column: 1 / -1; padding: 0.8rem; border: 1px solid var(--surface-border-soft); border-radius: 12px; background: var(--color-bg-secondary); }
 .basicStatePreview p, .basicStateEmpty p { margin: 0.35rem 0 0; color: var(--color-text-secondary); }
-.basicStateActions { grid-column: 1 / -1; display: flex; justify-content: flex-end; }
+.basicStateActions { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 0.55rem; justify-content: flex-end; }
 
 @media (max-width: 620px) {
   .basicStatePanel > header { flex-direction: column; }

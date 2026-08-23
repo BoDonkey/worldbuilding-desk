@@ -433,6 +433,21 @@ describe('Post-merge smoke checklist', () => {
     cy.contains('[role="status"]', 'Health is now tracked for Tamsin Vale.').should('be.visible');
     cy.contains('strong', '100 / 100').should('be.visible');
     cy.contains('button', 'Record a scene change').should('be.visible');
+    cy.contains('button', 'Record a scene change').click();
+    cy.location('pathname').should('eq', '/sheets');
+    cy.contains('button', 'Inventory, equipment, status, or location').click();
+    cy.contains('h2', 'Record a detailed scene change').parents('section').first().within(() => {
+      cy.contains('label', 'Character').find('select').find('option:selected')
+        .should('have.text', 'Tamsin Vale');
+      cy.contains('label', 'What changed?').find('select').within(() => {
+        cy.contains('option', 'Add item').should('exist');
+        cy.contains('option', 'Equip item').should('exist');
+        cy.contains('option', 'Add status').should('exist');
+        cy.contains('option', 'Set location').should('exist');
+      });
+      cy.contains('strong', 'Preview').should('be.visible');
+      cy.contains('strong', 'Replayed state at end of selected scene').should('be.visible');
+    });
 
     mutateSmokeDb(async (db) => {
       const projects = await getAllRecords<{id: string; name: string; rulesetId?: string}>(db, 'projects');
