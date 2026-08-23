@@ -246,4 +246,89 @@ describe('Source Notes', () => {
       acceptedSummary: 'Iron Sword background: A ritual blade used by the first watch.'
     });
   });
+
+  it('keeps inferred fact targets editable and accepts only the selected World Bible record', () => {
+    cy.visit('/lore');
+    cy.contains('button', 'Start Writing').click();
+    cy.contains('label', 'Title').find('input').type('Retargeting Check');
+    cy.contains('button', 'Link Canon Record').click();
+    cy.contains('option', 'Ember Archive (World Bible)')
+      .parent('select')
+      .select('Ember Archive (World Bible)');
+    cy.get('textarea').type('Background: A deliberately retargeted fact.');
+    cy.contains('button', 'Create Source Note').click();
+
+    cy.contains('article', 'Retargeting Check').within(() => {
+      cy.contains('button', 'Extract').click();
+    });
+    cy.contains('[role="status"]', /and \d+ fact proposal/).should('be.visible');
+    cy.contains('article', 'Retargeting Check').within(() => {
+      cy.contains('button', 'Edit').click();
+    });
+
+    cy.contains('article', 'Background: A deliberately retargeted fact.').within(() => {
+      cy.contains('label', 'World Bible target')
+        .find('select')
+        .should('have.value', 'entity:entity-ember-archive')
+        .select('Iron Sword');
+      cy.contains('button', 'Accept').click();
+    });
+    cy.contains('[role="status"]', 'Fact accepted into canon.').should('be.visible');
+    cy.contains('h3', 'Accepted Canon').parent().parent().within(() => {
+      cy.contains('Iron Sword background: A deliberately retargeted fact.').should('be.visible');
+      cy.contains('Ember Archive background: A deliberately retargeted fact.').should('not.exist');
+      cy.contains('article', 'Iron Sword background: A deliberately retargeted fact.')
+        .contains('button', 'Remove')
+        .click();
+    });
+    cy.contains('[role="dialog"]', 'Remove this accepted fact from canon?').within(() => {
+      cy.contains('button', 'Remove').click();
+    });
+    cy.contains('[role="status"]', 'Accepted fact removed.').should('be.visible');
+    cy.contains('article', 'Background: A deliberately retargeted fact.').within(() => {
+      cy.contains('label', 'World Bible target')
+        .find('option:selected')
+        .should('have.text', 'Iron Sword');
+      cy.contains('button', 'Accept').should('be.enabled');
+    });
+  });
+
+  it('refreshes an unresolved fact target after accepting its sibling entity', () => {
+    cy.visit('/lore');
+    cy.contains('button', 'Start Writing').click();
+    cy.contains('label', 'Title').find('input').type('Odessa Dossier');
+    cy.get('textarea').type(
+      '# Character Dossier — Odessa Vane-Kir{enter}{enter}' +
+      'Odessa Vane-Kir, the senior broker, is called Dess by those she trusts.'
+    );
+    cy.contains('button', 'Create Source Note').click();
+    cy.contains('article', 'Odessa Dossier').within(() => {
+      cy.contains('button', 'Extract').click();
+    });
+    cy.contains('[role="status"]', /Extracted 1 entity proposal and 1 fact proposal/)
+      .should('be.visible');
+    cy.contains('article', 'Odessa Dossier').within(() => {
+      cy.contains('button', 'Edit').click();
+    });
+
+    cy.contains('article', 'Dess').within(() => {
+      cy.contains('button', 'Resolve Entities First').should('be.disabled');
+      cy.contains('label', 'World Bible target').find('select').should('have.value', '');
+    });
+    cy.contains('article', 'Odessa Vane-Kir').within(() => {
+      cy.contains('button', 'Accept').click();
+    });
+    cy.contains('[role="status"]', '"Odessa Vane-Kir" created from lore.').should('be.visible');
+
+    cy.contains('article', 'Dess').within(() => {
+      cy.contains('label', 'World Bible target')
+        .find('option:selected')
+        .should('have.text', 'Odessa Vane-Kir');
+      cy.contains('button', 'Accept').should('be.enabled').click();
+    });
+    cy.contains('[role="status"]', 'Fact accepted into canon.').should('be.visible');
+    cy.contains('h3', 'Accepted Canon').parent().parent().within(() => {
+      cy.contains('Odessa Vane-Kir alias: Dess').should('be.visible');
+    });
+  });
 });

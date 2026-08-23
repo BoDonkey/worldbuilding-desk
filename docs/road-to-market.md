@@ -221,9 +221,10 @@ targets as editable proposals, never as locked truth. New fact writes target
 canonical World Bible entity IDs. Resolve an explicit grammatical subject when
 it exists; if that subject has not been accepted from a sibling entity proposal
 or the paragraph is ambiguous, leave the fact unresolved instead of falling
-back to another linked record. Resolve/reject entity candidates before fact
-acceptance and refresh fact candidates against the resulting authoritative
-records. Retargeting must persist on acceptance and allow the Brannic
+back to another linked record. Unresolved sibling subjects remain blocked
+until the author accepts the relevant entity or chooses an existing target;
+refresh fact candidates against the resulting authoritative records.
+Retargeting must persist on acceptance and allow the Brannic
 service-length proposals to form one conflict cluster. Removing or superseding
 a fact must conservatively undo only the user-facing side effects owned by that
 fact; accepting new background/appearance/trait/ability facts must not append

@@ -56,6 +56,9 @@ const LABEL_TO_FACT_TYPE: Record<string, CanonicalFactType> = {
 const normalize = (value: string): string =>
   value.trim().toLowerCase().replace(/\s+/g, ' ');
 
+const escapeRegex = (value: string): string =>
+  value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
 const formatFactValue = (value: CanonicalFactValue): string =>
   typeof value === 'string' ? value : `${value.label}:${value.value}`;
 
@@ -181,15 +184,59 @@ function resolveMentionedTarget(
   fallback: ExtractionTarget | null
 ): ExtractionTarget | null {
   const normalizedText = normalize(text);
+  const fullNameMatches = knownTargets.filter((entry) => {
+    const normalizedName = normalize(entry.name);
+    return new RegExp(
+      `(?:^|[^\\p{L}\\p{N}_'-])${escapeRegex(normalizedName)}(?=$|[^\\p{L}\\p{N}_'-])`,
+      'iu'
+    ).test(normalizedText);
+  });
+  if (fullNameMatches.length === 1) return fullNameMatches[0] ?? fallback;
+  if (fullNameMatches.length > 1) return fallback;
+
+  const firstNameMatches = knownTargets.filter((entry) => {
+    const firstName = normalize(entry.name).split(' ')[0];
+    return !!firstName && new RegExp(
+      `(?:^|[^\\p{L}\\p{N}_'-])${escapeRegex(firstName)}(?=$|[^\\p{L}\\p{N}_'-])`,
+      'iu'
+    ).test(normalizedText);
+  });
+  return firstNameMatches.length === 1 ? firstNameMatches[0] ?? fallback : fallback;
+}
+
+const resolveExplicitTarget = (
+  text: string,
+  knownTargets: ExtractionTarget[]
+): ExtractionTarget | null => resolveMentionedTarget(text, knownTargets, null);
+
+function resolveLastMentionedTarget(
+  text: string,
+  knownTargets: ExtractionTarget[]
+): ExtractionTarget | null {
+  const normalizedText = normalize(text);
   const matches = knownTargets
-    .filter((entry) => {
+    .map((entry) => {
       const normalizedName = normalize(entry.name);
-      if (normalizedText.includes(normalizedName)) return true;
-      const firstName = normalizedName.split(' ')[0];
-      return !!firstName && new RegExp(`(?:^|\\s)${firstName}(?:$|\\s)`, 'i').test(normalizedText);
+      const firstName = normalizedName.split(' ')[0] ?? '';
+      const surfaces = Array.from(new Set([normalizedName, firstName].filter(Boolean)));
+      const lastIndex = Math.max(
+        ...surfaces.flatMap((surface) =>
+          Array.from(
+            normalizedText.matchAll(
+              new RegExp(
+                `(?:^|[^\\p{L}\\p{N}_'-])(${escapeRegex(surface)})(?=$|[^\\p{L}\\p{N}_'-])`,
+                'giu'
+              )
+            )
+          ).map((match) => (match.index ?? -1) + (match[0].length - (match[1]?.length ?? 0)))
+        )
+      );
+      return {entry, lastIndex};
     })
-    .sort((left, right) => right.name.length - left.name.length);
-  return matches[0] ?? fallback;
+    .filter((match) => Number.isFinite(match.lastIndex) && match.lastIndex >= 0)
+    .sort((left, right) => right.lastIndex - left.lastIndex);
+  if (!matches[0] || matches[0].lastIndex === matches[1]?.lastIndex) return null;
+  return matches[0].entry;
 }
 
 function extractNaturalProseFacts(
@@ -231,11 +278,7 @@ function extractNaturalProseFacts(
     factType: CanonicalFactType,
     value: CanonicalFactValue,
     confidence: number,
-    target: ExtractionTarget | null = resolveMentionedTarget(
-      paragraph,
-      params.knownTargets,
-      activeFallbackTarget
-    )
+    target: ExtractionTarget | null = activeFallbackTarget
   ) => {
     pushProposal(proposals, dedupe, {
       projectId: params.projectId,
@@ -278,7 +321,7 @@ function extractNaturalProseFacts(
         'occupation',
         earlierOccupationMatch[2].toLowerCase(),
         0.66,
-        resolveMentionedTarget(earlierOccupationMatch[1], params.knownTargets, primaryTarget)
+        resolveExplicitTarget(earlierOccupationMatch[1], params.knownTargets)
       );
     }
 
@@ -305,7 +348,7 @@ function extractNaturalProseFacts(
         'alias',
         calledAliasMatch[2],
         0.91,
-        resolveMentionedTarget(calledAliasMatch[1], params.knownTargets, activeFallbackTarget)
+        resolveExplicitTarget(calledAliasMatch[1], params.knownTargets)
       );
     }
     const spokenAliasMatch = collapsed.match(
@@ -337,10 +380,10 @@ function extractNaturalProseFacts(
       /\bserved the ([A-Z][A-Za-z'-]+(?:\s+[A-Z][A-Za-z'-]+)*) (?:for )?(a decade|[a-z-]+ years)\b/
     );
     if (serviceMatch?.[1] && serviceMatch[2]) {
-      const serviceTarget = resolveMentionedTarget(
-        paragraph,
-        params.knownTargets,
-        primaryTarget
+      const servicePrefix = collapsed.slice(0, serviceMatch.index ?? 0);
+      const serviceTarget = resolveLastMentionedTarget(
+        servicePrefix,
+        params.knownTargets
       );
       propose(
         paragraph,
@@ -355,8 +398,15 @@ function extractNaturalProseFacts(
     const foundedMatch = collapsed.match(
       /\b(?:the\s+)?([A-Z][A-Za-z'-]+(?:\s+[A-Z][A-Za-z'-]+)*) was founded ([^,.]+)(?:,|\.)/
     );
-    if (foundedMatch?.[2]) {
-      propose(paragraph, start, 'background', `Founded ${foundedMatch[2].trim()}`, 0.88);
+    if (foundedMatch?.[1] && foundedMatch[2]) {
+      propose(
+        paragraph,
+        start,
+        'background',
+        `Founded ${foundedMatch[2].trim()}`,
+        0.88,
+        resolveExplicitTarget(foundedMatch[1], params.knownTargets)
+      );
     }
 
     const treatmentMatch = collapsed.match(
@@ -376,10 +426,9 @@ function extractNaturalProseFacts(
       /\bWhat if ([A-Z][A-Za-z'-]+) is ([A-Z][A-Za-z'-]+(?:\s+[A-Z][A-Za-z'-]+)*)\?/
     );
     if (speculativeMembershipMatch?.[1] && speculativeMembershipMatch[2]) {
-      const speculativeTarget = resolveMentionedTarget(
+      const speculativeTarget = resolveExplicitTarget(
         speculativeMembershipMatch[1],
-        params.knownTargets,
-        null
+        params.knownTargets
       );
       propose(
         paragraph,

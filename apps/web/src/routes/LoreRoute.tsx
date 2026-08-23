@@ -44,7 +44,8 @@ import {
   buildCanonicalFactSummary,
   captureCanonicalFactMemory,
   deleteCanonicalFactMemory,
-  prependUniqueCanonicalFact
+  prependUniqueCanonicalFact,
+  revertCanonicalFactSideEffects
 } from '../services/lore/canonicalFactActions';
 import {acceptLoreEntityProposal} from '../services/lore/entityProposalActions';
 import {getRAGService} from '../services/rag/getRAGService';
@@ -77,7 +78,7 @@ type LinkDraft = {
 };
 
 type FactTargetDraft = {
-  targetType: 'character' | 'entity';
+  targetType: 'entity';
   targetId: string;
 };
 
@@ -318,6 +319,16 @@ function LoreRoute() {
       }))
     ],
     [characters, entities]
+  );
+
+  const factLinkableTargets = useMemo(
+    () => entities.map((entity) => ({
+      key: `entity:${entity.id}`,
+      label: entity.name,
+      targetType: 'entity' as const,
+      targetId: entity.id
+    })),
+    [entities]
   );
 
   const linksByDocumentId = useMemo(() => {
@@ -647,18 +658,11 @@ function LoreRoute() {
         projectId: activeProject.id,
         document,
         links,
-        knownTargets: [
-          ...characters.map((character) => ({
-            type: 'character' as const,
-            id: character.id,
-            name: character.name
-          })),
-          ...entities.map((entity) => ({
-            type: 'entity' as const,
-            id: entity.id,
-            name: entity.name
-          }))
-        ],
+        knownTargets: entities.map((entity) => ({
+          type: 'entity' as const,
+          id: entity.id,
+          name: entity.name
+        })),
         existingFacts: canonicalFacts
       });
       await replaceLoreEntityProposals({
@@ -702,24 +706,26 @@ function LoreRoute() {
   };
 
   const getFactProposalTarget = (proposal: LoreFactProposal) => {
-    if (proposal.targetType && proposal.targetId) {
-      return {
-        targetType: proposal.targetType,
-        targetId: proposal.targetId,
-        targetName: proposal.targetName
-      };
-    }
     const draft = factTargetDrafts[proposal.id];
-    if (!draft) return null;
-    const target = linkableTargets.find(
-      (entry) => entry.targetType === draft.targetType && entry.targetId === draft.targetId
+    const targetId = draft?.targetId ?? (
+      proposal.targetType === 'entity' ? proposal.targetId : undefined
     );
+    if (!targetId) return null;
+    const target = factLinkableTargets.find((entry) => entry.targetId === targetId);
     if (!target) return null;
     return {
       targetType: target.targetType,
       targetId: target.targetId,
-      targetName: target.label.replace(/\s+\((?:Legacy character data|World Bible)\)$/, '')
+      targetName: target.label
     };
+  };
+
+  const getFactProposalTargetValue = (proposal: LoreFactProposal): string => {
+    const draft = factTargetDrafts[proposal.id];
+    if (draft) return `entity:${draft.targetId}`;
+    return proposal.targetType === 'entity' && proposal.targetId
+      ? `entity:${proposal.targetId}`
+      : '';
   };
 
   const handleAcceptProposal = async (proposal: LoreFactProposal) => {
@@ -820,6 +826,43 @@ function LoreRoute() {
         targetId: acceptedTarget.targetId,
         updatedAt: Date.now()
       });
+      const document = documents.find((entry) => entry.id === proposal.loreDocumentId);
+      if (activeProject && document) {
+        const [nextEntities, nextLinks, nextFacts] = await Promise.all([
+          getEntitiesByProject(activeProject.id),
+          getLoreDocumentLinksByProject(activeProject.id),
+          getCanonicalFactsByProject(activeProject.id)
+        ]);
+        const documentLinks = nextLinks.filter(
+          (link) => link.loreDocumentId === proposal.loreDocumentId
+        );
+        const refreshedFactProposals = extractLoreFactProposals({
+          projectId: activeProject.id,
+          document,
+          links: documentLinks,
+          knownTargets: nextEntities.map((entity) => ({
+            type: 'entity' as const,
+            id: entity.id,
+            name: entity.name
+          })),
+          existingFacts: nextFacts
+        });
+        await replaceLoreFactProposals({
+          projectId: activeProject.id,
+          loreDocumentId: proposal.loreDocumentId,
+          proposals: refreshedFactProposals
+        });
+        setEntities(nextEntities);
+        setDocumentLinks(nextLinks);
+        setCanonicalFacts(nextFacts);
+        setProposals((current) => [
+          ...current.filter(
+            (entry) => entry.loreDocumentId !== proposal.loreDocumentId
+          ),
+          ...refreshedFactProposals
+        ]);
+        setFactTargetDrafts({});
+      }
       setEntityProposals((current) =>
         current.map((entry) =>
           entry.id === proposal.id
@@ -901,6 +944,8 @@ function LoreRoute() {
   };
 
   const handleRemoveFact = (fact: CanonicalFact) => {
+    if (!activeProject) return;
+    const projectId = activeProject.id;
     requestConfirm({
       title: 'Remove this accepted fact from canon?',
       message: 'The source proposal will reopen for review instead of being discarded.',
@@ -910,6 +955,8 @@ function LoreRoute() {
         setRemovingFactId(fact.id);
         setFeedback(null);
         try {
+          const remainingFacts = canonicalFacts.filter((entry) => entry.id !== fact.id);
+          await revertCanonicalFactSideEffects(projectId, fact, remainingFacts);
           await deleteCanonicalFact(fact.id);
           const sourceProposal = proposals.find((proposal) => proposal.id === fact.sourceProposalId);
           if (sourceProposal) {
@@ -975,7 +1022,7 @@ function LoreRoute() {
         return next;
       }
       const [targetType, targetId] = value.split(':');
-      if ((targetType !== 'character' && targetType !== 'entity') || !targetId) {
+      if (targetType !== 'entity' || !targetId) {
         return current;
       }
       return {
@@ -1464,6 +1511,12 @@ function LoreRoute() {
                   <h3>Fact Candidates</h3>
                   <span className={styles.countBadge}>{editingDocumentProposals.length}</span>
                 </div>
+                <p className={styles.subsectionCopy}>
+                  Every target is a suggestion you can change before acceptance.
+                  {editingEntityProposals.length > 0
+                    ? ' Facts with no saved target remain blocked until you resolve the relevant entity candidate or choose an existing World Bible record.'
+                    : ' Accepting writes the fact only to the selected World Bible record.'}
+                </p>
                 {editingDocumentProposals.length === 0 ? (
                   <p className={styles.emptyState}>
                     No fact proposals yet. Run extraction on this document after saving it.
@@ -1477,35 +1530,25 @@ function LoreRoute() {
                         <span className={styles.statusBadge}>{proposal.status}</span>
                       </div>
                       <p className={styles.proposalValue}>{formatFactValue(proposal.value)}</p>
-                      {proposal.targetName ? (
-                        <p className={styles.proposalMeta}>
-                          Target: {proposal.targetName} ({proposal.targetType})
-                        </p>
-                      ) : (
-                        <label className={styles.targetSelectLabel}>
-                          Target
-                          <select
-                            value={
-                              factTargetDrafts[proposal.id]
-                                ? `${factTargetDrafts[proposal.id].targetType}:${factTargetDrafts[proposal.id].targetId}`
-                                : ''
-                            }
-                            onChange={(event) =>
-                              updateFactTargetDraft(proposal.id, event.target.value)
-                            }
-                          >
-                            <option value=''>Choose target</option>
-                            {linkableTargets.map((target) => (
-                              <option
-                                key={target.key}
-                                value={`${target.targetType}:${target.targetId}`}
-                              >
-                                {target.label}
-                              </option>
-                            ))}
-                          </select>
-                        </label>
-                      )}
+                      <label className={styles.targetSelectLabel}>
+                        World Bible target
+                        <select
+                          value={getFactProposalTargetValue(proposal)}
+                          onChange={(event) =>
+                            updateFactTargetDraft(proposal.id, event.target.value)
+                          }
+                        >
+                          <option value=''>Choose target</option>
+                          {factLinkableTargets.map((target) => (
+                            <option
+                              key={target.key}
+                              value={`entity:${target.targetId}`}
+                            >
+                              {target.label}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
                       <p className={styles.proposalMeta}>
                         Confidence: {Math.round(proposal.confidence * 100)}%
                       </p>
@@ -1517,12 +1560,14 @@ function LoreRoute() {
                             onClick={() => void handleAcceptProposal(proposal)}
                             disabled={
                               actingProposalId === proposal.id ||
-                              (!proposal.targetId && !factTargetDrafts[proposal.id])
+                              !getFactProposalTargetValue(proposal)
                             }
                           >
-                            {proposal.targetId || factTargetDrafts[proposal.id]
-                              ? 'Accept'
-                              : 'Choose Target'}
+                            {editingEntityProposals.length > 0 && !getFactProposalTargetValue(proposal)
+                              ? 'Resolve Entities First'
+                              : getFactProposalTargetValue(proposal)
+                                ? 'Accept'
+                                : 'Choose Target'}
                           </button>
                           <button
                             type='button'

@@ -44,7 +44,8 @@ import {
   applyCanonicalFactSideEffects,
   buildCanonicalFactSummary,
   captureCanonicalFactMemory,
-  deleteCanonicalFactMemory
+  deleteCanonicalFactMemory,
+  revertCanonicalFactSideEffects
 } from '../services/lore/canonicalFactActions';
 import {getRAGService} from '../services/rag/getRAGService';
 import type {RAGProvider} from '../services/rag/RAGService';
@@ -432,7 +433,6 @@ function CanonDecisionsRoute() {
         acceptedAt: Date.now(),
         updatedAt: Date.now()
       };
-      await deleteCanonicalFact(previousFact.id);
       await saveCanonicalFact(nextFact);
       await saveLoreFactProposal({
         ...proposal,
@@ -440,6 +440,12 @@ function CanonDecisionsRoute() {
         updatedAt: Date.now()
       });
       await applyCanonicalFactSideEffects(activeProject.id, nextFact);
+      await revertCanonicalFactSideEffects(
+        activeProject.id,
+        previousFact,
+        [...canonicalFacts.filter((fact) => fact.id !== previousFact.id), nextFact]
+      );
+      await deleteCanonicalFact(previousFact.id);
       try {
         const shodh = await getShodhService({
           projectId: activeProject.id,

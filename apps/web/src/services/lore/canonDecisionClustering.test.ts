@@ -1,7 +1,9 @@
 import {describe, expect, it} from 'vitest';
 import type {
+  CanonicalFact,
   CanonDecisionSuppression,
   LoreEntityProposal,
+  LoreFactProposal,
   WorldEntity
 } from '../../entityTypes';
 import {buildCanonDecisionClusters} from './canonDecisionClustering';
@@ -37,6 +39,36 @@ const makeWorldEntity = (overrides: Partial<WorldEntity>): WorldEntity => ({
   fields: {},
   links: [],
   createdAt: 1,
+  updatedAt: 1,
+  ...overrides
+});
+
+const makeFactProposal = (overrides: Partial<LoreFactProposal>): LoreFactProposal => ({
+  id: 'fact-proposal-1',
+  projectId,
+  loreDocumentId: 'lore-doc-1',
+  targetType: 'entity',
+  targetId: 'brannic',
+  targetName: 'Brannic Halloway',
+  factType: 'background',
+  value: 'Compact service: a decade',
+  confidence: 0.9,
+  evidence: {start: 0, end: 20, text: 'Brannic served the Compact a decade.'},
+  status: 'proposed',
+  createdAt: 1,
+  updatedAt: 1,
+  ...overrides
+});
+
+const makeCanonicalFact = (overrides: Partial<CanonicalFact>): CanonicalFact => ({
+  id: 'fact-1',
+  projectId,
+  targetType: 'entity',
+  targetId: 'brannic',
+  targetName: 'Brannic Halloway',
+  factType: 'background',
+  value: 'Compact service: twenty years',
+  acceptedAt: 1,
   updatedAt: 1,
   ...overrides
 });
@@ -163,5 +195,28 @@ describe('canonDecisionClustering', () => {
     });
 
     expect(clusters).toEqual([]);
+  });
+
+  it('forms the Brannic service conflict once one correctly targeted value is canon', () => {
+    const clusters = buildCanonDecisionClusters({
+      projectId,
+      entityProposals: [],
+      factProposals: [makeFactProposal({})],
+      canonicalFacts: [makeCanonicalFact({})],
+      characters: [],
+      entities: [makeWorldEntity({id: 'brannic', name: 'Brannic Halloway'})]
+    });
+
+    expect(clusters).toEqual([
+      expect.objectContaining({
+        kind: 'fact_conflict',
+        title: 'background conflict for Brannic Halloway',
+        reasonCodes: ['same_fact_type_same_target'],
+        memberRefs: expect.arrayContaining([
+          {type: 'lore_fact_proposal', id: 'fact-proposal-1'},
+          {type: 'canonical_fact', id: 'fact-1'}
+        ])
+      })
+    ]);
   });
 });

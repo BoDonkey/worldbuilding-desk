@@ -1,6 +1,6 @@
 # Worldbuilding-Desk Project Status
 
-**Last Updated:** August 16, 2026
+**Last Updated:** August 23, 2026
 
 ## Project Overview
 
@@ -128,6 +128,14 @@ Under the hood, the app still includes rich systems for world data, rules, chara
 - Full-name, hyphenated-name, and alias smoke coverage now exists for cases such as `Mira Voss`, `Lantern-Mira`, `Iron Warrens`, and `Warrens`.
 - Imported-scene review now keeps strong typed multiword names such as named doors, factions, locations, and items while suppressing bare generic fragments and verb-complement phrases; the trust-dogfood chapters cover the planted hazards and unknowns directly.
 - Lore extraction now proposes evidence-backed facts and typed entities from both structured labels and common natural-prose dossier/faction/place patterns, including the trust-dogfood occupation, aliases, relationships, appearance, service conflict, historical faction name, and explicitly speculative claims. All results remain review-only until author acceptance.
+- Lore fact review now exposes an editable World Bible target on every fact
+  proposal and writes new accepted facts only against stable World Bible entity
+  IDs. Explicit but unresolved subjects fail closed instead of inheriting an
+  unrelated linked record; accepting a sibling entity refreshes its fact
+  candidates against authoritative records. Removing or superseding an
+  accepted fact conservatively reverses fact-owned aliases and legacy
+  materialized fields, while new background/appearance/trait/ability facts no
+  longer copy untracked text into World Bible Notes.
 - Parent/child canon inheritance with promotion and sync flows.
 - Project backup export/import with validation and conflict review.
 - Project backup snapshots now use schema 3 and include consistency aliases,
@@ -361,10 +369,12 @@ Under the hood, the app still includes rich systems for world data, rules, chara
 ## Immediate Priorities
 
 ### Product / UX
-- Active handoff: dogfood the complete A–G trust fixture over several
-  sittings, record evidence and resume checkpoints in its runbook, and triage
-  every finding before claiming roadmap slice 5.1. Preserve ordinary findings
-  without fixing them mid-run so later sessions test one stable build.
+- Active handoff: the August 22–23 A–G dogfood run is stopped and preserved in
+  its fixture runbook after exposing release-blocking fact-target and temporal
+  custody failures. Fact-target integrity and reversible acceptance are now
+  repaired under slice 1.2a; complete 1.2b and the relevant workflow slices,
+  then restart the contaminated A–F run on one stable post-fix build before
+  claiming roadmap slice 5.1.
 - Make the writing workspace the clearest default entry point.
 - Reduce visible system complexity on first load through a calm-shell navigation pass before adding more route features.
 - Keep `Workspace`, `World Bible`, and `Lore Documents` as the primary active-project mental model: write, structure canon, and keep longform source notes.
@@ -432,6 +442,14 @@ Under the hood, the app still includes rich systems for world data, rules, chara
 ## Verification Status
 
 ### Verified Recently
+- Road-to-market Slice 1.2a makes every inferred fact target editable, keeps
+  new canonical fact identity on World Bible entity IDs, fails closed for an
+  unresolved explicit subject, refreshes sibling facts after entity
+  acceptance, forms the Brannic service conflict on one target, and reverses
+  only fact-owned materialization on removal or supersession. Web lint passes
+  with the three existing hook warnings; 387 web unit tests, 6 rules-engine
+  tests, 12 rules-ui tests, web/desktop production builds, and Cypress 55/55
+  pass.
 - Road-to-market Slice 2.9 UI close-out confirms Slices 2.1–2.8 match the
   current writing-first product rules: audited dialogs retain Escape/focus
   behavior, production native confirms/alerts are eliminated, field errors

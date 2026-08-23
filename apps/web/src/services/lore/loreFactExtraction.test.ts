@@ -23,8 +23,8 @@ const links: LoreDocumentLink[] = [
     id: 'link-1',
     projectId: 'project-1',
     loreDocumentId: 'doc-1',
-    targetType: 'character',
-    targetId: 'character-1',
+    targetType: 'entity',
+    targetId: 'character-entity-1',
     relationship: 'primary_subject',
     createdAt: 1
   }
@@ -36,7 +36,7 @@ describe('extractLoreFactProposals', () => {
       projectId: 'project-1',
       document: makeDocument(['Education:', '- Age: 6-10: Glass Harbor Primary'].join('\n')),
       links,
-      knownTargets: [{type: 'character', id: 'character-1', name: 'Mira Voss'}],
+      knownTargets: [{type: 'entity', id: 'character-entity-1', name: 'Mira Voss'}],
       existingFacts: [] as CanonicalFact[]
     });
 
@@ -57,15 +57,18 @@ describe('extractLoreFactProposals', () => {
       document: {...makeDocument(content), title: 'Character Dossier — Sera Kestrel'},
       links,
       knownTargets: [
-        {type: 'character', id: 'character-1', name: 'Sera Kestrel'},
-        {type: 'character', id: 'character-tam', name: 'Tam'}
+        {type: 'entity', id: 'sera', name: 'Sera Kestrel'},
+        {type: 'entity', id: 'tam', name: 'Tam'},
+        {type: 'entity', id: 'grayharbor', name: 'Grayharbor'},
+        {type: 'entity', id: 'compact', name: 'Cinder Compact'},
+        {type: 'entity', id: 'brannic', name: 'Brannic Halloway'}
       ],
       existingFacts: []
     });
 
     expect(proposals).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({factType: 'occupation', value: 'cartographer'}),
+        expect.objectContaining({targetId: 'sera', factType: 'occupation', value: 'cartographer'}),
         expect.objectContaining({factType: 'alias', value: 'Ash'}),
         expect.objectContaining({factType: 'alias', value: 'the Ledgerbound'}),
         expect.objectContaining({factType: 'appearance', value: 'gray eyes'}),
@@ -167,6 +170,41 @@ describe('extractLoreFactProposals', () => {
           targetId: 'undervault',
           factType: 'background',
           value: expect.stringContaining('Vaultburn treatment: salt, cedar oil, and whitethorn ash')
+        })
+      ])
+    );
+  });
+
+  it('leaves an explicit sibling subject unresolved until its entity exists', () => {
+    const content = readFileSync(
+      new URL('../../../../../fixtures/trust-dogfood/lore/places-grayharbor-undervault.md', import.meta.url),
+      'utf8'
+    );
+    const proposals = extractLoreFactProposals({
+      projectId: 'project-1',
+      document: {
+        ...makeDocument(content),
+        title: 'Place Notes — Grayharbor and the Undervault',
+        kind: 'place_history'
+      },
+      links: [
+        {...links[0]!, targetId: 'grayharbor'},
+        {...links[0]!, id: 'link-2', targetId: 'undervault', relationship: 'secondary_subject'}
+      ],
+      knownTargets: [
+        {type: 'entity', id: 'grayharbor', name: 'Grayharbor'},
+        {type: 'entity', id: 'undervault', name: 'Undervault'}
+      ],
+      existingFacts: []
+    });
+
+    expect(proposals).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          targetId: undefined,
+          targetName: undefined,
+          factType: 'alias',
+          value: 'Dess'
         })
       ])
     );

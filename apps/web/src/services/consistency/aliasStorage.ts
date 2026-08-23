@@ -340,6 +340,19 @@ export async function deleteAliasesForEntity(
   });
 }
 
+export async function deleteAliasById(id: string): Promise<void> {
+  const db = await openDb();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(CONSISTENCY_ALIAS_STORE_NAME, 'readwrite');
+    const request = tx.objectStore(CONSISTENCY_ALIAS_STORE_NAME).delete(id);
+    request.onsuccess = () => {
+      emitAliasRecordsChanged();
+      resolve();
+    };
+    request.onerror = () => reject(request.error);
+  });
+}
+
 export async function deleteAliasesForTarget(input: {
   projectId: string;
   targetId: string;
