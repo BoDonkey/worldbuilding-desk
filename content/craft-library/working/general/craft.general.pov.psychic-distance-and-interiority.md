@@ -33,6 +33,7 @@ related:
   - craft.general.scene.scene-turns
   - craft.general.scene.sequel-and-reflection
   - craft.general.voice.narrative-summary-vs-scene
+  - craft.general.voice.tense-and-narrative-person
   - craft.general.voice.voice-as-craft-element
   - craft.system.progression.visible-vs-hidden-systems
 source_ids:

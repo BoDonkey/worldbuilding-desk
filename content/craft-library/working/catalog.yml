@@ -5,7 +5,7 @@
 # Not the 4.17 runtime schema.
 
 generated_by: qa/build_catalog.py (draft tooling, not runtime code)
-record_count: 154
+record_count: 166
 records:
 - id: craft.comparison.progression.classes-versus-skill-based-growth
   title: Classes versus skill-based growth
@@ -598,6 +598,38 @@ records:
     exclusions: []
   author_vetted: false
   path: general/craft.general.practice.no-gap-posting.md
+- id: craft.general.practice.outlining-versus-discovery-drafting
+  title: Outlining versus discovery drafting
+  family: general
+  document_type: pattern
+  version: 1
+  detectability: practice
+  scopes:
+  - practice
+  - manuscript
+  applicability:
+    genres:
+    - general-fiction
+    subgenres: []
+    exclusions: []
+  author_vetted: false
+  path: general/craft.general.practice.outlining-versus-discovery-drafting.md
+- id: craft.general.practice.research-and-authenticity
+  title: Research and writing outside your experience
+  family: general
+  document_type: pattern
+  version: 1
+  detectability: practice
+  scopes:
+  - practice
+  - manuscript
+  applicability:
+    genres:
+    - general-fiction
+    subgenres: []
+    exclusions: []
+  author_vetted: false
+  path: general/craft.general.practice.research-and-authenticity.md
 - id: craft.general.premise.dramatic-question-and-controlling-idea
   title: Dramatic question and controlling idea
   family: general
@@ -805,6 +837,22 @@ records:
     exclusions: []
   author_vetted: false
   path: general/craft.general.structure.opening-pages-and-reader-commitment.md
+- id: craft.general.structure.series-and-arc-architecture
+  title: Series and arc architecture
+  family: general
+  document_type: pattern
+  version: 1
+  detectability: model-assisted
+  scopes:
+  - manuscript
+  - series
+  applicability:
+    genres:
+    - general-fiction
+    subgenres: []
+    exclusions: []
+  author_vetted: false
+  path: general/craft.general.structure.series-and-arc-architecture.md
 - id: craft.general.structure.subplot-and-thread-braiding
   title: Subplots and thread braiding
   family: general
@@ -902,6 +950,22 @@ records:
     exclusions: []
   author_vetted: false
   path: general/craft.general.voice.sentence-rhythm-and-clarity.md
+- id: craft.general.voice.tense-and-narrative-person
+  title: Tense and narrative person
+  family: general
+  document_type: pattern
+  version: 1
+  detectability: deterministic
+  scopes:
+  - manuscript
+  - series
+  applicability:
+    genres:
+    - general-fiction
+    subgenres: []
+    exclusions: []
+  author_vetted: false
+  path: general/craft.general.voice.tense-and-narrative-person.md
 - id: craft.general.voice.voice-as-craft-element
   title: Voice as a craft element
   family: general
@@ -1244,6 +1308,26 @@ records:
     exclusions: []
   author_vetted: false
   path: systems/craft.system.character.perks-feats-and-talents.md
+- id: craft.system.character.skill-acquisition-and-mastery
+  title: Skill acquisition and mastery
+  family: system
+  document_type: system-mechanic
+  version: 1
+  detectability: model-assisted
+  scopes:
+  - chapter
+  - manuscript
+  - series
+  applicability:
+    genres:
+    - litrpg
+    - progression-fantasy
+    subgenres:
+    - classic-litrpg
+    - cultivation
+    exclusions: []
+  author_vetted: false
+  path: systems/craft.system.character.skill-acquisition-and-mastery.md
 - id: craft.system.character.specialization-and-respec
   title: Specialization and respec
   family: system
@@ -1594,6 +1678,68 @@ records:
     exclusions: []
   author_vetted: false
   path: systems/craft.system.encounter.status-effects-crowd-control-and-counters.md
+- id: craft.system.entity.the-system-as-an-agent
+  title: The system as an agent
+  family: system
+  document_type: system-mechanic
+  version: 1
+  detectability: model-assisted
+  scopes:
+  - manuscript
+  - series
+  applicability:
+    genres:
+    - litrpg
+    - progression-fantasy
+    subgenres:
+    - system-apocalypse
+    - classic-litrpg
+    - isekai-portal-fantasy
+    exclusions: []
+  author_vetted: false
+  path: systems/craft.system.entity.the-system-as-an-agent.md
+- id: craft.system.geography.travel-territory-and-fast-movement
+  title: Travel, territory, and fast movement
+  family: system
+  document_type: system-mechanic
+  version: 1
+  detectability: model-assisted
+  scopes:
+  - chapter
+  - manuscript
+  - series
+  applicability:
+    genres:
+    - fantasy
+    - litrpg
+    - progression-fantasy
+    subgenres:
+    - classic-litrpg
+    - base-building
+    - system-apocalypse
+    exclusions: []
+  author_vetted: false
+  path: systems/craft.system.geography.travel-territory-and-fast-movement.md
+- id: craft.system.information.appraisal-and-identification
+  title: Appraisal, identification, and system information
+  family: system
+  document_type: system-mechanic
+  version: 1
+  detectability: model-assisted
+  scopes:
+  - scene
+  - chapter
+  - manuscript
+  applicability:
+    genres:
+    - litrpg
+    - progression-fantasy
+    subgenres:
+    - classic-litrpg
+    - gamelit
+    exclusions: []
+  author_vetted: false
+  path: systems/craft.system.information.appraisal-and-identification.md
 - id: craft.system.onboarding.system-introduction-and-tutorialization
   title: Introducing the system to the reader
   family: system
@@ -1890,6 +2036,27 @@ records:
     exclusions: []
   author_vetted: false
   path: systems/craft.system.social.reputation-and-faction-standing.md
+- id: craft.system.time.accelerated-training-and-time-dilation
+  title: Accelerated training and time dilation
+  family: system
+  document_type: system-mechanic
+  version: 1
+  detectability: model-assisted
+  scopes:
+  - chapter
+  - manuscript
+  - series
+  applicability:
+    genres:
+    - litrpg
+    - progression-fantasy
+    subgenres:
+    - cultivation
+    - classic-litrpg
+    - tower-climbing
+    exclusions: []
+  author_vetted: false
+  path: systems/craft.system.time.accelerated-training-and-time-dilation.md
 - id: craft.trope.combination.inversions-and-combinations
   title: Trope inversions and combinations
   family: trope
@@ -2093,6 +2260,27 @@ records:
     exclusions: []
   author_vetted: false
   path: tropes/craft.trope.identity.resurrection.md
+- id: craft.trope.identity.the-double-and-the-impostor
+  title: The double and the impostor
+  family: trope
+  document_type: trope
+  version: 1
+  detectability: model-assisted
+  scopes:
+  - chapter
+  - manuscript
+  - series
+  applicability:
+    genres:
+    - fantasy
+    - science-fiction
+    - litrpg
+    subgenres:
+    - system-apocalypse
+    - dark-horror-litrpg
+    exclusions: []
+  author_vetted: false
+  path: tropes/craft.trope.identity.the-double-and-the-impostor.md
 - id: craft.trope.role.antihero-and-redeemed-enemy
   title: The antihero and the redeemed enemy
   family: trope
@@ -2283,6 +2471,27 @@ records:
     exclusions: []
   author_vetted: false
   path: tropes/craft.trope.role.the-patron-and-the-benefactor.md
+- id: craft.trope.role.the-tyrant-and-the-institution
+  title: The tyrant and the institution
+  family: trope
+  document_type: trope
+  version: 1
+  detectability: model-assisted
+  scopes:
+  - manuscript
+  - series
+  applicability:
+    genres:
+    - fantasy
+    - litrpg
+    - progression-fantasy
+    subgenres:
+    - cultivation
+    - base-building
+    - system-apocalypse
+    exclusions: []
+  author_vetted: false
+  path: tropes/craft.trope.role.the-tyrant-and-the-institution.md
 - id: craft.trope.role.trickster
   title: The trickster
   family: trope
@@ -2354,6 +2563,28 @@ records:
     exclusions: []
   author_vetted: false
   path: tropes/craft.trope.setting.academy-story.md
+- id: craft.trope.setting.ruins-and-the-lost-civilization
+  title: Ruins and the lost civilization
+  family: trope
+  document_type: trope
+  version: 1
+  detectability: model-assisted
+  scopes:
+  - chapter
+  - manuscript
+  - series
+  applicability:
+    genres:
+    - fantasy
+    - litrpg
+    - progression-fantasy
+    subgenres:
+    - classic-litrpg
+    - cultivation
+    - tower-climbing
+    exclusions: []
+  author_vetted: false
+  path: tropes/craft.trope.setting.ruins-and-the-lost-civilization.md
 - id: craft.trope.setting.the-frontier-and-the-border-town
   title: The frontier and the border town
   family: trope

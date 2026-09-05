@@ -800,3 +800,56 @@ only how progress is measured.
 The remainders now sum to the 26 records left against the 180 target, as they
 should. Two more batches of roughly thirteen finish the production pass, and
 the weighting is set: `system` needs the most, `general` next, `trope` least.
+
+## After Batch 15 (12 records — one drafted record merged away)
+
+Total: **166 records** (54 `general`, 48 `system`, 6 `comparison`, 46
+`trope`, 12 `profile`).
+
+| document_type | count |
+|---|---|
+| pattern | 59 |
+| system-mechanic | 41 |
+| comparison | 8 |
+| trope | 46 |
+| subgenre-profile | 12 |
+
+| detectability | count |
+|---|---|
+| model-assisted | 141 |
+| practice | 23 |
+| deterministic | 2 |
+
+**Added:** series and arc architecture, tense and narrative person, outlining
+versus discovery drafting, research and writing outside your experience;
+skill acquisition and mastery, appraisal and identification, travel and
+territory, the system as an agent, accelerated training and time dilation;
+the double and the impostor, ruins and the lost civilization, the tyrant and
+the institution.
+
+**Thirteen were drafted and twelve kept.** `chapter-hooks-and-cliffhangers`
+duplicated the existing chapter-architecture record and was merged into it —
+the first merge in this production run; see `qa/duplication-report.md` for
+the full entry and the scoping lesson.
+
+**Two notes on the detectability column.** `deterministic` doubled, from one
+record to two: `tense-and-narrative-person` joins `advancement-rate`, because
+grammatical person and tense are facts of the text rather than
+interpretations. That family has been under-represented since Batch 4 flagged
+it, and this is the first genuine addition to it. `practice` also grew, with
+outlining-versus-discovery and research-and-authenticity both correctly
+marked as describing an author's process rather than a manuscript's
+properties.
+
+**Effective family progress** (comparisons counting toward `system`, profiles
+toward `trope`, per the reconciliation settled after Batch 14): `general`
+54/60, `trope` 58/60, `system` 54/60. **14 records to 180** — one final
+batch, weighted `general` 6, `system` 6, `trope` 2.
+
+**Candidates identified but not drafted**, for that final batch: `general` —
+theme and resonance as distinct from controlling idea, endings of a long
+series, prologues and epilogues, writing action; `system` — crafting
+professions and gathering, mounts and vehicles, weather and environment as
+mechanics, faction warfare at scale, inheritance of items across a series;
+`trope` — the tournament ladder as distinct from trial-and-tournament, the
+last stand.

@@ -34,6 +34,7 @@ related:
   - craft.system.binding.oaths-contracts-and-bindings
   - craft.trope.identity.hidden-identity-and-secret-heritage
   - craft.trope.identity.resurrection
+  - craft.trope.identity.the-double-and-the-impostor
   - craft.trope.role.villain-protagonist
   - craft.trope.structure.captivity-and-escape
 source_ids:

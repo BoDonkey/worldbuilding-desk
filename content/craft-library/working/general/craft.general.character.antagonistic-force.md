@@ -29,8 +29,10 @@ related:
   - craft.general.character.agency
   - craft.general.character.supporting-cast-purpose
   - craft.general.plot.stakes
+  - craft.system.entity.the-system-as-an-agent
   - craft.trope.identity.betrayal
   - craft.trope.role.rival
+  - craft.trope.role.the-tyrant-and-the-institution
   - craft.trope.structure.faction-conflict-and-war
 source_ids:
   - src.book.truby-anatomy-of-story

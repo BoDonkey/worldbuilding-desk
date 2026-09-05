@@ -35,6 +35,7 @@ related:
   - craft.general.character.relationships-and-relational-arcs
   - craft.system.character.affinities-resistances-titles-and-bloodlines
   - craft.system.consequences.institutions-labor-and-governance
+  - craft.system.information.appraisal-and-identification
   - craft.system.party.parties-guilds-and-group-structure
   - craft.trope.structure.faction-conflict-and-war
 source_ids:

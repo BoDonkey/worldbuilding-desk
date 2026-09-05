@@ -32,6 +32,7 @@ related:
   - craft.system.economy.crafting-and-economy-loops
   - craft.system.economy.enchanting-and-item-crafting
   - craft.system.economy.loot-durability-inventory-and-ownership
+  - craft.system.geography.travel-territory-and-fast-movement
 source_ids:
   - src.book.adams-fundamentals-of-game-design
 source_confidence: limited

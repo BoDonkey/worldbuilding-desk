@@ -35,6 +35,7 @@ related:
   - craft.general.character.want-versus-need
   - craft.profile.dungeon-core
   - craft.trope.identity.betrayal
+  - craft.trope.identity.the-double-and-the-impostor
   - craft.trope.role.antihero-and-redeemed-enemy
 source_ids:
   - src.book.card-characters-and-viewpoint

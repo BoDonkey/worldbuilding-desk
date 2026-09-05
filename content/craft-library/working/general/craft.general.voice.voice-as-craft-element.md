@@ -33,6 +33,7 @@ related:
   - craft.general.voice.humor-as-craft
   - craft.general.voice.narrative-summary-vs-scene
   - craft.general.voice.sentence-rhythm-and-clarity
+  - craft.general.voice.tense-and-narrative-person
   - craft.trope.role.ensemble-cast-dynamics
 source_ids:
   - src.book.leguin-steering-the-craft

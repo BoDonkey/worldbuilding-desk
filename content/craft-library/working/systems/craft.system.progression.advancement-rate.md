@@ -56,6 +56,7 @@ related:
   - craft.system.progression.decorative-chapter-test
   - craft.system.progression.fake-progression
   - craft.system.progression.vertical-vs-horizontal-progression
+  - craft.system.time.accelerated-training-and-time-dilation
   - craft.trope.convention.progression-fiction-reader-expectations
   - craft.trope.setting.academy-story
   - craft.trope.structure.time-loop

@@ -29,6 +29,7 @@ tags:
   - foundational
 related:
   - craft.general.practice.author-burnout-as-craft-problem
+  - craft.general.practice.research-and-authenticity
   - craft.general.promise.promise-consistency
   - craft.general.revision.continuity-passes
   - craft.general.revision.developmental-versus-line-editing

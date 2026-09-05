@@ -31,10 +31,13 @@ tags:
 related:
   - craft.general.plot.negative-space-problems-power-cannot-solve
   - craft.general.plot.stakes
+  - craft.general.practice.research-and-authenticity
   - craft.general.voice.description-and-specificity
   - craft.system.consequences.systemic-social-consequences
   - craft.system.dungeon.dungeon-structure-and-floors
+  - craft.system.geography.travel-territory-and-fast-movement
   - craft.trope.setting.academy-story
+  - craft.trope.setting.ruins-and-the-lost-civilization
   - craft.trope.setting.the-frontier-and-the-border-town
   - craft.trope.setting.the-hub-and-home-base
 source_ids:

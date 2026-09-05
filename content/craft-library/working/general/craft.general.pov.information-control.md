@@ -36,9 +36,11 @@ related:
   - craft.general.pov.psychic-distance-and-interiority
   - craft.general.voice.description-and-specificity
   - craft.general.voice.dialogue-and-subtext
+  - craft.system.information.appraisal-and-identification
   - craft.system.progression.visible-vs-hidden-systems
   - craft.trope.identity.amnesia-and-lost-memory
   - craft.trope.identity.hidden-identity-and-secret-heritage
+  - craft.trope.identity.the-double-and-the-impostor
 source_ids:
   - src.book.leguin-steering-the-craft
   - src.book.gardner-art-of-fiction

@@ -30,10 +30,12 @@ tags:
 related:
   - craft.general.pacing.tension-and-release-cycles
   - craft.general.structure.chapter-architecture-and-transitions
+  - craft.general.structure.series-and-arc-architecture
   - craft.general.structure.subplot-and-thread-braiding
   - craft.general.voice.description-and-specificity
   - craft.general.voice.narrative-summary-vs-scene
   - craft.system.progression.advancement-rate
+  - craft.system.time.accelerated-training-and-time-dilation
 source_ids:
   - src.book.weiland-helping-writers-become-authors
   - src.book.gardner-art-of-fiction

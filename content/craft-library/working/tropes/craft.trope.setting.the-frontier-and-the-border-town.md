@@ -38,6 +38,7 @@ related:
   - craft.profile.base-building
   - craft.system.dungeon.dungeon-structure-and-floors
   - craft.trope.setting.academy-story
+  - craft.trope.setting.ruins-and-the-lost-civilization
   - craft.trope.setting.the-hub-and-home-base
 source_ids:
   - src.book.burroway-writing-fiction

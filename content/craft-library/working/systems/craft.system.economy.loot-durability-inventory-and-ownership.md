@@ -37,6 +37,7 @@ related:
   - craft.system.economy.currencies-markets-and-inflation
   - craft.system.economy.enchanting-and-item-crafting
   - craft.system.quest.quest-and-reward-design
+  - craft.trope.setting.ruins-and-the-lost-civilization
 source_ids:
   - src.book.adams-fundamentals-of-game-design
 source_confidence: limited

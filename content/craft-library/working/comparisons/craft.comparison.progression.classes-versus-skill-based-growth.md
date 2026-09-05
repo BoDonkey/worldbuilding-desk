@@ -31,6 +31,7 @@ related:
   - craft.comparison.progression.universal-vs-class-bound-access
   - craft.general.character.want-versus-need
   - craft.system.character.perks-feats-and-talents
+  - craft.system.character.skill-acquisition-and-mastery
   - craft.system.character.specialization-and-respec
   - craft.system.progression.vertical-vs-horizontal-progression
 source_ids:

@@ -30,6 +30,7 @@ related:
   - craft.profile.crafting-and-economy
   - craft.system.advancement.diminishing-returns-rarity-gates-and-catch-up-mechanics
   - craft.system.character.perks-feats-and-talents
+  - craft.system.character.skill-acquisition-and-mastery
   - craft.system.progression.advancement-rate
   - craft.system.progression.fake-progression
   - craft.system.quest.quest-and-reward-design

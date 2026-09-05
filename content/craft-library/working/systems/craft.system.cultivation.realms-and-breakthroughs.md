@@ -38,6 +38,7 @@ related:
   - craft.system.cultivation.body-and-soul-cultivation
   - craft.system.cultivation.sects-inheritance-and-deviation
   - craft.system.progression.advancement-rate
+  - craft.system.time.accelerated-training-and-time-dilation
   - craft.trope.structure.transformation
 source_ids:
   - src.book.kohn-introducing-daoism

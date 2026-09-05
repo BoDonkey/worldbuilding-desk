@@ -32,8 +32,10 @@ related:
   - craft.system.consequences.medicine-religion-and-crime
   - craft.system.consequences.systemic-social-consequences
   - craft.system.cultivation.sects-inheritance-and-deviation
+  - craft.system.geography.travel-territory-and-fast-movement
   - craft.system.party.parties-guilds-and-group-structure
   - craft.system.social.reputation-and-faction-standing
+  - craft.trope.role.the-tyrant-and-the-institution
   - craft.trope.structure.faction-conflict-and-war
 source_ids:
   - src.rowe.progression-fantasy

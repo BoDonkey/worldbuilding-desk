@@ -32,8 +32,10 @@ related:
   - craft.general.plot.causal-escalation
   - craft.general.plot.complications
   - craft.general.plot.midpoint-and-reversals
+  - craft.system.geography.travel-territory-and-fast-movement
   - craft.system.quest.quest-and-reward-design
   - craft.trope.role.reluctant-hero
+  - craft.trope.setting.ruins-and-the-lost-civilization
   - craft.trope.structure.survival
   - craft.trope.structure.the-heist
   - craft.trope.structure.trial-and-tournament

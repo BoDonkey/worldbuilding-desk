@@ -30,6 +30,7 @@ tags:
 related:
   - craft.general.practice.author-burnout-as-craft-problem
   - craft.general.practice.no-gap-posting
+  - craft.general.practice.outlining-versus-discovery-drafting
   - craft.general.revision.continuity-passes
   - craft.general.revision.protecting-reader-experience
   - craft.trope.convention.serial-fiction-conventions

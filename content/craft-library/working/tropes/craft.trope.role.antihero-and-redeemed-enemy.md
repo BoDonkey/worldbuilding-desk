@@ -32,6 +32,7 @@ related:
   - craft.general.character.want-versus-need
   - craft.trope.role.mentor
   - craft.trope.role.rival
+  - craft.trope.role.the-tyrant-and-the-institution
   - craft.trope.role.trickster
   - craft.trope.role.villain-protagonist
   - craft.trope.structure.revenge

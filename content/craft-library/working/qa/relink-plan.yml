@@ -7,10 +7,10 @@ policy:
   min_cross_family: 1
   profile_min_intra_family: 2
 counts:
-  records: 154
-  edges_before: 518
-  edges_after: 518
-  reciprocity_completions: 58
+  records: 166
+  edges_before: 578
+  edges_after: 578
+  reciprocity_completions: 60
   audit_pairs_added: 0
   profile_intra_added: 0
   degree_fill_added: 0
@@ -29,6 +29,7 @@ related:
   - craft.comparison.progression.universal-vs-class-bound-access
   - craft.general.character.want-versus-need
   - craft.system.character.perks-feats-and-talents
+  - craft.system.character.skill-acquisition-and-mastery
   - craft.system.character.specialization-and-respec
   - craft.system.progression.vertical-vs-horizontal-progression
   craft.comparison.progression.hard-numbers-versus-named-tiers:
@@ -82,14 +83,17 @@ related:
   - craft.general.character.agency
   - craft.general.character.supporting-cast-purpose
   - craft.general.plot.stakes
+  - craft.system.entity.the-system-as-an-agent
   - craft.trope.identity.betrayal
   - craft.trope.role.rival
+  - craft.trope.role.the-tyrant-and-the-institution
   - craft.trope.structure.faction-conflict-and-war
   craft.general.character.internal-and-external-arcs:
   - craft.general.character.relationships-and-relational-arcs
   - craft.general.character.want-versus-need
   - craft.general.plot.climax-and-resolution
   - craft.general.premise.dramatic-question-and-controlling-idea
+  - craft.system.character.skill-acquisition-and-mastery
   - craft.trope.structure.coming-of-age
   - craft.trope.structure.sacrifice-and-return
   - craft.trope.structure.transformation
@@ -118,6 +122,7 @@ related:
   - craft.general.character.introducing-characters
   - craft.general.character.relationships-and-relational-arcs
   - craft.general.pov.multiple-viewpoint-management
+  - craft.general.practice.research-and-authenticity
   - craft.system.companion.summons-familiars-and-bonded-companions
   - craft.system.party.parties-guilds-and-group-structure
   - craft.trope.fatigue.overused-litrpg-trope-cluster
@@ -156,10 +161,12 @@ related:
   craft.general.pacing.pacing-across-scales:
   - craft.general.pacing.tension-and-release-cycles
   - craft.general.structure.chapter-architecture-and-transitions
+  - craft.general.structure.series-and-arc-architecture
   - craft.general.structure.subplot-and-thread-braiding
   - craft.general.voice.description-and-specificity
   - craft.general.voice.narrative-summary-vs-scene
   - craft.system.progression.advancement-rate
+  - craft.system.time.accelerated-training-and-time-dilation
   craft.general.pacing.suspense-uncertainty-and-anticipation:
   - craft.general.pacing.tension-and-release-cycles
   - craft.general.plot.foreshadowing
@@ -206,6 +213,7 @@ related:
   - craft.general.plot.complications
   - craft.general.plot.setup-and-payoff
   - craft.general.premise.dramatic-question-and-controlling-idea
+  - craft.general.structure.series-and-arc-architecture
   - craft.system.chance.luck-randomness-and-probability
   - craft.trope.structure.the-heist
   craft.general.plot.exposition-and-info-delivery:
@@ -278,15 +286,18 @@ related:
   - craft.general.pov.psychic-distance-and-interiority
   - craft.general.voice.description-and-specificity
   - craft.general.voice.dialogue-and-subtext
+  - craft.system.information.appraisal-and-identification
   - craft.system.progression.visible-vs-hidden-systems
   - craft.trope.identity.amnesia-and-lost-memory
   - craft.trope.identity.hidden-identity-and-secret-heritage
+  - craft.trope.identity.the-double-and-the-impostor
   craft.general.pov.multiple-viewpoint-management:
   - craft.general.character.introducing-characters
   - craft.general.character.supporting-cast-purpose
   - craft.general.pov.information-control
   - craft.general.pov.psychic-distance-and-interiority
   - craft.general.structure.chapter-architecture-and-transitions
+  - craft.general.voice.tense-and-narrative-person
   - craft.trope.role.ensemble-cast-dynamics
   craft.general.pov.psychic-distance-and-interiority:
   - craft.general.pov.information-control
@@ -294,11 +305,13 @@ related:
   - craft.general.scene.scene-turns
   - craft.general.scene.sequel-and-reflection
   - craft.general.voice.narrative-summary-vs-scene
+  - craft.general.voice.tense-and-narrative-person
   - craft.general.voice.voice-as-craft-element
   - craft.system.progression.visible-vs-hidden-systems
   craft.general.practice.author-burnout-as-craft-problem:
   - craft.general.practice.buffer-discipline
   - craft.general.practice.no-gap-posting
+  - craft.general.practice.outlining-versus-discovery-drafting
   - craft.general.promise.promise-consistency
   - craft.general.revision.protecting-reader-experience
   - craft.general.revision.triage-and-beta-reader-signal
@@ -306,6 +319,7 @@ related:
   craft.general.practice.buffer-discipline:
   - craft.general.practice.author-burnout-as-craft-problem
   - craft.general.practice.no-gap-posting
+  - craft.general.practice.outlining-versus-discovery-drafting
   - craft.general.revision.continuity-passes
   - craft.general.revision.protecting-reader-experience
   - craft.trope.convention.serial-fiction-conventions
@@ -315,6 +329,18 @@ related:
   - craft.general.revision.continuity-passes
   - craft.trope.convention.progression-fiction-reader-expectations
   - craft.trope.convention.serial-fiction-conventions
+  craft.general.practice.outlining-versus-discovery-drafting:
+  - craft.general.practice.author-burnout-as-craft-problem
+  - craft.general.practice.buffer-discipline
+  - craft.general.revision.developmental-versus-line-editing
+  - craft.general.structure.series-and-arc-architecture
+  - craft.trope.convention.serial-fiction-conventions
+  craft.general.practice.research-and-authenticity:
+  - craft.general.character.supporting-cast-purpose
+  - craft.general.revision.triage-and-beta-reader-signal
+  - craft.general.setting.setting-as-pressure
+  - craft.general.voice.description-and-specificity
+  - craft.system.consequences.medicine-religion-and-crime
   craft.general.premise.dramatic-question-and-controlling-idea:
   - craft.general.character.internal-and-external-arcs
   - craft.general.character.values-contradiction-and-meaningful-choice
@@ -330,6 +356,7 @@ related:
   - craft.general.revision.protecting-reader-experience
   - craft.general.revision.triage-and-beta-reader-signal
   - craft.general.structure.opening-pages-and-reader-commitment
+  - craft.general.structure.series-and-arc-architecture
   - craft.system.progression.decorative-chapter-test
   - craft.trope.convention.progression-fiction-reader-expectations
   craft.general.revision.continuity-passes:
@@ -341,6 +368,7 @@ related:
   - craft.general.revision.protecting-reader-experience
   - craft.general.revision.triage-and-beta-reader-signal
   craft.general.revision.developmental-versus-line-editing:
+  - craft.general.practice.outlining-versus-discovery-drafting
   - craft.general.revision.continuity-passes
   - craft.general.revision.protecting-reader-experience
   - craft.general.revision.triage-and-beta-reader-signal
@@ -357,6 +385,7 @@ related:
   - craft.trope.convention.serial-fiction-conventions
   craft.general.revision.triage-and-beta-reader-signal:
   - craft.general.practice.author-burnout-as-craft-problem
+  - craft.general.practice.research-and-authenticity
   - craft.general.promise.promise-consistency
   - craft.general.revision.continuity-passes
   - craft.general.revision.developmental-versus-line-editing
@@ -395,10 +424,13 @@ related:
   craft.general.setting.setting-as-pressure:
   - craft.general.plot.negative-space-problems-power-cannot-solve
   - craft.general.plot.stakes
+  - craft.general.practice.research-and-authenticity
   - craft.general.voice.description-and-specificity
   - craft.system.consequences.systemic-social-consequences
   - craft.system.dungeon.dungeon-structure-and-floors
+  - craft.system.geography.travel-territory-and-fast-movement
   - craft.trope.setting.academy-story
+  - craft.trope.setting.ruins-and-the-lost-civilization
   - craft.trope.setting.the-frontier-and-the-border-town
   - craft.trope.setting.the-hub-and-home-base
   craft.general.structure.chapter-architecture-and-transitions:
@@ -408,12 +440,20 @@ related:
   - craft.general.scene.entry-and-exit-points
   - craft.general.scene.scene-turns
   - craft.general.structure.opening-pages-and-reader-commitment
+  - craft.general.structure.series-and-arc-architecture
   - craft.trope.convention.serial-fiction-conventions
   craft.general.structure.opening-pages-and-reader-commitment:
   - craft.general.character.introducing-characters
   - craft.general.plot.reader-expectation-and-genre-signaling
   - craft.general.promise.promise-consistency
   - craft.general.scene.entry-and-exit-points
+  - craft.general.structure.chapter-architecture-and-transitions
+  - craft.trope.convention.serial-fiction-conventions
+  craft.general.structure.series-and-arc-architecture:
+  - craft.general.pacing.pacing-across-scales
+  - craft.general.plot.earned-resolution
+  - craft.general.practice.outlining-versus-discovery-drafting
+  - craft.general.promise.promise-consistency
   - craft.general.structure.chapter-architecture-and-transitions
   - craft.trope.convention.serial-fiction-conventions
   craft.general.structure.subplot-and-thread-braiding:
@@ -426,6 +466,7 @@ related:
   - craft.general.character.introducing-characters
   - craft.general.pacing.pacing-across-scales
   - craft.general.pov.information-control
+  - craft.general.practice.research-and-authenticity
   - craft.general.setting.setting-as-pressure
   - craft.general.voice.dialogue-and-subtext
   - craft.general.voice.narrative-summary-vs-scene
@@ -453,6 +494,7 @@ related:
   - craft.general.voice.description-and-specificity
   - craft.general.voice.dialogue-and-subtext
   - craft.general.voice.sentence-rhythm-and-clarity
+  - craft.general.voice.tense-and-narrative-person
   - craft.general.voice.voice-as-craft-element
   - craft.system.progression.stat-block-density
   craft.general.voice.sentence-rhythm-and-clarity:
@@ -461,6 +503,12 @@ related:
   - craft.general.voice.narrative-summary-vs-scene
   - craft.general.voice.voice-as-craft-element
   - craft.trope.convention.serial-fiction-conventions
+  craft.general.voice.tense-and-narrative-person:
+  - craft.general.pov.multiple-viewpoint-management
+  - craft.general.pov.psychic-distance-and-interiority
+  - craft.general.voice.narrative-summary-vs-scene
+  - craft.general.voice.voice-as-craft-element
+  - craft.system.progression.system-as-narrator-intrusion
   craft.general.voice.voice-as-craft-element:
   - craft.general.pov.psychic-distance-and-interiority
   - craft.general.voice.description-and-specificity
@@ -468,6 +516,7 @@ related:
   - craft.general.voice.humor-as-craft
   - craft.general.voice.narrative-summary-vs-scene
   - craft.general.voice.sentence-rhythm-and-clarity
+  - craft.general.voice.tense-and-narrative-person
   - craft.trope.role.ensemble-cast-dynamics
   craft.profile.base-building:
   - craft.profile.dungeon-core
@@ -551,6 +600,7 @@ related:
   - craft.profile.base-building
   - craft.profile.dark-horror-litrpg
   - craft.profile.time-loop
+  - craft.system.entity.the-system-as-an-agent
   - craft.system.progression.advancement-rate
   - craft.trope.structure.survival
   craft.profile.time-loop:
@@ -571,11 +621,13 @@ related:
   - craft.system.character.attributes-and-soft-hard-caps
   - craft.system.economy.loot-durability-inventory-and-ownership
   - craft.system.progression.vertical-vs-horizontal-progression
+  - craft.system.time.accelerated-training-and-time-dilation
   - craft.trope.role.found-family
   craft.system.advancement.experience-sources-and-milestone-growth:
   - craft.profile.crafting-and-economy
   - craft.system.advancement.diminishing-returns-rarity-gates-and-catch-up-mechanics
   - craft.system.character.perks-feats-and-talents
+  - craft.system.character.skill-acquisition-and-mastery
   - craft.system.progression.advancement-rate
   - craft.system.progression.fake-progression
   - craft.system.quest.quest-and-reward-design
@@ -611,9 +663,16 @@ related:
   - craft.comparison.progression.classes-versus-skill-based-growth
   - craft.system.advancement.experience-sources-and-milestone-growth
   - craft.system.character.attributes-and-soft-hard-caps
+  - craft.system.character.skill-acquisition-and-mastery
   - craft.system.character.specialization-and-respec
   - craft.system.companion.summons-familiars-and-bonded-companions
   - craft.system.progression.vertical-vs-horizontal-progression
+  craft.system.character.skill-acquisition-and-mastery:
+  - craft.comparison.progression.classes-versus-skill-based-growth
+  - craft.general.character.internal-and-external-arcs
+  - craft.system.advancement.experience-sources-and-milestone-growth
+  - craft.system.character.perks-feats-and-talents
+  - craft.trope.setting.academy-story
   craft.system.character.specialization-and-respec:
   - craft.comparison.progression.classes-versus-skill-based-growth
   - craft.system.character.affinities-resistances-titles-and-bloodlines
@@ -647,12 +706,15 @@ related:
   - craft.system.consequences.medicine-religion-and-crime
   - craft.system.consequences.systemic-social-consequences
   - craft.system.cultivation.sects-inheritance-and-deviation
+  - craft.system.geography.travel-territory-and-fast-movement
   - craft.system.party.parties-guilds-and-group-structure
   - craft.system.social.reputation-and-faction-standing
+  - craft.trope.role.the-tyrant-and-the-institution
   - craft.trope.structure.faction-conflict-and-war
   craft.system.consequences.medicine-religion-and-crime:
   - craft.comparison.progression.universal-vs-class-bound-access
   - craft.comparison.resource.qi-versus-mana
+  - craft.general.practice.research-and-authenticity
   - craft.system.binding.oaths-contracts-and-bindings
   - craft.system.consequences.institutions-labor-and-governance
   - craft.system.consequences.systemic-social-consequences
@@ -693,6 +755,7 @@ related:
   - craft.system.cultivation.body-and-soul-cultivation
   - craft.system.cultivation.sects-inheritance-and-deviation
   - craft.system.progression.advancement-rate
+  - craft.system.time.accelerated-training-and-time-dilation
   - craft.trope.structure.transformation
   craft.system.cultivation.sects-inheritance-and-deviation:
   - craft.profile.cultivation
@@ -708,6 +771,8 @@ related:
   - craft.profile.tower-climbing
   - craft.system.economy.loot-durability-inventory-and-ownership
   - craft.system.encounter.enemy-design-and-difficulty-scaling
+  - craft.system.geography.travel-territory-and-fast-movement
+  - craft.trope.setting.ruins-and-the-lost-civilization
   - craft.trope.setting.the-frontier-and-the-border-town
   - craft.trope.structure.captivity-and-escape
   craft.system.economy.crafting-and-economy-loops:
@@ -724,6 +789,7 @@ related:
   - craft.system.economy.crafting-and-economy-loops
   - craft.system.economy.enchanting-and-item-crafting
   - craft.system.economy.loot-durability-inventory-and-ownership
+  - craft.system.geography.travel-territory-and-fast-movement
   craft.system.economy.enchanting-and-item-crafting:
   - craft.profile.crafting-and-economy
   - craft.system.cultivation.alchemy-and-pill-refinement
@@ -740,6 +806,7 @@ related:
   - craft.system.economy.currencies-markets-and-inflation
   - craft.system.economy.enchanting-and-item-crafting
   - craft.system.quest.quest-and-reward-design
+  - craft.trope.setting.ruins-and-the-lost-civilization
   craft.system.encounter.enemy-design-and-difficulty-scaling:
   - craft.general.plot.causal-escalation
   - craft.system.character.attributes-and-soft-hard-caps
@@ -751,6 +818,7 @@ related:
   - craft.system.combat.action-economy
   - craft.system.encounter.range-positioning-damage-and-defenses
   - craft.system.encounter.status-effects-crowd-control-and-counters
+  - craft.system.information.appraisal-and-identification
   - craft.system.party.parties-guilds-and-group-structure
   - craft.trope.role.found-family
   - craft.trope.structure.the-heist
@@ -769,8 +837,27 @@ related:
   - craft.system.encounter.healing-teamwork-and-information-asymmetry
   - craft.system.encounter.range-positioning-damage-and-defenses
   - craft.system.resource.health-and-focus-as-core-resources
+  craft.system.entity.the-system-as-an-agent:
+  - craft.general.character.antagonistic-force
+  - craft.profile.system-apocalypse
+  - craft.system.onboarding.system-introduction-and-tutorialization
+  - craft.system.progression.system-as-narrator-intrusion
+  - craft.system.progression.visible-vs-hidden-systems
+  craft.system.geography.travel-territory-and-fast-movement:
+  - craft.general.setting.setting-as-pressure
+  - craft.system.consequences.institutions-labor-and-governance
+  - craft.system.dungeon.dungeon-structure-and-floors
+  - craft.system.economy.currencies-markets-and-inflation
+  - craft.trope.structure.the-quest
+  craft.system.information.appraisal-and-identification:
+  - craft.general.pov.information-control
+  - craft.system.encounter.healing-teamwork-and-information-asymmetry
+  - craft.system.progression.visible-vs-hidden-systems
+  - craft.system.social.reputation-and-faction-standing
+  - craft.trope.structure.mystery
   craft.system.onboarding.system-introduction-and-tutorialization:
   - craft.general.plot.exposition-and-info-delivery
+  - craft.system.entity.the-system-as-an-agent
   - craft.system.progression.stat-block-density
   - craft.system.progression.system-as-narrator-intrusion
   - craft.system.progression.visible-vs-hidden-systems
@@ -797,6 +884,7 @@ related:
   - craft.system.progression.decorative-chapter-test
   - craft.system.progression.fake-progression
   - craft.system.progression.vertical-vs-horizontal-progression
+  - craft.system.time.accelerated-training-and-time-dilation
   - craft.trope.convention.progression-fiction-reader-expectations
   - craft.trope.setting.academy-story
   - craft.trope.structure.time-loop
@@ -828,8 +916,10 @@ related:
   - craft.system.progression.visible-vs-hidden-systems
   craft.system.progression.system-as-narrator-intrusion:
   - craft.general.plot.exposition-and-info-delivery
+  - craft.general.voice.tense-and-narrative-person
   - craft.profile.classic-litrpg
   - craft.profile.gamelit
+  - craft.system.entity.the-system-as-an-agent
   - craft.system.onboarding.system-introduction-and-tutorialization
   - craft.system.progression.stat-block-density
   - craft.system.progression.visible-vs-hidden-systems
@@ -846,6 +936,8 @@ related:
   - craft.general.plot.exposition-and-info-delivery
   - craft.general.pov.information-control
   - craft.general.pov.psychic-distance-and-interiority
+  - craft.system.entity.the-system-as-an-agent
+  - craft.system.information.appraisal-and-identification
   - craft.system.onboarding.system-introduction-and-tutorialization
   - craft.system.progression.stat-block-density
   - craft.system.progression.system-as-narrator-intrusion
@@ -898,8 +990,15 @@ related:
   - craft.general.character.relationships-and-relational-arcs
   - craft.system.character.affinities-resistances-titles-and-bloodlines
   - craft.system.consequences.institutions-labor-and-governance
+  - craft.system.information.appraisal-and-identification
   - craft.system.party.parties-guilds-and-group-structure
   - craft.trope.structure.faction-conflict-and-war
+  craft.system.time.accelerated-training-and-time-dilation:
+  - craft.general.pacing.pacing-across-scales
+  - craft.system.advancement.diminishing-returns-rarity-gates-and-catch-up-mechanics
+  - craft.system.cultivation.realms-and-breakthroughs
+  - craft.system.progression.advancement-rate
+  - craft.trope.structure.time-loop
   craft.trope.combination.inversions-and-combinations:
   - craft.general.plot.reader-expectation-and-genre-signaling
   - craft.trope.role.chosen-one
@@ -941,11 +1040,13 @@ related:
   - craft.general.practice.author-burnout-as-craft-problem
   - craft.general.practice.buffer-discipline
   - craft.general.practice.no-gap-posting
+  - craft.general.practice.outlining-versus-discovery-drafting
   - craft.general.revision.developmental-versus-line-editing
   - craft.general.revision.protecting-reader-experience
   - craft.general.revision.triage-and-beta-reader-signal
   - craft.general.structure.chapter-architecture-and-transitions
   - craft.general.structure.opening-pages-and-reader-commitment
+  - craft.general.structure.series-and-arc-architecture
   - craft.general.voice.sentence-rhythm-and-clarity
   - craft.trope.convention.fantasy-genre-conventions
   - craft.trope.convention.progression-fiction-reader-expectations
@@ -960,6 +1061,7 @@ related:
   - craft.general.pov.information-control
   - craft.trope.identity.hidden-identity-and-secret-heritage
   - craft.trope.identity.resurrection
+  - craft.trope.identity.the-double-and-the-impostor
   - craft.trope.structure.mystery
   - craft.trope.structure.transformation
   craft.trope.identity.betrayal:
@@ -969,6 +1071,7 @@ related:
   - craft.system.binding.oaths-contracts-and-bindings
   - craft.trope.identity.hidden-identity-and-secret-heritage
   - craft.trope.identity.resurrection
+  - craft.trope.identity.the-double-and-the-impostor
   - craft.trope.role.villain-protagonist
   - craft.trope.structure.captivity-and-escape
   craft.trope.identity.hidden-identity-and-secret-heritage:
@@ -976,6 +1079,7 @@ related:
   - craft.trope.fatigue.overused-litrpg-trope-cluster
   - craft.trope.identity.amnesia-and-lost-memory
   - craft.trope.identity.betrayal
+  - craft.trope.identity.the-double-and-the-impostor
   - craft.trope.role.chosen-one
   - craft.trope.role.heir-and-succession
   craft.trope.identity.resurrection:
@@ -985,10 +1089,17 @@ related:
   - craft.trope.identity.amnesia-and-lost-memory
   - craft.trope.identity.betrayal
   - craft.trope.structure.sacrifice-and-return
+  craft.trope.identity.the-double-and-the-impostor:
+  - craft.general.pov.information-control
+  - craft.trope.identity.amnesia-and-lost-memory
+  - craft.trope.identity.betrayal
+  - craft.trope.identity.hidden-identity-and-secret-heritage
+  - craft.trope.role.villain-protagonist
   craft.trope.role.antihero-and-redeemed-enemy:
   - craft.general.character.want-versus-need
   - craft.trope.role.mentor
   - craft.trope.role.rival
+  - craft.trope.role.the-tyrant-and-the-institution
   - craft.trope.role.trickster
   - craft.trope.role.villain-protagonist
   - craft.trope.structure.revenge
@@ -1073,6 +1184,13 @@ related:
   - craft.trope.role.companion
   - craft.trope.role.heir-and-succession
   - craft.trope.role.mentor
+  - craft.trope.role.the-tyrant-and-the-institution
+  craft.trope.role.the-tyrant-and-the-institution:
+  - craft.general.character.antagonistic-force
+  - craft.system.consequences.institutions-labor-and-governance
+  - craft.trope.role.antihero-and-redeemed-enemy
+  - craft.trope.role.the-patron-and-the-benefactor
+  - craft.trope.structure.faction-conflict-and-war
   craft.trope.role.trickster:
   - craft.general.character.agency
   - craft.trope.combination.inversions-and-combinations
@@ -1084,6 +1202,7 @@ related:
   - craft.general.character.want-versus-need
   - craft.profile.dungeon-core
   - craft.trope.identity.betrayal
+  - craft.trope.identity.the-double-and-the-impostor
   - craft.trope.role.antihero-and-redeemed-enemy
   craft.trope.romance.romantic-subplot-conventions:
   - craft.general.character.relationships-and-relational-arcs
@@ -1094,6 +1213,7 @@ related:
   - craft.trope.role.found-family
   craft.trope.setting.academy-story:
   - craft.general.setting.setting-as-pressure
+  - craft.system.character.skill-acquisition-and-mastery
   - craft.system.progression.advancement-rate
   - craft.trope.role.mentor
   - craft.trope.role.rival
@@ -1102,11 +1222,18 @@ related:
   - craft.trope.setting.the-hub-and-home-base
   - craft.trope.structure.coming-of-age
   - craft.trope.structure.trial-and-tournament
+  craft.trope.setting.ruins-and-the-lost-civilization:
+  - craft.general.setting.setting-as-pressure
+  - craft.system.dungeon.dungeon-structure-and-floors
+  - craft.system.economy.loot-durability-inventory-and-ownership
+  - craft.trope.setting.the-frontier-and-the-border-town
+  - craft.trope.structure.the-quest
   craft.trope.setting.the-frontier-and-the-border-town:
   - craft.general.setting.setting-as-pressure
   - craft.profile.base-building
   - craft.system.dungeon.dungeon-structure-and-floors
   - craft.trope.setting.academy-story
+  - craft.trope.setting.ruins-and-the-lost-civilization
   - craft.trope.setting.the-hub-and-home-base
   craft.trope.setting.the-hub-and-home-base:
   - craft.general.setting.setting-as-pressure
@@ -1132,11 +1259,13 @@ related:
   - craft.general.plot.stakes
   - craft.system.consequences.institutions-labor-and-governance
   - craft.system.social.reputation-and-faction-standing
+  - craft.trope.role.the-tyrant-and-the-institution
   - craft.trope.structure.revenge
   - craft.trope.structure.the-prophecy
   craft.trope.structure.mystery:
   - craft.general.pacing.suspense-uncertainty-and-anticipation
   - craft.general.plot.setup-and-payoff
+  - craft.system.information.appraisal-and-identification
   - craft.trope.convention.mystery-genre-conventions
   - craft.trope.identity.amnesia-and-lost-memory
   - craft.trope.structure.the-heist
@@ -1188,8 +1317,10 @@ related:
   - craft.general.plot.causal-escalation
   - craft.general.plot.complications
   - craft.general.plot.midpoint-and-reversals
+  - craft.system.geography.travel-territory-and-fast-movement
   - craft.system.quest.quest-and-reward-design
   - craft.trope.role.reluctant-hero
+  - craft.trope.setting.ruins-and-the-lost-civilization
   - craft.trope.structure.survival
   - craft.trope.structure.the-heist
   - craft.trope.structure.trial-and-tournament
@@ -1198,6 +1329,7 @@ related:
   - craft.general.plot.negative-space-problems-power-cannot-solve
   - craft.profile.time-loop
   - craft.system.progression.advancement-rate
+  - craft.system.time.accelerated-training-and-time-dilation
   - craft.trope.structure.portal-and-other-world
   craft.trope.structure.transformation:
   - craft.general.character.internal-and-external-arcs

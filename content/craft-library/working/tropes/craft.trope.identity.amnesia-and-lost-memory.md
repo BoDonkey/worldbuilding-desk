@@ -34,6 +34,7 @@ related:
   - craft.general.pov.information-control
   - craft.trope.identity.hidden-identity-and-secret-heritage
   - craft.trope.identity.resurrection
+  - craft.trope.identity.the-double-and-the-impostor
   - craft.trope.structure.mystery
   - craft.trope.structure.transformation
 source_ids:

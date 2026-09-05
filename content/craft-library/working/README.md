@@ -631,3 +631,48 @@ Full trail: `qa/unresolved-claims.md` (resolution) and `qa/citation-audit.md`
 (what was read, and the practice note). The record now runs 1,985 words with
 a documented waiver in `qa/audit_corpus.py`; it was tightened by ~150 words
 elsewhere first.
+
+### Batch 15 — twelve kept of thirteen drafted (done)
+
+Weighted to the remaining gaps, and notable for containing this production
+run's **first merge**.
+
+**`general` (50 → 54):**
+
+- `general/craft.general.structure.series-and-arc-architecture.md`
+- `general/craft.general.voice.tense-and-narrative-person.md` — the corpus's
+  second `deterministic` record; person and tense are facts of the text.
+- `general/craft.general.practice.outlining-versus-discovery-drafting.md`
+- `general/craft.general.practice.research-and-authenticity.md`
+
+**`system` (43 → 48):**
+
+- `systems/craft.system.character.skill-acquisition-and-mastery.md`
+- `systems/craft.system.information.appraisal-and-identification.md`
+- `systems/craft.system.geography.travel-territory-and-fast-movement.md`
+- `systems/craft.system.entity.the-system-as-an-agent.md`
+- `systems/craft.system.time.accelerated-training-and-time-dilation.md`
+
+**`trope` (43 → 46):**
+
+- `tropes/craft.trope.identity.the-double-and-the-impostor.md`
+- `tropes/craft.trope.setting.ruins-and-the-lost-civilization.md`
+- `tropes/craft.trope.role.the-tyrant-and-the-institution.md`
+
+**The merge.** A thirteenth record, `chapter-hooks-and-cliffhangers`, scored
+0.302 against the existing chapter-architecture record — the highest
+new-record pair across three batches. Reading both confirmed it was a longer
+treatment of material already there, down to independently reinventing the
+same diagnostic. Three genuinely new ideas were folded into the existing
+record and the duplicate was deleted. Full entry in
+`qa/duplication-report.md`, including the scoping change it suggests: compare
+a proposed topic against neighbours' *section headings*, not just their
+titles.
+
+No new sources this batch; the registry's 55 entries covered the topics that
+had craft literature, and five records are marked `limited` where they did
+not — the system-as-agent and time-dilation records in particular are
+subgenre conventions with no scholarship behind them, and say so.
+
+QA: 166 records, zero audit findings, 578 mutual pairs after reciprocation,
+no orphans. **14 records to 180**, which is one final batch.

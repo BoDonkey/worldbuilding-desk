@@ -34,6 +34,7 @@ related:
   - craft.general.voice.description-and-specificity
   - craft.general.voice.dialogue-and-subtext
   - craft.general.voice.sentence-rhythm-and-clarity
+  - craft.general.voice.tense-and-narrative-person
   - craft.general.voice.voice-as-craft-element
   - craft.system.progression.stat-block-density
 source_ids:

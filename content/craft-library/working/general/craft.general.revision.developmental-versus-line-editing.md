@@ -28,6 +28,7 @@ tags:
   - practice
   - craft-process
 related:
+  - craft.general.practice.outlining-versus-discovery-drafting
   - craft.general.revision.continuity-passes
   - craft.general.revision.protecting-reader-experience
   - craft.general.revision.triage-and-beta-reader-signal

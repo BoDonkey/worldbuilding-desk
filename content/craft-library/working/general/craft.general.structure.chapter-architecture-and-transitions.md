@@ -31,6 +31,7 @@ related:
   - craft.general.scene.entry-and-exit-points
   - craft.general.scene.scene-turns
   - craft.general.structure.opening-pages-and-reader-commitment
+  - craft.general.structure.series-and-arc-architecture
   - craft.trope.convention.serial-fiction-conventions
 source_ids:
   - src.book.weiland-helping-writers-become-authors
@@ -66,7 +67,11 @@ to open the next chapter rather than simply continuing to read.
 - **Full-scene chapters**, where chapter and scene boundaries align, giving
   each chapter a self-contained shape.
 - **Hook endings**, deliberately closing on a turn, revelation, or threat
-  specifically to pull the reader forward.
+  specifically to pull the reader forward. Worth distinguishing two kinds:
+  an *event* hook, where something has happened and its outcome is open, and
+  a *withheld-information* hook, where the narration knows something and
+  declines to say it. Both pull, but the second spends reader trust rather
+  than tension, and wears out faster under repetition.
 - **Settled endings**, closing after a scene's tension has resolved, giving
   the reader a natural pause point — useful for pacing breathers and act
   breaks.
@@ -102,6 +107,13 @@ to open the next chapter rather than simply continuing to read.
 - **Slow chapter openings after a hook**, undercutting momentum by opening
   the next chapter with scene-setting or recap instead of addressing the
   tension the previous chapter's ending raised.
+- **Withholding as a substitute for event** — "she read the letter, and what
+  it said changed everything" — where the pull comes from the narration
+  refusing to report what it already knows. Readers eventually register this
+  as a small dishonesty rather than as suspense.
+- **Running past the ending**, where a chapter's real close is followed by a
+  paragraph or two of tidying, so the intended final beat is not the one the
+  reader leaves on.
 
 ## Questions for the author
 
@@ -128,7 +140,11 @@ to open the next chapter rather than simply continuing to read.
    boundary and compare the resulting momentum.
 4. For serialized fiction, specifically audit chapter endings for their
    effect on a reader's decision to continue, distinct from their effect on
-   a reader already committed to reading straight through.
+   a reader already committed to reading straight through. The gap between
+   chapters is real elapsed time on a serial platform — a day or a week —
+   which is a different decision from turning a page.
+5. Take a withheld-information hook and rebuild it on an event instead: let
+   the reader have the fact and end on what the character does about it.
 
 ## When this advice does not apply
 

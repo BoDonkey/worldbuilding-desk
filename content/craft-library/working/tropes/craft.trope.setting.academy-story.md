@@ -30,6 +30,7 @@ tags:
   - character-role
 related:
   - craft.general.setting.setting-as-pressure
+  - craft.system.character.skill-acquisition-and-mastery
   - craft.system.progression.advancement-rate
   - craft.trope.role.mentor
   - craft.trope.role.rival

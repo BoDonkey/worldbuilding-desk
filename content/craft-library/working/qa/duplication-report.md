@@ -87,7 +87,42 @@ needed.
 
 ## Merges/splits performed
 
-None yet.
+**Batch 15, 2026-09-05 — the first merge in this production run.**
+
+`craft.general.pacing.chapter-hooks-and-cliffhangers` was drafted, scored
+0.302 against `craft.general.structure.chapter-architecture-and-transitions`
+in the batch near-duplicate check — the highest new-record pair across
+Batches 13, 14, and 15 — and was **merged and deleted** rather than kept.
+
+Reading the two confirmed it: the existing record already covered hook
+endings, settled endings, cliffhangers that resolve anticlimactically, and
+slow openings after a hook. Its "read only the chapter endings in sequence"
+diagnostic and the new record's first experiment were the same idea,
+independently arrived at. The new record was a longer treatment of one
+section of an existing one, which is what the handoff's merge instruction is
+for.
+
+Three things from the deleted record were genuinely new and were folded into
+`chapter-architecture-and-transitions`:
+
+- the distinction between an **event hook** (something happened, outcome
+  open) and a **withheld-information hook** (the narration knows and declines
+  to say), with the argument that the second spends reader trust rather than
+  tension and degrades faster under repetition;
+- **running past the ending**, where a chapter's real close is followed by
+  tidying;
+- the serial framing that the between-chapter gap is *real elapsed time*, a
+  different decision from turning a page.
+
+That record went from 953 to 1,132 words and remains in band. Batch 15 is
+therefore **12 records, not the 13 planned**, and the corpus stands at 166.
+
+The lesson is worth keeping: this was caught by the routine batch check, not
+by a hunch, and it was caught *after* drafting rather than during scoping.
+The scoping pass compared the proposed topic against record titles; the
+overlap was in a record whose title names a different subject. Future
+scoping should compare a proposed topic against the *section headings* of its
+nearest neighbours, not just their titles.
 
 ---
 

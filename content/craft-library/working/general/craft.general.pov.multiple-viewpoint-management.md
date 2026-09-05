@@ -33,6 +33,7 @@ related:
   - craft.general.pov.information-control
   - craft.general.pov.psychic-distance-and-interiority
   - craft.general.structure.chapter-architecture-and-transitions
+  - craft.general.voice.tense-and-narrative-person
   - craft.trope.role.ensemble-cast-dynamics
 source_ids:
   - src.book.card-characters-and-viewpoint

@@ -34,6 +34,7 @@ tags:
   - openings
 related:
   - craft.general.plot.exposition-and-info-delivery
+  - craft.system.entity.the-system-as-an-agent
   - craft.system.progression.stat-block-density
   - craft.system.progression.system-as-narrator-intrusion
   - craft.system.progression.visible-vs-hidden-systems

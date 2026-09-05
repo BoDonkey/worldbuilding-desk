@@ -36,6 +36,7 @@ related:
   - craft.general.plot.negative-space-problems-power-cannot-solve
   - craft.profile.time-loop
   - craft.system.progression.advancement-rate
+  - craft.system.time.accelerated-training-and-time-dilation
   - craft.trope.structure.portal-and-other-world
 source_ids:
   - src.internal.litrpg-genre-research

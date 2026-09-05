@@ -30,6 +30,7 @@ related:
   - craft.profile.base-building
   - craft.profile.dark-horror-litrpg
   - craft.profile.time-loop
+  - craft.system.entity.the-system-as-an-agent
   - craft.system.progression.advancement-rate
   - craft.trope.structure.survival
 source_ids:

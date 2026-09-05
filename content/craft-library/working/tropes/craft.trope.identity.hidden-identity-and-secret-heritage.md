@@ -32,6 +32,7 @@ related:
   - craft.trope.fatigue.overused-litrpg-trope-cluster
   - craft.trope.identity.amnesia-and-lost-memory
   - craft.trope.identity.betrayal
+  - craft.trope.identity.the-double-and-the-impostor
   - craft.trope.role.chosen-one
   - craft.trope.role.heir-and-succession
 source_ids:

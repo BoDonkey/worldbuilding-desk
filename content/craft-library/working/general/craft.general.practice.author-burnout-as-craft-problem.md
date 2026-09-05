@@ -30,6 +30,7 @@ tags:
 related:
   - craft.general.practice.buffer-discipline
   - craft.general.practice.no-gap-posting
+  - craft.general.practice.outlining-versus-discovery-drafting
   - craft.general.promise.promise-consistency
   - craft.general.revision.protecting-reader-experience
   - craft.general.revision.triage-and-beta-reader-signal

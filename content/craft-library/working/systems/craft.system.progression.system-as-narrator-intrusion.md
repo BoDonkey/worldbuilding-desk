@@ -33,8 +33,10 @@ tags:
   - litrpg
 related:
   - craft.general.plot.exposition-and-info-delivery
+  - craft.general.voice.tense-and-narrative-person
   - craft.profile.classic-litrpg
   - craft.profile.gamelit
+  - craft.system.entity.the-system-as-an-agent
   - craft.system.onboarding.system-introduction-and-tutorialization
   - craft.system.progression.stat-block-density
   - craft.system.progression.visible-vs-hidden-systems

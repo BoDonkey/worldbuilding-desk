@@ -37,6 +37,7 @@ related:
   - craft.trope.role.companion
   - craft.trope.role.heir-and-succession
   - craft.trope.role.mentor
+  - craft.trope.role.the-tyrant-and-the-institution
 source_ids:
   - src.book.propp-morphology-of-the-folktale
   - src.book.vogler-writers-journey

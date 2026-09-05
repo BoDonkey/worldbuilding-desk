@@ -32,6 +32,7 @@ related:
   - craft.system.character.attributes-and-soft-hard-caps
   - craft.system.economy.loot-durability-inventory-and-ownership
   - craft.system.progression.vertical-vs-horizontal-progression
+  - craft.system.time.accelerated-training-and-time-dilation
   - craft.trope.role.found-family
 source_ids:
   - src.book.koster-theory-of-fun

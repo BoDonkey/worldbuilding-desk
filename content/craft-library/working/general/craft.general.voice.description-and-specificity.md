@@ -30,6 +30,7 @@ related:
   - craft.general.character.introducing-characters
   - craft.general.pacing.pacing-across-scales
   - craft.general.pov.information-control
+  - craft.general.practice.research-and-authenticity
   - craft.general.setting.setting-as-pressure
   - craft.general.voice.dialogue-and-subtext
   - craft.general.voice.narrative-summary-vs-scene

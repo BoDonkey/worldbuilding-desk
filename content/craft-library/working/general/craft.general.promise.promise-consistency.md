@@ -39,6 +39,7 @@ related:
   - craft.general.revision.protecting-reader-experience
   - craft.general.revision.triage-and-beta-reader-signal
   - craft.general.structure.opening-pages-and-reader-commitment
+  - craft.general.structure.series-and-arc-architecture
   - craft.system.progression.decorative-chapter-test
   - craft.trope.convention.progression-fiction-reader-expectations
 source_ids:

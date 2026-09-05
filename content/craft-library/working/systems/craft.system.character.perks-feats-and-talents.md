@@ -31,6 +31,7 @@ related:
   - craft.comparison.progression.classes-versus-skill-based-growth
   - craft.system.advancement.experience-sources-and-milestone-growth
   - craft.system.character.attributes-and-soft-hard-caps
+  - craft.system.character.skill-acquisition-and-mastery
   - craft.system.character.specialization-and-respec
   - craft.system.companion.summons-familiars-and-bonded-companions
   - craft.system.progression.vertical-vs-horizontal-progression

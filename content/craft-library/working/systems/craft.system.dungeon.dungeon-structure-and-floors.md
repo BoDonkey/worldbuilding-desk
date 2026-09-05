@@ -39,6 +39,8 @@ related:
   - craft.profile.tower-climbing
   - craft.system.economy.loot-durability-inventory-and-ownership
   - craft.system.encounter.enemy-design-and-difficulty-scaling
+  - craft.system.geography.travel-territory-and-fast-movement
+  - craft.trope.setting.ruins-and-the-lost-civilization
   - craft.trope.setting.the-frontier-and-the-border-town
   - craft.trope.structure.captivity-and-escape
 source_ids:
