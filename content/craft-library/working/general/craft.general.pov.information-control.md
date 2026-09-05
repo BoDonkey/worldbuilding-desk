@@ -27,8 +27,16 @@ tags:
   - voice
   - foundational
 related:
+  - craft.general.pacing.suspense-uncertainty-and-anticipation
+  - craft.general.plot.exposition-and-info-delivery
+  - craft.general.plot.reader-expectation-and-genre-signaling
   - craft.general.plot.setup-and-payoff
   - craft.general.plot.stakes
+  - craft.general.pov.psychic-distance-and-interiority
+  - craft.general.voice.description-and-specificity
+  - craft.general.voice.dialogue-and-subtext
+  - craft.system.progression.visible-vs-hidden-systems
+  - craft.trope.identity.hidden-identity-and-secret-heritage
 source_ids:
   - src.book.leguin-steering-the-craft
   - src.book.gardner-art-of-fiction

@@ -42,8 +42,11 @@ tags:
   - motivation
   - progression
 related:
+  - craft.general.character.values-contradiction-and-meaningful-choice
   - craft.general.character.want-versus-need
   - craft.general.plot.negative-space-problems-power-cannot-solve
+  - craft.profile.dungeon-core
+  - craft.trope.structure.revenge
 source_ids:
   - src.internal.litrpg-craft-failures-research
   - src.book.cron-story-genius

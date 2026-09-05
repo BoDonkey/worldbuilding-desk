@@ -31,8 +31,11 @@ tags:
   - stakes
   - resource-model
 related:
-  - craft.system.combat.action-economy
   - craft.general.plot.stakes
+  - craft.profile.dark-horror-litrpg
+  - craft.system.combat.action-economy
+  - craft.system.resource.health-and-focus-as-core-resources
+  - craft.trope.identity.resurrection
 source_ids:
   - src.internal.litrpg-genre-research
   - src.internal.litrpg-craft-failures-research

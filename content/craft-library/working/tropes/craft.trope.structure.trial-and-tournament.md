@@ -28,8 +28,11 @@ tags:
   - plot-structure
   - trope
 related:
-  - craft.trope.setting.academy-story
+  - craft.profile.tower-climbing
   - craft.system.combat.action-economy
+  - craft.trope.setting.academy-story
+  - craft.trope.structure.survival
+  - craft.trope.structure.the-quest
 source_ids:
   - src.internal.litrpg-genre-research
 source_confidence: limited

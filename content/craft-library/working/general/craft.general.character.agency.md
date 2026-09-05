@@ -30,8 +30,16 @@ tags:
   - agency
   - foundational
 related:
+  - craft.general.character.antagonistic-force
+  - craft.general.character.values-contradiction-and-meaningful-choice
   - craft.general.character.want-versus-need
+  - craft.general.plot.climax-and-resolution
   - craft.general.plot.stakes
+  - craft.profile.dungeon-core
+  - craft.profile.isekai-portal-fantasy
+  - craft.system.character.affinities-resistances-titles-and-bloodlines
+  - craft.trope.role.chosen-one
+  - craft.trope.role.trickster
 source_ids:
   - src.book.cron-story-genius
   - src.book.truby-anatomy-of-story

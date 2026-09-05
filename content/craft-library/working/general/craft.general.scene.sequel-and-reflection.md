@@ -26,8 +26,12 @@ tags:
   - structure
   - pacing
 related:
-  - craft.general.scene.goal-conflict-outcome
   - craft.general.pacing.tension-and-release-cycles
+  - craft.general.pov.psychic-distance-and-interiority
+  - craft.general.scene.entry-and-exit-points
+  - craft.general.scene.goal-conflict-outcome
+  - craft.general.scene.scene-turns
+  - craft.system.progression.decorative-chapter-test
 source_ids:
   - src.book.swain-techniques-selling-writer
   - src.book.weiland-helping-writers-become-authors

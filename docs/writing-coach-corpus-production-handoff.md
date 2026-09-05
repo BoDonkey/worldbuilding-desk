@@ -160,6 +160,42 @@ Use namespaced, lowercase, stable IDs. An ID must describe the concept rather
 than its current title so that wording can evolve without breaking links. Do
 not recycle retired IDs.
 
+## Related-Link Policy
+
+**Added 2026-09-05, after whole-corpus audit pass A.** The first twelve
+batches drafted `related` as an informal quota of about two links each,
+chosen from whatever already existed on disk. That produced a graph pointing
+backward in batch order: 62 of 130 records had nothing linking to them, only
+27 pairs were mutual, and the twelve subgenre profiles had no links to each
+other at all. A coach traversing `related` could not reach half the library.
+The following rules replace that convention and apply to every record,
+including the 130 already drafted (repaired in the remediation pass logged in
+`content/craft-library/working/qa/duplication-report.md`).
+
+1. **Links are mutual.** If A names B, B names A. A relationship between two
+   records is a property of the pair, not of whichever one happened to be
+   drafted second. Adding a link to a new record means editing the older one
+   too.
+2. **At least five links per record.** There is no maximum. Foundational
+   records legitimately accumulate more — capping them would break rule 1 —
+   and a high inbound count is a useful signal that a record is load-bearing.
+3. **At least one link crosses families.** A record that only points inside
+   its own family teaches an author nothing about how craft, trope, and
+   system questions bear on each other. These bridges are the corpus's most
+   valuable links and were its scarcest.
+4. **Subgenre profiles link to each other**, at least twice. Choosing between
+   adjacent subgenres is a decision authors actually make, and a profile that
+   only points at the records it modifies cannot support it.
+5. **Relevance beats quota.** A link must carry a real coaching relationship
+   a person could explain in a sentence. If a record cannot reach five
+   genuinely related neighbours, log the shortfall in the coverage matrix
+   rather than padding with a weak link — the shortfall usually means a
+   missing record, which is useful to know.
+
+`content/craft-library/working/qa/relink.py` proposes a graph under these
+rules and reports violations; every edge it proposes is reviewed by hand
+before it is applied.
+
 ## Required Body Structure
 
 Write each document in a warm, practical coaching voice. Prefer questions and

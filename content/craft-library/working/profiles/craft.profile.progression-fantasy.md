@@ -25,8 +25,17 @@ tags:
   - subgenre-profile
   - progression-fantasy
 related:
-  - craft.system.progression.fake-progression
+  - craft.comparison.progression.hard-numbers-versus-named-tiers
+  - craft.profile.classic-litrpg
+  - craft.profile.crafting-and-economy
+  - craft.profile.cultivation
+  - craft.profile.dungeon-core
+  - craft.profile.gamelit
+  - craft.profile.isekai-portal-fantasy
+  - craft.profile.time-loop
+  - craft.profile.tower-climbing
   - craft.system.progression.advancement-rate
+  - craft.system.progression.fake-progression
 source_ids:
   - src.internal.litrpg-genre-research
   - src.rowe.progression-fantasy

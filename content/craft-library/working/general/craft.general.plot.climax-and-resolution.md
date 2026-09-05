@@ -27,8 +27,13 @@ tags:
   - structure
   - foundational
 related:
-  - craft.general.plot.causal-escalation
   - craft.general.character.agency
+  - craft.general.character.internal-and-external-arcs
+  - craft.general.plot.causal-escalation
+  - craft.general.plot.earned-resolution
+  - craft.general.plot.midpoint-and-reversals
+  - craft.general.premise.dramatic-question-and-controlling-idea
+  - craft.trope.role.chosen-one
 source_ids:
   - src.book.mckee-story
   - src.book.truby-anatomy-of-story

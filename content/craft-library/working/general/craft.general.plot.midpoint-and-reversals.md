@@ -26,8 +26,12 @@ tags:
   - plot
   - structure
 related:
+  - craft.general.character.relationships-and-relational-arcs
   - craft.general.plot.causal-escalation
   - craft.general.plot.climax-and-resolution
+  - craft.general.plot.complications
+  - craft.general.plot.foreshadowing
+  - craft.trope.structure.the-quest
 source_ids:
   - src.book.bell-super-structure
   - src.book.snyder-save-the-cat

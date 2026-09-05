@@ -668,3 +668,19 @@ links, sections, and five overstated `source_confidence` marks — because
 every further batch drafted under the two-link quota widens the gap. The
 50 records still to draft toward 180 should be written against a raised
 link quota (four to six, at least one crossing families).
+
+## Remediation pass 1 (2026-09-05, no new records)
+
+Repaired the link graph found broken in audit pass A. Record counts
+unchanged at **130**. Full detail in `qa/duplication-report.md`; the policy
+now lives in the handoff under "Related-Link Policy".
+
+Zero records without inbound links (was 62), zero one-way links (was 210),
+399 mutual pairs (was 237 pairs of which 27 mutual), minimum five links per
+record, median six, and 308 cross-family directed edges (was 106). No
+hand-chosen link from any batch was dropped.
+
+Two audit-pass-A items remain open before or alongside Batch 13: the
+required-section gaps (14 records missing "visibility to characters and
+readers", plus three outright missing sections) and five overstated
+`source_confidence` marks.

@@ -30,7 +30,11 @@ tags:
   - systemic-consequences
   - worldbuilding
 related:
+  - craft.profile.cultivation
+  - craft.system.consequences.institutions-labor-and-governance
   - craft.system.consequences.systemic-social-consequences
+  - craft.system.cultivation.alchemy-and-pill-refinement
+  - craft.system.cultivation.body-and-soul-cultivation
   - craft.system.cultivation.realms-and-breakthroughs
 source_ids:
   - src.internal.litrpg-genre-research

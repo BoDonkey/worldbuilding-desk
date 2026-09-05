@@ -28,8 +28,11 @@ tags:
   - trope
   - identity
 related:
-  - craft.trope.role.chosen-one
   - craft.general.pov.information-control
+  - craft.trope.fatigue.overused-litrpg-trope-cluster
+  - craft.trope.identity.betrayal
+  - craft.trope.role.chosen-one
+  - craft.trope.role.heir-and-succession
 source_ids:
   - src.internal.litrpg-craft-failures-research
 source_confidence: limited

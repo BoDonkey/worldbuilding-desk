@@ -26,8 +26,14 @@ tags:
   - subgenre-profile
   - litrpg
 related:
-  - craft.system.progression.stat-block-density
   - craft.comparison.progression.hard-numbers-versus-named-tiers
+  - craft.profile.cultivation
+  - craft.profile.dark-horror-litrpg
+  - craft.profile.gamelit
+  - craft.profile.progression-fantasy
+  - craft.system.encounter.range-positioning-damage-and-defenses
+  - craft.system.progression.stat-block-density
+  - craft.system.progression.system-as-narrator-intrusion
 source_ids:
   - src.internal.litrpg-genre-research
   - src.litrpgtools.subgenre-guide

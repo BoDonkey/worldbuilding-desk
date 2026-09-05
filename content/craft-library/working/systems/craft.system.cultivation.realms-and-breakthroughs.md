@@ -33,7 +33,12 @@ tags:
   - resource-model
 related:
   - craft.comparison.resource.qi-versus-mana
+  - craft.profile.cultivation
+  - craft.system.cultivation.alchemy-and-pill-refinement
+  - craft.system.cultivation.body-and-soul-cultivation
+  - craft.system.cultivation.sects-inheritance-and-deviation
   - craft.system.progression.advancement-rate
+  - craft.trope.structure.transformation
 source_ids:
   - src.book.kohn-introducing-daoism
   - src.internal.litrpg-genre-research

@@ -26,8 +26,11 @@ tags:
   - genre-convention
   - trope
 related:
-  - craft.system.resource.resource-lifecycle-design
   - craft.system.consequences.systemic-social-consequences
+  - craft.system.resource.resource-lifecycle-design
+  - craft.trope.convention.horror-genre-conventions
+  - craft.trope.convention.science-fiction-conventions
+  - craft.trope.convention.serial-fiction-conventions
 source_ids:
   - src.internal.litrpg-genre-research
 source_confidence: limited

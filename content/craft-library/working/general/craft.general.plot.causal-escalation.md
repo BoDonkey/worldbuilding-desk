@@ -26,8 +26,14 @@ tags:
   - structure
   - foundational
 related:
-  - craft.general.scene.goal-conflict-outcome
+  - craft.general.plot.climax-and-resolution
+  - craft.general.plot.complications
+  - craft.general.plot.midpoint-and-reversals
+  - craft.general.plot.setup-and-payoff
   - craft.general.plot.stakes
+  - craft.general.scene.goal-conflict-outcome
+  - craft.trope.structure.the-quest
+  - craft.trope.structure.time-loop
 source_ids:
   - src.book.truby-anatomy-of-story
   - src.book.mckee-story

@@ -28,8 +28,12 @@ tags:
   - plot-structure
   - trope
 related:
-  - craft.general.plot.stakes
   - craft.general.character.internal-and-external-arcs
+  - craft.general.character.values-contradiction-and-meaningful-choice
+  - craft.general.plot.stakes
+  - craft.trope.identity.resurrection
+  - craft.trope.structure.portal-and-other-world
+  - craft.trope.structure.transformation
 source_ids:
   - src.book.campbell-hero-with-a-thousand-faces
 source_confidence: mixed

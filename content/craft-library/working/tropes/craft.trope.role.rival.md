@@ -28,6 +28,10 @@ tags:
   - relationships
 related:
   - craft.general.character.antagonistic-force
+  - craft.general.scene.goal-conflict-outcome
+  - craft.trope.role.antihero-and-redeemed-enemy
+  - craft.trope.role.companion
+  - craft.trope.role.trickster
   - craft.trope.setting.academy-story
 source_ids:
   - src.rowe.progression-fantasy

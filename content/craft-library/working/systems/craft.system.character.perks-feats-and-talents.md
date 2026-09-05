@@ -28,8 +28,11 @@ tags:
   - character-architecture
   - progression
 related:
-  - craft.system.progression.vertical-vs-horizontal-progression
   - craft.comparison.progression.classes-versus-skill-based-growth
+  - craft.system.advancement.experience-sources-and-milestone-growth
+  - craft.system.character.attributes-and-soft-hard-caps
+  - craft.system.character.specialization-and-respec
+  - craft.system.progression.vertical-vs-horizontal-progression
 source_ids:
   - src.book.adams-fundamentals-of-game-design
 source_confidence: limited

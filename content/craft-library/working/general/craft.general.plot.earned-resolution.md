@@ -26,8 +26,12 @@ tags:
   - structure
   - foundational
 related:
+  - craft.general.character.values-contradiction-and-meaningful-choice
   - craft.general.plot.climax-and-resolution
+  - craft.general.plot.complications
   - craft.general.plot.setup-and-payoff
+  - craft.general.premise.dramatic-question-and-controlling-idea
+  - craft.trope.structure.the-heist
 source_ids:
   - src.book.mckee-story
   - src.book.truby-anatomy-of-story

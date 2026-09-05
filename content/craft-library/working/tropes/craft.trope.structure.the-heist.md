@@ -27,8 +27,13 @@ tags:
   - plot-structure
   - trope
 related:
-  - craft.trope.structure.the-quest
+  - craft.general.plot.earned-resolution
   - craft.general.plot.setup-and-payoff
+  - craft.system.encounter.healing-teamwork-and-information-asymmetry
+  - craft.trope.combination.inversions-and-combinations
+  - craft.trope.role.trickster
+  - craft.trope.structure.mystery
+  - craft.trope.structure.the-quest
 source_ids:
   - src.book.mckee-story
 source_confidence: limited

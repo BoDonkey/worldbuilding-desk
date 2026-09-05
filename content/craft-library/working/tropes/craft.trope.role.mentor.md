@@ -28,8 +28,12 @@ tags:
   - trope
   - relationships
 related:
-  - craft.trope.role.reluctant-hero
+  - craft.general.character.supporting-cast-purpose
   - craft.general.character.want-versus-need
+  - craft.trope.role.antihero-and-redeemed-enemy
+  - craft.trope.role.found-family
+  - craft.trope.role.reluctant-hero
+  - craft.trope.setting.academy-story
 source_ids:
   - src.book.vogler-writers-journey
   - src.book.campbell-hero-with-a-thousand-faces

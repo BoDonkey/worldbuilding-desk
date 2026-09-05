@@ -30,8 +30,11 @@ tags:
   - plot-structure
   - trope
 related:
+  - craft.general.pacing.escalation-ceilings-urgency-and-pressure
   - craft.profile.system-apocalypse
   - craft.system.resource.resource-lifecycle-design
+  - craft.trope.structure.the-quest
+  - craft.trope.structure.trial-and-tournament
 source_ids:
   - src.internal.litrpg-genre-research
 source_confidence: limited

@@ -29,8 +29,12 @@ tags:
   - economy
   - crafting
 related:
-  - craft.system.economy.crafting-and-economy-loops
+  - craft.profile.crafting-and-economy
+  - craft.system.cultivation.body-and-soul-cultivation
   - craft.system.cultivation.realms-and-breakthroughs
+  - craft.system.cultivation.sects-inheritance-and-deviation
+  - craft.system.economy.crafting-and-economy-loops
+  - craft.system.economy.enchanting-and-item-crafting
 source_ids:
   - src.internal.litrpg-genre-research
 source_confidence: limited

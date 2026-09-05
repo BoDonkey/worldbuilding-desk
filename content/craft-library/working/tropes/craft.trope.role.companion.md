@@ -29,8 +29,11 @@ tags:
   - trope
   - relationships
 related:
-  - craft.trope.role.found-family
   - craft.general.character.supporting-cast-purpose
+  - craft.trope.fatigue.overused-litrpg-trope-cluster
+  - craft.trope.role.ensemble-cast-dynamics
+  - craft.trope.role.found-family
+  - craft.trope.role.rival
 source_ids:
   - src.internal.litrpg-craft-failures-research
 source_confidence: limited

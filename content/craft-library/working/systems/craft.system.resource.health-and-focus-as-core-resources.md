@@ -27,8 +27,12 @@ tags:
   - resource-model
   - combat
 related:
-  - craft.system.resource.resource-archetype-survey
+  - craft.comparison.resource.pools-vs-thresholds
   - craft.system.combat.death-and-respawn
+  - craft.system.encounter.status-effects-crowd-control-and-counters
+  - craft.system.resource.cooldowns-charges-and-sacrifice
+  - craft.system.resource.environmental-and-hybrid-power
+  - craft.system.resource.resource-archetype-survey
 source_ids:
   - src.book.adams-fundamentals-of-game-design
 source_confidence: limited

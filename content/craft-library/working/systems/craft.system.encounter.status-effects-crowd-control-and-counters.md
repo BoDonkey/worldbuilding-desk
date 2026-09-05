@@ -26,8 +26,11 @@ tags:
   - combat
   - encounter-design
 related:
-  - craft.system.encounter.range-positioning-damage-and-defenses
+  - craft.comparison.resource.renewable-vs-finite-resources
   - craft.system.combat.action-economy
+  - craft.system.encounter.healing-teamwork-and-information-asymmetry
+  - craft.system.encounter.range-positioning-damage-and-defenses
+  - craft.system.resource.health-and-focus-as-core-resources
 source_ids:
   - src.book.adams-fundamentals-of-game-design
   - src.book.costikyan-uncertainty-in-games

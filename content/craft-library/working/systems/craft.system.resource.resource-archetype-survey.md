@@ -27,8 +27,12 @@ tags:
   - resource-model
   - worldbuilding
 related:
-  - craft.system.resource.resource-lifecycle-design
   - craft.comparison.resource.qi-versus-mana
+  - craft.comparison.resource.renewable-vs-finite-resources
+  - craft.general.voice.description-and-specificity
+  - craft.system.resource.environmental-and-hybrid-power
+  - craft.system.resource.health-and-focus-as-core-resources
+  - craft.system.resource.resource-lifecycle-design
 source_ids:
   - src.book.adams-fundamentals-of-game-design
   - src.internal.litrpg-genre-research

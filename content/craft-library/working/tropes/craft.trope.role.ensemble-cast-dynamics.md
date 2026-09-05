@@ -30,8 +30,11 @@ tags:
   - trope
   - relationships
 related:
-  - craft.trope.role.found-family
   - craft.general.character.supporting-cast-purpose
+  - craft.general.voice.voice-as-craft-element
+  - craft.trope.fatigue.overused-litrpg-trope-cluster
+  - craft.trope.role.companion
+  - craft.trope.role.found-family
 source_ids:
   - src.internal.litrpg-craft-failures-research
 source_confidence: limited

@@ -26,8 +26,11 @@ tags:
   - subgenre-profile
   - base-building
 related:
-  - craft.trope.role.found-family
+  - craft.profile.dungeon-core
+  - craft.profile.system-apocalypse
+  - craft.profile.time-loop
   - craft.system.progression.vertical-vs-horizontal-progression
+  - craft.trope.role.found-family
 source_ids:
   - src.internal.litrpg-genre-research
 source_confidence: limited

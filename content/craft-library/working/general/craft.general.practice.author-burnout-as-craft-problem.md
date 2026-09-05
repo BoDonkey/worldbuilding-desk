@@ -29,7 +29,11 @@ tags:
   - series-quality
 related:
   - craft.general.practice.buffer-discipline
+  - craft.general.practice.no-gap-posting
   - craft.general.promise.promise-consistency
+  - craft.general.revision.protecting-reader-experience
+  - craft.general.revision.triage-and-beta-reader-signal
+  - craft.trope.convention.serial-fiction-conventions
 source_ids:
   - src.internal.litrpg-craft-failures-research
   - src.chapterchronicles.series-falloff

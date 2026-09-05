@@ -29,8 +29,17 @@ tags:
   - worldbuilding
   - systemic-consequences
 related:
+  - craft.comparison.resource.pools-vs-thresholds
   - craft.comparison.resource.qi-versus-mana
+  - craft.comparison.resource.renewable-vs-finite-resources
   - craft.system.consequences.systemic-social-consequences
+  - craft.system.economy.crafting-and-economy-loops
+  - craft.system.resource.cooldowns-charges-and-sacrifice
+  - craft.system.resource.environmental-and-hybrid-power
+  - craft.system.resource.resource-archetype-survey
+  - craft.trope.convention.fantasy-genre-conventions
+  - craft.trope.convention.science-fiction-conventions
+  - craft.trope.structure.survival
 source_ids:
   - src.book.adams-fundamentals-of-game-design
   - src.book.salen-zimmerman-rules-of-play

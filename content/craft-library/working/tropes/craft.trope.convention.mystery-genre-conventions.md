@@ -26,8 +26,11 @@ tags:
   - genre-convention
   - trope
 related:
-  - craft.trope.structure.mystery
   - craft.general.plot.reader-expectation-and-genre-signaling
+  - craft.trope.convention.horror-genre-conventions
+  - craft.trope.convention.progression-fiction-reader-expectations
+  - craft.trope.convention.science-fiction-conventions
+  - craft.trope.structure.mystery
 source_ids:
   - src.internal.litrpg-craft-failures-research
 source_confidence: limited

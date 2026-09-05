@@ -439,3 +439,27 @@ Confidence-mark corrections: `qa/citation-audit.md`.
 confidence marks) and Batch 13 drafting. The audit recommends remediation
 first, and that any further drafting use a raised link quota of four to six
 `related` links with at least one crossing families.
+
+### Remediation pass 1 — link graph (done, no new records)
+
+Repaired what audit pass A found. `related` is now a web rather than a
+backward-pointing tree: 399 mutual pairs (was 237, of which 27 mutual), no
+record without inbound links (was 62), no one-way links (was 210), minimum
+five links per record, and 308 cross-family directed edges (was 106). Every
+hand-chosen link from Batches 1–12 survives — the pass only adds.
+
+The policy now lives in `docs/writing-coach-corpus-production-handoff.md`
+under **Related-Link Policy** and applies to all future batches: links are
+mutual, at least five per record with no maximum, at least one crossing
+families, profiles linking to profiles, and relevance over quota. Adding a
+record now means editing its neighbours too.
+
+Tooling: `qa/relink.py propose | review | apply`, with the applied graph in
+`qa/relink-plan.yml` and 23 hand-rejected pairs recorded in the script so a
+re-run cannot reintroduce them.
+
+**Still open before Batch 13:** the required-section gaps from audit pass A
+(14 system/comparison records missing a "visibility to characters and
+readers" treatment; `qi-versus-mana` missing its experiments section; the
+fatigue cluster missing two sections) and five records declaring
+`source_confidence: mixed` on a single source.

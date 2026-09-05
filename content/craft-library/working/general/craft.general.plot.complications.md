@@ -27,8 +27,12 @@ tags:
   - plot
   - structure
 related:
+  - craft.general.pacing.escalation-ceilings-urgency-and-pressure
   - craft.general.plot.causal-escalation
+  - craft.general.plot.earned-resolution
+  - craft.general.plot.foreshadowing
   - craft.general.plot.midpoint-and-reversals
+  - craft.trope.structure.the-quest
 source_ids:
   - src.book.mckee-story
   - src.book.truby-anatomy-of-story

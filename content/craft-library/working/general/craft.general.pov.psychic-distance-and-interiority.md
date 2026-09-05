@@ -29,7 +29,11 @@ tags:
   - foundational
 related:
   - craft.general.pov.information-control
+  - craft.general.scene.scene-turns
+  - craft.general.scene.sequel-and-reflection
   - craft.general.voice.narrative-summary-vs-scene
+  - craft.general.voice.voice-as-craft-element
+  - craft.system.progression.visible-vs-hidden-systems
 source_ids:
   - src.book.leguin-steering-the-craft
   - src.book.gardner-art-of-fiction

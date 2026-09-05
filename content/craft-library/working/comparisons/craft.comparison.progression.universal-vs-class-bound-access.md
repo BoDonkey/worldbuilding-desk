@@ -30,6 +30,9 @@ tags:
   - systemic-consequences
 related:
   - craft.comparison.progression.classes-versus-skill-based-growth
+  - craft.system.character.affinities-resistances-titles-and-bloodlines
+  - craft.system.consequences.institutions-labor-and-governance
+  - craft.system.consequences.medicine-religion-and-crime
   - craft.system.consequences.systemic-social-consequences
 source_ids:
   - src.internal.litrpg-genre-research

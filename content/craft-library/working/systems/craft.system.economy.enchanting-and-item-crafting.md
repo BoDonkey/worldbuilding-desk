@@ -28,7 +28,10 @@ tags:
   - crafting
   - resource-model
 related:
+  - craft.profile.crafting-and-economy
+  - craft.system.cultivation.alchemy-and-pill-refinement
   - craft.system.economy.crafting-and-economy-loops
+  - craft.system.economy.currencies-markets-and-inflation
   - craft.system.economy.loot-durability-inventory-and-ownership
 source_ids:
   - src.book.adams-fundamentals-of-game-design

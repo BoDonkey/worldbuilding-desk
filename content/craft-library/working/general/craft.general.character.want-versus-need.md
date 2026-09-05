@@ -27,8 +27,18 @@ tags:
   - arc
   - foundational
 related:
-  - craft.general.character.power-as-sole-motivation
+  - craft.comparison.progression.classes-versus-skill-based-growth
+  - craft.general.character.agency
   - craft.general.character.internal-and-external-arcs
+  - craft.general.character.power-as-sole-motivation
+  - craft.general.character.relationships-and-relational-arcs
+  - craft.general.character.values-contradiction-and-meaningful-choice
+  - craft.trope.role.antihero-and-redeemed-enemy
+  - craft.trope.role.found-family
+  - craft.trope.role.mentor
+  - craft.trope.role.reluctant-hero
+  - craft.trope.romance.romantic-subplot-conventions
+  - craft.trope.structure.revenge
 source_ids:
   - src.book.cron-story-genius
   - src.book.truby-anatomy-of-story

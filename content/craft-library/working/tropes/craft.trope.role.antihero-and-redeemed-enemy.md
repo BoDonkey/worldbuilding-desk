@@ -31,6 +31,9 @@ tags:
 related:
   - craft.general.character.want-versus-need
   - craft.trope.role.mentor
+  - craft.trope.role.rival
+  - craft.trope.role.trickster
+  - craft.trope.structure.revenge
 source_ids:
   - src.book.forster-aspects-of-the-novel
   - src.internal.litrpg-craft-failures-research

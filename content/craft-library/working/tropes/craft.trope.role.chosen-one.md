@@ -28,8 +28,15 @@ tags:
   - trope
   - agency
 related:
-  - craft.trope.structure.the-prophecy
   - craft.general.character.agency
+  - craft.general.plot.climax-and-resolution
+  - craft.system.character.affinities-resistances-titles-and-bloodlines
+  - craft.trope.combination.inversions-and-combinations
+  - craft.trope.fatigue.overused-litrpg-trope-cluster
+  - craft.trope.identity.hidden-identity-and-secret-heritage
+  - craft.trope.role.heir-and-succession
+  - craft.trope.role.reluctant-hero
+  - craft.trope.structure.the-prophecy
 source_ids:
   - src.book.campbell-hero-with-a-thousand-faces
   - src.internal.litrpg-craft-failures-research

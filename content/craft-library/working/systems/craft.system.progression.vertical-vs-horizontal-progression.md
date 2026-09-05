@@ -29,8 +29,13 @@ tags:
   - comparison
   - systemic-consequences
 related:
-  - craft.system.progression.advancement-rate
   - craft.comparison.progression.classes-versus-skill-based-growth
+  - craft.profile.base-building
+  - craft.system.advancement.diminishing-returns-rarity-gates-and-catch-up-mechanics
+  - craft.system.character.attributes-and-soft-hard-caps
+  - craft.system.character.perks-feats-and-talents
+  - craft.system.character.specialization-and-respec
+  - craft.system.progression.advancement-rate
 source_ids:
   - src.rowe.progression-fantasy
   - src.book.koster-theory-of-fun

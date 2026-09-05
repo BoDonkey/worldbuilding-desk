@@ -28,8 +28,12 @@ tags:
   - comparison
   - pov
 related:
-  - craft.system.progression.stat-block-density
+  - craft.comparison.progression.hard-numbers-versus-named-tiers
+  - craft.general.plot.exposition-and-info-delivery
   - craft.general.pov.information-control
+  - craft.general.pov.psychic-distance-and-interiority
+  - craft.system.progression.stat-block-density
+  - craft.system.progression.system-as-narrator-intrusion
 source_ids:
   - src.internal.litrpg-genre-research
   - src.internal.litrpg-craft-failures-research

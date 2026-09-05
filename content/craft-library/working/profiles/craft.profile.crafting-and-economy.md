@@ -27,8 +27,14 @@ tags:
   - subgenre-profile
   - economy
 related:
-  - craft.system.economy.crafting-and-economy-loops
+  - craft.profile.gamelit
+  - craft.profile.progression-fantasy
+  - craft.system.advancement.experience-sources-and-milestone-growth
   - craft.system.consequences.systemic-social-consequences
+  - craft.system.cultivation.alchemy-and-pill-refinement
+  - craft.system.economy.crafting-and-economy-loops
+  - craft.system.economy.currencies-markets-and-inflation
+  - craft.system.economy.enchanting-and-item-crafting
 source_ids:
   - src.internal.litrpg-genre-research
 source_confidence: limited

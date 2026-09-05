@@ -31,8 +31,11 @@ tags:
   - character-role
   - trope
 related:
-  - craft.trope.setting.academy-story
+  - craft.system.character.affinities-resistances-titles-and-bloodlines
+  - craft.trope.combination.inversions-and-combinations
   - craft.trope.role.found-family
+  - craft.trope.role.heir-and-succession
+  - craft.trope.setting.academy-story
 source_ids:
   - src.internal.litrpg-craft-failures-research
 source_confidence: limited

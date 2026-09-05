@@ -27,8 +27,12 @@ tags:
   - litrpg
   - horror
 related:
+  - craft.profile.classic-litrpg
+  - craft.profile.cultivation
+  - craft.profile.system-apocalypse
   - craft.system.combat.death-and-respawn
   - craft.system.progression.fake-progression
+  - craft.trope.convention.horror-genre-conventions
 source_ids:
   - src.internal.litrpg-genre-research
   - src.internal.litrpg-craft-failures-research

@@ -28,7 +28,13 @@ tags:
   - foundational
 related:
   - craft.general.pacing.pacing-across-scales
+  - craft.general.plot.exposition-and-info-delivery
+  - craft.general.pov.psychic-distance-and-interiority
   - craft.general.scene.goal-conflict-outcome
+  - craft.general.voice.description-and-specificity
+  - craft.general.voice.dialogue-and-subtext
+  - craft.general.voice.voice-as-craft-element
+  - craft.system.progression.stat-block-density
 source_ids:
   - src.book.gardner-art-of-fiction
   - src.book.weiland-helping-writers-become-authors

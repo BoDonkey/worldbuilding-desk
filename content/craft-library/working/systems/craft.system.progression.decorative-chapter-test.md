@@ -38,9 +38,14 @@ tags:
   - stakes
   - chapter-architecture
 related:
-  - craft.system.progression.fake-progression
-  - craft.system.progression.advancement-rate
   - craft.general.plot.negative-space-problems-power-cannot-solve
+  - craft.general.promise.promise-consistency
+  - craft.general.scene.entry-and-exit-points
+  - craft.general.scene.scene-turns
+  - craft.general.scene.sequel-and-reflection
+  - craft.profile.tower-climbing
+  - craft.system.progression.advancement-rate
+  - craft.system.progression.fake-progression
 source_ids:
   - src.internal.litrpg-craft-failures-research
   - src.tam.meaningful-progression

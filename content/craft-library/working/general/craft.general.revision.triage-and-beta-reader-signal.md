@@ -28,8 +28,12 @@ tags:
   - practice
   - foundational
 related:
-  - craft.general.promise.promise-consistency
   - craft.general.practice.author-burnout-as-craft-problem
+  - craft.general.promise.promise-consistency
+  - craft.general.revision.continuity-passes
+  - craft.general.revision.protecting-reader-experience
+  - craft.general.structure.chapter-architecture-and-transitions
+  - craft.trope.convention.serial-fiction-conventions
 source_ids:
   - src.book.king-on-writing
   - src.internal.litrpg-craft-failures-research

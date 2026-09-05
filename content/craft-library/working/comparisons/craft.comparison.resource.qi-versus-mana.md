@@ -33,8 +33,12 @@ tags:
   - comparison
   - worldbuilding
 related:
-  - craft.system.resource.resource-lifecycle-design
+  - craft.profile.cultivation
+  - craft.system.consequences.medicine-religion-and-crime
+  - craft.system.cultivation.body-and-soul-cultivation
   - craft.system.cultivation.realms-and-breakthroughs
+  - craft.system.resource.resource-archetype-survey
+  - craft.system.resource.resource-lifecycle-design
 source_ids:
   - src.book.kohn-introducing-daoism
   - src.wikipedia.neidan

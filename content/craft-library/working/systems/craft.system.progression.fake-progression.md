@@ -34,8 +34,12 @@ tags:
   - stakes
   - dashboard
 related:
-  - craft.system.progression.decorative-chapter-test
+  - craft.general.plot.negative-space-problems-power-cannot-solve
+  - craft.profile.dark-horror-litrpg
+  - craft.profile.progression-fantasy
+  - craft.system.advancement.experience-sources-and-milestone-growth
   - craft.system.progression.advancement-rate
+  - craft.system.progression.decorative-chapter-test
 source_ids:
   - src.internal.litrpg-craft-failures-research
   - src.tam.meaningful-progression

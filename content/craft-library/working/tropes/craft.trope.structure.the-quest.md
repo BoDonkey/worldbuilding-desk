@@ -29,8 +29,13 @@ tags:
   - plot-structure
   - trope
 related:
-  - craft.trope.structure.the-heist
   - craft.general.plot.causal-escalation
+  - craft.general.plot.complications
+  - craft.general.plot.midpoint-and-reversals
+  - craft.trope.role.reluctant-hero
+  - craft.trope.structure.survival
+  - craft.trope.structure.the-heist
+  - craft.trope.structure.trial-and-tournament
 source_ids:
   - src.book.campbell-hero-with-a-thousand-faces
   - src.book.booker-seven-basic-plots

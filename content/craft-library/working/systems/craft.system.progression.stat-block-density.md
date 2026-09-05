@@ -39,8 +39,12 @@ tags:
   - system-presentation
   - litrpg
 related:
-  - craft.system.progression.visible-vs-hidden-systems
+  - craft.comparison.progression.hard-numbers-versus-named-tiers
+  - craft.general.voice.narrative-summary-vs-scene
+  - craft.profile.classic-litrpg
+  - craft.profile.gamelit
   - craft.system.progression.system-as-narrator-intrusion
+  - craft.system.progression.visible-vs-hidden-systems
 source_ids:
   - src.internal.litrpg-craft-failures-research
   - src.litrpgreads.integrating-systems

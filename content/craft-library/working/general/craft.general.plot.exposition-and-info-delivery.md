@@ -28,8 +28,11 @@ tags:
   - pacing
   - foundational
 related:
-  - craft.system.progression.system-as-narrator-intrusion
   - craft.general.pov.information-control
+  - craft.general.scene.entry-and-exit-points
+  - craft.general.voice.narrative-summary-vs-scene
+  - craft.system.progression.system-as-narrator-intrusion
+  - craft.system.progression.visible-vs-hidden-systems
 source_ids:
   - src.book.mckee-story
   - src.book.gardner-art-of-fiction

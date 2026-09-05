@@ -28,6 +28,9 @@ tags:
   - progression
   - systemic-consequences
 related:
+  - craft.system.advancement.experience-sources-and-milestone-growth
+  - craft.system.character.attributes-and-soft-hard-caps
+  - craft.system.economy.loot-durability-inventory-and-ownership
   - craft.system.progression.vertical-vs-horizontal-progression
   - craft.trope.role.found-family
 source_ids:

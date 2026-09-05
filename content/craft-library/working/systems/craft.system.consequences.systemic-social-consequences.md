@@ -38,8 +38,20 @@ tags:
   - worldbuilding
   - resource-model
 related:
-  - craft.system.resource.resource-lifecycle-design
+  - craft.comparison.progression.universal-vs-class-bound-access
+  - craft.profile.crafting-and-economy
+  - craft.profile.isekai-portal-fantasy
+  - craft.system.consequences.institutions-labor-and-governance
+  - craft.system.consequences.medicine-religion-and-crime
+  - craft.system.cultivation.sects-inheritance-and-deviation
   - craft.system.economy.crafting-and-economy-loops
+  - craft.system.economy.currencies-markets-and-inflation
+  - craft.system.economy.loot-durability-inventory-and-ownership
+  - craft.system.resource.resource-lifecycle-design
+  - craft.trope.convention.fantasy-genre-conventions
+  - craft.trope.convention.science-fiction-conventions
+  - craft.trope.identity.resurrection
+  - craft.trope.role.heir-and-succession
 source_ids:
   - src.rowe.progression-fantasy
   - src.internal.litrpg-craft-failures-research

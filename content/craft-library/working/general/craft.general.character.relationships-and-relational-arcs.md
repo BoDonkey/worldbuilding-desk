@@ -30,6 +30,9 @@ tags:
 related:
   - craft.general.character.internal-and-external-arcs
   - craft.general.character.supporting-cast-purpose
+  - craft.general.character.want-versus-need
+  - craft.general.plot.midpoint-and-reversals
+  - craft.trope.romance.romantic-subplot-conventions
 source_ids:
   - src.book.cron-story-genius
   - src.book.truby-anatomy-of-story

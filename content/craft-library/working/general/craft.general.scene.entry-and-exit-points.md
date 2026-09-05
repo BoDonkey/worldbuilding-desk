@@ -26,8 +26,12 @@ tags:
   - scene-craft
   - pacing
 related:
+  - craft.general.plot.exposition-and-info-delivery
   - craft.general.scene.goal-conflict-outcome
+  - craft.general.scene.scene-turns
+  - craft.general.scene.sequel-and-reflection
   - craft.general.structure.chapter-architecture-and-transitions
+  - craft.system.progression.decorative-chapter-test
 source_ids:
   - src.book.gardner-art-of-fiction
   - src.book.weiland-helping-writers-become-authors

@@ -29,8 +29,11 @@ tags:
   - systemic-consequences
   - worldbuilding
 related:
-  - craft.system.consequences.systemic-social-consequences
+  - craft.comparison.progression.universal-vs-class-bound-access
   - craft.comparison.resource.qi-versus-mana
+  - craft.system.consequences.institutions-labor-and-governance
+  - craft.system.consequences.systemic-social-consequences
+  - craft.trope.identity.resurrection
 source_ids:
   - src.rowe.progression-fantasy
   - src.internal.litrpg-craft-failures-research

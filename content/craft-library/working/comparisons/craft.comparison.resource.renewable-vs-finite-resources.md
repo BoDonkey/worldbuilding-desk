@@ -28,8 +28,12 @@ tags:
   - resource-model
   - comparison
 related:
-  - craft.system.resource.resource-lifecycle-design
+  - craft.comparison.resource.pools-vs-thresholds
+  - craft.system.economy.loot-durability-inventory-and-ownership
+  - craft.system.encounter.status-effects-crowd-control-and-counters
+  - craft.system.resource.cooldowns-charges-and-sacrifice
   - craft.system.resource.resource-archetype-survey
+  - craft.system.resource.resource-lifecycle-design
 source_ids:
   - src.book.adams-fundamentals-of-game-design
   - src.book.salen-zimmerman-rules-of-play

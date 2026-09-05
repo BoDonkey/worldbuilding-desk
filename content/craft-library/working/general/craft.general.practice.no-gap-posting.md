@@ -29,8 +29,11 @@ tags:
   - serialization
   - publishing
 related:
-  - craft.general.practice.buffer-discipline
   - craft.general.practice.author-burnout-as-craft-problem
+  - craft.general.practice.buffer-discipline
+  - craft.general.revision.continuity-passes
+  - craft.trope.convention.progression-fiction-reader-expectations
+  - craft.trope.convention.serial-fiction-conventions
 source_ids:
   - src.internal.litrpg-craft-failures-research
   - src.chapterchronicles.discipline-index

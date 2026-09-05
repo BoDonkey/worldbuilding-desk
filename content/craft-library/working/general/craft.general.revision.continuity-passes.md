@@ -28,8 +28,12 @@ tags:
   - revision
   - practice
 related:
-  - craft.general.revision.triage-and-beta-reader-signal
+  - craft.comparison.progression.hard-numbers-versus-named-tiers
   - craft.general.plot.setup-and-payoff
+  - craft.general.practice.buffer-discipline
+  - craft.general.practice.no-gap-posting
+  - craft.general.revision.protecting-reader-experience
+  - craft.general.revision.triage-and-beta-reader-signal
 source_ids:
   - src.book.king-on-writing
 source_confidence: limited

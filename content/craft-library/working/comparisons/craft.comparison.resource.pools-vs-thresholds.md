@@ -27,8 +27,11 @@ tags:
   - resource-model
   - comparison
 related:
-  - craft.system.resource.resource-lifecycle-design
   - craft.comparison.progression.hard-numbers-versus-named-tiers
+  - craft.comparison.resource.renewable-vs-finite-resources
+  - craft.system.resource.environmental-and-hybrid-power
+  - craft.system.resource.health-and-focus-as-core-resources
+  - craft.system.resource.resource-lifecycle-design
 source_ids:
   - src.book.adams-fundamentals-of-game-design
 source_confidence: limited

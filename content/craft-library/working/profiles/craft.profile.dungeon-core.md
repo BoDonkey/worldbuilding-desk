@@ -29,6 +29,9 @@ related:
   - craft.general.character.agency
   - craft.general.character.power-as-sole-motivation
   - craft.general.plot.negative-space-problems-power-cannot-solve
+  - craft.profile.base-building
+  - craft.profile.isekai-portal-fantasy
+  - craft.profile.progression-fantasy
 source_ids:
   - src.internal.litrpg-genre-research
 source_confidence: limited

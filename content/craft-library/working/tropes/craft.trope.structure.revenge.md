@@ -27,8 +27,12 @@ tags:
   - plot-structure
   - trope
 related:
+  - craft.general.character.power-as-sole-motivation
   - craft.general.character.want-versus-need
   - craft.trope.role.antihero-and-redeemed-enemy
+  - craft.trope.structure.faction-conflict-and-war
+  - craft.trope.structure.the-prophecy
+  - craft.trope.structure.transformation
 source_ids:
   - src.book.cron-story-genius
 source_confidence: limited

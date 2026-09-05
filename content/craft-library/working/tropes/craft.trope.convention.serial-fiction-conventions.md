@@ -31,8 +31,14 @@ tags:
   - trope
   - serialization
 related:
-  - craft.general.structure.chapter-architecture-and-transitions
+  - craft.general.practice.author-burnout-as-craft-problem
+  - craft.general.practice.buffer-discipline
   - craft.general.practice.no-gap-posting
+  - craft.general.revision.protecting-reader-experience
+  - craft.general.revision.triage-and-beta-reader-signal
+  - craft.general.structure.chapter-architecture-and-transitions
+  - craft.trope.convention.fantasy-genre-conventions
+  - craft.trope.convention.progression-fiction-reader-expectations
 source_ids:
   - src.internal.litrpg-craft-failures-research
 source_confidence: limited

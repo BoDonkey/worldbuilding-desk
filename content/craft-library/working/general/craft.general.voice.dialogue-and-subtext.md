@@ -27,6 +27,9 @@ tags:
   - foundational
 related:
   - craft.general.pov.information-control
+  - craft.general.voice.description-and-specificity
+  - craft.general.voice.narrative-summary-vs-scene
+  - craft.general.voice.voice-as-craft-element
   - craft.trope.romance.romantic-subplot-conventions
 source_ids:
   - src.book.mckee-story

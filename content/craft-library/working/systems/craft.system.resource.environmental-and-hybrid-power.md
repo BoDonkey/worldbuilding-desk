@@ -29,6 +29,9 @@ tags:
   - resource-model
   - worldbuilding
 related:
+  - craft.comparison.resource.pools-vs-thresholds
+  - craft.system.encounter.range-positioning-damage-and-defenses
+  - craft.system.resource.health-and-focus-as-core-resources
   - craft.system.resource.resource-archetype-survey
   - craft.system.resource.resource-lifecycle-design
 source_ids:

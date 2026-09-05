@@ -37,8 +37,11 @@ tags:
   - progression
   - worldbuilding-practice
 related:
-  - craft.system.progression.fake-progression
   - craft.general.character.power-as-sole-motivation
+  - craft.profile.dungeon-core
+  - craft.system.progression.decorative-chapter-test
+  - craft.system.progression.fake-progression
+  - craft.trope.structure.time-loop
 source_ids:
   - src.internal.litrpg-craft-failures-research
 source_confidence: mixed

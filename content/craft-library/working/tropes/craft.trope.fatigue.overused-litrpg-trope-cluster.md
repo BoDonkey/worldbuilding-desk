@@ -31,8 +31,12 @@ tags:
   - fatigue
   - litrpg
 related:
-  - craft.trope.romance.romantic-subplot-conventions
+  - craft.general.character.supporting-cast-purpose
+  - craft.trope.identity.hidden-identity-and-secret-heritage
   - craft.trope.role.chosen-one
+  - craft.trope.role.companion
+  - craft.trope.role.ensemble-cast-dynamics
+  - craft.trope.romance.romantic-subplot-conventions
 source_ids:
   - src.oster.overused-tropes
   - src.internal.litrpg-craft-failures-research

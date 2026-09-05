@@ -28,8 +28,11 @@ tags:
   - trope
   - progression
 related:
+  - craft.general.practice.no-gap-posting
   - craft.general.promise.promise-consistency
   - craft.system.progression.advancement-rate
+  - craft.trope.convention.mystery-genre-conventions
+  - craft.trope.convention.serial-fiction-conventions
 source_ids:
   - src.internal.litrpg-genre-research
   - src.internal.litrpg-craft-failures-research

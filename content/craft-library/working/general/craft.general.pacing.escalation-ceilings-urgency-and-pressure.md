@@ -29,8 +29,11 @@ tags:
   - tension
   - foundational
 related:
-  - craft.general.plot.stakes
   - craft.general.pacing.tension-and-release-cycles
+  - craft.general.plot.complications
+  - craft.general.plot.stakes
+  - craft.system.character.attributes-and-soft-hard-caps
+  - craft.trope.structure.survival
 source_ids:
   - src.book.maass-writing-breakout-novel
   - src.internal.litrpg-craft-failures-research

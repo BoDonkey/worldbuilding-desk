@@ -27,8 +27,14 @@ tags:
   - subgenre-profile
   - cultivation
 related:
-  - craft.system.cultivation.realms-and-breakthroughs
   - craft.comparison.resource.qi-versus-mana
+  - craft.profile.classic-litrpg
+  - craft.profile.dark-horror-litrpg
+  - craft.profile.progression-fantasy
+  - craft.profile.tower-climbing
+  - craft.system.cultivation.body-and-soul-cultivation
+  - craft.system.cultivation.realms-and-breakthroughs
+  - craft.system.cultivation.sects-inheritance-and-deviation
 source_ids:
   - src.internal.litrpg-genre-research
   - src.book.kohn-introducing-daoism

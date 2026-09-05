@@ -34,8 +34,11 @@ tags:
   - trope
   - setting
 related:
-  - craft.profile.isekai-portal-fantasy
   - craft.general.plot.reader-expectation-and-genre-signaling
+  - craft.profile.isekai-portal-fantasy
+  - craft.trope.structure.sacrifice-and-return
+  - craft.trope.structure.time-loop
+  - craft.trope.structure.transformation
 source_ids:
   - src.internal.litrpg-genre-research
 source_confidence: limited

@@ -28,8 +28,11 @@ tags:
   - trope
   - craft-technique
 related:
-  - craft.trope.role.chosen-one
   - craft.general.plot.reader-expectation-and-genre-signaling
+  - craft.trope.role.chosen-one
+  - craft.trope.role.the-outsider-and-belonging
+  - craft.trope.role.trickster
+  - craft.trope.structure.the-heist
 source_ids:
   - src.internal.litrpg-craft-failures-research
 source_confidence: limited

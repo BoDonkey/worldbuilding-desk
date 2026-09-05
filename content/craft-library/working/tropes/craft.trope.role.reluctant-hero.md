@@ -28,8 +28,12 @@ tags:
   - trope
   - agency
 related:
-  - craft.trope.role.chosen-one
   - craft.general.character.want-versus-need
+  - craft.general.premise.dramatic-question-and-controlling-idea
+  - craft.trope.role.chosen-one
+  - craft.trope.role.heir-and-succession
+  - craft.trope.role.mentor
+  - craft.trope.structure.the-quest
 source_ids:
   - src.book.vogler-writers-journey
   - src.book.campbell-hero-with-a-thousand-faces

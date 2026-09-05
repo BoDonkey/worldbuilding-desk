@@ -27,8 +27,12 @@ tags:
   - voice
   - foundational
 related:
-  - craft.general.pov.information-control
   - craft.general.pacing.pacing-across-scales
+  - craft.general.pov.information-control
+  - craft.general.voice.dialogue-and-subtext
+  - craft.general.voice.narrative-summary-vs-scene
+  - craft.general.voice.voice-as-craft-element
+  - craft.system.resource.resource-archetype-survey
 source_ids:
   - src.book.gardner-art-of-fiction
   - src.book.king-on-writing

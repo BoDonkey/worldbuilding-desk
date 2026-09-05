@@ -27,8 +27,11 @@ tags:
   - economy
   - systemic-consequences
 related:
-  - craft.system.economy.crafting-and-economy-loops
+  - craft.profile.crafting-and-economy
   - craft.system.consequences.systemic-social-consequences
+  - craft.system.economy.crafting-and-economy-loops
+  - craft.system.economy.enchanting-and-item-crafting
+  - craft.system.economy.loot-durability-inventory-and-ownership
 source_ids:
   - src.book.adams-fundamentals-of-game-design
 source_confidence: limited

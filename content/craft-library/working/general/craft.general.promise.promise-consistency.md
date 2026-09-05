@@ -32,8 +32,14 @@ tags:
   - retention
   - foundational
 related:
-  - craft.system.progression.decorative-chapter-test
+  - craft.general.plot.reader-expectation-and-genre-signaling
   - craft.general.plot.setup-and-payoff
+  - craft.general.practice.author-burnout-as-craft-problem
+  - craft.general.premise.dramatic-question-and-controlling-idea
+  - craft.general.revision.protecting-reader-experience
+  - craft.general.revision.triage-and-beta-reader-signal
+  - craft.system.progression.decorative-chapter-test
+  - craft.trope.convention.progression-fiction-reader-expectations
 source_ids:
   - src.internal.litrpg-craft-failures-research
   - src.chapterchronicles.series-falloff

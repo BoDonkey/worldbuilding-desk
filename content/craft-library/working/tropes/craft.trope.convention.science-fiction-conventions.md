@@ -28,6 +28,9 @@ tags:
 related:
   - craft.system.consequences.systemic-social-consequences
   - craft.system.resource.resource-lifecycle-design
+  - craft.trope.convention.fantasy-genre-conventions
+  - craft.trope.convention.horror-genre-conventions
+  - craft.trope.convention.mystery-genre-conventions
 source_ids:
   - src.internal.litrpg-genre-research
 source_confidence: limited

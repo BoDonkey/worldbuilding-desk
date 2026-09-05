@@ -29,7 +29,11 @@ tags:
   - foundational
 related:
   - craft.general.character.agency
+  - craft.general.character.power-as-sole-motivation
   - craft.general.character.want-versus-need
+  - craft.general.plot.earned-resolution
+  - craft.general.premise.dramatic-question-and-controlling-idea
+  - craft.trope.structure.sacrifice-and-return
 source_ids:
   - src.book.truby-anatomy-of-story
   - src.book.mckee-story

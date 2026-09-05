@@ -29,8 +29,11 @@ tags:
   - plot-structure
   - trope
 related:
-  - craft.trope.identity.hidden-identity-and-secret-heritage
   - craft.system.consequences.systemic-social-consequences
+  - craft.trope.identity.hidden-identity-and-secret-heritage
+  - craft.trope.role.chosen-one
+  - craft.trope.role.reluctant-hero
+  - craft.trope.role.the-outsider-and-belonging
 source_ids:
   - src.internal.litrpg-craft-failures-research
 source_confidence: limited

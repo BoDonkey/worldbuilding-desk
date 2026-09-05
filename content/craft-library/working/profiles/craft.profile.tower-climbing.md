@@ -26,8 +26,11 @@ tags:
   - subgenre-profile
   - tower-climbing
 related:
-  - craft.system.progression.decorative-chapter-test
+  - craft.profile.cultivation
+  - craft.profile.progression-fantasy
   - craft.system.progression.advancement-rate
+  - craft.system.progression.decorative-chapter-test
+  - craft.trope.structure.trial-and-tournament
 source_ids:
   - src.internal.litrpg-genre-research
 source_confidence: limited

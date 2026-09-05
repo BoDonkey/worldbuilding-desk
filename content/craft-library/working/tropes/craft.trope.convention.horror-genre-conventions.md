@@ -33,8 +33,11 @@ tags:
   - trope
   - horror
 related:
-  - craft.profile.dark-horror-litrpg
   - craft.general.pacing.suspense-uncertainty-and-anticipation
+  - craft.profile.dark-horror-litrpg
+  - craft.trope.convention.fantasy-genre-conventions
+  - craft.trope.convention.mystery-genre-conventions
+  - craft.trope.convention.science-fiction-conventions
 source_ids:
   - src.internal.litrpg-genre-research
 source_confidence: limited

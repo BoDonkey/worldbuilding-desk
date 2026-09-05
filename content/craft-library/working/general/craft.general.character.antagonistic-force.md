@@ -26,8 +26,12 @@ tags:
   - conflict
   - foundational
 related:
-  - craft.general.plot.stakes
   - craft.general.character.agency
+  - craft.general.character.supporting-cast-purpose
+  - craft.general.plot.stakes
+  - craft.trope.identity.betrayal
+  - craft.trope.role.rival
+  - craft.trope.structure.faction-conflict-and-war
 source_ids:
   - src.book.truby-anatomy-of-story
   - src.book.mckee-story

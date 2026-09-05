@@ -32,8 +32,11 @@ tags:
   - plot-structure
   - trope
 related:
-  - craft.system.progression.advancement-rate
   - craft.general.plot.causal-escalation
+  - craft.general.plot.negative-space-problems-power-cannot-solve
+  - craft.profile.time-loop
+  - craft.system.progression.advancement-rate
+  - craft.trope.structure.portal-and-other-world
 source_ids:
   - src.internal.litrpg-genre-research
 source_confidence: limited

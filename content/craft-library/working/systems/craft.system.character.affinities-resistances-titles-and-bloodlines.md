@@ -28,8 +28,11 @@ tags:
   - character-architecture
   - worldbuilding
 related:
-  - craft.trope.role.chosen-one
+  - craft.comparison.progression.universal-vs-class-bound-access
   - craft.general.character.agency
+  - craft.system.character.specialization-and-respec
+  - craft.trope.role.chosen-one
+  - craft.trope.role.the-outsider-and-belonging
 source_ids:
   - src.internal.litrpg-genre-research
   - src.book.adams-fundamentals-of-game-design

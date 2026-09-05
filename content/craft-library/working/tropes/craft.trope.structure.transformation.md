@@ -32,8 +32,12 @@ tags:
   - trope
   - character
 related:
-  - craft.system.cultivation.realms-and-breakthroughs
   - craft.general.character.internal-and-external-arcs
+  - craft.system.character.specialization-and-respec
+  - craft.system.cultivation.realms-and-breakthroughs
+  - craft.trope.structure.portal-and-other-world
+  - craft.trope.structure.revenge
+  - craft.trope.structure.sacrifice-and-return
 source_ids:
   - src.book.forster-aspects-of-the-novel
 source_confidence: limited

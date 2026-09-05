@@ -26,9 +26,12 @@ tags:
   - structure
   - foundational
 related:
+  - craft.general.plot.causal-escalation
+  - craft.general.scene.entry-and-exit-points
   - craft.general.scene.scene-turns
   - craft.general.scene.sequel-and-reflection
-  - craft.general.plot.causal-escalation
+  - craft.general.voice.narrative-summary-vs-scene
+  - craft.trope.role.rival
 source_ids:
   - src.book.swain-techniques-selling-writer
   - src.book.mckee-story

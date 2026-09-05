@@ -26,8 +26,12 @@ tags:
   - character
   - ensemble
 related:
-  - craft.trope.role.mentor
   - craft.general.character.antagonistic-force
+  - craft.general.character.relationships-and-relational-arcs
+  - craft.trope.fatigue.overused-litrpg-trope-cluster
+  - craft.trope.role.companion
+  - craft.trope.role.ensemble-cast-dynamics
+  - craft.trope.role.mentor
 source_ids:
   - src.book.forster-aspects-of-the-novel
   - src.book.truby-anatomy-of-story

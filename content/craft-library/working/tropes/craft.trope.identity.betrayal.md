@@ -29,7 +29,10 @@ tags:
   - relationships
 related:
   - craft.general.character.antagonistic-force
+  - craft.general.plot.foreshadowing
   - craft.general.plot.setup-and-payoff
+  - craft.trope.identity.hidden-identity-and-secret-heritage
+  - craft.trope.identity.resurrection
 source_ids:
   - src.book.mckee-story
 source_confidence: limited

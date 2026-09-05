@@ -44,8 +44,20 @@ tags:
   - pacing
   - dashboard
 related:
+  - craft.general.pacing.pacing-across-scales
+  - craft.profile.progression-fantasy
+  - craft.profile.system-apocalypse
+  - craft.profile.time-loop
+  - craft.profile.tower-climbing
+  - craft.system.advancement.experience-sources-and-milestone-growth
+  - craft.system.character.attributes-and-soft-hard-caps
+  - craft.system.cultivation.realms-and-breakthroughs
   - craft.system.progression.decorative-chapter-test
+  - craft.system.progression.fake-progression
   - craft.system.progression.vertical-vs-horizontal-progression
+  - craft.trope.convention.progression-fiction-reader-expectations
+  - craft.trope.setting.academy-story
+  - craft.trope.structure.time-loop
 source_ids:
   - src.internal.litrpg-craft-failures-research
   - src.tam.meaningful-progression

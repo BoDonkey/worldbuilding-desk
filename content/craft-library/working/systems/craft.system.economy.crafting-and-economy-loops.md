@@ -33,8 +33,13 @@ tags:
   - resource-model
   - systemic-consequences
 related:
-  - craft.system.resource.resource-lifecycle-design
+  - craft.profile.crafting-and-economy
   - craft.system.consequences.systemic-social-consequences
+  - craft.system.cultivation.alchemy-and-pill-refinement
+  - craft.system.economy.currencies-markets-and-inflation
+  - craft.system.economy.enchanting-and-item-crafting
+  - craft.system.economy.loot-durability-inventory-and-ownership
+  - craft.system.resource.resource-lifecycle-design
 source_ids:
   - src.book.adams-fundamentals-of-game-design
   - src.internal.litrpg-genre-research

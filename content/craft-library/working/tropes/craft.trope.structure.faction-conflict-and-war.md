@@ -28,8 +28,11 @@ tags:
   - plot-structure
   - trope
 related:
-  - craft.general.plot.stakes
   - craft.general.character.antagonistic-force
+  - craft.general.plot.stakes
+  - craft.system.consequences.institutions-labor-and-governance
+  - craft.trope.structure.revenge
+  - craft.trope.structure.the-prophecy
 source_ids:
   - src.internal.litrpg-genre-research
 source_confidence: limited

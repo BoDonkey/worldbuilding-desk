@@ -27,8 +27,12 @@ tags:
   - theme
   - foundational
 related:
+  - craft.general.character.internal-and-external-arcs
+  - craft.general.character.values-contradiction-and-meaningful-choice
   - craft.general.plot.climax-and-resolution
+  - craft.general.plot.earned-resolution
   - craft.general.promise.promise-consistency
+  - craft.trope.role.reluctant-hero
 source_ids:
   - src.book.mckee-story
   - src.book.truby-anatomy-of-story

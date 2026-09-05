@@ -25,7 +25,11 @@ tags:
   - scene-craft
   - structure
 related:
+  - craft.general.pov.psychic-distance-and-interiority
+  - craft.general.scene.entry-and-exit-points
   - craft.general.scene.goal-conflict-outcome
+  - craft.general.scene.sequel-and-reflection
+  - craft.general.structure.chapter-architecture-and-transitions
   - craft.system.progression.decorative-chapter-test
 source_ids:
   - src.book.mckee-story

@@ -26,8 +26,12 @@ tags:
   - subgenre-profile
   - system-apocalypse
 related:
-  - craft.system.progression.advancement-rate
   - craft.general.pacing.tension-and-release-cycles
+  - craft.profile.base-building
+  - craft.profile.dark-horror-litrpg
+  - craft.profile.time-loop
+  - craft.system.progression.advancement-rate
+  - craft.trope.structure.survival
 source_ids:
   - src.internal.litrpg-genre-research
 source_confidence: limited

@@ -26,8 +26,12 @@ tags:
   - combat
   - encounter-design
 related:
+  - craft.profile.classic-litrpg
   - craft.system.combat.action-economy
+  - craft.system.encounter.healing-teamwork-and-information-asymmetry
   - craft.system.encounter.status-effects-crowd-control-and-counters
+  - craft.system.resource.cooldowns-charges-and-sacrifice
+  - craft.system.resource.environmental-and-hybrid-power
 source_ids:
   - src.book.adams-fundamentals-of-game-design
   - src.book.salen-zimmerman-rules-of-play

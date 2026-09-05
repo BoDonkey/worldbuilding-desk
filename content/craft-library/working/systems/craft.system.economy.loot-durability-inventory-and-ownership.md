@@ -28,8 +28,12 @@ tags:
   - resource-model
   - systemic-consequences
 related:
-  - craft.system.economy.crafting-and-economy-loops
+  - craft.comparison.resource.renewable-vs-finite-resources
+  - craft.system.advancement.diminishing-returns-rarity-gates-and-catch-up-mechanics
   - craft.system.consequences.systemic-social-consequences
+  - craft.system.economy.crafting-and-economy-loops
+  - craft.system.economy.currencies-markets-and-inflation
+  - craft.system.economy.enchanting-and-item-crafting
 source_ids:
   - src.book.adams-fundamentals-of-game-design
 source_confidence: limited

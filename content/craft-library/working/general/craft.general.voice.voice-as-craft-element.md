@@ -27,8 +27,11 @@ tags:
   - voice
   - foundational
 related:
-  - craft.general.voice.dialogue-and-subtext
   - craft.general.pov.psychic-distance-and-interiority
+  - craft.general.voice.description-and-specificity
+  - craft.general.voice.dialogue-and-subtext
+  - craft.general.voice.narrative-summary-vs-scene
+  - craft.trope.role.ensemble-cast-dynamics
 source_ids:
   - src.book.leguin-steering-the-craft
   - src.book.king-on-writing

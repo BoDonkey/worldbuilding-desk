@@ -267,3 +267,83 @@ without ever using the word. Spot-checking suggests that is rare in a
 4. **Correct the five overstated `source_confidence` values.**
 5. Only then continue to Batch 13. The 50 remaining records should be
    drafted against a raised link quota so the gap does not widen.
+
+---
+
+# Remediation pass 1 — link graph repaired (2026-09-05)
+
+Acts on recommendations 1 and 2 of audit pass A. Tooling:
+`qa/relink.py` (`propose` → hand review → `apply`); the applied graph is
+preserved in `qa/relink-plan.yml`.
+
+## Policy adopted
+
+Now written into `docs/writing-coach-corpus-production-handoff.md` under
+"Related-Link Policy", so Batch 13 onward is drafted against it rather than
+the old informal two-link convention:
+
+1. links are mutual;
+2. at least five per record, no maximum;
+3. at least one crosses families;
+4. subgenre profiles link to each other at least twice;
+5. relevance beats quota — log a shortfall rather than pad it.
+
+## Result
+
+| measure | before | after |
+|---|---|---|
+| unique linked pairs | 237 | 399 |
+| records with zero inbound links | 62 (48%) | **0** |
+| one-way links | 210 | **0** |
+| mutual pairs | 27 | 399 (all) |
+| cross-family directed edges | 106 | 308 |
+| profile intra-family links | 0 | 18 |
+| minimum degree | 0 | 5 |
+| median degree | 2 | 6 |
+| maximum degree | 14 | 28 (`advancement-rate`, `systemic-social-consequences`) |
+
+Degree distribution: 60 records at 5, 43 at 6, 27 above. **No hand-chosen
+link from any drafting batch was dropped** — all 237 original pairs survive;
+the pass only adds.
+
+Where the 162 new pairs came from:
+
+- **210 reciprocity completions** — existing one-way links made mutual. No
+  new relationships, just the other half of relationships already asserted.
+- **31 hand-specified pairs** — the 19 cross-links identified in audit pass A,
+  plus 12 authored during review where similarity scoring kept reaching for a
+  weak partner. The `practice` cluster (buffer discipline, no-gap posting,
+  author burnout) needed most of these: a scheduling practice shares almost
+  no vocabulary with the serial-publishing conventions it exists because of,
+  so the score could not see a relationship obvious to a person.
+- **9 profile intra-family** and **21 cross-family** links closing rules 4
+  and 3.
+- **101 similarity-proposed fills**, each read before applying.
+
+## Rejected during review
+
+23 proposed pairs were rejected as vocabulary artifacts rather than real
+relationships, and are recorded in `qa/relink.py` so a re-run cannot
+reintroduce them. Representative: `voice-as-craft-element` /
+`power-as-sole-motivation`, `the-prophecy` / `the-heist`,
+`narrative-summary-vs-scene` / `renewable-vs-finite-resources`,
+`author-burnout` / `decorative-chapter-test`. The pattern is instructive:
+the score reliably finds records that *sound* adjacent — shared craft
+vocabulary, similar section headings — and cannot tell that a scheduling
+practice and a progression metric have nothing to say to each other. Every
+edge in this corpus still needs a human to confirm it.
+
+One rule-3 exception was resolved by hand rather than by threshold:
+`buffer-discipline` → `serial-fiction-conventions` scores 0.099, just under
+the cross-family floor, because a practice record and a convention record
+share little wording. The relationship is nonetheless direct, so the link
+was pinned.
+
+## Still open from audit pass A
+
+- Recommendation 3: the 14 system/comparison records missing a "visibility
+  to characters and readers" treatment, plus `qi-versus-mana`'s missing
+  experiments section and the fatigue cluster's two missing sections.
+- Recommendation 4: five records declaring `source_confidence: mixed` on a
+  single source (see `qa/citation-audit.md`).
+- Recommendation 5: Batch 13, now unblocked, drafted against the new policy.

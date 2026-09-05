@@ -28,8 +28,11 @@ tags:
   - character-role
   - trope
 related:
-  - craft.trope.structure.the-heist
   - craft.general.character.agency
+  - craft.trope.combination.inversions-and-combinations
+  - craft.trope.role.antihero-and-redeemed-enemy
+  - craft.trope.role.rival
+  - craft.trope.structure.the-heist
 source_ids:
   - src.book.propp-morphology-of-the-folktale
 source_confidence: mixed

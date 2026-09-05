@@ -27,7 +27,10 @@ tags:
   - encounter-design
 related:
   - craft.system.combat.action-economy
+  - craft.system.encounter.range-positioning-damage-and-defenses
+  - craft.system.encounter.status-effects-crowd-control-and-counters
   - craft.trope.role.found-family
+  - craft.trope.structure.the-heist
 source_ids:
   - src.book.adams-fundamentals-of-game-design
   - src.book.salen-zimmerman-rules-of-play

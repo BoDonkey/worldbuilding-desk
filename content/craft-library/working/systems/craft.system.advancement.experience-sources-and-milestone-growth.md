@@ -27,8 +27,12 @@ tags:
   - advancement
   - progression
 related:
+  - craft.profile.crafting-and-economy
+  - craft.system.advancement.diminishing-returns-rarity-gates-and-catch-up-mechanics
+  - craft.system.character.perks-feats-and-talents
   - craft.system.progression.advancement-rate
   - craft.system.progression.fake-progression
+  - craft.system.resource.cooldowns-charges-and-sacrifice
 source_ids:
   - src.book.adams-fundamentals-of-game-design
   - src.book.koster-theory-of-fun

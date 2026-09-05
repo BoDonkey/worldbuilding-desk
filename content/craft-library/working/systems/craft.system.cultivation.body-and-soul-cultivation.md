@@ -27,8 +27,11 @@ tags:
   - cultivation
   - character-architecture
 related:
-  - craft.system.cultivation.realms-and-breakthroughs
+  - craft.comparison.resource.qi-versus-mana
   - craft.profile.cultivation
+  - craft.system.cultivation.alchemy-and-pill-refinement
+  - craft.system.cultivation.realms-and-breakthroughs
+  - craft.system.cultivation.sects-inheritance-and-deviation
 source_ids:
   - src.book.kohn-introducing-daoism
   - src.internal.litrpg-genre-research

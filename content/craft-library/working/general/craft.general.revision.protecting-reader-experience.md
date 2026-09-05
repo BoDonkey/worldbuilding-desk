@@ -27,8 +27,13 @@ tags:
   - practice
   - foundational
 related:
-  - craft.general.revision.triage-and-beta-reader-signal
+  - craft.general.plot.reader-expectation-and-genre-signaling
+  - craft.general.practice.author-burnout-as-craft-problem
+  - craft.general.practice.buffer-discipline
   - craft.general.promise.promise-consistency
+  - craft.general.revision.continuity-passes
+  - craft.general.revision.triage-and-beta-reader-signal
+  - craft.trope.convention.serial-fiction-conventions
 source_ids:
   - src.internal.litrpg-craft-failures-research
 source_confidence: limited

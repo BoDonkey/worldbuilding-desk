@@ -25,6 +25,10 @@ tags:
   - subgenre-profile
   - gamelit
 related:
+  - craft.comparison.progression.hard-numbers-versus-named-tiers
+  - craft.profile.classic-litrpg
+  - craft.profile.crafting-and-economy
+  - craft.profile.progression-fantasy
   - craft.system.progression.stat-block-density
   - craft.system.progression.system-as-narrator-intrusion
 source_ids:

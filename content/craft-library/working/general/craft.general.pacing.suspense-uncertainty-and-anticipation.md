@@ -29,7 +29,10 @@ tags:
   - foundational
 related:
   - craft.general.pacing.tension-and-release-cycles
+  - craft.general.plot.foreshadowing
   - craft.general.pov.information-control
+  - craft.trope.convention.horror-genre-conventions
+  - craft.trope.structure.mystery
 source_ids:
   - src.book.cron-wired-for-story
   - src.book.leguin-steering-the-craft

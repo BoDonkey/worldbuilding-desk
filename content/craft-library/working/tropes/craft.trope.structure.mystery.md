@@ -27,7 +27,10 @@ tags:
   - trope
 related:
   - craft.general.pacing.suspense-uncertainty-and-anticipation
+  - craft.general.plot.setup-and-payoff
+  - craft.trope.convention.mystery-genre-conventions
   - craft.trope.structure.the-heist
+  - craft.trope.structure.the-prophecy
 source_ids:
   - src.book.mckee-story
 source_confidence: limited

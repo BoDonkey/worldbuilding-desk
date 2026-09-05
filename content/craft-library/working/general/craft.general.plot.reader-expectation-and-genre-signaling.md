@@ -28,8 +28,12 @@ tags:
   - genre
   - foundational
 related:
-  - craft.general.promise.promise-consistency
   - craft.general.pov.information-control
+  - craft.general.promise.promise-consistency
+  - craft.general.revision.protecting-reader-experience
+  - craft.trope.combination.inversions-and-combinations
+  - craft.trope.convention.mystery-genre-conventions
+  - craft.trope.structure.portal-and-other-world
 source_ids:
   - src.book.mckee-story
 source_confidence: mixed

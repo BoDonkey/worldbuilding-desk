@@ -28,8 +28,11 @@ tags:
   - systemic-consequences
   - worldbuilding
 related:
+  - craft.comparison.progression.universal-vs-class-bound-access
+  - craft.system.consequences.medicine-religion-and-crime
   - craft.system.consequences.systemic-social-consequences
   - craft.system.cultivation.sects-inheritance-and-deviation
+  - craft.trope.structure.faction-conflict-and-war
 source_ids:
   - src.rowe.progression-fantasy
   - src.internal.litrpg-craft-failures-research

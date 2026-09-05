@@ -31,8 +31,15 @@ tags:
   - ensemble
   - trope
 related:
-  - craft.trope.role.mentor
   - craft.general.character.want-versus-need
+  - craft.profile.base-building
+  - craft.system.advancement.diminishing-returns-rarity-gates-and-catch-up-mechanics
+  - craft.system.encounter.healing-teamwork-and-information-asymmetry
+  - craft.trope.role.companion
+  - craft.trope.role.ensemble-cast-dynamics
+  - craft.trope.role.mentor
+  - craft.trope.role.the-outsider-and-belonging
+  - craft.trope.romance.romantic-subplot-conventions
 source_ids:
   - src.internal.litrpg-genre-research
 source_confidence: limited

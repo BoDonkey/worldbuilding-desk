@@ -25,8 +25,11 @@ tags:
   - plot
   - structure
 related:
-  - craft.general.plot.setup-and-payoff
   - craft.general.pacing.suspense-uncertainty-and-anticipation
+  - craft.general.plot.complications
+  - craft.general.plot.midpoint-and-reversals
+  - craft.general.plot.setup-and-payoff
+  - craft.trope.identity.betrayal
 source_ids:
   - src.book.mckee-story
   - src.book.king-on-writing

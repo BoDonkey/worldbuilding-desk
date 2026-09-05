@@ -26,8 +26,15 @@ tags:
   - tension
   - foundational
 related:
-  - craft.general.plot.causal-escalation
   - craft.general.character.agency
+  - craft.general.character.antagonistic-force
+  - craft.general.pacing.escalation-ceilings-urgency-and-pressure
+  - craft.general.plot.causal-escalation
+  - craft.general.pov.information-control
+  - craft.system.combat.action-economy
+  - craft.system.combat.death-and-respawn
+  - craft.trope.structure.faction-conflict-and-war
+  - craft.trope.structure.sacrifice-and-return
 source_ids:
   - src.book.maass-writing-breakout-novel
   - src.book.mckee-story

@@ -28,8 +28,11 @@ tags:
   - character-architecture
   - progression
 related:
-  - craft.system.progression.vertical-vs-horizontal-progression
+  - craft.general.pacing.escalation-ceilings-urgency-and-pressure
+  - craft.system.advancement.diminishing-returns-rarity-gates-and-catch-up-mechanics
+  - craft.system.character.perks-feats-and-talents
   - craft.system.progression.advancement-rate
+  - craft.system.progression.vertical-vs-horizontal-progression
 source_ids:
   - src.book.adams-fundamentals-of-game-design
   - src.book.koster-theory-of-fun

@@ -28,7 +28,15 @@ tags:
   - foundational
 related:
   - craft.general.plot.causal-escalation
+  - craft.general.plot.earned-resolution
+  - craft.general.plot.foreshadowing
+  - craft.general.pov.information-control
   - craft.general.promise.promise-consistency
+  - craft.general.revision.continuity-passes
+  - craft.trope.identity.betrayal
+  - craft.trope.structure.mystery
+  - craft.trope.structure.the-heist
+  - craft.trope.structure.the-prophecy
 source_ids:
   - src.book.truby-anatomy-of-story
   - src.book.mckee-story

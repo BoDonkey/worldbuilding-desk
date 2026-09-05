@@ -31,8 +31,13 @@ tags:
   - comparison
   - system-presentation
 related:
-  - craft.system.progression.stat-block-density
   - craft.comparison.progression.classes-versus-skill-based-growth
+  - craft.comparison.resource.pools-vs-thresholds
+  - craft.general.revision.continuity-passes
+  - craft.profile.classic-litrpg
+  - craft.profile.gamelit
+  - craft.profile.progression-fantasy
+  - craft.system.progression.stat-block-density
   - craft.system.progression.visible-vs-hidden-systems
 source_ids:
   - src.internal.litrpg-genre-research

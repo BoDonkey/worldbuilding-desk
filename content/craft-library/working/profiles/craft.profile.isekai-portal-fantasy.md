@@ -28,8 +28,11 @@ tags:
   - subgenre-profile
   - isekai
 related:
-  - craft.system.consequences.systemic-social-consequences
   - craft.general.character.agency
+  - craft.profile.dungeon-core
+  - craft.profile.progression-fantasy
+  - craft.system.consequences.systemic-social-consequences
+  - craft.trope.structure.portal-and-other-world
 source_ids:
   - src.internal.litrpg-genre-research
   - src.internal.litrpg-craft-failures-research

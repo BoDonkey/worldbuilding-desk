@@ -27,8 +27,11 @@ tags:
   - plot-structure
   - trope
 related:
-  - craft.trope.role.chosen-one
   - craft.general.plot.setup-and-payoff
+  - craft.trope.role.chosen-one
+  - craft.trope.structure.faction-conflict-and-war
+  - craft.trope.structure.mystery
+  - craft.trope.structure.revenge
 source_ids:
   - src.book.mckee-story
 source_confidence: limited

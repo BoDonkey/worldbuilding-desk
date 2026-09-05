@@ -29,8 +29,11 @@ tags:
   - trope
   - character-role
 related:
-  - craft.trope.role.mentor
   - craft.system.progression.advancement-rate
+  - craft.trope.role.mentor
+  - craft.trope.role.rival
+  - craft.trope.role.the-outsider-and-belonging
+  - craft.trope.structure.trial-and-tournament
 source_ids:
   - src.internal.litrpg-genre-research
 source_confidence: limited

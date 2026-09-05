@@ -32,6 +32,9 @@ tags:
   - voice
   - litrpg
 related:
+  - craft.general.plot.exposition-and-info-delivery
+  - craft.profile.classic-litrpg
+  - craft.profile.gamelit
   - craft.system.progression.stat-block-density
   - craft.system.progression.visible-vs-hidden-systems
 source_ids:

@@ -29,6 +29,9 @@ tags:
   - foundational
 related:
   - craft.general.pacing.tension-and-release-cycles
+  - craft.general.structure.chapter-architecture-and-transitions
+  - craft.general.voice.description-and-specificity
+  - craft.general.voice.narrative-summary-vs-scene
   - craft.system.progression.advancement-rate
 source_ids:
   - src.book.weiland-helping-writers-become-authors

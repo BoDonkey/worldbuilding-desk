@@ -26,7 +26,10 @@ tags:
   - pacing
 related:
   - craft.general.pacing.pacing-across-scales
+  - craft.general.revision.triage-and-beta-reader-signal
+  - craft.general.scene.entry-and-exit-points
   - craft.general.scene.scene-turns
+  - craft.trope.convention.serial-fiction-conventions
 source_ids:
   - src.book.weiland-helping-writers-become-authors
   - src.book.king-on-writing

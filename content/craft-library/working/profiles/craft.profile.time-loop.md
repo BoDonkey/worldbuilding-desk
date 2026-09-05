@@ -26,8 +26,11 @@ tags:
   - subgenre-profile
   - time-loop
 related:
-  - craft.trope.structure.time-loop
+  - craft.profile.base-building
+  - craft.profile.progression-fantasy
+  - craft.profile.system-apocalypse
   - craft.system.progression.advancement-rate
+  - craft.trope.structure.time-loop
 source_ids:
   - src.internal.litrpg-genre-research
   - src.internal.litrpg-craft-failures-research

@@ -29,7 +29,10 @@ tags:
   - progression
 related:
   - craft.comparison.progression.classes-versus-skill-based-growth
+  - craft.system.character.affinities-resistances-titles-and-bloodlines
+  - craft.system.character.perks-feats-and-talents
   - craft.system.progression.vertical-vs-horizontal-progression
+  - craft.trope.structure.transformation
 source_ids:
   - src.book.adams-fundamentals-of-game-design
 source_confidence: limited

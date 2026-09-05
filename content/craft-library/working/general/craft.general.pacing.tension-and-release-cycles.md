@@ -28,8 +28,11 @@ tags:
   - tension
   - foundational
 related:
-  - craft.general.scene.sequel-and-reflection
+  - craft.general.pacing.escalation-ceilings-urgency-and-pressure
   - craft.general.pacing.pacing-across-scales
+  - craft.general.pacing.suspense-uncertainty-and-anticipation
+  - craft.general.scene.sequel-and-reflection
+  - craft.profile.system-apocalypse
 source_ids:
   - src.book.cron-wired-for-story
   - src.book.maass-writing-breakout-novel
