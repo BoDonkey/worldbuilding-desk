@@ -54,6 +54,13 @@ LENGTH_EXCEPTIONS = {
         "fatigue mechanism, and freshening strategy; splitting it into five "
         "records would give each a thinner evidence base than the single "
         "source supports. Flagged for the author's editorial pass.",
+    "craft.comparison.resource.qi-versus-mana":
+        "carries a sourced cultural history for both of its terms on top of a "
+        "full comparison. The mana history was added 2026-09-05 to close an "
+        "unsourced claim (see qa/citation-audit.md); the record was tightened "
+        "by roughly 150 words elsewhere first, and the remaining overage is "
+        "the history itself, which is what stops the flattening this record "
+        "exists to prevent. Flagged for the author's editorial pass.",
 }
 
 # Directory a family's records are expected to live in.

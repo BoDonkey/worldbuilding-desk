@@ -442,3 +442,52 @@ fall as the registry grows. The standing weakness — records resting on a
 single source — is now concentrated in exactly the places where the craft
 literature is genuinely thin, which is a better position than having it
 spread across topics that are well covered.
+
+## Mana history — correction and sourcing (2026-09-05)
+
+Closes the etymology gap open since Batch 3 (see `qa/unresolved-claims.md`
+for the full resolution). Recorded here because it is the clearest example so
+far of an unsourced claim turning out to be **wrong** rather than merely
+unsupported, which is the argument for the handoff's citation standard.
+
+**What the record said:** mana "descends largely from a Polynesian concept
+(borrowed and substantially reshaped by 20th-century occultism and then
+tabletop and video games)," with no source, excused in the sourcing note as
+"general, widely corroborated background knowledge."
+
+**What is actually documented:** the word is Austronesian, spanning the three
+regions Europeans imposed on the Pacific; and the route into games ran
+through Victorian missionary ethnography, mid-century comparative religion,
+and the American counterculture, with occultism a late and narrow tributary
+rather than the main channel.
+
+**Sources registered:**
+
+| id | read? |
+|---|---|
+| `src.article.golub-history-of-mana` | read in full |
+| `src.chapter.golub-peterson-mana-video-game` | bibliographic verification only (peer-reviewed version of the above) |
+| `src.book.codrington-melanesians` | bibliographic verification only; cited for what Codrington wrote |
+| `src.article.keesing-rethinking-mana` | bibliographic verification only; cited for its central published claim |
+
+**A practice note worth keeping.** Three of the four are cited without having
+been read in full, and each says so in its registry entry and in the record.
+That is weaker than reading them and stronger than the previous state, and
+writing down which is which is the difference between a citation and a
+gesture. A later pass should check the three at source before the author
+vets this record.
+
+**Two secondary effects:**
+
+1. The record's `source_confidence` stays `mixed`, but the mixture is now
+   clean: sourced history, practitioner-level genre material.
+2. The record exceeds the 1,800-word comparison ceiling at 1,985. It was
+   tightened by roughly 150 words elsewhere first; the remaining overage is
+   the history. A waiver with that reasoning is recorded in
+   `qa/audit_corpus.py` alongside the fatigue cluster's.
+
+**The general lesson for the remaining `limited` records:** "widely known
+background" is where errors hide, because nobody checks it. The four Batch 14
+records marked `limited` all name the literature that would settle them; this
+one shows why that queue is worth working through rather than treating as
+housekeeping.

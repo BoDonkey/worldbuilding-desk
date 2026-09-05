@@ -44,6 +44,10 @@ source_ids:
   - src.wikipedia.neidan
   - src.wikipedia.xianxia
   - src.internal.litrpg-genre-research
+  - src.article.golub-history-of-mana
+  - src.chapter.golub-peterson-mana-video-game
+  - src.book.codrington-melanesians
+  - src.article.keesing-rethinking-mana
 source_confidence: mixed
 ---
 
@@ -53,11 +57,25 @@ source_confidence: mixed
 and romanization system) are two of the most common vocabulary choices for a
 magic or power system's fuel, and they are frequently treated in genre
 discussion as interchangeable — a "Western" fuel bar and an "Eastern" one
-doing the same job. This record treats that flattening as a mistake. Mana,
-as used in contemporary fantasy and game fiction, descends largely from a
-Polynesian concept (borrowed and substantially reshaped by 20th-century
-occultism and then tabletop and video games) denoting an ambient,
-often-external spiritual force. Qi, in its historical and philosophical
+doing the same job. This record treats that flattening as a mistake.
+
+Mana has a documented route out of the Pacific. The word is Austronesian and
+appears across languages spanning the three regions Europeans invented and
+imposed — Polynesia, Melanesia, Micronesia — so calling it simply
+"Polynesian" repeats a colonial division the concept crosses. Codrington's
+1891 missionary ethnography introduced it to English-language scholarship as
+a supernatural power attaching to people and things; Keesing later argued
+that reading was a grammatical error, since in Proto-Oceanic mana was
+canonically a stative verb — to be efficacious, to work — naming a condition
+inferred from an outcome rather than a substance anyone holds. The substance
+reading is the one that travelled: through comparative religion, where
+Eliade anthologized Codrington for a mass American readership, into the
+1960s counterculture, and from there into tabletop spell-point systems and
+the video games that inherited them. What fantasy calls mana is therefore a
+Victorian misreading of an Oceanic concept, repurposed twice more on its way
+to the fuel bar.
+
+Qi, in its historical and philosophical
 sense within Chinese thought and Daoist internal alchemy (neidan), refers to
 vital energy understood as constitutive of the body and cosmos alike —
 not primarily a resource one spends, but a condition one cultivates and
@@ -89,10 +107,9 @@ involved, the inverse of classic LitRPG's number-forward appeal.
   refined through practice, and inseparable from the practitioner's own
   growth and moral/spiritual state; the historical Daoist neidan framing and
   the frame most cultivation fiction gestures toward, even when simplified.
-  Recommendation: when using "qi," state explicitly which transliteration and
-  tradition you're drawing from, since Mandarin qì, Cantonese hei, Japanese
-  ki, and Korean gi carry distinct linguistic and cultural histories that a
-  single spelling can flatten.
+  When using "qi," state which transliteration and tradition you are drawing
+  from: Mandarin qì, Cantonese hei, Japanese ki, and Korean gi carry distinct
+  histories that one spelling flattens.
 - **Hybrid or renamed resources** — invented terms (aether, essence, spirit)
   that borrow structurally from either tradition without claiming either
   culture's vocabulary directly, a common and lower-risk choice for authors
@@ -110,9 +127,9 @@ involved, the inverse of classic LitRPG's number-forward appeal.
   disciplined practice, where "how much qi" matters less than "what stage of
   refinement," and where a breakthrough is a narrated event rather than a
   number ticking up.
-- A story using "qi" purely as reskinned mana (a spendable meter with a
-  different name and no cultivation-specific behavior) — not wrong, but a
-  choice worth being deliberate about rather than defaulting into.
+- A story using "qi" as reskinned mana — a spendable meter with a different
+  name and no cultivation-specific behavior. Not wrong; worth choosing
+  deliberately rather than defaulting into.
 
 ## Common failure modes
 
@@ -122,13 +139,14 @@ involved, the inverse of classic LitRPG's number-forward appeal.
 - **Using "qi" without any signal of which tradition or transliteration is
   meant**, when the setting otherwise gives no context, which can read as
   borrowing prestige from a real cultural and religious tradition without
-  engaging its substance.
+  engaging its substance. The same applies to mana, whose distance from its
+  Oceanic sense is now so wide that most readers do not know it has one.
 - **Over-quantifying an internal-cultivation system** into a spendable meter,
   undercutting the "power as identity, not inventory" promise that draws
   cultivation readers to the subgenre in the first place.
 - **Under-explaining an ambient mana system's sourcing**, leaving its
-  economic and ecological implications (who else can access this force, and
-  what do they do with it) unexamined.
+  economic and ecological implications unexamined — who else can reach this
+  force, and what do they do with it.
 
 ## Questions for the author
 
@@ -157,14 +175,13 @@ quietly chosen mana's shape — a legitimate choice, worth making
 knowingly.
 
 Visibility differs in the same direction. An ambient resource invites
-instruments, wards, and specialists who can measure it, and readily becomes
-something institutions can perceive and price. An internal, cultivated
-resource is usually private — legible to the practitioner, sometimes to a
-master or a spiritual sense the setting defines, and otherwise inferred from
-bearing and reputation. That privacy is what makes concealed cultivation,
-underestimation, and the sudden reveal of a stage such durable plots, and
-what makes an appraisal ability quietly change a cultivation setting more
-than it changes a mana one.
+instruments, wards, and specialists who measure it, and becomes something
+institutions can price. An internal, cultivated resource is usually private —
+legible to the practitioner, sometimes to a master or a spiritual sense the
+setting defines, otherwise inferred from bearing. That privacy is what makes
+concealed cultivation, underestimation, and the sudden reveal of a stage
+such durable plots, and what makes an appraisal ability change a cultivation
+setting more than a mana one.
 
 ## Common exploits, edge cases, and interaction with other mechanics
 
@@ -201,10 +218,6 @@ combined with other mechanics.
    of one meets a practitioner of the other. Systems that were secretly one
    resource with two names reveal it here: neither character finds anything
    about the other strange.
-5. For an ambient system, write a page about someone who is not a
-   protagonist using the same resource commercially. If nothing plausible
-   comes, the resource is probably under-specified about who else can reach
-   it — the question the failure-modes section raises.
 
 ## When this advice does not apply
 
@@ -247,16 +260,29 @@ crossing a threshold.
 
 The historical and philosophical grounding for qi and Daoist internal
 alchemy draws on an academic introduction to Daoism
-([[src.book.kohn-introducing-daoism]]) and general encyclopedic
-corroboration ([[src.wikipedia.neidan]], [[src.wikipedia.xianxia]]); the
-genre-convention material (Western cultivation pacing, reader priorities)
-draws on `docs/research-litrpg-genre.md`'s subgenre research
-([[src.internal.litrpg-genre-research]]), which that document itself marks
-as partly the author's own inference. Mana's Polynesian origin and its
-20th-century occultist and gaming reinterpretation is general, widely
-corroborated background knowledge rather than a claim resting on a single
-source in this registry; an author revising this record for publication
-should add a dedicated source for that history if the claim is retained.
-`source_confidence` is `mixed` to reflect that the academic grounding is
-solid while the genre-convention and reader-priority claims remain
-practitioner-level.
+([[src.book.kohn-introducing-daoism]]) with encyclopedic corroboration
+([[src.wikipedia.neidan]], [[src.wikipedia.xianxia]]).
+
+**Mana's history was corrected and sourced on 2026-09-05**, replacing an
+earlier unsourced claim that called it "a Polynesian concept... reshaped by
+20th-century occultism." Both halves were wrong; the correction and its
+audit trail are recorded in `qa/citation-audit.md`. The transmission route
+is drawn from Golub's account ([[src.article.golub-history-of-mana]], with
+its peer-reviewed version [[src.chapter.golub-peterson-mana-video-game]]),
+Codrington cited for what he wrote ([[src.book.codrington-melanesians]]) and
+Keesing for the argument that he misread its grammar
+([[src.article.keesing-rethinking-mana]]). This pass read Golub in full;
+the other three were verified bibliographically and are cited only for
+central, well-attested claims — noted so a later pass knows which citations
+still want checking at source.
+
+`source_confidence` remains `mixed`, now for a cleaner reason: the
+historical claims rest on an academic account and its primary sources, while
+the genre-convention and reader-priority material
+([[src.internal.litrpg-genre-research]]) stays practitioner-level.
+
+One tension is preserved rather than resolved. Golub declines to settle
+whether gaming's adoption of mana is appropriation or care, holding that
+players borrowed the word, likely exoticized it, and also made it genuinely
+their own. This record takes the same position: an author using mana is not
+doing something wrong, and is using a word with a history worth knowing.

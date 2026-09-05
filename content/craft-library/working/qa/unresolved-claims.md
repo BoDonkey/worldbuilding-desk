@@ -70,16 +70,54 @@ twelve profiles rather than staying contained to one record. An author
 revision pass should treat the whole `profiles/` directory as a unit when
 checking this concentration, not profile by profile.
 
-## Mana's etymology — sourcing gap flagged in Batch 3
+## Mana's etymology — sourcing gap flagged in Batch 3 — **RESOLVED 2026-09-05**
 
-`craft.comparison.resource.qi-versus-mana` states that "mana" descends from
-a Polynesian concept substantially reshaped by 20th-century occultism and
-then games. This is treated as general, widely corroborated background
-knowledge in craft and games-studies discussion, but no source in
-`sources.yml` directly supports it. Flagged in the record's own sourcing
-note; before author sign-off, either add a dedicated academic or
-lexicographic source or soften the claim to match what's actually
-supportable.
+**Original entry, kept for the record:**
+
+> `craft.comparison.resource.qi-versus-mana` states that "mana" descends from
+> a Polynesian concept substantially reshaped by 20th-century occultism and
+> then games. This is treated as general, widely corroborated background
+> knowledge in craft and games-studies discussion, but no source in
+> `sources.yml` directly supports it. Flagged in the record's own sourcing
+> note; before author sign-off, either add a dedicated academic or
+> lexicographic source or soften the claim to match what's actually
+> supportable.
+
+**Resolution:** sourced, and corrected — the claim turned out to be wrong on
+both halves, not merely unsupported.
+
+- "Polynesian" was inaccurate. Mana is an *Austronesian* word appearing
+  across languages spanning Polynesia, Melanesia, and Micronesia — regions
+  Europeans invented and imposed, and which the concept crosses. Calling it
+  Polynesian repeats a colonial division.
+- "20th-century occultism" was the wrong route. The documented chain runs
+  Codrington's 1891 ethnography → comparative religion, where Eliade
+  anthologized Codrington for a mass American readership → the 1960s
+  Californian counterculture → tabletop spell-point systems → video games.
+  Occultism enters late and narrowly, through the neo-pagan designers of some
+  D&D derivatives, rather than as the main vector.
+
+Four sources registered: [[src.article.golub-history-of-mana]] (read in
+full), [[src.chapter.golub-peterson-mana-video-game]] (its peer-reviewed
+version), [[src.book.codrington-melanesians]], and
+[[src.article.keesing-rethinking-mana]]. The last three were verified
+bibliographically rather than read in full, which is stated in both the
+registry entries and the record itself.
+
+The correction also strengthened the record's own argument. Keesing's case is
+that mana in Proto-Oceanic was a stative verb — to be efficacious, to work —
+naming a condition inferred from an outcome rather than a substance anyone
+holds; Codrington's reading of it as a noun is what travelled. The fuel bar
+is therefore a *double* transformation, and the record now says so, which
+makes its warning against flattening qi and mana concrete rather than
+merely asserted.
+
+One thing is deliberately left unresolved: whether gaming's adoption of the
+word constitutes appropriation. Golub declines to settle it, holding that
+players borrowed it, likely exoticized it, and also made it genuinely their
+own. The record takes the same position rather than issuing a verdict, per
+the handoff's instruction to preserve disagreement rather than resolve it
+through confident prose.
 
 ## LitRPGTools taxonomy — promotional-placement caution
 

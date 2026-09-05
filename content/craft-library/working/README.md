@@ -606,3 +606,28 @@ flagged after Batch 13 was a misreading — the comparison and profile records
 had never been assigned to families. Comparisons now count toward `system`,
 profiles toward `trope`. Effective progress: `general` 50/60, `trope` 55/60,
 `system` 49/60 — **26 records to 180**, which is two more batches.
+
+### Mana history corrected (2026-09-05, no new records)
+
+Closed the etymology gap open since Batch 3 in
+`comparisons/craft.comparison.resource.qi-versus-mana.md`. The unsourced
+claim turned out to be **wrong**, not merely unsupported: mana is an
+Austronesian word crossing the Polynesia/Melanesia/Micronesia divisions
+Europeans imposed, and its route into games ran through Victorian
+ethnography, mid-century comparative religion, and the 1960s counterculture
+rather than principally through occultism.
+
+Four sources registered — Golub's article (read in full), its peer-reviewed
+chapter version, Codrington 1891, and Keesing 1984 — with the three not read
+in full marked as such in the registry and in the record.
+
+The fix improved the record's argument. Keesing's case is that mana was
+originally a stative verb naming a condition, not a substance, so the fantasy
+fuel bar is a *double* transformation — which makes this record's warning
+against flattening qi and mana concrete rather than asserted. Whether gaming's
+adoption is appropriation is deliberately left open, following the source.
+
+Full trail: `qa/unresolved-claims.md` (resolution) and `qa/citation-audit.md`
+(what was read, and the practice note). The record now runs 1,985 words with
+a documented waiver in `qa/audit_corpus.py`; it was tightened by ~150 words
+elsewhere first.

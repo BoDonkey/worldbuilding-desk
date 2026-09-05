@@ -544,6 +544,90 @@ sources:
       Established within its field; its transfer to narrative prose is an
       extension and is marked as such where used.
 
+  # --- Added 2026-09-05: mana history (closes the Batch 3 etymology gap) ---
+  - id: src.book.codrington-melanesians
+    title: "The Melanesians: Studies in their Anthropology and Folk-Lore"
+    org_or_author: Robert Henry Codrington
+    publisher: "Clarendon Press, 1891"
+    source_type: book
+    access_date: 2026-09-05
+    supports: >
+      The nineteenth-century missionary-ethnographic account that introduced
+      "mana" to English-language scholarship, describing it as a supernatural
+      power or influence attaching to persons and things.
+    confidence_note: >
+      Primary historical source, and a contested one — later scholarship
+      (see Keesing) holds that Codrington misconstrued the term's grammar.
+      Cited here for what Codrington wrote and its influence, never as an
+      accurate account of Oceanic usage. **This drafting pass did not read
+      the 1891 text directly**; it works from the passage Codrington is
+      quoted on in Golub's account plus bibliographic verification.
+
+  - id: src.article.keesing-rethinking-mana
+    title: "Rethinking Mana"
+    org_or_author: Roger M. Keesing
+    publisher: "Journal of Anthropological Research 40(1), 1984, pp. 137-156"
+    source_type: academic
+    access_date: 2026-09-05
+    supports: >
+      The argument that mana in Proto-Oceanic was canonically a stative verb
+      — to be efficacious, to succeed, to work — and that its noun uses are
+      abstract verbal nouns, so mana names a condition inferred from outcomes
+      rather than a substance a person holds. Also the claim that Codrington's
+      reading of mana as a noun derailed later scholarship.
+    confidence_note: >
+      Peer-reviewed anthropological article, widely cited and itself part of a
+      continuing debate rather than a settled last word. **This pass did not
+      read the full article**; it works from the journal record and from
+      Keesing's argument as summarized in the secondary literature, and the
+      record cites him only for that central claim.
+
+  - id: src.chapter.golub-peterson-mana-video-game
+    title: "How Mana Left the Pacific and Became a Video Game Mechanic"
+    org_or_author: Alex Golub and Jon Peterson
+    publisher: >
+      In Matt Tomlinson and Ty P. Kawika Tengan (eds), New Mana:
+      Transformations of a Classic Concept in Pacific Languages and Cultures,
+      ANU Press, 2016 (open access)
+    source_type: academic
+    access_date: 2026-09-05
+    supports: >
+      The documented transmission route of the word from Austronesian
+      languages through Codrington, comparative religion, and the American
+      counterculture into tabletop and video games.
+    confidence_note: >
+      The academic version of the article below, in a peer-reviewed edited
+      volume. **This pass read the popular version, not this chapter**;
+      it is registered because it is the citable scholarly form of the same
+      authors' argument, and the record's claims are drawn from what the two
+      accounts share.
+
+  - id: src.article.golub-history-of-mana
+    title: "The History of Mana: How an Austronesian Concept Became a Video Game Mechanic"
+    org_or_author: Alex Golub (University of Hawaii at Manoa)
+    url: https://theappendix.net/issues/2014/4/the-history-of-mana-how-an-austronesian-concept-became-a-video-game-mechanic
+    publisher: "The Appendix, vol. 2 no. 2, June 2014"
+    source_type: academic
+    access_date: 2026-09-05
+    supports: >
+      Mana as an Austronesian word crossing the Polynesia/Melanesia/Micronesia
+      divisions Europeans imposed; Codrington's 1891 account and its Victorian
+      reception; Mircea Eliade's anthologizing of Codrington for a mass
+      American readership; the 1960s-70s Californian counterculture as the
+      bridge; Larry Niven's 1969 "Not Long Before the End" as the source of
+      mana-as-depletable-resource; D&D's Vancian magic *not* using mana, with
+      the term entering through spell-point derivatives and then Ultima III
+      (1983), Final Fantasy and Dungeon Master (1987), Magic: The Gathering
+      (1993), and Warcraft II (1995).
+    confidence_note: >
+      Written for a general readership by an academic anthropologist, and the
+      popular counterpart to the peer-reviewed chapter above; the article
+      names the specialists who reviewed it for accuracy. **This is the
+      version this drafting pass actually read in full**, and it is the
+      source behind the record's corrected history. Golub's own closing
+      position holds borrowing and care together rather than resolving into a
+      verdict, and the record preserves that rather than flattening it.
+
   # --- Synthesis marker ---
   - id: src.synthesis.craft-library-editorial
     title: "Craft-library editorial synthesis"
