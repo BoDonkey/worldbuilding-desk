@@ -1,6 +1,6 @@
 # Worldbuilding-Desk Project Status
 
-**Last Updated:** August 23, 2026
+**Last Updated:** September 5, 2026
 
 ## Project Overview
 
@@ -463,6 +463,28 @@ Under the hood, the app still includes rich systems for world data, rules, chara
 - The current review UX direction for deterministic state suggestions is passive-by-default: proposals stay out of the writing flow, do not affect replay until accepted, and can be hidden and later restored without rejecting them.
 - AI assistance for World Bible canon should remain explicit and author-invoked. The direction is not a separate AI draft path per category; it is a floating helper that supports brainstorming and proposes confirmable actions against the current record/schema. Model output must not silently create records, fields, aliases, or canon facts.
 - Project-specific AI adapter feedback is documented in `docs/architecture-review.md` and `docs/road-to-market.md`: keep Ollama/local providers first-class but capability-variable, normalize tool/action proposals above provider-specific tool calling, prefer named AI routes/profiles over fixed effort buckets, default hosted routes toward provider-side prompt caching for stable prefixes, use tagged read-only context extraction, and treat future game-engine or persona hooks as typed app-owned capabilities rather than freeform prompt buttons.
+
+### Writing-coach craft library (draft content, parallel track)
+
+A draft coaching corpus is being produced under
+`content/craft-library/working/`, against the brief in
+`docs/writing-coach-corpus-production-handoff.md`. **This is content, not
+application truth** — no app code depends on it, it is not the Slice 4.17
+runtime schema, and nothing here changes the roadmap's status board.
+
+- **166 records** as of 2026-09-05 (54 `general`, 48 `system`, 46 `trope`,
+  6 `comparison`, 12 `profile`) against a 180 target; 14 remain.
+- **Every record carries `author_vetted: false`.** None has been reviewed by
+  the author. That is the gate before any of it is usable.
+- `working/README.md` holds the batch log and the resume protocol; `qa/`
+  holds the coverage matrix, duplication report, citation audit, and open
+  claims. `qa/build_catalog.py`, `qa/audit_corpus.py`, and `qa/relink.py` are
+  draft tooling, not runtime code and not a dependency of anything in `apps/`.
+- Standing items for the author's editorial pass: 59 records rest on a single
+  source at `source_confidence: limited`, concentrated where the craft
+  literature is genuinely thin; two records carry documented length waivers;
+  the overused-trope cluster is the most sensitive record in the set and is
+  flagged as a priority read.
 
 ---
 
