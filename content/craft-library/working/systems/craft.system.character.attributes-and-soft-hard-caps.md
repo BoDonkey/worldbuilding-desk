@@ -31,6 +31,7 @@ related:
   - craft.general.pacing.escalation-ceilings-urgency-and-pressure
   - craft.system.advancement.diminishing-returns-rarity-gates-and-catch-up-mechanics
   - craft.system.character.perks-feats-and-talents
+  - craft.system.encounter.enemy-design-and-difficulty-scaling
   - craft.system.progression.advancement-rate
   - craft.system.progression.vertical-vs-horizontal-progression
 source_ids:

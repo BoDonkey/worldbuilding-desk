@@ -342,3 +342,52 @@ single source remain the corpus's largest sourcing weakness, and the two
 internal research documents are still cited by 37 and 35 records
 respectively. Neither is a labeling problem; both are research problems for
 a later pass.
+
+## Batch 13 (2026-09-05) — research-led sourcing
+
+Batch 13 was drafted against sources located for the purpose rather than from
+the existing registry, on an explicit decision to stop the single-source
+count growing. Six sources were registered:
+
+| id | what it supports |
+|---|---|
+| `src.book.burroway-writing-fiction` | setting and atmosphere as active craft, POV taxonomy, scene construction |
+| `src.book.card-characters-and-viewpoint` | POV selection, costs of multiple viewpoints, reader attachment |
+| `src.book.edgerton-hooked` | opening-page craft, surface versus story-worthy problem |
+| `src.book.schell-art-of-game-design` | reward pacing, challenge-and-skill balance, teaching a system through play |
+| `src.book.yee-proteus-paradox` | guild social structure, obligation, play becoming labor |
+| `src.book.moretti-way-of-the-world` | the coming-of-age novel as a historically situated form |
+
+Bibliographic details for all six were verified against publisher and library
+records rather than written from memory.
+
+Eleven of the twelve records cite three independent sources each. Corpus-wide
+distinct sources in use rose from 36 to 43, and the internal research
+documents' share fell accordingly, though they remain the two most-cited
+sources at 37 records each.
+
+### Two `limited` marks, both deliberate
+
+- `craft.trope.setting.the-hub-and-home-base` cites three sources but is
+  marked `limited`, not `mixed`, because none of them treats the hub as a
+  *prose fiction* convention: Adams describes hub-and-spoke level design,
+  Burroway supplies a general principle about recurring settings, and the
+  genre observation is internal research. The record says so and names a
+  later pass with serial-fiction or long-form-structure scholarship as the
+  fix.
+- `craft.trope.identity.amnesia-and-lost-memory` cites one source plus the
+  synthesis marker. No dedicated craft or scholarly treatment of the amnesia
+  convention was found. Rather than attach Card's characterization work to
+  claims he does not make, the record cites him only for the attachment
+  argument and marks everything else as synthesis.
+
+### Disanalogies stated rather than smoothed over
+
+Three records import game-design sources into prose craft, and each says
+where the analogy breaks rather than letting the citation imply more than it
+supports. The onboarding record is the clearest case: a game's player must
+act to proceed while a reader only reads, so "learning by doing" becomes the
+weaker "learning by consequence." The party record notes that Yee describes
+real players in real games, not fictional depictions of them. This is the
+`mixed` mark being used as the handoff now defines it — a supported principle
+extended by this pass's synthesis, with the extension named.

@@ -38,6 +38,7 @@ related:
   - craft.general.premise.dramatic-question-and-controlling-idea
   - craft.general.revision.protecting-reader-experience
   - craft.general.revision.triage-and-beta-reader-signal
+  - craft.general.structure.opening-pages-and-reader-commitment
   - craft.system.progression.decorative-chapter-test
   - craft.trope.convention.progression-fiction-reader-expectations
 source_ids:

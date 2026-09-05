@@ -29,6 +29,7 @@ related:
   - craft.system.combat.action-economy
   - craft.system.encounter.range-positioning-damage-and-defenses
   - craft.system.encounter.status-effects-crowd-control-and-counters
+  - craft.system.party.parties-guilds-and-group-structure
   - craft.trope.role.found-family
   - craft.trope.structure.the-heist
 source_ids:

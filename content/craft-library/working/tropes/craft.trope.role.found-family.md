@@ -40,6 +40,7 @@ related:
   - craft.trope.role.mentor
   - craft.trope.role.the-outsider-and-belonging
   - craft.trope.romance.romantic-subplot-conventions
+  - craft.trope.setting.the-hub-and-home-base
 source_ids:
   - src.internal.litrpg-genre-research
 source_confidence: limited

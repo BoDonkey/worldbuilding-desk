@@ -52,6 +52,7 @@ related:
   - craft.system.advancement.experience-sources-and-milestone-growth
   - craft.system.character.attributes-and-soft-hard-caps
   - craft.system.cultivation.realms-and-breakthroughs
+  - craft.system.encounter.enemy-design-and-difficulty-scaling
   - craft.system.progression.decorative-chapter-test
   - craft.system.progression.fake-progression
   - craft.system.progression.vertical-vs-horizontal-progression

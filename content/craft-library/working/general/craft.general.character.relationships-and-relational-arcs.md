@@ -32,6 +32,7 @@ related:
   - craft.general.character.supporting-cast-purpose
   - craft.general.character.want-versus-need
   - craft.general.plot.midpoint-and-reversals
+  - craft.general.structure.subplot-and-thread-braiding
   - craft.trope.romance.romantic-subplot-conventions
 source_ids:
   - src.book.cron-story-genius

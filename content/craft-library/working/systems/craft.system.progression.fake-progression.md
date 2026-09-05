@@ -40,6 +40,7 @@ related:
   - craft.system.advancement.experience-sources-and-milestone-growth
   - craft.system.progression.advancement-rate
   - craft.system.progression.decorative-chapter-test
+  - craft.system.quest.quest-and-reward-design
 source_ids:
   - src.internal.litrpg-craft-failures-research
   - src.tam.meaningful-progression

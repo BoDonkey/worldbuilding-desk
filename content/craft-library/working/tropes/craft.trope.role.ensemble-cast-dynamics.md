@@ -31,7 +31,9 @@ tags:
   - relationships
 related:
   - craft.general.character.supporting-cast-purpose
+  - craft.general.pov.multiple-viewpoint-management
   - craft.general.voice.voice-as-craft-element
+  - craft.system.party.parties-guilds-and-group-structure
   - craft.trope.fatigue.overused-litrpg-trope-cluster
   - craft.trope.role.companion
   - craft.trope.role.found-family

@@ -31,6 +31,7 @@ related:
   - craft.general.scene.scene-turns
   - craft.general.scene.sequel-and-reflection
   - craft.general.structure.chapter-architecture-and-transitions
+  - craft.general.structure.opening-pages-and-reader-commitment
   - craft.system.progression.decorative-chapter-test
 source_ids:
   - src.book.gardner-art-of-fiction

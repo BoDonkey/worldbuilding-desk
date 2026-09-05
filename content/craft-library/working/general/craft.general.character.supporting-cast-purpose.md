@@ -28,6 +28,8 @@ tags:
 related:
   - craft.general.character.antagonistic-force
   - craft.general.character.relationships-and-relational-arcs
+  - craft.general.pov.multiple-viewpoint-management
+  - craft.system.party.parties-guilds-and-group-structure
   - craft.trope.fatigue.overused-litrpg-trope-cluster
   - craft.trope.role.companion
   - craft.trope.role.ensemble-cast-dynamics

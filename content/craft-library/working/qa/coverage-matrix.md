@@ -704,3 +704,58 @@ The audit now reports zero structural findings of any kind. All three core
 families remain where Batch 12 left them — `general` 42/60, `trope` 36/60,
 `system` 34/60 — and Batch 13 is unblocked, to be drafted under the
 related-link policy with at least five mutual links per record.
+
+## After Batch 13 (new ground across all three families)
+
+Total: **142 records** (46 `general`, 38 `system`, 6 `comparison`, 40
+`trope`, 12 `profile`).
+
+| document_type | count |
+|---|---|
+| pattern | 51 |
+| system-mechanic | 31 |
+| comparison | 8 |
+| trope | 40 |
+| subgenre-profile | 12 |
+
+| detectability | count |
+|---|---|
+| model-assisted | 121 |
+| practice | 20 |
+| deterministic | 1 |
+
+**Added:** opening pages and reader commitment, managing multiple viewpoints,
+subplots and thread braiding, setting as a source of pressure; quests and
+reward design, parties/guilds/group structure, enemy design and difficulty
+scaling, introducing the system to the reader; the hub and the home base, the
+villain protagonist, the coming-of-age story, amnesia and lost memory.
+
+**First batch without a backlog.** All twelve topics came from a fresh
+whole-catalog gap read rather than the handoff's original coverage lists,
+which were complete after Batch 12. Two new clusters opened: `setting` in
+Family A (which had none) and a second `setting` record in Family B.
+
+**Sourcing improved, deliberately.** Batch 13 was research-led: six new
+sources registered, eleven of twelve records citing three independent
+sources, distinct sources in use up from 36 to 43. The single-source count
+rose by only one (the amnesia record, marked `limited` with the gap named).
+The standing weakness is unchanged in kind — 45 records still rest on a
+single source at `limited`, and the two internal research documents are cited
+by 37 records each — but Batch 13 did not deepen it.
+
+**Family progress:** `general` 46/60 (77%), `trope` 40/60 (67%), `system`
+38/60 (63%). Tightest balance of the production run so far, and 142/180
+(79%) overall.
+
+**A target the author should settle:** 38 records remain against the 180
+total, but the per-family gaps sum to 56, because comparison and profile
+records count toward the families they serve. These two ways of counting have
+diverged far enough that the next batch's scope depends on which one governs.
+
+**Next-batch candidates from this pass's gap read**, not yet drafted:
+`general` — series and multi-book architecture, character introduction,
+humor as craft, prose rhythm and line-level clarity; `system` — dungeon
+structure, luck and randomness, reputation and faction standing, travel and
+territory, oaths and binding contracts, summons and companions; `trope` —
+additional setting tropes (the frontier, the dungeon town), the tyrant and
+the god-patron, the prison break and escape, apprenticeship, the doppelganger.

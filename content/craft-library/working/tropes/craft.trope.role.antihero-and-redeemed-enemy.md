@@ -33,6 +33,7 @@ related:
   - craft.trope.role.mentor
   - craft.trope.role.rival
   - craft.trope.role.trickster
+  - craft.trope.role.villain-protagonist
   - craft.trope.structure.revenge
 source_ids:
   - src.book.forster-aspects-of-the-novel

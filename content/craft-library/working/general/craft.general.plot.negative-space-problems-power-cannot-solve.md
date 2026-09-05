@@ -38,6 +38,7 @@ tags:
   - worldbuilding-practice
 related:
   - craft.general.character.power-as-sole-motivation
+  - craft.general.setting.setting-as-pressure
   - craft.profile.dungeon-core
   - craft.system.progression.decorative-chapter-test
   - craft.system.progression.fake-progression

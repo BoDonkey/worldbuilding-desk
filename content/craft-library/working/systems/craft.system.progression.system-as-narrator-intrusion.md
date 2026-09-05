@@ -35,6 +35,7 @@ related:
   - craft.general.plot.exposition-and-info-delivery
   - craft.profile.classic-litrpg
   - craft.profile.gamelit
+  - craft.system.onboarding.system-introduction-and-tutorialization
   - craft.system.progression.stat-block-density
   - craft.system.progression.visible-vs-hidden-systems
 source_ids:

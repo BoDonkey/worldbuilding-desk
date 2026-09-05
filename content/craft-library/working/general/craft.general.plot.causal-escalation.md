@@ -32,6 +32,8 @@ related:
   - craft.general.plot.setup-and-payoff
   - craft.general.plot.stakes
   - craft.general.scene.goal-conflict-outcome
+  - craft.general.structure.subplot-and-thread-braiding
+  - craft.system.encounter.enemy-design-and-difficulty-scaling
   - craft.trope.structure.the-quest
   - craft.trope.structure.time-loop
 source_ids:

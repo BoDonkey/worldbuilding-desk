@@ -31,8 +31,10 @@ related:
   - craft.general.pacing.escalation-ceilings-urgency-and-pressure
   - craft.general.plot.causal-escalation
   - craft.general.pov.information-control
+  - craft.general.setting.setting-as-pressure
   - craft.system.combat.action-economy
   - craft.system.combat.death-and-respawn
+  - craft.system.quest.quest-and-reward-design
   - craft.trope.structure.faction-conflict-and-war
   - craft.trope.structure.sacrifice-and-return
 source_ids:

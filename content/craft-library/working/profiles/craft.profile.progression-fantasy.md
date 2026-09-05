@@ -36,6 +36,7 @@ related:
   - craft.profile.tower-climbing
   - craft.system.progression.advancement-rate
   - craft.system.progression.fake-progression
+  - craft.trope.structure.coming-of-age
 source_ids:
   - src.internal.litrpg-genre-research
   - src.rowe.progression-fantasy

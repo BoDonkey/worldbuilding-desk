@@ -31,6 +31,7 @@ tags:
 related:
   - craft.general.character.relationships-and-relational-arcs
   - craft.general.character.want-versus-need
+  - craft.general.structure.subplot-and-thread-braiding
   - craft.general.voice.dialogue-and-subtext
   - craft.trope.fatigue.overused-litrpg-trope-cluster
   - craft.trope.role.found-family

@@ -32,6 +32,7 @@ related:
   - craft.general.plot.earned-resolution
   - craft.general.plot.foreshadowing
   - craft.general.plot.midpoint-and-reversals
+  - craft.general.structure.subplot-and-thread-braiding
   - craft.trope.structure.the-quest
 source_ids:
   - src.book.mckee-story

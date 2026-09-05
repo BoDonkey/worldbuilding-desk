@@ -31,6 +31,7 @@ related:
   - craft.general.pov.information-control
   - craft.general.scene.entry-and-exit-points
   - craft.general.voice.narrative-summary-vs-scene
+  - craft.system.onboarding.system-introduction-and-tutorialization
   - craft.system.progression.system-as-narrator-intrusion
   - craft.system.progression.visible-vs-hidden-systems
 source_ids:

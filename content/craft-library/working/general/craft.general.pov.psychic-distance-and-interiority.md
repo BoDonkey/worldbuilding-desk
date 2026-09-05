@@ -29,6 +29,7 @@ tags:
   - foundational
 related:
   - craft.general.pov.information-control
+  - craft.general.pov.multiple-viewpoint-management
   - craft.general.scene.scene-turns
   - craft.general.scene.sequel-and-reflection
   - craft.general.voice.narrative-summary-vs-scene

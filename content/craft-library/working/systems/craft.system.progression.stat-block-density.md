@@ -43,6 +43,7 @@ related:
   - craft.general.voice.narrative-summary-vs-scene
   - craft.profile.classic-litrpg
   - craft.profile.gamelit
+  - craft.system.onboarding.system-introduction-and-tutorialization
   - craft.system.progression.system-as-narrator-intrusion
   - craft.system.progression.visible-vs-hidden-systems
 source_ids:

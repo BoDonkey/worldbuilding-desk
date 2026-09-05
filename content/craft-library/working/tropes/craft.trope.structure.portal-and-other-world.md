@@ -36,6 +36,7 @@ tags:
 related:
   - craft.general.plot.reader-expectation-and-genre-signaling
   - craft.profile.isekai-portal-fantasy
+  - craft.system.onboarding.system-introduction-and-tutorialization
   - craft.trope.structure.sacrifice-and-return
   - craft.trope.structure.time-loop
   - craft.trope.structure.transformation

@@ -37,6 +37,7 @@ related:
   - craft.trope.role.found-family
   - craft.trope.role.mentor
   - craft.trope.role.reluctant-hero
+  - craft.trope.role.villain-protagonist
   - craft.trope.romance.romantic-subplot-conventions
   - craft.trope.structure.revenge
 source_ids:

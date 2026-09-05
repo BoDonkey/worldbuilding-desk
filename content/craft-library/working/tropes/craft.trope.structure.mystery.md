@@ -29,6 +29,7 @@ related:
   - craft.general.pacing.suspense-uncertainty-and-anticipation
   - craft.general.plot.setup-and-payoff
   - craft.trope.convention.mystery-genre-conventions
+  - craft.trope.identity.amnesia-and-lost-memory
   - craft.trope.structure.the-heist
   - craft.trope.structure.the-prophecy
 source_ids:

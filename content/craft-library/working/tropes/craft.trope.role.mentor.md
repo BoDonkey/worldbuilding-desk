@@ -34,6 +34,7 @@ related:
   - craft.trope.role.found-family
   - craft.trope.role.reluctant-hero
   - craft.trope.setting.academy-story
+  - craft.trope.structure.coming-of-age
 source_ids:
   - src.book.vogler-writers-journey
   - src.book.campbell-hero-with-a-thousand-faces

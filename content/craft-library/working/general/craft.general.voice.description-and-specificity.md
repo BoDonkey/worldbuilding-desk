@@ -29,6 +29,7 @@ tags:
 related:
   - craft.general.pacing.pacing-across-scales
   - craft.general.pov.information-control
+  - craft.general.setting.setting-as-pressure
   - craft.general.voice.dialogue-and-subtext
   - craft.general.voice.narrative-summary-vs-scene
   - craft.general.voice.voice-as-craft-element

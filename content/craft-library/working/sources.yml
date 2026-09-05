@@ -413,6 +413,93 @@ sources:
     supports: "Modern xianxia/cultivation genre conventions as distinct from historical Daoism."
     confidence_note: Tertiary source; used for definitional corroboration only.
 
+  # --- Added in Batch 13 (2026-09-05) ---
+  - id: src.book.burroway-writing-fiction
+    title: "Writing Fiction: A Guide to Narrative Craft"
+    org_or_author: Janet Burroway (with Elizabeth Stuckey-French and Ned Stuckey-French)
+    publisher: University of Chicago Press, 10th ed. 2019 (first published 1982)
+    source_type: book
+    access_date: 2026-09-05
+    supports: >
+      Setting and atmosphere as active craft elements, point-of-view choice
+      and its effects, scene construction, character introduction.
+    confidence_note: >
+      Long-established university-level creative-writing textbook, in print
+      across ten editions since 1982. Cited here for general craft principles
+      it treats directly, not for genre-fiction or serial-publishing claims,
+      which it does not address.
+
+  - id: src.book.card-characters-and-viewpoint
+    title: "Characters & Viewpoint (Elements of Fiction Writing)"
+    org_or_author: Orson Scott Card
+    publisher: "Writer's Digest Books, 1988; revised edition 2010"
+    source_type: book
+    access_date: 2026-09-05
+    supports: >
+      Point-of-view selection, the costs of multiple viewpoints, reader
+      attachment to characters, character introduction technique.
+    confidence_note: >
+      Established craft text within a genre-fiction tradition, written by a
+      working novelist rather than a scholar; practitioner craft guidance, not
+      empirical study of reader response.
+
+  - id: src.book.edgerton-hooked
+    title: "Hooked: Write Fiction That Grabs Readers at Page One & Never Lets Them Go"
+    org_or_author: Les Edgerton
+    publisher: "Writer's Digest Books, 2007"
+    source_type: book
+    access_date: 2026-09-05
+    supports: >
+      Opening-page craft, the distinction between a surface problem and a
+      story-worthy problem, inciting incident placement, common opening
+      failure modes.
+    confidence_note: >
+      Dedicated craft treatment of openings; practitioner guidance rather than
+      reader-response research. Its prescriptions are strongly stated and are
+      treated here as one considered position, not as measured fact.
+
+  - id: src.book.schell-art-of-game-design
+    title: "The Art of Game Design: A Book of Lenses"
+    org_or_author: Jesse Schell
+    publisher: "A K Peters/CRC Press, 3rd ed. 2019 (first published 2008)"
+    source_type: book
+    access_date: 2026-09-05
+    supports: >
+      Reward structures and their pacing, challenge-and-skill balance,
+      teaching players a system through play, motivation and player types.
+    confidence_note: >
+      Established game-design textbook. Cited for design principles about
+      games; any transfer of those principles to prose fiction is this
+      library's synthesis and is marked as such in the records that do it.
+
+  - id: src.book.yee-proteus-paradox
+    title: "The Proteus Paradox: How Online Games and Virtual Worlds Change Us — and How They Don't"
+    org_or_author: Nick Yee
+    publisher: Yale University Press, 2014
+    source_type: academic
+    access_date: 2026-09-05
+    supports: >
+      Guild and group social structure in online games, obligation and
+      scheduling pressure within player groups, play becoming labor.
+    confidence_note: >
+      Research-based account drawing on player surveys and in-game data.
+      Describes real players in real online games, not fictional depictions of
+      them; using it to reason about fiction is this library's synthesis.
+
+  - id: src.book.moretti-way-of-the-world
+    title: "The Way of the World: The Bildungsroman in European Culture"
+    org_or_author: Franco Moretti
+    publisher: "Verso, 1987; revised edition 2000"
+    source_type: academic
+    access_date: 2026-09-05
+    supports: >
+      The coming-of-age novel as a historically situated form, its
+      characteristic tension between self-development and socialization.
+    confidence_note: >
+      Literary-critical study of a specific European tradition. Used for the
+      form's structural tension, not as a universal claim about coming-of-age
+      stories in every culture or medium.
+
   # --- Synthesis marker ---
   - id: src.synthesis.craft-library-editorial
     title: "Craft-library editorial synthesis"

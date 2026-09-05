@@ -30,6 +30,7 @@ tags:
 related:
   - craft.general.pov.information-control
   - craft.trope.fatigue.overused-litrpg-trope-cluster
+  - craft.trope.identity.amnesia-and-lost-memory
   - craft.trope.identity.betrayal
   - craft.trope.role.chosen-one
   - craft.trope.role.heir-and-succession

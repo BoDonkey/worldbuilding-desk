@@ -39,6 +39,7 @@ tags:
   - resource-model
 related:
   - craft.comparison.progression.universal-vs-class-bound-access
+  - craft.general.setting.setting-as-pressure
   - craft.profile.crafting-and-economy
   - craft.profile.isekai-portal-fantasy
   - craft.system.consequences.institutions-labor-and-governance

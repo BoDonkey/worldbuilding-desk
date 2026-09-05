@@ -32,6 +32,7 @@ related:
   - craft.general.plot.exposition-and-info-delivery
   - craft.general.pov.information-control
   - craft.general.pov.psychic-distance-and-interiority
+  - craft.system.onboarding.system-introduction-and-tutorialization
   - craft.system.progression.stat-block-density
   - craft.system.progression.system-as-narrator-intrusion
 source_ids:

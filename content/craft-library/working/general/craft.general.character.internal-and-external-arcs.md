@@ -31,6 +31,7 @@ related:
   - craft.general.character.want-versus-need
   - craft.general.plot.climax-and-resolution
   - craft.general.premise.dramatic-question-and-controlling-idea
+  - craft.trope.structure.coming-of-age
   - craft.trope.structure.sacrifice-and-return
   - craft.trope.structure.transformation
 source_ids:

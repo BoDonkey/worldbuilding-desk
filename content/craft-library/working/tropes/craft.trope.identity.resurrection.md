@@ -32,6 +32,7 @@ related:
   - craft.system.combat.death-and-respawn
   - craft.system.consequences.medicine-religion-and-crime
   - craft.system.consequences.systemic-social-consequences
+  - craft.trope.identity.amnesia-and-lost-memory
   - craft.trope.identity.betrayal
   - craft.trope.structure.sacrifice-and-return
 source_ids:

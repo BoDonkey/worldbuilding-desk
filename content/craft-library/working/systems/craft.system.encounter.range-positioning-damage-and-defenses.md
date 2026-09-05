@@ -28,6 +28,7 @@ tags:
 related:
   - craft.profile.classic-litrpg
   - craft.system.combat.action-economy
+  - craft.system.encounter.enemy-design-and-difficulty-scaling
   - craft.system.encounter.healing-teamwork-and-information-asymmetry
   - craft.system.encounter.status-effects-crowd-control-and-counters
   - craft.system.resource.cooldowns-charges-and-sacrifice

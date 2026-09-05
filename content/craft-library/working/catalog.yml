@@ -5,7 +5,7 @@
 # Not the 4.17 runtime schema.
 
 generated_by: qa/build_catalog.py (draft tooling, not runtime code)
-record_count: 130
+record_count: 142
 records:
 - id: craft.comparison.progression.classes-versus-skill-based-growth
   title: Classes versus skill-based growth
@@ -498,6 +498,23 @@ records:
     exclusions: []
   author_vetted: false
   path: general/craft.general.pov.information-control.md
+- id: craft.general.pov.multiple-viewpoint-management
+  title: Managing multiple viewpoints
+  family: general
+  document_type: pattern
+  version: 1
+  detectability: model-assisted
+  scopes:
+  - chapter
+  - manuscript
+  - series
+  applicability:
+    genres:
+    - general-fiction
+    subgenres: []
+    exclusions: []
+  author_vetted: false
+  path: general/craft.general.pov.multiple-viewpoint-management.md
 - id: craft.general.pov.psychic-distance-and-interiority
   title: Psychic distance and interiority
   family: general
@@ -706,6 +723,23 @@ records:
     exclusions: []
   author_vetted: false
   path: general/craft.general.scene.sequel-and-reflection.md
+- id: craft.general.setting.setting-as-pressure
+  title: Setting as a source of pressure
+  family: general
+  document_type: pattern
+  version: 1
+  detectability: model-assisted
+  scopes:
+  - scene
+  - chapter
+  - manuscript
+  applicability:
+    genres:
+    - general-fiction
+    subgenres: []
+    exclusions: []
+  author_vetted: false
+  path: general/craft.general.setting.setting-as-pressure.md
 - id: craft.general.structure.chapter-architecture-and-transitions
   title: Chapter architecture and transitions
   family: general
@@ -721,6 +755,39 @@ records:
     exclusions: []
   author_vetted: false
   path: general/craft.general.structure.chapter-architecture-and-transitions.md
+- id: craft.general.structure.opening-pages-and-reader-commitment
+  title: Opening pages and reader commitment
+  family: general
+  document_type: pattern
+  version: 1
+  detectability: model-assisted
+  scopes:
+  - selection
+  - chapter
+  - manuscript
+  applicability:
+    genres:
+    - general-fiction
+    subgenres: []
+    exclusions: []
+  author_vetted: false
+  path: general/craft.general.structure.opening-pages-and-reader-commitment.md
+- id: craft.general.structure.subplot-and-thread-braiding
+  title: Subplots and thread braiding
+  family: general
+  document_type: pattern
+  version: 1
+  detectability: model-assisted
+  scopes:
+  - manuscript
+  - series
+  applicability:
+    genres:
+    - general-fiction
+    subgenres: []
+    exclusions: []
+  author_vetted: false
+  path: general/craft.general.structure.subplot-and-thread-braiding.md
 - id: craft.general.voice.description-and-specificity
   title: Description and specificity
   family: general
@@ -1307,6 +1374,28 @@ records:
     exclusions: []
   author_vetted: false
   path: systems/craft.system.economy.loot-durability-inventory-and-ownership.md
+- id: craft.system.encounter.enemy-design-and-difficulty-scaling
+  title: Enemy design and difficulty scaling
+  family: system
+  document_type: system-mechanic
+  version: 1
+  detectability: model-assisted
+  scopes:
+  - scene
+  - chapter
+  - manuscript
+  - series
+  applicability:
+    genres:
+    - litrpg
+    - progression-fantasy
+    subgenres:
+    - classic-litrpg
+    - tower-climbing
+    - system-apocalypse
+    exclusions: []
+  author_vetted: false
+  path: systems/craft.system.encounter.enemy-design-and-difficulty-scaling.md
 - id: craft.system.encounter.healing-teamwork-and-information-asymmetry
   title: Healing, teamwork, and information asymmetry
   family: system
@@ -1355,6 +1444,47 @@ records:
     exclusions: []
   author_vetted: false
   path: systems/craft.system.encounter.status-effects-crowd-control-and-counters.md
+- id: craft.system.onboarding.system-introduction-and-tutorialization
+  title: Introducing the system to the reader
+  family: system
+  document_type: system-mechanic
+  version: 1
+  detectability: model-assisted
+  scopes:
+  - chapter
+  - manuscript
+  applicability:
+    genres:
+    - litrpg
+    - progression-fantasy
+    subgenres:
+    - classic-litrpg
+    - system-apocalypse
+    - isekai-portal-fantasy
+    exclusions: []
+  author_vetted: false
+  path: systems/craft.system.onboarding.system-introduction-and-tutorialization.md
+- id: craft.system.party.parties-guilds-and-group-structure
+  title: Parties, guilds, and group structure
+  family: system
+  document_type: system-mechanic
+  version: 1
+  detectability: model-assisted
+  scopes:
+  - chapter
+  - manuscript
+  - series
+  applicability:
+    genres:
+    - litrpg
+    - progression-fantasy
+    subgenres:
+    - classic-litrpg
+    - gamelit
+    - base-building
+    exclusions: []
+  author_vetted: false
+  path: systems/craft.system.party.parties-guilds-and-group-structure.md
 - id: craft.system.progression.advancement-rate
   title: Advancement rate across a manuscript
   family: system
@@ -1482,6 +1612,27 @@ records:
     exclusions: []
   author_vetted: false
   path: systems/craft.system.progression.visible-vs-hidden-systems.md
+- id: craft.system.quest.quest-and-reward-design
+  title: Quests, objectives, and reward design
+  family: system
+  document_type: system-mechanic
+  version: 1
+  detectability: model-assisted
+  scopes:
+  - chapter
+  - manuscript
+  - series
+  applicability:
+    genres:
+    - litrpg
+    - progression-fantasy
+    subgenres:
+    - classic-litrpg
+    - system-apocalypse
+    - gamelit
+    exclusions: []
+  author_vetted: false
+  path: systems/craft.system.quest.quest-and-reward-design.md
 - id: craft.system.resource.cooldowns-charges-and-sacrifice
   title: Cooldowns, charges, and sacrifice as expenditure models
   family: system
@@ -1700,6 +1851,26 @@ records:
     exclusions: []
   author_vetted: false
   path: tropes/craft.trope.fatigue.overused-litrpg-trope-cluster.md
+- id: craft.trope.identity.amnesia-and-lost-memory
+  title: Amnesia and lost memory
+  family: trope
+  document_type: trope
+  version: 1
+  detectability: model-assisted
+  scopes:
+  - manuscript
+  - series
+  applicability:
+    genres:
+    - fantasy
+    - science-fiction
+    - litrpg
+    subgenres:
+    - isekai-portal-fantasy
+    - system-apocalypse
+    exclusions: []
+  author_vetted: false
+  path: tropes/craft.trope.identity.amnesia-and-lost-memory.md
 - id: craft.trope.identity.betrayal
   title: Betrayal
   family: trope
@@ -1939,6 +2110,26 @@ records:
     exclusions: []
   author_vetted: false
   path: tropes/craft.trope.role.trickster.md
+- id: craft.trope.role.villain-protagonist
+  title: The villain protagonist
+  family: trope
+  document_type: trope
+  version: 1
+  detectability: model-assisted
+  scopes:
+  - manuscript
+  - series
+  applicability:
+    genres:
+    - fantasy
+    - litrpg
+    - progression-fantasy
+    subgenres:
+    - dark-horror-litrpg
+    - dungeon-core
+    exclusions: []
+  author_vetted: false
+  path: tropes/craft.trope.role.villain-protagonist.md
 - id: craft.trope.romance.romantic-subplot-conventions
   title: Romantic subplot conventions
   family: trope
@@ -1973,6 +2164,47 @@ records:
     exclusions: []
   author_vetted: false
   path: tropes/craft.trope.setting.academy-story.md
+- id: craft.trope.setting.the-hub-and-home-base
+  title: The hub and the home base
+  family: trope
+  document_type: trope
+  version: 1
+  detectability: model-assisted
+  scopes:
+  - chapter
+  - manuscript
+  - series
+  applicability:
+    genres:
+    - fantasy
+    - litrpg
+    - progression-fantasy
+    subgenres:
+    - base-building
+    - classic-litrpg
+    exclusions: []
+  author_vetted: false
+  path: tropes/craft.trope.setting.the-hub-and-home-base.md
+- id: craft.trope.structure.coming-of-age
+  title: The coming-of-age story
+  family: trope
+  document_type: trope
+  version: 1
+  detectability: model-assisted
+  scopes:
+  - manuscript
+  - series
+  applicability:
+    genres:
+    - general-fiction
+    - fantasy
+    - progression-fantasy
+    subgenres:
+    - progression-fantasy
+    - classic-litrpg
+    exclusions: []
+  author_vetted: false
+  path: tropes/craft.trope.structure.coming-of-age.md
 - id: craft.trope.structure.faction-conflict-and-war
   title: Faction conflict and war
   family: trope

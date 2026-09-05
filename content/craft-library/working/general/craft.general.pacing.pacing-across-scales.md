@@ -30,6 +30,7 @@ tags:
 related:
   - craft.general.pacing.tension-and-release-cycles
   - craft.general.structure.chapter-architecture-and-transitions
+  - craft.general.structure.subplot-and-thread-braiding
   - craft.general.voice.description-and-specificity
   - craft.general.voice.narrative-summary-vs-scene
   - craft.system.progression.advancement-rate

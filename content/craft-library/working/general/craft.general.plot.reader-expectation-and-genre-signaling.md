@@ -31,6 +31,7 @@ related:
   - craft.general.pov.information-control
   - craft.general.promise.promise-consistency
   - craft.general.revision.protecting-reader-experience
+  - craft.general.structure.opening-pages-and-reader-commitment
   - craft.trope.combination.inversions-and-combinations
   - craft.trope.convention.mystery-genre-conventions
   - craft.trope.structure.portal-and-other-world

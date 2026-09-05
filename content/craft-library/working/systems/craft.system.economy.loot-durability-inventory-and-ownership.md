@@ -34,6 +34,7 @@ related:
   - craft.system.economy.crafting-and-economy-loops
   - craft.system.economy.currencies-markets-and-inflation
   - craft.system.economy.enchanting-and-item-crafting
+  - craft.system.quest.quest-and-reward-design
 source_ids:
   - src.book.adams-fundamentals-of-game-design
 source_confidence: limited

@@ -492,3 +492,64 @@ cluster at 1,700 words).
 standing research weakness is unchanged and is not structural: 44 records
 rest on a single source at `limited`, and the two internal research documents
 are cited by 37 and 35 records respectively.
+
+### Batch 13 — new ground across all three families (done)
+
+The first batch drafted without a backlog: every family's original
+coverage-plan list was complete after Batch 12, so these twelve topics come
+from a fresh gap read of the whole catalog. Four per family, all
+`author_vetted: false`.
+
+**`general` (42 → 46):**
+
+- `general/craft.general.structure.opening-pages-and-reader-commitment.md`
+- `general/craft.general.pov.multiple-viewpoint-management.md`
+- `general/craft.general.structure.subplot-and-thread-braiding.md`
+- `general/craft.general.setting.setting-as-pressure.md` — opens a `setting`
+  cluster; Family A previously had no setting record at all.
+
+**`system` (34 → 38):**
+
+- `systems/craft.system.quest.quest-and-reward-design.md` — closes the
+  quest-and-reward gap flagged as untouched since Batch 8.
+- `systems/craft.system.party.parties-guilds-and-group-structure.md`
+- `systems/craft.system.encounter.enemy-design-and-difficulty-scaling.md`
+- `systems/craft.system.onboarding.system-introduction-and-tutorialization.md`
+
+**`trope` (36 → 40):**
+
+- `tropes/craft.trope.setting.the-hub-and-home-base.md` — Family B's second
+  `setting` record; the academy story had been the only one.
+- `tropes/craft.trope.role.villain-protagonist.md`
+- `tropes/craft.trope.structure.coming-of-age.md`
+- `tropes/craft.trope.identity.amnesia-and-lost-memory.md`
+
+**Research-led, by decision.** Batch 13 was drafted against sources found for
+the purpose rather than from the existing registry, to stop the single-source
+count growing. Six sources were added: Burroway's *Writing Fiction*, Card's
+*Characters & Viewpoint*, Edgerton's *Hooked*, Schell's *The Art of Game
+Design*, Yee's *The Proteus Paradox*, and Moretti's *The Way of the World*.
+Eleven of twelve records cite three independent sources; the twelfth
+(amnesia) cites one and says so. Distinct sources in use across the corpus
+rose from 36 to 43.
+
+Two records carry `source_confidence: limited` deliberately — the hub record,
+because no craft source treats the hub as a *prose* convention, and the
+amnesia record, because no craft or scholarly treatment of the device was
+available to this pass. Both name that gap as a revision-pass target rather
+than borrowing confidence from adjacent sources.
+
+QA: 142 records (46 `general`, 40 `trope`, 38 `system`, 6 `comparison`, 12
+`profile`). `qa/audit_corpus.py` reports **zero findings** — no section gaps,
+no enum or naming violations, no broken, one-way, or orphan links, nothing
+outside the length band beyond the standing waiver. The closest new-record
+pair scores 0.233, well below the corpus's previous maximum of 0.417, so the
+batch introduced no near-duplicates. All twelve records were drafted with
+five `related` links under the new policy; `qa/relink.py` then reciprocated
+them into 60 existing records, taking the graph to 459 mutual pairs.
+
+**Next:** 38 records to the 180 target. Against the per-family target of 60,
+`general` needs 14, `trope` 20, and `system` 22 — which sums to more than 38
+because comparison and profile records count toward the families they serve.
+The author should decide whether the remaining slots go to the families or to
+the 180 total, since the two no longer reconcile.

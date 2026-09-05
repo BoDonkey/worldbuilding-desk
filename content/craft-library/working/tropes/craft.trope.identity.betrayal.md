@@ -33,6 +33,7 @@ related:
   - craft.general.plot.setup-and-payoff
   - craft.trope.identity.hidden-identity-and-secret-heritage
   - craft.trope.identity.resurrection
+  - craft.trope.role.villain-protagonist
 source_ids:
   - src.book.mckee-story
 source_confidence: limited

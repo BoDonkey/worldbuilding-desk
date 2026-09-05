@@ -31,6 +31,7 @@ related:
   - craft.system.encounter.healing-teamwork-and-information-asymmetry
   - craft.system.encounter.range-positioning-damage-and-defenses
   - craft.system.encounter.status-effects-crowd-control-and-counters
+  - craft.system.party.parties-guilds-and-group-structure
   - craft.trope.structure.trial-and-tournament
 source_ids:
   - src.book.adams-fundamentals-of-game-design

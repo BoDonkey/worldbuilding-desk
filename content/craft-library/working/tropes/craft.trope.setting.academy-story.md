@@ -29,10 +29,13 @@ tags:
   - trope
   - character-role
 related:
+  - craft.general.setting.setting-as-pressure
   - craft.system.progression.advancement-rate
   - craft.trope.role.mentor
   - craft.trope.role.rival
   - craft.trope.role.the-outsider-and-belonging
+  - craft.trope.setting.the-hub-and-home-base
+  - craft.trope.structure.coming-of-age
   - craft.trope.structure.trial-and-tournament
 source_ids:
   - src.internal.litrpg-genre-research

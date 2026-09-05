@@ -445,3 +445,56 @@ records. That is a research task for a later pass, not a labeling one.
 
 **Next:** Batch 13, drafted under the new related-link policy — 50 records
 remain against the 180 target (18 `general`, 26 `system`, 24 `trope`).
+
+---
+
+# Batch 13 near-duplicate check (2026-09-05, 142 records)
+
+Every pair involving one of the twelve new records was scored against the
+whole corpus. **The closest scores 0.233** — well below the 0.417 maximum the
+corpus carried before this batch, and below every pair reviewed in audit pass
+A. No merge or re-scope candidates.
+
+The four closest, each checked by hand:
+
+- `pov.multiple-viewpoint-management` / `role.villain-protagonist` (0.233) —
+  shared vocabulary only ("viewpoint"), no overlap in subject. Not linked and
+  should not be.
+- `encounter.enemy-design-and-difficulty-scaling` /
+  `progression.fake-progression` (0.217) — genuinely adjacent: fake
+  progression is the reader-facing symptom, enemy scaling is one mechanism
+  that produces it. Each names the other; the new record states the
+  distinction in its own text.
+- `pov.multiple-viewpoint-management` /
+  `structure.opening-pages-and-reader-commitment` (0.206) — both discuss
+  reader attachment, at different scales. Distinct, not linked.
+- `onboarding.system-introduction-and-tutorialization` /
+  `quest.quest-and-reward-design` (0.204) — both new, both about system
+  interfaces; scoped apart deliberately (teaching versus paying) and
+  cross-linked through the system cluster.
+
+Each new record was also scoped in its own text against its nearest existing
+neighbour before drafting: opening pages against promise consistency and
+genre signaling; multiple viewpoints against information control and psychic
+distance; subplots against complications and causal escalation; setting as
+pressure against description and specificity; quests against the quest trope;
+parties against ensemble-cast dynamics and encounter teamwork; enemy design
+against advancement rate; onboarding against system-as-narrator intrusion;
+the hub against the academy story and the base-building profile; the villain
+protagonist against the antihero; coming-of-age against internal and external
+arcs; amnesia against hidden identity.
+
+One incidental finding worth recording: "supplies" ranks as a shared
+high-weight term across several pairs. It is a drafting tic in the sources
+sections of records written in this pass, not a signal about content — a
+reminder that a similarity score measures wording, and that a corpus written
+to a fixed template will always score its own scaffolding.
+
+## Link graph after Batch 13
+
+459 mutual pairs across 142 records (was 399 across 130). The twelve new
+records were drafted with five hand-chosen links each under the policy;
+`qa/relink.py` then reciprocated those into 60 existing records. No
+algorithmic fill was needed — degree fill and cross-family fill both added
+zero — because every new record already met the policy on its own. Zero
+orphans, zero one-way links, zero records without a cross-family link.
