@@ -99,6 +99,26 @@ individual picks are shown to actually matter later.
 - **Chosen perks that never resurface**, where a dramatized choice moment
   is never paid off by the perk actually mattering to a later scene.
 
+## Visibility, consequences, and cross-mechanic interaction
+
+Discrete upgrades are unusually easy to make visible, because they have
+names. A named perk can be announced, listed, boasted about, recorded by a
+guild, and recognized by an opponent who has fought someone with the same
+one — which turns a mechanical choice into a social signature. If the story
+prefers characters to be read through behavior rather than labels, the same
+upgrades can stay private and surface only in what a character turns out to
+be able to do. Both work; drifting between them is what confuses readers
+about how legible this world is meant to be.
+
+At the scale of a society, a system of named, selectable upgrades implies
+training that teaches toward them, institutions that certify them, and a
+market for the rare ones — and implies people whose chosen perks made them
+unemployable, which is a texture progression settings often skip. Perks also
+interact with specialization and respec: a system where selections are
+permanent makes each one a commitment worth dramatizing, while freely
+reassignable perks are closer to equipment, and are better treated as such
+in the prose than given the weight of an identity choice.
+
 ## Questions for the author
 
 - When a character gains a perk, feat, or talent, is the choice

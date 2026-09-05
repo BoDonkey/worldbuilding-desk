@@ -84,7 +84,7 @@ particular maneuver worked.
   actions in a row with no established reason (an ability, a
   speed advantage) while opponents simply wait their narrative turn.
 
-## Progression, failure behavior, and cross-mechanic interaction
+## Progression, failure behavior, visibility, and cross-mechanic interaction
 
 Action economy interacts directly with progression: an ability that grants
 an extra action, an interrupt, or a way to act out of turn is often far more
@@ -96,6 +96,19 @@ simultaneously is facing a harder action-economy problem than raw
 individual strength comparisons would suggest, which is part of why
 "surrounded" reads as dangerous even against individually weaker
 opponents.
+
+Action economy is usually invisible to characters and only semi-visible to
+readers, which is precisely what makes it easy to break without anyone
+noticing at the time. Characters in a fight do not perceive turn order; they
+perceive being outnumbered, being too slow, or having no opening. A reader
+perceives the economy indirectly, through whether a scene's outcomes feel
+earned. This asymmetry cuts both ways: an author can quietly cheat the
+action economy and get away with it in the moment, and readers who cannot
+articulate the rule will still register its violation as a fight that felt
+unearned. In systems where characters *can* see the economy — visible
+turn-based interfaces, initiative displays, speed statistics — it becomes a
+tactical resource characters can reason about aloud, which is a distinctly
+different kind of fight scene and a different promise to the reader.
 
 ## Common failure modes
 

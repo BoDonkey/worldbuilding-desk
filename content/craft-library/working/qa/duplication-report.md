@@ -347,3 +347,101 @@ was pinned.
 - Recommendation 4: five records declaring `source_confidence: mixed` on a
   single source (see `qa/citation-audit.md`).
 - Recommendation 5: Batch 13, now unblocked, drafted against the new policy.
+
+---
+
+# Remediation pass 2 — sections and sourcing marks (2026-09-05)
+
+Closes the last two open recommendations from audit pass A. With this pass,
+**every structural finding from that audit is resolved**: the audit now
+reports zero required-section gaps, zero enum violations, zero naming
+mismatches, zero broken or one-way links, and zero orphans.
+
+## Required sections filled (20 records)
+
+Each of the 20 flagged records was read before editing rather than patched
+from the keyword report, and each addition was written to that record's own
+subject rather than from a template. The keyword flags proved accurate: all
+20 were genuine gaps.
+
+- **Visibility to characters and readers — 14 records.** The most-skipped
+  requirement in the corpus, and the one that most changes coaching advice.
+  Ten records already carried a "Progression, failure behavior, and
+  cross-mechanic interaction" section and had visibility added to it (the
+  heading now names visibility explicitly); four had no such section and
+  received one.
+- **Exploits, edge cases, and interaction — 6 records**, including new
+  sections for `experience-sources-and-milestone-growth`,
+  `institutions-labor-and-governance`, and `medicine-religion-and-crime`.
+- **Consequences — 4 records**, including the social and economic
+  consequences of `vertical-vs-horizontal-progression` and of
+  `visible-vs-hidden-systems`, both of which had treated their subject purely
+  as a pacing or POV decision.
+- **Progression and failure behaviour — 3 records.**
+
+Three outright missing top-level sections were also written:
+
+- `craft.comparison.resource.qi-versus-mana` gained the "Revision or design
+  experiments" section it had been missing since Batch 3 — nine batches
+  during which it was the corpus's flagship comparison record.
+- `craft.trope.fatigue.overused-litrpg-trope-cluster` gained "Common forms
+  and variants" and "Common failure modes". Both were written to preserve the
+  record's deliberate position: its failure-modes section names the failure
+  of using a convention unexamined *and* the failure of overreacting to
+  fatigue talk — dropping a convention the author wants, treating "subverted"
+  as automatically better than "executed well", or hedging until the book
+  delivers neither promise. The second direction is the one a coach is more
+  likely to cause.
+
+### One length-band waiver
+
+The fatigue-cluster record now runs 1,700 words against a 1,400-word
+guideline. The handoff calls that band "typical" rather than absolute, and
+this record consolidates five distinct conventions that each need their own
+promise, fatigue mechanism, and freshening strategy; splitting it into five
+records would give each a thinner evidence base than the single source
+supports. The waiver is recorded in `qa/audit_corpus.py` with its reason so
+it stays a decision rather than drift, and is flagged for the author's
+editorial pass. `qi-versus-mana` was tightened to land at 1,799 words, inside
+the comparison ceiling.
+
+## Sourcing marks — finding retracted
+
+Audit pass A's recommendation 4 ("five records overstate `mixed` on a single
+source") **was wrong and is retracted**; see `qa/citation-audit.md` for the
+full correction. Reading the five sourcing notes showed that four of them
+already explain their mixture as a well-supported principle extended by this
+pass's own synthesis or adaptation — a legitimate use of `mixed` that the
+handoff had simply never disambiguated from "a mixture of sources."
+
+The fix was therefore definitional rather than record-by-record: the handoff
+now defines all four `source_confidence` values and requires a `mixed`
+record's sourcing note to say which kind of mixture it means.
+`qa/audit_corpus.py` now tests for that explanation instead of counting
+sources. One genuine change resulted —
+`craft.trope.structure.sacrifice-and-return` moved to `contested`, which its
+own note had already described in all but name.
+
+The lesson is worth keeping: a whole-corpus script is good at finding places
+where records disagree with each other, and bad at knowing which side of the
+disagreement is right. Both of this pass's tooling changes came from reading
+records the tool had confidently flagged.
+
+## Corpus state after both remediation passes
+
+| check | result |
+|---|---|
+| records | 130 (unchanged) |
+| required-section gaps | 0 |
+| enum violations / naming mismatches | 0 / 0 |
+| broken, one-way, or orphan links | 0 / 0 / 0 |
+| records outside the length band | 0 (1 waived with reason) |
+| `source_confidence` | 65 mixed, 52 limited, 12 high, 1 contested |
+| word count min / median / max | 707 / 987 / 1,799 |
+
+**Open, and not a structural problem:** 44 records rest on a single source at
+`limited`, and the two internal research documents are cited by 37 and 35
+records. That is a research task for a later pass, not a labeling one.
+
+**Next:** Batch 13, drafted under the new related-link policy — 50 records
+remain against the 180 target (18 `general`, 26 `system`, 24 `trope`).

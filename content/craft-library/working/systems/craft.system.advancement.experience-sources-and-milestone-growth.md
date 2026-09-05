@@ -104,6 +104,25 @@ the mismatch undermines trust in the system's internal logic.
   character conveniently whenever the plot needs a boost, rather than at
   consistent, meaningful story beats.
 
+## Exploits, edge cases, and interaction with other mechanics
+
+Any rule about what earns advancement is also a rule about what a clever
+character would farm, and a setting is more convincing when someone in it
+has noticed. If killing grants experience, someone is breeding or
+stockpiling things to kill; if discovery grants it, someone is
+manufacturing novelty; if quests grant it, someone is issuing trivial
+quests for a cut. The story does not have to dwell on this, but a world
+where the obvious exploit has apparently occurred to nobody reads as a game
+nobody else is playing.
+
+Milestone growth avoids most farming problems and acquires a different edge
+case: because it advances characters on story beats, it can hand a character
+power they did not visibly earn, which is the same effect the fake-
+progression pattern describes. It also interacts with any experience-
+sharing rule — parties, mentors, contribution splits — where the question of
+who gets credit is a social problem long before it is a mechanical one, and
+usually a better source of conflict.
+
 ## Questions for the author
 
 - What does this system credit as generating advancement, and does the

@@ -107,6 +107,26 @@ character tension.
   tradition's stated order (body before soul, or vice versa) is
   circumvented with no narrative engagement of the risk that should imply.
 
+## Progression, failure behavior, and visibility
+
+The two paths differ in how legible they are, which is much of their story
+value. Body cultivation is usually visible: it is written on the frame,
+the scars, the way a person moves through a doorway, and it can be
+estimated by a stranger across a room. Soul cultivation is typically
+unreadable to ordinary perception and legible only to specialists, to
+spiritual senses the setting has defined, or to nobody at all — which is
+why soul cultivators so often read as either serene or unsettling, and why
+underestimation plots attach to them so naturally.
+
+The asymmetry is worth using deliberately rather than inheriting. A world
+where physical refinement is visible and spiritual refinement is not will
+rank people by the thing it can see, and will be wrong about them in
+consistent, exploitable ways. Failure states are similarly asymmetric:
+body-cultivation setbacks tend to be injuries a reader can picture, while
+soul-cultivation setbacks are internal — deviation, fracture, a change in
+who the character is — and need the narration to make them perceptible, or
+they will register as a stated consequence rather than a felt one.
+
 ## Questions for the author
 
 - Does this character's specialization in body or soul cultivation create

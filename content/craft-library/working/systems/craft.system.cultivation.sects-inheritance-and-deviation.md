@@ -116,6 +116,38 @@ external threats.
   cultivation but never actually shown happening to any character,
   undermining the stakes it's meant to establish.
 
+## Progression, failure behavior, visibility, and cross-mechanic interaction
+
+Sects convert individual progression into an institutional matter, which
+changes what advancement costs. Resources arrive with obligation attached;
+advancement is often gated by a rank the sect confers rather than by
+capability alone; and a disciple's setback is also a political event within
+a hierarchy that was ranking them. Deviation is the characteristic failure
+state — a cultivation attempt going wrong in ways that damage the
+cultivator — and it is worth deciding early whether deviation is a private
+medical crisis or a public disgrace, because sects tend to make it the
+second.
+
+Visibility is largely institutional here. A sect knows what its disciples
+have been taught, what they were given, and often what rank they hold, and
+that record is legible to anyone with access to it — while a technique's
+actual details are typically guarded, which is what makes inheritance worth
+stealing. Reader visibility can differ deliberately: a reader who knows a
+transmitted technique is flawed before the disciple does is reading a
+different kind of scene than one who discovers it with them.
+
+## Exploits, edge cases, and interaction with other mechanics
+
+Any system of transmitted technique invites theft, forgery, and
+adulteration — an incomplete manual sold as complete is a plot the genre
+returns to for good reason. Sect politics invite resource diversion,
+favoritism dressed as merit, and disciples cultivated as assets. And where
+deviation is possible, someone will have worked out how to induce it in a
+rival. A note on sourcing carried over from this record's origin: qi
+deviation as described here is a modern genre convention, not a documented
+historical practice, and this section reasons about the convention rather
+than about any real tradition.
+
 ## Questions for the author
 
 - Does this sect's internal politics or hierarchy actually affect the

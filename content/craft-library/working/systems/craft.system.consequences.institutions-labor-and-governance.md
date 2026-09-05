@@ -112,6 +112,26 @@ by individuals more powerful than its institutions.
   as flavor with no actual competition, hierarchy dispute, or governance
   function affecting plot.
 
+## Exploits, edge cases, and interaction with other mechanics
+
+Institutions are where power systems get gamed, and a setting becomes
+noticeably more solid once it admits that. Licensing bodies can be captured
+by the people they license; guilds can restrict supply to keep prices high;
+a governance structure that tracks personal power invites duels as
+succession, and one that does not invites the strongest people in the
+society to ask why they should obey it. Any credential a system can verify
+can also be forged, rented, or inherited by someone who did not earn it —
+and who has an interest in that forgery is often a better plot engine than
+the forgery itself.
+
+The sharpest edge case is labor. If power can replace work, someone owns
+that power, and the question of whether it displaced workers, enriched a
+few, or was quietly restricted to protect an existing order is usually more
+interesting than the magic. This record interacts most directly with
+universal-versus-class-bound access: who can reach the system determines
+which of these exploits are available to whom, and a story that has settled
+access has usually already answered half of this.
+
 ## Questions for the author
 
 - Given this setting's power distribution, why hasn't formal governance

@@ -86,7 +86,7 @@ immediate legibility a class name provides.
 - A scene where class constraints prevent a character from taking an
   otherwise-available action, creating a specific kind of narrative tension.
 
-## Progression, failure behavior, and cross-mechanic interaction
+## Progression, failure behavior, visibility, and cross-mechanic interaction
 
 Class systems interact strongly with genre archetype and reader
 expectation — a "Rogue" signals a set of narrative possibilities before the
@@ -99,6 +99,20 @@ casually abandon a class undercuts any story treating class choice as
 meaningful, while a system that makes respec impossible or extremely costly
 raises the stakes of the original choice but can also trap a character in an
 identity the story wants to complicate.
+
+Visibility differs sharply between the two models and is worth deciding
+deliberately. A class is usually legible: characters can often read each
+other's role at a glance, through a guild registration, a title, an
+appraisal ability, or simply the equipment the class implies — which makes
+class a social fact other characters can act on, and makes concealing one a
+plot in itself. Skill-based growth is typically opaque: what a character can
+do is learned by watching them do it, which favors reveals, ambushes, and
+underestimation, and makes a reputation something built rather than
+displayed. Reader visibility is a separate lever. A reader may see a full
+skill list the other characters cannot, which trades suspense for dramatic
+irony, or may be held to what the POV character knows, which preserves
+surprise at the cost of the accumulation pleasure readers of this genre
+often come for.
 
 ## Common failure modes
 

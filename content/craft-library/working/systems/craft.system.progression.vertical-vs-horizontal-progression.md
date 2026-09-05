@@ -94,7 +94,7 @@ just a bigger output.
   acknowledgment of why (a symptom of unmanaged pure-vertical growth,
   closely related to the side-cast-obsolescence pattern).
 
-## Progression, failure behavior, and cross-mechanic interaction
+## Progression, failure behavior, visibility, and cross-mechanic interaction
 
 Pure vertical growth interacts badly with multi-character casts, since a
 uniform power increase for the protagonist widens the gap with every
@@ -108,6 +108,19 @@ gaining new options doesn't necessarily make everyone else's contributions
 obsolete, but can create its own failure mode if the options accumulate
 without ever mattering (an ability the character never actually needs to
 use).
+
+The two models also imply different social and economic consequences, which
+is easy to overlook while treating this as a pacing decision. A world whose
+system rewards vertical growth tends to concentrate power: whoever started
+earliest or highest stays ahead, differences compound, and institutions
+organize around ranking — which produces hierarchies, gatekeeping, and
+ordinary people who are simply irrelevant to the story's conflicts.
+Horizontal growth distributes it: many people with different capabilities
+and no single ladder produces specialization, trade, interdependence, and a
+world where an ordinary character's narrow competence still matters. Neither
+is more realistic, but a setting that describes itself one way while its
+system works the other tends to feel subtly incoherent, and readers often
+register that as flat worldbuilding without being able to name the cause.
 
 ## Common failure modes
 

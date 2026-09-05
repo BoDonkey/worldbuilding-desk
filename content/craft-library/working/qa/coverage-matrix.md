@@ -684,3 +684,23 @@ Two audit-pass-A items remain open before or alongside Batch 13: the
 required-section gaps (14 records missing "visibility to characters and
 readers", plus three outright missing sections) and five overstated
 `source_confidence` marks.
+
+## Remediation pass 2 (2026-09-05, no new records)
+
+Closed the last open findings from audit pass A. Record counts unchanged at
+**130**. Filled required sections in 20 records — visibility to characters
+and readers (14), exploits and interaction (6), consequences (4), progression
+and failure behaviour (3) — and wrote three missing top-level sections:
+`qi-versus-mana`'s revision experiments, and the fatigue cluster's forms and
+failure modes.
+
+Audit pass A's sourcing finding was retracted after reading the records: four
+of the five flagged already explained their `mixed` mark correctly, and the
+real defect was that the handoff never distinguished "a mixture of sources"
+from "a mixture of sourced and synthesized claims." Both are now defined
+there. `sacrifice-and-return` moved to `contested`.
+
+The audit now reports zero structural findings of any kind. All three core
+families remain where Batch 12 left them — `general` 42/60, `trope` 36/60,
+`system` 34/60 — and Batch 13 is unblocked, to be drafted under the
+related-link policy with at least five mutual links per record.

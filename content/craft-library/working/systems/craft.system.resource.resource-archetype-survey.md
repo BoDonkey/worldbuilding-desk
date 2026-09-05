@@ -100,7 +100,7 @@ worldbuilding choice.
   identically to a calm, rested mana pool, with no emotional texture
   attached to its generation or expenditure at all.
 
-## Progression, failure behavior, and cross-mechanic interaction
+## Progression, failure behavior, visibility, and cross-mechanic interaction
 
 Different archetypes imply different failure behaviors worth deciding
 deliberately: running out of stamina implies collapse or vulnerability;
@@ -113,6 +113,19 @@ resource pairs naturally with a berserker-adjacent role, while a faith
 resource implies an institutional or relational structure (a priesthood, a
 patron) that the crafting-and-economy and systemic-social-consequences
 records both touch on from other angles.
+
+Each archetype also carries a default visibility, which is worth naming
+rather than inheriting. Blood and life force tend to be conspicuous — their
+expenditure is written on the body, so bystanders can see the cost and the
+reader cannot miss it. Stamina and rage announce themselves through
+behavior. Faith, psionics, and soul or spirit resources are usually private,
+legible only to the character or to specialists, which is what makes them
+suited to stories about interiority, concealment, and being misread. A
+depleting resource nobody can perceive produces no social pressure at all,
+which may be exactly the intent — but if the intended effect is an ally
+noticing the protagonist is running out, the resource has to be perceivable
+by someone. The reader's access is a separate lever: narration can quantify
+what no character can see.
 
 ## Common failure modes
 

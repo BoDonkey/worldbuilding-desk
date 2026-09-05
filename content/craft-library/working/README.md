@@ -463,3 +463,32 @@ re-run cannot reintroduce them.
 readers" treatment; `qi-versus-mana` missing its experiments section; the
 fatigue cluster missing two sections) and five records declaring
 `source_confidence: mixed` on a single source.
+
+### Remediation pass 2 — sections and sourcing marks (done, no new records)
+
+Closed the last findings from audit pass A. Filled the handoff's required
+sections in 20 records: visibility to characters and readers (14), exploits
+and interaction (6), consequences (4), progression and failure behaviour (3).
+Wrote three missing top-level sections — `qi-versus-mana` had been without
+its revision-experiments section since Batch 3, and the fatigue cluster
+needed forms/variants and failure modes written to preserve its deliberate
+refusal to treat the conventions as a blacklist.
+
+Audit pass A's claim that five records overstated `source_confidence: mixed`
+**was wrong and is retracted** (see `qa/citation-audit.md`). Four of the five
+already explained their mixture correctly; the real defect was that `mixed`
+had two undistinguished meanings corpus-wide. The handoff now defines all
+four values and requires the sourcing note to say which mixture applies.
+`sacrifice-and-return` moved to `contested`, which its own note had already
+described in all but name.
+
+The audit now reports **zero structural findings**: no section gaps, no enum
+or naming violations, no broken, one-way, or orphan links, nothing outside
+the length band except one waiver recorded with its reason (the fatigue
+cluster at 1,700 words).
+
+**Next: Batch 13.** 50 records remain against the 180 target — 18 `general`,
+26 `system`, 24 `trope` — to be drafted under the related-link policy. The
+standing research weakness is unchanged and is not structural: 44 records
+rest on a single source at `limited`, and the two internal research documents
+are cited by 37 and 35 records respectively.

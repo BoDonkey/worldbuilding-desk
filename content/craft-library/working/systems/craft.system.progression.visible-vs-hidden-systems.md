@@ -92,7 +92,7 @@ about how much the reader is meant to know and when.
   that has been fully transparent suddenly withholds information from the
   character with no in-world explanation.
 
-## Progression, failure behavior, and cross-mechanic interaction
+## Progression, failure behavior, visibility, and cross-mechanic interaction
 
 Visibility interacts directly with tension: a hidden system raises stakes
 through uncertainty (the character doesn't know their own limits, which can
@@ -102,6 +102,19 @@ character is). Visibility can also change over the course of a story — a
 system that starts opaque and becomes legible as the character gains
 understanding is itself a progression arc, distinct from the character's
 power growth.
+
+System visibility has consequences beyond the protagonist's experience of
+it. If everyone can see their own numbers, a society will organize around
+them: hiring by stat, marriage by tier, insurance by resistance, schooling
+aimed at whatever the system rewards, and a bureaucracy that exists to
+verify claims. If the system is visible only to a few, those few hold a
+professional monopoly — appraisers, priests, registrars — and the story
+inherits gatekeepers whose honesty is a live question. If it is hidden from
+everyone, the setting keeps its ordinary texture and the system stays a
+private mystery. Authors often choose visibility for its effect on one
+protagonist and then write a world that has somehow not noticed the same
+information; asking what a competent institution would do with this system's
+data usually surfaces the inconsistency early.
 
 ## Common failure modes
 

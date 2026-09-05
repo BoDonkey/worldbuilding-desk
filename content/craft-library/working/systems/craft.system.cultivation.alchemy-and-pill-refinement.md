@@ -100,7 +100,7 @@ dramatize.
   reliable power-ups regardless of who made them or under what
   conditions, with no risk or quality variation ever shown to matter.
 
-## Progression, failure behavior, and cross-mechanic interaction
+## Progression, failure behavior, visibility, and cross-mechanic interaction
 
 Pill refinement interacts directly with the crafting-and-economy-loops
 record's scarcity and market-consistency concerns, since rare materials
@@ -112,6 +112,19 @@ describe as characteristic of the subgenre. Failure in refinement (a
 botched pill, a wasted rare material, an accidental poisoning) is worth
 deciding deliberately as a real, dramatizable cost rather than an
 abstraction.
+
+Pill quality is often only partly visible, and that partial visibility is
+where alchemy generates plot. A buyer may be able to judge grade by color,
+scent, or a formal appraisal, or may be entirely dependent on the seller's
+word — which makes counterfeiting, adulteration, and reputation into
+structural features rather than incidental ones. Whether a character can
+perceive what a pill is doing to them matters too: a boost whose cost is
+hidden until later supports a very different story than one whose cost is
+stated on the label. For the reader, the question is whether they are told
+the pill's true grade before the character learns it. Telling them early
+buys dread; withholding buys surprise. A record of the choice is worth
+keeping, since a story that switches between the two arbitrarily teaches
+readers they cannot trust either mode.
 
 ## Common failure modes
 

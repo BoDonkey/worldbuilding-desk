@@ -105,7 +105,7 @@ implications.
   pure narrative convenience rather than a fact about how this society
   actually works.
 
-## Progression, failure behavior, and cross-mechanic interaction
+## Progression, failure behavior, visibility, and cross-mechanic interaction
 
 Access models interact directly with the systemic-social-consequences
 pattern: a bloodline-gated system implies institutions (inheritance law,
@@ -118,6 +118,18 @@ genuinely separate design questions — a system can be universally
 accessible and class-structured (anyone can become any class through
 effort) or class-bound and skill-based (only certain bloodlines can use
 the freeform skill system at all).
+
+Whether access is *visible* matters as much as how it is distributed. If a
+bloodline, awakening, or granted class leaves a legible mark — an eye color,
+a brand, a public ceremony, a record only officials can query — then
+exclusion can be enforced casually and continuously, and the story acquires
+the texture of a society sorting people on sight. If access is invisible
+until demonstrated, the same system produces passing, concealment, discovery
+plots, and institutions that must test rather than look. Reader visibility
+is again a separate choice: a reader told early that the protagonist carries
+a gated bloodline reads their exclusion as dramatic irony, while a reader
+who learns it alongside the character reads the same scene as revelation.
+Neither is more honest; they promise different books.
 
 ## Common failure modes
 

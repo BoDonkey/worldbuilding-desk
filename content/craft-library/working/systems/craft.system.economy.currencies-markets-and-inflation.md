@@ -97,7 +97,7 @@ manipulates, a good made cheap by the character's own success).
   orders of magnitude across a story continuing to purchase goods at prices
   that never reflect any economic pressure from that accumulation.
 
-## Progression, failure behavior, and cross-mechanic interaction
+## Progression, failure behavior, visibility, and cross-mechanic interaction
 
 Currency and market consistency interact directly with the crafting-and-
 economy-loops record's scarcity and market guidance, applied here
@@ -110,6 +110,18 @@ reward economy that consistently outpaces any sink mechanism will,
 eventually, either need the story to acknowledge the resulting inflation or
 simply stop tracking currency as meaningful at all — a legitimate choice,
 but one worth making deliberately rather than by default.
+
+Almost nobody in an economy can see the economy, and that gap is usable.
+Characters experience inflation as prices that feel wrong, a wage that no
+longer covers rent, or a merchant who will not take the coin they were paid
+in — not as a supply curve. A setting where some institution *can* see the
+aggregate (a merchant guild with records, a treasury, a system interface
+quoting market rates) has effectively given someone economic sight, and that
+asymmetry is itself a power the story can dramatize. For the reader, the
+choice is whether the narration explains the mechanism or lets them infer it
+from prices. Explaining converts the economy into worldbuilding the reader
+admires; withholding lets them feel the squeeze alongside the characters,
+and rewards the attentive reader who works it out first.
 
 ## Common failure modes
 

@@ -119,6 +119,26 @@ thought through past its immediate use to the protagonist.
   a mundane historical system despite the setting's power system implying
   they should function differently.
 
+## Exploits, edge cases, and interaction with other mechanics
+
+Each of these three domains has an obvious abuse that a story gains texture
+by acknowledging. Medicine: if healing is purchasable, then health tracks
+wealth, and someone is rationing, insuring, or counterfeiting it — and a
+healer who can restore anything is also someone who can withhold it.
+Religion: if divine power is verifiable, then faith becomes falsifiable, and
+the interesting characters are the ones whose authority depends on a claim
+the system could test — as well as those who have found how to produce the
+signs without the substance. Crime: every capability the system grants is
+also a criminal method, and every detection ability is also a surveillance
+tool, so a setting with mind-reading has either an unusually invasive state
+or a very good reason it does not.
+
+The common edge case across all three is verification. Where power is real
+and testable, institutions will build tests, and those tests will be gamed,
+bribed, and occasionally wrong about someone the reader knows the truth
+about — which is frequently the most dramatically useful failure available
+here.
+
 ## Questions for the author
 
 - If healing magic exists in this setting, does access to it carry social

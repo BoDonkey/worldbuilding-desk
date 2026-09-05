@@ -104,7 +104,7 @@ behind a tier change than the number attached to it.
   descriptions inconsistently within the same system, confusing the reader
   about which mode the story is using.
 
-## Progression, failure behavior, and cross-mechanic interaction
+## Progression, failure behavior, visibility, and cross-mechanic interaction
 
 Numeric systems tend to make failure and setbacks easy to quantify (losing
 exactly 200 experience, dropping from level 30 to 29), which can feel
@@ -117,6 +117,19 @@ tiered systems often require the story to dramatize a comparison instead of
 stating it, which can be a feature (forcing scenes to show relative
 strength) or a limitation (making direct power comparisons awkward to convey
 quickly).
+
+It is worth separating what the *reader* sees from what the *characters*
+see, because this comparison is easy to collapse into a single decision when
+it is really two. A story can show the reader precise numbers that no
+character has access to (the narration quantifies what the protagonist only
+feels), or give characters an in-world interface full of numbers while
+narrating in qualitative language. Named tiers are more often diegetic —
+characters use the tier names aloud, because the culture around the system
+invented them — while raw numbers more often belong to an interface, which
+is part of why an unexplained floating number can read as intrusive in a
+setting that otherwise has no screens in it. If characters can see each
+other's numbers or tiers, the system also becomes a social ranking device,
+and the story inherits every question a visible hierarchy raises.
 
 ## Questions for the author
 

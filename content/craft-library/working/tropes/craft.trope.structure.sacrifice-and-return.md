@@ -36,7 +36,7 @@ related:
   - craft.trope.structure.transformation
 source_ids:
   - src.book.campbell-hero-with-a-thousand-faces
-source_confidence: mixed
+source_confidence: contested
 ---
 
 ## What it is
@@ -176,4 +176,10 @@ Campbell's comparative-mythology synthesis
 ([[src.book.campbell-hero-with-a-thousand-faces]]), contested by later
 scholarship as overgeneralized across cultures and used here as one
 influential lens rather than a universal template. `source_confidence` is
-`mixed` accordingly.
+`contested` accordingly: the monomyth framework this record's structural
+pairing draws on is itself disputed in comparative-mythology scholarship,
+which is a different situation from a claim that is merely thinly sourced.
+The record's coaching value does not depend on the framework being
+universal — it treats the pairing as one recognizable shape among others —
+but an author reading it should know the lens is contested rather than
+settled.

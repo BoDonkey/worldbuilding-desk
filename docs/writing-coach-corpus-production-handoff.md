@@ -402,6 +402,32 @@ Use `source_confidence` values `high`, `mixed`, `limited`, or `contested`.
 Confidence describes the support for the document's claims, not how strongly
 the advice should be delivered.
 
+**Clarified 2026-09-05.** An audit found the first twelve batches using
+`mixed` in two different senses without saying which, so the value could not
+be read consistently across the corpus. The four values mean:
+
+- `high` — the record's substantive claims are supported by two or more
+  independent, established sources that make the claims directly.
+- `mixed` — support is uneven *within the record*. This covers two distinct
+  situations, and **the sourcing note must say which applies**: either the
+  record draws on several sources of differing strength, or a well-supported
+  principle has been extended by this drafting pass's own synthesis,
+  adaptation, or transfer to a context the source does not itself address.
+  A single-source record can legitimately be `mixed` under the second sense
+  — a widely taught screenwriting concept adapted to prose, for instance —
+  but only if it says so.
+- `limited` — the record rests on one source, on sources weaker than the
+  claims would ideally have, or largely on first-principles craft reasoning,
+  and no better support was available to the drafting pass.
+- `contested` — the underlying source or framework is itself disputed by
+  later or competing scholarship. This is a statement about the state of the
+  evidence, not about the record's usefulness: a contested framework can
+  still be a useful lens, and the record should present it as one.
+
+A record's `source_confidence` is a claim about evidence that a reader may
+check, so it should be readable from the sourcing note alone without
+counting entries in `source_ids`.
+
 ## Voice and Coaching Standard
 
 The voice should feel like an observant, well-read coach working beside an

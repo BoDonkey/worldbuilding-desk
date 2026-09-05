@@ -288,3 +288,57 @@ records respectively. That concentration is expected given how this corpus
 was produced, but it means the internal research is load-bearing for roughly
 half the library. The Batch 12 caution stands: internal research is not
 independent corroboration of itself.
+
+## Correction to the above (2026-09-05, remediation pass 2)
+
+**The finding logged immediately above was wrong, and is retracted here
+rather than quietly edited.** It reported five records as overstating their
+support by declaring `source_confidence: mixed` while citing a single
+source. Reading the five sourcing notes shows something different: each one
+already explains, in its own text, exactly what the mixture is — a
+well-supported principle extended by this drafting pass's synthesis,
+adaptation, or transfer to a context the source does not itself address.
+
+- `craft.general.scene.scene-turns` — McKee's value-shift model is widely
+  taught, but its transfer from screenwriting to prose scenes is this pass's
+  adaptation, and the note says so.
+- `craft.general.plot.reader-expectation-and-genre-signaling` — the
+  promise-and-expectation principle is established; the signaling taxonomy is
+  this pass's synthesis.
+- `craft.trope.role.trickster` — Propp's function-based framing is applied
+  beyond the corpus he studied, explicitly and with the limit stated.
+- `craft.general.plot.negative-space-problems-power-cannot-solve` — the
+  practitioner-essay pattern is sourced; the dungeon-core modifier and the
+  product angle are marked as synthesis and product note respectively.
+
+The real defect was in the vocabulary, not the records: `mixed` had been
+carrying two distinct meanings across the corpus — a mixture of *sources*
+and a mixture of *sourced and synthesized claims* — with nothing saying
+which applied where, so the value could not be read consistently. That is
+now fixed at the definition level. The handoff's citation section defines
+all four values explicitly (added 2026-09-05) and requires a `mixed` record's
+sourcing note to state which kind of mixture it means. All four records above
+already satisfy that requirement.
+
+`qa/audit_corpus.py` was corrected to match: it now flags a single-source
+`mixed` record only when the sourcing note does *not* explain the mixture,
+rather than treating source count alone as the test.
+
+### One genuine change
+
+`craft.trope.structure.sacrifice-and-return` moved from `mixed` to
+**`contested`**. Its own note already said the Campbell monomyth framework it
+draws on is "contested by later scholarship as overgeneralized across
+cultures" — which is the definition of `contested`, a statement about the
+state of the evidence rather than about the record's usefulness. The record's
+sourcing note now explains that distinction and says plainly that its
+coaching value does not depend on the framework being universal.
+
+Corpus-wide `source_confidence` after this pass: 65 mixed, 52 limited, 12
+high, 1 contested.
+
+**Standing caution, unchanged:** 44 records legitimately at `limited` with a
+single source remain the corpus's largest sourcing weakness, and the two
+internal research documents are still cited by 37 and 35 records
+respectively. Neither is a labeling problem; both are research problems for
+a later pass.

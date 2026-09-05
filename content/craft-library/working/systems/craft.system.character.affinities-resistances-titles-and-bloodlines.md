@@ -99,7 +99,7 @@ story's own agency claims.
   bloodline trait treated narratively as though the character had
   accomplished something by simply possessing it.
 
-## Progression, failure behavior, and cross-mechanic interaction
+## Progression, failure behavior, visibility, and cross-mechanic interaction
 
 These elements interact directly with the systemic-social-consequences
 record: a bloodline with social weight implies institutions (inheritance
@@ -111,6 +111,21 @@ carries its own stakes. Affinities and resistances interact with the
 classes-versus-skill-based-growth comparison, since an innate affinity can
 function similarly to a soft class-gate, shaping what capabilities are
 easily available to a character without formally restricting them.
+
+The four elements differ in visibility, and the differences are where much
+of their story value sits. Titles are usually the most public — they exist
+to be seen, announced, and reacted to, which is what makes a title a social
+mechanic rather than a statistical one. Bloodlines sit in the middle: often
+known to institutions and families even when invisible on the body, which is
+why they generate records, registries, and people who know what a character
+is before the character does. Affinities and resistances are frequently the
+most concealed, discovered only when tested, which is what allows a
+resistance to function as a reversal in a scene rather than a stat. Deciding
+which of these a stranger can perceive, which an institution can look up,
+and which the character themselves knows will shape more scenes than the
+traits' mechanical values do. The reader's view is a separate decision again:
+a reader who knows about an unrevealed bloodline is being offered dramatic
+irony, not information.
 
 ## Common failure modes
 

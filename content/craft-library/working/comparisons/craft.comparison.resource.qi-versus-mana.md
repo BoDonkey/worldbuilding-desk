@@ -142,6 +142,30 @@ involved, the inverse of classic LitRPG's number-forward appeal.
 - Who else in this world has access to the same resource, and what does
   that imply about society, economy, and power structures?
 
+## Progression, failure behavior, and visibility
+
+The two framings also progress and fail differently, which is often where a
+reskinned system gives itself away. Mana-shaped resources typically grow by
+capacity — a larger pool, faster regeneration, cheaper costs — so failure
+looks like running out at the wrong moment, and recovery is a matter of time
+or access. Qi-shaped resources typically grow by refinement — the same
+quantity made purer, or the practitioner made able to hold what would
+previously have harmed them — so failure looks like a foundation built too
+fast, a stalled stage, or damage taken from one's own power rather than from
+an opponent. A story that says "qi" but fails only by running dry has
+quietly chosen mana's shape — a legitimate choice, worth making
+knowingly.
+
+Visibility differs in the same direction. An ambient resource invites
+instruments, wards, and specialists who can measure it, and readily becomes
+something institutions can perceive and price. An internal, cultivated
+resource is usually private — legible to the practitioner, sometimes to a
+master or a spiritual sense the setting defines, and otherwise inferred from
+bearing and reputation. That privacy is what makes concealed cultivation,
+underestimation, and the sudden reveal of a stage such durable plots, and
+what makes an appraisal ability quietly change a cultivation setting more
+than it changes a mana one.
+
 ## Common exploits, edge cases, and interaction with other mechanics
 
 An externally sourced, ambient resource (mana) raises questions a purely
@@ -156,6 +180,31 @@ doesn't. Both interact with class/role systems, crafting (enchantment vs.
 alchemy/pill refinement), and social status differently — worth mapping
 explicitly rather than assuming either resource behaves like the other once
 combined with other mechanics.
+
+## Revision or design experiments
+
+1. Rename the resource, temporarily, to a neutral invented term and reread a
+   scene that leans on it. If nothing about the scene changes, the story is
+   drawing on the label's borrowed resonance rather than on any behavior the
+   system actually has — worth knowing before deciding whether to build the
+   behavior or keep the neutral name.
+2. Write the resource's failure state as a scene rather than a rule: what a
+   character looks like when it runs out, or when refinement goes wrong.
+   Whichever comes naturally is usually the tradition the draft actually
+   operates in.
+3. Draft one paragraph, not for the manuscript, stating which
+   transliteration and tradition the term is drawn from and what the story
+   does and does not claim about it. Keeping it in the notes tends to keep
+   the prose consistent, and makes an eventual author's note easier to write
+   honestly.
+4. If the setting runs both resources, write the scene where a practitioner
+   of one meets a practitioner of the other. Systems that were secretly one
+   resource with two names reveal it here: neither character finds anything
+   about the other strange.
+5. For an ambient system, write a page about someone who is not a
+   protagonist using the same resource commercially. If nothing plausible
+   comes, the resource is probably under-specified about who else can reach
+   it — the question the failure-modes section raises.
 
 ## When this advice does not apply
 

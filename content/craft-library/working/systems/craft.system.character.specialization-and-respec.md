@@ -98,7 +98,7 @@ undone) can undercut the story's own stated stakes.
   deeply identity-defining in the narration, in a system where respeccing
   is trivially easy and unlikely to carry real stakes.
 
-## Progression, failure behavior, and cross-mechanic interaction
+## Progression, failure behavior, visibility, and cross-mechanic interaction
 
 Respec availability interacts directly with the classes-versus-skill-based-
 growth comparison's discussion of identity stakes, and with the
@@ -110,6 +110,17 @@ interacts with narrative pacing: a permanent specialization choice made
 early can become a long-running constraint the plot has to work around or
 through, while easy respec removes that particular constraint but opens
 different story possibilities around adaptability and reinvention.
+
+Visibility changes what specialization costs socially. If a character's
+build is legible to others — through an appraisal ability, a guild record, or
+simply a reputation that precedes them — then specializing means being known
+for something, and being countered for it: opponents prepare, allies expect,
+and a respec becomes a public act with consequences beyond the character's
+own capability sheet. If builds are private, specialization is a secret
+advantage and respec is a quiet reinvention, which supports very different
+stories. Worth deciding separately: whether the *cost* of a respec is
+visible. A character who can quietly rebuild themselves reads differently
+from one whose neighbours can see what the change took from them.
 
 ## Common failure modes
 

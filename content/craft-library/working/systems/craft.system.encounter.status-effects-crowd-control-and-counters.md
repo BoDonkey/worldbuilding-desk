@@ -96,7 +96,7 @@ prophecy trope records.
   by an escape that isn't explained by any previously established
   mechanism.
 
-## Progression, failure behavior, and cross-mechanic interaction
+## Progression, failure behavior, visibility, and cross-mechanic interaction
 
 Status effects interact directly with action economy, since a stunned or
 disabled character functionally loses their turn or action for the
@@ -108,6 +108,19 @@ within the fight. Counters interact with the setup/payoff pattern most
 directly, since an unearned counter (introduced only at the moment it's
 needed) breaks the same fair-play contract that pattern addresses in plot
 structure generally.
+
+Whether a status effect is *visible* determines whether it can be countered,
+and therefore whether it produces tactics or just outcomes. If a poison
+announces itself — a visible mark, a system notification, a smell — then
+allies can respond, enemies can exploit it, and the effect becomes a problem
+characters solve. If it is hidden, it becomes a discovery, which is
+powerful once and frustrating if repeated. The same holds for durations: a
+character who knows a stun lasts six seconds fights differently from one who
+only knows they cannot move. For readers, unannounced effects raise the risk
+of an outcome reading as arbitrary — a fight lost to something they never
+saw — so a story that hides effects from its characters often still shows
+them to the reader, or plants the evidence early enough to be fair in
+hindsight.
 
 ## Common failure modes
 

@@ -108,6 +108,42 @@ dramatically.
   granular tactical tension the pool model is meant to provide if it's
   never shown running low enough to matter.
 
+## Progression, failure behavior, visibility, and consequences
+
+The two models fail differently, and the difference is felt rather than
+calculated. A pool fails gradually: a character runs low, rations, and
+finally runs dry, so the drama lives in the descent and the reader can
+anticipate it. A threshold fails discretely: the character either qualifies
+or does not, so the drama lives in the attempt and its aftermath, and a
+failed attempt usually needs its own consequence — lost accumulation, injury,
+a closed window — or the threshold becomes a door the character simply knocks
+on repeatedly.
+
+Visibility works differently too. Pools invite a legible gauge, whether an
+interface or a described sensation, and are easy to make perceivable to
+allies and enemies; thresholds are often private until crossed, which is why
+breakthrough moments are so often public reveals of a private accumulation.
+
+At the level of a society, pools tend to produce commerce — anything
+continuous can be measured, stored, sold, and taxed — while thresholds tend
+to produce hierarchy and ceremony, because a stepped qualification invites
+institutions to certify, gate, and rank it. A setting can run both at once,
+but it is worth noticing which one its economy and its politics actually
+grew around.
+
+## Exploits, edge cases, and interaction with other mechanics
+
+Each model implies its own abuses. Pools invite stockpiling, borrowing
+against future capacity, and topping up mid-fight from consumables — and
+anything that refills a pool cheaply quietly deletes the constraint the pool
+existed to create. Thresholds invite hovering just below a line to avoid
+triggering something, rushing a qualification with borrowed or artificial
+accumulation, and the classic cultivation problem of an unstable foundation
+bought by crossing too fast. Where the two models coexist — a pool that must
+reach a threshold to advance — the interaction is worth stating explicitly,
+since readers will otherwise infer a rule from the first example they see
+and notice when a later scene contradicts it.
+
 ## Questions for the author
 
 - For this resource, is the underlying model a continuous pool or a

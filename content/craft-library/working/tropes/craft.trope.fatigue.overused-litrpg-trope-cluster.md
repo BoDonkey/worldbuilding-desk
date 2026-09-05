@@ -74,6 +74,20 @@ presence. A coach that only names "this is popular" or only names "this
 tires some readers" gives an author half the picture; both facts matter to
 a deliberate choice.
 
+## Common forms and variants
+
+The five conventions below are this record's forms; each is treated in its
+own section rather than compressed into a list, because their promises and
+their fatigue mechanisms are genuinely different from one another and a
+single summary would flatten them. Two variations cut across all five.
+First, intensity: most appear on a spectrum from a light touch that few
+readers notice to a saturated version that becomes the book's identity, and
+fatigue reports cluster at the saturated end. Second, subgenre: what reads
+as overused in classic LitRPG may be the expected promise elsewhere — a
+power fantasy's overpowered protagonist is doing the job that subgenre's
+readers arrived for. Deliberate inversions of all five are common and are
+treated in the inversions-and-combinations record rather than repeated here.
+
 ## What it can look like on the page
 
 Common forms and variants for each of the five conventions, and the
@@ -152,6 +166,26 @@ with — or substitutes for — deeper character-level similarity. **What
 freshens it:** the same fix as the harem item above — distinct wants,
 voices, and relationships to the protagonist, independent of any
 description of appearance.
+
+## Common failure modes
+
+The failure modes worth naming here run in both directions, and the second
+direction is the one a coach is more likely to cause.
+
+Using a convention unexamined: adopting it because the genre supplied it
+rather than because the story wants what it offers, which tends to produce
+the saturated version by default, since nothing in the draft is deciding how
+much of it to use. Related: keeping the convention's shape after the story
+has outgrown its purpose — a companion who is still explaining mechanics the
+reader mastered twenty chapters ago.
+
+Overreacting to fatigue talk: dropping a convention the author actually
+wants to write, on the strength of a list like this one; treating
+"subverted" as automatically better than "executed well," which produces
+its own recognizable fatigue; or hedging a convention so thoroughly that the
+book delivers neither the original promise nor a clear alternative. A
+reader who came for this convention and found a half-hearted apology for it
+has been served worse than one who found it done wholeheartedly.
 
 ## Questions for the author
 
