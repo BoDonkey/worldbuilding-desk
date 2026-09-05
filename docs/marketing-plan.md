@@ -1,6 +1,6 @@
 # Marketing Plan — Worldbuilding Desk v1
 
-Last updated: 2026-08-03 · Companion to `docs/road-to-market.md` Phases 5–6.
+Last updated: 2026-08-30 · Companion to `docs/road-to-market.md` Phases 5–6.
 
 Grounded in `docs/archive/deep-research-report.md` (2026-05 market analysis).
 Supersedes `docs/archive/brand-positioning.md`: the February "Consistency
@@ -47,16 +47,31 @@ Narrative designers are not a wedge.
    becoming a disconnected reference chore.
 3. **Human authority.** AI proposes with evidence; nothing becomes canon
    without the author's explicit acceptance. No silent rewrites, ever.
-4. **Local-first, BYOK.** Manuscripts live on the author's machine. Only the
-   context needed for an author-invoked request is sent to the provider they
-   configure, or AI can run fully locally through Ollama. Provider retention
-   and training claims must be qualified against that provider's current API
-   terms. Supporting pillar — pair it with workflow value, don't lead with it.
+4. **Private by design.** Manuscripts and project data live on the author's
+   machine. Worldbuilding Desk sends no diagnostic telemetry and does not use
+   author writing to train AI. Only the context needed for an explicitly
+   author-invoked hosted request is sent to the provider they configure, or AI
+   can run locally through Ollama. Provider retention and training claims must
+   be qualified against that provider's current API terms. This is a major
+   selling point and should appear beside the workflow promise, supported by a
+   clear data-flow explanation rather than an absolute offline claim.
+5. **Craft coaching grounded in the author's draft.** When requested, the
+   coach pairs a vetted craft pattern with cited manuscript evidence. It never
+   runs in the background and never presents its opinion as canon.
 
 Do **not** say: "AI writing assistant," "AI co-author," "all-in-one authoring
 IDE," "worldbuilding database," "project management for writers," or anything
 implying autonomous writing. Frame every generative feature as draft support
 the author reviews.
+
+Also do not say `your writing never leaves your computer` without the hosted-
+provider qualification. Preferred proof points:
+
+- Stored locally by default.
+- No diagnostic telemetry.
+- Your writing is not used by Worldbuilding Desk to train AI.
+- Hosted AI runs only when you ask and uses the provider you configure.
+- Ollama keeps AI requests on your computer.
 
 ## Pricing
 
@@ -94,7 +109,10 @@ and just write; (2) a soft underline appears on an unknown name — no modal,
 no block; (3) a quick, editable review turns it into canon or an alias; (4)
 the assistant answers a story question by prioritizing accepted canon and
 clearly distinguishing any supporting Source Notes; (5) optional: a character
-sheet replaying state at a chosen scene, for the LitRPG audience.
+sheet replaying state at a chosen scene, for the LitRPG audience; (6) an
+author-triggered coach note pairing one vetted pattern with cited scenes. The
+demo includes a brief, accurate data-flow card distinguishing local storage,
+local Ollama, and explicitly invoked hosted providers.
 
 ## Sequencing
 

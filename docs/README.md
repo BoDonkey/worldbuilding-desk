@@ -1,6 +1,6 @@
 # Documentation Map
 
-Last updated: 2026-08-11
+Last updated: 2026-08-30
 
 The active documentation set was consolidated on 2026-08-01 down to seven
 documents. Everything else lives in `docs/archive/` with a banner pointing at
@@ -46,6 +46,20 @@ Other files:
   unifying characters around one canonical World Bible identity; its durable
   contract and journey tests are folded into the authorities above, while the
   roadmap remains authoritative for execution status.
+- `docs/research-litrpg-genre.md` and
+  `docs/research-litrpg-craft-failures.md` — active working input for roadmap
+  slice 4.18 (craft library content): subgenre taxonomy, platform conventions,
+  and 28 candidate coaching patterns with source-confidence and detectability
+  marks. **Not authorities.** They are cited research to be corrected by the
+  author before drafting, not decisions. Archive both only after their vetted
+  claims have moved into the versioned craft library and the parallel content
+  track no longer uses them as active input.
+- `docs/writing-coach-corpus-production-handoff.md` — active, non-authoritative
+  production brief for creating and quality-checking the large draft coaching
+  corpus in parallel with roadmap Slice 4.17. It defines working-file
+  placement, provisional metadata, coverage targets, sourcing rules, and the
+  resume protocol; the roadmap and domain/architecture documents remain
+  authoritative.
 
 ## Archive
 

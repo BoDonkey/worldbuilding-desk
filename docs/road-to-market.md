@@ -29,13 +29,91 @@ writing-first shell, one coherent character experience centered in World
 Bible, progressively disclosed optional mechanics, accessible dialogs/nav,
 packaged + signed installers for macOS and Windows, auto-update, storage
 schema versioning, first-run onboarding with a sample project, trial/license
-gate, and a help/docs baseline.
+gate, a help/docs baseline, and — added 2026-08-29 — the derived story
+dashboard and the writing coach described below.
+
+**Privacy promise.** Project data and manuscripts are stored locally.
+Worldbuilding Desk does not send diagnostic telemetry and does not use author
+writing to train AI. Text leaves the computer only when the author explicitly
+invokes a hosted provider they configured; local Ollama workflows remain on
+device. Hosted-provider setup and every author-facing AI surface must explain
+that boundary accurately rather than claiming that all configured workflows
+are fully offline.
+
+**v1 scope change, 2026-08-29.** The author judged the product materially more
+useful with coaching than without, and accepted a later release to get it.
+This moves the writing coach (4.17–4.20) and the derived story dashboard from
+post-v1 into v1, and moves library-content authoring earlier. Recorded here so
+the size of v1 stays visible: v1 now includes a curated content asset and a new
+analysis surface, not only the trust pipeline and the release-engineering work.
+The trade was made deliberately, not by drift.
 
 Explicitly **post-v1**: AI item-authoring slices beyond the manual
 description-first path, ruleset-domain adapters, app-wide search expansion,
-Scratchpad organization, Corkboard expansion, executable ruleset generation,
-carry weight/encumbrance, nonfiction product work, persona/game-engine
-ecosystems, Zod 4 migration.
+Scratchpad organization, *authored* Corkboard expansion (the *derived*
+dashboard panels of 4.19 are v1), executable ruleset generation, carry
+weight/encumbrance, nonfiction product work, persona/game-engine ecosystems,
+Zod 4 migration, and the craft library beyond tranche 1 (which continues as a
+parallel content track rather than a release gate).
+
+**The writing-coach direction (v1 as of 2026-08-29).** Accepted in principle
+on 2026-08-29: a coach that teaches craft patterns a new author does not know,
+anchored to their own manuscript — "here is the pattern, here is where your
+draft does it, here is where it does not, in chapters 3 and 7." Three parts at
+different stages, deliberately separated:
+
+- **Infrastructure — 4.17.** Retrieval plumbing only. Well defined,
+  content-independent, verifiable on its own. (Moved from 5.13 on 2026-08-29:
+  Phase 5 is release engineering, and this is now v1 product completeness.)
+- **Experience — 4.20, shape decided 2026-08-29.** Three author decisions:
+  (1) the coach is reachable **anywhere the author already interacts with the
+  AI**, invoked by explicitly asking for its opinion — not a separate
+  destination; (2) it also has **its own section in the story dashboard**;
+  (3) coaching is **author-triggered, never passive** — the author decides when
+  to run the more expensive reviews, so there is no background provider cost
+  and no unsolicited interruption of drafting.
+
+  Two consequences to design deliberately. Decision (1) makes **1.5
+  load-bearing rather than optional**: if the coach can be asked anywhere the
+  assistant lives, the shared propose → preview → confirm surface must exist
+  everywhere first. And the two entry points carry **different scopes** — an
+  inline ask is scoped to a selection or scene ("is this passage doing the
+  thing"), while the dashboard section is scoped to the whole manuscript
+  ("does this book have the shape"). Distinguish them explicitly; if they are
+  not, the inline path will drift toward whole-manuscript analysis and become
+  slow and vague.
+
+- **Library content — 4.18 (tranche 1) plus a parallel track.** 30–50 vetted
+  craft patterns are weeks of authoring, not engineering, and content cannot be
+  parallelized across slices the way code can. So it is split: **tranche 1 is
+  6–8 patterns, mixed general-craft and LitRPG/RPG-specific** (author decision,
+  2026-08-29) — enough to build and verify 4.20 against and enough to test with
+  outside readers. The remaining patterns continue as a **parallel content
+  track that no engineering slice blocks on**, and are explicitly not a release
+  gate. The model matches patterns to the draft and phrases the note; the
+  curated library is the authority. Model recall is explicitly not the
+  authority — a wrong craft claim is worse than a wrong continuity note because
+  a new author cannot check it.
+
+  **Validation note.** The coach is the first feature the author cannot
+  dogfood alone: its audience is writers who do not already know these
+  patterns, and the author does. Get outside reactions to tranche 1 before
+  committing writing time to the rest — the 6.1 cohort is the cheapest source.
+  Testing both content kinds in tranche 1 is the point of the mixed split.
+
+Also v1 as of 2026-08-29 (4.19): a **derived story dashboard** inside
+Corkboard —
+read-only panels computed from explicit manuscript, accepted-state, ruleset,
+and stable planning inputs, with every observation citing the scenes or records
+it came from. Semantic POV, agency, and setup/payoff interpretation belongs to
+author-triggered coaching rather than the deterministic foundation. The
+governing rule is that authored cards and derived observations must never look
+alike, and nothing on a derived panel is editable. This deliberately overrides
+the earlier MVP recommendation
+against deep Corkboard expansion in `docs/archive/deep-research-report.md`;
+the author accepted the added scope and later release on 2026-08-29. Scope
+discipline still keeps the dashboard close to continuity and structural
+observation rather than broad line-level prose editing.
 
 ## Working Rules
 
@@ -107,7 +185,8 @@ and required revisit point, `WIP`, `Done <commit>`.
 | 1.2d | Lore intake/review clarity + matcher precision | 1 | M | Done `f86bd83` — article-equivalent entity identity prevents Salt Door duplicates; shared boundary/longest-match arbitration covers Bran/Brannic; review creates and selects World Bible types in place; Source Notes have consolidated intake/extraction actions, saved document-context language, one primary subject, and save-before-extract enforcement; lint with 2 baseline warnings; 406 web + 6 engine + 12 UI tests; web/desktop builds; Cypress 57/57 |
 | 1.2e | State/replay dogfood journey | 1 | S | Done `d9cb7e3` — simple Character continuity now hands directly to detailed inventory/equipment/status/location changes while keeping the selected character and scene; the detailed form uses author-facing actions with explicit preview, recording, scene scope, and replay; Session C maps every E event to exact current UI labels and adds the required Pale Draught baseline; lint with 2 baseline warnings; 407 web + 6 engine + 12 UI tests; web/desktop builds; Cypress 57/57 |
 | 1.3 | Calm-shell navigation validation | 1 | S | Done `530b59f` — desktop/narrow project-mode checks pass; 2.8 must expose the aggregate pending badge on narrow `More` without promoting optional systems |
-| 1.4 | Proposal-review assistant route (conditional on product need) | 1 | M | — |
+| 1.4 | Grounded project Q&A destination (was: conditional assistant route) | 1 | M | — — product need established by the [2026-08-29 UX/AI review](archive/ux-ai-review-2026-08-29.md) §B4.3; runs after 1.5 |
+| 1.5 | Shared AI proposal surface | 1 | M | — — extract propose→preview→confirm from the World Bible record helper and reuse it; prerequisite for 1.4 and for any new AI capability ([review](archive/ux-ai-review-2026-08-29.md) §B3) |
 | 2.1 | ConfirmDialog + InlineAlert components | 2 | S | Done `38db7df` |
 | 2.2 | Migrate confirm/alert call sites | 2 | M | Done `9c278a3` + test fix `ab14f63` — Cypress re-run 2026-08-03: 42/42 passing |
 | 2.3 | Inline field-level validation | 2 | S | Done `45a163f` — lint; 252 web + 6 engine + 12 UI tests; web/desktop builds; Cypress 42/42; manual browser checks |
@@ -145,15 +224,23 @@ and required revisit point, `WIP`, `Done <commit>`.
 | 4.16a | Stable item references + atomic orchestration | 4 | M | Done `70c9b6b` — optional stable World Bible/Compendium inventory references; reference-aware replay and resolved labels; project/snapshot schema 3; exact/ambiguous resolver; validated atomic three-store writer; lint baseline; 370 web + 6 engine + 12 UI tests; web/desktop builds |
 | 4.16b | In-workspace acquisition proposal | 4 | M | Done `6663bea` — selection prose derives acquisition/item/actor; Workspace modal defaults state-only and offers explicit exact link or new canonical item; atomic save; responsive themed disclosure; lint baseline; 376 web + 6 engine + 12 UI tests; web/desktop builds; Cypress 50/50 |
 | 4.16c | Consumption effect authoring + prose integration | 4 | L | Done `bf45420` — approved effects prefill without silent rewrites; first use supports explicit remembered effects; combined replay preview; absent-inventory choices; deterministic Review proposals reopen in the same editor flow and are atomically superseded; source-hash guard; lint with 3 baseline warnings; 381 web + 6 engine + 12 UI tests; web/desktop builds; Cypress 53/53; desktop/narrow browser checks |
+| 4.17 | Craft library retrieval infrastructure | 4 | M | — coach-scoped read-only provider, `craft` chunk type, versioned build-time embeddings with compatible fallback; must never enter project evidence or ordinary assistant retrieval |
+| 4.18 | Craft library content — tranche 1 | 4 | M | — 6–8 author-vetted, cited patterns, mixed general-craft and LitRPG/RPG; drafting may run in parallel, but schema validation and packaging follow 4.17 |
+| 4.19 | Derived story dashboard | 4 | L | — read-only deterministic foundation in Corkboard; only metrics supported by explicit manuscript/state/card inputs; every observation identifies its inputs and nothing is editable |
+| 4.20 | Writing coach experience | 4 | L | — inline ask anywhere the assistant lives, plus a coach section in 4.19; author-triggered only. Depends on 1.5, 4.17, 4.18, 4.19 |
+| 4.21 | System negative-space records | 4 | S | — author-maintained World Bible structure for problems power cannot solve; explicit linked status can be summarized deterministically, but semantic engagement remains model-assisted |
+| 4.22 | Progression continuity candidates | 4 | M | — author-triggered model-assisted review of possible unused solutions and abandoned methods, based on deterministic evidence shortlists; depends on 1.5 |
 | 5.1 | Auto-update decision + implementation | 5 | M | — |
 | 5.2 | Code signing + notarization, both platforms | 5 | M | — |
 | 5.3 | Packaged-app validation + Electron E2E | 5 | M | — |
-| 5.4 | Progressive first-run onboarding + sample project | 5 | L | — depends on 4.13 and 4.15 so onboarding teaches the settled character/mechanics experience; no onboarding wall |
-| 5.5 | AI provider setup UX hardening | 5 | S | — |
-| 5.6 | Opt-in error reporting | 5 | S | — |
+| 5.4 | Progressive first-run onboarding + sample project | 5 | L | — **runs first in Phase 5**; dependencies 4.13/4.15 are met. Beta feedback is weak signal without it ([review](archive/ux-ai-review-2026-08-29.md) §A1); derive the sample project from `fixtures/trust-dogfood/` |
+| 5.5 | AI provider setup UX hardening | 5 | M | — re-sized S→M: this is a redesign, not polish. Test-connection action, two-tier setup/advanced disclosure, author-facing relabels ([review](archive/ux-ai-review-2026-08-29.md) §A2) |
+| 5.6 | Local-only error handling | 5 | S | — author-facing error descriptions plus copyable, redacted local diagnostics; no telemetry or automatic transmission |
 | 5.7 | Trial + license key gate | 5 | M | — |
 | 5.8 | Help/docs baseline | 5 | S | — |
 | 5.9 | Landing page + demo assets | 5 | M | — |
+| 5.10 | Author-facing vocabulary sweep | 5 | XS | — string-layer only, behavior-preserving; retires `Shodh`/`RAG`/`Rubber-Duck` from rendered UI ([review](archive/ux-ai-review-2026-08-29.md) §A3) |
+| 5.12 | App-shell toast viewport + status live region | 5 | S | — lifts the Workspace-only toast to the shell and adds the missing async announcements ([review](archive/ux-ai-review-2026-08-29.md) §A5, §A6) |
 | 6.1 | Beta build + cohort recruitment | 6 | M | — |
 | 6.2 | Beta feedback triage + fix slices | 6 | ? | — |
 | 6.3 | Release-readiness checklist + RC | 6 | M | — |
@@ -172,6 +259,29 @@ run in parallel; 4.13 follows 4.12 and 4.15 follows 4.14. Release-engineering
 work may run in parallel, but 4.16 follows 4.1 and 4.15, 5.4 waits for 4.13
 and 4.15, and 4.12–4.16 must land before 6.1. Release-blocking trust or
 data-loss findings remain first priority. Phase 6 is strictly ordered.
+
+The 2026-08-29 UX/AI review
+([archive](archive/ux-ai-review-2026-08-29.md)) added 1.5, re-scoped 1.4,
+re-sized 5.5 from S to M, promoted 5.4 to run first in Phase 5, and proposed
+5.10–5.12 (a thirteenth, craft-library infrastructure, was added as 5.13 and
+renumbered to 4.17 by the v1 scope change later the same day). The audit also
+proposed opt-in telemetry in 5.6 and a separate 5.11 error helper. The author
+rejected all telemetry on 2026-08-30; active work now combines author-facing
+descriptions and redacted, copyable local diagnostics in 5.6, with no automatic
+transmission, and removes 5.11. The Phase 1.1 gate remains authoritative: no
+Phase 5 slice is claimed until that run is recorded and triaged. Once cleared,
+5.4 runs first; 5.6 and 5.10 may then interleave, and 5.12 follows 5.4. Slice
+1.5 precedes 1.4 and every new AI capability.
+
+The 2026-08-29 v1 scope change added 4.17–4.22 (writing coach, derived story
+dashboard, and two standalone items the genre research surfaced) and moved
+craft-library infrastructure out of Phase 5. Research and content drafting for
+4.18 may start with 4.17, but its validated package follows the schema contract
+established by 4.17. Slice 4.19 is independent of the coach; 4.20 is last and
+depends on 1.5, 4.17, 4.18, and 4.19. Slice 4.21 remains standalone. Slice
+4.22 depends on 1.5 because semantic conclusions are model-assisted and
+author-triggered. All of 4.17–4.20 must land before 6.1; 4.21 and 4.22 are v1
+but may slip past beta without blocking it.
 
 ---
 
@@ -271,10 +381,28 @@ confirm optional-system badges stay discoverable without promoting mechanics
 routes. Resolve any changes through `docs/product-blueprint.md` navigation
 rules.
 
-**1.4 Proposal-review assistant route (conditional).** If product use and the
-trust model justify it, add an explicit assistant route that can discuss
-pending proposals without presenting them as canon. Dogfood findings may
-inform this slice, but do not gate deciding or designing it.
+**1.4 Grounded project Q&A destination.** The conditional gate on this slice
+is satisfied: the 2026-08-29 UX/AI review established the product need. Add a
+destination where the author can ask questions of the project outside the
+Workspace drawer — pending proposals discussed without being presented as
+canon, factual questions answered through the existing evidence gate and
+`getDirectSavedFactAnswer` path. Runs after 1.5 so answers and proposals share
+one review affordance.
+
+**1.5 Shared AI proposal surface.** Today exactly one AI surface — the World
+Bible record helper — lets model output become a reviewable, confirmable
+change; the assistant, the lore consultations, and the canon rubber-duck all
+terminate in prose the author must re-enter by hand. Extract that helper's
+propose → preview → confirm interaction into a shared component and hook, then
+adopt it at the surfaces that currently dead-end: assistant output captured as
+a draft Source Note (never canon, entering the existing extraction/review
+pipeline), assistant-to-scene insertion as a reviewed action rather than a raw
+paste, and canon rubber-duck output prefilling the alias/accept/reject choice
+with its rationale visible and the author's click still required. The trust
+boundary is unchanged — models propose, deterministic code validates, authors
+approve. Prerequisite for 1.4 and for every AI capability proposed in the
+review's §B4.
+_[detail: archive/ux-ai-review-2026-08-29.md § B3]_
 
 ## Phase 2 — UI, Dialogs, and Accessibility
 
@@ -546,6 +674,137 @@ full verification battery and desktop/narrow smoke authority pass.
   never direct persistence. Close with duplicate/ambiguity/rename/rollback
   tests, routed UI coverage, full battery, and smoke § 5.
 
+Slices 4.17–4.22 were added on 2026-08-29 by the v1 scope change recorded at
+the top of this file. 4.17–4.20 are the writing coach and the surface it
+reports into; 4.21 and 4.22 came out of the same research but are independent
+product work that stands without the coach.
+
+Ordering: 4.17, 4.19, and 4.21 may start independently. Research and prose
+drafting for 4.18 may run alongside 4.17, but its validated package uses the
+schema and indexing contract established by 4.17. Slice 4.20 is last and
+depends on 1.5, 4.17, 4.18, and 4.19. Slice 4.22 depends on 1.5. Slice 4.21
+is not a hard dependency of anything; 4.18 can teach its negative-space
+pattern without claiming that the manuscript was checked for it.
+
+- **4.17 Craft library retrieval infrastructure.** Structural groundwork for a
+  curated writing-craft reference kept strictly separate from project data and
+  canon. Add a coach-scoped, read-only provider and a distinct `craft` metadata
+  type. Do not add the provider to the ordinary project `CompositeRAGService`:
+  normal assistant search, factual evidence gates, canon decisions, context
+  health, backup, and project deletion must never consume or own craft chunks.
+  Embed the library at build time and ship the vectors, recording embedding
+  model, version, dimensions, normalization, and content version. Query-time
+  vectors must use a compatible contract; incompatible or unavailable models
+  fall back to lexical search rather than comparing mismatched dimensions.
+  Tests prove offline retrieval, provenance labels, route isolation, and safe
+  behavior with an empty or token library. This slice carries no real-content
+  dependency.
+- **4.18 Craft library content — tranche 1.** Author 6–8 vetted craft
+  patterns, mixed general-craft and LitRPG/RPG-specific, in the versioned form
+  defined by 4.17. **Source material:** `docs/research-litrpg-genre.md`
+  (subgenre taxonomy, platform conventions) and
+  `docs/research-litrpg-craft-failures.md` (28 candidate patterns with source
+  confidence and detectability marks, plus a suggested tranche-1 selection in
+  its Part C). The parallel large-corpus production and QA brief is
+  `docs/writing-coach-corpus-production-handoff.md`; it is a working handoff,
+  not a second roadmap or a substitute for this slice's completion gates.
+  Correct the research against your own reading before drafting — it is input,
+  not settled content, and every claim carries a confidence mark for that
+  reason. **Schema:** each pattern needs a stable ID and version,
+  author-vetted status, citations and source-confidence, genre applicability
+  and exclusions/modifiers, what it is, what it looks like when present, what
+  its absence looks like, and what to do about it. It also needs a
+  `detectability` field (`deterministic` / `model-assisted` / `practice`) and a
+  scope (`selection` / `scene` / `chapter` / `manuscript` / `series` /
+  `practice`). A deterministic label is permitted only for a metric or
+  observation computed entirely from explicit stored data; semantic meaning
+  remains model-assisted even when deterministic code supplies candidates. The
+  detectability field is load-bearing: without it the coach can claim to have
+  checked the draft for a pattern that is not present in prose at all, which is
+  precisely the kind of unearned claim the trust boundary exists to prevent.
+  Content drafting may run in parallel, but this remains a roadmap slice: claim
+  it, validate every record against the schema, complete an author source and
+  wording review, test retrieval/citation rendering, commit it, and close it on
+  the status board. Tranche 1 unblocks 4.20 and is tested with outside readers;
+  the remaining patterns continue as a parallel track and are not a release
+  gate.
+- **4.19 Derived story dashboard.** Read-only panels inside Corkboard,
+  computed from explicit manuscript, state, ruleset, and planning data. The v1
+  deterministic foundation includes scene/chapter word counts, dialogue ratio,
+  accepted state-change distribution, and advancement intervals where the
+  relevant value is explicitly tracked. Every metric names its inputs and
+  links to its source scenes. POV, agency, setup/payoff significance, and other
+  semantic interpretations belong to author-triggered coaching in 4.20, not to
+  the deterministic foundation.
+
+  Mechanics-enabled projects also receive descriptive multi-axis co-movement,
+  tier-interval, and advancement-rate metrics. The dashboard may say that
+  several tracked values moved together; it may not deterministically conclude
+  that the supporting cast is redundant or that pacing is wrong. Plan-versus-
+  draft comparison requires an explicit stable ChapterCard-to-scene link;
+  title/order heuristics must not invent one. If that link requires a persisted
+  shape change, version project storage and backup contracts before the panel
+  ships. Mechanics panels stay invisible in general fiction.
+
+  The research's 34% series-longevity figure is vendor-reported directional
+  evidence, not a product-weighting rule. Outside-reader validation of tranche
+  1 decides the relative emphasis between dashboard and inline coaching.
+
+  Governing rules:
+  every observation cites the scenes it came from; nothing on a derived panel
+  is editable; authored cards and derived observations must never look alike.
+  Deterministic passes need no provider and land first so the dashboard is
+  useful before any key is configured. This dashboard is a deliberate override
+  of the archived market report's narrower MVP cut; keep it close to continuity
+  and structural observation rather than expanding into broad prose editing.
+- **4.20 Writing coach experience.** The coach is reachable two ways, and the
+  two carry deliberately different scopes. **Inline:** anywhere the author
+  already interacts with the AI, invoked by explicitly asking for its opinion,
+  scoped to the selection or scene — "is this passage doing the thing."
+  **Dashboard:** its own section in 4.19, scoped to the whole manuscript —
+  "does this book have the shape." Keep the two scopes separate in the
+  implementation; if they are not, the inline path drifts toward
+  whole-manuscript analysis and becomes slow and vague. Coaching is
+  author-triggered only — never passive, no background provider cost, no
+  unsolicited interruption of drafting. Every coaching note pairs library
+  instruction with cited evidence from the author's own draft, and library text
+  is never presented as the author's established canon. The coaching response
+  itself is read-only advice. Only an explicit follow-up action such as saving a
+  note or applying a selected revision uses the shared proposal surface from
+  1.5, with preview and author confirmation.
+- **4.21 System negative-space records.** A World Bible record type for
+  **problems the system cannot solve** — the things a character cannot fix by
+  getting stronger. The craft rationale: every capability gain that also
+  shrinks a human problem moves a book toward competence porn, and the
+  recommended authorial practice is to keep this list explicitly. A
+  first-class record can deterministically summarize author-maintained status
+  and explicit scene links. Whether prose meaningfully engages the problem, or
+  whether a power has quietly solved it, remains model-assisted.
+
+  Independent of the coach, the dashboard, and the craft library — it is a
+  small domain addition that stands on its own and can land at any time. It
+  can upgrade the structured-status portion of P4 from practice to
+  deterministic; semantic manuscript assessment remains model-assisted.
+  Update `docs/domain-model.md` when the contract lands. Gated to
+  mechanics-enabled projects; general fiction unchanged.
+- **4.22 Progression continuity candidates.** Two observations that overlap
+  craft and canon consistency:
+  **unused solutions** — a character possesses an ability that would plainly
+  resolve the situation and the text never has them consider it (abilities to
+  watch most carefully: movement, teleportation, and anything time-related);
+  and **abandoned progression methods** — a rapid-advancement mechanic is
+  established in canon and then never referenced again, with no in-world reason
+  given. Deterministic code can shortlist abilities, items, methods, state, and
+  scenes with no explicit linked or lexical reference. It cannot decide that an
+  ability would resolve a narrative situation or that no adequate reason was
+  given. Those conclusions are model-assisted, author-triggered, cited, and
+  schema-validated through 1.5.
+
+  Findings go to the existing review queue with scene citations, as deferred
+  and dismissible like every other review surface — these are observations, not
+  errors, and a false positive must cost the author one click. No provider call
+  runs in the background. Source: `docs/research-litrpg-craft-failures.md` §B2.
+
 ## Phase 5 — Release Engineering
 
 - **5.1 Auto-update.** Decide Squirrel / electron-updater / manual (this
@@ -567,21 +826,50 @@ full verification battery and desktop/narrow smoke authority pass.
 - **5.5 AI provider setup UX hardening.** BYOK is a v1 differentiator and a
   support risk: clear provider setup, key validation, Ollama detection,
   actionable failure states, and a graceful zero-AI experience (the app must
-  be fully usable with AI disabled).
-- **5.6 Opt-in error reporting.** Crash/error capture (e.g. Sentry) with
-  explicit opt-in, no manuscript content in payloads.
+  be fully usable with AI disabled). Setup states plainly that Ollama remains
+  on-device while an author-invoked hosted request sends the necessary text to
+  the configured third party under that provider's terms. No request runs only
+  to discover whether configuration works except the explicit `Test
+  connection` action.
+- **5.6 Local-only error handling.** Route raw exception rendering through one
+  `describeError(error, fallback)` helper that maps known failure classes
+  (network, auth, quota, storage-full, schema-too-new) to author-facing text and
+  returns the fallback otherwise. Keep technical detail on the computer in a
+  redacted, copyable diagnostic view the author may choose to include in a
+  support request. Do not add telemetry, crash reporting, background uploads,
+  or automatic diagnostic transmission. Tests assert that common diagnostic
+  output excludes manuscript text, API keys, provider payloads, and local file
+  paths.
 - **5.7 Trial + license key gate.** Merchant-of-record checkout, license key
   issuance/validation (offline-tolerant), trial period behavior, and a
   restore-purchase path. Keep it thin; no accounts service.
 - **5.8 Help/docs baseline.** In-app or web help covering projects/backup,
   import, review workflow, World Bible/Lore model, AI setup, and the trust
-  model in author language.
+  model in author language. Include a plain data-flow explanation: local
+  storage, no telemetry or Worldbuilding Desk training, local Ollama, and the
+  exact author-triggered boundary for hosted providers.
 - **5.9 Landing page + demo assets.** Build the simple landing page and a
   60–90 second demo of the implemented core loop; include privacy/data-flow
-  copy, analytics and download/checkout paths, and a plan for collecting
+  copy, download/checkout paths, and a plan for collecting
   permissioned beta proof. Claims must stay within verified product behavior;
   quantified performance claims wait for dogfood or beta evidence.
-
+- **5.10 Author-facing vocabulary sweep.** Retire internal codenames and
+  ML jargon from rendered strings: `Shodh memories` → project memory,
+  `RAG documents` → indexed context, `Inherit RAG data` → inherit indexed
+  context, `Rubber-Duck AI` → a plain-language label. Internal service, type,
+  and identifier names are unchanged — this is a string-layer slice and is
+  strictly behavior-preserving. Add a test asserting the retired tokens do not
+  appear in rendered output so they cannot return.
+- **5.12 App-shell toast viewport + status live region.** Lift the
+  Workspace-only toast viewport into the app shell so every route posts
+  transient confirmations to one predictable place; keep `InlineAlert` for
+  errors anchored to the control that caused them. Add one shared status live
+  region and a `useStatusAnnouncement` hook wired to autosave, review refresh,
+  extraction, migration, and AI streaming — the app currently has three
+  `aria-live` regions against 67 loading/saving indicators. Extend the 2.3
+  `aria-invalid` pattern to the remaining validated fields. Record the
+  toast-versus-inline split in the `docs/product-blueprint.md` design system
+  section.
 ## Phase 6 — Beta, RC, Launch
 
 - **6.1 Beta.** Signed, auto-updating build to a 10–30 author cohort

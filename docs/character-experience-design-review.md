@@ -152,7 +152,8 @@ canonical-subject abstraction: it would be a third identity vocabulary, and
 entity IDs already serve locations, items, and factions — characters are not
 special at the fact layer. The `targetType` discriminator stays in storage
 for compatibility; all new writes use `'entity'`; the `'character'` variant
-is retired post-v1 after migration telemetry shows no remaining readers.
+is retired post-v1 after local migration reports and reader coverage show no
+remaining uses.
 
 **D8. Parent/child inheritance covers canon only.** Inherited entities
 remain read-only canon context for review and grounding (existing behavior).

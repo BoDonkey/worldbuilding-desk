@@ -1,6 +1,6 @@
 # Product Blueprint — Worldbuilding Desk
 
-Last updated: 2026-08-16
+Last updated: 2026-08-30
 
 This is the product, UX, navigation, and design authority. It consolidates the
 former `product-blueprint.md`, `navigation-ia-decision.md`, `style-bible.md`,
@@ -32,6 +32,30 @@ What the author should feel:
 What the product should do: preserve flow, surface context progressively,
 track entities and canon passively, offer soft consistency feedback, and keep
 advanced systems available for power users without making them mandatory.
+
+### Privacy and data movement
+
+Privacy is a product promise and a selling point, not an advanced setting.
+
+- Projects and manuscripts are stored locally.
+- Worldbuilding Desk does not send diagnostic telemetry and does not use
+  author writing to train AI.
+- No background feature sends manuscript or project context to a hosted model.
+- Text leaves the computer only when the author explicitly invokes a hosted AI
+  provider they configured. The surface must disclose that destination before
+  first use and keep the request author-triggered.
+- Local Ollama workflows remain on-device. The app remains useful with AI
+  disabled.
+- Provider retention or training claims belong to that provider's current API
+  terms; Worldbuilding Desk must not imply control it does not have.
+- Errors and diagnostics remain local. The author may copy a redacted
+  diagnostic into a support request, but the app never uploads it
+  automatically.
+
+Author-facing copy should say `Stored locally`, `Runs on this computer`, or
+`Sends this request to <provider>` where appropriate. Do not use an absolute
+`never leaves your computer` claim on a workflow that can invoke a hosted
+provider.
 
 ## Positioning
 
@@ -71,7 +95,8 @@ and import/export/backup flows suitable for real writing projects.
 2. **Context and Canon** — World Bible, aliases, memories, lore inspection,
    parent/child canon inheritance. Supports recall and continuity.
 3. **Assistance** — AI tools, prompt management, contextual retrieval,
-   consistency review.
+   consistency review, and author-triggered writing coaching grounded in a
+   curated craft reference plus cited manuscript evidence.
 4. **Advanced Systems** — rulesets, stats, resources, compendium mechanics,
    settlement progression, LitRPG runtime logic. Valuable and differentiating,
    but optional and discoverable rather than foregrounded.
@@ -88,6 +113,19 @@ roadmaps — refine through this document):
   canon database
 - `More` — optional systems (Ruleset, Sheets, Mechanics, Settlement), planning
   and review utilities, character-package transfer, settings
+
+The writing coach is not a separate destination. It is available when the
+author explicitly asks for craft feedback anywhere an existing AI interaction
+lives, scoped to the current selection or scene. A manuscript-level coach
+section lives in the derived Corkboard dashboard. These scopes remain visibly
+different so a local question does not silently become an expensive,
+whole-manuscript review.
+
+The derived dashboard is read-only. Authored Chapter Cards and Plot Points must
+never look like computed observations, and computed observations are never
+editable. Deterministic panels describe only explicit manuscript, planning,
+ruleset, and accepted-state inputs; semantic interpretation is labeled as
+author-triggered coaching and cites the scenes it considered.
 
 Canonical ownership rules:
 

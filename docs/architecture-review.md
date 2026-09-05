@@ -1,6 +1,6 @@
 # Architecture Reference — Worldbuilding Desk
 
-Last reviewed: 2026-08-09
+Last reviewed: 2026-08-30
 
 ## Purpose
 
@@ -73,6 +73,24 @@ reviewed. Unverified factual wording must never fall through to creative prompt
 tools or provider generation. Explicitly creative and analytical requests remain
 eligible for provider collaboration.
 
+## Privacy and Data Egress
+
+Primary project data, manuscripts, derived indexes, and diagnostics stay on
+the author's computer. The application has no diagnostic telemetry or
+automatic crash-report upload path and does not use author content for model
+training.
+
+Network egress containing author content is allowed only for an explicit
+author-invoked request to a hosted provider configured for that project. The
+request boundary must identify the destination, send only the context required
+for the chosen action, and remain fully optional. Background review, indexing,
+health checks, migrations, and error handling do not call hosted providers.
+Ollama remains the on-device provider path.
+
+Technical errors remain local. A support workflow may produce a redacted,
+copyable diagnostic, but it must exclude manuscript text, API keys, provider
+request/response bodies, and local file paths and must never transmit itself.
+
 ## Canon and Lore Boundary
 
 Lore Documents preserve author-written source material. Extraction may produce
@@ -90,6 +108,20 @@ Normal assistant context should distinguish:
 
 Pending and rejected proposals are excluded unless the author enters an
 explicit proposal-review workflow.
+
+The bundled craft library is a separate read-only reference corpus, not project
+context, Source Notes, accepted canon, or factual evidence. It uses a
+coach-scoped provider rather than the ordinary project `CompositeRAGService`.
+Craft chunks are excluded from factual evidence gates, normal assistant
+retrieval, canon decisions, project context-health diagnostics, backup, and
+project deletion. Coaching may combine craft references with manuscript
+evidence only inside an explicit author-triggered coaching request, with each
+source labeled by role.
+
+Bundled craft embeddings carry model, version, dimensions, normalization, and
+content-version metadata. Query-time embeddings must be compatible. If the
+compatible model is unavailable, retrieval falls back to lexical search rather
+than comparing vectors produced by different contracts.
 
 Primary reference: `docs/domain-model.md` (§ lore/canon model and canon
 decision workflow).

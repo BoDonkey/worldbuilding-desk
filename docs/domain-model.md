@@ -1,6 +1,6 @@
 # Domain Model — Lore, Canon, State, and AI Proposals
 
-Last updated: 2026-08-16
+Last updated: 2026-08-30
 
 This is the domain specification authority. It consolidates the durable
 contracts from `freeform-lore-ingestion-architecture.md`,
@@ -56,6 +56,13 @@ general Source Notes, scene drafts, rules references), with a modest ranking
 boost so accepted canon outranks Source Notes on close matches. Pending and
 rejected proposals stay out of ordinary assistant context. Derived RAG/Shodh
 indexes are rebuildable and never the source of truth.
+
+Bundled writing-craft references are not another project RAG document type in
+the trust hierarchy above. A `craft` chunk belongs to a separate, read-only,
+coach-scoped corpus. It is instructional reference material: never canon,
+never a Source Note, never project evidence, and never eligible to answer a
+factual question about the author's world. Only an explicit coaching request
+may retrieve it and pair it with separately cited manuscript evidence.
 
 ## 2. Canon Decision Workflow
 
@@ -290,3 +297,41 @@ validation, and author-approval boundary.
 Non-goals: automatically designing balanced items or whole rulesets, inferring
 genre-standard mechanics as canon, JSON as an author-facing format, requiring
 a hosted model for basic authoring, auto-creating stats/resources/rules/slots.
+
+## 6. Writing Coach and Derived Analysis
+
+_Status: accepted product/domain direction (2026-08-30); implementation is
+owned by roadmap Slices 4.17–4.22._
+
+The writing coach combines two explicitly different source roles:
+
+1. **Craft reference** explains a vetted pattern and carries its own citation,
+   content version, confidence, applicability, detectability, and scope.
+2. **Manuscript evidence** shows what the author's draft or accepted structured
+   data contains and cites the scenes or records inspected.
+
+The coach must never turn a craft claim into story truth or present library
+text as something established in the author's project. Coaching is
+author-triggered. A response is read-only advice; only a separate save/apply
+action enters the shared proposal → validation → preview → confirmation flow.
+
+Detectability has three meanings:
+
+- **`deterministic`** — the complete observation is computed from explicit
+  stored inputs, with no semantic inference. It names those inputs.
+- **`model-assisted`** — deterministic code may shortlist evidence, but a model
+  interprets narrative meaning. The note says it is an interpretation and
+  cites the evidence considered.
+- **`practice`** — advice about author behavior or publishing activity that is
+  not present in manuscript text. The coach may teach it but must not claim to
+  have checked the draft for it.
+
+Absence of a lexical or structured reference is not proof of narrative
+absence. Whether an ability would solve a scene, a character has meaningful
+agency, a human problem was solved by power, or an in-world reason is adequate
+is model-assisted unless the author explicitly recorded the decisive relation.
+
+Derived dashboard observations are read-only and distinct from authored
+Corkboard records. Stable links, not title or order heuristics, connect plans
+to scenes. Persisted link additions follow the storage-version, backup, and
+migration contracts before any comparison relies on them.
