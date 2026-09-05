@@ -413,3 +413,29 @@ QA: `python3 qa/build_catalog.py` reports 130 total records (42 `general`,
 `author_vetted: false`, no duplicate IDs, zero pending `related` links.
 `trope` is now at 60% of its 60-record target, closing the gap with the
 other core families.
+
+### Audit pass A — whole-corpus review (done, no new records)
+
+Not a batch. The holistic near-duplicate and cross-link audit flagged as due
+in the Batch 12 coverage-matrix notes, run 2026-09-05 with new draft tooling
+`qa/audit_corpus.py` (pairwise tf-idf over all 8,385 record pairs, plus
+link-graph, structural, and sourcing checks). Record count unchanged at 130.
+
+**No merges or splits.** All 60 closest pairs reviewed by hand and found
+genuinely distinct; the per-batch duplication discipline held up.
+
+**Found instead:** `related` is a backward-pointing tree, not a web — a
+fixed ~2-link quota per record, chosen from what existed at drafting time,
+leaves 62 of 130 records (48%) with zero inbound links, only 27 mutual
+pairs, and zero intra-family links among the 12 `profile` records. Also 21
+records with a required-section gap (most often "visibility to characters
+and readers" in system/comparison records, 14 of them), and 5 records
+declaring `source_confidence: mixed` on a single source.
+
+Full findings and a prioritised remediation list: `qa/duplication-report.md`.
+Confidence-mark corrections: `qa/citation-audit.md`.
+
+**Next session should decide between** a remediation pass (links, sections,
+confidence marks) and Batch 13 drafting. The audit recommends remediation
+first, and that any further drafting use a raised link quota of four to six
+`related` links with at least one crossing families.

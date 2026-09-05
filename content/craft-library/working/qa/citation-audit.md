@@ -255,3 +255,36 @@ drafting typo (a duplicated word) was caught and fixed within this batch.
   risk for Family C practice/dashboard-adjacent records; flag in
   `qa/unresolved-claims.md` and avoid stacking multiple records that treat
   this vendor as independent corroboration of itself.
+
+## Whole-corpus audit pass A (2026-09-05) — overstated confidence marks
+
+The holistic audit (`qa/audit_corpus.py`, findings in
+`qa/duplication-report.md`) cross-checked every record's declared
+`source_confidence` against how many non-synthesis sources it actually
+cites. Forty-nine records cite at most one; forty-four of those correctly
+declare `limited`, which is the deliberately logged Family B pattern.
+
+**Five declare `mixed` on a single source.** `mixed` implies support drawn
+from more than one place, so these overstate their footing and should be
+corrected to `limited` — or given a second source if one exists:
+
+| record | sources cited | declared |
+|---|---|---|
+| `craft.general.plot.negative-space-problems-power-cannot-solve` | 1 | mixed |
+| `craft.general.plot.reader-expectation-and-genre-signaling` | 1 | mixed |
+| `craft.general.scene.scene-turns` | 1 | mixed |
+| `craft.trope.role.trickster` | 1 | mixed |
+| `craft.trope.structure.sacrifice-and-return` | 1 | mixed |
+
+Three are Family A craft records where a second established craft source is
+likely findable (scene turns and genre signaling especially); two are Family
+B trope records that probably belong at `limited` alongside their siblings.
+Prefer adding the source over downgrading the mark where a real second
+source exists — but do not leave the mark as it stands.
+
+Source-reuse distribution at 130 records: 36 distinct sources, 11 cited
+exactly once, and the two internal research documents cited by 37 and 35
+records respectively. That concentration is expected given how this corpus
+was produced, but it means the internal research is load-bearing for roughly
+half the library. The Batch 12 caution stands: internal research is not
+independent corroboration of itself.

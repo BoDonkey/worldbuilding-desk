@@ -639,3 +639,32 @@ Family C's status.
 
 At 130/180 (72%), roughly three-quarters of the coverage target is
 complete, with balanced progress across all three core families.
+
+## Whole-corpus audit pass A (after Batch 12, no new records)
+
+Not a batch. This is the holistic near-duplicate and cross-link audit the
+Batch 12 notes flagged as due, run on 2026-09-05 with new draft tooling
+(`qa/audit_corpus.py`). Record counts are unchanged at **130** (42
+`general`, 34 `system`, 6 `comparison`, 36 `trope`, 12 `profile`). Full
+findings live in `qa/duplication-report.md`; confidence-mark corrections in
+`qa/citation-audit.md`.
+
+**No merges or splits resulted.** Every one of the 60 closest record pairs
+in the corpus was checked by hand and found genuinely distinct — the
+batch-by-batch duplication discipline held.
+
+**What the audit did find** is a structural weakness the per-batch QA could
+not see: `related` is a backward-pointing tree rather than a web. Each
+record carries a fixed quota of about two links, chosen from what already
+existed when it was drafted, so 62 of 130 records (48%) have nothing
+pointing at them and only 27 pairs are mutual. `profile` has zero
+intra-family links at all. Twenty-one records also have a required-section
+gap, most often the handoff's "visibility to characters and readers"
+requirement for system and comparison records (14 records).
+
+**This changes the next-batch priority.** The Batch 12 notes assumed Batch
+13 would be more drafting. The audit argues for a remediation pass first —
+links, sections, and five overstated `source_confidence` marks — because
+every further batch drafted under the two-link quota widens the gap. The
+50 records still to draft toward 180 should be written against a raised
+link quota (four to six, at least one crossing families).
