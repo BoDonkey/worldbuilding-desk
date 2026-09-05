@@ -553,3 +553,56 @@ them into 60 existing records, taking the graph to 459 mutual pairs.
 because comparison and profile records count toward the families they serve.
 The author should decide whether the remaining slots go to the families or to
 the 180 total, since the two no longer reconcile.
+
+### Batch 14 — closing the gaps, weighted (done)
+
+Twelve records, weighted five `system` / four `general` / three `trope` to
+close the largest remaining family gaps rather than split evenly. All
+`author_vetted: false`.
+
+**`system` (38 → 43):**
+
+- `systems/craft.system.chance.luck-randomness-and-probability.md`
+- `systems/craft.system.dungeon.dungeon-structure-and-floors.md`
+- `systems/craft.system.social.reputation-and-faction-standing.md`
+- `systems/craft.system.binding.oaths-contracts-and-bindings.md`
+- `systems/craft.system.companion.summons-familiars-and-bonded-companions.md`
+
+**`general` (46 → 50):**
+
+- `general/craft.general.voice.sentence-rhythm-and-clarity.md`
+- `general/craft.general.revision.developmental-versus-line-editing.md` —
+  closes the "developmental versus line concerns" bullet the handoff's
+  Family A coverage plan named and no record had covered.
+- `general/craft.general.character.introducing-characters.md`
+- `general/craft.general.voice.humor-as-craft.md`
+
+**`trope` (40 → 43):**
+
+- `tropes/craft.trope.setting.the-frontier-and-the-border-town.md`
+- `tropes/craft.trope.role.the-patron-and-the-benefactor.md`
+- `tropes/craft.trope.structure.captivity-and-escape.md`
+
+Three sources added, details verified before use: Williams's *Style: Lessons
+in Clarity and Grace*, Browne and King's *Self-Editing for Fiction Writers*,
+and Vorhaus's *The Comic Toolbox*.
+
+**Four records carry `source_confidence: limited`** — oaths and bindings,
+bonded companions, the frontier town, and captivity and escape — each because
+no craft or scholarly source on that specific convention was available to this
+pass, and each naming the literature a later pass should bring in (medieval
+and folkloric scholarship on oaths; frontier scholarship in American studies;
+prison-narrative criticism). That is a higher proportion than Batch 13 and it
+is honest: these four topics are genuinely less well covered by the craft
+literature than openings or point of view.
+
+QA: 154 records. Zero audit findings. The closest new-record pair scores
+0.241, all within expected clusters and each scoped in its own text against
+its neighbour. `qa/relink.py` reciprocated the new links into 57 records; 518
+mutual pairs, no orphans, no one-way links.
+
+**Target reconciliation settled** (see `qa/coverage-matrix.md`): the "divergence"
+flagged after Batch 13 was a misreading — the comparison and profile records
+had never been assigned to families. Comparisons now count toward `system`,
+profiles toward `trope`. Effective progress: `general` 50/60, `trope` 55/60,
+`system` 49/60 — **26 records to 180**, which is two more batches.

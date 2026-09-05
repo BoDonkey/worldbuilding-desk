@@ -32,6 +32,7 @@ related:
   - craft.general.practice.buffer-discipline
   - craft.general.promise.promise-consistency
   - craft.general.revision.continuity-passes
+  - craft.general.revision.developmental-versus-line-editing
   - craft.general.revision.triage-and-beta-reader-signal
   - craft.trope.convention.serial-fiction-conventions
 source_ids:

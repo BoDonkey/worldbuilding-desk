@@ -29,6 +29,7 @@ tags:
   - openings
   - reader-experience
 related:
+  - craft.general.character.introducing-characters
   - craft.general.plot.reader-expectation-and-genre-signaling
   - craft.general.promise.promise-consistency
   - craft.general.scene.entry-and-exit-points

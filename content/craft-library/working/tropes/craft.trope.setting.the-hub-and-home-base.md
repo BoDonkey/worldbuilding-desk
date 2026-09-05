@@ -38,6 +38,7 @@ related:
   - craft.system.party.parties-guilds-and-group-structure
   - craft.trope.role.found-family
   - craft.trope.setting.academy-story
+  - craft.trope.setting.the-frontier-and-the-border-town
 source_ids:
   - src.book.adams-fundamentals-of-game-design
   - src.book.burroway-writing-fiction

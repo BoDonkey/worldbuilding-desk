@@ -5,7 +5,7 @@
 # Not the 4.17 runtime schema.
 
 generated_by: qa/build_catalog.py (draft tooling, not runtime code)
-record_count: 142
+record_count: 154
 records:
 - id: craft.comparison.progression.classes-versus-skill-based-growth
   title: Classes versus skill-based growth
@@ -159,6 +159,23 @@ records:
     exclusions: []
   author_vetted: false
   path: general/craft.general.character.internal-and-external-arcs.md
+- id: craft.general.character.introducing-characters
+  title: Introducing characters
+  family: general
+  document_type: pattern
+  version: 1
+  detectability: model-assisted
+  scopes:
+  - scene
+  - chapter
+  - manuscript
+  applicability:
+    genres:
+    - general-fiction
+    subgenres: []
+    exclusions: []
+  author_vetted: false
+  path: general/craft.general.character.introducing-characters.md
 - id: craft.general.character.power-as-sole-motivation
   title: Power as a character's sole motivation
   family: general
@@ -631,6 +648,22 @@ records:
     exclusions: []
   author_vetted: false
   path: general/craft.general.revision.continuity-passes.md
+- id: craft.general.revision.developmental-versus-line-editing
+  title: Developmental versus line-level revision
+  family: general
+  document_type: pattern
+  version: 1
+  detectability: practice
+  scopes:
+  - manuscript
+  - practice
+  applicability:
+    genres:
+    - general-fiction
+    subgenres: []
+    exclusions: []
+  author_vetted: false
+  path: general/craft.general.revision.developmental-versus-line-editing.md
 - id: craft.general.revision.protecting-reader-experience
   title: Protecting the intended reader experience
   family: general
@@ -819,6 +852,23 @@ records:
     exclusions: []
   author_vetted: false
   path: general/craft.general.voice.dialogue-and-subtext.md
+- id: craft.general.voice.humor-as-craft
+  title: Humor as a craft element
+  family: general
+  document_type: pattern
+  version: 1
+  detectability: model-assisted
+  scopes:
+  - scene
+  - chapter
+  - manuscript
+  applicability:
+    genres:
+    - general-fiction
+    subgenres: []
+    exclusions: []
+  author_vetted: false
+  path: general/craft.general.voice.humor-as-craft.md
 - id: craft.general.voice.narrative-summary-vs-scene
   title: Narrative summary versus scene
   family: general
@@ -835,6 +885,23 @@ records:
     exclusions: []
   author_vetted: false
   path: general/craft.general.voice.narrative-summary-vs-scene.md
+- id: craft.general.voice.sentence-rhythm-and-clarity
+  title: Sentence rhythm and clarity
+  family: general
+  document_type: pattern
+  version: 1
+  detectability: model-assisted
+  scopes:
+  - selection
+  - scene
+  - manuscript
+  applicability:
+    genres:
+    - general-fiction
+    subgenres: []
+    exclusions: []
+  author_vetted: false
+  path: general/craft.general.voice.sentence-rhythm-and-clarity.md
 - id: craft.general.voice.voice-as-craft-element
   title: Voice as a craft element
   family: general
@@ -1084,6 +1151,47 @@ records:
     exclusions: []
   author_vetted: false
   path: systems/craft.system.advancement.experience-sources-and-milestone-growth.md
+- id: craft.system.binding.oaths-contracts-and-bindings
+  title: Oaths, contracts, and bindings
+  family: system
+  document_type: system-mechanic
+  version: 1
+  detectability: model-assisted
+  scopes:
+  - chapter
+  - manuscript
+  - series
+  applicability:
+    genres:
+    - fantasy
+    - litrpg
+    - progression-fantasy
+    subgenres:
+    - cultivation
+    - classic-litrpg
+    exclusions: []
+  author_vetted: false
+  path: systems/craft.system.binding.oaths-contracts-and-bindings.md
+- id: craft.system.chance.luck-randomness-and-probability
+  title: Luck, randomness, and probability
+  family: system
+  document_type: system-mechanic
+  version: 1
+  detectability: model-assisted
+  scopes:
+  - scene
+  - chapter
+  - manuscript
+  applicability:
+    genres:
+    - litrpg
+    - progression-fantasy
+    subgenres:
+    - classic-litrpg
+    - gamelit
+    exclusions: []
+  author_vetted: false
+  path: systems/craft.system.chance.luck-randomness-and-probability.md
 - id: craft.system.character.affinities-resistances-titles-and-bloodlines
   title: Affinities, resistances, titles, and bloodlines
   family: system
@@ -1186,6 +1294,27 @@ records:
     exclusions: []
   author_vetted: false
   path: systems/craft.system.combat.death-and-respawn.md
+- id: craft.system.companion.summons-familiars-and-bonded-companions
+  title: Summons, familiars, and bonded companions
+  family: system
+  document_type: system-mechanic
+  version: 1
+  detectability: model-assisted
+  scopes:
+  - chapter
+  - manuscript
+  - series
+  applicability:
+    genres:
+    - litrpg
+    - progression-fantasy
+    subgenres:
+    - classic-litrpg
+    - cultivation
+    - base-building
+    exclusions: []
+  author_vetted: false
+  path: systems/craft.system.companion.summons-familiars-and-bonded-companions.md
 - id: craft.system.consequences.institutions-labor-and-governance
   title: 'Systemic consequences: institutions, labor, and governance'
   family: system
@@ -1307,6 +1436,27 @@ records:
     exclusions: []
   author_vetted: false
   path: systems/craft.system.cultivation.sects-inheritance-and-deviation.md
+- id: craft.system.dungeon.dungeon-structure-and-floors
+  title: Dungeons, floors, and bounded spaces
+  family: system
+  document_type: system-mechanic
+  version: 1
+  detectability: model-assisted
+  scopes:
+  - chapter
+  - manuscript
+  - series
+  applicability:
+    genres:
+    - litrpg
+    - progression-fantasy
+    subgenres:
+    - classic-litrpg
+    - dungeon-core
+    - tower-climbing
+    exclusions: []
+  author_vetted: false
+  path: systems/craft.system.dungeon.dungeon-structure-and-floors.md
 - id: craft.system.economy.crafting-and-economy-loops
   title: Crafting and economy loops
   family: system
@@ -1720,6 +1870,26 @@ records:
     exclusions: []
   author_vetted: false
   path: systems/craft.system.resource.resource-lifecycle-design.md
+- id: craft.system.social.reputation-and-faction-standing
+  title: Reputation and faction standing
+  family: system
+  document_type: system-mechanic
+  version: 1
+  detectability: model-assisted
+  scopes:
+  - chapter
+  - manuscript
+  - series
+  applicability:
+    genres:
+    - litrpg
+    - progression-fantasy
+    subgenres:
+    - classic-litrpg
+    - base-building
+    exclusions: []
+  author_vetted: false
+  path: systems/craft.system.social.reputation-and-faction-standing.md
 - id: craft.trope.combination.inversions-and-combinations
   title: Trope inversions and combinations
   family: trope
@@ -2093,6 +2263,26 @@ records:
     exclusions: []
   author_vetted: false
   path: tropes/craft.trope.role.the-outsider-and-belonging.md
+- id: craft.trope.role.the-patron-and-the-benefactor
+  title: The patron and the benefactor
+  family: trope
+  document_type: trope
+  version: 1
+  detectability: model-assisted
+  scopes:
+  - manuscript
+  - series
+  applicability:
+    genres:
+    - fantasy
+    - litrpg
+    - progression-fantasy
+    subgenres:
+    - cultivation
+    - classic-litrpg
+    exclusions: []
+  author_vetted: false
+  path: tropes/craft.trope.role.the-patron-and-the-benefactor.md
 - id: craft.trope.role.trickster
   title: The trickster
   family: trope
@@ -2164,6 +2354,28 @@ records:
     exclusions: []
   author_vetted: false
   path: tropes/craft.trope.setting.academy-story.md
+- id: craft.trope.setting.the-frontier-and-the-border-town
+  title: The frontier and the border town
+  family: trope
+  document_type: trope
+  version: 1
+  detectability: model-assisted
+  scopes:
+  - chapter
+  - manuscript
+  - series
+  applicability:
+    genres:
+    - fantasy
+    - litrpg
+    - progression-fantasy
+    subgenres:
+    - base-building
+    - classic-litrpg
+    - system-apocalypse
+    exclusions: []
+  author_vetted: false
+  path: tropes/craft.trope.setting.the-frontier-and-the-border-town.md
 - id: craft.trope.setting.the-hub-and-home-base
   title: The hub and the home base
   family: trope
@@ -2185,6 +2397,27 @@ records:
     exclusions: []
   author_vetted: false
   path: tropes/craft.trope.setting.the-hub-and-home-base.md
+- id: craft.trope.structure.captivity-and-escape
+  title: Captivity and escape
+  family: trope
+  document_type: trope
+  version: 1
+  detectability: model-assisted
+  scopes:
+  - chapter
+  - manuscript
+  applicability:
+    genres:
+    - fantasy
+    - litrpg
+    - progression-fantasy
+    subgenres:
+    - system-apocalypse
+    - dark-horror-litrpg
+    - tower-climbing
+    exclusions: []
+  author_vetted: false
+  path: tropes/craft.trope.structure.captivity-and-escape.md
 - id: craft.trope.structure.coming-of-age
   title: The coming-of-age story
   family: trope

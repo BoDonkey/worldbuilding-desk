@@ -28,6 +28,7 @@ tags:
 related:
   - craft.profile.cultivation
   - craft.profile.progression-fantasy
+  - craft.system.dungeon.dungeon-structure-and-floors
   - craft.system.progression.advancement-rate
   - craft.system.progression.decorative-chapter-test
   - craft.trope.structure.trial-and-tournament

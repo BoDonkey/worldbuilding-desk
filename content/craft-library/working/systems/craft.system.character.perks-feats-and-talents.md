@@ -32,6 +32,7 @@ related:
   - craft.system.advancement.experience-sources-and-milestone-growth
   - craft.system.character.attributes-and-soft-hard-caps
   - craft.system.character.specialization-and-respec
+  - craft.system.companion.summons-familiars-and-bonded-companions
   - craft.system.progression.vertical-vs-horizontal-progression
 source_ids:
   - src.book.adams-fundamentals-of-game-design

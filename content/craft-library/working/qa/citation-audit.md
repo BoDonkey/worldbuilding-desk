@@ -391,3 +391,54 @@ weaker "learning by consequence." The party record notes that Yee describes
 real players in real games, not fictional depictions of them. This is the
 `mixed` mark being used as the handoff now defines it — a supported principle
 extended by this pass's synthesis, with the extension named.
+
+## Batch 14 (2026-09-05) — three sources, four honest gaps
+
+Three sources registered, bibliographic details verified before use:
+
+| id | what it supports |
+|---|---|
+| `src.book.williams-style-clarity-and-grace` | sentence-level clarity as a structural property — subject placement, information order, end-weight |
+| `src.book.browne-king-self-editing` | the developmental/line distinction, show-versus-tell at sentence level, editorial observation of common manuscript habits |
+| `src.book.vorhaus-comic-toolbox` | comedy as constructible from identifiable components rather than innate |
+
+Each carries a stated limit in its registry entry: Williams writes about
+expository prose, not fiction; Browne and King write from one
+commercial-editing tradition; Vorhaus writes for screen comedy. The records
+using them repeat those limits rather than letting the citation imply more.
+
+### Four `limited` marks, each with the gap named
+
+Batch 14 has a higher proportion of `limited` records than Batch 13 (four of
+twelve against two of twelve), and that is a property of the topics rather
+than of the effort:
+
+- `craft.system.binding.oaths-contracts-and-bindings` — Adams supports only
+  the general principle that a rule-enforced constraint must be tested. The
+  taxonomy, the characterization argument, the coercion edge case, and the
+  legal-order consequences are synthesis. **Gap named:** medieval and
+  folkloric literary scholarship on oath and vow, which exists and was not
+  available to this pass.
+- `craft.system.companion.summons-familiars-and-bonded-companions` — the
+  game-design sources address companion units mechanically and say nothing
+  about the record's actual question, which is whether a characterized
+  companion is being written as a person or a possession.
+- `craft.trope.setting.the-frontier-and-the-border-town` — **gap named:**
+  frontier scholarship in American studies and Western-genre criticism, which
+  addresses the displacement question this record raises and cannot cite.
+- `craft.trope.structure.captivity-and-escape` — Booker is used only for the
+  observation that the shape recurs, with his framework's contested status
+  stated. **Gap named:** prison-narrative criticism.
+
+The alternative in each case would have been to attach an adjacent source to
+claims it does not make. The handoff forbids that, and these four records
+would have looked better sourced and been less honest.
+
+### Corpus sourcing after Batch 14
+
+51 registered sources, 9 of them added across Batches 13 and 14. The internal
+research documents remain the two most-cited, but their share continues to
+fall as the registry grows. The standing weakness — records resting on a
+single source — is now concentrated in exactly the places where the craft
+literature is genuinely thin, which is a better position than having it
+spread across topics that are well covered.

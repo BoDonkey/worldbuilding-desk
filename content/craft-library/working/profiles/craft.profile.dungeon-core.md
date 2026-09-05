@@ -32,6 +32,7 @@ related:
   - craft.profile.base-building
   - craft.profile.isekai-portal-fantasy
   - craft.profile.progression-fantasy
+  - craft.system.dungeon.dungeon-structure-and-floors
   - craft.trope.role.villain-protagonist
 source_ids:
   - src.internal.litrpg-genre-research

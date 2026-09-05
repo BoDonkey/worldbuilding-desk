@@ -498,3 +498,42 @@ records were drafted with five hand-chosen links each under the policy;
 algorithmic fill was needed — degree fill and cross-family fill both added
 zero — because every new record already met the policy on its own. Zero
 orphans, zero one-way links, zero records without a cross-family link.
+
+# Batch 14 near-duplicate check (2026-09-05, 154 records)
+
+Closest pair involving a new record: **0.241** — below Batch 13's 0.233
+threshold only marginally, and far below the corpus's pre-remediation maximum
+of 0.417. No merge or re-scope candidates.
+
+The pairs at the top are all inside expected clusters, and each new record
+scopes itself against its neighbour in its own text:
+
+- `revision.developmental-versus-line-editing` /
+  `revision.triage-and-beta-reader-signal` (0.241) — triage is about which
+  notes to act on; this record is about which *kind* of change a note
+  requires and in what order. Cross-linked.
+- `dungeon.dungeon-structure-and-floors` /
+  `encounter.enemy-design-and-difficulty-scaling` (0.239) — the space versus
+  what is in it. Cross-linked, and the dungeon record defers to the encounter
+  record on scaling explicitly.
+- `revision.continuity-passes` / `revision.developmental-versus-line-editing`
+  (0.238) — continuity is one named pass within the order this record sets
+  out; the new record names it as such.
+- `party.parties-guilds-and-group-structure` /
+  `social.reputation-and-faction-standing` (0.229) — group membership versus
+  how groups regard you. Cross-linked.
+
+Three new records were also deliberately scoped against records drafted in
+Batch 13, one batch earlier: the frontier town against the hub and home base
+(a place people arrive at versus a place they return to), captivity against
+the dungeon record (a space that holds you versus one you enter by choice),
+and the patron against the mentor (provision that can be withdrawn versus
+capability the protagonist keeps).
+
+## Link graph after Batch 14
+
+518 mutual pairs across 154 records. As in Batch 13, every new record met the
+policy on its own — five hand-chosen links each — so `relink.py` added no
+algorithmic fill, only the 58 reciprocity completions into 57 existing
+records. Zero orphans, zero one-way links, zero records without a
+cross-family link.

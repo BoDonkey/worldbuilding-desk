@@ -31,6 +31,7 @@ related:
   - craft.general.plot.complications
   - craft.general.plot.setup-and-payoff
   - craft.general.premise.dramatic-question-and-controlling-idea
+  - craft.system.chance.luck-randomness-and-probability
   - craft.trope.structure.the-heist
 source_ids:
   - src.book.mckee-story

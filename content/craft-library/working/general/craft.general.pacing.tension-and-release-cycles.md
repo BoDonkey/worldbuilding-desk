@@ -32,6 +32,7 @@ related:
   - craft.general.pacing.pacing-across-scales
   - craft.general.pacing.suspense-uncertainty-and-anticipation
   - craft.general.scene.sequel-and-reflection
+  - craft.general.voice.humor-as-craft
   - craft.profile.system-apocalypse
 source_ids:
   - src.book.cron-wired-for-story

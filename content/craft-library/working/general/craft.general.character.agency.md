@@ -39,6 +39,7 @@ related:
   - craft.profile.isekai-portal-fantasy
   - craft.system.character.affinities-resistances-titles-and-bloodlines
   - craft.trope.role.chosen-one
+  - craft.trope.role.the-patron-and-the-benefactor
   - craft.trope.role.trickster
 source_ids:
   - src.book.cron-story-genius

@@ -31,6 +31,7 @@ tags:
 related:
   - craft.comparison.progression.universal-vs-class-bound-access
   - craft.comparison.resource.qi-versus-mana
+  - craft.system.binding.oaths-contracts-and-bindings
   - craft.system.consequences.institutions-labor-and-governance
   - craft.system.consequences.systemic-social-consequences
   - craft.trope.identity.resurrection

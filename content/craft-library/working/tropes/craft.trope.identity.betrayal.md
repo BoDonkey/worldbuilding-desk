@@ -31,9 +31,11 @@ related:
   - craft.general.character.antagonistic-force
   - craft.general.plot.foreshadowing
   - craft.general.plot.setup-and-payoff
+  - craft.system.binding.oaths-contracts-and-bindings
   - craft.trope.identity.hidden-identity-and-secret-heritage
   - craft.trope.identity.resurrection
   - craft.trope.role.villain-protagonist
+  - craft.trope.structure.captivity-and-escape
 source_ids:
   - src.book.mckee-story
 source_confidence: limited

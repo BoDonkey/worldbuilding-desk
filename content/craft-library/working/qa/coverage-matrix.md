@@ -759,3 +759,44 @@ structure, luck and randomness, reputation and faction standing, travel and
 territory, oaths and binding contracts, summons and companions; `trope` —
 additional setting tropes (the frontier, the dungeon town), the tyrant and
 the god-patron, the prison break and escape, apprenticeship, the doppelganger.
+
+## Target reconciliation (settled 2026-09-05)
+
+The Batch 13 notes flagged the 180 total and the three 60-record family
+targets as having "diverged." **That was a misreading, and it is corrected
+here.** The two never diverged; the comparison and profile records had simply
+never been assigned to families, so the family counts summed to less than the
+corpus and the gaps summed to more than the remainder. Any assignment of
+those 18 records reconciles the arithmetic, because the total is fixed.
+
+The assignment adopted, per the handoff's instruction to count each toward
+"whichever family it most directly serves":
+
+- **The 6 `comparison` records → `system`.** All six are progression or
+  resource design choices (qi versus mana, pools versus thresholds, hard
+  numbers versus named tiers, and so on). They serve Family C directly and no
+  other family at all.
+- **The 12 `profile` records → `trope`.** Subgenre profiles describe what a
+  subgenre promises and what its readers expect, which is Family B's stated
+  remit — "conventions that materially change reader expectations." They
+  modify records in every family, but what they *are* is genre-convention
+  knowledge.
+
+The second assignment is a judgment rather than an obvious fact; the profiles
+lean heavily on system mechanics and a reasonable person could file them
+under Family C instead. It is recorded here so the count is reproducible and
+so the author can overrule it. Nothing about the records changes either way —
+only how progress is measured.
+
+### Effective family progress after Batch 14
+
+| family | records | assigned | effective | target | remaining |
+|---|---|---|---|---|---|
+| general | 50 | — | **50** | 60 | 10 |
+| trope | 43 | +12 profile | **55** | 60 | 5 |
+| system | 43 | +6 comparison | **49** | 60 | 11 |
+| **total** | **154** | | **154** | **180** | **26** |
+
+The remainders now sum to the 26 records left against the 180 target, as they
+should. Two more batches of roughly thirteen finish the production pass, and
+the weighting is set: `system` needs the most, `general` next, `trope` least.

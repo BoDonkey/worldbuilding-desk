@@ -31,6 +31,7 @@ related:
   - craft.profile.time-loop
   - craft.system.progression.vertical-vs-horizontal-progression
   - craft.trope.role.found-family
+  - craft.trope.setting.the-frontier-and-the-border-town
   - craft.trope.setting.the-hub-and-home-base
 source_ids:
   - src.internal.litrpg-genre-research

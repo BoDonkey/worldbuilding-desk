@@ -30,7 +30,9 @@ related:
   - craft.general.pov.psychic-distance-and-interiority
   - craft.general.voice.description-and-specificity
   - craft.general.voice.dialogue-and-subtext
+  - craft.general.voice.humor-as-craft
   - craft.general.voice.narrative-summary-vs-scene
+  - craft.general.voice.sentence-rhythm-and-clarity
   - craft.trope.role.ensemble-cast-dynamics
 source_ids:
   - src.book.leguin-steering-the-craft

@@ -35,6 +35,7 @@ related:
   - craft.system.combat.action-economy
   - craft.system.combat.death-and-respawn
   - craft.system.quest.quest-and-reward-design
+  - craft.trope.structure.captivity-and-escape
   - craft.trope.structure.faction-conflict-and-war
   - craft.trope.structure.sacrifice-and-return
 source_ids:

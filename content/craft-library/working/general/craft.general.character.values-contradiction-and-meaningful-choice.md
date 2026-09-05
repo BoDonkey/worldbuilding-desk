@@ -33,6 +33,7 @@ related:
   - craft.general.character.want-versus-need
   - craft.general.plot.earned-resolution
   - craft.general.premise.dramatic-question-and-controlling-idea
+  - craft.system.binding.oaths-contracts-and-bindings
   - craft.trope.role.villain-protagonist
   - craft.trope.structure.sacrifice-and-return
 source_ids:

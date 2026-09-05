@@ -31,6 +31,7 @@ tags:
   - worldbuilding
 related:
   - craft.profile.cultivation
+  - craft.system.binding.oaths-contracts-and-bindings
   - craft.system.consequences.institutions-labor-and-governance
   - craft.system.consequences.systemic-social-consequences
   - craft.system.cultivation.alchemy-and-pill-refinement

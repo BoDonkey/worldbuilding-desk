@@ -27,11 +27,13 @@ tags:
   - voice
   - foundational
 related:
+  - craft.general.character.introducing-characters
   - craft.general.pacing.pacing-across-scales
   - craft.general.pov.information-control
   - craft.general.setting.setting-as-pressure
   - craft.general.voice.dialogue-and-subtext
   - craft.general.voice.narrative-summary-vs-scene
+  - craft.general.voice.sentence-rhythm-and-clarity
   - craft.general.voice.voice-as-craft-element
   - craft.system.resource.resource-archetype-survey
 source_ids:

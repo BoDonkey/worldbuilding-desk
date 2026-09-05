@@ -28,6 +28,7 @@ tags:
 related:
   - craft.comparison.resource.renewable-vs-finite-resources
   - craft.system.advancement.experience-sources-and-milestone-growth
+  - craft.system.binding.oaths-contracts-and-bindings
   - craft.system.encounter.range-positioning-damage-and-defenses
   - craft.system.resource.health-and-focus-as-core-resources
   - craft.system.resource.resource-lifecycle-design

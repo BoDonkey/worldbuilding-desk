@@ -27,8 +27,10 @@ tags:
   - ensemble
 related:
   - craft.general.character.antagonistic-force
+  - craft.general.character.introducing-characters
   - craft.general.character.relationships-and-relational-arcs
   - craft.general.pov.multiple-viewpoint-management
+  - craft.system.companion.summons-familiars-and-bonded-companions
   - craft.system.party.parties-guilds-and-group-structure
   - craft.trope.fatigue.overused-litrpg-trope-cluster
   - craft.trope.role.companion

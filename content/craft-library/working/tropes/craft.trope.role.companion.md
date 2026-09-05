@@ -30,10 +30,13 @@ tags:
   - relationships
 related:
   - craft.general.character.supporting-cast-purpose
+  - craft.general.voice.humor-as-craft
+  - craft.system.companion.summons-familiars-and-bonded-companions
   - craft.trope.fatigue.overused-litrpg-trope-cluster
   - craft.trope.role.ensemble-cast-dynamics
   - craft.trope.role.found-family
   - craft.trope.role.rival
+  - craft.trope.role.the-patron-and-the-benefactor
 source_ids:
   - src.internal.litrpg-craft-failures-research
 source_confidence: limited

@@ -34,6 +34,7 @@ related:
   - craft.trope.role.chosen-one
   - craft.trope.role.reluctant-hero
   - craft.trope.role.the-outsider-and-belonging
+  - craft.trope.role.the-patron-and-the-benefactor
 source_ids:
   - src.internal.litrpg-craft-failures-research
 source_confidence: limited

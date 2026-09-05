@@ -33,6 +33,7 @@ related:
   - craft.general.character.want-versus-need
   - craft.general.plot.midpoint-and-reversals
   - craft.general.structure.subplot-and-thread-braiding
+  - craft.system.social.reputation-and-faction-standing
   - craft.trope.romance.romantic-subplot-conventions
 source_ids:
   - src.book.cron-story-genius

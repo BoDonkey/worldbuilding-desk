@@ -31,6 +31,7 @@ related:
   - craft.comparison.progression.universal-vs-class-bound-access
   - craft.general.character.agency
   - craft.system.character.specialization-and-respec
+  - craft.system.social.reputation-and-faction-standing
   - craft.trope.role.chosen-one
   - craft.trope.role.the-outsider-and-belonging
 source_ids:

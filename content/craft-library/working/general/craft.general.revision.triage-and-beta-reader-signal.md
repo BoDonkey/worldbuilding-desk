@@ -31,6 +31,7 @@ related:
   - craft.general.practice.author-burnout-as-craft-problem
   - craft.general.promise.promise-consistency
   - craft.general.revision.continuity-passes
+  - craft.general.revision.developmental-versus-line-editing
   - craft.general.revision.protecting-reader-experience
   - craft.general.structure.chapter-architecture-and-transitions
   - craft.trope.convention.serial-fiction-conventions

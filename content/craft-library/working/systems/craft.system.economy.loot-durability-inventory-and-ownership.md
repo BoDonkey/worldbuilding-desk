@@ -30,7 +30,9 @@ tags:
 related:
   - craft.comparison.resource.renewable-vs-finite-resources
   - craft.system.advancement.diminishing-returns-rarity-gates-and-catch-up-mechanics
+  - craft.system.chance.luck-randomness-and-probability
   - craft.system.consequences.systemic-social-consequences
+  - craft.system.dungeon.dungeon-structure-and-floors
   - craft.system.economy.crafting-and-economy-loops
   - craft.system.economy.currencies-markets-and-inflation
   - craft.system.economy.enchanting-and-item-crafting

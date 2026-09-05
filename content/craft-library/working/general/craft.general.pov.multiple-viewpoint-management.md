@@ -28,6 +28,7 @@ tags:
   - structure
   - character
 related:
+  - craft.general.character.introducing-characters
   - craft.general.character.supporting-cast-purpose
   - craft.general.pov.information-control
   - craft.general.pov.psychic-distance-and-interiority

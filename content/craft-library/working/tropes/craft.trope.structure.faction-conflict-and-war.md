@@ -31,6 +31,7 @@ related:
   - craft.general.character.antagonistic-force
   - craft.general.plot.stakes
   - craft.system.consequences.institutions-labor-and-governance
+  - craft.system.social.reputation-and-faction-standing
   - craft.trope.structure.revenge
   - craft.trope.structure.the-prophecy
 source_ids:

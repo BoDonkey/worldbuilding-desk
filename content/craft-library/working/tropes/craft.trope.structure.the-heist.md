@@ -32,6 +32,7 @@ related:
   - craft.system.encounter.healing-teamwork-and-information-asymmetry
   - craft.trope.combination.inversions-and-combinations
   - craft.trope.role.trickster
+  - craft.trope.structure.captivity-and-escape
   - craft.trope.structure.mystery
   - craft.trope.structure.the-quest
 source_ids:

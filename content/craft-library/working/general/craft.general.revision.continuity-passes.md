@@ -32,6 +32,7 @@ related:
   - craft.general.plot.setup-and-payoff
   - craft.general.practice.buffer-discipline
   - craft.general.practice.no-gap-posting
+  - craft.general.revision.developmental-versus-line-editing
   - craft.general.revision.protecting-reader-experience
   - craft.general.revision.triage-and-beta-reader-signal
 source_ids:

@@ -32,6 +32,7 @@ related:
   - craft.general.promise.promise-consistency
   - craft.general.revision.protecting-reader-experience
   - craft.general.structure.opening-pages-and-reader-commitment
+  - craft.general.voice.humor-as-craft
   - craft.trope.combination.inversions-and-combinations
   - craft.trope.convention.mystery-genre-conventions
   - craft.trope.structure.portal-and-other-world

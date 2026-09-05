@@ -30,6 +30,7 @@ tags:
   - trope
   - relationships
 related:
+  - craft.general.character.introducing-characters
   - craft.general.character.supporting-cast-purpose
   - craft.general.pov.multiple-viewpoint-management
   - craft.general.voice.voice-as-craft-element

@@ -28,6 +28,7 @@ tags:
 related:
   - craft.general.plot.stakes
   - craft.system.combat.death-and-respawn
+  - craft.system.companion.summons-familiars-and-bonded-companions
   - craft.system.encounter.healing-teamwork-and-information-asymmetry
   - craft.system.encounter.range-positioning-damage-and-defenses
   - craft.system.encounter.status-effects-crowd-control-and-counters

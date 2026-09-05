@@ -28,6 +28,7 @@ tags:
 related:
   - craft.general.pov.information-control
   - craft.general.voice.description-and-specificity
+  - craft.general.voice.humor-as-craft
   - craft.general.voice.narrative-summary-vs-scene
   - craft.general.voice.voice-as-craft-element
   - craft.trope.romance.romantic-subplot-conventions

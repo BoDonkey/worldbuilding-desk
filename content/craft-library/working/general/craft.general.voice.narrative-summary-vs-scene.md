@@ -33,6 +33,7 @@ related:
   - craft.general.scene.goal-conflict-outcome
   - craft.general.voice.description-and-specificity
   - craft.general.voice.dialogue-and-subtext
+  - craft.general.voice.sentence-rhythm-and-clarity
   - craft.general.voice.voice-as-craft-element
   - craft.system.progression.stat-block-density
 source_ids:

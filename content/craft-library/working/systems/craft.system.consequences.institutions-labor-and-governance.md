@@ -33,6 +33,7 @@ related:
   - craft.system.consequences.systemic-social-consequences
   - craft.system.cultivation.sects-inheritance-and-deviation
   - craft.system.party.parties-guilds-and-group-structure
+  - craft.system.social.reputation-and-faction-standing
   - craft.trope.structure.faction-conflict-and-war
 source_ids:
   - src.rowe.progression-fantasy

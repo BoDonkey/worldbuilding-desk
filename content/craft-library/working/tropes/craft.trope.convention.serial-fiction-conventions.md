@@ -34,10 +34,12 @@ related:
   - craft.general.practice.author-burnout-as-craft-problem
   - craft.general.practice.buffer-discipline
   - craft.general.practice.no-gap-posting
+  - craft.general.revision.developmental-versus-line-editing
   - craft.general.revision.protecting-reader-experience
   - craft.general.revision.triage-and-beta-reader-signal
   - craft.general.structure.chapter-architecture-and-transitions
   - craft.general.structure.opening-pages-and-reader-commitment
+  - craft.general.voice.sentence-rhythm-and-clarity
   - craft.trope.convention.fantasy-genre-conventions
   - craft.trope.convention.progression-fiction-reader-expectations
 source_ids:

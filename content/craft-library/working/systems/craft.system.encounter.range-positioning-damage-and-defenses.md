@@ -27,6 +27,7 @@ tags:
   - encounter-design
 related:
   - craft.profile.classic-litrpg
+  - craft.system.chance.luck-randomness-and-probability
   - craft.system.combat.action-economy
   - craft.system.encounter.enemy-design-and-difficulty-scaling
   - craft.system.encounter.healing-teamwork-and-information-asymmetry

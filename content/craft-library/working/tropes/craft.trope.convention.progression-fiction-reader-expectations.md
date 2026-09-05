@@ -30,6 +30,7 @@ tags:
 related:
   - craft.general.practice.no-gap-posting
   - craft.general.promise.promise-consistency
+  - craft.system.chance.luck-randomness-and-probability
   - craft.system.progression.advancement-rate
   - craft.trope.convention.mystery-genre-conventions
   - craft.trope.convention.serial-fiction-conventions

@@ -38,6 +38,7 @@ related:
   - craft.profile.dark-horror-litrpg
   - craft.profile.progression-fantasy
   - craft.system.advancement.experience-sources-and-milestone-growth
+  - craft.system.chance.luck-randomness-and-probability
   - craft.system.progression.advancement-rate
   - craft.system.progression.decorative-chapter-test
   - craft.system.quest.quest-and-reward-design

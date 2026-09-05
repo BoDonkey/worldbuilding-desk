@@ -33,7 +33,9 @@ related:
   - craft.general.plot.stakes
   - craft.general.voice.description-and-specificity
   - craft.system.consequences.systemic-social-consequences
+  - craft.system.dungeon.dungeon-structure-and-floors
   - craft.trope.setting.academy-story
+  - craft.trope.setting.the-frontier-and-the-border-town
   - craft.trope.setting.the-hub-and-home-base
 source_ids:
   - src.book.burroway-writing-fiction

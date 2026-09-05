@@ -33,6 +33,7 @@ related:
   - craft.trope.role.antihero-and-redeemed-enemy
   - craft.trope.role.found-family
   - craft.trope.role.reluctant-hero
+  - craft.trope.role.the-patron-and-the-benefactor
   - craft.trope.setting.academy-story
   - craft.trope.structure.coming-of-age
 source_ids:

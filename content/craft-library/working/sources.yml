@@ -500,6 +500,50 @@ sources:
       form's structural tension, not as a universal claim about coming-of-age
       stories in every culture or medium.
 
+  # --- Added in Batch 14 (2026-09-05) ---
+  - id: src.book.williams-style-clarity-and-grace
+    title: "Style: Lessons in Clarity and Grace"
+    org_or_author: Joseph M. Williams, with Gregory G. Colomb and Joseph Bizup
+    publisher: "Pearson/Longman; 13th ed. 2021 (first published as Style: Ten Lessons in Clarity and Grace, 1981)"
+    source_type: book
+    access_date: 2026-09-05
+    supports: >
+      Sentence-level clarity, the relationship between grammatical subject and
+      character, cohesion and emphasis across sentences.
+    confidence_note: >
+      Long-established composition textbook. Its examples are drawn from
+      expository and academic prose, not fiction, so applying its principles
+      to narrative voice is an extension rather than a direct citation.
+
+  - id: src.book.browne-king-self-editing
+    title: "Self-Editing for Fiction Writers: How to Edit Yourself Into Print"
+    org_or_author: Renni Browne and Dave King
+    publisher: "HarperCollins, 2nd ed. (editions dated 2004 and 2010 in circulation)"
+    source_type: book
+    access_date: 2026-09-05
+    supports: >
+      The distinction between developmental and line-level revision,
+      show-versus-tell at the sentence level, dialogue mechanics, common
+      manuscript-level habits editors flag.
+    confidence_note: >
+      Practitioner craft guide by working editors, aimed at trade fiction. Its
+      prescriptions are strongly stated and reflect a particular
+      commercial-editing tradition; treated here as one considered position.
+
+  - id: src.book.vorhaus-comic-toolbox
+    title: "The Comic Toolbox: How to Be Funny Even If You're Not"
+    org_or_author: John Vorhaus
+    publisher: "Silman-James Press, 1994"
+    source_type: book
+    access_date: 2026-09-05
+    supports: >
+      Comedy as a constructible craft rather than a temperament; the role of
+      exaggeration, reversal, and character flaw in comic structure.
+    confidence_note: >
+      Written for screen and comedy writing rather than prose fiction.
+      Established within its field; its transfer to narrative prose is an
+      extension and is marked as such where used.
+
   # --- Synthesis marker ---
   - id: src.synthesis.craft-library-editorial
     title: "Craft-library editorial synthesis"

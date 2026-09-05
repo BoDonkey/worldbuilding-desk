@@ -34,6 +34,7 @@ related:
   - craft.trope.role.mentor
   - craft.trope.role.rival
   - craft.trope.role.the-outsider-and-belonging
+  - craft.trope.setting.the-frontier-and-the-border-town
   - craft.trope.setting.the-hub-and-home-base
   - craft.trope.structure.coming-of-age
   - craft.trope.structure.trial-and-tournament

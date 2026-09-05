@@ -36,8 +36,10 @@ tags:
 related:
   - craft.general.character.supporting-cast-purpose
   - craft.system.combat.action-economy
+  - craft.system.companion.summons-familiars-and-bonded-companions
   - craft.system.consequences.institutions-labor-and-governance
   - craft.system.encounter.healing-teamwork-and-information-asymmetry
+  - craft.system.social.reputation-and-faction-standing
   - craft.trope.role.ensemble-cast-dynamics
   - craft.trope.setting.the-hub-and-home-base
 source_ids:

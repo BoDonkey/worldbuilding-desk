@@ -38,6 +38,7 @@ related:
   - craft.general.plot.causal-escalation
   - craft.system.character.attributes-and-soft-hard-caps
   - craft.system.combat.death-and-respawn
+  - craft.system.dungeon.dungeon-structure-and-floors
   - craft.system.encounter.range-positioning-damage-and-defenses
   - craft.system.progression.advancement-rate
 source_ids:
