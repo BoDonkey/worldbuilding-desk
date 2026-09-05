@@ -1,0 +1,430 @@
+# Source registry — Writing Coach craft library (working/draft)
+#
+# Deduplicated source list. Individual documents cite these by `id` in their
+# `source_ids` front matter instead of repeating bibliographic details.
+# `source_type` values: book, blog, research-report, forum, encyclopedia,
+# internal-research, academic.
+#
+# This file is a draft production artifact. It is not the 4.17 schema and
+# does not imply author vetting of any cited claim.
+
+sources:
+  # --- Internal research inputs (this repo) ---
+  - id: src.internal.litrpg-genre-research
+    title: "LitRPG Genre Research — Taxonomy and Platform"
+    org_or_author: Worldbuilding Desk (internal)
+    location: docs/research-litrpg-genre.md
+    source_type: internal-research
+    access_date: 2026-08-31
+    supports: >
+      Subgenre taxonomy, umbrella relationships (GameLit/LitRPG/progression
+      fantasy), platform/market conventions, subgenre pattern modifiers.
+    confidence_note: >
+      Working input corrected by this drafting pass, not a settled source in
+      its own right. Individual claims trace back to its cited sources where
+      possible; platform-conventions claims remain vendor-reported.
+
+  - id: src.internal.litrpg-craft-failures-research
+    title: "LitRPG Craft-Failure Pattern Research (Part A–D)"
+    org_or_author: Worldbuilding Desk (internal)
+    location: docs/research-litrpg-craft-failures.md
+    source_type: internal-research
+    access_date: 2026-08-31
+    supports: >
+      Candidate pattern pool (P1–P28), reader-side failure hierarchy, tranche-1
+      selection rationale, detectability reasoning.
+    confidence_note: >
+      Working input corrected by this drafting pass. Reader-hierarchy
+      percentages are a single vendor's coded sample of one Reddit
+      discussion set, not a population estimate.
+
+  # --- Progression fantasy / LitRPG craft essays (practitioner) ---
+  - id: src.rowe.progression-fantasy
+    title: "Writing Progression Fantasy"
+    org_or_author: Andrew Rowe
+    url: https://andrewkrowe.wordpress.com/2019/03/02/writing-progression-fantasy/
+    source_type: blog
+    access_date: 2026-08-29
+    supports: >
+      Multi-axis progression, unused solutions, abandoned progression
+      methods, society applying its own powers, competent others, established
+      limits, options-vs-linear-power, effort-equals-reward.
+    confidence_note: >
+      Working progression-fantasy author writing craft essays for peers;
+      practitioner consensus, not academic study. Widely cited within the
+      subgenre's author community.
+
+  - id: src.rowe.distinctions-in-progression-fantasy
+    title: "Distinctions in Progression Fantasy Styles"
+    org_or_author: Andrew Rowe
+    url: https://andrewkrowe.wordpress.com/2022/11/04/distinctions-in-progression-fantasy-styles/
+    source_type: blog
+    access_date: 2026-08-29
+    supports: "Subgenre style distinctions within progression fantasy."
+    confidence_note: Practitioner essay, same author as above.
+
+  - id: src.tam.meaningful-progression
+    title: "How to Write Meaningful Progression in Progression Fantasy"
+    org_or_author: Jacob Tam, IlorisNovel
+    url: https://www.ilorisnovel.com/articles/how-to-write-meaningful-progression-in-progression-fantasy
+    source_type: blog
+    access_date: 2026-08-29
+    supports: >
+      Fake progression, decorative chapter test, three stages of relative
+      strength, negative space, weak-to-OP honesty, tier pacing curve.
+    confidence_note: Practitioner essay; internally consistent and specific.
+
+  - id: src.oster.overused-tropes
+    title: "Top 5 Overused LitRPG Tropes"
+    org_or_author: Aaron Oster
+    url: https://www.aaronosterauthor.com/from-the-bean-bag-of-aaron-oster/top-5-litrpg-tropes
+    source_type: blog
+    access_date: 2026-08-29
+    supports: "Working author's ranked list of reader-fatigued LitRPG tropes."
+    confidence_note: Single author's opinion, presented as such.
+
+  # --- Reader-side data (vendor-reported) ---
+  - id: src.chapterchronicles.series-falloff
+    title: "Why Do Great LitRPG Series Fall Off? An Analysis of 1,147 Reddit Comments"
+    org_or_author: Chapter Chronicles
+    url: https://www.chapterchronicles.com/blog/why-great-litrpg-series-fall-off/
+    source_type: research-report
+    access_date: 2026-08-29
+    supports: >
+      Reader-side failure hierarchy, promise-consistency finding, series
+      decline causes.
+    confidence_note: >
+      Vendor content marketing; coded sample of one selected discussion set
+      (ten r/LitRPG tier-list threads), not a population survey. Treat
+      percentages as directional, not representative.
+
+  - id: src.chapterchronicles.discipline-index
+    title: "We Analyzed 459 Rising Stars Fictions: The 5-Point Discipline Index"
+    org_or_author: Chapter Chronicles
+    url: https://www.chapterchronicles.com/blog/rising-stars-discipline-index/
+    source_type: research-report
+    access_date: 2026-08-29
+    supports: >
+      No-gap posting correlation with Rising Stars rank, launch-strategy
+      split by target list, rating-to-rank correlation (near zero).
+    confidence_note: >
+      Vendor content marketing with a stated methodology and sample size
+      (n=459); dataset not independently reproducible from the post alone.
+
+  - id: src.goodreads.litrpg-fatigue-poll
+    title: "Poll: which of these do you consistently have a problem with"
+    org_or_author: Goodreads LitRPG forum members
+    url: https://www.goodreads.com/topic/show/19548378-poll-which-of-these-do-you-consistently-have-a-problem-with-having-rea
+    source_type: forum
+    access_date: 2026-08-29
+    supports: "Reader-reported trope and mechanic fatigue."
+    confidence_note: Informal reader poll; self-selected respondents.
+
+  - id: src.royalroad.litrpg-tropes-thread
+    title: "LitRPG Tropes"
+    org_or_author: Royal Road forum members
+    url: https://www.royalroad.com/forums/thread/103455
+    source_type: forum
+    access_date: 2026-08-29
+    supports: "Working-author discussion of genre-specific tropes."
+    confidence_note: Practitioner forum consensus, self-reported.
+
+  - id: src.royalroad.guide-thread
+    title: "Guide to writing LitRPGs"
+    org_or_author: Royal Road forum members
+    url: https://www.royalroad.com/forums/thread/124876
+    source_type: forum
+    access_date: 2026-08-29
+    supports: "System presentation and pacing practitioner guidance."
+    confidence_note: Practitioner forum consensus, self-reported.
+
+  - id: src.scribblehub.power-creep-thread
+    title: "How do you deal with/prevent/manage power creep/rising stakes"
+    org_or_author: Scribble Hub forum members
+    url: https://forum.scribblehub.com/threads/how-do-you-deal-with-prevent-manage-power-creep-rising-stakes-in-story-telling.15591/
+    source_type: forum
+    access_date: 2026-08-29
+    supports: "Practitioner strategies for managing power creep and escalation."
+    confidence_note: Practitioner forum consensus, self-reported.
+
+  - id: src.litrpgreads.integrating-systems
+    title: "How to Write LitRPG: Integrating Game Systems Into Your Story Without Losing Readers"
+    org_or_author: LitRPG Reads
+    url: https://litrpgreads.com/blog/litrpg/how-to-write-litrpg-integrating-game-systems-into-your-story-without-losing-readers
+    source_type: blog
+    access_date: 2026-08-29
+    supports: >
+      Stat-block density, system-as-narrator intrusion, mechanical info-dump.
+    confidence_note: Heavily monetized site; used only where corroborated elsewhere.
+
+  - id: src.litrpgreads.audiobook-tropes
+    title: "LitRPG Audiobook Tropes Readers Love and Hate"
+    org_or_author: LitRPG Reads
+    url: https://litrpgreads.com/blog/litrpg/litrpg-audiobook-tropes-readers-love-and-hate
+    source_type: blog
+    access_date: 2026-08-29
+    supports: "Medium-dependent reception of stat blocks (print vs. audio)."
+    confidence_note: Heavily monetized site; single-source claim, marked weak.
+
+  - id: src.litrpgtools.subgenre-guide
+    title: "Complete Guide to LitRPG Subgenres"
+    org_or_author: LitRPGTools (Pivot Press Publishing)
+    url: https://litrpgtools.com/complete-guide-litrpg-subgenres/
+    source_type: blog
+    access_date: 2026-08-29
+    supports: "Twelve-category subgenre taxonomy skeleton."
+    confidence_note: >
+      Commercial property with affiliate links and promotional author
+      placement. Category structure corroborated by independent sources;
+      author/series recommendations are not used.
+
+  - id: src.litrpgcritic.subgenre-explainers
+    title: "Subgenre explainer posts (various)"
+    org_or_author: LitRPG Critic / Fantasy Ranked
+    source_type: blog
+    access_date: 2026-08-29
+    supports: "Independent corroboration of subgenre category boundaries."
+    confidence_note: Independent of LitRPGTools; agrees on category structure.
+
+  - id: src.wikipedia.progression-fantasy
+    title: "Progression fantasy"
+    org_or_author: Wikipedia contributors
+    url: https://en.wikipedia.org/wiki/Progression_fantasy
+    source_type: encyclopedia
+    access_date: 2026-08-29
+    supports: "General definitional grounding for progression fantasy."
+    confidence_note: Tertiary source; used for definitional corroboration only.
+
+  # --- Established general craft works (books) ---
+  - id: src.book.mckee-story
+    title: "Story: Substance, Structure, Style, and the Principles of Screenwriting"
+    org_or_author: Robert McKee
+    publisher: ReganBooks, 1997
+    source_type: book
+    supports: >
+      Scene structure (value shift, conflict, turn), controlling idea, story
+      causality, negation of the negation, exposition discipline.
+    confidence_note: >
+      Widely taught screenwriting/story-structure text; adapted here for
+      prose fiction rather than quoted directly.
+
+  - id: src.book.swain-techniques-selling-writer
+    title: "Techniques of the Selling Writer"
+    org_or_author: Dwight V. Swain
+    publisher: University of Oklahoma Press, 1965
+    source_type: book
+    supports: "Scene/sequel structure (goal-conflict-disaster / reaction-dilemma-decision)."
+    confidence_note: >
+      Foundational, still widely taught source for the scene/sequel model;
+      original terminology paraphrased, not quoted.
+
+  - id: src.book.snyder-save-the-cat
+    title: "Save the Cat! The Last Book on Screenwriting You'll Ever Need"
+    org_or_author: Blake Snyder
+    publisher: Michael Wiese Productions, 2005
+    source_type: book
+    supports: "Beat-sheet structure as one school of plot architecture, midpoint function."
+    confidence_note: >
+      Popular, prescriptive structure model; presented in this library as one
+      school among several, not the universal shape of a novel.
+
+  - id: src.book.truby-anatomy-of-story
+    title: "The Anatomy of Story: 22 Steps to Becoming a Master Storyteller"
+    org_or_author: John Truby
+    publisher: Faber and Faber, 2007
+    source_type: book
+    supports: "Premise/controlling idea, character web, moral argument, revelation."
+    confidence_note: Established, widely taught structure text.
+
+  - id: src.book.cron-story-genius
+    title: "Story Genius: How to Use Brain Science to Go Beyond Outlining"
+    org_or_author: Lisa Cron
+    publisher: Ten Speed Press, 2016
+    source_type: book
+    supports: "Want/need distinction, misbelief, internal-external arc alignment."
+    confidence_note: Established contemporary craft text, cognitive-science framing.
+
+  - id: src.book.cron-wired-for-story
+    title: "Wired for Story"
+    org_or_author: Lisa Cron
+    publisher: Ten Speed Press, 2012
+    source_type: book
+    supports: "Reader engagement mechanics, cause-and-effect, tension."
+    confidence_note: Established contemporary craft text.
+
+  - id: src.book.vogler-writers-journey
+    title: "The Writer's Journey: Mythic Structure for Writers"
+    org_or_author: Christopher Vogler
+    publisher: Michael Wiese Productions, 1992
+    source_type: book
+    supports: "Mentor, threshold guardian, and hero archetypes; call/refusal structure."
+    confidence_note: >
+      Popularization of Campbell's monomyth; presented as one lens, not a
+      universal template.
+
+  - id: src.book.campbell-hero-with-a-thousand-faces
+    title: "The Hero with a Thousand Faces"
+    org_or_author: Joseph Campbell
+    publisher: Pantheon Books, 1949
+    source_type: book
+    supports: "Monomyth structure, archetypal figures (mentor, threshold guardian, herald)."
+    confidence_note: >
+      Comparative-mythology synthesis, contested by later scholars as
+      overgeneralized across cultures; used here as one influential lens.
+
+  - id: src.book.propp-morphology-of-the-folktale
+    title: "Morphology of the Folktale"
+    org_or_author: Vladimir Propp
+    publisher: (Russian orig. 1928; Univ. of Texas Press trans. 1968)
+    source_type: academic
+    supports: "Character function taxonomy (villain, donor, helper, princess, dispatcher)."
+    confidence_note: >
+      Structuralist analysis of a specific corpus (Russian folktales); useful
+      for function-based trope naming, not a universal grammar of story.
+
+  - id: src.book.booker-seven-basic-plots
+    title: "The Seven Basic Plots: Why We Tell Stories"
+    org_or_author: Christopher Booker
+    publisher: Continuum, 2004
+    source_type: book
+    supports: "Plot-type taxonomy discussion (used critically, not as settled fact)."
+    confidence_note: >
+      Contested among scholars for its Jungian framing and selective
+      examples; cited here only where corroborated by other sources.
+
+  - id: src.book.forster-aspects-of-the-novel
+    title: "Aspects of the Novel"
+    org_or_author: E. M. Forster
+    publisher: Edward Arnold, 1927
+    source_type: book
+    supports: "Flat vs. round character distinction."
+    confidence_note: Foundational, still widely cited literary-craft source.
+
+  - id: src.book.maass-writing-breakout-novel
+    title: "Writing the Breakout Novel"
+    org_or_author: Donald Maass
+    publisher: Writer's Digest Books, 2001
+    source_type: book
+    supports: "Stakes escalation, tension layering, market-aware craft advice."
+    confidence_note: Established contemporary craft text from a working literary agent.
+
+  - id: src.book.bell-super-structure
+    title: "Super Structure: The Key to Unleashing the Power of Story"
+    org_or_author: James Scott Bell
+    publisher: Compendium Press, 2015
+    source_type: book
+    supports: "Midpoint, disaster-beat, and signpost-scene structure."
+    confidence_note: Established contemporary craft text, one school of structure.
+
+  - id: src.book.weiland-helping-writers-become-authors
+    title: "Helping Writers Become Authors (blog and structure guides)"
+    org_or_author: K. M. Weiland
+    url: https://www.helpingwritersbecomeauthors.com/
+    source_type: blog
+    access_date: 2026-08-30
+    supports: "Scene/sequel practice, pacing, structural signposts."
+    confidence_note: Long-running, widely referenced contemporary craft resource.
+
+  - id: src.book.king-on-writing
+    title: "On Writing: A Memoir of the Craft"
+    org_or_author: Stephen King
+    publisher: Scribner, 2000
+    source_type: book
+    supports: "Revision practice, voice, description discipline."
+    confidence_note: Single author's practice and opinion, presented as such.
+
+  - id: src.book.leguin-steering-the-craft
+    title: "Steering the Craft"
+    org_or_author: Ursula K. Le Guin
+    publisher: Eighth Mountain Press, 1998 (rev. 2015)
+    source_type: book
+    supports: "Point of view, psychic distance, narrative voice control."
+    confidence_note: Established, widely taught prose-craft text.
+
+  - id: src.book.gardner-art-of-fiction
+    title: "The Art of Fiction: Notes on Craft for Young Writers"
+    org_or_author: John Gardner
+    publisher: Knopf, 1984
+    source_type: book
+    supports: "The 'vivid, continuous dream,' psychic distance, specificity."
+    confidence_note: Foundational, widely taught prose-craft text.
+
+  # --- Game design / systems ---
+  - id: src.book.salen-zimmerman-rules-of-play
+    title: "Rules of Play: Game Design Fundamentals"
+    org_or_author: Katie Salen and Eric Zimmerman
+    publisher: MIT Press, 2003
+    source_type: book
+    supports: "Formal game-system concepts: resources, economies, meaningful play."
+    confidence_note: Established academic game-design text.
+
+  - id: src.book.costikyan-uncertainty-in-games
+    title: "Uncertainty in Games"
+    org_or_author: Greg Costikyan
+    publisher: MIT Press, 2013
+    source_type: book
+    supports: "Uncertainty and risk as sources of engagement in game systems."
+    confidence_note: Established academic/practitioner game-design text.
+
+  - id: src.book.adams-fundamentals-of-game-design
+    title: "Fundamentals of Game Design"
+    org_or_author: Ernest Adams
+    publisher: New Riders, 2010 (3rd ed. 2014)
+    source_type: book
+    supports: "Progression systems, economies, resource sinks/faucets, difficulty curves."
+    confidence_note: Established game-design textbook.
+
+  - id: src.book.koster-theory-of-fun
+    title: "A Theory of Fun for Game Design"
+    org_or_author: Raph Koster
+    publisher: Paraglyph Press, 2004
+    source_type: book
+    supports: "Mastery curves, learning-driven engagement, diminishing returns."
+    confidence_note: Established practitioner game-design text.
+
+  # --- Cultivation / qi tradition ---
+  - id: src.book.kohn-introducing-daoism
+    title: "Introducing Daoism"
+    org_or_author: Livia Kohn
+    publisher: Routledge, 2009
+    source_type: academic
+    supports: >
+      Daoist internal-alchemy (neidan) concepts, qi as a philosophical and
+      physiological concept, historical context for cultivation terminology.
+    confidence_note: >
+      Academic introduction; used to distinguish historical/religious usage
+      from modern xianxia genre convention, not to declare one true meaning.
+
+  - id: src.wikipedia.neidan
+    title: "Neidan"
+    org_or_author: Wikipedia contributors
+    url: https://en.wikipedia.org/wiki/Neidan
+    source_type: encyclopedia
+    access_date: 2026-08-30
+    supports: "Overview of internal alchemy terminology (dantian, meridians, qi)."
+    confidence_note: Tertiary source; used for definitional corroboration only.
+
+  - id: src.wikipedia.xianxia
+    title: "Xianxia"
+    org_or_author: Wikipedia contributors
+    url: https://en.wikipedia.org/wiki/Xianxia
+    source_type: encyclopedia
+    access_date: 2026-08-30
+    supports: "Modern xianxia/cultivation genre conventions as distinct from historical Daoism."
+    confidence_note: Tertiary source; used for definitional corroboration only.
+
+  # --- Synthesis marker ---
+  - id: src.synthesis.craft-library-editorial
+    title: "Craft-library editorial synthesis"
+    org_or_author: Worldbuilding Desk craft-library drafting pass
+    source_type: internal-research
+    access_date: 2026-08-31
+    supports: >
+      Connective reasoning, subgenre-modifier inferences, and coaching-voice
+      framing not directly asserted by any single cited source. Used as a
+      source_id only to make synthesis explicit and auditable, never to
+      backstop a claim that should carry a real citation.
+    confidence_note: >
+      Not independent evidence. A record citing only this ID for a
+      substantive factual claim has a sourcing gap and should be flagged in
+      qa/citation-audit.md.
