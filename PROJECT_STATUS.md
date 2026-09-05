@@ -111,6 +111,11 @@ Under the hood, the app still includes rich systems for world data, rules, chara
 - World Bible category task cards reserve stable description height so switching between Characters, Locations, and Items does not shift the list below.
 - World Bible AI assistance is being reshaped away from top-level AI draft cards and toward an explicit helper model. The current helper is an interim floating chat with selected-text apply to editable fields; the target model is open brainstorming plus confirmable model-proposed actions for names, aliases, fields, and new sections.
 - Character records and character sheets.
+- The World Bible AI helper now uses a shared read-only proposal preview and
+  confirmation hook. Confirmation disables repeat clicks while the app-owned
+  action is pending; failed actions retain the preview with inline feedback.
+  This is the first checkpoint of Slice 1.5; assistant-to-Source-Note capture,
+  reviewed scene insertion, and canon decision prefill remain pending.
 - World Bible categories now carry an explicit `character` / `general` kind,
   including an author-editable category-kind control; active character-aware
   surfaces no longer infer category identity from names or slugs.
@@ -491,6 +496,12 @@ runtime schema, and nothing here changes the roadmap's status board.
 ## Verification Status
 
 ### Verified Recently
+- Slice 1.5 shared proposal-preview checkpoint passes 410 web tests, 6
+  rules-engine tests, 12 rules-ui tests, lint (two existing warnings), and
+  web/desktop builds. Cypress passed 55/57 initially; both prompt-tool Settings
+  failures passed in the focused 17/17 post-merge rerun. The shared preview's
+  light/dark themes and retained failure feedback were browser-checked using
+  an isolated temporary fixture. Other Slice 1.5 integrations remain pending.
 - Road-to-market Slice 1.2b routes storage/custody questions through all
   primary saved scenes in manuscript order instead of the highest-ranked RAG
   chunks. The five-chapter D4 fixture now distinguishes Odessa's designated

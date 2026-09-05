@@ -4,6 +4,7 @@ import type {
   useWorldBibleAuthoringAssistant
 } from '../../hooks/useWorldBibleAuthoringAssistant';
 import {deriveAiSectionLabel} from '../../hooks/useWorldBibleAuthoringAssistant';
+import {AIProposalPreview} from '../common/AIProposalPreview';
 import {AIAssistant} from '../AIAssistant/AIAssistant';
 import styles from '../../assets/components/WorldBibleRoute.module.css';
 
@@ -101,44 +102,21 @@ export const WorldBibleRecordAiHelper = ({
                     </button>
                   </div>
                   {aiHelperProposal && (
-                    <div className={styles.aiHelperProposalCard} role='status'>
-                      <div>
-                        <span className={styles.aiHelperProposalEyebrow}>
-                          Pending action
-                        </span>
-                        <strong>
-                          {aiHelperProposal.kind === 'name' &&
-                            `Set ${activeCategoryRecordLabel} name`}
-                          {aiHelperProposal.kind === 'aliases' &&
-                            'Add alternative name'}
-                          {aiHelperProposal.kind === 'field' &&
-                            `${
-                              aiHelperProposal.fieldType === 'textarea'
-                                ? 'Append to'
-                                : 'Set'
-                            } ${aiHelperProposal.fieldLabel}`}
-                          {aiHelperProposal.kind === 'new-section' &&
-                            `Create section "${aiHelperProposal.label}"`}
-                        </strong>
-                      </div>
-                      <p>{aiHelperProposal.text}</p>
-                      <div className={styles.aiHelperProposalActions}>
-                        <button
-                          type='button'
-                          className={styles.secondaryButton}
-                          onClick={() => setAiHelperProposal(null)}
-                        >
-                          Dismiss
-                        </button>
-                        <button
-                          type='button'
-                          className={styles.primaryButton}
-                          onClick={() => void handleConfirmAiHelperProposal()}
-                        >
-                          Confirm action
-                        </button>
-                      </div>
-                    </div>
+                    <AIProposalPreview
+                      key={JSON.stringify(aiHelperProposal)}
+                      title={
+                        aiHelperProposal.kind === 'name'
+                          ? `Set ${activeCategoryRecordLabel} name`
+                          : aiHelperProposal.kind === 'aliases'
+                            ? 'Add alternative name'
+                            : aiHelperProposal.kind === 'field'
+                              ? `${aiHelperProposal.fieldType === 'textarea' ? 'Append to' : 'Set'} ${aiHelperProposal.fieldLabel}`
+                              : `Create section "${aiHelperProposal.label}"`
+                      }
+                      text={aiHelperProposal.text}
+                      onDismiss={() => setAiHelperProposal(null)}
+                      onConfirm={handleConfirmAiHelperProposal}
+                    />
                   )}
                   <AIAssistant
                     projectId={activeProject.id}
