@@ -1,3 +1,5 @@
+import type {SceneRevision} from '../services/assistant/sceneRevision';
+import {SceneRevisionPreview} from './Editor/SceneRevisionPreview';
 import type {Editor, Extension} from '@tiptap/core';
 import {EditorContent, useEditor} from '@tiptap/react';
 import {useEffect, useRef} from 'react';
@@ -60,6 +62,9 @@ interface TipTapEditorProps {
   toolbarActions?: ToolbarAction[];
   extensions?: Extension[];
   textToInsert?: string | null;
+  sceneRevision?: SceneRevision;
+  revisionProjectId?: string;
+  revisionDocumentId?: string;
   onTextInserted?: () => void;
   insertContext?: {from: number; to: number} | null;
   presentStatBlockToken?: (rawToken: string) => StatBlockTokenPresentation;
@@ -285,6 +290,9 @@ function TipTapEditor({
   toolbarButtons = [],
   toolbarActions = [],
   textToInsert,
+  sceneRevision,
+  revisionProjectId,
+  revisionDocumentId,
   onTextInserted,
   insertContext,
   presentStatBlockToken = getDefaultStatBlockTokenPresentation,
@@ -455,7 +463,7 @@ function TipTapEditor({
   }, [editor, onWordCountChange]);
 
   useEffect(() => {
-    if (!textToInsert || !editor) return;
+    if (!textToInsert || !editor || sceneRevision) return;
 
     if (insertContext) {
       editor.commands.setTextSelection({
@@ -465,12 +473,20 @@ function TipTapEditor({
     }
     editor.commands.insertContent(textToInsert);
     onTextInserted?.();
-  }, [textToInsert, editor, insertContext, onTextInserted]);
+  }, [textToInsert, editor, insertContext, onTextInserted, sceneRevision]);
 
   if (!editor) return null;
 
   return (
     <div className='tiptap-wrapper'>
+      {sceneRevision && <SceneRevisionPreview
+        key={JSON.stringify(sceneRevision)}
+        editor={editor}
+        proposal={sceneRevision}
+        projectId={revisionProjectId ?? ''}
+        documentId={revisionDocumentId ?? ''}
+        onClose={() => onTextInserted?.()}
+      />}
       <MenuBar
         editor={editor}
         customButtons={toolbarButtons}

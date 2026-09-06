@@ -435,6 +435,7 @@ function WorkspaceRoute() {
   const {
     activeAIContext,
     pendingAIInsert,
+    previewSceneRevision,
     setPendingAIInsert,
     queuedAssistantPrompt,
     setQueuedAssistantPrompt,
@@ -449,7 +450,8 @@ function WorkspaceRoute() {
     projectSettings,
     content,
     selectedId,
-    openContextDrawer
+    openContextDrawer,
+    onSceneRevisionPreview: () => { if (isNarrowViewport) closeContextDrawer(); }
   });
   useLayoutEffect(() => {
     resetContextActionsRef.current = resetContextActions;
@@ -1259,7 +1261,7 @@ function WorkspaceRoute() {
     dismissConsistencyReviewItem,
     ignoreUnknownSurfaceProjectWide, linkUnknownEntity, openWorldRecord,
     scratchpadContent, setScratchpadContent, scratchpadStatus, scratchpadLastSavedAt,
-    activeProject, projectSettings, activeAIContext, setPendingAIInsert,
+    activeProject, projectSettings, activeAIContext, setPendingAIInsert, previewSceneRevision,
     queuedAssistantPrompt, setQueuedAssistantPrompt, systemHistoryEntries,
     setFeedback, refreshSystemHistory, activeLoreRecord, aiBudgetUsed,
     handleConsultationFromLore,
@@ -1456,6 +1458,7 @@ function WorkspaceRoute() {
                   toolbarActions={toolbarActions}
                   textToInsert={pendingAIInsert?.text ?? statBlockInsertContent}
                   insertContext={pendingAIInsert?.context ?? null}
+                  sceneRevision={pendingAIInsert?.revision}
                   onTextInserted={() => {
                     if (pendingAIInsert) {
                       setPendingAIInsert(null);

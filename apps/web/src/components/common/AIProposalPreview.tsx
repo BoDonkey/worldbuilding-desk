@@ -5,12 +5,13 @@ import styles from '../../assets/components/common/AIProposalPreview.module.css'
 interface AIProposalPreviewProps {
   title: string;
   text: string;
+  beforeText?: string;
   onDismiss: () => void;
   onConfirm: () => void | Promise<void>;
 }
 
 /** Read-only preview. Confirm delegates to an app-owned, validated action. */
-export function AIProposalPreview({title, text, onDismiss, onConfirm}: AIProposalPreviewProps) {
+export function AIProposalPreview({title, text, beforeText, onDismiss, onConfirm}: AIProposalPreviewProps) {
   const titleId = useId();
   const {confirm, isConfirming, error} = useAIProposalConfirmation(onConfirm);
   return (
@@ -19,6 +20,7 @@ export function AIProposalPreview({title, text, onDismiss, onConfirm}: AIProposa
         <span className={styles.aiHelperProposalEyebrow}>Pending action</span>
         <strong id={titleId}>{title}</strong>
       </div>
+      {beforeText !== undefined && <><strong>Current text</strong><p>{beforeText}</p><strong>Proposed text</strong></>}
       <p>{text}</p>
       {error && <p role='alert'>{error}</p>}
       <div className={styles.aiHelperProposalActions}>

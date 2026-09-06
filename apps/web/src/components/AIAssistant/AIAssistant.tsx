@@ -581,7 +581,7 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
           </button>
           {onInsert && (
             <button onClick={handleInsert} disabled={isStreaming}>
-              Insert
+              Preview scene revision
             </button>
           )}
         </div>

@@ -1,3 +1,4 @@
+import type {SceneRevision} from '../../services/assistant/sceneRevision';
 import React, {useState, useEffect, useRef, useCallback} from 'react';
 import type {Editor as TipTapEditorInstance} from '@tiptap/react';
 import TipTapEditor from '../TipTapEditor';
@@ -70,6 +71,7 @@ interface EditorWithAIProps {
   toolbarButtons?: Array<{id: string; label: string; markName: string}>;
   toolbarActions?: Array<{id: string; label: string; onClick: () => void}>;
   textToInsert?: string | null;
+  sceneRevision?: SceneRevision;
   insertContext?: {from: number; to: number} | null;
   onTextInserted?: () => void;
   selectionQuickSnippets?: {
@@ -178,6 +180,7 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
   toolbarActions = [],
   textToInsert: externalTextToInsert = null,
   insertContext = null,
+  sceneRevision,
   onTextInserted,
   selectionQuickSnippets,
   knownLoreHighlights = [],
@@ -364,7 +367,7 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
     return () => {
       window.removeEventListener('ai-expand-request', handleAIRequest);
     };
-  }, [documentId]);
+  }, [documentId, onOpenAIContext]);
 
   useEffect(() => {
     return () => {
@@ -709,7 +712,7 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
     setCurrentSceneFindQuery('');
     setCurrentSceneFindMatches([]);
     setCurrentSceneFindIndex(-1);
-  }, [documentId]);
+  }, [documentId, onOpenAIContext]);
 
   useEffect(() => {
     const editor = editorRef.current;
@@ -1052,6 +1055,9 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
             setTextToInsertFromAI(null);
           }}
           insertContext={insertContext}
+          sceneRevision={sceneRevision}
+          revisionProjectId={projectId}
+          revisionDocumentId={documentId}
           presentStatBlockToken={presentStatBlockToken}
         />
         {selectionBubble && (

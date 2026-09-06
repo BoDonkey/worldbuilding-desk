@@ -1,6 +1,6 @@
 # Worldbuilding-Desk Project Status
 
-**Last Updated:** September 5, 2026
+**Last Updated:** September 6, 2026
 
 ## Project Overview
 
@@ -114,8 +114,12 @@ Under the hood, the app still includes rich systems for world data, rules, chara
 - The World Bible AI helper now uses a shared read-only proposal preview and
   confirmation hook. Confirmation disables repeat clicks while the app-owned
   action is pending; failed actions retain the preview with inline feedback.
-  This is the first checkpoint of Slice 1.5; assistant-to-Source-Note capture,
-  reviewed scene insertion, and canon decision prefill remain pending.
+  Workspace assistant output now opens a reviewed scene revision with current
+  and proposed text for replacements, or an explicit append-to-scene action.
+  Confirmation validates project/scene identity, the original scene snapshot,
+  and the selected range against the live editor before one undoable plain-text
+  insertion. Stale revisions stay unapplied with recovery guidance. Source Note
+  capture and canon decision prefill remain pending in Slice 1.5.
 - World Bible categories now carry an explicit `character` / `general` kind,
   including an author-editable category-kind control; active character-aware
   surfaces no longer infer category identity from names or slugs.
@@ -496,6 +500,11 @@ runtime schema, and nothing here changes the roadmap's status board.
 ## Verification Status
 
 ### Verified Recently
+- Slice 1.5 reviewed scene-revision checkpoint passes 416 web tests, 6
+  rules-engine tests, 12 rules-ui tests, lint (one existing warning), and
+  web/desktop production builds. The full Cypress suite passes 61/61,
+  including preview/dismiss/confirm, stale-source rejection, explicit append,
+  and narrow-drawer access. Source Note capture and canon prefill remain open.
 - Slice 1.5 shared proposal-preview checkpoint passes 410 web tests, 6
   rules-engine tests, 12 rules-ui tests, lint (two existing warnings), and
   web/desktop builds. Cypress passed 55/57 initially; both prompt-tool Settings

@@ -224,6 +224,7 @@ interface WorkspaceContextDrawerProps {
   activeProject: Pick<Project, 'id' | 'parentProjectId' | 'inheritRag' | 'inheritShodh'>;
   projectSettings: ProjectSettings | null;
   activeAIContext: AIContext | null;
+  previewSceneRevision: (text: string) => void;
   setPendingAIInsert: (val: PendingAIInsert | null) => void;
   queuedAssistantPrompt: string | null;
   setQueuedAssistantPrompt: (val: string | null) => void;
@@ -359,6 +360,7 @@ export function WorkspaceContextDrawer({
   projectSettings,
   activeAIContext,
   setPendingAIInsert,
+  previewSceneRevision,
   queuedAssistantPrompt,
   setQueuedAssistantPrompt,
   systemHistoryEntries,
@@ -1032,15 +1034,7 @@ export function WorkspaceContextDrawer({
           aiConfig={projectSettings?.aiSettings}
           projectMode={projectSettings?.projectMode}
           context={activeAIContext ?? undefined}
-          onInsert={(text) =>
-            setPendingAIInsert({
-              text,
-              context:
-                activeAIContext && activeAIContext.from !== activeAIContext.to
-                  ? {from: activeAIContext.from, to: activeAIContext.to}
-                  : null
-            })
-          }
+          onInsert={previewSceneRevision}
           queuedPrompt={queuedAssistantPrompt}
           onQueuedPromptConsumed={() => setQueuedAssistantPrompt(null)}
           consultationModel={projectSettings?.aiSettings?.inspectorSettings?.lowCostModel}

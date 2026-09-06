@@ -1,4 +1,5 @@
 import {useCallback, useEffect, useState} from 'react';
+import type {SceneRevision} from '../services/assistant/sceneRevision';
 import type {ProjectSettings} from '../entityTypes';
 import type {LoreInspectorRecord} from '../components/Editor/LoreInspectorPanel';
 import {
@@ -16,11 +17,13 @@ export interface WorkspaceAIContext {
   type: 'document';
   id: string;
   selectedText?: string;
+  sourceContent?: string;
   from: number;
   to: number;
 }
 
 export interface WorkspacePendingAIInsert {
+  revision?: SceneRevision;
   text: string;
   context: {from: number; to: number} | null;
 }
@@ -33,13 +36,15 @@ export function useWorkspaceContextActions(params: {
   content: string;
   selectedId: string | null;
   openContextDrawer: (view: WorkspaceContextDrawerView) => void;
+  onSceneRevisionPreview: () => void;
 }) {
   const {
     activeProjectId,
     projectSettings,
     content,
     selectedId,
-    openContextDrawer
+    openContextDrawer,
+    onSceneRevisionPreview
   } = params;
   const [activeAIContext, setActiveAIContext] = useState<WorkspaceAIContext | null>(null);
   const [queuedAssistantPrompt, setQueuedAssistantPrompt] = useState<string | null>(null);
@@ -58,14 +63,27 @@ export function useWorkspaceContextActions(params: {
 
   const handleOpenAIContext = useCallback(
     (context: WorkspaceAIContext, prompt?: string | null) => {
-      setActiveAIContext(context);
+      setActiveAIContext({...context, sourceContent: content});
       if (prompt !== undefined) {
         setQueuedAssistantPrompt(prompt);
       }
       openContextDrawer('ai');
     },
-    [openContextDrawer]
+    [openContextDrawer, content]
   );
+
+  const previewSceneRevision = useCallback((text: string) => {
+    if (!activeProjectId || !selectedId || !text.trim()) return;
+    const replacesSelection = activeAIContext?.id === selectedId && activeAIContext.from !== activeAIContext.to;
+    const range = replacesSelection ? {from: activeAIContext.from, to: activeAIContext.to} : null;
+    onSceneRevisionPreview();
+    setPendingAIInsert({text, context: range, revision: {
+      text, projectId: activeProjectId, documentId: selectedId,
+      sourceContent: replacesSelection ? (activeAIContext.sourceContent ?? '') : content,
+      selectedText: replacesSelection ? (activeAIContext.selectedText ?? '') : '',
+      range
+    }});
+  }, [activeProjectId, selectedId, activeAIContext, content, onSceneRevisionPreview]);
 
   const handleOpenLoreInspector = useCallback((record: LoreInspectorRecord) => {
     setActiveLoreRecord(record);
@@ -120,6 +138,7 @@ export function useWorkspaceContextActions(params: {
   return {
     activeAIContext,
     pendingAIInsert,
+    previewSceneRevision,
     setPendingAIInsert,
     queuedAssistantPrompt,
     setQueuedAssistantPrompt,
