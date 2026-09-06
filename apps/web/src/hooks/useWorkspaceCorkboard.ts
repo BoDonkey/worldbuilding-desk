@@ -134,7 +134,7 @@ export function useWorkspaceCorkboard(projectId: string | null) {
   const updateCard = useCallback(
     (
       cardId: string,
-      patch: Partial<Pick<ChapterCard, 'title' | 'summary' | 'status'>>
+      patch: Partial<Pick<ChapterCard, 'title' | 'summary' | 'status' | 'sceneIds'>>
     ) => {
       updateCards((prev) =>
         prev.map((card) =>

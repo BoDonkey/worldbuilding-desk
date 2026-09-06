@@ -7,6 +7,7 @@ import {
   CHARACTER_IDENTITY_REPORT_STORE_NAME,
   CHARACTER_SHEET_STORE_NAME,
   CHARACTER_STORE_NAME,
+  CORKBOARD_CHAPTER_CARD_STORE_NAME,
   ENTITY_STORE_NAME,
   PROJECT_MIGRATION_BACKUP_STORE_NAME,
   PROJECT_SCOPED_STORE_NAMES,
@@ -230,8 +231,8 @@ describe('project migration backup', () => {
         .getAll()
     );
 
-    expect(current.storageSchemaVersion).toBe(3);
-    expect((stored as Project).storageSchemaVersion).toBe(3);
+    expect(current.storageSchemaVersion).toBe(4);
+    expect((stored as Project).storageSchemaVersion).toBe(4);
     expect(backups).toHaveLength(1);
   });
 
@@ -307,6 +308,41 @@ describe('project migration backup', () => {
     }>(CHARACTER_IDENTITY_REPORT_STORE_NAME, `${project.id}:character-identity:v1`);
     expect(report.classifiedRecordCount).toBe(3);
     expect(report.sourceCounts).toEqual({characterEntities: 1, characters: 1, sheets: 1});
+  });
+
+  it('advances schema 3 without inventing or changing chapter-card scene links', async () => {
+    const db = await createMigrationTestDb();
+    const project: Project = {
+      id: 'project-links',
+      name: 'Linked chapters',
+      storageSchemaVersion: 3,
+      createdAt: 1,
+      updatedAt: 1
+    };
+    const linkedCard = {
+      id: 'card-1',
+      projectId: project.id,
+      title: 'Chapter One',
+      summary: '',
+      status: 'planned',
+      order: 0,
+      sceneIds: ['scene-2'],
+      plotPoints: [],
+      createdAt: 1,
+      updatedAt: 1
+    };
+    await put(db, PROJECT_STORE_NAME, project);
+    await put(db, CORKBOARD_CHAPTER_CARD_STORE_NAME, linkedCard);
+
+    const current = await ensureProjectStorageCurrent(db, project);
+    const storedCard = await requestToPromise(
+      db.transaction(CORKBOARD_CHAPTER_CARD_STORE_NAME, 'readonly')
+        .objectStore(CORKBOARD_CHAPTER_CARD_STORE_NAME)
+        .get(linkedCard.id)
+    );
+
+    expect(current.storageSchemaVersion).toBe(4);
+    expect(storedCard).toEqual(linkedCard);
   });
 
   it('restores the project and its scoped records without touching another project', async () => {

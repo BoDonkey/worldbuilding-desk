@@ -60,9 +60,22 @@ describe('Corkboard route', () => {
 
     cy.get('input[placeholder="Chapter or sequence title"]').clear().type('Moonlit Betrayal');
     cy.get('textarea[placeholder*="What changes"]').clear().type('The alliance breaks at the river crossing.');
+    cy.contains('label', 'Alpha Scene').find('input[type="checkbox"]').check();
+    cy.contains('label', 'Beta Scene').find('input[type="checkbox"]').check();
     cy.contains('[role="status"]', 'Corkboard saved').should('be.visible');
 
-    cy.visit('/workspace');
+    cy.contains('button', 'Story Dashboard').click();
+    cy.contains('h2', 'Story observations').should('be.visible');
+    cy.contains('h2', 'Scene rhythm').should('be.visible');
+    cy.contains('h3', 'Moonlit Betrayal').should('be.visible');
+    cy.contains('Progression and co-movement').should('not.exist');
+    cy.viewport(800, 900);
+    cy.contains('h2', 'Story observations').should('be.visible');
+    cy.contains('h2', 'Chapter rollups').should('be.visible');
+    cy.contains('button', 'Alpha Scene').first().click();
+    cy.location('pathname').should('eq', '/workspace');
+    cy.get('.tiptap[contenteditable="true"]').should('contain.text', 'Alpha content');
+
     cy.contains('h1', 'Writing Workspace').should('be.visible');
     cy.contains('button', /^Corkboard$/).first().click();
     cy.get('[role="dialog"][aria-label="Project corkboard"]').within(() => {

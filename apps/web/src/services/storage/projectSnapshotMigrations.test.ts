@@ -90,29 +90,29 @@ const legacySnapshot = () => ({
 
 describe('migrateProjectSnapshotPayload', () => {
   it('accepts the current snapshot schema unchanged', () => {
-    const snapshot = {schemaVersion: 3, project: {id: 'project-1'}};
+    const snapshot = {schemaVersion: 4, project: {id: 'project-1'}};
     expect(migrateProjectSnapshotPayload(snapshot)).toBe(snapshot);
   });
 
   it('rejects snapshots created by a newer app with an actionable error', () => {
-    expect(() => migrateProjectSnapshotPayload({schemaVersion: 4})).toThrow(
+    expect(() => migrateProjectSnapshotPayload({schemaVersion: 5})).toThrow(
       'Update the app before importing it.'
     );
-    expect(() => normalizeProjectSnapshot({schemaVersion: 4})).toThrow(
+    expect(() => normalizeProjectSnapshot({schemaVersion: 5})).toThrow(
       'Update the app before importing it.'
     );
     expect(() =>
       normalizeProjectSnapshot({
-        schemaVersion: 3,
-        project: {id: 'project-1', name: 'Future', storageSchemaVersion: 4}
+        schemaVersion: 4,
+        project: {id: 'project-1', name: 'Future', storageSchemaVersion: 5}
       })
-    ).toThrow('Backup project data uses storage schema 4');
+    ).toThrow('Backup project data uses storage schema 5');
   });
 
   it('classifies v1 character identities and adds complete v2 backup fields', () => {
     const snapshot = normalizeProjectSnapshot(legacySnapshot());
 
-    expect(snapshot.schemaVersion).toBe(3);
+    expect(snapshot.schemaVersion).toBe(4);
     expect(snapshot.data.categories[0].kind).toBe('character');
     expect(snapshot.data.characters[0].entityId).toBe('entity-mira');
     expect(snapshot.data.characterSheets[0].characterEntityId).toBe('entity-mira');
@@ -124,6 +124,38 @@ describe('migrateProjectSnapshotPayload', () => {
       actorResolutions: 2,
       characterIdentityReports: 1
     });
+  });
+
+  it('preserves explicit chapter-card scene links through schema 4', () => {
+    const snapshot = normalizeProjectSnapshot({
+      schemaVersion: 3,
+      project: {
+        id: 'project-1',
+        name: 'Linked plan',
+        storageSchemaVersion: 3,
+        createdAt: 1,
+        updatedAt: 1
+      },
+      data: {
+        corkboardChapterCards: [{
+          id: 'card-1',
+          projectId: 'project-1',
+          title: 'Chapter One',
+          summary: '',
+          status: 'planned',
+          order: 0,
+          sceneIds: ['scene-1', 'scene-2'],
+          plotPoints: [],
+          createdAt: 1,
+          updatedAt: 1
+        }]
+      },
+      counts: {corkboardChapterCards: 1}
+    });
+
+    expect(snapshot.schemaVersion).toBe(4);
+    expect(snapshot.project.storageSchemaVersion).toBe(4);
+    expect(snapshot.data.corkboardChapterCards[0].sceneIds).toEqual(['scene-1', 'scene-2']);
   });
 
   it('preserves replay byte-for-byte while migrating a v1 snapshot', () => {

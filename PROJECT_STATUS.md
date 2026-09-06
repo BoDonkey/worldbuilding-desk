@@ -100,6 +100,13 @@ Under the hood, the app still includes rich systems for world data, rules, chara
 - Scratchpad records are included in project backup snapshots and restore paths.
 - Lightweight Corkboard is back as a workspace planning modal for chapter cards and plot points.
 - Corkboard chapter-card records are included in project backup snapshots and restore paths.
+- Corkboard now includes a read-only Story Dashboard derived entirely from
+  saved manuscript text, accepted state events, configured rules, and explicit
+  Chapter Card-to-scene links. It reports scene/chapter word counts and quoted
+  dialogue ratio, accepted-change distribution, and mechanics-only axis
+  co-movement plus explicitly tracked advancement rates/intervals. Every
+  observation identifies its source scenes; general-fiction projects never
+  show mechanics analysis, and dashboard results cannot be edited.
 - App-shell search is now visibly exposed and returns unified scene plus World Bible results.
 - Pending Mechanics completion counts now aggregate onto the `More` navigation
   control at both desktop and narrow breakpoints, keeping optional-system work
@@ -158,10 +165,12 @@ Under the hood, the app still includes rich systems for world data, rules, chara
   longer copy untracked text into World Bible Notes.
 - Parent/child canon inheritance with promotion and sync flows.
 - Project backup export/import with validation and conflict review.
-- Project backup snapshots now use schema 3 and include consistency aliases,
+- Project backup snapshots now use schema 4 and include consistency aliases,
   canonical character link fields, persisted legacy actor resolutions, and
   character identity migration reports plus stable optional World
-  Bible/Compendium references for reusable inventory items. Earlier backups
+  Bible/Compendium references for reusable inventory items plus stable,
+  optional Chapter Card-to-scene links. Project storage schema 4 adds those
+  planning links without inferring them from titles or order. Earlier backups
   upgrade through deterministic migrations, including the
   deterministic character classifier before import, with replay parity
   preserved.
@@ -509,6 +518,13 @@ runtime schema, and nothing here changes the roadmap's status board.
 ## Verification Status
 
 ### Verified Recently
+- Slice 4.19 derived story dashboard passes web lint with one existing hook
+  warning, 429 web tests, 6 rules-engine tests, 12 rules-ui tests, web/desktop
+  production builds, and the full 61-test Cypress suite. Coverage locks
+  deterministic word/dialogue counts, explicit-only chapter links, accepted
+  event distribution, general-fiction containment, mechanics co-movement and
+  advancement intervals, schema-4 migration/backup conservation, desktop and
+  narrow dashboard rendering, and source-scene navigation.
 - Slice 4.17 craft-library retrieval infrastructure passes the package
   build/check, web lint with one existing hook warning, 423 web tests, 6
   rules-engine tests, 12 rules-ui tests, and web/desktop production builds.

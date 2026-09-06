@@ -24,7 +24,7 @@ import {
 } from '../rules/rulesetService';
 
 export const LEGACY_PROJECT_SCHEMA_VERSION = 1;
-export const CURRENT_PROJECT_SCHEMA_VERSION = 3;
+export const CURRENT_PROJECT_SCHEMA_VERSION = 4;
 export const PROJECT_MIGRATION_BACKUP_SCHEMA_VERSION = 1;
 
 export interface ProjectMigrationContext {
@@ -158,6 +158,13 @@ const PROJECT_MIGRATIONS: readonly ProjectSchemaMigration[] = [
     // Stable item references are additive optional fields. Existing quick
     // inventory remains name-based, so the version checkpoint and automatic
     // backup are the complete deterministic migration.
+    migrate: async () => undefined
+  },
+  {
+    fromVersion: 3,
+    toVersion: 4,
+    // Chapter-card scene links are additive and optional. Existing cards stay
+    // intentionally unlinked; migration must not guess from titles or order.
     migrate: async () => undefined
   }
 ];

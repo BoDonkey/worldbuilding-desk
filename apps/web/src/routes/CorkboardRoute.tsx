@@ -1,11 +1,14 @@
 import {useEffect, useMemo, useState} from 'react';
 import type {FormEvent} from 'react';
+import {useNavigate} from 'react-router';
 import type {ChapterCardStatus, PlotPoint} from '../entityTypes';
 import {useAppStore} from '../store/appStore';
 import {useWorkspaceCorkboard} from '../hooks/useWorkspaceCorkboard';
 import {PageHeader} from '../components/PageHeader';
 import {ProjectScratchpadButton} from '../components/ProjectScratchpadButton';
 import {useConfirmDialog} from '../hooks/useConfirmDialog';
+import {useStoryDashboardData} from '../hooks/useStoryDashboardData';
+import {StoryDashboard} from '../components/Corkboard/StoryDashboard';
 import styles from '../styles/CorkboardRoute.module.css';
 
 const STATUS_LABELS: Record<ChapterCardStatus, string> = {
@@ -26,7 +29,9 @@ const getChapterRailStorageKey = (projectId: string) =>
   `wbd:corkboard:chapter-rail-collapsed:${projectId}`;
 
 function CorkboardRoute() {
+  const navigate = useNavigate();
   const activeProject = useAppStore((s) => s.activeProject);
+  const projectSettings = useAppStore((s) => s.projectSettings);
   const {
     corkboardCards,
     corkboardStatus,
@@ -47,6 +52,12 @@ function CorkboardRoute() {
   const [beatTitle, setBeatTitle] = useState('');
   const [beatNotes, setBeatNotes] = useState('');
   const [isChapterRailCollapsed, setIsChapterRailCollapsed] = useState(false);
+  const [view, setView] = useState<'planning' | 'dashboard'>('planning');
+  const {dashboard, documents, status: dashboardStatus} = useStoryDashboardData({
+    projectId: activeProject?.id ?? null,
+    cards: corkboardCards,
+    mechanicsEnabled: Boolean(projectSettings && projectSettings.projectMode !== 'general')
+  });
 
   useEffect(() => {
     if (!activeProject) {
@@ -159,6 +170,20 @@ function CorkboardRoute() {
     resetBeatForm();
   };
 
+  const handleToggleSceneLink = (sceneId: string) => {
+    if (!selectedCard) return;
+    const current = selectedCard.sceneIds ?? [];
+    updateCorkboardCard(selectedCard.id, {
+      sceneIds: current.includes(sceneId)
+        ? current.filter((id) => id !== sceneId)
+        : [...current, sceneId]
+    });
+  };
+
+  const handleOpenScene = (sceneId: string) => {
+    navigate('/workspace', {state: {focusDocumentId: sceneId}});
+  };
+
   if (!activeProject) {
     return (
       <section className={styles.page}>
@@ -181,9 +206,26 @@ function CorkboardRoute() {
       />
 
       <div className={styles.utilityRow}>
-        <span className={styles.status} role='status'>{statusLabel}</span>
+        <div className={styles.viewSwitch} aria-label='Corkboard view'>
+          <button
+            type='button'
+            className={view === 'planning' ? styles.viewSwitchActive : ''}
+            aria-pressed={view === 'planning'}
+            onClick={() => setView('planning')}
+          >
+            Planning
+          </button>
+          <button
+            type='button'
+            className={view === 'dashboard' ? styles.viewSwitchActive : ''}
+            aria-pressed={view === 'dashboard'}
+            onClick={() => setView('dashboard')}
+          >
+            Story Dashboard
+          </button>
+        </div>
         <div className={styles.utilityActions}>
-          {corkboardCards.length > 0 && (
+          {view === 'planning' && corkboardCards.length > 0 && (
             <button
               type='button'
               onClick={handleToggleChapterRail}
@@ -191,22 +233,33 @@ function CorkboardRoute() {
               {isChapterRailCollapsed ? 'Show Chapter Cards' : 'Hide Chapter Cards'}
             </button>
           )}
-          <button type='button' onClick={handleCreateCard} disabled={isCorkboardLoading}>
-            New Chapter Card
-          </button>
+          {view === 'planning' && (
+            <button type='button' onClick={handleCreateCard} disabled={isCorkboardLoading}>
+              New Chapter Card
+            </button>
+          )}
         </div>
       </div>
 
       <div className={styles.metaRow}>
-        <span className={styles.countChip}>
-          {corkboardCards.length} card{corkboardCards.length === 1 ? '' : 's'}
-        </span>
-        <span className={styles.countChip}>
-          {corkboardPlotPointCount} beat{corkboardPlotPointCount === 1 ? '' : 's'}
-        </span>
+        {view === 'planning' ? (
+          <>
+            <span className={styles.countChip}>{corkboardCards.length} card{corkboardCards.length === 1 ? '' : 's'}</span>
+            <span className={styles.countChip}>{corkboardPlotPointCount} beat{corkboardPlotPointCount === 1 ? '' : 's'}</span>
+            <span className={styles.status} role='status'>{statusLabel}</span>
+          </>
+        ) : (
+          <span className={styles.status} role='status'>Dashboard uses saved project data and does not edit it.</span>
+        )}
       </div>
 
-      {corkboardCards.length === 0 ? (
+      {view === 'dashboard' ? (
+        <StoryDashboard
+          dashboard={dashboard}
+          status={dashboardStatus}
+          onOpenScene={handleOpenScene}
+        />
+      ) : corkboardCards.length === 0 ? (
         <div className={styles.panel}>
           <p className={styles.emptyState}>
             Start with a chapter card. You can add beats after the first card exists.
@@ -215,7 +268,7 @@ function CorkboardRoute() {
             type='button'
             onClick={handleCreateCard}
             disabled={isCorkboardLoading}
-            style={{marginTop: '0.75rem'}}
+            className={styles.createFirstButton}
           >
             Create first card
           </button>
@@ -326,6 +379,32 @@ function CorkboardRoute() {
                   placeholder='What changes in this chapter? What pressure does it add to the arc?'
                 />
               </label>
+
+              <section className={styles.sceneLinkEditor}>
+                <div className={styles.panelHeader}>
+                  <div>
+                    <h2 className={styles.panelTitle}>Draft scenes</h2>
+                    <p className={styles.inputNote}>Explicit links power chapter rollups. Nothing is matched by title or order.</p>
+                  </div>
+                  <span className={styles.countChip}>{selectedCard.sceneIds?.length ?? 0} linked</span>
+                </div>
+                {documents.length === 0 ? (
+                  <p className={styles.emptyState}>No saved scenes are available to link.</p>
+                ) : (
+                  <div className={styles.sceneChecklist}>
+                    {documents.map((document) => (
+                      <label key={document.id} className={styles.sceneCheck}>
+                        <input
+                          type='checkbox'
+                          checked={selectedCard.sceneIds?.includes(document.id) ?? false}
+                          onChange={() => handleToggleSceneLink(document.id)}
+                        />
+                        <span>{document.title.trim() || 'Untitled scene'}</span>
+                      </label>
+                    ))}
+                  </div>
+                )}
+              </section>
 
               <section className={styles.beatSection}>
                 <div className={styles.panelHeader}>

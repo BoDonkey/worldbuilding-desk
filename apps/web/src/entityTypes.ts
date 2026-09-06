@@ -61,6 +61,8 @@ export interface ChapterCard {
   summary: string;
   status: ChapterCardStatus;
   order: number;
+  /** Explicit planning-to-draft links. Never inferred from title or order. */
+  sceneIds?: string[];
   plotPoints: PlotPoint[];
   createdAt: number;
   updatedAt: number;
