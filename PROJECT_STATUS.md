@@ -125,8 +125,13 @@ Under the hood, the app still includes rich systems for world data, rules, chara
   and proposed text for replacements, or an explicit append-to-scene action.
   Confirmation validates project/scene identity, the original scene snapshot,
   and the selected range against the live editor before one undoable plain-text
-  insertion. Stale revisions stay unapplied with recovery guidance. Source Note
-  capture and canon decision prefill remain pending in Slice 1.5.
+  insertion. Stale revisions stay unapplied with recovery guidance. The
+  assistant can also capture its own output as a draft Source Note (never
+  canon; enters the normal extraction/review pipeline), and the canon
+  rubber-duck can prefill its alias/accept/reject choice from a deterministic,
+  position-anchored `Suggested Action:` tag in its response — never free-prose
+  matching — with the rationale visible and the author's click still required.
+  Slice 1.5 is complete.
 - World Bible categories now carry an explicit `character` / `general` kind,
   including an author-editable category-kind control; active character-aware
   surfaces no longer infer category identity from names or slugs.
@@ -533,6 +538,16 @@ runtime schema, and nothing here changes the roadmap's status board.
 ## Verification Status
 
 ### Verified Recently
+- Slice 1.5 shared AI proposal surface is complete: assistant output can be
+  captured as a draft Source Note, and the canon rubber-duck can prefill its
+  decision from a deterministic, position-anchored `Suggested Action:` tag
+  (never free-prose matching), both routed through the same
+  `AIProposalPreview`/`useAIProposalConfirmation` surface as reviewed scene
+  revisions and the World Bible record helper. Lint with 1 baseline warning;
+  445 web (+9 new) + 6 engine + 12 UI tests; web/desktop builds; Cypress
+  ai-scene-revision 4/4 and canon-decisions 3/3, plus a clean 61/62 full run
+  whose lone failure (an unrelated pre-existing character-capabilities-
+  routing assertion) was confirmed independent of this change.
 - Slice 4.18a craft-library tranche 2 packages the full 166-record
   author-vetted working corpus as 2,136 embedded chunks in content version
   `2.0.0-tranche-2`, superseding tranche 1's eight-record subset. Working
