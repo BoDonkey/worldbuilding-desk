@@ -90,29 +90,29 @@ const legacySnapshot = () => ({
 
 describe('migrateProjectSnapshotPayload', () => {
   it('accepts the current snapshot schema unchanged', () => {
-    const snapshot = {schemaVersion: 4, project: {id: 'project-1'}};
+    const snapshot = {schemaVersion: 5, project: {id: 'project-1'}};
     expect(migrateProjectSnapshotPayload(snapshot)).toBe(snapshot);
   });
 
   it('rejects snapshots created by a newer app with an actionable error', () => {
-    expect(() => migrateProjectSnapshotPayload({schemaVersion: 5})).toThrow(
+    expect(() => migrateProjectSnapshotPayload({schemaVersion: 6})).toThrow(
       'Update the app before importing it.'
     );
-    expect(() => normalizeProjectSnapshot({schemaVersion: 5})).toThrow(
+    expect(() => normalizeProjectSnapshot({schemaVersion: 6})).toThrow(
       'Update the app before importing it.'
     );
     expect(() =>
       normalizeProjectSnapshot({
-        schemaVersion: 4,
-        project: {id: 'project-1', name: 'Future', storageSchemaVersion: 5}
+        schemaVersion: 5,
+        project: {id: 'project-1', name: 'Future', storageSchemaVersion: 6}
       })
-    ).toThrow('Backup project data uses storage schema 5');
+    ).toThrow('Backup project data uses storage schema 6');
   });
 
   it('classifies v1 character identities and adds complete v2 backup fields', () => {
     const snapshot = normalizeProjectSnapshot(legacySnapshot());
 
-    expect(snapshot.schemaVersion).toBe(4);
+    expect(snapshot.schemaVersion).toBe(5);
     expect(snapshot.data.categories[0].kind).toBe('character');
     expect(snapshot.data.characters[0].entityId).toBe('entity-mira');
     expect(snapshot.data.characterSheets[0].characterEntityId).toBe('entity-mira');
@@ -126,7 +126,7 @@ describe('migrateProjectSnapshotPayload', () => {
     });
   });
 
-  it('preserves explicit chapter-card scene links through schema 4', () => {
+  it('preserves explicit chapter-card and negative-space links through schema 5', () => {
     const snapshot = normalizeProjectSnapshot({
       schemaVersion: 3,
       project: {
@@ -137,6 +137,27 @@ describe('migrateProjectSnapshotPayload', () => {
         updatedAt: 1
       },
       data: {
+        categories: [{
+          id: 'problems',
+          projectId: 'project-1',
+          kind: 'general',
+          recordType: 'system-negative-space',
+          name: 'Problems Power Cannot Solve',
+          slug: 'problems-power-cannot-solve',
+          fieldSchema: [],
+          createdAt: 1
+        }],
+        entities: [{
+          id: 'grief',
+          projectId: 'project-1',
+          categoryId: 'problems',
+          name: 'Grief',
+          fields: {},
+          systemNegativeSpace: {status: 'worsening', sceneIds: ['scene-2']},
+          links: [],
+          createdAt: 1,
+          updatedAt: 1
+        }],
         corkboardChapterCards: [{
           id: 'card-1',
           projectId: 'project-1',
@@ -153,9 +174,14 @@ describe('migrateProjectSnapshotPayload', () => {
       counts: {corkboardChapterCards: 1}
     });
 
-    expect(snapshot.schemaVersion).toBe(4);
-    expect(snapshot.project.storageSchemaVersion).toBe(4);
+    expect(snapshot.schemaVersion).toBe(5);
+    expect(snapshot.project.storageSchemaVersion).toBe(5);
     expect(snapshot.data.corkboardChapterCards[0].sceneIds).toEqual(['scene-1', 'scene-2']);
+    expect(snapshot.data.categories[0].recordType).toBe('system-negative-space');
+    expect(snapshot.data.entities[0].systemNegativeSpace).toEqual({
+      status: 'worsening',
+      sceneIds: ['scene-2']
+    });
   });
 
   it('preserves replay byte-for-byte while migrating a v1 snapshot', () => {

@@ -25,6 +25,7 @@ import {
 import {CharacterIdentityResolutionQueue} from '../components/WorldBible/CharacterIdentityResolutionQueue';
 import {WorldBibleCategoryRail} from '../components/WorldBible/WorldBibleCategoryRail';
 import {ItemDescriptionFirstFields} from '../components/WorldBible/ItemDescriptionFirstFields';
+import {SystemNegativeSpacePanel} from '../components/WorldBible/SystemNegativeSpacePanel';
 import styles from '../assets/components/WorldBibleRoute.module.css';
 import type {MemoryEntry} from '../services/shodh/ShodhMemoryService';
 import {ShodhMemoryPanel} from '../components/ShodhMemoryPanel';
@@ -68,6 +69,11 @@ import {
   type WorldBibleCanonicalizationHandoff
 } from '../hooks/useWorldBibleRecordResolution';
 import {createFirstCharacterMechanics} from '../services/characters';
+import {
+  isSystemNegativeSpaceCategory,
+  normalizeSystemNegativeSpaceRecord,
+  type SystemNegativeSpaceStatus
+} from '../services/worldBible/systemNegativeSpace';
 
 type WorldBibleViewMode = 'category' | 'review';
 type CharacterAuthoringMode = 'idle' | 'manual';
@@ -107,6 +113,9 @@ function WorldBibleRoute() {
     useState<CharacterAuthoringMode>('idle');
   const [recordAuthoringMode, setRecordAuthoringMode] =
     useState<RecordAuthoringMode>('idle');
+  const [negativeSpaceStatus, setNegativeSpaceStatus] =
+    useState<SystemNegativeSpaceStatus>('open');
+  const [negativeSpaceSceneIds, setNegativeSpaceSceneIds] = useState<string[]>([]);
   const [characterDetailSection, setCharacterDetailSection] =
     useState<CharacterDetailSection>('canon');
   const [areItemDetailsExpanded, setAreItemDetailsExpanded] = useState(false);
@@ -164,7 +173,11 @@ function WorldBibleRoute() {
     setCanonState,
     compendiumLinkedEntityIds,
     setCompendiumLinkedEntityIds
-  } = useWorldBibleProjectData({activeProject, setFeedback});
+  } = useWorldBibleProjectData({
+    activeProject,
+    enableSystemNegativeSpace: showGameSystems,
+    setFeedback
+  });
   const characterIdentityResolution = useCharacterIdentityResolutionQueue({
     activeProject, projectSettings, saveProjectSettings, categories, entities,
     characters, characterSheets, report: characterIdentityReport, setFeedback
@@ -204,13 +217,23 @@ function WorldBibleRoute() {
     [seriesConfig?.parentProjectId, refreshMemories]
   );
 
-  useEffect(() => {
-    if (!activeTab && categories.length > 0) {
-      setActiveTab(categories[0].id);
-    }
-  }, [categories, activeTab]);
+  const worldBibleCategories = useMemo(
+    () => showGameSystems
+      ? categories
+      : categories.filter((category) => !isSystemNegativeSpaceCategory(category)),
+    [categories, showGameSystems]
+  );
 
-  const activeCategory = categories.find((c) => c.id === activeTab);
+  useEffect(() => {
+    if (
+      worldBibleCategories.length > 0 &&
+      !worldBibleCategories.some((category) => category.id === activeTab)
+    ) {
+      setActiveTab(worldBibleCategories[0].id);
+    }
+  }, [worldBibleCategories, activeTab]);
+
+  const activeCategory = worldBibleCategories.find((c) => c.id === activeTab);
   const characterCategory = useMemo(
     () => categories.find((category) => isCharacterCategory(category)) ?? null,
     [categories]
@@ -220,6 +243,21 @@ function WorldBibleRoute() {
     [activeCategory]
   );
   const activeCategoryIsItem = Boolean(activeCategory && isItemCategory(activeCategory));
+  const activeCategoryIsSystemNegativeSpace = isSystemNegativeSpaceCategory(activeCategory);
+  const systemNegativeSpaceDraft = useMemo(
+    () => activeCategoryIsSystemNegativeSpace
+      ? normalizeSystemNegativeSpaceRecord(
+          {status: negativeSpaceStatus, sceneIds: negativeSpaceSceneIds},
+          new Set(writingDocuments.map((document) => document.id))
+        )
+      : undefined,
+    [
+      activeCategoryIsSystemNegativeSpace,
+      negativeSpaceSceneIds,
+      negativeSpaceStatus,
+      writingDocuments
+    ]
+  );
   const isDescriptionFirstItemDraft = activeCategoryIsItem && !editingId;
   const itemDescriptionField = activeCategoryIsItem
     ? activeCategory?.fieldSchema.find((field) => field.key === 'description') ?? null
@@ -440,6 +478,8 @@ function WorldBibleRoute() {
     setCharacterAuthoringMode('idle');
     setCharacterDetailSection('canon');
     setRecordAuthoringMode('idle');
+    setNegativeSpaceStatus('open');
+    setNegativeSpaceSceneIds([]);
     setAreItemDetailsExpanded(false);
     setIsPasteImportOpen(false);
     setPastedImportText('');
@@ -512,6 +552,8 @@ function WorldBibleRoute() {
     setCharacterAuthoringMode('idle');
     setCharacterDetailSection('canon');
     setRecordAuthoringMode('manual');
+    setNegativeSpaceStatus('open');
+    setNegativeSpaceSceneIds([]);
     setAreItemDetailsExpanded(false);
     setIsPasteImportOpen(false);
     setPastedImportText('');
@@ -555,6 +597,8 @@ function WorldBibleRoute() {
     setAiHelperNewSectionLabel('');
     setAiHelperProposal(null);
     setName(entity.name);
+    setNegativeSpaceStatus(entity.systemNegativeSpace?.status ?? 'open');
+    setNegativeSpaceSceneIds(entity.systemNegativeSpace?.sceneIds ?? []);
     setMoveCategoryTargetId(entity.categoryId);
     const persistedAlternativeNames =
       typeof entity.fields[ALTERNATIVE_NAMES_KEY] === 'string'
@@ -646,6 +690,7 @@ function WorldBibleRoute() {
     editingId,
     name,
     fieldValues,
+    systemNegativeSpace: systemNegativeSpaceDraft,
     viewMode,
     selectedEntityQueueItem,
     filteredReviewQueue,
@@ -902,7 +947,7 @@ function WorldBibleRoute() {
         }`}
       >
         <WorldBibleCategoryRail
-          isCollapsed={isCategoryRailCollapsed} categories={categories}
+          isCollapsed={isCategoryRailCollapsed} categories={worldBibleCategories}
           viewMode={viewMode} activeTab={activeTab}
           reviewCount={reviewQueue.length + characterIdentityResolution.queue.length}
           showCategoryManager={showCategoryManager}
@@ -980,6 +1025,11 @@ function WorldBibleRoute() {
                   aliases, description, role, and notes stay in World Bible; sheets
                   remain optional system tools.
                 </p>
+              ) : activeCategoryIsSystemNegativeSpace ? (
+                <p>
+                  Keep an explicit list of human problems that progression cannot solve.
+                  Status and scene links are author-maintained; meaning is not inferred here.
+                </p>
               ) : (
                 <p>
                   Build story-facing {activeCategory.name.toLowerCase()} here.
@@ -1047,8 +1097,15 @@ function WorldBibleRoute() {
       {showCategoryManager && (
         <CategoryManager
           projectId={activeProject.id}
-          categories={categories}
-          onCategoriesChange={setCategories}
+          categories={worldBibleCategories}
+          onCategoriesChange={(updatedCategories) => {
+            const hiddenCategories = categories.filter(
+              (category) => !worldBibleCategories.some(
+                (visibleCategory) => visibleCategory.id === category.id
+              )
+            );
+            setCategories([...updatedCategories, ...hiddenCategories]);
+          }}
           onClose={() => setShowCategoryManager(false)}
         />
       )}
@@ -1614,6 +1671,21 @@ function WorldBibleRoute() {
                 />
               ) : (
                 <>
+                  {activeCategoryIsSystemNegativeSpace && (
+                    <SystemNegativeSpacePanel
+                      categoryId={activeCategory.id}
+                      entities={entities}
+                      documents={writingDocuments}
+                      editing
+                      status={negativeSpaceStatus}
+                      sceneIds={negativeSpaceSceneIds}
+                      onStatusChange={setNegativeSpaceStatus}
+                      onSceneIdsChange={setNegativeSpaceSceneIds}
+                      onOpenScene={(sceneId) => navigate('/workspace', {
+                        state: {focusDocumentId: sceneId}
+                      })}
+                    />
+                  )}
                   {isDescriptionFirstItemDraft && (
                     <ItemDescriptionFirstFields
                       name={name}
@@ -2006,11 +2078,26 @@ function WorldBibleRoute() {
           </div>
           )}
 
+          {activeCategoryIsSystemNegativeSpace && !isFocusedRecordTask && (
+            <SystemNegativeSpacePanel
+              categoryId={activeCategory.id}
+              entities={entities}
+              documents={writingDocuments}
+              editing={false}
+              status='open'
+              sceneIds={[]}
+              onStatusChange={() => undefined}
+              onSceneIdsChange={() => undefined}
+              onOpenScene={(sceneId) => navigate('/workspace', {
+                state: {focusDocumentId: sceneId}
+              })}
+            />
+          )}
           <WorldBibleEntityList
             viewMode={viewMode} activeCategoryIsCharacterLike={activeCategoryIsCharacterLike}
             isFocusedCharacterTask={isFocusedCharacterTask}
             isFocusedRecordTask={isFocusedRecordTask} activeCategory={activeCategory}
-            categories={categories} visibleEntities={visibleEntities}
+            categories={worldBibleCategories} visibleEntities={visibleEntities}
             reviewEntityInsightsById={reviewEntityInsightsById} reviewQueue={reviewQueue}
             aliasMapByEntityId={aliasMapByEntityId}
             linkedLoreDocumentByEntityId={linkedLoreDocumentByEntityId}

@@ -8,7 +8,7 @@ import {classifyCharacterIdentities} from '../characters/characterIdentity';
 import {CURRENT_PROJECT_SCHEMA_VERSION} from './projectSchemaMigrations';
 
 export const MIN_SUPPORTED_PROJECT_SNAPSHOT_SCHEMA_VERSION = 1;
-export const CURRENT_PROJECT_SNAPSHOT_SCHEMA_VERSION = 4;
+export const CURRENT_PROJECT_SNAPSHOT_SCHEMA_VERSION = 5;
 
 export interface ProjectSnapshotMigration {
   fromVersion: number;
@@ -98,6 +98,20 @@ export function migrateProjectSnapshotV3ToV4(
   };
 }
 
+export function migrateProjectSnapshotV4ToV5(
+  snapshot: Record<string, unknown>
+): Record<string, unknown> {
+  const project = asRecord(snapshot.project);
+  return {
+    ...snapshot,
+    schemaVersion: 5,
+    project: {
+      ...project,
+      storageSchemaVersion: CURRENT_PROJECT_SCHEMA_VERSION
+    }
+  };
+}
+
 const PROJECT_SNAPSHOT_MIGRATIONS: readonly ProjectSnapshotMigration[] = [
   {
     fromVersion: 1,
@@ -113,6 +127,11 @@ const PROJECT_SNAPSHOT_MIGRATIONS: readonly ProjectSnapshotMigration[] = [
     fromVersion: 3,
     toVersion: 4,
     migrate: migrateProjectSnapshotV3ToV4
+  },
+  {
+    fromVersion: 4,
+    toVersion: 5,
+    migrate: migrateProjectSnapshotV4ToV5
   }
 ];
 

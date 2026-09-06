@@ -165,15 +165,22 @@ Under the hood, the app still includes rich systems for world data, rules, chara
   longer copy untracked text into World Bible Notes.
 - Parent/child canon inheritance with promotion and sync flows.
 - Project backup export/import with validation and conflict review.
-- Project backup snapshots now use schema 4 and include consistency aliases,
+- Project backup snapshots now use schema 5 and include consistency aliases,
   canonical character link fields, persisted legacy actor resolutions, and
   character identity migration reports plus stable optional World
   Bible/Compendium references for reusable inventory items plus stable,
-  optional Chapter Card-to-scene links. Project storage schema 4 adds those
-  planning links without inferring them from titles or order. Earlier backups
+  optional Chapter Card-to-scene links, plus typed system-negative-space
+  categories and author-maintained record status/scene links. Project storage
+  schema 5 registers those additive World Bible fields without inferring
+  categories, status, or links during migration. Earlier backups
   upgrade through deterministic migrations, including the
   deterministic character classifier before import, with replay parity
   preserved.
+- Mechanics-enabled projects expose a built-in World Bible record type for
+  problems power cannot solve. Authors maintain each problem's structured
+  status and explicit scene links; the World Bible deterministically summarizes
+  counts and cited scenes without making semantic claims about the prose.
+  General-fiction projects do not expose the record type.
 - Character package export now uses schema 2 and carries the canonical
   character categories/entities, aliases, accepted facts, Character Tools
   extensions, and optional sheets as one identity-linked unit. Schema-1

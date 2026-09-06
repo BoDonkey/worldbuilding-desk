@@ -4,6 +4,7 @@ import {deleteCategory, saveCategory} from '../../categoryStorage';
 import CategoryEditor from '../CategoryEditor';
 import {useConfirmDialog} from '../../hooks/useConfirmDialog';
 import styles from '../../assets/components/WorldBibleRoute.module.css';
+import {isSystemNegativeSpaceCategory} from '../../services/worldBible/systemNegativeSpace';
 
 interface CategoryManagerProps {
   projectId: string;
@@ -98,20 +99,23 @@ export function CategoryManager({
             <div className={styles.categoryInfo}>
               <strong>{category.name}</strong>
               <span className={styles.categoryMeta}>
-                ({category.fieldSchema.length} fields)
+                ({category.fieldSchema.length} fields
+                {isSystemNegativeSpaceCategory(category) ? ' · built-in mechanics record' : ''})
               </span>
             </div>
-            <div className={styles.categoryActions}>
-              <button onClick={() => setEditingCategory(category)}>
-                Edit Fields
-              </button>
-              <button
-                onClick={() => handleDeleteCategory(category.id)}
-                className={styles.deleteButton}
-              >
-                Delete
-              </button>
-            </div>
+            {!isSystemNegativeSpaceCategory(category) && (
+              <div className={styles.categoryActions}>
+                <button onClick={() => setEditingCategory(category)}>
+                  Edit Fields
+                </button>
+                <button
+                  onClick={() => handleDeleteCategory(category.id)}
+                  className={styles.deleteButton}
+                >
+                  Delete
+                </button>
+              </div>
+            )}
           </li>
         ))}
       </ul>

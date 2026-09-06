@@ -387,6 +387,8 @@ export interface EntityCategory {
   id: string;
   projectId: string;
   kind: 'character' | 'general';
+  /** Explicit built-in semantics; custom category names and slugs remain free-form. */
+  recordType?: 'system-negative-space';
   name: string;
   slug: string;
   fieldSchema: FieldDefinition[];
@@ -411,6 +413,11 @@ export interface WorldEntity {
   categoryId: string;
   name: string;
   fields: EntityFields;
+  /** Author-maintained structure for problems that progression cannot solve. */
+  systemNegativeSpace?: {
+    status: 'open' | 'worsening' | 'changed' | 'resolved';
+    sceneIds: string[];
+  };
   isNew?: boolean;
   needsCompletion?: boolean;
   aliasesReviewedAt?: number;

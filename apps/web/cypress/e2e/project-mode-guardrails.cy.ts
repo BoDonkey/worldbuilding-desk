@@ -176,6 +176,7 @@ describe('Project mode guardrails', () => {
   it('hides ruleset, sheets, and compendium surfaces for general fiction', () => {
     cy.contains('nav a', 'Ruleset').should('not.exist');
     cy.contains('nav a', 'Compendium').should('not.exist');
+    cy.contains('button', 'Problems Power Cannot Solve').should('not.exist');
 
     cy.visit('/characters');
     cy.location('pathname').should('eq', '/world-bible');

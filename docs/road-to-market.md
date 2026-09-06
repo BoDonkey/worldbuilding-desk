@@ -228,7 +228,7 @@ and required revisit point, `WIP`, `Done <commit>`.
 | 4.18 | Craft library content — tranche 1 | 4 | M | — 6–8 author-vetted, cited patterns, mixed general-craft and LitRPG/RPG; drafting may run in parallel, but schema validation and packaging follow 4.17 |
 | 4.19 | Derived story dashboard | 4 | L | Done `e936852` — read-only Corkboard dashboard for scene/chapter word and quoted-dialogue counts, accepted-change distribution, and mechanics-only axis co-movement plus explicit advancement rates/intervals; all observations cite source scenes; stable Chapter Card links use project/snapshot schema 4 with no inferred matches; general fiction hides mechanics; lint with 1 baseline warning; 429 web + 6 engine + 12 UI tests; web/desktop builds; Cypress 61/61 |
 | 4.20 | Writing coach experience | 4 | L | — inline ask anywhere the assistant lives, plus a coach section in 4.19; author-triggered only. Depends on 1.5, 4.17, 4.18, 4.19 |
-| 4.21 | System negative-space records | 4 | S | — author-maintained World Bible structure for problems power cannot solve; explicit linked status can be summarized deterministically, but semantic engagement remains model-assisted |
+| 4.21 | System negative-space records | 4 | S | WIP — author-maintained World Bible structure for problems power cannot solve; explicit linked status can be summarized deterministically, but semantic engagement remains model-assisted |
 | 4.22 | Progression continuity candidates | 4 | M | — author-triggered model-assisted review of possible unused solutions and abandoned methods, based on deterministic evidence shortlists; depends on 1.5 |
 | 5.1 | Auto-update decision + implementation | 5 | M | — |
 | 5.2 | Code signing + notarization, both platforms | 5 | M | — |

@@ -64,6 +64,7 @@ interface UseWorldBibleEntityActionsParams {
   editingId: string | null;
   name: string;
   fieldValues: Record<string, string>;
+  systemNegativeSpace?: WorldEntity['systemNegativeSpace'];
   viewMode: 'category' | 'review';
   selectedEntityQueueItem: ReviewQueueItem | null;
   filteredReviewQueue: ReviewQueueItem[];
@@ -105,6 +106,7 @@ export const useWorldBibleEntityActions = ({
   editingId,
   name,
   fieldValues,
+  systemNegativeSpace,
   viewMode,
   selectedEntityQueueItem,
   filteredReviewQueue,
@@ -242,6 +244,7 @@ export const useWorldBibleEntityActions = ({
           categoryId: activeCategory.id,
           name,
           fields: nextFields,
+          systemNegativeSpace,
           isNew: false,
           needsCompletion: false,
           aliasesReviewedAt:
@@ -326,6 +329,7 @@ export const useWorldBibleEntityActions = ({
       editingId,
       entities,
       fieldValues,
+      systemNegativeSpace,
       formatAlternativeNames,
       name,
       normalizeName,

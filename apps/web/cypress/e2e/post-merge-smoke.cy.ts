@@ -162,6 +162,27 @@ describe('Post-merge smoke checklist', () => {
     cy.contains('strong', 'Cypress Smoke Project').should('be.visible');
   });
 
+  it('tracks mechanics-only problems power cannot solve with explicit scene links', () => {
+    cy.visit('/world-bible');
+    cy.contains('button', 'Problems Power Cannot Solve').should('be.visible').click();
+    cy.get('section[aria-label="Problems power cannot solve summary"]')
+      .should('contain.text', '0 tracked');
+
+    cy.contains('button', 'Create Manually').click();
+    cy.get('section[aria-label="Problem status and scene links"]').within(() => {
+      cy.contains('label', 'Status').find('select').select('Worsening');
+      cy.contains('label', 'Alpha Scene').find('input').check();
+    });
+    cy.contains('label', 'Name').find('input').first().type('Grief after victory');
+    cy.contains('button', 'Create Entry').click();
+
+    cy.get('section[aria-label="Problems power cannot solve summary"]')
+      .should('contain.text', '1 tracked')
+      .should('contain.text', '1 Worsening')
+      .contains('button', 'Alpha Scene')
+      .should('be.visible');
+  });
+
   it('restores project assistant history after navigating away from Workspace', () => {
     cy.visit('/workspace');
     cy.window().then((win) => {

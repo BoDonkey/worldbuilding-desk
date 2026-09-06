@@ -194,6 +194,31 @@ safe but are never presented as canon or assistant grounding.
 These rules preserve the trust boundary: deterministic code classifies and
 validates possible links; the author resolves ambiguity and creates canon.
 
+## 4.1 System Negative-Space Records
+
+Mechanics-enabled projects have one explicit built-in World Bible category
+whose `recordType` is `system-negative-space`. Its records capture problems
+that character progression cannot solve. The category identity comes from the
+typed field, never from its editable display name or slug. General-fiction
+projects do not expose this category.
+
+Each record remains a normal `WorldEntity` for canon, retrieval, aliases, and
+Source Note linking, with an additional author-maintained
+`systemNegativeSpace` structure:
+
+- `status`: `open`, `worsening`, `changed`, or `resolved`;
+- `sceneIds`: unique stable IDs of explicitly linked manuscript scenes.
+
+Deterministic code validates statuses, removes duplicate links, discards links
+to missing scenes, and may summarize counts and linked sources. It must not
+infer that prose meaningfully engages the problem or that a power has quietly
+solved it. Those are semantic conclusions and remain author-triggered,
+model-assisted observations subject to the normal proposal trust boundary.
+
+Project storage and backup snapshot schema 5 register the additive category
+and entity fields. Migration leaves existing categories and records
+unclassified and unlinked; it never guesses author intent.
+
 ## 5. AI Proposal Boundary and Item Authoring
 
 _Status: item authoring is a product proposal (2026-07-26); the shared
