@@ -2,11 +2,11 @@ import {describe, expect, it} from 'vitest';
 import {bundledCraftLibrary} from '../../generated/craftLibrary.generated';
 import {CraftLibraryService} from './CraftLibraryService';
 
-describe('bundled craft library tranche 1', () => {
-  it('packages exactly the eight approved records with vetted provenance', () => {
+describe('bundled craft library tranche 2', () => {
+  it('packages the full 166-record author-vetted corpus with cited provenance', () => {
     const recordIds = new Set(bundledCraftLibrary.chunks.map((chunk) => chunk.recordId));
-    expect(recordIds.size).toBe(8);
-    expect(bundledCraftLibrary.contentVersion).toBe('1.0.0-tranche-1');
+    expect(recordIds.size).toBe(166);
+    expect(bundledCraftLibrary.contentVersion).toBe('2.0.0-tranche-2');
     expect(bundledCraftLibrary.chunks.every(
       (chunk) => chunk.metadata.authorVetted === true && chunk.metadata.citations.length > 0
     )).toBe(true);
@@ -24,7 +24,7 @@ describe('bundled craft library tranche 1', () => {
       provenance: {
         role: 'craft-reference',
         label: 'Vetted craft reference',
-        contentVersion: '1.0.0-tranche-1'
+        contentVersion: '2.0.0-tranche-2'
       }
     });
     expect(results[0]!.provenance.citations[0]!.label).toBeTruthy();

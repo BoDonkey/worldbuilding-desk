@@ -682,3 +682,35 @@ subgenre conventions with no scholarship behind them, and say so.
 
 QA: 166 records, zero audit findings, 578 mutual pairs after reciprocation,
 no orphans. **14 records to 180**, which is one final batch.
+
+### Tranche 2 published (2026-09-06, no new records)
+
+Roadmap Slice 4.18a packaged the full 166-record working corpus into the
+runtime schema via `qa/publish_tranche_2.py`, superseding tranche 1's
+eight-record subset. Content version `2.0.0-tranche-2` ships all families —
+`general`, `system`, `trope`, `comparison`, and `profile` — as 2,136 embedded
+chunks.
+
+Two mappings bridge the working vocabulary and the narrower Slice 4.17
+runtime contract: `document_type` values `trope` and `system-mechanic` map to
+runtime `documentType: pattern` (same four-section structural shape as
+general `pattern` records); `subgenre-profile` maps to `profile`. Source
+confidence `contested` (one record — a scholarly dispute about a cited claim,
+not a source-count problem) maps to `limited` so the shipped label never
+overstates it, alongside the existing `mixed` → `medium` mapping from
+tranche 1.
+
+At full-corpus size the generated bundle overflowed TypeScript's structural
+checker (`TS2590`, "union type too complex") when written as an inline
+object literal — the approach tranche 1 used at its much smaller (97-chunk)
+scale. `scripts/build-craft-library.mjs` now writes the manifest as a
+`.json` data file loaded at runtime via a small, stable, hand-written
+loader (`craftLibrary.generated.ts` imports it with Vite's `?raw` and
+`JSON.parse`s it), so TypeScript never attempts to structurally type the
+literal. Shape validation still runs in the build script itself
+(`validateSource`/`validateRecord`) before either file is written.
+
+No content changed in this pass — this is a packaging slice, not a content
+batch. The standing editorial items from Batch 15 (59 `limited`-confidence
+records, two length-waiver records, and the overused-trope cluster as
+priority read) remain open for the author's next editorial pass.

@@ -495,9 +495,13 @@ Under the hood, the app still includes rich systems for world data, rules, chara
   lexical search when they are not. The project RAG boundary rejects `craft`
   documents, so normal assistant evidence, canon, context health, backup, and
   project deletion cannot consume or own the coaching corpus. Published
-  content version `1.0.0-tranche-1` now contains the eight author-vetted
-  Batch-1 records as 97 checked-in retrieval chunks; application builds verify
-  that the checked-in bundle matches the reviewed source.
+  content version `2.0.0-tranche-2` now contains the full 166-record
+  author-vetted working corpus as 2,136 checked-in retrieval chunks,
+  superseding the eight-record tranche-1 subset; application builds verify
+  that the checked-in bundle matches the reviewed source. The bundle is
+  generated as a `.json` data file loaded by a small stable TS loader rather
+  than an inline object literal, because a literal at this size overflows
+  TypeScript's structural checker (`TS2590`).
 
 ### Writing-coach craft library (draft content, parallel track)
 
@@ -512,8 +516,8 @@ runtime schema, and nothing here changes the roadmap's status board.
 - **All 166 working records carry `author_vetted: true`.** On 2026-09-06 the
   product author explicitly approved the full working corpus after reviewing
   material across every folder and finding it accurate, well written,
-  researched, and cited. Publication remains separate: the shipped v1 bundle
-  still contains only the eight-record Batch-1 tranche.
+  researched, and cited. All 166 are now published as content version
+  `2.0.0-tranche-2` (Slice 4.18a).
 - `working/README.md` holds the batch log and the resume protocol; `qa/`
   holds the coverage matrix, duplication report, citation audit, and open
   claims. `qa/build_catalog.py`, `qa/audit_corpus.py`, and `qa/relink.py` are
@@ -529,6 +533,15 @@ runtime schema, and nothing here changes the roadmap's status board.
 ## Verification Status
 
 ### Verified Recently
+- Slice 4.18a craft-library tranche 2 packages the full 166-record
+  author-vetted working corpus as 2,136 embedded chunks in content version
+  `2.0.0-tranche-2`, superseding tranche 1's eight-record subset. Working
+  `document_type`/`source_confidence` values outside the runtime's three-value
+  contract are mapped explicitly and validated; the generated bundle moved
+  from an inline TS literal to a `.json` data file with a stable loader to
+  stay within TypeScript's structural-checking limits at this size. Web lint
+  with 1 baseline warning; 436 web + 6 engine + 12 UI tests; web/desktop
+  builds. No routed UI changed, so Cypress was not required.
 - Slice 4.18 craft-library tranche 1 packages eight author-vetted, cited
   records as 97 embedded chunks. Source/catalog validation, runtime schema
   validation, bundled lexical retrieval, labeled provenance, and safe citation
