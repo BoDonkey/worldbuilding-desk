@@ -6,8 +6,10 @@
   "scripts": {
     "predev": "pnpm --filter @worldbuilding-desk/rules-engine build",
     "dev": "vite",
-    "prebuild": "pnpm --filter @worldbuilding-desk/rules-ui... build",
+    "prebuild": "pnpm --filter @worldbuilding-desk/rules-ui... build && pnpm craft-library:check",
     "build": "tsc -b && vite build",
+    "craft-library:build": "node scripts/build-craft-library.mjs",
+    "craft-library:check": "node scripts/build-craft-library.mjs --check",
     "lint": "eslint \"src/**/*.{ts,tsx}\"",
     "lint:fix": "eslint \"src/**/*.{ts,tsx}\" --fix",
     "test:unit": "vitest run",

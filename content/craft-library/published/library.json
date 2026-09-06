@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "contentVersion": "0.0.0",
+  "embedding": {
+    "model": "Xenova/all-MiniLM-L6-v2",
+    "version": "main",
+    "dimensions": 384,
+    "normalization": "l2"
+  },
+  "records": []
+}

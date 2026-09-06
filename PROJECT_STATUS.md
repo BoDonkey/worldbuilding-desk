@@ -472,6 +472,15 @@ Under the hood, the app still includes rich systems for world data, rules, chara
 - The current review UX direction for deterministic state suggestions is passive-by-default: proposals stay out of the writing flow, do not affect replay until accepted, and can be hidden and later restored without rejecting them.
 - AI assistance for World Bible canon should remain explicit and author-invoked. The direction is not a separate AI draft path per category; it is a floating helper that supports brainstorming and proposes confirmable actions against the current record/schema. Model output must not silently create records, fields, aliases, or canon facts.
 - Project-specific AI adapter feedback is documented in `docs/architecture-review.md` and `docs/road-to-market.md`: keep Ollama/local providers first-class but capability-variable, normalize tool/action proposals above provider-specific tool calling, prefer named AI routes/profiles over fixed effort buckets, default hosted routes toward provider-side prompt caching for stable prefixes, use tagged read-only context extraction, and treat future game-engine or persona hooks as typed app-owned capabilities rather than freeform prompt buttons.
+- A separate read-only craft-library provider now owns bundled coaching
+  references. Its versioned package records content and embedding contracts,
+  accepts only author-vetted records, labels every result as craft reference
+  material, uses compatible shipped vectors when available, and falls back to
+  lexical search when they are not. The project RAG boundary rejects `craft`
+  documents, so normal assistant evidence, canon, context health, backup, and
+  project deletion cannot consume or own the coaching corpus. The published
+  v1 source is intentionally empty until author-vetted Slice 4.18 content
+  lands; application builds verify that the checked-in bundle matches it.
 
 ### Writing-coach craft library (draft content, parallel track)
 
@@ -500,6 +509,14 @@ runtime schema, and nothing here changes the roadmap's status board.
 ## Verification Status
 
 ### Verified Recently
+- Slice 4.17 craft-library retrieval infrastructure passes the package
+  build/check, web lint with one existing hook warning, 423 web tests, 6
+  rules-engine tests, 12 rules-ui tests, and web/desktop production builds.
+  Service coverage verifies offline lexical retrieval, compatible hybrid
+  ranking, incompatible/unavailable-model fallback, labeled provenance,
+  empty/token libraries, rejection of unvetted or mismatched bundles, and
+  project-RAG route isolation. Cypress was not required because no routed UI
+  changed.
 - Slice 1.5 reviewed scene-revision checkpoint passes 416 web tests, 6
   rules-engine tests, 12 rules-ui tests, lint (one existing warning), and
   web/desktop production builds. The full Cypress suite passes 61/61,

@@ -71,4 +71,20 @@ describe('RAGService lexical search scoring', () => {
     expect(results[0].chunk.documentId).toBe('sera');
     expect(results[0].chunk.content).toContain('appearance: gray eyes');
   });
+
+  it('rejects craft material at the project RAG boundary', async () => {
+    const rag = new RAGService();
+    await rag.init(`rag-craft-isolation-${crypto.randomUUID()}`);
+
+    await expect(rag.indexDocument(
+      'craft-pattern',
+      'Scene structure',
+      'A vetted instructional pattern.',
+      'craft' as never
+    )).rejects.toThrow('Unsupported project RAG document type: craft');
+    await expect(rag.getDiagnostics()).resolves.toMatchObject({
+      chunkCount: 0,
+      documentCount: 0
+    });
+  });
 });
