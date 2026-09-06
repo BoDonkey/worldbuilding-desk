@@ -39,6 +39,12 @@ import {
 } from '../services/lore/canonDecisionSuppressionStorage';
 import {buildCanonDecisionClusters} from '../services/lore/canonDecisionClustering';
 import {buildCanonDecisionConsultationPrompt} from '../services/lore/canonDecisionConsultation';
+import {
+  CANON_DECISION_ACTION_LABELS,
+  parseCanonDecisionRecommendation,
+  type CanonDecisionRecommendedAction
+} from '../services/lore/canonDecisionRecommendation';
+import {AIProposalPreview} from '../components/common/AIProposalPreview';
 import {acceptLoreEntityProposal} from '../services/lore/entityProposalActions';
 import {
   applyCanonicalFactSideEffects,
@@ -85,6 +91,9 @@ function CanonDecisionsRoute() {
   const [consultationByClusterId, setConsultationByClusterId] = useState<
     Record<string, {content?: string; error?: string}>
   >({});
+  const [dismissedRecommendationClusterIds, setDismissedRecommendationClusterIds] = useState<
+    Set<string>
+  >(new Set());
   const [aiBudgetUsed, setAIBudgetUsed] = useState(0);
   const [feedback, setFeedback] = useState<{
     tone: 'success' | 'error';
@@ -606,6 +615,12 @@ function CanonDecisionsRoute() {
       ...prev,
       [cluster.id]: {content: ''}
     }));
+    setDismissedRecommendationClusterIds((prev) => {
+      if (!prev.has(cluster.id)) return prev;
+      const next = new Set(prev);
+      next.delete(cluster.id);
+      return next;
+    });
     setFeedback(null);
 
     try {
@@ -711,6 +726,26 @@ function CanonDecisionsRoute() {
             const canonicalFact = canonicalFactRef
               ? canonicalFactsById.get(canonicalFactRef.id)
               : null;
+            const recommendation =
+              consultingClusterId !== cluster.id && !dismissedRecommendationClusterIds.has(cluster.id)
+                ? parseCanonDecisionRecommendation(
+                    consultationByClusterId[cluster.id]?.content ?? '',
+                    cluster.kind
+                  )
+                : null;
+            const recommendedActionHandlers: Partial<
+              Record<CanonDecisionRecommendedAction, () => Promise<void>>
+            > = {
+              alias: targetRef ? () => handleAliasEntity(cluster) : undefined,
+              accept_new: () => handleAcceptNewEntity(cluster),
+              accept_update: () => handleAcceptFactUpdate(cluster),
+              keep_separate: () => handleKeepSeparate(cluster),
+              reject: () => handleReject(cluster),
+              defer: () => handleDefer(cluster)
+            };
+            const recommendedActionHandler = recommendation
+              ? recommendedActionHandlers[recommendation.action]
+              : undefined;
             const targetLabel = targetRef
               ? targetRef.type === 'character'
                 ? charactersById.get(targetRef.id)?.name
@@ -750,6 +785,19 @@ function CanonDecisionsRoute() {
                     <p><strong>Current canon:</strong> {buildCanonicalFactSummary(canonicalFact)}</p>
                     <p><strong>Evidence:</strong> {factProposal.evidence.text}</p>
                   </div>
+                ) : null}
+
+                {recommendation && recommendedActionHandler ? (
+                  <AIProposalPreview
+                    title={`AI recommends: ${CANON_DECISION_ACTION_LABELS[recommendation.action]}`}
+                    text={recommendation.rationale}
+                    onDismiss={() =>
+                      setDismissedRecommendationClusterIds(
+                        (prev) => new Set(prev).add(cluster.id)
+                      )
+                    }
+                    onConfirm={recommendedActionHandler}
+                  />
                 ) : null}
 
                 <div className={styles.aiPanel}>

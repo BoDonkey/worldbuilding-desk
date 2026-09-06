@@ -1262,7 +1262,7 @@ function WorkspaceRoute() {
     ignoreUnknownSurfaceProjectWide, linkUnknownEntity, openWorldRecord,
     scratchpadContent, setScratchpadContent, scratchpadStatus, scratchpadLastSavedAt,
     activeProject, projectSettings, activeAIContext, setPendingAIInsert, previewSceneRevision,
-    queuedAssistantPrompt, setQueuedAssistantPrompt, systemHistoryEntries,
+    queuedAssistantPrompt, setQueuedAssistantPrompt, ragService, systemHistoryEntries,
     setFeedback, refreshSystemHistory, activeLoreRecord, aiBudgetUsed,
     handleConsultationFromLore,
     settlementModuleCount: settlementModules.length,

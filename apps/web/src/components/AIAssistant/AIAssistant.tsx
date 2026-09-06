@@ -44,6 +44,7 @@ interface AIAssistantProps {
     selectedText?: string;
   };
   onInsert?: (text: string) => void;
+  onCaptureSourceNote?: (text: string) => void;
   onAssistantSelectionChange?: (text: string) => void;
   queuedPrompt?: string | null;
   onQueuedPromptConsumed?: () => void;
@@ -71,6 +72,7 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
   projectMode = 'litrpg',
   context,
   onInsert,
+  onCaptureSourceNote,
   onAssistantSelectionChange,
   queuedPrompt,
   onQueuedPromptConsumed,
@@ -478,12 +480,20 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
     });
   }, [queuedPrompt, handleSendPrompt, isStreaming, contextStatus, onQueuedPromptConsumed]);
 
+  const getLastAssistantMessage = () =>
+    [...messages].reverse().find((m) => m.role === 'assistant');
+
   const handleInsert = () => {
-    const lastAssistantMessage = [...messages]
-      .reverse()
-      .find((m) => m.role === 'assistant');
+    const lastAssistantMessage = getLastAssistantMessage();
     if (lastAssistantMessage && onInsert) {
       onInsert(stripAssistantThinking(lastAssistantMessage.content));
+    }
+  };
+
+  const handleCaptureSourceNote = () => {
+    const lastAssistantMessage = getLastAssistantMessage();
+    if (lastAssistantMessage && onCaptureSourceNote) {
+      onCaptureSourceNote(stripAssistantThinking(lastAssistantMessage.content));
     }
   };
 
@@ -582,6 +592,11 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
           {onInsert && (
             <button onClick={handleInsert} disabled={isStreaming}>
               Preview scene revision
+            </button>
+          )}
+          {onCaptureSourceNote && (
+            <button onClick={handleCaptureSourceNote} disabled={isStreaming}>
+              Save as Source Note
             </button>
           )}
         </div>

@@ -53,6 +53,11 @@ export function buildCanonDecisionConsultationPrompt(
     targetEntity?.fields?.notes?.toString() ||
     '';
 
+  const allowedActionTokens: string[] =
+    cluster.kind === 'entity_identity'
+      ? [...(targetRecord ? ['alias'] : []), 'accept_new', 'keep_separate', 'reject', 'defer']
+      : ['accept_update', 'keep_separate', 'reject', 'defer'];
+
   const systemPrompt =
     'You are a canon-decision rubber-duck for a fiction worldbuilding tool. ' +
     'Your job is to help the author reason about ambiguity, not to decide canon. ' +
@@ -64,7 +69,11 @@ export function buildCanonDecisionConsultationPrompt(
     '2. Ambiguities\n' +
     '3. Decision Options\n' +
     '4. Recommended Next Step\n\n' +
-    'Under Decision Options, compare only the actions relevant to this cluster, such as alias, accept new, keep separate, accept update, reject, or defer.';
+    'Under Decision Options, compare only the actions relevant to this cluster, such as alias, accept new, keep separate, accept update, reject, or defer.\n\n' +
+    'After section 4, add exactly one final line, on its own, in precisely this ' +
+    `form: "Suggested Action: <token>" where <token> is exactly one of: ${[...allowedActionTokens, 'none'].join(', ')}. ` +
+    'Use "none" if no single action in that list is clearly the safest next step. ' +
+    'Do not add any text after that line.';
 
   if (cluster.kind === 'entity_identity' && entityProposal) {
     const targetName = targetRecord?.name ?? 'No existing match';

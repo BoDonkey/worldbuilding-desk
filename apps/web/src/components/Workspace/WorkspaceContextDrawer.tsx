@@ -15,7 +15,9 @@ import type {
 import {AIAssistant} from '../AIAssistant/AIAssistant';
 import {LoreInspectorPanel} from '../Editor/LoreInspectorPanel';
 import type {LoreInspectorRecord} from '../Editor/LoreInspectorPanel';
+import {SourceNoteCapturePreview} from '../Editor/SourceNoteCapturePreview';
 import {SystemHistoryPanel} from '../Editor/SystemHistoryPanel';
+import type {RAGProvider} from '../../services/rag/RAGService';
 import {ShodhMemoryPanel} from '../ShodhMemoryPanel';
 import TipTapEditor from '../TipTapEditor';
 import type {MemoryEntry} from '../../services/shodh/ShodhMemoryService';
@@ -228,6 +230,7 @@ interface WorkspaceContextDrawerProps {
   setPendingAIInsert: (val: PendingAIInsert | null) => void;
   queuedAssistantPrompt: string | null;
   setQueuedAssistantPrompt: (val: string | null) => void;
+  ragService: RAGProvider | null;
 
   // System history view
   systemHistoryEntries: SystemHistoryEntry[];
@@ -363,6 +366,7 @@ export function WorkspaceContextDrawer({
   previewSceneRevision,
   queuedAssistantPrompt,
   setQueuedAssistantPrompt,
+  ragService,
   systemHistoryEntries,
   setFeedback,
   refreshSystemHistory,
@@ -390,6 +394,8 @@ export function WorkspaceContextDrawer({
   const [rejectedAliasSuggestions, setRejectedAliasSuggestions] = useState<
     Record<string, string[]>
   >({});
+  const [pendingSourceNoteCapture, setPendingSourceNoteCapture] = useState<string | null>(null);
+  const [assistantSessionId] = useState(() => crypto.randomUUID());
   const activeReviewItemRef = useRef<HTMLLIElement | null>(null);
 
   const visibleTabs = useMemo(
@@ -1026,22 +1032,40 @@ export function WorkspaceContextDrawer({
     }
     if (activeContextView === 'ai') {
       return (
-        <AIAssistant
-          projectId={activeProject.id}
-          parentProjectId={activeProject.parentProjectId}
-          inheritRag={activeProject.inheritRag}
-          inheritShodh={activeProject.inheritShodh}
-          aiConfig={projectSettings?.aiSettings}
-          projectMode={projectSettings?.projectMode}
-          context={activeAIContext ?? undefined}
-          onInsert={previewSceneRevision}
-          queuedPrompt={queuedAssistantPrompt}
-          onQueuedPromptConsumed={() => setQueuedAssistantPrompt(null)}
-          consultationModel={projectSettings?.aiSettings?.inspectorSettings?.lowCostModel}
-          consultationMaxTokens={
-            projectSettings?.aiSettings?.inspectorSettings?.maxResponseTokens
-          }
-        />
+        <>
+          <AIAssistant
+            projectId={activeProject.id}
+            parentProjectId={activeProject.parentProjectId}
+            inheritRag={activeProject.inheritRag}
+            inheritShodh={activeProject.inheritShodh}
+            aiConfig={projectSettings?.aiSettings}
+            projectMode={projectSettings?.projectMode}
+            context={activeAIContext ?? undefined}
+            onInsert={previewSceneRevision}
+            onCaptureSourceNote={setPendingSourceNoteCapture}
+            queuedPrompt={queuedAssistantPrompt}
+            onQueuedPromptConsumed={() => setQueuedAssistantPrompt(null)}
+            consultationModel={projectSettings?.aiSettings?.inspectorSettings?.lowCostModel}
+            consultationMaxTokens={
+              projectSettings?.aiSettings?.inspectorSettings?.maxResponseTokens
+            }
+          />
+          {pendingSourceNoteCapture !== null && (
+            <SourceNoteCapturePreview
+              projectId={activeProject.id}
+              sessionId={assistantSessionId}
+              text={pendingSourceNoteCapture}
+              ragService={ragService}
+              onClose={() => setPendingSourceNoteCapture(null)}
+              onCaptured={(title) =>
+                setFeedback({
+                  tone: 'success',
+                  message: `Saved "${title}" as a draft Source Note. Review and extract it from Source Notes when ready.`
+                })
+              }
+            />
+          )}
+        </>
       );
     }
     if (activeContextView === 'scratchpad') {

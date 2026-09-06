@@ -49,6 +49,7 @@ import {
 } from '../services/lore/canonicalFactActions';
 import {acceptLoreEntityProposal} from '../services/lore/entityProposalActions';
 import {normalizeLoreDocumentLinks} from '../services/lore/loreDocumentLinks';
+import {summarizeContent} from '../services/lore/sourceNoteCapture';
 import {getRAGService} from '../services/rag/getRAGService';
 import type {RAGProvider} from '../services/rag/RAGService';
 import type {RAGDiagnostics, RAGSearchResult} from '../services/rag/types';
@@ -95,14 +96,6 @@ const RELATIONSHIP_OPTIONS: Array<{
 
 const getLinkDraftKey = (draft: LinkDraft): string =>
   `${draft.targetType}:${draft.targetId}:${draft.relationship}`;
-
-const summarizeContent = (content: string, limit = 220): string => {
-  const normalized = content.replace(/\s+/g, ' ').trim();
-  if (normalized.length <= limit) {
-    return normalized;
-  }
-  return `${normalized.slice(0, limit)}...`;
-};
 
 const formatFactValue = (value: CanonicalFact['value'] | LoreFactProposal['value']): string =>
   typeof value === 'string' ? value : `${value.label}: ${value.value}`;
