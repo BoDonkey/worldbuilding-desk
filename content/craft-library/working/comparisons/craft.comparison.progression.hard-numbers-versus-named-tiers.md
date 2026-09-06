@@ -9,7 +9,7 @@ summary: >
   displaying it as named thresholds (Journeyman, Core Formation) create
   different reading experiences and suit different genre promises — neither
   is a more "serious" choice than the other.
-author_vetted: false
+author_vetted: true
 detectability: model-assisted
 scopes:
   - manuscript

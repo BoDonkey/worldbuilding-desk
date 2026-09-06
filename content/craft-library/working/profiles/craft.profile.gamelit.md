@@ -8,7 +8,7 @@ summary: >
   Game-adjacent fun without the crunch — the widest umbrella subgenre, where
   several LitRPG-specific patterns simply do not apply because there's no
   stat screen to misuse.
-author_vetted: false
+author_vetted: true
 detectability: practice
 scopes:
   - practice

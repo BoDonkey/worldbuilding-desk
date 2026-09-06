@@ -8,7 +8,7 @@ summary: >
   Power without violence — the satisfaction of recipes, discovery, and
   being indispensable — where combat-escalation patterns largely don't
   apply and the story lives or dies on whether its economy coheres.
-author_vetted: false
+author_vetted: true
 detectability: practice
 scopes:
   - practice

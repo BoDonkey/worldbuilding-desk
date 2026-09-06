@@ -9,7 +9,7 @@ summary: >
   place or people left behind, are two complementary structures — both
   depend on the thing given up or the distance traveled being made
   concrete enough for a reader to feel its weight.
-author_vetted: false
+author_vetted: true
 detectability: model-assisted
 scopes:
   - manuscript

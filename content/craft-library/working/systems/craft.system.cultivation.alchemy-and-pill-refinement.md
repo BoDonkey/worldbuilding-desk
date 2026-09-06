@@ -10,7 +10,7 @@ summary: >
   and it inherits the crafting-and-economy-loops record's consistency
   requirements while adding cultivation-specific stakes around dosage and
   side effects.
-author_vetted: false
+author_vetted: true
 detectability: model-assisted
 scopes:
   - manuscript

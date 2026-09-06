@@ -9,7 +9,7 @@ summary: >
   come to function as family for each other — a structure that promises
   belonging earned through shared experience rather than assumed through
   origin.
-author_vetted: false
+author_vetted: true
 detectability: model-assisted
 scopes:
   - manuscript

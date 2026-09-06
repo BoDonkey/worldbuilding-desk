@@ -8,7 +8,7 @@ summary: >
   A payoff lands harder when the reader can retroactively recognize its
   setup; an unplanted payoff can feel arbitrary even when it's technically
   possible within the story.
-author_vetted: false
+author_vetted: true
 detectability: model-assisted
 scopes:
   - manuscript

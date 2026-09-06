@@ -8,7 +8,7 @@ summary: >
   A story with a power system has to teach it, and the teaching happens in
   the same pages the story is trying to start — which makes onboarding a
   pacing problem before it is an explanation problem.
-author_vetted: false
+author_vetted: true
 detectability: model-assisted
 scopes:
   - chapter

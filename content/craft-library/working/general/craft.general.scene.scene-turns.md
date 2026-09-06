@@ -8,7 +8,7 @@ summary: >
   A scene turn is the moment a scene's value charges from positive to
   negative or back — the pivot that makes a reader feel something actually
   changed, distinct from mere activity.
-author_vetted: false
+author_vetted: true
 detectability: model-assisted
 scopes:
   - scene

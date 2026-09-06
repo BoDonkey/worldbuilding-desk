@@ -9,7 +9,7 @@ summary: >
   knowledge across resets — its promise is compounding insight, and its
   characteristic failure is repetition that doesn't accumulate into
   anything.
-author_vetted: false
+author_vetted: true
 detectability: model-assisted
 scopes:
   - manuscript

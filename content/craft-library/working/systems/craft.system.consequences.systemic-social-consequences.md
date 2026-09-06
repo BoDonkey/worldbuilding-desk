@@ -9,7 +9,7 @@ summary: >
   elemental magic, mass-accessible progression — should plausibly reshape
   the society that has lived with it for generations; a setting that looks
   otherwise unchanged reads as unexamined.
-author_vetted: false
+author_vetted: true
 detectability: model-assisted
 scopes:
   - manuscript

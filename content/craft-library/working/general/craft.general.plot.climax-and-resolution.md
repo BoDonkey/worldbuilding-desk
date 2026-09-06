@@ -9,7 +9,7 @@ summary: >
   protagonist's own choice under maximum pressure; the resolution shows the
   cost and shape of that answer, and rushing or skipping it can undercut an
   otherwise strong climax.
-author_vetted: false
+author_vetted: true
 detectability: model-assisted
 scopes:
   - manuscript

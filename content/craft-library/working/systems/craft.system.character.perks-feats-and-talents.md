@@ -9,7 +9,7 @@ summary: >
   growth — let a story dramatize specific, narratively legible moments of
   choice, but only if each pick actually does something a reader can
   notice later.
-author_vetted: false
+author_vetted: true
 detectability: model-assisted
 scopes:
   - scene

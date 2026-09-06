@@ -8,7 +8,7 @@ summary: >
   A specific technique within the broader setup/payoff pattern — planting a
   signal of what's to come subtly enough to reward a rereader without
   being so overt it telegraphs the outcome to a first-time reader.
-author_vetted: false
+author_vetted: true
 detectability: model-assisted
 scopes:
   - scene

@@ -9,7 +9,7 @@ summary: >
   (grow whatever you use) make different promises about identity and
   flexibility, and each creates different narrative opportunities and
   constraints.
-author_vetted: false
+author_vetted: true
 detectability: model-assisted
 scopes:
   - manuscript

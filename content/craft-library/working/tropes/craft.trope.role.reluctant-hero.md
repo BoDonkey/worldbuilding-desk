@@ -8,7 +8,7 @@ summary: >
   A protagonist who resists the call to act before eventually committing —
   the resistance itself does narrative work if it's grounded in a specific,
   legible reason, and reads as a stalling device if it isn't.
-author_vetted: false
+author_vetted: true
 detectability: model-assisted
 scopes:
   - manuscript

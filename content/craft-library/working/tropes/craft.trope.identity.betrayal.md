@@ -9,7 +9,7 @@ summary: >
   impact depends almost entirely on whether the reader can trace the
   betrayer's choice back to an established, coherent motive once it's
   revealed.
-author_vetted: false
+author_vetted: true
 detectability: model-assisted
 scopes:
   - manuscript

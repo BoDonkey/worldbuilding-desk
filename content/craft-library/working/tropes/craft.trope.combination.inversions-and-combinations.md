@@ -9,7 +9,7 @@ summary: >
   genuinely new reader promise — but only if the inversion or combination
   is legible as deliberate, and only if it still delivers some version of
   satisfaction rather than simply negating the original's appeal.
-author_vetted: false
+author_vetted: true
 detectability: model-assisted
 scopes:
   - manuscript

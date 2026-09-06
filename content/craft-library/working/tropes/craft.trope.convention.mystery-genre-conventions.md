@@ -10,7 +10,7 @@ summary: >
   different relationship to violence, moral complexity, and the detective's
   own competence, and mismatching them creates a different failure than a
   simply unfair reveal.
-author_vetted: false
+author_vetted: true
 detectability: model-assisted
 scopes:
   - manuscript

@@ -8,7 +8,7 @@ summary: >
   A companion the system grants rather than the plot introduces — which
   raises a question most such records never answer: is this a capability the
   protagonist owns, or a person?
-author_vetted: false
+author_vetted: true
 detectability: model-assisted
 scopes:
   - chapter

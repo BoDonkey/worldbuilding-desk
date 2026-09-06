@@ -9,7 +9,7 @@ summary: >
   general material-goods production, raising its own questions about
   durability, transferability, and what happens to an enchanted item's
   power when its maker or bearer changes.
-author_vetted: false
+author_vetted: true
 detectability: model-assisted
 scopes:
   - manuscript

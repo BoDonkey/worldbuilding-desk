@@ -7,7 +7,7 @@ family: general
 summary: >
   The line-level layer — where sentences are followed or re-read, and where
   rhythm does work that no amount of structural planning can substitute for.
-author_vetted: false
+author_vetted: true
 detectability: model-assisted
 scopes:
   - selection

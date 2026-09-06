@@ -10,7 +10,7 @@ summary: >
   eventually runs into a ceiling — the point where raising stakes further
   stops being credible or effective — that's worth planning for
   deliberately rather than discovering by accident.
-author_vetted: false
+author_vetted: true
 detectability: model-assisted
 scopes:
   - manuscript

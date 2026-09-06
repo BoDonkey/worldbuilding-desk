@@ -10,7 +10,7 @@ summary: >
   — a system that is purely vertical tends toward power creep and cast
   obsolescence, while purely horizontal growth can struggle to convey any
   sense of increasing mastery at all.
-author_vetted: false
+author_vetted: true
 detectability: model-assisted
 scopes:
   - manuscript

@@ -509,9 +509,11 @@ runtime schema, and nothing here changes the roadmap's status board.
 
 - **166 records** as of 2026-09-05 (54 `general`, 48 `system`, 46 `trope`,
   6 `comparison`, 12 `profile`) against a 180 target; 14 remain.
-- **Eight Batch-1 records carry `author_vetted: true`.** The product author
-  approved that exact tranche on 2026-09-06 after reviewing material across
-  every corpus folder. The other 158 records remain unvetted drafts.
+- **All 166 working records carry `author_vetted: true`.** On 2026-09-06 the
+  product author explicitly approved the full working corpus after reviewing
+  material across every folder and finding it accurate, well written,
+  researched, and cited. Publication remains separate: the shipped v1 bundle
+  still contains only the eight-record Batch-1 tranche.
 - `working/README.md` holds the batch log and the resume protocol; `qa/`
   holds the coverage matrix, duplication report, citation audit, and open
   claims. `qa/build_catalog.py`, `qa/audit_corpus.py`, and `qa/relink.py` are

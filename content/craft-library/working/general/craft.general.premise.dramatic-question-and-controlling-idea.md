@@ -9,7 +9,7 @@ summary: >
   and a controlling idea — what the story asserts about its own subject —
   that gives every scene a reason to be in the manuscript rather than
   another one.
-author_vetted: false
+author_vetted: true
 detectability: model-assisted
 scopes:
   - manuscript

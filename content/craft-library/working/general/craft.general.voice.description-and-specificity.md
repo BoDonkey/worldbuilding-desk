@@ -8,7 +8,7 @@ summary: >
   A specific, well-chosen detail does more work than a longer list of
   generic ones — specificity is what makes description feel observed
   rather than assembled from category labels.
-author_vetted: false
+author_vetted: true
 detectability: model-assisted
 scopes:
   - scene

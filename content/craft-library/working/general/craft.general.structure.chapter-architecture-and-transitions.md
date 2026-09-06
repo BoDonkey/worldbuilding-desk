@@ -8,7 +8,7 @@ summary: >
   Where a chapter starts, where it ends, and how it hands off to the next
   one shape a reader's momentum independent of what happens inside the
   chapter — a strong scene can still underperform if it's boxed badly.
-author_vetted: false
+author_vetted: true
 detectability: model-assisted
 scopes:
   - chapter

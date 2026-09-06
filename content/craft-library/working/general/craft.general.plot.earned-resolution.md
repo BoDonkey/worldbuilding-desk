@@ -9,7 +9,7 @@ summary: >
   already established and dramatized, rather than resolving through a
   new element, a coincidence, or a capability introduced too late to have
   been anticipated.
-author_vetted: false
+author_vetted: true
 detectability: model-assisted
 scopes:
   - manuscript

@@ -9,7 +9,7 @@ summary: >
   advancement path, but the loop only stays satisfying if scarcity, cost,
   and value stay internally consistent rather than existing only when the
   plot needs them.
-author_vetted: false
+author_vetted: true
 detectability: model-assisted
 scopes:
   - manuscript

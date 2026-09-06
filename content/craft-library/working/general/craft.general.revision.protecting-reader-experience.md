@@ -9,7 +9,7 @@ summary: >
   be for its intended reader — the same note (add more description, cut
   this scene, raise the stakes) can be exactly right for one book and
   exactly wrong for another with a different promise.
-author_vetted: false
+author_vetted: true
 detectability: practice
 scopes:
   - practice

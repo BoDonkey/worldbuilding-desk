@@ -8,7 +8,7 @@ summary: >
   A character's first appearance sets what the reader expects from them and
   how much attention they will be given — which makes entrances a resource
   worth spending deliberately rather than evenly.
-author_vetted: false
+author_vetted: true
 detectability: model-assisted
 scopes:
   - scene

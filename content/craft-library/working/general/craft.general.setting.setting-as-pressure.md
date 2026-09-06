@@ -8,7 +8,7 @@ summary: >
   A setting can be scenery a story happens in front of, or a set of
   constraints that makes the story's problems harder; this record is about
   the second, and about how to tell which one a draft has.
-author_vetted: false
+author_vetted: true
 detectability: model-assisted
 scopes:
   - scene

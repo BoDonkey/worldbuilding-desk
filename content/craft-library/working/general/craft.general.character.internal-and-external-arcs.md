@@ -10,7 +10,7 @@ summary: >
   best when they intersect at key moments — running in parallel with no
   connection is a common way a story feels thinner than its plot alone
   would suggest.
-author_vetted: false
+author_vetted: true
 detectability: model-assisted
 scopes:
   - manuscript

@@ -9,7 +9,7 @@ summary: >
   genre conventions a reader should expect to apply — mismatched signals
   create confusion even when the eventual story is well executed on its
   own terms.
-author_vetted: false
+author_vetted: true
 detectability: model-assisted
 scopes:
   - selection

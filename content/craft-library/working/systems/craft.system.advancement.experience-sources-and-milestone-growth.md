@@ -9,7 +9,7 @@ summary: >
   narrative milestones — shapes what kind of story a progression system
   rewards, and a mismatch between stated sources and depicted growth
   undermines a system's credibility.
-author_vetted: false
+author_vetted: true
 detectability: model-assisted
 scopes:
   - manuscript

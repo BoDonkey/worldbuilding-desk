@@ -9,7 +9,7 @@ summary: >
   the interplay between the stated plan and what actually happens — a
   structure that depends on fair-play information control more than most
   other trope forms.
-author_vetted: false
+author_vetted: true
 detectability: model-assisted
 scopes:
   - manuscript

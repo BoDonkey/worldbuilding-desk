@@ -8,7 +8,7 @@ summary: >
   The companion unit to a scene — a character's emotional reaction, a
   weighed dilemma, and a decision — gives the reader room to feel a
   disaster's weight before the next goal launches.
-author_vetted: false
+author_vetted: true
 detectability: model-assisted
 scopes:
   - scene

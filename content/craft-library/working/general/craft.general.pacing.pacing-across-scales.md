@@ -9,7 +9,7 @@ summary: >
   manuscript level — a fast-feeling sentence can sit inside a slow-moving
   chapter, and diagnosing "this feels slow" requires knowing which scale is
   actually the problem.
-author_vetted: false
+author_vetted: true
 detectability: model-assisted
 scopes:
   - selection

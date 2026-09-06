@@ -8,7 +8,7 @@ summary: >
   Plot events that cause each other, each raising what's at stake, read as
   a story; events that merely follow each other in sequence read as a list
   — the difference between "and then" and "therefore, but."
-author_vetted: false
+author_vetted: true
 detectability: model-assisted
 scopes:
   - manuscript

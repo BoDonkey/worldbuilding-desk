@@ -9,7 +9,7 @@ summary: >
   is usually the resource whose depletion ends the story for a character,
   and focus governs sustained attention rather than raw output — and both
   deserve separate design treatment from mana-style spendable pools.
-author_vetted: false
+author_vetted: true
 detectability: model-assisted
 scopes:
   - scene

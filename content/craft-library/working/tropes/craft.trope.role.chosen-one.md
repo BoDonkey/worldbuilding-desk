@@ -8,7 +8,7 @@ summary: >
   A protagonist marked by prophecy, birth, or destiny as uniquely suited to
   a task — a trope readers report fatigue with specifically when destiny
   substitutes for choice, not simply because it's recognizable.
-author_vetted: false
+author_vetted: true
 detectability: model-assisted
 scopes:
   - manuscript

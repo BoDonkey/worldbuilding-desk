@@ -8,7 +8,7 @@ summary: >
   A protagonist the story does not ask the reader to approve of — which
   changes what holds attention, since sympathy is no longer available and
   something else has to do its work.
-author_vetted: false
+author_vetted: true
 detectability: model-assisted
 scopes:
   - manuscript

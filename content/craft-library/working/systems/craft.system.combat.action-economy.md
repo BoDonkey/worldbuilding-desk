@@ -8,7 +8,7 @@ summary: >
   Action economy — who gets to act, how often, and in what order — is the
   hidden logic behind whether a fight scene feels tactically legible or
   arbitrary, whether or not a story ever states a number.
-author_vetted: false
+author_vetted: true
 detectability: model-assisted
 scopes:
   - scene

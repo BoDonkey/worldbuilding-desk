@@ -9,7 +9,7 @@ summary: >
   system caps their growth softly or hard sets a ceiling on how open-ended a
   story's power fantasy can be, and how that ceiling is written matters as
   much as where it sits.
-author_vetted: false
+author_vetted: true
 detectability: model-assisted
 scopes:
   - manuscript

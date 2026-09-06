@@ -9,7 +9,7 @@ summary: >
   class, bloodline, or role, shapes a setting's social structure as much as
   its combat mechanics — universal access implies a different society than
   a gated one, whether or not the story engages that implication.
-author_vetted: false
+author_vetted: true
 detectability: model-assisted
 scopes:
   - manuscript

@@ -8,7 +8,7 @@ summary: >
   A recurring safe location the story keeps returning to — tavern, guild
   hall, ship, settlement — which readers use to measure change and which
   quietly does a lot of a serial's structural work.
-author_vetted: false
+author_vetted: true
 detectability: model-assisted
 scopes:
   - chapter

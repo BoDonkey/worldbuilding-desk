@@ -10,7 +10,7 @@ summary: >
   widened — and tracking that arc explicitly, distinct from either
   character's individual arc, often reveals whether a relationship is
   doing real narrative work.
-author_vetted: false
+author_vetted: true
 detectability: model-assisted
 scopes:
   - manuscript

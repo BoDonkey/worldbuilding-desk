@@ -9,7 +9,7 @@ summary: >
   shorter chapters, filler, abandoned threads — which is why it belongs in a
   craft library rather than only a wellness one, even though it is never
   something a manuscript itself can be checked for.
-author_vetted: false
+author_vetted: true
 detectability: practice
 scopes:
   - practice

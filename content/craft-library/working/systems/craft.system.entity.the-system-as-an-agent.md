@@ -8,7 +8,7 @@ summary: >
   Whether the System has intentions — a question most stories answer by
   accident, and one that decides whether it is a physics, a bureaucracy, or a
   character with a plan.
-author_vetted: false
+author_vetted: true
 detectability: model-assisted
 scopes:
   - manuscript

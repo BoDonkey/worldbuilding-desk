@@ -8,7 +8,7 @@ summary: >
   Most fiction requires writing about things the author has not done and
   people they are not — a craft problem with a research answer, a reader
   answer, and a limit on how much either can do.
-author_vetted: false
+author_vetted: true
 detectability: practice
 scopes:
   - practice

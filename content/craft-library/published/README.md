@@ -22,9 +22,10 @@ The application exposes this asset only through the coach-scoped provider. It
 is not project RAG data and is not included in project indexing, evidence,
 health, backup, deletion, or canon workflows.
 
-For the approved Batch-1 tranche, author approval is recorded as
-`author_vetted: true` in the eight working Markdown files. From
+Author approval is recorded as `author_vetted: true` in the working Markdown
+files. From
 `content/craft-library/working`, run `python3 qa/build_catalog.py` and then
 `python3 qa/publish_tranche.py` to validate the inventory and rebuild this
 runtime JSON before rebuilding the generated asset. The publisher contains an
-explicit ID allowlist so approval cannot spill into other working drafts.
+explicit ID allowlist so broad source approval cannot silently expand the
+shipped tranche.

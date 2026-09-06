@@ -10,7 +10,7 @@ summary: >
   error than developmental or line-level revision, and trying to catch
   continuity errors during either of those passes usually means catching
   fewer of them.
-author_vetted: false
+author_vetted: true
 detectability: practice
 scopes:
   - practice

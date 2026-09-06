@@ -9,7 +9,7 @@ summary: >
   effects that restrict multiple opponents at once, and specific responses
   built to answer specific threats all add tactical texture beyond raw
   damage — but each implies a design question about fairness and escape.
-author_vetted: false
+author_vetted: true
 detectability: model-assisted
 scopes:
   - scene

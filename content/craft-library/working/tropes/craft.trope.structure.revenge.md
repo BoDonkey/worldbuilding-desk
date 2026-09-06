@@ -9,7 +9,7 @@ summary: >
   central craft question is what the pursuit costs the protagonist, since a
   revenge that's free of cost tends to read as simple wish fulfillment
   rather than a story about revenge.
-author_vetted: false
+author_vetted: true
 detectability: model-assisted
 scopes:
   - manuscript

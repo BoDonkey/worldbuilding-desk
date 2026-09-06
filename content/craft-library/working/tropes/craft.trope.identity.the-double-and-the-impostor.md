@@ -8,7 +8,7 @@ summary: >
   Someone who is not who they appear to be, or who appears to be someone
   else — a convention whose tension lives entirely in the gap between what
   the reader knows and what the characters do.
-author_vetted: false
+author_vetted: true
 detectability: model-assisted
 scopes:
   - chapter

@@ -9,7 +9,7 @@ summary: >
   craft center is the crossing's cost and the way the other world's rules
   are revealed, distinct from the isekai subgenre profile's specific focus
   on transported-knowledge advantage.
-author_vetted: false
+author_vetted: true
 detectability: model-assisted
 scopes:
   - manuscript

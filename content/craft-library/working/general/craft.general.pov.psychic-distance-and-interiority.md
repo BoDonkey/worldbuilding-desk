@@ -10,7 +10,7 @@ summary: >
   are controllable dials, not fixed properties of a chosen POV, and
   shifting them deliberately is one of the most precise tools available for
   controlling a scene's emotional intensity.
-author_vetted: false
+author_vetted: true
 detectability: model-assisted
 scopes:
   - scene

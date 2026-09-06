@@ -8,7 +8,7 @@ summary: >
   Time-gated cooldowns, countable charges, and costly sacrifices are three
   distinct ways to limit how often a character can do something powerful,
   each implying a different rhythm and a different kind of tension.
-author_vetted: false
+author_vetted: true
 detectability: model-assisted
 scopes:
   - scene

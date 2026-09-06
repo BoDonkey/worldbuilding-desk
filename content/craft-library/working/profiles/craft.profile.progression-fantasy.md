@@ -8,7 +8,7 @@ summary: >
   An earned journey from nothing to something, where power growth need not
   be numeric — the defining failure is fake progression, and stat-block-era
   patterns may not apply at all.
-author_vetted: false
+author_vetted: true
 detectability: practice
 scopes:
   - practice

@@ -9,7 +9,7 @@ summary: >
   peer relationships, escalating skill tests, and hierarchy — the setting
   does real structural work, but only if the institution has functioning
   rules the story actually honors.
-author_vetted: false
+author_vetted: true
 detectability: model-assisted
 scopes:
   - manuscript

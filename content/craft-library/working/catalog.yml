@@ -21,7 +21,7 @@ records:
     - litrpg
     subgenres: []
     exclusions: []
-  author_vetted: false
+  author_vetted: true
   path: comparisons/craft.comparison.progression.classes-versus-skill-based-growth.md
 - id: craft.comparison.progression.hard-numbers-versus-named-tiers
   title: Hard numbers versus named tiers
@@ -38,7 +38,7 @@ records:
     - cultivation
     subgenres: []
     exclusions: []
-  author_vetted: false
+  author_vetted: true
   path: comparisons/craft.comparison.progression.hard-numbers-versus-named-tiers.md
 - id: craft.comparison.progression.universal-vs-class-bound-access
   title: Universal versus class-bound access
@@ -56,7 +56,7 @@ records:
     - cultivation
     subgenres: []
     exclusions: []
-  author_vetted: false
+  author_vetted: true
   path: comparisons/craft.comparison.progression.universal-vs-class-bound-access.md
 - id: craft.comparison.resource.pools-vs-thresholds
   title: Pools versus thresholds
@@ -73,7 +73,7 @@ records:
     - cultivation
     subgenres: []
     exclusions: []
-  author_vetted: false
+  author_vetted: true
   path: comparisons/craft.comparison.resource.pools-vs-thresholds.md
 - id: craft.comparison.resource.qi-versus-mana
   title: 'Qi versus mana: choosing a power resource''s cultural texture'
@@ -93,7 +93,7 @@ records:
     - cultivation
     - classic-litrpg
     exclusions: []
-  author_vetted: false
+  author_vetted: true
   path: comparisons/craft.comparison.resource.qi-versus-mana.md
 - id: craft.comparison.resource.renewable-vs-finite-resources
   title: Renewable versus finite resources
@@ -111,7 +111,7 @@ records:
     - cultivation
     subgenres: []
     exclusions: []
-  author_vetted: false
+  author_vetted: true
   path: comparisons/craft.comparison.resource.renewable-vs-finite-resources.md
 - id: craft.general.character.agency
   title: Character agency
@@ -127,7 +127,7 @@ records:
     - general-fiction
     subgenres: []
     exclusions: []
-  author_vetted: false
+  author_vetted: true
   path: general/craft.general.character.agency.md
 - id: craft.general.character.antagonistic-force
   title: The antagonistic force
@@ -142,7 +142,7 @@ records:
     - general-fiction
     subgenres: []
     exclusions: []
-  author_vetted: false
+  author_vetted: true
   path: general/craft.general.character.antagonistic-force.md
 - id: craft.general.character.internal-and-external-arcs
   title: Internal and external arcs
@@ -157,7 +157,7 @@ records:
     - general-fiction
     subgenres: []
     exclusions: []
-  author_vetted: false
+  author_vetted: true
   path: general/craft.general.character.internal-and-external-arcs.md
 - id: craft.general.character.introducing-characters
   title: Introducing characters
@@ -174,7 +174,7 @@ records:
     - general-fiction
     subgenres: []
     exclusions: []
-  author_vetted: false
+  author_vetted: true
   path: general/craft.general.character.introducing-characters.md
 - id: craft.general.character.power-as-sole-motivation
   title: Power as a character's sole motivation
@@ -208,7 +208,7 @@ records:
     - general-fiction
     subgenres: []
     exclusions: []
-  author_vetted: false
+  author_vetted: true
   path: general/craft.general.character.relationships-and-relational-arcs.md
 - id: craft.general.character.supporting-cast-purpose
   title: Supporting-cast purpose
@@ -223,7 +223,7 @@ records:
     - general-fiction
     subgenres: []
     exclusions: []
-  author_vetted: false
+  author_vetted: true
   path: general/craft.general.character.supporting-cast-purpose.md
 - id: craft.general.character.values-contradiction-and-meaningful-choice
   title: Values, contradiction, and meaningful choice
@@ -239,7 +239,7 @@ records:
     - general-fiction
     subgenres: []
     exclusions: []
-  author_vetted: false
+  author_vetted: true
   path: general/craft.general.character.values-contradiction-and-meaningful-choice.md
 - id: craft.general.character.want-versus-need
   title: Want versus need
@@ -254,7 +254,7 @@ records:
     - general-fiction
     subgenres: []
     exclusions: []
-  author_vetted: false
+  author_vetted: true
   path: general/craft.general.character.want-versus-need.md
 - id: craft.general.pacing.escalation-ceilings-urgency-and-pressure
   title: Escalation ceilings, urgency, and pressure
@@ -270,7 +270,7 @@ records:
     - general-fiction
     subgenres: []
     exclusions: []
-  author_vetted: false
+  author_vetted: true
   path: general/craft.general.pacing.escalation-ceilings-urgency-and-pressure.md
 - id: craft.general.pacing.pacing-across-scales
   title: Pacing across scales
@@ -288,7 +288,7 @@ records:
     - general-fiction
     subgenres: []
     exclusions: []
-  author_vetted: false
+  author_vetted: true
   path: general/craft.general.pacing.pacing-across-scales.md
 - id: craft.general.pacing.suspense-uncertainty-and-anticipation
   title: Suspense, uncertainty, and anticipation
@@ -305,7 +305,7 @@ records:
     - general-fiction
     subgenres: []
     exclusions: []
-  author_vetted: false
+  author_vetted: true
   path: general/craft.general.pacing.suspense-uncertainty-and-anticipation.md
 - id: craft.general.pacing.tension-and-release-cycles
   title: Tension and release cycles
@@ -322,7 +322,7 @@ records:
     - general-fiction
     subgenres: []
     exclusions: []
-  author_vetted: false
+  author_vetted: true
   path: general/craft.general.pacing.tension-and-release-cycles.md
 - id: craft.general.plot.causal-escalation
   title: Causal escalation
@@ -337,7 +337,7 @@ records:
     - general-fiction
     subgenres: []
     exclusions: []
-  author_vetted: false
+  author_vetted: true
   path: general/craft.general.plot.causal-escalation.md
 - id: craft.general.plot.climax-and-resolution
   title: Climax and resolution
@@ -352,7 +352,7 @@ records:
     - general-fiction
     subgenres: []
     exclusions: []
-  author_vetted: false
+  author_vetted: true
   path: general/craft.general.plot.climax-and-resolution.md
 - id: craft.general.plot.complications
   title: Complications
@@ -369,7 +369,7 @@ records:
     - general-fiction
     subgenres: []
     exclusions: []
-  author_vetted: false
+  author_vetted: true
   path: general/craft.general.plot.complications.md
 - id: craft.general.plot.earned-resolution
   title: Earned resolution
@@ -384,7 +384,7 @@ records:
     - general-fiction
     subgenres: []
     exclusions: []
-  author_vetted: false
+  author_vetted: true
   path: general/craft.general.plot.earned-resolution.md
 - id: craft.general.plot.exposition-and-info-delivery
   title: Exposition and information delivery
@@ -400,7 +400,7 @@ records:
     - general-fiction
     subgenres: []
     exclusions: []
-  author_vetted: false
+  author_vetted: true
   path: general/craft.general.plot.exposition-and-info-delivery.md
 - id: craft.general.plot.foreshadowing
   title: Foreshadowing
@@ -416,7 +416,7 @@ records:
     - general-fiction
     subgenres: []
     exclusions: []
-  author_vetted: false
+  author_vetted: true
   path: general/craft.general.plot.foreshadowing.md
 - id: craft.general.plot.midpoint-and-reversals
   title: Midpoint and reversals
@@ -431,7 +431,7 @@ records:
     - general-fiction
     subgenres: []
     exclusions: []
-  author_vetted: false
+  author_vetted: true
   path: general/craft.general.plot.midpoint-and-reversals.md
 - id: craft.general.plot.negative-space-problems-power-cannot-solve
   title: 'Negative space: problems power cannot solve'
@@ -465,7 +465,7 @@ records:
     - general-fiction
     subgenres: []
     exclusions: []
-  author_vetted: false
+  author_vetted: true
   path: general/craft.general.plot.reader-expectation-and-genre-signaling.md
 - id: craft.general.plot.setup-and-payoff
   title: Setup and payoff
@@ -481,7 +481,7 @@ records:
     - general-fiction
     subgenres: []
     exclusions: []
-  author_vetted: false
+  author_vetted: true
   path: general/craft.general.plot.setup-and-payoff.md
 - id: craft.general.plot.stakes
   title: Stakes
@@ -497,7 +497,7 @@ records:
     - general-fiction
     subgenres: []
     exclusions: []
-  author_vetted: false
+  author_vetted: true
   path: general/craft.general.plot.stakes.md
 - id: craft.general.pov.information-control
   title: Point of view and information control
@@ -513,7 +513,7 @@ records:
     - general-fiction
     subgenres: []
     exclusions: []
-  author_vetted: false
+  author_vetted: true
   path: general/craft.general.pov.information-control.md
 - id: craft.general.pov.multiple-viewpoint-management
   title: Managing multiple viewpoints
@@ -530,7 +530,7 @@ records:
     - general-fiction
     subgenres: []
     exclusions: []
-  author_vetted: false
+  author_vetted: true
   path: general/craft.general.pov.multiple-viewpoint-management.md
 - id: craft.general.pov.psychic-distance-and-interiority
   title: Psychic distance and interiority
@@ -545,7 +545,7 @@ records:
     - general-fiction
     subgenres: []
     exclusions: []
-  author_vetted: false
+  author_vetted: true
   path: general/craft.general.pov.psychic-distance-and-interiority.md
 - id: craft.general.practice.author-burnout-as-craft-problem
   title: Author burnout as a craft problem
@@ -562,7 +562,7 @@ records:
     - progression-fantasy
     subgenres: []
     exclusions: []
-  author_vetted: false
+  author_vetted: true
   path: general/craft.general.practice.author-burnout-as-craft-problem.md
 - id: craft.general.practice.buffer-discipline
   title: Buffer discipline
@@ -579,7 +579,7 @@ records:
     - progression-fantasy
     subgenres: []
     exclusions: []
-  author_vetted: false
+  author_vetted: true
   path: general/craft.general.practice.buffer-discipline.md
 - id: craft.general.practice.no-gap-posting
   title: No-gap posting discipline
@@ -612,7 +612,7 @@ records:
     - general-fiction
     subgenres: []
     exclusions: []
-  author_vetted: false
+  author_vetted: true
   path: general/craft.general.practice.outlining-versus-discovery-drafting.md
 - id: craft.general.practice.research-and-authenticity
   title: Research and writing outside your experience
@@ -628,7 +628,7 @@ records:
     - general-fiction
     subgenres: []
     exclusions: []
-  author_vetted: false
+  author_vetted: true
   path: general/craft.general.practice.research-and-authenticity.md
 - id: craft.general.premise.dramatic-question-and-controlling-idea
   title: Dramatic question and controlling idea
@@ -643,7 +643,7 @@ records:
     - general-fiction
     subgenres: []
     exclusions: []
-  author_vetted: false
+  author_vetted: true
   path: general/craft.general.premise.dramatic-question-and-controlling-idea.md
 - id: craft.general.promise.promise-consistency
   title: Promise consistency
@@ -678,7 +678,7 @@ records:
     - general-fiction
     subgenres: []
     exclusions: []
-  author_vetted: false
+  author_vetted: true
   path: general/craft.general.revision.continuity-passes.md
 - id: craft.general.revision.developmental-versus-line-editing
   title: Developmental versus line-level revision
@@ -694,7 +694,7 @@ records:
     - general-fiction
     subgenres: []
     exclusions: []
-  author_vetted: false
+  author_vetted: true
   path: general/craft.general.revision.developmental-versus-line-editing.md
 - id: craft.general.revision.protecting-reader-experience
   title: Protecting the intended reader experience
@@ -710,7 +710,7 @@ records:
     - general-fiction
     subgenres: []
     exclusions: []
-  author_vetted: false
+  author_vetted: true
   path: general/craft.general.revision.protecting-reader-experience.md
 - id: craft.general.revision.triage-and-beta-reader-signal
   title: Revision triage and beta-reader signal
@@ -726,7 +726,7 @@ records:
     - general-fiction
     subgenres: []
     exclusions: []
-  author_vetted: false
+  author_vetted: true
   path: general/craft.general.revision.triage-and-beta-reader-signal.md
 - id: craft.general.scene.entry-and-exit-points
   title: Scene entry and exit points
@@ -741,7 +741,7 @@ records:
     - general-fiction
     subgenres: []
     exclusions: []
-  author_vetted: false
+  author_vetted: true
   path: general/craft.general.scene.entry-and-exit-points.md
 - id: craft.general.scene.goal-conflict-outcome
   title: Scene goal, conflict, and outcome
@@ -756,7 +756,7 @@ records:
     - general-fiction
     subgenres: []
     exclusions: []
-  author_vetted: false
+  author_vetted: true
   path: general/craft.general.scene.goal-conflict-outcome.md
 - id: craft.general.scene.scene-turns
   title: Scene turns
@@ -771,7 +771,7 @@ records:
     - general-fiction
     subgenres: []
     exclusions: []
-  author_vetted: false
+  author_vetted: true
   path: general/craft.general.scene.scene-turns.md
 - id: craft.general.scene.sequel-and-reflection
   title: Sequel and reflection
@@ -786,7 +786,7 @@ records:
     - general-fiction
     subgenres: []
     exclusions: []
-  author_vetted: false
+  author_vetted: true
   path: general/craft.general.scene.sequel-and-reflection.md
 - id: craft.general.setting.setting-as-pressure
   title: Setting as a source of pressure
@@ -803,7 +803,7 @@ records:
     - general-fiction
     subgenres: []
     exclusions: []
-  author_vetted: false
+  author_vetted: true
   path: general/craft.general.setting.setting-as-pressure.md
 - id: craft.general.structure.chapter-architecture-and-transitions
   title: Chapter architecture and transitions
@@ -818,7 +818,7 @@ records:
     - general-fiction
     subgenres: []
     exclusions: []
-  author_vetted: false
+  author_vetted: true
   path: general/craft.general.structure.chapter-architecture-and-transitions.md
 - id: craft.general.structure.opening-pages-and-reader-commitment
   title: Opening pages and reader commitment
@@ -835,7 +835,7 @@ records:
     - general-fiction
     subgenres: []
     exclusions: []
-  author_vetted: false
+  author_vetted: true
   path: general/craft.general.structure.opening-pages-and-reader-commitment.md
 - id: craft.general.structure.series-and-arc-architecture
   title: Series and arc architecture
@@ -851,7 +851,7 @@ records:
     - general-fiction
     subgenres: []
     exclusions: []
-  author_vetted: false
+  author_vetted: true
   path: general/craft.general.structure.series-and-arc-architecture.md
 - id: craft.general.structure.subplot-and-thread-braiding
   title: Subplots and thread braiding
@@ -867,7 +867,7 @@ records:
     - general-fiction
     subgenres: []
     exclusions: []
-  author_vetted: false
+  author_vetted: true
   path: general/craft.general.structure.subplot-and-thread-braiding.md
 - id: craft.general.voice.description-and-specificity
   title: Description and specificity
@@ -883,7 +883,7 @@ records:
     - general-fiction
     subgenres: []
     exclusions: []
-  author_vetted: false
+  author_vetted: true
   path: general/craft.general.voice.description-and-specificity.md
 - id: craft.general.voice.dialogue-and-subtext
   title: Dialogue and subtext
@@ -898,7 +898,7 @@ records:
     - general-fiction
     subgenres: []
     exclusions: []
-  author_vetted: false
+  author_vetted: true
   path: general/craft.general.voice.dialogue-and-subtext.md
 - id: craft.general.voice.humor-as-craft
   title: Humor as a craft element
@@ -915,7 +915,7 @@ records:
     - general-fiction
     subgenres: []
     exclusions: []
-  author_vetted: false
+  author_vetted: true
   path: general/craft.general.voice.humor-as-craft.md
 - id: craft.general.voice.narrative-summary-vs-scene
   title: Narrative summary versus scene
@@ -931,7 +931,7 @@ records:
     - general-fiction
     subgenres: []
     exclusions: []
-  author_vetted: false
+  author_vetted: true
   path: general/craft.general.voice.narrative-summary-vs-scene.md
 - id: craft.general.voice.sentence-rhythm-and-clarity
   title: Sentence rhythm and clarity
@@ -948,7 +948,7 @@ records:
     - general-fiction
     subgenres: []
     exclusions: []
-  author_vetted: false
+  author_vetted: true
   path: general/craft.general.voice.sentence-rhythm-and-clarity.md
 - id: craft.general.voice.tense-and-narrative-person
   title: Tense and narrative person
@@ -964,7 +964,7 @@ records:
     - general-fiction
     subgenres: []
     exclusions: []
-  author_vetted: false
+  author_vetted: true
   path: general/craft.general.voice.tense-and-narrative-person.md
 - id: craft.general.voice.voice-as-craft-element
   title: Voice as a craft element
@@ -981,7 +981,7 @@ records:
     - general-fiction
     subgenres: []
     exclusions: []
-  author_vetted: false
+  author_vetted: true
   path: general/craft.general.voice.voice-as-craft-element.md
 - id: craft.profile.base-building
   title: 'Subgenre profile: base building and kingdom management'
@@ -998,7 +998,7 @@ records:
     subgenres:
     - base-building
     exclusions: []
-  author_vetted: false
+  author_vetted: true
   path: profiles/craft.profile.base-building.md
 - id: craft.profile.classic-litrpg
   title: 'Subgenre profile: classic LitRPG'
@@ -1014,7 +1014,7 @@ records:
     subgenres:
     - classic-litrpg
     exclusions: []
-  author_vetted: false
+  author_vetted: true
   path: profiles/craft.profile.classic-litrpg.md
 - id: craft.profile.crafting-and-economy
   title: 'Subgenre profile: crafting and economy'
@@ -1031,7 +1031,7 @@ records:
     subgenres:
     - crafting-and-economy
     exclusions: []
-  author_vetted: false
+  author_vetted: true
   path: profiles/craft.profile.crafting-and-economy.md
 - id: craft.profile.cultivation
   title: 'Subgenre profile: cultivation'
@@ -1047,7 +1047,7 @@ records:
     subgenres:
     - cultivation
     exclusions: []
-  author_vetted: false
+  author_vetted: true
   path: profiles/craft.profile.cultivation.md
 - id: craft.profile.dark-horror-litrpg
   title: 'Subgenre profile: dark / horror LitRPG'
@@ -1063,7 +1063,7 @@ records:
     subgenres:
     - dark-horror-litrpg
     exclusions: []
-  author_vetted: false
+  author_vetted: true
   path: profiles/craft.profile.dark-horror-litrpg.md
 - id: craft.profile.dungeon-core
   title: 'Subgenre profile: dungeon core'
@@ -1080,7 +1080,7 @@ records:
     subgenres:
     - dungeon-core
     exclusions: []
-  author_vetted: false
+  author_vetted: true
   path: profiles/craft.profile.dungeon-core.md
 - id: craft.profile.gamelit
   title: 'Subgenre profile: GameLit'
@@ -1096,7 +1096,7 @@ records:
     subgenres:
     - gamelit
     exclusions: []
-  author_vetted: false
+  author_vetted: true
   path: profiles/craft.profile.gamelit.md
 - id: craft.profile.isekai-portal-fantasy
   title: 'Subgenre profile: isekai / portal fantasy'
@@ -1113,7 +1113,7 @@ records:
     subgenres:
     - isekai-portal
     exclusions: []
-  author_vetted: false
+  author_vetted: true
   path: profiles/craft.profile.isekai-portal-fantasy.md
 - id: craft.profile.progression-fantasy
   title: 'Subgenre profile: progression fantasy'
@@ -1129,7 +1129,7 @@ records:
     subgenres:
     - progression-fantasy
     exclusions: []
-  author_vetted: false
+  author_vetted: true
   path: profiles/craft.profile.progression-fantasy.md
 - id: craft.profile.system-apocalypse
   title: 'Subgenre profile: system apocalypse'
@@ -1146,7 +1146,7 @@ records:
     subgenres:
     - system-apocalypse
     exclusions: []
-  author_vetted: false
+  author_vetted: true
   path: profiles/craft.profile.system-apocalypse.md
 - id: craft.profile.time-loop
   title: 'Subgenre profile: time loop'
@@ -1163,7 +1163,7 @@ records:
     subgenres:
     - time-loop
     exclusions: []
-  author_vetted: false
+  author_vetted: true
   path: profiles/craft.profile.time-loop.md
 - id: craft.profile.tower-climbing
   title: 'Subgenre profile: tower climbing'
@@ -1180,7 +1180,7 @@ records:
     subgenres:
     - tower-climbing
     exclusions: []
-  author_vetted: false
+  author_vetted: true
   path: profiles/craft.profile.tower-climbing.md
 - id: craft.system.advancement.diminishing-returns-rarity-gates-and-catch-up-mechanics
   title: Diminishing returns, rarity gates, and catch-up mechanics
@@ -1197,7 +1197,7 @@ records:
     - litrpg
     subgenres: []
     exclusions: []
-  author_vetted: false
+  author_vetted: true
   path: systems/craft.system.advancement.diminishing-returns-rarity-gates-and-catch-up-mechanics.md
 - id: craft.system.advancement.experience-sources-and-milestone-growth
   title: Experience sources and milestone growth
@@ -1213,7 +1213,7 @@ records:
     - litrpg
     subgenres: []
     exclusions: []
-  author_vetted: false
+  author_vetted: true
   path: systems/craft.system.advancement.experience-sources-and-milestone-growth.md
 - id: craft.system.binding.oaths-contracts-and-bindings
   title: Oaths, contracts, and bindings
@@ -1234,7 +1234,7 @@ records:
     - cultivation
     - classic-litrpg
     exclusions: []
-  author_vetted: false
+  author_vetted: true
   path: systems/craft.system.binding.oaths-contracts-and-bindings.md
 - id: craft.system.chance.luck-randomness-and-probability
   title: Luck, randomness, and probability
@@ -1254,7 +1254,7 @@ records:
     - classic-litrpg
     - gamelit
     exclusions: []
-  author_vetted: false
+  author_vetted: true
   path: systems/craft.system.chance.luck-randomness-and-probability.md
 - id: craft.system.character.affinities-resistances-titles-and-bloodlines
   title: Affinities, resistances, titles, and bloodlines
@@ -1272,7 +1272,7 @@ records:
     - cultivation
     subgenres: []
     exclusions: []
-  author_vetted: false
+  author_vetted: true
   path: systems/craft.system.character.affinities-resistances-titles-and-bloodlines.md
 - id: craft.system.character.attributes-and-soft-hard-caps
   title: Attributes and soft versus hard caps
@@ -1289,7 +1289,7 @@ records:
     - litrpg
     subgenres: []
     exclusions: []
-  author_vetted: false
+  author_vetted: true
   path: systems/craft.system.character.attributes-and-soft-hard-caps.md
 - id: craft.system.character.perks-feats-and-talents
   title: Perks, feats, and talents
@@ -1306,7 +1306,7 @@ records:
     - litrpg
     subgenres: []
     exclusions: []
-  author_vetted: false
+  author_vetted: true
   path: systems/craft.system.character.perks-feats-and-talents.md
 - id: craft.system.character.skill-acquisition-and-mastery
   title: Skill acquisition and mastery
@@ -1326,7 +1326,7 @@ records:
     - classic-litrpg
     - cultivation
     exclusions: []
-  author_vetted: false
+  author_vetted: true
   path: systems/craft.system.character.skill-acquisition-and-mastery.md
 - id: craft.system.character.specialization-and-respec
   title: Specialization and respec
@@ -1343,7 +1343,7 @@ records:
     - litrpg
     subgenres: []
     exclusions: []
-  author_vetted: false
+  author_vetted: true
   path: systems/craft.system.character.specialization-and-respec.md
 - id: craft.system.combat.action-economy
   title: Action economy in encounters
@@ -1359,7 +1359,7 @@ records:
     - litrpg
     subgenres: []
     exclusions: []
-  author_vetted: false
+  author_vetted: true
   path: systems/craft.system.combat.action-economy.md
 - id: craft.system.combat.death-and-respawn
   title: Death, respawn, and permadeath design
@@ -1376,7 +1376,7 @@ records:
     - litrpg
     subgenres: []
     exclusions: []
-  author_vetted: false
+  author_vetted: true
   path: systems/craft.system.combat.death-and-respawn.md
 - id: craft.system.companion.summons-familiars-and-bonded-companions
   title: Summons, familiars, and bonded companions
@@ -1397,7 +1397,7 @@ records:
     - cultivation
     - base-building
     exclusions: []
-  author_vetted: false
+  author_vetted: true
   path: systems/craft.system.companion.summons-familiars-and-bonded-companions.md
 - id: craft.system.consequences.institutions-labor-and-governance
   title: 'Systemic consequences: institutions, labor, and governance'
@@ -1415,7 +1415,7 @@ records:
     - cultivation
     subgenres: []
     exclusions: []
-  author_vetted: false
+  author_vetted: true
   path: systems/craft.system.consequences.institutions-labor-and-governance.md
 - id: craft.system.consequences.medicine-religion-and-crime
   title: 'Systemic consequences: medicine, religion, and crime'
@@ -1433,7 +1433,7 @@ records:
     - cultivation
     subgenres: []
     exclusions: []
-  author_vetted: false
+  author_vetted: true
   path: systems/craft.system.consequences.medicine-religion-and-crime.md
 - id: craft.system.consequences.systemic-social-consequences
   title: Systemic social consequences of power systems
@@ -1451,7 +1451,7 @@ records:
     - cultivation
     subgenres: []
     exclusions: []
-  author_vetted: false
+  author_vetted: true
   path: systems/craft.system.consequences.systemic-social-consequences.md
 - id: craft.system.cultivation.alchemy-and-pill-refinement
   title: Alchemy and pill refinement
@@ -1467,7 +1467,7 @@ records:
     subgenres:
     - cultivation
     exclusions: []
-  author_vetted: false
+  author_vetted: true
   path: systems/craft.system.cultivation.alchemy-and-pill-refinement.md
 - id: craft.system.cultivation.body-and-soul-cultivation
   title: Body cultivation and soul cultivation
@@ -1484,7 +1484,7 @@ records:
     subgenres:
     - cultivation
     exclusions: []
-  author_vetted: false
+  author_vetted: true
   path: systems/craft.system.cultivation.body-and-soul-cultivation.md
 - id: craft.system.cultivation.realms-and-breakthroughs
   title: Cultivation realms and breakthroughs
@@ -1501,7 +1501,7 @@ records:
     subgenres:
     - cultivation
     exclusions: []
-  author_vetted: false
+  author_vetted: true
   path: systems/craft.system.cultivation.realms-and-breakthroughs.md
 - id: craft.system.cultivation.sects-inheritance-and-deviation
   title: Sects, inheritance, and deviation
@@ -1518,7 +1518,7 @@ records:
     subgenres:
     - cultivation
     exclusions: []
-  author_vetted: false
+  author_vetted: true
   path: systems/craft.system.cultivation.sects-inheritance-and-deviation.md
 - id: craft.system.dungeon.dungeon-structure-and-floors
   title: Dungeons, floors, and bounded spaces
@@ -1539,7 +1539,7 @@ records:
     - dungeon-core
     - tower-climbing
     exclusions: []
-  author_vetted: false
+  author_vetted: true
   path: systems/craft.system.dungeon.dungeon-structure-and-floors.md
 - id: craft.system.economy.crafting-and-economy-loops
   title: Crafting and economy loops
@@ -1557,7 +1557,7 @@ records:
     subgenres:
     - crafting-and-economy
     exclusions: []
-  author_vetted: false
+  author_vetted: true
   path: systems/craft.system.economy.crafting-and-economy-loops.md
 - id: craft.system.economy.currencies-markets-and-inflation
   title: Currencies, markets, and inflation
@@ -1574,7 +1574,7 @@ records:
     - litrpg
     subgenres: []
     exclusions: []
-  author_vetted: false
+  author_vetted: true
   path: systems/craft.system.economy.currencies-markets-and-inflation.md
 - id: craft.system.economy.enchanting-and-item-crafting
   title: Enchanting and item crafting
@@ -1590,7 +1590,7 @@ records:
     - litrpg
     subgenres: []
     exclusions: []
-  author_vetted: false
+  author_vetted: true
   path: systems/craft.system.economy.enchanting-and-item-crafting.md
 - id: craft.system.economy.loot-durability-inventory-and-ownership
   title: Loot, durability, inventory, and ownership
@@ -1606,7 +1606,7 @@ records:
     - litrpg
     subgenres: []
     exclusions: []
-  author_vetted: false
+  author_vetted: true
   path: systems/craft.system.economy.loot-durability-inventory-and-ownership.md
 - id: craft.system.encounter.enemy-design-and-difficulty-scaling
   title: Enemy design and difficulty scaling
@@ -1628,7 +1628,7 @@ records:
     - tower-climbing
     - system-apocalypse
     exclusions: []
-  author_vetted: false
+  author_vetted: true
   path: systems/craft.system.encounter.enemy-design-and-difficulty-scaling.md
 - id: craft.system.encounter.healing-teamwork-and-information-asymmetry
   title: Healing, teamwork, and information asymmetry
@@ -1644,7 +1644,7 @@ records:
     - litrpg
     subgenres: []
     exclusions: []
-  author_vetted: false
+  author_vetted: true
   path: systems/craft.system.encounter.healing-teamwork-and-information-asymmetry.md
 - id: craft.system.encounter.range-positioning-damage-and-defenses
   title: Range, positioning, damage, and defenses
@@ -1660,7 +1660,7 @@ records:
     - litrpg
     subgenres: []
     exclusions: []
-  author_vetted: false
+  author_vetted: true
   path: systems/craft.system.encounter.range-positioning-damage-and-defenses.md
 - id: craft.system.encounter.status-effects-crowd-control-and-counters
   title: Status effects, crowd control, and counters
@@ -1676,7 +1676,7 @@ records:
     - litrpg
     subgenres: []
     exclusions: []
-  author_vetted: false
+  author_vetted: true
   path: systems/craft.system.encounter.status-effects-crowd-control-and-counters.md
 - id: craft.system.entity.the-system-as-an-agent
   title: The system as an agent
@@ -1696,7 +1696,7 @@ records:
     - classic-litrpg
     - isekai-portal-fantasy
     exclusions: []
-  author_vetted: false
+  author_vetted: true
   path: systems/craft.system.entity.the-system-as-an-agent.md
 - id: craft.system.geography.travel-territory-and-fast-movement
   title: Travel, territory, and fast movement
@@ -1718,7 +1718,7 @@ records:
     - base-building
     - system-apocalypse
     exclusions: []
-  author_vetted: false
+  author_vetted: true
   path: systems/craft.system.geography.travel-territory-and-fast-movement.md
 - id: craft.system.information.appraisal-and-identification
   title: Appraisal, identification, and system information
@@ -1738,7 +1738,7 @@ records:
     - classic-litrpg
     - gamelit
     exclusions: []
-  author_vetted: false
+  author_vetted: true
   path: systems/craft.system.information.appraisal-and-identification.md
 - id: craft.system.onboarding.system-introduction-and-tutorialization
   title: Introducing the system to the reader
@@ -1758,7 +1758,7 @@ records:
     - system-apocalypse
     - isekai-portal-fantasy
     exclusions: []
-  author_vetted: false
+  author_vetted: true
   path: systems/craft.system.onboarding.system-introduction-and-tutorialization.md
 - id: craft.system.party.parties-guilds-and-group-structure
   title: Parties, guilds, and group structure
@@ -1779,7 +1779,7 @@ records:
     - gamelit
     - base-building
     exclusions: []
-  author_vetted: false
+  author_vetted: true
   path: systems/craft.system.party.parties-guilds-and-group-structure.md
 - id: craft.system.progression.advancement-rate
   title: Advancement rate across a manuscript
@@ -1872,7 +1872,7 @@ records:
     exclusions:
     - gamelit
     - progression-fantasy
-  author_vetted: false
+  author_vetted: true
   path: systems/craft.system.progression.system-as-narrator-intrusion.md
 - id: craft.system.progression.vertical-vs-horizontal-progression
   title: Vertical versus horizontal progression
@@ -1889,7 +1889,7 @@ records:
     - litrpg
     subgenres: []
     exclusions: []
-  author_vetted: false
+  author_vetted: true
   path: systems/craft.system.progression.vertical-vs-horizontal-progression.md
 - id: craft.system.progression.visible-vs-hidden-systems
   title: Visible versus hidden systems
@@ -1906,7 +1906,7 @@ records:
     - cultivation
     subgenres: []
     exclusions: []
-  author_vetted: false
+  author_vetted: true
   path: systems/craft.system.progression.visible-vs-hidden-systems.md
 - id: craft.system.quest.quest-and-reward-design
   title: Quests, objectives, and reward design
@@ -1927,7 +1927,7 @@ records:
     - system-apocalypse
     - gamelit
     exclusions: []
-  author_vetted: false
+  author_vetted: true
   path: systems/craft.system.quest.quest-and-reward-design.md
 - id: craft.system.resource.cooldowns-charges-and-sacrifice
   title: Cooldowns, charges, and sacrifice as expenditure models
@@ -1944,7 +1944,7 @@ records:
     - litrpg
     subgenres: []
     exclusions: []
-  author_vetted: false
+  author_vetted: true
   path: systems/craft.system.resource.cooldowns-charges-and-sacrifice.md
 - id: craft.system.resource.environmental-and-hybrid-power
   title: Environmental power and hybrid resources
@@ -1962,7 +1962,7 @@ records:
     - cultivation
     subgenres: []
     exclusions: []
-  author_vetted: false
+  author_vetted: true
   path: systems/craft.system.resource.environmental-and-hybrid-power.md
 - id: craft.system.resource.health-and-focus-as-core-resources
   title: Health and focus as core resources
@@ -1979,7 +1979,7 @@ records:
     - litrpg
     subgenres: []
     exclusions: []
-  author_vetted: false
+  author_vetted: true
   path: systems/craft.system.resource.health-and-focus-as-core-resources.md
 - id: craft.system.resource.resource-archetype-survey
   title: Resource archetypes and their narrative textures
@@ -1996,7 +1996,7 @@ records:
     - cultivation
     subgenres: []
     exclusions: []
-  author_vetted: false
+  author_vetted: true
   path: systems/craft.system.resource.resource-archetype-survey.md
 - id: craft.system.resource.resource-lifecycle-design
   title: Resource lifecycle design (source, storage, access, expenditure, recovery, limits)
@@ -2014,7 +2014,7 @@ records:
     - cultivation
     subgenres: []
     exclusions: []
-  author_vetted: false
+  author_vetted: true
   path: systems/craft.system.resource.resource-lifecycle-design.md
 - id: craft.system.social.reputation-and-faction-standing
   title: Reputation and faction standing
@@ -2034,7 +2034,7 @@ records:
     - classic-litrpg
     - base-building
     exclusions: []
-  author_vetted: false
+  author_vetted: true
   path: systems/craft.system.social.reputation-and-faction-standing.md
 - id: craft.system.time.accelerated-training-and-time-dilation
   title: Accelerated training and time dilation
@@ -2055,7 +2055,7 @@ records:
     - classic-litrpg
     - tower-climbing
     exclusions: []
-  author_vetted: false
+  author_vetted: true
   path: systems/craft.system.time.accelerated-training-and-time-dilation.md
 - id: craft.trope.combination.inversions-and-combinations
   title: Trope inversions and combinations
@@ -2072,7 +2072,7 @@ records:
     - litrpg
     subgenres: []
     exclusions: []
-  author_vetted: false
+  author_vetted: true
   path: tropes/craft.trope.combination.inversions-and-combinations.md
 - id: craft.trope.convention.fantasy-genre-conventions
   title: Fantasy genre conventions
@@ -2088,7 +2088,7 @@ records:
     - progression-fantasy
     subgenres: []
     exclusions: []
-  author_vetted: false
+  author_vetted: true
   path: tropes/craft.trope.convention.fantasy-genre-conventions.md
 - id: craft.trope.convention.horror-genre-conventions
   title: Horror genre conventions
@@ -2106,7 +2106,7 @@ records:
     subgenres:
     - dark-horror-litrpg
     exclusions: []
-  author_vetted: false
+  author_vetted: true
   path: tropes/craft.trope.convention.horror-genre-conventions.md
 - id: craft.trope.convention.mystery-genre-conventions
   title: Mystery genre conventions
@@ -2121,7 +2121,7 @@ records:
     - general-fiction
     subgenres: []
     exclusions: []
-  author_vetted: false
+  author_vetted: true
   path: tropes/craft.trope.convention.mystery-genre-conventions.md
 - id: craft.trope.convention.progression-fiction-reader-expectations
   title: Progression fiction reader expectations
@@ -2137,7 +2137,7 @@ records:
     - litrpg
     subgenres: []
     exclusions: []
-  author_vetted: false
+  author_vetted: true
   path: tropes/craft.trope.convention.progression-fiction-reader-expectations.md
 - id: craft.trope.convention.science-fiction-conventions
   title: Science fiction genre conventions
@@ -2152,7 +2152,7 @@ records:
     - general-fiction
     subgenres: []
     exclusions: []
-  author_vetted: false
+  author_vetted: true
   path: tropes/craft.trope.convention.science-fiction-conventions.md
 - id: craft.trope.convention.serial-fiction-conventions
   title: Serial fiction conventions
@@ -2170,7 +2170,7 @@ records:
     - litrpg
     subgenres: []
     exclusions: []
-  author_vetted: false
+  author_vetted: true
   path: tropes/craft.trope.convention.serial-fiction-conventions.md
 - id: craft.trope.fatigue.overused-litrpg-trope-cluster
   title: A cluster of fatigue-sensitive LitRPG conventions
@@ -2186,7 +2186,7 @@ records:
     - progression-fantasy
     subgenres: []
     exclusions: []
-  author_vetted: false
+  author_vetted: true
   path: tropes/craft.trope.fatigue.overused-litrpg-trope-cluster.md
 - id: craft.trope.identity.amnesia-and-lost-memory
   title: Amnesia and lost memory
@@ -2206,7 +2206,7 @@ records:
     - isekai-portal-fantasy
     - system-apocalypse
     exclusions: []
-  author_vetted: false
+  author_vetted: true
   path: tropes/craft.trope.identity.amnesia-and-lost-memory.md
 - id: craft.trope.identity.betrayal
   title: Betrayal
@@ -2223,7 +2223,7 @@ records:
     - litrpg
     subgenres: []
     exclusions: []
-  author_vetted: false
+  author_vetted: true
   path: tropes/craft.trope.identity.betrayal.md
 - id: craft.trope.identity.hidden-identity-and-secret-heritage
   title: Hidden identity and secret heritage
@@ -2240,7 +2240,7 @@ records:
     - litrpg
     subgenres: []
     exclusions: []
-  author_vetted: false
+  author_vetted: true
   path: tropes/craft.trope.identity.hidden-identity-and-secret-heritage.md
 - id: craft.trope.identity.resurrection
   title: Resurrection
@@ -2258,7 +2258,7 @@ records:
     - litrpg
     subgenres: []
     exclusions: []
-  author_vetted: false
+  author_vetted: true
   path: tropes/craft.trope.identity.resurrection.md
 - id: craft.trope.identity.the-double-and-the-impostor
   title: The double and the impostor
@@ -2279,7 +2279,7 @@ records:
     - system-apocalypse
     - dark-horror-litrpg
     exclusions: []
-  author_vetted: false
+  author_vetted: true
   path: tropes/craft.trope.identity.the-double-and-the-impostor.md
 - id: craft.trope.role.antihero-and-redeemed-enemy
   title: The antihero and the redeemed enemy
@@ -2296,7 +2296,7 @@ records:
     - litrpg
     subgenres: []
     exclusions: []
-  author_vetted: false
+  author_vetted: true
   path: tropes/craft.trope.role.antihero-and-redeemed-enemy.md
 - id: craft.trope.role.chosen-one
   title: The chosen one
@@ -2313,7 +2313,7 @@ records:
     - litrpg
     subgenres: []
     exclusions: []
-  author_vetted: false
+  author_vetted: true
   path: tropes/craft.trope.role.chosen-one.md
 - id: craft.trope.role.companion
   title: The companion
@@ -2330,7 +2330,7 @@ records:
     - litrpg
     subgenres: []
     exclusions: []
-  author_vetted: false
+  author_vetted: true
   path: tropes/craft.trope.role.companion.md
 - id: craft.trope.role.ensemble-cast-dynamics
   title: Ensemble cast dynamics
@@ -2347,7 +2347,7 @@ records:
     - litrpg
     subgenres: []
     exclusions: []
-  author_vetted: false
+  author_vetted: true
   path: tropes/craft.trope.role.ensemble-cast-dynamics.md
 - id: craft.trope.role.found-family
   title: Found family
@@ -2364,7 +2364,7 @@ records:
     - litrpg
     subgenres: []
     exclusions: []
-  author_vetted: false
+  author_vetted: true
   path: tropes/craft.trope.role.found-family.md
 - id: craft.trope.role.heir-and-succession
   title: The heir and the succession plot
@@ -2381,7 +2381,7 @@ records:
     - litrpg
     subgenres: []
     exclusions: []
-  author_vetted: false
+  author_vetted: true
   path: tropes/craft.trope.role.heir-and-succession.md
 - id: craft.trope.role.mentor
   title: The mentor
@@ -2398,7 +2398,7 @@ records:
     - litrpg
     subgenres: []
     exclusions: []
-  author_vetted: false
+  author_vetted: true
   path: tropes/craft.trope.role.mentor.md
 - id: craft.trope.role.reluctant-hero
   title: The reluctant hero
@@ -2415,7 +2415,7 @@ records:
     - litrpg
     subgenres: []
     exclusions: []
-  author_vetted: false
+  author_vetted: true
   path: tropes/craft.trope.role.reluctant-hero.md
 - id: craft.trope.role.rival
   title: The rival
@@ -2432,7 +2432,7 @@ records:
     - litrpg
     subgenres: []
     exclusions: []
-  author_vetted: false
+  author_vetted: true
   path: tropes/craft.trope.role.rival.md
 - id: craft.trope.role.the-outsider-and-belonging
   title: The outsider and belonging
@@ -2449,7 +2449,7 @@ records:
     - litrpg
     subgenres: []
     exclusions: []
-  author_vetted: false
+  author_vetted: true
   path: tropes/craft.trope.role.the-outsider-and-belonging.md
 - id: craft.trope.role.the-patron-and-the-benefactor
   title: The patron and the benefactor
@@ -2469,7 +2469,7 @@ records:
     - cultivation
     - classic-litrpg
     exclusions: []
-  author_vetted: false
+  author_vetted: true
   path: tropes/craft.trope.role.the-patron-and-the-benefactor.md
 - id: craft.trope.role.the-tyrant-and-the-institution
   title: The tyrant and the institution
@@ -2490,7 +2490,7 @@ records:
     - base-building
     - system-apocalypse
     exclusions: []
-  author_vetted: false
+  author_vetted: true
   path: tropes/craft.trope.role.the-tyrant-and-the-institution.md
 - id: craft.trope.role.trickster
   title: The trickster
@@ -2507,7 +2507,7 @@ records:
     - litrpg
     subgenres: []
     exclusions: []
-  author_vetted: false
+  author_vetted: true
   path: tropes/craft.trope.role.trickster.md
 - id: craft.trope.role.villain-protagonist
   title: The villain protagonist
@@ -2527,7 +2527,7 @@ records:
     - dark-horror-litrpg
     - dungeon-core
     exclusions: []
-  author_vetted: false
+  author_vetted: true
   path: tropes/craft.trope.role.villain-protagonist.md
 - id: craft.trope.romance.romantic-subplot-conventions
   title: Romantic subplot conventions
@@ -2544,7 +2544,7 @@ records:
     - litrpg
     subgenres: []
     exclusions: []
-  author_vetted: false
+  author_vetted: true
   path: tropes/craft.trope.romance.romantic-subplot-conventions.md
 - id: craft.trope.setting.academy-story
   title: The academy story
@@ -2561,7 +2561,7 @@ records:
     - litrpg
     subgenres: []
     exclusions: []
-  author_vetted: false
+  author_vetted: true
   path: tropes/craft.trope.setting.academy-story.md
 - id: craft.trope.setting.ruins-and-the-lost-civilization
   title: Ruins and the lost civilization
@@ -2583,7 +2583,7 @@ records:
     - cultivation
     - tower-climbing
     exclusions: []
-  author_vetted: false
+  author_vetted: true
   path: tropes/craft.trope.setting.ruins-and-the-lost-civilization.md
 - id: craft.trope.setting.the-frontier-and-the-border-town
   title: The frontier and the border town
@@ -2605,7 +2605,7 @@ records:
     - classic-litrpg
     - system-apocalypse
     exclusions: []
-  author_vetted: false
+  author_vetted: true
   path: tropes/craft.trope.setting.the-frontier-and-the-border-town.md
 - id: craft.trope.setting.the-hub-and-home-base
   title: The hub and the home base
@@ -2626,7 +2626,7 @@ records:
     - base-building
     - classic-litrpg
     exclusions: []
-  author_vetted: false
+  author_vetted: true
   path: tropes/craft.trope.setting.the-hub-and-home-base.md
 - id: craft.trope.structure.captivity-and-escape
   title: Captivity and escape
@@ -2647,7 +2647,7 @@ records:
     - dark-horror-litrpg
     - tower-climbing
     exclusions: []
-  author_vetted: false
+  author_vetted: true
   path: tropes/craft.trope.structure.captivity-and-escape.md
 - id: craft.trope.structure.coming-of-age
   title: The coming-of-age story
@@ -2667,7 +2667,7 @@ records:
     - progression-fantasy
     - classic-litrpg
     exclusions: []
-  author_vetted: false
+  author_vetted: true
   path: tropes/craft.trope.structure.coming-of-age.md
 - id: craft.trope.structure.faction-conflict-and-war
   title: Faction conflict and war
@@ -2685,7 +2685,7 @@ records:
     - litrpg
     subgenres: []
     exclusions: []
-  author_vetted: false
+  author_vetted: true
   path: tropes/craft.trope.structure.faction-conflict-and-war.md
 - id: craft.trope.structure.mystery
   title: The mystery plot
@@ -2702,7 +2702,7 @@ records:
     - litrpg
     subgenres: []
     exclusions: []
-  author_vetted: false
+  author_vetted: true
   path: tropes/craft.trope.structure.mystery.md
 - id: craft.trope.structure.portal-and-other-world
   title: Portal and other-world stories
@@ -2720,7 +2720,7 @@ records:
     subgenres:
     - isekai-portal
     exclusions: []
-  author_vetted: false
+  author_vetted: true
   path: tropes/craft.trope.structure.portal-and-other-world.md
 - id: craft.trope.structure.revenge
   title: The revenge plot
@@ -2737,7 +2737,7 @@ records:
     - litrpg
     subgenres: []
     exclusions: []
-  author_vetted: false
+  author_vetted: true
   path: tropes/craft.trope.structure.revenge.md
 - id: craft.trope.structure.sacrifice-and-return
   title: Sacrifice and return
@@ -2754,7 +2754,7 @@ records:
     - litrpg
     subgenres: []
     exclusions: []
-  author_vetted: false
+  author_vetted: true
   path: tropes/craft.trope.structure.sacrifice-and-return.md
 - id: craft.trope.structure.survival
   title: The survival plot
@@ -2772,7 +2772,7 @@ records:
     subgenres:
     - system-apocalypse
     exclusions: []
-  author_vetted: false
+  author_vetted: true
   path: tropes/craft.trope.structure.survival.md
 - id: craft.trope.structure.the-heist
   title: The heist
@@ -2789,7 +2789,7 @@ records:
     - litrpg
     subgenres: []
     exclusions: []
-  author_vetted: false
+  author_vetted: true
   path: tropes/craft.trope.structure.the-heist.md
 - id: craft.trope.structure.the-prophecy
   title: The prophecy
@@ -2806,7 +2806,7 @@ records:
     - litrpg
     subgenres: []
     exclusions: []
-  author_vetted: false
+  author_vetted: true
   path: tropes/craft.trope.structure.the-prophecy.md
 - id: craft.trope.structure.the-quest
   title: The quest
@@ -2823,7 +2823,7 @@ records:
     - litrpg
     subgenres: []
     exclusions: []
-  author_vetted: false
+  author_vetted: true
   path: tropes/craft.trope.structure.the-quest.md
 - id: craft.trope.structure.time-loop
   title: The time loop
@@ -2841,7 +2841,7 @@ records:
     subgenres:
     - time-loop
     exclusions: []
-  author_vetted: false
+  author_vetted: true
   path: tropes/craft.trope.structure.time-loop.md
 - id: craft.trope.structure.transformation
   title: The transformation plot
@@ -2859,7 +2859,7 @@ records:
     subgenres:
     - cultivation
     exclusions: []
-  author_vetted: false
+  author_vetted: true
   path: tropes/craft.trope.structure.transformation.md
 - id: craft.trope.structure.trial-and-tournament
   title: The trial and the tournament
@@ -2876,5 +2876,5 @@ records:
     - litrpg
     subgenres: []
     exclusions: []
-  author_vetted: false
+  author_vetted: true
   path: tropes/craft.trope.structure.trial-and-tournament.md

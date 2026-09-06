@@ -9,7 +9,7 @@ summary: >
   rival, or romantic interest — the role most vulnerable to becoming
   pure company with no independent function, which is exactly what
   separates a memorable companion from a forgettable one.
-author_vetted: false
+author_vetted: true
 detectability: model-assisted
 scopes:
   - manuscript

@@ -8,7 +8,7 @@ summary: >
   A long work needs shape above the chapter and below the whole — arcs that
   close while the larger story stays open, and a plan for what the series is
   actually building toward.
-author_vetted: false
+author_vetted: true
 detectability: model-assisted
 scopes:
   - manuscript

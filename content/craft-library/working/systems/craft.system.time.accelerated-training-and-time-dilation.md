@@ -8,7 +8,7 @@ summary: >
   Spaces where time runs differently — a mechanic that buys the story
   plausible mastery without spending chapters on it, and that quietly costs
   the protagonist years of everyone else's life.
-author_vetted: false
+author_vetted: true
 detectability: model-assisted
 scopes:
   - chapter

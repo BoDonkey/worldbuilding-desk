@@ -9,7 +9,7 @@ summary: >
   diminishing returns slow late growth, rarity gates control access to
   powerful options, and catch-up mechanics keep a widening gap between
   characters from becoming permanent.
-author_vetted: false
+author_vetted: true
 detectability: model-assisted
 scopes:
   - manuscript

@@ -8,7 +8,7 @@ summary: >
   A character undergoes a fundamental change in form, nature, or identity
   — literal or figurative — and the trope's strength depends on the
   transformation carrying real, examined cost alongside whatever it grants.
-author_vetted: false
+author_vetted: true
 detectability: model-assisted
 scopes:
   - manuscript

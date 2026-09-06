@@ -9,7 +9,7 @@ summary: >
   (a limited number of resurrections, a finite well of ancestral favor)
   create fundamentally different tension shapes — renewable resources
   create rhythm, finite ones create irreversible stakes.
-author_vetted: false
+author_vetted: true
 detectability: model-assisted
 scopes:
   - manuscript

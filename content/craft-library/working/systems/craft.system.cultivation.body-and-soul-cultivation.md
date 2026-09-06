@@ -9,7 +9,7 @@ summary: >
   spiritual or mental refinement as separate, sometimes competing paths —
   treating them as interchangeable collapses a distinction that usually
   carries real narrative and philosophical weight.
-author_vetted: false
+author_vetted: true
 detectability: model-assisted
 scopes:
   - manuscript

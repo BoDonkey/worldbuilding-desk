@@ -9,7 +9,7 @@ summary: >
   have, and how offense and defense interact are the spatial and
   mechanical logic underneath a legible fight scene, whether or not a story
   ever states a number.
-author_vetted: false
+author_vetted: true
 detectability: model-assisted
 scopes:
   - scene

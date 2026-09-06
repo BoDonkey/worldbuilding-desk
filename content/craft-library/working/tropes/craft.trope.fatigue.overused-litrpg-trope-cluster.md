@@ -12,7 +12,7 @@ summary: >
   commercially viable and each reported as a source of reader fatigue at
   the same time, and this record treats both facts as true rather than
   resolving the tension.
-author_vetted: false
+author_vetted: true
 detectability: model-assisted
 scopes:
   - manuscript

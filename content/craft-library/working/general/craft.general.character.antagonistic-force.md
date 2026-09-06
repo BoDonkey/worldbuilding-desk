@@ -8,7 +8,7 @@ summary: >
   Whatever opposes the protagonist — a person, an institution, a system, or
   an internal flaw — works best when it has a coherent logic of its own,
   not just a function of blocking the protagonist.
-author_vetted: false
+author_vetted: true
 detectability: model-assisted
 scopes:
   - manuscript

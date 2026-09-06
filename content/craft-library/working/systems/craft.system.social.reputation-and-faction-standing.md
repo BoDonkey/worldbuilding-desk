@@ -8,7 +8,7 @@ summary: >
   When a system tracks what groups think of a character, social consequence
   becomes a mechanic with values — which is powerful, and which risks
   converting relationships into a resource to be farmed.
-author_vetted: false
+author_vetted: true
 detectability: model-assisted
 scopes:
   - chapter

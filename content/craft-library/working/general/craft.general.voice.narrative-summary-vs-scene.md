@@ -8,7 +8,7 @@ summary: >
   Compressing time through summary and slowing down into fully dramatized
   scene are both necessary tools — the craft question is whether a given
   moment's significance matches the amount of narrative time spent on it.
-author_vetted: false
+author_vetted: true
 detectability: model-assisted
 scopes:
   - scene

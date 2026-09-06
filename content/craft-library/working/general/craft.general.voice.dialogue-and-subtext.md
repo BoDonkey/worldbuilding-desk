@@ -9,7 +9,7 @@ summary: >
   dialogue that lets a reader feel that gap — rather than stating both
   layers outright — tends to read as more alive than dialogue that says
   exactly what it means.
-author_vetted: false
+author_vetted: true
 detectability: model-assisted
 scopes:
   - scene

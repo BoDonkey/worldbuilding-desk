@@ -10,7 +10,7 @@ summary: >
   across relationship models and orientations — the coaching value is in
   the shape and its promise, not in assuming any one configuration of
   partners.
-author_vetted: false
+author_vetted: true
 detectability: model-assisted
 scopes:
   - manuscript

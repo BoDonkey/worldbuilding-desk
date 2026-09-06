@@ -8,7 +8,7 @@ summary: >
   A scene built around a character wanting something specific, meeting
   resistance, and ending in a changed situation gives a reader a reason to
   keep reading the next one — the classic scene/sequel structural unit.
-author_vetted: false
+author_vetted: true
 detectability: model-assisted
 scopes:
   - scene

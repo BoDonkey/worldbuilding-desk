@@ -8,7 +8,7 @@ summary: >
   A story organized around a central unanswered question the protagonist
   (and reader) work to solve — its integrity depends entirely on whether
   the eventual answer was fairly available to a careful reader.
-author_vetted: false
+author_vetted: true
 detectability: model-assisted
 scopes:
   - manuscript

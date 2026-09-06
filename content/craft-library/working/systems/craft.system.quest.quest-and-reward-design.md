@@ -8,7 +8,7 @@ summary: >
   A quest system states what the world asks of a character and what it pays
   for compliance — which makes it, in practice, a standing statement about
   what this story values and who is doing the asking.
-author_vetted: false
+author_vetted: true
 detectability: model-assisted
 scopes:
   - chapter

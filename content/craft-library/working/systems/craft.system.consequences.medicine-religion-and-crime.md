@@ -10,7 +10,7 @@ summary: >
   what crime is possible and how it's policed — three domains where an
   unexamined default tends to read as the least examined part of a
   setting's worldbuilding.
-author_vetted: false
+author_vetted: true
 detectability: model-assisted
 scopes:
   - manuscript

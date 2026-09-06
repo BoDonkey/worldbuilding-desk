@@ -9,7 +9,7 @@ summary: >
   prose recognizably itself — operates at both the narrative and character
   level, and confusing the two is a common source of manuscripts where
   every character sounds like the author.
-author_vetted: false
+author_vetted: true
 detectability: model-assisted
 scopes:
   - selection

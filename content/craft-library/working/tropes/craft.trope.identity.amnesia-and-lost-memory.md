@@ -8,7 +8,7 @@ summary: >
   A protagonist without their own past, which hands the story a natural
   reason to explain the world and a standing question about who this person
   will turn out to have been.
-author_vetted: false
+author_vetted: true
 detectability: model-assisted
 scopes:
   - manuscript

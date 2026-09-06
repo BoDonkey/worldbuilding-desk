@@ -9,7 +9,7 @@ summary: >
   common power-resource archetypes beyond mana and qi, each carrying its
   own default narrative texture and set of expectations before an author
   changes anything about it.
-author_vetted: false
+author_vetted: true
 detectability: model-assisted
 scopes:
   - manuscript

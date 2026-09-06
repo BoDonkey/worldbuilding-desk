@@ -9,7 +9,7 @@ summary: >
   and an antagonist whose arc bends toward redemption — both promise moral
   complexity, and both fail the same way when the story asserts change it
   hasn't dramatized.
-author_vetted: false
+author_vetted: true
 detectability: model-assisted
 scopes:
   - manuscript

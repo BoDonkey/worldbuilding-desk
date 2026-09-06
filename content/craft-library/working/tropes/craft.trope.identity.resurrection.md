@@ -9,7 +9,7 @@ summary: >
   whether death's stakes are restored afterward, since a world with easy
   resurrection needs a different relationship to mortal danger than a world
   without it.
-author_vetted: false
+author_vetted: true
 detectability: model-assisted
 scopes:
   - manuscript

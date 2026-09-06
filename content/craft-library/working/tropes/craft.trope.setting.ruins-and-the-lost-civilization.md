@@ -8,7 +8,7 @@ summary: >
   A vanished people whose remains supply the present with power, mystery, and
   a warning — the genre's most common source of loot, and its most commonly
   unexamined piece of history.
-author_vetted: false
+author_vetted: true
 detectability: model-assisted
 scopes:
   - chapter

@@ -9,7 +9,7 @@ summary: >
   and earned wonder that differ from other genres' promises — a fantasy
   world's magic doesn't need to follow real-world rules, but it does need
   to follow its own rules once it's established them.
-author_vetted: false
+author_vetted: true
 detectability: model-assisted
 scopes:
   - manuscript

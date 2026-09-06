@@ -9,7 +9,7 @@ summary: >
   underlying events actually begin and end, is one of the most direct
   levers an author has over pacing — starting late and leaving early is
   usually stronger than covering everything.
-author_vetted: false
+author_vetted: true
 detectability: model-assisted
 scopes:
   - scene

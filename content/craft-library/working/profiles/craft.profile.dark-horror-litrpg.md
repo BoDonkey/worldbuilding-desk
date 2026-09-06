@@ -8,7 +8,7 @@ summary: >
   The numbers do not mean safety — real menace and real cost define this
   subgenre, and its characteristic failure is gore that costs the
   protagonist nothing durable.
-author_vetted: false
+author_vetted: true
 detectability: practice
 scopes:
   - practice

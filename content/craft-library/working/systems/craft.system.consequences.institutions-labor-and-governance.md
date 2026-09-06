@@ -9,7 +9,7 @@ summary: >
   authority is organized — this record works through those three domains
   specifically, as a deeper application of the general systemic-social-
   consequences framework rather than a restatement of it.
-author_vetted: false
+author_vetted: true
 detectability: model-assisted
 scopes:
   - manuscript

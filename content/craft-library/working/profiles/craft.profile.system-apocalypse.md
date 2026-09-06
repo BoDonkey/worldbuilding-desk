@@ -8,7 +8,7 @@ summary: >
   Urgency, day-one collapse, and rapid early power growth define this
   subgenre — its characteristic risk is that urgency decays after the
   first act with nothing narratively replacing it.
-author_vetted: false
+author_vetted: true
 detectability: practice
 scopes:
   - practice

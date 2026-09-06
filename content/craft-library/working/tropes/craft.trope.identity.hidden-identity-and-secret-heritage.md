@@ -8,7 +8,7 @@ summary: >
   A protagonist's true name, lineage, or nature is concealed — from other
   characters, the reader, or both — and its reveal is only as strong as the
   consequences it triggers, not the surprise itself.
-author_vetted: false
+author_vetted: true
 detectability: model-assisted
 scopes:
   - manuscript

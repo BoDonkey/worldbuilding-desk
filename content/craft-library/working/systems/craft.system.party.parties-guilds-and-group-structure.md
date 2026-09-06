@@ -8,7 +8,7 @@ summary: >
   When a power system is built around groups, the group becomes a mechanic —
   with roles, contribution rules, and obligations that generate as much
   conflict as the monsters do.
-author_vetted: false
+author_vetted: true
 detectability: model-assisted
 scopes:
   - chapter

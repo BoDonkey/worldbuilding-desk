@@ -9,7 +9,7 @@ summary: >
   rather than direct confrontation — useful for generating plot through
   cleverness, and prone to a specific failure where cleverness is asserted
   rather than demonstrated.
-author_vetted: false
+author_vetted: true
 detectability: model-assisted
 scopes:
   - manuscript

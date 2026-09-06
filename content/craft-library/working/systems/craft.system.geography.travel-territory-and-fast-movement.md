@@ -8,7 +8,7 @@ summary: >
   How far things are and how quickly they can be crossed — a quiet mechanic
   that sets the cost of every plan, and that teleportation deletes in one
   decision.
-author_vetted: false
+author_vetted: true
 detectability: model-assisted
 scopes:
   - chapter

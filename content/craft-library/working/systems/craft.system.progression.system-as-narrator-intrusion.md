@@ -9,7 +9,7 @@ summary: >
   can read as a protagonist traveling with a chat window that won't mute —
   a distinct problem from stat-block density, about the system's voice and
   frequency of interjection rather than its numeric content.
-author_vetted: false
+author_vetted: true
 detectability: model-assisted
 scopes:
   - scene

@@ -8,7 +8,7 @@ summary: >
   Opposition that is a structure rather than a person — and the tyrant who
   personifies it, which is the convention's usual solution and its usual
   weakness.
-author_vetted: false
+author_vetted: true
 detectability: model-assisted
 scopes:
   - manuscript

@@ -8,7 +8,7 @@ summary: >
   Two working methods with genuinely different costs — and a serial
   publishing schedule changes the calculation, because discovery drafting in
   public cannot be revised backward.
-author_vetted: false
+author_vetted: true
 detectability: practice
 scopes:
   - practice

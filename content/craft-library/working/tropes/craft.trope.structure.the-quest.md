@@ -8,7 +8,7 @@ summary: >
   A journey toward a defined goal, structured by a sequence of obstacles —
   one of fiction's oldest organizing shapes, whose freshness comes from what
   the obstacles cost and reveal, not from the goal's novelty.
-author_vetted: false
+author_vetted: true
 detectability: model-assisted
 scopes:
   - manuscript

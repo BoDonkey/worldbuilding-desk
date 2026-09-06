@@ -8,7 +8,7 @@ summary: >
   First or third, past or present — two choices made once and felt on every
   page, each with real costs that are easier to weigh before drafting than
   after.
-author_vetted: false
+author_vetted: true
 detectability: deterministic
 scopes:
   - manuscript

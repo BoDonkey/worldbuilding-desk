@@ -9,7 +9,7 @@ summary: >
   and one tracked as a binary threshold (either you qualify or you don't)
   create different tactical textures and different kinds of tension around
   the same underlying capability.
-author_vetted: false
+author_vetted: true
 detectability: model-assisted
 scopes:
   - manuscript

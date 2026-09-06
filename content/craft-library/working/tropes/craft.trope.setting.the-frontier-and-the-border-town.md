@@ -8,7 +8,7 @@ summary: >
   A settlement at the edge of the safe world, where law is thin and the
   danger is close — a setting that supplies mixed populations, provisional
   rules, and a reason for anyone to be there.
-author_vetted: false
+author_vetted: true
 detectability: model-assisted
 scopes:
   - chapter

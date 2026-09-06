@@ -8,7 +8,7 @@ summary: >
   Writing ahead of a publishing schedule, so a bad week doesn't force a
   missed or rushed release, is repeatedly named by serial authors as the
   single practice that makes a demanding schedule survivable.
-author_vetted: false
+author_vetted: true
 detectability: practice
 scopes:
   - practice

@@ -9,7 +9,7 @@ summary: >
   events, not simply levels with more evocative names — treating them as
   interchangeable with a generic tier system tends to lose what draws
   readers to the subgenre.
-author_vetted: false
+author_vetted: true
 detectability: model-assisted
 scopes:
   - manuscript

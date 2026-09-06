@@ -9,7 +9,7 @@ summary: >
   and who's actually entitled to keep it are four related object-economy
   questions whose answers shape a story's material stakes as much as its
   power system does.
-author_vetted: false
+author_vetted: true
 detectability: model-assisted
 scopes:
   - manuscript

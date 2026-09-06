@@ -9,7 +9,7 @@ summary: >
   the highest-leverage decisions a progression system makes, because it
   directly sets the ceiling on how much a reader can be made to fear for a
   character.
-author_vetted: false
+author_vetted: true
 detectability: model-assisted
 scopes:
   - manuscript

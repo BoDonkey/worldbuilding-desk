@@ -9,7 +9,7 @@ summary: >
   built-in structure makes escalation easy to track, but that same
   legibility means a mismatched or unfair round undercuts the whole
   structure quickly.
-author_vetted: false
+author_vetted: true
 detectability: model-assisted
 scopes:
   - manuscript

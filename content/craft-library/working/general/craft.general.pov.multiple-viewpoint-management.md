@@ -8,7 +8,7 @@ summary: >
   Every additional viewpoint character buys the story reach and costs it
   attachment; this record is about deciding how many a book can carry, and
   what each one has to earn.
-author_vetted: false
+author_vetted: true
 detectability: model-assisted
 scopes:
   - chapter

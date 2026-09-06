@@ -8,7 +8,7 @@ summary: >
   How characters get skills and how skills get better — the mechanic that
   decides whether growth reads as work or as acquisition, and one of the few
   places a system can dramatize effort directly.
-author_vetted: false
+author_vetted: true
 detectability: model-assisted
 scopes:
   - chapter

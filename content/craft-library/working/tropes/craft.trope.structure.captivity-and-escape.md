@@ -8,7 +8,7 @@ summary: >
   A structure built on constraint — a protagonist who cannot leave, and a
   story whose tension comes from the narrowing of options rather than from
   their expansion.
-author_vetted: false
+author_vetted: true
 detectability: model-assisted
 scopes:
   - chapter

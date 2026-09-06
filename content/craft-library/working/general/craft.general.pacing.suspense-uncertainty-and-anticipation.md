@@ -9,7 +9,7 @@ summary: >
   reader engagement, each built from a different configuration of what the
   reader knows, doesn't know, and wants to know — distinct from the broader
   tension/release rhythm this cluster of patterns feeds into.
-author_vetted: false
+author_vetted: true
 detectability: model-assisted
 scopes:
   - scene

@@ -10,7 +10,7 @@ summary: >
   well-written story that treats progression as incidental can
   underperform for this readership even when it succeeds by other
   standards.
-author_vetted: false
+author_vetted: true
 detectability: model-assisted
 scopes:
   - manuscript

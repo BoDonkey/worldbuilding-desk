@@ -9,7 +9,7 @@ summary: >
   acting on — separating developmental concerns from line-level ones, and
   reader-reported symptoms from reader-diagnosed causes, is what makes a
   revision pass efficient rather than reactive.
-author_vetted: false
+author_vetted: true
 detectability: practice
 scopes:
   - practice

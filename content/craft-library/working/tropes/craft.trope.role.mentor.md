@@ -8,7 +8,7 @@ summary: >
   A more experienced figure who trains, guides, or challenges the
   protagonist — a near-universal role across genres, whose staleness comes
   from function without friction, not from the role itself.
-author_vetted: false
+author_vetted: true
 detectability: model-assisted
 scopes:
   - manuscript

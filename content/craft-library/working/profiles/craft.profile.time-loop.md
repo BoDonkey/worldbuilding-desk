@@ -8,7 +8,7 @@ summary: >
   Iteration and optimization define this subgenre's reader promise; several
   standard progression patterns need explicit rescoping (per-loop rather
   than per-chapter, or set aside entirely) rather than applied by default.
-author_vetted: false
+author_vetted: true
 detectability: practice
 scopes:
   - practice

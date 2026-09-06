@@ -9,7 +9,7 @@ summary: >
   are opposite design pressures, and how freely a system allows respeccing
   determines whether specialization functions as identity or as a costless,
   reversible loadout choice.
-author_vetted: false
+author_vetted: true
 detectability: model-assisted
 scopes:
   - manuscript

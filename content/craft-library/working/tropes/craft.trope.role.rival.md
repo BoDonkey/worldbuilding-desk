@@ -8,7 +8,7 @@ summary: >
   A character pursuing a similar goal or standing to the protagonist,
   often without being an enemy — a rivalry does its best work when it
   reveals something about the protagonist that opposition alone can't.
-author_vetted: false
+author_vetted: true
 detectability: model-assisted
 scopes:
   - manuscript

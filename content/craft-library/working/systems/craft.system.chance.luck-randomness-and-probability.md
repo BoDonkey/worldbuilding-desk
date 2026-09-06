@@ -8,7 +8,7 @@ summary: >
   Systems that include chance hand the story an engine of uncertainty and a
   standing hazard — because a reader who suspects an outcome was rolled
   rather than earned stops crediting the character for it.
-author_vetted: false
+author_vetted: true
 detectability: model-assisted
 scopes:
   - scene

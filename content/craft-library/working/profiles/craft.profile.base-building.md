@@ -8,7 +8,7 @@ summary: >
   Progression applied to a community rather than an individual — watching a
   campfire become a kingdom — with the characteristic failure of management
   without personal stakes.
-author_vetted: false
+author_vetted: true
 detectability: practice
 scopes:
   - practice

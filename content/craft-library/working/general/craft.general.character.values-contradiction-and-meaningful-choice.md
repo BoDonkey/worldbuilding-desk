@@ -9,7 +9,7 @@ summary: >
   come into tension with each other or with circumstance — a choice only
   reveals character when it costs the character something they also
   value.
-author_vetted: false
+author_vetted: true
 detectability: model-assisted
 scopes:
   - scene

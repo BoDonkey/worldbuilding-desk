@@ -9,7 +9,7 @@ summary: >
   status, or difference — whose arc often turns on whether and how they
   find belonging; the trope's strength depends on the outsider status
   costing something real, not functioning only as a sympathetic label.
-author_vetted: false
+author_vetted: true
 detectability: model-assisted
 scopes:
   - manuscript

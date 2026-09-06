@@ -8,7 +8,7 @@ summary: >
   An inverted power fantasy where the protagonist is the place, not a
   traveler through it — the most heavily modified subgenre in this corpus,
   requiring variants of several agency- and motivation-related patterns.
-author_vetted: false
+author_vetted: true
 detectability: practice
 scopes:
   - practice

@@ -8,7 +8,7 @@ summary: >
   What a POV lets a reader know, and when, shapes suspense, dramatic irony,
   and trust — a POV choice is also an information-control choice, not just a
   stylistic one.
-author_vetted: false
+author_vetted: true
 detectability: model-assisted
 scopes:
   - scene

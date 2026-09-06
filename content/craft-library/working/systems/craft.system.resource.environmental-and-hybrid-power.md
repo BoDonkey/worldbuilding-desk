@@ -9,7 +9,7 @@ summary: >
   deliberately combine two archetypes' textures, both raise a question the
   more common personal-resource models don't: what happens to the
   character's power when the environment or combination condition changes.
-author_vetted: false
+author_vetted: true
 detectability: model-assisted
 scopes:
   - manuscript

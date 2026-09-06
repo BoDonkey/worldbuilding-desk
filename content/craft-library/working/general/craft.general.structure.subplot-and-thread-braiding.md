@@ -8,7 +8,7 @@ summary: >
   A book usually runs several storylines at once; braiding is the work of
   deciding what each one is for, how often it surfaces, and whether it
   eventually touches the others.
-author_vetted: false
+author_vetted: true
 detectability: model-assisted
 scopes:
   - manuscript

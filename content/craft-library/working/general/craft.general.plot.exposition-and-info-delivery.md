@@ -9,7 +9,7 @@ summary: >
   it in the moment they need it — exposition delivered ahead of its
   narrative need is one of the most common sources of reader disengagement
   in early chapters.
-author_vetted: false
+author_vetted: true
 detectability: model-assisted
 scopes:
   - scene

@@ -8,7 +8,7 @@ summary: >
   Sustained tension without any release exhausts a reader rather than
   gripping them; deliberate breathing room between pressure spikes is what
   makes the next spike land.
-author_vetted: false
+author_vetted: true
 detectability: model-assisted
 scopes:
   - scene

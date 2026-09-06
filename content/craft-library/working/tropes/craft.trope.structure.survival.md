@@ -8,7 +8,7 @@ summary: >
   A protagonist works to endure a hostile environment or situation rather
   than pursuing a conventional goal — its tension depends on genuine,
   escalating resource or environmental pressure, not just repeated danger.
-author_vetted: false
+author_vetted: true
 detectability: model-assisted
 scopes:
   - manuscript

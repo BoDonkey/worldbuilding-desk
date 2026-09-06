@@ -9,7 +9,7 @@ summary: >
   everyone can see), or kept partly or fully hidden — the choice shapes
   dramatic irony, character agency, and how much the prose can lean on
   system text versus narration.
-author_vetted: false
+author_vetted: true
 detectability: model-assisted
 scopes:
   - manuscript

@@ -9,7 +9,7 @@ summary: >
   carry different histories, different relationships to the self, and
   different narrative textures, and the choice between them (or a third
   option) should follow the story's promise, not habit.
-author_vetted: false
+author_vetted: true
 detectability: model-assisted
 scopes:
   - manuscript

@@ -10,7 +10,7 @@ summary: >
   invented), and its characteristic failure mode (deviation from rushed
   or reckless practice) together shape a cultivator's social world as much
   as their personal power.
-author_vetted: false
+author_vetted: true
 detectability: model-assisted
 scopes:
   - manuscript

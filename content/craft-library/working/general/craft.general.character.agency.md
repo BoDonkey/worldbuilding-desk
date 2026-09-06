@@ -8,7 +8,7 @@ summary: >
   A character who makes meaningful choices under real constraint reads as
   agentive; a character who is only acted upon, or whose choices don't
   actually matter to the outcome, reads as a passenger in their own story.
-author_vetted: false
+author_vetted: true
 detectability: model-assisted
 scopes:
   - scene

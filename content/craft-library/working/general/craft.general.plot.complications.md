@@ -9,7 +9,7 @@ summary: >
   adding a bigger obstacle — it changes the shape of the problem, and
   distinguishing real complications from repeated obstacles is what keeps
   a middle section from feeling like the same beat over and over.
-author_vetted: false
+author_vetted: true
 detectability: model-assisted
 scopes:
   - scene

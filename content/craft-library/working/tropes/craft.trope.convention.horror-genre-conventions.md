@@ -9,7 +9,7 @@ summary: >
   ideally means something — and conventions borrowed into horror from other
   genres (a LitRPG system, a mystery structure) need to serve that promise
   or they compete with it.
-author_vetted: false
+author_vetted: true
 detectability: model-assisted
 scopes:
   - manuscript

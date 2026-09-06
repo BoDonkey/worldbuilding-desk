@@ -9,7 +9,7 @@ summary: >
   are often in tension — the external plot pursues the want, and the arc is
   often the gap between what a character is chasing and what would actually
   satisfy them.
-author_vetted: false
+author_vetted: true
 detectability: model-assisted
 scopes:
   - manuscript

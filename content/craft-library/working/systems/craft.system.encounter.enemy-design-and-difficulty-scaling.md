@@ -8,7 +8,7 @@ summary: >
   What a story sends against its protagonist, and how that opposition grows,
   is where a progression system's promises are either honored or quietly
   broken.
-author_vetted: false
+author_vetted: true
 detectability: model-assisted
 scopes:
   - scene

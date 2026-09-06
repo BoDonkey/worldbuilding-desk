@@ -9,7 +9,7 @@ summary: >
   the story — testing, reflecting, or complicating the protagonist — that
   no other character does; a cast where several characters serve the same
   function tends to blur into interchangeability.
-author_vetted: false
+author_vetted: true
 detectability: model-assisted
 scopes:
   - manuscript

@@ -8,7 +8,7 @@ summary: >
   Comedy is constructible rather than innate — and in a long serial it does
   structural work beyond amusement, buying relief, characterizing quickly,
   and making darker material bearable.
-author_vetted: false
+author_vetted: true
 detectability: model-assisted
 scopes:
   - scene

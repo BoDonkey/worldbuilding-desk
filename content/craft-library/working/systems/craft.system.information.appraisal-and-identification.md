@@ -8,7 +8,7 @@ summary: >
   Abilities that tell a character what something is — the most quietly
   powerful mechanic in the genre, because information decides what a scene
   can be about.
-author_vetted: false
+author_vetted: true
 detectability: model-assisted
 scopes:
   - scene

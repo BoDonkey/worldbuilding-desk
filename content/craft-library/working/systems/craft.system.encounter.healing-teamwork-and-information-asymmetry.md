@@ -9,7 +9,7 @@ summary: >
   each side of a fight does or doesn't know together determine whether an
   encounter reads as a coordinated tactical puzzle or a sequence of
   isolated exchanges.
-author_vetted: false
+author_vetted: true
 detectability: model-assisted
 scopes:
   - scene

@@ -10,7 +10,7 @@ summary: >
   its own logic: roles that complement rather than duplicate, and a
   balance of screen time that doesn't quietly reduce most of the cast to
   furniture.
-author_vetted: false
+author_vetted: true
 detectability: model-assisted
 scopes:
   - manuscript

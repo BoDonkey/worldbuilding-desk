@@ -9,7 +9,7 @@ summary: >
   supply-and-demand logic as any economy, and a story whose characters
   accumulate wealth rapidly without any acknowledged inflationary effect is
   quietly asking readers not to think about its own numbers too hard.
-author_vetted: false
+author_vetted: true
 detectability: model-assisted
 scopes:
   - manuscript

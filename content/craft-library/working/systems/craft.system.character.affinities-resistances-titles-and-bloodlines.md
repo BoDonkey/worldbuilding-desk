@@ -9,7 +9,7 @@ summary: >
   lineage all shape a character before they make a single choice — worth
   distinguishing from each other because they carry different implications
   about agency, destiny, and social structure.
-author_vetted: false
+author_vetted: true
 detectability: model-assisted
 scopes:
   - manuscript

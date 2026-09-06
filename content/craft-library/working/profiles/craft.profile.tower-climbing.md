@@ -8,7 +8,7 @@ summary: >
   Vertical, floor-gated progression with the cleanest built-in structural
   hook in the genre — always a known next goal — with a characteristic
   failure of floors becoming interchangeable.
-author_vetted: false
+author_vetted: true
 detectability: practice
 scopes:
   - practice

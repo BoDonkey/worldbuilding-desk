@@ -10,7 +10,7 @@ summary: >
   explore the premise's implications rather than using it as decoration —
   the genre's core promise is thinking through a "what if," not just
   setting one dressing.
-author_vetted: false
+author_vetted: true
 detectability: model-assisted
 scopes:
   - manuscript

@@ -8,7 +8,7 @@ summary: >
   Promises the system enforces — a mechanic that converts a character's word
   into a constraint with teeth, and that only pays off when the story makes
   keeping it genuinely costly.
-author_vetted: false
+author_vetted: true
 detectability: model-assisted
 scopes:
   - chapter

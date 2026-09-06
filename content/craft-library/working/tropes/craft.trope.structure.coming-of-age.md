@@ -8,7 +8,7 @@ summary: >
   A structure organized around someone becoming an adult member of a world —
   which means it is always about socialization as well as growth, and the
   tension between those two is where the form lives.
-author_vetted: false
+author_vetted: true
 detectability: model-assisted
 scopes:
   - manuscript

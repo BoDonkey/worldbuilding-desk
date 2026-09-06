@@ -9,7 +9,7 @@ summary: >
   tiers — is the reader promise; the characteristic failure is numbers with
   no worldly weight, and this profile modifies several other library
   records accordingly.
-author_vetted: false
+author_vetted: true
 detectability: practice
 scopes:
   - practice

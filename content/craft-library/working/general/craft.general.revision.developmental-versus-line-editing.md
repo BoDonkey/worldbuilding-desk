@@ -8,7 +8,7 @@ summary: >
   Two different kinds of revision, working at different scales and in a
   costly order — polishing sentences in a scene that should be cut is the
   most common way revision effort is wasted.
-author_vetted: false
+author_vetted: true
 detectability: practice
 scopes:
   - manuscript

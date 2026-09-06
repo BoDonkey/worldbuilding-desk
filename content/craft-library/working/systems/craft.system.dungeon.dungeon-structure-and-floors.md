@@ -8,7 +8,7 @@ summary: >
   A bounded, tiered space that supplies difficulty, structure, and a
   measuring stick all at once — and that quietly answers a lot of a serial's
   pacing problems if its rules are decided rather than assumed.
-author_vetted: false
+author_vetted: true
 detectability: model-assisted
 scopes:
   - chapter

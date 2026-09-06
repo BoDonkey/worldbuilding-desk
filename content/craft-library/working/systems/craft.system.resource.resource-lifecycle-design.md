@@ -9,7 +9,7 @@ summary: >
   questions worth answering deliberately (where it comes from, where it's
   held, who can reach it, what spends it, how it returns, and what caps it),
   and gaps in any one of them tend to surface as plot holes or exploits.
-author_vetted: false
+author_vetted: true
 detectability: model-assisted
 scopes:
   - manuscript

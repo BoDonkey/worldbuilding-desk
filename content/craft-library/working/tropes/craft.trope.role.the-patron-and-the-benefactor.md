@@ -8,7 +8,7 @@ summary: >
   A figure who supplies what the protagonist could not obtain alone —
   resources, access, protection — and whose gift is nearly always attached to
   something, whether or not the story says so at the time.
-author_vetted: false
+author_vetted: true
 detectability: model-assisted
 scopes:
   - manuscript

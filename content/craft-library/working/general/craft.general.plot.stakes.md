@@ -8,7 +8,7 @@ summary: >
   Stakes are what a character stands to lose or gain, made concrete enough
   that a reader can hold it in mind — vague or unlimited stakes tend to feel
   weaker than specific, bounded ones.
-author_vetted: false
+author_vetted: true
 detectability: model-assisted
 scopes:
   - scene

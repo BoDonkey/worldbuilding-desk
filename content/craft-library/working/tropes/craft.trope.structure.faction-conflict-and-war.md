@@ -8,7 +8,7 @@ summary: >
   Large-scale organized conflict between groups — its craft challenge is
   keeping stakes legible at the personal scale even as the conflict
   operates at a scale no single character can fully control.
-author_vetted: false
+author_vetted: true
 detectability: model-assisted
 scopes:
   - manuscript

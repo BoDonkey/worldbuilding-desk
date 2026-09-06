@@ -8,7 +8,7 @@ summary: >
   The first page or two do a specific job — establishing whose story this is,
   what kind of book it will be, and why the reader should keep going — and
   they do it before the reader has any accumulated goodwill to spend.
-author_vetted: false
+author_vetted: true
 detectability: model-assisted
 scopes:
   - selection

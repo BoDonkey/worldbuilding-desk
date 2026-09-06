@@ -9,7 +9,7 @@ summary: >
   subgenre's signature failure is the protagonist solving problems an
   entire world of intelligent people somehow missed, with no explanation
   for the gap.
-author_vetted: false
+author_vetted: true
 detectability: practice
 scopes:
   - practice

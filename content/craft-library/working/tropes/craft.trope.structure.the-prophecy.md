@@ -9,7 +9,7 @@ summary: >
   expectation — its craft risk is that it can explain away the need for
   earned causality, and its craft opportunity is that its interpretation,
   not just its content, can drive plot.
-author_vetted: false
+author_vetted: true
 detectability: model-assisted
 scopes:
   - manuscript

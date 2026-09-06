@@ -10,7 +10,7 @@ summary: >
   installment needs its own local satisfaction while the larger story
   keeps developing, a balance a manuscript written for one format doesn't
   automatically strike in the other.
-author_vetted: false
+author_vetted: true
 detectability: practice
 scopes:
   - practice

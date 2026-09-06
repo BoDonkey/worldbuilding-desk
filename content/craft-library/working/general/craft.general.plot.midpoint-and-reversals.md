@@ -9,7 +9,7 @@ summary: >
   reversal flips a character's fortune or understanding — both are
   escalation tools distinct from raw stakes-raising, working through
   changed meaning rather than changed magnitude.
-author_vetted: false
+author_vetted: true
 detectability: model-assisted
 scopes:
   - manuscript

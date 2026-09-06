@@ -9,7 +9,7 @@ summary: >
   reasons more than numbers, the inverse of classic LitRPG, and the
   characteristic failure is breakthroughs that go mechanical while the
   philosophical half goes vestigial.
-author_vetted: false
+author_vetted: true
 detectability: practice
 scopes:
   - practice
