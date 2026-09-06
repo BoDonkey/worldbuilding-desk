@@ -9,7 +9,7 @@ summary: >
   progression promise a book is keeping — gradual-growth stories and
   compressed-growth stories are different, legitimate appeals, not a fast
   and a slow version of the same book.
-author_vetted: false
+author_vetted: true
 detectability: deterministic
 scopes:
   - manuscript

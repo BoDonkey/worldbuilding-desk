@@ -7,7 +7,7 @@ family: system
 summary: >
   A diagnostic question for progression-driven chapters — did the chapter add
   a new capability, a new demand on the character, or only one of the two?
-author_vetted: false
+author_vetted: true
 detectability: model-assisted
 scopes:
   - chapter

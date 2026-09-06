@@ -8,7 +8,7 @@ summary: >
   A protagonist can climb an absolute power scale while their standing
   relative to the world around them never actually changes — readers respond
   to the relative gap, not the raw numbers.
-author_vetted: false
+author_vetted: true
 detectability: model-assisted
 scopes:
   - manuscript

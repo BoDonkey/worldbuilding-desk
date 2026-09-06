@@ -1,11 +1,866 @@
 {
   "schemaVersion": 1,
-  "contentVersion": "0.0.0",
+  "contentVersion": "1.0.0-tranche-1",
   "embedding": {
     "model": "Xenova/all-MiniLM-L6-v2",
     "version": "main",
     "dimensions": 384,
     "normalization": "l2"
   },
-  "records": []
+  "records": [
+    {
+      "id": "craft.system.progression.decorative-chapter-test",
+      "version": 1,
+      "title": "The decorative chapter test",
+      "summary": "A diagnostic question for progression-driven chapters — did the chapter add a new capability, a new demand on the character, or only one of the two?",
+      "documentType": "pattern",
+      "family": "system",
+      "authorVetted": true,
+      "detectability": "model-assisted",
+      "scopes": [
+        "chapter"
+      ],
+      "applicability": {
+        "genres": [
+          "progression-fantasy",
+          "litrpg",
+          "cultivation",
+          "tower-climbing"
+        ],
+        "subgenres": [
+          "tower-climbing",
+          "cultivation"
+        ],
+        "exclusions": []
+      },
+      "modifiers": [
+        "tower-climbing: Consider applying the test per floor rather than strictly per chapter; a floor is often the natural capability/demand unit in this subgenre.",
+        "time-loop: Apply per loop rather than per chapter; a single loop is the unit that carries new capability and new demand in this structure."
+      ],
+      "aliases": [
+        "the capability-and-demand test"
+      ],
+      "tags": [
+        "progression",
+        "pacing",
+        "stakes",
+        "chapter-architecture"
+      ],
+      "sourceConfidence": "medium",
+      "citations": [
+        {
+          "id": "src.internal.litrpg-craft-failures-research",
+          "label": "LitRPG Craft-Failure Pattern Research (Part A–D)"
+        },
+        {
+          "id": "src.tam.meaningful-progression",
+          "label": "How to Write Meaningful Progression in Progression Fantasy",
+          "url": "https://www.ilorisnovel.com/articles/how-to-write-meaningful-progression-in-progression-fantasy"
+        }
+      ],
+      "sections": [
+        {
+          "id": "what-it-is",
+          "title": "What it is",
+          "content": "At the end of a chapter, two questions are worth asking side by side: what can\nthe protagonist now do that they could not do at the start, and what does the\nworld now ask of them that it did not ask before? A chapter that answers only\nthe first question — capability grew, but nothing new presses on the\ncharacter — is functioning as decoration. The numbers moved; the story did\nnot.\n\nThis is a chapter-level test, not a scene-level one, and it is specific to\nprogression-driven fiction, where capability change is tracked explicitly\nenough that a reader (and possibly a coach) can notice when it happens without\na matching rise in what the story demands."
+        },
+        {
+          "id": "why-readers-may-care",
+          "title": "Why readers may care",
+          "content": "Progression fiction sells a promise of forward motion. A reader who feels the\ntier climb but not the stakes climb experiences the same sensation prose\nreaders describe as \"nothing happened this chapter,\" except here it happens\ninside chapters that are visibly full of events — fights won, loot gained,\nlevels announced. The chapter reads as busy and feels empty at the same time,\nwhich is a harder problem to name than plain slowness, and one authors can\nmiss because activity is present."
+        },
+        {
+          "id": "common-forms-and-variants",
+          "title": "Common forms and variants",
+          "content": "- **Pure capability chapters.** A level-up, a new skill, a stronger weapon —\n  with the next scene functioning exactly as the last one did, just with\n  bigger numbers.\n- **Pure demand chapters.** A new threat, obligation, or complication\n  introduced with no accompanying growth — valid and common, especially early\n  in an arc, but a chapter type distinct from the failure this pattern names.\n- **The compounding chapter.** Capability and demand rise together: a new\n  ability is gained and immediately required by a harder problem than the\n  character has faced. This is the target shape, not a rule that every\n  chapter must hit it — see \"when this advice does not apply\" below.\n- **The delayed-demand chapter.** Capability is granted now and the matching\n  demand arrives two or three chapters later. This can work as a deliberate\n  set-up, provided the eventual payoff actually lands (see\n  [[craft.general.plot.negative-space-problems-power-cannot-solve]] for the\n  related question of what capability never gets used against)."
+        },
+        {
+          "id": "present",
+          "title": "What it can look like on the page",
+          "content": "- A skill or stat increase followed by a scene in which the previous\n  difficulty ceiling still applies unchanged.\n- A new tier or rank announced, with the subsequent conflict resolved as\n  easily, or with the same tactics, as the one before the increase.\n- Conversely: a threat escalates, and the protagonist's toolkit is\n  unchanged from three chapters earlier, forcing an unearned reach or a\n  convenient rescue.\n- A training or grinding montage that ends with a number changing but no new\n  scene, obligation, or choice attached to the new number.\n\nNone of these signals is proof by itself — a chapter can show a stat increase\nand still be doing real narrative work that isn't visible in the increase\nalone. The test is a prompt for author reflection, not a lint rule."
+        },
+        {
+          "id": "absence",
+          "title": "Common failure modes",
+          "content": "- **Numbers substituting for stakes**, especially in serialized fiction where\n  a chapter is expected to contain visible progress on a regular cadence.\n- **Escalating threats with no escalating toolkit**, which produces either\n  suspiciously convenient solutions or protagonist competence that reads as\n  plot armor.\n- **Repeating the test too literally**, treating every single chapter as a\n  failure if it doesn't hit both halves — some chapters exist to develop\n  relationships, build dread, or let the story breathe, and forcing capability\n  or demand into all of them flattens pacing rather than improving it."
+        },
+        {
+          "id": "questions-for-the-author",
+          "title": "Questions for the author",
+          "content": "- What did this chapter's protagonist gain, and what does the story now need\n  from them that it didn't need before?\n- If you can answer the capability half easily but struggle with the demand\n  half, is that an intentional breather chapter, or did the demand get lost?\n- Where is the next chapter or scene that will actually spend the capability\n  this chapter granted?\n- Are there chapters in this arc where the reverse is true — demand rising\n  with no matching growth — and is that gap deliberate?"
+        },
+        {
+          "id": "actions",
+          "title": "Revision or design experiments",
+          "content": "1. List, chapter by chapter across one arc, what was gained and what was\n   newly demanded. Look for chapters where one column is empty.\n2. For a chapter that reads as decorative, try moving its capability gain to\n   land immediately before the scene that needs it, rather than in its own\n   chapter.\n3. Try converting one \"pure capability\" chapter into a \"delayed demand\" setup\n   by seeding, in the same chapter, the shape of the problem this new\n   capability will eventually meet.\n4. If several chapters in a row show capability with no demand, consider\n   whether the story has entered an extended plateau and needs either a\n   compressing edit or a new complication introduced earlier than planned."
+        },
+        {
+          "id": "when-this-advice-does-not-apply",
+          "title": "When this advice does not apply",
+          "content": "- Rest, bonding, and worldbuilding chapters can be valuable without either\n  half of this test, especially directly after a high-intensity arc.\n- Subgenres with front-loaded power growth (system apocalypse, for example)\n  legitimately compress this pattern into a shorter span; applying it\n  chapter-by-chapter in the opening act may flag intentional structure as a\n  problem.\n- A slow-burn story that is deliberately withholding demand to build dramatic\n  irony (the reader senses a threat the protagonist hasn't met yet) is using\n  the gap on purpose."
+        },
+        {
+          "id": "evidence-and-detection-limits",
+          "title": "Evidence and detection limits",
+          "content": "Deterministic code can report the capability half where the project tracks\nexplicit state changes — a stat, skill, or level change linked to a scene.\nIt cannot determine, from that data alone, whether the world's demands\nchanged in the same chapter; that requires reading what actually happens in\nthe prose, which is a semantic judgment. A future coach could shortlist\nchapters with a tracked capability change and flag them for the author's own\nreview against this question, but it cannot claim to have verified the demand\nhalf from prose alone."
+        },
+        {
+          "id": "original-micro-examples",
+          "title": "Original micro-examples",
+          "content": "*Capability with no demand (decorative):* Wren's spellbook gains a new tier\nof fire magic in chapter twelve. Chapter thirteen opens on the same bandit\npatrol difficulty Wren cleared in chapter nine, resolved the same way, just\nfaster.\n\n*Compounding:* Wren's spellbook gains the same tier of fire magic, and the\nchapter ends with a scout reporting that the bandits have called in a\nfire-resistant mercenary company specifically because word of Wren's magic\nreached them. The next fight has to be won a different way."
+        },
+        {
+          "id": "sources-and-confidence-notes",
+          "title": "Sources and confidence notes",
+          "content": "The core formulation — capability gained versus demand raised — comes from\nJacob Tam's progression-fantasy craft writing\n([[src.tam.meaningful-progression]]), a practitioner essay describing this as\nthe single most operational diagnostic the source material identified; it is\npractitioner consensus rather than an academic or quantitative finding.\n`docs/research-litrpg-craft-failures.md` (Part B1, pattern P2) frames it as\nthe most checkable pattern in its candidate pool and notes the deterministic\nhalf (capability, where tracked) versus the model-assisted half (demand,\nalways). This record adds the tower-climbing and time-loop scope modifiers\nand the explicit caution against applying the test to every chapter\nuniformly, which is this drafting pass's synthesis rather than a sourced\nclaim."
+        }
+      ]
+    },
+    {
+      "id": "craft.system.progression.advancement-rate",
+      "version": 1,
+      "title": "Advancement rate across a manuscript",
+      "summary": "How fast tracked power grows relative to manuscript length shapes which progression promise a book is keeping — gradual-growth stories and compressed-growth stories are different, legitimate appeals, not a fast and a slow version of the same book.",
+      "documentType": "pattern",
+      "family": "system",
+      "authorVetted": true,
+      "detectability": "deterministic",
+      "scopes": [
+        "manuscript"
+      ],
+      "applicability": {
+        "genres": [
+          "progression-fantasy",
+          "litrpg",
+          "cultivation"
+        ],
+        "subgenres": [],
+        "exclusions": [
+          "time-loop"
+        ]
+      },
+      "modifiers": [
+        "system-apocalypse: Front-loaded advancement in the opening act is the genre convention, not evidence of an unpaced curve; read this metric against the subgenre's expected shape rather than a flat baseline.",
+        "cultivation: Later realms conventionally take longer than earlier ones; a slowing curve across the manuscript is expected, not a warning sign.",
+        "time-loop: Compressed re-advancement across each loop is the structure, not a violation of it; this metric is not meaningful applied naively across loop boundaries."
+      ],
+      "aliases": [
+        "tier pacing curve",
+        "power-growth rate"
+      ],
+      "tags": [
+        "progression",
+        "pacing",
+        "dashboard"
+      ],
+      "sourceConfidence": "medium",
+      "citations": [
+        {
+          "id": "src.internal.litrpg-craft-failures-research",
+          "label": "LitRPG Craft-Failure Pattern Research (Part A–D)"
+        },
+        {
+          "id": "src.tam.meaningful-progression",
+          "label": "How to Write Meaningful Progression in Progression Fantasy",
+          "url": "https://www.ilorisnovel.com/articles/how-to-write-meaningful-progression-in-progression-fantasy"
+        },
+        {
+          "id": "src.rowe.progression-fantasy",
+          "label": "Writing Progression Fantasy",
+          "url": "https://andrewkrowe.wordpress.com/2019/03/02/writing-progression-fantasy/"
+        }
+      ],
+      "sections": [
+        {
+          "id": "what-it-is",
+          "title": "What it is",
+          "content": "Advancement rate is how quickly a tracked power measure — level, tier, realm,\nrank — increases relative to how much manuscript has elapsed. Where a project\nexplicitly tracks numeric or ordinal progression tied to scenes, the interval\nbetween advancement events, and how that interval changes over the course of\na manuscript, is a number a coach can compute directly from stored data. What\nthat number *means* for a given book is an interpretive question this record\ndoes not answer on its own."
+        },
+        {
+          "id": "why-readers-may-care",
+          "title": "Why readers may care",
+          "content": "Progression fiction readers describe a felt difference between watching a\ncharacter earn power gradually and watching them acquire it in a rush.\nNeither is inherently better; they are different promises. A book that opens\nwith a rapid climb from nothing to competent and then studies competence for\nfour hundred pages is offering something different from a book that spends\nthe whole manuscript climbing. Readers who signed up for one and got the\nother describe the mismatch as pacing trouble, even when the actual complaint\nis a broken promise about *what kind* of progression story this is."
+        },
+        {
+          "id": "common-forms-and-variants",
+          "title": "Common forms and variants",
+          "content": "- **Steady climb.** Advancement events land at roughly even narrative\n  intervals throughout.\n- **Front-loaded climb.** Rapid early advancement (common in system-apocalypse\n  and portal-fantasy openings) followed by a plateau where the story shifts\n  from power acquisition to power application.\n- **Back-loaded climb.** Slow accumulation followed by a late, rapid breakthrough\n  — common where a manuscript is building toward a single defining\n  transformation.\n- **Widening-interval climb.** Advancement events grow steadily further apart\n  as tiers get harder to reach — the conventional cultivation and\n  tower-climbing shape, where later realms or floors cost much more\n  narrative space than early ones.\n- **Compressed reset climb.** Advancement resets and re-accelerates each\n  cycle, as in time-loop structures, where the metric needs a different unit\n  of analysis entirely (see modifiers above)."
+        },
+        {
+          "id": "present",
+          "title": "What it can look like on the page",
+          "content": "- Level-ups or realm breakthroughs clustered in the first quarter of a\n  manuscript, followed by a long stretch with none.\n- A single advancement event consuming a disproportionate share of the\n  manuscript's midpoint.\n- Roughly even spacing between tracked advancement events across acts.\n- A widening gap between advancement events as the story progresses, with\n  each new tier taking measurably longer to reach than the last."
+        },
+        {
+          "id": "absence",
+          "title": "Common failure modes",
+          "content": "- **Treating any one shape as correct.** The most common misuse of this\n  metric is comparing a book's curve to an assumed \"ideal\" pacing shape\n  rather than to the promise that book's opening chapters made.\n- **Racing to the end of the tier system**, where levels 1 through 99 occur\n  inside a single volume — a legitimate but different appeal from gradual\n  growth, and one that can leave readers who wanted the gradual version\n  feeling shortchanged. `docs/research-litrpg-craft-failures.md` (pattern\n  P10) names this the most common version of the mismatch.\n- **A late, unexplained acceleration** with no narrative cause, which reads\n  as the author needing to catch the plot up to a planned ending rather than\n  as an earned breakthrough."
+        },
+        {
+          "id": "questions-for-the-author",
+          "title": "Questions for the author",
+          "content": "- When this manuscript's advancement events are plotted against its page\n  count, does the resulting curve match the promise the opening chapters\n  made?\n- Is a plateau in the middle of the book a deliberate shift from \"getting\n  strong\" to \"being strong,\" or did advancement simply stall?\n- If advancement accelerates late, what in the story explains why it does?\n- Would this manuscript's actual curve surprise a reader who only read the\n  first three chapters?"
+        },
+        {
+          "id": "actions",
+          "title": "Revision or design experiments",
+          "content": "1. Chart tracked advancement events against manuscript position and compare\n   the shape to the promise set in the opening act.\n2. If the curve front-loads more than intended, consider whether early\n   advancement events can be spread out, or whether the plateau after them\n   needs an explicit narrative turn (a shift from acquisition to\n   application) to read as intentional rather than stalled.\n3. If a late acceleration feels unearned, look for an earlier chapter where\n   the seed of that acceleration (a discovered method, a removed limiter, a\n   sacrifice) could be planted.\n4. For a widening-interval structure, make sure each later, harder-won\n   advancement event is given proportionally more narrative weight, not just\n   more narrative time."
+        },
+        {
+          "id": "when-this-advice-does-not-apply",
+          "title": "When this advice does not apply",
+          "content": "- Stories where the tracked number is explicitly decorative — a game-world\n  skin over a narrative that isn't really about the numbers — may not\n  benefit from this analysis at all.\n- Time-loop structures need a fundamentally different unit of measurement\n  (per-loop, not per-manuscript-position).\n- A book that never intends to resolve its progression arc within itself\n  (an ongoing serial with no planned ending) may show a curve that only\n  makes sense across a series, not within one volume."
+        },
+        {
+          "id": "evidence-and-detection-limits",
+          "title": "Evidence and detection limits",
+          "content": "This is one of the few patterns in this cluster that can be fully computed:\nwhere a project explicitly tracks tier, level, or realm changes linked to\nscenes, the interval and its trend across the manuscript are deterministic —\nno interpretation is required to produce the number. Judging whether the\nresulting curve suits the story's promise, genre, and subgenre modifiers is\nmodel-assisted, and a coach should present the curve and ask the diagnostic\nquestions above rather than declaring the curve correct or wrong on its own."
+        },
+        {
+          "id": "original-micro-examples",
+          "title": "Original micro-examples",
+          "content": "*Front-loaded, intentional:* In a system-apocalypse draft, the protagonist\ngains four levels in the first three chapters as the world collapses, then\nnone for the next twelve while the story becomes about holding a shelter\ntogether. The plateau is legible because the opening explicitly promised\nsurvival, not a power fantasy.\n\n*Front-loaded, unintentional:* The same shape appears in a quiet cultivation\ndraft with no stated urgency, and the plateau reads as the story running out\nof momentum rather than shifting its promise on purpose."
+        },
+        {
+          "id": "sources-and-confidence-notes",
+          "title": "Sources and confidence notes",
+          "content": "`docs/research-litrpg-craft-failures.md` (Part B1, pattern P6 and P10) and\nJacob Tam's essay ([[src.tam.meaningful-progression]]) both describe the\n\"faster early, slower later\" convention and the failure mode of skipping to\nthe end; Andrew Rowe's writing ([[src.rowe.progression-fantasy]]) supports\nthe general principle that advancement should feel earned rather than rushed.\nThe subgenre modifiers (system apocalypse, cultivation, time loop) are drawn\nfrom `docs/research-litrpg-genre.md`'s subgenre coaching profiles, which that\ndocument itself marks as the author's own inference rather than a sourced\nclaim; this record inherits that same confidence level for the modifiers\nspecifically, while the core deterministic-metric framing is better\nsupported."
+        }
+      ]
+    },
+    {
+      "id": "craft.system.progression.stat-block-density",
+      "version": 1,
+      "title": "Stat-block density and interval",
+      "summary": "How often and how completely a story shows raw system numbers changes whether those numbers read as significant or as clutter — density and interval are measurable, but their felt effect is medium- and reader-dependent.",
+      "documentType": "pattern",
+      "family": "system",
+      "authorVetted": true,
+      "detectability": "model-assisted",
+      "scopes": [
+        "chapter",
+        "manuscript"
+      ],
+      "applicability": {
+        "genres": [
+          "litrpg"
+        ],
+        "subgenres": [
+          "classic-litrpg"
+        ],
+        "exclusions": [
+          "gamelit",
+          "progression-fantasy"
+        ]
+      },
+      "modifiers": [
+        "gamelit: This pattern largely does not apply — a book with no obligatory stat screen has no stat-block density to manage.",
+        "progression-fantasy: Applies only if the project's power system is genuinely numeric; hard-tier systems without displayed numbers should not be evaluated against this pattern."
+      ],
+      "aliases": [
+        "stat sheet frequency"
+      ],
+      "tags": [
+        "progression",
+        "system-presentation",
+        "litrpg"
+      ],
+      "sourceConfidence": "medium",
+      "citations": [
+        {
+          "id": "src.internal.litrpg-craft-failures-research",
+          "label": "LitRPG Craft-Failure Pattern Research (Part A–D)"
+        },
+        {
+          "id": "src.litrpgreads.integrating-systems",
+          "label": "How to Write LitRPG: Integrating Game Systems Into Your Story Without Losing Readers",
+          "url": "https://litrpgreads.com/blog/litrpg/how-to-write-litrpg-integrating-game-systems-into-your-story-without-losing-readers"
+        },
+        {
+          "id": "src.litrpgreads.audiobook-tropes",
+          "label": "LitRPG Audiobook Tropes Readers Love and Hate",
+          "url": "https://litrpgreads.com/blog/litrpg/litrpg-audiobook-tropes-readers-love-and-hate"
+        }
+      ],
+      "sections": [
+        {
+          "id": "what-it-is",
+          "title": "What it is",
+          "content": "Stat-block density describes two related, countable things: how often a\nmanuscript shows a full or partial system readout (skill lists, attribute\nsheets, level-up summaries), and how much of each readout is actually\nrelevant to what just happened. A story can show numbers constantly, rarely,\nor selectively — and the interval and completeness of those reveals shape\nwhether a stat block reads as a meaningful punctuation mark or as clutter the\nreader learns to skip."
+        },
+        {
+          "id": "why-readers-may-care",
+          "title": "Why readers may care",
+          "content": "Reader discussions in the LitRPG community return to this complaint more\noften than almost any other mechanical one: a full stat sheet reprinted after\nevery minor encounter, most of it unchanged from the last printing. The\npromise of visible numbers is that they mean something is happening; a\nreader who has to scan past six unchanged attributes to find the one that\nmoved stops trusting the sheet to tell them anything, and the genre's core\nappeal — legible, trackable growth — degrades into inventory the reader\ntunes out."
+        },
+        {
+          "id": "common-forms-and-variants",
+          "title": "Common forms and variants",
+          "content": "- **Full-sheet-every-time.** The complete character sheet reprinted at every\n  level or encounter, regardless of what changed.\n- **Delta-only reveals.** Only the changed values shown, with the full sheet\n  reserved for occasions when the character (and reader) genuinely needs the\n  whole picture.\n- **Reserved-for-consequence reveals.** Stat blocks appear only at narratively\n  significant moments, so their appearance itself signals \"this matters,\"\n  distinct from routine encounters.\n- **Diegetic partial reveals.** The system shows the character only what is\n  currently relevant to a decision, mirroring how a game UI might\n  contextually highlight one stat during a specific action.\n- **No stat block at all.** A legitimate choice in progression fantasy and\n  GameLit, where growth is conveyed through action and consequence rather\n  than displayed numbers."
+        },
+        {
+          "id": "present",
+          "title": "What it can look like on the page",
+          "content": "- A level-up scene followed by ten or more lines of unchanged attributes\n  before the one that actually moved.\n- Stat reveals clustering at consequential turning points rather than routine\n  encounters.\n- A skill list that grows every chapter versus one that is shown only when a\n  new or changed skill is about to matter to the immediate scene.\n- Repetition of near-identical blocks across consecutive chapters with only\n  minor numeric drift."
+        },
+        {
+          "id": "absence",
+          "title": "Common failure modes",
+          "content": "- **Reflexive full reveals** at every advancement event, regardless of\n  significance, which trains readers to skip the block entirely.\n- **Numbers with no worldly weight** — a related but distinct pattern (see\n  the \"meaningless numbers\" pattern) where even a well-paced reveal fails\n  because the numbers never affect a choice or outcome.\n- **Applying print conventions to audio, or vice versa.** Reader discussion\n  suggests stat blocks that read as tedious on the page can work better in\n  audiobook form, where a narrator can integrate or elide them; this is a\n  single-source, weakly supported claim and should be treated as a lead for\n  author testing rather than a rule."
+        },
+        {
+          "id": "questions-for-the-author",
+          "title": "Questions for the author",
+          "content": "- When a stat block appears, does the reader learn something they didn't\n  already know, or is most of it a repeat?\n- Would removing every non-changed line from this reveal make it stronger or\n  would it lose needed context?\n- Does the frequency of stat reveals track the frequency of things that\n  actually matter in the story, or does it track a fixed narrative rhythm\n  (every chapter, every fight)?\n- If this manuscript is likely to be read in audio, has the stat-heavy\n  passage been tested read aloud?"
+        },
+        {
+          "id": "actions",
+          "title": "Revision or design experiments",
+          "content": "1. Audit every stat-block appearance in a chapter range and mark which lines\n   changed since the last reveal; consider trimming unchanged lines from\n   routine reveals.\n2. Reserve one full-sheet reveal per arc for a genuinely pivotal moment, and\n   convert the rest to delta-only or diegetic partial reveals.\n3. Try reading a dense stat passage aloud (or having someone else read it) to\n   test whether the format still works outside the page.\n4. For a chapter with no consequential change, experiment with omitting the\n   reveal entirely and see whether the scene loses anything."
+        },
+        {
+          "id": "when-this-advice-does-not-apply",
+          "title": "When this advice does not apply",
+          "content": "- GameLit and non-numeric progression fantasy have no obligatory stat screen\n  and this pattern is not meaningful for them.\n- A story deliberately parodying or subverting stat-block conventions (a\n  system that floods the character with irrelevant readouts as a joke or a\n  horror beat) is using density on purpose.\n- Early chapters establishing the system for the first time reasonably need a\n  fuller reveal than later routine ones."
+        },
+        {
+          "id": "evidence-and-detection-limits",
+          "title": "Evidence and detection limits",
+          "content": "Reveal frequency and the proportion of unchanged lines per reveal are\ncountable from explicit text or structured state data where a project tracks\nstat changes per scene, making the raw density and delta ratio partially\ndeterministic. Whether a given density serves or hurts a specific manuscript,\nand whether print-versus-audio format should change the recommendation,\nrequire interpretation a coach should offer as a question, not a verdict."
+        },
+        {
+          "id": "original-micro-examples",
+          "title": "Original micro-examples",
+          "content": "*Reflexive full reveal:* After defeating a single low-level pest, the\nnarrative reprints a fourteen-line sheet; thirteen lines match the previous\nchapter's sheet exactly.\n\n*Reserved reveal:* The same character defeats a mid-tier rival for the first\ntime, and the narrative shows only the two skills that changed, in the\ncontext of the fight that changed them, saving the full sheet for the\nvolume's climactic breakthrough two chapters later."
+        },
+        {
+          "id": "sources-and-confidence-notes",
+          "title": "Sources and confidence notes",
+          "content": "The core complaint about reflexive full-sheet reveals and the\nreserved-for-consequence practice come from\n[[src.litrpgreads.integrating-systems]], corroborated by the broader pattern\nresearch in [[src.internal.litrpg-craft-failures-research]] (pattern P17),\nwhich marks the pattern as practitioner/reader consensus rather than\ncontrolled study. The print-versus-audio distinction rests on a single\nsource, [[src.litrpgreads.audiobook-tropes]], from a heavily monetized site,\nand is marked weak; it is included as a lead for author testing rather than\nestablished fact."
+        }
+      ]
+    },
+    {
+      "id": "craft.system.progression.fake-progression",
+      "version": 1,
+      "title": "Fake progression (relative position never moves)",
+      "summary": "A protagonist can climb an absolute power scale while their standing relative to the world around them never actually changes — readers respond to the relative gap, not the raw numbers.",
+      "documentType": "pattern",
+      "family": "system",
+      "authorVetted": true,
+      "detectability": "model-assisted",
+      "scopes": [
+        "manuscript"
+      ],
+      "applicability": {
+        "genres": [
+          "progression-fantasy",
+          "litrpg",
+          "cultivation"
+        ],
+        "subgenres": [],
+        "exclusions": []
+      },
+      "modifiers": [
+        "dungeon-core: Relative position works differently for an immobile protagonist whose \"peers\" may be invading adventurers rather than a social cohort; apply the underlying question (has the gap between capability and demand stayed alive?) rather than the literal peer-comparison framing."
+      ],
+      "aliases": [
+        "the treadmill problem",
+        "relative power stagnation"
+      ],
+      "tags": [
+        "progression",
+        "stakes",
+        "dashboard"
+      ],
+      "sourceConfidence": "medium",
+      "citations": [
+        {
+          "id": "src.internal.litrpg-craft-failures-research",
+          "label": "LitRPG Craft-Failure Pattern Research (Part A–D)"
+        },
+        {
+          "id": "src.tam.meaningful-progression",
+          "label": "How to Write Meaningful Progression in Progression Fantasy",
+          "url": "https://www.ilorisnovel.com/articles/how-to-write-meaningful-progression-in-progression-fantasy"
+        }
+      ],
+      "sections": [
+        {
+          "id": "what-it-is",
+          "title": "What it is",
+          "content": "Fake progression is what readers describe when a character's absolute power\nkeeps rising on paper while their position relative to the world's challenges\nnever actually changes: overpowered against the surrounding cast in chapter\nfive, still just as overpowered — no more, no less — in chapter five hundred.\nThe tier numbers climbed. Only the numbers climbed; everyone and everything\naround the character scaled up in step, so the *experience* of progression\nnever arrives even though its evidence is everywhere on the page."
+        },
+        {
+          "id": "why-readers-may-care",
+          "title": "Why readers may care",
+          "content": "The genre's core appeal is the felt sensation of getting stronger relative to\nwhat's in front of you — outmatched, then even, then dominant, then facing a\nnew kind of outmatched. A story that keeps the character permanently in the\n\"comfortably dominant\" band, just with bigger numbers attached, removes the\nsensation the numbers exist to produce. Readers name this specifically as\n\"progression that doesn't progress,\" which is a description of their felt\nexperience of relative standing, not a complaint about the math."
+        },
+        {
+          "id": "common-forms-and-variants",
+          "title": "Common forms and variants",
+          "content": "- **Peer inflation.** Every antagonist, rival, and encounter scales up in\n  lockstep with the protagonist, so the gap between them is constant across\n  the whole manuscript.\n- **Comfort-zone plateau.** The protagonist reaches a power level early and\n  the story keeps generating challenges calibrated to exactly that level\n  indefinitely, rather than letting the character outgrow a tier of problem\n  entirely.\n- **Cosmetic tier changes.** A rank or title changes (apprentice to journeyman,\n  for instance) with no accompanying change in what kinds of problems the\n  character can now solve that they couldn't before.\n- **The inverse, done well:** three distinct relative positions across an\n  arc — excluded from an activity, competing at its edge, and having\n  absorbed the old limit into routine — which is the shape fake progression\n  fails to deliver (see the three-stages pattern for the fuller treatment of\n  this positive form)."
+        },
+        {
+          "id": "present",
+          "title": "What it can look like on the page",
+          "content": "- Encounters that consistently cost the protagonist the same relative\n  effort across a long span of the manuscript, regardless of stated tier\n  changes.\n- A rank-up or level-up that changes no subsequent scene's difficulty,\n  tactics, or stakes.\n- Antagonists introduced late in the book who are narrated as comparably\n  threatening to antagonists from early in the book, despite the stated power\n  gap.\n- A character who never gets to revisit an old challenge and find it trivial\n  — the \"absorbed into routine\" beat that signals real relative growth is\n  simply absent."
+        },
+        {
+          "id": "absence",
+          "title": "Common failure modes",
+          "content": "- **Mistaking bigger numbers for real progression**, especially in serials\n  under pressure to show visible advancement every installment; escalating\n  the number is easier than escalating the story's actual demands.\n- **Escalating everything at once**, so relative position is preserved by\n  construction — every threat is designed to be exactly hard enough,\n  regardless of the character's stated tier.\n- **Never letting a former ceiling become routine**, which denies the reader\n  the payoff moment where visible growth is confirmed by an old problem\n  becoming trivial."
+        },
+        {
+          "id": "questions-for-the-author",
+          "title": "Questions for the author",
+          "content": "- If you removed every stated number from this manuscript, would a reader\n  still be able to tell the character got stronger relative to the world\n  around them?\n- Is there a scene where an old obstacle is revisited and now trivial? If\n  not, would one be possible to add?\n- Are late-book antagonists actually harder for this character specifically,\n  or are they simply narrated with bigger numbers attached to a\n  similarly-costly fight?\n- Across the manuscript, does the protagonist ever get to feel dominant\n  before the story raises the ceiling again?"
+        },
+        {
+          "id": "actions",
+          "title": "Revision or design experiments",
+          "content": "1. Chart, at several points across the manuscript, an approximate \"relative\n   standing\" (dominant / even / outmatched) rather than the raw tier number,\n   and look for a flat line.\n2. Identify one early obstacle that could plausibly be revisited later in the\n   book and made explicitly trivial, to give the reader concrete proof of\n   growth.\n3. For a late antagonist that feels no more threatening than an early one\n   despite a stated power gap, consider raising the *kind* of challenge\n   (a new axis of difficulty) rather than only its magnitude.\n4. Try deliberately allowing one arc where the protagonist is dominant with\n   no immediate new threat, before introducing the next ceiling-raiser, to\n   let the reader register the change before erasing it."
+        },
+        {
+          "id": "when-this-advice-does-not-apply",
+          "title": "When this advice does not apply",
+          "content": "- A story whose explicit premise is a treadmill or trap (a cursed loop, a\n  simulation designed never to let the character win) can use flat relative\n  standing on purpose, provided that stagnation is itself the narrative\n  problem the story engages.\n- Ensemble or community-focused subgenres (base building, dungeon core) may\n  not have a single protagonist whose relative peer standing is the right\n  lens; apply the underlying capability-versus-demand question instead of the\n  literal peer comparison.\n- Early-arc chapters legitimately keep a character in a comfort zone briefly\n  before the story raises stakes; a single early plateau is not the pattern."
+        },
+        {
+          "id": "evidence-and-detection-limits",
+          "title": "Evidence and detection limits",
+          "content": "Where a project tracks explicit numeric capability and something like\nencounter difficulty, deterministic code can compare the two over time and\nsurface a flat or widening gap as a candidate signal. Whether that flat gap\nis a craft problem, a deliberate structural choice, or simply an early-arc\nstretch requires reading the actual prose and cannot be concluded from\ntracked numbers alone; this pattern stays model-assisted even when a\npartial metric is available."
+        },
+        {
+          "id": "original-micro-examples",
+          "title": "Original micro-examples",
+          "content": "*Fake progression:* Across ten chapters, Kest advances from tier three to\ntier seven. Each chapter's fight costs the same three combat beats to win,\nregardless of stated tier, and no antagonist from tier seven reads as more\ndangerous than the tier-three rival from chapter one.\n\n*Real relative movement:* Kest advances the same tiers, but the tier-three\nrival reappears at the story's midpoint and is dispatched in one paragraph,\nexplicitly because Kest has outgrown that entire category of threat — and the\nnew tier-seven antagonist introduces a kind of danger (political, not\nphysical) that Kest's old toolkit cannot touch at all."
+        },
+        {
+          "id": "sources-and-confidence-notes",
+          "title": "Sources and confidence notes",
+          "content": "The core formulation is Jacob Tam's ([[src.tam.meaningful-progression]]),\ndescribing readers responding to relative position rather than raw numbers;\n`docs/research-litrpg-craft-failures.md` (pattern P1) frames the partial\ndeterministic angle (comparing tracked capability against tracked encounter\ndifficulty) as available only where both are explicitly recorded. Both\nsources are practitioner-level, not controlled research; the dungeon-core\nmodifier is this drafting pass's synthesis, extending the genre-profile\nreasoning in `docs/research-litrpg-genre.md` rather than a directly sourced\nclaim."
+        }
+      ]
+    },
+    {
+      "id": "craft.general.practice.no-gap-posting",
+      "version": 1,
+      "title": "No-gap posting discipline",
+      "summary": "For serialized web fiction, avoiding long gaps between chapters is reported as a stronger predictor of platform ranking than raw posting speed — this is a publishing practice, not something a manuscript itself can be checked for.",
+      "documentType": "pattern",
+      "family": "general",
+      "authorVetted": true,
+      "detectability": "practice",
+      "scopes": [
+        "practice"
+      ],
+      "applicability": {
+        "genres": [
+          "general-fiction",
+          "litrpg",
+          "progression-fantasy"
+        ],
+        "subgenres": [],
+        "exclusions": []
+      },
+      "modifiers": [],
+      "aliases": [
+        "posting-gap discipline",
+        "release-schedule regularity"
+      ],
+      "tags": [
+        "practice",
+        "serialization",
+        "publishing"
+      ],
+      "sourceConfidence": "limited",
+      "citations": [
+        {
+          "id": "src.internal.litrpg-craft-failures-research",
+          "label": "LitRPG Craft-Failure Pattern Research (Part A–D)"
+        },
+        {
+          "id": "src.chapterchronicles.discipline-index",
+          "label": "We Analyzed 459 Rising Stars Fictions: The 5-Point Discipline Index",
+          "url": "https://www.chapterchronicles.com/blog/rising-stars-discipline-index/"
+        }
+      ],
+      "sections": [
+        {
+          "id": "what-it-is",
+          "title": "What it is",
+          "content": "No-gap posting is the practice of never leaving a long stretch — commonly\nframed as three or more days — without a new chapter once a serial has\nstarted, even if that means posting on a slower, steadier cadence than the\nauthor could technically sustain. It is a scheduling discipline, not a craft\ntechnique that changes what is on the page, and it applies specifically to\nchapter-by-chapter serialized publishing (Royal Road and similar platforms),\nnot to books published as complete manuscripts."
+        },
+        {
+          "id": "why-readers-may-care",
+          "title": "Why readers may care",
+          "content": "A reader following a serial builds a habit around a story's release rhythm.\nA gap breaks that habit, and every broken habit is a chance for the reader\nnot to come back — not because the story got worse, but because life\nintervened for the reader too, and the story lost its claim on their\nattention. Vendor-reported data on Rising Stars performance found gap-free\nfictions ranking meaningfully higher than fictions with gaps, and found\nregularity mattering more than raw speed: an every-other-day schedule with no\ngaps reportedly outperformed a faster schedule with occasional multi-day\nholes."
+        },
+        {
+          "id": "common-forms-and-variants",
+          "title": "Common forms and variants",
+          "content": "- **Fixed-cadence posting** — a chapter every N days, chosen deliberately\n  slower than the author's maximum output, to make gaps unlikely.\n- **Buffer-backed posting** — writing ahead of the public release so a bad\n  week doesn't force a visible gap (see the related buffer-discipline\n  pattern).\n- **Flexible-but-communicated posting** — some serial authors keep readers\n  informed of an upcoming gap in advance, which is a different practice from\n  a silent gap and may carry different reader cost, though the cited data\n  does not separate the two.\n- **Binge-then-gap posting** — front-loading several chapters at launch and\n  then settling into an irregular pattern, which the cited data associates\n  with weaker Rising Stars performance specifically."
+        },
+        {
+          "id": "present",
+          "title": "What it can look like in an author's process",
+          "content": "- A visible pattern of chapter release dates with no interval longer than\n  two days, sustained across a launch window.\n- An author maintaining a private buffer of unpublished, finished chapters\n  specifically to absorb disruptions without missing a public release.\n- Conversely: a strong opening week followed by an irregular, unpredictable\n  schedule as the manuscript's actual writing pace catches up with (or falls\n  behind) the posting pace."
+        },
+        {
+          "id": "absence",
+          "title": "Common failure modes",
+          "content": "- **Treating no-gap posting as a guarantee of success.** It is one reported\n  correlate among several studied by a single vendor analysis, not a\n  causal lever a struggling serial can pull in isolation.\n- **Committing to an unsustainable cadence to avoid a gap**, which trades a\n  short-term ranking risk for burnout later — a tradeoff this pattern's\n  related record on author burnout treats as a real cost, not a hypothetical\n  one.\n- **Applying the practice to non-serial publishing**, where the underlying\n  mechanism (habit formation around a release rhythm) does not operate the\n  same way."
+        },
+        {
+          "id": "questions-for-the-author",
+          "title": "Questions for the author",
+          "content": "- Is the planned posting cadence something you can sustain for the length of\n  this serial, not just its first month?\n- If a gap becomes unavoidable, is there a buffer of finished chapters to\n  absorb it, or would it become visible to readers?\n- Would a slower, steadier schedule serve this project better than a faster,\n  riskier one?\n- Is this manuscript actually intended for serialized platform release, or\n  is this practice being applied to a project it doesn't fit?"
+        },
+        {
+          "id": "actions",
+          "title": "Revision or design experiments",
+          "content": "1. Before launch, calculate a cadence that comfortably fits the author's\n   demonstrated writing speed with margin for a bad week, rather than the\n   fastest cadence theoretically possible.\n2. Build a buffer of at least two to three finished chapters before the first\n   public release, so a single disrupted week does not become a visible gap.\n3. If a gap is unavoidable, consider whether communicating it to readers in\n   advance changes its cost, and test that against silence over a later\n   stretch.\n4. Track actual release dates against the plan for one arc and look for the\n   points where the schedule started to slip, to catch an emerging pattern\n   before it becomes a habit."
+        },
+        {
+          "id": "when-this-advice-does-not-apply",
+          "title": "When this advice does not apply",
+          "content": "- Manuscripts published as complete books, on a traditional or indie\n  schedule, are not exposed to the platform mechanism this data describes.\n- A serial explicitly built around irregular or event-driven releases (tied\n  to real-world milestones rather than a fixed schedule) is using a\n  different model on purpose.\n- Early drafting phases, before any public commitment to a schedule, are not\n  the moment to apply posting discipline — that comes after a cadence is\n  chosen and announced."
+        },
+        {
+          "id": "evidence-and-detection-limits",
+          "title": "Evidence and detection limits",
+          "content": "This is entirely a practice pattern: no manuscript text or structured project\ndata could ever confirm or refute an author's posting cadence, because\nposting cadence isn't part of the manuscript. A coach may teach this pattern\nbut must never claim to have checked a draft against it, and a coach that\nimplies otherwise has crossed the trust boundary this library exists to\nrespect."
+        },
+        {
+          "id": "original-micro-examples",
+          "title": "Original micro-examples",
+          "content": "Not applicable in the usual sense — this pattern concerns publishing\nbehavior rather than manuscript content, so it has no in-text example to\nillustrate. An author-facing illustration: two hypothetical serials post at\nthe same average weekly rate; one posts every three days without exception,\nthe other posts five chapters in one week followed by an eight-day silence.\nThe cited data associates the first pattern with materially better platform\nranking outcomes than the second, despite equal total output."
+        },
+        {
+          "id": "sources-and-confidence-notes",
+          "title": "Sources and confidence notes",
+          "content": "The core finding — no-gap posting correlating with Rising Stars rank more\nstrongly than raw speed, and the every-other-day-beats-daily-with-gaps\nframing — comes from a single vendor analysis of 459 fictions\n([[src.chapterchronicles.discipline-index]]), marked weak (◇) in the source\nresearch because its dataset and classification method are not independently\nreproducible from the published post, even though it states its sample size\nand methodology. `docs/research-litrpg-craft-failures.md` (pattern P25)\ncarries the same weak mark. This record's `source_confidence` is set to\n`limited` to reflect that a single, vendor-motivated, non-reproduced dataset\nis the entire evidentiary basis; the underlying mechanism (reader habit\nformation around release rhythm) is plausible but not independently tested\nhere."
+        }
+      ]
+    },
+    {
+      "id": "craft.general.character.power-as-sole-motivation",
+      "version": 1,
+      "title": "Power as a character's sole motivation",
+      "summary": "A protagonist whose only stated goal is getting stronger tends to read as monotonous within a few chapters — readers report forgiving weak prose for a compelling character far more readily than the reverse.",
+      "documentType": "pattern",
+      "family": "general",
+      "authorVetted": true,
+      "detectability": "model-assisted",
+      "scopes": [
+        "manuscript"
+      ],
+      "applicability": {
+        "genres": [
+          "general-fiction",
+          "progression-fantasy",
+          "litrpg"
+        ],
+        "subgenres": [],
+        "exclusions": [
+          "dungeon-core",
+          "base-building"
+        ]
+      },
+      "modifiers": [
+        "dungeon-core: Growth is legitimately the protagonist's condition and situation in this subgenre — an immobile core's central drive being \"grow stronger\" is not the same failure this pattern names. Look instead for whether the core has any want beyond growth once growth stops being urgent.",
+        "base-building: The protagonist's goal is often legitimately communal (the settlement's survival and flourishing) rather than personal power; apply this pattern to individual cast members' motivations, not to the collective goal itself."
+      ],
+      "aliases": [
+        "motivation monotony",
+        "getting-stronger-and-nothing-else"
+      ],
+      "tags": [
+        "character",
+        "motivation",
+        "progression"
+      ],
+      "sourceConfidence": "medium",
+      "citations": [
+        {
+          "id": "src.internal.litrpg-craft-failures-research",
+          "label": "LitRPG Craft-Failure Pattern Research (Part A–D)"
+        },
+        {
+          "id": "src.book.cron-story-genius",
+          "label": "Story Genius: How to Use Brain Science to Go Beyond Outlining"
+        }
+      ],
+      "sections": [
+        {
+          "id": "what-it-is",
+          "title": "What it is",
+          "content": "A protagonist whose entire stated drive is \"become stronger,\" with no\nindependent want that survives once strength stops being scarce, tends to\nread as a single flat note stretched across an entire manuscript or series.\nThis is distinct from a character who *uses* strength to pursue something\nelse — protection, belonging, revenge, understanding, freedom — where power\nis instrumental to a separable goal rather than the goal itself."
+        },
+        {
+          "id": "why-readers-may-care",
+          "title": "Why readers may care",
+          "content": "Reader-side data collected around long-running progression series names\ncharacter monotony as a top complaint, and separately reports that readers\nwill forgive mediocre prose for a compelling character far more readily than\nthey will forgive a dull character wrapped in strong prose. A protagonist\nwhose only motivation is climbing a power scale offers a reader nothing to\nattach to once the climbing itself stops being novel — no competing loyalty,\nno cost to weigh, no question about who this person is when the numbers\naren't moving."
+        },
+        {
+          "id": "common-forms-and-variants",
+          "title": "Common forms and variants",
+          "content": "- **Pure accumulation drive.** The character wants to be stronger because\n  stronger is better, full stop, with no stated reason beyond the accumulation\n  itself.\n- **Instrumental power.** The character wants strength *in order to*\n  accomplish something else — the power-seeking is a means, and the actual\n  motivation (protect a sibling, avenge a mentor, escape a caste system) is\n  what a reader tracks.\n- **Power as identity.** A character for whom strength has become\n  self-definition after an earlier loss — this can be a legitimate and\n  poignant motivation if the story treats the identity collapse itself as the\n  subject, rather than treating \"get stronger\" as sufficient explanation on\n  its own.\n- **Communal or structural drive.** In ensemble or settlement-focused\n  stories, the collective's goal can substitute for a single protagonist's\n  personal want; see the base-building modifier above."
+        },
+        {
+          "id": "present",
+          "title": "What it can look like on the page",
+          "content": "- Internal narration that returns to \"I need to get stronger\" as the only\n  articulated reason for a decision, chapter after chapter, with no\n  competing want ever raised.\n- A character whose choices never trade power against anything else — no\n  scene where gaining strength costs a relationship, a principle, or time\n  that could have gone elsewhere.\n- Dialogue in which other characters ask the protagonist what they actually\n  want, and the honest answer, examined closely, is only \"more.\"\n- The inverse, present: a scene where the character explicitly weighs power\n  against something they'd have to give up for it."
+        },
+        {
+          "id": "absence",
+          "title": "Common failure modes",
+          "content": "- **Confusing genre convention with characterization.** Progression fiction's\n  premise makes power-seeking a constant background activity; treating that\n  background activity as a sufficient foreground motivation is where the\n  pattern turns into monotony.\n- **Deferring the \"real\" motivation indefinitely.** A planned reveal of the\n  character's deeper want, held back for books, can leave early volumes\n  reading as flat in the meantime.\n- **Confusing power as identity with power as sufficient explanation** — a\n  character whose strength has become their whole self-concept still needs\n  the story to interrogate that collapse, not simply narrate it as normal."
+        },
+        {
+          "id": "questions-for-the-author",
+          "title": "Questions for the author",
+          "content": "- If you removed the word \"stronger\" from this character's internal\n  narration for one chapter, what would be left as their stated want?\n- Has this character ever chosen something other than power when the two\n  conflicted, even once?\n- What did this character want before the story's power system entered their\n  life? Is any of that still present?\n- Would a reader who only read this character's dialogue (not their\n  narration) be able to name a motivation beyond strength?"
+        },
+        {
+          "id": "actions",
+          "title": "Revision or design experiments",
+          "content": "1. Write a one-paragraph want statement for the protagonist that does not\n   contain any progression vocabulary (level, power, stronger, rank) and see\n   whether it still makes sense as a driving force.\n2. Find one scene where power-seeking could plausibly cost the character\n   something they value, and let it actually cost them, rather than resolving\n   painlessly.\n3. Give a supporting character a direct question — \"what do you actually\n   want, once you're strong enough?\" — and see whether the protagonist's\n   answer, honestly written, reveals a gap worth developing.\n4. If the deeper motivation is intentionally withheld for a later reveal,\n   check whether the early chapters give the reader *something* to invest in\n   besides the power climb in the meantime."
+        },
+        {
+          "id": "when-this-advice-does-not-apply",
+          "title": "When this advice does not apply",
+          "content": "- A story explicitly about the emptiness of pure accumulation, where\n  monotony is the interrogated subject rather than an unexamined default, is\n  using this pattern on purpose.\n- Dungeon-core and similarly structural premises can make \"grow\" a\n  legitimate condition of existence rather than a personality trait; apply\n  the modifier above rather than this pattern's default framing.\n- Very early chapters, before the story has had room to establish a deeper\n  want, are not yet evidence of the failure — this is a manuscript-level\n  pattern, not a first-chapter one."
+        },
+        {
+          "id": "evidence-and-detection-limits",
+          "title": "Evidence and detection limits",
+          "content": "Whether a character's stated motivation is monotonous, and whether power\nfunctions as an end or a means, requires reading and interpreting prose;\nthere is no structured data a deterministic pass could use to answer this.\nA future coach could shortlist scenes containing explicit motivation\nstatements as candidate evidence, but concluding that a character is\nunder-motivated remains an interpretive judgment the coach should present as\na question, not a diagnosis."
+        },
+        {
+          "id": "original-micro-examples",
+          "title": "Original micro-examples",
+          "content": "*Monotonous:* Every internal-narration paragraph in a five-chapter stretch\nends on some form of \"I have to get stronger.\" No other want is stated or\nimplied, and no choice in the stretch trades power against anything else.\n\n*Instrumental:* The same character wants strength specifically to return to\na hometown before a debt collector seizes it, and one scene has them turn\ndown a faster path to power because it would mean leaving too late to make\nthe deadline in person — power is in service of something the reader can\nname without the word \"power.\""
+        },
+        {
+          "id": "sources-and-confidence-notes",
+          "title": "Sources and confidence notes",
+          "content": "The character-monotony complaint and its pairing with the\nprose-forgiveness/character-unforgiveness finding come from the reader-side\nanalysis summarized in `docs/research-litrpg-craft-failures.md` (Part A and\npattern P21), a single vendor's coded sample of Reddit discussion, marked\npractitioner/reader consensus rather than controlled research\n([[src.internal.litrpg-craft-failures-research]]). The want/need and\ninstrumental-motivation framing draws on established craft literature\nregarding character motivation and internal/external arc alignment\n([[src.book.cron-story-genius]]); the dungeon-core and base-building modifiers are\nthis drafting pass's synthesis from `docs/research-litrpg-genre.md`'s\nsubgenre profiles, which that document itself marks as inference rather than\nsourced claim."
+        }
+      ]
+    },
+    {
+      "id": "craft.general.plot.negative-space-problems-power-cannot-solve",
+      "version": 1,
+      "title": "Negative space: problems power cannot solve",
+      "summary": "A protagonist who grows stronger at things that don't touch their actual human problems avoids competence porn — keeping an explicit list of what the character's power cannot fix is a practice that keeps growth from quietly solving everything.",
+      "documentType": "pattern",
+      "family": "general",
+      "authorVetted": true,
+      "detectability": "practice",
+      "scopes": [
+        "manuscript",
+        "practice"
+      ],
+      "applicability": {
+        "genres": [
+          "general-fiction",
+          "progression-fantasy",
+          "litrpg"
+        ],
+        "subgenres": [],
+        "exclusions": []
+      },
+      "modifiers": [
+        "dungeon-core: Unusually strong fit — an immobile protagonist has a naturally rich, built-in set of problems that no amount of growing stronger can solve (the core cannot leave, cannot choose its location, cannot un-know what it has learned about its invaders), making this practice especially productive here."
+      ],
+      "aliases": [
+        "the unsolvable-problems list",
+        "competence-porn guard"
+      ],
+      "tags": [
+        "character",
+        "progression",
+        "worldbuilding-practice"
+      ],
+      "sourceConfidence": "medium",
+      "citations": [
+        {
+          "id": "src.internal.litrpg-craft-failures-research",
+          "label": "LitRPG Craft-Failure Pattern Research (Part A–D)"
+        }
+      ],
+      "sections": [
+        {
+          "id": "what-it-is",
+          "title": "What it is",
+          "content": "This pattern names a specific author practice: keeping an explicit,\nmaintained list of the human problems a protagonist's growing power will\nnever solve — grief, a broken relationship, a moral failure, a structural\ninjustice, loneliness — and deliberately protecting that list from being\nquietly closed by the next capability the character earns. Every capability\ngain that shrinks a real human problem nudges a story toward what's\nsometimes called competence porn: a protagonist so thoroughly capable that\nnothing meaningful actually costs them anything anymore."
+        },
+        {
+          "id": "why-readers-may-care",
+          "title": "Why readers may care",
+          "content": "Power growth is satisfying because it changes what a character can attempt.\nIt stops being satisfying, and starts feeling hollow, when it changes\n*everything* — when a character who couldn't fix their marriage two hundred\nchapters ago can now, apparently, fix it too, simply because they're\nstronger. The reader loses the sense that this story has stakes a bigger\nsword can't touch, and the protagonist becomes someone the reader admires\nwithout being able to worry about."
+        },
+        {
+          "id": "common-forms-and-variants",
+          "title": "Common forms and variants",
+          "content": "- **A maintained negative-space list**, kept by the author outside the\n  manuscript, of problems the power system explicitly cannot solve, checked\n  against new capabilities as they're introduced.\n- **In-text acknowledgment**, where a character or the narration explicitly\n  notes that a new ability doesn't touch the problem that actually matters\n  to them — making the negative space visible to the reader, not just\n  protected by the author offstage.\n- **Structural negative space**, where the story's power system has a hard,\n  stated boundary (cannot resurrect the dead, cannot restore a severed bond,\n  cannot undo a choice) that the narrative respects consistently.\n- **Emergent negative space**, where the unsolvable problem isn't decided in\n  advance but discovered as the story is written, and then protected once\n  identified."
+        },
+        {
+          "id": "present",
+          "title": "What it can look like on the page",
+          "content": "- A scene where a new, significant capability is gained, and the narration\n  or a character explicitly notes what it does *not* change about their\n  personal situation.\n- A long-running relationship or regret that remains unresolved across many\n  power-tier increases, without the story ever implying that more strength\n  would have fixed it.\n- The inverse, as a warning sign: a personal or relational problem that\n  quietly disappears from the narrative around the same time the character\n  crosses a major power threshold, with no scene actually resolving it."
+        },
+        {
+          "id": "absence",
+          "title": "Common failure modes",
+          "content": "- **Letting power silently absorb a problem** by simply not returning to it —\n  the problem isn't resolved on the page, it's just never mentioned again\n  after the character becomes capable enough that a reader might expect it\n  to be trivial now.\n- **Solving a structural or emotional problem with a power-system shortcut**\n  (a spell that erases grief, a stat that removes trauma) which can work as\n  a deliberate, examined choice, but reads as a cheat if it arrives\n  unexamined.\n- **Never establishing any negative space at all**, so every problem in the\n  story is implicitly power-shaped, and the character's eventual\n  overwhelming strength quietly promises to make every future conflict\n  trivial too."
+        },
+        {
+          "id": "questions-for-the-author",
+          "title": "Questions for the author",
+          "content": "- What does this character want that no amount of strength can get them?\n- Is there a problem from early in the manuscript that a reader might now\n  expect to be trivially solvable — and if so, has the story addressed that\n  expectation directly?\n- If you listed every capability this character has gained, would any of\n  them plausibly \"solve\" a relationship, a regret, or a loss the story hasn't\n  actually resolved?\n- Does the power system have any stated hard limits, and do they hold under\n  narrative pressure?"
+        },
+        {
+          "id": "actions",
+          "title": "Revision or design experiments",
+          "content": "1. Draft an explicit list of three to five problems this character's power\n   system cannot touch, and check every major capability gain against it\n   going forward.\n2. Find a moment where a new ability could plausibly be read as solving an\n   old unresolved human problem, and add a line acknowledging that it\n   doesn't.\n3. Revisit an early emotional or relational thread and check whether the\n   manuscript quietly dropped it around a major power increase; if so,\n   either resolve it on the page or make its persistence visible.\n4. For dungeon-core or similarly structural premises, use the protagonist's\n   built-in limitations (immobility, forced proximity, inability to choose)\n   as a starting negative-space list rather than inventing one from scratch."
+        },
+        {
+          "id": "when-this-advice-does-not-apply",
+          "title": "When this advice does not apply",
+          "content": "- A story whose explicit premise is that power *can* solve everything (a\n  wish-fulfillment or satire piece examining that idea directly) is using\n  the absence of negative space on purpose.\n- Not every problem needs to be permanently unsolvable — a negative-space\n  list can shrink over a series as the story earns a resolution, provided the\n  resolution is dramatized rather than assumed.\n- Early volumes of a planned long series may deliberately leave the list\n  large and mostly untouched, with payoff planned for a later book."
+        },
+        {
+          "id": "revision-note-on-the-product-angle",
+          "title": "Revision note on the product angle",
+          "content": "The research behind this pattern flags that an explicit, author-maintained\nnegative-space list is a natural fit for a structured worldbuilding record —\ntracked status, linked scenes — separate from prose itself. Whether such a\nstructure exists in a given project is something a coach could observe\ndeterministically; whether the prose meaningfully engages a listed problem,\nor quietly lets power solve it anyway, remains an interpretive judgment."
+        },
+        {
+          "id": "evidence-and-detection-limits",
+          "title": "Evidence and detection limits",
+          "content": "Where an author maintains an explicit, structured negative-space list linked\nto scenes, a coach could deterministically report its existence and status.\nWhether the prose actually honors that list — engaging a listed problem\nwithout quietly resolving it through power — requires reading the\nmanuscript and is model-assisted, not deterministic. Absent an explicit\nlist, this pattern is teaching-only: it can be taught as a practice, but a\ncoach cannot claim to have checked an unstructured manuscript against it."
+        },
+        {
+          "id": "original-micro-examples",
+          "title": "Original micro-examples",
+          "content": "*Silent absorption (a caution, not a model):* Wren's estrangement from a\nsibling is a live thread through the manuscript's first third. Wren crosses\na major power threshold at the midpoint. The sibling thread is never\nmentioned again, with no scene resolving or acknowledging it.\n\n*Protected negative space:* Wren crosses the same threshold, and the very\nnext scene has Wren specifically think that this new strength changes\nnothing about the sibling's silence — the story keeps that problem visibly\nalive rather than letting it quietly vanish."
+        },
+        {
+          "id": "sources-and-confidence-notes",
+          "title": "Sources and confidence notes",
+          "content": "The pattern and its framing come from `docs/research-litrpg-craft-failures.md`\n(Part B1, pattern P4), a practitioner essay's recommended practice\n([[src.internal.litrpg-craft-failures-research]], citing Jacob Tam). That\nsame research explicitly flags the World Bible structure angle as a product\nnote rather than a sourced craft claim, and this record's \"revision note on\nthe product angle\" section preserves that distinction deliberately rather\nthan presenting it as established craft wisdom. The dungeon-core modifier is\nthis drafting pass's synthesis from `docs/research-litrpg-genre.md`'s\nsubgenre profiles."
+        }
+      ]
+    },
+    {
+      "id": "craft.general.promise.promise-consistency",
+      "version": 1,
+      "title": "Promise consistency",
+      "summary": "A story's opening sets an implicit contract about the kind of experience it offers, and keeping that contract across a chapter and across a whole series may be the single highest-leverage concept connecting reader retention to long-term series quality.",
+      "documentType": "pattern",
+      "family": "general",
+      "authorVetted": true,
+      "detectability": "model-assisted",
+      "scopes": [
+        "chapter",
+        "manuscript",
+        "series"
+      ],
+      "applicability": {
+        "genres": [
+          "general-fiction",
+          "progression-fantasy",
+          "litrpg"
+        ],
+        "subgenres": [],
+        "exclusions": []
+      },
+      "modifiers": [],
+      "aliases": [
+        "reader promise",
+        "book-one promise"
+      ],
+      "tags": [
+        "reader-promise",
+        "series",
+        "retention",
+        "foundational"
+      ],
+      "sourceConfidence": "medium",
+      "citations": [
+        {
+          "id": "src.internal.litrpg-craft-failures-research",
+          "label": "LitRPG Craft-Failure Pattern Research (Part A–D)"
+        },
+        {
+          "id": "src.chapterchronicles.series-falloff",
+          "label": "Why Do Great LitRPG Series Fall Off? An Analysis of 1,147 Reddit Comments",
+          "url": "https://www.chapterchronicles.com/blog/why-great-litrpg-series-fall-off/"
+        },
+        {
+          "id": "src.book.maass-writing-breakout-novel",
+          "label": "Writing the Breakout Novel"
+        }
+      ],
+      "sections": [
+        {
+          "id": "what-it-is",
+          "title": "What it is",
+          "content": "A story's opening chapters — sometimes its opening pages — establish an\nimplicit promise: what kind of experience this is, what tone it will hold,\nwhat stakes it takes seriously, what it will and won't do to its characters.\nPromise consistency is the degree to which the rest of the chapter, the rest\nof the manuscript, and the rest of a series keep that contract. It operates\nat every scale a coach has available: does this scene keep the chapter's\npromise, does this chapter keep the opening's promise, does this book keep\nbook one's promise."
+        },
+        {
+          "id": "why-readers-may-care",
+          "title": "Why readers may care",
+          "content": "Two independent lines of evidence point at the same idea from different\nangles. Reader-side analysis of long-running series names inconsistent\npromise-keeping — a cozy opening that turns grim, or a desperate-stakes\nopening that goes soft — as a throughline in series that lose readers over\ntime. Separately, early-chapter retention research treats poor chapter-one\nto chapter-two retention as a promise mismatch rather than a prose-quality\nproblem: readers aren't leaving because chapter two is badly written, they're\nleaving because chapter two isn't the book chapter one promised. Promise\nconsistency is the concept that connects a scene-level craft note to a\nseries-level retention outcome."
+        },
+        {
+          "id": "common-forms-and-variants",
+          "title": "Common forms and variants",
+          "content": "- **Tonal promise** — a story's emotional register (cozy, grim, comic,\n  desperate) established early and either sustained or drifted from.\n- **Stakes promise** — the level of consequence and risk a story establishes\n  as its baseline, which readers calibrate their expectations around.\n- **Structural promise** — the kind of plot a story signals it will deliver\n  (a mystery that will be solved, a romance that will resolve, a quest that\n  will complete), which readers track even when they can't articulate the\n  signal that told them.\n- **Series-level promise** — the contract a first book makes that later\n  books either honor, deliberately and visibly evolve, or quietly abandon.\n- **Deliberate promise subversion** — a story that signals one promise and\n  breaks it on purpose, which can be a powerful effect when the break itself\n  is the point, and a betrayal when it reads as drift rather than intent."
+        },
+        {
+          "id": "present",
+          "title": "What it can look like on the page",
+          "content": "- An opening chapter's tone, stakes, and implied genre, compared against a\n  chapter from the book's midpoint or a later book in a series.\n- A cozy or low-stakes opening followed by sustained brutal violence with no\n  signaled tonal shift.\n- A story that promises a specific mystery or quest resolution and then\n  quietly drops or indefinitely defers it across volumes.\n- Reader reviews or comments (where available) describing a specific book or\n  chapter as feeling like \"a different story\" from what came before it."
+        },
+        {
+          "id": "absence",
+          "title": "Common failure modes",
+          "content": "- **Unintentional tonal drift**, where later installments of a long series\n  gradually shift tone as the author's own interests or skills evolve,\n  without the shift being signaled to readers as deliberate.\n- **Confusing escalation with promise-keeping**, where rising stakes are\n  mistaken for a stable promise even though the actual felt experience (cozy\n  versus desperate, hopeful versus grim) has changed underneath the rising\n  numbers.\n- **Treating promise-keeping as \"never changing anything,\"** which\n  overcorrects into stagnation; a story can evolve its promise deliberately\n  and transparently without breaking faith with readers, and confusing that\n  with rigid sameness is its own failure mode."
+        },
+        {
+          "id": "questions-for-the-author",
+          "title": "Questions for the author",
+          "content": "- If a reader described this book's opening chapter in three words, would\n  those same three words describe its climax?\n- Has anything about this story's tone, stakes, or implied kind of ending\n  changed since the opening — and if so, was that change signaled to the\n  reader anywhere?\n- In a series, does book three keep the promise book one made, or has it\n  quietly become a different kind of book?\n- If early chapters are losing readers, is that a prose problem, or is\n  chapter two simply not the book chapter one promised?"
+        },
+        {
+          "id": "actions",
+          "title": "Revision or design experiments",
+          "content": "1. Write a one-sentence promise statement for the opening chapter (tone,\n   stakes, implied kind of story) and check it against a sentence written the\n   same way for the midpoint and the ending.\n2. For a series, compare a scene from book one against a comparable scene\n   from the most recent book, looking specifically at tone and stakes rather\n   than plot content.\n3. If a deliberate promise shift is planned, look for a scene that can\n   explicitly signal the shift to the reader before it happens, rather than\n   letting it arrive unannounced.\n4. For a struggling early-chapter retention problem, reread chapter one\n   asking only \"what does this promise,\" then reread chapter two asking only\n   \"does this deliver on that,\" separately from any prose-quality read of\n   either."
+        },
+        {
+          "id": "when-this-advice-does-not-apply",
+          "title": "When this advice does not apply",
+          "content": "- A story built around a structural twist in its own premise — an opening\n  that deliberately misleads the reader about what kind of book this is, as\n  the twist itself — is using inconsistency as a technique, not failing to\n  keep a promise.\n- Long series legitimately evolve as their authors and audiences do; a\n  transparent, gradual evolution acknowledged within the text is different\n  from an unannounced drift.\n- A single outlier chapter (a flashback, an interlude in a different voice)\n  can depart from the main promise briefly without breaking it, provided the\n  surrounding text signals the departure as intentional."
+        },
+        {
+          "id": "evidence-and-detection-limits",
+          "title": "Evidence and detection limits",
+          "content": "Whether a specific scene, chapter, or book keeps or breaks an established\npromise requires reading and comparing prose for tone, stakes, and implied\ngenre — an interpretive judgment with no deterministic substitute. A future\ncoach could shortlist an opening passage and a comparison passage as\nevidence for the author's own review, but concluding that a promise was kept\nor broken is model-assisted, not something structured data can settle.\nSeries-level promise-consistency claims additionally require access to\nmultiple books' worth of manuscript, which most coaching sessions will not\nhave simultaneously."
+        },
+        {
+          "id": "original-micro-examples",
+          "title": "Original micro-examples",
+          "content": "*Promise kept:* A story opens with a character narrowly avoiding eviction and\nworrying about a light bill. Its climax three hundred pages later still turns\non a resource shortage the character cannot simply out-power — the stakes\ngrew in scale but stayed the same kind.\n\n*Promise broken without signal:* The same opening, but by the climax the\ncharacter commands an army and the story's central tension has become a\npolitical succession crisis with no scene marking the shift from personal,\nsurvival-scale stakes to political, systemic ones."
+        },
+        {
+          "id": "sources-and-confidence-notes",
+          "title": "Sources and confidence notes",
+          "content": "The series-longevity framing and the \"consistently delivers on its initial\npromise\" finding come from a single vendor's coded analysis of Reddit\ndiscussion ([[src.chapterchronicles.series-falloff]]), marked practitioner/\nreader consensus rather than controlled research; that same source frames\npromise consistency as a candidate connecting concept rather than a settled\nconclusion, and `docs/research-litrpg-craft-failures.md` explicitly raises,\nas an open question, whether promise consistency deserves to be the\nlibrary's organizing idea rather than one entry among many\n([[src.internal.litrpg-craft-failures-research]]). The general-craft framing\nof reader promise and stakes escalation draws on established craft writing\nabout market-aware structure ([[src.book.maass-writing-breakout-novel]]).\nThis record treats promise consistency as a strong, cross-source hypothesis\nworth prioritizing in coaching, not as a proven causal mechanism."
+        }
+      ]
+    }
+  ]
 }

@@ -2,9 +2,9 @@
 
 **Status:** active draft content production, run in parallel with roadmap
 Slice 4.18 per `docs/writing-coach-corpus-production-handoff.md`.
-**This is not the 4.17 runtime schema, not canon, and not author-vetted.**
-Every record here carries `author_vetted: false` and stays that way until the
-author reviews it.
+**This is not the 4.17 runtime schema and is not canon.** Records remain
+`author_vetted: false` until the product author reviews them; the eight
+Batch-1 records were approved on 2026-09-06 and are now explicitly true.
 
 ## What this is
 
@@ -67,6 +67,12 @@ point to records planned for Batch 2/3 (logged in
 `qa/duplication-report.md`, not silently broken). One `source_ids` typo
 found and fixed during this batch (see `qa/citation-audit.md`). See
 `qa/coverage-matrix.md` for the running family/type breakdown.
+
+**Author review:** all eight Batch-1 records were approved by the product
+author on 2026-09-06 after reviewing at least three records in every working
+corpus folder and finding the material accurate, well written, researched,
+and cited. These eight records form the published v1 tranche; this approval
+does not apply to the other working drafts.
 
 ### Batch 2 — General coaching foundation (done)
 

@@ -9,7 +9,7 @@ summary: >
   human problems avoids competence porn — keeping an explicit list of what
   the character's power cannot fix is a practice that keeps growth from
   quietly solving everything.
-author_vetted: false
+author_vetted: true
 detectability: practice
 scopes:
   - manuscript

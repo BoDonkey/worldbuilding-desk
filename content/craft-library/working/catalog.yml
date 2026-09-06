@@ -193,7 +193,7 @@ records:
     exclusions:
     - dungeon-core
     - base-building
-  author_vetted: false
+  author_vetted: true
   path: general/craft.general.character.power-as-sole-motivation.md
 - id: craft.general.character.relationships-and-relational-arcs
   title: Relationships and relational arcs
@@ -449,7 +449,7 @@ records:
     - litrpg
     subgenres: []
     exclusions: []
-  author_vetted: false
+  author_vetted: true
   path: general/craft.general.plot.negative-space-problems-power-cannot-solve.md
 - id: craft.general.plot.reader-expectation-and-genre-signaling
   title: Reader expectation and genre signaling
@@ -596,7 +596,7 @@ records:
     - progression-fantasy
     subgenres: []
     exclusions: []
-  author_vetted: false
+  author_vetted: true
   path: general/craft.general.practice.no-gap-posting.md
 - id: craft.general.practice.outlining-versus-discovery-drafting
   title: Outlining versus discovery drafting
@@ -662,7 +662,7 @@ records:
     - litrpg
     subgenres: []
     exclusions: []
-  author_vetted: false
+  author_vetted: true
   path: general/craft.general.promise.promise-consistency.md
 - id: craft.general.revision.continuity-passes
   title: Continuity passes
@@ -1797,7 +1797,7 @@ records:
     subgenres: []
     exclusions:
     - time-loop
-  author_vetted: false
+  author_vetted: true
   path: systems/craft.system.progression.advancement-rate.md
 - id: craft.system.progression.decorative-chapter-test
   title: The decorative chapter test
@@ -1817,7 +1817,7 @@ records:
     - tower-climbing
     - cultivation
     exclusions: []
-  author_vetted: false
+  author_vetted: true
   path: systems/craft.system.progression.decorative-chapter-test.md
 - id: craft.system.progression.fake-progression
   title: Fake progression (relative position never moves)
@@ -1834,7 +1834,7 @@ records:
     - cultivation
     subgenres: []
     exclusions: []
-  author_vetted: false
+  author_vetted: true
   path: systems/craft.system.progression.fake-progression.md
 - id: craft.system.progression.stat-block-density
   title: Stat-block density and interval
@@ -1853,7 +1853,7 @@ records:
     exclusions:
     - gamelit
     - progression-fantasy
-  author_vetted: false
+  author_vetted: true
   path: systems/craft.system.progression.stat-block-density.md
 - id: craft.system.progression.system-as-narrator-intrusion
   title: System-as-narrator intrusion

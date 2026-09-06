@@ -494,9 +494,10 @@ Under the hood, the app still includes rich systems for world data, rules, chara
   material, uses compatible shipped vectors when available, and falls back to
   lexical search when they are not. The project RAG boundary rejects `craft`
   documents, so normal assistant evidence, canon, context health, backup, and
-  project deletion cannot consume or own the coaching corpus. The published
-  v1 source is intentionally empty until author-vetted Slice 4.18 content
-  lands; application builds verify that the checked-in bundle matches it.
+  project deletion cannot consume or own the coaching corpus. Published
+  content version `1.0.0-tranche-1` now contains the eight author-vetted
+  Batch-1 records as 97 checked-in retrieval chunks; application builds verify
+  that the checked-in bundle matches the reviewed source.
 
 ### Writing-coach craft library (draft content, parallel track)
 
@@ -508,8 +509,9 @@ runtime schema, and nothing here changes the roadmap's status board.
 
 - **166 records** as of 2026-09-05 (54 `general`, 48 `system`, 46 `trope`,
   6 `comparison`, 12 `profile`) against a 180 target; 14 remain.
-- **Every record carries `author_vetted: false`.** None has been reviewed by
-  the author. That is the gate before any of it is usable.
+- **Eight Batch-1 records carry `author_vetted: true`.** The product author
+  approved that exact tranche on 2026-09-06 after reviewing material across
+  every corpus folder. The other 158 records remain unvetted drafts.
 - `working/README.md` holds the batch log and the resume protocol; `qa/`
   holds the coverage matrix, duplication report, citation audit, and open
   claims. `qa/build_catalog.py`, `qa/audit_corpus.py`, and `qa/relink.py` are
@@ -525,6 +527,10 @@ runtime schema, and nothing here changes the roadmap's status board.
 ## Verification Status
 
 ### Verified Recently
+- Slice 4.18 craft-library tranche 1 packages eight author-vetted, cited
+  records as 97 embedded chunks. Source/catalog validation, runtime schema
+  validation, bundled lexical retrieval, labeled provenance, and safe citation
+  rendering are covered by automated tests.
 - Slice 4.19 derived story dashboard passes web lint with one existing hook
   warning, 429 web tests, 6 rules-engine tests, 12 rules-ui tests, web/desktop
   production builds, and the full 61-test Cypress suite. Coverage locks

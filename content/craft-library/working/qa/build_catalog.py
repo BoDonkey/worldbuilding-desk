@@ -7,7 +7,7 @@ not a dependency of anything under apps/. Run from the working/ directory:
     python3 qa/build_catalog.py
 
 Regenerates catalog.yml from every *.md file's front matter and prints a QA
-report: duplicate IDs, missing required fields, non-false author_vetted,
+report: duplicate IDs, missing required fields, invalid author_vetted values,
 broken `related` links, and unknown `source_ids`.
 """
 import sys
@@ -64,8 +64,10 @@ def main():
                     )
                 else:
                     ids_seen[rid] = rel_path
-            if fm.get("author_vetted") is not False:
-                errors.append(f"{rel_path}: author_vetted must be false, got {fm.get('author_vetted')!r}")
+            if not isinstance(fm.get("author_vetted"), bool):
+                errors.append(
+                    f"{rel_path}: author_vetted must be a boolean, got {fm.get('author_vetted')!r}"
+                )
             records.append((rel_path, fm))
 
     # Load sources.yml for source_id validation

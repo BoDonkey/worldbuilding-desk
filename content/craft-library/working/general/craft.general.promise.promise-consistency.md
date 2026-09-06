@@ -9,7 +9,7 @@ summary: >
   it offers, and keeping that contract across a chapter and across a whole
   series may be the single highest-leverage concept connecting reader
   retention to long-term series quality.
-author_vetted: false
+author_vetted: true
 detectability: model-assisted
 scopes:
   - chapter

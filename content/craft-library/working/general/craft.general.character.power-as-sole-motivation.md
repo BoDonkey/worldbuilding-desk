@@ -8,7 +8,7 @@ summary: >
   A protagonist whose only stated goal is getting stronger tends to read as
   monotonous within a few chapters — readers report forgiving weak prose for
   a compelling character far more readily than the reverse.
-author_vetted: false
+author_vetted: true
 detectability: model-assisted
 scopes:
   - manuscript

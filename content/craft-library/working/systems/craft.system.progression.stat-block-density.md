@@ -9,7 +9,7 @@ summary: >
   whether those numbers read as significant or as clutter — density and
   interval are measurable, but their felt effect is medium- and
   reader-dependent.
-author_vetted: false
+author_vetted: true
 detectability: model-assisted
 scopes:
   - chapter

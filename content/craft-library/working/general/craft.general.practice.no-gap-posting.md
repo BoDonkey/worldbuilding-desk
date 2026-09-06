@@ -9,7 +9,7 @@ summary: >
   reported as a stronger predictor of platform ranking than raw posting
   speed — this is a publishing practice, not something a manuscript itself
   can be checked for.
-author_vetted: false
+author_vetted: true
 detectability: practice
 scopes:
   - practice
