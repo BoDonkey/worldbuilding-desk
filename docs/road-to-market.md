@@ -234,7 +234,7 @@ and required revisit point, `WIP`, `Done <commit>`.
 | 5.1 | Auto-update decision + implementation | 5 | M | — |
 | 5.2 | Code signing + notarization, both platforms | 5 | M | — |
 | 5.3 | Packaged-app validation + Electron E2E | 5 | M | — |
-| 5.4 | Progressive first-run onboarding + sample project | 5 | L | — **runs first in Phase 5**; dependencies 4.13/4.15 are met. Beta feedback is weak signal without it ([review](archive/ux-ai-review-2026-08-29.md) §A1); derive the sample project from `fixtures/trust-dogfood/` |
+| 5.4 | Progressive first-run onboarding + sample project | 5 | L | WIP — one-time blank-project auto-create lands a fresh install in Workspace immediately; dismissible getting-started guide (marked projects only); bundled sample project trimmed from `fixtures/trust-dogfood/` with one self-contained factual conflict, reachable from the guide or Projects |
 | 5.5 | AI provider setup UX hardening | 5 | M | — re-sized S→M: this is a redesign, not polish. Test-connection action, two-tier setup/advanced disclosure, author-facing relabels ([review](archive/ux-ai-review-2026-08-29.md) §A2) |
 | 5.6 | Local-only error handling | 5 | S | — author-facing error descriptions plus copyable, redacted local diagnostics; no telemetry or automatic transmission |
 | 5.7 | Trial + license key gate | 5 | M | — |

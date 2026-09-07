@@ -1,5 +1,7 @@
 import {
+  useEffect,
   useLayoutEffect,
+  useState,
   type ReactNode
 } from 'react';
 import {
@@ -28,12 +30,44 @@ import CompendiumRoute from './routes/CompendiumRoute';
 import RulesetRoute from './routes/RulesetRoute';
 import LoreRoute from './routes/LoreRoute';
 import CanonDecisionsRoute from './routes/CanonDecisionsRoute';
+import {getAllProjects} from './projectStorage';
+import {createFirstRunProject, hasCheckedFirstRun, markFirstRunChecked} from './services/onboarding/firstRun';
 import appShellStyles from './styles/AppShell.module.css';
 
 const routeWindowScrollPositions = new Map<string, number>();
 
 function HomeRoute() {
   const activeProject = useAppStore((s) => s.activeProject);
+  const setActiveProject = useAppStore((s) => s.setActiveProject);
+  const saveProjectSettings = useAppStore((s) => s.saveProjectSettings);
+  const [ready, setReady] = useState(Boolean(activeProject));
+
+  useEffect(() => {
+    if (activeProject || hasCheckedFirstRun()) {
+      setReady(true);
+      return;
+    }
+    let cancelled = false;
+    void (async () => {
+      try {
+        const projects = await getAllProjects();
+        if (projects.length === 0) {
+          const project = await createFirstRunProject({saveProjectSettings});
+          if (!cancelled) await setActiveProject(project);
+        }
+      } catch (error) {
+        console.error('First-run project setup failed.', error);
+      } finally {
+        markFirstRunChecked();
+        if (!cancelled) setReady(true);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [activeProject, saveProjectSettings, setActiveProject]);
+
+  if (!ready) return null;
   return <Navigate to={activeProject ? '/workspace' : '/projects'} replace />;
 }
 

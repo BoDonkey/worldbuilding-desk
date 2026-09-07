@@ -38,6 +38,7 @@ import {
   validateSnapshotCounts
 } from '../services/storage';
 import {useAppStore} from '../store/appStore';
+import {createSampleProject} from '../services/onboarding/createSampleProject';
 import {PageHeader} from '../components/PageHeader';
 import styles from '../styles/ProjectsRoute.module.css';
 import {useConfirmDialog} from '../hooks/useConfirmDialog';
@@ -62,6 +63,7 @@ function ProjectsRoute() {
     message: string;
   } | null>(null);
   const [isCreatingProject, setIsCreatingProject] = useState(false);
+  const [isLoadingSample, setIsLoadingSample] = useState(false);
   const [deletingProjectId, setDeletingProjectId] = useState<string | null>(null);
   const [exportingProjectId, setExportingProjectId] = useState<string | null>(null);
   const [syncingProjectId, setSyncingProjectId] = useState<string | null>(null);
@@ -172,6 +174,24 @@ function ProjectsRoute() {
       setFeedback({tone: 'error', message});
     } finally {
       setIsCreatingProject(false);
+    }
+  };
+
+  const handleExploreSample = async () => {
+    setIsLoadingSample(true);
+    setFeedback(null);
+    try {
+      const sampleProject = await createSampleProject({saveProjectSettings: persistProjectSettings});
+      setProjects((prev) => [...prev, sampleProject]);
+      onSelectProject(sampleProject);
+      setFeedback({tone: 'success', message: 'Sample project loaded.'});
+      navigate('/workspace');
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'Unable to load the sample project.';
+      setFeedback({tone: 'error', message});
+    } finally {
+      setIsLoadingSample(false);
     }
   };
 
@@ -714,6 +734,14 @@ function ProjectsRoute() {
             {isCreatingProject ? 'Creating...' : 'Create Project'}
           </button>
         </form>
+
+        <p className={styles.sectionIntro}>
+          New here?{' '}
+          <button type='button' onClick={() => void handleExploreSample()} disabled={isLoadingSample}>
+            {isLoadingSample ? 'Loading sample...' : 'Explore a sample project'}
+          </button>{' '}
+          — a short manuscript with a deliberate canon conflict already waiting to be found.
+        </p>
 
         <section className={styles.listCard}>
           <h2>Existing Projects</h2>

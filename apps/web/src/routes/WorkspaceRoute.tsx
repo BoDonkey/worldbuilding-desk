@@ -80,6 +80,7 @@ import {useSceneRosterPreferences} from '../hooks/useSceneRosterPreferences';
 import {buildCharacterCaptureAliasList} from '../services/worldBible/worldBibleCanonicalization';
 import {isItemCategory} from '../services/worldBible/worldBibleSummary';
 import {PageHeader} from '../components/PageHeader';
+import {GettingStartedGuide} from '../components/Onboarding/GettingStartedGuide';
 import {
   buildManualCaptureLinkOptions,
   isCharacterLikeCategory,
@@ -1319,6 +1320,7 @@ function WorkspaceRoute() {
           </>
         }
       />
+      <GettingStartedGuide projectId={activeProject.id} />
       {(feedback || resolverNotice) && (
         <div className={styles.workspaceToastViewport} aria-live='polite'>
           {feedback && (

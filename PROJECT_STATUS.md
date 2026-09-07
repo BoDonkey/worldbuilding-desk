@@ -135,6 +135,20 @@ Under the hood, the app still includes rich systems for world data, rules, chara
 - Pending Mechanics completion counts now aggregate onto the `More` navigation
   control at both desktop and narrow breakpoints, keeping optional-system work
   discoverable without promoting systems into the writing-first primary nav.
+- A brand-new install now lands directly in a draft-ready Workspace instead of
+  an empty Projects screen: a one-time, one-scene blank project is created
+  automatically (general fiction, no provider or ruleset setup required) the
+  first time the app has no projects at all. A dismissible "Getting started"
+  panel — shown only on that project, never on projects the author already
+  had — walks through write → capture canon → review, and offers a bundled,
+  read-only-in-spirit sample project ("The Emberglass Key", trimmed from the
+  Slice 1.1 trust-dogfood fixture) with a deliberate, self-contained factual
+  conflict between two lore documents for the author to find and resolve
+  themselves through the real extraction and canon-decision pipeline — no
+  fixture stands in for that pipeline's own output. The sample is also
+  reachable directly from Projects at any time. Dismissal persists per
+  project; the automatic first-project creation is a true one-time check,
+  never re-triggered by later deleting all projects.
 
 ### Story Context Systems
 - World Bible with dynamic categories and custom field schemas.
@@ -567,6 +581,27 @@ runtime schema, and nothing here changes the roadmap's status board.
 ## Verification Status
 
 ### Verified Recently
+- Slice 5.4 progressive first-run onboarding + sample project: a truly
+  fresh install (zero projects, one-time check, guarded against ever
+  re-triggering) now auto-creates a blank draft-ready project and lands in
+  Workspace immediately; a dismissible "Getting started" panel (shown only
+  on first-run/sample projects, never on ones the author already had) walks
+  the write → capture canon → review loop and offers the bundled sample
+  project as an alternative, reachable from that panel or directly from
+  Projects. The sample is trimmed from the Slice 1.1 trust-dogfood fixture
+  to one self-contained factual conflict (two lore documents disagreeing
+  about a character's years of service) that the author discovers by
+  running the real extraction/canon-decision pipeline themselves — nothing
+  is pre-extracted or pre-accepted as canon by the fixture. Caught and fixed
+  a real bug during Cypress verification: the guide component's variant
+  defaulted to showing on every project rather than only marked ones,
+  which would have put an unrequested banner on every existing project and
+  broke unrelated layout in several existing specs. Lint with 1 baseline
+  warning; 485 web (+13 new) + 6 engine + 12 UI tests; web/desktop builds;
+  full Cypress suite 66/67 (new onboarding.cy.ts 3/3; the one remaining
+  failure is the same confirmed-unrelated pre-existing flake noted against
+  Slices 1.5/4.20/4.22 — likely local Ollama resource contention with
+  Cypress/Electron on this machine, not a code issue).
 - Slice 4.22 progression continuity candidates: a new Story Dashboard section
   deterministically shortlists characters with an established priority
   ability never lexically referenced across their scene appearances, and
