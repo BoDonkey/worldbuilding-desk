@@ -63,5 +63,5 @@ export function useStoryDashboardData(params: {
     mechanicsEnabled: params.mechanicsEnabled
   }), [documents, events, params.cards, params.mechanicsEnabled, ruleset]);
 
-  return {dashboard, documents, status, refresh};
+  return {dashboard, documents, events, ruleset, status, refresh};
 }

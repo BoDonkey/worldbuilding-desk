@@ -118,6 +118,19 @@ Under the hood, the app still includes rich systems for world data, rules, chara
   author-triggered, share the project's daily AI-consultation budget, and
   are read-only advice — the only follow-up action is the existing
   propose-preview-confirm surface (save as a draft Source Note).
+- The Story Dashboard also has a "Progression continuity" section: a
+  deterministic shortlist of two craft-and-canon-consistency observations —
+  a character with an established priority ability (movement, teleportation,
+  anything time-related) never lexically referenced across several scenes
+  where they appear, and a named rapid-advancement method never referenced
+  again after the accepted event that established it. Absence is
+  deterministic; whether it is a genuine finding is author-triggered and
+  model-assisted, cited to the shortlisted scenes, sharing the same
+  AI-consultation budget as the coach. A dismissed candidate persists
+  (localStorage, project-scoped) so a false positive costs one click; it is
+  never recomputed as canon or written anywhere. The abandoned-method side
+  depends on accepted advancement events carrying a descriptive label — a
+  real, documented coverage limit, not a guess about author intent.
 - App-shell search is now visibly exposed and returns unified scene plus World Bible results.
 - Pending Mechanics completion counts now aggregate onto the `More` navigation
   control at both desktop and narrow breakpoints, keeping optional-system work
@@ -554,6 +567,19 @@ runtime schema, and nothing here changes the roadmap's status board.
 ## Verification Status
 
 ### Verified Recently
+- Slice 4.22 progression continuity candidates: a new Story Dashboard section
+  deterministically shortlists characters with an established priority
+  ability never lexically referenced across their scene appearances, and
+  named rapid-advancement methods never referenced again after their
+  establishing event. Author-triggered, model-assisted, scene-cited
+  consultation judges each candidate via a deterministic, position-anchored
+  `Verdict:` tag (same pattern as the 1.5 canon-decision prefill — never
+  free-prose matching); dismissal persists per-project in localStorage,
+  mirroring the Workspace consistency review's existing hidden-item pattern
+  rather than adding a new IndexedDB store, backup contract, or schema
+  version. Lint with 1 baseline warning; 472 web (+20 new) + 6 engine + 12 UI
+  tests; web/desktop builds; Cypress corkboard-route.cy.ts covers the empty
+  state and a full seed/dismiss/reload/restore round-trip.
 - Slice 4.20 writing coach experience: an inline "Ask the writing coach"
   action (scoped to the current selection, or the open scene when nothing is
   selected) and a Story Dashboard "Writing coach" section (scoped to

@@ -1,6 +1,8 @@
 import type {StoryDashboard as StoryDashboardData} from '../../services/dashboard/storyDashboard';
-import type {ProjectAISettings} from '../../entityTypes';
+import type {ProjectAISettings, WritingDocument} from '../../entityTypes';
+import type {ProgressionContinuityCandidate} from '../../services/progressionContinuity/progressionContinuityCandidates';
 import {WritingCoachSection} from './WritingCoachSection';
+import {ProgressionContinuitySection} from './ProgressionContinuitySection';
 import styles from '../../styles/CorkboardRoute.module.css';
 
 interface StoryDashboardProps {
@@ -9,12 +11,22 @@ interface StoryDashboardProps {
   onOpenScene: (sceneId: string) => void;
   projectId: string;
   aiConfig?: ProjectAISettings;
+  documents: WritingDocument[];
+  progressionContinuityCandidates: ProgressionContinuityCandidate[];
 }
 
 const formatNumber = (value: number) => new Intl.NumberFormat().format(value);
 const formatPercent = (value: number) => `${Math.round(value * 100)}%`;
 
-export function StoryDashboard({dashboard, status, onOpenScene, projectId, aiConfig}: StoryDashboardProps) {
+export function StoryDashboard({
+  dashboard,
+  status,
+  onOpenScene,
+  projectId,
+  aiConfig,
+  documents,
+  progressionContinuityCandidates
+}: StoryDashboardProps) {
   if (status === 'loading' || status === 'idle') {
     return <div className={styles.derivedEmpty}>Reading manuscript and continuity data...</div>;
   }
@@ -160,6 +172,15 @@ export function StoryDashboard({dashboard, status, onOpenScene, projectId, aiCon
 
       {dashboard.mechanics && <MechanicsDashboard dashboard={dashboard} onOpenScene={onOpenScene} />}
 
+      <ProgressionContinuitySection
+        candidates={progressionContinuityCandidates}
+        documents={documents}
+        scenes={dashboard.scenes}
+        projectId={projectId}
+        aiConfig={aiConfig}
+        onOpenScene={onOpenScene}
+      />
+
       <WritingCoachSection dashboard={dashboard} projectId={projectId} aiConfig={aiConfig} />
     </div>
   );
@@ -218,7 +239,7 @@ function Metric({label, value, input}: {label: string; value: string; input: str
   return <article className={styles.metric}><span>{label}</span><strong>{value}</strong><small>{input}</small></article>;
 }
 
-function SourceScenes({sceneIds, scenes, onOpenScene}: {
+export function SourceScenes({sceneIds, scenes, onOpenScene}: {
   sceneIds: string[];
   scenes: StoryDashboardData['scenes'];
   onOpenScene: (sceneId: string) => void;

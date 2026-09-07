@@ -95,7 +95,8 @@ const STATE_CATEGORIES: StateChangeCategory[] = [
   'Attributes', 'Resources', 'Inventory', 'Equipment', 'Statuses', 'Locations'
 ];
 
-const ADVANCEMENT_NAME = /\b(level|tier|rank|experience|xp|advancement|progress)\b/i;
+/** Also reused by progressionContinuityCandidates.ts to identify advancement-axis commands. */
+export const ADVANCEMENT_NAME = /\b(level|tier|rank|experience|xp|advancement|progress)\b/i;
 
 export function buildStoryDashboard(params: {
   documents: WritingDocument[];

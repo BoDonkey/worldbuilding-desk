@@ -14,7 +14,8 @@ const PROJECT_LOCAL_STORAGE_PREFIXES = [
   'systemHistory',
   'loreSynopsis',
   'inspectorBudget',
-  'workspaceReviewPrefs'
+  'workspaceReviewPrefs',
+  'progressionContinuityReview'
 ] as const;
 
 function transactionToPromise(tx: IDBTransaction): Promise<void> {

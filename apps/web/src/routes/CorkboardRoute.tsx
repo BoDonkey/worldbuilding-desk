@@ -8,6 +8,7 @@ import {PageHeader} from '../components/PageHeader';
 import {ProjectScratchpadButton} from '../components/ProjectScratchpadButton';
 import {useConfirmDialog} from '../hooks/useConfirmDialog';
 import {useStoryDashboardData} from '../hooks/useStoryDashboardData';
+import {useProgressionContinuityCandidates} from '../hooks/useProgressionContinuityCandidates';
 import {StoryDashboard} from '../components/Corkboard/StoryDashboard';
 import styles from '../styles/CorkboardRoute.module.css';
 
@@ -53,10 +54,16 @@ function CorkboardRoute() {
   const [beatNotes, setBeatNotes] = useState('');
   const [isChapterRailCollapsed, setIsChapterRailCollapsed] = useState(false);
   const [view, setView] = useState<'planning' | 'dashboard'>('planning');
-  const {dashboard, documents, status: dashboardStatus} = useStoryDashboardData({
+  const {dashboard, documents, events, ruleset, status: dashboardStatus} = useStoryDashboardData({
     projectId: activeProject?.id ?? null,
     cards: corkboardCards,
     mechanicsEnabled: Boolean(projectSettings && projectSettings.projectMode !== 'general')
+  });
+  const {candidates: progressionContinuityCandidates} = useProgressionContinuityCandidates({
+    projectId: activeProject?.id ?? null,
+    documents,
+    events,
+    ruleset
   });
 
   useEffect(() => {
@@ -260,6 +267,8 @@ function CorkboardRoute() {
           onOpenScene={handleOpenScene}
           projectId={activeProject.id}
           aiConfig={projectSettings?.aiSettings}
+          documents={documents}
+          progressionContinuityCandidates={progressionContinuityCandidates}
         />
       ) : corkboardCards.length === 0 ? (
         <div className={styles.panel}>
