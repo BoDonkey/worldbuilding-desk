@@ -114,7 +114,7 @@ export class ShodhMemoryService implements ShodhMemoryProvider {
 
   private requireDb(): IDBPDatabase<MemoryDB> {
     if (!this.db) {
-      throw new Error('Shodh memory database has not been initialized');
+      throw new Error('Project memory database has not been initialized');
     }
     return this.db;
   }

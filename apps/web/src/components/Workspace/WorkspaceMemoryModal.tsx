@@ -18,7 +18,7 @@ export const WorkspaceMemoryModal = ({
   return (
     <div ref={dialogRef} role='dialog' aria-modal='true' className={styles.modalOverlay}>
       <div className={`${styles.modalCard} ${styles.memoryModalCard}`}>
-        <h3 className={styles.modalTitle}>Capture Shodh memory</h3>
+        <h3 className={styles.modalTitle}>Capture project memory</h3>
         <p className={styles.modalDescription}>
           Review or edit the summary before adding it to the project canon.
         </p>

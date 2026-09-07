@@ -846,7 +846,7 @@ export const useWorkspaceConsistency = ({
           );
         }
       } catch (error) {
-        console.warn('RAG indexing failed for scene', doc.id, error);
+        console.warn('Indexing failed for scene', doc.id, error);
       }
 
       try {

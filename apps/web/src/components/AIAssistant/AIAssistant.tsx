@@ -125,7 +125,7 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
       const list = await shodhService.current.listMemories();
       setMemoryCache(list);
     } catch (error) {
-      console.warn('Failed to load Shodh memories', error);
+      console.warn('Failed to load project memory', error);
     }
   }, []);
 
@@ -279,7 +279,7 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
 
       return ordered.slice(0, 3).map((memory) => ({
         content: memory.summary,
-        source: `${getShodhTrustLabel(memory.tags)} (Shodh summary) - ${memory.title || 'Memory'} (${
+        source: `${getShodhTrustLabel(memory.tags)} - ${memory.title || 'Memory'} (${
           memory.projectId === projectId ? 'Local' : 'Parent'
         })`,
         relevance:
@@ -340,7 +340,7 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
     scrollMessagesToBottom();
 
     try {
-      // Get relevant context from RAG
+      // Get relevant indexed context
       const groundingRequired = requiresProjectGrounding(
         promptText,
         Boolean(selectedText)

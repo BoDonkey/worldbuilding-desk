@@ -53,7 +53,7 @@ export function buildDraftSourceNoteFromAssistantOutput(params: {
 /**
  * Captures assistant chat output as a draft Source Note — never canon. It
  * enters the same extraction/review pipeline as any manually authored note;
- * this only performs the save and RAG indexing a manual save would also do.
+ * this only performs the save and indexing a manual save would also do.
  */
 export async function saveDraftSourceNoteFromAssistantOutput(params: {
   projectId: string;

@@ -817,7 +817,7 @@ function ProjectsRoute() {
                         handleInheritanceToggle(project, 'inheritRag', e.target.checked)
                       }
                     />
-                    Inherit RAG data
+                    Inherit indexed context
                   </label>
                   <label className={styles.toggleLabel}>
                     <input
@@ -834,7 +834,7 @@ function ProjectsRoute() {
                         )
                       }
                     />
-                    Inherit memories
+                    Inherit project memory
                   </label>
                 </div>
                 {project.parentProjectId && (

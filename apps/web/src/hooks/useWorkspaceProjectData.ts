@@ -325,7 +325,7 @@ export function useWorkspaceProjectData({
     };
   }, [activeProject]);
 
-  // Initialize RAG service when project changes.
+  // Initialize the indexed context service when project changes.
   useEffect(() => {
     if (!activeProject) {
       setRagService(null);
@@ -374,7 +374,7 @@ export function useWorkspaceProjectData({
     };
   }, [activeProject, syncCompendiumSystemSignals]);
 
-  // Keep RAG entity vocabulary up-to-date when entities or characters change.
+  // Keep the indexed context entity vocabulary up-to-date when entities or characters change.
   useEffect(() => {
     if (!activeProject || !ragService) return;
 
@@ -515,7 +515,7 @@ export function useWorkspaceProjectData({
     settlementState,
     settlementModules,
 
-    // RAG
+    // Indexed context
     ragService,
 
     // Canon sync (setter needed by handleCanonSync in route)

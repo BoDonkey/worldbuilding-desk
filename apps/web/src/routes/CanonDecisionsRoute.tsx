@@ -802,7 +802,7 @@ function CanonDecisionsRoute() {
 
                 <div className={styles.aiPanel}>
                   <div className={styles.aiPanelHeader}>
-                    <p className={styles.aiPanelTitle}>Rubber-Duck AI</p>
+                    <p className={styles.aiPanelTitle}>Think it through</p>
                     <span className={styles.aiPanelMeta}>
                       {aiProviderLabel} · {aiBudgetUsed}/{aiBudgetMax} today
                     </span>

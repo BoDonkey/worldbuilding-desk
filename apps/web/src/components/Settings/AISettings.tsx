@@ -798,7 +798,7 @@ export const AISettings: React.FC<AISettingsProps> = ({
             <option value='local-ollama'>Force local Ollama</option>
           </select>
           <p className={styles.help}>
-            Canon decision rubber-ducking can follow the main assistant provider or stay local through Ollama even when writing assistance uses a hosted model.
+            Canon decision consultations can follow the main assistant provider or stay local through Ollama even when writing assistance uses a hosted model.
           </p>
         </div>
         <label className={styles.field}>

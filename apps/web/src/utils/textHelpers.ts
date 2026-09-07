@@ -1,6 +1,6 @@
 /**
  * Convert HTML content (like TipTap output) to plain text.
- * Useful for word counts and future RAG pipelines.
+ * Useful for word counts and future retrieval pipelines.
  */
 export function htmlToPlainText(html: string): string {
   if (!html) return '';

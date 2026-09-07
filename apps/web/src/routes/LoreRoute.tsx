@@ -1673,12 +1673,12 @@ function LoreRoute() {
 
         <div className={styles.healthMetricGrid}>
           <div className={styles.healthMetric}>
-            <span>RAG documents</span>
+            <span>Indexed context</span>
             <strong>{ragDiagnostics?.documentCount ?? 0}</strong>
             <small>{ragDiagnostics?.chunkCount ?? 0} chunks</small>
           </div>
           <div className={styles.healthMetric}>
-            <span>Shodh memories</span>
+            <span>Project memory</span>
             <strong>{shodhMemories.length}</strong>
             <small>
               {shodhMemories.filter((memory) => memory.projectId === activeProject.id).length} local
@@ -1729,9 +1729,10 @@ function LoreRoute() {
           <div>
             <strong>Rebuild derived context</strong>
             <p>
-              Refresh RAG from saved scenes, World Bible records, Source Notes,
-              accepted canon facts, and rules. Shodh summaries are refreshed for
-              scenes, World Bible records, accepted canon facts, and rules.
+              Refresh indexed context from saved scenes, World Bible records, Source
+              Notes, accepted canon facts, and rules. Project memory summaries are
+              refreshed for scenes, World Bible records, accepted canon facts, and
+              rules.
             </p>
           </div>
           <button

@@ -1312,7 +1312,7 @@ function CharacterSheetsRoute({
           onRefresh={() => void refreshRulesetMemory()}
           pageSize={1}
           scopeSummaryLabel='this ruleset'
-          emptyState='No Shodh memory found yet. Save the ruleset (Ruleset tab) to generate one.'
+          emptyState='No project memory found yet. Save the ruleset (Ruleset tab) to generate one.'
           renderSourceLabel={(memory) =>
             memory.projectId === activeProject.id ? 'Local' : 'Parent'
           }

@@ -65,7 +65,7 @@ export async function saveRuleset(
           {tags: ['ruleset']}
         );
       } catch (error) {
-        console.warn('Failed to index ruleset in RAG', error);
+        console.warn('Failed to add ruleset to indexed context', error);
       }
       try {
         const shodh = await getShodhService(projectId);
@@ -115,7 +115,7 @@ export async function getRulesetByProjectId(
   });
 }
 
-/** Recovery-only write that deliberately skips derived RAG/Shodh indexing. */
+/** Recovery-only write that deliberately skips derived indexed-context and project-memory updates. */
 export async function replaceRulesetSnapshot(
   projectId: string,
   ruleset: StoredRuleset | null
@@ -170,7 +170,7 @@ export async function deleteRuleset(
           const rag = await getRAGService(targetProjectId);
           await rag.deleteDocument(rulesetId);
         } catch (error) {
-          console.warn('Failed to delete ruleset from RAG', error);
+          console.warn('Failed to remove ruleset from indexed context', error);
         }
         emitShodhMemoriesUpdated();
       };

@@ -151,7 +151,7 @@ export const WorldBibleCharacterHealth = (props: WorldBibleCharacterHealthProps)
                         </div>
 
                         <div className={styles.characterHealthCard}>
-                          <strong>Shodh memory</strong>
+                          <strong>Project memory</strong>
                           {currentEntityMemories.length > 0 ? (
                             <ul className={styles.characterHealthList}>
                               {currentEntityMemories.slice(0, 5).map((memory) => (
@@ -197,7 +197,7 @@ export const WorldBibleCharacterHealth = (props: WorldBibleCharacterHealthProps)
 
                       {characterHealthProbeResults.length > 0 && (
                         <div className={styles.characterHealthProbeResults}>
-                          <strong>RAG probe hits</strong>
+                          <strong>Indexed context probe hits</strong>
                           <ul className={styles.characterHealthList}>
                             {characterHealthProbeResults.map((result) => (
                               <li key={result.chunk.id}>

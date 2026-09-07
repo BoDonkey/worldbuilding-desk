@@ -94,7 +94,7 @@ export class RAGService implements RAGProvider {
     options?: {tags?: string[]; entityIds?: string[]}
   ): Promise<void> {
     if (!isProjectRagDocumentType(type)) {
-      throw new Error(`Unsupported project RAG document type: ${String(type)}`);
+      throw new Error(`Unsupported project document type: ${String(type)}`);
     }
     const normalized = this.normalizeContent(content);
     await this.deleteDocument(documentId);
@@ -270,7 +270,7 @@ export class RAGService implements RAGProvider {
 
   private requireDb(): IDBPDatabase<RAGDatabase> {
     if (!this.db) {
-      throw new Error('RAG database has not been initialized');
+      throw new Error('Indexed context database has not been initialized');
     }
     return this.db;
   }

@@ -162,6 +162,14 @@ Under the hood, the app still includes rich systems for world data, rules, chara
   while a hosted provider receives the necessary text under its own terms,
   only when invoked. The assistant's "provider not configured" notice now
   links directly to Settings instead of leaving the author to find it.
+- Internal codenames and ML jargon are retired from rendered UI: "Shodh
+  memories" reads as "Project memory," "RAG documents"/"Inherit RAG data"
+  read as "Indexed context"/"Inherit indexed context," and the canon
+  rubber-duck panel reads "Think it through." Internal service, type, and
+  identifier names (`ShodhMemoryService`, `RAGProvider`, `inheritShodh`,
+  etc.) are unchanged — this was a string-layer, behavior-preserving sweep.
+  A source-scanning test asserts the retired standalone words never
+  reappear.
 
 ### Story Context Systems
 - World Bible with dynamic categories and custom field schemas.
@@ -594,6 +602,23 @@ runtime schema, and nothing here changes the roadmap's status board.
 ## Verification Status
 
 ### Verified Recently
+- Slice 5.10 author-facing vocabulary sweep: retired "Shodh," standalone
+  "RAG," and "Rubber-Duck" from every rendered string found across a full
+  source sweep (JSX text, help copy, empty-state/error strings, plus a few
+  developer-facing comments and thrown-error/console messages caught along
+  the way) — "Shodh memories" → "Project memory," "RAG documents" →
+  "Indexed context," "Inherit RAG data" → "Inherit indexed context" (and
+  its inconsistent neighbor "Inherit memories" → "Inherit project memory"
+  for the same concept), "Rubber-Duck AI" → "Think it through." Internal
+  service/type/identifier names (`ShodhMemoryService`, `RAGProvider`,
+  `inheritShodh`, `getRAGService`, etc.) are unchanged — string-layer only,
+  behavior-preserving. New `vocabulary.test.ts` scans all non-test
+  `.ts`/`.tsx` source for the retired words as standalone tokens (word-
+  boundary regex, so compound identifiers like `ShodhMemoryService` are
+  correctly excluded) so they cannot silently return. Lint with 1 baseline
+  warning; 500 web (+4 new) + 6 engine + 12 UI tests; web/desktop builds;
+  full Cypress suite 72/73 (the one failure is the same confirmed
+  pre-existing, unrelated flake noted against 1.5/4.20/4.22/5.4/5.5).
 - Slice 5.5 AI provider setup UX hardening: `AISettings.tsx` now has a real
   "Test connection" action per provider (a single-token completion for
   Anthropic/OpenAI/Gemini, reachability + installed-model check for
