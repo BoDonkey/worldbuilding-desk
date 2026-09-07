@@ -240,7 +240,7 @@ and required revisit point, `WIP`, `Done <commit>`.
 | 5.7 | Trial + license key gate | 5 | M | — |
 | 5.8 | Help/docs baseline | 5 | S | — |
 | 5.9 | Landing page + demo assets | 5 | M | — |
-| 5.10 | Author-facing vocabulary sweep | 5 | XS | WIP — string-layer only, behavior-preserving; retires `Shodh`/`RAG`/`Rubber-Duck` from rendered UI; source-scanning test guards against regression ([review](archive/ux-ai-review-2026-08-29.md) §A3) |
+| 5.10 | Author-facing vocabulary sweep | 5 | XS | Done `69e6559` — string-layer only, behavior-preserving; retires `Shodh`/`RAG`/`Rubber-Duck` from rendered UI including the review's named "Inherit RAG data"/"Inherit memories" inconsistency; source-scanning test guards against regression; lint with 1 baseline warning; 500 web + 6 engine + 12 UI tests; web/desktop builds; Cypress 72/73 ([review](archive/ux-ai-review-2026-08-29.md) §A3) |
 | 5.12 | App-shell toast viewport + status live region | 5 | S | — lifts the Workspace-only toast to the shell and adds the missing async announcements ([review](archive/ux-ai-review-2026-08-29.md) §A5, §A6) |
 | 6.1 | Beta build + cohort recruitment | 6 | M | — |
 | 6.2 | Beta feedback triage + fix slices | 6 | ? | — |
