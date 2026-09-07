@@ -149,6 +149,19 @@ Under the hood, the app still includes rich systems for world data, rules, chara
   reachable directly from Projects at any time. Dismissal persists per
   project; the automatic first-project creation is a true one-time check,
   never re-triggered by later deleting all projects.
+- AI provider setup in Settings is now a short Setup section (provider,
+  data-flow disclosure, model, the one API key field the selected provider
+  actually needs, Test connection) plus a collapsed Advanced section
+  (Ollama base URL, Lore Inspector review-engine/consultation/budget
+  controls, relabeled in author language). Test connection makes one real,
+  cheap call per provider — a single-token completion for hosted providers,
+  a reachability + installed-model check for Ollama — and reports success,
+  a rejected key, or an unreachable provider in plain language; no request
+  runs just to discover whether configuration works outside that explicit
+  action. The provider select states plainly that Ollama stays on-device
+  while a hosted provider receives the necessary text under its own terms,
+  only when invoked. The assistant's "provider not configured" notice now
+  links directly to Settings instead of leaving the author to find it.
 
 ### Story Context Systems
 - World Bible with dynamic categories and custom field schemas.
@@ -581,6 +594,28 @@ runtime schema, and nothing here changes the roadmap's status board.
 ## Verification Status
 
 ### Verified Recently
+- Slice 5.5 AI provider setup UX hardening: `AISettings.tsx` now has a real
+  "Test connection" action per provider (a single-token completion for
+  Anthropic/OpenAI/Gemini, reachability + installed-model check for
+  Ollama — previously only Ollama made a real network call, the hosted
+  providers just confirmed a key was present locally) with plain-language
+  success/rejected-key/unreachable results, a two-tier Setup/Advanced
+  split (only the selected provider's key field shows; base URL and Lore
+  Inspector budget/policy controls move behind an explicit "Show advanced
+  settings" toggle — not a nested `<details>`, which collides with the
+  Settings page's own section-toggle convention and its Cypress helper),
+  three author-facing relabels named by the review (context chars → how
+  much story context to send; low-cost model override → cheaper model for
+  routine checks; project review engine → who checks your draft), an
+  on-device-vs-hosted data-flow disclosure next to the provider picker, and
+  an actionable "Open Settings" link on the assistant's not-configured
+  notice. New services/llm/connectionTest.ts carries the real-call logic
+  (11 unit tests) rather than embedding it in the settings component,
+  which had zero test coverage before this slice. Lint with 1 baseline
+  warning; 496 web (+11 new) + 6 engine + 12 UI tests; web/desktop builds;
+  full Cypress suite 73/73, including new ai-provider-setup.cy.ts (6/6)
+  and an existing post-merge-smoke.cy.ts case updated for the new
+  labels/copy.
 - Slice 5.4 progressive first-run onboarding + sample project: a truly
   fresh install (zero projects, one-time check, guarded against ever
   re-triggering) now auto-creates a blank draft-ready project and lands in

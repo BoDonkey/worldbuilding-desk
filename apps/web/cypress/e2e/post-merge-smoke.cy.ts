@@ -723,19 +723,19 @@ describe('Post-merge smoke checklist', () => {
         .as('fetchStub');
     });
 
-    cy.contains('label', 'Active Provider').parent().find('select').select('Ollama (Local)');
-    cy.contains('label', 'Default Model').parent().find('input').clear();
-    cy.contains('button', 'Run Provider Diagnostics').click();
+    cy.contains('label', 'Provider').parent().find('select').select('Ollama (Local)');
+    cy.contains('label', 'Model').parent().find('input').clear();
+    cy.contains('button', 'Test connection').click();
 
-    cy.contains('strong', 'Ollama diagnostics passed.').should('be.visible');
+    cy.contains('strong', 'Ollama connection succeeded.').should('be.visible');
     cy.contains('Connected to http://localhost:11434.').should('be.visible');
     cy.contains('Detected 2 installed model(s).').should('be.visible');
-    cy.contains('No explicit model configured. Runtime will auto-detect "llama3.2:latest".').should(
+    cy.contains('No explicit model configured. The app will auto-detect "llama3.2:latest".').should(
       'be.visible'
     );
 
     cy.contains('button', 'Use llama3.2:latest').click();
-    cy.contains('label', 'Default Model').parent().find('input').should('have.value', 'llama3.2:latest');
+    cy.contains('label', 'Model').parent().find('input').should('have.value', 'llama3.2:latest');
   });
 
   it('exports, validates, and imports a project backup with count check success', () => {

@@ -150,6 +150,10 @@
   font-size: var(--font-size-lg);
 }
 
+.toolsSection > .field:first-of-type {
+  margin-top: 0.75rem;
+}
+
 .textarea {
   width: 100%;
   max-width: 700px;

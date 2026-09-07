@@ -9,10 +9,10 @@ import type {
 import styles from '../../assets/components/Settings/AISettingsForm.module.css';
 import {
   PROVIDER_DEFAULT_BASE_URLS,
-  PROVIDER_FALLBACK_MODELS,
   PROVIDER_MODEL_PLACEHOLDERS,
   normalizeConfiguredModel
 } from '../../services/llm/providerConfig';
+import {testHostedProviderConnection, testOllamaConnection} from '../../services/llm/connectionTest';
 import {useConfirmDialog} from '../../hooks/useConfirmDialog';
 import {InlineAlert, type InlineAlertVariant} from '../common';
 
@@ -99,6 +99,7 @@ export const AISettings: React.FC<AISettingsProps> = ({
   const [editingToolContent, setEditingToolContent] = useState('');
   const [defaultsMode, setDefaultsMode] = useState<ProjectMode>(projectMode);
   const [isRunningDiagnostics, setIsRunningDiagnostics] = useState(false);
+  const [showAdvanced, setShowAdvanced] = useState(false);
   const {requestConfirm, confirmDialog} = useConfirmDialog();
   const [statusMessage, setStatusMessage] = useState<
     {variant: InlineAlertVariant; message: string} | null
@@ -154,9 +155,9 @@ export const AISettings: React.FC<AISettingsProps> = ({
       prev
         ? {
             tone: 'notice',
-            summary: `Selected "${model || 'automatic model detection'}". Run diagnostics again to verify this configuration.`,
+            summary: `Selected "${model || 'automatic model detection'}". Test the connection again to verify this configuration.`,
             details: [
-              'The previous diagnostics result was for the old model setting.',
+              'The previous test result was for the old model setting.',
               'The model field has been updated, but this new configuration has not been checked yet.'
             ],
             detectedModels: prev.detectedModels
@@ -186,119 +187,27 @@ export const AISettings: React.FC<AISettingsProps> = ({
     handleModelChange(model, {markDiagnosticsStale: true});
   };
 
-  const handleRunDiagnostics = async () => {
+  const handleTestConnection = async () => {
     const provider = aiSettings.provider;
-    const details: string[] = [];
     setIsRunningDiagnostics(true);
     setDiagnostics(null);
 
-    try {
-      if (provider === 'anthropic') {
-        const hasKey = Boolean(anthropicKey.trim() || localStorage.getItem('anthropic_api_key'));
-        if (!hasKey) {
-          throw new Error('Anthropic API key is missing.');
-        }
-        details.push('API key present.');
-        details.push(
-          currentModel.trim()
-            ? `Configured model: ${currentModel.trim()}.`
-            : `No explicit model configured. Fallback: ${PROVIDER_FALLBACK_MODELS.anthropic}.`
-        );
-        details.push('Live API probing is not attempted here; this check validates local configuration.');
-        setDiagnostics({
-          tone: 'success',
-          summary: 'Anthropic configuration looks usable.',
-          details
-        });
-        return;
-      }
+    const result =
+      provider === 'ollama'
+        ? await testOllamaConnection({baseUrl: currentBaseUrl, model: currentModel})
+        : await testHostedProviderConnection({
+            providerId: provider,
+            apiKey:
+              provider === 'anthropic'
+                ? anthropicKey || localStorage.getItem('anthropic_api_key') || ''
+                : provider === 'openai'
+                  ? openaiKey || localStorage.getItem('openai_api_key') || ''
+                  : geminiKey || localStorage.getItem('gemini_api_key') || '',
+            model: currentModel
+          });
 
-      if (provider === 'openai') {
-        const hasKey = Boolean(openaiKey.trim() || localStorage.getItem('openai_api_key'));
-        if (!hasKey) {
-          throw new Error('OpenAI API key is missing.');
-        }
-        details.push('API key present.');
-        details.push(
-          currentModel.trim()
-            ? `Configured model: ${currentModel.trim()}.`
-            : `No explicit model configured. Fallback: ${PROVIDER_FALLBACK_MODELS.openai}.`
-        );
-        details.push('Live API probing is not attempted here; this check validates local configuration.');
-        setDiagnostics({
-          tone: 'success',
-          summary: 'OpenAI configuration looks usable.',
-          details
-        });
-        return;
-      }
-
-      if (provider === 'gemini') {
-        const hasKey = Boolean(geminiKey.trim() || localStorage.getItem('gemini_api_key'));
-        if (!hasKey) {
-          throw new Error('Gemini API key is missing.');
-        }
-        details.push('API key present.');
-        details.push(
-          currentModel.trim()
-            ? `Configured model: ${currentModel.trim()}.`
-            : `No explicit model configured. Fallback: ${PROVIDER_FALLBACK_MODELS.gemini}.`
-        );
-        details.push('Live API probing is not attempted here; this check validates local configuration.');
-        setDiagnostics({
-          tone: 'success',
-          summary: 'Gemini configuration looks usable.',
-          details
-        });
-        return;
-      }
-
-      const baseUrl =
-        currentBaseUrl?.trim() || PROVIDER_DEFAULT_BASE_URLS.ollama || 'http://localhost:11434';
-      const response = await fetch(`${baseUrl.replace(/\/$/, '')}/api/tags`);
-      if (!response.ok) {
-        throw new Error(`Ollama responded with ${response.status} ${response.statusText}.`);
-      }
-      const data = await response.json();
-      const detectedModels = Array.isArray(data.models)
-        ? data.models
-            .map((entry: {name?: unknown}) =>
-              typeof entry?.name === 'string' ? entry.name.trim() : ''
-            )
-            .filter(Boolean)
-        : [];
-      if (detectedModels.length === 0) {
-        throw new Error('Connected to Ollama, but no local models are installed.');
-      }
-      details.push(`Connected to ${baseUrl}.`);
-      details.push(`Detected ${detectedModels.length} installed model(s).`);
-      if (currentModel.trim()) {
-        details.push(
-          detectedModels.includes(currentModel.trim())
-            ? `Configured model "${currentModel.trim()}" is installed.`
-            : `Configured model "${currentModel.trim()}" is not installed locally.`
-        );
-      } else {
-        details.push(`No explicit model configured. Runtime will auto-detect "${detectedModels[0]}".`);
-      }
-      setDiagnostics({
-        tone: currentModel.trim() && !detectedModels.includes(currentModel.trim()) ? 'error' : 'success',
-        summary:
-          currentModel.trim() && !detectedModels.includes(currentModel.trim())
-            ? 'Ollama is reachable, but the configured model is not installed.'
-            : 'Ollama diagnostics passed.',
-        details,
-        detectedModels
-      });
-    } catch (error) {
-      setDiagnostics({
-        tone: 'error',
-        summary: error instanceof Error ? error.message : 'Diagnostics failed.',
-        details
-      });
-    } finally {
-      setIsRunningDiagnostics(false);
-    }
+    setDiagnostics(result);
+    setIsRunningDiagnostics(false);
   };
 
   const currentProviderConfig = aiSettings.configs[aiSettings.provider] ?? {};
@@ -640,97 +549,208 @@ export const AISettings: React.FC<AISettingsProps> = ({
           autoDismissMs={statusMessage.variant === 'error' ? undefined : 4000}
         />
       )}
-      <div className={styles.field}>
-        <label className={styles.label}>Active Provider</label>
-        <select
-          className={styles.input}
-          value={aiSettings.provider}
-          onChange={(e) => handleProviderChange(e.target.value as AIProviderId)}
-        >
-          {(['anthropic', 'openai', 'gemini', 'ollama'] as AIProviderId[]).map((provider) => (
-            <option key={provider} value={provider}>
-              {PROVIDER_LABELS[provider]}
-            </option>
-          ))}
-        </select>
-        <p className={styles.help}>
-          Choose which LLM provider the writing assistant should use. Additional providers will be added over time.
-        </p>
+      <div className={styles.toolsSection}>
+        <h3 className={styles.toolsHeading}>Setup</h3>
+        <div className={styles.field}>
+          <label className={styles.label}>Provider</label>
+          <select
+            className={styles.input}
+            value={aiSettings.provider}
+            onChange={(e) => handleProviderChange(e.target.value as AIProviderId)}
+          >
+            {(['anthropic', 'openai', 'gemini', 'ollama'] as AIProviderId[]).map((provider) => (
+              <option key={provider} value={provider}>
+                {PROVIDER_LABELS[provider]}
+              </option>
+            ))}
+          </select>
+          <p className={styles.help}>
+            {aiSettings.provider === 'ollama'
+              ? 'Ollama runs entirely on your device. No story text ever leaves your computer.'
+              : `When you use the writing assistant, the necessary text is sent to ${PROVIDER_LABELS[aiSettings.provider]}'s servers under that provider's terms — only when you invoke it, never in the background.`}
+          </p>
+        </div>
+
+        <div className={styles.field}>
+          <label className={styles.label}>Model</label>
+          <input
+            type='text'
+            className={styles.input}
+            value={currentModel}
+            onChange={(e) => handleModelChange(e.target.value, {markDiagnosticsStale: true})}
+            placeholder={PROVIDER_MODEL_PLACEHOLDERS[aiSettings.provider]}
+          />
+          <p className={styles.help}>
+            Leave blank to use the app default{aiSettings.provider === 'ollama' ? ' — Ollama will auto-detect an installed local model' : ''}.
+          </p>
+        </div>
+
+        {aiSettings.provider === 'anthropic' && (
+          <div className={styles.field}>
+            <label className={styles.label}>Anthropic API Key (Claude)</label>
+            <input
+              type='password'
+              value={anthropicKey}
+              onChange={(e) => {
+                setAnthropicKey(e.target.value);
+                setApiKeysSaved(false);
+              }}
+              placeholder='sk-ant-...'
+              className={styles.input}
+            />
+            <p className={styles.help}>
+              Get your key from{' '}
+              <a href='https://console.anthropic.com' target='_blank' rel='noopener noreferrer'>
+                console.anthropic.com
+              </a>
+            </p>
+          </div>
+        )}
+        {aiSettings.provider === 'openai' && (
+          <div className={styles.field}>
+            <label className={styles.label}>OpenAI API Key (GPT & embeddings)</label>
+            <input
+              type='password'
+              value={openaiKey}
+              onChange={(e) => {
+                setOpenaiKey(e.target.value);
+                setApiKeysSaved(false);
+              }}
+              placeholder='sk-...'
+              className={styles.input}
+            />
+            <p className={styles.help}>
+              Get your key from{' '}
+              <a href='https://platform.openai.com' target='_blank' rel='noopener noreferrer'>
+                platform.openai.com
+              </a>
+            </p>
+          </div>
+        )}
+        {aiSettings.provider === 'gemini' && (
+          <div className={styles.field}>
+            <label className={styles.label}>Gemini API Key</label>
+            <input
+              type='password'
+              value={geminiKey}
+              onChange={(e) => {
+                setGeminiKey(e.target.value);
+                setApiKeysSaved(false);
+              }}
+              placeholder='AIza...'
+              className={styles.input}
+            />
+            <p className={styles.help}>
+              Get your key from{' '}
+              <a href='https://aistudio.google.com/app/apikey' target='_blank' rel='noopener noreferrer'>
+                Google AI Studio
+              </a>
+            </p>
+          </div>
+        )}
+
+        <div className={styles.apiKeyActions}>
+          <button
+            type='button'
+            className={styles.secondaryButton}
+            onClick={() => void handleTestConnection()}
+            disabled={isRunningDiagnostics}
+          >
+            {isRunningDiagnostics ? 'Testing connection...' : 'Test connection'}
+          </button>
+          {aiSettings.provider !== 'ollama' && (
+            <>
+              <button onClick={handleSaveKeys} className={styles.saveButton}>
+                Save API Keys
+              </button>
+              {apiKeysSaved && (
+                <InlineAlert
+                  variant='success'
+                  message='API keys saved.'
+                  onDismiss={() => setApiKeysSaved(false)}
+                  autoDismissMs={4000}
+                />
+              )}
+            </>
+          )}
+        </div>
+
+        {diagnostics && (
+          <div
+            className={`${styles.diagnosticsPanel} ${
+              diagnostics.tone === 'error'
+                ? styles.diagnosticsError
+                : diagnostics.tone === 'notice'
+                  ? styles.diagnosticsNotice
+                  : styles.diagnosticsSuccess
+            }`}
+          >
+            <strong>{diagnostics.summary}</strong>
+            <ul>
+              {diagnostics.details.map((detail) => (
+                <li key={detail}>{detail}</li>
+              ))}
+            </ul>
+            {aiSettings.provider === 'ollama' && diagnostics.detectedModels?.length ? (
+              <div className={styles.detectedModelActions}>
+                {diagnostics.detectedModels.slice(0, 6).map((model) => (
+                  <button
+                    key={model}
+                    type='button'
+                    className={styles.secondaryButton}
+                    onClick={() => handleUseDetectedModel(model)}
+                  >
+                    Use {model}
+                  </button>
+                ))}
+              </div>
+            ) : null}
+          </div>
+        )}
       </div>
 
-      <div className={styles.field}>
-        <label className={styles.label}>Default Model</label>
-        <input
-          type='text'
-          className={styles.input}
-          value={currentModel}
-          onChange={(e) => handleModelChange(e.target.value, {markDiagnosticsStale: true})}
-          placeholder={PROVIDER_MODEL_PLACEHOLDERS[aiSettings.provider]}
-        />
-        <p className={styles.help}>
-          Set a provider-specific model override. Leaving this blank uses the app fallback,
-          and Ollama will auto-detect an installed local model.
-        </p>
-      </div>
-
-      <div className={styles.field}>
+      <div className={styles.toolsSection}>
         <button
           type='button'
           className={styles.secondaryButton}
-          onClick={() => void handleRunDiagnostics()}
-          disabled={isRunningDiagnostics}
+          onClick={() => setShowAdvanced((prev) => !prev)}
+          aria-expanded={showAdvanced}
         >
-          {isRunningDiagnostics ? 'Running Diagnostics...' : 'Run Provider Diagnostics'}
+          {showAdvanced ? 'Hide advanced settings' : 'Show advanced settings'}
         </button>
-      </div>
 
-      {diagnostics && (
-        <div
-          className={`${styles.diagnosticsPanel} ${
-            diagnostics.tone === 'error'
-              ? styles.diagnosticsError
-              : diagnostics.tone === 'notice'
-                ? styles.diagnosticsNotice
-                : styles.diagnosticsSuccess
-          }`}
-        >
-          <strong>{diagnostics.summary}</strong>
-          <ul>
-            {diagnostics.details.map((detail) => (
-              <li key={detail}>{detail}</li>
-            ))}
-          </ul>
-          {aiSettings.provider === 'ollama' && diagnostics.detectedModels?.length ? (
-            <div className={styles.detectedModelActions}>
-              {diagnostics.detectedModels.slice(0, 6).map((model) => (
-                <button
-                  key={model}
-                  type='button'
-                  className={styles.secondaryButton}
-                  onClick={() => handleUseDetectedModel(model)}
-                >
-                  Use {model}
-                </button>
-              ))}
-              {diagnostics.tone === 'notice' && (
-                <button
-                  type='button'
-                  className={styles.saveButton}
-                  onClick={() => void handleRunDiagnostics()}
-                  disabled={isRunningDiagnostics}
-                >
-                  {isRunningDiagnostics ? 'Running Diagnostics...' : 'Run Diagnostics Again'}
-                </button>
-              )}
-            </div>
-          ) : null}
-        </div>
-      )}
+        {showAdvanced && (
+          <>
+        {aiSettings.provider === 'ollama' && (
+          <div className={styles.field}>
+            <label className={styles.label}>Ollama Base URL</label>
+            <input
+              type='text'
+              className={styles.input}
+              value={currentBaseUrl ?? ''}
+              onChange={(e) =>
+                onSettingsChange({
+                  ...aiSettings,
+                  configs: {
+                    ...aiSettings.configs,
+                    ollama: {
+                      ...aiSettings.configs.ollama,
+                      baseUrl: e.target.value || PROVIDER_DEFAULT_BASE_URLS.ollama
+                    }
+                  }
+                })
+              }
+              placeholder={PROVIDER_DEFAULT_BASE_URLS.ollama}
+            />
+            <p className={styles.help}>
+              Only needed if Ollama runs somewhere other than this computer (default localhost).
+            </p>
+          </div>
+        )}
 
-      <div className={styles.toolsSection}>
         <h3 className={styles.toolsHeading}>Lore Inspector AI Guardrails</h3>
         <div className={styles.field}>
-          <label className={styles.label}>Project review engine</label>
+          <label className={styles.label}>Who checks your draft</label>
           <select
             className={styles.input}
             value={inspectorSettings.reviewEngineMode ?? 'deterministic'}
@@ -751,7 +771,7 @@ export const AISettings: React.FC<AISettingsProps> = ({
             <option value='local-ai-preview'>Local AI review annotations</option>
           </select>
           <p className={styles.help}>
-            Local AI mode uses the Ollama model configured below, keeps deterministic
+            Local AI mode uses the Ollama model configured above, keeps deterministic
             validation as the source of truth, and only enriches the per-issue review
             annotation layer.
           </p>
@@ -818,7 +838,7 @@ export const AISettings: React.FC<AISettingsProps> = ({
           />
         </div>
         <div className={styles.field}>
-          <label className={styles.label}>Max context chars per request</label>
+          <label className={styles.label}>How much story context to send</label>
           <input
             type='number'
             className={styles.input}
@@ -834,6 +854,7 @@ export const AISettings: React.FC<AISettingsProps> = ({
               })
             }
           />
+          <p className={styles.help}>Measured in characters of story context per request.</p>
         </div>
         <div className={styles.field}>
           <label className={styles.label}>Max response tokens</label>
@@ -854,7 +875,7 @@ export const AISettings: React.FC<AISettingsProps> = ({
           />
         </div>
         <div className={styles.field}>
-          <label className={styles.label}>Low-cost model override (optional)</label>
+          <label className={styles.label}>Cheaper model for routine checks (optional)</label>
           <input
             type='text'
             className={styles.input}
@@ -871,104 +892,7 @@ export const AISettings: React.FC<AISettingsProps> = ({
             placeholder='e.g., gpt-4o-mini'
           />
         </div>
-      </div>
-
-      {aiSettings.provider === 'ollama' && (
-        <div className={styles.field}>
-          <label className={styles.label}>Ollama Base URL</label>
-          <input
-            type='text'
-            className={styles.input}
-            value={currentBaseUrl ?? ''}
-            onChange={(e) =>
-              onSettingsChange({
-                ...aiSettings,
-                configs: {
-                  ...aiSettings.configs,
-                  ollama: {
-                    ...aiSettings.configs.ollama,
-                    baseUrl: e.target.value || PROVIDER_DEFAULT_BASE_URLS.ollama
-                  }
-                }
-              })
-            }
-            placeholder={PROVIDER_DEFAULT_BASE_URLS.ollama}
-          />
-          <p className={styles.help}>Point to the user’s Ollama instance (default localhost).</p>
-        </div>
-      )}
-
-      <div className={styles.field}>
-        <label className={styles.label}>Anthropic API Key (Claude)</label>
-        <input
-          type='password'
-          value={anthropicKey}
-          onChange={(e) => {
-            setAnthropicKey(e.target.value);
-            setApiKeysSaved(false);
-          }}
-          placeholder='sk-ant-...'
-          className={styles.input}
-        />
-        <p className={styles.help}>
-          Get your key from{' '}
-          <a href='https://console.anthropic.com' target='_blank' rel='noopener noreferrer'>
-            console.anthropic.com
-          </a>
-        </p>
-      </div>
-
-      <div className={styles.field}>
-        <label className={styles.label}>OpenAI API Key (GPT & embeddings)</label>
-        <input
-          type='password'
-          value={openaiKey}
-          onChange={(e) => {
-            setOpenaiKey(e.target.value);
-            setApiKeysSaved(false);
-          }}
-          placeholder='sk-...'
-          className={styles.input}
-        />
-        <p className={styles.help}>
-          Get your key from{' '}
-          <a href='https://platform.openai.com' target='_blank' rel='noopener noreferrer'>
-            platform.openai.com
-          </a>
-        </p>
-      </div>
-
-      <div className={styles.field}>
-        <label className={styles.label}>Gemini API Key</label>
-        <input
-          type='password'
-          value={geminiKey}
-          onChange={(e) => {
-            setGeminiKey(e.target.value);
-            setApiKeysSaved(false);
-          }}
-          placeholder='AIza...'
-          className={styles.input}
-        />
-        <p className={styles.help}>
-          Get your key from{' '}
-          <a href='https://aistudio.google.com/app/apikey' target='_blank' rel='noopener noreferrer'>
-            Google AI Studio
-          </a>
-        </p>
-      </div>
-
-      <div className={styles.apiKeyActions}>
-        <button onClick={handleSaveKeys} className={styles.saveButton}>
-          Save API Keys
-        </button>
-        {apiKeysSaved && (
-          <InlineAlert
-            variant='success'
-            message='API keys saved.'
-            onDismiss={() => setApiKeysSaved(false)}
-            autoDismissMs={4000}
-          />
+          </>
         )}
       </div>
 

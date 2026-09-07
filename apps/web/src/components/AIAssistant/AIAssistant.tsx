@@ -1,4 +1,5 @@
 import React, {useState, useRef, useEffect, useCallback, useId} from 'react';
+import {Link} from 'react-router';
 import styles from '../../assets/components/AIAssistant.module.css';
 import {LLMService} from '../../services/llm/LLMService';
 import type {RAGProvider} from '../../services/rag/RAGService';
@@ -662,7 +663,9 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
       )}
       {providerError && (
         <div className={styles.notice}>
-          <p>{providerError}</p>
+          <p>
+            {providerError} <Link to='/settings'>Open Settings</Link>
+          </p>
         </div>
       )}
       <div
