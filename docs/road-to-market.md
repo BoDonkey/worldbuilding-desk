@@ -234,7 +234,7 @@ and required revisit point, `WIP`, `Done <commit>`.
 | 5.1 | Auto-update decision + implementation | 5 | M | — |
 | 5.2 | Code signing + notarization, both platforms | 5 | M | — |
 | 5.3 | Packaged-app validation + Electron E2E | 5 | M | — |
-| 5.4 | Progressive first-run onboarding + sample project | 5 | L | WIP — one-time blank-project auto-create lands a fresh install in Workspace immediately; dismissible getting-started guide (marked projects only); bundled sample project trimmed from `fixtures/trust-dogfood/` with one self-contained factual conflict, reachable from the guide or Projects |
+| 5.4 | Progressive first-run onboarding + sample project | 5 | L | Done `a5644b1` — one-time blank-project auto-create lands a fresh install in Workspace immediately, no provider/ruleset setup first; dismissible getting-started guide shown only on first-run/sample projects; bundled sample project trimmed from `fixtures/trust-dogfood/` to one self-contained factual conflict the author resolves via the real extraction/canon-decision pipeline, reachable from the guide or Projects; lint with 1 baseline warning; 485 web + 6 engine + 12 UI tests; web/desktop builds; Cypress 66/67 (one confirmed-unrelated pre-existing flake) |
 | 5.5 | AI provider setup UX hardening | 5 | M | — re-sized S→M: this is a redesign, not polish. Test-connection action, two-tier setup/advanced disclosure, author-facing relabels ([review](archive/ux-ai-review-2026-08-29.md) §A2) |
 | 5.6 | Local-only error handling | 5 | S | — author-facing error descriptions plus copyable, redacted local diagnostics; no telemetry or automatic transmission |
 | 5.7 | Trial + license key gate | 5 | M | — |
