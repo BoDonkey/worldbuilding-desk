@@ -258,6 +258,8 @@ function CorkboardRoute() {
           dashboard={dashboard}
           status={dashboardStatus}
           onOpenScene={handleOpenScene}
+          projectId={activeProject.id}
+          aiConfig={projectSettings?.aiSettings}
         />
       ) : corkboardCards.length === 0 ? (
         <div className={styles.panel}>

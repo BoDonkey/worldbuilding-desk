@@ -107,6 +107,17 @@ Under the hood, the app still includes rich systems for world data, rules, chara
   co-movement plus explicitly tracked advancement rates/intervals. Every
   observation identifies its source scenes; general-fiction projects never
   show mechanics analysis, and dashboard results cannot be edited.
+- A writing coach is reachable two ways, deliberately scoped differently.
+  Inline, an "Ask the writing coach" action lives beside the assistant's
+  existing scene-revision and Source Note actions, scoped to the current
+  selection or (with nothing selected) the open scene. In the Story
+  Dashboard, a "Writing coach" section asks about the whole manuscript's
+  shape using only the dashboard's own deterministic measurements — never
+  raw scene prose. Both pair cited, labeled craft-library reference material
+  (never presented as canon) with the evidence given; both are strictly
+  author-triggered, share the project's daily AI-consultation budget, and
+  are read-only advice — the only follow-up action is the existing
+  propose-preview-confirm surface (save as a draft Source Note).
 - App-shell search is now visibly exposed and returns unified scene plus World Bible results.
 - Pending Mechanics completion counts now aggregate onto the `More` navigation
   control at both desktop and narrow breakpoints, keeping optional-system work
@@ -506,14 +517,19 @@ Under the hood, the app still includes rich systems for world data, rules, chara
   that the checked-in bundle matches the reviewed source. The bundle is
   generated as a `.json` data file loaded by a small stable TS loader rather
   than an inline object literal, because a literal at this size overflows
-  TypeScript's structural checker (`TS2590`).
+  TypeScript's structural checker (`TS2590`). The writing coach (Slice 4.20)
+  is the corpus's first real consumer; `getCraftLibraryService` now loads the
+  manifest via a dynamic import so it ships as its own on-demand chunk rather
+  than bloating the main application bundle every page load downloads.
 
 ### Writing-coach craft library (draft content, parallel track)
 
 A draft coaching corpus is being produced under
 `content/craft-library/working/`, against the brief in
 `docs/writing-coach-corpus-production-handoff.md`. **This is content, not
-application truth** — no app code depends on it, it is not the Slice 4.17
+application truth** — the published subset app code depends on (Slice
+4.20's coach) is the reviewed `content/craft-library/published/library.json`
+tranche, never this working draft directly; it is not the Slice 4.17
 runtime schema, and nothing here changes the roadmap's status board.
 
 - **166 records** as of 2026-09-05 (54 `general`, 48 `system`, 46 `trope`,
@@ -538,6 +554,23 @@ runtime schema, and nothing here changes the roadmap's status board.
 ## Verification Status
 
 ### Verified Recently
+- Slice 4.20 writing coach experience: an inline "Ask the writing coach"
+  action (scoped to the current selection, or the open scene when nothing is
+  selected) and a Story Dashboard "Writing coach" section (scoped to
+  deterministic manuscript-wide measurements, never raw scene prose) both
+  pair cited craft-library reference material with the given evidence,
+  sharing the project's daily AI-consultation budget and the 1.5
+  propose-preview-confirm surface for their only follow-up action (save as a
+  draft Source Note). `getCraftLibraryService` now loads its multi-megabyte
+  manifest via dynamic import instead of a static one, keeping the corpus's
+  first real consumer from bloating the main bundle. Lint with 1 baseline
+  warning; 452 web (+7 new) + 6 engine + 12 UI tests; web/desktop builds;
+  Cypress 62/63 full run, including new coverage in ai-scene-revision.cy.ts
+  and corkboard-route.cy.ts, whose lone remaining failure is the same
+  confirmed-unrelated pre-existing flake noted for Slice 1.5. Along the way,
+  fixed a real layout bug the new inline button exposed: the assistant's
+  action row could overflow and cover the Send button at narrower widths
+  (`AIAssistant.module.css` `.actions` now wraps).
 - Slice 1.5 shared AI proposal surface is complete: assistant output can be
   captured as a draft Source Note, and the canon rubber-duck can prefill its
   decision from a deterministic, position-anchored `Suggested Action:` tag

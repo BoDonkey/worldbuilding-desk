@@ -33,6 +33,16 @@ import {
   selectWorldBibleContextForPrompt,
   stripAssistantThinking
 } from './AIAssistant.helpers';
+import {getInspectorConsultationUsage, incrementInspectorConsultationUsage} from '../../services/editor';
+import {getCraftLibraryService} from '../../services/craft/getCraftLibraryService';
+import {
+  buildCraftContextChunks,
+  buildCraftLibrarySearchQuery,
+  buildWritingCoachPrompt,
+  dedupeCraftCitations,
+  type WritingCoachScope
+} from '../../services/coach/writingCoachConsultation';
+import {CraftCitationList} from '../CraftCitationList';
 
 interface AIAssistantProps {
   projectId: string;
@@ -45,6 +55,9 @@ interface AIAssistantProps {
   };
   onInsert?: (text: string) => void;
   onCaptureSourceNote?: (text: string) => void;
+  /** Full text of the currently open scene, used only as writing-coach evidence when nothing
+   * is selected. Never sent to the ordinary project assistant prompt. */
+  sceneText?: string;
   onAssistantSelectionChange?: (text: string) => void;
   queuedPrompt?: string | null;
   onQueuedPromptConsumed?: () => void;
@@ -73,6 +86,7 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
   context,
   onInsert,
   onCaptureSourceNote,
+  sceneText,
   onAssistantSelectionChange,
   queuedPrompt,
   onQueuedPromptConsumed,
@@ -497,6 +511,119 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
     }
   };
 
+  const coachEvidence = selectedText || sceneText?.trim() || '';
+  const coachScope: WritingCoachScope = selectedText ? 'selection' : 'scene';
+  const coachEvidenceLabel = selectedText ? 'Selected passage' : 'Current scene';
+  const inspectorSettings = aiConfig?.inspectorSettings;
+  const coachConsultationEnabled = inspectorSettings?.enableAIConsultation !== false;
+
+  const handleAskCoach = useCallback(async () => {
+    if (!coachEvidence) return;
+    if (!llmService.current) {
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: 'assistant',
+          content: providerError || 'AI provider unavailable. Check your settings and try again.'
+        }
+      ]);
+      return;
+    }
+    if (!coachConsultationEnabled) {
+      setMessages((prev) => [
+        ...prev,
+        {role: 'assistant', content: 'AI consultation is disabled in Settings.'}
+      ]);
+      return;
+    }
+    const maxConsultations = inspectorSettings?.maxConsultationsPerDay ?? 20;
+    const used = getInspectorConsultationUsage(projectId);
+    if (used >= maxConsultations) {
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: 'assistant',
+          content: `AI consultation budget reached for today (${used}/${maxConsultations}).`
+        }
+      ]);
+      return;
+    }
+
+    setMessages((prev) => [
+      ...prev,
+      {
+        role: 'user',
+        content:
+          coachScope === 'selection'
+            ? 'Ask the writing coach about the selected passage.'
+            : 'Ask the writing coach about the current scene.'
+      }
+    ]);
+    setIsStreaming(true);
+    scrollMessagesToBottom();
+
+    try {
+      const craftLibrary = await getCraftLibraryService();
+      const searchQuery = buildCraftLibrarySearchQuery(coachEvidence);
+      const craftResults = await craftLibrary.search(searchQuery, 4);
+      const craftContext = buildCraftContextChunks(craftResults);
+      const craftCitations = dedupeCraftCitations(craftResults);
+      const {systemPrompt, userPrompt} = buildWritingCoachPrompt({
+        scope: coachScope,
+        evidenceLabel: coachEvidenceLabel,
+        evidenceText: coachEvidence
+      });
+
+      incrementInspectorConsultationUsage(projectId);
+
+      let rawAssistantMessage = '';
+      setMessages((prev) => [...prev, {role: 'assistant', content: '', craftCitations}]);
+      scrollMessagesToBottom();
+
+      for await (const chunk of llmService.current.stream({
+        messages: [{role: 'user', content: userPrompt}],
+        context: craftContext,
+        systemPrompt,
+        model: inspectorSettings?.lowCostModel?.trim() || undefined,
+        maxTokens: inspectorSettings?.maxResponseTokens,
+        think: false
+      })) {
+        rawAssistantMessage += chunk;
+        const assistantMessage = stripAssistantThinking(rawAssistantMessage);
+        setMessages((prev) => [
+          ...prev.slice(0, -1),
+          {
+            ...(prev[prev.length - 1]?.role === 'assistant'
+              ? prev[prev.length - 1]
+              : {role: 'assistant' as const, craftCitations}),
+            content: assistantMessage
+          }
+        ]);
+        scrollMessagesToBottom();
+      }
+    } catch (error) {
+      console.error('Writing coach request failed:', error);
+      setMessages((prev) => [
+        ...prev,
+        {role: 'assistant', content: 'The writing coach could not be reached. Try again.'}
+      ]);
+    } finally {
+      setIsStreaming(false);
+    }
+  }, [
+    coachConsultationEnabled,
+    coachEvidence,
+    coachEvidenceLabel,
+    coachScope,
+    inspectorSettings?.lowCostModel,
+    inspectorSettings?.maxConsultationsPerDay,
+    inspectorSettings?.maxResponseTokens,
+    projectId,
+    providerError,
+    scrollMessagesToBottom,
+    setMessages
+  ]);
+
   return (
     <div className={styles.container}>
       {showContextPreview && selectedText && (
@@ -557,6 +684,12 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
                 </ul>
               </details>
             ) : null}
+            {msg.role === 'assistant' && msg.craftCitations?.length ? (
+              <details className={styles.contextSources}>
+                <summary>Craft reference material (not your canon)</summary>
+                <CraftCitationList citations={msg.craftCitations} />
+              </details>
+            ) : null}
           </div>
         ))}
       </div>
@@ -599,6 +732,13 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
               Save as Source Note
             </button>
           )}
+          <button
+            onClick={() => void handleAskCoach()}
+            disabled={isStreaming || contextStatus !== 'ready' || !coachEvidence}
+            title={coachEvidence ? undefined : 'Select text or open a scene first'}
+          >
+            Ask the writing coach
+          </button>
         </div>
       </div>
     </div>

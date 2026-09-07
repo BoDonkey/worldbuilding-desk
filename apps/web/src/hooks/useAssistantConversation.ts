@@ -1,9 +1,14 @@
 import {useCallback, useEffect, useRef, useState} from 'react';
 import type {Dispatch, SetStateAction} from 'react';
 import type {LLMMessage} from '../services/llm/types';
+import type {CraftCitation} from '../services/craft/types';
 
 export type AssistantChatMessage = LLMMessage & {
   contextSources?: string[];
+  /** Present only on a writing-coach response: craft reference sources, kept
+   * visually distinct from contextSources because they are never the
+   * author's canon or manuscript evidence. */
+  craftCitations?: CraftCitation[];
 };
 
 const MAX_SAVED_MESSAGES = 100;
@@ -18,6 +23,14 @@ const getSessionStorage = (): Storage | null => {
   }
 };
 
+const isCraftCitation = (value: unknown): value is CraftCitation =>
+  Boolean(value) &&
+  typeof value === 'object' &&
+  typeof (value as Partial<CraftCitation>).id === 'string' &&
+  typeof (value as Partial<CraftCitation>).label === 'string' &&
+  ((value as Partial<CraftCitation>).url === undefined ||
+    typeof (value as Partial<CraftCitation>).url === 'string');
+
 const isAssistantChatMessage = (value: unknown): value is AssistantChatMessage => {
   if (!value || typeof value !== 'object') return false;
   const message = value as Partial<AssistantChatMessage>;
@@ -26,7 +39,9 @@ const isAssistantChatMessage = (value: unknown): value is AssistantChatMessage =
     typeof message.content === 'string' &&
     (message.contextSources === undefined ||
       (Array.isArray(message.contextSources) &&
-        message.contextSources.every((source) => typeof source === 'string')))
+        message.contextSources.every((source) => typeof source === 'string'))) &&
+    (message.craftCitations === undefined ||
+      (Array.isArray(message.craftCitations) && message.craftCitations.every(isCraftCitation)))
   );
 };
 

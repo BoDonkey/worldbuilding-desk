@@ -1043,6 +1043,7 @@ export function WorkspaceContextDrawer({
             context={activeAIContext ?? undefined}
             onInsert={previewSceneRevision}
             onCaptureSourceNote={setPendingSourceNoteCapture}
+            sceneText={currentDocument?.content}
             queuedPrompt={queuedAssistantPrompt}
             onQueuedPromptConsumed={() => setQueuedAssistantPrompt(null)}
             consultationModel={projectSettings?.aiSettings?.inspectorSettings?.lowCostModel}

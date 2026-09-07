@@ -21,6 +21,16 @@ describe('Reviewed assistant scene revisions', () => {
     cy.contains('strong', 'Replace selected scene text').should('be.visible');
   }
 
+  it('offers the inline writing coach with scene evidence, and keeps it enabled once text is selected', () => {
+    cy.contains('button', 'Context').click();
+    cy.contains('button', /^AI$/).click();
+    cy.contains('button', 'Ask the writing coach').should('be.visible').and('not.be.disabled');
+    cy.window().then((win) => win.dispatchEvent(new CustomEvent('ai-expand-request', {
+      detail: {selectedText: 'Alpha', from: 1, to: 6}
+    })));
+    cy.contains('button', 'Ask the writing coach').should('not.be.disabled');
+  });
+
   it('previews, dismisses, and confirms a replacement without automatic writes', () => {
     selectAlpha();
     cy.get('.tiptap[contenteditable="true"]').should('have.text', 'Alpha content');

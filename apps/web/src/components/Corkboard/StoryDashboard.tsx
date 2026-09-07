@@ -1,16 +1,20 @@
 import type {StoryDashboard as StoryDashboardData} from '../../services/dashboard/storyDashboard';
+import type {ProjectAISettings} from '../../entityTypes';
+import {WritingCoachSection} from './WritingCoachSection';
 import styles from '../../styles/CorkboardRoute.module.css';
 
 interface StoryDashboardProps {
   dashboard: StoryDashboardData;
   status: 'idle' | 'loading' | 'ready' | 'error';
   onOpenScene: (sceneId: string) => void;
+  projectId: string;
+  aiConfig?: ProjectAISettings;
 }
 
 const formatNumber = (value: number) => new Intl.NumberFormat().format(value);
 const formatPercent = (value: number) => `${Math.round(value * 100)}%`;
 
-export function StoryDashboard({dashboard, status, onOpenScene}: StoryDashboardProps) {
+export function StoryDashboard({dashboard, status, onOpenScene, projectId, aiConfig}: StoryDashboardProps) {
   if (status === 'loading' || status === 'idle') {
     return <div className={styles.derivedEmpty}>Reading manuscript and continuity data...</div>;
   }
@@ -155,6 +159,8 @@ export function StoryDashboard({dashboard, status, onOpenScene}: StoryDashboardP
       </section>
 
       {dashboard.mechanics && <MechanicsDashboard dashboard={dashboard} onOpenScene={onOpenScene} />}
+
+      <WritingCoachSection dashboard={dashboard} projectId={projectId} aiConfig={aiConfig} />
     </div>
   );
 }

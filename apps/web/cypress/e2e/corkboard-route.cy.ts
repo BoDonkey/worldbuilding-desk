@@ -69,6 +69,8 @@ describe('Corkboard route', () => {
     cy.contains('h2', 'Scene rhythm').should('be.visible');
     cy.contains('h3', 'Moonlit Betrayal').should('be.visible');
     cy.contains('Progression and co-movement').should('not.exist');
+    cy.contains('h2', 'Writing coach').should('be.visible');
+    cy.contains('button', 'Ask the coach').should('be.visible').and('not.be.disabled');
     cy.viewport(800, 900);
     cy.contains('h2', 'Story observations').should('be.visible');
     cy.contains('h2', 'Chapter rollups').should('be.visible');
