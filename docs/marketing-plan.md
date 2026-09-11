@@ -76,7 +76,8 @@ provider qualification. Preferred proof points:
 ## Pricing
 
 One-time purchase with a 14–30 day full-featured trial, via a
-merchant-of-record (Paddle / Lemon Squeezy). Anchors from the research:
+merchant-of-record (Paddle or Creem; provider evaluation remains open under
+road-to-market Slice 5.7). Anchors from the research:
 non-generative writing tools cluster at $4–15/mo subscription or $60–150
 one-time (Scrivener ≈ $60). BYOK means zero AI COGS, so one-time works.
 

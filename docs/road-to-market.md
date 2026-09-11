@@ -13,8 +13,8 @@ slices — referenced below as _[prompt: archive doc § slice]_).
 ## v1 Definition
 
 **v1 is a paid desktop app: one-time purchase with a free trial, sold through
-a merchant-of-record (Paddle or Lemon Squeezy) plus a simple landing page,
-preceded by a 4–8 week free beta with a small author cohort.**
+a merchant-of-record (Paddle or Creem, decision pending) plus a simple landing
+page, preceded by a 4–8 week free beta with a small author cohort.**
 
 Rationale: the app is local-first with BYOK AI providers (author-supplied API
 keys or local Ollama), so there are near-zero server costs — the
@@ -843,7 +843,16 @@ pattern without claiming that the manuscript was checked for it.
   paths.
 - **5.7 Trial + license key gate.** Merchant-of-record checkout, license key
   issuance/validation (offline-tolerant), trial period behavior, and a
-  restore-purchase path. Keep it thin; no accounts service.
+  restore-purchase path. Keep it thin; no accounts service. Before
+  implementation, compare Paddle and Creem (`creem.io`) for one-time desktop
+  purchases, hosted checkout and customer portal support, tax handling,
+  license issuance/validation and webhooks, refunds/chargebacks, pricing, and
+  restore-purchase ergonomics. Record the provider decision and integration
+  boundary in this slice; neither provider is selected yet. Preparatory
+  research is recorded in
+  [`research-payment-provider.md`](research-payment-provider.md): Creem is the
+  conditional sandbox favorite, but production selection waits on its listed
+  security, recovery, coverage, pricing, and operations gates.
 - **5.8 Help/docs baseline.** In-app or web help covering projects/backup,
   import, review workflow, World Bible/Lore model, AI setup, and the trust
   model in author language. Include a plain data-flow explanation: local
