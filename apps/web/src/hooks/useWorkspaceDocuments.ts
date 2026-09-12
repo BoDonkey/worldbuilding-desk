@@ -32,6 +32,7 @@ import {
 } from '../store/workspaceUiStore';
 import type {ConfirmRequest} from './useConfirmDialog';
 import {describeError} from '../services/errors';
+import {useStatusAnnouncement} from './useStatusAnnouncement';
 type SaveStatus = 'idle' | 'saving' | 'saved';
 type ImportMode = WorkspaceImportMode;
 
@@ -201,6 +202,7 @@ export const useWorkspaceDocuments = ({
     },
     [activeProject?.id, setStoreSelectedDocumentId]
   );
+  const announceStatus = useStatusAnnouncement();
   const [selectedCreatedAt, setSelectedCreatedAt] = useState<number | null>(null);
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
@@ -713,7 +715,11 @@ export const useWorkspaceDocuments = ({
         void save(doc, {
           source: 'workspace-autosave',
           consistencyMode: getWorkspaceAutosaveConsistencyMode(doc)
-        }).catch((error) => {
+        })
+          .then(() => {
+            announceStatus('Scene autosaved.');
+          })
+          .catch((error) => {
           const message =
             describeError(error, 'Unable to save scene.');
           setSaveStatus('idle');
@@ -728,7 +734,7 @@ export const useWorkspaceDocuments = ({
         clearTimeout(timeoutId);
       };
     },
-    [persistDocRef, setFeedback]
+    [announceStatus, persistDocRef, setFeedback]
   );
 
   useEffect(() => {

@@ -397,7 +397,8 @@ async function writeProjectSchemaVersion(
 
 export async function ensureProjectStorageCurrent(
   db: IDBDatabase,
-  project: Project
+  project: Project,
+  options: {onMigrated?: (report: ProjectMigrationReport) => void} = {}
 ): Promise<Project> {
   const storedVersion = project.storageSchemaVersion ?? LEGACY_PROJECT_SCHEMA_VERSION;
   let currentProject = project;
@@ -421,6 +422,10 @@ export async function ensureProjectStorageCurrent(
       currentProject = await writeProjectSchemaVersion(db, currentProject, version);
     }
   });
+
+  if (report.appliedVersions.length > 0) {
+    options.onMigrated?.(report);
+  }
 
   if (report.appliedVersions.length === 0 && project.storageSchemaVersion === undefined) {
     currentProject = await writeProjectSchemaVersion(

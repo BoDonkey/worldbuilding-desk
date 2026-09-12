@@ -1,4 +1,4 @@
-import {useState} from 'react';
+import {useId, useState} from 'react';
 import type {EntityCategory} from '../../entityTypes';
 import styles from './WorldCategorySelect.module.css';
 import {describeError} from '../../services/errors';
@@ -24,6 +24,7 @@ export function WorldCategorySelect({
   const [draftName, setDraftName] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState('');
+  const errorId = useId();
 
   const closeCreator = () => {
     setIsCreating(false);
@@ -86,6 +87,8 @@ export function WorldCategorySelect({
               }}
               placeholder='New type (e.g., Factions)'
               aria-label='New World Bible type name'
+              aria-invalid={error ? true : undefined}
+              aria-describedby={error ? errorId : undefined}
               autoFocus
             />
             <button
@@ -99,7 +102,7 @@ export function WorldCategorySelect({
               Cancel
             </button>
           </div>
-          {error ? <p className={styles.error} role='status'>{error}</p> : null}
+          {error ? <p id={errorId} className={styles.error} role='alert'>{error}</p> : null}
         </>
       ) : null}
     </div>

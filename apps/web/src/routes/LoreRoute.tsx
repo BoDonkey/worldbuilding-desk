@@ -73,6 +73,8 @@ import {PageHeader} from '../components/PageHeader';
 import styles from '../styles/LoreRoute.module.css';
 import {useConfirmDialog} from '../hooks/useConfirmDialog';
 import {describeError} from '../services/errors';
+import {useStatusAnnouncement} from '../hooks/useStatusAnnouncement';
+import {RouteFeedback} from '../components/common';
 
 type LinkDraft = {
   targetType: 'character' | 'entity';
@@ -147,6 +149,7 @@ function LoreRoute() {
   const [isImporting, setIsImporting] = useState(false);
   const [saving, setSaving] = useState(false);
   const [extractingId, setExtractingId] = useState<string | null>(null);
+  const announceStatus = useStatusAnnouncement();
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [actingProposalId, setActingProposalId] = useState<string | null>(null);
   const [actingEntityProposalId, setActingEntityProposalId] = useState<string | null>(null);
@@ -667,6 +670,7 @@ function LoreRoute() {
     }
     setExtractingId(document.id);
     setFeedback(null);
+    announceStatus('Extracting facts from this Source Note.');
     try {
       const links = linksByDocumentId.get(document.id) ?? [];
       const nextEntityProposals = extractLoreEntityProposals({
@@ -724,6 +728,7 @@ function LoreRoute() {
       setFeedback({tone: 'error', message});
     } finally {
       setExtractingId(null);
+      announceStatus('Extraction finished.');
     }
   };
 
@@ -1241,16 +1246,7 @@ function LoreRoute() {
         onChange={handleImport}
       />
 
-      {feedback ? (
-        <p
-          className={`${styles.feedback} ${
-            feedback.tone === 'error' ? styles.feedbackError : styles.feedbackSuccess
-          }`}
-          role='status'
-        >
-          {feedback.message}
-        </p>
-      ) : null}
+      <RouteFeedback feedback={feedback} onClear={() => setFeedback(null)} />
 
       <section className={styles.starterPanel} aria-label='Source note starting points'>
         <div className={styles.starterHeader}>

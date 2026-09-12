@@ -65,6 +65,7 @@ import {ProjectScratchpadButton} from '../components/ProjectScratchpadButton';
 import {PageHeader} from '../components/PageHeader';
 import styles from '../styles/CanonDecisionsRoute.module.css';
 import {describeError} from '../services/errors';
+import {RouteFeedback} from '../components/common';
 
 const PROVIDER_LABELS = {
   anthropic: 'Claude',
@@ -691,16 +692,7 @@ function CanonDecisionsRoute() {
         <span className={styles.countBadge}>{clusters.length}</span>
       </div>
 
-      {feedback ? (
-        <p
-          className={`${styles.feedback} ${
-            feedback.tone === 'error' ? styles.feedbackError : styles.feedbackSuccess
-          }`}
-          role='status'
-        >
-          {feedback.message}
-        </p>
-      ) : null}
+      <RouteFeedback feedback={feedback} onClear={() => setFeedback(null)} />
 
       {clusters.length === 0 ? (
         <div className={styles.emptyPanel}>

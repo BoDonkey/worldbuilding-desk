@@ -43,6 +43,7 @@ import {PageHeader} from '../components/PageHeader';
 import styles from '../styles/ProjectsRoute.module.css';
 import {useConfirmDialog} from '../hooks/useConfirmDialog';
 import {describeError} from '../services/errors';
+import {RouteFeedback} from '../components/common';
 
 function ProjectsRoute() {
   const {requestConfirm, confirmDialog} = useConfirmDialog();
@@ -512,16 +513,7 @@ function ProjectsRoute() {
         title='Projects'
         description='Open a project and get back to writing. Create new worlds here; use the utility tools only when you need backup or migration work.'
       />
-      {feedback && (
-        <p
-          role='status'
-          className={`${styles.feedback} ${
-            feedback.tone === 'error' ? styles.feedbackError : styles.feedbackSuccess
-          }`}
-        >
-          {feedback.message}
-        </p>
-      )}
+      <RouteFeedback feedback={feedback} onClear={() => setFeedback(null)} />
       {activeProject && projects.some((project) => project.id === activeProject.id) && (
         <section className={styles.heroCard}>
           <div className={styles.heroHeader}>

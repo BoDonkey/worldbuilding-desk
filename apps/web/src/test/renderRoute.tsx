@@ -11,6 +11,8 @@ import {CommandPaletteProvider} from '../contexts/CommandPaletteContext';
 import {ThemeProvider} from '../contexts/ThemeContext';
 import {useAppStore} from '../store/appStore';
 import {useWorkspaceUiStore} from '../store/workspaceUiStore';
+import {resetNotificationsForTests} from '../store/notificationStore';
+import {AppNotifications} from '../components/common/AppNotifications';
 
 const project: Project = {
   id: 'route-smoke-project',
@@ -52,6 +54,7 @@ export function seedRouteTestState() {
     isRailCollapsed: false
   });
   useWorkspaceUiStore.setState(useWorkspaceUiStore.getInitialState(), true);
+  resetNotificationsForTests();
 }
 
 export function renderRoute(
@@ -65,7 +68,10 @@ export function renderRoute(
         element: (
           <ThemeProvider>
             <AccessibilityProvider>
-              <CommandPaletteProvider>{route}</CommandPaletteProvider>
+              <CommandPaletteProvider>
+                {route}
+                <AppNotifications />
+              </CommandPaletteProvider>
             </AccessibilityProvider>
           </ThemeProvider>
         )

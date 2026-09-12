@@ -13,26 +13,6 @@
   line-height: 1.5;
 }
 
-.feedback {
-  margin: 0;
-  padding: 0.7rem 0.85rem;
-  border-radius: 8px;
-  border: 1px solid var(--color-border);
-  background: var(--color-bg-secondary);
-}
-
-.feedbackSuccess {
-  border-color: var(--color-success-soft-border);
-  background: var(--color-success-soft-bg);
-  color: var(--color-success);
-}
-
-.feedbackError {
-  border-color: var(--color-error-soft-border);
-  background: var(--color-error-soft-bg);
-  color: var(--color-error);
-}
-
 .toolbar,
 .tabRow,
 .actionRow,

@@ -187,6 +187,20 @@ Under the hood, the app still includes rich systems for world data, rules, chara
   name, message, and first stack frames are ever serialized, never request
   payloads, `cause` objects, or manuscript text. There is no telemetry,
   crash reporting, or automatic transmission of any kind.
+- Transient feedback now has one home. An app-shell notification store and
+  viewport (bottom-right, polite live region, four-second auto-dismiss,
+  repeats replaced) receives success confirmations from every route through
+  a shared `RouteFeedback` bridge, replacing the Workspace-only toast and the
+  nine route-local banners; errors stay anchored beside their control as an
+  `InlineAlert`, except Workspace, whose feedback was already a toast and
+  keeps errors there with a Dismiss control. The Workspace resolver notice is
+  an action toast with the same primary action and dismiss. One shared,
+  visually hidden status live region (plus an assertive alert twin) announces
+  autosave completion, consistency review start/finish, Source Note
+  extraction start/finish, project storage migration on load, and assistant
+  streaming start/finish via `useStatusAnnouncement`. `aria-invalid` and
+  `aria-describedby` now also cover the new World Bible type name, the
+  mechanics first-value name/starting value, and the dialogue style select.
 
 ### Story Context Systems
 - World Bible with dynamic categories and custom field schemas.
@@ -619,6 +633,20 @@ runtime schema, and nothing here changes the roadmap's status board.
 ## Verification Status
 
 ### Verified Recently
+- Slice 5.12 app-shell toast viewport + status live region: new
+  `store/notificationStore.ts` (toasts + announcement), `AppNotifications`
+  mounted once in the app shell (and in the route test helper), `RouteFeedback`
+  bridge adopted by Projects, Lore, Canon Decisions, World Bible, Ruleset,
+  Compendium (both views), Character Sheets, Character Packages, and
+  Workspace (errors-as-toast, resolver notice as an action toast); Workspace's
+  local viewport, timer, and toast/resolver styles removed along with the
+  now-unused route `.feedback*` styles. `useStatusAnnouncement` wired to
+  autosave, both consistency review runners, Source Note extraction, project
+  storage migration (via a new `onMigrated` callback on
+  `ensureProjectStorageCurrent`, keeping the migration service UI-free), and
+  both assistant streaming paths. `aria-invalid`/`aria-describedby` extended
+  to three more validated fields. Toast-versus-inline split and live-region
+  rule recorded in the blueprint design system. Lint with 1 baseline warning; 529 web (+11 new) + 6 engine + 12 UI tests; web/desktop builds; full Cypress run 75/77 across 16 specs (new `app-notifications` 2/2, `local-diagnostics` 2/2). Both failures were in `post-merge-smoke`: the JSON-conflict assertion legitimately changed from `[role="status"]` to `[role="alert"]` because error feedback is now an inline alert (updated), and the Add-mechanics navigation case is a pre-existing hydration race in that test's setup (it rewrites the persisted `rulesetId` and reloads; a click before rehydration takes the handler's non-sheet branch). After the selector fix the spec passes 18/18 in isolation alongside `app-notifications` 2/2.
 - Slice 5.6 local-only error handling: new `services/errors` module with
   `describeError`/`classifyError` (author-facing mapping that preserves
   app-authored validation messages), a redacted `localStorage`-backed

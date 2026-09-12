@@ -45,6 +45,7 @@ import {
 } from '../../services/coach/writingCoachConsultation';
 import {CraftCitationList} from '../CraftCitationList';
 import {describeError} from '../../services/errors';
+import {useStatusAnnouncement} from '../../hooks/useStatusAnnouncement';
 
 interface AIAssistantProps {
   projectId: string;
@@ -102,6 +103,7 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
   const [messages, setMessages] = useAssistantConversation(projectId);
   const [input, setInput] = useState('');
   const [isStreaming, setIsStreaming] = useState(false);
+  const announceStatus = useStatusAnnouncement();
   const [providerError, setProviderError] = useState<string | null>(null);
   const [memoryCache, setMemoryCache] = useState<MemoryEntry[]>([]);
   const [selectedToolIds, setSelectedToolIds] = useState<string[]>([]);
@@ -338,6 +340,7 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
     setMessages((prev) => [...prev, displayedUserMessage]);
     setInput('');
     setIsStreaming(true);
+    announceStatus('Assistant is responding.');
     scrollMessagesToBottom();
 
     try {
@@ -464,8 +467,10 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
       ]);
     } finally {
       setIsStreaming(false);
+      announceStatus('Assistant reply finished.');
     }
   }, [
+    announceStatus,
     buildMemoryChunks,
     consultationMaxTokens,
     consultationModel,
@@ -562,6 +567,7 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
       }
     ]);
     setIsStreaming(true);
+    announceStatus('Assistant is responding.');
     scrollMessagesToBottom();
 
     try {
@@ -611,8 +617,10 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
       ]);
     } finally {
       setIsStreaming(false);
+      announceStatus('Assistant reply finished.');
     }
   }, [
+    announceStatus,
     coachConsultationEnabled,
     coachEvidence,
     coachEvidenceLabel,

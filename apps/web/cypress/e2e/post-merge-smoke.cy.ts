@@ -862,7 +862,7 @@ describe('Post-merge smoke checklist', () => {
 
     cy.contains('h2', 'JSON Import Mapping').should('be.visible');
     cy.contains('button', 'Apply JSON Import').click();
-    cy.contains('[role="status"]', 'Review 1 conflicting JSON row(s) before importing.').should(
+    cy.contains('[role="alert"]', 'Review 1 conflicting JSON row(s) before importing.').should(
       'be.visible'
     );
 

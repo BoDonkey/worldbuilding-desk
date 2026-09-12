@@ -280,6 +280,22 @@ Chat/AI interface: user messages max-width 80% aligned right, styled like a
 primary button; AI messages max-width 80% aligned left, styled like a surface
 panel with soft border.
 
+Feedback placement (toast versus inline): transient confirmations ("Scene
+saved.", "Source Note created.") post to the single app-shell toast viewport
+via the notification store (`RouteFeedback` bridges a route's local feedback
+state; `pushToast` for direct use), so every route reports success in one
+predictable place: bottom-right, `aria-live="polite"`, auto-dismissed after
+four seconds, identical repeats replaced rather than stacked. Errors that
+belong to a control stay anchored beside it as an `InlineAlert`; only
+Workspace, whose feedback was always a toast, sends errors to the viewport too
+(sticky, with a Dismiss control). Routes do not render their own transient
+banners. Async work with no visible confirmation of its own (autosave,
+consistency review refresh, extraction, project storage migration, AI
+streaming) announces through the shell's one shared status live region via
+`useStatusAnnouncement` / `announceStatus`; do not add per-component
+`aria-live` regions for that. Validated fields carry `aria-invalid` and
+`aria-describedby` pointing at their inline error text.
+
 Error text: rendered error strings go through `describeError(error, fallback)`
 (`services/errors`), never `error.message` directly. The helper keeps the
 app's own plain-language validation messages, maps known failure classes

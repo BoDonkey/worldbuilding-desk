@@ -83,6 +83,7 @@ import styles from '../styles/CharacterSheetsRoute.module.css';
 import {useConfirmDialog} from '../hooks/useConfirmDialog';
 import {useCharacterSheetMutationPreview} from '../hooks/useCharacterSheetMutationPreview';
 import {describeError} from '../services/errors';
+import {RouteFeedback} from '../components/common';
 
 interface CharacterSheetsRouteProps {
   embedded?: boolean;
@@ -1276,18 +1277,7 @@ function CharacterSheetsRoute({
       <button type='button' onClick={() => setShowAdvancedSheetState(false)}>
         Return to simple scene changes
       </button>
-      {feedback && (
-        <p
-          role='status'
-          className={`${styles.feedback} ${
-            feedback.tone === 'error'
-              ? styles.feedbackError
-              : styles.feedbackSuccess
-          }`}
-        >
-          {feedback.message}
-        </p>
-      )}
+      <RouteFeedback feedback={feedback} onClear={() => setFeedback(null)} />
 
       {ruleset && (
         <details className={styles.rulesReference}>

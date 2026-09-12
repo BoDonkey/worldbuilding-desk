@@ -1,4 +1,4 @@
-import {useEffect, useState} from 'react';
+import {useEffect, useId, useState} from 'react';
 import type {Character, CharacterStyle, WorldEntity} from '../../entityTypes';
 import {saveCharacter} from '../../characterStorage';
 import styles from '../../assets/components/WorldBibleRoute.module.css';
@@ -20,6 +20,7 @@ export const WorldBibleDialogueStyleControl = (
   );
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const errorId = useId();
 
   useEffect(() => {
     setCharacterStyleId(props.characterExtension?.characterStyleId ?? '');
@@ -73,6 +74,8 @@ export const WorldBibleDialogueStyleControl = (
         <select
           value={characterStyleId}
           onChange={(event) => setCharacterStyleId(event.target.value)}
+          aria-invalid={error ? true : undefined}
+          aria-describedby={error ? errorId : undefined}
         >
           <option value=''>Default</option>
           {props.characterStyles.map((style) => (
@@ -86,7 +89,7 @@ export const WorldBibleDialogueStyleControl = (
         This affects dialogue presentation only. Identity and descriptive canon
         remain in this World Bible character.
       </p>
-      {error && <p role='alert'>{error}</p>}
+      {error && <p id={errorId} role='alert'>{error}</p>}
       <div className={styles.reviewToolbarActions}>
         <button type='button' onClick={() => void handleSave()} disabled={isSaving}>
           {isSaving ? 'Saving...' : 'Save dialogue style'}

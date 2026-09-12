@@ -75,6 +75,7 @@ import {
   type SystemNegativeSpaceStatus
 } from '../services/worldBible/systemNegativeSpace';
 import {describeError} from '../services/errors';
+import {RouteFeedback} from '../components/common';
 
 type WorldBibleViewMode = 'category' | 'review';
 type CharacterAuthoringMode = 'idle' | 'manual';
@@ -962,24 +963,7 @@ function WorldBibleRoute() {
         />
 
         <div className={styles.mainColumn}>
-      {feedback && (
-        <p
-          role='status'
-          style={{
-            marginBottom: '1rem',
-            padding: '0.5rem 0.75rem',
-            borderRadius: '6px',
-            border: `1px solid ${
-              feedback.tone === 'error' ? 'var(--color-error-soft-border)' : 'var(--color-success-soft-border)'
-            }`,
-            backgroundColor:
-              feedback.tone === 'error' ? 'var(--color-error-soft-bg)' : 'var(--color-success-soft-bg)',
-            color: feedback.tone === 'error' ? 'var(--color-error)' : 'var(--color-success)'
-          }}
-        >
-          {feedback.message}
-        </p>
-      )}
+      <RouteFeedback feedback={feedback} onClear={() => setFeedback(null)} />
       {seriesConfig?.parentProjectId && (
         <div className={styles.banner}>
           <strong>Parent canon:</strong> {canonState.parentName ?? 'Unknown'} ·

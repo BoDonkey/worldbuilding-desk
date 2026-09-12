@@ -13,6 +13,7 @@ import {
   useLocation
 } from 'react-router';
 import {Navigation} from './components/Navigation';
+import {AppNotifications} from './components/common';
 import {ThemeProvider} from './contexts/ThemeContext';
 import {AccessibilityProvider} from './contexts/AccessibilityContext';
 import {CommandPaletteProvider} from './contexts/CommandPaletteContext';
@@ -142,6 +143,7 @@ function AppShellLayout() {
       >
         <Outlet />
       </main>
+      <AppNotifications />
     </div>
   );
 }

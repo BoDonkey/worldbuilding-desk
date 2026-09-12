@@ -10,6 +10,7 @@ import {
 } from '../services/characters';
 import styles from '../styles/CharactersRoute.module.css';
 import {describeError} from '../services/errors';
+import {RouteFeedback} from '../components/common';
 
 function CharacterPackagesRoute() {
   const activeProject = useAppStore((state) => state.activeProject);
@@ -116,16 +117,7 @@ function CharacterPackagesRoute() {
         Transfer several World Bible characters between projects. Edit a single
         character or export its package from that character's World Bible detail.
       </p>
-      {feedback && (
-        <p
-          role='status'
-          className={`${styles.feedback} ${
-            feedback.tone === 'error' ? styles.feedbackError : styles.feedbackSuccess
-          }`}
-        >
-          {feedback.message}
-        </p>
-      )}
+      <RouteFeedback feedback={feedback} onClear={() => setFeedback(null)} />
       <div className={styles.toolbar}>
         <button type='button' onClick={() => void handleExport(false)}>
           Export all characters

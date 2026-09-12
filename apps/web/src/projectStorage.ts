@@ -7,8 +7,17 @@ import {
 } from './db';
 import {
   CURRENT_PROJECT_SCHEMA_VERSION,
-  ensureProjectStorageCurrent
+  ensureProjectStorageCurrent,
+  type ProjectMigrationReport
 } from './services/storage/projectSchemaMigrations';
+import {announceStatus} from './store/notificationStore';
+
+const announceProjectMigration = (project: Project) => (report: ProjectMigrationReport) => {
+  announceStatus(
+    `Project "${project.name}" was updated to the current storage format` +
+      (report.backupId ? ' and a pre-update backup was kept.' : '.')
+  );
+};
 
 const PROJECT_LOCAL_STORAGE_PREFIXES = [
   'systemHistory',
@@ -129,7 +138,7 @@ export async function getAllProjects(): Promise<Project[]> {
         resolve(
           await Promise.all(
             (request.result as Project[]).map((project) =>
-              ensureProjectStorageCurrent(db, project)
+              ensureProjectStorageCurrent(db, project, {onMigrated: announceProjectMigration(project)})
             )
           )
         );
@@ -155,7 +164,7 @@ export async function getProjectById(id: string): Promise<Project | null> {
     request.onsuccess = async () => {
       try {
         const project = (request.result as Project | undefined) ?? null;
-        resolve(project ? await ensureProjectStorageCurrent(db, project) : null);
+        resolve(project ? await ensureProjectStorageCurrent(db, project, {onMigrated: announceProjectMigration(project)}) : null);
       } catch (error) {
         reject(error);
       }

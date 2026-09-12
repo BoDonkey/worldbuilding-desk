@@ -1,4 +1,4 @@
-import {useEffect, useMemo, useState} from 'react';
+import {useEffect, useId, useMemo, useState} from 'react';
 import type {CharacterSheet, StateMutationEvent, StoredRuleset} from '../../entityTypes';
 import type {FirstTrackedValueKind} from '../../services/characters';
 import {replayCharacterState} from '../../services/state/stateReplay';
@@ -35,6 +35,7 @@ export function WorldBibleMechanicsPanel({
   const [name, setName] = useState(savedDraft?.name ?? 'Health');
   const [defaultValue, setDefaultValue] = useState(savedDraft?.defaultValue ?? '100');
   const [error, setError] = useState('');
+  const errorId = useId();
 
   useEffect(() => {
     if (!isAdding) return;
@@ -74,10 +75,10 @@ export function WorldBibleMechanicsPanel({
               </label>
             </fieldset>
             <div className={styles.firstMechanicsFields}>
-              <label>Value name<input autoFocus type='text' value={name} onChange={(event) => setName(event.target.value)} /></label>
-              <label>Starting value<input type='number' value={defaultValue} onChange={(event) => setDefaultValue(event.target.value)} /></label>
+              <label>Value name<input autoFocus type='text' value={name} onChange={(event) => setName(event.target.value)} aria-invalid={error ? true : undefined} aria-describedby={error ? errorId : undefined} /></label>
+              <label>Starting value<input type='number' value={defaultValue} onChange={(event) => setDefaultValue(event.target.value)} aria-invalid={error ? true : undefined} aria-describedby={error ? errorId : undefined} /></label>
             </div>
-            {error && <p role='alert' className={styles.firstMechanicsError}>{error}</p>}
+            {error && <p id={errorId} role='alert' className={styles.firstMechanicsError}>{error}</p>}
             <p className={styles.characterDetailUnlockHint}>
               Confirming creates this project’s tracking setup and attaches one sheet
               to this canonical character. Nothing is written until you confirm.

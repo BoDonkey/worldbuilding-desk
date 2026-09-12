@@ -74,6 +74,7 @@ import {
   type StateMutationReviewItem
 } from '../services/consistency/mutationReviewGrouping';
 import {describeError} from '../services/errors';
+import {useStatusAnnouncement} from './useStatusAnnouncement';
 
 export {mapReviewAnnotationsByIssueKey};
 export type {
@@ -440,6 +441,7 @@ export const useWorkspaceConsistency = ({
     Record<string, string>
   >({});
   const [isRunningConsistencyReview, setIsRunningConsistencyReview] = useState(false);
+  const announceStatus = useStatusAnnouncement();
   const [consistencyReviewItems, setConsistencyReviewItems] = useState<
     ConsistencyReviewItem[]
   >([]);
@@ -962,6 +964,7 @@ export const useWorkspaceConsistency = ({
   const refreshActiveDraftReview = useCallback(
     async (doc: WritingDocument) => {
       setIsRunningConsistencyReview(true);
+      announceStatus('Refreshing consistency review.');
       try {
         const {validation, issueAnnotations} = await worldEngine.reviewText({
           projectId: doc.projectId,
@@ -999,11 +1002,13 @@ export const useWorkspaceConsistency = ({
             (item) => !dismissedConflictItemIdsRef.current.has(item.id)
           )
         ]);
+        announceStatus('Consistency review refreshed.');
       } finally {
         setIsRunningConsistencyReview(false);
       }
     },
     [
+      announceStatus,
       filterDismissedUnknownIssues,
       canonicalFacts,
       characters,
@@ -1030,6 +1035,7 @@ export const useWorkspaceConsistency = ({
     setIsRunningConsistencyReview(true);
     dismissedConflictItemIdsRef.current.clear();
     setFeedback(null);
+    announceStatus('Running consistency review.');
     try {
       const items: ConsistencyReviewItem[] = [];
       for (const doc of documents) {
@@ -1097,8 +1103,10 @@ export const useWorkspaceConsistency = ({
       setFeedback({tone: 'error', message});
     } finally {
       setIsRunningConsistencyReview(false);
+      announceStatus('Consistency review finished.');
     }
   }, [
+    announceStatus,
     activeProject,
     addSystemHistory,
     canonicalFacts,

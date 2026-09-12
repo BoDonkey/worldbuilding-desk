@@ -69,6 +69,7 @@ import {getEntitiesByProject} from '../entityStorage';
 import {getProjectCapabilities} from '../projectMode';
 import {getRulesetByProjectId} from '../services/rules';
 import {describeError} from '../services/errors';
+import {RouteFeedback} from '../components/common';
 
 // activeProject and projectSettings read from store below
 
@@ -1267,7 +1268,7 @@ function CompendiumRoute() {
     return (
       <section>
         <h1>Mechanics</h1>
-        {feedback && <p role='status' className={`${styles.feedback} ${feedback.tone === 'error' ? styles.feedbackError : styles.feedbackSuccess}`}>{feedback.message}</p>}
+        <RouteFeedback feedback={feedback} onClear={() => setFeedback(null)} />
         <section className={`${styles.marginBottom085rem} ${styles.padding085rem} ${styles.border1pxSolidVarColorAccentSoftBg} ${styles.borderRadius8px} ${styles.backgroundColorVarColorBgSecondary}`}>
           <strong>Character tracking starts in the World Bible</strong>
           <p className={`${styles.fontSize088rem} ${styles.colorVarColorTextSecondary}`}>
@@ -1285,18 +1286,7 @@ function CompendiumRoute() {
   return (
     <section>
       <h1>Mechanics</h1>
-      {feedback && (
-        <p
-          role='status'
-          className={`${styles.feedback} ${
-            feedback.tone === 'error'
-              ? styles.feedbackError
-              : styles.feedbackSuccess
-          }`}
-        >
-          {feedback.message}
-        </p>
-      )}
+      <RouteFeedback feedback={feedback} onClear={() => setFeedback(null)} />
       <details
         className={`${styles.marginBottom1rem} ${styles.border1pxSolidVarColorBorder} ${styles.borderRadius8px} ${styles.padding07rem085rem} ${styles.backgroundColorVarColorBgSecondary}`}
       >

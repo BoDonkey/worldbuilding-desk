@@ -80,6 +80,8 @@ import {useSceneRosterPreferences} from '../hooks/useSceneRosterPreferences';
 import {buildCharacterCaptureAliasList} from '../services/worldBible/worldBibleCanonicalization';
 import {isItemCategory} from '../services/worldBible/worldBibleSummary';
 import {PageHeader} from '../components/PageHeader';
+import {RouteFeedback} from '../components/common';
+import {useNotificationStore} from '../store/notificationStore';
 import {GettingStartedGuide} from '../components/Onboarding/GettingStartedGuide';
 import {
   buildManualCaptureLinkOptions,
@@ -635,15 +637,38 @@ function WorkspaceRoute() {
       : resolverNotice?.destination === 'characters'
         ? 'Open World Bible Characters'
         : 'View in World Bible');
+  const clearFeedback = useCallback(() => setFeedback(null), []);
+  const pushToast = useNotificationStore((state) => state.pushToast);
+  const openResolverNoticeDestinationRef = useRef(openResolverNoticeDestination);
   useEffect(() => {
-    if (!feedback || feedback.tone !== 'success') {
+    openResolverNoticeDestinationRef.current = openResolverNoticeDestination;
+  }, [openResolverNoticeDestination]);
+  useEffect(() => {
+    if (!resolverNotice) {
       return;
     }
-    const timeoutId = window.setTimeout(() => {
-      setFeedback((current) => (current === feedback ? null : current));
-    }, 3200);
-    return () => window.clearTimeout(timeoutId);
-  }, [feedback]);
+    let dismissedByUser = false;
+    const toastId = pushToast({
+      tone: 'info',
+      message: resolverNotice.message,
+      durationMs: null,
+      action: {
+        label: resolverNoticePrimaryLabel,
+        onSelect: () => openResolverNoticeDestinationRef.current()
+      },
+      onDismiss: () => {
+        dismissedByUser = true;
+        setResolverNotice(null);
+      }
+    });
+    return () => {
+      if (!dismissedByUser) {
+        useNotificationStore.setState((state) => ({
+          toasts: state.toasts.filter((toast) => toast.id !== toastId)
+        }));
+      }
+    };
+  }, [resolverNotice, resolverNoticePrimaryLabel, pushToast, setResolverNotice]);
   useEffect(() => {
     if (!resolverNotice) {
       return;
@@ -1322,50 +1347,7 @@ function WorkspaceRoute() {
         }
       />
       <GettingStartedGuide projectId={activeProject.id} />
-      {(feedback || resolverNotice) && (
-        <div className={styles.workspaceToastViewport} aria-live='polite'>
-          {feedback && (
-            <div
-              role='status'
-              className={`${styles.feedbackBanner} ${
-                feedback.tone === 'error' ? styles.feedbackError : styles.feedbackSuccess
-              }`}
-            >
-              <span>{feedback.message}</span>
-              {feedback.tone === 'error' && (
-                <button
-                  type='button'
-                  onClick={() => setFeedback(null)}
-                  className={styles.feedbackDismissButton}
-                  aria-label='Dismiss notification'
-                >
-                  Dismiss
-                </button>
-              )}
-            </div>
-          )}
-          {resolverNotice && (
-            <div role='status' className={styles.resolverNotice}>
-              <span>{resolverNotice.message}</span>
-              <button
-                type='button'
-                onClick={openResolverNoticeDestination}
-                className={styles.resolverButtonPrimary}
-              >
-                {resolverNoticePrimaryLabel}
-              </button>
-              <button
-                type='button'
-                onClick={() => setResolverNotice(null)}
-                className={styles.resolverButtonSecondary}
-                aria-label='Dismiss notification'
-              >
-                Dismiss
-              </button>
-            </div>
-          )}
-        </div>
-      )}
+      <RouteFeedback feedback={feedback} onClear={clearFeedback} errorsAsToast />
       {showReviewBanner && (
         <UnknownEntityPanel
           hiddenReviewSurfaceCount={hiddenReviewSurfaceCount}
