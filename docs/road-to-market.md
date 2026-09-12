@@ -231,6 +231,11 @@ and required revisit point, `WIP`, `Done <commit>`.
 | 4.20 | Writing coach experience | 4 | L | Done `4e1515c` — inline ask (selection or open scene) and a Story Dashboard section (manuscript-wide, deterministic measurements only, never raw prose) both implemented, pairing cited craft-library material with given evidence; author-triggered, shares the project's AI-consultation budget; save-as-Source-Note follow-up reuses 1.5; craft library now loads via dynamic import to keep it out of the main bundle; lint with 1 baseline warning; 452 web + 6 engine + 12 UI tests; web/desktop builds; Cypress 62/63 (one confirmed-unrelated pre-existing flake) |
 | 4.21 | System negative-space records | 4 | S | Done `603c61f` — mechanics-only built-in World Bible records with author-maintained status and stable scene links; deterministic counts and source navigation make no semantic prose claims; project/snapshot schema 5; general fiction unchanged; lint with 1 baseline warning; 432 web + 6 engine + 12 UI tests; web/desktop builds; Cypress 62/62 |
 | 4.22 | Progression continuity candidates | 4 | M | Done `1adaff0` — new Story Dashboard section shortlists unused-priority-ability and abandoned-advancement-method candidates deterministically; author-triggered, scene-cited, model-assisted verdict via a position-anchored tag; per-project localStorage dismissal (no new IndexedDB store); lint with 1 baseline warning; 472 web + 6 engine + 12 UI tests; web/desktop builds |
+| 4.23 | Continuity review regression corpus | 4 | S | — first of the 2026-09-12 continuity-engine slices; makes 4.24–4.27 measurable |
+| 4.24 | Structured canon contradiction rules | 4 | M | — generalizes the single eye-color rule into a deterministic rule registry over accepted fact types |
+| 4.25 | Persisted, incremental project review | 4 | M | — results survive reload; unchanged scenes are not re-reviewed; stale markers when a scene changes |
+| 4.26 | State-backed continuity checks | 4 | M | — custody/location/equipment conflicts from the accepted ledger; retires the never-produced `INVALID_MUTATION` placeholder |
+| 4.27 | Sheet-free descriptive state for general fiction | 4 | L | — post-beta candidate; descriptive state (location, custody) for canonical characters without a ruleset or sheet |
 | 5.1 | Auto-update decision + implementation | 5 | M | — |
 | 5.2 | Code signing + notarization, both platforms | 5 | M | — |
 | 5.3 | Packaged-app validation + Electron E2E | 5 | M | — |
@@ -283,6 +288,12 @@ depends on 1.5, 4.17, 4.18, and 4.19. Slice 4.21 remains standalone. Slice
 4.22 depends on 1.5 because semantic conclusions are model-assisted and
 author-triggered. All of 4.17–4.20 must land before 6.1; 4.21 and 4.22 are v1
 but may slip past beta without blocking it.
+
+The 2026-09-12 continuity-engine review added 4.23–4.27 (see the Phase 4
+subsection of that name for the findings). None blocks 6.1: they harden the
+review pipeline's precision and coverage rather than change the trust
+boundary. Order: 4.23 first, then 4.24 and 4.25 in either order, then 4.26;
+4.27 is a post-beta candidate that 4.26 does not require.
 
 ---
 
@@ -805,6 +816,139 @@ pattern without claiming that the manuscript was checked for it.
   and dismissible like every other review surface — these are observations, not
   errors, and a false positive must cost the author one click. No provider call
   runs in the background. Source: `docs/research-litrpg-craft-failures.md` §B2.
+
+### Continuity engine hardening (4.23–4.27)
+
+Added 2026-09-12 from a code review of the continuity engine: the
+deterministic review pipeline (`services/consistency`, `services/worldEngine`,
+`hooks/useWorkspaceConsistency.ts`), the manuscript-time state ledger and
+replay (`services/state`), and the assistant's temporal custody grounding
+(`services/assistant/temporalCustody.ts`). The trust boundary holds throughout
+(models propose, deterministic code validates, authors approve) and entity
+matching has been dogfooded hard through 1.2a–1.2d. The gaps are in what the
+engine can *say* once names resolve:
+
+1. **Canon contradiction detection is narrow.** `contradictionReview.ts`
+   flags only two shapes: an `X is/was (not) Y` assertion whose exact
+   descriptor appears negated in canon, and one hard-coded attribute, eye
+   color. Accepted `CanonicalFact`s carry `age`, `occupation`, `membership`,
+   `heritage`, `appearance`, `relationship`, and more, but only `appearance`
+   eye color is compared. "Sera is left-handed" versus "Sera is right-handed"
+   is not a conflict today because the descriptors differ. Four unit tests
+   cover the whole detector.
+2. **Contradictions ignore manuscript order and state.** Canon facts have no
+   time validity and the detector never consults the accepted mutation ledger
+   or `replayCharacterState`, so a fact that legitimately changes across the
+   book (healed, renamed, defected) reads as a conflict in every scene on the
+   wrong side of it, and "uses the potion two chapters after drinking it" is
+   not a review item at all. The custody logic that answers that question
+   correctly for the assistant (1.2b) is not reused by review.
+3. **General fiction has no state at all.** `stateMutationDerivation.ts`
+   drops every observation whose actor has no `CharacterSheet`, and sheets
+   require a ruleset. Location and custody observations are extracted for
+   general-fiction projects and then discarded. The domain model already
+   names descriptive state (location, allegiance, disguise) as a field family;
+   nothing implements it without mechanics.
+4. **Project review is neither persisted nor incremental.** Results live in
+   React state, so a reload empties the review queue; every run re-reviews
+   every scene (and, with the local-AI engine, re-annotates every issue),
+   with only dismissals persisted in `localStorage` prefs.
+5. **Placeholder contract fields.** `ExtractedProposal.intents` and
+   `ValidationResult.proposedMutations` are typed `Array<Record<string,
+   never>>` and always empty; `INVALID_MUTATION` is a declared issue code that
+   no code path produces even though `validateStateMutationCommandAgainstState`
+   exists.
+6. **No regression corpus.** The trust-dogfood chapters and answer key are
+   the only realistic text, and they are exercised by hand, not by tests, so
+   precision changes to the matcher or detector are unmeasured.
+
+Ordering: 4.23 first, so every later change reports precision against the
+same corpus. 4.24 and 4.25 are independent of each other. 4.26 depends on 4.23
+and should follow 4.24 (it reuses the rule registry's conflict contract). 4.27
+depends on 4.26 and is a post-beta candidate. All are deterministic-first; any
+model involvement is confined to the existing 1.5 proposal surface and is not
+required by any slice below.
+
+- **4.23 Continuity review regression corpus.** A checked-in, test-driven
+  corpus for the review pipeline: scene texts plus canon (entities, aliases,
+  accepted facts, and, for the mechanics cases, a ruleset, sheets, and ledger
+  events) with an expected-findings list per case (issue code, entity, scene,
+  focus text) and an explicit expected-*absence* list for the known
+  false-positive shapes fixed in 1.2d and the smoke history (self-alias,
+  sentence-start words, in-progress name prefixes, possessives, article-
+  equivalent names, Bran/Brannic boundaries). Seed it from
+  `fixtures/trust-dogfood/chapters` and `answer-key.md` and from the sample
+  project, keeping the text short enough to read. One table test runs the
+  deterministic engine and `findCanonContradictions` over every case and
+  reports precision/recall counts in the assertion message so a regression
+  names what it lost. No behavior change; the slice is done when every
+  current finding is encoded and the suite is green. Record the corpus
+  location in `docs/smoke-tests.md` so manual smokes reference the same
+  cases.
+- **4.24 Structured canon contradiction rules.** Replace the one-off eye-color
+  path in `contradictionReview.ts` with a deterministic rule registry keyed by
+  `CanonicalFactType`. Each rule declares: a canon value extractor (from the
+  accepted fact's structured value first, its evidence text second), a scene
+  claim extractor anchored to a resolved entity mention, a normalizer (synonym
+  tables such as grey/gray, numeric age forms, kinship terms), and a
+  comparator (exclusive attribute, numeric distance, negation). First rules:
+  appearance families (eye color, hair color, height/build), `age`,
+  `heritage`, `occupation`, `membership` (with explicit "no longer" / "former"
+  negation), and `relationship` (kinship symmetry). Every conflict cites both
+  sources exactly as today (`STATE_CONFLICT`, scene claim, canon claim with
+  its Source Note or record) and keeps the existing dismissal and highlight
+  contract so the Workspace review drawer needs no change. Prefer structured
+  `CanonicalFact.value` over free text; free-text field scanning of entity and
+  character records stays as the fallback it is today. Add each rule to the
+  4.23 corpus with at least one hit, one agreeing non-hit, and one
+  wrong-entity non-hit. No model calls. Update `docs/domain-model.md` §1 with
+  the rule contract.
+- **4.25 Persisted, incremental project review.** Persist the last project
+  review per project through a service (no new direct persistence path; a
+  project-scoped store following the `consistencyStorage.ts` pattern, or the
+  existing guardrail-event store if its shape suffices) keyed by scene id and
+  a content hash of the reviewed text, plus the canon inputs' hash. On the
+  next run, scenes whose hash is unchanged reuse their stored findings and
+  annotations instead of re-running extraction and, with the local-AI engine,
+  re-requesting annotations; contradictions still recompute in full because
+  canon may have changed. On reload the review queue restores the last run
+  with its timestamp, and a scene edited since the run shows a stale marker
+  on its items until re-reviewed. Include the stored review in project
+  backups only if the snapshot schema already carries review state; otherwise
+  leave it out and say so. Existing dismissal prefs are unchanged. Verify with
+  a long-manuscript timing check in the commit message (scene count, first
+  run, second run) and Cypress coverage for reload restore and the stale
+  marker.
+- **4.26 State-backed continuity checks.** Give review the ledger it already
+  has. For projects with a ruleset and sheets, add deterministic `STATE_CONFLICT`
+  warnings (never blocking) that compare a scene's observations against
+  `replayCharacterState` as of the scene's order: an item used, equipped, or
+  handed over after the ledger shows it consumed or removed with no later
+  acquisition; an equip/attack with an item the ledger shows unequipped or
+  absent; a location claim that contradicts the last accepted `location_set`
+  with no movement cue in between. Reuse the ordered-scene custody walk from
+  `services/assistant/temporalCustody.ts` rather than re-deriving it, and
+  extract the shared part into `services/state` so the assistant and review
+  answer identically. Wire `INVALID_MUTATION` to
+  `validateStateMutationCommandAgainstState` for review-derived events that
+  fail replay validation, and delete the empty `intents` /
+  `proposedMutations` placeholders (or type them honestly if a consumer
+  exists). Each finding cites the earlier scene it conflicts with. Extend the
+  4.23 corpus with the Pale Draught / storage-question cases from the
+  trust-dogfood answer key. General fiction is unchanged by this slice.
+- **4.27 Sheet-free descriptive state for general fiction.** Post-beta
+  candidate. Let canonical characters carry descriptive state (location,
+  custody of named items, and later allegiance/disguise) without a ruleset or
+  `CharacterSheet`: a minimal replay target keyed by World Bible entity id,
+  the existing `location_set` / `inventory_*` commands only, and the same
+  accepted-ledger, scene-ordered, invalidatable rules as mechanics state.
+  Derivation stops discarding sheet-less observations; the Workspace
+  acquisition proposal (4.16b) and Character continuity section gain the
+  state-only path for general fiction; 4.26's checks then apply to every
+  project mode. Project and snapshot schema bump with a migration and
+  restorable backup per 4.2. Update `docs/domain-model.md` §3 (subject scope)
+  and the smoke procedures. Do not add stats or resources to general
+  fiction; this is descriptive state only.
 
 ## Phase 5 — Release Engineering
 
