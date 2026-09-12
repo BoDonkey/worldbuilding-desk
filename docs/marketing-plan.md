@@ -103,6 +103,22 @@ one-time (Scrivener ≈ $60). BYOK means zero AI COGS, so one-time works.
   self-publishing shows) after launch, funded only if early conversion
   supports it.
 
+### Post-launch experiments (from 2026-09-12 external research, unscheduled)
+
+- **Job-specific search content over "worldbuilding software."** Free,
+  small, deterministic web tools (a timeline validator, a fictional-calendar
+  calculator, a magic-system consistency checker) that hand off to the
+  product. Only after launch, only if the deterministic services can be
+  packaged for the web without forking logic, and only with claims that match
+  product truth. The research's competitor traffic figures are unverified and
+  must not be reused.
+- **Recurring community challenge with a downloadable starter project.** Run
+  in the niche communities above with a shareable project or character package
+  as the artifact. No hosted sharing, accounts, or public pages; those
+  contradict the privacy pillar.
+- **Portability as a headline promise** once roadmap 4.29 lands: readable
+  Markdown/CSV export plus the full backup zip, with the schema published.
+
 ## Demo Narrative
 
 Every demo, video, and screenshot sequence shows, in order: (1) open the app

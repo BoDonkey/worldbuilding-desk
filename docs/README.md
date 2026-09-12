@@ -1,6 +1,6 @@
 # Documentation Map
 
-Last updated: 2026-09-10
+Last updated: 2026-09-12
 
 The active documentation set was consolidated on 2026-08-01 down to seven
 documents. Everything else lives in `docs/archive/` with a banner pointing at
@@ -60,6 +60,10 @@ Other files:
   placement, provisional metadata, coverage targets, sourcing rules, and the
   resume protocol; the roadmap and domain/architecture documents remain
   authoritative.
+- `docs/tactical-actions.md` — dated, non-authoritative external market
+  research (2026-09-12) proposing five tactical actions. Its accepted outcomes
+  are roadmap slices 4.28–4.29 plus small edits to 5.8/5.9/6.1 and the
+  backlog; its citation tokens are broken and its figures are unverified.
 - `docs/research-payment-provider.md` — dated, non-authoritative vendor and
   architecture research for roadmap Slice 5.7. It compares Paddle and Creem,
   records a conditional sandbox recommendation and decision gates, and does

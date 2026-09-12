@@ -236,6 +236,8 @@ and required revisit point, `WIP`, `Done <commit>`.
 | 4.25 | Persisted, incremental project review | 4 | M | — results survive reload; unchanged scenes are not re-reviewed; stale markers when a scene changes |
 | 4.26 | State-backed continuity checks | 4 | M | — custody/location/equipment conflicts from the accepted ledger; retires the never-produced `INVALID_MUTATION` placeholder |
 | 4.27 | Sheet-free descriptive state for general fiction | 4 | L | — post-beta candidate; descriptive state (location, custody) for canonical characters without a ruleset or sheet |
+| 4.28 | Manuscript-order validity for canon facts | 4 | M | — the deterministic core of "temporal facts": optional valid-from/until scene on accepted facts; supersede instead of reject; after 4.24 |
+| 4.29 | Portable Markdown/CSV export + Markdown-folder import | 4 | M | — documented open export of World Bible and Source Notes; Obsidian-style vault import through the existing proposal/review pipeline |
 | 5.1 | Auto-update decision + implementation | 5 | M | — |
 | 5.2 | Code signing + notarization, both platforms | 5 | M | — |
 | 5.3 | Packaged-app validation + Electron E2E | 5 | M | — |
@@ -293,7 +295,10 @@ The 2026-09-12 continuity-engine review added 4.23–4.27 (see the Phase 4
 subsection of that name for the findings). None blocks 6.1: they harden the
 review pipeline's precision and coverage rather than change the trust
 boundary. Order: 4.23 first, then 4.24 and 4.25 in either order, then 4.26;
-4.27 is a post-beta candidate that 4.26 does not require.
+4.27 is a post-beta candidate that 4.26 does not require. The same day's
+review of `docs/tactical-actions.md` (external market research) added 4.28
+and 4.29; 4.28 follows 4.24 and feeds 4.26, 4.29 is independent and pairs
+with 5.8's export-schema documentation. Neither blocks 6.1.
 
 ---
 
@@ -950,6 +955,43 @@ required by any slice below.
   and the smoke procedures. Do not add stats or resources to general
   fiction; this is descriptive state only.
 
+### Research-promoted: temporal canon and portability (4.28–4.29)
+
+Added 2026-09-12 after reviewing `docs/tactical-actions.md`. Of its five
+actions, two map onto real product gaps that fit the writing-first,
+local-first boundary; the rest are recorded in the Backlog or the marketing
+plan with the reasons they were not scheduled.
+
+- **4.28 Manuscript-order validity for canon facts.** Accepted facts are
+  currently timeless, so a fact that legitimately changes across the
+  manuscript (healed, renamed, defected, promoted) contradicts every scene on
+  the wrong side of the change. Add optional `validFromSceneId` and
+  `validUntilSceneId` to `CanonicalFact` (resolved to scene order at use
+  time, never stored as ordinal positions, so reordering scenes does not
+  corrupt validity), with project/snapshot schema bumps and migrations per
+  4.2. Canon Decisions gains an "as of this scene" control on acceptance and a
+  **supersede** outcome: accepting a later conflicting fact closes the
+  earlier one at that scene instead of forcing a reject. The 4.24 rule
+  registry, the 4.26 checks, and the assistant's canon grounding all filter
+  facts by the scene being reviewed or asked about, and the assistant states
+  the validity window when it cites a superseded fact. Deterministic
+  throughout; the sample project's built-in conflict should become a
+  supersede example. "Who knows what" (character knowledge attribution) is
+  explicitly out of scope; see Backlog.
+- **4.29 Portable Markdown/CSV export + Markdown-folder import.** Portability
+  is a stated differentiator and a trust promise. Export: the World Bible
+  (one Markdown file per record with YAML frontmatter for category, aliases,
+  links, and accepted facts; one CSV per category) and Source Notes as a
+  folder, plus a documented schema page that 5.8 links from Help. Import: a
+  folder of Markdown files (an Obsidian vault is the reference case) with
+  frontmatter mapping, `[[wikilinks]]` proposed as links or aliases, and each
+  file offered as a Source Note or a World Bible draft; everything flows
+  through the existing extraction and review pipeline, so nothing becomes
+  canon without acceptance. Reuse `services/lore/loreImport.ts` and the World
+  Bible document import; no new persistence path. The backup zip remains the
+  full-fidelity format; this is the human-readable one. World Anvil import is
+  not in scope until its export format is verified (Backlog).
+
 ## Phase 5 — Release Engineering
 
 - **5.1 Auto-update.** Decide Squirrel / electron-updater / manual (this
@@ -997,12 +1039,16 @@ required by any slice below.
   [`research-payment-provider.md`](research-payment-provider.md): Creem is the
   conditional sandbox favorite, but production selection waits on its listed
   security, recovery, coverage, pricing, and operations gates.
-- **5.8 Help/docs baseline.** In-app or web help covering projects/backup,
+- **5.8 Help/docs baseline.** Include the portable export schema from 4.29 if
+  it has landed, and a plain statement that every project can be exported in
+  full (backup zip) or as readable files. In-app or web help covering projects/backup,
   import, review workflow, World Bible/Lore model, AI setup, and the trust
   model in author language. Include a plain data-flow explanation: local
   storage, no telemetry or Worldbuilding Desk training, local Ollama, and the
   exact author-triggered boundary for hosted providers.
-- **5.9 Landing page + demo assets.** Build the simple landing page and a
+- **5.9 Landing page + demo assets.** Portability ("your data leaves with
+  you") is a homepage-level promise once 4.29 exists; before that, state only
+  the backup-zip and manuscript export truth. Build the simple landing page and a
   60–90 second demo of the implemented core loop; include privacy/data-flow
   copy, download/checkout paths, and a plan for collecting
   permissioned beta proof. Claims must stay within verified product behavior;
@@ -1027,7 +1073,10 @@ required by any slice below.
 ## Phase 6 — Beta, RC, Launch
 
 - **6.1 Beta.** Signed, auto-updating build to a 10–30 author cohort
-  (fiction + LitRPG mix). Define what feedback is collected and where; beta
+  (fiction + LitRPG mix). Define what feedback is collected and where —
+  including two activation measures the research review asked for: time from
+  first open to first accepted canon record, and time to the first review
+  catch the author agrees with (self-reported, no telemetry); beta
   exit criteria: no data-loss reports, trust-path holds on real projects,
   authors return to write more than once.
 - **6.2 Feedback triage.** Convert beta findings into bounded slices; data
@@ -1050,3 +1099,20 @@ ecosystems; Zod 4; internal character compatibility retirement after 4.13 —
 `'character'` fact/alias/link targets, remaining name joins, and the extension
 store (CX-10b, after reader coverage proves removal safe; per
 `docs/character-experience-design-review.md`).
+
+From the 2026-09-12 review of `docs/tactical-actions.md`, deferred with
+reasons: **character knowledge attribution** ("what does Elara know before
+Chapter 12?") — a `known by` dimension on facts needs per-character witness
+provenance that is semantic, not deterministic; revisit after 4.28 and beta
+evidence that authors ask for it. **Spoiler-aware audience permissions** —
+publishing/audience control has no surface in a local writing tool and is
+out of scope. **World Anvil importer** — only after its export format is
+verified as obtainable and stable; 4.29's Markdown-folder import is the
+general path. **Relationship graph view** — entity `links` and `relationship`
+facts already exist; a read-only derived view is cheap but unproven, so wait
+for beta requests. **Public sharing, remixable templates, recurring
+challenges** — require hosted sharing and accounts, which contradict the
+no-accounts, no-telemetry boundary; a downloadable starter project shared in
+the niche communities is the marketing-plan substitute. **SEO micro-tools** —
+marketing-site work recorded in `docs/marketing-plan.md` as a post-launch
+experiment.
