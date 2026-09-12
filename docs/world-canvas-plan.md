@@ -1,12 +1,16 @@
 # World Canvas — work-slice plan
 
-Status: **proposal, not scheduled.** Dated 2026-09-12. Produced from the
-planning prompt in `docs/world-canvas.md` after inspecting the current World
-Bible, Source Notes, Scratchpad, canon-decision, onboarding, navigation, and
-persistence code. Nothing here is claimed on the roadmap status board; the
-scheduling recommendation at the end is for the author to accept, amend, or
-reject. When accepted, copy the slice index into `docs/road-to-market.md`
-with real IDs and keep the full prompts here.
+Status: **accepted 2026-09-12; scheduled as roadmap slices 4.30–4.34
+(WC-1–WC-5 in that order), to land before beta.** Dated 2026-09-12. Produced
+from the planning prompt in `docs/world-canvas.md` after inspecting the
+current World Bible, Source Notes, Scratchpad, canon-decision, onboarding,
+navigation, and persistence code. The author accepted every recommended
+default in § 8: the name "World Canvas", the dedicated `world_canvases`
+record, the seven lenses as listed, a shared consultation budget for now
+(budgets overall to be revisited before launch; see the roadmap Backlog), and
+the guide entry on all guide-marked projects. The status board in
+`docs/road-to-market.md` is authoritative for execution; this document holds
+the full prompts.
 
 ## 1. Product finding
 
@@ -178,7 +182,7 @@ shipping.
 
 ## 4. Slice index
 
-IDs are placeholders until the author schedules the work.
+Roadmap IDs: WC-1 = 4.30, WC-2 = 4.31, WC-3 = 4.32, WC-4 = 4.33, WC-5 = 4.34.
 
 | ID | Slice | Size | Depends on | Delivers |
 |---|---|---|---|---|

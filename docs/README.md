@@ -62,9 +62,9 @@ Other files:
   authoritative.
 - `docs/world-canvas.md` and `docs/world-canvas-plan.md` — dated (2026-09-12)
   planning prompt and the resulting World Canvas work-slice proposal (an
-  optional World Bible view for premise, lenses, and questions). Proposal
-  only: not scheduled, nothing on the status board; the plan recommends
-  beta-driven scheduling and lists the decisions needed first.
+  optional World Bible view for premise, lenses, and questions). Accepted
+  2026-09-12 and scheduled as roadmap slices 4.30–4.34 (pre-beta); the plan
+  holds the full prompts, the roadmap holds status.
 - `docs/tactical-actions.md` — dated, non-authoritative external market
   research (2026-09-12) proposing five tactical actions. Its accepted outcomes
   are roadmap slices 4.28–4.29 plus small edits to 5.8/5.9/6.1 and the

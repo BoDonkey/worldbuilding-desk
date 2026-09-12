@@ -238,6 +238,11 @@ and required revisit point, `WIP`, `Done <commit>`.
 | 4.27 | Sheet-free descriptive state for general fiction | 4 | L | — post-beta candidate; descriptive state (location, custody) for canonical characters without a ruleset or sheet |
 | 4.28 | Manuscript-order validity for canon facts | 4 | M | — the deterministic core of "temporal facts": optional valid-from/until scene on accepted facts; supersede instead of reject; after 4.24 |
 | 4.29 | Portable Markdown/CSV export + Markdown-folder import | 4 | M | — documented open export of World Bible and Source Notes; Obsidian-style vault import through the existing proposal/review pipeline |
+| 4.30 | World Canvas — record, view mode, premise, lenses, questions (WC-1) | 4 | M | — full prompt: [`world-canvas-plan.md`](world-canvas-plan.md) § WC-1; new `world_canvases` store, snapshot schema 6 |
+| 4.31 | World Canvas — bridges to Source Notes and World Bible (WC-2) | 4 | S | — after 4.30; Keep as Source Note, Propose as canon, link existing, question status |
+| 4.32 | World Canvas — derived return experience (WC-3) | 4 | S | — after 4.30; per-lens summaries and a rule-stated "worth a look" list, no scores |
+| 4.33 | World Canvas — author-invoked brainstorming (WC-4) | 4 | M | — after 4.31; through the 1.5 surface, per-item keep, shared consultation budget for now |
+| 4.34 | World Canvas — onboarding entry, help, IA docs (WC-5) | 4 | XS | — last; guide line on all guide-marked projects |
 | 5.1 | Auto-update decision + implementation | 5 | M | — |
 | 5.2 | Code signing + notarization, both platforms | 5 | M | — |
 | 5.3 | Packaged-app validation + Electron E2E | 5 | M | — |
@@ -299,6 +304,16 @@ boundary. Order: 4.23 first, then 4.24 and 4.25 in either order, then 4.26;
 review of `docs/tactical-actions.md` (external market research) added 4.28
 and 4.29; 4.28 follows 4.24 and feeds 4.26, 4.29 is independent and pairs
 with 5.8's export-schema documentation. Neither blocks 6.1.
+
+On 2026-09-12 the author accepted the World Canvas proposal
+([`world-canvas-plan.md`](world-canvas-plan.md)) with every recommended
+default (name, dedicated `world_canvases` record, the seven lenses, shared
+consultation budget for now, guide entry on all guide-marked projects) and
+chose to land it **before beta** rather than beta-driven: slices 4.30–4.34.
+Order: 4.30 → 4.31 → (4.32 ∥ 4.33) → 4.34. The author's stated priority is a
+complete working app for their own use first and a product second, so
+4.23–4.34 all precede 6.1; release engineering (5.x) may interleave. The
+project consultation budget model is to be revisited before launch (Backlog).
 
 ---
 
@@ -992,6 +1007,38 @@ plan with the reasons they were not scheduled.
   full-fidelity format; this is the human-readable one. World Anvil import is
   not in scope until its export format is verified (Backlog).
 
+### World Canvas (4.30–4.34)
+
+Accepted 2026-09-12 from `docs/world-canvas-plan.md`, which holds the
+product finding, the recommended IA (a third World Bible view mode beside
+`category` and `review`), the data-ownership and trust flow, and the full
+self-contained implementation prompt, acceptance criteria, and test
+expectations for each slice. Read that document as the prompt; this
+section only fixes IDs and boundaries.
+
+- **4.30 World Canvas record, view mode, premise, lenses, questions** —
+  plan § WC-1. New `world_canvases` IndexedDB store (project-scoped),
+  snapshot schema 5 → 6, backup round-trip. Freeform prose only; no
+  completeness indicators of any kind.
+- **4.31 Bridges to Source Notes and World Bible** — plan § WC-2. The only
+  new arrow in the trust flow is "Keep as Source Note"; everything after it
+  is the existing extraction and Canon Decisions pipeline. "Propose as
+  canon" opens the normal World Bible create form prefilled.
+- **4.32 Derived return experience** — plan § WC-3. Deterministic per-lens
+  summaries and a "worth a look" list whose every item states its rule;
+  never a percentage or score; general fiction never framed as incomplete.
+- **4.33 Author-invoked brainstorming** — plan § WC-4. Through the 1.5
+  proposal surface with a zod-validated, capped response; per-item Keep as
+  Source Note / Add as question / Dismiss; nothing persists otherwise; shares
+  the project consultation budget for now (see Backlog on budgets).
+- **4.34 Onboarding entry, help, IA docs** — plan § WC-5. Optional guide
+  line, rail help sentence, blueprint IA update; archive the plan and prompt
+  when done.
+
+Anti-goals hold across all five: no scores, no questionnaire, no second canon
+owner, no per-lens fields, no relationship graph, no RAG indexing of canvas
+text, no model text written into the canvas.
+
 ## Phase 5 — Release Engineering
 
 - **5.1 Auto-update.** Decide Squirrel / electron-updater / manual (this
@@ -1116,3 +1163,12 @@ no-accounts, no-telemetry boundary; a downloadable starter project shared in
 the niche communities is the marketing-plan substitute. **SEO micro-tools** —
 marketing-site work recorded in `docs/marketing-plan.md` as a post-launch
 experiment.
+
+**AI consultation budgets (author, 2026-09-12).** The shared daily
+consultation budget, its consumers (Lore Inspector, Canon Decisions
+consultation, coach, progression continuity, World Canvas brainstorming),
+and its reset timing were accepted as-is for now but must be revisited
+before launch: who the budget protects (cost vs. runaway loops), whether it
+should be per-feature or per-project, how it is explained at the point of
+use (dogfood friction already logged against 5.5/5.8), and whether Ollama
+requests should count at all.
