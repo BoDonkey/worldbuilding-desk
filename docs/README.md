@@ -60,6 +60,11 @@ Other files:
   placement, provisional metadata, coverage targets, sourcing rules, and the
   resume protocol; the roadmap and domain/architecture documents remain
   authoritative.
+- `docs/world-canvas.md` and `docs/world-canvas-plan.md` — dated (2026-09-12)
+  planning prompt and the resulting World Canvas work-slice proposal (an
+  optional World Bible view for premise, lenses, and questions). Proposal
+  only: not scheduled, nothing on the status board; the plan recommends
+  beta-driven scheduling and lists the decisions needed first.
 - `docs/tactical-actions.md` — dated, non-authoritative external market
   research (2026-09-12) proposing five tactical actions. Its accepted outcomes
   are roadmap slices 4.28–4.29 plus small edits to 5.8/5.9/6.1 and the
