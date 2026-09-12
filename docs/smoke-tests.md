@@ -53,6 +53,16 @@ through World Bible completion — import, deferred review hydration,
 unknown-entity resolution, alias linking, queue behavior, completion counts,
 and reload safety.
 
+Automated lower layer: the continuity review regression corpus at
+`apps/web/src/fixtures/continuityCorpus.ts` (harness
+`services/consistency/continuityCorpus.ts`, test
+`continuityCorpus.test.tsx`) runs the real deterministic extraction,
+validation, and contradiction code over short excerpts of the trust-dogfood
+chapters and the sample project, with the answer-key plants (A1, A2, A4,
+hazards, B1–B5, C1) as expected findings and the fixed false-positive shapes
+as expected absences. When a manual smoke finds a new false positive or
+miss, add it there as a case (or a `knownGap`) so it stays fixed.
+
 Fixture texts and expected matching behavior (Kaelor/Glass Harbor/Ember
 Archive; Kael/Kaelor alias chain; Mira Voss/Lantern-Mira/Iron Warrens
 full-name/hyphenated-alias cases) are preserved in

@@ -231,7 +231,7 @@ and required revisit point, `WIP`, `Done <commit>`.
 | 4.20 | Writing coach experience | 4 | L | Done `4e1515c` — inline ask (selection or open scene) and a Story Dashboard section (manuscript-wide, deterministic measurements only, never raw prose) both implemented, pairing cited craft-library material with given evidence; author-triggered, shares the project's AI-consultation budget; save-as-Source-Note follow-up reuses 1.5; craft library now loads via dynamic import to keep it out of the main bundle; lint with 1 baseline warning; 452 web + 6 engine + 12 UI tests; web/desktop builds; Cypress 62/63 (one confirmed-unrelated pre-existing flake) |
 | 4.21 | System negative-space records | 4 | S | Done `603c61f` — mechanics-only built-in World Bible records with author-maintained status and stable scene links; deterministic counts and source navigation make no semantic prose claims; project/snapshot schema 5; general fiction unchanged; lint with 1 baseline warning; 432 web + 6 engine + 12 UI tests; web/desktop builds; Cypress 62/62 |
 | 4.22 | Progression continuity candidates | 4 | M | Done `1adaff0` — new Story Dashboard section shortlists unused-priority-ability and abandoned-advancement-method candidates deterministically; author-triggered, scene-cited, model-assisted verdict via a position-anchored tag; per-project localStorage dismissal (no new IndexedDB store); lint with 1 baseline warning; 472 web + 6 engine + 12 UI tests; web/desktop builds |
-| 4.23 | Continuity review regression corpus | 4 | S | — first of the 2026-09-12 continuity-engine slices; makes 4.24–4.27 measurable |
+| 4.23 | Continuity review regression corpus | 4 | S | WIP — first of the 2026-09-12 continuity-engine slices; makes 4.24–4.27 measurable |
 | 4.24 | Structured canon contradiction rules | 4 | M | — generalizes the single eye-color rule into a deterministic rule registry over accepted fact types |
 | 4.25 | Persisted, incremental project review | 4 | M | — results survive reload; unchanged scenes are not re-reviewed; stale markers when a scene changes |
 | 4.26 | State-backed continuity checks | 4 | M | — custody/location/equipment conflicts from the accepted ledger; retires the never-produced `INVALID_MUTATION` placeholder |
@@ -912,7 +912,12 @@ required by any slice below.
   current finding is encoded and the suite is green. Record the corpus
   location in `docs/smoke-tests.md` so manual smokes reference the same
   cases.
-- **4.24 Structured canon contradiction rules.** Replace the one-off eye-color
+- **4.24 Structured canon contradiction rules.** First target from the 4.23
+  corpus: case `c1-eye-color-wrong-entity` records that a second-person
+  eye-color line ("Her same green", Tam speaking about Sera) is attributed to
+  the *speaker* when only the speaker has an accepted eye-color fact; the rule
+  registry's claim extractor needs addressee/possessive resolution, and
+  landing it must clear that `knownGap`. Replace the one-off eye-color
   path in `contradictionReview.ts` with a deterministic rule registry keyed by
   `CanonicalFactType`. Each rule declares: a canon value extractor (from the
   accepted fact's structured value first, its evidence text second), a scene

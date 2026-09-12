@@ -211,6 +211,17 @@ Under the hood, the app still includes rich systems for world data, rules, chara
   from `fixtures/trust-dogfood/` by `pnpm --filter web dogfood-fixture:build`
   and a parity test plus the prebuild check keep it from drifting.
 
+- The continuity review pipeline has a regression corpus
+  (`apps/web/src/fixtures/continuityCorpus.ts`): thirteen short cases from
+  the trust-dogfood chapters and the sample project encode the answer-key
+  plants as expected findings, the fixed false-positive shapes (sentence
+  starts, number words, bracketed system lines, "Ma", article-equivalent
+  names, Bran/Brannic boundaries, "deep vault" ≠ the Undervault) as expected
+  absences, and one recorded gap. A harness runs the real deterministic
+  extraction, validation, and contradiction code over every case, and the
+  test prints recall, findings, noise, mislinks, and healed gaps whenever a
+  case fails, so a matcher change names what it lost.
+
 ### Story Context Systems
 - World Bible with dynamic categories and custom field schemas.
 - World Bible now follows shared page chrome, uses a compact utility rail for import/help tools, opens category tabs in browse/list mode by default, and reveals manual entry forms only after explicit create/edit selection.
@@ -642,6 +653,14 @@ runtime schema, and nothing here changes the roadmap's status board.
 ## Verification Status
 
 ### Verified Recently
+- Slice 4.23 continuity review regression corpus: 13 cases, 7 expected
+  findings all matched (recall 100%), 0 planted-absence violations, 0
+  mislinks; 1 `knownGap` recorded for 4.24 (second-person eye-color claims
+  attributed to the speaker when only the speaker has an eye-color fact).
+  Corpus entity/alias/fact shapes go through the same
+  `buildKnownConsistencyEntities`, `buildExtractedProposal`,
+  `validateProposal`, and `findCanonContradictions` code the Workspace uses;
+  excerpts are quoted from the fixture verbatim. No behavior change. Lint with 1 baseline warning; 536 web (+2 new) + 6 engine + 12 UI tests; web/desktop builds; Cypress not required (no routed UI change).
 - Dogfood path simplification: `createTrustDogfoodProject` (unit-tested via
   fake IndexedDB: five scenes in order, escaped paragraph HTML with system
   lines intact, four Source Notes with correct kinds and import provenance,
