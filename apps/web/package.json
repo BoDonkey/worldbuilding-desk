@@ -6,9 +6,11 @@
   "scripts": {
     "predev": "pnpm --filter @worldbuilding-desk/rules-engine build",
     "dev": "vite",
-    "prebuild": "pnpm --filter @worldbuilding-desk/rules-ui... build && pnpm craft-library:check",
+    "prebuild": "pnpm --filter @worldbuilding-desk/rules-ui... build && pnpm craft-library:check && pnpm dogfood-fixture:check",
     "build": "tsc -b && vite build",
     "craft-library:build": "node scripts/build-craft-library.mjs",
+    "dogfood-fixture:build": "node scripts/build-trust-dogfood-content.mjs",
+    "dogfood-fixture:check": "node scripts/build-trust-dogfood-content.mjs --check",
     "craft-library:check": "node scripts/build-craft-library.mjs --check",
     "lint": "eslint \"src/**/*.{ts,tsx}\"",
     "lint:fix": "eslint \"src/**/*.{ts,tsx}\" --fix",

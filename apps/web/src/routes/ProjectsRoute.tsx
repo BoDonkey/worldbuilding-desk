@@ -39,6 +39,8 @@ import {
 } from '../services/storage';
 import {useAppStore} from '../store/appStore';
 import {createSampleProject} from '../services/onboarding/createSampleProject';
+import {createTrustDogfoodProject} from '../services/onboarding/createTrustDogfoodProject';
+import {isDogfoodToolsEnabled} from '../services/onboarding/dogfoodTools';
 import {PageHeader} from '../components/PageHeader';
 import styles from '../styles/ProjectsRoute.module.css';
 import {useConfirmDialog} from '../hooks/useConfirmDialog';
@@ -66,6 +68,8 @@ function ProjectsRoute() {
   } | null>(null);
   const [isCreatingProject, setIsCreatingProject] = useState(false);
   const [isLoadingSample, setIsLoadingSample] = useState(false);
+  const [isLoadingDogfood, setIsLoadingDogfood] = useState(false);
+  const dogfoodToolsEnabled = isDogfoodToolsEnabled();
   const [deletingProjectId, setDeletingProjectId] = useState<string | null>(null);
   const [exportingProjectId, setExportingProjectId] = useState<string | null>(null);
   const [syncingProjectId, setSyncingProjectId] = useState<string | null>(null);
@@ -194,6 +198,25 @@ function ProjectsRoute() {
       setFeedback({tone: 'error', message});
     } finally {
       setIsLoadingSample(false);
+    }
+  };
+
+  const handleLoadTrustDogfood = async () => {
+    setIsLoadingDogfood(true);
+    setFeedback(null);
+    try {
+      const project = await createTrustDogfoodProject({saveProjectSettings: persistProjectSettings});
+      setProjects((prev) => [...prev, project]);
+      onSelectProject(project);
+      setFeedback({
+        tone: 'success',
+        message: 'Trust-dogfood fixture loaded: 5 scenes, 4 Source Notes, ruleset linked. Nothing is canon yet.'
+      });
+      navigate('/workspace');
+    } catch (error) {
+      setFeedback({tone: 'error', message: describeError(error, 'Unable to load the trust-dogfood fixture.')});
+    } finally {
+      setIsLoadingDogfood(false);
     }
   };
 
@@ -731,6 +754,16 @@ function ProjectsRoute() {
           </button>{' '}
           — a short manuscript with a deliberate canon conflict already waiting to be found.
         </p>
+        {dogfoodToolsEnabled ? (
+          <p className={styles.sectionIntro} data-testid='dogfood-tools'>
+            Dogfood tools (dev only):{' '}
+            <button type='button' onClick={() => void handleLoadTrustDogfood()} disabled={isLoadingDogfood}>
+              {isLoadingDogfood ? 'Loading fixture...' : 'Load trust-dogfood fixture'}
+            </button>{' '}
+            — seeds the Slice 1.1 runbook project (chapters, Source Notes, ruleset) with no canon, sheets, or
+            state, so the run starts at review.
+          </p>
+        ) : null}
 
         <section className={styles.listCard}>
           <h2>Existing Projects</h2>

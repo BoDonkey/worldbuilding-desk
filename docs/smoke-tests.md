@@ -182,9 +182,11 @@ after backup; or pre/post-migration replay differences.
 
 ### Trust-dogfood fixture mapping
 
-Execute the concrete five-pass script in
-`fixtures/trust-dogfood/README.md` under **Character identity addendum —
-J1–J6**, and record its G1–G6 checks against
+Start from the run sheet at the top of `fixtures/trust-dogfood/README.md`;
+in a dev build, Projects → **Dogfood tools (dev only) → Load trust-dogfood
+fixture** seeds the chapters, Source Notes, and ruleset with no canon so the
+run begins at review. Then execute the concrete five-pass script in that
+file under **Character identity addendum — J1–J6**, and record its G1–G6 checks against
 `fixtures/trust-dogfood/answer-key.md`. J3 uses
 `character-identity/legacy-identity-matrix.v1.json`; J6 uses
 `character-identity/legacy-tam-tools-only.v1.json` twice so both explicit

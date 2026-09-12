@@ -28,9 +28,68 @@ character-identity/legacy-identity-matrix.v1.json
 answer-key.md                 every planted issue + expected behavior
 ```
 
-Time estimate: 5–7 hours across three to five sittings, including the
-character-identity addendum. A comfortable split is: Session A; Session B;
-Session C plus Identity Passes 1–2; Identity Passes 3–5; final triage.
+Time estimate with the fast path below: 3–4 hours across three sittings,
+including the character-identity addendum (5–7 hours if you import every
+file by hand). A comfortable split is: Session A + B; Session C + Identity
+Passes 1–2; Identity Passes 3–5 + triage.
+
+## Run sheet (start here)
+
+**Prerequisites (once).**
+
+1. One stable build for the whole run. Record `git rev-parse --short HEAD`.
+   Do not pull or patch mid-run unless a stop condition is hit.
+2. `pnpm dev:web` plus `pnpm start:desktop:dev` (desktop shell preferred), or
+   the browser at `localhost:5173`; record which and stay on it.
+3. Configure the AI provider in Settings → AI Settings and run **Test
+   connection**. Record provider/model. The D and G6 checks need it; A–C and
+   E–F do not.
+
+**Fast path (replaces the file-by-file setup).** On Projects, use
+**Dogfood tools (dev only) → Load trust-dogfood fixture**. It creates
+"Ember Ledger Dogfood" as a LitRPG project with the five chapters as scenes,
+the four lore files as Source Notes, and the fixture ruleset linked — and
+nothing else. No World Bible records, aliases, facts, sheets, or state
+events exist yet, because every one of those is an author action the run
+observes. The button appears in dev builds; in a packaged build enable it
+from the console with `localStorage.setItem('wbd:dogfood-tools','1')`. If you
+prefer to exercise the import paths by hand, follow A-1/A-2/A-4/A-5/A-6 as
+written instead; those import paths are also covered by Cypress
+(`post-merge-smoke`, `lore-documents`).
+
+What the fast path skips and what it does not:
+
+| Step | Fast path | Still manual |
+|---|---|---|
+| A-1 project, A-2 ruleset import | done by loader | — |
+| A-4/A-5 chapter imports | scenes exist; run **Run project review** from the Workspace **Review** drawer instead of waiting for import review | recording A1–A4 from that review, creating Sera/Brannic/Grayharbor/Corvo from review, linking "Bran" |
+| A-6 lore import | Source Notes exist | linking each note to its record, **Extract Candidates** on each |
+| A-3 sheet baseline | — | after Sera exists: World Bible → Sera → Mechanics → **Add mechanics to this character** → **Advanced sheet setup** |
+
+**Order of work.** Session A (A-3 after A-6) → Session B → Session C →
+Identity Passes 1–5 → triage. Record every check ID as `Pass / Fail /
+Partial — note — evidence` in the results log at the bottom; anything the
+app flags that the answer key does not list is a false positive and is a
+finding too.
+
+**Stop immediately and preserve the project (export a backup) if you see:**
+data loss or corruption; an unresolved record silently promoted to canon;
+rejected or pending material entering normal assistant grounding; the Tam
+Hollow Court note asserted before you resolve it (C4/D3/G6). Log everything
+else and keep going on the same build.
+
+**Check index (current UI labels).**
+
+| IDs | Where | Do | Expect (answer-key) |
+|---|---|---|---|
+| A1–A4 | Workspace → Review drawer → **Run project review** | read the review list per chapter | Corvo Lash and the Salt Door surface; "Ma", sentence-start words, bracketed system lines do not |
+| B1–B5 | Workspace, each chapter | after canon exists, re-run review; hover highlights | all alias forms known; "deep vault" does not link to the Undervault |
+| C1–C3 | Canon Decisions | work the queue | service-length cluster forms (accept twenty years); Compact of Cinders becomes an alias; gray-eyes then ch 2 conflict |
+| C4–C5 | Source Notes → working notes → **Extract Candidates** | leave Tam/Hollow Court and smuggler claims pending or rejected | never canon, never grounding |
+| D1–D5 | Workspace → AI drawer | ask the five questions verbatim | see § D; check **Sources used** labels |
+| E1–E5 | World Bible → Sera → Mechanics → **Record a scene change** | enter the § E script row by row, previewing each | replay per chapter matches; E3 is the honest "did anything catch it" check |
+| F1–F3 | Source Notes health panel; Sera's character detail | probe "Emberglass Key"; edit a note; open Sera | ranking, stale → rebuild, detail completeness |
+| G1–G6 | separate projects per pass | Identity Passes 1–5 | see addendum |
 
 ## Current multi-day handoff — started 2026-08-11
 
@@ -84,10 +143,13 @@ Suggested resume points:
 
 ## Session A — Setup and intake
 
-**A-1. Project setup.** Create a fresh project (suggest: "Ember Ledger
-Dogfood"). Do not reuse a project with existing review/ignore state.
+**A-1. Project setup.** *Fast path: done by the loader.* Otherwise create a
+fresh project (suggest: "Ember Ledger Dogfood"). Do not reuse a project with
+existing review/ignore state.
 
-**A-2. Ruleset import.** Ruleset route → Import → `ruleset.emberledger.json`.
+**A-2. Ruleset import.** *Fast path: done by the loader; just confirm the
+stats and resources below on the Ruleset route.* Otherwise Ruleset route →
+Import → `ruleset.emberledger.json`.
 Confirm stats (Level, Might, Finesse, Resonance, Class, Ledger-Marked) and
 resources (Health 100, Aether 50 max with regeneration, Stamina) appear.
 If import rejects the file, that is a finding (the payload matches
@@ -103,23 +165,28 @@ Ledger-Marked true, Health 100/100, Aether 30/50, Stamina 100/100. Expand
 save the sheet. The draught is required so ch 1's consume-item change can pass
 deterministic validation.
 
-**A-4. Chapter 1 import — pre-lore unknowns.** Workspace → Import →
-`01-the-salt-door.md` (balanced mode). Let review settle.
+**A-4. Chapter 1 review — pre-lore unknowns.** *Fast path: chapter 1 is
+already a scene; open it and choose **Run project review** in the Review
+drawer.* Otherwise Workspace → Import → `01-the-salt-door.md` (balanced
+mode) and let review settle.
 Record: **A2** (Salt Door flagged as unknown place), hazard checks (no stray
 highlights on "Don't rush…", "Some of them…", bracketed system lines).
 Resolve nothing yet except: create **Sera Kestrel** (Characters), **Brannic
 Halloway** (Characters), **Grayharbor** (Locations) from review; link "Bran"
 as alias when offered.
 
-**A-5. Remaining chapters.** Import `02`–`05` in order. After ch 2, record
+**A-5. Remaining chapters.** *Fast path: all five scenes exist; work them in
+order from the same project review.* Otherwise import `02`–`05` in order.
+After ch 2, record
 **A1** (Corvo Lash surfaces as repeated unknown) and **A4** ("Ma" doesn't
 fragment). Create Corvo Lash from review. After each import, spot-check the
 review drawer's Current/Other document sections behave.
 
-**A-6. Lore intake.** Lore Documents route → import all four `lore/*.md`
-files as Source Notes. Link the dossier to Sera, faction notes to the Cinder
-Compact record (create via extraction if not yet made), place notes to
-Grayharbor/Undervault records as offered. Run **Extract facts** on each.
+**A-6. Lore intake.** *Fast path: the four Source Notes exist.* Otherwise
+Source Notes route → **Import File** for each `lore/*.md`. Then open each
+note, link the dossier to Sera, faction notes to the Cinder Compact record
+(create via extraction if not yet made), place notes to Grayharbor/Undervault
+records as offered, and choose **Extract Candidates** on each.
 
 **A-7. Extraction review.** Accept the clean facts (occupation, brother Tam,
 aliases Ash/Ledgerbound/Dess/the Vault, Vaultburn cure, founding history,
@@ -205,7 +272,8 @@ procedure on rich data).
 
 Run these checks as isolated passes so their deliberately unresolved legacy
 records do not contaminate the main A–F trust run. Record **G1–G6** in the
-same results log. The two JSON files are real Character Tools import payloads;
+same results log. The two JSON files are real character-package import payloads (More →
+**Character packages**);
 their contract is also guarded by
 `characterIdentityDogfoodFixtures.test.ts`.
 
@@ -215,7 +283,7 @@ their contract is also guarded by
 2. In a scene, write `Ilyra Fen checked the shutter twice.` Run review and
    accept Ilyra into a character-kind World Bible category.
 3. Record **G1**: exactly one World Bible character exists; intake showed no
-   sheet, stat, resource, or Character Tools form; the known-lore highlight
+   sheet, stat, resource, or separate character-tools form; the known-lore highlight
    opens Ilyra's World Bible record; name and description are editable only
    there.
 4. Record the mode half of **G2**: direct navigation to `/characters` returns
@@ -238,15 +306,16 @@ Use the main LitRPG dogfood project after A-6 and A-3.
    that sheet deletion also leaves canon untouched.
 4. After at least one accepted state event exists, rename `Sera Kestrel` to
    `Sera Kestrel-Vale`. Record **G2** again: the sheet, state timeline, hover
-   card, and Character Tools capability row all show the new name without
+   card, and the Mechanics section all show the new name without
    relinking; `Sera Kestrel` remains an alias and manuscript mentions still
    resolve. Rename back only if desired for the remaining A–F questions.
 
 ### Identity Pass 3 — conserving legacy classification (J3)
 
-1. Create a fresh LitRPG project named `Ember Identity — Migration` and make
-   one World Bible character named `Maren Kestrel`.
-2. Character Tools → **Import Characters + Sheets** →
+1. Create a fresh LitRPG project named `Ember Identity — Migration` (the
+   fixture loader is not needed here; a blank project is fine) and make one
+   World Bible character named `Maren Kestrel`.
+2. More → **Character packages** → **Import packages with sheets** →
    `character-identity/legacy-identity-matrix.v1.json`.
 3. Record **G3**: the migration report reconciles five source records — the
    existing World Bible Maren plus both imported `Maren Kestrel` tools records
@@ -266,14 +335,14 @@ Use the main LitRPG dogfood project after A-6 and A-3.
 Run this pass twice in fresh projects: once for **link existing**, once for
 **create canon**.
 
-1. Before creating any Tam canon, Character Tools → **Import Character
-   Package** → `character-identity/legacy-tam-tools-only.v1.json`.
+1. Before creating any Tam canon, More → **Character packages** → **Import
+   character packages** → `character-identity/legacy-tam-tools-only.v1.json`.
 2. Add `Tam trimmed the lamp wick.` to a scene and run review. Ask the
    assistant `Is Tam working for the Hollow Court?` before resolving identity.
 3. Record **G6** containment: Tam is not a known-lore underline and does not
    enter assistant grounding; the answer does not assert the package's
    deliberately unconfirmed Hollow Court note; Tam appears under **Needs
-   canon link** as Character Tools only.
+   canon link** (World Bible review) as a package-only record.
 4. Link-existing branch: create `Tam Kestrel` in World Bible, then explicitly
    link the queued Tam record to it. Create-canon branch: use the queue's
    **Create canon record** action.

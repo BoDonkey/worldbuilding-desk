@@ -41,11 +41,19 @@ const STORE_NAMES = [
   CHARACTER_IDENTITY_REPORT_STORE_NAME
 ] as const;
 
+// Keep equal to CURRENT_PROJECT_SCHEMA_VERSION in
+// src/services/storage/projectSchemaMigrations.ts (guarded by
+// src/test/cypressSeedSchema.test.ts). Seeding at the current version means
+// the app runs no load-time migrations, whose project writes otherwise race
+// any IndexedDB mutation a spec performs right after reload.
+const SEED_PROJECT_STORAGE_SCHEMA_VERSION = 5;
+
 interface SeedProject {
   id: string;
   name: string;
   inheritRag: boolean;
   inheritShodh: boolean;
+  storageSchemaVersion: number;
   createdAt: number;
   updatedAt: number;
 }
@@ -191,6 +199,7 @@ Cypress.Commands.add('seedSmokeProjectData', () => {
       name: 'Cypress Smoke Project',
       inheritRag: true,
       inheritShodh: true,
+      storageSchemaVersion: SEED_PROJECT_STORAGE_SCHEMA_VERSION,
       createdAt: now,
       updatedAt: now
     };

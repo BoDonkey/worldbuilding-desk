@@ -202,6 +202,15 @@ Under the hood, the app still includes rich systems for world data, rules, chara
   `aria-describedby` now also cover the new World Bible type name, the
   mechanics first-value name/starting value, and the dialogue style select.
 
+- Dev-only dogfood tooling: in a dev build (or with the `wbd:dogfood-tools`
+  localStorage flag), Projects offers **Load trust-dogfood fixture**, which
+  seeds the Slice 1.1 runbook project — five chapters as scenes, four lore
+  files as Source Notes, the fixture ruleset linked — with no World Bible
+  records, aliases, facts, sheets, or state events, so the manual run starts
+  at review instead of at ten file imports. The content module is generated
+  from `fixtures/trust-dogfood/` by `pnpm --filter web dogfood-fixture:build`
+  and a parity test plus the prebuild check keep it from drifting.
+
 ### Story Context Systems
 - World Bible with dynamic categories and custom field schemas.
 - World Bible now follows shared page chrome, uses a compact utility rail for import/help tools, opens category tabs in browse/list mode by default, and reveals manual entry forms only after explicit create/edit selection.
@@ -633,6 +642,15 @@ runtime schema, and nothing here changes the roadmap's status board.
 ## Verification Status
 
 ### Verified Recently
+- Dogfood path simplification: `createTrustDogfoodProject` (unit-tested via
+  fake IndexedDB: five scenes in order, escaped paragraph HTML with system
+  lines intact, four Source Notes with correct kinds and import provenance,
+  ruleset saved and linked, zero entities/facts), generated fixture content
+  with a parity test against the source files, dev-gated Projects button, a
+  Cypress spec that loads the fixture and lands in Workspace. Runbook gained a
+  one-page run sheet, fast-path notes on A-1–A-6, a current-label check
+  index, and corrected Character Tools era paths (`Extract Candidates`, More →
+  Character packages). Also fixed the recurring `post-merge-smoke` "Add mechanics" flake at its root: the Cypress seed wrote projects without `storageSchemaVersion`, so every spec's first load ran the full migration chain whose project writes raced any IndexedDB mutation a spec made right after reload (the test's `rulesetId` was clobbered); the seed now stamps the current schema version, guarded by `cypressSeedSchema.test.ts`. Lint with 1 baseline warning; 534 web (+5 new) + 6 engine + 12 UI tests; web/desktop builds; full Cypress 78/78 across 17 specs.
 - Slice 5.12 app-shell toast viewport + status live region: new
   `store/notificationStore.ts` (toasts + announcement), `AppNotifications`
   mounted once in the app shell (and in the route test helper), `RouteFeedback`
