@@ -46,6 +46,8 @@ export interface CorpusEvaluation {
   healedKnownGaps: CorpusExpectedAbsence[];
   resolutionViolations: Array<{rule: CorpusExpectedResolution; mention: CorpusMention}>;
   conflictViolations: Array<{entityId: string; finding: CorpusFinding}>;
+  /** Findings whose focus text or surface is not a verbatim substring of their scene (highlights would fail). */
+  unanchoredFindings: CorpusFinding[];
   findings: CorpusFinding[];
 }
 
@@ -214,6 +216,13 @@ export function evaluateContinuityCase(corpusCase: ContinuityCorpusCase, run: Co
     }
   });
 
+  const sceneTextById = new Map(corpusCase.scenes.map((scene) => [scene.id, scene.text]));
+  const unanchoredFindings = run.findings.filter((finding) => {
+    const anchor = finding.focusText || finding.surface;
+    if (!anchor) return false;
+    return !(sceneTextById.get(finding.sceneId) ?? '').includes(anchor);
+  });
+
   return {
     caseId: corpusCase.id,
     matched,
@@ -222,6 +231,7 @@ export function evaluateContinuityCase(corpusCase: ContinuityCorpusCase, run: Co
     healedKnownGaps,
     resolutionViolations,
     conflictViolations,
+    unanchoredFindings,
     findings: run.findings
   };
 }
@@ -249,6 +259,9 @@ export function summarizeCorpusEvaluations(evaluations: CorpusEvaluation[]): str
     );
     item.conflictViolations.forEach(({entityId, finding}) =>
       lines.push(`  FALSE CONFLICT [${item.caseId}] ${entityId} in ${finding.sceneId} — ${finding.message}`)
+    );
+    item.unanchoredFindings.forEach((finding) =>
+      lines.push(`  UNANCHORED [${item.caseId}] ${finding.code} in ${finding.sceneId}: "${finding.focusText || finding.surface}" is not verbatim scene text`)
     );
     item.healedKnownGaps.forEach((absence) =>
       lines.push(`  HEALED  [${item.caseId}] "${absence.surface}" no longer surfaces in ${absence.sceneId}; remove its knownGap from the corpus`)

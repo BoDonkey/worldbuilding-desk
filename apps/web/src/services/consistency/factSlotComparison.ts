@@ -311,22 +311,25 @@ function claimsForSlot(params: {
 
   for (const nounMatch of block.matchAll(nounPattern(assertion.headNoun))) {
     const nounIndex = nounMatch.index ?? 0;
-    const beforeText = block.slice(Math.max(0, nounIndex - 80), nounIndex);
-    const afterText = block.slice(nounIndex + nounMatch[0].length, nounIndex + nounMatch[0].length + WINDOW_AFTER);
-    const beforeTokens = beforeText.split(/\s+/).filter(Boolean).slice(-TOKENS_BEFORE);
-    const afterTokens = afterText.split(/\s+/).filter(Boolean);
+    const nounEnd = nounIndex + nounMatch[0].length;
+    const beforeStart = Math.max(0, nounIndex - 80);
+    const beforeText = block.slice(beforeStart, nounIndex);
+    const afterText = block.slice(nounEnd, nounEnd + WINDOW_AFTER);
+    const trimPhrase = (value: string): string => value.replace(/^[\s"“”]+|[\s.,;:!?"“”]+$/g, '');
+    const beforeTokens = Array.from(beforeText.matchAll(/\S+/g)).slice(-TOKENS_BEFORE);
+    const afterTokens = Array.from(afterText.matchAll(/\S+/g));
 
     const candidates: Array<{token: string; phrase: string}> = [];
-    beforeTokens.forEach((token, index) => {
-      const phrase = `${beforeTokens.slice(index).join(' ')} ${nounMatch[0]}`;
-      candidates.push({token, phrase});
+    beforeTokens.forEach((token) => {
+      const start = beforeStart + (token.index ?? 0);
+      candidates.push({token: token[0], phrase: trimPhrase(block.slice(start, nounEnd))});
     });
-    afterTokens.forEach((token, index) => {
-      const phrase = `${nounMatch[0]} ${afterTokens.slice(0, index + 1).join(' ')}`;
-      candidates.push({token, phrase});
+    afterTokens.forEach((token) => {
+      const end = nounEnd + (token.index ?? 0) + token[0].length;
+      candidates.push({token: token[0], phrase: trimPhrase(block.slice(nounIndex, end))});
     });
 
-    const negatedNearby = NEGATION_PATTERN.test(`${beforeTokens.join(' ')} ${afterText}`);
+    const negatedNearby = NEGATION_PATTERN.test(`${beforeTokens.map((token) => token[0]).join(' ')} ${afterText}`);
 
     if (assertion.numeric !== null) {
       for (const candidate of candidates) {

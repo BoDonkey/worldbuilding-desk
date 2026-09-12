@@ -1,5 +1,5 @@
 export const DB_NAME = 'worldbuilding-db';
-export const DB_VERSION = 26;
+export const DB_VERSION = 27;
 export const ENTITY_STORE_NAME = 'entities';
 export const CATEGORY_STORE_NAME = 'entityCategories';
 export const PROJECT_STORE_NAME = 'projects';
@@ -32,6 +32,7 @@ export const STATE_MUTATION_EVENT_STORE_NAME = 'state_mutation_events';
 export const PROJECT_MIGRATION_BACKUP_STORE_NAME = 'project_migration_backups';
 export const ACTOR_RESOLUTION_STORE_NAME = 'actor_resolutions';
 export const CHARACTER_IDENTITY_REPORT_STORE_NAME = 'character_identity_reports';
+export const PROJECT_REVIEW_RUN_STORE_NAME = 'project_review_runs';
 
 export const PROJECT_SCOPED_STORE_NAMES = [
   CATEGORY_STORE_NAME,
@@ -63,165 +64,175 @@ export const PROJECT_SCOPED_STORE_NAMES = [
   CONSISTENCY_ALIAS_STORE_NAME,
   STATE_MUTATION_EVENT_STORE_NAME,
   ACTOR_RESOLUTION_STORE_NAME,
-  CHARACTER_IDENTITY_REPORT_STORE_NAME
+  CHARACTER_IDENTITY_REPORT_STORE_NAME,
+  PROJECT_REVIEW_RUN_STORE_NAME
 ] as const;
+
+/** Creates every object store and index the app expects. Shared with the Cypress seed so test databases match production. */
+export function upgradeDatabase(db: IDBDatabase): void {
+
+  if (!db.objectStoreNames.contains(ENTITY_STORE_NAME)) {
+    db.createObjectStore(ENTITY_STORE_NAME, { keyPath: 'id' });
+  }
+
+  if (!db.objectStoreNames.contains(PROJECT_STORE_NAME)) {
+    db.createObjectStore(PROJECT_STORE_NAME, { keyPath: 'id' });
+  }
+
+  if (!db.objectStoreNames.contains(WRITING_STORE_NAME)) {
+    db.createObjectStore(WRITING_STORE_NAME, { keyPath: 'id' });
+  }
+
+  if (!db.objectStoreNames.contains(SCRATCHPAD_STORE_NAME)) {
+    db.createObjectStore(SCRATCHPAD_STORE_NAME, { keyPath: 'id' });
+  }
+
+  if (!db.objectStoreNames.contains(CORKBOARD_CHAPTER_CARD_STORE_NAME)) {
+    db.createObjectStore(CORKBOARD_CHAPTER_CARD_STORE_NAME, { keyPath: 'id' });
+  }
+
+  if (!db.objectStoreNames.contains(SETTINGS_STORE_NAME)) {
+    db.createObjectStore(SETTINGS_STORE_NAME, { keyPath: 'id' });
+  }
+
+  if (!db.objectStoreNames.contains(CHARACTER_STORE_NAME)) {
+    db.createObjectStore(CHARACTER_STORE_NAME, { keyPath: 'id' });
+  }
+
+  if (!db.objectStoreNames.contains(CHARACTER_SHEET_STORE_NAME)) {
+    db.createObjectStore(CHARACTER_SHEET_STORE_NAME, { keyPath: 'id' });
+  }
+
+  if (!db.objectStoreNames.contains(LORE_DOCUMENT_STORE_NAME)) {
+    db.createObjectStore(LORE_DOCUMENT_STORE_NAME, { keyPath: 'id' });
+  }
+
+  if (!db.objectStoreNames.contains(LORE_DOCUMENT_LINK_STORE_NAME)) {
+    db.createObjectStore(LORE_DOCUMENT_LINK_STORE_NAME, { keyPath: 'id' });
+  }
+
+  if (!db.objectStoreNames.contains(LORE_FACT_PROPOSAL_STORE_NAME)) {
+    db.createObjectStore(LORE_FACT_PROPOSAL_STORE_NAME, { keyPath: 'id' });
+  }
+
+  if (!db.objectStoreNames.contains(LORE_ENTITY_PROPOSAL_STORE_NAME)) {
+    db.createObjectStore(LORE_ENTITY_PROPOSAL_STORE_NAME, { keyPath: 'id' });
+  }
+
+  if (!db.objectStoreNames.contains(CANONICAL_FACT_STORE_NAME)) {
+    db.createObjectStore(CANONICAL_FACT_STORE_NAME, { keyPath: 'id' });
+  }
+
+  if (!db.objectStoreNames.contains(CANON_DECISION_CLUSTER_STORE_NAME)) {
+    db.createObjectStore(CANON_DECISION_CLUSTER_STORE_NAME, { keyPath: 'id' });
+  }
+
+  if (!db.objectStoreNames.contains(CANON_DECISION_SUPPRESSION_STORE_NAME)) {
+    db.createObjectStore(CANON_DECISION_SUPPRESSION_STORE_NAME, { keyPath: 'id' });
+  }
+
+  if (!db.objectStoreNames.contains(CATEGORY_STORE_NAME)) {
+    db.createObjectStore(CATEGORY_STORE_NAME, { keyPath: 'id' });
+  }
+
+  if (!db.objectStoreNames.contains(COMPENDIUM_ENTRY_STORE_NAME)) {
+    db.createObjectStore(COMPENDIUM_ENTRY_STORE_NAME, { keyPath: 'id' });
+  }
+
+  if (!db.objectStoreNames.contains(COMPENDIUM_MILESTONE_STORE_NAME)) {
+    db.createObjectStore(COMPENDIUM_MILESTONE_STORE_NAME, {
+      keyPath: 'id'
+    });
+  }
+
+  if (!db.objectStoreNames.contains(COMPENDIUM_RECIPE_STORE_NAME)) {
+    db.createObjectStore(COMPENDIUM_RECIPE_STORE_NAME, { keyPath: 'id' });
+  }
+
+  if (!db.objectStoreNames.contains(COMPENDIUM_PROGRESS_STORE_NAME)) {
+    db.createObjectStore(COMPENDIUM_PROGRESS_STORE_NAME, { keyPath: 'id' });
+  }
+
+  if (!db.objectStoreNames.contains(COMPENDIUM_ACTION_LOG_STORE_NAME)) {
+    db.createObjectStore(COMPENDIUM_ACTION_LOG_STORE_NAME, {
+      keyPath: 'id'
+    });
+  }
+
+  if (!db.objectStoreNames.contains(ZONE_AFFINITY_PROFILE_STORE_NAME)) {
+    db.createObjectStore(ZONE_AFFINITY_PROFILE_STORE_NAME, {
+      keyPath: 'id'
+    });
+  }
+
+  if (!db.objectStoreNames.contains(ZONE_AFFINITY_PROGRESS_STORE_NAME)) {
+    db.createObjectStore(ZONE_AFFINITY_PROGRESS_STORE_NAME, {
+      keyPath: 'id'
+    });
+  }
+
+  if (!db.objectStoreNames.contains(SETTLEMENT_MODULE_STORE_NAME)) {
+    db.createObjectStore(SETTLEMENT_MODULE_STORE_NAME, {
+      keyPath: 'id'
+    });
+  }
+
+  if (!db.objectStoreNames.contains(SETTLEMENT_STATE_STORE_NAME)) {
+    db.createObjectStore(SETTLEMENT_STATE_STORE_NAME, {
+      keyPath: 'id'
+    });
+  }
+
+  if (!db.objectStoreNames.contains(CONSISTENCY_PROPOSAL_STORE_NAME)) {
+    db.createObjectStore(CONSISTENCY_PROPOSAL_STORE_NAME, {
+      keyPath: 'id'
+    });
+  }
+
+  if (!db.objectStoreNames.contains(CONSISTENCY_EVENT_STORE_NAME)) {
+    db.createObjectStore(CONSISTENCY_EVENT_STORE_NAME, {
+      keyPath: 'id'
+    });
+  }
+
+  if (!db.objectStoreNames.contains(CONSISTENCY_ALIAS_STORE_NAME)) {
+    db.createObjectStore(CONSISTENCY_ALIAS_STORE_NAME, {
+      keyPath: 'id'
+    });
+  }
+
+  if (!db.objectStoreNames.contains(STATE_MUTATION_EVENT_STORE_NAME)) {
+    db.createObjectStore(STATE_MUTATION_EVENT_STORE_NAME, {
+      keyPath: 'id'
+    });
+  }
+
+  if (!db.objectStoreNames.contains(PROJECT_MIGRATION_BACKUP_STORE_NAME)) {
+    db.createObjectStore(PROJECT_MIGRATION_BACKUP_STORE_NAME, {
+      keyPath: 'id'
+    });
+  }
+
+  if (!db.objectStoreNames.contains(ACTOR_RESOLUTION_STORE_NAME)) {
+    db.createObjectStore(ACTOR_RESOLUTION_STORE_NAME, {keyPath: 'id'});
+  }
+
+  if (!db.objectStoreNames.contains(CHARACTER_IDENTITY_REPORT_STORE_NAME)) {
+    db.createObjectStore(CHARACTER_IDENTITY_REPORT_STORE_NAME, {keyPath: 'id'});
+  }
+
+  if (!db.objectStoreNames.contains(PROJECT_REVIEW_RUN_STORE_NAME)) {
+    const reviewRunStore = db.createObjectStore(PROJECT_REVIEW_RUN_STORE_NAME, {keyPath: 'id'});
+    reviewRunStore.createIndex('projectId', 'projectId', {unique: true});
+  }
+}
 
 export function openDb(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
     const request = indexedDB.open(DB_NAME, DB_VERSION);
 
     request.onupgradeneeded = () => {
-      const db = request.result;
-
-      if (!db.objectStoreNames.contains(ENTITY_STORE_NAME)) {
-        db.createObjectStore(ENTITY_STORE_NAME, { keyPath: 'id' });
-      }
-
-      if (!db.objectStoreNames.contains(PROJECT_STORE_NAME)) {
-        db.createObjectStore(PROJECT_STORE_NAME, { keyPath: 'id' });
-      }
-
-      if (!db.objectStoreNames.contains(WRITING_STORE_NAME)) {
-        db.createObjectStore(WRITING_STORE_NAME, { keyPath: 'id' });
-      }
-
-      if (!db.objectStoreNames.contains(SCRATCHPAD_STORE_NAME)) {
-        db.createObjectStore(SCRATCHPAD_STORE_NAME, { keyPath: 'id' });
-      }
-
-      if (!db.objectStoreNames.contains(CORKBOARD_CHAPTER_CARD_STORE_NAME)) {
-        db.createObjectStore(CORKBOARD_CHAPTER_CARD_STORE_NAME, { keyPath: 'id' });
-      }
-
-      if (!db.objectStoreNames.contains(SETTINGS_STORE_NAME)) {
-        db.createObjectStore(SETTINGS_STORE_NAME, { keyPath: 'id' });
-      }
-
-      if (!db.objectStoreNames.contains(CHARACTER_STORE_NAME)) {
-        db.createObjectStore(CHARACTER_STORE_NAME, { keyPath: 'id' });
-      }
-
-      if (!db.objectStoreNames.contains(CHARACTER_SHEET_STORE_NAME)) {
-        db.createObjectStore(CHARACTER_SHEET_STORE_NAME, { keyPath: 'id' });
-      }
-
-      if (!db.objectStoreNames.contains(LORE_DOCUMENT_STORE_NAME)) {
-        db.createObjectStore(LORE_DOCUMENT_STORE_NAME, { keyPath: 'id' });
-      }
-
-      if (!db.objectStoreNames.contains(LORE_DOCUMENT_LINK_STORE_NAME)) {
-        db.createObjectStore(LORE_DOCUMENT_LINK_STORE_NAME, { keyPath: 'id' });
-      }
-
-      if (!db.objectStoreNames.contains(LORE_FACT_PROPOSAL_STORE_NAME)) {
-        db.createObjectStore(LORE_FACT_PROPOSAL_STORE_NAME, { keyPath: 'id' });
-      }
-
-      if (!db.objectStoreNames.contains(LORE_ENTITY_PROPOSAL_STORE_NAME)) {
-        db.createObjectStore(LORE_ENTITY_PROPOSAL_STORE_NAME, { keyPath: 'id' });
-      }
-
-      if (!db.objectStoreNames.contains(CANONICAL_FACT_STORE_NAME)) {
-        db.createObjectStore(CANONICAL_FACT_STORE_NAME, { keyPath: 'id' });
-      }
-
-      if (!db.objectStoreNames.contains(CANON_DECISION_CLUSTER_STORE_NAME)) {
-        db.createObjectStore(CANON_DECISION_CLUSTER_STORE_NAME, { keyPath: 'id' });
-      }
-
-      if (!db.objectStoreNames.contains(CANON_DECISION_SUPPRESSION_STORE_NAME)) {
-        db.createObjectStore(CANON_DECISION_SUPPRESSION_STORE_NAME, { keyPath: 'id' });
-      }
-
-      if (!db.objectStoreNames.contains(CATEGORY_STORE_NAME)) {
-        db.createObjectStore(CATEGORY_STORE_NAME, { keyPath: 'id' });
-      }
-
-      if (!db.objectStoreNames.contains(COMPENDIUM_ENTRY_STORE_NAME)) {
-        db.createObjectStore(COMPENDIUM_ENTRY_STORE_NAME, { keyPath: 'id' });
-      }
-
-      if (!db.objectStoreNames.contains(COMPENDIUM_MILESTONE_STORE_NAME)) {
-        db.createObjectStore(COMPENDIUM_MILESTONE_STORE_NAME, {
-          keyPath: 'id'
-        });
-      }
-
-      if (!db.objectStoreNames.contains(COMPENDIUM_RECIPE_STORE_NAME)) {
-        db.createObjectStore(COMPENDIUM_RECIPE_STORE_NAME, { keyPath: 'id' });
-      }
-
-      if (!db.objectStoreNames.contains(COMPENDIUM_PROGRESS_STORE_NAME)) {
-        db.createObjectStore(COMPENDIUM_PROGRESS_STORE_NAME, { keyPath: 'id' });
-      }
-
-      if (!db.objectStoreNames.contains(COMPENDIUM_ACTION_LOG_STORE_NAME)) {
-        db.createObjectStore(COMPENDIUM_ACTION_LOG_STORE_NAME, {
-          keyPath: 'id'
-        });
-      }
-
-      if (!db.objectStoreNames.contains(ZONE_AFFINITY_PROFILE_STORE_NAME)) {
-        db.createObjectStore(ZONE_AFFINITY_PROFILE_STORE_NAME, {
-          keyPath: 'id'
-        });
-      }
-
-      if (!db.objectStoreNames.contains(ZONE_AFFINITY_PROGRESS_STORE_NAME)) {
-        db.createObjectStore(ZONE_AFFINITY_PROGRESS_STORE_NAME, {
-          keyPath: 'id'
-        });
-      }
-
-      if (!db.objectStoreNames.contains(SETTLEMENT_MODULE_STORE_NAME)) {
-        db.createObjectStore(SETTLEMENT_MODULE_STORE_NAME, {
-          keyPath: 'id'
-        });
-      }
-
-      if (!db.objectStoreNames.contains(SETTLEMENT_STATE_STORE_NAME)) {
-        db.createObjectStore(SETTLEMENT_STATE_STORE_NAME, {
-          keyPath: 'id'
-        });
-      }
-
-      if (!db.objectStoreNames.contains(CONSISTENCY_PROPOSAL_STORE_NAME)) {
-        db.createObjectStore(CONSISTENCY_PROPOSAL_STORE_NAME, {
-          keyPath: 'id'
-        });
-      }
-
-      if (!db.objectStoreNames.contains(CONSISTENCY_EVENT_STORE_NAME)) {
-        db.createObjectStore(CONSISTENCY_EVENT_STORE_NAME, {
-          keyPath: 'id'
-        });
-      }
-
-      if (!db.objectStoreNames.contains(CONSISTENCY_ALIAS_STORE_NAME)) {
-        db.createObjectStore(CONSISTENCY_ALIAS_STORE_NAME, {
-          keyPath: 'id'
-        });
-      }
-
-      if (!db.objectStoreNames.contains(STATE_MUTATION_EVENT_STORE_NAME)) {
-        db.createObjectStore(STATE_MUTATION_EVENT_STORE_NAME, {
-          keyPath: 'id'
-        });
-      }
-
-      if (!db.objectStoreNames.contains(PROJECT_MIGRATION_BACKUP_STORE_NAME)) {
-        db.createObjectStore(PROJECT_MIGRATION_BACKUP_STORE_NAME, {
-          keyPath: 'id'
-        });
-      }
-
-      if (!db.objectStoreNames.contains(ACTOR_RESOLUTION_STORE_NAME)) {
-        db.createObjectStore(ACTOR_RESOLUTION_STORE_NAME, {keyPath: 'id'});
-      }
-
-      if (!db.objectStoreNames.contains(CHARACTER_IDENTITY_REPORT_STORE_NAME)) {
-        db.createObjectStore(CHARACTER_IDENTITY_REPORT_STORE_NAME, {keyPath: 'id'});
-      }
+      upgradeDatabase(request.result);
     };
 
     request.onsuccess = () => {

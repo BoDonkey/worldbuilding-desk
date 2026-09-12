@@ -31,6 +31,7 @@ describe('continuity review regression corpus (slice 4.23)', () => {
         item.absenceViolations.length > 0 ||
         item.resolutionViolations.length > 0 ||
         item.conflictViolations.length > 0 ||
+        item.unanchoredFindings.length > 0 ||
         item.healedKnownGaps.length > 0
     );
     expect(problems.map((item) => item.caseId), `\n${summary}\n`).toEqual([]);

@@ -14,6 +14,8 @@ export interface ConsistencyReviewItem {
   sceneTitle: string;
   issue: GuardrailIssue;
   reviewAnnotation?: ReviewIssueAnnotation;
+  /** The scene's text changed after the run that produced this item (4.25). */
+  staleSinceReview?: boolean;
 }
 
 export interface HighlightableReviewIssue {

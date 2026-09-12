@@ -63,6 +63,11 @@ hazards, B1–B5, C1) as expected findings and the fixed false-positive shapes
 as expected absences. When a manual smoke finds a new false positive or
 miss, add it there as a case (or a `knownGap`) so it stays fixed.
 
+Reload safety now includes the project review itself: after **Run project
+review**, reload and reopen the Review drawer; the items and "Last run" time
+must be restored, and editing a reviewed scene must mark its items "Scene
+changed since review" until the next run.
+
 Fixture texts and expected matching behavior (Kaelor/Glass Harbor/Ember
 Archive; Kael/Kaelor alias chain; Mira Voss/Lantern-Mira/Iron Warrens
 full-name/hyphenated-alias cases) are preserved in

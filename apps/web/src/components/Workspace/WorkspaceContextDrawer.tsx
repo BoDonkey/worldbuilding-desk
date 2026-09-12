@@ -48,6 +48,7 @@ interface ConsistencyReviewItem {
   sceneTitle: string;
   issue: GuardrailIssue;
   reviewAnnotation?: ReviewIssueAnnotation;
+  staleSinceReview?: boolean;
 }
 
 const ISSUE_LABELS: Record<string, string> = {
@@ -422,6 +423,10 @@ export function WorkspaceContextDrawer({
         ]
       : consistencyReviewItems;
   }, [activeReviewItemId, consistencyReviewItems]);
+  const staleReviewItemCount = useMemo(
+    () => consistencyReviewItems.filter((item) => item.staleSinceReview).length,
+    [consistencyReviewItems]
+  );
   const currentDocumentReviewItems = useMemo(
     () =>
       selectedId
@@ -525,6 +530,11 @@ export function WorkspaceContextDrawer({
               item.issue.severity === 'warning' && (
                 <span className={styles.consistencyReason}>Review later</span>
               )}
+            {item.staleSinceReview && (
+              <span className={styles.consistencyReason} title='This scene changed after the last project review. Run the review again to refresh it.'>
+                Scene changed since review
+              </span>
+            )}
           </div>
           <div className={styles.consistencyHeaderActions}>
             <button
@@ -838,6 +848,9 @@ export function WorkspaceContextDrawer({
           {lastConsistencyReviewAt && (
             <div className={styles.consistencyLastRun}>
               Last run: {new Date(lastConsistencyReviewAt).toLocaleString()}
+              {staleReviewItemCount > 0
+                ? ` · ${staleReviewItemCount} item${staleReviewItemCount === 1 ? '' : 's'} from scenes changed since`
+                : ''}
             </div>
           )}
           {hiddenStateMutationReviewCount > 0 && (

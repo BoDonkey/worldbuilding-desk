@@ -3,6 +3,7 @@ import {
   CHARACTER_IDENTITY_REPORT_STORE_NAME,
   DB_NAME,
   DB_VERSION,
+  upgradeDatabase,
   PROJECT_MIGRATION_BACKUP_STORE_NAME
 } from '../../src/db';
 
@@ -144,12 +145,9 @@ function openDatabase(win: Window): Promise<IDBDatabase> {
     const openRequest = win.indexedDB.open(DB_NAME, DB_VERSION);
 
     openRequest.onupgradeneeded = () => {
-      const db = openRequest.result;
-      for (const storeName of STORE_NAMES) {
-        if (!db.objectStoreNames.contains(storeName)) {
-          db.createObjectStore(storeName, {keyPath: 'id'});
-        }
-      }
+      // Use the app's own upgrade routine so every store and index exists,
+      // including ones added after this seed list was written.
+      upgradeDatabase(openRequest.result);
     };
 
     openRequest.onsuccess = () => resolve(openRequest.result);

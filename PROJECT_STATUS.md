@@ -236,6 +236,20 @@ Under the hood, the app still includes rich systems for world data, rules, chara
   Synonym normalization (grey/gray, number words) is a small data table with
   a per-project synonym hook; an author-editable synonym list is a follow-up.
 
+- Project review is persisted and incremental. The last run is stored per
+  project (`project_review_runs`, one record keyed by project id, in the
+  project-scoped store list so project deletion and migration backups cover
+  it) with each scene's deterministic result keyed by a content hash and the
+  run's non-text inputs hash (known entities, action cues, engine). Re-running
+  reuses unchanged scenes, including their local-AI annotations, and only
+  sends changed or new scenes through the engine; canon contradictions always
+  recompute. On reload the Review drawer restores the last run and its
+  timestamp; items whose scene text changed since show a "Scene changed since
+  review" marker and the header counts them. Dismissing a conflict also
+  updates the stored run. The stored run is deliberately not part of project
+  backups: snapshots carry accepted canon, not review output, and a restored
+  project simply runs review again.
+
 ### Story Context Systems
 - World Bible with dynamic categories and custom field schemas.
 - World Bible now follows shared page chrome, uses a compact utility rail for import/help tools, opens category tabs in browse/list mode by default, and reveals manual entry forms only after explicit create/edit selection.
@@ -667,6 +681,15 @@ runtime schema, and nothing here changes the roadmap's status board.
 ## Verification Status
 
 ### Verified Recently
+- Slice 4.25 persisted, incremental project review: new `project_review_runs`
+  store (DB version 27), `projectReviewRunStorage.ts`, pure
+  `incrementalReview.ts` (content and inputs hashing, reuse plan, stale
+  marking; 5 unit tests), hook wiring for restore/reuse/persist/dismiss, and
+  a drawer stale badge plus header count. Timing on the deterministic engine
+  with the trust-dogfood chapters copied to 40 scenes: first run 383 ms
+  (0 reused), second run 47 ms (40 reused). New Cypress spec
+  `project-review-persistence` covers reload restore, the stale marker after
+  an edit, and clearing it by re-running. Lint with 1 baseline warning; 553 web (+5 new) + 6 engine + 12 UI tests; web/desktop builds; full Cypress 79/79 across 18 specs including the new `project-review-persistence` spec.
 - Slice 4.24 fact-anchored canon contradiction detection: new
   `services/consistency/factSlotComparison.ts` (slot parsing, linguistic and
   learned value classes, per-claim speaker-aware attribution, negation and

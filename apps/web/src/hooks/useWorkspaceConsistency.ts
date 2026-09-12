@@ -25,6 +25,17 @@ import type {
   GuardrailIssue
 } from '../services/consistency';
 import {findCanonContradictions, saveAlias} from '../services/consistency';
+import {
+  hashReviewInputs,
+  markStaleReviewItems,
+  planIncrementalReview
+} from '../services/consistency/incrementalReview';
+import {
+  getProjectReviewRun,
+  saveProjectReviewRun,
+  type ProjectReviewRun,
+  type StoredSceneReview
+} from '../services/consistency/projectReviewRunStorage';
 import {buildCharacterCaptureAliasList} from '../services/worldBible/worldBibleCanonicalization';
 import {
   buildWorldCategory,
@@ -449,6 +460,8 @@ export const useWorkspaceConsistency = ({
   const [lastConsistencyReviewAt, setLastConsistencyReviewAt] = useState<number | null>(
     null
   );
+  const [storedReviewScenes, setStoredReviewScenes] = useState<StoredSceneReview[]>([]);
+  const storedReviewRunRef = useRef<ProjectReviewRun | null>(null);
   const [consistencyPopover, setConsistencyPopover] =
     useState<ConsistencyPopoverState | null>(null);
   const [worldEngineStatus, setWorldEngineStatus] =
@@ -531,6 +544,46 @@ export const useWorkspaceConsistency = ({
       setReviewPrefsHydrated(true);
     }
   }, [activeProject]);
+
+  // 4.25: restore the last project review for this project so the queue
+  // survives a reload; stale marking happens as scenes load or change.
+  useEffect(() => {
+    if (!activeProject) {
+      storedReviewRunRef.current = null;
+      setStoredReviewScenes([]);
+      setConsistencyReviewItems([]);
+      setLastConsistencyReviewAt(null);
+      return;
+    }
+    let cancelled = false;
+    void getProjectReviewRun(activeProject.id)
+      .then((run) => {
+        if (cancelled) return;
+        storedReviewRunRef.current = run;
+        if (!run) {
+          setStoredReviewScenes([]);
+          return;
+        }
+        setStoredReviewScenes(run.scenes);
+        setConsistencyReviewItems(run.items);
+        setLastConsistencyReviewAt(run.reviewedAt);
+      })
+      .catch((error) => {
+        if (!cancelled) {
+          console.warn('Could not restore the last project review.', error);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [activeProject]);
+
+  useEffect(() => {
+    if (storedReviewScenes.length === 0) return;
+    setConsistencyReviewItems((prev) =>
+      prev.length === 0 ? prev : markStaleReviewItems({items: prev, documents, storedScenes: storedReviewScenes})
+    );
+  }, [documents, storedReviewScenes]);
 
   useEffect(() => {
     if (!activeProject || !projectSettings || !isReviewPrefsHydrated) return;
@@ -1038,19 +1091,52 @@ export const useWorkspaceConsistency = ({
     announceStatus('Running consistency review.');
     try {
       const items: ConsistencyReviewItem[] = [];
+      const inputsHash = hashReviewInputs({
+        knownEntities: knownConsistencyEntities,
+        actionCues: resolvedActionCues,
+        engineLabel:
+          worldEngineStatus?.state === 'available'
+            ? `local-ai:${worldEngineStatus.modelLabel}`
+            : 'deterministic'
+      });
+      const plan = planIncrementalReview({
+        documents,
+        storedRun: storedReviewRunRef.current,
+        inputsHash
+      });
+      const reviewedAt = Date.now();
+      const nextStoredScenes: StoredSceneReview[] = [];
       for (const doc of documents) {
-        const {validation, issueAnnotations} = await worldEngine.reviewText({
-          projectId: activeProject.id,
-          text: htmlToPlainText(doc.content),
-          source: getReviewSourceForDocument(doc),
-          knownEntities: knownConsistencyEntities,
-          actionCues: resolvedActionCues
-        });
+        const reused = plan.reusable.get(doc.id);
+        let issues: GuardrailIssue[];
+        let issueAnnotations: StoredSceneReview['issueAnnotations'];
+        if (reused) {
+          issues = reused.issues;
+          issueAnnotations = reused.issueAnnotations;
+          nextStoredScenes.push(reused);
+        } else {
+          const result = await worldEngine.reviewText({
+            projectId: activeProject.id,
+            text: htmlToPlainText(doc.content),
+            source: getReviewSourceForDocument(doc),
+            knownEntities: knownConsistencyEntities,
+            actionCues: resolvedActionCues
+          });
+          issues = result.validation.issues;
+          issueAnnotations = result.issueAnnotations;
+          nextStoredScenes.push({
+            sceneId: doc.id,
+            contentHash: plan.contentHashById.get(doc.id) ?? '',
+            issues,
+            issueAnnotations,
+            reviewedAt
+          });
+        }
         const annotationsByIssueKey = mapReviewAnnotationsByIssueKey(
-          validation.issues,
+          issues,
           issueAnnotations
         );
-        const presentedIssues = filterDismissedUnknownIssues(doc.id, validation.issues);
+        const presentedIssues = filterDismissedUnknownIssues(doc.id, issues);
         presentedIssues.forEach((issue) => {
           items.push({
             id: makeReviewItemId(doc.id, issue),
@@ -1072,7 +1158,20 @@ export const useWorkspaceConsistency = ({
       const combinedItems = [...items, ...contradictionItems];
 
       setConsistencyReviewItems(combinedItems);
-      setLastConsistencyReviewAt(Date.now());
+      setLastConsistencyReviewAt(reviewedAt);
+      const nextRun: ProjectReviewRun = {
+        id: activeProject.id,
+        projectId: activeProject.id,
+        inputsHash,
+        reviewedAt,
+        scenes: nextStoredScenes,
+        items: combinedItems
+      };
+      storedReviewRunRef.current = nextRun;
+      setStoredReviewScenes(nextStoredScenes);
+      void saveProjectReviewRun(nextRun).catch((error) => {
+        console.warn('Could not persist the project review.', error);
+      });
       if (combinedItems.length === 0) {
         setFeedback({
           tone: 'success',
@@ -1113,6 +1212,7 @@ export const useWorkspaceConsistency = ({
     characters,
     documents,
     entities,
+    worldEngineStatus,
     filterDismissedUnknownIssues,
     knownConsistencyEntities,
     resolvedActionCues,
@@ -1814,6 +1914,14 @@ export const useWorkspaceConsistency = ({
     setConsistencyReviewItems((prev) =>
       prev.filter((item) => item.id !== itemId)
     );
+    const storedRun = storedReviewRunRef.current;
+    if (storedRun) {
+      const nextRun = {...storedRun, items: storedRun.items.filter((entry) => entry.id !== itemId)};
+      storedReviewRunRef.current = nextRun;
+      void saveProjectReviewRun(nextRun).catch((error) => {
+        console.warn('Could not persist the dismissed review item.', error);
+      });
+    }
   }, [consistencyReviewItems]);
 
   const ignoreUnknownSurfaceProjectWide = useCallback(
