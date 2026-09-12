@@ -1,3 +1,12 @@
+# Corkboard ↔ scenes — planning prompt
+
+Status: **input prompt, non-authoritative.** Received 2026-09-12 from an
+external LLM. The resulting plan is `docs/corkboard-scenes-plan.md`
+(proposal, not scheduled). Archive both together once the plan is accepted
+or rejected.
+
+---
+
 You are working in the worldbuilding-desk repository. Create a roadmap-ready work-slice plan that strengthens the connection between Corkboard Chapter Cards and manuscript scenes.
 
 This is a planning task only. Do not implement code, claim slices, commit changes, or silently change roadmap scope.
