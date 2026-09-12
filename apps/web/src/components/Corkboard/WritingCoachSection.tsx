@@ -16,6 +16,7 @@ import {CraftCitationList} from '../CraftCitationList';
 import {AIProposalPreview} from '../common/AIProposalPreview';
 import {saveDraftSourceNoteFromAssistantOutput} from '../../services/lore/sourceNoteCapture';
 import styles from '../../styles/CorkboardRoute.module.css';
+import {describeError} from '../../services/errors';
 
 /** Base retrieval query for the manuscript-wide coach: the dashboard's evidence is aggregate
  * numbers, not prose, so a fixed structural query finds relevant patterns better than searching
@@ -100,7 +101,7 @@ export function WritingCoachSection({dashboard, projectId, aiConfig}: WritingCoa
       }
     } catch (askError) {
       setStatus('error');
-      setError(askError instanceof Error ? askError.message : 'The writing coach could not be reached.');
+      setError(describeError(askError, 'The writing coach could not be reached.'));
     }
   };
 

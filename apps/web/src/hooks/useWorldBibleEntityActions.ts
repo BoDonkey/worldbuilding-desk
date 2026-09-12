@@ -33,6 +33,7 @@ import {
   isCharacterCategory
 } from '../services/characters/characterIdentity';
 import {exportCharactersJson} from '../services/characters/characterTransferService';
+import {describeError} from '../services/errors';
 
 type FeedbackState = {
   tone: 'success' | 'error';
@@ -314,7 +315,7 @@ export const useWorldBibleEntityActions = ({
             : (options?.successMessage ?? (editingId ? 'Entry updated.' : 'Entry created.'))
         });
       } catch (error) {
-        const message = error instanceof Error ? error.message : 'Unable to save entry.';
+        const message = describeError(error, 'Unable to save entry.');
         setFeedback({tone: 'error', message});
       } finally {
         setIsSubmittingEntity(false);
@@ -374,7 +375,7 @@ export const useWorldBibleEntityActions = ({
         });
       } catch (error) {
         const message =
-          error instanceof Error ? error.message : 'Unable to update entry.';
+          describeError(error, 'Unable to update entry.');
         setFeedback({tone: 'error', message});
       }
     },
@@ -411,7 +412,7 @@ export const useWorldBibleEntityActions = ({
             setFeedback({tone: 'success', message: 'Entry deleted.'});
           } catch (error) {
             const message =
-              error instanceof Error ? error.message : 'Unable to delete entry.';
+              describeError(error, 'Unable to delete entry.');
             setFeedback({tone: 'error', message});
           } finally {
             setDeletingEntityId(null);
@@ -530,7 +531,7 @@ export const useWorldBibleEntityActions = ({
             });
           } catch (error) {
             const message =
-              error instanceof Error ? error.message : 'Unable to merge records.';
+              describeError(error, 'Unable to merge records.');
             setFeedback({tone: 'error', message});
           } finally {
             setMergingEntityTargetId(null);
@@ -655,7 +656,7 @@ export const useWorldBibleEntityActions = ({
             });
           } catch (error) {
             const message =
-              error instanceof Error ? error.message : 'Unable to merge records.';
+              describeError(error, 'Unable to merge records.');
             setFeedback({tone: 'error', message});
           } finally {
             setMergingEntityTargetId(null);
@@ -813,7 +814,7 @@ export const useWorldBibleEntityActions = ({
             });
           } catch (error) {
             const message =
-              error instanceof Error ? error.message : 'Unable to convert record into an alias.';
+              describeError(error, 'Unable to convert record into an alias.');
             setFeedback({tone: 'error', message});
           } finally {
             setAliasingEntityTargetId(null);
@@ -929,7 +930,7 @@ export const useWorldBibleEntityActions = ({
         });
       } catch (error) {
         const message =
-          error instanceof Error ? error.message : 'Unable to open character tools.';
+          describeError(error, 'Unable to open character tools.');
         setFeedback({tone: 'error', message});
       } finally {
         setImportingCharacterEntityId(null);
@@ -957,7 +958,7 @@ export const useWorldBibleEntityActions = ({
       } catch (error) {
         setFeedback({
           tone: 'error',
-          message: error instanceof Error ? error.message : 'Unable to export this character.'
+          message: describeError(error, 'Unable to export this character.')
         });
       } finally {
         setExportingCharacterEntityId(null);
@@ -1030,9 +1031,7 @@ export const useWorldBibleEntityActions = ({
         return entry;
       } catch (error) {
         const message =
-          error instanceof Error
-            ? error.message
-            : 'Unable to link entity to compendium.';
+          describeError(error, 'Unable to link entity to compendium.');
         setFeedback({tone: 'error', message});
       } finally {
         setLinkingCompendiumEntityId(null);
@@ -1066,7 +1065,7 @@ export const useWorldBibleEntityActions = ({
         setFeedback({tone: 'success', message: 'Entry promoted to parent canon.'});
       } catch (error) {
         const message =
-          error instanceof Error ? error.message : 'Unable to promote entry.';
+          describeError(error, 'Unable to promote entry.');
         setFeedback({tone: 'error', message});
       } finally {
         setPromotingEntityId(null);
@@ -1090,7 +1089,7 @@ export const useWorldBibleEntityActions = ({
       setFeedback({tone: 'success', message: 'Canon sync state updated.'});
     } catch (error) {
       const message =
-        error instanceof Error ? error.message : 'Unable to mark canon as synced.';
+        describeError(error, 'Unable to mark canon as synced.');
       setFeedback({tone: 'error', message});
     } finally {
       setIsSyncingCanon(false);

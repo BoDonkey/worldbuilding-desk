@@ -15,6 +15,7 @@ import {
 import {testHostedProviderConnection, testOllamaConnection} from '../../services/llm/connectionTest';
 import {useConfirmDialog} from '../../hooks/useConfirmDialog';
 import {InlineAlert, type InlineAlertVariant} from '../common';
+import {describeError} from '../../services/errors';
 
 interface AISettingsProps {
   aiSettings: ProjectAISettings;
@@ -533,7 +534,7 @@ export const AISettings: React.FC<AISettingsProps> = ({
       });
     } catch (error) {
       const message =
-        error instanceof Error ? error.message : 'Unable to import tool pack.';
+        describeError(error, 'Unable to import tool pack.');
       setStatusMessage({variant: 'error', message});
       event.target.value = '';
     }

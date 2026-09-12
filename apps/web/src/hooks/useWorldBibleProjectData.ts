@@ -39,6 +39,7 @@ import {
   createSystemNegativeSpaceCategory,
   isSystemNegativeSpaceCategory
 } from '../services/worldBible/systemNegativeSpace';
+import {describeError} from '../services/errors';
 
 interface WorldBibleFeedback {
   tone: 'success' | 'error';
@@ -328,9 +329,7 @@ export function useWorldBibleProjectData({
         setFeedback({
           tone: 'error',
           message:
-            error instanceof Error
-              ? error.message
-              : 'Unable to load compendium links.'
+            describeError(error, 'Unable to load compendium links.')
         });
       });
     return () => {

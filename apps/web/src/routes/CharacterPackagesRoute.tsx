@@ -9,6 +9,7 @@ import {
   importCharactersJson
 } from '../services/characters';
 import styles from '../styles/CharactersRoute.module.css';
+import {describeError} from '../services/errors';
 
 function CharacterPackagesRoute() {
   const activeProject = useAppStore((state) => state.activeProject);
@@ -61,7 +62,7 @@ function CharacterPackagesRoute() {
     } catch (error) {
       setFeedback({
         tone: 'error',
-        message: error instanceof Error ? error.message : 'Unable to export characters.'
+        message: describeError(error, 'Unable to export characters.')
       });
     }
   };
@@ -92,7 +93,7 @@ function CharacterPackagesRoute() {
     } catch (error) {
       setFeedback({
         tone: 'error',
-        message: error instanceof Error ? error.message : 'Unable to import characters.'
+        message: describeError(error, 'Unable to import characters.')
       });
     } finally {
       setIsImporting(false);

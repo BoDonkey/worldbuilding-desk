@@ -64,6 +64,7 @@ import {
 import {ProjectScratchpadButton} from '../components/ProjectScratchpadButton';
 import {PageHeader} from '../components/PageHeader';
 import styles from '../styles/CanonDecisionsRoute.module.css';
+import {describeError} from '../services/errors';
 
 const PROVIDER_LABELS = {
   anthropic: 'Claude',
@@ -373,7 +374,7 @@ function CanonDecisionsRoute() {
       setFeedback({tone: 'success', message: `"${proposal.name}" aliased to existing canon.`});
       await refresh();
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unable to alias candidate.';
+      const message = describeError(error, 'Unable to alias candidate.');
       setFeedback({tone: 'error', message});
     } finally {
       setActingClusterId(null);
@@ -407,7 +408,7 @@ function CanonDecisionsRoute() {
       setFeedback({tone: 'success', message: `"${proposal.name}" created as new canon.`});
       await refresh();
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unable to accept new candidate.';
+      const message = describeError(error, 'Unable to accept new candidate.');
       setFeedback({tone: 'error', message});
     } finally {
       setActingClusterId(null);
@@ -485,7 +486,7 @@ function CanonDecisionsRoute() {
       setFeedback({tone: 'success', message: 'Canonical fact updated.'});
       await refresh();
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unable to update canonical fact.';
+      const message = describeError(error, 'Unable to update canonical fact.');
       setFeedback({tone: 'error', message});
     } finally {
       setActingClusterId(null);
@@ -506,7 +507,7 @@ function CanonDecisionsRoute() {
       setFeedback({tone: 'success', message: 'Cluster marked keep separate.'});
       await refresh();
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unable to update cluster.';
+      const message = describeError(error, 'Unable to update cluster.');
       setFeedback({tone: 'error', message});
     } finally {
       setActingClusterId(null);
@@ -538,7 +539,7 @@ function CanonDecisionsRoute() {
       setFeedback({tone: 'success', message: 'Cluster rejected.'});
       await refresh();
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unable to reject cluster.';
+      const message = describeError(error, 'Unable to reject cluster.');
       setFeedback({tone: 'error', message});
     } finally {
       setActingClusterId(null);
@@ -553,7 +554,7 @@ function CanonDecisionsRoute() {
       setFeedback({tone: 'success', message: 'Cluster deferred.'});
       await refresh();
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unable to defer cluster.';
+      const message = describeError(error, 'Unable to defer cluster.');
       setFeedback({tone: 'error', message});
     } finally {
       setActingClusterId(null);
@@ -659,7 +660,7 @@ function CanonDecisionsRoute() {
       }
     } catch (error) {
       const message =
-        error instanceof Error ? error.message : 'AI consultation failed for this cluster.';
+        describeError(error, 'AI consultation failed for this cluster.');
       setConsultationByClusterId((prev) => ({
         ...prev,
         [cluster.id]: {error: message}

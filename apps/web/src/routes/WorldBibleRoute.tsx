@@ -74,6 +74,7 @@ import {
   normalizeSystemNegativeSpaceRecord,
   type SystemNegativeSpaceStatus
 } from '../services/worldBible/systemNegativeSpace';
+import {describeError} from '../services/errors';
 
 type WorldBibleViewMode = 'category' | 'review';
 type CharacterAuthoringMode = 'idle' | 'manual';
@@ -208,7 +209,7 @@ function WorldBibleRoute() {
         setFeedback({tone: 'success', message: 'Memory promoted to parent canon.'});
       } catch (error) {
         const message =
-          error instanceof Error ? error.message : 'Unable to promote memory.';
+          describeError(error, 'Unable to promote memory.');
         setFeedback({tone: 'error', message});
       } finally {
         setPromotingMemoryId(null);
@@ -1650,7 +1651,7 @@ function WorldBibleRoute() {
                             window.localStorage.removeItem(`wbd:first-mechanics:${activeProject.id}:${selectedEntity.id}`);
                             setFeedback({tone: 'success', message: `${input.name} is now tracked for ${selectedEntity.name}.`});
                           } catch (error) {
-                            setFeedback({tone: 'error', message: error instanceof Error ? error.message : 'Unable to enable mechanics tracking.'});
+                            setFeedback({tone: 'error', message: describeError(error, 'Unable to enable mechanics tracking.')});
                           } finally {
                             setIsCreatingFirstMechanics(false);
                           }

@@ -82,6 +82,7 @@ import {BasicCharacterStatePanel} from '../components/CharacterSheets/BasicChara
 import styles from '../styles/CharacterSheetsRoute.module.css';
 import {useConfirmDialog} from '../hooks/useConfirmDialog';
 import {useCharacterSheetMutationPreview} from '../hooks/useCharacterSheetMutationPreview';
+import {describeError} from '../services/errors';
 
 interface CharacterSheetsRouteProps {
   embedded?: boolean;
@@ -509,9 +510,7 @@ function CharacterSheetsRoute({
       })
       .catch((error) => {
         const message =
-          error instanceof Error
-            ? error.message
-            : 'Unable to create a character sheet.';
+          describeError(error, 'Unable to create a character sheet.');
         setFeedback({tone: 'error', message});
       })
       .finally(() => {
@@ -717,9 +716,7 @@ function CharacterSheetsRoute({
       });
     } catch (error) {
       const message =
-        error instanceof Error
-          ? error.message
-          : 'Unable to save character sheet.';
+        describeError(error, 'Unable to save character sheet.');
       setFeedback({tone: 'error', message});
     } finally {
       setIsSubmitting(false);
@@ -771,9 +768,7 @@ function CharacterSheetsRoute({
           setFeedback({tone: 'success', message: 'Character sheet deleted.'});
         } catch (error) {
           const message =
-            error instanceof Error
-              ? error.message
-              : 'Unable to delete character sheet.';
+            describeError(error, 'Unable to delete character sheet.');
           setFeedback({tone: 'error', message});
         } finally {
           setDeletingSheetId(null);
@@ -1055,9 +1050,7 @@ function CharacterSheetsRoute({
       setFeedback({
         tone: 'error',
         message:
-          error instanceof Error
-            ? error.message
-            : 'Unable to record state change.'
+          describeError(error, 'Unable to record state change.')
       });
     } finally {
       setIsSavingMutation(false);
@@ -1112,9 +1105,7 @@ function CharacterSheetsRoute({
         setFeedback({
           tone: 'error',
           message:
-            error instanceof Error
-              ? error.message
-              : 'Unable to invalidate state change.'
+            describeError(error, 'Unable to invalidate state change.')
         });
       } finally {
         setInvalidatingMutationEventId(null);
@@ -1170,9 +1161,7 @@ function CharacterSheetsRoute({
         setFeedback({
           tone: 'error',
           message:
-            error instanceof Error
-              ? error.message
-              : 'Unable to reorder state change.'
+            describeError(error, 'Unable to reorder state change.')
         });
       } finally {
         setReorderingMutationEventId(null);

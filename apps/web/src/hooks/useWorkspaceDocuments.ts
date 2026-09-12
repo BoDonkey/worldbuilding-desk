@@ -31,6 +31,7 @@ import {
   type WorkspaceImportFailureItem
 } from '../store/workspaceUiStore';
 import type {ConfirmRequest} from './useConfirmDialog';
+import {describeError} from '../services/errors';
 type SaveStatus = 'idle' | 'saving' | 'saved';
 type ImportMode = WorkspaceImportMode;
 
@@ -324,7 +325,7 @@ export const useWorkspaceDocuments = ({
       });
     } catch (error) {
       const message =
-        error instanceof Error ? error.message : 'Unable to create scene.';
+        describeError(error, 'Unable to create scene.');
       setFeedback({tone: 'error', message});
     } finally {
       setCreatingScene(false);
@@ -396,7 +397,7 @@ export const useWorkspaceDocuments = ({
             nextOrder += 1;
           } catch (error) {
             const detail =
-              error instanceof Error ? error.message : 'Unknown import error.';
+              describeError(error, 'Unknown import error.');
             failedCount += 1;
             failedFiles.push(file);
             failures.push({
@@ -536,7 +537,7 @@ export const useWorkspaceDocuments = ({
       } catch (error) {
         setDocuments(documents);
         const message =
-          error instanceof Error ? error.message : 'Unable to reorder scenes.';
+          describeError(error, 'Unable to reorder scenes.');
         setFeedback({tone: 'error', message});
       }
     },
@@ -635,7 +636,7 @@ export const useWorkspaceDocuments = ({
       setFeedback({tone: 'success', message: 'Scene saved.'});
     } catch (error) {
       const message =
-        error instanceof Error ? error.message : 'Unable to save scene.';
+        describeError(error, 'Unable to save scene.');
       setSaveStatus('idle');
       setFeedback({tone: 'error', message});
     }
@@ -671,7 +672,7 @@ export const useWorkspaceDocuments = ({
             setFeedback({tone: 'success', message: 'Scene deleted.'});
           } catch (error) {
             const message =
-              error instanceof Error ? error.message : 'Unable to delete scene.';
+              describeError(error, 'Unable to delete scene.');
             setFeedback({tone: 'error', message});
           } finally {
             setDeletingDocumentId(null);
@@ -714,7 +715,7 @@ export const useWorkspaceDocuments = ({
           consistencyMode: getWorkspaceAutosaveConsistencyMode(doc)
         }).catch((error) => {
           const message =
-            error instanceof Error ? error.message : 'Unable to save scene.';
+            describeError(error, 'Unable to save scene.');
           setSaveStatus('idle');
           if (lastAutosaveErrorRef.current !== message) {
             lastAutosaveErrorRef.current = message;

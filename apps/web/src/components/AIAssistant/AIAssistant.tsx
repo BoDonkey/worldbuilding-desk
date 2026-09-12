@@ -44,6 +44,7 @@ import {
   type WritingCoachScope
 } from '../../services/coach/writingCoachConsultation';
 import {CraftCitationList} from '../CraftCitationList';
+import {describeError} from '../../services/errors';
 
 interface AIAssistantProps {
   projectId: string;
@@ -147,7 +148,7 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
       setProviderError(null);
     } catch (error) {
       const message =
-        error instanceof Error ? error.message : 'Invalid AI configuration.';
+        describeError(error, 'Invalid AI configuration.');
       setProviderError(message);
       llmService.current = null;
     }

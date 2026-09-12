@@ -65,6 +65,7 @@ import type {SceneRosterOverrides} from '../services/workspace/sceneRoster';
 import {sortWritingDocuments} from '../writingStorage';
 import type {ConfirmRequest} from './useConfirmDialog';
 import {isItemCategory} from '../services/worldBible/worldBibleSummary';
+import {describeError} from '../services/errors';
 
 export interface PendingPositionedChange {
   character: SceneRosterCharacterCard;
@@ -545,7 +546,7 @@ export function useWorkspaceSceneRoster({
         setFeedback({
           tone: 'error',
           message:
-            error instanceof Error ? error.message : 'Unable to add item to inventory.'
+            describeError(error, 'Unable to add item to inventory.')
         });
       } finally {
         setSavingInventoryCapture(false);
@@ -745,7 +746,7 @@ export function useWorkspaceSceneRoster({
       } catch (error) {
         setFeedback({
           tone: 'error',
-          message: error instanceof Error ? error.message : 'Unable to record item use.'
+          message: describeError(error, 'Unable to record item use.')
         });
       } finally {
         setSavingInventoryCapture(false);
@@ -1144,9 +1145,7 @@ export function useWorkspaceSceneRoster({
         setFeedback({
           tone: 'error',
           message:
-            error instanceof Error
-              ? error.message
-              : 'Unable to re-anchor scene change.'
+            describeError(error, 'Unable to re-anchor scene change.')
         });
       }
     },
@@ -1289,7 +1288,7 @@ export function useWorkspaceSceneRoster({
         setFeedback({
           tone: 'error',
           message:
-            error instanceof Error ? error.message : 'Unable to record state change.'
+            describeError(error, 'Unable to record state change.')
         });
       } finally {
         setSavingPositionedChange(false);

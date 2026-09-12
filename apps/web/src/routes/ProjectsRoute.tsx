@@ -42,6 +42,7 @@ import {createSampleProject} from '../services/onboarding/createSampleProject';
 import {PageHeader} from '../components/PageHeader';
 import styles from '../styles/ProjectsRoute.module.css';
 import {useConfirmDialog} from '../hooks/useConfirmDialog';
+import {describeError} from '../services/errors';
 
 function ProjectsRoute() {
   const {requestConfirm, confirmDialog} = useConfirmDialog();
@@ -97,7 +98,7 @@ function ProjectsRoute() {
       input.click();
     } catch (error) {
       const message =
-        error instanceof Error ? error.message : failureMessage;
+        describeError(error, failureMessage);
       setFeedback({tone: 'error', message});
     }
   };
@@ -170,7 +171,7 @@ function ProjectsRoute() {
       navigate('/workspace');
     } catch (error) {
       const message =
-        error instanceof Error ? error.message : 'Unable to create project.';
+        describeError(error, 'Unable to create project.');
       setFeedback({tone: 'error', message});
     } finally {
       setIsCreatingProject(false);
@@ -188,7 +189,7 @@ function ProjectsRoute() {
       navigate('/workspace');
     } catch (error) {
       const message =
-        error instanceof Error ? error.message : 'Unable to load the sample project.';
+        describeError(error, 'Unable to load the sample project.');
       setFeedback({tone: 'error', message});
     } finally {
       setIsLoadingSample(false);
@@ -236,7 +237,7 @@ function ProjectsRoute() {
           setFeedback({tone: 'success', message: 'Project deleted.'});
         } catch (error) {
           const message =
-            error instanceof Error ? error.message : 'Unable to delete project.';
+            describeError(error, 'Unable to delete project.');
           setFeedback({tone: 'error', message});
         } finally {
           setDeletingProjectId(null);
@@ -278,9 +279,7 @@ function ProjectsRoute() {
       setFeedback({tone: 'success', message: 'Parent project updated.'});
     } catch (error) {
       const message =
-        error instanceof Error
-          ? error.message
-          : 'Unable to update parent project.';
+        describeError(error, 'Unable to update parent project.');
       setFeedback({tone: 'error', message});
     } finally {
       setUpdatingProjectId(null);
@@ -296,7 +295,7 @@ function ProjectsRoute() {
       setFeedback({tone: 'success', message: 'Project synced with parent canon.'});
     } catch (error) {
       const message =
-        error instanceof Error ? error.message : 'Unable to sync with parent.';
+        describeError(error, 'Unable to sync with parent.');
       setFeedback({tone: 'error', message});
     } finally {
       setSyncingProjectId(null);
@@ -321,7 +320,7 @@ function ProjectsRoute() {
       setFeedback({tone: 'success', message: 'Project inheritance updated.'});
     } catch (error) {
       const message =
-        error instanceof Error ? error.message : 'Unable to update inheritance.';
+        describeError(error, 'Unable to update inheritance.');
       setFeedback({tone: 'error', message});
     } finally {
       setUpdatingProjectId(null);
@@ -342,9 +341,7 @@ function ProjectsRoute() {
       });
     } catch (error) {
       const message =
-        error instanceof Error
-          ? error.message
-          : 'Unable to export project backup.';
+        describeError(error, 'Unable to export project backup.');
       setFeedback({tone: 'error', message});
     } finally {
       setExportingProjectId(null);
@@ -413,7 +410,7 @@ function ProjectsRoute() {
     } catch (error) {
       clearImportState();
       const message =
-        error instanceof Error ? error.message : 'Unable to parse backup zip.';
+        describeError(error, 'Unable to parse backup zip.');
       setFeedback({tone: 'error', message});
     } finally {
       setIsParsingImport(false);
@@ -477,7 +474,7 @@ function ProjectsRoute() {
       });
     } catch (error) {
       const message =
-        error instanceof Error ? error.message : 'Unable to import backup.';
+        describeError(error, 'Unable to import backup.');
       setFeedback({tone: 'error', message});
     } finally {
       setIsApplyingImport(false);
@@ -500,7 +497,7 @@ function ProjectsRoute() {
       });
     } catch (error) {
       const message =
-        error instanceof Error ? error.message : 'Unable to validate backup zip.';
+        describeError(error, 'Unable to validate backup zip.');
       setFeedback({tone: 'error', message});
     } finally {
       setIsValidatingBackup(false);

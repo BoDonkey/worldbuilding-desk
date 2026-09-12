@@ -1,6 +1,7 @@
 import {useState} from 'react';
 import type {EntityCategory} from '../../entityTypes';
 import styles from './WorldCategorySelect.module.css';
+import {describeError} from '../../services/errors';
 
 interface WorldCategorySelectProps {
   categories: EntityCategory[];
@@ -40,7 +41,7 @@ export function WorldCategorySelect({
       closeCreator();
     } catch (cause) {
       setError(
-        cause instanceof Error ? cause.message : 'Unable to create this World Bible type.'
+        describeError(cause, 'Unable to create this World Bible type.')
       );
     } finally {
       setIsSaving(false);

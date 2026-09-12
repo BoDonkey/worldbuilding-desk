@@ -11,6 +11,7 @@ import type {
 } from '../services/shodh/ShodhMemoryService';
 import {getShodhService} from '../services/shodh/getShodhService';
 import {emitShodhMemoriesUpdated} from '../services/shodh/shodhEvents';
+import {describeError} from '../services/errors';
 
 type FeedbackState = {
   tone: 'success' | 'error';
@@ -133,7 +134,7 @@ export const useWorkspaceMemories = ({
       setFeedback({tone: 'success', message: 'Memory saved.'});
     } catch (error) {
       const message =
-        error instanceof Error ? error.message : 'Unable to save memory.';
+        describeError(error, 'Unable to save memory.');
       setFeedback({tone: 'error', message});
     } finally {
       setIsSavingMemory(false);
@@ -160,7 +161,7 @@ export const useWorkspaceMemories = ({
         setFeedback({tone: 'success', message: 'Memory promoted to parent canon.'});
       } catch (error) {
         const message =
-          error instanceof Error ? error.message : 'Unable to promote memory.';
+          describeError(error, 'Unable to promote memory.');
         setFeedback({tone: 'error', message});
       } finally {
         setIsPromotingMemoryId(null);

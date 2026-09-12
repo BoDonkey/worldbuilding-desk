@@ -14,6 +14,7 @@ import {
   type CharacterIdentityResolutionItem
 } from '../services/characters/characterIdentityResolution';
 import {isCharacterCategory} from '../services/characters/characterIdentity';
+import {describeError} from '../services/errors';
 
 interface FeedbackState {
   tone: 'success' | 'error';
@@ -95,9 +96,7 @@ export function useCharacterIdentityResolutionQueue(params: {
         params.setFeedback({
           tone: 'error',
           message:
-            error instanceof Error
-              ? error.message
-              : 'Unable to resolve this character identity.'
+            describeError(error, 'Unable to resolve this character identity.')
         });
       } finally {
         setResolvingKey(null);
@@ -188,7 +187,7 @@ export function useCharacterIdentityResolutionQueue(params: {
         params.setFeedback({
           tone: 'error',
           message:
-            error instanceof Error ? error.message : 'Unable to save this decision.'
+            describeError(error, 'Unable to save this decision.')
         });
       } finally {
         setResolvingKey(null);

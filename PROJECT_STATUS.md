@@ -1,6 +1,6 @@
 # Worldbuilding-Desk Project Status
 
-**Last Updated:** September 6, 2026
+**Last Updated:** September 12, 2026
 
 ## Project Overview
 
@@ -170,6 +170,23 @@ Under the hood, the app still includes rich systems for world data, rules, chara
   etc.) are unchanged — this was a string-layer, behavior-preserving sweep.
   A source-scanning test asserts the retired standalone words never
   reappear.
+- Error handling is local-only and author-facing. Every rendered error
+  string goes through one `describeError(error, fallback)` helper: the app's
+  own validation messages ("This character already has a mechanics sheet.")
+  still reach the author unchanged; network, rejected-key, rate-limit,
+  provider-outage, local-storage-full, newer-project-version, and cancelled
+  failures map to fixed plain-language sentences; technical noise (`Failed to
+  fetch`, `QuotaExceededError`, JSON parse errors, `undefined is not …`)
+  falls back to the caller's text. The raw error is recorded in a redacted
+  local log (50 entries, `localStorage`, plus uncaught errors and unhandled
+  rejections captured at the window) and shown under Settings → Diagnostics,
+  where the author can copy a plain-text report into a support request or
+  clear it. Redaction strips API keys (known shapes, bearer/header values,
+  long tokens, URL query strings, and the project's configured keys by exact
+  value), local file paths, and prose-length quoted text; only an error's
+  name, message, and first stack frames are ever serialized, never request
+  payloads, `cause` objects, or manuscript text. There is no telemetry,
+  crash reporting, or automatic transmission of any kind.
 
 ### Story Context Systems
 - World Bible with dynamic categories and custom field schemas.
@@ -602,6 +619,20 @@ runtime schema, and nothing here changes the roadmap's status board.
 ## Verification Status
 
 ### Verified Recently
+- Slice 5.6 local-only error handling: new `services/errors` module with
+  `describeError`/`classifyError` (author-facing mapping that preserves
+  app-authored validation messages), a redacted `localStorage`-backed
+  diagnostics log with exact-secret registration from the active project's
+  AI settings, window-level capture of uncaught errors and unhandled
+  rejections, and a Settings → Diagnostics panel (copy report, show/hide
+  report, clear log). All 107 `error instanceof Error ? error.message :
+  fallback` render sites across routes, hooks, components, the app store,
+  and the local review engine now call `describeError`; a source-scanning
+  test (`errorDescriptions.test.ts`) keeps the raw pattern from returning
+  outside the two allowlisted helpers. Tests assert the report and the
+  stored log exclude API keys of known and configured shapes, macOS/Linux/
+  Windows paths, provider payloads attached as `cause`, and manuscript
+  prose. Lint with 1 baseline warning; 518 web (+18 new) + 6 engine + 12 UI tests; web/desktop builds; full Cypress run 73/75 with the new `local-diagnostics` spec 2/2 — the two failures (`lore-review-matching` alias highlight timing, `post-merge-smoke` Add-mechanics navigation timing) are unrelated to error rendering and both pass in isolation (14/14, 18/18); the post-merge spec failed twice in a row before passing on the working tree and passes on the base tree, so it is recorded here as intermittent rather than cleared.
 - Slice 5.10 author-facing vocabulary sweep: retired "Shodh," standalone
   "RAG," and "Rubber-Duck" from every rendered string found across a full
   source sweep (JSX text, help copy, empty-state/error strings, plus a few

@@ -91,6 +91,7 @@ import {
   type PendingInventoryCapture,
   type PendingPositionedChange
 } from '../hooks/useWorkspaceSceneRoster';
+import {describeError} from '../services/errors';
 
 declare global {
   interface Window {
@@ -1165,7 +1166,7 @@ function WorkspaceRoute() {
       setFeedback({tone: 'success', message: 'Scene promoted to parent canon.'});
     } catch (error) {
       const message =
-        error instanceof Error ? error.message : 'Unable to promote scene.';
+        describeError(error, 'Unable to promote scene.');
       setFeedback({tone: 'error', message});
     } finally {
       setIsPromotingDocument(false);
@@ -1191,7 +1192,7 @@ function WorkspaceRoute() {
       });
     } catch (error) {
       const message =
-        error instanceof Error ? error.message : 'Unable to mark canon as synced.';
+        describeError(error, 'Unable to mark canon as synced.');
       setFeedback({tone: 'error', message});
     } finally {
       setIsSyncingCanon(false);

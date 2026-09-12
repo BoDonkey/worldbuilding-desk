@@ -7,6 +7,7 @@ import {
   saveProjectSettings as persistProjectSettings
 } from '../settingsStorage';
 import {getProjectById} from '../projectStorage';
+import {describeError} from '../services/errors';
 
 const noopStorage: StateStorage = {
   getItem: () => null,
@@ -72,7 +73,7 @@ export const useAppStore = create<AppState>()(
                 set({
                   projectSettingsStatus: 'error',
                   projectSettingsError:
-                    error instanceof Error ? error.message : 'Unable to load project settings'
+                    describeError(error, 'Unable to load project settings')
                 });
               }
             }
@@ -111,7 +112,7 @@ export const useAppStore = create<AppState>()(
                 ? {
                     projectSettingsStatus: 'error',
                     projectSettingsError:
-                      error instanceof Error ? error.message : 'Unable to load project settings'
+                      describeError(error, 'Unable to load project settings')
                   }
                 : {}
             );
@@ -184,7 +185,7 @@ export const useAppStore = create<AppState>()(
                 useAppStore.setState({
                   projectSettingsStatus: 'error',
                   projectSettingsError:
-                    error instanceof Error ? error.message : 'Unable to load project settings'
+                    describeError(error, 'Unable to load project settings')
                 });
               }
             });

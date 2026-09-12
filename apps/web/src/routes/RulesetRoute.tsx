@@ -12,6 +12,7 @@ import {
   exportRulesetJson,
   importRulesetJson
 } from '../services/rules';
+import {describeError} from '../services/errors';
 
 // activeProject and setActiveProject read from store below
 
@@ -108,9 +109,7 @@ function RulesetRoute() {
           setFeedback({
             tone: 'error',
             message:
-              error instanceof Error
-                ? error.message
-                : 'Unable to load ruleset.'
+              describeError(error, 'Unable to load ruleset.')
           });
         }
       })
@@ -146,7 +145,7 @@ function RulesetRoute() {
       setFeedback({tone: 'success', message: 'Ruleset saved.'});
     } catch (error) {
       const message =
-        error instanceof Error ? error.message : 'Unable to save ruleset.';
+        describeError(error, 'Unable to save ruleset.');
       setFeedback({tone: 'error', message});
     }
   };
@@ -162,7 +161,7 @@ function RulesetRoute() {
       setFeedback({tone: 'success', message: 'Ruleset exported.'});
     } catch (error) {
       const message =
-        error instanceof Error ? error.message : 'Unable to export ruleset.';
+        describeError(error, 'Unable to export ruleset.');
       setFeedback({tone: 'error', message});
     }
   };
@@ -186,7 +185,7 @@ function RulesetRoute() {
       });
     } catch (error) {
       const message =
-        error instanceof Error ? error.message : 'Unable to import ruleset.';
+        describeError(error, 'Unable to import ruleset.');
       setFeedback({tone: 'error', message});
     } finally {
       setIsImporting(false);

@@ -72,6 +72,7 @@ import {ProjectScratchpadButton} from '../components/ProjectScratchpadButton';
 import {PageHeader} from '../components/PageHeader';
 import styles from '../styles/LoreRoute.module.css';
 import {useConfirmDialog} from '../hooks/useConfirmDialog';
+import {describeError} from '../services/errors';
 
 type LinkDraft = {
   targetType: 'character' | 'entity';
@@ -574,7 +575,7 @@ function LoreRoute() {
       });
     } catch (error) {
       const message =
-        error instanceof Error ? error.message : 'Unable to save lore document.';
+        describeError(error, 'Unable to save lore document.');
       setFeedback({tone: 'error', message});
     } finally {
       setSaving(false);
@@ -610,7 +611,7 @@ function LoreRoute() {
           setFeedback({tone: 'success', message: 'Source Note deleted.'});
         } catch (error) {
           const message =
-            error instanceof Error ? error.message : 'Unable to delete Source Note.';
+            describeError(error, 'Unable to delete Source Note.');
           setFeedback({tone: 'error', message});
         } finally {
           setDeletingId(null);
@@ -648,7 +649,7 @@ function LoreRoute() {
       });
     } catch (error) {
       const message =
-        error instanceof Error ? error.message : 'Unable to import lore file.';
+        describeError(error, 'Unable to import lore file.');
       setFeedback({tone: 'error', message});
     } finally {
       setIsImporting(false);
@@ -719,7 +720,7 @@ function LoreRoute() {
       });
     } catch (error) {
       const message =
-        error instanceof Error ? error.message : 'Unable to extract lore facts.';
+        describeError(error, 'Unable to extract lore facts.');
       setFeedback({tone: 'error', message});
     } finally {
       setExtractingId(null);
@@ -824,7 +825,7 @@ function LoreRoute() {
       });
       setFeedback({tone: 'success', message: 'Fact accepted into canon.'});
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unable to accept fact.';
+      const message = describeError(error, 'Unable to accept fact.');
       setFeedback({tone: 'error', message});
     } finally {
       setActingProposalId(null);
@@ -906,7 +907,7 @@ function LoreRoute() {
       });
     } catch (error) {
       const message =
-        error instanceof Error ? error.message : 'Unable to accept entity proposal.';
+        describeError(error, 'Unable to accept entity proposal.');
       setFeedback({tone: 'error', message});
     } finally {
       setActingEntityProposalId(null);
@@ -932,7 +933,7 @@ function LoreRoute() {
       setFeedback({tone: 'success', message: 'Entity proposal rejected.'});
     } catch (error) {
       const message =
-        error instanceof Error ? error.message : 'Unable to reject entity proposal.';
+        describeError(error, 'Unable to reject entity proposal.');
       setFeedback({tone: 'error', message});
     } finally {
       setActingEntityProposalId(null);
@@ -957,7 +958,7 @@ function LoreRoute() {
       );
       setFeedback({tone: 'success', message: 'Proposal rejected.'});
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unable to reject proposal.';
+      const message = describeError(error, 'Unable to reject proposal.');
       setFeedback({tone: 'error', message});
     } finally {
       setActingProposalId(null);
@@ -1007,7 +1008,7 @@ function LoreRoute() {
           setFeedback({tone: 'success', message: 'Accepted fact removed.'});
         } catch (error) {
           const message =
-            error instanceof Error ? error.message : 'Unable to remove accepted fact.';
+            describeError(error, 'Unable to remove accepted fact.');
           setFeedback({tone: 'error', message});
         } finally {
           setRemovingFactId(null);
@@ -1192,7 +1193,7 @@ function LoreRoute() {
       });
     } catch (error) {
       const message =
-        error instanceof Error ? error.message : 'Unable to rebuild project context.';
+        describeError(error, 'Unable to rebuild project context.');
       setFeedback({tone: 'error', message});
     } finally {
       setHealthRebuilding(false);

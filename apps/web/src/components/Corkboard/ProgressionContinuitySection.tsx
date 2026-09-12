@@ -16,6 +16,7 @@ import {LLMService} from '../../services/llm/LLMService';
 import {getInspectorConsultationUsage, incrementInspectorConsultationUsage} from '../../services/editor';
 import {SourceScenes} from './StoryDashboard';
 import styles from '../../styles/CorkboardRoute.module.css';
+import {describeError} from '../../services/errors';
 
 const KIND_LABELS: Record<ProgressionContinuityCandidate['kind'], string> = {
   unused_solution: 'Possible unused solution',
@@ -131,7 +132,7 @@ export function ProgressionContinuitySection({
         ...prev,
         [candidate.key]: {
           status: 'error',
-          error: error instanceof Error ? error.message : 'The consultation could not be completed.'
+          error: describeError(error, 'The consultation could not be completed.')
         }
       }));
     }

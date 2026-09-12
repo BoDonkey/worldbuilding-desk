@@ -68,6 +68,7 @@ import {getCharactersByProject} from '../characterStorage';
 import {getEntitiesByProject} from '../entityStorage';
 import {getProjectCapabilities} from '../projectMode';
 import {getRulesetByProjectId} from '../services/rules';
+import {describeError} from '../services/errors';
 
 // activeProject and projectSettings read from store below
 
@@ -284,9 +285,7 @@ function CompendiumRoute() {
       .catch((error) => {
         if (cancelled) return;
         const message =
-          error instanceof Error
-            ? error.message
-            : 'Unable to load compendium data.';
+          describeError(error, 'Unable to load compendium data.');
         setFeedback({tone: 'error', message});
       })
       .finally(() => {
@@ -321,7 +320,7 @@ function CompendiumRoute() {
       .catch((error) => {
         if (cancelled) return;
         const message =
-          error instanceof Error ? error.message : 'Unable to load mechanics progress.';
+          describeError(error, 'Unable to load mechanics progress.');
         setFeedback({tone: 'error', message});
       });
 
@@ -520,7 +519,7 @@ function CompendiumRoute() {
       .catch((error) => {
         if (cancelled) return;
         const message =
-          error instanceof Error ? error.message : 'Unable to load settlement state.';
+          describeError(error, 'Unable to load settlement state.');
         setFeedback({tone: 'error', message});
       });
     return () => {
@@ -598,7 +597,7 @@ function CompendiumRoute() {
       setFeedback({tone: 'success', message: 'Compendium entry created.'});
     } catch (error) {
       const message =
-        error instanceof Error ? error.message : 'Unable to create entry.';
+        describeError(error, 'Unable to create entry.');
       setFeedback({tone: 'error', message});
     }
   };
@@ -691,7 +690,7 @@ function CompendiumRoute() {
       setFeedback({tone: 'success', message: 'World Bible entity linked to mechanics.'});
     } catch (error) {
       const message =
-        error instanceof Error ? error.message : 'Unable to import entity.';
+        describeError(error, 'Unable to import entity.');
       setFeedback({tone: 'error', message});
     }
   };
@@ -714,7 +713,7 @@ function CompendiumRoute() {
       setFeedback({tone: 'success', message: 'Mechanics settings saved.'});
     } catch (error) {
       const message =
-        error instanceof Error ? error.message : 'Unable to update mechanics settings.';
+        describeError(error, 'Unable to update mechanics settings.');
       setFeedback({tone: 'error', message});
     }
   };
@@ -767,7 +766,7 @@ function CompendiumRoute() {
       setFeedback({tone: 'success', message: `"${entry.name}" marked complete.`});
     } catch (error) {
       const message =
-        error instanceof Error ? error.message : 'Unable to update entry.';
+        describeError(error, 'Unable to update entry.');
       setFeedback({tone: 'error', message});
     }
   };
@@ -800,7 +799,7 @@ function CompendiumRoute() {
       setFeedback({tone: 'success', message: 'Unlockable recipe added.'});
     } catch (error) {
       const message =
-        error instanceof Error ? error.message : 'Unable to save recipe.';
+        describeError(error, 'Unable to save recipe.');
       setFeedback({tone: 'error', message});
     }
   };
@@ -834,7 +833,7 @@ function CompendiumRoute() {
       setFeedback({tone: 'success', message: 'Milestone added.'});
     } catch (error) {
       const message =
-        error instanceof Error ? error.message : 'Unable to save milestone.';
+        describeError(error, 'Unable to save milestone.');
       setFeedback({tone: 'error', message});
     }
   };
@@ -887,7 +886,7 @@ function CompendiumRoute() {
       setFeedback({tone: 'success', message: 'Zone affinity profile created.'});
     } catch (error) {
       const message =
-        error instanceof Error ? error.message : 'Unable to create zone profile.';
+        describeError(error, 'Unable to create zone profile.');
       setFeedback({tone: 'error', message});
     }
   };
@@ -933,7 +932,7 @@ function CompendiumRoute() {
       }
     } catch (error) {
       const message =
-        error instanceof Error ? error.message : 'Unable to record zone exposure.';
+        describeError(error, 'Unable to record zone exposure.');
       setFeedback({tone: 'error', message});
     } finally {
       setIsRecordingZone(false);
@@ -985,7 +984,7 @@ function CompendiumRoute() {
       setFeedback({tone: 'success', message: 'Settlement module added.'});
     } catch (error) {
       const message =
-        error instanceof Error ? error.message : 'Unable to add settlement module.';
+        describeError(error, 'Unable to add settlement module.');
       setFeedback({tone: 'error', message});
     } finally {
       setIsSavingModule(false);
@@ -1048,7 +1047,7 @@ function CompendiumRoute() {
       }
     } catch (error) {
       const message =
-        error instanceof Error ? error.message : 'Unable to record action.';
+        describeError(error, 'Unable to record action.');
       setFeedback({tone: 'error', message});
     } finally {
       setIsRecordingKey(null);
@@ -1081,7 +1080,7 @@ function CompendiumRoute() {
       });
     } catch (error) {
       const message =
-        error instanceof Error ? error.message : 'Unable to update settlement tier level.';
+        describeError(error, 'Unable to update settlement tier level.');
       setFeedback({tone: 'error', message});
     } finally {
       setIsSavingFortress(false);
@@ -1128,7 +1127,7 @@ function CompendiumRoute() {
       setFeedback({tone: 'success', message: 'Base stats saved.'});
     } catch (error) {
       const message =
-        error instanceof Error ? error.message : 'Unable to update base stats.';
+        describeError(error, 'Unable to update base stats.');
       setFeedback({tone: 'error', message});
     } finally {
       setIsSavingFortress(false);

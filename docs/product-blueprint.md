@@ -1,6 +1,6 @@
 # Product Blueprint — Worldbuilding Desk
 
-Last updated: 2026-08-30
+Last updated: 2026-09-12
 
 This is the product, UX, navigation, and design authority. It consolidates the
 former `product-blueprint.md`, `navigation-ia-decision.md`, `style-bible.md`,
@@ -279,6 +279,15 @@ Badges/pills/chips: `border-radius: 999px`, 1px solid border, tight padding
 Chat/AI interface: user messages max-width 80% aligned right, styled like a
 primary button; AI messages max-width 80% aligned left, styled like a surface
 panel with soft border.
+
+Error text: rendered error strings go through `describeError(error, fallback)`
+(`services/errors`), never `error.message` directly. The helper keeps the
+app's own plain-language validation messages, maps known failure classes
+(network, provider key, provider limit or outage, local storage full, project
+saved by a newer version, cancelled request) to fixed author-facing sentences,
+and returns the caller's fallback for technical noise. The raw error goes to
+the console and to the redacted local diagnostics log shown under Settings →
+Diagnostics, which the author may copy by hand; nothing is ever transmitted.
 
 ### Layout and breakpoints
 

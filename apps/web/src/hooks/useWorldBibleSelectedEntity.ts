@@ -30,6 +30,7 @@ import {
 } from '../services/worldBible/worldBibleEntityHelpers';
 import {buildCanonicalAliasList} from '../services/worldBible/worldBibleCanonicalization';
 import {htmlToPlainText} from '../utils/textHelpers';
+import {describeError} from '../services/errors';
 
 interface WorldBibleFeedback {
   tone: 'success' | 'error';
@@ -327,9 +328,7 @@ export function useWorldBibleSelectedEntity({
         setFeedback({
           tone: 'error',
           message:
-            error instanceof Error
-              ? error.message
-              : 'Unable to create linked Source Note.'
+            describeError(error, 'Unable to create linked Source Note.')
         });
       } finally {
         setLinkingLoreEntityId(null);

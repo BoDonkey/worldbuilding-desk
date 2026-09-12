@@ -1,0 +1,88 @@
+.container {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.help {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.secondaryButton {
+  width: fit-content;
+  padding: 8px 14px;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  background-color: var(--color-bg-primary);
+  color: var(--color-text-primary);
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+}
+
+.secondaryButton:hover {
+  background-color: var(--surface-panel-hover);
+}
+
+.secondaryButton:disabled {
+  cursor: not-allowed;
+  color: var(--color-text-tertiary);
+}
+
+.secondaryButton:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+.entryList {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 0.4rem;
+}
+
+.entry {
+  display: grid;
+  gap: 0.15rem;
+  padding: 0.5rem 0.65rem;
+  border: 1px solid var(--surface-border-soft);
+  border-radius: 6px;
+  background-color: var(--color-bg-primary);
+  font-size: var(--font-size-sm);
+}
+
+.entryMeta {
+  color: var(--color-text-tertiary);
+}
+
+.entryMessage {
+  color: var(--color-text-primary);
+  overflow-wrap: anywhere;
+}
+
+.empty {
+  margin: 0;
+  color: var(--color-text-tertiary);
+  font-size: var(--font-size-sm);
+}
+
+.report {
+  margin: 0;
+  max-height: 20rem;
+  overflow: auto;
+  padding: 0.65rem;
+  border: 1px solid var(--surface-border-soft);
+  border-radius: 6px;
+  background-color: var(--editor-pre-bg);
+  color: var(--editor-pre-text);
+  font-size: var(--font-size-sm);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}

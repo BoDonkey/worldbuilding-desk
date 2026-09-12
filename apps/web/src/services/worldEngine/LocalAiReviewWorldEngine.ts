@@ -20,6 +20,7 @@ import type {
   WorldEngineReviewResult,
   WorldEngineStatus
 } from './types';
+import {classifyError, describeError} from '../errors';
 
 const OLLAMA_FALLBACK_BASE_URL = PROVIDER_DEFAULT_BASE_URLS.ollama ?? 'http://localhost:11434';
 const LOCAL_AI_REVIEW_TIMEOUT_MS = 12000;
@@ -386,15 +387,11 @@ export class LocalAiReviewWorldEngine implements WorldEngine {
   }
 
   private mapStatusError(error: unknown): WorldEngineStatus {
-    const message = error instanceof Error ? error.message : 'Ollama is unavailable.';
-    if (
-      message.includes('Failed to fetch') ||
-      message.includes('NetworkError') ||
-      message.includes('Load failed')
-    ) {
+    if (classifyError(error) === 'network') {
       return WorldEngineStatusSchema.parse({state: 'notInstalled'});
     }
 
+    const message = describeError(error, 'Ollama is unavailable.');
     if (message === 'No Ollama models are installed.') {
       return WorldEngineStatusSchema.parse({state: 'notInstalled'});
     }

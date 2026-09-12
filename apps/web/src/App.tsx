@@ -17,6 +17,7 @@ import {ThemeProvider} from './contexts/ThemeContext';
 import {AccessibilityProvider} from './contexts/AccessibilityContext';
 import {CommandPaletteProvider} from './contexts/CommandPaletteContext';
 import {useAppStore} from './store/appStore';
+import {registerDiagnosticSecrets} from './services/errors';
 import {getProjectCapabilities} from './projectMode';
 import {useRouteDebug} from './utils/routeDebug';
 import ProjectsRoute from './routes/ProjectsRoute';
@@ -196,6 +197,15 @@ function AppRoutes() {
 }
 
 function App() {
+  const projectSettings = useAppStore((s) => s.projectSettings);
+  useEffect(() => {
+    const configs = projectSettings?.aiSettings?.configs;
+    registerDiagnosticSecrets([
+      configs?.anthropic?.apiKey,
+      configs?.openai?.apiKey,
+      configs?.gemini?.apiKey
+    ]);
+  }, [projectSettings]);
   return (
     <ThemeProvider>
       <AccessibilityProvider>

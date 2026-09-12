@@ -2,6 +2,7 @@ import {useEffect, useState} from 'react';
 import type {Character, CharacterStyle, WorldEntity} from '../../entityTypes';
 import {saveCharacter} from '../../characterStorage';
 import styles from '../../assets/components/WorldBibleRoute.module.css';
+import {describeError} from '../../services/errors';
 
 interface WorldBibleDialogueStyleControlProps {
   entity: WorldEntity;
@@ -58,9 +59,7 @@ export const WorldBibleDialogueStyleControl = (
       );
     } catch (saveError) {
       setError(
-        saveError instanceof Error
-          ? saveError.message
-          : 'Unable to save dialogue style.'
+        describeError(saveError, 'Unable to save dialogue style.')
       );
     } finally {
       setIsSaving(false);

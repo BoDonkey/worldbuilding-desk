@@ -1,4 +1,4 @@
-import {useEffect, useState} from 'react';
+import {useEffect, useMemo, useState} from 'react';
 import type {ReactNode} from 'react';
 import type {
   ProjectSettings,
@@ -14,6 +14,7 @@ import {
 } from '../settingsStorage';
 import {CharacterStyleList} from '../components/CharacterStyleList';
 import {AISettings} from '../components/Settings/AISettings';
+import {DiagnosticsPanel} from '../components/Settings/DiagnosticsPanel';
 import {FontSizeControl} from '../components/Settings/FontSizeControl';
 import {EditorAppearanceControl} from '../components/Settings/EditorAppearanceControl';
 import {
@@ -52,6 +53,12 @@ function SettingsRoute() {
   const [inheritedConsistencyCues, setInheritedConsistencyCues] = useState<string[]>(
     []
   );
+  const configuredApiKeys = useMemo(() => {
+    const configs = settings?.aiSettings?.configs;
+    return [configs?.anthropic?.apiKey, configs?.openai?.apiKey, configs?.gemini?.apiKey].filter(
+      (key): key is string => typeof key === 'string' && key.trim().length > 0
+    );
+  }, [settings]);
 
   useEffect(() => {
     if (!activeProject) {
@@ -336,6 +343,10 @@ function SettingsRoute() {
             projectMode={settings.projectMode}
             onSettingsChange={handleAISettingsChange}
           />
+        </SettingsSection>
+
+        <SettingsSection title='Diagnostics'>
+          <DiagnosticsPanel secrets={configuredApiKeys} />
         </SettingsSection>
 
         <SettingsSection title='Project Mode' defaultOpen={true}>

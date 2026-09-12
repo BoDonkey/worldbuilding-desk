@@ -73,6 +73,7 @@ import {
   type StateMutationReviewGroupHiddenCounts,
   type StateMutationReviewItem
 } from '../services/consistency/mutationReviewGrouping';
+import {describeError} from '../services/errors';
 
 export {mapReviewAnnotationsByIssueKey};
 export type {
@@ -466,9 +467,7 @@ export const useWorkspaceConsistency = ({
           setWorldEngineStatus({
             state: 'installedUnavailable',
             reason:
-              error instanceof Error
-                ? error.message
-                : 'Review engine status could not be checked.'
+              describeError(error, 'Review engine status could not be checked.')
           });
         }
       });
@@ -1094,9 +1093,7 @@ export const useWorkspaceConsistency = ({
       }
     } catch (error) {
       const message =
-        error instanceof Error
-          ? error.message
-          : 'Unable to run consistency review.';
+        describeError(error, 'Unable to run consistency review.');
       setFeedback({tone: 'error', message});
     } finally {
       setIsRunningConsistencyReview(false);
@@ -1343,9 +1340,7 @@ export const useWorkspaceConsistency = ({
         setFeedback({
           tone: 'error',
           message:
-            error instanceof Error
-              ? error.message
-              : 'Unable to accept suggested state change.'
+            describeError(error, 'Unable to accept suggested state change.')
         });
       } finally {
         setApplyingStateMutationReviewId(null);
@@ -1380,9 +1375,7 @@ export const useWorkspaceConsistency = ({
         setFeedback({
           tone: 'error',
           message:
-            error instanceof Error
-              ? error.message
-              : 'Unable to reject suggested state change.'
+            describeError(error, 'Unable to reject suggested state change.')
         });
       } finally {
         setApplyingStateMutationReviewId(null);
@@ -1715,7 +1708,7 @@ export const useWorkspaceConsistency = ({
         );
       } catch (error) {
         const message =
-          error instanceof Error ? error.message : 'Unable to create entity.';
+          describeError(error, 'Unable to create entity.');
         setFeedback({tone: 'error', message});
       } finally {
         setResolvingUnknown(null);
@@ -1856,7 +1849,7 @@ export const useWorkspaceConsistency = ({
         })
         .catch((error) => {
           const message =
-            error instanceof Error ? error.message : 'Unable to save project review settings.';
+            describeError(error, 'Unable to save project review settings.');
           setFeedback({tone: 'error', message});
         });
     },
@@ -1965,7 +1958,7 @@ export const useWorkspaceConsistency = ({
         };
       } catch (error) {
         const message =
-          error instanceof Error ? error.message : 'Unable to link alias.';
+          describeError(error, 'Unable to link alias.');
         setFeedback({tone: 'error', message});
         return false;
       } finally {

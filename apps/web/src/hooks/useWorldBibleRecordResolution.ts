@@ -22,6 +22,7 @@ import {
   buildEntityMatchKey,
   type PotentialEntityMatch
 } from '../services/worldBible/worldBibleReviewHelpers';
+import {describeError} from '../services/errors';
 
 interface FeedbackState {
   tone: 'success' | 'error';
@@ -259,7 +260,7 @@ export function useWorldBibleRecordResolution({
       });
     } catch (error) {
       const message =
-        error instanceof Error ? error.message : 'Unable to move this record.';
+        describeError(error, 'Unable to move this record.');
       setFeedback({tone: 'error', message});
     } finally {
       setMovingEntityCategoryId(null);
@@ -308,9 +309,7 @@ export function useWorldBibleRecordResolution({
         });
       } catch (error) {
         const message =
-          error instanceof Error
-            ? error.message
-            : 'Unable to keep these records separate.';
+          describeError(error, 'Unable to keep these records separate.');
         setFeedback({tone: 'error', message});
       }
     },
@@ -327,7 +326,7 @@ export function useWorldBibleRecordResolution({
         });
       } catch (error) {
         const message =
-          error instanceof Error ? error.message : 'Unable to ignore this match.';
+          describeError(error, 'Unable to ignore this match.');
         setFeedback({tone: 'error', message});
       }
     },

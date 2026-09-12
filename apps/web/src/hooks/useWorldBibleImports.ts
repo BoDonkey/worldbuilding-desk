@@ -7,6 +7,7 @@ import {
   convertPlainTextToRichHtml,
   normalizeRichTextValue
 } from '../services/worldBible/worldBibleEntityHelpers';
+import {describeError} from '../services/errors';
 
 export type ImportMode = 'create' | 'upsert';
 
@@ -1265,7 +1266,7 @@ export const useWorldBibleImports = ({
       });
     } catch (error) {
       const message =
-        error instanceof Error ? error.message : 'Unable to parse JSON import file.';
+        describeError(error, 'Unable to parse JSON import file.');
       setFeedback({tone: 'error', message});
       setJsonImportSession(null);
       setJsonImportConflictResolutions({});
