@@ -232,7 +232,7 @@ and required revisit point, `WIP`, `Done <commit>`.
 | 4.21 | System negative-space records | 4 | S | Done `603c61f` — mechanics-only built-in World Bible records with author-maintained status and stable scene links; deterministic counts and source navigation make no semantic prose claims; project/snapshot schema 5; general fiction unchanged; lint with 1 baseline warning; 432 web + 6 engine + 12 UI tests; web/desktop builds; Cypress 62/62 |
 | 4.22 | Progression continuity candidates | 4 | M | Done `1adaff0` — new Story Dashboard section shortlists unused-priority-ability and abandoned-advancement-method candidates deterministically; author-triggered, scene-cited, model-assisted verdict via a position-anchored tag; per-project localStorage dismissal (no new IndexedDB store); lint with 1 baseline warning; 472 web + 6 engine + 12 UI tests; web/desktop builds |
 | 4.23 | Continuity review regression corpus | 4 | S | Done `1763153` — 13 verbatim fixture/sample cases through the real extraction, validation, and contradiction path; 7/7 planted findings matched, 0 noise, 0 mislinks; one `knownGap` (speaker-attributed second-person eye-color claim) recorded as 4.24's first target; harness reports MISSED/NOISE/MISLINK/FALSE CONFLICT/HEALED; no behavior change; lint with 1 baseline warning; 536 web + 6 engine + 12 UI tests; web/desktop builds |
-| 4.24 | Structured canon contradiction rules | 4 | M | — generalizes the single eye-color rule into a deterministic rule registry over accepted fact types |
+| 4.24 | Fact-anchored canon contradiction detection | 4 | M | WIP — replaces the hard-coded eye-color rule with structural comparison anchored on the author's accepted facts; the engine knows linguistic value classes (colors, numbers, negation), never fictional attribute lists; first target: corpus `knownGap` on speaker attribution |
 | 4.25 | Persisted, incremental project review | 4 | M | — results survive reload; unchanged scenes are not re-reviewed; stale markers when a scene changes |
 | 4.26 | State-backed continuity checks | 4 | M | — custody/location/equipment conflicts from the accepted ledger; retires the never-produced `INVALID_MUTATION` placeholder |
 | 4.27 | Sheet-free descriptive state for general fiction | 4 | L | — post-beta candidate; descriptive state (location, custody) for canonical characters without a ruleset or sheet |
@@ -246,6 +246,7 @@ and required revisit point, `WIP`, `Done <commit>`.
 | 4.35 | Corkboard scene links — shared link UI, quick-modal links, "Link current scene", stale links (CB-1) | 4 | S | — full prompt: [`corkboard-scenes-plan.md`](corkboard-scenes-plan.md) § CB-1; no schema change; carries the Corkboard docs reconciliation |
 | 4.36 | Corkboard scene links — "Create linked scene" from both surfaces (CB-2) | 4 | S | — after 4.35; existing scene owner returns the document; no rollback that deletes prose |
 | 4.37 | Corkboard scene links — chapter-card context line in Workspace (CB-3) | 4 | S | — after 4.35; may defer if beta time is tight |
+| 4.38 | Model-assisted canon check (author-triggered, via 1.5) | 4 | M | — after 4.24 and the consultation-budget revisit; proposes contradictions with validated evidence spans into the review queue; never applies |
 | 5.1 | Auto-update decision + implementation | 5 | M | — |
 | 5.2 | Code signing + notarization, both platforms | 5 | M | — |
 | 5.3 | Packaged-app validation + Electron E2E | 5 | M | — |
@@ -912,29 +913,65 @@ required by any slice below.
   current finding is encoded and the suite is green. Record the corpus
   location in `docs/smoke-tests.md` so manual smokes reference the same
   cases.
-- **4.24 Structured canon contradiction rules.** First target from the 4.23
-  corpus: case `c1-eye-color-wrong-entity` records that a second-person
-  eye-color line ("Her same green", Tam speaking about Sera) is attributed to
-  the *speaker* when only the speaker has an accepted eye-color fact; the rule
-  registry's claim extractor needs addressee/possessive resolution, and
-  landing it must clear that `knownGap`. Replace the one-off eye-color
-  path in `contradictionReview.ts` with a deterministic rule registry keyed by
-  `CanonicalFactType`. Each rule declares: a canon value extractor (from the
-  accepted fact's structured value first, its evidence text second), a scene
-  claim extractor anchored to a resolved entity mention, a normalizer (synonym
-  tables such as grey/gray, numeric age forms, kinship terms), and a
-  comparator (exclusive attribute, numeric distance, negation). First rules:
-  appearance families (eye color, hair color, height/build), `age`,
-  `heritage`, `occupation`, `membership` (with explicit "no longer" / "former"
-  negation), and `relationship` (kinship symmetry). Every conflict cites both
-  sources exactly as today (`STATE_CONFLICT`, scene claim, canon claim with
-  its Source Note or record) and keeps the existing dismissal and highlight
-  contract so the Workspace review drawer needs no change. Prefer structured
-  `CanonicalFact.value` over free text; free-text field scanning of entity and
-  character records stays as the fallback it is today. Add each rule to the
-  4.23 corpus with at least one hit, one agreeing non-hit, and one
-  wrong-entity non-hit. No model calls. Update `docs/domain-model.md` §1 with
-  the rule contract.
+- **4.24 Fact-anchored canon contradiction detection.** Rewritten
+  2026-09-12 after the author rejected a rule registry: fiction has too many
+  edge cases for hard-coded attribute rules, and a registry of lexicons (eye
+  colors, hair colors, heights) is the same mistake generalized. The
+  engine may know **linguistic** value classes that apply to anything in any
+  story — colors, numbers and number words, negation, a handful of
+  comparatives — but it must never carry **fictional** attribute lists.
+  Which attributes matter comes only from the author's accepted facts.
+
+  Replace the eye-color special case in `contradictionReview.ts` with a
+  structural comparator anchored on each accepted `CanonicalFact`:
+  1. From the fact's value derive a *slot*: head noun (last token, with a
+     singular/plural stem) and modifiers (the rest), or a number for numeric
+     values. "gray eyes" → noun *eyes*, modifier *gray*; "twenty-six" → 26;
+     "black scales" → noun *scales*, modifier *black*. Single-token values
+     ("cartographer") keep the existing subject-assertion path (`X is/was
+     (not) Y`).
+  2. Find scene blocks attributed to the fact's entity using the existing
+     attribution logic, fixed for the corpus `knownGap`: in a quoted block
+     with a speaker tag, the speaker is not a candidate for claims inside
+     the quotes; second-person claims use the preceding narrative block's
+     entity, as today.
+  3. In those blocks, locate the slot noun and the modifier occupying it
+     (up to three tokens before, or within the existing 48-character window
+     after). A competing modifier is a conflict only when it is *explicitly
+     comparable* to the accepted one: an explicit negation of the accepted
+     value, a different number for numeric facts, or a member of the same
+     value class — a class known linguistically (built-in colors, numbers)
+     or learned from the author's own canon (every other accepted value of
+     the same fact type with the same head noun). Adjectives outside any
+     known class ("tired eyes", "wide eyes") never fire.
+  4. Value normalization (grey/gray, colour/color, number words → digits) is
+     a small data table, not code paths, and takes an optional per-project
+     synonym list so an author-editable list can be added later without
+     touching the comparator.
+  Every conflict cites the fact, its Source Note or record, and the scene
+  span exactly as today; the `STATE_CONFLICT` contract, highlights, and
+  dismissal are unchanged. Free-text field scanning of records stays as
+  the fallback it is today. No model calls. Measure against the 4.23
+  corpus: C1 stays a hit, its agreeing and wrong-entity cases stay non-hits,
+  the speaker-attribution `knownGap` must heal (remove it from the corpus),
+  and add cases for a non-appearance slot (e.g. "black scales" vs "crimson
+  scales"), a numeric age mismatch, a negation ("no longer a member"), and
+  a transient adjective that must not fire. Update `docs/domain-model.md`
+  §1 with the comparator contract and the linguistic-versus-fictional rule.
+- **4.38 Model-assisted canon check (author-triggered, via 1.5).** The edge
+  cases structural comparison cannot reach — paraphrase, implication,
+  "the same green her mother had" — need reading, not matching. An explicit
+  **Check this scene against canon** action sends one scene block and the
+  accepted facts for the entities it mentions to the configured provider
+  under the 1.5 proposal surface; the model returns candidate contradictions
+  as `{factId, evidence: {start, end, text}, summary}`; deterministic code
+  validates that each span exists verbatim in the scene and each fact id is
+  real, then the survivors enter the review queue as dismissible items
+  labeled model-assisted. Nothing is applied automatically, nothing runs in
+  the background, and the action consumes a consultation. Scheduled after
+  4.24 and after the consultation-budget revisit in the Backlog. Add
+  corpus cases that document which structural non-hits this path is meant
+  to catch, so the two detectors are measured separately.
 - **4.25 Persisted, incremental project review.** Persist the last project
   review per project through a service (no new direct persistence path; a
   project-scoped store following the `consistencyStorage.ts` pattern, or the
