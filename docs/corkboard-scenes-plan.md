@@ -1,11 +1,13 @@
 # Corkboard ↔ scenes — work-slice plan
 
-Status: **proposal, not scheduled.** Dated 2026-09-12. Produced from the
-planning prompt in `docs/corkboard-improvement.md` after inspecting the
+Status: **accepted 2026-09-12; scheduled as roadmap slices 4.35–4.37
+(CB-1–CB-3), pre-beta, after 4.30–4.31.** Dated 2026-09-12. Produced from
+the planning prompt in `docs/corkboard-improvement.md` after inspecting the
 Corkboard route, the Workspace quick modal, the shared hook, storage, the
 Story Dashboard derivation, Workspace scene creation/selection/focus
-handling, backup snapshots, and the existing tests. No roadmap status is
-changed here; § 8 recommends scheduling for the author to accept.
+handling, backup snapshots, and the existing tests. The author accepted the
+recommended defaults in § 3. The status board in `docs/road-to-market.md`
+is authoritative for execution; this document holds the full prompts.
 
 ## 1. Current-state finding
 
@@ -72,6 +74,8 @@ Two structural notes for the executor:
 | Atomicity of create + link | no rollback. Creation uses the existing owner and returns the document; the link is a second, idempotent write. If the link fails, the scene stays (never destroy manuscript text as compensation), the toast says "Scene created but not linked" with a **Link now** action. | transactional wrapper (not available across the document and card stores without a new persistence path; rejected) |
 
 ## 4. Slice index
+
+Roadmap IDs: CB-1 = 4.35, CB-2 = 4.36, CB-3 = 4.37.
 
 | ID | Slice | Size | Depends on |
 |---|---|---|---|

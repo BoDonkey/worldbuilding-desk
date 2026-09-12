@@ -243,6 +243,9 @@ and required revisit point, `WIP`, `Done <commit>`.
 | 4.32 | World Canvas — derived return experience (WC-3) | 4 | S | — after 4.30; per-lens summaries and a rule-stated "worth a look" list, no scores |
 | 4.33 | World Canvas — author-invoked brainstorming (WC-4) | 4 | M | — after 4.31; through the 1.5 surface, per-item keep, shared consultation budget for now |
 | 4.34 | World Canvas — onboarding entry, help, IA docs (WC-5) | 4 | XS | — last; guide line on all guide-marked projects |
+| 4.35 | Corkboard scene links — shared link UI, quick-modal links, "Link current scene", stale links (CB-1) | 4 | S | — full prompt: [`corkboard-scenes-plan.md`](corkboard-scenes-plan.md) § CB-1; no schema change; carries the Corkboard docs reconciliation |
+| 4.36 | Corkboard scene links — "Create linked scene" from both surfaces (CB-2) | 4 | S | — after 4.35; existing scene owner returns the document; no rollback that deletes prose |
+| 4.37 | Corkboard scene links — chapter-card context line in Workspace (CB-3) | 4 | S | — after 4.35; may defer if beta time is tight |
 | 5.1 | Auto-update decision + implementation | 5 | M | — |
 | 5.2 | Code signing + notarization, both platforms | 5 | M | — |
 | 5.3 | Packaged-app validation + Electron E2E | 5 | M | — |
@@ -314,6 +317,10 @@ Order: 4.30 → 4.31 → (4.32 ∥ 4.33) → 4.34. The author's stated priority 
 complete working app for their own use first and a product second, so
 4.23–4.34 all precede 6.1; release engineering (5.x) may interleave. The
 project consultation budget model is to be revisited before launch (Backlog).
+The same day the author scheduled the Corkboard ↔ scenes proposal
+([`corkboard-scenes-plan.md`](corkboard-scenes-plan.md)) as 4.35–4.37,
+pre-beta, after 4.30–4.31 so both planning surfaces share chip and link
+conventions; 4.35 → (4.36 ∥ 4.37); 4.37 is the one to defer if needed.
 
 ---
 
@@ -1038,6 +1045,35 @@ section only fixes IDs and boundaries.
 Anti-goals hold across all five: no scores, no questionnaire, no second canon
 owner, no per-lens fields, no relationship graph, no RAG indexing of canvas
 text, no model text written into the canvas.
+
+### Corkboard ↔ scenes (4.35–4.37)
+
+Accepted 2026-09-12 from `docs/corkboard-scenes-plan.md`, which holds the
+verified current state, the recommended journey, the decision table with
+defaults, and the full implementation prompt, acceptance criteria, and
+test expectations for each slice. Read that document as the prompt; this
+section only fixes IDs and boundaries. No slice changes a persisted schema
+or adds AI.
+
+- **4.35 Shared scene-link UI, quick-modal links, "Link current scene",
+  stale links** — plan § CB-1. One `ChapterCardSceneLinks` component used by
+  the dedicated route and the Workspace quick modal; stale-link chips with
+  **Remove link**, never automatic pruning; **Open scene** beside each linked
+  scene on the route. Also corrects the Corkboard wording in
+  `PROJECT_STATUS.md` and removes "Corkboard graduation to a route" from the
+  Backlog (the route exists).
+- **4.36 "Create linked scene" from both surfaces** — plan § CB-2.
+  `handleNewDocument` returns the created document; link is a second
+  idempotent write; on link failure the scene stays and a **Link now** retry
+  is offered. Title per the plan's decision table; the scene opens
+  immediately.
+- **4.37 Chapter-card context line in Workspace** — plan § CB-3. One line
+  under the page header naming the linked card(s), opening the quick modal
+  at that card or the dedicated route with the card selected.
+
+Anti-goals across all three: no inference from titles or order, no
+summary/beat/status syncing, no status suggestions, no one-card-per-scene
+enforcement (a separate author decision if ever wanted), no new persistence.
 
 ## Phase 5 — Release Engineering
 

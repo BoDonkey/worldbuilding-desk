@@ -68,8 +68,9 @@ Other files:
 - `docs/corkboard-improvement.md` and `docs/corkboard-scenes-plan.md` — dated
   (2026-09-12) planning prompt and the resulting proposal for one-click
   Chapter Card ↔ scene linking (shared link UI, create linked scene,
-  Workspace card context). Proposal only, not scheduled; no schema change;
-  recommends pre-beta scheduling after 4.30–4.31.
+  Workspace card context). Accepted 2026-09-12 and scheduled as roadmap
+  slices 4.35–4.37 (pre-beta, after 4.30–4.31); no schema change; the plan
+  holds the full prompts, the roadmap holds status.
 - `docs/tactical-actions.md` — dated, non-authoritative external market
   research (2026-09-12) proposing five tactical actions. Its accepted outcomes
   are roadmap slices 4.28–4.29 plus small edits to 5.8/5.9/6.1 and the
