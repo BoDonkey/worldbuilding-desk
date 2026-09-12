@@ -222,6 +222,20 @@ Under the hood, the app still includes rich systems for world data, rules, chara
   test prints recall, findings, noise, mislinks, and healed gaps whenever a
   case fails, so a matcher change names what it lost.
 
+- Canon contradiction detection is fact-anchored, not rule-coded. The
+  hard-coded eye-color check is gone; every accepted fact with a
+  "modifier + noun" or numeric value (gray eyes, black scales, twenty years,
+  twenty-six) becomes a comparison slot, and scene text attributed to that
+  entity is checked in that slot for an explicit negation, a different
+  number, or a modifier from the same value class. Classes are linguistic
+  (built-in colors and numbers) or learned from the author's other accepted
+  values for the same fact type and noun, so a world's own vocabulary (oak
+  staff vs. ash staff) is enforced without the app knowing what a staff is;
+  adjectives outside any class ("tired eyes") never fire. Attribution is per
+  claim by nearest preceding mention, never the speaker of a quotation.
+  Synonym normalization (grey/gray, number words) is a small data table with
+  a per-project synonym hook; an author-editable synonym list is a follow-up.
+
 ### Story Context Systems
 - World Bible with dynamic categories and custom field schemas.
 - World Bible now follows shared page chrome, uses a compact utility rail for import/help tools, opens category tabs in browse/list mode by default, and reveals manual entry forms only after explicit create/edit selection.
@@ -653,6 +667,17 @@ runtime schema, and nothing here changes the roadmap's status board.
 ## Verification Status
 
 ### Verified Recently
+- Slice 4.24 fact-anchored canon contradiction detection: new
+  `services/consistency/factSlotComparison.ts` (slot parsing, linguistic and
+  learned value classes, per-claim speaker-aware attribution, negation and
+  numeric comparison, per-project synonym hook) replaces the eye-color
+  special case in `contradictionReview.ts`; `STATE_CONFLICT` contract,
+  highlights, and dismissal unchanged. Corpus: 19 cases, 12/12 planted
+  findings matched, 0 noise, 0 mislinks; the 4.23 speaker-attribution
+  `knownGap` healed and was removed; six new cases (scales color, transient
+  adjective non-hit, negation, numeric age, numeric service years, learned
+  staff-wood class). 12 focused comparator unit tests; existing
+  contradiction tests unchanged and green. Lint with 1 baseline warning; 548 web (+12 new) + 6 engine + 12 UI tests; web/desktop builds; Cypress not required (no routed UI change).
 - Slice 4.23 continuity review regression corpus: 13 cases, 7 expected
   findings all matched (recall 100%), 0 planted-absence violations, 0
   mislinks; 1 `knownGap` recorded for 4.24 (second-person eye-color claims

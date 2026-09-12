@@ -311,7 +311,7 @@ export const CONTINUITY_CORPUS: ContinuityCorpusCase[] = [
   {
     id: 'c1-eye-color-wrong-entity',
     title: 'C1 non-hit — a gray-eyes fact about Tam is not attributed to Sera\'s scene claim',
-    source: 'contradictionReview.test wrong-entity case',
+    source: 'contradictionReview.test wrong-entity case; healed 4.23 knownGap (speaker is never the addressee) in 4.24',
     scenes: [{id: 'ch2', title: 'The Ledgerbound', text: CH2_MA}],
     entities: [sera, tam],
     facts: [{targetId: 'tam', factType: 'appearance', value: 'gray eyes', sourceTitle: 'Tam dossier'}],
@@ -319,11 +319,7 @@ export const CONTINUITY_CORPUS: ContinuityCorpusCase[] = [
     expectedAbsent: [],
     expectedNoConflictFor: [
       {entityId: 'sera'},
-      {
-        entityId: 'tam',
-        knownGap:
-          'Speaker attribution: "Her same green" is spoken by Tam about Sera, but when only Tam has an accepted eye-color fact the claim is attributed to Tam. Target for slice 4.24 (rule registry with addressee/possessive resolution).'
-      }
+      {entityId: 'tam'}
     ]
   },
   {
@@ -343,5 +339,82 @@ export const CONTINUITY_CORPUS: ContinuityCorpusCase[] = [
       {sceneId: 'sample-ch1', surface: 'Some', reason: 'sentence start'},
       {sceneId: 'sample-ch1', surface: 'Forty', reason: 'number word'}
     ]
+  },
+  {
+    id: 'slot-scales-color-conflict',
+    title: '4.24 — a non-appearance-lexicon slot: accepted black scales vs. crimson scales',
+    source: '4.24 prompt (linguistic value class applied to an attribute the engine has never heard of)',
+    scenes: [{id: 's1', title: 'The Drake', text: `Vexil the drake uncoiled from the cistern wall. Its crimson scales caught the lamplight as it turned toward her.`}],
+    entities: [{id: 'vexil', name: 'Vexil', kind: 'character'}],
+    facts: [{targetId: 'vexil', factType: 'appearance', value: 'black scales', sourceTitle: 'Bestiary notes'}],
+    expected: [
+      {code: 'STATE_CONFLICT', sceneId: 's1', entityId: 'vexil', surfaceIncludes: 'crimson', note: 'color class, unknown attribute noun'}
+    ],
+    expectedAbsent: []
+  },
+  {
+    id: 'slot-transient-adjective-no-conflict',
+    title: '4.24 — "tired eyes" is not a competing value for gray eyes',
+    source: '4.24 prompt (adjectives outside any value class never fire)',
+    scenes: [{id: 's1', title: 'Late', text: `Sera Kestrel rubbed her tired eyes and read the ledger line again. Her eyes were wide and wet with salt.`}],
+    entities: [sera],
+    facts: [{targetId: 'sera', factType: 'appearance', value: 'gray eyes', sourceTitle: 'Sera Kestrel dossier'}],
+    expected: [],
+    expectedAbsent: [],
+    expectedNoConflictFor: [{entityId: 'sera'}]
+  },
+  {
+    id: 'slot-negation-conflict',
+    title: '4.24 — explicit negation of the accepted value',
+    source: '4.24 prompt (negation is comparable regardless of class)',
+    scenes: [{id: 's1', title: 'Mirror', text: `Sera Kestrel studied the glass. Her eyes were not gray at all in this light, whatever the guild papers said.`}],
+    entities: [sera],
+    facts: [{targetId: 'sera', factType: 'appearance', value: 'gray eyes', sourceTitle: 'Sera Kestrel dossier'}],
+    expected: [
+      {code: 'STATE_CONFLICT', sceneId: 's1', entityId: 'sera', surfaceIncludes: 'not gray', note: 'negation'}
+    ],
+    expectedAbsent: []
+  },
+  {
+    id: 'slot-numeric-age-conflict',
+    title: '4.24 — accepted age twenty-six vs. "thirty years old"',
+    source: '4.24 prompt (numbers are a linguistic class)',
+    scenes: [{id: 's1', title: 'Papers', text: `Sera Kestrel signed where the clerk pointed. Thirty years old, the form said, and she did not correct it.`}],
+    entities: [sera],
+    facts: [{targetId: 'sera', factType: 'age', value: 'twenty-six', sourceTitle: 'Sera Kestrel dossier'}],
+    expected: [
+      {code: 'STATE_CONFLICT', sceneId: 's1', entityId: 'sera', surfaceIncludes: 'thirty', note: 'numeric mismatch'}
+    ],
+    expectedAbsent: []
+  },
+  {
+    id: 'slot-numeric-noun-service-years',
+    title: '4.24 — accepted twenty years of service vs. "ten years with the Compact"',
+    source: 'trust-dogfood C2 shape, moved from lore-vs-lore to canon-vs-scene',
+    scenes: [{id: 's1', title: 'Warden', text: `Brannic Halloway had given ten years to the Compact and both knees to the Vault, and he said so to anyone who asked.`}],
+    entities: [brannic, compact, undervault],
+    facts: [{targetId: 'brannic', factType: 'membership', value: 'twenty years', sourceTitle: 'Cinder Compact faction notes'}],
+    expected: [
+      {code: 'STATE_CONFLICT', sceneId: 's1', entityId: 'brannic', surfaceIncludes: 'ten years', note: 'numeric slot with a noun'}
+    ],
+    expectedAbsent: []
+  },
+  {
+    id: 'slot-learned-class-from-canon',
+    title: '4.24 — a value class learned from the author\'s own canon (staff woods)',
+    source: '4.24 prompt (learned classes: other accepted values of the same fact type and head noun)',
+    scenes: [
+      {id: 's1', title: 'Staves', text: `Maren Kestrel leaned on her ash staff at the gate. Odessa Vane-Kir waited with her yew staff across her knees.`}
+    ],
+    entities: [{id: 'maren', name: 'Maren Kestrel', kind: 'character'}, odessa],
+    facts: [
+      {targetId: 'maren', factType: 'trait', value: 'oak staff', sourceTitle: 'Kestrel family notes'},
+      {targetId: 'odessa', factType: 'trait', value: 'ash staff', sourceTitle: 'Weighing House notes'}
+    ],
+    expected: [
+      {code: 'STATE_CONFLICT', sceneId: 's1', entityId: 'maren', surfaceIncludes: 'ash staff', note: '"ash" is a learned class member (Odessa\'s accepted value); Maren\'s canon is oak'}
+    ],
+    expectedAbsent: [],
+    expectedNoConflictFor: [{entityId: 'odessa'}]
   }
 ];

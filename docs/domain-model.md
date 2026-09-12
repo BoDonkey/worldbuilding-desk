@@ -44,6 +44,24 @@ Key rules:
   text, which legitimately contains brainstorming and contradictions. Raw lore
   may appear as supporting context only. Consistency findings remain advisory
   and never block drafting.
+- **Fact-anchored contradiction detection carries no fictional attribute
+  rules.** Which attributes matter comes only from accepted facts: each
+  fact's value is parsed into a slot (head noun plus one modifier, or a
+  number) and scene text attributed to the fact's entity is compared in that
+  slot. The engine may know *linguistic* value classes — colors, numbers,
+  negation — because they are true of English, not of any story; it must
+  never carry lists of what characters, creatures, or places have. A
+  competing scene modifier is a conflict only when it is an explicit
+  negation, a different number, or a member of the same value class, where
+  classes are built-in linguistic ones or *learned* from the author's own
+  canon (other accepted values of the same fact type and head noun).
+  Adjectives outside any class never fire. Attribution is per claim: the
+  nearest preceding known-entity mention; the speaker of quoted dialogue is
+  never the subject of claims inside the quotes; second-person speech
+  resolves to the preceding narrative block's remaining entity. Paraphrase
+  and implication are out of reach for this path by design and belong to
+  the author-triggered, evidence-validated model check (roadmap 4.38).
+  Precision is measured against the checked-in continuity corpus.
 
 ### Retrieval integration
 
