@@ -6,9 +6,9 @@ from the planning prompt in `docs/world-canvas.md` after inspecting the
 current World Bible, Source Notes, Scratchpad, canon-decision, onboarding,
 navigation, and persistence code. The author accepted every recommended
 default in § 8: the name "World Canvas", the dedicated `world_canvases`
-record, the seven lenses as listed, a shared consultation budget for now
-(budgets overall to be revisited before launch; see the roadmap Backlog), and
-the guide entry on all guide-marked projects. The status board in
+record, the seven lenses as listed, a shared consultation budget (whose
+model roadmap slice 4.39 settles before WC-4/4.33), and the guide entry on
+all guide-marked projects. The status board in
 `docs/road-to-market.md` is authoritative for execution; this document holds
 the full prompts.
 

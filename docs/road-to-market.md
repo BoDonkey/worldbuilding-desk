@@ -246,7 +246,8 @@ and required revisit point, `WIP`, `Done <commit>`.
 | 4.35 | Corkboard scene links — shared link UI, quick-modal links, "Link current scene", stale links (CB-1) | 4 | S | — full prompt: [`corkboard-scenes-plan.md`](corkboard-scenes-plan.md) § CB-1; no schema change; carries the Corkboard docs reconciliation |
 | 4.36 | Corkboard scene links — "Create linked scene" from both surfaces (CB-2) | 4 | S | — after 4.35; existing scene owner returns the document; no rollback that deletes prose |
 | 4.37 | Corkboard scene links — chapter-card context line in Workspace (CB-3) | 4 | S | — after 4.35; may defer if beta time is tight |
-| 4.38 | Model-assisted canon check (author-triggered, via 1.5) | 4 | M | — after 4.24 and the consultation-budget revisit; proposes contradictions with validated evidence spans into the review queue; never applies |
+| 4.38 | Model-assisted canon check (author-triggered, via 1.5) | 4 | M | — after 4.24 and 4.39; proposes contradictions with validated evidence spans into the review queue; never applies |
+| 4.39 | AI consultation budget model + point-of-use explanation | 4 | M | — promoted from Backlog 2026-09-12 because it now gates 4.33 and 4.38; settles what the budget protects, its scope, whether Ollama counts, and explains it where it is spent |
 | 5.1 | Auto-update decision + implementation | 5 | M | — |
 | 5.2 | Code signing + notarization, both platforms | 5 | M | — |
 | 5.3 | Packaged-app validation + Electron E2E | 5 | M | — |
@@ -317,7 +318,8 @@ chose to land it **before beta** rather than beta-driven: slices 4.30–4.34.
 Order: 4.30 → 4.31 → (4.32 ∥ 4.33) → 4.34. The author's stated priority is a
 complete working app for their own use first and a product second, so
 4.23–4.34 all precede 6.1; release engineering (5.x) may interleave. The
-project consultation budget model is to be revisited before launch (Backlog).
+project consultation budget model is settled by 4.39, which runs before
+4.33 and 4.38 because both spend against it.
 The same day the author scheduled the Corkboard ↔ scenes proposal
 ([`corkboard-scenes-plan.md`](corkboard-scenes-plan.md)) as 4.35–4.37,
 pre-beta, after 4.30–4.31 so both planning surfaces share chip and link
@@ -969,9 +971,45 @@ required by any slice below.
   real, then the survivors enter the review queue as dismissible items
   labeled model-assisted. Nothing is applied automatically, nothing runs in
   the background, and the action consumes a consultation. Scheduled after
-  4.24 and after the consultation-budget revisit in the Backlog. Add
+  4.24 and 4.39 (the budget model this action spends against). Add
   corpus cases that document which structural non-hits this path is meant
   to catch, so the two detectors are measured separately.
+- **4.39 AI consultation budget model + point-of-use explanation.** Promoted
+  from the Backlog on 2026-09-12: the budget was accepted as-is when it had
+  two consumers, but 4.33 (World Canvas brainstorming) and 4.38
+  (model-assisted canon check) both spend against it, and the 1.1 dogfood
+  already logged that its limit, consumers, and reset timing are invisible
+  at the point of use. Today `services/editor/inspectorBudgetService.ts`
+  keeps one per-project daily counter in `localStorage`, incremented by the
+  assistant, the writing coach, progression continuity, workspace context
+  actions, and canon-decision consultation, with no shared display.
+
+  Settle and implement four decisions. **(a) What it protects.** Recommended:
+  runaway loops and surprise provider spend, not rationing deliberate work;
+  an author who wants more should be able to raise it. **(b) Scope.**
+  Recommended: keep one per-project budget rather than per-feature counters,
+  because an author thinks in "requests this project made today", but record
+  which feature spent each unit so the explanation can break it down.
+  **(c) Whether Ollama counts.** Recommended: no. A local request costs
+  nothing and sends nothing, so counting it contradicts the privacy pillar's
+  own framing; keep a separate, higher loop guard for local requests so a
+  runaway still stops. This is the decision most worth the author's explicit
+  sign-off. **(d) Where it is explained.** Every action that spends a unit
+  states the cost before the request and what remains after, in plain
+  language, beside the button rather than in Settings; Settings gains the
+  limit, the reset time in the author's own timezone, and a per-feature
+  breakdown of today's usage.
+
+  Keep it local: no telemetry, no server-side accounting, no account. The
+  budget remains a local convenience, so clearing site data resets it and
+  that is acceptable. Extend the existing service rather than adding a
+  second counter, and keep the over-budget message actionable (what to do
+  now, when it resets, how to raise it). Update
+  `docs/product-blueprint.md` with the model and the point-of-use rule, and
+  `PROJECT_STATUS.md` when behavior changes. Unit tests for scope, reset
+  boundaries, and the Ollama exemption; Cypress for the point-of-use display
+  and the over-budget path; no new persistence beyond the existing
+  `localStorage` key (document any key change and its migration).
 - **4.25 Persisted, incremental project review.** Persist the last project
   review per project through a service (no new direct persistence path; a
   project-scoped store following the `consistencyStorage.ts` pattern, or the
@@ -1079,7 +1117,7 @@ section only fixes IDs and boundaries.
 - **4.33 Author-invoked brainstorming** — plan § WC-4. Through the 1.5
   proposal surface with a zod-validated, capped response; per-item Keep as
   Source Note / Add as question / Dismiss; nothing persists otherwise; shares
-  the project consultation budget for now (see Backlog on budgets).
+  the project consultation budget, whose model 4.39 settles first.
 - **4.34 Onboarding entry, help, IA docs** — plan § WC-5. Optional guide
   line, rail help sentence, blueprint IA update; archive the plan and prompt
   when done.
@@ -1242,11 +1280,3 @@ the niche communities is the marketing-plan substitute. **SEO micro-tools** —
 marketing-site work recorded in `docs/marketing-plan.md` as a post-launch
 experiment.
 
-**AI consultation budgets (author, 2026-09-12).** The shared daily
-consultation budget, its consumers (Lore Inspector, Canon Decisions
-consultation, coach, progression continuity, World Canvas brainstorming),
-and its reset timing were accepted as-is for now but must be revisited
-before launch: who the budget protects (cost vs. runaway loops), whether it
-should be per-feature or per-project, how it is explained at the point of
-use (dogfood friction already logged against 5.5/5.8), and whether Ollama
-requests should count at all.
