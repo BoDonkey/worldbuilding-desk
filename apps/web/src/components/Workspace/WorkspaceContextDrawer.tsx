@@ -55,7 +55,7 @@ const ISSUE_LABELS: Record<string, string> = {
   UNKNOWN_ENTITY: 'Unknown name',
   AMBIGUOUS_REFERENCE: 'Ambiguous reference',
   UNEXPECTED_SCENE_PRESENCE: 'Unexpected scene presence',
-  STATE_CONFLICT: 'Canon conflict',
+  STATE_CONFLICT: 'Continuity conflict',
   INVALID_MUTATION: 'Invalid story state change'
 };
 
@@ -478,7 +478,8 @@ export function WorkspaceContextDrawer({
     const surface = item.issue.surface?.trim() ?? '';
     const actionSurface = surface || item.issue.message;
     const isActive = activeReviewItemId === item.id;
-    const isCanonConflict = item.issue.code === 'STATE_CONFLICT';
+    const isContinuityIssue =
+      item.issue.code === 'STATE_CONFLICT' || item.issue.code === 'INVALID_MUTATION';
     const isExpanded = expandedReviewActionId === item.id || isActive;
     const selectedCategoryId =
       unknownCategorySelection[actionSurface] ||
@@ -515,7 +516,7 @@ export function WorkspaceContextDrawer({
         key={item.id}
         ref={isActive ? activeReviewItemRef : undefined}
         className={`${styles.consistencyListItem} ${
-          isCanonConflict ? styles.consistencyListItemConflict : ''
+          isContinuityIssue ? styles.consistencyListItemConflict : ''
         } ${
           isActive ? styles.consistencyListItemActive : ''
         }`}
@@ -523,7 +524,7 @@ export function WorkspaceContextDrawer({
         <div className={styles.consistencyItemHeader}>
           <div>
             <strong className={styles.consistencyItemTitle}>{issueTitle}</strong>
-            {isCanonConflict && (
+            {isContinuityIssue && (
               <span className={styles.consistencyConflictBadge}>Needs attention</span>
             )}
             {item.issue.code === 'UNKNOWN_ENTITY' &&
@@ -548,7 +549,7 @@ export function WorkspaceContextDrawer({
             >
               Show context
             </button>
-            {isCanonConflict && (
+            {isContinuityIssue && (
               <button
                 type='button'
                 onClick={() => dismissConsistencyReviewItem(item.id)}

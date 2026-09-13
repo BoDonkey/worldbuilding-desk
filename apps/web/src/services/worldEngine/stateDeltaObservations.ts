@@ -71,6 +71,10 @@ function stripLeadingArticle(value: string): string {
 
 function trimTrailingNoise(value: string): string {
   return value
+    .replace(
+      /\s+in\s+(?:a|an|one|two|three|four|\d+)\s+(?:bite|bites|gulp|gulps|sip|sips|swallow|swallows)\b.*$/i,
+      ''
+    )
     .replace(/\s+(?:from|into|toward|towards|with|and)\s+.*$/i, '')
     .replace(/[.!,;:\s]+$/g, '')
     .trim();

@@ -35,7 +35,6 @@ export interface ExtractedProposal {
   source: ProposalSource;
   text: string;
   entities: ProposalEntityRef[];
-  intents: Array<Record<string, never>>;
   unresolvedSpans: Array<{
     start: number;
     end: number;
@@ -72,7 +71,6 @@ export interface GuardrailIssue {
 export interface ValidationResult {
   allowCommit: boolean;
   issues: GuardrailIssue[];
-  proposedMutations: Array<Record<string, never>>;
 }
 
 export interface KnownEntityRef {

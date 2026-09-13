@@ -1144,7 +1144,6 @@ export function buildExtractedProposal(
     source: input.source,
     text: input.text,
     entities,
-    intents: [],
     unresolvedSpans: [],
     createdAt: options.createdAt ?? Date.now()
   };
@@ -1218,8 +1217,7 @@ export class ConsistencyEngineService {
 
     const result: ValidationResult = {
       allowCommit: !issues.some((issue) => issue.severity === 'blocking'),
-      issues,
-      proposedMutations: []
+      issues
     };
 
     await saveGuardrailEvent({

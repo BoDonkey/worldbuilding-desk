@@ -142,6 +142,13 @@ change; the mutation ledger says when it changed.
 - Replay: accepted events only, applied over a `CharacterSheet`-derived
   baseline; last accepted set-style command wins, additive commands
   accumulate, invalid commands are rejected before persistence.
+- Deterministic review may compare prose observations with replay immediately
+  before their evidence span. Impossible proposed commands surface as
+  warning-level `INVALID_MUTATION` findings; incompatible custody, equipment,
+  or static-location claims surface as warning-level `STATE_CONFLICT`
+  findings citing the accepted scene that established the prior state.
+  Movement cues suppress static-location conflicts until state catches up.
+  Review and assistant custody answers use the same ordered manuscript walk.
 - Proposal layer (manual, deterministic extraction, or local LLM — with
   confidence/evidence/status) is strictly separate from the accepted mutation
   ledger. LLM integration affects proposal generation only; it never changes

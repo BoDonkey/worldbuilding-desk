@@ -53,6 +53,7 @@ import {htmlToPlainText} from '../utils/textHelpers';
 import {isCharacterCategory} from '../services/characters/characterIdentity';
 import type {ActorResolution} from '../services/characters/characterIdentity';
 import {buildDerivedStateMutationEvents} from '../services/state/stateMutationDerivation';
+import {findStateContinuityReviewItems} from '../services/state/stateContinuityReview';
 import {
   invalidateStateMutationEventById,
   replaceSceneStateMutationEventsBySourceType,
@@ -457,7 +458,7 @@ export const useWorkspaceConsistency = ({
     ConsistencyReviewItem[]
   >([]);
   const documentsRef = useRef(documents);
-  const dismissedConflictItemIdsRef = useRef(new Set<string>());
+  const dismissedContinuityItemIdsRef = useRef(new Set<string>());
   const [lastConsistencyReviewAt, setLastConsistencyReviewAt] = useState<number | null>(
     null
   );
@@ -994,6 +995,15 @@ export const useWorkspaceConsistency = ({
         canonicalFacts,
         knownEntities: knownConsistencyEntities
       });
+      const stateContinuityItems = findStateContinuityReviewItems({
+        documents: [doc],
+        sceneOrderDocuments: documentsRef.current,
+        knownEntities: knownConsistencyEntities,
+        characterSheets,
+        actorResolutions,
+        ruleset,
+        stateMutationEvents
+      });
       setGuardrailIssues(presentedIssues);
       setConsistencyReviewItems((prev) => [
         ...prev.filter((item) => item.sceneId !== doc.id),
@@ -1005,17 +1015,24 @@ export const useWorkspaceConsistency = ({
           reviewAnnotation: annotationsByIssueKey.get(getReviewIssueKey(issue))
         })),
         ...contradictionItems.filter(
-          (item) => !dismissedConflictItemIdsRef.current.has(item.id)
+          (item) => !dismissedContinuityItemIdsRef.current.has(item.id)
+        ),
+        ...stateContinuityItems.filter(
+          (item) => !dismissedContinuityItemIdsRef.current.has(item.id)
         )
       ]);
     },
     [
       filterDismissedUnknownIssues,
       canonicalFacts,
+      characterSheets,
       characters,
       entities,
       knownConsistencyEntities,
+      actorResolutions,
       resolvedActionCues,
+      ruleset,
+      stateMutationEvents,
       worldEngine
     ]
   );
@@ -1048,6 +1065,15 @@ export const useWorkspaceConsistency = ({
           canonicalFacts,
           knownEntities: knownConsistencyEntities
         });
+        const stateContinuityItems = findStateContinuityReviewItems({
+          documents: [doc],
+          sceneOrderDocuments: documentsRef.current,
+          knownEntities: knownConsistencyEntities,
+          characterSheets,
+          actorResolutions,
+          ruleset,
+          stateMutationEvents
+        });
         setGuardrailIssues(presentedIssues);
         setConsistencyReviewItems((prev) => [
           ...prev.filter((item) => item.sceneId !== doc.id),
@@ -1059,7 +1085,10 @@ export const useWorkspaceConsistency = ({
             reviewAnnotation: annotationsByIssueKey.get(getReviewIssueKey(issue))
           })),
           ...contradictionItems.filter(
-            (item) => !dismissedConflictItemIdsRef.current.has(item.id)
+            (item) => !dismissedContinuityItemIdsRef.current.has(item.id)
+          ),
+          ...stateContinuityItems.filter(
+            (item) => !dismissedContinuityItemIdsRef.current.has(item.id)
           )
         ]);
         announceStatus('Consistency review refreshed.');
@@ -1071,10 +1100,14 @@ export const useWorkspaceConsistency = ({
       announceStatus,
       filterDismissedUnknownIssues,
       canonicalFacts,
+      characterSheets,
       characters,
       entities,
       knownConsistencyEntities,
+      actorResolutions,
       resolvedActionCues,
+      ruleset,
+      stateMutationEvents,
       worldEngine
     ]
   );
@@ -1093,7 +1126,7 @@ export const useWorkspaceConsistency = ({
     }
 
     setIsRunningConsistencyReview(true);
-    dismissedConflictItemIdsRef.current.clear();
+    dismissedContinuityItemIdsRef.current.clear();
     setFeedback(null);
     announceStatus('Running consistency review.');
     try {
@@ -1162,7 +1195,16 @@ export const useWorkspaceConsistency = ({
         canonicalFacts,
         knownEntities: knownConsistencyEntities
       });
-      const combinedItems = [...items, ...contradictionItems];
+      const stateContinuityItems = findStateContinuityReviewItems({
+        documents,
+        knownEntities: knownConsistencyEntities,
+        characterSheets,
+        actorResolutions,
+        ruleset,
+        stateMutationEvents
+      });
+      const continuityItems = [...contradictionItems, ...stateContinuityItems];
+      const combinedItems = [...items, ...continuityItems];
 
       setConsistencyReviewItems(combinedItems);
       setLastConsistencyReviewAt(reviewedAt);
@@ -1189,12 +1231,12 @@ export const useWorkspaceConsistency = ({
           message: `Consistency review complete with no issues across ${documents.length} scene(s).`
         });
       } else {
-        const contradictionCount = contradictionItems.length;
+        const continuityCount = continuityItems.length;
         const firstSceneId = combinedItems[0]?.sceneId;
         const message =
           `Project review found ${combinedItems.length} item(s) across ${documents.length} scene(s).` +
-          (contradictionCount > 0
-            ? ` ${contradictionCount} contradiction${contradictionCount === 1 ? '' : 's'} with canon records.`
+          (continuityCount > 0
+            ? ` ${continuityCount} accepted canon/state continuity finding${continuityCount === 1 ? '' : 's'}.`
             : '');
         setFeedback({tone: 'error', message});
         addSystemHistory({
@@ -1216,14 +1258,18 @@ export const useWorkspaceConsistency = ({
     activeProject,
     addSystemHistory,
     canonicalFacts,
+    characterSheets,
     characters,
     documents,
     entities,
+    actorResolutions,
     worldEngineStatus,
     filterDismissedUnknownIssues,
     knownConsistencyEntities,
     resolvedActionCues,
+    ruleset,
     setFeedback,
+    stateMutationEvents,
     worldEngine
   ]);
 
@@ -1915,8 +1961,8 @@ export const useWorkspaceConsistency = ({
 
   const dismissConsistencyReviewItem = useCallback((itemId: string) => {
     const item = consistencyReviewItems.find((entry) => entry.id === itemId);
-    if (item?.issue.code === 'STATE_CONFLICT') {
-      dismissedConflictItemIdsRef.current.add(itemId);
+    if (item?.issue.code === 'STATE_CONFLICT' || item?.issue.code === 'INVALID_MUTATION') {
+      dismissedContinuityItemIdsRef.current.add(itemId);
     }
     setConsistencyReviewItems((prev) =>
       prev.filter((item) => item.id !== itemId)

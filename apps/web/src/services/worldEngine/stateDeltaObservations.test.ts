@@ -9,7 +9,7 @@ describe('stateDeltaObservations', () => {
         'Kael entered the Ember Archive.',
         'Kael picked up 2 iron keys.',
         'Kael equipped the lantern.',
-        'Kael drank a potion.'
+        'Kael drank a potion in two swallows.'
       ].join(' '),
       source: 'workspace-save',
       knownEntities: [

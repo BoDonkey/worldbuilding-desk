@@ -13,7 +13,7 @@ import {
 } from './stateReplay';
 import {validateStateMutationEvent} from './stateMutationSchemas';
 
-function findSheetForActor(
+export function findSheetForStateActor(
   actor: string | undefined,
   characterSheets: CharacterSheet[]
 ): CharacterSheet | null {
@@ -30,7 +30,7 @@ function findSheetForActor(
   );
 }
 
-function observationToCommand(
+export function stateDeltaObservationToCommand(
   observation: Extract<ObservationProposal, {type: 'state_delta_candidate'}>,
   actorId: string
 ): StateMutationCommand | null {
@@ -123,7 +123,7 @@ export function buildDerivedStateMutationEvents(params: {
     }));
 
   relevantObservations.forEach((observation, index) => {
-    const sheet = findSheetForActor(observation.actor, params.characterSheets);
+    const sheet = findSheetForStateActor(observation.actor, params.characterSheets);
     if (!sheet) {
       return;
     }
@@ -131,7 +131,7 @@ export function buildDerivedStateMutationEvents(params: {
     if (!actorId) {
       return;
     }
-    const command = observationToCommand(observation, actorId);
+    const command = stateDeltaObservationToCommand(observation, actorId);
     if (!command) {
       return;
     }

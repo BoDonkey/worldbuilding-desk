@@ -11,6 +11,7 @@ import type {ConsistencyAlias} from './aliasStorage';
 import {findCanonContradictions} from './contradictionReview';
 import {buildKnownConsistencyEntities} from './reviewLinkOptions';
 import type {GuardrailIssue, KnownEntityRef} from './types';
+import {findStateContinuityReviewItems} from '../state/stateContinuityReview';
 
 /**
  * Runs the real deterministic review path over a corpus case: the same
@@ -140,21 +141,32 @@ export async function runContinuityCase(corpusCase: ContinuityCorpusCase): Promi
     validation.issues.forEach((issue) => findings.push(issueToFinding(scene.id, issue)));
   }
 
-  const contradictions = findCanonContradictions({
-    documents: corpusCase.scenes.map((scene) => ({
+  const documents = corpusCase.scenes.map((scene, index) => ({
       id: scene.id,
       projectId: 'corpus',
       title: scene.title,
       content: scene.text,
+      order: index + 1,
       createdAt: 1,
       updatedAt: 1
-    })),
+    }));
+  const contradictions = findCanonContradictions({
+    documents,
     entities: toWorldEntities(corpusCase),
     characters: [],
     canonicalFacts: toCanonicalFacts(corpusCase),
     knownEntities
   });
   contradictions.forEach((item) => findings.push(issueToFinding(item.sceneId, item.issue)));
+  if (corpusCase.state) {
+    findStateContinuityReviewItems({
+      documents,
+      knownEntities,
+      characterSheets: corpusCase.state.characterSheets,
+      ruleset: corpusCase.state.ruleset,
+      stateMutationEvents: corpusCase.state.mutationEvents
+    }).forEach((item) => findings.push(issueToFinding(item.sceneId, item.issue)));
+  }
 
   return {findings, mentions};
 }
@@ -206,7 +218,9 @@ export function evaluateContinuityCase(corpusCase: ContinuityCorpusCase, run: Co
   const conflictViolations: CorpusEvaluation['conflictViolations'] = [];
   (corpusCase.expectedNoConflictFor ?? []).forEach(({entityId, knownGap}) => {
     const conflicts = run.findings.filter(
-      (finding) => finding.code === 'STATE_CONFLICT' && finding.entityIds.includes(entityId)
+      (finding) =>
+        (finding.code === 'STATE_CONFLICT' || finding.code === 'INVALID_MUTATION') &&
+        finding.entityIds.includes(entityId)
     );
     if (conflicts.length > 0 && !knownGap) {
       conflicts.forEach((finding) => conflictViolations.push({entityId, finding}));

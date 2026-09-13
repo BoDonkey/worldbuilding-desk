@@ -429,6 +429,12 @@ Under the hood, the app still includes rich systems for world data, rules, chara
 - Future AI expansion should follow the adapter/tool boundary now captured in `docs/architecture-review.md`: provider/model capabilities are explicit, named workflow routes can choose model/reasoning/capability/cache policies per feature, structured output is schema-validated, tool-like actions produce confirmable proposals, and shared read-only project-context extraction feeds features without silently mutating canon or state.
 - Scene-scoped state mutation tracking now exists as a project-scoped persistence layer with accepted/invalidation flow, replay, and workspace inspection surfaces.
 - Deterministic `state_delta_candidate` extraction now feeds the same typed mutation ledger as proposed `deterministic-review` events rather than mutating tracked state automatically.
+- Mechanics-enabled project review now replays accepted character state at each
+  scene observation and warns about impossible inventory changes, custody or
+  equipment use after removal/consumption, and static location claims that
+  contradict the last accepted location without an intervening movement cue.
+  Findings cite the earlier accepted scene and never block saving. The
+  assistant and review share one ordered manuscript-custody interpreter.
 
 ### Optional Game/System Layers
 - Standalone `rules-engine` package with stats, resources, formulas, effects, and dice.

@@ -12,14 +12,16 @@
  * extraction, validation, and contradiction code over every case; the test
  * reports precision and recall so a matcher or detector change names what
  * it lost. Add a case for every new rule (4.24), state check (4.26), or
- * fixed false positive. `state` is reserved for 4.26 (ruleset, sheets,
- * ledger events) and is unused today.
+ * fixed false positive. State-backed cases include their ruleset, sheets,
+ * and accepted ledger events so review exercises real replay.
  *
  * Keep excerpts short. Text is quoted from the fixture chapters; do not
  * "improve" it, because the matcher's behavior on real prose is the point.
  */
 
-export type CorpusIssueCode = 'UNKNOWN_ENTITY' | 'AMBIGUOUS_REFERENCE' | 'UNEXPECTED_SCENE_PRESENCE' | 'STATE_CONFLICT';
+import type {CharacterSheet, StateMutationEvent, StoredRuleset} from '../entityTypes';
+
+export type CorpusIssueCode = 'UNKNOWN_ENTITY' | 'AMBIGUOUS_REFERENCE' | 'UNEXPECTED_SCENE_PRESENCE' | 'STATE_CONFLICT' | 'INVALID_MUTATION';
 
 export interface CorpusEntity {
   id: string;
@@ -85,10 +87,13 @@ export interface ContinuityCorpusCase {
   expected: CorpusExpectedFinding[];
   expectedAbsent: CorpusExpectedAbsence[];
   expectedNotResolved?: CorpusExpectedResolution[];
-  /** No STATE_CONFLICT may name these entity ids (a `knownGap` records an accepted current violation). */
+  /** No state-backed conflict/invalid-mutation may name these entity ids. */
   expectedNoConflictFor?: Array<{entityId: string; knownGap?: string}>;
-  /** Reserved for slice 4.26 (state-backed checks). */
-  state?: never;
+  state?: {
+    ruleset: StoredRuleset;
+    characterSheets: CharacterSheet[];
+    mutationEvents: StateMutationEvent[];
+  };
 }
 
 const sera: CorpusEntity = {id: 'sera', name: 'Sera Kestrel', kind: 'character', aliases: ['Sera', 'the Ledgerbound']};
@@ -150,6 +155,22 @@ const CH4_DEEP_VAULT = `The Salt Door. The antechamber. The dark gate — signed
 "Climb," said Warden Halloway, and climbed.
 
 [Health: 71/100.]`;
+
+const STATE_RULESET: StoredRuleset = {
+  id: 'corpus-rules', projectId: 'corpus', name: 'Corpus rules', version: '1',
+  statDefinitions: [], resourceDefinitions: [], rules: [], itemTemplates: [], statusTemplates: [],
+  createdAt: 1, updatedAt: 1
+};
+
+const SERA_STATE_SHEET: CharacterSheet = {
+  id: 'sera-sheet', projectId: 'corpus', characterEntityId: 'sera', name: 'Sera Kestrel',
+  level: 3, experience: 0, stats: [], resources: [], inventory: [],
+  inventoryEntries: [
+    {id: 'pale-draught', mode: 'quick', name: 'Pale Draught', quantity: 1},
+    {id: 'emberglass-key', mode: 'quick', name: 'Emberglass Key', quantity: 1}
+  ],
+  createdAt: 1, updatedAt: 1
+};
 
 export const CONTINUITY_CORPUS: ContinuityCorpusCase[] = [
   {
@@ -416,5 +437,77 @@ export const CONTINUITY_CORPUS: ContinuityCorpusCase[] = [
     ],
     expectedAbsent: [],
     expectedNoConflictFor: [{entityId: 'odessa'}]
+  },
+  {
+    id: 'state-pale-draught-baseline-consumption',
+    title: '4.26/E — consuming the one baseline Pale Draught is replay-valid',
+    source: 'trust-dogfood answer-key E baseline and E event script; chapter 1',
+    scenes: [{
+      id: 'ch1',
+      title: 'The Salt Door',
+      text: 'Sera drank the Pale Draught in two swallows.'
+    }],
+    entities: [sera, {id: 'pale-draught', name: 'Pale Draught', kind: 'entity'}],
+    expected: [],
+    expectedAbsent: [{
+      sceneId: 'ch1',
+      surface: 'Pale Draught',
+      reason: 'known inventory consumption is valid state, not an unknown entity'
+    }],
+    expectedNoConflictFor: [{entityId: 'sera'}],
+    state: {
+      ruleset: STATE_RULESET,
+      characterSheets: [SERA_STATE_SHEET],
+      mutationEvents: []
+    }
+  },
+  {
+    id: 'state-emberglass-key-after-removal',
+    title: '4.26/E3 — Sera uses the Key after the accepted ledger removed it',
+    source: 'trust-dogfood answer-key D4/E3; chapters 3–5',
+    scenes: [
+      {id: 'ch3', title: 'The Weighing House', text: 'Sera gave the Emberglass Key to Odessa.'},
+      {id: 'ch4', title: 'Sorrowsteel', text: "The Key went into Brannic's pocket."},
+      {
+        id: 'ch5',
+        title: 'The Hollow Court',
+        text: 'Sera came down the antechamber slowly.\n\nShe stopped at the gate. She pressed the Emberglass Key into the lock.'
+      }
+    ],
+    entities: [
+      sera,
+      brannic,
+      odessa,
+      {id: 'emberglass-key', name: 'Emberglass Key', kind: 'entity'}
+    ],
+    expected: [{
+      code: 'STATE_CONFLICT',
+      sceneId: 'ch5',
+      entityId: 'sera',
+      surfaceIncludes: 'Emberglass Key',
+      note: 'accepted chapter 3 removal leaves the Key absent when Sera uses it in chapter 5'
+    }],
+    expectedAbsent: [],
+    state: {
+      ruleset: STATE_RULESET,
+      characterSheets: [SERA_STATE_SHEET],
+      mutationEvents: [{
+        id: 'key-to-odessa',
+        projectId: 'corpus',
+        sceneId: 'ch3',
+        sceneTitle: 'The Weighing House',
+        sceneOrder: 1,
+        scenePosition: 36,
+        sourceRevision: 1,
+        sourceHash: 'ch3-key-removal',
+        status: 'accepted',
+        commands: [{
+          type: 'inventory_remove',
+          actorId: 'sera',
+          itemName: 'Emberglass Key'
+        }],
+        createdAt: 1
+      }]
+    }
   }
 ];
