@@ -121,4 +121,23 @@ describe('findCanonContradictions', () => {
     });
     expect(items[0]?.issue.surface).toBeUndefined();
   });
+
+  it('compares each scene only with canon valid at that point in manuscript order', () => {
+    const first = document('Sera Kestrel smiled. Her gray eyes caught the light.');
+    first.id = 'chapter-1';
+    first.order = 0;
+    const second = document('Sera Kestrel smiled. Her green eyes caught the light.');
+    second.id = 'chapter-2';
+    second.order = 1;
+    const earlier = {...grayEyes, validUntilSceneId: second.id};
+    const later = {...grayEyes, id: 'fact-green-eyes', value: 'green eyes', validFromSceneId: second.id};
+
+    expect(findCanonContradictions({
+      documents: [first, second],
+      entities: [],
+      characters: [sera],
+      canonicalFacts: [earlier, later],
+      knownEntities: [{id: sera.id, name: sera.name, type: 'character'}]
+    })).toEqual([]);
+  });
 });

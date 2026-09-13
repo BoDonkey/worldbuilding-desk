@@ -39,6 +39,7 @@ type ParsedCanonFact = {
   target: string;
   factType: string;
   value: string;
+  validity?: string;
 };
 
 const getSavedFactIntent = (promptText: string): SavedFactIntent | null => {
@@ -92,13 +93,19 @@ const parseCanonFact = (result: RAGSearchResult): ParsedCanonFact | null => {
   const remainder = result.chunk.content.slice(prefix.length);
   const separatorIndex = remainder.indexOf(':');
   if (separatorIndex < 1) return null;
+  const rawValue = remainder.slice(separatorIndex + 1).trim();
+  const validityMatch = rawValue.match(/^(.*) \(((?:from|before|within) .+)\)$/i);
   return {
     result,
     target,
     factType: normalizeFactName(remainder.slice(0, separatorIndex)),
-    value: remainder.slice(separatorIndex + 1).trim()
+    value: validityMatch?.[1]?.trim() ?? rawValue,
+    validity: validityMatch?.[2]?.trim()
   };
 };
+
+const stateValidity = (content: string, fact: ParsedCanonFact): string =>
+  fact.validity ? `${content} This fact applies ${fact.validity}.` : content;
 
 const factMatchesSubject = (fact: ParsedCanonFact, subject: string): boolean => {
   const normalizedSubject = normalizeFactName(subject);
@@ -163,16 +170,16 @@ export const getDirectSavedFactAnswer = (
     switch (intent.kind) {
       case 'occupation':
         return {
-          content: intent.prior
+          content: stateValidity(intent.prior
             ? `${subject} was a ${acceptedFact.value} before becoming a delver.`
-            : `${subject}'s accepted occupation is ${acceptedFact.value}.`,
+            : `${subject}'s accepted occupation is ${acceptedFact.value}.`, acceptedFact),
           results: [acceptedFact.result]
         };
       case 'service-length': {
         const service = acceptedFact.value.match(/^(.+?)\s+service:\s*(.+)$/i);
         if (service?.[1] && service[2]) {
           return {
-            content: `${subject} has served the ${service[1]} for ${service[2]}.`,
+            content: stateValidity(`${subject} has served the ${service[1]} for ${service[2]}.`, acceptedFact),
             results: [acceptedFact.result]
           };
         }
@@ -180,14 +187,14 @@ export const getDirectSavedFactAnswer = (
       }
       case 'membership':
         return {
-          content: `${subject}'s accepted canon membership is ${acceptedFact.value}.`,
+          content: stateValidity(`${subject}'s accepted canon membership is ${acceptedFact.value}.`, acceptedFact),
           results: [acceptedFact.result]
         };
       case 'treatment': {
         const treatment = acceptedFact.value.match(/^.+?\s+treatment:\s*(.+)$/i);
         if (treatment?.[1]) {
           return {
-            content: `${subject} is treated with ${treatment[1]}.`,
+            content: stateValidity(`${subject} is treated with ${treatment[1]}.`, acceptedFact),
             results: [acceptedFact.result]
           };
         }
@@ -201,7 +208,7 @@ export const getDirectSavedFactAnswer = (
             .join('-')
             .toLowerCase();
           return {
-            content: `${subject}'s eyes are ${color}.`,
+            content: stateValidity(`${subject}'s eyes are ${color}.`, acceptedFact),
             results: [acceptedFact.result]
           };
         }

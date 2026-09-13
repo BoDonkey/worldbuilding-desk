@@ -400,6 +400,9 @@ export function prepareCharacterTransferImport(params: {
   const entityById = new Map(classifiedEntities.map((entity) => [entity.id, entity]));
   const canonicalFacts = params.payload.schemaVersion === 2
     ? params.payload.data.canonicalFacts.flatMap((fact): CanonicalFact[] => {
+        const portableFact = {...fact};
+        delete portableFact.validFromSceneId;
+        delete portableFact.validUntilSceneId;
         const importedCharacterId = fact.targetType === 'character'
           ? characterIdMap.get(fact.targetId)
           : undefined;
@@ -412,7 +415,7 @@ export function prepareCharacterTransferImport(params: {
         if (!targetId) return [];
         return [
           {
-            ...fact,
+            ...portableFact,
             id: crypto.randomUUID(),
             projectId: params.projectId,
             targetType: entityId ? 'entity' : 'character',

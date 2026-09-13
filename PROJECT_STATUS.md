@@ -1,6 +1,6 @@
 # Worldbuilding-Desk Project Status
 
-**Last Updated:** September 12, 2026
+**Last Updated:** September 13, 2026
 
 ## Project Overview
 
@@ -235,6 +235,18 @@ Under the hood, the app still includes rich systems for world data, rules, chara
   claim by nearest preceding mention, never the speaker of a quotation.
   Synonym normalization (grey/gray, number words) is a small data table with
   a per-project synonym hook; an author-editable synonym list is a follow-up.
+
+- Accepted canon facts now support manuscript-time validity through optional
+  stable scene links. Canon Decisions supersedes a conflicting fact at an
+  author-selected scene instead of deleting history: the earlier fact ends
+  exclusively at that scene and the new fact begins inclusively there.
+  Reordering scenes changes the resolved window without rewriting IDs;
+  missing boundaries fail closed. Deterministic contradiction review,
+  progression-continuity candidates, and assistant
+  RAG/local-memory grounding filter canon for the scene in question, while
+  assistant answers and canon displays state bounded windows. Project and
+  snapshot schema 6 preserve these links; character-package imports drop them
+  because those packages do not include manuscript scenes.
 
 - Project review is persisted and incremental. The last run is stored per
   project (`project_review_runs`, one record keyed by project id, in the

@@ -231,8 +231,8 @@ describe('project migration backup', () => {
         .getAll()
     );
 
-    expect(current.storageSchemaVersion).toBe(5);
-    expect((stored as Project).storageSchemaVersion).toBe(5);
+    expect(current.storageSchemaVersion).toBe(6);
+    expect((stored as Project).storageSchemaVersion).toBe(6);
     expect(backups).toHaveLength(1);
   });
 
@@ -341,7 +341,7 @@ describe('project migration backup', () => {
         .get(linkedCard.id)
     );
 
-    expect(current.storageSchemaVersion).toBe(5);
+    expect(current.storageSchemaVersion).toBe(6);
     expect(storedCard).toEqual(linkedCard);
   });
 

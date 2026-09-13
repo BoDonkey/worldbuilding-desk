@@ -1,6 +1,6 @@
 # Domain Model — Lore, Canon, State, and AI Proposals
 
-Last updated: 2026-08-30
+Last updated: 2026-09-13
 
 This is the domain specification authority. It consolidates the durable
 contracts from `freeform-lore-ingestion-architecture.md`,
@@ -39,6 +39,16 @@ Key rules:
   rebuilt from facts.
 - Alias extraction is a special fact path that writes to alias storage on
   acceptance, keeping consistency matching and lore extraction aligned.
+- Canonical facts may have optional manuscript-time boundaries stored as
+  stable scene references: `validFromSceneId` is inclusive and
+  `validUntilSceneId` is exclusive. Their meaning is resolved from current
+  manuscript order at use time; ordinal positions are never persisted. A
+  conflicting later fact is accepted by superseding the current fact at an
+  author-selected scene, preserving both records and closing the earlier
+  fact at that boundary. Missing boundary scenes fail closed rather than
+  making a bounded fact timeless. Character-package imports remove these
+  project-specific scene references because the package does not carry the
+  manuscript; full project backups preserve them.
 - Canon-grounded consistency checks rely only on accepted canon (records,
   aliases, canonical facts, accepted state mutations) — never on raw lore
   text, which legitimately contains brainstorming and contradictions. Raw lore
@@ -98,6 +108,8 @@ Flow: `extract -> cluster -> review -> decide -> apply -> reindex`.
 - Author resolutions: `merge`, `alias`, `keep_separate`, `accept_new`,
   `accept_update` (supersede), `reject`, `defer`. Each applies through
   deterministic handlers (merge helpers, alias storage, fact supersession).
+  Supersession requires an explicit "as of this scene" choice; it never
+  deletes the earlier truth or guesses a manuscript boundary.
 - Suppression memory remembers `keep separate` / alias decisions so resolved
   pairs are not re-flagged without new evidence.
 - LLM rubber-duck role is reasoning aid only: summarize a cluster, compare

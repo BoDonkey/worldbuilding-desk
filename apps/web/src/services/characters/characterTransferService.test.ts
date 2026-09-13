@@ -90,7 +90,7 @@ describe('character package transfer', () => {
       categories: [category()],
       entities: [entity()],
       aliases: [alias],
-      canonicalFacts: [fact],
+      canonicalFacts: [{...fact, validFromSceneId: 'source-scene-1', validUntilSceneId: 'source-scene-3'}],
       characters: [character('entity-mira')],
       characterSheets: [sheet('entity-mira')]
     });
@@ -262,7 +262,7 @@ describe('character package transfer', () => {
       categories: [category()],
       entities: [entity()],
       aliases: [alias],
-      canonicalFacts: [fact],
+      canonicalFacts: [{...fact, validFromSceneId: 'source-scene-1', validUntilSceneId: 'source-scene-3'}],
       characters: [character('entity-mira')],
       characterSheets: [sheet('entity-mira')]
     });
@@ -299,5 +299,7 @@ describe('character package transfer', () => {
       targetType: 'entity',
       targetId: importedEntityId
     });
+    expect(prepared.canonicalFacts[0].validFromSceneId).toBeUndefined();
+    expect(prepared.canonicalFacts[0].validUntilSceneId).toBeUndefined();
   });
 });

@@ -263,13 +263,14 @@ describe('Canon Decisions', () => {
     cy.contains('Ember may match Ember Archive').should('not.exist');
   });
 
-  it('accepts a proposed fact update and keeps the resolved conflict hidden after reload', () => {
+  it('supersedes a fact at a chosen scene and keeps both periods after reload', () => {
     seedFactConflict();
 
     cy.visit('/canon-decisions');
     cy.contains('h2', 'background conflict for Ember Archive').should('be.visible');
-    cy.contains('button', 'Accept Update').click();
-    cy.contains('[role="status"]', 'Canonical fact updated.').should('be.visible');
+    cy.contains('label', 'New fact becomes true as of').find('select').select('Beta Scene');
+    cy.contains('button', 'Supersede').should('be.enabled').click();
+    cy.contains('[role="status"]', 'Canon superseded as of Beta Scene.').should('be.visible');
     cy.contains('h2', 'No open canon decisions').should('be.visible');
 
     readStoreRecords<{
@@ -278,16 +279,21 @@ describe('Canon Decisions', () => {
       factType: string;
       value: string;
       sourceProposalId: string;
+      validFromSceneId?: string;
+      validUntilSceneId?: string;
     }>('canonical_facts').then((facts) => {
       const emberFacts = facts.filter(
         (fact) => fact.targetId === TARGET_ID && fact.factType === 'background'
       );
-      expect(emberFacts).to.have.length(1);
-      expect(emberFacts[0]).to.include({
+      expect(emberFacts).to.have.length(2);
+      const earlier = emberFacts.find((fact) => fact.id === 'canonical-fact-ember-background');
+      const later = emberFacts.find((fact) => fact.id !== 'canonical-fact-ember-background');
+      expect(earlier).to.include({validUntilSceneId: 'scene-beta'});
+      expect(later).to.include({
         value: 'Founded in the old watchtower.',
-        sourceProposalId: 'proposal-ember-background-conflict'
+        sourceProposalId: 'proposal-ember-background-conflict',
+        validFromSceneId: 'scene-beta'
       });
-      expect(emberFacts[0].id).not.to.equal('canonical-fact-ember-background');
     });
 
     readStoreRecords<{id: string; status: string}>('lore_fact_proposals').then((proposals) => {

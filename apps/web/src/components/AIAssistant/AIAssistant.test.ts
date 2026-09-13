@@ -136,6 +136,22 @@ describe('assistant grounding helpers', () => {
     );
   });
 
+  it('states the manuscript window when citing a superseded fact', () => {
+    const result = getDirectSavedFactAnswer('What was Sera\'s occupation?', [{
+      score: 2,
+      chunk: {
+        id: 'occupation-0',
+        documentId: 'canon-fact:occupation',
+        documentTitle: 'Sera',
+        content: 'Sera occupation: cartographer (before Chapter Two)',
+        metadata: {type: 'canon_fact'}
+      }
+    }]);
+    expect(result?.content).toBe(
+      'Sera\'s accepted occupation is cartographer. This fact applies before Chapter Two.'
+    );
+  });
+
   it('fails D-3 closed when no accepted membership fact exists', () => {
     const result = getDirectSavedFactAnswer(
       'Is Tam working for the Hollow Court?',

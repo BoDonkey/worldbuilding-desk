@@ -8,18 +8,19 @@ import type {
   LoreDocumentLink,
   LoreEntityProposal,
   LoreFactProposal,
+  WritingDocument,
   WorldEntity
 } from '../entityTypes';
 import {LLMService} from '../services/llm/LLMService';
 import {getCharactersByProject} from '../characterStorage';
 import {getEntitiesByProject} from '../entityStorage';
 import {getLoreDocumentsByProject, getLoreDocumentLinksByProject} from '../loreStorage';
+import {getDocumentsByProject} from '../writingStorage';
 import {saveAlias} from '../services/consistency';
 import {
   getCanonicalFactsByProject,
-  deleteCanonicalFact,
   getLoreFactProposalsByProject,
-  saveCanonicalFact,
+  saveCanonicalFactSupersession,
   saveLoreFactProposal
 } from '../services/lore/loreFactStorage';
 import {
@@ -50,9 +51,12 @@ import {
   applyCanonicalFactSideEffects,
   buildCanonicalFactSummary,
   captureCanonicalFactMemory,
-  deleteCanonicalFactMemory,
   revertCanonicalFactSideEffects
 } from '../services/lore/canonicalFactActions';
+import {
+  buildCanonicalFactSupersession,
+  getCanonicalFactValidityTags
+} from '../services/lore/canonicalFactValidity';
 import {getRAGService} from '../services/rag/getRAGService';
 import type {RAGProvider} from '../services/rag/RAGService';
 import {getShodhService} from '../services/shodh/getShodhService';
@@ -78,6 +82,7 @@ function CanonDecisionsRoute() {
   const activeProject = useAppStore((state) => state.activeProject);
   const projectSettings = useAppStore((state) => state.projectSettings);
   const [documents, setDocuments] = useState<LoreDocument[]>([]);
+  const [scenes, setScenes] = useState<WritingDocument[]>([]);
   const [characters, setCharacters] = useState<Character[]>([]);
   const [entities, setEntities] = useState<WorldEntity[]>([]);
   const [entityProposals, setEntityProposals] = useState<LoreEntityProposal[]>([]);
@@ -97,6 +102,9 @@ function CanonDecisionsRoute() {
     Set<string>
   >(new Set());
   const [aiBudgetUsed, setAIBudgetUsed] = useState(0);
+  const [factEffectiveSceneByClusterId, setFactEffectiveSceneByClusterId] = useState<
+    Record<string, string>
+  >({});
   const [feedback, setFeedback] = useState<{
     tone: 'success' | 'error';
     message: string;
@@ -105,6 +113,7 @@ function CanonDecisionsRoute() {
   const refresh = useCallback(async () => {
     if (!activeProject) {
       setDocuments([]);
+      setScenes([]);
       setCharacters([]);
       setEntities([]);
       setEntityProposals([]);
@@ -117,6 +126,7 @@ function CanonDecisionsRoute() {
 
     const [
       loadedDocuments,
+      loadedScenes,
       loadedDocumentLinks,
       loadedCharacters,
       loadedEntities,
@@ -128,6 +138,7 @@ function CanonDecisionsRoute() {
       nextRagService
     ] = await Promise.all([
       getLoreDocumentsByProject(activeProject.id),
+      getDocumentsByProject(activeProject.id),
       getLoreDocumentLinksByProject(activeProject.id),
       getCharactersByProject(activeProject.id),
       getEntitiesByProject(activeProject.id),
@@ -166,6 +177,7 @@ function CanonDecisionsRoute() {
     });
 
     setDocuments(loadedDocuments);
+    setScenes(loadedScenes);
     setCharacters(loadedCharacters);
     setEntities(loadedEntities);
     setEntityProposals(loadedEntityProposals);
@@ -423,11 +435,16 @@ function CanonDecisionsRoute() {
     const proposal = factProposalsById.get(proposalRef.id);
     const previousFact = canonicalFactsById.get(canonicalRef.id);
     if (!proposal || !previousFact || !proposal.targetType || !proposal.targetId) return;
+    const asOfSceneId = factEffectiveSceneByClusterId[cluster.id];
+    if (!asOfSceneId) {
+      setFeedback({tone: 'error', message: 'Choose the scene where the new fact becomes true.'});
+      return;
+    }
     setActingClusterId(cluster.id);
     setFeedback(null);
     try {
       const sourceDocument = documentsById.get(proposal.loreDocumentId);
-      const nextFact: CanonicalFact = {
+      const unboundedNextFact: CanonicalFact = {
         id: crypto.randomUUID(),
         projectId: activeProject.id,
         targetType: proposal.targetType,
@@ -444,47 +461,72 @@ function CanonDecisionsRoute() {
         acceptedAt: Date.now(),
         updatedAt: Date.now()
       };
-      await saveCanonicalFact(nextFact);
+      const supersession = buildCanonicalFactSupersession({
+        previousFact,
+        nextFact: unboundedNextFact,
+        asOfSceneId,
+        documents: scenes
+      });
+      const nextFact = supersession.nextFact;
+      await saveCanonicalFactSupersession(supersession.previousFact, nextFact);
       await saveLoreFactProposal({
         ...proposal,
         status: 'accepted',
         updatedAt: Date.now()
       });
-      await applyCanonicalFactSideEffects(activeProject.id, nextFact);
       await revertCanonicalFactSideEffects(
         activeProject.id,
         previousFact,
         [...canonicalFacts.filter((fact) => fact.id !== previousFact.id), nextFact]
       );
-      await deleteCanonicalFact(previousFact.id);
+      await applyCanonicalFactSideEffects(activeProject.id, nextFact);
       try {
         const shodh = await getShodhService({
           projectId: activeProject.id,
           inheritFromParent: activeProject.inheritShodh,
           parentProjectId: activeProject.parentProjectId
         });
-        await deleteCanonicalFactMemory(shodh, previousFact.id);
-        await captureCanonicalFactMemory(shodh, nextFact);
+        await captureCanonicalFactMemory(shodh, supersession.previousFact, scenes);
+        await captureCanonicalFactMemory(shodh, nextFact, scenes);
         emitShodhMemoriesUpdated(await shodh.listMemories());
       } catch (error) {
         console.warn('Failed to refresh canonical fact memory', error);
       }
       if (ragService) {
-        await ragService.deleteDocument(`canon-fact:${previousFact.id}`);
+        await ragService.indexDocument(
+          `canon-fact:${supersession.previousFact.id}`,
+          supersession.previousFact.targetName ?? supersession.previousFact.targetId,
+          buildCanonicalFactSummary(supersession.previousFact, scenes),
+          'canon_fact',
+          {
+            tags: [
+              'canon_fact',
+              supersession.previousFact.factType,
+              ...getCanonicalFactValidityTags(supersession.previousFact)
+            ],
+            entityIds: [supersession.previousFact.targetId]
+          }
+        );
         await ragService.indexDocument(
           `canon-fact:${nextFact.id}`,
           nextFact.targetName ?? nextFact.targetId,
-          buildCanonicalFactSummary(nextFact),
+          buildCanonicalFactSummary(nextFact, scenes),
           'canon_fact',
           {
-            tags: ['canon_fact', nextFact.factType],
+            tags: ['canon_fact', nextFact.factType, ...getCanonicalFactValidityTags(nextFact)],
             entityIds: [nextFact.targetId]
           }
         );
       }
       await resolveCluster(cluster, 'accept_update', 'resolved');
       await persistFactSuppression(cluster, 'accept_update');
-      setFeedback({tone: 'success', message: 'Canonical fact updated.'});
+      setFactEffectiveSceneByClusterId((current) => {
+        const next = {...current};
+        delete next[cluster.id];
+        return next;
+      });
+      const sceneTitle = scenes.find((scene) => scene.id === asOfSceneId)?.title ?? 'that scene';
+      setFeedback({tone: 'success', message: `Canon superseded as of ${sceneTitle}.`});
       await refresh();
     } catch (error) {
       const message = describeError(error, 'Unable to update canonical fact.');
@@ -775,8 +817,28 @@ function CanonDecisionsRoute() {
                 {factProposal && canonicalFact ? (
                   <div className={styles.detailPanel}>
                     <p><strong>Proposed:</strong> {factProposal.factType} = {typeof factProposal.value === 'string' ? factProposal.value : `${factProposal.value.label}: ${factProposal.value.value}`}</p>
-                    <p><strong>Current canon:</strong> {buildCanonicalFactSummary(canonicalFact)}</p>
+                    <p><strong>Current canon:</strong> {buildCanonicalFactSummary(canonicalFact, scenes)}</p>
                     <p><strong>Evidence:</strong> {factProposal.evidence.text}</p>
+                    <label className={styles.sceneControl}>
+                      <span>New fact becomes true as of</span>
+                      <select
+                        value={factEffectiveSceneByClusterId[cluster.id] ?? ''}
+                        onChange={(event) => setFactEffectiveSceneByClusterId((current) => ({
+                          ...current,
+                          [cluster.id]: event.target.value
+                        }))}
+                      >
+                        <option value=''>Choose a scene</option>
+                        {scenes.map((scene) => (
+                          <option key={scene.id} value={scene.id}>
+                            {scene.title || 'Untitled scene'}
+                          </option>
+                        ))}
+                      </select>
+                      <small>
+                        The current fact applies before this scene; the proposed fact applies from it onward.
+                      </small>
+                    </label>
                   </div>
                 ) : null}
 
@@ -861,9 +923,12 @@ function CanonDecisionsRoute() {
                       <button
                         type='button'
                         onClick={() => void handleAcceptFactUpdate(cluster)}
-                        disabled={actingClusterId === cluster.id}
+                        disabled={
+                          actingClusterId === cluster.id ||
+                          !factEffectiveSceneByClusterId[cluster.id]
+                        }
                       >
-                        Accept Update
+                        Supersede
                       </button>
                       <button
                         type='button'

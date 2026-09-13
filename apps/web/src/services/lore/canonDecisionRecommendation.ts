@@ -66,7 +66,7 @@ export function parseCanonDecisionRecommendation(
 export const CANON_DECISION_ACTION_LABELS: Record<CanonDecisionRecommendedAction, string> = {
   alias: 'Alias to existing',
   accept_new: 'Accept new',
-  accept_update: 'Accept update',
+  accept_update: 'Supersede',
   keep_separate: 'Keep separate',
   reject: 'Reject',
   defer: 'Defer'

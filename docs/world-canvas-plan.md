@@ -478,7 +478,7 @@ Decisions the author must make before WC-1 starts:
 
 1. **Name.** Keep "World Canvas" (recommended) or choose an alternative.
 2. **Persistence.** Accept the new `world_canvases` store and snapshot
-   schema 6 (recommended), or require the Source-Note-kind alternative
+   schema 7 (renumbered after Slice 4.28 used schema 6), or require the Source-Note-kind alternative
    (cheaper, but leaks exploratory text into extraction and retrieval
    unless both are taught to skip a kind).
 3. **Lens set.** The seven lenses above are the prompt's list verbatim;
@@ -500,5 +500,4 @@ Risks:
   `needsCompletion` first, and let the author dismiss items per project via
   the same localStorage pattern 4.22 uses.
 - **Backup schema bump.** Every snapshot bump is a fail-closed boundary for
-  older builds; batch WC-1's bump with any other pending snapshot change
-  (4.28 also needs one) if they land close together.
+  older builds. Slice 4.28 now owns schema 6, so WC-1 advances to schema 7.

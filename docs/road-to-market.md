@@ -236,9 +236,9 @@ and required revisit point, `WIP`, `Done <commit>`.
 | 4.25 | Persisted, incremental project review | 4 | M | Done `d6e5ddd` — new project-scoped `project_review_runs` store (DB 27, not in backups by design); per-scene content hashes plus an inputs hash reuse unchanged scenes and their local-AI annotations while contradictions always recompute (40-scene check: 383ms → 47ms); the drawer restores the last run on reload and marks items whose scene changed since; dismissals persist; Cypress seed now shares the app's `upgradeDatabase`, and conflict spans are sliced verbatim with a corpus anchor check; lint with 1 baseline warning; 553 web + 6 engine + 12 UI tests; web/desktop builds; Cypress 79/79 |
 | 4.26 | State-backed continuity checks | 4 | M | — custody/location/equipment conflicts from the accepted ledger; retires the never-produced `INVALID_MUTATION` placeholder |
 | 4.27 | Sheet-free descriptive state for general fiction | 4 | L | — post-beta candidate; descriptive state (location, custody) for canonical characters without a ruleset or sheet |
-| 4.28 | Manuscript-order validity for canon facts | 4 | M | — the deterministic core of "temporal facts": optional valid-from/until scene on accepted facts; supersede instead of reject; after 4.24 |
+| 4.28 | Manuscript-order validity for canon facts | 4 | M | WIP — claimed 2026-09-13; optional valid-from/until scene on accepted facts, supersede workflow, and ordered-scene filtering across continuity and grounding consumers |
 | 4.29 | Portable Markdown/CSV export + Markdown-folder import | 4 | M | — documented open export of World Bible and Source Notes; Obsidian-style vault import through the existing proposal/review pipeline |
-| 4.30 | World Canvas — record, view mode, premise, lenses, questions (WC-1) | 4 | M | — full prompt: [`world-canvas-plan.md`](world-canvas-plan.md) § WC-1; new `world_canvases` store, snapshot schema 6 |
+| 4.30 | World Canvas — record, view mode, premise, lenses, questions (WC-1) | 4 | M | — full prompt: [`world-canvas-plan.md`](world-canvas-plan.md) § WC-1; new `world_canvases` store, snapshot schema 7 (4.28 uses schema 6) |
 | 4.31 | World Canvas — bridges to Source Notes and World Bible (WC-2) | 4 | S | — after 4.30; Keep as Source Note, Propose as canon, link existing, question status |
 | 4.32 | World Canvas — derived return experience (WC-3) | 4 | S | — after 4.30; per-lens summaries and a rule-stated "worth a look" list, no scores |
 | 4.33 | World Canvas — author-invoked brainstorming (WC-4) | 4 | M | — after 4.31; through the 1.5 surface, per-item keep, shared consultation budget for now |
@@ -1105,7 +1105,7 @@ section only fixes IDs and boundaries.
 
 - **4.30 World Canvas record, view mode, premise, lenses, questions** —
   plan § WC-1. New `world_canvases` IndexedDB store (project-scoped),
-  snapshot schema 5 → 6, backup round-trip. Freeform prose only; no
+  snapshot schema 6 → 7, backup round-trip. Freeform prose only; no
   completeness indicators of any kind.
 - **4.31 Bridges to Source Notes and World Bible** — plan § WC-2. The only
   new arrow in the trust flow is "Keep as Source Note"; everything after it
@@ -1279,4 +1279,3 @@ no-accounts, no-telemetry boundary; a downloadable starter project shared in
 the niche communities is the marketing-plan substitute. **SEO micro-tools** —
 marketing-site work recorded in `docs/marketing-plan.md` as a post-launch
 experiment.
-

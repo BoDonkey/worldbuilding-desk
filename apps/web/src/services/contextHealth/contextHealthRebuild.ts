@@ -14,6 +14,7 @@ import {
   buildCanonicalFactSummary,
   captureCanonicalFactMemory
 } from '../lore/canonicalFactActions';
+import {getCanonicalFactValidityTags} from '../lore/canonicalFactValidity';
 import type {RAGProvider} from '../rag/RAGService';
 import type {ShodhMemoryProvider} from '../shodh/ShodhMemoryService';
 import {emitShodhMemoriesUpdated} from '../shodh/shodhEvents';
@@ -133,14 +134,14 @@ export async function rebuildProjectContextHealth(params: {
     await ragService.indexDocument(
       `canon-fact:${fact.id}`,
       fact.targetName ?? fact.targetId,
-      buildCanonicalFactSummary(fact),
+      buildCanonicalFactSummary(fact, scenes),
       'canon_fact',
       {
-        tags: ['canon_fact', fact.factType],
+        tags: ['canon_fact', fact.factType, ...getCanonicalFactValidityTags(fact)],
         entityIds: [getFactTargetId(fact)]
       }
     );
-    await captureCanonicalFactMemory(shodhService, fact);
+    await captureCanonicalFactMemory(shodhService, fact, scenes);
     shodhMemories += 1;
   }
 

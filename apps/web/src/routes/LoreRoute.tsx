@@ -47,6 +47,7 @@ import {
   prependUniqueCanonicalFact,
   revertCanonicalFactSideEffects
 } from '../services/lore/canonicalFactActions';
+import {getCanonicalFactValidityTags} from '../services/lore/canonicalFactValidity';
 import {acceptLoreEntityProposal} from '../services/lore/entityProposalActions';
 import {normalizeLoreDocumentLinks} from '../services/lore/loreDocumentLinks';
 import {summarizeContent} from '../services/lore/sourceNoteCapture';
@@ -801,7 +802,7 @@ function LoreRoute() {
       await saveLoreFactProposal(nextProposal);
       await applyCanonicalFactSideEffects(activeProject.id, fact);
       if (shodhService) {
-        await captureCanonicalFactMemory(shodhService, fact);
+        await captureCanonicalFactMemory(shodhService, fact, sourceScenes);
         const memories = await shodhService.listMemories();
         setShodhMemories(memories);
         emitShodhMemoriesUpdated(memories);
@@ -810,10 +811,10 @@ function LoreRoute() {
         await ragService.indexDocument(
           `canon-fact:${fact.id}`,
           fact.targetName ?? fact.targetId,
-          buildCanonicalFactSummary(fact),
+          buildCanonicalFactSummary(fact, sourceScenes),
           'canon_fact',
           {
-            tags: ['canon_fact', fact.factType],
+            tags: ['canon_fact', fact.factType, ...getCanonicalFactValidityTags(fact)],
             entityIds: [fact.targetId]
           }
         );
@@ -1624,7 +1625,7 @@ function LoreRoute() {
                   <div className={styles.factList}>
                     {editingDocumentFacts.map((fact) => (
                       <article key={fact.id} className={styles.factCard}>
-                        <p className={styles.proposalValue}>{buildCanonicalFactSummary(fact)}</p>
+                        <p className={styles.proposalValue}>{buildCanonicalFactSummary(fact, sourceScenes)}</p>
                         <button
                           type='button'
                           onClick={() => void handleRemoveFact(fact)}

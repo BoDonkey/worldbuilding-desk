@@ -456,6 +456,7 @@ export const useWorkspaceConsistency = ({
   const [consistencyReviewItems, setConsistencyReviewItems] = useState<
     ConsistencyReviewItem[]
   >([]);
+  const documentsRef = useRef(documents);
   const dismissedConflictItemIdsRef = useRef(new Set<string>());
   const [lastConsistencyReviewAt, setLastConsistencyReviewAt] = useState<number | null>(
     null
@@ -467,6 +468,10 @@ export const useWorkspaceConsistency = ({
   const [worldEngineStatus, setWorldEngineStatus] =
     useState<WorldEngineStatus | null>(null);
   const [applyingStateMutationReviewId, setApplyingStateMutationReviewId] = useState<string | null>(null);
+
+  useEffect(() => {
+    documentsRef.current = documents;
+  }, [documents]);
 
   useEffect(() => {
     let cancelled = false;
@@ -983,6 +988,7 @@ export const useWorkspaceConsistency = ({
       );
       const contradictionItems = findCanonContradictions({
         documents: [doc],
+        sceneOrderDocuments: documentsRef.current,
         entities,
         characters,
         canonicalFacts,
@@ -1036,6 +1042,7 @@ export const useWorkspaceConsistency = ({
         );
         const contradictionItems = findCanonContradictions({
           documents: [doc],
+          sceneOrderDocuments: documentsRef.current,
           entities,
           characters,
           canonicalFacts,

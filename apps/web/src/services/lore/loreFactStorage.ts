@@ -107,6 +107,26 @@ export async function saveCanonicalFact(fact: CanonicalFact): Promise<void> {
   });
 }
 
+export async function saveCanonicalFactSupersession(
+  previousFact: CanonicalFact,
+  nextFact: CanonicalFact
+): Promise<void> {
+  if (previousFact.projectId !== nextFact.projectId) {
+    throw new Error('Canon facts from different projects cannot be saved together.');
+  }
+  const db = await openDb();
+  const tx = db.transaction(CANONICAL_FACT_STORE_NAME, 'readwrite');
+  const store = tx.objectStore(CANONICAL_FACT_STORE_NAME);
+  store.put(previousFact);
+  store.put(nextFact);
+  await new Promise<void>((resolve, reject) => {
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+    tx.onabort = () => reject(tx.error);
+  });
+  emitLoreFactRecordsChanged();
+}
+
 export async function deleteCanonicalFact(id: string): Promise<void> {
   const db = await openDb();
   return new Promise((resolve, reject) => {

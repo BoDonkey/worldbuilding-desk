@@ -7,6 +7,7 @@ import type {
 import {htmlToPlainText} from '../../utils/textHelpers';
 import type {GuardrailIssue, KnownEntityRef} from './types';
 import {buildCanonSlotAssertions, findSlotConflicts, type SlotComparisonOptions} from './factSlotComparison';
+import {getCanonicalFactsValidAtScene} from '../lore/canonicalFactValidity';
 
 const normalizePhrase = (value: string): string =>
   value
@@ -46,6 +47,8 @@ interface SceneConflictItem {
 
 interface ContradictionInput {
   documents: WritingDocument[];
+  /** Full manuscript order when `documents` is only the active review subset. */
+  sceneOrderDocuments?: WritingDocument[];
   entities: WorldEntity[];
   characters: Character[];
   canonicalFacts: CanonicalFact[];
@@ -228,6 +231,7 @@ const buildSceneAssertions = (
 
 export const findCanonContradictions = ({
   documents,
+  sceneOrderDocuments = documents,
   entities,
   characters,
   canonicalFacts,
@@ -235,16 +239,7 @@ export const findCanonContradictions = ({
   slotOptions
 }: ContradictionInput): SceneConflictItem[] => {
   const {byNormalizedName, byId} = buildEntityLookup(knownEntities);
-  const canonAssertions = buildCanonAssertions(
-    entities,
-    characters,
-    canonicalFacts,
-    byNormalizedName
-  );
-  const sceneAssertions = buildSceneAssertions(documents, byNormalizedName);
-  const slotAssertions = buildCanonSlotAssertions({
-    canonicalFacts,
-    resolveEntityId: (fact) => {
+  const resolveFactEntityId = (fact: CanonicalFact) => {
       const targetName =
         fact.targetName?.trim() ||
         (fact.targetType === 'character'
@@ -253,92 +248,95 @@ export const findCanonContradictions = ({
         '';
       const entityId = byNormalizedName.get(normalizePhrase(targetName));
       return entityId ? {entityId, name: targetName || fact.targetId} : null;
-    },
-    options: slotOptions
-  });
-  const slotConflicts = findSlotConflicts({
-    documents,
-    assertions: slotAssertions,
-    knownEntities,
-    options: slotOptions
-  });
-
-  const canonByEntityDescriptor = new Map<string, Assertion[]>();
-  canonAssertions.forEach((assertion) => {
-    const key = `${assertion.entityId}:${assertion.descriptor}`;
-    const existing = canonByEntityDescriptor.get(key) ?? [];
-    existing.push(assertion);
-    canonByEntityDescriptor.set(key, existing);
-  });
+  };
 
   const seen = new Set<string>();
   const items: SceneConflictItem[] = [];
 
-  sceneAssertions.forEach((sceneAssertion) => {
-    const key = `${sceneAssertion.entityId}:${sceneAssertion.descriptor}`;
-    const canonMatches = canonByEntityDescriptor.get(key) ?? [];
-    const contradiction = canonMatches.find(
-      (canonAssertion) => canonAssertion.negative !== sceneAssertion.negative
+  documents.forEach((document) => {
+    const validFacts = getCanonicalFactsValidAtScene(
+      canonicalFacts,
+      document.id,
+      sceneOrderDocuments
     );
-    if (!contradiction || !sceneAssertion.sceneId) {
-      return;
-    }
-
-    const dedupeKey = `${sceneAssertion.sceneId}:${sceneAssertion.entityId}:${sceneAssertion.descriptor}:${sceneAssertion.negative}`;
-    if (seen.has(dedupeKey)) {
-      return;
-    }
-    seen.add(dedupeKey);
-
-    const entity = byId.get(sceneAssertion.entityId);
-    const sceneClaim = `'${sceneAssertion.phrase}'`;
-    const canonClaim = `'${contradiction.phrase}'`;
-    const canonSource =
-      contradiction.sourceDetail ??
-      (contradiction.sourceType === 'world'
-        ? `World Bible entry "${contradiction.sourceTitle}"`
-        : `Character record "${contradiction.sourceTitle}"`);
-
-    items.push({
-      id: `conflict:${dedupeKey}`,
-      sceneId: sceneAssertion.sceneId,
-      sceneTitle: sceneAssertion.sourceTitle,
-      issue: {
-        code: 'STATE_CONFLICT',
-        severity: 'blocking',
-        message:
-          `Canon conflict for ${entity?.name ?? 'entity'}: scene states ${sceneClaim}, ` +
-          `but ${canonSource} states ${canonClaim}.`,
-        focusText: sceneAssertion.phrase,
-        relatedEntities: entity ? [entity] : undefined
-      }
+    const canonAssertions = buildCanonAssertions(
+      entities,
+      characters,
+      validFacts,
+      byNormalizedName
+    );
+    const canonByEntityDescriptor = new Map<string, Assertion[]>();
+    canonAssertions.forEach((assertion) => {
+      const key = `${assertion.entityId}:${assertion.descriptor}`;
+      const existing = canonByEntityDescriptor.get(key) ?? [];
+      existing.push(assertion);
+      canonByEntityDescriptor.set(key, existing);
     });
-  });
 
-  slotConflicts.forEach(({canon, scene, reason}) => {
-    const dedupeKey = `${scene.sceneId}:${canon.entityId}:${canon.factId}:${scene.phrase.toLowerCase()}`;
-    if (seen.has(dedupeKey)) return;
-    seen.add(dedupeKey);
+    buildSceneAssertions([document], byNormalizedName).forEach((sceneAssertion) => {
+      const key = `${sceneAssertion.entityId}:${sceneAssertion.descriptor}`;
+      const canonMatches = canonByEntityDescriptor.get(key) ?? [];
+      const contradiction = canonMatches.find(
+        (canonAssertion) => canonAssertion.negative !== sceneAssertion.negative
+      );
+      if (!contradiction || !sceneAssertion.sceneId) return;
+      const dedupeKey = `${sceneAssertion.sceneId}:${sceneAssertion.entityId}:${sceneAssertion.descriptor}:${sceneAssertion.negative}`;
+      if (seen.has(dedupeKey)) return;
+      seen.add(dedupeKey);
+      const entity = byId.get(sceneAssertion.entityId);
+      const canonSource = contradiction.sourceDetail ??
+        (contradiction.sourceType === 'world'
+          ? `World Bible entry "${contradiction.sourceTitle}"`
+          : `Character record "${contradiction.sourceTitle}"`);
+      items.push({
+        id: `conflict:${dedupeKey}`,
+        sceneId: sceneAssertion.sceneId,
+        sceneTitle: sceneAssertion.sourceTitle,
+        issue: {
+          code: 'STATE_CONFLICT',
+          severity: 'blocking',
+          message:
+            `Canon conflict for ${entity?.name ?? 'entity'}: scene states '${sceneAssertion.phrase}', ` +
+            `but ${canonSource} states '${contradiction.phrase}'.`,
+          focusText: sceneAssertion.phrase,
+          relatedEntities: entity ? [entity] : undefined
+        }
+      });
+    });
 
-    const entity = byId.get(canon.entityId);
-    const slotLabel = canon.headNoun ?? 'age';
-    const sceneDescription =
-      reason === 'negation'
+    const slotAssertions = buildCanonSlotAssertions({
+      canonicalFacts: validFacts,
+      resolveEntityId: resolveFactEntityId,
+      options: slotOptions
+    });
+    findSlotConflicts({
+      documents: [document],
+      assertions: slotAssertions,
+      knownEntities,
+      options: slotOptions
+    }).forEach(({canon, scene, reason}) => {
+      const dedupeKey = `${scene.sceneId}:${canon.entityId}:${canon.factId}:${scene.phrase.toLowerCase()}`;
+      if (seen.has(dedupeKey)) return;
+      seen.add(dedupeKey);
+      const entity = byId.get(canon.entityId);
+      const slotLabel = canon.headNoun ?? 'age';
+      const sceneDescription = reason === 'negation'
         ? `scene denies it ('${scene.phrase}')`
         : `scene describes ${slotLabel} as '${scene.phrase}'`;
-    items.push({
-      id: `conflict:${dedupeKey}`,
-      sceneId: scene.sceneId,
-      sceneTitle: scene.sceneTitle,
-      issue: {
-        code: 'STATE_CONFLICT',
-        severity: 'blocking',
-        message:
-          `Canon conflict for ${entity?.name ?? 'entity'}: ${sceneDescription}, ` +
-          `but ${canon.sourceDetail} states '${canon.phrase}'.`,
-        focusText: scene.phrase,
-        relatedEntities: entity ? [entity] : undefined
-      }
+      items.push({
+        id: `conflict:${dedupeKey}`,
+        sceneId: scene.sceneId,
+        sceneTitle: scene.sceneTitle,
+        issue: {
+          code: 'STATE_CONFLICT',
+          severity: 'blocking',
+          message:
+            `Canon conflict for ${entity?.name ?? 'entity'}: ${sceneDescription}, ` +
+            `but ${canon.sourceDetail} states '${canon.phrase}'.`,
+          focusText: scene.phrase,
+          relatedEntities: entity ? [entity] : undefined
+        }
+      });
     });
   });
 

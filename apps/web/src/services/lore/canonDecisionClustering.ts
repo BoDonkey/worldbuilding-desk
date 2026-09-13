@@ -140,14 +140,20 @@ export function buildCanonDecisionClusters(
   params.factProposals
     .filter((proposal) => proposal.status === 'proposed' && proposal.targetType && proposal.targetId)
     .forEach((proposal) => {
-      const conflict = params.canonicalFacts.find((fact) => {
-        return (
+      const conflict = params.canonicalFacts
+        .filter((fact) => (
+          !fact.validUntilSceneId &&
           fact.targetType === proposal.targetType &&
           fact.targetId === proposal.targetId &&
           fact.factType === proposal.factType &&
           normalize(formatFactValue(fact.value)) !== normalize(formatFactValue(proposal.value))
-        );
-      });
+        ))
+        .sort((left, right) => {
+          if (Boolean(left.validUntilSceneId) !== Boolean(right.validUntilSceneId)) {
+            return left.validUntilSceneId ? 1 : -1;
+          }
+          return right.acceptedAt - left.acceptedAt;
+        })[0];
       if (!conflict) return;
       const factSuppressionKey = [
         'fact',

@@ -2,6 +2,7 @@ import type {
   CanonicalFact,
   Character,
   LoreFactProposal,
+  WritingDocument,
   WorldEntity
 } from '../../entityTypes';
 import {getCharactersByProject, saveCharacter} from '../../characterStorage';
@@ -12,6 +13,10 @@ import {
   saveAlias
 } from '../consistency';
 import type {ShodhMemoryProvider} from '../shodh/ShodhMemoryService';
+import {
+  formatCanonicalFactValidity,
+  getCanonicalFactValidityTags
+} from './canonicalFactValidity';
 
 function canonicalFactValueText(fact: CanonicalFact | LoreFactProposal): string {
   return typeof fact.value === 'string' ? fact.value : `${fact.value.label}: ${fact.value.value}`;
@@ -35,9 +40,14 @@ export function getCanonicalFactMemoryDocumentId(factId: string): string {
   return `canon-fact:${factId}`;
 }
 
-export function buildCanonicalFactSummary(fact: CanonicalFact): string {
+export function buildCanonicalFactSummary(
+  fact: CanonicalFact,
+  documents: WritingDocument[] = []
+): string {
   const label = fact.targetName ?? fact.targetId;
-  return `${label} ${fact.factType.replace(/_/g, ' ')}: ${canonicalFactValueText(fact)}`;
+  const validity = formatCanonicalFactValidity(fact, documents);
+  return `${label} ${fact.factType.replace(/_/g, ' ')}: ${canonicalFactValueText(fact)}` +
+    (validity ? ` (${validity})` : '');
 }
 
 export function prependUniqueCanonicalFact(
@@ -47,9 +57,12 @@ export function prependUniqueCanonicalFact(
   return [fact, ...current.filter((entry) => entry.id !== fact.id)];
 }
 
-export function buildCanonicalFactMemoryContent(fact: CanonicalFact): string {
+export function buildCanonicalFactMemoryContent(
+  fact: CanonicalFact,
+  documents: WritingDocument[] = []
+): string {
   return [
-    buildCanonicalFactSummary(fact),
+    buildCanonicalFactSummary(fact, documents),
     fact.sourceLoreDocumentTitle
       ? `Accepted from Source Note: ${fact.sourceLoreDocumentTitle}`
       : null,
@@ -61,14 +74,15 @@ export function buildCanonicalFactMemoryContent(fact: CanonicalFact): string {
 
 export async function captureCanonicalFactMemory(
   shodhService: ShodhMemoryProvider,
-  fact: CanonicalFact
+  fact: CanonicalFact,
+  documents: WritingDocument[] = []
 ): Promise<void> {
   await shodhService.captureAutoMemory({
     projectId: fact.projectId,
     documentId: getCanonicalFactMemoryDocumentId(fact.id),
     title: `Canon fact: ${fact.targetName ?? fact.targetId}`,
-    content: buildCanonicalFactMemoryContent(fact),
-    tags: ['canon_fact', fact.factType]
+    content: buildCanonicalFactMemoryContent(fact, documents),
+    tags: ['canon_fact', fact.factType, ...getCanonicalFactValidityTags(fact)]
   });
 }
 

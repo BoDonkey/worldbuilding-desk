@@ -7,6 +7,7 @@ import type {
   WritingDocument
 } from '../../entityTypes';
 import {ADVANCEMENT_NAME} from '../dashboard/storyDashboard';
+import {isCanonicalFactValidAtScene} from '../lore/canonicalFactValidity';
 
 /**
  * Two overlapping craft-and-canon-consistency observations (research:
@@ -99,7 +100,10 @@ export function buildUnusedSolutionCandidates(params: {
     const namePattern = buildTermPattern([character.name, ...(characterAliasesById.get(character.id) ?? [])]);
     if (!namePattern) continue;
 
-    const appearanceScenes = documents.filter((document) => namePattern.test(document.content));
+    const appearanceScenes = documents.filter((document) =>
+      isCanonicalFactValidAtScene(fact, document.id, documents) &&
+      namePattern.test(document.content)
+    );
     if (appearanceScenes.length < MIN_APPEARANCE_SCENES) continue;
 
     const abilityText = factValueText(fact.value);

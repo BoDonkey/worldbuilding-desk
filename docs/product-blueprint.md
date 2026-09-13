@@ -140,6 +140,12 @@ Canonical ownership rules:
 - New canon anchors default to World Bible; freeform background writing
   defaults to Lore Documents; review completion and alias cleanup stay
   centered in World Bible.
+- Canon that changes during the story remains one readable history. Canon
+  Decisions labels the action **Supersede**, requires an explicit "as of this
+  scene" selection, and explains that the earlier fact applies before the
+  selected scene while the new fact applies from it onward. Scene order is
+  resolved live from stable links, so rearranging chapters does not silently
+  rewrite the boundary.
 - Items, creatures, and locations gain mechanics only through an explicit
   author action; accepting a detected entity never auto-creates a Compendium
   record.

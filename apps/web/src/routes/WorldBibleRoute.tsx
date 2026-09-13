@@ -1603,6 +1603,7 @@ function WorldBibleRoute() {
                       characterHealthProbeResults={characterHealthProbeResults}
                       characterHealthProbeRunning={characterHealthProbeRunning}
                       currentEntityMemories={currentEntityMemories}
+                      documents={writingDocuments}
                       canProbe={Boolean(ragService)}
                       handleCharacterHealthProbe={handleCharacterHealthProbe}
                       onOpenScene={(sceneId) => navigate('/workspace', {state: {focusDocumentId: sceneId}})}

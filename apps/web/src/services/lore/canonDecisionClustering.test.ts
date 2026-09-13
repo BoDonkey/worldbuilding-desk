@@ -137,6 +137,26 @@ describe('canonDecisionClustering', () => {
     expect(clusters).toEqual([]);
   });
 
+  it('offers the current open fact as the supersession target instead of historical canon', () => {
+    const proposal = makeFactProposal({value: 'Compact service: thirty years'});
+    const historical = makeCanonicalFact({id: 'fact-old', validUntilSceneId: 'chapter-2'});
+    const current = makeCanonicalFact({
+      id: 'fact-current',
+      value: 'Compact service: twenty-five years',
+      validFromSceneId: 'chapter-2',
+      acceptedAt: 2
+    });
+    const clusters = buildCanonDecisionClusters({
+      projectId,
+      entityProposals: [],
+      factProposals: [proposal],
+      canonicalFacts: [historical, current],
+      characters: [],
+      entities: []
+    });
+    expect(clusters[0]?.memberRefs).toContainEqual({type: 'canonical_fact', id: 'fact-current'});
+  });
+
   it('clusters historical pluralized names from the trust dogfood fixture', () => {
     const clusters = buildCanonDecisionClusters({
       projectId,

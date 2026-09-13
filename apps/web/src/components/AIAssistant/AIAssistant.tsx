@@ -23,7 +23,7 @@ import {
   resolveTemporalCustodyAnswer
 } from '../../services/assistant/temporalCustody';
 import {getDocumentsByProject} from '../../writingStorage';
-import type {ProjectAISettings, PromptTool, ProjectMode} from '../../entityTypes';
+import type {ProjectAISettings, PromptTool, ProjectMode, WritingDocument} from '../../entityTypes';
 import {
   getContextInstruction,
   getContextLabel,
@@ -46,6 +46,10 @@ import {
 import {CraftCitationList} from '../CraftCitationList';
 import {describeError} from '../../services/errors';
 import {useStatusAnnouncement} from '../../hooks/useStatusAnnouncement';
+import {
+  filterCanonFactResultsForScene,
+  isCanonFactMemoryValidAtScene
+} from '../../services/lore/canonicalFactValidity';
 
 interface AIAssistantProps {
   projectId: string;
@@ -240,7 +244,7 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
   }, [onAssistantSelectionChange]);
 
   const buildMemoryChunks = useCallback(
-    async (query: string) => {
+    async (query: string, orderedScenes: WritingDocument[]) => {
       let allMemories = memoryCache;
       if (allMemories.length === 0 && shodhService.current) {
         allMemories = await shodhService.current.listMemories();
@@ -249,6 +253,9 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
       if (allMemories.length === 0) {
         return [];
       }
+      allMemories = allMemories.filter((memory) =>
+        isCanonFactMemoryValidAtScene(memory.tags, context?.type === 'document' ? context.id : undefined, orderedScenes)
+      );
 
       const docMatches = context?.id
         ? allMemories.filter((memory) => memory.documentId === context.id)
@@ -291,7 +298,7 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
             : queryMatches.find((entry) => entry.memory.id === memory.id)?.relevance ?? 0
       }));
     },
-    [context?.id, memoryCache, projectId]
+    [context?.id, context?.type, memoryCache, projectId]
   );
 
   const handleSendPrompt = useCallback(async (promptText: string) => {
@@ -349,19 +356,27 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
         promptText,
         Boolean(selectedText)
       );
-      const needsOrderedScenes = Boolean(getTemporalCustodySubject(promptText));
-      const [ragResults, shodhChunks, orderedScenes] = await Promise.all([
+      const needsOrderedScenes =
+        Boolean(getTemporalCustodySubject(promptText)) ||
+        groundingRequired ||
+        context?.type === 'document';
+      const orderedScenes = needsOrderedScenes
+        ? await getDocumentsByProject(projectId).catch((error) => {
+            console.warn('Unable to load ordered saved scenes for grounding.', error);
+            return [];
+          })
+        : [];
+      const [unfilteredRagResults, shodhChunks] = await Promise.all([
         ragService.current
           ? ragService.current.search(promptText, groundingRequired ? 20 : 3)
           : [],
-        buildMemoryChunks(promptText),
-        needsOrderedScenes
-          ? getDocumentsByProject(projectId).catch((error) => {
-              console.warn('Unable to load ordered saved scenes for custody grounding.', error);
-              return [];
-            })
-          : []
+        buildMemoryChunks(promptText, orderedScenes)
       ]);
+      const ragResults = filterCanonFactResultsForScene(
+        unfilteredRagResults,
+        context?.type === 'document' ? context.id : undefined,
+        orderedScenes
+      );
 
       const directSavedFact =
         resolveTemporalCustodyAnswer(promptText, orderedScenes, ragResults) ??
@@ -474,6 +489,7 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
     buildMemoryChunks,
     consultationMaxTokens,
     consultationModel,
+    context?.id,
     context?.type,
     contextStatus,
     projectId,

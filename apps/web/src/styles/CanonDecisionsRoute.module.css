@@ -143,6 +143,24 @@
   margin: 0 0 0.35rem;
 }
 
+.sceneControl {
+  display: grid;
+  gap: 0.35rem;
+  max-width: 30rem;
+  margin-top: 0.75rem;
+  color: var(--color-text-primary);
+  font-weight: 600;
+}
+
+.sceneControl select {
+  width: 100%;
+}
+
+.sceneControl small {
+  color: var(--color-text-secondary);
+  font-weight: 400;
+}
+
 .aiPanel {
   margin-bottom: 0.75rem;
   padding: 0.8rem;

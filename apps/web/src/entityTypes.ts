@@ -593,6 +593,10 @@ export interface CanonicalFact {
   evidenceText?: string;
   evidenceStart?: number;
   evidenceEnd?: number;
+  /** Inclusive manuscript boundary, resolved from the scene's current order at use time. */
+  validFromSceneId?: string;
+  /** Exclusive manuscript boundary: the fact no longer applies as of this scene. */
+  validUntilSceneId?: string;
   acceptedAt: number;
   updatedAt: number;
 }

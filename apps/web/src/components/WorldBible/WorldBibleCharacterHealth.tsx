@@ -1,7 +1,8 @@
-import type {CanonicalFact, WorldEntity} from '../../entityTypes';
+import type {CanonicalFact, WorldEntity, WritingDocument} from '../../entityTypes';
 import type {MemoryEntry} from '../../services/shodh/ShodhMemoryService';
 import type {useWorldBibleSelectedEntity} from '../../hooks/useWorldBibleSelectedEntity';
 import {buildCanonicalFactSummary} from '../../services/lore/canonicalFactActions';
+import {formatCanonicalFactValidity} from '../../services/lore/canonicalFactValidity';
 import styles from '../../assets/components/WorldBibleRoute.module.css';
 
 const formatFactValue = (fact: CanonicalFact): string =>
@@ -19,6 +20,7 @@ interface WorldBibleCharacterHealthProps {
   characterHealthProbeResults: ReturnType<typeof useWorldBibleSelectedEntity>['characterHealthProbeResults'];
   characterHealthProbeRunning: boolean;
   currentEntityMemories: MemoryEntry[];
+  documents: WritingDocument[];
   canProbe: boolean;
   handleCharacterHealthProbe: () => Promise<void>;
   onOpenScene: (sceneId: string) => void;
@@ -30,7 +32,7 @@ export const WorldBibleCharacterHealth = (props: WorldBibleCharacterHealthProps)
     linkedLoreDocumentsForSelectedEntity, selectedEntitySceneMentions,
     selectedEntityStateEvents, selectedEntityAcceptedStateEventCount,
     selectedEntityProposedStateEventCount, characterHealthProbeResults,
-    characterHealthProbeRunning, currentEntityMemories, canProbe,
+    characterHealthProbeRunning, currentEntityMemories, documents, canProbe,
     handleCharacterHealthProbe, onOpenScene
   } = props;
   return (
@@ -102,9 +104,12 @@ export const WorldBibleCharacterHealth = (props: WorldBibleCharacterHealthProps)
                           {selectedEntityFacts.length > 0 ? (
                             <ul className={styles.characterHealthList}>
                               {selectedEntityFacts.slice(0, 5).map((fact) => (
-                                <li key={fact.id} title={buildCanonicalFactSummary(fact)}>
+                                <li key={fact.id} title={buildCanonicalFactSummary(fact, documents)}>
                                   <span>{fact.factType.replace(/_/g, ' ')}</span>
                                   <strong>{formatFactValue(fact)}</strong>
+                                  {formatCanonicalFactValidity(fact, documents) && (
+                                    <small>{formatCanonicalFactValidity(fact, documents)}</small>
+                                  )}
                                   {fact.sourceLoreDocumentTitle && (
                                     <small>{fact.sourceLoreDocumentTitle}</small>
                                   )}

@@ -24,7 +24,7 @@ import {
 } from '../rules/rulesetService';
 
 export const LEGACY_PROJECT_SCHEMA_VERSION = 1;
-export const CURRENT_PROJECT_SCHEMA_VERSION = 5;
+export const CURRENT_PROJECT_SCHEMA_VERSION = 6;
 export const PROJECT_MIGRATION_BACKUP_SCHEMA_VERSION = 1;
 
 export interface ProjectMigrationContext {
@@ -172,6 +172,13 @@ const PROJECT_MIGRATIONS: readonly ProjectSchemaMigration[] = [
     toVersion: 5,
     // System negative-space records add explicit optional category and entity
     // fields. Existing records stay intentionally unclassified and unlinked.
+    migrate: async () => undefined
+  },
+  {
+    fromVersion: 5,
+    toVersion: 6,
+    // Canon fact manuscript-time boundaries are additive stable scene IDs.
+    // Existing facts remain intentionally timeless.
     migrate: async () => undefined
   }
 ];
