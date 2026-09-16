@@ -1,6 +1,6 @@
 # Worldbuilding-Desk Project Status
 
-**Last Updated:** September 13, 2026
+**Last Updated:** September 16, 2026
 
 ## Project Overview
 
@@ -132,6 +132,14 @@ Under the hood, the app still includes rich systems for world data, rules, chara
   depends on accepted advancement events carrying a descriptive label — a
   real, documented coverage limit, not a guess about author intent.
 - App-shell search is now visibly exposed and returns unified scene plus World Bible results.
+- World Bible now exports a human-readable portable ZIP: one Markdown file per
+  record with JSON-compatible YAML frontmatter, one CSV per category, and one
+  Markdown file per Source Note, plus an included schema README. A reviewed
+  Markdown-folder importer supports Obsidian-style vaults: every file is
+  staged as a Source Note or incomplete World Bible draft, and wikilinks are
+  opt-in link/alias proposals. Source Notes continue through extraction and
+  proposal review; import never writes accepted facts directly. The project
+  backup ZIP remains the full-fidelity restore format.
 - Pending Mechanics completion counts now aggregate onto the `More` navigation
   control at both desktop and narrow breakpoints, keeping optional-system work
   discoverable without promoting systems into the writing-first primary nav.

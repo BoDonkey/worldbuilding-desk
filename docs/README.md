@@ -75,6 +75,9 @@ Other files:
   research (2026-09-12) proposing five tactical actions. Its accepted outcomes
   are roadmap slices 4.28–4.29 plus small edits to 5.8/5.9/6.1 and the
   backlog; its citation tokens are broken and its figures are unverified.
+- `docs/portable-data-schema.md` — public, versioned Markdown/CSV interchange
+  contract for the human-readable project export and Markdown-folder import;
+  full-fidelity restore remains the project backup ZIP.
 - `docs/research-payment-provider.md` — dated, non-authoritative vendor and
   architecture research for roadmap Slice 5.7. It compares Paddle and Creem,
   records a conditional sandbox recommendation and decision gates, and does

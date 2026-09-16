@@ -26,6 +26,7 @@ import {CharacterIdentityResolutionQueue} from '../components/WorldBible/Charact
 import {WorldBibleCategoryRail} from '../components/WorldBible/WorldBibleCategoryRail';
 import {ItemDescriptionFirstFields} from '../components/WorldBible/ItemDescriptionFirstFields';
 import {SystemNegativeSpacePanel} from '../components/WorldBible/SystemNegativeSpacePanel';
+import {PortableDataPanel} from '../components/WorldBible/PortableDataPanel';
 import styles from '../assets/components/WorldBibleRoute.module.css';
 import type {MemoryEntry} from '../services/shodh/ShodhMemoryService';
 import {ShodhMemoryPanel} from '../components/ShodhMemoryPanel';
@@ -964,6 +965,18 @@ function WorldBibleRoute() {
 
         <div className={styles.mainColumn}>
       <RouteFeedback feedback={feedback} onClear={() => setFeedback(null)} />
+      <PortableDataPanel
+        project={activeProject}
+        categories={worldBibleCategories}
+        entities={entities}
+        aliases={aliases}
+        canonicalFacts={canonicalFacts}
+        loreDocuments={loreDocuments}
+        loreDocumentLinks={loreDocumentLinks}
+        ragService={ragService}
+        shodhService={shodhService}
+        onFeedback={setFeedback}
+      />
       {seriesConfig?.parentProjectId && (
         <div className={styles.banner}>
           <strong>Parent canon:</strong> {canonState.parentName ?? 'Unknown'} ·
