@@ -1,10 +1,11 @@
 export const DB_NAME = 'worldbuilding-db';
-export const DB_VERSION = 27;
+export const DB_VERSION = 28;
 export const ENTITY_STORE_NAME = 'entities';
 export const CATEGORY_STORE_NAME = 'entityCategories';
 export const PROJECT_STORE_NAME = 'projects';
 export const WRITING_STORE_NAME = 'writingDocuments';
 export const SCRATCHPAD_STORE_NAME = 'scratchpads';
+export const WORLD_CANVAS_STORE_NAME = 'world_canvases';
 export const CORKBOARD_CHAPTER_CARD_STORE_NAME = 'corkboard_chapter_cards';
 export const SETTINGS_STORE_NAME = 'projectSettings';
 export const CHARACTER_STORE_NAME = 'characters';
@@ -39,6 +40,7 @@ export const PROJECT_SCOPED_STORE_NAMES = [
   ENTITY_STORE_NAME,
   WRITING_STORE_NAME,
   SCRATCHPAD_STORE_NAME,
+  WORLD_CANVAS_STORE_NAME,
   CORKBOARD_CHAPTER_CARD_STORE_NAME,
   SETTINGS_STORE_NAME,
   CHARACTER_STORE_NAME,
@@ -85,6 +87,11 @@ export function upgradeDatabase(db: IDBDatabase): void {
 
   if (!db.objectStoreNames.contains(SCRATCHPAD_STORE_NAME)) {
     db.createObjectStore(SCRATCHPAD_STORE_NAME, { keyPath: 'id' });
+  }
+
+  if (!db.objectStoreNames.contains(WORLD_CANVAS_STORE_NAME)) {
+    const worldCanvasStore = db.createObjectStore(WORLD_CANVAS_STORE_NAME, {keyPath: 'id'});
+    worldCanvasStore.createIndex('projectId', 'projectId', {unique: true});
   }
 
   if (!db.objectStoreNames.contains(CORKBOARD_CHAPTER_CARD_STORE_NAME)) {

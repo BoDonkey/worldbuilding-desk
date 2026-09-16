@@ -13,6 +13,7 @@ const STORE_NAMES = [
   'projects',
   'writingDocuments',
   'scratchpads',
+  'world_canvases',
   'corkboard_chapter_cards',
   'projectSettings',
   'lore_documents',

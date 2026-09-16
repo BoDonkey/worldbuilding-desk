@@ -1,6 +1,6 @@
 # Manual Smoke Procedures
 
-Last updated: 2026-08-16
+Last updated: 2026-09-16
 
 Reusable manual smoke procedures targeting trust and data-loss boundaries.
 Consolidates the former `project-backup-smoke-test.md`,
@@ -19,13 +19,15 @@ warnings.
 
 Goal: export produces a valid `.zip`, validation passes, import works in both
 `new` and `merge` modes, count checks match, and Scratchpad + Corkboard
-planning data survive the round-trip.
+planning data plus the exploratory World Canvas survive the round-trip.
 
 Procedure:
 
 1. Seed a project with mixed data (scenes, World Bible entries, characters
    and sheets, compendium/settlement data), a non-trivial Scratchpad note, and
-   two Corkboard cards with plot points.
+   two Corkboard cards with plot points. In World Canvas, enter a premise,
+   open at least two lenses with notes, and add three questions with mixed
+   open/answered/dropped statuses.
 2. `Projects` → `Export Backup (.zip)` → confirm
    `<project>-backup-YYYY-MM-DD.zip` downloads → `Validate Backup (.zip)`
    passes integrity and supported-version checks. A fixture whose
@@ -38,13 +40,17 @@ Procedure:
    details).
 5. Spot-check after import: World Bible categories/entries, scenes open,
    Scratchpad content and formatting present, Corkboard card count/order and
-   per-card title/summary/status/plot-points intact, characters and sheets
-   editable, compendium data persists, autosave still works after a small
-   post-import edit.
+   per-card title/summary/status/plot-points intact, World Canvas premise,
+   opened lenses, notes, questions, lens links, and statuses byte-for-byte
+   intact, characters and sheets editable, compendium data persists, autosave
+   still works after a small post-import edit. Confirm Canvas content did not
+   create World Bible records, accepted facts, or indexed context.
 
 Failure signals: validation failure, unexpectedly empty sections, count
 mismatch on an unchanged new-project import, runtime errors, truncated
-Scratchpad, Corkboard cards missing plot points or order.
+Scratchpad, Corkboard cards missing plot points or order, changed/missing
+World Canvas content, or any Canvas-only idea appearing as canon or indexed
+context.
 
 ## 2. Review Completion (Import → Workspace Review → World Bible Queue)
 

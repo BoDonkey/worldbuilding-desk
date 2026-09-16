@@ -20,6 +20,7 @@ import type {
   SettlementModule,
   SettlementState,
   ScratchpadDocument,
+  WorldCanvasDocument,
   UnlockableRecipe,
   WorldEntity,
   WritingDocument,
@@ -53,6 +54,7 @@ import {
   SETTLEMENT_MODULE_STORE_NAME,
   SETTLEMENT_STATE_STORE_NAME,
   SCRATCHPAD_STORE_NAME,
+  WORLD_CANVAS_STORE_NAME,
   STATE_MUTATION_EVENT_STORE_NAME,
   WRITING_STORE_NAME,
   ZONE_AFFINITY_PROFILE_STORE_NAME,
@@ -79,6 +81,7 @@ export interface ProjectSnapshot {
     entities: WorldEntity[];
     writingDocuments: WritingDocument[];
     scratchpads: ScratchpadDocument[];
+    worldCanvases: WorldCanvasDocument[];
     corkboardChapterCards: ChapterCard[];
     characters: Character[];
     characterSheets: CharacterSheet[];
@@ -108,6 +111,7 @@ export interface ProjectSnapshot {
     entities: number;
     writingDocuments: number;
     scratchpads: number;
+    worldCanvases: number;
     corkboardChapterCards: number;
     characters: number;
     characterSheets: number;
@@ -172,6 +176,7 @@ export async function buildProjectSnapshot(projectId: string): Promise<ProjectSn
     entities,
     writingDocuments,
     scratchpads,
+    worldCanvases,
     corkboardChapterCards,
     characters,
     characterSheets,
@@ -202,6 +207,7 @@ export async function buildProjectSnapshot(projectId: string): Promise<ProjectSn
     getProjectScopedRecords<WorldEntity>(ENTITY_STORE_NAME, projectId),
     getProjectScopedRecords<WritingDocument>(WRITING_STORE_NAME, projectId),
     getProjectScopedRecords<ScratchpadDocument>(SCRATCHPAD_STORE_NAME, projectId),
+    getProjectScopedRecords<WorldCanvasDocument>(WORLD_CANVAS_STORE_NAME, projectId),
     getProjectScopedRecords<ChapterCard>(CORKBOARD_CHAPTER_CARD_STORE_NAME, projectId),
     getProjectScopedRecords<Character>(CHARACTER_STORE_NAME, projectId),
     getProjectScopedRecords<CharacterSheet>(CHARACTER_SHEET_STORE_NAME, projectId),
@@ -262,6 +268,7 @@ export async function buildProjectSnapshot(projectId: string): Promise<ProjectSn
       entities,
       writingDocuments,
       scratchpads,
+      worldCanvases,
       corkboardChapterCards,
       characters,
       characterSheets,
@@ -291,6 +298,7 @@ export async function buildProjectSnapshot(projectId: string): Promise<ProjectSn
       entities: entities.length,
       writingDocuments: writingDocuments.length,
       scratchpads: scratchpads.length,
+      worldCanvases: worldCanvases.length,
       corkboardChapterCards: corkboardChapterCards.length,
       characters: characters.length,
       characterSheets: characterSheets.length,
@@ -332,6 +340,7 @@ export function validateSnapshotCounts(snapshot: ProjectSnapshot): SnapshotCount
     entities: snapshot.data.entities.length,
     writingDocuments: snapshot.data.writingDocuments.length,
     scratchpads: snapshot.data.scratchpads.length,
+    worldCanvases: snapshot.data.worldCanvases.length,
     corkboardChapterCards: snapshot.data.corkboardChapterCards.length,
     characters: snapshot.data.characters.length,
     characterSheets: snapshot.data.characterSheets.length,

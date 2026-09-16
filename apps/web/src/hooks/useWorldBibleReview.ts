@@ -19,7 +19,7 @@ interface UseWorldBibleReviewParams {
   categories: EntityCategory[];
   aliasMapByEntityId: Map<string, string[]>;
   activeTab: string | null;
-  viewMode: 'category' | 'review';
+  viewMode: 'category' | 'review' | 'canvas';
   reviewFilter: 'all' | ReviewQueueReason;
   recommendedFilter: 'all' | ReviewResolution;
   editingId: string | null;

@@ -11,6 +11,7 @@ import type {
   ProjectSettings,
   ScratchpadDocument,
   StateMutationEvent,
+  WorldCanvasDocument,
   WorldEntity,
   WritingDocument,
 } from '../../entityTypes';
@@ -42,6 +43,7 @@ import {
   LORE_ENTITY_PROPOSAL_STORE_NAME,
   LORE_FACT_PROPOSAL_STORE_NAME,
   SCRATCHPAD_STORE_NAME,
+  WORLD_CANVAS_STORE_NAME,
   SETTINGS_STORE_NAME,
   STATE_MUTATION_EVENT_STORE_NAME,
   SETTLEMENT_MODULE_STORE_NAME,
@@ -126,6 +128,8 @@ export function normalizeProjectSnapshot(value: unknown): ProjectSnapshot {
   }
   snapshot.data.scratchpads ??= [];
   snapshot.counts.scratchpads ??= snapshot.data.scratchpads.length;
+  snapshot.data.worldCanvases ??= [];
+  snapshot.counts.worldCanvases ??= snapshot.data.worldCanvases.length;
   snapshot.data.corkboardChapterCards ??= [];
   snapshot.counts.corkboardChapterCards ??= snapshot.data.corkboardChapterCards.length;
   snapshot.data.loreDocuments ??= [];
@@ -203,6 +207,17 @@ function rewriteScratchpads(
   }));
 }
 
+function rewriteWorldCanvases(
+  records: WorldCanvasDocument[],
+  projectId: string
+): WorldCanvasDocument[] {
+  return records.map((record) => ({
+    ...record,
+    id: projectId,
+    projectId
+  }));
+}
+
 function rewriteConsistencyAliases(
   records: ConsistencyAlias[],
   projectId: string
@@ -249,6 +264,7 @@ async function saveProjectScopedRecords(params: {
       ENTITY_STORE_NAME,
       WRITING_STORE_NAME,
       SCRATCHPAD_STORE_NAME,
+      WORLD_CANVAS_STORE_NAME,
       CORKBOARD_CHAPTER_CARD_STORE_NAME,
       CHARACTER_STORE_NAME,
       CHARACTER_SHEET_STORE_NAME,
@@ -307,6 +323,10 @@ async function saveProjectScopedRecords(params: {
   await putMany(
     SCRATCHPAD_STORE_NAME,
     rewriteScratchpads(params.data.scratchpads ?? [], params.projectId)
+  );
+  await putMany(
+    WORLD_CANVAS_STORE_NAME,
+    rewriteWorldCanvases(params.data.worldCanvases ?? [], params.projectId)
   );
   await putMany(
     CORKBOARD_CHAPTER_CARD_STORE_NAME,
@@ -461,7 +481,7 @@ export async function previewProjectBackupConflicts(params: {
     getRulesetByProjectId(params.targetProjectId),
     getProjectRecords<EntityCategory>(CATEGORY_STORE_NAME, params.targetProjectId),
     getProjectRecords<WorldEntity>(ENTITY_STORE_NAME, params.targetProjectId),
-    // Scratchpads are project-scoped singleton notes; they do not participate in name conflicts.
+    // Scratchpads and World Canvas are project-scoped singletons; neither has name conflicts.
     getProjectRecords<WritingDocument>(WRITING_STORE_NAME, params.targetProjectId)
   ]);
 

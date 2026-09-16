@@ -741,8 +741,28 @@ describe('Post-merge smoke checklist', () => {
   it('exports, validates, and imports a project backup with count check success', () => {
     const scratchpadNote =
       'Loose planning note: Kaelor should discover the Ember Archive map fragment here.';
+    const canvasContent = {
+      premise: 'A city grows around an archive that remembers every broken promise.',
+      lenses: [{
+        kind: 'history',
+        note: 'The archive opened after the ash treaty.',
+        linkedSourceNoteIds: [],
+        linkedEntityIds: [],
+        updatedAt: 42
+      }],
+      questions: [{
+        id: 'question-backup-smoke',
+        text: 'Who can erase a promise?',
+        status: 'open',
+        lensKind: 'history',
+        createdAt: 42,
+        updatedAt: 42
+      }],
+      createdAt: 42,
+      updatedAt: 42
+    } as const;
 
-    mutateSmokeDb((db) =>
+    mutateSmokeDb((db) => Promise.all([
       putRecord(db, 'consistency_aliases', {
         id: 'alias-backup-smoke',
         projectId: 'cypress-project-1',
@@ -752,8 +772,13 @@ describe('Post-merge smoke checklist', () => {
         alias: 'The Archive of Embers',
         createdAt: 1,
         updatedAt: 1
+      }),
+      putRecord(db, 'world_canvases', {
+        id: 'cypress-project-1',
+        projectId: 'cypress-project-1',
+        ...canvasContent
       })
-    );
+    ]).then(() => undefined));
 
     cy.visit('/workspace');
     cy.contains('button', /^Scratchpad$/).first().click();
@@ -823,6 +848,22 @@ describe('Post-merge smoke checklist', () => {
       );
       expect(importedAlias).to.exist;
       expect(importedAlias?.targetId).to.equal('entity-ember-archive');
+
+      const canvases = await getAllRecords<{
+        id: string;
+        projectId: string;
+        premise: string;
+        lenses: unknown[];
+        questions: unknown[];
+        createdAt: number;
+        updatedAt: number;
+      }>(db, 'world_canvases');
+      const importedCanvas = canvases.find(
+        (record) => record.projectId !== 'cypress-project-1'
+      );
+      expect(importedCanvas).to.exist;
+      expect(importedCanvas).to.deep.include(canvasContent);
+      expect(importedCanvas?.id).to.equal(importedCanvas?.projectId);
     });
 
     cy.visit('/workspace');

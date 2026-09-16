@@ -42,6 +42,44 @@ export interface ScratchpadDocument {
   updatedAt: number;
 }
 
+export type WorldCanvasLensKind =
+  | 'people'
+  | 'places'
+  | 'factions'
+  | 'history'
+  | 'power'
+  | 'customs'
+  | 'constraints';
+
+export interface WorldCanvasQuestion {
+  id: string;
+  text: string;
+  status: 'open' | 'answered' | 'dropped';
+  lensKind?: WorldCanvasLensKind;
+  linkedSourceNoteId?: string;
+  linkedEntityId?: string;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface WorldCanvasLens {
+  kind: WorldCanvasLensKind;
+  note: string;
+  linkedSourceNoteIds: string[];
+  linkedEntityIds: string[];
+  updatedAt: number;
+}
+
+export interface WorldCanvasDocument {
+  id: string;
+  projectId: string;
+  premise: string;
+  lenses: WorldCanvasLens[];
+  questions: WorldCanvasQuestion[];
+  createdAt: number;
+  updatedAt: number;
+}
+
 export type ChapterCardStatus = 'planned' | 'draft' | 'written';
 
 export interface PlotPoint {

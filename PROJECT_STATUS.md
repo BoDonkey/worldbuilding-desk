@@ -93,6 +93,10 @@ Under the hood, the app still includes rich systems for world data, rules, chara
 - Hidden deterministic state suggestions now surface only as lightweight review summaries with per-scene and project-level restore actions.
 - Project scratchpad is available as an autosaved quick-access modal and remains available from the workspace context drawer.
 - Scratchpad quick access is now available from active-project chrome on World Bible, Lore, and Canon Decisions so loose ideas can move into structured canon, longform lore, or review decisions without navigating back to Workspace.
+- World Bible now includes an optional, autosaved World Canvas for a freeform
+  premise, seven author-opened lenses, and open/answered/dropped questions.
+  Canvas content is explicitly exploratory and non-canon, stays out of
+  extraction and retrieval, and participates in full project backup/restore.
 - Lore Documents are now framed as source-note intake rather than a parallel canon database, with manual writing, dossier import, and extraction paths kept separate from accepted canon.
 - World Bible records can create or open a linked Lore Document for longform source notes, and Lore Documents can navigate back to the linked World Bible record.
 - Lore Documents now has a project context health panel that shows RAG document/chunk counts, indexed document type counts, Shodh memory counts, project data counts, and a retrieval probe.
@@ -1022,6 +1026,11 @@ runtime schema, and nothing here changes the roadmap's status board.
 - Zustand workspace UI integration has been smoke-checked manually for Corkboard and Scratchpad memory saving, and the latest focused unit/build passes cover workspace store behavior plus document initialization/save helper behavior.
 
 ### Current Verification Notes
+- World Canvas WC-1 passes lint with the single existing hook warning, 578 web
+  unit tests, 6 rules-engine tests, 12 rules-ui tests, web and desktop builds,
+  and the full 82-test Cypress suite. Its backup new-project restore is covered
+  in post-merge smoke; desktop and 780px browser checks confirm the rail entry,
+  Canvas-only view, labels, and responsive layout.
 - The shared dialog system (`ConfirmDialog`/`InlineAlert`) and its migration off
   native `window.confirm`/`alert` pass web lint, tsc build, 249/249 web unit
   tests, and the later full 42-test Cypress rerun recorded for road-to-market

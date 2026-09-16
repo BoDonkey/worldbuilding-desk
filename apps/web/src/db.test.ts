@@ -7,7 +7,8 @@ import {
   DB_VERSION,
   openDb,
   PROJECT_MIGRATION_BACKUP_STORE_NAME,
-  PROJECT_STORE_NAME
+  PROJECT_STORE_NAME,
+  WORLD_CANVAS_STORE_NAME
 } from './db';
 
 let openedDb: IDBDatabase | null = null;
@@ -59,6 +60,11 @@ describe('openDb structural upgrade', () => {
     expect(openedDb.objectStoreNames.contains(PROJECT_MIGRATION_BACKUP_STORE_NAME)).toBe(true);
     expect(openedDb.objectStoreNames.contains(ACTOR_RESOLUTION_STORE_NAME)).toBe(true);
     expect(openedDb.objectStoreNames.contains(CHARACTER_IDENTITY_REPORT_STORE_NAME)).toBe(true);
+    expect(openedDb.objectStoreNames.contains(WORLD_CANVAS_STORE_NAME)).toBe(true);
+    const canvasStore = openedDb
+      .transaction(WORLD_CANVAS_STORE_NAME, 'readonly')
+      .objectStore(WORLD_CANVAS_STORE_NAME);
+    expect(canvasStore.indexNames.contains('projectId')).toBe(true);
     const storedProject = await requestToPromise(
       openedDb
         .transaction(PROJECT_STORE_NAME, 'readonly')

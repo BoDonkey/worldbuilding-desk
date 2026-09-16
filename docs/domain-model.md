@@ -28,6 +28,13 @@ Three layers separate "written in notes" from "accepted as canon":
    materialized `Character`/`WorldEntity` field updates) linked back to source
    document, evidence span, and acceptance metadata.
 
+`WorldCanvasDocument` sits outside these three layers. It is optional,
+project-scoped exploratory planning: a premise, author-opened lenses, and
+questions. It is never canon, never an extraction source, never indexed for
+retrieval, and never written into World Bible records, canonical facts, or
+state. Moving a Canvas idea into canon requires the same explicit author
+action and validation as any other proposal or source material.
+
 Key rules:
 
 - The fact vocabulary (`alias`, `role`, `occupation`, `affiliation`,
