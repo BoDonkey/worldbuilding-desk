@@ -1,11 +1,8 @@
-import {useCallback, useEffect, useState} from 'react';
+import {useCallback, useState} from 'react';
 import type {SceneRevision} from '../services/assistant/sceneRevision';
 import type {ProjectSettings} from '../entityTypes';
 import type {LoreInspectorRecord} from '../components/Editor/LoreInspectorPanel';
-import {
-  getInspectorConsultationUsage,
-  incrementInspectorConsultationUsage
-} from '../services/editor';
+import {useConsultationBudget} from './useConsultationBudget';
 import type {WorkspaceContextDrawerView} from './useWorkspaceDrawers';
 import {
   buildWorkspaceLoreConsultation,
@@ -49,17 +46,13 @@ export function useWorkspaceContextActions(params: {
   const [activeAIContext, setActiveAIContext] = useState<WorkspaceAIContext | null>(null);
   const [queuedAssistantPrompt, setQueuedAssistantPrompt] = useState<string | null>(null);
   const [activeLoreRecord, setActiveLoreRecord] = useState<LoreInspectorRecord | null>(null);
-  const [aiBudgetUsed, setAIBudgetUsed] = useState(0);
   const [pendingAIInsert, setPendingAIInsert] =
     useState<WorkspacePendingAIInsert | null>(null);
-
-  useEffect(() => {
-    if (!activeProjectId) {
-      setAIBudgetUsed(0);
-      return;
-    }
-    setAIBudgetUsed(getInspectorConsultationUsage(activeProjectId));
-  }, [activeProjectId]);
+  const consultationBudget = useConsultationBudget(
+    activeProjectId,
+    projectSettings?.aiSettings?.inspectorSettings,
+    projectSettings?.aiSettings?.provider
+  );
 
   const handleOpenAIContext = useCallback(
     (context: WorkspaceAIContext, prompt?: string | null) => {
@@ -101,12 +94,9 @@ export function useWorkspaceContextActions(params: {
     if (!activeProjectId || !activeLoreRecord) return;
     const inspector = projectSettings?.aiSettings?.inspectorSettings;
     if (inspector?.enableAIConsultation === false) return;
-    const maxConsultations = inspector?.maxConsultationsPerDay ?? 20;
-    const used = getInspectorConsultationUsage(activeProjectId);
-    if (used >= maxConsultations) return;
+    if (consultationBudget.blocked) return;
 
-    const nextUsed = incrementInspectorConsultationUsage(activeProjectId);
-    setAIBudgetUsed(nextUsed);
+    consultationBudget.spend('workspace-context');
 
     const maxContextChars = inspector?.maxContextChars ?? 1800;
     const {compactContext, prompt} = buildWorkspaceLoreConsultation({
@@ -129,6 +119,7 @@ export function useWorkspaceContextActions(params: {
   }, [
     activeLoreRecord,
     activeProjectId,
+    consultationBudget,
     content,
     handleOpenAIContext,
     projectSettings?.aiSettings?.inspectorSettings,
@@ -143,7 +134,7 @@ export function useWorkspaceContextActions(params: {
     queuedAssistantPrompt,
     setQueuedAssistantPrompt,
     activeLoreRecord,
-    aiBudgetUsed,
+    consultationBudget,
     resetContextActions,
     handleOpenAIContext,
     handleOpenLoreInspector,

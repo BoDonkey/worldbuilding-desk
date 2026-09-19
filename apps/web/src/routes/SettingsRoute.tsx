@@ -340,6 +340,7 @@ function SettingsRoute() {
         <SettingsSection title='AI Settings'>
           <AISettings
             aiSettings={settings.aiSettings}
+            projectId={activeProject?.id ?? null}
             projectMode={settings.projectMode}
             onSettingsChange={handleAISettingsChange}
           />

@@ -14,6 +14,7 @@ import type {
 } from '../../entityTypes';
 import {AIAssistant} from '../AIAssistant/AIAssistant';
 import {LoreInspectorPanel} from '../Editor/LoreInspectorPanel';
+import type {UseConsultationBudget} from '../../hooks/useConsultationBudget';
 import type {LoreInspectorRecord} from '../Editor/LoreInspectorPanel';
 import {SourceNoteCapturePreview} from '../Editor/SourceNoteCapturePreview';
 import {SystemHistoryPanel} from '../Editor/SystemHistoryPanel';
@@ -240,7 +241,7 @@ interface WorkspaceContextDrawerProps {
 
   // Lore view
   activeLoreRecord: LoreInspectorRecord | null;
-  aiBudgetUsed: number;
+  consultationBudget: UseConsultationBudget;
   handleConsultationFromLore: (
     mode: 'consistency' | 'reaction' | 'outcome' | 'worldbuilding' | 'plotting'
   ) => void;
@@ -372,7 +373,7 @@ export function WorkspaceContextDrawer({
   setFeedback,
   refreshSystemHistory,
   activeLoreRecord,
-  aiBudgetUsed,
+  consultationBudget,
   handleConsultationFromLore,
   settlementModuleCount,
   activePartySynergyCount,
@@ -1152,8 +1153,7 @@ export function WorkspaceContextDrawer({
           aiEnabled={
             projectSettings?.aiSettings?.inspectorSettings?.enableAIConsultation !== false
           }
-          aiBudgetUsed={aiBudgetUsed}
-          aiBudgetMax={projectSettings?.aiSettings?.inspectorSettings?.maxConsultationsPerDay ?? 20}
+          budget={consultationBudget}
           onConsult={handleConsultationFromLore}
         />
       );

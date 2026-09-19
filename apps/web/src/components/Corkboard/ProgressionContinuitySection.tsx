@@ -13,7 +13,8 @@ import {
   restoreAllDismissedProgressionContinuityCandidates
 } from '../../services/progressionContinuity/progressionContinuityReviewPrefs';
 import {LLMService} from '../../services/llm/LLMService';
-import {getInspectorConsultationUsage, incrementInspectorConsultationUsage} from '../../services/editor';
+import {useConsultationBudget} from '../../hooks/useConsultationBudget';
+import {ConsultationBudgetNotice} from '../common/ConsultationBudgetNotice';
 import {SourceScenes} from './StoryDashboard';
 import styles from '../../styles/CorkboardRoute.module.css';
 import {describeError} from '../../services/errors';
@@ -51,13 +52,12 @@ export function ProgressionContinuitySection({
 }: ProgressionContinuitySectionProps) {
   const [dismissedKeys, setDismissedKeys] = useState(() => getDismissedProgressionContinuityKeys(projectId));
   const [consultationByKey, setConsultationByKey] = useState<Record<string, ConsultationState>>({});
-  const [budgetUsed, setBudgetUsed] = useState(() => getInspectorConsultationUsage(projectId));
 
   const documentsById = useMemo(() => new Map(documents.map((document) => [document.id, document])), [documents]);
   const visibleCandidates = candidates.filter((candidate) => !dismissedKeys.has(candidate.key));
   const inspector = aiConfig?.inspectorSettings;
   const consultationEnabled = inspector?.enableAIConsultation !== false;
-  const maxConsultations = inspector?.maxConsultationsPerDay ?? 20;
+  const budget = useConsultationBudget(projectId, inspector, aiConfig?.provider);
 
   const dismiss = (key: string) => {
     dismissProgressionContinuityCandidate(projectId, key);
@@ -84,13 +84,12 @@ export function ProgressionContinuitySection({
       }));
       return;
     }
-    const used = getInspectorConsultationUsage(projectId);
-    if (used >= maxConsultations) {
+    if (budget.blocked) {
       setConsultationByKey((prev) => ({
         ...prev,
         [candidate.key]: {
           status: 'error',
-          error: `AI consultation budget reached for today (${used}/${maxConsultations}).`
+          error: budget.blockedMessage ?? 'AI consultation budget reached for today.'
         }
       }));
       return;
@@ -112,8 +111,7 @@ export function ProgressionContinuitySection({
       const {systemPrompt, userPrompt} = buildProgressionContinuityConsultationPrompt({candidate, evidence});
 
       const service = new LLMService(aiConfig);
-      incrementInspectorConsultationUsage(projectId);
-      setBudgetUsed(getInspectorConsultationUsage(projectId));
+      budget.spend('progression-continuity');
 
       let content = '';
       for await (const chunk of service.stream({
@@ -147,8 +145,17 @@ export function ProgressionContinuitySection({
           <span className={styles.derivedEyebrow}>Author-triggered, model-assisted shortlist</span>
           <h2 id='dashboard-progression-continuity'>Progression continuity</h2>
         </div>
-        <span className={styles.coachPanelMeta}>{budgetUsed}/{maxConsultations} today</span>
+        <span className={styles.coachPanelMeta}>
+          {budget.isLocal ? 'Local model' : `${budget.status.used}/${budget.status.limit} today`}
+        </span>
       </div>
+
+      <ConsultationBudgetNotice
+        status={budget.status}
+        isLocal={budget.isLocal}
+        onGrantMore={budget.grantMore}
+        hidden={!consultationEnabled || visibleCandidates.length === 0}
+      />
 
       {candidates.length === 0 ? (
         <p className={styles.derivedEmpty}>

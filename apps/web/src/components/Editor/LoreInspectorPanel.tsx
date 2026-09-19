@@ -1,5 +1,6 @@
-import {useMemo} from 'react';
 import styles from '../../assets/components/AISettings.module.css';
+import {ConsultationBudgetNotice} from '../common/ConsultationBudgetNotice';
+import type {UseConsultationBudget} from '../../hooks/useConsultationBudget';
 
 export interface LoreInspectorRecord {
   type: 'character' | 'entity';
@@ -17,8 +18,8 @@ interface LoreInspectorPanelProps {
   record: LoreInspectorRecord | null;
   onEditRecord: (record: LoreInspectorRecord) => void;
   aiEnabled: boolean;
-  aiBudgetUsed: number;
-  aiBudgetMax: number;
+  /** Shared project consultation budget — the same status every spending surface shows. */
+  budget: UseConsultationBudget;
   onConsult: (
     mode:
       | 'consistency'
@@ -33,14 +34,9 @@ export const LoreInspectorPanel = ({
   record,
   onEditRecord,
   aiEnabled,
-  aiBudgetUsed,
-  aiBudgetMax,
+  budget,
   onConsult
 }: LoreInspectorPanelProps) => {
-  const remaining = useMemo(
-    () => Math.max(0, aiBudgetMax - aiBudgetUsed),
-    [aiBudgetMax, aiBudgetUsed]
-  );
 
   if (!record) {
     return (
@@ -87,24 +83,27 @@ export const LoreInspectorPanel = ({
 
       <section className={styles.loreSection}>
         <h4 className={styles.loreSectionTitle}>AI Consultation</h4>
-        <p className={styles.loreBudgetText}>
-          Daily consultations used: {aiBudgetUsed}/{aiBudgetMax}
-          {' · '}Remaining: {remaining}
-        </p>
+        <ConsultationBudgetNotice
+          status={budget.status}
+          isLocal={budget.isLocal}
+          onGrantMore={budget.grantMore}
+          hidden={!aiEnabled}
+          className={styles.loreBudgetText}
+        />
         <div className={styles.systemActions}>
-          <button type='button' onClick={() => onConsult('consistency')} disabled={!aiEnabled || remaining === 0}>
+          <button type='button' onClick={() => onConsult('consistency')} disabled={!aiEnabled || budget.blocked}>
             Check Consistency
           </button>
-          <button type='button' onClick={() => onConsult('reaction')} disabled={!aiEnabled || remaining === 0}>
+          <button type='button' onClick={() => onConsult('reaction')} disabled={!aiEnabled || budget.blocked}>
             Suggest Reaction
           </button>
-          <button type='button' onClick={() => onConsult('outcome')} disabled={!aiEnabled || remaining === 0}>
+          <button type='button' onClick={() => onConsult('outcome')} disabled={!aiEnabled || budget.blocked}>
             Calculate Outcome
           </button>
-          <button type='button' onClick={() => onConsult('worldbuilding')} disabled={!aiEnabled || remaining === 0}>
+          <button type='button' onClick={() => onConsult('worldbuilding')} disabled={!aiEnabled || budget.blocked}>
             Expand World Detail
           </button>
-          <button type='button' onClick={() => onConsult('plotting')} disabled={!aiEnabled || remaining === 0}>
+          <button type='button' onClick={() => onConsult('plotting')} disabled={!aiEnabled || budget.blocked}>
             Generate Plot Hooks
           </button>
         </div>

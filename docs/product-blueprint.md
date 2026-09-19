@@ -57,6 +57,35 @@ Author-facing copy should say `Stored locally`, `Runs on this computer`, or
 `never leaves your computer` claim on a workflow that can invoke a hosted
 provider.
 
+### AI consultation budget
+
+Every model request an author makes costs a **consultation**. The budget exists
+to stop runaway loops and surprise provider spend — not to ration deliberate
+work. An author who means to keep going must always be able to keep going.
+
+- **One budget per project**, not per feature. An author thinks in "requests
+  this project made today", so a single daily counter is the model they already
+  hold. Each unit still records which feature spent it, so the usage can be
+  broken down without fragmenting the limit.
+- **Local providers do not spend it.** An Ollama request costs nothing and
+  sends nothing; counting it would contradict the privacy promise above. Local
+  requests are reported separately and stop only at a much higher runaway
+  guard.
+- **The day resets at the author's local midnight**, and every surface that
+  names the reset names it in the author's own timezone.
+- **Explain it where it is spent, not in Settings.** Every action that spends a
+  consultation states, beside the button and before the request, what it costs
+  and what remains after. Settings carries the persistent limit, the reset
+  time, and today's per-feature breakdown — it is the reference, not the
+  disclosure.
+- **Over budget is blocking but not a dead end.** The message says what
+  happened, when it resets, and offers more units for today in place, so the
+  author is never sent to Settings mid-thought. Units granted this way last for
+  today only; the persistent limit stays where the author set it.
+- **The budget stays local.** No telemetry, no server-side accounting, no
+  account. Clearing site data resets it, and that is acceptable for a guard
+  rail rather than an entitlement.
+
 ## Positioning
 
 Against general AI writing tools (which optimize for generation speed and

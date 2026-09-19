@@ -62,14 +62,13 @@ import type {RAGProvider} from '../services/rag/RAGService';
 import {getShodhService} from '../services/shodh/getShodhService';
 import {emitShodhMemoriesUpdated} from '../services/shodh/shodhEvents';
 import {
-  getInspectorConsultationUsage,
-  incrementInspectorConsultationUsage
 } from '../services/editor';
 import {ProjectScratchpadButton} from '../components/ProjectScratchpadButton';
 import {PageHeader} from '../components/PageHeader';
 import styles from '../styles/CanonDecisionsRoute.module.css';
 import {describeError} from '../services/errors';
-import {RouteFeedback} from '../components/common';
+import {ConsultationBudgetNotice, RouteFeedback} from '../components/common';
+import {useConsultationBudget} from '../hooks/useConsultationBudget';
 
 const PROVIDER_LABELS = {
   anthropic: 'Claude',
@@ -101,7 +100,6 @@ function CanonDecisionsRoute() {
   const [dismissedRecommendationClusterIds, setDismissedRecommendationClusterIds] = useState<
     Set<string>
   >(new Set());
-  const [aiBudgetUsed, setAIBudgetUsed] = useState(0);
   const [factEffectiveSceneByClusterId, setFactEffectiveSceneByClusterId] = useState<
     Record<string, string>
   >({});
@@ -189,14 +187,6 @@ function CanonDecisionsRoute() {
   }, [activeProject]);
 
   useEffect(() => {
-    if (!activeProject) {
-      setAIBudgetUsed(0);
-      return;
-    }
-    setAIBudgetUsed(getInspectorConsultationUsage(activeProject.id));
-  }, [activeProject]);
-
-  useEffect(() => {
     void refresh();
     const handleChanged = () => {
       void refresh();
@@ -252,8 +242,13 @@ function CanonDecisionsRoute() {
     : 'AI';
   const aiConsultationEnabled =
     projectSettings?.aiSettings?.inspectorSettings?.enableAIConsultation !== false;
-  const aiBudgetMax =
-    projectSettings?.aiSettings?.inspectorSettings?.maxConsultationsPerDay ?? 20;
+  // Routing canon decisions to local Ollama exempts them from the budget: `effectiveAIProviderId`
+  // already reflects that override, so the budget follows the provider actually used.
+  const budget = useConsultationBudget(
+    activeProject?.id ?? null,
+    projectSettings?.aiSettings?.inspectorSettings,
+    effectiveAIProviderId
+  );
 
   const resolveCluster = async (
     cluster: CanonDecisionCluster,
@@ -614,11 +609,10 @@ function CanonDecisionsRoute() {
       setFeedback({tone: 'error', message: 'AI consultation is disabled in Settings.'});
       return;
     }
-    const used = getInspectorConsultationUsage(activeProject.id);
-    if (used >= aiBudgetMax) {
+    if (budget.blocked) {
       setFeedback({
         tone: 'error',
-        message: `AI consultation budget reached for today (${used}/${aiBudgetMax}).`
+        message: budget.blockedMessage ?? 'AI consultation budget reached for today.'
       });
       return;
     }
@@ -676,8 +670,7 @@ function CanonDecisionsRoute() {
             }
           : projectSettings.aiSettings;
       const service = new LLMService(aiSettingsForConsultation);
-      const nextUsed = incrementInspectorConsultationUsage(activeProject.id);
-      setAIBudgetUsed(nextUsed);
+      budget.spend('canon-decision');
 
       const ragChunks = ragService
         ? (await ragService.search(searchQuery, 3)).map((result) => ({
@@ -859,9 +852,16 @@ function CanonDecisionsRoute() {
                   <div className={styles.aiPanelHeader}>
                     <p className={styles.aiPanelTitle}>Think it through</p>
                     <span className={styles.aiPanelMeta}>
-                      {aiProviderLabel} · {aiBudgetUsed}/{aiBudgetMax} today
+                      {aiProviderLabel}
+                      {budget.isLocal ? '' : ` · ${budget.status.used}/${budget.status.limit} today`}
                     </span>
                   </div>
+                  <ConsultationBudgetNotice
+                    status={budget.status}
+                    isLocal={budget.isLocal}
+                    onGrantMore={budget.grantMore}
+                    hidden={!aiConsultationEnabled}
+                  />
                   {consultationByClusterId[cluster.id]?.error ? (
                     <p className={styles.aiError}>{consultationByClusterId[cluster.id]?.error}</p>
                   ) : consultationByClusterId[cluster.id]?.content ? (

@@ -16,9 +16,16 @@ import {testHostedProviderConnection, testOllamaConnection} from '../../services
 import {useConfirmDialog} from '../../hooks/useConfirmDialog';
 import {InlineAlert, type InlineAlertVariant} from '../common';
 import {describeError} from '../../services/errors';
+import {
+  getConsultationBudgetStatus,
+  isLocalConsultationProvider,
+  LOCAL_CONSULTATION_DAILY_GUARD
+} from '../../services/editor';
 
 interface AISettingsProps {
   aiSettings: ProjectAISettings;
+  /** Project whose consultation budget this panel reports on. */
+  projectId: string | null;
   projectMode: ProjectMode;
   onSettingsChange: (aiSettings: ProjectAISettings) => void;
 }
@@ -85,6 +92,7 @@ const DEFAULT_PRESET_TOOLS: PromptTool[] = [
 
 export const AISettings: React.FC<AISettingsProps> = ({
   aiSettings,
+  projectId,
   projectMode,
   onSettingsChange
 }) => {
@@ -234,6 +242,15 @@ export const AISettings: React.FC<AISettingsProps> = ({
     maxResponseTokens: 500,
     lowCostModel: ''
   };
+
+  // Settings owns the persistent limit and the explanation of it; the per-action cost is stated
+  // at the point of use (see `ConsultationBudgetNotice`). Read once per render — the ledger is
+  // plain `localStorage`, and this panel is not a live meter.
+  const budgetStatus = getConsultationBudgetStatus(
+    projectId ?? '__none__',
+    inspectorSettings.maxConsultationsPerDay
+  );
+  const budgetIsLocal = isLocalConsultationProvider(aiSettings.provider);
 
   const withDefaultModes = (
     updates: Partial<ProjectAISettings>
@@ -837,6 +854,39 @@ export const AISettings: React.FC<AISettingsProps> = ({
               })
             }
           />
+          <p className={styles.help}>
+            Guards against runaway loops and surprise provider spend, not against deliberate work.
+            It counts whole requests for this project, whichever feature makes them, and resets at{' '}
+            {budgetStatus.resetsAtLabel}.{' '}
+            {budgetIsLocal
+              ? `Your local provider does not spend it at all — local requests stop only at a separate runaway guard of ${LOCAL_CONSULTATION_DAILY_GUARD} a day.`
+              : 'Local (Ollama) providers do not spend it at all.'}
+          </p>
+          <div className={styles.budgetUsage}>
+            <p className={styles.budgetUsageSummary}>
+              <strong>Today:</strong> {budgetStatus.used} of {budgetStatus.limit} used
+              {budgetStatus.granted > 0
+                ? ` (${budgetStatus.configuredLimit} plus ${budgetStatus.granted} you added for today)`
+                : ''}
+              {budgetIsLocal || budgetStatus.localUsed > 0
+                ? ` · ${budgetStatus.localUsed} local request${budgetStatus.localUsed === 1 ? '' : 's'}, unbudgeted`
+                : ''}
+            </p>
+            {budgetStatus.byFeature.length > 0 ? (
+              <ul className={styles.budgetUsageList}>
+                {budgetStatus.byFeature.map((entry) => (
+                  <li key={entry.feature}>
+                    <span>{entry.label}</span>
+                    <span>{entry.count}</span>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className={styles.budgetUsageEmpty}>
+                No AI consultations spent for this project today.
+              </p>
+            )}
+          </div>
         </div>
         <div className={styles.field}>
           <label className={styles.label}>How much story context to send</label>

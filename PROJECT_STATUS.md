@@ -463,6 +463,19 @@ Under the hood, the app still includes rich systems for world data, rules, chara
   Findings cite the earlier accepted scene and never block saving. The
   assistant and review share one ordered manuscript-custody interpreter.
 
+- The project's daily AI consultation budget is now one explained model rather
+  than a hidden counter. It stays one budget per project (not per feature) but
+  records which feature spent each unit; local (Ollama) requests do not spend it
+  at all and stop only at a separate, much higher runaway guard; the day resets
+  at the author's local midnight rather than a UTC one. Every action that spends
+  a consultation now states the cost and what remains beside its own button
+  before the request, and an over-budget author can add more for today in place
+  instead of being sent to Settings — the persistent limit stays where they set
+  it. Settings carries the limit, the reset time in the author's timezone, and
+  today's per-feature breakdown. Storage moved from one `localStorage` key per
+  project per day (never cleaned up) to a single `inspectorBudget:<projectId>`
+  ledger, migrating today's legacy count forward and sweeping the stale keys.
+
 ### Optional Game/System Layers
 - Standalone `rules-engine` package with stats, resources, formulas, effects, and dice.
 - Ruleset builder and runtime stat/resource evaluation.

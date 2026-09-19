@@ -34,7 +34,8 @@ import {
   selectWorldBibleContextForPrompt,
   stripAssistantThinking
 } from './AIAssistant.helpers';
-import {getInspectorConsultationUsage, incrementInspectorConsultationUsage} from '../../services/editor';
+import {useConsultationBudget} from '../../hooks/useConsultationBudget';
+import {ConsultationBudgetNotice} from '../common/ConsultationBudgetNotice';
 import {getCraftLibraryService} from '../../services/craft/getCraftLibraryService';
 import {
   buildCraftContextChunks,
@@ -539,6 +540,7 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
   const coachEvidenceLabel = selectedText ? 'Selected passage' : 'Current scene';
   const inspectorSettings = aiConfig?.inspectorSettings;
   const coachConsultationEnabled = inspectorSettings?.enableAIConsultation !== false;
+  const budget = useConsultationBudget(projectId, inspectorSettings, aiConfig?.provider);
 
   const handleAskCoach = useCallback(async () => {
     if (!coachEvidence) return;
@@ -559,14 +561,12 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
       ]);
       return;
     }
-    const maxConsultations = inspectorSettings?.maxConsultationsPerDay ?? 20;
-    const used = getInspectorConsultationUsage(projectId);
-    if (used >= maxConsultations) {
+    if (budget.blocked) {
       setMessages((prev) => [
         ...prev,
         {
           role: 'assistant',
-          content: `AI consultation budget reached for today (${used}/${maxConsultations}).`
+          content: budget.blockedMessage ?? 'AI consultation budget reached for today.'
         }
       ]);
       return;
@@ -598,7 +598,7 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
         evidenceText: coachEvidence
       });
 
-      incrementInspectorConsultationUsage(projectId);
+      budget.spend('assistant');
 
       let rawAssistantMessage = '';
       setMessages((prev) => [...prev, {role: 'assistant', content: '', craftCitations}]);
@@ -641,10 +641,9 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
     coachEvidence,
     coachEvidenceLabel,
     coachScope,
+    budget,
     inspectorSettings?.lowCostModel,
-    inspectorSettings?.maxConsultationsPerDay,
     inspectorSettings?.maxResponseTokens,
-    projectId,
     providerError,
     scrollMessagesToBottom,
     setMessages
@@ -768,6 +767,12 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
             Ask the writing coach
           </button>
         </div>
+        <ConsultationBudgetNotice
+          status={budget.status}
+          isLocal={budget.isLocal}
+          onGrantMore={budget.grantMore}
+          hidden={!coachConsultationEnabled || !coachEvidence}
+        />
       </div>
     </div>
   );

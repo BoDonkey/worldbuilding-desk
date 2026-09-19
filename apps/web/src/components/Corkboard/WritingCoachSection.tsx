@@ -8,7 +8,8 @@ import {
 } from '../../services/coach/writingCoachConsultation';
 import {LLMService} from '../../services/llm/LLMService';
 import type {ProjectAISettings} from '../../entityTypes';
-import {getInspectorConsultationUsage, incrementInspectorConsultationUsage} from '../../services/editor';
+import {useConsultationBudget} from '../../hooks/useConsultationBudget';
+import {ConsultationBudgetNotice} from '../common/ConsultationBudgetNotice';
 import {getCraftLibraryService} from '../../services/craft/getCraftLibraryService';
 import {getRAGService} from '../../services/rag/getRAGService';
 import type {CraftCitation} from '../../services/craft/types';
@@ -34,14 +35,13 @@ export function WritingCoachSection({dashboard, projectId, aiConfig}: WritingCoa
   const [status, setStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
   const [response, setResponse] = useState<{content: string; craftCitations: CraftCitation[]} | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [budgetUsed, setBudgetUsed] = useState(() => getInspectorConsultationUsage(projectId));
   const [savedNoteTitle, setSavedNoteTitle] = useState<string | null>(null);
   const [noteDismissed, setNoteDismissed] = useState(false);
   const [sessionId] = useState(() => crypto.randomUUID());
 
   const inspector = aiConfig?.inspectorSettings;
   const consultationEnabled = inspector?.enableAIConsultation !== false;
-  const maxConsultations = inspector?.maxConsultationsPerDay ?? 20;
+  const budget = useConsultationBudget(projectId, inspector, aiConfig?.provider);
   const hasEvidence = dashboard.scenes.length > 0;
 
   const askCoach = async () => {
@@ -55,10 +55,9 @@ export function WritingCoachSection({dashboard, projectId, aiConfig}: WritingCoa
       setError('AI consultation is disabled in Settings.');
       return;
     }
-    const used = getInspectorConsultationUsage(projectId);
-    if (used >= maxConsultations) {
+    if (budget.blocked) {
       setStatus('error');
-      setError(`AI consultation budget reached for today (${used}/${maxConsultations}).`);
+      setError(budget.blockedMessage ?? 'AI consultation budget reached for today.');
       return;
     }
 
@@ -83,8 +82,7 @@ export function WritingCoachSection({dashboard, projectId, aiConfig}: WritingCoa
       });
 
       const service = new LLMService(aiConfig);
-      incrementInspectorConsultationUsage(projectId);
-      setBudgetUsed(getInspectorConsultationUsage(projectId));
+      budget.spend('writing-coach');
 
       let content = '';
       setResponse({content: '', craftCitations});
@@ -117,7 +115,9 @@ export function WritingCoachSection({dashboard, projectId, aiConfig}: WritingCoa
       <div className={styles.coachPanel} aria-busy={status === 'loading'}>
         <div className={styles.coachPanelHeader}>
           <strong className={styles.coachPanelTitle}>Ask about this manuscript&apos;s shape</strong>
-          <span className={styles.coachPanelMeta}>{budgetUsed}/{maxConsultations} today</span>
+          <span className={styles.coachPanelMeta}>
+            {budget.isLocal ? 'Local model' : `${budget.status.used}/${budget.status.limit} today`}
+          </span>
         </div>
 
         {!hasEvidence ? (
@@ -141,6 +141,13 @@ export function WritingCoachSection({dashboard, projectId, aiConfig}: WritingCoa
             raw scene prose for this manuscript-wide question.
           </p>
         )}
+
+        <ConsultationBudgetNotice
+          status={budget.status}
+          isLocal={budget.isLocal}
+          onGrantMore={budget.grantMore}
+          hidden={!consultationEnabled || !hasEvidence}
+        />
 
         <div className={styles.actionRow}>
           <button
