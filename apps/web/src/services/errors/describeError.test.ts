@@ -22,6 +22,13 @@ describe('describeError', () => {
     expect(classifyError(new Error('Ollama model lookup failed: 429 Too Many Requests'))).toBe('quota');
   });
 
+  it('keeps messages whose words merely start with "e", but still hides errno codes', () => {
+    expect(classifyError(new Error('The model returned an empty reply.'))).toBe('app-message');
+    expect(classifyError(new Error('Enter every required field.'))).toBe('app-message');
+    expect(classifyError(new Error('open failed: ENOENT'))).toBe('unknown');
+    expect(classifyError(new Error('write EPIPE'))).toBe('unknown');
+  });
+
   it('falls back for non-Error throws and technical runtime failures', () => {
     expect(describeError(undefined, 'Unable to save scene.')).toBe('Unable to save scene.');
     expect(describeError('boom', 'Unable to save scene.')).toBe('Unable to save scene.');

@@ -4,7 +4,11 @@ import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
 import type {ProjectAISettings} from '../../entityTypes';
 import type {UseConsultationBudget} from '../../hooks/useConsultationBudget';
 import {getConsultationBudgetStatus} from '../../services/editor';
-import {BRAINSTORM_INVALID_RESPONSE_MESSAGE} from '../../services/worldBible/worldCanvasBrainstorm';
+import {
+  BRAINSTORM_EMPTY_RESPONSE_MESSAGE,
+  BRAINSTORM_INVALID_RESPONSE_MESSAGE,
+  BRAINSTORM_MIN_RESPONSE_TOKENS
+} from '../../services/worldBible/worldCanvasBrainstorm';
 import {resetWorldCanvasBrainstormSession} from '../../services/worldBible/worldCanvasBrainstormSession';
 import {createEmptyWorldCanvas, updateLensNote} from '../../services/worldBible/worldCanvasService';
 import {WorldCanvasBrainstorm} from './WorldCanvasBrainstorm';
@@ -115,7 +119,12 @@ describe('WorldCanvasBrainstorm', () => {
     expect(budget.spend).toHaveBeenCalledTimes(1);
     expect(budget.spend).toHaveBeenCalledWith('canvas-brainstorm');
     expect(mocks.complete).toHaveBeenCalledTimes(1);
-    expect(mocks.complete.mock.calls[0][0]).toMatchObject({responseFormat: 'json'});
+    expect(mocks.complete.mock.calls[0][0]).toMatchObject({
+      responseFormat: 'json',
+      think: false,
+      cache: false,
+      maxTokens: BRAINSTORM_MIN_RESPONSE_TOKENS
+    });
     expect(screen.queryByText(/to Anthropic’s servers/)).not.toBeInTheDocument();
   });
 
@@ -181,6 +190,8 @@ describe('WorldCanvasBrainstorm', () => {
 
     expect(await screen.findByRole('alert')).toHaveTextContent(BRAINSTORM_INVALID_RESPONSE_MESSAGE);
     expect(screen.queryByRole('list')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByText('Show the model’s reply'));
+    expect(screen.getByText('Here are some ideas about the Compact.')).toBeVisible();
     expect(onKeepAsSourceNote).not.toHaveBeenCalled();
     expect(onAddQuestion).not.toHaveBeenCalled();
   });
@@ -209,5 +220,14 @@ describe('WorldCanvasBrainstorm', () => {
       title: 'Replace unreviewed ideas?'
     }));
     expect(mocks.complete).toHaveBeenCalledTimes(1);
+  });
+
+  it('explains an empty reply instead of calling it unreadable', async () => {
+    mocks.complete.mockResolvedValue({content: ''});
+    renderBrainstorm();
+    fireEvent.click(screen.getByRole('button', {name: 'Ask for tensions and questions'}));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(BRAINSTORM_EMPTY_RESPONSE_MESSAGE);
+    expect(screen.queryByText('Show the model’s reply')).not.toBeInTheDocument();
   });
 });

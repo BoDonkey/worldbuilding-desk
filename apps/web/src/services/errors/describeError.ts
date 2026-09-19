@@ -60,7 +60,10 @@ const TECHNICAL_NAMES = new Set([
 ]);
 
 const TECHNICAL_MESSAGE_PATTERN =
-  /unexpected token|unexpected end of (json|input)|json\.parse|is not a function|cannot read propert|cannot set propert|cannot access|undefined is not|null is not|is not defined|is not iterable|is not an object|\[object [A-Za-z]+\]|maximum call stack|out of memory|^\s*at\s+\S+\s+\(|^error:?\s*$|^\s*$|api error:\s*$|responded with \d{3}\s*\.?$|\bECONN|\bE[A-Z]{4,}\b/i;
+  /unexpected token|unexpected end of (json|input)|json\.parse|is not a function|cannot read propert|cannot set propert|cannot access|undefined is not|null is not|is not defined|is not iterable|is not an object|\[object [A-Za-z]+\]|maximum call stack|out of memory|^\s*at\s+\S+\s+\(|^error:?\s*$|^\s*$|api error:\s*$|responded with \d{3}\s*\.?$|\bECONN/i;
+// Node-style errno codes (ENOENT, ETIMEDOUT). Case-sensitive on purpose: under /i this would match
+// ordinary words such as "empty" or "every" and hide a plain-language app message.
+const ERRNO_CODE_PATTERN = /\bE[A-Z]{4,}\b/;
 
 export type ErrorFailureClass = DiagnosticFailureClass;
 
@@ -112,7 +115,13 @@ export function classifyError(error: unknown): ErrorFailureClass {
   if (!(error instanceof Error) && !(error && typeof error === 'object' && typeof (error as {message?: unknown}).message === 'string')) {
     return 'unknown';
   }
-  if (TECHNICAL_NAMES.has(name) || TECHNICAL_MESSAGE_PATTERN.test(message)) return 'unknown';
+  if (
+    TECHNICAL_NAMES.has(name) ||
+    TECHNICAL_MESSAGE_PATTERN.test(message) ||
+    ERRNO_CODE_PATTERN.test(message)
+  ) {
+    return 'unknown';
+  }
   return 'app-message';
 }
 

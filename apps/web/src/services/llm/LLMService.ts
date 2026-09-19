@@ -60,14 +60,15 @@ export class LLMService {
 
   async complete(request: LLMRequest): Promise<LLMResponse> {
     const normalizedRequest = this.applyProviderDefaults(request);
+    const useCache = request.cache !== false;
     const cacheKey = this.buildCacheKey(normalizedRequest);
-    const cached = llmCache.get(cacheKey);
+    const cached = useCache ? llmCache.get(cacheKey) : undefined;
     if (cached) {
       return {content: cached};
     }
 
     const response = await this.getCompletion(normalizedRequest);
-    if (response.content) {
+    if (useCache && response.content) {
       llmCache.set(cacheKey, response.content);
     }
     return response;

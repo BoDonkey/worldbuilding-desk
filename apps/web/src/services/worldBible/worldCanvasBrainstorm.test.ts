@@ -1,10 +1,13 @@
 import {describe, expect, it} from 'vitest';
 import {
+  BRAINSTORM_EMPTY_RESPONSE_MESSAGE,
   BRAINSTORM_INVALID_RESPONSE_MESSAGE,
+  BRAINSTORM_MIN_RESPONSE_TOKENS,
   BRAINSTORM_MAX_CANON_NAMES,
   BRAINSTORM_MAX_ITEM_CHARS,
   BRAINSTORM_MAX_ITEMS,
   WorldCanvasBrainstormResponseError,
+  brainstormResponseTokens,
   buildWorldCanvasBrainstormPrompt,
   collectCanonNames,
   parseWorldCanvasBrainstormResponse
@@ -139,6 +142,18 @@ describe('parseWorldCanvasBrainstormResponse', () => {
     ).toThrow(BRAINSTORM_INVALID_RESPONSE_MESSAGE);
   });
 
+  it('keeps the raw reply on the error and names an empty reply for what it is', () => {
+    const prose = 'Here are some ideas: the Compact is corrupt.';
+    try {
+      parseWorldCanvasBrainstormResponse(prose);
+      expect.unreachable();
+    } catch (error) {
+      expect(error).toBeInstanceOf(WorldCanvasBrainstormResponseError);
+      expect((error as WorldCanvasBrainstormResponseError).reply).toBe(prose);
+    }
+    expect(() => parseWorldCanvasBrainstormResponse('  ')).toThrow(BRAINSTORM_EMPTY_RESPONSE_MESSAGE);
+  });
+
   it.each([
     ['prose', 'Here are some ideas: the Compact is corrupt.'],
     ['an unknown kind', reply([{kind: 'fact', text: 'The Compact is corrupt.'}])],
@@ -149,5 +164,13 @@ describe('parseWorldCanvasBrainstormResponse', () => {
     expect(() => parseWorldCanvasBrainstormResponse(content)).toThrow(
       WorldCanvasBrainstormResponseError
     );
+  });
+});
+
+describe('brainstormResponseTokens', () => {
+  it('never asks for less than a full list needs, but honors a larger setting', () => {
+    expect(brainstormResponseTokens(500)).toBe(BRAINSTORM_MIN_RESPONSE_TOKENS);
+    expect(brainstormResponseTokens(undefined)).toBe(BRAINSTORM_MIN_RESPONSE_TOKENS);
+    expect(brainstormResponseTokens(4000)).toBe(4000);
   });
 });

@@ -22,6 +22,11 @@ export interface LLMRequest {
   signal?: AbortSignal;
   responseFormat?: 'json';
   think?: boolean | 'low' | 'medium' | 'high';
+  /**
+   * Defaults to true. Pass false for a request the author deliberately repeats and pays for
+   * (e.g. brainstorming), so a retry reaches the model instead of replaying an earlier reply.
+   */
+  cache?: boolean;
 }
 
 export interface LLMResponse {

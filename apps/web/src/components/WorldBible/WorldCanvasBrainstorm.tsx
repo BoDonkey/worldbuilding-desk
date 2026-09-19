@@ -14,7 +14,9 @@ import {LLMService} from '../../services/llm/LLMService';
 import {
   BRAINSTORM_INVALID_RESPONSE_MESSAGE,
   BRAINSTORM_ITEM_KIND_LABELS,
+  WorldCanvasBrainstormResponseError,
   brainstormFocusKey,
+  brainstormResponseTokens,
   buildWorldCanvasBrainstormPrompt,
   describeBrainstormFocus,
   parseWorldCanvasBrainstormResponse,
@@ -75,6 +77,8 @@ export function WorldCanvasBrainstorm({
   const [items, setItems] = useState<PendingBrainstormItem[]>(() => getPendingBrainstormItems(key));
   const [status, setStatus] = useState<'idle' | 'loading'>('idle');
   const [error, setError] = useState<string | null>(null);
+  /** The unreadable reply, shown on request so the author can see what the model sent. */
+  const [rejectedReply, setRejectedReply] = useState<string | null>(null);
   const [disclosed, setDisclosed] = useState(() => hasBrainstormDisclosure(projectId));
 
   const providerIssue = useMemo(() => getBrainstormProviderIssue(aiConfig), [aiConfig]);
@@ -90,6 +94,7 @@ export function WorldCanvasBrainstorm({
   useEffect(() => {
     setItems(getPendingBrainstormItems(key));
     setError(null);
+    setRejectedReply(null);
   }, [key]);
 
   useEffect(() => {
@@ -132,6 +137,7 @@ export function WorldCanvasBrainstorm({
   const runRequest = async (config: ProjectAISettings) => {
     setStatus('loading');
     setError(null);
+    setRejectedReply(null);
     markBrainstormDisclosed(projectId);
     setDisclosed(true);
     try {
@@ -147,8 +153,14 @@ export function WorldCanvasBrainstorm({
         messages: [{role: 'user', content: userPrompt}],
         systemPrompt,
         model: inspector?.lowCostModel?.trim() || undefined,
-        maxTokens: inspector?.maxResponseTokens,
-        responseFormat: 'json'
+        maxTokens: brainstormResponseTokens(inspector?.maxResponseTokens),
+        responseFormat: 'json',
+        // Brainstorming needs no reasoning pass; on Ollama a thinking model can otherwise spend
+        // the whole response allowance thinking and return an empty reply.
+        think: false,
+        // Every click is a deliberate, paid-for request: a retry must reach the model rather than
+        // replay an earlier (possibly unreadable) reply.
+        cache: false
       });
       const parsed = parseWorldCanvasBrainstormResponse(response.content);
       updateItems(
@@ -156,6 +168,9 @@ export function WorldCanvasBrainstorm({
         parsed.map((item) => item.text)
       );
     } catch (caught) {
+      if (caught instanceof WorldCanvasBrainstormResponseError && caught.reply.trim()) {
+        setRejectedReply(caught.reply);
+      }
       setError(describeError(caught, BRAINSTORM_INVALID_RESPONSE_MESSAGE, {
         context: 'world-canvas-brainstorm'
       }));
@@ -212,6 +227,12 @@ export function WorldCanvasBrainstorm({
       )}
 
       {error && <p className={styles.error} role='alert'>{error}</p>}
+      {rejectedReply && (
+        <details className={styles.rejectedReply}>
+          <summary>Show the model’s reply</summary>
+          <pre>{rejectedReply}</pre>
+        </details>
+      )}
 
       {items.length > 0 && (
         <div className={styles.brainstormResults}>
