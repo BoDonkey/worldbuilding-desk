@@ -247,7 +247,7 @@ and required revisit point, `WIP`, `Done <commit>`.
 | 4.36 | Corkboard scene links — "Create linked scene" from both surfaces (CB-2) | 4 | S | — after 4.35; existing scene owner returns the document; no rollback that deletes prose |
 | 4.37 | Corkboard scene links — chapter-card context line in Workspace (CB-3) | 4 | S | — after 4.35; may defer if beta time is tight |
 | 4.38 | Model-assisted canon check (author-triggered, via 1.5) | 4 | M | — after 4.24 and 4.39; proposes contradictions with validated evidence spans into the review queue; never applies |
-| 4.39 | AI consultation budget model + point-of-use explanation | 4 | M | — promoted from Backlog 2026-09-12 because it now gates 4.33 and 4.38; settles what the budget protects, its scope, whether Ollama counts, and explains it where it is spent |
+| 4.39 | AI consultation budget model + point-of-use explanation | 4 | M | Done `ac84793` — (a) guards runaway loops and surprise spend, never rations deliberate work; (b) one per-project budget with a per-feature record; (c) **author signed off: local Ollama is exempt**, with a separate 200/day runaway guard; (d) every spending action states cost and remainder beside its own button, and an over-budget author adds units for today in place rather than going to Settings. Day boundary moved from UTC to the author's local midnight. Storage moved from per-project-per-day `localStorage` keys (never cleaned up) to one `inspectorBudget:<projectId>` ledger, migrating today's legacy count and sweeping the stale keys. Settings gains the reset time and today's per-feature breakdown. Lint with 1 baseline warning; 611 web (+26) + 6 engine + 12 UI tests; web/desktop builds. **Cypress not run here** — `cypress/e2e/consultation-budget.cy.ts` added (4 specs: point-of-use display, over-budget + in-place grant, local exemption, Settings breakdown) but the binary download is blocked by this environment's egress; run it locally before calling the slice fully verified |
 | 5.1 | Auto-update decision + implementation | 5 | M | — |
 | 5.2 | Code signing + notarization, both platforms | 5 | M | — |
 | 5.3 | Packaged-app validation + Electron E2E | 5 | M | — |
@@ -318,8 +318,10 @@ chose to land it **before beta** rather than beta-driven: slices 4.30–4.34.
 Order: 4.30 → 4.31 → (4.32 ∥ 4.33) → 4.34. The author's stated priority is a
 complete working app for their own use first and a product second, so
 4.23–4.34 all precede 6.1; release engineering (5.x) may interleave. The
-project consultation budget model is settled by 4.39, which runs before
-4.33 and 4.38 because both spend against it.
+project consultation budget model was settled by 4.39 (done), which unblocks
+4.33 and 4.38; both spend against it and must use `useConsultationBudget` with
+their own feature id (`canvas-brainstorm`, `canon-check`) rather than adding a
+counter of their own.
 The same day the author scheduled the Corkboard ↔ scenes proposal
 ([`corkboard-scenes-plan.md`](corkboard-scenes-plan.md)) as 4.35–4.37,
 pre-beta, after 4.30–4.31 so both planning surfaces share chip and link
