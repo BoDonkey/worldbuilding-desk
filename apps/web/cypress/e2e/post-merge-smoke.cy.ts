@@ -139,16 +139,6 @@ function openAssistantAndAssertSelectedTool(
     );
 }
 
-function ensureSettingsSectionOpen(sectionTitle: string): void {
-  cy.contains('summary', sectionTitle)
-    .closest('details')
-    .then(($details) => {
-      if (!$details.attr('open')) {
-        cy.wrap($details).find('summary').click();
-      }
-    });
-}
-
 function openScenesDrawer(): void {
   cy.contains('button', /^Scenes$/).first().click();
 }
@@ -635,8 +625,8 @@ describe('Post-merge smoke checklist', () => {
 
   it('keeps mode defaults isolated and applies them in the assistant', () => {
     cy.visit('/settings');
-    ensureSettingsSectionOpen('AI Settings');
-    ensureSettingsSectionOpen('Project Mode');
+    cy.ensureSettingsSectionOpen('AI Settings');
+    cy.ensureSettingsSectionOpen('Project Mode');
 
     addPromptTool(TOOL_NAMES.litrpg, 'Prioritize LitRPG progression, stats, and systems coherence.');
     addPromptTool(TOOL_NAMES.game, 'Prioritize gameplay loops, balance pressure, and tuning clarity.');
@@ -693,7 +683,7 @@ describe('Post-merge smoke checklist', () => {
 
   it('runs ollama diagnostics and applies a detected local model', () => {
     cy.visit('/settings');
-    ensureSettingsSectionOpen('AI Settings');
+    cy.ensureSettingsSectionOpen('AI Settings');
 
     cy.window().then((win) => {
       const originalFetch = win.fetch.bind(win);
@@ -924,7 +914,7 @@ describe('Post-merge smoke checklist', () => {
 
   it('round-trips tool pack with replace and append without breaking defaults', () => {
     cy.visit('/settings');
-    ensureSettingsSectionOpen('AI Settings');
+    cy.ensureSettingsSectionOpen('AI Settings');
 
     addPromptTool(TOOL_NAMES.litrpg, 'LitRPG default tool');
     addPromptTool(TOOL_NAMES.game, 'Game default tool');
@@ -1019,7 +1009,7 @@ describe('Post-merge smoke checklist', () => {
 
   it('inserts rendered character status blocks into the scene editor', () => {
     cy.visit('/settings');
-    ensureSettingsSectionOpen('Project Mode');
+    cy.ensureSettingsSectionOpen('Project Mode');
     setProjectMode('general');
     cy.visit('/workspace');
 
@@ -1043,7 +1033,7 @@ describe('Post-merge smoke checklist', () => {
 
   it('inserts template tokens and refreshes them into live stat blocks', () => {
     cy.visit('/settings');
-    ensureSettingsSectionOpen('Project Mode');
+    cy.ensureSettingsSectionOpen('Project Mode');
     setProjectMode('general');
     cy.visit('/workspace');
 

@@ -339,11 +339,23 @@ Cypress.Commands.add('seedSmokeProjectData', () => {
   });
 });
 
+Cypress.Commands.add('ensureSettingsSectionOpen', (sectionTitle: string) => {
+  cy.contains('summary', sectionTitle)
+    .closest('details')
+    .then(($details) => {
+      if (!$details.attr('open')) {
+        cy.wrap($details).find('summary').click();
+      }
+    });
+});
+
 declare global {
   namespace Cypress {
     interface Chainable {
       // Creates one active project with 3 scenes and baseline settings in IndexedDB.
       seedSmokeProjectData(): Chainable<void>;
+      // Expands a collapsed <details> section on the Settings page; a no-op when already open.
+      ensureSettingsSectionOpen(sectionTitle: string): Chainable<void>;
     }
   }
 }

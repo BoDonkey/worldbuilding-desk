@@ -42,7 +42,10 @@ function setSeededProjectToGeneralFiction(): Cypress.Chainable<void> {
   );
 }
 
-function putRecords(storeName: string, records: Array<{id: string}>): Cypress.Chainable<void> {
+function putRecords<T extends {id: string}>(
+  storeName: string,
+  records: T[]
+): Cypress.Chainable<void> {
   return cy.window().then(
     (win) =>
       new Cypress.Promise<void>((resolve, reject) => {

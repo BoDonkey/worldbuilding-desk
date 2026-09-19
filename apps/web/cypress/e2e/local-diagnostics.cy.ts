@@ -1,13 +1,3 @@
-function ensureSettingsSectionOpen(sectionTitle: string): void {
-  cy.contains('summary', sectionTitle)
-    .closest('details')
-    .then(($details) => {
-      if (!$details.attr('open')) {
-        cy.wrap($details).find('summary').click();
-      }
-    });
-}
-
 describe('Local-only diagnostics', () => {
   beforeEach(() => {
     cy.viewport(1400, 1000);
@@ -15,7 +5,7 @@ describe('Local-only diagnostics', () => {
     cy.seedSmokeProjectData();
     cy.reload();
     cy.visit('/settings');
-    ensureSettingsSectionOpen('Diagnostics');
+    cy.ensureSettingsSectionOpen('Diagnostics');
   });
 
   it('starts empty and explains that nothing is sent automatically', () => {
@@ -42,7 +32,7 @@ describe('Local-only diagnostics', () => {
       );
     });
     cy.reload();
-    ensureSettingsSectionOpen('Diagnostics');
+    cy.ensureSettingsSectionOpen('Diagnostics');
 
     cy.contains('Provider key').should('be.visible');
     cy.contains('OpenAI API error: Unauthorized').should('be.visible');

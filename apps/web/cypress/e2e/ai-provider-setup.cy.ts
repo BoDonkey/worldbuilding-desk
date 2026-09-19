@@ -1,13 +1,3 @@
-function ensureSettingsSectionOpen(sectionTitle: string): void {
-  cy.contains('summary', sectionTitle)
-    .closest('details')
-    .then(($details) => {
-      if (!$details.attr('open')) {
-        cy.wrap($details).find('summary').click();
-      }
-    });
-}
-
 describe('AI provider setup UX', () => {
   beforeEach(() => {
     cy.viewport(1400, 1000);
@@ -15,7 +5,7 @@ describe('AI provider setup UX', () => {
     cy.seedSmokeProjectData();
     cy.reload();
     cy.visit('/settings');
-    ensureSettingsSectionOpen('AI Settings');
+    cy.ensureSettingsSectionOpen('AI Settings');
   });
 
   it('shows only the selected provider\'s key field and states the on-device / hosted data-flow disclosure', () => {

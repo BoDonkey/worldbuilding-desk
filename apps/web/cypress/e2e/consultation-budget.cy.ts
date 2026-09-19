@@ -144,6 +144,8 @@ describe('AI consultation budget', () => {
       local: 2
     });
     cy.visit('/settings');
+    cy.ensureSettingsSectionOpen('AI Settings');
+    cy.contains('button', 'Show advanced settings').click();
 
     cy.contains('label', 'Max consultations per day')
       .closest('div')
