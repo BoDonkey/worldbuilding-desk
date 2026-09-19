@@ -214,13 +214,16 @@ describe('World Canvas', () => {
   });
 
   describe('brainstorming', () => {
-    const ANTHROPIC_MESSAGES = 'https://api.anthropic.com/v1/messages';
+    // The web build streams Anthropic through the local proxy, not api.anthropic.com directly.
+    const ANTHROPIC_STREAM = 'http://localhost:3001/api/anthropic/stream';
     const anthropicReply = (text: string) => ({
-      id: 'msg-cypress',
-      type: 'message',
-      role: 'assistant',
-      content: [{type: 'text', text}],
-      usage: {input_tokens: 10, output_tokens: 10}
+      statusCode: 200,
+      headers: {'content-type': 'text/event-stream'},
+      body: [
+        `data: ${JSON.stringify({type: 'content_block_delta', delta: {type: 'text_delta', text}})}`,
+        'data: [DONE]',
+        ''
+      ].join('\n\n')
     });
 
     const openFactionsLens = () => {
@@ -238,7 +241,8 @@ describe('World Canvas', () => {
     };
 
     it('explains the missing provider and links to Settings without sending anything', () => {
-      cy.intercept('POST', ANTHROPIC_MESSAGES, cy.spy().as('providerRequest'));
+      cy.intercept('POST', ANTHROPIC_STREAM, cy.spy().as('providerRequest'));
+      cy.intercept('POST', 'https://api.anthropic.com/v1/messages', cy.spy().as('directRequest'));
       openFactionsLens();
 
       cy.contains('section', 'Brainstorm: Factions and institutions').within(() => {
@@ -247,20 +251,18 @@ describe('World Canvas', () => {
         cy.contains('button', 'Ask for tensions and questions').should('be.disabled');
       });
       cy.get('@providerRequest').should('not.have.been.called');
+      cy.get('@directRequest').should('not.have.been.called');
     });
 
     it('asks once, then keeps, adds, and dismisses ideas one at a time', () => {
       cy.window().then((win) => win.localStorage.setItem('anthropic_api_key', 'cypress-test-key'));
-      cy.intercept('POST', ANTHROPIC_MESSAGES, {
-        statusCode: 200,
-        body: anthropicReply(JSON.stringify({
-          items: [
-            {kind: 'tension', text: 'The Compact profits when travelers forget the toll.'},
-            {kind: 'question', text: 'Who audits the memories the Compact collects?'},
-            {kind: 'alternative', text: 'What if the river, not the Compact, sets the price?'}
-          ]
-        }))
-      }).as('brainstorm');
+      cy.intercept('POST', ANTHROPIC_STREAM, anthropicReply(JSON.stringify({
+        items: [
+          {kind: 'tension', text: 'The Compact profits when travelers forget the toll.'},
+          {kind: 'question', text: 'Who audits the memories the Compact collects?'},
+          {kind: 'alternative', text: 'What if the river, not the Compact, sets the price?'}
+        ]
+      }))).as('brainstorm');
       openFactionsLens();
 
       cy.contains('section', 'Brainstorm: Factions and institutions').within(() => {
@@ -319,12 +321,86 @@ describe('World Canvas', () => {
       );
     });
 
+    describe('on a local model', () => {
+      const OLLAMA_CHAT = 'http://localhost:11434/api/chat';
+      // Ollama streams newline-delimited JSON: thinking fragments first, then the answer.
+      const ndjson = (thinking: string[], answer: string) => [
+        ...thinking.map((text) => JSON.stringify({message: {role: 'assistant', content: '', thinking: text}})),
+        JSON.stringify({message: {role: 'assistant', content: answer}}),
+        JSON.stringify({done: true, done_reason: 'stop'})
+      ].join('\n');
+
+      const openLocalFactionsLens = () => {
+        cy.visit('/world-bible');
+        cy.contains('h1', 'World Bible').should('be.visible');
+        cy.setSeededProjectProvider('ollama');
+        cy.window().then(seedCanvasReturnExperience);
+        cy.reload();
+        cy.contains('button', 'World Canvas').click();
+        cy.contains('article', 'Factions and institutions').within(() => {
+          cy.contains('button', 'Open lens').click();
+        });
+      };
+
+      it('streams with no response cap and shows the thinking apart from the answer', () => {
+        cy.intercept('POST', OLLAMA_CHAT, {
+          statusCode: 200,
+          headers: {'content-type': 'application/x-ndjson'},
+          body: ndjson(
+            ['The author wants tensions', ' about the Compact.'],
+            JSON.stringify({items: [{kind: 'question', text: 'Who audits the Compact?'}]})
+          )
+        }).as('localBrainstorm');
+        openLocalFactionsLens();
+
+        cy.contains('section', 'Brainstorm: Factions and institutions').within(() => {
+          cy.contains('Nothing leaves this computer').should('be.visible');
+          cy.contains('button', 'Ask for tensions and questions').click();
+        });
+        cy.wait('@localBrainstorm').then(({request}) => {
+          expect(request.body.stream).to.equal(true);
+          expect(request.body.options?.num_predict).to.equal(undefined);
+          expect(request.body).not.to.have.property('think');
+        });
+
+        cy.contains('section', 'Brainstorm: Factions and institutions').within(() => {
+          cy.contains('li', 'Who audits the Compact?').should('be.visible');
+          cy.contains(/^Finished in \d+:\d{2}\.$/).should('be.visible');
+          cy.contains('summary', 'Show thinking (7 words)').click();
+          cy.contains('The author wants tensions about the Compact.').should('be.visible');
+          cy.get('li').should('have.length', 1);
+        });
+      });
+
+      it('lets the author stop a slow run', () => {
+        cy.intercept('POST', OLLAMA_CHAT, {
+          statusCode: 200,
+          headers: {'content-type': 'application/x-ndjson'},
+          body: ndjson([], JSON.stringify({items: [{kind: 'question', text: 'Too late?'}]})),
+          delay: 15000
+        }).as('slowBrainstorm');
+        openLocalFactionsLens();
+
+        cy.contains('section', 'Brainstorm: Factions and institutions').within(() => {
+          cy.contains('button', 'Ask for tensions and questions').click();
+          cy.contains('[role="status"]', 'Waiting for the model…').should('be.visible');
+          cy.contains('button', 'Asking...').should('be.disabled');
+          cy.contains('button', 'Stop').click();
+          cy.contains(/^Stopped after 0:\d{2}\.$/).should('be.visible');
+          cy.contains('[role="alert"]', 'Stopped before the model finished').should('be.visible');
+          cy.contains('button', 'Ask for tensions and questions').should('be.enabled');
+          cy.contains('Too late?').should('not.exist');
+        });
+      });
+    });
+
     it('shows the fallback message for a malformed reply and adds nothing', () => {
       cy.window().then((win) => win.localStorage.setItem('anthropic_api_key', 'cypress-test-key'));
-      cy.intercept('POST', ANTHROPIC_MESSAGES, {
-        statusCode: 200,
-        body: anthropicReply('Here are some thoughts about the Compact and its tolls.')
-      }).as('brainstorm');
+      cy.intercept(
+        'POST',
+        ANTHROPIC_STREAM,
+        anthropicReply('Here are some thoughts about the Compact and its tolls.')
+      ).as('brainstorm');
       openFactionsLens();
 
       cy.contains('section', 'Brainstorm: Factions and institutions').within(() => {

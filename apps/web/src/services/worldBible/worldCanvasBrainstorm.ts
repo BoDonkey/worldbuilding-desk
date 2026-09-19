@@ -1,5 +1,6 @@
 import {z} from 'zod';
 import type {
+  AIProviderId,
   WorldCanvasDocument,
   WorldCanvasLensKind,
   WorldEntity
@@ -23,7 +24,7 @@ export const BRAINSTORM_MAX_CANON_NAMES = 80;
 /**
  * A full list (12 items of up to 280 characters, plus JSON) needs roughly 900 tokens. The
  * inspector's response limit defaults to 500 for short consultations, which would cut a list off
- * mid-reply, so brainstorming never asks for less than this.
+ * mid-reply, so a hosted brainstorm never asks for less than this. Local runs send no cap (4.40).
  */
 export const BRAINSTORM_MIN_RESPONSE_TOKENS = 1500;
 const MAX_FOCUS_CHARS = 4000;
@@ -64,6 +65,8 @@ export const BRAINSTORM_INVALID_RESPONSE_MESSAGE =
 export const BRAINSTORM_EMPTY_RESPONSE_MESSAGE =
   'The model returned an empty reply, so nothing was added. It may have run out of response length before answering; try again, or raise the response length in Settings.';
 
+export const BRAINSTORM_STOPPED_MESSAGE = 'Stopped before the model finished, so nothing was added.';
+
 /** Carries the raw reply so the author can see what the model actually sent. */
 export class WorldCanvasBrainstormResponseError extends Error {
   readonly reply: string;
@@ -75,8 +78,11 @@ export class WorldCanvasBrainstormResponseError extends Error {
   }
 }
 
-export const brainstormResponseTokens = (configured: number | undefined): number =>
-  Math.max(configured ?? 0, BRAINSTORM_MIN_RESPONSE_TOKENS);
+export const brainstormResponseTokens = (
+  provider: AIProviderId | undefined,
+  configured: number | undefined
+): number | undefined =>
+  provider === 'ollama' ? undefined : Math.max(configured ?? 0, BRAINSTORM_MIN_RESPONSE_TOKENS);
 
 export const describeBrainstormFocus = (focus: WorldCanvasBrainstormFocus): string =>
   focus.type === 'premise'

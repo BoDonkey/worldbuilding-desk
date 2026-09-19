@@ -14,14 +14,14 @@ import {createEmptyWorldCanvas, updateLensNote} from '../../services/worldBible/
 import {WorldCanvasBrainstorm} from './WorldCanvasBrainstorm';
 
 const mocks = vi.hoisted(() => ({
-  complete: vi.fn()
+  stream: vi.fn()
 }));
 
 vi.mock('../../services/llm/LLMService', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../../services/llm/LLMService')>();
   return {
     LLMService: class extends actual.LLMService {
-      complete = mocks.complete;
+      stream = mocks.stream;
     }
   };
 });
@@ -73,12 +73,19 @@ const renderBrainstorm = (props: Partial<Parameters<typeof WorldCanvasBrainstorm
   return {...handlers, budget};
 };
 
-const reply = (items: Array<{kind: string; text: string}>) => ({content: JSON.stringify({items})});
+/** Streams a reply the way Ollama does: thinking fragments first, then the answer. */
+const respondWith = (answer: string, thinking: string[] = []) => {
+  mocks.stream.mockImplementation(async function* () {
+    for (const fragment of thinking) yield `<think>${fragment}</think>`;
+    if (answer) yield answer;
+  });
+};
+const reply = (items: Array<{kind: string; text: string}>) => JSON.stringify({items});
 
 describe('WorldCanvasBrainstorm', () => {
   beforeEach(() => {
     resetWorldCanvasBrainstormSession();
-    mocks.complete.mockReset();
+    mocks.stream.mockReset();
   });
 
   afterEach(() => {
@@ -93,7 +100,7 @@ describe('WorldCanvasBrainstorm', () => {
     const button = screen.getByRole('button', {name: 'Ask for tensions and questions'});
     expect(button).toBeDisabled();
     fireEvent.click(button);
-    expect(mocks.complete).not.toHaveBeenCalled();
+    expect(mocks.stream).not.toHaveBeenCalled();
   });
 
   it('treats a hosted provider with no API key as not configured', () => {
@@ -104,7 +111,7 @@ describe('WorldCanvasBrainstorm', () => {
   });
 
   it('names the provider before the first request and spends one consultation per click', async () => {
-    mocks.complete.mockResolvedValue(reply([
+    respondWith(reply([
       {kind: 'tension', text: 'The Compact needs the city to forget.'},
       {kind: 'question', text: 'Who remembers the founders?'}
     ]));
@@ -118,10 +125,9 @@ describe('WorldCanvasBrainstorm', () => {
     expect(await screen.findByText('The Compact needs the city to forget.')).toBeInTheDocument();
     expect(budget.spend).toHaveBeenCalledTimes(1);
     expect(budget.spend).toHaveBeenCalledWith('canvas-brainstorm');
-    expect(mocks.complete).toHaveBeenCalledTimes(1);
-    expect(mocks.complete.mock.calls[0][0]).toMatchObject({
+    expect(mocks.stream).toHaveBeenCalledTimes(1);
+    expect(mocks.stream.mock.calls[0][0]).toMatchObject({
       responseFormat: 'json',
-      think: false,
       cache: false,
       maxTokens: BRAINSTORM_MIN_RESPONSE_TOKENS
     });
@@ -129,7 +135,7 @@ describe('WorldCanvasBrainstorm', () => {
   });
 
   it('keeps, adds, and dismisses items one at a time', async () => {
-    mocks.complete.mockResolvedValue(reply([
+    respondWith(reply([
       {kind: 'tension', text: 'The Compact needs the city to forget.'},
       {kind: 'question', text: 'Who remembers the founders?'},
       {kind: 'alternative', text: 'What if the memories are sold, not borrowed?'}
@@ -161,7 +167,7 @@ describe('WorldCanvasBrainstorm', () => {
   });
 
   it('adds a non-question item as a question only after the author rewrites it', async () => {
-    mocks.complete.mockResolvedValue(reply([
+    respondWith(reply([
       {kind: 'implication', text: 'Forgetting spreads faster in the harbor.'}
     ]));
     const {onAddQuestion} = renderBrainstorm();
@@ -184,7 +190,7 @@ describe('WorldCanvasBrainstorm', () => {
   });
 
   it('shows the fallback message for a malformed reply and changes nothing else', async () => {
-    mocks.complete.mockResolvedValue({content: 'Here are some ideas about the Compact.'});
+    respondWith('Here are some ideas about the Compact.');
     const {onKeepAsSourceNote, onAddQuestion} = renderBrainstorm();
     fireEvent.click(screen.getByRole('button', {name: 'Ask for tensions and questions'}));
 
@@ -205,12 +211,12 @@ describe('WorldCanvasBrainstorm', () => {
     fireEvent.click(screen.getByRole('button', {name: 'Ask for tensions and questions'}));
 
     expect(screen.getByRole('alert')).toHaveTextContent('You have used all 20 AI consultations');
-    expect(mocks.complete).not.toHaveBeenCalled();
+    expect(mocks.stream).not.toHaveBeenCalled();
     expect(budget.spend).not.toHaveBeenCalled();
   });
 
   it('confirms before a new request replaces unreviewed ideas', async () => {
-    mocks.complete.mockResolvedValue(reply([{kind: 'tension', text: 'The Compact needs the city to forget.'}]));
+    respondWith(reply([{kind: 'tension', text: 'The Compact needs the city to forget.'}]));
     const {requestConfirm} = renderBrainstorm();
     fireEvent.click(screen.getByRole('button', {name: 'Ask for tensions and questions'}));
     await screen.findByText('The Compact needs the city to forget.');
@@ -219,15 +225,32 @@ describe('WorldCanvasBrainstorm', () => {
     expect(requestConfirm).toHaveBeenCalledWith(expect.objectContaining({
       title: 'Replace unreviewed ideas?'
     }));
-    expect(mocks.complete).toHaveBeenCalledTimes(1);
+    expect(mocks.stream).toHaveBeenCalledTimes(1);
   });
 
   it('explains an empty reply instead of calling it unreadable', async () => {
-    mocks.complete.mockResolvedValue({content: ''});
+    respondWith('');
     renderBrainstorm();
     fireEvent.click(screen.getByRole('button', {name: 'Ask for tensions and questions'}));
 
     expect(await screen.findByRole('alert')).toHaveTextContent(BRAINSTORM_EMPTY_RESPONSE_MESSAGE);
     expect(screen.queryByText('Show the model’s reply')).not.toBeInTheDocument();
+  });
+
+  it('sends no cap to a local model and parses only the answer, not the thinking', async () => {
+    respondWith(
+      reply([{kind: 'question', text: 'Who keeps the shrine of forgotten names?'}]),
+      ['The author wants {"items": ideas}.', ' Keep it short.']
+    );
+    renderBrainstorm({
+      aiConfig: {provider: 'ollama', configs: {ollama: {model: 'qwen3'}}} as ProjectAISettings,
+      budget: buildBudget({isLocal: true})
+    });
+    fireEvent.click(screen.getByRole('button', {name: 'Ask for tensions and questions'}));
+
+    expect(await screen.findByText('Who keeps the shrine of forgotten names?')).toBeInTheDocument();
+    expect(mocks.stream.mock.calls[0][0]).not.toHaveProperty('maxTokens', expect.anything());
+    expect(mocks.stream.mock.calls[0][0].think).toBeUndefined();
+    expect(screen.getByText('Show thinking (8 words)')).toBeInTheDocument();
   });
 });

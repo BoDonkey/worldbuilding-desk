@@ -248,6 +248,8 @@ and required revisit point, `WIP`, `Done <commit>`.
 | 4.37 | Corkboard scene links — chapter-card context line in Workspace (CB-3) | 4 | S | — after 4.35; may defer if beta time is tight |
 | 4.38 | Model-assisted canon check (author-triggered, via 1.5) | 4 | M | — after 4.24 and 4.39; proposes contradictions with validated evidence spans into the review queue; never applies |
 | 4.39 | AI consultation budget model + point-of-use explanation | 4 | M | Done `ac84793` — (a) guards runaway loops and surprise spend, never rations deliberate work; (b) one per-project budget with a per-feature record; (c) **author signed off: local Ollama is exempt**, with a separate 200/day runaway guard; (d) every spending action states cost and remainder beside its own button, and an over-budget author adds units for today in place rather than going to Settings. Day boundary moved from UTC to the author's local midnight. Storage moved from per-project-per-day `localStorage` keys (never cleaned up) to one `inspectorBudget:<projectId>` ledger, migrating today's legacy count and sweeping the stale keys. Settings gains the reset time and today's per-feature breakdown. Lint with 1 baseline warning; 611 web (+26) + 6 engine + 12 UI tests; web/desktop builds. Cypress run locally: `cypress/e2e/consultation-budget.cy.ts` (4 specs: point-of-use display, over-budget + in-place grant, local exemption, Settings breakdown) passes after a spec fix to open the collapsed AI Settings section and advanced settings; full suite otherwise green |
+| 4.40 | Local model runs: no response cap, visible thinking, elapsed time, Stop | 4 | L | WIP — author-requested 2026-09-19 after 4.33 brainstorming failed on local qwen3 models (thinking consumed the 500-token cap, empty reply) |
+| 4.41 | Hosted response limits as a cost ceiling (plan, then build) | 4 | M | — after 4.40; planning note first: per-provider thinking policy, cut-off detection, worst-case cost per request |
 | 5.1 | Auto-update decision + implementation | 5 | M | — |
 | 5.2 | Code signing + notarization, both platforms | 5 | M | — |
 | 5.3 | Packaged-app validation + Electron E2E | 5 | M | — |
@@ -1012,6 +1014,41 @@ required by any slice below.
   boundaries, and the Ollama exemption; Cypress for the point-of-use display
   and the over-budget path; no new persistence beyond the existing
   `localStorage` key (document any key change and its migration).
+- **4.40 Local model runs: no response cap, visible thinking, elapsed time,
+  Stop.** Author-requested on 2026-09-19. Local (Ollama) models are slow on
+  large models and many think before answering; the inspector's response cap
+  (default 500 tokens, sent as `num_predict`) protects nothing locally and let
+  thinking consume the whole reply, and nothing in the UI distinguishes a slow
+  model from a hung one. For local providers only: send no response-token cap
+  and leave thinking at the model's default instead of forcing it off. Every
+  author-triggered model call (writing assistant and the context actions that
+  route through it, writing coach, progression continuity, canon-decision
+  consultation, World Canvas brainstorming) streams through one shared run
+  helper that separates thinking from the answer, and one shared progress
+  component that shows the phase (thinking / writing), elapsed time, the
+  thinking text live in a collapsible area, and a **Stop** button that aborts
+  the request. After a run the thinking stays available behind "Show
+  thinking" for the latest reply only; it is never persisted, indexed, or
+  sent back to the model. Answers never include thinking text (today coach,
+  progression continuity, and canon decisions would show raw `<think>` tags).
+  Hosted providers keep today's cap and behavior; that is 4.41. The Local AI
+  review engine keeps its own timeout and bounded cap (it runs as part of
+  review, not as a watched request). Unit tests for thinking/answer
+  separation (per-chunk `<think>` wrappers, unclosed and leading-close forms)
+  and the cap resolution; component tests for phase, elapsed time, Stop, and
+  "Show thinking"; Cypress for a streamed local run with thinking and Stop.
+- **4.41 Hosted response limits as a cost ceiling.** Plan first, then build.
+  For hosted providers the response cap is the only per-request spend limit,
+  and thinking tokens bill as output. Today no request enables provider
+  thinking, the app never detects a reply cut off at the cap (Anthropic
+  `stop_reason`, OpenAI/Gemini `finish_reason`), OpenAI reasoning models
+  expect `max_completion_tokens` rather than `max_tokens`, and Gemini 2.5
+  models think by default against `maxOutputTokens`. Produce a short planning
+  note settling: the cap as a stated cost ceiling (worst-case cost per request
+  for the chosen model, from a maintained price table), a per-provider
+  thinking policy and allowance, cut-off detection with a plain-language
+  message, and whether per-feature caps are needed. Then implement the
+  accepted plan.
 - **4.25 Persisted, incremental project review.** Persist the last project
   review per project through a service (no new direct persistence path; a
   project-scoped store following the `consistencyStorage.ts` pattern, or the

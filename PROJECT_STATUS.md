@@ -127,6 +127,18 @@ Under the hood, the app still includes rich systems for world data, rules, chara
   navigation, and prompt before a reload or window close; nothing else persists
   and nothing is written to canon. With no usable provider, the control
   explains why and links to Settings without sending a request.
+- Author-triggered model runs (writing assistant and its context actions,
+  writing coach in both places, progression continuity, canon-decision
+  consultation, World Canvas brainstorming) now stream through one shared run
+  that shows the phase (waiting / thinking / writing the answer), elapsed
+  time, the model's thinking live in a collapsible area, and a **Stop** button
+  that aborts the request, including in the desktop app, where the main
+  process now cancels the provider request. After a run, "Show thinking"
+  keeps the latest reply's thinking readable; it is never saved, indexed,
+  parsed as output, or sent back to the model, and answers never contain
+  `<think>` text. Local (Ollama) runs send no response-token cap and no longer
+  force thinking off; hosted providers keep the configured cap (4.41 revisits
+  it as a cost ceiling).
 - Lore Documents are now framed as source-note intake rather than a parallel canon database, with manual writing, dossier import, and extraction paths kept separate from accepted canon.
 - World Bible records can create or open a linked Lore Document for longform source notes, and Lore Documents can navigate back to the linked World Bible record.
 - Lore Documents now has a project context health panel that shows RAG document/chunk counts, indexed document type counts, Shodh memory counts, project data counts, and a retrieval probe.
@@ -1072,6 +1084,13 @@ runtime schema, and nothing here changes the roadmap's status board.
 - Zustand workspace UI integration has been smoke-checked manually for Corkboard and Scratchpad memory saving, and the latest focused unit/build passes cover workspace store behavior plus document initialization/save helper behavior.
 
 ### Current Verification Notes
+- Local model runs (4.40): lint with the single existing hook warning, 655
+  web unit tests, 6 rules-engine tests, 12 rules-ui tests, web and desktop
+  builds; full 93-test Cypress suite, where `world-canvas.cy.ts` adds a streamed local run with thinking and no
+  cap, and Stop during a slow run. Checked against the installed local models
+  through the app's Ollama streaming path with no cap: qwen3.8 thought for
+  about 4 minutes (first thinking text at 16 s) and returned 10 valid ideas in
+  5 min 5 s; writer (26.9B) returned 10 in 6 min 34 s.
 - World Canvas WC-4 (brainstorming) passes lint with the single existing hook
   warning, 635 web unit tests, 6 rules-engine tests, 12 rules-ui tests, web and
   desktop builds, and the full 91-test Cypress suite. `world-canvas.cy.ts` covers

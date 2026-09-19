@@ -147,6 +147,12 @@
   margin-top: 0.25rem;
 }
 
+.runProgress {
+  padding: 0.6rem 1rem;
+  border-top: 1px solid var(--color-border);
+  background: var(--color-bg-primary);
+}
+
 .inputArea {
   min-width: 0;
   border-top: 1px solid var(--color-border);

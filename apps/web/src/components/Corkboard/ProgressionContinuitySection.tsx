@@ -13,6 +13,9 @@ import {
   restoreAllDismissedProgressionContinuityCandidates
 } from '../../services/progressionContinuity/progressionContinuityReviewPrefs';
 import {LLMService} from '../../services/llm/LLMService';
+import {resolveResponseTokenLimit} from '../../services/llm/modelRun';
+import {useModelRun} from '../../hooks/useModelRun';
+import {ModelRunProgress} from '../common/ModelRunProgress';
 import {useConsultationBudget} from '../../hooks/useConsultationBudget';
 import {ConsultationBudgetNotice} from '../common/ConsultationBudgetNotice';
 import {SourceScenes} from './StoryDashboard';
@@ -52,6 +55,9 @@ export function ProgressionContinuitySection({
 }: ProgressionContinuitySectionProps) {
   const [dismissedKeys, setDismissedKeys] = useState(() => getDismissedProgressionContinuityKeys(projectId));
   const [consultationByKey, setConsultationByKey] = useState<Record<string, ConsultationState>>({});
+  const modelRun = useModelRun();
+  /** The candidate whose run the progress line describes (the latest one asked about). */
+  const [runKey, setRunKey] = useState<string | null>(null);
 
   const documentsById = useMemo(() => new Map(documents.map((document) => [document.id, document])), [documents]);
   const visibleCandidates = candidates.filter((candidate) => !dismissedKeys.has(candidate.key));
@@ -96,6 +102,7 @@ export function ProgressionContinuitySection({
     }
 
     setConsultationByKey((prev) => ({...prev, [candidate.key]: {status: 'loading'}}));
+    setRunKey(candidate.key);
 
     try {
       const evidence = candidate.sourceSceneIds.flatMap((sceneId) => {
@@ -113,15 +120,12 @@ export function ProgressionContinuitySection({
       const service = new LLMService(aiConfig);
       budget.spend('progression-continuity');
 
-      let content = '';
-      for await (const chunk of service.stream({
+      const {answer: content} = await modelRun.run(service, {
         messages: [{role: 'user', content: userPrompt}],
         systemPrompt,
         model: inspector?.lowCostModel?.trim() || undefined,
-        maxTokens: inspector?.maxResponseTokens
-      })) {
-        content += chunk;
-      }
+        maxTokens: resolveResponseTokenLimit(aiConfig.provider, inspector?.maxResponseTokens)
+      });
 
       const verdict = parseProgressionContinuityVerdict(content) ?? undefined;
       setConsultationByKey((prev) => ({...prev, [candidate.key]: {status: 'ready', content, verdict}}));
@@ -205,11 +209,13 @@ export function ProgressionContinuitySection({
                   )}
                 </div>
 
+                {runKey === candidate.key && <ModelRunProgress run={modelRun} />}
+
                 <div className={styles.actionRow}>
                   <button
                     type='button'
                     onClick={() => void consult(candidate)}
-                    disabled={consultation?.status === 'loading' || !consultationEnabled}
+                    disabled={consultation?.status === 'loading' || modelRun.isRunning || !consultationEnabled}
                   >
                     {consultation?.status === 'loading' ? 'Asking...' : 'Ask about this'}
                   </button>

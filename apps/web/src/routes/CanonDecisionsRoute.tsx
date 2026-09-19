@@ -67,8 +67,10 @@ import {ProjectScratchpadButton} from '../components/ProjectScratchpadButton';
 import {PageHeader} from '../components/PageHeader';
 import styles from '../styles/CanonDecisionsRoute.module.css';
 import {describeError} from '../services/errors';
-import {ConsultationBudgetNotice, RouteFeedback} from '../components/common';
+import {ConsultationBudgetNotice, ModelRunProgress, RouteFeedback} from '../components/common';
 import {useConsultationBudget} from '../hooks/useConsultationBudget';
+import {useModelRun} from '../hooks/useModelRun';
+import {resolveResponseTokenLimit} from '../services/llm/modelRun';
 
 const PROVIDER_LABELS = {
   anthropic: 'Claude',
@@ -94,6 +96,9 @@ function CanonDecisionsRoute() {
   const [ragService, setRagService] = useState<RAGProvider | null>(null);
   const [actingClusterId, setActingClusterId] = useState<string | null>(null);
   const [consultingClusterId, setConsultingClusterId] = useState<string | null>(null);
+  const modelRun = useModelRun();
+  /** The cluster whose run the progress line describes (the latest one consulted). */
+  const [runClusterId, setRunClusterId] = useState<string | null>(null);
   const [consultationByClusterId, setConsultationByClusterId] = useState<
     Record<string, {content?: string; error?: string}>
   >({});
@@ -649,6 +654,7 @@ function CanonDecisionsRoute() {
     });
 
     setConsultingClusterId(cluster.id);
+    setRunClusterId(cluster.id);
     setConsultationByClusterId((prev) => ({
       ...prev,
       [cluster.id]: {content: ''}
@@ -680,20 +686,25 @@ function CanonDecisionsRoute() {
           }))
         : [];
 
-      let content = '';
-      for await (const chunkText of service.stream({
-        messages: [{role: 'user', content: userPrompt}],
-        systemPrompt,
-        context: ragChunks,
-        model: projectSettings.aiSettings.inspectorSettings?.lowCostModel?.trim() || undefined,
-        maxTokens: projectSettings.aiSettings.inspectorSettings?.maxResponseTokens
-      })) {
-        content += chunkText;
-        setConsultationByClusterId((prev) => ({
-          ...prev,
-          [cluster.id]: {content}
-        }));
-      }
+      await modelRun.run(
+        service,
+        {
+          messages: [{role: 'user', content: userPrompt}],
+          systemPrompt,
+          context: ragChunks,
+          model: projectSettings.aiSettings.inspectorSettings?.lowCostModel?.trim() || undefined,
+          maxTokens: resolveResponseTokenLimit(
+            aiSettingsForConsultation.provider,
+            projectSettings.aiSettings.inspectorSettings?.maxResponseTokens
+          )
+        },
+        ({answer}) => {
+          setConsultationByClusterId((prev) => ({
+            ...prev,
+            [cluster.id]: {content: answer}
+          }));
+        }
+      );
     } catch (error) {
       const message =
         describeError(error, 'AI consultation failed for this cluster.');
@@ -875,6 +886,8 @@ function CanonDecisionsRoute() {
                   )}
                 </div>
 
+                {runClusterId === cluster.id && <ModelRunProgress run={modelRun} />}
+
                 <div className={styles.actionRow}>
                   <button
                     type='button'
@@ -882,6 +895,7 @@ function CanonDecisionsRoute() {
                     disabled={
                       actingClusterId === cluster.id ||
                       consultingClusterId === cluster.id ||
+                      modelRun.isRunning ||
                       !projectSettings?.aiSettings ||
                       !aiConsultationEnabled
                     }

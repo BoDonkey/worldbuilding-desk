@@ -142,6 +142,10 @@ function validatePayload(payload: unknown): asserts payload is LLMPayload {
   }
 }
 
+/** In-flight streams by request id, so the renderer can stop one (a slow local model keeps
+ * generating otherwise, even after the window stops listening). */
+const activeStreams = new Map<string, AbortController>();
+
 export function setupAPIHandlers() {
   ipcMain.handle('llm:complete', async (_event, payload: LLMPayload) => {
     validatePayload(payload);
@@ -161,11 +165,14 @@ export function setupAPIHandlers() {
 
     const {apiKey, providerId, request, providerConfig, requestId = randomUUID()} = payload;
 
+    const controller = new AbortController();
+    activeStreams.set(requestId, controller);
     try {
       const adapter = createStreamingAdapter(providerId, {
         apiKey,
         baseUrl: providerConfig?.baseUrl,
-        request
+        request,
+        signal: controller.signal
       });
       const chunks: string[] = [];
 
@@ -180,6 +187,15 @@ export function setupAPIHandlers() {
       const message = error instanceof Error ? error.message : 'Unknown error';
       event.sender.send('llm:stream:error', {requestId, message});
       throw error;
+    } finally {
+      activeStreams.delete(requestId);
     }
+  });
+
+  ipcMain.handle('llm:stream:cancel', (_event, requestId: unknown) => {
+    if (typeof requestId !== 'string') return false;
+    const controller = activeStreams.get(requestId);
+    controller?.abort();
+    return Boolean(controller);
   });
 }

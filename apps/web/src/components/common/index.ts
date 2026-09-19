@@ -7,3 +7,5 @@ export {RouteFeedback} from './RouteFeedback';
 export type {RouteFeedbackProps, RouteFeedbackValue} from './RouteFeedback';
 export {ConsultationBudgetNotice} from './ConsultationBudgetNotice';
 export type {ConsultationBudgetNoticeProps} from './ConsultationBudgetNotice';
+export {ModelRunProgress} from './ModelRunProgress';
+export type {ModelRunProgressProps} from './ModelRunProgress';

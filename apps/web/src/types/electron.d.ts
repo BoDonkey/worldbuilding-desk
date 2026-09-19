@@ -18,6 +18,8 @@ declare global {
   interface ElectronAPI {
     llmComplete: (payload: unknown) => Promise<string>;
     llmStream: (payload: unknown) => Promise<string>;
+    /** Stops an in-flight stream in the main process. Older desktop builds lack it. */
+    llmCancelStream?: (requestId: string) => Promise<boolean>;
     onLLMChunk?: (callback: (payload: ElectronLLMChunkEvent) => void) => () => void;
     onLLMComplete?: (callback: (payload: ElectronLLMCompleteEvent) => void) => () => void;
     onLLMError?: (callback: (payload: ElectronLLMErrorEvent) => void) => () => void;

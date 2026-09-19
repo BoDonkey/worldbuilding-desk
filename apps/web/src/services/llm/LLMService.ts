@@ -76,8 +76,9 @@ export class LLMService {
 
   async *stream(request: LLMRequest): AsyncGenerator<string> {
     const normalizedRequest = this.applyProviderDefaults(request);
+    const useCache = request.cache !== false;
     const cacheKey = this.buildCacheKey(normalizedRequest);
-    const cached = llmCache.get(cacheKey);
+    const cached = useCache ? llmCache.get(cacheKey) : undefined;
     if (cached) {
       yield cached;
       return;
@@ -89,7 +90,7 @@ export class LLMService {
       yield chunk;
     }
 
-    if (buffer.length) {
+    if (useCache && buffer.length) {
       llmCache.set(cacheKey, buffer.join(''));
     }
   }
@@ -274,6 +275,9 @@ export class LLMService {
       fatalError = new DOMException('The operation was aborted.', 'AbortError');
       done = true;
       wake();
+      // Stop the provider request too, not just this listener: a local model would otherwise
+      // keep generating after the author pressed Stop.
+      void api.llmCancelStream?.(requestId);
     };
 
     if (request.signal?.aborted) {

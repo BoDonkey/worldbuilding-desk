@@ -9,11 +9,14 @@ import type {
 import {useAIProposalConfirmation} from '../../hooks/useAIProposalConfirmation';
 import type {ConfirmRequest} from '../../hooks/useConfirmDialog';
 import type {UseConsultationBudget} from '../../hooks/useConsultationBudget';
+import {useModelRun} from '../../hooks/useModelRun';
+import {ModelRunProgress} from '../common/ModelRunProgress';
 import {describeError} from '../../services/errors';
 import {LLMService} from '../../services/llm/LLMService';
 import {
   BRAINSTORM_INVALID_RESPONSE_MESSAGE,
   BRAINSTORM_ITEM_KIND_LABELS,
+  BRAINSTORM_STOPPED_MESSAGE,
   WorldCanvasBrainstormResponseError,
   brainstormFocusKey,
   brainstormResponseTokens,
@@ -75,7 +78,8 @@ export function WorldCanvasBrainstorm({
   const lensKind = focus.type === 'lens' ? focus.kind : undefined;
   const focusLabel = describeBrainstormFocus(focus);
   const [items, setItems] = useState<PendingBrainstormItem[]>(() => getPendingBrainstormItems(key));
-  const [status, setStatus] = useState<'idle' | 'loading'>('idle');
+  const modelRun = useModelRun();
+  const status = modelRun.isRunning ? 'loading' : 'idle';
   const [error, setError] = useState<string | null>(null);
   /** The unreadable reply, shown on request so the author can see what the model sent. */
   const [rejectedReply, setRejectedReply] = useState<string | null>(null);
@@ -135,7 +139,6 @@ export function WorldCanvasBrainstorm({
   };
 
   const runRequest = async (config: ProjectAISettings) => {
-    setStatus('loading');
     setError(null);
     setRejectedReply(null);
     markBrainstormDisclosed(projectId);
@@ -149,20 +152,22 @@ export function WorldCanvasBrainstorm({
       });
       const service = new LLMService(config);
       budget.spend('canvas-brainstorm');
-      const response = await service.complete({
+      const result = await modelRun.run(service, {
         messages: [{role: 'user', content: userPrompt}],
         systemPrompt,
         model: inspector?.lowCostModel?.trim() || undefined,
-        maxTokens: brainstormResponseTokens(inspector?.maxResponseTokens),
+        maxTokens: brainstormResponseTokens(config.provider, inspector?.maxResponseTokens),
         responseFormat: 'json',
-        // Brainstorming needs no reasoning pass; on Ollama a thinking model can otherwise spend
-        // the whole response allowance thinking and return an empty reply.
-        think: false,
         // Every click is a deliberate, paid-for request: a retry must reach the model rather than
         // replay an earlier (possibly unreadable) reply.
         cache: false
       });
-      const parsed = parseWorldCanvasBrainstormResponse(response.content);
+      if (result.stopped) {
+        setError(BRAINSTORM_STOPPED_MESSAGE);
+        return;
+      }
+      // Only the answer is parsed; the model's thinking is shown, never treated as output.
+      const parsed = parseWorldCanvasBrainstormResponse(result.answer);
       updateItems(
         parsed.map((item) => ({...item, id: crypto.randomUUID()})),
         parsed.map((item) => item.text)
@@ -174,8 +179,6 @@ export function WorldCanvasBrainstorm({
       setError(describeError(caught, BRAINSTORM_INVALID_RESPONSE_MESSAGE, {
         context: 'world-canvas-brainstorm'
       }));
-    } finally {
-      setStatus('idle');
     }
   };
 
@@ -226,6 +229,7 @@ export function WorldCanvasBrainstorm({
         </>
       )}
 
+      <ModelRunProgress run={modelRun} />
       {error && <p className={styles.error} role='alert'>{error}</p>}
       {rejectedReply && (
         <details className={styles.rejectedReply}>

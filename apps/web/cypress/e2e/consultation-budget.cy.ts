@@ -1,5 +1,3 @@
-import {DB_NAME, DB_VERSION} from '../../src/db';
-
 const PROJECT_ID = 'cypress-project-1';
 const LEDGER_KEY = `inspectorBudget:${PROJECT_ID}`;
 
@@ -31,43 +29,6 @@ function seedLedger(ledger: {
       })
     );
   });
-}
-
-function setSeededProjectProvider(provider: 'anthropic' | 'ollama'): Cypress.Chainable<void> {
-  return cy.window().then(
-    (win) =>
-      new Cypress.Promise<void>((resolve, reject) => {
-        const openRequest = win.indexedDB.open(DB_NAME, DB_VERSION);
-        openRequest.onerror = () => reject(openRequest.error);
-        openRequest.onsuccess = () => {
-          const db = openRequest.result;
-          const tx = db.transaction(['projectSettings'], 'readwrite');
-          const store = tx.objectStore('projectSettings');
-          const getRequest = store.get(`settings-${PROJECT_ID}`);
-
-          getRequest.onerror = () => reject(getRequest.error);
-          getRequest.onsuccess = () => {
-            const existing = getRequest.result;
-            store.put({
-              ...existing,
-              aiSettings: {...existing.aiSettings, provider}
-            });
-          };
-          tx.oncomplete = () => {
-            db.close();
-            resolve();
-          };
-          tx.onerror = () => {
-            db.close();
-            reject(tx.error);
-          };
-          tx.onabort = () => {
-            db.close();
-            reject(tx.error);
-          };
-        };
-      })
-  );
 }
 
 const openStoryDashboard = () => {
@@ -120,7 +81,7 @@ describe('AI consultation budget', () => {
   });
 
   it('exempts a local provider and says so at the point of use', () => {
-    setSeededProjectProvider('ollama');
+    cy.setSeededProjectProvider('ollama');
     seedLedger({total: 20, byFeature: {assistant: 20}, local: 4});
     cy.reload();
     openStoryDashboard();

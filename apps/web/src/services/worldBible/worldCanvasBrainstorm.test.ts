@@ -168,9 +168,13 @@ describe('parseWorldCanvasBrainstormResponse', () => {
 });
 
 describe('brainstormResponseTokens', () => {
-  it('never asks for less than a full list needs, but honors a larger setting', () => {
-    expect(brainstormResponseTokens(500)).toBe(BRAINSTORM_MIN_RESPONSE_TOKENS);
-    expect(brainstormResponseTokens(undefined)).toBe(BRAINSTORM_MIN_RESPONSE_TOKENS);
-    expect(brainstormResponseTokens(4000)).toBe(4000);
+  it('never asks a hosted model for less than a full list needs, but honors a larger setting', () => {
+    expect(brainstormResponseTokens('anthropic', 500)).toBe(BRAINSTORM_MIN_RESPONSE_TOKENS);
+    expect(brainstormResponseTokens('openai', undefined)).toBe(BRAINSTORM_MIN_RESPONSE_TOKENS);
+    expect(brainstormResponseTokens('gemini', 4000)).toBe(4000);
+  });
+
+  it('sends no cap to a local model', () => {
+    expect(brainstormResponseTokens('ollama', 500)).toBeUndefined();
   });
 });

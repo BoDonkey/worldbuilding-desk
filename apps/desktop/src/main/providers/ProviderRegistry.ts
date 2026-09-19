@@ -26,6 +26,8 @@ export interface ProviderConfig {
   apiKey?: string;
   baseUrl?: string;
   request: LLMRequestPayload;
+  /** Aborts the provider request, e.g. when the author presses Stop. */
+  signal?: AbortSignal;
 }
 
 export interface StreamingAdapter {
@@ -82,6 +84,7 @@ export class AnthropicStreamingAdapter implements StreamingAdapter {
     }
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
+      signal: this.config.signal,
       headers: {
         'Content-Type': 'application/json',
         'x-api-key': this.config.apiKey,
@@ -155,6 +158,7 @@ export class AnthropicCompletionAdapter implements CompletionAdapter {
     }
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
+      signal: this.config.signal,
       headers: {
         'Content-Type': 'application/json',
         'x-api-key': this.config.apiKey,
@@ -207,6 +211,7 @@ export class OpenAIStreamingAdapter implements StreamingAdapter {
     const baseUrl = (this.config.baseUrl ?? 'https://api.openai.com').replace(/\/$/, '');
     const response = await fetch(`${baseUrl}/v1/chat/completions`, {
       method: 'POST',
+      signal: this.config.signal,
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${this.config.apiKey}`
@@ -278,6 +283,7 @@ export class OpenAICompletionAdapter implements CompletionAdapter {
     const baseUrl = (this.config.baseUrl ?? 'https://api.openai.com').replace(/\/$/, '');
     const response = await fetch(`${baseUrl}/v1/chat/completions`, {
       method: 'POST',
+      signal: this.config.signal,
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${this.config.apiKey}`
@@ -311,6 +317,7 @@ export class OllamaStreamingAdapter implements StreamingAdapter {
     const baseUrl = (this.config.baseUrl ?? 'http://localhost:11434').replace(/\/$/, '');
     const response = await fetch(`${baseUrl}/api/chat`, {
       method: 'POST',
+      signal: this.config.signal,
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify(buildOllamaChatPayload(this.config, true))
     });
@@ -359,6 +366,7 @@ export class OllamaCompletionAdapter implements CompletionAdapter {
     const baseUrl = (this.config.baseUrl ?? 'http://localhost:11434').replace(/\/$/, '');
     const response = await fetch(`${baseUrl}/api/chat`, {
       method: 'POST',
+      signal: this.config.signal,
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify(buildOllamaChatPayload(this.config, false))
     });

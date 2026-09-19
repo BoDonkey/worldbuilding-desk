@@ -1,0 +1,64 @@
+.progress {
+  display: grid;
+  gap: 0.4rem;
+  font-size: var(--font-size-sm);
+  line-height: 1.4;
+  color: var(--color-text-secondary);
+}
+
+.statusRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.spinner {
+  width: 0.85rem;
+  height: 0.85rem;
+  border: 2px solid var(--surface-border-soft);
+  border-top-color: var(--color-text-secondary);
+  border-radius: 50%;
+  animation: model-run-spin 0.9s linear infinite;
+}
+
+.elapsed {
+  font-variant-numeric: tabular-nums;
+}
+
+.stopButton {
+  margin-left: auto;
+}
+
+.summary {
+  color: var(--color-text-secondary);
+}
+
+.thinking summary {
+  cursor: pointer;
+}
+
+.thinkingText {
+  max-height: 14rem;
+  margin-top: 0.35rem;
+  padding: 0.55rem 0.65rem;
+  overflow: auto;
+  border: 1px solid var(--surface-border-soft);
+  border-radius: 8px;
+  background: var(--surface-panel);
+  color: var(--color-text-secondary);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+@keyframes model-run-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spinner {
+    animation: none;
+  }
+}

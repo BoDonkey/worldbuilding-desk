@@ -7,6 +7,9 @@ import {
   summarizeStoryDashboardForCoach
 } from '../../services/coach/writingCoachConsultation';
 import {LLMService} from '../../services/llm/LLMService';
+import {resolveResponseTokenLimit} from '../../services/llm/modelRun';
+import {useModelRun} from '../../hooks/useModelRun';
+import {ModelRunProgress} from '../common/ModelRunProgress';
 import type {ProjectAISettings} from '../../entityTypes';
 import {useConsultationBudget} from '../../hooks/useConsultationBudget';
 import {ConsultationBudgetNotice} from '../common/ConsultationBudgetNotice';
@@ -38,6 +41,7 @@ export function WritingCoachSection({dashboard, projectId, aiConfig}: WritingCoa
   const [savedNoteTitle, setSavedNoteTitle] = useState<string | null>(null);
   const [noteDismissed, setNoteDismissed] = useState(false);
   const [sessionId] = useState(() => crypto.randomUUID());
+  const modelRun = useModelRun();
 
   const inspector = aiConfig?.inspectorSettings;
   const consultationEnabled = inspector?.enableAIConsultation !== false;
@@ -84,19 +88,19 @@ export function WritingCoachSection({dashboard, projectId, aiConfig}: WritingCoa
       const service = new LLMService(aiConfig);
       budget.spend('writing-coach');
 
-      let content = '';
       setResponse({content: '', craftCitations});
       setStatus('ready');
-      for await (const chunk of service.stream({
-        messages: [{role: 'user', content: userPrompt}],
-        context: craftContext,
-        systemPrompt,
-        model: inspector?.lowCostModel?.trim() || undefined,
-        maxTokens: inspector?.maxResponseTokens
-      })) {
-        content += chunk;
-        setResponse({content, craftCitations});
-      }
+      await modelRun.run(
+        service,
+        {
+          messages: [{role: 'user', content: userPrompt}],
+          context: craftContext,
+          systemPrompt,
+          model: inspector?.lowCostModel?.trim() || undefined,
+          maxTokens: resolveResponseTokenLimit(aiConfig.provider, inspector?.maxResponseTokens)
+        },
+        ({answer}) => setResponse({content: answer, craftCitations})
+      );
     } catch (askError) {
       setStatus('error');
       setError(describeError(askError, 'The writing coach could not be reached.'));
@@ -142,6 +146,8 @@ export function WritingCoachSection({dashboard, projectId, aiConfig}: WritingCoa
           </p>
         )}
 
+        <ModelRunProgress run={modelRun} />
+
         <ConsultationBudgetNotice
           status={budget.status}
           isLocal={budget.isLocal}
@@ -153,13 +159,13 @@ export function WritingCoachSection({dashboard, projectId, aiConfig}: WritingCoa
           <button
             type='button'
             onClick={() => void askCoach()}
-            disabled={status === 'loading' || !hasEvidence || !consultationEnabled}
+            disabled={status === 'loading' || modelRun.isRunning || !hasEvidence || !consultationEnabled}
           >
-            {status === 'loading' ? 'Asking the coach...' : 'Ask the coach'}
+            {status === 'loading' || modelRun.isRunning ? 'Asking the coach...' : 'Ask the coach'}
           </button>
         </div>
 
-        {response && response.content && status !== 'loading' && !noteDismissed && (
+        {response && response.content && status !== 'loading' && !modelRun.isRunning && !noteDismissed && (
           savedNoteTitle ? (
             <p className={styles.coachHint}>Saved as Source Note &quot;{savedNoteTitle}&quot;.</p>
           ) : (

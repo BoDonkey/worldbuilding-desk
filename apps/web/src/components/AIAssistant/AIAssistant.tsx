@@ -36,6 +36,9 @@ import {
 } from './AIAssistant.helpers';
 import {useConsultationBudget} from '../../hooks/useConsultationBudget';
 import {ConsultationBudgetNotice} from '../common/ConsultationBudgetNotice';
+import {ModelRunProgress} from '../common/ModelRunProgress';
+import {useModelRun} from '../../hooks/useModelRun';
+import {resolveResponseTokenLimit} from '../../services/llm/modelRun';
 import {getCraftLibraryService} from '../../services/craft/getCraftLibraryService';
 import {
   buildCraftContextChunks,
@@ -108,6 +111,10 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
   const [messages, setMessages] = useAssistantConversation(projectId);
   const [input, setInput] = useState('');
   const [isStreaming, setIsStreaming] = useState(false);
+  const modelRun = useModelRun();
+  // Stable across renders (the run object itself changes every second while a run ticks).
+  const runModel = modelRun.run;
+  const aiProvider = aiConfig?.provider;
   const announceStatus = useStatusAnnouncement();
   const [providerError, setProviderError] = useState<string | null>(null);
   const [memoryCache, setMemoryCache] = useState<MemoryEntry[]>([]);
@@ -447,34 +454,35 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
 
 
       // Stream response
-      let rawAssistantMessage = '';
       setMessages((prev) => [
         ...prev,
         {role: 'assistant', content: '', contextSources}
       ]);
       scrollMessagesToBottom();
 
-      for await (const chunk of llmService.current.stream({
-        messages: [requestUserMessage],
-        context: contextChunks,
-        systemPrompt: composedPrompt,
-        model: consultationModel?.trim() || undefined,
-        maxTokens: consultationMaxTokens,
-        think: false
-      })) {
-        rawAssistantMessage += chunk;
-        const assistantMessage = stripAssistantThinking(rawAssistantMessage);
-        setMessages((prev) => [
-          ...prev.slice(0, -1),
-          {
-            ...(prev[prev.length - 1]?.role === 'assistant'
-              ? prev[prev.length - 1]
-              : {role: 'assistant' as const, contextSources}),
-            content: assistantMessage
-          }
-        ]);
-        scrollMessagesToBottom();
-      }
+      await runModel(
+        llmService.current,
+        {
+          messages: [requestUserMessage],
+          context: contextChunks,
+          systemPrompt: composedPrompt,
+          model: consultationModel?.trim() || undefined,
+          maxTokens: resolveResponseTokenLimit(aiProvider, consultationMaxTokens)
+        },
+        ({answer}) => {
+          const assistantMessage = stripAssistantThinking(answer);
+          setMessages((prev) => [
+            ...prev.slice(0, -1),
+            {
+              ...(prev[prev.length - 1]?.role === 'assistant'
+                ? prev[prev.length - 1]
+                : {role: 'assistant' as const, contextSources}),
+              content: assistantMessage
+            }
+          ]);
+          scrollMessagesToBottom();
+        }
+      );
     } catch (error) {
       console.error('AI request failed:', error);
       setMessages((prev) => [
@@ -486,6 +494,8 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
       announceStatus('Assistant reply finished.');
     }
   }, [
+    aiProvider,
+    runModel,
     announceStatus,
     buildMemoryChunks,
     consultationMaxTokens,
@@ -600,31 +610,32 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
 
       budget.spend('assistant');
 
-      let rawAssistantMessage = '';
       setMessages((prev) => [...prev, {role: 'assistant', content: '', craftCitations}]);
       scrollMessagesToBottom();
 
-      for await (const chunk of llmService.current.stream({
-        messages: [{role: 'user', content: userPrompt}],
-        context: craftContext,
-        systemPrompt,
-        model: inspectorSettings?.lowCostModel?.trim() || undefined,
-        maxTokens: inspectorSettings?.maxResponseTokens,
-        think: false
-      })) {
-        rawAssistantMessage += chunk;
-        const assistantMessage = stripAssistantThinking(rawAssistantMessage);
-        setMessages((prev) => [
-          ...prev.slice(0, -1),
-          {
-            ...(prev[prev.length - 1]?.role === 'assistant'
-              ? prev[prev.length - 1]
-              : {role: 'assistant' as const, craftCitations}),
-            content: assistantMessage
-          }
-        ]);
-        scrollMessagesToBottom();
-      }
+      await runModel(
+        llmService.current,
+        {
+          messages: [{role: 'user', content: userPrompt}],
+          context: craftContext,
+          systemPrompt,
+          model: inspectorSettings?.lowCostModel?.trim() || undefined,
+          maxTokens: resolveResponseTokenLimit(aiProvider, inspectorSettings?.maxResponseTokens)
+        },
+        ({answer}) => {
+          const assistantMessage = stripAssistantThinking(answer);
+          setMessages((prev) => [
+            ...prev.slice(0, -1),
+            {
+              ...(prev[prev.length - 1]?.role === 'assistant'
+                ? prev[prev.length - 1]
+                : {role: 'assistant' as const, craftCitations}),
+              content: assistantMessage
+            }
+          ]);
+          scrollMessagesToBottom();
+        }
+      );
     } catch (error) {
       console.error('Writing coach request failed:', error);
       setMessages((prev) => [
@@ -636,6 +647,8 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
       announceStatus('Assistant reply finished.');
     }
   }, [
+    aiProvider,
+    runModel,
     announceStatus,
     coachConsultationEnabled,
     coachEvidence,
@@ -720,6 +733,8 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
           </div>
         ))}
       </div>
+
+      <ModelRunProgress run={modelRun} className={styles.runProgress} />
 
       <div className={styles.inputArea}>
         <textarea

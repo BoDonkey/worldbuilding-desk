@@ -349,6 +349,43 @@ Cypress.Commands.add('ensureSettingsSectionOpen', (sectionTitle: string) => {
     });
 });
 
+Cypress.Commands.add('setSeededProjectProvider', (provider: 'anthropic' | 'ollama') => {
+  return cy.window().then(
+    (win) =>
+      new Cypress.Promise<void>((resolve, reject) => {
+        const openRequest = win.indexedDB.open(DB_NAME, DB_VERSION);
+        openRequest.onerror = () => reject(openRequest.error);
+        openRequest.onsuccess = () => {
+          const db = openRequest.result;
+          const tx = db.transaction(['projectSettings'], 'readwrite');
+          const store = tx.objectStore('projectSettings');
+          const getRequest = store.get('settings-cypress-project-1');
+
+          getRequest.onerror = () => reject(getRequest.error);
+          getRequest.onsuccess = () => {
+            const existing = getRequest.result;
+            store.put({
+              ...existing,
+              aiSettings: {...existing.aiSettings, provider}
+            });
+          };
+          tx.oncomplete = () => {
+            db.close();
+            resolve();
+          };
+          tx.onerror = () => {
+            db.close();
+            reject(tx.error);
+          };
+          tx.onabort = () => {
+            db.close();
+            reject(tx.error);
+          };
+        };
+      })
+  );
+});
+
 declare global {
   namespace Cypress {
     interface Chainable {
@@ -356,6 +393,8 @@ declare global {
       seedSmokeProjectData(): Chainable<void>;
       // Expands a collapsed <details> section on the Settings page; a no-op when already open.
       ensureSettingsSectionOpen(sectionTitle: string): Chainable<void>;
+      // Switches the seeded smoke project's AI provider in IndexedDB; reload afterwards.
+      setSeededProjectProvider(provider: 'anthropic' | 'ollama'): Chainable<void>;
     }
   }
 }
