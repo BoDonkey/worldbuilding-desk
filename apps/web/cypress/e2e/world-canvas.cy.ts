@@ -212,4 +212,129 @@ describe('World Canvas', () => {
       expect(win.document.documentElement.scrollWidth).to.be.at.most(win.innerWidth);
     });
   });
+
+  describe('brainstorming', () => {
+    const ANTHROPIC_MESSAGES = 'https://api.anthropic.com/v1/messages';
+    const anthropicReply = (text: string) => ({
+      id: 'msg-cypress',
+      type: 'message',
+      role: 'assistant',
+      content: [{type: 'text', text}],
+      usage: {input_tokens: 10, output_tokens: 10}
+    });
+
+    const openFactionsLens = () => {
+      cy.visit('/world-bible');
+      cy.contains('h1', 'World Bible').should('be.visible');
+      cy.window().then(seedCanvasReturnExperience);
+      cy.reload();
+      cy.contains('button', 'World Canvas').click();
+      cy.contains('article', 'Factions and institutions').within(() => {
+        cy.contains('button', 'Open lens').click();
+      });
+      cy.contains('label', 'Factions and institutions notes')
+        .find('textarea')
+        .type('The Compact trades in forgotten crossings.');
+    };
+
+    it('explains the missing provider and links to Settings without sending anything', () => {
+      cy.intercept('POST', ANTHROPIC_MESSAGES, cy.spy().as('providerRequest'));
+      openFactionsLens();
+
+      cy.contains('section', 'Brainstorm: Factions and institutions').within(() => {
+        cy.contains('Anthropic API key is missing').should('be.visible');
+        cy.contains('a', 'Open Settings').should('have.attr', 'href', '/settings');
+        cy.contains('button', 'Ask for tensions and questions').should('be.disabled');
+      });
+      cy.get('@providerRequest').should('not.have.been.called');
+    });
+
+    it('asks once, then keeps, adds, and dismisses ideas one at a time', () => {
+      cy.window().then((win) => win.localStorage.setItem('anthropic_api_key', 'cypress-test-key'));
+      cy.intercept('POST', ANTHROPIC_MESSAGES, {
+        statusCode: 200,
+        body: anthropicReply(JSON.stringify({
+          items: [
+            {kind: 'tension', text: 'The Compact profits when travelers forget the toll.'},
+            {kind: 'question', text: 'Who audits the memories the Compact collects?'},
+            {kind: 'alternative', text: 'What if the river, not the Compact, sets the price?'}
+          ]
+        }))
+      }).as('brainstorm');
+      openFactionsLens();
+
+      cy.contains('section', 'Brainstorm: Factions and institutions').within(() => {
+        cy.contains('to Anthropic’s servers').should('be.visible');
+        cy.contains("Costs 1 of this project's 20 daily AI consultations").should('be.visible');
+        cy.contains('button', 'Ask for tensions and questions').click();
+      });
+
+      cy.wait('@brainstorm').then(({request}) => {
+        const body = JSON.stringify(request.body);
+        expect(body).to.contain('EXPLORATORY — NOT CANON');
+        expect(body).to.contain('The Compact trades in forgotten crossings.');
+        expect(body).to.contain('The Cinder Compact');
+        // Canon travels as names only: seeded Source Note text never reaches the provider.
+        expect(body).not.to.contain('Compact notes');
+      });
+      cy.get('@brainstorm.all').should('have.length', 1);
+
+      cy.contains('section', 'Brainstorm: Factions and institutions').within(() => {
+        cy.contains('19 left').should('be.visible');
+        cy.contains('to Anthropic’s servers').should('not.exist');
+        cy.contains('li', 'The Compact profits').within(() => {
+          cy.contains('button', 'Keep as Source Note').click();
+        });
+        cy.contains('li', 'The Compact profits').should('not.exist');
+        cy.contains('li', 'Who audits the memories').within(() => {
+          cy.contains('button', 'Add as question').click();
+        });
+        cy.contains('li', 'What if the river').within(() => {
+          cy.contains('button', 'Dismiss').click();
+        });
+        cy.get('li').should('not.exist');
+      });
+
+      cy.contains('article', 'Factions and institutions')
+        .contains('Source Note: The Compact profits when travelers forget the toll')
+        .should('be.visible');
+      cy.contains('article', 'Who audits the memories the Compact collects?')
+        .should('contain.text', 'From World Canvas brainstorm');
+      cy.contains(/Saved at/).should('be.visible');
+
+      cy.reload();
+      cy.contains('button', 'World Canvas').click();
+      cy.contains('article', 'Who audits the memories the Compact collects?')
+        .should('contain.text', 'From World Canvas brainstorm');
+      cy.contains('What if the river, not the Compact, sets the price?').should('not.exist');
+
+      cy.contains('article', 'Factions and institutions')
+        .contains('Source Note: The Compact profits')
+        .within(() => cy.contains('button', 'Open note').click());
+      cy.location('pathname').should('eq', '/lore');
+      cy.contains('h2', 'Edit Source Note').should('be.visible');
+      cy.get('textarea').should(
+        'contain.value',
+        'From World Canvas brainstorm — Factions and institutions (Tension)'
+      );
+    });
+
+    it('shows the fallback message for a malformed reply and adds nothing', () => {
+      cy.window().then((win) => win.localStorage.setItem('anthropic_api_key', 'cypress-test-key'));
+      cy.intercept('POST', ANTHROPIC_MESSAGES, {
+        statusCode: 200,
+        body: anthropicReply('Here are some thoughts about the Compact and its tolls.')
+      }).as('brainstorm');
+      openFactionsLens();
+
+      cy.contains('section', 'Brainstorm: Factions and institutions').within(() => {
+        cy.contains('button', 'Ask for tensions and questions').click();
+        cy.contains('[role="alert"]', 'could not be read as a brainstorm list').should('be.visible');
+        cy.get('li').should('not.exist');
+      });
+      cy.contains('article', 'Factions and institutions')
+        .contains('Source Note: Here are some')
+        .should('not.exist');
+    });
+  });
 });

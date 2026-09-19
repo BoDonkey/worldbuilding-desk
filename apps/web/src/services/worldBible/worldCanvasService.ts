@@ -133,6 +133,28 @@ export function buildSourceNoteFromQuestion(
   });
 }
 
+/**
+ * A brainstorm item the author chose to keep. The first line marks it as model-suggested so it is
+ * never later mistaken for the author's own research.
+ */
+export function buildSourceNoteFromBrainstormItem(params: {
+  projectId: string;
+  lensKind?: WorldCanvasLensKind;
+  kindLabel: string;
+  text: string;
+}): LoreDocument {
+  const text = params.text.trim();
+  if (!text) throw new Error('This brainstorm item is empty, so there is nothing to keep.');
+  const focusLabel = params.lensKind ? getLensDefinition(params.lensKind).label : 'Premise';
+  const content = `From World Canvas brainstorm — ${focusLabel} (${params.kindLabel})\n\n${text}`;
+  return buildManualSourceNote({
+    projectId: params.projectId,
+    titleSource: text,
+    content,
+    kind: params.lensKind ? WORLD_CANVAS_LENS_NOTE_KINDS[params.lensKind] : 'general_lore'
+  });
+}
+
 export interface ResolvedCanvasLink {
   id: string;
   label: string;
@@ -236,7 +258,8 @@ export function updateLensNote(
 export function addQuestion(
   canvas: WorldCanvasDocument,
   text: string,
-  lensKind?: WorldCanvasLensKind
+  lensKind?: WorldCanvasLensKind,
+  origin?: WorldCanvasQuestion['origin']
 ): WorldCanvasDocument {
   const normalized = text.trim();
   if (!normalized) throw new Error('Enter a question before adding it.');
@@ -246,6 +269,7 @@ export function addQuestion(
     text: normalized,
     status: 'open',
     lensKind,
+    ...(origin ? {origin} : {}),
     createdAt: now,
     updatedAt: now
   };

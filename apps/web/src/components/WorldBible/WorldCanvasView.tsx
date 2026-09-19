@@ -3,11 +3,15 @@ import type {
   EntityCategory,
   LoreDocument,
   LoreDocumentLink,
+  ProjectAISettings,
   WorldCanvasLensKind,
   WorldCanvasQuestion,
   WorldEntity
 } from '../../entityTypes';
+import {useConfirmDialog} from '../../hooks/useConfirmDialog';
+import {useConsultationBudget} from '../../hooks/useConsultationBudget';
 import type {useWorldCanvas} from '../../hooks/useWorldCanvas';
+import type {ConsistencyAlias} from '../../services/consistency/aliasStorage';
 import {describeError} from '../../services/errors';
 import {
   LENS_DEFINITIONS,
@@ -22,6 +26,8 @@ import {
   summarizeOtherRecords,
   type WorldCanvasWorthALookItem
 } from '../../services/worldBible/worldCanvasDerived';
+import {collectCanonNames} from '../../services/worldBible/worldCanvasBrainstorm';
+import {WorldCanvasBrainstorm} from './WorldCanvasBrainstorm';
 import styles from './WorldCanvasView.module.css';
 
 interface WorldCanvasViewProps {
@@ -30,6 +36,8 @@ interface WorldCanvasViewProps {
   entities?: WorldEntity[];
   loreDocuments?: LoreDocument[];
   loreDocumentLinks?: LoreDocumentLink[];
+  aliases?: ConsistencyAlias[];
+  aiConfig?: ProjectAISettings;
   reviewCandidateCount?: number;
   isGeneralFiction?: boolean;
   onOpenSourceNote?: (documentId: string) => void;
@@ -81,6 +89,8 @@ export function WorldCanvasView({
   entities = [],
   loreDocuments = [],
   loreDocumentLinks = [],
+  aliases = [],
+  aiConfig,
   reviewCandidateCount = 0,
   isGeneralFiction = false,
   onOpenSourceNote,
@@ -100,6 +110,9 @@ export function WorldCanvasView({
   const [dismissedItemIds, setDismissedItemIds] = useState<Set<string>>(
     () => projectId ? getDismissedItemIds(projectId) : new Set()
   );
+  const budget = useConsultationBudget(projectId || null, aiConfig?.inspectorSettings, aiConfig?.provider);
+  const {requestConfirm, confirmDialog} = useConfirmDialog();
+  const canonNames = useMemo(() => collectCanonNames(entities, aliases), [entities, aliases]);
   const lensByKind = useMemo(
     () => new Map(worldCanvas.canvas?.lenses.map((lens) => [lens.kind, lens]) ?? []),
     [worldCanvas.canvas?.lenses]
@@ -125,6 +138,7 @@ export function WorldCanvasView({
   if (!worldCanvas.canvas || worldCanvas.status === 'loading') {
     return <section className={styles.section}>Loading World Canvas...</section>;
   }
+  const canvas = worldCanvas.canvas;
 
   const saveStatus = worldCanvas.status === 'saving'
     ? 'Saving...'
@@ -454,6 +468,21 @@ export function WorldCanvasView({
     );
   };
 
+  const renderBrainstorm = (focus: {type: 'premise'} | {type: 'lens'; kind: WorldCanvasLensKind}) => (
+    <WorldCanvasBrainstorm
+      projectId={projectId}
+      focus={focus}
+      canvas={canvas}
+      canonNames={canonNames}
+      aiConfig={aiConfig}
+      budget={budget}
+      requestConfirm={requestConfirm}
+      onKeepAsSourceNote={worldCanvas.keepBrainstormItemAsSourceNote}
+      onAddQuestion={(text, lensKind) => worldCanvas.addQuestion(text, lensKind, 'brainstorm')}
+      onFeedback={onFeedback}
+    />
+  );
+
   const renderQuestionBridge = (question: WorldCanvasQuestion) => {
     const target: BridgeTarget = {
       type: 'question',
@@ -483,6 +512,7 @@ export function WorldCanvasView({
 
   return (
     <div className={styles.canvas}>
+      {confirmDialog}
       <section className={styles.intro}>
         <h2>World Canvas</h2>
         <p>
@@ -508,6 +538,7 @@ export function WorldCanvasView({
             placeholder='A city powered by borrowed memories begins to forget who built it.'
           />
         </label>
+        {renderBrainstorm({type: 'premise'})}
       </section>
 
       <section className={styles.section} aria-labelledby='world-canvas-lenses-heading'>
@@ -552,6 +583,7 @@ export function WorldCanvasView({
                   />
                 </label>
                 {renderLensSummary(definition.kind, lens)}
+                {renderBrainstorm({type: 'lens', kind: definition.kind})}
                 {renderBridgeActions({
                   target,
                   sourceNoteIds: lens.linkedSourceNoteIds,
@@ -658,6 +690,9 @@ export function WorldCanvasView({
             <p className={styles.emptyCopy}>Example: What truth would change how people understand this world?</p>
           ) : worldCanvas.canvas.questions.map((question, index) => (
             <article key={question.id} className={styles.questionCard}>
+              {question.origin === 'brainstorm' && (
+                <span className={styles.originBadge}>From World Canvas brainstorm</span>
+              )}
               <div className={styles.questionEditGrid}>
                 <label className={styles.questionField}>
                   Question {index + 1}

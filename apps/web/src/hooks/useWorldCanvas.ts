@@ -10,6 +10,7 @@ import {saveLoreDocument} from '../loreStorage';
 import type {RAGProvider} from '../services/rag/RAGService';
 import {
   addQuestion,
+  buildSourceNoteFromBrainstormItem,
   buildSourceNoteFromLens,
   buildSourceNoteFromQuestion,
   createEmptyWorldCanvas,
@@ -140,8 +141,12 @@ export function useWorldCanvas(projectId: string | null, ragService: RAGProvider
     changeCanvas((current) => updateLensNote(current, kind, note));
   }, [changeCanvas]);
 
-  const handleAddQuestion = useCallback((text: string, lensKind?: WorldCanvasLensKind) => {
-    changeCanvas((current) => addQuestion(current, text, lensKind));
+  const handleAddQuestion = useCallback((
+    text: string,
+    lensKind?: WorldCanvasLensKind,
+    origin?: WorldCanvasQuestion['origin']
+  ) => {
+    changeCanvas((current) => addQuestion(current, text, lensKind, origin));
   }, [changeCanvas]);
 
   const handleUpdateQuestion = useCallback((
@@ -186,6 +191,22 @@ export function useWorldCanvas(projectId: string | null, ragService: RAGProvider
     return document;
   }, [canvas, changeCanvasAndSave, indexSourceNote]);
 
+  const keepBrainstormItemAsSourceNote = useCallback(async (item: {
+    lensKind?: WorldCanvasLensKind;
+    kindLabel: string;
+    text: string;
+  }) => {
+    if (!canvas) return null;
+    const document = buildSourceNoteFromBrainstormItem({projectId: canvas.projectId, ...item});
+    await saveLoreDocument(document);
+    await indexSourceNote(document);
+    const {lensKind} = item;
+    if (lensKind) {
+      await changeCanvasAndSave((current) => linkLensSourceNote(current, lensKind, document.id));
+    }
+    return document;
+  }, [canvas, changeCanvasAndSave, indexSourceNote]);
+
   const handleLinkLensSourceNote = useCallback(
     (kind: WorldCanvasLensKind, sourceNoteId: string) =>
       changeCanvasAndSave((current) => linkLensSourceNote(current, kind, sourceNoteId)),
@@ -225,6 +246,7 @@ export function useWorldCanvas(projectId: string | null, ragService: RAGProvider
     updateQuestion: handleUpdateQuestion,
     keepLensAsSourceNote,
     keepQuestionAsSourceNote,
+    keepBrainstormItemAsSourceNote,
     linkLensSourceNote: handleLinkLensSourceNote,
     linkLensEntity: handleLinkLensEntity,
     unlinkLensTarget: handleUnlinkLensTarget,

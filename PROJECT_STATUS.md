@@ -112,6 +112,21 @@ Under the hood, the app still includes rich systems for world data, rules, chara
   Bible review candidates; it links back to the existing record, question, or
   Review surface and never assigns a score or resolves work automatically.
   Mechanics-only records are excluded in general-fiction projects.
+- World Canvas premise and every opened lens now offer author-invoked
+  brainstorming (**Ask for tensions and questions**). One click sends the
+  premise, that lens's notes, relevant open questions, and accepted World Bible
+  record names and aliases (never Source Note text) under an explicit
+  "exploratory — not canon" framing, and spends one `canvas-brainstorm` unit of
+  the shared project consultation budget (local Ollama exempt). The reply must
+  validate as at most 12 alternative/tension/implication/question items of at
+  most 280 characters each, or it is rejected whole with a fallback message.
+  Each item can be kept as a provenance-marked Source Note ("From World Canvas
+  brainstorm — …", linked to its lens), added as a question marked "From World
+  Canvas brainstorm" (non-question items only after the author rewrites them),
+  or dismissed. Unreviewed ideas are held in memory only, survive in-app
+  navigation, and prompt before a reload or window close; nothing else persists
+  and nothing is written to canon. With no usable provider, the control
+  explains why and links to Settings without sending a request.
 - Lore Documents are now framed as source-note intake rather than a parallel canon database, with manual writing, dossier import, and extraction paths kept separate from accepted canon.
 - World Bible records can create or open a linked Lore Document for longform source notes, and Lore Documents can navigate back to the linked World Bible record.
 - Lore Documents now has a project context health panel that shows RAG document/chunk counts, indexed document type counts, Shodh memory counts, project data counts, and a retrieval probe.
@@ -1054,6 +1069,13 @@ runtime schema, and nothing here changes the roadmap's status board.
 - Zustand workspace UI integration has been smoke-checked manually for Corkboard and Scratchpad memory saving, and the latest focused unit/build passes cover workspace store behavior plus document initialization/save helper behavior.
 
 ### Current Verification Notes
+- World Canvas WC-4 (brainstorming) passes lint with the single existing hook
+  warning, 635 web unit tests, 6 rules-engine tests, 12 rules-ui tests, web and
+  desktop builds, and the full 91-test Cypress suite. `world-canvas.cy.ts` covers
+  the not-configured state (no request sent), journey 4 against an intercepted
+  Anthropic endpoint (one request, budget decremented, names-only canon, keep /
+  add / dismiss, provenance after reload), and a malformed reply. The manual
+  disclosure-wording check in both themes is still outstanding.
 - World Canvas WC-3 passes lint with the single existing hook warning, 585 web
   unit tests, 6 rules-engine tests, 12 rules-ui tests, web and desktop builds,
   and the full 84-test Cypress suite. The seeded return journey covers mapped

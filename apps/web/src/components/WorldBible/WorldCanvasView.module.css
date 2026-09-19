@@ -279,6 +279,71 @@
   font-size: var(--font-size-sm);
 }
 
+.brainstorm {
+  display: grid;
+  gap: 0.6rem;
+  margin-top: 0.85rem;
+  padding: 0.75rem;
+  border: 1px solid var(--surface-border-soft);
+  border-radius: 10px;
+  background: var(--surface-panel-elevated);
+}
+
+.brainstormHeader,
+.brainstormResultsHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.brainstormHeader h5 {
+  margin: 0;
+  color: var(--color-text-primary);
+}
+
+.brainstormNote {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+}
+
+.brainstormResults {
+  display: grid;
+  gap: 0.6rem;
+}
+
+.brainstormList {
+  display: grid;
+  gap: 0.6rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.brainstormItem {
+  display: grid;
+  gap: 0.45rem;
+  padding-top: 0.6rem;
+  border-top: 1px solid var(--surface-border-soft);
+  color: var(--color-text-primary);
+}
+
+.brainstormItem p {
+  margin: 0;
+}
+
+.brainstormKind,
+.originBadge {
+  justify-self: start;
+  padding: 0.1rem 0.5rem;
+  border: 1px solid var(--surface-border-soft);
+  border-radius: 999px;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+  font-weight: 650;
+}
+
 @media (max-width: 900px) {
   .lensRow,
   .sectionHeader,
@@ -289,7 +354,9 @@
 
   .worthALookHeader,
   .worthALookItem,
-  .otherRecords {
+  .otherRecords,
+  .brainstormHeader,
+  .brainstormResultsHeader {
     align-items: stretch;
     flex-direction: column;
   }

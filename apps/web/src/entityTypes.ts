@@ -56,6 +56,8 @@ export interface WorldCanvasQuestion {
   text: string;
   status: 'open' | 'answered' | 'dropped';
   lensKind?: WorldCanvasLensKind;
+  /** Set when the author added this question from a World Canvas brainstorm item (4.33). */
+  origin?: 'brainstorm';
   linkedSourceNoteId?: string;
   linkedEntityId?: string;
   createdAt: number;

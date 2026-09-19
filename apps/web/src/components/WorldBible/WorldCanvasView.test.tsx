@@ -1,7 +1,9 @@
-import {fireEvent, render, screen} from '@testing-library/react';
+import {fireEvent, render as rtlRender, screen} from '@testing-library/react';
+import type {ReactElement} from 'react';
+import {MemoryRouter} from 'react-router';
 import {describe, expect, it, vi} from 'vitest';
 import type {useWorldCanvas} from '../../hooks/useWorldCanvas';
-import {createEmptyWorldCanvas, openLens} from '../../services/worldBible/worldCanvasService';
+import {addQuestion, createEmptyWorldCanvas, openLens} from '../../services/worldBible/worldCanvasService';
 import {WorldCanvasView} from './WorldCanvasView';
 
 const buildWorldCanvas = (
@@ -17,6 +19,7 @@ const buildWorldCanvas = (
   updateQuestion: vi.fn(),
   keepLensAsSourceNote: vi.fn(),
   keepQuestionAsSourceNote: vi.fn(),
+  keepBrainstormItemAsSourceNote: vi.fn(),
   linkLensSourceNote: vi.fn(),
   linkLensEntity: vi.fn(),
   unlinkLensTarget: vi.fn(),
@@ -24,6 +27,9 @@ const buildWorldCanvas = (
   linkQuestionEntity: vi.fn(),
   ...overrides
 });
+
+// The brainstorm panel links to Settings, so the view needs a router.
+const render = (ui: ReactElement) => rtlRender(ui, {wrapper: MemoryRouter});
 
 describe('WorldCanvasView', () => {
   it('renders the optional empty state and all seven unopened lenses', () => {
@@ -95,5 +101,20 @@ describe('WorldCanvasView', () => {
       name: 'Sera Vale',
       target: {type: 'lens', kind: 'people'}
     }));
+  });
+
+  it('offers brainstorming on the premise and opened lenses and marks brainstorm questions', () => {
+    const canvas = addQuestion(
+      addQuestion(openLens(createEmptyWorldCanvas('project-1'), 'people'), 'Who owns the gate?'),
+      'Who remembers the founders?',
+      undefined,
+      'brainstorm'
+    );
+    render(<WorldCanvasView worldCanvas={buildWorldCanvas({canvas})} />);
+
+    expect(screen.getAllByRole('button', {name: 'Ask for tensions and questions'})).toHaveLength(2);
+    expect(screen.getByRole('heading', {name: 'Brainstorm: Premise'})).toBeInTheDocument();
+    expect(screen.getByRole('heading', {name: 'Brainstorm: People'})).toBeInTheDocument();
+    expect(screen.getAllByText('From World Canvas brainstorm')).toHaveLength(1);
   });
 });

@@ -1,6 +1,7 @@
 import {afterEach, describe, expect, it, vi} from 'vitest';
 import {
   LENS_DEFINITIONS,
+  buildSourceNoteFromBrainstormItem,
   buildSourceNoteFromLens,
   buildSourceNoteFromQuestion,
   addQuestion,
@@ -94,6 +95,49 @@ describe('worldCanvasService', () => {
       kind: 'faction_notes',
       source: {type: 'manual'},
       content: 'From World Canvas — Question (Factions and institutions)\n\nWho funds the Compact?'
+    });
+  });
+
+  it('marks kept brainstorm items as model-suggested Source Notes, kind by lens', () => {
+    const lensNote = buildSourceNoteFromBrainstormItem({
+      projectId: 'project-1',
+      lensKind: 'factions',
+      kindLabel: 'Tension',
+      text: 'The Compact needs the city to forget.'
+    });
+    const premiseNote = buildSourceNoteFromBrainstormItem({
+      projectId: 'project-1',
+      kindLabel: 'Question',
+      text: 'Who remembers the founders?'
+    });
+
+    expect(lensNote).toMatchObject({
+      projectId: 'project-1',
+      kind: 'faction_notes',
+      source: {type: 'manual'},
+      content: 'From World Canvas brainstorm — Factions and institutions (Tension)\n\nThe Compact needs the city to forget.'
+    });
+    expect(premiseNote).toMatchObject({
+      kind: 'general_lore',
+      content: 'From World Canvas brainstorm — Premise (Question)\n\nWho remembers the founders?'
+    });
+    expect(() => buildSourceNoteFromBrainstormItem({
+      projectId: 'project-1',
+      kindLabel: 'Tension',
+      text: '  '
+    })).toThrow();
+  });
+
+  it('records brainstorm origin on a question only when given', () => {
+    const canvas = createEmptyWorldCanvas('project-1');
+    const authored = addQuestion(canvas, 'Who owns the gate?', 'places');
+    const fromBrainstorm = addQuestion(authored, 'Who remembers the founders?', undefined, 'brainstorm');
+
+    expect(fromBrainstorm.questions[0]).not.toHaveProperty('origin');
+    expect(fromBrainstorm.questions[1]).toMatchObject({
+      text: 'Who remembers the founders?',
+      origin: 'brainstorm',
+      status: 'open'
     });
   });
 

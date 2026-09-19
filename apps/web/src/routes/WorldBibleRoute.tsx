@@ -1058,6 +1058,8 @@ function WorldBibleRoute() {
           entities={entities}
           loreDocuments={loreDocuments}
           loreDocumentLinks={loreDocumentLinks}
+          aliases={aliases}
+          aiConfig={projectSettings?.aiSettings}
           reviewCandidateCount={reviewQueue.length + characterIdentityResolution.queue.length}
           isGeneralFiction={capabilities.isGeneralFiction}
           onOpenSourceNote={(documentId) =>
