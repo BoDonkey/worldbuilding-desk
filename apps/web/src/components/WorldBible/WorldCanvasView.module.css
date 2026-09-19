@@ -52,7 +52,10 @@
 .questionForm textarea,
 .questionForm select,
 .questionCard textarea,
-.questionCard select {
+.questionCard select,
+.linkPicker select,
+.canonDraft select,
+.canonDraft input {
   width: 100%;
   box-sizing: border-box;
   border: 1px solid var(--input-border);
@@ -73,7 +76,10 @@
 }
 
 .questionForm select,
-.questionCard select {
+.questionCard select,
+.linkPicker select,
+.canonDraft select,
+.canonDraft input {
   min-height: 2.7rem;
   padding: 0.55rem 0.7rem;
 }
@@ -83,7 +89,10 @@
 .questionForm textarea:focus,
 .questionForm select:focus,
 .questionCard textarea:focus,
-.questionCard select:focus {
+.questionCard select:focus,
+.linkPicker select:focus,
+.canonDraft select:focus,
+.canonDraft input:focus {
   outline: none;
   border-color: var(--input-border-focus);
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-focus) 22%, transparent);
@@ -131,11 +140,68 @@
   margin-top: 1rem;
 }
 
-.questionCard {
+.questionEditGrid {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(11rem, 0.3fr);
   gap: 0.75rem;
   align-items: end;
+}
+
+.questionCard,
+.bridgePanel {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.bridgePanel {
+  margin-top: 0.85rem;
+  padding-top: 0.85rem;
+  border-top: 1px solid var(--surface-border-soft);
+}
+
+.actionRow,
+.chipList {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.linkPickers,
+.canonDraft {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.linkPicker,
+.linkPicker label,
+.canonDraft label {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.linkPicker {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  max-width: 100%;
+  padding: 0.2rem 0.5rem;
+  border: 1px solid var(--surface-border-soft);
+  border-radius: 999px;
+  color: var(--color-text-primary);
+  font-size: var(--font-size-sm);
+  font-weight: 650;
+}
+
+.chip button {
+  padding: 0.15rem 0.4rem;
+  font-size: var(--font-size-sm);
 }
 
 .error {
@@ -153,7 +219,10 @@
   }
 
   .questionForm,
-  .questionCard {
+  .questionEditGrid,
+  .linkPickers,
+  .canonDraft,
+  .linkPicker {
     grid-template-columns: 1fr;
   }
 }

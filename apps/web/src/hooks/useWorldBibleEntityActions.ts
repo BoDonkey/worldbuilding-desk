@@ -178,7 +178,7 @@ export const useWorldBibleEntityActions = ({
       successMessage?: string;
       successMessageWithNext?: string;
     }) => {
-      if (!activeProject || !activeCategory) return;
+      if (!activeProject || !activeCategory) return null;
 
       setIsSubmittingEntity(true);
       setFeedback(null);
@@ -314,9 +314,11 @@ export const useWorldBibleEntityActions = ({
               `"${savedName}" saved. Opened the next record.`
             : (options?.successMessage ?? (editingId ? 'Entry updated.' : 'Entry created.'))
         });
+        return entity;
       } catch (error) {
         const message = describeError(error, 'Unable to save entry.');
         setFeedback({tone: 'error', message});
+        return null;
       } finally {
         setIsSubmittingEntity(false);
       }

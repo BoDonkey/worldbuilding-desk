@@ -1,9 +1,14 @@
 import {afterEach, describe, expect, it, vi} from 'vitest';
 import {
   LENS_DEFINITIONS,
+  buildSourceNoteFromLens,
+  buildSourceNoteFromQuestion,
   addQuestion,
   createEmptyWorldCanvas,
+  linkLensEntity,
+  linkLensSourceNote,
   openLens,
+  resolveCanvasLinks,
   updateLensNote,
   updateQuestion
 } from './worldCanvasService';
@@ -67,5 +72,47 @@ describe('worldCanvasService', () => {
       lensKind: 'power',
       status: 'answered'
     });
+  });
+
+  it('builds manual Source Notes with visible canvas provenance and the lens kind map', () => {
+    vi.spyOn(Date, 'now').mockReturnValue(30);
+    vi.spyOn(crypto, 'randomUUID').mockReturnValue('00000000-0000-4000-8000-000000000001');
+    const canvas = updateLensNote(createEmptyWorldCanvas('project-1'), 'factions', 'The Cinder Compact');
+    const lensNote = buildSourceNoteFromLens(canvas.lenses[0], canvas);
+    const questionCanvas = addQuestion(canvas, 'Who funds the Compact?', 'factions');
+    const questionNote = buildSourceNoteFromQuestion(questionCanvas.questions[0], 'project-1');
+
+    expect(lensNote).toMatchObject({
+      id: '00000000-0000-4000-8000-000000000001',
+      projectId: 'project-1',
+      title: 'The Cinder Compact',
+      kind: 'faction_notes',
+      source: {type: 'manual'},
+      content: 'From World Canvas — Factions and institutions\n\nThe Cinder Compact'
+    });
+    expect(questionNote).toMatchObject({
+      kind: 'faction_notes',
+      source: {type: 'manual'},
+      content: 'From World Canvas — Question (Factions and institutions)\n\nWho funds the Compact?'
+    });
+  });
+
+  it('keeps stable links and resolves deleted targets as missing', () => {
+    const canvas = openLens(createEmptyWorldCanvas('project-1'), 'people');
+    const linked = linkLensEntity(
+      linkLensSourceNote(canvas, 'people', 'note-1'),
+      'people',
+      'entity-1'
+    );
+
+    expect(linked.lenses[0]).toMatchObject({
+      linkedSourceNoteIds: ['note-1'],
+      linkedEntityIds: ['entity-1']
+    });
+    expect(resolveCanvasLinks(['entity-1', 'missing'], [{id: 'entity-1', name: 'Sera'}], (item) => item.name))
+      .toEqual([
+        {id: 'entity-1', label: 'Sera', missing: false},
+        {id: 'missing', label: 'no longer exists', missing: true}
+      ]);
   });
 });

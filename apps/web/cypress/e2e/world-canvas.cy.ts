@@ -78,4 +78,41 @@ describe('World Canvas', () => {
       .and('have.attr', 'aria-describedby', 'world-canvas-question-error');
     cy.contains('Enter a question before adding it.').should('be.visible');
   });
+
+  it('moves lens ideas into Source Notes and the normal canon form', () => {
+    cy.visit('/world-bible');
+    cy.contains('button', 'World Canvas').click();
+    cy.contains('article', 'Places').within(() => cy.contains('button', 'Open lens').click());
+    cy.contains('label', 'Places notes').find('textarea').type(
+      'Name: Glass Citadel{enter}Background: A harbor fortress founded after the first beacon failed.'
+    );
+    cy.contains('article', 'Places').within(() => {
+      cy.contains('button', 'Keep as Source Note').click();
+      cy.contains('Source Note: Name: Glass Citadel').should('be.visible');
+      cy.contains('button', 'Open note').click();
+    });
+
+    cy.location('pathname').should('eq', '/lore');
+    cy.contains('h2', 'Edit Source Note').should('be.visible');
+    cy.get('textarea').should('contain.value', 'From World Canvas — Places');
+    cy.contains('button', 'Extract Candidates').click();
+    cy.contains('[role="status"]', /Extracted \d+ entity proposal/).should('be.visible');
+
+    cy.visit('/world-bible');
+    cy.contains('button', 'World Canvas').click();
+    cy.contains('article', 'Places').within(() => {
+      cy.contains('button', 'Propose as canon').click();
+      cy.contains('label', 'Canon record name').find('input').clear().type('Glass Citadel');
+      cy.contains('button', 'Open canon form').click();
+    });
+    cy.contains('h2', 'New Location').should('be.visible');
+    cy.contains('label', 'Name').find('input').should('have.value', 'Glass Citadel');
+    cy.contains('button', 'Create Entry').click();
+    cy.contains('[role="status"]', 'Entry created.').should('be.visible');
+
+    cy.contains('button', 'World Canvas').click();
+    cy.contains('article', 'Places').within(() => {
+      cy.contains('World Bible: Glass Citadel').should('be.visible');
+    });
+  });
 });

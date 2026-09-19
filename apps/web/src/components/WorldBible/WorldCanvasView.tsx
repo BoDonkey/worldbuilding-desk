@@ -1,11 +1,35 @@
-import {useMemo, useState, type FormEvent} from 'react';
-import type {WorldCanvasLensKind} from '../../entityTypes';
+import {useEffect, useMemo, useState, type FormEvent, type ReactNode} from 'react';
+import type {
+  EntityCategory,
+  LoreDocument,
+  WorldCanvasLensKind,
+  WorldCanvasQuestion,
+  WorldEntity
+} from '../../entityTypes';
 import type {useWorldCanvas} from '../../hooks/useWorldCanvas';
-import {LENS_DEFINITIONS} from '../../services/worldBible/worldCanvasService';
+import {describeError} from '../../services/errors';
+import {
+  LENS_DEFINITIONS,
+  deriveCanvasCanonName,
+  findSuggestedCanvasCategory,
+  getCanvasEntityLabel,
+  resolveCanvasLinks
+} from '../../services/worldBible/worldCanvasService';
 import styles from './WorldCanvasView.module.css';
 
 interface WorldCanvasViewProps {
   worldCanvas: ReturnType<typeof useWorldCanvas>;
+  categories?: EntityCategory[];
+  entities?: WorldEntity[];
+  loreDocuments?: LoreDocument[];
+  onOpenSourceNote?: (documentId: string) => void;
+  onOpenEntity?: (entityId: string) => void;
+  onProposeCanon?: (proposal: {
+    category: EntityCategory;
+    name: string;
+    target: {type: 'lens'; kind: WorldCanvasLensKind} | {type: 'question'; id: string};
+  }) => void;
+  onFeedback?: (feedback: {tone: 'success' | 'error'; message: string}) => void;
 }
 
 const STATUS_LABELS = {
@@ -14,14 +38,54 @@ const STATUS_LABELS = {
   dropped: 'Dropped'
 } as const;
 
-export function WorldCanvasView({worldCanvas}: WorldCanvasViewProps) {
+type BridgeTarget =
+  | {type: 'lens'; kind: WorldCanvasLensKind; text: string}
+  | {type: 'question'; id: string; text: string; lensKind?: WorldCanvasLensKind};
+
+interface CanonDraft {
+  key: string;
+  target: BridgeTarget;
+  categoryId: string;
+  name: string;
+}
+
+const targetKey = (target: BridgeTarget) =>
+  target.type === 'lens' ? `lens:${target.kind}` : `question:${target.id}`;
+
+export function WorldCanvasView({
+  worldCanvas,
+  categories = [],
+  entities = [],
+  loreDocuments = [],
+  onOpenSourceNote,
+  onOpenEntity,
+  onProposeCanon,
+  onFeedback
+}: WorldCanvasViewProps) {
   const [questionText, setQuestionText] = useState('');
   const [questionLensKind, setQuestionLensKind] = useState<WorldCanvasLensKind | ''>('');
   const [questionError, setQuestionError] = useState('');
+  const [sourceNoteSelections, setSourceNoteSelections] = useState<Record<string, string>>({});
+  const [entitySelections, setEntitySelections] = useState<Record<string, string>>({});
+  const [canonDraft, setCanonDraft] = useState<CanonDraft | null>(null);
+  const [busyKey, setBusyKey] = useState<string | null>(null);
   const lensByKind = useMemo(
     () => new Map(worldCanvas.canvas?.lenses.map((lens) => [lens.kind, lens]) ?? []),
     [worldCanvas.canvas?.lenses]
   );
+
+  useEffect(() => {
+    if (!canonDraft || canonDraft.categoryId || categories.length === 0) return;
+    const category = findSuggestedCanvasCategory(
+      canonDraft.target.type === 'lens'
+        ? canonDraft.target.kind
+        : canonDraft.target.lensKind,
+      categories
+    );
+    if (category) {
+      setCanonDraft((current) => current ? {...current, categoryId: category.id} : current);
+    }
+  }, [canonDraft, categories]);
 
   if (!worldCanvas.canvas || worldCanvas.status === 'loading') {
     return <section className={styles.section}>Loading World Canvas...</section>;
@@ -45,6 +109,280 @@ export function WorldCanvasView({worldCanvas}: WorldCanvasViewProps) {
     setQuestionText('');
     setQuestionLensKind('');
     setQuestionError('');
+  };
+
+  const runBridgeAction = async (
+    key: string,
+    action: () => Promise<unknown>,
+    successMessage: string
+  ) => {
+    setBusyKey(key);
+    try {
+      await action();
+      onFeedback?.({tone: 'success', message: successMessage});
+    } catch (error) {
+      onFeedback?.({
+        tone: 'error',
+        message: describeError(error, 'Unable to update the World Canvas link.')
+      });
+    } finally {
+      setBusyKey(null);
+    }
+  };
+
+  const openCanonDraft = (target: BridgeTarget) => {
+    const category = findSuggestedCanvasCategory(
+      target.type === 'lens' ? target.kind : target.lensKind,
+      categories
+    );
+    setCanonDraft({
+      key: targetKey(target),
+      target,
+      categoryId: category?.id ?? '',
+      name: deriveCanvasCanonName(target.text)
+    });
+  };
+
+  const renderCanonDraft = (target: BridgeTarget) => {
+    const key = targetKey(target);
+    if (canonDraft?.key !== key) return null;
+    return (
+      <div className={styles.canonDraft}>
+        <label>
+          Canon category
+          <select
+            value={canonDraft.categoryId}
+            onChange={(event) => setCanonDraft({...canonDraft, categoryId: event.target.value})}
+          >
+            {categories.map((category) => (
+              <option key={category.id} value={category.id}>{category.name}</option>
+            ))}
+          </select>
+        </label>
+        <label>
+          Canon record name
+          <input
+            value={canonDraft.name}
+            onChange={(event) => setCanonDraft({...canonDraft, name: event.target.value})}
+          />
+        </label>
+        <div className={styles.actionRow}>
+          <button
+            type='button'
+            disabled={!canonDraft.categoryId || !canonDraft.name.trim()}
+            onClick={() => {
+              const category = categories.find((candidate) => candidate.id === canonDraft.categoryId);
+              if (!category || !canonDraft.name.trim()) return;
+              onProposeCanon?.({
+                category,
+                name: canonDraft.name.trim(),
+                target: canonDraft.target.type === 'lens'
+                  ? {type: 'lens', kind: canonDraft.target.kind}
+                  : {type: 'question', id: canonDraft.target.id}
+              });
+              setCanonDraft(null);
+            }}
+          >
+            Open canon form
+          </button>
+          <button type='button' onClick={() => setCanonDraft(null)}>Cancel</button>
+        </div>
+      </div>
+    );
+  };
+
+  const renderLinkPickers = (params: {
+    target: BridgeTarget;
+    onLinkSourceNote: (id: string) => Promise<unknown>;
+    onLinkEntity: (id: string) => Promise<unknown>;
+  }) => {
+    const key = targetKey(params.target);
+    const sourceNoteId = sourceNoteSelections[key] ?? '';
+    const entityId = entitySelections[key] ?? '';
+    return (
+      <div className={styles.linkPickers}>
+        <div className={styles.linkPicker}>
+          <label>
+            Existing Source Note
+            <select
+              value={sourceNoteId}
+              onChange={(event) => setSourceNoteSelections((current) => ({
+                ...current,
+                [key]: event.target.value
+              }))}
+            >
+              <option value=''>Choose a Source Note</option>
+              {loreDocuments.map((document) => (
+                <option key={document.id} value={document.id}>{document.title}</option>
+              ))}
+            </select>
+          </label>
+          <button
+            type='button'
+            disabled={!sourceNoteId || busyKey === `${key}:note-link`}
+            onClick={() => void runBridgeAction(
+              `${key}:note-link`,
+              () => params.onLinkSourceNote(sourceNoteId),
+              'Source Note linked from World Canvas.'
+            )}
+          >
+            Link existing note
+          </button>
+        </div>
+        <div className={styles.linkPicker}>
+          <label>
+            Existing World Bible record
+            <select
+              value={entityId}
+              onChange={(event) => setEntitySelections((current) => ({
+                ...current,
+                [key]: event.target.value
+              }))}
+            >
+              <option value=''>Choose a record</option>
+              {entities.map((entity) => (
+                <option key={entity.id} value={entity.id}>
+                  {getCanvasEntityLabel(entity, categories)}
+                </option>
+              ))}
+            </select>
+          </label>
+          <button
+            type='button'
+            disabled={!entityId || busyKey === `${key}:entity-link`}
+            onClick={() => void runBridgeAction(
+              `${key}:entity-link`,
+              () => params.onLinkEntity(entityId),
+              'World Bible record linked from World Canvas.'
+            )}
+          >
+            Link existing record
+          </button>
+        </div>
+      </div>
+    );
+  };
+
+  const renderChips = (params: {
+    target: BridgeTarget;
+    sourceNoteIds: string[];
+    entityIds: string[];
+    onUnlinkSourceNote: (id: string) => Promise<unknown>;
+    onUnlinkEntity: (id: string) => Promise<unknown>;
+  }) => {
+    const key = targetKey(params.target);
+    const sourceNoteLinks = resolveCanvasLinks(
+      params.sourceNoteIds,
+      loreDocuments,
+      (note) => note.title
+    );
+    const entityLinks = resolveCanvasLinks(params.entityIds, entities, (entity) => entity.name);
+    if (sourceNoteLinks.length === 0 && entityLinks.length === 0) return null;
+    return (
+      <div className={styles.chipList} aria-label='World Canvas links'>
+        {sourceNoteLinks.map((link) => (
+          <span className={styles.chip} key={`note:${link.id}`}>
+            Source Note: {link.label}
+            {!link.missing && (
+              <button type='button' onClick={() => onOpenSourceNote?.(link.id)}>Open note</button>
+            )}
+            <button
+              type='button'
+              onClick={() => void runBridgeAction(
+                `${key}:note-unlink:${link.id}`,
+                () => params.onUnlinkSourceNote(link.id),
+                'Source Note unlinked from World Canvas.'
+              )}
+            >
+              Unlink
+            </button>
+          </span>
+        ))}
+        {entityLinks.map((link) => (
+          <span className={styles.chip} key={`entity:${link.id}`}>
+            World Bible: {link.label}
+            {!link.missing && (
+              <button type='button' onClick={() => onOpenEntity?.(link.id)}>Open record</button>
+            )}
+            <button
+              type='button'
+              onClick={() => void runBridgeAction(
+                `${key}:entity-unlink:${link.id}`,
+                () => params.onUnlinkEntity(link.id),
+                'World Bible record unlinked from World Canvas.'
+              )}
+            >
+              Unlink
+            </button>
+          </span>
+        ))}
+      </div>
+    );
+  };
+
+  const renderBridgeActions = (params: {
+    target: BridgeTarget;
+    sourceNoteIds: string[];
+    entityIds: string[];
+    onKeep: () => Promise<LoreDocument | null>;
+    onLinkSourceNote: (id: string) => Promise<unknown>;
+    onLinkEntity: (id: string) => Promise<unknown>;
+    onUnlinkSourceNote: (id: string) => Promise<unknown>;
+    onUnlinkEntity: (id: string) => Promise<unknown>;
+    extraAction?: ReactNode;
+  }) => {
+    const key = targetKey(params.target);
+    return (
+      <div className={styles.bridgePanel}>
+        {renderChips(params)}
+        <div className={styles.actionRow}>
+          <button
+            type='button'
+            disabled={busyKey === `${key}:keep`}
+            onClick={() => void runBridgeAction(
+              `${key}:keep`,
+              params.onKeep,
+              'Source Note created from World Canvas.'
+            )}
+          >
+            {busyKey === `${key}:keep` ? 'Creating...' : 'Keep as Source Note'}
+          </button>
+          <button type='button' onClick={() => openCanonDraft(params.target)}>
+            Propose as canon
+          </button>
+          {params.extraAction}
+        </div>
+        {renderLinkPickers(params)}
+        {renderCanonDraft(params.target)}
+      </div>
+    );
+  };
+
+  const renderQuestionBridge = (question: WorldCanvasQuestion) => {
+    const target: BridgeTarget = {
+      type: 'question',
+      id: question.id,
+      text: question.text,
+      lensKind: question.lensKind
+    };
+    return renderBridgeActions({
+      target,
+      sourceNoteIds: question.linkedSourceNoteId ? [question.linkedSourceNoteId] : [],
+      entityIds: question.linkedEntityId ? [question.linkedEntityId] : [],
+      onKeep: () => worldCanvas.keepQuestionAsSourceNote(question.id),
+      onLinkSourceNote: (id) => worldCanvas.linkQuestionSourceNote(question.id, id),
+      onLinkEntity: (id) => worldCanvas.linkQuestionEntity(question.id, id),
+      onUnlinkSourceNote: () => worldCanvas.linkQuestionSourceNote(question.id, undefined),
+      onUnlinkEntity: () => worldCanvas.linkQuestionEntity(question.id, undefined),
+      extraAction: question.status !== 'answered' ? (
+        <button
+          type='button'
+          onClick={() => worldCanvas.updateQuestion(question.id, {status: 'answered'})}
+        >
+          Mark answered
+        </button>
+      ) : undefined
+    });
   };
 
   return (
@@ -99,6 +437,7 @@ export function WorldCanvasView({worldCanvas}: WorldCanvasViewProps) {
                 </article>
               );
             }
+            const target: BridgeTarget = {type: 'lens', kind: definition.kind, text: lens.note};
             return (
               <article key={definition.kind} className={styles.lensOpen}>
                 <div className={styles.lensHeader}>
@@ -115,6 +454,18 @@ export function WorldCanvasView({worldCanvas}: WorldCanvasViewProps) {
                     onChange={(event) => worldCanvas.setLensNote(definition.kind, event.target.value)}
                   />
                 </label>
+                {renderBridgeActions({
+                  target,
+                  sourceNoteIds: lens.linkedSourceNoteIds,
+                  entityIds: lens.linkedEntityIds,
+                  onKeep: () => worldCanvas.keepLensAsSourceNote(definition.kind),
+                  onLinkSourceNote: (id) => worldCanvas.linkLensSourceNote(definition.kind, id),
+                  onLinkEntity: (id) => worldCanvas.linkLensEntity(definition.kind, id),
+                  onUnlinkSourceNote: (id) =>
+                    worldCanvas.unlinkLensTarget(definition.kind, 'source-note', id),
+                  onUnlinkEntity: (id) =>
+                    worldCanvas.unlinkLensTarget(definition.kind, 'entity', id)
+                })}
               </article>
             );
           })}
@@ -168,27 +519,30 @@ export function WorldCanvasView({worldCanvas}: WorldCanvasViewProps) {
             <p className={styles.emptyCopy}>Example: What truth would change how people understand this world?</p>
           ) : worldCanvas.canvas.questions.map((question, index) => (
             <article key={question.id} className={styles.questionCard}>
-              <label className={styles.questionField}>
-                Question {index + 1}
-                <textarea
-                  rows={2}
-                  value={question.text}
-                  onChange={(event) => worldCanvas.updateQuestion(question.id, {text: event.target.value})}
-                />
-              </label>
-              <label className={styles.questionField}>
-                Question {index + 1} status
-                <select
-                  value={question.status}
-                  onChange={(event) => worldCanvas.updateQuestion(question.id, {
-                    status: event.target.value as typeof question.status
-                  })}
-                >
-                  {Object.entries(STATUS_LABELS).map(([value, label]) => (
-                    <option key={value} value={value}>{label}</option>
-                  ))}
-                </select>
-              </label>
+              <div className={styles.questionEditGrid}>
+                <label className={styles.questionField}>
+                  Question {index + 1}
+                  <textarea
+                    rows={2}
+                    value={question.text}
+                    onChange={(event) => worldCanvas.updateQuestion(question.id, {text: event.target.value})}
+                  />
+                </label>
+                <label className={styles.questionField}>
+                  Question {index + 1} status
+                  <select
+                    value={question.status}
+                    onChange={(event) => worldCanvas.updateQuestion(question.id, {
+                      status: event.target.value as typeof question.status
+                    })}
+                  >
+                    {Object.entries(STATUS_LABELS).map(([value, label]) => (
+                      <option key={value} value={value}>{label}</option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+              {renderQuestionBridge(question)}
             </article>
           ))}
         </div>

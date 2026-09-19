@@ -6,17 +6,26 @@ import type {
 } from '../entityTypes';
 import {useStatusAnnouncement} from './useStatusAnnouncement';
 import {getWorldCanvasByProjectId, saveWorldCanvas} from '../worldCanvasStorage';
+import {saveLoreDocument} from '../loreStorage';
+import type {RAGProvider} from '../services/rag/RAGService';
 import {
   addQuestion,
+  buildSourceNoteFromLens,
+  buildSourceNoteFromQuestion,
   createEmptyWorldCanvas,
+  linkLensEntity,
+  linkLensSourceNote,
+  linkQuestionEntity,
+  linkQuestionSourceNote,
   openLens,
+  unlinkLensTarget,
   updateLensNote,
   updateQuestion
 } from '../services/worldBible/worldCanvasService';
 
 export type WorldCanvasSaveStatus = 'idle' | 'loading' | 'saving' | 'saved' | 'error';
 
-export function useWorldCanvas(projectId: string | null) {
+export function useWorldCanvas(projectId: string | null, ragService: RAGProvider | null = null) {
   const [canvas, setCanvas] = useState<WorldCanvasDocument | null>(null);
   const [status, setStatus] = useState<WorldCanvasSaveStatus>('idle');
   const [lastSavedAt, setLastSavedAt] = useState<number | null>(null);
@@ -96,6 +105,29 @@ export function useWorldCanvas(projectId: string | null) {
     []
   );
 
+  const changeCanvasAndSave = useCallback(async (
+    update: (current: WorldCanvasDocument) => WorldCanvasDocument
+  ) => {
+    if (!canvas) return null;
+    const next = update(canvas);
+    if (next === canvas) return canvas;
+    revisionRef.current += 1;
+    setCanvas(next);
+    setDirty(false);
+    setStatus('saving');
+    try {
+      await saveWorldCanvas(next);
+      setLastSavedAt(next.updatedAt);
+      setStatus('saved');
+      announceStatus('World Canvas saved.');
+      return next;
+    } catch (error) {
+      setDirty(true);
+      setStatus('error');
+      throw error;
+    }
+  }, [announceStatus, canvas]);
+
   const setPremise = useCallback((premise: string) => {
     changeCanvas((current) => ({...current, premise, updatedAt: Date.now()}));
   }, [changeCanvas]);
@@ -119,6 +151,69 @@ export function useWorldCanvas(projectId: string | null) {
     changeCanvas((current) => updateQuestion(current, questionId, updates));
   }, [changeCanvas]);
 
+  const indexSourceNote = useCallback(async (document: ReturnType<typeof buildSourceNoteFromLens>) => {
+    if (!ragService) return;
+    await ragService.indexDocument(
+      `lore:${document.id}`,
+      document.title,
+      document.content,
+      'lore',
+      {tags: [document.kind, 'lore'], entityIds: []}
+    );
+  }, [ragService]);
+
+  const keepLensAsSourceNote = useCallback(async (kind: WorldCanvasLensKind) => {
+    if (!canvas) return null;
+    const lens = canvas.lenses.find((candidate) => candidate.kind === kind);
+    if (!lens) return null;
+    const document = buildSourceNoteFromLens(lens, canvas);
+    await saveLoreDocument(document);
+    await indexSourceNote(document);
+    await changeCanvasAndSave((current) => linkLensSourceNote(current, kind, document.id));
+    return document;
+  }, [canvas, changeCanvasAndSave, indexSourceNote]);
+
+  const keepQuestionAsSourceNote = useCallback(async (questionId: string) => {
+    if (!canvas) return null;
+    const question = canvas.questions.find((candidate) => candidate.id === questionId);
+    if (!question) return null;
+    const document = buildSourceNoteFromQuestion(question, canvas.projectId);
+    await saveLoreDocument(document);
+    await indexSourceNote(document);
+    await changeCanvasAndSave((current) =>
+      linkQuestionSourceNote(current, questionId, document.id)
+    );
+    return document;
+  }, [canvas, changeCanvasAndSave, indexSourceNote]);
+
+  const handleLinkLensSourceNote = useCallback(
+    (kind: WorldCanvasLensKind, sourceNoteId: string) =>
+      changeCanvasAndSave((current) => linkLensSourceNote(current, kind, sourceNoteId)),
+    [changeCanvasAndSave]
+  );
+  const handleLinkLensEntity = useCallback(
+    (kind: WorldCanvasLensKind, entityId: string) =>
+      changeCanvasAndSave((current) => linkLensEntity(current, kind, entityId)),
+    [changeCanvasAndSave]
+  );
+  const handleUnlinkLensTarget = useCallback((
+    kind: WorldCanvasLensKind,
+    target: 'source-note' | 'entity',
+    targetId: string
+  ) => changeCanvasAndSave((current) => unlinkLensTarget(current, kind, target, targetId)), [changeCanvasAndSave]);
+  const handleLinkQuestionSourceNote = useCallback(
+    (questionId: string, sourceNoteId?: string) =>
+      changeCanvasAndSave((current) =>
+        linkQuestionSourceNote(current, questionId, sourceNoteId)
+      ),
+    [changeCanvasAndSave]
+  );
+  const handleLinkQuestionEntity = useCallback(
+    (questionId: string, entityId?: string) =>
+      changeCanvasAndSave((current) => linkQuestionEntity(current, questionId, entityId)),
+    [changeCanvasAndSave]
+  );
+
   return {
     canvas,
     status,
@@ -127,6 +222,13 @@ export function useWorldCanvas(projectId: string | null) {
     openLens: handleOpenLens,
     setLensNote,
     addQuestion: handleAddQuestion,
-    updateQuestion: handleUpdateQuestion
+    updateQuestion: handleUpdateQuestion,
+    keepLensAsSourceNote,
+    keepQuestionAsSourceNote,
+    linkLensSourceNote: handleLinkLensSourceNote,
+    linkLensEntity: handleLinkLensEntity,
+    unlinkLensTarget: handleUnlinkLensTarget,
+    linkQuestionSourceNote: handleLinkQuestionSourceNote,
+    linkQuestionEntity: handleLinkQuestionEntity
   };
 }

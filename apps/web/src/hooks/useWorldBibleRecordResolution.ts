@@ -69,7 +69,7 @@ interface UseWorldBibleRecordResolutionOptions {
     openNext?: boolean;
     successMessage?: string;
     successMessageWithNext?: string;
-  }) => Promise<void>;
+  }) => Promise<WorldEntity | null>;
 }
 
 export function useWorldBibleRecordResolution({

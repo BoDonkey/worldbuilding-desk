@@ -15,6 +15,13 @@ const buildWorldCanvas = (
   setLensNote: vi.fn(),
   addQuestion: vi.fn(),
   updateQuestion: vi.fn(),
+  keepLensAsSourceNote: vi.fn(),
+  keepQuestionAsSourceNote: vi.fn(),
+  linkLensSourceNote: vi.fn(),
+  linkLensEntity: vi.fn(),
+  unlinkLensTarget: vi.fn(),
+  linkQuestionSourceNote: vi.fn(),
+  linkQuestionEntity: vi.fn(),
   ...overrides
 });
 
@@ -60,5 +67,33 @@ describe('WorldCanvasView', () => {
     fireEvent.click(screen.getByRole('button', {name: 'Add question'}));
 
     expect(addQuestion).toHaveBeenCalledWith('Who owns the gate?', 'places');
+  });
+
+  it('offers Source Note and canon bridges without writing canon directly', () => {
+    const keepLensAsSourceNote = vi.fn().mockResolvedValue(null);
+    const onProposeCanon = vi.fn();
+    const canvas = openLens(createEmptyWorldCanvas('project-1'), 'people');
+    canvas.lenses[0].note = 'Sera Vale';
+    render(
+      <WorldCanvasView
+        worldCanvas={buildWorldCanvas({canvas, keepLensAsSourceNote})}
+        categories={[{
+          id: 'characters', projectId: 'project-1', kind: 'character',
+          name: 'Characters', slug: 'characters', fieldSchema: [], createdAt: 1
+        }]}
+        onProposeCanon={onProposeCanon}
+      />
+    );
+
+    fireEvent.click(screen.getByRole('button', {name: 'Keep as Source Note'}));
+    expect(keepLensAsSourceNote).toHaveBeenCalledWith('people');
+
+    fireEvent.click(screen.getByRole('button', {name: 'Propose as canon'}));
+    expect(screen.getByLabelText('Canon record name')).toHaveValue('Sera Vale');
+    fireEvent.click(screen.getByRole('button', {name: 'Open canon form'}));
+    expect(onProposeCanon).toHaveBeenCalledWith(expect.objectContaining({
+      name: 'Sera Vale',
+      target: {type: 'lens', kind: 'people'}
+    }));
   });
 });

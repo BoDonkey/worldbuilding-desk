@@ -1,6 +1,6 @@
 # Worldbuilding-Desk Project Status
 
-**Last Updated:** September 16, 2026
+**Last Updated:** September 19, 2026
 
 ## Project Overview
 
@@ -97,6 +97,12 @@ Under the hood, the app still includes rich systems for world data, rules, chara
   premise, seven author-opened lenses, and open/answered/dropped questions.
   Canvas content is explicitly exploratory and non-canon, stays out of
   extraction and retrieval, and participates in full project backup/restore.
+- World Canvas lenses and questions can now be kept as provenance-marked manual
+  Source Notes, linked to existing Source Notes or World Bible records, and
+  moved into the normal prefilled World Bible create form. Canvas links resolve
+  current target names, preserve visibly stale targets for explicit unlinking,
+  and questions can be marked answered with an optional supporting link; no
+  Canvas action writes facts, aliases, or canon records directly.
 - Lore Documents are now framed as source-note intake rather than a parallel canon database, with manual writing, dossier import, and extraction paths kept separate from accepted canon.
 - World Bible records can create or open a linked Lore Document for longform source notes, and Lore Documents can navigate back to the linked World Bible record.
 - Lore Documents now has a project context health panel that shows RAG document/chunk counts, indexed document type counts, Shodh memory counts, project data counts, and a retrieval probe.
@@ -1026,6 +1032,11 @@ runtime schema, and nothing here changes the roadmap's status board.
 - Zustand workspace UI integration has been smoke-checked manually for Corkboard and Scratchpad memory saving, and the latest focused unit/build passes cover workspace store behavior plus document initialization/save helper behavior.
 
 ### Current Verification Notes
+- World Canvas WC-2 passes lint with the single existing hook warning, 581 web
+  unit tests, 6 rules-engine tests, 12 rules-ui tests, web and desktop builds,
+  and the full 83-test Cypress suite. Manual review completion from a
+  canvas-created note passed through entity proposal and fact acceptance, and
+  the linked controls remain usable at the 780px breakpoint.
 - World Canvas WC-1 passes lint with the single existing hook warning, 578 web
   unit tests, 6 rules-engine tests, 12 rules-ui tests, web and desktop builds,
   and the full 82-test Cypress suite. Its backup new-project restore is covered

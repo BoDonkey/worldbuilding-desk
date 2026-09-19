@@ -6,7 +6,7 @@ import {useFocusTrap} from '../hooks/useFocusTrap';
 import {useConfirmDialog} from '../hooks/useConfirmDialog';
 import {useAppStore} from '../store/appStore';
 import {getProjectCapabilities} from '../projectMode';
-import type {EntityCategory, WorldEntity} from '../entityTypes';
+import type {EntityCategory, WorldCanvasLensKind, WorldEntity} from '../entityTypes';
 import {ProjectScratchpadButton} from '../components/ProjectScratchpadButton';
 import {PageHeader} from '../components/PageHeader';
 import {CategoryManager} from '../components/WorldBible/CategoryManager';
@@ -151,7 +151,9 @@ function WorldBibleRoute() {
   const [isCategoryRailCollapsed, setIsCategoryRailCollapsed] = useState(false);
   const [promotingMemoryId, setPromotingMemoryId] = useState<string | null>(null);
   const [isCreatingFirstMechanics, setIsCreatingFirstMechanics] = useState(false);
-  const worldCanvas = useWorldCanvas(activeProject?.id ?? null);
+  const [pendingCanvasEntityLink, setPendingCanvasEntityLink] = useState<
+    {type: 'lens'; kind: WorldCanvasLensKind} | {type: 'question'; id: string} | null
+  >(null);
   const {
     categories,
     setCategories,
@@ -184,6 +186,7 @@ function WorldBibleRoute() {
     enableSystemNegativeSpace: showGameSystems,
     setFeedback
   });
+  const worldCanvas = useWorldCanvas(activeProject?.id ?? null, ragService);
   const characterIdentityResolution = useCharacterIdentityResolutionQueue({
     activeProject, projectSettings, saveProjectSettings, categories, entities,
     characters, characterSheets, report: characterIdentityReport, setFeedback
@@ -203,6 +206,7 @@ function WorldBibleRoute() {
 
   const aliasTextareaRef = useRef<HTMLTextAreaElement | null>(null);
   const focusedEntityKeyRef = useRef<string | null>(null);
+  const canvasProposalKeyRef = useRef<string | null>(null);
   const handlePromoteMemory = useCallback(
     async (memory: MemoryEntry) => {
       if (!seriesConfig?.parentProjectId) return;
@@ -496,6 +500,7 @@ function WorldBibleRoute() {
     setAiHelperNewSectionLabel('');
     setAiHelperProposal(null);
     setNewCharacterSectionName('');
+    setPendingCanvasEntityLink(null);
   };
 
   const handleSelectCategoryTab = (categoryId: string) => {
@@ -765,11 +770,18 @@ function WorldBibleRoute() {
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
-    if (activeCategoryIsItem && !editingId) {
-      await saveEntityDraft({successMessage: 'Item saved.'});
-      return;
+    const canvasLinkTarget = pendingCanvasEntityLink;
+    const savedEntity = activeCategoryIsItem && !editingId
+      ? await saveEntityDraft({successMessage: 'Item saved.'})
+      : await saveEntityDraft();
+    if (savedEntity && canvasLinkTarget) {
+      if (canvasLinkTarget.type === 'lens') {
+        await worldCanvas.linkLensEntity(canvasLinkTarget.kind, savedEntity.id);
+      } else {
+        await worldCanvas.linkQuestionEntity(canvasLinkTarget.id, savedEntity.id);
+      }
+      setPendingCanvasEntityLink(null);
     }
-    await saveEntityDraft();
   };
 
   useEffect(() => {
@@ -792,6 +804,10 @@ function WorldBibleRoute() {
       handoffKind?: 'character-canonicalization';
       handoffSourceName?: string;
       handoffMatchEntityId?: string;
+      prefillRecordName?: string;
+      worldCanvasLinkTarget?:
+        | {type: 'lens'; kind: WorldCanvasLensKind}
+        | {type: 'question'; id: string};
     } | null;
     if (state?.focusCategorySlug && categories.length > 0) {
       const targetCategory = categories.find(
@@ -803,6 +819,25 @@ function WorldBibleRoute() {
       setViewMode('category');
       if (state.startCharacterImport && !isPasteImportOpen) {
         setIsPasteImportOpen(true);
+      }
+      const canvasProposalKey = state.prefillRecordName && state.worldCanvasLinkTarget
+        ? `${location.key}:${state.focusCategorySlug}:${state.prefillRecordName}`
+        : null;
+      if (
+        targetCategory &&
+        state.prefillRecordName &&
+        state.worldCanvasLinkTarget &&
+        canvasProposalKeyRef.current !== canvasProposalKey
+      ) {
+        const isCharacter = isCharacterCategory(targetCategory);
+        setEditingId(null);
+        setName(state.prefillRecordName);
+        setFieldValues({});
+        setCharacterAuthoringMode(isCharacter ? 'manual' : 'idle');
+        setRecordAuthoringMode(isCharacter ? 'idle' : 'manual');
+        setCharacterDetailSection('canon');
+        setPendingCanvasEntityLink(state.worldCanvasLinkTarget);
+        canvasProposalKeyRef.current = canvasProposalKey;
       }
     }
     const focusEntityId = state?.focusEntityId;
@@ -1016,7 +1051,30 @@ function WorldBibleRoute() {
         />
       )}
 
-      {viewMode === 'canvas' && <WorldCanvasView worldCanvas={worldCanvas} />}
+      {viewMode === 'canvas' && (
+        <WorldCanvasView
+          worldCanvas={worldCanvas}
+          categories={worldBibleCategories}
+          entities={entities}
+          loreDocuments={loreDocuments}
+          onOpenSourceNote={(documentId) =>
+            navigate('/lore', {state: {focusLoreDocumentId: documentId}})
+          }
+          onOpenEntity={(entityId) =>
+            navigate('/world-bible', {state: {focusEntityId: entityId}})
+          }
+          onProposeCanon={({category, name: proposedName, target}) =>
+            navigate('/world-bible', {
+              state: {
+                focusCategorySlug: category.slug,
+                prefillRecordName: proposedName,
+                worldCanvasLinkTarget: target
+              }
+            })
+          }
+          onFeedback={setFeedback}
+        />
+      )}
 
       {activeCategory && viewMode === 'category' && (
         <section className={styles.castPanel} aria-label={`${activeCategory.name} canon`}>

@@ -1,8 +1,17 @@
 import type {
+  EntityCategory,
+  LoreDocument,
+  LoreDocumentKind,
   WorldCanvasDocument,
+  WorldCanvasLens,
   WorldCanvasLensKind,
-  WorldCanvasQuestion
+  WorldCanvasQuestion,
+  WorldEntity
 } from '../../entityTypes';
+import {
+  deriveSourceNoteTitle,
+  summarizeContent
+} from '../lore/sourceNoteCapture';
 
 export interface WorldCanvasLensDefinition {
   kind: WorldCanvasLensKind;
@@ -47,6 +56,137 @@ export const LENS_DEFINITIONS: readonly WorldCanvasLensDefinition[] = [
     prompt: 'What does this world make expensive, forbidden, or impossible?'
   }
 ] as const;
+
+export const WORLD_CANVAS_LENS_NOTE_KINDS: Readonly<Record<WorldCanvasLensKind, LoreDocumentKind>> = {
+  people: 'character_dossier',
+  places: 'place_history',
+  factions: 'faction_notes',
+  history: 'timeline',
+  power: 'general_lore',
+  customs: 'myth',
+  constraints: 'general_lore'
+};
+
+const getLensDefinition = (kind: WorldCanvasLensKind): WorldCanvasLensDefinition =>
+  LENS_DEFINITIONS.find((definition) => definition.kind === kind) ?? {
+    kind,
+    label: kind,
+    prompt: ''
+  };
+
+const buildManualSourceNote = (params: {
+  projectId: string;
+  titleSource: string;
+  content: string;
+  kind: LoreDocumentKind;
+}): LoreDocument => {
+  const now = Date.now();
+  return {
+    id: crypto.randomUUID(),
+    projectId: params.projectId,
+    title: deriveSourceNoteTitle(params.titleSource),
+    kind: params.kind,
+    format: 'plain_text',
+    content: params.content,
+    summary: summarizeContent(params.content),
+    source: {type: 'manual'},
+    status: 'active',
+    createdAt: now,
+    updatedAt: now
+  };
+};
+
+export function buildSourceNoteFromLens(
+  lens: WorldCanvasLens,
+  canvas: WorldCanvasDocument
+): LoreDocument {
+  const note = lens.note.trim();
+  if (!note) throw new Error('Write something in this lens before keeping it as a Source Note.');
+  const definition = getLensDefinition(lens.kind);
+  const content = `From World Canvas — ${definition.label}\n\n${note}`;
+  return buildManualSourceNote({
+    projectId: canvas.projectId,
+    titleSource: note,
+    content,
+    kind: WORLD_CANVAS_LENS_NOTE_KINDS[lens.kind]
+  });
+}
+
+export function buildSourceNoteFromQuestion(
+  question: WorldCanvasQuestion,
+  projectId: string
+): LoreDocument {
+  const text = question.text.trim();
+  if (!text) throw new Error('Write the question before keeping it as a Source Note.');
+  const lens = question.lensKind ? getLensDefinition(question.lensKind) : null;
+  const provenance = lens
+    ? `From World Canvas — Question (${lens.label})`
+    : 'From World Canvas — Question';
+  const content = `${provenance}\n\n${text}`;
+  return buildManualSourceNote({
+    projectId,
+    titleSource: text,
+    content,
+    kind: question.lensKind
+      ? WORLD_CANVAS_LENS_NOTE_KINDS[question.lensKind]
+      : 'general_lore'
+  });
+}
+
+export interface ResolvedCanvasLink {
+  id: string;
+  label: string;
+  missing: boolean;
+}
+
+export function resolveCanvasLinks<T extends {id: string}>(
+  ids: string[],
+  records: T[],
+  getLabel: (record: T) => string
+): ResolvedCanvasLink[] {
+  const recordsById = new Map(records.map((record) => [record.id, record]));
+  return ids.map((id) => {
+    const record = recordsById.get(id);
+    return record
+      ? {id, label: getLabel(record), missing: false}
+      : {id, label: 'no longer exists', missing: true};
+  });
+}
+
+const LENS_CATEGORY_HINTS: Readonly<Record<WorldCanvasLensKind, readonly string[]>> = {
+  people: ['character', 'person', 'people', 'npc'],
+  places: ['location', 'place', 'region', 'zone'],
+  factions: ['faction', 'guild', 'house', 'order', 'institution'],
+  history: ['history', 'event', 'timeline'],
+  power: ['power', 'magic', 'ability', 'system'],
+  customs: ['custom', 'belief', 'religion', 'culture', 'myth'],
+  constraints: ['constraint', 'law', 'rule', 'limit']
+};
+
+export function findSuggestedCanvasCategory(
+  kind: WorldCanvasLensKind | undefined,
+  categories: EntityCategory[]
+): EntityCategory | null {
+  if (categories.length === 0) return null;
+  if (!kind) return categories[0];
+  const hints = LENS_CATEGORY_HINTS[kind];
+  return categories.find((category) => {
+    const haystack = `${category.kind} ${category.slug} ${category.name}`.toLowerCase();
+    return hints.some((hint) => haystack.includes(hint));
+  }) ?? categories[0];
+}
+
+export function deriveCanvasCanonName(text: string): string {
+  return deriveSourceNoteTitle(text).replace(/[?.!]+$/, '');
+}
+
+export function getCanvasEntityLabel(
+  entity: WorldEntity,
+  categories: EntityCategory[]
+): string {
+  const category = categories.find((candidate) => candidate.id === entity.categoryId);
+  return category ? `${entity.name} · ${category.name}` : entity.name;
+}
 
 export function createEmptyWorldCanvas(projectId: string): WorldCanvasDocument {
   const now = Date.now();
@@ -135,6 +275,91 @@ export function updateQuestion(
           }
         : question
     ),
+    updatedAt: now
+  };
+}
+
+export function linkLensSourceNote(
+  canvas: WorldCanvasDocument,
+  kind: WorldCanvasLensKind,
+  sourceNoteId: string
+): WorldCanvasDocument {
+  const opened = openLens(canvas, kind);
+  const now = Date.now();
+  return {
+    ...opened,
+    lenses: opened.lenses.map((lens) => lens.kind === kind
+      ? {...lens, linkedSourceNoteIds: [...new Set([...lens.linkedSourceNoteIds, sourceNoteId])], updatedAt: now}
+      : lens),
+    updatedAt: now
+  };
+}
+
+export function linkLensEntity(
+  canvas: WorldCanvasDocument,
+  kind: WorldCanvasLensKind,
+  entityId: string
+): WorldCanvasDocument {
+  const opened = openLens(canvas, kind);
+  const now = Date.now();
+  return {
+    ...opened,
+    lenses: opened.lenses.map((lens) => lens.kind === kind
+      ? {...lens, linkedEntityIds: [...new Set([...lens.linkedEntityIds, entityId])], updatedAt: now}
+      : lens),
+    updatedAt: now
+  };
+}
+
+export function unlinkLensTarget(
+  canvas: WorldCanvasDocument,
+  kind: WorldCanvasLensKind,
+  target: 'source-note' | 'entity',
+  targetId: string
+): WorldCanvasDocument {
+  const now = Date.now();
+  return {
+    ...canvas,
+    lenses: canvas.lenses.map((lens) => lens.kind !== kind ? lens : {
+      ...lens,
+      linkedSourceNoteIds: target === 'source-note'
+        ? lens.linkedSourceNoteIds.filter((id) => id !== targetId)
+        : lens.linkedSourceNoteIds,
+      linkedEntityIds: target === 'entity'
+        ? lens.linkedEntityIds.filter((id) => id !== targetId)
+        : lens.linkedEntityIds,
+      updatedAt: now
+    }),
+    updatedAt: now
+  };
+}
+
+export function linkQuestionSourceNote(
+  canvas: WorldCanvasDocument,
+  questionId: string,
+  sourceNoteId?: string
+): WorldCanvasDocument {
+  const now = Date.now();
+  return {
+    ...canvas,
+    questions: canvas.questions.map((question) => question.id === questionId
+      ? {...question, linkedSourceNoteId: sourceNoteId, updatedAt: now}
+      : question),
+    updatedAt: now
+  };
+}
+
+export function linkQuestionEntity(
+  canvas: WorldCanvasDocument,
+  questionId: string,
+  entityId?: string
+): WorldCanvasDocument {
+  const now = Date.now();
+  return {
+    ...canvas,
+    questions: canvas.questions.map((question) => question.id === questionId
+      ? {...question, linkedEntityId: entityId, updatedAt: now}
+      : question),
     updatedAt: now
   };
 }
