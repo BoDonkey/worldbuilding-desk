@@ -22,16 +22,29 @@ export function isSystemNegativeSpaceCategory(
   return category?.recordType === SYSTEM_NEGATIVE_SPACE_RECORD_TYPE;
 }
 
+export const SYSTEM_NEGATIVE_SPACE_CATEGORY_NAME = 'Problems Power Cannot Solve';
+
+export const SYSTEM_NEGATIVE_SPACE_DESCRIPTION =
+  'Track human problems your world’s power system cannot fix — grief, trust, belonging — so ' +
+  'growing power does not quietly solve everything. Optional; add it only if the question is useful.';
+
+/**
+ * Opt-in: the author adds this from Manage Categories. The id is fixed per project so the
+ * category can only ever exist once, however many times it is added.
+ */
+export const systemNegativeSpaceCategoryId = (projectId: string) =>
+  `system-negative-space-${projectId}`;
+
 export function createSystemNegativeSpaceCategory(
   projectId: string,
   now = Date.now()
 ): EntityCategory {
   return {
-    id: crypto.randomUUID(),
+    id: systemNegativeSpaceCategoryId(projectId),
     projectId,
     kind: 'general',
     recordType: SYSTEM_NEGATIVE_SPACE_RECORD_TYPE,
-    name: 'Problems Power Cannot Solve',
+    name: SYSTEM_NEGATIVE_SPACE_CATEGORY_NAME,
     slug: 'problems-power-cannot-solve',
     fieldSchema: [
       {

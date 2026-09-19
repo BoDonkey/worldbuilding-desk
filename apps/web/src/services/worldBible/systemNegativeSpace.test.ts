@@ -1,4 +1,4 @@
-import {describe, expect, it, vi} from 'vitest';
+import {describe, expect, it} from 'vitest';
 import type {WorldEntity, WritingDocument} from '../../entityTypes';
 import {
   createSystemNegativeSpaceCategory,
@@ -32,15 +32,16 @@ const entity = (
 });
 
 describe('system negative-space records', () => {
-  it('creates an explicitly typed built-in category', () => {
-    vi.stubGlobal('crypto', {randomUUID: () => 'category-1'});
+  it('creates an explicitly typed built-in category with one fixed id per project', () => {
     expect(createSystemNegativeSpaceCategory('project-1', 42)).toMatchObject({
-      id: 'category-1',
+      id: 'system-negative-space-project-1',
       projectId: 'project-1',
       recordType: 'system-negative-space',
       createdAt: 42
     });
-    vi.unstubAllGlobals();
+    expect(createSystemNegativeSpaceCategory('project-1', 99).id).toBe(
+      createSystemNegativeSpaceCategory('project-1', 42).id
+    );
   });
 
   it('normalizes status and keeps only unique, existing scene links', () => {

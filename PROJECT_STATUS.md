@@ -373,8 +373,11 @@ Under the hood, the app still includes rich systems for world data, rules, chara
   upgrade through deterministic migrations, including the
   deterministic character classifier before import, with replay parity
   preserved.
-- Mechanics-enabled projects expose a built-in World Bible record type for
-  problems power cannot solve. Authors maintain each problem's structured
+- Mechanics-enabled projects can opt in to a built-in World Bible record type
+  for problems power cannot solve: Manage Categories offers **Add Problems
+  Power Cannot Solve** with a one-line explanation, and the category can be
+  deleted like any other. It is never created automatically; a fixed
+  per-project id means it can exist only once. Authors maintain each problem's structured
   status and explicit scene links; the World Bible deterministically summarizes
   counts and cited scenes without making semantic claims about the prose.
   General-fiction projects do not expose the record type.

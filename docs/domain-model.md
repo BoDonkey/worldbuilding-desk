@@ -240,8 +240,10 @@ validates possible links; the author resolves ambiguity and creates canon.
 
 ## 4.1 System Negative-Space Records
 
-Mechanics-enabled projects have one explicit built-in World Bible category
-whose `recordType` is `system-negative-space`. Its records capture problems
+Mechanics-enabled projects may opt in to one explicit built-in World Bible
+category whose `recordType` is `system-negative-space`. The author adds it from
+Manage Categories; nothing creates it automatically. Its id is fixed per
+project (`system-negative-space-<projectId>`), so it can exist at most once. Its records capture problems
 that character progression cannot solve. The category identity comes from the
 typed field, never from its editable display name or slug. General-fiction
 projects do not expose this category.

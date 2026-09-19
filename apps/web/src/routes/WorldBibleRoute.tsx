@@ -183,7 +183,6 @@ function WorldBibleRoute() {
     setCompendiumLinkedEntityIds
   } = useWorldBibleProjectData({
     activeProject,
-    enableSystemNegativeSpace: showGameSystems,
     setFeedback
   });
   const worldCanvas = useWorldCanvas(activeProject?.id ?? null, ragService);
@@ -1168,6 +1167,7 @@ function WorldBibleRoute() {
         <CategoryManager
           projectId={activeProject.id}
           categories={worldBibleCategories}
+          canAddSystemNegativeSpace={showGameSystems}
           onCategoriesChange={(updatedCategories) => {
             const hiddenCategories = categories.filter(
               (category) => !worldBibleCategories.some(

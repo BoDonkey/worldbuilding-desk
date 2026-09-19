@@ -154,6 +154,12 @@ describe('Post-merge smoke checklist', () => {
 
   it('tracks mechanics-only problems power cannot solve with explicit scene links', () => {
     cy.visit('/world-bible');
+    // Opt-in: the category does not exist until the author adds it.
+    cy.contains('button', 'Problems Power Cannot Solve').should('not.exist');
+    cy.contains('button', 'Manage Categories').click();
+    cy.contains('button', 'Add Problems Power Cannot Solve').click();
+    cy.contains('button', 'Add Problems Power Cannot Solve').should('not.exist');
+    cy.contains('button', 'Close').click();
     cy.contains('button', 'Problems Power Cannot Solve').should('be.visible').click();
     cy.get('section[aria-label="Problems power cannot solve summary"]')
       .should('contain.text', '0 tracked');

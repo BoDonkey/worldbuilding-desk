@@ -35,10 +35,6 @@ import {
   CHARACTER_NOTES_FIELD,
   isCharacterCategory
 } from '../services/worldBible/worldBibleSummary';
-import {
-  createSystemNegativeSpaceCategory,
-  isSystemNegativeSpaceCategory
-} from '../services/worldBible/systemNegativeSpace';
 import {describeError} from '../services/errors';
 
 interface WorldBibleFeedback {
@@ -48,7 +44,6 @@ interface WorldBibleFeedback {
 
 interface UseWorldBibleProjectDataOptions {
   activeProject: Project | null;
-  enableSystemNegativeSpace: boolean;
   setFeedback: Dispatch<SetStateAction<WorldBibleFeedback | null>>;
 }
 
@@ -84,7 +79,6 @@ const ensureCharacterCategoryLongFormFields = async (
 
 export function useWorldBibleProjectData({
   activeProject,
-  enableSystemNegativeSpace,
   setFeedback
 }: UseWorldBibleProjectDataOptions) {
   const [categories, setCategories] = useState<EntityCategory[]>([]);
@@ -192,17 +186,9 @@ export function useWorldBibleProjectData({
         getRulesetByProjectId(projectId),
         getCharacterIdentityMigrationReport(projectId)
       ]);
-      let normalizedCategories = await ensureCharacterCategoryLongFormFields(
+      const normalizedCategories = await ensureCharacterCategoryLongFormFields(
         loadedCategories
       );
-      if (
-        enableSystemNegativeSpace &&
-        !normalizedCategories.some(isSystemNegativeSpaceCategory)
-      ) {
-        const category = createSystemNegativeSpaceCategory(projectId);
-        await saveCategory(category);
-        normalizedCategories = [...normalizedCategories, category];
-      }
 
       if (!cancelled) {
         setCategories(normalizedCategories);
@@ -281,7 +267,7 @@ export function useWorldBibleProjectData({
         refreshCharacterIdentityData
       );
     };
-  }, [activeProject, enableSystemNegativeSpace]);
+  }, [activeProject]);
 
   useEffect(() => {
     if (!activeProject) {

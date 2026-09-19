@@ -4,11 +4,18 @@ import {deleteCategory, saveCategory} from '../../categoryStorage';
 import CategoryEditor from '../CategoryEditor';
 import {useConfirmDialog} from '../../hooks/useConfirmDialog';
 import styles from '../../assets/components/WorldBibleRoute.module.css';
-import {isSystemNegativeSpaceCategory} from '../../services/worldBible/systemNegativeSpace';
+import {
+  SYSTEM_NEGATIVE_SPACE_CATEGORY_NAME,
+  SYSTEM_NEGATIVE_SPACE_DESCRIPTION,
+  createSystemNegativeSpaceCategory,
+  isSystemNegativeSpaceCategory
+} from '../../services/worldBible/systemNegativeSpace';
 
 interface CategoryManagerProps {
   projectId: string;
   categories: EntityCategory[];
+  /** Game-systems projects may opt in to the built-in "Problems Power Cannot Solve" category. */
+  canAddSystemNegativeSpace?: boolean;
   onCategoriesChange: (categories: EntityCategory[]) => void;
   onClose: () => void;
 }
@@ -16,6 +23,7 @@ interface CategoryManagerProps {
 export function CategoryManager({
   projectId,
   categories,
+  canAddSystemNegativeSpace = false,
   onCategoriesChange,
   onClose
 }: CategoryManagerProps) {
@@ -43,6 +51,18 @@ export function CategoryManager({
     await saveCategory(category);
     onCategoriesChange([...categories, category]);
     setNewCatName('');
+  };
+
+  const showSystemNegativeSpaceOffer =
+    canAddSystemNegativeSpace && !categories.some(isSystemNegativeSpaceCategory);
+
+  const handleAddSystemNegativeSpace = async () => {
+    const category = createSystemNegativeSpaceCategory(projectId);
+    await saveCategory(category);
+    onCategoriesChange([
+      ...categories.filter((existing) => existing.id !== category.id),
+      category
+    ]);
   };
 
   const handleDeleteCategory = (id: string) => {
@@ -93,6 +113,20 @@ export function CategoryManager({
         <button onClick={handleAddCategory}>Add Category</button>
       </div>
 
+      {showSystemNegativeSpaceOffer && (
+        <div className={styles.categoryItem}>
+          <div className={styles.categoryInfo}>
+            <strong>Optional: {SYSTEM_NEGATIVE_SPACE_CATEGORY_NAME}</strong>
+            <span className={styles.categoryMeta}>{SYSTEM_NEGATIVE_SPACE_DESCRIPTION}</span>
+          </div>
+          <div className={styles.categoryActions}>
+            <button onClick={() => void handleAddSystemNegativeSpace()}>
+              Add {SYSTEM_NEGATIVE_SPACE_CATEGORY_NAME}
+            </button>
+          </div>
+        </div>
+      )}
+
       <ul className={styles.categoryList}>
         {categories.map((category) => (
           <li key={category.id} className={styles.categoryItem}>
@@ -103,19 +137,20 @@ export function CategoryManager({
                 {isSystemNegativeSpaceCategory(category) ? ' · built-in mechanics record' : ''})
               </span>
             </div>
-            {!isSystemNegativeSpaceCategory(category) && (
-              <div className={styles.categoryActions}>
+            <div className={styles.categoryActions}>
+              {!isSystemNegativeSpaceCategory(category) && (
                 <button onClick={() => setEditingCategory(category)}>
                   Edit Fields
                 </button>
-                <button
-                  onClick={() => handleDeleteCategory(category.id)}
-                  className={styles.deleteButton}
-                >
-                  Delete
-                </button>
-              </div>
-            )}
+              )}
+              <button
+                onClick={() => handleDeleteCategory(category.id)}
+                className={styles.deleteButton}
+                aria-label={`Delete ${category.name}`}
+              >
+                Delete
+              </button>
+            </div>
           </li>
         ))}
       </ul>
