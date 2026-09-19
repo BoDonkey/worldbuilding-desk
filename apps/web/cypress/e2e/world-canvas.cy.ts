@@ -1,3 +1,68 @@
+import {DB_NAME} from '../../src/db';
+
+const seedCanvasReturnExperience = (win: Window): Promise<void> =>
+  new Promise((resolve, reject) => {
+    const request = win.indexedDB.open(DB_NAME);
+    request.onerror = () => reject(request.error);
+    request.onsuccess = () => {
+      const db = request.result;
+      const now = Date.now();
+      const tx = db.transaction(
+        ['entityCategories', 'entities', 'lore_documents', 'lore_document_links', 'world_canvases'],
+        'readwrite'
+      );
+      const categories = tx.objectStore('entityCategories');
+      categories.put({
+        id: 'canvas-characters', projectId: 'cypress-project-1', kind: 'character',
+        name: 'Characters', slug: 'characters', fieldSchema: [], createdAt: now
+      });
+      categories.put({
+        id: 'canvas-factions', projectId: 'cypress-project-1', kind: 'general',
+        name: 'Factions', slug: 'factions', fieldSchema: [], createdAt: now
+      });
+      categories.put({
+        id: 'canvas-relics', projectId: 'cypress-project-1', kind: 'general',
+        name: 'Relics', slug: 'relics', fieldSchema: [], createdAt: now
+      });
+      const entities = tx.objectStore('entities');
+      [
+        {id: 'canvas-sera', categoryId: 'canvas-characters', name: 'Sera Kestrel', needsCompletion: true},
+        {id: 'canvas-brannic', categoryId: 'canvas-characters', name: 'Brannic Halloway'},
+        {id: 'canvas-compact', categoryId: 'canvas-factions', name: 'The Cinder Compact'},
+        {id: 'canvas-key', categoryId: 'canvas-relics', name: 'Emberglass Key'}
+      ].forEach((entity) => entities.put({
+        ...entity,
+        projectId: 'cypress-project-1', fields: {}, links: [], createdAt: now, updatedAt: now
+      }));
+      tx.objectStore('lore_documents').put({
+        id: 'canvas-compact-note', projectId: 'cypress-project-1',
+        title: 'Faction Notes — The Cinder Compact', kind: 'faction_notes',
+        format: 'plain_text', content: 'Compact notes', source: {type: 'manual'},
+        status: 'active', createdAt: now, updatedAt: now
+      });
+      tx.objectStore('lore_document_links').put({
+        id: 'canvas-compact-link', projectId: 'cypress-project-1',
+        loreDocumentId: 'canvas-compact-note', targetType: 'entity',
+        targetId: 'canvas-compact', relationship: 'primary_subject', createdAt: now
+      });
+      tx.objectStore('world_canvases').put({
+        id: 'cypress-project-1', projectId: 'cypress-project-1', premise: '', lenses: [],
+        questions: [{
+          id: 'canvas-old-question', text: 'Who first opened the Salt Door?',
+          status: 'open', createdAt: now - 31 * 24 * 60 * 60 * 1000,
+          updatedAt: now - 31 * 24 * 60 * 60 * 1000
+        }],
+        createdAt: now, updatedAt: now
+      });
+      tx.oncomplete = () => {
+        db.close();
+        resolve();
+      };
+      tx.onerror = () => reject(tx.error);
+      tx.onabort = () => reject(tx.error);
+    };
+  });
+
 describe('World Canvas', () => {
   beforeEach(() => {
     cy.viewport(1400, 1000);
@@ -113,6 +178,38 @@ describe('World Canvas', () => {
     cy.contains('button', 'World Canvas').click();
     cy.contains('article', 'Places').within(() => {
       cy.contains('World Bible: Glass Citadel').should('be.visible');
+    });
+  });
+
+  it('returns to mapped canon, Source Notes, and rule-stated reminders', () => {
+    cy.visit('/world-bible');
+    cy.contains('h1', 'World Bible').should('be.visible');
+    cy.window().then(seedCanvasReturnExperience);
+    cy.reload();
+    cy.contains('button', 'World Canvas').click();
+
+    cy.contains('article', 'People').within(() => {
+      cy.contains('2 World Bible records:').should('be.visible');
+      cy.contains('Brannic Halloway, Sera Kestrel').should('be.visible');
+    });
+    cy.contains('article', 'Factions and institutions').within(() => {
+      cy.contains('The Cinder Compact').should('be.visible');
+      cy.contains('Faction Notes — The Cinder Compact').should('be.visible');
+    });
+    cy.contains('Other records').parent().should('contain.text', 'Emberglass Key');
+    cy.contains('aside', 'Worth a look').within(() => {
+      cy.contains('Sera Kestrel').should('be.visible');
+      cy.contains('This record is marked for author review.').should('be.visible');
+      cy.contains('No Source Note is linked to this record.').should('be.visible');
+      cy.contains('Who first opened the Salt Door?').should('be.visible');
+      cy.contains('This question has stayed open for more than 30 days.').should('be.visible');
+      cy.contains(/%|score|progress bar/i).should('not.exist');
+    });
+
+    cy.viewport(780, 900);
+    cy.contains('article', 'People').should('be.visible');
+    cy.window().then((win) => {
+      expect(win.document.documentElement.scrollWidth).to.be.at.most(win.innerWidth);
     });
   });
 });

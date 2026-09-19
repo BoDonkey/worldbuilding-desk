@@ -2,6 +2,7 @@ import {useEffect, useMemo, useState, type FormEvent, type ReactNode} from 'reac
 import type {
   EntityCategory,
   LoreDocument,
+  LoreDocumentLink,
   WorldCanvasLensKind,
   WorldCanvasQuestion,
   WorldEntity
@@ -15,6 +16,12 @@ import {
   getCanvasEntityLabel,
   resolveCanvasLinks
 } from '../../services/worldBible/worldCanvasService';
+import {
+  buildWorthALookList,
+  summarizeLens,
+  summarizeOtherRecords,
+  type WorldCanvasWorthALookItem
+} from '../../services/worldBible/worldCanvasDerived';
 import styles from './WorldCanvasView.module.css';
 
 interface WorldCanvasViewProps {
@@ -22,8 +29,12 @@ interface WorldCanvasViewProps {
   categories?: EntityCategory[];
   entities?: WorldEntity[];
   loreDocuments?: LoreDocument[];
+  loreDocumentLinks?: LoreDocumentLink[];
+  reviewCandidateCount?: number;
+  isGeneralFiction?: boolean;
   onOpenSourceNote?: (documentId: string) => void;
   onOpenEntity?: (entityId: string) => void;
+  onOpenReview?: () => void;
   onProposeCanon?: (proposal: {
     category: EntityCategory;
     name: string;
@@ -52,13 +63,29 @@ interface CanonDraft {
 const targetKey = (target: BridgeTarget) =>
   target.type === 'lens' ? `lens:${target.kind}` : `question:${target.id}`;
 
+const dismissedKey = (projectId: string) =>
+  `wbd:world-canvas-worth-a-look-dismissed:${projectId}`;
+
+const getDismissedItemIds = (projectId: string): Set<string> => {
+  try {
+    const value = JSON.parse(localStorage.getItem(dismissedKey(projectId)) ?? '[]');
+    return new Set(Array.isArray(value) ? value.filter((item) => typeof item === 'string') : []);
+  } catch {
+    return new Set();
+  }
+};
+
 export function WorldCanvasView({
   worldCanvas,
   categories = [],
   entities = [],
   loreDocuments = [],
+  loreDocumentLinks = [],
+  reviewCandidateCount = 0,
+  isGeneralFiction = false,
   onOpenSourceNote,
   onOpenEntity,
+  onOpenReview,
   onProposeCanon,
   onFeedback
 }: WorldCanvasViewProps) {
@@ -69,6 +96,10 @@ export function WorldCanvasView({
   const [entitySelections, setEntitySelections] = useState<Record<string, string>>({});
   const [canonDraft, setCanonDraft] = useState<CanonDraft | null>(null);
   const [busyKey, setBusyKey] = useState<string | null>(null);
+  const projectId = worldCanvas.canvas?.projectId ?? '';
+  const [dismissedItemIds, setDismissedItemIds] = useState<Set<string>>(
+    () => projectId ? getDismissedItemIds(projectId) : new Set()
+  );
   const lensByKind = useMemo(
     () => new Map(worldCanvas.canvas?.lenses.map((lens) => [lens.kind, lens]) ?? []),
     [worldCanvas.canvas?.lenses]
@@ -86,6 +117,10 @@ export function WorldCanvasView({
       setCanonDraft((current) => current ? {...current, categoryId: category.id} : current);
     }
   }, [canonDraft, categories]);
+
+  useEffect(() => {
+    setDismissedItemIds(projectId ? getDismissedItemIds(projectId) : new Set());
+  }, [projectId]);
 
   if (!worldCanvas.canvas || worldCanvas.status === 'loading') {
     return <section className={styles.section}>Loading World Canvas...</section>;
@@ -141,6 +176,67 @@ export function WorldCanvasView({
       categoryId: category?.id ?? '',
       name: deriveCanvasCanonName(target.text)
     });
+  };
+
+  const derivedContext = {
+    entities,
+    categories,
+    loreDocuments,
+    links: loreDocumentLinks,
+    isGeneralFiction
+  };
+  const worthALookItems = buildWorthALookList({
+    canvas: worldCanvas.canvas,
+    entities,
+    categories,
+    links: loreDocumentLinks,
+    unresolvedReviewCount: reviewCandidateCount,
+    isGeneralFiction,
+    limit: Number.MAX_SAFE_INTEGER
+  })
+    .filter((item) => !dismissedItemIds.has(item.id))
+    .slice(0, 8);
+  const otherRecordNames = summarizeOtherRecords({entities, categories, isGeneralFiction});
+
+  const dismissWorthALookItem = (id: string) => {
+    const next = new Set(dismissedItemIds).add(id);
+    setDismissedItemIds(next);
+    localStorage.setItem(dismissedKey(projectId), JSON.stringify([...next]));
+  };
+
+  const restoreWorthALookItems = () => {
+    localStorage.removeItem(dismissedKey(projectId));
+    setDismissedItemIds(new Set());
+  };
+
+  const openWorthALookItem = (item: WorldCanvasWorthALookItem) => {
+    if (item.action === 'review') {
+      onOpenReview?.();
+    } else if (item.action === 'record' && item.entityId) {
+      onOpenEntity?.(item.entityId);
+    } else if (item.questionId) {
+      document.getElementById(`world-canvas-question-${item.questionId}`)?.focus();
+    }
+  };
+
+  const renderLensSummary = (
+    kind: WorldCanvasLensKind,
+    lens?: {linkedEntityIds: string[]; linkedSourceNoteIds: string[]}
+  ) => {
+    const summary = summarizeLens({kind, ...lens}, derivedContext);
+    return (
+      <div className={styles.derivedSummary} aria-label={`${kind} saved material summary`}>
+        <span className={styles.derivedLabel}>From saved material</span>
+        <p>
+          <strong>{summary.recordCount} World Bible record{summary.recordCount === 1 ? '' : 's'}:</strong>{' '}
+          {summary.recordNames.length > 0 ? summary.recordNames.join(', ') : 'None mapped'}
+        </p>
+        <p>
+          <strong>{summary.sourceNoteCount} Source Note{summary.sourceNoteCount === 1 ? '' : 's'}:</strong>{' '}
+          {summary.sourceNoteTitles.length > 0 ? summary.sourceNoteTitles.join(', ') : 'None mapped'}
+        </p>
+      </div>
+    );
   };
 
   const renderCanonDraft = (target: BridgeTarget) => {
@@ -430,6 +526,7 @@ export function WorldCanvasView({
                   <div>
                     <h4>{definition.label}</h4>
                     <p className={styles.lensCopy}>{definition.prompt}</p>
+                    {renderLensSummary(definition.kind)}
                   </div>
                   <button type='button' onClick={() => worldCanvas.openLens(definition.kind)}>
                     Open lens
@@ -454,6 +551,7 @@ export function WorldCanvasView({
                     onChange={(event) => worldCanvas.setLensNote(definition.kind, event.target.value)}
                   />
                 </label>
+                {renderLensSummary(definition.kind, lens)}
                 {renderBridgeActions({
                   target,
                   sourceNoteIds: lens.linkedSourceNoteIds,
@@ -470,6 +568,12 @@ export function WorldCanvasView({
             );
           })}
         </div>
+        {otherRecordNames.length > 0 && (
+          <div className={styles.otherRecords}>
+            <strong>Other records</strong>
+            <span>{otherRecordNames.join(', ')}</span>
+          </div>
+        )}
       </section>
 
       <section className={styles.section} aria-labelledby='world-canvas-questions-heading'>
@@ -479,6 +583,41 @@ export function WorldCanvasView({
             <p>Keep uncertainties visible without forcing an answer before the story needs one.</p>
           </div>
         </div>
+        {(worthALookItems.length > 0 || dismissedItemIds.size > 0) && (
+          <aside className={styles.worthALook} aria-labelledby='world-canvas-worth-a-look-heading'>
+            <div className={styles.worthALookHeader}>
+              <div>
+                <h4 id='world-canvas-worth-a-look-heading'>Worth a look</h4>
+                <p>Deterministic reminders from saved records, links, questions, and review.</p>
+              </div>
+              {dismissedItemIds.size > 0 && (
+                <button type='button' onClick={restoreWorthALookItems}>Restore dismissed</button>
+              )}
+            </div>
+            <div className={styles.worthALookList}>
+              {worthALookItems.map((item) => (
+                <div key={item.id} className={styles.worthALookItem}>
+                  <div>
+                    <strong>{item.label}</strong>
+                    <p>{item.reason}</p>
+                  </div>
+                  <div className={styles.actionRow}>
+                    <button type='button' onClick={() => openWorthALookItem(item)}>
+                      {item.action === 'review'
+                        ? 'Open Review'
+                        : item.action === 'record'
+                          ? 'Open record'
+                          : 'Open question'}
+                    </button>
+                    <button type='button' onClick={() => dismissWorthALookItem(item.id)}>
+                      Dismiss
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </aside>
+        )}
         <form className={styles.questionForm} onSubmit={handleAddQuestion}>
           <div className={styles.questionField}>
             <label htmlFor='world-canvas-new-question'>New question</label>
@@ -523,6 +662,7 @@ export function WorldCanvasView({
                 <label className={styles.questionField}>
                   Question {index + 1}
                   <textarea
+                    id={`world-canvas-question-${question.id}`}
                     rows={2}
                     value={question.text}
                     onChange={(event) => worldCanvas.updateQuestion(question.id, {text: event.target.value})}

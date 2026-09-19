@@ -1057,12 +1057,16 @@ function WorldBibleRoute() {
           categories={worldBibleCategories}
           entities={entities}
           loreDocuments={loreDocuments}
+          loreDocumentLinks={loreDocumentLinks}
+          reviewCandidateCount={reviewQueue.length + characterIdentityResolution.queue.length}
+          isGeneralFiction={capabilities.isGeneralFiction}
           onOpenSourceNote={(documentId) =>
             navigate('/lore', {state: {focusLoreDocumentId: documentId}})
           }
           onOpenEntity={(entityId) =>
             navigate('/world-bible', {state: {focusEntityId: entityId}})
           }
+          onOpenReview={handleSelectReview}
           onProposeCanon={({category, name: proposedName, target}) =>
             navigate('/world-bible', {
               state: {
