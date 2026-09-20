@@ -243,7 +243,7 @@ and required revisit point, `WIP`, `Done <commit>`.
 | 4.32 | World Canvas — derived return experience (WC-3) | 4 | S | Done `eb305e7` — read-only per-lens record/Source Note summaries for opened and unopened lenses; unmapped custom categories under Other records; capped project-scoped dismiss/restore Worth a look rules for author-review records, missing Source Note links, questions open over 30 days, and review candidates with direct navigation; no scores or automatic resolution; mechanics-only records excluded for general fiction; lint with 1 baseline warning; 585 web + 6 engine + 12 UI tests; web/desktop builds; Cypress 84/84; manual 780×900 check |
 | 4.33 | World Canvas — author-invoked brainstorming (WC-4) | 4 | M | Done `6fd31ae` — **Ask for tensions and questions** on the premise and each opened lens; sends authored canvas text plus World Bible names/aliases only (never Source Note text) under an exploratory-not-canon framing; one `canvas-brainstorm` budget unit per click; zod-validated 1–12 items ≤280 chars, a bad reply is rejected whole; per-item Keep as Source Note (provenance-marked, lens-linked) / Add as question (non-question items only after an author rewrite; `origin: 'brainstorm'` badge) / Dismiss. Deviations: unreviewed ideas are kept in memory across in-app navigation, because `BrowserRouter` has no `useBlocker`; replace/discard asks first and reload/close prompts. Repeat requests list ideas already shown, which also avoids the `LLMService` cache. Lint with 1 baseline warning; 635 web (+24) + 6 engine + 12 UI tests; web/desktop builds; Cypress 91/91. **Manual disclosure-wording check in both themes still outstanding** |
 | 4.34 | World Canvas — purpose, Planning IA, guided focus, lens collapse (WC-5) | 4 | M | Done `47559cd` — Canvas and Corkboard are sibling Planning tools; dedicated `/world-canvas` route; Core Idea wording over the compatible `premise` field; Inhabitants and societies lens; progressive non-AI guidance; lossless persisted collapse/reopen; flattened saved-material summaries removed while link/derivation services remain; onboarding and authority docs updated; original prompt/plan archived. Lint with 1 baseline warning; 659 web + 6 engine + 12 UI tests; web/desktop builds; Cypress 93/93 plus final Canvas 9/9 and onboarding 3/3 reruns; manual narrow navigation/rail check |
-| 4.34a | World Canvas — repeatable lens sketches and Open Threads (WC-6) | 4 | L | — after 4.34; migrate the one-note lens into lossless discrete sketches; reusable prompts; routed-sketch history; remove Worth a Look |
+| 4.34a | World Canvas — repeatable lens sketches, Open Threads, and Core Idea bridges (WC-6) | 4 | L | — after 4.34; migrate the one-note lens into lossless discrete sketches; reusable prompts; routed-sketch history; remove Worth a Look; explicitly keep Core Idea as a linked Source Note and offer the normal reviewed World Bible canon-anchor handoff; revisit whether an overarching canon concept needs a first-class home before 4.34b |
 | 4.34b | World Canvas — Reference Palette foundation (WC-7) | 4 | M | — after 4.34a; separate author-pinned references from deterministic suggestions; no AI-context change |
 | 4.34c | World Canvas — craft-guided coaching (WC-8) | 4 | M | — after 4.34b; author-triggered craft-grounded focus/reword/question help; selected-reference disclosure; proposal-only |
 | 4.35 | Corkboard scene links — shared link UI, quick-modal links, "Link current scene", stale links (CB-1) | 4 | S | — full prompt: [`corkboard-scenes-plan.md`](corkboard-scenes-plan.md) § CB-1; no schema change; carries the Corkboard docs reconciliation |
@@ -1219,7 +1219,8 @@ follow-up direction, but this roadmap remains authoritative for 4.34–4.34c.
   the relevant smoke guidance; archive the original prompt/plan only after the
   replacement durable decisions have been folded into the authority docs.
 
-- **4.34a Repeatable lens sketches and Open Threads (WC-6, L).** Replace the
+- **4.34a Repeatable lens sketches, Open Threads, and Core Idea bridges
+  (WC-6, L).** Replace the
   current one-per-lens `note` workflow with stable, discrete sketches. A lens's
   directed question is evergreen and reusable; it is not a field the author
   completes once. Each opened lens has one autosaved working composer plus a
@@ -1262,13 +1263,44 @@ follow-up direction, but this roadmap remains authoritative for 4.34–4.34c.
   assertion prose. Any future path for settling an assertion as a canonical
   fact must use the existing reviewed canon workflow and is not invented here.
 
+  Give **Core Idea** the same explicit path out of Canvas instead of leaving it
+  as an isolated `premise` string. **Keep as Source Note** creates a normal,
+  provenance-marked Source Note (for example, `From World Canvas — Core Idea`),
+  indexes it through the existing Source Note path, links it back to Core Idea,
+  and never changes canon. The saved note is an author-chosen snapshot: later
+  Core Idea edits do not silently rewrite it. Surface the linked note with the
+  same open/unlink and missing-target behavior used elsewhere, and prevent an
+  accidental repeated click from creating indistinguishable duplicate notes.
+  Preserve the persisted `premise` field name for compatibility; add only the
+  smallest backward-compatible link/provenance state needed for the bridge and
+  include it in backup/restore.
+
+  Also offer **Propose canon anchor** from Core Idea through the existing normal
+  World Bible create form, with an author-selected category and a suggested
+  concept/setting-style destination when one exists. Saving remains an explicit
+  author action and links the resulting record back to Core Idea; do not write
+  accepted facts directly, canonize the whole paragraph automatically, create
+  a second canon owner, or treat theme, questions, and possibilities as factual
+  assertions. This is the conservative overarching-canon placement for 4.34a.
+  Add a product checkpoint after hands-on use and before 4.34b: decide whether
+  a normal World Bible concept/setting anchor is sufficient or whether authors
+  need a first-class, project-level **World Foundation** canon concept. Any such
+  first-class owner is a separate domain decision and follow-up slice, not an
+  assumption inside 4.34a.
+
   Acceptance: migrate an existing populated seven-lens Canvas and preserve
   exact text/links through reload and backup round-trip; create and route
   multiple non-conflicting sketches from the same lens; verify failed/cancelled
   routes retain the composer; keep statement-form and question-form Open
   Threads; settle and set aside without deleting; confirm no age-based warning
   appears; confirm every removed Worth a Look signal remains available at its
-  legitimate owner where applicable. Add service/migration/component tests,
+  legitimate owner where applicable. From Core Idea, create and open a
+  provenance-marked Source Note, confirm later Core Idea edits do not silently
+  mutate it, verify duplicate-click protection and stale-link handling, and
+  complete a prefilled normal World Bible proposal whose saved record links
+  back without any direct canon/fact write. Record the post-use decision on
+  whether that anchor is sufficient before starting 4.34b. Add
+  service/migration/component tests,
   routed Cypress coverage, keyboard/a11y checks, and desktop/narrow manual
   smoke.
 
