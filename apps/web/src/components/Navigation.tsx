@@ -85,7 +85,8 @@ export const Navigation: FC<NavigationProps> = ({
   const secondaryNavSections = useMemo<NavSection[]>(() => {
     const planningItems: NavItem[] = [
       {to: '/canon-decisions', label: 'Canon Review', icon: 'CR'},
-      {to: '/corkboard', label: 'Corkboard', icon: 'CB'}
+      {to: '/corkboard', label: 'Corkboard', icon: 'CB'},
+      {to: '/world-canvas', label: 'World Canvas', icon: 'WC'}
     ];
     const systemsItems: NavItem[] = [
       ...(capabilities.canUseRuleAuthoring

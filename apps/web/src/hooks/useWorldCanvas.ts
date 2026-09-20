@@ -13,6 +13,7 @@ import {
   buildSourceNoteFromBrainstormItem,
   buildSourceNoteFromLens,
   buildSourceNoteFromQuestion,
+  collapseLens,
   createEmptyWorldCanvas,
   linkLensEntity,
   linkLensSourceNote,
@@ -137,6 +138,10 @@ export function useWorldCanvas(projectId: string | null, ragService: RAGProvider
     changeCanvas((current) => openLens(current, kind));
   }, [changeCanvas]);
 
+  const handleCollapseLens = useCallback((kind: WorldCanvasLensKind) => {
+    changeCanvas((current) => collapseLens(current, kind));
+  }, [changeCanvas]);
+
   const setLensNote = useCallback((kind: WorldCanvasLensKind, note: string) => {
     changeCanvas((current) => updateLensNote(current, kind, note));
   }, [changeCanvas]);
@@ -241,6 +246,7 @@ export function useWorldCanvas(projectId: string | null, ragService: RAGProvider
     lastSavedAt,
     setPremise,
     openLens: handleOpenLens,
+    collapseLens: handleCollapseLens,
     setLensNote,
     addQuestion: handleAddQuestion,
     updateQuestion: handleUpdateQuestion,

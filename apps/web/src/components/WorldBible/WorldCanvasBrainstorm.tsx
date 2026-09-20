@@ -92,7 +92,7 @@ export function WorldCanvasBrainstorm({
   const disclosure = provider === 'ollama'
     ? 'Runs on your local Ollama model. Nothing leaves this computer.'
     : provider
-      ? `Sends the premise, ${focus.type === 'lens' ? 'these lens notes, ' : ''}open questions, and World Bible record names to ${HOSTED_PROVIDER_NAMES[provider]}’s servers under that provider’s terms — only when you click, never in the background.`
+      ? `Sends the core idea, ${focus.type === 'lens' ? 'these lens notes, ' : ''}open questions, and World Bible record names to ${HOSTED_PROVIDER_NAMES[provider]}’s servers under that provider’s terms — only when you click, never in the background.`
       : null;
 
   useEffect(() => {

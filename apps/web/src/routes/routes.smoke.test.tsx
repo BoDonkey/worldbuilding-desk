@@ -9,6 +9,7 @@ import ProjectsRoute from './ProjectsRoute';
 import SettingsRoute from './SettingsRoute';
 import WorkspaceRoute from './WorkspaceRoute';
 import WorldBibleRoute from './WorldBibleRoute';
+import WorldCanvasRoute from './WorldCanvasRoute';
 import {renderRoute, seedRouteTestState} from '../test/renderRoute';
 
 beforeEach(() => {
@@ -33,6 +34,12 @@ describe('route smoke coverage', () => {
       path: '/world-bible',
       route: <WorldBibleRoute />,
       heading: 'World Bible'
+    },
+    {
+      name: 'WorldCanvasRoute',
+      path: '/world-canvas',
+      route: <WorldCanvasRoute />,
+      heading: 'World Canvas'
     },
     {
       name: 'CompendiumRoute',

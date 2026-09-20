@@ -69,6 +69,8 @@ export interface WorldCanvasLens {
   note: string;
   linkedSourceNoteIds: string[];
   linkedEntityIds: string[];
+  /** Optional so canvases saved before 4.34 continue to open expanded. */
+  isCollapsed?: boolean;
   updatedAt: number;
 }
 

@@ -1,6 +1,6 @@
 # Documentation Map
 
-Last updated: 2026-09-12
+Last updated: 2026-09-20
 
 The active documentation set was consolidated on 2026-08-01 down to seven
 documents. Everything else lives in `docs/archive/` with a banner pointing at
@@ -60,11 +60,22 @@ Other files:
   placement, provisional metadata, coverage targets, sourcing rules, and the
   resume protocol; the roadmap and domain/architecture documents remain
   authoritative.
-- `docs/world-canvas.md` and `docs/world-canvas-plan.md` — dated (2026-09-12)
-  planning prompt and the resulting World Canvas work-slice proposal (an
-  optional World Bible view for premise, lenses, and questions). Accepted
-  2026-09-12 and scheduled as roadmap slices 4.30–4.34 (pre-beta); the plan
-  holds the full prompts, the roadmap holds status.
+- `docs/archive/world-canvas.md` and `docs/archive/world-canvas-plan.md` —
+  archived 2026-09-20; historical prompt and initial World Canvas plan for
+  completed slices 4.30–4.33.
+  Accepted 2026-09-12; slices 4.30–4.33 shipped the original optional World
+  Bible view, while the 2026-09-20 author review re-scoped 4.34–4.34c around a
+  dedicated Planning route, repeatable sketches/Open Threads, Reference
+  Palette, and craft-guided coaching. The plan holds the original prompts; the
+  roadmap holds the revised authoritative boundaries and status.
+- `docs/systems-experience-design-review.md` — dated (2026-09-20),
+  non-authoritative working review of the author journey across World Bible
+  mechanics entry, Rules, Sheets/State, Mechanics/Compendium, Workspace state
+  actions, and optional world systems. It recommends a task-based Systems hub
+  over exposing storage owners as navigation, records the decisions still
+  requiring author approval, and carries provisional unscheduled slices; fold
+  accepted IA into the blueprint and approved work into the roadmap, then
+  archive it.
 - `docs/corkboard-improvement.md` and `docs/corkboard-scenes-plan.md` — dated
   (2026-09-12) planning prompt and the resulting proposal for one-click
   Chapter Card ↔ scene linking (shared link UI, create linked scene,

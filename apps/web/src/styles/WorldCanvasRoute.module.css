@@ -1,0 +1,15 @@
+.page {
+  display: grid;
+  width: 100%;
+  max-width: 1120px;
+  margin: 0 auto;
+  gap: 1rem;
+}
+
+.emptyState {
+  padding: 1rem;
+  border: 1px solid var(--surface-border-soft);
+  border-radius: 12px;
+  background: var(--surface-panel);
+  color: var(--color-text-secondary);
+}

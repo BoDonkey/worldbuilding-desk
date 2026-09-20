@@ -51,7 +51,7 @@ interface UseWorldBibleEntityActionsParams {
   setAliases: Dispatch<SetStateAction<ConsistencyAlias[]>>;
   setFeedback: Dispatch<SetStateAction<FeedbackState>>;
   requestConfirm: (request: ConfirmRequest) => void;
-  setViewMode: Dispatch<SetStateAction<'category' | 'review' | 'canvas'>>;
+  setViewMode: Dispatch<SetStateAction<'category' | 'review'>>;
   setCanonState: Dispatch<
     SetStateAction<{
       parentCanonVersion?: string;
@@ -66,7 +66,7 @@ interface UseWorldBibleEntityActionsParams {
   name: string;
   fieldValues: Record<string, string>;
   systemNegativeSpace?: WorldEntity['systemNegativeSpace'];
-  viewMode: 'category' | 'review' | 'canvas';
+  viewMode: 'category' | 'review';
   selectedEntityQueueItem: ReviewQueueItem | null;
   filteredReviewQueue: ReviewQueueItem[];
   aliasMapByEntityId: Map<string, string[]>;

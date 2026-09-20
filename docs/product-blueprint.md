@@ -1,6 +1,6 @@
 # Product Blueprint — Worldbuilding Desk
 
-Last updated: 2026-09-12
+Last updated: 2026-09-20
 
 This is the product, UX, navigation, and design authority. It consolidates the
 former `product-blueprint.md`, `navigation-ia-decision.md`, `style-bible.md`,
@@ -140,8 +140,17 @@ roadmaps — refine through this document):
 - `World Bible` — structured canon (the single canonical record system)
 - `Lore Documents` — longform source material and deep notes, not a second
   canon database
-- `More` — optional systems (Ruleset, Sheets, Mechanics, Settlement), planning
-  and review utilities, character-package transfer, settings
+- `More` — grouped secondary destinations: Planning (Canon Review, Corkboard,
+  World Canvas), optional Systems (Rules, Sheets, Mechanics), utilities, and
+  settings
+
+Corkboard and World Canvas are sibling brainstorming surfaces under Planning.
+Corkboard develops story progression—what happens and in what order. World
+Canvas develops the world behind those events through a Core Idea and directed
+lenses. Canvas is useful both before drafting and after prose exposes gaps; it
+does not claim to analyze chapters. Its content stays exploratory until the
+author deliberately keeps it as a Source Note or proposes a record through the
+normal World Bible flow.
 
 The writing coach is not a separate destination. It is available when the
 author explicitly asks for craft feedback anywhere an existing AI interaction

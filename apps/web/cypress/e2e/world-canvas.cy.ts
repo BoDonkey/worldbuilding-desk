@@ -73,25 +73,23 @@ describe('World Canvas', () => {
   });
 
   it('captures optional worldbuilding notes and restores them after reload', () => {
-    cy.visit('/world-bible');
-    cy.contains('h1', 'World Bible').should('be.visible');
-    cy.contains('button', 'World Canvas').click();
+    cy.visit('/world-canvas');
 
-    cy.contains('h2', 'World Canvas').should('be.visible');
+    cy.contains('h1', 'World Canvas').should('be.visible');
     cy.contains(/Nothing here is canon/i).should('be.visible');
     cy.contains('h2', 'Characters').should('not.exist');
     cy.get('textarea[placeholder*="borrowed memories"]')
       .type('A river city trades years of memory for safe passage.');
 
-    cy.contains('article', 'People').within(() => cy.contains('button', 'Open lens').click());
-    cy.contains('label', 'People notes')
+    cy.contains('article', 'Inhabitants and societies').within(() => cy.contains('button', 'Bring into focus').click());
+    cy.contains('label', 'Inhabitants and societies sketch')
       .find('textarea')
       .type('Ferrymen remember every bargain, even when travelers do not.');
 
     cy.contains('article', 'Constraints and costs').within(() => {
-      cy.contains('button', 'Open lens').click();
+      cy.contains('button', 'Bring into focus').click();
     });
-    cy.contains('label', 'Constraints and costs notes')
+    cy.contains('label', 'Constraints and costs sketch')
       .find('textarea')
       .type('Every crossing costs a cherished memory.');
 
@@ -102,7 +100,7 @@ describe('World Canvas', () => {
     ];
     questions.forEach((question, index) => {
       cy.get('#world-canvas-new-question').type(question);
-      if (index === 0) cy.get('#world-canvas-question-lens').select('People');
+      if (index === 0) cy.get('#world-canvas-question-lens').select('Inhabitants and societies');
       cy.contains('button', 'Add question').click();
     });
 
@@ -112,14 +110,20 @@ describe('World Canvas', () => {
     cy.contains('Saving...').should('be.visible');
     cy.contains(/Saved at/).should('be.visible');
 
+    cy.contains('article', 'Inhabitants and societies').within(() => cy.contains('button', 'Collapse').click());
+    cy.contains('Saving...').should('be.visible');
+    cy.contains(/Saved at/).should('be.visible');
     cy.reload();
-    cy.contains('button', 'World Canvas').click();
     cy.get('textarea[placeholder*="borrowed memories"]')
       .should('have.value', 'A river city trades years of memory for safe passage.');
-    cy.contains('label', 'People notes')
+    cy.contains('article', 'Inhabitants and societies').within(() => {
+      cy.contains('Saved sketch · Ferrymen remember every bargain').should('be.visible');
+      cy.contains('button', 'Bring into focus').click();
+    });
+    cy.contains('label', 'Inhabitants and societies sketch')
       .find('textarea')
       .should('have.value', 'Ferrymen remember every bargain, even when travelers do not.');
-    cy.contains('label', 'Constraints and costs notes')
+    cy.contains('label', 'Constraints and costs sketch')
       .find('textarea')
       .should('have.value', 'Every crossing costs a cherished memory.');
     questions.forEach((question) => cy.contains(question).should('be.visible'));
@@ -127,15 +131,14 @@ describe('World Canvas', () => {
     cy.contains('label', 'Question 3 status').find('select').should('have.value', 'dropped');
 
     cy.viewport(780, 900);
-    cy.contains('h2', 'World Canvas').should('be.visible');
+    cy.contains('h1', 'World Canvas').should('be.visible');
     cy.window().then((win) => {
       expect(win.document.documentElement.scrollWidth).to.be.at.most(win.innerWidth);
     });
   });
 
   it('marks an empty question as invalid without adding it', () => {
-    cy.visit('/world-bible');
-    cy.contains('button', 'World Canvas').click();
+    cy.visit('/world-canvas');
     cy.contains('button', 'Add question').click();
 
     cy.get('#world-canvas-new-question')
@@ -145,10 +148,9 @@ describe('World Canvas', () => {
   });
 
   it('moves lens ideas into Source Notes and the normal canon form', () => {
-    cy.visit('/world-bible');
-    cy.contains('button', 'World Canvas').click();
-    cy.contains('article', 'Places').within(() => cy.contains('button', 'Open lens').click());
-    cy.contains('label', 'Places notes').find('textarea').type(
+    cy.visit('/world-canvas');
+    cy.contains('article', 'Places').within(() => cy.contains('button', 'Bring into focus').click());
+    cy.contains('label', 'Places sketch').find('textarea').type(
       'Name: Glass Citadel{enter}Background: A harbor fortress founded after the first beacon failed.'
     );
     cy.contains('article', 'Places').within(() => {
@@ -163,8 +165,7 @@ describe('World Canvas', () => {
     cy.contains('button', 'Extract Candidates').click();
     cy.contains('[role="status"]', /Extracted \d+ entity proposal/).should('be.visible');
 
-    cy.visit('/world-bible');
-    cy.contains('button', 'World Canvas').click();
+    cy.visit('/world-canvas');
     cy.contains('article', 'Places').within(() => {
       cy.contains('button', 'Propose as canon').click();
       cy.contains('label', 'Canon record name').find('input').clear().type('Glass Citadel');
@@ -175,28 +176,19 @@ describe('World Canvas', () => {
     cy.contains('button', 'Create Entry').click();
     cy.contains('[role="status"]', 'Entry created.').should('be.visible');
 
-    cy.contains('button', 'World Canvas').click();
+    cy.visit('/world-canvas');
     cy.contains('article', 'Places').within(() => {
       cy.contains('World Bible: Glass Citadel').should('be.visible');
     });
   });
 
-  it('returns to mapped canon, Source Notes, and rule-stated reminders', () => {
-    cy.visit('/world-bible');
-    cy.contains('h1', 'World Bible').should('be.visible');
+  it('keeps saved-material summaries out of lenses and retains rule-stated reminders', () => {
+    cy.visit('/world-canvas');
     cy.window().then(seedCanvasReturnExperience);
     cy.reload();
-    cy.contains('button', 'World Canvas').click();
 
-    cy.contains('article', 'People').within(() => {
-      cy.contains('2 World Bible records:').should('be.visible');
-      cy.contains('Brannic Halloway, Sera Kestrel').should('be.visible');
-    });
-    cy.contains('article', 'Factions and institutions').within(() => {
-      cy.contains('The Cinder Compact').should('be.visible');
-      cy.contains('Faction Notes — The Cinder Compact').should('be.visible');
-    });
-    cy.contains('Other records').parent().should('contain.text', 'Emberglass Key');
+    cy.contains('From saved material').should('not.exist');
+    cy.contains('Other records').should('not.exist');
     cy.contains('aside', 'Worth a look').within(() => {
       cy.contains('Sera Kestrel').should('be.visible');
       cy.contains('This record is marked for author review.').should('be.visible');
@@ -207,7 +199,7 @@ describe('World Canvas', () => {
     });
 
     cy.viewport(780, 900);
-    cy.contains('article', 'People').should('be.visible');
+    cy.contains('article', 'Inhabitants and societies').should('be.visible');
     cy.window().then((win) => {
       expect(win.document.documentElement.scrollWidth).to.be.at.most(win.innerWidth);
     });
@@ -227,15 +219,13 @@ describe('World Canvas', () => {
     });
 
     const openFactionsLens = () => {
-      cy.visit('/world-bible');
-      cy.contains('h1', 'World Bible').should('be.visible');
+      cy.visit('/world-canvas');
       cy.window().then(seedCanvasReturnExperience);
       cy.reload();
-      cy.contains('button', 'World Canvas').click();
       cy.contains('article', 'Factions and institutions').within(() => {
-        cy.contains('button', 'Open lens').click();
+        cy.contains('button', 'Bring into focus').click();
       });
-      cy.contains('label', 'Factions and institutions notes')
+      cy.contains('label', 'Factions and institutions sketch')
         .find('textarea')
         .type('The Compact trades in forgotten crossings.');
     };
@@ -305,7 +295,6 @@ describe('World Canvas', () => {
       cy.contains(/Saved at/).should('be.visible');
 
       cy.reload();
-      cy.contains('button', 'World Canvas').click();
       cy.contains('article', 'Who audits the memories the Compact collects?')
         .should('contain.text', 'From World Canvas brainstorm');
       cy.contains('What if the river, not the Compact, sets the price?').should('not.exist');
@@ -331,14 +320,12 @@ describe('World Canvas', () => {
       ].join('\n');
 
       const openLocalFactionsLens = () => {
-        cy.visit('/world-bible');
-        cy.contains('h1', 'World Bible').should('be.visible');
+        cy.visit('/world-canvas');
         cy.setSeededProjectProvider('ollama');
         cy.window().then(seedCanvasReturnExperience);
         cy.reload();
-        cy.contains('button', 'World Canvas').click();
         cy.contains('article', 'Factions and institutions').within(() => {
-          cy.contains('button', 'Open lens').click();
+          cy.contains('button', 'Bring into focus').click();
         });
       };
 

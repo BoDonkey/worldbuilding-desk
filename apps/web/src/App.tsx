@@ -25,6 +25,7 @@ import ProjectsRoute from './routes/ProjectsRoute';
 import WorldBibleRoute from './routes/WorldBibleRoute';
 import WorkspaceRoute from './routes/WorkspaceRoute';
 import CorkboardRoute from './routes/CorkboardRoute';
+import WorldCanvasRoute from './routes/WorldCanvasRoute';
 import SettingsRoute from './routes/SettingsRoute';
 import CharacterSheetsPageRoute from './routes/CharacterSheetsPageRoute';
 import CharacterPackagesRoute from './routes/CharacterPackagesRoute';
@@ -182,6 +183,7 @@ function AppRoutes() {
           <Route path='/character-packages' element={<CharacterPackagesRoute />} />
           <Route path='/workspace' element={<WorkspaceRoute />} />
           <Route path='/corkboard' element={<CorkboardRoute />} />
+          <Route path='/world-canvas' element={<WorldCanvasRoute />} />
           <Route
             path='/compendium'
             element={

@@ -85,7 +85,7 @@ describe('buildWorldCanvasBrainstormPrompt', () => {
       canonNames: []
     });
 
-    expect(userPrompt).toContain('Brainstorm focus: Premise.');
+    expect(userPrompt).toContain('Brainstorm focus: Core Idea.');
     expect(userPrompt).not.toContain('Cinder Compact hoards');
     expect(userPrompt).not.toContain('drowned archive');
     expect(userPrompt).not.toContain('Who pays when a memory is returned?');

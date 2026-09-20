@@ -1,6 +1,6 @@
 # Manual Smoke Procedures
 
-Last updated: 2026-09-16
+Last updated: 2026-09-20
 
 Reusable manual smoke procedures targeting trust and data-loss boundaries.
 Consolidates the former `project-backup-smoke-test.md`,
@@ -25,9 +25,10 @@ Procedure:
 
 1. Seed a project with mixed data (scenes, World Bible entries, characters
    and sheets, compendium/settlement data), a non-trivial Scratchpad note, and
-   two Corkboard cards with plot points. In World Canvas, enter a premise,
-   open at least two lenses with notes, and add three questions with mixed
-   open/answered/dropped statuses.
+   two Corkboard cards with plot points. In Planning → World Canvas, enter a
+   Core Idea, bring at least two lenses into focus, add notes and explicit
+   Source Note/World Bible links, collapse one populated lens, and add three
+   questions with mixed open/answered/dropped statuses.
 2. `Projects` → `Export Backup (.zip)` → confirm
    `<project>-backup-YYYY-MM-DD.zip` downloads → `Validate Backup (.zip)`
    passes integrity and supported-version checks. A fixture whose
@@ -40,9 +41,11 @@ Procedure:
    details).
 5. Spot-check after import: World Bible categories/entries, scenes open,
    Scratchpad content and formatting present, Corkboard card count/order and
-   per-card title/summary/status/plot-points intact, World Canvas premise,
-   opened lenses, notes, questions, lens links, and statuses byte-for-byte
-   intact, characters and sheets editable, compendium data persists, autosave
+   per-card title/summary/status/plot-points intact, World Canvas Core Idea,
+   opened/collapsed lens state, notes, questions, lens links, and statuses
+   byte-for-byte intact. Reopen the collapsed lens and confirm its exact text
+   and links remain; then confirm characters and sheets are editable,
+   compendium data persists, autosave
    still works after a small post-import edit. Confirm Canvas content did not
    create World Bible records, accepted facts, or indexed context.
 
@@ -51,6 +54,29 @@ mismatch on an unchanged new-project import, runtime errors, truncated
 Scratchpad, Corkboard cards missing plot points or order, changed/missing
 World Canvas content, or any Canvas-only idea appearing as canon or indexed
 context.
+
+## 1a. World Canvas Planning IA and Guided Focus
+
+Goal: confirm both brainstorming tools are discoverable without presenting
+exploratory Canvas content as World Bible canon.
+
+1. At desktop width and at 780px, open More → Planning. Confirm Corkboard and
+   World Canvas are both reachable and keyboard focusable.
+2. Open World Canvas. Confirm the page explains the Canvas/Corkboard distinction,
+   shows Core Idea, and offers seven closed lenses with a strong question and a
+   uniquely announced Bring into focus control.
+3. Bring Inhabitants and societies into focus. Expand its optional guidance,
+   confirm examples cover populations and unequal social relationships, enter
+   text, link one Source Note and one World Bible record, then collapse it.
+4. Reload. Confirm the saved-sketch summary remains, reopen the lens, and verify
+   the exact text and both links. Confirm save announcements remain audible.
+5. Open World Bible. Confirm World Canvas is absent from its category rail.
+   From Canvas, propose a canon record and confirm the normal World Bible form
+   opens prefilled; saving it must still require the author action and preserve
+   the backlink.
+6. On a guide-marked blank project and a guide-marked sample/mature project,
+   confirm onboarding links to `/world-canvas` and accurately explains starting
+   before drafting or returning later. It must not claim to read chapter prose.
 
 ## 2. Review Completion (Import → Workspace Review → World Bible Queue)
 

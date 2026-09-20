@@ -17,43 +17,59 @@ export interface WorldCanvasLensDefinition {
   kind: WorldCanvasLensKind;
   label: string;
   prompt: string;
+  uncovers: string;
+  starters: readonly string[];
 }
 
 export const LENS_DEFINITIONS: readonly WorldCanvasLensDefinition[] = [
   {
     kind: 'people',
-    label: 'People',
-    prompt: 'Who shapes daily life here, and whose perspective has not been heard yet?'
+    label: 'Inhabitants and societies',
+    prompt: 'Who shapes daily life here, and whose perspective has not been heard yet?',
+    uncovers: 'The groups, relationships, hierarchies, and points of view that make the world feel inhabited.',
+    starters: ['Who belongs here—and who is treated as an outsider?', 'Which species, communities, or social groups hold power over others?']
   },
   {
     kind: 'places',
     label: 'Places',
-    prompt: 'Which places define this world, and what makes each one feel distinct?'
+    prompt: 'Which places define this world, and what makes each one feel distinct?',
+    uncovers: 'The environments, boundaries, and lived details that give the setting its shape.',
+    starters: ['Where does daily life feel safest or most precarious?', 'Which boundary changes how people behave when they cross it?']
   },
   {
     kind: 'factions',
     label: 'Factions and institutions',
-    prompt: 'Which groups hold influence, and what do they want from one another?'
+    prompt: 'Which groups hold influence, and what do they want from one another?',
+    uncovers: 'Organized interests, competing agendas, and the structures that distribute influence.',
+    starters: ['What does this group protect, control, or fear losing?', 'Where do public duties and private goals conflict?']
   },
   {
     kind: 'history',
     label: 'History and change',
-    prompt: 'What past events still shape the choices people make now?'
+    prompt: 'What past events still shape the choices people make now?',
+    uncovers: 'The remembered, disputed, and forgotten past that still creates pressure in the present.',
+    starters: ['Which event is remembered differently by different groups?', 'What old wound has never truly closed?']
   },
   {
     kind: 'power',
     label: 'Power and possibility',
-    prompt: 'What can people do in this world, and who controls access to that power?'
+    prompt: 'What can people do in this world, and who controls access to that power?',
+    uncovers: 'Extraordinary possibilities and the social systems that grant, restrict, or exploit them.',
+    starters: ['Who is allowed to use this power openly?', 'What changes when access to power is denied or stolen?']
   },
   {
     kind: 'customs',
     label: 'Customs and beliefs',
-    prompt: 'What practices, stories, or beliefs make this culture recognizable?'
+    prompt: 'What practices, stories, or beliefs make this culture recognizable?',
+    uncovers: 'Shared rituals, assumptions, taboos, and disagreements that shape ordinary choices.',
+    starters: ['What is considered sacred, shameful, or unclean—and by whom?', 'Which belief divides generations, regions, or species?']
   },
   {
     kind: 'constraints',
     label: 'Constraints and costs',
-    prompt: 'What does this world make expensive, forbidden, or impossible?'
+    prompt: 'What does this world make expensive, forbidden, or impossible?',
+    uncovers: 'The limits and tradeoffs that keep the setting consequential instead of frictionless.',
+    starters: ['What must someone give up to get what they want?', 'Which rule is hardest to live with or easiest to exploit?']
   }
 ] as const;
 
@@ -71,7 +87,9 @@ const getLensDefinition = (kind: WorldCanvasLensKind): WorldCanvasLensDefinition
   LENS_DEFINITIONS.find((definition) => definition.kind === kind) ?? {
     kind,
     label: kind,
-    prompt: ''
+    prompt: '',
+    uncovers: '',
+    starters: []
   };
 
 const buildManualSourceNote = (params: {
@@ -145,7 +163,7 @@ export function buildSourceNoteFromBrainstormItem(params: {
 }): LoreDocument {
   const text = params.text.trim();
   if (!text) throw new Error('This brainstorm item is empty, so there is nothing to keep.');
-  const focusLabel = params.lensKind ? getLensDefinition(params.lensKind).label : 'Premise';
+  const focusLabel = params.lensKind ? getLensDefinition(params.lensKind).label : 'Core Idea';
   const content = `From World Canvas brainstorm — ${focusLabel} (${params.kindLabel})\n\n${text}`;
   return buildManualSourceNote({
     projectId: params.projectId,
@@ -227,14 +245,40 @@ export function openLens(
   canvas: WorldCanvasDocument,
   kind: WorldCanvasLensKind
 ): WorldCanvasDocument {
-  if (canvas.lenses.some((lens) => lens.kind === kind)) return canvas;
+  const existing = canvas.lenses.find((lens) => lens.kind === kind);
+  if (existing && !existing.isCollapsed) return canvas;
   const now = Date.now();
+  if (existing) {
+    return {
+      ...canvas,
+      lenses: canvas.lenses.map((lens) =>
+        lens.kind === kind ? {...lens, isCollapsed: false, updatedAt: now} : lens
+      ),
+      updatedAt: now
+    };
+  }
   return {
     ...canvas,
     lenses: [
       ...canvas.lenses,
-      {kind, note: '', linkedSourceNoteIds: [], linkedEntityIds: [], updatedAt: now}
+      {kind, note: '', linkedSourceNoteIds: [], linkedEntityIds: [], isCollapsed: false, updatedAt: now}
     ],
+    updatedAt: now
+  };
+}
+
+export function collapseLens(
+  canvas: WorldCanvasDocument,
+  kind: WorldCanvasLensKind
+): WorldCanvasDocument {
+  const existing = canvas.lenses.find((lens) => lens.kind === kind);
+  if (!existing || existing.isCollapsed) return canvas;
+  const now = Date.now();
+  return {
+    ...canvas,
+    lenses: canvas.lenses.map((lens) =>
+      lens.kind === kind ? {...lens, isCollapsed: true, updatedAt: now} : lens
+    ),
     updatedAt: now
   };
 }

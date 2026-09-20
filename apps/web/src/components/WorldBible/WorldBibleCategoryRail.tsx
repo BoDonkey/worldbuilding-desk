@@ -5,7 +5,7 @@ import styles from '../../assets/components/WorldBibleRoute.module.css';
 interface WorldBibleCategoryRailProps {
   isCollapsed: boolean;
   categories: EntityCategory[];
-  viewMode: 'category' | 'review' | 'canvas';
+  viewMode: 'category' | 'review';
   activeTab: string | null;
   reviewCount: number;
   showCategoryManager: boolean;
@@ -14,7 +14,6 @@ interface WorldBibleCategoryRailProps {
   importInputRef: RefObject<HTMLInputElement | null>;
   jsonImportInputRef: RefObject<HTMLInputElement | null>;
   onSelectCategory: (categoryId: string) => void;
-  onSelectCanvas: () => void;
   onSelectReview: () => void;
   onToggleCategoryManager: () => void;
   onDownloadJsonTemplate: () => void;
@@ -26,7 +25,6 @@ export const WorldBibleCategoryRail = (props: WorldBibleCategoryRailProps) => {
     isCollapsed: isCategoryRailCollapsed, categories, viewMode, activeTab, reviewCount,
     showCategoryManager, isImportingEntities, isImportingJson, importInputRef,
     jsonImportInputRef, onSelectCategory: handleSelectCategoryTab,
-    onSelectCanvas,
     onSelectReview,
     onToggleCategoryManager, onDownloadJsonTemplate: handleDownloadJsonTemplate,
     onDownloadJsonSample: handleDownloadJsonSample
@@ -43,13 +41,6 @@ export const WorldBibleCategoryRail = (props: WorldBibleCategoryRailProps) => {
               <span className={styles.categoryRailCount}>{categories.length}</span>
             </div>
             <div className={styles.tabNav}>
-              <button
-                type='button'
-                onClick={onSelectCanvas}
-                className={`${styles.tab} ${viewMode === 'canvas' ? styles.active : ''}`}
-              >
-                World Canvas
-              </button>
               <button
                 type='button'
                 onClick={onSelectReview}

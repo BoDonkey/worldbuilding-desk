@@ -5,6 +5,7 @@ import {
   buildSourceNoteFromLens,
   buildSourceNoteFromQuestion,
   addQuestion,
+  collapseLens,
   createEmptyWorldCanvas,
   linkLensEntity,
   linkLensSourceNote,
@@ -50,6 +51,28 @@ describe('worldCanvasService', () => {
         linkedEntityIds: []
       })
     ]);
+  });
+
+  it('collapses and reopens a lens without changing its note or links', () => {
+    const opened = linkLensEntity(
+      linkLensSourceNote(
+        updateLensNote(createEmptyWorldCanvas('project-1'), 'customs', 'Bears are considered unclean.'),
+        'customs',
+        'note-1'
+      ),
+      'customs',
+      'entity-1'
+    );
+    const collapsed = collapseLens(opened, 'customs');
+    const reopened = openLens(collapsed, 'customs');
+
+    expect(collapsed.lenses[0].isCollapsed).toBe(true);
+    expect(reopened.lenses[0]).toMatchObject({
+      note: 'Bears are considered unclean.',
+      linkedSourceNoteIds: ['note-1'],
+      linkedEntityIds: ['entity-1'],
+      isCollapsed: false
+    });
   });
 
   it('adds and edits author questions while rejecting an empty add', () => {
@@ -119,7 +142,7 @@ describe('worldCanvasService', () => {
     });
     expect(premiseNote).toMatchObject({
       kind: 'general_lore',
-      content: 'From World Canvas brainstorm — Premise (Question)\n\nWho remembers the founders?'
+      content: 'From World Canvas brainstorm — Core Idea (Question)\n\nWho remembers the founders?'
     });
     expect(() => buildSourceNoteFromBrainstormItem({
       projectId: 'project-1',

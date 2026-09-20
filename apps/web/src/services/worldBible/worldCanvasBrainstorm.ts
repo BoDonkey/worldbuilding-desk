@@ -86,7 +86,7 @@ export const brainstormResponseTokens = (
 
 export const describeBrainstormFocus = (focus: WorldCanvasBrainstormFocus): string =>
   focus.type === 'premise'
-    ? 'Premise'
+    ? 'Core Idea'
     : LENS_DEFINITIONS.find((definition) => definition.kind === focus.kind)?.label ?? focus.kind;
 
 export const brainstormFocusKey = (focus: WorldCanvasBrainstormFocus): string =>
@@ -156,7 +156,7 @@ export function buildWorldCanvasBrainstormPrompt(params: {
   const sections = [
     `Brainstorm focus: ${focusLabel}.`,
     '--- Exploratory material (not canon) ---',
-    `Premise: ${premise ? clip(premise, MAX_FOCUS_CHARS) : '(not written yet)'}`
+    `Core idea: ${premise ? clip(premise, MAX_FOCUS_CHARS) : '(not written yet)'}`
   ];
   if (focus.type === 'lens') {
     sections.push(
@@ -181,8 +181,8 @@ export function buildWorldCanvasBrainstormPrompt(params: {
   }
   sections.push(
     focus.type === 'premise'
-      ? 'Suggest alternatives, tensions, implications, and questions about the premise.'
-      : `Suggest alternatives, tensions, implications, and questions for the ${focusLabel} lens, in light of the premise.`
+      ? 'Suggest alternatives, tensions, implications, and questions about the core idea.'
+      : `Suggest alternatives, tensions, implications, and questions for the ${focusLabel} lens, in light of the core idea.`
   );
 
   return {systemPrompt, userPrompt: sections.join('\n\n')};

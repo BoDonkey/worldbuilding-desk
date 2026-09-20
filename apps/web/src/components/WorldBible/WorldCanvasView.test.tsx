@@ -14,6 +14,7 @@ const buildWorldCanvas = (
   lastSavedAt: null,
   setPremise: vi.fn(),
   openLens: vi.fn(),
+  collapseLens: vi.fn(),
   setLensNote: vi.fn(),
   addQuestion: vi.fn(),
   updateQuestion: vi.fn(),
@@ -36,7 +37,7 @@ describe('WorldCanvasView', () => {
     render(<WorldCanvasView worldCanvas={buildWorldCanvas()} />);
 
     expect(screen.getByText(/nothing here is canon/i)).toBeInTheDocument();
-    expect(screen.getAllByRole('button', {name: 'Open lens'})).toHaveLength(7);
+    expect(screen.getAllByText('Bring into focus')).toHaveLength(7);
     expect(screen.getByText(/What truth would change how people understand this world\?/)).toBeInTheDocument();
   });
 
@@ -48,7 +49,7 @@ describe('WorldCanvasView', () => {
       <WorldCanvasView worldCanvas={buildWorldCanvas({canvas: empty, openLens: openLensAction, setLensNote})} />
     );
 
-    fireEvent.click(screen.getAllByRole('button', {name: 'Open lens'})[0]);
+    fireEvent.click(screen.getByRole('button', {name: 'Bring Inhabitants and societies into focus'}));
     expect(openLensAction).toHaveBeenCalledWith('people');
 
     rerender(
@@ -56,8 +57,23 @@ describe('WorldCanvasView', () => {
         worldCanvas={buildWorldCanvas({canvas: openLens(empty, 'people'), openLens: openLensAction, setLensNote})}
       />
     );
-    fireEvent.change(screen.getByLabelText('People notes'), {target: {value: 'Names and tensions'}});
+    fireEvent.change(screen.getByLabelText('Inhabitants and societies sketch'), {target: {value: 'Names and tensions'}});
     expect(setLensNote).toHaveBeenCalledWith('people', 'Names and tensions');
+  });
+
+  it('collapses a populated lens and keeps its saved sketch available to reopen', () => {
+    const collapseLens = vi.fn();
+    const canvas = openLens(createEmptyWorldCanvas('project-1'), 'customs');
+    canvas.lenses[0].note = 'Bears are considered unclean.';
+    const {rerender} = render(<WorldCanvasView worldCanvas={buildWorldCanvas({canvas, collapseLens})} />);
+
+    fireEvent.click(screen.getByRole('button', {name: 'Collapse Customs and beliefs'}));
+    expect(collapseLens).toHaveBeenCalledWith('customs');
+
+    canvas.lenses[0].isCollapsed = true;
+    rerender(<WorldCanvasView worldCanvas={buildWorldCanvas({canvas, collapseLens})} />);
+    expect(screen.getByText(/Saved sketch · Bears are considered unclean/)).toBeInTheDocument();
+    expect(screen.getByRole('button', {name: 'Bring Customs and beliefs into focus'})).toBeInTheDocument();
   });
 
   it('validates and adds a question with an optional lens', () => {
@@ -113,8 +129,8 @@ describe('WorldCanvasView', () => {
     render(<WorldCanvasView worldCanvas={buildWorldCanvas({canvas})} />);
 
     expect(screen.getAllByRole('button', {name: 'Ask for tensions and questions'})).toHaveLength(2);
-    expect(screen.getByRole('heading', {name: 'Brainstorm: Premise'})).toBeInTheDocument();
-    expect(screen.getByRole('heading', {name: 'Brainstorm: People'})).toBeInTheDocument();
+    expect(screen.getByRole('heading', {name: 'Brainstorm: Core Idea'})).toBeInTheDocument();
+    expect(screen.getByRole('heading', {name: 'Brainstorm: Inhabitants and societies'})).toBeInTheDocument();
     expect(screen.getAllByText('From World Canvas brainstorm')).toHaveLength(1);
   });
 });

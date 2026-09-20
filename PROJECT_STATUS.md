@@ -1,6 +1,6 @@
 # Worldbuilding-Desk Project Status
 
-**Last Updated:** September 19, 2026
+**Last Updated:** September 20, 2026
 
 ## Project Overview
 
@@ -93,26 +93,35 @@ Under the hood, the app still includes rich systems for world data, rules, chara
 - Hidden deterministic state suggestions now surface only as lightweight review summaries with per-scene and project-level restore actions.
 - Project scratchpad is available as an autosaved quick-access modal and remains available from the workspace context drawer.
 - Scratchpad quick access is now available from active-project chrome on World Bible, Lore, and Canon Decisions so loose ideas can move into structured canon, longform lore, or review decisions without navigating back to Workspace.
-- World Bible now includes an optional, autosaved World Canvas for a freeform
-  premise, seven author-opened lenses, and open/answered/dropped questions.
+- Planning now presents World Canvas beside Corkboard as a sibling brainstorming
+  tool: Corkboard develops what happens, while Canvas develops the world behind
+  it through a Core Idea, seven optional lenses, and open/answered/dropped
+  questions. World Canvas has its own `/world-canvas` route rather than appearing
+  as a World Bible category; World Bible remains the sole canon owner.
   Canvas content is explicitly exploratory and non-canon, stays out of
   extraction and retrieval, and participates in full project backup/restore.
+- Each lens now keeps one strong directed question visible before opening,
+  offers optional non-AI guidance and question starters after opening, and can
+  collapse and reopen without changing its exact note or links. The author-facing
+  name is Core Idea while the persisted `premise` field remains backward
+  compatible. Guide-marked projects explain that Canvas works both before and
+  after drafting and distinguish it from Corkboard.
 - World Canvas lenses and questions can now be kept as provenance-marked manual
   Source Notes, linked to existing Source Notes or World Bible records, and
   moved into the normal prefilled World Bible create form. Canvas links resolve
   current target names, preserve visibly stale targets for explicit unlinking,
   and questions can be marked answered with an optional supporting link; no
   Canvas action writes facts, aliases, or canon records directly.
-- Every World Canvas lens now includes a read-only return summary derived from
-  saved World Bible records, Source Note kinds, and explicit note/record links,
-  whether or not the lens has been opened. Unmapped custom categories remain
-  visible under Other records. A capped, dismissible Worth a look list states
+- The former flattened per-lens saved-material summaries and Other-records list
+  are no longer mixed into author sketches; stable note/record links and their
+  derivation services remain available for the planned Reference Palette. A
+  capped, dismissible Worth a look list still states
   its deterministic rule for incomplete-import records, records without a
   linked Source Note, questions open longer than 30 days, and unresolved World
   Bible review candidates; it links back to the existing record, question, or
   Review surface and never assigns a score or resolves work automatically.
   Mechanics-only records are excluded in general-fiction projects.
-- World Canvas premise and every opened lens now offer author-invoked
+- World Canvas Core Idea (stored as `premise`) and every opened lens now offer author-invoked
   brainstorming (**Ask for tensions and questions**). One click sends the
   premise, that lens's notes, relevant open questions, and accepted World Bible
   record names and aliases (never Source Note text) under an explicit
@@ -1084,6 +1093,12 @@ runtime schema, and nothing here changes the roadmap's status board.
 - Zustand workspace UI integration has been smoke-checked manually for Corkboard and Scratchpad memory saving, and the latest focused unit/build passes cover workspace store behavior plus document initialization/save helper behavior.
 
 ### Current Verification Notes
+- World Canvas WC-5 (purpose and Planning IA): lint with the single existing
+  hook warning; 659 web unit tests, 6 rules-engine tests, and 12 rules-ui
+  tests; web and desktop builds; full 93-test Cypress suite plus a final 9/9
+  focused Canvas rerun. Manual narrow-width inspection confirmed Corkboard and
+  World Canvas together under Planning, a single route heading, no horizontal
+  crowding, and no World Canvas entry in the World Bible category rail.
 - Local model runs (4.40): lint with the single existing hook warning, 655
   web unit tests, 6 rules-engine tests, 12 rules-ui tests, web and desktop
   builds; full 93-test Cypress suite, where `world-canvas.cy.ts` adds a streamed local run with thinking and no

@@ -1,8 +1,12 @@
 # World Canvas — planning prompt
 
+> **Archived 2026-09-20.** Historical input prompt for World Canvas 4.30–4.33.
+> Current product decisions and open slices live only in
+> `docs/road-to-market.md`; do not execute this prompt.
+
 Status: **input prompt, non-authoritative.** Received 2026-09-12 from an
-external LLM. The resulting plan is `docs/world-canvas-plan.md` (proposal,
-not scheduled). Archive both together once the plan is accepted or rejected.
+external LLM. The resulting historical plan is
+`docs/archive/world-canvas-plan.md`.
 
 ---
 

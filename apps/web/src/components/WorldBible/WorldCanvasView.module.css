@@ -18,7 +18,6 @@
   padding: 1.1rem;
 }
 
-.intro h2,
 .section h3,
 .lensRow h4,
 .lensOpen h4 {
@@ -29,10 +28,17 @@
 .intro p,
 .sectionHeader p,
 .lensCopy,
+.guidanceCopy,
+.savedSketchSummary,
 .emptyCopy,
 .saveStatus {
   margin: 0.35rem 0 0;
   color: var(--color-text-secondary);
+}
+
+.guidanceCopy {
+  max-width: 76ch;
+  line-height: 1.5;
 }
 
 .saveStatus {
@@ -187,6 +193,34 @@
 .lensOpen,
 .questionCard {
   padding: 0.9rem;
+}
+
+.savedSketchSummary {
+  font-size: var(--font-size-sm);
+}
+
+.lensGuidance {
+  margin: 0.75rem 0;
+  padding: 0.7rem 0.8rem;
+  border: 1px solid var(--surface-border-soft);
+  border-radius: 10px;
+  background: var(--surface-panel-elevated);
+  color: var(--color-text-secondary);
+}
+
+.lensGuidance summary {
+  color: var(--color-text-primary);
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.lensGuidance p {
+  margin: 0.65rem 0 0;
+}
+
+.lensGuidance ul {
+  margin: 0.55rem 0 0;
+  padding-left: 1.2rem;
 }
 
 .lensRow {

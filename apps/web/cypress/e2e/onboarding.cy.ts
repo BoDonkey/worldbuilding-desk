@@ -30,10 +30,16 @@ describe('First-run onboarding', () => {
     cy.contains('h2', 'Getting started').should('not.exist');
   });
 
-  it('opens Source Notes and Canon Decisions from the guide without leaving the loop unexplained', () => {
+  it('opens World Canvas and Source Notes from the guide without leaving the loop unexplained', () => {
     cy.contains('button', 'Explore a sample project').click();
     cy.location('pathname').should('eq', '/workspace');
 
+    cy.contains('button', 'World Canvas').click();
+    cy.location('pathname').should('eq', '/world-canvas');
+    cy.contains('h1', 'World Canvas').should('be.visible');
+    cy.contains('start here with only a seed of an idea', {matchCase: false}).should('be.visible');
+
+    cy.visit('/workspace');
     cy.contains('button', 'Source Note').click();
     cy.location('pathname').should('eq', '/lore');
     cy.contains('h1', 'Source Notes').should('be.visible');

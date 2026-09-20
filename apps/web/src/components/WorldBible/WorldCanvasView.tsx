@@ -22,8 +22,6 @@ import {
 } from '../../services/worldBible/worldCanvasService';
 import {
   buildWorthALookList,
-  summarizeLens,
-  summarizeOtherRecords,
   type WorldCanvasWorthALookItem
 } from '../../services/worldBible/worldCanvasDerived';
 import {collectCanonNames} from '../../services/worldBible/worldCanvasBrainstorm';
@@ -192,13 +190,6 @@ export function WorldCanvasView({
     });
   };
 
-  const derivedContext = {
-    entities,
-    categories,
-    loreDocuments,
-    links: loreDocumentLinks,
-    isGeneralFiction
-  };
   const worthALookItems = buildWorthALookList({
     canvas: worldCanvas.canvas,
     entities,
@@ -210,7 +201,6 @@ export function WorldCanvasView({
   })
     .filter((item) => !dismissedItemIds.has(item.id))
     .slice(0, 8);
-  const otherRecordNames = summarizeOtherRecords({entities, categories, isGeneralFiction});
 
   const dismissWorthALookItem = (id: string) => {
     const next = new Set(dismissedItemIds).add(id);
@@ -231,26 +221,6 @@ export function WorldCanvasView({
     } else if (item.questionId) {
       document.getElementById(`world-canvas-question-${item.questionId}`)?.focus();
     }
-  };
-
-  const renderLensSummary = (
-    kind: WorldCanvasLensKind,
-    lens?: {linkedEntityIds: string[]; linkedSourceNoteIds: string[]}
-  ) => {
-    const summary = summarizeLens({kind, ...lens}, derivedContext);
-    return (
-      <div className={styles.derivedSummary} aria-label={`${kind} saved material summary`}>
-        <span className={styles.derivedLabel}>From saved material</span>
-        <p>
-          <strong>{summary.recordCount} World Bible record{summary.recordCount === 1 ? '' : 's'}:</strong>{' '}
-          {summary.recordNames.length > 0 ? summary.recordNames.join(', ') : 'None mapped'}
-        </p>
-        <p>
-          <strong>{summary.sourceNoteCount} Source Note{summary.sourceNoteCount === 1 ? '' : 's'}:</strong>{' '}
-          {summary.sourceNoteTitles.length > 0 ? summary.sourceNoteTitles.join(', ') : 'None mapped'}
-        </p>
-      </div>
-    );
   };
 
   const renderCanonDraft = (target: BridgeTarget) => {
@@ -514,10 +484,15 @@ export function WorldCanvasView({
     <div className={styles.canvas}>
       {confirmDialog}
       <section className={styles.intro}>
-        <h2>World Canvas</h2>
         <p>
-          Explore the shape of your world. Nothing here is canon. Every field is optional,
-          and you can start writing without filling this in.
+          Paint the larger picture behind your story. Use a lens to bring one part into focus,
+          then keep useful ideas as notes or propose them to the World Bible when they are ready.
+          Nothing here is canon, and every field is optional.
+        </p>
+        <p className={styles.guidanceCopy}>
+          Start here with only a seed of an idea, or return after drafting to deepen what is already
+          on the page. The Corkboard explores what happens; this Canvas explores the world that makes
+          those events possible.
         </p>
         <p className={styles.saveStatus}>{saveStatus}</p>
       </section>
@@ -525,12 +500,12 @@ export function WorldCanvasView({
       <section className={styles.section} aria-labelledby='world-canvas-premise-heading'>
         <div className={styles.sectionHeader}>
           <div>
-            <h3 id='world-canvas-premise-heading'>Premise</h3>
-            <p>What makes this story world compelling to explore?</p>
+            <h3 id='world-canvas-premise-heading'>Core Idea</h3>
+            <p>What is the central idea, tension, or possibility that makes this world worth exploring?</p>
           </div>
         </div>
         <label className={styles.field}>
-          World premise
+          Core idea
           <textarea
             rows={5}
             value={worldCanvas.canvas.premise}
@@ -545,22 +520,30 @@ export function WorldCanvasView({
         <div className={styles.sectionHeader}>
           <div>
             <h3 id='world-canvas-lenses-heading'>Lenses</h3>
-            <p>Open only the perspectives that help this project. Write freely; there are no required fields.</p>
+            <p>Choose a lens to bring one part of the picture into focus. Open only what helps this project.</p>
           </div>
         </div>
         <div className={styles.lensList}>
           {LENS_DEFINITIONS.map((definition) => {
             const lens = lensByKind.get(definition.kind);
-            if (!lens) {
+            if (!lens || lens.isCollapsed) {
               return (
                 <article key={definition.kind} className={styles.lensRow}>
                   <div>
                     <h4>{definition.label}</h4>
                     <p className={styles.lensCopy}>{definition.prompt}</p>
-                    {renderLensSummary(definition.kind)}
+                    {lens && (
+                      <p className={styles.savedSketchSummary}>
+                        Saved sketch · {lens.note.trim() ? `${lens.note.trim().slice(0, 120)}${lens.note.trim().length > 120 ? '…' : ''}` : 'No notes yet'}
+                      </p>
+                    )}
                   </div>
-                  <button type='button' onClick={() => worldCanvas.openLens(definition.kind)}>
-                    Open lens
+                  <button
+                    type='button'
+                    aria-label={`Bring ${definition.label} into focus`}
+                    onClick={() => worldCanvas.openLens(definition.kind)}
+                  >
+                    Bring into focus
                   </button>
                 </article>
               );
@@ -573,16 +556,29 @@ export function WorldCanvasView({
                     <h4>{definition.label}</h4>
                     <p className={styles.lensCopy}>{definition.prompt}</p>
                   </div>
+                  <button
+                    type='button'
+                    aria-label={`Collapse ${definition.label}`}
+                    onClick={() => worldCanvas.collapseLens(definition.kind)}
+                  >
+                    Collapse
+                  </button>
                 </div>
+                <details className={styles.lensGuidance}>
+                  <summary>What this lens can uncover</summary>
+                  <p>{definition.uncovers}</p>
+                  <ul>
+                    {definition.starters.map((starter) => <li key={starter}>{starter}</li>)}
+                  </ul>
+                </details>
                 <label className={styles.field}>
-                  {definition.label} notes
+                  {definition.label} sketch
                   <textarea
                     rows={6}
                     value={lens.note}
                     onChange={(event) => worldCanvas.setLensNote(definition.kind, event.target.value)}
                   />
                 </label>
-                {renderLensSummary(definition.kind, lens)}
                 {renderBrainstorm({type: 'lens', kind: definition.kind})}
                 {renderBridgeActions({
                   target,
@@ -600,12 +596,6 @@ export function WorldCanvasView({
             );
           })}
         </div>
-        {otherRecordNames.length > 0 && (
-          <div className={styles.otherRecords}>
-            <strong>Other records</strong>
-            <span>{otherRecordNames.join(', ')}</span>
-          </div>
-        )}
       </section>
 
       <section className={styles.section} aria-labelledby='world-canvas-questions-heading'>

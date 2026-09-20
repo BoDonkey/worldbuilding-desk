@@ -1,8 +1,11 @@
 # World Canvas — work-slice plan
 
-Status: **accepted 2026-09-12; scheduled as roadmap slices 4.30–4.34
-(WC-1–WC-5 in that order), to land before beta.** Dated 2026-09-12. Produced
-from the planning prompt in `docs/world-canvas.md` after inspecting the
+> **Archived 2026-09-20.** Historical implementation plan for completed slices
+> 4.30–4.33. The replacement product direction and executable 4.34–4.34c
+> definitions live only in `docs/road-to-market.md`.
+
+Status: **accepted 2026-09-12; historical.** Dated 2026-09-12. Produced
+from the planning prompt in `docs/archive/world-canvas.md` after inspecting the
 current World Bible, Source Notes, Scratchpad, canon-decision, onboarding,
 navigation, and persistence code. The author accepted every recommended
 default in § 8: the name "World Canvas", the dedicated `world_canvases`

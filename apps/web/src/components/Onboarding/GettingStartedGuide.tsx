@@ -57,7 +57,22 @@ export function GettingStartedGuide({projectId}: GettingStartedGuideProps) {
         </button>
       </div>
       <ol className={styles.gettingStartedSteps}>
-        <li>Write your scene here, in the editor. There is nothing else to set up first.</li>
+        <li>
+          You can begin with a scene, or use the{' '}
+          <button
+            type='button'
+            className={styles.gettingStartedLink}
+            onClick={() => navigate('/world-canvas')}
+          >
+            World Canvas
+          </button>{' '}
+          to develop a seed of an idea. The Canvas is the developing picture; each lens brings one
+          part into focus, and what you write there is a sketch you can deepen later.
+        </li>
+        <li>
+          Return to the World Canvas after drafting when the story reveals gaps or suggests a new
+          perspective. Use the Corkboard when you want to plan what happens next.
+        </li>
         <li>
           Add background details as a{' '}
           <button type='button' className={styles.gettingStartedLink} onClick={() => navigate('/lore')}>

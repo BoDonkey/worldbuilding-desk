@@ -27,7 +27,6 @@ import {WorldBibleCategoryRail} from '../components/WorldBible/WorldBibleCategor
 import {ItemDescriptionFirstFields} from '../components/WorldBible/ItemDescriptionFirstFields';
 import {SystemNegativeSpacePanel} from '../components/WorldBible/SystemNegativeSpacePanel';
 import {PortableDataPanel} from '../components/WorldBible/PortableDataPanel';
-import {WorldCanvasView} from '../components/WorldBible/WorldCanvasView';
 import styles from '../assets/components/WorldBibleRoute.module.css';
 import type {MemoryEntry} from '../services/shodh/ShodhMemoryService';
 import {ShodhMemoryPanel} from '../components/ShodhMemoryPanel';
@@ -80,7 +79,7 @@ import {describeError} from '../services/errors';
 import {RouteFeedback} from '../components/common';
 import {useWorldCanvas} from '../hooks/useWorldCanvas';
 
-type WorldBibleViewMode = 'category' | 'review' | 'canvas';
+type WorldBibleViewMode = 'category' | 'review';
 type CharacterAuthoringMode = 'idle' | 'manual';
 type RecordAuthoringMode = 'idle' | 'manual';
 
@@ -509,7 +508,6 @@ function WorldBibleRoute() {
   };
 
   const handleSelectReview = () => { setViewMode('review'); resetForm(); };
-  const handleSelectCanvas = () => { setViewMode('canvas'); resetForm(); };
 
   const handleToggleCategoryRail = () => {
     setIsCategoryRailCollapsed((current) => {
@@ -807,7 +805,11 @@ function WorldBibleRoute() {
       worldCanvasLinkTarget?:
         | {type: 'lens'; kind: WorldCanvasLensKind}
         | {type: 'question'; id: string};
+      openReview?: boolean;
     } | null;
+    if (state?.openReview) {
+      setViewMode('review');
+    }
     if (state?.focusCategorySlug && categories.length > 0) {
       const targetCategory = categories.find(
         (category) => category.slug === state.focusCategorySlug
@@ -995,7 +997,6 @@ function WorldBibleRoute() {
           isImportingEntities={isImportingEntities} isImportingJson={isImportingJson}
           importInputRef={importInputRef} jsonImportInputRef={jsonImportInputRef}
           onSelectCategory={handleSelectCategoryTab}
-          onSelectCanvas={handleSelectCanvas}
           onSelectReview={handleSelectReview}
           onToggleCategoryManager={() => setShowCategoryManager((value) => !value)}
           onDownloadJsonTemplate={handleDownloadJsonTemplate}
@@ -1004,7 +1005,7 @@ function WorldBibleRoute() {
 
         <div className={styles.mainColumn}>
       <RouteFeedback feedback={feedback} onClear={() => setFeedback(null)} />
-      {viewMode !== 'canvas' && <PortableDataPanel
+      <PortableDataPanel
         project={activeProject}
         categories={worldBibleCategories}
         entities={entities}
@@ -1015,7 +1016,7 @@ function WorldBibleRoute() {
         ragService={ragService}
         shodhService={shodhService}
         onFeedback={setFeedback}
-      />}
+      />
       {seriesConfig?.parentProjectId && (
         <div className={styles.banner}>
           <strong>Parent canon:</strong> {canonState.parentName ?? 'Unknown'} ·
@@ -1050,36 +1051,6 @@ function WorldBibleRoute() {
         />
       )}
 
-      {viewMode === 'canvas' && (
-        <WorldCanvasView
-          worldCanvas={worldCanvas}
-          categories={worldBibleCategories}
-          entities={entities}
-          loreDocuments={loreDocuments}
-          loreDocumentLinks={loreDocumentLinks}
-          aliases={aliases}
-          aiConfig={projectSettings?.aiSettings}
-          reviewCandidateCount={reviewQueue.length + characterIdentityResolution.queue.length}
-          isGeneralFiction={capabilities.isGeneralFiction}
-          onOpenSourceNote={(documentId) =>
-            navigate('/lore', {state: {focusLoreDocumentId: documentId}})
-          }
-          onOpenEntity={(entityId) =>
-            navigate('/world-bible', {state: {focusEntityId: entityId}})
-          }
-          onOpenReview={handleSelectReview}
-          onProposeCanon={({category, name: proposedName, target}) =>
-            navigate('/world-bible', {
-              state: {
-                focusCategorySlug: category.slug,
-                prefillRecordName: proposedName,
-                worldCanvasLinkTarget: target
-              }
-            })
-          }
-          onFeedback={setFeedback}
-        />
-      )}
 
       {activeCategory && viewMode === 'category' && (
         <section className={styles.castPanel} aria-label={`${activeCategory.name} canon`}>
@@ -1149,7 +1120,6 @@ function WorldBibleRoute() {
         </section>
       )}
 
-      {viewMode !== 'canvas' && <>
       <WorldBibleImportWorkspace
         activeProject={activeProject} projectSettings={projectSettings}
         activeCategory={activeCategory} categories={categories} categoryById={categoryById}
@@ -2192,7 +2162,6 @@ function WorldBibleRoute() {
           />
         </div>
       )}
-      </>}
         </div>
       </div>
 

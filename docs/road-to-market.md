@@ -242,7 +242,10 @@ and required revisit point, `WIP`, `Done <commit>`.
 | 4.31 | World Canvas — bridges to Source Notes and World Bible (WC-2) | 4 | S | Done `53d7803` — provenance-marked manual Source Notes with normal RAG indexing; link/unlink existing notes and World Bible records with current-name and missing-target chips; prefilled normal canon create form with post-save canvas backlink; question answer links/status; lint with 1 baseline warning; 581 web + 6 engine + 12 UI tests; web/desktop builds; Cypress 83/83; manual review completion and 780px check |
 | 4.32 | World Canvas — derived return experience (WC-3) | 4 | S | Done `eb305e7` — read-only per-lens record/Source Note summaries for opened and unopened lenses; unmapped custom categories under Other records; capped project-scoped dismiss/restore Worth a look rules for author-review records, missing Source Note links, questions open over 30 days, and review candidates with direct navigation; no scores or automatic resolution; mechanics-only records excluded for general fiction; lint with 1 baseline warning; 585 web + 6 engine + 12 UI tests; web/desktop builds; Cypress 84/84; manual 780×900 check |
 | 4.33 | World Canvas — author-invoked brainstorming (WC-4) | 4 | M | Done `6fd31ae` — **Ask for tensions and questions** on the premise and each opened lens; sends authored canvas text plus World Bible names/aliases only (never Source Note text) under an exploratory-not-canon framing; one `canvas-brainstorm` budget unit per click; zod-validated 1–12 items ≤280 chars, a bad reply is rejected whole; per-item Keep as Source Note (provenance-marked, lens-linked) / Add as question (non-question items only after an author rewrite; `origin: 'brainstorm'` badge) / Dismiss. Deviations: unreviewed ideas are kept in memory across in-app navigation, because `BrowserRouter` has no `useBlocker`; replace/discard asks first and reload/close prompts. Repeat requests list ideas already shown, which also avoids the `LLMService` cache. Lint with 1 baseline warning; 635 web (+24) + 6 engine + 12 UI tests; web/desktop builds; Cypress 91/91. **Manual disclosure-wording check in both themes still outstanding** |
-| 4.34 | World Canvas — onboarding entry, help, IA docs (WC-5) | 4 | XS | — last; guide line on all guide-marked projects |
+| 4.34 | World Canvas — purpose, Planning IA, guided focus, lens collapse (WC-5) | 4 | M | WIP — claimed 2026-09-20; reframe Canvas and Corkboard as sibling brainstorming tools; dedicated Planning route; Core Idea; progressive lens guidance; collapse without deleting lens work |
+| 4.34a | World Canvas — repeatable lens sketches and Open Threads (WC-6) | 4 | L | — after 4.34; migrate the one-note lens into lossless discrete sketches; reusable prompts; routed-sketch history; remove Worth a Look |
+| 4.34b | World Canvas — Reference Palette foundation (WC-7) | 4 | M | — after 4.34a; separate author-pinned references from deterministic suggestions; no AI-context change |
+| 4.34c | World Canvas — craft-guided coaching (WC-8) | 4 | M | — after 4.34b; author-triggered craft-grounded focus/reword/question help; selected-reference disclosure; proposal-only |
 | 4.35 | Corkboard scene links — shared link UI, quick-modal links, "Link current scene", stale links (CB-1) | 4 | S | — full prompt: [`corkboard-scenes-plan.md`](corkboard-scenes-plan.md) § CB-1; no schema change; carries the Corkboard docs reconciliation |
 | 4.36 | Corkboard scene links — "Create linked scene" from both surfaces (CB-2) | 4 | S | — after 4.35; existing scene owner returns the document; no rollback that deletes prose |
 | 4.37 | Corkboard scene links — chapter-card context line in Workspace (CB-3) | 4 | S | — after 4.35; may defer if beta time is tight |
@@ -312,14 +315,24 @@ review of `docs/tactical-actions.md` (external market research) added 4.28
 and 4.29; 4.28 follows 4.24 and feeds 4.26, 4.29 is independent and pairs
 with 5.8's export-schema documentation. Neither blocks 6.1.
 
-On 2026-09-12 the author accepted the World Canvas proposal
-([`world-canvas-plan.md`](world-canvas-plan.md)) with every recommended
+On 2026-09-12 the author accepted the initial World Canvas proposal
+([archived `world-canvas-plan.md`](archive/world-canvas-plan.md)) with every recommended
 default (name, dedicated `world_canvases` record, the seven lenses, shared
 consultation budget for now, guide entry on all guide-marked projects) and
-chose to land it **before beta** rather than beta-driven: slices 4.30–4.34.
-Order: 4.30 → 4.31 → (4.32 ∥ 4.33) → 4.34. The author's stated priority is a
-complete working app for their own use first and a product second, so
-4.23–4.34 all precede 6.1; release engineering (5.x) may interleave. The
+chose to land it **before beta** rather than beta-driven. An author walkthrough
+on 2026-09-20 found that the shipped surface obscures its brainstorming
+purpose, mixes authored/model/derived material, places a non-canon tool inside
+the canon navigation, and cannot collapse an opened lens. The author accepted
+the follow-up direction recorded below: Corkboard and World Canvas are sibling
+brainstorming tools under Planning; the Canvas develops a Core Idea through
+directed lenses; reusable sketches capture successive answers without treating
+a lens as complete; Open Threads retain promising questions, tensions,
+possibilities, contradictions, and undecided ideas; saved project material
+becomes an author-controlled Reference Palette; and optional craft-grounded
+coaching can deepen or reword exploration.
+Order: 4.30 → 4.31 → (4.32 ∥ 4.33) → 4.34 → 4.34a → 4.34b → 4.34c. The author's
+stated priority is a complete working app for their own use first and a product second, so
+4.23–4.34c all precede 6.1; release engineering (5.x) may interleave. The
 project consultation budget model was settled by 4.39 (done), which unblocks
 4.33 and 4.38; both spend against it and must use `useConsultationBudget` with
 their own feature id (`canvas-brainstorm`, `canon-check`) rather than adding a
@@ -1133,14 +1146,15 @@ plan with the reasons they were not scheduled.
   full-fidelity format; this is the human-readable one. World Anvil import is
   not in scope until its export format is verified (Backlog).
 
-### World Canvas (4.30–4.34)
+### World Canvas (4.30–4.34c)
 
-Accepted 2026-09-12 from `docs/world-canvas-plan.md`, which holds the
-product finding, the recommended IA (a third World Bible view mode beside
+Accepted 2026-09-12 from archived `docs/archive/world-canvas-plan.md`, which holds the
+initial product finding, the original IA (a third World Bible view mode beside
 `category` and `review`), the data-ownership and trust flow, and the full
 self-contained implementation prompt, acceptance criteria, and test
-expectations for each slice. Read that document as the prompt; this
-section only fixes IDs and boundaries.
+expectations for 4.30–4.33. Those slices are complete. The 2026-09-20 author
+walkthrough in `docs/world-canvas-findings.md` is evidence for the accepted
+follow-up direction, but this roadmap remains authoritative for 4.34–4.34c.
 
 - **4.30 World Canvas record, view mode, premise, lenses, questions** —
   plan § WC-1. New `world_canvases` IndexedDB store (project-scoped),
@@ -1157,11 +1171,157 @@ section only fixes IDs and boundaries.
   proposal surface with a zod-validated, capped response; per-item Keep as
   Source Note / Add as question / Dismiss; nothing persists otherwise; shares
   the project consultation budget, whose model 4.39 settles first.
-- **4.34 Onboarding entry, help, IA docs** — plan § WC-5. Optional guide
-  line, rail help sentence, blueprint IA update; archive the plan and prompt
-  when done.
+- **4.34 Purpose, Planning IA, guided focus, and lens collapse (WC-5, M).**
+  Reframe Corkboard and World Canvas as sibling brainstorming tools: Corkboard
+  develops what happens and in what order; World Canvas develops a core idea
+  through directed questions that reveal pressures, possibilities, conflicts,
+  and consequences. Move World Canvas from the World Bible category rail to a
+  dedicated route in the existing `Planning` navigation group beside
+  Corkboard. World Bible remains the only canon owner; retain a contextual
+  path between Canvas and World Bible without presenting Canvas as a canon
+  category. Rename author-facing `Premise` to **Core Idea** without renaming
+  the persisted field. Use one coherent explanation: the Canvas is the
+  developing picture and a lens brings one part into focus. Replace **Open
+  lens** with **Bring into focus**; familiar controls such as **Collapse** stay
+  literal rather than forcing metaphor onto every action.
 
-Anti-goals hold across all five: no scores, no questionnaire, no second canon
+  Add progressive, non-AI help to each lens: one strong directed question in
+  the closed state, a concise "what this can uncover" explanation, and an
+  optional small set of examples/question starters. These are prompts, never
+  fields or a checklist. Teach both valid entry moments in onboarding and
+  empty-state copy: start from a spark before drafting, or return with existing
+  material to discover further implications. Do not claim that Canvas reads or
+  analyzes chapter prose; today it does not. Onboarding must teach the coherent
+  metaphor without turning every control into themed jargon: the **Canvas** is
+  the developing exploratory picture, a **lens** brings one part into focus,
+  and repeatable **sketches** are provisional studies that may later develop
+  into Source Notes, Open Threads, or accepted canon. No lens is completed by
+  answering its opening question once.
+
+  An opened lens must be collapsible without deleting, unlinking, or hiding its
+  authored work from backup. Separate "this lens has durable content" from
+  "this card is expanded" with an additive, backward-compatible presentation
+  state; old records default safely and no trim/removal of a persisted lens kind
+  is allowed. Visually separate author writing, derived references, and model
+  suggestions. Remove the current flattened **From saved material** block from
+  inside lens cards, but preserve the stable link and derivation services for
+  4.34b. Move `Other records` out of the lens list. Keep the existing one-note
+  lens and Questions persistence unchanged in this slice; 4.34a performs their
+  lossless transition after the new route, hierarchy, and guidance are stable.
+
+  Acceptance: desktop and narrow navigation expose both brainstorming tools
+  under Planning; onboarding reaches the dedicated Canvas route; World Bible
+  no longer presents Canvas as a category; existing Canvas data loads without
+  loss; a populated lens can collapse, survive reload/backup round-trip, reopen,
+  and retain exact text and links; blank and mature projects receive accurate
+  guidance; all controls are keyboard reachable and save/status announcements
+  remain correct. Update `docs/product-blueprint.md`, `PROJECT_STATUS.md`, and
+  the relevant smoke guidance; archive the original prompt/plan only after the
+  replacement durable decisions have been folded into the authority docs.
+
+- **4.34a Repeatable lens sketches and Open Threads (WC-6, L).** Replace the
+  current one-per-lens `note` workflow with stable, discrete sketches. A lens's
+  directed question is evergreen and reusable; it is not a field the author
+  completes once. Each opened lens has one autosaved working composer plus a
+  compact **Sketches from this lens** history. The author can start another
+  sketch after deliberately routing the current one, while every earlier sketch
+  remains visible with its destination and can be reopened. Never clear the
+  composer merely because autosave ran. After a successful route, transition
+  the sketch out of the composer only through an explicit **Add another sketch**
+  / equivalent action, and never discard text on a cancelled or failed route.
+
+  Add a versioned, lossless Canvas migration from each existing lens `note` to
+  its first stable sketch, preserving timestamps and every linked Source Note
+  and World Bible id. Define where legacy lens-level links live after migration
+  before changing the type; backups, restore, project deletion, and older
+  snapshots must remain safe. Each sketch needs stable identity, text,
+  created/updated timestamps, and enough destination/provenance state to show
+  that it became or linked to a Source Note, Open Thread, or World Bible record.
+  Do not silently infer a destination from prose.
+
+  Replace the current **Questions** list with author-facing **Open Threads**:
+  promising questions, tensions, possibilities, contradictions, or undecided
+  ideas the author intentionally wants to revisit. Keep a compact manual **Add
+  an open thread** control; no required kind/category selector. A retained
+  brainstorm alternative, tension, implication, or question can become a
+  thread without being rewritten into question grammar. Author-facing statuses
+  are **Open**, **Settled**, and **Set aside**; migrate or compatibly interpret
+  existing `open` / `answered` / `dropped` values without data loss. Settled and
+  set-aside threads collapse into history. Lens association is optional; a
+  thread captured from a lens inherits that association. Remove the 30-day
+  stale-question rule.
+
+  Remove **Worth a Look** from Canvas rather than renaming it. `needsCompletion`
+  belongs to World Bible review, unresolved candidates belong to Canon Review,
+  absence of a linked Source Note is not a defect, and age does not make a
+  creative thread stale. Preserve or strengthen the owning review surfaces if
+  removal would make an actionable item unreachable. Refine sketch actions:
+  **Keep as Open Thread** retains exploratory pressure; **Develop as Source
+  Note** creates/links a normal provenance-marked note; **Propose canon anchor**
+  is available only for material suited to a World Bible entity, not arbitrary
+  assertion prose. Any future path for settling an assertion as a canonical
+  fact must use the existing reviewed canon workflow and is not invented here.
+
+  Acceptance: migrate an existing populated seven-lens Canvas and preserve
+  exact text/links through reload and backup round-trip; create and route
+  multiple non-conflicting sketches from the same lens; verify failed/cancelled
+  routes retain the composer; keep statement-form and question-form Open
+  Threads; settle and set aside without deleting; confirm no age-based warning
+  appears; confirm every removed Worth a Look signal remains available at its
+  legitimate owner where applicable. Add service/migration/component tests,
+  routed Cypress coverage, keyboard/a11y checks, and desktop/narrow manual
+  smoke.
+
+- **4.34b Reference Palette foundation (WC-7, M).** Replace the ambiguous
+  saved-material inventory with a separate, clearly attributed **Reference
+  Palette** that supports the return-to-a-project journey without competing
+  with the author's canvas writing. Preserve and reuse the existing stable
+  `linkedEntityIds` and `linkedSourceNoteIds`. Refactor derived resolution to
+  return structured reference objects with stable id, label, source type,
+  lens association, existence state, and provenance instead of only flattened
+  counts/names. Keep two explicit classes: **Pinned references**, deliberately
+  chosen by the author, and **Suggested references**, associated by a stated
+  deterministic rule. Never silently pin, unlink, or repair a reference.
+
+  The palette supports browse, pin, unpin, open-source, and visibly stale
+  references. World Bible material is labeled accepted canon; Source Notes are
+  labeled source material. Conservative incomplete mapping is preferable to a
+  false semantic match: mappings must be deterministic and tested, and
+  unclassified project references belong in a separate browse area rather
+  than a malformed extra lens. General-fiction projects remain free of
+  mechanics-only suggestions. This slice changes no model prompt: Palette
+  names, titles, summaries, and text are not newly sent to a provider. Unit
+  tests cover suggested-versus-pinned resolution, dedupe, rename, deletion,
+  custom categories, and project-mode filtering; Cypress covers pin/reload/
+  unpin and navigation to both source types; manually verify blank and mature
+  projects at desktop and narrow widths.
+
+- **4.34c Craft-guided Canvas coaching (WC-8, M).** Add optional,
+  author-triggered guidance grounded in the vetted craft library, using a new
+  Canvas coaching contract rather than reusing the manuscript-revision coach
+  prompt. The coach helps the author focus a Core Idea or opened lens through
+  actions such as **Help me focus this**, **Ask a deeper question**, **Show the
+  central tension**, and **Suggest clearer wording**. It teaches applicable
+  craft patterns and proposes alternatives; it never judges unseen manuscript
+  prose, establishes story truth, or writes into Canvas/canon/state directly.
+  Suggested wording or questions use the shared proposal/preview/confirmation
+  surface and leave the author's current text intact until an explicit choice.
+
+  Retrieve only applicable author-vetted craft chunks and show their citations
+  separately from project references. The request includes the explicitly
+  focused Canvas text. Any Palette participation is author-selected and
+  disclosed at point of use; default to record names/aliases only, and continue
+  excluding Source Note text unless a later explicit product decision changes
+  that boundary. Use `useConsultationBudget` with a distinct per-feature entry
+  in the shared project ledger, the shared streaming/thinking/elapsed/Stop
+  surface, hosted-provider disclosure, whole-response schema validation, and
+  local Ollama exemption/runaway rules. Bad output fails closed. Add unit tests
+  for retrieval query, trust prompt, selected-reference boundary, schema
+  validation, and proposal behavior; Cypress covers no-provider, hosted
+  disclosure, successful suggestion review, cancellation, and no direct write;
+  manually check citations and disclosure in both themes.
+
+Anti-goals hold across all eight: no scores, no questionnaire, no second canon
 owner, no per-lens fields, no relationship graph, no RAG indexing of canvas
 text, no model text written into the canvas.
 
