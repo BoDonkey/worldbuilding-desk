@@ -834,6 +834,7 @@ describe('Post-merge smoke checklist', () => {
       const aliases = await getAllRecords<{
         id: string;
         projectId: string;
+        schemaVersion: number;
         targetId: string;
         alias: string;
       }>(db, 'consistency_aliases');
@@ -849,8 +850,8 @@ describe('Post-merge smoke checklist', () => {
         id: string;
         projectId: string;
         premise: string;
-        lenses: unknown[];
-        questions: unknown[];
+        lenses: Array<{kind: string; sketches: Array<{text: string; linkedSourceNoteIds: string[]; linkedEntityIds: string[]}>}>;
+        openThreads: Array<{id: string; text: string; status: string}>;
         createdAt: number;
         updatedAt: number;
       }>(db, 'world_canvases');
@@ -858,7 +859,15 @@ describe('Post-merge smoke checklist', () => {
         (record) => record.projectId !== 'cypress-project-1'
       );
       expect(importedCanvas).to.exist;
-      expect(importedCanvas).to.deep.include(canvasContent);
+      expect(importedCanvas).to.deep.include({premise: canvasContent.premise, schemaVersion: 2});
+      expect(importedCanvas?.lenses[0].sketches[0]).to.deep.include({
+        text: 'The archive opened after the ash treaty.',
+        linkedSourceNoteIds: [],
+        linkedEntityIds: []
+      });
+      expect(importedCanvas?.openThreads[0]).to.deep.include({
+        id: 'question-backup-smoke', text: 'Who can erase a promise?', status: 'open'
+      });
       expect(importedCanvas?.id).to.equal(importedCanvas?.projectId);
     });
 

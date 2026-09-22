@@ -26,9 +26,10 @@ Procedure:
 1. Seed a project with mixed data (scenes, World Bible entries, characters
    and sheets, compendium/settlement data), a non-trivial Scratchpad note, and
    two Corkboard cards with plot points. In Planning → World Canvas, enter a
-   Core Idea, bring at least two lenses into focus, add notes and explicit
-   Source Note/World Bible links, collapse one populated lens, and add three
-   questions with mixed open/answered/dropped statuses.
+   Core Idea, bring at least two lenses into focus, route two distinct sketches
+   from one lens to different destinations, add explicit Source Note/World
+   Bible links, collapse one populated lens, and add three Open Threads with
+   mixed Open/Settled/Set aside statuses.
 2. `Projects` → `Export Backup (.zip)` → confirm
    `<project>-backup-YYYY-MM-DD.zip` downloads → `Validate Backup (.zip)`
    passes integrity and supported-version checks. A fixture whose
@@ -42,9 +43,10 @@ Procedure:
 5. Spot-check after import: World Bible categories/entries, scenes open,
    Scratchpad content and formatting present, Corkboard card count/order and
    per-card title/summary/status/plot-points intact, World Canvas Core Idea,
-   opened/collapsed lens state, notes, questions, lens links, and statuses
-   byte-for-byte intact. Reopen the collapsed lens and confirm its exact text
-   and links remain; then confirm characters and sheets are editable,
+   opened/collapsed lens state, every sketch, Open Thread, destination link,
+   active composer, and status byte-for-byte intact. Reopen the collapsed lens
+   and each prior sketch and confirm its exact text and destinations remain;
+   then confirm characters and sheets are editable,
    compendium data persists, autosave
    still works after a small post-import edit. Confirm Canvas content did not
    create World Bible records, accepted facts, or indexed context.
@@ -67,14 +69,25 @@ exploratory Canvas content as World Bible canon.
    uniquely announced Bring into focus control.
 3. Bring Inhabitants and societies into focus. Expand its optional guidance,
    confirm examples cover populations and unequal social relationships, enter
-   text, link one Source Note and one World Bible record, then collapse it.
-4. Reload. Confirm the saved-sketch summary remains, reopen the lens, and verify
-   the exact text and both links. Confirm save announcements remain audible.
-5. Open World Bible. Confirm World Canvas is absent from its category rail.
-   From Canvas, propose a canon record and confirm the normal World Bible form
-   opens prefilled; saving it must still require the author action and preserve
-   the backlink.
-6. On a guide-marked blank project and a guide-marked sample/mature project,
+   a first sketch, route it to an Open Thread, and explicitly add another
+   sketch. Route that sketch to a Source Note and a suitable World Bible record.
+4. Cancel one route and simulate or observe one failed route; confirm neither
+   clears the composer. Collapse, reload, reopen the lens, and verify both
+   sketches, exact text, active selection, and destinations. Confirm save
+   announcements remain audible.
+5. Add question- and statement-form Open Threads, mark one Settled and one Set
+   aside, and confirm both remain in reopenable history without an age warning.
+   Confirm Worth a Look is absent; incomplete records remain in World Bible
+   review and unresolved candidates remain in Canon Review.
+6. Keep Core Idea as a Source Note, open it, then edit Core Idea and confirm the
+   note remains the original snapshot. Confirm a repeated click cannot create a
+   duplicate; delete the note, verify the stale link is visible, and unlink it.
+7. Open World Bible. Confirm World Canvas is absent from its category rail.
+   From Core Idea and a suitable sketch, propose a canon anchor and confirm the
+   normal World Bible form opens with an author-selected category and prefilled
+   name; saving still requires author action, preserves the backlink, and writes
+   no accepted fact.
+8. On a guide-marked blank project and a guide-marked sample/mature project,
    confirm onboarding links to `/world-canvas` and accurately explains starting
    before drafting or returning later. It must not claim to read chapter prose.
 

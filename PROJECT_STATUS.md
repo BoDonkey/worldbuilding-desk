@@ -1,6 +1,6 @@
 # Worldbuilding-Desk Project Status
 
-**Last Updated:** September 20, 2026
+**Last Updated:** September 22, 2026
 
 ## Project Overview
 
@@ -95,44 +95,52 @@ Under the hood, the app still includes rich systems for world data, rules, chara
 - Scratchpad quick access is now available from active-project chrome on World Bible, Lore, and Canon Decisions so loose ideas can move into structured canon, longform lore, or review decisions without navigating back to Workspace.
 - Planning now presents World Canvas beside Corkboard as a sibling brainstorming
   tool: Corkboard develops what happens, while Canvas develops the world behind
-  it through a Core Idea, seven optional lenses, and open/answered/dropped
-  questions. World Canvas has its own `/world-canvas` route rather than appearing
+  it through a Core Idea, seven optional lenses, repeatable sketches, and Open
+  Threads. World Canvas has its own `/world-canvas` route rather than appearing
   as a World Bible category; World Bible remains the sole canon owner.
   Canvas content is explicitly exploratory and non-canon, stays out of
   extraction and retrieval, and participates in full project backup/restore.
 - Each lens now keeps one strong directed question visible before opening,
   offers optional non-AI guidance and question starters after opening, and can
-  collapse and reopen without changing its exact note or links. The author-facing
+  collapse and reopen without changing its exact sketches or links. Each lens
+  has one autosaved working composer; a routed sketch remains in reopenable
+  history, and starting another is always an explicit author action. The author-facing
   name is Core Idea while the persisted `premise` field remains backward
   compatible. Guide-marked projects explain that Canvas works both before and
   after drafting and distinguish it from Corkboard.
-- World Canvas lenses and questions can now be kept as provenance-marked manual
-  Source Notes, linked to existing Source Notes or World Bible records, and
-  moved into the normal prefilled World Bible create form. Canvas links resolve
-  current target names, preserve visibly stale targets for explicit unlinking,
-  and questions can be marked answered with an optional supporting link; no
-  Canvas action writes facts, aliases, or canon records directly.
+- Sketches and Open Threads can be developed as provenance-marked manual Source
+  Notes, linked to existing Source Notes or World Bible records, or handed to
+  the normal prefilled World Bible create form when suited to a named canon
+  entity. Open Threads accept question- and statement-form ideas with Open,
+  Settled, and Set aside statuses; settled material remains as reopenable
+  history. Links resolve current target names and preserve visibly stale targets
+  for explicit unlinking. No Canvas action writes facts, aliases, or canon
+  records directly.
+- Core Idea can be kept as a provenance-marked, indexed Source Note snapshot;
+  later Core Idea edits do not rewrite the saved note, duplicate creation is
+  guarded while linked, and stale links remain visible for unlinking. Core Idea
+  can also open the normal World Bible create form with an author-selected
+  category and preserve the backlink after explicit save. Hands-on review found
+  the ordinary concept/setting anchor sufficient, so there is no separate World
+  Foundation canon owner before 4.34b.
 - The former flattened per-lens saved-material summaries and Other-records list
   are no longer mixed into author sketches; stable note/record links and their
-  derivation services remain available for the planned Reference Palette. A
-  capped, dismissible Worth a look list still states
-  its deterministic rule for incomplete-import records, records without a
-  linked Source Note, questions open longer than 30 days, and unresolved World
-  Bible review candidates; it links back to the existing record, question, or
-  Review surface and never assigns a score or resolves work automatically.
-  Mechanics-only records are excluded in general-fiction projects.
+  derivation services remain available for the planned Reference Palette.
+  Worth a Look and its age/missing-link rules have been removed: World Bible
+  completion stays in World Bible review, unresolved candidates stay in Canon
+  Review, and an old creative thread or absent Source Note is not treated as a
+  defect.
 - World Canvas Core Idea (stored as `premise`) and every opened lens now offer author-invoked
   brainstorming (**Ask for tensions and questions**). One click sends the
-  premise, that lens's notes, relevant open questions, and accepted World Bible
+  premise, that lens's active sketch, relevant Open Threads, and accepted World Bible
   record names and aliases (never Source Note text) under an explicit
   "exploratory — not canon" framing, and spends one `canvas-brainstorm` unit of
   the shared project consultation budget (local Ollama exempt). The reply must
   validate as at most 12 alternative/tension/implication/question items of at
   most 280 characters each, or it is rejected whole with a fallback message.
   Each item can be kept as a provenance-marked Source Note ("From World Canvas
-  brainstorm — …", linked to its lens), added as a question marked "From World
-  Canvas brainstorm" (non-question items only after the author rewrites them),
-  or dismissed. Unreviewed ideas are held in memory only, survive in-app
+  brainstorm — …"), kept directly as an Open Thread in either question or
+  statement form, or dismissed. Unreviewed ideas are held in memory only, survive in-app
   navigation, and prompt before a reload or window close; nothing else persists
   and nothing is written to canon. With no usable provider, the control
   explains why and links to Settings without sending a request.
@@ -1093,6 +1101,12 @@ runtime schema, and nothing here changes the roadmap's status board.
 - Zustand workspace UI integration has been smoke-checked manually for Corkboard and Scratchpad memory saving, and the latest focused unit/build passes cover workspace store behavior plus document initialization/save helper behavior.
 
 ### Current Verification Notes
+- World Canvas WC-6 (repeatable sketches, Open Threads, and Core Idea
+  bridges): lint with the single existing hook warning; 658 web unit tests, 6
+  rules-engine tests, and 12 rules-ui tests; web and desktop builds; full
+  95/95 Cypress suite. Manual desktop and 780×900 inspection confirmed the
+  hierarchy and keyboard names, bottom navigation, existing theme-token styling,
+  and no horizontal overflow (`scrollWidth === innerWidth`).
 - World Canvas WC-5 (purpose and Planning IA): lint with the single existing
   hook warning; 659 web unit tests, 6 rules-engine tests, and 12 rules-ui
   tests; web and desktop builds; full 93-test Cypress suite plus a final 9/9

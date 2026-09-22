@@ -1,136 +1,93 @@
-import {fireEvent, render as rtlRender, screen} from '@testing-library/react';
+import {fireEvent, render as rtlRender, screen, within} from '@testing-library/react';
 import type {ReactElement} from 'react';
 import {MemoryRouter} from 'react-router';
 import {describe, expect, it, vi} from 'vitest';
 import type {useWorldCanvas} from '../../hooks/useWorldCanvas';
-import {addQuestion, createEmptyWorldCanvas, openLens} from '../../services/worldBible/worldCanvasService';
+import {addOpenThread, createEmptyWorldCanvas, getActiveSketch, openLens, updateSketchText} from '../../services/worldBible/worldCanvasService';
 import {WorldCanvasView} from './WorldCanvasView';
 
-const buildWorldCanvas = (
-  overrides: Partial<ReturnType<typeof useWorldCanvas>> = {}
-): ReturnType<typeof useWorldCanvas> => ({
-  canvas: createEmptyWorldCanvas('project-1'),
-  status: 'saved',
-  lastSavedAt: null,
-  setPremise: vi.fn(),
-  openLens: vi.fn(),
-  collapseLens: vi.fn(),
-  setLensNote: vi.fn(),
-  addQuestion: vi.fn(),
-  updateQuestion: vi.fn(),
-  keepLensAsSourceNote: vi.fn(),
-  keepQuestionAsSourceNote: vi.fn(),
-  keepBrainstormItemAsSourceNote: vi.fn(),
-  linkLensSourceNote: vi.fn(),
-  linkLensEntity: vi.fn(),
-  unlinkLensTarget: vi.fn(),
-  linkQuestionSourceNote: vi.fn(),
-  linkQuestionEntity: vi.fn(),
+const buildWorldCanvas = (overrides: Partial<ReturnType<typeof useWorldCanvas>> = {}): ReturnType<typeof useWorldCanvas> => ({
+  canvas: createEmptyWorldCanvas('project-1'), status: 'saved', lastSavedAt: null,
+  setPremise: vi.fn(), openLens: vi.fn(), collapseLens: vi.fn(), setSketchText: vi.fn(),
+  selectSketch: vi.fn(), addAnotherSketch: vi.fn(), keepSketchAsOpenThread: vi.fn(),
+  addOpenThread: vi.fn(), updateOpenThread: vi.fn(), keepCoreIdeaAsSourceNote: vi.fn(),
+  developSketchAsSourceNote: vi.fn(), keepOpenThreadAsSourceNote: vi.fn(),
+  keepBrainstormItemAsSourceNote: vi.fn(), linkCoreIdeaSourceNote: vi.fn(),
+  linkCoreIdeaEntity: vi.fn(), linkSketchSourceNote: vi.fn(), linkSketchEntity: vi.fn(),
+  unlinkSketchTarget: vi.fn(), linkOpenThreadSourceNote: vi.fn(), linkOpenThreadEntity: vi.fn(),
   ...overrides
 });
-
-// The brainstorm panel links to Settings, so the view needs a router.
 const render = (ui: ReactElement) => rtlRender(ui, {wrapper: MemoryRouter});
 
 describe('WorldCanvasView', () => {
-  it('renders the optional empty state and all seven unopened lenses', () => {
+  it('renders all lenses, Core Idea bridges, and no Worth a Look surface', () => {
     render(<WorldCanvasView worldCanvas={buildWorldCanvas()} />);
-
     expect(screen.getByText(/nothing here is canon/i)).toBeInTheDocument();
     expect(screen.getAllByText('Bring into focus')).toHaveLength(7);
-    expect(screen.getByText(/What truth would change how people understand this world\?/)).toBeInTheDocument();
+    expect(screen.getByRole('heading', {name: 'Open Threads'})).toBeInTheDocument();
+    expect(screen.queryByText('Worth a look')).not.toBeInTheDocument();
   });
 
-  it('opens a lens and edits its freeform note', () => {
-    const openLensAction = vi.fn();
-    const setLensNote = vi.fn();
-    const empty = createEmptyWorldCanvas('project-1');
-    const {rerender} = render(
-      <WorldCanvasView worldCanvas={buildWorldCanvas({canvas: empty, openLens: openLensAction, setLensNote})} />
-    );
-
+  it('opens a lens and autosaves its working sketch', () => {
+    const openLensAction = vi.fn(); const setSketchText = vi.fn(); const empty = createEmptyWorldCanvas('project-1');
+    const {rerender} = render(<WorldCanvasView worldCanvas={buildWorldCanvas({canvas: empty, openLens: openLensAction, setSketchText})} />);
     fireEvent.click(screen.getByRole('button', {name: 'Bring Inhabitants and societies into focus'}));
     expect(openLensAction).toHaveBeenCalledWith('people');
-
-    rerender(
-      <WorldCanvasView
-        worldCanvas={buildWorldCanvas({canvas: openLens(empty, 'people'), openLens: openLensAction, setLensNote})}
-      />
-    );
-    fireEvent.change(screen.getByLabelText('Inhabitants and societies sketch'), {target: {value: 'Names and tensions'}});
-    expect(setLensNote).toHaveBeenCalledWith('people', 'Names and tensions');
+    const opened = openLens(empty, 'people');
+    rerender(<WorldCanvasView worldCanvas={buildWorldCanvas({canvas: opened, setSketchText})} />);
+    fireEvent.change(screen.getByLabelText('Inhabitants and societies working sketch'), {target: {value: 'Names and tensions'}});
+    expect(setSketchText).toHaveBeenCalledWith('people', getActiveSketch(opened.lenses[0]).id, 'Names and tensions');
   });
 
-  it('collapses a populated lens and keeps its saved sketch available to reopen', () => {
-    const collapseLens = vi.fn();
-    const canvas = openLens(createEmptyWorldCanvas('project-1'), 'customs');
-    canvas.lenses[0].note = 'Bears are considered unclean.';
-    const {rerender} = render(<WorldCanvasView worldCanvas={buildWorldCanvas({canvas, collapseLens})} />);
-
-    fireEvent.click(screen.getByRole('button', {name: 'Collapse Customs and beliefs'}));
-    expect(collapseLens).toHaveBeenCalledWith('customs');
-
-    canvas.lenses[0].isCollapsed = true;
-    rerender(<WorldCanvasView worldCanvas={buildWorldCanvas({canvas, collapseLens})} />);
-    expect(screen.getByText(/Saved sketch · Bears are considered unclean/)).toBeInTheDocument();
-    expect(screen.getByRole('button', {name: 'Bring Customs and beliefs into focus'})).toBeInTheDocument();
+  it('keeps a routed sketch in history and explicitly starts another', () => {
+    let canvas = openLens(createEmptyWorldCanvas('project-1'), 'customs');
+    const first = getActiveSketch(canvas.lenses[0]);
+    canvas = updateSketchText(canvas, 'customs', first.id, 'Bears are considered unclean.');
+    canvas.lenses[0].sketches[0].linkedOpenThreadIds = ['thread-1'];
+    canvas.openThreads = [{id: 'thread-1', text: 'Bears are considered unclean.', status: 'open', lensKind: 'customs', createdAt: 1, updatedAt: 1}];
+    const addAnotherSketch = vi.fn();
+    render(<WorldCanvasView worldCanvas={buildWorldCanvas({canvas, addAnotherSketch})} />);
+    fireEvent.click(screen.getByRole('button', {name: 'Add another sketch'}));
+    expect(addAnotherSketch).toHaveBeenCalledWith('customs');
+    expect(screen.getByText(/Open Thread:/)).toBeInTheDocument();
   });
 
-  it('validates and adds a question with an optional lens', () => {
-    const addQuestion = vi.fn();
-    render(<WorldCanvasView worldCanvas={buildWorldCanvas({addQuestion})} />);
-
-    fireEvent.click(screen.getByRole('button', {name: 'Add question'}));
-    expect(screen.getByLabelText('New question')).toHaveAttribute('aria-invalid', 'true');
-    expect(addQuestion).not.toHaveBeenCalled();
-
-    fireEvent.change(screen.getByLabelText('New question'), {target: {value: 'Who owns the gate?'}});
-    fireEvent.change(screen.getByLabelText('Lens (optional)'), {target: {value: 'places'}});
-    fireEvent.click(screen.getByRole('button', {name: 'Add question'}));
-
-    expect(addQuestion).toHaveBeenCalledWith('Who owns the gate?', 'places');
+  it('adds statement-form Open Threads and validates blank input', () => {
+    const addOpenThread = vi.fn();
+    render(<WorldCanvasView worldCanvas={buildWorldCanvas({addOpenThread})} />);
+    fireEvent.click(screen.getByRole('button', {name: 'Add open thread'}));
+    expect(screen.getByLabelText('Add an open thread')).toHaveAttribute('aria-invalid', 'true');
+    fireEvent.change(screen.getByLabelText('Add an open thread'), {target: {value: 'The founders lied.'}});
+    fireEvent.change(screen.getByLabelText('Lens (optional)'), {target: {value: 'history'}});
+    fireEvent.click(screen.getByRole('button', {name: 'Add open thread'}));
+    expect(addOpenThread).toHaveBeenCalledWith('The founders lied.', 'history');
   });
 
-  it('offers Source Note and canon bridges without writing canon directly', () => {
-    const keepLensAsSourceNote = vi.fn().mockResolvedValue(null);
-    const onProposeCanon = vi.fn();
-    const canvas = openLens(createEmptyWorldCanvas('project-1'), 'people');
-    canvas.lenses[0].note = 'Sera Vale';
-    render(
-      <WorldCanvasView
-        worldCanvas={buildWorldCanvas({canvas, keepLensAsSourceNote})}
-        categories={[{
-          id: 'characters', projectId: 'project-1', kind: 'character',
-          name: 'Characters', slug: 'characters', fieldSchema: [], createdAt: 1
-        }]}
-        onProposeCanon={onProposeCanon}
-      />
-    );
-
-    fireEvent.click(screen.getByRole('button', {name: 'Keep as Source Note'}));
-    expect(keepLensAsSourceNote).toHaveBeenCalledWith('people');
-
-    fireEvent.click(screen.getByRole('button', {name: 'Propose as canon'}));
-    expect(screen.getByLabelText('Canon record name')).toHaveValue('Sera Vale');
-    fireEvent.click(screen.getByRole('button', {name: 'Open canon form'}));
-    expect(onProposeCanon).toHaveBeenCalledWith(expect.objectContaining({
-      name: 'Sera Vale',
-      target: {type: 'lens', kind: 'people'}
-    }));
+  it('routes a sketch through Source Notes and the normal World Bible form', () => {
+    let canvas = openLens(createEmptyWorldCanvas('project-1'), 'people');
+    const sketch = getActiveSketch(canvas.lenses[0]);
+    canvas = updateSketchText(canvas, 'people', sketch.id, 'Sera Vale');
+    const developSketchAsSourceNote = vi.fn().mockResolvedValue(null); const onProposeCanon = vi.fn();
+    render(<WorldCanvasView worldCanvas={buildWorldCanvas({canvas, developSketchAsSourceNote})} categories={[{id: 'characters', projectId: 'project-1', kind: 'character', name: 'Characters', slug: 'characters', fieldSchema: [], createdAt: 1}]} onProposeCanon={onProposeCanon} />);
+    const article = screen.getByText('Inhabitants and societies', {selector: 'h4'}).closest('article')!;
+    fireEvent.click(within(article).getByRole('button', {name: 'Develop as Source Note'}));
+    expect(developSketchAsSourceNote).toHaveBeenCalledWith('people', sketch.id);
+    fireEvent.click(within(article).getByRole('button', {name: 'Propose canon anchor'}));
+    expect(screen.getByLabelText('Record name')).toHaveValue('Sera Vale');
+    fireEvent.click(screen.getByRole('button', {name: 'Open World Bible form'}));
+    expect(onProposeCanon).toHaveBeenCalledWith(expect.objectContaining({name: 'Sera Vale', target: {type: 'sketch', kind: 'people', sketchId: sketch.id}}));
   });
 
-  it('offers brainstorming on the premise and opened lenses and marks brainstorm questions', () => {
-    const canvas = addQuestion(
-      addQuestion(openLens(createEmptyWorldCanvas('project-1'), 'people'), 'Who owns the gate?'),
-      'Who remembers the founders?',
-      undefined,
-      'brainstorm'
-    );
-    render(<WorldCanvasView worldCanvas={buildWorldCanvas({canvas})} />);
-
-    expect(screen.getAllByRole('button', {name: 'Ask for tensions and questions'})).toHaveLength(2);
-    expect(screen.getByRole('heading', {name: 'Brainstorm: Core Idea'})).toBeInTheDocument();
-    expect(screen.getByRole('heading', {name: 'Brainstorm: Inhabitants and societies'})).toBeInTheDocument();
-    expect(screen.getAllByText('From World Canvas brainstorm')).toHaveLength(1);
+  it('collapses Settled and Set aside threads into reopenable history', () => {
+    let canvas = addOpenThread(createEmptyWorldCanvas('project-1'), 'Who owns the gate?');
+    canvas.openThreads[0].status = 'settled';
+    canvas = addOpenThread(canvas, 'The gate may choose its keeper.');
+    canvas.openThreads[1].status = 'set_aside';
+    const updateOpenThread = vi.fn();
+    render(<WorldCanvasView worldCanvas={buildWorldCanvas({canvas, updateOpenThread})} />);
+    fireEvent.click(screen.getByText(/Settled and set-aside history/));
+    expect(screen.getByText('Who owns the gate?')).toBeInTheDocument();
+    fireEvent.click(screen.getAllByRole('button', {name: 'Reopen'})[0]);
+    expect(updateOpenThread).toHaveBeenCalledWith(canvas.openThreads[0].id, {status: 'open'});
   });
 });

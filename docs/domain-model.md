@@ -1,6 +1,6 @@
 # Domain Model — Lore, Canon, State, and AI Proposals
 
-Last updated: 2026-09-13
+Last updated: 2026-09-22
 
 This is the domain specification authority. It consolidates the durable
 contracts from `freeform-lore-ingestion-architecture.md`,
@@ -29,11 +29,22 @@ Three layers separate "written in notes" from "accepted as canon":
    document, evidence span, and acceptance metadata.
 
 `WorldCanvasDocument` sits outside these three layers. It is optional,
-project-scoped exploratory planning: a premise, author-opened lenses, and
-questions. It is never canon, never an extraction source, never indexed for
+project-scoped exploratory planning: a compatible persisted `premise` presented
+as Core Idea, author-opened lenses containing stable repeatable sketches, and
+Open Threads. Sketches preserve explicit destinations to Source Notes, Open
+Threads, and World Bible records; Open Threads retain open/settled/set-aside
+history. It is never canon, never an extraction source, never indexed for
 retrieval, and never written into World Bible records, canonical facts, or
 state. Moving a Canvas idea into canon requires the same explicit author
 action and validation as any other proposal or source material.
+
+Keeping Canvas material as a Source Note creates a provenance-marked snapshot
+through the normal `LoreDocument` and indexing path; later Canvas edits never
+rewrite that note. A canon anchor opens the normal author-selected World Bible
+create flow and records only a backlink after the author saves the record. It
+does not accept factual assertions. The ordinary World Bible concept/setting
+record remains the owner for an overarching canon anchor; there is no separate
+World Foundation canon object.
 
 Key rules:
 

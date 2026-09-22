@@ -151,7 +151,10 @@ function WorldBibleRoute() {
   const [promotingMemoryId, setPromotingMemoryId] = useState<string | null>(null);
   const [isCreatingFirstMechanics, setIsCreatingFirstMechanics] = useState(false);
   const [pendingCanvasEntityLink, setPendingCanvasEntityLink] = useState<
-    {type: 'lens'; kind: WorldCanvasLensKind} | {type: 'question'; id: string} | null
+    | {type: 'core-idea'}
+    | {type: 'sketch'; kind: WorldCanvasLensKind; sketchId: string}
+    | {type: 'open-thread'; id: string}
+    | null
   >(null);
   const {
     categories,
@@ -772,10 +775,12 @@ function WorldBibleRoute() {
       ? await saveEntityDraft({successMessage: 'Item saved.'})
       : await saveEntityDraft();
     if (savedEntity && canvasLinkTarget) {
-      if (canvasLinkTarget.type === 'lens') {
-        await worldCanvas.linkLensEntity(canvasLinkTarget.kind, savedEntity.id);
+      if (canvasLinkTarget.type === 'core-idea') {
+        await worldCanvas.linkCoreIdeaEntity(savedEntity.id);
+      } else if (canvasLinkTarget.type === 'sketch') {
+        await worldCanvas.linkSketchEntity(canvasLinkTarget.kind, canvasLinkTarget.sketchId, savedEntity.id);
       } else {
-        await worldCanvas.linkQuestionEntity(canvasLinkTarget.id, savedEntity.id);
+        await worldCanvas.linkOpenThreadEntity(canvasLinkTarget.id, savedEntity.id);
       }
       setPendingCanvasEntityLink(null);
     }
@@ -803,8 +808,9 @@ function WorldBibleRoute() {
       handoffMatchEntityId?: string;
       prefillRecordName?: string;
       worldCanvasLinkTarget?:
-        | {type: 'lens'; kind: WorldCanvasLensKind}
-        | {type: 'question'; id: string};
+        | {type: 'core-idea'}
+        | {type: 'sketch'; kind: WorldCanvasLensKind; sketchId: string}
+        | {type: 'open-thread'; id: string};
       openReview?: boolean;
     } | null;
     if (state?.openReview) {

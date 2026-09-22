@@ -1,6 +1,6 @@
 # Documentation Map
 
-Last updated: 2026-09-20
+Last updated: 2026-09-22
 
 The active documentation set was consolidated on 2026-08-01 down to seven
 documents. Everything else lives in `docs/archive/` with a banner pointing at
@@ -66,8 +66,9 @@ Other files:
   Accepted 2026-09-12; slices 4.30–4.33 shipped the original optional World
   Bible view, while the 2026-09-20 author review re-scoped 4.34–4.34c around a
   dedicated Planning route, repeatable sketches/Open Threads, Reference
-  Palette, and craft-guided coaching. The plan holds the original prompts; the
-  roadmap holds the revised authoritative boundaries and status.
+  Palette, and craft-guided coaching. Slices 4.34–4.34a now implement the route,
+  sketches, threads, and Core Idea bridges; the plan holds the original prompts
+  and the roadmap holds the revised authoritative boundaries and status.
 - `docs/systems-experience-design-review.md` — dated (2026-09-20),
   non-authoritative working review of the author journey across World Bible
   mechanics entry, Rules, Sheets/State, Mechanics/Compendium, Workspace state

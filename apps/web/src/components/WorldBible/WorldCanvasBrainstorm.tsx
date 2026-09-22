@@ -58,7 +58,7 @@ interface WorldCanvasBrainstormProps {
     kindLabel: string;
     text: string;
   }) => Promise<unknown>;
-  onAddQuestion: (text: string, lensKind?: WorldCanvasLensKind) => void;
+  onAddOpenThread: (text: string, lensKind?: WorldCanvasLensKind) => void;
   onFeedback?: (feedback: {tone: 'success' | 'error'; message: string}) => void;
 }
 
@@ -71,7 +71,7 @@ export function WorldCanvasBrainstorm({
   budget,
   requestConfirm,
   onKeepAsSourceNote,
-  onAddQuestion,
+  onAddOpenThread,
   onFeedback
 }: WorldCanvasBrainstormProps) {
   const key = brainstormSessionKey(projectId, focus);
@@ -92,7 +92,7 @@ export function WorldCanvasBrainstorm({
   const disclosure = provider === 'ollama'
     ? 'Runs on your local Ollama model. Nothing leaves this computer.'
     : provider
-      ? `Sends the core idea, ${focus.type === 'lens' ? 'these lens notes, ' : ''}open questions, and World Bible record names to ${HOSTED_PROVIDER_NAMES[provider]}’s servers under that provider’s terms — only when you click, never in the background.`
+      ? `Sends the core idea, ${focus.type === 'lens' ? 'this lens sketch, ' : ''}open threads, and World Bible record names to ${HOSTED_PROVIDER_NAMES[provider]}’s servers under that provider’s terms — only when you click, never in the background.`
       : null;
 
   useEffect(() => {
@@ -258,10 +258,10 @@ export function WorldCanvasBrainstorm({
                   removeItem(item.id);
                   onFeedback?.({tone: 'success', message: 'Brainstorm idea kept as a Source Note.'});
                 }}
-                onAddQuestion={(text) => {
-                  onAddQuestion(text, lensKind);
+                onAddOpenThread={(text) => {
+                  onAddOpenThread(text, lensKind);
                   removeItem(item.id);
-                  onFeedback?.({tone: 'success', message: 'Brainstorm idea added as a question.'});
+                  onFeedback?.({tone: 'success', message: 'Brainstorm idea kept as an Open Thread.'});
                 }}
                 onDismiss={() => removeItem(item.id)}
               />
@@ -281,47 +281,25 @@ export function WorldCanvasBrainstorm({
 function BrainstormItemRow({
   item,
   onKeepAsSourceNote,
-  onAddQuestion,
+  onAddOpenThread,
   onDismiss
 }: {
   item: PendingBrainstormItem;
   onKeepAsSourceNote: () => Promise<void>;
-  onAddQuestion: (text: string) => void;
+  onAddOpenThread: (text: string) => void;
   onDismiss: () => void;
 }) {
   const {confirm: keep, isConfirming, error} = useAIProposalConfirmation(onKeepAsSourceNote);
-  const [rewrite, setRewrite] = useState<string | null>(null);
-  // Only items the model phrased as questions go straight in; anything else must be rewritten by
-  // the author first, so a question on the canvas is always either theirs or reviewed as one.
-  const rewriteReady = rewrite !== null && Boolean(rewrite.trim()) && rewrite.trim() !== item.text.trim();
-
   return (
     <li className={styles.brainstormItem}>
       <span className={styles.brainstormKind}>{BRAINSTORM_ITEM_KIND_LABELS[item.kind]}</span>
       <p>{item.text}</p>
-      {rewrite !== null && (
-        <label className={styles.field}>
-          Rewrite as a question
-          <textarea rows={2} value={rewrite} onChange={(event) => setRewrite(event.target.value)} />
-        </label>
-      )}
       {error && <p className={styles.error} role='alert'>{error}</p>}
       <div className={styles.actionRow}>
         <button type='button' disabled={isConfirming} onClick={() => void keep()}>
           {isConfirming ? 'Keeping...' : 'Keep as Source Note'}
         </button>
-        {item.kind === 'question' ? (
-          <button type='button' onClick={() => onAddQuestion(item.text)}>Add as question</button>
-        ) : rewrite !== null ? (
-          <>
-            <button type='button' disabled={!rewriteReady} onClick={() => onAddQuestion(rewrite)}>
-              Add as question
-            </button>
-            <button type='button' onClick={() => setRewrite(null)}>Cancel rewrite</button>
-          </>
-        ) : (
-          <button type='button' onClick={() => setRewrite(item.text)}>Rewrite as question</button>
-        )}
+        <button type='button' onClick={() => onAddOpenThread(item.text)}>Keep as Open Thread</button>
         <button type='button' onClick={onDismiss} disabled={isConfirming}>Dismiss</button>
       </div>
     </li>

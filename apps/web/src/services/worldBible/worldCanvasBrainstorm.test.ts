@@ -12,16 +12,18 @@ import {
   collectCanonNames,
   parseWorldCanvasBrainstormResponse
 } from './worldCanvasBrainstorm';
-import {addQuestion, createEmptyWorldCanvas, updateLensNote} from './worldCanvasService';
+import {addOpenThread, createEmptyWorldCanvas, getActiveSketch, openLens, updateSketchText} from './worldCanvasService';
 
 const buildCanvas = () => {
   let canvas = createEmptyWorldCanvas('project-1');
   canvas = {...canvas, premise: 'A city powered by borrowed memories.'};
-  canvas = updateLensNote(canvas, 'factions', 'The Cinder Compact hoards old memories.');
-  canvas = updateLensNote(canvas, 'places', 'The drowned archive under the harbor.');
-  canvas = addQuestion(canvas, 'Who pays when a memory is returned?', 'factions');
-  canvas = addQuestion(canvas, 'What does the harbor smell like?', 'places');
-  canvas = addQuestion(canvas, 'Is the city older than its founders claim?');
+  canvas = openLens(canvas, 'factions');
+  canvas = updateSketchText(canvas, 'factions', getActiveSketch(canvas.lenses[0]).id, 'The Cinder Compact hoards old memories.');
+  canvas = openLens(canvas, 'places');
+  canvas = updateSketchText(canvas, 'places', getActiveSketch(canvas.lenses[1]).id, 'The drowned archive under the harbor.');
+  canvas = addOpenThread(canvas, 'Who pays when a memory is returned?', 'factions');
+  canvas = addOpenThread(canvas, 'What does the harbor smell like?', 'places');
+  canvas = addOpenThread(canvas, 'Is the city older than its founders claim?');
   return canvas;
 };
 
@@ -78,7 +80,7 @@ describe('buildWorldCanvasBrainstormPrompt', () => {
 
   it('sends no lens notes for the premise and skips answered questions', () => {
     const canvas = buildCanvas();
-    canvas.questions[0] = {...canvas.questions[0], status: 'answered'};
+    canvas.openThreads[0] = {...canvas.openThreads[0], status: 'settled'};
     const {userPrompt} = buildWorldCanvasBrainstormPrompt({
       canvas,
       focus: {type: 'premise'},

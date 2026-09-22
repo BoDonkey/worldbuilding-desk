@@ -117,7 +117,7 @@ const clip = (text: string, limit: number) =>
   text.length > limit ? `${text.slice(0, limit)}…` : text;
 
 export function buildWorldCanvasBrainstormPrompt(params: {
-  canvas: Pick<WorldCanvasDocument, 'premise' | 'lenses' | 'questions'>;
+  canvas: Pick<WorldCanvasDocument, 'premise' | 'lenses' | 'openThreads'>;
   focus: WorldCanvasBrainstormFocus;
   canonNames: string[];
   /** Items already shown this session, so a repeat request asks for different ideas. */
@@ -132,12 +132,12 @@ export function buildWorldCanvasBrainstormPrompt(params: {
   const lensDefinition = focus.type === 'lens'
     ? LENS_DEFINITIONS.find((definition) => definition.kind === focus.kind)
     : undefined;
-  const openQuestions = canvas.questions
-    .filter((question) => question.status === 'open')
-    .filter((question) =>
-      focus.type === 'premise' || !question.lensKind || question.lensKind === focus.kind
+  const openQuestions = canvas.openThreads
+    .filter((thread) => thread.status === 'open')
+    .filter((thread) =>
+      focus.type === 'premise' || !thread.lensKind || thread.lensKind === focus.kind
     )
-    .map((question) => question.text.trim())
+    .map((thread) => thread.text.trim())
     .filter(Boolean)
     .slice(0, MAX_OPEN_QUESTIONS);
   const canonNames = params.canonNames.slice(0, BRAINSTORM_MAX_CANON_NAMES);
@@ -161,13 +161,13 @@ export function buildWorldCanvasBrainstormPrompt(params: {
   if (focus.type === 'lens') {
     sections.push(
       `${focusLabel} lens prompt: ${lensDefinition?.prompt ?? ''}`,
-      `${focusLabel} lens notes: ${lens?.note.trim() ? clip(lens.note.trim(), MAX_FOCUS_CHARS) : '(not written yet)'}`
+      `${focusLabel} lens notes: ${lens?.sketches.find((sketch) => sketch.id === lens.activeSketchId)?.text.trim() ? clip(lens.sketches.find((sketch) => sketch.id === lens.activeSketchId)!.text.trim(), MAX_FOCUS_CHARS) : '(not written yet)'}`
     );
   }
   sections.push(
     openQuestions.length > 0
-      ? `Open questions:\n${openQuestions.map((question) => `- ${question}`).join('\n')}`
-      : 'Open questions: (none)',
+      ? `Open threads:\n${openQuestions.map((thread) => `- ${thread}`).join('\n')}`
+      : 'Open threads: (none)',
     '--- Accepted canon names (names only) ---',
     canonNames.length > 0
       ? `${canonNames.join(', ')}${omittedNames > 0 ? ` (and ${omittedNames} more)` : ''}`

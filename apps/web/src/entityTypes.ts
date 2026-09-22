@@ -51,12 +51,14 @@ export type WorldCanvasLensKind =
   | 'customs'
   | 'constraints';
 
-export interface WorldCanvasQuestion {
+export type WorldCanvasThreadStatus = 'open' | 'settled' | 'set_aside';
+
+export interface WorldCanvasOpenThread {
   id: string;
   text: string;
-  status: 'open' | 'answered' | 'dropped';
+  status: WorldCanvasThreadStatus;
   lensKind?: WorldCanvasLensKind;
-  /** Set when the author added this question from a World Canvas brainstorm item (4.33). */
+  /** Set when the author retained this thread from a World Canvas brainstorm item. */
   origin?: 'brainstorm';
   linkedSourceNoteId?: string;
   linkedEntityId?: string;
@@ -64,22 +66,34 @@ export interface WorldCanvasQuestion {
   updatedAt: number;
 }
 
-export interface WorldCanvasLens {
-  kind: WorldCanvasLensKind;
-  note: string;
+export interface WorldCanvasSketch {
+  id: string;
+  text: string;
   linkedSourceNoteIds: string[];
   linkedEntityIds: string[];
+  linkedOpenThreadIds: string[];
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface WorldCanvasLens {
+  kind: WorldCanvasLensKind;
+  sketches: WorldCanvasSketch[];
+  activeSketchId: string;
   /** Optional so canvases saved before 4.34 continue to open expanded. */
   isCollapsed?: boolean;
   updatedAt: number;
 }
 
 export interface WorldCanvasDocument {
+  schemaVersion: 2;
   id: string;
   projectId: string;
   premise: string;
+  coreIdeaSourceNoteId?: string;
+  coreIdeaEntityId?: string;
   lenses: WorldCanvasLens[];
-  questions: WorldCanvasQuestion[];
+  openThreads: WorldCanvasOpenThread[];
   createdAt: number;
   updatedAt: number;
 }

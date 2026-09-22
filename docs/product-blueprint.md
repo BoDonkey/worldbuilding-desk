@@ -152,6 +152,21 @@ does not claim to analyze chapters. Its content stays exploratory until the
 author deliberately keeps it as a Source Note or proposes a record through the
 normal World Bible flow.
 
+Each lens is an evergreen prompt, not a field to complete. An autosaved working
+composer produces stable, repeatable sketches; after the author routes a sketch
+to an Open Thread, Source Note, or suitable World Bible anchor, they explicitly
+start another and can reopen any earlier sketch with its destinations intact.
+Open Threads accept questions, tensions, possibilities, contradictions, and
+undecided statements; Settled and Set aside entries remain as compact history.
+Core Idea can be kept as a provenance-marked Source Note snapshot or proposed
+as a normal World Bible record. These actions never write accepted facts.
+
+The post-WC-6 product checkpoint found the normal author-selected World Bible
+concept/setting anchor sufficient for an overarching canon reference. Do not
+add a second project-level "World Foundation" canon owner before observed use
+shows a distinct need; revisit this decision before expanding the Reference
+Palette beyond its planned author-controlled references.
+
 The writing coach is not a separate destination. It is available when the
 author explicitly asks for craft feedback anywhere an existing AI interaction
 lives, scoped to the current selection or scene. A manuscript-level coach

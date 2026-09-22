@@ -10,7 +10,7 @@ import {
   BRAINSTORM_MIN_RESPONSE_TOKENS
 } from '../../services/worldBible/worldCanvasBrainstorm';
 import {resetWorldCanvasBrainstormSession} from '../../services/worldBible/worldCanvasBrainstormSession';
-import {createEmptyWorldCanvas, updateLensNote} from '../../services/worldBible/worldCanvasService';
+import {createEmptyWorldCanvas, getActiveSketch, openLens, updateSketchText} from '../../services/worldBible/worldCanvasService';
 import {WorldCanvasBrainstorm} from './WorldCanvasBrainstorm';
 
 const mocks = vi.hoisted(() => ({
@@ -42,16 +42,13 @@ const buildBudget = (overrides: Partial<UseConsultationBudget> = {}): UseConsult
   ...overrides
 });
 
-const canvas = updateLensNote(
-  {...createEmptyWorldCanvas('project-1'), premise: 'A city powered by borrowed memories.'},
-  'factions',
-  'The Cinder Compact hoards old memories.'
-);
+const openedCanvas = openLens({...createEmptyWorldCanvas('project-1'), premise: 'A city powered by borrowed memories.'}, 'factions');
+const canvas = updateSketchText(openedCanvas, 'factions', getActiveSketch(openedCanvas.lenses[0]).id, 'The Cinder Compact hoards old memories.');
 
 const renderBrainstorm = (props: Partial<Parameters<typeof WorldCanvasBrainstorm>[0]> = {}) => {
   const handlers = {
     onKeepAsSourceNote: vi.fn().mockResolvedValue(undefined),
-    onAddQuestion: vi.fn(),
+    onAddOpenThread: vi.fn(),
     onFeedback: vi.fn(),
     requestConfirm: vi.fn()
   };
@@ -140,7 +137,7 @@ describe('WorldCanvasBrainstorm', () => {
       {kind: 'question', text: 'Who remembers the founders?'},
       {kind: 'alternative', text: 'What if the memories are sold, not borrowed?'}
     ]));
-    const {onKeepAsSourceNote, onAddQuestion} = renderBrainstorm();
+    const {onKeepAsSourceNote, onAddOpenThread} = renderBrainstorm();
     fireEvent.click(screen.getByRole('button', {name: 'Ask for tensions and questions'}));
     await screen.findByText('The Compact needs the city to forget.');
 
@@ -156,42 +153,31 @@ describe('WorldCanvasBrainstorm', () => {
     );
 
     const question = screen.getByText('Who remembers the founders?').closest('li')!;
-    fireEvent.click(within(question).getByRole('button', {name: 'Add as question'}));
-    expect(onAddQuestion).toHaveBeenCalledWith('Who remembers the founders?', 'factions');
+    fireEvent.click(within(question).getByRole('button', {name: 'Keep as Open Thread'}));
+    expect(onAddOpenThread).toHaveBeenCalledWith('Who remembers the founders?', 'factions');
 
     const alternative = screen.getByText('What if the memories are sold, not borrowed?').closest('li')!;
     fireEvent.click(within(alternative).getByRole('button', {name: 'Dismiss'}));
     expect(screen.queryByText('What if the memories are sold, not borrowed?')).not.toBeInTheDocument();
     expect(onKeepAsSourceNote).toHaveBeenCalledTimes(1);
-    expect(onAddQuestion).toHaveBeenCalledTimes(1);
+    expect(onAddOpenThread).toHaveBeenCalledTimes(1);
   });
 
-  it('adds a non-question item as a question only after the author rewrites it', async () => {
+  it('keeps a statement-form implication as an Open Thread without forced question grammar', async () => {
     respondWith(reply([
       {kind: 'implication', text: 'Forgetting spreads faster in the harbor.'}
     ]));
-    const {onAddQuestion} = renderBrainstorm();
+    const {onAddOpenThread} = renderBrainstorm();
     fireEvent.click(screen.getByRole('button', {name: 'Ask for tensions and questions'}));
     await screen.findByText('Forgetting spreads faster in the harbor.');
 
-    expect(screen.queryByRole('button', {name: 'Add as question'})).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', {name: 'Rewrite as question'}));
-    const add = screen.getByRole('button', {name: 'Add as question'});
-    expect(add).toBeDisabled();
-
-    fireEvent.change(screen.getByLabelText('Rewrite as a question'), {
-      target: {value: 'Why does forgetting spread faster in the harbor?'}
-    });
-    fireEvent.click(add);
-    expect(onAddQuestion).toHaveBeenCalledWith(
-      'Why does forgetting spread faster in the harbor?',
-      'factions'
-    );
+    fireEvent.click(screen.getByRole('button', {name: 'Keep as Open Thread'}));
+    expect(onAddOpenThread).toHaveBeenCalledWith('Forgetting spreads faster in the harbor.', 'factions');
   });
 
   it('shows the fallback message for a malformed reply and changes nothing else', async () => {
     respondWith('Here are some ideas about the Compact.');
-    const {onKeepAsSourceNote, onAddQuestion} = renderBrainstorm();
+    const {onKeepAsSourceNote, onAddOpenThread} = renderBrainstorm();
     fireEvent.click(screen.getByRole('button', {name: 'Ask for tensions and questions'}));
 
     expect(await screen.findByRole('alert')).toHaveTextContent(BRAINSTORM_INVALID_RESPONSE_MESSAGE);
@@ -199,7 +185,7 @@ describe('WorldCanvasBrainstorm', () => {
     fireEvent.click(screen.getByText('Show the model’s reply'));
     expect(screen.getByText('Here are some ideas about the Compact.')).toBeVisible();
     expect(onKeepAsSourceNote).not.toHaveBeenCalled();
-    expect(onAddQuestion).not.toHaveBeenCalled();
+    expect(onAddOpenThread).not.toHaveBeenCalled();
   });
 
   it('refuses with the over-budget message and makes no request when the budget is spent', () => {

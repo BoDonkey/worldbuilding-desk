@@ -61,6 +61,7 @@ import {
   LEGACY_PROJECT_SCHEMA_VERSION
 } from './projectSchemaMigrations';
 import {extractSingleFileZip} from '../../utils/unzip';
+import {migrateWorldCanvasDocument} from '../worldBible/worldCanvasService';
 
 export type ProjectBackupImportMode = 'new' | 'merge';
 
@@ -212,7 +213,7 @@ function rewriteWorldCanvases(
   projectId: string
 ): WorldCanvasDocument[] {
   return records.map((record) => ({
-    ...record,
+    ...migrateWorldCanvasDocument(record),
     id: projectId,
     projectId
   }));

@@ -82,31 +82,31 @@ describe('World Canvas', () => {
       .type('A river city trades years of memory for safe passage.');
 
     cy.contains('article', 'Inhabitants and societies').within(() => cy.contains('button', 'Bring into focus').click());
-    cy.contains('label', 'Inhabitants and societies sketch')
+    cy.contains('label', 'Inhabitants and societies working sketch')
       .find('textarea')
       .type('Ferrymen remember every bargain, even when travelers do not.');
 
     cy.contains('article', 'Constraints and costs').within(() => {
       cy.contains('button', 'Bring into focus').click();
     });
-    cy.contains('label', 'Constraints and costs sketch')
+    cy.contains('label', 'Constraints and costs working sketch')
       .find('textarea')
       .type('Every crossing costs a cherished memory.');
 
-    const questions = [
+    const threads = [
       'Who records the memories that were traded?',
       'What happens when the river refuses a bargain?',
       'Which faction profits from forgotten crossings?'
     ];
-    questions.forEach((question, index) => {
-      cy.get('#world-canvas-new-question').type(question);
-      if (index === 0) cy.get('#world-canvas-question-lens').select('Inhabitants and societies');
-      cy.contains('button', 'Add question').click();
+    threads.forEach((thread, index) => {
+      cy.get('#world-canvas-new-thread').type(thread);
+      if (index === 0) cy.get('#world-canvas-thread-lens').select('Inhabitants and societies');
+      cy.contains('button', 'Add open thread').click();
     });
 
-    questions.forEach((question) => cy.contains(question).should('be.visible'));
-    cy.contains('label', 'Question 2 status').find('select').select('Answered');
-    cy.contains('label', 'Question 3 status').find('select').select('Dropped');
+    threads.forEach((thread) => cy.contains(thread).should('be.visible'));
+    cy.contains('article', threads[1]).contains('label', 'Status').find('select').select('Settled');
+    cy.contains('article', threads[2]).contains('label', 'Status').find('select').select('Set aside');
     cy.contains('Saving...').should('be.visible');
     cy.contains(/Saved at/).should('be.visible');
 
@@ -117,18 +117,19 @@ describe('World Canvas', () => {
     cy.get('textarea[placeholder*="borrowed memories"]')
       .should('have.value', 'A river city trades years of memory for safe passage.');
     cy.contains('article', 'Inhabitants and societies').within(() => {
-      cy.contains('Saved sketch · Ferrymen remember every bargain').should('be.visible');
+      cy.contains('1 sketch · Ferrymen remember every bargain').should('be.visible');
       cy.contains('button', 'Bring into focus').click();
     });
-    cy.contains('label', 'Inhabitants and societies sketch')
+    cy.contains('label', 'Inhabitants and societies working sketch')
       .find('textarea')
       .should('have.value', 'Ferrymen remember every bargain, even when travelers do not.');
-    cy.contains('label', 'Constraints and costs sketch')
+    cy.contains('label', 'Constraints and costs working sketch')
       .find('textarea')
       .should('have.value', 'Every crossing costs a cherished memory.');
-    questions.forEach((question) => cy.contains(question).should('be.visible'));
-    cy.contains('label', 'Question 2 status').find('select').should('have.value', 'answered');
-    cy.contains('label', 'Question 3 status').find('select').should('have.value', 'dropped');
+    cy.contains(threads[0]).should('be.visible');
+    cy.contains('summary', 'Settled and set-aside history').click();
+    cy.contains(threads[1]).should('be.visible');
+    cy.contains(threads[2]).should('be.visible');
 
     cy.viewport(780, 900);
     cy.contains('h1', 'World Canvas').should('be.visible');
@@ -137,26 +138,26 @@ describe('World Canvas', () => {
     });
   });
 
-  it('marks an empty question as invalid without adding it', () => {
+  it('marks an empty Open Thread as invalid without adding it', () => {
     cy.visit('/world-canvas');
-    cy.contains('button', 'Add question').click();
+    cy.contains('button', 'Add open thread').click();
 
-    cy.get('#world-canvas-new-question')
+    cy.get('#world-canvas-new-thread')
       .should('have.attr', 'aria-invalid', 'true')
-      .and('have.attr', 'aria-describedby', 'world-canvas-question-error');
-    cy.contains('Enter a question before adding it.').should('be.visible');
+      .and('have.attr', 'aria-describedby', 'world-canvas-thread-error');
+    cy.contains('Enter an open thread before adding it.').should('be.visible');
   });
 
   it('moves lens ideas into Source Notes and the normal canon form', () => {
     cy.visit('/world-canvas');
     cy.contains('article', 'Places').within(() => cy.contains('button', 'Bring into focus').click());
-    cy.contains('label', 'Places sketch').find('textarea').type(
+    cy.contains('label', 'Places working sketch').find('textarea').type(
       'Name: Glass Citadel{enter}Background: A harbor fortress founded after the first beacon failed.'
     );
     cy.contains('article', 'Places').within(() => {
-      cy.contains('button', 'Keep as Source Note').click();
+      cy.contains('button', 'Develop as Source Note').click();
       cy.contains('Source Note: Name: Glass Citadel').should('be.visible');
-      cy.contains('button', 'Open note').click();
+      cy.contains('button', 'Open').click();
     });
 
     cy.location('pathname').should('eq', '/lore');
@@ -167,9 +168,9 @@ describe('World Canvas', () => {
 
     cy.visit('/world-canvas');
     cy.contains('article', 'Places').within(() => {
-      cy.contains('button', 'Propose as canon').click();
-      cy.contains('label', 'Canon record name').find('input').clear().type('Glass Citadel');
-      cy.contains('button', 'Open canon form').click();
+      cy.contains('button', 'Propose canon anchor').click();
+      cy.contains('label', 'Record name').find('input').clear().type('Glass Citadel');
+      cy.contains('button', 'Open World Bible form').click();
     });
     cy.contains('h2', 'New Location').should('be.visible');
     cy.contains('label', 'Name').find('input').should('have.value', 'Glass Citadel');
@@ -182,21 +183,87 @@ describe('World Canvas', () => {
     });
   });
 
-  it('keeps saved-material summaries out of lenses and retains rule-stated reminders', () => {
+  it('keeps repeatable routed sketches and preserves cancelled composer text', () => {
+    cy.visit('/world-canvas');
+    cy.contains('article', 'Constraints and costs').within(() => {
+      cy.contains('button', 'Bring into focus').click();
+    });
+    cy.contains('label', 'Constraints and costs working sketch').find('textarea')
+      .type('Every crossing costs a cherished memory.');
+    cy.contains('article', 'Constraints and costs').within(() => {
+      cy.contains('button', 'Propose canon anchor').click();
+      cy.contains('button', 'Cancel').click();
+      cy.contains('label', 'Constraints and costs working sketch').find('textarea')
+        .should('have.value', 'Every crossing costs a cherished memory.');
+      cy.contains('button', 'Keep as Open Thread').click();
+      cy.contains('button', 'Add another sketch').should('be.enabled').click();
+      cy.contains('label', 'Constraints and costs working sketch').find('textarea')
+        .type('The ferrymen can waive the price once in a lifetime.');
+      cy.contains('button', 'Keep as Open Thread').click();
+      cy.contains('button', 'Add another sketch').click();
+      cy.contains('Sketches from this lens').should('be.visible');
+      cy.contains('button', 'Every crossing costs a cherished memory.').click();
+      cy.contains('label', 'Constraints and costs working sketch').find('textarea')
+        .should('have.value', 'Every crossing costs a cherished memory.');
+      cy.contains('Open Thread: Every crossing costs a cherished memory.').should('be.visible');
+    });
+    cy.contains('Saving...').should('be.visible');
+    cy.contains(/Saved at/).should('be.visible');
+    cy.reload();
+    cy.contains('article', 'Constraints and costs').within(() => {
+      cy.contains('label', 'Constraints and costs working sketch').find('textarea')
+        .should('have.value', 'Every crossing costs a cherished memory.');
+      cy.contains('Sketches from this lens').should('be.visible');
+    });
+  });
+
+  it('snapshots and links the Core Idea without silently rewriting or duplicating it', () => {
+    cy.visit('/world-canvas');
+    cy.get('textarea[placeholder*="borrowed memories"]')
+      .type('A city powered by borrowed memories.');
+    cy.get('#world-canvas-premise-heading').parents('section').first().within(() => {
+      cy.contains('button', 'Keep as Source Note').click();
+      cy.contains('Source Note: A city powered by borrowed memories').should('be.visible');
+      cy.contains('button', 'Keep as Source Note').should('be.disabled');
+      cy.contains('button', 'Open').click();
+    });
+    cy.location('pathname').should('eq', '/lore');
+    cy.get('textarea').should('contain.value', 'From World Canvas — Core Idea')
+      .and('contain.value', 'A city powered by borrowed memories.');
+
+    cy.visit('/world-canvas');
+    cy.get('textarea[placeholder*="borrowed memories"]')
+      .type(' Its founders are forgotten.');
+    cy.contains(/Saved at/).should('be.visible');
+    cy.get('#world-canvas-premise-heading').parents('section').first().within(() => cy.contains('button', 'Open').click());
+    cy.get('textarea').should('contain.value', 'A city powered by borrowed memories.')
+      .and('not.contain.value', 'Its founders are forgotten.');
+
+    cy.visit('/world-canvas');
+    cy.get('#world-canvas-premise-heading').parents('section').first().within(() => {
+      cy.contains('button', 'Propose canon anchor').click();
+      cy.contains('label', 'Record name').find('input').clear().type('The Borrowed City');
+      cy.contains('button', 'Open World Bible form').click();
+    });
+    cy.contains('label', 'Name').find('input').should('have.value', 'The Borrowed City');
+    cy.contains('button', 'Create Entry').click();
+    cy.contains('[role="status"]', 'Entry created.').should('be.visible');
+    cy.visit('/world-canvas');
+    cy.get('#world-canvas-premise-heading').parents('section').first().within(() => {
+      cy.contains('World Bible: The Borrowed City').should('be.visible');
+    });
+  });
+
+  it('removes Worth a Look and migrates old questions without age warnings', () => {
     cy.visit('/world-canvas');
     cy.window().then(seedCanvasReturnExperience);
     cy.reload();
 
     cy.contains('From saved material').should('not.exist');
     cy.contains('Other records').should('not.exist');
-    cy.contains('aside', 'Worth a look').within(() => {
-      cy.contains('Sera Kestrel').should('be.visible');
-      cy.contains('This record is marked for author review.').should('be.visible');
-      cy.contains('No Source Note is linked to this record.').should('be.visible');
-      cy.contains('Who first opened the Salt Door?').should('be.visible');
-      cy.contains('This question has stayed open for more than 30 days.').should('be.visible');
-      cy.contains(/%|score|progress bar/i).should('not.exist');
-    });
+    cy.contains('Worth a look').should('not.exist');
+    cy.contains('This question has stayed open for more than 30 days.').should('not.exist');
+    cy.contains('Who first opened the Salt Door?').should('be.visible');
 
     cy.viewport(780, 900);
     cy.contains('article', 'Inhabitants and societies').should('be.visible');
@@ -225,7 +292,7 @@ describe('World Canvas', () => {
       cy.contains('article', 'Factions and institutions').within(() => {
         cy.contains('button', 'Bring into focus').click();
       });
-      cy.contains('label', 'Factions and institutions sketch')
+      cy.contains('label', 'Factions and institutions working sketch')
         .find('textarea')
         .type('The Compact trades in forgotten crossings.');
     };
@@ -279,7 +346,7 @@ describe('World Canvas', () => {
         });
         cy.contains('li', 'The Compact profits').should('not.exist');
         cy.contains('li', 'Who audits the memories').within(() => {
-          cy.contains('button', 'Add as question').click();
+          cy.contains('button', 'Keep as Open Thread').click();
         });
         cy.contains('li', 'What if the river').within(() => {
           cy.contains('button', 'Dismiss').click();
@@ -301,7 +368,7 @@ describe('World Canvas', () => {
 
       cy.contains('article', 'Factions and institutions')
         .contains('Source Note: The Compact profits')
-        .within(() => cy.contains('button', 'Open note').click());
+        .within(() => cy.contains('button', 'Open').click());
       cy.location('pathname').should('eq', '/lore');
       cy.contains('h2', 'Edit Source Note').should('be.visible');
       cy.get('textarea').should(

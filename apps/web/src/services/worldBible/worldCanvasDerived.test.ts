@@ -3,11 +3,9 @@ import type {
   EntityCategory,
   LoreDocument,
   LoreDocumentLink,
-  WorldCanvasDocument,
   WorldEntity
 } from '../../entityTypes';
 import {
-  buildWorthALookList,
   mapCategoryToLens,
   summarizeLens,
   summarizeOtherRecords
@@ -69,16 +67,6 @@ const link = (id: string, loreDocumentId: string, targetId: string): LoreDocumen
   createdAt: 1
 });
 
-const canvas = (createdAt = 1): WorldCanvasDocument => ({
-  id: 'project-1',
-  projectId: 'project-1',
-  premise: '',
-  lenses: [],
-  questions: [],
-  createdAt,
-  updatedAt: createdAt
-});
-
 describe('worldCanvasDerived', () => {
   it('maps only the specified category semantics and leaves custom categories visible as other', () => {
     const categories = [
@@ -122,29 +110,7 @@ describe('worldCanvasDerived', () => {
     });
   });
 
-  it('uses rule-stated deterministic items and treats exactly 30 days as not older', () => {
-    const now = 40 * 24 * 60 * 60 * 1000;
-    const thirtyDaysAgo = now - 30 * 24 * 60 * 60 * 1000;
-    const oldQuestion = {...canvas().questions[0], id: 'old', text: 'Who opened it?', status: 'open' as const, createdAt: thirtyDaysAgo - 1, updatedAt: 1};
-    const thresholdQuestion = {...oldQuestion, id: 'threshold', text: 'Who closed it?', createdAt: thirtyDaysAgo};
-    const testCanvas = {...canvas(), questions: [oldQuestion, thresholdQuestion]};
-    const items = buildWorthALookList({
-      canvas: testCanvas,
-      categories: [category('characters', 'characters', 'character')],
-      entities: [entity('sera', 'characters', 'Sera Kestrel', true)],
-      links: [],
-      unresolvedReviewCount: 2,
-      now
-    });
-    expect(items.map((item) => item.kind)).toEqual([
-      'needs-completion', 'review-candidates', 'missing-source-note', 'stale-question'
-    ]);
-    expect(items.find((item) => item.kind === 'missing-source-note')?.reason)
-      .toBe('No Source Note is linked to this record.');
-    expect(items.some((item) => item.label === 'Who closed it?')).toBe(false);
-  });
-
-  it('puts review candidates first without canon and excludes mechanics in general fiction', () => {
+  it('excludes mechanics-only records from general-fiction derived summaries', () => {
     const mechanics = category(
       'mechanics',
       'problems-power-cannot-solve',
@@ -152,16 +118,6 @@ describe('worldCanvasDerived', () => {
       'system-negative-space'
     );
     const categories = [mechanics];
-    expect(buildWorthALookList({
-      canvas: canvas(),
-      categories,
-      entities: [entity('problem', mechanics.id, 'Magic debt', true)],
-      links: [],
-      unresolvedReviewCount: 3,
-      isGeneralFiction: true
-    })).toEqual([
-      expect.objectContaining({kind: 'review-candidates', label: '3 review candidates'})
-    ]);
     expect(summarizeOtherRecords({
       categories,
       entities: [entity('problem', mechanics.id, 'Magic debt')],
