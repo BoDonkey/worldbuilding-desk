@@ -272,6 +272,50 @@ describe('World Canvas', () => {
     });
   });
 
+  it('pins, restores, opens, and unpins both Reference Palette source types', () => {
+    cy.visit('/world-canvas');
+    cy.window().then(seedCanvasReturnExperience);
+    cy.reload();
+
+    cy.contains('summary', 'Suggested references').click();
+    cy.contains('[data-canvas-reference]', 'Sera Kestrel').within(() => {
+      cy.contains('Accepted canon').should('be.visible');
+      cy.contains('button', 'Pin').click();
+    });
+    cy.contains('[role="status"]', 'Reference pinned.').should('be.visible');
+    cy.contains('[data-canvas-reference]', 'Faction Notes — The Cinder Compact').within(() => {
+      cy.contains('Source material').should('be.visible');
+      cy.contains('button', 'Pin').click();
+    });
+    cy.contains('[role="status"]', 'Reference pinned.').should('be.visible');
+
+    cy.reload();
+    cy.contains('h4', 'Pinned references').parent().within(() => {
+      cy.contains('[data-canvas-reference]', 'Sera Kestrel').should('be.visible');
+      cy.contains('[data-canvas-reference]', 'Faction Notes — The Cinder Compact').should('be.visible');
+    });
+    cy.contains('[data-canvas-reference]', 'Sera Kestrel').within(() => cy.contains('button', 'Open').click());
+    cy.location('pathname').should('eq', '/world-bible');
+
+    cy.visit('/world-canvas');
+    cy.contains('[data-canvas-reference]', 'Faction Notes — The Cinder Compact').within(() => cy.contains('button', 'Open').click());
+    cy.location('pathname').should('eq', '/lore');
+
+    cy.visit('/world-canvas');
+    cy.contains('[data-canvas-reference]', 'Sera Kestrel').within(() => cy.contains('button', 'Unpin').click());
+    cy.contains('[role="status"]', 'Reference unpinned.').should('be.visible');
+    cy.contains('[data-canvas-reference]', 'Faction Notes — The Cinder Compact').within(() => cy.contains('button', 'Unpin').click());
+    cy.contains('[role="status"]', 'Reference unpinned.').should('be.visible');
+    cy.reload();
+    cy.contains('No pinned references yet.').should('be.visible');
+
+    cy.viewport(780, 900);
+    cy.contains('h3', 'Reference Palette').should('be.visible');
+    cy.window().then((win) => {
+      expect(win.document.documentElement.scrollWidth).to.be.at.most(win.innerWidth);
+    });
+  });
+
   describe('brainstorming', () => {
     // The web build streams Anthropic through the local proxy, not api.anthropic.com directly.
     const ANTHROPIC_STREAM = 'http://localhost:3001/api/anthropic/stream';

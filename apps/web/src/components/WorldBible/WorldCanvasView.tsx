@@ -1,6 +1,6 @@
 import {useEffect, useMemo, useState, type FormEvent, type ReactNode} from 'react';
 import type {
-  EntityCategory, LoreDocument, ProjectAISettings, WorldCanvasLensKind,
+  EntityCategory, LoreDocument, LoreDocumentLink, ProjectAISettings, WorldCanvasLensKind,
   WorldCanvasOpenThread, WorldCanvasSketch, WorldEntity
 } from '../../entityTypes';
 import {useConfirmDialog} from '../../hooks/useConfirmDialog';
@@ -13,7 +13,9 @@ import {
   getActiveSketch, getCanvasEntityLabel, resolveCanvasLinks
 } from '../../services/worldBible/worldCanvasService';
 import {collectCanonNames} from '../../services/worldBible/worldCanvasBrainstorm';
+import {deriveWorldCanvasReferencePalette} from '../../services/worldBible/worldCanvasDerived';
 import {WorldCanvasBrainstorm} from './WorldCanvasBrainstorm';
+import {WorldCanvasReferencePaletteView} from './WorldCanvasReferencePalette';
 import styles from './WorldCanvasView.module.css';
 
 type CanonLinkTarget =
@@ -27,6 +29,8 @@ interface WorldCanvasViewProps {
   categories?: EntityCategory[];
   entities?: WorldEntity[];
   loreDocuments?: LoreDocument[];
+  loreDocumentLinks?: LoreDocumentLink[];
+  isGeneralFiction?: boolean;
   aliases?: ConsistencyAlias[];
   aiConfig?: ProjectAISettings;
   onOpenSourceNote?: (documentId: string) => void;
@@ -39,7 +43,8 @@ const STATUS_LABELS = {open: 'Open', settled: 'Settled', set_aside: 'Set aside'}
 const targetKey = (target: CanonLinkTarget) => target.type === 'core-idea' ? 'core-idea' : target.type === 'sketch' ? `sketch:${target.kind}:${target.sketchId}` : `thread:${target.id}`;
 
 export function WorldCanvasView({
-  worldCanvas, categories = [], entities = [], loreDocuments = [], aliases = [], aiConfig,
+  worldCanvas, categories = [], entities = [], loreDocuments = [], loreDocumentLinks = [],
+  isGeneralFiction = false, aliases = [], aiConfig,
   onOpenSourceNote, onOpenEntity, onProposeCanon, onFeedback
 }: WorldCanvasViewProps) {
   const [threadText, setThreadText] = useState('');
@@ -54,6 +59,22 @@ export function WorldCanvasView({
   const {requestConfirm, confirmDialog} = useConfirmDialog();
   const canonNames = useMemo(() => collectCanonNames(entities, aliases), [entities, aliases]);
   const lensByKind = useMemo(() => new Map(worldCanvas.canvas?.lenses.map((lens) => [lens.kind, lens]) ?? []), [worldCanvas.canvas?.lenses]);
+  const referencePalette = useMemo(() => worldCanvas.canvas
+    ? deriveWorldCanvasReferencePalette(worldCanvas.canvas, {
+        categories,
+        entities,
+        loreDocuments,
+        links: loreDocumentLinks,
+        isGeneralFiction
+      })
+    : {pinned: [], suggested: [], browse: []}, [
+      categories,
+      entities,
+      isGeneralFiction,
+      loreDocumentLinks,
+      loreDocuments,
+      worldCanvas.canvas
+    ]);
 
   useEffect(() => {
     if (!canonDraft || canonDraft.categoryId || !categories.length) return;
@@ -170,6 +191,15 @@ export function WorldCanvasView({
       {renderBridge({target: coreTarget, sourceIds: canvas.coreIdeaSourceNoteId ? [canvas.coreIdeaSourceNoteId] : [], entityIds: canvas.coreIdeaEntityId ? [canvas.coreIdeaEntityId] : [], primaryLabel: 'Keep as Source Note', primaryAction: worldCanvas.keepCoreIdeaAsSourceNote, disablePrimary: Boolean(canvas.coreIdeaSourceNoteId), linkSource: worldCanvas.linkCoreIdeaSourceNote, linkEntity: worldCanvas.linkCoreIdeaEntity, unlinkSource: () => worldCanvas.linkCoreIdeaSourceNote(), unlinkEntity: () => worldCanvas.linkCoreIdeaEntity()})}
       {renderBrainstorm({type: 'premise'})}
     </section>
+
+    <WorldCanvasReferencePaletteView
+      palette={referencePalette}
+      onOpenSourceNote={onOpenSourceNote}
+      onOpenEntity={onOpenEntity}
+      onPin={worldCanvas.pinReference}
+      onUnpin={worldCanvas.unpinReference}
+      onFeedback={onFeedback}
+    />
 
     <section className={styles.section} aria-labelledby='world-canvas-lenses-heading'>
       <div className={styles.sectionHeader}><div><h3 id='world-canvas-lenses-heading'>Lenses</h3><p>A directed question stays useful; successive sketches can explore different answers.</p></div></div>

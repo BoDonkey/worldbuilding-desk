@@ -1,6 +1,6 @@
 # Manual Smoke Procedures
 
-Last updated: 2026-09-20
+Last updated: 2026-09-23
 
 Reusable manual smoke procedures targeting trust and data-loss boundaries.
 Consolidates the former `project-backup-smoke-test.md`,
@@ -90,6 +90,14 @@ exploratory Canvas content as World Bible canon.
 8. On a guide-marked blank project and a guide-marked sample/mature project,
    confirm onboarding links to `/world-canvas` and accurately explains starting
    before drafting or returning later. It must not claim to read chapter prose.
+9. In Reference Palette, confirm Pinned references begins with only deliberately
+   linked material. Expand Suggested references and verify every item states a
+   deterministic rule; confirm a custom-category record appears under Browse
+   other project references rather than an invented lens. Pin one World Bible
+   record and one Source Note, reload, open both originals, then unpin and reload.
+   Rename and delete a source and confirm the live name or visibly stale target
+   appears. Repeat at 780px and confirm no mechanics-only suggestion appears in
+   a general-fiction project.
 
 ## 2. Review Completion (Import → Workspace Review → World Bible Queue)
 

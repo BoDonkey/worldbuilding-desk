@@ -4,7 +4,8 @@ import {
   buildSourceNoteFromOpenThread, buildSourceNoteFromSketch, collapseLens,
   createEmptyWorldCanvas, getActiveSketch, linkSketchEntity, linkSketchSourceNote,
   migrateWorldCanvasDocument, openLens, resolveCanvasLinks, routeSketchToOpenThread,
-  selectSketch, updateOpenThread, updateSketchText
+  selectSketch, pinCanvasReference, unpinCanvasReference, updateOpenThread,
+  updateSketchText
 } from './worldCanvasService';
 
 describe('worldCanvasService', () => {
@@ -87,5 +88,34 @@ describe('worldCanvasService', () => {
       {id: 'entity-1', label: 'Sera', missing: false},
       {id: 'missing', label: 'no longer exists', missing: true}
     ]);
+  });
+
+  it('pins into stable lens links and explicitly unpins every matching link', () => {
+    let canvas = pinCanvasReference(
+      createEmptyWorldCanvas('project-1'),
+      {sourceType: 'world-bible', id: 'entity-1'},
+      'places'
+    );
+    expect(canvas.lenses[0]).toMatchObject({kind: 'places', isCollapsed: true});
+    expect(getActiveSketch(canvas.lenses[0]).linkedEntityIds).toEqual(['entity-1']);
+
+    canvas = {...canvas, coreIdeaEntityId: 'entity-1'};
+    canvas = unpinCanvasReference(canvas, {sourceType: 'world-bible', id: 'entity-1'});
+    expect(canvas.coreIdeaEntityId).toBeUndefined();
+    expect(canvas.lenses).toEqual([]);
+  });
+
+  it('never removes authored lens work while unpinning a reference', () => {
+    let canvas = openLens(createEmptyWorldCanvas('project-1'), 'places');
+    const sketch = getActiveSketch(canvas.lenses[0]);
+    canvas = updateSketchText(canvas, 'places', sketch.id, 'The harbor remembers every ship.');
+    canvas = linkSketchEntity(canvas, 'places', sketch.id, 'entity-1');
+    canvas = collapseLens(canvas, 'places');
+    canvas = unpinCanvasReference(canvas, {sourceType: 'world-bible', id: 'entity-1'});
+    expect(canvas.lenses).toHaveLength(1);
+    expect(getActiveSketch(canvas.lenses[0])).toMatchObject({
+      text: 'The harbor remembers every ship.',
+      linkedEntityIds: []
+    });
   });
 });

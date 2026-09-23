@@ -6,6 +6,7 @@ import {RouteFeedback} from '../components/common';
 import {WorldCanvasView} from '../components/WorldBible/WorldCanvasView';
 import {useWorldBibleProjectData} from '../hooks/useWorldBibleProjectData';
 import {useWorldCanvas} from '../hooks/useWorldCanvas';
+import {getProjectCapabilities} from '../projectMode';
 import {useAppStore} from '../store/appStore';
 import styles from '../styles/WorldCanvasRoute.module.css';
 
@@ -18,10 +19,12 @@ function WorldCanvasRoute() {
     categories,
     entities,
     loreDocuments,
+    loreDocumentLinks,
     aliases,
     ragService
   } = useWorldBibleProjectData({activeProject, setFeedback});
   const worldCanvas = useWorldCanvas(activeProject?.id ?? null, ragService);
+  const capabilities = getProjectCapabilities(projectSettings);
 
   return (
     <section className={styles.page}>
@@ -46,6 +49,8 @@ function WorldCanvasRoute() {
             categories={categories}
             entities={entities}
             loreDocuments={loreDocuments}
+            loreDocumentLinks={loreDocumentLinks}
+            isGeneralFiction={capabilities.isGeneralFiction}
             aliases={aliases}
             aiConfig={projectSettings?.aiSettings}
             onOpenSourceNote={(documentId) => navigate('/lore', {state: {focusLoreDocumentId: documentId}})}

@@ -1,6 +1,6 @@
 # Domain Model — Lore, Canon, State, and AI Proposals
 
-Last updated: 2026-09-22
+Last updated: 2026-09-23
 
 This is the domain specification authority. It consolidates the durable
 contracts from `freeform-lore-ingestion-architecture.md`,
@@ -45,6 +45,14 @@ create flow and records only a backlink after the author saves the record. It
 does not accept factual assertions. The ordinary World Bible concept/setting
 record remains the owner for an overarching canon anchor; there is no separate
 World Foundation canon object.
+
+The Canvas Reference Palette is a derived view over those existing stable
+links plus deterministic project-record suggestions. A palette pin reuses the
+Canvas link arrays; it does not copy source text or create a second record.
+World Bible references retain their accepted-canon trust label, Source Notes
+retain their source-material label, and missing targets remain explicit until
+the author unpins them. Suggestions never become links without an author
+action and are not added to retrieval or model prompts.
 
 Key rules:
 

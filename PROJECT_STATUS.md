@@ -1,6 +1,6 @@
 # Worldbuilding-Desk Project Status
 
-**Last Updated:** September 22, 2026
+**Last Updated:** September 23, 2026
 
 ## Project Overview
 
@@ -123,9 +123,16 @@ Under the hood, the app still includes rich systems for world data, rules, chara
   category and preserve the backlink after explicit save. Hands-on review found
   the ordinary concept/setting anchor sufficient, so there is no separate World
   Foundation canon owner before 4.34b.
-- The former flattened per-lens saved-material summaries and Other-records list
-  are no longer mixed into author sketches; stable note/record links and their
-  derivation services remain available for the planned Reference Palette.
+- A separate Reference Palette keeps author-pinned project material beside the
+  Canvas without mixing it into sketches. Existing stable Source Note and World
+  Bible links become pinned references with live names and visibly stale
+  targets. Deterministic suggestions state their category, note-kind, or
+  record-link rule and never pin themselves; unmatched custom material stays in
+  a separate browse area. General-fiction suggestions exclude mechanics-only
+  categories. Pin, unpin, open, rename, and deletion handling do not change AI
+  context or write to canon.
+  The former flattened per-lens saved-material summaries and Other-records list
+  remain removed.
   Worth a Look and its age/missing-link rules have been removed: World Bible
   completion stays in World Bible review, unresolved candidates stay in Canon
   Review, and an old creative thread or absent Source Note is not treated as a

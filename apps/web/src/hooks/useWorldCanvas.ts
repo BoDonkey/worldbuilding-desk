@@ -9,8 +9,9 @@ import {
   buildSourceNoteFromCoreIdea, buildSourceNoteFromOpenThread, buildSourceNoteFromSketch,
   collapseLens, createEmptyWorldCanvas, linkCoreIdeaEntity, linkCoreIdeaSourceNote,
   linkOpenThreadEntity, linkOpenThreadSourceNote, linkSketchEntity, linkSketchSourceNote,
-  openLens, routeSketchToOpenThread, selectSketch, unlinkSketchTarget,
-  updateOpenThread, updateSketchText
+  openLens, pinCanvasReference, routeSketchToOpenThread, selectSketch,
+  unlinkSketchTarget, unpinCanvasReference, updateOpenThread, updateSketchText,
+  type CanvasReferenceTarget
 } from '../services/worldBible/worldCanvasService';
 
 export type WorldCanvasSaveStatus = 'idle' | 'loading' | 'saving' | 'saved' | 'error';
@@ -104,6 +105,8 @@ export function useWorldCanvas(projectId: string | null, ragService: RAGProvider
     linkSketchEntity: (kind: WorldCanvasLensKind, sketchId: string, id: string) => changeCanvasAndSave((current) => linkSketchEntity(current, kind, sketchId, id)),
     unlinkSketchTarget: (kind: WorldCanvasLensKind, sketchId: string, target: 'source-note' | 'entity', id: string) => changeCanvasAndSave((current) => unlinkSketchTarget(current, kind, sketchId, target, id)),
     linkOpenThreadSourceNote: (id: string, noteId?: string) => changeCanvasAndSave((current) => linkOpenThreadSourceNote(current, id, noteId)),
-    linkOpenThreadEntity: (id: string, entityId?: string) => changeCanvasAndSave((current) => linkOpenThreadEntity(current, id, entityId))
+    linkOpenThreadEntity: (id: string, entityId?: string) => changeCanvasAndSave((current) => linkOpenThreadEntity(current, id, entityId)),
+    pinReference: (target: CanvasReferenceTarget, lensKind: WorldCanvasLensKind) => changeCanvasAndSave((current) => pinCanvasReference(current, target, lensKind)),
+    unpinReference: (target: CanvasReferenceTarget) => changeCanvasAndSave((current) => unpinCanvasReference(current, target))
   };
 }

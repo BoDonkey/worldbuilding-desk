@@ -113,5 +113,63 @@ export function linkCoreIdeaSourceNote(canvas: WorldCanvasDocument, id?: string)
 export function linkCoreIdeaEntity(canvas: WorldCanvasDocument, id?: string): WorldCanvasDocument {const now = Date.now(); return {...canvas, coreIdeaEntityId: id, updatedAt: now};}
 export function routeSketchToOpenThread(canvas: WorldCanvasDocument, kind: WorldCanvasLensKind, sketchId: string): WorldCanvasDocument {const lens = canvas.lenses.find((item) => item.kind === kind); const sketch = lens?.sketches.find((item) => item.id === sketchId); if (!sketch?.text.trim()) throw new Error('Write something in this sketch before keeping it as an Open Thread.'); const next = addOpenThread(canvas, sketch.text, kind); return linkSketchOpenThread(next, kind, sketchId, next.openThreads.at(-1)!.id);}
 
+export type CanvasReferenceTarget = {sourceType: 'world-bible' | 'source-note'; id: string};
+
+/** Pin a palette reference through the existing stable sketch link arrays. */
+export function pinCanvasReference(canvas: WorldCanvasDocument, target: CanvasReferenceTarget, lensKind: WorldCanvasLensKind): WorldCanvasDocument {
+  let next = canvas;
+  let lens = next.lenses.find((item) => item.kind === lensKind);
+  if (!lens) {
+    next = collapseLens(openLens(next, lensKind), lensKind);
+    lens = next.lenses.find((item) => item.kind === lensKind);
+  }
+  if (!lens) return canvas;
+  return target.sourceType === 'world-bible'
+    ? linkSketchEntity(next, lensKind, lens.activeSketchId, target.id)
+    : linkSketchSourceNote(next, lensKind, lens.activeSketchId, target.id);
+}
+
+/** Explicitly remove a palette pin from every Canvas surface that references it. */
+export function unpinCanvasReference(canvas: WorldCanvasDocument, target: CanvasReferenceTarget): WorldCanvasDocument {
+  const isEntity = target.sourceType === 'world-bible';
+  const hasReference = (isEntity ? canvas.coreIdeaEntityId : canvas.coreIdeaSourceNoteId) === target.id ||
+    canvas.lenses.some((lens) => lens.sketches.some((sketch) => (isEntity ? sketch.linkedEntityIds : sketch.linkedSourceNoteIds).includes(target.id))) ||
+    canvas.openThreads.some((thread) => (isEntity ? thread.linkedEntityId : thread.linkedSourceNoteId) === target.id);
+  if (!hasReference) return canvas;
+  const now = Date.now();
+  const lenses = canvas.lenses.flatMap((lens) => {
+    const lensHadReference = lens.sketches.some((sketch) => (isEntity ? sketch.linkedEntityIds : sketch.linkedSourceNoteIds).includes(target.id));
+    const updatedLens = {
+      ...lens,
+      sketches: lens.sketches.map((sketch) => {
+        const hadReference = (isEntity ? sketch.linkedEntityIds : sketch.linkedSourceNoteIds).includes(target.id);
+        return {
+          ...sketch,
+          linkedEntityIds: isEntity ? sketch.linkedEntityIds.filter((id) => id !== target.id) : sketch.linkedEntityIds,
+          linkedSourceNoteIds: !isEntity ? sketch.linkedSourceNoteIds.filter((id) => id !== target.id) : sketch.linkedSourceNoteIds,
+          updatedAt: hadReference ? now : sketch.updatedAt
+        };
+      }),
+      updatedAt: lensHadReference ? now : lens.updatedAt
+    };
+    const onlySketch = updatedLens.sketches.length === 1 ? updatedLens.sketches[0] : null;
+    const isEmptyPinScaffold = lensHadReference && lens.isCollapsed && onlySketch &&
+      !onlySketch.text.trim() && !onlySketch.linkedEntityIds.length &&
+      !onlySketch.linkedSourceNoteIds.length && !onlySketch.linkedOpenThreadIds.length;
+    return isEmptyPinScaffold ? [] : [updatedLens];
+  });
+  return {
+    ...canvas,
+    ...(isEntity && canvas.coreIdeaEntityId === target.id ? {coreIdeaEntityId: undefined} : {}),
+    ...(!isEntity && canvas.coreIdeaSourceNoteId === target.id ? {coreIdeaSourceNoteId: undefined} : {}),
+    lenses,
+    openThreads: canvas.openThreads.map((thread) => {
+      if ((isEntity ? thread.linkedEntityId : thread.linkedSourceNoteId) !== target.id) return thread;
+      return isEntity ? {...thread, linkedEntityId: undefined, updatedAt: now} : {...thread, linkedSourceNoteId: undefined, updatedAt: now};
+    }),
+    updatedAt: now
+  };
+}
+
 export const addQuestion = addOpenThread;
 export const updateQuestion = updateOpenThread;

@@ -1,6 +1,6 @@
 # Product Blueprint — Worldbuilding Desk
 
-Last updated: 2026-09-20
+Last updated: 2026-09-23
 
 This is the product, UX, navigation, and design authority. It consolidates the
 former `product-blueprint.md`, `navigation-ia-decision.md`, `style-bible.md`,
@@ -166,6 +166,15 @@ concept/setting anchor sufficient for an overarching canon reference. Do not
 add a second project-level "World Foundation" canon owner before observed use
 shows a distinct need; revisit this decision before expanding the Reference
 Palette beyond its planned author-controlled references.
+
+The Reference Palette is a separate return-to-project aid, not part of a lens
+composer. Pinned references are only the Source Notes and World Bible records
+the author deliberately links or pins; suggestions remain visibly separate,
+state the deterministic category, note-kind, or record-link rule that produced
+them, and never pin or repair themselves. Unclassified custom material remains
+browsable without being forced into a lens. World Bible references are labeled
+accepted canon and Source Notes as source material. Missing targets stay visible
+until the author unpins them. Palette text is not additional model context.
 
 The writing coach is not a separate destination. It is available when the
 author explicitly asks for craft feedback anywhere an existing AI interaction

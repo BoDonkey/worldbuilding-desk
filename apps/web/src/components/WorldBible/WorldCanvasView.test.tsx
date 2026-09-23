@@ -15,6 +15,7 @@ const buildWorldCanvas = (overrides: Partial<ReturnType<typeof useWorldCanvas>> 
   keepBrainstormItemAsSourceNote: vi.fn(), linkCoreIdeaSourceNote: vi.fn(),
   linkCoreIdeaEntity: vi.fn(), linkSketchSourceNote: vi.fn(), linkSketchEntity: vi.fn(),
   unlinkSketchTarget: vi.fn(), linkOpenThreadSourceNote: vi.fn(), linkOpenThreadEntity: vi.fn(),
+  pinReference: vi.fn(), unpinReference: vi.fn(),
   ...overrides
 });
 const render = (ui: ReactElement) => rtlRender(ui, {wrapper: MemoryRouter});
@@ -89,5 +90,39 @@ describe('WorldCanvasView', () => {
     expect(screen.getByText('Who owns the gate?')).toBeInTheDocument();
     fireEvent.click(screen.getAllByRole('button', {name: 'Reopen'})[0]);
     expect(updateOpenThread).toHaveBeenCalledWith(canvas.openThreads[0].id, {status: 'open'});
+  });
+
+  it('keeps deterministic suggestions separate and pins one to its mapped lens', () => {
+    const pinReference = vi.fn().mockResolvedValue(null);
+    render(<WorldCanvasView
+      worldCanvas={buildWorldCanvas({pinReference})}
+      categories={[{id: 'characters', projectId: 'project-1', kind: 'character', name: 'Characters', slug: 'characters', fieldSchema: [], createdAt: 1}]}
+      entities={[{id: 'sera', projectId: 'project-1', categoryId: 'characters', name: 'Sera Kestrel', fields: {}, links: [], createdAt: 1, updatedAt: 1}]}
+    />);
+    fireEvent.click(screen.getByText('Suggested references (1)'));
+    const card = screen.getByText('Sera Kestrel').closest('[data-canvas-reference]') as HTMLElement;
+    expect(within(card).getByText('Accepted canon')).toBeInTheDocument();
+    expect(within(card).getByText(/category maps to this lens/i)).toBeInTheDocument();
+    fireEvent.click(within(card).getByRole('button', {name: 'Pin'}));
+    expect(pinReference).toHaveBeenCalledWith({sourceType: 'world-bible', id: 'sera'}, 'people');
+  });
+
+  it('shows renamed and stale pinned references with open and unpin actions', () => {
+    const canvas = {...createEmptyWorldCanvas('project-1'), coreIdeaSourceNoteId: 'note-1', coreIdeaEntityId: 'missing'};
+    const onOpenSourceNote = vi.fn();
+    const unpinReference = vi.fn().mockResolvedValue(null);
+    render(<WorldCanvasView
+      worldCanvas={buildWorldCanvas({canvas, unpinReference})}
+      loreDocuments={[{id: 'note-1', projectId: 'project-1', title: 'Renamed Foundation Note', kind: 'general_lore', format: 'plain_text', content: '', source: {type: 'manual'}, status: 'active', createdAt: 1, updatedAt: 2}]}
+      onOpenSourceNote={onOpenSourceNote}
+    />);
+    const noteCard = screen.getByText('Renamed Foundation Note', {selector: 'strong'}).closest('[data-canvas-reference]') as HTMLElement;
+    fireEvent.click(within(noteCard).getByRole('button', {name: 'Open'}));
+    expect(onOpenSourceNote).toHaveBeenCalledWith('note-1');
+    const staleCard = screen.getByText('No longer exists', {selector: 'strong'}).closest('[data-canvas-reference]') as HTMLElement;
+    expect(within(staleCard).getByText('Missing source')).toBeInTheDocument();
+    expect(within(staleCard).queryByRole('button', {name: 'Open'})).not.toBeInTheDocument();
+    fireEvent.click(within(staleCard).getByRole('button', {name: 'Unpin'}));
+    expect(unpinReference).toHaveBeenCalledWith({sourceType: 'world-bible', id: 'missing'});
   });
 });

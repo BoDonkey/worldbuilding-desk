@@ -6,10 +6,12 @@ import type {
   WorldEntity
 } from '../../entityTypes';
 import {
+  deriveWorldCanvasReferencePalette,
   mapCategoryToLens,
   summarizeLens,
   summarizeOtherRecords
 } from './worldCanvasDerived';
+import {createEmptyWorldCanvas, linkSketchEntity, openLens} from './worldCanvasService';
 
 const category = (
   id: string,
@@ -123,5 +125,72 @@ describe('worldCanvasDerived', () => {
       entities: [entity('problem', mechanics.id, 'Magic debt')],
       isGeneralFiction: true
     })).toEqual([]);
+  });
+
+  it('separates author pins from deterministic suggestions and dedupes linked notes', () => {
+    const categories = [
+      category('characters', 'characters', 'character'),
+      category('factions', 'factions')
+    ];
+    const entities = [
+      entity('sera', 'characters', 'Sera Kestrel'),
+      entity('compact', 'factions', 'The Cinder Compact')
+    ];
+    const documents = [note('compact-note', 'Compact Notes', 'faction_notes')];
+    let canvas = openLens(createEmptyWorldCanvas('project-1'), 'people');
+    canvas = linkSketchEntity(canvas, 'people', canvas.lenses[0].activeSketchId, 'sera');
+
+    const palette = deriveWorldCanvasReferencePalette(canvas, {
+      categories,
+      entities,
+      loreDocuments: documents,
+      links: [link('compact-link', 'compact-note', 'compact')]
+    });
+
+    expect(palette.pinned).toEqual([
+      expect.objectContaining({id: 'sera', label: 'Sera Kestrel', provenance: 'author-pinned', lensKinds: ['people']})
+    ]);
+    expect(palette.suggested.filter((item) => item.id === 'compact-note')).toHaveLength(1);
+    expect(palette.suggested).toEqual(expect.arrayContaining([
+      expect.objectContaining({id: 'compact', sourceType: 'world-bible', lensKinds: ['factions']}),
+      expect.objectContaining({id: 'compact-note', sourceType: 'source-note', lensKinds: ['factions']})
+    ]));
+    expect(palette.suggested.some((item) => item.id === 'sera')).toBe(false);
+  });
+
+  it('uses live names, preserves stale pins, and browses custom categories separately', () => {
+    const categories = [category('relics', 'relics')];
+    const canvas = {
+      ...createEmptyWorldCanvas('project-1'),
+      coreIdeaEntityId: 'deleted-entity',
+      coreIdeaSourceNoteId: 'renamed-note'
+    };
+    const palette = deriveWorldCanvasReferencePalette(canvas, {
+      categories,
+      entities: [entity('key', 'relics', 'Emberglass Key')],
+      loreDocuments: [note('renamed-note', 'The New Note Title', 'general_lore')],
+      links: []
+    });
+
+    expect(palette.pinned).toEqual(expect.arrayContaining([
+      expect.objectContaining({id: 'deleted-entity', label: 'No longer exists', existence: 'missing'}),
+      expect.objectContaining({id: 'renamed-note', label: 'The New Note Title', existence: 'available'})
+    ]));
+    expect(palette.browse).toEqual([
+      expect.objectContaining({id: 'key', label: 'Emberglass Key', provenance: 'unclassified'})
+    ]);
+  });
+
+  it('filters mechanics-only suggestions from general-fiction projects', () => {
+    const mechanics = category('mechanics', 'problems-power-cannot-solve', 'general', 'system-negative-space');
+    const palette = deriveWorldCanvasReferencePalette(createEmptyWorldCanvas('project-1'), {
+      categories: [mechanics],
+      entities: [entity('problem', mechanics.id, 'Magic debt')],
+      loreDocuments: [],
+      links: [],
+      isGeneralFiction: true
+    });
+    expect(palette.suggested).toEqual([]);
+    expect(palette.browse).toEqual([]);
   });
 });

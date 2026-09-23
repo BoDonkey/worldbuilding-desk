@@ -66,6 +66,7 @@
 .questionCard textarea,
 .questionCard select,
 .linkPicker select,
+.referenceActions select,
 .canonDraft select,
 .canonDraft input {
   width: 100%;
@@ -90,6 +91,7 @@
 .questionForm select,
 .questionCard select,
 .linkPicker select,
+.referenceActions select,
 .canonDraft select,
 .canonDraft input {
   min-height: 2.7rem;
@@ -103,6 +105,7 @@
 .questionCard textarea:focus,
 .questionCard select:focus,
 .linkPicker select:focus,
+.referenceActions select:focus,
 .canonDraft select:focus,
 .canonDraft input:focus {
   outline: none;
@@ -120,7 +123,8 @@
 }
 
 .lensList,
-.questionList {
+.questionList,
+.referenceList {
   display: grid;
   gap: 0.75rem;
   margin-top: 1rem;
@@ -147,6 +151,94 @@
   width: 100%;
   margin-top: 0.4rem;
   text-align: left;
+}
+
+.paletteGroup {
+  margin-top: 1rem;
+  padding-top: 0.85rem;
+  border-top: 1px solid var(--surface-border-soft);
+}
+
+.paletteGroup h4,
+.paletteGroup summary {
+  margin: 0;
+  color: var(--color-text-primary);
+  font-weight: 700;
+}
+
+.paletteGroup summary {
+  cursor: pointer;
+}
+
+.paletteHelp {
+  margin: 0.35rem 0 0;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+}
+
+.referenceCard {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.8rem;
+  border: 1px solid var(--surface-border-soft);
+  border-radius: 10px;
+  background: var(--surface-panel-elevated);
+}
+
+.referenceDetails {
+  display: grid;
+  gap: 0.3rem;
+  min-width: 0;
+  color: var(--color-text-primary);
+}
+
+.referenceDetails p {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+}
+
+.referenceRule {
+  max-width: 72ch;
+}
+
+.referenceBadges,
+.referenceActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 0.45rem;
+}
+
+.referenceBadge,
+.staleBadge {
+  padding: 0.15rem 0.5rem;
+  border: 1px solid var(--surface-border-soft);
+  border-radius: 999px;
+  font-size: var(--font-size-sm);
+  font-weight: 650;
+}
+
+.referenceBadge {
+  color: var(--color-text-secondary);
+}
+
+.staleBadge {
+  color: var(--color-error);
+}
+
+.referenceActions label {
+  display: grid;
+  gap: 0.25rem;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+  font-weight: 650;
+}
+
+.referenceActions select {
+  min-width: 12rem;
 }
 
 .sketchHistoryItem small,
@@ -422,6 +514,8 @@
   .worthALookHeader,
   .worthALookItem,
   .otherRecords,
+  .referenceCard,
+  .referenceActions,
   .brainstormHeader,
   .brainstormResultsHeader {
     align-items: stretch;
