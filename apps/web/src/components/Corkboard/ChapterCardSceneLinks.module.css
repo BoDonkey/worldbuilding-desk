@@ -1,0 +1,120 @@
+.sceneLinks {
+  display: grid;
+  gap: 0.7rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--surface-border-soft);
+}
+
+.compact {
+  padding: 0.75rem;
+  border: 1px solid var(--surface-border-soft);
+  border-radius: 12px;
+  background: var(--surface-panel);
+}
+
+.headingRow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.headingRow p,
+.emptyCopy {
+  margin: 0.25rem 0 0;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+  line-height: 1.4;
+}
+
+.countChip,
+.sceneChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.2rem 0.5rem;
+  border: 1px solid var(--surface-border-soft);
+  border-radius: 999px;
+  background: var(--color-bg-primary);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+  font-weight: 650;
+}
+
+.countChip {
+  flex: 0 0 auto;
+}
+
+.chipRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.missingChip {
+  border-style: dashed;
+}
+
+.missingChip button {
+  padding: 0.1rem 0.35rem;
+  font-size: var(--font-size-sm);
+}
+
+.currentSceneButton {
+  justify-self: start;
+}
+
+.manageLinks summary {
+  cursor: pointer;
+  color: var(--color-text-primary);
+  font-weight: 700;
+}
+
+.sceneChecklist {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 0.5rem;
+  margin-top: 0.65rem;
+}
+
+.sceneCheckRow {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.55rem 0.65rem;
+  border: 1px solid var(--surface-border-soft);
+  border-radius: 10px;
+  background: var(--color-bg-primary);
+}
+
+.sceneCheckRow label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+  flex: 1;
+  color: var(--color-text-primary);
+}
+
+.sceneCheckRow label span {
+  overflow-wrap: anywhere;
+}
+
+.sceneCheckRow button {
+  flex: 0 0 auto;
+  padding: 0.25rem 0.45rem;
+  font-size: var(--font-size-sm);
+}
+
+@media (max-width: 900px) {
+  .headingRow,
+  .sceneCheckRow {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .currentSceneButton,
+  .sceneCheckRow button {
+    width: 100%;
+  }
+}

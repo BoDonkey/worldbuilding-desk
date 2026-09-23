@@ -773,6 +773,18 @@ describe('Post-merge smoke checklist', () => {
         id: 'cypress-project-1',
         projectId: 'cypress-project-1',
         ...canvasContent
+      }),
+      putRecord(db, 'corkboard_chapter_cards', {
+        id: 'chapter-card-backup-smoke',
+        projectId: 'cypress-project-1',
+        title: 'Backup-linked chapter',
+        summary: '',
+        status: 'draft',
+        order: 0,
+        sceneIds: ['scene-alpha', 'scene-beta'],
+        plotPoints: [],
+        createdAt: 42,
+        updatedAt: 42
       })
     ]).then(() => undefined));
 
@@ -869,6 +881,18 @@ describe('Post-merge smoke checklist', () => {
         id: 'question-backup-smoke', text: 'Who can erase a promise?', status: 'open'
       });
       expect(importedCanvas?.id).to.equal(importedCanvas?.projectId);
+
+      const chapterCards = await getAllRecords<{
+        id: string;
+        projectId: string;
+        title: string;
+        sceneIds?: string[];
+      }>(db, 'corkboard_chapter_cards');
+      const importedCard = chapterCards.find(
+        (record) => record.title === 'Backup-linked chapter' && record.projectId !== 'cypress-project-1'
+      );
+      expect(importedCard).to.exist;
+      expect(importedCard?.sceneIds).to.deep.equal(['scene-alpha', 'scene-beta']);
     });
 
     cy.visit('/workspace');

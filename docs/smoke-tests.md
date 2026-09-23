@@ -25,7 +25,7 @@ Procedure:
 
 1. Seed a project with mixed data (scenes, World Bible entries, characters
    and sheets, compendium/settlement data), a non-trivial Scratchpad note, and
-   two Corkboard cards with plot points. In Planning → World Canvas, enter a
+   two Corkboard cards with plot points and explicit scene links. In Planning → World Canvas, enter a
    Core Idea, bring at least two lenses into focus, route two distinct sketches
    from one lens to different destinations, add explicit Source Note/World
    Bible links, collapse one populated lens, and add three Open Threads with
@@ -42,7 +42,7 @@ Procedure:
    details).
 5. Spot-check after import: World Bible categories/entries, scenes open,
    Scratchpad content and formatting present, Corkboard card count/order and
-   per-card title/summary/status/plot-points intact, World Canvas Core Idea,
+   per-card title/summary/status/plot-points and exact scene-link ids intact, World Canvas Core Idea,
    opened/collapsed lens state, every sketch, Open Thread, destination link,
    active composer, and status byte-for-byte intact. Reopen the collapsed lens
    and each prior sketch and confirm its exact text and destinations remain;
@@ -53,7 +53,7 @@ Procedure:
 
 Failure signals: validation failure, unexpectedly empty sections, count
 mismatch on an unchanged new-project import, runtime errors, truncated
-Scratchpad, Corkboard cards missing plot points or order, changed/missing
+Scratchpad, Corkboard cards missing plot points, order, or scene links, changed/missing
 World Canvas content, or any Canvas-only idea appearing as canon or indexed
 context.
 

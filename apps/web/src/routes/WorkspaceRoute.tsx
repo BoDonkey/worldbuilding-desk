@@ -2035,8 +2035,11 @@ function WorkspaceRoute() {
         isOpen={isCorkboardModalOpen}
         dialogRef={corkboardDialogRef}
         corkboard={corkboard}
+        documents={documents}
+        currentDocumentId={selectedDocument?.id}
         onClose={closeCorkboardModal}
         onOpenScratchpad={openScratchpadModal}
+        onCurrentSceneAction={(message) => pushToast({tone: 'success', message})}
       />
 
       <WorkspaceExportModal

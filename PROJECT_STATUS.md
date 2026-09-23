@@ -179,7 +179,13 @@ Under the hood, the app still includes rich systems for world data, rules, chara
 - Lore Documents now has a project context health panel that shows RAG document/chunk counts, indexed document type counts, Shodh memory counts, project data counts, and a retrieval probe.
 - World Bible character records now include a Character detail health panel showing aliases, accepted facts, linked Lore Documents, scene mentions, Shodh memories, state events, and an explicit RAG context probe for the selected character.
 - Scratchpad records are included in project backup snapshots and restore paths.
-- Lightweight Corkboard is back as a workspace planning modal for chapter cards and plot points.
+- Corkboard has a dedicated `/corkboard` Planning route for chapter cards,
+  beats, explicit scene links, and the read-only Story Dashboard, plus a quick
+  Workspace modal over the same cards. Both surfaces share scene-link controls:
+  linked-scene chips, explicit checklists, current-scene link/unlink in the
+  modal, open-scene actions on the route, and removable stale links when a
+  scene no longer exists. Links use stable scene ids only and never infer from
+  titles or manuscript order.
 - Corkboard chapter-card records are included in project backup snapshots and restore paths.
 - Corkboard now includes a read-only Story Dashboard derived entirely from
   saved manuscript text, accepted state events, configured rules, and explicit
@@ -724,7 +730,6 @@ Under the hood, the app still includes rich systems for world data, rules, chara
 - Extend the passive review-needed indicator into changed-word plus idle-pause background cadence.
 - Finish review/count correctness where overlap between known-lore and unresolved-review highlights can still confuse authors.
 - Manually retest alias highlighting for short aliases nested inside longer canon names, especially character full names plus nicknames and location short forms.
-- Decide whether Corkboard graduates from a quick-access modal into a dedicated planning tab/route while keeping the modal for in-scene reference.
 - Add a deliberate AI-to-Scratchpad capture action so planning thoughts from right-rail conversations are easy to retain.
 - Define the next Scratchpad evolution: quick access is now broadly available, so the remaining question is lightweight organization rather than one flat note forever.
 - Replace the interim World Bible AI helper apply bar with a proposal/action model: the assistant can suggest "add this section" or "apply this to field X", but every canon or schema mutation remains author-confirmed and editable before save.

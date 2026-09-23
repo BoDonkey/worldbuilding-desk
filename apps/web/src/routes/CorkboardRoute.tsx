@@ -10,6 +10,8 @@ import {useConfirmDialog} from '../hooks/useConfirmDialog';
 import {useStoryDashboardData} from '../hooks/useStoryDashboardData';
 import {useProgressionContinuityCandidates} from '../hooks/useProgressionContinuityCandidates';
 import {StoryDashboard} from '../components/Corkboard/StoryDashboard';
+import {ChapterCardSceneLinks} from '../components/Corkboard/ChapterCardSceneLinks';
+import {removeSceneLink, toggleSceneLink} from '../services/workspace/chapterCardSceneLinks';
 import styles from '../styles/CorkboardRoute.module.css';
 
 const STATUS_LABELS: Record<ChapterCardStatus, string> = {
@@ -175,16 +177,6 @@ function CorkboardRoute() {
       });
     }
     resetBeatForm();
-  };
-
-  const handleToggleSceneLink = (sceneId: string) => {
-    if (!selectedCard) return;
-    const current = selectedCard.sceneIds ?? [];
-    updateCorkboardCard(selectedCard.id, {
-      sceneIds: current.includes(sceneId)
-        ? current.filter((id) => id !== sceneId)
-        : [...current, sceneId]
-    });
   };
 
   const handleOpenScene = (sceneId: string) => {
@@ -391,31 +383,17 @@ function CorkboardRoute() {
                 />
               </label>
 
-              <section className={styles.sceneLinkEditor}>
-                <div className={styles.panelHeader}>
-                  <div>
-                    <h2 className={styles.panelTitle}>Draft scenes</h2>
-                    <p className={styles.inputNote}>Explicit links power chapter rollups. Nothing is matched by title or order.</p>
-                  </div>
-                  <span className={styles.countChip}>{selectedCard.sceneIds?.length ?? 0} linked</span>
-                </div>
-                {documents.length === 0 ? (
-                  <p className={styles.emptyState}>No saved scenes are available to link.</p>
-                ) : (
-                  <div className={styles.sceneChecklist}>
-                    {documents.map((document) => (
-                      <label key={document.id} className={styles.sceneCheck}>
-                        <input
-                          type='checkbox'
-                          checked={selectedCard.sceneIds?.includes(document.id) ?? false}
-                          onChange={() => handleToggleSceneLink(document.id)}
-                        />
-                        <span>{document.title.trim() || 'Untitled scene'}</span>
-                      </label>
-                    ))}
-                  </div>
-                )}
-              </section>
+              <ChapterCardSceneLinks
+                card={selectedCard}
+                documents={documents}
+                onToggle={(sceneId) => updateCorkboardCard(selectedCard.id, {
+                  sceneIds: toggleSceneLink(selectedCard, sceneId)
+                })}
+                onRemoveMissing={(sceneId) => updateCorkboardCard(selectedCard.id, {
+                  sceneIds: removeSceneLink(selectedCard, sceneId)
+                })}
+                onOpenScene={handleOpenScene}
+              />
 
               <section className={styles.beatSection}>
                 <div className={styles.panelHeader}>

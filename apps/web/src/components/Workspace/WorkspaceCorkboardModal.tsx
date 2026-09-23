@@ -1,17 +1,24 @@
 import type {RefObject} from 'react';
+import type {WritingDocument} from '../../entityTypes';
 import type {useWorkspaceCorkboard} from '../../hooks/useWorkspaceCorkboard';
+import {removeSceneLink, toggleSceneLink} from '../../services/workspace/chapterCardSceneLinks';
+import {ChapterCardSceneLinks} from '../Corkboard/ChapterCardSceneLinks';
 import styles from '../../styles/WorkspaceRoute.module.css';
 
 interface WorkspaceCorkboardModalProps {
   isOpen: boolean;
   dialogRef: RefObject<HTMLDivElement | null>;
   corkboard: ReturnType<typeof useWorkspaceCorkboard>;
+  documents: WritingDocument[];
+  currentDocumentId?: string;
   onClose: () => void;
   onOpenScratchpad: () => void;
+  onCurrentSceneAction: (message: string) => void;
 }
 
 export const WorkspaceCorkboardModal = ({
-  isOpen, dialogRef, corkboard, onClose, onOpenScratchpad
+  isOpen, dialogRef, corkboard, documents, currentDocumentId,
+  onClose, onOpenScratchpad, onCurrentSceneAction
 }: WorkspaceCorkboardModalProps) => {
   if (!isOpen) return null;
   const {
@@ -40,7 +47,7 @@ export const WorkspaceCorkboardModal = ({
           <div>
             <h3 className={styles.modalTitle}>Corkboard</h3>
             <p className={styles.modalDescription}>
-              Lightweight chapter planning with cards, summaries, status, and plot points.
+              Quick access to the same chapter cards, beats, and scene links as Planning → Corkboard.
             </p>
           </div>
           <div className={styles.corkboardHeaderActions}>
@@ -102,6 +109,19 @@ export const WorkspaceCorkboardModal = ({
                       className={styles.corkboardSummaryTextarea} />
                   </label>
                 </div>
+                <ChapterCardSceneLinks
+                  card={card}
+                  documents={documents}
+                  currentDocumentId={currentDocumentId}
+                  compact
+                  onToggle={(sceneId) => updateCorkboardCard(card.id, {
+                    sceneIds: toggleSceneLink(card, sceneId)
+                  })}
+                  onRemoveMissing={(sceneId) => updateCorkboardCard(card.id, {
+                    sceneIds: removeSceneLink(card, sceneId)
+                  })}
+                  onCurrentSceneAction={onCurrentSceneAction}
+                />
                 <div className={styles.corkboardPlotSection}>
                   <div className={styles.corkboardPlotHeader}>
                     <strong>Plot points</strong>

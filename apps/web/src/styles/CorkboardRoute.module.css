@@ -204,34 +204,6 @@
   padding-top: 1rem;
 }
 
-.sceneLinkEditor {
-  display: grid;
-  gap: 0.75rem;
-  border-top: 1px solid var(--color-border);
-  padding-top: 1rem;
-}
-
-.sceneChecklist {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
-  gap: 0.5rem;
-}
-
-.sceneCheck {
-  display: flex;
-  align-items: center;
-  gap: 0.55rem;
-  padding: 0.6rem 0.7rem;
-  border: 1px solid var(--surface-border-soft);
-  border-radius: 10px;
-  background: var(--surface-panel);
-  color: var(--color-text-primary);
-}
-
-.sceneCheck input {
-  flex: 0 0 auto;
-}
-
 .dashboard {
   display: grid;
   gap: 1rem;
