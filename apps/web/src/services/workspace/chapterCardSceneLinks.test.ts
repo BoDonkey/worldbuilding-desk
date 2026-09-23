@@ -2,6 +2,7 @@ import {describe, expect, it} from 'vitest';
 import type {ChapterCard, WritingDocument} from '../../entityTypes';
 import {
   addSceneLink,
+  deriveLinkedSceneTitle,
   removeSceneLink,
   resolveSceneLinks,
   toggleSceneLink
@@ -16,6 +17,12 @@ const document = (id: string, title: string): WritingDocument => ({
 });
 
 describe('chapter card scene links', () => {
+  it('derives the first and subsequent linked scene titles', () => {
+    expect(deriveLinkedSceneTitle(card(), 0)).toBe('The Salt Door');
+    expect(deriveLinkedSceneTitle(card(), 2)).toBe('The Salt Door — Scene 3');
+    expect(deriveLinkedSceneTitle({...card(), title: '   '}, 0)).toBe('Untitled scene');
+  });
+
   it('adds a link idempotently and preserves explicit order', () => {
     expect(addSceneLink(card(['scene-2', 'scene-1', 'scene-2']), 'scene-3'))
       .toEqual(['scene-2', 'scene-1', 'scene-3']);

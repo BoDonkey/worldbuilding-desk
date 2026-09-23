@@ -7,8 +7,8 @@ import {
   useMemo,
   useRef
 } from 'react';
-import {useNavigate} from 'react-router';
-import type {WritingDocument} from '../entityTypes';
+import {useLocation, useNavigate} from 'react-router';
+import type {ChapterCard, WritingDocument} from '../entityTypes';
 import {EditorWithAI} from '../components/Editor/EditorWithAI';
 import {ContextPopover} from '../components/Editor/ContextPopover';
 import {useWorkspaceMemories} from '../hooks/useWorkspaceMemories';
@@ -76,6 +76,7 @@ import {useWorkspaceProjectData} from '../hooks/useWorkspaceProjectData';
 import {useWorkspaceLoreSnippets} from '../hooks/useWorkspaceLoreSnippets';
 import {useWorkspaceScratchpad} from '../hooks/useWorkspaceScratchpad';
 import {useWorkspaceCorkboard} from '../hooks/useWorkspaceCorkboard';
+import {useChapterCardSceneActions} from '../hooks/useChapterCardSceneActions';
 import {useSceneRosterPreferences} from '../hooks/useSceneRosterPreferences';
 import {buildCharacterCaptureAliasList} from '../services/worldBible/worldBibleCanonicalization';
 import {isItemCategory} from '../services/worldBible/worldBibleSummary';
@@ -125,11 +126,13 @@ type FeedbackTone = 'success' | 'error';
 function WorkspaceRoute() {
   const activeProject = useAppStore((s) => s.activeProject);
   const navigate = useNavigate();
+  const location = useLocation();
   const positionedChangeDialogRef = useRef<HTMLDivElement | null>(null);
   const inventoryCaptureDialogRef = useRef<HTMLDivElement | null>(null);
   const statBlockDialogRef = useRef<HTMLDivElement | null>(null);
   const scratchpadDialogRef = useRef<HTMLDivElement | null>(null);
   const corkboardDialogRef = useRef<HTMLDivElement | null>(null);
+  const sceneTitleInputRef = useRef<HTMLInputElement | null>(null);
   const exportDialogRef = useRef<HTMLDivElement | null>(null);
   const memoryDialogRef = useRef<HTMLDivElement | null>(null);
   const [documents, setDocuments] = useState<WritingDocument[]>([]);
@@ -147,6 +150,7 @@ function WorkspaceRoute() {
   } | null>(null);
   const [isPromotingDocument, setIsPromotingDocument] = useState(false);
   const [isSyncingCanon, setIsSyncingCanon] = useState(false);
+  const [creatingLinkedSceneCardId, setCreatingLinkedSceneCardId] = useState<string | null>(null);
   const corkboard = useWorkspaceCorkboard(activeProject?.id ?? null);
   const {
     isScratchpadModalOpen,
@@ -639,6 +643,78 @@ function WorkspaceRoute() {
         : 'View in World Bible');
   const clearFeedback = useCallback(() => setFeedback(null), []);
   const pushToast = useNotificationStore((state) => state.pushToast);
+  const updateCorkboardCard = corkboard.updateCorkboardCard;
+  const updateLinkedSceneIds = useCallback(
+    (cardId: string, sceneIds: string[]) => updateCorkboardCard(
+      cardId,
+      {sceneIds},
+      {persistImmediately: true}
+    ),
+    [updateCorkboardCard]
+  );
+  const {createLinkedScene, retryLink} = useChapterCardSceneActions({
+    createDocument: handleNewDocument,
+    updateCard: updateLinkedSceneIds
+  });
+  const focusSceneTitle = useCallback(() => {
+    window.requestAnimationFrame(() => sceneTitleInputRef.current?.focus());
+    window.setTimeout(() => sceneTitleInputRef.current?.focus(), 50);
+    window.setTimeout(() => sceneTitleInputRef.current?.focus(), 150);
+  }, []);
+  const showLinkedSceneResult = useCallback(async (
+    card: ChapterCard,
+    result: Awaited<ReturnType<typeof createLinkedScene>>
+  ) => {
+    if (!result.document) return;
+    closeCorkboardModal();
+    focusSceneTitle();
+    const cardName = card.title.trim() || 'Untitled chapter';
+    if (result.linked) {
+      pushToast({message: `Scene created and linked to ${cardName}.`});
+      return;
+    }
+    const document = result.document;
+    pushToast({
+      tone: 'error',
+      message: `Scene created but not linked to ${cardName}.`,
+      durationMs: null,
+      action: {
+        label: 'Link now',
+        onSelect: () => {
+          void retryLink(card, document).then((linked) => {
+            pushToast(linked
+              ? {message: `Linked ${document.title} to ${cardName}.`}
+              : {tone: 'error', message: `Could not link ${document.title} to ${cardName}.`});
+          });
+        }
+      }
+    });
+  }, [closeCorkboardModal, focusSceneTitle, pushToast, retryLink]);
+  const handleCreateLinkedScene = useCallback(async (card: ChapterCard) => {
+    if (creatingLinkedSceneCardId) return;
+    setCreatingLinkedSceneCardId(card.id);
+    try {
+      await showLinkedSceneResult(card, await createLinkedScene(card));
+    } finally {
+      setCreatingLinkedSceneCardId(null);
+    }
+  }, [createLinkedScene, creatingLinkedSceneCardId, showLinkedSceneResult]);
+
+  useEffect(() => {
+    const state = location.state as {createLinkedSceneCardId?: string} | null;
+    const cardId = state?.createLinkedSceneCardId;
+    if (!cardId || corkboard.corkboardStatus !== 'saved') return;
+    navigate(location.pathname, {replace: true, state: {}});
+    const card = corkboard.corkboardCards.find((entry) => entry.id === cardId);
+    if (card) void handleCreateLinkedScene(card);
+  }, [
+    corkboard.corkboardCards,
+    corkboard.corkboardStatus,
+    handleCreateLinkedScene,
+    location.pathname,
+    location.state,
+    navigate
+  ]);
   const openResolverNoticeDestinationRef = useRef(openResolverNoticeDestination);
   useEffect(() => {
     openResolverNoticeDestinationRef.current = openResolverNoticeDestination;
@@ -1395,6 +1471,7 @@ function WorkspaceRoute() {
                   Title
                   <br />
                   <input
+                    ref={sceneTitleInputRef}
                     type='text'
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
@@ -2040,6 +2117,8 @@ function WorkspaceRoute() {
         onClose={closeCorkboardModal}
         onOpenScratchpad={openScratchpadModal}
         onCurrentSceneAction={(message) => pushToast({tone: 'success', message})}
+        onCreateLinkedScene={(card) => void handleCreateLinkedScene(card)}
+        creatingLinkedSceneCardId={creatingLinkedSceneCardId}
       />
 
       <WorkspaceExportModal

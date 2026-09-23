@@ -42,3 +42,8 @@ export function resolveSceneLinks(
     missingSceneIds: sceneIds.filter((sceneId) => !documentsById.has(sceneId))
   };
 }
+
+export function deriveLinkedSceneTitle(card: ChapterCard, linkedCount: number): string {
+  const baseTitle = card.title.trim() || 'Untitled scene';
+  return linkedCount > 0 ? `${baseTitle} — Scene ${linkedCount + 1}` : baseTitle;
+}

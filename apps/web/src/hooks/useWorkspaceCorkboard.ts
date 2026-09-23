@@ -132,17 +132,35 @@ export function useWorkspaceCorkboard(projectId: string | null) {
   }, [projectId, updateCards]);
 
   const updateCard = useCallback(
-    (
+    async (
       cardId: string,
-      patch: Partial<Pick<ChapterCard, 'title' | 'summary' | 'status' | 'sceneIds'>>
+      patch: Partial<Pick<ChapterCard, 'title' | 'summary' | 'status' | 'sceneIds'>>,
+      options?: {persistImmediately?: boolean}
     ) => {
+      if (options?.persistImmediately) {
+        const current = cards.find((card) => card.id === cardId);
+        if (!current) throw new Error('Chapter card no longer exists.');
+        const updated = {...current, ...patch, updatedAt: Date.now()};
+        try {
+          await saveChapterCard(updated);
+          setCards((prev) => normalizeCardOrders(prev.map((card) =>
+            card.id === cardId ? updated : card
+          )));
+          setLastSavedAt(updated.updatedAt);
+          setStatus('saved');
+          return;
+        } catch (error) {
+          setStatus('error');
+          throw error;
+        }
+      }
       updateCards((prev) =>
         prev.map((card) =>
           card.id === cardId ? {...card, ...patch, updatedAt: Date.now()} : card
         )
       );
     },
-    [updateCards]
+    [cards, updateCards]
   );
 
   const deleteCard = useCallback(

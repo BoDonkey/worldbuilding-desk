@@ -110,4 +110,52 @@ describe('Workspace Corkboard scene links', () => {
     cy.visit('/workspace');
     cy.contains('label', 'Title').find('input').should('have.value', 'Beta Scene');
   });
+
+  it('creates, opens, and restores a linked scene from the quick modal', () => {
+    putRecords('corkboard_chapter_cards', [{
+      id: 'modal-create-card', projectId: 'cypress-project-1', title: 'Modal Chapter',
+      summary: 'Planning only', status: 'planned', order: 0, sceneIds: [],
+      plotPoints: [], createdAt: 1, updatedAt: 1
+    }]);
+    cy.visit('/workspace');
+    cy.contains('button', /^Corkboard$/).first().click();
+    cy.get('[role="dialog"][aria-label="Project corkboard"]').within(() => {
+      cy.get('input[value="Modal Chapter"]').closest('section').within(() => {
+        cy.contains('button', 'Create linked scene').click();
+      });
+    });
+    cy.get('[role="dialog"][aria-label="Project corkboard"]').should('not.exist');
+    cy.contains('label', 'Title').find('input')
+      .should('have.value', 'Modal Chapter')
+      .and('be.focused');
+    cy.contains('Scene created and linked to Modal Chapter.').should('be.visible');
+
+    cy.reload();
+    cy.contains('label', 'Title').find('input').should('have.value', 'Modal Chapter');
+    cy.visit('/corkboard');
+    cy.get('[aria-label="Draft scenes for Modal Chapter"]')
+      .contains('label', 'Modal Chapter').find('input').should('be.checked');
+    cy.contains('button', 'Story Dashboard').click();
+    cy.contains('h3', 'Modal Chapter').should('be.visible');
+  });
+
+  it('creates a subsequent linked scene from the dedicated route', () => {
+    putRecords('corkboard_chapter_cards', [{
+      id: 'route-create-card', projectId: 'cypress-project-1', title: 'Route Chapter',
+      summary: '', status: 'planned', order: 0, sceneIds: ['scene-alpha'],
+      plotPoints: [], createdAt: 1, updatedAt: 1
+    }]);
+    cy.visit('/corkboard');
+    cy.get('[aria-label="Draft scenes for Route Chapter"]')
+      .contains('button', 'Create linked scene').click();
+    cy.location('pathname').should('eq', '/workspace');
+    cy.contains('label', 'Title').find('input')
+      .should('have.value', 'Route Chapter — Scene 2')
+      .and('be.focused');
+    cy.contains('Scene created and linked to Route Chapter.').should('be.visible');
+
+    cy.visit('/corkboard');
+    cy.get('[aria-label="Draft scenes for Route Chapter"]')
+      .contains('label', 'Route Chapter — Scene 2').find('input').should('be.checked');
+  });
 });

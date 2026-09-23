@@ -12,6 +12,8 @@ interface ChapterCardSceneLinksProps {
   onRemoveMissing: (sceneId: string) => void;
   onOpenScene?: (sceneId: string) => void;
   onCurrentSceneAction?: (message: string) => void;
+  onCreateLinkedScene?: () => void;
+  isCreatingLinkedScene?: boolean;
   compact?: boolean;
 }
 
@@ -26,6 +28,8 @@ export function ChapterCardSceneLinks({
   onRemoveMissing,
   onOpenScene,
   onCurrentSceneAction,
+  onCreateLinkedScene,
+  isCreatingLinkedScene = false,
   compact = false
 }: ChapterCardSceneLinksProps) {
   const [linksOpen, setLinksOpen] = useState(!compact);
@@ -73,14 +77,24 @@ export function ChapterCardSceneLinks({
       </span>)}
     </div> : <p className={styles.emptyCopy}>No linked scenes yet.</p>}
 
-    {currentDocument && <button
-      type='button'
-      className={styles.currentSceneButton}
-      onClick={() => toggle(currentDocument, true)}
-      aria-label={`${currentIsLinked ? 'Unlink' : 'Link'} current scene ${sceneTitle(currentDocument)} ${currentIsLinked ? 'from' : 'to'} ${cardTitle(card)}`}
-    >
-      {currentIsLinked ? 'Unlink current scene' : 'Link current scene'}
-    </button>}
+    {(currentDocument || onCreateLinkedScene) && <div className={styles.primaryActions}>
+      {currentDocument && <button
+        type='button'
+        className={styles.currentSceneButton}
+        onClick={() => toggle(currentDocument, true)}
+        aria-label={`${currentIsLinked ? 'Unlink' : 'Link'} current scene ${sceneTitle(currentDocument)} ${currentIsLinked ? 'from' : 'to'} ${cardTitle(card)}`}
+      >
+        {currentIsLinked ? 'Unlink current scene' : 'Link current scene'}
+      </button>}
+      {onCreateLinkedScene && <button
+        type='button'
+        onClick={onCreateLinkedScene}
+        disabled={isCreatingLinkedScene}
+        aria-label={`Create linked scene for ${cardTitle(card)}`}
+      >
+        {isCreatingLinkedScene ? 'Creating scene…' : 'Create linked scene'}
+      </button>}
+    </div>}
 
     <details open={linksOpen} onToggle={(event) => setLinksOpen(event.currentTarget.open)} className={styles.manageLinks}>
       <summary>Manage links</summary>

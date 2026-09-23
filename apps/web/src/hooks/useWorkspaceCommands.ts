@@ -6,7 +6,7 @@ import {
 import type {WorkspaceContextDrawerView} from './useWorkspaceDrawers';
 
 interface UseWorkspaceCommandsOptions {
-  handleNewDocument: () => void | Promise<void>;
+  handleNewDocument: () => void | Promise<unknown>;
   handleSave: () => void | Promise<void>;
   openScratchpadModal: () => void;
   openCorkboardModal: () => void;

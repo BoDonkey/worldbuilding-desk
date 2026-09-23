@@ -294,8 +294,10 @@ export const useWorkspaceDocuments = ({
     selectedId
   ]);
 
-  const handleNewDocument = useCallback(async () => {
-    if (!activeProject) return;
+  const handleNewDocument = useCallback(async (
+    options?: {title?: string; select?: boolean}
+  ): Promise<WritingDocument | null> => {
+    if (!activeProject) return null;
 
     setCreatingScene(true);
     setFeedback(null);
@@ -304,7 +306,7 @@ export const useWorkspaceDocuments = ({
       const doc: WritingDocument = {
         id: crypto.randomUUID(),
         projectId: activeProject.id,
-        title: 'Untitled scene',
+        title: options?.title?.trim() || 'Untitled scene',
         content: '<p></p>',
         order: getNextWritingDocumentOrder(documents),
         createdAt: now,
@@ -314,21 +316,27 @@ export const useWorkspaceDocuments = ({
       await saveWritingDocument(doc);
 
       setDocuments((prev) => sortWritingDocuments([...prev, doc]));
-      initializeEditorState(doc);
-      setEditorScrollResetToken((prev) => prev + 1);
-      setSaveStatus('saved');
-      setLastSavedAt(Date.now());
-      setWordCount(0);
-      setFeedback({tone: 'success', message: 'Created a new scene.'});
+      if (options?.select !== false) {
+        initializeEditorState(doc);
+        setEditorScrollResetToken((prev) => prev + 1);
+        setSaveStatus('saved');
+        setLastSavedAt(Date.now());
+        setWordCount(0);
+      }
+      if (!options?.title) {
+        setFeedback({tone: 'success', message: 'Created a new scene.'});
+      }
       addSystemHistory({
         category: 'scene',
         message: `Created scene "${doc.title}".`,
         insertText: `System Notice: Scene "${doc.title}" was created.`
       });
+      return doc;
     } catch (error) {
       const message =
         describeError(error, 'Unable to create scene.');
       setFeedback({tone: 'error', message});
+      return null;
     } finally {
       setCreatingScene(false);
     }

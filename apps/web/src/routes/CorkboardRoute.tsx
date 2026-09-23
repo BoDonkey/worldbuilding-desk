@@ -393,6 +393,9 @@ function CorkboardRoute() {
                   sceneIds: removeSceneLink(selectedCard, sceneId)
                 })}
                 onOpenScene={handleOpenScene}
+                onCreateLinkedScene={() => navigate('/workspace', {
+                  state: {createLinkedSceneCardId: selectedCard.id}
+                })}
               />
 
               <section className={styles.beatSection}>

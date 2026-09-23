@@ -1,5 +1,5 @@
 import type {RefObject} from 'react';
-import type {WritingDocument} from '../../entityTypes';
+import type {ChapterCard, WritingDocument} from '../../entityTypes';
 import type {useWorkspaceCorkboard} from '../../hooks/useWorkspaceCorkboard';
 import {removeSceneLink, toggleSceneLink} from '../../services/workspace/chapterCardSceneLinks';
 import {ChapterCardSceneLinks} from '../Corkboard/ChapterCardSceneLinks';
@@ -14,11 +14,14 @@ interface WorkspaceCorkboardModalProps {
   onClose: () => void;
   onOpenScratchpad: () => void;
   onCurrentSceneAction: (message: string) => void;
+  onCreateLinkedScene: (card: ChapterCard) => void;
+  creatingLinkedSceneCardId: string | null;
 }
 
 export const WorkspaceCorkboardModal = ({
   isOpen, dialogRef, corkboard, documents, currentDocumentId,
-  onClose, onOpenScratchpad, onCurrentSceneAction
+  onClose, onOpenScratchpad, onCurrentSceneAction,
+  onCreateLinkedScene, creatingLinkedSceneCardId
 }: WorkspaceCorkboardModalProps) => {
   if (!isOpen) return null;
   const {
@@ -121,6 +124,8 @@ export const WorkspaceCorkboardModal = ({
                     sceneIds: removeSceneLink(card, sceneId)
                   })}
                   onCurrentSceneAction={onCurrentSceneAction}
+                  onCreateLinkedScene={() => onCreateLinkedScene(card)}
+                  isCreatingLinkedScene={creatingLinkedSceneCardId === card.id}
                 />
                 <div className={styles.corkboardPlotSection}>
                   <div className={styles.corkboardPlotHeader}>

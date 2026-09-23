@@ -64,6 +64,12 @@
   justify-self: start;
 }
 
+.primaryActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
 .manageLinks summary {
   cursor: pointer;
   color: var(--color-text-primary);
@@ -114,6 +120,7 @@
   }
 
   .currentSceneButton,
+  .primaryActions button,
   .sceneCheckRow button {
     width: 100%;
   }

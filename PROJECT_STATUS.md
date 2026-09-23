@@ -185,7 +185,10 @@ Under the hood, the app still includes rich systems for world data, rules, chara
   linked-scene chips, explicit checklists, current-scene link/unlink in the
   modal, open-scene actions on the route, and removable stale links when a
   scene no longer exists. Links use stable scene ids only and never infer from
-  titles or manuscript order.
+  titles or manuscript order. Either surface can create a normal manuscript
+  scene through the Workspace owner and link it to the card in one action;
+  failures never delete the created prose and offer an idempotent link-only
+  retry.
 - Corkboard chapter-card records are included in project backup snapshots and restore paths.
 - Corkboard now includes a read-only Story Dashboard derived entirely from
   saved manuscript text, accepted state events, configured rules, and explicit
