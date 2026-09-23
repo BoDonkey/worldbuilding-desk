@@ -98,6 +98,17 @@ exploratory Canvas content as World Bible canon.
    Rename and delete a source and confirm the live name or visibly stale target
    appears. Repeat at 780px and confirm no mechanics-only suggestion appears in
    a general-fiction project.
+10. With no provider configured, expand Craft-guided coaching on Core Idea and
+    confirm all four actions are unavailable with an actionable Settings link.
+    Configure a hosted provider and check both light and dark themes: the
+    disclosure must name the focused Canvas text, selected reference
+    names/titles, and craft excerpts, and must say that Source Note text and
+    manuscript prose are excluded. Select one accepted-canon reference and one
+    Source Note, request clearer wording, and confirm project references are
+    listed separately from craft citations. Verify the existing text does not
+    change while the proposal is pending or after Dismiss; request again and
+    Confirm action to apply it. Start another request, press Stop, and confirm
+    no proposal or Canvas write occurs.
 
 ## 2. Review Completion (Import → Workspace Review → World Bible Queue)
 

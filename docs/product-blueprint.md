@@ -176,6 +176,17 @@ browsable without being forced into a lens. World Bible references are labeled
 accepted canon and Source Notes as source material. Missing targets stay visible
 until the author unpins them. Palette text is not additional model context.
 
+Craft-guided Canvas coaching is optional and author-triggered on Core Idea or
+an opened lens. It may teach an applicable vetted craft pattern and propose a
+tighter focus, deeper question, central tension, or clearer wording, but it
+must not judge unseen manuscript prose or establish project truth. The request
+contains only the focused Canvas text plus references selected for that request:
+World Bible names and aliases or Source Note titles, never Source Note bodies.
+Craft citations and selected project references are shown as separate sources.
+Suggested replacement wording or Open Threads use the shared read-only proposal
+preview and require explicit confirmation; the existing Canvas text stays
+unchanged until then, and a stale proposal fails closed.
+
 The writing coach is not a separate destination. It is available when the
 author explicitly asks for craft feedback anywhere an existing AI interaction
 lives, scoped to the current selection or scene. A manuscript-level coach

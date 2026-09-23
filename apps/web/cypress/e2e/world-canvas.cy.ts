@@ -511,4 +511,118 @@ describe('World Canvas', () => {
         .should('not.exist');
     });
   });
+
+  describe('craft-guided coaching', () => {
+    const ANTHROPIC_STREAM = 'http://localhost:3001/api/anthropic/stream';
+    const OLLAMA_CHAT = 'http://localhost:11434/api/chat';
+    const anthropicReply = (text: string) => ({
+      statusCode: 200,
+      headers: {'content-type': 'text/event-stream'},
+      body: [
+        `data: ${JSON.stringify({type: 'content_block_delta', delta: {type: 'text_delta', text}})}`,
+        'data: [DONE]',
+        ''
+      ].join('\n\n')
+    });
+    const coreIdeaSection = () => cy.get('#world-canvas-premise-heading').parents('section').first();
+
+    const openSeededCanvas = () => {
+      cy.visit('/world-canvas');
+      cy.window().then(seedCanvasReturnExperience);
+      cy.reload();
+    };
+
+    it('explains the missing provider and cannot send a coaching request', () => {
+      cy.intercept('POST', ANTHROPIC_STREAM, cy.spy().as('coachingRequest'));
+      openSeededCanvas();
+      cy.get('textarea[placeholder*="borrowed memories"]').type('A city survives by trading memories.');
+
+      coreIdeaSection().within(() => {
+        cy.contains('summary', 'Craft-guided coaching').click();
+        cy.contains('Anthropic API key is missing').should('be.visible');
+        cy.contains('a', 'Open Settings').should('have.attr', 'href', '/settings');
+        cy.contains('button', 'Help me focus this').should('be.disabled');
+      });
+      cy.get('@coachingRequest').should('not.have.been.called');
+    });
+
+    it('discloses hosted data and keeps a validated wording proposal unchanged until confirmation', () => {
+      const original = 'A city survives by trading memories.';
+      const proposed = 'A city buys survival with the memories that define its people.';
+      cy.window().then((win) => win.localStorage.setItem('anthropic_api_key', 'cypress-test-key'));
+      cy.intercept('POST', ANTHROPIC_STREAM, anthropicReply(JSON.stringify({
+        observations: [{
+          pattern: 'Setting as pressure',
+          application: 'Make the exchange create an ongoing cost rather than background decoration.'
+        }],
+        proposal: {kind: 'replacement', text: proposed}
+      }))).as('canvasCoaching');
+      openSeededCanvas();
+
+      cy.contains('summary', 'Suggested references').click();
+      cy.contains('[data-canvas-reference]', 'Sera Kestrel').within(() => cy.contains('button', 'Pin').click());
+      cy.contains('[data-canvas-reference]', 'Faction Notes — The Cinder Compact').within(() => cy.contains('button', 'Pin').click());
+      cy.get('textarea[placeholder*="borrowed memories"]').type(original);
+
+      coreIdeaSection().within(() => {
+        cy.contains('summary', 'Craft-guided coaching').click();
+        cy.contains('focused Canvas text').should('be.visible');
+        cy.contains('Source Note text and manuscript prose are not sent').should('be.visible');
+        cy.contains('span', 'Sera Kestrel').prev('input[type="checkbox"]').check();
+        cy.contains('span', 'Faction Notes — The Cinder Compact').prev('input[type="checkbox"]').check();
+        cy.contains('button', 'Suggest clearer wording').click();
+      });
+
+      cy.wait('@canvasCoaching').then(({request}) => {
+        const body = JSON.stringify(request.body);
+        expect(body).to.contain(original);
+        expect(body).to.contain('Sera Kestrel');
+        expect(body).to.contain('Source Note title only: Faction Notes — The Cinder Compact');
+        expect(body).to.contain('NOT CANON');
+        expect(body).not.to.contain('Compact notes');
+      });
+
+      coreIdeaSection().within(() => {
+        cy.get('textarea').should('have.value', original);
+        cy.contains('Setting as pressure').should('be.visible');
+        cy.contains('Current text').should('be.visible');
+        cy.contains('Proposed text').should('be.visible');
+        cy.contains(proposed).should('be.visible');
+        cy.contains('summary', 'Craft reference material (not your canon)').should('be.visible');
+        cy.contains('button', 'Confirm action').click();
+        cy.get('textarea').should('have.value', proposed);
+      });
+    });
+
+    it('stops a slow local coaching run without writing to the Canvas', () => {
+      const original = 'A city survives by trading memories.';
+      cy.intercept('POST', OLLAMA_CHAT, {
+        statusCode: 200,
+        headers: {'content-type': 'application/x-ndjson'},
+        body: [
+          JSON.stringify({message: {role: 'assistant', content: JSON.stringify({
+            observations: [{pattern: 'Pressure', application: 'Make the cost recur.'}],
+            proposal: {kind: 'replacement', text: 'Too late.'}
+          })}}),
+          JSON.stringify({done: true, done_reason: 'stop'})
+        ].join('\n'),
+        delay: 15000
+      }).as('slowCanvasCoaching');
+      cy.visit('/world-canvas');
+      cy.setSeededProjectProvider('ollama');
+      cy.reload();
+      cy.get('textarea[placeholder*="borrowed memories"]').type(original);
+
+      coreIdeaSection().within(() => {
+        cy.contains('summary', 'Craft-guided coaching').click();
+        cy.contains('Runs locally').should('be.visible');
+        cy.contains('button', 'Help me focus this').click();
+        cy.contains('[role="status"]', 'Waiting for the model…').should('be.visible');
+        cy.contains('button', 'Stop').click();
+        cy.contains('[role="alert"]', 'Stopped before the coach finished').should('be.visible');
+        cy.get('textarea').should('have.value', original);
+        cy.contains('Too late.').should('not.exist');
+      });
+    });
+  });
 });

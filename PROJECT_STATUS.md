@@ -151,9 +151,20 @@ Under the hood, the app still includes rich systems for world data, rules, chara
   navigation, and prompt before a reload or window close; nothing else persists
   and nothing is written to canon. With no usable provider, the control
   explains why and links to Settings without sending a request.
+- Core Idea and each opened lens also offer optional craft-guided coaching with
+  four explicit author actions: focus, deeper question, central tension, and
+  clearer wording. Each request retrieves only applicable author-vetted craft
+  chunks and sends the focused Canvas text; project references are opt-in per
+  request and disclose World Bible names/aliases or Source Note titles only,
+  never Source Note text or manuscript prose. Craft citations remain separate
+  from project references. The whole reply is schema-validated and its wording
+  or Open Thread stays in the shared proposal preview until explicit author
+  confirmation; stale focused text fails closed and no model output writes
+  directly to Canvas, canon, or state. Hosted runs spend one `canvas-coach`
+  consultation; local Ollama remains exempt from that budget.
 - Author-triggered model runs (writing assistant and its context actions,
   writing coach in both places, progression continuity, canon-decision
-  consultation, World Canvas brainstorming) now stream through one shared run
+  consultation, World Canvas brainstorming and coaching) now stream through one shared run
   that shows the phase (waiting / thinking / writing the answer), elapsed
   time, the model's thinking live in a collapsible area, and a **Stop** button
   that aborts the request, including in the desktop app, where the main

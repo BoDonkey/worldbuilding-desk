@@ -15,7 +15,7 @@ const buildWorldCanvas = (overrides: Partial<ReturnType<typeof useWorldCanvas>> 
   keepBrainstormItemAsSourceNote: vi.fn(), linkCoreIdeaSourceNote: vi.fn(),
   linkCoreIdeaEntity: vi.fn(), linkSketchSourceNote: vi.fn(), linkSketchEntity: vi.fn(),
   unlinkSketchTarget: vi.fn(), linkOpenThreadSourceNote: vi.fn(), linkOpenThreadEntity: vi.fn(),
-  pinReference: vi.fn(), unpinReference: vi.fn(),
+  pinReference: vi.fn(), unpinReference: vi.fn(), applyCoachingProposal: vi.fn(),
   ...overrides
 });
 const render = (ui: ReactElement) => rtlRender(ui, {wrapper: MemoryRouter});

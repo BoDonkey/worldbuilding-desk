@@ -54,6 +54,17 @@ retain their source-material label, and missing targets remain explicit until
 the author unpins them. Suggestions never become links without an author
 action and are not added to retrieval or model prompts.
 
+Canvas coaching is a separate, author-invoked proposal path. Deterministic
+retrieval supplies only applicable author-vetted craft chunks, while an
+explicit per-request selection may supply World Bible names/aliases or Source
+Note titles. Source Note bodies and manuscript prose are outside this contract.
+The application validates the entire model response and expected proposal kind
+before showing anything actionable. Replacement wording and proposed Open
+Threads remain read-only previews until confirmation, then deterministic
+application code verifies that the focused Canvas text is still current before
+writing only the confirmed Canvas change. The model cannot write Canvas,
+canon, or state directly.
+
 Key rules:
 
 - The fact vocabulary (`alias`, `role`, `occupation`, `affiliation`,

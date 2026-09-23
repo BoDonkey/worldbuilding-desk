@@ -13,6 +13,11 @@ import {
   unlinkSketchTarget, unpinCanvasReference, updateOpenThread, updateSketchText,
   type CanvasReferenceTarget
 } from '../services/worldBible/worldCanvasService';
+import {
+  applyWorldCanvasCoachingProposal,
+  type WorldCanvasCoachingFocus,
+  type WorldCanvasCoachingProposal
+} from '../services/worldBible/worldCanvasCoaching';
 
 export type WorldCanvasSaveStatus = 'idle' | 'loading' | 'saving' | 'saved' | 'error';
 
@@ -107,6 +112,7 @@ export function useWorldCanvas(projectId: string | null, ragService: RAGProvider
     linkOpenThreadSourceNote: (id: string, noteId?: string) => changeCanvasAndSave((current) => linkOpenThreadSourceNote(current, id, noteId)),
     linkOpenThreadEntity: (id: string, entityId?: string) => changeCanvasAndSave((current) => linkOpenThreadEntity(current, id, entityId)),
     pinReference: (target: CanvasReferenceTarget, lensKind: WorldCanvasLensKind) => changeCanvasAndSave((current) => pinCanvasReference(current, target, lensKind)),
-    unpinReference: (target: CanvasReferenceTarget) => changeCanvasAndSave((current) => unpinCanvasReference(current, target))
+    unpinReference: (target: CanvasReferenceTarget) => changeCanvasAndSave((current) => unpinCanvasReference(current, target)),
+    applyCoachingProposal: (focus: WorldCanvasCoachingFocus, expectedFocusText: string, proposal: WorldCanvasCoachingProposal) => changeCanvasAndSave((current) => applyWorldCanvasCoachingProposal({canvas: current, focus, expectedFocusText, proposal}))
   };
 }

@@ -15,6 +15,7 @@ import {
 import {collectCanonNames} from '../../services/worldBible/worldCanvasBrainstorm';
 import {deriveWorldCanvasReferencePalette} from '../../services/worldBible/worldCanvasDerived';
 import {WorldCanvasBrainstorm} from './WorldCanvasBrainstorm';
+import {WorldCanvasCoaching} from './WorldCanvasCoaching';
 import {WorldCanvasReferencePaletteView} from './WorldCanvasReferencePalette';
 import styles from './WorldCanvasView.module.css';
 
@@ -164,6 +165,21 @@ export function WorldCanvasView({
   };
 
   const renderBrainstorm = (focus: {type: 'premise'} | {type: 'lens'; kind: WorldCanvasLensKind}) => <WorldCanvasBrainstorm projectId={projectId} focus={focus} canvas={canvas} canonNames={canonNames} aiConfig={aiConfig} budget={budget} requestConfirm={requestConfirm} onKeepAsSourceNote={worldCanvas.keepBrainstormItemAsSourceNote} onAddOpenThread={(text, lensKind) => worldCanvas.addOpenThread(text, lensKind, 'brainstorm')} onFeedback={onFeedback} />;
+  const renderCoaching = (
+    focus: {type: 'premise'} | {type: 'lens'; kind: WorldCanvasLensKind},
+    focusLabel: string,
+    focusText: string
+  ) => <WorldCanvasCoaching
+    focus={focus}
+    focusLabel={focusLabel}
+    focusText={focusText}
+    paletteReferences={referencePalette.pinned}
+    aliases={aliases}
+    aiConfig={aiConfig}
+    budget={budget}
+    onApplyProposal={(expectedFocusText, proposal) => worldCanvas.applyCoachingProposal(focus, expectedFocusText, proposal)}
+    onFeedback={onFeedback}
+  />;
 
   const renderThreadCard = (thread: WorldCanvasOpenThread, index: number) => {
     const target: BridgeTarget = {type: 'open-thread', id: thread.id, text: thread.text, lensKind: thread.lensKind};
@@ -190,6 +206,7 @@ export function WorldCanvasView({
       <label className={styles.field}>Core idea<textarea rows={5} value={canvas.premise} onChange={(event) => worldCanvas.setPremise(event.target.value)} placeholder='A city powered by borrowed memories begins to forget who built it.' /></label>
       {renderBridge({target: coreTarget, sourceIds: canvas.coreIdeaSourceNoteId ? [canvas.coreIdeaSourceNoteId] : [], entityIds: canvas.coreIdeaEntityId ? [canvas.coreIdeaEntityId] : [], primaryLabel: 'Keep as Source Note', primaryAction: worldCanvas.keepCoreIdeaAsSourceNote, disablePrimary: Boolean(canvas.coreIdeaSourceNoteId), linkSource: worldCanvas.linkCoreIdeaSourceNote, linkEntity: worldCanvas.linkCoreIdeaEntity, unlinkSource: () => worldCanvas.linkCoreIdeaSourceNote(), unlinkEntity: () => worldCanvas.linkCoreIdeaEntity()})}
       {renderBrainstorm({type: 'premise'})}
+      {renderCoaching({type: 'premise'}, 'Core Idea', canvas.premise)}
     </section>
 
     <WorldCanvasReferencePaletteView
@@ -217,6 +234,7 @@ export function WorldCanvasView({
           <details className={styles.lensGuidance}><summary>What this lens can uncover</summary><p>{definition.uncovers}</p><ul>{definition.starters.map((starter) => <li key={starter}>{starter}</li>)}</ul></details>
           <label className={styles.field}>{definition.label} working sketch<textarea rows={6} value={active.text} onChange={(event) => worldCanvas.setSketchText(definition.kind, active.id, event.target.value)} /></label>
           {renderBrainstorm({type: 'lens', kind: definition.kind})}
+          {renderCoaching({type: 'lens', kind: definition.kind}, definition.label, active.text)}
           {renderBridge({target, sourceIds: active.linkedSourceNoteIds, entityIds: active.linkedEntityIds, threadIds: active.linkedOpenThreadIds, primaryLabel: 'Develop as Source Note', primaryAction: () => worldCanvas.developSketchAsSourceNote(definition.kind, active.id), linkSource: (id) => worldCanvas.linkSketchSourceNote(definition.kind, active.id, id), linkEntity: (id) => worldCanvas.linkSketchEntity(definition.kind, active.id, id), unlinkSource: (id) => worldCanvas.unlinkSketchTarget(definition.kind, active.id, 'source-note', id), unlinkEntity: (id) => worldCanvas.unlinkSketchTarget(definition.kind, active.id, 'entity', id), extra: <><button type='button' disabled={!active.text.trim() || active.linkedOpenThreadIds.length > 0} onClick={() => worldCanvas.keepSketchAsOpenThread(definition.kind, active.id)}>Keep as Open Thread</button><button type='button' disabled={!routed} onClick={() => worldCanvas.addAnotherSketch(definition.kind)}>Add another sketch</button></>})}
           {lens.sketches.length > 1 && <div className={styles.sketchHistory}><h5>Sketches from this lens</h5>{lens.sketches.filter((item) => item.id !== active.id).map((sketch, index) => <button type='button' key={sketch.id} className={styles.sketchHistoryItem} onClick={() => worldCanvas.selectSketch(definition.kind, sketch.id)}><span>Sketch {index + 1}: {sketch.text.trim().slice(0, 90) || 'Untitled sketch'}</span><small>{destinationSummary(sketch)}</small></button>)}</div>}
         </article>;

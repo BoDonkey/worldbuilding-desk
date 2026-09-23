@@ -32,6 +32,7 @@ export type ConsultationFeature =
   | 'workspace-context'
   | 'canon-decision'
   | 'canvas-brainstorm'
+  | 'canvas-coach'
   | 'canon-check';
 
 const FEATURE_LABELS: Record<ConsultationFeature, string> = {
@@ -41,6 +42,7 @@ const FEATURE_LABELS: Record<ConsultationFeature, string> = {
   'workspace-context': 'Workspace context actions',
   'canon-decision': 'Canon decisions',
   'canvas-brainstorm': 'World Canvas brainstorming',
+  'canvas-coach': 'World Canvas coaching',
   'canon-check': 'Model-assisted canon check'
 };
 
