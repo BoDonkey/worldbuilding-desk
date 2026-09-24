@@ -9,9 +9,15 @@ import type {
 import styles from '../../assets/components/Settings/AISettingsForm.module.css';
 import {
   PROVIDER_DEFAULT_BASE_URLS,
+  PROVIDER_FALLBACK_MODELS,
   PROVIDER_MODEL_PLACEHOLDERS,
   normalizeConfiguredModel
 } from '../../services/llm/providerConfig';
+import {
+  HOSTED_PRICE_TABLE_CHECKED_AT,
+  formatHostedResponseCost,
+  getHostedResponseCostCeiling
+} from '../../services/llm/hostedResponsePolicy';
 import {testHostedProviderConnection, testOllamaConnection} from '../../services/llm/connectionTest';
 import {useConfirmDialog} from '../../hooks/useConfirmDialog';
 import {InlineAlert, type InlineAlertVariant} from '../common';
@@ -251,6 +257,13 @@ export const AISettings: React.FC<AISettingsProps> = ({
     inspectorSettings.maxConsultationsPerDay
   );
   const budgetIsLocal = isLocalConsultationProvider(aiSettings.provider);
+  const responseModel =
+    currentModel || PROVIDER_FALLBACK_MODELS[aiSettings.provider] || 'provider default';
+  const responseCostCeiling = getHostedResponseCostCeiling(
+    aiSettings.provider,
+    responseModel,
+    inspectorSettings.maxResponseTokens
+  );
 
   const withDefaultModes = (
     updates: Partial<ProjectAISettings>
@@ -924,6 +937,18 @@ export const AISettings: React.FC<AISettingsProps> = ({
               })
             }
           />
+          {responseCostCeiling ? (
+            <p className={styles.help} data-testid='hosted-response-cost-ceiling'>
+              Hosted response ceiling: up to {responseCostCeiling.tokens.toLocaleString()} tokens
+              {responseCostCeiling.maximumOutputUsd !== undefined
+                ? ` (${formatHostedResponseCost(responseCostCeiling.maximumOutputUsd)} maximum response charge for ${responseModel})`
+                : ` (the current price for ${responseModel} is not listed)`}
+              . Input tokens cost extra. Structured replies may use the 1,500-token minimum shown
+              here. Prices checked {HOSTED_PRICE_TABLE_CHECKED_AT}.
+            </p>
+          ) : (
+            <p className={styles.help}>Local Ollama replies have no response cap or provider charge.</p>
+          )}
         </div>
         <div className={styles.field}>
           <label className={styles.label}>Cheaper model for routine checks (optional)</label>

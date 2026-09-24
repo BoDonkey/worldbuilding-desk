@@ -1,6 +1,7 @@
 import type {AIProviderId} from '../../../entityTypes';
 import type {LLMProvider, LLMRequest, LLMResponse, LLMContextChunk} from '../types';
 import {PROVIDER_FALLBACK_MODELS} from '../providerConfig';
+import {assertHostedResponseComplete, geminiThinkingConfig} from '../hostedResponsePolicy';
 
 interface GeminiProviderConfig {
   apiKey: string;
@@ -16,6 +17,7 @@ interface GeminiCandidate {
   content?: {
     parts?: GeminiPart[];
   };
+  finishReason?: string;
 }
 
 interface GeminiResponse {
@@ -31,7 +33,7 @@ export class GeminiProvider implements LLMProvider {
 
   constructor(config: GeminiProviderConfig) {
     this.apiKey = config.apiKey;
-    this.model = config.model ?? PROVIDER_FALLBACK_MODELS.gemini ?? 'gemini-2.0-flash';
+    this.model = config.model ?? PROVIDER_FALLBACK_MODELS.gemini ?? 'gemini-2.5-flash-lite';
     this.baseUrl = config.baseUrl ?? 'https://generativelanguage.googleapis.com/v1beta';
   }
 
@@ -39,6 +41,7 @@ export class GeminiProvider implements LLMProvider {
     const model = request.model ?? this.model;
     const endpoint = `${this.baseUrl.replace(/\/$/, '')}/models/${model}:generateContent?key=${encodeURIComponent(this.apiKey)}`;
 
+    const thinkingConfig = geminiThinkingConfig(model, request.maxTokens ?? 4096);
     const body = {
       systemInstruction: {
         parts: [{text: this.buildSystemPrompt(request.context, request.systemPrompt)}]
@@ -51,7 +54,8 @@ export class GeminiProvider implements LLMProvider {
         })),
       generationConfig: {
         temperature: request.temperature ?? 0.7,
-        maxOutputTokens: request.maxTokens ?? 4096
+        maxOutputTokens: request.maxTokens ?? 4096,
+        ...(thinkingConfig ? {thinkingConfig} : {})
       }
     };
 
@@ -67,6 +71,7 @@ export class GeminiProvider implements LLMProvider {
     }
 
     const data = (await response.json()) as GeminiResponse;
+    assertHostedResponseComplete('gemini', data.candidates?.[0]?.finishReason);
     const content =
       data.candidates?.[0]?.content?.parts
         ?.map((part) => part.text ?? '')

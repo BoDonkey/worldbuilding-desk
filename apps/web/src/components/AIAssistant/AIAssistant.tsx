@@ -485,10 +485,13 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
       );
     } catch (error) {
       console.error('AI request failed:', error);
-      setMessages((prev) => [
-        ...prev,
-        {role: 'assistant', content: 'Error: Failed to generate response.'}
-      ]);
+      const message = describeError(error, 'The assistant could not generate a response.');
+      setMessages((prev) => {
+        const last = prev[prev.length - 1];
+        return last?.role === 'assistant'
+          ? [...prev.slice(0, -1), {...last, content: message}]
+          : [...prev, {role: 'assistant', content: message}];
+      });
     } finally {
       setIsStreaming(false);
       announceStatus('Assistant reply finished.');
@@ -638,10 +641,13 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
       );
     } catch (error) {
       console.error('Writing coach request failed:', error);
-      setMessages((prev) => [
-        ...prev,
-        {role: 'assistant', content: 'The writing coach could not be reached. Try again.'}
-      ]);
+      const message = describeError(error, 'The writing coach could not be reached. Try again.');
+      setMessages((prev) => {
+        const last = prev[prev.length - 1];
+        return last?.role === 'assistant'
+          ? [...prev.slice(0, -1), {...last, content: message}]
+          : [...prev, {role: 'assistant', content: message}];
+      });
     } finally {
       setIsStreaming(false);
       announceStatus('Assistant reply finished.');

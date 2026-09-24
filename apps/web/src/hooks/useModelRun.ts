@@ -76,6 +76,9 @@ export function useModelRun(): UseModelRun {
       }
     } catch (error) {
       if (!controller.signal.aborted) {
+        // A provider can report a hard-cap stop only after partial text has streamed. Clear that
+        // incomplete text so it cannot be mistaken for, parsed as, or saved as a complete reply.
+        onUpdate?.(splitModelOutput(''));
         setStatus('error');
         setElapsedMs(Date.now() - startedAtRef.current);
         throw error;

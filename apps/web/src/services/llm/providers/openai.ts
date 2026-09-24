@@ -1,6 +1,7 @@
 import type {AIProviderId} from '../../../entityTypes';
 import type {LLMProvider, LLMRequest, LLMResponse, LLMContextChunk} from '../types';
 import {PROVIDER_FALLBACK_MODELS} from '../providerConfig';
+import {assertHostedResponseComplete, openAIUsesReasoning} from '../hostedResponsePolicy';
 
 interface OpenAIProviderConfig {
   apiKey: string;
@@ -45,6 +46,7 @@ export class OpenAIProvider implements LLMProvider {
 
     const data = await response.json();
     const choice = data.choices?.[0];
+    assertHostedResponseComplete('openai', choice?.finish_reason);
 
     return {
       content: choice?.message?.content ?? '',
@@ -77,6 +79,7 @@ export class OpenAIProvider implements LLMProvider {
     const reader = response.body.getReader();
     const decoder = new TextDecoder();
     let buffer = '';
+    let finishReason: unknown;
 
     while (true) {
       const {done, value} = await reader.read();
@@ -97,6 +100,7 @@ export class OpenAIProvider implements LLMProvider {
 
         try {
           const parsed = JSON.parse(data);
+          finishReason = parsed.choices?.[0]?.finish_reason ?? finishReason;
           const delta: string | undefined =
             parsed.choices?.[0]?.delta?.content ?? undefined;
           if (delta) {
@@ -107,16 +111,20 @@ export class OpenAIProvider implements LLMProvider {
         }
       }
     }
+    assertHostedResponseComplete('openai', finishReason);
   }
 
   private buildPayload(request: LLMRequest, stream: boolean) {
     const systemPrompt = this.buildSystemPrompt(request.context, request.systemPrompt);
     const messages = this.buildMessages(systemPrompt, request.messages);
 
+    const model = request.model ?? this.model;
+    const reasoning = openAIUsesReasoning(model);
     return {
-      model: request.model ?? this.model,
-      temperature: request.temperature ?? 0.7,
-      max_tokens: request.maxTokens ?? 4096,
+      model,
+      ...(!reasoning ? {temperature: request.temperature ?? 0.7} : {}),
+      max_completion_tokens: request.maxTokens ?? 4096,
+      ...(reasoning ? {reasoning_effort: 'low'} : {}),
       stream,
       ...(request.responseFormat === 'json'
         ? {response_format: {type: 'json_object'}}

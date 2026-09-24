@@ -120,5 +120,11 @@ describe('AI consultation budget', () => {
         cy.contains('li', 'Writing coach').should('contain.text', '1');
         cy.contains('li', 'Canon decisions').should('contain.text', '1');
       });
+
+    cy.get('[data-testid="hosted-response-cost-ceiling"]')
+      .should('be.visible')
+      .and('contain.text', 'maximum response charge')
+      .and('contain.text', 'Input tokens cost extra')
+      .and('contain.text', '1,500-token minimum');
   });
 });

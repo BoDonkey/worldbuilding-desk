@@ -6,6 +6,7 @@ import type {
   LLMContextChunk
 } from '../types';
 import {PROVIDER_FALLBACK_MODELS} from '../providerConfig';
+import {assertHostedResponseComplete} from '../hostedResponsePolicy';
 
 interface AnthropicProviderConfig {
   apiKey: string;
@@ -57,6 +58,7 @@ export class AnthropicProvider implements LLMProvider {
     }
 
     const data = await response.json();
+    assertHostedResponseComplete('anthropic', data.stop_reason);
 
     return {
       content: data.content[0].text,
@@ -95,22 +97,25 @@ export class AnthropicProvider implements LLMProvider {
 
     const reader = response.body!.getReader();
     const decoder = new TextDecoder();
+    let stopReason: unknown;
+    let buffer = '';
 
     while (true) {
       const {done, value} = await reader.read();
       if (done) break;
 
-      const chunk = decoder.decode(value);
-      const lines = chunk
-        .split('\n')
-        .filter((line) => line.trim().startsWith('data:'));
+      buffer += decoder.decode(value, {stream: true});
+      const lines = buffer.split('\n');
+      buffer = lines.pop() ?? '';
 
       for (const line of lines) {
+        if (!line.trim().startsWith('data:')) continue;
         const data = line.replace(/^data: /, '');
         if (data === '[DONE]') continue;
 
         try {
           const parsed = JSON.parse(data);
+          if (parsed.type === 'message_delta') stopReason = parsed.delta?.stop_reason;
           if (parsed.type === 'content_block_delta' && parsed.delta?.text) {
             yield parsed.delta.text;
           }
@@ -119,6 +124,7 @@ export class AnthropicProvider implements LLMProvider {
         }
       }
     }
+    assertHostedResponseComplete('anthropic', stopReason);
   }
 
   private buildSystemPrompt(

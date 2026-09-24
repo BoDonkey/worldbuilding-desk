@@ -5,13 +5,13 @@ export const DEFAULT_AI_PROVIDER: AIProviderId = 'ollama';
 export const PROVIDER_FALLBACK_MODELS: Partial<Record<AIProviderId, string>> = {
   anthropic: 'claude-sonnet-4-20250514',
   openai: 'gpt-4o-mini',
-  gemini: 'gemini-2.0-flash'
+  gemini: 'gemini-2.5-flash-lite'
 };
 
 export const PROVIDER_MODEL_PLACEHOLDERS: Record<AIProviderId, string> = {
   anthropic: 'e.g., claude-sonnet-4-20250514',
   openai: 'e.g., gpt-4o-mini',
-  gemini: 'e.g., gemini-2.0-flash',
+  gemini: 'e.g., gemini-2.5-flash-lite',
   ollama: 'Leave blank to auto-detect an installed local model'
 };
 

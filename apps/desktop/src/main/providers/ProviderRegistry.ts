@@ -38,6 +38,42 @@ export interface CompletionAdapter {
   complete(): Promise<string>;
 }
 
+const HOSTED_RESPONSE_LIMIT_MESSAGE =
+  "The provider stopped at this project's response limit, so no complete answer was used. Raise Max response tokens in Settings and try again.";
+
+function assertHostedResponseComplete(
+  provider: 'anthropic' | 'openai',
+  reason: unknown
+) {
+  const normalized = typeof reason === 'string' ? reason.toLowerCase() : '';
+  if (
+    (provider === 'anthropic' && normalized === 'max_tokens') ||
+    (provider === 'openai' && normalized === 'length')
+  ) {
+    throw new Error(HOSTED_RESPONSE_LIMIT_MESSAGE);
+  }
+}
+
+function openAIUsesReasoning(model: string): boolean {
+  return /^(o\d|gpt-[5-9](?:\.|-|$))/.test(model.toLowerCase());
+}
+
+function buildOpenAIRequest(config: ProviderConfig, stream: boolean) {
+  const model = config.request.model ?? 'gpt-4o-mini';
+  const reasoning = openAIUsesReasoning(model);
+  return {
+    model,
+    ...(!reasoning ? {temperature: config.request.temperature ?? 0.7} : {}),
+    max_completion_tokens: config.request.maxTokens ?? 4096,
+    ...(reasoning ? {reasoning_effort: 'low'} : {}),
+    ...(config.request.responseFormat === 'json'
+      ? {response_format: {type: 'json_object'}}
+      : {}),
+    stream,
+    messages: buildMessagesWithSystem(config.request)
+  };
+}
+
 export function buildOllamaChatPayload(config: ProviderConfig, stream: boolean) {
   const options: Record<string, number> = {};
   if (typeof config.request.maxTokens === 'number') {
@@ -107,6 +143,7 @@ export class AnthropicStreamingAdapter implements StreamingAdapter {
     const reader = response.body.getReader();
     const decoder = new TextDecoder();
     let buffer = '';
+    let stopReason: unknown;
 
     while (true) {
       const {done, value} = await reader.read();
@@ -125,6 +162,7 @@ export class AnthropicStreamingAdapter implements StreamingAdapter {
 
         try {
           const parsed = JSON.parse(data);
+          if (parsed.type === 'message_delta') stopReason = parsed.delta?.stop_reason;
           if (parsed.type === 'content_block_delta' && parsed.delta?.text) {
             yield parsed.delta.text;
           }
@@ -133,6 +171,7 @@ export class AnthropicStreamingAdapter implements StreamingAdapter {
         }
       }
     }
+    assertHostedResponseComplete('anthropic', stopReason);
   }
 
   private buildMessages() {
@@ -178,6 +217,7 @@ export class AnthropicCompletionAdapter implements CompletionAdapter {
     }
 
     const data = await response.json();
+    assertHostedResponseComplete('anthropic', data.stop_reason);
     return Array.isArray(data.content)
       ? data.content
           .map((part: {type?: unknown; text?: unknown}) =>
@@ -216,13 +256,7 @@ export class OpenAIStreamingAdapter implements StreamingAdapter {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${this.config.apiKey}`
       },
-      body: JSON.stringify({
-        model: this.config.request.model ?? 'gpt-4o-mini',
-        temperature: this.config.request.temperature ?? 0.7,
-        max_tokens: this.config.request.maxTokens ?? 4096,
-        stream: true,
-        messages: this.buildMessages()
-      })
+      body: JSON.stringify(buildOpenAIRequest(this.config, true))
     });
 
     if (!response.ok || !response.body) {
@@ -232,6 +266,7 @@ export class OpenAIStreamingAdapter implements StreamingAdapter {
     const reader = (response.body as ReadableStream<Uint8Array>).getReader();
     const decoder = new TextDecoder();
     let buffer = '';
+    let finishReason: unknown;
 
     while (true) {
       const {done, value} = await reader.read();
@@ -252,6 +287,7 @@ export class OpenAIStreamingAdapter implements StreamingAdapter {
 
         try {
           const parsed = JSON.parse(data);
+          finishReason = parsed.choices?.[0]?.finish_reason ?? finishReason;
           const delta: string | undefined =
             parsed.choices?.[0]?.delta?.content ?? undefined;
           if (delta) {
@@ -262,11 +298,9 @@ export class OpenAIStreamingAdapter implements StreamingAdapter {
         }
       }
     }
+    assertHostedResponseComplete('openai', finishReason);
   }
 
-  private buildMessages() {
-    return buildMessagesWithSystem(this.config.request);
-  }
 }
 
 export class OpenAICompletionAdapter implements CompletionAdapter {
@@ -288,13 +322,7 @@ export class OpenAICompletionAdapter implements CompletionAdapter {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${this.config.apiKey}`
       },
-      body: JSON.stringify({
-        model: this.config.request.model ?? 'gpt-4o-mini',
-        temperature: this.config.request.temperature ?? 0.7,
-        max_tokens: this.config.request.maxTokens ?? 4096,
-        stream: false,
-        messages: buildMessagesWithSystem(this.config.request)
-      })
+      body: JSON.stringify(buildOpenAIRequest(this.config, false))
     });
 
     if (!response.ok) {
@@ -302,6 +330,7 @@ export class OpenAICompletionAdapter implements CompletionAdapter {
     }
 
     const data = await response.json();
+    assertHostedResponseComplete('openai', data.choices?.[0]?.finish_reason);
     return data.choices?.[0]?.message?.content ?? '';
   }
 }
