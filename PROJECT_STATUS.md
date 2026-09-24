@@ -172,8 +172,17 @@ Under the hood, the app still includes rich systems for world data, rules, chara
   keeps the latest reply's thinking readable; it is never saved, indexed,
   parsed as output, or sent back to the model, and answers never contain
   `<think>` text. Local (Ollama) runs send no response-token cap and no longer
-  force thinking off; hosted providers keep the configured cap (4.41 revisits
-  it as a cost ceiling).
+  force thinking off.
+- Hosted Anthropic, OpenAI, and Gemini runs use the project response limit as
+  a hard response-cost ceiling, including hidden reasoning/thinking tokens.
+  Settings shows the largest effective token cap and the maximum response-only
+  charge when the exact model is in a dated maintained price table; unknown
+  models are never assigned a guessed price, and input cost is clearly
+  separate. Provider-specific policy keeps hidden thinking off or low,
+  OpenAI reasoning models use `max_completion_tokens`, and all three providers
+  detect cap stops. An incomplete capped reply is cleared, never parsed or
+  saved, and the author is told how to raise the limit. The default Gemini
+  fallback is now the priced `gemini-2.5-flash-lite`.
 - Lore Documents are now framed as source-note intake rather than a parallel canon database, with manual writing, dossier import, and extraction paths kept separate from accepted canon.
 - World Bible records can create or open a linked Lore Document for longform source notes, and Lore Documents can navigate back to the linked World Bible record.
 - Lore Documents now has a project context health panel that shows RAG document/chunk counts, indexed document type counts, Shodh memory counts, project data counts, and a retrieval probe.

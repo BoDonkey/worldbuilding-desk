@@ -1,3 +1,7 @@
+> **Archived 2026-09-24.** Slice 4.41 implemented this plan in `910b7a0`.
+> Durable product behavior now lives in `docs/product-blueprint.md`; current
+> implementation truth lives in `PROJECT_STATUS.md`.
+
 # Hosted Response Limits — Slice 4.41 Plan
 
 **Status:** Accepted for implementation, 2026-09-24  
@@ -71,4 +75,3 @@ and already fall inside the response ceiling.
 - Component coverage for the Settings explanation and unknown-price state.
 - Full repository verification battery. Cypress is required because Settings
   is routed UI; add a focused assertion for the hosted cost ceiling.
-

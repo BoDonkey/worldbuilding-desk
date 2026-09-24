@@ -86,6 +86,25 @@ work. An author who means to keep going must always be able to keep going.
   account. Clearing site data resets it, and that is acceptable for a guard
   rail rather than an entitlement.
 
+### Hosted response cost ceiling
+
+Hosted requests keep one project-level response-token limit as a hard ceiling
+on generated output, including billed reasoning or thinking tokens. Settings
+states the largest effective cap (including the fixed 1,500-token floor used
+by schema-heavy replies) and the worst-case response charge for an exact model
+in the dated, maintained price table. This is explicitly a response-only
+estimate: input tokens cost extra. Unknown or custom models retain the token
+ceiling but show no guessed price.
+
+Provider policy minimizes hidden output within that ceiling: Anthropic
+thinking is not enabled, OpenAI reasoning families use low effort and
+`max_completion_tokens`, Gemini 2.5 Flash disables thinking, Gemini 2.5 Pro
+gets its minimum allowance when the cap can contain it, and Gemini 3+ uses low
+thinking. If Anthropic, OpenAI, or Gemini reports that the ceiling stopped the
+reply, the app discards the incomplete result and tells the author to raise
+**Max response tokens** in Settings. Local Ollama remains uncapped and
+unpriced.
+
 ## Positioning
 
 Against general AI writing tools (which optimize for generation speed and

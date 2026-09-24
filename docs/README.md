@@ -94,10 +94,6 @@ Other files:
   architecture research for roadmap Slice 5.7. It compares Paddle and Creem,
   records a conditional sandbox recommendation and decision gates, and does
   not claim the slice or select a production provider.
-- `docs/hosted-response-limits-plan.md` — accepted implementation plan for
-  roadmap Slice 4.41: hosted response-cost ceilings, provider thinking policy,
-  cut-off detection, and the maintained price-table boundary. Archive it after
-  the slice lands and its durable behavior is folded into the authorities.
 
 ## Archive
 
@@ -112,6 +108,9 @@ the full-length originals behind the 2026-08-01 consolidation:
   `docs/road-to-market.md` Phases 0, 2, and 3.
 - `code-fitness-report-2026-08-07.md` — current fitness close-out (grade A);
   the superseded 2026-08-01 A− baseline remains beside it for comparison.
+- `hosted-response-limits-plan-2026-09-24.md` — implemented Slice 4.41 plan
+  for hosted response-cost ceilings, provider thinking policy, cut-off
+  detection, and the maintained price-table boundary.
 - `freeform-lore-ingestion-architecture.md`, `canon-decision-workflow.md`,
   `customizable-state-model-spec.md`, `ai-assisted-item-authoring.md` — full
   design rationale behind `docs/domain-model.md`.
