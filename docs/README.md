@@ -94,6 +94,10 @@ Other files:
   architecture research for roadmap Slice 5.7. It compares Paddle and Creem,
   records a conditional sandbox recommendation and decision gates, and does
   not claim the slice or select a production provider.
+- `docs/hosted-response-limits-plan.md` — accepted implementation plan for
+  roadmap Slice 4.41: hosted response-cost ceilings, provider thinking policy,
+  cut-off detection, and the maintained price-table boundary. Archive it after
+  the slice lands and its durable behavior is folded into the authorities.
 
 ## Archive
 
