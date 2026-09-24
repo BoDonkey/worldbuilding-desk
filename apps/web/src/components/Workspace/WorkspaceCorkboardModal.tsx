@@ -1,3 +1,4 @@
+import {useEffect, useRef} from 'react';
 import type {RefObject} from 'react';
 import type {ChapterCard, WritingDocument} from '../../entityTypes';
 import type {useWorkspaceCorkboard} from '../../hooks/useWorkspaceCorkboard';
@@ -11,6 +12,8 @@ interface WorkspaceCorkboardModalProps {
   corkboard: ReturnType<typeof useWorkspaceCorkboard>;
   documents: WritingDocument[];
   currentDocumentId?: string;
+  focusCardId?: string | null;
+  onFocusCardHandled?: () => void;
   onClose: () => void;
   onOpenScratchpad: () => void;
   onCurrentSceneAction: (message: string) => void;
@@ -20,10 +23,12 @@ interface WorkspaceCorkboardModalProps {
 
 export const WorkspaceCorkboardModal = ({
   isOpen, dialogRef, corkboard, documents, currentDocumentId,
+  focusCardId, onFocusCardHandled,
   onClose, onOpenScratchpad, onCurrentSceneAction,
   onCreateLinkedScene, creatingLinkedSceneCardId
 }: WorkspaceCorkboardModalProps) => {
-  if (!isOpen) return null;
+  const cardElementsRef = useRef(new Map<string, HTMLElement>());
+  const cardTitleInputsRef = useRef(new Map<string, HTMLInputElement>());
   const {
     corkboardCards: cards, corkboardStatus: status,
     corkboardLastSavedAt: lastSavedAt, corkboardPlotPointCount,
@@ -31,6 +36,19 @@ export const WorkspaceCorkboardModal = ({
     moveCorkboardCard, addCorkboardPlotPoint, updateCorkboardPlotPoint,
     deleteCorkboardPlotPoint, moveCorkboardPlotPoint
   } = corkboard;
+  useEffect(() => {
+    if (!isOpen || !focusCardId) return;
+    const cardElement = cardElementsRef.current.get(focusCardId);
+    const titleInput = cardTitleInputsRef.current.get(focusCardId);
+    if (!cardElement || !titleInput) return;
+    window.requestAnimationFrame(() => {
+      cardElement.scrollIntoView?.({block: 'center'});
+      titleInput.focus();
+      onFocusCardHandled?.();
+    });
+  }, [focusCardId, isOpen, onFocusCardHandled, cards]);
+
+  if (!isOpen) return null;
   const statusLabel = status === 'loading'
     ? 'Loading corkboard...'
     : status === 'saving'
@@ -76,11 +94,23 @@ export const WorkspaceCorkboardModal = ({
         ) : (
           <div className={styles.corkboardCardList}>
             {cards.map((card, index) => (
-              <section key={card.id} className={styles.corkboardCard}>
+              <section
+                key={card.id}
+                ref={(node) => {
+                  if (node) cardElementsRef.current.set(card.id, node);
+                  else cardElementsRef.current.delete(card.id);
+                }}
+                className={styles.corkboardCard}
+              >
                 <div className={styles.corkboardCardHeader}>
                   <div className={styles.corkboardCardTitleRow}>
                     <span className={styles.corkboardCardIndex}>Card {index + 1}</span>
-                    <input type='text' value={card.title}
+                    <input
+                      ref={(node) => {
+                        if (node) cardTitleInputsRef.current.set(card.id, node);
+                        else cardTitleInputsRef.current.delete(card.id);
+                      }}
+                      type='text' value={card.title}
                       onChange={(event) => updateCorkboardCard(card.id, {title: event.target.value})}
                       placeholder='Chapter or sequence title' className={styles.corkboardTitleInput} />
                   </div>

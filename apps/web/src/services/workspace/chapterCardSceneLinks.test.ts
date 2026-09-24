@@ -3,6 +3,7 @@ import type {ChapterCard, WritingDocument} from '../../entityTypes';
 import {
   addSceneLink,
   deriveLinkedSceneTitle,
+  findCardsForScene,
   removeSceneLink,
   resolveSceneLinks,
   toggleSceneLink
@@ -47,5 +48,17 @@ describe('chapter card scene links', () => {
     );
     expect(result.linked.map((item) => item.id)).toEqual(['scene-2', 'scene-1']);
     expect(result.missingSceneIds).toEqual(['missing']);
+  });
+
+  it('finds every card linked by an explicit scene id only', () => {
+    const cards = [
+      card(['scene-1']),
+      {...card(['scene-2', 'scene-1', 'scene-1']), id: 'card-2', title: 'Second'},
+      {...card(), id: 'card-3', title: 'scene-1'}
+    ];
+
+    expect(findCardsForScene(cards, 'scene-1').map((item) => item.id))
+      .toEqual(['card-1', 'card-2']);
+    expect(findCardsForScene(cards, 'missing')).toEqual([]);
   });
 });

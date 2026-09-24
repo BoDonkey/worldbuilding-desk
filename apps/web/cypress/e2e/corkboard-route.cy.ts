@@ -164,7 +164,7 @@ describe('Corkboard route', () => {
     cy.get('.tiptap[contenteditable="true"]').should('contain.text', 'Alpha content');
 
     cy.contains('h1', 'Writing Workspace').should('be.visible');
-    cy.contains('button', /^Corkboard$/).first().click();
+    cy.get('button[aria-label="Open quick Corkboard"]').click();
     cy.get('[role="dialog"][aria-label="Project corkboard"]').within(() => {
       cy.get('input[value="Moonlit Betrayal"]').should('be.visible');
       cy.contains('textarea', 'The alliance breaks at the river crossing.').should('be.visible');

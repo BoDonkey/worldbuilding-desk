@@ -43,6 +43,14 @@ export function resolveSceneLinks(
   };
 }
 
+/** Finds cards linked by the scene's explicit id. Titles and card order are not inferred. */
+export function findCardsForScene(
+  cards: ChapterCard[],
+  sceneId: string
+): ChapterCard[] {
+  return cards.filter((card) => uniqueSceneIds(card.sceneIds).includes(sceneId));
+}
+
 export function deriveLinkedSceneTitle(card: ChapterCard, linkedCount: number): string {
   const baseTitle = card.title.trim() || 'Untitled scene';
   return linkedCount > 0 ? `${baseTitle} — Scene ${linkedCount + 1}` : baseTitle;

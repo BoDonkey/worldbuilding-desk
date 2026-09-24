@@ -1680,6 +1680,39 @@
   max-height: 82vh;
 }
 
+.workspaceHeaderMeta {
+  display: block;
+}
+
+.chapterCardContext {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  margin-top: 0.3rem;
+  color: var(--color-text-secondary);
+}
+
+.chapterCardContext > button,
+.chapterCardContextChip {
+  min-height: auto;
+  padding: 0.2rem 0.5rem;
+  border: 1px solid var(--button-border);
+  border-radius: 999px;
+  background: var(--button-bg);
+  color: var(--button-text);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+}
+
+.chapterCardContextChips {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+  flex-basis: 100%;
+}
+
 .corkboardModalCard {
   padding: 1.1rem;
   width: min(960px, 96vw);
@@ -2389,6 +2422,10 @@
 }
 
 @media (max-width: 760px) {
+  .chapterCardContext {
+    align-items: flex-start;
+  }
+
   .corkboardCardFields {
     grid-template-columns: 1fr;
   }

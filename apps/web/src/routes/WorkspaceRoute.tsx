@@ -53,6 +53,7 @@ import {useAppStore} from '../store/appStore';
 import {WorkspaceContextDrawer} from '../components/Workspace/WorkspaceContextDrawer';
 import {WorkspaceDrawerLayout} from '../components/Workspace/WorkspaceDrawerLayout';
 import {WorkspaceCorkboardModal} from '../components/Workspace/WorkspaceCorkboardModal';
+import {WorkspaceChapterCardContext} from '../components/Workspace/WorkspaceChapterCardContext';
 import {WorkspaceScratchpadModal} from '../components/Workspace/WorkspaceScratchpadModal';
 import {WorkspaceExportModal} from '../components/Workspace/WorkspaceExportModal';
 import {WorkspaceMemoryModal} from '../components/Workspace/WorkspaceMemoryModal';
@@ -95,6 +96,7 @@ import {
   type PendingPositionedChange
 } from '../hooks/useWorkspaceSceneRoster';
 import {describeError} from '../services/errors';
+import {findCardsForScene} from '../services/workspace/chapterCardSceneLinks';
 
 declare global {
   interface Window {
@@ -151,6 +153,7 @@ function WorkspaceRoute() {
   const [isPromotingDocument, setIsPromotingDocument] = useState(false);
   const [isSyncingCanon, setIsSyncingCanon] = useState(false);
   const [creatingLinkedSceneCardId, setCreatingLinkedSceneCardId] = useState<string | null>(null);
+  const [focusCorkboardCardId, setFocusCorkboardCardId] = useState<string | null>(null);
   const corkboard = useWorkspaceCorkboard(activeProject?.id ?? null);
   const {
     isScratchpadModalOpen,
@@ -240,6 +243,7 @@ function WorkspaceRoute() {
   }, [setCorkboardModalOpen]);
   const closeCorkboardModal = useCallback(() => {
     setCorkboardModalOpen(false);
+    setFocusCorkboardCardId(null);
   }, [setCorkboardModalOpen]);
   const lastAutosaveErrorRef = useRef<string | null>(null);
   const persistDocRef = useRef<Parameters<typeof useWorkspaceDocuments>[0]['persistDocRef']['current']>(null);
@@ -699,6 +703,20 @@ function WorkspaceRoute() {
       setCreatingLinkedSceneCardId(null);
     }
   }, [createLinkedScene, creatingLinkedSceneCardId, showLinkedSceneResult]);
+
+  const linkedChapterCards = useMemo(
+    () => selectedDocument
+      ? findCardsForScene(corkboard.corkboardCards, selectedDocument.id)
+      : [],
+    [corkboard.corkboardCards, selectedDocument]
+  );
+  const handleOpenChapterCard = useCallback((cardId: string) => {
+    setFocusCorkboardCardId(cardId);
+    setCorkboardModalOpen(true);
+  }, [setCorkboardModalOpen]);
+  const handleOpenChapterCardRoute = useCallback((cardId: string) => {
+    navigate('/corkboard', {state: {focusCardId: cardId}});
+  }, [navigate]);
 
   useEffect(() => {
     const state = location.state as {createLinkedSceneCardId?: string} | null;
@@ -1395,10 +1413,15 @@ function WorkspaceRoute() {
         eyebrow='Current manuscript'
         title='Writing Workspace'
         meta={
-          <>
+          <span className={styles.workspaceHeaderMeta}>
             {activeProject.name}
             {selectedDocument ? ` · ${selectedDocument.title || 'Untitled scene'}` : ''}
-          </>
+            <WorkspaceChapterCardContext
+              cards={linkedChapterCards}
+              onOpenCard={handleOpenChapterCard}
+              onOpenCorkboard={handleOpenChapterCardRoute}
+            />
+          </span>
         }
         actions={
           <>
@@ -1928,6 +1951,7 @@ function WorkspaceRoute() {
                   <button
                     type='button'
                     className={styles.drawerTopButton}
+                    aria-label='Open quick Corkboard'
                     onClick={openCorkboardModal}
                   >
                     Corkboard
@@ -2114,6 +2138,8 @@ function WorkspaceRoute() {
         corkboard={corkboard}
         documents={documents}
         currentDocumentId={selectedDocument?.id}
+        focusCardId={focusCorkboardCardId}
+        onFocusCardHandled={() => setFocusCorkboardCardId(null)}
         onClose={closeCorkboardModal}
         onOpenScratchpad={openScratchpadModal}
         onCurrentSceneAction={(message) => pushToast({tone: 'success', message})}

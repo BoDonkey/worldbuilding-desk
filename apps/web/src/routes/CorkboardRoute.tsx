@@ -1,6 +1,6 @@
 import {useEffect, useMemo, useState} from 'react';
 import type {FormEvent} from 'react';
-import {useNavigate} from 'react-router';
+import {useLocation, useNavigate} from 'react-router';
 import type {ChapterCardStatus, PlotPoint} from '../entityTypes';
 import {useAppStore} from '../store/appStore';
 import {useWorkspaceCorkboard} from '../hooks/useWorkspaceCorkboard';
@@ -33,6 +33,7 @@ const getChapterRailStorageKey = (projectId: string) =>
 
 function CorkboardRoute() {
   const navigate = useNavigate();
+  const location = useLocation();
   const activeProject = useAppStore((s) => s.activeProject);
   const projectSettings = useAppStore((s) => s.projectSettings);
   const {
@@ -89,6 +90,18 @@ function CorkboardRoute() {
         : corkboardCards[0].id
     );
   }, [corkboardCards]);
+
+  useEffect(() => {
+    const state = location.state as {focusCardId?: string} | null;
+    const focusCardId = state?.focusCardId;
+    if (!focusCardId || corkboardStatus !== 'saved') return;
+    const card = corkboardCards.find((entry) => entry.id === focusCardId);
+    if (!card) return;
+    setView('planning');
+    setIsChapterRailCollapsed(false);
+    setSelectedCardId(card.id);
+    navigate(location.pathname, {replace: true, state: {}});
+  }, [corkboardCards, corkboardStatus, location.pathname, location.state, navigate]);
 
   const selectedCard = useMemo(
     () => corkboardCards.find((card) => card.id === selectedCardId) ?? null,

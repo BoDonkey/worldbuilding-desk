@@ -31,7 +31,7 @@ describe('Workspace Corkboard scene links', () => {
     }]);
     cy.visit('/workspace');
     cy.contains('label', 'Title').find('input').should('have.value', 'Delta Scene');
-    cy.contains('button', /^Corkboard$/).first().click();
+    cy.get('button[aria-label="Open quick Corkboard"]').click();
     cy.get('[role="dialog"][aria-label="Project corkboard"]').within(() => {
       cy.contains('button', 'New Card').click();
       cy.get('input[placeholder="Chapter or sequence title"]').last().type('Linked Chapter');
@@ -59,7 +59,7 @@ describe('Workspace Corkboard scene links', () => {
     cy.contains('[role="status"]', 'Linked Delta Scene to Linked Chapter.').should('be.visible');
 
     cy.reload();
-    cy.contains('button', /^Corkboard$/).first().click();
+    cy.get('button[aria-label="Open quick Corkboard"]').click();
     cy.get('[role="dialog"][aria-label="Project corkboard"]').within(() => {
       cy.get('input[value="Linked Chapter"]').closest('section').within(() => {
         cy.get('[aria-label="Linked scenes"]').should('contain.text', '+1 more');
@@ -88,7 +88,7 @@ describe('Workspace Corkboard scene links', () => {
     cy.get('[role="dialog"]').contains('button', 'Delete').click();
     cy.contains('[role="status"]', 'Scene deleted.').should('be.visible');
 
-    cy.contains('button', /Corkboard/).first().click();
+    cy.get('button[aria-label="Open quick Corkboard"]').click();
     cy.get('[role="dialog"][aria-label="Project corkboard"]').within(() => {
       cy.get('input[value="Stale Link Chapter"]').closest('section').within(() => {
         cy.contains('Scene no longer exists').should('be.visible');
@@ -118,7 +118,7 @@ describe('Workspace Corkboard scene links', () => {
       plotPoints: [], createdAt: 1, updatedAt: 1
     }]);
     cy.visit('/workspace');
-    cy.contains('button', /^Corkboard$/).first().click();
+    cy.get('button[aria-label="Open quick Corkboard"]').click();
     cy.get('[role="dialog"][aria-label="Project corkboard"]').within(() => {
       cy.get('input[value="Modal Chapter"]').closest('section').within(() => {
         cy.contains('button', 'Create linked scene').click();
@@ -157,5 +157,43 @@ describe('Workspace Corkboard scene links', () => {
     cy.visit('/corkboard');
     cy.get('[aria-label="Draft scenes for Route Chapter"]')
       .contains('label', 'Route Chapter — Scene 2').find('input').should('be.checked');
+  });
+
+  it('round trips from a scene to its focused chapter card and back', () => {
+    putRecords('corkboard_chapter_cards', [
+      {
+        id: 'other-card', projectId: 'cypress-project-1', title: 'Other Chapter',
+        summary: '', status: 'planned', order: 0, sceneIds: ['scene-alpha'],
+        plotPoints: [], createdAt: 1, updatedAt: 1
+      },
+      {
+        id: 'focused-card', projectId: 'cypress-project-1', title: 'Beta Chapter',
+        summary: '', status: 'draft', order: 1, sceneIds: ['scene-beta'],
+        plotPoints: [], createdAt: 2, updatedAt: 2
+      }
+    ]);
+    cy.visit('/workspace');
+    cy.contains('button', /^Scenes$/).first().click();
+    cy.contains('li', 'Beta Scene').contains('span', 'Beta Scene').click();
+
+    cy.get('[aria-label="Chapter card context"]').within(() => {
+      cy.contains('Beta Chapter').should('be.visible');
+      cy.contains('button', 'Open card').click();
+    });
+    cy.get('[role="dialog"][aria-label="Project corkboard"]').within(() => {
+      cy.get('input[value="Beta Chapter"]').should('be.focused');
+      cy.contains('button', 'Done').click();
+    });
+
+    cy.get('[aria-label="Chapter card context"]')
+      .contains('button', 'Corkboard').click();
+    cy.location('pathname').should('eq', '/corkboard');
+    cy.contains('label', 'Title').find('input').should('have.value', 'Beta Chapter');
+    cy.get('[aria-label="Draft scenes for Beta Chapter"]')
+      .contains('button', 'Open scene').click();
+
+    cy.location('pathname').should('eq', '/workspace');
+    cy.contains('label', 'Title').find('input').should('have.value', 'Beta Scene');
+    cy.get('[aria-label="Chapter card context"]').should('contain.text', 'Beta Chapter');
   });
 });

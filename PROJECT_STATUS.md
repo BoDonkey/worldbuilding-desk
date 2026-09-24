@@ -1,6 +1,6 @@
 # Worldbuilding-Desk Project Status
 
-**Last Updated:** September 23, 2026
+**Last Updated:** September 24, 2026
 
 ## Project Overview
 
@@ -188,7 +188,10 @@ Under the hood, the app still includes rich systems for world data, rules, chara
   titles or manuscript order. Either surface can create a normal manuscript
   scene through the Workspace owner and link it to the card in one action;
   failures never delete the created prose and offer an idempotent link-only
-  retry.
+  retry. A linked scene now names its chapter card beneath the Workspace title;
+  one card opens directly in the quick modal with its title focused, while the
+  dedicated Corkboard link selects the same card. Scenes linked to several
+  cards expose a compact expandable chip row without changing editor width.
 - Corkboard chapter-card records are included in project backup snapshots and restore paths.
 - Corkboard now includes a read-only Story Dashboard derived entirely from
   saved manuscript text, accepted state events, configured rules, and explicit
