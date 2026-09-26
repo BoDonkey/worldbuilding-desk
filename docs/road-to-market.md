@@ -271,8 +271,8 @@ and required revisit point, `WIP`, `Done <commit>`.
 | 4.44 | Character scenes, 2–3 characters (CL-3) | 4 | M | — after 4.43 |
 | 4.45 | Character from a rough description (CL-4) | 4 | M | — after 4.42 |
 | 4.46 | Character snapshot service + shared stat card (SP-1) | 4 | S | Done `e9a7017` — pure `characterSnapshot` service (scene opening/cursor/ending or latest, ordered change diff, compact summary) and shared `CharacterStatCard`; scene roster and editor hover card adopted with byte-identical output and markup; lint with 1 baseline warning; 710 web + 6 engine + 12 UI tests; web/desktop builds; Cypress 104/104 |
-| 4.47 | Stat peek from the editor and command palette (SP-2) | 4 | M | WIP |
-| 4.48 | Pinned stat panel across writing and brainstorming (SP-3) | 4 | M | — after 4.47 |
+| 4.47 | Stat peek from the editor and command palette (SP-2) | 4 | M | Done `c94356f` — Cmd/Ctrl+Alt+S and right-click Show stats on a name or alias in Workspace (shared names ask); hover card uses the same card; palette Show stats for… on every route (Workspace peeks at the cursor, elsewhere latest); cards follow stat-block style and scope; all gated on game systems; lint 1 baseline warning; 725 web + 6 engine + 12 UI tests; builds; Cypress 111/111 |
+| 4.48 | Pinned stat panel across writing and brainstorming (SP-3) | 4 | M | WIP |
 | 5.1 | Auto-update decision + implementation | 5 | M | — |
 | 5.2 | Code signing + notarization, both platforms | 5 | M | — |
 | 5.3 | Packaged-app validation + Electron E2E | 5 | M | — |
