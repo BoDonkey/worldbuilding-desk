@@ -94,6 +94,11 @@ Other files:
   architecture research for roadmap Slice 5.7. It compares Paddle and Creem,
   records a conditional sandbox recommendation and decision gates, and does
   not claim the slice or select a production provider.
+- `docs/rules-engine-plan.md` — accepted plan for moving the live
+  manuscript-time state model into `packages/rules-engine` (Slices 3.10–3.11)
+  and later using rules for derived values, proposed follow-up commands, and
+  continuity checks (backlog R3–R5; review finding F3). Archive it after the
+  scheduled slices land and its contracts are folded into the authorities.
 
 ## Archive
 

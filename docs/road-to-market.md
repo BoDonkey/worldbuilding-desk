@@ -205,6 +205,8 @@ and required revisit point, `WIP`, `Done <commit>`.
 | 3.7 | Cypress 15 | 3 | S | Done `8867c2b` — Cypress 15.20.0; binary verified; legacy `Cypress.env()` browser access disabled; CI cache/install flow retained; dev audit 30→29; lint; 271 web + 6 engine + 12 UI tests; web/desktop builds; Cypress 43/43 across 9 specs |
 | 3.8 | TypeScript 7 | 3 | M | Done `8611539` — TypeScript 7.0.2 builds in all four workspaces; TypeScript 6 compatibility API retained for `typescript-eslint`; legacy node resolution migrated; TypeScript 6 stable-ordering parity; lint with 3 baseline warnings; 271 web + 6 engine + 12 UI tests; web/desktop builds; unpacked desktop package; Cypress 43/43 |
 | 3.9 | Dev-audit sweep + fitness close-out | 3 | S | Done `c8d7c78` — grade A; development audit 29→0 and production audit remains 0 via targeted overrides; all 5 architecture targets below 2,000 lines; lint with 3 baseline warnings; 271 web + 6 engine + 12 UI tests; web/desktop builds; Cypress 43/43; [2026-08-07 report](archive/code-fitness-report-2026-08-07.md) |
+| 3.10 | Move live state core into `rules-engine` (R1) | 3 | M | — |
+| 3.11 | Rules-engine hygiene + typed rules (R2) | 3 | S | — |
 | 4.1 | Description-first manual item creation | 4 | S | Done `70fb72f` — focused manual item draft with progressive full-editor disclosure; lint with 3 baseline warnings; 275 web + 6 engine + 12 UI tests; web/desktop builds; Cypress 44/44; desktop/narrow browser checks |
 | 4.2 | Storage schema versioning + migrations | 4 | M | Done `965af19` — separate IndexedDB, project-data, and snapshot schema contracts; ordered project-load migration runner with restorable pre-migration backups including rulesets; newer schemas fail closed before writes; 327 web + 6 engine + 12 UI tests; lint baseline; web/desktop builds; Cypress 47/47 |
 | 4.3 | Internal package namespace rename | 4 | S | Done `1917611` — rules packages renamed to `@worldbuilding-desk/*` across manifests, imports, workspace scripts, Vite resolution, CI, lockfile, and active docs; local workspace links and generated artifacts contain no old scope; web/package lint; root test plus 357 web + 6 engine + 12 UI tests; web/desktop builds; Cypress not required (no routed UI change) |
@@ -509,6 +511,20 @@ _[prompts: archive/fitness-a-work-slices.md § Slices 1–9]_.
   write the new dated fitness report, archive the old one.
 
 Zod 4 stays deferred as its own future migration.
+
+Rules-engine consolidation (from finding F3 of the 2026-09-26 architecture
+review). Full scope and decisions: _[plan: rules-engine-plan.md § R1, § R2]_.
+
+- **3.10** (R1) Move the pure manuscript-time state core (command types and
+  schemas, `CharacterReplayState`, command application, ordering, replay,
+  ruleset validation) into `packages/rules-engine`; persistence stays in web.
+  Behavior-preserving; replay parity across the continuity corpus; web
+  Vitest resolves the package from `src`.
+- **3.11** (R2, after 3.10) Lock down `mathjs` in `FormulaParser`, replace
+  `rules: z.array(z.any())` with `GameRuleSchema` plus a quarantining storage
+  migration, move `StateManager` and wall-clock state to a non-exported
+  `experimental/` path, and add engine tests for formulas, effects, and rule
+  evaluation.
 
 ## Phase 4 — Product Completeness for v1
 
@@ -1485,7 +1501,7 @@ enforcement (a separate author decision if ever wanted), no new persistence.
 
 ## Backlog (valid, not scheduled)
 
-App-wide search beyond current entry points; AI-to-Scratchpad capture and
+Rules-engine R3–R5 (derived values at replay, rule-proposed follow-up commands, rules as continuity validators; revisit after 1.1 dogfooding, see `docs/rules-engine-plan.md`); App-wide search beyond current entry points; AI-to-Scratchpad capture and
 Scratchpad organization; item authoring AI
 slices 2–6 and ruleset-domain adapters; advanced executable rule generation;
 carry weight/encumbrance; nonfiction product; persona/game-engine tool
