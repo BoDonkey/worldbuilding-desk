@@ -108,6 +108,9 @@ the full-length originals behind the 2026-08-01 consolidation:
   `docs/road-to-market.md` Phases 0, 2, and 3.
 - `code-fitness-report-2026-08-07.md` — current fitness close-out (grade A);
   the superseded 2026-08-01 A− baseline remains beside it for comparison.
+- `architecture-review-2026-09-26.md` — dated code health and architecture
+  review (CI, credential storage, rules-engine role, hotspots, canon
+  atomicity) behind the current risk list in `docs/architecture-review.md`.
 - `hosted-response-limits-plan-2026-09-24.md` — implemented Slice 4.41 plan
   for hosted response-cost ceilings, provider thinking policy, cut-off
   detection, and the maintained price-table boundary.

@@ -1,6 +1,6 @@
 # Architecture Reference — Worldbuilding Desk
 
-Last reviewed: 2026-08-30
+Last reviewed: 2026-09-26
 
 ## Purpose
 
@@ -12,8 +12,10 @@ Use:
 - `PROJECT_STATUS.md` for the current implementation snapshot
 - `docs/road-to-market.md` for execution order
 - `docs/domain-model.md` for detailed domain contracts
-- `docs/archive/architecture-review-2026-05-10.md` for the prior point-in-time
-  review and its completed action history
+- `docs/archive/architecture-review-2026-09-26.md` for the latest
+  point-in-time code health review and its evidence
+- `docs/archive/architecture-review-2026-05-10.md` for the earlier
+  point-in-time review and its completed action history
 
 ## System Shape
 
@@ -215,14 +217,29 @@ every visual detail.
 
 ## Current Architecture Risks
 
-1. Several route components still own too much workflow state and orchestration.
-2. Provider capabilities are not yet normalized behind one proposal/action
+1. CI does not reproduce local verification: the rules packages are consumed
+   through `dist/` but not built before web unit tests, so `main` fails from a
+   clean checkout.
+2. Provider API keys are stored in plaintext renderer `localStorage` and sent
+   over IPC with an unvalidated `baseUrl`; the renderer has no CSP. Keys
+   should be held by the main process (`safeStorage`) and provider endpoints
+   constrained by a scheme/host policy.
+3. The `rules-engine` runtime (`RulesEngine`, `StateManager`, effects,
+   formulas) is not used by the app; live character state is the
+   event-sourced model in `apps/web/src/services/state/`. Authored `GameRule`
+   records are never executed and remain `z.any()` in the schema. The package
+   role needs a decision before advanced mechanics or AI generation build on
+   it.
+4. Several route components and `useWorkspaceConsistency` still own too much
+   workflow state and orchestration, and are growing again.
+5. Multi-record canon acceptance writes are not transactional.
+6. Provider capabilities are not yet normalized behind one proposal/action
    contract.
-3. Ruleset collections still contain weakly typed areas that should be tightened
-   before advanced AI generation.
-4. Electron and transformer dependencies need supported upgrade paths.
-5. Some assistant/retrieval behavior still needs realistic provenance testing.
+7. Electron and transformer dependencies need supported upgrade paths; the
+   desktop package has no tests or lint.
+8. Some assistant/retrieval behavior still needs realistic provenance testing.
 
+Evidence for 1–5 and 7: `docs/archive/architecture-review-2026-09-26.md`.
 These risks are prioritized and scheduled in `docs/road-to-market.md`.
 
 ## Change Rule

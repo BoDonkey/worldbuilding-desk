@@ -14,6 +14,7 @@
     "craft-library:check": "node scripts/build-craft-library.mjs --check",
     "lint": "eslint \"src/**/*.{ts,tsx}\"",
     "lint:fix": "eslint \"src/**/*.{ts,tsx}\" --fix",
+    "pretest:unit": "pnpm --filter @worldbuilding-desk/rules-ui... build",
     "test:unit": "vitest run",
     "preview": "vite preview",
     "e2e:open": "cypress open",
