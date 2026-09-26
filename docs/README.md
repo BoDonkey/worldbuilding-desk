@@ -94,6 +94,11 @@ Other files:
   architecture research for roadmap Slice 5.7. It compares Paddle and Creem,
   records a conditional sandbox recommendation and decision gates, and does
   not claim the slice or select a production provider.
+- `docs/character-lab-plan.md` — accepted plan for the character lab
+  (Slices 4.42–4.45: grounded character talk, reaction tests, character
+  scenes, character-from-description) and optional encrypted backups (5.14).
+  Archive it after the slices land and their behavior is folded into the
+  authorities.
 - `docs/rules-engine-plan.md` — accepted plan for moving the live
   manuscript-time state model into `packages/rules-engine` (Slices 3.10–3.11)
   and later using rules for derived values, proposed follow-up commands, and

@@ -30,7 +30,8 @@ Bible, progressively disclosed optional mechanics, accessible dialogs/nav,
 packaged + signed installers for macOS and Windows, auto-update, storage
 schema versioning, first-run onboarding with a sample project, trial/license
 gate, a help/docs baseline, and — added 2026-08-29 — the derived story
-dashboard and the writing coach described below.
+dashboard and the writing coach described below, and — added 2026-09-26 —
+the character lab.
 
 **Privacy promise.** Project data and manuscripts are stored locally.
 Worldbuilding Desk does not send diagnostic telemetry and does not use author
@@ -48,11 +49,19 @@ the size of v1 stays visible: v1 now includes a curated content asset and a new
 analysis surface, not only the trust pipeline and the release-engineering work.
 The trade was made deliberately, not by drift.
 
+**v1 scope change, 2026-09-26.** The author brought in a working standalone
+prototype for talking to characters, testing their reactions, and running
+short multi-character scenes, and chose to schedule it rather than defer it.
+The character lab (4.42–4.45) and optional encrypted backups (5.14) move into
+v1; persona tool ecosystems beyond the lab and game-engine narration stay
+post-v1. Plan: `docs/character-lab-plan.md`.
+
 Explicitly **post-v1**: AI item-authoring slices beyond the manual
 description-first path, ruleset-domain adapters, app-wide search expansion,
 Scratchpad organization, *authored* Corkboard expansion (the *derived*
 dashboard panels of 4.19 are v1), executable ruleset generation, carry
-weight/encumbrance, nonfiction product work, persona/game-engine ecosystems,
+weight/encumbrance, nonfiction product work, persona/game-engine ecosystems
+beyond the character lab,
 Zod 4 migration, and the craft library beyond tranche 1 (which continues as a
 parallel content track rather than a release gate).
 
@@ -145,6 +154,7 @@ pnpm --filter web e2e:run       # for slices touching routed UI
    starting. Respect phase ordering and the noted dependencies (2.2 after
    2.1; 2.7 after 2.5; 3.5–3.8 sequentially; 4.5–4.11 after 4.2 with the
    internal ordering noted in Phase 4; 4.12 → 4.13 and 4.14 → 4.15;
+   3.10 → 3.11; 3.10 → 4.42 → 4.43 → 4.44; 4.45 after 4.42;
    Phase 6 strictly ordered).
 2. **Get the full prompt.** Slices marked _[prompt: archive/... § Slice N]_
    have complete, self-contained agent prompts in the archived plan. Use
@@ -255,6 +265,10 @@ and required revisit point, `WIP`, `Done <commit>`.
 | 4.39 | AI consultation budget model + point-of-use explanation | 4 | M | Done `ac84793` — (a) guards runaway loops and surprise spend, never rations deliberate work; (b) one per-project budget with a per-feature record; (c) **author signed off: local Ollama is exempt**, with a separate 200/day runaway guard; (d) every spending action states cost and remainder beside its own button, and an over-budget author adds units for today in place rather than going to Settings. Day boundary moved from UTC to the author's local midnight. Storage moved from per-project-per-day `localStorage` keys (never cleaned up) to one `inspectorBudget:<projectId>` ledger, migrating today's legacy count and sweeping the stale keys. Settings gains the reset time and today's per-feature breakdown. Lint with 1 baseline warning; 611 web (+26) + 6 engine + 12 UI tests; web/desktop builds. Cypress run locally: `cypress/e2e/consultation-budget.cy.ts` (4 specs: point-of-use display, over-budget + in-place grant, local exemption, Settings breakdown) passes after a spec fix to open the collapsed AI Settings section and advanced settings; full suite otherwise green |
 | 4.40 | Local model runs: no response cap, visible thinking, elapsed time, Stop | 4 | L | Done `1749c8f` — one shared run (`useModelRun` + `ModelRunProgress` + `splitModelOutput`) behind the assistant, both coaches, progression continuity, canon decisions, and brainstorming: phase, elapsed time, live collapsible thinking, Stop, and "Show thinking" for the latest reply (never saved or sent back); answers never contain `<think>` text. Local runs send no cap and no longer force thinking off; hosted keep the cap (4.41). Stop cancels the provider request in desktop through a new `llm:stream:cancel` IPC. Real-model check with no cap: qwen3.8 10 ideas in 5:05 (thinking visible from 16 s), writer 10 in 6:34. Lint with 1 baseline warning; 655 web (+12) + 6 engine + 12 UI tests; web/desktop builds; Cypress 93/93 |
 | 4.41 | Hosted response limits as a cost ceiling (plan, then build) | 4 | M | Done `910b7a0` — dated maintained exact-model price table and Settings response-only ceiling (including the 1,500-token structured-reply floor); unknown models never get guessed prices; Anthropic thinking stays off, OpenAI reasoning uses low effort plus `max_completion_tokens`, Gemini applies model-family allowances; all hosted adapters detect cap stops and discard incomplete streamed or ordinary replies with an actionable limit message; Gemini fallback updated to 2.5 Flash-Lite. Lint with 1 baseline warning; 696 web + 6 engine + 12 UI tests; web/desktop builds; Cypress 104/104. [Plan](archive/hosted-response-limits-plan-2026-09-24.md). |
+| 4.42 | Character voice contract (CL-1) | 4 | S | — after 3.10 |
+| 4.43 | Talk to a character + reaction test (CL-2) | 4 | M | — after 4.42 |
+| 4.44 | Character scenes, 2–3 characters (CL-3) | 4 | M | — after 4.43 |
+| 4.45 | Character from a rough description (CL-4) | 4 | M | — after 4.42 |
 | 5.1 | Auto-update decision + implementation | 5 | M | — |
 | 5.2 | Code signing + notarization, both platforms | 5 | M | — |
 | 5.3 | Packaged-app validation + Electron E2E | 5 | M | — |
@@ -266,6 +280,7 @@ and required revisit point, `WIP`, `Done <commit>`.
 | 5.9 | Landing page + demo assets | 5 | M | — |
 | 5.10 | Author-facing vocabulary sweep | 5 | XS | Done `69e6559` — string-layer only, behavior-preserving; retires `Shodh`/`RAG`/`Rubber-Duck` from rendered UI including the review's named "Inherit RAG data"/"Inherit memories" inconsistency; source-scanning test guards against regression; lint with 1 baseline warning; 500 web + 6 engine + 12 UI tests; web/desktop builds; Cypress 72/73 ([review](archive/ux-ai-review-2026-08-29.md) §A3) |
 | 5.12 | App-shell toast viewport + status live region | 5 | S | Done `7f303f7` — one app-shell toast viewport (polite, auto-dismiss, repeats replaced) fed by a `RouteFeedback` bridge in all nine routes plus Workspace (errors-as-toast, resolver notice as an action toast); errors elsewhere stay inline as `InlineAlert`; one shared status live region via `useStatusAnnouncement` wired to autosave, review, extraction, migration, and AI streaming; `aria-invalid` on three more validated fields; split recorded in the blueprint; lint with 1 baseline warning; 529 web + 6 engine + 12 UI tests; web/desktop builds; Cypress 75/77 full run (one assertion updated to `role="alert"`, one pre-existing hydration race in `post-merge-smoke`), 18/18 + 2/2 in isolation ([review](archive/ux-ai-review-2026-08-29.md) §A5, §A6) |
+| 5.14 | Optional encrypted backups | 5 | S | — |
 | 6.1 | Beta build + cohort recruitment | 6 | M | — |
 | 6.2 | Beta feedback triage + fix slices | 6 | ? | — |
 | 6.3 | Release-readiness checklist + RC | 6 | M | — |
@@ -1402,6 +1417,27 @@ Anti-goals across all three: no inference from titles or order, no
 summary/beat/status syncing, no status suggestions, no one-card-per-scene
 enforcement (a separate author decision if ever wanted), no new persistence.
 
+### Character lab (4.42–4.45)
+
+Accepted 2026-09-26 from `docs/character-lab-plan.md`, which holds the
+principles, per-slice scope, and tests; read it as the prompt. Lab output is
+creative draft text: it never writes canon, facts, state events, or
+manuscript content without an explicit author action, and grounding is story
+state at a scene position, not per-character knowledge.
+
+- **4.42 Character voice contract** (after 3.10) — plan § 4.42. Read-only
+  context builder (canon record, accepted facts, dialogue style, replayed
+  state at a scene position) plus the shared in-character prompt module.
+  No UI.
+- **4.43 Talk to a character + reaction test** — plan § 4.43. World Bible
+  character page and Workspace drawer; session transcript with Save to
+  Scratchpad.
+- **4.44 Character scenes** — plan § 4.44. 2–3 characters, Directed or
+  Surprise me; Save to Scratchpad or Insert at cursor.
+- **4.45 Character from a rough description** — plan § 4.45. World Bible
+  draft plus fact proposals through existing review; identity resolution on
+  collisions.
+
 ## Phase 5 — Release Engineering
 
 - **5.1 Auto-update.** Decide Squirrel / electron-updater / manual (this
@@ -1480,6 +1516,12 @@ enforcement (a separate author decision if ever wanted), no new persistence.
   `aria-invalid` pattern to the remaining validated fields. Record the
   toast-versus-inline split in the `docs/product-blueprint.md` design system
   section.
+- **5.14 Optional encrypted backups.** An optional passphrase on project
+  backup export (PBKDF2-SHA256 → AES-256-GCM, versioned envelope, passphrase
+  never stored); import detects the envelope, fails closed on a wrong
+  passphrase, and plain backups keep working. Before 6.1 so beta authors can
+  protect backups they move between machines. Plan:
+  `docs/character-lab-plan.md` § 5.14.
 ## Phase 6 — Beta, RC, Launch
 
 - **6.1 Beta.** Signed, auto-updating build to a 10–30 author cohort
