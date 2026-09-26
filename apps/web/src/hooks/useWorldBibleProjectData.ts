@@ -82,6 +82,9 @@ export function useWorldBibleProjectData({
   setFeedback
 }: UseWorldBibleProjectDataOptions) {
   const [categories, setCategories] = useState<EntityCategory[]>([]);
+  // Which project the loaded categories belong to; the route renders before
+  // the first load finishes, and an empty list then means "not loaded yet".
+  const [categoriesProjectId, setCategoriesProjectId] = useState<string | null>(null);
   const [entities, setEntities] = useState<WorldEntity[]>([]);
   const [characters, setCharacters] = useState<Character[]>([]);
   const [characterSheets, setCharacterSheets] = useState<CharacterSheet[]>([]);
@@ -192,6 +195,7 @@ export function useWorldBibleProjectData({
 
       if (!cancelled) {
         setCategories(normalizedCategories);
+        setCategoriesProjectId(projectId);
         setEntities(loadedEntities);
         setAliases(loadedAliases);
         setCharacters(loadedCharacters);
@@ -400,6 +404,7 @@ export function useWorldBibleProjectData({
 
   return {
     categories,
+    categoriesLoaded: activeProject !== null && categoriesProjectId === activeProject.id,
     setCategories,
     entities,
     setEntities,

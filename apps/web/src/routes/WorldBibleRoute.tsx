@@ -158,6 +158,7 @@ function WorldBibleRoute() {
   >(null);
   const {
     categories,
+    categoriesLoaded,
     setCategories,
     entities,
     setEntities,
@@ -1014,6 +1015,7 @@ function WorldBibleRoute() {
       <PortableDataPanel
         project={activeProject}
         categories={worldBibleCategories}
+        categoriesLoaded={categoriesLoaded}
         entities={entities}
         aliases={aliases}
         canonicalFacts={canonicalFacts}

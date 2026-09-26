@@ -40,6 +40,7 @@ interface PortableImportDraft extends PortableMarkdownDraft {
 interface PortableDataPanelProps {
   project: Project;
   categories: EntityCategory[];
+  categoriesLoaded: boolean;
   entities: WorldEntity[];
   aliases: ConsistencyAlias[];
   canonicalFacts: CanonicalFact[];
@@ -122,6 +123,10 @@ export function PortableDataPanel(props: PortableDataPanelProps) {
     });
     return matches;
   }, [drafts, props.aliases, props.entities]);
+
+  const waitingForCategories =
+    !props.categoriesLoaded &&
+    drafts.some((draft) => draft.include && draft.destination === 'world-bible');
 
   const updateDraft = (id: string, updates: Partial<PortableImportDraft>) => {
     setDrafts((current) => current.map((draft) => draft.id === id ? {...draft, ...updates} : draft));
@@ -434,8 +439,17 @@ export function PortableDataPanel(props: PortableDataPanelProps) {
               </li>
             ))}
           </ul>
+          {waitingForCategories && (
+            <p className={styles.importSummary} role='status'>
+              Loading World Bible categories before drafts can be imported...
+            </p>
+          )}
           <div className={styles.importPanelActions}>
-            <button type='button' onClick={() => void handleApply()} disabled={isApplying}>
+            <button
+              type='button'
+              onClick={() => void handleApply()}
+              disabled={isApplying || waitingForCategories}
+            >
               {isApplying ? 'Importing...' : 'Import Selected'}
             </button>
             <button type='button' onClick={() => setDrafts([])} disabled={isApplying}>Clear</button>
