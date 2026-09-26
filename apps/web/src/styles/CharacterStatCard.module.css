@@ -1,5 +1,33 @@
-/* Card-level layout for CharacterStatCard. The shared parts (meters, chips,
-   details) keep the scene roster's styles so the roster renders unchanged. */
+/* CharacterStatCard and its shared parts (meters, chips, full state), which the
+   scene roster also renders. Moved verbatim from the roster's styles. */
+
+.card {
+  padding: 0.72rem;
+  border: 1px solid var(--surface-border-soft);
+  border-radius: 14px;
+  background: var(--surface-panel-elevated);
+}
+
+.identity {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 0.12rem;
+}
+
+.identity > span {
+  overflow: hidden;
+  color: var(--color-text-secondary);
+  font-size: 0.74rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.source {
+  margin: 0.5rem 0;
+  color: var(--color-text-secondary);
+  font-size: 0.7rem;
+}
 
 .header {
   display: flex;
@@ -21,4 +49,146 @@
 
 .statusWindow {
   border-color: var(--color-accent-soft-border);
+}
+
+.resources {
+  display: flex;
+  flex-direction: column;
+  gap: 0.48rem;
+  margin-top: 0.6rem;
+}
+
+.resource > div:first-child {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  color: var(--color-text-secondary);
+  font-size: 0.72rem;
+}
+
+.resource strong {
+  color: var(--color-text-primary);
+}
+
+.meter {
+  height: 0.38rem;
+  margin-top: 0.22rem;
+  overflow: hidden;
+  border: 1px solid var(--surface-border-soft);
+  border-radius: 999px;
+  background: var(--surface-panel);
+}
+
+.meter span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--button-primary-bg);
+}
+
+.chips {
+  display: flex;
+  gap: 0.3rem;
+  flex-wrap: wrap;
+  margin-top: 0.6rem;
+}
+
+.chips span {
+  padding: 0.18rem 0.45rem;
+  border: 1px solid var(--badge-info-border);
+  border-radius: 999px;
+  background: var(--badge-info-bg);
+  color: var(--badge-info-text);
+  font-size: 0.68rem;
+  font-weight: 700;
+}
+
+.details {
+  margin-top: 0.65rem;
+  border-top: 1px solid var(--surface-border-soft);
+  padding-top: 0.55rem;
+}
+
+.details summary {
+  cursor: pointer;
+  color: var(--color-text-secondary);
+  font-size: 0.74rem;
+  font-weight: 700;
+}
+
+.location {
+  margin-top: 0.55rem;
+  color: var(--color-text-secondary);
+  font-size: 0.72rem;
+}
+
+.inventory {
+  margin-top: 0.55rem;
+  padding: 0.5rem;
+  border: 1px solid var(--surface-border-soft);
+  border-radius: 10px;
+  background: var(--surface-panel);
+  color: var(--color-text-secondary);
+  font-size: 0.72rem;
+}
+
+.inventory > strong {
+  display: block;
+  margin-bottom: 0.3rem;
+  color: var(--color-text-primary);
+  font-size: 0.75rem;
+}
+
+.inventory ul {
+  margin: 0;
+  padding-left: 1rem;
+}
+
+.inventory li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.inventory li + li {
+  margin-top: 0.3rem;
+}
+
+.inventory button {
+  flex: 0 0 auto;
+  padding: 0.24rem 0.42rem;
+  font-size: 0.66rem;
+}
+
+.statGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.4rem;
+  margin-top: 0.55rem;
+}
+
+.statGrid > div {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 0.12rem;
+  padding: 0.45rem;
+  border: 1px solid var(--surface-border-soft);
+  border-radius: 10px;
+  background: var(--surface-panel);
+}
+
+.statGrid span {
+  overflow: hidden;
+  color: var(--color-text-secondary);
+  font-size: 0.66rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.statGrid strong {
+  overflow-wrap: anywhere;
+  color: var(--color-text-primary);
+  font-size: 0.8rem;
 }

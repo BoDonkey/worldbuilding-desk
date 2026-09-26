@@ -3,6 +3,24 @@ import {create} from 'zustand';
 import {persist, createJSONStorage} from 'zustand/middleware';
 import type {StateStorage} from 'zustand/middleware';
 import type {WorkspaceImportMode} from '../entityTypes';
+import type {
+  CharacterSnapshot,
+  CharacterSnapshotPosition
+} from '../services/state/characterSnapshot';
+import {toggleStatPin} from '../services/state/statPanel';
+
+/**
+ * Published by Workspace while it is mounted so the pinned stat panel follows
+ * the current scene and cursor with the same snapshot the editor peek uses.
+ */
+export interface WorkspaceStatContext {
+  projectId: string;
+  sceneId: string;
+  sceneTitle: string;
+  sceneOrder: number;
+  cursorPosition: number;
+  getSnapshot: (sheetId: string, position: CharacterSnapshotPosition) => CharacterSnapshot | null;
+}
 
 export type WorkspaceContextDrawerView =
   | 'scene-roster'
@@ -67,6 +85,10 @@ interface WorkspaceUiState {
   deletingDocumentId: string | null;
   drawerPreferencesByProjectId: Record<string, WorkspaceDrawerPreferences>;
   selectedDocumentIdByProjectId: Record<string, string | null>;
+  /** Pinned stat cards per project: a UI preference, never project data. */
+  statPinsByProjectId: Record<string, string[]>;
+  isStatPanelOpen: boolean;
+  workspaceStatContext: WorkspaceStatContext | null;
 
   setWorkspaceDrawerContext: (projectId: string | null, isNarrowViewport: boolean) => void;
   setSceneDrawerOpen: Dispatch<SetStateAction<boolean>>;
@@ -93,6 +115,10 @@ interface WorkspaceUiState {
     projectId: string | null,
     update: SetStateAction<string | null>
   ) => void;
+  toggleStatPin: (projectId: string, sheetId: string) => 'pinned' | 'unpinned' | 'full';
+  setStatPins: (projectId: string, sheetIds: string[]) => void;
+  setStatPanelOpen: (open: boolean) => void;
+  setWorkspaceStatContext: (context: WorkspaceStatContext | null) => void;
 }
 
 const DEFAULT_DRAWER_PREFERENCES: WorkspaceDrawerPreferences = {
@@ -167,7 +193,7 @@ const persistProjectPreferences = (
 
 export const useWorkspaceUiStore = create<WorkspaceUiState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       currentProjectId: null,
       isNarrowViewport: false,
       isSceneDrawerOpen: false,
@@ -187,6 +213,9 @@ export const useWorkspaceUiStore = create<WorkspaceUiState>()(
       deletingDocumentId: null,
       drawerPreferencesByProjectId: {},
       selectedDocumentIdByProjectId: {},
+      statPinsByProjectId: {},
+      isStatPanelOpen: true,
+      workspaceStatContext: null,
 
       setWorkspaceDrawerContext: (projectId, isNarrowViewport) =>
         set((state) => ({
@@ -318,14 +347,36 @@ export const useWorkspaceUiStore = create<WorkspaceUiState>()(
               [projectId]: resolveNextNullableString(update, previous)
             }
           };
-        })
+        }),
+
+      toggleStatPin: (projectId, sheetId) => {
+        const next = toggleStatPin(get().statPinsByProjectId[projectId] ?? [], sheetId);
+        if (next.result !== 'full') {
+          set((state) => ({
+            statPinsByProjectId: {...state.statPinsByProjectId, [projectId]: next.pins},
+            ...(next.result === 'pinned' ? {isStatPanelOpen: true} : {})
+          }));
+        }
+        return next.result;
+      },
+
+      setStatPins: (projectId, sheetIds) =>
+        set((state) => ({
+          statPinsByProjectId: {...state.statPinsByProjectId, [projectId]: sheetIds}
+        })),
+
+      setStatPanelOpen: (open) => set({isStatPanelOpen: open}),
+
+      setWorkspaceStatContext: (context) => set({workspaceStatContext: context})
     }),
     {
       name: 'wbd-workspace-ui',
       storage: createJSONStorage(getStorage),
       partialize: (state) => ({
         drawerPreferencesByProjectId: state.drawerPreferencesByProjectId,
-        selectedDocumentIdByProjectId: state.selectedDocumentIdByProjectId
+        selectedDocumentIdByProjectId: state.selectedDocumentIdByProjectId,
+        statPinsByProjectId: state.statPinsByProjectId,
+        isStatPanelOpen: state.isStatPanelOpen
       })
     }
   )

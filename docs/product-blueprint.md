@@ -289,6 +289,31 @@ record when they become relevant. Likewise, let prose initiate an item or
 state workflow while deterministic application code keeps reusable canon,
 mechanics definitions, and scene-scoped state changes correctly separated.
 
+### Character stat peek (settled 2026-09-26, Slices 4.46–4.48)
+
+A LitRPG author can read any character's stat block without leaving the
+current surface. Every peek surface is read-only and appears only when game
+systems are enabled; state changes stay on the proposal path.
+
+- One shared card (`CharacterStatCard`) built from one snapshot service
+  (`buildCharacterSnapshot`) serves the scene roster, the editor peek, the
+  palette, and the pinned panel. Cards follow the project's stat-block style
+  and stat/resource scope, so they match the book's status windows.
+- **Workspace:** Cmd/Ctrl+Alt+S or right-click **Show stats** on a character's
+  name or alias (exact matching; a shared name asks) opens the card at the
+  cursor. Hovering a highlighted name shows the same card.
+- **Command palette, every route:** **Show stats for…** picks a character.
+  Workspace shows it at the cursor; elsewhere it shows the latest state.
+- **Pinned stats:** up to three characters pinned from the peek, palette,
+  roster, or World Bible appear in a collapsible app-shell panel on
+  Workspace, World Canvas, Corkboard, and World Bible (above the Scratchpad).
+  The panel follows the cursor in Workspace. Elsewhere it shows the latest
+  state or the end of a chosen scene. Each card offers **Changes since
+  previous chapter**, with the chapter found through Corkboard scene links (or
+  the previous scene when none links it), and **Open sheet**. Pins are a
+  per-project UI preference, not project data, and are never in backups. On
+  narrow screens the panel is a bottom sheet.
+
 ## Fiction-First Product Boundary
 
 Fiction is the shipping product. Nonfiction remains a parked, separate future

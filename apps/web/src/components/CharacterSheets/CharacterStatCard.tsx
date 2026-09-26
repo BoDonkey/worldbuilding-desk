@@ -9,10 +9,7 @@ import {
   applyCharacterStatCardTemplate,
   type CharacterStatCardTemplate
 } from '../../services/state/characterPeek';
-// The parts share the scene roster's styles so the roster renders unchanged;
-// card-level layout lives in its own module.
-import styles from '../../styles/WorkspaceRoute.module.css';
-import cardStyles from '../../styles/CharacterStatCard.module.css';
+import styles from '../../styles/CharacterStatCard.module.css';
 
 export function CharacterResourceMeters({
   resources
@@ -21,14 +18,14 @@ export function CharacterResourceMeters({
 }) {
   if (resources.length === 0) return null;
   return (
-    <div className={styles.sceneRosterResources}>
+    <div className={styles.resources}>
       {resources.map((resource) => {
         const percent =
           typeof resource.max === 'number' && resource.max > 0
             ? Math.max(0, Math.min(100, (resource.current / resource.max) * 100))
             : 0;
         return (
-          <div key={resource.id} className={styles.sceneRosterResource}>
+          <div key={resource.id} className={styles.resource}>
             <div>
               <span>{resource.label}</span>
               <strong>
@@ -37,7 +34,7 @@ export function CharacterResourceMeters({
               </strong>
             </div>
             {typeof resource.max === 'number' && resource.max > 0 && (
-              <div className={styles.sceneRosterMeter}>
+              <div className={styles.meter}>
                 <span style={{width: `${percent}%`}} />
               </div>
             )}
@@ -51,7 +48,7 @@ export function CharacterResourceMeters({
 export function CharacterStatusChips({statuses}: {statuses: string[]}) {
   if (statuses.length === 0) return null;
   return (
-    <div className={styles.sceneRosterChips}>
+    <div className={styles.chips}>
       {statuses.map((status) => (
         <span key={status}>{status}</span>
       ))}
@@ -75,14 +72,14 @@ export function CharacterStateDetails({
   renderItemAction?: (item: CharacterSnapshotInventoryLine) => ReactNode;
 }) {
   return (
-    <details className={styles.sceneRosterDetails} open={open}>
+    <details className={styles.details} open={open}>
       <summary>{summary}</summary>
       {location && (
-        <div className={styles.sceneRosterLocation}>
+        <div className={styles.location}>
           Location <strong>{location}</strong>
         </div>
       )}
-      <div className={styles.sceneRosterStatGrid}>
+      <div className={styles.statGrid}>
         {stats.map((stat) => (
           <div key={stat.id}>
             <span>{stat.label}</span>
@@ -90,7 +87,7 @@ export function CharacterStateDetails({
           </div>
         ))}
       </div>
-      <div className={styles.sceneRosterInventory}>
+      <div className={styles.inventory}>
         <strong>Inventory</strong>
         {inventory.length > 0 ? (
           <ul>
@@ -138,17 +135,17 @@ export function CharacterStatCard({
     density ?? (template && template.style !== 'compact' ? 'full' : 'compact');
   return (
     <article
-      className={`${styles.sceneRosterCard} ${template ? cardStyles.statusWindow : ''}`}
+      className={`${styles.card} ${template ? styles.statusWindow : ''}`}
       aria-label={`${snapshot.name} stats`}
     >
-      <div className={cardStyles.header}>
-        <div className={styles.sceneRosterIdentity}>
+      <div className={styles.header}>
+        <div className={styles.identity}>
           <strong>{snapshot.name}</strong>
           <span>Level {snapshot.level}</span>
         </div>
       </div>
-      {template && <div className={cardStyles.statusWindowCaption}>[{template.label}]</div>}
-      <div className={styles.sceneRosterSource}>{asOfLabel}</div>
+      {template && <div className={styles.statusWindowCaption}>[{template.label}]</div>}
+      <div className={styles.source}>{asOfLabel}</div>
       <CharacterResourceMeters resources={shown.resources} />
       <CharacterStatusChips statuses={shown.statuses} />
       <CharacterStateDetails

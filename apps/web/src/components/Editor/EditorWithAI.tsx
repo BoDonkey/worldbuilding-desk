@@ -42,6 +42,7 @@ import {
   type CharacterStatCardTemplate
 } from '../../services/state/characterPeek';
 import {CharacterStatCard} from '../CharacterSheets/CharacterStatCard';
+import {PinStatsButton} from '../CharacterSheets/PinStatsButton';
 import {
   findCurrentSceneMatches,
   resolveCurrentSceneFindIndex,
@@ -1583,6 +1584,16 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
                     : `At the cursor in ${characterStatPeek?.sceneTitle ?? 'this scene'}`
                 }
                 template={characterStatPeek?.template}
+                actions={
+                  statPeek.source === 'keyboard' && (
+                    <div className={styles.systemActions}>
+                      <PinStatsButton
+                        sheetId={statPeekSnapshot.sheetId}
+                        name={statPeekSnapshot.name}
+                      />
+                    </div>
+                  )
+                }
               />
             ) : statPeek.candidates.length > 1 ? (
               <div className={styles.systemActions} role='group' aria-label='Matching characters'>

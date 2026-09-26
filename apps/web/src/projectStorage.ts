@@ -85,10 +85,12 @@ function removeProjectFromWorkspaceUi(projectId: string): void {
       state?: {
         drawerPreferencesByProjectId?: Record<string, unknown>;
         selectedDocumentIdByProjectId?: Record<string, unknown>;
+        statPinsByProjectId?: Record<string, unknown>;
       };
     };
     delete parsed.state?.drawerPreferencesByProjectId?.[projectId];
     delete parsed.state?.selectedDocumentIdByProjectId?.[projectId];
+    delete parsed.state?.statPinsByProjectId?.[projectId];
     localStorage.setItem('wbd-workspace-ui', JSON.stringify(parsed));
   } catch {
     // Leave malformed persisted UI state alone; it is non-critical cleanup.

@@ -235,4 +235,77 @@ describe('Stat peek', () => {
     cy.get('input[placeholder="Type a command..."]').type('stats');
     cy.contains('[role="option"]', 'Show stats for').should('not.exist');
   });
+
+  it('pins characters to a panel that follows the cursor and shows latest elsewhere', () => {
+    cy.visit('/workspace');
+    writeScene('Aria waits by the gate while Borin sharpens an axe.');
+
+    // Pin Aria from the peek and Borin from the scene roster.
+    cy.get('.tiptap-editor').type('{moveToStart}{rightArrow}');
+    pressStatPeekShortcut();
+    cy.get('[role="dialog"][aria-label="Character stats"]').within(() => {
+      cy.contains('button', 'Pin stats').click();
+      cy.contains('button', 'Unpin stats').should('have.attr', 'aria-pressed', 'true');
+    });
+    cy.focused().type('{esc}');
+    cy.contains('button', 'Context').click();
+    cy.contains('button', /^Scene$/).click();
+    cy.get('button[aria-label="Pin Borin\'s stats"]').click();
+
+    cy.get('aside[aria-label="Pinned stats"]').within(() => {
+      cy.contains('button', 'Pinned stats (2)').should('have.attr', 'aria-expanded', 'true');
+      cy.get('article[aria-label="Aria stats"]').should('contain.text', 'At the cursor in Alpha Scene');
+      cy.get('article[aria-label="Borin stats"]').should('contain.text', '18 / 25');
+      cy.get('select').should('not.exist');
+    });
+    // The open panel sits above Workspace's save bar instead of covering it.
+    cy.contains('button', 'Save now').click();
+    cy.get('aside[aria-label="Pinned stats"]').within(() => {
+      cy.get('article[aria-label="Aria stats"]').within(() => {
+        cy.contains('button', 'Changes since previous chapter').click();
+        cy.contains('Since the previous scene (no chapter card links this scene)').should('be.visible');
+        cy.contains('No changes.').should('be.visible');
+      });
+    });
+
+    // Elsewhere the panel shows the latest state, with an as-of picker, and
+    // stays visible over the Scratchpad.
+    cy.visit('/corkboard');
+    cy.get('aside[aria-label="Pinned stats"]').within(() => {
+      cy.get('article[aria-label="Aria stats"]')
+        .should('contain.text', 'Latest, after every accepted change')
+        .and('contain.text', '32 / 40');
+      cy.get('select').select('End of Beta Scene');
+      cy.get('article[aria-label="Aria stats"]').should('contain.text', 'At the end of Beta Scene');
+    });
+    cy.contains('button', 'Scratchpad').click();
+    cy.get('[role="dialog"][aria-label="Project scratchpad"]').should('be.visible');
+    cy.get('aside[aria-label="Pinned stats"]').within(() => {
+      cy.contains('button', 'Pinned stats (2)').click();
+      cy.contains('button', 'Pinned stats (2)').should('have.attr', 'aria-expanded', 'false');
+      cy.contains('button', 'Pinned stats (2)').click();
+    });
+    cy.get('[role="dialog"][aria-label="Project scratchpad"]').should('be.visible');
+    cy.get('body').type('{esc}');
+
+    // A bottom sheet on narrow screens.
+    cy.viewport(390, 844);
+    cy.get('aside[aria-label="Pinned stats"]').then(($panel) => {
+      const rect = $panel[0].getBoundingClientRect();
+      expect(rect.left).to.equal(0);
+      expect(rect.width).to.be.closeTo(390, 1);
+    });
+    cy.document().then((document) => {
+      expect(document.documentElement.scrollWidth).to.be.at.most(390);
+    });
+    cy.viewport(1400, 1000);
+
+    // Pins survive a reload; unpinning the last one removes the panel.
+    cy.reload();
+    cy.get('aside[aria-label="Pinned stats"]').within(() => {
+      cy.get('button[aria-label="Unpin Aria\'s stats"]').click();
+      cy.get('button[aria-label="Unpin Borin\'s stats"]').click();
+    });
+    cy.get('aside[aria-label="Pinned stats"]').should('not.exist');
+  });
 });

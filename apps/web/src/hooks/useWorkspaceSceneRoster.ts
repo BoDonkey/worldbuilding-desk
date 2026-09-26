@@ -55,7 +55,8 @@ import {
 import {validateStateMutationEvent} from '../services/state/stateMutationSchemas';
 import {
   buildCharacterSnapshot,
-  getSceneOrder
+  getSceneOrder,
+  type CharacterSnapshotPosition
 } from '../services/state/characterSnapshot';
 import {
   buildSceneRosterModel,
@@ -1339,27 +1340,20 @@ export function useWorkspaceSceneRoster({
     [entities]
   );
 
-  /** Read-only state for the stat peek, at an editor position in the selected scene. */
-  const getCharacterStatSnapshot = useCallback(
-    (sheetId: string, editorPosition: number) => {
-      if (!selectedDocument) return null;
-      const selectedSceneOrder = getSceneOrder(documents, selectedDocument.id);
-      if (selectedSceneOrder <= 0) return null;
-
+  /**
+   * Read-only state for the stat peek and pinned panel, with this scene's
+   * anchors resolved against the live editor text.
+   */
+  const getCharacterStatSnapshotAt = useCallback(
+    (sheetId: string, position: CharacterSnapshotPosition) => {
       const sheet = characterSheets.find((candidate) => candidate.id === sheetId);
       if (!sheet) return null;
-
       return buildCharacterSnapshot({
         sheet,
         ruleset,
         events: resolvedStateMutationEvents,
         actorResolutions,
-        position: {
-          kind: 'scene',
-          sceneOrder: selectedSceneOrder,
-          moment: 'cursor',
-          cursorPosition: editorPosition
-        },
+        position,
         runtimeModifiers,
         statDefinitionNameById,
         resourceDefinitionNameById,
@@ -1371,15 +1365,29 @@ export function useWorkspaceSceneRoster({
       actorResolutions,
       characterSheets,
       compendiumEntries,
-      documents,
       entityById,
       resourceDefinitionNameById,
       resolvedStateMutationEvents,
       ruleset,
       runtimeModifiers,
-      selectedDocument,
       statDefinitionNameById
     ]
+  );
+
+  /** The same state at an editor position in the selected scene. */
+  const getCharacterStatSnapshot = useCallback(
+    (sheetId: string, editorPosition: number) => {
+      if (!selectedDocument) return null;
+      const selectedSceneOrder = getSceneOrder(documents, selectedDocument.id);
+      if (selectedSceneOrder <= 0) return null;
+      return getCharacterStatSnapshotAt(sheetId, {
+        kind: 'scene',
+        sceneOrder: selectedSceneOrder,
+        moment: 'cursor',
+        cursorPosition: editorPosition
+      });
+    },
+    [documents, getCharacterStatSnapshotAt, selectedDocument]
   );
 
   return {
@@ -1403,6 +1411,7 @@ export function useWorkspaceSceneRoster({
     positionedChangeBefore,
     savePositionedChange,
     selectedSceneTimeline,
-    getCharacterStatSnapshot
+    getCharacterStatSnapshot,
+    getCharacterStatSnapshotAt
   };
 }

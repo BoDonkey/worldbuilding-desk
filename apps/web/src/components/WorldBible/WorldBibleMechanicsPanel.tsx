@@ -3,6 +3,7 @@ import type {CharacterSheet, StateMutationEvent, StoredRuleset} from '../../enti
 import type {FirstTrackedValueKind} from '../../services/characters';
 import {replayCharacterState} from '../../services/state/stateReplay';
 import styles from '../../assets/components/WorldBibleRoute.module.css';
+import {PinStatsButton} from '../CharacterSheets/PinStatsButton';
 
 interface WorldBibleMechanicsPanelProps {
   characterSheet: CharacterSheet | null;
@@ -142,6 +143,7 @@ export function WorldBibleMechanicsPanel({
           </button>
         )}
         <button type='button' onClick={onOpenAdvanced}>Advanced sheet and state</button>
+        {characterSheet && <PinStatsButton sheetId={characterSheet.id} name={characterSheet.name} />}
       </div>
     </div>
   );

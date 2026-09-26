@@ -17,6 +17,7 @@ import {AppNotifications} from './components/common';
 import {ThemeProvider} from './contexts/ThemeContext';
 import {AccessibilityProvider} from './contexts/AccessibilityContext';
 import {CommandPaletteProvider} from './contexts/CommandPaletteContext';
+import {StatPinPanel} from './components/StatPinPanel';
 import {useAppStore} from './store/appStore';
 import {registerDiagnosticSecrets} from './services/errors';
 import {getProjectCapabilities} from './projectMode';
@@ -144,6 +145,7 @@ function AppShellLayout() {
       >
         <Outlet />
       </main>
+      <StatPinPanel isRailCollapsed={isRailCollapsed} />
       <AppNotifications />
     </div>
   );

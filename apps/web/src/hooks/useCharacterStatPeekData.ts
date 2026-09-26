@@ -1,5 +1,6 @@
 import {useCallback, useEffect, useMemo, useState} from 'react';
 import type {
+  ChapterCard,
   Character,
   CharacterSheet,
   CompendiumEntry,
@@ -7,8 +8,11 @@ import type {
   SettlementState,
   StateMutationEvent,
   StoredRuleset,
-  WorldEntity
+  WorldEntity,
+  WritingDocument
 } from '../entityTypes';
+import {getDocumentsByProject} from '../writingStorage';
+import {getChapterCardsByProjectId} from '../corkboardStorage';
 import {getEntitiesByProject} from '../entityStorage';
 import {getCharactersByProject} from '../characterStorage';
 import {
@@ -28,8 +32,14 @@ import {
 } from '../services/compendium';
 import {getAliasesByProject, type ConsistencyAlias} from '../services/consistency';
 import {getStateMutationEventsByProject} from '../services/state/stateMutationLedger';
-import {buildCharacterSnapshot} from '../services/state/characterSnapshot';
+import {
+  buildCharacterSnapshot,
+  type CharacterSnapshotPosition
+} from '../services/state/characterSnapshot';
 import {buildCharacterPeekTargets} from '../services/state/characterPeek';
+
+const EMPTY_DOCUMENTS: WritingDocument[] = [];
+const EMPTY_CARDS: ChapterCard[] = [];
 
 interface StatPeekProjectData {
   projectId: string;
@@ -43,6 +53,8 @@ interface StatPeekProjectData {
   compendiumEntries: CompendiumEntry[];
   settlementState: SettlementState | null;
   settlementModules: SettlementModule[];
+  documents: WritingDocument[];
+  chapterCards: ChapterCard[];
 }
 
 const RELOAD_EVENTS = [
@@ -51,15 +63,21 @@ const RELOAD_EVENTS = [
   'wbd:entity-records-changed',
   'wbd:alias-records-changed',
   'wbd:state-mutation-events-changed',
-  'wbd:compendium-records-changed'
+  'wbd:compendium-records-changed',
+  'wbd:writing-records-changed'
 ];
 
 /**
- * Read-only project state for the stat peek outside Workspace: every sheet as
- * a peek target and its snapshot at the latest point. Loads only while
- * `enabled`, and never creates or migrates records.
+ * Read-only project state for stat cards outside Workspace: every sheet as a
+ * peek target, its snapshot at any point, and the scenes and chapter cards
+ * that positions refer to. Loads only while `enabled` (and again when
+ * `reloadKey` changes), and never creates or migrates records.
  */
-export function useCharacterStatPeekData(projectId: string | null, enabled: boolean) {
+export function useCharacterStatPeekData(
+  projectId: string | null,
+  enabled: boolean,
+  reloadKey?: string
+) {
   const [data, setData] = useState<StatPeekProjectData | null>(null);
 
   useEffect(() => {
@@ -76,7 +94,9 @@ export function useCharacterStatPeekData(projectId: string | null, enabled: bool
         actorResolutions,
         compendiumEntries,
         settlementState,
-        settlementModules
+        settlementModules,
+        documents,
+        chapterCards
       ] = await Promise.all([
         getCharacterSheetsByProject(projectId),
         getEntitiesByProject(projectId),
@@ -87,7 +107,9 @@ export function useCharacterStatPeekData(projectId: string | null, enabled: bool
         getActorResolutionsByProject(projectId),
         getCompendiumEntriesByProject(projectId),
         getSettlementState(projectId),
-        getSettlementModulesByProject(projectId)
+        getSettlementModulesByProject(projectId),
+        getDocumentsByProject(projectId),
+        getChapterCardsByProjectId(projectId)
       ]);
       if (cancelled) return;
       setData({
@@ -101,7 +123,9 @@ export function useCharacterStatPeekData(projectId: string | null, enabled: bool
         actorResolutions,
         compendiumEntries,
         settlementState,
-        settlementModules
+        settlementModules,
+        documents,
+        chapterCards
       });
     };
     void load();
@@ -111,7 +135,7 @@ export function useCharacterStatPeekData(projectId: string | null, enabled: bool
       cancelled = true;
       RELOAD_EVENTS.forEach((name) => window.removeEventListener(name, reload));
     };
-  }, [enabled, projectId]);
+  }, [enabled, projectId, reloadKey]);
 
   const current = data && data.projectId === projectId ? data : null;
 
@@ -127,8 +151,8 @@ export function useCharacterStatPeekData(projectId: string | null, enabled: bool
     [current]
   );
 
-  const getLatestSnapshot = useCallback(
-    (sheetId: string) => {
+  const getSnapshotAt = useCallback(
+    (sheetId: string, position: CharacterSnapshotPosition) => {
       const sheet = current?.sheets.find((candidate) => candidate.id === sheetId);
       if (!current || !sheet) return null;
       // Same derivation as the Workspace and Sheets routes.
@@ -145,7 +169,7 @@ export function useCharacterStatPeekData(projectId: string | null, enabled: bool
         ruleset: current.ruleset,
         events: current.events,
         actorResolutions: current.actorResolutions,
-        position: {kind: 'latest'},
+        position,
         runtimeModifiers,
         statDefinitionNameById: new Map(
           (current.ruleset?.statDefinitions ?? []).map((definition) => [
@@ -166,5 +190,17 @@ export function useCharacterStatPeekData(projectId: string | null, enabled: bool
     [current]
   );
 
-  return {isLoaded: Boolean(current), targets, getLatestSnapshot};
+  const getLatestSnapshot = useCallback(
+    (sheetId: string) => getSnapshotAt(sheetId, {kind: 'latest'}),
+    [getSnapshotAt]
+  );
+
+  return {
+    isLoaded: Boolean(current),
+    targets,
+    documents: current?.documents ?? EMPTY_DOCUMENTS,
+    chapterCards: current?.chapterCards ?? EMPTY_CARDS,
+    getSnapshotAt,
+    getLatestSnapshot
+  };
 }

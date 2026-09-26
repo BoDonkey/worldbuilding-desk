@@ -185,4 +185,31 @@ describe('useWorkspaceUiStore', () => {
       )
     ).not.toContain('deletingDocumentId');
   });
+
+  it('keeps up to three stat pins per project and persists them without the Workspace context', () => {
+    const store = useWorkspaceUiStore.getState();
+    store.setStatPanelOpen(false);
+
+    expect(store.toggleStatPin('alpha', 'a')).toBe('pinned');
+    expect(useWorkspaceUiStore.getState().isStatPanelOpen).toBe(true);
+    store.toggleStatPin('alpha', 'b');
+    store.toggleStatPin('alpha', 'c');
+    expect(store.toggleStatPin('alpha', 'd')).toBe('full');
+    expect(store.toggleStatPin('beta', 'd')).toBe('pinned');
+    expect(store.toggleStatPin('alpha', 'b')).toBe('unpinned');
+
+    store.setWorkspaceStatContext({
+      projectId: 'alpha',
+      sceneId: 'scene-a',
+      sceneTitle: 'A',
+      sceneOrder: 1,
+      cursorPosition: 1,
+      getSnapshot: () => null
+    });
+    const state = useWorkspaceUiStore.getState();
+    expect(state.statPinsByProjectId).toEqual({alpha: ['a', 'c'], beta: ['d']});
+    const persisted = useWorkspaceUiStore.persist.getOptions().partialize?.(state) ?? {};
+    expect(persisted).toMatchObject({statPinsByProjectId: {alpha: ['a', 'c'], beta: ['d']}});
+    expect(Object.keys(persisted)).not.toContain('workspaceStatContext');
+  });
 });

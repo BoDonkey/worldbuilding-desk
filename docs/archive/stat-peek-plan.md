@@ -1,3 +1,6 @@
+> **Archived 2026-09-26.** Slices 4.46–4.48 landed; the durable behavior is in
+> [product-blueprint.md](../product-blueprint.md) (Character stat peek).
+
 # Stat Peek — Plan
 
 **Status:** Accepted 2026-09-26. Scheduled as roadmap Slices 4.46–4.48.
@@ -102,6 +105,12 @@ the hover card.)
   not project data; not included in backups.
 - Mobile: the panel becomes a bottom sheet; the standing mobile breakpoint and
   keyboard rules apply.
+- As built (2026-09-26): pins live in the persisted Workspace UI store
+  (removed with the project); Workspace publishes its cursor snapshot function
+  so the panel matches the editor peek. The panel lifts itself above bottom
+  bars marked `data-stat-panel-avoid` (Workspace's save bar). Scratchpad is a
+  dialog over these routes rather than a route; the panel stays above it. All
+  card styles now live in `styles/CharacterStatCard.module.css`.
 
 ## Related scheduled work
 

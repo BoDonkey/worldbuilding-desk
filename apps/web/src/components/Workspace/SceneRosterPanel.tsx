@@ -10,6 +10,7 @@ import {
   CharacterStateDetails,
   CharacterStatusChips
 } from '../CharacterSheets/CharacterStatCard';
+import {PinStatsButton} from '../CharacterSheets/PinStatsButton';
 
 export type SceneRosterStatLine = CharacterSnapshotStatLine;
 export type SceneRosterResourceLine = CharacterSnapshotResourceLine;
@@ -331,6 +332,13 @@ export function SceneRosterPanel({
                   >
                     Record change here
                   </button>
+                  {character.sheetId && (
+                    <PinStatsButton
+                      sheetId={character.sheetId}
+                      name={character.name}
+                      className={styles.sceneRosterPinButton}
+                    />
+                  )}
                   <CharacterStateDetails
                     summary='Full state at this moment'
                     location={character.location}

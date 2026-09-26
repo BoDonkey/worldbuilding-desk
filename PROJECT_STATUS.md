@@ -824,6 +824,20 @@ runtime schema, and nothing here changes the roadmap's status board.
 ## Verification Status
 
 ### Verified Recently
+- Slice 4.48 pinned stat panel: up to three characters pinned from the editor
+  peek, palette dialog, scene roster, or World Bible mechanics panel appear in
+  a collapsible app-shell panel (`components/StatPinPanel.tsx`) on Workspace,
+  World Canvas, Corkboard, and World Bible, above the Scratchpad dialog. In
+  Workspace it follows the scene and cursor through the snapshot function
+  Workspace publishes; elsewhere it shows the latest state or the end of a
+  chosen scene. Each card has **Changes since previous chapter** (Corkboard
+  scene links find the chapter, else the previous scene; pure logic in
+  `services/state/statPanel.ts`), **Open sheet**, and unpin. Pins are a
+  persisted per-project UI preference in the Workspace UI store, removed with
+  the project and never in backups. On narrow screens the panel is a bottom
+  sheet. It lifts itself above Workspace's save bar. All card styles moved to
+  `styles/CharacterStatCard.module.css`. The stat peek plan is archived and its
+  behavior folded into the product blueprint.
 - Slice 4.47 stat peek from the editor and command palette: in Workspace, with
   the cursor in or a selection on a character's name or alias,
   **Cmd/Ctrl+Alt+S** or the right-click **Show stats** item opens the shared

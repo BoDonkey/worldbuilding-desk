@@ -60,7 +60,7 @@ assembled prompt.
 
 - A read-only context builder for one character at a scene position:
   canonical record (stable ID), accepted facts, assigned dialogue style, and
-  replayed state via `buildCharacterSnapshot` (4.46, `docs/stat-peek-plan.md`)
+  replayed state via `buildCharacterSnapshot` (4.46, `docs/archive/stat-peek-plan.md`)
   over the `rules-engine` replay API that 3.10 introduces.
   Returns tagged sections with provenance, in line with the shared context
   extraction direction.

@@ -413,6 +413,11 @@
   color: var(--button-primary-text);
 }
 
+.sceneRosterPinButton {
+  width: 100%;
+  margin-top: 0.4rem;
+}
+
 .sceneRosterAddRow {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
@@ -650,124 +655,6 @@
   font-size: 0.7rem;
 }
 
-.sceneRosterResources {
-  display: flex;
-  flex-direction: column;
-  gap: 0.48rem;
-  margin-top: 0.6rem;
-}
-
-.sceneRosterResource > div:first-child {
-  display: flex;
-  justify-content: space-between;
-  gap: 0.5rem;
-  color: var(--color-text-secondary);
-  font-size: 0.72rem;
-}
-
-.sceneRosterResource strong {
-  color: var(--color-text-primary);
-}
-
-.sceneRosterMeter {
-  height: 0.38rem;
-  margin-top: 0.22rem;
-  overflow: hidden;
-  border: 1px solid var(--surface-border-soft);
-  border-radius: 999px;
-  background: var(--surface-panel);
-}
-
-.sceneRosterMeter span {
-  display: block;
-  height: 100%;
-  border-radius: inherit;
-  background: var(--button-primary-bg);
-}
-
-.sceneRosterChips {
-  display: flex;
-  gap: 0.3rem;
-  flex-wrap: wrap;
-  margin-top: 0.6rem;
-}
-
-.sceneRosterChips span {
-  padding: 0.18rem 0.45rem;
-  border: 1px solid var(--badge-info-border);
-  border-radius: 999px;
-  background: var(--badge-info-bg);
-  color: var(--badge-info-text);
-  font-size: 0.68rem;
-  font-weight: 700;
-}
-
-.sceneRosterDetails {
-  margin-top: 0.65rem;
-  border-top: 1px solid var(--surface-border-soft);
-  padding-top: 0.55rem;
-}
-
-.sceneRosterDetails summary {
-  cursor: pointer;
-  color: var(--color-text-secondary);
-  font-size: 0.74rem;
-  font-weight: 700;
-}
-
-.sceneRosterLocation {
-  margin-top: 0.55rem;
-  color: var(--color-text-secondary);
-  font-size: 0.72rem;
-}
-
-.sceneRosterInventory {
-  margin-top: 0.55rem;
-  padding: 0.5rem;
-  border: 1px solid var(--surface-border-soft);
-  border-radius: 10px;
-  background: var(--surface-panel);
-  color: var(--color-text-secondary);
-  font-size: 0.72rem;
-}
-
-.sceneRosterInventory > strong {
-  display: block;
-  margin-bottom: 0.3rem;
-  color: var(--color-text-primary);
-  font-size: 0.75rem;
-}
-
-.sceneRosterInventory ul {
-  margin: 0;
-  padding-left: 1rem;
-}
-
-.sceneRosterInventory li {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem;
-}
-
-.sceneRosterInventory li + li {
-  margin-top: 0.3rem;
-}
-
-.sceneRosterInventory button {
-  flex: 0 0 auto;
-  padding: 0.24rem 0.42rem;
-  font-size: 0.66rem;
-}
-
-.sceneRosterStatGrid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.4rem;
-  margin-top: 0.55rem;
-}
-
-.sceneRosterStatGrid > div,
 .sceneRosterFieldList > div {
   display: flex;
   min-width: 0;
@@ -779,7 +666,6 @@
   background: var(--surface-panel);
 }
 
-.sceneRosterStatGrid span,
 .sceneRosterFieldList span {
   overflow: hidden;
   color: var(--color-text-secondary);
@@ -788,7 +674,6 @@
   white-space: nowrap;
 }
 
-.sceneRosterStatGrid strong,
 .sceneRosterFieldList strong {
   overflow-wrap: anywhere;
   color: var(--color-text-primary);

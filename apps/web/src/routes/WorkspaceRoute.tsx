@@ -101,6 +101,8 @@ import {
   buildCharacterPeekTargets,
   resolveCharacterStatCardTemplate
 } from '../services/state/characterPeek';
+import {getSceneOrder} from '../services/state/characterSnapshot';
+import {useWorkspaceUiStore} from '../store/workspaceUiStore';
 import {
   CHARACTER_STAT_PEEK_EVENT,
   type CharacterStatPeekRequestDetail
@@ -907,7 +909,8 @@ function WorkspaceRoute() {
     positionedChangeBefore,
     savePositionedChange,
     selectedSceneTimeline,
-    getCharacterStatSnapshot
+    getCharacterStatSnapshot,
+    getCharacterStatSnapshotAt
   } = useWorkspaceSceneRoster({
     activeProject,
     selectedDocument,
@@ -1000,6 +1003,33 @@ function WorkspaceRoute() {
       statBlockPreferences
     ]
   );
+  const setWorkspaceStatContext = useWorkspaceUiStore((s) => s.setWorkspaceStatContext);
+  const selectedSceneOrder = selectedDocument
+    ? getSceneOrder(documents, selectedDocument.id)
+    : 0;
+  useEffect(() => {
+    if (!activeProject || !showGameSystems || !selectedDocument || selectedSceneOrder <= 0) {
+      setWorkspaceStatContext(null);
+      return;
+    }
+    setWorkspaceStatContext({
+      projectId: activeProject.id,
+      sceneId: selectedDocument.id,
+      sceneTitle: selectedDocument.title || 'Untitled scene',
+      sceneOrder: selectedSceneOrder,
+      cursorPosition: sceneCursorPosition,
+      getSnapshot: getCharacterStatSnapshotAt
+    });
+  }, [
+    activeProject,
+    getCharacterStatSnapshotAt,
+    sceneCursorPosition,
+    selectedDocument,
+    selectedSceneOrder,
+    setWorkspaceStatContext,
+    showGameSystems
+  ]);
+  useEffect(() => () => setWorkspaceStatContext(null), [setWorkspaceStatContext]);
   const [statPeekRequest, setStatPeekRequest] = useState<{
     sheetId: string;
     token: number;
@@ -1960,7 +1990,7 @@ function WorkspaceRoute() {
                 )}
               </div>
 
-              <div className={styles.editorFooterBar}>
+              <div className={styles.editorFooterBar} data-stat-panel-avoid=''>
                 <button
                   type='button'
                   onClick={handleSave}

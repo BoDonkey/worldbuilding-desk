@@ -99,9 +99,6 @@ Other files:
   scenes, character-from-description) and optional encrypted backups (5.14).
   Archive it after the slices land and their behavior is folded into the
   authorities.
-- `docs/stat-peek-plan.md` — accepted plan for fast, read-only character
-  stat blocks while writing and brainstorming (Slices 4.46–4.48). Archive it
-  after the slices land and its behavior is folded into the authorities.
 - `docs/rules-engine-plan.md` — accepted plan for moving the live
   manuscript-time state model into `packages/rules-engine` (Slices 3.10–3.11)
   and later using rules for derived values, proposed follow-up commands, and
@@ -121,6 +118,9 @@ the full-length originals behind the 2026-08-01 consolidation:
   `docs/road-to-market.md` Phases 0, 2, and 3.
 - `code-fitness-report-2026-08-07.md` — current fitness close-out (grade A);
   the superseded 2026-08-01 A− baseline remains beside it for comparison.
+- `stat-peek-plan.md` — completed plan for Slices 4.46–4.48 (character
+  snapshot service, stat peek, pinned stat panel); durable behavior lives in
+  `docs/product-blueprint.md`.
 - `architecture-review-2026-09-26.md` — dated code health and architecture
   review (CI, credential storage, rules-engine role, hotspots, canon
   atomicity) behind the current risk list in `docs/architecture-review.md`.

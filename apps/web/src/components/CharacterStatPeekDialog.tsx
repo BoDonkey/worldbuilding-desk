@@ -8,6 +8,7 @@ import {
   type CharacterStatCardTemplate
 } from '../services/state/characterPeek';
 import {CharacterStatCard} from './CharacterSheets/CharacterStatCard';
+import {PinStatsButton} from './CharacterSheets/PinStatsButton';
 
 interface CharacterStatPeekDialogProps {
   isOpen: boolean;
@@ -107,6 +108,11 @@ export function CharacterStatPeekDialog({
                   snapshot={snapshot}
                   asOfLabel='Latest, after every accepted change'
                   template={template}
+                  actions={
+                    <div className={styles.peekHeaderActions}>
+                      <PinStatsButton sheetId={snapshot.sheetId} name={snapshot.name} />
+                    </div>
+                  }
                 />
               ) : (
                 <div className={styles.empty}>
