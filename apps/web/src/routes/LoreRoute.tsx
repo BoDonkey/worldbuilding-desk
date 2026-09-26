@@ -163,6 +163,9 @@ function LoreRoute() {
   const importInputRef = useRef<HTMLInputElement | null>(null);
   const titleInputRef = useRef<HTMLInputElement | null>(null);
   const focusedLoreDocumentKeyRef = useRef<string | null>(null);
+  // Bumped whenever the editor starts over (new, edit, import) so a save that
+  // finishes late does not clear a form the author has since moved on to.
+  const formSessionRef = useRef(0);
 
   useEffect(() => {
     if (!activeProject) {
@@ -487,6 +490,7 @@ function LoreRoute() {
   };
 
   const resetForm = () => {
+    formSessionRef.current += 1;
     setEditingId(null);
     setTitle('');
     setKind('general_lore');
@@ -497,6 +501,7 @@ function LoreRoute() {
   };
 
   const beginEdit = useCallback((document: LoreDocument) => {
+    formSessionRef.current += 1;
     setEditingId(document.id);
     setTitle(document.title);
     setKind(document.kind);
@@ -563,12 +568,15 @@ function LoreRoute() {
       }))
     );
 
+    const formSession = formSessionRef.current;
     try {
       await saveLoreDocument(nextDocument);
       await replaceLoreDocumentLinks({loreDocumentId: documentId, links: nextLinks});
       await indexLoreDocument(nextDocument, nextLinks);
       await refreshProjectContextHealth();
-      resetForm();
+      if (formSessionRef.current === formSession) {
+        resetForm();
+      }
       const placementMessage =
         nextLinks.length > 0
           ? `Linked to ${nextLinks.length} canon target${nextLinks.length === 1 ? '' : 's'}.`
@@ -637,6 +645,7 @@ function LoreRoute() {
     setFeedback(null);
     try {
       const parsed = await parseLoreImport(file);
+      formSessionRef.current += 1;
       setEditingId(null);
       setTitle(parsed.title);
       setKind('general_lore');
@@ -1314,13 +1323,18 @@ function LoreRoute() {
                         <h3>{document.title}</h3>
                       </div>
                       <div className={styles.inlineActions}>
-                        <button type='button' onClick={() => beginEdit(document)}>
+                        {/* A save lists the note before its links are written; wait for it. */}
+                        <button
+                          type='button'
+                          onClick={() => beginEdit(document)}
+                          disabled={saving}
+                        >
                           Edit
                         </button>
                         <button
                           type='button'
                           onClick={() => void handleDelete(document)}
-                          disabled={deletingId === document.id}
+                          disabled={saving || deletingId === document.id}
                         >
                           {deletingId === document.id ? 'Deleting...' : 'Delete'}
                         </button>
