@@ -270,7 +270,7 @@ and required revisit point, `WIP`, `Done <commit>`.
 | 4.43 | Talk to a character + reaction test (CL-2) | 4 | M | — after 4.42 |
 | 4.44 | Character scenes, 2–3 characters (CL-3) | 4 | M | — after 4.43 |
 | 4.45 | Character from a rough description (CL-4) | 4 | M | — after 4.42 |
-| 4.46 | Character snapshot service + shared stat card (SP-1) | 4 | S | WIP |
+| 4.46 | Character snapshot service + shared stat card (SP-1) | 4 | S | Done `e9a7017` — pure `characterSnapshot` service (scene opening/cursor/ending or latest, ordered change diff, compact summary) and shared `CharacterStatCard`; scene roster and editor hover card adopted with byte-identical output and markup; lint with 1 baseline warning; 710 web + 6 engine + 12 UI tests; web/desktop builds; Cypress 104/104 |
 | 4.47 | Stat peek from the editor and command palette (SP-2) | 4 | M | — after 4.46 |
 | 4.48 | Pinned stat panel across writing and brainstorming (SP-3) | 4 | M | — after 4.47 |
 | 5.1 | Auto-update decision + implementation | 5 | M | — |
