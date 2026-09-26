@@ -14,17 +14,13 @@ import type {
   SceneRosterItemCard
 } from '../../components/Workspace/SceneRosterPanel';
 import type {ConsistencyAlias} from '../consistency';
-import {
-  type CharacterRuntimeModifiers,
-  getEffectiveResourceValues,
-  getEffectiveStatValue
-} from '../compendium';
-import {findConsumableEntry} from '../state/consumableEffects';
+import type {CharacterRuntimeModifiers} from '../compendium';
 import {
   applyStateMutationCommand,
   compareStateMutationEvents,
   replayCharacterState
 } from '../state/stateReplay';
+import {buildCharacterSnapshot} from '../state/characterSnapshot';
 import {
   describeStateMutationEventStaleness,
   getStateMutationEventStaleness
@@ -252,23 +248,22 @@ export function buildSceneRosterModel(params: {
           hasSheet: false
         };
       }
-      const replayed = replayCharacterState({
+      const snapshot = buildCharacterSnapshot({
         sheet,
         ruleset: params.ruleset,
         events: params.stateMutationEvents,
-        target: {
-          actorId: sheet.characterEntityId,
-          characterId: sheet.characterId,
-          sheetId: sheet.id,
-          actorName: sheet.name
-        },
         actorResolutions: params.actorResolutions,
-        upToSceneOrder:
-          params.stateMoment === 'opening'
-            ? Math.max(0, selectedSceneOrder - 1)
-            : selectedSceneOrder,
-        upToScenePosition:
-          params.stateMoment === 'cursor' ? params.cursorPosition : undefined
+        position: {
+          kind: 'scene',
+          sceneOrder: selectedSceneOrder,
+          moment: params.stateMoment,
+          cursorPosition: params.cursorPosition
+        },
+        runtimeModifiers: params.runtimeModifiers,
+        statDefinitionNameById: params.statDefinitionNameById,
+        resourceDefinitionNameById: params.resourceDefinitionNameById,
+        compendiumEntries: params.compendiumEntries,
+        entityById
       });
       return {
         key: entry.key,
@@ -278,69 +273,14 @@ export function buildSceneRosterModel(params: {
         role:
           (typeof character?.fields.role === 'string' && character.fields.role.trim()) ||
           'Role not set',
-        level: Math.max(1, sheet.level + params.runtimeModifiers.levelBonus),
+        level: snapshot.level,
         source: entry.source,
         matchedSurface: entry.matchedSurface,
-        stats: Object.entries(replayed.stats).map(([id, value]) => ({
-          id,
-          label: params.statDefinitionNameById.get(id) ?? id,
-          value:
-            typeof value === 'number'
-              ? String(
-                  getEffectiveStatValue({
-                    definitionId: id,
-                    baseValue: value,
-                    runtime: params.runtimeModifiers
-                  })
-                )
-              : String(value)
-        })),
-        resources: Object.entries(replayed.resources.current).map(([id, current]) => {
-          const effective = getEffectiveResourceValues({
-            definitionId: id,
-            current,
-            max: replayed.resources.max[id] ?? current,
-            runtime: params.runtimeModifiers
-          });
-          return {
-            id,
-            label: params.resourceDefinitionNameById.get(id) ?? id,
-            current: effective.current,
-            max: effective.max
-          };
-        }),
-        inventory: replayed.inventory.items.map((item) => {
-          const linkedEntry = item.definitionId
-            ? params.compendiumEntries.find((entry) => entry.id === item.definitionId) ?? null
-            : null;
-          const linkedEntityId = item.sourceEntityId ?? linkedEntry?.sourceEntityId;
-          const linkedEntity = linkedEntityId ? entityById.get(linkedEntityId) ?? null : null;
-          const resolvedItem = {
-            ...item,
-            name: linkedEntity?.name ?? linkedEntry?.name ?? item.name
-          };
-          const consumableEntry = findConsumableEntry({
-            entries: params.compendiumEntries,
-            item: resolvedItem
-          });
-          return {
-            ...resolvedItem,
-            equipped: replayed.inventory.equipped.some(
-              (name) =>
-                name.trim().toLocaleLowerCase() === item.name.trim().toLocaleLowerCase()
-            ),
-            consumable: consumableEntry?.consumable
-              ? {
-                  definitionId: consumableEntry.id,
-                  durationLabel: consumableEntry.consumable.durationLabel
-                }
-              : undefined
-          };
-        }),
-        statuses: Array.from(
-          new Set([...replayed.statuses, ...params.runtimeModifiers.notes])
-        ),
-        location: replayed.locationName,
+        stats: snapshot.stats,
+        resources: snapshot.resources,
+        inventory: snapshot.inventory,
+        statuses: snapshot.statuses,
+        location: snapshot.location,
         hasSheet: true
       };
     });

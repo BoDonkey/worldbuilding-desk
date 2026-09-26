@@ -824,6 +824,19 @@ runtime schema, and nothing here changes the roadmap's status board.
 ## Verification Status
 
 ### Verified Recently
+- Slice 4.46 character snapshot service + shared stat card: new pure
+  `services/state/characterSnapshot.ts` (`buildCharacterSnapshot` at a scene
+  opening/cursor/ending or `latest`, `describeCharacterSnapshotChanges`,
+  `summarizeCharacterSnapshot`, `getSceneOrder`) and
+  `components/CharacterSheets/CharacterStatCard.tsx` (compact/full card plus
+  shared resource, status, and full-state parts). The scene roster and the
+  editor character hover card now read state through the service with no
+  behavior change: roster model output (54 scene/moment/cursor cases) and
+  rendered roster markup (9 renders) were byte-identical before and after,
+  and the hover card matched a verbatim copy of its old logic in 24 cases.
+  Groundwork for stat peek 4.47–4.48 and the character lab. Lint with 1
+  baseline warning; 710 web (+12) + 6 engine + 12 UI tests; web/desktop
+  builds; full Cypress 104/104 across 22 specs.
 - Slice 4.25 persisted, incremental project review: new `project_review_runs`
   store (DB version 27), `projectReviewRunStorage.ts`, pure
   `incrementalReview.ts` (content and inputs hashing, reuse plan, stale

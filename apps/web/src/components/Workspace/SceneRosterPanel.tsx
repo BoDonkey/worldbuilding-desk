@@ -1,29 +1,19 @@
 import {useMemo, useState} from 'react';
 import styles from '../../styles/WorkspaceRoute.module.css';
+import type {
+  CharacterSnapshotInventoryLine,
+  CharacterSnapshotResourceLine,
+  CharacterSnapshotStatLine
+} from '../../services/state/characterSnapshot';
+import {
+  CharacterResourceMeters,
+  CharacterStateDetails,
+  CharacterStatusChips
+} from '../CharacterSheets/CharacterStatCard';
 
-export interface SceneRosterStatLine {
-  id: string;
-  label: string;
-  value: string;
-}
-
-export interface SceneRosterResourceLine {
-  id: string;
-  label: string;
-  current: number;
-  max?: number;
-}
-
-export interface SceneRosterInventoryLine {
-  name: string;
-  quantity: number;
-  equipped: boolean;
-  definitionId?: string;
-  consumable?: {
-    definitionId: string;
-    durationLabel?: string;
-  };
-}
+export type SceneRosterStatLine = CharacterSnapshotStatLine;
+export type SceneRosterResourceLine = CharacterSnapshotResourceLine;
+export type SceneRosterInventoryLine = CharacterSnapshotInventoryLine;
 
 export interface SceneRosterCharacterCard {
   key: string;
@@ -329,40 +319,8 @@ export function SceneRosterPanel({
                   {sourceLabel(character.source, character.matchedSurface)}
                 </div>
 
-                {character.resources.length > 0 && (
-                  <div className={styles.sceneRosterResources}>
-                    {character.resources.map((resource) => {
-                      const percent =
-                        typeof resource.max === 'number' && resource.max > 0
-                          ? Math.max(0, Math.min(100, (resource.current / resource.max) * 100))
-                          : 0;
-                      return (
-                        <div key={resource.id} className={styles.sceneRosterResource}>
-                          <div>
-                            <span>{resource.label}</span>
-                            <strong>
-                              {resource.current}
-                              {typeof resource.max === 'number' ? ` / ${resource.max}` : ''}
-                            </strong>
-                          </div>
-                          {typeof resource.max === 'number' && resource.max > 0 && (
-                            <div className={styles.sceneRosterMeter}>
-                              <span style={{width: `${percent}%`}} />
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-
-                {character.statuses.length > 0 && (
-                  <div className={styles.sceneRosterChips}>
-                    {character.statuses.map((status) => (
-                      <span key={status}>{status}</span>
-                    ))}
-                  </div>
-                )}
+                <CharacterResourceMeters resources={character.resources} />
+                <CharacterStatusChips statuses={character.statuses} />
 
                 {character.hasSheet ? (
                   <>
@@ -373,45 +331,19 @@ export function SceneRosterPanel({
                   >
                     Record change here
                   </button>
-                  <details className={styles.sceneRosterDetails}>
-                    <summary>Full state at this moment</summary>
-                    {character.location && (
-                      <div className={styles.sceneRosterLocation}>
-                        Location <strong>{character.location}</strong>
-                      </div>
-                    )}
-                    <div className={styles.sceneRosterStatGrid}>
-                      {character.stats.map((stat) => (
-                        <div key={stat.id}>
-                          <span>{stat.label}</span>
-                          <strong>{stat.value}</strong>
-                        </div>
-                      ))}
-                    </div>
-                    <div className={styles.sceneRosterInventory}>
-                      <strong>Inventory</strong>
-                      {character.inventory.length > 0 ? (
-                        <ul>
-                          {character.inventory.map((item) => (
-                            <li key={item.name}>
-                              <span>
-                                {item.name}
-                                {item.quantity > 1 ? ` ×${item.quantity}` : ''}
-                                {item.equipped ? ' · equipped' : ''}
-                              </span>
-                              {item.consumable && (
-                                <button type='button' onClick={() => onConsumeHere(character, item)}>
-                                  Consume here
-                                </button>
-                              )}
-                            </li>
-                          ))}
-                        </ul>
-                      ) : (
-                        <span>None</span>
-                      )}
-                    </div>
-                  </details>
+                  <CharacterStateDetails
+                    summary='Full state at this moment'
+                    location={character.location}
+                    stats={character.stats}
+                    inventory={character.inventory}
+                    renderItemAction={(item) =>
+                      item.consumable && (
+                        <button type='button' onClick={() => onConsumeHere(character, item)}>
+                          Consume here
+                        </button>
+                      )
+                    }
+                  />
                   </>
                 ) : (
                   <div className={styles.sceneRosterMissing}>

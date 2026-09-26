@@ -24,11 +24,7 @@ import type {
   SceneRosterTimelineEvent
 } from '../components/Workspace/SceneRosterPanel';
 import type {ConsistencyAlias} from '../services/consistency';
-import {
-  getEffectiveResourceValues,
-  getEffectiveStatValue,
-  type CharacterRuntimeModifiers
-} from '../services/compendium';
+import type {CharacterRuntimeModifiers} from '../services/compendium';
 import {
   buildConsumableCommands,
   buildConsumableExpirationCommands
@@ -57,6 +53,11 @@ import {
   validateStateMutationEventForRuleset
 } from '../services/state/stateReplay';
 import {validateStateMutationEvent} from '../services/state/stateMutationSchemas';
+import {
+  buildCharacterSnapshot,
+  getSceneOrder,
+  summarizeCharacterSnapshot
+} from '../services/state/characterSnapshot';
 import {
   buildSceneRosterModel,
   buildSelectedSceneTimeline
@@ -1334,12 +1335,15 @@ export function useWorkspaceSceneRoster({
     ]
   );
 
+  const entityById = useMemo(
+    () => new Map(entities.map((entity) => [entity.id, entity])),
+    [entities]
+  );
+
   const getCharacterStateHoverCard = useCallback(
     (loreId: string, editorPosition: number) => {
       if (!selectedDocument) return null;
-      const orderedSceneIds = sortWritingDocuments(documents).map((doc) => doc.id);
-      const selectedSceneOrder =
-        orderedSceneIds.findIndex((id) => id === selectedDocument.id) + 1;
+      const selectedSceneOrder = getSceneOrder(documents, selectedDocument.id);
       if (selectedSceneOrder <= 0) return null;
 
       const sheet = characterSheets.find(
@@ -1347,61 +1351,35 @@ export function useWorkspaceSceneRoster({
       );
       if (!sheet) return null;
 
-      const replayed = replayCharacterState({
+      const snapshot = buildCharacterSnapshot({
         sheet,
         ruleset,
         events: resolvedStateMutationEvents,
-        target: {
-          actorId: sheet.characterEntityId,
-          characterId: sheet.characterId,
-          sheetId: sheet.id,
-          actorName: sheet.name
-        },
         actorResolutions,
-        upToSceneOrder: selectedSceneOrder,
-        upToScenePosition: editorPosition
+        position: {
+          kind: 'scene',
+          sceneOrder: selectedSceneOrder,
+          moment: 'cursor',
+          cursorPosition: editorPosition
+        },
+        runtimeModifiers,
+        statDefinitionNameById,
+        resourceDefinitionNameById,
+        compendiumEntries,
+        entityById
       });
-      const resources = Object.entries(replayed.resources.current)
-        .slice(0, 4)
-        .map(([resourceId, current]) => {
-          const label = resourceDefinitionNameById.get(resourceId) ?? resourceId;
-          const effective = getEffectiveResourceValues({
-            definitionId: resourceId,
-            current,
-            max: replayed.resources.max[resourceId] ?? current,
-            runtime: runtimeModifiers
-          });
-          return `${label} ${effective.current}/${effective.max}`;
-        });
-      const stats = Object.entries(replayed.stats)
-        .slice(0, 4)
-        .map(([statId, value]) => {
-          const label = statDefinitionNameById.get(statId) ?? statId;
-          const effective =
-            typeof value === 'number'
-              ? getEffectiveStatValue({
-                  definitionId: statId,
-                  baseValue: value,
-                  runtime: runtimeModifiers
-                })
-              : value;
-          return `${label} ${String(effective)}`;
-        });
       return {
         title: sheet.name,
         sceneLabel: 'this mention',
-        resources,
-        stats,
-        statuses: Array.from(
-          new Set([...replayed.statuses, ...runtimeModifiers.notes])
-        ),
-        location: replayed.locationName
+        ...summarizeCharacterSnapshot(snapshot)
       };
     },
     [
       actorResolutions,
       characterSheets,
+      compendiumEntries,
       documents,
+      entityById,
       resourceDefinitionNameById,
       resolvedStateMutationEvents,
       ruleset,

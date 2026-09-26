@@ -270,7 +270,7 @@ and required revisit point, `WIP`, `Done <commit>`.
 | 4.43 | Talk to a character + reaction test (CL-2) | 4 | M | — after 4.42 |
 | 4.44 | Character scenes, 2–3 characters (CL-3) | 4 | M | — after 4.43 |
 | 4.45 | Character from a rough description (CL-4) | 4 | M | — after 4.42 |
-| 4.46 | Character snapshot service + shared stat card (SP-1) | 4 | S | — |
+| 4.46 | Character snapshot service + shared stat card (SP-1) | 4 | S | WIP |
 | 4.47 | Stat peek from the editor and command palette (SP-2) | 4 | M | — after 4.46 |
 | 4.48 | Pinned stat panel across writing and brainstorming (SP-3) | 4 | M | — after 4.47 |
 | 5.1 | Auto-update decision + implementation | 5 | M | — |
