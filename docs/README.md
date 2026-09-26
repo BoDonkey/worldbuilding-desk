@@ -99,6 +99,9 @@ Other files:
   scenes, character-from-description) and optional encrypted backups (5.14).
   Archive it after the slices land and their behavior is folded into the
   authorities.
+- `docs/stat-peek-plan.md` — accepted plan for fast, read-only character
+  stat blocks while writing and brainstorming (Slices 4.46–4.48). Archive it
+  after the slices land and its behavior is folded into the authorities.
 - `docs/rules-engine-plan.md` — accepted plan for moving the live
   manuscript-time state model into `packages/rules-engine` (Slices 3.10–3.11)
   and later using rules for derived values, proposed follow-up commands, and

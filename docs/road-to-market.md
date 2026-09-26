@@ -155,6 +155,7 @@ pnpm --filter web e2e:run       # for slices touching routed UI
    2.1; 2.7 after 2.5; 3.5–3.8 sequentially; 4.5–4.11 after 4.2 with the
    internal ordering noted in Phase 4; 4.12 → 4.13 and 4.14 → 4.15;
    3.10 → 3.11; 3.10 → 4.42 → 4.43 → 4.44; 4.45 after 4.42;
+   4.46 → 4.47 → 4.48; 4.42 after 4.46;
    Phase 6 strictly ordered).
 2. **Get the full prompt.** Slices marked _[prompt: archive/... § Slice N]_
    have complete, self-contained agent prompts in the archived plan. Use
@@ -265,10 +266,13 @@ and required revisit point, `WIP`, `Done <commit>`.
 | 4.39 | AI consultation budget model + point-of-use explanation | 4 | M | Done `ac84793` — (a) guards runaway loops and surprise spend, never rations deliberate work; (b) one per-project budget with a per-feature record; (c) **author signed off: local Ollama is exempt**, with a separate 200/day runaway guard; (d) every spending action states cost and remainder beside its own button, and an over-budget author adds units for today in place rather than going to Settings. Day boundary moved from UTC to the author's local midnight. Storage moved from per-project-per-day `localStorage` keys (never cleaned up) to one `inspectorBudget:<projectId>` ledger, migrating today's legacy count and sweeping the stale keys. Settings gains the reset time and today's per-feature breakdown. Lint with 1 baseline warning; 611 web (+26) + 6 engine + 12 UI tests; web/desktop builds. Cypress run locally: `cypress/e2e/consultation-budget.cy.ts` (4 specs: point-of-use display, over-budget + in-place grant, local exemption, Settings breakdown) passes after a spec fix to open the collapsed AI Settings section and advanced settings; full suite otherwise green |
 | 4.40 | Local model runs: no response cap, visible thinking, elapsed time, Stop | 4 | L | Done `1749c8f` — one shared run (`useModelRun` + `ModelRunProgress` + `splitModelOutput`) behind the assistant, both coaches, progression continuity, canon decisions, and brainstorming: phase, elapsed time, live collapsible thinking, Stop, and "Show thinking" for the latest reply (never saved or sent back); answers never contain `<think>` text. Local runs send no cap and no longer force thinking off; hosted keep the cap (4.41). Stop cancels the provider request in desktop through a new `llm:stream:cancel` IPC. Real-model check with no cap: qwen3.8 10 ideas in 5:05 (thinking visible from 16 s), writer 10 in 6:34. Lint with 1 baseline warning; 655 web (+12) + 6 engine + 12 UI tests; web/desktop builds; Cypress 93/93 |
 | 4.41 | Hosted response limits as a cost ceiling (plan, then build) | 4 | M | Done `910b7a0` — dated maintained exact-model price table and Settings response-only ceiling (including the 1,500-token structured-reply floor); unknown models never get guessed prices; Anthropic thinking stays off, OpenAI reasoning uses low effort plus `max_completion_tokens`, Gemini applies model-family allowances; all hosted adapters detect cap stops and discard incomplete streamed or ordinary replies with an actionable limit message; Gemini fallback updated to 2.5 Flash-Lite. Lint with 1 baseline warning; 696 web + 6 engine + 12 UI tests; web/desktop builds; Cypress 104/104. [Plan](archive/hosted-response-limits-plan-2026-09-24.md). |
-| 4.42 | Character voice contract (CL-1) | 4 | S | — after 3.10 |
+| 4.42 | Character voice contract (CL-1) | 4 | S | — after 3.10 and 4.46 |
 | 4.43 | Talk to a character + reaction test (CL-2) | 4 | M | — after 4.42 |
 | 4.44 | Character scenes, 2–3 characters (CL-3) | 4 | M | — after 4.43 |
 | 4.45 | Character from a rough description (CL-4) | 4 | M | — after 4.42 |
+| 4.46 | Character snapshot service + shared stat card (SP-1) | 4 | S | — |
+| 4.47 | Stat peek from the editor and command palette (SP-2) | 4 | M | — after 4.46 |
+| 4.48 | Pinned stat panel across writing and brainstorming (SP-3) | 4 | M | — after 4.47 |
 | 5.1 | Auto-update decision + implementation | 5 | M | — |
 | 5.2 | Code signing + notarization, both platforms | 5 | M | — |
 | 5.3 | Packaged-app validation + Electron E2E | 5 | M | — |
@@ -1425,7 +1429,7 @@ creative draft text: it never writes canon, facts, state events, or
 manuscript content without an explicit author action, and grounding is story
 state at a scene position, not per-character knowledge.
 
-- **4.42 Character voice contract** (after 3.10) — plan § 4.42. Read-only
+- **4.42 Character voice contract** (after 3.10 and 4.46) — plan § 4.42. Read-only
   context builder (canon record, accepted facts, dialogue style, replayed
   state at a scene position) plus the shared in-character prompt module.
   No UI.
@@ -1437,6 +1441,25 @@ state at a scene position, not per-character knowledge.
 - **4.45 Character from a rough description** — plan § 4.45. World Bible
   draft plus fact proposals through existing review; identity resolution on
   collisions.
+
+### Stat peek (4.46–4.48)
+
+Accepted 2026-09-26 from `docs/stat-peek-plan.md`, which holds the verified
+current state, per-slice scope, and tests; read it as the prompt. Goal: any
+character's stat block in a second or two while drafting or brainstorming,
+without leaving the current surface. Read-only, and shown only when game
+systems are enabled for the project.
+
+- **4.46 Character snapshot service + shared stat card** — plan § 4.46.
+  Extract snapshot assembly out of `useWorkspaceSceneRoster` into a pure
+  service with a `changesSince` view, plus one shared card; the scene roster
+  adopts both with no behavior change. 4.42 builds on the same service.
+- **4.47 Peek from the editor and command palette** — plan § 4.47. Shortcut
+  and context menu on a character name in Workspace; **Show stats for…** in
+  the command palette on every route.
+- **4.48 Pinned stat panel** — plan § 4.48. Up to three pinned characters in
+  an app-shell panel on Workspace, World Canvas, Corkboard, Scratchpad, and
+  World Bible; follows the cursor in Workspace, `latest` elsewhere.
 
 ## Phase 5 — Release Engineering
 

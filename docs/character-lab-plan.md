@@ -1,7 +1,7 @@
 # Character Lab — Plan
 
 **Status:** Accepted 2026-09-26. Scheduled as roadmap Slices 4.42–4.45 (after
-3.10) and 5.14. Archive this plan once the slices land and the durable
+3.10 and 4.46) and 5.14. Archive this plan once the slices land and the durable
 behavior is folded into `docs/product-blueprint.md` and `docs/domain-model.md`.
 **Origin:** the author's standalone single-file Ollama story/persona prototype
 (kept outside this repository). It proved the value of talking to characters,
@@ -60,7 +60,8 @@ assembled prompt.
 
 - A read-only context builder for one character at a scene position:
   canonical record (stable ID), accepted facts, assigned dialogue style, and
-  replayed state from the `rules-engine` replay API that 3.10 introduces.
+  replayed state via `buildCharacterSnapshot` (4.46, `docs/stat-peek-plan.md`)
+  over the `rules-engine` replay API that 3.10 introduces.
   Returns tagged sections with provenance, in line with the shared context
   extraction direction.
 - A shared prompt module for in-character generation holding the principle-5
@@ -78,6 +79,8 @@ assembled prompt.
   a situation; get likely behavior, reasoning, and dialogue).
 - The transcript lives for the session; **Save to Scratchpad** keeps it. No
   canon or state writes.
+- The character's `CharacterStatCard` (4.46) sits beside the conversation,
+  from the same snapshot the model is given.
 - Budget, provider disclosure, Stop, and cut-off handling reuse 4.39–4.41.
 - Cypress: open from both entry points, run against a stubbed provider, save
   to Scratchpad, and verify no canon/state records changed.
