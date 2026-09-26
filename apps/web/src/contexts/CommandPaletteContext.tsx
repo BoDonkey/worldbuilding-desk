@@ -7,6 +7,18 @@ import {
 } from 'react';
 import {useLocation, useNavigate} from 'react-router';
 import {CommandPalette} from '../components/CommandPalette';
+import {CharacterStatPeekDialog} from '../components/CharacterStatPeekDialog';
+import {requestCharacterStatPeek} from '../commands/characterStatPeek';
+import {getProjectCapabilities} from '../projectMode';
+import {
+  deriveCharacterSheetNames,
+  getCharacterSheetsByProject
+} from '../services/characters';
+import {
+  buildCharacterPeekTargets,
+  resolveCharacterStatCardTemplate,
+  type CharacterPeekTarget
+} from '../services/state/characterPeek';
 import {
   createAppCommands,
   type AppCommand
@@ -31,23 +43,40 @@ export const CommandPaletteProvider = ({children}: CommandPaletteProviderProps) 
   const location = useLocation();
   const [isOpen, setIsOpen] = useState(false);
   const [searchCommands, setSearchCommands] = useState<AppCommand[]>([]);
+  const [statPeekTargets, setStatPeekTargets] = useState<CharacterPeekTarget[]>([]);
+  const [statPeek, setStatPeek] = useState<{query: string; sheetId: string | null} | null>(
+    null
+  );
+  const canUseGameSystems = getProjectCapabilities(
+    activeProject ? projectSettings : null
+  ).canUseGameSystems;
 
   useEffect(() => {
     if (!activeProject) {
       setSearchCommands([]);
+      setStatPeekTargets([]);
       return;
     }
 
     let cancelled = false;
 
     const loadSearchCommands = async () => {
-      const [documents, entities, aliases] = await Promise.all([
+      const [documents, entities, aliases, sheets] = await Promise.all([
         getDocumentsByProject(activeProject.id),
         getEntitiesByProject(activeProject.id),
-        getAliasesByProject(activeProject.id)
+        getAliasesByProject(activeProject.id),
+        getCharacterSheetsByProject(activeProject.id)
       ]);
 
       if (cancelled) return;
+
+      setStatPeekTargets(
+        buildCharacterPeekTargets({
+          sheets: deriveCharacterSheetNames(sheets, entities),
+          entities,
+          aliases
+        })
+      );
 
       const aliasesByEntityId = aliases.reduce<Record<string, string[]>>((acc, alias) => {
         if (alias.targetType !== 'entity') {
@@ -143,18 +172,54 @@ export const CommandPaletteProvider = ({children}: CommandPaletteProviderProps) 
     window.addEventListener('wbd:entity-records-changed', reload);
     window.addEventListener('wbd:alias-records-changed', reload);
     window.addEventListener('wbd:writing-records-changed', reload);
+    window.addEventListener('wbd:character-sheet-records-changed', reload);
 
     return () => {
       cancelled = true;
       window.removeEventListener('wbd:entity-records-changed', reload);
       window.removeEventListener('wbd:alias-records-changed', reload);
       window.removeEventListener('wbd:writing-records-changed', reload);
+      window.removeEventListener('wbd:character-sheet-records-changed', reload);
     };
   }, [activeProject, isOpen, navigate]);
+
+  const statPeekCommands = useMemo<AppCommand[]>(() => {
+    if (!canUseGameSystems) return [];
+    const showStatsFor = (sheetId: string) => {
+      if (!requestCharacterStatPeek(sheetId)) setStatPeek({query: '', sheetId});
+    };
+    return [
+      {
+        id: 'character-show-stats',
+        label: 'Show stats for…',
+        section: 'Characters',
+        keywords: ['stats', 'status', 'sheet', 'character', 'peek', 'level'],
+        description: location.pathname.startsWith('/workspace')
+          ? 'At the cursor in the current scene'
+          : 'Latest state',
+        run: (query?: string) =>
+          setStatPeek({
+            query: (query ?? '')
+              .replace(/^\s*(show\s+)?(stats?|status)(\s+for)?\s*/i, '')
+              .replace(/…/g, '')
+              .trim(),
+            sheetId: null
+          })
+      },
+      ...statPeekTargets.map((target) => ({
+        id: `search-stats-${target.sheetId}`,
+        label: `Show stats for ${target.name}`,
+        section: 'Search' as const,
+        keywords: ['stats', 'status', 'sheet', ...target.surfaces],
+        run: () => showStatsFor(target.sheetId)
+      }))
+    ];
+  }, [canUseGameSystems, location.pathname, statPeekTargets]);
 
   const commands = useMemo(
     () => [
       ...searchCommands,
+      ...statPeekCommands,
       ...createAppCommands({
         pathname: location.pathname,
         navigate,
@@ -162,8 +227,17 @@ export const CommandPaletteProvider = ({children}: CommandPaletteProviderProps) 
         projectSettings
       })
     ],
-    [location.pathname, navigate, activeProject, projectSettings, searchCommands]
+    [
+      location.pathname,
+      navigate,
+      activeProject,
+      projectSettings,
+      searchCommands,
+      statPeekCommands
+    ]
   );
+
+  const closeStatPeek = useCallback(() => setStatPeek(null), []);
 
   const closePalette = useCallback(() => {
     setIsOpen(false);
@@ -211,6 +285,14 @@ export const CommandPaletteProvider = ({children}: CommandPaletteProviderProps) 
         commands={commands}
         onClose={closePalette}
         onExecute={handleExecuteCommand}
+      />
+      <CharacterStatPeekDialog
+        isOpen={Boolean(statPeek) && canUseGameSystems}
+        projectId={activeProject?.id ?? null}
+        initialQuery={statPeek?.query ?? ''}
+        initialSheetId={statPeek?.sheetId ?? null}
+        template={resolveCharacterStatCardTemplate(projectSettings?.statBlockPreferences)}
+        onClose={closeStatPeek}
       />
     </CommandPaletteContext.Provider>
   );

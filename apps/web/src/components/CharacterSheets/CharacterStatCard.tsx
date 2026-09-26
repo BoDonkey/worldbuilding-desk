@@ -5,9 +5,14 @@ import type {
   CharacterSnapshotResourceLine,
   CharacterSnapshotStatLine
 } from '../../services/state/characterSnapshot';
-// Shares the scene roster's styles so the roster renders unchanged; the card
-// gets its own module when it appears outside Workspace (Slice 4.48).
+import {
+  applyCharacterStatCardTemplate,
+  type CharacterStatCardTemplate
+} from '../../services/state/characterPeek';
+// The parts share the scene roster's styles so the roster renders unchanged;
+// card-level layout lives in its own module.
 import styles from '../../styles/WorkspaceRoute.module.css';
+import cardStyles from '../../styles/CharacterStatCard.module.css';
 
 export function CharacterResourceMeters({
   resources
@@ -110,37 +115,48 @@ export function CharacterStateDetails({
 
 /**
  * Read-only stat block for one character at a point in the manuscript. `compact`
- * keeps full state collapsed; `full` opens it.
+ * keeps full state collapsed; `full` opens it. A stat-block `template` scopes
+ * stats and resources like the project's inserted status windows, captions the
+ * card to match, and sets the default density from its style.
  */
 export function CharacterStatCard({
   snapshot,
   asOfLabel,
-  density = 'compact',
+  density,
+  template,
   actions
 }: {
   snapshot: CharacterSnapshot;
   /** Where the state was read, e.g. "at the cursor in The Vault". */
   asOfLabel: string;
   density?: 'compact' | 'full';
+  template?: CharacterStatCardTemplate;
   actions?: ReactNode;
 }) {
+  const shown = applyCharacterStatCardTemplate(snapshot, template);
+  const effectiveDensity =
+    density ?? (template && template.style !== 'compact' ? 'full' : 'compact');
   return (
-    <article className={styles.sceneRosterCard} aria-label={`${snapshot.name} stats`}>
-      <div className={styles.sceneRosterCardHeader}>
+    <article
+      className={`${styles.sceneRosterCard} ${template ? cardStyles.statusWindow : ''}`}
+      aria-label={`${snapshot.name} stats`}
+    >
+      <div className={cardStyles.header}>
         <div className={styles.sceneRosterIdentity}>
           <strong>{snapshot.name}</strong>
           <span>Level {snapshot.level}</span>
         </div>
       </div>
+      {template && <div className={cardStyles.statusWindowCaption}>[{template.label}]</div>}
       <div className={styles.sceneRosterSource}>{asOfLabel}</div>
-      <CharacterResourceMeters resources={snapshot.resources} />
-      <CharacterStatusChips statuses={snapshot.statuses} />
+      <CharacterResourceMeters resources={shown.resources} />
+      <CharacterStatusChips statuses={shown.statuses} />
       <CharacterStateDetails
         summary='Stats and inventory'
-        location={snapshot.location}
-        stats={snapshot.stats}
-        inventory={snapshot.inventory}
-        open={density === 'full'}
+        location={shown.location}
+        stats={shown.stats}
+        inventory={shown.inventory}
+        open={effectiveDensity === 'full'}
       />
       {actions}
     </article>

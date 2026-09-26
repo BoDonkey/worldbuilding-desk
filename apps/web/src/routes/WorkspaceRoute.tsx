@@ -97,6 +97,14 @@ import {
 } from '../hooks/useWorkspaceSceneRoster';
 import {describeError} from '../services/errors';
 import {findCardsForScene} from '../services/workspace/chapterCardSceneLinks';
+import {
+  buildCharacterPeekTargets,
+  resolveCharacterStatCardTemplate
+} from '../services/state/characterPeek';
+import {
+  CHARACTER_STAT_PEEK_EVENT,
+  type CharacterStatPeekRequestDetail
+} from '../commands/characterStatPeek';
 
 declare global {
   interface Window {
@@ -899,7 +907,7 @@ function WorkspaceRoute() {
     positionedChangeBefore,
     savePositionedChange,
     selectedSceneTimeline,
-    getCharacterStateHoverCard
+    getCharacterStatSnapshot
   } = useWorkspaceSceneRoster({
     activeProject,
     selectedDocument,
@@ -969,6 +977,48 @@ function WorkspaceRoute() {
   const showGameSystems = capabilities.canUseGameSystems;
   const showRuleAuthoring = capabilities.canUseRuleAuthoring;
   const isGeneralFictionProject = capabilities.isGeneralFiction;
+  const characterPeekTargets = useMemo(
+    () => buildCharacterPeekTargets({sheets: characterSheets, entities, aliases}),
+    [aliases, characterSheets, entities]
+  );
+  const statBlockPreferences = projectSettings?.statBlockPreferences;
+  const characterStatPeek = useMemo(
+    () =>
+      showGameSystems && selectedDocument
+        ? {
+            targets: characterPeekTargets,
+            getSnapshot: getCharacterStatSnapshot,
+            template: resolveCharacterStatCardTemplate(statBlockPreferences),
+            sceneTitle: selectedDocument.title || 'Untitled scene'
+          }
+        : undefined,
+    [
+      characterPeekTargets,
+      getCharacterStatSnapshot,
+      selectedDocument,
+      showGameSystems,
+      statBlockPreferences
+    ]
+  );
+  const [statPeekRequest, setStatPeekRequest] = useState<{
+    sheetId: string;
+    token: number;
+  } | null>(null);
+  useEffect(() => {
+    if (!characterStatPeek) return;
+    const onStatPeekRequest = (event: Event) => {
+      const detail = (event as CustomEvent<CharacterStatPeekRequestDetail>).detail;
+      if (!detail || detail.handled) return;
+      if (!characterStatPeek.targets.some((target) => target.sheetId === detail.sheetId)) return;
+      detail.handled = true;
+      setStatPeekRequest((current) => ({
+        sheetId: detail.sheetId,
+        token: (current?.token ?? 0) + 1
+      }));
+    };
+    window.addEventListener(CHARACTER_STAT_PEEK_EVENT, onStatPeekRequest);
+    return () => window.removeEventListener(CHARACTER_STAT_PEEK_EVENT, onStatPeekRequest);
+  }, [characterStatPeek]);
   const reviewBannerTitle = hasBlockingUnknownGuardrailIssues
     ? isGeneralFictionProject
       ? 'This scene has names or places to review before strict save.'
@@ -1553,7 +1603,8 @@ function WorkspaceRoute() {
                   }}
                   selectionQuickSnippets={selectionQuickSnippets}
                   knownLoreHighlights={knownWorldBibleLoreHighlights}
-                  getCharacterStateHoverCard={getCharacterStateHoverCard}
+                  characterStatPeek={characterStatPeek}
+                  statPeekRequest={statPeekRequest}
                   presentStatBlockToken={getStatBlockTokenPresentation}
                   getStatBlockPreviewData={getStatBlockPreviewData}
                   onRebindStatBlockToken={openStatBlockRebind}

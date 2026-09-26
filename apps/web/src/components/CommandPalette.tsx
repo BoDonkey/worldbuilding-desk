@@ -77,8 +77,14 @@ export const CommandPalette = ({
     const workspace = filteredCommands.filter(
       (command) => command.section === 'Workspace' && !seen.has(command.id)
     );
+    const characters = filteredCommands.filter(
+      (command) => command.section === 'Characters' && !seen.has(command.id)
+    );
     if (navigation.length > 0) {
       groups.push({label: 'Navigation', commands: navigation});
+    }
+    if (characters.length > 0) {
+      groups.push({label: 'Characters', commands: characters});
     }
     if (workspace.length > 0) {
       groups.push({label: 'Workspace', commands: workspace});

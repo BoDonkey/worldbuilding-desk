@@ -824,6 +824,22 @@ runtime schema, and nothing here changes the roadmap's status board.
 ## Verification Status
 
 ### Verified Recently
+- Slice 4.47 stat peek from the editor and command palette: in Workspace, with
+  the cursor in or a selection on a character's name or alias,
+  **Cmd/Ctrl+Alt+S** or the right-click **Show stats** item opens the shared
+  `CharacterStatCard` at the cursor in a focusable popover (Escape returns to
+  the editor; a shared name asks which character). The mouse hover card now
+  shows the same card. The command palette offers **Show stats for…** (and
+  `Show stats for <name>` search results) on every route: in Workspace it
+  opens the peek at the cursor, elsewhere a dialog shows the latest state.
+  Cards follow the project's stat-block style and stat/resource scope. All of
+  it is hidden when game systems are disabled, including the hover card,
+  which was previously shown regardless. Name matching lives in the pure
+  `services/state/characterPeek.ts`; the palette dialog reads data read-only
+  (new `getSettlementState` never creates a settlement record). Verified by
+  unit tests and `cypress/e2e/stat-peek.cy.ts` (rostered and roster-hidden
+  characters by shortcut, context menu, palette, values match the Sheets
+  route, no IndexedDB record changes, gating).
 - Slice 4.46 character snapshot service + shared stat card: new pure
   `services/state/characterSnapshot.ts` (`buildCharacterSnapshot` at a scene
   opening/cursor/ending or `latest`, `describeCharacterSnapshotChanges`,

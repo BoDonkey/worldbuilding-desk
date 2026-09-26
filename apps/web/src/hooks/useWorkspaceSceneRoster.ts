@@ -55,8 +55,7 @@ import {
 import {validateStateMutationEvent} from '../services/state/stateMutationSchemas';
 import {
   buildCharacterSnapshot,
-  getSceneOrder,
-  summarizeCharacterSnapshot
+  getSceneOrder
 } from '../services/state/characterSnapshot';
 import {
   buildSceneRosterModel,
@@ -1340,18 +1339,17 @@ export function useWorkspaceSceneRoster({
     [entities]
   );
 
-  const getCharacterStateHoverCard = useCallback(
-    (loreId: string, editorPosition: number) => {
+  /** Read-only state for the stat peek, at an editor position in the selected scene. */
+  const getCharacterStatSnapshot = useCallback(
+    (sheetId: string, editorPosition: number) => {
       if (!selectedDocument) return null;
       const selectedSceneOrder = getSceneOrder(documents, selectedDocument.id);
       if (selectedSceneOrder <= 0) return null;
 
-      const sheet = characterSheets.find(
-        (candidate) => candidate.id === loreId || candidate.characterId === loreId
-      );
+      const sheet = characterSheets.find((candidate) => candidate.id === sheetId);
       if (!sheet) return null;
 
-      const snapshot = buildCharacterSnapshot({
+      return buildCharacterSnapshot({
         sheet,
         ruleset,
         events: resolvedStateMutationEvents,
@@ -1368,11 +1366,6 @@ export function useWorkspaceSceneRoster({
         compendiumEntries,
         entityById
       });
-      return {
-        title: sheet.name,
-        sceneLabel: 'this mention',
-        ...summarizeCharacterSnapshot(snapshot)
-      };
     },
     [
       actorResolutions,
@@ -1410,6 +1403,6 @@ export function useWorkspaceSceneRoster({
     positionedChangeBefore,
     savePositionedChange,
     selectedSceneTimeline,
-    getCharacterStateHoverCard
+    getCharacterStatSnapshot
   };
 }

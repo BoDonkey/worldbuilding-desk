@@ -106,3 +106,25 @@
   color: var(--color-text-secondary);
   padding: 0.7rem 0.85rem;
 }
+
+/* Stat peek opened from the palette: a character card below the header. */
+.peekHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--color-border);
+  color: var(--color-text-primary);
+  font-weight: 600;
+}
+
+.peekBody {
+  padding: 0.75rem 1rem 1rem;
+  overflow-y: auto;
+}
+
+.peekHeaderActions {
+  display: flex;
+  gap: 0.5rem;
+}

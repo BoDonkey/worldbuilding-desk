@@ -1,4 +1,4 @@
-import {useLayoutEffect, useRef, useState, type ReactNode} from 'react';
+import React, {useEffect, useLayoutEffect, useRef, useState, type ReactNode} from 'react';
 import styles from '../../assets/components/ContextPopover.module.css';
 import {calculateContextPopoverPosition} from './contextPopoverPosition';
 
@@ -10,6 +10,8 @@ interface ContextPopoverProps {
   anchorTop?: number;
   anchorBottom?: number;
   tone?: 'warning' | 'neutral';
+  /** Move focus into the popover when it opens; Escape then closes it. */
+  focusOnOpen?: boolean;
   onClose: () => void;
   children?: ReactNode;
 }
@@ -22,11 +24,16 @@ export function ContextPopover({
   anchorTop,
   anchorBottom,
   tone = 'warning',
+  focusOnOpen = false,
   onClose,
   children
 }: ContextPopoverProps) {
   const popoverRef = useRef<HTMLDivElement | null>(null);
   const [position, setPosition] = useState({left, top});
+
+  useEffect(() => {
+    if (focusOnOpen) popoverRef.current?.focus({preventScroll: true});
+  }, [focusOnOpen]);
 
   useLayoutEffect(() => {
     const clampPosition = () => {
@@ -73,6 +80,19 @@ export function ContextPopover({
     <div
       ref={popoverRef}
       className={`${styles.popover} ${tone === 'neutral' ? styles.popoverNeutral : ''}`}
+      {...(focusOnOpen
+        ? {
+            role: 'dialog',
+            'aria-label': title,
+            tabIndex: -1,
+            onKeyDown: (event: React.KeyboardEvent<HTMLDivElement>) => {
+              if (event.key !== 'Escape') return;
+              event.preventDefault();
+              event.stopPropagation();
+              onClose();
+            }
+          }
+        : {})}
       style={{
         left: `${position.left}px`,
         top: `${position.top}px`

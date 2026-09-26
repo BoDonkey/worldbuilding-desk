@@ -1030,6 +1030,19 @@ export async function saveSettlementModule(module: SettlementModule): Promise<vo
   await requestToPromise(store.put(module));
 }
 
+/** Read-only lookup: the normalized settlement state, or null if none was created yet. */
+export async function getSettlementState(
+  projectId: string,
+  sourceEntityId?: string
+): Promise<SettlementState | null> {
+  const db = await openDb();
+  const tx = db.transaction(SETTLEMENT_STATE_STORE_NAME, 'readonly');
+  const existing = (await requestToPromise(
+    tx.objectStore(SETTLEMENT_STATE_STORE_NAME).get(settlementStateId(projectId, sourceEntityId))
+  )) as SettlementState | undefined;
+  return existing ? normalizeSettlementState(existing) : null;
+}
+
 export async function getOrCreateSettlementState(
   projectId: string,
   name = 'Main Base',

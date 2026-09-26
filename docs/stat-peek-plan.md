@@ -75,6 +75,15 @@ the hover card.)
   from Workspace).
 - Cypress: peek by shortcut on a rostered and a non-rostered character; value
   matches the Sheets route; no records change.
+- As built (2026-09-26): the shortcut is **Cmd/Ctrl+Alt+S** (StarterKit owns
+  Mod+Shift+S for strikethrough; AltGr is excluded). "The project's chosen
+  template" is its stat-block preferences: the card takes their style
+  (compact keeps details collapsed) and stat/resource scope, and captions
+  itself like an inserted status window. The right-click menu keeps **AI
+  Expand** for a selection. The card got a small module
+  (`styles/CharacterStatCard.module.css`) for card-level layout, since the
+  palette dialog is already a surface outside Workspace; the parts keep the
+  roster's styles until 4.48. The hover card is now gated on game systems.
 
 ### 4.48 — Pinned stat panel across writing and brainstorming (M, after 4.47)
 

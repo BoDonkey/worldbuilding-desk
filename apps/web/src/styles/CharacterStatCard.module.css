@@ -1,0 +1,24 @@
+/* Card-level layout for CharacterStatCard. The shared parts (meters, chips,
+   details) keep the scene roster's styles so the roster renders unchanged. */
+
+.header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.55rem;
+}
+
+/* Matches the caption line of an inserted status window. */
+.statusWindowCaption {
+  margin-top: 0.4rem;
+  padding: 0.2rem 0.45rem;
+  border-left: 2px solid var(--color-accent);
+  background: var(--color-bg-secondary);
+  color: var(--color-text-secondary);
+  font-family: var(--editor-font-family);
+  font-size: 0.72rem;
+}
+
+.statusWindow {
+  border-color: var(--color-accent-soft-border);
+}

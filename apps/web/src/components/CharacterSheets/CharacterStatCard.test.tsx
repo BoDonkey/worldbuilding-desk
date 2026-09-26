@@ -56,3 +56,38 @@ describe('CharacterStatCard', () => {
     expect(screen.getByRole('button', {name: 'Open sheet'})).toBeInTheDocument();
   });
 });
+
+describe('CharacterStatCard with a stat-block template', () => {
+  it('captions, scopes, and opens the card like the project status window', () => {
+    const {container} = render(
+      <CharacterStatCard
+        snapshot={snapshot}
+        asOfLabel='Latest'
+        template={{
+          style: 'full',
+          label: 'Character Status • All Stats',
+          statIds: ['agility'],
+          resourceIds: []
+        }}
+      />
+    );
+
+    const card = screen.getByRole('article', {name: 'Mira stats'});
+    expect(within(card).getByText('[Character Status • All Stats]')).toBeInTheDocument();
+    expect(within(card).getByText('Agility')).toBeInTheDocument();
+    expect(within(card).queryByText('Strength')).not.toBeInTheDocument();
+    expect(within(card).queryByText('29 / 45')).not.toBeInTheDocument();
+    expect(container.querySelector('details')).toHaveAttribute('open');
+  });
+
+  it('stays collapsed for a compact template', () => {
+    const {container} = render(
+      <CharacterStatCard
+        snapshot={snapshot}
+        asOfLabel='Latest'
+        template={{style: 'compact', label: 'Character Status • Compact'}}
+      />
+    );
+    expect(container.querySelector('details')).not.toHaveAttribute('open');
+  });
+});
