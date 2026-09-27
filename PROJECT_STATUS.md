@@ -824,6 +824,24 @@ runtime schema, and nothing here changes the roadmap's status board.
 ## Verification Status
 
 ### Verified Recently
+- Slice 4.45 character from a rough description (CL-4): **Start from a
+  description** on the World Bible Characters page opens
+  `CharacterFromDescriptionDialog`. The generation reply is strict JSON,
+  validated by `parseCharacterProfileReply`: malformed replies are rejected
+  whole, a name survives only if the description contains it, and each stable
+  fact must quote the description (unquoted facts are dropped and counted).
+  The author edits the name, unticks facts, and edits or drops suggestions,
+  then explicitly accepts. That creates a draft `WorldEntity`
+  (`needsCompletion`, empty fields), a `character_dossier` Source Note with
+  the description plus kept suggestions under a not-canon heading, its
+  primary-subject link, and proposed facts whose evidence spans point into
+  the note. The facts are reviewed in Source Notes like any other; model
+  suggestions never enter World Bible fields. A name matching an existing
+  character's canonical name or alias requires choosing **Add to <name>**
+  (proposals only, no merge) or **Create a separate character**. Cypress
+  covers create → review → accept to canon, the collision path, and a
+  refused invented name. The character lab contract is now in
+  `docs/domain-model.md` §5 and `docs/product-blueprint.md`.
 - Slice 4.44 character scenes (CL-3): **Write a character scene** in the
   Workspace context drawer's Characters tab opens `CharacterSceneDialog` —
   choose two or three characters and a story point (default: the cursor in

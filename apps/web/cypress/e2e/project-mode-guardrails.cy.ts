@@ -182,7 +182,16 @@ describe('Project mode guardrails', () => {
     cy.location('pathname').should('eq', '/world-bible');
     cy.contains('h1', 'World Bible').should('be.visible');
     cy.contains('h2', 'Characters').should('be.visible');
-    cy.get('section[aria-label="Characters canon"]').find('button').should('have.length', 3);
+    cy.get('section[aria-label="Characters canon"]')
+      .find('button')
+      .then(($buttons) => {
+        expect([...$buttons].map((button) => button.textContent?.trim())).to.deep.equal([
+          'Create Manually',
+          'Start from a description',
+          'Import Docs',
+          'Paste Text'
+        ]);
+      });
     cy.contains('h2', 'New Character').should('not.exist');
     cy.contains('h2', 'Characters')
       .parents('section[aria-label="Characters canon"]')

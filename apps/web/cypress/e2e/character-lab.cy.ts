@@ -46,6 +46,14 @@ function readStores(db: IDBDatabase): Promise<string> {
   }))).then((stores) => JSON.stringify(stores));
 }
 
+function readAll<T>(db: IDBDatabase, storeName: string): Promise<T[]> {
+  return new Promise((resolve, reject) => {
+    const request = db.transaction([storeName], 'readonly').objectStore(storeName).getAll();
+    request.onsuccess = () => resolve(request.result as T[]);
+    request.onerror = () => reject(request.error);
+  });
+}
+
 function seedAria(db: IDBDatabase): Promise<void> {
   const now = Date.now();
   return new Promise((resolve, reject) => {
@@ -129,6 +137,7 @@ function seedSceneCast(db: IDBDatabase): Promise<void> {
 }
 
 const labDialog = () => cy.get('[role="dialog"][aria-labelledby="character-lab-title"]');
+const descriptionDialog = () => cy.get('[role="dialog"][aria-labelledby="character-description-title"]');
 const sceneDialog = () => cy.get('[role="dialog"][aria-labelledby="character-scene-title"]');
 
 describe('Character lab', () => {
@@ -370,6 +379,125 @@ describe('Character lab', () => {
       cy.contains('button', 'Scratchpad').first().click();
       cy.contains('Character scene: Aria, Borin, Cael').should('be.visible');
       cy.contains('The toll collector knows Aria by name.').should('be.visible');
+    });
+  });
+  describe('character from a description', () => {
+    const MARA = 'Mara Voss pilots the ferry on the Grey River. She is stubborn and hates bells.';
+    const profileReply = (name: string | null, quote = 'She is stubborn') => anthropicReply(JSON.stringify({
+      name,
+      stableFacts: [
+        {factType: 'trait', value: 'stubborn', quote},
+        {factType: 'background', value: 'orphaned young', quote: 'lost her parents'}
+      ],
+      suggestedDetails: ['Hums old river songs while steering']
+    }));
+
+    const openFromDescription = () => {
+      cy.visit('/world-bible');
+      cy.contains('h1', 'World Bible').should('be.visible');
+      cy.contains('button', 'Characters').click();
+      cy.contains('button', 'Start from a description').click();
+    };
+
+    it('creates a draft character whose quoted facts wait in review and whose suggestions stay notes', () => {
+      cy.intercept('POST', ANTHROPIC_STREAM, profileReply('Mara Voss')).as('profileRequest');
+      openFromDescription();
+
+      descriptionDialog().within(() => {
+        cy.get('textarea').first().type(MARA);
+        cy.contains('button', 'Draft profile').click();
+      });
+      cy.wait('@profileRequest').then(({request}) => {
+        expect(JSON.stringify(request.body)).to.contain('Mara Voss pilots the ferry');
+      });
+
+      descriptionDialog().within(() => {
+        cy.contains('label', 'Name').find('input').should('have.value', 'Mara Voss');
+        cy.contains('From your description: “She is stubborn”').should('be.visible');
+        cy.contains('orphaned young').should('not.exist');
+        cy.contains('1 fact was left out because it did not quote your description.').should('be.visible');
+        cy.get('input[aria-label="Suggestion 1"]').should('have.value', 'Hums old river songs while steering');
+        cy.contains('button', 'Create draft character').click();
+        cy.contains('[role="status"]', 'Created a draft character, Mara Voss').should('be.visible');
+        cy.contains('1 fact is waiting for your review in Source Notes').should('be.visible');
+      });
+
+      withDb((db) => Promise.all([
+        readAll<{id: string; name: string; needsCompletion?: boolean; fields: Record<string, unknown>}>(db, 'entities'),
+        readAll<{value: unknown}>(db, 'canonical_facts'),
+        readAll<{targetId: string; status: string; value: unknown; loreDocumentId: string}>(db, 'lore_fact_proposals'),
+        readAll<{id: string; title: string; content: string}>(db, 'lore_documents'),
+        readAll<{loreDocumentId: string; targetId: string; relationship: string}>(db, 'lore_document_links')
+      ])).then(([entities, facts, proposals, notes, links]) => {
+        const mara = entities.find((entity) => entity.name === 'Mara Voss');
+        expect(mara?.needsCompletion).to.equal(true);
+        expect(mara?.fields).to.deep.equal({});
+        expect(facts.map((fact) => fact.value)).not.to.include('stubborn');
+        const note = notes.find((entry) => entry.title === 'Character lab: Mara Voss');
+        expect(note?.content).to.contain(MARA);
+        expect(note?.content).to.contain('- Hums old river songs while steering');
+        const proposal = proposals.find((entry) => entry.value === 'stubborn');
+        expect(proposal).to.include({targetId: mara?.id, status: 'proposed', loreDocumentId: note?.id});
+        expect(links.find((link) => link.loreDocumentId === note?.id)).to.include({
+          targetId: mara?.id,
+          relationship: 'primary_subject'
+        });
+      });
+
+      descriptionDialog().contains('button', 'Review facts').click();
+      cy.location('pathname').should('eq', '/lore');
+      cy.contains('article', 'stubborn').within(() => {
+        cy.contains('button', /^Accept$/).click();
+      });
+      cy.contains('h3', 'Accepted Canon').parent().parent().should('contain.text', 'stubborn');
+      withDb((db) => readAll<{value: unknown; targetId: string}>(db, 'canonical_facts')).then((facts) => {
+        expect(facts.some((fact) => fact.value === 'stubborn')).to.equal(true);
+      });
+    });
+
+    it('sends a name collision through an explicit choice and adds to the existing character without a merge', () => {
+      cy.intercept('POST', ANTHROPIC_STREAM, anthropicReply(JSON.stringify({
+        name: 'Aria',
+        stableFacts: [{factType: 'trait', value: 'fears deep water', quote: 'fears deep water'}],
+        suggestedDetails: []
+      }))).as('profileRequest');
+      openFromDescription();
+
+      descriptionDialog().within(() => {
+        cy.get('textarea').first().type('Aria fears deep water.');
+        cy.contains('button', 'Draft profile').click();
+        cy.contains('legend', 'A character already uses this name').should('be.visible');
+        cy.contains('button', 'Create draft character').should('be.disabled');
+        cy.contains('label', 'Add to Aria').find('input').check();
+        cy.contains('button', 'Add to Aria').click();
+        cy.contains('[role="status"]', 'Added the description to Aria.').should('be.visible');
+      });
+
+      withDb((db) => Promise.all([
+        readAll<{name: string}>(db, 'entities'),
+        readAll<{targetId: string; status: string; value: unknown}>(db, 'lore_fact_proposals')
+      ])).then(([entities, proposals]) => {
+        expect(entities.filter((entity) => entity.name === 'Aria')).to.have.length(1);
+        expect(proposals.find((entry) => entry.value === 'fears deep water')).to.include({
+          targetId: 'entity-aria',
+          status: 'proposed'
+        });
+      });
+    });
+
+    it('never keeps a name the description does not give', () => {
+      cy.intercept('POST', ANTHROPIC_STREAM, profileReply('Selka Thorn', 'stubborn')).as('profileRequest');
+      openFromDescription();
+
+      descriptionDialog().within(() => {
+        cy.get('textarea').first().type('A ferry pilot who is stubborn and hates bells.');
+        cy.contains('button', 'Draft profile').click();
+        cy.contains('label', 'Name').find('input').should('have.value', '');
+        cy.contains('The model offered a name your description does not use').should('be.visible');
+        cy.contains('button', 'Create draft character').should('be.disabled');
+        cy.contains('label', 'Name').find('input').type('Tamsin');
+        cy.contains('button', 'Create draft character').should('not.be.disabled');
+      });
     });
   });
 });

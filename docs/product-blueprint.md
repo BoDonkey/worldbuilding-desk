@@ -314,6 +314,28 @@ systems are enabled; state changes stay on the proposal path.
   per-project UI preference, not project data, and are never in backups. On
   narrow screens the panel is a bottom sheet.
 
+### Character lab (settled 2026-09-27, Slices 4.42–4.45)
+
+Authors can talk to a character, test a reaction, draft a short scene, or
+start a character from a rough description. Everything the lab produces is
+draft material; it never changes canon, facts, state, or manuscript without
+an explicit author action.
+
+- **World Bible character page:** **Talk to <name>** opens Talk and Reaction
+  test, grounded at the latest point by default. The Characters page offers
+  **Start from a description** beside Create Manually and Import.
+- **Workspace context drawer, Characters tab:** **Open character lab**
+  (grounded at the cursor in the current scene) and **Write a character
+  scene** for two or three characters, Directed or Surprise me.
+- Every run shows what it is grounded in, the story point (with a stat card
+  when game systems are on), a hosted/local data disclosure, the
+  consultation cost, and Stop. Story state is labelled as what is true at
+  that point, not what the character knows.
+- Output leaves the lab only by **Save to Scratchpad**, **Insert at cursor**
+  (an ordinary undoable edit), or, for a description, a draft character
+  marked Needs completion with a linked Source Note and proposed facts in
+  the normal review.
+
 ## Fiction-First Product Boundary
 
 Fiction is the shipping product. Nonfiction remains a parked, separate future

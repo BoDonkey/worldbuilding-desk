@@ -1,6 +1,6 @@
 # Documentation Map
 
-Last updated: 2026-09-22
+Last updated: 2026-09-27
 
 The active documentation set was consolidated on 2026-08-01 down to seven
 documents. Everything else lives in `docs/archive/` with a banner pointing at
@@ -97,8 +97,8 @@ Other files:
 - `docs/character-lab-plan.md` — accepted plan for the character lab
   (Slices 4.42–4.45: grounded character talk, reaction tests, character
   scenes, character-from-description) and optional encrypted backups (5.14).
-  Archive it after the slices land and their behavior is folded into the
-  authorities.
+  4.42–4.45 have landed and their durable behavior is in the blueprint and
+  domain model; archive the plan after 5.14 lands.
 - `docs/rules-engine-plan.md` — accepted plan for moving the live
   manuscript-time state model into `packages/rules-engine` (Slices 3.10–3.11)
   and later using rules for derived values, proposed follow-up commands, and

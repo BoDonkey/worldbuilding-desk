@@ -18,6 +18,7 @@ import {WorldBibleCharacterHealth} from '../components/WorldBible/WorldBibleChar
 import {WorldBibleLinkedSourceNote} from '../components/WorldBible/WorldBibleLinkedSourceNote';
 import {WorldBibleDialogueStyleControl} from '../components/WorldBible/WorldBibleDialogueStyleControl';
 import {CharacterLabDialog} from '../components/CharacterLab/CharacterLabDialog';
+import {CharacterFromDescriptionDialog} from '../components/CharacterLab/CharacterFromDescriptionDialog';
 import type {CharacterVoicePosition} from '../services/characterLab';
 import {WorldBibleMechanicsPanel} from '../components/WorldBible/WorldBibleMechanicsPanel';
 import {
@@ -125,6 +126,7 @@ function WorldBibleRoute() {
     useState<SystemNegativeSpaceStatus>('open');
   const [negativeSpaceSceneIds, setNegativeSpaceSceneIds] = useState<string[]>([]);
   const [labEntityId, setLabEntityId] = useState<string | null>(null);
+  const [isFromDescriptionOpen, setIsFromDescriptionOpen] = useState(false);
   const [characterDetailSection, setCharacterDetailSection] =
     useState<CharacterDetailSection>('canon');
   const [areItemDetailsExpanded, setAreItemDetailsExpanded] = useState(false);
@@ -878,6 +880,9 @@ function WorldBibleRoute() {
     focusedEntityKeyRef.current = focusKey;
   }, [activeTab, categories, entities, handleEdit, isPasteImportOpen, location.key, location.state]);
 
+  const openCharacterFromDescription = (entityId: string) =>
+    navigate('/world-bible', {state: {focusEntityId: entityId, focusCharacterSection: 'notes'}});
+
   const handleApplyImportDrafts = async (options?: {
     draftIds?: string[];
     openFirstImported?: boolean;
@@ -1110,6 +1115,18 @@ function WorldBibleRoute() {
                 Create Manually
               </button>
             </div>
+            {isCharacterCategory(activeCategory) && (
+              <div className={styles.castTask}>
+                <h3>From a description</h3>
+                <p>
+                  Describe a character in a few sentences. The character lab splits it into
+                  facts for your review and suggestions kept as notes.
+                </p>
+                <button type='button' onClick={() => setIsFromDescriptionOpen(true)}>
+                  Start from a description
+                </button>
+              </div>
+            )}
             <div className={styles.castTask}>
               <h3>Import {activeCategory.name.replace(/s$/i, '')}</h3>
               <p>Import documents or pasted dossiers, then review each generated canon record.</p>
@@ -2184,6 +2201,16 @@ function WorldBibleRoute() {
       )}
         </div>
       </div>
+
+      {isFromDescriptionOpen && activeCategory && (
+        <CharacterFromDescriptionDialog
+          isOpen
+          projectId={activeProject.id}
+          category={{id: activeCategory.id, slug: activeCategory.slug}}
+          onOpenCharacter={openCharacterFromDescription}
+          onClose={() => setIsFromDescriptionOpen(false)}
+        />
+      )}
 
       {labEntityId && (
         <CharacterLabDialog

@@ -24,6 +24,16 @@ export const CHARACTER_KNOWLEDGE_DISCLAIMER =
   'character knows. A character may be unaware of parts of it. Do not assume a character knows ' +
   'something only because it appears there.';
 
+/** The generation reply contract; `parseCharacterProfileReply` enforces it. */
+export const CHARACTER_PROFILE_REPLY_FORMAT =
+  'Reply with JSON only, in this shape:\n' +
+  '{"name": string or null, "stableFacts": [{"factType": one of "alias", "age", "occupation", ' +
+  '"membership", "heritage", "appearance", "trait", "ability", "relationship", "goal", ' +
+  '"background"; "value": short text; "quote": the exact words from the description that ' +
+  'state it}], "suggestedDetails": [short text]}\n' +
+  'Use null for the name unless the description gives one. Every quote must be copied ' +
+  'exactly from the description; a fact without one is discarded.';
+
 const LAB_OUTPUT_NOTE =
   'Your reply is draft material for the author. It does not change their story, canon, or notes.';
 
@@ -183,6 +193,7 @@ export function buildCharacterVoicePrompt(request: CharacterVoiceRequest): Chara
             '- Keep every stable fact traceable to the description.\n' +
             '- When the description does not decide something, leave it open.',
           'Nothing you return becomes canon. The author reviews every fact and detail.',
+          CHARACTER_PROFILE_REPLY_FORMAT,
           renderAuthorInstructions(request.authorInstructions)
         ]),
         messages: [

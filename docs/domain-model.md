@@ -337,6 +337,32 @@ Delivery slices (detail in `docs/archive/ai-assisted-item-authoring.md`):
    separate from character acquisition/equipment/consumption events)
 6. Advanced conditional mechanics — only after fixture evaluation
 
+### Character lab boundary
+
+_Status: implemented (Slices 4.42–4.45, 2026-09-27)._
+
+- **Grounding** comes only from `buildCharacterVoiceContext`: the canonical
+  World Bible record and aliases (through the shared character link
+  resolver), accepted canon facts valid at the chosen position, the assigned
+  dialogue style name, and replayed story state from `buildCharacterSnapshot`.
+  A canonical fact whose known source proposal is not `accepted` is
+  excluded. Story state is labelled as what is true at that point, never as
+  what a character knows; per-character knowledge attribution is not modelled.
+- **One prompt module** (`buildCharacterVoicePrompt`) carries the
+  in-character rules (may disagree or refuse, no people-pleasing, no invented
+  major biography, state uncertainty) for talk, reaction, scene, and
+  generation, and embeds grounding in the system prompt so every provider,
+  including local Ollama, receives it.
+- **Character from a description** treats the reply as untrusted input: a
+  strict schema; a name is kept only if the description contains it; every
+  stable fact must quote the description and carries that span as evidence.
+  Accepting is an explicit author action that creates a draft `WorldEntity`
+  (`needsCompletion`), a linked Source Note holding the author's description
+  and any kept suggestions, and `LoreFactProposal`s in the ordinary review.
+  Model suggestions never enter World Bible fields. A name that matches an
+  existing character's canonical name or alias requires an explicit choice:
+  add to that character (proposals only, no merge) or create a separate one.
+
 ### Prose-proximate item and state handoff
 
 _Status: accepted product/domain direction (2026-08-16); implementation is

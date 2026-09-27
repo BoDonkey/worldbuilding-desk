@@ -41,6 +41,8 @@ import {getCanonicalFactsByProject, getLoreFactProposalsByProject} from '../serv
 import {getStateMutationEventsByProject} from '../services/state/stateMutationLedger';
 import {
   buildCharacterVoiceContext,
+  findCharacterNameCollisions,
+  type CharacterNameCollision,
   type CharacterVoiceContext,
   type CharacterVoicePosition
 } from '../services/characterLab';
@@ -236,6 +238,21 @@ export function useCharacterLabData(projectId: string | null, enabled: boolean) 
     [current]
   );
 
+  const findNameCollisions = useCallback(
+    (name: string): CharacterNameCollision[] =>
+      current
+        ? findCharacterNameCollisions({
+            name,
+            categories: current.categories,
+            entities: current.entities,
+            characters: current.characters,
+            sheets: current.sheets,
+            aliases: current.aliases
+          })
+        : [],
+    [current]
+  );
+
   return {
     isLoaded: Boolean(current),
     loadError,
@@ -245,6 +262,7 @@ export function useCharacterLabData(projectId: string | null, enabled: boolean) 
     documents: current?.documents ?? EMPTY_DOCUMENTS,
     chapterCards: current?.chapterCards ?? EMPTY_CARDS,
     openThreads: current?.openThreads ?? EMPTY_THREADS,
-    buildContext
+    buildContext,
+    findNameCollisions
   };
 }
