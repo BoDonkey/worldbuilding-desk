@@ -267,12 +267,13 @@ and required revisit point, `WIP`, `Done <commit>`.
 | 4.40 | Local model runs: no response cap, visible thinking, elapsed time, Stop | 4 | L | Done `1749c8f` — one shared run (`useModelRun` + `ModelRunProgress` + `splitModelOutput`) behind the assistant, both coaches, progression continuity, canon decisions, and brainstorming: phase, elapsed time, live collapsible thinking, Stop, and "Show thinking" for the latest reply (never saved or sent back); answers never contain `<think>` text. Local runs send no cap and no longer force thinking off; hosted keep the cap (4.41). Stop cancels the provider request in desktop through a new `llm:stream:cancel` IPC. Real-model check with no cap: qwen3.8 10 ideas in 5:05 (thinking visible from 16 s), writer 10 in 6:34. Lint with 1 baseline warning; 655 web (+12) + 6 engine + 12 UI tests; web/desktop builds; Cypress 93/93 |
 | 4.41 | Hosted response limits as a cost ceiling (plan, then build) | 4 | M | Done `910b7a0` — dated maintained exact-model price table and Settings response-only ceiling (including the 1,500-token structured-reply floor); unknown models never get guessed prices; Anthropic thinking stays off, OpenAI reasoning uses low effort plus `max_completion_tokens`, Gemini applies model-family allowances; all hosted adapters detect cap stops and discard incomplete streamed or ordinary replies with an actionable limit message; Gemini fallback updated to 2.5 Flash-Lite. Lint with 1 baseline warning; 696 web + 6 engine + 12 UI tests; web/desktop builds; Cypress 104/104. [Plan](archive/hosted-response-limits-plan-2026-09-24.md). |
 | 4.42 | Character voice contract (CL-1) | 4 | S | Done `b69a76f` — read-only `buildCharacterVoiceContext` (link resolver; canon record + aliases, accepted facts valid at the position with non-accepted source proposals excluded, dialogue style, `buildCharacterSnapshot` state labelled as not-knowledge) and shared `buildCharacterVoicePrompt` (talk, reaction, scene, generation; context embedded in the system prompt because Ollama ignores `LLMRequest.context`); no UI; lint with 1 baseline warning; 742 web + 14 engine + 12 UI tests; web/desktop builds |
-| 4.43 | Talk to a character + reaction test (CL-2) | 4 | M | — after 4.42 |
+| 4.43 | Talk to a character + reaction test (CL-2) | 4 | M | WIP |
 | 4.44 | Character scenes, 2–3 characters (CL-3) | 4 | M | — after 4.43 |
 | 4.45 | Character from a rough description (CL-4) | 4 | M | — after 4.42 |
 | 4.46 | Character snapshot service + shared stat card (SP-1) | 4 | S | Done `e9a7017` — pure `characterSnapshot` service (scene opening/cursor/ending or latest, ordered change diff, compact summary) and shared `CharacterStatCard`; scene roster and editor hover card adopted with byte-identical output and markup; lint with 1 baseline warning; 710 web + 6 engine + 12 UI tests; web/desktop builds; Cypress 104/104 |
 | 4.47 | Stat peek from the editor and command palette (SP-2) | 4 | M | Done `c94356f` — Cmd/Ctrl+Alt+S and right-click Show stats on a name or alias in Workspace (shared names ask); hover card uses the same card; palette Show stats for… on every route (Workspace peeks at the cursor, elsewhere latest); cards follow stat-block style and scope; all gated on game systems; lint 1 baseline warning; 725 web + 6 engine + 12 UI tests; builds; Cypress 107/107 (commit message says 111 from a double-counted stalled run) |
 | 4.48 | Pinned stat panel across writing and brainstorming (SP-3) | 4 | M | Done `f1b4831` — up to three pins from peek, palette, roster, or World Bible in a collapsible app-shell panel on Workspace, World Canvas, Corkboard, World Bible (above Scratchpad); follows the cursor in Workspace, latest or end of a chosen scene elsewhere; changes since previous chapter via Corkboard links; Open sheet; per-project UI pins, not in backups; mobile bottom sheet; lint 1 baseline warning; 735 web + 6 engine + 12 UI tests; builds; Cypress 108/108 |
+| 4.49 | Local Ollama runs receive project and craft context | 4 | S | — found during 4.42: `OllamaProvider` drops `LLMRequest.context`, so assistant grounding and coach craft material never reach local models |
 | 5.1 | Auto-update decision + implementation | 5 | M | — |
 | 5.2 | Code signing + notarization, both platforms | 5 | M | — |
 | 5.3 | Packaged-app validation + Electron E2E | 5 | M | — |
@@ -1460,6 +1461,26 @@ systems are enabled for the project.
 - **4.48 Pinned stat panel** — plan § 4.48. Up to three pinned characters in
   an app-shell panel on Workspace, World Canvas, Corkboard, Scratchpad, and
   World Bible; follows the cursor in Workspace, `latest` elsewhere.
+
+### Local provider context parity (4.49)
+
+Found 2026-09-27 during 4.42. The hosted adapters (Anthropic, OpenAI,
+Gemini) fold `LLMRequest.context` into the system prompt as
+`[Source: …]` blocks; `OllamaProvider.buildRequestBody` sends only
+`systemPrompt` and `messages`, so every context chunk is silently dropped on
+local runs — including the assistant's canon/Source Note grounding
+(`AIAssistant.tsx`) and the writing coach's craft reference material. Local
+Ollama is a first-class path per the privacy promise, so this is a trust gap,
+not an optimisation.
+
+- **4.49 Local Ollama runs receive project and craft context** — render
+  context chunks into the Ollama system message using one shared formatter
+  with the hosted adapters (same `[Source: label]` provenance and default
+  base prompt), in both the renderer and the Electron main-process path.
+  Tests: a request with context produces the same system text for Ollama as
+  for the hosted adapters; the assistant and coach requests reach the Ollama
+  payload with their context; the cache key is unchanged. Character-lab
+  prompts (4.42) already embed their grounding and need no change.
 
 ## Phase 5 — Release Engineering
 
