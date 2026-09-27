@@ -824,6 +824,20 @@ runtime schema, and nothing here changes the roadmap's status board.
 ## Verification Status
 
 ### Verified Recently
+- Slice 4.42 character voice contract (CL-1, no UI):
+  `services/characterLab/characterVoiceContext.ts` builds read-only grounding
+  for one World Bible character at a scene position (opening, cursor, ending,
+  or latest) through the shared character link resolver — canonical record
+  and aliases, accepted canon facts valid at that position, the assigned
+  dialogue style, and `buildCharacterSnapshot` story state — as tagged
+  sections with provenance. Facts whose source proposal is known and not
+  accepted are excluded (guards the fact-before-proposal write order). The
+  story-state section is labelled as what is true, not what the character
+  knows. `characterVoicePrompt.ts` holds the shared in-character rules and
+  knowledge disclaimer with talk, reaction, scene (2–3 distinct characters,
+  directed or surprise), and generation variants; grounding is embedded in the
+  system prompt because the Ollama provider does not render
+  `LLMRequest.context`. Nothing calls it yet (4.43–4.45).
 - Slice 3.10 rules-engine consolidation (R1): the manuscript-time state core
   (state mutation command/event types, schemas, ordering, command
   application, state validation, replay baseline, replay, and ruleset
