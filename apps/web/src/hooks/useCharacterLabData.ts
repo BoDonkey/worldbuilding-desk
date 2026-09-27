@@ -1,6 +1,7 @@
 import {useCallback, useEffect, useMemo, useState} from 'react';
 import type {
   CanonicalFact,
+  ChapterCard,
   Character,
   CharacterSheet,
   CompendiumEntry,
@@ -11,9 +12,12 @@ import type {
   SettlementState,
   StateMutationEvent,
   StoredRuleset,
+  WorldCanvasOpenThread,
   WorldEntity,
   WritingDocument
 } from '../entityTypes';
+import {getChapterCardsByProjectId} from '../corkboardStorage';
+import {getWorldCanvasByProjectId} from '../worldCanvasStorage';
 import {getCategoriesByProject} from '../categoryStorage';
 import {getCharactersByProject} from '../characterStorage';
 import {getEntitiesByProject} from '../entityStorage';
@@ -59,6 +63,8 @@ interface CharacterLabProjectData {
   settlementState: SettlementState | null;
   settlementModules: SettlementModule[];
   documents: WritingDocument[];
+  chapterCards: ChapterCard[];
+  openThreads: WorldCanvasOpenThread[];
 }
 
 export type CharacterLabContextResult =
@@ -66,6 +72,8 @@ export type CharacterLabContextResult =
   | {context: null; error: string};
 
 const EMPTY_DOCUMENTS: WritingDocument[] = [];
+const EMPTY_CARDS: ChapterCard[] = [];
+const EMPTY_THREADS: WorldCanvasOpenThread[] = [];
 
 const RELOAD_EVENTS = [
   'wbd:character-sheet-records-changed',
@@ -106,7 +114,9 @@ export function useCharacterLabData(projectId: string | null, enabled: boolean) 
           compendiumEntries,
           settlementState,
           settlementModules,
-          documents
+          documents,
+          chapterCards,
+          canvas
         ] = await Promise.all([
           getProjectSettings(projectId),
           getCategoriesByProject(projectId),
@@ -122,7 +132,9 @@ export function useCharacterLabData(projectId: string | null, enabled: boolean) 
           getCompendiumEntriesByProject(projectId),
           getSettlementState(projectId),
           getSettlementModulesByProject(projectId),
-          getDocumentsByProject(projectId)
+          getDocumentsByProject(projectId),
+          getChapterCardsByProjectId(projectId),
+          getWorldCanvasByProjectId(projectId)
         ]);
         if (cancelled) return;
         setLoadError(null);
@@ -142,7 +154,9 @@ export function useCharacterLabData(projectId: string | null, enabled: boolean) 
           compendiumEntries,
           settlementState,
           settlementModules,
-          documents: sortWritingDocuments(documents)
+          documents: sortWritingDocuments(documents),
+          chapterCards,
+          openThreads: canvas?.openThreads ?? []
         });
       } catch (error) {
         if (!cancelled) setLoadError(describeError(error, 'Unable to load this character.'));
@@ -229,6 +243,8 @@ export function useCharacterLabData(projectId: string | null, enabled: boolean) 
     canUseGameSystems: getProjectCapabilities(current?.settings).canUseGameSystems,
     characterOptions,
     documents: current?.documents ?? EMPTY_DOCUMENTS,
+    chapterCards: current?.chapterCards ?? EMPTY_CARDS,
+    openThreads: current?.openThreads ?? EMPTY_THREADS,
     buildContext
   };
 }

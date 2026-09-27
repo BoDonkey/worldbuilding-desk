@@ -103,6 +103,7 @@ import {
 } from '../services/state/characterPeek';
 import {getSceneOrder} from '../services/state/characterSnapshot';
 import {CharacterLabDialog} from '../components/CharacterLab/CharacterLabDialog';
+import {CharacterSceneDialog} from '../components/CharacterLab/CharacterSceneDialog';
 import {useWorkspaceUiStore} from '../store/workspaceUiStore';
 import {
   CHARACTER_STAT_PEEK_EVENT,
@@ -193,6 +194,7 @@ function WorkspaceRoute() {
   >('opening');
   const [sceneCursorPosition, setSceneCursorPosition] = useState(1);
   const [labEntityId, setLabEntityId] = useState<string | null>(null);
+  const [sceneLabEntityId, setSceneLabEntityId] = useState<string | null>(null);
   const [sceneCursorSnapshot, setSceneCursorSnapshot] = useState<EditorTextSnapshot>({
     text: '',
     spans: []
@@ -1435,6 +1437,7 @@ function WorkspaceRoute() {
     activeContextView, setActiveContextView, showGameSystems, showRuleAuthoring,
     entities, categories, ruleset, characters, characterSheets,
     onOpenCharacterLab: setLabEntityId,
+    onOpenCharacterScene: setSceneLabEntityId,
     sceneRosterTitle: sceneRosterModel.sceneTitle,
     sceneRosterCharacters: sceneRosterModel.characters,
     sceneRosterItems: sceneRosterModel.items,
@@ -2257,6 +2260,21 @@ function WorkspaceRoute() {
               : {kind: 'latest'}
           }
           onClose={() => setLabEntityId(null)}
+        />
+      )}
+
+      {sceneLabEntityId && (
+        <CharacterSceneDialog
+          isOpen
+          projectId={activeProject.id}
+          initialEntityIds={[sceneLabEntityId]}
+          defaultPosition={
+            selectedId
+              ? {kind: 'scene', sceneId: selectedId, moment: 'cursor', cursorPosition: sceneCursorPosition}
+              : {kind: 'latest'}
+          }
+          onInsertAtCursor={selectedId ? (html) => setPendingAIInsert({text: html, context: null}) : undefined}
+          onClose={() => setSceneLabEntityId(null)}
         />
       )}
 

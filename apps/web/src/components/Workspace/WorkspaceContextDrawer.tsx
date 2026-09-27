@@ -143,6 +143,7 @@ interface WorkspaceContextDrawerProps {
   characters: Character[];
   characterSheets: CharacterSheet[];
   onOpenCharacterLab: (entityId: string) => void;
+  onOpenCharacterScene: (entityId: string) => void;
 
   // Current scene roster view
   sceneRosterTitle: string | null;
@@ -303,6 +304,7 @@ export function WorkspaceContextDrawer({
   characters,
   characterSheets,
   onOpenCharacterLab,
+  onOpenCharacterScene,
   sceneRosterTitle,
   sceneRosterCharacters,
   sceneRosterItems,
@@ -842,8 +844,9 @@ export function WorkspaceContextDrawer({
           <div className={styles.contextSummaryText}>
             <strong>Character lab</strong>
             <div className={styles.consistencyDescription}>
-              Talk to a character or test a reaction, grounded in canon and story state at
-              your cursor. Draft only; nothing changes canon.
+              Talk to a character, test a reaction, or draft a short scene for two or three
+              characters, grounded in canon and story state at your cursor. Draft only;
+              nothing changes canon.
             </div>
           </div>
           {labCharacterOptions.length === 0 ? (
@@ -869,6 +872,13 @@ export function WorkspaceContextDrawer({
                 disabled={!selectedLabEntityId}
               >
                 Open character lab
+              </button>
+              <button
+                type='button'
+                onClick={() => onOpenCharacterScene(selectedLabEntityId)}
+                disabled={labCharacterOptions.length < 2}
+              >
+                Write a character scene
               </button>
             </>
           )}

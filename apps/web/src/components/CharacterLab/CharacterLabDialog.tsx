@@ -15,13 +15,13 @@ import {
 import {appendToScratchpad} from '../../scratchpadStorage';
 import {LLMService} from '../../services/llm/LLMService';
 import {resolveResponseTokenLimit} from '../../services/llm/modelRun';
-import {HOSTED_PROVIDER_NAMES} from '../../services/llm/providerConfig';
 import {describeError} from '../../services/errors';
-import type {CharacterSnapshotMoment} from '../../services/state/characterSnapshot';
 import {ModelRunProgress} from '../common/ModelRunProgress';
 import {ConsultationBudgetNotice} from '../common/ConsultationBudgetNotice';
 import {CharacterStatCard} from '../CharacterSheets/CharacterStatCard';
 import styles from '../../styles/CharacterLab.module.css';
+import {StoryPointPicker} from './StoryPointPicker';
+import {describeCharacterLabDataFlow, getCharacterLabProviderIssue} from './characterLabProvider';
 
 interface CharacterLabDialogProps {
   isOpen: boolean;
@@ -39,12 +39,6 @@ const transcriptKey = (projectId: string, entityId: string) => `${projectId}:${e
 const MODE_LABELS: Record<CharacterLabMode, string> = {
   talk: 'Talk',
   reaction: 'Reaction test'
-};
-
-const MOMENT_LABELS: Record<CharacterSnapshotMoment, string> = {
-  opening: 'Opening',
-  cursor: 'At the cursor',
-  ending: 'End of scene'
 };
 
 export function CharacterLabDialog({
@@ -96,56 +90,15 @@ export function CharacterLabDialog({
   );
   const context = grounding?.context ?? null;
 
-  const providerIssue = useMemo(() => {
-    if (!lab.aiConfig) return 'AI provider is not configured. Add one in Settings to use the character lab.';
-    try {
-      new LLMService(lab.aiConfig);
-      return null;
-    } catch (providerError) {
-      return describeError(
-        providerError,
-        'AI provider is not configured. Add one in Settings to use the character lab.',
-        {record: false}
-      );
-    }
-  }, [lab.aiConfig]);
+  const providerIssue = useMemo(() => getCharacterLabProviderIssue(lab.aiConfig), [lab.aiConfig]);
 
   if (!isOpen) return null;
 
-  const provider = lab.aiConfig?.provider;
   const name = context?.name ?? 'this character';
-  const disclosure = provider === 'ollama'
-    ? 'Runs on your local Ollama model. Nothing leaves this computer.'
-    : provider
-      ? `Sends ${name}’s World Bible record, accepted facts, dialogue style, story state, and this conversation to ${HOSTED_PROVIDER_NAMES[provider]}’s servers only when you send. Manuscript prose is not sent.`
-      : null;
-  const cursorScene =
-    defaultPosition.kind === 'scene' && defaultPosition.moment === 'cursor' ? defaultPosition : null;
-  const sceneValue = position.kind === 'scene' ? position.sceneId : 'latest';
-  const momentOptions: CharacterSnapshotMoment[] =
-    cursorScene && position.kind === 'scene' && position.sceneId === cursorScene.sceneId
-      ? ['opening', 'cursor', 'ending']
-      : ['opening', 'ending'];
-
-  const changeScene = (value: string) => {
-    if (value === 'latest') {
-      setPosition({kind: 'latest'});
-    } else if (cursorScene && value === cursorScene.sceneId) {
-      setPosition(cursorScene);
-    } else {
-      setPosition({kind: 'scene', sceneId: value, moment: 'ending'});
-    }
-  };
-
-  const changeMoment = (moment: CharacterSnapshotMoment) => {
-    if (position.kind !== 'scene') return;
-    setPosition(
-      moment === 'cursor' && cursorScene
-        ? cursorScene
-        : {kind: 'scene', sceneId: position.sceneId, moment}
-    );
-  };
-
+  const disclosure = describeCharacterLabDataFlow(
+    lab.aiConfig,
+    `${name}’s World Bible record, accepted facts, dialogue style, story state, and this conversation`
+  );
   const send = async () => {
     const text = input.trim();
     if (!text || !context || !lab.aiConfig || modelRun.isRunning) return;
@@ -279,30 +232,12 @@ export function CharacterLabDialog({
                     </button>
                   ))}
                 </div>
-                <label className={styles.field}>
-                  <span>Story point</span>
-                  <select value={sceneValue} onChange={(event) => changeScene(event.target.value)}>
-                    <option value='latest'>Latest, after every accepted change</option>
-                    {lab.documents.map((document) => (
-                      <option key={document.id} value={document.id}>
-                        {document.title || 'Untitled scene'}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                {position.kind === 'scene' && (
-                  <label className={styles.field}>
-                    <span>Moment</span>
-                    <select
-                      value={position.moment}
-                      onChange={(event) => changeMoment(event.target.value as CharacterSnapshotMoment)}
-                    >
-                      {momentOptions.map((moment) => (
-                        <option key={moment} value={moment}>{MOMENT_LABELS[moment]}</option>
-                      ))}
-                    </select>
-                  </label>
-                )}
+                <StoryPointPicker
+                  documents={lab.documents}
+                  position={position}
+                  defaultPosition={defaultPosition}
+                  onChange={setPosition}
+                />
               </div>
 
               {exchanges.length === 0 ? (

@@ -824,6 +824,20 @@ runtime schema, and nothing here changes the roadmap's status board.
 ## Verification Status
 
 ### Verified Recently
+- Slice 4.44 character scenes (CL-3): **Write a character scene** in the
+  Workspace context drawer's Characters tab opens `CharacterSceneDialog` —
+  choose two or three characters and a story point (default: the cursor in
+  the current scene). **Directed** takes an author setup; **Surprise me**
+  lists and sends the chapter cards explicitly linked to the chosen scene
+  plus up to six most-recent open World Canvas threads (settled and set-aside
+  threads never). Only the chosen characters' grounding is sent, shown per
+  character in the Grounded-in panel. Output is draft prose with
+  speaker-attributed dialogue; **Save to Scratchpad** appends a draft-marked
+  record of the setup or seeds, and **Insert at cursor** is an ordinary,
+  undoable editor insert through the existing pending-insert path. Drafts
+  live for the app session; runs share the lab's budget feature, Stop, and
+  disclosure. `StoryPointPicker` and the provider checks are now shared with
+  the talk dialog.
 - Slice 4.43 talk to a character + reaction test (CL-2): `CharacterLabDialog`
   opens from **Talk to <name>** on a saved World Bible character (grounded at
   the latest point) and from **Open character lab** in the Workspace context

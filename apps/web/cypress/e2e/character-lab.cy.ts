@@ -91,7 +91,45 @@ function seedAria(db: IDBDatabase): Promise<void> {
   });
 }
 
+function seedSceneCast(db: IDBDatabase): Promise<void> {
+  const now = Date.now();
+  const character = (id: string, name: string, notes: string) => ({
+    id, projectId: PROJECT_ID, categoryId: 'characters', name,
+    fields: {notes: `<p>${notes}</p>`}, links: [], createdAt: now, updatedAt: now
+  });
+  const fact = (id: string, targetId: string, targetName: string, value: string) => ({
+    id, projectId: PROJECT_ID, targetType: 'entity', targetId, targetName, factType: 'trait',
+    value, acceptedAt: now, updatedAt: now
+  });
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(
+      ['entities', 'canonical_facts', 'world_canvases', 'corkboard_chapter_cards'],
+      'readwrite'
+    );
+    tx.objectStore('entities').put(character('entity-borin', 'Borin', 'A smith who owes the wrong people.'));
+    tx.objectStore('entities').put(character('entity-cael', 'Cael', 'A courier nobody remembers.'));
+    tx.objectStore('canonical_facts').put(fact('fact-borin', 'entity-borin', 'Borin', 'laughs when frightened'));
+    tx.objectStore('canonical_facts').put(fact('fact-cael', 'entity-cael', 'Cael', 'CAEL-ONLY-FACT'));
+    tx.objectStore('world_canvases').put({
+      schemaVersion: 2, id: PROJECT_ID, projectId: PROJECT_ID, premise: '', lenses: [],
+      openThreads: [
+        {id: 'thread-toll', text: 'Who collects the bridge toll?', status: 'open', createdAt: now, updatedAt: now},
+        {id: 'thread-done', text: 'SETTLED-THREAD', status: 'settled', createdAt: now, updatedAt: now + 1}
+      ],
+      createdAt: now, updatedAt: now
+    });
+    tx.objectStore('corkboard_chapter_cards').put({
+      id: 'card-gate', projectId: PROJECT_ID, title: 'The gate', summary: 'Aria refuses the bribe.',
+      status: 'planned', order: 0, sceneIds: ['scene-alpha'], plotPoints: [], createdAt: now, updatedAt: now
+    });
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+    tx.onabort = () => reject(tx.error);
+  });
+}
+
 const labDialog = () => cy.get('[role="dialog"][aria-labelledby="character-lab-title"]');
+const sceneDialog = () => cy.get('[role="dialog"][aria-labelledby="character-scene-title"]');
 
 describe('Character lab', () => {
   beforeEach(() => {
@@ -242,6 +280,96 @@ describe('Character lab', () => {
       cy.contains('button', 'Stop').click();
       cy.contains('Stopped before the reply finished.').should('be.visible');
       cy.contains('Too late.').should('not.exist');
+    });
+  });
+  describe('character scenes', () => {
+    beforeEach(() => {
+      withDb(seedSceneCast);
+      cy.reload();
+      cy.visit('/workspace');
+      cy.get('.tiptap[contenteditable="true"]').should('contain.text', 'Alpha content');
+    });
+
+    const openSceneFromDrawer = () => {
+      cy.contains('button', 'Context').click();
+      cy.contains('button', /^Characters$/).click();
+      cy.contains('button', 'Write a character scene').click();
+    };
+
+    it('writes a directed scene from only the chosen characters and inserts it as an undoable edit', () => {
+      cy.intercept('POST', ANTHROPIC_STREAM, anthropicReply('Aria: "Put the hammer down."\nBorin laughs, and does not.'))
+        .as('sceneRequest');
+      let baseline = '';
+      withDb(readStores).then((snapshot) => {
+        baseline = snapshot;
+      });
+      openSceneFromDrawer();
+
+      sceneDialog().within(() => {
+        cy.contains('label', 'Aria').find('input').should('be.checked');
+        cy.contains('button', 'Write scene').should('be.disabled');
+        cy.contains('label', 'Borin').find('input').check();
+        cy.contains('label', 'Scene setup').find('textarea').type('Borin blocks the forge door at dusk.');
+        cy.contains('button', 'Write scene').click();
+      });
+
+      cy.wait('@sceneRequest').then(({request}) => {
+        const body = JSON.stringify(request.body);
+        expect(body).to.contain('Borin blocks the forge door at dusk.');
+        expect(body).to.contain('sworn to the Ember Court');
+        expect(body).to.contain('laughs when frightened');
+        expect(body).not.to.contain('CAEL-ONLY-FACT');
+        expect(body).not.to.contain('A courier nobody remembers.');
+      });
+
+      sceneDialog().within(() => {
+        cy.contains('Borin laughs, and does not.').should('be.visible');
+      });
+      withDb(readStores).then((snapshot) => {
+        expect(snapshot).to.equal(baseline);
+      });
+
+      sceneDialog().contains('button', 'Insert at cursor').click();
+      sceneDialog().should('not.exist');
+      cy.get('.tiptap-editor').should('contain.text', 'Borin laughs, and does not.');
+      cy.get('.tiptap[contenteditable="true"]').type('{cmd+z}');
+      cy.get('.tiptap-editor').should('not.contain.text', 'Borin laughs, and does not.');
+      cy.get('.tiptap-editor').should('contain.text', 'Alpha content');
+    });
+
+    it('surprises from the linked chapter card and open threads, then saves to the Scratchpad', () => {
+      cy.intercept('POST', ANTHROPIC_STREAM, anthropicReply('The toll collector knows Aria by name.'))
+        .as('sceneRequest');
+      openSceneFromDrawer();
+
+      sceneDialog().within(() => {
+        cy.contains('label', 'Borin').find('input').check();
+        cy.contains('label', 'Cael').find('input').check();
+        cy.contains('button', 'Surprise me').click();
+        cy.contains('li', 'Chapter card "The gate": Aria refuses the bribe.').should('be.visible');
+        cy.contains('li', 'Open thread: Who collects the bridge toll?').should('be.visible');
+        cy.contains('SETTLED-THREAD').should('not.exist');
+        cy.contains('button', 'Write scene').click();
+      });
+
+      cy.wait('@sceneRequest').then(({request}) => {
+        const body = JSON.stringify(request.body);
+        expect(body).to.contain('Aria refuses the bribe.');
+        expect(body).to.contain('Who collects the bridge toll?');
+        expect(body).to.contain('CAEL-ONLY-FACT');
+        expect(body).not.to.contain('SETTLED-THREAD');
+      });
+
+      sceneDialog().within(() => {
+        cy.contains('The toll collector knows Aria by name.').should('be.visible');
+        cy.contains('button', 'Save to Scratchpad').click();
+        cy.contains('[role="status"]', 'Saved to Scratchpad.').should('be.visible');
+        cy.contains('button', 'Close').click();
+      });
+
+      cy.contains('button', 'Scratchpad').first().click();
+      cy.contains('Character scene: Aria, Borin, Cael').should('be.visible');
+      cy.contains('The toll collector knows Aria by name.').should('be.visible');
     });
   });
 });

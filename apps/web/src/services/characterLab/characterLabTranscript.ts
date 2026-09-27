@@ -26,14 +26,15 @@ export function buildCharacterTalkTranscript(exchanges: CharacterLabExchange[]):
     ]);
 }
 
-const escapeHtml = (value: string): string =>
+export const escapeHtml = (value: string): string =>
   value
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;');
 
-const paragraphs = (text: string, lead?: string): string => {
+/** Plain text as escaped `<p>` blocks, one per non-empty line; `lead` is trusted HTML for the first. */
+export const paragraphs = (text: string, lead?: string): string => {
   const lines = text
     .split(/\n+/)
     .map((line) => line.trim())
