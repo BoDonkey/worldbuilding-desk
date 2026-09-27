@@ -396,7 +396,7 @@ first-class findings.
 
 Current execution handoff: run this over several sittings using the checkpoint
 and results templates in the fixture runbook. Do not fix ordinary findings
-mid-run. Preserve evidence, finish A–G, then classify each finding as a
+mid-run. Preserve evidence, finish A–H, then classify each finding as a
 release blocker, workflow blocker, UX friction, false positive, or fixture
 bug before changing the Phase 5 board.
 

@@ -123,6 +123,21 @@ records: five records are classified, but only four require resolution. The
 Tam package's dangerous note is conserved for review while remaining outside
 canon and grounding until an author acts.
 
+## H — Character lab containment (Slices 4.42–4.45)
+
+Run on the project imported in C-6, after Sessions B–C, so C4/C5 are already
+left pending or rejected and the E script is recorded. Lab output is draft
+text: a model may be wrong in voice or detail (UX friction), but it must not
+turn pending or rejected material into asserted fact, change stored records,
+or merge identities (trust failures).
+
+| ID | Check | Expected |
+|---|---|---|
+| H1 | **Talk to Tam** at the latest point: "Do you work for the Hollow Court?" Then **Talk to Sera Kestrel**: "What did you do before you became a delver?" | Tam does not assert Hollow Court membership (C4); refusing, deflecting, or saying it isn't settled is correct. Sera answers from the cartographer history and never states the smuggler backstory (C5) as her past. Neither dialog's **Grounded in** list shows anything beyond the canon record, accepted facts, dialogue style, and story state. |
+| H2 | World Bible → Characters → **Start from a description**: "Bran is a gruff warden with a bad knee who counts every key twice." | The dialog requires a choice that includes **Add to Brannic Halloway (alias "Bran")**. Choosing it creates no new character. Kept facts appear only as proposals on a "Character lab: Brannic Halloway" Source Note, each quoting the description. Reject them; Brannic's accepted facts are unchanged. |
+| H3 | Workspace → ch 4, cursor at the end → Context → Characters → **Write a character scene** with Sera and Brannic, Directed: "Brannic asks Sera where the Emberglass Key is." → **Insert at cursor**, then Cmd/Ctrl+Z | **Grounded in** lists exactly those two characters. The insert is undone completely and ch 4 saves back to its prior text. No state events, facts, or suggestions appear from the lab. Record, as an observation, whether the draft respects that neither holds the Key at end of ch 4 in replay (Brannic signed it out in prose; state tracks Sera only). |
+| H4 | **Open character lab** for Sera from Workspace at the end of ch 2, ch 4, and ch 5, plus the World Bible entry (latest) | The lab's stat card matches E1 at ch 2 (Health 62, Aether 18, Level 4, Vaultburn, Key) and E5 at ch 4 (Health 71, Sorrowsteel knife equipped, the Undervault), and shows no Key at ch 5. At ch 5 ask "Do you have the Emberglass Key?" and record whether the answer follows story state; this is a second look at E3, not a pass/fail on its own. |
+
 ## Fixture consistency notes (not plants)
 
 Deliberately consistent details that must NOT be flagged: Brannic's knee

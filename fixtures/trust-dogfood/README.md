@@ -28,8 +28,8 @@ character-identity/legacy-identity-matrix.v1.json
 answer-key.md                 every planted issue + expected behavior
 ```
 
-Time estimate with the fast path below: 3–4 hours across three sittings,
-including the character-identity addendum (5–7 hours if you import every
+Time estimate with the fast path below: 3½–4½ hours across three sittings,
+including Session H and the character-identity addendum (5–7 hours if you import every
 file by hand). A comfortable split is: Session A + B; Session C + Identity
 Passes 1–2; Identity Passes 3–5 + triage.
 
@@ -42,8 +42,11 @@ Passes 1–2; Identity Passes 3–5 + triage.
 2. `pnpm dev:web` plus `pnpm start:desktop:dev` (desktop shell preferred), or
    the browser at `localhost:5173`; record which and stay on it.
 3. Configure the AI provider in Settings → AI Settings and run **Test
-   connection**. Record provider/model. The D and G6 checks need it; A–C and
-   E–F do not.
+   connection**. Record provider/model. The D, G6, and H checks need it; A–C
+   and E–F do not. Session D on local Ollama needs a build that includes
+   Slice 4.49; before it, the assistant's project context never reached
+   Ollama. Character-lab runs in Session H spend the daily AI budget like
+   other consultations.
 
 **Fast path (replaces the file-by-file setup).** On Projects, use
 **Dogfood tools (dev only) → Load trust-dogfood fixture**. It creates
@@ -67,16 +70,16 @@ What the fast path skips and what it does not:
 | A-3 sheet baseline | — | after Sera exists: World Bible → Sera → Mechanics → **Add mechanics to this character** → **Advanced sheet setup** |
 
 **Order of work.** Session A (A-3 after A-6) → Session B → Session C →
-Identity Passes 1–5 → triage. Record every check ID as `Pass / Fail /
+Session H (on the C-6 copy) → Identity Passes 1–5 → triage. Record every check ID as `Pass / Fail /
 Partial — note — evidence` in the results log at the bottom; anything the
 app flags that the answer key does not list is a false positive and is a
 finding too.
 
 **Stop immediately and preserve the project (export a backup) if you see:**
 data loss or corruption; an unresolved record silently promoted to canon;
-rejected or pending material entering normal assistant grounding; the Tam
-Hollow Court note asserted before you resolve it (C4/D3/G6). Log everything
-else and keep going on the same build.
+rejected or pending material entering normal assistant or character-lab
+grounding; the Tam Hollow Court note asserted before you resolve it
+(C4/D3/G6/H1). Log everything else and keep going on the same build.
 
 **Check index (current UI labels).**
 
@@ -90,6 +93,7 @@ else and keep going on the same build.
 | E1–E5 | World Bible → Sera → Mechanics → **Record a scene change** | enter the § E script row by row, previewing each | replay per chapter matches; E3 is the honest "did anything catch it" check |
 | F1–F3 | Source Notes health panel; Sera's character detail | probe "Emberglass Key"; edit a note; open Sera | ranking, stale → rebuild, detail completeness |
 | G1–G6 | separate projects per pass | Identity Passes 1–5 | see addendum |
+| H1–H4 | the C-6 imported copy | Session H, character lab | pending/rejected material never asserted; no merges or record changes; lab cards match replay |
 
 ## Current multi-day handoff — started 2026-08-11
 
@@ -135,9 +139,9 @@ Suggested resume points:
 |---|---|---|
 | 1 | Session A | After A-7, with extraction decisions saved |
 | 2 | Session B | After D1–D5 and source lists are recorded |
-| 3 | Session C + Identity Passes 1–2 | After the rich-project backup and Sera rename checks |
+| 3 | Session C + Session H + Identity Passes 1–2 | After the rich-project backup, H1–H4 on the imported copy, and Sera rename checks |
 | 4 | Identity Passes 3–5 | After both Tam branches and imported-backup comparison |
-| 5 | Triage | Every A–G result classified; roadmap follow-ups written |
+| 5 | Triage | Every A–H result classified; roadmap follow-ups written |
 
 ---
 
@@ -268,6 +272,38 @@ procedure on rich data).
 
 ---
 
+## Session H — Character lab containment
+
+Run this on the project imported in **C-6**, never on the original: H2
+deliberately adds a Source Note and proposals. The lab never writes canon,
+facts, or state by itself; this session checks that on a project where
+C4/C5 are known to be pending or rejected.
+
+**H-1. Talk.** World Bible → Characters → Tam → **Talk to Tam**. Leave the
+story point at **Latest**. Ask "Do you work for the Hollow Court?" Then do
+the same for Sera Kestrel with "What did you do before you became a
+delver?" Record **H1**: whether either answer asserts C4 or C5, and what
+each **Grounded in** list shows.
+
+**H-2. Character from a description.** World Bible → Characters → **Start
+from a description**. Enter the H2 description verbatim and choose **Draft
+profile**. Record whether the collision choice appears and what it offers,
+choose **Add to Brannic Halloway**, then **Review facts**. Reject every
+proposal. Record **H2**.
+
+**H-3. Character scene.** Workspace → ch 4, put the cursor at the end →
+Context → **Characters** → **Write a character scene**. Tick Brannic (Sera
+if not preselected), keep **Directed**, enter the H3 setup, **Write scene**,
+then **Insert at cursor** and immediately Cmd/Ctrl+Z. Save the scene. Record
+**H3**, including the observation about the Key.
+
+**H-4. Lab stat cards.** With the cursor at the end of ch 2, ch 4, and ch 5
+in turn, Context → **Characters** → Sera → **Open character lab**, and
+compare the stat card with E1/E5 and the ch 5 replay. At ch 5 ask the H4
+question. Record **H4**.
+
+---
+
 ## Character identity addendum — J1–J6
 
 Run these checks as isolated passes so their deliberately unresolved legacy
@@ -384,7 +420,7 @@ with that hyphenated step label and mark the dependent verdicts blocked.
 - **Fixture bugs** — real inconsistencies I planted by accident. Fix the
   fixture, note it, and continue.
 - **Trust failures** — anything from C4/C5/D2/D3 leaking into canon or
-  assistant answers. These become new bounded trust-fix slices and block
+  assistant answers, or asserted as fact by the character lab (H1). These become new bounded trust-fix slices and block
   release engineering when they violate a stop condition above.
 - **Character identity failures** — any failed G1–G6 invariant, especially a
   pre-resolution Tam underline/grounding leak, rename-broken link, silent
@@ -402,7 +438,7 @@ At final triage, classify each finding as one of:
 - **Fixture bug** — the fixture or instructions, rather than the app, are
   inconsistent.
 
-Exit condition for slice 1.1: every A–G check has a recorded result; every
+Exit condition for slice 1.1: every A–H check has a recorded result; every
 finding is classified; release blockers have bounded follow-up slices (or a
 note that none were found); and the roadmap records whether 5.1 may begin.
 Do not mark 1.1 done merely because the planned sittings ended.
@@ -455,6 +491,10 @@ G3 — Not run —
 G4 — Not run —
 G5 — Not run —
 G6 — Not run —
+H1 — Not run —
+H2 — Not run —
+H3 — Not run —
+H4 — Not run —
 
 Resume checkpoint
 Date/time: 2026-08-23
