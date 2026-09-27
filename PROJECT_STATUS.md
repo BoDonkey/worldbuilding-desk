@@ -824,6 +824,14 @@ runtime schema, and nothing here changes the roadmap's status board.
 ## Verification Status
 
 ### Verified Recently
+- Slice 3.10 rules-engine consolidation (R1): the manuscript-time state core
+  (state mutation command/event types, schemas, ordering, command
+  application, state validation, replay baseline, replay, and ruleset
+  validation) lives in `packages/rules-engine/src/manuscript/`; web modules
+  re-export it and keep persistence. A replay parity harness
+  (`services/state/replayParity.test.ts`) pins the digest of 63 cases
+  (~12k replays) and was reproduced exactly. Web Vitest resolves the package
+  from source (`extends: true` on each inline project).
 - Slice 4.48 pinned stat panel: up to three characters pinned from the editor
   peek, palette dialog, scene roster, or World Bible mechanics panel appear in
   a collapsible app-shell panel (`components/StatPinPanel.tsx`) on Workspace,
