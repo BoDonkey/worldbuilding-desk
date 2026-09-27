@@ -83,6 +83,21 @@ function pressStatPeekShortcut() {
   });
 }
 
+/**
+ * Puts a collapsed cursor after `prefix` in the scene's first paragraph and
+ * waits until the editor's own selection has caught up. Synthetic arrow keys
+ * move the DOM selection; ProseMirror syncs on the later selectionchange, so
+ * a shortcut fired immediately can read the old cursor.
+ */
+function placeCursorAfter(prefix: string) {
+  cy.get('.tiptap-editor').type(`{moveToStart}${'{rightArrow}'.repeat(prefix.length)}`);
+  cy.window().should((win) => {
+    const selection = win.getSelection();
+    expect(selection?.anchorNode?.textContent?.slice(0, selection.anchorOffset)).to.equal(prefix);
+  });
+  cy.window().then((win) => new Cypress.Promise((resolve) => win.requestAnimationFrame(resolve)));
+}
+
 function writeScene(text: string) {
   cy.get('.tiptap-editor').click().type(`{selectall}${text}`, {delay: 0});
   cy.contains('button', 'Save now').click();
@@ -127,7 +142,7 @@ describe('Stat peek', () => {
     });
 
     // Rostered: cursor inside "Aria".
-    cy.get('.tiptap-editor').type('{moveToStart}{rightArrow}{rightArrow}');
+    placeCursorAfter('Ar');
     pressStatPeekShortcut();
     cy.get('[role="dialog"][aria-label="Character stats"]').should('have.focus').within(() => {
       cy.get('article[aria-label="Aria stats"]').within(() => {
@@ -142,8 +157,7 @@ describe('Stat peek', () => {
     cy.focused().should('have.class', 'ProseMirror');
 
     // Non-rostered: cursor at the end of "Borin".
-    cy.get('.tiptap-editor').type('{moveToStart}');
-    cy.get('.tiptap-editor').type('{rightArrow}'.repeat('Aria waits by the gate while Borin'.length));
+    placeCursorAfter('Aria waits by the gate while Borin');
     pressStatPeekShortcut();
     cy.get('article[aria-label="Borin stats"]').within(() => {
       cy.contains('Level 2').should('be.visible');
@@ -228,7 +242,7 @@ describe('Stat peek', () => {
     }));
     cy.visit('/workspace');
     writeScene('Aria waits by the gate.');
-    cy.get('.tiptap-editor').type('{moveToStart}{rightArrow}');
+    placeCursorAfter('A');
     pressStatPeekShortcut();
     cy.get('[aria-label="Character stats"]').should('not.exist');
     cy.get('body').type('{ctrl}k');
@@ -241,7 +255,7 @@ describe('Stat peek', () => {
     writeScene('Aria waits by the gate while Borin sharpens an axe.');
 
     // Pin Aria from the peek and Borin from the scene roster.
-    cy.get('.tiptap-editor').type('{moveToStart}{rightArrow}');
+    placeCursorAfter('A');
     pressStatPeekShortcut();
     cy.get('[role="dialog"][aria-label="Character stats"]').within(() => {
       cy.contains('button', 'Pin stats').click();
