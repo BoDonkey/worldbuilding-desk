@@ -2,11 +2,11 @@ import type {AIProviderId} from '../../../entityTypes';
 import type {
   LLMProvider,
   LLMRequest,
-  LLMResponse,
-  LLMContextChunk
+  LLMResponse
 } from '../types';
 import {PROVIDER_FALLBACK_MODELS} from '../providerConfig';
 import {assertHostedResponseComplete} from '../hostedResponsePolicy';
+import {buildSystemPromptWithContext} from '../contextPrompt';
 
 interface AnthropicProviderConfig {
   apiKey: string;
@@ -31,7 +31,7 @@ export class AnthropicProvider implements LLMProvider {
   }
 
   async generateCompletion(request: LLMRequest): Promise<LLMResponse> {
-    const systemPrompt = this.buildSystemPrompt(
+    const systemPrompt = buildSystemPromptWithContext(
       request.context,
       request.systemPrompt
     );
@@ -70,7 +70,7 @@ export class AnthropicProvider implements LLMProvider {
   }
 
   async *streamCompletion(request: LLMRequest): AsyncGenerator<string> {
-    const systemPrompt = this.buildSystemPrompt(
+    const systemPrompt = buildSystemPromptWithContext(
       request.context,
       request.systemPrompt
     );
@@ -127,21 +127,4 @@ export class AnthropicProvider implements LLMProvider {
     assertHostedResponseComplete('anthropic', stopReason);
   }
 
-  private buildSystemPrompt(
-    context?: LLMContextChunk[],
-    basePrompt?: string
-  ): string {
-    let prompt =
-      basePrompt ||
-      'You are an AI assistant helping authors create LitRPG/GameLit content.';
-
-    if (context && context.length > 0) {
-      prompt += '\n\nRelevant context from the project:\n';
-      context.forEach((chunk) => {
-        prompt += `\n[Source: ${chunk.source}]\n${chunk.content}\n`;
-      });
-    }
-
-    return prompt;
-  }
 }

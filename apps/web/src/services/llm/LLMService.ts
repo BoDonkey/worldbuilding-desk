@@ -10,6 +10,7 @@ import {
   PROVIDER_DEFAULT_BASE_URLS,
   PROVIDER_FALLBACK_MODELS
 } from './providerConfig';
+import {foldContextIntoSystemPrompt} from './contextPrompt';
 
 const FALLBACK_ID = () => Math.random().toString(36).slice(2);
 
@@ -384,7 +385,9 @@ export class LLMService {
   }
 
   private buildElectronRequest(request: LLMRequest) {
-    const payload = {...request};
+    // The desktop main process sends only the system prompt and messages, so context travels
+    // inside the system prompt, rendered exactly as the renderer providers render it.
+    const payload = foldContextIntoSystemPrompt({...request});
     delete payload.baseUrl;
     delete payload.signal;
     return payload;

@@ -273,7 +273,7 @@ and required revisit point, `WIP`, `Done <commit>`.
 | 4.46 | Character snapshot service + shared stat card (SP-1) | 4 | S | Done `e9a7017` — pure `characterSnapshot` service (scene opening/cursor/ending or latest, ordered change diff, compact summary) and shared `CharacterStatCard`; scene roster and editor hover card adopted with byte-identical output and markup; lint with 1 baseline warning; 710 web + 6 engine + 12 UI tests; web/desktop builds; Cypress 104/104 |
 | 4.47 | Stat peek from the editor and command palette (SP-2) | 4 | M | Done `c94356f` — Cmd/Ctrl+Alt+S and right-click Show stats on a name or alias in Workspace (shared names ask); hover card uses the same card; palette Show stats for… on every route (Workspace peeks at the cursor, elsewhere latest); cards follow stat-block style and scope; all gated on game systems; lint 1 baseline warning; 725 web + 6 engine + 12 UI tests; builds; Cypress 107/107 (commit message says 111 from a double-counted stalled run) |
 | 4.48 | Pinned stat panel across writing and brainstorming (SP-3) | 4 | M | Done `f1b4831` — up to three pins from peek, palette, roster, or World Bible in a collapsible app-shell panel on Workspace, World Canvas, Corkboard, World Bible (above Scratchpad); follows the cursor in Workspace, latest or end of a chosen scene elsewhere; changes since previous chapter via Corkboard links; Open sheet; per-project UI pins, not in backups; mobile bottom sheet; lint 1 baseline warning; 735 web + 6 engine + 12 UI tests; builds; Cypress 108/108 |
-| 4.49 | Local Ollama runs receive project and craft context | 4 | S | — found during 4.42: `OllamaProvider` drops `LLMRequest.context`, so assistant grounding and coach craft material never reach local models |
+| 4.49 | Local Ollama runs receive project and craft context | 4 | S | WIP — found during 4.42: `OllamaProvider` drops `LLMRequest.context`, so assistant grounding and coach craft material never reach local models |
 | 5.1 | Auto-update decision + implementation | 5 | M | — |
 | 5.2 | Code signing + notarization, both platforms | 5 | M | — |
 | 5.3 | Packaged-app validation + Electron E2E | 5 | M | — |
@@ -1464,23 +1464,15 @@ systems are enabled for the project.
 
 ### Local provider context parity (4.49)
 
-Found 2026-09-27 during 4.42. The hosted adapters (Anthropic, OpenAI,
-Gemini) fold `LLMRequest.context` into the system prompt as
-`[Source: …]` blocks; `OllamaProvider.buildRequestBody` sends only
-`systemPrompt` and `messages`, so every context chunk is silently dropped on
-local runs — including the assistant's canon/Source Note grounding
-(`AIAssistant.tsx`) and the writing coach's craft reference material. Local
-Ollama is a first-class path per the privacy promise, so this is a trust gap,
-not an optimisation.
-
-- **4.49 Local Ollama runs receive project and craft context** — render
-  context chunks into the Ollama system message using one shared formatter
-  with the hosted adapters (same `[Source: label]` provenance and default
-  base prompt), in both the renderer and the Electron main-process path.
-  Tests: a request with context produces the same system text for Ollama as
-  for the hosted adapters; the assistant and coach requests reach the Ollama
-  payload with their context; the cache key is unchanged. Character-lab
-  prompts (4.42) already embed their grounding and need no change.
+Found 2026-09-27 during 4.42 and widened when 4.49 started. Only the
+renderer's hosted adapters rendered `LLMRequest.context` (as `[Source: …]`
+blocks in the system prompt). The renderer's Ollama adapter and every adapter
+in the desktop main process (Anthropic, OpenAI, Ollama) sent only
+`systemPrompt` and `messages`, so the assistant's canon/Source Note grounding
+and the coaches' craft material never reached local Ollama in the browser or
+any provider except Gemini in the desktop app. 4.49 renders context once, in
+the renderer, with one shared formatter, before a request leaves for Ollama
+or the Electron bridge; the IPC surface is unchanged.
 
 ## Phase 5 — Release Engineering
 

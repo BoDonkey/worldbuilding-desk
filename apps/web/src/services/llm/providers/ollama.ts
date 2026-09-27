@@ -1,4 +1,5 @@
 import type {LLMProvider, LLMRequest, LLMResponse} from '../types';
+import {foldContextIntoSystemPrompt} from '../contextPrompt';
 
 interface OllamaProviderConfig {
   baseUrl: string;
@@ -84,6 +85,8 @@ export class OllamaProvider implements LLMProvider {
       options.temperature = request.temperature;
     }
 
+    const {systemPrompt} = foldContextIntoSystemPrompt(request);
+
     return {
       model,
       stream,
@@ -91,9 +94,7 @@ export class OllamaProvider implements LLMProvider {
       ...(request.responseFormat === 'json' ? {format: 'json'} : {}),
       ...(Object.keys(options).length ? {options} : {}),
       messages: [
-        ...(request.systemPrompt
-          ? [{role: 'system' as const, content: request.systemPrompt}]
-          : []),
+        ...(systemPrompt ? [{role: 'system' as const, content: systemPrompt}] : []),
         ...request.messages.map((m) => ({role: m.role, content: m.content}))
       ]
     };

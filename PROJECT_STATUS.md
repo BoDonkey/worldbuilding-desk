@@ -824,6 +824,17 @@ runtime schema, and nothing here changes the roadmap's status board.
 ## Verification Status
 
 ### Verified Recently
+- Slice 4.49 provider context parity: `LLMRequest.context` is rendered once
+  by `services/llm/contextPrompt.ts` (`[Source: label]` blocks after the
+  system prompt). The hosted renderer adapters use it unchanged; the
+  renderer Ollama adapter and `LLMService`'s Electron request builder fold
+  context into the system prompt before the request leaves the renderer.
+  Before this, the assistant's canon/Source Note grounding and the coaches'
+  craft material never reached local Ollama in the browser or any provider
+  except Gemini in the desktop app (the main-process adapters send only the
+  system prompt and messages). The Electron IPC surface and the response
+  cache key are unchanged. A Cypress case asserts the writing coach's craft
+  sources reach a local Ollama request, and fails without the fix.
 - Slice 4.45 character from a rough description (CL-4): **Start from a
   description** on the World Bible Characters page opens
   `CharacterFromDescriptionDialog`. The generation reply is strict JSON,

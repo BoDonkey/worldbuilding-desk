@@ -1,7 +1,8 @@
 import type {AIProviderId} from '../../../entityTypes';
-import type {LLMProvider, LLMRequest, LLMResponse, LLMContextChunk} from '../types';
+import type {LLMProvider, LLMRequest, LLMResponse} from '../types';
 import {PROVIDER_FALLBACK_MODELS} from '../providerConfig';
 import {assertHostedResponseComplete, openAIUsesReasoning} from '../hostedResponsePolicy';
+import {buildSystemPromptWithContext} from '../contextPrompt';
 
 interface OpenAIProviderConfig {
   apiKey: string;
@@ -115,7 +116,7 @@ export class OpenAIProvider implements LLMProvider {
   }
 
   private buildPayload(request: LLMRequest, stream: boolean) {
-    const systemPrompt = this.buildSystemPrompt(request.context, request.systemPrompt);
+    const systemPrompt = buildSystemPromptWithContext(request.context, request.systemPrompt);
     const messages = this.buildMessages(systemPrompt, request.messages);
 
     const model = request.model ?? this.model;
@@ -147,21 +148,4 @@ export class OpenAIProvider implements LLMProvider {
     return result;
   }
 
-  private buildSystemPrompt(
-    context?: LLMContextChunk[],
-    basePrompt?: string
-  ): string | null {
-    let prompt =
-      basePrompt ||
-      'You are an AI assistant helping authors create LitRPG/GameLit content.';
-
-    if (context && context.length > 0) {
-      prompt += '\n\nRelevant context from the project:\n';
-      context.forEach((chunk) => {
-        prompt += `\n[Source: ${chunk.source}]\n${chunk.content}\n`;
-      });
-    }
-
-    return prompt ?? null;
-  }
 }

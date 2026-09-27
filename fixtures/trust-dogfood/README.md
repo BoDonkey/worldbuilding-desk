@@ -43,10 +43,11 @@ Passes 1–2; Identity Passes 3–5 + triage.
    the browser at `localhost:5173`; record which and stay on it.
 3. Configure the AI provider in Settings → AI Settings and run **Test
    connection**. Record provider/model. The D, G6, and H checks need it; A–C
-   and E–F do not. Session D on local Ollama needs a build that includes
-   Slice 4.49; before it, the assistant's project context never reached
-   Ollama. Character-lab runs in Session H spend the daily AI budget like
-   other consultations.
+   and E–F do not. Session D needs a build that includes Slice 4.49: before
+   it, the assistant's project context never reached local Ollama in the
+   browser, or any provider except Gemini in the desktop app. Record which
+   surface and provider D ran on. Character-lab runs in Session H spend the
+   daily AI budget like other consultations.
 
 **Fast path (replaces the file-by-file setup).** On Projects, use
 **Dogfood tools (dev only) → Load trust-dogfood fixture**. It creates

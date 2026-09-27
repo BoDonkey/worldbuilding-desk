@@ -195,4 +195,27 @@ describe('Corkboard route', () => {
     cy.contains('button', 'Restore dismissed').click();
     cy.contains('h3', 'Possible unused solution: Odessa').should('be.visible');
   });
+  it('sends the writing coach its craft reference material on a local Ollama run', () => {
+    cy.intercept('POST', 'http://localhost:11434/api/chat', {
+      statusCode: 200,
+      headers: {'content-type': 'application/x-ndjson'},
+      body: [
+        JSON.stringify({message: {role: 'assistant', content: 'Vary the scene lengths.'}}),
+        JSON.stringify({done: true, done_reason: 'stop'})
+      ].join('\n')
+    }).as('localCoach');
+    cy.setSeededProjectProvider('ollama');
+    cy.visit('/corkboard');
+    cy.contains('h1', 'Corkboard').should('be.visible');
+    cy.contains('button', 'Story Dashboard').click();
+    cy.contains('button', 'Ask the coach').click();
+
+    cy.wait('@localCoach').then(({request}) => {
+      const [system] = request.body.messages as Array<{role: string; content: string}>;
+      expect(system.role).to.equal('system');
+      expect(system.content).to.contain('Relevant context from the project:');
+      expect(system.content).to.contain('[Source: Craft reference material, not your canon - ');
+    });
+    cy.contains('Vary the scene lengths.').should('be.visible');
+  });
 });

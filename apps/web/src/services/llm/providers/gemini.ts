@@ -1,7 +1,8 @@
 import type {AIProviderId} from '../../../entityTypes';
-import type {LLMProvider, LLMRequest, LLMResponse, LLMContextChunk} from '../types';
+import type {LLMProvider, LLMRequest, LLMResponse} from '../types';
 import {PROVIDER_FALLBACK_MODELS} from '../providerConfig';
 import {assertHostedResponseComplete, geminiThinkingConfig} from '../hostedResponsePolicy';
+import {buildSystemPromptWithContext} from '../contextPrompt';
 
 interface GeminiProviderConfig {
   apiKey: string;
@@ -44,7 +45,7 @@ export class GeminiProvider implements LLMProvider {
     const thinkingConfig = geminiThinkingConfig(model, request.maxTokens ?? 4096);
     const body = {
       systemInstruction: {
-        parts: [{text: this.buildSystemPrompt(request.context, request.systemPrompt)}]
+        parts: [{text: buildSystemPromptWithContext(request.context, request.systemPrompt)}]
       },
       contents: request.messages
         .filter((message) => message.role !== 'system')
@@ -87,21 +88,4 @@ export class GeminiProvider implements LLMProvider {
     }
   }
 
-  private buildSystemPrompt(
-    context?: LLMContextChunk[],
-    basePrompt?: string
-  ): string {
-    let prompt =
-      basePrompt ||
-      'You are an AI assistant helping authors create LitRPG/GameLit content.';
-
-    if (context && context.length > 0) {
-      prompt += '\n\nRelevant context from the project:\n';
-      context.forEach((chunk) => {
-        prompt += `\n[Source: ${chunk.source}]\n${chunk.content}\n`;
-      });
-    }
-
-    return prompt;
-  }
 }
