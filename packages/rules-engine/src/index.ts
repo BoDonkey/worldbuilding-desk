@@ -3,6 +3,7 @@ export * from './types';
 export * from './engine';
 export * from './utils';
 export * from './state';
+export * from './manuscript';
 
 // Re-export main classes for convenience
 export { RulesEngine } from './engine/RulesEngine';

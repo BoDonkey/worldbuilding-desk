@@ -339,105 +339,21 @@ export interface CharacterSheet {
   updatedAt: number;
 }
 
-export type StateMutationActorId = string;
-export type StateMutationInventoryQuantity = number;
-
-export type ResourceChangeStateMutationCommand = {
-  type: 'resource_change';
-  actorId: StateMutationActorId;
-  resourceDefinitionId: string;
-  delta: number;
-};
-
-export type ResourceSetStateMutationCommand = {
-  type: 'resource_set';
-  actorId: StateMutationActorId;
-  resourceDefinitionId: string;
-  value: number;
-};
-
-export type StatChangeStateMutationCommand = {
-  type: 'stat_change';
-  actorId: StateMutationActorId;
-  statDefinitionId: string;
-  delta: number | boolean | string;
-};
-
-export type StatSetStateMutationCommand = {
-  type: 'stat_set';
-  actorId: StateMutationActorId;
-  statDefinitionId: string;
-  value: number | boolean | string;
-};
-
-export type StatusStateMutationCommand = {
-  type: 'status_apply' | 'status_remove';
-  actorId: StateMutationActorId;
-  statusName: string;
-};
-
-export type InventoryQuantityStateMutationCommand = {
-  type: 'inventory_add' | 'inventory_remove' | 'inventory_consume';
-  actorId: StateMutationActorId;
-  itemName: string;
-  quantity?: StateMutationInventoryQuantity;
-  sourceEntityId?: string;
-  definitionId?: string;
-};
-
-export type InventoryEquipStateMutationCommand = {
-  type: 'inventory_equip' | 'inventory_unequip';
-  actorId: StateMutationActorId;
-  itemName: string;
-  sourceEntityId?: string;
-  definitionId?: string;
-};
-
-export type LocationSetStateMutationCommand = {
-  type: 'location_set';
-  actorId: StateMutationActorId;
-  locationName: string;
-};
-
-export type StateMutationCommand =
-  | ResourceChangeStateMutationCommand
-  | ResourceSetStateMutationCommand
-  | StatChangeStateMutationCommand
-  | StatSetStateMutationCommand
-  | StatusStateMutationCommand
-  | InventoryQuantityStateMutationCommand
-  | InventoryEquipStateMutationCommand
-  | LocationSetStateMutationCommand;
-
-export interface StateMutationEvent {
-  id: string;
-  projectId: string;
-  sceneId: string;
-  sceneTitle?: string;
-  sceneOrder?: number;
-  sceneSequence?: number;
-  scenePosition?: number;
-  sceneAnchor?: {
-    before: string;
-    after: string;
-  };
-  label?: string;
-  sourceType?: 'manual' | 'deterministic-review';
-  sourceRevision: number;
-  sourceHash: string;
-  status: 'proposed' | 'accepted' | 'invalidated';
-  commands: StateMutationCommand[];
-  consumableEffect?: {
-    definitionId: string;
-    itemName: string;
-    durationLabel?: string;
-    phase: 'consume' | 'expire';
-    sourceEventId?: string;
-  };
-  createdAt: number;
-  invalidatedAt?: number;
-  invalidationReason?: string;
-}
+// The manuscript-time state model lives in the rules engine (Slice 3.10).
+export type {
+  StateMutationActorId,
+  StateMutationInventoryQuantity,
+  ResourceChangeStateMutationCommand,
+  ResourceSetStateMutationCommand,
+  StatChangeStateMutationCommand,
+  StatSetStateMutationCommand,
+  StatusStateMutationCommand,
+  InventoryQuantityStateMutationCommand,
+  InventoryEquipStateMutationCommand,
+  LocationSetStateMutationCommand,
+  StateMutationCommand,
+  StateMutationEvent
+} from '@worldbuilding-desk/rules-engine';
 
 export interface EntityCategory {
   id: string;

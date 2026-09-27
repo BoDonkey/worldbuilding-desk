@@ -1,15 +1,15 @@
 import {describe, expect, it} from 'vitest';
-import type {CharacterSheet, StateMutationEvent, StoredRuleset} from '../../entityTypes';
+import type {WorldRuleset} from '../types/WorldRuleset';
+import type {ReplaySheet, StateMutationEvent} from './types';
 import {
   getAcceptedStateMutationEvents,
   replayCharacterState,
-  validateStateMutationCommandAgainstState,
-  validateStateMutationEventForRuleset
-} from './stateReplay';
+  validateStateMutationCommandAgainstState
+} from './replay';
+import {validateStateMutationEventForRuleset} from './schemas';
 
-const ruleset: StoredRuleset = {
+const ruleset: WorldRuleset = {
   id: 'ruleset-1',
-  projectId: 'project-1',
   name: 'Test Ruleset',
   version: '1.0.0',
   statDefinitions: [
@@ -26,22 +26,16 @@ const ruleset: StoredRuleset = {
   updatedAt: 1
 };
 
-const sheet: CharacterSheet = {
+const sheet: ReplaySheet = {
   id: 'sheet-1',
-  projectId: 'project-1',
   characterId: 'character-1',
   characterEntityId: 'entity-1',
   name: 'Kael',
-  level: 1,
-  experience: 0,
   stats: [{definitionId: 'hp', value: 12}],
   resources: [{definitionId: 'mana', current: 4, max: 8}],
-  inventory: [],
-  inventoryEntries: [{id: 'item-1', mode: 'quick', name: 'Torch', quantity: 2}],
-  equipmentEntries: [{id: 'item-2', mode: 'quick', name: 'Torch', quantity: 1}],
-  statuses: ['Inspired'],
-  createdAt: 1,
-  updatedAt: 1
+  inventoryEntries: [{name: 'Torch', quantity: 2}],
+  equipmentEntries: [{name: 'Torch', quantity: 1}],
+  statuses: ['Inspired']
 };
 
 function makeEvent(
@@ -239,12 +233,8 @@ describe('stateReplay', () => {
       target: {actorId: 'entity-1'},
       actorResolutions: [
         {
-          id: 'resolution-1',
-          projectId: 'project-1',
           legacyActorId: 'character-1',
-          legacyActorType: 'character',
-          entityId: 'entity-1',
-          createdAt: 1
+          entityId: 'entity-1'
         }
       ]
     });
