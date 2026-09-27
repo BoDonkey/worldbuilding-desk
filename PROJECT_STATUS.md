@@ -824,6 +824,21 @@ runtime schema, and nothing here changes the roadmap's status board.
 ## Verification Status
 
 ### Verified Recently
+- Slice 4.43 talk to a character + reaction test (CL-2): `CharacterLabDialog`
+  opens from **Talk to <name>** on a saved World Bible character (grounded at
+  the latest point) and from **Open character lab** in the Workspace context
+  drawer's Characters tab (grounded at the cursor in the current scene). Talk
+  (first-person, earlier completed turns replayed) and Reaction test modes;
+  story point and moment are adjustable; the `CharacterStatCard` beside the
+  conversation is built from the same snapshot the model receives, and a
+  "Grounded in" list names every section sent. Runs use the shared model run
+  (Stop, elapsed, thinking), the `character-lab` budget feature (local Ollama
+  exempt), an explicit hosted/local data disclosure, and no response cache.
+  Transcripts live for the app session per character; **Save to Scratchpad**
+  appends draft-marked, escaped HTML through `appendToScratchpad`, and open
+  scratchpad editors apply the same append in memory so they never save over
+  it. No canon, fact, state, or manuscript writes (Cypress asserts the stores
+  are unchanged).
 - Slice 4.42 character voice contract (CL-1, no UI):
   `services/characterLab/characterVoiceContext.ts` builds read-only grounding
   for one World Bible character at a scene position (opening, cursor, ending,

@@ -1,6 +1,6 @@
 import {useMemo, useState} from 'react';
 import {Link} from 'react-router';
-import type {AIProviderId, ProjectAISettings} from '../../entityTypes';
+import type {ProjectAISettings} from '../../entityTypes';
 import type {ConsistencyAlias} from '../../services/consistency/aliasStorage';
 import {
   buildCraftContextChunks,
@@ -34,12 +34,7 @@ import {ConsultationBudgetNotice} from '../common/ConsultationBudgetNotice';
 import {ModelRunProgress} from '../common/ModelRunProgress';
 import {CraftCitationList} from '../CraftCitationList';
 import styles from './WorldCanvasView.module.css';
-
-const HOSTED_PROVIDER_NAMES: Readonly<Record<Exclude<AIProviderId, 'ollama'>, string>> = {
-  anthropic: 'Anthropic',
-  openai: 'OpenAI',
-  gemini: 'Google'
-};
+import {HOSTED_PROVIDER_NAMES} from '../../services/llm/providerConfig';
 
 interface CoachingResult {
   action: WorldCanvasCoachingAction;

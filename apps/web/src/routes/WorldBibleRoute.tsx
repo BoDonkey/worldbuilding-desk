@@ -17,6 +17,8 @@ import {WorldBibleRecordAiHelper} from '../components/WorldBible/WorldBibleRecor
 import {WorldBibleCharacterHealth} from '../components/WorldBible/WorldBibleCharacterHealth';
 import {WorldBibleLinkedSourceNote} from '../components/WorldBible/WorldBibleLinkedSourceNote';
 import {WorldBibleDialogueStyleControl} from '../components/WorldBible/WorldBibleDialogueStyleControl';
+import {CharacterLabDialog} from '../components/CharacterLab/CharacterLabDialog';
+import type {CharacterVoicePosition} from '../services/characterLab';
 import {WorldBibleMechanicsPanel} from '../components/WorldBible/WorldBibleMechanicsPanel';
 import {
   WorldBibleCharacterSections,
@@ -83,6 +85,8 @@ type WorldBibleViewMode = 'category' | 'review';
 type CharacterAuthoringMode = 'idle' | 'manual';
 type RecordAuthoringMode = 'idle' | 'manual';
 
+const LATEST_POSITION: CharacterVoicePosition = {kind: 'latest'};
+
 const getWorldBibleRailStorageKey = (projectId: string) =>
   `wbd:world-bible:category-rail-collapsed:${projectId}`;
 
@@ -120,6 +124,7 @@ function WorldBibleRoute() {
   const [negativeSpaceStatus, setNegativeSpaceStatus] =
     useState<SystemNegativeSpaceStatus>('open');
   const [negativeSpaceSceneIds, setNegativeSpaceSceneIds] = useState<string[]>([]);
+  const [labEntityId, setLabEntityId] = useState<string | null>(null);
   const [characterDetailSection, setCharacterDetailSection] =
     useState<CharacterDetailSection>('canon');
   const [areItemDetailsExpanded, setAreItemDetailsExpanded] = useState(false);
@@ -1249,6 +1254,13 @@ function WorldBibleRoute() {
                   onExport={() => {
                     if (selectedEntity) void handleExportCharacter(selectedEntity);
                   }}
+                  labAction={
+                    selectedEntity ? (
+                      <button type='button' onClick={() => setLabEntityId(selectedEntity.id)}>
+                        Talk to {selectedEntity.name}
+                      </button>
+                    ) : null
+                  }
                   dialogueStyleContent={
                     selectedEntity ? (
                       <WorldBibleDialogueStyleControl
@@ -2172,6 +2184,16 @@ function WorldBibleRoute() {
       )}
         </div>
       </div>
+
+      {labEntityId && (
+        <CharacterLabDialog
+          isOpen
+          projectId={activeProject.id}
+          entityId={labEntityId}
+          defaultPosition={LATEST_POSITION}
+          onClose={() => setLabEntityId(null)}
+        />
+      )}
 
       {confirmDialog}
     </section>

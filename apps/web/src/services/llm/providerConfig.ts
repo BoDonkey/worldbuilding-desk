@@ -2,6 +2,13 @@ import type {AIProviderId} from '../../entityTypes';
 
 export const DEFAULT_AI_PROVIDER: AIProviderId = 'ollama';
 
+/** Company names for hosted-provider data disclosures ("sends … to Anthropic's servers"). */
+export const HOSTED_PROVIDER_NAMES: Readonly<Record<Exclude<AIProviderId, 'ollama'>, string>> = {
+  anthropic: 'Anthropic',
+  openai: 'OpenAI',
+  gemini: 'Google'
+};
+
 export const PROVIDER_FALLBACK_MODELS: Partial<Record<AIProviderId, string>> = {
   anthropic: 'claude-sonnet-4-20250514',
   openai: 'gpt-4o-mini',

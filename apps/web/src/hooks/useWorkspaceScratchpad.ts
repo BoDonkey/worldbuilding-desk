@@ -1,6 +1,11 @@
 import {useCallback, useEffect, useRef, useState} from 'react';
 import type {ScratchpadDocument} from '../entityTypes';
-import {getScratchpadByProjectId, saveScratchpad} from '../scratchpadStorage';
+import {
+  getScratchpadByProjectId,
+  saveScratchpad,
+  SCRATCHPAD_APPENDED_EVENT,
+  type ScratchpadAppendedDetail
+} from '../scratchpadStorage';
 
 export type ScratchpadSaveStatus = 'idle' | 'loading' | 'saving' | 'saved' | 'error';
 
@@ -11,6 +16,8 @@ export function useWorkspaceScratchpad(projectId: string | null) {
   const [isHydrated, setHydrated] = useState(false);
   const [isDirty, setDirty] = useState(false);
   const createdAtRef = useRef<number | null>(null);
+  const isHydratedRef = useRef(false);
+  const [reloadToken, setReloadToken] = useState(0);
 
   const updateContent = useCallback((nextContent: string) => {
     setContent(nextContent);
@@ -52,6 +59,29 @@ export function useWorkspaceScratchpad(projectId: string | null) {
     return () => {
       cancelled = true;
     };
+  }, [projectId, reloadToken]);
+
+  useEffect(() => {
+    isHydratedRef.current = isHydrated;
+  }, [isHydrated]);
+
+  // Another surface appended to the saved scratchpad. Apply the same append here, keeping any
+  // unsaved edit pending, so this copy never saves over the appended text. Mid-load, the read may
+  // predate the append, so load again instead.
+  useEffect(() => {
+    if (!projectId) return;
+    const handleAppended = (event: Event) => {
+      const detail = (event as CustomEvent<ScratchpadAppendedDetail>).detail;
+      if (detail?.projectId !== projectId) return;
+      if (!isHydratedRef.current) {
+        setReloadToken((current) => current + 1);
+        return;
+      }
+      setContent((current) => `${current}${detail.html}`);
+      setLastSavedAt(Date.now());
+    };
+    window.addEventListener(SCRATCHPAD_APPENDED_EVENT, handleAppended);
+    return () => window.removeEventListener(SCRATCHPAD_APPENDED_EVENT, handleAppended);
   }, [projectId]);
 
   useEffect(() => {

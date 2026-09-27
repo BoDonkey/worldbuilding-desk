@@ -102,6 +102,7 @@ import {
   resolveCharacterStatCardTemplate
 } from '../services/state/characterPeek';
 import {getSceneOrder} from '../services/state/characterSnapshot';
+import {CharacterLabDialog} from '../components/CharacterLab/CharacterLabDialog';
 import {useWorkspaceUiStore} from '../store/workspaceUiStore';
 import {
   CHARACTER_STAT_PEEK_EVENT,
@@ -191,6 +192,7 @@ function WorkspaceRoute() {
     'opening' | 'cursor' | 'ending'
   >('opening');
   const [sceneCursorPosition, setSceneCursorPosition] = useState(1);
+  const [labEntityId, setLabEntityId] = useState<string | null>(null);
   const [sceneCursorSnapshot, setSceneCursorSnapshot] = useState<EditorTextSnapshot>({
     text: '',
     spans: []
@@ -1432,6 +1434,7 @@ function WorkspaceRoute() {
   const contextDrawerProps: ComponentProps<typeof WorkspaceContextDrawer> = {
     activeContextView, setActiveContextView, showGameSystems, showRuleAuthoring,
     entities, categories, ruleset, characters, characterSheets,
+    onOpenCharacterLab: setLabEntityId,
     sceneRosterTitle: sceneRosterModel.sceneTitle,
     sceneRosterCharacters: sceneRosterModel.characters,
     sceneRosterItems: sceneRosterModel.items,
@@ -2243,6 +2246,19 @@ function WorkspaceRoute() {
         onClose={closeMemoryDialog} onSave={handleMemorySave}
       />
 
+      {labEntityId && (
+        <CharacterLabDialog
+          isOpen
+          projectId={activeProject.id}
+          entityId={labEntityId}
+          defaultPosition={
+            selectedId
+              ? {kind: 'scene', sceneId: selectedId, moment: 'cursor', cursorPosition: sceneCursorPosition}
+              : {kind: 'latest'}
+          }
+          onClose={() => setLabEntityId(null)}
+        />
+      )}
 
       {confirmDialog}
     </section>

@@ -27,6 +27,8 @@ interface WorldBibleCharacterSectionsProps {
   notesContent: ReactNode;
   continuityContent: ReactNode;
   mechanicsContent: ReactNode;
+  /** Character lab entry, shown once the character is saved. */
+  labAction?: ReactNode;
 }
 
 interface SectionDefinition {
@@ -96,6 +98,7 @@ export const WorldBibleCharacterSections = (
           Canon stays here. Notes, continuity, mechanics, and writing aids attach
           to this same character when they become useful.
         </p>
+        {props.isSaved && props.labAction}
       </div>
 
       <div

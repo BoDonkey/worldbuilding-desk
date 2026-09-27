@@ -1,6 +1,7 @@
 import {useEffect, useMemo, useRef, useState} from 'react';
 import {useNavigate} from 'react-router';
 import {clearSystemHistoryEntries} from '../../services/system';
+import {isCharacterCategory} from '../../services/characters/characterIdentity';
 import type {
   Character,
   CharacterSheet,
@@ -141,6 +142,7 @@ interface WorkspaceContextDrawerProps {
   // Characters view
   characters: Character[];
   characterSheets: CharacterSheet[];
+  onOpenCharacterLab: (entityId: string) => void;
 
   // Current scene roster view
   sceneRosterTitle: string | null;
@@ -300,6 +302,7 @@ export function WorkspaceContextDrawer({
   ruleset,
   characters,
   characterSheets,
+  onOpenCharacterLab,
   sceneRosterTitle,
   sceneRosterCharacters,
   sceneRosterItems,
@@ -398,6 +401,18 @@ export function WorkspaceContextDrawer({
   >({});
   const [pendingSourceNoteCapture, setPendingSourceNoteCapture] = useState<string | null>(null);
   const [assistantSessionId] = useState(() => crypto.randomUUID());
+  const [labEntityId, setLabEntityId] = useState('');
+  const labCharacterOptions = useMemo(() => {
+    const characterCategoryIds = new Set(
+      categories.filter((category) => isCharacterCategory(category)).map((category) => category.id)
+    );
+    return entities
+      .filter((entity) => characterCategoryIds.has(entity.categoryId))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [categories, entities]);
+  const selectedLabEntityId = labCharacterOptions.some((entity) => entity.id === labEntityId)
+    ? labEntityId
+    : labCharacterOptions[0]?.id ?? '';
   const activeReviewItemRef = useRef<HTMLLIElement | null>(null);
 
   const visibleTabs = useMemo(
@@ -824,6 +839,39 @@ export function WorkspaceContextDrawer({
           >
             Open World Bible characters
           </button>
+          <div className={styles.contextSummaryText}>
+            <strong>Character lab</strong>
+            <div className={styles.consistencyDescription}>
+              Talk to a character or test a reaction, grounded in canon and story state at
+              your cursor. Draft only; nothing changes canon.
+            </div>
+          </div>
+          {labCharacterOptions.length === 0 ? (
+            <p className={styles.contextSummaryText}>
+              Add a character in World Bible to use the lab.
+            </p>
+          ) : (
+            <>
+              <label className={styles.contextSummaryText}>
+                Character{' '}
+                <select
+                  value={selectedLabEntityId}
+                  onChange={(event) => setLabEntityId(event.target.value)}
+                >
+                  {labCharacterOptions.map((entity) => (
+                    <option key={entity.id} value={entity.id}>{entity.name}</option>
+                  ))}
+                </select>
+              </label>
+              <button
+                type='button'
+                onClick={() => onOpenCharacterLab(selectedLabEntityId)}
+                disabled={!selectedLabEntityId}
+              >
+                Open character lab
+              </button>
+            </>
+          )}
         </div>
       );
     }

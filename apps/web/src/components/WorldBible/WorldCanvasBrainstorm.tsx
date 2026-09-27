@@ -1,7 +1,6 @@
 import {useEffect, useMemo, useState} from 'react';
 import {Link} from 'react-router';
 import type {
-  AIProviderId,
   ProjectAISettings,
   WorldCanvasDocument,
   WorldCanvasLensKind
@@ -38,12 +37,7 @@ import {
 } from '../../services/worldBible/worldCanvasBrainstormSession';
 import {ConsultationBudgetNotice} from '../common/ConsultationBudgetNotice';
 import styles from './WorldCanvasView.module.css';
-
-const HOSTED_PROVIDER_NAMES: Readonly<Record<Exclude<AIProviderId, 'ollama'>, string>> = {
-  anthropic: 'Anthropic',
-  openai: 'OpenAI',
-  gemini: 'Google'
-};
+import {HOSTED_PROVIDER_NAMES} from '../../services/llm/providerConfig';
 
 interface WorldCanvasBrainstormProps {
   projectId: string;
