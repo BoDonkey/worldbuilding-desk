@@ -99,11 +99,6 @@ Other files:
   scenes, character-from-description) and optional encrypted backups (5.14).
   4.42–4.45 have landed and their durable behavior is in the blueprint and
   domain model; archive the plan after 5.14 lands.
-- `docs/rules-engine-plan.md` — accepted plan for moving the live
-  manuscript-time state model into `packages/rules-engine` (Slices 3.10–3.11)
-  and later using rules for derived values, proposed follow-up commands, and
-  continuity checks (backlog R3–R5; review finding F3). Archive it after the
-  scheduled slices land and its contracts are folded into the authorities.
 
 ## Archive
 
@@ -118,6 +113,10 @@ the full-length originals behind the 2026-08-01 consolidation:
   `docs/road-to-market.md` Phases 0, 2, and 3.
 - `code-fitness-report-2026-08-07.md` — current fitness close-out (grade A);
   the superseded 2026-08-01 A− baseline remains beside it for comparison.
+- `rules-engine-plan.md` — accepted rules-engine plan; Slices 3.10–3.11
+  (R1–R2) landed and their contracts are in `docs/domain-model.md` § 3 and
+  `docs/architecture-review.md`. It remains the design reference for
+  backlog R3–R5.
 - `stat-peek-plan.md` — completed plan for Slices 4.46–4.48 (character
   snapshot service, stat peek, pinned stat panel); durable behavior lives in
   `docs/product-blueprint.md`.

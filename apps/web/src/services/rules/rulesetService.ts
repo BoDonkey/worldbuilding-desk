@@ -1,4 +1,4 @@
-import type {WorldRuleset} from '@worldbuilding-desk/rules-engine';
+import {quarantineInvalidRules, type WorldRuleset} from '@worldbuilding-desk/rules-engine';
 import type {StoredRuleset} from '../../entityTypes';
 import {getRAGService} from '../rag/getRAGService';
 import {getShodhService} from '../shodh/getShodhService';
@@ -34,14 +34,21 @@ async function getDB(): Promise<IDBDatabase> {
   });
 }
 
+/**
+ * Every ruleset write goes through here, so stored `rules` always satisfy
+ * GameRuleSchema: invalid rules from imports or older data are kept in
+ * `quarantinedRules` and left out of indexed context. Resolves to the ruleset
+ * as stored.
+ */
 export async function saveRuleset(
-  ruleset: WorldRuleset,
+  input: WorldRuleset,
   projectId: string
-): Promise<void> {
+): Promise<WorldRuleset> {
   const database = await getDB();
   const transaction = database.transaction([RULESET_STORE], 'readwrite');
   const store = transaction.objectStore(RULESET_STORE);
 
+  const ruleset: WorldRuleset = quarantineInvalidRules(input);
   const storedRuleset: StoredRuleset = {
     ...ruleset,
     projectId
@@ -80,7 +87,7 @@ export async function saveRuleset(
         console.warn('Failed to capture ruleset memory', error);
       }
       emitShodhMemoriesUpdated();
-      resolve();
+      resolve(ruleset);
     };
     request.onerror = () => reject(request.error);
   });

@@ -1,17 +1,14 @@
-import type {
-  CharacterState,
-  ActiveStatus,
-  Modifier
-} from '../types/CharacterState';
+import type {ActiveStatus, Modifier} from '../types/CharacterState';
 import type {
   WorldRuleset,
   StatDefinition,
   ResourceDefinition
 } from '../types/WorldRuleset';
+import {calculateEffectiveStat} from '../types/CharacterState';
 import {
-  createEmptyCharacterState,
-  calculateEffectiveStat
-} from '../types/CharacterState';
+  createEmptyExperimentalCharacterState,
+  type ExperimentalCharacterState
+} from './wallClockState';
 import {updateState} from '../utils/immutable';
 import {RulesEngine} from '../engine/RulesEngine';
 
@@ -48,7 +45,7 @@ export interface ItemDurabilityOptions {
 }
 
 export interface ItemDurabilityResult {
-  state: CharacterState;
+  state: ExperimentalCharacterState;
   broken: boolean;
   removed: boolean;
   gainedScrap: number;
@@ -59,7 +56,7 @@ export interface ItemDurabilityResult {
 }
 
 export class StateManager {
-  private states: Map<string, CharacterState>;
+  private states: Map<string, ExperimentalCharacterState>;
   private engine: RulesEngine;
   private ruleset: WorldRuleset;
 
@@ -75,7 +72,7 @@ export class StateManager {
   createCharacter(
     name: string,
     customStats?: Record<string, any>
-  ): CharacterState {
+  ): ExperimentalCharacterState {
     // Build initial stats from ruleset
     const stats: Record<string, any> = {};
     for (const statDef of this.ruleset.statDefinitions) {
@@ -95,7 +92,7 @@ export class StateManager {
       resources.max[resDef.id] = resDef.max ?? value;
     }
 
-    const character = createEmptyCharacterState(
+    const character = createEmptyExperimentalCharacterState(
       name,
       this.ruleset.id,
       stats,
@@ -124,7 +121,7 @@ export class StateManager {
   /**
    * Get character state by ID
    */
-  getCharacter(characterId: string): CharacterState | undefined {
+  getCharacter(characterId: string): ExperimentalCharacterState | undefined {
     return this.states.get(characterId);
   }
 
@@ -133,8 +130,8 @@ export class StateManager {
    */
   updateCharacter(
     characterId: string,
-    updates: Partial<CharacterState>
-  ): CharacterState {
+    updates: Partial<ExperimentalCharacterState>
+  ): ExperimentalCharacterState {
     const current = this.states.get(characterId);
     if (!current) {
       throw new Error(`Character ${characterId} not found`);
@@ -156,7 +153,7 @@ export class StateManager {
     characterId: string,
     ruleId: string
   ): {
-    state: CharacterState;
+    state: ExperimentalCharacterState;
     success: boolean;
     error?: string;
   } {
@@ -190,12 +187,12 @@ export class StateManager {
     characterId: string,
     amount: number,
     options?: TimeAdvanceOptions
-  ): CharacterState {
+  ): ExperimentalCharacterState {
     const seconds = this.toSeconds(amount, options);
     return this.processTimeElapsed(characterId, seconds);
   }
 
-  processTimeElapsed(characterId: string, seconds: number): CharacterState {
+  processTimeElapsed(characterId: string, seconds: number): ExperimentalCharacterState {
     const state = this.states.get(characterId);
     if (!state) {
       throw new Error(`Character ${characterId} not found`);
@@ -240,9 +237,9 @@ export class StateManager {
    * Update effect timers
    */
   private updateEffectTimers(
-    state: CharacterState,
+    state: ExperimentalCharacterState,
     seconds: number
-  ): CharacterState {
+  ): ExperimentalCharacterState {
     return updateState(state, (draft) => {
       for (const [ruleId, timer] of Object.entries(
         draft.timers.activeEffects
@@ -262,7 +259,7 @@ export class StateManager {
   /**
    * Remove expired statuses
    */
-  private removeExpiredStatuses(state: CharacterState): CharacterState {
+  private removeExpiredStatuses(state: ExperimentalCharacterState): ExperimentalCharacterState {
     const now = Date.now();
 
     return updateState(state, (draft) => {
@@ -279,9 +276,9 @@ export class StateManager {
    * Apply resource regeneration based on ruleset definitions
    */
   private applyRegeneration(
-    state: CharacterState,
+    state: ExperimentalCharacterState,
     seconds: number
-  ): CharacterState {
+  ): ExperimentalCharacterState {
     let newState = state;
 
     for (const resDef of this.ruleset.resourceDefinitions) {
@@ -307,9 +304,9 @@ export class StateManager {
    * Trigger time-based rules
    */
   private triggerTimeBasedRules(
-    state: CharacterState,
+    state: ExperimentalCharacterState,
     seconds: number
-  ): CharacterState {
+  ): ExperimentalCharacterState {
     // Find rules with time_elapsed trigger
     const timeRules = this.ruleset.rules.filter(
       (rule) => rule.enabled && rule.trigger?.type === 'time_elapsed'
@@ -336,9 +333,9 @@ export class StateManager {
    * Trigger rules that should run while a status is active
    */
   private triggerStatusActiveRules(
-    state: CharacterState,
+    state: ExperimentalCharacterState,
     seconds: number
-  ): CharacterState {
+  ): ExperimentalCharacterState {
     const statusRuleCandidates = this.ruleset.rules.filter(
       (rule) => rule.enabled && rule.trigger?.type === 'status_active'
     );
@@ -375,7 +372,7 @@ export class StateManager {
     exposureKey: string,
     amount: number,
     options?: TimeAdvanceOptions
-  ): CharacterState {
+  ): ExperimentalCharacterState {
     const state = this.states.get(characterId);
     if (!state) {
       throw new Error(`Character ${characterId} not found`);
@@ -395,7 +392,7 @@ export class StateManager {
     return newState;
   }
 
-  clearExposure(characterId: string, exposureKey: string): CharacterState {
+  clearExposure(characterId: string, exposureKey: string): ExperimentalCharacterState {
     const state = this.states.get(characterId);
     if (!state) {
       throw new Error(`Character ${characterId} not found`);
@@ -411,7 +408,7 @@ export class StateManager {
   applyExposureAilments(
     characterId: string,
     ailments: ExposureAilmentDefinition[]
-  ): CharacterState {
+  ): ExperimentalCharacterState {
     const state = this.states.get(characterId);
     if (!state) {
       throw new Error(`Character ${characterId} not found`);
@@ -466,7 +463,7 @@ export class StateManager {
     amount: number,
     ailments: ExposureAilmentDefinition[],
     options?: TimeAdvanceOptions
-  ): CharacterState {
+  ): ExperimentalCharacterState {
     this.recordExposure(characterId, exposureKey, amount, options);
     return this.applyExposureAilments(characterId, ailments);
   }
@@ -480,7 +477,7 @@ export class StateManager {
     sourceRuleId: string,
     duration?: number,
     data?: Record<string, any>
-  ): CharacterState {
+  ): ExperimentalCharacterState {
     const state = this.states.get(characterId);
     if (!state) {
       throw new Error(`Character ${characterId} not found`);
@@ -506,7 +503,7 @@ export class StateManager {
   /**
    * Remove a status from a character
    */
-  removeStatus(characterId: string, statusId: string): CharacterState {
+  removeStatus(characterId: string, statusId: string): ExperimentalCharacterState {
     const state = this.states.get(characterId);
     if (!state) {
       throw new Error(`Character ${characterId} not found`);
@@ -678,7 +675,7 @@ export class StateManager {
     value: number,
     sourceRuleId: string,
     priority: number = 100
-  ): CharacterState {
+  ): ExperimentalCharacterState {
     const state = this.states.get(characterId);
     if (!state) {
       throw new Error(`Character ${characterId} not found`);
@@ -723,7 +720,7 @@ export class StateManager {
   /**
    * Get all characters
    */
-  getAllCharacters(): CharacterState[] {
+  getAllCharacters(): ExperimentalCharacterState[] {
     return Array.from(this.states.values());
   }
 

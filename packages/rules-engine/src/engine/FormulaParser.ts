@@ -1,4 +1,4 @@
-import {evaluate, create, all} from 'mathjs';
+import {create, all} from 'mathjs';
 import type {CharacterState} from '../types/CharacterState';
 import {DiceRoller} from '../utils/DiceRoller';
 
@@ -6,15 +6,44 @@ import {DiceRoller} from '../utils/DiceRoller';
  * Safely evaluates mathematical formulas with character state context
  */
 
-// Create a restricted math instance
+// Restricted math instance, per the mathjs security guidance: keep private
+// references to evaluate/parse, then disable every function that could
+// evaluate code, mutate the instance, or reach outside it from inside an
+// expression. Formulas may come from authors or, later, from models.
 const math = create(all);
+const limitedEvaluate = math.evaluate;
+const limitedParse = math.parse;
+
+export const DISABLED_FORMULA_FUNCTIONS = [
+  'import',
+  'createUnit',
+  'evaluate',
+  'parse',
+  'compile',
+  'simplify',
+  'derivative',
+  'resolve',
+  'reviver'
+] as const;
+
+math.import(
+  Object.fromEntries(
+    DISABLED_FORMULA_FUNCTIONS.map((name) => [
+      name,
+      () => {
+        throw new Error(`Function ${name} is disabled in formulas`);
+      }
+    ])
+  ),
+  {override: true}
+);
 
 export class FormulaParser {
   private diceRoller: DiceRoller;
 
   constructor() {
     this.diceRoller = new DiceRoller();
-  } // <-- This was missing!
+  }
 
   /**
    * Create scope object from character state for formula evaluation
@@ -46,7 +75,7 @@ export class FormulaParser {
     try {
       const formulaWithRolls = this.replaceDiceNotation(formula);
       const scope = this.createScope(state);
-      const result = evaluate(formulaWithRolls, scope);
+      const result = limitedEvaluate(formulaWithRolls, scope);
 
       // Ensure we return a number
       if (typeof result === 'number') {
@@ -73,7 +102,7 @@ export class FormulaParser {
   validate(formula: string): {valid: boolean; error?: string} {
     try {
       // Try to parse the formula
-      math.parse(formula);
+      limitedParse(formula);
       return {valid: true};
     } catch (error) {
       return {
@@ -88,7 +117,7 @@ export class FormulaParser {
    */
   extractVariables(formula: string): string[] {
     try {
-      const parsed = math.parse(formula);
+      const parsed = limitedParse(formula);
       const variables = new Set<string>();
 
       parsed.traverse((node: any) => {

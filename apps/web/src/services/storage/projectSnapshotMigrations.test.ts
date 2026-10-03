@@ -90,7 +90,7 @@ const legacySnapshot = () => ({
 
 describe('migrateProjectSnapshotPayload', () => {
   it('accepts the current snapshot schema unchanged', () => {
-    const snapshot = {schemaVersion: 8, project: {id: 'project-1'}};
+    const snapshot = {schemaVersion: 9, project: {id: 'project-1'}};
     expect(migrateProjectSnapshotPayload(snapshot)).toBe(snapshot);
   });
 
@@ -108,8 +108,8 @@ describe('migrateProjectSnapshotPayload', () => {
       }
     });
     expect(migrated).toMatchObject({
-      schemaVersion: 8,
-      project: {storageSchemaVersion: 6},
+      schemaVersion: 9,
+      project: {storageSchemaVersion: 7},
       data: {
         canonicalFacts: [{validFromSceneId: 'scene-2', validUntilSceneId: 'scene-4'}],
         worldCanvases: []
@@ -133,7 +133,7 @@ describe('migrateProjectSnapshotPayload', () => {
       counts: {}
     });
 
-    expect(snapshot.schemaVersion).toBe(8);
+    expect(snapshot.schemaVersion).toBe(9);
     expect(snapshot.data.worldCanvases).toEqual([]);
     expect(snapshot.counts.worldCanvases).toBe(0);
   });
@@ -151,30 +151,54 @@ describe('migrateProjectSnapshotPayload', () => {
       counts: {worldCanvases: 1}
     });
 
-    expect(snapshot.schemaVersion).toBe(8);
+    expect(snapshot.schemaVersion).toBe(9);
     expect(snapshot.data.worldCanvases[0]).toMatchObject({schemaVersion: 2, premise: 'A city forgets.', openThreads: [{id: 'q1', text: 'The river remembers.', status: 'settled'}]});
     expect(snapshot.data.worldCanvases[0].lenses[0].sketches[0]).toMatchObject({text: 'The crater sings.', linkedSourceNoteIds: ['note-1'], linkedEntityIds: ['entity-1'], createdAt: 4, updatedAt: 4});
   });
 
+  it('quarantines invalid ruleset rules while migrating schema 8 without dropping them', () => {
+    const invalidRule = {id: 'rule-bad', name: 'Half a rule', category: 'not-a-category'};
+    const snapshot = normalizeProjectSnapshot({
+      schemaVersion: 8,
+      project: {id: 'project-1', name: 'Rules', storageSchemaVersion: 6, createdAt: 1, updatedAt: 1},
+      data: {ruleset: {
+        id: 'ruleset-1', projectId: 'project-1', name: 'Rules', version: '1.0.0',
+        statDefinitions: [], resourceDefinitions: [], itemTemplates: [], statusTemplates: [],
+        rules: [{id: 'rule-ok', name: 'Long Rest', category: 'time'}, invalidRule],
+        createdAt: 1, updatedAt: 1
+      }},
+      counts: {}
+    });
+
+    expect(snapshot.schemaVersion).toBe(9);
+    expect(snapshot.project.storageSchemaVersion).toBe(7);
+    expect(snapshot.data.ruleset?.rules).toEqual([
+      {id: 'rule-ok', name: 'Long Rest', category: 'time', enabled: true, priority: 100, tags: [], effects: []}
+    ]);
+    expect(snapshot.data.ruleset?.quarantinedRules).toEqual([
+      {raw: invalidRule, name: 'Half a rule', issues: [expect.stringContaining('category')]}
+    ]);
+  });
+
   it('rejects snapshots created by a newer app with an actionable error', () => {
-    expect(() => migrateProjectSnapshotPayload({schemaVersion: 9})).toThrow(
+    expect(() => migrateProjectSnapshotPayload({schemaVersion: 10})).toThrow(
       'Update the app before importing it.'
     );
-    expect(() => normalizeProjectSnapshot({schemaVersion: 9})).toThrow(
+    expect(() => normalizeProjectSnapshot({schemaVersion: 10})).toThrow(
       'Update the app before importing it.'
     );
     expect(() =>
       normalizeProjectSnapshot({
-        schemaVersion: 8,
-        project: {id: 'project-1', name: 'Future', storageSchemaVersion: 7}
+        schemaVersion: 9,
+        project: {id: 'project-1', name: 'Future', storageSchemaVersion: 8}
       })
-    ).toThrow('Backup project data uses storage schema 7');
+    ).toThrow('Backup project data uses storage schema 8');
   });
 
   it('classifies v1 character identities and adds complete v2 backup fields', () => {
     const snapshot = normalizeProjectSnapshot(legacySnapshot());
 
-    expect(snapshot.schemaVersion).toBe(8);
+    expect(snapshot.schemaVersion).toBe(9);
     expect(snapshot.data.categories[0].kind).toBe('character');
     expect(snapshot.data.characters[0].entityId).toBe('entity-mira');
     expect(snapshot.data.characterSheets[0].characterEntityId).toBe('entity-mira');
@@ -236,8 +260,8 @@ describe('migrateProjectSnapshotPayload', () => {
       counts: {corkboardChapterCards: 1}
     });
 
-    expect(snapshot.schemaVersion).toBe(8);
-    expect(snapshot.project.storageSchemaVersion).toBe(6);
+    expect(snapshot.schemaVersion).toBe(9);
+    expect(snapshot.project.storageSchemaVersion).toBe(7);
     expect(snapshot.data.corkboardChapterCards[0].sceneIds).toEqual(['scene-1', 'scene-2']);
     expect(snapshot.data.categories[0].recordType).toBe('system-negative-space');
     expect(snapshot.data.entities[0].systemNegativeSpace).toEqual({

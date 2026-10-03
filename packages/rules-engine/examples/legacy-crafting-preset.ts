@@ -1,4 +1,4 @@
-import type {ItemDurabilityOptions} from '../src/state/StateManager';
+import type {ItemDurabilityOptions} from '../src/experimental/StateManager';
 
 /**
  * Suggested defaults for a "break -> insight -> better tool" loop.

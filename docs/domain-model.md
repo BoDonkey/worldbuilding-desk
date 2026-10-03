@@ -192,6 +192,18 @@ change; the mutation ledger says when it changed.
   the event schema, replay rules, or ordering.
 - Subject scope is character-first; the event schema permits later expansion
   to locations, factions, items, and world.
+- The command types, schemas, ordering, application, replay, and ruleset
+  validation live in `packages/rules-engine/src/manuscript/`; persistence and
+  project lookups stay in the web app.
+- Authored game rules (`WorldRuleset.rules`) are typed by `GameRuleSchema`.
+  Every ruleset write moves rules that fail the schema into
+  `quarantinedRules`, kept verbatim with their validation issues. Quarantined
+  rules are never executed or sent as AI context, survive exports and
+  backups, and are shown to the author on the Ruleset route.
+- Rule output, when rules are wired in (backlog R3–R5), takes only two forms:
+  derived views recomputed at replay and never stored, or proposed
+  `StateMutationCommand`s that go through the normal author confirmation.
+  Rules never write to the ledger directly.
 
 ## 4. Character Identity Contract
 

@@ -1,4 +1,5 @@
 import {z} from 'zod';
+import {GameRuleSchema, type GameRule} from './GameRule';
 
 /**
  * Defines the overall world/game system
@@ -80,8 +81,10 @@ export const WorldRulesetSchema = z.object({
   statDefinitions: z.array(StatDefinitionSchema).default([]),
   resourceDefinitions: z.array(ResourceDefinitionSchema).default([]),
 
-  // Rules will be imported from GameRule.ts
-  rules: z.array(z.any()).default([]), // Will type properly after GameRule is defined
+  rules: z.array(GameRuleSchema).default([]),
+  // Stored rules that failed GameRuleSchema. Kept verbatim so nothing an
+  // author or import wrote is lost; never executed or sent as context.
+  quarantinedRules: z.array(z.lazy(() => QuarantinedRuleSchema)).optional(),
 
   // Templates for common patterns
   itemTemplates: z.array(z.any()).default([]),
@@ -96,6 +99,65 @@ export const WorldRulesetSchema = z.object({
   custom: z.record(z.unknown()).optional()
 });
 export type WorldRuleset = z.infer<typeof WorldRulesetSchema>;
+
+export const QuarantinedRuleSchema = z.object({
+  raw: z.unknown(),
+  name: z.string().optional(),
+  issues: z.array(z.string())
+});
+export type QuarantinedRule = z.infer<typeof QuarantinedRuleSchema>;
+
+/**
+ * Splits stored rules into ones that satisfy GameRuleSchema (returned with
+ * schema defaults applied) and ones that do not (kept verbatim with the
+ * validation issues). Pure and deterministic; storage and snapshot
+ * migrations both use it.
+ */
+export function partitionRulesetRules(rules: unknown): {
+  rules: GameRule[];
+  quarantinedRules: QuarantinedRule[];
+} {
+  const valid: GameRule[] = [];
+  const quarantined: QuarantinedRule[] = [];
+  const list = Array.isArray(rules) ? rules : rules === undefined ? [] : [rules];
+  for (const raw of list) {
+    const parsed = GameRuleSchema.safeParse(raw);
+    if (parsed.success) {
+      valid.push(parsed.data);
+      continue;
+    }
+    const name =
+      raw && typeof raw === 'object' && typeof (raw as {name?: unknown}).name === 'string'
+        ? (raw as {name: string}).name
+        : undefined;
+    quarantined.push({
+      raw,
+      ...(name ? {name} : {}),
+      issues: parsed.error.issues.map(
+        (issue) => `${issue.path.length > 0 ? issue.path.join('.') : 'rule'}: ${issue.message}`
+      )
+    });
+  }
+  return {rules: valid, quarantinedRules: quarantined};
+}
+
+/**
+ * Returns the ruleset with invalid rules moved into `quarantinedRules`,
+ * appended after any already quarantined. Rulesets whose rules are all valid
+ * come back without a `quarantinedRules` field unless they already had one.
+ * Idempotent.
+ */
+export function quarantineInvalidRules<
+  T extends {rules?: unknown; quarantinedRules?: QuarantinedRule[]}
+>(ruleset: T): Omit<T, 'rules'> & {rules: GameRule[]} {
+  const {rules, quarantinedRules} = partitionRulesetRules(ruleset.rules);
+  const existing = ruleset.quarantinedRules ?? [];
+  const next = {...ruleset, rules};
+  if (quarantinedRules.length === 0 && ruleset.quarantinedRules === undefined) {
+    return next;
+  }
+  return {...next, quarantinedRules: [...existing, ...quarantinedRules]};
+}
 
 // Helper to create empty ruleset
 export function createEmptyRuleset(name: string): WorldRuleset {

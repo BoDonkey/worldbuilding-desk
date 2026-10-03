@@ -17,7 +17,7 @@ export class EffectApplicator {
   /**
    * Apply a single effect to state
    */
-  applyEffect(effect: Effect, state: CharacterState): CharacterState {
+  applyEffect<S extends CharacterState>(effect: Effect, state: S): S {
     const currentValue = getNestedValue(state, effect.target);
     let newValue: any;
 
@@ -124,8 +124,8 @@ export class EffectApplicator {
   /**
    * Apply multiple effects to state
    */
-  applyEffects(effects: Effect[], state: CharacterState): CharacterState {
-    return effects.reduce((currentState, effect) => {
+  applyEffects<S extends CharacterState>(effects: Effect[], state: S): S {
+    return effects.reduce<S>((currentState, effect) => {
       return this.applyEffect(effect, currentState);
     }, state);
   }

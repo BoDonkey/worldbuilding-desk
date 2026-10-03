@@ -13,7 +13,7 @@ import {
   importRulesetJson
 } from '../services/rules';
 import {describeError} from '../services/errors';
-import {RouteFeedback} from '../components/common';
+import {InlineAlert, RouteFeedback} from '../components/common';
 
 // activeProject and setActiveProject read from store below
 
@@ -130,8 +130,8 @@ function RulesetRoute() {
 
     setFeedback(null);
     try {
-      await saveRuleset(nextRuleset, activeProject.id);
-      setRuleset(nextRuleset);
+      const savedRuleset = await saveRuleset(nextRuleset, activeProject.id);
+      setRuleset(savedRuleset);
 
       if (activeProject.rulesetId !== nextRuleset.id) {
         const updatedProject: Project = {
@@ -193,6 +193,14 @@ function RulesetRoute() {
     }
   };
 
+  const quarantinedRuleCount = ruleset?.quarantinedRules?.length ?? 0;
+  const quarantinedRuleNotice =
+    quarantinedRuleCount === 0
+      ? null
+      : quarantinedRuleCount === 1
+        ? '1 saved rule could not be read, so it is set aside: not applied and not shared with AI. It stays in ruleset exports and project backups.'
+        : `${quarantinedRuleCount} saved rules could not be read, so they are set aside: not applied and not shared with AI. They stay in ruleset exports and project backups.`;
+
   if (!activeProject) {
     return (
       <section>
@@ -213,6 +221,7 @@ function RulesetRoute() {
           ? `${ruleset.statDefinitions.length + ruleset.resourceDefinitions.length} tracked values are available to character mechanics.`
           : 'Tracking is optional. The quickest start is one value on a saved World Bible character.'}
       </p>
+      {quarantinedRuleNotice && <InlineAlert variant='info' message={quarantinedRuleNotice} />}
       {!showAdvancedRules ? (
         <div style={{maxWidth: '680px', padding: '1rem', border: '1px solid var(--surface-border-soft)', borderRadius: '14px', background: 'var(--surface-panel)'}}>
           <h2 style={{marginTop: 0}}>{ruleset ? 'Rules are ready' : 'Start with a character'}</h2>

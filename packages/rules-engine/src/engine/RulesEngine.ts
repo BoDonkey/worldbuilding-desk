@@ -8,12 +8,12 @@ import {FormulaParser} from './FormulaParser';
 /**
  * Result of rule evaluation
  */
-export interface RuleResult {
+export interface RuleResult<S extends CharacterState = CharacterState> {
   ruleId: string;
   ruleName: string;
   success: boolean;
   conditionsMet: boolean;
-  newState?: CharacterState;
+  newState?: S;
   error?: string;
   triggeredRules?: string[]; // IDs of rules that were triggered by this rule
 }
@@ -63,12 +63,12 @@ export class RulesEngine {
   /**
    * Evaluate a single rule against character state
    */
-  evaluateRule(
+  evaluateRule<S extends CharacterState>(
     rule: GameRule,
-    state: CharacterState,
+    state: S,
     context?: RuleContext
-  ): RuleResult {
-    const result: RuleResult = {
+  ): RuleResult<S> {
+    const result: RuleResult<S> = {
       ruleId: rule.id,
       ruleName: rule.name,
       success: false,
@@ -155,18 +155,19 @@ export class RulesEngine {
   /**
    * Execute multiple rules in priority order
    */
-  executeRules(
+  executeRules<S extends CharacterState>(
     ruleIds: string[],
-    state: CharacterState,
-    context?: RuleContext
-  ): {finalState: CharacterState; results: RuleResult[]} {
+    state: S,
+    context?: RuleContext,
+    depth = 0
+  ): {finalState: S; results: RuleResult<S>[]} {
     const rules = ruleIds
       .map((id) => this.ruleset.rules.find((r) => r.id === id))
       .filter((r): r is GameRule => r !== undefined)
       .sort((a, b) => (b.priority || 100) - (a.priority || 100)); // Higher priority first
 
     let currentState = state;
-    const results: RuleResult[] = [];
+    const results: RuleResult<S>[] = [];
     const triggeredRuleIds = new Set<string>();
 
     for (const rule of rules) {
@@ -183,12 +184,14 @@ export class RulesEngine {
       }
     }
 
-    // Execute triggered rules (one level deep to prevent infinite loops)
-    if (triggeredRuleIds.size > 0) {
+    // Execute triggered rules one level deep; triggers fired by triggered
+    // rules are not followed, so a rule that triggers itself cannot loop.
+    if (triggeredRuleIds.size > 0 && depth === 0) {
       const triggeredResults = this.executeRules(
         Array.from(triggeredRuleIds),
         currentState,
-        context
+        context,
+        depth + 1
       );
 
       currentState = triggeredResults.finalState;
@@ -213,11 +216,11 @@ export class RulesEngine {
   /**
    * Execute all rules matching a trigger
    */
-  executeTrigger(
+  executeTrigger<S extends CharacterState>(
     triggerType: string,
-    state: CharacterState,
+    state: S,
     triggerData?: Record<string, any>
-  ): {finalState: CharacterState; results: RuleResult[]} {
+  ): {finalState: S; results: RuleResult<S>[]} {
     const matchingRules = this.findRulesByTrigger(triggerType);
     const ruleIds = matchingRules.map((r) => r.id);
 

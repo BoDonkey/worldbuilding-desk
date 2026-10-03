@@ -1,3 +1,4 @@
+import {quarantineInvalidRules} from '@worldbuilding-desk/rules-engine';
 import type {
   Character,
   CharacterSheet,
@@ -9,7 +10,7 @@ import {CURRENT_PROJECT_SCHEMA_VERSION} from './projectSchemaMigrations';
 import {migrateWorldCanvasDocument} from '../worldBible/worldCanvasService';
 
 export const MIN_SUPPORTED_PROJECT_SNAPSHOT_SCHEMA_VERSION = 1;
-export const CURRENT_PROJECT_SNAPSHOT_SCHEMA_VERSION = 8;
+export const CURRENT_PROJECT_SNAPSHOT_SCHEMA_VERSION = 9;
 
 export interface ProjectSnapshotMigration {
   fromVersion: number;
@@ -166,6 +167,26 @@ export function migrateProjectSnapshotV7ToV8(
   };
 }
 
+export function migrateProjectSnapshotV8ToV9(
+  snapshot: Record<string, unknown>
+): Record<string, unknown> {
+  const project = asRecord(snapshot.project);
+  const data = asRecord(snapshot.data);
+  const ruleset = data.ruleset;
+  return {
+    ...snapshot,
+    schemaVersion: 9,
+    project: {...project, storageSchemaVersion: CURRENT_PROJECT_SCHEMA_VERSION},
+    data: {
+      ...data,
+      ruleset:
+        ruleset && typeof ruleset === 'object'
+          ? quarantineInvalidRules(ruleset as Record<string, unknown>)
+          : ruleset
+    }
+  };
+}
+
 const PROJECT_SNAPSHOT_MIGRATIONS: readonly ProjectSnapshotMigration[] = [
   {
     fromVersion: 1,
@@ -201,6 +222,11 @@ const PROJECT_SNAPSHOT_MIGRATIONS: readonly ProjectSnapshotMigration[] = [
     fromVersion: 7,
     toVersion: 8,
     migrate: migrateProjectSnapshotV7ToV8
+  },
+  {
+    fromVersion: 8,
+    toVersion: 9,
+    migrate: migrateProjectSnapshotV8ToV9
   }
 ];
 

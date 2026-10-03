@@ -231,8 +231,8 @@ describe('project migration backup', () => {
         .getAll()
     );
 
-    expect(current.storageSchemaVersion).toBe(6);
-    expect((stored as Project).storageSchemaVersion).toBe(6);
+    expect(current.storageSchemaVersion).toBe(7);
+    expect((stored as Project).storageSchemaVersion).toBe(7);
     expect(backups).toHaveLength(1);
   });
 
@@ -341,8 +341,50 @@ describe('project migration backup', () => {
         .get(linkedCard.id)
     );
 
-    expect(current.storageSchemaVersion).toBe(6);
+    expect(current.storageSchemaVersion).toBe(7);
     expect(storedCard).toEqual(linkedCard);
+  });
+
+  it('advances schema 6 by quarantining invalid rules without dropping them', async () => {
+    const db = await createMigrationTestDb();
+    const project: Project = {
+      id: 'project-rules',
+      name: 'Untyped rules',
+      storageSchemaVersion: 6,
+      createdAt: 1,
+      updatedAt: 1
+    };
+    const invalidRule = {id: 'rule-bad', name: 'Missing category'};
+    await put(db, PROJECT_STORE_NAME, project);
+    await replaceRulesetSnapshot(project.id, {
+      id: 'ruleset-rules',
+      projectId: project.id,
+      name: 'Rules',
+      version: '1.0.0',
+      statDefinitions: [],
+      resourceDefinitions: [],
+      rules: [{id: 'rule-ok', name: 'Long Rest', category: 'time'}, invalidRule],
+      itemTemplates: [],
+      statusTemplates: [],
+      createdAt: 1,
+      updatedAt: 1
+    } as unknown as StoredRuleset);
+
+    const current = await ensureProjectStorageCurrent(db, project);
+    const ruleset = await getRulesetByProjectId(project.id);
+
+    expect(current.storageSchemaVersion).toBe(7);
+    expect(ruleset?.rules).toEqual([
+      {id: 'rule-ok', name: 'Long Rest', category: 'time', enabled: true, priority: 100, tags: [], effects: []}
+    ]);
+    expect(ruleset?.quarantinedRules).toEqual([
+      {raw: invalidRule, name: 'Missing category', issues: [expect.stringContaining('category')]}
+    ]);
+
+    // Re-running the step is a no-op.
+    await ensureProjectStorageCurrent(db, {...project, storageSchemaVersion: 6});
+    expect((await getRulesetByProjectId(project.id))?.quarantinedRules).toHaveLength(1);
+    await replaceRulesetSnapshot(project.id, null);
   });
 
   it('restores the project and its scoped records without touching another project', async () => {

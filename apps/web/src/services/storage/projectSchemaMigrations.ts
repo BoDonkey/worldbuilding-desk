@@ -17,6 +17,7 @@ import {
   PROJECT_SCOPED_STORE_NAMES,
   PROJECT_STORE_NAME
 } from '../../db';
+import {quarantineInvalidRules} from '@worldbuilding-desk/rules-engine';
 import {classifyCharacterIdentities} from '../characters/characterIdentity';
 import {
   getRulesetByProjectId,
@@ -24,7 +25,7 @@ import {
 } from '../rules/rulesetService';
 
 export const LEGACY_PROJECT_SCHEMA_VERSION = 1;
-export const CURRENT_PROJECT_SCHEMA_VERSION = 6;
+export const CURRENT_PROJECT_SCHEMA_VERSION = 7;
 export const PROJECT_MIGRATION_BACKUP_SCHEMA_VERSION = 1;
 
 export interface ProjectMigrationContext {
@@ -100,6 +101,21 @@ async function readProjectRecords<T extends {projectId: string}>(
   )) as T[];
   await transactionToPromise(transaction);
   return records.filter((record) => record.projectId === projectId);
+}
+
+/**
+ * Types stored game rules: rules that satisfy GameRuleSchema are kept (with
+ * schema defaults applied) and the rest move to `quarantinedRules` verbatim,
+ * so nothing is dropped and nothing invalid is executed or sent as context.
+ */
+async function migrateQuarantineInvalidRules(
+  context: ProjectMigrationContext
+): Promise<void> {
+  const ruleset = await getRulesetByProjectId(context.projectId);
+  if (!ruleset) return;
+  const next = quarantineInvalidRules(ruleset);
+  if (JSON.stringify(next) === JSON.stringify(ruleset)) return;
+  await replaceRulesetSnapshot(context.projectId, next);
 }
 
 async function migrateCharacterIdentityLinks(
@@ -180,6 +196,11 @@ const PROJECT_MIGRATIONS: readonly ProjectSchemaMigration[] = [
     // Canon fact manuscript-time boundaries are additive stable scene IDs.
     // Existing facts remain intentionally timeless.
     migrate: async () => undefined
+  },
+  {
+    fromVersion: 6,
+    toVersion: 7,
+    migrate: migrateQuarantineInvalidRules
   }
 ];
 

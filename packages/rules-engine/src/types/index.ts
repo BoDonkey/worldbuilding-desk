@@ -16,6 +16,7 @@ export {
   CompendiumMilestoneSchema,
   CompendiumConfigSchema,
   WorldRulesetSchema,
+  QuarantinedRuleSchema,
 } from './WorldRuleset';
 
 export {

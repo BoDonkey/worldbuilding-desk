@@ -1,3 +1,8 @@
+> **Archived 2026-10-03.** Slices 3.10 (R1) and 3.11 (R2) have landed. Durable
+> contracts now live in `docs/domain-model.md` § 3 and the Rules engine section
+> of `docs/architecture-review.md`; R3–R5 remain in the roadmap backlog and
+> this plan is their design reference.
+
 # Rules Engine Consolidation — Exploration Plan
 
 **Status:** Accepted 2026-09-26. R1 and R2 are scheduled as roadmap Slices

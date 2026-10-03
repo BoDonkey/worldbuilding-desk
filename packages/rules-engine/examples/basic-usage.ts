@@ -7,13 +7,13 @@ import {
   createCondition,
   createEffect,
   RulesEngine,
-  StateManager,
   roll,
   rollWithDetails,
   DiceRoller,
   type WorldRuleset,
   type GameRule
 } from '../src';
+import {StateManager} from '../src/experimental';
 
 /**
  * Example: Create a simple LitRPG world with rules

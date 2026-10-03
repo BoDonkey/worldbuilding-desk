@@ -221,7 +221,7 @@ and required revisit point, `WIP`, `Done <commit>`.
 | 3.8 | TypeScript 7 | 3 | M | Done `8611539` — TypeScript 7.0.2 builds in all four workspaces; TypeScript 6 compatibility API retained for `typescript-eslint`; legacy node resolution migrated; TypeScript 6 stable-ordering parity; lint with 3 baseline warnings; 271 web + 6 engine + 12 UI tests; web/desktop builds; unpacked desktop package; Cypress 43/43 |
 | 3.9 | Dev-audit sweep + fitness close-out | 3 | S | Done `c8d7c78` — grade A; development audit 29→0 and production audit remains 0 via targeted overrides; all 5 architecture targets below 2,000 lines; lint with 3 baseline warnings; 271 web + 6 engine + 12 UI tests; web/desktop builds; Cypress 43/43; [2026-08-07 report](archive/code-fitness-report-2026-08-07.md) |
 | 3.10 | Move live state core into `rules-engine` (R1) | 3 | M | Done `90b64dd` — command/event types, schemas, ordering, application, replay baseline, replay, and ruleset validation in `packages/rules-engine/src/manuscript/`; web re-exports, persistence stays in web; replay parity digest (harness `b71a976`) reproduced exactly; web Vitest resolves the package from src (`extends: true` fix, proven by a planted-bug check); lint 1 baseline warning; 730 web + 14 engine + 12 UI tests; builds; Cypress 108/108 (one intermittent stat-peek failure under load, passed on rerun) |
-| 3.11 | Rules-engine hygiene + typed rules (R2) | 3 | S | — |
+| 3.11 | Rules-engine hygiene + typed rules (R2) | 3 | S | WIP |
 | 3.12 | Provider credential + endpoint hardening | 3 | M | — |
 | 3.13 | Atomic canon acceptance | 3 | M | — |
 | 3.14 | Hotspot freeze + editor/workspace extraction | 3 | M | — |
@@ -541,7 +541,7 @@ _[prompts: archive/fitness-a-work-slices.md § Slices 1–9]_.
 Zod 4 stays deferred as its own future migration.
 
 Rules-engine consolidation (from finding F3 of the 2026-09-26 architecture
-review). Full scope and decisions: _[plan: rules-engine-plan.md § R1, § R2]_.
+review). Full scope and decisions: _[plan: archive/rules-engine-plan.md § R1, § R2]_.
 
 - **3.10** (R1) Move the pure manuscript-time state core (command types and
   schemas, `CharacterReplayState`, command application, ordering, replay,
@@ -1647,7 +1647,7 @@ or the Electron bridge; the IPC surface is unchanged.
 
 ## Backlog (valid, not scheduled)
 
-Rules-engine R3–R5 (derived values at replay, rule-proposed follow-up commands, rules as continuity validators; revisit after 1.1 dogfooding, see `docs/rules-engine-plan.md`); App-wide search beyond current entry points; AI-to-Scratchpad capture and
+Rules-engine R3–R5 (derived values at replay, rule-proposed follow-up commands, rules as continuity validators; revisit after 1.1 dogfooding, see `docs/archive/rules-engine-plan.md`); App-wide search beyond current entry points; AI-to-Scratchpad capture and
 Scratchpad organization; item authoring AI
 slices 2–6 and ruleset-domain adapters; advanced executable rule generation;
 carry weight/encumbrance; nonfiction product; persona/game-engine tool

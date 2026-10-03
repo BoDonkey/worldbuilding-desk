@@ -52,22 +52,6 @@ export const ModifierSchema = z.object({
 });
 export type Modifier = z.infer<typeof ModifierSchema>;
 
-export const EffectTimerSchema = z.object({
-  ruleId: z.string(),
-  startedAt: z.number(),
-  duration: z.number(), // Seconds
-  remainingTime: z.number(), // Seconds
-  isPaused: z.boolean().default(false),
-});
-export type EffectTimer = z.infer<typeof EffectTimerSchema>;
-
-export const ExposureTrackerSchema = z.object({
-  seconds: z.number().default(0),
-  lastUpdated: z.number(),
-  lastAppliedAt: z.number().optional()
-});
-export type ExposureTracker = z.infer<typeof ExposureTrackerSchema>;
-
 export const CharacterStateSchema = z.object({
   id: z.string(),
   name: z.string(),
@@ -97,17 +81,6 @@ export const CharacterStateSchema = z.object({
   
   // Active modifiers to stats
   modifiers: z.array(ModifierSchema).default([]),
-  
-  // Time tracking
-  timers: z.object({
-    lastUpdate: z.number(),
-    activeEffects: z.record(EffectTimerSchema),
-  }),
-
-  // Environmental exposure tracking (used for ailments like cave lung)
-  environment: z.object({
-    exposures: z.record(ExposureTrackerSchema).default({})
-  }).default({exposures: {}}),
   
   // Custom fields (user-defined data)
   custom: z.record(z.unknown()).optional(),
@@ -140,13 +113,6 @@ export function createEmptyCharacterState(
     equipment: {},
     statuses: [],
     modifiers: [],
-    timers: {
-      lastUpdate: now,
-      activeEffects: {},
-    },
-    environment: {
-      exposures: {}
-    },
     createdAt: now,
     updatedAt: now,
   };

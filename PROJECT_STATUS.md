@@ -824,6 +824,16 @@ runtime schema, and nothing here changes the roadmap's status board.
 ## Verification Status
 
 ### Verified Recently
+- Slice 3.11 rules-engine hygiene (R2): `FormulaParser` evaluates through a
+  restricted mathjs instance (`import`, `createUnit`, `evaluate`, `parse`,
+  `compile`, `simplify`, `derivative`, `resolve`, `reviver` throw inside
+  formulas). `WorldRuleset.rules` is typed by `GameRuleSchema`; `saveRuleset`,
+  project storage migration 6→7, and snapshot migration 8→9 move rules that
+  fail it into `quarantinedRules` (kept verbatim, never executed or sent as
+  context, noted on the Ruleset route). `StateManager` and wall-clock timer
+  and exposure state moved to the non-exported `src/experimental/` path.
+  Triggered rules now stop after one level, so a self-triggering rule
+  terminates. Engine tests went from 14 to 47.
 - Slice 4.49 provider context parity: `LLMRequest.context` is rendered once
   by `services/llm/contextPrompt.ts` (`[Source: label]` blocks after the
   system prompt). The hosted renderer adapters use it unchanged; the

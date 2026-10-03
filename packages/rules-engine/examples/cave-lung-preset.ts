@@ -1,5 +1,5 @@
 import type {GameRule} from '../src/types/GameRule';
-import type {ExposureAilmentDefinition} from '../src/state/StateManager';
+import type {ExposureAilmentDefinition} from '../src/experimental/StateManager';
 
 /**
  * Example ailment preset:

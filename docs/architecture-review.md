@@ -184,9 +184,21 @@ scheme/host policy.
 
 ### Rules engine
 
-The rules engine remains framework-independent and testable without React.
-Rules UI should adapt engine concepts for authoring without moving domain logic
-into components.
+`packages/rules-engine` is framework-independent and testable without React.
+It owns the live manuscript-time state core (`src/manuscript/`), the ruleset
+and game-rule schemas, and the rule evaluation classes (`RulesEngine`,
+`ConditionEvaluator`, `EffectApplicator`, `FormulaParser`). Rules UI adapts
+engine concepts for authoring without moving domain logic into components.
+
+- Formulas are evaluated by a restricted mathjs instance; functions that can
+  evaluate code or modify the instance are disabled inside expressions. Keep
+  it that way before evaluating any author- or model-supplied formula.
+- Wall-clock simulation (`StateManager`, effect timers, exposure tracking)
+  lives under the non-exported `src/experimental/` path. Nothing in the app
+  may import it until those concepts are rebuilt on manuscript time.
+- Design reference for later rule work (derived values, rule-proposed
+  commands, rule-based continuity checks):
+  `docs/archive/rules-engine-plan.md`.
 
 ## UI Architecture
 
@@ -226,10 +238,9 @@ every visual detail.
    over IPC with an unvalidated `baseUrl`; the renderer has no CSP. Keys
    should be held by the main process (`safeStorage`) and provider endpoints
    constrained by a scheme/host policy.
-3. The live manuscript-time state core now lives in `rules-engine`
-   (Slice 3.10), but the unused runtime (`RulesEngine`, `StateManager`,
-   effects, formulas) is still exported, `mathjs` is unrestricted, and
-   authored `GameRule` records remain `z.any()` (Slice 3.11).
+3. The rule evaluation classes are tested and hardened (Slice 3.11) but no
+   app path uses them yet; wiring them in (backlog R3–R5) must keep rule
+   output to derived views and author-confirmed proposals.
 4. Several route components, `useWorkspaceConsistency`, and `EditorWithAI`
    own too much workflow state and orchestration and are still growing; new
    components keep importing storage modules directly.
@@ -244,7 +255,7 @@ every visual detail.
 Evidence for 1–5 and 7: `docs/archive/architecture-review-2026-10-03.md`.
 Scheduled in `docs/road-to-market.md`: risk 1 through the slice close-out
 rule (CI green, including `cypress-smoke`), risk 2 as Slice 3.12, risk 3 as
-Slice 3.11, risk 4 as Slice 3.14, risk 5 as Slice 3.13, and the dependency
+Slice 3.11 (done), risk 4 as Slice 3.14, risk 5 as Slice 3.13, and the dependency
 part of risk 7 as Slice 3.15.
 
 ## Change Rule
