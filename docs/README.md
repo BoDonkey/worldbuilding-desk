@@ -1,6 +1,6 @@
 # Documentation Map
 
-Last updated: 2026-09-27
+Last updated: 2026-10-03
 
 The active documentation set was consolidated on 2026-08-01 down to seven
 documents. Everything else lives in `docs/archive/` with a banner pointing at
@@ -121,9 +121,11 @@ the full-length originals behind the 2026-08-01 consolidation:
 - `stat-peek-plan.md` — completed plan for Slices 4.46–4.48 (character
   snapshot service, stat peek, pinned stat panel); durable behavior lives in
   `docs/product-blueprint.md`.
-- `architecture-review-2026-09-26.md` — dated code health and architecture
-  review (CI, credential storage, rules-engine role, hotspots, canon
-  atomicity) behind the current risk list in `docs/architecture-review.md`.
+- `architecture-review-2026-10-03.md` — dated code health and architecture
+  review (Cypress CI gate, unscheduled credential/hotspot/atomicity risks,
+  remaining rules-engine hygiene, dependency advisories) behind the current
+  risk list in `docs/architecture-review.md`; the prior
+  `architecture-review-2026-09-26.md` remains beside it for comparison.
 - `hosted-response-limits-plan-2026-09-24.md` — implemented Slice 4.41 plan
   for hosted response-cost ceilings, provider thinking policy, cut-off
   detection, and the maintained price-table boundary.

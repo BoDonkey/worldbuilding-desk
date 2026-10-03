@@ -1,6 +1,6 @@
 # Architecture Reference — Worldbuilding Desk
 
-Last reviewed: 2026-09-26
+Last reviewed: 2026-10-03
 
 ## Purpose
 
@@ -12,8 +12,9 @@ Use:
 - `PROJECT_STATUS.md` for the current implementation snapshot
 - `docs/road-to-market.md` for execution order
 - `docs/domain-model.md` for detailed domain contracts
-- `docs/archive/architecture-review-2026-09-26.md` for the latest
+- `docs/archive/architecture-review-2026-10-03.md` for the latest
   point-in-time code health review and its evidence
+- `docs/archive/architecture-review-2026-09-26.md` for the prior review
 - `docs/archive/architecture-review-2026-05-10.md` for the earlier
   point-in-time review and its completed action history
 
@@ -217,30 +218,34 @@ every visual detail.
 
 ## Current Architecture Risks
 
-1. CI does not reproduce local verification: the rules packages are consumed
-   through `dist/` but not built before web unit tests, so `main` fails from a
-   clean checkout.
+1. CI does not gate slices: unit, lint, and build jobs are green, but
+   `cypress-smoke` has failed on `main` since the character-lab and stat-peek
+   specs landed (two editor-timing assertions), so routed-UI verification is
+   local-only.
 2. Provider API keys are stored in plaintext renderer `localStorage` and sent
    over IPC with an unvalidated `baseUrl`; the renderer has no CSP. Keys
    should be held by the main process (`safeStorage`) and provider endpoints
    constrained by a scheme/host policy.
-3. The `rules-engine` runtime (`RulesEngine`, `StateManager`, effects,
-   formulas) is not used by the app; live character state is the
-   event-sourced model in `apps/web/src/services/state/`. Authored `GameRule`
-   records are never executed and remain `z.any()` in the schema. The package
-   role needs a decision before advanced mechanics or AI generation build on
-   it.
-4. Several route components and `useWorkspaceConsistency` still own too much
-   workflow state and orchestration, and are growing again.
+3. The live manuscript-time state core now lives in `rules-engine`
+   (Slice 3.10), but the unused runtime (`RulesEngine`, `StateManager`,
+   effects, formulas) is still exported, `mathjs` is unrestricted, and
+   authored `GameRule` records remain `z.any()` (Slice 3.11).
+4. Several route components, `useWorkspaceConsistency`, and `EditorWithAI`
+   own too much workflow state and orchestration and are still growing; new
+   components keep importing storage modules directly.
 5. Multi-record canon acceptance writes are not transactional.
 6. Provider capabilities are not yet normalized behind one proposal/action
    contract.
-7. Electron and transformer dependencies need supported upgrade paths; the
-   desktop package has no tests or lint.
+7. Electron, transformer, and editor (`@tiptap/core`) dependencies carry
+   open advisories and need supported upgrade paths; the desktop package has
+   no tests or lint.
 8. Some assistant/retrieval behavior still needs realistic provenance testing.
 
-Evidence for 1–5 and 7: `docs/archive/architecture-review-2026-09-26.md`.
-These risks are prioritized and scheduled in `docs/road-to-market.md`.
+Evidence for 1–5 and 7: `docs/archive/architecture-review-2026-10-03.md`.
+Scheduled in `docs/road-to-market.md`: risk 1 through the slice close-out
+rule (CI green, including `cypress-smoke`), risk 2 as Slice 3.12, risk 3 as
+Slice 3.11, risk 4 as Slice 3.14, risk 5 as Slice 3.13, and the dependency
+part of risk 7 as Slice 3.15.
 
 ## Change Rule
 

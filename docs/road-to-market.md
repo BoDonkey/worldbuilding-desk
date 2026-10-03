@@ -156,6 +156,7 @@ pnpm --filter web e2e:run       # for slices touching routed UI
    internal ordering noted in Phase 4; 4.12 → 4.13 and 4.14 → 4.15;
    3.10 → 3.11; 3.10 → 4.42 → 4.43 → 4.44; 4.45 after 4.42;
    4.46 → 4.47 → 4.48; 4.42 after 4.46;
+   3.15 first among 3.12–3.15; 3.12 before 5.3 and 6.1;
    Phase 6 strictly ordered).
 2. **Get the full prompt.** Slices marked _[prompt: archive/... § Slice N]_
    have complete, self-contained agent prompts in the archived plan. Use
@@ -179,6 +180,9 @@ pnpm --filter web e2e:run       # for slices touching routed UI
 4. **Close out.** Mark the slice `Done <commit>` on the board. Update
    `PROJECT_STATUS.md` if application truth changed. Never round a partial
    result up to done — record the honest state in the board's note column.
+   After pushing, check the `Web CI` run for that push, including
+   `cypress-smoke`. If it is red, fix it before claiming the next slice, or
+   record the failure in the note column. Local-only green is not done.
 
 ## Status Board
 
@@ -218,6 +222,10 @@ and required revisit point, `WIP`, `Done <commit>`.
 | 3.9 | Dev-audit sweep + fitness close-out | 3 | S | Done `c8d7c78` — grade A; development audit 29→0 and production audit remains 0 via targeted overrides; all 5 architecture targets below 2,000 lines; lint with 3 baseline warnings; 271 web + 6 engine + 12 UI tests; web/desktop builds; Cypress 43/43; [2026-08-07 report](archive/code-fitness-report-2026-08-07.md) |
 | 3.10 | Move live state core into `rules-engine` (R1) | 3 | M | Done `90b64dd` — command/event types, schemas, ordering, application, replay baseline, replay, and ruleset validation in `packages/rules-engine/src/manuscript/`; web re-exports, persistence stays in web; replay parity digest (harness `b71a976`) reproduced exactly; web Vitest resolves the package from src (`extends: true` fix, proven by a planted-bug check); lint 1 baseline warning; 730 web + 14 engine + 12 UI tests; builds; Cypress 108/108 (one intermittent stat-peek failure under load, passed on rerun) |
 | 3.11 | Rules-engine hygiene + typed rules (R2) | 3 | S | — |
+| 3.12 | Provider credential + endpoint hardening | 3 | M | — |
+| 3.13 | Atomic canon acceptance | 3 | M | — |
+| 3.14 | Hotspot freeze + editor/workspace extraction | 3 | M | — |
+| 3.15 | Dependency advisory sweep + CI audit gate | 3 | S | — |
 | 4.1 | Description-first manual item creation | 4 | S | Done `70fb72f` — focused manual item draft with progressive full-editor disclosure; lint with 3 baseline warnings; 275 web + 6 engine + 12 UI tests; web/desktop builds; Cypress 44/44; desktop/narrow browser checks |
 | 4.2 | Storage schema versioning + migrations | 4 | M | Done `965af19` — separate IndexedDB, project-data, and snapshot schema contracts; ordered project-load migration runner with restorable pre-migration backups including rulesets; newer schemas fail closed before writes; 327 web + 6 engine + 12 UI tests; lint baseline; web/desktop builds; Cypress 47/47 |
 | 4.3 | Internal package namespace rename | 4 | S | Done `1917611` — rules packages renamed to `@worldbuilding-desk/*` across manifests, imports, workspace scripts, Vite resolution, CI, lockfile, and active docs; local workspace links and generated artifacts contain no old scope; web/package lint; root test plus 357 web + 6 engine + 12 UI tests; web/desktop builds; Cypress not required (no routed UI change) |
@@ -545,6 +553,66 @@ review). Full scope and decisions: _[plan: rules-engine-plan.md § R1, § R2]_.
   migration, move `StateManager` and wall-clock state to a non-exported
   `experimental/` path, and add engine tests for formulas, effects, and rule
   evaluation.
+
+Hardening from the 2026-10-03 architecture review
+(_[evidence: archive/architecture-review-2026-10-03.md § F2, F4, F5, F6]_).
+Run 3.15 first because it is cheap and unblocks the others' CI. 3.12 must
+land before 5.3 packaged validation and before 6.1 beta.
+
+- **3.12** (F2) Provider credential and endpoint hardening.
+  - Move hosted-provider API keys out of renderer `localStorage` into a
+    main-process store backed by Electron `safeStorage`, behind a narrow IPC
+    surface (set, clear, has-key). The renderer never reads a key back. The
+    main process attaches the key to provider requests.
+  - Migrate existing `*_api_key` values on first run, then clear the
+    plaintext copies.
+  - `apiHandler.ts` enforces a scheme/host policy on `baseUrl`: HTTPS to the
+    known host for each hosted provider, and loopback only for Ollama or an
+    explicitly local endpoint.
+  - Add a renderer Content-Security-Policy that works with the Vite dev
+    server, and a `will-navigate` guard on the main window.
+  - Give `apps/desktop` a lint script and Vitest tests for the IPC payload
+    validator and the URL policy.
+  - The browser-only dev build keeps keys behind one `providerKeyStore`
+    module instead of ad hoc `localStorage` calls in `AISettings.tsx` and
+    `LLMService.ts`.
+  - Update the Privacy section of `docs/architecture-review.md`.
+- **3.13** (F5) Atomic canon acceptance.
+  - Add one shared multi-store transaction helper under `services/storage/`.
+  - Move `acceptLoreEntityProposal` (`services/lore/entityProposalActions.ts`)
+    and the canonical-fact side effects (`canonicalFactActions.ts`) onto a
+    single `readwrite` transaction across categories, characters, entities,
+    aliases, and lore links. Derived RAG/Shodh indexing runs only after
+    commit.
+  - Tests with `fake-indexeddb` inject a mid-flow failure and assert that
+    no partial canon is left behind.
+  - Where a single transaction is impractical, use the documented
+    failure-safe write order that `saveCharacterFromDescription` uses.
+- **3.14** (F4) Hotspot freeze and extraction. Behavior-preserving, and it
+  follows the 3.1–3.4 hook-extraction pattern.
+  - Add a CI check that fails when any non-test file over 1,500 lines grows
+    past its recorded baseline.
+  - Extract the stat-peek and character-scene insertion paths from
+    `components/Editor/EditorWithAI.tsx` into hooks, bringing it back under
+    1,400 lines.
+  - Bring `routes/WorkspaceRoute.tsx` back under 2,000.
+  - Move the direct storage imports that 4.43–4.48 added
+    (`CharacterLabDialog`, `CharacterSceneDialog`,
+    `CharacterFromDescriptionDialog`, `StatPinPanel`) behind their owning
+    hooks.
+  - Splitting `useWorkspaceConsistency` by responsibility stays in the
+    backlog until the freeze holds.
+- **3.15** (F6) Dependency advisory sweep and CI audit gate.
+  - Clear the production advisories: `@tiptap/*` ≥ 3.30.5;
+    `sharp` ≥ 0.35.4 and `adm-zip` ≥ 0.6.1 via the
+    `@huggingface/transformers` chain (newer release or `pnpm.overrides`;
+    raise the existing `adm-zip` override); `qs` ≥ 6.16.
+  - Move `express` and `cors` to `devDependencies` if `proxy-server.ts` is
+    their only consumer.
+  - Add a `pnpm audit --prod --audit-level high` step to `web-verify` so the
+    3.9 zero-advisory baseline cannot drift silently again.
+  - Run the full battery plus Cypress. The editor upgrade touches every
+    routed UI.
 
 ## Phase 4 — Product Completeness for v1
 
