@@ -274,7 +274,7 @@ every visual detail.
 
 Evidence for 1–5 and 7: `docs/archive/architecture-review-2026-10-03.md`.
 Scheduled in `docs/road-to-market.md`: risk 1 through the slice close-out
-rule (CI green, including `cypress-smoke`), risk 2 as Slice 3.12, risk 3 as
+rule (CI green, including `cypress-smoke`), risk 2 as Slices 3.12a–3.12b, risk 3 as
 Slice 3.11 (done), risk 4 as Slice 3.14, risk 5 as Slice 3.13, and the dependency
 part of risk 7 as Slice 3.15.
 

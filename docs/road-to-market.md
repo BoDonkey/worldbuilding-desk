@@ -165,7 +165,7 @@ pnpm --filter web e2e:run       # for slices touching routed UI
    internal ordering noted in Phase 4; 4.12 → 4.13 and 4.14 → 4.15;
    3.10 → 3.11; 3.10 → 4.42 → 4.43 → 4.44; 4.45 after 4.42;
    4.46 → 4.47 → 4.48; 4.42 after 4.46;
-   3.15 first among 3.12–3.15; 3.12 before 5.3 and 6.1;
+   3.15 first among 3.12–3.15; 3.12a → 3.12b; both before 5.3 and 6.1;
    5.14 before 5.15; 5.15 before 6.1;
    Phase 6 strictly ordered).
 2. **Get the full prompt.** Slices marked _[prompt: archive/... § Slice N]_
@@ -232,7 +232,8 @@ and required revisit point, `WIP`, `Done <commit>`.
 | 3.9 | Dev-audit sweep + fitness close-out | 3 | S | Done `c8d7c78` — grade A; development audit 29→0 and production audit remains 0 via targeted overrides; all 5 architecture targets below 2,000 lines; lint with 3 baseline warnings; 271 web + 6 engine + 12 UI tests; web/desktop builds; Cypress 43/43; [2026-08-07 report](archive/code-fitness-report-2026-08-07.md) |
 | 3.10 | Move live state core into `rules-engine` (R1) | 3 | M | Done `90b64dd` — command/event types, schemas, ordering, application, replay baseline, replay, and ruleset validation in `packages/rules-engine/src/manuscript/`; web re-exports, persistence stays in web; replay parity digest (harness `b71a976`) reproduced exactly; web Vitest resolves the package from src (`extends: true` fix, proven by a planted-bug check); lint 1 baseline warning; 730 web + 14 engine + 12 UI tests; builds; Cypress 108/108 (one intermittent stat-peek failure under load, passed on rerun) |
 | 3.11 | Rules-engine hygiene + typed rules (R2) | 3 | S | Done `3c93743` — restricted mathjs (9 functions disabled in formulas); `rules` typed by `GameRuleSchema` with invalid rules quarantined on save, project schema 7, and snapshot schema 9, noted on the Ruleset route; `StateManager` + wall-clock state in non-exported `experimental/`; triggered rules stop at one level; engine tests 14→47; plan archived; lint; 765 web + 47 engine + 12 UI tests; web/desktop builds; Cypress 117/117 |
-| 3.12 | Provider credential + private-local endpoint hardening | 3 | M | — |
+| 3.12a | Provider credential + endpoint hardening | 3 | M | WIP |
+| 3.12b | Private-local AI classification | 3 | M | — |
 | 3.13 | Atomic canon acceptance | 3 | M | — |
 | 3.14 | Hotspot freeze + editor/workspace extraction | 3 | M | — |
 | 3.15 | Dependency advisory sweep + CI audit gate | 3 | S | Done `b636915` — production audit 12→0: TipTap 3.31.4 with ProseMirror pins raised to match; sharp 0.35.5, adm-zip 0.6.1, qs 6.16.0 overrides; express/cors dev-only; `web-verify` fails on high production advisories; lint; 763 web + 14 engine + 12 UI tests; web/desktop builds; Cypress 117/117 |
@@ -567,10 +568,10 @@ review). Full scope and decisions: _[plan: archive/rules-engine-plan.md § R1, �
 
 Hardening from the 2026-10-03 architecture review
 (_[evidence: archive/architecture-review-2026-10-03.md § F2, F4, F5, F6]_).
-Run 3.15 first because it is cheap and unblocks the others' CI. 3.12 must
-land before 5.3 packaged validation and before 6.1 beta.
+Run 3.15 first because it is cheap and unblocks the others' CI. 3.12a and
+3.12b must land before 5.3 packaged validation and before 6.1 beta.
 
-- **3.12** (F2) Provider credential and private-local endpoint hardening.
+- **3.12a** (F2) Provider credential and endpoint hardening.
   - Move hosted-provider API keys out of renderer `localStorage` into a
     main-process store backed by Electron `safeStorage`, behind a narrow IPC
     surface (set, clear, has-key). The renderer never reads a key back. The
@@ -580,6 +581,15 @@ land before 5.3 packaged validation and before 6.1 beta.
   - `apiHandler.ts` enforces a scheme/host policy on `baseUrl`: HTTPS to the
     known host for each hosted provider, and loopback only for Ollama or an
     explicitly local endpoint.
+  - Add a renderer Content-Security-Policy that works with the Vite dev
+    server, and a `will-navigate` guard on the main window.
+  - Give `apps/desktop` a lint script and Vitest tests for the IPC payload
+    validator and the URL policy.
+  - The browser-only dev build keeps keys behind one `providerKeyStore`
+    module instead of ad hoc `localStorage` calls in `AISettings.tsx` and
+    `LLMService.ts`.
+  - Update the Privacy section of `docs/architecture-review.md`.
+- **3.12b** (F2, after 3.12a) Private-local AI classification.
   - Introduce one provider-route classification used by disclosures, request
     policy, and consultation accounting. **Private local AI** requires a
     loopback endpoint and a model verified as locally installed; an Ollama
@@ -590,14 +600,6 @@ land before 5.3 packaged validation and before 6.1 beta.
   - Replace the current unconditional Ollama copy with the verified state and
     cover local model, cloud model, remote endpoint, and unverifiable-model
     cases in renderer and desktop tests.
-  - Add a renderer Content-Security-Policy that works with the Vite dev
-    server, and a `will-navigate` guard on the main window.
-  - Give `apps/desktop` a lint script and Vitest tests for the IPC payload
-    validator and the URL policy.
-  - The browser-only dev build keeps keys behind one `providerKeyStore`
-    module instead of ad hoc `localStorage` calls in `AISettings.tsx` and
-    `LLMService.ts`.
-  - Update the Privacy section of `docs/architecture-review.md`.
 - **3.13** (F5) Atomic canon acceptance.
   - Add one shared multi-store transaction helper under `services/storage/`.
   - Move `acceptLoreEntityProposal` (`services/lore/entityProposalActions.ts`)
