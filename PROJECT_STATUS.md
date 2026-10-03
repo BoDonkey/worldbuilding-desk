@@ -1202,8 +1202,10 @@ runtime schema, and nothing here changes the roadmap's status board.
 - The July 31 fitness close-out and follow-up extractions pass web lint, all 250
   unit/package tests (232 web, 6 rules-engine, 12 rules-ui), the production web
   build, and all 42 Cypress tests across eight specs.
-- `pnpm audit --prod` reports 0 vulnerabilities after the React Router 8.3
-  security upgrade and transformer migration.
+- `pnpm audit --prod` reports 0 vulnerabilities after the Slice 3.15 sweep
+  (TipTap 3.31 with matching ProseMirror pins, and patched `sharp`, `adm-zip`,
+  and `qs`). `express`/`cors` are dev-only (used by `proxy-server.ts`), and
+  the `web-verify` CI job fails on any high-severity production advisory.
 - Pull-request CI now treats verification as blocking across three jobs: web lint/unit tests/rules-engine tests/web build, desktop build, and the full Cypress smoke suite.
 - PR #43 passed all three hosted jobs on July 20, 2026; the Cypress job passed all 42 tests after two consecutive 42/42 local runs.
 - `pnpm build:web` succeeds on the current tree.
