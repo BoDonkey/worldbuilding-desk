@@ -341,7 +341,8 @@ describe('Character lab', () => {
       sceneDialog().contains('button', 'Insert at cursor').click();
       sceneDialog().should('not.exist');
       cy.get('.tiptap-editor').should('contain.text', 'Borin laughs, and does not.');
-      cy.get('.tiptap[contenteditable="true"]').type('{cmd+z}');
+      // ProseMirror binds undo to Mod-z: Cmd on macOS, Ctrl on the Linux CI runner.
+      cy.get('.tiptap[contenteditable="true"]').type(Cypress.platform === 'darwin' ? '{cmd+z}' : '{ctrl+z}');
       cy.get('.tiptap-editor').should('not.contain.text', 'Borin laughs, and does not.');
       cy.get('.tiptap-editor').should('contain.text', 'Alpha content');
     });

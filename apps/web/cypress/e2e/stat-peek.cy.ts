@@ -83,19 +83,34 @@ function pressStatPeekShortcut() {
   });
 }
 
+const nextFrame = () =>
+  cy.window().then((win) => new Cypress.Promise((resolve) => win.requestAnimationFrame(() => resolve())));
+
 /**
  * Puts a collapsed cursor after `prefix` in the scene's first paragraph and
  * waits until the editor's own selection has caught up. Synthetic arrow keys
  * move the DOM selection; ProseMirror syncs on the later selectionchange, so
  * a shortcut fired immediately can read the old cursor.
+ *
+ * After a dialog closes, the editor restores its previous selection on a
+ * later frame. If that lands after `{moveToStart}`, the arrows count from the
+ * old cursor, so settle first and retry a bounded number of times.
  */
-function placeCursorAfter(prefix: string) {
+function placeCursorAfter(prefix: string, attempt = 1) {
+  nextFrame();
+  nextFrame();
   cy.get('.tiptap-editor').type(`{moveToStart}${'{rightArrow}'.repeat(prefix.length)}`);
-  cy.window().should((win) => {
+  nextFrame();
+  cy.window().then((win) => {
     const selection = win.getSelection();
-    expect(selection?.anchorNode?.textContent?.slice(0, selection.anchorOffset)).to.equal(prefix);
+    const before = selection?.anchorNode?.textContent?.slice(0, selection.anchorOffset);
+    if (before !== prefix && attempt < 3) {
+      placeCursorAfter(prefix, attempt + 1);
+      return;
+    }
+    expect(before).to.equal(prefix);
   });
-  cy.window().then((win) => new Cypress.Promise((resolve) => win.requestAnimationFrame(resolve)));
+  nextFrame();
 }
 
 function writeScene(text: string) {
