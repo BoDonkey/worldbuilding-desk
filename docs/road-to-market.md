@@ -225,7 +225,7 @@ and required revisit point, `WIP`, `Done <commit>`.
 | 3.12 | Provider credential + endpoint hardening | 3 | M | — |
 | 3.13 | Atomic canon acceptance | 3 | M | — |
 | 3.14 | Hotspot freeze + editor/workspace extraction | 3 | M | — |
-| 3.15 | Dependency advisory sweep + CI audit gate | 3 | S | WIP |
+| 3.15 | Dependency advisory sweep + CI audit gate | 3 | S | Done `b636915` — production audit 12→0: TipTap 3.31.4 with ProseMirror pins raised to match; sharp 0.35.5, adm-zip 0.6.1, qs 6.16.0 overrides; express/cors dev-only; `web-verify` fails on high production advisories; lint; 763 web + 14 engine + 12 UI tests; web/desktop builds; Cypress 117/117 |
 | 4.1 | Description-first manual item creation | 4 | S | Done `70fb72f` — focused manual item draft with progressive full-editor disclosure; lint with 3 baseline warnings; 275 web + 6 engine + 12 UI tests; web/desktop builds; Cypress 44/44; desktop/narrow browser checks |
 | 4.2 | Storage schema versioning + migrations | 4 | M | Done `965af19` — separate IndexedDB, project-data, and snapshot schema contracts; ordered project-load migration runner with restorable pre-migration backups including rulesets; newer schemas fail closed before writes; 327 web + 6 engine + 12 UI tests; lint baseline; web/desktop builds; Cypress 47/47 |
 | 4.3 | Internal package namespace rename | 4 | S | Done `1917611` — rules packages renamed to `@worldbuilding-desk/*` across manifests, imports, workspace scripts, Vite resolution, CI, lockfile, and active docs; local workspace links and generated artifacts contain no old scope; web/package lint; root test plus 357 web + 6 engine + 12 UI tests; web/desktop builds; Cypress not required (no routed UI change) |
