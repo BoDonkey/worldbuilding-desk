@@ -2,8 +2,8 @@
   "name": "desktop",
   "version": "0.0.0",
   "private": true,
-  "description": "Electron desktop shell for Worldbuilding Desk",
-  "author": "Worldbuilding Desk",
+  "description": "Electron desktop shell for SagaSpine",
+  "author": "SagaSpine",
   "type": "commonjs",
   "main": "dist/main/main.js",
   "scripts": {
@@ -24,7 +24,7 @@
   },
   "build": {
     "appId": "com.worldbuildingdesk.app",
-    "productName": "Worldbuilding Desk",
+    "productName": "SagaSpine",
     "directories": {
       "output": "release"
     },

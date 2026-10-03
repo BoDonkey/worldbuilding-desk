@@ -201,8 +201,8 @@ export function buildScenesDocx(params: {
     'xmlns:dcmitype="http://purl.org/dc/dcmitype/" ' +
     'xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">' +
     `<dc:title>${escapeXml(params.projectName)} Scene Export</dc:title>` +
-    '<dc:creator>Worldbuilding Desk</dc:creator>' +
-    `<cp:lastModifiedBy>Worldbuilding Desk</cp:lastModifiedBy>` +
+    '<dc:creator>SagaSpine</dc:creator>' +
+    `<cp:lastModifiedBy>SagaSpine</cp:lastModifiedBy>` +
     `<dcterms:created xsi:type="dcterms:W3CDTF">${new Date().toISOString()}</dcterms:created>` +
     `<dcterms:modified xsi:type="dcterms:W3CDTF">${new Date().toISOString()}</dcterms:modified>` +
     '</cp:coreProperties>';
@@ -211,7 +211,7 @@ export function buildScenesDocx(params: {
     '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
     '<Properties xmlns="http://schemas.openxmlformats.org/officeDocument/2006/extended-properties" ' +
     'xmlns:vt="http://schemas.openxmlformats.org/officeDocument/2006/docPropsVTypes">' +
-    '<Application>Worldbuilding Desk</Application>' +
+    '<Application>SagaSpine</Application>' +
     '</Properties>';
 
   return buildZip([
@@ -305,7 +305,7 @@ export function buildScenesEpub(params: {
     '<metadata xmlns:dc="http://purl.org/dc/elements/1.1/">' +
     `<dc:identifier id="bookid">${escapeXml(bookId)}</dc:identifier>` +
     `<dc:title>${escapedProjectName} Scene Export</dc:title>` +
-    '<dc:creator>Worldbuilding Desk</dc:creator>' +
+    '<dc:creator>SagaSpine</dc:creator>' +
     '<dc:language>en</dc:language>' +
     `<meta property="dcterms:modified">${modifiedIso}</meta>` +
     '</metadata>' +

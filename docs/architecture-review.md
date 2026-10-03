@@ -1,4 +1,4 @@
-# Architecture Reference — Worldbuilding Desk
+# Architecture Reference — SagaSpine
 
 Last reviewed: 2026-10-03
 
@@ -20,7 +20,7 @@ Use:
 
 ## System Shape
 
-Worldbuilding Desk is a local-first writing application with:
+SagaSpine is a local-first writing application with:
 
 - `apps/web`: React authoring UI and application orchestration
 - `apps/desktop`: Electron host and privileged provider/network bridge
@@ -88,7 +88,10 @@ author-invoked request to a hosted provider configured for that project. The
 request boundary must identify the destination, send only the context required
 for the chosen action, and remain fully optional. Background review, indexing,
 health checks, migrations, and error handling do not call hosted providers.
-Ollama remains the on-device provider path.
+Ollama is an on-device provider path only when the configured endpoint is
+loopback and the selected model is verified local; remote endpoints and Ollama
+cloud models cross the egress boundary and must not inherit local-provider
+claims or policy.
 
 Technical errors remain local. A support workflow may produce a redacted,
 copyable diagnostic, but it must exclude manuscript text, API keys, provider
@@ -154,6 +157,23 @@ an owning service or store already exists.
 
 Project backup is the portability boundary. Derived RAG/Shodh data may be
 rebuilt from primary records.
+
+Roadmap Slice 5.15 adds an optional project-vault boundary. A vault must cover
+every project-owned persistence service and persistent derivative, not only
+document content. A random per-project data key encrypts records with
+authenticated encryption; a versioned passphrase-derived key wraps that data
+key so passphrase changes do not require rewriting the project. Only the
+minimal versioned unlock manifest may remain outside the vault. Plaintext may
+exist in process memory while unlocked, but no component may introduce a
+parallel plaintext persistence path, preview, cache, search index, recovery
+copy, or migration backup.
+
+Vault enablement and disablement are verified, rollback-safe migrations. The
+encrypted copy must be complete and readable before plaintext removal;
+failure or cancellation leaves the original representation unchanged. The
+normal pre-migration backup rule below does not authorize a plaintext backup
+while enabling a vault. There is no application or hosted passphrase-recovery
+path.
 
 IndexedDB's structural `DB_VERSION`, per-project `storageSchemaVersion`, and
 portable project-snapshot `schemaVersion` are separate contracts. Opening a

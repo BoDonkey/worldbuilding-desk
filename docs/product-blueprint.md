@@ -1,6 +1,6 @@
-# Product Blueprint — Worldbuilding Desk
+# Product Blueprint — SagaSpine
 
-Last updated: 2026-09-23
+Last updated: 2026-10-03
 
 This is the product, UX, navigation, and design authority. It consolidates the
 former `product-blueprint.md`, `navigation-ia-decision.md`, `style-bible.md`,
@@ -9,16 +9,30 @@ former `product-blueprint.md`, `navigation-ia-decision.md`, `style-bible.md`,
 
 ## Core Thesis
 
-Worldbuilding Desk should feel like a calm writing workspace that quietly
+SagaSpine should feel like a calm writing workspace that quietly
 understands the story around the draft.
 
 The editor is the primary product surface. World data, rules, AI tooling, and
 consistency logic are supporting systems that stay mostly invisible until the
 author needs them.
 
-**One-sentence summary:** a writing-first narrative workspace that helps
-authors draft with live story context, soft consistency support, and optional
-deep world/rules systems when they need them.
+**One-sentence summary:** SagaSpine is a writing-first narrative workspace
+that keeps the draft and its accepted story truth connected through live
+context, soft consistency support, and optional deep world/rules systems.
+
+### Name and verbal identity
+
+The public product name is **SagaSpine**, paired with `sagaspine.com`.
+`saga-spine.com` is a defensive domain and should redirect to the canonical
+domain. “Saga” signals long-form and series fiction; “Spine” is both a book's
+physical backbone and the structure that keeps a long story coherent. Prefer
+the short promise **Build stories that hold together.** The name does not
+change the product category or authorize enforcement language: review remains
+soft, AI remains proposal-only, and the author remains the authority.
+
+Internal compatibility identifiers may retain `worldbuilding-desk`; do not
+rename package scopes, persisted keys, portable schema identifiers, or the
+desktop application ID as part of the public-brand change.
 
 ## Product Promise
 
@@ -38,16 +52,18 @@ advanced systems available for power users without making them mandatory.
 Privacy is a product promise and a selling point, not an advanced setting.
 
 - Projects and manuscripts are stored locally.
-- Worldbuilding Desk does not send diagnostic telemetry and does not use
+- SagaSpine does not send diagnostic telemetry and does not use
   author writing to train AI.
 - No background feature sends manuscript or project context to a hosted model.
 - Text leaves the computer only when the author explicitly invokes a hosted AI
   provider they configured. The surface must disclose that destination before
   first use and keep the request author-triggered.
-- Local Ollama workflows remain on-device. The app remains useful with AI
-  disabled.
+- Ollama workflows remain on-device only when the endpoint is the local
+  loopback service and the selected model is verified local. Ollama cloud
+  models are hosted workflows and must be disclosed as such. The app remains
+  useful with AI disabled.
 - Provider retention or training claims belong to that provider's current API
-  terms; Worldbuilding Desk must not imply control it does not have.
+  terms; SagaSpine must not imply control it does not have.
 - Errors and diagnostics remain local. The author may copy a redacted
   diagnostic into a support request, but the app never uploads it
   automatically.
@@ -56,6 +72,24 @@ Author-facing copy should say `Stored locally`, `Runs on this computer`, or
 `Sends this request to <provider>` where appropriate. Do not use an absolute
 `never leaves your computer` claim on a workflow that can invoke a hosted
 provider.
+
+Privacy has three distinct author-facing states; never use one as shorthand
+for another:
+
+- **Stored locally** — app-owned project data is saved on this computer but is
+  not necessarily encrypted by SagaSpine.
+- **Locked with your passphrase** — after roadmap Slice 5.15 lands, all
+  project-owned content and persistent derivatives are encrypted at rest and
+  require the project passphrase after restart, close, or manual lock.
+- **Private local AI** — a verified local model is reached through a loopback
+  endpoint; neither an Ollama cloud model nor a remote Ollama base URL
+  qualifies.
+
+Project locking is optional. Its recovery warning must be unambiguous: the
+passphrase is never stored, SagaSpine has no recovery service or backdoor, and
+losing it means losing access. Locking protects app-owned data at rest, not
+content visible while the project is unlocked or deliberately exported in an
+unencrypted format.
 
 ### AI consultation budget
 
@@ -67,10 +101,10 @@ work. An author who means to keep going must always be able to keep going.
   this project made today", so a single daily counter is the model they already
   hold. Each unit still records which feature spent it, so the usage can be
   broken down without fragmenting the limit.
-- **Local providers do not spend it.** An Ollama request costs nothing and
-  sends nothing; counting it would contradict the privacy promise above. Local
+- **Verified local providers do not spend it.** An Ollama request is local
+  only when its endpoint and model satisfy the boundary above. Verified-local
   requests are reported separately and stop only at a much higher runaway
-  guard.
+  guard; Ollama cloud models follow hosted-provider accounting and disclosure.
 - **The day resets at the author's local midnight**, and every surface that
   names the reset names it in the author's own timezone.
 - **Explain it where it is spent, not in Settings.** Every action that spends a
@@ -108,11 +142,11 @@ unpriced.
 ## Positioning
 
 Against general AI writing tools (which optimize for generation speed and
-prompt-driven output), Worldbuilding Desk differentiates on context continuity,
+prompt-driven output), SagaSpine differentiates on context continuity,
 story-aware assistance, passive lore/canon capture, and consistency support
 inside the writing flow.
 
-Against wiki-style lore tools (which require manual upkeep), Worldbuilding Desk
+Against wiki-style lore tools (which require manual upkeep), SagaSpine
 grows structure from the manuscript, connects writing to world context, and
 makes references and consistency useful in the moment of drafting.
 

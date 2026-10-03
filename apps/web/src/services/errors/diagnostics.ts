@@ -229,7 +229,7 @@ export function buildDiagnosticReport(params: {secrets?: readonly string[]; now?
   const now = params.now ?? Date.now();
   const list = ensureLoaded();
   const lines: string[] = [
-    'Worldbuilding Desk diagnostic report',
+    'SagaSpine diagnostic report',
     `Generated: ${new Date(now).toISOString()}`,
     ...describeRuntime(),
     'Contents: error names, plain descriptions, and code locations only.',

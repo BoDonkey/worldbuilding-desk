@@ -169,8 +169,8 @@ export const Navigation: FC<NavigationProps> = ({
     <>
       {!isRailCollapsed && (
         <aside className={styles.rail}>
-          <div className={styles.brand} title='Worldbuilding Desk'>
-            WBD
+          <div className={styles.brand} title='SagaSpine'>
+            SS
           </div>
           <button
             type='button'

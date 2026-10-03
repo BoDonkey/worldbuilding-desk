@@ -1,10 +1,33 @@
-# Worldbuilding-Desk Project Status
+# SagaSpine Project Status
 
-**Last Updated:** September 24, 2026
+**Last Updated:** October 3, 2026
 
 ## Project Overview
 
-Worldbuilding-Desk is a desktop writing environment for fiction authors. The current product direction is **writing first**: authors should be able to open the app, start drafting immediately, and let structure, lore tracking, and consistency support appear progressively instead of blocking the writing flow.
+SagaSpine is a desktop writing environment for fiction authors. The current product direction is **writing first**: authors should be able to open the app, start drafting immediately, and let structure, lore tracking, and consistency support appear progressively instead of blocking the writing flow.
+
+### Product Brand
+
+- Public product name: **SagaSpine**.
+- Canonical web domain: **sagaspine.com** (secured October 3, 2026).
+- Defensive domain: **saga-spine.com**, reserved to redirect to the canonical
+  domain when the website is configured.
+- Brand promise: build stories that hold together.
+- Compatibility identifiers such as the `@worldbuilding-desk` package scope,
+  `worldbuilding-desk/portable/*` schema names, persisted storage keys, and the
+  desktop app ID remain unchanged during this light rebrand.
+
+### Current Privacy Boundary
+
+- Project data is stored locally but working projects are not currently
+  encrypted by SagaSpine. Optional encrypted backup files remain planned as
+  roadmap Slice 5.14; optional password-protected working project vaults are
+  planned separately as Slice 5.15 before beta.
+- The configured Ollama path defaults to `http://localhost:11434`, but the
+  current UI does not yet distinguish a verified local model from an Ollama
+  cloud model or reject a remote base URL. Until provider hardening lands,
+  `Ollama` alone is not proof that a request stayed on the computer.
+- There is no diagnostic telemetry or automatic crash-report upload.
 
 Under the hood, the app still includes rich systems for world data, rules, character state, AI assistance, and consistency review. The difference in the current direction is presentation: those systems are support infrastructure, not the primary surface.
 

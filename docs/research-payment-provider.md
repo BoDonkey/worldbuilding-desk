@@ -20,7 +20,7 @@ and product fulfillment to the seller.
 
 The condition matters. Creem's documented license endpoints require a merchant
 API key, while the same documentation correctly says never to expose that key
-client-side. Worldbuilding Desk therefore still needs a minimal entitlement
+client-side. SagaSpine therefore still needs a minimal entitlement
 service or a client-safe, vendor-supported alternative. Creem also has a
 shorter public operating history, separate payout fees, and several details
 that require written clarification. If Creem cannot close the validation gates
@@ -42,7 +42,7 @@ The v1 integration must support:
 - device transfer/deactivation and restore-purchase flows;
 - full and partial refunds plus chargeback/revocation events;
 - test/sandbox mode and signed, replay-safe webhooks;
-- no Worldbuilding Desk account service; and
+- no SagaSpine account service; and
 - no payment, license, or device operation that can expose manuscripts,
   project data, AI-provider keys, canon, mechanics, or state.
 
@@ -147,7 +147,7 @@ Resolve these before selecting Creem:
    a full refund, partial refund, chargeback, or Creem-initiated refund, and
    which webhook is authoritative.
 3. **Restore purchase:** Verify in sandbox that a one-time buyer can recover
-   their key and manage device activations without a Worldbuilding Desk
+   their key and manage device activations without a SagaSpine
    account. The public portal page is mostly subscription-oriented even though
    the license page says keys are available in the portal.
 4. **Offline contract:** Ask whether license responses can be verified locally

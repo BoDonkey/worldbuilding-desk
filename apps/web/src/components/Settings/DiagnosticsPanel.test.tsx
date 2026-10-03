@@ -32,7 +32,7 @@ describe('DiagnosticsPanel', () => {
     fireEvent.click(screen.getByRole('button', {name: 'Copy diagnostic report'}));
     await waitFor(() => expect(writeText).toHaveBeenCalledTimes(1));
     const copied = String(writeText.mock.calls[0]?.[0] ?? '');
-    expect(copied).toContain('Worldbuilding Desk diagnostic report');
+    expect(copied).toContain('SagaSpine diagnostic report');
     expect(copied).toContain('OpenAI API error: Unauthorized');
     expect(copied).not.toContain('sk-proj-');
     expect(await screen.findByText(/Diagnostic report copied/)).toBeInTheDocument();

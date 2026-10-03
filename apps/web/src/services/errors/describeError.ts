@@ -160,7 +160,7 @@ export function describeError(error: unknown, fallback: string, options: Describ
     case 'storage-full':
       return "This computer's local storage for the app is full, so the change could not be saved. Export a backup, then remove projects you no longer need.";
     case 'schema-too-new':
-      return 'This project was saved by a newer version of Worldbuilding Desk. Update the app to open it.';
+      return 'This project was saved by a newer version of SagaSpine. Update the app to open it.';
     case 'aborted':
       return 'The request was cancelled before it finished.';
     case 'migration':

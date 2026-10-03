@@ -2,7 +2,7 @@
 
 **Schema identifier:** `worldbuilding-desk/portable/1`
 
-Worldbuilding Desk's portable export is a human-readable ZIP intended for
+SagaSpine's portable export is a human-readable ZIP intended for
 moving material between writing tools and keeping an inspectable copy outside
 the app. It is not a full-fidelity backup. Use **Export Backup (.zip)** on the
 Projects screen when you need an exact, restorable project snapshot.
@@ -75,4 +75,3 @@ alias. Unmatched and unselected wikilinks remain ordinary text.
 Imported Source Notes use the existing extraction and proposal review flow.
 Imported World Bible records are marked incomplete and appear in the existing
 World Bible Review queue. Import never writes accepted facts directly.
-

@@ -1,6 +1,6 @@
-# Marketing Plan — Worldbuilding Desk v1
+# Marketing Plan — SagaSpine v1
 
-Last updated: 2026-08-30 · Companion to `docs/road-to-market.md` Phases 5–6.
+Last updated: 2026-10-03 · Companion to `docs/road-to-market.md` Phases 5–6.
 
 Grounded in `docs/archive/deep-research-report.md` (2026-05 market analysis).
 Supersedes `docs/archive/brand-positioning.md`: the February "Consistency
@@ -14,8 +14,16 @@ Category: **continuity-aware writing software for series fiction**.
 
 One-sentence positioning:
 
-> Worldbuilding Desk is a writing-first drafting tool that catches canon
-> drift, reference mistakes, and story-state inconsistencies while you write.
+> SagaSpine is a writing-first drafting tool that keeps your story bible
+> connected to the draft and catches continuity drift while you write.
+
+Brand line: **Build stories that hold together.**
+
+Canonical domain: **sagaspine.com**. The defensive `saga-spine.com` is reserved
+to redirect to it when the website is configured. The name combines the scale
+of long-form and series fiction with the book and narrative backbone the
+product helps an author maintain. It remains distinct from generic
+“worldbuilder” software and the crowded “lore/story + weaver” category.
 
 Headline directions to test:
 
@@ -48,11 +56,13 @@ Narrative designers are not a wedge.
 3. **Human authority.** AI proposes with evidence; nothing becomes canon
    without the author's explicit acceptance. No silent rewrites, ever.
 4. **Private by design.** Manuscripts and project data live on the author's
-   machine. Worldbuilding Desk sends no diagnostic telemetry and does not use
+   machine. SagaSpine sends no diagnostic telemetry and does not use
    author writing to train AI. Only the context needed for an explicitly
    author-invoked hosted request is sent to the provider they configure, or AI
-   can run locally through Ollama. Provider retention and training claims must
-   be qualified against that provider's current API terms. This is a major
+   can run locally through a verified local Ollama model and loopback endpoint.
+   Remote Ollama endpoints and Ollama cloud models are hosted paths, not local
+   privacy proof. Provider retention and training claims must be qualified
+   against that provider's current API terms. This is a major
    selling point and should appear beside the workflow promise, supported by a
    clear data-flow explanation rather than an absolute offline claim.
 5. **Craft coaching grounded in the author's draft.** When requested, the
@@ -69,9 +79,11 @@ provider qualification. Preferred proof points:
 
 - Stored locally by default.
 - No diagnostic telemetry.
-- Your writing is not used by Worldbuilding Desk to train AI.
+- Your writing is not used by SagaSpine to train AI.
 - Hosted AI runs only when you ask and uses the provider you configure.
-- Ollama keeps AI requests on your computer.
+- A verified local Ollama model keeps AI requests on your computer.
+- After roadmap Slice 5.15 is implemented and verified: optionally lock a
+  project with a passphrase so its app-owned data is encrypted at rest.
 
 ## Pricing
 
@@ -129,7 +141,9 @@ clearly distinguishing any supporting Source Notes; (5) optional: a character
 sheet replaying state at a chosen scene, for the LitRPG audience; (6) an
 author-triggered coach note pairing one vetted pattern with cited scenes. The
 demo includes a brief, accurate data-flow card distinguishing local storage,
-local Ollama, and explicitly invoked hosted providers.
+passphrase-locked storage, verified-local Ollama, and explicitly invoked
+hosted providers. Do not show or claim project locking until Slice 5.15 has
+passed its packaged-app smoke.
 
 ## Sequencing
 

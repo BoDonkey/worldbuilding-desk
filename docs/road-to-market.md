@@ -31,15 +31,17 @@ packaged + signed installers for macOS and Windows, auto-update, storage
 schema versioning, first-run onboarding with a sample project, trial/license
 gate, a help/docs baseline, and — added 2026-08-29 — the derived story
 dashboard and the writing coach described below, and — added 2026-09-26 —
-the character lab.
+the character lab, and — added 2026-10-03 — optional password-protected
+project vaults.
 
 **Privacy promise.** Project data and manuscripts are stored locally.
-Worldbuilding Desk does not send diagnostic telemetry and does not use author
+SagaSpine does not send diagnostic telemetry and does not use author
 writing to train AI. Text leaves the computer only when the author explicitly
-invokes a hosted provider they configured; local Ollama workflows remain on
-device. Hosted-provider setup and every author-facing AI surface must explain
-that boundary accurately rather than claiming that all configured workflows
-are fully offline.
+invokes a hosted provider they configured; Ollama remains on-device only when
+the endpoint is loopback and the selected model is verified local rather than
+an Ollama cloud model. Hosted-provider setup and every author-facing AI
+surface must explain that boundary accurately rather than claiming that every
+Ollama or configured workflow is fully offline.
 
 **v1 scope change, 2026-08-29.** The author judged the product materially more
 useful with coaching than without, and accepted a later release to get it.
@@ -55,6 +57,13 @@ short multi-character scenes, and chose to schedule it rather than defer it.
 The character lab (4.42–4.45) and optional encrypted backups (5.14) move into
 v1; persona tool ecosystems beyond the lab and game-engine narration stay
 post-v1. Plan: `docs/character-lab-plan.md`.
+
+**v1 scope change, 2026-10-03.** The author chose to make password protection
+and encryption of working project data part of the product's privacy promise,
+not only encryption of exported backups. Optional project vaults (5.15) move
+into v1 before beta. This is a separate, larger slice from backup-file
+encryption because it crosses autosave, every project-owned persistence path,
+derived indexes, locking, migration, and recovery UX.
 
 Explicitly **post-v1**: AI item-authoring slices beyond the manual
 description-first path, ruleset-domain adapters, app-wide search expansion,
@@ -157,6 +166,7 @@ pnpm --filter web e2e:run       # for slices touching routed UI
    3.10 → 3.11; 3.10 → 4.42 → 4.43 → 4.44; 4.45 after 4.42;
    4.46 → 4.47 → 4.48; 4.42 after 4.46;
    3.15 first among 3.12–3.15; 3.12 before 5.3 and 6.1;
+   5.14 before 5.15; 5.15 before 6.1;
    Phase 6 strictly ordered).
 2. **Get the full prompt.** Slices marked _[prompt: archive/... § Slice N]_
    have complete, self-contained agent prompts in the archived plan. Use
@@ -222,7 +232,7 @@ and required revisit point, `WIP`, `Done <commit>`.
 | 3.9 | Dev-audit sweep + fitness close-out | 3 | S | Done `c8d7c78` — grade A; development audit 29→0 and production audit remains 0 via targeted overrides; all 5 architecture targets below 2,000 lines; lint with 3 baseline warnings; 271 web + 6 engine + 12 UI tests; web/desktop builds; Cypress 43/43; [2026-08-07 report](archive/code-fitness-report-2026-08-07.md) |
 | 3.10 | Move live state core into `rules-engine` (R1) | 3 | M | Done `90b64dd` — command/event types, schemas, ordering, application, replay baseline, replay, and ruleset validation in `packages/rules-engine/src/manuscript/`; web re-exports, persistence stays in web; replay parity digest (harness `b71a976`) reproduced exactly; web Vitest resolves the package from src (`extends: true` fix, proven by a planted-bug check); lint 1 baseline warning; 730 web + 14 engine + 12 UI tests; builds; Cypress 108/108 (one intermittent stat-peek failure under load, passed on rerun) |
 | 3.11 | Rules-engine hygiene + typed rules (R2) | 3 | S | Done `3c93743` — restricted mathjs (9 functions disabled in formulas); `rules` typed by `GameRuleSchema` with invalid rules quarantined on save, project schema 7, and snapshot schema 9, noted on the Ruleset route; `StateManager` + wall-clock state in non-exported `experimental/`; triggered rules stop at one level; engine tests 14→47; plan archived; lint; 765 web + 47 engine + 12 UI tests; web/desktop builds; Cypress 117/117 |
-| 3.12 | Provider credential + endpoint hardening | 3 | M | — |
+| 3.12 | Provider credential + private-local endpoint hardening | 3 | M | — |
 | 3.13 | Atomic canon acceptance | 3 | M | — |
 | 3.14 | Hotspot freeze + editor/workspace extraction | 3 | M | — |
 | 3.15 | Dependency advisory sweep + CI audit gate | 3 | S | Done `b636915` — production audit 12→0: TipTap 3.31.4 with ProseMirror pins raised to match; sharp 0.35.5, adm-zip 0.6.1, qs 6.16.0 overrides; express/cors dev-only; `web-verify` fails on high production advisories; lint; 763 web + 14 engine + 12 UI tests; web/desktop builds; Cypress 117/117 |
@@ -294,6 +304,7 @@ and required revisit point, `WIP`, `Done <commit>`.
 | 5.10 | Author-facing vocabulary sweep | 5 | XS | Done `69e6559` — string-layer only, behavior-preserving; retires `Shodh`/`RAG`/`Rubber-Duck` from rendered UI including the review's named "Inherit RAG data"/"Inherit memories" inconsistency; source-scanning test guards against regression; lint with 1 baseline warning; 500 web + 6 engine + 12 UI tests; web/desktop builds; Cypress 72/73 ([review](archive/ux-ai-review-2026-08-29.md) §A3) |
 | 5.12 | App-shell toast viewport + status live region | 5 | S | Done `7f303f7` — one app-shell toast viewport (polite, auto-dismiss, repeats replaced) fed by a `RouteFeedback` bridge in all nine routes plus Workspace (errors-as-toast, resolver notice as an action toast); errors elsewhere stay inline as `InlineAlert`; one shared status live region via `useStatusAnnouncement` wired to autosave, review, extraction, migration, and AI streaming; `aria-invalid` on three more validated fields; split recorded in the blueprint; lint with 1 baseline warning; 529 web + 6 engine + 12 UI tests; web/desktop builds; Cypress 75/77 full run (one assertion updated to `role="alert"`, one pre-existing hydration race in `post-merge-smoke`), 18/18 + 2/2 in isolation ([review](archive/ux-ai-review-2026-08-29.md) §A5, §A6) |
 | 5.14 | Optional encrypted backups | 5 | S | — |
+| 5.15 | Password-protected project vaults | 5 | L | — |
 | 6.1 | Beta build + cohort recruitment | 6 | M | — |
 | 6.2 | Beta feedback triage + fix slices | 6 | ? | — |
 | 6.3 | Release-readiness checklist + RC | 6 | M | — |
@@ -559,7 +570,7 @@ Hardening from the 2026-10-03 architecture review
 Run 3.15 first because it is cheap and unblocks the others' CI. 3.12 must
 land before 5.3 packaged validation and before 6.1 beta.
 
-- **3.12** (F2) Provider credential and endpoint hardening.
+- **3.12** (F2) Provider credential and private-local endpoint hardening.
   - Move hosted-provider API keys out of renderer `localStorage` into a
     main-process store backed by Electron `safeStorage`, behind a narrow IPC
     surface (set, clear, has-key). The renderer never reads a key back. The
@@ -569,6 +580,16 @@ land before 5.3 packaged validation and before 6.1 beta.
   - `apiHandler.ts` enforces a scheme/host policy on `baseUrl`: HTTPS to the
     known host for each hosted provider, and loopback only for Ollama or an
     explicitly local endpoint.
+  - Introduce one provider-route classification used by disclosures, request
+    policy, and consultation accounting. **Private local AI** requires a
+    loopback endpoint and a model verified as locally installed; an Ollama
+    cloud model, remote base URL, or indeterminate model fails closed to a
+    hosted/remote disclosure and never receives the private-local badge or
+    local-budget exemption. The default private mode rejects cloud models
+    rather than silently forwarding manuscript context through Ollama.
+  - Replace the current unconditional Ollama copy with the verified state and
+    cover local model, cloud model, remote endpoint, and unverifiable-model
+    cases in renderer and desktop tests.
   - Add a renderer Content-Security-Policy that works with the Vite dev
     server, and a `will-navigate` guard on the main window.
   - Give `apps/desktop` a lint script and Vitest tests for the IPC payload
@@ -1594,15 +1615,20 @@ or the Electron bridge; the IPC surface is unchanged.
   full (backup zip) or as readable files. In-app or web help covering projects/backup,
   import, review workflow, World Bible/Lore model, AI setup, and the trust
   model in author language. Include a plain data-flow explanation: local
-  storage, no telemetry or Worldbuilding Desk training, local Ollama, and the
-  exact author-triggered boundary for hosted providers.
+  storage, optional project locking, no telemetry or SagaSpine training,
+  verified-local Ollama versus Ollama cloud models, and the exact
+  author-triggered boundary for hosted providers.
 - **5.9 Landing page + demo assets.** Portability ("your data leaves with
   you") is a homepage-level promise once 4.29 exists; before that, state only
   the backup-zip and manuscript export truth. Build the simple landing page and a
   60–90 second demo of the implemented core loop; include privacy/data-flow
   copy, download/checkout paths, and a plan for collecting
   permissioned beta proof. Claims must stay within verified product behavior;
-  quantified performance claims wait for dogfood or beta evidence.
+  quantified performance claims wait for dogfood or beta evidence. Once 5.15
+  is complete, distinguish **Stored locally**, **Locked with your passphrase**,
+  and **Private local AI** rather than collapsing them into a single offline
+  claim. Do not advertise encrypted working projects before the vault smoke
+  and packaged-desktop checks pass.
 - **5.10 Author-facing vocabulary sweep.** Retire internal codenames and
   ML jargon from rendered strings: `Shodh memories` → project memory,
   `RAG documents` → indexed context, `Inherit RAG data` → inherit indexed
@@ -1626,6 +1652,42 @@ or the Electron bridge; the IPC surface is unchanged.
   passphrase, and plain backups keep working. Before 6.1 so beta authors can
   protect backups they move between machines. Plan:
   `docs/character-lab-plan.md` § 5.14.
+- **5.15 Password-protected project vaults.** Add opt-in encryption at rest for
+  working projects before 6.1. A protected project owns a random 256-bit data
+  key; a versioned passphrase KDF derives a key-encryption key that wraps the
+  data key, and project records use authenticated AES-256-GCM encryption. The
+  passphrase is never stored or transmitted. Changing it re-wraps the data key
+  rather than rewriting the project. Lock on app restart and project close,
+  and provide an explicit **Lock project** action; no plaintext preview,
+  search result, recent excerpt, or notification may render while locked.
+
+  Treat the project as a vault, not a collection of encrypted scene fields.
+  Manuscripts, Source Notes, World Bible/canon, scratchpad, Canvas and
+  Corkboard material, rules/state, assistant conversations, review output,
+  caches, search data, and local retrieval/memory derivatives must either be
+  encrypted through the owning persistence boundary or rebuilt/in-memory only
+  after unlock. The unencrypted manifest is limited to the stable project id,
+  crypto/schema version, KDF parameters, salt, wrapped key, and an explicitly
+  chosen display label; the safe default label is **Locked project**.
+
+  Enabling protection on an existing project must use a recoverable,
+  transaction-like migration: write and authenticate the complete encrypted
+  copy, verify a round trip, then remove plaintext records. Do not create the
+  usual plaintext pre-migration backup for this transition. Cancellation or
+  failure leaves the original project readable and unchanged; success leaves
+  no app-owned plaintext project record or derived index. Disabling protection
+  requires the passphrase and the same verified migration discipline.
+
+  State the threat boundary honestly: protection covers app-owned data at
+  rest, not plaintext already visible while unlocked, operating-system swap,
+  screen capture, malware, or files the author exported unencrypted. There is
+  no server recovery or backdoor; losing the passphrase means losing access,
+  with that consequence acknowledged before enablement. Acceptance requires
+  wrong-passphrase and tamper failure, restart/manual-lock behavior, passphrase
+  change, existing-project enable/disable rollback cases, cross-project key
+  isolation, encrypted backup round trip, a scan proving planted manuscript
+  phrases do not remain in app-owned persistence, and packaged macOS/Windows
+  smoke coverage. Update the privacy/help copy only after these checks pass.
 ## Phase 6 — Beta, RC, Launch
 
 - **6.1 Beta.** Signed, auto-updating build to a 10–30 author cohort

@@ -38,7 +38,7 @@ describe('Local-only diagnostics', () => {
     cy.contains('OpenAI API error: Unauthorized').should('be.visible');
     cy.contains('button', 'Show report').click();
     cy.get('[aria-label="Diagnostic report"]')
-      .should('contain.text', 'Worldbuilding Desk diagnostic report')
+      .should('contain.text', 'SagaSpine diagnostic report')
       .and('contain.text', 'Where: assistant reply')
       .and('contain.text', 'API keys, and file paths are not included');
     cy.contains('button', 'Hide report').click();

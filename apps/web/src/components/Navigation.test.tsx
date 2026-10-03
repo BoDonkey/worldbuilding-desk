@@ -19,6 +19,7 @@ describe('Navigation', () => {
   it('exposes the aggregate mechanics count on desktop and narrow More controls', async () => {
     renderRoute(<Navigation />, '/workspace');
 
+    expect(screen.getByTitle('SagaSpine')).toHaveTextContent('SS');
     const desktopMore = screen.getByRole('button', {name: /^More/});
     const mobileMore = screen.getByRole('button', {
       name: /Toggle more navigation options/

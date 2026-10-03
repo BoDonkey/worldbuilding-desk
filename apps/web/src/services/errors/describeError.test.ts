@@ -79,7 +79,7 @@ describe('describeError', () => {
     );
     expect(classifyError(newer)).toBe('schema-too-new');
     expect(describeError(newer, 'x')).toBe(
-      'This project was saved by a newer version of Worldbuilding Desk. Update the app to open it.'
+      'This project was saved by a newer version of SagaSpine. Update the app to open it.'
     );
     const versionError = new DOMException('The requested version (26) is less than the existing version (30).', 'VersionError');
     expect(classifyError(versionError)).toBe('schema-too-new');

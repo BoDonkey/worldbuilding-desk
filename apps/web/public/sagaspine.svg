@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="SagaSpine">
+  <rect width="64" height="64" rx="14" fill="#253747"/>
+  <path d="M22 13v38" fill="none" stroke="#f3eee5" stroke-width="7" stroke-linecap="round"/>
+  <path d="M23 17c11-4 20-2 27 4M23 29c10-3 18-1 24 4M23 41c8-2 15 0 20 5" fill="none" stroke="#a8b99a" stroke-width="6" stroke-linecap="round"/>
+</svg>

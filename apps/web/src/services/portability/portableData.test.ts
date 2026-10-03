@@ -106,6 +106,7 @@ describe('portable data export', () => {
     const readable = new TextDecoder().decode(zip);
 
     expect(readable).toContain('README.md');
+    expect(readable).toContain('# SagaSpine portable data');
     expect(readable).toContain('world-bible/locations/ember-archive.md');
     expect(readable).toContain('world-bible/locations.csv');
     expect(readable).toContain('source-notes/archive-research.md');
