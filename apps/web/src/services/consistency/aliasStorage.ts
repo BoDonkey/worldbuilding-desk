@@ -1,6 +1,7 @@
 import type {Character, EntityCategory, WorldEntity} from '../../entityTypes';
 import { CONSISTENCY_ALIAS_STORE_NAME, openDb } from '../../db';
 import {createCharacterLinkResolver, isCharacterCategory} from '../characters/characterIdentity';
+import type {ProjectWriteTransaction} from '../storage/projectWriteTransaction';
 
 export interface ConsistencyAlias {
   id: string;
@@ -164,19 +165,19 @@ export async function migrateCharacterAliasesToEntities(params: {
   });
 }
 
-export async function saveAlias(
-  input: Omit<ConsistencyAlias, 'id' | 'createdAt' | 'updatedAt' | 'entityId'>
-): Promise<ConsistencyAlias> {
-  const db = await openDb();
-
-  const existing = await getAliasesByProject(input.projectId);
+/**
+ * The record `saveAlias` writes: an existing alias with the same normalized
+ * text is retargeted, otherwise a new alias is created. Pure; `existing` is
+ * the project's aliases as `getAliasesByProject` returns them.
+ */
+export function planAliasSave(
+  existing: ConsistencyAlias[],
+  input: Omit<ConsistencyAlias, 'id' | 'createdAt' | 'updatedAt' | 'entityId'>,
+  now: number = Date.now()
+): ConsistencyAlias {
   const normalized = normalizeAlias(input.alias);
-  const duplicate = existing.find(
-    (alias) => normalizeAlias(alias.alias) === normalized
-  );
-
-  const now = Date.now();
-  const aliasToSave: ConsistencyAlias = duplicate
+  const duplicate = existing.find((alias) => normalizeAlias(alias.alias) === normalized);
+  return duplicate
     ? {
         ...duplicate,
         targetId: input.targetId,
@@ -194,6 +195,14 @@ export async function saveAlias(
         createdAt: now,
         updatedAt: now
       };
+}
+
+export async function saveAlias(
+  input: Omit<ConsistencyAlias, 'id' | 'createdAt' | 'updatedAt' | 'entityId'>
+): Promise<ConsistencyAlias> {
+  const db = await openDb();
+
+  const aliasToSave = planAliasSave(await getAliasesByProject(input.projectId), input);
 
   return new Promise((resolve, reject) => {
     const tx = db.transaction(CONSISTENCY_ALIAS_STORE_NAME, 'readwrite');
@@ -382,4 +391,21 @@ export async function deleteAliasesForTarget(input: {
     tx.onerror = () => reject(tx.error);
     tx.onabort = () => reject(tx.error);
   });
+}
+
+/** Part of a multi-store write; `alias` comes from `planAliasSave`. */
+export async function putAliasInTransaction(
+  tx: ProjectWriteTransaction,
+  alias: ConsistencyAlias
+): Promise<void> {
+  await tx.put(CONSISTENCY_ALIAS_STORE_NAME, alias);
+  tx.afterCommit(emitAliasRecordsChanged);
+}
+
+export async function deleteAliasInTransaction(
+  tx: ProjectWriteTransaction,
+  id: string
+): Promise<void> {
+  await tx.delete(CONSISTENCY_ALIAS_STORE_NAME, id);
+  tx.afterCommit(emitAliasRecordsChanged);
 }

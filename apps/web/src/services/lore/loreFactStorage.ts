@@ -4,6 +4,7 @@ import {
   LORE_FACT_PROPOSAL_STORE_NAME,
   openDb
 } from '../../db';
+import type {ProjectWriteTransaction} from '../storage/projectWriteTransaction';
 
 function emitLoreFactRecordsChanged(): void {
   if (typeof window === 'undefined') return;
@@ -138,4 +139,29 @@ export async function deleteCanonicalFact(id: string): Promise<void> {
     };
     request.onerror = () => reject(request.error);
   });
+}
+
+/** Part of a multi-store write; see `runProjectWriteTransaction`. */
+export async function putCanonicalFactInTransaction(
+  tx: ProjectWriteTransaction,
+  fact: CanonicalFact
+): Promise<void> {
+  await tx.put(CANONICAL_FACT_STORE_NAME, fact);
+  tx.afterCommit(emitLoreFactRecordsChanged);
+}
+
+export async function deleteCanonicalFactInTransaction(
+  tx: ProjectWriteTransaction,
+  id: string
+): Promise<void> {
+  await tx.delete(CANONICAL_FACT_STORE_NAME, id);
+  tx.afterCommit(emitLoreFactRecordsChanged);
+}
+
+export async function putLoreFactProposalInTransaction(
+  tx: ProjectWriteTransaction,
+  proposal: LoreFactProposal
+): Promise<void> {
+  await tx.put(LORE_FACT_PROPOSAL_STORE_NAME, proposal);
+  tx.afterCommit(emitLoreFactRecordsChanged);
 }

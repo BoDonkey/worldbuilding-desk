@@ -1,5 +1,6 @@
 import type { Character } from './entityTypes';
 import { openDb, CHARACTER_STORE_NAME } from './db';
+import type {ProjectWriteTransaction} from './services/storage/projectWriteTransaction';
 
 function emitCharacterRecordsChanged(): void {
   if (typeof window === 'undefined') return;
@@ -85,4 +86,15 @@ export async function deleteCharacter(id: string): Promise<void> {
       reject(request.error);
     };
   });
+}
+
+/** Part of a multi-store write; applies the same write validation as `saveCharacter`. */
+export async function putCharacterInTransaction(
+  tx: ProjectWriteTransaction,
+  character: Character
+): Promise<void> {
+  const existing = await tx.get<Character>(CHARACTER_STORE_NAME, character.id);
+  validateCharacterWrite(character, existing);
+  await tx.put(CHARACTER_STORE_NAME, character);
+  tx.afterCommit(emitCharacterRecordsChanged);
 }

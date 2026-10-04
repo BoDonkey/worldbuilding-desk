@@ -1,5 +1,6 @@
 import type {LoreEntityProposal} from '../../entityTypes';
 import {LORE_ENTITY_PROPOSAL_STORE_NAME, openDb} from '../../db';
+import type {ProjectWriteTransaction} from '../storage/projectWriteTransaction';
 
 function emitLoreFactRecordsChanged(): void {
   if (typeof window === 'undefined') return;
@@ -71,4 +72,13 @@ export async function saveLoreEntityProposal(proposal: LoreEntityProposal): Prom
     };
     request.onerror = () => reject(request.error);
   });
+}
+
+/** Part of a multi-store write; see `runProjectWriteTransaction`. */
+export async function putLoreEntityProposalInTransaction(
+  tx: ProjectWriteTransaction,
+  proposal: LoreEntityProposal
+): Promise<void> {
+  await tx.put(LORE_ENTITY_PROPOSAL_STORE_NAME, proposal);
+  tx.afterCommit(emitLoreFactRecordsChanged);
 }

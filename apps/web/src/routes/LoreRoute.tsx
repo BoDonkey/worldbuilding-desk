@@ -25,11 +25,9 @@ import {
 import {getDocumentsByProject} from '../writingStorage';
 import {parseLoreImport} from '../services/lore/loreImport';
 import {
-  deleteCanonicalFact,
   getCanonicalFactsByProject,
   getLoreFactProposalsByProject,
   replaceLoreFactProposals,
-  saveCanonicalFact,
   saveLoreFactProposal
 } from '../services/lore/loreFactStorage';
 import {
@@ -40,12 +38,12 @@ import {
 import {extractLoreFactProposals} from '../services/lore/loreFactExtraction';
 import {extractLoreEntityProposals} from '../services/lore/loreEntityExtraction';
 import {
-  applyCanonicalFactSideEffects,
+  acceptCanonicalFact,
   buildCanonicalFactSummary,
   captureCanonicalFactMemory,
   deleteCanonicalFactMemory,
   prependUniqueCanonicalFact,
-  revertCanonicalFactSideEffects
+  removeCanonicalFact
 } from '../services/lore/canonicalFactActions';
 import {getCanonicalFactValidityTags} from '../services/lore/canonicalFactValidity';
 import {acceptLoreEntityProposal} from '../services/lore/entityProposalActions';
@@ -807,9 +805,8 @@ function LoreRoute() {
     };
 
     try {
-      await saveCanonicalFact(fact);
-      await saveLoreFactProposal(nextProposal);
-      await applyCanonicalFactSideEffects(activeProject.id, fact);
+      // The fact, its proposal, and its side effects commit together.
+      await acceptCanonicalFact({projectId: activeProject.id, fact, proposal: nextProposal});
       if (shodhService) {
         await captureCanonicalFactMemory(shodhService, fact, sourceScenes);
         const memories = await shodhService.listMemories();
@@ -852,16 +849,10 @@ function LoreRoute() {
     setFeedback(null);
     try {
       const existingLinks = linksByDocumentId.get(proposal.loreDocumentId) ?? [];
+      // Canon, links, and the proposal's accepted status commit together.
       const acceptedTarget = await acceptLoreEntityProposal({
         proposal,
         existingLinks
-      });
-      await saveLoreEntityProposal({
-        ...proposal,
-        status: 'accepted',
-        targetType: acceptedTarget.targetType,
-        targetId: acceptedTarget.targetId,
-        updatedAt: Date.now()
       });
       const document = documents.find((entry) => entry.id === proposal.loreDocumentId);
       if (activeProject && document) {
@@ -993,16 +984,13 @@ function LoreRoute() {
         setFeedback(null);
         try {
           const remainingFacts = canonicalFacts.filter((entry) => entry.id !== fact.id);
-          await revertCanonicalFactSideEffects(projectId, fact, remainingFacts);
-          await deleteCanonicalFact(fact.id);
           const sourceProposal = proposals.find((proposal) => proposal.id === fact.sourceProposalId);
-          if (sourceProposal) {
-            const reopenedProposal: LoreFactProposal = {
-              ...sourceProposal,
-              status: 'proposed',
-              updatedAt: Date.now()
-            };
-            await saveLoreFactProposal(reopenedProposal);
+          const reopenedProposal: LoreFactProposal | undefined = sourceProposal
+            ? {...sourceProposal, status: 'proposed', updatedAt: Date.now()}
+            : undefined;
+          // Side-effect revert, fact deletion, and proposal reopening commit together.
+          await removeCanonicalFact({projectId, fact, remainingFacts, reopenedProposal});
+          if (reopenedProposal) {
             setProposals((current) =>
               current.map((proposal) =>
                 proposal.id === reopenedProposal.id ? reopenedProposal : proposal

@@ -1,5 +1,6 @@
 import type { WorldEntity } from './entityTypes';
 import { openDb, ENTITY_STORE_NAME } from './db';
+import type {ProjectWriteTransaction} from './services/storage/projectWriteTransaction';
 
 function emitEntityRecordsChanged(): void {
   if (typeof window === 'undefined') return;
@@ -65,4 +66,13 @@ export async function deleteEntity(id: string): Promise<void> {
       reject(request.error);
     };
   });
+}
+
+/** Part of a multi-store write; see `runProjectWriteTransaction`. */
+export async function putEntityInTransaction(
+  tx: ProjectWriteTransaction,
+  entity: WorldEntity
+): Promise<void> {
+  await tx.put(ENTITY_STORE_NAME, entity);
+  tx.afterCommit(emitEntityRecordsChanged);
 }

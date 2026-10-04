@@ -5,6 +5,7 @@ import {
   LORE_DOCUMENT_STORE_NAME
 } from './db';
 import {normalizeLoreDocumentLinks} from './services/lore/loreDocumentLinks';
+import type {ProjectWriteTransaction} from './services/storage/projectWriteTransaction';
 
 function emitLoreRecordsChanged(): void {
   if (typeof window === 'undefined') return;
@@ -124,4 +125,21 @@ export async function deleteLoreDocument(id: string): Promise<void> {
     tx.onabort = () => reject(tx.error);
   });
   emitLoreRecordsChanged();
+}
+
+/** Part of a multi-store write; same result as `replaceLoreDocumentLinks`. */
+export async function replaceLoreDocumentLinksInTransaction(
+  tx: ProjectWriteTransaction,
+  params: {loreDocumentId: string; links: LoreDocumentLink[]}
+): Promise<void> {
+  const all = await tx.getAll<LoreDocumentLink>(LORE_DOCUMENT_LINK_STORE_NAME);
+  for (const link of all) {
+    if (link.loreDocumentId === params.loreDocumentId) {
+      await tx.delete(LORE_DOCUMENT_LINK_STORE_NAME, link.id);
+    }
+  }
+  for (const link of normalizeLoreDocumentLinks(params.links)) {
+    await tx.put(LORE_DOCUMENT_LINK_STORE_NAME, link);
+  }
+  tx.afterCommit(emitLoreRecordsChanged);
 }

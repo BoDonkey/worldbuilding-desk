@@ -1,5 +1,6 @@
 import type {EntityCategory} from './entityTypes';
 import {openDb, CATEGORY_STORE_NAME} from './db';
+import type {ProjectWriteTransaction} from './services/storage/projectWriteTransaction';
 
 export async function getCategoriesByProject(
   projectId: string
@@ -113,4 +114,12 @@ export function initializeDefaultCategories(projectId: string): Promise<void> {
 
   categoryInitInFlight.set(projectId, promise);
   return promise;
+}
+
+/** Part of a multi-store write; see `runProjectWriteTransaction`. */
+export async function putCategoryInTransaction(
+  tx: ProjectWriteTransaction,
+  category: EntityCategory
+): Promise<void> {
+  await tx.put(CATEGORY_STORE_NAME, category);
 }

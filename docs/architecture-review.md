@@ -183,6 +183,16 @@ Application and workspace UI preferences use Zustand with persistence where
 appropriate. Components should not introduce new direct persistence paths when
 an owning service or store already exists.
 
+A change that spans several stores and must not be left half-done — accepting
+or removing canon is the main case — commits through
+`runProjectWriteTransaction` (`services/storage/projectWriteTransaction.ts`):
+read with the ordinary getters, plan in plain code, then write every record in
+one `readwrite` transaction using each store's `…InTransaction` writer, which
+keeps that store's validation and change event. Change events fire only after
+commit. Derived indexes (retrieval, memory) update after the commit and can
+be rebuilt; bookkeeping such as resolving a canon-decision cluster may follow
+as a separate step, because leaving it open is safe.
+
 Project backup is the portability boundary. Derived RAG/Shodh data may be
 rebuilt from primary records.
 
@@ -294,7 +304,8 @@ every visual detail.
 4. Several route components, `useWorkspaceConsistency`, and `EditorWithAI`
    own too much workflow state and orchestration and are still growing; new
    components keep importing storage modules directly.
-5. Multi-record canon acceptance writes are not transactional.
+5. Resolved in Slice 3.13: canon acceptance, supersession, and removal
+   commit atomically.
 6. Provider capabilities are not yet normalized behind one proposal/action
    contract.
 7. Electron, transformer, and editor (`@tiptap/core`) dependencies carry
@@ -305,7 +316,7 @@ every visual detail.
 Evidence for 1–5 and 7: `docs/archive/architecture-review-2026-10-03.md`.
 Scheduled in `docs/road-to-market.md`: risk 1 through the slice close-out
 rule (CI green, including `cypress-smoke`), risk 2 as Slices 3.12a–3.12b (done), risk 3 as
-Slice 3.11 (done), risk 4 as Slice 3.14, risk 5 as Slice 3.13, and the dependency
+Slice 3.11 (done), risk 4 as Slice 3.14, risk 5 as Slice 3.13 (done), and the dependency
 part of risk 7 as Slice 3.15.
 
 ## Change Rule

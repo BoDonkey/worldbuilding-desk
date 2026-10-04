@@ -1,34 +1,17 @@
 import {describe, expect, it, vi} from 'vitest';
 import type {CanonicalFact} from '../../entityTypes';
 import type {ShodhMemoryProvider} from '../shodh/ShodhMemoryService';
-import {getCharactersByProject, saveCharacter} from '../../characterStorage';
-import {getEntitiesByProject, saveEntity} from '../../entityStorage';
-import {deleteAliasById, getAliasesByProject, saveAlias} from '../consistency';
 import {
-  applyCanonicalFactSideEffects,
   buildCanonicalFactMemoryContent,
   captureCanonicalFactMemory,
   deleteCanonicalFactMemory,
   getCanonicalFactMemoryDocumentId,
-  prependUniqueCanonicalFact,
-  revertCanonicalFactSideEffects
+  planCanonicalFactSideEffects,
+  planRevertCanonicalFactSideEffects,
+  prependUniqueCanonicalFact
 } from './canonicalFactActions';
 
-vi.mock('../../characterStorage', () => ({
-  getCharactersByProject: vi.fn().mockResolvedValue([]),
-  saveCharacter: vi.fn()
-}));
-
-vi.mock('../../entityStorage', () => ({
-  getEntitiesByProject: vi.fn().mockResolvedValue([]),
-  saveEntity: vi.fn()
-}));
-
-vi.mock('../consistency', () => ({
-  deleteAliasById: vi.fn(),
-  getAliasesByProject: vi.fn().mockResolvedValue([]),
-  saveAlias: vi.fn()
-}));
+const emptySnapshot = () => ({aliases: [], characters: [], entities: []});
 
 function buildFact(overrides: Partial<CanonicalFact> = {}): CanonicalFact {
   return {
@@ -109,29 +92,18 @@ describe('canonical fact Shodh memory helpers', () => {
 });
 
 describe('canonical fact materialization ownership', () => {
-  it('keeps new entity facts out of untracked free-form notes', async () => {
-    await applyCanonicalFactSideEffects('project-1', buildFact({
+  it('keeps new entity facts out of untracked free-form notes', () => {
+    const plan = planCanonicalFactSideEffects('project-1', buildFact({
       targetType: 'entity',
       targetId: 'sera',
       factType: 'background',
       value: 'Compact service: twenty years'
-    }));
+    }), emptySnapshot());
 
-    expect(getEntitiesByProject).not.toHaveBeenCalled();
-    expect(saveEntity).not.toHaveBeenCalled();
+    expect(plan).toEqual({});
   });
 
-  it('removes one exact legacy materialized note while preserving author prose', async () => {
-    vi.mocked(getEntitiesByProject).mockResolvedValueOnce([{
-      id: 'sera',
-      projectId: 'project-1',
-      categoryId: 'characters',
-      name: 'Sera Kestrel',
-      fields: {notes: 'Author note.\nbackground: Compact service: twenty years'},
-      links: [],
-      createdAt: 1,
-      updatedAt: 1
-    }]);
+  it('removes one exact legacy materialized note while preserving author prose', () => {
     const fact = buildFact({
       targetType: 'entity',
       targetId: 'sera',
@@ -139,62 +111,64 @@ describe('canonical fact materialization ownership', () => {
       value: 'Compact service: twenty years'
     });
 
-    await revertCanonicalFactSideEffects('project-1', fact, []);
-
-    expect(saveEntity).toHaveBeenCalledWith(expect.objectContaining({
-      id: 'sera',
-      fields: {notes: 'Author note.'}
-    }));
-  });
-
-  it('does not remove a pre-existing manual alias when its fact is removed', async () => {
-    vi.mocked(getAliasesByProject).mockResolvedValueOnce([{
-      id: 'alias-1',
-      projectId: 'project-1',
-      targetType: 'entity',
-      targetId: 'sera',
-      entityId: 'sera',
-      alias: 'Ash',
-      createdAt: 1,
-      updatedAt: 20
-    }]);
-    const fact = buildFact({
-      targetType: 'entity',
-      targetId: 'sera',
-      factType: 'alias',
-      value: 'Ash',
-      acceptedAt: 10
+    const plan = planRevertCanonicalFactSideEffects(fact, [], {
+      ...emptySnapshot(),
+      entities: [{
+        id: 'sera',
+        projectId: 'project-1',
+        categoryId: 'characters',
+        name: 'Sera Kestrel',
+        fields: {notes: 'Author note.\nbackground: Compact service: twenty years'},
+        links: [],
+        createdAt: 1,
+        updatedAt: 1
+      }]
     });
 
-    await revertCanonicalFactSideEffects('project-1', fact, []);
-
-    expect(deleteAliasById).not.toHaveBeenCalled();
+    expect(plan.entityToPut).toEqual(expect.objectContaining({id: 'sera', fields: {notes: 'Author note.'}}));
   });
 
-  it('removes an alias created by the accepted fact when no equivalent fact remains', async () => {
-    vi.mocked(getAliasesByProject).mockResolvedValueOnce([{
-      id: 'alias-2',
-      projectId: 'project-1',
-      targetType: 'entity',
-      targetId: 'sera',
-      entityId: 'sera',
-      alias: 'Ash',
-      createdAt: 10,
-      updatedAt: 10
-    }]);
-    const fact = buildFact({
-      targetType: 'entity',
-      targetId: 'sera',
-      factType: 'alias',
-      value: 'Ash',
-      acceptedAt: 10
+  it('does not remove a pre-existing manual alias when its fact is removed', () => {
+    const fact = buildFact({targetType: 'entity', targetId: 'sera', factType: 'alias', value: 'Ash', acceptedAt: 10});
+
+    const plan = planRevertCanonicalFactSideEffects(fact, [], {
+      ...emptySnapshot(),
+      aliases: [{
+        id: 'alias-1', projectId: 'project-1', targetType: 'entity', targetId: 'sera', entityId: 'sera',
+        alias: 'Ash', createdAt: 1, updatedAt: 20
+      }]
     });
 
-    await revertCanonicalFactSideEffects('project-1', fact, []);
+    expect(plan).toEqual({});
+  });
 
-    expect(deleteAliasById).toHaveBeenCalledWith('alias-2');
-    expect(saveAlias).not.toHaveBeenCalled();
-    expect(getCharactersByProject).not.toHaveBeenCalled();
-    expect(saveCharacter).not.toHaveBeenCalled();
+  it('removes an alias created by the accepted fact when no equivalent fact remains', () => {
+    const fact = buildFact({targetType: 'entity', targetId: 'sera', factType: 'alias', value: 'Ash', acceptedAt: 10});
+    const snapshot = {
+      ...emptySnapshot(),
+      aliases: [{
+        id: 'alias-2', projectId: 'project-1', targetType: 'entity' as const, targetId: 'sera', entityId: 'sera',
+        alias: 'Ash', createdAt: 10, updatedAt: 10
+      }]
+    };
+
+    expect(planRevertCanonicalFactSideEffects(fact, [], snapshot)).toEqual({aliasIdToDelete: 'alias-2'});
+    expect(planRevertCanonicalFactSideEffects(fact, [{...fact, id: 'fact-2'}], snapshot)).toEqual({});
+  });
+
+  it('fills an empty character field from an occupation fact without overwriting author text', () => {
+    const character = {
+      id: 'character-1', projectId: 'project-1', name: 'Moreland', fields: {}, createdAt: 1, updatedAt: 1
+    };
+    const plan = planCanonicalFactSideEffects('project-1', buildFact(), {...emptySnapshot(), characters: [character]} as never, 5);
+    expect(plan.characterToPut?.fields).toEqual({role: 'Detective'});
+
+    const kept = planCanonicalFactSideEffects(
+      'project-1',
+      buildFact(),
+      {...emptySnapshot(), characters: [{...character, fields: {role: 'Inspector'}}]} as never,
+      5
+    );
+    expect(kept.characterToPut?.fields).toEqual({role: 'Inspector'});
   });
 });

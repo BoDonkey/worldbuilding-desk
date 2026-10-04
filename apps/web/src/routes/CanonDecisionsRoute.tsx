@@ -16,11 +16,9 @@ import {getCharactersByProject} from '../characterStorage';
 import {getEntitiesByProject} from '../entityStorage';
 import {getLoreDocumentsByProject, getLoreDocumentLinksByProject} from '../loreStorage';
 import {getDocumentsByProject} from '../writingStorage';
-import {saveAlias} from '../services/consistency';
 import {
   getCanonicalFactsByProject,
   getLoreFactProposalsByProject,
-  saveCanonicalFactSupersession,
   saveLoreFactProposal
 } from '../services/lore/loreFactStorage';
 import {
@@ -48,10 +46,9 @@ import {
 import {AIProposalPreview} from '../components/common/AIProposalPreview';
 import {acceptLoreEntityProposal} from '../services/lore/entityProposalActions';
 import {
-  applyCanonicalFactSideEffects,
+  supersedeCanonicalFact,
   buildCanonicalFactSummary,
   captureCanonicalFactMemory,
-  revertCanonicalFactSideEffects
 } from '../services/lore/canonicalFactActions';
 import {
   buildCanonicalFactSupersession,
@@ -388,17 +385,17 @@ function CanonDecisionsRoute() {
         status: 'accepted',
         updatedAt: Date.now()
       };
+      // Canon links, the alias, and the proposal commit together; cluster bookkeeping follows.
       await acceptLoreEntityProposal({
         proposal: nextProposal,
-        existingLinks: documentLinksById.get(proposal.loreDocumentId) ?? []
+        existingLinks: documentLinksById.get(proposal.loreDocumentId) ?? [],
+        alias: {
+          targetId: targetRef.id,
+          targetType: targetRef.type === 'character' ? 'character' : 'entity',
+          alias: proposal.name
+        },
+        acceptedProposal: () => nextProposal
       });
-      await saveAlias({
-        projectId: activeProject.id,
-        targetId: targetRef.id,
-        targetType: targetRef.type === 'character' ? 'character' : 'entity',
-        alias: proposal.name
-      });
-      await saveLoreEntityProposal(nextProposal);
       await persistAliasSuppression(cluster);
       await resolveCluster(cluster, 'alias', 'resolved');
       setFeedback({tone: 'success', message: `"${proposal.name}" aliased to existing canon.`});
@@ -419,20 +416,13 @@ function CanonDecisionsRoute() {
     setActingClusterId(cluster.id);
     setFeedback(null);
     try {
-      const target = await acceptLoreEntityProposal({
+      await acceptLoreEntityProposal({
         proposal: {
           ...proposal,
           targetType: undefined,
           targetId: undefined
         },
         existingLinks: documentLinksById.get(proposal.loreDocumentId) ?? []
-      });
-      await saveLoreEntityProposal({
-        ...proposal,
-        targetType: target.targetType,
-        targetId: target.targetId,
-        status: 'accepted',
-        updatedAt: Date.now()
       });
       await resolveCluster(cluster, 'accept_new', 'resolved');
       setFeedback({tone: 'success', message: `"${proposal.name}" created as new canon.`});
@@ -485,18 +475,14 @@ function CanonDecisionsRoute() {
         documents: scenes
       });
       const nextFact = supersession.nextFact;
-      await saveCanonicalFactSupersession(supersession.previousFact, nextFact);
-      await saveLoreFactProposal({
-        ...proposal,
-        status: 'accepted',
-        updatedAt: Date.now()
+      // Both facts, the proposal, and the side-effect hand-over commit together.
+      await supersedeCanonicalFact({
+        projectId: activeProject.id,
+        previousFact: supersession.previousFact,
+        nextFact,
+        proposal: {...proposal, status: 'accepted', updatedAt: Date.now()},
+        remainingFacts: [...canonicalFacts.filter((fact) => fact.id !== previousFact.id), nextFact]
       });
-      await revertCanonicalFactSideEffects(
-        activeProject.id,
-        previousFact,
-        [...canonicalFacts.filter((fact) => fact.id !== previousFact.id), nextFact]
-      );
-      await applyCanonicalFactSideEffects(activeProject.id, nextFact);
       try {
         const shodh = await getShodhService({
           projectId: activeProject.id,

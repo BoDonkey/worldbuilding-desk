@@ -847,6 +847,18 @@ runtime schema, and nothing here changes the roadmap's status board.
 ## Verification Status
 
 ### Verified Recently
+- Slice 3.13 atomic canon acceptance: `runProjectWriteTransaction` commits a
+  multi-store change in one IndexedDB transaction, with change events after
+  commit. Accepting an entity proposal (new or existing canon, legacy
+  character canonicalization, Source Note links, an optional alias, and the
+  proposal's accepted status), accepting a fact (fact, proposal, alias or
+  character field), superseding a fact, and removing a fact (revert, delete,
+  reopen proposal) each commit together or not at all. Side effects are pure
+  planners (`planCanonicalFactSideEffects`,
+  `planRevertCanonicalFactSideEffects`, `planAliasSave`). Real-IndexedDB tests
+  inject a failing last write and assert nothing persisted; they fail when the
+  transaction is not aborted. Retrieval and memory indexing and canon-decision
+  cluster resolution follow the commit.
 - Slice 3.12b private-local AI classification: one provider-route
   classifier (`services/llm/providerRoute.ts`, `hooks/useProviderRoute.ts`)
   drives disclosures and the consultation budget. Only loopback Ollama with a
