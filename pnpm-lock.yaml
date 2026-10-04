@@ -99,7 +99,7 @@ importers:
         specifier: ^8.0.3
         version: 8.0.3
       prosemirror-model:
-        specifier: ^1.25.12
+        specifier: 1.25.12
         version: 1.25.12
       prosemirror-state:
         specifier: 1.4.4
