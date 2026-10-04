@@ -69,6 +69,23 @@ describe('parseCharacterProfileReply', () => {
     expect(profile.suggestedDetails).toEqual(['A brother who drowned', 'Hums while steering']);
   });
 
+  it('accepts identity facts and maps gender and pronoun near-misses to identity', () => {
+    const profile = parseCharacterProfileReply(
+      reply({
+        name: null,
+        stableFacts: [
+          {factType: 'identity', value: 'she/her', quote: 'She is stubborn'},
+          {factType: 'Gender', value: 'woman', quote: 'She is stubborn'},
+          {factType: 'pronouns', value: 'she', quote: 'She'}
+        ],
+        suggestedDetails: []
+      }),
+      description
+    );
+
+    expect(profile.stableFacts.map((fact) => fact.factType)).toEqual(['identity', 'identity', 'identity']);
+  });
+
   it('refuses a name the description does not contain', () => {
     const profile = parseCharacterProfileReply(
       reply({name: 'Mara Vossberg', stableFacts: [], suggestedDetails: []}),

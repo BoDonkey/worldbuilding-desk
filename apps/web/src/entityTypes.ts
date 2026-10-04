@@ -449,6 +449,8 @@ export type CanonicalFactType =
   | 'occupation'
   | 'membership'
   | 'heritage'
+  /** Gender and pronouns. */
+  | 'identity'
   | 'appearance'
   | 'trait'
   | 'ability'

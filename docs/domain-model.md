@@ -68,7 +68,8 @@ canon, or state directly.
 Key rules:
 
 - The fact vocabulary (`alias`, `role`, `occupation`, `affiliation`,
-  `relationship`, `species`, `heritage`, `trait`, `ability`, `appearance`,
+  `relationship`, `species`, `heritage`, `identity` (gender and pronouns),
+  `trait`, `ability`, `appearance`,
   `belief`, `goal`, `timeline_marker`, …) is application-defined with
   deterministic per-type validation; do not grow it into an open ontology.
 - Canon is dual-written: `CanonicalFact` is the authoritative machine-readable

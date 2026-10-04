@@ -113,6 +113,9 @@ export function CharacterFromDescriptionDialog({
         systemPrompt: prompt.systemPrompt,
         messages: prompt.messages,
         responseFormat: 'json',
+        // Extraction gains little from long reasoning, and the quote check guards quality.
+        // Only Ollama reads this; hosted providers keep their own thinking policy.
+        think: false,
         maxTokens:
           lab.aiConfig.provider === 'ollama'
             ? undefined

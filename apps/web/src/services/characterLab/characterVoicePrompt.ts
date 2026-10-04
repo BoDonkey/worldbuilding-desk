@@ -28,9 +28,13 @@ export const CHARACTER_KNOWLEDGE_DISCLAIMER =
 export const CHARACTER_PROFILE_REPLY_FORMAT =
   'Reply with JSON only, in this shape:\n' +
   '{"name": string or null, "stableFacts": [{"factType": one of "alias", "age", "occupation", ' +
-  '"membership", "heritage", "appearance", "trait", "ability", "relationship", "goal", ' +
-  '"background"; "value": short text; "quote": the exact words from the description that ' +
-  'state it}], "suggestedDetails": [short text]}\n' +
+  '"membership", "heritage", "identity", "appearance", "trait", "ability", "relationship", ' +
+  '"goal", "background"; "value": short text; "quote": the exact words from the description ' +
+  'that state it}], "suggestedDetails": [short text]}\n' +
+  'Fact types: identity for gender and pronouns; appearance for physical description; trait ' +
+  'for personality and habits; background for history and circumstances; heritage for ' +
+  'ancestry, species, or culture. If no type fits, use trait. Pick quickly; the author ' +
+  'reviews every fact.\n' +
   'Use null for the name unless the description gives one. Every quote must be copied ' +
   'exactly from the description; a fact without one is discarded.';
 

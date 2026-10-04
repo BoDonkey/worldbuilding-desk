@@ -22,6 +22,7 @@ export const CHARACTER_PROFILE_FACT_TYPES = [
   'occupation',
   'membership',
   'heritage',
+  'identity',
   'appearance',
   'trait',
   'ability',
@@ -36,12 +37,30 @@ const MAX_SUGGESTED_DETAILS = 10;
 /** Confidence recorded on lab fact proposals: model-proposed, quote-checked, not yet reviewed. */
 export const CHARACTER_PROFILE_FACT_CONFIDENCE = 0.6;
 
+/**
+ * Near-miss fact types models commonly use for gender and pronouns. Mapped
+ * before validation so one off-list label does not reject the whole reply;
+ * any other unknown type still does.
+ */
+const FACT_TYPE_SYNONYMS: Readonly<Record<string, (typeof CHARACTER_PROFILE_FACT_TYPES)[number]>> = {
+  gender: 'identity',
+  pronoun: 'identity',
+  pronouns: 'identity',
+  sex: 'identity'
+};
+
+export function normalizeProfileFactType(value: unknown): unknown {
+  if (typeof value !== 'string') return value;
+  const key = value.trim().toLowerCase();
+  return FACT_TYPE_SYNONYMS[key] ?? key;
+}
+
 const replySchema = z.object({
   name: z.string().max(120).nullable().optional(),
   stableFacts: z
     .array(
       z.object({
-        factType: z.enum(CHARACTER_PROFILE_FACT_TYPES),
+        factType: z.preprocess(normalizeProfileFactType, z.enum(CHARACTER_PROFILE_FACT_TYPES)),
         value: z.string().max(240),
         quote: z.string().max(600)
       })
