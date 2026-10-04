@@ -19,6 +19,14 @@ import {
   getHostedResponseCostCeiling
 } from '../../services/llm/hostedResponsePolicy';
 import {testHostedProviderConnection, testOllamaConnection} from '../../services/llm/connectionTest';
+import {
+  clearProviderKey,
+  getProviderKeyStatus,
+  saveProviderKey,
+  usesDesktopKeyVault,
+  type HostedProviderId,
+  type ProviderKeyStatus
+} from '../../services/llm/providerKeyStore';
 import {useConfirmDialog} from '../../hooks/useConfirmDialog';
 import {InlineAlert, type InlineAlertVariant} from '../common';
 import {describeError} from '../../services/errors';
@@ -102,9 +110,11 @@ export const AISettings: React.FC<AISettingsProps> = ({
   projectMode,
   onSettingsChange
 }) => {
-  const [anthropicKey, setAnthropicKey] = useState(() => localStorage.getItem('anthropic_api_key') || '');
-  const [openaiKey, setOpenaiKey] = useState(() => localStorage.getItem('openai_api_key') || '');
-  const [geminiKey, setGeminiKey] = useState(() => localStorage.getItem('gemini_api_key') || '');
+  // Drafts of keys being entered. Saved keys are never read back into the form.
+  const [anthropicKey, setAnthropicKey] = useState('');
+  const [openaiKey, setOpenaiKey] = useState('');
+  const [geminiKey, setGeminiKey] = useState('');
+  const [keyStatus, setKeyStatus] = useState<ProviderKeyStatus | null>(null);
   const [toolName, setToolName] = useState('');
   const [toolKind, setToolKind] = useState<PromptToolKind>('persona');
   const [toolContent, setToolContent] = useState('');
@@ -120,33 +130,79 @@ export const AISettings: React.FC<AISettingsProps> = ({
     {variant: InlineAlertVariant; message: string} | null
   >(null);
   const [apiKeysSaved, setApiKeysSaved] = useState(false);
+  const [keyError, setKeyError] = useState<string | null>(null);
   const [diagnostics, setDiagnostics] = useState<ProviderDiagnosticsState | null>(null);
 
   useEffect(() => {
     setDefaultsMode(projectMode);
   }, [projectMode]);
 
-  const handleSaveKeys = () => {
-    if (anthropicKey) {
-      localStorage.setItem('anthropic_api_key', anthropicKey);
-    } else {
-      localStorage.removeItem('anthropic_api_key');
-    }
+  useEffect(() => {
+    let cancelled = false;
+    getProviderKeyStatus()
+      .then((status) => {
+        if (!cancelled) setKeyStatus(status);
+      })
+      .catch((error: unknown) => {
+        if (!cancelled) setKeyError(describeError(error, 'Unable to check saved API keys.'));
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
-    if (openaiKey) {
-      localStorage.setItem('openai_api_key', openaiKey);
-    } else {
-      localStorage.removeItem('openai_api_key');
-    }
-
-    if (geminiKey) {
-      localStorage.setItem('gemini_api_key', geminiKey);
-    } else {
-      localStorage.removeItem('gemini_api_key');
-    }
-
-    setApiKeysSaved(true);
+  const keyDrafts: Record<HostedProviderId, string> = {
+    anthropic: anthropicKey,
+    openai: openaiKey,
+    gemini: geminiKey
   };
+  const keyDraftSetters: Record<HostedProviderId, (value: string) => void> = {
+    anthropic: setAnthropicKey,
+    openai: setOpenaiKey,
+    gemini: setGeminiKey
+  };
+  const keyStorageNote = usesDesktopKeyVault()
+    ? 'Saved keys are encrypted by your operating system and are never shown again.'
+    : 'In this browser build, saved keys stay in this browser\'s storage.';
+
+  /** Saves the keys that were typed. A blank field keeps the saved key. */
+  const handleSaveKeys = async () => {
+    setKeyError(null);
+    try {
+      let status = keyStatus;
+      for (const provider of ['anthropic', 'openai', 'gemini'] as const) {
+        const draft = keyDrafts[provider].trim();
+        if (!draft) continue;
+        status = await saveProviderKey(provider, draft);
+        keyDraftSetters[provider]('');
+      }
+      setKeyStatus(status ?? (await getProviderKeyStatus()));
+      setApiKeysSaved(true);
+    } catch (error) {
+      setKeyError(describeError(error, 'Unable to save the API key.'));
+    }
+  };
+
+  const handleRemoveKey = async (provider: HostedProviderId) => {
+    setKeyError(null);
+    setApiKeysSaved(false);
+    try {
+      setKeyStatus(await clearProviderKey(provider));
+      keyDraftSetters[provider]('');
+    } catch (error) {
+      setKeyError(describeError(error, 'Unable to remove the API key.'));
+    }
+  };
+
+  const renderSavedKeyNote = (provider: HostedProviderId) =>
+    keyStatus?.[provider] ? (
+      <p className={styles.help}>
+        A key is saved. Enter a new key to replace it, or{' '}
+        <button type='button' className={styles.secondaryButton} onClick={() => void handleRemoveKey(provider)}>
+          Remove saved key
+        </button>
+      </p>
+    ) : null;
 
   const handleProviderChange = (provider: AIProviderId) => {
     const nextConfigs = {...aiSettings.configs};
@@ -212,17 +268,20 @@ export const AISettings: React.FC<AISettingsProps> = ({
         ? await testOllamaConnection({baseUrl: currentBaseUrl, model: currentModel})
         : await testHostedProviderConnection({
             providerId: provider,
-            apiKey:
-              provider === 'anthropic'
-                ? anthropicKey || localStorage.getItem('anthropic_api_key') || ''
-                : provider === 'openai'
-                  ? openaiKey || localStorage.getItem('openai_api_key') || ''
-                  : geminiKey || localStorage.getItem('gemini_api_key') || '',
+            apiKey: keyDrafts[provider],
             model: currentModel
           });
 
     setDiagnostics(result);
     setIsRunningDiagnostics(false);
+    if (provider !== 'ollama') {
+      // The desktop app saves a typed key before testing it.
+      const status = await getProviderKeyStatus().catch(() => null);
+      if (status) {
+        setKeyStatus(status);
+        if (status[provider] && usesDesktopKeyVault()) keyDraftSetters[provider]('');
+      }
+    }
   };
 
   const currentProviderConfig = aiSettings.configs[aiSettings.provider] ?? {};
@@ -626,7 +685,8 @@ export const AISettings: React.FC<AISettingsProps> = ({
                 setAnthropicKey(e.target.value);
                 setApiKeysSaved(false);
               }}
-              placeholder='sk-ant-...'
+              placeholder={keyStatus?.anthropic ? 'Saved key (hidden)' : 'sk-ant-...'}
+              autoComplete='off'
               className={styles.input}
             />
             <p className={styles.help}>
@@ -635,6 +695,7 @@ export const AISettings: React.FC<AISettingsProps> = ({
                 console.anthropic.com
               </a>
             </p>
+            {renderSavedKeyNote('anthropic')}
           </div>
         )}
         {aiSettings.provider === 'openai' && (
@@ -647,7 +708,8 @@ export const AISettings: React.FC<AISettingsProps> = ({
                 setOpenaiKey(e.target.value);
                 setApiKeysSaved(false);
               }}
-              placeholder='sk-...'
+              placeholder={keyStatus?.openai ? 'Saved key (hidden)' : 'sk-...'}
+              autoComplete='off'
               className={styles.input}
             />
             <p className={styles.help}>
@@ -656,6 +718,7 @@ export const AISettings: React.FC<AISettingsProps> = ({
                 platform.openai.com
               </a>
             </p>
+            {renderSavedKeyNote('openai')}
           </div>
         )}
         {aiSettings.provider === 'gemini' && (
@@ -668,7 +731,8 @@ export const AISettings: React.FC<AISettingsProps> = ({
                 setGeminiKey(e.target.value);
                 setApiKeysSaved(false);
               }}
-              placeholder='AIza...'
+              placeholder={keyStatus?.gemini ? 'Saved key (hidden)' : 'AIza...'}
+              autoComplete='off'
               className={styles.input}
             />
             <p className={styles.help}>
@@ -677,9 +741,11 @@ export const AISettings: React.FC<AISettingsProps> = ({
                 Google AI Studio
               </a>
             </p>
+            {renderSavedKeyNote('gemini')}
           </div>
         )}
 
+        {aiSettings.provider !== 'ollama' && <p className={styles.help}>{keyStorageNote}</p>}
         <div className={styles.apiKeyActions}>
           <button
             type='button'
@@ -691,7 +757,7 @@ export const AISettings: React.FC<AISettingsProps> = ({
           </button>
           {aiSettings.provider !== 'ollama' && (
             <>
-              <button onClick={handleSaveKeys} className={styles.saveButton}>
+              <button onClick={() => void handleSaveKeys()} className={styles.saveButton}>
                 Save API Keys
               </button>
               {apiKeysSaved && (
@@ -701,6 +767,9 @@ export const AISettings: React.FC<AISettingsProps> = ({
                   onDismiss={() => setApiKeysSaved(false)}
                   autoDismissMs={4000}
                 />
+              )}
+              {keyError && (
+                <InlineAlert variant='error' message={keyError} onDismiss={() => setKeyError(null)} />
               )}
             </>
           )}

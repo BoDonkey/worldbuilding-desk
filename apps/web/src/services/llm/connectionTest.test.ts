@@ -81,6 +81,63 @@ describe('testHostedProviderConnection', () => {
   });
 });
 
+describe('testHostedProviderConnection in the desktop app', () => {
+  afterEach(() => {
+    completeMock.mockReset();
+    vi.unstubAllGlobals();
+  });
+
+  it('saves a typed key to the vault before testing it', async () => {
+    const providerKeys = {
+      status: vi.fn(async () => ({anthropic: true, openai: false, gemini: false})),
+      set: vi.fn(async () => ({anthropic: true, openai: false, gemini: false})),
+      clear: vi.fn()
+    };
+    vi.stubGlobal('window', {electronAPI: {providerKeys}});
+    completeMock.mockImplementation(async () => {
+      expect(providerKeys.set).toHaveBeenCalledWith('anthropic', 'sk-ant-new');
+      return {content: 'OK'};
+    });
+
+    const result = await testHostedProviderConnection({providerId: 'anthropic', apiKey: ' sk-ant-new '});
+    expect(result.tone).toBe('success');
+  });
+
+  it('tests the saved key when the field is blank, and reports a missing one', async () => {
+    const providerKeys = {
+      status: vi.fn(async () => ({anthropic: false, openai: true, gemini: false})),
+      set: vi.fn(),
+      clear: vi.fn()
+    };
+    vi.stubGlobal('window', {electronAPI: {providerKeys}});
+    completeMock.mockResolvedValue({content: 'OK'});
+
+    expect((await testHostedProviderConnection({providerId: 'openai', apiKey: ''})).tone).toBe('success');
+    expect(await testHostedProviderConnection({providerId: 'anthropic', apiKey: ''})).toEqual({
+      tone: 'error',
+      summary: 'Anthropic API key is missing.',
+      details: []
+    });
+    expect(providerKeys.set).not.toHaveBeenCalled();
+  });
+
+  it('reports a vault refusal in plain language without calling the provider', async () => {
+    const providerKeys = {
+      status: vi.fn(),
+      set: vi.fn(async () => {
+        throw new Error('Secure key storage is unavailable on this computer, so the API key was not saved.');
+      }),
+      clear: vi.fn()
+    };
+    vi.stubGlobal('window', {electronAPI: {providerKeys}});
+
+    const result = await testHostedProviderConnection({providerId: 'gemini', apiKey: 'AIza-x'});
+    expect(result.tone).toBe('error');
+    expect(result.summary).toMatch(/Secure key storage is unavailable/);
+    expect(completeMock).not.toHaveBeenCalled();
+  });
+});
+
 describe('testOllamaConnection', () => {
   afterEach(() => {
     vi.unstubAllGlobals();

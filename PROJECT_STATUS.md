@@ -847,6 +847,26 @@ runtime schema, and nothing here changes the roadmap's status board.
 ## Verification Status
 
 ### Verified Recently
+- Slice 3.12a provider credential and endpoint hardening: hosted-provider
+  API keys live in the desktop main process, encrypted with the OS keychain
+  (`safeStorage`, `providerKeyVault.ts`); saving fails closed when OS
+  encryption is unavailable. The renderer reaches them only through
+  `provider-keys:status|set|clear` and never reads a key back; keys older
+  builds left in `localStorage` move into the vault at startup and the
+  plaintext copy is removed only after the vault accepts it. Every provider
+  request, Gemini included (new main-process adapter, key in a header), runs
+  in main, which refuses payloads carrying `apiKey` and applies a
+  scheme/host policy to provider addresses (hosted: HTTPS to their own
+  origin; Ollama and local OpenAI-compatible servers: loopback only). The
+  packaged renderer has a CSP meta tag (no hosted-provider hosts; loopback
+  plus the embedding-model download hosts) and the dev server gets a header
+  policy; the main window has a `will-navigate` guard. Settings no longer
+  pre-fills saved keys, a blank field keeps the saved key, and each provider
+  has Remove saved key. The browser dev build keeps keys behind
+  `providerKeyStore`. `apps/desktop` now has lint and 19 Vitest tests, run in
+  CI. Verified against the real main process: migration, status/set/clear,
+  renderer-key and remote-Ollama rejection, missing-key message, and a local
+  Ollama completion through main.
 - Slice 3.11 rules-engine hygiene (R2): `FormulaParser` evaluates through a
   restricted mathjs instance (`import`, `createUnit`, `evaluate`, `parse`,
   `compile`, `simplify`, `derivative`, `resolve`, `reviver` throw inside

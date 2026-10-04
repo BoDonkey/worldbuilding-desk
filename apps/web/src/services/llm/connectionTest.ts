@@ -1,6 +1,12 @@
 import type {AIProviderId, ProjectAISettings} from '../../entityTypes';
 import {LLMService} from './LLMService';
 import {PROVIDER_DEFAULT_BASE_URLS} from './providerConfig';
+import {
+  getProviderKeyStatus,
+  readBrowserProviderKey,
+  saveProviderKey,
+  usesDesktopKeyVault
+} from './providerKeyStore';
 
 export interface ConnectionTestResult {
   tone: 'success' | 'error';
@@ -39,7 +45,12 @@ export function describeConnectionTestError(providerId: AIProviderId, error: unk
   return `${label} test failed: ${message}`;
 }
 
-/** One cheap real call — a single-token completion — to confirm the key and model actually work. */
+/**
+ * One cheap real call — a single-token completion — to confirm the key and
+ * model actually work. `apiKey` is what the author just typed, if anything;
+ * a blank field tests the saved key. In the desktop app a typed key is saved
+ * to the OS-encrypted store first, because the main process attaches keys.
+ */
 export async function testHostedProviderConnection(params: {
   providerId: 'anthropic' | 'openai' | 'gemini';
   apiKey: string;
@@ -47,16 +58,28 @@ export async function testHostedProviderConnection(params: {
 }): Promise<ConnectionTestResult> {
   const {providerId, apiKey, model} = params;
   const label = PROVIDER_DISPLAY_NAMES[providerId];
-  const trimmedKey = apiKey.trim();
-  if (!trimmedKey) {
-    return {tone: 'error', summary: `${label} API key is missing.`, details: []};
+  const missing: ConnectionTestResult = {tone: 'error', summary: `${label} API key is missing.`, details: []};
+  const typedKey = apiKey.trim();
+  const desktop = usesDesktopKeyVault();
+  let rendererKey: string | undefined;
+
+  try {
+    if (desktop) {
+      if (typedKey) await saveProviderKey(providerId, typedKey);
+      else if (!(await getProviderKeyStatus())[providerId]) return missing;
+    } else {
+      rendererKey = typedKey || readBrowserProviderKey(providerId);
+      if (!rendererKey) return missing;
+    }
+  } catch (error) {
+    return {tone: 'error', summary: describeConnectionTestError(providerId, error), details: []};
   }
 
   try {
     const settings = {
       provider: providerId,
       configs: {
-        [providerId]: {apiKey: trimmedKey, model: model?.trim() || undefined}
+        [providerId]: {apiKey: rendererKey, model: model?.trim() || undefined}
       },
       promptTools: [],
       defaultToolIds: []

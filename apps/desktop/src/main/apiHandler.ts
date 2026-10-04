@@ -4,16 +4,17 @@ import {randomUUID} from 'node:crypto';
 import {
   createCompletionAdapter,
   createStreamingAdapter,
-  ProviderId,
   LLMRequestPayload
 } from './providers/ProviderRegistry';
+import {isProviderId, resolveProviderBaseUrl, type ProviderId} from './endpointPolicy';
+import {
+  isHostedProviderId,
+  type HostedProviderId,
+  type ProviderKeyVault
+} from './providerKeyVault';
 
-type RendererMessage = LLMRequestPayload['messages'][number];
-type RendererContextChunk = NonNullable<LLMRequestPayload['context']>[number];
-
-interface LLMPayload {
+export interface LLMPayload {
   providerId: ProviderId;
-  apiKey?: string;
   request: LLMRequestPayload;
   providerConfig?: {
     baseUrl?: string;
@@ -21,23 +22,27 @@ interface LLMPayload {
   requestId?: string;
 }
 
-function validatePayload(payload: unknown): asserts payload is LLMPayload {
+const PROVIDER_LABELS: Record<HostedProviderId, string> = {
+  anthropic: 'Anthropic',
+  openai: 'OpenAI',
+  gemini: 'Gemini'
+};
+
+export function validatePayload(payload: unknown): asserts payload is LLMPayload {
   if (!payload || typeof payload !== 'object') {
     throw new Error('Payload must be an object');
   }
 
   const p = payload as Record<string, unknown>;
 
-  if (typeof p.providerId !== 'string' || p.providerId.trim().length === 0) {
-    throw new Error('providerId must be provided');
+  if (!isProviderId(p.providerId)) {
+    throw new Error('providerId must be anthropic, openai, gemini, or ollama');
   }
 
-  // Validate apiKey. Ollama is local and does not need one.
-  if (
-    p.providerId !== 'ollama' &&
-    (typeof p.apiKey !== 'string' || p.apiKey.trim().length === 0)
-  ) {
-    throw new Error('apiKey must be a non-empty string');
+  // Keys live in the main-process vault. A renderer-supplied key could be
+  // aimed at an address the author never configured, so it is refused.
+  if ('apiKey' in p) {
+    throw new Error('apiKey must not be sent from the renderer');
   }
 
   // Validate request object
@@ -135,25 +140,60 @@ function validatePayload(payload: unknown): asserts payload is LLMPayload {
   }
 
   if (p.providerConfig !== undefined) {
+    if (!p.providerConfig || typeof p.providerConfig !== 'object') {
+      throw new Error('providerConfig must be an object if provided');
+    }
     const config = p.providerConfig as Record<string, unknown>;
     if (config.baseUrl !== undefined && typeof config.baseUrl !== 'string') {
       throw new Error('providerConfig.baseUrl must be a string if provided');
     }
+    // Throws for any address outside the provider's scheme/host policy.
+    resolveProviderBaseUrl(p.providerId, config.baseUrl as string | undefined);
   }
+}
+
+async function resolveCredentials(vault: ProviderKeyVault, payload: LLMPayload) {
+  const baseUrl = resolveProviderBaseUrl(payload.providerId, payload.providerConfig?.baseUrl);
+  if (!isHostedProviderId(payload.providerId)) {
+    return {baseUrl, apiKey: undefined};
+  }
+  const apiKey = await vault.get(payload.providerId);
+  if (!apiKey) {
+    throw new Error(
+      `${PROVIDER_LABELS[payload.providerId]} API key is missing. Please add it in Settings.`
+    );
+  }
+  return {baseUrl, apiKey};
 }
 
 /** In-flight streams by request id, so the renderer can stop one (a slow local model keeps
  * generating otherwise, even after the window stops listening). */
 const activeStreams = new Map<string, AbortController>();
 
-export function setupAPIHandlers() {
+export function setupAPIHandlers(vault: ProviderKeyVault) {
+  ipcMain.handle('provider-keys:status', () => vault.status());
+
+  ipcMain.handle('provider-keys:set', async (_event, provider: unknown, key: unknown) => {
+    if (!isHostedProviderId(provider)) throw new Error('Unknown provider');
+    if (typeof key !== 'string') throw new Error('API key must be a string');
+    await vault.set(provider, key);
+    return vault.status();
+  });
+
+  ipcMain.handle('provider-keys:clear', async (_event, provider: unknown) => {
+    if (!isHostedProviderId(provider)) throw new Error('Unknown provider');
+    await vault.clear(provider);
+    return vault.status();
+  });
+
   ipcMain.handle('llm:complete', async (_event, payload: LLMPayload) => {
     validatePayload(payload);
 
-    const {apiKey, providerId, request, providerConfig} = payload;
+    const {providerId, request} = payload;
+    const {apiKey, baseUrl} = await resolveCredentials(vault, payload);
     const adapter = createCompletionAdapter(providerId, {
       apiKey,
-      baseUrl: providerConfig?.baseUrl,
+      baseUrl,
       request
     });
 
@@ -163,14 +203,15 @@ export function setupAPIHandlers() {
   ipcMain.handle('llm:stream', async (event, payload: LLMPayload) => {
     validatePayload(payload);
 
-    const {apiKey, providerId, request, providerConfig, requestId = randomUUID()} = payload;
+    const {providerId, request, requestId = randomUUID()} = payload;
 
     const controller = new AbortController();
     activeStreams.set(requestId, controller);
     try {
+      const {apiKey, baseUrl} = await resolveCredentials(vault, payload);
       const adapter = createStreamingAdapter(providerId, {
         apiKey,
-        baseUrl: providerConfig?.baseUrl,
+        baseUrl,
         request,
         signal: controller.signal
       });

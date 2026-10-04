@@ -1,11 +1,27 @@
-import { defineConfig } from 'vite'
+import { defineConfig, type Plugin } from 'vite'
 import react from '@vitejs/plugin-react'
 import path from 'path';
+import { PACKAGED_RENDERER_CSP } from './rendererCsp';
+
+/** Adds the packaged renderer CSP to index.html in production builds only. */
+function rendererCspPlugin(): Plugin {
+  return {
+    name: 'renderer-csp',
+    apply: 'build',
+    transformIndexHtml: () => [
+      {
+        tag: 'meta',
+        attrs: {'http-equiv': 'Content-Security-Policy', content: PACKAGED_RENDERER_CSP},
+        injectTo: 'head-prepend'
+      }
+    ]
+  };
+}
 
 // https://vite.dev/config/
 export default defineConfig({
   base: './',
-  plugins: [react()],
+  plugins: [react(), rendererCspPlugin()],
   resolve: {
     alias: {
       '@worldbuilding-desk/rules-ui': path.resolve(import.meta.dirname, '../../packages/rules-ui/src/index.ts'),

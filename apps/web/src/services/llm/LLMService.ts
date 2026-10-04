@@ -11,23 +11,36 @@ import {
   PROVIDER_FALLBACK_MODELS
 } from './providerConfig';
 import {foldContextIntoSystemPrompt} from './contextPrompt';
+import {
+  getCachedProviderKeyStatus,
+  readBrowserProviderKey,
+  usesDesktopKeyVault,
+  type HostedProviderId
+} from './providerKeyStore';
 
 const FALLBACK_ID = () => Math.random().toString(36).slice(2);
 
+const HOSTED_PROVIDER_LABELS: Record<HostedProviderId, string> = {
+  anthropic: 'Anthropic',
+  openai: 'OpenAI',
+  gemini: 'Gemini'
+};
+
+/** `apiKey` is absent in the desktop app, where the main process attaches it. */
 type ProviderCredentials =
   | {
       id: 'anthropic';
-      apiKey: string;
+      apiKey?: string;
       model?: string;
     }
   | {
       id: 'openai';
-      apiKey: string;
+      apiKey?: string;
       model?: string;
     }
   | {
       id: 'gemini';
-      apiKey: string;
+      apiKey?: string;
       model?: string;
     }
   | {
@@ -37,9 +50,9 @@ type ProviderCredentials =
     };
 
 export class LLMService {
-  private provider: LLMProvider;
+  /** Renderer-side provider, used only when there is no desktop bridge. */
+  private provider: LLMProvider | null;
   private readonly providerId: AIProviderId;
-  private readonly providerApiKey?: string;
   private readonly providerModel?: string;
   private readonly providerBaseUrl?: string;
   private readonly electronAPI = typeof window !== 'undefined' ? window.electronAPI : undefined;
@@ -47,16 +60,23 @@ export class LLMService {
   constructor(settings?: ProjectAISettings | null) {
     const credentials = this.resolveProviderCredentials(settings ?? undefined);
     this.providerId = credentials.id;
-    if ('apiKey' in credentials) {
-      this.providerApiKey = credentials.apiKey;
-    }
     if ('model' in credentials) {
       this.providerModel = credentials.model;
     }
     if ('baseUrl' in credentials) {
       this.providerBaseUrl = credentials.baseUrl;
     }
-    this.provider = this.instantiateProvider(credentials);
+    this.provider = this.usesDesktopBridge() ? null : this.instantiateProvider(credentials);
+  }
+
+  /** In the desktop app every provider call goes through the main process. */
+  private usesDesktopBridge(): boolean {
+    return Boolean(this.electronAPI?.llmComplete && usesDesktopKeyVault());
+  }
+
+  private rendererProvider(): LLMProvider {
+    if (!this.provider) throw new Error('Provider runs in the desktop app process.');
+    return this.provider;
   }
 
   async complete(request: LLMRequest): Promise<LLMResponse> {
@@ -100,17 +120,17 @@ export class LLMService {
     switch (credentials.id) {
       case 'anthropic':
         return new AnthropicProvider({
-          apiKey: credentials.apiKey,
+          apiKey: credentials.apiKey ?? '',
           model: credentials.model ?? PROVIDER_FALLBACK_MODELS.anthropic
         });
       case 'openai':
         return new OpenAIProvider({
-          apiKey: credentials.apiKey,
+          apiKey: credentials.apiKey ?? '',
           model: credentials.model ?? PROVIDER_FALLBACK_MODELS.openai
         });
       case 'gemini':
         return new GeminiProvider({
-          apiKey: credentials.apiKey,
+          apiKey: credentials.apiKey ?? '',
           model: credentials.model ?? PROVIDER_FALLBACK_MODELS.gemini
         });
       case 'ollama':
@@ -127,48 +147,14 @@ export class LLMService {
     const providerId: AIProviderId = settings?.provider ?? DEFAULT_AI_PROVIDER;
 
     switch (providerId) {
-      case 'anthropic': {
-        const apiKey =
-          settings?.configs?.anthropic?.apiKey ?? this.readStoredKey('anthropic_api_key');
-
-        if (!apiKey) {
-          throw new Error('Anthropic API key is missing. Please add it in Settings.');
-        }
-
+      case 'anthropic':
+      case 'openai':
+      case 'gemini':
         return {
-          id: 'anthropic',
-          apiKey,
-          model: settings?.configs?.anthropic?.model ?? PROVIDER_FALLBACK_MODELS.anthropic
+          id: providerId,
+          apiKey: this.resolveHostedKey(providerId, settings?.configs?.[providerId]?.apiKey),
+          model: settings?.configs?.[providerId]?.model ?? PROVIDER_FALLBACK_MODELS[providerId]
         };
-      }
-      case 'openai': {
-        const apiKey =
-          settings?.configs?.openai?.apiKey ?? this.readStoredKey('openai_api_key');
-
-        if (!apiKey) {
-          throw new Error('OpenAI API key is missing. Please add it in Settings.');
-        }
-
-        return {
-          id: 'openai',
-          apiKey,
-          model: settings?.configs?.openai?.model ?? PROVIDER_FALLBACK_MODELS.openai
-        };
-      }
-      case 'gemini': {
-        const apiKey =
-          settings?.configs?.gemini?.apiKey ?? this.readStoredKey('gemini_api_key');
-
-        if (!apiKey) {
-          throw new Error('Gemini API key is missing. Please add it in Settings.');
-        }
-
-        return {
-          id: 'gemini',
-          apiKey,
-          model: settings?.configs?.gemini?.model ?? PROVIDER_FALLBACK_MODELS.gemini
-        };
-      }
       case 'ollama': {
         return {
           id: 'ollama',
@@ -181,13 +167,22 @@ export class LLMService {
     }
   }
 
-  private readStoredKey(key: string): string | undefined {
-    if (typeof window === 'undefined' || typeof window.localStorage === 'undefined') {
+  /**
+   * Desktop app: the key stays in the main process, so this only fails fast
+   * when the last known status says no key is saved. Browser build: the key
+   * comes from settings (connection test) or the browser key store.
+   */
+  private resolveHostedKey(provider: HostedProviderId, explicitKey?: string): string | undefined {
+    const missing = new Error(
+      `${HOSTED_PROVIDER_LABELS[provider]} API key is missing. Please add it in Settings.`
+    );
+    if (this.usesDesktopBridge()) {
+      if (getCachedProviderKeyStatus()?.[provider] === false) throw missing;
       return undefined;
     }
-
-    const value = window.localStorage.getItem(key);
-    return value ?? undefined;
+    const key = explicitKey ?? readBrowserProviderKey(provider);
+    if (!key) throw missing;
+    return key;
   }
 
   private applyProviderDefaults(request: LLMRequest): LLMRequest {
@@ -199,11 +194,8 @@ export class LLMService {
   }
 
   private getStreamingIterator(request: LLMRequest): AsyncGenerator<string> {
-    if (this.providerId === 'gemini' && this.provider.streamCompletion) {
-      return this.provider.streamCompletion(request);
-    }
-
     if (
+      this.usesDesktopBridge() &&
       this.electronAPI?.llmStream &&
       this.electronAPI?.onLLMChunk &&
       this.electronAPI?.onLLMComplete &&
@@ -212,19 +204,20 @@ export class LLMService {
       return this.streamViaElectron(request);
     }
 
-    if (!this.provider.streamCompletion) {
+    const provider = this.rendererProvider();
+    if (!provider.streamCompletion) {
       throw new Error('Provider does not support streaming');
     }
 
-    return this.provider.streamCompletion(request);
+    return provider.streamCompletion(request);
   }
 
   private async getCompletion(request: LLMRequest): Promise<LLMResponse> {
-    if (this.providerId !== 'gemini' && this.electronAPI?.llmComplete) {
+    if (this.usesDesktopBridge()) {
       return {content: await this.completeViaElectron(request)};
     }
 
-    return this.provider.generateCompletion(request);
+    return this.rendererProvider().generateCompletion(request);
   }
 
   private buildCacheKey(request: LLMRequest): string {
@@ -309,7 +302,6 @@ export class LLMService {
       api
         .llmStream({
           providerId: this.providerId,
-          apiKey: this.providerApiKey,
           request: this.buildElectronRequest(request),
           providerConfig: {
             baseUrl: request.baseUrl
@@ -361,7 +353,6 @@ export class LLMService {
 
     const completion = api.llmComplete({
       providerId: this.providerId,
-      apiKey: this.providerApiKey,
       request: this.buildElectronRequest(request),
       providerConfig: {
         baseUrl: request.baseUrl

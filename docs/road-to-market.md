@@ -1575,6 +1575,11 @@ or the Electron bridge; the IPC surface is unchanged.
 - **5.3 Packaged-app validation.** Playwright Electron E2E covering the LLM
   streaming IPC path (highest-payoff single test); packaged checks for file
   operations, external-link policy, provider diagnostics; both platforms.
+  Include reload and deep-link behavior: the renderer uses `BrowserRouter`
+  under `file://`, so routes rewrite the URL to paths like `file:///workspace`
+  and a manual reload has no file to load (found during 3.12a; the
+  `will-navigate` guard now blocks that reload instead of loading a blank
+  page). Decide between a hash router and a custom app protocol.
 - **5.4 Progressive first-run onboarding + sample project.** Land the new
   author in a draft-ready workspace immediately, then teach the write →
   capture canon → review loop through contextual, dismissible guidance and

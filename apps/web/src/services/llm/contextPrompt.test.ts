@@ -87,15 +87,19 @@ describe('context prompt rendering', () => {
 
   it('sends context through the desktop bridge inside the system prompt, for every provider', async () => {
     const llmComplete = vi.fn(async () => 'ok');
-    vi.stubGlobal('window', {electronAPI: {llmComplete}});
+    const providerKeys = {status: vi.fn(), set: vi.fn(), clear: vi.fn()};
+    vi.stubGlobal('window', {electronAPI: {llmComplete, providerKeys}});
     const settings = {
       provider: 'anthropic',
-      configs: {anthropic: {model: 'claude-test', apiKey: 'key'}}
+      configs: {anthropic: {model: 'claude-test'}}
     } as unknown as ProjectAISettings;
 
     await new LLMService(settings).complete({...request, cache: false});
 
-    const sent = (llmComplete.mock.calls[0] as unknown as [{request: LLMRequest}])[0].request;
+    const payload = (llmComplete.mock.calls[0] as unknown as [Record<string, unknown> & {request: LLMRequest}])[0];
+    // The main process attaches the key; the renderer never sends one.
+    expect(payload).not.toHaveProperty('apiKey');
+    const sent = payload.request;
     expect(sent.systemPrompt).toBe(expectedSystem);
     expect(sent.context).toBeUndefined();
     // The desktop main process's Ollama adapter then carries it as the system message.

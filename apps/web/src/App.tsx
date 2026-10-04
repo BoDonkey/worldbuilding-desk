@@ -19,7 +19,11 @@ import {AccessibilityProvider} from './contexts/AccessibilityContext';
 import {CommandPaletteProvider} from './contexts/CommandPaletteContext';
 import {StatPinPanel} from './components/StatPinPanel';
 import {useAppStore} from './store/appStore';
-import {registerDiagnosticSecrets} from './services/errors';
+import {recordDiagnostic} from './services/errors';
+import {
+  migrateBrowserKeysToDesktopVault,
+  registerBrowserKeySecrets
+} from './services/llm/providerKeyStore';
 import {getProjectCapabilities} from './projectMode';
 import {useRouteDebug} from './utils/routeDebug';
 import ProjectsRoute from './routes/ProjectsRoute';
@@ -206,12 +210,19 @@ function App() {
   const projectSettings = useAppStore((s) => s.projectSettings);
   useEffect(() => {
     const configs = projectSettings?.aiSettings?.configs;
-    registerDiagnosticSecrets([
+    registerBrowserKeySecrets([
       configs?.anthropic?.apiKey,
       configs?.openai?.apiKey,
       configs?.gemini?.apiKey
     ]);
   }, [projectSettings]);
+  useEffect(() => {
+    // Desktop app: move keys older builds left in plaintext storage into the
+    // OS-encrypted vault. A failure keeps the plaintext copy for the next try.
+    migrateBrowserKeysToDesktopVault().catch((error: unknown) => {
+      recordDiagnostic(error, {context: 'Moving saved API keys to secure storage'});
+    });
+  }, []);
   return (
     <ThemeProvider>
       <AccessibilityProvider>

@@ -1,7 +1,10 @@
-import {app, BrowserWindow, shell} from 'electron';
+import {app, BrowserWindow, safeStorage, session, shell} from 'electron';
 import path from 'node:path';
+import {pathToFileURL} from 'node:url';
 import {setupAPIHandlers} from './apiHandler';
 import {openExternalIfSafe} from './externalLinks';
+import {ProviderKeyVault} from './providerKeyVault';
+import {buildDevContentSecurityPolicy, isRendererNavigation} from './windowPolicy';
 
 const isDevelopment = process.env.NODE_ENV === 'development' || !app.isPackaged;
 const devServerUrl = process.env.VITE_DEV_SERVER_URL;
@@ -12,6 +15,26 @@ function rendererIndexHtml(): string {
     return path.join(process.resourcesPath, 'renderer', 'index.html');
   }
   return path.resolve(__dirname, '../../../web/dist/index.html');
+}
+
+function rendererUrl(): string {
+  return isDevelopment && devServerUrl ? devServerUrl : pathToFileURL(rendererIndexHtml()).href;
+}
+
+/** The packaged renderer carries its CSP as a meta tag; the dev server gets it as a header. */
+function installDevContentSecurityPolicy() {
+  if (!(isDevelopment && devServerUrl)) return;
+  const origin = new URL(devServerUrl).origin;
+  const policy = buildDevContentSecurityPolicy(devServerUrl);
+  session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
+    if (!details.url.startsWith(origin)) {
+      callback({});
+      return;
+    }
+    callback({
+      responseHeaders: {...details.responseHeaders, 'Content-Security-Policy': [policy]}
+    });
+  });
 }
 
 async function loadRenderer(win: BrowserWindow) {
@@ -43,6 +66,14 @@ async function createMainWindow() {
     return {action: 'deny'};
   });
 
+  // A link or script must not navigate the app window away from the
+  // renderer; web links open in the browser instead.
+  mainWindow.webContents.on('will-navigate', (event, url) => {
+    if (isRendererNavigation(url, rendererUrl())) return;
+    event.preventDefault();
+    openExternalIfSafe(url, (safeUrl) => shell.openExternal(safeUrl));
+  });
+
   await loadRenderer(mainWindow);
 
   mainWindow.on('closed', () => {
@@ -51,7 +82,10 @@ async function createMainWindow() {
 }
 
 app.whenReady().then(() => {
-  setupAPIHandlers();
+  setupAPIHandlers(
+    new ProviderKeyVault({directory: app.getPath('userData'), cipher: safeStorage})
+  );
+  installDevContentSecurityPolicy();
   createMainWindow().catch((error) => {
     console.error('Failed to create Electron window', error);
   });

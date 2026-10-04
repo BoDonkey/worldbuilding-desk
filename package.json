@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "pnpm --filter web test:unit && pnpm --filter @worldbuilding-desk/rules-engine test && pnpm --filter @worldbuilding-desk/rules-ui test",
+    "test": "pnpm --filter web test:unit && pnpm --filter @worldbuilding-desk/rules-engine test && pnpm --filter @worldbuilding-desk/rules-ui test && pnpm --filter desktop test",
     "dev:web": "pnpm --filter web dev",
     "build:web": "pnpm --filter web build",
     "build:desktop": "pnpm --filter desktop build",

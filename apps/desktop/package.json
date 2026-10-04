@@ -9,18 +9,26 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "dev": "tsc -p tsconfig.json --watch",
+    "lint": "eslint \"src/**/*.ts\"",
+    "lint:fix": "eslint \"src/**/*.ts\" --fix",
+    "test": "vitest run",
     "start": "electron ./dist/main/main.js",
     "start:dev": "VITE_DEV_SERVER_URL=http://localhost:5173 electron ./dist/main/main.js",
     "package": "electron-builder",
     "package:dir": "electron-builder --dir"
   },
-  "dependencies": {},
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "@types/node": "^24.10.11",
+    "@typescript/native": "npm:typescript@^7.0.2",
     "electron": "^43.2.0",
     "electron-builder": "^26.15.7",
     "electron-builder-squirrel-windows": "^26.15.7",
-    "typescript": "^7.0.2"
+    "eslint": "^10.8.0",
+    "globals": "^17.9.0",
+    "typescript": "npm:@typescript/typescript6@^6.0.2",
+    "typescript-eslint": "^8.66.0",
+    "vitest": "^4.1.10"
   },
   "build": {
     "appId": "com.worldbuildingdesk.app",
