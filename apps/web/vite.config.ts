@@ -1,7 +1,7 @@
 import { defineConfig, type Plugin } from 'vite'
 import react from '@vitejs/plugin-react'
 import path from 'path';
-import { PACKAGED_RENDERER_CSP } from './rendererCsp';
+import { PACKAGED_RENDERER_CSP } from './rendererCsp.ts';
 
 /** Adds the packaged renderer CSP to index.html in production builds only. */
 function rendererCspPlugin(): Plugin {
