@@ -193,6 +193,8 @@ pnpm --filter web e2e:run       # for slices touching routed UI
    After pushing, check the `Web CI` run for that push, including
    `cypress-smoke`. If it is red, fix it before claiming the next slice, or
    record the failure in the note column. Local-only green is not done.
+   Cypress retries a failed test up to twice in run mode; a test that
+   passed only on retry is a flake to fix, not a pass to ignore.
 
 ## Status Board
 
