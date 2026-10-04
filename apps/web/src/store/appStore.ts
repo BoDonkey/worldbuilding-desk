@@ -122,8 +122,14 @@ export const useAppStore = create<AppState>()(
 
         saveProjectSettings: async (settings) => {
           await persistProjectSettings(settings);
+          // Saves can finish out of order (one per keystroke in a text field); never let an
+          // older save replace a newer one already applied.
           set((state) =>
-            state.activeProject?.id === settings.projectId
+            state.activeProject?.id === settings.projectId &&
+            !(
+              state.projectSettings?.projectId === settings.projectId &&
+              state.projectSettings.updatedAt > settings.updatedAt
+            )
               ? {
                   projectSettings: settings,
                   projectSettingsStatus: 'ready',

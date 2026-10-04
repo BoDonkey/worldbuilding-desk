@@ -40,6 +40,20 @@ function SettingsSection({title, defaultOpen = false, children}: SettingsSection
   );
 }
 
+/**
+ * Local edits are saved one change at a time and the store echoes each save
+ * back when it finishes. Keep the local copy when it is at least as new, so a
+ * slow save cannot erase what the author typed after it.
+ */
+function preferNewerSettings(
+  current: ProjectSettings | null,
+  incoming: ProjectSettings
+): ProjectSettings {
+  return current && current.projectId === incoming.projectId && current.updatedAt >= incoming.updatedAt
+    ? current
+    : incoming;
+}
+
 function SettingsRoute() {
   const activeProject = useAppStore((s) => s.activeProject);
   const projectSettings = useAppStore((s) => s.projectSettings);
@@ -76,7 +90,7 @@ function SettingsRoute() {
           : await loadProjectSettings(activeProject.id);
       const inheritedCues = await getInheritedConsistencyActionCues(activeProject);
       if (!cancelled) {
-        setSettings(nextProjectSettings);
+        setSettings((current) => preferNewerSettings(current, nextProjectSettings));
         setConsistencyCuesDraft(nextProjectSettings.consistencyActionCues.join('\n'));
         setInheritedConsistencyCues(inheritedCues);
       }
@@ -91,7 +105,7 @@ function SettingsRoute() {
     if (!projectSettings || !activeProject || projectSettings.projectId !== activeProject.id) {
       return;
     }
-    setSettings(projectSettings);
+    setSettings((current) => preferNewerSettings(current, projectSettings));
     setConsistencyCuesDraft(projectSettings.consistencyActionCues.join('\n'));
   }, [activeProject, projectSettings]);
 

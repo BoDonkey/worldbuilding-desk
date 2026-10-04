@@ -30,5 +30,16 @@ export function useProviderRoute(
   }, [provider, baseUrl]);
 
   const models = installed.baseUrl === baseUrl ? installed.models : null;
-  return useMemo(() => classifyProviderRoute(aiConfig, models), [aiConfig, models]);
+  const model = aiConfig?.configs?.ollama?.model;
+  // Keyed on the values the classification reads, not the settings object: settings get a new
+  // identity on every save, and callers keep the route (via the consultation budget) in effect and
+  // callback dependencies, so an identity change on each save would re-run their work.
+  return useMemo(
+    () =>
+      classifyProviderRoute(
+        provider ? ({provider, configs: {ollama: {baseUrl, model}}} as Pick<ProjectAISettings, 'provider' | 'configs'>) : null,
+        models
+      ),
+    [provider, baseUrl, model, models]
+  );
 }

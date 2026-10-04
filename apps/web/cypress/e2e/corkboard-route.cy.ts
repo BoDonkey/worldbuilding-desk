@@ -208,6 +208,8 @@ describe('Corkboard route', () => {
     cy.visit('/corkboard');
     cy.contains('h1', 'Corkboard').should('be.visible');
     cy.contains('button', 'Story Dashboard').click();
+    // Settings loaded and the Ollama model verified as local before asking.
+    cy.contains('Runs on your local model').should('be.visible');
     cy.contains('button', 'Ask the coach').click();
 
     cy.wait('@localCoach').then(({request}) => {

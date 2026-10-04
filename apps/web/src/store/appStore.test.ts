@@ -89,6 +89,23 @@ describe('useAppStore', () => {
     expect(useAppStore.getState().projectSettings).toEqual(secondSettings);
   });
 
+  it('keeps the newest project settings when saves finish out of order', async () => {
+    useAppStore.setState(useAppStore.getInitialState(), true);
+    useAppStore.setState({activeProject: makeProject('typing'), projectSettings: makeSettings('typing')});
+    const {saveProjectSettings: persist} = await import('../settingsStorage');
+    const older = createDeferred<void>();
+    vi.mocked(persist).mockImplementationOnce(() => older.promise);
+
+    const first = {...makeSettings('typing'), updatedAt: 10};
+    const second = {...makeSettings('typing'), updatedAt: 20};
+    const firstSave = useAppStore.getState().saveProjectSettings(first);
+    await useAppStore.getState().saveProjectSettings(second);
+    older.resolve();
+    await firstSave;
+
+    expect(useAppStore.getState().projectSettings?.updatedAt).toBe(20);
+  });
+
   it('exposes settings load failures without clearing the selected project', async () => {
     useAppStore.setState(useAppStore.getInitialState(), true);
     mockedGetOrCreateSettings.mockReset();
