@@ -154,6 +154,9 @@ describe('Post-merge smoke checklist', () => {
 
   it('tracks mechanics-only problems power cannot solve with explicit scene links', () => {
     cy.visit('/world-bible');
+    // Categories must finish loading first: a load that completes after the add
+    // would replace the list with the pre-add copy.
+    cy.contains('button', /^Characters/).should('be.visible');
     // Opt-in: the category does not exist until the author adds it.
     cy.contains('button', 'Problems Power Cannot Solve').should('not.exist');
     cy.contains('button', 'Manage Categories').click();

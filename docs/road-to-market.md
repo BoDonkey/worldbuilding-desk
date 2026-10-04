@@ -628,6 +628,10 @@ Run 3.15 first because it is cheap and unblocks the others' CI. 3.12a and
     hooks.
   - Splitting `useWorkspaceConsistency` by responsibility stays in the
     backlog until the freeze holds.
+  - Fix the World Bible category load race found 2026-10-04: a category
+    added before the initial category load finishes is overwritten by the
+    stale loaded list (the post-merge smoke now waits for categories; the
+    app should merge or ignore a load older than a local change).
 - **3.15** (F6) Dependency advisory sweep and CI audit gate.
   - Clear the production advisories: `@tiptap/*` ≥ 3.30.5;
     `sharp` ≥ 0.35.4 and `adm-zip` ≥ 0.6.1 via the

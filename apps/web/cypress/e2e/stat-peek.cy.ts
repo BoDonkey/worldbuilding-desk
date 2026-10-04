@@ -224,6 +224,8 @@ describe('Stat peek', () => {
       .and('contain.text', 'Health: 32/40');
 
     cy.visit('/corkboard');
+    // The palette shortcut listener attaches after first render; wait for the route first.
+    cy.contains('h1', 'Corkboard').should('be.visible');
     cy.get('body').type('{ctrl}k');
     cy.get('input[placeholder="Type a command..."]').type('aria');
     cy.contains('[role="option"]', 'Show stats for Aria').click();
