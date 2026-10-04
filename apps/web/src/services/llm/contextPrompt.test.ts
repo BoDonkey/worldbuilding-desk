@@ -10,6 +10,7 @@ import {LLMService} from './LLMService';
 import {AnthropicProvider} from './providers/anthropic';
 import {OllamaProvider} from './providers/ollama';
 import type {LLMRequest} from './types';
+import {answerOllamaTags, withoutTagLookups} from '../../test/ollamaTagsStub';
 
 const context = [
   {source: 'Accepted canon fact - Sera Kestrel', content: 'Sera was a cartographer.', relevance: 0.9},
@@ -60,7 +61,7 @@ describe('context prompt rendering', () => {
   });
 
   it('gives local Ollama the same system text a hosted provider sends', async () => {
-    const fetchMock = vi.fn<(url: string, init?: RequestInit) => Promise<unknown>>(async (url) =>
+    const fetchMock = vi.fn(answerOllamaTags(async (url: string) =>
       url.includes('11434')
         ? {ok: true, body: streamOf([JSON.stringify({message: {content: 'ok'}})])}
         : {
@@ -69,7 +70,7 @@ describe('context prompt rendering', () => {
               `data: ${JSON.stringify({type: 'content_block_delta', delta: {type: 'text_delta', text: 'ok'}})}`
             ])
           }
-    );
+    ));
     vi.stubGlobal('fetch', fetchMock);
 
     for await (const chunk of new OllamaProvider({baseUrl: 'http://localhost:11434', model: 'qwen3'}).streamCompletion(request)) {
@@ -79,8 +80,9 @@ describe('context prompt rendering', () => {
       void chunk;
     }
 
-    const ollamaBody = JSON.parse(String(fetchMock.mock.calls[0][1]?.body));
-    const anthropicBody = JSON.parse(String(fetchMock.mock.calls[1][1]?.body));
+    const [ollamaCall, anthropicCall] = withoutTagLookups(fetchMock.mock.calls);
+    const ollamaBody = JSON.parse(String(ollamaCall[1]?.body));
+    const anthropicBody = JSON.parse(String(anthropicCall[1]?.body));
     expect(ollamaBody.messages[0]).toEqual({role: 'system', content: expectedSystem});
     expect(anthropicBody.request.systemPrompt).toBe(expectedSystem);
   });

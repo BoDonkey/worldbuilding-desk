@@ -93,6 +93,16 @@ loopback and the selected model is verified local; remote endpoints and Ollama
 cloud models cross the egress boundary and must not inherit local-provider
 claims or policy.
 
+One provider-route classification (`services/llm/providerRoute.ts`) drives
+the data-flow disclosures and consultation accounting: `private-local` only
+for loopback Ollama with a model that `/api/tags` lists as installed and not
+cloud; anything unverified is disclosed and budgeted as remote. The request
+policy enforces the same rule before any text is sent: the desktop main
+process (and the browser build's Ollama provider) reads `/api/tags`, refuses
+cloud and not-installed models, and auto-selects only local models. Remote
+Ollama addresses are blocked outright. There is no opt-in for Ollama cloud
+models; private mode is the only mode.
+
 Provider API keys belong to the desktop main process. They are encrypted with
 the operating system keychain (Electron `safeStorage`) and stored under the
 app's user data folder; when OS encryption is unavailable the app refuses to
@@ -274,10 +284,10 @@ every visual detail.
    `cypress-smoke` has failed on `main` since the character-lab and stat-peek
    specs landed (two editor-timing assertions), so routed-UI verification is
    local-only.
-2. Provider routes are not yet classified for privacy: Ollama is disclosed
-   as on-device without verifying a loopback endpoint and a locally installed
-   model (Slice 3.12b). Credential storage, endpoint policy, and the renderer
-   CSP landed in Slice 3.12a.
+2. Resolved in Slices 3.12a–3.12b: provider keys, endpoint policy, renderer
+   CSP, and private-local route classification. Remaining egress worth
+   watching: the embedding-model download from Hugging Face/jsDelivr (no
+   author content).
 3. The rule evaluation classes are tested and hardened (Slice 3.11) but no
    app path uses them yet; wiring them in (backlog R3–R5) must keep rule
    output to derived views and author-confirmed proposals.
@@ -294,7 +304,7 @@ every visual detail.
 
 Evidence for 1–5 and 7: `docs/archive/architecture-review-2026-10-03.md`.
 Scheduled in `docs/road-to-market.md`: risk 1 through the slice close-out
-rule (CI green, including `cypress-smoke`), risk 2 as Slice 3.12b (3.12a done), risk 3 as
+rule (CI green, including `cypress-smoke`), risk 2 as Slices 3.12a–3.12b (done), risk 3 as
 Slice 3.11 (done), risk 4 as Slice 3.14, risk 5 as Slice 3.13, and the dependency
 part of risk 7 as Slice 3.15.
 

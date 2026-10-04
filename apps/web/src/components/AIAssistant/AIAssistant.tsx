@@ -553,7 +553,7 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
   const coachEvidenceLabel = selectedText ? 'Selected passage' : 'Current scene';
   const inspectorSettings = aiConfig?.inspectorSettings;
   const coachConsultationEnabled = inspectorSettings?.enableAIConsultation !== false;
-  const budget = useConsultationBudget(projectId, inspectorSettings, aiConfig?.provider);
+  const budget = useConsultationBudget(projectId, inspectorSettings, aiConfig);
 
   const handleAskCoach = useCallback(async () => {
     if (!coachEvidence) return;

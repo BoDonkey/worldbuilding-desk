@@ -157,6 +157,32 @@ describe('testOllamaConnection', () => {
     expect(result.details).toContain('Configured model "llama3.1" is installed.');
   });
 
+  it('blocks a configured Ollama cloud model and hides cloud models from the list', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          models: [{name: 'gpt-oss:20b-cloud', remote_host: 'https://ollama.com:443'}, {name: 'mistral'}]
+        })
+      })
+    );
+    const result = await testOllamaConnection({model: 'gpt-oss:20b-cloud'});
+    expect(result.tone).toBe('error');
+    expect(result.summary).toMatch(/Ollama cloud model\. Private mode blocks it/);
+    expect(result.detectedModels).toEqual(['mistral']);
+    expect(result.details).toContain('1 Ollama cloud model(s) are hidden because they run off this computer.');
+  });
+
+  it('refuses a remote Ollama address without contacting it', async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+    const result = await testOllamaConnection({baseUrl: 'http://192.168.1.20:11434', model: 'mistral'});
+    expect(result.tone).toBe('error');
+    expect(result.summary).toMatch(/Remote Ollama addresses are blocked/);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   it('flags a configured model that is not installed', async () => {
     vi.stubGlobal(
       'fetch',

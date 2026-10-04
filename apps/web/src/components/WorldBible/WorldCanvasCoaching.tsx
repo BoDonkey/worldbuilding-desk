@@ -97,9 +97,11 @@ export function WorldCanvasCoaching({
     selectedIds.has(`${reference.sourceType}:${reference.id}`)
   );
 
-  const disclosure = aiConfig?.provider === 'ollama'
+  const disclosure = budget.route.kind === 'private-local'
     ? 'Runs locally. The focused Canvas text, selected reference names or titles, and craft excerpts stay on this computer.'
-    : aiConfig?.provider
+    : budget.route.kind !== 'hosted'
+      ? budget.route.reason ?? null
+      : aiConfig?.provider && aiConfig.provider !== 'ollama'
       ? `Sends the focused Canvas text, selected reference names or titles, and retrieved craft excerpts to ${HOSTED_PROVIDER_NAMES[aiConfig.provider]}’s servers only when you choose an action. Source Note text and manuscript prose are not sent.`
       : null;
 

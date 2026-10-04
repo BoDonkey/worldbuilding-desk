@@ -1,9 +1,10 @@
-import {fireEvent, render, renderHook, screen, act} from '@testing-library/react';
-import {describe, expect, it, vi} from 'vitest';
+import {fireEvent, render, renderHook, screen, act, waitFor} from '@testing-library/react';
+import {afterEach, describe, expect, it, vi} from 'vitest';
 import {ConsultationBudgetNotice} from './ConsultationBudgetNotice';
 import {useConsultationBudget} from '../../hooks/useConsultationBudget';
 import {getConsultationBudgetStatus, recordConsultation} from '../../services/editor';
-import type {InspectorSettings} from '../../entityTypes';
+import type {InspectorSettings, ProjectAISettings} from '../../entityTypes';
+import {clearInstalledOllamaModelsCache} from '../../services/llm/ollamaModels';
 
 const inspector = (limit: number): InspectorSettings => ({
   enableAIConsultation: true,
@@ -82,9 +83,21 @@ describe('ConsultationBudgetNotice', () => {
   });
 });
 
+const HOSTED = {provider: 'anthropic', configs: {}} as unknown as ProjectAISettings;
+const ollamaConfig = (model: string) =>
+  ({provider: 'ollama', configs: {ollama: {baseUrl: 'http://localhost:11434', model}}}) as unknown as ProjectAISettings;
+function stubOllamaTags(models: Array<Record<string, unknown>>) {
+  vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({models}), {status: 200})));
+}
+
 describe('useConsultationBudget', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    clearInstalledOllamaModelsCache();
+  });
+
   it('spends against the project budget and re-renders the new status', () => {
-    const {result} = renderHook(() => useConsultationBudget('p5', inspector(3), 'anthropic'));
+    const {result} = renderHook(() => useConsultationBudget('p5', inspector(3), HOSTED));
 
     expect(result.current.status.remaining).toBe(3);
     expect(result.current.blocked).toBe(false);
@@ -104,7 +117,7 @@ describe('useConsultationBudget', () => {
   });
 
   it('unblocks in place when the author grants more for today', () => {
-    const {result} = renderHook(() => useConsultationBudget('p6', inspector(1), 'anthropic'));
+    const {result} = renderHook(() => useConsultationBudget('p6', inspector(1), HOSTED));
 
     act(() => result.current.spend('assistant'));
     expect(result.current.blocked).toBe(true);
@@ -115,8 +128,10 @@ describe('useConsultationBudget', () => {
     expect(result.current.status.configuredLimit).toBe(1);
   });
 
-  it('does not spend the budget for a local provider', () => {
-    const {result} = renderHook(() => useConsultationBudget('p7', inspector(2), 'ollama'));
+  it('does not spend the budget for a verified private-local Ollama model', async () => {
+    stubOllamaTags([{name: 'qwen3:8b'}]);
+    const {result} = renderHook(() => useConsultationBudget('p7', inspector(2), ollamaConfig('qwen3:8b')));
+    await waitFor(() => expect(result.current.isLocal).toBe(true));
 
     act(() => {
       result.current.spend('assistant');
@@ -124,9 +139,28 @@ describe('useConsultationBudget', () => {
       result.current.spend('assistant');
     });
 
-    expect(result.current.isLocal).toBe(true);
+    expect(result.current.route.kind).toBe('private-local');
     expect(result.current.status.used).toBe(0);
     expect(result.current.status.localUsed).toBe(3);
     expect(result.current.blocked).toBe(false);
+  });
+
+  it('budgets an Ollama cloud model and an unverifiable Ollama model', async () => {
+    stubOllamaTags([{name: 'gpt-oss:120b-cloud', remote_host: 'https://ollama.com:443'}]);
+    const cloud = renderHook(() => useConsultationBudget('p8', inspector(2), ollamaConfig('gpt-oss:120b-cloud')));
+    expect(cloud.result.current.route.kind).toBe('ollama-cloud');
+    act(() => cloud.result.current.spend('assistant'));
+    expect(cloud.result.current.status.used).toBe(1);
+
+    clearInstalledOllamaModelsCache();
+    vi.stubGlobal('fetch', vi.fn(async () => {
+      throw new TypeError('Failed to fetch');
+    }));
+    const unreachable = renderHook(() => useConsultationBudget('p9', inspector(2), ollamaConfig('qwen3:8b')));
+    await waitFor(() => expect(vi.mocked(fetch)).toHaveBeenCalled());
+    expect(unreachable.result.current.route.kind).toBe('ollama-unverified');
+    expect(unreachable.result.current.isLocal).toBe(false);
+    act(() => unreachable.result.current.spend('assistant'));
+    expect(unreachable.result.current.status.used).toBe(1);
   });
 });

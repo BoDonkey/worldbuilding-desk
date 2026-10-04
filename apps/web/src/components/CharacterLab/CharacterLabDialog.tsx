@@ -54,7 +54,7 @@ export function CharacterLabDialog({
   const modelRun = useModelRun();
   const inspector = lab.aiConfig?.inspectorSettings;
   const consultationEnabled = inspector?.enableAIConsultation !== false;
-  const budget = useConsultationBudget(projectId, inspector, lab.aiConfig?.provider);
+  const budget = useConsultationBudget(projectId, inspector, lab.aiConfig);
   const [mode, setMode] = useState<CharacterLabMode>('talk');
   const [position, setPosition] = useState<CharacterVoicePosition>(defaultPosition);
   const [input, setInput] = useState('');
@@ -96,7 +96,7 @@ export function CharacterLabDialog({
 
   const name = context?.name ?? 'this character';
   const disclosure = describeCharacterLabDataFlow(
-    lab.aiConfig,
+    budget.route,
     `${name}’s World Bible record, accepted facts, dialogue style, story state, and this conversation`
   );
   const send = async () => {

@@ -5,7 +5,7 @@ import {
   DEFAULT_CONSULTATION_LIMIT,
   getConsultationBudgetStatus,
   grantExtraConsultations,
-  isLocalConsultationProvider,
+  isPrivateLocalConsultation,
   LOCAL_CONSULTATION_DAILY_GUARD,
   recordConsultation
 } from './inspectorBudgetService';
@@ -42,6 +42,9 @@ const storage = () => (globalThis as {localStorage: Storage}).localStorage;
 beforeEach(() => {
   (globalThis as {localStorage: Storage}).localStorage = new MemoryStorage();
 });
+
+
+const PRIVATE_LOCAL = {isPrivateLocal: true};
 
 describe('inspectorBudgetService — scope', () => {
   it('starts empty', () => {
@@ -96,14 +99,17 @@ describe('inspectorBudgetService — scope', () => {
 
 describe('inspectorBudgetService — Ollama exemption', () => {
   it('identifies local providers', () => {
-    expect(isLocalConsultationProvider('ollama')).toBe(true);
-    expect(isLocalConsultationProvider('anthropic')).toBe(false);
-    expect(isLocalConsultationProvider(undefined)).toBe(false);
+    expect(isPrivateLocalConsultation(PRIVATE_LOCAL)).toBe(true);
+    // A provider name is never enough: unverified or cloud Ollama stays budgeted.
+    expect(isPrivateLocalConsultation('ollama')).toBe(false);
+    expect(isPrivateLocalConsultation({isPrivateLocal: false})).toBe(false);
+    expect(isPrivateLocalConsultation('anthropic')).toBe(false);
+    expect(isPrivateLocalConsultation(undefined)).toBe(false);
   });
 
   it('does not spend the budget for local requests', () => {
-    recordConsultation(projectId, 'assistant', 'ollama', 20);
-    recordConsultation(projectId, 'writing-coach', 'ollama', 20);
+    recordConsultation(projectId, 'assistant', PRIVATE_LOCAL, 20);
+    recordConsultation(projectId, 'writing-coach', PRIVATE_LOCAL, 20);
 
     const status = getConsultationBudgetStatus(projectId, 20);
     expect(status.used).toBe(0);
@@ -115,18 +121,18 @@ describe('inspectorBudgetService — Ollama exemption', () => {
     for (let i = 0; i < 20; i += 1) recordConsultation(projectId, 'assistant', 'anthropic', 20);
 
     expect(canSpendConsultation(projectId, 20, 'anthropic')).toBe(false);
-    expect(canSpendConsultation(projectId, 20, 'ollama')).toBe(true);
+    expect(canSpendConsultation(projectId, 20, PRIVATE_LOCAL)).toBe(true);
   });
 
   it('still stops a runaway local loop at the separate guard', () => {
     for (let i = 0; i < LOCAL_CONSULTATION_DAILY_GUARD; i += 1) {
-      recordConsultation(projectId, 'assistant', 'ollama', 20);
+      recordConsultation(projectId, 'assistant', PRIVATE_LOCAL, 20);
     }
 
     const status = getConsultationBudgetStatus(projectId, 20);
     expect(status.localGuardExhausted).toBe(true);
     expect(status.exhausted).toBe(false);
-    expect(canSpendConsultation(projectId, 20, 'ollama')).toBe(false);
+    expect(canSpendConsultation(projectId, 20, PRIVATE_LOCAL)).toBe(false);
   });
 });
 
@@ -156,7 +162,7 @@ describe('inspectorBudgetService — reset boundaries', () => {
     const afterMidnight = new Date(2026, 8, 20, 0, 1, 0);
 
     recordConsultation(projectId, 'assistant', 'anthropic', 20, lateTonight);
-    recordConsultation(projectId, 'assistant', 'ollama', 20, lateTonight);
+    recordConsultation(projectId, 'assistant', PRIVATE_LOCAL, 20, lateTonight);
     grantExtraConsultations(projectId, 10, 20, lateTonight);
 
     const status = getConsultationBudgetStatus(projectId, 20, afterMidnight);

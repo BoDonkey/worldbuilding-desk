@@ -1,19 +1,22 @@
 import {useCallback, useEffect, useMemo, useState} from 'react';
-import type {AIProviderId, InspectorSettings} from '../entityTypes';
+import type {InspectorSettings, ProjectAISettings} from '../entityTypes';
 import {
   DEFAULT_CONSULTATION_LIMIT,
   getConsultationBudgetStatus,
   grantExtraConsultations,
-  isLocalConsultationProvider,
   recordConsultation,
   type ConsultationBudgetStatus,
   type ConsultationFeature
 } from '../services/editor';
+import type {ProviderRoute} from '../services/llm/providerRoute';
+import {useProviderRoute} from './useProviderRoute';
 
 export interface UseConsultationBudget {
   status: ConsultationBudgetStatus;
-  /** True when this project's provider is local, so requests do not spend the budget. */
+  /** True only for a verified private-local route, so requests do not spend the budget. */
   isLocal: boolean;
+  /** The verified provider route, for the matching data-flow disclosure. */
+  route: ProviderRoute;
   /** True when the request should be refused: budget exhausted, or the local loop guard tripped. */
   blocked: boolean;
   /** Plain-language reason the request was refused, for the caller's own error surface. */
@@ -33,10 +36,11 @@ export interface UseConsultationBudget {
 export function useConsultationBudget(
   projectId: string | null,
   inspector: InspectorSettings | undefined,
-  provider: AIProviderId | undefined
+  aiConfig: Pick<ProjectAISettings, 'provider' | 'configs'> | undefined | null
 ): UseConsultationBudget {
   const configuredLimit = inspector?.maxConsultationsPerDay ?? DEFAULT_CONSULTATION_LIMIT;
-  const isLocal = isLocalConsultationProvider(provider);
+  const route = useProviderRoute(aiConfig);
+  const isLocal = route.isPrivateLocal;
   const [version, setVersion] = useState(0);
 
   const refresh = useCallback(() => setVersion((current) => current + 1), []);
@@ -55,10 +59,10 @@ export function useConsultationBudget(
   const spend = useCallback(
     (feature: ConsultationFeature) => {
       if (!projectId) return;
-      recordConsultation(projectId, feature, provider, configuredLimit);
+      recordConsultation(projectId, feature, route, configuredLimit);
       refresh();
     },
-    [projectId, provider, configuredLimit, refresh]
+    [projectId, route, configuredLimit, refresh]
   );
 
   const grantMore = useCallback(() => {
@@ -79,7 +83,7 @@ export function useConsultationBudget(
   // identity every render would re-create their handlers (and, where a handler is an effect
   // dependency, loop).
   return useMemo(
-    () => ({status, isLocal, blocked, blockedMessage, spend, grantMore, refresh}),
-    [status, isLocal, blocked, blockedMessage, spend, grantMore, refresh]
+    () => ({status, isLocal, route, blocked, blockedMessage, spend, grantMore, refresh}),
+    [status, isLocal, route, blocked, blockedMessage, spend, grantMore, refresh]
   );
 }

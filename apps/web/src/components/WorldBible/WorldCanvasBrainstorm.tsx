@@ -1,4 +1,5 @@
 import {useEffect, useMemo, useState} from 'react';
+import {PRIVATE_LOCAL_DISCLOSURE} from '../../services/llm/providerRoute';
 import {Link} from 'react-router';
 import type {
   ProjectAISettings,
@@ -83,9 +84,11 @@ export function WorldCanvasBrainstorm({
   const inspector = aiConfig?.inspectorSettings;
   const consultationEnabled = inspector?.enableAIConsultation !== false;
   const provider = aiConfig?.provider;
-  const disclosure = provider === 'ollama'
-    ? 'Runs on your local Ollama model. Nothing leaves this computer.'
-    : provider
+  const disclosure = budget.route.kind === 'private-local'
+    ? PRIVATE_LOCAL_DISCLOSURE
+    : budget.route.kind !== 'hosted'
+      ? budget.route.reason ?? null
+      : provider && provider !== 'ollama'
       ? `Sends the core idea, ${focus.type === 'lens' ? 'this lens sketch, ' : ''}open threads, and World Bible record names to ${HOSTED_PROVIDER_NAMES[provider]}’s servers under that provider’s terms — only when you click, never in the background.`
       : null;
 

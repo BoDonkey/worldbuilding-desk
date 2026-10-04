@@ -847,6 +847,20 @@ runtime schema, and nothing here changes the roadmap's status board.
 ## Verification Status
 
 ### Verified Recently
+- Slice 3.12b private-local AI classification: one provider-route
+  classifier (`services/llm/providerRoute.ts`, `hooks/useProviderRoute.ts`)
+  drives disclosures and the consultation budget. Only loopback Ollama with a
+  model `/api/tags` lists as installed and not cloud is `private-local` (the
+  on-device copy and the budget exemption); cloud models (`remote_host` /
+  `remote_model` or a `cloud` tag), remote addresses, not-installed models,
+  and an Ollama that does not answer fail closed. A bare `'ollama'` provider
+  name no longer exempts a request from the budget. The desktop main process
+  and the browser build's Ollama provider verify the model before sending,
+  refuse cloud and missing models, and auto-pick only local models (main no
+  longer falls back to an unverified `llama3.1`). Settings, the character
+  lab, and World Canvas coaching/brainstorm show the verified state; the
+  Ollama connection test hides cloud models and blocks a configured one.
+  Remote Ollama stays blocked by author decision.
 - Slice 3.12a provider credential and endpoint hardening: hosted-provider
   API keys live in the desktop main process, encrypted with the OS keychain
   (`safeStorage`, `providerKeyVault.ts`); saving fails closed when OS

@@ -22,6 +22,24 @@ describe('AI provider setup UX', () => {
     cy.contains('label', 'Gemini API Key').should('not.exist');
   });
 
+  it('shows the on-device promise only for a verified local Ollama model', () => {
+    cy.intercept('GET', 'http://localhost:11434/api/tags', {
+      statusCode: 200,
+      body: {
+        models: [
+          {name: 'llama3.1:latest'},
+          {name: 'gpt-oss:20b-cloud', remote_host: 'https://ollama.com:443', remote_model: 'gpt-oss:20b'}
+        ]
+      }
+    });
+    cy.contains('label', 'Provider').parent().find('select').select('Ollama (Local)');
+    cy.contains('No story text ever leaves your computer').should('be.visible');
+
+    cy.contains('label', /^Model/).parent().find('input').clear().type('gpt-oss:20b-cloud');
+    cy.contains(/"gpt-oss:20b-cloud" is an Ollama cloud model.*Private mode blocks it/).should('be.visible');
+    cy.contains('No story text ever leaves your computer').should('not.exist');
+  });
+
   it('reports a missing key without making a network call', () => {
     cy.contains('label', 'Provider').parent().find('select').select('Anthropic (Claude)');
     cy.contains('button', 'Test connection').click();

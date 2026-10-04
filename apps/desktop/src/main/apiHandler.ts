@@ -7,6 +7,7 @@ import {
   LLMRequestPayload
 } from './providers/ProviderRegistry';
 import {isProviderId, resolveProviderBaseUrl, type ProviderId} from './endpointPolicy';
+import {resolveOllamaRequestModel} from './ollamaModelPolicy';
 import {
   isHostedProviderId,
   type HostedProviderId,
@@ -152,10 +153,16 @@ export function validatePayload(payload: unknown): asserts payload is LLMPayload
   }
 }
 
-async function resolveCredentials(vault: ProviderKeyVault, payload: LLMPayload) {
+/**
+ * Everything a provider call needs that the renderer may not decide: the
+ * policy-checked address, the key from the vault, and for Ollama the model
+ * verified as installed locally (cloud and missing models are refused).
+ */
+async function resolveCredentials(vault: ProviderKeyVault, payload: LLMPayload, signal?: AbortSignal) {
   const baseUrl = resolveProviderBaseUrl(payload.providerId, payload.providerConfig?.baseUrl);
   if (!isHostedProviderId(payload.providerId)) {
-    return {baseUrl, apiKey: undefined};
+    const model = await resolveOllamaRequestModel(baseUrl, payload.request.model, {signal});
+    return {baseUrl, apiKey: undefined, request: {...payload.request, model}};
   }
   const apiKey = await vault.get(payload.providerId);
   if (!apiKey) {
@@ -163,7 +170,7 @@ async function resolveCredentials(vault: ProviderKeyVault, payload: LLMPayload) 
       `${PROVIDER_LABELS[payload.providerId]} API key is missing. Please add it in Settings.`
     );
   }
-  return {baseUrl, apiKey};
+  return {baseUrl, apiKey, request: payload.request};
 }
 
 /** In-flight streams by request id, so the renderer can stop one (a slow local model keeps
@@ -189,8 +196,8 @@ export function setupAPIHandlers(vault: ProviderKeyVault) {
   ipcMain.handle('llm:complete', async (_event, payload: LLMPayload) => {
     validatePayload(payload);
 
-    const {providerId, request} = payload;
-    const {apiKey, baseUrl} = await resolveCredentials(vault, payload);
+    const {providerId} = payload;
+    const {apiKey, baseUrl, request} = await resolveCredentials(vault, payload);
     const adapter = createCompletionAdapter(providerId, {
       apiKey,
       baseUrl,
@@ -203,12 +210,12 @@ export function setupAPIHandlers(vault: ProviderKeyVault) {
   ipcMain.handle('llm:stream', async (event, payload: LLMPayload) => {
     validatePayload(payload);
 
-    const {providerId, request, requestId = randomUUID()} = payload;
+    const {providerId, requestId = randomUUID()} = payload;
 
     const controller = new AbortController();
     activeStreams.set(requestId, controller);
     try {
-      const {apiKey, baseUrl} = await resolveCredentials(vault, payload);
+      const {apiKey, baseUrl, request} = await resolveCredentials(vault, payload, controller.signal);
       const adapter = createStreamingAdapter(providerId, {
         apiKey,
         baseUrl,

@@ -53,7 +53,7 @@ export function CharacterSceneDialog({
   const modelRun = useModelRun();
   const inspector = lab.aiConfig?.inspectorSettings;
   const consultationEnabled = inspector?.enableAIConsultation !== false;
-  const budget = useConsultationBudget(projectId, inspector, lab.aiConfig?.provider);
+  const budget = useConsultationBudget(projectId, inspector, lab.aiConfig);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [position, setPosition] = useState<CharacterVoicePosition>(defaultPosition);
   const [directionKind, setDirectionKind] = useState<CharacterSceneDirection['kind']>('directed');
@@ -112,7 +112,7 @@ export function CharacterSceneDialog({
   if (!isOpen) return null;
 
   const disclosure = describeCharacterLabDataFlow(
-    lab.aiConfig,
+    budget.route,
     'the chosen characters’ World Bible records, accepted facts, dialogue styles, and story state, plus your setup or the listed story threads'
   );
   const direction: CharacterSceneDirection =

@@ -56,7 +56,7 @@ export function WorldCanvasView({
   const [canonDraft, setCanonDraft] = useState<{key: string; target: BridgeTarget; categoryId: string; name: string} | null>(null);
   const [busyKey, setBusyKey] = useState<string | null>(null);
   const projectId = worldCanvas.canvas?.projectId ?? '';
-  const budget = useConsultationBudget(projectId || null, aiConfig?.inspectorSettings, aiConfig?.provider);
+  const budget = useConsultationBudget(projectId || null, aiConfig?.inspectorSettings, aiConfig);
   const {requestConfirm, confirmDialog} = useConfirmDialog();
   const canonNames = useMemo(() => collectCanonNames(entities, aliases), [entities, aliases]);
   const lensByKind = useMemo(() => new Map(worldCanvas.canvas?.lenses.map((lens) => [lens.kind, lens]) ?? []), [worldCanvas.canvas?.lenses]);

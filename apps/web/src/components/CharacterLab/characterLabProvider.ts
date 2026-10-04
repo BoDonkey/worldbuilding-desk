@@ -1,7 +1,7 @@
 import type {ProjectAISettings} from '../../entityTypes';
 import {describeError} from '../../services/errors';
 import {LLMService} from '../../services/llm/LLMService';
-import {HOSTED_PROVIDER_NAMES} from '../../services/llm/providerConfig';
+import {describeRouteDataFlow, type ProviderRoute} from '../../services/llm/providerRoute';
 
 const NOT_CONFIGURED = 'AI provider is not configured. Add one in Settings to use the character lab.';
 
@@ -16,13 +16,8 @@ export function getCharacterLabProviderIssue(aiConfig: ProjectAISettings | undef
   }
 }
 
-/** Point-of-use data disclosure; `sentMaterial` names what a hosted run sends. */
-export function describeCharacterLabDataFlow(
-  aiConfig: ProjectAISettings | undefined,
-  sentMaterial: string
-): string | null {
-  const provider = aiConfig?.provider;
-  if (provider === 'ollama') return 'Runs on your local Ollama model. Nothing leaves this computer.';
-  if (!provider) return null;
-  return `Sends ${sentMaterial} to ${HOSTED_PROVIDER_NAMES[provider]}’s servers only when you send. Manuscript prose is not sent.`;
+/** Point-of-use data disclosure for the verified route; `sentMaterial` names what a hosted run sends. */
+export function describeCharacterLabDataFlow(route: ProviderRoute, sentMaterial: string): string | null {
+  const sentence = describeRouteDataFlow(route, sentMaterial);
+  return route.kind === 'hosted' && sentence ? `${sentence} Manuscript prose is not sent.` : sentence;
 }

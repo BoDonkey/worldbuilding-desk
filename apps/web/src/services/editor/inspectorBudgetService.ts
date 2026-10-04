@@ -106,10 +106,16 @@ export interface ConsultationBudgetStatus {
   day: string;
 }
 
-const LOCAL_PROVIDERS: ReadonlySet<string> = new Set(['ollama']);
+/**
+ * What a consultation is charged against. Only a route the provider-route
+ * classifier verified as private-local (loopback Ollama with a locally
+ * installed model) is exempt; a bare provider name, `'ollama'` included, is
+ * always budgeted, so an unverified or cloud Ollama model fails closed.
+ */
+export type ConsultationRoute = {isPrivateLocal: boolean} | AIProviderId | string | null | undefined;
 
-export const isLocalConsultationProvider = (provider?: AIProviderId | string | null): boolean =>
-  typeof provider === 'string' && LOCAL_PROVIDERS.has(provider);
+export const isPrivateLocalConsultation = (route: ConsultationRoute): boolean =>
+  typeof route === 'object' && route !== null && route.isPrivateLocal === true;
 
 /** Local calendar day, not UTC — the reset the author sees is the reset that happens. */
 const localDayKey = (now: Date = new Date()): string => {
@@ -264,11 +270,11 @@ export const getConsultationBudgetStatus = (
 export const canSpendConsultation = (
   projectId: string,
   configuredLimit: number,
-  provider?: AIProviderId | string | null,
+  route?: ConsultationRoute,
   now: Date = new Date()
 ): boolean => {
   const status = getConsultationBudgetStatus(projectId, configuredLimit, now);
-  return isLocalConsultationProvider(provider) ? !status.localGuardExhausted : !status.exhausted;
+  return isPrivateLocalConsultation(route) ? !status.localGuardExhausted : !status.exhausted;
 };
 
 /**
@@ -278,13 +284,13 @@ export const canSpendConsultation = (
 export const recordConsultation = (
   projectId: string,
   feature: ConsultationFeature,
-  provider?: AIProviderId | string | null,
+  route?: ConsultationRoute,
   configuredLimit: number = DEFAULT_CONSULTATION_LIMIT,
   now: Date = new Date()
 ): ConsultationBudgetStatus => {
   const ledger = readLedger(projectId, now);
 
-  if (isLocalConsultationProvider(provider)) {
+  if (isPrivateLocalConsultation(route)) {
     ledger.local += 1;
   } else {
     ledger.total += 1;

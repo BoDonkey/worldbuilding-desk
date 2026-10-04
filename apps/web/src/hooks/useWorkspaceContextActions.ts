@@ -51,7 +51,7 @@ export function useWorkspaceContextActions(params: {
   const consultationBudget = useConsultationBudget(
     activeProjectId,
     projectSettings?.aiSettings?.inspectorSettings,
-    projectSettings?.aiSettings?.provider
+    projectSettings?.aiSettings
   );
 
   const handleOpenAIContext = useCallback(

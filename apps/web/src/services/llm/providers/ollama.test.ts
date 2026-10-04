@@ -1,5 +1,6 @@
 import {afterEach, describe, expect, it, vi} from 'vitest';
 import {OllamaProvider} from './ollama';
+import {answerOllamaTags, withoutTagLookups} from '../../../test/ollamaTagsStub';
 
 const makeStream = (lines: string[]): ReadableStream<Uint8Array> => {
   const encoder = new TextEncoder();
@@ -19,13 +20,13 @@ describe('OllamaProvider', () => {
   });
 
   it('streams thinking chunks separately from content chunks', async () => {
-    const fetchMock = vi.fn().mockResolvedValue({
+    const fetchMock = vi.fn(answerOllamaTags(async () => ({
       ok: true,
       body: makeStream([
         JSON.stringify({message: {thinking: 'Considering names.'}}),
         JSON.stringify({message: {content: 'The Echo Blade'}})
       ])
-    });
+    })));
     vi.stubGlobal('fetch', fetchMock);
 
     const provider = new OllamaProvider({
@@ -42,7 +43,7 @@ describe('OllamaProvider', () => {
     }
 
     expect(chunks).toEqual(['<think>Considering names.</think>', 'The Echo Blade']);
-    expect(JSON.parse(fetchMock.mock.calls[0]?.[1]?.body)).toMatchObject({
+    expect(JSON.parse(String(withoutTagLookups(fetchMock.mock.calls)[0]?.[1]?.body))).toMatchObject({
       model: 'qwen3',
       stream: true,
       think: true
@@ -50,10 +51,10 @@ describe('OllamaProvider', () => {
   });
 
   it('includes the system prompt in direct Ollama payloads', async () => {
-    const fetchMock = vi.fn().mockResolvedValue({
+    const fetchMock = vi.fn(answerOllamaTags(async () => ({
       ok: true,
       json: async () => ({message: {content: '{"ok":true}'}})
-    });
+    })));
     vi.stubGlobal('fetch', fetchMock);
 
     const provider = new OllamaProvider({
@@ -67,7 +68,7 @@ describe('OllamaProvider', () => {
       messages: [{role: 'user', content: 'Draft an item.'}]
     });
 
-    expect(JSON.parse(fetchMock.mock.calls[0]?.[1]?.body)).toMatchObject({
+    expect(JSON.parse(String(withoutTagLookups(fetchMock.mock.calls)[0]?.[1]?.body))).toMatchObject({
       model: 'qwen3',
       stream: false,
       format: 'json',

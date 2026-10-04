@@ -45,7 +45,7 @@ export function WritingCoachSection({dashboard, projectId, aiConfig}: WritingCoa
 
   const inspector = aiConfig?.inspectorSettings;
   const consultationEnabled = inspector?.enableAIConsultation !== false;
-  const budget = useConsultationBudget(projectId, inspector, aiConfig?.provider);
+  const budget = useConsultationBudget(projectId, inspector, aiConfig);
   const hasEvidence = dashboard.scenes.length > 0;
 
   const askCoach = async () => {

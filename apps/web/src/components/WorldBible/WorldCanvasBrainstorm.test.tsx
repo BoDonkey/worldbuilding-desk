@@ -34,6 +34,7 @@ const hostedConfig: ProjectAISettings = {
 const buildBudget = (overrides: Partial<UseConsultationBudget> = {}): UseConsultationBudget => ({
   status: getConsultationBudgetStatus('project-1', 20),
   isLocal: false,
+  route: {kind: 'hosted', provider: 'anthropic', isPrivateLocal: false, allowsRequests: true},
   blocked: false,
   blockedMessage: null,
   spend: vi.fn(),

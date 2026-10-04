@@ -19,6 +19,7 @@ import {
   getHostedResponseCostCeiling
 } from '../../services/llm/hostedResponsePolicy';
 import {testHostedProviderConnection, testOllamaConnection} from '../../services/llm/connectionTest';
+import {useProviderRoute} from '../../hooks/useProviderRoute';
 import {
   clearProviderKey,
   getProviderKeyStatus,
@@ -32,7 +33,6 @@ import {InlineAlert, type InlineAlertVariant} from '../common';
 import {describeError} from '../../services/errors';
 import {
   getConsultationBudgetStatus,
-  isLocalConsultationProvider,
   LOCAL_CONSULTATION_DAILY_GUARD
 } from '../../services/editor';
 
@@ -115,6 +115,7 @@ export const AISettings: React.FC<AISettingsProps> = ({
   const [openaiKey, setOpenaiKey] = useState('');
   const [geminiKey, setGeminiKey] = useState('');
   const [keyStatus, setKeyStatus] = useState<ProviderKeyStatus | null>(null);
+  const providerRoute = useProviderRoute(aiSettings);
   const [toolName, setToolName] = useState('');
   const [toolKind, setToolKind] = useState<PromptToolKind>('persona');
   const [toolContent, setToolContent] = useState('');
@@ -315,7 +316,7 @@ export const AISettings: React.FC<AISettingsProps> = ({
     projectId ?? '__none__',
     inspectorSettings.maxConsultationsPerDay
   );
-  const budgetIsLocal = isLocalConsultationProvider(aiSettings.provider);
+  const budgetIsLocal = providerRoute.isPrivateLocal;
   const responseModel =
     currentModel || PROVIDER_FALLBACK_MODELS[aiSettings.provider] || 'provider default';
   const responseCostCeiling = getHostedResponseCostCeiling(
@@ -655,9 +656,11 @@ export const AISettings: React.FC<AISettingsProps> = ({
             ))}
           </select>
           <p className={styles.help}>
-            {aiSettings.provider === 'ollama'
-              ? 'Ollama runs entirely on your device. No story text ever leaves your computer.'
-              : `When you use the writing assistant, the necessary text is sent to ${PROVIDER_LABELS[aiSettings.provider]}'s servers under that provider's terms — only when you invoke it, never in the background.`}
+            {providerRoute.kind === 'private-local'
+              ? `Ollama runs entirely on your device with ${providerRoute.model ? `"${providerRoute.model}"` : 'an installed local model'}. No story text ever leaves your computer.`
+              : providerRoute.kind !== 'hosted'
+                ? providerRoute.reason
+                : `When you use the writing assistant, the necessary text is sent to ${PROVIDER_LABELS[aiSettings.provider]}'s servers under that provider's terms — only when you invoke it, never in the background.`}
           </p>
         </div>
 

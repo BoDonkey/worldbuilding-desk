@@ -1,6 +1,7 @@
 import type {AIProviderId, ProjectAISettings} from '../../entityTypes';
 import {LLMService} from './LLMService';
 import {PROVIDER_DEFAULT_BASE_URLS} from './providerConfig';
+import {isLoopbackUrl, parseOllamaTags, resolveLocalOllamaModel} from './providerRoute';
 import {
   getProviderKeyStatus,
   readBrowserProviderKey,
@@ -111,42 +112,51 @@ export async function testOllamaConnection(params: {
   const model = params.model?.trim() ?? '';
   const details: string[] = [];
 
+  if (!isLoopbackUrl(baseUrl)) {
+    return {
+      tone: 'error',
+      summary: 'Ollama must run on this computer (localhost or 127.0.0.1). Remote Ollama addresses are blocked.',
+      details
+    };
+  }
+
   try {
     const response = await fetch(`${baseUrl}/api/tags`);
     if (!response.ok) {
       throw new Error(`Ollama responded with ${response.status} ${response.statusText}.`);
     }
-    const data = await response.json();
-    const detectedModels: string[] = Array.isArray(data.models)
-      ? data.models
-          .map((entry: {name?: unknown}) => (typeof entry?.name === 'string' ? entry.name.trim() : ''))
-          .filter(Boolean)
-      : [];
+    const installed = parseOllamaTags(await response.json());
+    const localModels = installed.filter((entry) => !entry.cloud).map((entry) => entry.name);
+    const cloudCount = installed.length - localModels.length;
 
-    if (detectedModels.length === 0) {
-      throw new Error('Connected to Ollama, but no local models are installed.');
+    if (localModels.length === 0) {
+      throw new Error(
+        cloudCount > 0
+          ? 'Connected to Ollama, but only cloud models are installed. Pull a local model to keep your text on this computer.'
+          : 'Connected to Ollama, but no local models are installed.'
+      );
     }
 
     details.push(`Connected to ${baseUrl}.`);
-    details.push(`Detected ${detectedModels.length} installed model(s).`);
-    const modelIsInstalled = !model || detectedModels.includes(model);
+    details.push(`Detected ${localModels.length} installed model(s).`);
+    if (cloudCount > 0) details.push(`${cloudCount} Ollama cloud model(s) are hidden because they run off this computer.`);
+
+    const resolution = resolveLocalOllamaModel(installed, model || undefined);
     if (model) {
-      details.push(
-        modelIsInstalled
-          ? `Configured model "${model}" is installed.`
-          : `Configured model "${model}" is not installed locally.`
-      );
-    } else {
-      details.push(`No explicit model configured. The app will auto-detect "${detectedModels[0]}".`);
+      details.push(resolution.ok ? `Configured model "${model}" is installed.` : resolution.reason);
+    } else if (resolution.ok) {
+      details.push(`No explicit model configured. The app will auto-detect "${resolution.model}".`);
     }
 
     return {
-      tone: modelIsInstalled ? 'success' : 'error',
-      summary: modelIsInstalled
+      tone: resolution.ok ? 'success' : 'error',
+      summary: resolution.ok
         ? 'Ollama connection succeeded.'
-        : 'Ollama is reachable, but the configured model is not installed.',
+        : resolution.kind === 'ollama-cloud'
+          ? 'Ollama is reachable, but the configured model is an Ollama cloud model. Private mode blocks it.'
+          : 'Ollama is reachable, but the configured model is not installed.',
       details,
-      detectedModels
+      detectedModels: localModels
     };
   } catch (error) {
     const message = error instanceof Error ? error.message : '';

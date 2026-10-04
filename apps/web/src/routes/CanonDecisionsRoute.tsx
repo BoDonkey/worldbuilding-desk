@@ -247,12 +247,29 @@ function CanonDecisionsRoute() {
     : 'AI';
   const aiConsultationEnabled =
     projectSettings?.aiSettings?.inspectorSettings?.enableAIConsultation !== false;
-  // Routing canon decisions to local Ollama exempts them from the budget: `effectiveAIProviderId`
-  // already reflects that override, so the budget follows the provider actually used.
+  // The settings a canon-decision request actually uses: the local-Ollama override and the
+  // low-cost model included. The budget classifies this route, so the exemption applies only when
+  // that exact model is verified local.
+  const consultationAISettings = useMemo(() => {
+    const aiSettings = projectSettings?.aiSettings;
+    if (!aiSettings || canonDecisionProviderMode !== 'local-ollama') return aiSettings;
+    const lowCostModel = aiSettings.inspectorSettings?.lowCostModel?.trim();
+    return {
+      ...aiSettings,
+      provider: 'ollama' as const,
+      configs: {
+        ...aiSettings.configs,
+        ollama: {
+          ...aiSettings.configs?.ollama,
+          ...(lowCostModel ? {model: lowCostModel} : {})
+        }
+      }
+    };
+  }, [projectSettings?.aiSettings, canonDecisionProviderMode]);
   const budget = useConsultationBudget(
     activeProject?.id ?? null,
     projectSettings?.aiSettings?.inspectorSettings,
-    effectiveAIProviderId
+    consultationAISettings
   );
 
   const resolveCluster = async (
@@ -668,13 +685,7 @@ function CanonDecisionsRoute() {
     setFeedback(null);
 
     try {
-      const aiSettingsForConsultation =
-        canonDecisionProviderMode === 'local-ollama'
-          ? {
-              ...projectSettings.aiSettings,
-              provider: 'ollama' as const
-            }
-          : projectSettings.aiSettings;
+      const aiSettingsForConsultation = consultationAISettings ?? projectSettings.aiSettings;
       const service = new LLMService(aiSettingsForConsultation);
       budget.spend('canon-decision');
 

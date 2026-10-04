@@ -58,7 +58,7 @@ export function CharacterFromDescriptionDialog({
   const modelRun = useModelRun();
   const inspector = lab.aiConfig?.inspectorSettings;
   const consultationEnabled = inspector?.enableAIConsultation !== false;
-  const budget = useConsultationBudget(projectId, inspector, lab.aiConfig?.provider);
+  const budget = useConsultationBudget(projectId, inspector, lab.aiConfig);
   const [sessionId] = useState(() => crypto.randomUUID());
   const [description, setDescription] = useState('');
   const [authorInstructions, setAuthorInstructions] = useState('');
@@ -87,7 +87,7 @@ export function CharacterFromDescriptionDialog({
 
   if (!isOpen) return null;
 
-  const disclosure = describeCharacterLabDataFlow(lab.aiConfig, 'your description and instructions');
+  const disclosure = describeCharacterLabDataFlow(budget.route, 'your description and instructions');
 
   const draftProfile = async () => {
     const text = description.trim();

@@ -63,7 +63,7 @@ export function ProgressionContinuitySection({
   const visibleCandidates = candidates.filter((candidate) => !dismissedKeys.has(candidate.key));
   const inspector = aiConfig?.inspectorSettings;
   const consultationEnabled = inspector?.enableAIConsultation !== false;
-  const budget = useConsultationBudget(projectId, inspector, aiConfig?.provider);
+  const budget = useConsultationBudget(projectId, inspector, aiConfig);
 
   const dismiss = (key: string) => {
     dismissProgressionContinuityCandidate(projectId, key);

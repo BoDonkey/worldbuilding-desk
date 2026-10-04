@@ -1,4 +1,10 @@
 import type {LLMProvider, LLMRequest, LLMResponse} from '../types';
+import {
+  isLoopbackUrl,
+  isOllamaCloudModelName,
+  parseOllamaTags,
+  resolveLocalOllamaModel
+} from '../providerRoute';
 import {foldContextIntoSystemPrompt} from '../contextPrompt';
 
 interface OllamaProviderConfig {
@@ -100,32 +106,32 @@ export class OllamaProvider implements LLMProvider {
     };
   }
 
+  /**
+   * Private-local request policy: the model must be installed on this
+   * computer and not an Ollama cloud model, at a loopback address. With no
+   * model configured, the first installed local model is used.
+   */
   private async resolveModel(request: LLMRequest): Promise<string> {
-    const explicitModel = request.model?.trim() || this.model?.trim();
-    if (explicitModel) {
-      return explicitModel;
+    const baseUrl = this.getBaseUrl(request);
+    if (!isLoopbackUrl(baseUrl)) {
+      throw new Error('Ollama must run on this computer (localhost or 127.0.0.1). Remote Ollama addresses are blocked.');
+    }
+    const configured = request.model?.trim() || this.model?.trim();
+    if (configured && isOllamaCloudModelName(configured)) {
+      const refused = resolveLocalOllamaModel([], configured);
+      throw new Error(refused.ok ? 'Ollama cloud models are blocked.' : refused.reason);
     }
 
-    const response = await fetch(`${this.getBaseUrl(request)}/api/tags`, {
+    const response = await fetch(`${baseUrl}/api/tags`, {
       signal: request.signal
     });
     if (!response.ok) {
       throw new Error(`Ollama model lookup failed: ${response.status} ${response.statusText}`);
     }
 
-    const data = await response.json();
-    const firstModel = Array.isArray(data.models)
-      ? data.models.find(
-          (entry: {name?: unknown}) =>
-            typeof entry?.name === 'string' && entry.name.trim()
-        )
-      : null;
-
-    if (!firstModel?.name) {
-      throw new Error('No Ollama models are installed. Pull a model or enter one explicitly.');
-    }
-
-    return firstModel.name;
+    const resolution = resolveLocalOllamaModel(parseOllamaTags(await response.json()), configured);
+    if (!resolution.ok) throw new Error(resolution.reason);
+    return resolution.model;
   }
 
   private getBaseUrl(request: LLMRequest) {
