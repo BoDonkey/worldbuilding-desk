@@ -386,7 +386,7 @@ describe('Character lab', () => {
     });
   });
   describe('character from a description', () => {
-    const MARA = 'Mara Voss pilots the ferry on the Grey River. She is stubborn and hates bells.';
+    const MARA = 'Mara Voss pilots the ferry on the Grey River. She is stubborn and hates bells. She is 34 years old.';
     const profileReply = (name: string | null, quote = 'She is stubborn') => anthropicReply(JSON.stringify({
       name,
       stableFacts: [
@@ -403,7 +403,7 @@ describe('Character lab', () => {
       cy.contains('button', 'Start from a description').click();
     };
 
-    it('creates a draft character whose quoted facts wait in review and whose suggestions stay notes', () => {
+    it('creates a draft character whose quoted facts wait in review and whose kept suggestions land in Notes', () => {
       cy.intercept('POST', ANTHROPIC_STREAM, profileReply('Mara Voss')).as('profileRequest');
       openFromDescription();
 
@@ -420,10 +420,10 @@ describe('Character lab', () => {
         cy.contains('From your description: “She is stubborn”').should('be.visible');
         cy.contains('orphaned young').should('not.exist');
         cy.contains('1 fact was left out because it did not quote your description.').should('be.visible');
-        cy.get('input[aria-label="Suggestion 1"]').should('have.value', 'Hums old river songs while steering');
+        cy.get('textarea[aria-label="Suggestion 1"]').should('have.value', 'Hums old river songs while steering');
         cy.contains('button', 'Create draft character').click();
         cy.contains('[role="status"]', 'Created a draft character, Mara Voss').should('be.visible');
-        cy.contains('1 fact is waiting for your review in Source Notes').should('be.visible');
+        cy.contains('2 facts are waiting for your review in Source Notes').should('be.visible');
       });
 
       withDb((db) => Promise.all([
@@ -435,7 +435,10 @@ describe('Character lab', () => {
       ])).then(([entities, facts, proposals, notes, links]) => {
         const mara = entities.find((entity) => entity.name === 'Mara Voss');
         expect(mara?.needsCompletion).to.equal(true);
-        expect(mara?.fields).to.deep.equal({});
+        expect(mara?.fields).to.deep.equal({
+          description: `<p>${MARA}</p>`,
+          notes: '<p>Hums old river songs while steering</p>'
+        });
         expect(facts.map((fact) => fact.value)).not.to.include('stubborn');
         const note = notes.find((entry) => entry.title === 'Character lab: Mara Voss');
         expect(note?.content).to.contain(MARA);
@@ -456,6 +459,14 @@ describe('Character lab', () => {
       cy.contains('h3', 'Accepted Canon').parent().parent().should('contain.text', 'stubborn');
       withDb((db) => readAll<{value: unknown; targetId: string}>(db, 'canonical_facts')).then((facts) => {
         expect(facts.some((fact) => fact.value === 'stubborn')).to.equal(true);
+      });
+
+      cy.contains('article', '34 years old').within(() => {
+        cy.contains('button', /^Accept$/).click();
+      });
+      cy.contains('h3', 'Accepted Canon').parent().parent().should('contain.text', '34');
+      withDb((db) => readAll<{name: string; fields: Record<string, unknown>}>(db, 'entities')).then((entities) => {
+        expect(entities.find((entity) => entity.name === 'Mara Voss')?.fields).to.include({age: '34'});
       });
     });
 

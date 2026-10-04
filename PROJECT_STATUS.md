@@ -934,11 +934,16 @@ runtime schema, and nothing here changes the roadmap's status board.
   fact must quote the description (unquoted facts are dropped and counted).
   The author edits the name, unticks facts, and edits or drops suggestions,
   then explicitly accepts. That creates a draft `WorldEntity`
-  (`needsCompletion`, empty fields), a `character_dossier` Source Note with
+  (`needsCompletion`, its Description field holding the author's own
+  description and its Notes the kept suggestions), a `character_dossier`
+  Source Note with
   the description plus kept suggestions under a not-canon heading, its
   primary-subject link, and proposed facts whose evidence spans point into
-  the note. The facts are reviewed in Source Notes like any other; model
-  suggestions never enter World Bible fields. A name matching an existing
+  the note. The facts are reviewed in Source Notes like any other; unkept
+  suggestions never enter World Bible fields; an accepted age or occupation
+  fact fills an empty Age or Role field on the character entity. Generation
+  invents appearance, biography, personality, voice, wants, relationships,
+  and a secret as suggested details only. A name matching an existing
   character's canonical name or alias requires choosing **Add to <name>**
   (proposals only, no merge) or **Create a separate character**. Cypress
   covers create → review → accept to canon, the collision path, and a

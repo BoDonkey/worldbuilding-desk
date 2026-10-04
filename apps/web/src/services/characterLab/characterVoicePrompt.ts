@@ -188,16 +188,28 @@ export function buildCharacterVoicePrompt(request: CharacterVoiceRequest): Chara
     case 'generation':
       return {
         systemPrompt: joinBlocks([
-          'You help the author turn a rough description into a character profile for their ' +
-            'story. Split the profile into stable facts, which the description states or ' +
-            'clearly implies, and suggested details, which are your ideas for the author to ' +
-            'accept or discard.',
+          'You help the author invent a character for their story from a rough description. ' +
+            'Split your reply into stable facts, which the description states or clearly ' +
+            'implies, and suggested details, which are your own inventions for the author to ' +
+            'accept, edit, or discard.',
           'Generation rules:\n' +
             '- Do not invent a name the description does not give.\n' +
-            '- Do not invent major biography: family, history, relationships, abilities, or ' +
-            'past events. Offer those only as suggested details, if at all.\n' +
-            '- Keep every stable fact traceable to the description.\n' +
-            '- When the description does not decide something, leave it open.',
+            '- Keep every stable fact traceable to the description. Anything you make up is a ' +
+            'suggested detail, never a stable fact.\n' +
+            '- Invent generously in suggested details: this is where the character gets filled ' +
+            'out. Give 8 to 12, each one or two vivid, specific sentences that start with a ' +
+            'topic label, covering:\n' +
+            '  Appearance: build, face, hair, skin, clothing, and anything distinctive about how ' +
+            'they look or move.\n' +
+            '  Biography: where they come from, family, formative events, and how they came to ' +
+            'their present life (two or three suggestions).\n' +
+            '  Personality: temperament, habits, and a contradiction.\n' +
+            '  Voice: how they talk.\n' +
+            '  Wants and fears: what they are after and what they dread.\n' +
+            '  Relationships: one or two people who matter to them.\n' +
+            '  Secret: something they hide.\n' +
+            '- Suggested details must fit the description and the instructions, and never ' +
+            'contradict them.',
           'Nothing you return becomes canon. The author reviews every fact and detail.',
           CHARACTER_PROFILE_REPLY_FORMAT,
           renderAuthorInstructions(request.authorInstructions)

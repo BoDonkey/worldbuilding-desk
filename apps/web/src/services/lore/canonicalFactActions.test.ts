@@ -11,7 +11,7 @@ import {
   prependUniqueCanonicalFact
 } from './canonicalFactActions';
 
-const emptySnapshot = () => ({aliases: [], characters: [], entities: []});
+const emptySnapshot = () => ({aliases: [], categories: [], characters: [], entities: []});
 
 function buildFact(overrides: Partial<CanonicalFact> = {}): CanonicalFact {
   return {
@@ -154,6 +154,34 @@ describe('canonical fact materialization ownership', () => {
 
     expect(planRevertCanonicalFactSideEffects(fact, [], snapshot)).toEqual({aliasIdToDelete: 'alias-2'});
     expect(planRevertCanonicalFactSideEffects(fact, [{...fact, id: 'fact-2'}], snapshot)).toEqual({});
+  });
+
+  it('fills and clears an empty Age field on a World Bible character entity', () => {
+    const categories = [
+      {id: 'characters', projectId: 'project-1', name: 'Characters', slug: 'characters', kind: 'character' as const, fieldSchema: [], createdAt: 1},
+      {id: 'places', projectId: 'project-1', name: 'Places', slug: 'places', kind: 'general' as const, fieldSchema: [], createdAt: 1}
+    ];
+    const entity = {
+      id: 'sera', projectId: 'project-1', categoryId: 'characters', name: 'Sera Kestrel',
+      fields: {description: 'A river pilot.'}, links: [], createdAt: 1, updatedAt: 1
+    };
+    const fact = buildFact({targetType: 'entity', targetId: 'sera', factType: 'age', value: '34'});
+    const snapshot = {...emptySnapshot(), categories, entities: [entity]};
+
+    const plan = planCanonicalFactSideEffects('project-1', fact, snapshot, 5);
+    expect(plan.entityToPut?.fields).toEqual({description: 'A river pilot.', age: '34'});
+
+    const filled = {...snapshot, entities: [plan.entityToPut!]};
+    expect(planRevertCanonicalFactSideEffects(fact, [], filled, 6).entityToPut?.fields).toEqual({
+      description: 'A river pilot.'
+    });
+
+    const authorAge = {...snapshot, entities: [{...entity, fields: {age: 'mid-thirties'}}]};
+    expect(planCanonicalFactSideEffects('project-1', fact, authorAge, 5)).toEqual({});
+    expect(planRevertCanonicalFactSideEffects(fact, [], authorAge, 6)).toEqual({});
+
+    const place = {...snapshot, entities: [{...entity, categoryId: 'places'}]};
+    expect(planCanonicalFactSideEffects('project-1', fact, place, 5)).toEqual({});
   });
 
   it('fills an empty character field from an occupation fact without overwriting author text', () => {

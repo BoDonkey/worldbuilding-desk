@@ -1,6 +1,8 @@
 import type {
   CanonicalFact,
   Character,
+  EntityCategory,
+  EntityFields,
   LoreFactProposal,
   WritingDocument,
   WorldEntity
@@ -12,7 +14,9 @@ import {
   ENTITY_STORE_NAME,
   LORE_FACT_PROPOSAL_STORE_NAME
 } from '../../db';
+import {getCategoriesByProject} from '../../categoryStorage';
 import {getCharactersByProject, putCharacterInTransaction} from '../../characterStorage';
+import {isCharacterCategory} from '../characters/characterIdentity';
 import {getEntitiesByProject, putEntityInTransaction} from '../../entityStorage';
 import {
   deleteAliasInTransaction,
@@ -121,13 +125,46 @@ export interface CanonicalFactSideEffectPlan {
 
 interface SideEffectSnapshot {
   aliases: ConsistencyAlias[];
+  categories: EntityCategory[];
   characters: Character[];
   entities: WorldEntity[];
 }
 
+/** Fact types that fill an empty character field, and the field they fill. */
+const CHARACTER_FIELD_BY_FACT_TYPE: Partial<Record<CanonicalFact['factType'], 'role' | 'age'>> = {
+  occupation: 'role',
+  age: 'age'
+};
+
+/** A World Bible entity in a character category, the record lab and review facts target. */
+const findCharacterEntity = (snapshot: SideEffectSnapshot, entityId: string): WorldEntity | undefined => {
+  const entity = snapshot.entities.find((entry) => entry.id === entityId);
+  if (!entity) return undefined;
+  const category = snapshot.categories.find((entry) => entry.id === entity.categoryId);
+  return category && isCharacterCategory(category) ? entity : undefined;
+};
+
+/** Fields with the fact's value filled in, or null when the field is not empty or the type fills none. */
+function fillCharacterField<T extends EntityFields | Character['fields']>(fields: T, fact: CanonicalFact): T | null {
+  const key = CHARACTER_FIELD_BY_FACT_TYPE[fact.factType];
+  if (!key || fields[key]) return null;
+  return {...fields, [key]: canonicalFactValueText(fact)};
+}
+
+/** Fields without the value the fact filled, or null when the field no longer holds it. */
+function clearCharacterField<T extends EntityFields | Character['fields']>(fields: T, fact: CanonicalFact): T | null {
+  const key = CHARACTER_FIELD_BY_FACT_TYPE[fact.factType];
+  const current = key ? fields[key] : undefined;
+  if (!key || typeof current !== 'string' || current.trim().toLowerCase() !== normalizeFactValue(fact)) return null;
+  const next = {...fields};
+  delete next[key];
+  return next;
+}
+
 /**
  * What accepting a fact changes besides the fact itself: an alias fact adds
- * an alias; a character occupation or age fills an empty field. Entity facts
+ * an alias; an occupation or age fact on a character (legacy record or World
+ * Bible character entity) fills an empty Role or Age field. Other entity facts
  * stay in the accepted-fact surface: earlier builds copied several fact types
  * into free-form Notes without recording ownership, which left hidden
  * canon-like residue after removal.
@@ -148,21 +185,18 @@ export function planCanonicalFactSideEffects(
       }, now)
     };
   }
+  if (fact.targetType === 'entity') {
+    const entity = findCharacterEntity(snapshot, fact.targetId);
+    const fields = entity ? fillCharacterField(entity.fields, fact) : null;
+    return entity && fields ? {entityToPut: {...entity, fields, updatedAt: now}} : {};
+  }
   if (fact.targetType !== 'character') return {};
   const character = snapshot.characters.find((entry) => entry.id === fact.targetId);
   if (!character) return {};
   return {
     characterToPut: {
       ...character,
-      fields: {
-        ...character.fields,
-        ...(fact.factType === 'occupation' && !character.fields.role
-          ? {role: canonicalFactValueText(fact)}
-          : {}),
-        ...(fact.factType === 'age' && !character.fields.age
-          ? {age: canonicalFactValueText(fact)}
-          : {})
-      },
+      fields: fillCharacterField(character.fields, fact) ?? character.fields,
       updatedAt: now
     }
   };
@@ -193,26 +227,14 @@ export function planRevertCanonicalFactSideEffects(
 
   if (fact.targetType === 'character') {
     const character = snapshot.characters.find((entry) => entry.id === fact.targetId);
-    if (!character) return {};
-    const fields = {...character.fields};
-    let changed = false;
-    if (
-      fact.factType === 'occupation' &&
-      typeof fields.role === 'string' &&
-      fields.role.trim().toLowerCase() === normalizeFactValue(fact)
-    ) {
-      delete fields.role;
-      changed = true;
-    }
-    if (
-      fact.factType === 'age' &&
-      typeof fields.age === 'string' &&
-      fields.age.trim().toLowerCase() === normalizeFactValue(fact)
-    ) {
-      delete fields.age;
-      changed = true;
-    }
-    return changed ? {characterToPut: {...character, fields, updatedAt: now}} : {};
+    const fields = character ? clearCharacterField(character.fields, fact) : null;
+    return character && fields ? {characterToPut: {...character, fields, updatedAt: now}} : {};
+  }
+
+  if (fact.targetType === 'entity' && CHARACTER_FIELD_BY_FACT_TYPE[fact.factType]) {
+    const entity = findCharacterEntity(snapshot, fact.targetId);
+    const fields = entity ? clearCharacterField(entity.fields, fact) : null;
+    return entity && fields ? {entityToPut: {...entity, fields, updatedAt: now}} : {};
   }
 
   if (!['background', 'trait', 'ability', 'appearance'].includes(fact.factType)) {
@@ -242,6 +264,7 @@ export function planRevertCanonicalFactSideEffects(
 /** Applies a plan to the working snapshot so a later plan in the same commit sees it. */
 function applyPlanToSnapshot(snapshot: SideEffectSnapshot, plan: CanonicalFactSideEffectPlan): SideEffectSnapshot {
   return {
+    categories: snapshot.categories,
     aliases: [
       ...snapshot.aliases.filter(
         (alias) => alias.id !== plan.aliasIdToDelete && alias.id !== plan.aliasToPut?.id
@@ -258,12 +281,13 @@ function applyPlanToSnapshot(snapshot: SideEffectSnapshot, plan: CanonicalFactSi
 }
 
 async function readSideEffectSnapshot(projectId: string): Promise<SideEffectSnapshot> {
-  const [aliases, characters, entities] = await Promise.all([
+  const [aliases, categories, characters, entities] = await Promise.all([
     getAliasesByProject(projectId),
+    getCategoriesByProject(projectId),
     getCharactersByProject(projectId),
     getEntitiesByProject(projectId)
   ]);
-  return {aliases, characters, entities};
+  return {aliases, categories, characters, entities};
 }
 
 const FACT_STORES = [

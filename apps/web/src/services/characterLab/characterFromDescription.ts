@@ -15,6 +15,7 @@ import {
   normalizeCharacterIdentityName
 } from '../characters/characterIdentity';
 import type {ConsistencyAlias} from '../consistency/aliasStorage';
+import {convertPlainTextToRichHtml} from '../worldBible/worldBibleEntityHelpers';
 
 export const CHARACTER_PROFILE_FACT_TYPES = [
   'alias',
@@ -32,7 +33,7 @@ export const CHARACTER_PROFILE_FACT_TYPES = [
 ] as const satisfies readonly CanonicalFactType[];
 
 const MAX_STABLE_FACTS = 16;
-const MAX_SUGGESTED_DETAILS = 10;
+const MAX_SUGGESTED_DETAILS = 14;
 
 /** Confidence recorded on lab fact proposals: model-proposed, quote-checked, not yet reviewed. */
 export const CHARACTER_PROFILE_FACT_CONFIDENCE = 0.6;
@@ -71,7 +72,8 @@ const replySchema = z.object({
       })
     )
     .max(MAX_STABLE_FACTS),
-  suggestedDetails: z.array(z.string().max(400)).max(MAX_SUGGESTED_DETAILS)
+  // Extra suggestions are dropped, not a reason to reject the whole reply.
+  suggestedDetails: z.array(z.string().max(800)).transform((details) => details.slice(0, MAX_SUGGESTED_DETAILS))
 });
 
 export class CharacterProfileReplyError extends Error {
@@ -303,7 +305,8 @@ export const SUGGESTED_DETAILS_HEADING = 'Suggested details from the character l
 
 /**
  * Builds the records an explicit author accept creates: a draft World Bible
- * character (new target only), a Source Note holding the author's description
+ * character (new target only) whose Description field holds the author's own
+ * description and whose Notes hold the suggestions the author kept; a Source Note holding the author's description
  * and the kept suggestions, its primary-subject link, and one proposed fact per
  * kept stable fact with evidence in that note. Nothing is canon until the
  * author accepts each fact in the normal review. Pure; nothing is saved.
@@ -325,6 +328,7 @@ export function buildCharacterFromDescriptionRecords(params: {
   const description = params.description;
   if (!description.trim()) throw new Error('The description is empty.');
 
+  const details = params.suggestedDetails.map((detail) => detail.trim()).filter(Boolean);
   const entity: WorldEntity | null =
     params.target.kind === 'new'
       ? {
@@ -332,7 +336,11 @@ export function buildCharacterFromDescriptionRecords(params: {
           projectId: params.projectId,
           categoryId: params.target.categoryId,
           name,
-          fields: {},
+          fields: {
+            description: convertPlainTextToRichHtml(description),
+            // Each kept suggestion is its own paragraph; the author chose and may have edited them.
+            ...(details.length > 0 ? {notes: convertPlainTextToRichHtml(details.join('\n\n'))} : {})
+          },
           links: [],
           isNew: true,
           needsCompletion: true,
@@ -342,7 +350,6 @@ export function buildCharacterFromDescriptionRecords(params: {
       : null;
   const targetId = entity?.id ?? (params.target.kind === 'existing' ? params.target.entityId : '');
 
-  const details = params.suggestedDetails.map((detail) => detail.trim()).filter(Boolean);
   // The description comes first and unchanged, so fact evidence offsets stay valid.
   const content =
     details.length > 0

@@ -363,16 +363,24 @@ _Status: implemented (Slices 4.42–4.45, 2026-09-27)._
   what a character knows; per-character knowledge attribution is not modelled.
 - **One prompt module** (`buildCharacterVoicePrompt`) carries the
   in-character rules (may disagree or refuse, no people-pleasing, no invented
-  major biography, state uncertainty) for talk, reaction, scene, and
-  generation, and embeds grounding in the system prompt so every provider,
+  major biography, state uncertainty) for talk, reaction, and scene, and
+  embeds grounding in the system prompt so every provider,
   including local Ollama, receives it.
 - **Character from a description** treats the reply as untrusted input: a
   strict schema; a name is kept only if the description contains it; every
   stable fact must quote the description and carries that span as evidence.
+  Generation is the one lab mode that invents: it asks for appearance,
+  biography, personality, voice, wants, relationships, and a secret, but only
+  as suggested details, never as stable facts.
   Accepting is an explicit author action that creates a draft `WorldEntity`
-  (`needsCompletion`), a linked Source Note holding the author's description
-  and any kept suggestions, and `LoreFactProposal`s in the ordinary review.
-  Model suggestions never enter World Bible fields. A name that matches an
+  (`needsCompletion`) whose Description field holds the author's own
+  description and whose Notes field holds the suggestions the author kept
+  (each one explicitly ticked and editable before accept), a linked Source
+  Note holding the same, and `LoreFactProposal`s in the ordinary review.
+  Unkept model suggestions never enter World Bible fields, and adding to an
+  existing character changes none of its fields; an accepted age or occupation
+  fact fills an empty Age or Role field on the character entity, as it does
+  for legacy character records. A name that matches an
   existing character's canonical name or alias requires an explicit choice:
   add to that character (proposals only, no merge) or create a separate one.
 

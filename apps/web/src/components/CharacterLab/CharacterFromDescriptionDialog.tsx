@@ -44,6 +44,8 @@ interface CreatedResult {
 }
 
 const SEPARATE = 'separate';
+/** Room for a dozen invented suggestions on top of the facts. */
+const PROFILE_RESPONSE_MINIMUM = 3000;
 
 export function CharacterFromDescriptionDialog({
   isOpen,
@@ -119,7 +121,7 @@ export function CharacterFromDescriptionDialog({
         maxTokens:
           lab.aiConfig.provider === 'ollama'
             ? undefined
-            : Math.max(inspector?.maxResponseTokens ?? 0, HOSTED_STRUCTURED_RESPONSE_MINIMUM),
+            : Math.max(inspector?.maxResponseTokens ?? 0, HOSTED_STRUCTURED_RESPONSE_MINIMUM, PROFILE_RESPONSE_MINIMUM),
         cache: false
       });
       if (run.stopped) {
@@ -222,7 +224,7 @@ export function CharacterFromDescriptionDialog({
                   : `Added the description to ${result.name}.`}{' '}
                 {result.factCount === 0
                   ? 'No facts are waiting for review.'
-                  : `${result.factCount} ${result.factCount === 1 ? 'fact is' : 'facts are'} waiting for your review in Source Notes. None are canon until you accept them.`}
+                  : `${result.factCount} ${result.factCount === 1 ? 'fact is' : 'facts are'} waiting for your review in Source Notes. None are canon until you accept them; an accepted age or occupation also fills an empty Age or Role field.`}
               </p>
               <div className={styles.actions}>
                 {result.factCount > 0 && (
@@ -405,9 +407,10 @@ export function CharacterFromDescriptionDialog({
                               )
                             }
                           />
-                          <input
+                          <textarea
                             className={styles.textInput}
                             aria-label={`Suggestion ${index + 1}`}
+                            rows={2}
                             value={detail.text}
                             onChange={(event) =>
                               setDetails((current) =>
@@ -427,7 +430,7 @@ export function CharacterFromDescriptionDialog({
               <p className={styles.hint}>
                 {target?.kind === 'existing'
                   ? `Saves your description and kept suggestions as a Source Note on ${target.name}. Kept facts go to review; nothing is merged.`
-                  : 'Creates a draft character marked Needs completion, with your description and kept suggestions as a linked Source Note. Kept facts go to review.'}
+                  : 'Creates a draft character marked Needs completion, with your description as its Description and your kept suggestions in its Notes and a linked Source Note. Kept facts go to review.'}
               </p>
               {error && <p className={styles.error} role='alert'>{error}</p>}
               <div className={styles.actions}>

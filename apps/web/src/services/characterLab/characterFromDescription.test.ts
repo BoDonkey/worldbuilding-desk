@@ -1,6 +1,7 @@
 import {describe, expect, it} from 'vitest';
 import type {Character, EntityCategory, WorldEntity} from '../../entityTypes';
 import type {ConsistencyAlias} from '../consistency/aliasStorage';
+import {convertPlainTextToRichHtml} from '../worldBible/worldBibleEntityHelpers';
 import {
   buildCharacterFromDescriptionRecords,
   CHARACTER_PROFILE_AUTO_FACT_CONFIDENCE,
@@ -214,6 +215,14 @@ describe('findCharacterNameCollisions', () => {
   });
 });
 
+describe('suggested detail limits', () => {
+  it('keeps the first suggestions past the limit instead of rejecting the reply', () => {
+    const many = Array.from({length: 20}, (_, index) => `Suggestion ${index + 1}`);
+    const profile = parseCharacterProfileReply(reply({name: null, stableFacts: [], suggestedDetails: many}), description);
+    expect(profile.suggestedDetails).toEqual(many.slice(0, 14));
+  });
+});
+
 describe('buildCharacterFromDescriptionRecords', () => {
   let counter = 0;
   const createId = () => `id-${++counter}`;
@@ -240,7 +249,10 @@ describe('buildCharacterFromDescriptionRecords', () => {
     });
 
     expect(records.entity).toMatchObject({
-      id: 'id-1', categoryId: 'characters', name: 'Mara Voss', fields: {}, isNew: true, needsCompletion: true
+      id: 'id-1', categoryId: 'characters', name: 'Mara Voss', fields: {
+        description: convertPlainTextToRichHtml(description),
+        notes: '<p>Hums while steering</p>'
+      }, isNew: true, needsCompletion: true
     });
     expect(records.note).toMatchObject({
       id: 'id-2',
@@ -254,6 +266,29 @@ describe('buildCharacterFromDescriptionRecords', () => {
     const [proposal] = records.proposals;
     expect(proposal).toMatchObject({loreDocumentId: 'id-2', targetId: 'id-1', status: 'proposed', factType: 'trait', value: 'stubborn'});
     expect(records.note.content.slice(proposal.evidence.start, proposal.evidence.end)).toBe('She is stubborn');
+  });
+
+  it('puts each kept suggestion in Notes as its own escaped paragraph', () => {
+    const records = buildCharacterFromDescriptionRecords({
+      projectId: 'p',
+      sessionId: 's',
+      description,
+      target: {kind: 'new', categoryId: 'characters', name: 'Mara Voss'},
+      stableFacts: [],
+      suggestedDetails: ['Appearance: scar <left> cheek', ' ', 'Secret: owes the toll house']
+    });
+    expect(records.entity?.fields.notes).toBe(
+      '<p>Appearance: scar &lt;left&gt; cheek</p><p>Secret: owes the toll house</p>'
+    );
+    const none = buildCharacterFromDescriptionRecords({
+      projectId: 'p',
+      sessionId: 's',
+      description,
+      target: {kind: 'new', categoryId: 'characters', name: 'Mara Voss'},
+      stableFacts: [],
+      suggestedDetails: []
+    });
+    expect(none.entity?.fields).not.toHaveProperty('notes');
   });
 
   it('adds to an existing character without creating another record', () => {

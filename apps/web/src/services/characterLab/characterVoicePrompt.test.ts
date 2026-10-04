@@ -129,6 +129,9 @@ describe('buildCharacterVoicePrompt', () => {
     });
     const generation = buildCharacterVoicePrompt(requests.generation).systemPrompt;
     expect(generation).toContain('Do not invent a name');
+    expect(generation).toContain('Appearance:');
+    expect(generation).toContain('Biography:');
+    expect(generation).toContain('never a stable fact');
     expect(generation).toContain('Nothing you return becomes canon.');
   });
 
