@@ -1,7 +1,13 @@
 describe('First-run onboarding', () => {
   beforeEach(() => {
     cy.viewport(1400, 1000);
-    cy.visit('/');
+    // Start every test from an empty database: Cypress clears storage between tests but
+    // not IndexedDB. Deleting before the app's scripts run queues the app's open behind it.
+    cy.visit('/', {
+      onBeforeLoad(win) {
+        win.indexedDB.deleteDatabase('worldbuilding-db');
+      }
+    });
   });
 
   it('loads the sample project from Projects, shows its scenes, and offers the getting-started guide', () => {
@@ -15,6 +21,12 @@ describe('First-run onboarding', () => {
 
     cy.contains('h2', 'Getting started').should('be.visible');
     cy.contains("disagree about how long Brannic has served the Compact").should('be.visible');
+
+    // A first-run offer: gone once the sample exists.
+    cy.contains('a, button', 'Projects').first().click();
+    cy.contains('h2', 'Existing Projects').should('be.visible');
+    cy.contains('The Emberglass Key (Sample)').should('be.visible');
+    cy.contains('button', 'Explore a sample project').should('not.exist');
   });
 
   it('persists a dismissal of the getting-started guide across reload', () => {

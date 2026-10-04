@@ -46,6 +46,7 @@ import styles from '../styles/ProjectsRoute.module.css';
 import {useConfirmDialog} from '../hooks/useConfirmDialog';
 import {describeError} from '../services/errors';
 import {RouteFeedback} from '../components/common';
+import {SAMPLE_PROJECT_NAME} from '../fixtures/sampleProjectContent';
 
 function ProjectsRoute() {
   const {requestConfirm, confirmDialog} = useConfirmDialog();
@@ -70,6 +71,10 @@ function ProjectsRoute() {
   const [isLoadingSample, setIsLoadingSample] = useState(false);
   const [isLoadingDogfood, setIsLoadingDogfood] = useState(false);
   const dogfoodToolsEnabled = isDogfoodToolsEnabled();
+  // A first-run offer: shown while the author has at most one project (often the blank
+  // first-run project) and has not loaded the sample yet.
+  const showSampleOffer =
+    projects.length <= 1 && !projects.some((project) => project.name === SAMPLE_PROJECT_NAME);
   const [deletingProjectId, setDeletingProjectId] = useState<string | null>(null);
   const [exportingProjectId, setExportingProjectId] = useState<string | null>(null);
   const [syncingProjectId, setSyncingProjectId] = useState<string | null>(null);
@@ -713,6 +718,8 @@ function ProjectsRoute() {
       )}
 
       <div className={styles.layout}>
+        {/* One grid cell for the whole left column, so the project list stays at the top right. */}
+        <div className={styles.startColumn}>
         <form onSubmit={handleSubmit} className={styles.createCard}>
           <h2>Create New Project</h2>
           <p className={styles.sectionIntro}>
@@ -747,6 +754,7 @@ function ProjectsRoute() {
           </button>
         </form>
 
+        {showSampleOffer && (
         <p className={styles.sectionIntro}>
           New here?{' '}
           <button type='button' onClick={() => void handleExploreSample()} disabled={isLoadingSample}>
@@ -754,6 +762,7 @@ function ProjectsRoute() {
           </button>{' '}
           — a short manuscript with a deliberate canon conflict already waiting to be found.
         </p>
+        )}
         {dogfoodToolsEnabled ? (
           <p className={styles.sectionIntro} data-testid='dogfood-tools'>
             Dogfood tools (dev only):{' '}
@@ -764,6 +773,7 @@ function ProjectsRoute() {
             state, so the run starts at review.
           </p>
         ) : null}
+        </div>
 
         <section className={styles.listCard}>
           <h2>Existing Projects</h2>
