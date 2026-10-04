@@ -87,11 +87,11 @@ Other files:
   research (2026-09-12) proposing five tactical actions. Its accepted outcomes
   are roadmap slices 4.28–4.29 plus small edits to 5.8/5.9/6.1 and the
   backlog; its citation tokens are broken and its figures are unverified.
-- `docs/ai-scene-drafting-plan.md` — dated (2026-10-03), proposed and not
-  yet scheduled: opt-in per-project AI scene drafts (off by default) plus
-  provenance marking of every AI text insert and a project AI-text report.
-  Records the author decisions and open questions; on acceptance its slices
-  move to the roadmap and its rules into the blueprint and domain model.
+- `docs/ai-scene-drafting-plan.md` — accepted plan (2026-10-03) for quiet,
+  opt-in per-project AI scene drafts (off by default), provenance marking of
+  every AI text insert, and a platform-neutral AI-text report (Slices
+  4.50–4.52). Durable rules are in the blueprint and domain model; archive
+  the plan after 4.52 lands.
 - `docs/portable-data-schema.md` — public, versioned Markdown/CSV interchange
   contract for the human-readable project export and Markdown-folder import;
   full-fidelity restore remains the project backup ZIP.

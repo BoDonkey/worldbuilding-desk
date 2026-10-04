@@ -375,6 +375,20 @@ _Status: implemented (Slices 4.42–4.45, 2026-09-27)._
   existing character's canonical name or alias requires an explicit choice:
   add to that character (proposals only, no merge) or create a separate one.
 
+### AI text in the manuscript
+
+- Every path that inserts model-written prose into a scene (assistant scene
+  revision, character-scene insert, opt-in scene drafts) applies an `aiText`
+  mark inside the same undoable insert transaction, carrying origin,
+  provider, model, route kind, and time. The app never applies it in the
+  background or to author-typed text; only the author can clear it.
+- The mark is provenance, not canon: AI-drafted text reaches canon and state
+  only through the ordinary review, like author prose. Exports strip it;
+  backups keep it.
+- Scene drafts require the project's "Allow AI scene drafts" setting (default
+  off). The app never removes or disguises provider watermarks.
+- Plan and decisions: `docs/ai-scene-drafting-plan.md`.
+
 ### Prose-proximate item and state handoff
 
 _Status: accepted product/domain direction (2026-08-16); implementation is

@@ -166,6 +166,10 @@ and import/export/backup flows suitable for real writing projects.
    are dismissible; review feels closer to a linter than a compiler.
 4. **AI is assistive.** AI refines, explains, summarizes, and suggests; it
    does not generate large unsolicited chunks or replace the author's voice.
+   A project may opt in to AI scene drafts (off by default, a quiet advanced
+   setting): drafts are requested, previewed, and inserted only by the
+   author, and every AI insert into the manuscript is marked as AI text.
+   Copy around drafting is neutral, never warning-laden or judgmental.
 5. **Systems support narrative.** Rules, stats, compendium state, and
    progression enrich narrative continuity; they never dominate the primary
    interface.
@@ -393,7 +397,9 @@ Language:
   `field key`, `upsert`, `record`) in primary workflows.
 - Prefer direct verbs: `Create character`, `Import profile`, `Save changes`.
 - Keep AI language author-controlled: draft, suggest, expand, review. Never
-  imply autonomous writing or background mutation.
+  imply autonomous writing or background mutation. AI-text provenance copy is
+  platform-neutral and factual: it reports what the app inserted and leaves
+  disclosure judgments to the author.
 - Copy must not imply rulesets/sheets/stats are part of the default fiction
   workflow.
 - When touching high-churn system copy, extract it into the typed app-copy

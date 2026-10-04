@@ -164,7 +164,7 @@ pnpm --filter web e2e:run       # for slices touching routed UI
    2.1; 2.7 after 2.5; 3.5–3.8 sequentially; 4.5–4.11 after 4.2 with the
    internal ordering noted in Phase 4; 4.12 → 4.13 and 4.14 → 4.15;
    3.10 → 3.11; 3.10 → 4.42 → 4.43 → 4.44; 4.45 after 4.42;
-   4.46 → 4.47 → 4.48; 4.42 after 4.46;
+   4.46 → 4.47 → 4.48; 4.42 after 4.46; 4.50 → 4.51; 4.50 → 4.52;
    3.15 first among 3.12–3.15; 3.12a → 3.12b; both before 5.3 and 6.1;
    5.14 before 5.15; 5.15 before 6.1;
    Phase 6 strictly ordered).
@@ -293,6 +293,9 @@ and required revisit point, `WIP`, `Done <commit>`.
 | 4.47 | Stat peek from the editor and command palette (SP-2) | 4 | M | Done `c94356f` — Cmd/Ctrl+Alt+S and right-click Show stats on a name or alias in Workspace (shared names ask); hover card uses the same card; palette Show stats for… on every route (Workspace peeks at the cursor, elsewhere latest); cards follow stat-block style and scope; all gated on game systems; lint 1 baseline warning; 725 web + 6 engine + 12 UI tests; builds; Cypress 107/107 (commit message says 111 from a double-counted stalled run) |
 | 4.48 | Pinned stat panel across writing and brainstorming (SP-3) | 4 | M | Done `f1b4831` — up to three pins from peek, palette, roster, or World Bible in a collapsible app-shell panel on Workspace, World Canvas, Corkboard, World Bible (above Scratchpad); follows the cursor in Workspace, latest or end of a chosen scene elsewhere; changes since previous chapter via Corkboard links; Open sheet; per-project UI pins, not in backups; mobile bottom sheet; lint 1 baseline warning; 735 web + 6 engine + 12 UI tests; builds; Cypress 108/108 |
 | 4.49 | Local Ollama runs receive project and craft context | 4 | S | Done `003a2dc` — widened on start: context also never reached any desktop-app provider except Gemini; one shared `[Source: label]` formatter for hosted adapters, the renderer Ollama adapter, and the Electron request builder (IPC surface and cache key unchanged); lint with 1 baseline warning; 763 web + 14 engine + 12 UI tests; web/desktop builds; Cypress 117/117 including a local-Ollama coach case that fails without the fix |
+| 4.50 | AI text provenance mark (AD-1) | 4 | M | — |
+| 4.51 | AI text report (AD-2) | 4 | S | — |
+| 4.52 | Opt-in AI scene drafts (AD-3) | 4 | M | — |
 | 5.1 | Auto-update decision + implementation | 5 | M | — |
 | 5.2 | Code signing + notarization, both platforms | 5 | M | — |
 | 5.3 | Packaged-app validation + Electron E2E | 5 | M | — |
@@ -1564,6 +1567,27 @@ and the coaches' craft material never reached local Ollama in the browser or
 any provider except Gemini in the desktop app. 4.49 renders context once, in
 the renderer, with one shared formatter, before a request leaves for Ollama
 or the Electron bridge; the IPC surface is unchanged.
+
+### Opt-in AI scene drafting and text provenance (4.50–4.52)
+
+Accepted 2026-10-03. Full design, decisions, and verification:
+_[plan: ai-scene-drafting-plan.md]_. Quiet, per-project, off by default;
+platform-neutral, non-judgmental copy; no watermark removal.
+
+- **4.50 (AD-1) AI text provenance.** An `aiText` TipTap mark applied only
+  inside the app's insert transaction on every AI-to-manuscript path
+  (assistant scene revision, character-scene Insert at cursor, and later
+  scene drafts), non-inclusive at the edges, kept through edits inside;
+  **Mark as my writing**; optional subtle highlight; exports strip the mark,
+  backups keep it; invisible-character normalization on AI inserts.
+- **4.51 (AD-2) AI text report.** Project-level count of marked words and
+  passages per scene by origin and provider; platform-neutral, factual copy.
+- **4.52 (AD-3) Opt-in AI scene drafts.** "Allow AI scene drafts" project
+  setting (default off, advanced Settings, not inherited); **Draft this
+  scene** on empty or near-empty scenes with editable, visible inputs,
+  character-lab-style grounding, disclosure, budget, Stop, ~1,500-word cap;
+  preview until Insert into scene (marked, undoable) or Save to Scratchpad;
+  never writes canon, state, or records.
 
 ## Phase 5 — Release Engineering
 

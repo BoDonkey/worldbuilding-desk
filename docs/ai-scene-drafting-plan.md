@@ -1,14 +1,18 @@
 # AI Scene Drafting and Text Provenance — Plan
 
-**Status:** Proposed 2026-10-03. Not yet scheduled. On acceptance, add the
-slices below to `docs/road-to-market.md`, fold the durable rules into
-`docs/product-blueprint.md` (UX principle 4, AI language) and
-`docs/domain-model.md` § 5, then archive this plan once the slices land.
+**Status:** Accepted 2026-10-03 and scheduled as roadmap Slices 4.50–4.52.
+Durable rules are folded into `docs/product-blueprint.md` (UX principle 4,
+AI language) and `docs/domain-model.md` § 5; archive this plan once the
+slices land.
 
 **Author decisions already made (2026-10-03):** AI drafting is opt-in **per
 project**, **off by default**, and covers **scene drafts only**. Watermark
 removal is out of scope: the app will not strip or disguise provider
-watermarks.
+watermarks. Follow-up decisions the same day: the setting stays **quiet**
+(no marketing change), character-scene inserts keep their current gate, and
+all copy is **platform-neutral and non-judgmental** — drafting is a normal
+choice, not a warning-laden one, and the product's assistive stance for
+default projects is unchanged.
 
 ## Why
 
@@ -21,11 +25,12 @@ without changing what a default project does.
 
 Two outside facts make provenance part of the same change:
 
-- **Disclosure.** Amazon KDP requires authors to disclose AI-generated text,
-  and counts text as AI-generated even after substantial human editing.
-  Assisted work (brainstorming, grammar, refining the author's own text)
-  needs no disclosure. Authors currently have no reliable record of which
-  manuscript text came from a model.
+- **Disclosure.** Some publishing platforms ask authors whether a book
+  contains AI-generated text, and count text as AI-generated even after
+  substantial human editing, while assisted work (brainstorming, grammar,
+  refining the author's own text) is treated differently. Authors currently
+  have no reliable record of which manuscript text came from a model.
+  (Research note only; product copy stays platform-neutral.)
 - **Watermarks.** Since 2 August 2026 the EU AI Act (Article 50) requires
   providers to mark generated text in a machine-readable way. Gemini text has
   carried SynthID since 2024, and Claude models released after 2 August 2026
@@ -42,7 +47,7 @@ knows exactly which text a model wrote, and tells the author.
 | Path | Gate today | Under this plan |
 | --- | --- | --- |
 | Assistant scene revision (replace selection, or append) | AI consultation on | unchanged gate; output marked as AI text |
-| Character lab: character scene, Insert at cursor (4.44) | AI consultation on | unchanged gate (see open question 2); output marked |
+| Character lab: character scene, Insert at cursor (4.44) | AI consultation on | unchanged gate (author decision); output marked |
 | **New: Draft this scene** | — | requires the new project setting; output marked |
 
 ## Design
@@ -57,16 +62,17 @@ knows exactly which text a model wrote, and tells the author.
   Never applied in the background and never applied to text the author
   typed.
 - The mark is non-inclusive at its edges: typing next to AI text is the
-  author's writing. Edits inside a marked span keep the mark, matching KDP's
-  "still AI-generated after editing" rule.
+  author's writing. Edits inside a marked span keep the mark, matching how
+  platforms that ask treat edited AI text.
 - **Mark as my writing**: the author can clear the mark from a selection. The
   app records nothing about why; the author owns that judgment.
 - Subtle, toggleable highlighting in the editor (theme tokens only), off by
   default once the author has seen it.
 - **AI text report** (project level): words and passages marked per scene,
-  by origin and provider, with a plain explanation of the assisted vs
-  generated distinction. It is a record for the author, not legal advice and
-  not a detector.
+  by origin and provider. Copy is platform-neutral (no named store or
+  publisher) and factual: it says what the app inserted, notes that some
+  publishing platforms ask about AI-generated text, and leaves the judgment
+  to the author. It is a record, not legal advice and not a detector.
 - Export (Markdown, DOCX, EPUB) strips the marks by default; the backup ZIP
   keeps them. Storage is additive HTML, so no project schema migration is
   needed. An older app build would drop the marks when it re-saves a scene;
@@ -74,9 +80,11 @@ knows exactly which text a model wrote, and tells the author.
 
 ### 2. Project setting: "Allow AI scene drafts"
 
-- New `ProjectAISettings` field, default `false`, set in Settings → AI with
-  a plain description: the AI may draft whole scenes on request; drafts are
-  previews until accepted; accepted text is marked as AI text.
+- New `ProjectAISettings` field, default `false`, set in Settings → AI
+  (advanced, not promoted in onboarding or marketing) with a plain,
+  neutral description: the AI may draft whole scenes on request; drafts are
+  previews until accepted; accepted text is marked as AI text. No warning
+  dialogs or moralizing copy.
 - Turning it off hides the drafting action and keeps existing marks and text
   untouched. Child projects do not inherit it; each project decides.
 - Not offered while AI consultation is off.
@@ -114,7 +122,7 @@ knows exactly which text a model wrote, and tells the author.
 - Continue-writing, whole-chapter, or whole-book generation.
 - Detection of AI text the app did not insert (pasted text is unmarked; the
   report says so).
-- Any change to marketing positioning (see open question 1).
+- Any change to marketing positioning: the setting is quiet.
 
 ## Proposed slices (provisional numbers)
 
@@ -135,17 +143,13 @@ round-trip keeps marks; the drafting action is absent when the setting is
 off or AI consultation is off; a draft never changes canon, state, or
 records (store snapshot before/after, as in the character-lab specs).
 
-## Open questions for the author
+## Decisions (2026-10-03)
 
-1. **Positioning.** Keep this a quiet project setting with the current
-   marketing language (recommended for v1), or say publicly that SagaSpine
-   offers opt-in drafting with honest provenance?
-2. **Character scenes.** They already insert AI prose without the new
-   setting. Leave them as they are (they are framed as exploration), or gate
-   Insert at cursor behind "Allow AI scene drafts" too?
-3. **Report wording.** The report will describe Amazon KDP's distinction in
-   general terms with a link. Is naming KDP specifically acceptable, or keep
-   it platform-neutral?
+1. **Positioning:** quiet. No marketing, onboarding, or landing-page change;
+   default projects keep the assistive stance.
+2. **Character scenes:** keep their current gate; their inserts are marked
+   by 4.50 like every other AI insert.
+3. **Report wording:** platform-neutral; no named platforms.
 
 ## Related, small, and independent
 
