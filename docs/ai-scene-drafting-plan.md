@@ -66,8 +66,10 @@ knows exactly which text a model wrote, and tells the author.
   platforms that ask treat edited AI text.
 - **Mark as my writing**: the author can clear the mark from a selection. The
   app records nothing about why; the author owns that judgment.
-- Subtle, toggleable highlighting in the editor (theme tokens only), off by
-  default once the author has seen it.
+- Subtle highlighting in the editor (theme tokens only) with a persisted
+  **Show AI text / Hide AI text** toggle, on by default; the controls appear
+  only in scenes that contain AI text. (Changed in 4.50 from "off once seen":
+  a plain toggle is easier to understand.)
 - **AI text report** (project level): words and passages marked per scene,
   by origin and provider. Copy is platform-neutral (no named store or
   publisher) and factual: it says what the app inserted, notes that some

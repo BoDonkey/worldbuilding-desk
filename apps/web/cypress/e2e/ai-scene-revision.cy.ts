@@ -40,6 +40,32 @@ describe('Reviewed assistant scene revisions', () => {
     cy.contains('button', 'Confirm action').click();
     cy.get('.tiptap[contenteditable="true"]').should('have.text', 'Revised opening content');
     cy.contains('strong', 'Replace selected scene text').should('not.exist');
+    // An app-written reply (no provenance) is not AI text.
+    cy.get('.tiptap [data-ai-text]').should('not.exist');
+  });
+
+  it('marks a confirmed model-written revision as AI text the author can reclaim', () => {
+    cy.window().then((win) => {
+      win.sessionStorage.setItem('wbd:assistant-conversation:cypress-project-1', JSON.stringify([
+        {
+          role: 'assistant',
+          content: 'Revised opening',
+          provenance: {origin: 'scene-revision', provider: 'ollama', route: 'private-local', at: 1}
+        }
+      ]));
+    });
+    cy.reload();
+    cy.get('.tiptap[contenteditable="true"]').should('contain.text', 'Alpha content');
+    selectAlpha();
+    cy.contains('button', 'Confirm action').click();
+    cy.get('.tiptap [data-ai-text="scene-revision"]').should('have.text', 'Revised opening');
+    cy.contains('button', 'Hide AI text').should('be.visible');
+
+    cy.get('.tiptap [data-ai-text]').click();
+    cy.contains('button', 'Mark as my writing').click();
+    cy.get('.tiptap [data-ai-text]').should('not.exist');
+    cy.get('.tiptap[contenteditable="true"]').should('have.text', 'Revised opening content');
+    cy.contains('button', 'Hide AI text').should('not.exist');
   });
 
   it('refuses a replacement after the scene changes', () => {

@@ -847,6 +847,18 @@ runtime schema, and nothing here changes the roadmap's status board.
 ## Verification Status
 
 ### Verified Recently
+- Slice 4.50 AI text provenance: an `aiText` TipTap mark (registered in every
+  editor config, so it survives save and reload) records origin, provider,
+  model, route, and time on text a model wrote. `insertAIText` marks the
+  content before inserting it, in the same undoable transaction. Marked
+  paths: assistant scene revisions (only model-written replies, stamped with
+  provenance when generated; app-written answers insert unmarked) and
+  character-scene Insert at cursor. Stat snapshots and system history are not
+  AI text and stay unmarked. Not inclusive at the edges; edits inside keep
+  the mark; **Mark as my writing** clears it; **Show/Hide AI text** toggles a
+  neutral highlight. Exports are plain text, so the mark never leaves the app
+  except in backups. AI inserts drop zero-width characters and turn no-break
+  spaces into spaces.
 - Slice 3.13 atomic canon acceptance: `runProjectWriteTransaction` commits a
   multi-store change in one IndexedDB transaction, with change events after
   commit. Accepting an entity proposal (new or existing canon, legacy

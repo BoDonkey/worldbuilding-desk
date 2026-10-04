@@ -88,6 +88,8 @@ interface WorkspaceUiState {
   /** Pinned stat cards per project: a UI preference, never project data. */
   statPinsByProjectId: Record<string, string[]>;
   isStatPanelOpen: boolean;
+  /** Subtle highlight on text marked as written by AI. */
+  showAITextHighlight: boolean;
   workspaceStatContext: WorkspaceStatContext | null;
 
   setWorkspaceDrawerContext: (projectId: string | null, isNarrowViewport: boolean) => void;
@@ -118,6 +120,7 @@ interface WorkspaceUiState {
   toggleStatPin: (projectId: string, sheetId: string) => 'pinned' | 'unpinned' | 'full';
   setStatPins: (projectId: string, sheetIds: string[]) => void;
   setStatPanelOpen: (open: boolean) => void;
+  setShowAITextHighlight: (show: boolean) => void;
   setWorkspaceStatContext: (context: WorkspaceStatContext | null) => void;
 }
 
@@ -215,6 +218,7 @@ export const useWorkspaceUiStore = create<WorkspaceUiState>()(
       selectedDocumentIdByProjectId: {},
       statPinsByProjectId: {},
       isStatPanelOpen: true,
+      showAITextHighlight: true,
       workspaceStatContext: null,
 
       setWorkspaceDrawerContext: (projectId, isNarrowViewport) =>
@@ -366,6 +370,7 @@ export const useWorkspaceUiStore = create<WorkspaceUiState>()(
         })),
 
       setStatPanelOpen: (open) => set({isStatPanelOpen: open}),
+      setShowAITextHighlight: (show) => set({showAITextHighlight: show}),
 
       setWorkspaceStatContext: (context) => set({workspaceStatContext: context})
     }),
@@ -376,7 +381,8 @@ export const useWorkspaceUiStore = create<WorkspaceUiState>()(
         drawerPreferencesByProjectId: state.drawerPreferencesByProjectId,
         selectedDocumentIdByProjectId: state.selectedDocumentIdByProjectId,
         statPinsByProjectId: state.statPinsByProjectId,
-        isStatPanelOpen: state.isStatPanelOpen
+        isStatPanelOpen: state.isStatPanelOpen,
+        showAITextHighlight: state.showAITextHighlight
       })
     }
   )

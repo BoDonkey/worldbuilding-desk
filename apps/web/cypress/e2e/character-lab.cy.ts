@@ -341,10 +341,13 @@ describe('Character lab', () => {
       sceneDialog().contains('button', 'Insert at cursor').click();
       sceneDialog().should('not.exist');
       cy.get('.tiptap-editor').should('contain.text', 'Borin laughs, and does not.');
+      cy.get('.tiptap [data-ai-text="character-scene"]').should('contain.text', 'Borin laughs, and does not.');
       // ProseMirror binds undo to Mod-z: Cmd on macOS, Ctrl on the Linux CI runner.
       cy.get('.tiptap[contenteditable="true"]').type(Cypress.platform === 'darwin' ? '{cmd+z}' : '{ctrl+z}');
       cy.get('.tiptap-editor').should('not.contain.text', 'Borin laughs, and does not.');
       cy.get('.tiptap-editor').should('contain.text', 'Alpha content');
+      // One undo removes the text and its AI-text mark together.
+      cy.get('.tiptap [data-ai-text]').should('not.exist');
     });
 
     it('surprises from the linked chapter card and open threads, then saves to the Scratchpad', () => {

@@ -16,6 +16,8 @@ import {
   serializeStatBlockTokensAsChipHtml,
   type StatBlockTokenPresentation
 } from '../utils/statBlockTemplates';
+import {insertAIText} from '../extensions/AITextMark';
+import {normalizeAIText, type AITextProvenance} from '../services/editor/aiTextProvenance';
 
 type ToolbarButton = {
   id: string;
@@ -67,6 +69,8 @@ interface TipTapEditorProps {
   revisionDocumentId?: string;
   onTextInserted?: () => void;
   insertContext?: {from: number; to: number} | null;
+  /** Present when a model wrote `textToInsert`; the insert is then marked as AI text. */
+  insertProvenance?: AITextProvenance;
   presentStatBlockToken?: (rawToken: string) => StatBlockTokenPresentation;
   onTypingActivity?: () => void;
   inlineHighlightsMode?: InlineHighlightsMode | 'hidden';
@@ -295,6 +299,7 @@ function TipTapEditor({
   revisionDocumentId,
   onTextInserted,
   insertContext,
+  insertProvenance,
   presentStatBlockToken = getDefaultStatBlockTokenPresentation,
   onTypingActivity,
   inlineHighlightsMode = 'visible'
@@ -465,6 +470,18 @@ function TipTapEditor({
   useEffect(() => {
     if (!textToInsert || !editor || sceneRevision) return;
 
+    if (insertProvenance) {
+      // One undoable transaction: the model's text and its AI-text mark.
+      insertAIText(
+        editor,
+        normalizeAIText(textToInsert),
+        insertProvenance,
+        insertContext ?? undefined
+      );
+      onTextInserted?.();
+      return;
+    }
+
     if (insertContext) {
       editor.commands.setTextSelection({
         from: insertContext.from,
@@ -473,7 +490,7 @@ function TipTapEditor({
     }
     editor.commands.insertContent(textToInsert);
     onTextInserted?.();
-  }, [textToInsert, editor, insertContext, onTextInserted, sceneRevision]);
+  }, [textToInsert, editor, insertContext, insertProvenance, onTextInserted, sceneRevision]);
 
   if (!editor) return null;
 

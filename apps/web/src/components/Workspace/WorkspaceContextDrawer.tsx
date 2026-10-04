@@ -43,6 +43,7 @@ import {
   type SceneRosterItemCard,
   type SceneRosterTimelineEvent
 } from './SceneRosterPanel';
+import type {AITextProvenance} from '../../services/editor/aiTextProvenance';
 
 interface ConsistencyReviewItem {
   id: string;
@@ -117,6 +118,7 @@ interface AIContext {
 interface PendingAIInsert {
   text: string;
   context: {from: number; to: number} | null;
+  provenance?: AITextProvenance;
 }
 
 interface LinkTargetOption {
@@ -231,7 +233,7 @@ interface WorkspaceContextDrawerProps {
   activeProject: Pick<Project, 'id' | 'parentProjectId' | 'inheritRag' | 'inheritShodh'>;
   projectSettings: ProjectSettings | null;
   activeAIContext: AIContext | null;
-  previewSceneRevision: (text: string) => void;
+  previewSceneRevision: (text: string, provenance?: AITextProvenance) => void;
   setPendingAIInsert: (val: PendingAIInsert | null) => void;
   queuedAssistantPrompt: string | null;
   setQueuedAssistantPrompt: (val: string | null) => void;

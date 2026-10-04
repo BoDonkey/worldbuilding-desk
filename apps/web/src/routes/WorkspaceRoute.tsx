@@ -1629,6 +1629,7 @@ function WorkspaceRoute() {
                   toolbarActions={toolbarActions}
                   textToInsert={pendingAIInsert?.text ?? statBlockInsertContent}
                   insertContext={pendingAIInsert?.context ?? null}
+                  insertProvenance={pendingAIInsert?.provenance}
                   sceneRevision={pendingAIInsert?.revision}
                   onTextInserted={() => {
                     if (pendingAIInsert) {
@@ -2273,7 +2274,9 @@ function WorkspaceRoute() {
               ? {kind: 'scene', sceneId: selectedId, moment: 'cursor', cursorPosition: sceneCursorPosition}
               : {kind: 'latest'}
           }
-          onInsertAtCursor={selectedId ? (html) => setPendingAIInsert({text: html, context: null}) : undefined}
+          onInsertAtCursor={
+            selectedId ? (html, provenance) => setPendingAIInsert({text: html, context: null, provenance}) : undefined
+          }
           onClose={() => setSceneLabEntityId(null)}
         />
       )}

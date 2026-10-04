@@ -48,6 +48,8 @@ import {
   resolveCurrentSceneFindIndex,
   type CurrentSceneFindMatch
 } from '../../services/workspace/currentSceneFind';
+import type {AITextProvenance} from '../../services/editor/aiTextProvenance';
+import {useAITextControls} from '../../hooks/useAITextControls';
 
 interface AIContextType {
   type: 'document';
@@ -82,6 +84,8 @@ interface EditorWithAIProps {
   textToInsert?: string | null;
   sceneRevision?: SceneRevision;
   insertContext?: {from: number; to: number} | null;
+  /** Present when a model wrote `textToInsert`; the insert is then marked as AI text. */
+  insertProvenance?: AITextProvenance;
   onTextInserted?: () => void;
   selectionQuickSnippets?: {
     characters: Record<string, {name: string; html: string; lore: LoreInspectorRecord}>;
@@ -238,6 +242,7 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
   toolbarActions = [],
   textToInsert: externalTextToInsert = null,
   insertContext = null,
+  insertProvenance,
   sceneRevision,
   onTextInserted,
   selectionQuickSnippets,
@@ -259,6 +264,7 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
     null
   );
   const [editorReadyToken, setEditorReadyToken] = useState(0);
+  const [readyEditor, setReadyEditor] = useState<TipTapEditorInstance | null>(null);
   const [lorePopoverRecord, setLorePopoverRecord] = useState<LoreInspectorRecord | null>(null);
   const [lorePopoverAnchor, setLorePopoverAnchor] = useState<{left: number; top: number} | null>(
     null
@@ -324,6 +330,7 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
     [currentSceneFindMatches.length]
   );
 
+  const aiTextControls = useAITextControls(readyEditor);
   const effectiveToolbarActions = React.useMemo(
     () => [
       ...toolbarActions,
@@ -331,9 +338,10 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
         id: 'find-current-scene',
         label: 'Find in scene',
         onClick: openCurrentSceneFind
-      }
+      },
+      ...aiTextControls.actions
     ],
-    [openCurrentSceneFind, toolbarActions]
+    [openCurrentSceneFind, toolbarActions, aiTextControls.actions]
   );
 
   const effectiveInlineHighlightsMode =
@@ -732,6 +740,7 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
 
   const handleEditorReady = useCallback((editorInstance: TipTapEditorInstance) => {
     editorRef.current = editorInstance;
+    setReadyEditor(editorInstance);
     setEditorReadyToken((prev) => prev + 1);
     updateSelectionBubble();
   }, [updateSelectionBubble]);
@@ -1185,7 +1194,7 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
   }, [inlineHighlightsMode]);
 
   return (
-    <div className={styles.container}>
+    <div className={styles.container} data-ai-text-highlight={aiTextControls.highlight ? 'on' : 'off'}>
       {isCurrentSceneFindOpen && (
         <div className={styles.currentSceneFindBar} role='search' aria-label='Find in current scene'>
           <label className={styles.currentSceneFindField}>
@@ -1275,6 +1284,7 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
             setTextToInsertFromAI(null);
           }}
           insertContext={insertContext}
+          insertProvenance={externalTextToInsert ? insertProvenance : undefined}
           sceneRevision={sceneRevision}
           revisionProjectId={projectId}
           revisionDocumentId={documentId}

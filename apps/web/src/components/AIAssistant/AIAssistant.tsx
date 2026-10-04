@@ -54,6 +54,8 @@ import {
   filterCanonFactResultsForScene,
   isCanonFactMemoryValidAtScene
 } from '../../services/lore/canonicalFactValidity';
+import {useProviderRoute} from '../../hooks/useProviderRoute';
+import {buildAITextProvenance, type AITextProvenance} from '../../services/editor/aiTextProvenance';
 
 interface AIAssistantProps {
   projectId: string;
@@ -64,7 +66,8 @@ interface AIAssistantProps {
     id: string;
     selectedText?: string;
   };
-  onInsert?: (text: string) => void;
+  /** `provenance` is present only when the inserted text was written by a model. */
+  onInsert?: (text: string, provenance?: AITextProvenance) => void;
   onCaptureSourceNote?: (text: string) => void;
   /** Full text of the currently open scene, used only as writing-coach evidence when nothing
    * is selected. Never sent to the ordinary project assistant prompt. */
@@ -115,6 +118,15 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
   // Stable across renders (the run object itself changes every second while a run ticks).
   const runModel = modelRun.run;
   const aiProvider = aiConfig?.provider;
+  const providerRoute = useProviderRoute(aiConfig);
+  const modelReplyProvenance = useCallback(
+    (modelOverride?: string): AITextProvenance => {
+      const provenance = buildAITextProvenance('scene-revision', aiConfig, providerRoute);
+      const model = modelOverride?.trim();
+      return model ? {...provenance, model} : provenance;
+    },
+    [aiConfig, providerRoute]
+  );
   const announceStatus = useStatusAnnouncement();
   const [providerError, setProviderError] = useState<string | null>(null);
   const [memoryCache, setMemoryCache] = useState<MemoryEntry[]>([]);
@@ -454,9 +466,11 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
 
 
       // Stream response
+      // Stamped at generation time, so an insert later records the model that wrote it.
+      const replyProvenance = modelReplyProvenance(consultationModel);
       setMessages((prev) => [
         ...prev,
-        {role: 'assistant', content: '', contextSources}
+        {role: 'assistant', content: '', contextSources, provenance: replyProvenance}
       ]);
       scrollMessagesToBottom();
 
@@ -476,7 +490,7 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
             {
               ...(prev[prev.length - 1]?.role === 'assistant'
                 ? prev[prev.length - 1]
-                : {role: 'assistant' as const, contextSources}),
+                : {role: 'assistant' as const, contextSources, provenance: replyProvenance}),
               content: assistantMessage
             }
           ]);
@@ -498,6 +512,7 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
     }
   }, [
     aiProvider,
+    modelReplyProvenance,
     runModel,
     announceStatus,
     buildMemoryChunks,
@@ -537,7 +552,9 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
   const handleInsert = () => {
     const lastAssistantMessage = getLastAssistantMessage();
     if (lastAssistantMessage && onInsert) {
-      onInsert(stripAssistantThinking(lastAssistantMessage.content));
+      // App-written replies (answers from accepted canon, notices) carry no provenance and
+      // insert unmarked; model replies insert as AI text.
+      onInsert(stripAssistantThinking(lastAssistantMessage.content), lastAssistantMessage.provenance);
     }
   };
 
@@ -613,7 +630,8 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
 
       budget.spend('assistant');
 
-      setMessages((prev) => [...prev, {role: 'assistant', content: '', craftCitations}]);
+      const coachProvenance = modelReplyProvenance();
+      setMessages((prev) => [...prev, {role: 'assistant', content: '', craftCitations, provenance: coachProvenance}]);
       scrollMessagesToBottom();
 
       await runModel(
@@ -632,7 +650,7 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
             {
               ...(prev[prev.length - 1]?.role === 'assistant'
                 ? prev[prev.length - 1]
-                : {role: 'assistant' as const, craftCitations}),
+                : {role: 'assistant' as const, craftCitations, provenance: coachProvenance}),
               content: assistantMessage
             }
           ]);
@@ -654,6 +672,7 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
     }
   }, [
     aiProvider,
+    modelReplyProvenance,
     runModel,
     announceStatus,
     coachConsultationEnabled,

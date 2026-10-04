@@ -9,6 +9,7 @@ import {
   summarizeWorkspaceContent,
   type WorkspaceLoreConsultationMode
 } from '../services/workspace/workspaceConsultation';
+import type {AITextProvenance} from '../services/editor/aiTextProvenance';
 
 export interface WorkspaceAIContext {
   type: 'document';
@@ -23,6 +24,8 @@ export interface WorkspacePendingAIInsert {
   revision?: SceneRevision;
   text: string;
   context: {from: number; to: number} | null;
+  /** Present when a model wrote `text`; the inserted text is marked as AI text. */
+  provenance?: AITextProvenance;
 }
 
 export {summarizeWorkspaceContent as summarizeContent};
@@ -65,7 +68,7 @@ export function useWorkspaceContextActions(params: {
     [openContextDrawer, content]
   );
 
-  const previewSceneRevision = useCallback((text: string) => {
+  const previewSceneRevision = useCallback((text: string, provenance?: AITextProvenance) => {
     if (!activeProjectId || !selectedId || !text.trim()) return;
     const replacesSelection = activeAIContext?.id === selectedId && activeAIContext.from !== activeAIContext.to;
     const range = replacesSelection ? {from: activeAIContext.from, to: activeAIContext.to} : null;
@@ -74,7 +77,8 @@ export function useWorkspaceContextActions(params: {
       text, projectId: activeProjectId, documentId: selectedId,
       sourceContent: replacesSelection ? (activeAIContext.sourceContent ?? '') : content,
       selectedText: replacesSelection ? (activeAIContext.selectedText ?? '') : '',
-      range
+      range,
+      ...(provenance ? {provenance} : {})
     }});
   }, [activeProjectId, selectedId, activeAIContext, content, onSceneRevisionPreview]);
 

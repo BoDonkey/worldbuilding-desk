@@ -41,4 +41,18 @@ describe('useAssistantConversation', () => {
     );
     expect(loadAssistantConversation('broken')).toEqual([]);
   });
+
+  it('keeps a model reply\'s provenance and drops a malformed one', () => {
+    const provenance = {origin: 'scene-revision', provider: 'ollama', route: 'private-local', at: 5};
+    window.sessionStorage.setItem(
+      'wbd:assistant-conversation:provenance',
+      JSON.stringify([
+        {role: 'assistant', content: 'Model reply', provenance},
+        {role: 'assistant', content: 'Bad record', provenance: {origin: 7}}
+      ])
+    );
+    expect(loadAssistantConversation('provenance')).toEqual([
+      {role: 'assistant', content: 'Model reply', provenance}
+    ]);
+  });
 });

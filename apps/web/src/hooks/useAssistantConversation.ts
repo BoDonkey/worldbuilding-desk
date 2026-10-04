@@ -2,6 +2,7 @@ import {useCallback, useEffect, useRef, useState} from 'react';
 import type {Dispatch, SetStateAction} from 'react';
 import type {LLMMessage} from '../services/llm/types';
 import type {CraftCitation} from '../services/craft/types';
+import type {AITextProvenance} from '../services/editor/aiTextProvenance';
 
 export type AssistantChatMessage = LLMMessage & {
   contextSources?: string[];
@@ -9,6 +10,8 @@ export type AssistantChatMessage = LLMMessage & {
    * visually distinct from contextSources because they are never the
    * author's canon or manuscript evidence. */
   craftCitations?: CraftCitation[];
+  /** Present only on model-written replies; inserting such a reply marks it as AI text. */
+  provenance?: AITextProvenance;
 };
 
 const MAX_SAVED_MESSAGES = 100;
@@ -41,7 +44,12 @@ const isAssistantChatMessage = (value: unknown): value is AssistantChatMessage =
       (Array.isArray(message.contextSources) &&
         message.contextSources.every((source) => typeof source === 'string'))) &&
     (message.craftCitations === undefined ||
-      (Array.isArray(message.craftCitations) && message.craftCitations.every(isCraftCitation)))
+      (Array.isArray(message.craftCitations) && message.craftCitations.every(isCraftCitation))) &&
+    (message.provenance === undefined ||
+      (typeof message.provenance === 'object' &&
+        message.provenance !== null &&
+        typeof message.provenance.origin === 'string' &&
+        typeof message.provenance.at === 'number'))
   );
 };
 

@@ -23,6 +23,7 @@ import {ConsultationBudgetNotice} from '../common/ConsultationBudgetNotice';
 import styles from '../../styles/CharacterLab.module.css';
 import {StoryPointPicker} from './StoryPointPicker';
 import {describeCharacterLabDataFlow, getCharacterLabProviderIssue} from './characterLabProvider';
+import {buildAITextProvenance, type AITextProvenance} from '../../services/editor/aiTextProvenance';
 
 const MAX_CHARACTERS = 3;
 
@@ -33,7 +34,8 @@ interface CharacterSceneDialogProps {
   initialEntityIds: string[];
   defaultPosition: CharacterVoicePosition;
   /** Present in Workspace: an ordinary, undoable editor insert at the cursor. */
-  onInsertAtCursor?: (html: string) => void;
+  /** `provenance` records that a model wrote the inserted scene. */
+  onInsertAtCursor?: (html: string, provenance: AITextProvenance) => void;
   onClose: () => void;
 }
 
@@ -361,7 +363,10 @@ export function CharacterSceneDialog({
                     type='button'
                     onClick={() => {
                       if (!latest) return;
-                      onInsertAtCursor(formatCharacterSceneInsertHtml(latest));
+                      onInsertAtCursor(
+                        formatCharacterSceneInsertHtml(latest),
+                        buildAITextProvenance('character-scene', lab.aiConfig, budget.route)
+                      );
                       onClose();
                     }}
                     disabled={!latest?.text.trim() || modelRun.isRunning}
