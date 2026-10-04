@@ -364,7 +364,12 @@ export function CharacterFromDescriptionDialog({
                           />
                           <span>
                             <strong>{fact.factType}:</strong> {fact.value}
-                            <span className={styles.quote}>From your description: “{fact.evidence.text}”</span>
+                            {fact.typeUnsure && (
+                              <span className={styles.hint}> (type unsure: check it in review)</span>
+                            )}
+                            <span className={styles.quote}>
+                              {`${fact.source === 'auto' ? 'Read directly from' : 'From'} your description: “${fact.evidence.text}”`}
+                            </span>
                           </span>
                         </label>
                       </li>

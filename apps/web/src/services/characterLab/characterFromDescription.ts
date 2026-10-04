@@ -36,6 +36,10 @@ const MAX_SUGGESTED_DETAILS = 10;
 
 /** Confidence recorded on lab fact proposals: model-proposed, quote-checked, not yet reviewed. */
 export const CHARACTER_PROFILE_FACT_CONFIDENCE = 0.6;
+/** Read from the description by code, not the model: an exact pattern match. */
+export const CHARACTER_PROFILE_AUTO_FACT_CONFIDENCE = 0.9;
+/** The model said it was unsure which fact type fits; the review shows the lower figure. */
+export const CHARACTER_PROFILE_UNSURE_FACT_CONFIDENCE = 0.4;
 
 /**
  * Near-miss fact types models commonly use for gender and pronouns. Mapped
@@ -62,7 +66,8 @@ const replySchema = z.object({
       z.object({
         factType: z.preprocess(normalizeProfileFactType, z.enum(CHARACTER_PROFILE_FACT_TYPES)),
         value: z.string().max(240),
-        quote: z.string().max(600)
+        quote: z.string().max(600),
+        typeUnsure: z.boolean().optional()
       })
     )
     .max(MAX_STABLE_FACTS),
@@ -81,6 +86,47 @@ export interface CharacterProfileFact {
   value: string;
   /** Span of the author's own description that states the fact. */
   evidence: {start: number; end: number; text: string};
+  /** `auto`: read from the description by code; `model`: proposed by the model. */
+  source: 'auto' | 'model';
+  /** The model was unsure which fact type fits; shown for the author to check. */
+  typeUnsure?: boolean;
+}
+
+const AGE_PATTERNS = [
+  /\b(\d{1,3})[\s-]*(?:years?|yrs?)[\s-]*old\b/i,
+  /\bage[d]?\s*:?\s*(\d{1,3})\b/i
+];
+const PRONOUN_PATTERN = /\b(?:pronouns?\s*:?\s*)?((?:she|he|they|xe|ze|it)\s*\/\s*(?:her|hers|him|his|them|theirs|they|xem|zir|its)(?:\s*\/\s*[a-z]+)?)\b/i;
+
+/**
+ * Facts code can read from the description without a model: an age stated as
+ * "N years old", "aged N", or "age: N", and pronouns written in slash form
+ * ("she/her", "pronouns: they/them"). Only the first of each; each keeps the
+ * exact description span as its evidence.
+ */
+export function extractDeterministicProfileFacts(description: string): CharacterProfileFact[] {
+  const facts: CharacterProfileFact[] = [];
+  for (const pattern of AGE_PATTERNS) {
+    const match = pattern.exec(description);
+    if (!match) continue;
+    facts.push({
+      factType: 'age',
+      value: match[1],
+      evidence: {start: match.index, end: match.index + match[0].length, text: match[0]},
+      source: 'auto'
+    });
+    break;
+  }
+  const pronouns = PRONOUN_PATTERN.exec(description);
+  if (pronouns) {
+    facts.push({
+      factType: 'identity',
+      value: pronouns[1].replace(/\s+/g, '').toLowerCase(),
+      evidence: {start: pronouns.index, end: pronouns.index + pronouns[0].length, text: pronouns[0]},
+      source: 'auto'
+    });
+  }
+  return facts;
 }
 
 /** A model profile after deterministic validation against the author's description. */
@@ -157,8 +203,25 @@ export function parseCharacterProfileReply(content: string, description: string)
     const key = `${fact.factType}:${value.toLocaleLowerCase()}`;
     if (seen.has(key)) return;
     seen.add(key);
-    stableFacts.push({factType: fact.factType, value, evidence});
+    stableFacts.push({
+      factType: fact.factType,
+      value,
+      evidence,
+      source: 'model',
+      ...(fact.typeUnsure ? {typeUnsure: true} : {})
+    });
   });
+
+  // Code-read facts win: an age stated in the description replaces any model
+  // age, and an identical model fact is not repeated.
+  const autoFacts = extractDeterministicProfileFacts(description);
+  const autoKeys = new Set(autoFacts.map((fact) => `${fact.factType}:${fact.value.toLocaleLowerCase()}`));
+  const hasAutoAge = autoFacts.some((fact) => fact.factType === 'age');
+  const modelFacts = stableFacts.filter(
+    (fact) =>
+      !autoKeys.has(`${fact.factType}:${fact.value.toLocaleLowerCase()}`) &&
+      !(hasAutoAge && fact.factType === 'age')
+  );
 
   const suggestedDetails = Array.from(
     new Set(result.data.suggestedDetails.map((detail) => detail.trim()).filter(Boolean))
@@ -166,7 +229,7 @@ export function parseCharacterProfileReply(content: string, description: string)
 
   return {
     name,
-    stableFacts,
+    stableFacts: [...autoFacts, ...modelFacts],
     suggestedDetails,
     droppedFactCount,
     droppedName: Boolean(offeredName) && !name
@@ -322,7 +385,12 @@ export function buildCharacterFromDescriptionRecords(params: {
     targetName: name,
     factType: fact.factType,
     value: fact.value,
-    confidence: CHARACTER_PROFILE_FACT_CONFIDENCE,
+    confidence:
+      fact.source === 'auto'
+        ? CHARACTER_PROFILE_AUTO_FACT_CONFIDENCE
+        : fact.typeUnsure
+          ? CHARACTER_PROFILE_UNSURE_FACT_CONFIDENCE
+          : CHARACTER_PROFILE_FACT_CONFIDENCE,
     evidence: {...fact.evidence},
     status: 'proposed',
     createdAt: now,

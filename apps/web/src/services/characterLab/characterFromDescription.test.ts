@@ -3,7 +3,11 @@ import type {Character, EntityCategory, WorldEntity} from '../../entityTypes';
 import type {ConsistencyAlias} from '../consistency/aliasStorage';
 import {
   buildCharacterFromDescriptionRecords,
+  CHARACTER_PROFILE_AUTO_FACT_CONFIDENCE,
+  CHARACTER_PROFILE_FACT_CONFIDENCE,
+  CHARACTER_PROFILE_UNSURE_FACT_CONFIDENCE,
   CharacterProfileReplyError,
+  extractDeterministicProfileFacts,
   findCharacterNameCollisions,
   findQuoteSpan,
   parseCharacterProfileReply,
@@ -25,6 +29,30 @@ describe('findQuoteSpan', () => {
     expect(findQuoteSpan(description, 'FERRY PILOT')?.text).toBe('ferry pilot');
     expect(findQuoteSpan(description, 'loves bells')).toBeNull();
     expect(findQuoteSpan(description, '  ')).toBeNull();
+  });
+});
+
+describe('extractDeterministicProfileFacts', () => {
+  it('reads a stated age and slash-form pronouns with their exact spans', () => {
+    const text = 'Odile, 42 years old, a lock-keeper. Pronouns: she/they.';
+    const facts = extractDeterministicProfileFacts(text);
+    expect(facts.map(({factType, value, source}) => ({factType, value, source}))).toEqual([
+      {factType: 'age', value: '42', source: 'auto'},
+      {factType: 'identity', value: 'she/they', source: 'auto'}
+    ]);
+    expect(text.slice(facts[0].evidence.start, facts[0].evidence.end)).toBe('42 years old');
+    expect(facts[1].evidence.text).toBe('Pronouns: she/they');
+  });
+
+  it('accepts other common age forms', () => {
+    expect(extractDeterministicProfileFacts('Aged 70, still rowing.')[0]?.value).toBe('70');
+    expect(extractDeterministicProfileFacts('Age: 9')[0]?.value).toBe('9');
+    expect(extractDeterministicProfileFacts('a 30-year-old smith')[0]?.value).toBe('30');
+  });
+
+  it('does not read generic or unrelated text as a fact', () => {
+    expect(extractDeterministicProfileFacts('Turn to page 4 at the stage door; he/she will know.')).toEqual([]);
+    expect(extractDeterministicProfileFacts('Four years older than her brother.')).toEqual([]);
   });
 });
 
@@ -57,12 +85,14 @@ describe('parseCharacterProfileReply', () => {
           start: description.indexOf('a ferry'),
           end: description.indexOf('River') + 'River'.length,
           text: 'a ferry pilot on the Grey River'
-        }
+        },
+        source: 'model'
       },
       {
         factType: 'trait',
         value: 'stubborn',
-        evidence: {start: description.indexOf('She'), end: description.indexOf('stubborn') + 8, text: 'She is stubborn'}
+        evidence: {start: description.indexOf('She'), end: description.indexOf('stubborn') + 8, text: 'She is stubborn'},
+        source: 'model'
       }
     ]);
     expect(profile.droppedFactCount).toBe(2);
@@ -84,6 +114,53 @@ describe('parseCharacterProfileReply', () => {
     );
 
     expect(profile.stableFacts.map((fact) => fact.factType)).toEqual(['identity', 'identity', 'identity']);
+  });
+
+  it('puts code-read facts first, lets them replace a model age, and keeps the unsure flag', () => {
+    const text = 'Odile is 42 years old (she/her). She mends locks.';
+    const profile = parseCharacterProfileReply(
+      reply({
+        name: 'Odile',
+        stableFacts: [
+          {factType: 'age', value: '24', quote: '42 years old'},
+          {factType: 'identity', value: 'she/her', quote: 'she/her'},
+          {factType: 'occupation', value: 'locksmith', quote: 'She mends locks', typeUnsure: true}
+        ],
+        suggestedDetails: []
+      }),
+      text
+    );
+
+    expect(profile.stableFacts.map(({factType, value, source, typeUnsure}) => ({factType, value, source, typeUnsure}))).toEqual([
+      {factType: 'age', value: '42', source: 'auto', typeUnsure: undefined},
+      {factType: 'identity', value: 'she/her', source: 'auto', typeUnsure: undefined},
+      {factType: 'occupation', value: 'locksmith', source: 'model', typeUnsure: true}
+    ]);
+  });
+
+  it('stores code-read, model, and type-unsure facts at different review confidences', () => {
+    const evidence = {start: 0, end: 4, text: 'Mara'};
+    let next = 0;
+    const records = buildCharacterFromDescriptionRecords({
+      projectId: 'p',
+      sessionId: 's',
+      description,
+      target: {kind: 'new', categoryId: 'characters', name: 'Mara Voss'},
+      stableFacts: [
+        {factType: 'age', value: '40', evidence, source: 'auto'},
+        {factType: 'trait', value: 'stubborn', evidence, source: 'model'},
+        {factType: 'occupation', value: 'pilot', evidence, source: 'model', typeUnsure: true}
+      ],
+      suggestedDetails: [],
+      now: 1,
+      createId: () => `id-${next++}`
+    });
+
+    expect(records.proposals.map((proposal) => proposal.confidence)).toEqual([
+      CHARACTER_PROFILE_AUTO_FACT_CONFIDENCE,
+      CHARACTER_PROFILE_FACT_CONFIDENCE,
+      CHARACTER_PROFILE_UNSURE_FACT_CONFIDENCE
+    ]);
   });
 
   it('refuses a name the description does not contain', () => {

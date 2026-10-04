@@ -33,8 +33,10 @@ export const CHARACTER_PROFILE_REPLY_FORMAT =
   'that state it}], "suggestedDetails": [short text]}\n' +
   'Fact types: identity for gender and pronouns; appearance for physical description; trait ' +
   'for personality and habits; background for history and circumstances; heritage for ' +
-  'ancestry, species, or culture. If no type fits, use trait. Pick quickly; the author ' +
-  'reviews every fact.\n' +
+  'ancestry, species, or culture. If no type fits, use trait. Pick quickly: when unsure ' +
+  'which type fits, choose the closest and add "typeUnsure": true to that fact instead of ' +
+  'deliberating; the author reviews every fact. An age written as "N years old" and ' +
+  'pronouns written like "she/her" are recorded automatically, so you may skip them.\n' +
   'Use null for the name unless the description gives one. Every quote must be copied ' +
   'exactly from the description; a fact without one is discarded.';
 

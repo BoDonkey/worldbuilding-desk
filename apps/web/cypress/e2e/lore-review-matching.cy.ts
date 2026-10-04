@@ -344,10 +344,8 @@ describe('Lore and review matching', () => {
     cy.contains('strong', /^Orin$/).closest('li').within(() => {
       cy.contains('button', 'Create canon record').should('be.enabled').click();
     });
-    cy.get('[role="status"]')
-      .should('be.visible')
-      .invoke('text')
-      .should('contain', 'Created World Bible canon for "Orin"');
+    // Earlier toasts may still be showing; find this action's message rather than the first.
+    cy.contains('[role="status"]', 'Created World Bible canon for "Orin"').should('be.visible');
     cy.contains('h2', 'Needs canon link')
       .closest('section')
       .within(() => {
