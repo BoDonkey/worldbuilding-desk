@@ -51,6 +51,11 @@ export function useWorkspaceContextActions(params: {
   const [activeLoreRecord, setActiveLoreRecord] = useState<LoreInspectorRecord | null>(null);
   const [pendingAIInsert, setPendingAIInsert] =
     useState<WorkspacePendingAIInsert | null>(null);
+  /** Model-written prose (character scene, scene draft) for a marked, undoable insert at the cursor. */
+  const insertAIProse = useCallback(
+    (html: string, provenance: AITextProvenance) => setPendingAIInsert({text: html, context: null, provenance}),
+    []
+  );
   const consultationBudget = useConsultationBudget(
     activeProjectId,
     projectSettings?.aiSettings?.inspectorSettings,
@@ -135,6 +140,7 @@ export function useWorkspaceContextActions(params: {
     pendingAIInsert,
     previewSceneRevision,
     setPendingAIInsert,
+    insertAIProse,
     queuedAssistantPrompt,
     setQueuedAssistantPrompt,
     activeLoreRecord,

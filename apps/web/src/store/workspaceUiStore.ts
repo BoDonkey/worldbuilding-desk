@@ -76,6 +76,8 @@ interface WorkspaceUiState {
   isStatBlockModalOpen: boolean;
   isExportModalOpen: boolean;
   isAITextReportOpen: boolean;
+  /** A scene the author asked to draft from elsewhere (Corkboard); Workspace opens it. */
+  sceneDraftRequestSceneId: string | null;
   exportFormat: WorkspaceExportFormat;
   exportSelection: WorkspaceExportItem[];
   importMode: WorkspaceImportMode;
@@ -108,6 +110,7 @@ interface WorkspaceUiState {
   /** Opens the AI text report, closing the scene drawer on narrow screens. */
   openAITextReport: () => void;
   closeAITextReport: () => void;
+  requestSceneDraft: (sceneId: string | null) => void;
   moveExportItem: (id: string, direction: -1 | 1) => void;
   toggleExportItem: (id: string) => void;
   toggleAllExportItems: (included: boolean) => void;
@@ -211,6 +214,7 @@ export const useWorkspaceUiStore = create<WorkspaceUiState>()(
       isStatBlockModalOpen: false,
       isExportModalOpen: false,
       isAITextReportOpen: false,
+      sceneDraftRequestSceneId: null,
       exportFormat: 'markdown',
       exportSelection: [],
       importMode: 'balanced',
@@ -304,6 +308,8 @@ export const useWorkspaceUiStore = create<WorkspaceUiState>()(
         })),
 
       closeAITextReport: () => set({isAITextReportOpen: false}),
+
+      requestSceneDraft: (sceneId) => set({sceneDraftRequestSceneId: sceneId}),
 
       moveExportItem: (id, direction) =>
         set((state) => {

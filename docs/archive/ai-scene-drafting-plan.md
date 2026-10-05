@@ -1,3 +1,5 @@
+> **Archived 2026-10-05.** Slices 4.50–4.52 landed. Durable rules live in `docs/product-blueprint.md` (UX principle 4, AI language) and `docs/domain-model.md` § 5; this file keeps the full design and decisions.
+
 # AI Scene Drafting and Text Provenance — Plan
 
 **Status:** Accepted 2026-10-03 and scheduled as roadmap Slices 4.50–4.52.

@@ -5,7 +5,7 @@
   "apps/web/src/routes/CharacterSheetsRoute.tsx": 2126,
   "apps/web/src/routes/CompendiumRoute.tsx": 1540,
   "apps/web/src/routes/LoreRoute.tsx": 1829,
-  "apps/web/src/routes/WorkspaceRoute.tsx": 1873,
+  "apps/web/src/routes/WorkspaceRoute.tsx": 1854,
   "apps/web/src/routes/WorldBibleRoute.tsx": 2229,
   "apps/web/src/styles/WorkspaceRoute.module.css": 2376
 }

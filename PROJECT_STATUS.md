@@ -847,6 +847,22 @@ runtime schema, and nothing here changes the roadmap's status board.
 ## Verification Status
 
 ### Verified Recently
+- Slice 4.52 opt-in AI scene drafts: **Allow AI scene drafts** in Settings →
+  AI → advanced (`ProjectAISettings.allowSceneDrafts`, default off, per
+  project, disabled while AI consultation is off). When on, **Draft this
+  scene** appears in the Workspace scene header on scenes of 50 words or
+  fewer, and on a Corkboard chapter card's linked empty scenes (it opens the
+  scene in Workspace with the dialog). The dialog shows every input before
+  sending: goal (seeded from linked chapter cards), characters present (up to
+  4) and point of view, setting, beats, target length, the previous scene's
+  last 150 words (editable), and notes. Grounding follows the character lab
+  (records, accepted facts, dialogue styles, story state at the scene's
+  start); other scenes and Source Notes are not sent. Same disclosure,
+  consultation budget (`scene-draft`), Stop, and **Draft again** as the lab.
+  Drafts are cut at 1,500 words in code (the stream stops at the cap).
+  **Insert into scene** is one undoable insert marked `scene-draft`; **Save to
+  Scratchpad** keeps a labeled copy. Nothing else is written. Service:
+  `services/sceneDraft/sceneDraft.ts`.
 - Slice 3.14 hotspot freeze and extraction (behavior-preserving):
   `pnpm check:file-sizes` (`scripts/check-file-sizes.mjs`, run in `web-verify`)
   fails when a non-test source file over 1,500 lines grows past

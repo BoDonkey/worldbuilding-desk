@@ -397,8 +397,12 @@ _Status: implemented (Slices 4.42–4.45, 2026-09-27)._
 - The AI text report reads only these marks: it is a record of what the app
   inserted, not a detector, and unmarked text is never counted.
 - Scene drafts require the project's "Allow AI scene drafts" setting (default
-  off). The app never removes or disguises provider watermarks.
-- Plan and decisions: `docs/ai-scene-drafting-plan.md`.
+  off, not copied to child projects) and AI consultation. They are offered
+  only on scenes of 50 words or fewer, send only the inputs the author sees
+  plus the present characters' grounding, are cut at 1,500 words in code, and
+  write nothing but an author-confirmed scene insert or Scratchpad note. The
+  app never removes or disguises provider watermarks.
+- Plan and decisions: `docs/archive/ai-scene-drafting-plan.md`.
 
 ### Prose-proximate item and state handoff
 

@@ -1,7 +1,7 @@
 import {useEffect, useMemo, useState} from 'react';
 import type {FormEvent} from 'react';
 import {useLocation, useNavigate} from 'react-router';
-import type {ChapterCardStatus, PlotPoint} from '../entityTypes';
+import type {ChapterCardStatus, PlotPoint, WritingDocument} from '../entityTypes';
 import {useAppStore} from '../store/appStore';
 import {useWorkspaceCorkboard} from '../hooks/useWorkspaceCorkboard';
 import {PageHeader} from '../components/PageHeader';
@@ -12,6 +12,8 @@ import {useProgressionContinuityCandidates} from '../hooks/useProgressionContinu
 import {StoryDashboard} from '../components/Corkboard/StoryDashboard';
 import {ChapterCardSceneLinks} from '../components/Corkboard/ChapterCardSceneLinks';
 import {removeSceneLink, toggleSceneLink} from '../services/workspace/chapterCardSceneLinks';
+import {canDraftScenes, isSceneDraftable} from '../services/sceneDraft/sceneDraft';
+import {useWorkspaceUiStore} from '../store/workspaceUiStore';
 import styles from '../styles/CorkboardRoute.module.css';
 
 const STATUS_LABELS: Record<ChapterCardStatus, string> = {
@@ -195,6 +197,14 @@ function CorkboardRoute() {
   const handleOpenScene = (sceneId: string) => {
     navigate('/workspace', {state: {focusDocumentId: sceneId}});
   };
+  const requestSceneDraft = useWorkspaceUiStore((state) => state.requestSceneDraft);
+  const handleDraftScene = (sceneId: string) => {
+    requestSceneDraft(sceneId);
+    handleOpenScene(sceneId);
+  };
+  const canDraftScene = canDraftScenes(projectSettings?.aiSettings)
+    ? (document: WritingDocument) => isSceneDraftable(document.content)
+    : undefined;
 
   if (!activeProject) {
     return (
@@ -406,6 +416,8 @@ function CorkboardRoute() {
                   sceneIds: removeSceneLink(selectedCard, sceneId)
                 })}
                 onOpenScene={handleOpenScene}
+                onDraftScene={canDraftScene ? handleDraftScene : undefined}
+                canDraftScene={canDraftScene}
                 onCreateLinkedScene={() => navigate('/workspace', {
                   state: {createLinkedSceneCardId: selectedCard.id}
                 })}

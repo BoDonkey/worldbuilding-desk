@@ -96,8 +96,8 @@ import {
   resolveCharacterStatCardTemplate
 } from '../services/state/characterPeek';
 import {getSceneOrder} from '../services/state/characterSnapshot';
-import {CharacterLabDialog} from '../components/CharacterLab/CharacterLabDialog';
-import {CharacterSceneDialog} from '../components/CharacterLab/CharacterSceneDialog';
+import {WorkspaceCharacterLabDialogs} from '../components/Workspace/WorkspaceCharacterLabDialogs';
+import {WorkspaceSceneDraftEntry} from '../components/Workspace/WorkspaceSceneDraftEntry';
 import {useWorkspaceUiStore} from '../store/workspaceUiStore';
 import {
   CHARACTER_STAT_PEEK_EVENT,
@@ -440,6 +440,7 @@ function WorkspaceRoute() {
     pendingAIInsert,
     previewSceneRevision,
     setPendingAIInsert,
+    insertAIProse,
     queuedAssistantPrompt,
     setQueuedAssistantPrompt,
     activeLoreRecord,
@@ -1485,6 +1486,10 @@ function WorkspaceRoute() {
                     style={{width: '100%'}}
                   />
                 </label>
+                <WorkspaceSceneDraftEntry
+                  key={selectedId} projectId={activeProject.id} sceneId={selectedId} sceneTitle={title}
+                  content={content} aiSettings={projectSettings?.aiSettings} onInsert={insertAIProse}
+                />
               </div>
 
               <div className={styles.editorPane} data-wbd-scroll-key='workspace-editor-pane'>
@@ -1834,36 +1839,12 @@ function WorkspaceRoute() {
         onClose={closeMemoryDialog} onSave={handleMemorySave}
       />
 
-      {labEntityId && (
-        <CharacterLabDialog
-          isOpen
-          projectId={activeProject.id}
-          entityId={labEntityId}
-          defaultPosition={
-            selectedId
-              ? {kind: 'scene', sceneId: selectedId, moment: 'cursor', cursorPosition: sceneCursorPosition}
-              : {kind: 'latest'}
-          }
-          onClose={() => setLabEntityId(null)}
-        />
-      )}
-
-      {sceneLabEntityId && (
-        <CharacterSceneDialog
-          isOpen
-          projectId={activeProject.id}
-          initialEntityIds={[sceneLabEntityId]}
-          defaultPosition={
-            selectedId
-              ? {kind: 'scene', sceneId: selectedId, moment: 'cursor', cursorPosition: sceneCursorPosition}
-              : {kind: 'latest'}
-          }
-          onInsertAtCursor={
-            selectedId ? (html, provenance) => setPendingAIInsert({text: html, context: null, provenance}) : undefined
-          }
-          onClose={() => setSceneLabEntityId(null)}
-        />
-      )}
+      <WorkspaceCharacterLabDialogs
+        projectId={activeProject.id} selectedSceneId={selectedId} cursorPosition={sceneCursorPosition}
+        labEntityId={labEntityId} sceneLabEntityId={sceneLabEntityId}
+        onCloseLab={() => setLabEntityId(null)} onCloseSceneLab={() => setSceneLabEntityId(null)}
+        onInsertAtCursor={insertAIProse}
+      />
 
       {confirmDialog}
     </section>

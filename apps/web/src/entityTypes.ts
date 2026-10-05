@@ -179,6 +179,12 @@ export interface ProjectAISettings {
   defaultToolIds: string[];
   defaultToolIdsByMode?: Record<ProjectMode, string[]>;
   inspectorSettings?: InspectorSettings;
+  /**
+   * Lets the AI draft whole scenes on request (Slice 4.52). Off by default and
+   * per project: child projects do not copy it. Drafts are previews until the
+   * author inserts them, and inserted text is marked as AI text.
+   */
+  allowSceneDrafts?: boolean;
 }
 
 export interface InspectorSettings {

@@ -297,7 +297,7 @@ and required revisit point, `WIP`, `Done <commit>`.
 | 4.49 | Local Ollama runs receive project and craft context | 4 | S | Done `003a2dc` — widened on start: context also never reached any desktop-app provider except Gemini; one shared `[Source: label]` formatter for hosted adapters, the renderer Ollama adapter, and the Electron request builder (IPC surface and cache key unchanged); lint with 1 baseline warning; 763 web + 14 engine + 12 UI tests; web/desktop builds; Cypress 117/117 including a local-Ollama coach case that fails without the fix |
 | 4.50 | AI text provenance mark (AD-1) | 4 | M | Done `a6197d6` — `aiText` mark with provenance on assistant revisions (model replies only) and character-scene inserts, applied in the insert transaction; Mark as my writing; Show/Hide AI text (on by default, changed from "off once seen"); exports plain text; invisible-character normalization; lint; 807 web + 47 engine + 12 UI + 24 desktop tests; build; Cypress 118/119 (stat-peek palette flake 2/2 in isolation); light/dark screenshots |
 | 4.51 | AI text report (AD-2) | 4 | S | Done `1f80e78` — Workspace scene drawer **AI text report**: marked words and passages per scene and by feature and provider (with models), open scene read as edited, plain-text Copy report, platform-neutral notes; lint baseline; 824 web + 47 engine + 12 UI + 24 desktop tests; web/desktop builds; Cypress 119/119 |
-| 4.52 | Opt-in AI scene drafts (AD-3) | 4 | M | — |
+| 4.52 | Opt-in AI scene drafts (AD-3) | 4 | M | WIP |
 | 5.1 | Auto-update decision + implementation | 5 | M | — |
 | 5.2 | Code signing + notarization, both platforms | 5 | M | — |
 | 5.3 | Packaged-app validation + Electron E2E | 5 | M | — |
@@ -1577,7 +1577,7 @@ or the Electron bridge; the IPC surface is unchanged.
 ### Opt-in AI scene drafting and text provenance (4.50–4.52)
 
 Accepted 2026-10-03. Full design, decisions, and verification:
-_[plan: ai-scene-drafting-plan.md]_. Quiet, per-project, off by default;
+_[plan: archive/ai-scene-drafting-plan.md]_. Quiet, per-project, off by default;
 platform-neutral, non-judgmental copy; no watermark removal.
 
 - **4.50 (AD-1) AI text provenance.** An `aiText` TipTap mark applied only

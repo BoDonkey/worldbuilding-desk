@@ -11,6 +11,9 @@ interface ChapterCardSceneLinksProps {
   onToggle: (sceneId: string) => void;
   onRemoveMissing: (sceneId: string) => void;
   onOpenScene?: (sceneId: string) => void;
+  /** Present when the project allows AI scene drafts: offered on linked scenes that are still empty. */
+  onDraftScene?: (sceneId: string) => void;
+  canDraftScene?: (document: WritingDocument) => boolean;
   onCurrentSceneAction?: (message: string) => void;
   onCreateLinkedScene?: () => void;
   isCreatingLinkedScene?: boolean;
@@ -27,6 +30,8 @@ export function ChapterCardSceneLinks({
   onToggle,
   onRemoveMissing,
   onOpenScene,
+  onDraftScene,
+  canDraftScene,
   onCurrentSceneAction,
   onCreateLinkedScene,
   isCreatingLinkedScene = false,
@@ -105,6 +110,7 @@ export function ChapterCardSceneLinks({
             <span>{sceneTitle(document)}</span>
           </label>
           {linkedIdSet.has(document.id) && onOpenScene && <button type='button' onClick={() => onOpenScene(document.id)} aria-label={`Open scene ${sceneTitle(document)}`}>Open scene</button>}
+          {linkedIdSet.has(document.id) && onDraftScene && canDraftScene?.(document) && <button type='button' onClick={() => onDraftScene(document.id)} aria-label={`Draft scene ${sceneTitle(document)}`}>Draft this scene</button>}
         </div>)}
       </div>}
     </details>
