@@ -262,7 +262,8 @@ export const useWorkspaceConsistency = ({
     refreshDeferredReview,
     refreshActiveDraftReview,
     handleRunConsistencyReview,
-    dismissConsistencyReviewItem
+    dismissConsistencyReviewItem,
+    addModelCheckItems
   } = useConsistencyReviewRuns({
     activeProject,
     documents,
@@ -434,6 +435,7 @@ export const useWorkspaceConsistency = ({
     dismissAllUnknownEntities: dismissal.dismissAllUnknownEntities,
     dismissUnknownEntity: dismissal.dismissUnknownEntity,
     dismissConsistencyReviewItem,
+    addModelCheckItems,
     ignoreUnknownSurfaceProjectWide: dismissal.ignoreUnknownSurfaceProjectWide,
     linkUnknownEntity: resolution.linkUnknownEntity,
     clearUnknownSurface: dismissal.clearUnknownSurface,

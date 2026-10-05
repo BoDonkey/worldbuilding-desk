@@ -1,5 +1,4 @@
 import type {Dispatch, SetStateAction} from 'react';
-import type {ConsistencyReviewItem} from '../services/consistency/reviewReadiness';
 import {create} from 'zustand';
 import {persist, createJSONStorage} from 'zustand/middleware';
 import type {StateStorage} from 'zustand/middleware';
@@ -79,8 +78,6 @@ interface WorkspaceUiState {
   isAITextReportOpen: boolean;
   /** A scene the author asked to draft from elsewhere (Corkboard); Workspace opens it. */
   sceneDraftRequestSceneId: string | null;
-  /** Model-assisted canon check results the author added to review (4.38). Session only. */
-  modelCheckItemsByProjectId: Record<string, ConsistencyReviewItem[]>;
   exportFormat: WorkspaceExportFormat;
   exportSelection: WorkspaceExportItem[];
   importMode: WorkspaceImportMode;
@@ -114,9 +111,6 @@ interface WorkspaceUiState {
   openAITextReport: () => void;
   closeAITextReport: () => void;
   requestSceneDraft: (sceneId: string | null) => void;
-  /** Replaces the scene's earlier model-assisted items with a newer check's. */
-  setModelCheckItemsForScene: (projectId: string, sceneId: string, items: ConsistencyReviewItem[]) => void;
-  dismissModelCheckItem: (projectId: string, itemId: string) => void;
   moveExportItem: (id: string, direction: -1 | 1) => void;
   toggleExportItem: (id: string) => void;
   toggleAllExportItems: (included: boolean) => void;
@@ -221,7 +215,6 @@ export const useWorkspaceUiStore = create<WorkspaceUiState>()(
       isExportModalOpen: false,
       isAITextReportOpen: false,
       sceneDraftRequestSceneId: null,
-      modelCheckItemsByProjectId: {},
       exportFormat: 'markdown',
       exportSelection: [],
       importMode: 'balanced',
@@ -317,25 +310,6 @@ export const useWorkspaceUiStore = create<WorkspaceUiState>()(
       closeAITextReport: () => set({isAITextReportOpen: false}),
 
       requestSceneDraft: (sceneId) => set({sceneDraftRequestSceneId: sceneId}),
-
-      setModelCheckItemsForScene: (projectId, sceneId, items) =>
-        set((state) => ({
-          modelCheckItemsByProjectId: {
-            ...state.modelCheckItemsByProjectId,
-            [projectId]: [
-              ...(state.modelCheckItemsByProjectId[projectId] ?? []).filter((item) => item.sceneId !== sceneId),
-              ...items
-            ]
-          }
-        })),
-
-      dismissModelCheckItem: (projectId, itemId) =>
-        set((state) => ({
-          modelCheckItemsByProjectId: {
-            ...state.modelCheckItemsByProjectId,
-            [projectId]: (state.modelCheckItemsByProjectId[projectId] ?? []).filter((item) => item.id !== itemId)
-          }
-        })),
 
       moveExportItem: (id, direction) =>
         set((state) => {

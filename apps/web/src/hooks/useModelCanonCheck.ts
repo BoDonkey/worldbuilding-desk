@@ -21,7 +21,6 @@ import {resolveResponseTokenLimit} from '../services/llm/modelRun';
 import {describeRouteDataFlow} from '../services/llm/providerRoute';
 import {describeError} from '../services/errors';
 import {getCharacterLabProviderIssue} from '../components/CharacterLab/characterLabProvider';
-import {useWorkspaceUiStore} from '../store/workspaceUiStore';
 import {useConsultationBudget} from './useConsultationBudget';
 import {useModelRun} from './useModelRun';
 
@@ -45,13 +44,14 @@ export function useModelCanonCheck(params: {
   aiSettings: ProjectAISettings | undefined;
   scene: {id: string; title: string; text: string} | null;
   documents: WritingDocument[];
+  /** Adds confirmed items to the review queue, replacing the scene's earlier ones. */
+  onAddItems: (sceneId: string, items: ConsistencyReviewItem[]) => void;
 }) {
-  const {projectId, aiSettings, scene, documents} = params;
+  const {projectId, aiSettings, scene, documents, onAddItems} = params;
   const modelRun = useModelRun();
   const inspector = aiSettings?.inspectorSettings;
   const consultationEnabled = inspector?.enableAIConsultation !== false;
   const budget = useConsultationBudget(projectId, inspector, aiSettings);
-  const setModelCheckItemsForScene = useWorkspaceUiStore((state) => state.setModelCheckItemsForScene);
   const [preview, setPreview] = useState<CanonCheckPreview | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -132,12 +132,12 @@ export function useModelCanonCheck(params: {
 
   const confirm = useCallback(() => {
     if (!preview) return;
-    setModelCheckItemsForScene(projectId, preview.sceneId, preview.items);
+    onAddItems(preview.sceneId, preview.items);
     setMessage(
       `Added ${preview.items.length} possible conflict${preview.items.length === 1 ? '' : 's'} to review.`
     );
     setPreview(null);
-  }, [preview, projectId, setModelCheckItemsForScene]);
+  }, [onAddItems, preview]);
 
   const discard = useCallback(() => setPreview(null), []);
 

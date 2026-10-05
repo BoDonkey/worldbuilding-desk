@@ -26,9 +26,16 @@ export interface ProjectReviewRun {
   projectId: string;
   /** Hash of the non-text review inputs (known entities, action cues, engine). */
   inputsHash: string;
+  /** 0 when no project review has run yet and the record only holds model-assisted items. */
   reviewedAt: number;
   scenes: StoredSceneReview[];
   items: ConsistencyReviewItem[];
+  /**
+   * Model-assisted canon check items the author added to review (4.38/4.53).
+   * Kept apart from `items` because they come from an explicit check, not
+   * from the review run, and survive re-reviews while their quote remains.
+   */
+  modelCheckItems?: ConsistencyReviewItem[];
 }
 
 export async function getProjectReviewRun(projectId: string): Promise<ProjectReviewRun | null> {

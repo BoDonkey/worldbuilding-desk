@@ -847,6 +847,14 @@ runtime schema, and nothing here changes the roadmap's status board.
 ## Verification Status
 
 ### Verified Recently
+- Slice 4.53 model-assisted review items in the shared review model: canon
+  check items (4.38) now live in the Workspace review state and are saved
+  with the project review run (`ProjectReviewRun.modelCheckItems`; a record
+  with `reviewedAt: 0` holds them if no review has run yet). They underline
+  their quote in the editor, count in the header review indicator, survive
+  reloads, scene re-reviews, and project review runs while their quote is
+  still in the scene (`survivesSceneRereview`, `pruneModelCheckItems`), and
+  their dismissal is saved. The 4.38 session store slice is gone.
 - Slice 3.16 `useWorkspaceConsistency` split (behavior-preserving): the
   2,234-line hook is now a 450-line composer over `useReviewPreferences`,
   `useSceneSaveReview` (`persistDoc`), `useConsistencyReviewRuns` (refreshes,
@@ -867,9 +875,9 @@ runtime schema, and nothing here changes the roadmap's status board.
   discarded and counted. Survivors appear in the shared proposal preview and
   join the review queue only on **Confirm action**, as dismissible
   `STATE_CONFLICT` warnings labeled "Model-assisted check · provider".
-  Session-only (`workspaceUiStore`); an item drops out when its quoted text
-  leaves the scene. They do not underline in the editor or change the header
-  review indicator. Service: `services/consistency/modelCanonCheck.ts`;
+  Since 4.53 they are part of the shared review model (persisted,
+  underlined, counted); an item drops out when its quoted text leaves the
+  scene. Service: `services/consistency/modelCanonCheck.ts`;
   three corpus cases with `modelCheckTargets` (paraphrase, implication,
   reworded denial) are asserted as structural non-hits the check can cite.
 - Slice 4.52 opt-in AI scene drafts: **Allow AI scene drafts** in Settings →

@@ -8,6 +8,8 @@ import {
   canonCheckSceneText,
   isModelCheckItem,
   isModelCheckItemCurrent,
+  pruneModelCheckItems,
+  survivesSceneRereview,
   parseCanonCheckReply,
   sceneCheckText,
   selectCanonCheckFacts,
@@ -101,5 +103,25 @@ describe('model-assisted canon check', () => {
     expect(checked.truncated).toBe(true);
     expect(checked.text.length).toBeLessThanOrEqual(CANON_CHECK_SCENE_CHAR_LIMIT);
     expect(canonCheckSceneText('Short.')).toEqual({text: 'Short.', truncated: false});
+  });
+
+  it('keeps live model-assisted items through re-reviews and drops them when their quote goes', () => {
+    const selected = selectCanonCheckFacts({sceneText: scene, entities, facts: [fact('f-sera', 'sera', 'gray eyes')]});
+    const {accepted} = validateCanonCheckCandidates({
+      sceneText: scene,
+      facts: selected,
+      candidates: [{factId: 'F1', evidence: {text: 'eyes the color of new moss'}, summary: 'Green.'}]
+    });
+    const [model] = buildModelCanonCheckItems({sceneId: 's1', sceneTitle: 'Moss', conflicts: accepted, provider: undefined});
+    const deterministic = {...model, id: 'det', reviewAnnotation: undefined};
+    const kept = {id: 's1', content: '<p>The Ledgerbound looked up with eyes the color of new moss.</p>'};
+    const edited = {id: 's1', content: '<p>The Ledgerbound looked up with gray eyes.</p>'};
+    expect(survivesSceneRereview(model, kept)).toBe(true);
+    expect(survivesSceneRereview(model, edited)).toBe(false);
+    expect(survivesSceneRereview(deterministic, kept)).toBe(false);
+    expect(survivesSceneRereview(deterministic, {id: 'other', content: ''})).toBe(true);
+    expect(pruneModelCheckItems([model, deterministic], [kept])).toEqual([model, deterministic]);
+    expect(pruneModelCheckItems([model, deterministic], [edited])).toEqual([deterministic]);
+    expect(pruneModelCheckItems([model], [])).toEqual([]);
   });
 });

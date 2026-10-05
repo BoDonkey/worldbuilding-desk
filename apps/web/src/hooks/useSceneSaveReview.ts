@@ -21,6 +21,7 @@ import {
   mapReviewAnnotationsByIssueKey,
   type ConsistencyReviewItem
 } from '../services/consistency/reviewReadiness';
+import {survivesSceneRereview} from '../services/consistency/modelCanonCheck';
 import {downgradeUnknownIssuesToWarnings, hashString} from '../services/consistency/sceneReviewHelpers';
 
 /**
@@ -109,7 +110,7 @@ export function useSceneSaveReview({
           );
           setGuardrailIssues(dismissedPresentedIssues);
           setConsistencyReviewItems((prev) => [
-            ...prev.filter((item) => item.sceneId !== doc.id),
+            ...prev.filter((item) => survivesSceneRereview(item, doc)),
             ...dismissedPresentedIssues.map((issue) => ({
               id: makeReviewItemId(doc.id, issue),
               sceneId: doc.id,
@@ -226,7 +227,7 @@ export function useSceneSaveReview({
       if (consistencyMode === 'strict' && !isImport) {
         setGuardrailIssues([]);
         setConsistencyReviewItems((prev) =>
-          prev.filter((item) => item.sceneId !== doc.id)
+          prev.filter((item) => survivesSceneRereview(item, doc))
         );
       }
       lastAutosaveErrorRef.current = null;

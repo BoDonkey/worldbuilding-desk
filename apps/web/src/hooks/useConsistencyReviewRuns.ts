@@ -37,6 +37,11 @@ import {
   downgradeUnknownIssuesToWarnings,
   getReviewSourceForDocument
 } from '../services/consistency/sceneReviewHelpers';
+import {
+  isModelCheckItem,
+  pruneModelCheckItems,
+  survivesSceneRereview
+} from '../services/consistency/modelCanonCheck';
 import {describeError} from '../services/errors';
 import {useStatusAnnouncement} from './useStatusAnnouncement';
 
@@ -157,8 +162,8 @@ export function useConsistencyReviewRuns({
           return;
         }
         setStoredReviewScenes(run.scenes);
-        setConsistencyReviewItems(run.items);
-        setLastConsistencyReviewAt(run.reviewedAt);
+        setConsistencyReviewItems([...run.items, ...(run.modelCheckItems ?? [])]);
+        setLastConsistencyReviewAt(run.reviewedAt || null);
       })
       .catch((error) => {
         if (!cancelled) {
@@ -173,9 +178,34 @@ export function useConsistencyReviewRuns({
   useEffect(() => {
     if (storedReviewScenes.length === 0) return;
     setConsistencyReviewItems((prev) =>
-      prev.length === 0 ? prev : markStaleReviewItems({items: prev, documents, storedScenes: storedReviewScenes})
+      // Model-assisted items are not tied to a review run; they expire by quote instead.
+      prev.length === 0
+        ? prev
+        : [
+            ...markStaleReviewItems({
+              items: prev.filter((item) => !isModelCheckItem(item)),
+              documents,
+              storedScenes: storedReviewScenes
+            }),
+            ...prev.filter(isModelCheckItem)
+          ]
     );
   }, [setConsistencyReviewItems, documents, storedReviewScenes]);
+
+  // Read at the end of an async project review, so items added during it are kept.
+  const consistencyReviewItemsRef = useRef(consistencyReviewItems);
+  useEffect(() => {
+    consistencyReviewItemsRef.current = consistencyReviewItems;
+  }, [consistencyReviewItems]);
+
+  // A saved scene that no longer contains a model-assisted item's quote drops it.
+  useEffect(() => {
+    if (documents.length === 0) return;
+    setConsistencyReviewItems((prev) => {
+      const next = pruneModelCheckItems(prev, documents);
+      return next.length === prev.length ? prev : next;
+    });
+  }, [documents, setConsistencyReviewItems]);
 
   const refreshDeferredReview = useCallback(
     async (doc: WritingDocument) => {
@@ -213,7 +243,7 @@ export function useConsistencyReviewRuns({
       });
       setGuardrailIssues(presentedIssues);
       setConsistencyReviewItems((prev) => [
-        ...prev.filter((item) => item.sceneId !== doc.id),
+        ...prev.filter((item) => survivesSceneRereview(item, doc)),
         ...presentedIssues.map((issue) => ({
           id: makeReviewItemId(doc.id, issue),
           sceneId: doc.id,
@@ -285,7 +315,7 @@ export function useConsistencyReviewRuns({
         });
         setGuardrailIssues(presentedIssues);
         setConsistencyReviewItems((prev) => [
-          ...prev.filter((item) => item.sceneId !== doc.id),
+          ...prev.filter((item) => survivesSceneRereview(item, doc)),
           ...presentedIssues.map((issue) => ({
             id: makeReviewItemId(doc.id, issue),
             sceneId: doc.id,
@@ -417,7 +447,12 @@ export function useConsistencyReviewRuns({
       const continuityItems = [...contradictionItems, ...stateContinuityItems];
       const combinedItems = [...items, ...continuityItems];
 
-      setConsistencyReviewItems(combinedItems);
+      // Model-assisted items come from explicit checks, not this run: keep the live ones.
+      const modelCheckItems = pruneModelCheckItems(
+        consistencyReviewItemsRef.current.filter(isModelCheckItem),
+        documents
+      );
+      setConsistencyReviewItems([...combinedItems, ...modelCheckItems]);
       setLastConsistencyReviewAt(reviewedAt);
       const nextRun: ProjectReviewRun = {
         id: activeProject.id,
@@ -425,7 +460,8 @@ export function useConsistencyReviewRuns({
         inputsHash,
         reviewedAt,
         scenes: nextStoredScenes,
-        items: combinedItems
+        items: combinedItems,
+        modelCheckItems
       };
       storedReviewRunRef.current = nextRun;
       setStoredReviewScenes(nextStoredScenes);
@@ -495,13 +531,47 @@ export function useConsistencyReviewRuns({
     );
     const storedRun = storedReviewRunRef.current;
     if (storedRun) {
-      const nextRun = {...storedRun, items: storedRun.items.filter((entry) => entry.id !== itemId)};
+      const nextRun = {
+        ...storedRun,
+        items: storedRun.items.filter((entry) => entry.id !== itemId),
+        modelCheckItems: (storedRun.modelCheckItems ?? []).filter((entry) => entry.id !== itemId)
+      };
       storedReviewRunRef.current = nextRun;
       void saveProjectReviewRun(nextRun).catch((error) => {
         console.warn('Could not persist the dismissed review item.', error);
       });
     }
   }, [setConsistencyReviewItems, consistencyReviewItems]);
+
+  /**
+   * Adds a confirmed canon check's items for a scene, replacing that scene's
+   * earlier model-assisted items, and saves them with the project review run
+   * (creating a run record that holds only them if no review has run yet).
+   */
+  const addModelCheckItems = useCallback(
+    (sceneId: string, items: ConsistencyReviewItem[]) => {
+      if (!activeProject) return;
+      const keep = (entry: ConsistencyReviewItem) => !(isModelCheckItem(entry) && entry.sceneId === sceneId);
+      setConsistencyReviewItems((prev) => [...prev.filter(keep), ...items]);
+      const base: ProjectReviewRun = storedReviewRunRef.current ?? {
+        id: activeProject.id,
+        projectId: activeProject.id,
+        inputsHash: '',
+        reviewedAt: 0,
+        scenes: [],
+        items: []
+      };
+      const nextRun: ProjectReviewRun = {
+        ...base,
+        modelCheckItems: [...(base.modelCheckItems ?? []).filter(keep), ...items]
+      };
+      storedReviewRunRef.current = nextRun;
+      void saveProjectReviewRun(nextRun).catch((error) => {
+        console.warn('Could not persist the canon check results.', error);
+      });
+    },
+    [activeProject, setConsistencyReviewItems]
+  );
 
   return {
     isRunningConsistencyReview,
@@ -510,6 +580,7 @@ export function useConsistencyReviewRuns({
     refreshDeferredReview,
     refreshActiveDraftReview,
     handleRunConsistencyReview,
-    dismissConsistencyReviewItem
+    dismissConsistencyReviewItem,
+    addModelCheckItems
   };
 }

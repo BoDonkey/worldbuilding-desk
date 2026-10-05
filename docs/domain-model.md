@@ -118,8 +118,10 @@ Key rules:
   only if it cites a fact that was sent and quotes text that exists
   verbatim in the scene; everything else is discarded and counted. Survivors
   are previewed, join the review queue only on the author's confirmation, are
-  labeled model-assisted, and are dismissible. They are session-only and
-  drop out when their quoted text leaves the scene. Nothing is applied to
+  labeled model-assisted, and are dismissible. They live in the shared
+  review model (4.53): saved with the project review run, underlined in the
+  editor, counted in the review indicator, kept through re-reviews and
+  project review runs, and dropped when their quoted text leaves the scene. Nothing is applied to
   canon, facts, or state. Corpus `modelCheckTargets` record the structural
   non-hits this path exists for, measured separately from `expected`.
 

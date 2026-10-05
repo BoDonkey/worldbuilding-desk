@@ -127,7 +127,39 @@ describe('Model-assisted canon check', () => {
     });
   });
 
-  it('drops an added item when the quoted text leaves the scene', () => {
+  it('keeps added items in the shared review: underlined, counted, and still there after a reload', () => {
+    cy.intercept('POST', ANTHROPIC_STREAM, anthropicReply(JSON.stringify({
+      contradictions: [{factId: 'F1', evidence: {text: 'eyes the color of new moss'}, summary: 'Green, not gray.'}]
+    })));
+    cy.get('button[aria-label^="Open review drawer"]').should('contain.text', 'Review clear');
+    openReview();
+    cy.contains('button', 'Check this scene against canon').click();
+    cy.contains('button', 'Confirm action').click();
+    cy.get('.tiptap [data-consistency-id^="model-check:"]').should('have.text', 'eyes the color of new moss');
+    cy.get('button[aria-label^="Open review drawer"]').should('contain.text', '1 review item');
+    // A project review rebuilds its own findings but keeps the model-assisted item.
+    cy.contains('button', 'Run project review').click();
+    cy.contains('button', 'Run project review').should('not.be.disabled');
+    cy.contains('li', 'Possible canon conflict for Sera').should('be.visible');
+
+    cy.reload();
+    cy.get('.tiptap[contenteditable="true"]').should('contain.text', 'eyes the color of new moss');
+    cy.get('.tiptap [data-consistency-id^="model-check:"]').should('have.text', 'eyes the color of new moss');
+    cy.get('button[aria-label^="Open review drawer"]').should('contain.text', '1 review item');
+    openReview();
+    cy.contains('li', 'Possible canon conflict for Sera').within(() => {
+      cy.contains('Model-assisted check · Anthropic (Claude)').scrollIntoView().should('be.visible');
+      cy.contains('button', 'Dismiss').click();
+    });
+    cy.get('.tiptap [data-consistency-id^="model-check:"]').should('not.exist');
+
+    cy.reload();
+    cy.get('.tiptap[contenteditable="true"]').should('contain.text', 'eyes the color of new moss');
+    cy.get('button[aria-label^="Open review drawer"]').should('contain.text', 'Review clear');
+    cy.get('.tiptap [data-consistency-id^="model-check:"]').should('not.exist');
+  });
+
+  it('drops an added item when the quoted text leaves the scene, including after a reload', () => {
     cy.intercept('POST', ANTHROPIC_STREAM, anthropicReply(JSON.stringify({
       contradictions: [{factId: 'F1', evidence: {text: 'the color of new moss'}, summary: 'Green, not gray.'}]
     })));
@@ -137,6 +169,11 @@ describe('Model-assisted canon check', () => {
     cy.contains('li', 'Possible canon conflict for Sera').should('be.visible');
 
     cy.get('.tiptap[contenteditable="true"]').type('{selectall}{backspace}Sera blinked.');
+    cy.contains('li', 'Possible canon conflict for Sera').should('not.exist');
+    cy.contains('button', 'Save now').click();
+    cy.reload();
+    cy.get('.tiptap[contenteditable="true"]').should('contain.text', 'Sera blinked.');
+    openReview();
     cy.contains('li', 'Possible canon conflict for Sera').should('not.exist');
   });
 

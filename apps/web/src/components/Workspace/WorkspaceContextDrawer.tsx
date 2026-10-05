@@ -45,8 +45,7 @@ import {
 } from './SceneRosterPanel';
 import type {AITextProvenance} from '../../services/editor/aiTextProvenance';
 import {useModelCanonCheck} from '../../hooks/useModelCanonCheck';
-import {isModelCheckItem, isModelCheckItemCurrent, sceneCheckText} from '../../services/consistency/modelCanonCheck';
-import {useWorkspaceUiStore} from '../../store/workspaceUiStore';
+import {sceneCheckText} from '../../services/consistency/modelCanonCheck';
 import {CanonCheckPanel} from './CanonCheckPanel';
 
 interface ConsistencyReviewItem {
@@ -219,6 +218,8 @@ interface WorkspaceContextDrawerProps {
   ) => Promise<void>;
   dismissUnknownEntity: (surface: string, documentId?: string) => void;
   dismissConsistencyReviewItem: (itemId: string) => void;
+  /** Adds a confirmed canon check's items to the review queue (4.53). */
+  addModelCheckItems: (sceneId: string, items: ConsistencyReviewItem[]) => void;
   ignoreUnknownSurfaceProjectWide: (surface: string, documentId?: string) => void;
   linkUnknownEntity: (
     surface: string,
@@ -333,7 +334,7 @@ export function WorkspaceContextDrawer({
   handleRunConsistencyReview,
   isRunningConsistencyReview,
   lastConsistencyReviewAt,
-  consistencyReviewItems: baseConsistencyReviewItems,
+  consistencyReviewItems,
   stateMutationReviewItems,
   hiddenStateMutationReviewCountBySceneId,
   hiddenStateMutationReviewCount,
@@ -366,7 +367,8 @@ export function WorkspaceContextDrawer({
   createWorldCategory,
   resolveUnknownEntity,
   dismissUnknownEntity,
-  dismissConsistencyReviewItem: dismissBaseReviewItem,
+  dismissConsistencyReviewItem,
+  addModelCheckItems,
   ignoreUnknownSurfaceProjectWide,
   linkUnknownEntity,
   openWorldRecord,
@@ -446,24 +448,9 @@ export function WorkspaceContextDrawer({
     scene: currentDocument
       ? {id: currentDocument.id, title: currentDocument.title, text: currentSceneCheckText}
       : null,
-    documents
+    documents,
+    onAddItems: addModelCheckItems
   });
-  const modelCheckItems = useWorkspaceUiStore((state) => state.modelCheckItemsByProjectId[activeProject.id]);
-  const dismissModelCheckItem = useWorkspaceUiStore((state) => state.dismissModelCheckItem);
-  // Model-assisted items stay only while the text they quote is still in the scene.
-  const consistencyReviewItems = useMemo(() => {
-    const live = (modelCheckItems ?? []).filter((item) => {
-      if (item.sceneId === selectedId) return isModelCheckItemCurrent(item, currentSceneCheckText);
-      const scene = documents.find((document) => document.id === item.sceneId);
-      return scene ? isModelCheckItemCurrent(item, sceneCheckText(scene.content)) : false;
-    });
-    return live.length > 0 ? [...baseConsistencyReviewItems, ...live] : baseConsistencyReviewItems;
-  }, [baseConsistencyReviewItems, currentSceneCheckText, documents, modelCheckItems, selectedId]);
-  const dismissConsistencyReviewItem = (itemId: string) => {
-    const item = consistencyReviewItems.find((entry) => entry.id === itemId);
-    if (item && isModelCheckItem(item)) dismissModelCheckItem(activeProject.id, itemId);
-    else dismissBaseReviewItem(itemId);
-  };
   const orderedConsistencyReviewItems = useMemo(() => {
     const activeItem = activeReviewItemId
       ? consistencyReviewItems.find((item) => item.id === activeReviewItemId) ?? null

@@ -247,3 +247,27 @@ export const isModelCheckItemCurrent = (item: ConsistencyReviewItem, sceneText: 
 
 export const isModelCheckItem = (item: ConsistencyReviewItem): boolean =>
   item.reviewAnnotation?.source === 'model-check';
+
+/**
+ * Whether an item stays when `scene` is re-reviewed: items from other scenes
+ * always do; the scene's own model-assisted items do while their quote is
+ * still in it. Re-review rebuilds everything else for that scene.
+ */
+export const survivesSceneRereview = (item: ConsistencyReviewItem, scene: {id: string; content: string}): boolean =>
+  item.sceneId !== scene.id ||
+  (isModelCheckItem(item) && isModelCheckItemCurrent(item, sceneCheckText(scene.content)));
+
+/** Drops model-assisted items whose scene is gone or no longer contains their quote. */
+export function pruneModelCheckItems(
+  items: ConsistencyReviewItem[],
+  scenes: Array<{id: string; content: string}>
+): ConsistencyReviewItem[] {
+  const textById = new Map<string, string>();
+  return items.filter((item) => {
+    if (!isModelCheckItem(item)) return true;
+    const scene = scenes.find((entry) => entry.id === item.sceneId);
+    if (!scene) return false;
+    if (!textById.has(scene.id)) textById.set(scene.id, sceneCheckText(scene.content));
+    return isModelCheckItemCurrent(item, textById.get(scene.id) ?? '');
+  });
+}
