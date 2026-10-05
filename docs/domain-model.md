@@ -110,6 +110,18 @@ Key rules:
   and implication are out of reach for this path by design and belong to
   the author-triggered, evidence-validated model check (roadmap 4.38).
   Precision is measured against the checked-in continuity corpus.
+- **The model-assisted canon check proposes; code decides what is shown.**
+  Only on an explicit **Check this scene against canon**: one scene's text
+  (capped at 12,000 characters) and the accepted, valid-at-scene facts about
+  entities it names go to the configured provider; one `canon-check`
+  consultation is spent only when something is sent. A candidate survives
+  only if it cites a fact that was sent and quotes text that exists
+  verbatim in the scene; everything else is discarded and counted. Survivors
+  are previewed, join the review queue only on the author's confirmation, are
+  labeled model-assisted, and are dismissible. They are session-only and
+  drop out when their quoted text leaves the scene. Nothing is applied to
+  canon, facts, or state. Corpus `modelCheckTargets` record the structural
+  non-hits this path exists for, measured separately from `expected`.
 
 ### Retrieval integration
 

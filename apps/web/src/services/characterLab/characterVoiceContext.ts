@@ -111,7 +111,7 @@ const describePosition = (
  * not accepted: accepting writes the fact before the proposal, so a failed
  * second write must not let a pending or rejected claim ground a character.
  */
-const isAcceptedFact = (
+export const isAcceptedFact = (
   fact: CanonicalFact,
   proposalStatusById: Map<string, LoreFactProposal['status']>
 ): boolean => {

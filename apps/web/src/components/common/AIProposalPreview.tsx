@@ -1,17 +1,19 @@
-import {useId} from 'react';
+import {useId, type ReactNode} from 'react';
 import {useAIProposalConfirmation} from '../../hooks/useAIProposalConfirmation';
 import styles from '../../assets/components/common/AIProposalPreview.module.css';
 
 interface AIProposalPreviewProps {
   title: string;
-  text: string;
+  text?: string;
+  /** Structured content in place of `text`, e.g. a list of proposed items. */
+  children?: ReactNode;
   beforeText?: string;
   onDismiss: () => void;
   onConfirm: () => void | Promise<void>;
 }
 
 /** Read-only preview. Confirm delegates to an app-owned, validated action. */
-export function AIProposalPreview({title, text, beforeText, onDismiss, onConfirm}: AIProposalPreviewProps) {
+export function AIProposalPreview({title, text, children, beforeText, onDismiss, onConfirm}: AIProposalPreviewProps) {
   const titleId = useId();
   const {confirm, isConfirming, error} = useAIProposalConfirmation(onConfirm);
   return (
@@ -21,7 +23,7 @@ export function AIProposalPreview({title, text, beforeText, onDismiss, onConfirm
         <strong id={titleId}>{title}</strong>
       </div>
       {beforeText !== undefined && <><strong>Current text</strong><p>{beforeText}</p><strong>Proposed text</strong></>}
-      <p>{text}</p>
+      {children ?? <p>{text}</p>}
       {error && <p role='alert'>{error}</p>}
       <div className={styles.aiHelperProposalActions}>
         <button type='button' className={styles.secondaryButton} onClick={onDismiss} disabled={isConfirming}>Dismiss</button>

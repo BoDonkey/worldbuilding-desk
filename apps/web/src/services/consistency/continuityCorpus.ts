@@ -91,7 +91,7 @@ function toAliases(corpusCase: ContinuityCorpusCase): ConsistencyAlias[] {
   );
 }
 
-function toCanonicalFacts(corpusCase: ContinuityCorpusCase): CanonicalFact[] {
+export function toCanonicalFacts(corpusCase: ContinuityCorpusCase): CanonicalFact[] {
   return (corpusCase.facts ?? []).map((fact, index) => ({
     id: `${corpusCase.id}-fact-${index}`,
     projectId: 'corpus',

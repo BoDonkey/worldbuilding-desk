@@ -89,6 +89,14 @@ export interface ContinuityCorpusCase {
   expectedNotResolved?: CorpusExpectedResolution[];
   /** No state-backed conflict/invalid-mutation may name these entity ids. */
   expectedNoConflictFor?: Array<{entityId: string; knownGap?: string}>;
+  /**
+   * Contradictions only reading can catch (4.38): the structural comparator
+   * must miss them (assert with `expectedNoConflictFor`), and the
+   * model-assisted check must be able to cite them. `evidence` is the exact
+   * scene span; `factIndex` points into `facts`. Kept separate from
+   * `expected` so the two detectors are measured separately.
+   */
+  modelCheckTargets?: Array<{sceneId: string; factIndex: number; evidence: string; note: string}>;
   state?: {
     ruleset: StoredRuleset;
     characterSheets: CharacterSheet[];
@@ -509,5 +517,41 @@ export const CONTINUITY_CORPUS: ContinuityCorpusCase[] = [
         createdAt: 1
       }]
     }
+  },
+  {
+    id: 'model-paraphrase-eye-color',
+    title: '4.38 — paraphrased eye color the structural comparator cannot read',
+    source: '4.38 prompt (paraphrase: no color word in the eye slot)',
+    scenes: [{id: 's1', title: 'Moss', text: `Sera Kestrel met his stare with eyes the color of new moss, and did not blink first.`}],
+    entities: [sera],
+    facts: [{targetId: 'sera', factType: 'appearance', value: 'gray eyes', sourceTitle: 'Sera Kestrel dossier'}],
+    expected: [],
+    expectedAbsent: [],
+    expectedNoConflictFor: [{entityId: 'sera'}],
+    modelCheckTargets: [{sceneId: 's1', factIndex: 0, evidence: 'eyes the color of new moss', note: 'moss-colored means green, not gray'}]
+  },
+  {
+    id: 'model-implied-occupation',
+    title: '4.38 — an occupation contradicted by implication',
+    source: '4.38 prompt (implication: no assertion pattern names the role)',
+    scenes: [{id: 's1', title: 'Below', text: `Brannic Halloway had never once gone below the harbor. The vault keys were someone else's burden, and he liked it that way.`}],
+    entities: [brannic, undervault],
+    facts: [{targetId: 'brannic', factType: 'occupation', value: 'warden of the Undervault', sourceTitle: 'Brannic Halloway dossier'}],
+    expected: [],
+    expectedAbsent: [],
+    expectedNoConflictFor: [{entityId: 'brannic'}],
+    modelCheckTargets: [{sceneId: 's1', factIndex: 0, evidence: "The vault keys were someone else's burden", note: 'the warden would hold the vault keys'}]
+  },
+  {
+    id: 'model-membership-paraphrase',
+    title: '4.38 — membership denied in other words',
+    source: '4.38 prompt (paraphrase of a negation the slot comparator cannot see)',
+    scenes: [{id: 's1', title: 'Ash', text: `Dess spat when the Compact was named. "I'd sooner drown than wear their ash," she said, and meant it.`}],
+    entities: [odessa, compact],
+    facts: [{targetId: 'odessa', factType: 'membership', value: 'sworn member of the Cinder Compact', sourceTitle: 'Odessa Vane-Kir dossier'}],
+    expected: [],
+    expectedAbsent: [],
+    expectedNoConflictFor: [{entityId: 'odessa'}],
+    modelCheckTargets: [{sceneId: 's1', factIndex: 0, evidence: "I'd sooner drown than wear their ash", note: 'a sworn member would not refuse the Compact'}]
   }
 ];

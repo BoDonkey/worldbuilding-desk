@@ -1373,7 +1373,7 @@ function WorkspaceRoute() {
     handleConsultationFromLore,
     settlementModuleCount: settlementModules.length,
     activePartySynergyCount: activePartySynergies.length,
-    selectedId, memoryCandidates, memoryFilter, setMemoryFilter,
+    selectedId, sceneContent: content, memoryCandidates, memoryFilter, setMemoryFilter,
     memoryScope, setMemoryScope, scopeLabel, refreshMemories,
     handleDeleteMemory, emptyMemoryMessage, seriesBibleConfig,
     handlePromoteMemory, isPromotingMemoryId

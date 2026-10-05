@@ -112,7 +112,7 @@ export const ReviewIssueAnnotationSchema = z.object({
     'STATE_CONFLICT',
     'INVALID_MUTATION'
   ]),
-  source: z.enum(['deterministic', 'local-ai']),
+  source: z.enum(['deterministic', 'local-ai', 'model-check']),
   engineLabel: z.string().min(1),
   confidence: z.number().min(0).max(1).optional(),
   summary: z.string().min(1).optional(),

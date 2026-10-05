@@ -847,6 +847,21 @@ runtime schema, and nothing here changes the roadmap's status board.
 ## Verification Status
 
 ### Verified Recently
+- Slice 4.38 model-assisted canon check: **Check this scene against canon** in
+  the Workspace review drawer sends the open scene (paragraph text, up to
+  12,000 characters) and the accepted, valid-at-scene facts about entities it
+  names by name or alias to the configured provider, with the usual
+  disclosure, budget (`canon-check`), and Stop. No facts → nothing sent or
+  spent. The reply (`{factId, evidence, summary}`) is parsed strictly;
+  candidates citing unknown facts or text not verbatim in the scene are
+  discarded and counted. Survivors appear in the shared proposal preview and
+  join the review queue only on **Confirm action**, as dismissible
+  `STATE_CONFLICT` warnings labeled "Model-assisted check · provider".
+  Session-only (`workspaceUiStore`); an item drops out when its quoted text
+  leaves the scene. They do not underline in the editor or change the header
+  review indicator. Service: `services/consistency/modelCanonCheck.ts`;
+  three corpus cases with `modelCheckTargets` (paraphrase, implication,
+  reworded denial) are asserted as structural non-hits the check can cite.
 - Slice 4.52 opt-in AI scene drafts: **Allow AI scene drafts** in Settings →
   AI → advanced (`ProjectAISettings.allowSceneDrafts`, default off, per
   project, disabled while AI consultation is off). When on, **Draft this

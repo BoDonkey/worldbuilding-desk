@@ -44,6 +44,10 @@ import {
   type SceneRosterTimelineEvent
 } from './SceneRosterPanel';
 import type {AITextProvenance} from '../../services/editor/aiTextProvenance';
+import {useModelCanonCheck} from '../../hooks/useModelCanonCheck';
+import {isModelCheckItem, isModelCheckItemCurrent, sceneCheckText} from '../../services/consistency/modelCanonCheck';
+import {useWorkspaceUiStore} from '../../store/workspaceUiStore';
+import {CanonCheckPanel} from './CanonCheckPanel';
 
 interface ConsistencyReviewItem {
   id: string;
@@ -257,6 +261,8 @@ interface WorkspaceContextDrawerProps {
 
   // ShodhMemoryPanel (shown when a document is selected)
   selectedId: string | null;
+  /** The open scene as edited, for the model-assisted canon check. */
+  sceneContent: string;
   memoryCandidates: MemoryEntry[];
   memoryFilter: string;
   setMemoryFilter: (val: string) => void;
@@ -327,7 +333,7 @@ export function WorkspaceContextDrawer({
   handleRunConsistencyReview,
   isRunningConsistencyReview,
   lastConsistencyReviewAt,
-  consistencyReviewItems,
+  consistencyReviewItems: baseConsistencyReviewItems,
   stateMutationReviewItems,
   hiddenStateMutationReviewCountBySceneId,
   hiddenStateMutationReviewCount,
@@ -360,7 +366,7 @@ export function WorkspaceContextDrawer({
   createWorldCategory,
   resolveUnknownEntity,
   dismissUnknownEntity,
-  dismissConsistencyReviewItem,
+  dismissConsistencyReviewItem: dismissBaseReviewItem,
   ignoreUnknownSurfaceProjectWide,
   linkUnknownEntity,
   openWorldRecord,
@@ -385,6 +391,7 @@ export function WorkspaceContextDrawer({
   settlementModuleCount,
   activePartySynergyCount,
   selectedId,
+  sceneContent,
   memoryCandidates,
   memoryFilter,
   setMemoryFilter,
@@ -432,6 +439,31 @@ export function WorkspaceContextDrawer({
     () => documents.find((document) => document.id === selectedId) ?? null,
     [documents, selectedId]
   );
+  const currentSceneCheckText = useMemo(() => sceneCheckText(sceneContent), [sceneContent]);
+  const canonCheck = useModelCanonCheck({
+    projectId: activeProject.id,
+    aiSettings: projectSettings?.aiSettings,
+    scene: currentDocument
+      ? {id: currentDocument.id, title: currentDocument.title, text: currentSceneCheckText}
+      : null,
+    documents
+  });
+  const modelCheckItems = useWorkspaceUiStore((state) => state.modelCheckItemsByProjectId[activeProject.id]);
+  const dismissModelCheckItem = useWorkspaceUiStore((state) => state.dismissModelCheckItem);
+  // Model-assisted items stay only while the text they quote is still in the scene.
+  const consistencyReviewItems = useMemo(() => {
+    const live = (modelCheckItems ?? []).filter((item) => {
+      if (item.sceneId === selectedId) return isModelCheckItemCurrent(item, currentSceneCheckText);
+      const scene = documents.find((document) => document.id === item.sceneId);
+      return scene ? isModelCheckItemCurrent(item, sceneCheckText(scene.content)) : false;
+    });
+    return live.length > 0 ? [...baseConsistencyReviewItems, ...live] : baseConsistencyReviewItems;
+  }, [baseConsistencyReviewItems, currentSceneCheckText, documents, modelCheckItems, selectedId]);
+  const dismissConsistencyReviewItem = (itemId: string) => {
+    const item = consistencyReviewItems.find((entry) => entry.id === itemId);
+    if (item && isModelCheckItem(item)) dismissModelCheckItem(activeProject.id, itemId);
+    else dismissBaseReviewItem(itemId);
+  };
   const orderedConsistencyReviewItems = useMemo(() => {
     const activeItem = activeReviewItemId
       ? consistencyReviewItems.find((item) => item.id === activeReviewItemId) ?? null
@@ -907,6 +939,7 @@ export function WorkspaceContextDrawer({
               {isRunningConsistencyReview ? 'Running project review...' : 'Run project review'}
             </button>
           </div>
+          <CanonCheckPanel check={canonCheck} sceneTitle={currentDocument ? currentDocument.title : null} />
           {lastConsistencyReviewAt && (
             <div className={styles.consistencyLastRun}>
               Last run: {new Date(lastConsistencyReviewAt).toLocaleString()}
