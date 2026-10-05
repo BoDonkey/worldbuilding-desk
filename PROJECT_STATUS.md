@@ -847,6 +847,16 @@ runtime schema, and nothing here changes the roadmap's status board.
 ## Verification Status
 
 ### Verified Recently
+- Slice 3.16 `useWorkspaceConsistency` split (behavior-preserving): the
+  2,234-line hook is now a 450-line composer over `useReviewPreferences`,
+  `useSceneSaveReview` (`persistDoc`), `useConsistencyReviewRuns` (refreshes,
+  project review run, persistence, item dismissal), `useStateMutationReview`,
+  `useUnknownCategorySuggestion`, `useUnknownEntityResolution`, and
+  `useUnknownEntityDismissal`, none over 600 lines. Pure logic moved to
+  `services/consistency/unknownCategorySuggestion.ts` and
+  `sceneReviewHelpers.ts`, with tests. The composer keeps the shared review
+  state and the same return shape; callers are unchanged. File-size baseline
+  now has 8 entries.
 - Slice 4.38 model-assisted canon check: **Check this scene against canon** in
   the Workspace review drawer sends the open scene (paragraph text, up to
   12,000 characters) and the accepted, valid-at-scene facts about entities it

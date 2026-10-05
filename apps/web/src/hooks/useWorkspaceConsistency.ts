@@ -1,4 +1,4 @@
-import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
+import {useCallback, useMemo, useState} from 'react';
 import type {Dispatch, MutableRefObject, SetStateAction} from 'react';
 import type {
   CanonicalFact,
@@ -12,81 +12,38 @@ import type {
   WorldEntity,
   WritingDocument
 } from '../entityTypes';
-import {saveWritingDocument, sortWritingDocuments} from '../writingStorage';
-import {
-  getCategoriesByProject,
-  initializeDefaultCategories,
-  saveCategory
-} from '../categoryStorage';
-import {saveEntity} from '../entityStorage';
 import type {RAGProvider} from '../services/rag/RAGService';
-import type {
-  ConsistencyAlias,
-  GuardrailIssue
-} from '../services/consistency';
-import {findCanonContradictions, saveAlias} from '../services/consistency';
-import {
-  hashReviewInputs,
-  markStaleReviewItems,
-  planIncrementalReview
-} from '../services/consistency/incrementalReview';
-import {
-  getProjectReviewRun,
-  saveProjectReviewRun,
-  type ProjectReviewRun,
-  type StoredSceneReview
-} from '../services/consistency/projectReviewRunStorage';
-import {buildCharacterCaptureAliasList} from '../services/worldBible/worldBibleCanonicalization';
-import {
-  buildWorldCategory,
-  normalizeWorldCategoryName
-} from '../services/worldBible/categoryAuthoring';
+import type {ConsistencyAlias, GuardrailIssue} from '../services/consistency';
 import type {WorldEngine} from '../services/worldEngine';
-import type {WorldEngineStatus} from '../services/worldEngine';
 import type {ShodhMemoryProvider} from '../services/shodh/ShodhMemoryService';
-import {normalizeCanonText} from '../services/consistency/textMatcher';
-import type {
-  WorkspaceAnnotationSummary
-} from '../services/consistency/workspaceAnnotations';
+import type {WorkspaceAnnotationSummary} from '../services/consistency/workspaceAnnotations';
 import {summarizeWorkspaceReviewSurfaces} from '../services/consistency/workspaceAnnotations';
-import {htmlToPlainText} from '../utils/textHelpers';
-import {isCharacterCategory} from '../services/characters/characterIdentity';
 import type {ActorResolution} from '../services/characters/characterIdentity';
-import {buildDerivedStateMutationEvents} from '../services/state/stateMutationDerivation';
-import {findStateContinuityReviewItems} from '../services/state/stateContinuityReview';
-import {
-  invalidateStateMutationEventById,
-  replaceSceneStateMutationEventsBySourceType,
-  saveStateMutationEvent
-} from '../services/state/stateMutationLedger';
 import {
   buildCharacterCategoryIds,
   buildCharacterLoreEntityIdByCharacterId,
-  buildCloseUnknownLinkOptions,
-  buildKnownConsistencyEntities,
-  buildUnknownLinkOptions,
-  namesLikelyReferToSameCharacter,
-  normalizeRecordName
+  buildKnownConsistencyEntities
 } from '../services/consistency/reviewLinkOptions';
 import {
   buildHighlightableReviewIssues,
   buildReviewReadiness,
   filterUnknownGuardrailIssues,
-  getReviewIssueKey,
-  makeReviewItemId,
   mapReviewAnnotationsByIssueKey,
   type ConsistencyReviewItem,
   type ReviewReadiness
 } from '../services/consistency/reviewReadiness';
+import {canonicalizeUnknownSurface} from '../services/consistency/sceneReviewHelpers';
 import {
-  buildStateMutationReviewItems,
-  countHiddenStateMutationReviewsByScene,
-  getHiddenStateMutationReviewKey,
-  type StateMutationReviewGroupHiddenCounts,
-  type StateMutationReviewItem
-} from '../services/consistency/mutationReviewGrouping';
-import {describeError} from '../services/errors';
-import {useStatusAnnouncement} from './useStatusAnnouncement';
+  useConsistencyReviewRuns,
+  type ConsistencyFeedback,
+  type ConsistencySystemHistory
+} from './useConsistencyReviewRuns';
+import {useReviewPreferences} from './useReviewPreferences';
+import {useSceneSaveReview} from './useSceneSaveReview';
+import {useStateMutationReview} from './useStateMutationReview';
+import {useUnknownCategorySuggestion} from './useUnknownCategorySuggestion';
+import {useUnknownEntityDismissal} from './useUnknownEntityDismissal';
+import {useUnknownEntityResolution} from './useUnknownEntityResolution';
 
 export {mapReviewAnnotationsByIssueKey};
 export type {
@@ -98,42 +55,6 @@ export type {
   StateMutationReviewItem
 } from '../services/consistency/mutationReviewGrouping';
 
-type FeedbackState = {
-  tone: 'success' | 'error';
-  message: string;
-} | null;
-
-interface ResolverNotice {
-  message: string;
-  primaryLabel?: string;
-  destination?:
-    | 'world-bible'
-    | 'characters'
-    | 'character-sheets'
-    | 'character-sheet-create';
-  targetId?: string;
-  matchEntityId?: string;
-  sourceName?: string;
-}
-
-interface LinkUnknownEntityResult {
-  destination: 'world-bible' | 'characters' | 'character-sheets' | 'character-sheet-create';
-  targetId?: string;
-  focus?: 'general' | 'aliases';
-}
-
-type SuggestedUnknownCategory =
-  | 'character'
-  | 'location'
-  | 'item'
-  | 'creature'
-  | 'faction'
-  | 'flora'
-  | 'mineral'
-  | 'artifact'
-  | 'concept'
-  | null;
-
 const EMPTY_ANNOTATION_SUMMARY: WorkspaceAnnotationSummary = {
   totalCount: 0,
   inlineVisibleCount: 0,
@@ -141,13 +62,6 @@ const EMPTY_ANNOTATION_SUMMARY: WorkspaceAnnotationSummary = {
   suppressedCount: 0,
   blockingCount: 0
 };
-
-interface ConsistencyPopoverState {
-  issueId: string;
-  surface: string;
-  left: number;
-  top: number;
-}
 
 interface UseWorkspaceConsistencyParams {
   activeProject: Project | null;
@@ -177,233 +91,18 @@ interface UseWorkspaceConsistencyParams {
   setSaveStatus: Dispatch<SetStateAction<'idle' | 'saving' | 'saved'>>;
   setLastSavedAt: Dispatch<SetStateAction<number | null>>;
   lastAutosaveErrorRef: MutableRefObject<string | null>;
-  setFeedback: Dispatch<SetStateAction<FeedbackState>>;
-  addSystemHistory: (input: {
-    category: 'scene' | 'consistency' | 'resource' | 'quest' | 'system';
-    message: string;
-    insertText?: string;
-    sceneId?: string;
-  }) => void;
+  setFeedback: ConsistencyFeedback;
+  addSystemHistory: ConsistencySystemHistory;
 }
 
-const downgradeUnknownIssuesToWarnings = (
-  issues: GuardrailIssue[]
-): GuardrailIssue[] =>
-  issues.map((issue) =>
-        issue.code === 'UNKNOWN_ENTITY'
-      ? {
-          ...issue,
-          severity: 'warning',
-          message: issue.surface
-            ? `Review "${issue.surface}" when you are ready to add or ignore this scene context.`
-            : 'Review this name or world term when you are ready to add or ignore it.'
-        }
-      : issue
-  );
-
-const canonicalizeUnknownSurface = normalizeCanonText;
-
-const hasUppercaseLetter = (value: string): boolean => /[A-Z]/.test(value);
-
-const LOCATION_HINT_TOKENS = new Set([
-  'archive',
-  'bay',
-  'camp',
-  'capital',
-  'castle',
-  'cavern',
-  'cave',
-  'city',
-  'district',
-  'empire',
-  'farm',
-  'forest',
-  'fort',
-  'fortress',
-  'garden',
-  'hall',
-  'harbor',
-  'hollow',
-  'inn',
-  'island',
-  'keep',
-  'kingdom',
-  'lake',
-  'library',
-  'manor',
-  'market',
-  'marsh',
-  'mine',
-  'monastery',
-  'mountain',
-  'outpost',
-  'palace',
-  'realm',
-  'river',
-  'road',
-  'ruins',
-  'sanctum',
-  'settlement',
-  'shore',
-  'square',
-  'street',
-  'swamp',
-  'temple',
-  'tower',
-  'town',
-  'vale',
-  'village',
-  'woods'
-]);
-
-const ITEM_HINT_TOKENS = new Set([
-  'amulet',
-  'armor',
-  'armour',
-  'axe',
-  'blade',
-  'book',
-  'bow',
-  'bracelet',
-  'charm',
-  'cloak',
-  'coin',
-  'crown',
-  'dagger',
-  'elixir',
-  'gem',
-  'grimoire',
-  'hammer',
-  'helm',
-  'helmet',
-  'herb',
-  'key',
-  'knife',
-  'lantern',
-  'map',
-  'medallion',
-  'necklace',
-  'orb',
-  'potion',
-  'relic',
-  'ring',
-  'robe',
-  'scroll',
-  'shield',
-  'spear',
-  'staff',
-  'stone',
-  'sword',
-  'talisman',
-  'tome',
-  'vial',
-  'wand'
-]);
-
-const CREATURE_HINT_TOKENS = new Set([
-  'bear',
-  'beast',
-  'boar',
-  'cat',
-  'creature',
-  'crow',
-  'deer',
-  'demon',
-  'dog',
-  'dragon',
-  'drake',
-  'eagle',
-  'fiend',
-  'fox',
-  'giant',
-  'goblin',
-  'griffin',
-  'hawk',
-  'hound',
-  'monster',
-  'owl',
-  'phantom',
-  'rat',
-  'serpent',
-  'shade',
-  'spider',
-  'spirit',
-  'stag',
-  'tiger',
-  'wolf',
-  'wyrm'
-]);
-
-const FACTION_HINT_TOKENS = new Set([
-  'alliance',
-  'band',
-  'brotherhood',
-  'clan',
-  'company',
-  'council',
-  'court',
-  'cult',
-  'dynasty',
-  'faction',
-  'family',
-  'fellowship',
-  'fleet',
-  'guild',
-  'house',
-  'kingdom',
-  'legion',
-  'order',
-  'syndicate',
-  'tribe'
-]);
-
-const CATEGORY_SEMANTIC_SLUG_HINTS: Record<
-  Exclude<SuggestedUnknownCategory, null>,
-  string[]
-> = {
-  character: ['character', 'npc', 'person', 'people'],
-  location: ['location', 'place', 'city', 'town', 'region', 'landmark'],
-  item: ['item', 'object', 'gear', 'equipment', 'tool', 'weapon'],
-  creature: ['creature', 'monster', 'beast', 'enemy', 'mob', 'species'],
-  faction: ['faction', 'guild', 'clan', 'house', 'group', 'order'],
-  flora: ['flora', 'plant', 'herb'],
-  mineral: ['mineral', 'ore', 'rock', 'metal'],
-  artifact: ['artifact', 'relic'],
-  concept: ['concept', 'lore', 'rule', 'history', 'culture']
-};
-
-const hashString = (value: string): string => {
-  let hash = 5381;
-  for (let index = 0; index < value.length; index += 1) {
-    hash = (hash * 33) ^ value.charCodeAt(index);
-  }
-  return `h${(hash >>> 0).toString(16)}`;
-};
-
-const getReviewSourceForDocument = (
-  doc: WritingDocument
-): 'workspace-save' | 'import' =>
-  doc.consistencyReviewMode === 'deferred' ? 'import' : 'workspace-save';
-
-function findCategoryIdForSuggestedKind(
-  availableCategories: EntityCategory[],
-  suggested: SuggestedUnknownCategory
-): string | undefined {
-  if (!suggested) {
-    return undefined;
-  }
-  const slugHints = CATEGORY_SEMANTIC_SLUG_HINTS[suggested];
-  const exactMatch = availableCategories.find((category) =>
-    slugHints.some((hint) => category.slug.toLowerCase() === hint)
-  );
-  if (exactMatch) {
-    return exactMatch.id;
-  }
-  return availableCategories.find((category) =>
-    slugHints.some((hint) => category.slug.toLowerCase().includes(hint))
-  )?.id;
-}
-
+/**
+ * Workspace review, composed from responsibility hooks (3.16): review
+ * preferences, scene save review, review runs, state-change review, and
+ * unknown-name suggestion, resolution, and dismissal. This hook owns the
+ * shared review state (scene issues and the review queue), the known-entity
+ * lookups, and the derived highlights and readiness; its return shape is the
+ * single surface the Workspace uses.
+ */
 export const useWorkspaceConsistency = ({
   activeProject,
   documents,
@@ -436,227 +135,16 @@ export const useWorkspaceConsistency = ({
   addSystemHistory
 }: UseWorkspaceConsistencyParams) => {
   const [guardrailIssues, setGuardrailIssues] = useState<GuardrailIssue[]>([]);
-  const [dismissedUnknownByDocument, setDismissedUnknownByDocument] = useState<
-    Record<string, string[]>
-  >({});
-  const [hiddenStateMutationReviewKeys, setHiddenStateMutationReviewKeys] = useState<string[]>(
-    []
-  );
-  const [isReviewPrefsHydrated, setReviewPrefsHydrated] = useState(false);
-  const [resolvingUnknown, setResolvingUnknown] = useState<string | null>(null);
-  const [linkingUnknown, setLinkingUnknown] = useState<string | null>(null);
-  const [resolverNotice, setResolverNotice] = useState<ResolverNotice | null>(null);
-  const [unknownLinkSelection, setUnknownLinkSelection] = useState<
-    Record<string, string>
-  >({});
-  const [unknownCategorySelection, setUnknownCategorySelection] = useState<
-    Record<string, string>
-  >({});
-  const [isRunningConsistencyReview, setIsRunningConsistencyReview] = useState(false);
-  const announceStatus = useStatusAnnouncement();
   const [consistencyReviewItems, setConsistencyReviewItems] = useState<
     ConsistencyReviewItem[]
   >([]);
-  const documentsRef = useRef(documents);
-  const dismissedContinuityItemIdsRef = useRef(new Set<string>());
-  const [lastConsistencyReviewAt, setLastConsistencyReviewAt] = useState<number | null>(
-    null
-  );
-  const [storedReviewScenes, setStoredReviewScenes] = useState<StoredSceneReview[]>([]);
-  const storedReviewRunRef = useRef<ProjectReviewRun | null>(null);
-  const [consistencyPopover, setConsistencyPopover] =
-    useState<ConsistencyPopoverState | null>(null);
-  const [worldEngineStatus, setWorldEngineStatus] =
-    useState<WorldEngineStatus | null>(null);
-  const [applyingStateMutationReviewId, setApplyingStateMutationReviewId] = useState<string | null>(null);
-
-  useEffect(() => {
-    documentsRef.current = documents;
-  }, [documents]);
-
-  useEffect(() => {
-    let cancelled = false;
-    void worldEngine
-      .getStatus()
-      .then((status) => {
-        if (!cancelled) {
-          setWorldEngineStatus(status);
-        }
-      })
-      .catch((error) => {
-        if (!cancelled) {
-          setWorldEngineStatus({
-            state: 'installedUnavailable',
-            reason:
-              describeError(error, 'Review engine status could not be checked.')
-          });
-        }
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [worldEngine]);
-
-  useEffect(() => {
-    if (!activeProject) {
-      setDismissedUnknownByDocument({});
-      setHiddenStateMutationReviewKeys([]);
-      setReviewPrefsHydrated(true);
-      return;
-    }
-    try {
-      const raw = localStorage.getItem(`workspaceReviewPrefs:${activeProject.id}`);
-      if (!raw) {
-        setDismissedUnknownByDocument({});
-        setReviewPrefsHydrated(true);
-        return;
-      }
-      const parsed = JSON.parse(raw) as unknown;
-      if (!parsed || typeof parsed !== 'object') {
-        setDismissedUnknownByDocument({});
-        setReviewPrefsHydrated(true);
-        return;
-      }
-      const prefs = parsed as {
-        dismissedUnknownByDocument?: unknown;
-        hiddenStateMutationReviewKeys?: unknown;
-      };
-      const nextDismissed: Record<string, string[]> = {};
-      if (
-        prefs.dismissedUnknownByDocument &&
-        typeof prefs.dismissedUnknownByDocument === 'object'
-      ) {
-        Object.entries(prefs.dismissedUnknownByDocument as Record<string, unknown>).forEach(
-          ([docId, values]) => {
-            if (!Array.isArray(values)) return;
-            nextDismissed[docId] = values
-              .filter((value): value is string => typeof value === 'string')
-              .map((value) => value.trim())
-              .filter(Boolean);
-          }
-        );
-      }
-      const nextHiddenKeys = Array.isArray(prefs.hiddenStateMutationReviewKeys)
-        ? prefs.hiddenStateMutationReviewKeys.filter(
-            (value): value is string => typeof value === 'string' && value.trim().length > 0
-          )
-        : [];
-      setDismissedUnknownByDocument(nextDismissed);
-      setHiddenStateMutationReviewKeys(nextHiddenKeys);
-    } catch {
-      setDismissedUnknownByDocument({});
-      setHiddenStateMutationReviewKeys([]);
-    } finally {
-      setReviewPrefsHydrated(true);
-    }
-  }, [activeProject]);
-
-  // 4.25: restore the last project review for this project so the queue
-  // survives a reload; stale marking happens as scenes load or change.
-  useEffect(() => {
-    if (!activeProject) {
-      storedReviewRunRef.current = null;
-      setStoredReviewScenes([]);
-      setConsistencyReviewItems([]);
-      setLastConsistencyReviewAt(null);
-      return;
-    }
-    let cancelled = false;
-    void getProjectReviewRun(activeProject.id)
-      .then((run) => {
-        if (cancelled) return;
-        storedReviewRunRef.current = run;
-        if (!run) {
-          setStoredReviewScenes([]);
-          return;
-        }
-        setStoredReviewScenes(run.scenes);
-        setConsistencyReviewItems(run.items);
-        setLastConsistencyReviewAt(run.reviewedAt);
-      })
-      .catch((error) => {
-        if (!cancelled) {
-          console.warn('Could not restore the last project review.', error);
-        }
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [activeProject]);
-
-  useEffect(() => {
-    if (storedReviewScenes.length === 0) return;
-    setConsistencyReviewItems((prev) =>
-      prev.length === 0 ? prev : markStaleReviewItems({items: prev, documents, storedScenes: storedReviewScenes})
-    );
-  }, [documents, storedReviewScenes]);
-
-  useEffect(() => {
-    if (!activeProject || !projectSettings || !isReviewPrefsHydrated) return;
-    try {
-      const raw = localStorage.getItem(`workspaceReviewPrefs:${activeProject.id}`);
-      if (!raw) return;
-      const parsed = JSON.parse(raw) as
-        | {
-            ignoredUnknownSurfaces?: unknown;
-          }
-        | null;
-      const legacyIgnoredValues = parsed?.ignoredUnknownSurfaces;
-      const legacyIgnored = (
-        Array.isArray(legacyIgnoredValues) ? legacyIgnoredValues : []
-      )
-        .filter((value): value is string => typeof value === 'string')
-        .map((value) => value.trim().toLowerCase())
-        .filter(Boolean);
-      if (legacyIgnored.length === 0) return;
-
-      const mergedIgnored = Array.from(
-        new Set([...(projectSettings.ignoredUnknownSurfaces ?? []), ...legacyIgnored])
-      );
-      if (mergedIgnored.length === (projectSettings.ignoredUnknownSurfaces ?? []).length) {
-        return;
-      }
-
-      const nextSettings: ProjectSettings = {
-        ...projectSettings,
-        ignoredUnknownSurfaces: mergedIgnored,
-        updatedAt: Date.now()
-      };
-      void saveProjectSettings(nextSettings)
-        .catch(() => {
-          // Ignore migration errors and continue using current settings.
-        });
-    } catch {
-      // Ignore malformed legacy local storage.
-    }
-  }, [activeProject, isReviewPrefsHydrated, projectSettings, saveProjectSettings]);
-
-  useEffect(() => {
-    if (!activeProject || !isReviewPrefsHydrated) return;
-    localStorage.setItem(
-      `workspaceReviewPrefs:${activeProject.id}`,
-      JSON.stringify({
-        dismissedUnknownByDocument,
-        hiddenStateMutationReviewKeys
-      })
-    );
-  }, [
-    activeProject,
+  const {
     dismissedUnknownByDocument,
+    setDismissedUnknownByDocument,
     hiddenStateMutationReviewKeys,
+    setHiddenStateMutationReviewKeys,
     isReviewPrefsHydrated
-  ]);
-
-  useEffect(() => {
-    if (!consistencyPopover) return;
-    const close = () => setConsistencyPopover(null);
-    window.addEventListener('scroll', close, true);
-    window.addEventListener('resize', close);
-    return () => {
-      window.removeEventListener('scroll', close, true);
-      window.removeEventListener('resize', close);
-    };
-  }, [consistencyPopover]);
+  } = useReviewPreferences({activeProject, projectSettings, saveProjectSettings});
 
   const characterCategoryIds = useMemo(
     () => buildCharacterCategoryIds(categories),
@@ -745,533 +233,56 @@ export const useWorkspaceConsistency = ({
     []
   );
 
-  const attachAliasTexts = useCallback(
-    async (params: {
-      projectId: string;
-      targetId: string;
-      targetType: 'entity' | 'character';
-      aliasTexts: string[];
-    }) => {
-      const uniqueAliases = Array.from(
-        new Map(
-          params.aliasTexts
-            .map((alias) => alias.trim())
-            .filter(Boolean)
-            .map((alias) => [alias.toLowerCase(), alias])
-        ).values()
-      );
-
-      for (const alias of uniqueAliases) {
-        const saved = await saveAlias({
-          projectId: params.projectId,
-          targetId: params.targetId,
-          targetType: params.targetType,
-          alias
-        });
-        setAliases((prev) => {
-          const existingIndex = prev.findIndex((entry) => entry.id === saved.id);
-          if (existingIndex >= 0) {
-            const copy = [...prev];
-            copy[existingIndex] = saved;
-            return copy;
-          }
-          return [...prev, saved];
-        });
-      }
-    },
-    [setAliases]
-  );
-
-  const persistDoc = useCallback(
-    async (
-      doc: WritingDocument,
-      options?: {
-        source?: 'workspace-save' | 'workspace-autosave' | 'import';
-        consistencyMode?: 'strict' | 'balanced' | 'lenient';
-      }
-    ): Promise<{unresolvedCount: number; consistencyRun: boolean}> => {
-      const source = options?.source ?? 'workspace-save';
-      const consistencyMode = options?.consistencyMode ?? 'strict';
-      const isImport = source === 'import';
-      let unresolvedCount = 0;
-
-      if (isImport) {
-        await saveWritingDocument(doc);
-      }
-
-      if (consistencyMode !== 'lenient') {
-        try {
-          const {proposal, validation, observations, issueAnnotations} =
-            await worldEngine.reviewText({
-              projectId: doc.projectId,
-              text: htmlToPlainText(doc.content),
-              source,
-              knownEntities: knownConsistencyEntities,
-              actionCues: resolvedActionCues
-            });
-          const presentedIssues =
-            consistencyMode === 'strict'
-              ? validation.issues
-              : downgradeUnknownIssuesToWarnings(validation.issues);
-          const annotationsByIssueKey = mapReviewAnnotationsByIssueKey(
-            validation.issues,
-            issueAnnotations
-          );
-          const dismissedPresentedIssues = filterDismissedUnknownIssues(
-            doc.id,
-            presentedIssues
-          );
-          setGuardrailIssues(dismissedPresentedIssues);
-          setConsistencyReviewItems((prev) => [
-            ...prev.filter((item) => item.sceneId !== doc.id),
-            ...dismissedPresentedIssues.map((issue) => ({
-              id: makeReviewItemId(doc.id, issue),
-              sceneId: doc.id,
-              sceneTitle: doc.title || 'Untitled scene',
-              issue,
-              reviewAnnotation: annotationsByIssueKey.get(getReviewIssueKey(issue))
-            }))
-          ]);
-          unresolvedCount = validation.issues.filter(
-            (issue) => issue.code === 'UNKNOWN_ENTITY'
-          ).length;
-
-          if (!validation.allowCommit && consistencyMode === 'strict' && !isImport) {
-            const visibleUnknowns = validation.issues
-              .map((issue) => issue.surface)
-              .filter((surface): surface is string => Boolean(surface))
-              .slice(0, 3);
-            const suffix =
-              validation.issues.length > 3
-                ? ` (+${validation.issues.length - 3} more)`
-                : '';
-            const summary = visibleUnknowns.join(', ');
-            throw new Error(
-              `Scene save needs review first: ${validation.issues.length} unknown ${validation.issues.length === 1 ? 'name or world term' : 'names or world terms'} (${summary}${suffix}).`
-            );
-          }
-
-          if (validation.allowCommit) {
-            await worldEngine.applyAcceptedProposal(proposal, validation);
-            const orderedDocuments = sortWritingDocuments(documents);
-            const sceneOrder =
-              orderedDocuments.findIndex((entry) => entry.id === doc.id) + 1;
-            if (sceneOrder > 0) {
-              try {
-                const nextDerivedEvents = buildDerivedStateMutationEvents({
-                  projectId: doc.projectId,
-                  sceneId: doc.id,
-                  sceneTitle: doc.title,
-                  sceneOrder,
-                  sourceRevision: doc.updatedAt,
-                  sourceHash: hashString(doc.content),
-                  observations,
-                  characterSheets,
-                  actorResolutions,
-                  ruleset,
-                  existingEvents: stateMutationEvents
-                });
-                await replaceSceneStateMutationEventsBySourceType({
-                  projectId: doc.projectId,
-                  sceneId: doc.id,
-                  sourceType: 'deterministic-review',
-                  nextEvents: nextDerivedEvents,
-                  invalidationReason:
-                    'Replaced deterministic review-derived state changes after scene save.'
-                });
-              } catch (error) {
-                console.warn('State mutation derivation failed for scene', doc.id, error);
-              }
-            }
-          }
-        } catch (error) {
-          if (!isImport) {
-            throw error;
-          }
-          console.warn('Import review failed after scene persistence', doc.id, error);
-        }
-      }
-
-      if (!isImport) {
-        await saveWritingDocument(doc);
-      }
-
-      try {
-        if (ragService) {
-          await ragService.indexDocument(
-            doc.id,
-            doc.title || 'Untitled scene',
-            doc.content,
-            'scene'
-          );
-        }
-      } catch (error) {
-        console.warn('Indexing failed for scene', doc.id, error);
-      }
-
-      try {
-        if (shodhService) {
-          await shodhService.captureAutoMemory({
-            projectId: doc.projectId,
-            documentId: doc.id,
-            title: doc.title || 'Untitled scene',
-            content: doc.content,
-            tags: ['scene']
-          });
-          await refreshMemories();
-        }
-      } catch (error) {
-        console.warn('Auto-memory capture failed for scene', doc.id, error);
-      }
-
-      setDocuments((prev) => {
-        const index = prev.findIndex((entry) => entry.id === doc.id);
-        if (index === -1) {
-          return sortWritingDocuments([...prev, doc]);
-        }
-        const copy = [...prev];
-        copy[index] = doc;
-        return sortWritingDocuments(copy);
-      });
-
-      setSelectedCreatedAt(doc.createdAt);
-      setSaveStatus('saved');
-      setLastSavedAt(Date.now());
-      if (consistencyMode === 'strict' && !isImport) {
-        setGuardrailIssues([]);
-        setConsistencyReviewItems((prev) =>
-          prev.filter((item) => item.sceneId !== doc.id)
-        );
-      }
-      lastAutosaveErrorRef.current = null;
-      return {
-        unresolvedCount,
-        consistencyRun: consistencyMode !== 'lenient'
-      };
-    },
-    [
-      filterDismissedUnknownIssues,
-      documents,
-      characterSheets,
-      actorResolutions,
-      knownConsistencyEntities,
-      ruleset,
-      resolvedActionCues,
-      ragService,
-      shodhService,
-      refreshMemories,
-      stateMutationEvents,
-      setDocuments,
-      setLastSavedAt,
-      setSaveStatus,
-      setSelectedCreatedAt,
-      lastAutosaveErrorRef,
-      worldEngine
-    ]
-  );
-
-  const refreshDeferredReview = useCallback(
-    async (doc: WritingDocument) => {
-      const {validation, issueAnnotations} = await worldEngine.reviewText({
-        projectId: doc.projectId,
-        text: htmlToPlainText(doc.content),
-        source: getReviewSourceForDocument(doc),
-        knownEntities: knownConsistencyEntities,
-        actionCues: resolvedActionCues
-      });
-      const annotationsByIssueKey = mapReviewAnnotationsByIssueKey(
-        validation.issues,
-        issueAnnotations
-      );
-      const presentedIssues = filterDismissedUnknownIssues(
-        doc.id,
-        downgradeUnknownIssuesToWarnings(validation.issues)
-      );
-      const contradictionItems = findCanonContradictions({
-        documents: [doc],
-        sceneOrderDocuments: documentsRef.current,
-        entities,
-        characters,
-        canonicalFacts,
-        knownEntities: knownConsistencyEntities
-      });
-      const stateContinuityItems = findStateContinuityReviewItems({
-        documents: [doc],
-        sceneOrderDocuments: documentsRef.current,
-        knownEntities: knownConsistencyEntities,
-        characterSheets,
-        actorResolutions,
-        ruleset,
-        stateMutationEvents
-      });
-      setGuardrailIssues(presentedIssues);
-      setConsistencyReviewItems((prev) => [
-        ...prev.filter((item) => item.sceneId !== doc.id),
-        ...presentedIssues.map((issue) => ({
-          id: makeReviewItemId(doc.id, issue),
-          sceneId: doc.id,
-          sceneTitle: doc.title || 'Untitled scene',
-          issue,
-          reviewAnnotation: annotationsByIssueKey.get(getReviewIssueKey(issue))
-        })),
-        ...contradictionItems.filter(
-          (item) => !dismissedContinuityItemIdsRef.current.has(item.id)
-        ),
-        ...stateContinuityItems.filter(
-          (item) => !dismissedContinuityItemIdsRef.current.has(item.id)
-        )
-      ]);
-    },
-    [
-      filterDismissedUnknownIssues,
-      canonicalFacts,
-      characterSheets,
-      characters,
-      entities,
-      knownConsistencyEntities,
-      actorResolutions,
-      resolvedActionCues,
-      ruleset,
-      stateMutationEvents,
-      worldEngine
-    ]
-  );
-
-  const refreshActiveDraftReview = useCallback(
-    async (doc: WritingDocument) => {
-      setIsRunningConsistencyReview(true);
-      announceStatus('Refreshing consistency review.');
-      try {
-        const {validation, issueAnnotations} = await worldEngine.reviewText({
-          projectId: doc.projectId,
-          text: htmlToPlainText(doc.content),
-          source: 'workspace-autosave',
-          knownEntities: knownConsistencyEntities,
-          actionCues: resolvedActionCues
-        });
-        const presentedIssues = filterDismissedUnknownIssues(
-          doc.id,
-          downgradeUnknownIssuesToWarnings(validation.issues)
-        );
-        const annotationsByIssueKey = mapReviewAnnotationsByIssueKey(
-          validation.issues,
-          issueAnnotations
-        );
-        const contradictionItems = findCanonContradictions({
-          documents: [doc],
-          sceneOrderDocuments: documentsRef.current,
-          entities,
-          characters,
-          canonicalFacts,
-          knownEntities: knownConsistencyEntities
-        });
-        const stateContinuityItems = findStateContinuityReviewItems({
-          documents: [doc],
-          sceneOrderDocuments: documentsRef.current,
-          knownEntities: knownConsistencyEntities,
-          characterSheets,
-          actorResolutions,
-          ruleset,
-          stateMutationEvents
-        });
-        setGuardrailIssues(presentedIssues);
-        setConsistencyReviewItems((prev) => [
-          ...prev.filter((item) => item.sceneId !== doc.id),
-          ...presentedIssues.map((issue) => ({
-            id: makeReviewItemId(doc.id, issue),
-            sceneId: doc.id,
-            sceneTitle: doc.title || 'Untitled scene',
-            issue,
-            reviewAnnotation: annotationsByIssueKey.get(getReviewIssueKey(issue))
-          })),
-          ...contradictionItems.filter(
-            (item) => !dismissedContinuityItemIdsRef.current.has(item.id)
-          ),
-          ...stateContinuityItems.filter(
-            (item) => !dismissedContinuityItemIdsRef.current.has(item.id)
-          )
-        ]);
-        announceStatus('Consistency review refreshed.');
-      } finally {
-        setIsRunningConsistencyReview(false);
-      }
-    },
-    [
-      announceStatus,
-      filterDismissedUnknownIssues,
-      canonicalFacts,
-      characterSheets,
-      characters,
-      entities,
-      knownConsistencyEntities,
-      actorResolutions,
-      resolvedActionCues,
-      ruleset,
-      stateMutationEvents,
-      worldEngine
-    ]
-  );
-
-  const handleRunConsistencyReview = useCallback(async () => {
-    if (!activeProject) return;
-    if (documents.length === 0) {
-      setConsistencyReviewItems([]);
-      setLastConsistencyReviewAt(Date.now());
-      setFeedback({tone: 'error', message: 'No scenes available to review.'});
-      addSystemHistory({
-        category: 'consistency',
-        message: 'Consistency review skipped: no scenes available.'
-      });
-      return;
-    }
-
-    setIsRunningConsistencyReview(true);
-    dismissedContinuityItemIdsRef.current.clear();
-    setFeedback(null);
-    announceStatus('Running consistency review.');
-    try {
-      const items: ConsistencyReviewItem[] = [];
-      const inputsHash = hashReviewInputs({
-        knownEntities: knownConsistencyEntities,
-        actionCues: resolvedActionCues,
-        engineLabel:
-          worldEngineStatus?.state === 'available'
-            ? `local-ai:${worldEngineStatus.modelLabel}`
-            : 'deterministic'
-      });
-      const plan = planIncrementalReview({
-        documents,
-        storedRun: storedReviewRunRef.current,
-        inputsHash
-      });
-      const reviewedAt = Date.now();
-      const nextStoredScenes: StoredSceneReview[] = [];
-      for (const doc of documents) {
-        const reused = plan.reusable.get(doc.id);
-        let issues: GuardrailIssue[];
-        let issueAnnotations: StoredSceneReview['issueAnnotations'];
-        if (reused) {
-          issues = reused.issues;
-          issueAnnotations = reused.issueAnnotations;
-          nextStoredScenes.push(reused);
-        } else {
-          const result = await worldEngine.reviewText({
-            projectId: activeProject.id,
-            text: htmlToPlainText(doc.content),
-            source: getReviewSourceForDocument(doc),
-            knownEntities: knownConsistencyEntities,
-            actionCues: resolvedActionCues
-          });
-          issues = result.validation.issues;
-          issueAnnotations = result.issueAnnotations;
-          nextStoredScenes.push({
-            sceneId: doc.id,
-            contentHash: plan.contentHashById.get(doc.id) ?? '',
-            issues,
-            issueAnnotations,
-            reviewedAt
-          });
-        }
-        const annotationsByIssueKey = mapReviewAnnotationsByIssueKey(
-          issues,
-          issueAnnotations
-        );
-        const presentedIssues = filterDismissedUnknownIssues(doc.id, issues);
-        presentedIssues.forEach((issue) => {
-          items.push({
-            id: makeReviewItemId(doc.id, issue),
-            sceneId: doc.id,
-            sceneTitle: doc.title || 'Untitled scene',
-            issue,
-            reviewAnnotation: annotationsByIssueKey.get(getReviewIssueKey(issue))
-          });
-        });
-      }
-
-      const contradictionItems = findCanonContradictions({
-        documents,
-        entities,
-        characters,
-        canonicalFacts,
-        knownEntities: knownConsistencyEntities
-      });
-      const stateContinuityItems = findStateContinuityReviewItems({
-        documents,
-        knownEntities: knownConsistencyEntities,
-        characterSheets,
-        actorResolutions,
-        ruleset,
-        stateMutationEvents
-      });
-      const continuityItems = [...contradictionItems, ...stateContinuityItems];
-      const combinedItems = [...items, ...continuityItems];
-
-      setConsistencyReviewItems(combinedItems);
-      setLastConsistencyReviewAt(reviewedAt);
-      const nextRun: ProjectReviewRun = {
-        id: activeProject.id,
-        projectId: activeProject.id,
-        inputsHash,
-        reviewedAt,
-        scenes: nextStoredScenes,
-        items: combinedItems
-      };
-      storedReviewRunRef.current = nextRun;
-      setStoredReviewScenes(nextStoredScenes);
-      void saveProjectReviewRun(nextRun).catch((error) => {
-        console.warn('Could not persist the project review.', error);
-      });
-      if (combinedItems.length === 0) {
-        setFeedback({
-          tone: 'success',
-          message: `Consistency review complete: no issues across ${documents.length} scene(s).`
-        });
-        addSystemHistory({
-          category: 'consistency',
-          message: `Consistency review complete with no issues across ${documents.length} scene(s).`
-        });
-      } else {
-        const continuityCount = continuityItems.length;
-        const firstSceneId = combinedItems[0]?.sceneId;
-        const message =
-          `Project review found ${combinedItems.length} item(s) across ${documents.length} scene(s).` +
-          (continuityCount > 0
-            ? ` ${continuityCount} accepted canon/state continuity finding${continuityCount === 1 ? '' : 's'}.`
-            : '');
-        setFeedback({tone: 'error', message});
-        addSystemHistory({
-          category: 'consistency',
-          message,
-          sceneId: firstSceneId
-        });
-      }
-    } catch (error) {
-      const message =
-        describeError(error, 'Unable to run consistency review.');
-      setFeedback({tone: 'error', message});
-    } finally {
-      setIsRunningConsistencyReview(false);
-      announceStatus('Consistency review finished.');
-    }
-  }, [
-    announceStatus,
-    activeProject,
-    addSystemHistory,
-    canonicalFacts,
+  const persistDoc = useSceneSaveReview({
+    documents,
+    setDocuments,
     characterSheets,
-    characters,
+    actorResolutions,
+    ruleset,
+    stateMutationEvents,
+    resolvedActionCues,
+    worldEngine,
+    ragService,
+    shodhService,
+    refreshMemories,
+    setSelectedCreatedAt,
+    setSaveStatus,
+    setLastSavedAt,
+    lastAutosaveErrorRef,
+    knownConsistencyEntities,
+    filterDismissedUnknownIssues,
+    setGuardrailIssues,
+    setConsistencyReviewItems
+  });
+
+  const {
+    isRunningConsistencyReview,
+    lastConsistencyReviewAt,
+    worldEngineStatus,
+    refreshDeferredReview,
+    refreshActiveDraftReview,
+    handleRunConsistencyReview,
+    dismissConsistencyReviewItem
+  } = useConsistencyReviewRuns({
+    activeProject,
     documents,
     entities,
+    characters,
+    canonicalFacts,
+    characterSheets,
     actorResolutions,
-    worldEngineStatus,
-    filterDismissedUnknownIssues,
-    knownConsistencyEntities,
-    resolvedActionCues,
     ruleset,
-    setFeedback,
     stateMutationEvents,
-    worldEngine
-  ]);
+    resolvedActionCues,
+    worldEngine,
+    setFeedback,
+    addSystemHistory,
+    knownConsistencyEntities,
+    filterDismissedUnknownIssues,
+    setGuardrailIssues,
+    consistencyReviewItems,
+    setConsistencyReviewItems
+  });
 
   const unknownGuardrailIssues = useMemo(
     () =>
@@ -1329,879 +340,84 @@ export const useWorkspaceConsistency = ({
     ]
   );
 
-  const getSuggestedUnknownCategory = useCallback(
-    (surface: string): SuggestedUnknownCategory => {
-      const normalizedSurface = canonicalizeUnknownSurface(surface);
-      if (!normalizedSurface) {
-        return null;
-      }
-      const issue = unknownGuardrailIssues.find(
-        (candidate) =>
-          candidate.code === 'UNKNOWN_ENTITY' &&
-          canonicalizeUnknownSurface(candidate.surface ?? '') === normalizedSurface
-      );
-      const detectionReason = issue?.detectionReason ?? null;
-      if (
-        detectionReason === 'titled_name' ||
-        detectionReason === 'character_context_candidate'
-      ) {
-        return 'character';
-      }
-      if (detectionReason === 'action_object_candidate') {
-        return 'item';
-      }
+  const stateMutationReview = useStateMutationReview({
+    characterSheets,
+    actorResolutions,
+    documents,
+    ruleset,
+    stateMutationEvents,
+    hiddenStateMutationReviewKeys,
+    setHiddenStateMutationReviewKeys,
+    setFeedback,
+    addSystemHistory
+  });
 
-      const tokens = normalizedSurface.split(/\s+/).filter(Boolean);
-      const lastToken = tokens[tokens.length - 1] ?? '';
-      const originalSurfaceLooksNamed = hasUppercaseLetter(surface);
-      if (lastToken && LOCATION_HINT_TOKENS.has(lastToken) && originalSurfaceLooksNamed) {
-        return 'location';
-      }
-      if (lastToken && ITEM_HINT_TOKENS.has(lastToken)) {
-        return 'item';
-      }
-      if (lastToken && CREATURE_HINT_TOKENS.has(lastToken)) {
-        return 'creature';
-      }
-      if (lastToken && FACTION_HINT_TOKENS.has(lastToken)) {
-        return 'faction';
-      }
+  const {getSuggestedUnknownCategoryId, createWorldCategory} = useUnknownCategorySuggestion({
+    activeProject,
+    categories,
+    setCategories,
+    documents,
+    selectedDocumentId,
+    unknownGuardrailIssues,
+    setFeedback
+  });
 
-      const issueDocument =
-        issue && selectedDocumentId
-          ? documents.find((document) => document.id === selectedDocumentId) ?? null
-          : null;
-      if (issue?.span && issueDocument) {
-        const prefix = issueDocument.content
-          .slice(Math.max(0, issue.span.start - 32), issue.span.start)
-          .replace(/<[^>]+>/g, ' ')
-          .toLowerCase();
-        if (/\b(from|to|into|toward|towards|at|in|near|inside|outside)\s*$/u.test(prefix)) {
-          return 'location';
-        }
-        if (/\b(with|using|equip(?:ped)?|wield(?:ed)?|drink|drank|grab(?:bed)?|draw|drew|throw|threw|cast)\s*$/u.test(prefix)) {
-          return 'item';
-        }
-        if (/\b(named|called)\s*$/u.test(prefix)) {
-          return 'character';
-        }
-      }
+  const resolution = useUnknownEntityResolution({
+    activeProject,
+    categories,
+    setCategories,
+    entities,
+    setEntities,
+    characters,
+    setAliases,
+    ruleset,
+    setFeedback,
+    characterCategoryIds,
+    characterLoreEntityIdByCharacterId,
+    consistencyReviewItems,
+    unknownGuardrailIssues,
+    highlightableReviewIssues,
+    removeReviewSurface,
+    getSuggestedUnknownCategoryId
+  });
 
-      return null;
-    },
-    [documents, selectedDocumentId, unknownGuardrailIssues]
-  );
-
-  const getSuggestedUnknownCategoryId = useCallback(
-    (surface: string): string | undefined => {
-      const suggested = getSuggestedUnknownCategory(surface);
-      return findCategoryIdForSuggestedKind(categories, suggested);
-    },
-    [categories, getSuggestedUnknownCategory]
-  );
-
-  const createWorldCategory = useCallback(
-    async (name: string): Promise<EntityCategory> => {
-      if (!activeProject) {
-        throw new Error('Open a project before creating a World Bible type.');
-      }
-
-      const normalizedName = normalizeWorldCategoryName(name);
-      const existing = categories.find(
-        (category) => category.name.toLowerCase() === normalizedName.toLowerCase()
-      );
-      if (existing) {
-        return existing;
-      }
-
-      const category = buildWorldCategory({
-        projectId: activeProject.id,
-        name: normalizedName
-      });
-      const slugMatch = categories.find((entry) => entry.slug === category.slug);
-      if (slugMatch) {
-        return slugMatch;
-      }
-
-      await saveCategory(category);
-      setCategories((current) => [...current, category]);
-      setFeedback({
-        tone: 'success',
-        message: `${category.name} is ready. The review candidate is still open.`
-      });
-      return category;
-    },
-    [activeProject, categories, setCategories, setFeedback]
-  );
-
-  const stateMutationReviewItems = useMemo<StateMutationReviewItem[]>(
-    () =>
-      buildStateMutationReviewItems({
-        characterSheets,
-        actorResolutions,
-        documents,
-        hiddenReviewKeys: hiddenStateMutationReviewKeys,
-        ruleset,
-        stateMutationEvents
-      }),
-    [
-      characterSheets,
-      actorResolutions,
-      documents,
-      hiddenStateMutationReviewKeys,
-      ruleset,
-      stateMutationEvents
-    ]
-  );
-
-  const hiddenStateMutationReviewCountBySceneId =
-    useMemo<StateMutationReviewGroupHiddenCounts>(
-      () =>
-        countHiddenStateMutationReviewsByScene({
-          stateMutationEvents,
-          hiddenReviewKeys: hiddenStateMutationReviewKeys
-        }),
-      [hiddenStateMutationReviewKeys, stateMutationEvents]
-    );
-
-  const hiddenStateMutationReviewCount = useMemo(
-    () =>
-      Object.values(hiddenStateMutationReviewCountBySceneId).reduce(
-        (sum, count) => sum + count,
-        0
-      ),
-    [hiddenStateMutationReviewCountBySceneId]
-  );
-
-  const acceptStateMutationReviewItem = useCallback(
-    async (eventId: string, applyingId?: string) => {
-      const event = stateMutationEvents.find((entry) => entry.id === eventId);
-      if (!event || event.status !== 'proposed') {
-        return;
-      }
-      setApplyingStateMutationReviewId(applyingId ?? eventId);
-      setFeedback(null);
-      try {
-        await saveStateMutationEvent({
-          ...event,
-          status: 'accepted',
-          invalidatedAt: undefined,
-          invalidationReason: undefined
-        });
-        setFeedback({
-          tone: 'success',
-          message: `Accepted suggested state change from "${event.sceneTitle || 'scene'}".`
-        });
-        addSystemHistory({
-          category: 'consistency',
-          message: `Accepted suggested state change from "${event.sceneTitle || 'scene'}".`,
-          sceneId: event.sceneId
-        });
-      } catch (error) {
-        setFeedback({
-          tone: 'error',
-          message:
-            describeError(error, 'Unable to accept suggested state change.')
-        });
-      } finally {
-        setApplyingStateMutationReviewId(null);
-      }
-    },
-    [addSystemHistory, setFeedback, stateMutationEvents]
-  );
-
-  const rejectStateMutationReviewItem = useCallback(
-    async (eventId: string, applyingId?: string) => {
-      const event = stateMutationEvents.find((entry) => entry.id === eventId);
-      if (!event || event.status !== 'proposed') {
-        return;
-      }
-      setApplyingStateMutationReviewId(applyingId ?? eventId);
-      setFeedback(null);
-      try {
-        await invalidateStateMutationEventById({
-          eventId,
-          reason: 'Rejected from Project Review suggested state changes.'
-        });
-        setFeedback({
-          tone: 'success',
-          message: `Rejected suggested state change from "${event.sceneTitle || 'scene'}".`
-        });
-        addSystemHistory({
-          category: 'consistency',
-          message: `Rejected suggested state change from "${event.sceneTitle || 'scene'}".`,
-          sceneId: event.sceneId
-        });
-      } catch (error) {
-        setFeedback({
-          tone: 'error',
-          message:
-            describeError(error, 'Unable to reject suggested state change.')
-        });
-      } finally {
-        setApplyingStateMutationReviewId(null);
-      }
-    },
-    [addSystemHistory, setFeedback, stateMutationEvents]
-  );
-
-  const hideStateMutationReviewItem = useCallback(
-    (eventId: string) => {
-      const event = stateMutationEvents.find((entry) => entry.id === eventId);
-      if (!event || event.status !== 'proposed') {
-        return;
-      }
-      const hiddenKey = getHiddenStateMutationReviewKey(event);
-      setHiddenStateMutationReviewKeys((prev) =>
-        prev.includes(hiddenKey) ? prev : [...prev, hiddenKey]
-      );
-      setFeedback({
-        tone: 'success',
-        message: `Hidden suggested state change from "${event.sceneTitle || 'scene'}" until the scene changes.`
-      });
-    },
-    [setFeedback, stateMutationEvents]
-  );
-
-  const restoreHiddenStateMutationReviewItems = useCallback(
-    (sceneId: string) => {
-      const hiddenKeysForScene = stateMutationEvents
-        .filter(
-          (event) =>
-            event.sceneId === sceneId &&
-            event.status === 'proposed' &&
-            event.sourceType === 'deterministic-review'
-        )
-        .map((event) => getHiddenStateMutationReviewKey(event))
-        .filter((key) => hiddenStateMutationReviewKeys.includes(key));
-      if (hiddenKeysForScene.length === 0) {
-        setFeedback({
-          tone: 'error',
-          message: 'No hidden suggested state changes to restore in this scene.'
-        });
-        return;
-      }
-      setHiddenStateMutationReviewKeys((prev) =>
-        prev.filter((key) => !hiddenKeysForScene.includes(key))
-      );
-      const sceneTitle =
-        stateMutationEvents.find((event) => event.sceneId === sceneId)?.sceneTitle || 'scene';
-      setFeedback({
-        tone: 'success',
-        message: `Restored hidden suggested state changes from "${sceneTitle}".`
-      });
-    },
-    [hiddenStateMutationReviewKeys, setFeedback, stateMutationEvents]
-  );
-
-  const restoreAllHiddenStateMutationReviewItems = useCallback(() => {
-    if (hiddenStateMutationReviewCount === 0) {
-      setFeedback({
-        tone: 'error',
-        message: 'No hidden suggested state changes to restore.'
-      });
-      return;
-    }
-    setHiddenStateMutationReviewKeys([]);
-    setFeedback({
-      tone: 'success',
-      message: `Restored ${hiddenStateMutationReviewCount} hidden suggested state change${hiddenStateMutationReviewCount === 1 ? '' : 's'}.`
-    });
-  }, [hiddenStateMutationReviewCount, setFeedback]);
-
-  const acceptSceneStateMutationReviewItems = useCallback(
-    async (sceneId: string) => {
-      const applyingId = `scene:${sceneId}:accept`;
-      const sceneItems = stateMutationReviewItems
-        .filter((item) => item.sceneId === sceneId)
-        .sort(
-          (a, b) =>
-            (a.sceneSequence ?? Number.MAX_SAFE_INTEGER) -
-            (b.sceneSequence ?? Number.MAX_SAFE_INTEGER)
-        );
-      const batchAcceptableItems = sceneItems.filter((item) => item.canAcceptInBatch);
-      if (batchAcceptableItems.length === 0) {
-        setFeedback({
-          tone: 'error',
-          message: 'No valid suggested state changes to accept in this scene.'
-        });
-        return;
-      }
-      for (const item of batchAcceptableItems) {
-        await acceptStateMutationReviewItem(item.id, applyingId);
-      }
-      setFeedback({
-        tone: 'success',
-        message: `Accepted ${batchAcceptableItems.length} suggested state change${batchAcceptableItems.length === 1 ? '' : 's'} from "${batchAcceptableItems[0]?.sceneTitle || 'scene'}".`
-      });
-    },
-    [acceptStateMutationReviewItem, setFeedback, stateMutationReviewItems]
-  );
-
-  const rejectSceneStateMutationReviewItems = useCallback(
-    async (sceneId: string) => {
-      const applyingId = `scene:${sceneId}:reject`;
-      const sceneItems = stateMutationReviewItems.filter((item) => item.sceneId === sceneId);
-      if (sceneItems.length === 0) {
-        setFeedback({
-          tone: 'error',
-          message: 'No suggested state changes to reject in this scene.'
-        });
-        return;
-      }
-      for (const item of sceneItems) {
-        await rejectStateMutationReviewItem(item.id, applyingId);
-      }
-      setFeedback({
-        tone: 'success',
-        message: `Rejected ${sceneItems.length} suggested state change${sceneItems.length === 1 ? '' : 's'} from "${sceneItems[0]?.sceneTitle || 'scene'}".`
-      });
-    },
-    [rejectStateMutationReviewItem, setFeedback, stateMutationReviewItems]
-  );
-
-  const unknownLinkOptions = useMemo(
-    () =>
-      buildUnknownLinkOptions({
-        categories,
-        characterCategoryIds,
-        characterLoreEntityIdByCharacterId,
-        characters,
-        consistencyReviewItems,
-        entities,
-        unknownGuardrailIssues
-      }),
-    [
-      categories,
-      characterCategoryIds,
-      characterLoreEntityIdByCharacterId,
-      characters,
-      consistencyReviewItems,
-      entities,
-      unknownGuardrailIssues
-    ]
-  );
-
-  const closeUnknownLinkOptions = useMemo(
-    () =>
-      buildCloseUnknownLinkOptions({
-        unknownGuardrailIssues,
-        unknownLinkOptions
-      }),
-    [unknownGuardrailIssues, unknownLinkOptions]
-  );
-
-  const resolveUnknownEntity = useCallback(
-    async (
-      surface: string,
-      categoryId?: string,
-      preferredName?: string,
-      acceptedAliases?: string[]
-    ) => {
-      if (!activeProject) return;
-
-      const normalizedSurface = surface.trim();
-      const normalizedName = preferredName?.trim() || normalizedSurface;
-      if (!normalizedSurface || !normalizedName) return;
-
-      setResolvingUnknown(surface);
-      setFeedback(null);
-      try {
-        let availableCategories = categories;
-        if (availableCategories.length === 0) {
-          await initializeDefaultCategories(activeProject.id);
-          availableCategories = await getCategoriesByProject(activeProject.id);
-          setCategories(availableCategories);
-        }
-
-        const inferredCategoryId = getSuggestedUnknownCategoryId(normalizedSurface);
-        const selectedCategory = categoryId
-          ? availableCategories.find((c) => c.id === categoryId)
-          : inferredCategoryId
-            ? availableCategories.find((c) => c.id === inferredCategoryId) ?? null
-            : null;
-        const chosenCategory =
-          selectedCategory ??
-          availableCategories.find((category) =>
-            ['characters', 'locations', 'items'].includes(category.slug)
-          ) ??
-          availableCategories[0];
-
-        if (!chosenCategory) {
-          throw new Error('No categories available for entity creation.');
-        }
-
-        const now = Date.now();
-        const explicitCharacterSelection = Boolean(
-          selectedCategory && isCharacterCategory(selectedCategory)
-        );
-        let acceptedReviewAliases: string[] = [];
-        if (explicitCharacterSelection) {
-          const normalizedCharacterName = normalizeRecordName(normalizedName);
-          const linkedCharacterEntity = entities.find(
-            (entity) =>
-              entity.categoryId === chosenCategory.id &&
-              normalizeRecordName(entity.name) === normalizedCharacterName
-          );
-          const closeCharacterEntityMatch = [...entities]
-            .filter(
-              (candidate) => {
-                if (
-                  candidate.categoryId !== chosenCategory.id ||
-                  normalizeRecordName(candidate.name) === normalizedCharacterName
-                ) {
-                  return false;
-                }
-                const candidateName = normalizeRecordName(candidate.name);
-                return (
-                  namesLikelyReferToSameCharacter(candidateName, normalizedCharacterName) ||
-                  candidateName.includes(normalizedCharacterName) ||
-                  normalizedCharacterName.includes(candidateName)
-                );
-              }
-            )
-            .sort((left, right) => {
-              const leftName = normalizeRecordName(left.name);
-              const rightName = normalizeRecordName(right.name);
-              const leftClose =
-                namesLikelyReferToSameCharacter(leftName, normalizedCharacterName) ||
-                leftName.includes(normalizedCharacterName) ||
-                normalizedCharacterName.includes(leftName)
-                  ? 0
-                  : 1;
-              const rightClose =
-                namesLikelyReferToSameCharacter(rightName, normalizedCharacterName) ||
-                rightName.includes(normalizedCharacterName) ||
-                normalizedCharacterName.includes(rightName)
-                  ? 0
-                  : 1;
-              if (leftClose !== rightClose) {
-                return leftClose - rightClose;
-              }
-              return left.name.localeCompare(right.name);
-            })[0] ?? null;
-          const characterEntity =
-            linkedCharacterEntity ??
-            ({
-              id: crypto.randomUUID(),
-              projectId: activeProject.id,
-              categoryId: chosenCategory.id,
-              name: normalizedName,
-              fields: {},
-              isNew: true,
-              needsCompletion: false,
-              links: [],
-              createdAt: now,
-              updatedAt: now
-            } satisfies WorldEntity);
-          if (!linkedCharacterEntity) {
-            await saveEntity(characterEntity);
-            setEntities((prev) => [...prev, characterEntity]);
-          }
-          const aliasTexts = acceptedAliases ?? buildCharacterCaptureAliasList({
-            surface: normalizedSurface,
-            canonicalName: normalizedName
-          });
-          acceptedReviewAliases = aliasTexts;
-          await attachAliasTexts({
-            projectId: activeProject.id,
-            targetId: characterEntity.id,
-            targetType: 'entity',
-            aliasTexts
-          });
-          setResolverNotice({
-            message: closeCharacterEntityMatch
-              ? `"${normalizedName}" added to World Bible Characters. Review possible match with "${closeCharacterEntityMatch.name}".`
-              : `"${normalizedName}" added to World Bible Characters.`,
-            primaryLabel: closeCharacterEntityMatch ? 'Review Character Match' : undefined,
-            destination: 'world-bible',
-            targetId: characterEntity.id,
-            matchEntityId: closeCharacterEntityMatch?.id,
-            sourceName: normalizedName
-          });
-        } else {
-          const entity: WorldEntity = {
-            id: crypto.randomUUID(),
-            projectId: activeProject.id,
-            categoryId: chosenCategory.id,
-            name: normalizedName,
-            fields: {},
-            isNew: true,
-            needsCompletion: false,
-            links: [],
-            createdAt: now,
-            updatedAt: now
-          };
-          await saveEntity(entity);
-          await attachAliasTexts({
-            projectId: activeProject.id,
-            targetId: entity.id,
-            targetType: 'entity',
-            aliasTexts:
-              normalizedName.toLowerCase() === normalizedSurface.toLowerCase()
-                ? []
-                : [normalizedSurface]
-          });
-          setEntities((prev) => [...prev, entity]);
-          setResolverNotice({
-            message: `"${normalizedName}" added to your world.`,
-            destination: 'world-bible',
-            targetId: entity.id
-          });
-        }
-        removeReviewSurface(normalizedSurface);
-        acceptedReviewAliases.forEach((alias) => removeReviewSurface(alias));
-        setUnknownLinkSelection((prev) => {
-          const copy = {...prev};
-          delete copy[surface];
-          return copy;
-        });
-        setUnknownCategorySelection((prev) => {
-          const copy = {...prev};
-          delete copy[surface];
-          return copy;
-        });
-        setConsistencyPopover((prev) =>
-          canonicalizeUnknownSurface(prev?.surface ?? '') ===
-          canonicalizeUnknownSurface(normalizedSurface)
-            ? null
-            : prev
-        );
-      } catch (error) {
-        const message =
-          describeError(error, 'Unable to create entity.');
-        setFeedback({tone: 'error', message});
-      } finally {
-        setResolvingUnknown(null);
-      }
-    },
-    [
-      activeProject,
-      attachAliasTexts,
-      categories,
-      entities,
-      getSuggestedUnknownCategoryId,
-      removeReviewSurface,
-      setCategories,
-      setEntities,
-      setFeedback
-    ]
-  );
-
-  const clearUnknownSurface = useCallback((surface: string) => {
-    removeReviewSurface(surface, {docId: selectedDocumentId ?? undefined});
-  }, [removeReviewSurface, selectedDocumentId]);
-
-  const resolveAllUnknownEntities = useCallback(async () => {
-    const surfaces = unknownGuardrailIssues
-      .map((issue) => issue.surface?.trim())
-      .filter((surface): surface is string => Boolean(surface));
-    if (surfaces.length === 0) return;
-
-    for (const surface of surfaces) {
-      await resolveUnknownEntity(surface);
-    }
-  }, [resolveUnknownEntity, unknownGuardrailIssues]);
-
-  const dismissAllUnknownEntities = useCallback((docId?: string) => {
-    const dismissedSurfaces = Array.from(
-      new Set(
-        unknownGuardrailIssues
-          .map((issue) => issue.surface?.trim())
-          .filter((surface): surface is string => Boolean(surface))
-      )
-    );
-    const blocked = new Set(
-        unknownGuardrailIssues
-          .map((issue) => (issue.surface ? canonicalizeUnknownSurface(issue.surface) : ''))
-          .filter((surface): surface is string => Boolean(surface))
-    );
-    if (docId && dismissedSurfaces.length > 0) {
-      setDismissedUnknownByDocument((prev) => ({
-        ...prev,
-        [docId]: Array.from(
-          new Set([...(prev[docId] ?? []), ...dismissedSurfaces])
-        )
-      }));
-    }
-    setGuardrailIssues((prev) =>
-      prev.filter((issue) => {
-        const surface = issue.surface ? canonicalizeUnknownSurface(issue.surface) : '';
-        return !surface || !blocked.has(surface);
-      })
-    );
-    setConsistencyReviewItems((prev) =>
-      prev.filter((item) => {
-        const surface = item.issue.surface
-          ? canonicalizeUnknownSurface(item.issue.surface)
-          : '';
-        return !surface || !blocked.has(surface);
-      })
-    );
-    setFeedback({
-      tone: 'success',
-      message: 'Unknown entity warnings dismissed for now.'
-    });
-  }, [setFeedback, unknownGuardrailIssues]);
-
-  const dismissUnknownEntity = useCallback((surface: string, docId?: string) => {
-    const normalized = canonicalizeUnknownSurface(surface);
-    if (!normalized) return;
-    if (docId) {
-      setDismissedUnknownByDocument((prev) => ({
-        ...prev,
-        [docId]: Array.from(new Set([...(prev[docId] ?? []), surface.trim()]))
-      }));
-    }
-    removeReviewSurface(surface, {docId});
-    setConsistencyPopover((prev) =>
-      canonicalizeUnknownSurface(prev?.surface ?? '') === normalized ? null : prev
-    );
-  }, [removeReviewSurface]);
-
-  const dismissConsistencyReviewItem = useCallback((itemId: string) => {
-    const item = consistencyReviewItems.find((entry) => entry.id === itemId);
-    if (item?.issue.code === 'STATE_CONFLICT' || item?.issue.code === 'INVALID_MUTATION') {
-      dismissedContinuityItemIdsRef.current.add(itemId);
-    }
-    setConsistencyReviewItems((prev) =>
-      prev.filter((item) => item.id !== itemId)
-    );
-    const storedRun = storedReviewRunRef.current;
-    if (storedRun) {
-      const nextRun = {...storedRun, items: storedRun.items.filter((entry) => entry.id !== itemId)};
-      storedReviewRunRef.current = nextRun;
-      void saveProjectReviewRun(nextRun).catch((error) => {
-        console.warn('Could not persist the dismissed review item.', error);
-      });
-    }
-  }, [consistencyReviewItems]);
-
-  const ignoreUnknownSurfaceProjectWide = useCallback(
-    (surface: string, docId?: string) => {
-      const normalized = surface.trim();
-      if (!normalized) return;
-      if (!projectSettings || !activeProject) {
-        setFeedback({
-          tone: 'error',
-          message: 'Project settings are not available yet. Try again in a moment.'
-        });
-        return;
-      }
-      const mergedIgnored = Array.from(
-        new Set([...(projectSettings.ignoredUnknownSurfaces ?? []), normalized.toLowerCase()])
-      );
-      if (docId) {
-        setDismissedUnknownByDocument((prev) => ({
-          ...prev,
-          [docId]: Array.from(new Set([...(prev[docId] ?? []), surface.trim()]))
-        }));
-      }
-      removeReviewSurface(surface);
-      setConsistencyPopover((prev) =>
-        canonicalizeUnknownSurface(prev?.surface ?? '') ===
-        canonicalizeUnknownSurface(surface)
-          ? null
-          : prev
-      );
-      const nextSettings: ProjectSettings = {
-        ...projectSettings,
-        ignoredUnknownSurfaces: mergedIgnored,
-        updatedAt: Date.now()
-      };
-      void saveProjectSettings(nextSettings)
-        .then(() => {
-          setFeedback({
-            tone: 'success',
-            message: `"${normalized}" will be ignored for this project in future reviews.`
-          });
-        })
-        .catch((error) => {
-          const message =
-            describeError(error, 'Unable to save project review settings.');
-          setFeedback({tone: 'error', message});
-        });
-    },
-    [
-      activeProject,
-      projectSettings,
-      removeReviewSurface,
-      setFeedback,
-      saveProjectSettings
-    ]
-  );
-
-  const linkUnknownEntity = useCallback(
-    async (
-      surface: string,
-      explicitEntityId?: string,
-      preferredAlias?: string
-    ): Promise<LinkUnknownEntityResult | false> => {
-      if (!activeProject) return false;
-      const selectedEntityId = explicitEntityId ?? unknownLinkSelection[surface];
-      if (!selectedEntityId) {
-        setFeedback({
-          tone: 'error',
-          message: `Select an existing record before linking "${surface}".`
-        });
-        return false;
-      }
-
-      setLinkingUnknown(surface);
-      setFeedback(null);
-      try {
-        const [selectedTargetType, selectedTargetId] = selectedEntityId.split(':');
-        if (
-          (selectedTargetType !== 'entity' && selectedTargetType !== 'character') ||
-          !selectedTargetId
-        ) {
-          throw new Error('Invalid link target selected.');
-        }
-        const characterCategoryIds = new Set(
-          categories
-            .filter(isCharacterCategory)
-            .map((category) => category.id)
-        );
-        let targetType: 'entity' | 'character' = selectedTargetType;
-        let targetId = selectedTargetId;
-        if (selectedTargetType === 'character') {
-          const selectedCharacter = characters.find((character) => character.id === selectedTargetId);
-          const linkedEntity = selectedCharacter
-            ? entities.find(
-                (entity) =>
-                  characterCategoryIds.has(entity.categoryId) &&
-                  namesLikelyReferToSameCharacter(entity.name, selectedCharacter.name)
-              )
-            : null;
-          if (linkedEntity) {
-            targetType = 'entity';
-            targetId = linkedEntity.id;
-          }
-        }
-        const aliasTexts =
-          preferredAlias && preferredAlias.trim()
-            ? [preferredAlias.trim(), surface]
-            : [surface];
-        await attachAliasTexts({
-          projectId: activeProject.id,
-          targetId,
-          targetType,
-          aliasTexts
-        });
-        removeReviewSurface(surface);
-        setUnknownLinkSelection((prev) => {
-          const copy = {...prev};
-          delete copy[surface];
-          return copy;
-        });
-        setConsistencyPopover((prev) =>
-          canonicalizeUnknownSurface(prev?.surface ?? '') ===
-          canonicalizeUnknownSurface(surface)
-            ? null
-            : prev
-        );
-        setResolverNotice({
-          message: `Connected "${surface}" as an alias of an existing record.`,
-          destination:
-            targetType === 'character'
-              ? ruleset
-                ? 'character-sheet-create'
-                : 'characters'
-              : 'world-bible',
-          targetId
-        });
-        return {
-          destination:
-            targetType === 'character'
-              ? ruleset
-                ? 'character-sheet-create'
-                : 'characters'
-              : 'world-bible',
-          targetId,
-          focus:
-            selectedTargetType === 'character' || selectedTargetType === 'entity'
-              ? selectedTargetType === 'character'
-                ? 'aliases'
-                : 'general'
-              : 'general'
-        };
-      } catch (error) {
-        const message =
-          describeError(error, 'Unable to link alias.');
-        setFeedback({tone: 'error', message});
-        return false;
-      } finally {
-        setLinkingUnknown(null);
-      }
-    },
-    [
-      activeProject,
-      attachAliasTexts,
-      categories,
-      characters,
-      entities,
-      ruleset,
-      removeReviewSurface,
-      setFeedback,
-      unknownLinkSelection
-    ]
-  );
-
-  const activeConsistencyPopoverIssue = consistencyPopover
-    ? highlightableReviewIssues.find((issue) => issue.id === consistencyPopover.issueId) ?? null
-    : null;
-
-  const openConsistencyPopover = useCallback(
-    (
-      issueId: string,
-      anchorRect: {left: number; bottom: number},
-      surface: string
-    ) => {
-      setConsistencyPopover({
-        issueId,
-        surface,
-        left: anchorRect.left,
-        top: anchorRect.bottom + 8
-      });
-      setUnknownLinkSelection((prev) => ({
-        ...prev,
-        [surface]:
-          prev[surface] ??
-          (unknownLinkOptions[surface]?.[0]
-            ? `${unknownLinkOptions[surface][0].type}:${unknownLinkOptions[surface][0].id}`
-            : '')
-      }));
-      setUnknownCategorySelection((prev) => ({
-        ...prev,
-        [surface]: prev[surface] ?? getSuggestedUnknownCategoryId(surface) ?? ''
-      }));
-    },
-    [getSuggestedUnknownCategoryId, unknownLinkOptions]
-  );
+  const dismissal = useUnknownEntityDismissal({
+    activeProject,
+    projectSettings,
+    saveProjectSettings,
+    selectedDocumentId,
+    setFeedback,
+    unknownGuardrailIssues,
+    removeReviewSurface,
+    setGuardrailIssues,
+    setConsistencyReviewItems,
+    setDismissedUnknownByDocument,
+    setConsistencyPopover: resolution.setConsistencyPopover
+  });
 
   return {
     guardrailIssues,
     setGuardrailIssues,
-    resolvingUnknown,
-    linkingUnknown,
-    resolverNotice,
-    setResolverNotice,
+    resolvingUnknown: resolution.resolvingUnknown,
+    linkingUnknown: resolution.linkingUnknown,
+    resolverNotice: resolution.resolverNotice,
+    setResolverNotice: resolution.setResolverNotice,
     getSuggestedUnknownCategoryId,
     createWorldCategory,
-    unknownLinkSelection,
-    setUnknownLinkSelection,
-    unknownCategorySelection,
-    setUnknownCategorySelection,
+    unknownLinkSelection: resolution.unknownLinkSelection,
+    setUnknownLinkSelection: resolution.setUnknownLinkSelection,
+    unknownCategorySelection: resolution.unknownCategorySelection,
+    setUnknownCategorySelection: resolution.setUnknownCategorySelection,
     isRunningConsistencyReview,
     consistencyReviewItems,
-    stateMutationReviewItems,
-    hiddenStateMutationReviewCountBySceneId,
-    hiddenStateMutationReviewCount,
-    applyingStateMutationReviewId,
+    stateMutationReviewItems: stateMutationReview.stateMutationReviewItems,
+    hiddenStateMutationReviewCountBySceneId: stateMutationReview.hiddenStateMutationReviewCountBySceneId,
+    hiddenStateMutationReviewCount: stateMutationReview.hiddenStateMutationReviewCount,
+    applyingStateMutationReviewId: stateMutationReview.applyingStateMutationReviewId,
     lastConsistencyReviewAt,
     reviewReadiness,
-    consistencyPopover,
-    setConsistencyPopover,
+    consistencyPopover: resolution.consistencyPopover,
+    setConsistencyPopover: resolution.setConsistencyPopover,
     knownConsistencyEntities,
     persistDoc,
     refreshDeferredReview,
@@ -2211,24 +427,24 @@ export const useWorkspaceConsistency = ({
     hasBlockingUnknownGuardrailIssues,
     highlightableReviewIssues,
     isReviewPrefsHydrated,
-    unknownLinkOptions,
-    closeUnknownLinkOptions,
-    resolveUnknownEntity,
-    resolveAllUnknownEntities,
-    dismissAllUnknownEntities,
-    dismissUnknownEntity,
+    unknownLinkOptions: resolution.unknownLinkOptions,
+    closeUnknownLinkOptions: resolution.closeUnknownLinkOptions,
+    resolveUnknownEntity: resolution.resolveUnknownEntity,
+    resolveAllUnknownEntities: resolution.resolveAllUnknownEntities,
+    dismissAllUnknownEntities: dismissal.dismissAllUnknownEntities,
+    dismissUnknownEntity: dismissal.dismissUnknownEntity,
     dismissConsistencyReviewItem,
-    ignoreUnknownSurfaceProjectWide,
-    linkUnknownEntity,
-    clearUnknownSurface,
-    activeConsistencyPopoverIssue,
-    openConsistencyPopover,
-    acceptStateMutationReviewItem,
-    rejectStateMutationReviewItem,
-    acceptSceneStateMutationReviewItems,
-    rejectSceneStateMutationReviewItems,
-    hideStateMutationReviewItem,
-    restoreHiddenStateMutationReviewItems,
-    restoreAllHiddenStateMutationReviewItems
+    ignoreUnknownSurfaceProjectWide: dismissal.ignoreUnknownSurfaceProjectWide,
+    linkUnknownEntity: resolution.linkUnknownEntity,
+    clearUnknownSurface: dismissal.clearUnknownSurface,
+    activeConsistencyPopoverIssue: resolution.activeConsistencyPopoverIssue,
+    openConsistencyPopover: resolution.openConsistencyPopover,
+    acceptStateMutationReviewItem: stateMutationReview.acceptStateMutationReviewItem,
+    rejectStateMutationReviewItem: stateMutationReview.rejectStateMutationReviewItem,
+    acceptSceneStateMutationReviewItems: stateMutationReview.acceptSceneStateMutationReviewItems,
+    rejectSceneStateMutationReviewItems: stateMutationReview.rejectSceneStateMutationReviewItems,
+    hideStateMutationReviewItem: stateMutationReview.hideStateMutationReviewItem,
+    restoreHiddenStateMutationReviewItems: stateMutationReview.restoreHiddenStateMutationReviewItems,
+    restoreAllHiddenStateMutationReviewItems: stateMutationReview.restoreAllHiddenStateMutationReviewItems
   };
 };
