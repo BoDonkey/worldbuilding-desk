@@ -1553,6 +1553,61 @@
   max-height: 80vh;
 }
 
+.aiTextReportCard {
+  padding: 1.25rem;
+  width: min(640px, 94vw);
+  max-height: 82vh;
+  overflow-y: auto;
+}
+
+.aiTextReportBody {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.aiTextReportHeading {
+  margin: 0.25rem 0 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+
+.aiTextReportList {
+  margin: 0;
+  padding-left: 1.1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.aiTextReportSubList {
+  margin: 0.15rem 0 0;
+  padding-left: 1rem;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+}
+
+.aiTextReportSceneButton {
+  min-height: auto;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--color-accent);
+  font-weight: 600;
+  text-decoration: underline;
+}
+
+.aiTextReportNotes {
+  border-top: 1px solid var(--color-border);
+  padding-top: 0.6rem;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+}
+
+.aiTextReportNotes p {
+  margin: 0 0 0.4rem;
+}
+
 .memoryModalCard {
   padding: 1.5rem;
   width: min(520px, 90vw);

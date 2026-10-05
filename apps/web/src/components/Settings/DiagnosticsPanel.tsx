@@ -7,6 +7,7 @@ import {
   subscribeDiagnostics
 } from '../../services/errors';
 import styles from '../../assets/components/Settings/DiagnosticsPanel.module.css';
+import {copyText} from '../../utils/clipboard';
 
 interface DiagnosticsPanelProps {
   /** Exact secret values (configured API keys) to scrub from the report. */
@@ -28,31 +29,6 @@ const FAILURE_CLASS_LABELS: Record<string, string> = {
 
 function formatTime(at: number): string {
   return new Date(at).toLocaleString();
-}
-
-async function copyText(text: string): Promise<boolean> {
-  try {
-    if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
-      await navigator.clipboard.writeText(text);
-      return true;
-    }
-  } catch {
-    // Fall through to the selection-based copy below.
-  }
-  try {
-    const textarea = document.createElement('textarea');
-    textarea.value = text;
-    textarea.setAttribute('readonly', 'true');
-    textarea.style.position = 'fixed';
-    textarea.style.opacity = '0';
-    document.body.appendChild(textarea);
-    textarea.select();
-    const copied = document.execCommand('copy');
-    document.body.removeChild(textarea);
-    return copied;
-  } catch {
-    return false;
-  }
 }
 
 /**

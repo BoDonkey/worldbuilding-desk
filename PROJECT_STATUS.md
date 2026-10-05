@@ -847,6 +847,19 @@ runtime schema, and nothing here changes the roadmap's status board.
 ## Verification Status
 
 ### Verified Recently
+- Slice 4.51 AI text report: **AI text report** in the Workspace scene drawer
+  (beside the exports) opens a project-level record of marked AI text:
+  words and passages per scene and by feature and provider (with models),
+  plus the manuscript's total words. It reads the open scene as edited, so it
+  never lags autosave. One multi-paragraph insert counts as one passage;
+  **Mark as my writing** in the middle splits it; a word counts when any part
+  of it is marked. Unknown provenance shows as unknown rather than dropped.
+  Copy is factual and platform-neutral (says what the app inserted, that
+  pasted or typed text is never marked, and that the judgment is the
+  author's); **Copy report** puts a plain-text record on the clipboard.
+  `buildAITextReport` / `formatAITextReport` in
+  `services/editor/aiTextReport.ts`; the dialog's open state lives in
+  `workspaceUiStore` and closes the scene drawer on narrow screens.
 - Slice 4.50 AI text provenance: an `aiText` TipTap mark (registered in every
   editor config, so it survives save and reload) records origin, provider,
   model, route, and time on text a model wrote. `insertAIText` marks the

@@ -394,6 +394,8 @@ _Status: implemented (Slices 4.42–4.45, 2026-09-27)._
 - The mark is provenance, not canon: AI-drafted text reaches canon and state
   only through the ordinary review, like author prose. Exports strip it;
   backups keep it.
+- The AI text report reads only these marks: it is a record of what the app
+  inserted, not a detector, and unmarked text is never counted.
 - Scene drafts require the project's "Allow AI scene drafts" setting (default
   off). The app never removes or disguises provider watermarks.
 - Plan and decisions: `docs/ai-scene-drafting-plan.md`.

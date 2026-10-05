@@ -275,9 +275,12 @@ function buildMechanicsMetrics(params: {
   };
 }
 
+/** What counts as one manuscript word: letters/digits, joined by apostrophes or hyphens. */
+export const MANUSCRIPT_WORD_PATTERN = /[\p{L}\p{N}]+(?:['’-][\p{L}\p{N}]+)*/gu;
+
 export function countWords(content: string): number {
   const text = normalizeManuscriptText(content);
-  return text.match(/[\p{L}\p{N}]+(?:['’-][\p{L}\p{N}]+)*/gu)?.length ?? 0;
+  return text.match(MANUSCRIPT_WORD_PATTERN)?.length ?? 0;
 }
 
 export function countQuotedWords(content: string): number {

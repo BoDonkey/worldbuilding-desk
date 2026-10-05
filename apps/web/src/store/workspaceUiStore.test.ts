@@ -22,6 +22,19 @@ describe('useWorkspaceUiStore', () => {
     expect(useWorkspaceUiStore.getState().activeContextView).toBe('review');
   });
 
+  it('opens the AI text report, closing the scene drawer only on narrow screens', () => {
+    useWorkspaceUiStore.getState().setWorkspaceDrawerContext('alpha', false);
+    useWorkspaceUiStore.getState().setSceneDrawerOpen(true);
+    useWorkspaceUiStore.getState().openAITextReport();
+    expect(useWorkspaceUiStore.getState()).toMatchObject({isAITextReportOpen: true, isSceneDrawerOpen: true});
+
+    useWorkspaceUiStore.getState().closeAITextReport();
+    useWorkspaceUiStore.getState().setWorkspaceDrawerContext('alpha', true);
+    useWorkspaceUiStore.getState().setSceneDrawerOpen(true);
+    useWorkspaceUiStore.getState().openAITextReport();
+    expect(useWorkspaceUiStore.getState()).toMatchObject({isAITextReportOpen: true, isSceneDrawerOpen: false});
+  });
+
   it('does not overwrite desktop drawer preferences while in a narrow viewport', () => {
     const store = useWorkspaceUiStore.getState();
 

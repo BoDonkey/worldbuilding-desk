@@ -75,6 +75,7 @@ interface WorkspaceUiState {
   isCorkboardModalOpen: boolean;
   isStatBlockModalOpen: boolean;
   isExportModalOpen: boolean;
+  isAITextReportOpen: boolean;
   exportFormat: WorkspaceExportFormat;
   exportSelection: WorkspaceExportItem[];
   importMode: WorkspaceImportMode;
@@ -104,6 +105,9 @@ interface WorkspaceUiState {
     selection: WorkspaceExportItem[]
   ) => void;
   closeExportModal: () => void;
+  /** Opens the AI text report, closing the scene drawer on narrow screens. */
+  openAITextReport: () => void;
+  closeAITextReport: () => void;
   moveExportItem: (id: string, direction: -1 | 1) => void;
   toggleExportItem: (id: string) => void;
   toggleAllExportItems: (included: boolean) => void;
@@ -206,6 +210,7 @@ export const useWorkspaceUiStore = create<WorkspaceUiState>()(
       isCorkboardModalOpen: false,
       isStatBlockModalOpen: false,
       isExportModalOpen: false,
+      isAITextReportOpen: false,
       exportFormat: 'markdown',
       exportSelection: [],
       importMode: 'balanced',
@@ -291,6 +296,14 @@ export const useWorkspaceUiStore = create<WorkspaceUiState>()(
         }),
 
       closeExportModal: () => set({isExportModalOpen: false}),
+
+      openAITextReport: () =>
+        set((state) => ({
+          isAITextReportOpen: true,
+          ...(state.isNarrowViewport ? {isSceneDrawerOpen: false} : {})
+        })),
+
+      closeAITextReport: () => set({isAITextReportOpen: false}),
 
       moveExportItem: (id, direction) =>
         set((state) => {

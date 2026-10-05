@@ -31,6 +31,7 @@ import {
 import {useConfirmDialog} from '../../hooks/useConfirmDialog';
 import {InlineAlert, type InlineAlertVariant} from '../common';
 import {describeError} from '../../services/errors';
+import {AI_PROVIDER_LABELS} from '../../services/llm/providerLabels';
 import {
   getConsultationBudgetStatus,
   LOCAL_CONSULTATION_DAILY_GUARD
@@ -44,12 +45,6 @@ interface AISettingsProps {
   onSettingsChange: (aiSettings: ProjectAISettings) => void;
 }
 
-const PROVIDER_LABELS: Record<AIProviderId, string> = {
-  anthropic: 'Anthropic (Claude)',
-  openai: 'OpenAI (GPT)',
-  gemini: 'Google Gemini',
-  ollama: 'Ollama (Local)'
-};
 
 const PROMPT_TOOL_KIND_LABELS: Record<PromptToolKind, string> = {
   style: 'Style Guide',
@@ -651,7 +646,7 @@ export const AISettings: React.FC<AISettingsProps> = ({
           >
             {(['anthropic', 'openai', 'gemini', 'ollama'] as AIProviderId[]).map((provider) => (
               <option key={provider} value={provider}>
-                {PROVIDER_LABELS[provider]}
+                {AI_PROVIDER_LABELS[provider]}
               </option>
             ))}
           </select>
@@ -660,7 +655,7 @@ export const AISettings: React.FC<AISettingsProps> = ({
               ? `Ollama runs entirely on your device with ${providerRoute.model ? `"${providerRoute.model}"` : 'an installed local model'}. No story text ever leaves your computer.`
               : providerRoute.kind !== 'hosted'
                 ? providerRoute.reason
-                : `When you use the writing assistant, the necessary text is sent to ${PROVIDER_LABELS[aiSettings.provider]}'s servers under that provider's terms — only when you invoke it, never in the background.`}
+                : `When you use the writing assistant, the necessary text is sent to ${AI_PROVIDER_LABELS[aiSettings.provider]}'s servers under that provider's terms — only when you invoke it, never in the background.`}
           </p>
         </div>
 

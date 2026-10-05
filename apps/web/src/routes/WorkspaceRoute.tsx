@@ -56,6 +56,7 @@ import {WorkspaceCorkboardModal} from '../components/Workspace/WorkspaceCorkboar
 import {WorkspaceChapterCardContext} from '../components/Workspace/WorkspaceChapterCardContext';
 import {WorkspaceScratchpadModal} from '../components/Workspace/WorkspaceScratchpadModal';
 import {WorkspaceExportModal} from '../components/Workspace/WorkspaceExportModal';
+import {WorkspaceAITextReportModal} from '../components/Workspace/WorkspaceAITextReportModal';
 import {WorkspaceMemoryModal} from '../components/Workspace/WorkspaceMemoryModal';
 import {WorkspaceStatBlockModal} from '../components/Workspace/WorkspaceStatBlockModal';
 import {WorkspaceSceneDrawer} from '../components/Workspace/WorkspaceSceneDrawer';
@@ -2241,6 +2242,10 @@ function WorkspaceRoute() {
         onClose={closeExportModal} onMove={moveExportItem}
         onToggle={toggleExportItem} onToggleAll={toggleAllExportItems}
         onExport={handleExportScenes}
+      />
+      <WorkspaceAITextReportModal
+        documents={documents} selectedId={isSelectedDocumentInitialized ? selectedId : null}
+        selectedTitle={title} selectedContent={content} onOpenScene={handleSelectDocument}
       />
 
 

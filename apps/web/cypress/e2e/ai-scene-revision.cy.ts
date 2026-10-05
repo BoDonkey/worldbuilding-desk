@@ -61,6 +61,16 @@ describe('Reviewed assistant scene revisions', () => {
     cy.get('.tiptap [data-ai-text="scene-revision"]').should('have.text', 'Revised opening');
     cy.contains('button', 'Hide AI text').should('be.visible');
 
+    // The project report counts the marked words before autosave catches up.
+    cy.contains('button', /^Scenes$/).first().click();
+    cy.contains('button', 'AI text report').click();
+    cy.get('[role="dialog"][aria-labelledby="ai-text-report-title"]').within(() => {
+      cy.get('[data-testid="ai-text-report-summary"]').should('contain.text', '2 words in 1 passage');
+      cy.contains('Assistant revision · Ollama (Local): 2 words in 1 passage').should('be.visible');
+      cy.contains('button', 'Close').click();
+    });
+    cy.get('[aria-labelledby="ai-text-report-title"]').should('not.exist');
+
     cy.get('.tiptap [data-ai-text]').click();
     cy.contains('button', 'Mark as my writing').click();
     cy.get('.tiptap [data-ai-text]').should('not.exist');

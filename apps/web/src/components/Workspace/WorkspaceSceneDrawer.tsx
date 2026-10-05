@@ -1,5 +1,6 @@
 import type {WritingDocument, WorkspaceImportMode} from '../../entityTypes';
 import type {WorkspaceImportSummary} from '../../store/workspaceUiStore';
+import {useWorkspaceUiStore} from '../../store/workspaceUiStore';
 import styles from '../../styles/WorkspaceRoute.module.css';
 
 interface WorkspaceSceneTimelineEntry {
@@ -75,6 +76,7 @@ export function WorkspaceSceneDrawer({
   staleStateEventCountBySceneId = {},
   selectedSceneTimeline = null
 }: WorkspaceSceneDrawerProps) {
+  const openAITextReport = useWorkspaceUiStore((state) => state.openAITextReport);
   return (
     <>
       <div style={{marginBottom: '1rem'}}>
@@ -138,6 +140,14 @@ export function WorkspaceSceneDrawer({
           style={{marginLeft: '0.5rem'}}
         >
           Export EPUB
+        </button>
+        <button
+          type='button'
+          onClick={openAITextReport}
+          disabled={documents.length === 0}
+          style={{marginLeft: '0.5rem'}}
+        >
+          AI text report
         </button>
       </div>
 
