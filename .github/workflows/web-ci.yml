@@ -46,6 +46,9 @@ jobs:
       - name: Audit production dependencies
         run: pnpm audit --prod --audit-level high
 
+      - name: Check file sizes
+        run: pnpm check:file-sizes
+
       - name: Lint web
         run: pnpm --filter web lint
 

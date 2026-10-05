@@ -1,4 +1,4 @@
-import {useCallback, useEffect, useState, type Dispatch, type SetStateAction} from 'react';
+import {useCallback, useEffect, useRef, useState, type Dispatch, type SetStateAction} from 'react';
 import type {
   CanonicalFact,
   Character,
@@ -77,11 +77,37 @@ const ensureCharacterCategoryLongFormFields = async (
   return updatedCategories;
 };
 
+/**
+ * Categories loaded from storage, reconciled with category changes the author
+ * made while the load was in flight: those changes are saved first, so they
+ * win, and a category added locally that the load missed is kept.
+ */
+export function mergeLoadedCategories(
+  loaded: EntityCategory[],
+  local: EntityCategory[],
+  projectId: string
+): EntityCategory[] {
+  const localForProject = local.filter((category) => category.projectId === projectId);
+  const localById = new Map(localForProject.map((category) => [category.id, category]));
+  const loadedIds = new Set(loaded.map((category) => category.id));
+  return [
+    ...loaded.map((category) => localById.get(category.id) ?? category),
+    ...localForProject.filter((category) => !loadedIds.has(category.id))
+  ];
+}
+
 export function useWorldBibleProjectData({
   activeProject,
   setFeedback
 }: UseWorldBibleProjectDataOptions) {
-  const [categories, setCategories] = useState<EntityCategory[]>([]);
+  const [categories, setLoadedCategories] = useState<EntityCategory[]>([]);
+  // Counts author changes to categories, so a load that started before one
+  // merges with it instead of overwriting it with an older list.
+  const localCategoryChangesRef = useRef(0);
+  const setCategories = useCallback<Dispatch<SetStateAction<EntityCategory[]>>>((update) => {
+    localCategoryChangesRef.current += 1;
+    setLoadedCategories(update);
+  }, []);
   // Which project the loaded categories belong to; the route renders before
   // the first load finishes, and an empty list then means "not loaded yet".
   const [categoriesProjectId, setCategoriesProjectId] = useState<string | null>(null);
@@ -149,7 +175,7 @@ export function useWorldBibleProjectData({
 
   useEffect(() => {
     if (!activeProject) {
-      setCategories([]);
+      setLoadedCategories([]);
       setEntities([]);
       setAliases([]);
       setCharacters([]);
@@ -165,6 +191,7 @@ export function useWorldBibleProjectData({
     let cancelled = false;
     void (async () => {
       const projectId = activeProject.id;
+      const localChangesAtStart = localCategoryChangesRef.current;
       await initializeDefaultCategories(projectId);
       const [
         loadedCategories,
@@ -194,7 +221,11 @@ export function useWorldBibleProjectData({
       );
 
       if (!cancelled) {
-        setCategories(normalizedCategories);
+        setLoadedCategories((local) =>
+          localCategoryChangesRef.current === localChangesAtStart
+            ? normalizedCategories
+            : mergeLoadedCategories(normalizedCategories, local, projectId)
+        );
         setCategoriesProjectId(projectId);
         setEntities(loadedEntities);
         setAliases(loadedAliases);

@@ -47,6 +47,10 @@ import {
   type CharacterVoicePosition
 } from '../services/characterLab';
 import {describeError} from '../services/errors';
+import {appendToScratchpad} from '../scratchpadStorage';
+import {saveCharacterFromDescription} from '../services/characterLab/characterFromDescriptionStorage';
+import type {CharacterFromDescriptionRecords} from '../services/characterLab/characterFromDescription';
+import {getRAGService} from '../services/rag/getRAGService';
 
 interface CharacterLabProjectData {
   projectId: string;
@@ -253,6 +257,23 @@ export function useCharacterLabData(projectId: string | null, enabled: boolean) 
     [current]
   );
 
+  /** Appends author-saved lab output to the project Scratchpad. */
+  const saveToScratchpad = useCallback(
+    (html: string) =>
+      projectId ? appendToScratchpad(projectId, html) : Promise.reject(new Error('No project is open.')),
+    [projectId]
+  );
+
+  /** Saves an author-approved character from a description, then indexes it if search is available. */
+  const saveFromDescription = useCallback(
+    async (records: CharacterFromDescriptionRecords, categorySlug?: string) => {
+      if (!projectId) throw new Error('No project is open.');
+      const ragService = await getRAGService(projectId).catch(() => null);
+      await saveCharacterFromDescription(records, {ragService, categorySlug});
+    },
+    [projectId]
+  );
+
   return {
     isLoaded: Boolean(current),
     loadError,
@@ -263,6 +284,8 @@ export function useCharacterLabData(projectId: string | null, enabled: boolean) 
     chapterCards: current?.chapterCards ?? EMPTY_CARDS,
     openThreads: current?.openThreads ?? EMPTY_THREADS,
     buildContext,
-    findNameCollisions
+    findNameCollisions,
+    saveToScratchpad,
+    saveFromDescription
   };
 }

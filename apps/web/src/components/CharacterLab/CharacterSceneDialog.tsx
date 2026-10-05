@@ -14,7 +14,6 @@ import {
   type CharacterVoiceContext,
   type CharacterVoicePosition
 } from '../../services/characterLab';
-import {appendToScratchpad} from '../../scratchpadStorage';
 import {LLMService} from '../../services/llm/LLMService';
 import {resolveResponseTokenLimit} from '../../services/llm/modelRun';
 import {describeError} from '../../services/errors';
@@ -195,7 +194,7 @@ export function CharacterSceneDialog({
     setIsSaving(true);
     setError(null);
     try {
-      await appendToScratchpad(projectId, formatCharacterSceneScratchpadHtml(sceneDraft));
+      await lab.saveToScratchpad(formatCharacterSceneScratchpadHtml(sceneDraft));
       setSavedMessage('Saved to Scratchpad.');
     } catch (saveError) {
       setError(describeError(saveError, 'Unable to save to the Scratchpad.'));

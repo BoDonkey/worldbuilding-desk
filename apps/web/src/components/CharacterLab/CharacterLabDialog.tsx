@@ -12,7 +12,6 @@ import {
   type CharacterLabMode,
   type CharacterVoicePosition
 } from '../../services/characterLab';
-import {appendToScratchpad} from '../../scratchpadStorage';
 import {LLMService} from '../../services/llm/LLMService';
 import {resolveResponseTokenLimit} from '../../services/llm/modelRun';
 import {describeError} from '../../services/errors';
@@ -169,8 +168,7 @@ export function CharacterLabDialog({
     setIsSaving(true);
     setError(null);
     try {
-      await appendToScratchpad(
-        projectId,
+      await lab.saveToScratchpad(
         formatCharacterLabScratchpadHtml({characterName: context.name, exchanges})
       );
       setSavedMessage('Saved to Scratchpad.');

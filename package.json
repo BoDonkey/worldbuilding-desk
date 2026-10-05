@@ -12,6 +12,7 @@
     "start:desktop:dev": "pnpm --filter desktop start:dev",
     "package:desktop": "pnpm build:web && pnpm build:desktop && pnpm --filter desktop package",
     "package:desktop:dir": "pnpm build:web && pnpm build:desktop && pnpm --filter desktop package:dir",
+    "check:file-sizes": "node scripts/check-file-sizes.mjs",
     "lint": "pnpm -r lint",
     "lint:fix": "pnpm -r lint:fix"
   },

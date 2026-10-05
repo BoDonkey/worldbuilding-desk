@@ -11,7 +11,7 @@ import type {
   WorldEntity,
   WritingDocument
 } from '../entityTypes';
-import {getDocumentsByProject} from '../writingStorage';
+import {getDocumentsByProject, sortWritingDocuments} from '../writingStorage';
 import {getChapterCardsByProjectId} from '../corkboardStorage';
 import {getEntitiesByProject} from '../entityStorage';
 import {getCharactersByProject} from '../characterStorage';
@@ -138,6 +138,11 @@ export function useCharacterStatPeekData(
   }, [enabled, projectId, reloadKey]);
 
   const current = data && data.projectId === projectId ? data : null;
+  const currentDocuments = current?.documents;
+  const documents = useMemo(
+    () => (currentDocuments ? sortWritingDocuments(currentDocuments) : EMPTY_DOCUMENTS),
+    [currentDocuments]
+  );
 
   const targets = useMemo(
     () =>
@@ -198,7 +203,8 @@ export function useCharacterStatPeekData(
   return {
     isLoaded: Boolean(current),
     targets,
-    documents: current?.documents ?? EMPTY_DOCUMENTS,
+    /** Scenes in manuscript order. */
+    documents,
     chapterCards: current?.chapterCards ?? EMPTY_CARDS,
     getSnapshotAt,
     getLatestSnapshot

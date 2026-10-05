@@ -5,7 +5,6 @@ import {useAppStore} from '../store/appStore';
 import {useWorkspaceUiStore} from '../store/workspaceUiStore';
 import {getProjectCapabilities} from '../projectMode';
 import {useCharacterStatPeekData} from '../hooks/useCharacterStatPeekData';
-import {sortWritingDocuments} from '../writingStorage';
 import {resolveCharacterStatCardTemplate} from '../services/state/characterPeek';
 import {
   describeCharacterSnapshotChanges,
@@ -109,7 +108,7 @@ export function StatPinPanel({isRailCollapsed}: {isRailCollapsed: boolean}) {
     location.pathname.startsWith('/workspace') && storedWorkspaceContext?.projectId === projectId
       ? storedWorkspaceContext
       : null;
-  const orderedDocuments = sortWritingDocuments(data.documents);
+  const orderedDocuments = data.documents;
   const asOfSceneId = asOf.projectId === projectId ? asOf.sceneId : null;
   const asOfScene = asOfSceneId
     ? orderedDocuments.find((document) => document.id === asOfSceneId) ?? null

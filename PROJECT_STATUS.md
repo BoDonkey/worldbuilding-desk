@@ -847,6 +847,20 @@ runtime schema, and nothing here changes the roadmap's status board.
 ## Verification Status
 
 ### Verified Recently
+- Slice 3.14 hotspot freeze and extraction (behavior-preserving):
+  `pnpm check:file-sizes` (`scripts/check-file-sizes.mjs`, run in `web-verify`)
+  fails when a non-test source file over 1,500 lines grows past
+  `scripts/file-size-baseline.json`, or a new file crosses 1,500; `--update`
+  records shrinkage. `EditorWithAI.tsx` 1,636 → 1,285 lines: stat peek moved to
+  `useEditorStatPeek` + `EditorStatPeekLayer`, and an unused insert state was
+  removed. `WorkspaceRoute.tsx` 2,294 → 1,873: the unknown-name review popover
+  and **Add to World** popover moved to `WorkspaceReviewSurfacePopover` and
+  `WorkspaceManualWorldCapturePopover`. The character lab dialogs save through
+  `useCharacterLabData` (`saveToScratchpad`, `saveFromDescription`), and the
+  stat pin panel gets ordered scenes from `useCharacterStatPeekData`, so none
+  of them import storage. World Bible category load race fixed: a category
+  changed or added while the initial load is in flight is merged into the
+  loaded list instead of being overwritten (`mergeLoadedCategories`).
 - Slice 4.51 AI text report: **AI text report** in the Workspace scene drawer
   (beside the exports) opens a project-level record of marked AI text:
   words and passages per scene and by feature and provider (with models),

@@ -11,10 +11,8 @@ import {
   type CharacterFromDescriptionTarget,
   type CharacterProfile
 } from '../../services/characterLab';
-import {saveCharacterFromDescription} from '../../services/characterLab/characterFromDescriptionStorage';
 import {LLMService} from '../../services/llm/LLMService';
 import {HOSTED_STRUCTURED_RESPONSE_MINIMUM} from '../../services/llm/hostedResponsePolicy';
-import {getRAGService} from '../../services/rag/getRAGService';
 import {describeError} from '../../services/errors';
 import {ModelRunProgress} from '../common/ModelRunProgress';
 import {ConsultationBudgetNotice} from '../common/ConsultationBudgetNotice';
@@ -161,8 +159,7 @@ export function CharacterFromDescriptionDialog({
         stableFacts: profile.stableFacts.filter((_, index) => factKept[index]),
         suggestedDetails: details.filter((detail) => detail.keep).map((detail) => detail.text)
       });
-      const ragService = await getRAGService(projectId).catch(() => null);
-      await saveCharacterFromDescription(records, {ragService, categorySlug: category.slug});
+      await lab.saveFromDescription(records, category.slug);
       setResult({
         entityId: records.link.targetId,
         name: target.name,

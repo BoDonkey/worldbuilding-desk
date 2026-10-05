@@ -10,7 +10,6 @@ import {
 import {useLocation, useNavigate} from 'react-router';
 import type {ChapterCard, WritingDocument} from '../entityTypes';
 import {EditorWithAI} from '../components/Editor/EditorWithAI';
-import {ContextPopover} from '../components/Editor/ContextPopover';
 import {useWorkspaceMemories} from '../hooks/useWorkspaceMemories';
 import {useWorkspaceConsistency} from '../hooks/useWorkspaceConsistency';
 import {useWorkspaceDocuments} from '../hooks/useWorkspaceDocuments';
@@ -47,7 +46,6 @@ import {
   useWorkspaceSceneOperationUi
 } from '../hooks/useWorkspaceUi';
 import {getProjectCapabilities} from '../projectMode';
-import {isCharacterCategory} from '../services/characters/characterIdentity';
 import styles from '../styles/WorkspaceRoute.module.css';
 import {useAppStore} from '../store/appStore';
 import {WorkspaceContextDrawer} from '../components/Workspace/WorkspaceContextDrawer';
@@ -62,7 +60,8 @@ import {WorkspaceStatBlockModal} from '../components/Workspace/WorkspaceStatBloc
 import {WorkspaceSceneDrawer} from '../components/Workspace/WorkspaceSceneDrawer';
 import {CanonPanel} from '../components/Workspace/CanonPanel';
 import {UnknownEntityPanel} from '../components/Workspace/UnknownEntityPanel';
-import {WorldCategorySelect} from '../components/Workspace/WorldCategorySelect';
+import {WorkspaceReviewSurfacePopover} from '../components/Workspace/WorkspaceReviewSurfacePopover';
+import {WorkspaceManualWorldCapturePopover} from '../components/Workspace/WorkspaceManualWorldCapturePopover';
 import {PositionedStateChangeComposer} from '../components/Workspace/PositionedStateChangeComposer';
 import {SceneInventoryCapture} from '../components/Workspace/SceneInventoryCapture';
 import {SceneConsumptionCapture} from '../components/Workspace/SceneConsumptionCapture';
@@ -80,17 +79,11 @@ import {useWorkspaceScratchpad} from '../hooks/useWorkspaceScratchpad';
 import {useWorkspaceCorkboard} from '../hooks/useWorkspaceCorkboard';
 import {useChapterCardSceneActions} from '../hooks/useChapterCardSceneActions';
 import {useSceneRosterPreferences} from '../hooks/useSceneRosterPreferences';
-import {buildCharacterCaptureAliasList} from '../services/worldBible/worldBibleCanonicalization';
 import {isItemCategory} from '../services/worldBible/worldBibleSummary';
 import {PageHeader} from '../components/PageHeader';
 import {RouteFeedback} from '../components/common';
 import {useNotificationStore} from '../store/notificationStore';
 import {GettingStartedGuide} from '../components/Onboarding/GettingStartedGuide';
-import {
-  buildManualCaptureLinkOptions,
-  isCharacterLikeCategory,
-  normalizeCaptureSelection
-} from '../services/workspace/workspaceView';
 import {
   useWorkspaceSceneRoster,
   type PendingInventoryCapture,
@@ -118,23 +111,6 @@ declare global {
     __wbdWorkspaceUnmountedAt?: number;
   }
 }
-
-const toSingularLabel = (value: string): string => {
-  const trimmed = value.trim();
-  if (!trimmed) {
-    return 'Record';
-  }
-  if (/ies$/i.test(trimmed)) {
-    return trimmed.replace(/ies$/i, 'y');
-  }
-  if (/ses$/i.test(trimmed)) {
-    return trimmed.replace(/es$/i, '');
-  }
-  if (/s$/i.test(trimmed) && !/ss$/i.test(trimmed)) {
-    return trimmed.slice(0, -1);
-  }
-  return trimmed;
-};
 
 type FeedbackTone = 'success' | 'error';
 
@@ -512,56 +488,7 @@ function WorkspaceRoute() {
     });
     return counts;
   }, [documents, stateMutationEvents]);
-  const {
-    setGuardrailIssues,
-    resolvingUnknown,
-    linkingUnknown,
-    resolverNotice,
-    setResolverNotice,
-    unknownLinkSelection,
-    setUnknownLinkSelection,
-    unknownCategorySelection,
-    setUnknownCategorySelection,
-    isRunningConsistencyReview,
-    consistencyReviewItems,
-    stateMutationReviewItems,
-    hiddenStateMutationReviewCountBySceneId,
-    hiddenStateMutationReviewCount,
-    applyingStateMutationReviewId,
-    lastConsistencyReviewAt,
-    consistencyPopover,
-    setConsistencyPopover,
-    persistDoc,
-    refreshDeferredReview,
-    refreshActiveDraftReview,
-    handleRunConsistencyReview,
-    unknownGuardrailIssues,
-    hasBlockingUnknownGuardrailIssues,
-    highlightableReviewIssues,
-    isReviewPrefsHydrated,
-    unknownLinkOptions,
-    closeUnknownLinkOptions,
-    getSuggestedUnknownCategoryId,
-    createWorldCategory,
-    resolveUnknownEntity,
-    resolveAllUnknownEntities,
-    dismissAllUnknownEntities,
-    dismissUnknownEntity,
-    dismissConsistencyReviewItem,
-    ignoreUnknownSurfaceProjectWide,
-    linkUnknownEntity,
-    clearUnknownSurface,
-    activeConsistencyPopoverIssue,
-    reviewReadiness,
-    openConsistencyPopover,
-    acceptStateMutationReviewItem,
-    rejectStateMutationReviewItem,
-    acceptSceneStateMutationReviewItems,
-    rejectSceneStateMutationReviewItems,
-    hideStateMutationReviewItem,
-    restoreHiddenStateMutationReviewItems,
-    restoreAllHiddenStateMutationReviewItems
-  } = useWorkspaceConsistency({
+  const consistency = useWorkspaceConsistency({
     activeProject,
     documents,
     setDocuments,
@@ -592,6 +519,54 @@ function WorkspaceRoute() {
     setFeedback,
     addSystemHistory
   });
+  const {
+    setGuardrailIssues,
+    resolvingUnknown,
+    linkingUnknown,
+    resolverNotice,
+    setResolverNotice,
+    unknownLinkSelection,
+    setUnknownLinkSelection,
+    unknownCategorySelection,
+    setUnknownCategorySelection,
+    isRunningConsistencyReview,
+    consistencyReviewItems,
+    stateMutationReviewItems,
+    hiddenStateMutationReviewCountBySceneId,
+    hiddenStateMutationReviewCount,
+    applyingStateMutationReviewId,
+    lastConsistencyReviewAt,
+    consistencyPopover,
+    setConsistencyPopover,
+    persistDoc,
+    refreshDeferredReview,
+    refreshActiveDraftReview,
+    handleRunConsistencyReview,
+    unknownGuardrailIssues,
+    hasBlockingUnknownGuardrailIssues,
+    highlightableReviewIssues,
+    isReviewPrefsHydrated,
+    unknownLinkOptions,
+    getSuggestedUnknownCategoryId,
+    createWorldCategory,
+    resolveUnknownEntity,
+    resolveAllUnknownEntities,
+    dismissAllUnknownEntities,
+    dismissUnknownEntity,
+    dismissConsistencyReviewItem,
+    ignoreUnknownSurfaceProjectWide,
+    linkUnknownEntity,
+    activeConsistencyPopoverIssue,
+    reviewReadiness,
+    openConsistencyPopover,
+    acceptStateMutationReviewItem,
+    rejectStateMutationReviewItem,
+    acceptSceneStateMutationReviewItems,
+    rejectSceneStateMutationReviewItems,
+    hideStateMutationReviewItem,
+    restoreHiddenStateMutationReviewItems,
+    restoreAllHiddenStateMutationReviewItems
+  } = consistency;
   const reviewItemCountBySceneId = useMemo(() => {
     const counts: Record<string, number> = {};
     consistencyReviewItems.forEach((item) => {
@@ -1097,48 +1072,6 @@ function WorkspaceRoute() {
           : scratchpadLastSavedAt
             ? `Scratchpad saved at ${new Date(scratchpadLastSavedAt).toLocaleTimeString()}`
             : 'Scratchpad ready.';
-  const activeWorldCaptureDraft =
-    (activeConsistencyPopoverIssue &&
-      worldCaptureDrafts[activeConsistencyPopoverIssue.surface]) ||
-    activeConsistencyPopoverIssue?.surface ||
-    '';
-  const activeSuggestedCategoryId = activeConsistencyPopoverIssue
-    ? unknownCategorySelection[activeConsistencyPopoverIssue.surface] ||
-      getSuggestedUnknownCategoryId(activeConsistencyPopoverIssue.surface) ||
-      ''
-    : '';
-  const activeSuggestedCategory = activeSuggestedCategoryId
-    ? categories.find((category) => category.id === activeSuggestedCategoryId) ?? null
-    : null;
-  const activeIsCharacterCapture = isCharacterLikeCategory(activeSuggestedCategory);
-  const activeRejectedAliases = activeConsistencyPopoverIssue
-    ? rejectedAliasSuggestions[activeConsistencyPopoverIssue.surface] ?? []
-    : [];
-  const activeAliasPreview = activeConsistencyPopoverIssue
-    ? buildCharacterCaptureAliasList({
-        surface: activeConsistencyPopoverIssue.surface,
-        canonicalName: activeWorldCaptureDraft,
-        rejectedAliases: activeRejectedAliases
-      })
-    : [];
-  const reviewCreateActionLabel =
-    activeSuggestedCategory
-      ? activeIsCharacterCapture
-        ? 'Add Character'
-        : `Add ${toSingularLabel(activeSuggestedCategory.name)}`
-      : reviewCreateLabel;
-  const activeCloseCharacterMatches =
-    activeConsistencyPopoverIssue
-      ? (closeUnknownLinkOptions[activeConsistencyPopoverIssue.surface] ?? []).filter(
-          (entry) => entry.type === 'character'
-        )
-      : [];
-  const showCharacterCanonicalizationHint =
-    Boolean(
-      activeSuggestedCategory &&
-      isCharacterCategory(activeSuggestedCategory)
-    ) &&
-    activeCloseCharacterMatches.length > 0;
   const selectionQuickSnippets = useWorkspaceLoreSnippets({
     activeProject,
     categories,
@@ -1177,32 +1110,6 @@ function WorkspaceRoute() {
 
     return highlights;
   }, [aliases, entities]);
-  const manualCaptureExistingEntity = manualWorldCapture
-    ? selectionQuickSnippets.entities[
-        normalizeCaptureSelection(manualWorldCapture.draftText)
-      ] ??
-      entities.find(
-        (entity) =>
-          normalizeCaptureSelection(entity.name) ===
-          normalizeCaptureSelection(manualWorldCapture.draftText)
-      ) ??
-      null
-    : null;
-  const manualCaptureLinkOptions = useMemo(
-    () =>
-      buildManualCaptureLinkOptions({
-        draftText: manualWorldCapture?.draftText ?? null,
-        categories,
-        characters,
-        entities
-      }),
-    [categories, characters, entities, manualWorldCapture?.draftText]
-  );
-  const manualSelectedCategoryId = unknownCategorySelection.__manual__ ?? '';
-  const manualSelectedCategory = manualSelectedCategoryId
-    ? categories.find((category) => category.id === manualSelectedCategoryId) ?? null
-    : null;
-  const manualIsCharacterCapture = isCharacterLikeCategory(manualSelectedCategory);
   const pendingInventoryResolution = useMemo(
     () => pendingInventoryCapture
       ? resolveReusableItem({
@@ -1226,16 +1133,6 @@ function WorkspaceRoute() {
         (entry) => entry.id === pendingInventoryResolution.definitionId
       ) ?? null
     : null;
-  const manualRejectedAliases = manualWorldCapture
-    ? rejectedAliasSuggestions[manualWorldCapture.sourceText] ?? []
-    : [];
-  const manualAliasPreview = manualWorldCapture && manualIsCharacterCapture
-    ? buildCharacterCaptureAliasList({
-        surface: manualWorldCapture.sourceText,
-        canonicalName: manualWorldCapture.draftText,
-        rejectedAliases: manualRejectedAliases
-      })
-    : [];
   const toolbarActions = useMemo(
     () => [
       {
@@ -1655,346 +1552,28 @@ function WorkspaceRoute() {
                   suppressSelectionBubble={Boolean(manualWorldCapture)}
                 />
                 {consistencyPopover && activeConsistencyPopoverIssue && (
-                  <ContextPopover
-                    title={activeConsistencyPopoverIssue.surface}
-                    message={reviewPopoverMessage}
-                    left={consistencyPopover.left}
-                    top={consistencyPopover.top}
-                    onClose={() => setConsistencyPopover(null)}
-                  >
-                    <div className={styles.consistencyPopoverActions}>
-                      <WorldCategorySelect
-                        categories={categories}
-                        value={activeSuggestedCategoryId}
-                        onChange={(categoryId) =>
-                          setUnknownCategorySelection((prev) => ({
-                            ...prev,
-                            [activeConsistencyPopoverIssue.surface]: categoryId
-                          }))
-                        }
-                        onCreate={createWorldCategory}
-                        ariaLabel='World Bible type'
-                      />
-                      <label className={styles.captureNameField}>
-                        {activeIsCharacterCapture ? 'Canonical name' : 'Name or place'}
-                        <input
-                          type='text'
-                          value={activeWorldCaptureDraft}
-                          onChange={(event) =>
-                            setWorldCaptureDrafts((prev) => ({
-                              ...prev,
-                              [activeConsistencyPopoverIssue.surface]: event.target.value
-                            }))
-                          }
-                          placeholder={
-                            activeIsCharacterCapture
-                              ? 'Full canonical name'
-                              : 'Name or place'
-                          }
-                          className={styles.captureNameInput}
-                        />
-                      </label>
-                      {activeIsCharacterCapture && (
-                        <div className={styles.canonicalCaptureHint}>
-                          <strong>World Bible is the canon home.</strong>
-                          <span>
-                            Save the full name here, then keep or remove suggested aliases.
-                          </span>
-                          {activeAliasPreview.length > 0 && (
-                            <div className={styles.aliasPreviewList} aria-label='Suggested aliases'>
-                              {activeAliasPreview.map((alias) => (
-                                <span key={alias}>
-                                  {alias}
-                                  <button
-                                    type='button'
-                                    onClick={() =>
-                                      setRejectedAliasSuggestions((prev) => ({
-                                        ...prev,
-                                        [activeConsistencyPopoverIssue.surface]: [
-                                          ...(prev[activeConsistencyPopoverIssue.surface] ?? []),
-                                          alias
-                                        ]
-                                      }))
-                                    }
-                                    aria-label={`Remove alias ${alias}`}
-                                    title='Remove alias'
-                                  >
-                                    x
-                                  </button>
-                                </span>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      )}
-                      <button
-                        type='button'
-                        onClick={() =>
-                          void resolveUnknownEntity(
-                            activeConsistencyPopoverIssue.surface,
-                            activeSuggestedCategoryId || undefined,
-                            activeWorldCaptureDraft,
-                            activeAliasPreview
-                          ).then(() =>
-                            setRejectedAliasSuggestions((prev) => {
-                              const copy = {...prev};
-                              delete copy[activeConsistencyPopoverIssue.surface];
-                              return copy;
-                            })
-                          )
-                        }
-                        disabled={resolvingUnknown === activeConsistencyPopoverIssue.surface}
-                      >
-                        {resolvingUnknown === activeConsistencyPopoverIssue.surface
-                          ? 'Adding...'
-                          : activeIsCharacterCapture
-                            ? 'Create character'
-                            : reviewCreateActionLabel}
-                      </button>
-                      <button
-                        type='button'
-                        onClick={() =>
-                          dismissUnknownEntity(
-                            activeConsistencyPopoverIssue.surface,
-                            selectedId ?? undefined
-                          )
-                        }
-                      >
-                        Ignore
-                      </button>
-                      <button
-                        type='button'
-                        onClick={() =>
-                          ignoreUnknownSurfaceProjectWide(
-                            activeConsistencyPopoverIssue.surface,
-                            selectedId ?? undefined
-                          )
-                        }
-                      >
-                        Always ignore
-                      </button>
-                    </div>
-                    {showCharacterCanonicalizationHint && (
-                      <div className={styles.consistencyPopoverNote}>
-                        Possible existing character match:{' '}
-                        <strong>{activeCloseCharacterMatches[0]?.name}</strong>. Add this
-                        as World Bible character canon, then use <strong>Review Character Match</strong> to
-                        decide whether "{activeWorldCaptureDraft}" should become an alias.
-                      </div>
-                    )}
-                    {unknownLinkOptions[activeConsistencyPopoverIssue.surface]?.length ? (
-                      <div className={styles.consistencyPopoverLinkRow}>
-                        <select
-                          value={
-                            unknownLinkSelection[activeConsistencyPopoverIssue.surface] ?? ''
-                          }
-                          onChange={(event) =>
-                            setUnknownLinkSelection((prev) => ({
-                              ...prev,
-                              [activeConsistencyPopoverIssue.surface]:
-                                event.target.value
-                            }))
-                          }
-                        >
-                          <option value=''>Select existing record...</option>
-                          {unknownLinkOptions[activeConsistencyPopoverIssue.surface].map(
-                            (entity) => (
-                              <option
-                                key={`${entity.type}-${entity.id}`}
-                                value={`${entity.type}:${entity.id}`}
-                              >
-                                {entity.name} · {entity.label}
-                              </option>
-                            )
-                          )}
-                        </select>
-                        <button
-                          type='button'
-                          onClick={() =>
-                            void linkUnknownEntity(
-                              activeConsistencyPopoverIssue.surface,
-                              unknownLinkSelection[activeConsistencyPopoverIssue.surface],
-                              activeWorldCaptureDraft
-                            )
-                          }
-                          disabled={
-                            linkingUnknown === activeConsistencyPopoverIssue.surface ||
-                            !unknownLinkSelection[activeConsistencyPopoverIssue.surface]
-                          }
-                        >
-                          {linkingUnknown === activeConsistencyPopoverIssue.surface
-                            ? 'Connecting...'
-                            : reviewLinkLabel}
-                        </button>
-                        {closeUnknownLinkOptions[activeConsistencyPopoverIssue.surface]?.length ? null : (
-                          <span className={styles.consistencyPopoverNote}>
-                            No close match found. Showing recent records.
-                          </span>
-                        )}
-                      </div>
-                    ) : (
-                      <div className={styles.consistencyPopoverNote}>
-                        No existing records available yet.
-                      </div>
-                    )}
-                  </ContextPopover>
+                  <WorkspaceReviewSurfacePopover
+                    surface={activeConsistencyPopoverIssue.surface}
+                    left={consistencyPopover.left} top={consistencyPopover.top}
+                    message={reviewPopoverMessage} createLabel={reviewCreateLabel} linkLabel={reviewLinkLabel}
+                    categories={categories} selectedSceneId={selectedId}
+                    worldCaptureDrafts={worldCaptureDrafts} setWorldCaptureDrafts={setWorldCaptureDrafts}
+                    rejectedAliasSuggestions={rejectedAliasSuggestions}
+                    setRejectedAliasSuggestions={setRejectedAliasSuggestions}
+                    consistency={consistency} onClose={() => setConsistencyPopover(null)}
+                  />
                 )}
                 {manualWorldCapture && (
-                  <ContextPopover
-                    title='Add to World'
-                    message='Use the selected text as a starting point, then edit it before creating a world record.'
-                    left={manualWorldCapture.left}
-                    top={manualWorldCapture.top}
-                    onClose={() => setManualWorldCapture(null)}
-                  >
-                    <div className={styles.consistencyPopoverActions}>
-                      <WorldCategorySelect
-                        categories={categories}
-                        value={unknownCategorySelection.__manual__ ?? ''}
-                        onChange={(categoryId) =>
-                          setUnknownCategorySelection((prev) => ({
-                            ...prev,
-                            __manual__: categoryId
-                          }))
-                        }
-                        onCreate={createWorldCategory}
-                        ariaLabel='World Bible type'
-                      />
-                      <label className={styles.captureNameField}>
-                        {manualIsCharacterCapture ? 'Canonical name' : 'Name or place'}
-                        <input
-                          type='text'
-                          value={manualWorldCapture.draftText}
-                          onChange={(event) => {
-                            setManualExistingTargetId('');
-                            setManualWorldCapture((prev) =>
-                              prev ? {...prev, draftText: event.target.value} : prev
-                            );
-                          }}
-                          placeholder={
-                            manualIsCharacterCapture ? 'Full canonical name' : 'Name or place'
-                          }
-                          className={styles.captureNameInput}
-                        />
-                      </label>
-                      {manualIsCharacterCapture && (
-                        <div className={styles.canonicalCaptureHint}>
-                          <strong>World Bible is the canon home.</strong>
-                          <span>
-                            Save the full name here, then keep or remove suggested aliases.
-                          </span>
-                          {manualAliasPreview.length > 0 && (
-                            <div className={styles.aliasPreviewList} aria-label='Suggested aliases'>
-                              {manualAliasPreview.map((alias) => (
-                                <span key={alias}>
-                                  {alias}
-                                  <button
-                                    type='button'
-                                    onClick={() =>
-                                      setRejectedAliasSuggestions((prev) => ({
-                                        ...prev,
-                                        [manualWorldCapture.sourceText]: [
-                                          ...(prev[manualWorldCapture.sourceText] ?? []),
-                                          alias
-                                        ]
-                                      }))
-                                    }
-                                    aria-label={`Remove alias ${alias}`}
-                                    title='Remove alias'
-                                  >
-                                    x
-                                  </button>
-                                </span>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      )}
-                      <button
-                        type='button'
-                        onClick={() =>
-                          void resolveUnknownEntity(
-                            manualWorldCapture.sourceText,
-                            unknownCategorySelection.__manual__ || undefined,
-                            manualWorldCapture.draftText,
-                            manualAliasPreview
-                          ).then(() => {
-                            setRejectedAliasSuggestions((prev) => {
-                              const copy = {...prev};
-                              delete copy[manualWorldCapture.sourceText];
-                              return copy;
-                            });
-                            setManualWorldCapture(null);
-                          })
-                        }
-                        disabled={resolvingUnknown === manualWorldCapture.sourceText}
-                      >
-                        {resolvingUnknown === manualWorldCapture.sourceText
-                          ? 'Adding...'
-                          : manualIsCharacterCapture
-                            ? 'Create character'
-                            : reviewCreateLabel}
-                      </button>
-                      {manualCaptureExistingEntity && (
-                        <button
-                          type='button'
-                          onClick={() => {
-                            clearUnknownSurface(manualWorldCapture.sourceText);
-                            setManualWorldCapture(null);
-                            setFeedback({
-                              tone: 'success',
-                              message: `"${manualWorldCapture.sourceText}" matched ${manualCaptureExistingEntity.name}.`
-                            });
-                          }}
-                        >
-                          Use existing
-                        </button>
-                      )}
-                      {manualCaptureLinkOptions.length > 0 && (
-                        <div className={styles.manualExistingLinkControls}>
-                          <select
-                            value={manualExistingTargetId}
-                            onChange={(event) =>
-                              setManualExistingTargetId(event.target.value)
-                            }
-                            aria-label='Existing world record'
-                          >
-                            <option value=''>Link to existing...</option>
-                            {manualCaptureLinkOptions.map((option) => (
-                              <option key={option.id} value={option.id}>
-                                {option.name} ({option.type})
-                              </option>
-                            ))}
-                          </select>
-                          <button
-                            type='button'
-                            onClick={() => {
-                              const selectedTargetId = manualExistingTargetId;
-                              const selectedSurface = manualWorldCapture.sourceText;
-                              void linkUnknownEntity(
-                                selectedSurface,
-                                selectedTargetId,
-                                selectedSurface
-                              ).then((linked) => {
-                                if (!linked) return;
-                                clearUnknownSurface(selectedSurface);
-                                setManualExistingTargetId('');
-                                setManualWorldCapture(null);
-                              });
-                            }}
-                            disabled={
-                              !manualExistingTargetId ||
-                              linkingUnknown === manualWorldCapture.sourceText
-                            }
-                          >
-                            {linkingUnknown === manualWorldCapture.sourceText
-                              ? 'Linking...'
-                              : 'Link selected'}
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  </ContextPopover>
+                  <WorkspaceManualWorldCapturePopover
+                    capture={manualWorldCapture} setCapture={setManualWorldCapture}
+                    createLabel={reviewCreateLabel} categories={categories} characters={characters}
+                    entities={entities} entitySnippets={selectionQuickSnippets.entities}
+                    existingTargetId={manualExistingTargetId} setExistingTargetId={setManualExistingTargetId}
+                    rejectedAliasSuggestions={rejectedAliasSuggestions}
+                    setRejectedAliasSuggestions={setRejectedAliasSuggestions}
+                    consistency={consistency}
+                    onMatchedExisting={(message) => setFeedback({tone: 'success', message})}
+                  />
                 )}
               </div>
 

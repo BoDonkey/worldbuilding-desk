@@ -21,7 +21,7 @@ import {
   reviewFocusFlashKey,
   setReviewFocusFlash
 } from './extensions/ReviewFocusFlashExtension';
-import {TextSelection, type EditorState} from 'prosemirror-state';
+import {TextSelection} from 'prosemirror-state';
 import type {EditorConfig} from '../../config/editorConfig';
 import type {StatBlockTokenPresentation} from '../../utils/statBlockTemplates';
 import type {StatBlockPreviewData} from '../../hooks/useWorkspaceStatBlocks';
@@ -34,15 +34,8 @@ import {
   type StateMutationTextAnchor
 } from '../../services/state/stateMutationAnchor';
 import {getWorkspaceSceneScrollKey} from '../../services/workspace/workspaceScroll';
-import type {CharacterSnapshot} from '../../services/state/characterSnapshot';
-import {
-  findCharacterPeekTargetForLore,
-  findCharacterPeekTargetsAt,
-  type CharacterPeekTarget,
-  type CharacterStatCardTemplate
-} from '../../services/state/characterPeek';
-import {CharacterStatCard} from '../CharacterSheets/CharacterStatCard';
-import {PinStatsButton} from '../CharacterSheets/PinStatsButton';
+import {useEditorStatPeek, type EditorCharacterStatPeek} from '../../hooks/useEditorStatPeek';
+import {EditorStatPeekLayer} from './EditorStatPeekLayer';
 import {
   findCurrentSceneMatches,
   resolveCurrentSceneFindIndex,
@@ -93,12 +86,7 @@ interface EditorWithAIProps {
   };
   knownLoreHighlights?: LoreHighlightEntry[];
   /** Stat peek (hover, shortcut, context menu); omitted when game systems are off. */
-  characterStatPeek?: {
-    targets: CharacterPeekTarget[];
-    getSnapshot: (sheetId: string, editorPosition: number) => CharacterSnapshot | null;
-    template?: CharacterStatCardTemplate;
-    sceneTitle: string;
-  };
+  characterStatPeek?: EditorCharacterStatPeek;
   /** Opens the peek for a character at the cursor, e.g. from the command palette. */
   statPeekRequest?: {sheetId: string; token: number} | null;
   presentStatBlockToken?: (rawToken: string) => StatBlockTokenPresentation;
@@ -117,57 +105,6 @@ interface EditorWithAIProps {
   }) => void;
   inlineHighlightsMode?: InlineHighlightsMode;
   suppressSelectionBubble?: boolean;
-}
-
-export const STAT_PEEK_SHORTCUT_LABEL = 'Cmd/Ctrl+Alt+S';
-
-const isStatPeekShortcut = (event: KeyboardEvent): boolean =>
-  (event.metaKey || event.ctrlKey) &&
-  event.altKey &&
-  !event.shiftKey &&
-  event.code === 'KeyS' &&
-  !event.getModifierState?.('AltGraph');
-
-/** Characters named at an editor range, within the block that holds its start. */
-const findStatPeekCandidates = (
-  state: EditorState,
-  targets: CharacterPeekTarget[],
-  from: number,
-  to: number
-): CharacterPeekTarget[] => {
-  const $from = state.doc.resolve(from);
-  if (!$from.parent.isTextblock) return [];
-  const start = $from.start();
-  const size = $from.parent.content.size;
-  // One placeholder character per inline leaf keeps text offsets equal to positions.
-  const text = $from.parent.textBetween(0, size, undefined, '\ufffc');
-  return findCharacterPeekTargetsAt({
-    text,
-    from: from - start,
-    to: Math.min(to, start + size) - start,
-    targets
-  });
-};
-
-interface StatPeekState {
-  source: 'hover' | 'keyboard';
-  candidates: CharacterPeekTarget[];
-  sheetId: string | null;
-  editorPosition: number;
-  left: number;
-  top: number;
-  anchorTop: number;
-  anchorBottom: number;
-}
-
-interface StatPeekMenuState {
-  x: number;
-  y: number;
-  candidates: CharacterPeekTarget[];
-  editorPosition: number;
-  anchorTop: number;
-  anchorBottom: number;
-  selection: {selectedText: string; from: number; to: number} | null;
 }
 
 interface SelectionBubbleState {
@@ -259,7 +196,6 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
   inlineHighlightsMode = 'visible',
   suppressSelectionBubble = false
 }) => {
-  const [textToInsertFromAI, setTextToInsertFromAI] = useState<string | null>(null);
   const [selectionBubble, setSelectionBubble] = useState<SelectionBubbleState | null>(
     null
   );
@@ -274,9 +210,6 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
     left: number;
     top: number;
   } | null>(null);
-  const [statPeek, setStatPeek] = useState<StatPeekState | null>(null);
-  const [statPeekMenu, setStatPeekMenu] = useState<StatPeekMenuState | null>(null);
-  const statPeekMenuRef = useRef<HTMLDivElement | null>(null);
   const [isActivelyTyping, setIsActivelyTyping] = useState(false);
   const [isCurrentSceneFindOpen, setCurrentSceneFindOpen] = useState(false);
   const [currentSceneFindQuery, setCurrentSceneFindQuery] = useState('');
@@ -298,6 +231,24 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
     documentId
   );
   const appliedScrollResetKeyRef = useRef<string | null>(null);
+
+  const closeSelectionBubble = useCallback(() => setSelectionBubble(null), []);
+  const closeOtherPopovers = useCallback(() => {
+    setLorePopoverAnchor(null);
+    setLorePopoverRecord(null);
+    setStatBlockPopover(null);
+  }, []);
+  const statPeekControls = useEditorStatPeek({
+    editorRef,
+    editorScrollRef,
+    editorReadyToken,
+    characterStatPeek,
+    statPeekRequest,
+    closeSelectionBubble,
+    closeOtherPopovers
+  });
+  const {statPeek, setStatPeek, statPeekMenu, setStatPeekMenu, handleLoreHighlightHover, handleLoreHighlightLeave} =
+    statPeekControls;
 
   const openCurrentSceneFind = useCallback(() => {
     setCurrentSceneFindOpen(true);
@@ -631,7 +582,7 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
       window.removeEventListener('scroll', close, true);
       window.removeEventListener('resize', close);
     };
-  }, [lorePopoverAnchor, statBlockPopover, statPeek, statPeekMenu]);
+  }, [lorePopoverAnchor, setStatPeek, setStatPeekMenu, statBlockPopover, statPeek, statPeekMenu]);
 
   useEffect(() => {
     const reposition = () => {
@@ -844,7 +795,7 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
 
   const handleLoreHighlightClick = useCallback(
     (loreId: string, anchorRect: {left: number; top: number; bottom: number}) => {
-      setStatPeek((current) => (current?.source === 'hover' ? null : current));
+      handleLoreHighlightLeave();
       const record = loreRecordById.get(loreId);
       if (!record) {
         return;
@@ -855,208 +806,8 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
         top: anchorRect.bottom + 8
       });
     },
-    [loreRecordById]
+    [handleLoreHighlightLeave, loreRecordById]
   );
-
-  const handleLoreHighlightHover = useCallback(
-    (
-      loreId: string,
-      editorPosition: number,
-      anchorRect: {left: number; top: number; bottom: number}
-    ) => {
-      const target = characterStatPeek
-        ? findCharacterPeekTargetForLore(characterStatPeek.targets, loreId)
-        : null;
-      const hasSnapshot = Boolean(
-        target && characterStatPeek?.getSnapshot(target.sheetId, editorPosition)
-      );
-      setStatPeek((current) => {
-        // A peek opened on purpose stays until the author closes it.
-        if (current?.source === 'keyboard') return current;
-        if (!target || !hasSnapshot) return null;
-        return {
-          source: 'hover',
-          candidates: [target],
-          sheetId: target.sheetId,
-          editorPosition,
-          left: anchorRect.left,
-          top: anchorRect.bottom + 8,
-          anchorTop: anchorRect.top,
-          anchorBottom: anchorRect.bottom
-        };
-      });
-      if (!target || !hasSnapshot) return;
-      setLorePopoverAnchor(null);
-      setLorePopoverRecord(null);
-      setStatBlockPopover(null);
-    },
-    [characterStatPeek]
-  );
-
-  const handleLoreHighlightLeave = useCallback(() => {
-    setStatPeek((current) => (current?.source === 'hover' ? null : current));
-  }, []);
-
-  const openStatPeek = useCallback(
-    (params: {
-      candidates: CharacterPeekTarget[];
-      editorPosition: number;
-      anchorTop?: number;
-      anchorBottom?: number;
-      left?: number;
-    }) => {
-      const editor = editorRef.current;
-      if (!editor || editor.isDestroyed) return;
-      const coords = editor.view.coordsAtPos(params.editorPosition);
-      const anchorTop = params.anchorTop ?? coords.top;
-      const anchorBottom = params.anchorBottom ?? coords.bottom;
-      setSelectionBubble(null);
-      setLorePopoverAnchor(null);
-      setLorePopoverRecord(null);
-      setStatBlockPopover(null);
-      setStatPeekMenu(null);
-      setStatPeek({
-        source: 'keyboard',
-        candidates: params.candidates,
-        sheetId: params.candidates.length === 1 ? params.candidates[0].sheetId : null,
-        editorPosition: params.editorPosition,
-        left: params.left ?? coords.left,
-        top: anchorBottom + 8,
-        anchorTop,
-        anchorBottom
-      });
-    },
-    []
-  );
-
-  const openStatPeekAtSelection = useCallback(() => {
-    const editor = editorRef.current;
-    if (!editor || editor.isDestroyed || !characterStatPeek) return;
-    const {from, to} = editor.state.selection;
-    openStatPeek({
-      candidates: findStatPeekCandidates(editor.state, characterStatPeek.targets, from, to),
-      editorPosition: from
-    });
-  }, [characterStatPeek, openStatPeek]);
-
-  const closeStatPeek = useCallback(() => {
-    setStatPeek((current) => {
-      if (current?.source === 'keyboard') {
-        window.requestAnimationFrame(() => {
-          const editor = editorRef.current;
-          if (editor && !editor.isDestroyed) editor.view.focus();
-        });
-      }
-      return null;
-    });
-  }, []);
-
-  const statPeekSnapshot = React.useMemo(
-    () =>
-      statPeek?.sheetId && characterStatPeek
-        ? characterStatPeek.getSnapshot(statPeek.sheetId, statPeek.editorPosition)
-        : null,
-    [characterStatPeek, statPeek]
-  );
-
-  useEffect(() => {
-    if (!characterStatPeek) {
-      setStatPeek(null);
-      setStatPeekMenu(null);
-    }
-  }, [characterStatPeek]);
-
-  useEffect(() => {
-    const editor = editorRef.current;
-    if (!editor || !characterStatPeek) return;
-    const dom = editor.view.dom;
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (!isStatPeekShortcut(event)) return;
-      event.preventDefault();
-      event.stopPropagation();
-      openStatPeekAtSelection();
-    };
-    dom.addEventListener('keydown', onKeyDown, true);
-    return () => dom.removeEventListener('keydown', onKeyDown, true);
-  }, [characterStatPeek, editorReadyToken, openStatPeekAtSelection]);
-
-  useEffect(() => {
-    const container = editorScrollRef.current;
-    const editor = editorRef.current;
-    if (!container || !editor || !characterStatPeek) return;
-    // Capture phase, so a character name gets this menu before the editor's own
-    // right-click handling (AI Expand on a selection), which the menu keeps.
-    const onContextMenu = (event: MouseEvent) => {
-      if (editor.isDestroyed || !(event.target instanceof Node)) return;
-      if (!editor.view.dom.contains(event.target)) return;
-      const hit = editor.view.posAtCoords({left: event.clientX, top: event.clientY});
-      if (!hit) return;
-      const {from, to} = editor.state.selection;
-      const inSelection = from !== to && hit.pos >= from && hit.pos <= to;
-      const range = inSelection ? {from, to} : {from: hit.pos, to: hit.pos};
-      const candidates = findStatPeekCandidates(
-        editor.state,
-        characterStatPeek.targets,
-        range.from,
-        range.to
-      );
-      if (candidates.length === 0) return;
-      event.preventDefault();
-      event.stopPropagation();
-      const selectedText = from !== to ? editor.state.doc.textBetween(from, to) : '';
-      setSelectionBubble(null);
-      setStatPeek(null);
-      setStatPeekMenu({
-        x: event.clientX,
-        y: event.clientY,
-        candidates,
-        editorPosition: range.from,
-        anchorTop: event.clientY - 8,
-        anchorBottom: event.clientY + 8,
-        selection: selectedText.trim() ? {selectedText, from, to} : null
-      });
-    };
-    container.addEventListener('contextmenu', onContextMenu, true);
-    return () => container.removeEventListener('contextmenu', onContextMenu, true);
-  }, [characterStatPeek, editorReadyToken]);
-
-  useEffect(() => {
-    if (!statPeekMenu) return;
-    statPeekMenuRef.current?.querySelector<HTMLButtonElement>('button')?.focus({
-      preventScroll: true
-    });
-    const closeOnOutside = (event: PointerEvent) => {
-      if (event.target instanceof Node && statPeekMenuRef.current?.contains(event.target)) {
-        return;
-      }
-      setStatPeekMenu(null);
-    };
-    const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key !== 'Escape') return;
-      setStatPeekMenu(null);
-      editorRef.current?.view.focus();
-    };
-    window.addEventListener('pointerdown', closeOnOutside, true);
-    window.addEventListener('keydown', closeOnEscape);
-    return () => {
-      window.removeEventListener('pointerdown', closeOnOutside, true);
-      window.removeEventListener('keydown', closeOnEscape);
-    };
-  }, [statPeekMenu]);
-
-  const lastStatPeekRequestTokenRef = useRef<number | null>(null);
-  useEffect(() => {
-    if (!statPeekRequest || !characterStatPeek) return;
-    if (lastStatPeekRequestTokenRef.current === statPeekRequest.token) return;
-    const editor = editorRef.current;
-    if (!editor || editor.isDestroyed) return;
-    const target = characterStatPeek.targets.find(
-      (candidate) => candidate.sheetId === statPeekRequest.sheetId
-    );
-    if (!target) return;
-    lastStatPeekRequestTokenRef.current = statPeekRequest.token;
-    openStatPeek({candidates: [target], editorPosition: editor.state.selection.from});
-  }, [characterStatPeek, editorReadyToken, openStatPeek, statPeekRequest]);
 
   const handleStatBlockTokenClick = useCallback(
     (rawToken: string, anchorRect: {left: number; top: number; bottom: number}) => {
@@ -1275,13 +1026,9 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
           config={mergedConfig}
           toolbarButtons={toolbarButtons}
           toolbarActions={effectiveToolbarActions}
-          textToInsert={externalTextToInsert ?? textToInsertFromAI}
+          textToInsert={externalTextToInsert}
           onTextInserted={() => {
-            if (externalTextToInsert) {
-              onTextInserted?.();
-              return;
-            }
-            setTextToInsertFromAI(null);
+            if (externalTextToInsert) onTextInserted?.();
           }}
           insertContext={insertContext}
           insertProvenance={externalTextToInsert ? insertProvenance : undefined}
@@ -1527,109 +1274,11 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
             )}
           </ContextPopover>
         )}
-        {statPeekMenu && (
-          <div
-            ref={statPeekMenuRef}
-            className={styles.selectionBubble}
-            style={{left: `${statPeekMenu.x}px`, top: `${statPeekMenu.y}px`}}
-            role='menu'
-            aria-label='Character actions'
-            onMouseDown={(event) => event.preventDefault()}
-          >
-            <button
-              type='button'
-              role='menuitem'
-              onClick={() =>
-                openStatPeek({
-                  candidates: statPeekMenu.candidates,
-                  editorPosition: statPeekMenu.editorPosition,
-                  left: statPeekMenu.x,
-                  anchorTop: statPeekMenu.anchorTop,
-                  anchorBottom: statPeekMenu.anchorBottom
-                })
-              }
-            >
-              Show stats
-            </button>
-            {statPeekMenu.selection && (
-              <button
-                type='button'
-                role='menuitem'
-                onClick={() => {
-                  const selection = statPeekMenu.selection;
-                  setStatPeekMenu(null);
-                  if (!selection) return;
-                  onOpenAIContext?.({type: 'document', id: documentId, ...selection});
-                }}
-              >
-                AI Expand
-              </button>
-            )}
-            <span className={styles.selectionHint}>{STAT_PEEK_SHORTCUT_LABEL}</span>
-          </div>
-        )}
-        {statPeek && (
-          <ContextPopover
-            title={
-              statPeek.sheetId
-                ? 'Character stats'
-                : statPeek.candidates.length > 1
-                  ? 'Which character?'
-                  : 'Character stats'
-            }
-            left={statPeek.left}
-            top={statPeek.top}
-            anchorTop={statPeek.anchorTop}
-            anchorBottom={statPeek.anchorBottom}
-            tone='neutral'
-            focusOnOpen={statPeek.source === 'keyboard'}
-            onClose={closeStatPeek}
-          >
-            {statPeek.sheetId && statPeekSnapshot ? (
-              <CharacterStatCard
-                snapshot={statPeekSnapshot}
-                asOfLabel={
-                  statPeek.source === 'hover'
-                    ? 'At this mention'
-                    : `At the cursor in ${characterStatPeek?.sceneTitle ?? 'this scene'}`
-                }
-                template={characterStatPeek?.template}
-                actions={
-                  statPeek.source === 'keyboard' && (
-                    <div className={styles.systemActions}>
-                      <PinStatsButton
-                        sheetId={statPeekSnapshot.sheetId}
-                        name={statPeekSnapshot.name}
-                      />
-                    </div>
-                  )
-                }
-              />
-            ) : statPeek.candidates.length > 1 ? (
-              <div className={styles.systemActions} role='group' aria-label='Matching characters'>
-                {statPeek.candidates.map((candidate) => (
-                  <button
-                    key={candidate.sheetId}
-                    type='button'
-                    onClick={() =>
-                      setStatPeek((current) =>
-                        current ? {...current, sheetId: candidate.sheetId} : current
-                      )
-                    }
-                  >
-                    {candidate.name}
-                  </button>
-                ))}
-              </div>
-            ) : (
-              <div className={styles.lorePeekList}>
-                {statPeek.sheetId
-                  ? 'Stats are not available for this scene.'
-                  : 'No character name at the cursor. Use Show stats for… in the command palette to pick one.'}
-              </div>
-            )}
-          </ContextPopover>
-        )}
+        <EditorStatPeekLayer
+          peek={statPeekControls}
+          characterStatPeek={characterStatPeek}
+          onExpandSelection={(selection) => onOpenAIContext?.({type: 'document', id: documentId, ...selection})}
+        />
       </div>
     </div>
   );
