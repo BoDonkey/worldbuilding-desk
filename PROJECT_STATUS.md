@@ -847,6 +847,19 @@ runtime schema, and nothing here changes the roadmap's status board.
 ## Verification Status
 
 ### Verified Recently
+- Slice 1.4 grounded project Q&A destination: **Ask your project** (`/ask`;
+  More → Utilities; command palette) runs the project assistant outside the
+  Workspace drawer with its own conversation history
+  (`useAssistantConversation(projectId, 'ask')`). Factual questions use the
+  same evidence gate and saved-fact answers as the drawer, so they never
+  reach a model. **Include pending proposals** (off by default) loads pending
+  Source Note fact proposals (`usePendingProposals`): the model sees them
+  labeled "Pending proposal, not canon" with an instruction to keep them
+  apart from accepted canon, and deterministic answers append a separate
+  "Pending, not accepted canon" list for proposals naming someone in the
+  question (`services/assistant/pendingProposalContext.ts`). Replies leave
+  only through the shared Source Note capture preview. No writing coach here
+  (it needs a scene).
 - Slice 4.53 model-assisted review items in the shared review model: canon
   check items (4.38) now live in the Workspace review state and are saved
   with the project review run (`ProjectReviewRun.modelCheckItems`; a record

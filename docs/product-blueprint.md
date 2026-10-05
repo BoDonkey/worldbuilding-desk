@@ -198,8 +198,8 @@ roadmaps — refine through this document):
 - `Lore Documents` — longform source material and deep notes, not a second
   canon database
 - `More` — grouped secondary destinations: Planning (Canon Review, Corkboard,
-  World Canvas), optional Systems (Rules, Sheets, Mechanics), utilities, and
-  settings
+  World Canvas), optional Systems (Rules, Sheets, Mechanics), utilities (Ask
+  your project, Character packages), and settings
 
 Corkboard and World Canvas are sibling brainstorming surfaces under Planning.
 Corkboard develops story progression—what happens and in what order. World

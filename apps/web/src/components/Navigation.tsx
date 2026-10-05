@@ -111,7 +111,10 @@ export const Navigation: FC<NavigationProps> = ({
     }
     sections.push({
       label: 'Utilities',
-      items: [{to: '/character-packages', label: 'Character packages', icon: 'CP'}]
+      items: [
+        {to: '/ask', label: 'Ask your project', icon: 'AQ'},
+        {to: '/character-packages', label: 'Character packages', icon: 'CP'}
+      ]
     });
     sections.push({label: 'App', items: [{to: '/settings', label: 'Settings', icon: 'ST'}]});
     return sections;

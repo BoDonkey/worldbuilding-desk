@@ -58,6 +58,13 @@ export const createAppCommands = ({
       run: () => navigate('/corkboard')
     },
     {
+      id: 'nav-ask',
+      label: 'Ask your project',
+      section: 'Navigation',
+      keywords: ['ask', 'question', 'assistant', 'q&a', 'canon', 'lore'],
+      run: () => navigate('/ask')
+    },
+    {
       id: 'nav-settings',
       label: 'Go to Settings',
       section: 'Navigation',

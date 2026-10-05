@@ -23,7 +23,13 @@ import {
   resolveTemporalCustodyAnswer
 } from '../../services/assistant/temporalCustody';
 import {getDocumentsByProject} from '../../writingStorage';
-import type {ProjectAISettings, PromptTool, ProjectMode, WritingDocument} from '../../entityTypes';
+import type {LoreFactProposal, ProjectAISettings, PromptTool, ProjectMode, WritingDocument} from '../../entityTypes';
+import {
+  PENDING_PROPOSAL_INSTRUCTION,
+  appendPendingProposalNote,
+  buildPendingProposalChunks,
+  findPendingProposalsForQuestion
+} from '../../services/assistant/pendingProposalContext';
 import {
   getContextInstruction,
   getContextLabel,
@@ -81,6 +87,17 @@ interface AIAssistantProps {
   parentProjectId?: string;
   inheritRag?: boolean;
   inheritShodh?: boolean;
+  /** Separate conversation history for this surface (the Workspace drawer leaves it unset). */
+  conversationScope?: string;
+  /**
+   * Present only when the author asked to discuss pending proposals (1.4). The
+   * model sees them labeled "Pending proposal, not canon"; deterministic answers
+   * stay accepted-canon only and list matching proposals separately.
+   */
+  pendingProposals?: {proposals: LoreFactProposal[]; sourceTitleById: Map<string, string>} | null;
+  placeholder?: string;
+  /** The writing coach needs a scene or selection; surfaces without one hide it. */
+  showWritingCoach?: boolean;
 }
 
 const getContextSourceSummaries = (chunks: LLMContextChunk[]): string[] =>
@@ -109,9 +126,13 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
   showContextPreview = true,
   parentProjectId,
   inheritRag = false,
-  inheritShodh = false
+  inheritShodh = false,
+  conversationScope,
+  pendingProposals = null,
+  placeholder = 'Ask for help expanding, rewriting, or creating content...',
+  showWritingCoach = true
 }) => {
-  const [messages, setMessages] = useAssistantConversation(projectId);
+  const [messages, setMessages] = useAssistantConversation(projectId, conversationScope);
   const [input, setInput] = useState('');
   const [isStreaming, setIsStreaming] = useState(false);
   const modelRun = useModelRun();
@@ -410,7 +431,12 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
           ...prev,
           {
             role: 'assistant',
-            content: directSavedFact.content,
+            content: pendingProposals
+              ? appendPendingProposalNote(
+                  directSavedFact.content,
+                  findPendingProposalsForQuestion(promptText, pendingProposals.proposals)
+                )
+              : directSavedFact.content,
             contextSources: getContextSourceSummaries(directChunks)
           }
         ]);
@@ -428,7 +454,12 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
           ...prev,
           {
             role: 'assistant',
-            content: unverified.content,
+            content: pendingProposals
+              ? appendPendingProposalNote(
+                  unverified.content,
+                  findPendingProposalsForQuestion(promptText, pendingProposals.proposals)
+                )
+              : unverified.content,
             contextSources: getContextSourceSummaries(reviewedChunks)
           }
         ]);
@@ -437,7 +468,10 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
       }
 
       const ragChunks = await buildRagContextChunks(projectId, ragResults.slice(0, 3));
-      const contextChunks = [...shodhChunks, ...ragChunks];
+      const pendingChunks = pendingProposals
+        ? buildPendingProposalChunks(pendingProposals.proposals, pendingProposals.sourceTitleById)
+        : [];
+      const contextChunks = [...shodhChunks, ...ragChunks, ...pendingChunks];
 
       // Add selected text context if available
       if (selectedText) {
@@ -462,7 +496,9 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
               )
               .join('\n')}`
           : '';
-      const composedPrompt = appendContextTrustInstructions(`${basePrompt}${toolPrompt}`);
+      const composedPrompt = appendContextTrustInstructions(
+        `${basePrompt}${toolPrompt}${pendingChunks.length > 0 ? `\n\n${PENDING_PROPOSAL_INSTRUCTION}` : ''}`
+      );
 
 
       // Stream response
@@ -527,7 +563,8 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
     setMessages,
     selectedToolIds,
     selectedText,
-    aiConfig?.promptTools
+    aiConfig?.promptTools,
+    pendingProposals
   ]);
 
   const handleSend = async () => {
@@ -771,7 +808,7 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
               handleSend();
             }
           }}
-          placeholder='Ask for help expanding, rewriting, or creating content...'
+          placeholder={placeholder}
           disabled={isStreaming || contextStatus !== 'ready'}
           aria-describedby={contextStatusId}
         />
@@ -799,13 +836,15 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
               Save as Source Note
             </button>
           )}
-          <button
-            onClick={() => void handleAskCoach()}
-            disabled={isStreaming || contextStatus !== 'ready' || !coachEvidence}
-            title={coachEvidence ? undefined : 'Select text or open a scene first'}
-          >
-            Ask the writing coach
-          </button>
+          {showWritingCoach && (
+            <button
+              onClick={() => void handleAskCoach()}
+              disabled={isStreaming || contextStatus !== 'ready' || !coachEvidence}
+              title={coachEvidence ? undefined : 'Select text or open a scene first'}
+            >
+              Ask the writing coach
+            </button>
+          )}
         </div>
         <ConsultationBudgetNotice
           status={budget.status}

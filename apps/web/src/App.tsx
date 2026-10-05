@@ -38,6 +38,7 @@ import CompendiumRoute from './routes/CompendiumRoute';
 import RulesetRoute from './routes/RulesetRoute';
 import LoreRoute from './routes/LoreRoute';
 import CanonDecisionsRoute from './routes/CanonDecisionsRoute';
+import AskProjectRoute from './routes/AskProjectRoute';
 import {getAllProjects} from './projectStorage';
 import {createFirstRunProject, hasCheckedFirstRun, markFirstRunChecked} from './services/onboarding/firstRun';
 import appShellStyles from './styles/AppShell.module.css';
@@ -167,6 +168,7 @@ function AppRoutes() {
           <Route path='/projects' element={<ProjectsRoute />} />
           <Route path='/lore' element={<LoreRoute />} />
           <Route path='/canon-decisions' element={<CanonDecisionsRoute />} />
+          <Route path='/ask' element={<AskProjectRoute />} />
           <Route path='/world-bible' element={<WorldBibleRoute />} />
           <Route
             path='/ruleset'

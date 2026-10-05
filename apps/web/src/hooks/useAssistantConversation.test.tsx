@@ -30,6 +30,17 @@ describe('useAssistantConversation', () => {
     expect(second.result.current[0][1].content).toBe("Sera's eyes are gray.");
   });
 
+  it('keeps a scoped surface (Ask your project) separate from the Workspace drawer', () => {
+    const ask = renderHook(() => useAssistantConversation('project-a', 'ask'));
+    act(() => ask.result.current[1]([{role: 'user', content: 'Ask page question'}]));
+    expect(loadAssistantConversation('project-a')).toEqual([]);
+    expect(loadAssistantConversation('project-a', undefined, 'ask')).toEqual([
+      {role: 'user', content: 'Ask page question'}
+    ]);
+    const drawer = renderHook(() => useAssistantConversation('project-a'));
+    expect(drawer.result.current[0]).toEqual([]);
+  });
+
   it('keeps conversations scoped by project and ignores invalid saved data', () => {
     const alpha = renderHook(() => useAssistantConversation('alpha'));
     act(() => alpha.result.current[1]([{role: 'user', content: 'Alpha question'}]));

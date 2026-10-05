@@ -15,7 +15,9 @@ export type AssistantChatMessage = LLMMessage & {
 };
 
 const MAX_SAVED_MESSAGES = 100;
-const storageKey = (projectId: string) => `wbd:assistant-conversation:${projectId}`;
+/** `scope` keeps a separate history per surface; the Workspace drawer uses the unscoped key. */
+const storageKey = (projectId: string, scope?: string) =>
+  scope ? `wbd:assistant-conversation:${scope}:${projectId}` : `wbd:assistant-conversation:${projectId}`;
 
 const getSessionStorage = (): Storage | null => {
   if (typeof window === 'undefined') return null;
@@ -55,11 +57,12 @@ const isAssistantChatMessage = (value: unknown): value is AssistantChatMessage =
 
 export const loadAssistantConversation = (
   projectId: string,
-  storage: Storage | null = getSessionStorage()
+  storage: Storage | null = getSessionStorage(),
+  scope?: string
 ): AssistantChatMessage[] => {
   if (!storage) return [];
   try {
-    const parsed = JSON.parse(storage.getItem(storageKey(projectId)) ?? '[]');
+    const parsed = JSON.parse(storage.getItem(storageKey(projectId, scope)) ?? '[]');
     return Array.isArray(parsed)
       ? parsed.filter(isAssistantChatMessage).slice(-MAX_SAVED_MESSAGES)
       : [];
@@ -71,12 +74,13 @@ export const loadAssistantConversation = (
 const saveAssistantConversation = (
   projectId: string,
   messages: AssistantChatMessage[],
+  scope?: string,
   storage: Storage | null = getSessionStorage()
 ): void => {
   if (!storage) return;
   try {
     storage.setItem(
-      storageKey(projectId),
+      storageKey(projectId, scope),
       JSON.stringify(messages.slice(-MAX_SAVED_MESSAGES))
     );
   } catch {
@@ -85,18 +89,19 @@ const saveAssistantConversation = (
 };
 
 export const useAssistantConversation = (
-  projectId: string
+  projectId: string,
+  scope?: string
 ): [AssistantChatMessage[], Dispatch<SetStateAction<AssistantChatMessage[]>>] => {
   const [messages, setMessagesState] = useState<AssistantChatMessage[]>(() =>
-    loadAssistantConversation(projectId)
+    loadAssistantConversation(projectId, undefined, scope)
   );
   const projectIdRef = useRef(projectId);
 
   useEffect(() => {
     if (projectIdRef.current === projectId) return;
     projectIdRef.current = projectId;
-    setMessagesState(loadAssistantConversation(projectId));
-  }, [projectId]);
+    setMessagesState(loadAssistantConversation(projectId, undefined, scope));
+  }, [projectId, scope]);
 
   const setMessages = useCallback<Dispatch<SetStateAction<AssistantChatMessage[]>>>(
     (update) => {
@@ -106,11 +111,11 @@ export const useAssistantConversation = (
             ? update(previous)
             : update;
         const bounded = next.slice(-MAX_SAVED_MESSAGES);
-        saveAssistantConversation(projectIdRef.current, bounded);
+        saveAssistantConversation(projectIdRef.current, bounded, scope);
         return bounded;
       });
     },
-    []
+    [scope]
   );
 
   return [messages, setMessages];
