@@ -166,6 +166,7 @@ pnpm --filter web e2e:run       # for slices touching routed UI
    3.10 → 3.11; 3.10 → 4.42 → 4.43 → 4.44; 4.45 after 4.42;
    4.46 → 4.47 → 4.48; 4.42 after 4.46; 4.50 → 4.51; 4.50 → 4.52;
    3.15 first among 3.12–3.15; 3.12a → 3.12b; both before 5.3 and 6.1;
+   3.16 → 4.53;
    5.14 before 5.15; 5.15 before 6.1;
    Phase 6 strictly ordered).
 2. **Get the full prompt.** Slices marked _[prompt: archive/... § Slice N]_
@@ -239,6 +240,7 @@ and required revisit point, `WIP`, `Done <commit>`.
 | 3.13 | Atomic canon acceptance | 3 | M | Done `0d7a54d` — `runProjectWriteTransaction` + per-store InTransaction writers; entity acceptance (canon, links, alias, proposal) and fact accept/supersede/remove each commit together; pure side-effect planners; real-IndexedDB rollback tests (fail without abort); lint; 797 web + 47 engine + 12 UI + 24 desktop tests; builds; Cypress 118/118 |
 | 3.14 | Hotspot freeze + editor/workspace extraction | 3 | M | Done `9756578` — `pnpm check:file-sizes` CI gate with recorded baseline (9 files over 1,500); EditorWithAI 1,636 → 1,285 (`useEditorStatPeek` + `EditorStatPeekLayer`); WorkspaceRoute 2,294 → 1,873 (review and Add to World popovers extracted); character lab and stat pin storage behind owning hooks; World Bible category load race merged instead of overwritten; lint baseline; 827 web + 47 engine + 12 UI + 24 desktop tests; web/desktop builds; Cypress 119/119 |
 | 3.15 | Dependency advisory sweep + CI audit gate | 3 | S | Done `b636915` — production audit 12→0: TipTap 3.31.4 with ProseMirror pins raised to match; sharp 0.35.5, adm-zip 0.6.1, qs 6.16.0 overrides; express/cors dev-only; `web-verify` fails on high production advisories; lint; 763 web + 14 engine + 12 UI tests; web/desktop builds; Cypress 117/117 |
+| 3.16 | Split `useWorkspaceConsistency` by responsibility | 3 | M | — |
 | 4.1 | Description-first manual item creation | 4 | S | Done `70fb72f` — focused manual item draft with progressive full-editor disclosure; lint with 3 baseline warnings; 275 web + 6 engine + 12 UI tests; web/desktop builds; Cypress 44/44; desktop/narrow browser checks |
 | 4.2 | Storage schema versioning + migrations | 4 | M | Done `965af19` — separate IndexedDB, project-data, and snapshot schema contracts; ordered project-load migration runner with restorable pre-migration backups including rulesets; newer schemas fail closed before writes; 327 web + 6 engine + 12 UI tests; lint baseline; web/desktop builds; Cypress 47/47 |
 | 4.3 | Internal package namespace rename | 4 | S | Done `1917611` — rules packages renamed to `@worldbuilding-desk/*` across manifests, imports, workspace scripts, Vite resolution, CI, lockfile, and active docs; local workspace links and generated artifacts contain no old scope; web/package lint; root test plus 357 web + 6 engine + 12 UI tests; web/desktop builds; Cypress not required (no routed UI change) |
@@ -298,6 +300,7 @@ and required revisit point, `WIP`, `Done <commit>`.
 | 4.50 | AI text provenance mark (AD-1) | 4 | M | Done `a6197d6` — `aiText` mark with provenance on assistant revisions (model replies only) and character-scene inserts, applied in the insert transaction; Mark as my writing; Show/Hide AI text (on by default, changed from "off once seen"); exports plain text; invisible-character normalization; lint; 807 web + 47 engine + 12 UI + 24 desktop tests; build; Cypress 118/119 (stat-peek palette flake 2/2 in isolation); light/dark screenshots |
 | 4.51 | AI text report (AD-2) | 4 | S | Done `1f80e78` — Workspace scene drawer **AI text report**: marked words and passages per scene and by feature and provider (with models), open scene read as edited, plain-text Copy report, platform-neutral notes; lint baseline; 824 web + 47 engine + 12 UI + 24 desktop tests; web/desktop builds; Cypress 119/119 |
 | 4.52 | Opt-in AI scene drafts (AD-3) | 4 | M | Done `bf8eecb` — per-project **Allow AI scene drafts** (default off, not inherited, needs AI consultation); **Draft this scene** on scenes of ≤50 words in Workspace and from Corkboard linked scenes; visible editable inputs, character-lab grounding at scene start, disclosure, budget, Stop, 1,500-word cap in code; preview until marked undoable Insert or Save to Scratchpad; never writes canon, state, or records; lint baseline; 836 web + 47 engine + 12 UI + 24 desktop tests; web/desktop builds; Cypress 123/123 |
+| 4.53 | Model-assisted review items in the shared review model | 4 | M | — after 3.16 |
 | 5.1 | Auto-update decision + implementation | 5 | M | — |
 | 5.2 | Code signing + notarization, both platforms | 5 | M | — |
 | 5.3 | Packaged-app validation + Electron E2E | 5 | M | — |
@@ -628,8 +631,8 @@ Run 3.15 first because it is cheap and unblocks the others' CI. 3.12a and
     (`CharacterLabDialog`, `CharacterSceneDialog`,
     `CharacterFromDescriptionDialog`, `StatPinPanel`) behind their owning
     hooks.
-  - Splitting `useWorkspaceConsistency` by responsibility stays in the
-    backlog until the freeze holds.
+  - Splitting `useWorkspaceConsistency` by responsibility is scheduled as
+    3.16 now that the freeze holds.
   - Fix the World Bible category load race found 2026-10-04: a category
     added before the initial category load finishes is overwritten by the
     stale loaded list (the post-merge smoke now waits for categories; the
@@ -645,6 +648,19 @@ Run 3.15 first because it is cheap and unblocks the others' CI. 3.12a and
     3.9 zero-advisory baseline cannot drift silently again.
   - Run the full battery plus Cypress. The editor upgrade touches every
     routed UI.
+- **3.16** Split `useWorkspaceConsistency` by responsibility. Promoted from
+  the 3.14 note on 2026-10-05; no pre-work (the 3.14 size freeze holds).
+  Behavior-preserving, following the 3.1–3.4 hook-extraction pattern.
+  - Split `hooks/useWorkspaceConsistency.ts` (2,234 lines, frozen at its
+    baseline) into hooks by responsibility, for example unknown-name
+    resolution and linking, scene review and project review runs (including
+    persistence and dismissal), and state-mutation review. Pure logic moves
+    into tested services; no new hook over 600 lines.
+  - Keep the hook's public return shape so `WorkspaceRoute` and the drawers
+    change only where they import from.
+  - Record the smaller sizes with `pnpm check:file-sizes --update`.
+  - Full battery plus local Cypress; the review, canon, and state specs must
+    stay green unchanged.
 
 ## Phase 4 — Product Completeness for v1
 
@@ -1594,6 +1610,19 @@ platform-neutral, non-judgmental copy; no watermark removal.
   character-lab-style grounding, disclosure, budget, Stop, ~1,500-word cap;
   preview until Insert into scene (marked, undoable) or Save to Scratchpad;
   never writes canon, state, or records.
+
+### Review model follow-up (4.53)
+
+- **4.53 Model-assisted review items in the shared review model.** Promoted
+  from the 4.38 limits on 2026-10-05; runs after 3.16, which makes room in
+  the review hooks. Model-assisted canon-check items (4.38) currently live
+  only in session UI state. Move them into the review model the deterministic
+  items use: persist them and their dismissals with the project review run,
+  underline their quoted text in the editor like other conflicts, and count
+  them in the header review indicator, while keeping them labeled
+  model-assisted, dismissible, never applied, and dropped when their quoted
+  text leaves the scene. Cypress covers reload persistence, the underline,
+  and the indicator.
 
 ## Phase 5 — Release Engineering
 
