@@ -562,6 +562,15 @@ Under the hood, the app still includes rich systems for world data, rules, chara
 - Assistant input now waits for project RAG/Shodh initialization, honors parent-context inheritance, labels relevant Shodh summaries by trust tier, and refuses to guess when a named factual question has no retrieved project source. Development retrieval uses the deterministic meaningful fallback embedding rather than constant vectors, and lexical ranking ignores common question-word noise.
 - All factual project questions now cross a universal evidence gate before provider prompting. Recognized lookups for accepted occupation, service-length, membership, treatment, and eye-color facts are answered deterministically. Storage/custody questions bypass retrieval rank and inspect all primary saved scenes in manuscript order, distinguishing designated storage from later sign-out, named possession, and use; incompatible later custody returns explicit uncertainty with every relevant scene cited. Accepted canon remains a fallback only when saved scenes contain no custody evidence, and Source Notes cannot supply the answer. Any other factual wording that cannot be deterministically verified fails closed with the retrieved sources reviewed; it never reaches prompt tools or a creative provider. Missing membership canon fails closed, conflicting facts/locations are surfaced rather than chosen, and provider output strips leaked silent-system scaffolding.
 - Workspace assistant conversations are retained in session-local, project-scoped storage, so navigating to World Bible or another route and returning restores the conversation immediately without mixing projects or persisting chat indefinitely.
+- Workspace and Ask now authorize every ordinary provider request through the
+  shared `useAssistantRequestPolicy` boundary. It owns provider readiness and
+  route disclosure, consultation blocking/accounting, streaming and Stop, and
+  plain-language failures. Deterministic factual answers remain outside that
+  boundary and spend zero consultations; successful hosted assistant requests
+  record exactly one `assistant` unit, verified private-local runs use the
+  existing runaway guard, and writing-coach requests record
+  `writing-coach`. Both assistant surfaces show the same point-of-use route and
+  budget disclosure beside Send.
 - Future AI expansion should follow the adapter/tool boundary now captured in `docs/architecture-review.md`: provider/model capabilities are explicit, named workflow routes can choose model/reasoning/capability/cache policies per feature, structured output is schema-validated, tool-like actions produce confirmable proposals, and shared read-only project-context extraction feeds features without silently mutating canon or state.
 - Scene-scoped state mutation tracking now exists as a project-scoped persistence layer with accepted/invalidation flow, replay, and workspace inspection surfaces.
 - Deterministic `state_delta_candidate` extraction now feeds the same typed mutation ledger as proposed `deterministic-review` events rather than mutating tracked state automatically.
@@ -847,6 +856,15 @@ runtime schema, and nothing here changes the roadmap's status board.
 ## Verification Status
 
 ### Verified Recently
+- Slice 3.17 centralized project-assistant provider authorization in
+  `useAssistantRequestPolicy`: Workspace and Ask share provider readiness,
+  provider-route disclosure, consultation blocking and accounting, streaming,
+  Stop, and error handling. Ordinary hosted model runs spend one `assistant`
+  unit immediately before execution; private-local runs retain the runaway
+  guard; the writing coach records `writing-coach`; deterministic factual
+  replies spend zero. `AIAssistant.tsx` fell from 858 to 827 lines. The full
+  battery passes: lint (one existing warning), 858 web + 47 engine + 12 UI +
+  24 desktop tests, web/desktop builds, file-size gate, and Cypress 132/132.
 - Slice 1.4 grounded project Q&A destination: **Ask your project** (`/ask`;
   More → Utilities; command palette) runs the project assistant outside the
   Workspace drawer with its own conversation history

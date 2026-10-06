@@ -241,6 +241,7 @@ and required revisit point, `WIP`, `Done <commit>`.
 | 3.14 | Hotspot freeze + editor/workspace extraction | 3 | M | Done `9756578` — `pnpm check:file-sizes` CI gate with recorded baseline (9 files over 1,500); EditorWithAI 1,636 → 1,285 (`useEditorStatPeek` + `EditorStatPeekLayer`); WorkspaceRoute 2,294 → 1,873 (review and Add to World popovers extracted); character lab and stat pin storage behind owning hooks; World Bible category load race merged instead of overwritten; lint baseline; 827 web + 47 engine + 12 UI + 24 desktop tests; web/desktop builds; Cypress 119/119 |
 | 3.15 | Dependency advisory sweep + CI audit gate | 3 | S | Done `b636915` — production audit 12→0: TipTap 3.31.4 with ProseMirror pins raised to match; sharp 0.35.5, adm-zip 0.6.1, qs 6.16.0 overrides; express/cors dev-only; `web-verify` fails on high production advisories; lint; 763 web + 14 engine + 12 UI tests; web/desktop builds; Cypress 117/117 |
 | 3.16 | Split `useWorkspaceConsistency` by responsibility | 3 | M | Done `2a9aa0e` — 2,234-line hook now a 450-line composer over seven responsibility hooks (none over 600) plus two tested pure services; same return shape, callers unchanged; baseline 8 files; lint baseline; 850 web + 47 engine + 12 UI + 24 desktop tests; web/desktop builds; Cypress 126/126 |
+| 3.17 | Centralize assistant request policy | 3 | M | Done `aa500ea` — shared provider readiness, route disclosure, consultation guard/accounting, streaming/Stop, and error boundary for Workspace and Ask; deterministic factual answers spend zero; hosted runs record `assistant`, coach records `writing-coach`, and private-local retains its runaway guard; AIAssistant 858→827 lines; lint baseline; 858 web + 47 engine + 12 UI + 24 desktop tests; web/desktop builds; file-size gate; Cypress 132/132 |
 | 4.1 | Description-first manual item creation | 4 | S | Done `70fb72f` — focused manual item draft with progressive full-editor disclosure; lint with 3 baseline warnings; 275 web + 6 engine + 12 UI tests; web/desktop builds; Cypress 44/44; desktop/narrow browser checks |
 | 4.2 | Storage schema versioning + migrations | 4 | M | Done `965af19` — separate IndexedDB, project-data, and snapshot schema contracts; ordered project-load migration runner with restorable pre-migration backups including rulesets; newer schemas fail closed before writes; 327 web + 6 engine + 12 UI tests; lint baseline; web/desktop builds; Cypress 47/47 |
 | 4.3 | Internal package namespace rename | 4 | S | Done `1917611` — rules packages renamed to `@worldbuilding-desk/*` across manifests, imports, workspace scripts, Vite resolution, CI, lockfile, and active docs; local workspace links and generated artifacts contain no old scope; web/package lint; root test plus 357 web + 6 engine + 12 UI tests; web/desktop builds; Cypress not required (no routed UI change) |
@@ -661,6 +662,38 @@ Run 3.15 first because it is cheap and unblocks the others' CI. 3.12a and
   - Record the smaller sizes with `pnpm check:file-sizes --update`.
   - Full battery plus local Cypress; the review, canon, and state specs must
     stay green unchanged.
+
+Follow-up from the 2026-10-06 architecture review
+(_[evidence: archive/architecture-review-2026-10-06.md § F1]_). This is the
+prerequisite for 1.4a and must land before beta.
+
+- **3.17 Centralize assistant request policy.** Extract the ordinary project
+  assistant's model-run orchestration from `AIAssistant.tsx` into one shared
+  hook/service boundary used by both the Workspace drawer and **Ask your
+  project**. That boundary owns provider readiness, provider-route disclosure,
+  consultation-budget blocking, feature accounting, request execution, Stop,
+  and plain-language failure handling. Retrieval and the universal factual
+  evidence gate may remain in tested assistant services, but there must be one
+  obvious call site where a provider request is authorized and spent.
+  Deterministic saved-fact, temporal-custody, and unverified factual answers do
+  not call a model and must spend zero consultations. Immediately before every
+  ordinary model request, enforce `budget.blocked`; hosted/remote calls spend
+  exactly one `assistant` unit, verified private-local calls count only toward
+  the local runaway guard through the existing budget service, and the author
+  sees the shared point-of-use cost/remainder or local disclosure beside Send.
+  The writing-coach action keeps its own guard and records
+  `writing-coach`, not `assistant`. Do not add a second counter, provider-route
+  classifier, or Ask-only exception. Preserve the current factual gate,
+  context trust labels, pending-proposal labels, conversation scopes, response
+  ceilings, streaming/Stop behavior, AI-text provenance, and Source Note
+  preview boundary. Add focused unit/component coverage proving deterministic
+  answers spend zero, ordinary hosted generation blocks and grants in place,
+  one successful hosted run records one `assistant`, local accounting uses the
+  runaway guard, and coach usage is attributed correctly. Extend Cypress for
+  both Workspace and Ask point-of-use disclosure and exhausted-budget behavior.
+  Keep `AIAssistant.tsx` below its starting line count, update
+  `PROJECT_STATUS.md`, and run the full verification battery plus local
+  Cypress; `cypress-smoke` must be green before close-out.
 
 ## Phase 4 — Product Completeness for v1
 
