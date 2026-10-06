@@ -1,6 +1,6 @@
 # Architecture Reference — SagaSpine
 
-Last reviewed: 2026-10-03
+Last reviewed: 2026-10-06
 
 ## Purpose
 
@@ -12,9 +12,10 @@ Use:
 - `PROJECT_STATUS.md` for the current implementation snapshot
 - `docs/road-to-market.md` for execution order
 - `docs/domain-model.md` for detailed domain contracts
-- `docs/archive/architecture-review-2026-10-03.md` for the latest
+- `docs/archive/architecture-review-2026-10-06.md` for the latest
   point-in-time code health review and its evidence
-- `docs/archive/architecture-review-2026-09-26.md` for the prior review
+- `docs/archive/architecture-review-2026-10-03.md` and
+  `docs/archive/architecture-review-2026-09-26.md` for the prior reviews
 - `docs/archive/architecture-review-2026-05-10.md` for the earlier
   point-in-time review and its completed action history
 
@@ -290,34 +291,32 @@ every visual detail.
 
 ## Current Architecture Risks
 
-1. CI does not gate slices: unit, lint, and build jobs are green, but
-   `cypress-smoke` has failed on `main` since the character-lab and stat-peek
-   specs landed (two editor-timing assertions), so routed-UI verification is
-   local-only.
-2. Resolved in Slices 3.12a–3.12b: provider keys, endpoint policy, renderer
-   CSP, and private-local route classification. Remaining egress worth
-   watching: the embedding-model download from Hugging Face/jsDelivr (no
-   author content).
+1. The shared assistant still combines provider lifecycle, retrieval,
+   factual gating, pending-proposal policy, model execution, consultation
+   accounting, coaching, conversation persistence, and presentation. That
+   fragmented request policy let ordinary assistant calls bypass the project
+   consultation budget. Slice 3.17 centralizes the boundary.
+2. The Ask route's pending-proposal opt-in has no explicit loading or error
+   state, so a request can silently omit the context the author just enabled.
+   Slice 1.4a makes the opt-in fail closed after 3.17.
 3. The rule evaluation classes are tested and hardened (Slice 3.11) but no
    app path uses them yet; wiring them in (backlog R3–R5) must keep rule
    output to derived views and author-confirmed proposals.
-4. Several route components, `useWorkspaceConsistency`, and `EditorWithAI`
-   own too much workflow state and orchestration and are still growing; new
-   components keep importing storage modules directly.
-5. Resolved in Slice 3.13: canon acceptance, supersession, and removal
-   commit atomically.
-6. Provider capabilities are not yet normalized behind one proposal/action
+4. The hotspot freeze from Slice 3.14 holds, and Slice 3.16 split
+   `useWorkspaceConsistency`; several route components remain over 1,500
+   lines, especially World Bible, Character Sheets, Workspace, Lore, and
+   Compendium. Continue incremental responsibility-based extraction rather
+   than broad rewrites.
+5. Provider capabilities are not yet normalized behind one proposal/action
    contract.
-7. Electron, transformer, and editor (`@tiptap/core`) dependencies carry
-   open advisories and need supported upgrade paths; the desktop package has
-   no tests or lint.
-8. Some assistant/retrieval behavior still needs realistic provenance testing.
+6. Some assistant/retrieval behavior still needs realistic provenance testing.
+7. Remaining egress worth watching is the embedding-model download from
+   Hugging Face/jsDelivr; it carries no author content.
 
-Evidence for 1–5 and 7: `docs/archive/architecture-review-2026-10-03.md`.
-Scheduled in `docs/road-to-market.md`: risk 1 through the slice close-out
-rule (CI green, including `cypress-smoke`), risk 2 as Slices 3.12a–3.12b (done), risk 3 as
-Slice 3.11 (done), risk 4 as Slice 3.14, risk 5 as Slice 3.13 (done), and the dependency
-part of risk 7 as Slice 3.15.
+Evidence for risks 1–2 and the current hotspot state:
+`docs/archive/architecture-review-2026-10-06.md`. Prior hardening evidence:
+`docs/archive/architecture-review-2026-10-03.md`. Scheduled in
+`docs/road-to-market.md`: risk 1 as Slice 3.17 and risk 2 as Slice 1.4a.
 
 ## Change Rule
 

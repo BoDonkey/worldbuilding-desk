@@ -1,7 +1,6 @@
 import React, {useState, useRef, useEffect, useCallback, useId} from 'react';
 import {Link} from 'react-router';
 import styles from '../../assets/components/AIAssistant.module.css';
-import {LLMService} from '../../services/llm/LLMService';
 import type {RAGProvider} from '../../services/rag/RAGService';
 import {getRAGService} from '../../services/rag/getRAGService';
 import type {
@@ -40,10 +39,8 @@ import {
   selectWorldBibleContextForPrompt,
   stripAssistantThinking
 } from './AIAssistant.helpers';
-import {useConsultationBudget} from '../../hooks/useConsultationBudget';
 import {ConsultationBudgetNotice} from '../common/ConsultationBudgetNotice';
 import {ModelRunProgress} from '../common/ModelRunProgress';
-import {useModelRun} from '../../hooks/useModelRun';
 import {resolveResponseTokenLimit} from '../../services/llm/modelRun';
 import {getCraftLibraryService} from '../../services/craft/getCraftLibraryService';
 import {
@@ -60,8 +57,8 @@ import {
   filterCanonFactResultsForScene,
   isCanonFactMemoryValidAtScene
 } from '../../services/lore/canonicalFactValidity';
-import {useProviderRoute} from '../../hooks/useProviderRoute';
 import {buildAITextProvenance, type AITextProvenance} from '../../services/editor/aiTextProvenance';
+import {useAssistantRequestPolicy} from '../../hooks/useAssistantRequestPolicy';
 
 interface AIAssistantProps {
   projectId: string;
@@ -135,28 +132,28 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
   const [messages, setMessages] = useAssistantConversation(projectId, conversationScope);
   const [input, setInput] = useState('');
   const [isStreaming, setIsStreaming] = useState(false);
-  const modelRun = useModelRun();
-  // Stable across renders (the run object itself changes every second while a run ticks).
-  const runModel = modelRun.run;
   const aiProvider = aiConfig?.provider;
-  const providerRoute = useProviderRoute(aiConfig);
+  const requestPolicy = useAssistantRequestPolicy({
+    projectId,
+    aiConfig,
+    sentMaterial: 'your request and the selected project context'
+  });
+  const {budget, modelRun, providerIssue, disclosure, run: runModelRequest} = requestPolicy;
   const modelReplyProvenance = useCallback(
     (modelOverride?: string): AITextProvenance => {
-      const provenance = buildAITextProvenance('scene-revision', aiConfig, providerRoute);
+      const provenance = buildAITextProvenance('scene-revision', aiConfig, budget.route);
       const model = modelOverride?.trim();
       return model ? {...provenance, model} : provenance;
     },
-    [aiConfig, providerRoute]
+    [aiConfig, budget.route]
   );
   const announceStatus = useStatusAnnouncement();
-  const [providerError, setProviderError] = useState<string | null>(null);
   const [memoryCache, setMemoryCache] = useState<MemoryEntry[]>([]);
   const [selectedToolIds, setSelectedToolIds] = useState<string[]>([]);
   const [contextStatus, setContextStatus] = useState<'loading' | 'ready' | 'error'>('loading');
   const contextStatusId = useId();
   const messagesRef = useRef<HTMLDivElement>(null);
 
-  const llmService = useRef<LLMService | null>(null);
   const ragService = useRef<RAGProvider | null>(null);
   const shodhService = useRef<ShodhMemoryProvider | null>(null);
   const consumedQueuedPromptRef = useRef<string | null>(null);
@@ -180,26 +177,6 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
   useEffect(() => {
     promptManager.current.init();
   }, []);
-
-  useEffect(() => {
-    if (!aiConfig) {
-      llmService.current = null;
-      setProviderError(
-        'AI provider is not configured. Add an API key in Settings.'
-      );
-      return;
-    }
-
-    try {
-      llmService.current = new LLMService(aiConfig);
-      setProviderError(null);
-    } catch (error) {
-      const message =
-        describeError(error, 'Invalid AI configuration.');
-      setProviderError(message);
-      llmService.current = null;
-    }
-  }, [aiConfig]);
 
   useEffect(() => {
     const enabledTools = (aiConfig?.promptTools ?? []).filter((tool) => tool.enabled);
@@ -344,18 +321,6 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
 
   const handleSendPrompt = useCallback(async (promptText: string) => {
     if (!promptText.trim()) return;
-    if (!llmService.current) {
-      setMessages((prev) => [
-        ...prev,
-        {
-          role: 'assistant',
-          content:
-            providerError ||
-            'AI provider unavailable. Check your settings and try again.'
-        }
-      ]);
-      return;
-    }
     if (contextStatus !== 'ready') {
       setMessages((prev) => [
         ...prev,
@@ -510,16 +475,17 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
       ]);
       scrollMessagesToBottom();
 
-      await runModel(
-        llmService.current,
-        {
+      const outcome = await runModelRequest({
+        feature: 'assistant',
+        request: {
           messages: [requestUserMessage],
           context: contextChunks,
           systemPrompt: composedPrompt,
           model: consultationModel?.trim() || undefined,
           maxTokens: resolveResponseTokenLimit(aiProvider, consultationMaxTokens)
         },
-        ({answer}) => {
+        failureMessage: 'The assistant could not generate a response.',
+        onUpdate: ({answer}) => {
           const assistantMessage = stripAssistantThinking(answer);
           setMessages((prev) => [
             ...prev.slice(0, -1),
@@ -532,10 +498,23 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
           ]);
           scrollMessagesToBottom();
         }
-      );
+      });
+      if (!outcome.ok) {
+        setMessages((prev) => [
+          ...prev.slice(0, -1),
+          {
+            ...(prev[prev.length - 1]?.role === 'assistant'
+              ? prev[prev.length - 1]
+              : {role: 'assistant' as const, contextSources, provenance: replyProvenance}),
+            content: outcome.message
+          }
+        ]);
+      }
     } catch (error) {
       console.error('AI request failed:', error);
-      const message = describeError(error, 'The assistant could not generate a response.');
+      const message = describeError(error, 'Project context could not be prepared. Try again.', {
+        context: 'assistant context'
+      });
       setMessages((prev) => {
         const last = prev[prev.length - 1];
         return last?.role === 'assistant'
@@ -549,7 +528,6 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
   }, [
     aiProvider,
     modelReplyProvenance,
-    runModel,
     announceStatus,
     buildMemoryChunks,
     consultationMaxTokens,
@@ -558,13 +536,13 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
     context?.type,
     contextStatus,
     projectId,
-    providerError,
     scrollMessagesToBottom,
     setMessages,
     selectedToolIds,
     selectedText,
     aiConfig?.promptTools,
-    pendingProposals
+    pendingProposals,
+    runModelRequest
   ]);
 
   const handleSend = async () => {
@@ -607,20 +585,9 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
   const coachEvidenceLabel = selectedText ? 'Selected passage' : 'Current scene';
   const inspectorSettings = aiConfig?.inspectorSettings;
   const coachConsultationEnabled = inspectorSettings?.enableAIConsultation !== false;
-  const budget = useConsultationBudget(projectId, inspectorSettings, aiConfig);
 
   const handleAskCoach = useCallback(async () => {
     if (!coachEvidence) return;
-    if (!llmService.current) {
-      setMessages((prev) => [
-        ...prev,
-        {
-          role: 'assistant',
-          content: providerError || 'AI provider unavailable. Check your settings and try again.'
-        }
-      ]);
-      return;
-    }
     if (!coachConsultationEnabled) {
       setMessages((prev) => [
         ...prev,
@@ -628,17 +595,6 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
       ]);
       return;
     }
-    if (budget.blocked) {
-      setMessages((prev) => [
-        ...prev,
-        {
-          role: 'assistant',
-          content: budget.blockedMessage ?? 'AI consultation budget reached for today.'
-        }
-      ]);
-      return;
-    }
-
     setMessages((prev) => [
       ...prev,
       {
@@ -665,22 +621,21 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
         evidenceText: coachEvidence
       });
 
-      budget.spend('assistant');
-
       const coachProvenance = modelReplyProvenance();
       setMessages((prev) => [...prev, {role: 'assistant', content: '', craftCitations, provenance: coachProvenance}]);
       scrollMessagesToBottom();
 
-      await runModel(
-        llmService.current,
-        {
+      const outcome = await runModelRequest({
+        feature: 'writing-coach',
+        request: {
           messages: [{role: 'user', content: userPrompt}],
           context: craftContext,
           systemPrompt,
           model: inspectorSettings?.lowCostModel?.trim() || undefined,
           maxTokens: resolveResponseTokenLimit(aiProvider, inspectorSettings?.maxResponseTokens)
         },
-        ({answer}) => {
+        failureMessage: 'The writing coach could not be reached. Try again.',
+        onUpdate: ({answer}) => {
           const assistantMessage = stripAssistantThinking(answer);
           setMessages((prev) => [
             ...prev.slice(0, -1),
@@ -693,10 +648,25 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
           ]);
           scrollMessagesToBottom();
         }
-      );
+      });
+      if (!outcome.ok) {
+        setMessages((prev) => [
+          ...prev.slice(0, -1),
+          {
+            ...(prev[prev.length - 1]?.role === 'assistant'
+              ? prev[prev.length - 1]
+              : {role: 'assistant' as const, craftCitations, provenance: coachProvenance}),
+            content: outcome.message
+          }
+        ]);
+      }
     } catch (error) {
       console.error('Writing coach request failed:', error);
-      const message = describeError(error, 'The writing coach could not be reached. Try again.');
+      const message = describeError(
+        error,
+        'The writing coach could not prepare its references. Try again.',
+        {context: 'writing coach references'}
+      );
       setMessages((prev) => {
         const last = prev[prev.length - 1];
         return last?.role === 'assistant'
@@ -710,16 +680,14 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
   }, [
     aiProvider,
     modelReplyProvenance,
-    runModel,
+    runModelRequest,
     announceStatus,
     coachConsultationEnabled,
     coachEvidence,
     coachEvidenceLabel,
     coachScope,
-    budget,
     inspectorSettings?.lowCostModel,
     inspectorSettings?.maxResponseTokens,
-    providerError,
     scrollMessagesToBottom,
     setMessages
   ]);
@@ -760,10 +728,10 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
           </div>
         </div>
       )}
-      {providerError && (
+      {providerIssue && (
         <div className={styles.notice}>
           <p>
-            {providerError} <Link to='/settings'>Open Settings</Link>
+            {providerIssue} <Link to='/settings'>Open Settings</Link>
           </p>
         </div>
       )}
@@ -846,11 +814,12 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
             </button>
           )}
         </div>
+        {disclosure && <p className={styles.disclosure}>{disclosure}</p>}
         <ConsultationBudgetNotice
           status={budget.status}
           isLocal={budget.isLocal}
           onGrantMore={budget.grantMore}
-          hidden={!coachConsultationEnabled || !coachEvidence}
+          hidden={Boolean(providerIssue)}
         />
       </div>
     </div>

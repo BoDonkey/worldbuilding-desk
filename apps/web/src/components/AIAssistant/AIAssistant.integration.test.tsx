@@ -1,5 +1,9 @@
 import {fireEvent, render, screen, waitFor} from '@testing-library/react';
+import {MemoryRouter} from 'react-router';
+import type {ComponentProps} from 'react';
 import {beforeEach, describe, expect, it, vi} from 'vitest';
+import type {ProjectAISettings} from '../../entityTypes';
+import {getConsultationBudgetStatus} from '../../services/editor';
 import {AIAssistant} from './AIAssistant';
 
 const mocks = vi.hoisted(() => ({
@@ -31,6 +35,12 @@ vi.mock('../../services/shodh/getShodhService', () => ({
   }))
 }));
 
+vi.mock('../../services/craft/getCraftLibraryService', () => ({
+  getCraftLibraryService: vi.fn(async () => ({
+    search: vi.fn(async () => [])
+  }))
+}));
+
 vi.mock('../../services/llm/LLMService', () => ({
   LLMService: class {
     async *stream() {
@@ -40,8 +50,31 @@ vi.mock('../../services/llm/LLMService', () => ({
   }
 }));
 
+const hostedSettings: ProjectAISettings = {
+  provider: 'anthropic',
+  configs: {anthropic: {apiKey: 'test-key', model: 'claude-test'}},
+  promptTools: [],
+  defaultToolIds: [],
+  inspectorSettings: {
+    enableAIConsultation: true,
+    maxConsultationsPerDay: 1,
+    maxContextChars: 1800,
+    maxResponseTokens: 500,
+    lowCostModel: ''
+  }
+};
+
+const renderAssistant = (props: ComponentProps<typeof AIAssistant>) =>
+  render(
+    <MemoryRouter>
+      <AIAssistant {...props} />
+    </MemoryRouter>
+  );
+
 describe('AIAssistant factual lookup integration', () => {
   beforeEach(() => {
+    localStorage.clear();
+    sessionStorage.clear();
     mocks.getDocumentsByProject.mockReset();
     mocks.getDocumentsByProject.mockResolvedValue([]);
     mocks.search.mockReset();
@@ -81,17 +114,15 @@ describe('AIAssistant factual lookup integration', () => {
   });
 
   it('answers D-1 from accepted canon without invoking the provider', async () => {
-    render(
-      <AIAssistant
-        projectId='project-a'
-        aiConfig={{
+    renderAssistant({
+      projectId: 'project-a',
+      aiConfig: {
           provider: 'ollama',
           configs: {},
           promptTools: [],
           defaultToolIds: []
-        }}
-      />
-    );
+      }
+    });
 
     await screen.findByText('Project context ready.');
     fireEvent.change(screen.getByRole('textbox'), {
@@ -105,6 +136,7 @@ describe('AIAssistant factual lookup integration', () => {
       20
     );
     expect(mocks.stream).not.toHaveBeenCalled();
+    expect(getConsultationBudgetStatus('project-a', 20).used).toBe(0);
     fireEvent.click(screen.getByText('Sources used'));
     await waitFor(() => {
       expect(screen.getByText('Accepted canon fact - Sera Kestrel')).toBeVisible();
@@ -165,17 +197,15 @@ describe('AIAssistant factual lookup integration', () => {
         }
       }
     ]);
-    render(
-      <AIAssistant
-        projectId='project-d4'
-        aiConfig={{
+    renderAssistant({
+      projectId: 'project-d4',
+      aiConfig: {
           provider: 'ollama',
           configs: {},
           promptTools: [],
           defaultToolIds: []
-        }}
-      />
-    );
+      }
+    });
 
     await screen.findByText('Project context ready.');
     fireEvent.change(screen.getByRole('textbox'), {
@@ -213,17 +243,15 @@ describe('AIAssistant factual lookup integration', () => {
         }
       }
     ]);
-    render(
-      <AIAssistant
-        projectId='project-unknown-fact'
-        aiConfig={{
+    renderAssistant({
+      projectId: 'project-unknown-fact',
+      aiConfig: {
           provider: 'ollama',
           configs: {},
           promptTools: [],
           defaultToolIds: []
-        }}
-      />
-    );
+      }
+    });
 
     await screen.findByText('Project context ready.');
     fireEvent.change(screen.getByRole('textbox'), {
@@ -235,5 +263,59 @@ describe('AIAssistant factual lookup integration', () => {
     expect(screen.getByText(/won't invent one/i)).toBeVisible();
     expect(mocks.search).toHaveBeenCalledWith('Who stole the Emberglass Key?', 20);
     expect(mocks.stream).not.toHaveBeenCalled();
+  });
+
+  it('discloses, records, and blocks ordinary hosted assistant requests', async () => {
+    mocks.search.mockResolvedValue([]);
+    renderAssistant({
+      projectId: 'project-budget',
+      aiConfig: hostedSettings,
+      showWritingCoach: false
+    });
+
+    await screen.findByText('Project context ready.');
+    expect(screen.getByText(/to Anthropic’s servers/)).toBeVisible();
+    expect(screen.getByText(/Costs 1 of this project's 1 daily AI consultations/)).toBeVisible();
+
+    fireEvent.change(screen.getByRole('textbox'), {target: {value: 'Brainstorm a tense harbor scene.'}});
+    fireEvent.click(screen.getByRole('button', {name: 'Send'}));
+
+    await screen.findByText('This should not be used.');
+    expect(mocks.stream).toHaveBeenCalledTimes(1);
+    expect(getConsultationBudgetStatus('project-budget', 1)).toMatchObject({
+      used: 1,
+      remaining: 0,
+      exhausted: true
+    });
+    expect(getConsultationBudgetStatus('project-budget', 1).byFeature).toContainEqual({
+      feature: 'assistant',
+      label: 'Writing assistant',
+      count: 1
+    });
+    expect(await screen.findByRole('button', {name: 'Add 10 more for today'})).toBeVisible();
+
+    fireEvent.change(screen.getByRole('textbox'), {target: {value: 'Brainstorm one more turn.'}});
+    fireEvent.click(screen.getByRole('button', {name: 'Send'}));
+
+    await screen.findByText(/used all 1 AI consultations/i);
+    expect(mocks.stream).toHaveBeenCalledTimes(1);
+  });
+
+  it('attributes the embedded writing coach to writing-coach', async () => {
+    renderAssistant({
+      projectId: 'project-coach-budget',
+      aiConfig: hostedSettings,
+      sceneText: 'Sera waits beside the locked harbor gate.'
+    });
+
+    await screen.findByText('Project context ready.');
+    fireEvent.click(screen.getByRole('button', {name: 'Ask the writing coach'}));
+    await screen.findByText('This should not be used.');
+
+    expect(getConsultationBudgetStatus('project-coach-budget', 1).byFeature).toContainEqual({
+      feature: 'writing-coach',
+      label: 'Writing coach',
+      count: 1
+    });
   });
 });

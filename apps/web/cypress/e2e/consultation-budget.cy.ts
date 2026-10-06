@@ -1,5 +1,6 @@
 const PROJECT_ID = 'cypress-project-1';
 const LEDGER_KEY = `inspectorBudget:${PROJECT_ID}`;
+const ANTHROPIC_STREAM = 'http://localhost:3001/api/anthropic/stream';
 
 const localDayKey = (now = new Date()) =>
   `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(
@@ -37,11 +38,20 @@ const openStoryDashboard = () => {
   cy.contains('h2', 'Writing coach').should('be.visible');
 };
 
+const openWorkspaceAssistant = () => {
+  cy.visit('/workspace');
+  cy.get('.tiptap[contenteditable="true"]').should('contain.text', 'Alpha content');
+  cy.contains('button', 'Context').click();
+  cy.contains('button', /^AI$/).click();
+  cy.contains('Project context ready.').should('be.visible');
+};
+
 describe('AI consultation budget', () => {
   beforeEach(() => {
     cy.viewport(1400, 1000);
     cy.visit('/');
     cy.seedSmokeProjectData();
+    cy.window().then((win) => win.localStorage.setItem('anthropic_api_key', 'cypress-test-key'));
     cy.reload();
     cy.contains('h2', 'Cypress Smoke Project').should('be.visible');
   });
@@ -126,5 +136,42 @@ describe('AI consultation budget', () => {
       .and('contain.text', 'maximum response charge')
       .and('contain.text', 'Input tokens cost extra')
       .and('contain.text', '1,500-token minimum');
+  });
+
+  it('shows the shared assistant disclosure and budget in Ask and Workspace', () => {
+    seedLedger({total: 3, byFeature: {assistant: 3}});
+
+    cy.visit('/ask');
+    cy.contains('Project context ready.').should('be.visible');
+    cy.contains('Sends your request and the selected project context to Anthropic’s servers only when you send.').should('be.visible');
+    cy.contains("Costs 1 of this project's 20 daily AI consultations").should('be.visible');
+    cy.contains('17 left').should('be.visible');
+
+    openWorkspaceAssistant();
+    cy.contains('Sends your request and the selected project context to Anthropic’s servers only when you send.').should('be.visible');
+    cy.contains("Costs 1 of this project's 20 daily AI consultations").should('be.visible');
+    cy.contains('17 left').should('be.visible');
+  });
+
+  it('blocks exhausted assistant requests in Ask and exposes the in-place grant in both surfaces', () => {
+    let requests = 0;
+    cy.intercept('POST', ANTHROPIC_STREAM, (request) => {
+      requests += 1;
+      request.reply({statusCode: 500, body: 'request should have been blocked'});
+    });
+    seedLedger({total: 20, byFeature: {assistant: 20}});
+
+    cy.visit('/ask');
+    cy.contains('Project context ready.').should('be.visible');
+    cy.contains('[role="alert"]', 'You have used all 20 AI consultations').should('be.visible');
+    cy.get('textarea[placeholder^="Ask about your characters"]')
+      .type('Brainstorm an opening image for the harbor.');
+    cy.contains('button', /^Send$/).click();
+    cy.contains('[class*="messageContent"]', 'You have used all 20 AI consultations').should('be.visible');
+    cy.then(() => expect(requests, 'exhausted Ask never reaches the provider').to.equal(0));
+
+    openWorkspaceAssistant();
+    cy.contains('[role="alert"]', 'You have used all 20 AI consultations').should('be.visible');
+    cy.contains('button', 'Add 10 more for today').should('be.visible');
   });
 });
