@@ -74,7 +74,7 @@ export function ImportSectionPanel({
         </label>
       </div>
       <div className={styles.importSectionList}>
-        {draft.detectedSections.slice(0, 8).map((section) => (
+        {draft.detectedSections.map((section) => (
           <div key={section.id} className={styles.importSectionItem}>
             <div>
               <strong>{section.title}</strong>

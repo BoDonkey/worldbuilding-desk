@@ -166,7 +166,7 @@ pnpm --filter web e2e:run       # for slices touching routed UI
    3.10 → 3.11; 3.10 → 4.42 → 4.43 → 4.44; 4.45 after 4.42;
    4.46 → 4.47 → 4.48; 4.42 after 4.46; 4.50 → 4.51; 4.50 → 4.52;
    3.15 first among 3.12–3.15; 3.12a → 3.12b; both before 5.3 and 6.1;
-   3.16 → 4.53;
+   3.16 → 4.53; 4.54 → 4.55 → 4.56;
    5.14 before 5.15; 5.15 before 6.1;
    Phase 6 strictly ordered).
 2. **Get the full prompt.** Slices marked _[prompt: archive/... § Slice N]_
@@ -302,6 +302,9 @@ and required revisit point, `WIP`, `Done <commit>`.
 | 4.51 | AI text report (AD-2) | 4 | S | Done `1f80e78` — Workspace scene drawer **AI text report**: marked words and passages per scene and by feature and provider (with models), open scene read as edited, plain-text Copy report, platform-neutral notes; lint baseline; 824 web + 47 engine + 12 UI + 24 desktop tests; web/desktop builds; Cypress 119/119 |
 | 4.52 | Opt-in AI scene drafts (AD-3) | 4 | M | Done `bf8eecb` — per-project **Allow AI scene drafts** (default off, not inherited, needs AI consultation); **Draft this scene** on scenes of ≤50 words in Workspace and from Corkboard linked scenes; visible editable inputs, character-lab grounding at scene start, disclosure, budget, Stop, 1,500-word cap in code; preview until marked undoable Insert or Save to Scratchpad; never writes canon, state, or records; lint baseline; 836 web + 47 engine + 12 UI + 24 desktop tests; web/desktop builds; Cypress 123/123 |
 | 4.53 | Model-assisted review items in the shared review model | 4 | M | Done `b7ae00c` — canon check items in the shared review state: saved with the project review run (`modelCheckItems`), underlined, counted in the review indicator, kept through re-reviews and project runs while their quote remains, dismissal saved; session store removed; lint baseline; 851 web + 47 engine + 12 UI + 24 desktop tests; web/desktop builds; Cypress 124/127 full run (world-canvas renderer crash, 15/15 isolated) |
+| 4.54 | Document import structure fidelity | 4 | M | WIP |
+| 4.55 | Import heading destinations | 4 | M | — |
+| 4.56 | Multi-document import flow + category manager dialog | 4 | M | — |
 | 5.1 | Auto-update decision + implementation | 5 | M | — |
 | 5.2 | Code signing + notarization, both platforms | 5 | M | — |
 | 5.3 | Packaged-app validation + Electron E2E | 5 | M | — |
@@ -333,6 +336,12 @@ run in parallel; 4.13 follows 4.12 and 4.15 follows 4.14. Release-engineering
 work may run in parallel, but 4.16 follows 4.1 and 4.15, 5.4 waits for 4.13
 and 4.15, and 4.12–4.16 must land before 6.1. Release-blocking trust or
 data-loss findings remain first priority. Phase 6 is strictly ordered.
+
+The 2026-10-08 start of real-world dogfooding (importing the author's
+Echoes character and race sheets) adds 4.54–4.56, run in order. 4.54
+carries a data-loss fix (same-named headings overwrite each other) and goes
+first. They touch World Bible import only, so they may run in parallel with
+1.4a/1.4b.
 
 The 2026-08-29 UX/AI review
 ([archive](archive/ux-ai-review-2026-08-29.md)) added 1.5, re-scoped 1.4,
@@ -1656,6 +1665,51 @@ platform-neutral, non-judgmental copy; no watermark removal.
   model-assisted, dismissible, never applied, and dropped when their quoted
   text leaves the scene. Cypress covers reload persistence, the underline,
   and the indicator.
+
+### Dogfood document import (4.54–4.56)
+
+Found on 2026-10-08 importing the author's real Echoes character and race
+sheets (`Echoes consolidation/canonical/1 World Bible`): one Markdown sheet,
+one Pages-exported DOCX, and several race sheets imported as a batch.
+
+- **4.54 Document import structure fidelity.** Heading detection accepts only
+  lines ending in a colon, so Markdown `##` headings and Word heading styles
+  are invisible: Camila's sheet detects only `Open questions:`, and
+  everything else lands in Description. `- **Age:** Mid-30s` is not read as
+  a label row, and label rows are only mapped inside detected sections, so
+  Age stays empty. The DOCX reader drops paragraph styles, so Leo's three
+  Heading 3 paragraphs vanish and the second `Background:` swallows ~8,800
+  characters. Two same-named headings mapped to one field overwrite each
+  other, losing Leo's first Background. The heading list renders only the
+  first eight rows. Required: detect Markdown ATX headings and DOCX heading
+  styles (style id/name or outline level, including Pages exports); treat a
+  leading title heading as the document title, not a section; read list and
+  bold label rows; map label rows anywhere in the document; keep Markdown
+  structure in Description instead of flattening it to plain text, with
+  record-section titles rendered as headings; concatenate, never overwrite,
+  sections that land in the same field; show every detected heading.
+  Import still never writes canon facts. Unit-test fixtures that reproduce
+  both sheets' structure (sections, name, Age, no lost Background content);
+  the author's manuscript files stay out of the repo.
+- **4.55 Import heading destinations.** After 4.54. Replace the
+  Existing field / Record section / Reusable field / Ignore dropdown with a
+  destination picker: each mappable field of the target category by label,
+  **New field: <title>**, **Keep in Description**, and **Skip**. A heading
+  whose title matches no field must never silently fall back to Description
+  while labeled as a field. Re-derive open drafts' destinations whenever the
+  category's fields change, so a field created by one import in a batch is
+  offered to the drafts still open. Unsaved characters must show the
+  category's custom fields (today they live only on the saved-only Notes
+  tab). Unit and Cypress coverage for the picker and the batch carry-over.
+- **4.56 Multi-document import flow + category manager dialog.** After 4.55.
+  The import preview must say plainly that nothing is saved until a draft is
+  imported, show per-draft status (waiting, imported with an Open link,
+  failed with the reason), and keep remaining drafts reachable after
+  **Import and open**. **Manage Categories** becomes a modal dialog on the
+  shared dialog pattern (focus moves in, Escape and navigation close it)
+  instead of an unfocused block in page flow that stays open across
+  category switches and imports. Cypress covers a three-document batch and
+  the dialog.
 
 ## Phase 5 — Release Engineering
 

@@ -1,6 +1,5 @@
 {
   "apps/web/src/assets/components/WorldBibleRoute.module.css": 2487,
-  "apps/web/src/hooks/useWorldBibleImports.ts": 1632,
   "apps/web/src/routes/CharacterSheetsRoute.tsx": 2126,
   "apps/web/src/routes/CompendiumRoute.tsx": 1540,
   "apps/web/src/routes/LoreRoute.tsx": 1829,

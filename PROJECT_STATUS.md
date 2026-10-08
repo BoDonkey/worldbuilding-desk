@@ -397,6 +397,17 @@ Under the hood, the app still includes rich systems for world data, rules, chara
 
 ### Story Context Systems
 - World Bible with dynamic categories and custom field schemas.
+- World Bible document import detects Markdown `#` headings and DOCX heading
+  paragraphs (Word style ids, Pages-style named styles with outline levels,
+  `basedOn` chains, paragraph outline levels), treats a leading title heading
+  with no content of its own as the document title, reads list and bold
+  `**Label:** value` rows anywhere in the document (Occupation/Profession fill
+  an empty Role), keeps Markdown structure in rich-text fields with
+  record-section titles as headings, appends same-named sections that land
+  in one field, drops HTML comments from Markdown and deleted tracked-change
+  text from DOCX, and lists every detected heading. Parsing lives in
+  `services/worldBible/worldBibleImportParsing.ts` and `docxImport.ts`.
+  HTML imports still flatten headings to text.
 - World Bible now follows shared page chrome, uses a compact utility rail for import/help tools, opens category tabs in browse/list mode by default, and reveals manual entry forms only after explicit create/edit selection.
 - World Bible category task cards reserve stable description height so switching between Characters, Locations, and Items does not shift the list below.
 - World Bible AI assistance is being reshaped away from top-level AI draft cards and toward an explicit helper model. The current helper is an interim floating chat with selected-text apply to editable fields; the target model is open brainstorming plus confirmable model-proposed actions for names, aliases, fields, and new sections.
@@ -856,6 +867,16 @@ runtime schema, and nothing here changes the roadmap's status board.
 ## Verification Status
 
 ### Verified Recently
+- Slice 4.54 document import structure fidelity, from the 2026-10-08
+  dogfood import of the author's Markdown and Pages-exported DOCX character
+  sheets. Before: the Markdown sheet detected one heading and left Age empty;
+  the DOCX lost its Heading 3 paragraphs and its first Background section.
+  After, checked against both real files: 12 and 19 sections, name, Age, and
+  Role filled, both Background sections kept. Also fixes doubled `</li>` in
+  Markdown list HTML. `useWorldBibleImports.ts` fell from 1,632 to 912 lines
+  and left the file-size baseline. Battery: lint (one existing warning),
+  869 web + 47 engine + 12 UI + 24 desktop tests, web/desktop builds,
+  file-size gate, Cypress 132/132.
 - Slice 3.17 centralized project-assistant provider authorization in
   `useAssistantRequestPolicy`: Workspace and Ask share provider readiness,
   provider-route disclosure, consultation blocking and accounting, streaming,

@@ -8,6 +8,38 @@ import {
   normalizeRichTextValue
 } from '../services/worldBible/worldBibleEntityHelpers';
 import {describeError} from '../services/errors';
+import {parseDocxFile} from '../services/worldBible/docxImport';
+import {
+  buildPreview,
+  classifyImportSections,
+  detectImportDocumentName,
+  detectImportSections,
+  fileNameToEntityName,
+  htmlToText,
+  isExistingFieldMatch,
+  mapImportedTextToFields,
+  markdownToRichHtml,
+  sanitizeImportedHtml,
+  slugifyFieldKey,
+  stripMarkdownComments
+} from '../services/worldBible/worldBibleImportParsing';
+import type {
+  ImportSourceFormat,
+  WorldBibleImportSectionAction,
+  WorldBibleImportSectionDraft
+} from '../services/worldBible/worldBibleImportParsing';
+
+export type {
+  ImportSourceFormat,
+  WorldBibleImportSectionAction,
+  WorldBibleImportSectionDraft
+} from '../services/worldBible/worldBibleImportParsing';
+export {
+  detectImportDocumentName,
+  detectImportSections,
+  mapImportedTextToFields,
+  markdownToRichHtml
+} from '../services/worldBible/worldBibleImportParsing';
 
 export type ImportMode = 'create' | 'upsert';
 
@@ -17,6 +49,7 @@ export interface WorldBibleImportDraft {
   name: string;
   text: string;
   richTextHtml?: string;
+  sourceFormat?: ImportSourceFormat;
   preview: string;
   categoryId: string;
   mode: ImportMode;
@@ -26,18 +59,6 @@ export interface WorldBibleImportDraft {
   parseError?: string;
 }
 
-export type WorldBibleImportSectionAction =
-  | 'existing-field'
-  | 'record-section'
-  | 'new-field'
-  | 'ignore';
-
-export interface WorldBibleImportSectionDraft {
-  id: string;
-  title: string;
-  content: string;
-  action: WorldBibleImportSectionAction;
-}
 
 interface JsonImportRowInput {
   rowIndex: number;
@@ -88,690 +109,7 @@ interface UseWorldBibleImportsParams {
   onEntitiesChanged?: () => Promise<void>;
 }
 
-const fileNameToEntityName = (name: string): string => {
-  const base = name
-    .replace(/\.[^.]+$/, '')
-    .replace(/[_-]+/g, ' ')
-    .replace(/^\s*(?:race|species|character|item|location|faction)\s+sheet\s*/i, '')
-    .trim();
-  return base || 'Imported entry';
-};
 
-const normalizeImportLine = (line: string): string =>
-  line
-    .replace(/^[\s\u200f\u200e]+/g, '')
-    .replace(/^[•*·▪◦]\s*/u, '')
-    .replace(/\t+/g, ' ')
-    .trim();
-
-const parseImportLabelValue = (line: string): {label: string; value: string} | null => {
-  const match = line.match(/^([^:]{1,80}):\s*(.+)$/);
-  if (!match) return null;
-  return {label: match[1].trim(), value: match[2].trim()};
-};
-
-const IMPORT_NAME_LABELS = new Set([
-  'name',
-  'title',
-  'concept',
-  'race',
-  'species',
-  'character',
-  'character name'
-]);
-const COLLAPSED_SECTION_HEADING_PATTERN =
-  /\b(Background(?:\s+and\s+[A-Z][A-Za-z'’/-]+)?|[A-Z][A-Za-z'’/-]+\s+and\s+[A-Z][A-Za-z'’/-]+|Interaction\s+with\s+[A-Z][A-Za-z'’/-]+(?:\s+[A-Z][A-Za-z'’/-]+)*|Role\s+in\s+[A-Z][A-Za-z'’/-]+(?:\s+[A-Z][A-Za-z'’/-]+)*|Broader\s+Implications|Inclusion\s+of\s+[A-Z][A-Za-z'’/-]+(?:\s+[A-Z][A-Za-z'’/-]+)*):\s/gi;
-const INLINE_LABEL_PATTERN = /^[A-Z][A-Za-z'’/-]{1,32}(?:\s+[A-Z][A-Za-z'’/-]{1,32}){0,2}$/;
-const COMMON_IMPORT_SECTION_HEADINGS = new Set([
-  'basic information',
-  'physical description',
-  'personality',
-  'background',
-  'skills',
-  'special traits',
-  'social dynamics',
-  'goals and motivations',
-  'character arc',
-  'new additions'
-]);
-
-const looksLikeImportSectionHeading = (
-  line: string,
-  previousLine: string,
-  nextLine: string
-): boolean => {
-  if (!line.endsWith(':')) return false;
-  const candidate = line.slice(0, -1).trim();
-  if (!candidate || candidate.includes(':') || candidate.includes('  ')) return false;
-  if (IMPORT_NAME_LABELS.has(candidate.toLowerCase())) return false;
-  if (candidate.length > 72) return false;
-  if (COMMON_IMPORT_SECTION_HEADINGS.has(candidate.toLowerCase())) return true;
-  if (INLINE_LABEL_PATTERN.test(candidate) && !/\b(and|with|in|of)\b/i.test(candidate)) {
-    return !previousLine && Boolean(nextLine) && !parseImportLabelValue(nextLine);
-  }
-  return true;
-};
-
-const slugifyFieldKey = (value: string): string =>
-  value.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '') ||
-  crypto.randomUUID();
-
-const COMMON_REUSABLE_SECTION_LABELS = new Set([
-  'abilities',
-  'appearance',
-  'background',
-  'background and traits',
-  'biology',
-  'culture',
-  'cultural aspects',
-  'description',
-  'diet',
-  'government',
-  'history',
-  'interaction with other races',
-  'lifespan',
-  'magic',
-  'notes',
-  'origin',
-  'personality',
-  'physical traits',
-  'religion',
-  'role in the story',
-  'society',
-  'traits'
-]);
-
-const titleWords = (value: string): string[] =>
-  value
-    .toLowerCase()
-    .replace(/[^a-z0-9\s'-]+/g, ' ')
-    .split(/\s+/)
-    .map((word) => word.replace(/'s$/, '').trim())
-    .filter((word) => word.length > 2);
-
-const classifyImportSection = (
-  title: string,
-  category: EntityCategory,
-  recordName: string
-): WorldBibleImportSectionAction => {
-  if (
-    category.fieldSchema.some(
-      (field) => canMapImportField(field) && isExistingFieldMatch(field, title)
-    )
-  ) {
-    return 'existing-field';
-  }
-
-  const normalizedTitle = slugifyFieldKey(title).replace(/_/g, ' ');
-  const recordWords = new Set(titleWords(recordName));
-  const headingWords = titleWords(title);
-  const mentionsRecord = headingWords.some((word) => recordWords.has(word));
-  if (mentionsRecord) {
-    return 'record-section';
-  }
-
-  if (COMMON_REUSABLE_SECTION_LABELS.has(normalizedTitle)) {
-    return 'new-field';
-  }
-
-  if (/\b(and|with|in|of)\b/i.test(title)) {
-    return 'record-section';
-  }
-
-  return 'record-section';
-};
-
-const classifyImportSections = (
-  sections: WorldBibleImportSectionDraft[],
-  category: EntityCategory,
-  recordName: string
-): WorldBibleImportSectionDraft[] =>
-  sections.map((section) => ({
-    ...section,
-    action: classifyImportSection(section.title, category, recordName)
-  }));
-
-const isExistingFieldMatch = (
-  field: EntityCategory['fieldSchema'][number],
-  sectionTitle: string
-): boolean => {
-  const normalizedTitle = slugifyFieldKey(sectionTitle);
-  return field.key === normalizedTitle || slugifyFieldKey(field.label) === normalizedTitle;
-};
-
-const canMapImportField = (field: EntityCategory['fieldSchema'][number]): boolean =>
-  field.type === 'textarea' || field.type === 'text';
-
-const trimCollapsedSectionTextFromName = (value: string): string => {
-  const normalized = value.replace(/\s+/g, ' ').trim();
-  const nextHeadingMatch = normalized.match(
-    /\s+(?:Background|Origin|Appearance|Traits|Culture|Cultural|Society|Interaction|Relations|Relationships|Role|Broader|Implications|History|Notes|Description|Personality|Abilities|Magic|Pheromones|Trafficking|Inclusion)(?:\s+[A-Z][A-Za-z'’/&-]*|\s+and|\s+or|\s+of|\s+with|\s+in|\s+the){0,8}:\s/i
-  );
-  const candidate = nextHeadingMatch
-    ? normalized.slice(0, nextHeadingMatch.index).trim()
-    : normalized;
-  return candidate.length <= 80 ? candidate : '';
-};
-
-export const detectImportDocumentName = (text: string, fileName: string): string => {
-  const lines = text.replace(/\r/g, '').split('\n').map(normalizeImportLine);
-  for (const line of lines.slice(0, 12)) {
-    const pair = parseImportLabelValue(line);
-    if (pair && IMPORT_NAME_LABELS.has(pair.label.toLowerCase()) && pair.value.trim()) {
-      const name = trimCollapsedSectionTextFromName(pair.value);
-      if (name) return name;
-    }
-  }
-  return fileNameToEntityName(fileName);
-};
-
-const detectCollapsedImportSections = (text: string): WorldBibleImportSectionDraft[] => {
-  const normalized = text.replace(/\s+/g, ' ').trim();
-  const matches = Array.from(normalized.matchAll(COLLAPSED_SECTION_HEADING_PATTERN));
-  if (matches.length === 0) {
-    return [];
-  }
-
-  return matches
-    .map((match, index) => {
-      const title = match[1]?.trim() ?? '';
-      const contentStart = (match.index ?? 0) + match[0].length;
-      const contentEnd =
-        index + 1 < matches.length ? matches[index + 1].index ?? normalized.length : normalized.length;
-      return {
-        id: `${slugifyFieldKey(title)}-${index}`,
-        title,
-        content: normalized.slice(contentStart, contentEnd).trim(),
-        action: 'record-section' as const
-      };
-    })
-    .filter((section) => section.title && section.content);
-};
-
-export const detectImportSections = (text: string): WorldBibleImportSectionDraft[] => {
-  const lines = text.replace(/\r/g, '').split('\n').map(normalizeImportLine);
-  const sections: Array<{title: string; contentLines: string[]}> = [];
-  let currentSection: {title: string; contentLines: string[]} | null = null;
-
-  for (let index = 0; index < lines.length; index += 1) {
-    const line = lines[index];
-    if (!line) {
-      if (currentSection) currentSection.contentLines.push('');
-      continue;
-    }
-
-    const previousLine = lines[index - 1] ?? '';
-    const nextLine = lines.slice(index + 1).find(Boolean) ?? '';
-    if (looksLikeImportSectionHeading(line, previousLine, nextLine)) {
-      currentSection = {title: line.slice(0, -1).trim(), contentLines: []};
-      sections.push(currentSection);
-      continue;
-    }
-
-    if (currentSection) {
-      currentSection.contentLines.push(line);
-    }
-  }
-
-  const lineSections = sections
-    .map((section, index) => ({
-      id: `${slugifyFieldKey(section.title)}-${index}`,
-      title: section.title,
-      content: section.contentLines.join('\n').trim(),
-      action: 'record-section' as const
-    }))
-    .filter((section) => section.content.length > 0);
-  return lineSections.length > 0 ? lineSections : detectCollapsedImportSections(text);
-};
-
-const findFirstLineSectionIndex = (lines: string[]): number => {
-  const normalizedLines = lines.map(normalizeImportLine);
-  return normalizedLines.findIndex((line, index) => {
-    if (!line) return false;
-    const previousLine = normalizedLines[index - 1] ?? '';
-    const nextLine = normalizedLines.slice(index + 1).find(Boolean) ?? '';
-    return looksLikeImportSectionHeading(line, previousLine, nextLine);
-  });
-};
-
-const getImportIntroText = (
-  text: string,
-  sections: WorldBibleImportSectionDraft[]
-): string => {
-  if (sections.length === 0) return text.trim();
-  const lines = text.replace(/\r/g, '').split('\n');
-  const firstLineSectionIndex = findFirstLineSectionIndex(lines);
-  if (firstLineSectionIndex >= 0) {
-    return lines.slice(0, firstLineSectionIndex).join('\n').trim();
-  }
-
-  const normalized = text.replace(/\s+/g, ' ').trim();
-  const firstCollapsedSection = normalized.match(
-    new RegExp(COLLAPSED_SECTION_HEADING_PATTERN.source, 'i')
-  );
-  return firstCollapsedSection && firstCollapsedSection.index
-    ? normalized.slice(0, firstCollapsedSection.index).trim()
-    : '';
-};
-
-const mapInlineLabelsToExistingFields = (
-  category: EntityCategory,
-  fields: Record<string, string>,
-  sections: WorldBibleImportSectionDraft[]
-): void => {
-  sections.forEach((section) => {
-    section.content
-      .replace(/\r/g, '')
-      .split('\n')
-      .map(normalizeImportLine)
-      .forEach((line) => {
-        const pair = parseImportLabelValue(line);
-        if (!pair) return;
-        const field = category.fieldSchema.find(
-          (candidate) =>
-            canMapImportField(candidate) &&
-            !fields[candidate.key] &&
-            isExistingFieldMatch(candidate, pair.label)
-        );
-        if (!field) return;
-        fields[field.key] =
-          field.type === 'textarea'
-            ? normalizeRichTextValue(pair.value)
-            : pair.value;
-      });
-  });
-};
-
-const htmlToText = (raw: string): string => {
-  const parser = new DOMParser();
-  const parsed = parser.parseFromString(raw, 'text/html');
-  return parsed.body.textContent?.trim() ?? '';
-};
-
-const sanitizeImportedHtml = (raw: string): string => {
-  const parser = new DOMParser();
-  const parsed = parser.parseFromString(raw, 'text/html');
-  parsed.querySelectorAll('script, style, noscript').forEach((node) => node.remove());
-  return parsed.body.innerHTML.trim() || '<p></p>';
-};
-
-const escapeHtml = (value: string): string =>
-  value
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;');
-
-const renderMarkdownInline = (value: string): string => {
-  let html = escapeHtml(value);
-  html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
-  html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>');
-  html = html.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
-  html = html.replace(/__([^_]+)__/g, '<strong>$1</strong>');
-  html = html.replace(/\*([^*]+)\*/g, '<em>$1</em>');
-  html = html.replace(/_([^_]+)_/g, '<em>$1</em>');
-  return html;
-};
-
-const splitMarkdownTableRow = (line: string): string[] =>
-  line
-    .trim()
-    .replace(/^\|/, '')
-    .replace(/\|$/, '')
-    .split('|')
-    .map((cell) => cell.trim());
-
-const isMarkdownTableSeparator = (line: string): boolean => {
-  const cells = splitMarkdownTableRow(line);
-  return (
-    cells.length > 0 &&
-    cells.every((cell) => /^:?-{3,}:?$/.test(cell))
-  );
-};
-
-type MarkdownListItem = {
-  content: string;
-  ordered: boolean;
-  level: number;
-};
-
-const buildMarkdownListHtml = (items: MarkdownListItem[]): string => {
-  if (items.length === 0) return '';
-
-  let html = '';
-  const stack: boolean[] = [];
-
-  items.forEach((item, index) => {
-    const next = items[index + 1];
-
-    while (stack.length > item.level + 1) {
-      html += '</li>';
-      const closingOrdered = stack.pop();
-      html += closingOrdered ? '</ol>' : '</ul>';
-    }
-
-    if (stack.length === item.level + 1) {
-      html += '</li>';
-      if (stack[stack.length - 1] !== item.ordered) {
-        const closingOrdered = stack.pop();
-        html += closingOrdered ? '</ol>' : '</ul>';
-      }
-    }
-
-    while (stack.length < item.level + 1) {
-      stack.push(item.ordered);
-      html += item.ordered ? '<ol>' : '<ul>';
-    }
-
-    html += `<li>${renderMarkdownInline(item.content)}`;
-
-    const shouldNest =
-      next &&
-      (next.level > item.level ||
-        (next.level === item.level && next.ordered !== item.ordered));
-    if (!shouldNest) {
-      html += '</li>';
-    }
-  });
-
-  while (stack.length > 0) {
-    const closingOrdered = stack.pop();
-    html += closingOrdered ? '</ol>' : '</ul>';
-  }
-
-  return html;
-};
-
-const buildMarkdownTableHtml = (rows: string[]): string => {
-  if (rows.length < 2) return '';
-  const headerCells = splitMarkdownTableRow(rows[0]);
-  const bodyRows = rows.slice(2).map(splitMarkdownTableRow).filter((cells) => cells.length > 0);
-  if (headerCells.length === 0) return '';
-
-  return (
-    '<table><thead><tr>' +
-    headerCells.map((cell) => `<th>${renderMarkdownInline(cell)}</th>`).join('') +
-    '</tr></thead><tbody>' +
-    bodyRows
-      .map(
-        (cells) =>
-          '<tr>' +
-          headerCells
-            .map((_, index) => `<td>${renderMarkdownInline(cells[index] ?? '')}</td>`)
-            .join('') +
-          '</tr>'
-      )
-      .join('') +
-    '</tbody></table>'
-  );
-};
-
-export const markdownToRichHtml = (raw: string): string => {
-  const normalized = raw.replace(/\r\n/g, '\n').trim();
-  if (!normalized) {
-    return '<p></p>';
-  }
-
-  const lines = normalized.split('\n');
-  const blocks: string[] = [];
-  let paragraphLines: string[] = [];
-  let listItems: MarkdownListItem[] = [];
-  let blockquoteLines: string[] = [];
-  let tableLines: string[] = [];
-
-  const flushParagraph = () => {
-    if (!paragraphLines.length) return;
-    blocks.push(`<p>${renderMarkdownInline(paragraphLines.join('\n')).replace(/\n/g, '<br />')}</p>`);
-    paragraphLines = [];
-  };
-
-  const flushList = () => {
-    if (!listItems.length) return;
-    blocks.push(buildMarkdownListHtml(listItems));
-    listItems = [];
-  };
-
-  const flushBlockquote = () => {
-    if (!blockquoteLines.length) return;
-    blocks.push(
-      `<blockquote><p>${renderMarkdownInline(blockquoteLines.join('\n')).replace(/\n/g, '<br />')}</p></blockquote>`
-    );
-    blockquoteLines = [];
-  };
-
-  const flushTable = () => {
-    if (tableLines.length < 2) {
-      if (tableLines.length === 1) {
-        paragraphLines.push(tableLines[0]);
-      }
-      tableLines = [];
-      return;
-    }
-    blocks.push(buildMarkdownTableHtml(tableLines));
-    tableLines = [];
-  };
-
-  lines.forEach((line, index) => {
-    const trimmed = line.trim();
-    if (!trimmed) {
-      flushParagraph();
-      flushList();
-      flushBlockquote();
-      flushTable();
-      return;
-    }
-
-    const nextLine = lines[index + 1]?.trim() ?? '';
-    const isTableStart =
-      trimmed.includes('|') && nextLine.includes('|') && isMarkdownTableSeparator(nextLine);
-    const isTableContinuation =
-      tableLines.length > 0 && trimmed.includes('|') && !/^#{1,6}\s+/.test(trimmed);
-    if (isTableStart || isTableContinuation) {
-      flushParagraph();
-      flushList();
-      flushBlockquote();
-      tableLines.push(trimmed);
-      if (!lines[index + 1]?.trim()) {
-        flushTable();
-      }
-      return;
-    }
-
-    const headingMatch = trimmed.match(/^(#{1,6})\s+(.*)$/);
-    if (headingMatch) {
-      flushParagraph();
-      flushList();
-      flushBlockquote();
-      flushTable();
-      const level = Math.min(headingMatch[1].length, 6);
-      blocks.push(`<h${level}>${renderMarkdownInline(headingMatch[2])}</h${level}>`);
-      return;
-    }
-
-    if (/^---+$/.test(trimmed) || /^\*\*\*+$/.test(trimmed)) {
-      flushParagraph();
-      flushList();
-      flushBlockquote();
-      flushTable();
-      blocks.push('<hr />');
-      return;
-    }
-
-    const blockquoteMatch = trimmed.match(/^>\s?(.*)$/);
-    if (blockquoteMatch) {
-      flushParagraph();
-      flushList();
-      flushTable();
-      blockquoteLines.push(blockquoteMatch[1]);
-      return;
-    }
-
-    flushBlockquote();
-
-    const unorderedMatch = line.match(/^(\s*)[-*+]\s+(.*)$/);
-    if (unorderedMatch) {
-      flushParagraph();
-      flushTable();
-      listItems.push({
-        content: unorderedMatch[2],
-        ordered: false,
-        level: Math.floor(unorderedMatch[1].replace(/\t/g, '  ').length / 2)
-      });
-      return;
-    }
-
-    const orderedMatch = line.match(/^(\s*)\d+\.\s+(.*)$/);
-    if (orderedMatch) {
-      flushParagraph();
-      flushTable();
-      listItems.push({
-        content: orderedMatch[2],
-        ordered: true,
-        level: Math.floor(orderedMatch[1].replace(/\t/g, '  ').length / 2)
-      });
-      return;
-    }
-
-    if (listItems.length) {
-      flushList();
-    }
-    flushTable();
-    paragraphLines.push(trimmed);
-  });
-
-  flushParagraph();
-  flushList();
-  flushBlockquote();
-  flushTable();
-  return blocks.join('') || '<p></p>';
-};
-
-const readU16LE = (bytes: Uint8Array, offset: number): number =>
-  bytes[offset] | (bytes[offset + 1] << 8);
-
-const readU32LE = (bytes: Uint8Array, offset: number): number =>
-  (bytes[offset] |
-    (bytes[offset + 1] << 8) |
-    (bytes[offset + 2] << 16) |
-    (bytes[offset + 3] << 24)) >>> 0;
-
-const findDocxDocumentEntry = (
-  bytes: Uint8Array
-): {
-  compressionMethod: number;
-  compressedData: Uint8Array;
-} | null => {
-  const eocdSignature = 0x06054b50;
-  const centralSignature = 0x02014b50;
-  const localSignature = 0x04034b50;
-
-  const minEocdSize = 22;
-  const maxCommentLength = 0xffff;
-  const searchStart = Math.max(0, bytes.length - (minEocdSize + maxCommentLength));
-  let eocdOffset = -1;
-  for (let i = bytes.length - minEocdSize; i >= searchStart; i -= 1) {
-    if (readU32LE(bytes, i) === eocdSignature) {
-      eocdOffset = i;
-      break;
-    }
-  }
-  if (eocdOffset === -1) return null;
-
-  const centralDirectorySize = readU32LE(bytes, eocdOffset + 12);
-  const centralDirectoryOffset = readU32LE(bytes, eocdOffset + 16);
-  const centralDirectoryEnd = centralDirectoryOffset + centralDirectorySize;
-  if (centralDirectoryEnd > bytes.length) return null;
-
-  const decoder = new TextDecoder('utf-8');
-  let cursor = centralDirectoryOffset;
-
-  while (cursor + 46 <= centralDirectoryEnd) {
-    if (readU32LE(bytes, cursor) !== centralSignature) {
-      break;
-    }
-    const compressionMethod = readU16LE(bytes, cursor + 10);
-    const compressedSize = readU32LE(bytes, cursor + 20);
-    const fileNameLength = readU16LE(bytes, cursor + 28);
-    const extraLength = readU16LE(bytes, cursor + 30);
-    const commentLength = readU16LE(bytes, cursor + 32);
-    const localHeaderOffset = readU32LE(bytes, cursor + 42);
-    const fileNameStart = cursor + 46;
-    const fileNameEnd = fileNameStart + fileNameLength;
-    if (fileNameEnd > bytes.length) return null;
-
-    const fileName = decoder.decode(bytes.slice(fileNameStart, fileNameEnd));
-    cursor = fileNameEnd + extraLength + commentLength;
-
-    if (fileName !== 'word/document.xml') continue;
-    if (localHeaderOffset + 30 > bytes.length) return null;
-    if (readU32LE(bytes, localHeaderOffset) !== localSignature) return null;
-
-    const localNameLength = readU16LE(bytes, localHeaderOffset + 26);
-    const localExtraLength = readU16LE(bytes, localHeaderOffset + 28);
-    const dataStart = localHeaderOffset + 30 + localNameLength + localExtraLength;
-    const dataEnd = dataStart + compressedSize;
-    if (dataEnd > bytes.length) return null;
-
-    return {
-      compressionMethod,
-      compressedData: bytes.slice(dataStart, dataEnd)
-    };
-  }
-
-  return null;
-};
-
-const inflateRaw = async (compressedData: Uint8Array): Promise<Uint8Array> => {
-  const copy = new Uint8Array(compressedData.byteLength);
-  copy.set(compressedData);
-  const stream = new Blob([copy.buffer]).stream().pipeThrough(
-    new DecompressionStream('deflate-raw')
-  );
-  const decompressed = await new Response(stream).arrayBuffer();
-  return new Uint8Array(decompressed);
-};
-
-const docxXmlToText = (xml: string): string => {
-  const withBreaks = xml
-    .replace(/<w:tab\b[^>]*\/>/g, '\t')
-    .replace(/<w:br\b[^>]*\/>/g, '\n')
-    .replace(/<w:cr\b[^>]*\/>/g, '\n')
-    .replace(/<\/w:p>/g, '\n\n');
-  const withoutTags = withBreaks.replace(/<[^>]+>/g, '');
-  const parser = new DOMParser();
-  const decoded = parser.parseFromString(
-    `<!doctype html><body>${withoutTags}`,
-    'text/html'
-  ).body.textContent;
-  return decoded?.trim() ?? '';
-};
-
-const parseDocxToText = async (file: File): Promise<string> => {
-  const bytes = new Uint8Array(await file.arrayBuffer());
-  const entry = findDocxDocumentEntry(bytes);
-  if (!entry) {
-    throw new Error('Could not read DOCX structure.');
-  }
-
-  let xmlBytes: Uint8Array;
-  if (entry.compressionMethod === 0) {
-    xmlBytes = entry.compressedData;
-  } else if (entry.compressionMethod === 8) {
-    xmlBytes = await inflateRaw(entry.compressedData);
-  } else {
-    throw new Error(`Unsupported DOCX compression method (${entry.compressionMethod}).`);
-  }
-
-  const xml = new TextDecoder('utf-8').decode(xmlBytes);
-  return docxXmlToText(xml);
-};
-
-const buildPreview = (text: string, limit = 180): string => {
-  const normalized = text.replace(/\s+/g, ' ').trim();
-  if (!normalized) return '(empty)';
-  return normalized.length > limit
-    ? `${normalized.slice(0, limit)}...`
-    : normalized;
-};
 
 const valueToString = (value: unknown): string => {
   if (value === null || value === undefined) return '';
@@ -792,73 +130,6 @@ const valueToString = (value: unknown): string => {
   return '';
 };
 
-export const mapImportedTextToFields = (
-  category: EntityCategory,
-  text: string,
-  richTextHtml?: string,
-  sections: WorldBibleImportSectionDraft[] = []
-): Record<string, string> => {
-  const normalized = text.trim();
-  const fields: Record<string, string> = {};
-  const mappedSections: WorldBibleImportSectionDraft[] = [];
-  const recordSections: WorldBibleImportSectionDraft[] = [];
-
-  sections.forEach((section) => {
-    if (section.action === 'ignore') return;
-    if (section.action === 'record-section') {
-      recordSections.push(section);
-      return;
-    }
-    const field = category.fieldSchema.find((candidate) =>
-      canMapImportField(candidate) && isExistingFieldMatch(candidate, section.title)
-    );
-    if (field) {
-      mappedSections.push(section);
-    } else if (section.action === 'existing-field') {
-      recordSections.push(section);
-    }
-  });
-
-  mappedSections.forEach((section) => {
-    const field = category.fieldSchema.find((candidate) =>
-      canMapImportField(candidate) && isExistingFieldMatch(candidate, section.title)
-    );
-    if (!field) return;
-    fields[field.key] =
-      field.type === 'textarea' ? normalizeRichTextValue(section.content) : section.content;
-  });
-  mapInlineLabelsToExistingFields(category, fields, sections);
-
-  const preferredField =
-    sections.length > 0
-      ? category.fieldSchema.find((field) => field.key === 'description')
-      : category.fieldSchema.find((field) => field.key === 'description') ??
-        category.fieldSchema.find((field) => field.type === 'textarea') ??
-        category.fieldSchema.find((field) => field.type === 'text');
-  const descriptionText = sections.length > 0
-    ? getImportIntroText(text, sections)
-    : normalized;
-  const recordSectionText = recordSections
-    .map((section) => `${section.title}\n${section.content}`)
-    .join('\n\n')
-    .trim();
-  const descriptionWithRecordSections = [descriptionText, recordSectionText]
-    .filter(Boolean)
-    .join('\n\n');
-
-  if (descriptionWithRecordSections && preferredField) {
-    fields[preferredField.key] =
-      preferredField.type === 'textarea'
-        ? sections.length > 0
-          ? normalizeRichTextValue(descriptionWithRecordSections)
-          : richTextHtml || normalizeRichTextValue(descriptionWithRecordSections)
-        : descriptionWithRecordSections;
-  } else if (!sections.length && !preferredField) {
-    fields.description = richTextHtml || normalizeRichTextValue(normalized);
-  }
-
-  return fields;
-};
 
 const ensureSectionFields = async (
   category: EntityCategory,
@@ -899,9 +170,9 @@ interface ApplyImportDraftOptions {
 const buildStructuredImportDraft = (
   source: {
     fileName: string;
-    raw: string;
     text: string;
     richTextHtml?: string;
+    sourceFormat: ImportSourceFormat;
   },
   category: EntityCategory
 ): WorldBibleImportDraft => {
@@ -917,6 +188,7 @@ const buildStructuredImportDraft = (
     name,
     text: source.text,
     richTextHtml: source.richTextHtml,
+    sourceFormat: source.sourceFormat,
     preview: buildPreview(source.text),
     categoryId: category.id,
     mode: 'create',
@@ -1079,24 +351,30 @@ export const useWorldBibleImports = ({
             });
             continue;
           }
-          const raw = lower.endsWith('.docx')
-            ? await parseDocxToText(file)
-            : await file.text();
-          const richTextHtml =
-            lower.endsWith('.html') || lower.endsWith('.htm')
-              ? sanitizeImportedHtml(raw)
-              : lower.endsWith('.md') || lower.endsWith('.markdown')
-                ? markdownToRichHtml(raw)
-                : convertPlainTextToRichHtml(raw.trim());
-          const text =
-            lower.endsWith('.html') || lower.endsWith('.htm')
-              ? htmlToText(raw)
-              : raw.trim();
+          const isHtml = lower.endsWith('.html') || lower.endsWith('.htm');
+          const isMarkdown = lower.endsWith('.md') || lower.endsWith('.markdown');
+          let text: string;
+          let richTextHtml: string;
+          if (lower.endsWith('.docx')) {
+            const docx = await parseDocxFile(file);
+            text = docx.text;
+            richTextHtml = docx.html;
+          } else if (isHtml) {
+            const raw = await file.text();
+            text = htmlToText(raw);
+            richTextHtml = sanitizeImportedHtml(raw);
+          } else if (isMarkdown) {
+            text = stripMarkdownComments(await file.text()).trim();
+            richTextHtml = markdownToRichHtml(text);
+          } else {
+            text = (await file.text()).trim();
+            richTextHtml = convertPlainTextToRichHtml(text);
+          }
           drafts.push(buildStructuredImportDraft({
             fileName: file.name,
             text,
             richTextHtml,
-            raw
+            sourceFormat: isMarkdown ? 'markdown' : 'text'
           }, activeCategory));
         } catch {
           parseFailures += 1;
@@ -1142,9 +420,9 @@ export const useWorldBibleImports = ({
         `Pasted ${activeCategory.name.replace(/s$/i, '') || 'entry'}`;
       const draft = buildStructuredImportDraft({
         fileName: fallbackName,
-        raw: text,
         text,
-        richTextHtml: convertPlainTextToRichHtml(text)
+        richTextHtml: convertPlainTextToRichHtml(text),
+        sourceFormat: 'text'
       }, activeCategory);
       setImportDrafts([draft]);
       setFeedback({
@@ -1398,7 +676,8 @@ export const useWorldBibleImports = ({
                     importCategory,
                     draft.text,
                     draft.richTextHtml,
-                    sectionDrafts
+                    sectionDrafts,
+                    draft.sourceFormat
                   )
                 },
                 updatedAt: now
@@ -1412,7 +691,8 @@ export const useWorldBibleImports = ({
                   importCategory,
                   draft.text,
                   draft.richTextHtml,
-                  sectionDrafts
+                  sectionDrafts,
+                  draft.sourceFormat
                 ),
                 needsCompletion: false,
                 links: [],

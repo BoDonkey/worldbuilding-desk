@@ -1,0 +1,176 @@
+import {describe, expect, it} from 'vitest';
+import type {EntityCategory} from '../../entityTypes';
+import {
+  classifyImportSections,
+  detectImportDocumentName,
+  detectImportSections,
+  mapImportedTextToFields,
+  markdownToRichHtml,
+  stripMarkdownComments
+} from './worldBibleImportParsing';
+
+const characters: EntityCategory = {
+  id: 'characters',
+  projectId: 'project',
+  kind: 'character',
+  name: 'Characters',
+  slug: 'characters',
+  createdAt: 1,
+  fieldSchema: [
+    {key: 'description', label: 'Description', type: 'textarea'},
+    {key: 'age', label: 'Age', type: 'text'},
+    {key: 'role', label: 'Role', type: 'text'},
+    {key: 'notes', label: 'Notes', type: 'textarea'}
+  ]
+};
+
+const withBackground: EntityCategory = {
+  ...characters,
+  fieldSchema: [
+    ...characters.fieldSchema,
+    {key: 'background', label: 'Background', type: 'textarea'}
+  ]
+};
+
+// Mirrors the structure of the author's Markdown character sheet (2026-10-08
+// dogfood): H1 title, H2 sections, bold list labels, HTML comments, and a
+// trailing colon-style heading.
+const markdownSheet = stripMarkdownComments([
+  '# Character Sheet: Mira Holt',
+  '',
+  '<!-- Merged from two drafts. [CHECK] markers need a decision. -->',
+  '',
+  '## Basic Information',
+  '- **Name:** Mira Holt',
+  '- Member of the Holt clan',
+  '- **Age:** Mid-30s',
+  '- **Occupation:** Detective partnered with Ansel Varga',
+  '',
+  '## Physical Description',
+  '- **Height:** 6 ft 1 in',
+  '- **Eyes:** Brown with rings like a tree',
+  '',
+  '## Background',
+  '- **Family:** Raised in a mixed community.',
+  '',
+  '## Naming Note: "Holt"',
+  'The surname marks clan affiliation.',
+  '',
+  'Open questions:',
+  '1. **Clan Significance:** What does a clan represent?'
+].join('\n')).trim();
+
+describe('Markdown document import', () => {
+  it('detects H2 sections, keeps the H1 as the title, and reads bold list labels', () => {
+    expect(detectImportDocumentName(markdownSheet, 'Character Sheet - Mira Holt.md')).toBe(
+      'Mira Holt'
+    );
+    expect(detectImportSections(markdownSheet).map((section) => section.title)).toEqual([
+      'Basic Information',
+      'Physical Description',
+      'Background',
+      'Naming Note: "Holt"',
+      'Open questions'
+    ]);
+  });
+
+  it('fills Age and Role from label rows and keeps Markdown structure in Description', () => {
+    const sections = classifyImportSections(
+      detectImportSections(markdownSheet),
+      characters,
+      'Mira Holt'
+    );
+    const fields = mapImportedTextToFields(
+      characters,
+      markdownSheet,
+      undefined,
+      sections,
+      'markdown'
+    );
+
+    expect(fields.age).toBe('Mid-30s');
+    expect(fields.role).toBe('Detective partnered with Ansel Varga');
+    expect(fields.description).toContain('<h1>Character Sheet: Mira Holt</h1>');
+    expect(fields.description).toContain('<h2>Basic Information</h2>');
+    expect(fields.description).toContain('<li><strong>Age:</strong> Mid-30s</li>');
+    expect(fields.description).toContain('<h2>Open questions</h2>');
+    expect(fields.description).not.toContain('**');
+    expect(fields.description).not.toContain('CHECK');
+  });
+
+  it('prefers an exact label match over an alias', () => {
+    const category: EntityCategory = {
+      ...characters,
+      fieldSchema: [
+        ...characters.fieldSchema,
+        {key: 'occupation', label: 'Occupation', type: 'text'}
+      ]
+    };
+    const fields = mapImportedTextToFields(category, 'Occupation: Courier', undefined, []);
+
+    expect(fields.occupation).toBe('Courier');
+    expect(fields.role).toBeUndefined();
+  });
+
+  it('maps label rows even when no headings are detected', () => {
+    const fields = mapImportedTextToFields(
+      characters,
+      'Age: 41\nA quiet archivist.',
+      undefined,
+      []
+    );
+
+    expect(fields.age).toBe('41');
+    expect(fields.description).toContain('A quiet archivist.');
+  });
+
+  it('treats a leading heading with its own content as a section, not a title', () => {
+    const source = '## Overview\nA river city.\n\n## History\nFounded twice.';
+
+    expect(detectImportSections(source).map((section) => section.title)).toEqual([
+      'Overview',
+      'History'
+    ]);
+  });
+});
+
+describe('same-named import headings', () => {
+  it('appends every section that lands in one field instead of overwriting', () => {
+    const source = [
+      'Background:',
+      'Family: Raised by his mother.',
+      '',
+      '### Academic Background',
+      'Several colleges.',
+      '',
+      'Background:',
+      'Early education abroad.'
+    ].join('\n');
+    const sections = detectImportSections(source).map((section) => ({
+      ...section,
+      action: 'new-field' as const
+    }));
+    const fields = mapImportedTextToFields(withBackground, source, undefined, sections);
+
+    expect(sections.map((section) => section.title)).toEqual([
+      'Background',
+      'Academic Background',
+      'Background'
+    ]);
+    expect(fields.background).toContain('Raised by his mother.');
+    expect(fields.background).toContain('Early education abroad.');
+  });
+});
+
+describe('markdownToRichHtml lists', () => {
+  it('closes each list item exactly once, including nested and mixed lists', () => {
+    const html = markdownToRichHtml(
+      ['- one', '- two', '  - two a', '  - two b', '- three', '1. first', '2. second'].join('\n')
+    );
+
+    expect(html).toBe(
+      '<ul><li>one</li><li>two<ul><li>two a</li><li>two b</li></ul></li><li>three</li></ul>' +
+        '<ol><li>first</li><li>second</li></ol>'
+    );
+  });
+});
