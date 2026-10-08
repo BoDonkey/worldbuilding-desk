@@ -6,8 +6,10 @@ import {
   detectImportSections,
   mapImportedTextToFields,
   markdownToRichHtml,
+  reconcileImportSectionDestinations,
   stripMarkdownComments
 } from './worldBibleImportParsing';
+import type {WorldBibleImportSectionDraft} from './worldBibleImportParsing';
 
 const characters: EntityCategory = {
   id: 'characters',
@@ -172,5 +174,85 @@ describe('markdownToRichHtml lists', () => {
       '<ul><li>one</li><li>two<ul><li>two a</li><li>two b</li></ul></li><li>three</li></ul>' +
         '<ol><li>first</li><li>second</li></ol>'
     );
+  });
+});
+
+const section = (
+  title: string,
+  content: string,
+  destination: Partial<WorldBibleImportSectionDraft> = {}
+): WorldBibleImportSectionDraft => ({
+  id: title,
+  title,
+  content,
+  action: 'record-section',
+  ...destination
+});
+
+describe('import heading destinations', () => {
+  it('classifies a heading that matches a field to that field key', () => {
+    const [age] = classifyImportSections([section('Age', '41')], characters, 'Mira');
+
+    expect(age).toMatchObject({action: 'existing-field', fieldKey: 'age'});
+  });
+
+  it('sends a heading to the field the author picked, whatever its title', () => {
+    const fields = mapImportedTextToFields(
+      withBackground,
+      'Schooling:\nTaught at home.',
+      undefined,
+      [section('Schooling', 'Taught at home.', {action: 'existing-field', fieldKey: 'background'})]
+    );
+
+    expect(fields.background).toContain('Taught at home.');
+    expect(fields.description ?? '').not.toContain('Taught at home.');
+  });
+
+  it('fills a planned new field by its label once the field exists', () => {
+    const category: EntityCategory = {
+      ...characters,
+      fieldSchema: [...characters.fieldSchema, {key: 'education', label: 'Education', type: 'textarea'}]
+    };
+    const fields = mapImportedTextToFields(category, 'Schooling:\nTaught at home.', undefined, [
+      section('Schooling', 'Taught at home.', {action: 'new-field', newFieldLabel: 'Education'})
+    ]);
+
+    expect(fields.education).toContain('Taught at home.');
+  });
+
+  it('turns a planned new field into the existing field once another import creates it', () => {
+    const planned = [section('Schooling', 'Home.', {action: 'new-field', newFieldLabel: 'Education'})];
+    const before = reconcileImportSectionDestinations(planned, characters, 'Mira');
+    const after = reconcileImportSectionDestinations(
+      planned,
+      {
+        ...characters,
+        fieldSchema: [...characters.fieldSchema, {key: 'education', label: 'Education', type: 'textarea'}]
+      },
+      'Mira'
+    );
+
+    expect(before).toBe(planned);
+    expect(after[0]).toMatchObject({action: 'existing-field', fieldKey: 'education'});
+    expect(after[0].newFieldLabel).toBeUndefined();
+  });
+
+  it('reclassifies a heading whose chosen field no longer exists', () => {
+    const [reconciled] = reconcileImportSectionDestinations(
+      [section('Age', '41', {action: 'existing-field', fieldKey: 'deleted_field'})],
+      characters,
+      'Mira'
+    );
+
+    expect(reconciled).toMatchObject({action: 'existing-field', fieldKey: 'age'});
+  });
+
+  it('keeps author choices that are still valid', () => {
+    const sections = [
+      section('Age', '41', {action: 'existing-field', fieldKey: 'role'}),
+      section('Rumors', 'Unclear.', {action: 'ignore'})
+    ];
+
+    expect(reconcileImportSectionDestinations(sections, characters, 'Mira')).toBe(sections);
   });
 });

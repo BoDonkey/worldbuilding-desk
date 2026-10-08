@@ -293,9 +293,7 @@ function WorldBibleRoute() {
       ).filter((field): field is EntityCategory['fieldSchema'][number] => Boolean(field))
     : [];
   const characterCustomFields = activeCategoryIsCharacterLike
-    ? activeCategory?.fieldSchema.filter(
-        (field) => !CHARACTER_AUTHORING_FIELD_KEYS.has(field.key)
-      ) ?? []
+    ? activeCategory?.fieldSchema.filter((field) => !CHARACTER_AUTHORING_FIELD_KEYS.has(field.key)) ?? []
     : [];
   const categoryById = useMemo(
     () => new Map(categories.map((category) => [category.id, category])),
@@ -1639,6 +1637,8 @@ function WorldBibleRoute() {
                   )}
 
                   {characterDescriptionField && renderEntityField(characterDescriptionField)}
+                  {/* Unsaved characters only have Canon; custom fields move to Notes after saving. */}
+                  {!selectedEntity && characterCustomFields.map(renderEntityField)}
                     </>
                   }
                   notesContent={

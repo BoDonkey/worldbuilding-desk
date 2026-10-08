@@ -15,7 +15,21 @@ export interface WorldBibleImportSectionDraft {
   title: string;
   content: string;
   action: WorldBibleImportSectionAction;
+  /** `existing-field`: key of the target field. */
+  fieldKey?: string;
+  /**
+   * `new-field`: label of the field to create (defaults to the heading title).
+   * Sections that share a label, in one draft or across a batch, create one field.
+   */
+  newFieldLabel?: string;
 }
+
+export type ImportSectionDestination = Pick<
+  WorldBibleImportSectionDraft,
+  'action' | 'fieldKey' | 'newFieldLabel'
+>;
+
+type CategoryField = EntityCategory['fieldSchema'][number];
 
 export const fileNameToEntityName = (name: string): string => {
   const base = name
@@ -147,13 +161,12 @@ const classifyImportSection = (
   title: string,
   category: EntityCategory,
   recordName: string
-): WorldBibleImportSectionAction => {
-  if (
-    category.fieldSchema.some(
-      (field) => canMapImportField(field) && isExistingFieldMatch(field, title)
-    )
-  ) {
-    return 'existing-field';
+): ImportSectionDestination => {
+  const matchingField = getImportFieldOptions(category).find((field) =>
+    isExistingFieldMatch(field, title)
+  );
+  if (matchingField) {
+    return {action: 'existing-field', fieldKey: matchingField.key};
   }
 
   const normalizedTitle = slugifyFieldKey(title).replace(/_/g, ' ');
@@ -161,29 +174,92 @@ const classifyImportSection = (
   const headingWords = titleWords(title);
   const mentionsRecord = headingWords.some((word) => recordWords.has(word));
   if (mentionsRecord) {
-    return 'record-section';
+    return {action: 'record-section'};
   }
 
   if (COMMON_REUSABLE_SECTION_LABELS.has(normalizedTitle)) {
-    return 'new-field';
+    return {action: 'new-field'};
   }
 
-  if (/\b(and|with|in|of)\b/i.test(title)) {
-    return 'record-section';
-  }
-
-  return 'record-section';
+  return {action: 'record-section'};
 };
+
+const withDestination = (
+  section: WorldBibleImportSectionDraft,
+  destination: ImportSectionDestination
+): WorldBibleImportSectionDraft => ({
+  ...section,
+  action: destination.action,
+  fieldKey: destination.action === 'existing-field' ? destination.fieldKey : undefined,
+  newFieldLabel: destination.action === 'new-field' ? destination.newFieldLabel : undefined
+});
 
 export const classifyImportSections = (
   sections: WorldBibleImportSectionDraft[],
   category: EntityCategory,
   recordName: string
 ): WorldBibleImportSectionDraft[] =>
-  sections.map((section) => ({
-    ...section,
-    action: classifyImportSection(section.title, category, recordName)
-  }));
+  sections.map((section) =>
+    withDestination(section, classifyImportSection(section.title, category, recordName))
+  );
+
+/** Fields an import heading can fill: text and rich-text fields. */
+export const getImportFieldOptions = (category: EntityCategory): CategoryField[] =>
+  category.fieldSchema.filter(canMapImportField);
+
+export const getNewFieldLabel = (section: WorldBibleImportSectionDraft): string =>
+  section.newFieldLabel?.trim() || section.title;
+
+/** The existing field a section fills, or null when it has none. */
+export const resolveImportSectionField = (
+  category: EntityCategory,
+  section: WorldBibleImportSectionDraft
+): CategoryField | null => {
+  const fields = getImportFieldOptions(category);
+  if (section.action === 'existing-field') {
+    return (
+      fields.find((field) => field.key === section.fieldKey) ??
+      (section.fieldKey ? null : fields.find((field) => isExistingFieldMatch(field, section.title))) ??
+      null
+    );
+  }
+  if (section.action === 'new-field') {
+    const label = getNewFieldLabel(section);
+    return fields.find((field) => isExistingFieldMatch(field, label)) ?? null;
+  }
+  return null;
+};
+
+/**
+ * Brings section destinations up to date with the category's current fields
+ * without discarding the author's choices: a planned new field that now
+ * exists becomes that field, and a field that no longer exists is
+ * reclassified. Returns the same array when nothing changed.
+ */
+export const reconcileImportSectionDestinations = (
+  sections: WorldBibleImportSectionDraft[],
+  category: EntityCategory,
+  recordName: string
+): WorldBibleImportSectionDraft[] => {
+  let changed = false;
+  const next = sections.map((section) => {
+    if (section.action !== 'existing-field' && section.action !== 'new-field') {
+      return section;
+    }
+    const field = resolveImportSectionField(category, section);
+    if (section.action === 'existing-field') {
+      if (field && field.key === section.fieldKey) return section;
+      changed = true;
+      return field
+        ? withDestination(section, {action: 'existing-field', fieldKey: field.key})
+        : withDestination(section, classifyImportSection(section.title, category, recordName));
+    }
+    if (!field) return section;
+    changed = true;
+    return withDestination(section, {action: 'existing-field', fieldKey: field.key});
+  });
+  return changed ? next : sections;
+};
 
 export const isExistingFieldMatch = (
   field: EntityCategory['fieldSchema'][number],
@@ -666,30 +742,22 @@ export const mapImportedTextToFields = (
 ): Record<string, string> => {
   const normalized = text.trim();
   const fields: Record<string, string> = {};
-  const mappedSections: WorldBibleImportSectionDraft[] = [];
+  const mappedSections: Array<{section: WorldBibleImportSectionDraft; field: CategoryField}> = [];
   const recordSections: WorldBibleImportSectionDraft[] = [];
 
   sections.forEach((section) => {
     if (section.action === 'ignore') return;
-    if (section.action === 'record-section') {
-      recordSections.push(section);
-      return;
-    }
-    const field = category.fieldSchema.find((candidate) =>
-      canMapImportField(candidate) && isExistingFieldMatch(candidate, section.title)
-    );
+    const field = section.action === 'record-section'
+      ? null
+      : resolveImportSectionField(category, section);
     if (field) {
-      mappedSections.push(section);
-    } else if (section.action === 'existing-field') {
+      mappedSections.push({section, field});
+    } else {
       recordSections.push(section);
     }
   });
 
-  mappedSections.forEach((section) => {
-    const field = category.fieldSchema.find((candidate) =>
-      canMapImportField(candidate) && isExistingFieldMatch(candidate, section.title)
-    );
-    if (!field) return;
+  mappedSections.forEach(({section, field}) => {
     // Same-named headings (or headings sharing one field) append, never overwrite.
     const value = field.type === 'textarea'
       ? renderImportRichText(section.content, format)

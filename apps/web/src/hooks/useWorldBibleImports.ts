@@ -15,21 +15,24 @@ import {
   detectImportDocumentName,
   detectImportSections,
   fileNameToEntityName,
+  getNewFieldLabel,
   htmlToText,
   isExistingFieldMatch,
   mapImportedTextToFields,
   markdownToRichHtml,
+  reconcileImportSectionDestinations,
   sanitizeImportedHtml,
   slugifyFieldKey,
   stripMarkdownComments
 } from '../services/worldBible/worldBibleImportParsing';
 import type {
+  ImportSectionDestination,
   ImportSourceFormat,
-  WorldBibleImportSectionAction,
   WorldBibleImportSectionDraft
 } from '../services/worldBible/worldBibleImportParsing';
 
 export type {
+  ImportSectionDestination,
   ImportSourceFormat,
   WorldBibleImportSectionAction,
   WorldBibleImportSectionDraft
@@ -142,10 +145,11 @@ const ensureSectionFields = async (
 
   sections.forEach((section) => {
     if (section.action !== 'new-field') return;
-    const existing = nextFields.find((field) => isExistingFieldMatch(field, section.title));
+    const label = getNewFieldLabel(section);
+    const existing = nextFields.find((field) => isExistingFieldMatch(field, label));
     if (existing) return;
 
-    const baseKey = slugifyFieldKey(section.title);
+    const baseKey = slugifyFieldKey(label);
     let key = baseKey;
     let suffix = 2;
     while (existingKeys.has(key)) {
@@ -153,7 +157,7 @@ const ensureSectionFields = async (
       suffix += 1;
     }
     existingKeys.add(key);
-    nextFields.push({key, label: section.title, type: 'textarea'});
+    nextFields.push({key, label, type: 'textarea'});
     changed = true;
   });
 
@@ -439,10 +443,9 @@ export const useWorldBibleImports = ({
         prev.map((draft) => {
           if (draft.id !== draftId) return draft;
           const nextDraft = {...draft, ...updates};
-          if (
-            (updates.categoryId && updates.categoryId !== draft.categoryId) ||
-            (typeof updates.name === 'string' && updates.name !== draft.name)
-          ) {
+          // A different category has different fields, so destinations start
+          // over; renaming the entry keeps the author's chosen destinations.
+          if (updates.categoryId && updates.categoryId !== draft.categoryId) {
             const category = categories.find((item) => item.id === nextDraft.categoryId);
             if (category && nextDraft.detectedSections) {
               nextDraft.detectedSections = classifyImportSections(
@@ -459,11 +462,11 @@ export const useWorldBibleImports = ({
     [categories]
   );
 
-  const updateImportSectionAction = useCallback(
+  const updateImportSectionDestination = useCallback(
     (
       draftId: string,
       sectionId: string,
-      action: WorldBibleImportSectionAction
+      destination: ImportSectionDestination
     ) => {
       setImportDrafts((prev) =>
         prev.map((draft) =>
@@ -471,7 +474,14 @@ export const useWorldBibleImports = ({
             ? {
                 ...draft,
                 detectedSections: draft.detectedSections?.map((section) =>
-                  section.id === sectionId ? {...section, action} : section
+                  section.id === sectionId
+                    ? {
+                        ...section,
+                        action: destination.action,
+                        fieldKey: destination.fieldKey,
+                        newFieldLabel: destination.newFieldLabel
+                      }
+                    : section
                 )
               }
             : draft
@@ -480,6 +490,27 @@ export const useWorldBibleImports = ({
     },
     []
   );
+
+  // When a category's fields change (an import in this batch created one, or
+  // the author edited fields), open drafts pick up the new fields.
+  useEffect(() => {
+    setImportDrafts((prev) => {
+      let changed = false;
+      const next = prev.map((draft) => {
+        const category = categories.find((item) => item.id === draft.categoryId);
+        if (!category || !draft.detectedSections) return draft;
+        const detectedSections = reconcileImportSectionDestinations(
+          draft.detectedSections,
+          category,
+          draft.name
+        );
+        if (detectedSections === draft.detectedSections) return draft;
+        changed = true;
+        return {...draft, detectedSections};
+      });
+      return changed ? next : prev;
+    });
+  }, [categories]);
 
   const handleJsonImportFile = useCallback(async (event: ChangeEvent<HTMLInputElement>) => {
     if (!activeProjectId || !activeCategory) return;
@@ -649,7 +680,7 @@ export const useWorldBibleImports = ({
 
         try {
           const sectionDrafts = draft.useDetectedSections
-            ? draft.detectedSections ?? []
+            ? reconcileImportSectionDestinations(draft.detectedSections ?? [], category, draft.name)
             : [];
           const importCategory = await ensureSectionFields(category, sectionDrafts);
           if (importCategory !== category) {
@@ -898,7 +929,7 @@ export const useWorldBibleImports = ({
     handleImportEntities,
     preparePastedImportDraft,
     updateImportDraft,
-    updateImportSectionAction,
+    updateImportSectionDestination,
     applyImportDrafts,
     applyJsonImport,
     handleJsonImportFile,

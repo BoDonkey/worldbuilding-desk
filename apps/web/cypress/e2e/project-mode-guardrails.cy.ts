@@ -281,15 +281,12 @@ describe('Project mode guardrails', () => {
     cy.contains('h2', 'Import Preview').should('be.visible');
     cy.get('input[value="Mira Voss"]').should('be.visible');
     cy.contains('span', '2 headings detected').should('be.visible');
-    cy.contains('strong', 'Classify detected headings').should('be.visible');
-    cy.contains('strong', 'Background')
-      .closest('[class*="importSectionItem"]')
-      .find('select')
-      .should('have.value', 'new-field');
-    cy.contains('strong', 'Voice')
-      .closest('[class*="importSectionItem"]')
-      .find('select')
-      .select('Reusable field');
+    cy.contains('strong', 'Choose where each heading goes').should('be.visible');
+    cy.get('select[aria-label="Destination for Background"]').should(
+      'have.value',
+      'new:Background'
+    );
+    cy.get('select[aria-label="Destination for Voice"]').select('New field: Voice');
     cy.contains('button', 'Import and open').click();
 
     cy.contains('h2', 'Edit Character Canon').should('be.visible');

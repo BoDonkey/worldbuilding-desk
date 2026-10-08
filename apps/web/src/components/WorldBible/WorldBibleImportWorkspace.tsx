@@ -10,7 +10,26 @@ import type {useWorldBibleAuthoringAssistant} from '../../hooks/useWorldBibleAut
 import {AIAssistant} from '../AIAssistant/AIAssistant';
 import {ImportSectionPanel} from './ImportSectionPanel';
 import {normalizeRichTextValue} from '../../services/worldBible/worldBibleEntityHelpers';
+import {getNewFieldLabel} from '../../services/worldBible/worldBibleImportParsing';
 import styles from '../../assets/components/WorldBibleRoute.module.css';
+
+/** New-field labels planned by included drafts, per category, so one import can reuse another's. */
+const getPlannedNewFieldLabels = (drafts: WorldBibleImportDraft[]): Map<string, string[]> => {
+  const byCategory = new Map<string, string[]>();
+  drafts.forEach((draft) => {
+    if (!draft.include || draft.parseError || !draft.useDetectedSections) return;
+    const labels = byCategory.get(draft.categoryId) ?? [];
+    draft.detectedSections?.forEach((section) => {
+      if (section.action !== 'new-field') return;
+      const label = getNewFieldLabel(section);
+      if (!labels.some((known) => known.toLowerCase() === label.toLowerCase())) {
+        labels.push(label);
+      }
+    });
+    byCategory.set(draft.categoryId, labels);
+  });
+  return byCategory;
+};
 
 const getPreferredImportField = (category: EntityCategory) =>
   category.fieldSchema.find((field) => field.key === 'description') ??
@@ -49,7 +68,7 @@ export const WorldBibleImportWorkspace = (props: WorldBibleImportWorkspaceProps)
     isApplyingImports, importDrafts, clearImportDrafts, isApplyingJsonImport,
     jsonImportSession, jsonImportConflictResolutions, activeJsonCategory,
     preparedJsonRows, jsonImportValidCount, jsonImportConflictCount,
-    unresolvedJsonConflictCount, updateImportDraft, updateImportSectionAction,
+    unresolvedJsonConflictCount, updateImportDraft, updateImportSectionDestination,
     applyJsonImport, handleJsonCategoryChange, handleJsonNameKeyChange,
     handleJsonModeChange, handleJsonFieldMapChange,
     handleJsonConflictResolutionChange, clearJsonImportSession
@@ -58,6 +77,7 @@ export const WorldBibleImportWorkspace = (props: WorldBibleImportWorkspaceProps)
     isImportAiHelperOpen, setIsImportAiHelperOpen, importAiContext,
     detectedSectionImportDraftCount, handleUseDetectedSectionsForImportDrafts
   } = authoring;
+  const plannedNewFieldLabels = getPlannedNewFieldLabels(importDrafts);
   return (
     <>
       {activeCategory && isPasteImportOpen && (
@@ -287,9 +307,11 @@ export const WorldBibleImportWorkspace = (props: WorldBibleImportWorkspaceProps)
                     <>
                       <ImportSectionPanel
                         draft={draft}
+                        category={category}
+                        plannedNewFieldLabels={plannedNewFieldLabels.get(draft.categoryId)}
                         isApplyingImports={isApplyingImports}
                         onUpdateDraft={updateImportDraft}
-                        onUpdateSectionAction={updateImportSectionAction}
+                        onUpdateSectionDestination={updateImportSectionDestination}
                       />
                       <div className={styles.importDraftActions}>
                         <button
@@ -319,7 +341,7 @@ export const WorldBibleImportWorkspace = (props: WorldBibleImportWorkspaceProps)
                       <p className={styles.importPreview}>{draft.preview}</p>
                       <p className={styles.importDraftNote}>
                         {draft.useDetectedSections && (draft.detectedSections?.length ?? 0) > 0
-                          ? 'Description keeps intro and record-section headings. Only reusable field headings change the category schema.'
+                          ? 'Description keeps the intro and every heading set to Keep in Description. Only New field choices add fields to the category.'
                           : landsAsRichText
                             ? 'This import will preserve richer prose structure in the target lore field.'
                             : 'This import will land as plain text in the target field.'}
