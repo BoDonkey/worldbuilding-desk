@@ -68,7 +68,7 @@ export function useConfirmDialog() {
     [handleCancel, handleConfirm, request]
   );
 
-  return {requestConfirm, confirmDialog};
+  return {requestConfirm, confirmDialog, isConfirmOpen: request !== null};
 }
 
 export default useConfirmDialog;

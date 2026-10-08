@@ -2,6 +2,7 @@ import {fireEvent, render, screen, waitFor} from '@testing-library/react';
 import {beforeEach, describe, expect, it, vi} from 'vitest';
 import type {EntityCategory} from '../../entityTypes';
 import {createSystemNegativeSpaceCategory} from '../../services/worldBible/systemNegativeSpace';
+import {MemoryRouter} from 'react-router';
 import {CategoryManager} from './CategoryManager';
 
 const mocks = vi.hoisted(() => ({
@@ -26,16 +27,19 @@ const factions: EntityCategory = {
 
 const renderManager = (props: Partial<Parameters<typeof CategoryManager>[0]> = {}) => {
   const onCategoriesChange = vi.fn();
+  const onClose = vi.fn();
   render(
-    <CategoryManager
-      projectId='project-1'
-      categories={[factions]}
-      onCategoriesChange={onCategoriesChange}
-      onClose={vi.fn()}
-      {...props}
-    />
+    <MemoryRouter>
+      <CategoryManager
+        projectId='project-1'
+        categories={[factions]}
+        onCategoriesChange={onCategoriesChange}
+        onClose={onClose}
+        {...props}
+      />
+    </MemoryRouter>
   );
-  return {onCategoriesChange};
+  return {onCategoriesChange, onClose};
 };
 
 describe('CategoryManager', () => {
@@ -68,5 +72,45 @@ describe('CategoryManager', () => {
 
     expect(screen.queryByRole('button', {name: 'Add Problems Power Cannot Solve'})).not.toBeInTheDocument();
     expect(screen.getByRole('button', {name: 'Delete Problems Power Cannot Solve'})).toBeInTheDocument();
+  });
+
+  it('opens as a labelled modal dialog with focus inside', () => {
+    renderManager();
+
+    const dialog = screen.getByRole('dialog', {name: 'Manage Categories'});
+    expect(dialog).toHaveAttribute('aria-modal', 'true');
+    expect(dialog).toContainElement(document.activeElement as HTMLElement);
+  });
+
+  it('backs out of field editing on Escape before closing', () => {
+    const {onClose} = renderManager();
+
+    fireEvent.click(screen.getByRole('button', {name: 'Edit Fields'}));
+    expect(screen.getByRole('dialog', {name: 'Edit Factions fields'})).toBeInTheDocument();
+
+    fireEvent.keyDown(window, {key: 'Escape'});
+    expect(screen.getByRole('dialog', {name: 'Manage Categories'})).toBeInTheDocument();
+    expect(onClose).not.toHaveBeenCalled();
+
+    fireEvent.keyDown(window, {key: 'Escape'});
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('lets Escape close only the delete confirmation when it is open', () => {
+    const {onClose} = renderManager();
+
+    fireEvent.click(screen.getByRole('button', {name: 'Delete Factions'}));
+    expect(screen.getByRole('dialog', {name: 'Delete this category?'})).toBeInTheDocument();
+
+    fireEvent.keyDown(window, {key: 'Escape'});
+    expect(screen.queryByRole('dialog', {name: 'Delete this category?'})).not.toBeInTheDocument();
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it('closes when the overlay is clicked', () => {
+    const {onClose} = renderManager();
+
+    fireEvent.click(screen.getByRole('presentation'));
+    expect(onClose).toHaveBeenCalledTimes(1);
   });
 });

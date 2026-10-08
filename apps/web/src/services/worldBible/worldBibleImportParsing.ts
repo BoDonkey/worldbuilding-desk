@@ -725,8 +725,16 @@ export const markdownToRichHtml = (raw: string): string => {
   return blocks.join('') || '<p></p>';
 };
 
+export const getImportSourceKind = (fileName: string): string => {
+  const lower = fileName.toLowerCase();
+  if (lower.endsWith('.html') || lower.endsWith('.htm')) return 'HTML';
+  if (lower.endsWith('.md') || lower.endsWith('.markdown')) return 'Markdown';
+  if (lower.endsWith('.docx')) return 'DOCX';
+  return 'Text';
+};
+
 export const buildPreview = (text: string, limit = 180): string => {
-  const normalized = text.replace(/\s+/g, ' ').trim();
+  const normalized = text.replace(/^\s{0,3}#{1,6}\s+/gm, '').replace(/\s+/g, ' ').trim();
   if (!normalized) return '(empty)';
   return normalized.length > limit
     ? `${normalized.slice(0, limit)}...`

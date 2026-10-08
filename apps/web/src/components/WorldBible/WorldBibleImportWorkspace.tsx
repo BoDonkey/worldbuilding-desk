@@ -1,5 +1,6 @@
-import type {Dispatch, RefObject, SetStateAction} from 'react';
-import type {EntityCategory, Project, ProjectSettings} from '../../entityTypes';
+import {useState} from 'react';
+import type {Dispatch, SetStateAction} from 'react';
+import type {EntityCategory, Project, ProjectSettings, WorldEntity} from '../../entityTypes';
 import type {
   ImportMode,
   JsonImportConflictResolution,
@@ -7,17 +8,20 @@ import type {
   useWorldBibleImports
 } from '../../hooks/useWorldBibleImports';
 import type {useWorldBibleAuthoringAssistant} from '../../hooks/useWorldBibleAuthoringAssistant';
+import {useConfirmDialog} from '../../hooks/useConfirmDialog';
 import {AIAssistant} from '../AIAssistant/AIAssistant';
-import {ImportSectionPanel} from './ImportSectionPanel';
-import {normalizeRichTextValue} from '../../services/worldBible/worldBibleEntityHelpers';
+import {ImportDraftCard} from './ImportDraftCard';
+import {ImportDocumentPreviewDialog} from './ImportDocumentPreviewDialog';
 import {getNewFieldLabel} from '../../services/worldBible/worldBibleImportParsing';
 import styles from '../../assets/components/WorldBibleRoute.module.css';
 
-/** New-field labels planned by included drafts, per category, so one import can reuse another's. */
+/** New-field labels planned by drafts still waiting, per category, so one import can reuse another's. */
 const getPlannedNewFieldLabels = (drafts: WorldBibleImportDraft[]): Map<string, string[]> => {
   const byCategory = new Map<string, string[]>();
   drafts.forEach((draft) => {
-    if (!draft.include || draft.parseError || !draft.useDetectedSections) return;
+    if (!draft.include || draft.parseError || draft.status === 'imported' || !draft.useDetectedSections) {
+      return;
+    }
     const labels = byCategory.get(draft.categoryId) ?? [];
     draft.detectedSections?.forEach((section) => {
       if (section.action !== 'new-field') return;
@@ -31,10 +35,7 @@ const getPlannedNewFieldLabels = (drafts: WorldBibleImportDraft[]): Map<string, 
   return byCategory;
 };
 
-const getPreferredImportField = (category: EntityCategory) =>
-  category.fieldSchema.find((field) => field.key === 'description') ??
-  category.fieldSchema.find((field) => field.type === 'textarea') ??
-  category.fieldSchema.find((field) => field.type === 'text');
+const plural = (count: number, noun: string) => `${count} ${noun}${count === 1 ? '' : 's'}`;
 
 interface WorldBibleImportWorkspaceProps {
   activeProject: Project;
@@ -49,23 +50,18 @@ interface WorldBibleImportWorkspaceProps {
   pastedImportText: string;
   setPastedImportText: Dispatch<SetStateAction<string>>;
   handlePreparePastedImportDraft: () => void;
-  richImportDraftCount: number;
-  activeImportPreviewDraft: WorldBibleImportDraft | null;
-  importPreviewDialogRef: RefObject<HTMLDivElement | null>;
-  setActiveImportPreviewId: Dispatch<SetStateAction<string | null>>;
-  handleApplyImportDrafts: (options?: {draftIds?: string[]; openFirstImported?: boolean}) => Promise<void>;
+  /** Opens a saved record in the editor; `saved` is the just-written copy when the list is not yet refreshed. */
+  onOpenImportedEntity: (entityId: string, saved?: WorldEntity) => void;
 }
 
 export const WorldBibleImportWorkspace = (props: WorldBibleImportWorkspaceProps) => {
   const {
     activeProject, projectSettings, activeCategory, categories, categoryById, imports, authoring,
     isPasteImportOpen, setIsPasteImportOpen, pastedImportText, setPastedImportText,
-    handlePreparePastedImportDraft, richImportDraftCount, activeImportPreviewDraft,
-    importPreviewDialogRef, setActiveImportPreviewId,
-    handleApplyImportDrafts
+    handlePreparePastedImportDraft, onOpenImportedEntity
   } = props;
   const {
-    isApplyingImports, importDrafts, clearImportDrafts, isApplyingJsonImport,
+    isApplyingImports, importDrafts, clearImportDrafts, applyImportDrafts, isApplyingJsonImport,
     jsonImportSession, jsonImportConflictResolutions, activeJsonCategory,
     preparedJsonRows, jsonImportValidCount, jsonImportConflictCount,
     unresolvedJsonConflictCount, updateImportDraft, updateImportSectionDestination,
@@ -77,7 +73,42 @@ export const WorldBibleImportWorkspace = (props: WorldBibleImportWorkspaceProps)
     isImportAiHelperOpen, setIsImportAiHelperOpen, importAiContext,
     detectedSectionImportDraftCount, handleUseDetectedSectionsForImportDrafts
   } = authoring;
+  const [activeImportPreviewId, setActiveImportPreviewId] = useState<string | null>(null);
+  const {requestConfirm, confirmDialog} = useConfirmDialog();
   const plannedNewFieldLabels = getPlannedNewFieldLabels(importDrafts);
+  const activeImportPreviewDraft =
+    importDrafts.find((draft) => draft.id === activeImportPreviewId) ?? null;
+
+  const importedCount = importDrafts.filter((draft) => draft.status === 'imported').length;
+  const failedCount = importDrafts.filter((draft) => draft.status === 'failed').length;
+  const unreadableCount = importDrafts.filter((draft) => draft.parseError).length;
+  const unsavedDrafts = importDrafts.filter(
+    (draft) => !draft.parseError && draft.status !== 'imported'
+  );
+  const selectedUnsavedCount = unsavedDrafts.filter((draft) => draft.include).length;
+
+  const handleImport = async (options?: {draftIds?: string[]; openFirstImported?: boolean}) => {
+    const firstImported = await applyImportDrafts(options);
+    if (options?.openFirstImported && firstImported) {
+      setActiveImportPreviewId(null);
+      onOpenImportedEntity(firstImported.id, firstImported);
+    }
+  };
+
+  const handleCloseImports = () => {
+    if (unsavedDrafts.length === 0) {
+      clearImportDrafts();
+      return;
+    }
+    requestConfirm({
+      title: 'Discard drafts that are not imported?',
+      message: `${plural(unsavedDrafts.length, 'draft')} will be discarded without saving. Records already imported stay in the project.`,
+      confirmLabel: 'Discard',
+      variant: 'danger',
+      onConfirm: clearImportDrafts
+    });
+  };
+
   return (
     <>
       {activeCategory && isPasteImportOpen && (
@@ -133,24 +164,28 @@ export const WorldBibleImportWorkspace = (props: WorldBibleImportWorkspaceProps)
               </button>
               <button
                 type='button'
-                onClick={() => void handleApplyImportDrafts()}
-                disabled={isApplyingImports}
+                onClick={() => void handleImport()}
+                disabled={isApplyingImports || selectedUnsavedCount === 0}
               >
-                {isApplyingImports ? 'Importing...' : 'Apply Imports'}
+                {isApplyingImports ? 'Importing...' : `Import selected (${selectedUnsavedCount})`}
               </button>
               <button
                 type='button'
-                onClick={clearImportDrafts}
+                onClick={handleCloseImports}
                 disabled={isApplyingImports}
               >
-                Clear
+                {unsavedDrafts.length > 0 ? 'Discard drafts' : 'Close'}
               </button>
             </div>
           </div>
           <p className={styles.importSummary}>
-            {importDrafts.filter((draft) => draft.include && !draft.parseError).length}{' '}
-            selected · {importDrafts.filter((draft) => draft.parseError).length} with
-            errors · {richImportDraftCount} targeting rich-text lore fields
+            Nothing is saved to the project until a draft is imported. Import and open saves
+            one draft; Import selected saves every checked draft.
+          </p>
+          <p className={styles.importSummary} aria-label='Import status'>
+            {plural(unsavedDrafts.length - failedCount, 'draft')} waiting · {importedCount} imported
+            {failedCount > 0 ? ` · ${failedCount} failed` : ''}
+            {unreadableCount > 0 ? ` · ${unreadableCount} unreadable` : ''}
           </p>
           {isImportAiHelperOpen && (
             <section className={styles.aiHelperPanel} aria-label='Import AI helper'>
@@ -209,238 +244,39 @@ export const WorldBibleImportWorkspace = (props: WorldBibleImportWorkspaceProps)
             </section>
           )}
           <ul className={styles.importDraftList}>
-            {importDrafts.map((draft) => {
-              const category = categoryById.get(draft.categoryId) ?? null;
-              const preferredField = category ? getPreferredImportField(category) : null;
-              const landsAsRichText = preferredField?.type === 'textarea';
-              const sourceKind = draft.fileName.toLowerCase().endsWith('.html') ||
-                draft.fileName.toLowerCase().endsWith('.htm')
-                ? 'HTML'
-                : draft.fileName.toLowerCase().endsWith('.md') ||
-                    draft.fileName.toLowerCase().endsWith('.markdown')
-                  ? 'Markdown'
-                  : draft.fileName.toLowerCase().endsWith('.docx')
-                    ? 'DOCX'
-                    : 'Text';
-              return (
-                <li key={draft.id} className={styles.importDraftCard}>
-                  <div className={styles.importDraftTop}>
-                    <label>
-                      <input
-                        type='checkbox'
-                        checked={draft.include}
-                        disabled={Boolean(draft.parseError) || isApplyingImports}
-                        onChange={(e) =>
-                          updateImportDraft(draft.id, {include: e.target.checked})
-                        }
-                      />
-                      <span>{draft.fileName}</span>
-                    </label>
-                    <div className={styles.importChipRow}>
-                      <span className={styles.importChip}>{sourceKind}</span>
-                      {preferredField && (
-                        <span
-                          className={`${styles.importChip} ${
-                            landsAsRichText ? styles.importChipRich : styles.importChipPlain
-                          }`}
-                        >
-                          {landsAsRichText
-                            ? `Rich text -> ${preferredField.label}`
-                            : `Plain field -> ${preferredField.label}`}
-                        </span>
-                      )}
-                      {draft.detectedSections && draft.detectedSections.length > 0 && (
-                        <span className={`${styles.importChip} ${styles.importChipRich}`}>
-                          {draft.detectedSections.length} headings detected
-                        </span>
-                      )}
-                      <span className={styles.importChip}>
-                        {draft.mode === 'upsert' ? 'Update by name' : 'Create new'}
-                      </span>
-                    </div>
-                  </div>
-                  <div className={styles.importDraftFields}>
-                    <label>
-                      Entry Name
-                      <input
-                        type='text'
-                        value={draft.name}
-                        disabled={Boolean(draft.parseError) || isApplyingImports}
-                        onChange={(e) =>
-                          updateImportDraft(draft.id, {name: e.target.value})
-                        }
-                      />
-                    </label>
-                    <label>
-                      Category
-                      <select
-                        value={draft.categoryId}
-                        disabled={Boolean(draft.parseError) || isApplyingImports}
-                        onChange={(e) =>
-                          updateImportDraft(draft.id, {categoryId: e.target.value})
-                        }
-                      >
-                        {categories.map((categoryOption) => (
-                          <option key={categoryOption.id} value={categoryOption.id}>
-                            {categoryOption.name}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                    <label>
-                      Behavior
-                      <select
-                        value={draft.mode}
-                        disabled={Boolean(draft.parseError) || isApplyingImports}
-                        onChange={(e) =>
-                          updateImportDraft(draft.id, {mode: e.target.value as ImportMode})
-                        }
-                      >
-                        <option value='create'>Create New</option>
-                        <option value='upsert'>Update by Name</option>
-                      </select>
-                    </label>
-                  </div>
-                  {draft.parseError ? (
-                    <p className={styles.importError}>{draft.parseError}</p>
-                  ) : (
-                    <>
-                      <ImportSectionPanel
-                        draft={draft}
-                        category={category}
-                        plannedNewFieldLabels={plannedNewFieldLabels.get(draft.categoryId)}
-                        isApplyingImports={isApplyingImports}
-                        onUpdateDraft={updateImportDraft}
-                        onUpdateSectionDestination={updateImportSectionDestination}
-                      />
-                      <div className={styles.importDraftActions}>
-                        <button
-                          type='button'
-                          className={styles.importPreviewButton}
-                          onClick={() =>
-                            void handleApplyImportDrafts({
-                              draftIds: [draft.id],
-                              openFirstImported: true
-                            })
-                          }
-                          disabled={isApplyingImports}
-                        >
-                          Import and open
-                        </button>
-                        {draft.richTextHtml && (
-                          <button
-                            type='button'
-                            className={styles.importPreviewButton}
-                            onClick={() => setActiveImportPreviewId(draft.id)}
-                            disabled={isApplyingImports}
-                          >
-                            Preview source document
-                          </button>
-                        )}
-                      </div>
-                      <p className={styles.importPreview}>{draft.preview}</p>
-                      <p className={styles.importDraftNote}>
-                        {draft.useDetectedSections && (draft.detectedSections?.length ?? 0) > 0
-                          ? 'Description keeps the intro and every heading set to Keep in Description. Only New field choices add fields to the category.'
-                          : landsAsRichText
-                            ? 'This import will preserve richer prose structure in the target lore field.'
-                            : 'This import will land as plain text in the target field.'}
-                      </p>
-                    </>
-                  )}
-                </li>
-              );
-            })}
+            {importDrafts.map((draft) => (
+              <ImportDraftCard
+                key={draft.id}
+                draft={draft}
+                category={categoryById.get(draft.categoryId) ?? null}
+                categories={categories}
+                plannedNewFieldLabels={plannedNewFieldLabels.get(draft.categoryId)}
+                isApplyingImports={isApplyingImports}
+                onUpdateDraft={updateImportDraft}
+                onUpdateSectionDestination={updateImportSectionDestination}
+                onImportAndOpen={(draftId) =>
+                  void handleImport({draftIds: [draftId], openFirstImported: true})
+                }
+                onOpenImported={(entityId) => onOpenImportedEntity(entityId)}
+                onPreviewSource={setActiveImportPreviewId}
+              />
+            ))}
           </ul>
         </section>
       )}
 
-      {activeImportPreviewDraft && (() => {
-        const previewCategory = categoryById.get(activeImportPreviewDraft.categoryId) ?? null;
-        const previewField = previewCategory ? getPreferredImportField(previewCategory) : null;
-        const previewSourceKind =
-          activeImportPreviewDraft.fileName.toLowerCase().endsWith('.html') ||
-          activeImportPreviewDraft.fileName.toLowerCase().endsWith('.htm')
-            ? 'HTML'
-            : activeImportPreviewDraft.fileName.toLowerCase().endsWith('.md') ||
-                activeImportPreviewDraft.fileName.toLowerCase().endsWith('.markdown')
-              ? 'Markdown'
-              : activeImportPreviewDraft.fileName.toLowerCase().endsWith('.docx')
-                ? 'DOCX'
-                : 'Text';
-        return (
-          <div
-            ref={importPreviewDialogRef}
-            className={styles.importPreviewOverlay}
-            role='dialog'
-            aria-modal='true'
-            aria-label='Import document preview'
-            onClick={() => setActiveImportPreviewId(null)}
-          >
-            <div
-              className={styles.importPreviewCard}
-              onClick={(event) => event.stopPropagation()}
-            >
-              <div className={styles.importPreviewHeader}>
-                <div>
-                  <div className={styles.importPreviewEyebrow}>Import document preview</div>
-                  <h3 className={styles.importPreviewTitle}>
-                    {activeImportPreviewDraft.name || activeImportPreviewDraft.fileName}
-                  </h3>
-                  <div className={styles.importChipRow}>
-                    <span className={styles.importChip}>{previewSourceKind}</span>
-                    {previewField && (
-                      <span
-                        className={`${styles.importChip} ${
-                          previewField.type === 'textarea'
-                            ? styles.importChipRich
-                            : styles.importChipPlain
-                        }`}
-                      >
-                        {previewField.type === 'textarea'
-                          ? `Rich text -> ${previewField.label}`
-                          : `Plain field -> ${previewField.label}`}
-                      </span>
-                    )}
-                    <span className={styles.importChip}>{activeImportPreviewDraft.fileName}</span>
-                  </div>
-                </div>
-                <button
-                  type='button'
-                  className={styles.importPreviewButton}
-                  onClick={() =>
-                    void handleApplyImportDrafts({
-                      draftIds: [activeImportPreviewDraft.id],
-                      openFirstImported: true
-                    })
-                  }
-                  disabled={isApplyingImports}
-                >
-                  Import and open
-                </button>
-                <button
-                  type='button'
-                  className={styles.importPreviewButton}
-                  onClick={() => setActiveImportPreviewId(null)}
-                  disabled={isApplyingImports}
-                >
-                  Close preview
-                </button>
-              </div>
-              <div className={styles.importPreviewDocument}>
-                <article
-                  className={styles.importPreviewContent}
-                  dangerouslySetInnerHTML={{
-                    __html:
-                      activeImportPreviewDraft.richTextHtml ||
-                      normalizeRichTextValue(activeImportPreviewDraft.text)
-                  }}
-                />
-              </div>
-            </div>
-          </div>
-        );
-      })()}
+      {activeImportPreviewDraft && (
+        <ImportDocumentPreviewDialog
+          draft={activeImportPreviewDraft}
+          category={categoryById.get(activeImportPreviewDraft.categoryId) ?? null}
+          isApplyingImports={isApplyingImports}
+          onImportAndOpen={(draftId) =>
+            void handleImport({draftIds: [draftId], openFirstImported: true})
+          }
+          onClose={() => setActiveImportPreviewId(null)}
+        />
+      )}
+      {confirmDialog}
 
       {jsonImportSession && (
         <section className={styles.importPanel}>

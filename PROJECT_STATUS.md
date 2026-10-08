@@ -418,6 +418,15 @@ Under the hood, the app still includes rich systems for world data, rules, chara
   rest; renaming an entry keeps chosen destinations. Unsaved characters show
   the category's custom fields on Canon; saved characters keep them on
   Notes.
+- The World Bible import preview states that nothing is saved until a draft
+  is imported and shows a waiting / imported / failed count. Imported drafts
+  stay listed as **Imported** with an **Open** action; failed drafts show the
+  reason and stay importable; drafts are never imported twice. **Import
+  and open** scrolls the opened record into view. **Import selected (N)**
+  replaces Apply Imports, and closing with unsaved drafts asks before
+  discarding them. **Manage Categories** is a modal dialog (focus trap,
+  Escape backs out of field editing then closes, closes on navigation,
+  bottom sheet on mobile).
 - World Bible now follows shared page chrome, uses a compact utility rail for import/help tools, opens category tabs in browse/list mode by default, and reveals manual entry forms only after explicit create/edit selection.
 - World Bible category task cards reserve stable description height so switching between Characters, Locations, and Items does not shift the list below.
 - World Bible AI assistance is being reshaped away from top-level AI draft cards and toward an explicit helper model. The current helper is an interim floating chat with selected-text apply to editable fields; the target model is open brainstorming plus confirmable model-proposed actions for names, aliases, fields, and new sections.
@@ -885,6 +894,13 @@ runtime schema, and nothing here changes the roadmap's status board.
 ## Verification Status
 
 ### Verified Recently
+- Slice 4.56 multi-document import flow and category manager dialog:
+  per-draft import status in `useWorldBibleImports`, `ImportDraftCard` and
+  `ImportDocumentPreviewDialog` split out of the import workspace, record
+  editor scrolled into view on open, and `CategoryManager` as a modal.
+  `WorldBibleRoute.tsx` fell from 2,229 to 2,202 lines. Battery: lint (one
+  existing warning), 890 web + 47 engine + 12 UI + 24 desktop tests,
+  web/desktop builds, file-size gate, Cypress 137/137 with no retries.
 - Slice 4.55 import heading destinations: destination picker, batch
   carry-over of new fields (`reconcileImportSectionDestinations`), and custom
   fields on unsaved characters. New Cypress spec `world-bible-import.cy.ts`

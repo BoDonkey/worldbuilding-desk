@@ -64,10 +64,12 @@ export const WorldBibleCategoryRail = (props: WorldBibleCategoryRailProps) => {
                 </button>
               ))}
               <button
-                onClick={() => setShowCategoryManager(!showCategoryManager)}
+                type='button'
+                onClick={() => setShowCategoryManager(true)}
+                aria-haspopup='dialog'
                 className={styles.manageButton}
               >
-                {showCategoryManager ? 'Close' : 'Manage Categories'}
+                Manage Categories
               </button>
             </div>
             <div className={styles.categoryRailSection}>

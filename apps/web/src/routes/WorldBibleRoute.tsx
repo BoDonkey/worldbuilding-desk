@@ -1,8 +1,6 @@
 import {useEffect, useState, useCallback, useRef, useMemo} from 'react';
 import type {FormEvent} from 'react';
 import {useLocation, useNavigate} from 'react-router';
-import {useEscapeToClose} from '../hooks/useEscapeToClose';
-import {useFocusTrap} from '../hooks/useFocusTrap';
 import {useConfirmDialog} from '../hooks/useConfirmDialog';
 import {useAppStore} from '../store/appStore';
 import {getProjectCapabilities} from '../projectMode';
@@ -46,7 +44,6 @@ import {
   ALTERNATIVE_NAMES_KEY,
   buildWorldBibleEntityContent,
   formatAlternativeNames,
-  getPreferredImportField,
   getWorldBibleFieldTemplateValue,
   normalizeRichTextValue,
   normalizeName,
@@ -117,7 +114,12 @@ function WorldBibleRoute() {
   const [name, setName] = useState('');
   const [fieldValues, setFieldValues] = useState<Record<string, string>>({});
   const [showCategoryManager, setShowCategoryManager] = useState(false);
-  const [activeImportPreviewId, setActiveImportPreviewId] = useState<string | null>(null);
+  const [importOpenRequest, setImportOpenRequest] = useState(0);
+  const recordFormRef = useRef<HTMLFormElement | null>(null);
+  // Opening an imported record brings its editor into view below the import preview.
+  useEffect(() => {
+    if (importOpenRequest > 0) recordFormRef.current?.scrollIntoView({block: 'start'});
+  }, [importOpenRequest]);
   const [characterAuthoringMode, setCharacterAuthoringMode] =
     useState<CharacterAuthoringMode>('idle');
   const [recordAuthoringMode, setRecordAuthoringMode] =
@@ -340,7 +342,6 @@ function WorldBibleRoute() {
     handleImportEntities,
     preparePastedImportDraft,
     updateImportDraft,
-    applyImportDrafts,
     handleJsonImportFile,
   } = worldBibleImports;
   const currentEntityMemories = editingId
@@ -365,26 +366,6 @@ function WorldBibleRoute() {
     () => new Set(projectSettings?.ignoredEntityMatchKeys ?? []),
     [projectSettings?.ignoredEntityMatchKeys]
   );
-  const richImportDraftCount = useMemo(
-    () =>
-      importDrafts.filter((draft) => {
-        const category = categoryById.get(draft.categoryId);
-        const preferredField = category ? getPreferredImportField(category) : null;
-        return preferredField?.type === 'textarea';
-      }).length,
-    [categoryById, importDrafts]
-  );
-  const activeImportPreviewDraft = useMemo(
-    () => importDrafts.find((draft) => draft.id === activeImportPreviewId) ?? null,
-    [activeImportPreviewId, importDrafts]
-  );
-  const importPreviewDialogRef = useRef<HTMLDivElement | null>(null);
-  const closeImportPreviewDialog = useCallback(() => {
-    setActiveImportPreviewId(null);
-  }, [setActiveImportPreviewId]);
-  const isImportPreviewDialogOpen = Boolean(activeImportPreviewDraft);
-  useEscapeToClose(closeImportPreviewDialog, isImportPreviewDialogOpen);
-  useFocusTrap(importPreviewDialogRef, isImportPreviewDialogOpen);
   const {
     selectedEntity,
     selectedEntityCharacterExtension,
@@ -881,17 +862,13 @@ function WorldBibleRoute() {
   const openCharacterFromDescription = (entityId: string) =>
     navigate('/world-bible', {state: {focusEntityId: entityId, focusCharacterSection: 'notes'}});
 
-  const handleApplyImportDrafts = async (options?: {
-    draftIds?: string[];
-    openFirstImported?: boolean;
-  }) => {
-    const firstImportedEntity = await applyImportDrafts(options);
-    if (options?.openFirstImported && firstImportedEntity) {
-      setActiveImportPreviewId(null);
-      setViewMode('category');
-      setActiveTab(firstImportedEntity.categoryId);
-      handleEdit(firstImportedEntity);
-    }
+  const handleOpenImportedEntity = (entityId: string, saved?: WorldEntity) => {
+    const entity = entities.find((item) => item.id === entityId) ?? saved;
+    if (!entity) return;
+    setViewMode('category');
+    setActiveTab(entity.categoryId);
+    handleEdit(entity);
+    setImportOpenRequest((count) => count + 1);
   };
 
   const handleDownloadJsonTemplate = () => {
@@ -1155,11 +1132,7 @@ function WorldBibleRoute() {
         isPasteImportOpen={isPasteImportOpen} setIsPasteImportOpen={setIsPasteImportOpen}
         pastedImportText={pastedImportText} setPastedImportText={setPastedImportText}
         handlePreparePastedImportDraft={handlePreparePastedImportDraft}
-        richImportDraftCount={richImportDraftCount}
-        activeImportPreviewDraft={activeImportPreviewDraft}
-        importPreviewDialogRef={importPreviewDialogRef}
-        setActiveImportPreviewId={setActiveImportPreviewId}
-        handleApplyImportDrafts={handleApplyImportDrafts}
+        onOpenImportedEntity={handleOpenImportedEntity}
       />
       {showCategoryManager && (
         <CategoryManager
@@ -1184,7 +1157,7 @@ function WorldBibleRoute() {
         >
           {(activeCategoryIsCharacterLike ? isFocusedCharacterTask : isFocusedRecordTask) && (
           <div className={styles.formSection}>
-            <form onSubmit={handleSubmit} className={styles.form}>
+            <form ref={recordFormRef} onSubmit={handleSubmit} className={styles.form}>
               <div className={styles.formHeadingRow}>
                 <h2>
                   {activeCategoryIsCharacterLike

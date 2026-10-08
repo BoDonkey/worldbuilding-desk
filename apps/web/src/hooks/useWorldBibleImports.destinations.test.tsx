@@ -97,3 +97,49 @@ describe('useWorldBibleImports heading destinations', () => {
     expect(result.current.importDrafts[0].detectedSections![0].action).toBe('ignore');
   });
 });
+
+describe('useWorldBibleImports draft status', () => {
+  beforeEach(() => {
+    mocks.saveEntity.mockReset().mockResolvedValue(undefined);
+    mocks.saveCategory.mockReset().mockResolvedValue(undefined);
+  });
+
+  it('keeps imported drafts listed with the saved record and never imports them twice', async () => {
+    const {result} = renderImports();
+
+    act(() => result.current.preparePastedImportDraft('A harbor town.', 'Harbor'));
+    const draftId = result.current.importDrafts[0].id;
+    await act(async () => {
+      await result.current.applyImportDrafts();
+    });
+
+    const imported = result.current.importDrafts[0];
+    expect(imported).toMatchObject({status: 'imported', importedEntityName: 'Harbor'});
+    expect(imported.importedEntityId).toEqual(expect.any(String));
+    expect(imported.id).toBe(draftId);
+
+    await act(async () => {
+      await result.current.applyImportDrafts();
+    });
+    expect(mocks.saveEntity).toHaveBeenCalledTimes(1);
+  });
+
+  it('marks a draft that fails to save with a plain reason and leaves it to retry', async () => {
+    mocks.saveEntity.mockRejectedValueOnce(new Error('disk full'));
+    const {result} = renderImports();
+
+    act(() => result.current.preparePastedImportDraft('A harbor town.', 'Harbor'));
+    await act(async () => {
+      await result.current.applyImportDrafts();
+    });
+
+    const failed = result.current.importDrafts[0];
+    expect(failed.status).toBe('failed');
+    expect(failed.importError).toEqual(expect.any(String));
+
+    await act(async () => {
+      await result.current.applyImportDrafts();
+    });
+    expect(result.current.importDrafts[0].status).toBe('imported');
+  });
+});

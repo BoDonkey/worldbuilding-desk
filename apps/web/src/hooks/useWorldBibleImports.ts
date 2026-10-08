@@ -60,6 +60,11 @@ export interface WorldBibleImportDraft {
   detectedSections?: WorldBibleImportSectionDraft[];
   useDetectedSections?: boolean;
   parseError?: string;
+  /** Unset means waiting: nothing from this draft is saved yet. */
+  status?: 'imported' | 'failed';
+  importedEntityId?: string;
+  importedEntityName?: string;
+  importError?: string;
 }
 
 
@@ -650,6 +655,7 @@ export const useWorldBibleImports = ({
       (draft) =>
         draft.include &&
         !draft.parseError &&
+        draft.status !== 'imported' &&
         (!options?.draftIds || options.draftIds.includes(draft.id))
     );
     if (queuedDrafts.length === 0) {
@@ -669,12 +675,17 @@ export const useWorldBibleImports = ({
     let failedCount = 0;
     let categoriesChanged = false;
     let firstImportedEntity: WorldEntity | null = null;
+    const results = new Map<string, Partial<WorldBibleImportDraft>>();
 
     try {
       for (const draft of queuedDrafts) {
         const category = categoryById.get(draft.categoryId);
         if (!category) {
           failedCount += 1;
+          results.set(draft.id, {
+            status: 'failed',
+            importError: 'Its category no longer exists. Choose another category.'
+          });
           continue;
         }
 
@@ -745,8 +756,18 @@ export const useWorldBibleImports = ({
             nextEntities.push(entity);
             createdCount += 1;
           }
-        } catch {
+          results.set(draft.id, {
+            status: 'imported',
+            importedEntityId: entity.id,
+            importedEntityName: entity.name,
+            importError: undefined
+          });
+        } catch (error) {
           failedCount += 1;
+          results.set(draft.id, {
+            status: 'failed',
+            importError: describeError(error, 'This record could not be saved.')
+          });
         }
       }
 
@@ -767,15 +788,14 @@ export const useWorldBibleImports = ({
           (failedCount > 0 ? ` ${failedCount} failed.` : '')
       });
 
-      if (failedCount === 0) {
-        if (options?.draftIds?.length) {
-          setImportDrafts((prev) =>
-            prev.filter((draft) => !options.draftIds?.includes(draft.id))
-          );
-        } else {
-          setImportDrafts([]);
-        }
-      }
+      // Drafts stay listed with their outcome so the author can see what was
+      // saved, open it, or retry a failure.
+      setImportDrafts((prev) =>
+        prev.map((draft) => {
+          const result = results.get(draft.id);
+          return result ? {...draft, ...result} : draft;
+        })
+      );
 
       return firstImportedEntity;
     } finally {
