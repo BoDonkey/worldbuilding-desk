@@ -166,7 +166,7 @@ pnpm --filter web e2e:run       # for slices touching routed UI
    3.10 → 3.11; 3.10 → 4.42 → 4.43 → 4.44; 4.45 after 4.42;
    4.46 → 4.47 → 4.48; 4.42 after 4.46; 4.50 → 4.51; 4.50 → 4.52;
    3.15 first among 3.12–3.15; 3.12a → 3.12b; both before 5.3 and 6.1;
-   3.16 → 4.53; 4.54 → 4.55 → 4.56;
+   3.16 → 4.53; 3.17 → 1.4a; 3.17 → 1.4b; 4.54 → 4.55 → 4.56;
    5.14 before 5.15; 5.15 before 6.1;
    Phase 6 strictly ordered).
 2. **Get the full prompt.** Slices marked _[prompt: archive/... § Slice N]_
@@ -214,6 +214,8 @@ and required revisit point, `WIP`, `Done <commit>`.
 | 1.2e | State/replay dogfood journey | 1 | S | Done `d9cb7e3` — simple Character continuity now hands directly to detailed inventory/equipment/status/location changes while keeping the selected character and scene; the detailed form uses author-facing actions with explicit preview, recording, scene scope, and replay; Session C maps every E event to exact current UI labels and adds the required Pale Draught baseline; lint with 2 baseline warnings; 407 web + 6 engine + 12 UI tests; web/desktop builds; Cypress 57/57 |
 | 1.3 | Calm-shell navigation validation | 1 | S | Done `530b59f` — desktop/narrow project-mode checks pass; 2.8 must expose the aggregate pending badge on narrow `More` without promoting optional systems |
 | 1.4 | Grounded project Q&A destination (was: conditional assistant route) | 1 | M | Done `a4c47ab` — **Ask your project** (`/ask`, More → Utilities, palette) with its own conversation; factual questions through the existing evidence gate and saved-fact answers (no model call); opt-in **Include pending proposals** labels them "Pending proposal, not canon" for discussion and lists matches separately under deterministic answers; replies leave only via the shared Source Note preview; lint baseline; 856 web + 47 engine + 12 UI + 24 desktop tests; web/desktop builds; Cypress 130/130 |
+| 1.4a | Ask pending-proposal readiness | 1 | S | — |
+| 1.4b | Assistant follow-up subjects + evidence-gate coverage | 1 | M | — |
 | 1.5 | Shared AI proposal surface | 1 | M | Done `b1d0a2a` — the propose→preview→confirm surface extracted from the World Bible record helper (`AIProposalPreview` + `useAIProposalConfirmation`) is now adopted at all four surfaces named in the review: reviewed scene revisions, assistant-to-Source-Note capture, and canon rubber-duck decision prefill (a deterministic, position-anchored `Suggested Action:` tag, never free-prose matching); lint with 1 baseline warning; 445 web + 6 engine + 12 UI tests; web/desktop builds; Cypress ai-scene-revision 4/4 and canon-decisions 3/3, plus a clean 61/62 full run whose lone failure is a confirmed-unrelated pre-existing flake |
 | 2.1 | ConfirmDialog + InlineAlert components | 2 | S | Done `38db7df` |
 | 2.2 | Migrate confirm/alert call sites | 2 | M | Done `9c278a3` + test fix `ab14f63` — Cypress re-run 2026-08-03: 42/42 passing |
@@ -342,6 +344,18 @@ Echoes character and race sheets) adds 4.54–4.56, run in order. 4.54
 carries a data-loss fix (same-named headings overwrite each other) and goes
 first. They touch World Bible import only, so they may run in parallel with
 1.4a/1.4b.
+
+The 2026-10-06 architecture review
+([archive](archive/architecture-review-2026-10-06.md)) adds 3.17 and 1.4a.
+Both are pre-beta corrections to the shared assistant: 3.17 first centralizes
+the request policy and restores consultation-budget enforcement; 1.4a then
+makes pending-proposal opt-in readiness fail closed on that boundary. Do not
+run them in parallel because both touch the assistant contract.
+
+A 2026-10-06 code reading of the assistant request path adds 1.4b, a third
+pre-beta correction on the same contract: follow-up questions lose their
+subject, and factual requests phrased as instructions skip the evidence gate.
+It also runs after 3.17 and not in parallel with 1.4a.
 
 The 2026-08-29 UX/AI review
 ([archive](archive/ux-ai-review-2026-08-29.md)) added 1.5, re-scoped 1.4,
@@ -507,6 +521,78 @@ Workspace drawer — pending proposals discussed without being presented as
 canon, factual questions answered through the existing evidence gate and
 `getDirectSavedFactAnswer` path. Runs after 1.5 so answers and proposals share
 one review affordance.
+
+**1.4a Ask pending-proposal readiness.** Follow-up from the 2026-10-06
+architecture review, after 3.17. Replace `usePendingProposals`'s ambiguous
+`null`/empty result with an explicit disabled/loading/ready/error contract.
+After the author enables **Include pending proposals**, do not allow a request
+to claim or imply that proposal context is included until both pending facts
+and their Source Note titles are ready. Show loading beside the control;
+surface a plain-language inline error with retry rather than reporting zero
+proposals; turning the option off must immediately restore the accepted-only
+path. Guard event-triggered reloads with a request generation or equivalent so
+an older read cannot replace a newer result. Keep factual answers accepted-
+canon-only and keep every pending value visibly labeled as unaccepted.
+Unit-test disabled/loading/ready/error, retry, overlapping reloads, and toggle
+off. Cypress must cover checking the option and trying to send immediately,
+load failure plus retry, and a successful labeled discussion. Run the full
+verification battery and local Cypress; this routed trust-path change must be
+green in `cypress-smoke` before close-out.
+
+**1.4b Assistant follow-up subjects and evidence-gate coverage.** Found by
+code reading on 2026-10-06, not yet reproduced in the running app; reproduce
+first and record the observed replies. After 3.17; not in parallel with 1.4a.
+Two defects on the shared assistant path (Workspace drawer and **Ask your
+project**), both in the fact-checking questions authors are expected to ask:
+
+- _Follow-ups lose their subject._ `handleSendPrompt` runs retrieval, the
+  deterministic resolvers, and the provider request on the current message
+  text alone (`messages: [requestUserMessage]`); earlier turns are displayed
+  but never used. After "What is Sera's occupation?", "What about her
+  brother?" is gated but has no resolvable subject, so it returns the generic
+  unverified reply. "And her brother?" is not gated at all and reaches the
+  provider with chunks retrieved for the fragment and no referent.
+- _The gate keys on the opening word._ `isEvidenceGatedFactualQuestion`
+  matches only messages that start with a question word or auxiliary. "Tell
+  me how long Brannic served", "Remind me where the ledger is kept", "And his
+  rank?", and "How about Dess?" reach the provider ungated, which contradicts
+  the 1.2 guarantee that a provider never gets the opportunity to invent a
+  project fact.
+
+Required behavior:
+
+- Carry the subject forward deterministically. When the current message names
+  no World Bible entity or alias, resolve it against the entities named in the
+  immediately preceding author question and its answer in the same
+  conversation, using the existing entity/alias matcher. No model call
+  performs this resolution. Exactly one candidate: run retrieval, the
+  resolvers, and the gate on the resolved subject, and show the resolved name
+  in the reply so the author can see what was assumed. Zero or several
+  candidates: ask which record the author means, without a provider call.
+  Carry-over is one turn deep and never crosses conversations or surfaces.
+- Classify by what is asked, not by the first word. Gate report-style
+  requests (tell me, remind me, give me, list, what's, leading "and"/"so"/"how
+  about" continuations) when they ask for a project fact. Requests that ask
+  for new text (write, draft, describe, brainstorm, suggest, rewrite, expand)
+  stay on the creative path, as do the existing should/could/might/would
+  forms. Keep the classifier deterministic and table-driven. When a request
+  is ambiguous between reporting and generating, gate it.
+- Do not send prior turns to the provider as conversation history in this
+  slice. That is a separate decision with cost and trust consequences;
+  record it in the Backlog if the reproduction shows authors need it.
+- Selected-text and World Bible record context keep their current handling.
+
+Unit-test a phrasing table that covers every example above in both gated and
+creative directions, plus carry-over with one, zero, and several candidates,
+an alias as the carried subject, and no carry-over across conversations.
+Extend the assistant integration test and add Cypress coverage on `/ask` for
+a two-turn fact check that resolves, one that asks for clarification, and an
+instruction-phrased factual request that fails closed. Add the follow-up and
+instruction phrasings to Session D of the trust-dogfood runbook and answer
+key. At close-out, correct the `PROJECT_STATUS.md` statement that all factual
+project questions cross the evidence gate so it describes the tested
+boundary. Full verification battery and local Cypress; green in
+`cypress-smoke` before close-out.
 
 **1.5 Shared AI proposal surface.** Today exactly one AI surface — the World
 Bible record helper — lets model output become a reviewable, confirmable
@@ -1887,3 +1973,22 @@ no-accounts, no-telemetry boundary; a downloadable starter project shared in
 the niche communities is the marketing-plan substitute. **SEO micro-tools** —
 marketing-site work recorded in `docs/marketing-plan.md` as a post-launch
 experiment.
+
+From the 2026-10-06 preparation of the author's own novel ("Echoes") for
+real-world dogfooding: **Images** — no image support exists anywhere (records,
+Source Notes, World Canvas, backups); the prepared corpus has 15 portraits
+and scene images (~40 MB) that stay outside the app. Smallest useful slice is
+one image per World Bible record (portrait/illustration), stored in the
+project and carried by backup/restore; maps and game-mode handouts wait until
+game-running needs are defined. Open questions: backup/portable-export size,
+desktop vs browser storage, and whether AI surfaces ever see images (display-
+only unless the provider supports vision). Revisit with dogfood/beta evidence.
+**Chapter epigraphs** — the author plans in-world glossary snippets (from a
+Codex Omnium Source Note, an annotated in-world document) at the top of each
+chapter. Start with plain text at the chapter top, no new affordance; promote
+only if dogfood shows project review or extraction treating epigraph text as
+narration or contradictions (in-world sources may be deliberately wrong),
+authors need to track which entry opens which chapter, or export needs
+distinct formatting. Likely shape: an optional scene `epigraph` field with an
+attribution and an optional link to its World Bible record or Source Note,
+excluded from or labeled in review.

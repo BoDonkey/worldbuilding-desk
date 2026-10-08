@@ -1,6 +1,6 @@
 # SagaSpine Project Status
 
-**Last Updated:** October 3, 2026
+**Last Updated:** October 6, 2026
 
 ## Project Overview
 
@@ -572,6 +572,14 @@ Under the hood, the app still includes rich systems for world data, rules, chara
 - Assistant RAG context now carries explicit trust-tier labels before provider prompts are built. World Bible records are labeled as accepted canon, accepted canon facts are labeled separately, linked Source Notes are labeled as source material, general Source Notes are labeled as project reference material, and scene/rules chunks remain clearly draft/reference context. RAG ranking now applies a modest trust boost so accepted canon and accepted canon facts win over Source Notes when matches are otherwise close.
 - Assistant input now waits for project RAG/Shodh initialization, honors parent-context inheritance, labels relevant Shodh summaries by trust tier, and refuses to guess when a named factual question has no retrieved project source. Development retrieval uses the deterministic meaningful fallback embedding rather than constant vectors, and lexical ranking ignores common question-word noise.
 - All factual project questions now cross a universal evidence gate before provider prompting. Recognized lookups for accepted occupation, service-length, membership, treatment, and eye-color facts are answered deterministically. Storage/custody questions bypass retrieval rank and inspect all primary saved scenes in manuscript order, distinguishing designated storage from later sign-out, named possession, and use; incompatible later custody returns explicit uncertainty with every relevant scene cited. Accepted canon remains a fallback only when saved scenes contain no custody evidence, and Source Notes cannot supply the answer. Any other factual wording that cannot be deterministically verified fails closed with the retrieved sources reviewed; it never reaches prompt tools or a creative provider. Missing membership canon fails closed, conflicting facts/locations are surfaced rather than chosen, and provider output strips leaked silent-system scaffolding.
+  - **Known gap (2026-10-06, from code reading; not yet reproduced in the app):**
+    the gate recognizes a factual question by its opening word. A factual
+    request phrased as an instruction ("Tell me how long Brannic served") or
+    as a continuation ("And his rank?") is not gated and can reach the
+    provider. Retrieval, the resolvers, and the provider also see only the
+    current message, so a follow-up that relies on the previous turn for its
+    subject ("What about her brother?") cannot be resolved. Tracked as
+    roadmap Slice 1.4b.
 - Workspace assistant conversations are retained in session-local, project-scoped storage, so navigating to World Bible or another route and returning restores the conversation immediately without mixing projects or persisting chat indefinitely.
 - Workspace and Ask now authorize every ordinary provider request through the
   shared `useAssistantRequestPolicy` boundary. It owns provider readiness and
