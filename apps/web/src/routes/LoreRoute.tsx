@@ -51,8 +51,7 @@ import {acceptLoreEntityProposal} from '../services/lore/entityProposalActions';
 import {normalizeLoreDocumentLinks} from '../services/lore/loreDocumentLinks';
 import {summarizeContent} from '../services/lore/sourceNoteCapture';
 import {resolveSourceNoteFormat} from '../services/lore/sourceNoteFormat';
-import {SourceNoteContentField} from '../components/SourceNotes/SourceNoteContentField';
-import type {SourceNoteContentView} from '../components/SourceNotes/SourceNoteContentField';
+import {SourceNoteContentField, type SourceNoteContentView} from '../components/SourceNotes/SourceNoteContentField';
 import {SourceNoteStarterPanel} from '../components/SourceNotes/SourceNoteStarterPanel';
 import {getRAGService} from '../services/rag/getRAGService';
 import type {RAGProvider} from '../services/rag/RAGService';
@@ -148,7 +147,7 @@ function LoreRoute() {
   const [kind, setKind] = useState<LoreDocumentKind>('general_lore');
   const [content, setContent] = useState('');
   const [draftFormat, setDraftFormat] = useState<LoreDocumentFormat>('markdown');
-  const [contentView, setContentView] = useState<SourceNoteContentView>('edit');
+  const [contentView, setContentView] = useState<SourceNoteContentView>('formatted');
   const [draftSource, setDraftSource] = useState<LoreDocument['source']>({type: 'manual'});
   const [linkDrafts, setLinkDrafts] = useState<LinkDraft[]>([]);
   const [factTargetDrafts, setFactTargetDrafts] = useState<Record<string, FactTargetDraft>>({});
@@ -494,14 +493,18 @@ function LoreRoute() {
     await ragService.deleteDocument(`lore:${documentId}`);
   };
 
+  const loadDraftContent = (nextContent: string, format: LoreDocumentFormat) => {
+    setContent(nextContent);
+    setDraftFormat(format);
+    setContentView('formatted');
+  };
+
   const resetForm = () => {
     formSessionRef.current += 1;
     setEditingId(null);
     setTitle('');
     setKind('general_lore');
-    setContent('');
-    setDraftFormat('markdown');
-    setContentView('edit');
+    loadDraftContent('', 'markdown');
     setDraftSource({type: 'manual'});
     setLinkDrafts([]);
     setFactTargetDrafts({});
@@ -512,9 +515,7 @@ function LoreRoute() {
     setEditingId(document.id);
     setTitle(document.title);
     setKind(document.kind);
-    setContent(document.content);
-    setDraftFormat(resolveSourceNoteFormat(document));
-    setContentView('formatted');
+    loadDraftContent(document.content, resolveSourceNoteFormat(document));
     setDraftSource(document.source);
     setLinkDrafts(
       (linksByDocumentId.get(document.id) ?? []).map((link) => ({
@@ -658,9 +659,7 @@ function LoreRoute() {
       setEditingId(null);
       setTitle(parsed.title);
       setKind('general_lore');
-      setContent(parsed.content);
-      setDraftFormat(parsed.format);
-      setContentView('formatted');
+      loadDraftContent(parsed.content, parsed.format);
       setDraftSource({
         type: 'import',
         fileName: parsed.fileName,
@@ -1449,6 +1448,7 @@ function LoreRoute() {
               view={contentView}
               onViewChange={setContentView}
               onChange={setContent}
+              onFormatChange={setDraftFormat}
             />
 
             <div className={styles.formActions}>

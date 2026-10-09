@@ -28,6 +28,7 @@ describe('Source Notes', () => {
       .find('input')
       .should('be.focused')
       .type('Glass Harbor Timeline');
+    cy.contains('button', 'Edit Markdown').click();
     cy.get('textarea').clear().type(
       [
         'The Glass Harbor was founded after the lantern guild vanished.',
@@ -87,7 +88,7 @@ describe('Source Notes', () => {
       'Imported "mira-voss-dossier.md". Add document context links if useful, then save the Source Note.'
     ).should('be.visible');
     cy.contains('label', 'Title').find('input').should('have.value', 'mira-voss-dossier');
-    cy.get('[role="document"]').should('contain.text', 'Character Sheet: Mira Voss');
+    cy.get('[role="textbox"][contenteditable]').should('contain.text', 'Character Sheet: Mira Voss');
     cy.contains('button', 'Create Source Note').click();
     cy.contains(
       '[role="status"]',
@@ -144,7 +145,7 @@ describe('Source Notes', () => {
       {force: true}
     );
 
-    cy.get('[role="document"]').within(() => {
+    cy.get('[role="textbox"][contenteditable]').within(() => {
       cy.contains('h1', 'Camila Garcia deTerra').should('be.visible');
       cy.contains('li strong', 'Age:').should('be.visible');
       cy.contains('th', 'Trait').should('be.visible');
@@ -160,7 +161,41 @@ describe('Source Notes', () => {
     cy.contains('article', 'camila').within(() => {
       cy.contains('button', 'Edit').click();
     });
-    cy.get('[role="document"]').contains('td', 'Tall').should('be.visible');
+    cy.get('[role="textbox"][contenteditable]').contains('td', 'Tall').should('be.visible');
+  });
+
+  it('writes a note in the visual editor and saves it as Markdown', () => {
+    const editor = '[role="textbox"][contenteditable]';
+    cy.visit('/lore');
+    cy.contains('button', 'Start Writing').click();
+    cy.contains('label', 'Title').find('input').type('Visual Note');
+
+    cy.get(editor).click().type('Harbor families');
+    cy.get('select[aria-label="Block style"]').select('Heading 2');
+    cy.get(editor).type('{end}{enter}The ');
+    cy.contains('[role="toolbar"] button', 'Bold').click();
+    cy.get(editor).type('Lantern');
+    cy.contains('[role="toolbar"] button', 'Bold').click();
+    cy.get(editor).type(' house keeps the ledger.{enter}');
+    cy.contains('[role="toolbar"] button', 'Insert table').click();
+    cy.get(editor).type('Family{rightarrow}Seat');
+    cy.contains('[role="toolbar"] button', 'Add row').should('be.visible');
+
+    cy.contains('button', 'Create Source Note').click();
+    cy.contains('[role="status"]', 'Source Note created.').should('be.visible');
+    cy.contains('article', 'Visual Note').within(() => {
+      cy.contains('button', 'Edit').click();
+    });
+    cy.get(editor).within(() => {
+      cy.contains('h2', 'Harbor families').should('be.visible');
+      cy.contains('strong', 'Lantern').should('be.visible');
+      cy.contains('th', 'Family').should('be.visible');
+    });
+    cy.contains('button', 'Edit Markdown').click();
+    cy.get('textarea')
+      .should('contain.value', '## Harbor families')
+      .and('contain.value', 'The **Lantern** house keeps the ledger.')
+      .and('contain.value', '| Family | Seat |   |');
   });
 
   it('creates and opens a linked Source Note from a World Bible record', () => {
@@ -180,7 +215,7 @@ describe('Source Notes', () => {
     cy.location('pathname').should('eq', '/lore');
     cy.contains('h2', 'Edit Source Note').should('be.visible');
     cy.contains('label', 'Title').find('input').should('have.value', 'Crystal Vault Dossier');
-    cy.get('[role="document"]').should('contain.text', 'Crystal Vault source notes');
+    cy.get('[role="textbox"][contenteditable]').should('contain.text', 'Crystal Vault source notes');
     cy.contains('option', 'Crystal Vault (World Bible)')
       .parent('select')
       .find('option:selected')
@@ -210,6 +245,7 @@ describe('Source Notes', () => {
       cy.contains('option', `${params.target} (World Bible)`)
         .parent('select')
         .select(`${params.target} (World Bible)`);
+      cy.contains('button', 'Edit Markdown').click();
       cy.get('textarea').clear().type(params.content);
       cy.contains('button', 'Create Source Note').click();
       cy.contains(
@@ -299,6 +335,7 @@ describe('Source Notes', () => {
     cy.contains('option', 'Ember Archive (World Bible)')
       .parent('select')
       .select('Ember Archive (World Bible)');
+    cy.contains('button', 'Edit Markdown').click();
     cy.get('textarea').type('Background: A deliberately retargeted fact.');
     cy.contains('button', 'Create Source Note').click();
 
@@ -342,6 +379,7 @@ describe('Source Notes', () => {
     cy.visit('/lore');
     cy.contains('button', 'Start Writing').click();
     cy.contains('label', 'Title').find('input').type('Odessa Dossier');
+    cy.contains('button', 'Edit Markdown').click();
     cy.get('textarea').type(
       '# Character Dossier — Odessa Vane-Kir{enter}{enter}' +
       'Odessa Vane-Kir, the senior broker, is called Dess by those she trusts.'

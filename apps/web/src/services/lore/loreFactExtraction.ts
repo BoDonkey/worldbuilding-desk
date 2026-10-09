@@ -474,7 +474,9 @@ export function extractLoreFactProposals(
     }
 
     // Markdown label rows read like plain ones: "- **Age:** Mid-30s" → "Age: Mid-30s".
-    const bulletBody = trimmed
+    // A leading backslash keeps converted plain text ("\- Age: 34") from rendering as a list.
+    const unescaped = trimmed.replace(/^\\(?=[-•*])/, '');
+    const bulletBody = unescaped
       .replace(/^(?:[•-]|\*(?!\*))\s*/, '')
       .replace(/^(\*\*|__)([^*_:]+):\1:?\s*/, '$2: ')
       .replace(/^(\*\*|__)([^*_:]+)\1:\s*/, '$2: ');
@@ -486,7 +488,7 @@ export function extractLoreFactProposals(
     if (labelMatch) {
       const nextLine = lines[lineIndex + 1]?.trim() ?? '';
       const isWrappedProseLabel =
-        !/^[•*-]\s*/.test(trimmed) && nextLine.length > 0 && /^[a-z]/.test(nextLine);
+        !/^[•*-]\s*/.test(unescaped) && nextLine.length > 0 && /^[a-z]/.test(nextLine);
       if (isWrappedProseLabel) continue;
       const label = normalize(labelMatch[1]);
       const value = labelMatch[2].trim();

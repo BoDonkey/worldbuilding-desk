@@ -44,6 +44,7 @@ describe('LoreRoute', () => {
     await screen.findByRole('heading', {name: 'Source Notes', level: 1});
 
     fireEvent.change(screen.getByLabelText('Title'), {target: {value: 'Late Save Note'}});
+    fireEvent.click(screen.getByRole('button', {name: 'Edit Markdown'}));
     fireEvent.change(screen.getByLabelText('Content'), {
       target: {value: 'Background: Saved before indexing finished.'}
     });
@@ -72,7 +73,7 @@ describe('LoreRoute', () => {
     expect(screen.getByRole('button', {name: 'Extract Candidates'})).toBeEnabled();
   });
 
-  it('imports Markdown as a formatted note and keeps it Markdown when saved', async () => {
+  it('imports Markdown into the visual editor and keeps it Markdown when saved', async () => {
     const {container} = renderRoute(<LoreRoute />, '/lore');
     await screen.findByRole('heading', {name: 'Source Notes', level: 1});
 
@@ -89,7 +90,9 @@ describe('LoreRoute', () => {
       target: {files: [new File([markdown], 'Camila.md', {type: 'text/markdown'})]}
     });
 
-    const formatted = await screen.findByRole('document', {name: 'Content'});
+    // A new note already shows an empty editor; wait for the imported text.
+    await screen.findByRole('heading', {name: 'Background', level: 2});
+    const formatted = screen.getByRole('textbox', {name: 'Content'});
     expect(within(formatted).getByRole('heading', {name: 'Background', level: 2})).toBeInTheDocument();
     expect(within(formatted).getByRole('cell', {name: 'Tall'})).toBeInTheDocument();
     expect(within(formatted).queryByText(/\*\*/)).not.toBeInTheDocument();
@@ -111,7 +114,7 @@ describe('LoreRoute', () => {
     fireEvent.click(
       within(listedTitle.closest('article') as HTMLElement).getByRole('button', {name: 'Edit'})
     );
-    const reopened = await screen.findByRole('document', {name: 'Content'});
+    const reopened = await screen.findByRole('textbox', {name: 'Content'});
     expect(within(reopened).getByRole('heading', {name: 'Background', level: 2})).toBeInTheDocument();
     expect(screen.getByRole('button', {name: 'Edit Markdown'})).toBeInTheDocument();
   });

@@ -52,6 +52,7 @@ describe('extractLoreFactProposals', () => {
       '# Camila Garcia deTerra',
       '- **Age:** Mid-30s',
       '**Occupation**: Harbor archivist',
+      '\\- Height: Tall',
       '## Education',
       '- Age 6-10: Glass Harbor Primary'
     ].join('\n');
@@ -74,6 +75,7 @@ describe('extractLoreFactProposals', () => {
     expect(proposals.find((proposal) => proposal.factType === 'background')?.value).toBe(
       'Age 6-10: Glass Harbor Primary'
     );
+    expect(proposals.find((proposal) => proposal.factType === 'appearance')?.value).toBe('Tall');
   });
 
   it('extracts reviewable natural-prose facts from the trust dogfood dossier', () => {

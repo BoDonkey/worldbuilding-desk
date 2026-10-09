@@ -162,7 +162,7 @@ describe('World Canvas', () => {
 
     cy.location('pathname').should('eq', '/lore');
     cy.contains('h2', 'Edit Source Note').should('be.visible');
-    cy.get('[role="document"]').should('contain.text', 'From World Canvas — Places');
+    cy.get('[role="textbox"][contenteditable]').should('contain.text', 'From World Canvas — Places');
     cy.contains('button', 'Extract Candidates').click();
     cy.contains('[role="status"]', /Extracted \d+ entity proposal/).should('be.visible');
 
@@ -228,7 +228,7 @@ describe('World Canvas', () => {
       cy.contains('button', 'Open').click();
     });
     cy.location('pathname').should('eq', '/lore');
-    cy.get('[role="document"]').should('contain.text', 'From World Canvas — Core Idea')
+    cy.get('[role="textbox"][contenteditable]').should('contain.text', 'From World Canvas — Core Idea')
       .and('contain.text', 'A city powered by borrowed memories.');
 
     cy.visit('/world-canvas');
@@ -236,7 +236,7 @@ describe('World Canvas', () => {
       .type(' Its founders are forgotten.');
     cy.contains(/Saved at/).should('be.visible');
     cy.get('#world-canvas-premise-heading').parents('section').first().within(() => cy.contains('button', 'Open').click());
-    cy.get('[role="document"]').should('contain.text', 'A city powered by borrowed memories.')
+    cy.get('[role="textbox"][contenteditable]').should('contain.text', 'A city powered by borrowed memories.')
       .and('not.contain.text', 'Its founders are forgotten.');
 
     cy.visit('/world-canvas');
@@ -415,7 +415,7 @@ describe('World Canvas', () => {
         .within(() => cy.contains('button', 'Open').click());
       cy.location('pathname').should('eq', '/lore');
       cy.contains('h2', 'Edit Source Note').should('be.visible');
-      cy.get('[role="document"]').should(
+      cy.get('[role="textbox"][contenteditable]').should(
         'contain.text',
         'From World Canvas brainstorm — Factions and institutions (Tension)'
       );

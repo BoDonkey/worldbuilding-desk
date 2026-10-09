@@ -189,6 +189,13 @@ describe('markdownToRichHtml tables and links', () => {
     );
   });
 
+  it('reads backslash escapes as literal text and <br> as a line break', () => {
+    expect(markdownToRichHtml('\\# not a heading')).toBe('<p># not a heading</p>');
+    expect(markdownToRichHtml('\\- 5 \\* 3 \\*kept\\* snake\\_case \\<br> one<br>two')).toBe(
+      '<p>- 5 * 3 *kept* snake_case &lt;br&gt; one<br />two</p>'
+    );
+  });
+
   it('links only web and mail URLs and never breaks out of the href', () => {
     expect(markdownToRichHtml('[site](https://example.com/a"b)')).toBe(
       '<p><a href="https://example.com/a&quot;b">site</a></p>'

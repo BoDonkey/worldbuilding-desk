@@ -13,6 +13,7 @@ describe('App-shell notifications', () => {
     cy.visit('/lore');
     cy.contains('button', 'Start Writing').click();
     cy.contains('label', 'Title').find('input').type('Shell Toast Note');
+    cy.contains('button', 'Edit Markdown').click();
     cy.get('textarea').clear().type('The harbor bell rang twice.');
     cy.contains('button', 'Create Source Note').click();
 

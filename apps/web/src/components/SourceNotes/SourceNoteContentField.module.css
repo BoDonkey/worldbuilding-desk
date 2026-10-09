@@ -21,94 +21,81 @@
   resize: vertical;
 }
 
-.hint,
-.empty {
+.hint {
   margin: 0.35rem 0 0;
   font-size: var(--font-size-sm);
   color: var(--color-text-secondary);
 }
 
-.formatted {
-  max-height: 36rem;
-  overflow: auto;
-  padding: 0.75rem 1rem;
-  border-radius: 12px;
-  border: 1px solid var(--surface-border-soft);
-  background: var(--input-bg);
-  color: var(--color-text-primary);
-  line-height: 1.55;
-  overflow-wrap: anywhere;
-}
-
-.formatted > :first-child {
+.field .richContent > :first-child {
   margin-top: 0;
 }
 
-.formatted > :last-child {
+.field .richContent > :last-child {
   margin-bottom: 0;
 }
 
-.formatted h1,
-.formatted h2,
-.formatted h3,
-.formatted h4,
-.formatted h5,
-.formatted h6 {
+.field .richContent h1,
+.field .richContent h2,
+.field .richContent h3,
+.field .richContent h4,
+.field .richContent h5,
+.field .richContent h6 {
   margin: 1.1em 0 0.4em;
   line-height: 1.25;
 }
 
-.formatted h1 {
+.field .richContent h1 {
   font-size: var(--font-size-xl);
 }
 
-.formatted h2 {
+.field .richContent h2 {
   font-size: var(--font-size-lg);
 }
 
-.formatted h3,
-.formatted h4,
-.formatted h5,
-.formatted h6 {
+.field .richContent h3,
+.field .richContent h4,
+.field .richContent h5,
+.field .richContent h6 {
   font-size: var(--font-size-base);
 }
 
-.formatted p,
-.formatted ul,
-.formatted ol,
-.formatted blockquote {
+.field .richContent p,
+.field .richContent ul,
+.field .richContent ol,
+.field .richContent blockquote {
   margin: 0 0 0.75em;
 }
 
-.formatted ul,
-.formatted ol {
+.field .richContent ul,
+.field .richContent ol {
   padding-left: 1.4rem;
 }
 
-.formatted blockquote {
+.field .richContent blockquote {
   padding-left: 0.85rem;
   border-left: 3px solid var(--surface-border-strong);
   color: var(--color-text-secondary);
 }
 
-.formatted hr {
+.field .richContent hr {
   border: none;
   border-top: 1px solid var(--surface-border-soft);
   margin: 1em 0;
 }
 
-.formatted code {
+.field .richContent code {
   padding: 0.05em 0.3em;
   border-radius: 4px;
   background: var(--editor-code-bg);
   color: var(--editor-code-text);
 }
 
-.formatted a {
+.field .richContent a {
   color: var(--color-accent);
 }
 
-.formatted table {
+.field .richContent table {
   display: block;
   max-width: 100%;
   overflow-x: auto;
@@ -117,15 +104,61 @@
   font-size: var(--font-size-sm);
 }
 
-.formatted th,
-.formatted td {
+.field .richContent th,
+.field .richContent td {
   padding: 0.4rem 0.6rem;
   border: 1px solid var(--surface-border-soft);
   text-align: left;
   vertical-align: top;
 }
 
-.formatted th {
+.field .richContent th {
   background: var(--surface-panel-elevated);
   font-weight: 600;
+}
+
+.editor :global(.control-group) {
+  position: static;
+  margin-bottom: 0.5rem;
+  padding: 0.45rem 0.55rem;
+  border-radius: 12px;
+}
+
+.field .editorSurface {
+  min-height: 14rem;
+  max-height: 36rem;
+  max-width: none;
+  overflow: auto;
+  margin: 0;
+  padding: 0.75rem 1rem;
+  border-radius: 12px;
+  border: 1px solid var(--surface-border-soft);
+  background: var(--input-bg);
+  color: var(--color-text-primary);
+  font-family: inherit;
+  font-size: inherit;
+  line-height: 1.55;
+  letter-spacing: normal;
+  overflow-wrap: anywhere;
+}
+
+.field .editorSurface:focus {
+  border-color: var(--input-border-focus);
+  outline: 2px solid color-mix(in oklab, var(--color-focus) 50%, transparent);
+  outline-offset: 1px;
+}
+
+.field .richContent :global(.selectedCell) {
+  background: var(--color-accent-soft-bg);
+}
+
+.field .richContent :global(.tableWrapper) {
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.field .richContent li p,
+.field .richContent td p,
+.field .richContent th p {
+  margin: 0;
 }

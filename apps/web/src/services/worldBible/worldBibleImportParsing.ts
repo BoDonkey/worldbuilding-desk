@@ -492,8 +492,18 @@ const escapeHtml = (value: string): string =>
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;');
 
+const MARKDOWN_ESCAPE = /\\([\\`*_[\]()#+\-.!|<>~])/g;
+// Private-use characters stand in for escaped punctuation while patterns run.
+const ESCAPE_PLACEHOLDER = /\uE000(\d+)\uE001/g;
+
 const renderMarkdownInline = (value: string): string => {
-  let html = escapeHtml(value);
+  const escaped: string[] = [];
+  let html = escapeHtml(
+    value.replace(MARKDOWN_ESCAPE, (_match, char: string) => {
+      escaped.push(char);
+      return `\uE000${escaped.length - 1}\uE001`;
+    })
+  );
   html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
   // Only web and mail links survive; anything else (javascript:, data:) keeps its text.
   html = html.replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, (_match, label: string, href: string) =>
@@ -503,7 +513,10 @@ const renderMarkdownInline = (value: string): string => {
   html = html.replace(/__([^_]+)__/g, '<strong>$1</strong>');
   html = html.replace(/\*([^*]+)\*/g, '<em>$1</em>');
   html = html.replace(/_([^_]+)_/g, '<em>$1</em>');
-  return html;
+  html = html.replace(/&lt;br\s*\/?&gt;/gi, '<br />');
+  return html.replace(ESCAPE_PLACEHOLDER, (_match, index: string) =>
+    escapeHtml(escaped[Number(index)] ?? '')
+  );
 };
 
 /** Splits on unescaped pipes; `\|` is a literal pipe inside a cell. */
@@ -515,9 +528,7 @@ const splitMarkdownTableRow = (line: string): string[] =>
     .split(/(?<!\\)\|/)
     .map((cell) => cell.trim().replace(/\\\|/g, '|'));
 
-/** Cells cannot hold block content, so `<br>` is the only line break they keep. */
-const renderMarkdownTableCell = (value: string): string =>
-  renderMarkdownInline(value).replace(/&lt;br\s*\/?&gt;/gi, '<br />');
+
 
 const isMarkdownTableSeparator = (line: string): boolean => {
   const cells = splitMarkdownTableRow(line);
@@ -577,14 +588,14 @@ const buildMarkdownTableHtml = (rows: string[]): string => {
 
   return (
     '<table><thead><tr>' +
-    headerCells.map((cell) => `<th>${renderMarkdownTableCell(cell)}</th>`).join('') +
+    headerCells.map((cell) => `<th>${renderMarkdownInline(cell)}</th>`).join('') +
     '</tr></thead><tbody>' +
     bodyRows
       .map(
         (cells) =>
           '<tr>' +
           headerCells
-            .map((_, index) => `<td>${renderMarkdownTableCell(cells[index] ?? '')}</td>`)
+            .map((_, index) => `<td>${renderMarkdownInline(cells[index] ?? '')}</td>`)
             .join('') +
           '</tr>'
       )

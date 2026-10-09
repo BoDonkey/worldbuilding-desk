@@ -1,8 +1,9 @@
-import {useId, useMemo} from 'react';
+import {useId, useState} from 'react';
 import type {LoreDocumentFormat} from '../../entityTypes';
-import {sourceNoteContentToHtml} from '../../services/lore/sourceNoteFormat';
+import {SourceNoteEditor} from './SourceNoteEditor';
 import styles from './SourceNoteContentField.module.css';
 
+/** `formatted` is the visual editor; `edit` is the stored text in a plain textarea. */
 export type SourceNoteContentView = 'formatted' | 'edit';
 
 interface SourceNoteContentFieldProps {
@@ -11,22 +12,32 @@ interface SourceNoteContentFieldProps {
   view: SourceNoteContentView;
   onViewChange: (view: SourceNoteContentView) => void;
   onChange: (content: string) => void;
+  onFormatChange: (format: LoreDocumentFormat) => void;
 }
 
-/** Source Note body: the formatted note by default, with a switch to edit its text. */
 export const SourceNoteContentField = ({
   content,
   format,
   view,
   onViewChange,
-  onChange
+  onChange,
+  onFormatChange
 }: SourceNoteContentFieldProps) => {
   const labelId = useId();
-  const html = useMemo(
-    () => (view === 'formatted' ? sourceNoteContentToHtml(content, format) : ''),
-    [content, format, view]
-  );
-  const editLabel = format === 'markdown' ? 'Edit Markdown' : 'Edit text';
+  const isMarkdown = format === 'markdown';
+  // The visual editor owns its document once mounted; content that arrives
+  // from anywhere else (another note, an import, the textarea) remounts it.
+  const [editorContent, setEditorContent] = useState(content);
+  const [editorKey, setEditorKey] = useState(0);
+  if (content !== editorContent) {
+    setEditorContent(content);
+    setEditorKey((key) => key + 1);
+  }
+  const handleEditorChange = (next: string, nextFormat: LoreDocumentFormat) => {
+    setEditorContent(next);
+    onChange(next);
+    if (nextFormat !== format) onFormatChange(nextFormat);
+  };
 
   return (
     <div className={styles.field}>
@@ -38,7 +49,7 @@ export const SourceNoteContentField = ({
           type='button'
           onClick={() => onViewChange(view === 'formatted' ? 'edit' : 'formatted')}
         >
-          {view === 'formatted' ? editLabel : 'Show formatted'}
+          {view === 'edit' ? 'Visual editor' : isMarkdown ? 'Edit Markdown' : 'Edit text'}
         </button>
       </div>
       {view === 'edit' ? (
@@ -49,22 +60,20 @@ export const SourceNoteContentField = ({
             onChange={(event) => onChange(event.target.value)}
             rows={18}
           />
-          {format === 'markdown' ? (
-            <p className={styles.hint}>
-              Markdown: # headings, - lists, **bold**, *italic*, and | pipe | tables |.
-            </p>
-          ) : null}
+          <p className={styles.hint}>
+            {isMarkdown
+              ? 'Markdown: # headings, - lists, **bold**, _italic_, and | pipe | tables |.'
+              : 'Plain text. Editing in the visual editor saves this note as Markdown.'}
+          </p>
         </>
-      ) : html ? (
-        <div
-          className={styles.formatted}
-          role='document'
-          aria-labelledby={labelId}
-          // Sanitized by sourceNoteContentToHtml: allow-listed tags, safe link schemes only.
-          dangerouslySetInnerHTML={{__html: html}}
-        />
       ) : (
-        <p className={styles.empty}>Nothing written yet.</p>
+        <SourceNoteEditor
+          key={editorKey}
+          content={content}
+          format={format}
+          labelId={labelId}
+          onChange={handleEditorChange}
+        />
       )}
     </div>
   );

@@ -212,12 +212,16 @@ Under the hood, the app still includes rich systems for world data, rules, chara
   as Markdown (notes imported from `.md` before this were saved as plain text
   and are now read as Markdown). DOCX imports convert heading styles,
   bullet/numbered lists, bold/italic, and tables (pipe tables, first row as
-  header) to Markdown. The Content field shows the formatted note by default
-  for saved and imported notes, with **Edit Markdown** to change the text;
-  displayed HTML is sanitized to allow-listed tags and web/mail links. Fact
-  and entity extraction read Markdown label rows (`- **Age:** Mid-30s`) and
-  `#` headings as sections. Editing is still a plain Markdown textarea
-  (visual editor: roadmap 4.58).
+  header) to Markdown. Notes open in a visual editor (TipTap: block style,
+  bold, italic, insert table, add/delete rows and columns) loaded through the
+  same sanitized renderer that displays them; **Edit Markdown** / **Edit
+  text** shows the stored text in a textarea. The editor serializes back to
+  Markdown only when the content changes, so opening and saving a note
+  without edits keeps its text byte-for-byte (an undone edit restores the
+  original). A plain-text note opens as written and becomes Markdown on its
+  first edit, with markup characters escaped so it reads the same. Fact and
+  entity extraction read Markdown label rows (`- **Age:** Mid-30s`), escaped
+  bullets from converted notes, and `#` headings as sections.
 - Entity candidates keep the author's casing: words already containing a
   capital ("deTerra", "McAllister", "De") are left as written, lowercase name
   particles (van, von, da, del, ...) stay lowercase after the first word, and
@@ -908,6 +912,16 @@ runtime schema, and nothing here changes the roadmap's status board.
 ## Verification Status
 
 ### Verified Recently
+- Slice 4.58 Source Note visual editor: `SourceNoteEditor` (dedicated
+  TipTap editor without code blocks/strike/underline/trailing node, plus
+  `@tiptap/extension-table`), `sourceNoteDocToMarkdown` serializer, and
+  renderer support for backslash escapes and inline `<br>`. Round-trip tests
+  show canonical Markdown survives the editor unchanged and other spellings
+  normalize once, then hold. Battery: lint (one existing warning), 917 web +
+  47 engine + 12 UI + 24 desktop tests, web/desktop builds, file-size gate
+  (`LoreRoute.tsx` held at 1,814), Cypress 139/139 in two batches with no
+  retries (one earlier first-run retry came from Vite optimizing the new
+  dependency mid-seed; clean on rerun); editor checked in light and dark.
 - Slice 4.57 Source Note import fidelity and formatted display:
   `docxToMarkdown` (shares the World Bible DOCX reader's style and zip
   helpers; the Source Note copy of the old reader is removed),
