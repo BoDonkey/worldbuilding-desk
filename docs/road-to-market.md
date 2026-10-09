@@ -167,7 +167,7 @@ pnpm --filter web e2e:run       # for slices touching routed UI
    4.46 → 4.47 → 4.48; 4.42 after 4.46; 4.50 → 4.51; 4.50 → 4.52;
    3.15 first among 3.12–3.15; 3.12a → 3.12b; both before 5.3 and 6.1;
    3.16 → 4.53; 3.17 → 1.4a; 3.17 → 1.4b; 4.54 → 4.55 → 4.56;
-   4.57 → 4.58;
+   4.57 → 4.58 → 4.59;
    5.14 before 5.15; 5.15 before 6.1;
    Phase 6 strictly ordered).
 2. **Get the full prompt.** Slices marked _[prompt: archive/... § Slice N]_
@@ -310,6 +310,8 @@ and required revisit point, `WIP`, `Done <commit>`.
 | 4.56 | Multi-document import flow + category manager dialog | 4 | M | Done `8489786` — drafts keep waiting / imported (Open) / failed (reason, retry) status and are never imported twice; preview says nothing is saved until import and counts each state; Import selected (N); discarding unsaved drafts asks first; Import and open scrolls the record into view; Manage Categories is a modal (focus trap, Escape backs out of field editing then closes, closes on navigation, mobile bottom sheet above nav); WorldBibleRoute 2,229→2,202 lines; lint baseline; 890 web + 47 engine + 12 UI + 24 desktop tests; web/desktop builds; file-size gate; Cypress 137/137; not yet pushed, so `cypress-smoke` unchecked |
 | 4.57 | Source Note import fidelity + formatted display | 4 | M | Done `8da6811` — `.md` imports keep Markdown (legacy plain-text `.md` imports read as Markdown); DOCX → Markdown with heading styles, lists, bold/italic, and pipe tables (merged cells, multi-paragraph cells); formatted Content view by default with Edit Markdown, sanitized display HTML; renderer escaped-pipe/`<br>` cells and safe links; extraction reads Markdown label rows and headings; LoreRoute 1,829→1,814 lines; lint baseline; 905 web + 47 engine + 12 UI + 24 desktop tests; web/desktop builds; file-size gate; Cypress 138/138; not yet pushed, so `cypress-smoke` unchecked |
 | 4.58 | Source Note visual editor (Markdown-backed) | 4 | M | Done `d52065e` — dedicated TipTap editor (block style, bold, italic, tables) instead of the shared scene editor, whose toolbar offers code blocks/strike and emits HTML; loads through the display renderer and serializes to Markdown only on change (no-edit save byte-identical, undone edit restores original); plain-text notes convert to escaped Markdown on first edit; renderer backslash escapes and inline `<br>`; round-trip tests (canonical unchanged, other spellings normalize once); lint baseline; 917 web + 47 engine + 12 UI + 24 desktop tests; web/desktop builds; file-size gate; Cypress 139/139; not yet pushed, so `cypress-smoke` unchecked |
+| 4.59 | Remembered Markdown source view for Source Notes | 4 | S | — |
+| 4.60 | Collapsible Source Notes intake panel | 4 | S | WIP |
 | 5.1 | Auto-update decision + implementation | 5 | M | — |
 | 5.2 | Code signing + notarization, both platforms | 5 | M | — |
 | 5.3 | Packaged-app validation + Electron E2E | 5 | M | — |
@@ -351,7 +353,8 @@ first. They touch World Bible import only, so they may run in parallel with
 Dogfooding Source Notes on 2026-10-09 adds 4.57 → 4.58: imported Markdown
 loses its formatting, DOCX tables flatten into one cell per paragraph, and
 notes are edited as plain text. 4.57 fixes import and display; 4.58 replaces
-the plain-text editor.
+the plain-text editor. 4.59 lets authors who prefer Markdown keep the source
+view; 4.60 lets the intake panel collapse.
 
 The 2026-10-06 architecture review
 ([archive](archive/architecture-review-2026-10-06.md)) adds 3.17 and 1.4a.
@@ -1805,7 +1808,7 @@ one Pages-exported DOCX, and several race sheets imported as a batch.
   category switches and imports. Cypress covers a three-document batch and
   the dialog.
 
-### Dogfood Source Notes (4.57–4.58)
+### Dogfood Source Notes (4.57–4.60)
 
 Found on 2026-10-09 importing Echoes material into Source Notes. Source
 Notes are stored, edited, and displayed as plain text end to end: a `.md`
@@ -1837,6 +1840,23 @@ are lost and every table cell becomes its own paragraph.
   serializing back to Markdown so stored content stays text. Round-trip
   tests must show that opening and saving a note without edits leaves its
   Markdown unchanged, so extraction evidence offsets do not move.
+
+- **4.59 Remembered Markdown source view for Source Notes.** After 4.58.
+  Authors who write Markdown must click **Edit Markdown** on every note,
+  because each note opens in the visual editor. Add an app-wide preference
+  (not per project), set from the Content field and listed in Settings
+  beside the editor appearance controls, for which view Source Notes open
+  in: visual editor (default) or Markdown source. Opening, creating, and
+  importing a note honor it; switching views on one note does not change
+  it unless the author chooses to remember the switch. Plain-text notes
+  follow it too (their source view is **Edit text**). Unit-test the
+  preference and each entry path; Cypress covers setting it once and opening
+  a second note in Markdown source.
+- **4.60 Collapsible Source Notes intake panel.** The **Start here** intake
+  block takes a large share of the Source Notes page on every visit. Let
+  the author collapse it to a single row that keeps **Start Writing** and
+  **Import File** available (import has no other entry point), remember
+  the choice per browser, and expose the toggle with `aria-expanded`.
 
 ## Phase 5 — Release Engineering
 

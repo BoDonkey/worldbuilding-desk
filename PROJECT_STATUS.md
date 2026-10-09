@@ -222,6 +222,10 @@ Under the hood, the app still includes rich systems for world data, rules, chara
   first edit, with markup characters escaped so it reads the same. Fact and
   entity extraction read Markdown label rows (`- **Age:** Mid-30s`), escaped
   bullets from converted notes, and `#` headings as sections.
+- The Source Notes **Start here** intake panel collapses (**Hide intro** /
+  **Show intro**, `aria-expanded`) to one row that keeps **Start Writing** and
+  **Import File**; the choice is remembered per browser and the row wraps on
+  narrow screens.
 - Entity candidates keep the author's casing: words already containing a
   capital ("deTerra", "McAllister", "De") are left as written, lowercase name
   particles (van, von, da, del, ...) stay lowercase after the first word, and
@@ -912,6 +916,11 @@ runtime schema, and nothing here changes the roadmap's status board.
 ## Verification Status
 
 ### Verified Recently
+- Slice 4.60 collapsible Source Notes intake panel: state inside
+  `SourceNoteStarterPanel` (localStorage, guarded), so `LoreRoute.tsx` is
+  unchanged. Battery: lint (one existing warning), 918 web + 47 engine + 12 UI
+  + 24 desktop tests, web/desktop builds, file-size gate, Cypress 139/139 in
+  two batches with no retries; collapsed row checked at desktop and 390px.
 - Slice 4.58 Source Note visual editor: `SourceNoteEditor` (dedicated
   TipTap editor without code blocks/strike/underline/trailing node, plus
   `@tiptap/extension-table`), `sourceNoteDocToMarkdown` serializer, and

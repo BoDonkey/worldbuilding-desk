@@ -23,6 +23,14 @@ describe('Source Notes', () => {
     cy.contains('button', 'Import File').should('have.length', 1);
     cy.contains('button', 'Extract Candidates').should('not.exist');
 
+    cy.contains('button', 'Hide intro').should('have.attr', 'aria-expanded', 'true').click();
+    cy.contains('h3', 'Write Manually').should('not.exist');
+    cy.reload();
+    cy.contains('button', 'Show intro').should('have.attr', 'aria-expanded', 'false');
+    cy.get('button').filter(':contains("Import File")').should('have.length', 1);
+    cy.contains('button', 'Show intro').click();
+    cy.contains('h3', 'Write Manually').should('be.visible');
+
     cy.contains('button', 'Start Writing').click();
     cy.contains('label', 'Title')
       .find('input')

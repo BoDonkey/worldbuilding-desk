@@ -67,6 +67,40 @@
   margin: 0 0 0.4rem 0;
 }
 
+.starterHeaderActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.starterPanelCollapsed {
+  padding: 0.6rem 1rem;
+}
+
+.starterPanelCollapsed .starterHeader {
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.starterPanelCollapsed .starterHeader > :first-child {
+  flex: 1 1 12rem;
+}
+
+.starterPanelCollapsed .starterHeaderActions {
+  justify-content: flex-start;
+}
+
+.starterPanelCollapsed .starterHeader h2 {
+  margin: 0;
+  font-size: var(--font-size-lg);
+}
+
+.starterToggle {
+  white-space: nowrap;
+}
+
 .starterHeader p,
 .starterCard p {
   margin: 0;
