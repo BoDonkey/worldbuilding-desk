@@ -218,6 +218,10 @@ Under the hood, the app still includes rich systems for world data, rules, chara
   and entity extraction read Markdown label rows (`- **Age:** Mid-30s`) and
   `#` headings as sections. Editing is still a plain Markdown textarea
   (visual editor: roadmap 4.58).
+- Entity candidates keep the author's casing: words already containing a
+  capital ("deTerra", "McAllister", "De") are left as written, lowercase name
+  particles (van, von, da, del, ...) stay lowercase after the first word, and
+  only all-lowercase words captured from prose are capitalized.
 - Lore Documents now has a project context health panel that shows RAG document/chunk counts, indexed document type counts, Shodh memory counts, project data counts, and a retrieval probe.
 - World Bible character records now include a Character detail health panel showing aliases, accepted facts, linked Lore Documents, scene mentions, Shodh memories, state events, and an explicit RAG context probe for the selected character.
 - Scratchpad records are included in project backup snapshots and restore paths.

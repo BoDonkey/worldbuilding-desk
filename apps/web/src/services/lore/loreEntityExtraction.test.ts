@@ -1,7 +1,7 @@
 import {describe, expect, it} from 'vitest';
 import {readFileSync} from 'node:fs';
 import type {LoreDocument} from '../../entityTypes';
-import {extractLoreEntityProposals} from './loreEntityExtraction';
+import {extractLoreEntityProposals, titleCaseName} from './loreEntityExtraction';
 
 function makeDocument(content: string): LoreDocument {
   return {
@@ -40,7 +40,7 @@ describe('extractLoreEntityProposals', () => {
     const proposals = extractLoreEntityProposals({
       projectId: 'project-1',
       document: {
-        ...makeDocument('- **Name:** Camila Garcia\n- **Age:** Mid-30s'),
+        ...makeDocument('- **Name:** Camila Garcia deTerra\n- **Age:** Mid-30s'),
         title: 'Camila',
         kind: 'character_dossier'
       },
@@ -49,7 +49,17 @@ describe('extractLoreEntityProposals', () => {
       entities: []
     });
 
-    expect(proposals.map((proposal) => proposal.name)).toContain('Camila Garcia');
+    expect(proposals.map((proposal) => proposal.name)).toContain('Camila Garcia deTerra');
+  });
+
+  it('keeps author casing in names and lowercase name particles', () => {
+    expect(titleCaseName('Camila Garcia deTerra')).toBe('Camila Garcia deTerra');
+    expect(titleCaseName('Ewan McAllister')).toBe('Ewan McAllister');
+    expect(titleCaseName('Pieter van  Doorn')).toBe('Pieter van Doorn');
+    expect(titleCaseName('Maria De Souza')).toBe('Maria De Souza');
+    expect(titleCaseName('lantern guild clan')).toBe('Lantern Guild Clan');
+    expect(titleCaseName('the order of the ash')).toBe('The Order of the Ash');
+    expect(titleCaseName('élodie')).toBe('Élodie');
   });
 
   it('finds typed entities in natural-prose dogfood faction notes', () => {

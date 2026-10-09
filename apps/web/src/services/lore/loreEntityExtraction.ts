@@ -18,15 +18,22 @@ interface ExtractLoreEntityParams {
 
 const normalize = normalizeCanonText;
 
-const titleCaseName = (value: string): string =>
+const NAME_PARTICLES = /^(?:a|an|of|the|da|das|de|del|della|der|di|do|dos|du|la|le|van|von|y)$/;
+
+/**
+ * Capitalizes lowercase words captured from prose ("Lantern Guild clan"); a
+ * word the author already cased ("deTerra", "McAllister", "De") is kept as
+ * written, and lowercase name particles stay lowercase after the first word.
+ */
+export const titleCaseName = (value: string): string =>
   value
     .trim()
     .replace(/\s+/g, ' ')
     .split(' ')
     .map((word, index) =>
-      index > 0 && /^(?:a|an|de|of|the)$/i.test(word)
-        ? word.toLowerCase()
-        : word.replace(/^\w/, (char) => char.toUpperCase())
+      /\p{Lu}/u.test(word) || (index > 0 && NAME_PARTICLES.test(word))
+        ? word
+        : word.replace(/^\p{Ll}/u, (char) => char.toUpperCase())
     )
     .join(' ');
 
