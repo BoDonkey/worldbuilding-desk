@@ -53,6 +53,9 @@ import {summarizeContent} from '../services/lore/sourceNoteCapture';
 import {resolveSourceNoteFormat} from '../services/lore/sourceNoteFormat';
 import {SourceNoteContentField, type SourceNoteContentView} from '../components/SourceNotes/SourceNoteContentField';
 import {SourceNoteStarterPanel} from '../components/SourceNotes/SourceNoteStarterPanel';
+import {SourceNoteDocumentList} from '../components/SourceNotes/SourceNoteDocumentList';
+import {SourceNoteBatchImportDialog} from '../components/SourceNotes/SourceNoteBatchImportDialog';
+import {indexSourceNote} from '../services/lore/sourceNoteBatchImport';
 import {getRAGService} from '../services/rag/getRAGService';
 import type {RAGProvider} from '../services/rag/RAGService';
 import type {RAGDiagnostics, RAGSearchResult} from '../services/rag/types';
@@ -152,6 +155,7 @@ function LoreRoute() {
   const [linkDrafts, setLinkDrafts] = useState<LinkDraft[]>([]);
   const [factTargetDrafts, setFactTargetDrafts] = useState<Record<string, FactTargetDraft>>({});
   const [isImporting, setIsImporting] = useState(false);
+  const [batchImportFiles, setBatchImportFiles] = useState<File[] | null>(null);
   const [saving, setSaving] = useState(false);
   const [extractingId, setExtractingId] = useState<string | null>(null);
   const announceStatus = useStatusAnnouncement();
@@ -480,13 +484,8 @@ function LoreRoute() {
 
   const contextMayNeedRebuild = contextStaleReasons.length > 0;
 
-  const indexLoreDocument = async (document: LoreDocument, links: LoreDocumentLink[]) => {
-    if (!ragService) return;
-    await ragService.indexDocument(`lore:${document.id}`, document.title, document.content, 'lore', {
-      tags: [document.kind, 'lore'],
-      entityIds: links.map((link) => link.targetId)
-    });
-  };
+  const indexLoreDocument = (document: LoreDocument, links: LoreDocumentLink[]) =>
+    indexSourceNote(ragService, document, links);
 
   const deleteLoreRagDocument = async (documentId: string) => {
     if (!ragService) return;
@@ -647,9 +646,12 @@ function LoreRoute() {
   };
 
   const handleImport = async (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
+    const files = Array.from(event.target.files ?? []);
+    const [file] = files;
     event.target.value = '';
     if (!file || !activeProject) return;
+    // Several files save straight to Source Notes; one file still loads into the form for review.
+    if (files.length > 1) return setBatchImportFiles(files);
 
     setIsImporting(true);
     setFeedback(null);
@@ -1253,10 +1255,27 @@ function LoreRoute() {
         type='file'
         accept='.docx,.txt,.md,.markdown,text/plain,text/markdown,application/vnd.openxmlformats-officedocument.wordprocessingml.document'
         className={styles.hiddenInput}
+        multiple
         onChange={handleImport}
       />
 
       <RouteFeedback feedback={feedback} onClear={() => setFeedback(null)} />
+      {batchImportFiles && activeProject ? (
+        <SourceNoteBatchImportDialog
+          files={batchImportFiles}
+          projectId={activeProject.id}
+          documents={documents}
+          linkTargets={linkableTargets}
+          ragService={ragService}
+          onOpen={(id) => {
+            const target = documents.find((document) => document.id === id);
+            if (target) beginEdit(target);
+            setBatchImportFiles(null);
+          }}
+          onClose={() => setBatchImportFiles(null)}
+          onFinished={() => void refreshProjectContextHealth()}
+        />
+      ) : null}
 
       <SourceNoteStarterPanel
         isImporting={isImporting}
@@ -1270,62 +1289,16 @@ function LoreRoute() {
         }`}
       >
         {!isDocumentRailCollapsed && (
-        <aside className={styles.listCard} aria-label='Source notes'>
-          <div className={styles.cardHeader}>
-            <h2>Documents</h2>
-            <span className={styles.countBadge}>{documents.length}</span>
-          </div>
-          {documents.length === 0 ? (
-            <p className={styles.emptyState}>
-              No Source Notes yet. Import a dossier or start a longform world note.
-            </p>
-          ) : (
-            <div className={styles.documentList}>
-              {documents.map((document) => {
-                const links = linksByDocumentId.get(document.id) ?? [];
-                const documentEntityProposals = entityProposalsByDocumentId.get(document.id) ?? [];
-                const documentProposals = proposalsByDocumentId.get(document.id) ?? [];
-                const documentFacts = canonicalFactsByDocumentId.get(document.id) ?? [];
-                return (
-                  <article key={document.id} className={styles.documentCard}>
-                    <div className={styles.documentHeader}>
-                      <div>
-                        <p className={styles.documentKind}>
-                          {links.length > 0 ? 'Linked source note' : 'General source note'}
-                        </p>
-                        <h3>{document.title}</h3>
-                      </div>
-                      <div className={styles.inlineActions}>
-                        {/* A save lists the note before its links are written; wait for it. */}
-                        <button
-                          type='button'
-                          onClick={() => beginEdit(document)}
-                          disabled={saving}
-                        >
-                          Edit
-                        </button>
-                        <button
-                          type='button'
-                          onClick={() => void handleDelete(document)}
-                          disabled={saving || deletingId === document.id}
-                        >
-                          {deletingId === document.id ? 'Deleting...' : 'Delete'}
-                        </button>
-                      </div>
-                    </div>
-                    <div className={styles.metaRow}>
-                      <span>
-                        {documentEntityProposals.length + documentProposals.length} pending
-                      </span>
-                      <span>{documentFacts.length} accepted</span>
-                      {links.length > 0 ? <span>{links.length} linked</span> : null}
-                    </div>
-                  </article>
-                );
-              })}
-            </div>
-          )}
-        </aside>
+        <SourceNoteDocumentList
+          documents={documents}
+          linksByDocumentId={linksByDocumentId}
+          pendingCountByDocumentId={(id) => (entityProposalsByDocumentId.get(id)?.length ?? 0) + (proposalsByDocumentId.get(id)?.length ?? 0)}
+          acceptedCountByDocumentId={(id) => canonicalFactsByDocumentId.get(id)?.length ?? 0}
+          saving={saving}
+          deletingId={deletingId}
+          onEdit={beginEdit}
+          onDelete={(document) => void handleDelete(document)}
+        />
         )}
         <div className={styles.editorStack}>
           <form

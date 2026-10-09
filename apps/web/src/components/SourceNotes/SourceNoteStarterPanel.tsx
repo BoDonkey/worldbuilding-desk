@@ -86,7 +86,7 @@ export const SourceNoteStarterPanel = ({
           </div>
           <div className={styles.starterCard}>
             <h3>Import Dossier</h3>
-            <p>Bring in DOCX, Markdown, or plain text as a linked or general Source Note.</p>
+            <p>Bring in DOCX, Markdown, or plain text. Choose several files to save each as its own Source Note at once.</p>
             {importButton}
           </div>
           <div className={styles.starterCard}>

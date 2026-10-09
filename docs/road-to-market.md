@@ -312,6 +312,7 @@ and required revisit point, `WIP`, `Done <commit>`.
 | 4.58 | Source Note visual editor (Markdown-backed) | 4 | M | Done `d52065e` — dedicated TipTap editor (block style, bold, italic, tables) instead of the shared scene editor, whose toolbar offers code blocks/strike and emits HTML; loads through the display renderer and serializes to Markdown only on change (no-edit save byte-identical, undone edit restores original); plain-text notes convert to escaped Markdown on first edit; renderer backslash escapes and inline `<br>`; round-trip tests (canonical unchanged, other spellings normalize once); lint baseline; 917 web + 47 engine + 12 UI + 24 desktop tests; web/desktop builds; file-size gate; Cypress 139/139; not yet pushed, so `cypress-smoke` unchecked |
 | 4.59 | Remembered Markdown source view for Source Notes | 4 | S | — |
 | 4.60 | Collapsible Source Notes intake panel | 4 | S | Done `3092929` — Hide intro / Show intro (`aria-expanded`) collapses to one row keeping Start Writing and Import File; remembered per browser (guarded localStorage); wraps on narrow screens; lint baseline; 918 web + 47 engine + 12 UI + 24 desktop tests; web/desktop builds; file-size gate; Cypress 139/139; not yet pushed, so `cypress-smoke` unchecked |
+| 4.61 | Multi-file Source Note import | 4 | M | WIP |
 | 5.1 | Auto-update decision + implementation | 5 | M | — |
 | 5.2 | Code signing + notarization, both platforms | 5 | M | — |
 | 5.3 | Packaged-app validation + Electron E2E | 5 | M | — |
@@ -354,7 +355,8 @@ Dogfooding Source Notes on 2026-10-09 adds 4.57 → 4.58: imported Markdown
 loses its formatting, DOCX tables flatten into one cell per paragraph, and
 notes are edited as plain text. 4.57 fixes import and display; 4.58 replaces
 the plain-text editor. 4.59 lets authors who prefer Markdown keep the source
-view; 4.60 lets the intake panel collapse.
+view; 4.60 lets the intake panel collapse. 4.61 (multi-file import) runs
+before 4.59: the author has ~25 documents to bring in.
 
 The 2026-10-06 architecture review
 ([archive](archive/architecture-review-2026-10-06.md)) adds 3.17 and 1.4a.
@@ -1808,7 +1810,7 @@ one Pages-exported DOCX, and several race sheets imported as a batch.
   category switches and imports. Cypress covers a three-document batch and
   the dialog.
 
-### Dogfood Source Notes (4.57–4.60)
+### Dogfood Source Notes (4.57–4.61)
 
 Found on 2026-10-09 importing Echoes material into Source Notes. Source
 Notes are stored, edited, and displayed as plain text end to end: a `.md`
@@ -1857,6 +1859,23 @@ are lost and every table cell becomes its own paragraph.
   the author collapse it to a single row that keeps **Start Writing** and
   **Import File** available (import has no other entry point), remember
   the choice per browser, and expose the toggle with `aria-expanded`.
+
+- **4.61 Multi-file Source Note import.** Importing ~25 documents one at a
+  time, each loaded into the form and saved by hand, made it hard to track
+  what had been imported. Source Notes are never canon, so a batch needs no
+  per-file review: choosing several files saves each as its own Source Note
+  (same parsing as 4.57, same save, link, and index path as a manual save)
+  from a modal dialog. Before starting, the dialog lists the files, marks
+  any already imported (a note whose import file name matches,
+  case-insensitively) as skipped, and offers one optional World Bible record
+  to link every note to as its primary subject. While running it shows
+  progress and cannot be dismissed; afterwards it lists imported (Open),
+  skipped (Open the existing note), and failed (reason) files. A single
+  file keeps today's load-into-the-form flow. No extraction runs
+  automatically and nothing writes canon. Unit-test the batch service
+  (duplicates against saved notes and within the batch, failures not
+  stopping the batch, link and index calls); Cypress covers a three-file
+  batch with one duplicate and opening an imported note.
 
 ## Phase 5 — Release Engineering
 

@@ -222,6 +222,16 @@ Under the hood, the app still includes rich systems for world data, rules, chara
   first edit, with markup characters escaped so it reads the same. Fact and
   entity extraction read Markdown label rows (`- **Age:** Mid-30s`), escaped
   bullets from converted notes, and `#` headings as sections.
+- Choosing several files in the Source Notes import saves each as its own
+  Source Note from a modal dialog (one file still loads into the form for
+  review). The dialog lists the files, marks any already imported (same
+  import file name, ignoring case) as skipped, and offers one optional record
+  to link every note to as its primary subject. While running it shows
+  progress and cannot be dismissed; afterwards it lists imported (Open),
+  skipped (Open the existing note), and failed (reason) files. Notes are
+  saved, linked, and indexed exactly like a manual save; an indexing failure
+  still reports the note as imported, with a Rebuild Context hint. No
+  extraction runs and nothing writes canon.
 - The Source Notes **Start here** intake panel collapses (**Hide intro** /
   **Show intro**, `aria-expanded`) to one row that keeps **Start Writing** and
   **Import File**; the choice is remembered per browser and the row wraps on
@@ -916,6 +926,14 @@ runtime schema, and nothing here changes the roadmap's status board.
 ## Verification Status
 
 ### Verified Recently
+- Slice 4.61 multi-file Source Note import: `sourceNoteBatchImport`
+  (`importSourceNoteFiles`, `findImportedSourceNote`, shared
+  `indexSourceNote` now also used by the manual save),
+  `SourceNoteBatchImportDialog`, and `SourceNoteDocumentList` split out of
+  `LoreRoute.tsx` (1,814 to 1,787 lines). Battery: lint (one existing
+  warning), 921 web + 47 engine + 12 UI + 24 desktop tests, web/desktop
+  builds, file-size gate, Cypress 140/140 in two batches with no retries;
+  dialog checked at desktop and 390px.
 - Slice 4.60 collapsible Source Notes intake panel: state inside
   `SourceNoteStarterPanel` (localStorage, guarded), so `LoreRoute.tsx` is
   unchanged. Battery: lint (one existing warning), 918 web + 47 engine + 12 UI

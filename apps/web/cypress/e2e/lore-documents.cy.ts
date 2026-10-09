@@ -206,6 +206,49 @@ describe('Source Notes', () => {
       .and('contain.value', '| Family | Seat |   |');
   });
 
+  it('imports several files at once, skipping one already imported, and opens a result', () => {
+    const asFile = (fileName: string, text: string, mimeType = 'text/markdown') => ({
+      contents: Cypress.Buffer.from(text),
+      fileName,
+      mimeType
+    });
+    cy.visit('/lore');
+    cy.get('input[type="file"]').selectFile(asFile('camila.md', '# Camila'), {force: true});
+    cy.contains('button', 'Create Source Note').click();
+    cy.contains('[role="status"]', 'Source Note created.').should('be.visible');
+
+    cy.get('input[type="file"]').selectFile(
+      [
+        asFile('Camila.md', '# Camila again'),
+        asFile('leo.md', '## Background\n\n- **Age:** 40'),
+        asFile('races.txt', 'Harbor folk and hill clans.', 'text/plain')
+      ],
+      {force: true}
+    );
+    cy.get('[role="dialog"]').within(() => {
+      cy.contains('h2', 'Import 3 files as Source Notes').should('be.visible');
+      cy.contains('2 to import, 1 already imported.').should('be.visible');
+      cy.contains('li', 'Camila.md').should('contain.text', 'Skipped').and('contain.text', 'Already imported as "camila".');
+      cy.contains('label', 'Link every note to').find('select').select('Ember Archive (World Bible)');
+      cy.contains('button', 'Import 2 files').click();
+      cy.contains('Imported 2 · Skipped 1 · Failed 0').should('be.visible');
+      cy.contains('li', 'leo.md').should('contain.text', 'Imported');
+      cy.contains('li', 'races.txt').should('contain.text', 'Imported');
+    });
+    cy.get('aside[aria-label="Source notes"] article').should('have.length', 3);
+    cy.contains('article', 'leo').should('contain.text', 'Linked source note');
+
+    cy.get('[role="dialog"] button[aria-label="Open leo.md"]').click();
+    cy.get('[role="dialog"]').should('not.exist');
+    cy.contains('h2', 'Edit Source Note').should('be.visible');
+    cy.contains('label', 'Title').find('input').should('have.value', 'leo');
+    cy.get('[role="textbox"][contenteditable]').contains('h2', 'Background').should('be.visible');
+    cy.contains('option', 'Ember Archive (World Bible)')
+      .parent('select')
+      .find('option:selected')
+      .should('have.text', 'Ember Archive (World Bible)');
+  });
+
   it('creates and opens a linked Source Note from a World Bible record', () => {
     cy.visit('/world-bible');
     cy.contains('button', 'Locations').click();
