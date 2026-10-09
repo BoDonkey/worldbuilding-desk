@@ -229,6 +229,32 @@ describe('AIAssistant factual lookup integration', () => {
     expect(screen.getByText('Scene draft - Chapter Five — The Hollow Court')).toBeVisible();
   });
 
+  it('sends nothing while a send is blocked, keeps the question, and explains why', async () => {
+    const props: ComponentProps<typeof AIAssistant> = {
+      projectId: 'project-blocked',
+      aiConfig: {provider: 'ollama', configs: {}, promptTools: [], defaultToolIds: []},
+      sendBlockedReason: 'Loading pending proposals… Send is available once they are ready.'
+    };
+    const {rerender} = renderAssistant(props);
+
+    await screen.findByText('Loading pending proposals… Send is available once they are ready.');
+    const input = screen.getByRole('textbox');
+    fireEvent.change(input, {target: {value: 'Help me think through the spy rumor.'}});
+    expect(screen.getByRole('button', {name: 'Send'})).toBeDisabled();
+    fireEvent.keyDown(input, {key: 'Enter'});
+    expect(input).toHaveValue('Help me think through the spy rumor.');
+    expect(mocks.search).not.toHaveBeenCalled();
+    expect(mocks.stream).not.toHaveBeenCalled();
+
+    rerender(
+      <MemoryRouter>
+        <AIAssistant {...props} sendBlockedReason={null} />
+      </MemoryRouter>
+    );
+    await screen.findByText('Project context ready.');
+    expect(screen.getByRole('button', {name: 'Send'})).toBeEnabled();
+  });
+
   it('never sends an unsupported factual question to the creative provider', async () => {
     mocks.search.mockResolvedValue([
       {

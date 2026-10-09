@@ -93,6 +93,12 @@ interface AIAssistantProps {
    */
   pendingProposals?: {proposals: LoreFactProposal[]; sourceTitleById: Map<string, string>} | null;
   placeholder?: string;
+  /**
+   * When set, nothing is sent and this explains why (for example, pending
+   * proposals the author asked to include are still loading). The typed
+   * question is kept.
+   */
+  sendBlockedReason?: string | null;
   /** The writing coach needs a scene or selection; surfaces without one hide it. */
   showWritingCoach?: boolean;
 }
@@ -127,6 +133,7 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
   conversationScope,
   pendingProposals = null,
   placeholder = 'Ask for help expanding, rewriting, or creating content...',
+  sendBlockedReason = null,
   showWritingCoach = true
 }) => {
   const [messages, setMessages] = useAssistantConversation(projectId, conversationScope);
@@ -321,6 +328,7 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
 
   const handleSendPrompt = useCallback(async (promptText: string) => {
     if (!promptText.trim()) return;
+    if (sendBlockedReason) return;
     if (contextStatus !== 'ready') {
       setMessages((prev) => [
         ...prev,
@@ -542,6 +550,7 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
     selectedText,
     aiConfig?.promptTools,
     pendingProposals,
+    sendBlockedReason,
     runModelRequest
   ]);
 
@@ -553,13 +562,13 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
     const next = queuedPrompt?.trim() ?? '';
     if (!next) return;
     if (isStreaming) return;
-    if (contextStatus !== 'ready') return;
+    if (contextStatus !== 'ready' || sendBlockedReason) return;
     if (consumedQueuedPromptRef.current === next) return;
     consumedQueuedPromptRef.current = next;
     void handleSendPrompt(next).finally(() => {
       onQueuedPromptConsumed?.();
     });
-  }, [queuedPrompt, handleSendPrompt, isStreaming, contextStatus, onQueuedPromptConsumed]);
+  }, [queuedPrompt, handleSendPrompt, isStreaming, contextStatus, sendBlockedReason, onQueuedPromptConsumed]);
 
   const getLastAssistantMessage = () =>
     [...messages].reverse().find((m) => m.role === 'assistant');
@@ -785,12 +794,12 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
             ? 'Loading project context…'
             : contextStatus === 'error'
               ? 'Project context unavailable. Reopen this assistant or rebuild context.'
-              : 'Project context ready.'}
+              : sendBlockedReason ?? 'Project context ready.'}
         </div>
         <div className={styles.actions}>
           <button
             onClick={handleSend}
-            disabled={isStreaming || contextStatus !== 'ready' || !input.trim()}
+            disabled={isStreaming || contextStatus !== 'ready' || Boolean(sendBlockedReason) || !input.trim()}
           >
             Send
           </button>

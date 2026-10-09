@@ -1020,6 +1020,13 @@ runtime schema, and nothing here changes the roadmap's status board.
   question (`services/assistant/pendingProposalContext.ts`). Replies leave
   only through the shared Source Note capture preview. No writing coach here
   (it needs a scene).
+  Since slice 1.4a, `usePendingProposals` reports disabled / loading / ready
+  / error explicitly. After the option is checked, Send is held (the typed
+  question is kept, and the assistant's own send path also refuses) until both
+  pending proposals and their Source Note titles have loaded; loading shows
+  beside the control, and a failed load shows an error with **Retry** instead
+  of reporting zero proposals. Only the newest read can update the state, and
+  unchecking returns to the accepted-only path at once.
 - Slice 4.53 model-assisted review items in the shared review model: canon
   check items (4.38) now live in the Workspace review state and are saved
   with the project review run (`ProjectReviewRun.modelCheckItems`; a record

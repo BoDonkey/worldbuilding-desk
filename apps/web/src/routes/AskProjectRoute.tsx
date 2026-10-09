@@ -4,7 +4,7 @@ import {useAppStore} from '../store/appStore';
 import {PageHeader} from '../components/PageHeader';
 import {AIAssistant} from '../components/AIAssistant/AIAssistant';
 import {SourceNoteCapturePreview} from '../components/Editor/SourceNoteCapturePreview';
-import {RouteFeedback} from '../components/common';
+import {InlineAlert, RouteFeedback} from '../components/common';
 import {usePendingProposals} from '../hooks/usePendingProposals';
 import type {RAGProvider} from '../services/rag/RAGService';
 import {getRAGService} from '../services/rag/getRAGService';
@@ -21,7 +21,7 @@ function AskProjectRoute() {
   const activeProject = useAppStore((state) => state.activeProject);
   const projectSettings = useAppStore((state) => state.projectSettings);
   const [includePending, setIncludePending] = useState(false);
-  const pendingProposals = usePendingProposals(activeProject?.id ?? null, includePending);
+  const {state: pending, retry: retryPending} = usePendingProposals(activeProject?.id ?? null, includePending);
   const [captureText, setCaptureText] = useState<string | null>(null);
   const [sessionId] = useState(() => crypto.randomUUID());
   const [ragService, setRagService] = useState<RAGProvider | null>(null);
@@ -58,7 +58,15 @@ function AskProjectRoute() {
     );
   }
 
-  const pendingCount = pendingProposals?.proposals.length ?? 0;
+  // Proposals reach the assistant only once both they and their Source Note titles have loaded.
+  const pendingContext = pending.status === 'ready' ? pending.context : null;
+  const pendingCount = pendingContext?.proposals.length ?? 0;
+  const sendBlockedReason =
+    pending.status === 'loading'
+      ? 'Loading pending proposals… Send is available once they are ready.'
+      : pending.status === 'error'
+        ? 'Pending proposals could not be loaded. Retry, or turn off Include pending proposals to ask about accepted canon only.'
+        : null;
   const inspector = projectSettings?.aiSettings?.inspectorSettings;
 
   return (
@@ -78,12 +86,27 @@ function AskProjectRoute() {
           />
           Include pending proposals
         </label>
-        <p className={styles.hint}>
-          {includePending
+        <p className={styles.hint} role='status'>
+          {pending.status === 'ready'
             ? `${pendingCount} pending proposal${pendingCount === 1 ? '' : 's'} from Source Notes can come up in discussion, always labeled as not yet accepted. Factual answers still use accepted canon only. `
-            : 'Off: only accepted canon, saved scenes, and Source Notes inform answers. Turn this on to talk through proposals you have not accepted yet. '}
+            : pending.status === 'loading'
+              ? 'Loading pending proposals… '
+              : pending.status === 'error'
+                ? ''
+                : 'Off: only accepted canon, saved scenes, and Source Notes inform answers. Turn this on to talk through proposals you have not accepted yet. '}
           <Link to='/canon-decisions'>Review proposals in Canon Review</Link>
         </p>
+        {pending.status === 'error' ? (
+          <div className={styles.pendingError}>
+            <InlineAlert
+              variant='error'
+              message={`Pending proposals could not be loaded, so none are included. ${pending.message}`}
+            />
+            <button type='button' onClick={retryPending}>
+              Retry
+            </button>
+          </div>
+        ) : null}
       </div>
       <div className={styles.assistant}>
         <AIAssistant
@@ -94,7 +117,8 @@ function AskProjectRoute() {
           aiConfig={projectSettings?.aiSettings}
           projectMode={projectSettings?.projectMode}
           conversationScope='ask'
-          pendingProposals={includePending ? pendingProposals : null}
+          pendingProposals={pendingContext}
+          sendBlockedReason={sendBlockedReason}
           onCaptureSourceNote={setCaptureText}
           placeholder='Ask about your characters, places, and story so far…'
           showWritingCoach={false}

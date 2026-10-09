@@ -28,6 +28,18 @@
   font-size: var(--font-size-sm);
 }
 
+.pendingError {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.pendingError > :first-child {
+  flex: 1 1 16rem;
+  margin: 0;
+}
+
 .assistant {
   min-height: 0;
 }

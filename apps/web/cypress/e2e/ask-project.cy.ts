@@ -52,6 +52,40 @@ const ask = (question: string) => {
   cy.contains('button', /^Send$/).click();
 };
 
+/**
+ * Holds or fails reads of the pending-proposal store inside the app window,
+ * so the test can act while proposals are still loading or after a failed load.
+ */
+function patchProposalReads(win: Window, mode: 'hold' | 'fail') {
+  const proto = (win as unknown as {IDBObjectStore: typeof IDBObjectStore}).IDBObjectStore.prototype;
+  const original = proto.getAll;
+  let release: () => void = () => {};
+  const gate = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  proto.getAll = function patchedGetAll(this: IDBObjectStore, ...args: Parameters<IDBObjectStore['getAll']>) {
+    if (this.name !== 'lore_fact_proposals') return original.apply(this, args);
+    if (mode === 'fail') throw new DOMException('Simulated read failure', 'UnknownError');
+    const request = original.apply(this, args);
+    Object.defineProperty(request, 'onsuccess', {
+      configurable: true,
+      set(handler: (event: Event) => void) {
+        request.addEventListener('success', (event) => {
+          void gate.then(() => handler.call(request, event));
+        });
+      }
+    });
+    return request;
+  };
+  return {
+    release: () => release(),
+    restore: () => {
+      proto.getAll = original;
+      release();
+    }
+  };
+}
+
 describe('Ask your project', () => {
   beforeEach(() => {
     cy.viewport(1400, 1000);
@@ -110,6 +144,56 @@ describe('Ask your project', () => {
       expect(body).to.contain('never as established fact');
     });
     cy.contains('her loyalty becomes the open question').should('be.visible');
+  });
+
+  it('holds Send until pending proposals have loaded after the option is checked', () => {
+    cy.intercept('POST', ANTHROPIC_STREAM, anthropicReply('Then her loyalty is the open question.')).as('discussion');
+    cy.visit('/ask');
+    cy.get('textarea[placeholder^="Ask about your characters"]').should('not.be.disabled');
+    cy.window().then((win) => {
+      const reads = patchProposalReads(win, 'hold');
+      cy.contains('label', 'Include pending proposals').find('input').check();
+      cy.contains('Loading pending proposals…').should('be.visible');
+      cy.get('textarea[placeholder^="Ask about your characters"]').type('Help me think through the spy rumor about Sera.');
+      cy.contains('button', /^Send$/).should('be.disabled');
+      cy.get('textarea[placeholder^="Ask about your characters"]').type('{enter}');
+      cy.get('textarea[placeholder^="Ask about your characters"]').should('contain.value', 'spy rumor');
+      cy.then(() => reads.restore());
+    });
+    cy.contains('1 pending proposal from Source Notes').should('be.visible');
+    cy.contains('button', /^Send$/).should('be.enabled').click();
+    cy.wait('@discussion').then(({request}) => {
+      expect(JSON.stringify(request.body)).to.contain('Pending proposal, not canon - Sera — background: secretly a spy');
+    });
+  });
+
+  it('shows a failed proposal load with Retry instead of reporting none, and can be turned off', () => {
+    cy.visit('/ask');
+    cy.get('textarea[placeholder^="Ask about your characters"]').should('not.be.disabled');
+    cy.window().then((win) => {
+      const reads = patchProposalReads(win, 'fail');
+      cy.contains('label', 'Include pending proposals').find('input').check();
+      cy.contains('[role="alert"]', 'Pending proposals could not be loaded, so none are included.').should('be.visible');
+      cy.contains('0 pending proposals').should('not.exist');
+      cy.get('textarea[placeholder^="Ask about your characters"]').type('Help me think through the rumor.');
+      cy.contains('button', /^Send$/).should('be.disabled');
+      cy.then(() => reads.restore());
+    });
+
+    cy.contains('label', 'Include pending proposals').find('input').uncheck();
+    cy.contains('[role="alert"]', 'Pending proposals could not be loaded').should('not.exist');
+    cy.contains('Off: only accepted canon').should('be.visible');
+    cy.contains('button', /^Send$/).should('be.enabled');
+
+    cy.window().then((win) => {
+      const reads = patchProposalReads(win, 'fail');
+      cy.contains('label', 'Include pending proposals').find('input').check();
+      cy.contains('button', 'Retry').should('be.visible');
+      cy.then(() => reads.restore());
+    });
+    cy.contains('button', 'Retry').click();
+    cy.contains('1 pending proposal from Source Notes').should('be.visible');
+    cy.contains('[role="alert"]', 'Pending proposals could not be loaded').should('not.exist');
   });
 
   it('saves a reply only through the Source Note preview', () => {
