@@ -1,6 +1,6 @@
 # SagaSpine Project Status
 
-**Last Updated:** October 6, 2026
+**Last Updated:** October 9, 2026
 
 ## Project Overview
 
@@ -208,6 +208,16 @@ Under the hood, the app still includes rich systems for world data, rules, chara
   fallback is now the priced `gemini-2.5-flash-lite`.
 - Lore Documents are now framed as source-note intake rather than a parallel canon database, with manual writing, dossier import, and extraction paths kept separate from accepted canon.
 - World Bible records can create or open a linked Lore Document for longform source notes, and Lore Documents can navigate back to the linked World Bible record.
+- Source Notes store Markdown. `.md` imports keep their text and are saved
+  as Markdown (notes imported from `.md` before this were saved as plain text
+  and are now read as Markdown). DOCX imports convert heading styles,
+  bullet/numbered lists, bold/italic, and tables (pipe tables, first row as
+  header) to Markdown. The Content field shows the formatted note by default
+  for saved and imported notes, with **Edit Markdown** to change the text;
+  displayed HTML is sanitized to allow-listed tags and web/mail links. Fact
+  and entity extraction read Markdown label rows (`- **Age:** Mid-30s`) and
+  `#` headings as sections. Editing is still a plain Markdown textarea
+  (visual editor: roadmap 4.58).
 - Lore Documents now has a project context health panel that shows RAG document/chunk counts, indexed document type counts, Shodh memory counts, project data counts, and a retrieval probe.
 - World Bible character records now include a Character detail health panel showing aliases, accepted facts, linked Lore Documents, scene mentions, Shodh memories, state events, and an explicit RAG context probe for the selected character.
 - Scratchpad records are included in project backup snapshots and restore paths.
@@ -894,6 +904,17 @@ runtime schema, and nothing here changes the roadmap's status board.
 ## Verification Status
 
 ### Verified Recently
+- Slice 4.57 Source Note import fidelity and formatted display:
+  `docxToMarkdown` (shares the World Bible DOCX reader's style and zip
+  helpers; the Source Note copy of the old reader is removed),
+  `sourceNoteFormat` (legacy `.md` format, sanitized display HTML), and
+  `SourceNoteContentField` / `SourceNoteStarterPanel` split out of
+  `LoreRoute.tsx` (1,829 to 1,814 lines). The shared Markdown renderer now
+  honors escaped pipes and `<br>` in table cells and links only http(s)/mailto
+  URLs. Battery: lint (one existing warning), 905 web + 47 engine + 12 UI +
+  24 desktop tests, web/desktop builds, file-size gate, Cypress 138/138 in two
+  batches with no retries; DOCX table import checked visually in light and
+  dark themes.
 - Slice 4.56 multi-document import flow and category manager dialog:
   per-draft import status in `useWorldBibleImports`, `ImportDraftCard` and
   `ImportDocumentPreviewDialog` split out of the import workspace, record

@@ -176,7 +176,7 @@ export function extractLoreEntityProposals(
   if (params.document.kind === 'character_dossier' || /character sheet/i.test(params.document.title)) {
     const titleMatch =
       params.document.title.match(/character sheet[:\s-]+(.+)/i) ??
-      text.match(/^\s*[•*-]?\s*Name:\s*(.+)$/im);
+      text.match(/^\s*(?:[•-]|\*(?!\*))?\s*(?:\*\*|__)?Name:(?:\*\*|__)?\s*(.+)$/im);
     const candidateName = titleMatch?.[1]?.trim();
     if (titleMatch && candidateName && !firstLinkedCharacter) {
       pushProposal(proposals, dedupe, {

@@ -47,6 +47,35 @@ describe('extractLoreFactProposals', () => {
     });
   });
 
+  it('reads Markdown label rows and uses Markdown headings as sections', () => {
+    const content = [
+      '# Camila Garcia deTerra',
+      '- **Age:** Mid-30s',
+      '**Occupation**: Harbor archivist',
+      '## Education',
+      '- Age 6-10: Glass Harbor Primary'
+    ].join('\n');
+    const proposals = extractLoreFactProposals({
+      projectId: 'project-1',
+      document: makeDocument(content),
+      links,
+      knownTargets: [{type: 'entity', id: 'character-entity-1', name: 'Mira Voss'}],
+      existingFacts: [] as CanonicalFact[]
+    });
+
+    const age = proposals.find((proposal) => proposal.factType === 'age');
+    expect(age?.value).toBe('Mid-30s');
+    expect(content.slice(age?.evidence.start, (age?.evidence.start ?? 0) + 'Mid-30s'.length)).toBe(
+      'Mid-30s'
+    );
+    expect(proposals.find((proposal) => proposal.factType === 'occupation')?.value).toBe(
+      'Harbor archivist'
+    );
+    expect(proposals.find((proposal) => proposal.factType === 'background')?.value).toBe(
+      'Age 6-10: Glass Harbor Primary'
+    );
+  });
+
   it('extracts reviewable natural-prose facts from the trust dogfood dossier', () => {
     const content = readFileSync(
       new URL('../../../../../fixtures/trust-dogfood/lore/dossier-sera-kestrel.md', import.meta.url),

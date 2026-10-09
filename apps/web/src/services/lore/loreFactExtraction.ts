@@ -467,8 +467,17 @@ export function extractLoreFactProposals(
       currentSection = trimmed.slice(0, -1);
       continue;
     }
+    const markdownHeading = trimmed.match(/^#{1,6}\s+(.+?):?$/);
+    if (markdownHeading) {
+      currentSection = markdownHeading[1].trim();
+      continue;
+    }
 
-    const bulletBody = trimmed.replace(/^[•*-]\s*/, '');
+    // Markdown label rows read like plain ones: "- **Age:** Mid-30s" → "Age: Mid-30s".
+    const bulletBody = trimmed
+      .replace(/^(?:[•-]|\*(?!\*))\s*/, '')
+      .replace(/^(\*\*|__)([^*_:]+):\1:?\s*/, '$2: ')
+      .replace(/^(\*\*|__)([^*_:]+)\1:\s*/, '$2: ');
     if (/^name:/i.test(bulletBody)) {
       continue;
     }

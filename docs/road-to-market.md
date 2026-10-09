@@ -167,6 +167,7 @@ pnpm --filter web e2e:run       # for slices touching routed UI
    4.46 → 4.47 → 4.48; 4.42 after 4.46; 4.50 → 4.51; 4.50 → 4.52;
    3.15 first among 3.12–3.15; 3.12a → 3.12b; both before 5.3 and 6.1;
    3.16 → 4.53; 3.17 → 1.4a; 3.17 → 1.4b; 4.54 → 4.55 → 4.56;
+   4.57 → 4.58;
    5.14 before 5.15; 5.15 before 6.1;
    Phase 6 strictly ordered).
 2. **Get the full prompt.** Slices marked _[prompt: archive/... § Slice N]_
@@ -307,6 +308,8 @@ and required revisit point, `WIP`, `Done <commit>`.
 | 4.54 | Document import structure fidelity | 4 | M | Done `e7bef24` — Markdown `#` and DOCX heading styles (incl. Pages named styles/outline levels) detected; leading title heading kept as title; list/bold label rows mapped anywhere (Age; Occupation→Role); Markdown structure kept in rich fields; same-named sections append; all headings listed; Markdown list `</li>` fix; parsing extracted (hook 1,632→912 lines); checked on both real Echoes sheets (12/19 sections, Age, both Backgrounds kept); lint baseline; 869 web + 47 engine + 12 UI + 24 desktop tests; web/desktop builds; file-size gate; Cypress 132/132; not yet pushed, so `cypress-smoke` unchecked |
 | 4.55 | Import heading destinations | 4 | M | Done `0c6a6f9` — per-heading picker (Keep in Description, category fields by name, New field: <label> incl. fields planned by other headings/open drafts, Skip); destinations carry field key or planned label; open drafts reconcile when category fields change (batch carry-over) and apply reconciles too; stale field shows as Description; rename keeps choices; unsaved characters show custom fields; lint baseline; 881 web + 47 engine + 12 UI + 24 desktop tests; web/desktop builds; file-size gate; Cypress 134/134; not yet pushed, so `cypress-smoke` unchecked |
 | 4.56 | Multi-document import flow + category manager dialog | 4 | M | Done `8489786` — drafts keep waiting / imported (Open) / failed (reason, retry) status and are never imported twice; preview says nothing is saved until import and counts each state; Import selected (N); discarding unsaved drafts asks first; Import and open scrolls the record into view; Manage Categories is a modal (focus trap, Escape backs out of field editing then closes, closes on navigation, mobile bottom sheet above nav); WorldBibleRoute 2,229→2,202 lines; lint baseline; 890 web + 47 engine + 12 UI + 24 desktop tests; web/desktop builds; file-size gate; Cypress 137/137; not yet pushed, so `cypress-smoke` unchecked |
+| 4.57 | Source Note import fidelity + formatted display | 4 | M | WIP |
+| 4.58 | Source Note visual editor (Markdown-backed) | 4 | M | — |
 | 5.1 | Auto-update decision + implementation | 5 | M | — |
 | 5.2 | Code signing + notarization, both platforms | 5 | M | — |
 | 5.3 | Packaged-app validation + Electron E2E | 5 | M | — |
@@ -344,6 +347,11 @@ Echoes character and race sheets) adds 4.54–4.56, run in order. 4.54
 carries a data-loss fix (same-named headings overwrite each other) and goes
 first. They touch World Bible import only, so they may run in parallel with
 1.4a/1.4b.
+
+Dogfooding Source Notes on 2026-10-09 adds 4.57 → 4.58: imported Markdown
+loses its formatting, DOCX tables flatten into one cell per paragraph, and
+notes are edited as plain text. 4.57 fixes import and display; 4.58 replaces
+the plain-text editor.
 
 The 2026-10-06 architecture review
 ([archive](archive/architecture-review-2026-10-06.md)) adds 3.17 and 1.4a.
@@ -1796,6 +1804,39 @@ one Pages-exported DOCX, and several race sheets imported as a batch.
   instead of an unfocused block in page flow that stays open across
   category switches and imports. Cypress covers a three-document batch and
   the dialog.
+
+### Dogfood Source Notes (4.57–4.58)
+
+Found on 2026-10-09 importing Echoes material into Source Notes. Source
+Notes are stored, edited, and displayed as plain text end to end: a `.md`
+import is detected as Markdown but saved as `plain_text`, so its markup shows
+as literal characters; the Source Note DOCX reader (a duplicate of the
+pre-4.54 one) strips all structure, so headings, lists, emphasis, and tables
+are lost and every table cell becomes its own paragraph.
+
+- **4.57 Source Note import fidelity + formatted display.** Note content
+  stays text, now Markdown, so extraction evidence offsets, RAG indexing,
+  the evidence gate, and portable export keep working on near-plain text.
+  `.md` imports keep their content and are saved as `markdown`; notes saved
+  as `plain_text` from a `.md` import before this fix are read as Markdown.
+  DOCX imports go through the shared World Bible DOCX reader, extended to
+  emit Markdown: heading styles, bullet/numbered lists (from
+  `numbering.xml`), bold/italic, and tables as pipe tables (first row as
+  header, merged cells padded, multi-paragraph cells joined with `<br>`).
+  The old Source Note DOCX reader is removed. The Content field shows the
+  formatted note by default for saved and imported notes, with an explicit
+  switch to edit the Markdown; the rendered HTML is sanitized (allow-listed
+  tags, safe link schemes only). Fact extraction tolerates Markdown label
+  rows (`- **Age:** Mid-30s`) and treats `#` headings as sections. Import
+  still never writes canon. Unit-test DOCX tables/lists/emphasis, the
+  renderer's sanitization, legacy `.md` detection, and Markdown label
+  extraction; Cypress covers importing a Markdown note and seeing it
+  formatted.
+- **4.58 Source Note visual editor (Markdown-backed).** After 4.57. Replace
+  the Markdown textarea with the shared TipTap editor plus table support,
+  serializing back to Markdown so stored content stays text. Round-trip
+  tests must show that opening and saving a note without edits leaves its
+  Markdown unchanged, so extraction evidence offsets do not move.
 
 ## Phase 5 — Release Engineering
 

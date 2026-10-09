@@ -36,6 +36,22 @@ describe('extractLoreEntityProposals', () => {
     expect(proposals.map((proposal) => proposal.name)).toEqual(['Lantern Guild Clan']);
   });
 
+  it('reads a bold Markdown Name label on a character dossier', () => {
+    const proposals = extractLoreEntityProposals({
+      projectId: 'project-1',
+      document: {
+        ...makeDocument('- **Name:** Camila Garcia\n- **Age:** Mid-30s'),
+        title: 'Camila',
+        kind: 'character_dossier'
+      },
+      links: [],
+      characters: [],
+      entities: []
+    });
+
+    expect(proposals.map((proposal) => proposal.name)).toContain('Camila Garcia');
+  });
+
   it('finds typed entities in natural-prose dogfood faction notes', () => {
     const content = readFileSync(
       new URL('../../../../../fixtures/trust-dogfood/lore/faction-cinder-compact.md', import.meta.url),

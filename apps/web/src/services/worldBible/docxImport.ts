@@ -90,7 +90,7 @@ export interface DocxImportDocument {
   html: string;
 }
 
-interface DocxParagraphStyle {
+export interface DocxParagraphStyle {
   name?: string;
   outlineLevel?: number;
   basedOn?: string;
@@ -104,7 +104,7 @@ const XML_ENTITIES: Record<string, string> = {
   apos: "'"
 };
 
-const decodeXmlEntities = (value: string): string =>
+export const decodeXmlEntities = (value: string): string =>
   value.replace(/&(#x[0-9a-f]+|#\d+|[a-z]+);/gi, (match, entity: string) => {
     if (entity[0] === '#') {
       const codePoint = entity[1] === 'x' || entity[1] === 'X'
@@ -121,10 +121,10 @@ const escapeHtml = (value: string): string =>
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;');
 
-const readAttribute = (xml: string, element: string): string | undefined =>
+export const readAttribute = (xml: string, element: string): string | undefined =>
   xml.match(new RegExp(`<w:${element}\\b[^>]*\\bw:val="([^"]*)"`))?.[1];
 
-const parseDocxParagraphStyles = (stylesXml: string): Map<string, DocxParagraphStyle> => {
+export const parseDocxParagraphStyles = (stylesXml: string): Map<string, DocxParagraphStyle> => {
   const styles = new Map<string, DocxParagraphStyle>();
   for (const match of stylesXml.matchAll(/<w:style\b([^>]*)>([\s\S]*?)<\/w:style>/g)) {
     const attributes = match[1];
@@ -150,10 +150,10 @@ const headingLevelFromStyleName = (value: string | undefined): number | null => 
 };
 
 /** Outline levels 0-8 are headings; 9 is body text. */
-const headingLevelFromOutline = (outlineLevel: number): number | null =>
+export const headingLevelFromOutline = (outlineLevel: number): number | null =>
   outlineLevel >= 0 && outlineLevel < 9 ? Math.min(outlineLevel + 1, 6) : null;
 
-const resolveStyleHeadingLevel = (
+export const resolveStyleHeadingLevel = (
   styleId: string,
   styles: Map<string, DocxParagraphStyle>
 ): number | null => {
@@ -228,7 +228,7 @@ export const docxXmlToImportDocument = (
   };
 };
 
-const readZipEntryText = async (
+export const readZipEntryText = async (
   bytes: Uint8Array,
   entryName: string
 ): Promise<string | null> => {

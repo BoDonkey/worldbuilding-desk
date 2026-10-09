@@ -87,7 +87,7 @@ describe('Source Notes', () => {
       'Imported "mira-voss-dossier.md". Add document context links if useful, then save the Source Note.'
     ).should('be.visible');
     cy.contains('label', 'Title').find('input').should('have.value', 'mira-voss-dossier');
-    cy.get('textarea').should('contain.value', 'Character Sheet: Mira Voss');
+    cy.get('[role="document"]').should('contain.text', 'Character Sheet: Mira Voss');
     cy.contains('button', 'Create Source Note').click();
     cy.contains(
       '[role="status"]',
@@ -122,6 +122,47 @@ describe('Source Notes', () => {
     cy.contains('Mira Voss').should('not.exist');
   });
 
+  it('shows imported Markdown formatted, with its tables, and edits the Markdown on request', () => {
+    cy.visit('/lore');
+    cy.get('input[type="file"]').selectFile(
+      {
+        contents: Cypress.Buffer.from(
+          [
+            '# Camila Garcia deTerra',
+            '',
+            '- **Age:** Mid-30s',
+            '- *Occupation:* Harbor archivist',
+            '',
+            '| Trait | Value |',
+            '| --- | --- |',
+            '| Height | Tall |'
+          ].join('\n')
+        ),
+        fileName: 'camila.md',
+        mimeType: 'text/markdown'
+      },
+      {force: true}
+    );
+
+    cy.get('[role="document"]').within(() => {
+      cy.contains('h1', 'Camila Garcia deTerra').should('be.visible');
+      cy.contains('li strong', 'Age:').should('be.visible');
+      cy.contains('th', 'Trait').should('be.visible');
+      cy.contains('td', 'Tall').should('be.visible');
+      cy.contains('**').should('not.exist');
+    });
+
+    cy.contains('button', 'Edit Markdown').click();
+    cy.get('textarea').should('contain.value', '- **Age:** Mid-30s');
+    cy.contains('button', 'Create Source Note').click();
+    cy.contains('[role="status"]', 'Source Note created.').should('be.visible');
+
+    cy.contains('article', 'camila').within(() => {
+      cy.contains('button', 'Edit').click();
+    });
+    cy.get('[role="document"]').contains('td', 'Tall').should('be.visible');
+  });
+
   it('creates and opens a linked Source Note from a World Bible record', () => {
     cy.visit('/world-bible');
     cy.contains('button', 'Locations').click();
@@ -139,7 +180,7 @@ describe('Source Notes', () => {
     cy.location('pathname').should('eq', '/lore');
     cy.contains('h2', 'Edit Source Note').should('be.visible');
     cy.contains('label', 'Title').find('input').should('have.value', 'Crystal Vault Dossier');
-    cy.get('textarea').should('contain.value', 'Crystal Vault source notes');
+    cy.get('[role="document"]').should('contain.text', 'Crystal Vault source notes');
     cy.contains('option', 'Crystal Vault (World Bible)')
       .parent('select')
       .find('option:selected')

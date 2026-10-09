@@ -6,6 +6,7 @@ import type {
   CanonicalFact,
   Character,
   LoreDocument,
+  LoreDocumentFormat,
   LoreDocumentKind,
   LoreDocumentLink,
   LoreEntityProposal,
@@ -49,6 +50,10 @@ import {getCanonicalFactValidityTags} from '../services/lore/canonicalFactValidi
 import {acceptLoreEntityProposal} from '../services/lore/entityProposalActions';
 import {normalizeLoreDocumentLinks} from '../services/lore/loreDocumentLinks';
 import {summarizeContent} from '../services/lore/sourceNoteCapture';
+import {resolveSourceNoteFormat} from '../services/lore/sourceNoteFormat';
+import {SourceNoteContentField} from '../components/SourceNotes/SourceNoteContentField';
+import type {SourceNoteContentView} from '../components/SourceNotes/SourceNoteContentField';
+import {SourceNoteStarterPanel} from '../components/SourceNotes/SourceNoteStarterPanel';
 import {getRAGService} from '../services/rag/getRAGService';
 import type {RAGProvider} from '../services/rag/RAGService';
 import type {RAGDiagnostics, RAGSearchResult} from '../services/rag/types';
@@ -142,6 +147,8 @@ function LoreRoute() {
   const [title, setTitle] = useState('');
   const [kind, setKind] = useState<LoreDocumentKind>('general_lore');
   const [content, setContent] = useState('');
+  const [draftFormat, setDraftFormat] = useState<LoreDocumentFormat>('markdown');
+  const [contentView, setContentView] = useState<SourceNoteContentView>('edit');
   const [draftSource, setDraftSource] = useState<LoreDocument['source']>({type: 'manual'});
   const [linkDrafts, setLinkDrafts] = useState<LinkDraft[]>([]);
   const [factTargetDrafts, setFactTargetDrafts] = useState<Record<string, FactTargetDraft>>({});
@@ -493,6 +500,8 @@ function LoreRoute() {
     setTitle('');
     setKind('general_lore');
     setContent('');
+    setDraftFormat('markdown');
+    setContentView('edit');
     setDraftSource({type: 'manual'});
     setLinkDrafts([]);
     setFactTargetDrafts({});
@@ -504,6 +513,8 @@ function LoreRoute() {
     setTitle(document.title);
     setKind(document.kind);
     setContent(document.content);
+    setDraftFormat(resolveSourceNoteFormat(document));
+    setContentView('formatted');
     setDraftSource(document.source);
     setLinkDrafts(
       (linksByDocumentId.get(document.id) ?? []).map((link) => ({
@@ -545,7 +556,7 @@ function LoreRoute() {
       projectId: activeProject.id,
       title: title.trim(),
       kind,
-      format: existing?.format ?? 'plain_text',
+      format: draftFormat,
       content: content.trim(),
       summary: summarizeContent(content),
       source: existing?.source ?? draftSource,
@@ -648,6 +659,8 @@ function LoreRoute() {
       setTitle(parsed.title);
       setKind('general_lore');
       setContent(parsed.content);
+      setDraftFormat(parsed.format);
+      setContentView('formatted');
       setDraftSource({
         type: 'import',
         fileName: parsed.fileName,
@@ -1239,45 +1252,18 @@ function LoreRoute() {
       <input
         ref={importInputRef}
         type='file'
-        accept='.docx,.txt,.md,text/plain,text/markdown,application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+        accept='.docx,.txt,.md,.markdown,text/plain,text/markdown,application/vnd.openxmlformats-officedocument.wordprocessingml.document'
         className={styles.hiddenInput}
         onChange={handleImport}
       />
 
       <RouteFeedback feedback={feedback} onClear={() => setFeedback(null)} />
 
-      <section className={styles.starterPanel} aria-label='Source note starting points'>
-        <div className={styles.starterHeader}>
-          <div>
-            <div className={styles.starterEyebrow}>Start here</div>
-            <h2>Source note intake</h2>
-            <p>
-              Capture longform material first, then decide which extracted facts
-              and entities are worth promoting into World Bible canon.
-            </p>
-          </div>
-        </div>
-        <div className={styles.starterGrid}>
-          <div className={styles.starterCard}>
-            <h3>Write Manually</h3>
-            <p>Draft a dossier, timeline, myth, or background note without shaping it into fields.</p>
-            <button type='button' onClick={focusLoreEditor}>
-              Start Writing
-            </button>
-          </div>
-          <div className={styles.starterCard}>
-            <h3>Import Dossier</h3>
-            <p>Bring in DOCX, Markdown, or plain text as a linked or general Source Note.</p>
-            <button type='button' onClick={handleImportClick} disabled={isImporting}>
-              {isImporting ? 'Importing...' : 'Import File'}
-            </button>
-          </div>
-          <div className={styles.starterCard}>
-            <h3>Review Later</h3>
-            <p>Save a Source Note, open it for editing, then extract candidates from the one saved version in view.</p>
-          </div>
-        </div>
-      </section>
+      <SourceNoteStarterPanel
+        isImporting={isImporting}
+        onStartWriting={focusLoreEditor}
+        onImport={handleImportClick}
+      />
 
       <div
         className={`${styles.layout} ${
@@ -1457,14 +1443,13 @@ function LoreRoute() {
               ))}
             </div>
 
-            <label className={styles.fieldLabel}>
-              Content
-              <textarea
-                value={content}
-                onChange={(event) => setContent(event.target.value)}
-                rows={18}
-              />
-            </label>
+            <SourceNoteContentField
+              content={content}
+              format={draftFormat}
+              view={contentView}
+              onViewChange={setContentView}
+              onChange={setContent}
+            />
 
             <div className={styles.formActions}>
               <button type='submit' disabled={saving || !title.trim() || !content.trim()}>

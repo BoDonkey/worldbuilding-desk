@@ -1,0 +1,131 @@
+.field {
+  margin-bottom: 0.8rem;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.35rem;
+}
+
+.label {
+  font-size: 0.92rem;
+  color: var(--color-text-primary);
+}
+
+.field textarea {
+  display: block;
+  width: 100%;
+  resize: vertical;
+}
+
+.hint,
+.empty {
+  margin: 0.35rem 0 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+
+.formatted {
+  max-height: 36rem;
+  overflow: auto;
+  padding: 0.75rem 1rem;
+  border-radius: 12px;
+  border: 1px solid var(--surface-border-soft);
+  background: var(--input-bg);
+  color: var(--color-text-primary);
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}
+
+.formatted > :first-child {
+  margin-top: 0;
+}
+
+.formatted > :last-child {
+  margin-bottom: 0;
+}
+
+.formatted h1,
+.formatted h2,
+.formatted h3,
+.formatted h4,
+.formatted h5,
+.formatted h6 {
+  margin: 1.1em 0 0.4em;
+  line-height: 1.25;
+}
+
+.formatted h1 {
+  font-size: var(--font-size-xl);
+}
+
+.formatted h2 {
+  font-size: var(--font-size-lg);
+}
+
+.formatted h3,
+.formatted h4,
+.formatted h5,
+.formatted h6 {
+  font-size: var(--font-size-base);
+}
+
+.formatted p,
+.formatted ul,
+.formatted ol,
+.formatted blockquote {
+  margin: 0 0 0.75em;
+}
+
+.formatted ul,
+.formatted ol {
+  padding-left: 1.4rem;
+}
+
+.formatted blockquote {
+  padding-left: 0.85rem;
+  border-left: 3px solid var(--surface-border-strong);
+  color: var(--color-text-secondary);
+}
+
+.formatted hr {
+  border: none;
+  border-top: 1px solid var(--surface-border-soft);
+  margin: 1em 0;
+}
+
+.formatted code {
+  padding: 0.05em 0.3em;
+  border-radius: 4px;
+  background: var(--editor-code-bg);
+  color: var(--editor-code-text);
+}
+
+.formatted a {
+  color: var(--color-accent);
+}
+
+.formatted table {
+  display: block;
+  max-width: 100%;
+  overflow-x: auto;
+  margin: 0 0 0.75em;
+  border-collapse: collapse;
+  font-size: var(--font-size-sm);
+}
+
+.formatted th,
+.formatted td {
+  padding: 0.4rem 0.6rem;
+  border: 1px solid var(--surface-border-soft);
+  text-align: left;
+  vertical-align: top;
+}
+
+.formatted th {
+  background: var(--surface-panel-elevated);
+  font-weight: 600;
+}

@@ -162,7 +162,7 @@ describe('World Canvas', () => {
 
     cy.location('pathname').should('eq', '/lore');
     cy.contains('h2', 'Edit Source Note').should('be.visible');
-    cy.get('textarea').should('contain.value', 'From World Canvas — Places');
+    cy.get('[role="document"]').should('contain.text', 'From World Canvas — Places');
     cy.contains('button', 'Extract Candidates').click();
     cy.contains('[role="status"]', /Extracted \d+ entity proposal/).should('be.visible');
 
@@ -228,16 +228,16 @@ describe('World Canvas', () => {
       cy.contains('button', 'Open').click();
     });
     cy.location('pathname').should('eq', '/lore');
-    cy.get('textarea').should('contain.value', 'From World Canvas — Core Idea')
-      .and('contain.value', 'A city powered by borrowed memories.');
+    cy.get('[role="document"]').should('contain.text', 'From World Canvas — Core Idea')
+      .and('contain.text', 'A city powered by borrowed memories.');
 
     cy.visit('/world-canvas');
     cy.get('textarea[placeholder*="borrowed memories"]')
       .type(' Its founders are forgotten.');
     cy.contains(/Saved at/).should('be.visible');
     cy.get('#world-canvas-premise-heading').parents('section').first().within(() => cy.contains('button', 'Open').click());
-    cy.get('textarea').should('contain.value', 'A city powered by borrowed memories.')
-      .and('not.contain.value', 'Its founders are forgotten.');
+    cy.get('[role="document"]').should('contain.text', 'A city powered by borrowed memories.')
+      .and('not.contain.text', 'Its founders are forgotten.');
 
     cy.visit('/world-canvas');
     cy.get('#world-canvas-premise-heading').parents('section').first().within(() => {
@@ -415,8 +415,8 @@ describe('World Canvas', () => {
         .within(() => cy.contains('button', 'Open').click());
       cy.location('pathname').should('eq', '/lore');
       cy.contains('h2', 'Edit Source Note').should('be.visible');
-      cy.get('textarea').should(
-        'contain.value',
+      cy.get('[role="document"]').should(
+        'contain.text',
         'From World Canvas brainstorm — Factions and institutions (Tension)'
       );
     });

@@ -177,6 +177,26 @@ describe('markdownToRichHtml lists', () => {
   });
 });
 
+describe('markdownToRichHtml tables and links', () => {
+  it('keeps escaped pipes and <br> line breaks inside table cells', () => {
+    const html = markdownToRichHtml(
+      ['| Trait | Notes |', '| --- | --- |', '| Height \\| build | one<br>two |'].join('\n')
+    );
+
+    expect(html).toBe(
+      '<table><thead><tr><th>Trait</th><th>Notes</th></tr></thead>' +
+        '<tbody><tr><td>Height | build</td><td>one<br />two</td></tr></tbody></table>'
+    );
+  });
+
+  it('links only web and mail URLs and never breaks out of the href', () => {
+    expect(markdownToRichHtml('[site](https://example.com/a"b)')).toBe(
+      '<p><a href="https://example.com/a&quot;b">site</a></p>'
+    );
+    expect(markdownToRichHtml('[bad](javascript:alert(1))')).toBe('<p>bad)</p>');
+  });
+});
+
 const section = (
   title: string,
   content: string,

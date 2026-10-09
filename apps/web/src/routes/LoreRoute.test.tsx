@@ -2,6 +2,7 @@ import {fireEvent, screen, waitFor, within} from '@testing-library/react';
 import {beforeEach, describe, expect, it, vi} from 'vitest';
 import LoreRoute from './LoreRoute';
 import {renderRoute, seedRouteTestState} from '../test/renderRoute';
+import {getLoreDocumentsByProject} from '../loreStorage';
 
 const indexGate = vi.hoisted(() => {
   let release: () => void = () => {};
@@ -69,5 +70,49 @@ describe('LoreRoute', () => {
     ).toBeInTheDocument();
     expect(screen.getByLabelText('Title')).toHaveValue('Late Save Note');
     expect(screen.getByRole('button', {name: 'Extract Candidates'})).toBeEnabled();
+  });
+
+  it('imports Markdown as a formatted note and keeps it Markdown when saved', async () => {
+    const {container} = renderRoute(<LoreRoute />, '/lore');
+    await screen.findByRole('heading', {name: 'Source Notes', level: 1});
+
+    const markdown = [
+      '## Background',
+      '- **Age:** Mid-30s',
+      '',
+      '| Trait | Value |',
+      '| --- | --- |',
+      '| Height | Tall |'
+    ].join('\n');
+    const input = container.querySelector('input[type="file"]') as HTMLInputElement;
+    fireEvent.change(input, {
+      target: {files: [new File([markdown], 'Camila.md', {type: 'text/markdown'})]}
+    });
+
+    const formatted = await screen.findByRole('document', {name: 'Content'});
+    expect(within(formatted).getByRole('heading', {name: 'Background', level: 2})).toBeInTheDocument();
+    expect(within(formatted).getByRole('cell', {name: 'Tall'})).toBeInTheDocument();
+    expect(within(formatted).queryByText(/\*\*/)).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', {name: 'Edit Markdown'}));
+    expect(screen.getByLabelText('Content')).toHaveValue(markdown);
+
+    fireEvent.click(screen.getByRole('button', {name: 'Create Source Note'}));
+    const listedTitle = await screen.findByText('Camila', {selector: 'article h3'});
+    await waitFor(() => {
+      expect(
+        within(listedTitle.closest('article') as HTMLElement).getByRole('button', {name: 'Edit'})
+      ).toBeEnabled();
+    });
+
+    const [saved] = await getLoreDocumentsByProject('route-smoke-project');
+    expect(saved).toMatchObject({title: 'Camila', format: 'markdown', content: markdown});
+
+    fireEvent.click(
+      within(listedTitle.closest('article') as HTMLElement).getByRole('button', {name: 'Edit'})
+    );
+    const reopened = await screen.findByRole('document', {name: 'Content'});
+    expect(within(reopened).getByRole('heading', {name: 'Background', level: 2})).toBeInTheDocument();
+    expect(screen.getByRole('button', {name: 'Edit Markdown'})).toBeInTheDocument();
   });
 });

@@ -495,7 +495,10 @@ const escapeHtml = (value: string): string =>
 const renderMarkdownInline = (value: string): string => {
   let html = escapeHtml(value);
   html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
-  html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>');
+  // Only web and mail links survive; anything else (javascript:, data:) keeps its text.
+  html = html.replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, (_match, label: string, href: string) =>
+    /^(https?:|mailto:)/i.test(href) ? `<a href="${href.replace(/"/g, '&quot;')}">${label}</a>` : label
+  );
   html = html.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
   html = html.replace(/__([^_]+)__/g, '<strong>$1</strong>');
   html = html.replace(/\*([^*]+)\*/g, '<em>$1</em>');
@@ -503,13 +506,18 @@ const renderMarkdownInline = (value: string): string => {
   return html;
 };
 
+/** Splits on unescaped pipes; `\|` is a literal pipe inside a cell. */
 const splitMarkdownTableRow = (line: string): string[] =>
   line
     .trim()
     .replace(/^\|/, '')
-    .replace(/\|$/, '')
-    .split('|')
-    .map((cell) => cell.trim());
+    .replace(/(?<!\\)\|$/, '')
+    .split(/(?<!\\)\|/)
+    .map((cell) => cell.trim().replace(/\\\|/g, '|'));
+
+/** Cells cannot hold block content, so `<br>` is the only line break they keep. */
+const renderMarkdownTableCell = (value: string): string =>
+  renderMarkdownInline(value).replace(/&lt;br\s*\/?&gt;/gi, '<br />');
 
 const isMarkdownTableSeparator = (line: string): boolean => {
   const cells = splitMarkdownTableRow(line);
@@ -569,14 +577,14 @@ const buildMarkdownTableHtml = (rows: string[]): string => {
 
   return (
     '<table><thead><tr>' +
-    headerCells.map((cell) => `<th>${renderMarkdownInline(cell)}</th>`).join('') +
+    headerCells.map((cell) => `<th>${renderMarkdownTableCell(cell)}</th>`).join('') +
     '</tr></thead><tbody>' +
     bodyRows
       .map(
         (cells) =>
           '<tr>' +
           headerCells
-            .map((_, index) => `<td>${renderMarkdownInline(cells[index] ?? '')}</td>`)
+            .map((_, index) => `<td>${renderMarkdownTableCell(cells[index] ?? '')}</td>`)
             .join('') +
           '</tr>'
       )
