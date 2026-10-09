@@ -249,6 +249,34 @@ describe('Source Notes', () => {
       .should('have.text', 'Ember Archive (World Bible)');
   });
 
+  it('opens every note in Markdown source once the author prefers it', () => {
+    cy.visit('/settings');
+    cy.contains('Source Notes open in')
+      .parent()
+      .within(() => {
+        cy.contains('button', 'Markdown source').click().should('have.attr', 'aria-pressed', 'true');
+      });
+
+    cy.visit('/lore');
+    cy.get('textarea').type('# First note');
+    cy.contains('label', 'Title').find('input').type('First');
+    cy.contains('button', 'Create Source Note').click();
+    cy.contains('[role="status"]', 'Source Note created.').should('be.visible');
+    cy.get('textarea').should('have.value', '');
+
+    cy.contains('article', 'First').within(() => {
+      cy.contains('button', 'Edit').click();
+    });
+    cy.get('textarea').should('have.value', '# First note');
+    cy.contains('button', 'Visual editor').click();
+    cy.get('[role="textbox"][contenteditable]').contains('h1', 'First note').should('be.visible');
+    cy.contains('button', 'Always open notes this way').click();
+    cy.contains('button', 'Always open notes this way').should('not.exist');
+
+    cy.contains('button', 'Start Another Note').click();
+    cy.get('[role="textbox"][contenteditable]').should('be.visible');
+  });
+
   it('creates and opens a linked Source Note from a World Bible record', () => {
     cy.visit('/world-bible');
     cy.contains('button', 'Locations').click();

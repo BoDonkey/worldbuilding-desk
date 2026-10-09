@@ -1,7 +1,8 @@
 import {act, fireEvent, render, screen, within} from '@testing-library/react';
 import type {Editor} from '@tiptap/core';
 import {useState} from 'react';
-import {describe, expect, it, vi} from 'vitest';
+import {beforeEach, describe, expect, it, vi} from 'vitest';
+import {AccessibilityProvider} from '../../contexts/AccessibilityContext';
 import {SourceNoteContentField} from './SourceNoteContentField';
 import type {SourceNoteContentView} from './SourceNoteContentField';
 import type {LoreDocumentFormat} from '../../entityTypes';
@@ -19,24 +20,30 @@ const Harness = ({
 }) => {
   const [content, setContent] = useState(initial);
   const [format, setFormat] = useState(initialFormat);
-  const [view, setView] = useState<SourceNoteContentView>('formatted');
+  const [view, setView] = useState<SourceNoteContentView | null>(null);
   return (
-    <SourceNoteContentField
-      content={content}
-      format={format}
-      view={view}
-      onViewChange={setView}
-      onChange={(next) => {
-        setContent(next);
-        onChange(next);
-      }}
-      onFormatChange={(next) => {
-        setFormat(next);
-        onFormatChange(next);
-      }}
-    />
+    <AccessibilityProvider>
+      <SourceNoteContentField
+        content={content}
+        format={format}
+        view={view}
+        onViewChange={setView}
+        onChange={(next) => {
+          setContent(next);
+          onChange(next);
+        }}
+        onFormatChange={(next) => {
+          setFormat(next);
+          onFormatChange(next);
+        }}
+      />
+    </AccessibilityProvider>
   );
 };
+
+beforeEach(() => {
+  window.localStorage.clear();
+});
 
 const editorFor = (): Editor =>
   (screen.getByRole('textbox', {name: 'Content'}) as HTMLElement & {editor: Editor}).editor;
@@ -126,5 +133,23 @@ describe('SourceNoteContentField visual editor', () => {
     });
     expect(onChange).toHaveBeenLastCalledWith(original);
     expect(onFormatChange).toHaveBeenLastCalledWith('plain_text');
+  });
+
+  it('opens in Markdown source when the author prefers it, and remembers a switch only on request', () => {
+    window.localStorage.setItem('sourceNoteView', 'markdown');
+    render(<Harness initial='# Heading' onChange={vi.fn()} />);
+
+    expect(screen.getByRole('textbox', {name: 'Content'})).toHaveValue('# Heading');
+    expect(screen.queryByRole('button', {name: 'Always open notes this way'})).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', {name: 'Visual editor'}));
+    expect(
+      within(screen.getByRole('textbox', {name: 'Content'})).getByRole('heading', {name: 'Heading'})
+    ).toBeInTheDocument();
+    expect(window.localStorage.getItem('sourceNoteView')).toBe('markdown');
+
+    fireEvent.click(screen.getByRole('button', {name: 'Always open notes this way'}));
+    expect(window.localStorage.getItem('sourceNoteView')).toBe('visual');
+    expect(screen.queryByRole('button', {name: 'Always open notes this way'})).not.toBeInTheDocument();
   });
 });

@@ -118,4 +118,26 @@ describe('LoreRoute', () => {
     expect(within(reopened).getByRole('heading', {name: 'Background', level: 2})).toBeInTheDocument();
     expect(screen.getByRole('button', {name: 'Edit Markdown'})).toBeInTheDocument();
   });
+
+  it('opens new, imported, and saved notes in Markdown source when the author prefers it', async () => {
+    window.localStorage.setItem('sourceNoteView', 'markdown');
+    const {container} = renderRoute(<LoreRoute />, '/lore');
+    await screen.findByRole('heading', {name: 'Source Notes', level: 1});
+    expect(screen.getByLabelText('Content')).toHaveValue('');
+
+    const input = container.querySelector('input[type="file"]') as HTMLInputElement;
+    fireEvent.change(input, {
+      target: {files: [new File(['## Background'], 'Leo.md', {type: 'text/markdown'})]}
+    });
+    await waitFor(() => expect(screen.getByLabelText('Content')).toHaveValue('## Background'));
+    fireEvent.click(screen.getByRole('button', {name: 'Create Source Note'}));
+
+    const listedTitle = await screen.findByText('Leo', {selector: 'article h3'});
+    const listed = listedTitle.closest('article') as HTMLElement;
+    await waitFor(() => expect(within(listed).getByRole('button', {name: 'Edit'})).toBeEnabled());
+    fireEvent.click(within(listed).getByRole('button', {name: 'Edit'}));
+    await screen.findByRole('heading', {name: 'Edit Source Note', level: 2});
+    expect(screen.getByLabelText('Content')).toHaveValue('## Background');
+    window.localStorage.removeItem('sourceNoteView');
+  });
 });

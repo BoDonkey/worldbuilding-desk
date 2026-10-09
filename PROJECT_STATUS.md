@@ -222,6 +222,11 @@ Under the hood, the app still includes rich systems for world data, rules, chara
   first edit, with markup characters escaped so it reads the same. Fact and
   entity extraction read Markdown label rows (`- **Age:** Mid-30s`), escaped
   bullets from converted notes, and `#` headings as sections.
+- Settings → Reading & Editor has **Source Notes open in** (Visual editor,
+  the default, or Markdown source), an app-wide preference kept in this
+  browser. New, opened, and imported notes follow it. Switching view on one
+  note changes only that note; when the switch differs from the preference,
+  **Always open notes this way** saves it as the new preference.
 - Choosing several files in the Source Notes import saves each as its own
   Source Note from a modal dialog (one file still loads into the form for
   review). The dialog lists the files, marks any already imported (same
@@ -926,6 +931,13 @@ runtime schema, and nothing here changes the roadmap's status board.
 ## Verification Status
 
 ### Verified Recently
+- Slice 4.59 remembered Source Note view: `sourceNoteView` in
+  `AccessibilityContext` (localStorage, like the other editor preferences),
+  Settings control, and a per-note override in `SourceNoteContentField`
+  (null follows the preference). Battery: lint (one existing warning), 923
+  web + 47 engine + 12 UI + 24 desktop tests, web/desktop builds, file-size
+  gate, Cypress 141/141 in two batches with no retries; field header and
+  Settings group checked at desktop and 390px.
 - Slice 4.61 multi-file Source Note import: `sourceNoteBatchImport`
   (`importSourceNoteFiles`, `findImportedSourceNote`, shared
   `indexSourceNote` now also used by the manual save),

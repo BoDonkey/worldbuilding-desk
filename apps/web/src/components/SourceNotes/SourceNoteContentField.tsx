@@ -1,5 +1,6 @@
 import {useId, useState} from 'react';
 import type {LoreDocumentFormat} from '../../entityTypes';
+import {useAccessibility} from '../../contexts/AccessibilityContext';
 import {SourceNoteEditor} from './SourceNoteEditor';
 import styles from './SourceNoteContentField.module.css';
 
@@ -9,7 +10,8 @@ export type SourceNoteContentView = 'formatted' | 'edit';
 interface SourceNoteContentFieldProps {
   content: string;
   format: LoreDocumentFormat;
-  view: SourceNoteContentView;
+  /** This note's view, or null to follow the author's preference. */
+  view: SourceNoteContentView | null;
   onViewChange: (view: SourceNoteContentView) => void;
   onChange: (content: string) => void;
   onFormatChange: (format: LoreDocumentFormat) => void;
@@ -18,12 +20,15 @@ interface SourceNoteContentFieldProps {
 export const SourceNoteContentField = ({
   content,
   format,
-  view,
+  view: noteView,
   onViewChange,
   onChange,
   onFormatChange
 }: SourceNoteContentFieldProps) => {
   const labelId = useId();
+  const {sourceNoteView, setSourceNoteView} = useAccessibility();
+  const preferredView: SourceNoteContentView = sourceNoteView === 'markdown' ? 'edit' : 'formatted';
+  const view = noteView ?? preferredView;
   const isMarkdown = format === 'markdown';
   // The visual editor owns its document once mounted; content that arrives
   // from anywhere else (another note, an import, the textarea) remounts it.
@@ -45,12 +50,23 @@ export const SourceNoteContentField = ({
         <span id={labelId} className={styles.label}>
           Content
         </span>
-        <button
-          type='button'
-          onClick={() => onViewChange(view === 'formatted' ? 'edit' : 'formatted')}
-        >
-          {view === 'edit' ? 'Visual editor' : isMarkdown ? 'Edit Markdown' : 'Edit text'}
-        </button>
+        <div className={styles.viewActions}>
+          {view !== preferredView ? (
+            <button
+              type='button'
+              className={styles.rememberButton}
+              onClick={() => setSourceNoteView(view === 'edit' ? 'markdown' : 'visual')}
+            >
+              Always open notes this way
+            </button>
+          ) : null}
+          <button
+            type='button'
+            onClick={() => onViewChange(view === 'formatted' ? 'edit' : 'formatted')}
+          >
+            {view === 'edit' ? 'Visual editor' : isMarkdown ? 'Edit Markdown' : 'Edit text'}
+          </button>
+        </div>
       </div>
       {view === 'edit' ? (
         <>

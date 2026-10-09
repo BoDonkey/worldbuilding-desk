@@ -10,6 +10,20 @@
   margin-bottom: 0.35rem;
 }
 
+.viewActions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.4rem;
+}
+
+.rememberButton {
+  background: transparent;
+  border-color: transparent;
+  color: var(--color-accent);
+  text-decoration: underline;
+}
+
 .label {
   font-size: 0.92rem;
   color: var(--color-text-primary);

@@ -5,6 +5,8 @@ type EditorFont = 'serif' | 'sans' | 'dyslexic';
 type EditorWidth = 'focused' | 'wide';
 type EditorSurface = 'paper' | 'mist' | 'contrast';
 type EditorLineHeight = 'compact' | 'comfortable' | 'airy';
+/** Which view Source Notes open in: the visual editor or their stored text. */
+export type SourceNoteView = 'visual' | 'markdown';
 
 interface AccessibilityContextType {
   fontSize: FontSize;
@@ -17,6 +19,8 @@ interface AccessibilityContextType {
   setEditorSurface: (surface: EditorSurface) => void;
   editorLineHeight: EditorLineHeight;
   setEditorLineHeight: (lineHeight: EditorLineHeight) => void;
+  sourceNoteView: SourceNoteView;
+  setSourceNoteView: (view: SourceNoteView) => void;
 }
 
 const AccessibilityContext = createContext<AccessibilityContextType | undefined>(undefined);
@@ -49,6 +53,9 @@ export const AccessibilityProvider: React.FC<{ children: React.ReactNode }> = ({
     }
     return 'comfortable';
   });
+  const [sourceNoteView, setSourceNoteView] = useState<SourceNoteView>(() =>
+    localStorage.getItem('sourceNoteView') === 'markdown' ? 'markdown' : 'visual'
+  );
 
   useEffect(() => {
     document.documentElement.setAttribute('data-font-size', fontSize);
@@ -75,6 +82,10 @@ export const AccessibilityProvider: React.FC<{ children: React.ReactNode }> = ({
     localStorage.setItem('editorLineHeight', editorLineHeight);
   }, [editorLineHeight]);
 
+  useEffect(() => {
+    localStorage.setItem('sourceNoteView', sourceNoteView);
+  }, [sourceNoteView]);
+
   return (
     <AccessibilityContext.Provider
       value={{
@@ -87,7 +98,9 @@ export const AccessibilityProvider: React.FC<{ children: React.ReactNode }> = ({
         editorSurface,
         setEditorSurface,
         editorLineHeight,
-        setEditorLineHeight
+        setEditorLineHeight,
+        sourceNoteView,
+        setSourceNoteView
       }}
     >
       {children}

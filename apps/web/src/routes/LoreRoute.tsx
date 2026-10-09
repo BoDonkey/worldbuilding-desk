@@ -150,7 +150,7 @@ function LoreRoute() {
   const [kind, setKind] = useState<LoreDocumentKind>('general_lore');
   const [content, setContent] = useState('');
   const [draftFormat, setDraftFormat] = useState<LoreDocumentFormat>('markdown');
-  const [contentView, setContentView] = useState<SourceNoteContentView>('formatted');
+  const [contentView, setContentView] = useState<SourceNoteContentView | null>(null);
   const [draftSource, setDraftSource] = useState<LoreDocument['source']>({type: 'manual'});
   const [linkDrafts, setLinkDrafts] = useState<LinkDraft[]>([]);
   const [factTargetDrafts, setFactTargetDrafts] = useState<Record<string, FactTargetDraft>>({});
@@ -495,7 +495,7 @@ function LoreRoute() {
   const loadDraftContent = (nextContent: string, format: LoreDocumentFormat) => {
     setContent(nextContent);
     setDraftFormat(format);
-    setContentView('formatted');
+    setContentView(null);
   };
 
   const resetForm = () => {

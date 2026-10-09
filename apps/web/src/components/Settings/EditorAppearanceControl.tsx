@@ -11,15 +11,17 @@ export const EditorAppearanceControl: React.FC = () => {
     editorSurface,
     setEditorSurface,
     editorLineHeight,
-    setEditorLineHeight
+    setEditorLineHeight,
+    sourceNoteView,
+    setSourceNoteView
   } = useAccessibility();
 
   return (
     <div className={styles.container}>
       <h3>Editor Appearance</h3>
       <p className={styles.helper}>
-        These controls change the writing surface only, so you can tune readability
-        without affecting the rest of the app.
+        These controls change the writing surfaces only: how text looks, and which
+        view Source Notes open in. The rest of the app is unaffected.
       </p>
 
       <div className={styles.group}>
@@ -130,6 +132,28 @@ export const EditorAppearanceControl: React.FC = () => {
             aria-pressed={editorSurface === 'contrast'}
           >
             Contrast
+          </button>
+        </div>
+      </div>
+
+      <div className={styles.group}>
+        <span className={styles.label}>Source Notes open in</span>
+        <div className={styles.buttonGroup}>
+          <button
+            type='button'
+            onClick={() => setSourceNoteView('visual')}
+            className={sourceNoteView === 'visual' ? styles.active : ''}
+            aria-pressed={sourceNoteView === 'visual'}
+          >
+            Visual editor
+          </button>
+          <button
+            type='button'
+            onClick={() => setSourceNoteView('markdown')}
+            className={sourceNoteView === 'markdown' ? styles.active : ''}
+            aria-pressed={sourceNoteView === 'markdown'}
+          >
+            Markdown source
           </button>
         </div>
       </div>
