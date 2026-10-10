@@ -82,7 +82,7 @@ Under the hood, the app still includes rich systems for world data, rules, chara
 - Editable review capture flow for detected names/places before adding to world records.
 - Manual selection-to-world capture from the editor for non-detected text.
 - Temporary dismiss and project-level `Always ignore` review actions.
-- Inline lore highlights and quick lore popovers are reserved for World Bible entities and aliases; unresolved legacy character capability records remain available to resolution tools without being presented as canon, and Lore Inspector routes them to World Bible resolution.
+- Inline lore highlights and quick lore popovers are reserved for World Bible entities and aliases (exact name or alias, ignoring case, plus possessives). Non-character records (races, places, factions, items) also highlight in the other number — `Dhemons` matches `Dhemon`, `Fairy` matches `Fairies` — by deterministic last-word rules; character names stay exact, and an exact name or alias of another record always wins. This widening applies to editor highlighting only, not to project review or unknown-name detection; unresolved legacy character capability records remain available to resolution tools without being presented as canon, and Lore Inspector routes them to World Bible resolution.
 - World Bible review queue for finishing review-created records and alias follow-up.
 - World Bible review queue now supports queue filtering by review reason and recommended action (`complete`, `alias`, `merge`, `ignore`).
 - Editor appearance controls for width, surface style, and serif/sans presentation.

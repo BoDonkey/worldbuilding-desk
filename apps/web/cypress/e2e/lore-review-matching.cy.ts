@@ -430,6 +430,19 @@ describe('Lore and review matching', () => {
     cy.contains('Commit blocked by consistency check').should('not.exist');
   });
 
+  it('highlights the other number of non-character record names', () => {
+    cy.visit('/workspace');
+    cy.contains('h1', 'Writing Workspace').should('be.visible');
+    cy.get('.tiptap-editor')
+      .click()
+      .type('{selectall}Both Ember Archives burned. The Iron Swords rusted.', {delay: 0});
+
+    cy.contains('.tiptap-editor [data-lore-id="entity-ember-archive"]', 'Ember Archives')
+      .should('exist');
+    cy.contains('.tiptap-editor [data-lore-id="entity-sword-1"]', 'Iron Swords')
+      .should('exist');
+  });
+
   it('opens a highlighted canon record at its World Bible editing surface', () => {
     cy.visit('/workspace');
     cy.contains('h1', 'Writing Workspace').should('be.visible');

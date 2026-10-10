@@ -80,6 +80,7 @@ import {useWorkspaceCorkboard} from '../hooks/useWorkspaceCorkboard';
 import {useChapterCardSceneActions} from '../hooks/useChapterCardSceneActions';
 import {useSceneRosterPreferences} from '../hooks/useSceneRosterPreferences';
 import {isItemCategory} from '../services/worldBible/worldBibleSummary';
+import {buildKnownLoreHighlights} from '../services/consistency/knownLoreHighlights';
 import {PageHeader} from '../components/PageHeader';
 import {RouteFeedback} from '../components/common';
 import {useNotificationStore} from '../store/notificationStore';
@@ -1086,31 +1087,10 @@ function WorkspaceRoute() {
     resolveCharacterBlock,
     resolveItemBlock
   });
-  const knownWorldBibleLoreHighlights = useMemo(() => {
-    const entityById = new Map(entities.map((entity) => [entity.id, entity]));
-    const highlights = entities.map((entity) => ({
-      id: entity.id,
-      surface: entity.name,
-      type: 'entity' as const
-    }));
-
-    aliases.forEach((alias) => {
-      if ((alias.targetType ?? 'entity') !== 'entity') {
-        return;
-      }
-      const entity = entityById.get(alias.targetId);
-      if (!entity) {
-        return;
-      }
-      highlights.push({
-        id: entity.id,
-        surface: alias.alias,
-        type: 'entity' as const
-      });
-    });
-
-    return highlights;
-  }, [aliases, entities]);
+  const knownWorldBibleLoreHighlights = useMemo(
+    () => buildKnownLoreHighlights({entities, aliases, categories}),
+    [aliases, categories, entities]
+  );
   const pendingInventoryResolution = useMemo(
     () => pendingInventoryCapture
       ? resolveReusableItem({
