@@ -2049,7 +2049,16 @@ out of scope. **World Anvil importer** — only after its export format is
 verified as obtainable and stable; 4.29's Markdown-folder import is the
 general path. **Relationship graph view** — entity `links` and `relationship`
 facts already exist; a read-only derived view is cheap but unproven, so wait
-for beta requests. **Public sharing, remixable templates, recurring
+for beta requests. The author raised it again on 2026-10-10 (Obsidian-style
+graph) and agreed it is post-release. Shape when promoted: start with a
+**per-record local graph** (one record's neighborhood: Source Note links by
+relationship, scene mentions, accepted relationship facts, World Canvas
+links), with click-through; a whole-project graph only later, framed around
+finding unlinked records and notes. Derived and read-only under the
+Corkboard dashboard rule: every edge cites its source, nothing on it is
+editable, and it never infers links or writes canon. Promote earlier only if
+1.1 dogfood shows navigating between related records is a real friction.
+**Public sharing, remixable templates, recurring
 challenges** — require hosted sharing and accounts, which contradict the
 no-accounts, no-telemetry boundary; a downloadable starter project shared in
 the niche communities is the marketing-plan substitute. **SEO micro-tools** —
