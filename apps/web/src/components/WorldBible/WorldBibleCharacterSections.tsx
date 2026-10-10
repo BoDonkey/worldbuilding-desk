@@ -41,12 +41,12 @@ const SECTION_DEFINITIONS: SectionDefinition[] = [
   {
     id: 'canon',
     label: 'Canon',
-    description: 'Identity, aliases, description, and story-facing facts.'
+    description: 'Identity, aliases, description, custom sections, and story-facing facts.'
   },
   {
     id: 'notes',
     label: 'Notes',
-    description: 'Structured notes, custom sections, and longform source material.'
+    description: 'Working notes and longform source material.'
   },
   {
     id: 'continuity',

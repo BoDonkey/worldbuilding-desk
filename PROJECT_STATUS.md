@@ -452,9 +452,8 @@ Under the hood, the app still includes rich systems for world data, rules, chara
   chosen field no longer exists shows as Keep in Description. Open drafts
   reconcile with the category whenever its fields change, so a field
   created by one import in a batch becomes a normal field choice for the
-  rest; renaming an entry keeps chosen destinations. Unsaved characters show
-  the category's custom fields on Canon; saved characters keep them on
-  Notes.
+  rest; renaming an entry keeps chosen destinations. Characters show the
+  category's custom fields on Canon, saved or not.
 - The World Bible import preview states that nothing is saved until a draft
   is imported and shows a waiting / imported / failed count. Imported drafts
   stay listed as **Imported** with an **Open** action; failed drafts show the
@@ -584,7 +583,10 @@ Under the hood, the app still includes rich systems for world data, rules, chara
   linked notes, scene/state continuity, dialogue style, export, and sheet
   handoffs without another identity or name-entry surface. The composition
   resolves extensions and sheets through the shared stable-ID character
-  resolver rather than a display-name join.
+  resolver rather than a display-name join. Canon holds identity, aliases,
+  Age, Role, Description, every custom field (including fields created by
+  import), and **Add character section**; Notes holds the Notes field and the
+  linked Source Note.
 - Rules-enabled projects now start character mechanics inside the saved World
   Bible character: one author-confirmed Stat or Resource creates a minimal
   project ruleset plus exactly one canon-linked sheet through a deterministic

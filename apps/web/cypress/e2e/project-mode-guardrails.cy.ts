@@ -226,12 +226,7 @@ describe('Project mode guardrails', () => {
       .parents('li')
       .first()
       .within(() => cy.contains('button', 'Edit').click());
-    cy.contains('[role="tab"]', 'Notes').click();
-    cy.contains('[data-rich-text-variant="character"] span', 'Notes')
-      .closest('[data-rich-text-variant]')
-      .should('have.attr', 'data-rich-text-variant', 'character')
-      .find('.tiptap-editor')
-      .should('exist');
+    cy.contains('[role="tab"]', 'Canon').should('have.attr', 'aria-selected', 'true');
     cy.contains('strong', 'Add character section').should('be.visible');
     cy.get('input[placeholder="Education, Traumas, Addictions..."]').type('Education');
     cy.contains('button', 'Add Section').click();
@@ -242,11 +237,19 @@ describe('Project mode guardrails', () => {
       .should('exist');
     cy.get('form').then(($form) => {
       const formText = $form.text();
-      expect(formText.indexOf('Notes')).to.be.lessThan(formText.indexOf('Education'));
+      expect(formText.indexOf('Description')).to.be.lessThan(formText.indexOf('Education'));
       expect(formText.indexOf('Education')).to.be.lessThan(
         formText.indexOf('Add character section')
       );
     });
+    cy.contains('[role="tab"]', 'Notes').click();
+    cy.contains('[data-rich-text-variant="character"] span', 'Notes')
+      .closest('[data-rich-text-variant]')
+      .should('have.attr', 'data-rich-text-variant', 'character')
+      .find('.tiptap-editor')
+      .should('exist');
+    cy.contains('[data-rich-text-variant="character"] span', 'Education').should('not.exist');
+    cy.contains('strong', 'Add character section').should('not.exist');
     cy.get('[class*="content"]').should('have.css', 'display', 'grid');
 
     cy.visit('/ruleset');
@@ -298,7 +301,7 @@ describe('Project mode guardrails', () => {
       .should('contain.text', 'Name: Mira Voss')
       .should('not.contain.text', 'Mira mapped the undercity');
     cy.contains('[role="tab"]', 'Mechanics').should('not.exist');
-    cy.contains('[role="tab"]', 'Notes').click();
+    cy.contains('[role="tab"]', 'Canon').should('have.attr', 'aria-selected', 'true');
     cy.contains('span', 'Background')
       .closest('[class*="container"]')
       .should('have.attr', 'data-rich-text-variant', 'character')

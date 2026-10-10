@@ -1610,39 +1610,36 @@ function WorldBibleRoute() {
                   )}
 
                   {characterDescriptionField && renderEntityField(characterDescriptionField)}
-                  {/* Unsaved characters only have Canon; custom fields move to Notes after saving. */}
-                  {!selectedEntity && characterCustomFields.map(renderEntityField)}
+                  {characterCustomFields.map(renderEntityField)}
+
+                  <div className={styles.characterSectionBuilder}>
+                    <div>
+                      <strong>Add character section</strong>
+                      <p>
+                        Create a reusable rich section for this project, such as
+                        Education, Traumas, Addictions, Relationships, or Voice.
+                      </p>
+                    </div>
+                    <div className={styles.characterSectionControls}>
+                      <input
+                        type='text'
+                        value={newCharacterSectionName}
+                        onChange={(event) => setNewCharacterSectionName(event.target.value)}
+                        placeholder='Education, Traumas, Addictions...'
+                      />
+                      <button
+                        type='button'
+                        onClick={() => void handleAddCharacterSection()}
+                      >
+                        Add Section
+                      </button>
+                    </div>
+                  </div>
                     </>
                   }
                   notesContent={
                     <>
                       {characterNotesField && renderEntityField(characterNotesField)}
-
-                      {characterCustomFields.map(renderEntityField)}
-
-                      <div className={styles.characterSectionBuilder}>
-                        <div>
-                          <strong>Add character section</strong>
-                          <p>
-                            Create a reusable rich section for this project, such as
-                            Education, Traumas, Addictions, Relationships, or Voice.
-                          </p>
-                        </div>
-                        <div className={styles.characterSectionControls}>
-                          <input
-                            type='text'
-                            value={newCharacterSectionName}
-                            onChange={(event) => setNewCharacterSectionName(event.target.value)}
-                            placeholder='Education, Traumas, Addictions...'
-                          />
-                          <button
-                            type='button'
-                            onClick={() => void handleAddCharacterSection()}
-                          >
-                            Add Section
-                          </button>
-                        </div>
-                      </div>
 
                       {selectedEntity && (
                         <WorldBibleLinkedSourceNote
