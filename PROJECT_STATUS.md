@@ -301,7 +301,12 @@ Under the hood, the app still includes rich systems for world data, rules, chara
   staged as a Source Note or incomplete World Bible draft, and wikilinks are
   opt-in link/alias proposals. Source Notes continue through extraction and
   proposal review; import never writes accepted facts directly. The project
-  backup ZIP remains the full-fidelity restore format.
+  backup ZIP remains the full-fidelity restore format. Both live on the
+  **Portable data** page (`/portable-data`, More → Utilities), not on the
+  World Bible page.
+- The World Bible create/import panel (Create Manually, From a description,
+  Import Docs, Paste Text) shows only on a category's record list; it hides
+  while a record is open in the editor, for every category.
 - Pending Mechanics completion counts now aggregate onto the `More` navigation
   control at both desktop and narrow breakpoints, keeping optional-system work
   discoverable without promoting systems into the writing-first primary nav.

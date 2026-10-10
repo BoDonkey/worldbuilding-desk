@@ -27,7 +27,6 @@ import {CharacterIdentityResolutionQueue} from '../components/WorldBible/Charact
 import {WorldBibleCategoryRail} from '../components/WorldBible/WorldBibleCategoryRail';
 import {ItemDescriptionFirstFields} from '../components/WorldBible/ItemDescriptionFirstFields';
 import {SystemNegativeSpacePanel} from '../components/WorldBible/SystemNegativeSpacePanel';
-import {PortableDataPanel} from '../components/WorldBible/PortableDataPanel';
 import styles from '../assets/components/WorldBibleRoute.module.css';
 import type {MemoryEntry} from '../services/shodh/ShodhMemoryService';
 import {ShodhMemoryPanel} from '../components/ShodhMemoryPanel';
@@ -167,7 +166,6 @@ function WorldBibleRoute() {
   >(null);
   const {
     categories,
-    categoriesLoaded,
     setCategories,
     entities,
     setEntities,
@@ -437,6 +435,8 @@ function WorldBibleRoute() {
           (editingId && selectedEntity?.categoryId === activeCategory?.id)
       )
     : false;
+  // The create/import panel shows only on the record list, not over an open record.
+  const isRecordEditorOpen = isFocusedCharacterTask || isFocusedRecordTask;
   const {
     reviewQueue,
     filteredReviewQueue,
@@ -997,19 +997,6 @@ function WorldBibleRoute() {
 
         <div className={styles.mainColumn}>
       <RouteFeedback feedback={feedback} onClear={() => setFeedback(null)} />
-      <PortableDataPanel
-        project={activeProject}
-        categories={worldBibleCategories}
-        categoriesLoaded={categoriesLoaded}
-        entities={entities}
-        aliases={aliases}
-        canonicalFacts={canonicalFacts}
-        loreDocuments={loreDocuments}
-        loreDocumentLinks={loreDocumentLinks}
-        ragService={ragService}
-        shodhService={shodhService}
-        onFeedback={setFeedback}
-      />
       {seriesConfig?.parentProjectId && (
         <div className={styles.banner}>
           <strong>Parent canon:</strong> {canonState.parentName ?? 'Unknown'} ·
@@ -1045,7 +1032,7 @@ function WorldBibleRoute() {
       )}
 
 
-      {activeCategory && viewMode === 'category' && (
+      {activeCategory && viewMode === 'category' && !isRecordEditorOpen && (
         <section className={styles.castPanel} aria-label={`${activeCategory.name} canon`}>
           <div className={styles.castHeader}>
             <div>
@@ -1155,7 +1142,7 @@ function WorldBibleRoute() {
         <div
           className={`${styles.content} ${styles.castContent}`}
         >
-          {(activeCategoryIsCharacterLike ? isFocusedCharacterTask : isFocusedRecordTask) && (
+          {isRecordEditorOpen && (
           <div className={styles.formSection}>
             <form ref={recordFormRef} onSubmit={handleSubmit} className={styles.form}>
               <div className={styles.formHeadingRow}>

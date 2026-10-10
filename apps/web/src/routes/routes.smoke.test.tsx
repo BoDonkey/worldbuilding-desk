@@ -5,6 +5,7 @@ import CharacterSheetsRoute from './CharacterSheetsRoute';
 import CharacterPackagesRoute from './CharacterPackagesRoute';
 import CompendiumRoute from './CompendiumRoute';
 import LoreRoute from './LoreRoute';
+import PortableDataRoute from './PortableDataRoute';
 import ProjectsRoute from './ProjectsRoute';
 import SettingsRoute from './SettingsRoute';
 import WorkspaceRoute from './WorkspaceRoute';
@@ -64,6 +65,12 @@ describe('route smoke coverage', () => {
       path: '/character-packages',
       route: <CharacterPackagesRoute />,
       heading: 'Character packages'
+    },
+    {
+      name: 'PortableDataRoute',
+      path: '/portable-data',
+      route: <PortableDataRoute />,
+      heading: 'Portable data'
     },
     {
       name: 'ProjectsRoute',

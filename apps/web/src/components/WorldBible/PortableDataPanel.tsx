@@ -332,17 +332,27 @@ export function PortableDataPanel(props: PortableDataPanelProps) {
         onChange={(event) => void handleFolder(event)}
         style={{display: 'none'}}
       />
-      <div className={styles.importPanelHeader}>
-        <div>
-          <h2>Portable data</h2>
-          <p className={styles.importSummary}>
-            Export readable Markdown and CSV, or review an Obsidian-style Markdown folder before importing it.
+      <div className={styles.castTaskGrid}>
+        <div className={styles.castTask}>
+          <h3>Export Markdown + CSV</h3>
+          <p>
+            Downloads a ZIP with one Markdown file per World Bible record, one spreadsheet
+            (CSV) per category, and one Markdown file per Source Note. This isn't a backup
+            and can't restore a project.
           </p>
-        </div>
-        <div className={styles.importPanelActions}>
           <button type='button' onClick={handleExport} disabled={isExporting}>
             {isExporting ? 'Exporting...' : 'Export Markdown + CSV'}
           </button>
+        </div>
+        <div className={styles.castTask}>
+          <h3>Import Markdown Folder</h3>
+          <p>
+            Choose a folder of <code>.md</code> files. Before anything is saved, you choose
+            for each file whether it becomes a World Bible record (and in which category) or
+            a Source Note, or you leave it out. Imported records start marked incomplete so
+            you can check them in Review. Source Notes go through the usual fact review
+            before anything becomes canon.
+          </p>
           <button type='button' onClick={() => folderInputRef.current?.click()} disabled={isReading}>
             {isReading ? 'Reading...' : 'Import Markdown Folder'}
           </button>

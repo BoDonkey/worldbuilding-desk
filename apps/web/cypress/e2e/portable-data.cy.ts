@@ -5,11 +5,25 @@ describe('Portable project data', () => {
     cy.seedSmokeProjectData();
     cy.reload();
     cy.contains('h2', 'Cypress Smoke Project').should('be.visible');
+  });
+
+  it('lives under More → Utilities instead of the World Bible page', () => {
     cy.contains('a', 'World Bible').click();
     cy.contains('h1', 'World Bible').should('be.visible');
+    cy.get('section[aria-label="Portable data"]').should('not.exist');
+
+    cy.contains('button', 'More').click();
+    cy.contains('a', 'Portable data').click();
+    cy.location('pathname').should('eq', '/portable-data');
+    cy.contains('h1', 'Portable data').should('be.visible');
+    cy.contains('button', 'Export Markdown + CSV').should('be.visible');
+    cy.contains('button', 'Import Markdown Folder').should('be.visible');
   });
 
   it('reviews a Markdown folder and keeps Source Notes separate from incomplete World Bible drafts', () => {
+    cy.contains('button', 'More').click();
+    cy.contains('a', 'Portable data').click();
+    cy.contains('h1', 'Portable data').should('be.visible');
     cy.get('section[aria-label="Portable data"] input[type="file"]').selectFile(
       [
         {
@@ -39,6 +53,8 @@ describe('Portable project data', () => {
     cy.contains('button', 'Import Selected').click();
     cy.contains('Imported 1 Source Note and 1 World Bible draft.').should('be.visible');
 
+    cy.contains('a', 'World Bible').click();
+    cy.contains('h1', 'World Bible').should('be.visible');
     cy.contains('button', 'Review').click();
     cy.contains('Vault City').should('be.visible');
     cy.contains('Needs completion').should('be.visible');

@@ -34,6 +34,7 @@ import WorldCanvasRoute from './routes/WorldCanvasRoute';
 import SettingsRoute from './routes/SettingsRoute';
 import CharacterSheetsPageRoute from './routes/CharacterSheetsPageRoute';
 import CharacterPackagesRoute from './routes/CharacterPackagesRoute';
+import PortableDataRoute from './routes/PortableDataRoute';
 import CompendiumRoute from './routes/CompendiumRoute';
 import RulesetRoute from './routes/RulesetRoute';
 import LoreRoute from './routes/LoreRoute';
@@ -189,6 +190,7 @@ function AppRoutes() {
           />
           <Route path='/character-sheets' element={<Navigate to='/sheets' replace />} />
           <Route path='/character-packages' element={<CharacterPackagesRoute />} />
+          <Route path='/portable-data' element={<PortableDataRoute />} />
           <Route path='/workspace' element={<WorkspaceRoute />} />
           <Route path='/corkboard' element={<CorkboardRoute />} />
           <Route path='/world-canvas' element={<WorldCanvasRoute />} />

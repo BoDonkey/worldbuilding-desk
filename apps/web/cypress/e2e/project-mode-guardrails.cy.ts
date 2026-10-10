@@ -198,6 +198,10 @@ describe('Project mode guardrails', () => {
       .should('be.visible');
     cy.contains('button', 'Create Manually').should('be.visible');
     cy.contains('button', 'Create Manually').click();
+    cy.get('section[aria-label="Characters canon"]').should('not.exist');
+    cy.contains('form button', 'Cancel').click();
+    cy.get('section[aria-label="Characters canon"]').should('be.visible');
+    cy.contains('button', 'Create Manually').click();
     cy.get('form').then(($form) => {
       const formText = $form.text();
       expect(formText).to.include('Canon and aliases');

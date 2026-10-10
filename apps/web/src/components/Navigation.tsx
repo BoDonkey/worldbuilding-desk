@@ -113,7 +113,8 @@ export const Navigation: FC<NavigationProps> = ({
       label: 'Utilities',
       items: [
         {to: '/ask', label: 'Ask your project', icon: 'AQ'},
-        {to: '/character-packages', label: 'Character packages', icon: 'CP'}
+        {to: '/character-packages', label: 'Character packages', icon: 'CP'},
+        {to: '/portable-data', label: 'Portable data', icon: 'PD'}
       ]
     });
     sections.push({label: 'App', items: [{to: '/settings', label: 'Settings', icon: 'ST'}]});
