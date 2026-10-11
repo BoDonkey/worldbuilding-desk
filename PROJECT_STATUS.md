@@ -280,6 +280,12 @@ Under the hood, the app still includes rich systems for world data, rules, chara
   author-triggered, share the project's daily AI-consultation budget, and
   are read-only advice — the only follow-up action is the existing
   propose-preview-confirm surface (save as a draft Source Note).
+- Any assistant reply with content (coach or chat, wherever the shared
+  assistant appears) has an **Expand** button that opens it in a wide
+  reading view (bottom slide-up on narrow screens) with its Markdown
+  formatted through the sanitized Source Note renderer, its craft
+  references, and Copy/Close. Display only: stored messages are unchanged.
+  Escape closes just the reading view, not the narrow-viewport drawer.
 - The Story Dashboard also has a "Progression continuity" section: a
   deterministic shortlist of two craft-and-canon-consistency observations —
   a character with an established priority ability (movement, teleportation,

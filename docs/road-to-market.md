@@ -316,6 +316,7 @@ and required revisit point, `WIP`, `Done <commit>`.
 | 4.62 | Character custom fields on Canon | 4 | S | Done `52a36ab` — saved and unsaved characters show custom fields (incl. import-created) and Add character section on Canon; Notes keeps the Notes field and linked Source Note; tab copy updated; lint baseline; 928 web + 47 engine + 12 UI + 24 desktop tests; web/desktop builds; file-size gate; Cypress 143/143; `cypress-smoke` green (Web CI run 38049116825) |
 | 4.63 | Uncramped World Bible editing (Portable data → More, hide create panel while editing) | 4 | S | Done `7a4e486` — Portable data is its own page (More → Utilities, `/portable-data`) with copy covering scope (World Bible + Source Notes, not manuscript), export-is-not-backup, and per-file import choices; World Bible create/import panel shows only on the record list (hidden while a record is open, all categories); WorldBibleRoute smaller; lint baseline; 929 web + 47 engine + 12 UI + 24 desktop tests; web/desktop builds; file-size gate; Cypress 144/144; `cypress-smoke` green (Web CI run 38049116825) |
 | 4.64 | Singular/plural World Bible highlighting | 4 | S | Done `36300bb` — editor lore highlights match the other number of non-character names/aliases (-s, -es after sibilants, -ies/-y) on the last word; characters exact; exact names win; highlighting only (review/unknown detection unchanged); builder extracted to `services/consistency/knownLoreHighlights.ts`, WorkspaceRoute smaller; lint baseline; 939 web + 47 engine + 12 UI + 24 desktop tests; web/desktop builds; file-size gate; Cypress 145/145; `cypress-smoke` green (Web CI run 38127880556) |
+| 4.65 | Assistant reply reading view | 4 | S | WIP |
 | 5.1 | Auto-update decision + implementation | 5 | M | — |
 | 5.2 | Code signing + notarization, both platforms | 5 | M | — |
 | 5.3 | Packaged-app validation + Electron E2E | 5 | M | — |
@@ -1879,6 +1880,21 @@ are lost and every table cell becomes its own paragraph.
   (duplicates against saved notes and within the batch, failures not
   stopping the batch, link and index calls); Cypress covers a three-file
   batch with one duplicate and opening an imported note.
+
+### Dogfood assistant readability (4.65)
+
+- **4.65 Assistant reply reading view.** Found on 2026-10-11 using **Ask the
+  writing coach** for the first time: the advice was useful but hard to read
+  in the 320px Workspace context drawer, which cannot be widened, and replies
+  show Markdown markup as literal characters. Each assistant reply with
+  content gets an **Expand** button that opens it in a wide modal reading
+  view (bottom slide-up on narrow screens) with its Markdown formatted
+  through the sanitized Source Note renderer, its craft references, and
+  Copy/Close. Applies wherever the shared assistant appears. Display only:
+  stored messages are unchanged and nothing is written. Escape closes only
+  the reading view, not the narrow-viewport drawer behind it; focus is
+  trapped and restored. A resizable context drawer stays a later option if
+  dogfood shows the drawer is cramped beyond assistant replies.
 
 ## Phase 5 — Release Engineering
 

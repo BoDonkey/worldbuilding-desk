@@ -31,6 +31,27 @@ describe('Reviewed assistant scene revisions', () => {
     cy.contains('button', 'Ask the writing coach').should('not.be.disabled');
   });
 
+  it('expands a reply into a formatted reading view that Escape closes without closing the drawer', () => {
+    cy.window().then((win) => {
+      win.sessionStorage.setItem('wbd:assistant-conversation:cypress-project-1', JSON.stringify([
+        {role: 'assistant', content: '## Pacing\n\nThe middle **stalls**.\n\n- Cut the recap\n- Move the reveal'}
+      ]));
+    });
+    // Narrow viewport: the context drawer is itself an Escape-closable panel.
+    cy.viewport(1000, 900);
+    cy.contains('button', 'Context').click();
+    cy.contains('button', /^AI$/).click();
+    cy.contains('button', 'Expand').click();
+    cy.get('[role="dialog"][aria-labelledby="assistant-reply-reader-title"]').within(() => {
+      cy.contains('h2', 'Pacing').should('be.visible');
+      cy.contains('strong', 'stalls').should('be.visible');
+      cy.get('li').should('have.length', 2);
+    });
+    cy.focused().type('{esc}');
+    cy.get('[aria-labelledby="assistant-reply-reader-title"]').should('not.exist');
+    cy.contains('button', 'Ask the writing coach').should('be.visible');
+  });
+
   it('previews, dismisses, and confirms a replacement without automatic writes', () => {
     selectAlpha();
     cy.get('.tiptap[contenteditable="true"]').should('have.text', 'Alpha content');

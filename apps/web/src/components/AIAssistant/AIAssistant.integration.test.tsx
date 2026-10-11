@@ -344,4 +344,26 @@ describe('AIAssistant factual lookup integration', () => {
       count: 1
     });
   });
+  it('opens a coach reply in a wide reading view and returns focus on close', async () => {
+    renderAssistant({
+      projectId: 'project-coach-reader',
+      aiConfig: hostedSettings,
+      sceneText: 'Sera waits beside the locked harbor gate.'
+    });
+
+    await screen.findByText('Project context ready.');
+    expect(screen.queryByRole('button', {name: 'Expand reply in a reading view'})).toBeNull();
+    fireEvent.click(screen.getByRole('button', {name: 'Ask the writing coach'}));
+    await screen.findByText('This should not be used.');
+    const expand = await screen.findByRole('button', {name: 'Expand reply in a reading view'});
+    expand.focus();
+    fireEvent.click(expand);
+
+    const dialog = screen.getByRole('dialog', {name: 'Assistant reply'});
+    expect(dialog).toHaveTextContent('This should not be used.');
+    fireEvent.click(screen.getByRole('button', {name: 'Close'}));
+
+    expect(screen.queryByRole('dialog', {name: 'Assistant reply'})).toBeNull();
+    expect(expand).toHaveFocus();
+  });
 });

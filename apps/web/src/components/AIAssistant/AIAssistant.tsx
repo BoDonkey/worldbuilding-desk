@@ -51,6 +51,7 @@ import {
   type WritingCoachScope
 } from '../../services/coach/writingCoachConsultation';
 import {CraftCitationList} from '../CraftCitationList';
+import {AssistantReplyReader} from './AssistantReplyReader';
 import {describeError} from '../../services/errors';
 import {useStatusAnnouncement} from '../../hooks/useStatusAnnouncement';
 import {
@@ -139,6 +140,7 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
   const [messages, setMessages] = useAssistantConversation(projectId, conversationScope);
   const [input, setInput] = useState('');
   const [isStreaming, setIsStreaming] = useState(false);
+  const [readingIndex, setReadingIndex] = useState<number | null>(null);
   const aiProvider = aiConfig?.provider;
   const requestPolicy = useAssistantRequestPolicy({
     projectId,
@@ -769,9 +771,27 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
                 <CraftCitationList citations={msg.craftCitations} />
               </details>
             ) : null}
+            {msg.role === 'assistant' && msg.content.trim() ? (
+              <button
+                type='button'
+                className={styles.expandReply}
+                onClick={() => setReadingIndex(i)}
+                aria-label='Expand reply in a reading view'
+              >
+                Expand
+              </button>
+            ) : null}
           </div>
         ))}
       </div>
+      {readingIndex !== null && messages[readingIndex]?.role === 'assistant' && (
+        <AssistantReplyReader
+          content={messages[readingIndex].content}
+          craftCitations={messages[readingIndex].craftCitations}
+          isStreaming={isStreaming && readingIndex === messages.length - 1}
+          onClose={() => setReadingIndex(null)}
+        />
+      )}
 
       <ModelRunProgress run={modelRun} className={styles.runProgress} />
 
