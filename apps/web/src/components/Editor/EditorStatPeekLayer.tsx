@@ -64,7 +64,7 @@ export function EditorStatPeekLayer({peek, characterStatPeek, onExpandSelection}
                 onExpandSelection(selection);
               }}
             >
-              AI Expand
+              Ask AI about this
             </button>
           )}
           <span className={styles.selectionHint}>{STAT_PEEK_SHORTCUT_LABEL}</span>

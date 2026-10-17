@@ -221,7 +221,7 @@ export function useEditorStatPeek({
     const editor = editorRef.current;
     if (!container || !editor || !characterStatPeek) return;
     // Capture phase, so a character name gets this menu before the editor's own
-    // right-click handling (AI Expand on a selection), which the menu keeps.
+    // right-click handling (Ask AI about this on a selection), which the menu keeps.
     const onContextMenu = (event: MouseEvent) => {
       if (editor.isDestroyed || !(event.target instanceof Node)) return;
       if (!editor.view.dom.contains(event.target)) return;

@@ -438,6 +438,8 @@ function WorkspaceRoute() {
   });
   const {
     activeAIContext,
+    clearAIContext,
+    consumePendingAIInsert,
     pendingAIInsert,
     previewSceneRevision,
     setPendingAIInsert,
@@ -1347,7 +1349,7 @@ function WorkspaceRoute() {
     dismissConsistencyReviewItem, addModelCheckItems,
     ignoreUnknownSurfaceProjectWide, linkUnknownEntity, openWorldRecord,
     scratchpadContent, setScratchpadContent, scratchpadStatus, scratchpadLastSavedAt,
-    activeProject, projectSettings, activeAIContext, setPendingAIInsert, previewSceneRevision,
+    activeProject, projectSettings, activeAIContext, clearAIContext, setPendingAIInsert, previewSceneRevision,
     queuedAssistantPrompt, setQueuedAssistantPrompt, ragService, systemHistoryEntries,
     setFeedback, refreshSystemHistory, activeLoreRecord, consultationBudget,
     handleConsultationFromLore,
@@ -1514,13 +1516,7 @@ function WorkspaceRoute() {
                   insertContext={pendingAIInsert?.context ?? null}
                   insertProvenance={pendingAIInsert?.provenance}
                   sceneRevision={pendingAIInsert?.revision}
-                  onTextInserted={() => {
-                    if (pendingAIInsert) {
-                      setPendingAIInsert(null);
-                      return;
-                    }
-                    setStatBlockInsertContent(null);
-                  }}
+                  onTextInserted={() => { if (!consumePendingAIInsert()) setStatBlockInsertContent(null); }}
                   selectionQuickSnippets={selectionQuickSnippets}
                   knownLoreHighlights={knownWorldBibleLoreHighlights}
                   characterStatPeek={characterStatPeek}
@@ -1535,6 +1531,7 @@ function WorkspaceRoute() {
                     ? undefined
                     : openSelectionInventoryCapture}
                   suppressSelectionBubble={Boolean(manualWorldCapture)}
+                  aiContextPassage={activeAIContext?.id === selectedId ? activeAIContext : null}
                 />
                 {consistencyPopover && activeConsistencyPopoverIssue && (
                   <WorkspaceReviewSurfacePopover

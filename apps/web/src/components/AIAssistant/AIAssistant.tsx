@@ -102,6 +102,8 @@ interface AIAssistantProps {
   sendBlockedReason?: string | null;
   /** The writing coach needs a scene or selection; surfaces without one hide it. */
   showWritingCoach?: boolean;
+  /** Offered on the Selected text card; returns the assistant to its default scope. */
+  onClearContext?: () => void;
 }
 
 const getContextSourceSummaries = (chunks: LLMContextChunk[]): string[] =>
@@ -135,7 +137,8 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
   pendingProposals = null,
   placeholder = 'Ask for help expanding, rewriting, or creating content...',
   sendBlockedReason = null,
-  showWritingCoach = true
+  showWritingCoach = true,
+  onClearContext
 }) => {
   const [messages, setMessages] = useAssistantConversation(projectId, conversationScope);
   const [input, setInput] = useState('');
@@ -710,6 +713,17 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
           <div className={styles.contextHeader}>
             <div className={styles.contextTitle}>Selected text</div>
             <div className={styles.contextHint}>Used as reference for your prompt</div>
+            {onClearContext && (
+              <button
+                type='button'
+                className={styles.contextClear}
+                onClick={onClearContext}
+                aria-label='Clear selected text'
+                disabled={isStreaming}
+              >
+                Clear
+              </button>
+            )}
           </div>
           <p className={styles.contextText}>{selectedTextPreview}</p>
         </div>

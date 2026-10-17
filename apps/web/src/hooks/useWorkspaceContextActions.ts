@@ -92,6 +92,16 @@ export function useWorkspaceContextActions(params: {
     openContextDrawer('lore');
   }, [openContextDrawer]);
 
+  /** Clears an applied AI insert; false when the editor inserted something else. */
+  const consumePendingAIInsert = useCallback(() => {
+    if (!pendingAIInsert) return false;
+    setPendingAIInsert(null);
+    return true;
+  }, [pendingAIInsert]);
+
+  /** Returns the assistant to whole-scene scope and removes the passage mark. */
+  const clearAIContext = useCallback(() => setActiveAIContext(null), []);
+
   const resetContextActions = useCallback(() => {
     setActiveAIContext(null);
     setQueuedAssistantPrompt(null);
@@ -137,6 +147,8 @@ export function useWorkspaceContextActions(params: {
 
   return {
     activeAIContext,
+    clearAIContext,
+    consumePendingAIInsert,
     pendingAIInsert,
     previewSceneRevision,
     setPendingAIInsert,

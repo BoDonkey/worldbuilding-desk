@@ -317,6 +317,7 @@ and required revisit point, `WIP`, `Done <commit>`.
 | 4.63 | Uncramped World Bible editing (Portable data → More, hide create panel while editing) | 4 | S | Done `7a4e486` — Portable data is its own page (More → Utilities, `/portable-data`) with copy covering scope (World Bible + Source Notes, not manuscript), export-is-not-backup, and per-file import choices; World Bible create/import panel shows only on the record list (hidden while a record is open, all categories); WorldBibleRoute smaller; lint baseline; 929 web + 47 engine + 12 UI + 24 desktop tests; web/desktop builds; file-size gate; Cypress 144/144; `cypress-smoke` green (Web CI run 38049116825) |
 | 4.64 | Singular/plural World Bible highlighting | 4 | S | Done `36300bb` — editor lore highlights match the other number of non-character names/aliases (-s, -es after sibilants, -ies/-y) on the last word; characters exact; exact names win; highlighting only (review/unknown detection unchanged); builder extracted to `services/consistency/knownLoreHighlights.ts`, WorkspaceRoute smaller; lint baseline; 939 web + 47 engine + 12 UI + 24 desktop tests; web/desktop builds; file-size gate; Cypress 145/145; `cypress-smoke` green (Web CI run 38127880556) |
 | 4.65 | Assistant reply reading view | 4 | S | Done `0d206a7` — every assistant reply with content gets Expand: a wide modal reading view (bottom slide-up on narrow screens) with sanitized Markdown formatting, craft references, Copy/Close; display only; portaled above the narrow drawer, focus trapped/restored, Escape closes only the reading view; lint baseline; 944 web + 47 engine + 12 UI + 24 desktop tests; web/desktop builds; file-size gate; Cypress 146/146; `cypress-smoke` green (Web CI run 38133487790) |
+| 4.66 | Visible assistant selection handoff | 4 | S | WIP |
 | 5.1 | Auto-update decision + implementation | 5 | M | — |
 | 5.2 | Code signing + notarization, both platforms | 5 | M | — |
 | 5.3 | Packaged-app validation + Electron E2E | 5 | M | — |
@@ -1895,6 +1896,15 @@ are lost and every table cell becomes its own paragraph.
   the reading view, not the narrow-viewport drawer behind it; focus is
   trapped and restored. A resizable context drawer stays a later option if
   dogfood shows the drawer is cramped beyond assistant replies.
+- **4.66 Visible assistant selection handoff.** Found on 2026-10-11: the
+  author highlighted a passage, clicked into the assistant, and the
+  highlight vanished. Only the selection menu's **AI Expand** button or a
+  right-click hands a passage to the assistant; otherwise the writing coach
+  silently falls back to the whole scene. Rename the button **Ask AI about
+  this**; while a passage is the assistant's context, keep it marked in the
+  editor (a display-only decoration that follows edits and is never saved
+  into scene content) and give the Selected text card a **Clear** action
+  that returns the assistant to whole-scene scope and removes the mark.
 
 ## Phase 5 — Release Engineering
 

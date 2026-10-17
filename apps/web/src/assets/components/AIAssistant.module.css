@@ -41,6 +41,27 @@
   color: var(--color-text-secondary);
 }
 
+.contextClear {
+  margin-left: auto;
+  padding: 0.1rem 0.5rem;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: var(--color-bg-primary);
+  color: var(--color-text-secondary);
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.contextClear:hover {
+  color: var(--color-text-primary);
+  border-color: var(--color-accent);
+}
+
+.contextClear:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .contextText {
   margin: 0;
   max-height: 7.5rem;

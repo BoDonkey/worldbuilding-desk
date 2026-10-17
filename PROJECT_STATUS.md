@@ -286,6 +286,13 @@ Under the hood, the app still includes rich systems for world data, rules, chara
   formatted through the sanitized Source Note renderer, its craft
   references, and Copy/Close. Display only: stored messages are unchanged.
   Escape closes just the reading view, not the narrow-viewport drawer.
+- To give the assistant a passage, the author selects it and chooses **Ask
+  AI about this** (selection menu or right-click). While that passage is the
+  assistant's context it stays marked in the editor, even after focus moves
+  to the assistant. The mark is display only: it follows edits and is never
+  saved into the scene or its undo history. The assistant's **Selected
+  text** card has a **Clear** action that returns the assistant to the whole
+  scene and removes the mark.
 - The Story Dashboard also has a "Progression continuity" section: a
   deterministic shortlist of two craft-and-canon-consistency observations —
   a character with an established priority ability (movement, teleportation,

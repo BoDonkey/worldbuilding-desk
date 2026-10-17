@@ -31,6 +31,33 @@ describe('Reviewed assistant scene revisions', () => {
     cy.contains('button', 'Ask the writing coach').should('not.be.disabled');
   });
 
+  it('keeps a passage handed to the assistant marked until the author clears it', () => {
+    cy.get('.tiptap[contenteditable="true"]').click();
+    cy.get('.tiptap[contenteditable="true"] p').first().then(($paragraph) => {
+      const doc = $paragraph[0].ownerDocument;
+      const textNode = $paragraph[0].firstChild as Text;
+      const range = doc.createRange();
+      range.setStart(textNode, 0);
+      range.setEnd(textNode, 5);
+      const selection = doc.getSelection()!;
+      selection.removeAllRanges();
+      selection.addRange(range);
+      doc.dispatchEvent(new Event('selectionchange'));
+    });
+    cy.contains('button', 'Ask AI about this').click();
+
+    cy.contains('Selected text').should('be.visible');
+    cy.get('[data-testid="ai-context-passage"]').should('have.text', 'Alpha');
+    // The mark survives the editor losing focus to the assistant.
+    cy.get('textarea[placeholder^="Ask for help"]').click();
+    cy.get('[data-testid="ai-context-passage"]').should('have.text', 'Alpha');
+
+    cy.contains('button', 'Clear').click();
+    cy.contains('Selected text').should('not.exist');
+    cy.get('[data-testid="ai-context-passage"]').should('not.exist');
+    cy.get('.tiptap[contenteditable="true"]').should('have.text', 'Alpha content');
+  });
+
   it('expands a reply into a formatted reading view that Escape closes without closing the drawer', () => {
     cy.window().then((win) => {
       win.sessionStorage.setItem('wbd:assistant-conversation:cypress-project-1', JSON.stringify([

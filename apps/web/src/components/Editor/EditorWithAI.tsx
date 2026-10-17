@@ -21,6 +21,11 @@ import {
   reviewFocusFlashKey,
   setReviewFocusFlash
 } from './extensions/ReviewFocusFlashExtension';
+import {
+  createAIContextPassageExtension,
+  setAIContextPassage,
+  type AIContextPassageRange
+} from './extensions/AIContextPassageExtension';
 import {TextSelection} from 'prosemirror-state';
 import type {EditorConfig} from '../../config/editorConfig';
 import type {StatBlockTokenPresentation} from '../../utils/statBlockTemplates';
@@ -105,6 +110,8 @@ interface EditorWithAIProps {
   }) => void;
   inlineHighlightsMode?: InlineHighlightsMode;
   suppressSelectionBubble?: boolean;
+  /** The passage the assistant is using as context; marked until cleared. */
+  aiContextPassage?: AIContextPassageRange | null;
 }
 
 interface SelectionBubbleState {
@@ -194,7 +201,8 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
   characterStatPeek,
   statPeekRequest = null,
   inlineHighlightsMode = 'visible',
-  suppressSelectionBubble = false
+  suppressSelectionBubble = false,
+  aiContextPassage = null
 }) => {
   const [selectionBubble, setSelectionBubble] = useState<SelectionBubbleState | null>(
     null
@@ -341,6 +349,7 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
         AIExpandMenu,
         createCurrentSceneFindExtension(),
         createReviewFocusFlashExtension(),
+        createAIContextPassageExtension(),
         createWorkspaceAnnotationsExtension(
           // ProseMirror invokes these getters after render when it evaluates
           // decorations; passing them here does not read either ref during render.
@@ -375,6 +384,18 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
       window.removeEventListener('ai-expand-request', handleAIRequest);
     };
   }, [documentId, onOpenAIContext]);
+
+  const aiContextFrom = aiContextPassage?.from ?? null;
+  const aiContextTo = aiContextPassage?.to ?? null;
+  useEffect(() => {
+    const editor = editorRef.current;
+    if (!editor || editor.isDestroyed) return;
+    const range =
+      aiContextFrom !== null && aiContextTo !== null && aiContextFrom < aiContextTo
+        ? {from: aiContextFrom, to: aiContextTo}
+        : null;
+    editor.view.dispatch(setAIContextPassage(editor.state.tr, range));
+  }, [aiContextFrom, aiContextTo, documentId, editorReadyToken]);
 
   useEffect(() => {
     return () => {
@@ -1058,7 +1079,7 @@ export const EditorWithAI: React.FC<EditorWithAIProps> = ({
                 });
               }}
             >
-              AI Expand
+              Ask AI about this
             </button>
             {selectionBubble.matchType === 'character' && (
               <button

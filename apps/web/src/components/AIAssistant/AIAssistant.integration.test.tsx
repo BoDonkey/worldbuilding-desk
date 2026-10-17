@@ -366,4 +366,32 @@ describe('AIAssistant factual lookup integration', () => {
     expect(screen.queryByRole('dialog', {name: 'Assistant reply'})).toBeNull();
     expect(expand).toHaveFocus();
   });
+  it('offers Clear on the selected text card only when the host can clear it', async () => {
+    const onClearContext = vi.fn();
+    const context = {type: 'document' as const, id: 'scene-1', selectedText: 'Sera waits.'};
+    const {rerender} = renderAssistant({
+      projectId: 'project-clear-context',
+      aiConfig: hostedSettings,
+      context,
+      sceneText: 'Sera waits. The gate stays shut.',
+      onClearContext
+    });
+
+    await screen.findByText('Project context ready.');
+    expect(screen.getByText('Sera waits.')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', {name: 'Clear selected text'}));
+    expect(onClearContext).toHaveBeenCalledTimes(1);
+
+    rerender(
+      <MemoryRouter>
+        <AIAssistant
+          projectId='project-clear-context'
+          aiConfig={hostedSettings}
+          context={context}
+          sceneText='Sera waits. The gate stays shut.'
+        />
+      </MemoryRouter>
+    );
+    expect(screen.queryByRole('button', {name: 'Clear selected text'})).toBeNull();
+  });
 });

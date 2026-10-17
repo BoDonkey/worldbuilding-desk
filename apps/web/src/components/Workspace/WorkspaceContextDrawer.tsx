@@ -238,6 +238,7 @@ interface WorkspaceContextDrawerProps {
   activeProject: Pick<Project, 'id' | 'parentProjectId' | 'inheritRag' | 'inheritShodh'>;
   projectSettings: ProjectSettings | null;
   activeAIContext: AIContext | null;
+  clearAIContext: () => void;
   previewSceneRevision: (text: string, provenance?: AITextProvenance) => void;
   setPendingAIInsert: (val: PendingAIInsert | null) => void;
   queuedAssistantPrompt: string | null;
@@ -379,6 +380,7 @@ export function WorkspaceContextDrawer({
   activeProject,
   projectSettings,
   activeAIContext,
+  clearAIContext,
   setPendingAIInsert,
   previewSceneRevision,
   queuedAssistantPrompt,
@@ -1136,6 +1138,7 @@ export function WorkspaceContextDrawer({
             aiConfig={projectSettings?.aiSettings}
             projectMode={projectSettings?.projectMode}
             context={activeAIContext ?? undefined}
+            onClearContext={clearAIContext}
             onInsert={previewSceneRevision}
             onCaptureSourceNote={setPendingSourceNoteCapture}
             sceneText={currentDocument?.content}
