@@ -168,6 +168,8 @@ pnpm --filter web e2e:run       # for slices touching routed UI
    3.15 first among 3.12–3.15; 3.12a → 3.12b; both before 5.3 and 6.1;
    3.16 → 4.53; 3.17 → 1.4a; 3.17 → 1.4b; 4.54 → 4.55 → 4.56;
    4.57 → 4.58 → 4.59;
+   3.18 after 4.66; 3.22 → 3.23a → 3.23b; 3.23a → 3.23c;
+   3.23a–3.23c before 5.15;
    5.14 before 5.15; 5.15 before 6.1;
    Phase 6 strictly ordered).
 2. **Get the full prompt.** Slices marked _[prompt: archive/... § Slice N]_
@@ -245,6 +247,14 @@ and required revisit point, `WIP`, `Done <commit>`.
 | 3.15 | Dependency advisory sweep + CI audit gate | 3 | S | Done `b636915` — production audit 12→0: TipTap 3.31.4 with ProseMirror pins raised to match; sharp 0.35.5, adm-zip 0.6.1, qs 6.16.0 overrides; express/cors dev-only; `web-verify` fails on high production advisories; lint; 763 web + 14 engine + 12 UI tests; web/desktop builds; Cypress 117/117 |
 | 3.16 | Split `useWorkspaceConsistency` by responsibility | 3 | M | Done `2a9aa0e` — 2,234-line hook now a 450-line composer over seven responsibility hooks (none over 600) plus two tested pure services; same return shape, callers unchanged; baseline 8 files; lint baseline; 850 web + 47 engine + 12 UI + 24 desktop tests; web/desktop builds; Cypress 126/126 |
 | 3.17 | Centralize assistant request policy | 3 | M | Done `aa500ea` — shared provider readiness, route disclosure, consultation guard/accounting, streaming/Stop, and error boundary for Workspace and Ask; deterministic factual answers spend zero; hosted runs record `assistant`, coach records `writing-coach`, and private-local retains its runaway guard; AIAssistant 858→827 lines; lint baseline; 858 web + 47 engine + 12 UI + 24 desktop tests; web/desktop builds; file-size gate; Cypress 132/132 |
+| 3.18 | Lower the size freeze to 1,000 lines | 3 | XS | — |
+| 3.19 | Undefined theme token + hardcoded editor colors | 3 | XS | — |
+| 3.20 | Compendium form extraction | 3 | M | — |
+| 3.21 | Scene-roster mutation services | 3 | M | — |
+| 3.22 | Characterization tests for untested domain modules | 3 | M | — |
+| 3.23a | One storage layer + import guard | 3 | M | — |
+| 3.23b | Project-scoped IndexedDB indexes | 3 | M | — |
+| 3.23c | Browser-storage preferences + mechanics draft | 3 | S | — |
 | 4.1 | Description-first manual item creation | 4 | S | Done `70fb72f` — focused manual item draft with progressive full-editor disclosure; lint with 3 baseline warnings; 275 web + 6 engine + 12 UI tests; web/desktop builds; Cypress 44/44; desktop/narrow browser checks |
 | 4.2 | Storage schema versioning + migrations | 4 | M | Done `965af19` — separate IndexedDB, project-data, and snapshot schema contracts; ordered project-load migration runner with restorable pre-migration backups including rulesets; newer schemas fail closed before writes; 327 web + 6 engine + 12 UI tests; lint baseline; web/desktop builds; Cypress 47/47 |
 | 4.3 | Internal package namespace rename | 4 | S | Done `1917611` — rules packages renamed to `@worldbuilding-desk/*` across manifests, imports, workspace scripts, Vite resolution, CI, lockfile, and active docs; local workspace links and generated artifacts contain no old scope; web/package lint; root test plus 357 web + 6 engine + 12 UI tests; web/desktop builds; Cypress not required (no routed UI change) |
@@ -807,6 +817,102 @@ prerequisite for 1.4a and must land before beta.
   Keep `AIAssistant.tsx` below its starting line count, update
   `PROJECT_STATUS.md`, and run the full verification battery plus local
   Cypress; `cypress-smoke` must be green before close-out.
+
+Follow-up from the 2026-10-17 architecture review
+(_[evidence: archive/architecture-review-2026-10-17.md § F1–F7]_). The audit
+ran without Node.js, so each slice starts by confirming its finding against a
+green battery. Every slice here is behavior-preserving except 3.19 (visible
+text color) and 3.23b (an additive schema migration). 3.23a–3.23c must land
+before 5.15, because the vault encrypts through the owning persistence
+boundary and these slices create it.
+
+- **3.18 Lower the size freeze to 1,000 lines.** Run after 4.66 closes.
+  Change `LIMIT` in `scripts/check-file-sizes.mjs` from 1,500 to 1,000 and
+  record the baseline with `pnpm check:file-sizes --update`. Files that are
+  already over 1,000 lines may shrink but not grow. Update the 3.14
+  references in `docs/architecture-review.md` risk 4 and the script's header
+  comment. No application code changes.
+- **3.19 Undefined theme token + hardcoded editor colors.**
+  `--color-text-muted` is used in `ConsultationBudgetNotice.module.css` and
+  `AISettingsForm.module.css` but is not defined. Replace it with the
+  existing token that matches the intended muted text (most likely
+  `--color-text-secondary`; confirm against `docs/product-blueprint.md`).
+  Replace the 13 hardcoded colors in `assets/TipTapEditor.css` and 3 in
+  `App.css` with existing theme tokens where an equivalent exists, adding a
+  shared token deliberately only where none does. Check both themes. Add a
+  small check (a unit test or script) that fails when a stylesheet uses a
+  `var(--…)` name that no stylesheet defines.
+- **3.20 Compendium form extraction.** `routes/CompendiumRoute.tsx` holds 59
+  `useState` values, about 40 of them draft fields for separate forms
+  (entry, import, recipe, milestone, preview, zone, settlement module, base
+  stats). Move each form's draft state and submit handler into its own
+  component or hook beside `EntriesTab`/`WorldSystemsTab`, so the route keeps
+  only loaded data, the active tab, and feedback. Pure validation and
+  parsing (for example recipe milestone IDs and preview materials text) move
+  into tested helpers. Bring the route under 1,000 lines with no new file
+  over 600, and record sizes with `pnpm check:file-sizes --update`. Full
+  battery plus local Cypress.
+- **3.21 Scene-roster mutation services.** Move the state-mutation command
+  construction out of `hooks/useWorkspaceSceneRoster.ts` (1,417 lines) into
+  pure, tested functions under `services/workspace/` or `services/state/`.
+  This covers `saveSelectionInventoryCapture`,
+  `saveSelectionConsumptionCapture`, the timeline expire, edit, invalidate,
+  and re-anchor actions, and `savePositionedChange`. The hook keeps React
+  state, persistence calls, and wiring; its return shape does not change.
+  Move the `SceneRoster*` card types out of
+  `components/Workspace/SceneRosterPanel` and `LoreInspectorRecord` out of
+  `components/Editor/LoreInspectorPanel` into the services that produce
+  them, so no service imports from `components/`. Target under 800 lines
+  for the hook, with no new file over 600. Unit tests cover each command
+  builder with continuity-corpus cases, and the scene-roster, stat-peek,
+  and state Cypress specs stay green unchanged.
+- **3.22 Characterization tests for untested domain modules.** Before any
+  move, add tests that pin current behavior for
+  `services/compendium/compendiumService.ts` (1,232 lines, no unit tests),
+  using `fake-indexeddb` like the 3.13 transaction tests. Then extract the
+  pure logic from `hooks/useWorldBibleEntityActions.ts` (1,125) and
+  `hooks/useWorkspaceStatBlocks.ts` (1,074) into tested services, following
+  the 3.16 pattern (same return shapes, no new hook over 600 lines). Split
+  `compendiumService.ts` by responsibility only after its tests are green,
+  for example persistence versus mechanics calculations. Must land before
+  3.23a so the storage move has a safety net.
+- **3.23a One storage layer + import guard.** Move the root-level
+  repositories (`db.ts`, `projectStorage.ts`, `settingsStorage.ts`,
+  `entityStorage.ts`, `characterStorage.ts`, `categoryStorage.ts`,
+  `writingStorage.ts`, `loreStorage.ts`, `corkboardStorage.ts`,
+  `scratchpadStorage.ts`, `worldCanvasStorage.ts`), and the services that
+  open IndexedDB themselves (canon decisions, lore facts, entity proposals,
+  state ledger, compendium, character transfer), under one storage folder in
+  `services/storage/`. Replace the 12 copies of `requestToPromise` with one
+  shared helper. Routes, hooks, and components import repositories only
+  through that folder's public index. Add an ESLint `no-restricted-imports`
+  rule (or an equivalent check) that blocks `openDb` and `indexedDB` use
+  outside the storage folder. Keep function names and signatures so that
+  callers change only their import path. Behavior-preserving: no schema
+  change and no new stores. Full battery plus local Cypress, plus the backup
+  and canon smoke tests in `docs/smoke-tests.md`.
+- **3.23b Project-scoped IndexedDB indexes.** After 3.23a, add `projectId`
+  indexes to every project-owned object store that lacks one, with one
+  `DB_VERSION` step. Change the `…ByProject` getters to read through the
+  index instead of loading every project's records and filtering. Cover the
+  upgrade path from the current `DB_VERSION` (28) with a real-IndexedDB test
+  that opens a populated v28 database. Backup export and import, the
+  per-project migration chain, and snapshot `schemaVersion` stay unchanged.
+  Record the change in `docs/domain-model.md` if it lists store indexes, and
+  run the backup smoke test.
+- **3.23c Browser-storage preferences + mechanics draft.** After 3.23a,
+  replace the copied collapsed-rail `localStorage` code in the Corkboard,
+  World Bible, and Lore routes, and the direct calls in `CommandPalette` and
+  `SourceNoteStarterPanel`, with one preference helper or the existing
+  Zustand preference store. Keep existing keys or migrate them so that no
+  author loses a setting. Move the unfinished mechanic draft in
+  `WorldBibleMechanicsPanel` (name and default value the author typed) out
+  of plaintext `localStorage`, either into project storage through the 3.23a
+  layer or into memory only. Ask the author which before starting, because
+  memory-only drafts would no longer survive a reload. After this slice, no
+  author-typed content may be stored outside the storage layer. Record the
+  remaining `localStorage` keys, which should be preferences only, as the
+  inventory 5.15 must account for.
 
 ## Phase 4 — Product Completeness for v1
 

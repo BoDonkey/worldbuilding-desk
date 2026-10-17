@@ -1,6 +1,6 @@
 # Architecture Reference — SagaSpine
 
-Last reviewed: 2026-10-06
+Last reviewed: 2026-10-17
 
 ## Purpose
 
@@ -12,9 +12,10 @@ Use:
 - `PROJECT_STATUS.md` for the current implementation snapshot
 - `docs/road-to-market.md` for execution order
 - `docs/domain-model.md` for detailed domain contracts
-- `docs/archive/architecture-review-2026-10-06.md` for the latest
+- `docs/archive/architecture-review-2026-10-17.md` for the latest
   point-in-time code health review and its evidence
-- `docs/archive/architecture-review-2026-10-03.md` and
+- `docs/archive/architecture-review-2026-10-06.md`,
+  `docs/archive/architecture-review-2026-10-03.md`, and
   `docs/archive/architecture-review-2026-09-26.md` for the prior reviews
 - `docs/archive/architecture-review-2026-05-10.md` for the earlier
   point-in-time review and its completed action history
@@ -291,32 +292,35 @@ every visual detail.
 
 ## Current Architecture Risks
 
-1. The shared assistant still combines provider lifecycle, retrieval,
-   factual gating, pending-proposal policy, model execution, consultation
-   accounting, coaching, conversation persistence, and presentation. That
-   fragmented request policy let ordinary assistant calls bypass the project
-   consultation budget. Slice 3.17 centralizes the boundary.
-2. The Ask route's pending-proposal opt-in has no explicit loading or error
-   state, so a request can silently omit the context the author just enabled.
-   Slice 1.4a makes the opt-in fail closed after 3.17.
+1. Persistence has no single owning boundary. About 28 modules open
+   IndexedDB directly; root-level repositories are imported by routes and
+   hooks; and project-scoped reads load every project's records and filter
+   in memory. The 5.15 vault needs one boundary to encrypt through. Slices
+   3.22–3.23c consolidate it before 5.15.
+2. Domain logic still sits in large hooks with few tests
+   (`useWorkspaceSceneRoster`, `useWorldBibleEntityActions`,
+   `useWorkspaceStatBlocks`) and in the untested `compendiumService`.
+   Slices 3.21–3.22 move it into tested services.
 3. The rule evaluation classes are tested and hardened (Slice 3.11) but no
    app path uses them yet; wiring them in (backlog R3–R5) must keep rule
    output to derived views and author-confirmed proposals.
-4. The hotspot freeze from Slice 3.14 holds, and Slice 3.16 split
-   `useWorkspaceConsistency`; several route components remain over 1,500
-   lines, especially World Bible, Character Sheets, Workspace, Lore, and
-   Compendium. Continue incremental responsibility-based extraction rather
-   than broad rewrites.
+4. The hotspot freeze from Slice 3.14 holds, but it only sees files over
+   1,500 lines; several files sit between 1,250 and 1,420 lines. Route
+   components still hold large amounts of per-form state (Compendium has 59
+   `useState` values). Slice 3.18 lowers the freeze to 1,000 lines, and
+   Slice 3.20 extracts the Compendium forms. Continue incremental,
+   responsibility-based extraction rather than broad rewrites.
 5. Provider capabilities are not yet normalized behind one proposal/action
    contract.
 6. Some assistant/retrieval behavior still needs realistic provenance testing.
 7. Remaining egress worth watching is the embedding-model download from
    Hugging Face/jsDelivr; it carries no author content.
 
-Evidence for risks 1–2 and the current hotspot state:
-`docs/archive/architecture-review-2026-10-06.md`. Prior hardening evidence:
-`docs/archive/architecture-review-2026-10-03.md`. Scheduled in
-`docs/road-to-market.md`: risk 1 as Slice 3.17 and risk 2 as Slice 1.4a.
+Evidence for risks 1, 2, and 4:
+`docs/archive/architecture-review-2026-10-17.md`. Prior evidence:
+`docs/archive/architecture-review-2026-10-06.md` (assistant request policy,
+closed by Slices 3.17 and 1.4a) and
+`docs/archive/architecture-review-2026-10-03.md`.
 
 ## Change Rule
 

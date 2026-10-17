@@ -124,10 +124,14 @@ the full-length originals behind the 2026-08-01 consolidation:
 - `stat-peek-plan.md` — completed plan for Slices 4.46–4.48 (character
   snapshot service, stat peek, pinned stat panel); durable behavior lives in
   `docs/product-blueprint.md`.
-- `architecture-review-2026-10-06.md` — latest dated code health and
-  architecture review (shared assistant request-policy ownership,
-  consultation-budget enforcement, pending-proposal readiness, and authority
-  drift) behind the current risk list and roadmap Slices 3.17 and 1.4a. The
+- `architecture-review-2026-10-17.md` — latest dated code health and
+  architecture review (persistence ownership, domain logic in large hooks,
+  the size-freeze blind spot, route form state, browser storage, and an
+  undefined theme token) behind the current risk list and roadmap Slices
+  3.18–3.23c.
+- `architecture-review-2026-10-06.md` — prior review (assistant
+  request-policy ownership, consultation-budget enforcement, and
+  pending-proposal readiness), closed by Slices 3.17 and 1.4a. The
   2026-10-03 and 2026-09-26 reviews remain beside it for comparison.
 - `hosted-response-limits-plan-2026-09-24.md` — implemented Slice 4.41 plan
   for hosted response-cost ceilings, provider thinking policy, cut-off
