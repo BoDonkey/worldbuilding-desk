@@ -37,6 +37,7 @@ const createFallbackEmbeddingPipeline = (): EmbeddingPipeline => {
 
 export interface RAGProvider {
   init(projectId: string): Promise<void>;
+  close?(): void;
   setEntityVocabulary(vocabulary: EntityVocabulary): void;
   deleteDocument(documentId: string): Promise<void>;
   indexDocument(
@@ -57,16 +58,20 @@ export class RAGService implements RAGProvider {
 
   async init(projectId: string): Promise<void> {
     this.db = await openDB<RAGDatabase>(`rag-${projectId}`, 2, {
-      upgrade(db, oldVersion) {
-        const chunkStore = db.createObjectStore('chunks', {keyPath: 'id'});
-        chunkStore.createIndex('by-document', 'documentId');
-        chunkStore.createIndex('by-type', 'metadata.type');
-
-        if (oldVersion < 2) {
-          // no-op placeholder for future migrations
+      upgrade(db) {
+        if (!db.objectStoreNames.contains('chunks')) {
+          const chunkStore = db.createObjectStore('chunks', {keyPath: 'id'});
+          chunkStore.createIndex('by-document', 'documentId');
+          chunkStore.createIndex('by-type', 'metadata.type');
         }
-      }
+      },
+      blocking: () => this.close()
     });
+  }
+
+  close(): void {
+    this.db?.close();
+    this.db = null;
   }
 
   setEntityVocabulary(vocabulary: EntityVocabulary) {
@@ -316,6 +321,11 @@ export class CompositeRAGService implements RAGProvider {
 
   async init(projectId: string): Promise<void> {
     await this.primary.init(projectId);
+  }
+
+  close(): void {
+    this.primary.close?.();
+    this.parents.forEach((parent) => parent.close?.());
   }
 
   setEntityVocabulary(vocabulary: EntityVocabulary) {

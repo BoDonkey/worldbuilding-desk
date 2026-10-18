@@ -10,7 +10,10 @@ export interface ShodhServiceOptions {
   parentProjectId?: string;
 }
 
-const cache = new Map<string, Promise<ShodhMemoryProvider>>();
+const cache = new Map<string, {
+  projectIds: string[];
+  service: Promise<ShodhMemoryProvider>;
+}>();
 
 async function createProvider(projectId: string) {
   const service = new ShodhMemoryService();
@@ -35,14 +38,38 @@ export function getShodhService(
   if (!cache.has(cacheKey)) {
     const initPromise = (async () => {
       const primary = await createProvider(projectId);
-      if (inheritFromParent && parentProjectId) {
-        const parent = await createProvider(parentProjectId);
-        return new CompositeShodhMemoryService(primary, [parent]);
+      try {
+        if (inheritFromParent && parentProjectId) {
+          const parent = await createProvider(parentProjectId);
+          return new CompositeShodhMemoryService(primary, [parent]);
+        }
+        return primary;
+      } catch (error) {
+        primary.close();
+        throw error;
       }
-      return primary;
     })();
-    cache.set(cacheKey, initPromise);
+    const entry = {
+      projectIds: inheritFromParent && parentProjectId ? [projectId, parentProjectId] : [projectId],
+      service: initPromise
+    };
+    cache.set(cacheKey, entry);
+    initPromise.catch(() => {
+      if (cache.get(cacheKey) === entry) cache.delete(cacheKey);
+    });
   }
 
-  return cache.get(cacheKey)!;
+  return cache.get(cacheKey)!.service;
+}
+
+/** Release every cached provider that owns a connection to this project, including inherited views. */
+export async function closeShodhServices(projectId: string): Promise<void> {
+  const closing: Promise<void>[] = [];
+  for (const [key, entry] of cache) {
+    if (!entry.projectIds.includes(projectId)) continue;
+    cache.delete(key);
+    // Failed initialization has no usable provider to close.
+    closing.push(entry.service.then((service) => service.close?.(), () => undefined));
+  }
+  await Promise.all(closing);
 }

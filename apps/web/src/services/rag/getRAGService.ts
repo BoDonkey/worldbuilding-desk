@@ -7,7 +7,10 @@ export interface RagServiceOptions {
   parentProjectId?: string;
 }
 
-const serviceCache = new Map<string, Promise<RAGProvider>>();
+const serviceCache = new Map<string, {
+  projectIds: string[];
+  service: Promise<RAGProvider>;
+}>();
 
 async function createProvider(projectId: string) {
   const service = new RAGService();
@@ -32,14 +35,38 @@ export function getRAGService(
   if (!serviceCache.has(cacheKey)) {
     const initPromise = (async () => {
       const primary = await createProvider(projectId);
-      if (inheritFromParent && parentProjectId) {
-        const parent = await createProvider(parentProjectId);
-        return new CompositeRAGService(primary, [parent]);
+      try {
+        if (inheritFromParent && parentProjectId) {
+          const parent = await createProvider(parentProjectId);
+          return new CompositeRAGService(primary, [parent]);
+        }
+        return primary;
+      } catch (error) {
+        primary.close();
+        throw error;
       }
-      return primary;
     })();
-    serviceCache.set(cacheKey, initPromise);
+    const entry = {
+      projectIds: inheritFromParent && parentProjectId ? [projectId, parentProjectId] : [projectId],
+      service: initPromise
+    };
+    serviceCache.set(cacheKey, entry);
+    initPromise.catch(() => {
+      if (serviceCache.get(cacheKey) === entry) serviceCache.delete(cacheKey);
+    });
   }
 
-  return serviceCache.get(cacheKey)!;
+  return serviceCache.get(cacheKey)!.service;
+}
+
+/** Release every cached provider that owns a connection to this project, including inherited views. */
+export async function closeRAGServices(projectId: string): Promise<void> {
+  const closing: Promise<void>[] = [];
+  for (const [key, entry] of serviceCache) {
+    if (!entry.projectIds.includes(projectId)) continue;
+    serviceCache.delete(key);
+    // Failed initialization has no usable provider to close.
+    closing.push(entry.service.then((service) => service.close?.(), () => undefined));
+  }
+  await Promise.all(closing);
 }

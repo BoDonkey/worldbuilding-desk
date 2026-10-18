@@ -3,6 +3,48 @@ import {describe, expect, it} from 'vitest';
 import {getLexicalSearchScore, getRagTrustRankingBoost, RAGService} from './RAGService';
 
 describe('RAGService lexical search scoring', () => {
+  it('upgrades a populated v1 database without losing chunks or indexes', async () => {
+    const projectId = `legacy-${crypto.randomUUID()}`;
+    const chunk = {
+      id: 'legacy-chunk', documentId: 'legacy-scene', documentTitle: 'Legacy scene',
+      content: 'Preserved author text', metadata: {type: 'scene'}
+    };
+    await new Promise<void>((resolve, reject) => {
+      const request = indexedDB.open(`rag-${projectId}`, 1);
+      request.onupgradeneeded = () => {
+        const store = request.result.createObjectStore('chunks', {keyPath: 'id'});
+        store.createIndex('by-document', 'documentId');
+        store.createIndex('by-type', 'metadata.type');
+        store.put(chunk);
+      };
+      request.onsuccess = () => { request.result.close(); resolve(); };
+      request.onerror = () => reject(request.error);
+    });
+
+    const rag = new RAGService();
+    try {
+      await rag.init(projectId);
+      expect(await rag.getDiagnostics()).toMatchObject({chunkCount: 1, documentCount: 1});
+      await new Promise<void>((resolve, reject) => {
+        const request = indexedDB.open(`rag-${projectId}`, 2);
+        request.onerror = () => reject(request.error);
+        request.onsuccess = () => {
+          const db = request.result;
+          const tx = db.transaction('chunks', 'readonly');
+          const record = tx.objectStore('chunks').index('by-type').get('scene');
+          record.onsuccess = () => expect(record.result).toEqual(chunk);
+          tx.oncomplete = () => { db.close(); resolve(); };
+          tx.onerror = () => { db.close(); reject(tx.error); };
+        };
+      });
+      // Deletion uses the preserved by-document index.
+      await rag.deleteDocument('legacy-scene');
+      expect(await rag.getDiagnostics()).toMatchObject({chunkCount: 0});
+    } finally {
+      rag.close();
+    }
+  });
+
   it('scores exact named matches above unrelated chapter text', () => {
     const query = 'Dresden';
 
