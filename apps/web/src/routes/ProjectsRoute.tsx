@@ -13,7 +13,7 @@ import {
 } from '../projectStorage';
 import {getDocumentsByProject} from '../writingStorage';
 import {getEntitiesByProject} from '../entityStorage';
-import {getRulesetByProjectId, deleteRuleset} from '../services/rules';
+import {getRulesetByProjectId} from '../services/rules';
 import {
   getSeriesBibleConfig,
   linkProjectToParent,
@@ -247,11 +247,6 @@ function ProjectsRoute() {
         setDeletingProjectId(project.id);
         setFeedback(null);
         try {
-          const ruleset = await getRulesetByProjectId(project.id);
-          if (ruleset) {
-            await deleteRuleset(ruleset.id, project.id);
-          }
-
           await deleteProjectFromStore(project.id);
           setProjects((prev) => prev.filter((p) => p.id !== project.id));
           setProjectRulesets((prev) => {

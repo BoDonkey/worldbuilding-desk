@@ -11,6 +11,10 @@ import {
   type ProjectMigrationReport
 } from './services/storage/projectSchemaMigrations';
 import {announceStatus} from './store/notificationStore';
+import {runProjectWriteTransaction} from './services/storage/projectWriteTransaction';
+import {closeRAGServices} from './services/rag/getRAGService';
+import {closeShodhServices} from './services/shodh/getShodhService';
+import {getRulesetByProjectId, replaceRulesetSnapshot} from './services/rules/rulesetService';
 
 const announceProjectMigration = (project: Project) => (report: ProjectMigrationReport) => {
   announceStatus(
@@ -27,52 +31,27 @@ const PROJECT_LOCAL_STORAGE_PREFIXES = [
   'progressionContinuityReview'
 ] as const;
 
-function transactionToPromise(tx: IDBTransaction): Promise<void> {
-  return new Promise((resolve, reject) => {
-    tx.oncomplete = () => resolve();
-    tx.onerror = () => reject(tx.error);
-    tx.onabort = () => reject(tx.error);
+async function deleteProjectPrimaryRecords(projectId: string): Promise<void> {
+  const storesToClear = [...PROJECT_SCOPED_STORE_NAMES, PROJECT_MIGRATION_BACKUP_STORE_NAME];
+  await runProjectWriteTransaction([PROJECT_STORE_NAME, ...storesToClear], async (tx) => {
+    for (const storeName of storesToClear) {
+      const records = await tx.getAll<{id: string; projectId?: string}>(storeName);
+      for (const record of records) {
+        if (record.projectId === projectId) await tx.delete(storeName, record.id);
+      }
+    }
+    await tx.delete(PROJECT_STORE_NAME, projectId);
   });
-}
-
-async function deleteProjectScopedRecords(projectId: string): Promise<void> {
-  const db = await openDb();
-  const storesToClear = [
-    ...PROJECT_SCOPED_STORE_NAMES,
-    PROJECT_MIGRATION_BACKUP_STORE_NAME
-  ] as const;
-  const tx = db.transaction([...storesToClear], 'readwrite');
-
-  storesToClear.forEach((storeName) => {
-    const store = tx.objectStore(storeName);
-    const request = store.getAll();
-
-    request.onsuccess = () => {
-      const records = request.result as Array<{
-        id?: string;
-        projectId?: string;
-      }>;
-
-      records
-        .filter(
-          (record): record is {id: string; projectId?: string} =>
-            record.projectId === projectId && typeof record.id === 'string'
-        )
-        .forEach((record) => {
-          store.delete(record.id);
-        });
-    };
-  });
-
-  await transactionToPromise(tx);
 }
 
 function deleteDatabaseIfPresent(name: string): Promise<void> {
-  return new Promise((resolve) => {
+  return new Promise((resolve, reject) => {
     const request = indexedDB.deleteDatabase(name);
     request.onsuccess = () => resolve();
-    request.onerror = () => resolve();
-    request.onblocked = () => resolve();
+    request.onerror = () => reject(request.error ?? new Error('Unable to remove project context data.'));
+    request.onblocked = () => reject(new Error(
+      'Project deletion is blocked. Close other windows using this project and retry.'
+    ));
   });
 }
 
@@ -120,7 +99,7 @@ function deleteProjectLocalStorage(projectId: string): void {
 }
 
 async function deleteProjectAuxiliaryStorage(projectId: string): Promise<void> {
-  deleteProjectLocalStorage(projectId);
+  await Promise.all([closeRAGServices(projectId), closeShodhServices(projectId)]);
   await Promise.all([
     deleteDatabaseIfPresent(`rag-${projectId}`),
     deleteDatabaseIfPresent(`shodh-memory-${projectId}`)
@@ -202,24 +181,26 @@ export async function saveProject(project: Project): Promise<void> {
 }
 
 export async function deleteProject(id: string): Promise<void> {
-  const db = await openDb();
-
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(PROJECT_STORE_NAME, 'readwrite');
-    const store = tx.objectStore(PROJECT_STORE_NAME);
-    const request = store.delete(id);
-
-    request.onsuccess = () => {
-      Promise.all([
-        deleteProjectScopedRecords(id),
-        deleteProjectAuxiliaryStorage(id)
-      ])
-        .then(() => resolve())
-        .catch((error: unknown) => reject(error));
-    };
-
-    request.onerror = () => {
-      reject(request.error);
-    };
-  });
+  const ruleset = await getRulesetByProjectId(id);
+  // Derived context is rebuildable. A blocked deletion must leave primary data
+  // intact so the author can close another window and retry.
+  await deleteProjectAuxiliaryStorage(id);
+  // Rulesets live in a separate legacy database. Compensate on primary-write
+  // failure rather than letting a failed deletion destroy a live ruleset.
+  await replaceRulesetSnapshot(id, null);
+  try {
+    await deleteProjectPrimaryRecords(id);
+  } catch (error) {
+    if (ruleset) {
+      try {
+        await replaceRulesetSnapshot(id, ruleset);
+      } catch (restoreError) {
+        throw new AggregateError([error, restoreError],
+          'Project deletion failed and its ruleset could not be restored. Restore a project backup before continuing.',
+          {cause: restoreError});
+      }
+    }
+    throw error;
+  }
+  deleteProjectLocalStorage(id);
 }

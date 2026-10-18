@@ -1,6 +1,6 @@
 # Architecture Reference — SagaSpine
 
-Last reviewed: 2026-10-17
+Last reviewed: 2026-10-18
 
 ## Purpose
 
@@ -197,6 +197,14 @@ as a separate step, because leaving it open is safe.
 
 Project backup is the portability boundary. Derived RAG/Shodh data may be
 rebuilt from primary records.
+
+Project deletion removes the manifest and all project-owned records in the
+main database in one transaction. The legacy ruleset database is separate:
+deletion snapshots its ruleset and restores it if the main transaction fails.
+This is compensating recovery, not a cross-database atomic transaction.
+Retrieval and memory connections, including cached inherited providers, close
+before derived databases are deleted. Blocked/error cleanup fails before any
+primary deletion so it can be retried; it must never be treated as success.
 
 Roadmap Slice 5.15 adds an optional project-vault boundary. A vault must cover
 every project-owned persistence service and persistent derivative, not only

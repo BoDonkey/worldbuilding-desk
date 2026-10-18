@@ -247,6 +247,7 @@ and required revisit point, `WIP`, `Done <commit>`.
 | 3.15 | Dependency advisory sweep + CI audit gate | 3 | S | Done `b636915` — production audit 12→0: TipTap 3.31.4 with ProseMirror pins raised to match; sharp 0.35.5, adm-zip 0.6.1, qs 6.16.0 overrides; express/cors dev-only; `web-verify` fails on high production advisories; lint; 763 web + 14 engine + 12 UI tests; web/desktop builds; Cypress 117/117 |
 | 3.16 | Split `useWorkspaceConsistency` by responsibility | 3 | M | Done `2a9aa0e` — 2,234-line hook now a 450-line composer over seven responsibility hooks (none over 600) plus two tested pure services; same return shape, callers unchanged; baseline 8 files; lint baseline; 850 web + 47 engine + 12 UI + 24 desktop tests; web/desktop builds; Cypress 126/126 |
 | 3.17 | Centralize assistant request policy | 3 | M | Done `aa500ea` — shared provider readiness, route disclosure, consultation guard/accounting, streaming/Stop, and error boundary for Workspace and Ask; deterministic factual answers spend zero; hosted runs record `assistant`, coach records `writing-coach`, and private-local retains its runaway guard; AIAssistant 858→827 lines; lint baseline; 858 web + 47 engine + 12 UI + 24 desktop tests; web/desktop builds; file-size gate; Cypress 132/132 |
+| 3.17a | Project deletion integrity + retrieval upgrade repair | 3 | S | WIP |
 | 3.18 | Lower the size freeze to 1,000 lines | 3 | XS | — |
 | 3.19 | Undefined theme token + hardcoded editor colors | 3 | XS | — |
 | 3.20 | Compendium form extraction | 3 | M | — |
@@ -817,6 +818,18 @@ prerequisite for 1.4a and must land before beta.
   Keep `AIAssistant.tsx` below its starting line count, update
   `PROJECT_STATUS.md`, and run the full verification battery plus local
   Cypress; `cypress-smoke` must be green before close-out.
+
+- **3.17a Project deletion integrity + retrieval upgrade repair.** Correctness
+  fixes from the 2026-10-18 code review, before the behavior-preserving
+  cleanup slices: delete the project manifest and its main-database records
+  in one transaction; preserve the separate ruleset if deletion fails;
+  close and evict cached retrieval/memory connections before deleting their
+  databases, and surface blocked/error outcomes instead of reporting success.
+  Upgrade populated version-1 retrieval databases without recreating their
+  existing store. Cover rollback, project isolation, live cached connections,
+  inherited providers, blocked deletion, retries, and legacy upgrade with
+  IndexedDB regression tests. Run the full battery and local Cypress for
+  the Projects deletion workflow. No broad storage refactor or schema bump.
 
 Follow-up from the 2026-10-17 architecture review
 (_[evidence: archive/architecture-review-2026-10-17.md § F1–F7]_). The audit

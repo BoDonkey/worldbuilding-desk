@@ -1,6 +1,6 @@
 # SagaSpine Project Status
 
-**Last Updated:** October 9, 2026
+**Last Updated:** October 18, 2026
 
 ## Project Overview
 
@@ -537,6 +537,13 @@ Under the hood, the app still includes rich systems for world data, rules, chara
   longer copy untracked text into World Bible Notes.
 - Parent/child canon inheritance with promotion and sync flows.
 - Project backup export/import with validation and conflict review.
+- Project deletion commits its manifest, project-owned main-database records,
+  and migration backups in one transaction. A failed primary deletion rolls
+  back those records and restores the ruleset from its separate database.
+  Cached retrieval and memory providers, including inherited views, close
+  before their databases are removed; blocked or failed context cleanup keeps
+  primary data intact and reports a retry instruction. Populated version-1
+  retrieval databases upgrade without recreating the existing chunk store.
 - Project backup snapshots now use schema 5 and include consistency aliases,
   canonical character link fields, persisted legacy actor resolutions, and
   character identity migration reports plus stable optional World

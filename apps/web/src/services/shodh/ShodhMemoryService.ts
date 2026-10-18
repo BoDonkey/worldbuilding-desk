@@ -23,6 +23,7 @@ export interface MemoryEntry {
 
 export interface ShodhMemoryProvider {
   init(projectId: string): Promise<void>;
+  close?(): void;
   addMemory(entry: Omit<MemoryEntry, 'id' | 'createdAt'> & {id?: string; createdAt?: number}): Promise<void>;
   listMemories(): Promise<MemoryEntry[]>;
   deleteMemory(memoryId: string): Promise<void>;
@@ -44,8 +45,14 @@ export class ShodhMemoryService implements ShodhMemoryProvider {
       upgrade(db) {
         const store = db.createObjectStore('memories', {keyPath: 'id'});
         store.createIndex('by-document', 'documentId');
-      }
+      },
+      blocking: () => this.close()
     });
+  }
+
+  close(): void {
+    this.db?.close();
+    this.db = null;
   }
 
   async addMemory(entry: Omit<MemoryEntry, 'id' | 'createdAt'> & {id?: string; createdAt?: number}): Promise<void> {
@@ -131,6 +138,11 @@ export class CompositeShodhMemoryService implements ShodhMemoryProvider {
 
   async init(projectId: string): Promise<void> {
     await this.primary.init(projectId);
+  }
+
+  close(): void {
+    this.primary.close?.();
+    this.parents.forEach((parent) => parent.close?.());
   }
 
   async addMemory(entry: Omit<MemoryEntry, 'id' | 'createdAt'> & {id?: string; createdAt?: number}) {
