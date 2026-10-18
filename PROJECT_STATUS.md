@@ -1103,11 +1103,13 @@ runtime schema, and nothing here changes the roadmap's status board.
   **Insert into scene** is one undoable insert marked `scene-draft`; **Save to
   Scratchpad** keeps a labeled copy. Nothing else is written. Service:
   `services/sceneDraft/sceneDraft.ts`.
-- Slice 3.14 hotspot freeze and extraction (behavior-preserving):
+- Hotspot freeze (Slices 3.14 and 3.18) and behavior-preserving extraction:
   `pnpm check:file-sizes` (`scripts/check-file-sizes.mjs`, run in `web-verify`)
-  fails when a non-test source file over 1,500 lines grows past
-  `scripts/file-size-baseline.json`, or a new file crosses 1,500; `--update`
-  records shrinkage. `EditorWithAI.tsx` 1,636 → 1,285 lines: stat peek moved to
+  fails when a non-test source file over 1,000 lines grows past
+  `scripts/file-size-baseline.json`, or a new file crosses 1,000; the baseline
+  covers 15 existing files and `--update` records shrinkage. Changes to the
+  size-check script or baseline also trigger Web CI.
+  `EditorWithAI.tsx` 1,636 → 1,285 lines: stat peek moved to
   `useEditorStatPeek` + `EditorStatPeekLayer`, and an unused insert state was
   removed. `WorkspaceRoute.tsx` 2,294 → 1,873: the unknown-name review popover
   and **Add to World** popover moved to `WorkspaceReviewSurfacePopover` and

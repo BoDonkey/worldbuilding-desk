@@ -1,13 +1,13 @@
 #!/usr/bin/env node
-// Hotspot freeze (Slice 3.14): fails when a non-test source file over
-// LIMIT lines grows past its recorded baseline, or a new file crosses LIMIT.
+// Hotspot freeze (Slices 3.14 / 3.18): fails when a non-test source file over
+// 1,000 lines grows past its recorded baseline, or a new file crosses LIMIT.
 // Shrinking is always allowed; run with --update to record the new sizes.
 import {execFileSync} from 'node:child_process';
 import {existsSync, readFileSync, writeFileSync} from 'node:fs';
 import {fileURLToPath} from 'node:url';
 import path from 'node:path';
 
-const LIMIT = 1500;
+const LIMIT = 1000;
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const baselinePath = path.join(root, 'scripts', 'file-size-baseline.json');
 const SOURCE = /^(apps|packages)\/[^/]+\/src\/.+\.(ts|tsx|js|jsx|mjs|cjs|css)$/;

@@ -312,11 +312,12 @@ every visual detail.
 3. The rule evaluation classes are tested and hardened (Slice 3.11) but no
    app path uses them yet; wiring them in (backlog R3–R5) must keep rule
    output to derived views and author-confirmed proposals.
-4. The hotspot freeze from Slice 3.14 holds, but it only sees files over
-   1,500 lines; several files sit between 1,250 and 1,420 lines. Route
-   components still hold large amounts of per-form state (Compendium has 59
-   `useState` values). Slice 3.18 lowers the freeze to 1,000 lines, and
-   Slice 3.20 extracts the Compendium forms. Continue incremental,
+4. The hotspot freeze introduced in Slice 3.14 now covers non-test source
+   files over 1,000 lines (Slice 3.18). Existing files above that threshold
+   may shrink but cannot grow past their recorded baseline; new files cannot
+   cross the threshold. Route components still hold large amounts of
+   per-form state (Compendium has 59 `useState` values). Slice 3.20 extracts
+   the Compendium forms. Continue incremental,
    responsibility-based extraction rather than broad rewrites.
 5. Provider capabilities are not yet normalized behind one proposal/action
    contract.
