@@ -1109,6 +1109,14 @@ runtime schema, and nothing here changes the roadmap's status board.
   `scripts/file-size-baseline.json`, or a new file crosses 1,000; the baseline
   covers 15 existing files and `--update` records shrinkage. Changes to the
   size-check script or baseline also trigger Web CI.
+  CI now selects documentation/tooling, fast, focused-UI, or full verification
+  through a tested path policy. Full browser coverage runs in three disjoint
+  groups with retries disabled. Superseded PR runs are cancelled. An identical
+  verified code/coverage fingerprint can reuse successful tests for a
+  documentation-only follow-up; unknown or failed evidence requires fresh
+  tests, and production dependency advisories remain a fresh check. The
+  `cypress-smoke` aggregate fails on missing or failed selected checks. Manual
+  dispatch and the `ci:full` PR label request fresh full coverage.
   `EditorWithAI.tsx` 1,636 → 1,285 lines: stat peek moved to
   `useEditorStatPeek` + `EditorStatPeekLayer`, and an unused insert state was
   removed. `WorkspaceRoute.tsx` 2,294 → 1,873: the unknown-name review popover

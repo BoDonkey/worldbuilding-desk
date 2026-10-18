@@ -298,6 +298,22 @@ Use layered verification:
 Smoke coverage should target trust and data-loss boundaries rather than mirror
 every visual detail.
 
+The roadmap's verification policy defines the required tier. Web CI uses a
+tested, conservative path classifier: known documentation/size-gate work skips
+application tests, explicit local UI scopes select related browser workflows,
+and shared, high-risk, CI-policy, or unmapped changes select full coverage.
+Full browser coverage is partitioned into three disjoint groups. Superseded PR
+runs are cancelled; a final aggregate check fails on planning failures or
+unexpectedly skipped selected jobs. Main integration and manual release
+coverage remain available.
+
+Test-result reuse requires an identical application/test/dependency/CI tree
+and coverage fingerprint, a successful source workflow, and a successful
+preceding run on the same head repository/branch. Missing or uncertain proof
+causes fresh tests. Current production dependency advisories are audited even
+when test results are reused. This keeps documentation-only close-outs quick
+without turning cancelled or unverified code into a passing check.
+
 ## Current Architecture Risks
 
 1. Persistence has no single owning boundary. About 28 modules open

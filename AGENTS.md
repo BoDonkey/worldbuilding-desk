@@ -8,8 +8,8 @@ plan; its status board is authoritative for open work).
 
 Follow the **Executing a Slice** section in `docs/road-to-market.md`: claim
 the slice on the status board, pull the full prompt from the referenced
-archive doc (applying the path remaps listed there), run the full
-verification battery before committing, and mark the slice done with its
+archive doc (applying the path remaps listed there), run the verification
+tier defined in the roadmap before committing, and mark the slice done with its
 commit hash. Refactor slices are strictly behavior-preserving.
 
 ## Standing rules
