@@ -301,7 +301,7 @@ and required revisit point, `WIP`, `Done <commit>`.
 | 3.17 | Centralize assistant request policy | 3 | M | Done `aa500ea` — shared provider readiness, route disclosure, consultation guard/accounting, streaming/Stop, and error boundary for Workspace and Ask; deterministic factual answers spend zero; hosted runs record `assistant`, coach records `writing-coach`, and private-local retains its runaway guard; AIAssistant 858→827 lines; lint baseline; 858 web + 47 engine + 12 UI + 24 desktop tests; web/desktop builds; file-size gate; Cypress 132/132 |
 | 3.17a | Project deletion integrity + retrieval upgrade repair | 3 | S | Done `ef332ac` |
 | 3.18 | Lower the size freeze to 1,000 lines | 3 | XS | Done `e1a7964` |
-| 3.18a | Change-aware CI + verification policy | 3 | S | WIP |
+| 3.18a | Change-aware CI + verification policy | 3 | S | Done `2ab0cb6` — full remote coverage 149/149 without retries in three groups |
 | 3.19 | Undefined theme token + hardcoded editor colors | 3 | XS | — |
 | 3.20 | Compendium form extraction | 3 | M | — |
 | 3.21 | Scene-roster mutation services | 3 | M | — |
