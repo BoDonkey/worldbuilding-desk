@@ -1,9 +1,17 @@
 {
   "apps/web/src/assets/components/WorldBibleRoute.module.css": 2487,
+  "apps/web/src/components/Editor/EditorWithAI.tsx": 1306,
+  "apps/web/src/components/Settings/AISettings.tsx": 1262,
+  "apps/web/src/components/Workspace/WorkspaceContextDrawer.tsx": 1328,
+  "apps/web/src/hooks/useWorkspaceSceneRoster.ts": 1417,
+  "apps/web/src/hooks/useWorkspaceStatBlocks.ts": 1074,
+  "apps/web/src/hooks/useWorldBibleEntityActions.ts": 1125,
   "apps/web/src/routes/CharacterSheetsRoute.tsx": 2126,
   "apps/web/src/routes/CompendiumRoute.tsx": 1540,
   "apps/web/src/routes/LoreRoute.tsx": 1787,
   "apps/web/src/routes/WorkspaceRoute.tsx": 1831,
   "apps/web/src/routes/WorldBibleRoute.tsx": 2186,
+  "apps/web/src/services/compendium/compendiumService.ts": 1232,
+  "apps/web/src/services/consistency/ConsistencyEngineService.ts": 1250,
   "apps/web/src/styles/WorkspaceRoute.module.css": 2376
 }

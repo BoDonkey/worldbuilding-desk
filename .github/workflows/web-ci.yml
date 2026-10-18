@@ -4,6 +4,8 @@ on:
   pull_request:
     paths:
       - '.github/workflows/web-ci.yml'
+      - 'scripts/check-file-sizes.mjs'
+      - 'scripts/file-size-baseline.json'
       - 'apps/desktop/**'
       - 'apps/web/**'
       - 'packages/**'
@@ -15,6 +17,8 @@ on:
       - main
     paths:
       - '.github/workflows/web-ci.yml'
+      - 'scripts/check-file-sizes.mjs'
+      - 'scripts/file-size-baseline.json'
       - 'apps/desktop/**'
       - 'apps/web/**'
       - 'packages/**'
