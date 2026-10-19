@@ -12,7 +12,7 @@ import type {
   SceneRosterAddOption,
   SceneRosterCharacterCard,
   SceneRosterItemCard
-} from '../../components/Workspace/SceneRosterPanel';
+} from './sceneRosterTypes';
 import type {ConsistencyAlias} from '../consistency';
 import type {CharacterRuntimeModifiers} from '../compendium';
 import {

@@ -1,6 +1,6 @@
 # SagaSpine Project Status
 
-**Last Updated:** October 18, 2026
+**Last Updated:** October 19, 2026
 
 ## Project Overview
 
@@ -717,6 +717,11 @@ Under the hood, the app still includes rich systems for world data, rules, chara
 ## Current Architecture Status
 
 ### Stabilized
+- Editor toolbar, canvas, and stat-block chips now use existing theme tokens
+  for their surfaces, shadows, and normal/warning/error colors in both themes.
+  AI Settings and consultation notices use the defined secondary-text token
+  for helper text. A unit check scans every application stylesheet and fails
+  on undefined CSS variable references, including those with fallbacks.
 - Service layer reorganized into domain folders with barrel exports.
 - `App.tsx` split into routing/layout composition and shared shell concerns.
 - `rules-ui` consumes React and React DOM as React 18/19 peer dependencies;
@@ -733,10 +738,13 @@ Under the hood, the app still includes rich systems for world data, rules, chara
   ruleset mutations, stat/resource editors, and end-to-end world creation flow.
 - Web tests now include provider-aware jsdom smoke coverage for all eight
   high-risk application routes plus Compendium tab switching.
-- All four Compendium tab panels now live in focused, explicitly typed
-  components; `CompendiumRoute.tsx` has been reduced from 3,118 to 1,590 lines
-  without changing the rendered interface or route-owned state. The remaining
-  route size is primarily state, derived data, and persistence handlers.
+- All four Compendium tab panels live in focused, explicitly typed components.
+  Eight adjacent form hooks own entry/import, recipe/milestone, craft preview,
+  zone/exposure, module, and settlement/base-stat drafts and submit handlers.
+  They stay mounted with the route so tab switches preserve unfinished input;
+  parsing and validation use tested, pure Compendium helpers. The route is
+  951 lines, down from 1,540 before this extraction, with the rendered
+  interface, save/reset behavior, and persistence services preserved.
 - Web and rules-engine tests run on Vitest 4.1, and all workspaces use Zod
   3.25.76 while the breaking Zod 4 migration remains deliberately deferred.
 - The web workspace now builds on Vite 8.2 and `@vitejs/plugin-react` 6 with
@@ -782,6 +790,17 @@ Under the hood, the app still includes rich systems for world data, rules, chara
   - `useWorkspaceSystemHistory`
   - `useWorkspaceUi`
   - `useWorkspaceReviewRefresh`
+- Scene-roster item capture and timeline actions now use pure planners under
+  `services/workspace/`, with IDs and timestamps supplied by the hook. The
+  hook retains author confirmation, validation, persistence, and React wiring;
+  its return shape and workflows are unchanged. Roster cards and Lore Inspector
+  records are service-owned types, removing service imports from components.
+  Continuity-corpus tests pin write plans, actor bindings, replay ordering,
+  stale-source rejection, reusable item links, and anchor/timeline behavior.
+  The hook is 786 lines (previously 1,417), with each new service below 600.
+  Existing limitation preserved by characterization: timeline edit/expiration
+  still look up sheet/legacy actor IDs, so canonical-only actor IDs may report
+  that the character must be added to the roster despite already being present.
 - World Bible orchestration is decomposed into focused hooks:
   - `useWorldBibleProjectData`
   - `useWorldBibleSelectedEntity`
@@ -958,6 +977,15 @@ runtime schema, and nothing here changes the roadmap's status board.
 ## Verification Status
 
 ### Verified Recently
+- Slices 3.19–3.21 (theme tokens, Compendium form extraction, scene-roster
+  mutation services) passed full remote Web CI, including `cypress-smoke`,
+  in [run 39273413648](https://github.com/BoDonkey/worldbuilding-desk/actions/runs/39273413648)
+  for [PR #59](https://github.com/BoDonkey/worldbuilding-desk/pull/59).
+  Coverage: 16 CI-policy tests, file-size gate (13 baseline files), lint with
+  the existing ConsumableEffectEditor warning, 999 web + 47 engine + 12 UI +
+  24 desktop unit tests, both builds, and 149 Cypress tests in three disjoint
+  groups with retries disabled. Earlier local browser stalls remain recorded
+  in the implementation commits; this remote full run completed successfully.
 - Slice 4.59 remembered Source Note view: `sourceNoteView` in
   `AccessibilityContext` (localStorage, like the other editor preferences),
   Settings control, and a per-note override in `SourceNoteContentField`

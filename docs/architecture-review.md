@@ -1,6 +1,6 @@
 # Architecture Reference — SagaSpine
 
-Last reviewed: 2026-10-18
+Last reviewed: 2026-10-19
 
 ## Purpose
 
@@ -322,18 +322,23 @@ without turning cancelled or unverified code into a passing check.
    in memory. The 5.15 vault needs one boundary to encrypt through. Slices
    3.22–3.23c consolidate it before 5.15.
 2. Domain logic still sits in large hooks with few tests
-   (`useWorkspaceSceneRoster`, `useWorldBibleEntityActions`,
-   `useWorkspaceStatBlocks`) and in the untested `compendiumService`.
-   Slices 3.21–3.22 move it into tested services.
+   (`useWorldBibleEntityActions`, `useWorkspaceStatBlocks`) and in the
+   untested `compendiumService`.
+   Slice 3.22 moves the remaining logic into tested services. Scene-roster
+   mutation planning already lives in pure workspace services; its hook owns
+   confirmation, validation, persistence calls, and React state. Service-owned
+   roster and Lore Inspector types keep production services independent of
+   components.
 3. The rule evaluation classes are tested and hardened (Slice 3.11) but no
    app path uses them yet; wiring them in (backlog R3–R5) must keep rule
    output to derived views and author-confirmed proposals.
 4. The hotspot freeze introduced in Slice 3.14 now covers non-test source
    files over 1,000 lines (Slice 3.18). Existing files above that threshold
    may shrink but cannot grow past their recorded baseline; new files cannot
-   cross the threshold. Route components still hold large amounts of
-   per-form state (Compendium has 59 `useState` values). Slice 3.20 extracts
-   the Compendium forms. Continue incremental,
+   cross the threshold. Compendium form drafts and submit handlers live in
+   focused hooks beside its tab components, mounted for the route's lifetime;
+   pure parsing and validation belong to the Compendium service helpers.
+   Other large routes still hold substantial per-form state. Continue incremental,
    responsibility-based extraction rather than broad rewrites.
 5. Provider capabilities are not yet normalized behind one proposal/action
    contract.

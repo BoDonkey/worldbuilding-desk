@@ -2,7 +2,7 @@ import type {SceneRevision} from '../../services/assistant/sceneRevision';
 import React, {useState, useEffect, useRef, useCallback} from 'react';
 import type {Editor as TipTapEditorInstance} from '@tiptap/react';
 import TipTapEditor from '../TipTapEditor';
-import type {LoreInspectorRecord} from './LoreInspectorPanel';
+import type {LoreInspectorRecord} from '../../services/workspace/workspaceConsultation';
 import {ContextPopover} from './ContextPopover';
 import {AIExpandMenu} from './extensions/AIExpandMenu';
 import {

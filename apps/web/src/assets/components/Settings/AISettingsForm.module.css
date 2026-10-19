@@ -259,10 +259,10 @@
   display: flex;
   justify-content: space-between;
   gap: 1rem;
-  color: var(--color-text-muted);
+  color: var(--color-text-secondary);
 }
 
 .budgetUsageEmpty {
   margin: 0;
-  color: var(--color-text-muted);
+  color: var(--color-text-secondary);
 }

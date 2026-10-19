@@ -9,7 +9,7 @@ import type {
   SystemHistoryEntry,
   WorldEntity
 } from '../entityTypes';
-import type {LoreInspectorRecord} from '../components/Editor/LoreInspectorPanel';
+import type {LoreInspectorRecord} from '../services/workspace/workspaceConsultation';
 import type {ConsistencyAlias} from '../services/consistency';
 import type {Project} from '../entityTypes';
 import {getCachedSynopsis, setCachedSynopsis} from '../services/editor';

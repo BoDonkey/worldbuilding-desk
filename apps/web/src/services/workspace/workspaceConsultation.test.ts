@@ -1,5 +1,5 @@
 import {describe, expect, it} from 'vitest';
-import type {LoreInspectorRecord} from '../../components/Editor/LoreInspectorPanel';
+import type {LoreInspectorRecord} from './workspaceConsultation';
 import {
   buildWorkspaceLoreConsultation,
   summarizeWorkspaceContent,
