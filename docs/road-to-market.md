@@ -302,8 +302,8 @@ and required revisit point, `WIP`, `Done <commit>`.
 | 3.17a | Project deletion integrity + retrieval upgrade repair | 3 | S | Done `ef332ac` |
 | 3.18 | Lower the size freeze to 1,000 lines | 3 | XS | Done `e1a7964` |
 | 3.18a | Change-aware CI + verification policy | 3 | S | Done `2ab0cb6` — full remote coverage 149/149 without retries in three groups |
-| 3.19 | Undefined theme token + hardcoded editor colors | 3 | XS | WIP — implemented in `dbbd86e`; lint baseline, 962 web + 47 engine + 12 UI + 24 desktop tests, both builds, 16 CI-policy tests, size gate, and light/dark visual checks pass. Local browser coverage: 146/149 distinct tests pass without retries across Electron/Chrome runs; Electron stalled in lore-review-matching (15/15 later passed in Chrome); World Canvas renderer crashed, then isolated run failed its coaching beforeEach on a blank Projects page (12 pass, 1 fail, 2 skipped). Push rejected by automatic approval review pending explicit author authorization; remote CI and close-out remain pending |
-| 3.20 | Compendium form extraction | 3 | M | — |
+| 3.19 | Undefined theme token + hardcoded editor colors | 3 | XS | WIP — implemented in `dbbd86e`; fast checks and light/dark visual review pass. Latest combined 3.19/3.20 tree passes full local Chrome Cypress 149/149 without retries; earlier Electron stall and World Canvas crash/startup failure remain recorded in `ea24c18`. Author requested local batching before pushing; remote CI and close-out remain pending |
+| 3.20 | Compendium form extraction | 3 | M | WIP — implemented locally: route 1,540→951 lines; eight form hooks (largest 156), tested parsing/validation helpers, unchanged tab markup and draft/save/reset behavior. Lint baseline; 980 web + 47 engine + 12 UI + 24 desktop tests; both builds; 16 CI-policy tests; size gate (14 baseline files); full local Chrome Cypress 149/149 without retries. Author requested local batching before pushing; remote CI and close-out remain pending |
 | 3.21 | Scene-roster mutation services | 3 | M | — |
 | 3.22 | Characterization tests for untested domain modules | 3 | M | — |
 | 3.23a | One storage layer + import guard | 3 | M | — |

@@ -1,6 +1,6 @@
-import type {MechanicsProgressScope, SettlementState} from '../../entityTypes';
+import type {MechanicsProgressScope} from '../../entityTypes';
 
-export type BaseStatKey = keyof NonNullable<SettlementState['baseStats']>;
+export {BASE_STAT_KEYS, BASE_STAT_LIMITS, type BaseStatKey} from '../../services/compendium/compendiumFormValues';
 
 export type CompendiumTab =
   | 'overview'
@@ -51,23 +51,6 @@ export const MECHANICS_SCOPE_OPTIONS: Array<{
   {value: 'character', label: 'Per character'},
   {value: 'global', label: 'Shared / global'}
 ];
-
-export const BASE_STAT_KEYS: BaseStatKey[] = [
-  'defense',
-  'storageCapacity',
-  'craftingThroughput',
-  'morale'
-];
-
-export const BASE_STAT_LIMITS: Record<
-  BaseStatKey,
-  {min: number; max: number}
-> = {
-  defense: {min: 0, max: 100000},
-  storageCapacity: {min: 0, max: 100000},
-  craftingThroughput: {min: 0, max: 100000},
-  morale: {min: 0, max: 100000}
-};
 
 export function filterNamedItems<T extends {name: string}>(
   items: T[],

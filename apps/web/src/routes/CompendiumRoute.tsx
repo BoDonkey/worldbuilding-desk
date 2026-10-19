@@ -1,3 +1,12 @@
+import {useCompendiumEntryForm} from '../components/Compendium/useCompendiumEntryForm';
+import {useCompendiumImportForm} from '../components/Compendium/useCompendiumImportForm';
+import {useCompendiumRecipeForm} from '../components/Compendium/useCompendiumRecipeForm';
+import {useCompendiumMilestoneForm} from '../components/Compendium/useCompendiumMilestoneForm';
+import {useCompendiumCraftPreview} from '../components/Compendium/useCompendiumCraftPreview';
+import {useCompendiumZoneForm} from '../components/Compendium/useCompendiumZoneForm';
+import {useCompendiumModuleForm} from '../components/Compendium/useCompendiumModuleForm';
+import {useCompendiumSettlementForm} from '../components/Compendium/useCompendiumSettlementForm';
+import {toBiomeKey} from '../services/compendium/compendiumFormValues';
 import styles from '../assets/components/CompendiumRoute.module.css';
 import {useEffect, useMemo, useState} from 'react';
 import {useLocation, useNavigate} from 'react-router';
@@ -7,10 +16,7 @@ import {OverviewTab} from '../components/Compendium/OverviewTab';
 import {ProgressionTab} from '../components/Compendium/ProgressionTab';
 import {WorldSystemsTab} from '../components/Compendium/WorldSystemsTab';
 import {
-  BASE_STAT_KEYS,
-  BASE_STAT_LIMITS,
   COMPENDIUM_TABS,
-  type BaseStatKey,
   type CompendiumNextStepItem,
   type CompendiumTab
 } from '../components/Compendium/constants';
@@ -19,7 +25,6 @@ import type {
   CharacterSheet,
   CompendiumMechanicKind,
   CompendiumActionDefinition,
-  CompendiumDomain,
   CompendiumEntry,
   MechanicsProgressScope,
   CompendiumMilestone,
@@ -35,7 +40,6 @@ import type {
 import {
   DEFAULT_FORTRESS_TIERS,
   DEFAULT_PARTY_SYNERGY_RULES,
-  attachModuleToSettlement,
   deriveCraftingRuntimeModifiers,
   getNextFortressTier,
   getPartySynergySuggestions,
@@ -51,17 +55,8 @@ import {
   getSettlementModulesByProject,
   getZoneAffinityProfilesByProject,
   getZoneAffinityProgressByProject,
-  recordZoneExposure,
   recordCompendiumAction,
-  saveCompendiumEntry,
-  saveCompendiumMilestone,
-  saveSettlementModule,
-  updateSettlementLocation,
-  updateSettlementBaseStats,
-  updateSettlementFortressLevel,
-  saveUnlockableRecipe,
-  upsertZoneAffinityProfile,
-  upsertCompendiumEntryFromEntity
+  saveCompendiumEntry
 } from '../services/compendium';
 import {getCharacterSheetsByProject} from '../services/characters';
 import {getCharactersByProject} from '../characterStorage';
@@ -70,48 +65,6 @@ import {getProjectCapabilities} from '../projectMode';
 import {getRulesetByProjectId} from '../services/rules';
 import {describeError} from '../services/errors';
 import {RouteFeedback} from '../components/common';
-
-// activeProject and projectSettings read from store below
-
-function toBaseStatsDraft(
-  baseStats: NonNullable<SettlementState['baseStats']>
-): Record<BaseStatKey, string> {
-  return {
-    defense: String(baseStats.defense),
-    storageCapacity: String(baseStats.storageCapacity),
-    craftingThroughput: String(baseStats.craftingThroughput),
-    morale: String(baseStats.morale)
-  };
-}
-
-function clampBaseStatValue(key: BaseStatKey, value: number): number {
-  const limits = BASE_STAT_LIMITS[key];
-  return Math.min(limits.max, Math.max(limits.min, Math.floor(value)));
-}
-
-function getDefaultActions(domain: CompendiumDomain): CompendiumActionDefinition[] {
-  if (domain === 'beast') {
-    return [
-      {id: 'discover', label: 'Discover', points: 1, repeatable: false},
-      {id: 'kill', label: 'Kill', points: 3, repeatable: true},
-      {id: 'skin', label: 'Skin', points: 2, repeatable: true}
-    ];
-  }
-  if (domain === 'flora' || domain === 'mineral') {
-    return [
-      {id: 'discover', label: 'Discover', points: 1, repeatable: false},
-      {id: 'harvest', label: 'Harvest', points: 2, repeatable: true}
-    ];
-  }
-  return [{id: 'discover', label: 'Discover', points: 1, repeatable: false}];
-}
-
-const toBiomeKey = (value: string): string =>
-  value
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '_')
-    .replace(/^_+|_+$/g, '') || 'zone';
 
 function CompendiumRoute() {
   const activeProject = useAppStore((s) => s.activeProject);
@@ -143,55 +96,6 @@ function CompendiumRoute() {
     message: string;
   } | null>(null);
 
-  const [entryName, setEntryName] = useState('');
-  const [entryDomain, setEntryDomain] = useState<CompendiumDomain>('beast');
-  const [entityToImportId, setEntityToImportId] = useState('');
-  const [importDomain, setImportDomain] = useState<CompendiumDomain>('beast');
-  const [importMechanicKind, setImportMechanicKind] =
-    useState<CompendiumMechanicKind>('discovery');
-  const [importProgressScope, setImportProgressScope] =
-    useState<MechanicsProgressScope>('character');
-
-  const [recipeName, setRecipeName] = useState('');
-  const [recipeCategory, setRecipeCategory] =
-    useState<UnlockableRecipe['category']>('food');
-  const [recipeMinLevel, setRecipeMinLevel] = useState<number>(1);
-  const [recipeRequiredMilestones, setRecipeRequiredMilestones] = useState('');
-
-  const [milestoneName, setMilestoneName] = useState('');
-  const [milestonePoints, setMilestonePoints] = useState(10);
-  const [milestoneDescription, setMilestoneDescription] = useState('');
-  const [milestoneRecipeIds, setMilestoneRecipeIds] = useState('');
-  const [previewLevel, setPreviewLevel] = useState(1);
-  const [previewMaterialsText, setPreviewMaterialsText] = useState('');
-  const [zoneName, setZoneName] = useState('');
-  const [zoneKey, setZoneKey] = useState('');
-  const [zoneMaxPoints, setZoneMaxPoints] = useState(100);
-  const [zoneSourceEntityId, setZoneSourceEntityId] = useState('');
-  const [zoneProgressScope, setZoneProgressScope] =
-    useState<MechanicsProgressScope>('character');
-  const [selectedZoneKey, setSelectedZoneKey] = useState('');
-  const [zoneExposureMinutes, setZoneExposureMinutes] = useState(10);
-  const [isRecordingZone, setIsRecordingZone] = useState(false);
-  const [selectedSettlementLocationId, setSelectedSettlementLocationId] = useState('');
-  const [moduleName, setModuleName] = useState('');
-  const [moduleSourceType, setModuleSourceType] =
-    useState<SettlementModule['sourceType']>('trophy');
-  const [moduleTargetType, setModuleTargetType] =
-    useState<SettlementModule['effects'][number]['targetType']>('resistance');
-  const [moduleTargetId, setModuleTargetId] = useState('poison');
-  const [moduleOperation, setModuleOperation] =
-    useState<SettlementModule['effects'][number]['operation']>('add');
-  const [moduleValue, setModuleValue] = useState('5');
-  const [isSavingModule, setIsSavingModule] = useState(false);
-  const [isSavingFortress, setIsSavingFortress] = useState(false);
-  const [baseStatsDraft, setBaseStatsDraft] = useState<Record<BaseStatKey, string>>({
-    defense: '10',
-    storageCapacity: '100',
-    craftingThroughput: '100',
-    morale: '50'
-  });
-
   const [quantityByActionKey, setQuantityByActionKey] = useState<
     Record<string, number>
   >({});
@@ -206,6 +110,24 @@ function CompendiumRoute() {
   const enableRuntimeModifiers = capabilities.canUseRuntimeModifiers;
   const enableWorldSystems = capabilities.canUseSettlementAndZoneSystems;
 
+  const context = {activeProject, setFeedback};
+  const entryForm = useCompendiumEntryForm({...context, setEntries});
+  const recipeForm = useCompendiumRecipeForm({...context, setRecipes});
+  const milestoneForm = useCompendiumMilestoneForm({...context, setMilestones});
+  const craftPreview = useCompendiumCraftPreview();
+  const zoneForm = useCompendiumZoneForm({
+    ...context, zoneProfiles, activeMechanicsCharacterSheetId, setZoneProfiles, setZoneProgress
+  });
+  const settlementForm = useCompendiumSettlementForm({...context, settlementState, setSettlementState});
+  const {selectedSettlementLocationId, setSelectedSettlementLocationId} = settlementForm;
+  const moduleForm = useCompendiumModuleForm({
+    ...context, settlementState, selectedSettlementLocationId, setSettlementState, setSettlementModules
+  });
+  const {setSelectedZoneKey, setZoneSourceEntityId, setZoneName, setZoneKey, setZoneProgressScope} = zoneForm;
+  const {entryName, setEntryName} = entryForm;
+  const {milestoneName, setMilestoneName} = milestoneForm;
+  const {recipeName, setRecipeName} = recipeForm;
+  const {zoneName, zoneKey} = zoneForm;
   useEffect(() => {
     if (!activeProject) {
       setEntries([]);
@@ -215,7 +137,6 @@ function CompendiumRoute() {
       setZoneProgress([]);
       setSettlementState(null);
       setSettlementModules([]);
-      setSelectedSettlementLocationId('');
       setProgress(null);
       setLogs([]);
       setGlobalLogs([]);
@@ -225,12 +146,6 @@ function CompendiumRoute() {
       setActivePartyCharacterIds([]);
       setActiveMechanicsCharacterSheetId('');
       setRuleset(null);
-      setBaseStatsDraft({
-        defense: '10',
-        storageCapacity: '100',
-        craftingThroughput: '100',
-        morale: '50'
-      });
       return;
     }
 
@@ -298,7 +213,7 @@ function CompendiumRoute() {
     return () => {
       cancelled = true;
     };
-  }, [activeProject]);
+  }, [activeProject, setSelectedSettlementLocationId]);
 
   useEffect(() => {
     if (!activeProject) {
@@ -331,50 +246,10 @@ function CompendiumRoute() {
   }, [activeMechanicsCharacterSheetId, activeProject]);
 
   useEffect(() => {
-    if (!settlementState) return;
-    setBaseStatsDraft(toBaseStatsDraft(settlementState.baseStats));
-  }, [settlementState]);
-  useEffect(() => {
     if (activeTab === 'world-systems' && !enableWorldSystems) {
       setActiveTab('overview');
     }
   }, [activeTab, enableWorldSystems]);
-
-  useEffect(() => {
-    const state = location.state as
-      | {
-          focusEntryId?: string;
-          activeTab?: CompendiumTab;
-          flashMessage?: string;
-          importEntityId?: string;
-          importMechanicKind?: CompendiumMechanicKind;
-          importProgressScope?: MechanicsProgressScope;
-        }
-      | null;
-    if (!state) return;
-
-    if (state.activeTab) {
-      setActiveTab(state.activeTab);
-      if (state.activeTab === 'progression' || state.activeTab === 'world-systems') {
-        setShowAdvancedSetup(true);
-      }
-    }
-    if (state.flashMessage) {
-      setFeedback({tone: 'success', message: state.flashMessage});
-    }
-    if (state.focusEntryId) {
-      setHighlightedEntryId(state.focusEntryId);
-    }
-    if (state.importEntityId) {
-      setEntityToImportId(state.importEntityId);
-    }
-    if (state.importMechanicKind) {
-      setImportMechanicKind(state.importMechanicKind);
-    }
-    if (state.importProgressScope) {
-      setImportProgressScope(state.importProgressScope);
-    }
-  }, [location.key, location.state]);
 
   useEffect(() => {
     if (!highlightedEntryId) return;
@@ -414,6 +289,48 @@ function CompendiumRoute() {
     () => new Map(worldEntities.map((entity) => [entity.id, entity])),
     [worldEntities]
   );
+  const importForm = useCompendiumImportForm({
+    ...context, worldEntityById, activeMechanicsCharacterSheetId, setEntries, setZoneProfiles,
+    setSelectedZoneKey, setSelectedSettlementLocationId, setSettlementState,
+    setShowAdvancedSetup, setActiveTab
+  });
+  const {entityToImportId, setEntityToImportId, setImportMechanicKind, setImportProgressScope} = importForm;
+  useEffect(() => {
+    const state = location.state as
+      | {
+          focusEntryId?: string;
+          activeTab?: CompendiumTab;
+          flashMessage?: string;
+          importEntityId?: string;
+          importMechanicKind?: CompendiumMechanicKind;
+          importProgressScope?: MechanicsProgressScope;
+        }
+      | null;
+    if (!state) return;
+
+    if (state.activeTab) {
+      setActiveTab(state.activeTab);
+      if (state.activeTab === 'progression' || state.activeTab === 'world-systems') {
+        setShowAdvancedSetup(true);
+      }
+    }
+    if (state.flashMessage) {
+      setFeedback({tone: 'success', message: state.flashMessage});
+    }
+    if (state.focusEntryId) {
+      setHighlightedEntryId(state.focusEntryId);
+    }
+    if (state.importEntityId) {
+      setEntityToImportId(state.importEntityId);
+    }
+    if (state.importMechanicKind) {
+      setImportMechanicKind(state.importMechanicKind);
+    }
+    if (state.importProgressScope) {
+      setImportProgressScope(state.importProgressScope);
+    }
+  }, [location.key, location.state, setEntityToImportId, setImportMechanicKind, setImportProgressScope]);
+
   const zoneProfileBySourceEntityId = useMemo(
     () =>
       new Map(
@@ -433,10 +350,6 @@ function CompendiumRoute() {
     const selectedSet = new Set(activePartyCharacterIds);
     return characters.filter((character) => selectedSet.has(character.id));
   }, [characters, activePartyCharacterIds]);
-  const selectedZoneProfile =
-    selectedZoneKey
-      ? zoneProfiles.find((profile) => profile.biomeKey === selectedZoneKey) ?? null
-      : null;
   const settlementLocationName =
     settlementState?.sourceEntityId
       ? worldEntityById.get(settlementState.sourceEntityId)?.name ?? settlementState.sourceEntityId
@@ -550,151 +463,10 @@ function CompendiumRoute() {
       tiers: DEFAULT_FORTRESS_TIERS
     });
   }, [enableWorldSystems, settlementState]);
-  const isBaseStatsDraftDirty = useMemo(() => {
-    if (!settlementState) return false;
-    return BASE_STAT_KEYS.some(
-      (key) => baseStatsDraft[key] !== String(settlementState.baseStats[key])
-    );
-  }, [baseStatsDraft, settlementState]);
-  const parsedPreviewMaterials = useMemo(() => {
-    const result: Record<string, number> = {};
-    for (const rawLine of previewMaterialsText.split('\n')) {
-      const line = rawLine.trim();
-      if (!line) continue;
-      const [itemIdRaw, qtyRaw] = line.split(':');
-      const itemId = itemIdRaw?.trim();
-      const qty = Number(qtyRaw?.trim() ?? '');
-      if (!itemId || !Number.isFinite(qty) || qty < 0) {
-        continue;
-      }
-      result[itemId] = qty;
-    }
-    return result;
-  }, [previewMaterialsText]);
   const reviewEntries = useMemo(
     () => entries.filter((entry) => entry.needsCompletion),
     [entries]
   );
-
-  const handleCreateEntry = async () => {
-    if (!activeProject || !entryName.trim()) return;
-    const now = Date.now();
-    const next: CompendiumEntry = {
-      id: crypto.randomUUID(),
-      projectId: activeProject.id,
-      name: entryName.trim(),
-      domain: entryDomain,
-      needsCompletion: false,
-      actions: getDefaultActions(entryDomain),
-      createdAt: now,
-      updatedAt: now
-    };
-
-    setFeedback(null);
-    try {
-      await saveCompendiumEntry(next);
-      setEntries((prev) => [...prev, next].sort((a, b) => a.name.localeCompare(b.name)));
-      setEntryName('');
-      setFeedback({tone: 'success', message: 'Compendium entry created.'});
-    } catch (error) {
-      const message =
-        describeError(error, 'Unable to create entry.');
-      setFeedback({tone: 'error', message});
-    }
-  };
-
-  const handleImportEntity = async () => {
-    if (!activeProject || !entityToImportId) return;
-    const entity = worldEntityById.get(entityToImportId);
-    if (!entity) return;
-    if (importProgressScope === 'character' && !activeMechanicsCharacterSheetId) {
-      setFeedback({
-        tone: 'error',
-        message: 'Choose a character sheet before linking character-scoped mechanics.'
-      });
-      return;
-    }
-    setFeedback(null);
-    try {
-      const entry = await upsertCompendiumEntryFromEntity({
-        projectId: activeProject.id,
-        entity,
-        domain: importDomain,
-        defaultActions: getDefaultActions(importDomain),
-        needsCompletion: entity.needsCompletion ?? false,
-        mechanicKind: importMechanicKind,
-        progressScope: importProgressScope
-      });
-      setEntries((prev) => {
-        const idx = prev.findIndex((item) => item.id === entry.id);
-        if (idx === -1) return [...prev, entry].sort((a, b) => a.name.localeCompare(b.name));
-        const next = [...prev];
-        next[idx] = entry;
-        return next.sort((a, b) => a.name.localeCompare(b.name));
-      });
-      if (importMechanicKind === 'zone') {
-        const biomeKey = toBiomeKey(entity.name);
-        const profile = await upsertZoneAffinityProfile({
-          projectId: activeProject.id,
-          biomeKey,
-          name: entity.name,
-          sourceEntityId: entity.id,
-          progressScope: importProgressScope,
-          maxAffinityPoints: 100,
-          milestones: [
-            {
-              id: `${biomeKey}-25`,
-              thresholdPercent: 25,
-              name: '25% Affinity',
-              description: 'Biome familiarity unlocked.'
-            },
-            {
-              id: `${biomeKey}-50`,
-              thresholdPercent: 50,
-              name: '50% Affinity',
-              description: 'Biome resistance unlocked.'
-            },
-            {
-              id: `${biomeKey}-100`,
-              thresholdPercent: 100,
-              name: '100% Affinity',
-              description: 'Biome mastery unlocked.'
-            }
-          ]
-        });
-        setZoneProfiles((prev) => {
-          const idx = prev.findIndex((item) => item.id === profile.id);
-          if (idx === -1) return [...prev, profile].sort((a, b) => a.name.localeCompare(b.name));
-          const next = [...prev];
-          next[idx] = profile;
-          return next.sort((a, b) => a.name.localeCompare(b.name));
-        });
-        setSelectedZoneKey(profile.biomeKey);
-        setShowAdvancedSetup(true);
-        setActiveTab('world-systems');
-        setFeedback({tone: 'success', message: 'Location linked as a zone profile.'});
-        return;
-      }
-      if (importMechanicKind === 'settlement') {
-        const nextState = await updateSettlementLocation({
-          projectId: activeProject.id,
-          sourceEntityId: entity.id,
-          name: entity.name
-        });
-        setSelectedSettlementLocationId(entity.id);
-        setSettlementState(nextState);
-        setShowAdvancedSetup(true);
-        setActiveTab('world-systems');
-        setFeedback({tone: 'success', message: 'Location linked to settlement/community systems.'});
-        return;
-      }
-      setFeedback({tone: 'success', message: 'World Bible entity linked to mechanics.'});
-    } catch (error) {
-      const message =
-        describeError(error, 'Unable to import entity.');
-      setFeedback({tone: 'error', message});
-    }
-  };
 
   const handleUpdateEntryMechanics = async (
     entry: CompendiumEntry,
@@ -772,226 +544,6 @@ function CompendiumRoute() {
     }
   };
 
-  const handleCreateRecipe = async () => {
-    if (!activeProject || !recipeName.trim()) return;
-    const now = Date.now();
-    const recipe: UnlockableRecipe = {
-      id: crypto.randomUUID(),
-      projectId: activeProject.id,
-      name: recipeName.trim(),
-      category: recipeCategory,
-      requirements: {
-        minCharacterLevel: Math.max(1, Math.floor(recipeMinLevel)),
-        requiredMilestoneIds: recipeRequiredMilestones
-          .split(',')
-          .map((value) => value.trim())
-          .filter(Boolean)
-      },
-      createdAt: now,
-      updatedAt: now
-    };
-    setFeedback(null);
-    try {
-      await saveUnlockableRecipe(recipe);
-      setRecipes((prev) => [...prev, recipe].sort((a, b) => a.name.localeCompare(b.name)));
-      setRecipeName('');
-      setRecipeMinLevel(1);
-      setRecipeRequiredMilestones('');
-      setFeedback({tone: 'success', message: 'Unlockable recipe added.'});
-    } catch (error) {
-      const message =
-        describeError(error, 'Unable to save recipe.');
-      setFeedback({tone: 'error', message});
-    }
-  };
-
-  const handleCreateMilestone = async () => {
-    if (!activeProject || !milestoneName.trim()) return;
-    const recipeIds = milestoneRecipeIds
-      .split(',')
-      .map((value) => value.trim())
-      .filter(Boolean);
-    const milestone: CompendiumMilestone = {
-      id: crypto.randomUUID(),
-      projectId: activeProject.id,
-      name: milestoneName.trim(),
-      description: milestoneDescription.trim() || undefined,
-      pointsRequired: Math.max(0, Math.floor(milestonePoints)),
-      unlockRecipeIds: recipeIds,
-      permanentEffects: [],
-      createdAt: Date.now()
-    };
-    setFeedback(null);
-    try {
-      await saveCompendiumMilestone(milestone);
-      setMilestones((prev) =>
-        [...prev, milestone].sort((a, b) => a.pointsRequired - b.pointsRequired)
-      );
-      setMilestoneName('');
-      setMilestoneDescription('');
-      setMilestonePoints(10);
-      setMilestoneRecipeIds('');
-      setFeedback({tone: 'success', message: 'Milestone added.'});
-    } catch (error) {
-      const message =
-        describeError(error, 'Unable to save milestone.');
-      setFeedback({tone: 'error', message});
-    }
-  };
-
-  const handleCreateZoneProfile = async () => {
-    if (!activeProject || !zoneName.trim() || !zoneKey.trim()) return;
-    setFeedback(null);
-    try {
-      const profile = await upsertZoneAffinityProfile({
-        projectId: activeProject.id,
-        biomeKey: zoneKey.trim().toLowerCase(),
-        name: zoneName.trim(),
-        sourceEntityId: zoneSourceEntityId || undefined,
-        progressScope: zoneProgressScope,
-        maxAffinityPoints: Math.max(1, Math.floor(zoneMaxPoints)),
-        milestones: [
-          {
-            id: `${zoneKey.trim().toLowerCase()}-25`,
-            thresholdPercent: 25,
-            name: '25% Affinity',
-            description: 'Biome familiarity unlocked.'
-          },
-          {
-            id: `${zoneKey.trim().toLowerCase()}-50`,
-            thresholdPercent: 50,
-            name: '50% Affinity',
-            description: 'Biome resistance unlocked.'
-          },
-          {
-            id: `${zoneKey.trim().toLowerCase()}-100`,
-            thresholdPercent: 100,
-            name: '100% Affinity',
-            description: 'Biome mastery unlocked.'
-          }
-        ]
-      });
-      setZoneProfiles((prev) => {
-        const idx = prev.findIndex((item) => item.id === profile.id);
-        if (idx === -1) return [...prev, profile].sort((a, b) => a.name.localeCompare(b.name));
-        const next = [...prev];
-        next[idx] = profile;
-        return next.sort((a, b) => a.name.localeCompare(b.name));
-      });
-      setSelectedZoneKey(profile.biomeKey);
-      setZoneName('');
-      setZoneKey('');
-      setZoneMaxPoints(100);
-      setZoneSourceEntityId('');
-      setZoneProgressScope('character');
-      setFeedback({tone: 'success', message: 'Zone affinity profile created.'});
-    } catch (error) {
-      const message =
-        describeError(error, 'Unable to create zone profile.');
-      setFeedback({tone: 'error', message});
-    }
-  };
-
-  const handleRecordZoneExposure = async () => {
-    if (!activeProject || !selectedZoneKey) return;
-    if (
-      selectedZoneProfile?.progressScope === 'character' &&
-      !activeMechanicsCharacterSheetId
-    ) {
-      setFeedback({
-        tone: 'error',
-        message: 'Choose a character sheet before recording character-scoped zone exposure.'
-      });
-      return;
-    }
-    setIsRecordingZone(true);
-    setFeedback(null);
-    try {
-      const result = await recordZoneExposure({
-        projectId: activeProject.id,
-        biomeKey: selectedZoneKey,
-        exposureSeconds: Math.max(1, Math.floor(zoneExposureMinutes * 60)),
-        characterSheetId:
-          selectedZoneProfile?.progressScope === 'character'
-            ? activeMechanicsCharacterSheetId || undefined
-            : undefined
-      });
-      setZoneProgress((prev) => {
-        const idx = prev.findIndex((item) => item.id === result.progress.id);
-        if (idx === -1) return [...prev, result.progress].sort((a, b) => b.affinityPoints - a.affinityPoints);
-        const next = [...prev];
-        next[idx] = result.progress;
-        return next.sort((a, b) => b.affinityPoints - a.affinityPoints);
-      });
-      if (result.unlockedMilestoneIds.length > 0) {
-        setFeedback({
-          tone: 'success',
-          message: `Exposure recorded. Unlocked ${result.unlockedMilestoneIds.length} zone milestone(s).`
-        });
-      } else {
-        setFeedback({tone: 'success', message: 'Zone exposure recorded.'});
-      }
-    } catch (error) {
-      const message =
-        describeError(error, 'Unable to record zone exposure.');
-      setFeedback({tone: 'error', message});
-    } finally {
-      setIsRecordingZone(false);
-    }
-  };
-
-  const handleAddSettlementModule = async () => {
-    if (!activeProject || !settlementState || !moduleName.trim()) return;
-    setIsSavingModule(true);
-    setFeedback(null);
-    try {
-      const parsedValue = Number(moduleValue);
-      const normalizedValue =
-        Number.isFinite(parsedValue) && moduleValue.trim() !== ''
-          ? parsedValue
-          : moduleValue;
-
-      const module: SettlementModule = {
-        id: crypto.randomUUID(),
-        projectId: activeProject.id,
-        name: moduleName.trim(),
-        sourceType: moduleSourceType,
-        auraRadiusMeters: 30,
-        active: true,
-        effects: [
-          {
-            targetType: moduleTargetType,
-            targetId: moduleTargetId.trim() || 'custom',
-            operation: moduleOperation,
-            value: normalizedValue
-          }
-        ],
-        createdAt: Date.now(),
-        updatedAt: Date.now()
-      };
-
-      await saveSettlementModule(module);
-      const nextState = await attachModuleToSettlement({
-        projectId: activeProject.id,
-        moduleId: module.id,
-        sourceEntityId: selectedSettlementLocationId || undefined
-      });
-      setSettlementModules((prev) =>
-        [...prev, module].sort((a, b) => a.name.localeCompare(b.name))
-      );
-      setSettlementState(nextState);
-      setModuleName('');
-      setModuleValue('5');
-      setFeedback({tone: 'success', message: 'Settlement module added.'});
-    } catch (error) {
-      const message =
-        describeError(error, 'Unable to add settlement module.');
-      setFeedback({tone: 'error', message});
-    } finally {
-      setIsSavingModule(false);
-    }
-  };
-
   const handleRecordAction = async (
     entry: CompendiumEntry,
     action: CompendiumActionDefinition
@@ -1061,78 +613,6 @@ function CompendiumRoute() {
         ? prev.filter((id) => id !== characterId)
         : [...prev, characterId]
     );
-  };
-
-  const handleAdjustFortressLevel = async (delta: number) => {
-    if (!activeProject || !settlementState) return;
-    const nextLevel = Math.max(1, settlementState.fortressLevel + delta);
-    setIsSavingFortress(true);
-    setFeedback(null);
-    try {
-      const nextState = await updateSettlementFortressLevel({
-        projectId: activeProject.id,
-        level: nextLevel,
-        sourceEntityId: selectedSettlementLocationId || undefined
-      });
-      setSettlementState(nextState);
-      setFeedback({
-        tone: 'success',
-        message: `Settlement tier level set to ${nextState.fortressLevel}.`
-      });
-    } catch (error) {
-      const message =
-        describeError(error, 'Unable to update settlement tier level.');
-      setFeedback({tone: 'error', message});
-    } finally {
-      setIsSavingFortress(false);
-    }
-  };
-
-  const handleBaseStatDraftChange = (statKey: BaseStatKey, value: string): void => {
-    setBaseStatsDraft((prev) => ({
-      ...prev,
-      [statKey]: value
-    }));
-  };
-
-  const handleResetBaseStatsDraft = (): void => {
-    if (!settlementState) return;
-    setBaseStatsDraft(toBaseStatsDraft(settlementState.baseStats));
-  };
-
-  const handleSaveBaseStats = async () => {
-    if (!activeProject || !settlementState) return;
-    const nextBaseStats: Partial<SettlementState['baseStats']> = {};
-    for (const key of BASE_STAT_KEYS) {
-      const parsed = Number(baseStatsDraft[key].trim());
-      if (!Number.isFinite(parsed)) {
-        setFeedback({
-          tone: 'error',
-          message: `Base stat "${key}" must be a valid number.`
-        });
-        return;
-      }
-      nextBaseStats[key] = clampBaseStatValue(key, parsed);
-    }
-
-    setIsSavingFortress(true);
-    setFeedback(null);
-    try {
-      const nextState = await updateSettlementBaseStats({
-        projectId: activeProject.id,
-        baseStats: nextBaseStats,
-        sourceEntityId: selectedSettlementLocationId || undefined
-      });
-      setSettlementState(nextState);
-      setBaseStatsDraft(toBaseStatsDraft(nextState.baseStats));
-      setFeedback({tone: 'success', message: 'Base stats saved.'});
-    } catch (error) {
-      const message =
-        describeError(error, 'Unable to update base stats.');
-      setFeedback({tone: 'error', message});
-    } finally {
-      setIsSavingFortress(false);
-    }
   };
 
   if (!activeProject) {
@@ -1395,26 +875,20 @@ function CompendiumRoute() {
       )}
       {currentTab.id === 'entries' && (
         <EntriesTab
+          {...importForm}
+          {...entryForm}
           activeMechanicsCharacterSheet={activeMechanicsCharacterSheet}
           activeMechanicsCharacterSheetId={activeMechanicsCharacterSheetId}
           characterSheets={characterSheets}
           completedActionSet={completedActionSet}
           editingMechanicsEntryId={editingMechanicsEntryId}
           entries={entries}
-          entryDomain={entryDomain}
-          entryName={entryName}
-          entityToImportId={entityToImportId}
           globalCompletedActionSet={globalCompletedActionSet}
-          handleCreateEntry={handleCreateEntry}
-          handleImportEntity={handleImportEntity}
           handleMarkEntryComplete={handleMarkEntryComplete}
           handleOpenEntryMechanicsEditor={handleOpenEntryMechanicsEditor}
           handleRecordAction={handleRecordAction}
           handleUpdateEntryMechanics={handleUpdateEntryMechanics}
           highlightedEntryId={highlightedEntryId}
-          importDomain={importDomain}
-          importMechanicKind={importMechanicKind}
-          importProgressScope={importProgressScope}
           isRecordingKey={isRecordingKey}
           navigate={navigate}
           quantityByActionKey={quantityByActionKey}
@@ -1422,12 +896,6 @@ function CompendiumRoute() {
           ruleset={ruleset}
           setActiveMechanicsCharacterSheetId={setActiveMechanicsCharacterSheetId}
           setEditingMechanicsEntryId={setEditingMechanicsEntryId}
-          setEntryDomain={setEntryDomain}
-          setEntryName={setEntryName}
-          setEntityToImportId={setEntityToImportId}
-          setImportDomain={setImportDomain}
-          setImportMechanicKind={setImportMechanicKind}
-          setImportProgressScope={setImportProgressScope}
           setQuantityByActionKey={setQuantityByActionKey}
           settlementLocationName={settlementLocationName}
           settlementState={settlementState}
@@ -1438,84 +906,33 @@ function CompendiumRoute() {
       )}
       {currentTab.id === 'progression' && (
         <ProgressionTab
+          {...craftPreview}
+          {...milestoneForm}
+          {...recipeForm}
           craftingRuntimeModifiers={craftingRuntimeModifiers}
-          handleCreateMilestone={handleCreateMilestone}
-          handleCreateRecipe={handleCreateRecipe}
-          milestoneDescription={milestoneDescription}
-          milestoneName={milestoneName}
-          milestonePoints={milestonePoints}
-          milestoneRecipeIds={milestoneRecipeIds}
           milestones={milestones}
-          parsedPreviewMaterials={parsedPreviewMaterials}
-          previewLevel={previewLevel}
-          previewMaterialsText={previewMaterialsText}
           progress={progress}
-          recipeCategory={recipeCategory}
-          recipeMinLevel={recipeMinLevel}
-          recipeName={recipeName}
-          recipeRequiredMilestones={recipeRequiredMilestones}
           recipes={recipes}
-          setMilestoneDescription={setMilestoneDescription}
-          setMilestoneName={setMilestoneName}
-          setMilestonePoints={setMilestonePoints}
-          setMilestoneRecipeIds={setMilestoneRecipeIds}
-          setPreviewLevel={setPreviewLevel}
-          setPreviewMaterialsText={setPreviewMaterialsText}
-          setRecipeCategory={setRecipeCategory}
-          setRecipeMinLevel={setRecipeMinLevel}
-          setRecipeName={setRecipeName}
-          setRecipeRequiredMilestones={setRecipeRequiredMilestones}
           unlockedMilestoneSet={unlockedMilestoneSet}
           unlockedRecipeSet={unlockedRecipeSet}
         />
       )}
       {currentTab.id === 'world-systems' && (
         <WorldSystemsTab
+          {...settlementForm}
+          {...moduleForm}
+          {...zoneForm}
           activeMechanicsCharacterSheetId={activeMechanicsCharacterSheetId}
           activePartyCharacterIds={activePartyCharacterIds}
           activePartySynergies={activePartySynergies}
           activeSettlementEffects={activeSettlementEffects}
-          baseStatsDraft={baseStatsDraft}
           characterById={characterById}
           characterSheets={characterSheets}
           characters={characters}
           enableWorldSystems={enableWorldSystems}
-          handleAddSettlementModule={handleAddSettlementModule}
-          handleAdjustFortressLevel={handleAdjustFortressLevel}
-          handleBaseStatDraftChange={handleBaseStatDraftChange}
-          handleCreateZoneProfile={handleCreateZoneProfile}
-          handleRecordZoneExposure={handleRecordZoneExposure}
-          handleResetBaseStatsDraft={handleResetBaseStatsDraft}
-          handleSaveBaseStats={handleSaveBaseStats}
-          isBaseStatsDraftDirty={isBaseStatsDraftDirty}
-          isRecordingZone={isRecordingZone}
-          isSavingFortress={isSavingFortress}
-          isSavingModule={isSavingModule}
-          moduleName={moduleName}
-          moduleOperation={moduleOperation}
-          moduleSourceType={moduleSourceType}
-          moduleTargetId={moduleTargetId}
-          moduleTargetType={moduleTargetType}
-          moduleValue={moduleValue}
           nextFortressTier={nextFortressTier}
           rosterSynergyOpportunities={rosterSynergyOpportunities}
-          selectedSettlementLocationId={selectedSettlementLocationId}
-          selectedZoneKey={selectedZoneKey}
           setActiveMechanicsCharacterSheetId={setActiveMechanicsCharacterSheetId}
-          setModuleName={setModuleName}
-          setModuleOperation={setModuleOperation}
-          setModuleSourceType={setModuleSourceType}
-          setModuleTargetId={setModuleTargetId}
-          setModuleTargetType={setModuleTargetType}
-          setModuleValue={setModuleValue}
-          setSelectedSettlementLocationId={setSelectedSettlementLocationId}
-          setSelectedZoneKey={setSelectedZoneKey}
-          setZoneExposureMinutes={setZoneExposureMinutes}
-          setZoneKey={setZoneKey}
-          setZoneMaxPoints={setZoneMaxPoints}
-          setZoneName={setZoneName}
-          setZoneProgressScope={setZoneProgressScope}
-          setZoneSourceEntityId={setZoneSourceEntityId}
           settlementComputedEffects={settlementComputedEffects}
           settlementModules={settlementModules}
           settlementState={settlementState}
@@ -1523,14 +940,8 @@ function CompendiumRoute() {
           unlockedFortressTiers={unlockedFortressTiers}
           worldEntities={worldEntities}
           worldEntityById={worldEntityById}
-          zoneExposureMinutes={zoneExposureMinutes}
-          zoneKey={zoneKey}
-          zoneMaxPoints={zoneMaxPoints}
-          zoneName={zoneName}
           zoneProfiles={zoneProfiles}
           zoneProgressByKey={zoneProgressByKey}
-          zoneProgressScope={zoneProgressScope}
-          zoneSourceEntityId={zoneSourceEntityId}
         />
       )}
     </section>

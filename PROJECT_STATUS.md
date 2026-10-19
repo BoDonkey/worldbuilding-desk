@@ -738,10 +738,13 @@ Under the hood, the app still includes rich systems for world data, rules, chara
   ruleset mutations, stat/resource editors, and end-to-end world creation flow.
 - Web tests now include provider-aware jsdom smoke coverage for all eight
   high-risk application routes plus Compendium tab switching.
-- All four Compendium tab panels now live in focused, explicitly typed
-  components; `CompendiumRoute.tsx` has been reduced from 3,118 to 1,590 lines
-  without changing the rendered interface or route-owned state. The remaining
-  route size is primarily state, derived data, and persistence handlers.
+- All four Compendium tab panels live in focused, explicitly typed components.
+  Eight adjacent form hooks own entry/import, recipe/milestone, craft preview,
+  zone/exposure, module, and settlement/base-stat drafts and submit handlers.
+  They stay mounted with the route so tab switches preserve unfinished input;
+  parsing and validation use tested, pure Compendium helpers. The route is
+  951 lines, down from 1,540 before this extraction, with the rendered
+  interface, save/reset behavior, and persistence services preserved.
 - Web and rules-engine tests run on Vitest 4.1, and all workspaces use Zod
   3.25.76 while the breaking Zod 4 migration remains deliberately deferred.
 - The web workspace now builds on Vite 8.2 and `@vitejs/plugin-react` 6 with

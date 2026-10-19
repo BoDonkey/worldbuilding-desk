@@ -1,6 +1,6 @@
 # Architecture Reference — SagaSpine
 
-Last reviewed: 2026-10-18
+Last reviewed: 2026-10-19
 
 ## Purpose
 
@@ -331,9 +331,10 @@ without turning cancelled or unverified code into a passing check.
 4. The hotspot freeze introduced in Slice 3.14 now covers non-test source
    files over 1,000 lines (Slice 3.18). Existing files above that threshold
    may shrink but cannot grow past their recorded baseline; new files cannot
-   cross the threshold. Route components still hold large amounts of
-   per-form state (Compendium has 59 `useState` values). Slice 3.20 extracts
-   the Compendium forms. Continue incremental,
+   cross the threshold. Compendium form drafts and submit handlers live in
+   focused hooks beside its tab components, mounted for the route's lifetime;
+   pure parsing and validation belong to the Compendium service helpers.
+   Other large routes still hold substantial per-form state. Continue incremental,
    responsibility-based extraction rather than broad rewrites.
 5. Provider capabilities are not yet normalized behind one proposal/action
    contract.
