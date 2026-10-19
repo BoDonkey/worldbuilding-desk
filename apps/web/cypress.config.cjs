@@ -11,6 +11,7 @@ module.exports = defineConfig({
   // Retry a failed test up to twice in `cypress run` (CI and local batch runs) so a
   // timing flake does not cost a full rerun. Retried tests still show in the run
   // output as "Attempt 2 of 3"; a test that keeps needing retries is a bug to fix.
+  // Web CI overrides this local default with --config retries=0 so flakes fail.
   retries: {runMode: 2, openMode: 0},
   downloadsFolder: 'cypress/downloads',
   screenshotsFolder: 'cypress/screenshots',

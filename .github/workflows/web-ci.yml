@@ -1,35 +1,78 @@
 name: Web CI
 
+# Always create checks, including for documentation updates. Job-level selection
+# avoids required checks being left pending by workflow path filters.
 on:
   pull_request:
-    paths:
-      - '.github/workflows/web-ci.yml'
-      - 'scripts/check-file-sizes.mjs'
-      - 'scripts/file-size-baseline.json'
-      - 'apps/desktop/**'
-      - 'apps/web/**'
-      - 'packages/**'
-      - 'pnpm-lock.yaml'
-      - 'pnpm-workspace.yaml'
-      - 'package.json'
+    types: [opened, synchronize, reopened, ready_for_review, labeled, unlabeled]
   push:
-    branches:
-      - main
-    paths:
-      - '.github/workflows/web-ci.yml'
-      - 'scripts/check-file-sizes.mjs'
-      - 'scripts/file-size-baseline.json'
-      - 'apps/desktop/**'
-      - 'apps/web/**'
-      - 'packages/**'
-      - 'pnpm-lock.yaml'
-      - 'pnpm-workspace.yaml'
-      - 'package.json'
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: web-ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-  web-verify:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      application: ${{ steps.plan.outputs.application }}
+      mode: ${{ steps.plan.outputs.mode }}
+      matrix: ${{ steps.plan.outputs.matrix }}
+      fingerprint: ${{ steps.plan.outputs.fingerprint }}
+      key: ${{ steps.plan.outputs.key }}
+      verified: ${{ steps.proof.outputs.verified }}
+      cache_hit: ${{ steps.cache.outputs.cache-hit }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22.22.0
+      - name: Select verification coverage
+        id: plan
+        run: node scripts/ci/detect.mjs
+      - name: Look for successful verification of identical code
+        id: cache
+        uses: actions/cache/restore@v6
+        with:
+          path: ${{ runner.temp }}/ci-verified
+          key: ${{ steps.plan.outputs.key }}
+      - name: Validate verification proof and run history
+        id: proof
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CI_FINGERPRINT: ${{ steps.plan.outputs.fingerprint }}
+          CI_FORCE: ${{ steps.plan.outputs.force }}
+          CI_HEAD_REPOSITORY: ${{ github.event.pull_request.head.repo.full_name || github.repository }}
+        run: node scripts/ci/proof.mjs --check
+
+  tooling-verify:
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22.22.0
+      - name: Test CI selection and verification policy
+        run: node --test scripts/ci/*.test.mjs
+      - name: Check file sizes
+        run: node scripts/check-file-sizes.mjs
+
+  web-verify:
+    needs: changes
+    if: ${{ always() && (needs.changes.result != 'success' || needs.changes.outputs.application == 'true') }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Reject failed planning
+        if: ${{ needs.changes.result != 'success' }}
+        run: exit 1
       - name: Checkout
         uses: actions/checkout@v7
 
@@ -47,29 +90,38 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Audit production dependencies
+      - name: Audit current production advisories
         run: pnpm audit --prod --audit-level high
 
       - name: Check file sizes
         run: pnpm check:file-sizes
 
       - name: Lint web
+        if: ${{ needs.changes.outputs.verified != 'true' }}
         run: pnpm --filter web lint
 
       - name: Test web
+        if: ${{ needs.changes.outputs.verified != 'true' }}
         run: pnpm --filter web test:unit
 
       - name: Test rules packages
+        if: ${{ needs.changes.outputs.verified != 'true' }}
         run: |
           pnpm --filter @worldbuilding-desk/rules-engine test
           pnpm --filter @worldbuilding-desk/rules-ui test
 
       - name: Build web
+        if: ${{ needs.changes.outputs.verified != 'true' }}
         run: pnpm --filter web build
 
   desktop-verify:
+    needs: changes
+    if: ${{ always() && (needs.changes.result != 'success' || (needs.changes.outputs.application == 'true' && needs.changes.outputs.verified != 'true')) }}
     runs-on: ubuntu-latest
     steps:
+      - name: Reject failed planning
+        if: ${{ needs.changes.result != 'success' }}
+        run: exit 1
       - name: Checkout
         uses: actions/checkout@v7
 
@@ -96,50 +148,69 @@ jobs:
       - name: Build desktop
         run: pnpm --filter desktop build
 
-  cypress-smoke:
+  cypress-run:
+    needs: changes
+    if: ${{ needs.changes.outputs.application == 'true' && needs.changes.outputs.mode != 'none' && needs.changes.outputs.verified != 'true' }}
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: true
+      matrix: ${{ fromJSON(needs.changes.outputs.matrix || '{"include":[{"shard":0,"specs":""}]}') }}
+    name: Cypress group ${{ matrix.shard }}
     steps:
-      - name: Checkout
-        uses: actions/checkout@v7
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v6
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
         with:
           version: 10.15.0
-
-      - name: Setup Node
-        uses: actions/setup-node@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: 22.22.0
           cache: pnpm
-
       - name: Cache Cypress binary
         uses: actions/cache@v6
         with:
           path: ~/.cache/Cypress
           key: cypress-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Install Cypress binary
-        run: pnpm --filter web exec cypress install
-
-      - name: Run Cypress smoke tests
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter web exec cypress install
+      - name: Run selected browser tests without retries
         uses: cypress-io/github-action@v7
+        env:
+          CI_CYPRESS_SPECS: ${{ matrix.specs }}
         with:
           install: false
           start: pnpm --filter web dev
           wait-on: 'http://localhost:5173'
           wait-on-timeout: 120
-          command: pnpm --filter web e2e:run
-
+          command: node scripts/ci/run-cypress.mjs
       - name: Upload Cypress artifacts
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: cypress-artifacts
+          name: cypress-artifacts-${{ matrix.shard }}
           path: |
             apps/web/cypress/screenshots
             apps/web/cypress/videos
           if-no-files-found: ignore
+
+  # Preserve the existing required check, and fail closed on missing/failed
+  # planning, tooling, fast checks, or any selected browser group.
+  cypress-smoke:
+    if: ${{ always() }}
+    needs: [changes, tooling-verify, web-verify, desktop-verify, cypress-run]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22.22.0
+      - name: Verify selected job results
+        env:
+          CI_RESULTS: ${{ toJSON(needs) }}
+          CI_FINGERPRINT: ${{ needs.changes.outputs.fingerprint }}
+        run: node scripts/ci/proof.mjs
+      - name: Save successful application verification
+        if: ${{ success() && needs.changes.outputs.application == 'true' && needs.changes.outputs.verified != 'true' && needs.changes.outputs.cache_hit != 'true' }}
+        uses: actions/cache/save@v6
+        with:
+          path: ${{ runner.temp }}/ci-verified
+          key: ${{ needs.changes.outputs.key }}

@@ -137,25 +137,77 @@ observation rather than broad line-level prose editing.
 
 - Prefer narrow slices that complete an author workflow; keep AI
   author-invoked, proposal-oriented, review-gated (see `docs/domain-model.md`).
-- Behavior-preserving refactors stay behavior-preserving; run the full
-  verification battery before commit (see battery below).
+- Behavior-preserving refactors stay behavior-preserving; run the applicable
+  verification tier before commit (see policy below).
 - Update `PROJECT_STATUS.md` when application truth changes; update this file
   when priority or remaining work changes; archive completed phases.
 - Trust dogfooding is the active checkpoint after Phase 4. Keep Phase 5
   unclaimed until the 1.1 run is recorded and its findings are triaged; only
   release-blocking trust or data-loss findings must be fixed before 5.1.
 
-Verification battery:
+### Verification policy
+
+Every update runs the CI-policy regression tests and the file-size gate:
 
 ```bash
-pnpm --filter web lint          # 0 errors (3 exhaustive-deps warnings baseline)
-pnpm --filter web test:unit     # 232+ tests
-pnpm --filter @worldbuilding-desk/rules-engine test
-pnpm --filter @worldbuilding-desk/rules-ui test
+node --test scripts/ci/*.test.mjs
+pnpm check:file-sizes
+```
+
+Application and CI-policy changes also run the fast battery before commit:
+
+```bash
+pnpm lint                      # 0 errors; existing ConsumableEffectEditor dependency warning
+pnpm test                      # all web, rules-engine, rules-ui, and desktop unit tests
 pnpm --filter web build
 pnpm --filter desktop build
-pnpm --filter web e2e:run       # for slices touching routed UI
 ```
+
+Browser coverage is selected by `scripts/ci/detect.mjs` and its tested policy
+in `scripts/ci/plan.mjs`. Preview the local plan, including uncommitted files,
+with `CI_BASE_SHA=origin/main node scripts/ci/detect.mjs`:
+
+- **Documentation and known tooling:** root README, PROJECT_STATUS, AGENTS,
+  Markdown under `docs/`, and the size-check script/baseline need only the
+  tooling checks. They do not require application tests on their own.
+- **Unit-only changes:** run the fast battery; no browser tests are required.
+- **Focused UI:** the explicit Settings, Source Notes, Corkboard, and Projects
+  styling mappings select their downstream browser specs. Run those specs
+  locally when changing a covered application workflow, using
+  `pnpm --filter web e2e:run --config retries=0 --spec '<selected specs>'`.
+- **Full coverage:** persistence, canon/state, IPC, shared services, hooks,
+  routes, dependencies, packages, shared/global styling, CI policy, broad
+  refactors, and unmapped paths select every browser spec. Run the full local
+  browser suite for application changes in this tier with
+  `pnpm --filter web e2e:run --config retries=0`. A CI-only change needs policy
+  tests and the fast battery locally, then a full remote run to exercise the
+  workflow itself; no duplicate local UI run is required.
+- **Release validation:** request full fresh coverage with Web CI's manual
+  dispatch, or the `ci:full` PR label. Both bypass reuse. Keep packaged desktop
+  validation and the relevant manual smoke procedures in `docs/smoke-tests.md`.
+
+Web CI always publishes check results rather than skipping the entire
+workflow by path. Full/focused browser selections run in up to three disjoint
+parallel groups, without automatic retries. The existing `cypress-smoke`
+check is an aggregate gate: failed planning, tooling, dependency audit, fast
+checks, or any selected browser group makes it fail; an unexpectedly skipped
+selected job cannot pass the gate.
+
+PR coverage uses the cumulative diff against its target, not only the latest
+commit. Documentation follow-ups to a code PR may reuse successful tests only
+for an identical checked-out application/test/dependency/CI tree and coverage
+selection. That fingerprint includes base-branch changes and file modes. The
+proof's workflow and the most recent preceding run for the same head
+repository/branch must both have succeeded. Missing, expired, corrupt,
+failed, cancelled, pending, or unavailable evidence causes fresh verification.
+Production dependency advisories are audited again even when tests are reused.
+
+Superseded runs are cancelled on the same PR. Main-branch runs are serialized
+and select full integration coverage unless an identical verified tree and
+coverage can be reused. Documentation-only close-out does not require waiting
+for unrelated browser work: successful reuse or an intentional policy skip is
+valid, but a missing/failed selected check is not. Do not claim a full browser
+run when a result was reused or coverage was focused.
 
 ## Executing a Slice (instructions for agents)
 
@@ -189,16 +241,16 @@ pnpm --filter web e2e:run       # for slices touching routed UI
      `docs/archive/code-fitness-report-2026-08-01.md`. New dated reports
      (fitness Slice 9 / 3.9) are written directly to `docs/archive/` and
      linked from the status board.
-3. **Verify.** Run the battery above (plus local Cypress for routed-UI
-   slices); report counts in the commit message.
+3. **Verify.** Run the applicable tier above and relevant manual smokes;
+   report the tier, coverage, and counts in the commit message.
 4. **Close out.** Mark the slice `Done <commit>` on the board. Update
    `PROJECT_STATUS.md` if application truth changed. Never round a partial
    result up to done — record the honest state in the board's note column.
-   After pushing, check the `Web CI` run for that push, including
-   `cypress-smoke`. If it is red, fix it before claiming the next slice, or
-   record the failure in the note column. Local-only green is not done.
-   Cypress retries a failed test up to twice in run mode; a test that
-   passed only on retry is a flake to fix, not a pass to ignore.
+   After pushing, check the selected `Web CI` tier, including the aggregate
+   `cypress-smoke` result. If it is red, fix it before claiming the next slice,
+   or record the failure in the note column. Local-only green is not done.
+   CI disables automatic browser retries. A test that passes only after a
+   manual retry is still a flake to fix, not a pass to ignore.
 
 ## Status Board
 
@@ -249,6 +301,7 @@ and required revisit point, `WIP`, `Done <commit>`.
 | 3.17 | Centralize assistant request policy | 3 | M | Done `aa500ea` — shared provider readiness, route disclosure, consultation guard/accounting, streaming/Stop, and error boundary for Workspace and Ask; deterministic factual answers spend zero; hosted runs record `assistant`, coach records `writing-coach`, and private-local retains its runaway guard; AIAssistant 858→827 lines; lint baseline; 858 web + 47 engine + 12 UI + 24 desktop tests; web/desktop builds; file-size gate; Cypress 132/132 |
 | 3.17a | Project deletion integrity + retrieval upgrade repair | 3 | S | Done `ef332ac` |
 | 3.18 | Lower the size freeze to 1,000 lines | 3 | XS | Done `e1a7964` |
+| 3.18a | Change-aware CI + verification policy | 3 | S | Done `2ab0cb6` — full remote coverage 149/149 without retries in three groups |
 | 3.19 | Undefined theme token + hardcoded editor colors | 3 | XS | — |
 | 3.20 | Compendium form extraction | 3 | M | — |
 | 3.21 | Scene-roster mutation services | 3 | M | — |
@@ -846,6 +899,16 @@ boundary and these slices create it.
   references in `docs/architecture-review.md` risk 4 and the script's header
   comment. Ensure edits to the size-check script and baseline trigger Web CI.
   No application code changes.
+- **3.18a Change-aware CI + verification policy.** Introduce conservative,
+  tested path classification, focused UI browser mappings, fresh dependency
+  audits, and three disjoint browser groups for full coverage. Keep required
+  check names and fail closed on planner/job failures. Reuse tests only with
+  a successful identical-code/coverage proof and successful prior run; cancel
+  superseded PR runs without allowing a documentation update to bypass an
+  unverified code change. Exercise the new full workflow once and confirm a
+  documentation-only close-out reuses the verified result. Update this policy,
+  AGENTS, the architecture reference, and PROJECT_STATUS. No application
+  behavior changes.
 - **3.19 Undefined theme token + hardcoded editor colors.**
   `--color-text-muted` is used in `ConsultationBudgetNotice.module.css` and
   `AISettingsForm.module.css` but is not defined. Replace it with the
