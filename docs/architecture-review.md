@@ -322,9 +322,13 @@ without turning cancelled or unverified code into a passing check.
    in memory. The 5.15 vault needs one boundary to encrypt through. Slices
    3.22–3.23c consolidate it before 5.15.
 2. Domain logic still sits in large hooks with few tests
-   (`useWorkspaceSceneRoster`, `useWorldBibleEntityActions`,
-   `useWorkspaceStatBlocks`) and in the untested `compendiumService`.
-   Slices 3.21–3.22 move it into tested services.
+   (`useWorldBibleEntityActions`, `useWorkspaceStatBlocks`) and in the
+   untested `compendiumService`.
+   Slice 3.22 moves the remaining logic into tested services. Scene-roster
+   mutation planning already lives in pure workspace services; its hook owns
+   confirmation, validation, persistence calls, and React state. Service-owned
+   roster and Lore Inspector types keep production services independent of
+   components.
 3. The rule evaluation classes are tested and hardened (Slice 3.11) but no
    app path uses them yet; wiring them in (backlog R3–R5) must keep rule
    output to derived views and author-confirmed proposals.

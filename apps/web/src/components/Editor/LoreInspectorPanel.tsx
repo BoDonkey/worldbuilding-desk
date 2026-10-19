@@ -1,18 +1,7 @@
 import styles from '../../assets/components/AISettings.module.css';
 import {ConsultationBudgetNotice} from '../common/ConsultationBudgetNotice';
 import type {UseConsultationBudget} from '../../hooks/useConsultationBudget';
-
-export interface LoreInspectorRecord {
-  type: 'character' | 'entity';
-  id: string;
-  name: string;
-  vitalSigns: string[];
-  synopsis: {
-    goal: string;
-    recentEvent: string;
-    motivation: string;
-  };
-}
+import type {LoreInspectorRecord} from '../../services/workspace/workspaceConsultation';
 
 interface LoreInspectorPanelProps {
   record: LoreInspectorRecord | null;

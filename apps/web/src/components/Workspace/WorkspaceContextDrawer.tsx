@@ -16,7 +16,7 @@ import type {
 import {AIAssistant} from '../AIAssistant/AIAssistant';
 import {LoreInspectorPanel} from '../Editor/LoreInspectorPanel';
 import type {UseConsultationBudget} from '../../hooks/useConsultationBudget';
-import type {LoreInspectorRecord} from '../Editor/LoreInspectorPanel';
+import type {LoreInspectorRecord} from '../../services/workspace/workspaceConsultation';
 import {SourceNoteCapturePreview} from '../Editor/SourceNoteCapturePreview';
 import {SystemHistoryPanel} from '../Editor/SystemHistoryPanel';
 import type {RAGProvider} from '../../services/rag/RAGService';
@@ -36,13 +36,13 @@ import {normalizeRichTextValue} from '../../services/worldBible/worldBibleEntity
 import {WorldCategorySelect} from './WorldCategorySelect';
 import {buildCharacterCaptureAliasList} from '../../services/worldBible/worldBibleCanonicalization';
 import styles from '../../styles/WorkspaceRoute.module.css';
-import {
-  SceneRosterPanel,
-  type SceneRosterAddOption,
-  type SceneRosterCharacterCard,
-  type SceneRosterItemCard,
-  type SceneRosterTimelineEvent
-} from './SceneRosterPanel';
+import {SceneRosterPanel} from './SceneRosterPanel';
+import type {
+  SceneRosterAddOption,
+  SceneRosterCharacterCard,
+  SceneRosterItemCard,
+  SceneRosterTimelineEvent
+} from '../../services/workspace/sceneRosterTypes';
 import type {AITextProvenance} from '../../services/editor/aiTextProvenance';
 import {useModelCanonCheck} from '../../hooks/useModelCanonCheck';
 import {sceneCheckText} from '../../services/consistency/modelCanonCheck';

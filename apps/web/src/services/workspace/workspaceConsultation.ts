@@ -1,4 +1,14 @@
-import type {LoreInspectorRecord} from '../../components/Editor/LoreInspectorPanel';
+export interface LoreInspectorRecord {
+  type: 'character' | 'entity';
+  id: string;
+  name: string;
+  vitalSigns: string[];
+  synopsis: {
+    goal: string;
+    recentEvent: string;
+    motivation: string;
+  };
+}
 
 export type WorkspaceLoreConsultationMode =
   | 'consistency'

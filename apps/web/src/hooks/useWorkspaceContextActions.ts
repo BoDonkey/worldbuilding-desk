@@ -1,7 +1,7 @@
 import {useCallback, useState} from 'react';
 import type {SceneRevision} from '../services/assistant/sceneRevision';
 import type {ProjectSettings} from '../entityTypes';
-import type {LoreInspectorRecord} from '../components/Editor/LoreInspectorPanel';
+import type {LoreInspectorRecord} from '../services/workspace/workspaceConsultation';
 import {useConsultationBudget} from './useConsultationBudget';
 import type {WorkspaceContextDrawerView} from './useWorkspaceDrawers';
 import {

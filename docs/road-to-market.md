@@ -304,7 +304,7 @@ and required revisit point, `WIP`, `Done <commit>`.
 | 3.18a | Change-aware CI + verification policy | 3 | S | Done `2ab0cb6` — full remote coverage 149/149 without retries in three groups |
 | 3.19 | Undefined theme token + hardcoded editor colors | 3 | XS | WIP — implemented in `dbbd86e`; fast checks and light/dark visual review pass. Latest combined 3.19/3.20 tree passes full local Chrome Cypress 149/149 without retries; earlier Electron stall and World Canvas crash/startup failure remain recorded in `ea24c18`. Author requested local batching before pushing; remote CI and close-out remain pending |
 | 3.20 | Compendium form extraction | 3 | M | WIP — implemented locally: route 1,540→951 lines; eight form hooks (largest 156), tested parsing/validation helpers, unchanged tab markup and draft/save/reset behavior. Lint baseline; 980 web + 47 engine + 12 UI + 24 desktop tests; both builds; 16 CI-policy tests; size gate (14 baseline files); full local Chrome Cypress 149/149 without retries. Author requested local batching before pushing; remote CI and close-out remain pending |
-| 3.21 | Scene-roster mutation services | 3 | M | — |
+| 3.21 | Scene-roster mutation services | 3 | M | WIP — implemented locally: hook 1,417→786 lines, pure item/timeline planners, service-owned types, 19 new tests. Fast battery, 16 CI-policy tests, size gate (13 baseline files), and all 29 Cypress specs / 149 tests pass across split Chrome runs without retries; two earlier browser attempts stalled. Author-requested local batching retained; push, remote CI, and close-out pending |
 | 3.22 | Characterization tests for untested domain modules | 3 | M | — |
 | 3.23a | One storage layer + import guard | 3 | M | — |
 | 3.23b | Project-scoped IndexedDB indexes | 3 | M | — |

@@ -790,6 +790,17 @@ Under the hood, the app still includes rich systems for world data, rules, chara
   - `useWorkspaceSystemHistory`
   - `useWorkspaceUi`
   - `useWorkspaceReviewRefresh`
+- Scene-roster item capture and timeline actions now use pure planners under
+  `services/workspace/`, with IDs and timestamps supplied by the hook. The
+  hook retains author confirmation, validation, persistence, and React wiring;
+  its return shape and workflows are unchanged. Roster cards and Lore Inspector
+  records are service-owned types, removing service imports from components.
+  Continuity-corpus tests pin write plans, actor bindings, replay ordering,
+  stale-source rejection, reusable item links, and anchor/timeline behavior.
+  The hook is 786 lines (previously 1,417), with each new service below 600.
+  Existing limitation preserved by characterization: timeline edit/expiration
+  still look up sheet/legacy actor IDs, so canonical-only actor IDs may report
+  that the character must be added to the roster despite already being present.
 - World Bible orchestration is decomposed into focused hooks:
   - `useWorldBibleProjectData`
   - `useWorldBibleSelectedEntity`
