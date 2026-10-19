@@ -302,7 +302,7 @@ and required revisit point, `WIP`, `Done <commit>`.
 | 3.17a | Project deletion integrity + retrieval upgrade repair | 3 | S | Done `ef332ac` |
 | 3.18 | Lower the size freeze to 1,000 lines | 3 | XS | Done `e1a7964` |
 | 3.18a | Change-aware CI + verification policy | 3 | S | Done `2ab0cb6` — full remote coverage 149/149 without retries in three groups |
-| 3.19 | Undefined theme token + hardcoded editor colors | 3 | XS | WIP — implemented; lint baseline, 962 web + 47 engine + 12 UI + 24 desktop tests, both builds, 16 CI-policy tests, size gate, and light/dark visual checks pass; full local Cypress stalled in lore-review-matching after 12 completed specs; remaining coverage and remote CI pending |
+| 3.19 | Undefined theme token + hardcoded editor colors | 3 | XS | WIP — implemented in `dbbd86e`; lint baseline, 962 web + 47 engine + 12 UI + 24 desktop tests, both builds, 16 CI-policy tests, size gate, and light/dark visual checks pass. Local browser coverage: 146/149 distinct tests pass without retries across Electron/Chrome runs; Electron stalled in lore-review-matching (15/15 later passed in Chrome); World Canvas renderer crashed, then isolated run failed its coaching beforeEach on a blank Projects page (12 pass, 1 fail, 2 skipped). Push rejected by automatic approval review pending explicit author authorization; remote CI and close-out remain pending |
 | 3.20 | Compendium form extraction | 3 | M | — |
 | 3.21 | Scene-roster mutation services | 3 | M | — |
 | 3.22 | Characterization tests for untested domain modules | 3 | M | — |
