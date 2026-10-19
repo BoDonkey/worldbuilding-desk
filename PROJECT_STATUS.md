@@ -977,6 +977,15 @@ runtime schema, and nothing here changes the roadmap's status board.
 ## Verification Status
 
 ### Verified Recently
+- Slices 3.19–3.21 (theme tokens, Compendium form extraction, scene-roster
+  mutation services) passed full remote Web CI, including `cypress-smoke`,
+  in [run 39273413648](https://github.com/BoDonkey/worldbuilding-desk/actions/runs/39273413648)
+  for [PR #59](https://github.com/BoDonkey/worldbuilding-desk/pull/59).
+  Coverage: 16 CI-policy tests, file-size gate (13 baseline files), lint with
+  the existing ConsumableEffectEditor warning, 999 web + 47 engine + 12 UI +
+  24 desktop unit tests, both builds, and 149 Cypress tests in three disjoint
+  groups with retries disabled. Earlier local browser stalls remain recorded
+  in the implementation commits; this remote full run completed successfully.
 - Slice 4.59 remembered Source Note view: `sourceNoteView` in
   `AccessibilityContext` (localStorage, like the other editor preferences),
   Settings control, and a per-note override in `SourceNoteContentField`
