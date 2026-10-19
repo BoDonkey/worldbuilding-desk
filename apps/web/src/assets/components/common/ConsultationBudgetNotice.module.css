@@ -8,11 +8,11 @@
 }
 
 .cost {
-  color: var(--color-text-muted);
+  color: var(--color-text-secondary);
 }
 
 .local {
-  color: var(--color-text-muted);
+  color: var(--color-text-secondary);
 }
 
 .exhausted {

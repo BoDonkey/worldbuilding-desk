@@ -1,6 +1,6 @@
 # SagaSpine Project Status
 
-**Last Updated:** October 18, 2026
+**Last Updated:** October 19, 2026
 
 ## Project Overview
 
@@ -717,6 +717,11 @@ Under the hood, the app still includes rich systems for world data, rules, chara
 ## Current Architecture Status
 
 ### Stabilized
+- Editor toolbar, canvas, and stat-block chips now use existing theme tokens
+  for their surfaces, shadows, and normal/warning/error colors in both themes.
+  AI Settings and consultation notices use the defined secondary-text token
+  for helper text. A unit check scans every application stylesheet and fails
+  on undefined CSS variable references, including those with fallbacks.
 - Service layer reorganized into domain folders with barrel exports.
 - `App.tsx` split into routing/layout composition and shared shell concerns.
 - `rules-ui` consumes React and React DOM as React 18/19 peer dependencies;
