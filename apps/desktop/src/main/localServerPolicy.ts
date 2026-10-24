@@ -47,6 +47,34 @@ export async function resolveLocalServerRequestModel(
   }
 }
 
+/** Servers that refused a constrained request this session, as in the renderer. */
+const serversWithoutSchemaSupport = new Set<string>();
+
+export function resetLocalServerSchemaSupport(): void {
+  serversWithoutSchemaSupport.clear();
+}
+
+export function localServerAcceptsSchema(apiBase: string): boolean {
+  return !serversWithoutSchemaSupport.has(apiBase);
+}
+
+export function noteSchemaRefusal(apiBase: string, error: unknown): boolean {
+  const status = (error as {status?: unknown})?.status;
+  if (status !== 400 && status !== 422) return false;
+  serversWithoutSchemaSupport.add(apiBase);
+  return true;
+}
+
+export class LocalServerStatusError extends Error {
+  readonly status: number;
+
+  constructor(status: number, message: string) {
+    super(message);
+    this.name = 'LocalServerStatusError';
+    this.status = status;
+  }
+}
+
 export function assertLocalServerResponseComplete(finishReason: unknown): void {
   if (typeof finishReason === 'string' && finishReason.toLowerCase() === 'length') {
     throw new Error(LOCAL_SERVER_RESPONSE_LIMIT_MESSAGE);
@@ -80,7 +108,8 @@ export async function fetchLocalServer(apiBase: string, path: string, init: Requ
       // No readable body.
     }
     detail = detail.trim().slice(0, 200);
-    throw new Error(
+    throw new LocalServerStatusError(
+      response.status,
       `The local model server responded with ${response.status}${response.statusText ? ` ${response.statusText}` : ''}${detail ? `: ${detail}` : '.'}`
     );
   }

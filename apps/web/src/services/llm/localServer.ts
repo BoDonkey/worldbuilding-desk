@@ -73,14 +73,56 @@ export async function resolveLocalServerModel(
   return (await listLocalServerModels(apiBase, options))?.[0];
 }
 
-export function buildLocalServerChatPayload(request: LLMRequest, model: string | undefined, stream: boolean) {
+/**
+ * Servers that refused a constrained request this session. They get the
+ * request again without a schema, and later requests skip the schema.
+ */
+const serversWithoutSchemaSupport = new Set<string>();
+
+/** For tests. */
+export function resetLocalServerSchemaSupport(): void {
+  serversWithoutSchemaSupport.clear();
+}
+
+export function localServerAcceptsSchema(apiBase: string): boolean {
+  return !serversWithoutSchemaSupport.has(apiBase);
+}
+
+/**
+ * True when a constrained request failed in a way that means the server does
+ * not take `response_format: json_schema` (a 400 or 422). The server is then
+ * remembered for the session and the request should be sent again without it.
+ */
+export function noteSchemaRefusal(apiBase: string, error: unknown): boolean {
+  const status = (error as {status?: unknown})?.status;
+  if (status !== 400 && status !== 422) return false;
+  serversWithoutSchemaSupport.add(apiBase);
+  return true;
+}
+
+/**
+ * `response_format: json_schema` is the one structured-output form KoboldCPP,
+ * LM Studio, and the llama.cpp server share (Slice 4.68; KoboldCPP 1.123
+ * enforces it, while its `json_object` mode returns JSON of any shape). It is
+ * sent only with a request's schema and only to a server that has not refused
+ * it. Plain `responseFormat: 'json'` adds nothing: the prompt asks for JSON
+ * and the reply is parsed and validated by the feature either way. No token
+ * cap unless the caller sets one, the same as Ollama.
+ */
+export function buildLocalServerChatPayload(
+  request: LLMRequest,
+  model: string | undefined,
+  stream: boolean,
+  options: {constrain?: boolean} = {}
+) {
   const {systemPrompt} = foldContextIntoSystemPrompt(request);
-  // No `response_format`: the servers disagree on which forms they accept (4.68 settles that), and
-  // every structured reply is parsed and validated by the app anyway. No token cap unless the
-  // caller sets one, the same as Ollama.
+  const schema = options.constrain === false ? undefined : request.responseSchema;
   return {
     ...(model ? {model} : {}),
     stream,
+    ...(schema
+      ? {response_format: {type: 'json_schema', json_schema: {name: schema.name, strict: true, schema: schema.schema}}}
+      : {}),
     ...(typeof request.maxTokens === 'number' ? {max_tokens: request.maxTokens} : {}),
     ...(typeof request.temperature === 'number' ? {temperature: request.temperature} : {}),
     messages: [
@@ -109,11 +151,22 @@ export async function fetchLocalServer(apiBase: string, path: string, init: Requ
   }
   if (!response.ok) {
     const detail = await readServerError(response);
-    throw new Error(
+    throw new LocalServerStatusError(
+      response.status,
       `The local model server responded with ${response.status}${response.statusText ? ` ${response.statusText}` : ''}${detail ? `: ${detail}` : '.'}`
     );
   }
   return response;
+}
+
+export class LocalServerStatusError extends Error {
+  readonly status: number;
+
+  constructor(status: number, message: string) {
+    super(message);
+    this.name = 'LocalServerStatusError';
+    this.status = status;
+  }
 }
 
 async function readServerError(response: Response): Promise<string> {

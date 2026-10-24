@@ -140,6 +140,11 @@ the desktop app and the browser build.
    A thinking model's reasoning shows while it runs and is not kept.
 3. Stop the server and send again: the error names the local model server.
    Enter a non-loopback address: Settings and the lab say it is blocked.
+4. Structured replies (slice 4.68): run Canvas brainstorm, Canvas coaching,
+   and Create from description once each. Each request carries
+   `response_format: json_schema` (visible in the server log), and the result
+   appears as a proposal, not an "unreadable reply" error. A server that
+   refuses the schema still answers on a second, unconstrained request.
 
 ## 2. Review Completion (Import → Workspace Review → World Bible Queue)
 

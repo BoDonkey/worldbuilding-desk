@@ -2,6 +2,7 @@ import {afterEach, describe, expect, it, vi} from 'vitest';
 import {
   LOCAL_SERVER_RESPONSE_LIMIT_MESSAGE,
   localServerApiBase,
+  resetLocalServerSchemaSupport,
   resolveLocalServerRequestModel
 } from './localServerPolicy';
 import {
@@ -17,6 +18,7 @@ const request = {messages: [{role: 'user' as const, content: 'Hi'}], systemPromp
 
 afterEach(() => {
   vi.unstubAllGlobals();
+  resetLocalServerSchemaSupport();
 });
 
 describe('local model server policy (main process)', () => {
@@ -82,5 +84,28 @@ describe('local model server policy (main process)', () => {
     await expect(createCompletionAdapter('local-openai', {request}).complete()).rejects.toThrow(
       'Could not connect to the local model server at http://localhost:5001/v1. Check that it is running.'
     );
+  });
+});
+
+describe('constrained output in the main process (4.68)', () => {
+  const responseSchema = {name: 'item', schema: {type: 'object', required: ['name']}};
+
+  it('sends the schema, and retries once without it when the server refuses it', async () => {
+    const bodies: Array<Record<string, unknown>> = [];
+    vi.stubGlobal('fetch', vi.fn(async (_url: string, init?: RequestInit) => {
+      const body = JSON.parse(String(init?.body));
+      bodies.push(body);
+      return body.response_format
+        ? json({error: 'response_format is not supported'}, 422)
+        : json({choices: [{message: {content: '{"name":"Echo"}'}}]});
+    }));
+    const config = {request: {...request, responseSchema}};
+    expect(await createCompletionAdapter('local-openai', config).complete()).toBe('{"name":"Echo"}');
+    expect(bodies[0].response_format).toEqual({type: 'json_schema', json_schema: {name: 'item', strict: true, schema: responseSchema.schema}});
+    expect(bodies[1]).not.toHaveProperty('response_format');
+
+    await createCompletionAdapter('local-openai', config).complete();
+    expect(bodies).toHaveLength(3);
+    expect(bodies[2]).not.toHaveProperty('response_format');
   });
 });

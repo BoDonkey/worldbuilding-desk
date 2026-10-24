@@ -100,6 +100,24 @@ export function validatePayload(payload: unknown): asserts payload is LLMPayload
     throw new Error('think must be a boolean or low, medium, or high if provided');
   }
 
+  if (request.responseSchema !== undefined) {
+    const schema = request.responseSchema as Record<string, unknown> | null;
+    if (
+      !schema ||
+      typeof schema !== 'object' ||
+      typeof schema.name !== 'string' ||
+      !/^[A-Za-z0-9_-]{1,64}$/.test(schema.name) ||
+      !schema.schema ||
+      typeof schema.schema !== 'object' ||
+      Array.isArray(schema.schema)
+    ) {
+      throw new Error('responseSchema must be {name, schema} with a short name and an object schema');
+    }
+    if (JSON.stringify(schema.schema).length > 20000) {
+      throw new Error('responseSchema is too large');
+    }
+  }
+
   if (request.context !== undefined && !Array.isArray(request.context)) {
     throw new Error('context must be an array if provided');
   }

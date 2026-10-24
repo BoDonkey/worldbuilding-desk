@@ -7,7 +7,8 @@ import {getConsultationBudgetStatus} from '../../services/editor';
 import {
   BRAINSTORM_EMPTY_RESPONSE_MESSAGE,
   BRAINSTORM_INVALID_RESPONSE_MESSAGE,
-  BRAINSTORM_MIN_RESPONSE_TOKENS
+  BRAINSTORM_MIN_RESPONSE_TOKENS,
+  BRAINSTORM_RESPONSE_SCHEMA
 } from '../../services/worldBible/worldCanvasBrainstorm';
 import {resetWorldCanvasBrainstormSession} from '../../services/worldBible/worldCanvasBrainstormSession';
 import {createEmptyWorldCanvas, getActiveSketch, openLens, updateSketchText} from '../../services/worldBible/worldCanvasService';
@@ -126,6 +127,7 @@ describe('WorldCanvasBrainstorm', () => {
     expect(mocks.stream).toHaveBeenCalledTimes(1);
     expect(mocks.stream.mock.calls[0][0]).toMatchObject({
       responseFormat: 'json',
+      responseSchema: BRAINSTORM_RESPONSE_SCHEMA,
       cache: false,
       maxTokens: BRAINSTORM_MIN_RESPONSE_TOKENS
     });

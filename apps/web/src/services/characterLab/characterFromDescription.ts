@@ -1,4 +1,5 @@
 import {z} from 'zod';
+import {defineResponseSchema} from '../llm/responseSchema';
 import type {
   CanonicalFactType,
   Character,
@@ -75,6 +76,8 @@ const replySchema = z.object({
   // Extra suggestions are dropped, not a reason to reject the whole reply.
   suggestedDetails: z.array(z.string().max(800)).transform((details) => details.slice(0, MAX_SUGGESTED_DETAILS))
 });
+
+export const CHARACTER_PROFILE_RESPONSE_SCHEMA = defineResponseSchema('character_profile', replySchema);
 
 export class CharacterProfileReplyError extends Error {
   constructor() {

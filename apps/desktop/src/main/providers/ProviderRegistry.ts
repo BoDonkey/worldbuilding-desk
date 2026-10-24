@@ -2,7 +2,9 @@ import type {ProviderId} from '../endpointPolicy';
 import {
   assertLocalServerResponseComplete,
   fetchLocalServer,
-  localServerApiBase
+  localServerAcceptsSchema,
+  localServerApiBase,
+  noteSchemaRefusal
 } from '../localServerPolicy';
 
 export type {ProviderId};
@@ -26,6 +28,8 @@ export interface LLMRequestPayload {
   temperature?: number;
   model?: string;
   responseFormat?: 'json';
+  /** A named JSON Schema; only the local model server uses it (Slice 4.68). */
+  responseSchema?: {name: string; schema: Record<string, unknown>};
   think?: boolean | 'low' | 'medium' | 'high';
 }
 
@@ -419,25 +423,39 @@ export class OllamaCompletionAdapter implements CompletionAdapter {
   }
 }
 
-/** Mirrors the renderer's `buildLocalServerChatPayload`: no `response_format`, no default token cap. */
-export function buildLocalServerChatPayload(config: ProviderConfig, stream: boolean) {
+/** Mirrors the renderer's `buildLocalServerChatPayload`: a schema only when asked, no default token cap. */
+export function buildLocalServerChatPayload(config: ProviderConfig, stream: boolean, options: {constrain?: boolean} = {}) {
   const {model, maxTokens, temperature} = config.request;
+  const schema = options.constrain === false ? undefined : config.request.responseSchema;
   return {
     ...(model ? {model} : {}),
     stream,
+    ...(schema
+      ? {response_format: {type: 'json_schema', json_schema: {name: schema.name, strict: true, schema: schema.schema}}}
+      : {}),
     ...(typeof maxTokens === 'number' ? {max_tokens: maxTokens} : {}),
     ...(typeof temperature === 'number' ? {temperature} : {}),
     messages: buildMessagesWithSystem(config.request)
   };
 }
 
-function postLocalServer(config: ProviderConfig, stream: boolean): Promise<Response> {
-  return fetchLocalServer(localServerApiBase(config.baseUrl ?? 'http://localhost:5001/v1'), '/chat/completions', {
-    method: 'POST',
-    signal: config.signal,
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify(buildLocalServerChatPayload(config, stream))
-  });
+async function postLocalServer(config: ProviderConfig, stream: boolean): Promise<Response> {
+  const apiBase = localServerApiBase(config.baseUrl ?? 'http://localhost:5001/v1');
+  const post = (constrain: boolean) =>
+    fetchLocalServer(apiBase, '/chat/completions', {
+      method: 'POST',
+      signal: config.signal,
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(buildLocalServerChatPayload(config, stream, {constrain}))
+    });
+  const constrain = Boolean(config.request.responseSchema) && localServerAcceptsSchema(apiBase);
+  try {
+    return await post(constrain);
+  } catch (error) {
+    // A server that does not take a schema still gets the request; the renderer validates the reply.
+    if (constrain && noteSchemaRefusal(apiBase, error)) return post(false);
+    throw error;
+  }
 }
 
 /** A local OpenAI-compatible server. Never sends a key; the address is loopback-only. */

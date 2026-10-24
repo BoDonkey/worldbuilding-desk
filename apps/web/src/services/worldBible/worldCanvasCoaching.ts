@@ -1,4 +1,5 @@
 import {z} from 'zod';
+import {defineResponseSchema} from '../llm/responseSchema';
 import type {
   AIProviderId,
   WorldCanvasDocument,
@@ -84,6 +85,8 @@ const responseSchema = z.object({
     text: z.string().trim().min(1).max(2000)
   })
 });
+
+export const CANVAS_COACHING_RESPONSE_SCHEMA = defineResponseSchema('canvas_coaching', responseSchema);
 
 export type WorldCanvasCoachingResponse = z.infer<typeof responseSchema>;
 export type WorldCanvasCoachingProposal = WorldCanvasCoachingResponse['proposal'];

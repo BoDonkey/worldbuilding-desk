@@ -67,6 +67,11 @@ Any model-proposed mutation must pass through:
 Providers may have different structured-output, tool-calling, streaming,
 context, and sampling capabilities. Product workflows should depend on a
 provider-neutral proposal/action contract rather than native provider behavior.
+Native structured output is used only to make a valid reply more likely: a
+feature may pass its Zod schema as `LLMRequest.responseSchema`
+(`defineResponseSchema`), which the local model server receives as
+`response_format: json_schema`. A server that refuses it gets the request
+again without it. The feature's own parser and validator still decide.
 
 Unsupported or malformed model output must degrade to editable text, an
 unresolved proposal, or a retry. It must not be repaired and silently committed.
