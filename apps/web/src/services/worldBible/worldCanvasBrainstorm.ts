@@ -1,4 +1,5 @@
 import {z} from 'zod';
+import {defineResponseSchema} from '../llm/responseSchema';
 import type {
   AIProviderId,
   WorldCanvasDocument,
@@ -56,6 +57,8 @@ const brainstormResponseSchema = z.object({
     .min(1)
     .max(BRAINSTORM_MAX_ITEMS)
 });
+
+export const BRAINSTORM_RESPONSE_SCHEMA = defineResponseSchema('canvas_brainstorm', brainstormResponseSchema);
 
 export type WorldCanvasBrainstormResponse = z.infer<typeof brainstormResponseSchema>;
 export type WorldCanvasBrainstormItem = WorldCanvasBrainstormResponse['items'][number];

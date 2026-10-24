@@ -4,7 +4,8 @@ import {
   LOCAL_SERVER_RESPONSE_LIMIT_MESSAGE,
   buildLocalServerChatPayload,
   localServerApiBase,
-  parseLocalServerModels
+  parseLocalServerModels,
+  resetLocalServerSchemaSupport
 } from '../localServer';
 
 const sse = (events: unknown[]): ReadableStream<Uint8Array> => {
@@ -85,6 +86,7 @@ describe('LocalOpenAIProvider', () => {
   afterEach(() => {
     vi.unstubAllGlobals();
     vi.restoreAllMocks();
+    resetLocalServerSchemaSupport();
   });
 
   it('refuses a non-loopback address before sending anything', async () => {
@@ -163,5 +165,48 @@ describe('LocalOpenAIProvider', () => {
     await expect(new LocalOpenAIProvider({}).generateCompletion({messages: [{role: 'user', content: 'Hi'}]})).rejects.toThrow(
       'The local model server responded with 400: No models loaded.'
     );
+  });
+});
+
+describe('constrained output (4.68)', () => {
+  const responseSchema = {name: 'item', schema: {type: 'object', properties: {name: {type: 'string'}}, required: ['name']}};
+  const ask = {messages: [{role: 'user' as const, content: 'Name it.'}], responseFormat: 'json' as const, responseSchema};
+  const bodyOf = (call: [string, RequestInit]) => JSON.parse(String(call[1].body));
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    resetLocalServerSchemaSupport();
+  });
+
+  it('sends the schema as response_format json_schema, and nothing for plain JSON requests', async () => {
+    const fetchMock = stubServer(['m'], () => json({choices: [{message: {content: '{"name":"Echo"}'}, finish_reason: 'stop'}]}));
+    await new LocalOpenAIProvider({}).generateCompletion(ask);
+    await new LocalOpenAIProvider({}).generateCompletion({...ask, responseSchema: undefined});
+
+    const [constrained, plain] = chatCalls(fetchMock).map(bodyOf);
+    expect(constrained.response_format).toEqual({type: 'json_schema', json_schema: {name: 'item', strict: true, schema: responseSchema.schema}});
+    expect(plain).not.toHaveProperty('response_format');
+  });
+
+  it('retries once without the schema when a server refuses it, and skips it afterwards', async () => {
+    const fetchMock = stubServer(['m'], () => json({choices: [{message: {content: '{"name":"Echo"}'}}]}));
+    fetchMock.mockImplementation(async (url: string, init?: RequestInit) => {
+      if (url.endsWith('/models')) return json({data: [{id: 'm'}]});
+      return JSON.parse(String(init?.body)).response_format
+        ? json({error: {message: 'Unsupported response_format'}}, 400)
+        : json({choices: [{message: {content: '{"name":"Echo"}'}}]});
+    });
+
+    expect((await new LocalOpenAIProvider({}).generateCompletion(ask)).content).toBe('{"name":"Echo"}');
+    expect(chatCalls(fetchMock).map((call) => 'response_format' in bodyOf(call))).toEqual([true, false]);
+
+    await new LocalOpenAIProvider({}).generateCompletion(ask);
+    expect(chatCalls(fetchMock).map((call) => 'response_format' in bodyOf(call))).toEqual([true, false, false]);
+  });
+
+  it('does not retry other failures', async () => {
+    const fetchMock = stubServer(['m'], () => json({error: 'model crashed'}, 500));
+    await expect(new LocalOpenAIProvider({}).generateCompletion(ask)).rejects.toThrow('responded with 500: model crashed');
+    expect(chatCalls(fetchMock)).toHaveLength(1);
   });
 });

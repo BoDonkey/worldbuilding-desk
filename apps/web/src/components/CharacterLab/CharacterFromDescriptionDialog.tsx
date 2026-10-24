@@ -5,6 +5,7 @@ import {useModelRun} from '../../hooks/useModelRun';
 import {useConsultationBudget} from '../../hooks/useConsultationBudget';
 import {useCharacterLabData} from '../../hooks/useCharacterLabData';
 import {
+  CHARACTER_PROFILE_RESPONSE_SCHEMA,
   buildCharacterFromDescriptionRecords,
   buildCharacterVoicePrompt,
   parseCharacterProfileReply,
@@ -114,6 +115,7 @@ export function CharacterFromDescriptionDialog({
         systemPrompt: prompt.systemPrompt,
         messages: prompt.messages,
         responseFormat: 'json',
+        responseSchema: CHARACTER_PROFILE_RESPONSE_SCHEMA,
         // Extraction gains little from long reasoning, and the quote check guards quality.
         // Only Ollama reads this; hosted providers keep their own thinking policy.
         think: false,

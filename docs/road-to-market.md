@@ -387,13 +387,14 @@ and required revisit point, `WIP`, `Done <commit>`.
 | 4.65 | Assistant reply reading view | 4 | S | Done `0d206a7` — every assistant reply with content gets Expand: a wide modal reading view (bottom slide-up on narrow screens) with sanitized Markdown formatting, craft references, Copy/Close; display only; portaled above the narrow drawer, focus trapped/restored, Escape closes only the reading view; lint baseline; 944 web + 47 engine + 12 UI + 24 desktop tests; web/desktop builds; file-size gate; Cypress 146/146; `cypress-smoke` green (Web CI run 38133487790) |
 | 4.66 | Visible assistant selection handoff | 4 | S | Done `54ccf24` — selection menu and right-click read **Ask AI about this**; the handed-over passage stays marked in the editor (display-only decoration that follows edits, never saved or in undo history) until the Selected text card's **Clear** returns the assistant to whole-scene scope; lint baseline; 949 web + 47 engine + 12 UI + 24 desktop tests; web/desktop builds; file-size gate; Cypress 147/147; `cypress-smoke` green (Web CI run 39058732227) |
 | 4.67 | Local OpenAI-compatible provider | 4 | M | Done `564e52b` — **Local server (OpenAI-compatible)** provider (`local-openai`) for KoboldCPP (default `http://localhost:5001/v1`), LM Studio, and llama.cpp; no key, own code, never the hosted OpenAI provider or its disclosure; private-local at a loopback address (on-device disclosure, no consultation charge, no price ceiling), remote addresses blocked in the route, the provider, and the desktop main process; Settings address field, one-request connection test, listed-model buttons; configured model, else first listed, else the server's loaded model; no `response_format` (4.68), no default token cap, reasoning shown as thinking, length-capped replies refused; desktop main-process adapters; checked live against Ollama's `/v1`, KoboldCPP/LM Studio/llama.cpp not run (smoke §1b); 5 planted regressions caught; lint baseline; 1,166 web + 47 engine + 12 UI + 30 desktop tests; web/desktop builds; Cypress 153/154 locally, the one failure a stale expected sentence fixed in the amend; `cypress-smoke` green (run 40125505701, PR #69) |
-| 4.68 | Constrained local output for proposals | 4 | S | — |
+| 4.68 | Constrained local output for proposals | 4 | S | Done `1ec212f` — Canvas brainstorm, Canvas coaching, and character from description pass their Zod schema (`defineResponseSchema`, `LLMRequest.responseSchema`); the local model server gets `response_format: json_schema`, hosted providers and Ollama unchanged; checked first on a running KoboldCPP 1.123.1 (`json_schema` and GBNF `grammar` enforced, `json_object` any shape), LM Studio/llama.cpp not available; real prompts and parsers, 6 runs each: character 4/6 → 6/6, brainstorm and coaching 6/6 → 6/6, replies 2–3× faster; a server that refuses the schema (400/422) is retried without it and skipped for the session; desktop IPC validates the schema and mirrors the retry; finding: with no `max_tokens` KoboldCPP stops at 2,048 tokens, reasoning included; 5 planted regressions caught; lint baseline; 1,172 web + 47 engine + 12 UI + 32 desktop tests; web/desktop builds; Cypress 154/154; `cypress-smoke` green (run 40132386938 attempt 2 after an unrelated Compendium unit-test flake, PR #70) |
 | 4.69 | Character card import | 4 | M | — |
 | 4.70 | Character card export | 4 | S | — |
 | 4.71 | Context budget + linked-record pull-in | 4 | M | — |
 | 4.72 | Prompt breakdown with token counts | 4 | S | — |
 | 4.73 | Alternative replies | 4 | M | — |
 | 4.74 | Rolling Character Lab summaries | 4 | M | — |
+| 4.75 | Local reply length from server context | 4 | S | — |
 | 5.1 | Auto-update decision + implementation | 5 | M | — |
 | 5.2 | Code signing + notarization, both platforms | 5 | M | — |
 | 5.3 | Packaged-app validation + Electron E2E | 5 | M | — |
@@ -2189,6 +2190,16 @@ KoboldCPP.
   sessions, summarize older turns so the conversation fits the model's
   context. The summary is shown and editable, is labeled as a summary, and
   is never treated as canon or saved to the World Bible.
+- **4.75 Local reply length from server context.** Found during 4.68: with
+  no `max_tokens`, KoboldCPP stops a reply at 2,048 tokens, reasoning
+  included, so long thinking-model replies (chat, scene work) are cut off
+  and refused. For the local model server, read the loaded model's context
+  size where the server reports it (first confirm the endpoint against
+  running KoboldCPP, LM Studio, and llama.cpp servers) and send a
+  `max_tokens` that fits what remains after the prompt. Where no size is
+  reported, use an Advanced setting for local maximum reply length. A reply
+  that still hits the limit stays refused with the existing message. Hosted
+  providers and Ollama are unchanged.
 
 ## Phase 5 — Release Engineering
 

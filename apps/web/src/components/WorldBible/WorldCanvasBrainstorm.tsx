@@ -16,6 +16,7 @@ import {LLMService} from '../../services/llm/LLMService';
 import {
   BRAINSTORM_INVALID_RESPONSE_MESSAGE,
   BRAINSTORM_ITEM_KIND_LABELS,
+  BRAINSTORM_RESPONSE_SCHEMA,
   BRAINSTORM_STOPPED_MESSAGE,
   WorldCanvasBrainstormResponseError,
   brainstormFocusKey,
@@ -155,6 +156,7 @@ export function WorldCanvasBrainstorm({
         model: inspector?.lowCostModel?.trim() || undefined,
         maxTokens: brainstormResponseTokens(config.provider, inspector?.maxResponseTokens),
         responseFormat: 'json',
+        responseSchema: BRAINSTORM_RESPONSE_SCHEMA,
         // Every click is a deliberate, paid-for request: a retry must reach the model rather than
         // replay an earlier (possibly unreadable) reply.
         cache: false

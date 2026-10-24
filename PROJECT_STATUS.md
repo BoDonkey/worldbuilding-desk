@@ -1091,6 +1091,24 @@ runtime schema, and nothing here changes the roadmap's status board.
   reloads, scene re-reviews, and project review runs while their quote is
   still in the scene (`survivesSceneRereview`, `pruneModelCheckItems`), and
   their dismissal is saved. The 4.38 session store slice is gone.
+- Slice 4.68 constrained local output for proposals: the three features
+  that expect a structured reply (Canvas brainstorm, Canvas coaching, and
+  character from description) now hand the local model server a JSON Schema
+  built from their own Zod schema, sent as `response_format: json_schema`.
+  Checked first against a running KoboldCPP 1.123.1: it accepts and enforces
+  `json_schema` and a GBNF `grammar`, while `json_object` returns JSON of any
+  shape (an array, in the probe). LM Studio and the llama.cpp server were not
+  available to run; `json_schema` is the form all three document. Measured
+  on KoboldCPP with the features' real prompts and parsers (6 runs each):
+  brainstorm 6/6 → 6/6, coaching 6/6 → 6/6, character 4/6 → 6/6, and replies
+  2–3× faster, because the model goes straight to the JSON instead of
+  reasoning first. A server that refuses the schema (400 or 422) gets the
+  request again without it and is not sent one again that session. Replies
+  are still parsed and validated by each feature, and nothing becomes canon
+  without the author. Hosted providers and Ollama are unchanged. Finding:
+  with no `max_tokens`, KoboldCPP stops every reply at 2,048 tokens, and a
+  thinking model's reasoning counts toward that; both unconstrained
+  character failures were replies cut off there.
 - Slice 4.67 local OpenAI-compatible provider: Settings now offers **Local
   server (OpenAI-compatible)** for KoboldCPP (default
   `http://localhost:5001/v1`), LM Studio, and the llama.cpp server. It needs no

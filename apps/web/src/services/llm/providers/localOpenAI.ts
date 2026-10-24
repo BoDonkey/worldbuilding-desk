@@ -4,7 +4,9 @@ import {
   assertLocalServerResponseComplete,
   buildLocalServerChatPayload,
   fetchLocalServer,
+  localServerAcceptsSchema,
   localServerApiBase,
+  noteSchemaRefusal,
   resolveLocalServerModel
 } from '../localServer';
 
@@ -86,11 +88,20 @@ export class LocalOpenAIProvider implements LLMProvider {
     const apiBase = localServerApiBase(request.baseUrl ?? this.baseUrl);
     assertLocalServerAddress(apiBase);
     const model = await resolveLocalServerModel(apiBase, request.model ?? this.model, {signal: request.signal});
-    return fetchLocalServer(apiBase, '/chat/completions', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify(buildLocalServerChatPayload(request, model, stream)),
-      signal: request.signal
-    });
+    const post = (constrain: boolean) =>
+      fetchLocalServer(apiBase, '/chat/completions', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(buildLocalServerChatPayload(request, model, stream, {constrain})),
+        signal: request.signal
+      });
+    const constrain = Boolean(request.responseSchema) && localServerAcceptsSchema(apiBase);
+    try {
+      return await post(constrain);
+    } catch (error) {
+      // A server that does not take a schema still gets the request; the reply is validated as before.
+      if (constrain && noteSchemaRefusal(apiBase, error)) return post(false);
+      throw error;
+    }
   }
 }

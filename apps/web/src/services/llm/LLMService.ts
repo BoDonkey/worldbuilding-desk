@@ -236,6 +236,7 @@ export class LLMService {
       maxTokens: request.maxTokens,
       temperature: request.temperature,
       responseFormat: request.responseFormat,
+      responseSchema: request.responseSchema,
       think: request.think,
       systemPrompt: request.systemPrompt,
       baseUrl: request.baseUrl,

@@ -21,6 +21,7 @@ import {
   buildSelectedCanvasReferenceLines,
   buildWorldCanvasCoachingPrompt,
   buildWorldCanvasCraftSearchQuery,
+  CANVAS_COACHING_RESPONSE_SCHEMA,
   canvasCoachingResponseTokens,
   parseWorldCanvasCoachingResponse,
   selectApplicableCanvasCraftResults,
@@ -150,6 +151,7 @@ export function WorldCanvasCoaching({
         model: inspector?.lowCostModel?.trim() || undefined,
         maxTokens: canvasCoachingResponseTokens(aiConfig.provider, inspector?.maxResponseTokens),
         responseFormat: 'json',
+        responseSchema: CANVAS_COACHING_RESPONSE_SCHEMA,
         cache: false
       });
       if (run.stopped) {

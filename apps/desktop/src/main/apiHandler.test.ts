@@ -15,6 +15,19 @@ describe('validatePayload', () => {
     ).not.toThrow();
   });
 
+  it('accepts a short named object schema and refuses anything else', () => {
+    const withSchema = (responseSchema: unknown) => ({
+      ...base(),
+      providerId: 'local-openai',
+      request: {...base().request, responseSchema}
+    });
+    expect(() => validatePayload(withSchema({name: 'canvas_brainstorm', schema: {type: 'object'}}))).not.toThrow();
+    for (const bad of [null, 'schema', {name: 'x'}, {name: 'bad name!', schema: {}}, {name: 'x', schema: []}]) {
+      expect(() => validatePayload(withSchema(bad))).toThrow(/responseSchema must be/);
+    }
+    expect(() => validatePayload(withSchema({name: 'x', schema: {description: 'a'.repeat(20001)}}))).toThrow(/too large/);
+  });
+
   it('refuses a key sent from the renderer, even an empty one', () => {
     expect(() => validatePayload({...base(), apiKey: 'sk-ant-secret'})).toThrow(/must not be sent/);
     expect(() => validatePayload({...base(), apiKey: undefined})).toThrow(/must not be sent/);
