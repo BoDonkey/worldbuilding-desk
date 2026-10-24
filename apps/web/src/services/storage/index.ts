@@ -38,7 +38,8 @@ export {
   PROJECT_MIGRATION_BACKUP_STORE_NAME,
   ACTOR_RESOLUTION_STORE_NAME,
   CHARACTER_IDENTITY_REPORT_STORE_NAME,
-  PROJECT_REVIEW_RUN_STORE_NAME
+  PROJECT_REVIEW_RUN_STORE_NAME,
+  MECHANICS_DRAFT_STORE_NAME
 } from './db';
 export * from './jsonTransfer';
 export * from './projectWriteTransaction';
@@ -55,6 +56,7 @@ export * from './repositories/characterIdentityResolutionStorage';
 export * from './repositories/characterIdentityStorage';
 export * from './repositories/characterImportStorage';
 export * from './repositories/characterSheetStorage';
+export * from './repositories/mechanicsDraftStorage';
 export * from './repositories/characterStorage';
 export * from './repositories/compendiumStorage';
 export * from './repositories/compendiumWorldStorage';

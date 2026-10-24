@@ -1,5 +1,5 @@
 export const DB_NAME = 'worldbuilding-db';
-export const DB_VERSION = 29;
+export const DB_VERSION = 30;
 export const ENTITY_STORE_NAME = 'entities';
 export const CATEGORY_STORE_NAME = 'entityCategories';
 export const PROJECT_STORE_NAME = 'projects';
@@ -34,6 +34,8 @@ export const PROJECT_MIGRATION_BACKUP_STORE_NAME = 'project_migration_backups';
 export const ACTOR_RESOLUTION_STORE_NAME = 'actor_resolutions';
 export const CHARACTER_IDENTITY_REPORT_STORE_NAME = 'character_identity_reports';
 export const PROJECT_REVIEW_RUN_STORE_NAME = 'project_review_runs';
+/** Unfinished first-mechanics forms in the World Bible (DB_VERSION 30). */
+export const MECHANICS_DRAFT_STORE_NAME = 'mechanics_drafts';
 
 export const PROJECT_SCOPED_STORE_NAMES = [
   CATEGORY_STORE_NAME,
@@ -67,7 +69,8 @@ export const PROJECT_SCOPED_STORE_NAMES = [
   STATE_MUTATION_EVENT_STORE_NAME,
   ACTOR_RESOLUTION_STORE_NAME,
   CHARACTER_IDENTITY_REPORT_STORE_NAME,
-  PROJECT_REVIEW_RUN_STORE_NAME
+  PROJECT_REVIEW_RUN_STORE_NAME,
+  MECHANICS_DRAFT_STORE_NAME
 ] as const;
 
 /** Index on `projectId` used by project-scoped reads (DB_VERSION 29). */
@@ -247,7 +250,12 @@ export function upgradeDatabase(db: IDBDatabase, transaction: IDBTransaction): v
     reviewRunStore.createIndex('projectId', 'projectId', {unique: true});
   }
 
+  if (!db.objectStoreNames.contains(MECHANICS_DRAFT_STORE_NAME)) {
+    db.createObjectStore(MECHANICS_DRAFT_STORE_NAME, {keyPath: 'id'});
+  }
+
   // world_canvases and project_review_runs already have a unique index.
+  // mechanics_drafts gets its projectId index here too.
   for (const storeName of PROJECT_INDEXED_STORE_NAMES) {
     const store = transaction.objectStore(storeName);
     if (!store.indexNames.contains(PROJECT_ID_INDEX)) {

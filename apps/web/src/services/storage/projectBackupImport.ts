@@ -7,6 +7,7 @@ import type {
   LoreDocumentLink,
   LoreEntityProposal,
   LoreFactProposal,
+  MechanicsDraft,
   Project,
   ProjectSettings,
   ScratchpadDocument,
@@ -16,6 +17,7 @@ import type {
   WritingDocument,
 } from '../../entityTypes';
 import type {ConsistencyAlias} from './repositories/aliasStorage';
+import {mechanicsDraftId} from './repositories/mechanicsDraftStorage';
 import type {
   ActorResolution,
   CharacterIdentityMigrationReport
@@ -46,6 +48,7 @@ import {
   WORLD_CANVAS_STORE_NAME,
   SETTINGS_STORE_NAME,
   STATE_MUTATION_EVENT_STORE_NAME,
+  MECHANICS_DRAFT_STORE_NAME,
   SETTLEMENT_MODULE_STORE_NAME,
   SETTLEMENT_STATE_STORE_NAME,
   WRITING_STORE_NAME,
@@ -139,6 +142,8 @@ export function normalizeProjectSnapshot(value: unknown): ProjectSnapshot {
   snapshot.data.canonDecisionSuppressions ??= [];
   snapshot.counts.canonDecisionSuppressions ??= snapshot.data.canonDecisionSuppressions.length;
   snapshot.data.stateMutationEvents ??= [];
+  snapshot.data.mechanicsDrafts ??= [];
+  snapshot.counts.mechanicsDrafts ??= snapshot.data.mechanicsDrafts.length;
   snapshot.counts.stateMutationEvents ??= snapshot.data.stateMutationEvents.length;
   snapshot.data.consistencyAliases ??= [];
   snapshot.counts.consistencyAliases ??= snapshot.data.consistencyAliases.length;
@@ -243,6 +248,14 @@ function rewriteCharacterIdentityReports(
   }));
 }
 
+function rewriteMechanicsDrafts(records: MechanicsDraft[], projectId: string): MechanicsDraft[] {
+  return records.map((record) => ({
+    ...record,
+    id: mechanicsDraftId(projectId, record.entityId),
+    projectId
+  }));
+}
+
 async function saveProjectScopedRecords(params: {
   projectId: string;
   data: ProjectSnapshot['data'];
@@ -279,7 +292,8 @@ async function saveProjectScopedRecords(params: {
       ZONE_AFFINITY_PROGRESS_STORE_NAME,
       SETTLEMENT_MODULE_STORE_NAME,
       SETTLEMENT_STATE_STORE_NAME,
-      STATE_MUTATION_EVENT_STORE_NAME
+      STATE_MUTATION_EVENT_STORE_NAME,
+      MECHANICS_DRAFT_STORE_NAME
     ],
     'readwrite'
   );
@@ -432,6 +446,10 @@ async function saveProjectScopedRecords(params: {
       params.data.stateMutationEvents ?? [],
       params.projectId
     )
+  );
+  await putMany(
+    MECHANICS_DRAFT_STORE_NAME,
+    rewriteMechanicsDrafts(params.data.mechanicsDrafts ?? [], params.projectId)
   );
 
   await new Promise<void>((resolve, reject) => {

@@ -14,6 +14,7 @@ import type {
   LoreDocumentLink,
   LoreEntityProposal,
   LoreFactProposal,
+  MechanicsDraft,
   Project,
   ProjectSettings,
   StateMutationEvent,
@@ -49,6 +50,7 @@ import {
   LORE_DOCUMENT_STORE_NAME,
   LORE_ENTITY_PROPOSAL_STORE_NAME,
   LORE_FACT_PROPOSAL_STORE_NAME,
+  MECHANICS_DRAFT_STORE_NAME,
   SETTINGS_STORE_NAME,
   SETTLEMENT_MODULE_STORE_NAME,
   SETTLEMENT_STATE_STORE_NAME,
@@ -105,6 +107,7 @@ export interface ProjectSnapshot {
     settlementModules: SettlementModule[];
     settlementStateRecords: SettlementState[];
     stateMutationEvents: StateMutationEvent[];
+    mechanicsDrafts: MechanicsDraft[];
   };
   counts: {
     categories: number;
@@ -135,6 +138,7 @@ export interface ProjectSnapshot {
     settlementModules: number;
     settlementStateRecords: number;
     stateMutationEvents: number;
+    mechanicsDrafts: number;
     hasSettings: boolean;
     hasRuleset: boolean;
   };
@@ -188,7 +192,8 @@ export async function buildProjectSnapshot(projectId: string): Promise<ProjectSn
     zoneAffinityProgressRecords,
     settlementModules,
     settlementStateRecords,
-    stateMutationEvents
+    stateMutationEvents,
+    mechanicsDrafts
   ] = await Promise.all([
     getProjectScopedRecords<ProjectSettings>(SETTINGS_STORE_NAME, projectId),
     getRulesetByProjectId(projectId),
@@ -240,7 +245,8 @@ export async function buildProjectSnapshot(projectId: string): Promise<ProjectSn
     ),
     getProjectScopedRecords<SettlementModule>(SETTLEMENT_MODULE_STORE_NAME, projectId),
     getProjectScopedRecords<SettlementState>(SETTLEMENT_STATE_STORE_NAME, projectId),
-    getProjectScopedRecords<StateMutationEvent>(STATE_MUTATION_EVENT_STORE_NAME, projectId)
+    getProjectScopedRecords<StateMutationEvent>(STATE_MUTATION_EVENT_STORE_NAME, projectId),
+    getProjectScopedRecords<MechanicsDraft>(MECHANICS_DRAFT_STORE_NAME, projectId)
   ]);
 
   const settings = settingsRecords[0] ?? null;
@@ -280,7 +286,8 @@ export async function buildProjectSnapshot(projectId: string): Promise<ProjectSn
       zoneAffinityProgressRecords,
       settlementModules,
       settlementStateRecords,
-      stateMutationEvents
+      stateMutationEvents,
+      mechanicsDrafts
     },
     counts: {
       categories: categories.length,
@@ -311,6 +318,7 @@ export async function buildProjectSnapshot(projectId: string): Promise<ProjectSn
       settlementModules: settlementModules.length,
       settlementStateRecords: settlementStateRecords.length,
       stateMutationEvents: stateMutationEvents.length,
+      mechanicsDrafts: mechanicsDrafts.length,
       hasSettings: Boolean(settings),
       hasRuleset: Boolean(ruleset)
     }
@@ -353,6 +361,7 @@ export function validateSnapshotCounts(snapshot: ProjectSnapshot): SnapshotCount
     settlementModules: snapshot.data.settlementModules.length,
     settlementStateRecords: snapshot.data.settlementStateRecords.length,
     stateMutationEvents: snapshot.data.stateMutationEvents.length,
+    mechanicsDrafts: snapshot.data.mechanicsDrafts.length,
     hasSettings: Boolean(snapshot.data.settings),
     hasRuleset: Boolean(snapshot.data.ruleset)
   };

@@ -7,6 +7,7 @@ import {
   DB_NAME,
   DB_VERSION,
   ENTITY_STORE_NAME,
+  MECHANICS_DRAFT_STORE_NAME,
   openDb,
   PROJECT_ID_INDEX,
   PROJECT_INDEXED_STORE_NAMES,
@@ -38,7 +39,10 @@ import {
  */
 
 const V28 = 28;
-const ALL_STORES = [PROJECT_STORE_NAME, ...PROJECT_INDEXED_STORE_NAMES];
+// mechanics_drafts arrived in version 30, so a v28 database does not have it.
+const ALL_STORES = [PROJECT_STORE_NAME, ...PROJECT_INDEXED_STORE_NAMES].filter(
+  (storeName) => storeName !== MECHANICS_DRAFT_STORE_NAME
+);
 
 const SEED: Record<string, Array<Record<string, unknown>>> = {
   [PROJECT_STORE_NAME]: [
@@ -123,7 +127,7 @@ async function createPopulatedV28Database(): Promise<void> {
 
 const ids = (records: Array<{id: string}>) => records.map((record) => record.id);
 
-describe('DB_VERSION 29 projectId indexes', () => {
+describe('DB_VERSION 29+ projectId indexes', () => {
   let db: IDBDatabase;
 
   beforeAll(async () => {
@@ -133,8 +137,9 @@ describe('DB_VERSION 29 projectId indexes', () => {
   });
 
   it('upgrades a populated v28 database in place and indexes every project store', () => {
-    expect(DB_VERSION).toBe(29);
-    expect(db.version).toBe(29);
+    expect(db.objectStoreNames.contains(MECHANICS_DRAFT_STORE_NAME)).toBe(true);
+    expect(DB_VERSION).toBeGreaterThanOrEqual(29);
+    expect(db.version).toBe(DB_VERSION);
     const tx = db.transaction([...PROJECT_INDEXED_STORE_NAMES], 'readonly');
     for (const storeName of PROJECT_INDEXED_STORE_NAMES) {
       const store = tx.objectStore(storeName);

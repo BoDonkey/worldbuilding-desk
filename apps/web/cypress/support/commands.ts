@@ -38,6 +38,7 @@ const STORE_NAMES = [
   'consistency_events',
   'consistency_aliases',
   'state_mutation_events',
+  'mechanics_drafts',
   PROJECT_MIGRATION_BACKUP_STORE_NAME,
   ACTOR_RESOLUTION_STORE_NAME,
   CHARACTER_IDENTITY_REPORT_STORE_NAME

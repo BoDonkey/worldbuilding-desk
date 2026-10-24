@@ -74,6 +74,7 @@ import {ProjectScratchpadButton} from '../components/ProjectScratchpadButton';
 import {PageHeader} from '../components/PageHeader';
 import styles from '../styles/LoreRoute.module.css';
 import {useConfirmDialog} from '../hooks/useConfirmDialog';
+import {useCollapsedPreference} from '../hooks/useCollapsedPreference';
 import {describeError} from '../services/errors';
 import {useStatusAnnouncement} from '../hooks/useStatusAnnouncement';
 import {RouteFeedback} from '../components/common';
@@ -163,23 +164,15 @@ function LoreRoute() {
     tone: 'success' | 'error';
     message: string;
   } | null>(null);
-  const [isDocumentRailCollapsed, setIsDocumentRailCollapsed] = useState(false);
+  const {collapsed: isDocumentRailCollapsed, toggle: handleToggleDocumentRail} = useCollapsedPreference(
+    activeProject ? getLoreRailStorageKey(activeProject.id) : null
+  );
   const importInputRef = useRef<HTMLInputElement | null>(null);
   const titleInputRef = useRef<HTMLInputElement | null>(null);
   const focusedLoreDocumentKeyRef = useRef<string | null>(null);
   // Bumped whenever the editor starts over (new, edit, import) so a save that
   // finishes late does not clear a form the author has since moved on to.
   const formSessionRef = useRef(0);
-
-  useEffect(() => {
-    if (!activeProject) {
-      setIsDocumentRailCollapsed(false);
-      return;
-    }
-    setIsDocumentRailCollapsed(
-      window.localStorage.getItem(getLoreRailStorageKey(activeProject.id)) === 'true'
-    );
-  }, [activeProject]);
 
   useEffect(() => {
     if (!activeProject) {
@@ -1088,16 +1081,6 @@ function LoreRoute() {
       block: 'start'
     });
     window.setTimeout(() => titleInputRef.current?.focus(), 120);
-  };
-
-  const handleToggleDocumentRail = () => {
-    setIsDocumentRailCollapsed((current) => {
-      const next = !current;
-      if (activeProject) {
-        window.localStorage.setItem(getLoreRailStorageKey(activeProject.id), String(next));
-      }
-      return next;
-    });
   };
 
   const handleHealthProbe = async () => {

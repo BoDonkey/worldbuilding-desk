@@ -774,6 +774,15 @@ describe('Post-merge smoke checklist', () => {
         projectId: 'cypress-project-1',
         ...canvasContent
       }),
+      putRecord(db, 'mechanics_drafts', {
+        id: 'cypress-project-1:mechanics-draft:entity-ember-archive',
+        projectId: 'cypress-project-1',
+        entityId: 'entity-ember-archive',
+        kind: 'stat',
+        name: 'Archive Memory',
+        defaultValue: '12',
+        updatedAt: 42
+      }),
       putRecord(db, 'corkboard_chapter_cards', {
         id: 'chapter-card-backup-smoke',
         projectId: 'cypress-project-1',
@@ -881,6 +890,21 @@ describe('Post-merge smoke checklist', () => {
         id: 'question-backup-smoke', text: 'Who can erase a promise?', status: 'open'
       });
       expect(importedCanvas?.id).to.equal(importedCanvas?.projectId);
+
+      const drafts = await getAllRecords<{
+        id: string;
+        projectId: string;
+        entityId: string;
+        name: string;
+        defaultValue: string;
+      }>(db, 'mechanics_drafts');
+      const importedDraft = drafts.find((record) => record.projectId !== 'cypress-project-1');
+      expect(importedDraft).to.deep.include({
+        entityId: 'entity-ember-archive', kind: 'stat', name: 'Archive Memory', defaultValue: '12'
+      });
+      expect(importedDraft?.id).to.equal(
+        `${importedDraft?.projectId}:mechanics-draft:entity-ember-archive`
+      );
 
       const chapterCards = await getAllRecords<{
         id: string;

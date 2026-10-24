@@ -2,6 +2,7 @@ import {useEffect, useState, useCallback, useRef, useMemo} from 'react';
 import type {FormEvent} from 'react';
 import {useLocation, useNavigate} from 'react-router';
 import {useConfirmDialog} from '../hooks/useConfirmDialog';
+import {useCollapsedPreference} from '../hooks/useCollapsedPreference';
 import {useAppStore} from '../store/appStore';
 import {getProjectCapabilities} from '../projectMode';
 import type {EntityCategory, WorldCanvasLensKind, WorldEntity} from '../entityTypes';
@@ -155,7 +156,9 @@ function WorldBibleRoute() {
     tone: 'success' | 'error';
     message: string;
   } | null>(null);
-  const [isCategoryRailCollapsed, setIsCategoryRailCollapsed] = useState(false);
+  const {collapsed: isCategoryRailCollapsed, toggle: handleToggleCategoryRail} = useCollapsedPreference(
+    activeProject ? getWorldBibleRailStorageKey(activeProject.id) : null
+  );
   const [promotingMemoryId, setPromotingMemoryId] = useState<string | null>(null);
   const [isCreatingFirstMechanics, setIsCreatingFirstMechanics] = useState(false);
   const [pendingCanvasEntityLink, setPendingCanvasEntityLink] = useState<
@@ -202,16 +205,6 @@ function WorldBibleRoute() {
   });
   const importInputRef = useRef<HTMLInputElement | null>(null);
   const jsonImportInputRef = useRef<HTMLInputElement | null>(null);
-
-  useEffect(() => {
-    if (!activeProject) {
-      setIsCategoryRailCollapsed(false);
-      return;
-    }
-    setIsCategoryRailCollapsed(
-      window.localStorage.getItem(getWorldBibleRailStorageKey(activeProject.id)) === 'true'
-    );
-  }, [activeProject]);
 
   const aliasTextareaRef = useRef<HTMLTextAreaElement | null>(null);
   const focusedEntityKeyRef = useRef<string | null>(null);
@@ -498,16 +491,6 @@ function WorldBibleRoute() {
   };
 
   const handleSelectReview = () => { setViewMode('review'); resetForm(); };
-
-  const handleToggleCategoryRail = () => {
-    setIsCategoryRailCollapsed((current) => {
-      const next = !current;
-      if (activeProject) {
-        window.localStorage.setItem(getWorldBibleRailStorageKey(activeProject.id), String(next));
-      }
-      return next;
-    });
-  };
 
   const openCharacterCategory = useCallback(() => {
     if (!characterCategory) return;
@@ -1682,7 +1665,6 @@ function WorldBibleRoute() {
                             useAppStore.setState({activeProject: created.project});
                             setRuleset({...created.ruleset, projectId: activeProject.id});
                             setCharacterSheets((current) => [...current, created.sheet]);
-                            window.localStorage.removeItem(`wbd:first-mechanics:${activeProject.id}:${selectedEntity.id}`);
                             setFeedback({tone: 'success', message: `${input.name} is now tracked for ${selectedEntity.name}.`});
                           } catch (error) {
                             setFeedback({tone: 'error', message: describeError(error, 'Unable to enable mechanics tracking.')});
@@ -1699,7 +1681,8 @@ function WorldBibleRoute() {
                           showAdvanced: true
                         }})}
                         onAddSheet={() => void handleImportEntityToCharacters(selectedEntity, {autoCreateSheet: true})}
-                        draftStorageKey={`wbd:first-mechanics:${activeProject?.id ?? 'none'}:${selectedEntity.id}`}
+                        projectId={activeProject?.id ?? null}
+                        entityId={selectedEntity.id}
                       />
                     ) : null
                   }

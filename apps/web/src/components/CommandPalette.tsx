@@ -1,6 +1,10 @@
 import {useEffect, useMemo, useRef, useState} from 'react';
 import type {AppCommand} from '../commands/commandRegistry';
 import styles from '../assets/components/CommandPalette.module.css';
+import {readJsonPreference, writeJsonPreference} from '../utils/browserPreferences';
+
+const parseRecentCommandIds = (value: unknown): string[] | null =>
+  Array.isArray(value) ? value.filter((entry): entry is string => typeof entry === 'string') : null;
 
 interface CommandPaletteProps {
   isOpen: boolean;
@@ -18,17 +22,9 @@ export const CommandPalette = ({
   const RECENT_COMMANDS_KEY = 'recentCommands';
   const [query, setQuery] = useState('');
   const [activeIndex, setActiveIndex] = useState(0);
-  const [recentCommandIds, setRecentCommandIds] = useState<string[]>(() => {
-    try {
-      const raw = localStorage.getItem(RECENT_COMMANDS_KEY);
-      if (!raw) return [];
-      const parsed = JSON.parse(raw);
-      if (!Array.isArray(parsed)) return [];
-      return parsed.filter((entry): entry is string => typeof entry === 'string');
-    } catch {
-      return [];
-    }
-  });
+  const [recentCommandIds, setRecentCommandIds] = useState<string[]>(
+    () => readJsonPreference(RECENT_COMMANDS_KEY, parseRecentCommandIds) ?? []
+  );
   const inputRef = useRef<HTMLInputElement | null>(null);
 
   const filteredCommands = useMemo(() => {
@@ -121,7 +117,7 @@ export const CommandPalette = ({
       8
     );
     setRecentCommandIds(nextRecent);
-    localStorage.setItem(RECENT_COMMANDS_KEY, JSON.stringify(nextRecent));
+    writeJsonPreference(RECENT_COMMANDS_KEY, nextRecent);
     onExecute({
       ...command,
       run: () => command.run(query.trim())

@@ -1,6 +1,6 @@
 # Manual Smoke Procedures
 
-Last updated: 2026-09-23
+Last updated: 2026-10-24
 
 Reusable manual smoke procedures targeting trust and data-loss boundaries.
 Consolidates the former `project-backup-smoke-test.md`,
@@ -50,12 +50,19 @@ Procedure:
    compendium data persists, autosave
    still works after a small post-import edit. Confirm Canvas content did not
    create World Bible records, accepted facts, or indexed context.
+6. Unfinished mechanics draft (slice 3.23c). In a project with no mechanics
+   yet, open a World Bible character, choose `Add mechanics`, and type a
+   value name and starting value without confirming. Reload, and confirm the
+   form comes back with both values. Export and import as a new project, open
+   the same character there, and confirm the form returns with the same
+   values. Cancel it, reload, and confirm it stays closed.
 
 Failure signals: validation failure, unexpectedly empty sections, count
 mismatch on an unchanged new-project import, runtime errors, truncated
 Scratchpad, Corkboard cards missing plot points, order, or scene links, changed/missing
-World Canvas content, or any Canvas-only idea appearing as canon or indexed
-context.
+World Canvas content, any Canvas-only idea appearing as canon or indexed
+context, or an unfinished mechanics draft missing after reload or import, or
+returning after Cancel.
 
 ## 1a. World Canvas Planning IA and Guided Focus
 

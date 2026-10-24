@@ -85,6 +85,21 @@ export interface WorldCanvasLens {
   updatedAt: number;
 }
 
+/**
+ * The first-mechanics form an author started on a World Bible character but
+ * has not confirmed (slice 3.23c). One per character; deleted on confirm or
+ * cancel. `defaultValue` keeps the author's text as typed.
+ */
+export interface MechanicsDraft {
+  id: string;
+  projectId: string;
+  entityId: string;
+  kind: 'stat' | 'resource';
+  name: string;
+  defaultValue: string;
+  updatedAt: number;
+}
+
 export interface WorldCanvasDocument {
   schemaVersion: 2;
   id: string;
