@@ -8,8 +8,18 @@ import {AIAssistant} from './AIAssistant';
 
 const mocks = vi.hoisted(() => ({
   getDocumentsByProject: vi.fn(),
+  getEntitiesByProject: vi.fn(),
+  getAliasesByProject: vi.fn(),
   search: vi.fn(),
   stream: vi.fn()
+}));
+
+vi.mock('../../entityStorage', () => ({
+  getEntitiesByProject: mocks.getEntitiesByProject
+}));
+
+vi.mock('../../services/consistency/aliasStorage', () => ({
+  getAliasesByProject: mocks.getAliasesByProject
 }));
 
 vi.mock('../../writingStorage', () => ({
@@ -77,6 +87,15 @@ describe('AIAssistant factual lookup integration', () => {
     sessionStorage.clear();
     mocks.getDocumentsByProject.mockReset();
     mocks.getDocumentsByProject.mockResolvedValue([]);
+    mocks.getEntitiesByProject.mockReset();
+    mocks.getEntitiesByProject.mockResolvedValue([
+      {id: 'sera', projectId: 'p', categoryId: 'characters', name: 'Sera Kestrel', fields: {}, links: [], createdAt: 1, updatedAt: 1},
+      {id: 'brannic', projectId: 'p', categoryId: 'characters', name: 'Brannic', fields: {}, links: [], createdAt: 1, updatedAt: 1}
+    ]);
+    mocks.getAliasesByProject.mockReset();
+    mocks.getAliasesByProject.mockResolvedValue([
+      {id: 'alias-sera', projectId: 'p', targetId: 'sera', targetType: 'entity', alias: 'Sera', createdAt: 1, updatedAt: 1}
+    ]);
     mocks.search.mockReset();
     mocks.stream.mockReset();
     mocks.search.mockResolvedValue([
@@ -288,6 +307,70 @@ describe('AIAssistant factual lookup integration', () => {
     await screen.findByText(/couldn't verify an explicit answer/i);
     expect(screen.getByText(/won't invent one/i)).toBeVisible();
     expect(mocks.search).toHaveBeenCalledWith('Who stole the Emberglass Key?', 20);
+    expect(mocks.stream).not.toHaveBeenCalled();
+  });
+
+  const send = (value: string) => {
+    fireEvent.change(screen.getByRole('textbox'), {target: {value}});
+    fireEvent.click(screen.getByRole('button', {name: 'Send'}));
+  };
+  const ollama: ProjectAISettings = {provider: 'ollama', configs: {}, promptTools: [], defaultToolIds: []};
+
+  it('carries a follow-up subject forward from the previous turn and shows what it assumed (1.4b)', async () => {
+    renderAssistant({projectId: 'project-follow-up', aiConfig: ollama});
+    await screen.findByText('Project context ready.');
+
+    send('Who is Sera?');
+    await screen.findByText(/couldn't verify an explicit answer/i);
+    send('What is her occupation?');
+
+    await screen.findByText(
+      "Answering about Sera Kestrel, from your previous question. Sera Kestrel's accepted occupation is cartographer."
+    );
+    expect(mocks.search).toHaveBeenLastCalledWith("What is Sera Kestrel's occupation?", 20);
+    expect(mocks.stream).not.toHaveBeenCalled();
+  });
+
+  it('asks which record is meant instead of answering an ambiguous follow-up (1.4b)', async () => {
+    renderAssistant({projectId: 'project-ambiguous', aiConfig: ollama});
+    await screen.findByText('Project context ready.');
+
+    send('Did Sera ever meet Brannic?');
+    await screen.findByText(/couldn't verify an explicit answer/i);
+    mocks.search.mockClear();
+    send('And his rank?');
+
+    await screen.findByText(/could be about Sera Kestrel or Brannic, so I haven't answered it/);
+    expect(mocks.search).not.toHaveBeenCalled();
+    expect(mocks.stream).not.toHaveBeenCalled();
+  });
+
+  it('gates an instruction-phrased factual request instead of sending it to the provider (1.4b)', async () => {
+    renderAssistant({projectId: 'project-instruction', aiConfig: hostedSettings, showWritingCoach: false});
+    await screen.findByText('Project context ready.');
+
+    send('Remind me where the ledger is kept');
+
+    await screen.findByText(/won't invent one/i);
+    expect(mocks.stream).not.toHaveBeenCalled();
+    expect(getConsultationBudgetStatus('project-instruction', 1).used).toBe(0);
+  });
+
+  it('never carries a subject across conversations (1.4b)', async () => {
+    const first = renderAssistant({projectId: 'project-scoped', aiConfig: ollama, conversationScope: 'ask'});
+    await screen.findByText('Project context ready.');
+    send('Who is Sera?');
+    await screen.findByText(/couldn't verify an explicit answer/i);
+    first.unmount();
+
+    renderAssistant({projectId: 'project-scoped', aiConfig: ollama});
+    await screen.findByText('Project context ready.');
+    mocks.search.mockClear();
+    send('What is her occupation?');
+
+    await screen.findByText(/couldn't verify an explicit answer/i);
+    expect(screen.queryByText(/Answering about/)).not.toBeInTheDocument();
+    expect(mocks.search).toHaveBeenCalledWith('What is her occupation?', 20);
     expect(mocks.stream).not.toHaveBeenCalled();
   });
 

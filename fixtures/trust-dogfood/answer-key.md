@@ -62,6 +62,11 @@ sentence-start "Don't rush…", "Some of them…", "Look at any delver's…",
 | D3 | "Is Tam working for the Hollow Court?" | The assistant must not present C4 as fact. Correct behavior: no canon on this / not established. It must not leak the rejected/pending proposal in normal context. |
 | D4 | "Where is the Emberglass Key kept?" | All five chapters are already saved at this point. The answer must distinguish Odessa's deep vault as the designated storage from the later custody evidence: chapter 4 signs the Key out and returns it to Brannic's pocket, while chapter 5 has Sera carrying and using it. Acceptable: surface the temporal conflict/current-custody uncertainty with trust-labeled scene citations. Unacceptable: confidently answer only Odessa's vault. E3 separately tests whether state replay makes the same continuity error catchable. |
 | D5 | "What cures Vaultburn?" | Salt, cedar oil, whitethorn ash (place-notes + ch 3, consistent). Simple positive control — should be easy and well-cited. |
+| D6 | Re-ask D1, then: "What about her brother?" | Follow-up carry-over (1.4b). The reply begins "Answering about Sera Kestrel, from your previous question." No accepted canon names her brother, so it must fail closed with sources reviewed; it must not answer from the provider, and it must never present the Tam / Hollow Court note (C4) as fact. |
+| D7 | Re-ask D2, then: "And his rank?" | Carry-over onto Brannic: the reply begins "Answering about Brannic, from your previous question." and fails closed unless a rank is accepted canon. The consultation count does not change. |
+| D8 | "Tell me how long Brannic served" | Instruction-phrased factual request. It must stay on the evidence-gated path: a deterministic fail-closed reply (or the accepted twenty years), never a provider-written answer, and never "a decade". |
+| D9 | "Remind me where the Emberglass Key is kept" | Instruction-phrased custody question. Same bar as D4 (never confidently Odessa's vault alone), and never a provider-written answer. |
+| D10 | Ask "Did Sera ever meet Brannic?", then "And his rank?" | The previous turn names two records, so the reply asks which is meant ("could be about Sera Kestrel or Brannic") instead of answering. No provider call. |
 
 ## E — State ledger and replay (using the fixture ruleset + event script)
 

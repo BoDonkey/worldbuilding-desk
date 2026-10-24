@@ -90,7 +90,7 @@ grounding; the Tam Hollow Court note asserted before you resolve it
 | B1–B5 | Workspace, each chapter | after canon exists, re-run review; hover highlights | all alias forms known; "deep vault" does not link to the Undervault |
 | C1–C3 | Canon Decisions | work the queue | service-length cluster forms (accept twenty years); Compact of Cinders becomes an alias; gray-eyes then ch 2 conflict |
 | C4–C5 | Source Notes → working notes → **Extract Candidates** | leave Tam/Hollow Court and smuggler claims pending or rejected | never canon, never grounding |
-| D1–D5 | Workspace → AI drawer | ask the five questions verbatim | see § D; check **Sources used** labels |
+| D1–D10 | Workspace → AI drawer | ask D1–D5 verbatim, then the D6–D10 follow-ups | see § D; check **Sources used** labels; D6–D10 never reach the provider |
 | E1–E5 | World Bible → Sera → Mechanics → **Record a scene change** | enter the § E script row by row, previewing each | replay per chapter matches; E3 is the honest "did anything catch it" check |
 | F1–F3 | Source Notes health panel; Sera's character detail | probe "Emberglass Key"; edit a note; open Sera | ranking, stale → rebuild, detail completeness |
 | G1–G6 | separate projects per pass | Identity Passes 1–5 | see addendum |
@@ -139,7 +139,7 @@ Suggested resume points:
 | Sitting | Work | Safe stopping point |
 |---|---|---|
 | 1 | Session A | After A-7, with extraction decisions saved |
-| 2 | Session B | After D1–D5 and source lists are recorded |
+| 2 | Session B | After D1–D10 and source lists are recorded |
 | 3 | Session C + Session H + Identity Passes 1–2 | After the rich-project backup, H1–H4 on the imported copy, and Sera rename checks |
 | 4 | Identity Passes 3–5 | After both Tam branches and imported-backup comparison |
 | 5 | Triage | Every A–H result classified; roadmap follow-ups written |
@@ -219,6 +219,12 @@ written in the answer key. For each: record the answer's correctness, whether
 the rejected/pending material leaked (D2/D3 are the critical ones), and what
 the `Sources used` list shows (trust labels present? canon above Source
 Notes?).
+
+Then run the follow-up and instruction-phrased checks **D6–D10** as the
+answer key writes them (D6 and D7 re-ask their lead question first, because
+carry-over looks back exactly one turn). For each, record the full reply and whether the daily consultation count
+changed. A changed count, or any reply that reads as model-written, is a
+Fail: these requests must never reach the provider.
 
 ## Session C — State, health, and teardown
 
