@@ -43,6 +43,54 @@ function putRecord<T extends {id: string}>(
   });
 }
 
+/** Deletes a project's records but keeps its row, like opening its backup on another computer. */
+function removeProjectRecords(db: IDBDatabase, projectId: string): Promise<void> {
+  const storeNames = Array.from(db.objectStoreNames).filter((name) => name !== 'projects');
+  return new Cypress.Promise<void>((resolve, reject) => {
+    const tx = db.transaction(storeNames, 'readwrite');
+    for (const storeName of storeNames) {
+      const store = tx.objectStore(storeName);
+      store.openCursor().onsuccess = (event) => {
+        const cursor = (event.target as IDBRequest<IDBCursorWithValue | null>).result;
+        if (!cursor) return;
+        if ((cursor.value as {projectId?: string}).projectId === projectId) cursor.delete();
+        cursor.continue();
+      };
+    }
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+    tx.onabort = () => reject(tx.error);
+  });
+}
+
+/** Deletes a project's ruleset from the separate rulesets database. */
+function removeProjectRuleset(projectId: string): Cypress.Chainable<void> {
+  return cy.window().then(
+    (win) =>
+      new Cypress.Promise<void>((resolve, reject) => {
+        const openRequest = win.indexedDB.open('worldbuilding-desk', 2);
+        openRequest.onerror = () => reject(openRequest.error);
+        openRequest.onsuccess = () => {
+          const db = openRequest.result;
+          if (!db.objectStoreNames.contains('rulesets')) {
+            db.close();
+            resolve();
+            return;
+          }
+          const tx = db.transaction('rulesets', 'readwrite');
+          tx.objectStore('rulesets').openCursor().onsuccess = (event) => {
+            const cursor = (event.target as IDBRequest<IDBCursorWithValue | null>).result;
+            if (!cursor) return;
+            if ((cursor.value as {projectId?: string}).projectId === projectId) cursor.delete();
+            cursor.continue();
+          };
+          tx.oncomplete = () => { db.close(); resolve(); };
+          tx.onerror = () => { db.close(); reject(tx.error); };
+        };
+      })
+  );
+}
+
 function getRecord<T>(db: IDBDatabase, storeName: string, id: string): Promise<T> {
   return new Cypress.Promise<T>((resolve, reject) => {
     const tx = db.transaction([storeName], 'readonly');
@@ -844,9 +892,24 @@ describe('Post-merge smoke checklist', () => {
       cy.contains('button', 'Import Backup (.zip)')
         .next('input[type="file"]')
         .selectFile(backupFile, {force: true});
+
+      // 3.24a: in the browser the backup came from, a new-project import would take
+      // the source's records, so it is blocked before anything is written.
+      cy.contains('h2', 'Backup Import Preview').should('be.visible');
+      cy.contains('[role="alert"]', 'This import is blocked.')
+        .should('contain.text', 'already belong to “Cypress Smoke Project”');
+      cy.contains('button', 'Apply Import').should('be.disabled');
+
+      // As on another computer: the source's records are not here.
+      mutateSmokeDb((db) => removeProjectRecords(db, 'cypress-project-1'));
+      removeProjectRuleset('cypress-project-1');
+      cy.contains('button', 'Import Backup (.zip)')
+        .next('input[type="file"]')
+        .selectFile(backupFile, {force: true});
     });
 
     cy.contains('h2', 'Backup Import Preview').should('be.visible');
+    cy.contains('[role="alert"]', 'This import is blocked.').should('not.exist');
     cy.contains('button', 'Apply Import').click();
     cy.contains('[role="status"]', 'Count check passed.').should('be.visible');
     cy.contains('strong', 'Cypress Smoke Project (Imported)').should('be.visible');

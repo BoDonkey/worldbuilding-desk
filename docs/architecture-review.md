@@ -241,6 +241,11 @@ commit. Derived indexes (retrieval, memory) update after the commit and can
 be rebuilt; bookkeeping such as resolving a canon-decision cluster may follow
 as a separate step, because leaving it open is safe.
 
+Import keeps most record ids. Until slice 3.24b gives imported records new
+ids, `projectBackupCollisions.ts` refuses, before any write, an import that
+would overwrite a record belonging to another project in this browser (3.24a).
+Restoring a backup into the project it came from is allowed.
+
 Project backup is the portability boundary. Derived RAG/Shodh data may be
 rebuilt from primary records.
 

@@ -15,6 +15,8 @@ import {
   importProjectBackup,
   parseProjectBackupZip,
   previewProjectBackupConflicts,
+  findProjectBackupCollisions,
+  describeProjectBackupCollisions,
   buildProjectSnapshot,
   diffSnapshotCounts,
   validateSnapshotCounts,
@@ -79,6 +81,7 @@ function ProjectsRoute() {
   const [importSnapshot, setImportSnapshot] = useState<ProjectSnapshot | null>(null);
   const [importMode, setImportMode] = useState<ProjectBackupImportMode>('new');
   const [importTargetProjectId, setImportTargetProjectId] = useState('');
+  const [importBlockedMessage, setImportBlockedMessage] = useState<string | null>(null);
   const [importConflicts, setImportConflicts] =
     useState<ProjectBackupConflictSummary | null>(null);
   const [isValidatingBackup, setIsValidatingBackup] = useState(false);
@@ -372,6 +375,29 @@ function ProjectsRoute() {
     setImportMode('new');
     setImportTargetProjectId('');
     setImportConflicts(null);
+    setImportBlockedMessage(null);
+  };
+
+  // 3.24a: an import that would take records from another project is shown as blocked.
+  const collisionCheckRef = useRef(0);
+  const refreshImportCollisions = async (
+    snapshot: ProjectSnapshot,
+    mode: ProjectBackupImportMode,
+    targetProjectId: string
+  ) => {
+    const check = ++collisionCheckRef.current;
+    setImportBlockedMessage(null);
+    if (mode === 'merge' && !targetProjectId) return;
+    try {
+      const report = await findProjectBackupCollisions({
+        snapshot,
+        targetProjectId: mode === 'new' ? null : targetProjectId
+      });
+      if (check !== collisionCheckRef.current || report.recordCount === 0) return;
+      setImportBlockedMessage(`This import is blocked. ${describeProjectBackupCollisions(report, mode)}`);
+    } catch {
+      // Import runs the same check and refuses with the full explanation.
+    }
   };
 
   const refreshImportConflicts = async (
@@ -421,6 +447,7 @@ function ProjectsRoute() {
       setImportConflicts(null);
       const defaultTarget = activeProject?.id ?? projects[0]?.id ?? '';
       setImportTargetProjectId(defaultTarget);
+      void refreshImportCollisions(parsed.snapshot, 'new', defaultTarget);
       setFeedback({
         tone: 'success',
         message: `Loaded backup preview for "${parsed.preview.sourceProjectName}".`
@@ -438,6 +465,7 @@ function ProjectsRoute() {
 
   const handleImportModeChange = async (mode: ProjectBackupImportMode) => {
     setImportMode(mode);
+    if (importSnapshot) void refreshImportCollisions(importSnapshot, mode, importTargetProjectId);
     if (mode !== 'merge' || !importSnapshot) {
       setImportConflicts(null);
       return;
@@ -447,6 +475,7 @@ function ProjectsRoute() {
 
   const handleImportTargetProjectChange = async (projectId: string) => {
     setImportTargetProjectId(projectId);
+    if (importSnapshot) void refreshImportCollisions(importSnapshot, importMode, projectId);
     if (importMode !== 'merge' || !importSnapshot) {
       setImportConflicts(null);
       return;
@@ -637,7 +666,7 @@ function ProjectsRoute() {
               <button
                 type='button'
                 onClick={() => void handleApplyBackupImport()}
-                disabled={isApplyingImport}
+                disabled={isApplyingImport || Boolean(importBlockedMessage)}
               >
                 {isApplyingImport ? 'Importing...' : 'Apply Import'}
               </button>
@@ -686,6 +715,10 @@ function ProjectsRoute() {
               </label>
             )}
           </div>
+
+          {importBlockedMessage && (
+            <p role='alert' className={styles.conflictPreview}>{importBlockedMessage}</p>
+          )}
 
           <div className={styles.countsText}>
             Counts: {importPreview.counts.categories} categories · {importPreview.counts.entities}{' '}
