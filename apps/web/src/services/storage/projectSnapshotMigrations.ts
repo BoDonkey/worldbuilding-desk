@@ -10,7 +10,7 @@ import {CURRENT_PROJECT_SCHEMA_VERSION} from './projectSchemaMigrations';
 import {migrateWorldCanvasDocument} from '../worldBible/worldCanvasService';
 
 export const MIN_SUPPORTED_PROJECT_SNAPSHOT_SCHEMA_VERSION = 1;
-export const CURRENT_PROJECT_SNAPSHOT_SCHEMA_VERSION = 9;
+export const CURRENT_PROJECT_SNAPSHOT_SCHEMA_VERSION = 10;
 
 export interface ProjectSnapshotMigration {
   fromVersion: number;
@@ -187,6 +187,22 @@ export function migrateProjectSnapshotV8ToV9(
   };
 }
 
+/** 3.23c: unfinished mechanics drafts join the backup; older backups have none. */
+export function migrateProjectSnapshotV9ToV10(
+  snapshot: Record<string, unknown>
+): Record<string, unknown> {
+  const project = asRecord(snapshot.project);
+  const data = asRecord(snapshot.data);
+  const drafts = asArray(data.mechanicsDrafts);
+  return {
+    ...snapshot,
+    schemaVersion: 10,
+    project: {...project, storageSchemaVersion: CURRENT_PROJECT_SCHEMA_VERSION},
+    data: {...data, mechanicsDrafts: drafts},
+    counts: {...asRecord(snapshot.counts), mechanicsDrafts: drafts.length}
+  };
+}
+
 const PROJECT_SNAPSHOT_MIGRATIONS: readonly ProjectSnapshotMigration[] = [
   {
     fromVersion: 1,
@@ -227,6 +243,11 @@ const PROJECT_SNAPSHOT_MIGRATIONS: readonly ProjectSnapshotMigration[] = [
     fromVersion: 8,
     toVersion: 9,
     migrate: migrateProjectSnapshotV8ToV9
+  },
+  {
+    fromVersion: 9,
+    toVersion: 10,
+    migrate: migrateProjectSnapshotV9ToV10
   }
 ];
 

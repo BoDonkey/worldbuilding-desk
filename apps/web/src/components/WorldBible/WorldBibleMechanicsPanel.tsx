@@ -1,9 +1,10 @@
-import {useEffect, useId, useMemo, useState} from 'react';
+import {useEffect, useId, useRef, useState} from 'react';
 import type {CharacterSheet, StateMutationEvent, StoredRuleset} from '../../entityTypes';
 import type {FirstTrackedValueKind} from '../../services/characters';
 import {replayCharacterState} from '../../services/state/stateReplay';
 import styles from '../../assets/components/WorldBibleRoute.module.css';
 import {PinStatsButton} from '../CharacterSheets/PinStatsButton';
+import {useMechanicsDraft} from '../../hooks/useMechanicsDraft';
 
 interface WorldBibleMechanicsPanelProps {
   characterSheet: CharacterSheet | null;
@@ -17,31 +18,43 @@ interface WorldBibleMechanicsPanelProps {
   onRecordChange: () => void;
   onOpenAdvanced: () => void;
   onAddSheet: () => void;
-  draftStorageKey: string;
+  /** Where the unfinished form is kept; null keeps it for this session only. */
+  projectId: string | null;
+  entityId: string;
 }
 
 export function WorldBibleMechanicsPanel({
   characterSheet, ruleset, hasRuleset, stateEventCount, stateEvents, isSaving, isOpeningSheet,
-  onCreate, onRecordChange, onOpenAdvanced, onAddSheet, draftStorageKey
+  onCreate, onRecordChange, onOpenAdvanced, onAddSheet, projectId, entityId
 }: WorldBibleMechanicsPanelProps) {
-  const savedDraft = useMemo(() => {
-    try {
-      return JSON.parse(window.localStorage.getItem(draftStorageKey) ?? 'null') as {
-        isAdding?: boolean; kind?: FirstTrackedValueKind; name?: string; defaultValue?: string;
-      } | null;
-    } catch { return null; }
-  }, [draftStorageKey]);
-  const [isAdding, setIsAdding] = useState(savedDraft?.isAdding ?? false);
-  const [kind, setKind] = useState<FirstTrackedValueKind>(savedDraft?.kind ?? 'resource');
-  const [name, setName] = useState(savedDraft?.name ?? 'Health');
-  const [defaultValue, setDefaultValue] = useState(savedDraft?.defaultValue ?? '100');
+  const {draft, save: saveDraft, discard: discardDraft} = useMechanicsDraft(projectId, entityId);
+  const [isAdding, setIsAdding] = useState(false);
+  const [kind, setKind] = useState<FirstTrackedValueKind>('resource');
+  const [name, setName] = useState('Health');
+  const [defaultValue, setDefaultValue] = useState('100');
   const [error, setError] = useState('');
   const errorId = useId();
+  // Set once the author acts, so a draft that loads late never replaces their input.
+  const touchedRef = useRef(false);
 
   useEffect(() => {
-    if (!isAdding) return;
-    window.localStorage.setItem(draftStorageKey, JSON.stringify({isAdding, kind, name, defaultValue}));
-  }, [defaultValue, draftStorageKey, isAdding, kind, name]);
+    if (!draft || touchedRef.current) return;
+    touchedRef.current = true;
+    setKind(draft.kind);
+    setName(draft.name);
+    setDefaultValue(draft.defaultValue);
+    setIsAdding(true);
+  }, [draft]);
+
+  useEffect(() => {
+    if (!isAdding || ruleset) return;
+    saveDraft({kind, name, defaultValue});
+  }, [defaultValue, isAdding, kind, name, ruleset, saveDraft]);
+
+  // Tracking is set up, so the form is gone for good; drop any leftover draft.
+  useEffect(() => {
+    if (ruleset && draft) void discardDraft();
+  }, [discardDraft, draft, ruleset]);
 
   if (hasRuleset && !ruleset) {
     return <p className={styles.characterDetailUnlockHint}>Loading character mechanics…</p>;
@@ -56,7 +69,7 @@ export function WorldBibleMechanicsPanel({
               Mechanics are optional. Add one useful value when you want the story
               to remember how this character changes from scene to scene.
             </p>
-            <button type='button' className={styles.primaryButton} onClick={() => setIsAdding(true)}>
+            <button type='button' className={styles.primaryButton} onClick={() => { touchedRef.current = true; setIsAdding(true); }}>
               Add mechanics
             </button>
           </div>
@@ -85,7 +98,7 @@ export function WorldBibleMechanicsPanel({
               to this canonical character. Nothing is written until you confirm.
             </p>
             <div className={styles.reviewToolbarActions}>
-              <button type='button' onClick={() => { window.localStorage.removeItem(draftStorageKey); setIsAdding(false); }} disabled={isSaving}>Cancel</button>
+              <button type='button' onClick={() => { touchedRef.current = true; void discardDraft(); setIsAdding(false); }} disabled={isSaving}>Cancel</button>
               <button type='button' className={styles.primaryButton} disabled={isSaving} onClick={() => {
                 const value = Number(defaultValue);
                 if (!name.trim() || !Number.isFinite(value)) {

@@ -1090,6 +1090,19 @@ runtime schema, and nothing here changes the roadmap's status board.
   reloads, scene re-reviews, and project review runs while their quote is
   still in the scene (`survivesSceneRereview`, `pruneModelCheckItems`), and
   their dismissal is saved. The 4.38 session store slice is gone.
+- Slice 3.23c browser-storage preferences and mechanics draft: the
+  unfinished first-mechanics form in the World Bible (value kind, name, and
+  starting value) now lives in project storage, in the `mechanics_drafts`
+  store (`DB_VERSION` 30). It survives a reload, travels with backups
+  (snapshot `schemaVersion` 10; older backups import with no drafts), and is
+  removed with its project, on Cancel, or once tracking is set up. Drafts
+  that older builds left in `localStorage` move over the first time a
+  character in that project is opened, and the old keys are removed.
+  Collapsed rails (Corkboard, World Bible, Lore), the Source Note starter
+  panel, and recent commands now share `utils/browserPreferences.ts` and
+  `hooks/useCollapsedPreference.ts`, with the same keys, so no setting is
+  lost. The remaining browser-storage keys are listed in
+  `docs/architecture-review.md` for 5.15.
 - Slice 3.23b project-scoped IndexedDB indexes: `DB_VERSION` is 29. The
   upgrade adds a non-unique `projectId` index to every project-scoped store
   and to migration backups; records are not rewritten. Project reads

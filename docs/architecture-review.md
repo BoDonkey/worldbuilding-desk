@@ -189,9 +189,47 @@ index, which does not export `openDb`; ESLint rejects deep imports into the
 folder and any use of `indexedDB` elsewhere (tests may reach in to seed
 databases). Services that need several stores at once either call a storage
 function that takes a pure planner (character identity resolution) or use
-`runProjectWriteTransaction`. Application and workspace UI preferences use
-Zustand with persistence where appropriate. Components should not introduce new
-direct persistence paths when an owning service or store already exists.
+`runProjectWriteTransaction`. Components should not introduce new direct
+persistence paths when an owning service or store already exists.
+
+Author-typed content belongs in project storage. Since Slice 3.23c that
+includes the unfinished first-mechanics form (`mechanics_drafts`, `DB_VERSION`
+30, snapshot `schemaVersion` 10). It survives a reload and travels with
+backups. Device-local UI preferences go through `utils/browserPreferences.ts`
+(collapsed panels through `hooks/useCollapsedPreference.ts`) or a persisted
+Zustand store, and they keep their existing keys.
+
+### Browser storage inventory (3.23c)
+
+Slice 5.15 must account for every key below. Most are preferences. The keys
+marked **content** hold project text or text derived from it. These are not
+author-typed drafts, but a locked vault must still encrypt them, clear them,
+or rebuild them after unlock.
+
+| Key | Holds | Kind |
+| --- | --- | --- |
+| `theme`, `fontSize`, `editorFont`, `editorWidth`, `editorSurface`, `editorLineHeight`, `sourceNoteView` | Display and editor choices | preference |
+| `wbd:corkboard:chapter-rail-collapsed:<p>`, `wbd:world-bible:category-rail-collapsed:<p>`, `wbd:lore:document-rail-collapsed:<p>`, `wbd:lore:starter-collapsed` | Collapsed panels | preference |
+| `recentCommands` | Command-palette command ids | preference |
+| `sceneRosterPreferences:<p>` | Scene roster layout | preference |
+| `wbd-workspace-ui` (Zustand) | Drawer layout, selected scene id, pinned stat sheet ids, panel toggles | preference |
+| `wbd-app-shell` (Zustand) | Rail state and the **active project record** (name and metadata) | **content** |
+| `workspaceReviewPrefs:<p>` | Dismissed unknown names per scene (words from the manuscript) | **content** |
+| `progressionContinuityReview:<p>` | Hidden progression-review items | preference |
+| `systemHistory:<p>` | App-generated System history; messages name entries | **content** |
+| `loreSynopsis:<p>:<subject>:<rev>` | Cached AI synopsis of a character or entry | **content** |
+| `inspectorBudget:<p>` | Daily AI consultation counts | preference |
+| `wbd:ai:last-provider` | Last chosen AI provider | preference |
+| `anthropic_api_key`, `openai_api_key`, `gemini_api_key` | Provider keys, browser dev build only; the desktop app keeps them in the OS-encrypted vault and moves old copies out | secret |
+| `worldbuilding-desk:diagnostics` | Redacted error ring buffer (slice 5.6) | diagnostic |
+| `wbd.routeDebugLog`, `wbd.routeEventLog` | Route-change debug log | diagnostic |
+| `wbd:first-run-checked`, `wbd:onboarding-guide-projects`, `wbd:onboarding-guide-dismissed:<p>`, `wbd:dogfood-tools` | Onboarding state and the dogfood-tools switch | preference |
+| `wbd:first-mechanics:<p>:<entity>` | Legacy mechanics drafts; moved into `mechanics_drafts` the next time the World Bible opens a character in that project, and removed with the project | legacy, migrating |
+
+`sessionStorage` holds one more: `wbd:assistant-conversation[:<scope>]:<p>`,
+the author's assistant chat for the current tab (**content**, cleared when
+the tab closes). 5.15 already names assistant conversations, so this inventory
+leaves the chat where it is.
 
 A change that spans several stores and must not be left half-done — accepting
 or removing canon is the main case — commits through
@@ -324,11 +362,11 @@ without turning cancelled or unverified code into a passing check.
 
 ## Current Architecture Risks
 
-1. Persistence now has one boundary (`services/storage/`, Slice 3.23a) and
-   project-scoped reads use a `projectId` index (3.23b), but some
-   author-typed drafts and preferences still sit in plaintext `localStorage`
-   (3.23c). The 5.15 vault encrypts through the storage boundary, so 3.23c
-   must land before it.
+1. Persistence has one boundary (`services/storage/`, Slice 3.23a), and
+   project-scoped reads use a `projectId` index (3.23b). As of 3.23c, no
+   author-typed draft remains in `localStorage`. Several keys still hold
+   project-derived text (see the browser storage inventory under
+   Persistence), and 5.15 must encrypt, clear, or rebuild each of them.
 2. Slice 3.22 moved the remaining hook-held domain logic into tested
    services: World Bible draft, classification, and review-queue planning
    (`services/worldBible/worldBibleEntityPlans.ts`) and Workspace stat-block

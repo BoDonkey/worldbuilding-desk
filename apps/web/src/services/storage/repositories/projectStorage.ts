@@ -28,7 +28,9 @@ const PROJECT_LOCAL_STORAGE_PREFIXES = [
   'loreSynopsis',
   'inspectorBudget',
   'workspaceReviewPrefs',
-  'progressionContinuityReview'
+  'progressionContinuityReview',
+  // Pre-3.23c mechanics drafts not yet moved into project storage.
+  'wbd:first-mechanics'
 ] as const;
 
 async function deleteProjectPrimaryRecords(projectId: string): Promise<void> {

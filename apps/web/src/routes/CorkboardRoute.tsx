@@ -7,6 +7,7 @@ import {useWorkspaceCorkboard} from '../hooks/useWorkspaceCorkboard';
 import {PageHeader} from '../components/PageHeader';
 import {ProjectScratchpadButton} from '../components/ProjectScratchpadButton';
 import {useConfirmDialog} from '../hooks/useConfirmDialog';
+import {useCollapsedPreference} from '../hooks/useCollapsedPreference';
 import {useStoryDashboardData} from '../hooks/useStoryDashboardData';
 import {useProgressionContinuityCandidates} from '../hooks/useProgressionContinuityCandidates';
 import {StoryDashboard} from '../components/Corkboard/StoryDashboard';
@@ -57,7 +58,11 @@ function CorkboardRoute() {
   const [editingBeatId, setEditingBeatId] = useState<string | null>(null);
   const [beatTitle, setBeatTitle] = useState('');
   const [beatNotes, setBeatNotes] = useState('');
-  const [isChapterRailCollapsed, setIsChapterRailCollapsed] = useState(false);
+  const {
+    collapsed: isChapterRailCollapsed,
+    setCollapsed: setIsChapterRailCollapsed,
+    toggle: handleToggleChapterRail
+  } = useCollapsedPreference(activeProject ? getChapterRailStorageKey(activeProject.id) : null);
   const [view, setView] = useState<'planning' | 'dashboard'>('planning');
   const {dashboard, documents, events, ruleset, status: dashboardStatus} = useStoryDashboardData({
     projectId: activeProject?.id ?? null,
@@ -70,16 +75,6 @@ function CorkboardRoute() {
     events,
     ruleset
   });
-
-  useEffect(() => {
-    if (!activeProject) {
-      setIsChapterRailCollapsed(false);
-      return;
-    }
-    setIsChapterRailCollapsed(
-      window.localStorage.getItem(getChapterRailStorageKey(activeProject.id)) === 'true'
-    );
-  }, [activeProject]);
 
   useEffect(() => {
     if (corkboardCards.length === 0) {
@@ -103,7 +98,7 @@ function CorkboardRoute() {
     setIsChapterRailCollapsed(false);
     setSelectedCardId(card.id);
     navigate(location.pathname, {replace: true, state: {}});
-  }, [corkboardCards, corkboardStatus, location.pathname, location.state, navigate]);
+  }, [corkboardCards, corkboardStatus, location.pathname, location.state, navigate, setIsChapterRailCollapsed]);
 
   const selectedCard = useMemo(
     () => corkboardCards.find((card) => card.id === selectedCardId) ?? null,
@@ -143,16 +138,6 @@ function CorkboardRoute() {
       confirmLabel: 'Delete',
       variant: 'danger',
       onConfirm: () => deleteCorkboardPlotPoint(cardId, pointId)
-    });
-  };
-
-  const handleToggleChapterRail = () => {
-    setIsChapterRailCollapsed((current) => {
-      const next = !current;
-      if (activeProject) {
-        window.localStorage.setItem(getChapterRailStorageKey(activeProject.id), String(next));
-      }
-      return next;
     });
   };
 

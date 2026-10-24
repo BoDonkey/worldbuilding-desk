@@ -1,15 +1,7 @@
-import {useState} from 'react';
 import styles from '../../styles/LoreRoute.module.css';
+import {useCollapsedPreference} from '../../hooks/useCollapsedPreference';
 
 const COLLAPSED_STORAGE_KEY = 'wbd:lore:starter-collapsed';
-
-const readCollapsed = (): boolean => {
-  try {
-    return window.localStorage.getItem(COLLAPSED_STORAGE_KEY) === 'true';
-  } catch {
-    return false;
-  }
-};
 
 interface SourceNoteStarterPanelProps {
   isImporting: boolean;
@@ -23,16 +15,7 @@ export const SourceNoteStarterPanel = ({
   onStartWriting,
   onImport
 }: SourceNoteStarterPanelProps) => {
-  const [collapsed, setCollapsed] = useState(readCollapsed);
-  const toggleCollapsed = () => {
-    const next = !collapsed;
-    setCollapsed(next);
-    try {
-      window.localStorage.setItem(COLLAPSED_STORAGE_KEY, String(next));
-    } catch {
-      // The panel still toggles; it just will not be remembered.
-    }
-  };
+  const {collapsed, toggle: toggleCollapsed} = useCollapsedPreference(COLLAPSED_STORAGE_KEY);
   const startWritingButton = (
     <button type='button' onClick={onStartWriting}>
       Start Writing
