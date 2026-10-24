@@ -221,7 +221,7 @@ run when a result was reused or coverage was focused.
    3.16 → 4.53; 3.17 → 1.4a; 3.17 → 1.4b; 4.54 → 4.55 → 4.56;
    4.57 → 4.58 → 4.59;
    3.18 after 4.66; 3.22 → 3.23a → 3.23b; 3.23a → 3.23c;
-   3.23a–3.23c before 5.15; 4.67 → 4.68; 4.69 → 4.70;
+   3.23a–3.23c before 5.15; 3.24a → 3.24b, both high priority; 4.67 → 4.68; 4.69 → 4.70;
    5.14 before 5.15; 5.15 before 6.1;
    Phase 6 strictly ordered).
 2. **Get the full prompt.** Slices marked _[prompt: archive/... § Slice N]_
@@ -311,6 +311,8 @@ and required revisit point, `WIP`, `Done <commit>`.
 | 3.23a | One storage layer + import guard | 3 | M | Done `1ff729b` — IndexedDB reached only through `services/storage/`: 11 root repositories, the service repositories, and `db.ts` moved under their own names (31 files incl. tests); one `idbRequest.ts` replaces 12 `requestToPromise` copies; character import, item-state authoring, identity resolution (pure planner inside a storage transaction), and the separate rulesets database now persist through storage; the index exports repositories and store names, not `openDb`; ESLint blocks deep storage imports and `indexedDB` outside the folder (tests excepted); no schema change or new stores; planted regressions in the extracted identity and item-state writes caught; bundle chunks unchanged; lint 1 baseline warning; 1,116 web + 47 engine + 12 UI + 24 desktop tests; web/desktop builds; local Cypress 152/152 without retries (backup round-trip in `post-merge-smoke`, canon in `canon-decisions` and the J-suite; manual smoke procedures not run by hand); `cypress-smoke` green (run 40095897501, PR #64) |
 | 3.23b | Project-scoped IndexedDB indexes | 3 | M | Done `5c70ff9` — `DB_VERSION` 28→29 adds a non-unique `projectId` index to every project-scoped store plus migration backups (world canvases and review runs keep their unique index); the upgrade only adds indexes, records unchanged; one `getAllByProject`/`readProjectRecords` reader (a missing project id reads nothing, since `index.getAll(undefined)` returns everything); every `…ByProject` getter plus the backup, snapshot, and migration readers and the replace-by-project writes read through the index; same order (primary key) and contents; real-IndexedDB test opens a populated v28 database, upgrades it, and checks indexes, every record, and getter results, with two planted regressions caught; backup and snapshot formats, migration chain, and snapshot `schemaVersion` unchanged; lint 1 baseline warning; 1,120 web + 47 engine + 12 UI + 24 desktop tests; web/desktop builds; local Cypress 150/152 in the full run without retries, the two `ask-project` failures being its fault injection patching only `IDBObjectStore.getAll` — it now patches `IDBIndex.getAll` too and the spec passes 8/8; `cypress-smoke` green (run 40105610919, PR #65) |
 | 3.23c | Browser-storage preferences + mechanics draft | 3 | S | WIP — unfinished first-mechanics draft moved from `localStorage` into a project-scoped `mechanics_drafts` store (`DB_VERSION` 29→30, snapshot `schemaVersion` 9→10, older backups import with no drafts); survives reload, round-trips through backup under rewritten ids, removed on cancel, setup, or project delete; writes queued in call order so a late save cannot revive a cancelled draft; legacy `wbd:first-mechanics:*` keys migrate once and are removed; collapsed rails (Corkboard, World Bible, Lore), Source Note starter, and recent commands share `utils/browserPreferences.ts` and `useCollapsedPreference` with unchanged keys; remaining browser-storage keys inventoried for 5.15 in `docs/architecture-review.md`; two planted regressions caught; lint 1 baseline warning; 1,135 web + 47 engine + 12 UI + 24 desktop tests; web/desktop builds; local Cypress 152/152 without retries (backup smoke now carries a draft); manual smoke step 1.6 not run by hand; awaiting `cypress-smoke` |
+| 3.24a | Backup import collision guard | 3 | S | — |
+| 3.24b | Backup import id remapping | 3 | L | — |
 | 4.1 | Description-first manual item creation | 4 | S | Done `70fb72f` — focused manual item draft with progressive full-editor disclosure; lint with 3 baseline warnings; 275 web + 6 engine + 12 UI tests; web/desktop builds; Cypress 44/44; desktop/narrow browser checks |
 | 4.2 | Storage schema versioning + migrations | 4 | M | Done `965af19` — separate IndexedDB, project-data, and snapshot schema contracts; ordered project-load migration runner with restorable pre-migration backups including rulesets; newer schemas fail closed before writes; 327 web + 6 engine + 12 UI tests; lint baseline; web/desktop builds; Cypress 47/47 |
 | 4.3 | Internal package namespace rename | 4 | S | Done `1917611` — rules packages renamed to `@worldbuilding-desk/*` across manifests, imports, workspace scripts, Vite resolution, CI, lockfile, and active docs; local workspace links and generated artifacts contain no old scope; web/package lint; root test plus 357 web + 6 engine + 12 UI tests; web/desktop builds; Cypress not required (no routed UI change) |
@@ -1001,6 +1003,38 @@ boundary and these slices create it.
   backup. After this slice, no author-typed content may be stored outside the storage layer. Record the
   remaining `localStorage` keys, which should be preferences only, as the
   inventory 5.15 must account for.
+- **3.24a Backup import collision guard.** High priority: this is a
+  data-loss bug. Found 2026-10-24 during 3.23c. `importProjectBackup` keeps
+  each record's own id for most stores (`rewriteProjectScoped` changes only
+  `projectId`). A backup imported into the same browser it came from, as a
+  new project or merged into another project, therefore overwrites the
+  source project's records and moves them into the copy. A fake-IndexedDB
+  probe left the source project with 0 of its 1 entity. Scratchpad, World
+  Canvas, aliases, actor resolutions, identity reports, and mechanics drafts
+  already build their ids from the project id and are safe. Before any
+  write, the preview and the import look up every incoming id in its store.
+  If an id belongs to a project other than the target, they refuse the
+  import with a plain explanation and leave the database untouched. A merge
+  back into the same source project (a restore) stays allowed. Add tests for
+  new, merge-into-other, and restore, and add a failure case to the
+  backup smoke test. Snapshot format unchanged.
+- **3.24b Backup import id remapping.** After 3.24a. Give every imported
+  record a fresh id on a new-project import, and on a merge whenever an id
+  collides. Rewrite every reference through one id map built before
+  writing: `categoryId`, entity `links`, Corkboard `sceneIds` and
+  `chapterCardId`, character and sheet ids (`characterId`,
+  `characterEntityId`, `characterSheetId`), lore links and
+  `loreDocumentId`, fact and proposal `sourceEntityId`/`targetId`/scene
+  bounds, canon-decision targets, state events' `sceneId` and actor ids,
+  compendium and settlement ids, Canvas `linkedEntityIds` and
+  `linkedSourceNoteIds`, and ids inside scene HTML such as `data-lore-id`.
+  Rule-definition ids (`definitionId`, ruleset stat/resource ids) belong to
+  the ruleset and stay unchanged. Add a test that walks every
+  `ProjectSnapshot.data` field and fails when a field holding an id is not
+  remapped, so new stores cannot skip the map. Then lift the 3.24a refusal
+  for cases the map now handles. Round-trip test: import a backup twice into
+  the browser it came from, and all three projects stay complete and
+  independent. Snapshot format unchanged.
 
 ## Phase 4 — Product Completeness for v1
 
