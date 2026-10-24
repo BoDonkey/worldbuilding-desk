@@ -111,7 +111,7 @@ export interface ConsultationBudgetStatus {
 /**
  * What a consultation is charged against. Only a route the provider-route
  * classifier verified as private-local (loopback Ollama with a locally
- * installed model) is exempt; a bare provider name, `'ollama'` included, is
+ * installed model, or a loopback local model server) is exempt; a bare provider name, `'ollama'` included, is
  * always budgeted, so an unverified or cloud Ollama model fails closed.
  */
 export type ConsultationRoute = {isPrivateLocal: boolean} | AIProviderId | string | null | undefined;

@@ -8,6 +8,7 @@ import {
 } from './providers/ProviderRegistry';
 import {isProviderId, resolveProviderBaseUrl, type ProviderId} from './endpointPolicy';
 import {resolveOllamaRequestModel} from './ollamaModelPolicy';
+import {resolveLocalServerRequestModel} from './localServerPolicy';
 import {
   isHostedProviderId,
   type HostedProviderId,
@@ -37,7 +38,7 @@ export function validatePayload(payload: unknown): asserts payload is LLMPayload
   const p = payload as Record<string, unknown>;
 
   if (!isProviderId(p.providerId)) {
-    throw new Error('providerId must be anthropic, openai, gemini, or ollama');
+    throw new Error('providerId must be anthropic, openai, gemini, ollama, or local-openai');
   }
 
   // Keys live in the main-process vault. A renderer-supplied key could be
@@ -155,11 +156,16 @@ export function validatePayload(payload: unknown): asserts payload is LLMPayload
 
 /**
  * Everything a provider call needs that the renderer may not decide: the
- * policy-checked address, the key from the vault, and for Ollama the model
- * verified as installed locally (cloud and missing models are refused).
+ * policy-checked address, the key from the vault, for Ollama the model
+ * verified as installed locally (cloud and missing models are refused), and
+ * for the local model server the configured or first listed model.
  */
 async function resolveCredentials(vault: ProviderKeyVault, payload: LLMPayload, signal?: AbortSignal) {
   const baseUrl = resolveProviderBaseUrl(payload.providerId, payload.providerConfig?.baseUrl);
+  if (payload.providerId === 'local-openai') {
+    const model = await resolveLocalServerRequestModel(baseUrl, payload.request.model, {signal});
+    return {baseUrl, apiKey: undefined, request: {...payload.request, model}};
+  }
   if (!isHostedProviderId(payload.providerId)) {
     const model = await resolveOllamaRequestModel(baseUrl, payload.request.model, {signal});
     return {baseUrl, apiKey: undefined, request: {...payload.request, model}};

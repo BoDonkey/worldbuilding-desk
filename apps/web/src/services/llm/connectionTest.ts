@@ -2,6 +2,7 @@ import type {AIProviderId, ProjectAISettings} from '../../entityTypes';
 import {LLMService} from './LLMService';
 import {PROVIDER_DEFAULT_BASE_URLS} from './providerConfig';
 import {isLoopbackUrl, parseOllamaTags, resolveLocalOllamaModel} from './providerRoute';
+import {LOCAL_SERVER_RESPONSE_LIMIT_MESSAGE, listLocalServerModels, localServerApiBase} from './localServer';
 import {
   getProviderKeyStatus,
   readBrowserProviderKey,
@@ -20,7 +21,8 @@ export const PROVIDER_DISPLAY_NAMES: Record<AIProviderId, string> = {
   anthropic: 'Anthropic',
   openai: 'OpenAI',
   gemini: 'Google Gemini',
-  ollama: 'Ollama'
+  ollama: 'Ollama',
+  'local-openai': 'The local model server'
 };
 
 /**
@@ -171,4 +173,85 @@ export async function testOllamaConnection(params: {
       details
     };
   }
+}
+
+/**
+ * Lists the server's models where it offers a listing, then sends one
+ * single-token chat request, because some servers answer `/models` without a
+ * model loaded. Requests go only to a loopback address.
+ */
+export async function testLocalServerConnection(params: {
+  baseUrl?: string;
+  model?: string;
+}): Promise<ConnectionTestResult> {
+  const apiBase = localServerApiBase(params.baseUrl);
+  const model = params.model?.trim() ?? '';
+  const details: string[] = [];
+
+  if (!isLoopbackUrl(apiBase)) {
+    return {
+      tone: 'error',
+      summary: 'The local model server must run on this computer (localhost or 127.0.0.1). Remote addresses are blocked.',
+      details
+    };
+  }
+
+  const listed = await listLocalServerModels(apiBase).catch(() => null);
+  if (listed?.length) {
+    details.push(`The server lists ${listed.length} model(s).`);
+    if (model && !listed.includes(model)) {
+      details.push(`"${model}" is not in that list. Some servers accept any name and use their loaded model.`);
+    }
+  } else {
+    details.push('The server did not list its models, so it will use whichever model it has loaded.');
+  }
+
+  try {
+    const service = new LLMService({
+      provider: 'local-openai',
+      configs: {'local-openai': {baseUrl: params.baseUrl, model: model || undefined}},
+      promptTools: [],
+      defaultToolIds: []
+    });
+    await service.complete({
+      messages: [{role: 'user', content: 'Reply with just the word OK.'}],
+      maxTokens: 5,
+      cache: false
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    // A five-token test can run out of room (a thinking model spends it reasoning); the server
+    // still answered, which is all the test checks.
+    if (!message.includes(LOCAL_SERVER_RESPONSE_LIMIT_MESSAGE)) return localServerFailure(message, apiBase, details, listed);
+  }
+
+  details.unshift(`Connected to ${apiBase}.`);
+  if (!model && listed?.length) details.push(`No model configured. Requests will name "${listed[0]}".`);
+  return {
+    tone: 'success',
+    summary: 'Local model server connection succeeded.',
+    details,
+    detectedModels: listed ?? undefined
+  };
+}
+
+function localServerFailure(
+  message: string,
+  apiBase: string,
+  details: string[],
+  listed: string[] | null
+): ConnectionTestResult {
+  const unreachable = /could not connect/i.test(message);
+  return {
+    tone: 'error',
+    summary: unreachable
+      ? `Could not reach the local model server at ${apiBase}. Check that it is running${
+          typeof window !== 'undefined' && !window.electronAPI
+            ? ', and that it allows requests from this page (CORS) in the browser build'
+            : ''
+        }.`
+      : message,
+    details,
+    detectedModels: listed ?? undefined
+  };
 }

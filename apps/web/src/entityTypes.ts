@@ -157,7 +157,7 @@ export interface SystemHistoryEntry {
   createdAt: number;
 }
 
-export type AIProviderId = 'anthropic' | 'openai' | 'gemini' | 'ollama';
+export type AIProviderId = 'anthropic' | 'openai' | 'gemini' | 'ollama' | 'local-openai';
 
 export interface AnthropicProviderSettings {
   apiKey?: string;
@@ -180,11 +180,18 @@ export interface OllamaProviderSettings {
   model?: string;
 }
 
+/** A local server that speaks the OpenAI chat-completions API (KoboldCPP, LM Studio, llama.cpp). */
+export interface LocalOpenAIProviderSettings {
+  baseUrl?: string;
+  model?: string;
+}
+
 export interface ProviderConfigMap {
   anthropic?: AnthropicProviderSettings;
   openai?: OpenAIProviderSettings;
   gemini?: GeminiProviderSettings;
   ollama?: OllamaProviderSettings;
+  'local-openai'?: LocalOpenAIProviderSettings;
 }
 
 export interface ProjectAISettings {

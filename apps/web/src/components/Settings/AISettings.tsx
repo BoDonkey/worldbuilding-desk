@@ -11,6 +11,8 @@ import {
   PROVIDER_DEFAULT_BASE_URLS,
   PROVIDER_FALLBACK_MODELS,
   PROVIDER_MODEL_PLACEHOLDERS,
+  isHostedAIProvider,
+  isLocalAIProvider,
   normalizeConfiguredModel
 } from '../../services/llm/providerConfig';
 import {
@@ -18,7 +20,11 @@ import {
   formatHostedResponseCost,
   getHostedResponseCostCeiling
 } from '../../services/llm/hostedResponsePolicy';
-import {testHostedProviderConnection, testOllamaConnection} from '../../services/llm/connectionTest';
+import {
+  testHostedProviderConnection,
+  testLocalServerConnection,
+  testOllamaConnection
+} from '../../services/llm/connectionTest';
 import {useProviderRoute} from '../../hooks/useProviderRoute';
 import {
   clearProviderKey,
@@ -65,6 +71,12 @@ interface ProviderDiagnosticsState {
   details: string[];
   detectedModels?: string[];
 }
+
+const HOSTED_KEY_FIELDS: Record<HostedProviderId, {label: string; placeholder: string; href: string; site: string}> = {
+  anthropic: {label: 'Anthropic API Key (Claude)', placeholder: 'sk-ant-...', href: 'https://console.anthropic.com', site: 'console.anthropic.com'},
+  openai: {label: 'OpenAI API Key (GPT & embeddings)', placeholder: 'sk-...', href: 'https://platform.openai.com', site: 'platform.openai.com'},
+  gemini: {label: 'Gemini API Key', placeholder: 'AIza...', href: 'https://aistudio.google.com/app/apikey', site: 'Google AI Studio'}
+};
 
 const PROJECT_MODE_LABELS: Record<ProjectMode, string> = {
   litrpg: 'LitRPG',
@@ -262,15 +274,13 @@ export const AISettings: React.FC<AISettingsProps> = ({
     const result =
       provider === 'ollama'
         ? await testOllamaConnection({baseUrl: currentBaseUrl, model: currentModel})
-        : await testHostedProviderConnection({
-            providerId: provider,
-            apiKey: keyDrafts[provider],
-            model: currentModel
-          });
+        : provider === 'local-openai'
+          ? await testLocalServerConnection({baseUrl: currentBaseUrl, model: currentModel})
+          : await testHostedProviderConnection({providerId: provider, apiKey: keyDrafts[provider], model: currentModel});
 
     setDiagnostics(result);
     setIsRunningDiagnostics(false);
-    if (provider !== 'ollama') {
+    if (isHostedAIProvider(provider)) {
       // The desktop app saves a typed key before testing it.
       const status = await getProviderKeyStatus().catch(() => null);
       if (status) {
@@ -280,6 +290,7 @@ export const AISettings: React.FC<AISettingsProps> = ({
     }
   };
 
+  const hostedProvider = isHostedAIProvider(aiSettings.provider) ? aiSettings.provider : null;
   const currentProviderConfig = aiSettings.configs[aiSettings.provider] ?? {};
   const currentModel = currentProviderConfig.model ?? '';
   const currentBaseUrl =
@@ -644,7 +655,7 @@ export const AISettings: React.FC<AISettingsProps> = ({
             value={aiSettings.provider}
             onChange={(e) => handleProviderChange(e.target.value as AIProviderId)}
           >
-            {(['anthropic', 'openai', 'gemini', 'ollama'] as AIProviderId[]).map((provider) => (
+            {(Object.keys(AI_PROVIDER_LABELS) as AIProviderId[]).map((provider) => (
               <option key={provider} value={provider}>
                 {AI_PROVIDER_LABELS[provider]}
               </option>
@@ -652,7 +663,7 @@ export const AISettings: React.FC<AISettingsProps> = ({
           </select>
           <p className={styles.help}>
             {providerRoute.kind === 'private-local'
-              ? `Ollama runs entirely on your device with ${providerRoute.model ? `"${providerRoute.model}"` : 'an installed local model'}. No story text ever leaves your computer.`
+              ? `${aiSettings.provider === 'local-openai' ? 'Your local model server' : 'Ollama'} runs entirely on your device with ${providerRoute.model ? `"${providerRoute.model}"` : aiSettings.provider === 'local-openai' ? 'the model it has loaded' : 'an installed local model'}. No story text ever leaves your computer.`
               : providerRoute.kind !== 'hosted'
                 ? providerRoute.reason
                 : `When you use the writing assistant, the necessary text is sent to ${AI_PROVIDER_LABELS[aiSettings.provider]}'s servers under that provider's terms — only when you invoke it, never in the background.`}
@@ -669,81 +680,60 @@ export const AISettings: React.FC<AISettingsProps> = ({
             placeholder={PROVIDER_MODEL_PLACEHOLDERS[aiSettings.provider]}
           />
           <p className={styles.help}>
-            Leave blank to use the app default{aiSettings.provider === 'ollama' ? ' — Ollama will auto-detect an installed local model' : ''}.
+            {aiSettings.provider === 'local-openai'
+              ? 'Leave blank to use the first model the server lists, or the one it has loaded.'
+              : `Leave blank to use the app default${aiSettings.provider === 'ollama' ? ' — Ollama will auto-detect an installed local model' : ''}.`}
           </p>
         </div>
 
-        {aiSettings.provider === 'anthropic' && (
+        {aiSettings.provider === 'local-openai' && (
           <div className={styles.field}>
-            <label className={styles.label}>Anthropic API Key (Claude)</label>
+            <label className={styles.label} htmlFor='local-server-base-url'>Server address</label>
             <input
-              type='password'
-              value={anthropicKey}
-              onChange={(e) => {
-                setAnthropicKey(e.target.value);
-                setApiKeysSaved(false);
-              }}
-              placeholder={keyStatus?.anthropic ? 'Saved key (hidden)' : 'sk-ant-...'}
-              autoComplete='off'
+              id='local-server-base-url'
+              type='text'
               className={styles.input}
+              value={currentBaseUrl ?? ''}
+              onChange={(e) =>
+                onSettingsChange({
+                  ...aiSettings,
+                  configs: {...aiSettings.configs, 'local-openai': {...aiSettings.configs['local-openai'], baseUrl: e.target.value}}
+                })
+              }
+              placeholder={PROVIDER_DEFAULT_BASE_URLS['local-openai']}
             />
             <p className={styles.help}>
-              Get your key from{' '}
-              <a href='https://console.anthropic.com' target='_blank' rel='noopener noreferrer'>
-                console.anthropic.com
-              </a>
+              KoboldCPP: http://localhost:5001/v1 · LM Studio: http://localhost:1234/v1 · llama.cpp server:
+              http://localhost:8080/v1. Only addresses on this computer are allowed; no API key is needed.
             </p>
-            {renderSavedKeyNote('anthropic')}
-          </div>
-        )}
-        {aiSettings.provider === 'openai' && (
-          <div className={styles.field}>
-            <label className={styles.label}>OpenAI API Key (GPT & embeddings)</label>
-            <input
-              type='password'
-              value={openaiKey}
-              onChange={(e) => {
-                setOpenaiKey(e.target.value);
-                setApiKeysSaved(false);
-              }}
-              placeholder={keyStatus?.openai ? 'Saved key (hidden)' : 'sk-...'}
-              autoComplete='off'
-              className={styles.input}
-            />
-            <p className={styles.help}>
-              Get your key from{' '}
-              <a href='https://platform.openai.com' target='_blank' rel='noopener noreferrer'>
-                platform.openai.com
-              </a>
-            </p>
-            {renderSavedKeyNote('openai')}
-          </div>
-        )}
-        {aiSettings.provider === 'gemini' && (
-          <div className={styles.field}>
-            <label className={styles.label}>Gemini API Key</label>
-            <input
-              type='password'
-              value={geminiKey}
-              onChange={(e) => {
-                setGeminiKey(e.target.value);
-                setApiKeysSaved(false);
-              }}
-              placeholder={keyStatus?.gemini ? 'Saved key (hidden)' : 'AIza...'}
-              autoComplete='off'
-              className={styles.input}
-            />
-            <p className={styles.help}>
-              Get your key from{' '}
-              <a href='https://aistudio.google.com/app/apikey' target='_blank' rel='noopener noreferrer'>
-                Google AI Studio
-              </a>
-            </p>
-            {renderSavedKeyNote('gemini')}
           </div>
         )}
 
-        {aiSettings.provider !== 'ollama' && <p className={styles.help}>{keyStorageNote}</p>}
+        {hostedProvider && (
+          <div className={styles.field}>
+            <label className={styles.label}>{HOSTED_KEY_FIELDS[hostedProvider].label}</label>
+            <input
+              type='password'
+              value={keyDrafts[hostedProvider]}
+              onChange={(e) => {
+                keyDraftSetters[hostedProvider](e.target.value);
+                setApiKeysSaved(false);
+              }}
+              placeholder={keyStatus?.[hostedProvider] ? 'Saved key (hidden)' : HOSTED_KEY_FIELDS[hostedProvider].placeholder}
+              autoComplete='off'
+              className={styles.input}
+            />
+            <p className={styles.help}>
+              Get your key from{' '}
+              <a href={HOSTED_KEY_FIELDS[hostedProvider].href} target='_blank' rel='noopener noreferrer'>
+                {HOSTED_KEY_FIELDS[hostedProvider].site}
+              </a>
+            </p>
+            {renderSavedKeyNote(hostedProvider)}
+          </div>
+        )}
+
+        {hostedProvider && <p className={styles.help}>{keyStorageNote}</p>}
         <div className={styles.apiKeyActions}>
           <button
             type='button'
@@ -753,7 +743,7 @@ export const AISettings: React.FC<AISettingsProps> = ({
           >
             {isRunningDiagnostics ? 'Testing connection...' : 'Test connection'}
           </button>
-          {aiSettings.provider !== 'ollama' && (
+          {hostedProvider && (
             <>
               <button onClick={() => void handleSaveKeys()} className={styles.saveButton}>
                 Save API Keys
@@ -789,7 +779,7 @@ export const AISettings: React.FC<AISettingsProps> = ({
                 <li key={detail}>{detail}</li>
               ))}
             </ul>
-            {aiSettings.provider === 'ollama' && diagnostics.detectedModels?.length ? (
+            {isLocalAIProvider(aiSettings.provider) && diagnostics.detectedModels?.length ? (
               <div className={styles.detectedModelActions}>
                 {diagnostics.detectedModels.slice(0, 6).map((model) => (
                   <button
@@ -958,7 +948,7 @@ export const AISettings: React.FC<AISettingsProps> = ({
             {budgetStatus.resetsAtLabel}.{' '}
             {budgetIsLocal
               ? `Your local provider does not spend it at all — local requests stop only at a separate runaway guard of ${LOCAL_CONSULTATION_DAILY_GUARD} a day.`
-              : 'Local (Ollama) providers do not spend it at all.'}
+              : 'Local providers (Ollama or a local model server) do not spend it at all.'}
           </p>
           <div className={styles.budgetUsage}>
             <p className={styles.budgetUsageSummary}>
@@ -1032,7 +1022,7 @@ export const AISettings: React.FC<AISettingsProps> = ({
               here. Prices checked {HOSTED_PRICE_TABLE_CHECKED_AT}.
             </p>
           ) : (
-            <p className={styles.help}>Local Ollama replies have no response cap or provider charge.</p>
+            <p className={styles.help}>Local replies have no response cap or provider charge.</p>
           )}
         </div>
         <div className={styles.field}>

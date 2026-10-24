@@ -34,7 +34,7 @@ import {ConsultationBudgetNotice} from '../common/ConsultationBudgetNotice';
 import {ModelRunProgress} from '../common/ModelRunProgress';
 import {CraftCitationList} from '../CraftCitationList';
 import styles from './WorldCanvasView.module.css';
-import {HOSTED_PROVIDER_NAMES} from '../../services/llm/providerConfig';
+import {HOSTED_PROVIDER_NAMES, isHostedAIProvider} from '../../services/llm/providerConfig';
 
 interface CoachingResult {
   action: WorldCanvasCoachingAction;
@@ -101,7 +101,7 @@ export function WorldCanvasCoaching({
     ? 'Runs locally. The focused Canvas text, selected reference names or titles, and craft excerpts stay on this computer.'
     : budget.route.kind !== 'hosted'
       ? budget.route.reason ?? null
-      : aiConfig?.provider && aiConfig.provider !== 'ollama'
+      : isHostedAIProvider(aiConfig?.provider)
       ? `Sends the focused Canvas text, selected reference names or titles, and retrieved craft excerpts to ${HOSTED_PROVIDER_NAMES[aiConfig.provider]}’s servers only when you choose an action. Source Note text and manuscript prose are not sent.`
       : null;
 

@@ -4,6 +4,7 @@ import {OllamaProvider} from './providers/ollama';
 import {
   classifyProviderRoute,
   describeRouteDataFlow,
+  LOCAL_SERVER_DISCLOSURE,
   parseOllamaTags,
   PRIVATE_LOCAL_DISCLOSURE
 } from './providerRoute';
@@ -90,5 +91,25 @@ describe('browser-build Ollama request policy', () => {
       new OllamaProvider({baseUrl: 'http://10.0.0.2:11434', model: 'qwen3:8b'}).generateCompletion(request)
     ).rejects.toThrow(/Remote Ollama addresses are blocked/);
     expect(fetchMock.mock.calls.some(([url]) => String(url).endsWith('/api/chat'))).toBe(false);
+  });
+});
+
+describe('local OpenAI-compatible server route', () => {
+  const localServer = (config: {baseUrl?: string; model?: string}) =>
+    ({provider: 'local-openai', configs: {'local-openai': config}}) as unknown as ProjectAISettings;
+
+  it('is private-local at a loopback address, including the default, with no model check', () => {
+    for (const baseUrl of [undefined, '', 'http://127.0.0.1:8080/v1', 'http://localhost:1234/v1']) {
+      const route = classifyProviderRoute(localServer({baseUrl, model: 'mistral'}), null);
+      expect(route).toMatchObject({kind: 'private-local', isPrivateLocal: true, allowsRequests: true, model: 'mistral'});
+      expect(describeRouteDataFlow(route, 'the scene')).toBe(LOCAL_SERVER_DISCLOSURE);
+    }
+  });
+
+  it('blocks a remote address and never names a hosted provider', () => {
+    const route = classifyProviderRoute(localServer({baseUrl: 'http://192.168.1.20:5001/v1'}), null);
+    expect(route).toMatchObject({kind: 'local-server-remote', isPrivateLocal: false, allowsRequests: false});
+    expect(describeRouteDataFlow(route, 'the scene')).toMatch(/must run on this computer/);
+    expect(describeRouteDataFlow(route, 'the scene')).not.toMatch(/OpenAI/);
   });
 });

@@ -146,6 +146,8 @@ export function describeError(error: unknown, fallback: string, options: Describ
     case 'network':
       return /ollama/i.test(message)
         ? 'Could not reach Ollama. Check that it is running on this computer, then try again.'
+        : /local model server/i.test(message)
+        ? 'Could not reach the local model server. Check that it is running on this computer, then try again.'
         : PROVIDER_NAME_PATTERN.test(message)
           ? `Could not reach ${providerLabel(message)}. Check your internet connection and try again.`
           : 'Could not reach the network. Check your connection and try again.';

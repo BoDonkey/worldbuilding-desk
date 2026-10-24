@@ -7,6 +7,16 @@ describe('resolveProviderBaseUrl', () => {
     expect(resolveProviderBaseUrl('openai', '  ')).toBe('https://api.openai.com');
     expect(resolveProviderBaseUrl('gemini')).toBe('https://generativelanguage.googleapis.com/v1beta');
     expect(resolveProviderBaseUrl('ollama')).toBe('http://localhost:11434');
+    expect(resolveProviderBaseUrl('local-openai')).toBe('http://localhost:5001/v1');
+  });
+
+  it('allows the local model server only on this computer', () => {
+    expect(resolveProviderBaseUrl('local-openai', 'http://127.0.0.1:8080/')).toBe('http://127.0.0.1:8080');
+    expect(resolveProviderBaseUrl('local-openai', 'http://localhost:1234/v1')).toBe('http://localhost:1234/v1');
+    for (const address of ['http://192.168.1.20:5001/v1', 'https://api.openai.com/v1', 'http://localhost.evil.example:5001']) {
+      expect(() => resolveProviderBaseUrl('local-openai', address)).toThrow(/must run on this computer/);
+    }
+    expect(() => resolveProviderBaseUrl('local-openai', 'http://user:pw@localhost:5001/v1')).toThrow(/credentials/);
   });
 
   it('accepts only HTTPS on the provider origin for hosted providers', () => {

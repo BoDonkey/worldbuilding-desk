@@ -57,7 +57,8 @@ function isAIProviderId(value: unknown): value is ProjectAISettings['provider'] 
     value === 'anthropic' ||
     value === 'openai' ||
     value === 'gemini' ||
-    value === 'ollama'
+    value === 'ollama' ||
+    value === 'local-openai'
   );
 }
 
@@ -95,6 +96,9 @@ export function createDefaultAISettings(): ProjectAISettings {
       },
       ollama: {
         baseUrl: PROVIDER_DEFAULT_BASE_URLS.ollama
+      },
+      'local-openai': {
+        baseUrl: PROVIDER_DEFAULT_BASE_URLS['local-openai']
       }
     },
     promptTools: [],
@@ -179,6 +183,11 @@ function ensureAISettings(settings: ProjectSettings): ProjectSettings {
       ...aiSettings.configs.ollama,
       model: normalizeConfiguredModel(aiSettings.configs.ollama?.model),
       baseUrl: aiSettings.configs.ollama?.baseUrl ?? PROVIDER_DEFAULT_BASE_URLS.ollama
+    },
+    'local-openai': {
+      ...aiSettings.configs['local-openai'],
+      model: normalizeConfiguredModel(aiSettings.configs['local-openai']?.model),
+      baseUrl: aiSettings.configs['local-openai']?.baseUrl ?? PROVIDER_DEFAULT_BASE_URLS['local-openai']
     }
   };
   aiSettings.promptTools = aiSettings.promptTools ?? [];

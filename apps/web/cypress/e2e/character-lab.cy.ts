@@ -3,6 +3,7 @@ import {DB_NAME, DB_VERSION} from '../../src/services/storage/db';
 const PROJECT_ID = 'cypress-project-1';
 const ANTHROPIC_STREAM = 'http://localhost:3001/api/anthropic/stream';
 const OLLAMA_CHAT = 'http://localhost:11434/api/chat';
+const LOCAL_SERVER = 'http://localhost:5001/v1';
 const WATCHED_STORES = [
   'entities',
   'entityCategories',
@@ -291,6 +292,45 @@ describe('Character lab', () => {
       cy.contains('Too late.').should('not.exist');
     });
   });
+
+  it('runs on a local OpenAI-compatible server with no key and the on-device disclosure', () => {
+    cy.intercept('GET', `${LOCAL_SERVER}/models`, {statusCode: 200, body: {data: [{id: 'kobold-model'}]}});
+    cy.intercept('POST', `${LOCAL_SERVER}/chat/completions`, {
+      statusCode: 200,
+      headers: {'content-type': 'text/event-stream'},
+      body: [
+        `data: ${JSON.stringify({choices: [{delta: {content: 'The Ember Court, '}}]})}`,
+        `data: ${JSON.stringify({choices: [{delta: {content: 'always.'}, finish_reason: 'stop'}]})}`,
+        'data: [DONE]',
+        ''
+      ].join('\n\n')
+    }).as('localServer');
+    cy.setSeededProjectProvider('local-openai');
+    cy.visit('/world-bible');
+    cy.contains('button', 'Characters').click();
+    cy.contains('[class*="entityName"]', /^Aria$/).parents('li').first().within(() => {
+      cy.contains('button', 'Edit').click();
+    });
+    cy.contains('button', 'Talk to Aria').click();
+
+    labDialog().within(() => {
+      cy.contains('Runs on your local model server. Nothing leaves this computer.').should('be.visible');
+      cy.contains(/servers/).should('not.exist');
+      cy.get('textarea').first().type('Who do you serve?');
+      cy.contains('button', /^Send$/).click();
+      cy.contains('The Ember Court, always.').should('be.visible');
+    });
+
+    cy.wait('@localServer').then(({request}) => {
+      expect(request.headers).not.to.have.property('authorization');
+      const body = request.body as {model: string; stream: boolean; messages: Array<{role: string; content: string}>};
+      expect(body.model).to.equal('kobold-model');
+      expect(body.stream).to.equal(true);
+      expect(body.messages[0].role).to.equal('system');
+      expect(body.messages[0].content).to.contain('sworn to the Ember Court');
+    });
+  });
+
   describe('character scenes', () => {
     beforeEach(() => {
       withDb(seedSceneCast);

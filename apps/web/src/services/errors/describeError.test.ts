@@ -51,6 +51,9 @@ describe('describeError', () => {
     expect(describeError(new Error('Ollama API error: fetch failed'), 'x')).toBe(
       'Could not reach Ollama. Check that it is running on this computer, then try again.'
     );
+    expect(
+      describeError(new Error('Could not connect to the local model server at http://localhost:5001/v1. Check that it is running.'), 'x')
+    ).toBe('Could not reach the local model server. Check that it is running on this computer, then try again.');
     expect(describeError(new Error('Anthropic API error: ECONNREFUSED'), 'x')).toBe(
       'Could not reach Anthropic. Check your internet connection and try again.'
     );
