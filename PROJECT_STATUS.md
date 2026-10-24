@@ -1090,6 +1090,16 @@ runtime schema, and nothing here changes the roadmap's status board.
   reloads, scene re-reviews, and project review runs while their quote is
   still in the scene (`survivesSceneRereview`, `pruneModelCheckItems`), and
   their dismissal is saved. The 4.38 session store slice is gone.
+- Slice 3.24b backup import id remapping: importing a backup as a new
+  project now gives every record a new id and rewrites every reference
+  through one map. A backup can therefore be copied into the browser it came
+  from as often as needed, and the source and each copy stay complete and
+  independent. Ids the app builds from the project id keep that shape. A
+  merge into another project copies records that belong elsewhere; merging
+  the same backup again updates them instead of adding duplicates. A restore
+  into the source project changes no ids, and no longer duplicates aliases.
+  The 3.24a refusal remains as a safety net, and the Projects preview now
+  says when an import makes a copy.
 - Slice 3.24a backup import collision guard: importing a backup in the
   browser it came from no longer takes records away from the source project.
   Import keeps most record ids, so a new-project import, or a merge into a

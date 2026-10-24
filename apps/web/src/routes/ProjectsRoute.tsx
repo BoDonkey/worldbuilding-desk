@@ -16,7 +16,7 @@ import {
   parseProjectBackupZip,
   previewProjectBackupConflicts,
   findProjectBackupCollisions,
-  describeProjectBackupCollisions,
+  describeProjectBackupCopy,
   buildProjectSnapshot,
   diffSnapshotCounts,
   validateSnapshotCounts,
@@ -81,7 +81,7 @@ function ProjectsRoute() {
   const [importSnapshot, setImportSnapshot] = useState<ProjectSnapshot | null>(null);
   const [importMode, setImportMode] = useState<ProjectBackupImportMode>('new');
   const [importTargetProjectId, setImportTargetProjectId] = useState('');
-  const [importBlockedMessage, setImportBlockedMessage] = useState<string | null>(null);
+  const [importCopyNotice, setImportCopyNotice] = useState<string | null>(null);
   const [importConflicts, setImportConflicts] =
     useState<ProjectBackupConflictSummary | null>(null);
   const [isValidatingBackup, setIsValidatingBackup] = useState(false);
@@ -375,10 +375,10 @@ function ProjectsRoute() {
     setImportMode('new');
     setImportTargetProjectId('');
     setImportConflicts(null);
-    setImportBlockedMessage(null);
+    setImportCopyNotice(null);
   };
 
-  // 3.24a: an import that would take records from another project is shown as blocked.
+  // 3.24b: say when an import copies records that another project also has.
   const collisionCheckRef = useRef(0);
   const refreshImportCollisions = async (
     snapshot: ProjectSnapshot,
@@ -386,7 +386,7 @@ function ProjectsRoute() {
     targetProjectId: string
   ) => {
     const check = ++collisionCheckRef.current;
-    setImportBlockedMessage(null);
+    setImportCopyNotice(null);
     if (mode === 'merge' && !targetProjectId) return;
     try {
       const report = await findProjectBackupCollisions({
@@ -394,9 +394,9 @@ function ProjectsRoute() {
         targetProjectId: mode === 'new' ? null : targetProjectId
       });
       if (check !== collisionCheckRef.current || report.recordCount === 0) return;
-      setImportBlockedMessage(`This import is blocked. ${describeProjectBackupCollisions(report, mode)}`);
+      setImportCopyNotice(describeProjectBackupCopy(report, mode));
     } catch {
-      // Import runs the same check and refuses with the full explanation.
+      // The notice is informational; import runs its own checks.
     }
   };
 
@@ -666,7 +666,7 @@ function ProjectsRoute() {
               <button
                 type='button'
                 onClick={() => void handleApplyBackupImport()}
-                disabled={isApplyingImport || Boolean(importBlockedMessage)}
+                disabled={isApplyingImport}
               >
                 {isApplyingImport ? 'Importing...' : 'Apply Import'}
               </button>
@@ -716,8 +716,8 @@ function ProjectsRoute() {
             )}
           </div>
 
-          {importBlockedMessage && (
-            <p role='alert' className={styles.conflictPreview}>{importBlockedMessage}</p>
+          {importCopyNotice && (
+            <p role='note' className={styles.conflictPreview}>{importCopyNotice}</p>
           )}
 
           <div className={styles.countsText}>

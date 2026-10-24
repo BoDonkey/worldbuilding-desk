@@ -35,13 +35,12 @@ Procedure:
    passes integrity and supported-version checks. A fixture whose
    `schemaVersion` is newer than the app supports must fail before preview or
    import with an instruction to update the app.
-3. In the same browser, choose the backup under `Import Backup (.zip)`. The
-   preview says the import is blocked because its records already belong to
-   the source project, and `Apply Import` is disabled (slice 3.24a). Choosing
-   `Merge Into Existing Project` with another project as the target is also
-   blocked; with the source project as the target it is allowed. Then switch to
-   a second browser profile, or a browser without this project, and import as
-   `Create New Project`: new project created and selected, feedback
+3. In the same browser, import as `Create New Project`. The preview notes
+   that the source project is already in this browser and that importing
+   makes an independent copy (slice 3.24b). Apply it: a new project is created
+   and selected. Open the source project and confirm nothing in it changed;
+   edit a scene in the copy and confirm the source scene does not change.
+   Feedback
    includes `Count check passed.`
 4. Import again as `Merge Into Existing Project`: review conflict summary,
    apply, confirm merge feedback and count check (or explicit mismatch
