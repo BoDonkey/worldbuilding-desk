@@ -321,10 +321,13 @@ without turning cancelled or unverified code into a passing check.
    hooks; and project-scoped reads load every project's records and filter
    in memory. The 5.15 vault needs one boundary to encrypt through. Slices
    3.22–3.23c consolidate it before 5.15.
-2. Domain logic still sits in large hooks with few tests
-   (`useWorldBibleEntityActions`, `useWorkspaceStatBlocks`) and in the
-   untested `compendiumService`.
-   Slice 3.22 moves the remaining logic into tested services. Scene-roster
+2. Slice 3.22 moved the remaining hook-held domain logic into tested
+   services: World Bible draft, classification, and review-queue planning
+   (`services/worldBible/worldBibleEntityPlans.ts`) and Workspace stat-block
+   resolution (`services/workspace/statBlockResolution.ts`), with the hooks
+   split by responsibility and none over 600 lines. The compendium is split
+   into pure mechanics and two repositories, pinned by characterization tests
+   that 3.23a uses as its safety net. Scene-roster
    mutation planning already lives in pure workspace services; its hook owns
    confirmation, validation, persistence calls, and React state. Service-owned
    roster and Lore Inspector types keep production services independent of

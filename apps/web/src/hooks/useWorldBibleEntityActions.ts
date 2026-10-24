@@ -1,38 +1,27 @@
 import {useCallback, useState} from 'react';
 import type {Dispatch, SetStateAction} from 'react';
 import {saveEntity, deleteEntity} from '../entityStorage';
-import {saveCharacter} from '../characterStorage';
 import type {
   Character,
   EntityCategory,
   WorldEntity,
-  CompendiumDomain,
-  CompendiumEntry,
   Project
 } from '../entityTypes';
 import type {ConsistencyAlias, ReviewQueueItem} from '../services/consistency';
 import {deleteAliasesForEntity, replaceAliasesForEntity} from '../services/consistency';
 import {
-  buildCanonicalAliasList,
-  buildEntityMergePlan,
-  deriveFirstNameAlias,
-  getAliasConversionPlan
-} from '../services/worldBible/worldBibleCanonicalization';
-import {
-  normalizeRichTextValue
-} from '../services/worldBible/worldBibleEntityHelpers';
+  isCharacterLikeEntity as isCharacterLikeRecord,
+  isLocationLikeEntity as isLocationLikeRecord,
+  pickNextReviewItem,
+  planEntityDraft
+} from '../services/worldBible/worldBibleEntityPlans';
+import {useWorldBibleMergeActions} from './useWorldBibleMergeActions';
+import {useWorldBibleLinkActions} from './useWorldBibleLinkActions';
 import type {RAGProvider} from '../services/rag/RAGService';
 import type {
   ShodhMemoryProvider
 } from '../services/shodh/ShodhMemoryService';
-import {upsertCompendiumEntryFromEntity} from '../services/compendium';
-import {promoteDocumentToParent, syncChildWithParent} from '../services/seriesBible/SeriesBibleService';
 import type {ConfirmRequest} from './useConfirmDialog';
-import {
-  createCharacterLinkResolver,
-  isCharacterCategory
-} from '../services/characters/characterIdentity';
-import {exportCharactersJson} from '../services/characters/characterTransferService';
 import {describeError} from '../services/errors';
 
 type FeedbackState = {
@@ -85,9 +74,6 @@ interface UseWorldBibleEntityActionsParams {
   navigate: (to: string, options?: {state?: unknown}) => void;
 }
 
-const CHARACTER_CATEGORY_HINTS = ['character', 'characters', 'npc', 'person', 'people'];
-const LOCATION_CATEGORY_HINTS = ['location', 'locations', 'place', 'places', 'region', 'zone'];
-
 export const useWorldBibleEntityActions = ({
   activeProject,
   activeCategory,
@@ -128,41 +114,15 @@ export const useWorldBibleEntityActions = ({
 }: UseWorldBibleEntityActionsParams) => {
   const [isSubmittingEntity, setIsSubmittingEntity] = useState(false);
   const [deletingEntityId, setDeletingEntityId] = useState<string | null>(null);
-  const [promotingEntityId, setPromotingEntityId] = useState<string | null>(null);
-  const [importingCharacterEntityId, setImportingCharacterEntityId] = useState<string | null>(
-    null
-  );
-  const [exportingCharacterEntityId, setExportingCharacterEntityId] = useState<string | null>(
-    null
-  );
-  const [mergingEntityTargetId, setMergingEntityTargetId] = useState<string | null>(null);
-  const [aliasingEntityTargetId, setAliasingEntityTargetId] = useState<string | null>(null);
-  const [isSyncingCanon, setIsSyncingCanon] = useState(false);
-  const [linkingCompendiumEntityId, setLinkingCompendiumEntityId] = useState<
-    string | null
-  >(null);
 
   const isCharacterLikeEntity = useCallback(
-    (entity: WorldEntity): boolean => {
-      const category = categories.find((item) => item.id === entity.categoryId);
-      const slug = (category?.slug ?? '').toLowerCase();
-      const categoryName = (category?.name ?? '').toLowerCase();
-      return CHARACTER_CATEGORY_HINTS.some(
-        (hint) => slug.includes(hint) || categoryName.includes(hint)
-      );
-    },
+    (entity: WorldEntity): boolean => isCharacterLikeRecord(categories, entity),
     [categories]
   );
 
   const openNextReviewItem = useCallback(
     (currentEntityId: string) => {
-      const currentIndex = filteredReviewQueue.findIndex(
-        (item) => item.entity.id === currentEntityId
-      );
-      const nextItem =
-        filteredReviewQueue[currentIndex + 1] ??
-        filteredReviewQueue[currentIndex - 1] ??
-        null;
+      const nextItem = pickNextReviewItem(filteredReviewQueue, currentEntityId);
       if (!nextItem) {
         return false;
       }
@@ -185,87 +145,28 @@ export const useWorldBibleEntityActions = ({
       try {
         const now = Date.now();
         const id = editingId ?? crypto.randomUUID();
-        const existing = entities.find((entity) => entity.id === id);
-        const manualAlternativeNames = parseAlternativeNames(
-          fieldValues[alternativeNamesKey] || ''
-        );
-        const activeCategorySlug = activeCategory.slug.toLowerCase();
-        const shouldSuggestFirstNameAlias =
-          CHARACTER_CATEGORY_HINTS.some((hint) => activeCategorySlug.includes(hint)) &&
-          (!existing || !existing.aliasesReviewedAt);
-        const suggestedAliases = shouldSuggestFirstNameAlias
-          ? [deriveFirstNameAlias(name)].filter(
-              (alias): alias is string => typeof alias === 'string'
-            )
-          : [];
-        const alternativeNames = buildCanonicalAliasList({
-          previousName: existing?.name,
-          nextName: name,
-          aliases: manualAlternativeNames,
-          suggestedAliases
-        });
-        const persistedAlternativeNames = [
-          ...parseAlternativeNames(
-            typeof existing?.fields?.[alternativeNamesKey] === 'string'
-              ? String(existing.fields[alternativeNamesKey])
-              : ''
-          ),
-          ...(aliasMapByEntityId.get(id) ?? [])
-        ]
-          .map((alias) => normalizeName(alias))
-          .filter(Boolean)
-          .filter((alias) => alias !== normalizeName(name));
-        const nextAlternativeNamesNormalized = alternativeNames
-          .map((alias) => normalizeName(alias))
-          .filter(Boolean)
-          .filter((alias) => alias !== normalizeName(name));
-        const aliasesChanged =
-          persistedAlternativeNames.length !== nextAlternativeNamesNormalized.length ||
-          persistedAlternativeNames.some(
-            (alias, index) => alias !== nextAlternativeNamesNormalized[index]
-          );
-        const nextFields = {...fieldValues};
-        activeCategory.fieldSchema.forEach((field) => {
-          if (field.type !== 'textarea') return;
-          nextFields[field.key] = normalizeRichTextValue(nextFields[field.key] || '');
-        });
-        if (alternativeNames.length > 0) {
-          nextFields[alternativeNamesKey] = formatAlternativeNames(alternativeNames);
-        } else {
-          delete nextFields[alternativeNamesKey];
-        }
-        const canonicalRename =
-          typeof existing?.name === 'string' &&
-          existing.name.trim().length > 0 &&
-          existing.name.trim().toLowerCase() !== name.trim().toLowerCase();
-
-        const entity: WorldEntity = {
+        const {entity, aliases: aliasesToSave} = planEntityDraft({
           id,
+          now,
           projectId: activeProject.id,
-          categoryId: activeCategory.id,
+          category: activeCategory,
+          existing: entities.find((record) => record.id === id),
           name,
-          fields: nextFields,
+          fieldValues,
           systemNegativeSpace,
-          isNew: false,
-          needsCompletion: false,
-          aliasesReviewedAt:
-            aliasesChanged || (viewMode === 'review' && selectedEntityQueueItem)
-              ? now
-              : canonicalRename
-                ? now
-                : existing?.aliasesReviewedAt,
-          links: existing?.links ?? [],
-          createdAt: existing?.createdAt ?? now,
-          updatedAt: now
-        };
+          indexedAliases: aliasMapByEntityId.get(id) ?? [],
+          reviewingFromQueue: Boolean(viewMode === 'review' && selectedEntityQueueItem),
+          alternativeNamesKey,
+          normalizeName,
+          parseAlternativeNames,
+          formatAlternativeNames
+        });
 
         await saveEntity(entity);
         const savedAliases = await replaceAliasesForEntity({
           projectId: activeProject.id,
           entityId: entity.id,
-          aliases: alternativeNames.filter(
-            (alias) => alias.trim().toLowerCase() !== entity.name.trim().toLowerCase()
-          )
+          aliases: aliasesToSave
         });
         if (ragService) {
           await ragService.indexDocument(
@@ -436,667 +337,70 @@ export const useWorldBibleEntityActions = ({
     ]
   );
 
-  const handleMergeEntityIntoMatch = useCallback(
-    (target: WorldEntity) => {
-      if (!activeProject || !editingId) return;
-
-      const source = entities.find((entity) => entity.id === editingId);
-      if (!source || source.id === target.id) return;
-
-      requestConfirm({
-        title: `Merge "${source.name}" into "${target.name}"?`,
-        message: 'The duplicate record will be removed.',
-        confirmLabel: 'Merge',
-        variant: 'danger',
-        onConfirm: async () => {
-          setMergingEntityTargetId(target.id);
-          setFeedback(null);
-
-          try {
-            const sourceName = name.trim() || source.name;
-            const sourceDraftFields: Record<string, unknown> = {
-              ...source.fields,
-              ...fieldValues
-            };
-            const {mergedEntity, aliases: mergedAliasTexts} = buildEntityMergePlan({
-              source,
-              target,
-              sourceName,
-              sourceFields: sourceDraftFields,
-              targetFields: target.fields,
-              sourceIndexedAliases: aliasMapByEntityId.get(source.id) ?? [],
-              targetIndexedAliases: aliasMapByEntityId.get(target.id) ?? [],
-              alternativeNamesKey,
-              normalizeName,
-              parseAlternativeNames,
-              aliasesReviewedAt: Math.max(
-                target.aliasesReviewedAt ?? 0,
-                source.aliasesReviewedAt ?? 0
-              ) || undefined
-            });
-
-            await saveEntity(mergedEntity);
-            const mergedAliases = await replaceAliasesForEntity({
-              projectId: activeProject.id,
-              entityId: target.id,
-              aliases: mergedAliasTexts
-            });
-            await deleteAliasesForEntity(activeProject.id, source.id);
-            await deleteEntity(source.id);
-
-            if (ragService) {
-              await ragService.indexDocument(
-                mergedEntity.id,
-                mergedEntity.name,
-                buildEntityContent(mergedEntity),
-                'worldbible',
-                {
-                  tags: [
-                    categories.find((category) => category.id === mergedEntity.categoryId)?.slug ?? ''
-                  ].filter(Boolean),
-                  entityIds: [mergedEntity.id]
-                }
-              );
-              await ragService.deleteDocument(source.id);
-            }
-            if (shodhService) {
-              await shodhService.captureAutoMemory({
-                projectId: activeProject.id,
-                documentId: mergedEntity.id,
-                title: mergedEntity.name,
-                content: buildEntityContent(mergedEntity),
-                tags: [
-                  'worldbible',
-                  categories.find((category) => category.id === mergedEntity.categoryId)?.slug ?? ''
-                ].filter(Boolean)
-              });
-              await shodhService.deleteMemoriesForDocument(source.id);
-              await refreshMemories();
-            }
-
-            setEntities((prev) =>
-              prev
-                .filter((entity) => entity.id !== source.id)
-                .map((entity) => (entity.id === target.id ? mergedEntity : entity))
-            );
-            setAliases((prev) => [
-              ...prev.filter(
-                (alias) => alias.targetId !== source.id && alias.targetId !== target.id
-              ),
-              ...mergedAliases
-            ]);
-            setViewMode('category');
-            handleEdit(mergedEntity, 'aliases');
-            setFeedback({
-              tone: 'success',
-              message: `"${sourceName}" merged into "${target.name}".`
-            });
-          } catch (error) {
-            const message =
-              describeError(error, 'Unable to merge records.');
-            setFeedback({tone: 'error', message});
-          } finally {
-            setMergingEntityTargetId(null);
-          }
-        }
-      });
-    },
-    [
-      activeProject,
-      aliasMapByEntityId,
-      alternativeNamesKey,
-      buildEntityContent,
-      categories,
-      editingId,
-      entities,
-      fieldValues,
-      handleEdit,
-      name,
-      normalizeName,
-      parseAlternativeNames,
-      ragService,
-      refreshMemories,
-      requestConfirm,
-      setAliases,
-      setEntities,
-      setFeedback,
-      setViewMode,
-      shodhService
-    ]
-  );
-
-  const handleMergeMatchIntoCurrentEntity = useCallback(
-    (source: WorldEntity) => {
-      if (!activeProject || !editingId) return;
-
-      const target = entities.find((entity) => entity.id === editingId);
-      if (!target || source.id === target.id) return;
-
-      const targetName = name.trim() || target.name;
-
-      requestConfirm({
-        title: `Keep "${targetName}" canonical?`,
-        message: `"${source.name}" will be merged into it and the duplicate record removed.`,
-        confirmLabel: 'Merge',
-        variant: 'danger',
-        onConfirm: async () => {
-          setMergingEntityTargetId(source.id);
-          setFeedback(null);
-
-          try {
-            const now = Date.now();
-            const targetDraftFields: Record<string, unknown> = {
-              ...target.fields,
-              ...fieldValues
-            };
-            const {mergedEntity, aliases: mergedAliasTexts} = buildEntityMergePlan({
-              source,
-              target,
-              targetName,
-              sourceFields: source.fields,
-              targetFields: targetDraftFields,
-              sourceIndexedAliases: aliasMapByEntityId.get(source.id) ?? [],
-              targetIndexedAliases: aliasMapByEntityId.get(target.id) ?? [],
-              alternativeNamesKey,
-              normalizeName,
-              parseAlternativeNames,
-              aliasesReviewedAt: now
-            });
-
-            await saveEntity(mergedEntity);
-            const mergedAliases = await replaceAliasesForEntity({
-              projectId: activeProject.id,
-              entityId: target.id,
-              aliases: mergedAliasTexts
-            });
-            await deleteAliasesForEntity(activeProject.id, source.id);
-            await deleteEntity(source.id);
-
-            const targetCategorySlug =
-              categories.find((category) => category.id === target.categoryId)?.slug ?? '';
-            if (ragService) {
-              await ragService.indexDocument(
-                mergedEntity.id,
-                mergedEntity.name,
-                buildEntityContent(mergedEntity),
-                'worldbible',
-                {
-                  tags: [targetCategorySlug].filter(Boolean),
-                  entityIds: [mergedEntity.id]
-                }
-              );
-              await ragService.deleteDocument(source.id);
-            }
-            if (shodhService) {
-              await shodhService.captureAutoMemory({
-                projectId: activeProject.id,
-                documentId: mergedEntity.id,
-                title: mergedEntity.name,
-                content: buildEntityContent(mergedEntity),
-                tags: ['worldbible', targetCategorySlug].filter(Boolean)
-              });
-              await shodhService.deleteMemoriesForDocument(source.id);
-              await refreshMemories();
-            }
-
-            setEntities((prev) =>
-              prev
-                .filter((entity) => entity.id !== source.id)
-                .map((entity) => (entity.id === target.id ? mergedEntity : entity))
-            );
-            setAliases((prev) => [
-              ...prev.filter(
-                (alias) => alias.targetId !== source.id && alias.targetId !== target.id
-              ),
-              ...mergedAliases
-            ]);
-            setViewMode('category');
-            handleEdit(mergedEntity, 'aliases');
-            setFeedback({
-              tone: 'success',
-              message: `"${source.name}" merged into "${targetName}".`
-            });
-          } catch (error) {
-            const message =
-              describeError(error, 'Unable to merge records.');
-            setFeedback({tone: 'error', message});
-          } finally {
-            setMergingEntityTargetId(null);
-          }
-        }
-      });
-    },
-    [
-      activeProject,
-      aliasMapByEntityId,
-      alternativeNamesKey,
-      buildEntityContent,
-      categories,
-      editingId,
-      entities,
-      fieldValues,
-      handleEdit,
-      name,
-      normalizeName,
-      parseAlternativeNames,
-      ragService,
-      refreshMemories,
-      requestConfirm,
-      setAliases,
-      setEntities,
-      setFeedback,
-      setViewMode,
-      shodhService
-    ]
-  );
-
-  const handleConvertEntityToAlias = useCallback(
-    (target: WorldEntity, options?: {openNext?: boolean}) => {
-      if (!activeProject || !editingId) return;
-
-      const source = entities.find((entity) => entity.id === editingId);
-      if (!source || source.id === target.id) return;
-
-      const sourceName = name.trim() || source.name;
-      const sourceDraftFields: Record<string, unknown> = {
-        ...source.fields,
-        ...fieldValues
-      };
-      const plan = getAliasConversionPlan({
-        sourceName,
-        sourceFields: sourceDraftFields,
-        sourceLinks: source.links ?? [],
-        targetName: target.name,
-        targetFields: target.fields,
-        targetLinks: target.links ?? [],
-        sourceIndexedAliases: aliasMapByEntityId.get(source.id) ?? [],
-        targetIndexedAliases: aliasMapByEntityId.get(target.id) ?? [],
-        alternativeNamesKey,
-        normalizeName,
-        parseAlternativeNames
-      });
-
-      if (!plan.canDeleteSource) {
-        setFeedback({
-          tone: 'error',
-          message: `Use merge instead. "${sourceName}" still has unique field data: ${plan.blockingFieldKeys.join(', ')}.`
-        });
-        return;
-      }
-
-      requestConfirm({
-        title: `Convert "${sourceName}" into an alias of "${target.name}"?`,
-        message: 'The duplicate record will be removed.',
-        confirmLabel: 'Convert',
-        variant: 'danger',
-        onConfirm: async () => {
-          setAliasingEntityTargetId(target.id);
-          setFeedback(null);
-
-          try {
-            const now = Date.now();
-            const targetCategorySlug =
-              categories.find((category) => category.id === target.categoryId)?.slug ?? '';
-            const nextTarget: WorldEntity = {
-              ...target,
-              links: plan.mergedLinks,
-              isNew: false,
-              needsCompletion: false,
-              aliasesReviewedAt: now,
-              updatedAt: now
-            };
-
-            await saveEntity(nextTarget);
-            const savedAliases = await replaceAliasesForEntity({
-              projectId: activeProject.id,
-              entityId: target.id,
-              aliases: plan.transferAliases
-            });
-            const reviewedTarget: WorldEntity = {
-              ...nextTarget,
-              aliasesReviewedAt: Math.max(
-                nextTarget.aliasesReviewedAt ?? 0,
-                ...savedAliases.map((alias) => alias.updatedAt ?? alias.createdAt)
-              )
-            };
-            if (reviewedTarget.aliasesReviewedAt !== nextTarget.aliasesReviewedAt) {
-              await saveEntity(reviewedTarget);
-            }
-            await deleteAliasesForEntity(activeProject.id, source.id);
-            await deleteEntity(source.id);
-
-            if (ragService) {
-              await ragService.indexDocument(
-                nextTarget.id,
-                nextTarget.name,
-                buildEntityContent(reviewedTarget),
-                'worldbible',
-                {
-                  tags: [targetCategorySlug].filter(Boolean),
-                  entityIds: [nextTarget.id]
-                }
-              );
-              await ragService.deleteDocument(source.id);
-            }
-            if (shodhService) {
-              await shodhService.captureAutoMemory({
-                projectId: activeProject.id,
-                documentId: nextTarget.id,
-                title: nextTarget.name,
-                content: buildEntityContent(reviewedTarget),
-                tags: ['worldbible', targetCategorySlug].filter(Boolean)
-              });
-              await shodhService.deleteMemoriesForDocument(source.id);
-              await refreshMemories();
-            }
-
-            setEntities((prev) =>
-              prev
-                .filter((entity) => entity.id !== source.id)
-                .map((entity) => (entity.id === target.id ? reviewedTarget : entity))
-            );
-            setAliases((prev) => [
-              ...prev.filter(
-                (alias) => alias.targetId !== source.id && alias.targetId !== target.id
-              ),
-              ...savedAliases
-            ]);
-
-            resetForm();
-            const openedNext = options?.openNext !== false ? openNextReviewItem(source.id) : false;
-            if (!openedNext) {
-              setViewMode('category');
-              handleEdit(reviewedTarget, 'aliases');
-            }
-            setFeedback({
-              tone: 'success',
-              message: openedNext
-                ? `"${sourceName}" converted into an alias of "${target.name}". Opened the next record.`
-                : `"${sourceName}" converted into an alias of "${target.name}".`
-            });
-          } catch (error) {
-            const message =
-              describeError(error, 'Unable to convert record into an alias.');
-            setFeedback({tone: 'error', message});
-          } finally {
-            setAliasingEntityTargetId(null);
-          }
-        }
-      });
-    },
-    [
-      activeProject,
-      aliasMapByEntityId,
-      alternativeNamesKey,
-      buildEntityContent,
-      categories,
-      editingId,
-      entities,
-      fieldValues,
-      handleEdit,
-      name,
-      normalizeName,
-      openNextReviewItem,
-      parseAlternativeNames,
-      ragService,
-      refreshMemories,
-      requestConfirm,
-      resetForm,
-      setAliases,
-      setEntities,
-      setFeedback,
-      setViewMode,
-      shodhService
-    ]
-  );
+  const {
+    mergingEntityTargetId,
+    aliasingEntityTargetId,
+    handleMergeEntityIntoMatch,
+    handleMergeMatchIntoCurrentEntity,
+    handleConvertEntityToAlias
+  } = useWorldBibleMergeActions({
+    activeProject,
+    categories,
+    entities,
+    editingId,
+    name,
+    fieldValues,
+    aliasMapByEntityId,
+    alternativeNamesKey,
+    normalizeName,
+    parseAlternativeNames,
+    buildEntityContent,
+    ragService,
+    shodhService,
+    refreshMemories,
+    requestConfirm,
+    setEntities,
+    setAliases,
+    setFeedback,
+    setViewMode,
+    handleEdit,
+    resetForm,
+    openNextReviewItem
+  });
 
   const isLocationLikeEntity = useCallback(
-    (entity: WorldEntity): boolean => {
-      const category = categories.find((item) => item.id === entity.categoryId);
-      const slug = (category?.slug ?? '').toLowerCase();
-      return LOCATION_CATEGORY_HINTS.some((hint) => slug.includes(hint));
-    },
+    (entity: WorldEntity): boolean => isLocationLikeRecord(categories, entity),
     [categories]
   );
 
-  const handleImportEntityToCharacters = useCallback(
-    async (entity: WorldEntity, options?: {autoCreateSheet?: boolean}) => {
-      if (!activeProject) return;
-      setImportingCharacterEntityId(entity.id);
-      setFeedback(null);
-      try {
-        const entityCategory = categories.find(
-          (category) => category.id === entity.categoryId
-        );
-        if (!entityCategory || !isCharacterCategory(entityCategory)) {
-          throw new Error('Optional character capabilities require a World Bible character.');
-        }
-        const resolver = createCharacterLinkResolver({
-          categories,
-          entities,
-          characters,
-          sheets: []
-        });
-        const existingCharacter = resolver.getCharacter(entity.id);
-        const character: Character = existingCharacter
-          ? {...existingCharacter, entityId: entity.id, updatedAt: Date.now()}
-          : {
-          id: crypto.randomUUID(),
-          projectId: activeProject.id,
-          entityId: entity.id,
-          name: entity.name,
-          fields: {},
-          createdAt: Date.now(),
-          updatedAt: Date.now()
-        };
-
-        await saveCharacter(character);
-        if (!existingCharacter) {
-          setCharacters((prev) => [...prev, character]);
-        } else if (!existingCharacter.entityId) {
-          setCharacters((prev) =>
-            prev.map((record) =>
-              record.id === existingCharacter.id ? character : record
-            )
-          );
-        }
-
-        if (options?.autoCreateSheet && hasRuleset) {
-          setFeedback({
-            tone: 'success',
-            message: existingCharacter
-              ? `Opening sheet and state tracking for "${entity.name}".`
-              : `Optional character data attached to "${entity.name}". Opening sheet and state tracking.`
-          });
-          navigate('/sheets', {
-            state: {
-              prefillCharacterId: character.id,
-              autoCreateSheetForCharacterId: character.id,
-            }
-          });
-          return;
-        }
-
-        setFeedback({
-          tone: 'success',
-          message: existingCharacter
-            ? `Opening dialogue style for "${entity.name}".`
-            : `Optional character data attached to "${entity.name}". World Bible remains canonical.`
-        });
-
-        navigate('/world-bible', {
-          state: {
-            focusEntityId: entity.id,
-            focusCharacterSection: 'writing-aids'
-          }
-        });
-      } catch (error) {
-        const message =
-          describeError(error, 'Unable to open character tools.');
-        setFeedback({tone: 'error', message});
-      } finally {
-        setImportingCharacterEntityId(null);
-      }
-    },
-    [activeProject, categories, characters, entities, hasRuleset, navigate, setCharacters, setFeedback]
-  );
-
-  const handleExportCharacter = useCallback(
-    async (entity: WorldEntity) => {
-      if (!activeProject) return;
-      setExportingCharacterEntityId(entity.id);
-      setFeedback(null);
-      try {
-        await exportCharactersJson({
-          projectId: activeProject.id,
-          projectName: activeProject.name,
-          includeSheets: true,
-          entityIds: [entity.id]
-        });
-        setFeedback({
-          tone: 'success',
-          message: `Exported "${entity.name}" with its attached character capabilities.`
-        });
-      } catch (error) {
-        setFeedback({
-          tone: 'error',
-          message: describeError(error, 'Unable to export this character.')
-        });
-      } finally {
-        setExportingCharacterEntityId(null);
-      }
-    },
-    [activeProject, setFeedback]
-  );
-
-  const inferCompendiumDomain = useCallback(
-    (entity: WorldEntity): CompendiumDomain => {
-      const category = categories.find((item) => item.id === entity.categoryId);
-      const slug = (category?.slug ?? '').toLowerCase();
-      if (slug.includes('monster') || slug.includes('beast') || slug.includes('creature')) {
-        return 'beast';
-      }
-      if (slug.includes('plant') || slug.includes('flora') || slug.includes('herb')) {
-        return 'flora';
-      }
-      if (slug.includes('ore') || slug.includes('mineral') || slug.includes('rock')) {
-        return 'mineral';
-      }
-      if (slug.includes('artifact') || slug.includes('relic')) {
-        return 'artifact';
-      }
-      return 'custom';
-    },
-    [categories]
-  );
-
-  const handleAddEntityToCompendium = useCallback(
-    async (entity: WorldEntity): Promise<CompendiumEntry | void> => {
-      if (!activeProject) return;
-      if (isLocationLikeEntity(entity) && !compendiumLinkedEntityIds.has(entity.id)) {
-        navigate('/compendium', {
-          state: {
-            activeTab: 'entries',
-            importEntityId: entity.id,
-            importMechanicKind: 'discovery',
-            importProgressScope: 'character',
-            flashMessage: `Choose the mechanics type for "${entity.name}".`
-          }
-        });
-        return;
-      }
-      setLinkingCompendiumEntityId(entity.id);
-      setFeedback(null);
-      try {
-        const entry = await upsertCompendiumEntryFromEntity({
-          projectId: activeProject.id,
-          entity,
-          domain: inferCompendiumDomain(entity),
-          needsCompletion: entity.needsCompletion ?? false
-        });
-        setCompendiumLinkedEntityIds((prev) => {
-          const next = new Set(prev);
-          next.add(entity.id);
-          return next;
-        });
-        setFeedback({
-          tone: 'success',
-          message: `"${entity.name}" linked to mechanics.`
-        });
-        navigate('/compendium', {
-          state: {
-            focusEntryId: entry.id,
-            activeTab: 'entries',
-            flashMessage: `"${entity.name}" linked to mechanics.`
-          }
-        });
-        return entry;
-      } catch (error) {
-        const message =
-          describeError(error, 'Unable to link entity to compendium.');
-        setFeedback({tone: 'error', message});
-      } finally {
-        setLinkingCompendiumEntityId(null);
-      }
-    },
-    [
-      activeProject,
-      compendiumLinkedEntityIds,
-      inferCompendiumDomain,
-      isLocationLikeEntity,
-      navigate,
-      setCompendiumLinkedEntityIds,
-      setFeedback
-    ]
-  );
-
-  const handlePromoteEntity = useCallback(
-    async (entity: WorldEntity) => {
-      if (!seriesParentProjectId) return;
-      setPromotingEntityId(entity.id);
-      setFeedback(null);
-      try {
-        await promoteDocumentToParent({
-          parentProjectId: seriesParentProjectId,
-          documentId: entity.id,
-          title: entity.name,
-          content: buildEntityContent(entity),
-          type: 'worldbible',
-          tags: [activeCategory?.slug ?? 'worldbible']
-        });
-        setFeedback({tone: 'success', message: 'Entry promoted to parent canon.'});
-      } catch (error) {
-        const message =
-          describeError(error, 'Unable to promote entry.');
-        setFeedback({tone: 'error', message});
-      } finally {
-        setPromotingEntityId(null);
-      }
-    },
-    [activeCategory?.slug, buildEntityContent, seriesParentProjectId, setFeedback]
-  );
-
-  const handleCanonSync = useCallback(async () => {
-    if (!activeProject) return;
-    setIsSyncingCanon(true);
-    setFeedback(null);
-    try {
-      const updated = await syncChildWithParent(activeProject.id);
-      if (updated) {
-        setCanonState((prev) => ({
-          ...prev,
-          childLastSynced: updated.lastSyncedCanon
-        }));
-      }
-      setFeedback({tone: 'success', message: 'Canon sync state updated.'});
-    } catch (error) {
-      const message =
-        describeError(error, 'Unable to mark canon as synced.');
-      setFeedback({tone: 'error', message});
-    } finally {
-      setIsSyncingCanon(false);
-    }
-  }, [activeProject, setCanonState, setFeedback]);
+  const {
+    promotingEntityId,
+    importingCharacterEntityId,
+    exportingCharacterEntityId,
+    isSyncingCanon,
+    linkingCompendiumEntityId,
+    handleImportEntityToCharacters,
+    handleExportCharacter,
+    handleAddEntityToCompendium,
+    handlePromoteEntity,
+    handleCanonSync
+  } = useWorldBibleLinkActions({
+    activeProject,
+    activeCategory,
+    categories,
+    entities,
+    characters,
+    setCharacters,
+    setFeedback,
+    setCanonState,
+    compendiumLinkedEntityIds,
+    setCompendiumLinkedEntityIds,
+    hasRuleset,
+    seriesParentProjectId,
+    buildEntityContent,
+    isLocationLikeEntity,
+    navigate
+  });
 
   return {
     isSubmittingEntity,
