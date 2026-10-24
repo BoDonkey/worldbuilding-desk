@@ -26,7 +26,7 @@ export const InventoryItemSchema = z.object({
   yieldBonusPercent: z.number().default(0),
   
   // Custom properties
-  properties: z.record(z.unknown()).optional(),
+  properties: z.record(z.string(), z.unknown()).optional(),
 });
 export type InventoryItem = z.infer<typeof InventoryItemSchema>;
 
@@ -38,7 +38,7 @@ export const ActiveStatusSchema = z.object({
   expiresAt: z.number().optional(), // Timestamp when it expires
   
   // Status-specific data (e.g., buff strength, debuff type)
-  data: z.record(z.unknown()).optional(),
+  data: z.record(z.string(), z.unknown()).optional(),
 });
 export type ActiveStatus = z.infer<typeof ActiveStatusSchema>;
 
@@ -58,23 +58,23 @@ export const CharacterStateSchema = z.object({
   rulesetId: z.string(), // Which ruleset this character uses
   
   // Core stats (flexible - defined by ruleset)
-  stats: z.record(z.union([z.number(), z.string(), z.boolean()])),
+  stats: z.record(z.string(), z.union([z.number(), z.string(), z.boolean()])),
   
   // Resources (health, mana, etc.)
   resources: z.object({
-    current: z.record(z.number()),
-    max: z.record(z.number()),
+    current: z.record(z.string(), z.number()),
+    max: z.record(z.string(), z.number()),
   }),
   
   // Inventory system
   inventory: z.object({
     items: z.array(InventoryItemSchema),
     capacity: z.number().default(100),
-    essences: z.record(z.number()).optional(), // For crafting
+    essences: z.record(z.string(), z.number()).optional(), // For crafting
   }),
   
   // Equipment (flexible slots)
-  equipment: z.record(InventoryItemSchema.nullable()),
+  equipment: z.record(z.string(), InventoryItemSchema.nullable()),
   
   // Active effects and statuses
   statuses: z.array(ActiveStatusSchema).default([]),
@@ -83,7 +83,7 @@ export const CharacterStateSchema = z.object({
   modifiers: z.array(ModifierSchema).default([]),
   
   // Custom fields (user-defined data)
-  custom: z.record(z.unknown()).optional(),
+  custom: z.record(z.string(), z.unknown()).optional(),
   
   // Metadata
   createdAt: z.number(),

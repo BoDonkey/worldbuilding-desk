@@ -28,8 +28,12 @@ import {buildCharacterReplayBaseline, validateStateMutationEvent} from './stateM
  * every later implementation must reproduce it byte for byte. On mismatch the
  * full output is written to the OS temp dir for diffing against a run of the
  * previous commit. Change the digest only for an intended behavior change.
+ *
+ * Slice 3.21a (zod 3 → 4) re-recorded the digest. A diff against the zod 3
+ * output showed identical replay state, and every difference was in the
+ * wording of the 65 schema-error messages, which kept the same issue codes and paths.
  */
-const GOLDEN_SHA256 = '474bfce64995d9579fd7a8c1bfff4ce6444a46b34399d34cdf0ac6265f53772d';
+const GOLDEN_SHA256 = '4ed0ab4ccc8c4a955259fb6a5f4cab8a70f5570cabcf1ab846b82d00e6a83ef4';
 
 interface ParityCase {
   name: string;

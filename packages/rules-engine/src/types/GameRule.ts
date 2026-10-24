@@ -19,7 +19,7 @@ export const TriggerDefinitionSchema = z.object({
   actionName: z.string().optional(), // For on_action
   
   // Custom trigger data
-  data: z.record(z.unknown()).optional(),
+  data: z.record(z.string(), z.unknown()).optional(),
 });
 export type TriggerDefinition = z.infer<typeof TriggerDefinitionSchema>;
 
@@ -77,7 +77,7 @@ export const GameRuleSchema = z.object({
   author: z.string().optional(),
   
   // Custom user data
-  custom: z.record(z.unknown()).optional(),
+  custom: z.record(z.string(), z.unknown()).optional(),
 });
 export type GameRule = z.infer<typeof GameRuleSchema>;
 
