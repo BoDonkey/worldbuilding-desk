@@ -1,5 +1,6 @@
 import type {CharacterSheet, WorldEntity} from '../../../entityTypes';
 import { openDb } from '../db';
+import {readProjectRecords} from '../projectIndex';
 
 const STORE_NAME = 'character_sheets';
 
@@ -34,22 +35,7 @@ export function findCharacterSheetCollisions(
 }
 
 export async function getCharacterSheetsByProject(projectId: string): Promise<CharacterSheet[]> {
-  const db = await openDb();
-
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(STORE_NAME, 'readonly');
-    const store = tx.objectStore(STORE_NAME);
-    const request = store.getAll();
-
-    request.onsuccess = () => {
-      const all = request.result as CharacterSheet[];
-      resolve(all.filter(c => c.projectId === projectId));
-    };
-
-    request.onerror = () => {
-      reject(request.error);
-    };
-  });
+  return readProjectRecords<CharacterSheet>(STORE_NAME, projectId);
 }
 
 export async function getCharacterSheet(id: string): Promise<CharacterSheet | undefined> {

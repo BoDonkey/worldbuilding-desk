@@ -4,6 +4,7 @@ import {
   LORE_DOCUMENT_LINK_STORE_NAME,
   LORE_DOCUMENT_STORE_NAME
 } from '../db';
+import {readProjectRecords} from '../projectIndex';
 import {normalizeLoreDocumentLinks} from '../../lore/loreDocumentLinks';
 import type {ProjectWriteTransaction} from '../projectWriteTransaction';
 import {requestToPromise} from '../idbRequest';
@@ -13,38 +14,15 @@ function emitLoreRecordsChanged(): void {
   window.dispatchEvent(new CustomEvent('wbd:lore-records-changed'));
 }
 
-async function getAllLoreDocuments(): Promise<LoreDocument[]> {
-  const db = await openDb();
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(LORE_DOCUMENT_STORE_NAME, 'readonly');
-    const request = tx.objectStore(LORE_DOCUMENT_STORE_NAME).getAll();
-    request.onsuccess = () => resolve(request.result as LoreDocument[]);
-    request.onerror = () => reject(request.error);
-  });
-}
-
-async function getAllLoreDocumentLinks(): Promise<LoreDocumentLink[]> {
-  const db = await openDb();
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(LORE_DOCUMENT_LINK_STORE_NAME, 'readonly');
-    const request = tx.objectStore(LORE_DOCUMENT_LINK_STORE_NAME).getAll();
-    request.onsuccess = () => resolve(request.result as LoreDocumentLink[]);
-    request.onerror = () => reject(request.error);
-  });
-}
-
 export async function getLoreDocumentsByProject(projectId: string): Promise<LoreDocument[]> {
-  const all = await getAllLoreDocuments();
-  return all
-    .filter((document) => document.projectId === projectId)
+  return (await readProjectRecords<LoreDocument>(LORE_DOCUMENT_STORE_NAME, projectId))
     .sort((left, right) => right.updatedAt - left.updatedAt);
 }
 
 export async function getLoreDocumentLinksByProject(
   projectId: string
 ): Promise<LoreDocumentLink[]> {
-  const all = await getAllLoreDocumentLinks();
-  return all.filter((link) => link.projectId === projectId);
+  return readProjectRecords<LoreDocumentLink>(LORE_DOCUMENT_LINK_STORE_NAME, projectId);
 }
 
 export async function saveLoreDocument(document: LoreDocument): Promise<void> {

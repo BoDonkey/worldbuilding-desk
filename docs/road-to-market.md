@@ -221,7 +221,7 @@ run when a result was reused or coverage was focused.
    3.16 → 4.53; 3.17 → 1.4a; 3.17 → 1.4b; 4.54 → 4.55 → 4.56;
    4.57 → 4.58 → 4.59;
    3.18 after 4.66; 3.22 → 3.23a → 3.23b; 3.23a → 3.23c;
-   3.23a–3.23c before 5.15;
+   3.23a–3.23c before 5.15; 4.67 → 4.68; 4.69 → 4.70;
    5.14 before 5.15; 5.15 before 6.1;
    Phase 6 strictly ordered).
 2. **Get the full prompt.** Slices marked _[prompt: archive/... § Slice N]_
@@ -309,7 +309,7 @@ and required revisit point, `WIP`, `Done <commit>`.
 | 3.21b | Electron runtime + dev advisory sweep | 3 | S | Done `24fc435` — Electron 43.2.0→43.8.3 (12 advisories, 5 high, all fixed in-major); Vite 8.3.5 and Vitest 4.1.12 within range; override floors raised for xmldom, body-parser, brace-expansion 1/2/5, fast-uri, js-yaml and added for @humanfs/node, browserslist, source-map-js, undici 6/7/8; full audit 89→1 (`http-cache-semantics` via electron-builder download path, no patched release), production audit 0; lint 1 baseline warning; 1,053 web + 47 engine + 12 UI + 24 desktop tests; web/desktop builds; unpacked desktop package launches on Electron 43.8.3; local Cypress 152/152 without retries; `cypress-smoke` green (run 40091695222, PR #62) |
 | 3.22 | Characterization tests for untested domain modules | 3 | M | Done `4e8fec9` — 31 compendium characterization tests (18 storage on fake IndexedDB, 13 mechanics), checked by five planted regressions; `compendiumService.ts` (1,232) split into `compendiumMechanics`, `compendiumStorage`, `compendiumWorldStorage` behind the unchanged index; `useWorkspaceStatBlocks` 1,074→546 over `statBlockResolution` (20 tests), `useStatBlockPreferencePersistence`, `useStatBlockRebind`; `useWorldBibleEntityActions` 1,125→429 over `worldBibleEntityPlans` (9 tests), `useWorldBibleMergeActions`, `useWorldBibleLinkActions`; no hook over 600; size baseline 13→10; lint 1 baseline warning; 1,113 web + 47 engine + 12 UI + 24 desktop tests; web/desktop builds; local Cypress 152/152 without retries; `cypress-smoke` green (run 40093325242, PR #63) |
 | 3.23a | One storage layer + import guard | 3 | M | Done `1ff729b` — IndexedDB reached only through `services/storage/`: 11 root repositories, the service repositories, and `db.ts` moved under their own names (31 files incl. tests); one `idbRequest.ts` replaces 12 `requestToPromise` copies; character import, item-state authoring, identity resolution (pure planner inside a storage transaction), and the separate rulesets database now persist through storage; the index exports repositories and store names, not `openDb`; ESLint blocks deep storage imports and `indexedDB` outside the folder (tests excepted); no schema change or new stores; planted regressions in the extracted identity and item-state writes caught; bundle chunks unchanged; lint 1 baseline warning; 1,116 web + 47 engine + 12 UI + 24 desktop tests; web/desktop builds; local Cypress 152/152 without retries (backup round-trip in `post-merge-smoke`, canon in `canon-decisions` and the J-suite; manual smoke procedures not run by hand); `cypress-smoke` green (run 40095897501, PR #64) |
-| 3.23b | Project-scoped IndexedDB indexes | 3 | M | — |
+| 3.23b | Project-scoped IndexedDB indexes | 3 | M | Done `5c70ff9` — `DB_VERSION` 28→29 adds a non-unique `projectId` index to every project-scoped store plus migration backups (world canvases and review runs keep their unique index); the upgrade only adds indexes, records unchanged; one `getAllByProject`/`readProjectRecords` reader (a missing project id reads nothing, since `index.getAll(undefined)` returns everything); every `…ByProject` getter plus the backup, snapshot, and migration readers and the replace-by-project writes read through the index; same order (primary key) and contents; real-IndexedDB test opens a populated v28 database, upgrades it, and checks indexes, every record, and getter results, with two planted regressions caught; backup and snapshot formats, migration chain, and snapshot `schemaVersion` unchanged; lint 1 baseline warning; 1,120 web + 47 engine + 12 UI + 24 desktop tests; web/desktop builds; local Cypress 150/152 in the full run without retries, the two `ask-project` failures being its fault injection patching only `IDBObjectStore.getAll` — it now patches `IDBIndex.getAll` too and the spec passes 8/8; `cypress-smoke` green (run 40105610919, PR #65) |
 | 3.23c | Browser-storage preferences + mechanics draft | 3 | S | — |
 | 4.1 | Description-first manual item creation | 4 | S | Done `70fb72f` — focused manual item draft with progressive full-editor disclosure; lint with 3 baseline warnings; 275 web + 6 engine + 12 UI tests; web/desktop builds; Cypress 44/44; desktop/narrow browser checks |
 | 4.2 | Storage schema versioning + migrations | 4 | M | Done `965af19` — separate IndexedDB, project-data, and snapshot schema contracts; ordered project-load migration runner with restorable pre-migration backups including rulesets; newer schemas fail closed before writes; 327 web + 6 engine + 12 UI tests; lint baseline; web/desktop builds; Cypress 47/47 |
@@ -384,6 +384,14 @@ and required revisit point, `WIP`, `Done <commit>`.
 | 4.64 | Singular/plural World Bible highlighting | 4 | S | Done `36300bb` — editor lore highlights match the other number of non-character names/aliases (-s, -es after sibilants, -ies/-y) on the last word; characters exact; exact names win; highlighting only (review/unknown detection unchanged); builder extracted to `services/consistency/knownLoreHighlights.ts`, WorkspaceRoute smaller; lint baseline; 939 web + 47 engine + 12 UI + 24 desktop tests; web/desktop builds; file-size gate; Cypress 145/145; `cypress-smoke` green (Web CI run 38127880556) |
 | 4.65 | Assistant reply reading view | 4 | S | Done `0d206a7` — every assistant reply with content gets Expand: a wide modal reading view (bottom slide-up on narrow screens) with sanitized Markdown formatting, craft references, Copy/Close; display only; portaled above the narrow drawer, focus trapped/restored, Escape closes only the reading view; lint baseline; 944 web + 47 engine + 12 UI + 24 desktop tests; web/desktop builds; file-size gate; Cypress 146/146; `cypress-smoke` green (Web CI run 38133487790) |
 | 4.66 | Visible assistant selection handoff | 4 | S | Done `54ccf24` — selection menu and right-click read **Ask AI about this**; the handed-over passage stays marked in the editor (display-only decoration that follows edits, never saved or in undo history) until the Selected text card's **Clear** returns the assistant to whole-scene scope; lint baseline; 949 web + 47 engine + 12 UI + 24 desktop tests; web/desktop builds; file-size gate; Cypress 147/147; `cypress-smoke` green (Web CI run 39058732227) |
+| 4.67 | Local OpenAI-compatible provider | 4 | M | — |
+| 4.68 | Constrained local output for proposals | 4 | S | — |
+| 4.69 | Character card import | 4 | M | — |
+| 4.70 | Character card export | 4 | S | — |
+| 4.71 | Context budget + linked-record pull-in | 4 | M | — |
+| 4.72 | Prompt breakdown with token counts | 4 | S | — |
+| 4.73 | Alternative replies | 4 | M | — |
+| 4.74 | Rolling Character Lab summaries | 4 | M | — |
 | 5.1 | Auto-update decision + implementation | 5 | M | — |
 | 5.2 | Code signing + notarization, both platforms | 5 | M | — |
 | 5.3 | Packaged-app validation + Electron E2E | 5 | M | — |
@@ -2091,6 +2099,62 @@ are lost and every table cell becomes its own paragraph.
   editor (a display-only decoration that follows edits and is never saved
   into scene content) and give the Selected text card a **Clear** action
   that returns the assistant to whole-scene scope and removes the mark.
+
+
+Slices 4.67–4.74 come from a 2026-10-24 review of SillyTavern (AGPL-3.0:
+borrow ideas and the public character-card format, never its code) and
+KoboldCPP.
+
+- **4.67 Local OpenAI-compatible provider.** Add one local provider for
+  servers that speak the OpenAI chat-completions API: KoboldCPP (default
+  `http://localhost:5001/v1`), LM Studio, and the llama.cpp server. It is
+  labeled local, so it carries no hosted-data disclosure and is not counted
+  as sending data off the machine. Base URL and model are configurable, with
+  a connection test and model detection where the server lists models. Reuse
+  the OpenAI request shape; do not route it through the hosted OpenAI
+  provider, whose disclosure names OpenAI's servers. Desktop routing follows
+  the existing Ollama path.
+- **4.68 Constrained local output for proposals.** After 4.67, when the
+  local server supports it, send a JSON schema or grammar with requests that
+  expect structured proposals, so small local models return parseable JSON
+  more often. First confirm what KoboldCPP and the other targets accept
+  against running servers. This changes only how often parsing succeeds:
+  every reply is still parsed strictly and validated by deterministic code,
+  and nothing becomes canon without the author.
+- **4.69 Character card import.** Import character cards in the public
+  Tavern Character Card V2/V3 format (PNG with embedded JSON, or JSON),
+  used by SillyTavern and many card libraries. Map name, description,
+  personality, scenario, and example dialogue to a World Bible character
+  draft (fields kept as Notes where no field fits), with a preview before
+  anything is written. Embedded lorebook entries become Source Notes or
+  review proposals, never accepted canon. Name collisions go through the
+  existing explicit choice. Reject malformed or oversized cards with a
+  clear reason. Other platforms' cards (for example HiWaifu) are in scope
+  only if they export to this format; check a real sample first.
+- **4.70 Character card export.** After 4.69, export a World Bible
+  character (and its Character Lab voice fields) as a V2 card (JSON, and PNG
+  when a portrait exists), so an author can use the character in
+  SillyTavern. Export includes only that character's own fields, never
+  pending proposals or other records.
+- **4.71 Context budget + linked-record pull-in.** Give each context
+  section (accepted facts, World Bible records, retrieved passages) a token
+  budget scaled to the configured model's context, trimming lowest-priority
+  items first and recording what was dropped. Optionally include records
+  linked to the entities a scene mentions, one hop only and within budget.
+  Idea from SillyTavern World Info; skip its sticky, cooldown, and delay
+  timing rules, which suit chat roleplay rather than prose.
+- **4.72 Prompt breakdown with token counts.** Extend the existing context
+  provenance view with an estimated token count per section and the total
+  against the model's context, so authors on small local models can see
+  what fills the prompt.
+- **4.73 Alternative replies.** Let the author ask for another version of a
+  Character Lab reply or a scene revision and step between versions before
+  keeping one. Unkept versions are discarded and never saved as canon;
+  budgets and disclosures apply to each generation.
+- **4.74 Rolling Character Lab summaries.** For long Character Lab
+  sessions, summarize older turns so the conversation fits the model's
+  context. The summary is shown and editable, is labeled as a summary, and
+  is never treated as canon or saved to the World Bible.
 
 ## Phase 5 — Release Engineering
 

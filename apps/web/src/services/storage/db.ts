@@ -1,5 +1,5 @@
 export const DB_NAME = 'worldbuilding-db';
-export const DB_VERSION = 28;
+export const DB_VERSION = 29;
 export const ENTITY_STORE_NAME = 'entities';
 export const CATEGORY_STORE_NAME = 'entityCategories';
 export const PROJECT_STORE_NAME = 'projects';
@@ -70,8 +70,22 @@ export const PROJECT_SCOPED_STORE_NAMES = [
   PROJECT_REVIEW_RUN_STORE_NAME
 ] as const;
 
-/** Creates every object store and index the app expects. Shared with the Cypress seed so test databases match production. */
-export function upgradeDatabase(db: IDBDatabase): void {
+/** Index on `projectId` used by project-scoped reads (DB_VERSION 29). */
+export const PROJECT_ID_INDEX = 'projectId';
+
+/** Stores read per project through the `projectId` index. */
+export const PROJECT_INDEXED_STORE_NAMES = [
+  ...PROJECT_SCOPED_STORE_NAMES,
+  PROJECT_MIGRATION_BACKUP_STORE_NAME
+] as const;
+
+/**
+ * Creates every object store and index the app expects. Shared with the
+ * Cypress seed so test databases match production. `transaction` is the
+ * version-change transaction; it lets the upgrade add indexes to stores that
+ * already exist. Creating an index only adds it; records are unchanged.
+ */
+export function upgradeDatabase(db: IDBDatabase, transaction: IDBTransaction): void {
 
   if (!db.objectStoreNames.contains(ENTITY_STORE_NAME)) {
     db.createObjectStore(ENTITY_STORE_NAME, { keyPath: 'id' });
@@ -232,6 +246,14 @@ export function upgradeDatabase(db: IDBDatabase): void {
     const reviewRunStore = db.createObjectStore(PROJECT_REVIEW_RUN_STORE_NAME, {keyPath: 'id'});
     reviewRunStore.createIndex('projectId', 'projectId', {unique: true});
   }
+
+  // world_canvases and project_review_runs already have a unique index.
+  for (const storeName of PROJECT_INDEXED_STORE_NAMES) {
+    const store = transaction.objectStore(storeName);
+    if (!store.indexNames.contains(PROJECT_ID_INDEX)) {
+      store.createIndex(PROJECT_ID_INDEX, 'projectId', {unique: false});
+    }
+  }
 }
 
 export function openDb(): Promise<IDBDatabase> {
@@ -239,7 +261,7 @@ export function openDb(): Promise<IDBDatabase> {
     const request = indexedDB.open(DB_NAME, DB_VERSION);
 
     request.onupgradeneeded = () => {
-      upgradeDatabase(request.result);
+      upgradeDatabase(request.result, request.transaction as IDBTransaction);
     };
 
     request.onsuccess = () => {

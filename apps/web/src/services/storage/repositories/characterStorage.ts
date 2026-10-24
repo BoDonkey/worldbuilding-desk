@@ -1,5 +1,6 @@
 import type { Character } from '../../../entityTypes';
 import { openDb, CHARACTER_STORE_NAME } from '../db';
+import {readProjectRecords} from '../projectIndex';
 import type {ProjectWriteTransaction} from '../projectWriteTransaction';
 
 function emitCharacterRecordsChanged(): void {
@@ -8,22 +9,7 @@ function emitCharacterRecordsChanged(): void {
 }
 
 export async function getCharactersByProject(projectId: string): Promise<Character[]> {
-  const db = await openDb();
-
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(CHARACTER_STORE_NAME, 'readonly');
-    const store = tx.objectStore(CHARACTER_STORE_NAME);
-    const request = store.getAll();
-
-    request.onsuccess = () => {
-      const all = request.result as Character[];
-      resolve(all.filter(c => c.projectId === projectId));
-    };
-
-    request.onerror = () => {
-      reject(request.error);
-    };
-  });
+  return readProjectRecords<Character>(CHARACTER_STORE_NAME, projectId);
 }
 
 export function validateCharacterWrite(

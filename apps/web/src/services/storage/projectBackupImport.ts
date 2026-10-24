@@ -63,6 +63,7 @@ import {
 } from './projectSchemaMigrations';
 import {extractSingleFileZip} from '../../utils/unzip';
 import {migrateWorldCanvasDocument} from '../worldBible/worldCanvasService';
+import {readProjectRecords} from './projectIndex';
 import {requestToPromise} from './idbRequest';
 
 export type ProjectBackupImportMode = 'new' | 'merge';
@@ -93,12 +94,7 @@ async function getProjectRecords<T extends {projectId: string}>(
   storeName: string,
   projectId: string
 ): Promise<T[]> {
-  const db = await openDb();
-  const tx = db.transaction(storeName, 'readonly');
-  const all = (await requestToPromise(
-    tx.objectStore(storeName).getAll()
-  )) as T[];
-  return all.filter((item) => item.projectId === projectId);
+  return readProjectRecords<T>(storeName, projectId);
 }
 
 export function normalizeProjectSnapshot(value: unknown): ProjectSnapshot {

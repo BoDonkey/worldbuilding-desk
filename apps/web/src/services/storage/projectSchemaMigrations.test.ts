@@ -10,8 +10,8 @@ import {
   CORKBOARD_CHAPTER_CARD_STORE_NAME,
   ENTITY_STORE_NAME,
   PROJECT_MIGRATION_BACKUP_STORE_NAME,
-  PROJECT_SCOPED_STORE_NAMES,
-  PROJECT_STORE_NAME
+  PROJECT_STORE_NAME,
+  upgradeDatabase
 } from './db';
 import {
   getRulesetByProjectId,
@@ -47,12 +47,7 @@ async function createMigrationTestDb(): Promise<IDBDatabase> {
   const name = `project-migration-${crypto.randomUUID()}`;
   const request = indexedDB.open(name, 1);
   request.onupgradeneeded = () => {
-    const db = request.result;
-    db.createObjectStore(PROJECT_STORE_NAME, {keyPath: 'id'});
-    db.createObjectStore(PROJECT_MIGRATION_BACKUP_STORE_NAME, {keyPath: 'id'});
-    PROJECT_SCOPED_STORE_NAMES.forEach((storeName) => {
-      db.createObjectStore(storeName, {keyPath: 'id'});
-    });
+    upgradeDatabase(request.result, request.transaction as IDBTransaction);
   };
   const db = await requestToPromise(request);
   openedDatabases.push({name, db});

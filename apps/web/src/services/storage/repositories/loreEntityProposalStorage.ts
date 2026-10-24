@@ -1,5 +1,6 @@
 import type {LoreEntityProposal} from '../../../entityTypes';
 import {LORE_ENTITY_PROPOSAL_STORE_NAME, openDb} from '../db';
+import {getAllByProject, readProjectRecords} from '../projectIndex';
 import type {ProjectWriteTransaction} from '../projectWriteTransaction';
 import {requestToPromise} from '../idbRequest';
 
@@ -8,22 +9,10 @@ function emitLoreFactRecordsChanged(): void {
   window.dispatchEvent(new CustomEvent('wbd:lore-fact-records-changed'));
 }
 
-async function getAllLoreEntityProposals(): Promise<LoreEntityProposal[]> {
-  const db = await openDb();
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(LORE_ENTITY_PROPOSAL_STORE_NAME, 'readonly');
-    const request = tx.objectStore(LORE_ENTITY_PROPOSAL_STORE_NAME).getAll();
-    request.onsuccess = () => resolve(request.result as LoreEntityProposal[]);
-    request.onerror = () => reject(request.error);
-  });
-}
-
 export async function getLoreEntityProposalsByProject(
   projectId: string
 ): Promise<LoreEntityProposal[]> {
-  const all = await getAllLoreEntityProposals();
-  return all
-    .filter((proposal) => proposal.projectId === projectId)
+  return (await readProjectRecords<LoreEntityProposal>(LORE_ENTITY_PROPOSAL_STORE_NAME, projectId))
     .sort((left, right) => right.createdAt - left.createdAt);
 }
 
@@ -35,12 +24,9 @@ export async function replaceLoreEntityProposals(params: {
   const db = await openDb();
   const tx = db.transaction(LORE_ENTITY_PROPOSAL_STORE_NAME, 'readwrite');
   const store = tx.objectStore(LORE_ENTITY_PROPOSAL_STORE_NAME);
-  const all = (await requestToPromise(store.getAll())) as LoreEntityProposal[];
-  for (const proposal of all) {
-    if (
-      proposal.projectId === params.projectId &&
-      proposal.loreDocumentId === params.loreDocumentId
-    ) {
+  const existing = await getAllByProject<LoreEntityProposal>(store, params.projectId);
+  for (const proposal of existing) {
+    if (proposal.loreDocumentId === params.loreDocumentId) {
       await requestToPromise(store.delete(proposal.id));
     }
   }

@@ -1,5 +1,6 @@
 import type {ChapterCard} from '../../../entityTypes';
 import {CORKBOARD_CHAPTER_CARD_STORE_NAME, openDb} from '../db';
+import {readProjectRecords} from '../projectIndex';
 
 const compareChapterCards = (a: ChapterCard, b: ChapterCard) =>
   a.order - b.order || a.createdAt - b.createdAt || a.title.localeCompare(b.title);
@@ -7,24 +8,8 @@ const compareChapterCards = (a: ChapterCard, b: ChapterCard) =>
 export async function getChapterCardsByProjectId(
   projectId: string
 ): Promise<ChapterCard[]> {
-  const db = await openDb();
-
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(CORKBOARD_CHAPTER_CARD_STORE_NAME, 'readonly');
-    const store = tx.objectStore(CORKBOARD_CHAPTER_CARD_STORE_NAME);
-    const request = store.getAll();
-
-    request.onsuccess = () => {
-      const records = (request.result as ChapterCard[]).filter(
-        (card) => card.projectId === projectId
-      );
-      resolve(records.sort(compareChapterCards));
-    };
-
-    request.onerror = () => {
-      reject(request.error);
-    };
-  });
+  const records = await readProjectRecords<ChapterCard>(CORKBOARD_CHAPTER_CARD_STORE_NAME, projectId);
+  return records.sort(compareChapterCards);
 }
 
 export async function saveChapterCard(chapterCard: ChapterCard): Promise<void> {

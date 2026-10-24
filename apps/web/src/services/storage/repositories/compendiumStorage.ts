@@ -16,6 +16,7 @@ import {
   COMPENDIUM_PROGRESS_STORE_NAME,
   COMPENDIUM_RECIPE_STORE_NAME
 } from '../db';
+import {getAllByProject, readProjectRecords} from '../projectIndex';
 import {requestToPromise} from '../idbRequest';
 
 /*
@@ -60,12 +61,7 @@ function normalizeQuantity(quantity?: number): number {
 export async function getCompendiumEntriesByProject(
   projectId: string
 ): Promise<CompendiumEntry[]> {
-  const db = await openDb();
-  const tx = db.transaction(COMPENDIUM_ENTRY_STORE_NAME, 'readonly');
-  const store = tx.objectStore(COMPENDIUM_ENTRY_STORE_NAME);
-  const all = (await requestToPromise(store.getAll())) as CompendiumEntry[];
-  return all
-    .filter((entry) => entry.projectId === projectId)
+  return (await readProjectRecords<CompendiumEntry>(COMPENDIUM_ENTRY_STORE_NAME, projectId))
     .sort((a, b) => a.name.localeCompare(b.name));
 }
 
@@ -128,12 +124,7 @@ export async function deleteCompendiumEntry(entryId: string): Promise<void> {
 export async function getCompendiumMilestonesByProject(
   projectId: string
 ): Promise<CompendiumMilestone[]> {
-  const db = await openDb();
-  const tx = db.transaction(COMPENDIUM_MILESTONE_STORE_NAME, 'readonly');
-  const store = tx.objectStore(COMPENDIUM_MILESTONE_STORE_NAME);
-  const all = (await requestToPromise(store.getAll())) as CompendiumMilestone[];
-  return all
-    .filter((milestone) => milestone.projectId === projectId)
+  return (await readProjectRecords<CompendiumMilestone>(COMPENDIUM_MILESTONE_STORE_NAME, projectId))
     .sort((a, b) => a.pointsRequired - b.pointsRequired);
 }
 
@@ -149,12 +140,7 @@ export async function saveCompendiumMilestone(
 export async function getRecipesByProject(
   projectId: string
 ): Promise<UnlockableRecipe[]> {
-  const db = await openDb();
-  const tx = db.transaction(COMPENDIUM_RECIPE_STORE_NAME, 'readonly');
-  const store = tx.objectStore(COMPENDIUM_RECIPE_STORE_NAME);
-  const all = (await requestToPromise(store.getAll())) as UnlockableRecipe[];
-  return all
-    .filter((recipe) => recipe.projectId === projectId)
+  return (await readProjectRecords<UnlockableRecipe>(COMPENDIUM_RECIPE_STORE_NAME, projectId))
     .sort((a, b) => a.name.localeCompare(b.name));
 }
 
@@ -198,15 +184,10 @@ export async function getCompendiumActionLogs(
   projectId: string,
   characterSheetId?: string
 ): Promise<CompendiumActionLog[]> {
-  const db = await openDb();
-  const tx = db.transaction(COMPENDIUM_ACTION_LOG_STORE_NAME, 'readonly');
-  const store = tx.objectStore(COMPENDIUM_ACTION_LOG_STORE_NAME);
-  const all = (await requestToPromise(store.getAll())) as CompendiumActionLog[];
+  const all = await readProjectRecords<CompendiumActionLog>(COMPENDIUM_ACTION_LOG_STORE_NAME, projectId);
   const targetProgressId = progressIdFor(projectId, characterSheetId);
   return all
-    .filter(
-      (log) => log.projectId === projectId && log.progressId === targetProgressId
-    )
+    .filter((log) => log.progressId === targetProgressId)
     .sort((a, b) => b.createdAt - a.createdAt);
 }
 
@@ -283,11 +264,8 @@ export async function recordCompendiumAction(
   const pointsAwarded = action.points * quantity;
   progress.totalPoints += pointsAwarded;
 
-  const milestones = (await requestToPromise(
-    milestoneStore.getAll()
-  )) as CompendiumMilestone[];
+  const milestones = await getAllByProject<CompendiumMilestone>(milestoneStore, params.projectId);
   const projectMilestones = milestones
-    .filter((milestone) => milestone.projectId === params.projectId)
     .sort((a, b) => a.pointsRequired - b.pointsRequired);
   const unlockedMilestoneSet = new Set(progress.unlockedMilestoneIds);
   const unlockedRecipeSet = new Set(progress.unlockedRecipeIds);

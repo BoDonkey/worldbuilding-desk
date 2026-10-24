@@ -1,5 +1,6 @@
 import type {CanonDecisionSuppression} from '../../../entityTypes';
 import {CANON_DECISION_SUPPRESSION_STORE_NAME, openDb} from '../db';
+import {readProjectRecords} from '../projectIndex';
 
 function emitCanonDecisionRecordsChanged(): void {
   if (typeof window === 'undefined') return;
@@ -33,21 +34,10 @@ export function buildFactDecisionSuppressionKey(params: {
   ].join('|');
 }
 
-async function getAllSuppressionRecords(): Promise<CanonDecisionSuppression[]> {
-  const db = await openDb();
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(CANON_DECISION_SUPPRESSION_STORE_NAME, 'readonly');
-    const request = tx.objectStore(CANON_DECISION_SUPPRESSION_STORE_NAME).getAll();
-    request.onsuccess = () => resolve(request.result as CanonDecisionSuppression[]);
-    request.onerror = () => reject(request.error);
-  });
-}
-
 export async function getCanonDecisionSuppressionsByProject(
   projectId: string
 ): Promise<CanonDecisionSuppression[]> {
-  const all = await getAllSuppressionRecords();
-  return all.filter((record) => record.projectId === projectId);
+  return readProjectRecords<CanonDecisionSuppression>(CANON_DECISION_SUPPRESSION_STORE_NAME, projectId);
 }
 
 export async function saveCanonDecisionSuppression(
