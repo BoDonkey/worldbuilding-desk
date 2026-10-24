@@ -13,6 +13,7 @@ import {
   CHARACTER_SHEET_STORE_NAME,
   CHARACTER_STORE_NAME,
   ENTITY_STORE_NAME,
+  PROJECT_ID_INDEX,
   PROJECT_MIGRATION_BACKUP_STORE_NAME,
   PROJECT_SCOPED_STORE_NAMES,
   PROJECT_STORE_NAME
@@ -23,6 +24,7 @@ import {
   getRulesetByProjectId,
   replaceRulesetSnapshot
 } from './repositories/rulesetStorage';
+import {getAllByProject} from './projectIndex';
 import {requestToPromise, transactionToPromise} from './idbRequest';
 
 export const LEGACY_PROJECT_SCHEMA_VERSION = 1;
@@ -97,11 +99,9 @@ async function readProjectRecords<T extends {projectId: string}>(
   projectId: string
 ): Promise<T[]> {
   const transaction = db.transaction(storeName, 'readonly');
-  const records = (await requestToPromise(
-    transaction.objectStore(storeName).getAll()
-  )) as T[];
+  const records = await getAllByProject<T>(transaction.objectStore(storeName), projectId);
   await transactionToPromise(transaction);
-  return records.filter((record) => record.projectId === projectId);
+  return records;
 }
 
 /**
@@ -296,13 +296,11 @@ export async function createProjectMigrationBackup(params: {
   const [entries, ruleset] = await Promise.all([
     Promise.all(
       PROJECT_SCOPED_STORE_NAMES.map(async (storeName) => {
-        const records = (await requestToPromise(
-          transaction.objectStore(storeName).getAll()
-        )) as Array<{projectId?: string}>;
-        return [
-          storeName,
-          records.filter((record) => record.projectId === params.project.id)
-        ] as const;
+        const records = await getAllByProject<{projectId?: string}>(
+          transaction.objectStore(storeName),
+          params.project.id
+        );
+        return [storeName, records] as const;
       })
     ),
     getRulesetByProjectId(params.project.id)
@@ -336,11 +334,11 @@ function replaceProjectRecordsInStore(params: {
   return new Promise((resolve, reject) => {
     const transaction = params.db.transaction(params.storeName, 'readwrite');
     const store = transaction.objectStore(params.storeName);
-    const read = store.getAll();
+    const read = store.index(PROJECT_ID_INDEX).getAll(params.projectId);
 
     read.onsuccess = () => {
       (read.result as Array<{id?: string; projectId?: string}>)
-        .filter((record) => record.projectId === params.projectId && typeof record.id === 'string')
+        .filter((record) => typeof record.id === 'string')
         .forEach((record) => store.delete(record.id as string));
       params.records.forEach((record) => store.put(record));
     };
@@ -389,11 +387,11 @@ export async function listProjectMigrationBackups(
   projectId: string
 ): Promise<ProjectMigrationBackup[]> {
   const transaction = db.transaction(PROJECT_MIGRATION_BACKUP_STORE_NAME, 'readonly');
-  const backups = (await requestToPromise(
-    transaction.objectStore(PROJECT_MIGRATION_BACKUP_STORE_NAME).getAll()
-  )) as ProjectMigrationBackup[];
+  const backups = await getAllByProject<ProjectMigrationBackup>(
+    transaction.objectStore(PROJECT_MIGRATION_BACKUP_STORE_NAME),
+    projectId
+  );
   return backups
-    .filter((backup) => backup.projectId === projectId)
     .sort((left, right) => right.createdAt - left.createdAt);
 }
 

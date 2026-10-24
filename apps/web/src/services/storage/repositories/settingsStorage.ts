@@ -10,6 +10,7 @@ import type {
   EditorFeedbackSettings
 } from '../../../entityTypes';
 import { openDb, SETTINGS_STORE_NAME } from '../db';
+import {readProjectRecords} from '../projectIndex';
 import {getDefaultFeatureToggles, normalizeFeatureToggles} from '../../../projectMode';
 import {getProjectById} from './projectStorage';
 import {
@@ -297,23 +298,8 @@ function ensureAISettings(settings: ProjectSettings): ProjectSettings {
 }
 
 export async function getProjectSettings(projectId: string): Promise<ProjectSettings | null> {
-  const db = await openDb();
-
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(SETTINGS_STORE_NAME, 'readonly');
-    const store = tx.objectStore(SETTINGS_STORE_NAME);
-    const request = store.getAll();
-
-    request.onsuccess = () => {
-      const all = request.result as ProjectSettings[];
-      const settings = all.find(s => s.projectId === projectId);
-      resolve(settings ? ensureAISettings(settings) : null);
-    };
-
-    request.onerror = () => {
-      reject(request.error);
-    };
-  });
+  const [settings] = await readProjectRecords<ProjectSettings>(SETTINGS_STORE_NAME, projectId);
+  return settings ? ensureAISettings(settings) : null;
 }
 
 export async function saveProjectSettings(settings: ProjectSettings): Promise<void> {

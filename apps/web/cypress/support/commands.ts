@@ -148,7 +148,7 @@ function openDatabase(win: Window): Promise<IDBDatabase> {
     openRequest.onupgradeneeded = () => {
       // Use the app's own upgrade routine so every store and index exists,
       // including ones added after this seed list was written.
-      upgradeDatabase(openRequest.result);
+      upgradeDatabase(openRequest.result, openRequest.transaction as IDBTransaction);
     };
 
     openRequest.onsuccess = () => resolve(openRequest.result);

@@ -1,5 +1,6 @@
 import type {Character, EntityCategory, WorldEntity} from '../../../entityTypes';
 import { CONSISTENCY_ALIAS_STORE_NAME, openDb } from '../db';
+import {readProjectRecords} from '../projectIndex';
 import {createCharacterLinkResolver, isCharacterCategory} from '../../characters/characterIdentity';
 import type {ProjectWriteTransaction} from '../projectWriteTransaction';
 
@@ -81,44 +82,30 @@ function emitAliasRecordsChanged(): void {
 }
 
 export async function getAliasesByProject(projectId: string): Promise<ConsistencyAlias[]> {
-  const db = await openDb();
-
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(CONSISTENCY_ALIAS_STORE_NAME, 'readonly');
-    const store = tx.objectStore(CONSISTENCY_ALIAS_STORE_NAME);
-    const request = store.getAll();
-
-    request.onsuccess = () => {
-      const all = request.result as Array<Partial<ConsistencyAlias>>;
-      resolve(
-        all
-          .filter((alias): alias is Partial<ConsistencyAlias> & {projectId: string; alias: string} =>
-            alias.projectId === projectId && typeof alias.alias === 'string'
-          )
-          .map((alias) => {
-            const targetType = alias.targetType ?? 'entity';
-            const targetId = alias.targetId ?? alias.entityId;
-            if (!targetId) {
-              throw new Error('Alias record missing target id.');
-            }
-            return {
-              id: alias.id ?? crypto.randomUUID(),
-              projectId: alias.projectId,
-              targetId,
-              targetType,
-              entityId: targetType === 'entity' ? targetId : undefined,
-              alias: alias.alias,
-              createdAt: alias.createdAt ?? Date.now(),
-              updatedAt: alias.updatedAt ?? alias.createdAt ?? Date.now()
-            };
-          })
-      );
-    };
-
-    request.onerror = () => {
-      reject(request.error);
-    };
-  });
+  const all = await readProjectRecords<Partial<ConsistencyAlias>>(CONSISTENCY_ALIAS_STORE_NAME, projectId);
+  return (
+    all
+      .filter((alias): alias is Partial<ConsistencyAlias> & {projectId: string; alias: string} =>
+        alias.projectId === projectId && typeof alias.alias === 'string'
+      )
+      .map((alias) => {
+        const targetType = alias.targetType ?? 'entity';
+        const targetId = alias.targetId ?? alias.entityId;
+        if (!targetId) {
+          throw new Error('Alias record missing target id.');
+        }
+        return {
+          id: alias.id ?? crypto.randomUUID(),
+          projectId: alias.projectId,
+          targetId,
+          targetType,
+          entityId: targetType === 'entity' ? targetId : undefined,
+          alias: alias.alias,
+          createdAt: alias.createdAt ?? Date.now(),
+          updatedAt: alias.updatedAt ?? alias.createdAt ?? Date.now()
+        };
+      })
+  );
 }
 
 export async function migrateCharacterAliasesToEntities(params: {

@@ -30,7 +30,6 @@ import type {
 } from '../../entityTypes';
 import {
   ACTOR_RESOLUTION_STORE_NAME,
-  openDb,
   CATEGORY_STORE_NAME,
   CORKBOARD_CHAPTER_CARD_STORE_NAME,
   CHARACTER_SHEET_STORE_NAME,
@@ -68,7 +67,7 @@ import type {
 import {getProjectById} from './repositories/projectStorage';
 import {getRulesetByProjectId} from './repositories/rulesetStorage';
 import {CURRENT_PROJECT_SNAPSHOT_SCHEMA_VERSION} from './projectSnapshotMigrations';
-import {requestToPromise} from './idbRequest';
+import {readProjectRecords} from './projectIndex';
 
 export interface ProjectSnapshot {
   schemaVersion: typeof CURRENT_PROJECT_SNAPSHOT_SCHEMA_VERSION;
@@ -150,11 +149,7 @@ async function getProjectScopedRecords<T extends {projectId: string}>(
   storeName: string,
   projectId: string
 ): Promise<T[]> {
-  const db = await openDb();
-  const tx = db.transaction(storeName, 'readonly');
-  const store = tx.objectStore(storeName);
-  const all = (await requestToPromise(store.getAll())) as T[];
-  return all.filter((record) => record.projectId === projectId);
+  return readProjectRecords<T>(storeName, projectId);
 }
 
 export async function buildProjectSnapshot(projectId: string): Promise<ProjectSnapshot> {

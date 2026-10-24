@@ -1090,6 +1090,14 @@ runtime schema, and nothing here changes the roadmap's status board.
   reloads, scene re-reviews, and project review runs while their quote is
   still in the scene (`survivesSceneRereview`, `pruneModelCheckItems`), and
   their dismissal is saved. The 4.38 session store slice is gone.
+- Slice 3.23b project-scoped IndexedDB indexes: `DB_VERSION` is 29. The
+  upgrade adds a non-unique `projectId` index to every project-scoped store
+  and to migration backups; records are not rewritten. Project reads
+  (`…ByProject` getters, backup export and import, snapshots, the migration
+  chain, and replace-by-project writes) go through
+  `services/storage/projectIndex.ts` instead of loading every project's
+  records and filtering, with the same order and contents. A missing project
+  id reads nothing. Backup and snapshot formats are unchanged.
 - Slice 3.23a one storage layer (behavior-preserving): IndexedDB is reached
   only through `apps/web/src/services/storage/`. The 11 root-level
   repositories, the service repositories (canon decisions and suppressions,

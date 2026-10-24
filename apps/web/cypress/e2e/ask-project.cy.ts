@@ -106,30 +106,41 @@ const ask = (question: string) => {
  * so the test can act while proposals are still loading or after a failed load.
  */
 function patchProposalReads(win: Window, mode: 'hold' | 'fail') {
-  const proto = (win as unknown as {IDBObjectStore: typeof IDBObjectStore}).IDBObjectStore.prototype;
-  const original = proto.getAll;
+  // Project reads go through the store's projectId index (3.23b), so patch
+  // both getAll methods and match the proposal store by name.
+  const globals = win as unknown as {IDBObjectStore: typeof IDBObjectStore; IDBIndex: typeof IDBIndex};
+  const targets = [
+    {proto: globals.IDBObjectStore.prototype, storeName: (self: IDBObjectStore) => self.name},
+    {proto: globals.IDBIndex.prototype, storeName: (self: IDBIndex) => self.objectStore.name}
+  ] as const;
   let release: () => void = () => {};
   const gate = new Promise<void>((resolve) => {
     release = resolve;
   });
-  proto.getAll = function patchedGetAll(this: IDBObjectStore, ...args: Parameters<IDBObjectStore['getAll']>) {
-    if (this.name !== 'lore_fact_proposals') return original.apply(this, args);
-    if (mode === 'fail') throw new DOMException('Simulated read failure', 'UnknownError');
-    const request = original.apply(this, args);
-    Object.defineProperty(request, 'onsuccess', {
-      configurable: true,
-      set(handler: (event: Event) => void) {
-        request.addEventListener('success', (event) => {
-          void gate.then(() => handler.call(request, event));
-        });
-      }
-    });
-    return request;
-  };
+  const originals = targets.map(({proto, storeName}) => {
+    const original = proto.getAll;
+    proto.getAll = function patchedGetAll(this: never, ...args: never[]) {
+      if (storeName(this) !== 'lore_fact_proposals') return (original as (...a: never[]) => IDBRequest).apply(this, args);
+      if (mode === 'fail') throw new DOMException('Simulated read failure', 'UnknownError');
+      const request = (original as (...a: never[]) => IDBRequest).apply(this, args);
+      Object.defineProperty(request, 'onsuccess', {
+        configurable: true,
+        set(handler: (event: Event) => void) {
+          request.addEventListener('success', (event) => {
+            void gate.then(() => handler.call(request, event));
+          });
+        }
+      });
+      return request;
+    } as typeof proto.getAll;
+    return {proto, original};
+  });
   return {
     release: () => release(),
     restore: () => {
-      proto.getAll = original;
+      originals.forEach(({proto, original}) => {
+        (proto as {getAll: unknown}).getAll = original;
+      });
       release();
     }
   };

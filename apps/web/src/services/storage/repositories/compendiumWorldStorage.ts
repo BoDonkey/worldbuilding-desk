@@ -12,6 +12,7 @@ import {
   SETTLEMENT_MODULE_STORE_NAME,
   SETTLEMENT_STATE_STORE_NAME
 } from '../db';
+import {readProjectRecords} from '../projectIndex';
 import {
   createDefaultSettlementBaseStats,
   getZoneAffinityPercent,
@@ -52,12 +53,7 @@ function zoneProgressId(projectId: string, biomeKey: string, characterSheetId?: 
 export async function getZoneAffinityProfilesByProject(
   projectId: string
 ): Promise<ZoneAffinityProfile[]> {
-  const db = await openDb();
-  const tx = db.transaction(ZONE_AFFINITY_PROFILE_STORE_NAME, 'readonly');
-  const store = tx.objectStore(ZONE_AFFINITY_PROFILE_STORE_NAME);
-  const all = (await requestToPromise(store.getAll())) as ZoneAffinityProfile[];
-  return all
-    .filter((profile) => profile.projectId === projectId)
+  return (await readProjectRecords<ZoneAffinityProfile>(ZONE_AFFINITY_PROFILE_STORE_NAME, projectId))
     .sort((a, b) => a.name.localeCompare(b.name));
 }
 
@@ -106,12 +102,7 @@ export async function upsertZoneAffinityProfile(params: {
 export async function getZoneAffinityProgressByProject(
   projectId: string
 ): Promise<ZoneAffinityProgress[]> {
-  const db = await openDb();
-  const tx = db.transaction(ZONE_AFFINITY_PROGRESS_STORE_NAME, 'readonly');
-  const store = tx.objectStore(ZONE_AFFINITY_PROGRESS_STORE_NAME);
-  const all = (await requestToPromise(store.getAll())) as ZoneAffinityProgress[];
-  return all
-    .filter((progress) => progress.projectId === projectId)
+  return (await readProjectRecords<ZoneAffinityProgress>(ZONE_AFFINITY_PROGRESS_STORE_NAME, projectId))
     .sort((a, b) => b.affinityPoints - a.affinityPoints);
 }
 
@@ -204,12 +195,7 @@ function settlementStateId(projectId: string, sourceEntityId?: string): string {
 export async function getSettlementModulesByProject(
   projectId: string
 ): Promise<SettlementModule[]> {
-  const db = await openDb();
-  const tx = db.transaction(SETTLEMENT_MODULE_STORE_NAME, 'readonly');
-  const store = tx.objectStore(SETTLEMENT_MODULE_STORE_NAME);
-  const all = (await requestToPromise(store.getAll())) as SettlementModule[];
-  return all
-    .filter((module) => module.projectId === projectId)
+  return (await readProjectRecords<SettlementModule>(SETTLEMENT_MODULE_STORE_NAME, projectId))
     .sort((a, b) => a.name.localeCompare(b.name));
 }
 

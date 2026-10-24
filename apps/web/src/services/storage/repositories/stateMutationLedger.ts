@@ -1,5 +1,6 @@
 import type {StateMutationEvent} from '../../../entityTypes';
 import {openDb, STATE_MUTATION_EVENT_STORE_NAME} from '../db';
+import {getAllByProject, readProjectRecords} from '../projectIndex';
 import {requestToPromise} from '../idbRequest';
 
 function normalizeCommandValue(value: unknown): unknown {
@@ -96,13 +97,8 @@ export async function saveStateMutationEvent(event: StateMutationEvent): Promise
 export async function getStateMutationEventsByProject(
   projectId: string
 ): Promise<StateMutationEvent[]> {
-  const db = await openDb();
-  const tx = db.transaction(STATE_MUTATION_EVENT_STORE_NAME, 'readonly');
-  const all = (await requestToPromise(
-    tx.objectStore(STATE_MUTATION_EVENT_STORE_NAME).getAll()
-  )) as StateMutationEvent[];
+  const all = await readProjectRecords<StateMutationEvent>(STATE_MUTATION_EVENT_STORE_NAME, projectId);
   return all
-    .filter((event) => event.projectId === projectId)
     .sort((a, b) => {
       const orderDelta = (a.sceneOrder ?? Number.MAX_SAFE_INTEGER) - (b.sceneOrder ?? Number.MAX_SAFE_INTEGER);
       if (orderDelta !== 0) return orderDelta;
@@ -138,13 +134,10 @@ export async function invalidateStateMutationEventsFromScene(params: {
   const db = await openDb();
   const tx = db.transaction(STATE_MUTATION_EVENT_STORE_NAME, 'readwrite');
   const store = tx.objectStore(STATE_MUTATION_EVENT_STORE_NAME);
-  const all = (await requestToPromise(store.getAll())) as StateMutationEvent[];
+  const all = await getAllByProject<StateMutationEvent>(store, params.projectId);
   const invalidatedAt = params.invalidatedAt ?? Date.now();
   const matching = all.filter(
-    (event) =>
-      event.projectId === params.projectId &&
-      event.sceneId === params.sceneId &&
-      event.status !== 'invalidated'
+    (event) => event.sceneId === params.sceneId && event.status !== 'invalidated'
   );
   await Promise.all(
     matching.map((event) =>
@@ -200,11 +193,10 @@ export async function replaceSceneStateMutationEventsBySourceType(params: {
   const db = await openDb();
   const tx = db.transaction(STATE_MUTATION_EVENT_STORE_NAME, 'readwrite');
   const store = tx.objectStore(STATE_MUTATION_EVENT_STORE_NAME);
-  const all = (await requestToPromise(store.getAll())) as StateMutationEvent[];
+  const all = await getAllByProject<StateMutationEvent>(store, params.projectId);
   const invalidatedAt = params.invalidatedAt ?? Date.now();
   const matching = all.filter(
     (event) =>
-      event.projectId === params.projectId &&
       event.sceneId === params.sceneId &&
       event.sourceType === params.sourceType &&
       event.status !== 'invalidated'

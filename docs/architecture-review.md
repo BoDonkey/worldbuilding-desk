@@ -324,11 +324,11 @@ without turning cancelled or unverified code into a passing check.
 
 ## Current Architecture Risks
 
-1. Persistence now has one boundary (`services/storage/`, Slice 3.23a), but
-   project-scoped reads still load every project's records and filter in
-   memory (3.23b), and some author-typed drafts and preferences still sit in
-   plaintext `localStorage` (3.23c). The 5.15 vault encrypts through the
-   storage boundary, so both must land before it.
+1. Persistence now has one boundary (`services/storage/`, Slice 3.23a) and
+   project-scoped reads use a `projectId` index (3.23b), but some
+   author-typed drafts and preferences still sit in plaintext `localStorage`
+   (3.23c). The 5.15 vault encrypts through the storage boundary, so 3.23c
+   must land before it.
 2. Slice 3.22 moved the remaining hook-held domain logic into tested
    services: World Bible draft, classification, and review-queue planning
    (`services/worldBible/worldBibleEntityPlans.ts`) and Workspace stat-block

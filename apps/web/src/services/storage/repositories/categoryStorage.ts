@@ -1,21 +1,12 @@
 import type {EntityCategory} from '../../../entityTypes';
 import {openDb, CATEGORY_STORE_NAME} from '../db';
+import {readProjectRecords} from '../projectIndex';
 import type {ProjectWriteTransaction} from '../projectWriteTransaction';
 
 export async function getCategoriesByProject(
   projectId: string
 ): Promise<EntityCategory[]> {
-  const db = await openDb();
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(CATEGORY_STORE_NAME, 'readonly');
-    const request = tx.objectStore(CATEGORY_STORE_NAME).getAll();
-
-    request.onsuccess = () => {
-      const all = request.result as EntityCategory[];
-      resolve(all.filter((c) => c.projectId === projectId));
-    };
-    request.onerror = () => reject(request.error);
-  });
+  return readProjectRecords<EntityCategory>(CATEGORY_STORE_NAME, projectId);
 }
 
 export async function saveCategory(category: EntityCategory): Promise<void> {

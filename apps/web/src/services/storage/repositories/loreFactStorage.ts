@@ -4,6 +4,7 @@ import {
   LORE_FACT_PROPOSAL_STORE_NAME,
   openDb
 } from '../db';
+import {getAllByProject, readProjectRecords} from '../projectIndex';
 import type {ProjectWriteTransaction} from '../projectWriteTransaction';
 import {requestToPromise} from '../idbRequest';
 
@@ -12,39 +13,15 @@ function emitLoreFactRecordsChanged(): void {
   window.dispatchEvent(new CustomEvent('wbd:lore-fact-records-changed'));
 }
 
-async function getAllLoreFactProposals(): Promise<LoreFactProposal[]> {
-  const db = await openDb();
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(LORE_FACT_PROPOSAL_STORE_NAME, 'readonly');
-    const request = tx.objectStore(LORE_FACT_PROPOSAL_STORE_NAME).getAll();
-    request.onsuccess = () => resolve(request.result as LoreFactProposal[]);
-    request.onerror = () => reject(request.error);
-  });
-}
-
-async function getAllCanonicalFacts(): Promise<CanonicalFact[]> {
-  const db = await openDb();
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(CANONICAL_FACT_STORE_NAME, 'readonly');
-    const request = tx.objectStore(CANONICAL_FACT_STORE_NAME).getAll();
-    request.onsuccess = () => resolve(request.result as CanonicalFact[]);
-    request.onerror = () => reject(request.error);
-  });
-}
-
 export async function getLoreFactProposalsByProject(
   projectId: string
 ): Promise<LoreFactProposal[]> {
-  const all = await getAllLoreFactProposals();
-  return all
-    .filter((proposal) => proposal.projectId === projectId)
+  return (await readProjectRecords<LoreFactProposal>(LORE_FACT_PROPOSAL_STORE_NAME, projectId))
     .sort((left, right) => right.createdAt - left.createdAt);
 }
 
 export async function getCanonicalFactsByProject(projectId: string): Promise<CanonicalFact[]> {
-  const all = await getAllCanonicalFacts();
-  return all
-    .filter((fact) => fact.projectId === projectId)
+  return (await readProjectRecords<CanonicalFact>(CANONICAL_FACT_STORE_NAME, projectId))
     .sort((left, right) => right.acceptedAt - left.acceptedAt);
 }
 
@@ -56,12 +33,9 @@ export async function replaceLoreFactProposals(params: {
   const db = await openDb();
   const tx = db.transaction(LORE_FACT_PROPOSAL_STORE_NAME, 'readwrite');
   const store = tx.objectStore(LORE_FACT_PROPOSAL_STORE_NAME);
-  const all = (await requestToPromise(store.getAll())) as LoreFactProposal[];
-  for (const proposal of all) {
-    if (
-      proposal.projectId === params.projectId &&
-      proposal.loreDocumentId === params.loreDocumentId
-    ) {
+  const existing = await getAllByProject<LoreFactProposal>(store, params.projectId);
+  for (const proposal of existing) {
+    if (proposal.loreDocumentId === params.loreDocumentId) {
       await requestToPromise(store.delete(proposal.id));
     }
   }

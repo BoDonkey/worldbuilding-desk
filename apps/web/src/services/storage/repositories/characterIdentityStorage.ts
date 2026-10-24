@@ -1,8 +1,8 @@
 import {
   ACTOR_RESOLUTION_STORE_NAME,
-  CHARACTER_IDENTITY_REPORT_STORE_NAME,
-  openDb
+  CHARACTER_IDENTITY_REPORT_STORE_NAME
 } from '../db';
+import {readProjectRecords} from '../projectIndex';
 import type {
   ActorResolution,
   CharacterIdentityMigrationReport
@@ -12,18 +12,7 @@ function getProjectRecords<T extends {projectId: string}>(
   storeName: string,
   projectId: string
 ): Promise<T[]> {
-  return openDb().then(
-    (db) =>
-      new Promise<T[]>((resolve, reject) => {
-        const request = db.transaction(storeName, 'readonly').objectStore(storeName).getAll();
-        request.onsuccess = () => {
-          resolve(
-            (request.result as T[]).filter((record) => record.projectId === projectId)
-          );
-        };
-        request.onerror = () => reject(request.error);
-      })
-  );
+  return readProjectRecords<T>(storeName, projectId);
 }
 
 export const getActorResolutionsByProject = (projectId: string): Promise<ActorResolution[]> =>

@@ -1,5 +1,6 @@
 import type { WritingDocument } from '../../../entityTypes';
 import { openDb, WRITING_STORE_NAME } from '../db';
+import {readProjectRecords} from '../projectIndex';
 
 const sceneTitleCollator = new Intl.Collator(undefined, {
   numeric: true,
@@ -57,22 +58,7 @@ export const getNextWritingDocumentOrder = (documents: WritingDocument[]): numbe
 };
 
 export async function getDocumentsByProject(projectId: string): Promise<WritingDocument[]> {
-  const db = await openDb();
-
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(WRITING_STORE_NAME, 'readonly');
-    const store = tx.objectStore(WRITING_STORE_NAME);
-    const request = store.getAll();
-
-    request.onsuccess = () => {
-      const all = request.result as WritingDocument[];
-      resolve(sortWritingDocuments(all.filter(doc => doc.projectId === projectId)));
-    };
-
-    request.onerror = () => {
-      reject(request.error);
-    };
-  });
+  return sortWritingDocuments(await readProjectRecords<WritingDocument>(WRITING_STORE_NAME, projectId));
 }
 
 export async function saveWritingDocument(doc: WritingDocument): Promise<void> {

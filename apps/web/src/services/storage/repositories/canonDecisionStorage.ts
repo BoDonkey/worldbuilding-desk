@@ -1,5 +1,6 @@
 import type {CanonDecisionCluster} from '../../../entityTypes';
 import {CANON_DECISION_CLUSTER_STORE_NAME, openDb} from '../db';
+import {getAllByProject, readProjectRecords} from '../projectIndex';
 import {requestToPromise} from '../idbRequest';
 
 function emitCanonDecisionRecordsChanged(): void {
@@ -7,22 +8,10 @@ function emitCanonDecisionRecordsChanged(): void {
   window.dispatchEvent(new CustomEvent('wbd:canon-decision-records-changed'));
 }
 
-async function getAllCanonDecisionClusters(): Promise<CanonDecisionCluster[]> {
-  const db = await openDb();
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(CANON_DECISION_CLUSTER_STORE_NAME, 'readonly');
-    const request = tx.objectStore(CANON_DECISION_CLUSTER_STORE_NAME).getAll();
-    request.onsuccess = () => resolve(request.result as CanonDecisionCluster[]);
-    request.onerror = () => reject(request.error);
-  });
-}
-
 export async function getCanonDecisionClustersByProject(
   projectId: string
 ): Promise<CanonDecisionCluster[]> {
-  const all = await getAllCanonDecisionClusters();
-  return all
-    .filter((cluster) => cluster.projectId === projectId)
+  return (await readProjectRecords<CanonDecisionCluster>(CANON_DECISION_CLUSTER_STORE_NAME, projectId))
     .sort((left, right) => right.updatedAt - left.updatedAt);
 }
 
@@ -33,11 +22,9 @@ export async function replaceCanonDecisionClusters(params: {
   const db = await openDb();
   const tx = db.transaction(CANON_DECISION_CLUSTER_STORE_NAME, 'readwrite');
   const store = tx.objectStore(CANON_DECISION_CLUSTER_STORE_NAME);
-  const all = (await requestToPromise(store.getAll())) as CanonDecisionCluster[];
-  for (const cluster of all) {
-    if (cluster.projectId === params.projectId) {
-      await requestToPromise(store.delete(cluster.id));
-    }
+  const existing = await getAllByProject<CanonDecisionCluster>(store, params.projectId);
+  for (const cluster of existing) {
+    await requestToPromise(store.delete(cluster.id));
   }
   for (const cluster of params.clusters) {
     await requestToPromise(store.put(cluster));

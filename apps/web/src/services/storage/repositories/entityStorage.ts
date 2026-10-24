@@ -1,5 +1,6 @@
 import type { WorldEntity } from '../../../entityTypes';
 import { openDb, ENTITY_STORE_NAME } from '../db';
+import {readProjectRecords} from '../projectIndex';
 import type {ProjectWriteTransaction} from '../projectWriteTransaction';
 
 function emitEntityRecordsChanged(): void {
@@ -26,8 +27,7 @@ export async function getAllEntities(): Promise<WorldEntity[]> {
 }
 
 export async function getEntitiesByProject(projectId: string): Promise<WorldEntity[]> {
-  const all = await getAllEntities();
-  return all.filter(entity => entity.projectId === projectId);
+  return readProjectRecords<WorldEntity>(ENTITY_STORE_NAME, projectId);
 }
 
 export async function saveEntity(entity: WorldEntity): Promise<void> {
