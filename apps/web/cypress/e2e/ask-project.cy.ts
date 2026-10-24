@@ -47,6 +47,55 @@ function seed(win: Window): Promise<void> {
   });
 }
 
+// Same arithmetic as the RAG service's deterministic dev/Cypress embedding fallback.
+const fallbackEmbedding = (text: string): number[] => {
+  const buckets = new Array<number>(32).fill(0);
+  const normalized = text.toLowerCase();
+  for (let i = 0; i < normalized.length; i += 1) buckets[i % 32] += (normalized.charCodeAt(i) % 31) / 31;
+  return buckets;
+};
+
+/** Adds Brannic, and an accepted service fact as the RAG index holds it after a context rebuild. */
+function seedBrannicServiceFact(win: Window): Promise<void> {
+  const now = Date.now();
+  const writeEntity = new Promise<void>((resolve, reject) => {
+    const request = win.indexedDB.open(DB_NAME, DB_VERSION);
+    request.onerror = () => reject(request.error);
+    request.onsuccess = () => {
+      const db = request.result;
+      const tx = db.transaction(['entities'], 'readwrite');
+      tx.objectStore('entities').put({
+        id: 'entity-brannic', projectId: PROJECT_ID, categoryId: 'characters', name: 'Brannic',
+        fields: {}, links: [], createdAt: now, updatedAt: now
+      });
+      tx.oncomplete = () => {db.close(); resolve();};
+      tx.onerror = () => {db.close(); reject(tx.error);};
+    };
+  });
+  const writeChunk = new Promise<void>((resolve, reject) => {
+    const request = win.indexedDB.open(`rag-${PROJECT_ID}`, 2);
+    request.onupgradeneeded = () => {
+      const store = request.result.createObjectStore('chunks', {keyPath: 'id'});
+      store.createIndex('by-document', 'documentId');
+      store.createIndex('by-type', 'metadata.type');
+    };
+    request.onerror = () => reject(request.error);
+    request.onsuccess = () => {
+      const db = request.result;
+      const content = 'Brannic background: Compact service: twenty years';
+      const tx = db.transaction(['chunks'], 'readwrite');
+      tx.objectStore('chunks').put({
+        id: 'canon-fact:brannic-service-0', documentId: 'canon-fact:brannic-service', documentTitle: 'Brannic',
+        content, embedding: fallbackEmbedding(content),
+        metadata: {type: 'canon_fact', entityIds: ['entity-brannic'], tags: ['canon_fact', 'background']}
+      });
+      tx.oncomplete = () => {db.close(); resolve();};
+      tx.onerror = () => {db.close(); reject(tx.error);};
+    };
+  });
+  return Promise.all([writeEntity, writeChunk]).then(() => undefined);
+}
+
 const ask = (question: string) => {
   cy.get('textarea[placeholder^="Ask about your characters"]').should('not.be.disabled').type(question);
   cy.contains('button', /^Send$/).click();
@@ -194,6 +243,51 @@ describe('Ask your project', () => {
     cy.contains('button', 'Retry').click();
     cy.contains('1 pending proposal from Source Notes').should('be.visible');
     cy.contains('[role="alert"]', 'Pending proposals could not be loaded').should('not.exist');
+  });
+
+  it('resolves a two-turn fact check from the previous question, without the model (1.4b)', () => {
+    let requests = 0;
+    cy.intercept('POST', ANTHROPIC_STREAM, (request) => {
+      requests += 1;
+      request.reply(anthropicReply('unexpected'));
+    });
+    cy.window().then((win) => seedBrannicServiceFact(win));
+    cy.visit('/ask');
+    ask('Who is Brannic?');
+    cy.contains("won't").should('be.visible');
+    ask('How long has he served?');
+    cy.contains(
+      'Answering about Brannic, from your previous question. Brannic has served the Compact for twenty years.'
+    ).should('be.visible');
+    cy.then(() => expect(requests, 'the follow-up never reaches the model').to.equal(0));
+  });
+
+  it('asks which record a follow-up means when the previous turn named several (1.4b)', () => {
+    let requests = 0;
+    cy.intercept('POST', ANTHROPIC_STREAM, (request) => {
+      requests += 1;
+      request.reply(anthropicReply('unexpected'));
+    });
+    cy.window().then((win) => seedBrannicServiceFact(win));
+    cy.visit('/ask');
+    ask('Did Sera ever meet Brannic?');
+    cy.contains("won't").should('be.visible');
+    ask('And his rank?');
+    cy.contains("This follow-up could be about Sera or Brannic, so I haven't answered it.").should('be.visible');
+    cy.then(() => expect(requests, 'an ambiguous follow-up never reaches the model').to.equal(0));
+  });
+
+  it('fails closed on an instruction-phrased factual request (1.4b)', () => {
+    let requests = 0;
+    cy.intercept('POST', ANTHROPIC_STREAM, (request) => {
+      requests += 1;
+      request.reply(anthropicReply('The ledger is kept under the harbor stones.'));
+    });
+    cy.visit('/ask');
+    ask('Remind me where the ledger is kept');
+    cy.contains("won't").should('be.visible');
+    cy.contains('under the harbor stones').should('not.exist');
+    cy.then(() => expect(requests, 'instruction-phrased factual requests never reach the model').to.equal(0));
   });
 
   it('saves a reply only through the Source Note preview', () => {

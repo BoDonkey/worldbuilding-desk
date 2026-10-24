@@ -12,7 +12,7 @@ export const EffectSchema = z.object({
     z.string(),  // Could be a formula
     z.number(),
     z.boolean(),
-    z.record(z.any()), // For complex objects
+    z.record(z.string(), z.any()), // For complex objects
   ]),
   
   // Optional constraints

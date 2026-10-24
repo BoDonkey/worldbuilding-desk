@@ -37,7 +37,7 @@
     "react-dom": "^19.2.8",
     "react-router": "^8.3.0",
     "word-list-google": "^1.0.1",
-    "zod": "^3.25.76",
+    "zod": "^4.6.7",
     "zustand": "^5.0.12"
   },
   "devDependencies": {

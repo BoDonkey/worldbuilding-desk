@@ -51,8 +51,6 @@ export function initializeDefaultCategories(projectId: string): Promise<void> {
   }
 
   const promise = (async () => {
-    console.log('in initialize defaults!!!!!!!!!!!!!!', projectId);
-
     // If there are already categories for this project, do nothing.
     const existingCats = await getCategoriesByProject(projectId);
     if (existingCats.length > 0) {

@@ -96,7 +96,7 @@ export const WorldRulesetSchema = z.object({
   updatedAt: z.number(),
 
   // Custom user-defined data
-  custom: z.record(z.unknown()).optional()
+  custom: z.record(z.string(), z.unknown()).optional()
 });
 export type WorldRuleset = z.infer<typeof WorldRulesetSchema>;
 

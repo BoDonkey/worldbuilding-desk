@@ -17,7 +17,7 @@ describe('partitionRulesetRules', () => {
     expect(quarantinedRules).toHaveLength(2);
     expect(quarantinedRules[0]).toMatchObject({raw: invalidRule, name: 'Broken'});
     expect(quarantinedRules[0].issues.some((issue) => issue.startsWith('effects.0.operation'))).toBe(true);
-    expect(quarantinedRules[1]).toMatchObject({raw: 'junk', issues: ['rule: Expected object, received string']});
+    expect(quarantinedRules[1]).toMatchObject({raw: 'junk', issues: ['rule: Invalid input: expected object, received string']});
   });
 
   it('treats a missing rules list as empty', () => {

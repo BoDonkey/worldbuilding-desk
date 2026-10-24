@@ -30,11 +30,11 @@ export type ExposureTracker = z.infer<typeof ExposureTrackerSchema>;
 export const ExperimentalCharacterStateSchema = CharacterStateSchema.extend({
   timers: z.object({
     lastUpdate: z.number(),
-    activeEffects: z.record(EffectTimerSchema),
+    activeEffects: z.record(z.string(), EffectTimerSchema),
   }),
   // Environmental exposure tracking (used for ailments like cave lung)
   environment: z.object({
-    exposures: z.record(ExposureTrackerSchema).default({})
+    exposures: z.record(z.string(), ExposureTrackerSchema).default({})
   }).default({exposures: {}}),
 });
 export type ExperimentalCharacterState = z.infer<typeof ExperimentalCharacterStateSchema>;
