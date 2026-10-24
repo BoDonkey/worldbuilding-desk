@@ -18,6 +18,7 @@ import type {
 } from '../../entityTypes';
 import type {ConsistencyAlias} from './repositories/aliasStorage';
 import {mechanicsDraftId} from './repositories/mechanicsDraftStorage';
+import {assertNoProjectBackupCollisions} from './projectBackupCollisions';
 import type {
   ActorResolution,
   CharacterIdentityMigrationReport
@@ -528,6 +529,8 @@ export async function importProjectBackup(params: {
   let targetProjectId: string;
   let targetProjectName: string;
   if (params.mode === 'new') {
+    // Checked before the project record is written, so a refusal leaves nothing behind.
+    await assertNoProjectBackupCollisions({snapshot, mode: 'new', targetProjectId: null});
     targetProjectId = crypto.randomUUID();
     const now = Date.now();
     targetProjectName = await uniqueProjectName(
@@ -552,6 +555,7 @@ export async function importProjectBackup(params: {
     }
     targetProjectId = existing.id;
     targetProjectName = existing.name;
+    await assertNoProjectBackupCollisions({snapshot, mode: 'merge', targetProjectId: existing.id});
   }
 
   let importedData = snapshot.data;

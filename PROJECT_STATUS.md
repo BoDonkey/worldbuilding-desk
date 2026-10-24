@@ -1090,6 +1090,15 @@ runtime schema, and nothing here changes the roadmap's status board.
   reloads, scene re-reviews, and project review runs while their quote is
   still in the scene (`survivesSceneRereview`, `pruneModelCheckItems`), and
   their dismissal is saved. The 4.38 session store slice is gone.
+- Slice 3.24a backup import collision guard: importing a backup in the
+  browser it came from no longer takes records away from the source project.
+  Import keeps most record ids, so a new-project import, or a merge into a
+  different project, used to overwrite the source's records and move them
+  into the copy. Import now checks every incoming id first (plus the
+  settings record and the ruleset). If any belongs to another project, it
+  refuses and writes nothing. The Projects page shows the import as blocked,
+  with the reason, before `Apply Import`. Restoring a backup into its own
+  project still works. Copying a project within one browser waits for 3.24b.
 - Slice 3.23c browser-storage preferences and mechanics draft: the
   unfinished first-mechanics form in the World Bible (value kind, name, and
   starting value) now lives in project storage, in the `mechanics_drafts`
