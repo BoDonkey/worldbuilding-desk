@@ -1090,6 +1090,22 @@ runtime schema, and nothing here changes the roadmap's status board.
   reloads, scene re-reviews, and project review runs while their quote is
   still in the scene (`survivesSceneRereview`, `pruneModelCheckItems`), and
   their dismissal is saved. The 4.38 session store slice is gone.
+- Slice 3.22 characterization and extraction (behavior-preserving): the
+  compendium now has 31 characterization tests (fake IndexedDB for storage,
+  pure tests for mechanics), checked by planting five regressions, and is
+  split into `compendiumMechanics.ts` (pure), `compendiumStorage.ts`
+  (entries, milestones, recipes, progress, action logs), and
+  `compendiumWorldStorage.ts` (zone affinity, settlements) behind the
+  unchanged `services/compendium` index. Recorded quirks: a moved settlement
+  leaves its previous location record in place, and category substring
+  matching reads "stores" as a mineral domain. `useWorkspaceStatBlocks`
+  (1,074 → 546 lines) delegates to `services/workspace/statBlockResolution.ts`
+  plus `useStatBlockPreferencePersistence` and `useStatBlockRebind`;
+  `useWorldBibleEntityActions` (1,125 → 429) delegates to
+  `services/worldBible/worldBibleEntityPlans.ts` plus
+  `useWorldBibleMergeActions` (the two merges share one commit path) and
+  `useWorldBibleLinkActions`. No hook is over 600 lines; return shapes and
+  callers are unchanged; the size baseline is down to 10 files.
 - Slice 3.16 `useWorkspaceConsistency` split (behavior-preserving): the
   2,234-line hook is now a 450-line composer over `useReviewPreferences`,
   `useSceneSaveReview` (`persistDoc`), `useConsistencyReviewRuns` (refreshes,
