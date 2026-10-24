@@ -1,4 +1,5 @@
 import type {AIProviderId} from '../../entityTypes';
+import {isLocalAIProvider} from './providerConfig';
 
 /**
  * Shared handling for an author-watched model run (Slice 4.40).
@@ -54,7 +55,7 @@ export function resolveResponseTokenLimit(
   provider: AIProviderId | undefined,
   configured: number | undefined
 ): number | undefined {
-  return provider === 'ollama' ? undefined : configured;
+  return isLocalAIProvider(provider) ? undefined : configured;
 }
 
 export function formatElapsed(ms: number): string {

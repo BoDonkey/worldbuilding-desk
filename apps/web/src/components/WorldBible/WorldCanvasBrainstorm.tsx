@@ -1,5 +1,5 @@
 import {useEffect, useMemo, useState} from 'react';
-import {PRIVATE_LOCAL_DISCLOSURE} from '../../services/llm/providerRoute';
+import {describePrivateLocalRoute} from '../../services/llm/providerRoute';
 import {Link} from 'react-router';
 import type {
   ProjectAISettings,
@@ -38,7 +38,7 @@ import {
 } from '../../services/worldBible/worldCanvasBrainstormSession';
 import {ConsultationBudgetNotice} from '../common/ConsultationBudgetNotice';
 import styles from './WorldCanvasView.module.css';
-import {HOSTED_PROVIDER_NAMES} from '../../services/llm/providerConfig';
+import {HOSTED_PROVIDER_NAMES, isHostedAIProvider} from '../../services/llm/providerConfig';
 
 interface WorldCanvasBrainstormProps {
   projectId: string;
@@ -85,10 +85,10 @@ export function WorldCanvasBrainstorm({
   const consultationEnabled = inspector?.enableAIConsultation !== false;
   const provider = aiConfig?.provider;
   const disclosure = budget.route.kind === 'private-local'
-    ? PRIVATE_LOCAL_DISCLOSURE
+    ? describePrivateLocalRoute(budget.route)
     : budget.route.kind !== 'hosted'
       ? budget.route.reason ?? null
-      : provider && provider !== 'ollama'
+      : isHostedAIProvider(provider)
       ? `Sends the core idea, ${focus.type === 'lens' ? 'this lens sketch, ' : ''}open threads, and World Bible record names to ${HOSTED_PROVIDER_NAMES[provider]}’s servers under that provider’s terms — only when you click, never in the background.`
       : null;
 

@@ -4,6 +4,7 @@ import {AnthropicProvider} from './providers/anthropic';
 import {OpenAIProvider} from './providers/openai';
 import {OllamaProvider} from './providers/ollama';
 import {GeminiProvider} from './providers/gemini';
+import {LocalOpenAIProvider} from './providers/localOpenAI';
 import {llmCache} from './LLMCache';
 import {
   DEFAULT_AI_PROVIDER,
@@ -44,7 +45,7 @@ type ProviderCredentials =
       model?: string;
     }
   | {
-      id: 'ollama';
+      id: 'ollama' | 'local-openai';
       baseUrl?: string;
       model?: string;
     };
@@ -138,6 +139,8 @@ export class LLMService {
           baseUrl: credentials.baseUrl ?? PROVIDER_DEFAULT_BASE_URLS.ollama ?? 'http://localhost:11434',
           model: credentials.model
         });
+      case 'local-openai':
+        return new LocalOpenAIProvider({baseUrl: credentials.baseUrl, model: credentials.model});
     }
 
     throw new Error('Provider is not implemented.');
@@ -162,6 +165,12 @@ export class LLMService {
           model: settings?.configs?.ollama?.model
         };
       }
+      case 'local-openai':
+        return {
+          id: 'local-openai',
+          baseUrl: settings?.configs?.['local-openai']?.baseUrl ?? PROVIDER_DEFAULT_BASE_URLS['local-openai'],
+          model: settings?.configs?.['local-openai']?.model
+        };
       default:
         throw new Error(`Provider "${providerId}" is not supported yet.`);
     }

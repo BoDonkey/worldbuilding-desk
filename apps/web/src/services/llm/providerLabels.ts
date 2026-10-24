@@ -5,5 +5,6 @@ export const AI_PROVIDER_LABELS: Record<AIProviderId, string> = {
   anthropic: 'Anthropic (Claude)',
   openai: 'OpenAI (GPT)',
   gemini: 'Google Gemini',
-  ollama: 'Ollama (Local)'
+  ollama: 'Ollama (Local)',
+  'local-openai': 'Local server (OpenAI-compatible)'
 };

@@ -93,12 +93,18 @@ health checks, migrations, and error handling do not call hosted providers.
 Ollama is an on-device provider path only when the configured endpoint is
 loopback and the selected model is verified local; remote endpoints and Ollama
 cloud models cross the egress boundary and must not inherit local-provider
-claims or policy.
+claims or policy. A local OpenAI-compatible server (`local-openai`: KoboldCPP,
+LM Studio, llama.cpp) is on-device only at a loopback address; it never
+carries an API key and never uses the hosted OpenAI provider's code or
+disclosure.
 
 One provider-route classification (`services/llm/providerRoute.ts`) drives
 the data-flow disclosures and consultation accounting: `private-local` only
 for loopback Ollama with a model that `/api/tags` lists as installed and not
-cloud; anything unverified is disclosed and budgeted as remote. The request
+cloud, or for the local OpenAI-compatible server at a loopback address (its
+models cannot be checked the way Ollama's can, and it has no cloud models to
+hand a request to); anything unverified is disclosed and budgeted as remote,
+and a remote local-server address is blocked. The request
 policy enforces the same rule before any text is sent: the desktop main
 process (and the browser build's Ollama provider) reads `/api/tags`, refuses
 cloud and not-installed models, and auto-selects only local models. Remote
@@ -113,8 +119,8 @@ ask which providers have a key, and never reads one back. Every provider
 request, Gemini included, runs in the main process, which attaches the key and
 refuses requests whose payload carries one. Provider addresses pass a
 scheme/host policy at the IPC boundary: hosted providers only over HTTPS to
-their own origin, Ollama (and an explicitly local OpenAI-compatible server)
-only on loopback. The browser-only dev build keeps keys in browser storage
+their own origin, Ollama and the local model server only on loopback (the
+hosted OpenAI provider also still accepts a loopback address). The browser-only dev build keeps keys in browser storage
 behind the same `providerKeyStore` module.
 
 The packaged renderer runs under a Content-Security-Policy that allows code

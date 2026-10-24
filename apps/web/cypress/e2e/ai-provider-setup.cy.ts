@@ -40,6 +40,28 @@ describe('AI provider setup UX', () => {
     cy.contains('No story text ever leaves your computer').should('not.exist');
   });
 
+  it('sets up a local OpenAI-compatible server with no key, and blocks a remote address', () => {
+    cy.intercept('GET', 'http://localhost:5001/v1/models', {statusCode: 200, body: {data: [{id: 'kobold-model'}]}});
+    cy.intercept('POST', 'http://localhost:5001/v1/chat/completions', {
+      statusCode: 200,
+      body: {choices: [{message: {content: 'OK'}, finish_reason: 'stop'}]}
+    }).as('localChat');
+    cy.contains('label', 'Provider').parent().find('select').select('Local server (OpenAI-compatible)');
+    cy.contains('Your local model server runs entirely on your device').should('be.visible');
+    cy.contains('label', /API Key/).should('not.exist');
+    cy.contains('button', 'Save API Keys').should('not.exist');
+    cy.get('#local-server-base-url').should('have.value', 'http://localhost:5001/v1');
+
+    cy.contains('button', 'Test connection').click();
+    cy.contains('strong', 'Local model server connection succeeded.').should('be.visible');
+    cy.wait('@localChat').its('request.headers').should('not.have.property', 'authorization');
+    cy.contains('button', 'Use kobold-model').should('be.visible');
+
+    cy.get('#local-server-base-url').clear().type('http://192.168.1.20:5001/v1');
+    cy.contains('The local model server must run on this computer').should('be.visible');
+    cy.contains('No story text ever leaves your computer').should('not.exist');
+  });
+
   it('reports a missing key without making a network call', () => {
     cy.contains('label', 'Provider').parent().find('select').select('Anthropic (Claude)');
     cy.contains('button', 'Test connection').click();

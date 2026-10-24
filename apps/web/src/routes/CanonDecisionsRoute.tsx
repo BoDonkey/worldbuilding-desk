@@ -68,7 +68,8 @@ const PROVIDER_LABELS = {
   anthropic: 'Claude',
   openai: 'GPT',
   gemini: 'Gemini',
-  ollama: 'Local Ollama'
+  ollama: 'Local Ollama',
+  'local-openai': 'Local server'
 } as const;
 
 function CanonDecisionsRoute() {

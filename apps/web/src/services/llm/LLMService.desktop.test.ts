@@ -37,6 +37,26 @@ describe('LLMService in the desktop app', () => {
     payloads.forEach((payload) => expect(payload).not.toHaveProperty('apiKey'));
   });
 
+  it('routes the local model server through the main process with its address and no key', async () => {
+    const {llmComplete} = desktopWindow();
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+
+    await new LLMService({
+      provider: 'local-openai',
+      configs: {'local-openai': {baseUrl: 'http://127.0.0.1:8080/v1', model: 'qwen3'}}
+    } as unknown as ProjectAISettings).complete({messages: [{role: 'user', content: 'Hi'}], cache: false});
+
+    expect(fetchMock).not.toHaveBeenCalled();
+    const [payload] = llmComplete.mock.calls[0] as unknown as [Record<string, unknown>];
+    expect(payload).toMatchObject({
+      providerId: 'local-openai',
+      providerConfig: {baseUrl: 'http://127.0.0.1:8080/v1'},
+      request: {model: 'qwen3'}
+    });
+    expect(payload).not.toHaveProperty('apiKey');
+  });
+
   it('fails fast when the vault reports no key for the provider', async () => {
     desktopWindow({anthropic: false, openai: true, gemini: true});
     await getProviderKeyStatus();

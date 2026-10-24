@@ -1,4 +1,5 @@
 import type {AIProviderId} from '../../entityTypes';
+import {isLocalAIProvider, type HostedAIProviderId} from './providerConfig';
 
 export const HOSTED_RESPONSE_LIMIT_MESSAGE =
   "The provider stopped at this project's response limit, so no complete answer was used. Raise Max response tokens in Settings and try again.";
@@ -7,7 +8,7 @@ export const HOSTED_PRICE_TABLE_CHECKED_AT = '2026-09-24';
 export const HOSTED_STRUCTURED_RESPONSE_MINIMUM = 1500;
 
 interface HostedModelPrice {
-  provider: Exclude<AIProviderId, 'ollama'>;
+  provider: HostedAIProviderId;
   model: string;
   outputUsdPerMillionTokens: number;
   source: string;
@@ -42,7 +43,7 @@ export function getHostedResponseCostCeiling(
   model: string,
   configuredTokens: number
 ): HostedResponseCostCeiling | null {
-  if (provider === 'ollama') return null;
+  if (isLocalAIProvider(provider)) return null;
   const tokens = Math.max(configuredTokens, HOSTED_STRUCTURED_RESPONSE_MINIMUM);
   const price = HOSTED_MODEL_PRICES.find(
     (entry) => entry.provider === provider && entry.model === model.trim().toLowerCase()
@@ -62,7 +63,7 @@ export function formatHostedResponseCost(usd: number): string {
 }
 
 export function assertHostedResponseComplete(
-  provider: Exclude<AIProviderId, 'ollama'>,
+  provider: HostedAIProviderId,
   reason: unknown
 ): void {
   const normalized = typeof reason === 'string' ? reason.toLowerCase() : '';

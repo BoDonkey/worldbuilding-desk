@@ -123,7 +123,7 @@ describe('AI consultation budget', () => {
       .within(() => {
         cy.contains('Guards against runaway loops').should('be.visible');
         cy.contains('resets at midnight tonight').should('be.visible');
-        cy.contains('Local (Ollama) providers do not spend it at all.').should('be.visible');
+        cy.contains('Local providers (Ollama or a local model server) do not spend it at all.').should('be.visible');
         cy.contains('5 of 20 used').should('be.visible');
         cy.contains('2 local requests, unbudgeted').should('be.visible');
         cy.contains('li', 'Writing assistant').should('contain.text', '3');

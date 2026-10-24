@@ -60,7 +60,9 @@ Privacy is a product promise and a selling point, not an advanced setting.
   first use and keep the request author-triggered.
 - Ollama workflows remain on-device only when the endpoint is the local
   loopback service and the selected model is verified local. Ollama cloud
-  models are hosted workflows and must be disclosed as such. The app remains
+  models are hosted workflows and must be disclosed as such. A local
+  OpenAI-compatible server (KoboldCPP, LM Studio, llama.cpp) is on-device only
+  at a loopback address. The app remains
   useful with AI disabled.
 - Provider retention or training claims belong to that provider's current API
   terms; SagaSpine must not imply control it does not have.
@@ -82,8 +84,8 @@ for another:
   project-owned content and persistent derivatives are encrypted at rest and
   require the project passphrase after restart, close, or manual lock.
 - **Private local AI** — a verified local model is reached through a loopback
-  endpoint; neither an Ollama cloud model nor a remote Ollama base URL
-  qualifies.
+  endpoint; neither an Ollama cloud model nor a remote Ollama or local-server
+  base URL qualifies.
 
 Project locking is optional. Its recovery warning must be unambiguous: the
 passphrase is never stored, SagaSpine has no recovery service or backdoor, and
@@ -101,8 +103,8 @@ work. An author who means to keep going must always be able to keep going.
   this project made today", so a single daily counter is the model they already
   hold. Each unit still records which feature spent it, so the usage can be
   broken down without fragmenting the limit.
-- **Verified local providers do not spend it.** An Ollama request is local
-  only when its endpoint and model satisfy the boundary above. Verified-local
+- **Verified local providers do not spend it.** An Ollama or local-server
+  request is local only when it satisfies the boundary above. Verified-local
   requests are reported separately and stop only at a much higher runaway
   guard; Ollama cloud models follow hosted-provider accounting and disclosure.
 - **The day resets at the author's local midnight**, and every surface that
@@ -136,8 +138,9 @@ thinking is not enabled, OpenAI reasoning families use low effort and
 gets its minimum allowance when the cap can contain it, and Gemini 3+ uses low
 thinking. If Anthropic, OpenAI, or Gemini reports that the ceiling stopped the
 reply, the app discards the incomplete result and tells the author to raise
-**Max response tokens** in Settings. Local Ollama remains uncapped and
-unpriced.
+**Max response tokens** in Settings. Local Ollama and the local model server
+remain uncapped and unpriced; a local server reply cut off at its own length
+limit is also discarded.
 
 ## Positioning
 
