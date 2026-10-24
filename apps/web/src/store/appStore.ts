@@ -4,9 +4,9 @@ import type {StateStorage} from 'zustand/middleware';
 import type {Project, ProjectSettings} from '../entityTypes';
 import {
   getOrCreateSettings,
-  saveProjectSettings as persistProjectSettings
-} from '../settingsStorage';
-import {getProjectById} from '../projectStorage';
+  saveProjectSettings as persistProjectSettings,
+  getProjectById
+} from '../services/storage';
 import {describeError} from '../services/errors';
 
 const noopStorage: StateStorage = {

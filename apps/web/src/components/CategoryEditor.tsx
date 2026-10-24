@@ -1,6 +1,6 @@
 import {useState} from 'react';
 import type {EntityCategory, FieldDefinition} from '../entityTypes';
-import {saveCategory} from '../categoryStorage';
+import {saveCategory} from '../services/storage';
 import styles from '../assets/components/CategoryEditor.module.css';
 
 interface CategoryEditorProps {

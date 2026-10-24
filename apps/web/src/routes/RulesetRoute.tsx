@@ -5,9 +5,9 @@ import type {Project} from '../entityTypes';
 import type {WorldRuleset} from '@worldbuilding-desk/rules-engine';
 import {WorldBuildingWizard} from '@worldbuilding-desk/rules-ui';
 import '@rules-ui/styles/wizard.css';
-import {saveProject} from '../projectStorage';
+import {saveProject, getRulesetByProjectId} from '../services/storage';
 import {useAppStore} from '../store/appStore';
-import {getRulesetByProjectId, saveRuleset} from '../services/rules';
+import {saveRuleset} from '../services/rules';
 import {
   exportRulesetJson,
   importRulesetJson

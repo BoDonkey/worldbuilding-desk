@@ -59,15 +59,16 @@ import {
   WRITING_STORE_NAME,
   ZONE_AFFINITY_PROFILE_STORE_NAME,
   ZONE_AFFINITY_PROGRESS_STORE_NAME
-} from '../../db';
-import type {ConsistencyAlias} from '../consistency/aliasStorage';
+} from './db';
+import type {ConsistencyAlias} from './repositories/aliasStorage';
 import type {
   ActorResolution,
   CharacterIdentityMigrationReport
 } from '../characters/characterIdentity';
-import {getProjectById} from '../../projectStorage';
-import {getRulesetByProjectId} from '../rules/rulesetService';
+import {getProjectById} from './repositories/projectStorage';
+import {getRulesetByProjectId} from './repositories/rulesetStorage';
 import {CURRENT_PROJECT_SNAPSHOT_SCHEMA_VERSION} from './projectSnapshotMigrations';
+import {requestToPromise} from './idbRequest';
 
 export interface ProjectSnapshot {
   schemaVersion: typeof CURRENT_PROJECT_SNAPSHOT_SCHEMA_VERSION;
@@ -143,13 +144,6 @@ export interface ProjectSnapshot {
 export interface SnapshotCountValidationResult {
   ok: boolean;
   mismatches: string[];
-}
-
-function requestToPromise<T>(request: IDBRequest<T>): Promise<T> {
-  return new Promise((resolve, reject) => {
-    request.onsuccess = () => resolve(request.result);
-    request.onerror = () => reject(request.error);
-  });
 }
 
 async function getProjectScopedRecords<T extends {projectId: string}>(

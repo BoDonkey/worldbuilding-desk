@@ -6,7 +6,7 @@ import type {
   EntityCategory,
   WorldEntity
 } from '../../entityTypes';
-import type {ConsistencyAlias} from '../consistency/aliasStorage';
+import type {ConsistencyAlias} from '../storage';
 import {
   createCharacterTransferPayload,
   prepareCharacterTransferImport,

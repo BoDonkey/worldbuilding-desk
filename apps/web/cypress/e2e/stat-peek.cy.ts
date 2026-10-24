@@ -1,4 +1,4 @@
-import {DB_NAME, DB_VERSION} from '../../src/db';
+import {DB_NAME, DB_VERSION} from '../../src/services/storage/db';
 
 const PROJECT_ID = 'cypress-project-1';
 const WATCHED_STORES = [

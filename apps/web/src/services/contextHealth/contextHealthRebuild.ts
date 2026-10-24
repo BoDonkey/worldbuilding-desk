@@ -1,5 +1,12 @@
-import {getCategoriesByProject} from '../../categoryStorage';
-import {getEntitiesByProject} from '../../entityStorage';
+import {
+  getCategoriesByProject,
+  getEntitiesByProject,
+  getLoreDocumentLinksByProject,
+  getLoreDocumentsByProject,
+  getDocumentsByProject,
+  getCanonicalFactsByProject,
+  getRulesetByProjectId
+} from '../storage';
 import type {
   CanonicalFact,
   LoreDocumentLink,
@@ -7,9 +14,6 @@ import type {
   StoredRuleset,
   WorldEntity
 } from '../../entityTypes';
-import {getLoreDocumentLinksByProject, getLoreDocumentsByProject} from '../../loreStorage';
-import {getDocumentsByProject} from '../../writingStorage';
-import {getCanonicalFactsByProject} from '../lore/loreFactStorage';
 import {
   buildCanonicalFactSummary,
   captureCanonicalFactMemory
@@ -19,7 +23,6 @@ import type {RAGProvider} from '../rag/RAGService';
 import type {ShodhMemoryProvider} from '../shodh/ShodhMemoryService';
 import {emitShodhMemoriesUpdated} from '../shodh/shodhEvents';
 import {extractPlainTextFromRichText} from '../worldBible/worldBibleEntityHelpers';
-import {getRulesetByProjectId} from '../rules/rulesetService';
 
 export interface ContextHealthRebuildResult {
   scenes: number;

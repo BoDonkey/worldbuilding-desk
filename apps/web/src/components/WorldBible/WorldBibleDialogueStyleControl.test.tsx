@@ -1,10 +1,10 @@
 import {fireEvent, render, screen, waitFor} from '@testing-library/react';
 import {beforeEach, describe, expect, it, vi} from 'vitest';
 import type {Character, WorldEntity} from '../../entityTypes';
-import {saveCharacter} from '../../characterStorage';
+import {saveCharacter} from '../../services/storage';
 import {WorldBibleDialogueStyleControl} from './WorldBibleDialogueStyleControl';
 
-vi.mock('../../characterStorage', () => ({
+vi.mock('../../services/storage/repositories/characterStorage', () => ({
   saveCharacter: vi.fn(async () => undefined)
 }));
 

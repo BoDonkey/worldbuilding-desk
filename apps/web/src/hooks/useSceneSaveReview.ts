@@ -6,7 +6,11 @@ import type {
   StoredRuleset,
   WritingDocument
 } from '../entityTypes';
-import {saveWritingDocument, sortWritingDocuments} from '../writingStorage';
+import {
+  saveWritingDocument,
+  sortWritingDocuments,
+  replaceSceneStateMutationEventsBySourceType
+} from '../services/storage';
 import type {RAGProvider} from '../services/rag/RAGService';
 import type {GuardrailIssue, KnownEntityRef} from '../services/consistency';
 import type {WorldEngine} from '../services/worldEngine';
@@ -14,7 +18,6 @@ import type {ShodhMemoryProvider} from '../services/shodh/ShodhMemoryService';
 import {htmlToPlainText} from '../utils/textHelpers';
 import type {ActorResolution} from '../services/characters/characterIdentity';
 import {buildDerivedStateMutationEvents} from '../services/state/stateMutationDerivation';
-import {replaceSceneStateMutationEventsBySourceType} from '../services/state/stateMutationLedger';
 import {
   getReviewIssueKey,
   makeReviewItemId,

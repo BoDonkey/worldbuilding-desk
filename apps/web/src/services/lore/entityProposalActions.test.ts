@@ -1,15 +1,17 @@
 import 'fake-indexeddb/auto';
 import {describe, expect, it} from 'vitest';
 import type {Character, LoreDocumentLink, LoreEntityProposal} from '../../entityTypes';
-import {CHARACTER_STORE_NAME} from '../../db';
-import {getCategoriesByProject} from '../../categoryStorage';
-import {getCharactersByProject} from '../../characterStorage';
-import {getEntitiesByProject} from '../../entityStorage';
-import {getLoreDocumentLinksByProject} from '../../loreStorage';
-import {getAliasesByProject} from '../consistency/aliasStorage';
-import {runProjectWriteTransaction} from '../storage/projectWriteTransaction';
+import {CHARACTER_STORE_NAME} from '../storage/db';
+import {
+  getCategoriesByProject,
+  getCharactersByProject,
+  getEntitiesByProject,
+  getLoreDocumentLinksByProject,
+  getAliasesByProject,
+  runProjectWriteTransaction,
+  getLoreEntityProposalsByProject
+} from '../storage';
 import {acceptLoreEntityProposal} from './entityProposalActions';
-import {getLoreEntityProposalsByProject} from './loreEntityProposalStorage';
 
 let projectCounter = 0;
 const newProjectId = () => `entity-accept-${Date.now()}-${projectCounter++}`;

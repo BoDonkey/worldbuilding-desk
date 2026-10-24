@@ -1,6 +1,6 @@
 import {useState} from 'react';
 import type {SettlementModule, SettlementState} from '../../entityTypes';
-import {saveSettlementModule, attachModuleToSettlement} from '../../services/compendium';
+import {saveSettlementModule, attachModuleToSettlement} from '../../services/storage';
 import {parseModuleValue} from '../../services/compendium/compendiumFormValues';
 import {describeError} from '../../services/errors';
 import type {CompendiumFormContext, SetFormValue} from './formTypes';

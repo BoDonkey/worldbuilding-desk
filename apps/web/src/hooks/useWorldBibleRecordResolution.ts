@@ -1,5 +1,5 @@
 import {useCallback, useEffect, useMemo, type Dispatch, type SetStateAction} from 'react';
-import {saveEntity} from '../entityStorage';
+import {saveEntity} from '../services/storage';
 import type {
   EntityCategory,
   Project,

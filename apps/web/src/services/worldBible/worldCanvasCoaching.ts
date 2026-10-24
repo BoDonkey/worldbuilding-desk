@@ -4,7 +4,7 @@ import type {
   WorldCanvasDocument,
   WorldCanvasLensKind
 } from '../../entityTypes';
-import type {ConsistencyAlias} from '../consistency/aliasStorage';
+import type {ConsistencyAlias} from '../storage';
 import type {CraftSearchResult} from '../craft/types';
 import {
   addOpenThread,

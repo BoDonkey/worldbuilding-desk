@@ -7,7 +7,7 @@ import {
   getAllProjects,
   getProjectById,
   saveProject
-} from '../../projectStorage';
+} from '../storage';
 
 export interface SeriesBibleConfig {
   parentProjectId?: string;

@@ -1,6 +1,6 @@
 import {useState} from 'react';
 import type {CompendiumDomain, CompendiumEntry} from '../../entityTypes';
-import {saveCompendiumEntry} from '../../services/compendium';
+import {saveCompendiumEntry} from '../../services/storage';
 import {getDefaultActions} from '../../services/compendium/compendiumFormValues';
 import {describeError} from '../../services/errors';
 import type {CompendiumFormContext, SetFormValue} from './formTypes';

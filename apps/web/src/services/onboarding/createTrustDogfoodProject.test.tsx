@@ -1,11 +1,13 @@
 import {beforeEach, describe, expect, it, vi} from 'vitest';
 import {createTrustDogfoodProject, TRUST_DOGFOOD_PROJECT_NAME} from './createTrustDogfoodProject';
-import {getDocumentsByProject} from '../../writingStorage';
-import {getLoreDocumentsByProject} from '../../loreStorage';
-import {getRulesetByProjectId} from '../rules/rulesetService';
-import {getProjectById} from '../../projectStorage';
-import {getEntitiesByProject} from '../../entityStorage';
-import {getCanonicalFactsByProject} from '../lore/loreFactStorage';
+import {
+  getDocumentsByProject,
+  getLoreDocumentsByProject,
+  getRulesetByProjectId,
+  getProjectById,
+  getEntitiesByProject,
+  getCanonicalFactsByProject
+} from '../storage';
 
 // .test.tsx so it runs in the jsdom project with fake-indexeddb.
 describe('createTrustDogfoodProject', () => {

@@ -11,14 +11,12 @@ import type {
   WorldEntity,
   WritingDocument
 } from '../../entityTypes';
-import {sortWritingDocuments} from '../../writingStorage';
+import {sortWritingDocuments, deriveCharacterSheetNames, type ConsistencyAlias} from '../storage';
 import {
   createCharacterLinkResolver,
   type ActorResolution
 } from '../characters/characterIdentity';
-import {deriveCharacterSheetNames} from '../characters/characterSheetService';
 import type {CharacterRuntimeModifiers} from '../compendium';
-import type {ConsistencyAlias} from '../consistency/aliasStorage';
 import {
   formatCanonicalFactValidity,
   isCanonicalFactValidAtScene

@@ -1,6 +1,6 @@
 import type {EntityCategory, WorldEntity} from '../../entityTypes';
 import {isCharacterCategory} from '../worldBible/worldBibleSummary';
-import type {ConsistencyAlias} from './aliasStorage';
+import type {ConsistencyAlias} from '../storage';
 import {withNumberVariants} from './numberVariants';
 
 export interface KnownLoreHighlight {

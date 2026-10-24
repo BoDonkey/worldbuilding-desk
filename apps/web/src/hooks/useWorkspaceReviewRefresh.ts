@@ -1,6 +1,6 @@
 import {useEffect, useMemo, useRef} from 'react';
 import type {Character, WorldEntity, WritingDocument} from '../entityTypes';
-import type {ConsistencyAlias} from '../services/consistency/aliasStorage';
+import type {ConsistencyAlias} from '../services/storage';
 
 export const useWorkspaceReviewRefresh = (params: {
   selectedId: string | null;

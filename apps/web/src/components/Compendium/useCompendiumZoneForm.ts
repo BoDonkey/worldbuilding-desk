@@ -1,6 +1,6 @@
 import {useState} from 'react';
 import type {MechanicsProgressScope, ZoneAffinityProfile, ZoneAffinityProgress} from '../../entityTypes';
-import {upsertZoneAffinityProfile, recordZoneExposure} from '../../services/compendium';
+import {upsertZoneAffinityProfile, recordZoneExposure} from '../../services/storage';
 import {describeError} from '../../services/errors';
 import type {CompendiumFormContext, SetFormValue} from './formTypes';
 

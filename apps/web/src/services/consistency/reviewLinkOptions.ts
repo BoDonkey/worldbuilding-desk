@@ -1,5 +1,5 @@
 import type {Character, EntityCategory, WorldEntity} from '../../entityTypes';
-import type {ConsistencyAlias} from './aliasStorage';
+import type {ConsistencyAlias} from '../storage';
 import type {GuardrailIssue} from './types';
 import type {ConsistencyReviewItem} from './reviewReadiness';
 import {createCharacterLinkResolver, isCharacterCategory} from '../characters/characterIdentity';

@@ -1,9 +1,12 @@
 import {useCallback, useMemo, useState} from 'react';
 import type {ProjectAISettings, WritingDocument} from '../entityTypes';
-import {getEntitiesByProject} from '../entityStorage';
-import {getCharactersByProject} from '../characterStorage';
-import {getAliasesByProject} from '../services/consistency';
-import {getCanonicalFactsByProject, getLoreFactProposalsByProject} from '../services/lore/loreFactStorage';
+import {
+  getEntitiesByProject,
+  getCharactersByProject,
+  getAliasesByProject,
+  getCanonicalFactsByProject,
+  getLoreFactProposalsByProject
+} from '../services/storage';
 import {getCanonicalFactsValidAtScene} from '../services/lore/canonicalFactValidity';
 import {isAcceptedFact} from '../services/characterLab/characterVoiceContext';
 import {

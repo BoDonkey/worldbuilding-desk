@@ -1,5 +1,5 @@
 import type {LoreDocument} from '../../entityTypes';
-import {saveLoreDocument} from '../../loreStorage';
+import {saveLoreDocument} from '../storage';
 import type {RAGProvider} from '../rag/RAGService';
 
 /** Shared with LoreRoute so a manually authored note and an assistant-captured

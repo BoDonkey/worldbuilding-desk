@@ -5,7 +5,7 @@ import type {ActorResolution} from '../services/characters/characterIdentity';
 import {
   invalidateStateMutationEventById,
   saveStateMutationEvent
-} from '../services/state/stateMutationLedger';
+} from '../services/storage';
 import {
   buildStateMutationReviewItems,
   countHiddenStateMutationReviewsByScene,

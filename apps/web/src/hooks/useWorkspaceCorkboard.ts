@@ -4,7 +4,7 @@ import {
   deleteChapterCard,
   getChapterCardsByProjectId,
   saveChapterCard
-} from '../corkboardStorage';
+} from '../services/storage';
 
 export type CorkboardSaveStatus = 'idle' | 'loading' | 'saving' | 'saved' | 'error';
 

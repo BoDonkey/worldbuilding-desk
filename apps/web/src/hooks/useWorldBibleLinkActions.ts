@@ -1,6 +1,6 @@
 import {useCallback, useState} from 'react';
 import type {Dispatch, SetStateAction} from 'react';
-import {saveCharacter} from '../characterStorage';
+import {saveCharacter, upsertCompendiumEntryFromEntity} from '../services/storage';
 import type {
   Character,
   EntityCategory,
@@ -9,7 +9,6 @@ import type {
   CompendiumEntry,
   Project
 } from '../entityTypes';
-import {upsertCompendiumEntryFromEntity} from '../services/compendium';
 import {promoteDocumentToParent, syncChildWithParent} from '../services/seriesBible/SeriesBibleService';
 import {
   createCharacterLinkResolver,

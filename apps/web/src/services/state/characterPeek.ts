@@ -4,7 +4,7 @@ import type {
   StatBlockStyle,
   WorldEntity
 } from '../../entityTypes';
-import type {ConsistencyAlias} from '../consistency/aliasStorage';
+import type {ConsistencyAlias} from '../storage';
 import {findTextMatches, normalizeCanonText} from '../consistency/textMatcher';
 import type {CharacterSnapshot} from './characterSnapshot';
 

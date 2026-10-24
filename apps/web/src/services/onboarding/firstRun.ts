@@ -1,8 +1,6 @@
 import type {Project, ProjectMode, ProjectSettings} from '../../entityTypes';
-import {saveProject} from '../../projectStorage';
-import {createDefaultSettings} from '../../settingsStorage';
+import {saveProject, createDefaultSettings, saveWritingDocument} from '../storage';
 import {getDefaultFeatureToggles} from '../../projectMode';
-import {saveWritingDocument} from '../../writingStorage';
 import {markProjectForOnboardingGuide} from './onboardingGuide';
 
 const FIRST_RUN_CHECK_KEY = 'wbd:first-run-checked';

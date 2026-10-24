@@ -1,4 +1,4 @@
-import {DB_NAME, DB_VERSION} from '../../src/db';
+import {DB_NAME, DB_VERSION} from '../../src/services/storage/db';
 
 function putRecords<T extends {id: string}>(storeName: string, records: T[]): Cypress.Chainable<void> {
   return cy.window().then((win) => new Cypress.Promise<void>((resolve, reject) => {

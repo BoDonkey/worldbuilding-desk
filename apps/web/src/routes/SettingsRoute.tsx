@@ -11,7 +11,7 @@ import type {
 } from '../entityTypes';
 import {
   getInheritedConsistencyActionCues
-} from '../settingsStorage';
+} from '../services/storage';
 import {CharacterStyleList} from '../components/CharacterStyleList';
 import {AISettings} from '../components/Settings/AISettings';
 import {DiagnosticsPanel} from '../components/Settings/DiagnosticsPanel';

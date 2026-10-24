@@ -10,7 +10,7 @@ import type {
   WorldEntity
 } from '../entityTypes';
 import type {LoreInspectorRecord} from '../services/workspace/workspaceConsultation';
-import type {ConsistencyAlias} from '../services/consistency';
+import type {ConsistencyAlias} from '../services/storage';
 import type {Project} from '../entityTypes';
 import {getCachedSynopsis, setCachedSynopsis} from '../services/editor';
 import {createCharacterLinkResolver} from '../services/characters/characterIdentity';

@@ -1,7 +1,7 @@
 import {describe, expect, it} from 'vitest';
 import {buildCharacterMergeCandidatesById, mergeCharacterFields} from './characterMergeHelpers';
 import type {Character} from '../../entityTypes';
-import type {ConsistencyAlias} from '../consistency';
+import type {ConsistencyAlias} from '../storage';
 
 const makeCharacter = (id: string, name: string, fields: Character['fields'] = {}): Character => ({
   id,

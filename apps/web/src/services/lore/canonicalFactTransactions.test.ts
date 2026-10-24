@@ -1,10 +1,14 @@
 import 'fake-indexeddb/auto';
 import {describe, expect, it} from 'vitest';
 import type {CanonicalFact, Character, LoreFactProposal} from '../../entityTypes';
-import {getCharactersByProject, saveCharacter} from '../../characterStorage';
-import {getAliasesByProject} from '../consistency/aliasStorage';
+import {
+  getCharactersByProject,
+  saveCharacter,
+  getAliasesByProject,
+  getCanonicalFactsByProject,
+  getLoreFactProposalsByProject
+} from '../storage';
 import {acceptCanonicalFact, removeCanonicalFact, supersedeCanonicalFact} from './canonicalFactActions';
-import {getCanonicalFactsByProject, getLoreFactProposalsByProject} from './loreFactStorage';
 
 let counter = 0;
 const newProjectId = () => `fact-tx-${Date.now()}-${counter++}`;

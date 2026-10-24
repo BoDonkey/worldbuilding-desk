@@ -1,6 +1,6 @@
 import type {StateMutationEvent} from '../../entityTypes';
 import {getAcceptedStateMutationEvents} from '@worldbuilding-desk/rules-engine';
-import {getStateMutationEventsByProject} from './stateMutationLedger';
+import {getStateMutationEventsByProject} from '../storage';
 
 // Ordering, command application, replay, and ruleset validation live in the
 // rules engine (Slice 3.10). Persistence stays here.

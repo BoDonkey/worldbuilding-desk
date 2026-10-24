@@ -13,7 +13,7 @@ import type {
   SceneRosterCharacterCard,
   SceneRosterItemCard
 } from './sceneRosterTypes';
-import type {ConsistencyAlias} from '../consistency';
+import {sortWritingDocuments, type ConsistencyAlias} from '../storage';
 import type {CharacterRuntimeModifiers} from '../compendium';
 import {
   applyStateMutationCommand,
@@ -29,7 +29,6 @@ import {
   summarizeStateMutationCommand,
   summarizeStateMutationEffects
 } from '../state/stateMutationPresentation';
-import {sortWritingDocuments} from '../../writingStorage';
 import {
   selectSceneRoster,
   type SceneRosterCandidate,

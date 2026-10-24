@@ -2,7 +2,7 @@ import {useCallback, useEffect, useMemo, useRef, useState, type FC} from 'react'
 import { NavLink, useLocation } from 'react-router';
 import { ThemeToggle } from './ThemeToggle';
 import {useCommandPalette} from '../contexts/commandPaletteApi';
-import {getCompendiumEntriesByProject} from '../services/compendium';
+import {getCompendiumEntriesByProject} from '../services/storage';
 import {getProjectCapabilities} from '../projectMode';
 import {useAppStore} from '../store/appStore';
 import styles from '../assets/components/Navigation.module.css';

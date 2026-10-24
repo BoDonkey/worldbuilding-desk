@@ -1,6 +1,6 @@
 import {describe, expect, it} from 'vitest';
 import type {Character, EntityCategory, WorldEntity} from '../../entityTypes';
-import type {ConsistencyAlias} from '../consistency/aliasStorage';
+import type {ConsistencyAlias} from '../storage';
 import {convertPlainTextToRichHtml} from '../worldBible/worldBibleEntityHelpers';
 import {
   buildCharacterFromDescriptionRecords,

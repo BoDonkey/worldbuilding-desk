@@ -1090,6 +1090,22 @@ runtime schema, and nothing here changes the roadmap's status board.
   reloads, scene re-reviews, and project review runs while their quote is
   still in the scene (`survivesSceneRereview`, `pruneModelCheckItems`), and
   their dismissal is saved. The 4.38 session store slice is gone.
+- Slice 3.23a one storage layer (behavior-preserving): IndexedDB is reached
+  only through `apps/web/src/services/storage/`. The 11 root-level
+  repositories, the service repositories (canon decisions and suppressions,
+  lore facts, entity proposals, state ledger, compendium, character sheets and
+  identity, aliases, consistency, review runs), and `db.ts` moved there under
+  their own names; one `idbRequest.ts` replaces the 12 `requestToPromise`
+  copies. Four modules that mixed logic with a transaction now call storage:
+  character package import (`saveCharacterTransferImport`), item-state
+  authoring (`saveItemStateAuthoringPlan`), character identity resolution
+  (storage runs the read-plan-write transaction around the pure
+  `planCharacterIdentityResolution`), and rulesets, whose separate
+  `worldbuilding-desk` database is opened by `repositories/rulesetStorage.ts`
+  while indexing stays in `rulesetService`. Code outside the folder imports
+  its index, which exports repositories and store names but not `openDb`;
+  ESLint rejects deep imports into the folder and any `indexedDB` use outside
+  it (tests excepted). No schema change, no new stores, same function names.
 - Slice 3.22 characterization and extraction (behavior-preserving): the
   compendium now has 31 characterization tests (fake IndexedDB for storage,
   pure tests for mechanics), checked by planting five regressions, and is

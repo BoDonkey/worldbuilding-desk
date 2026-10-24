@@ -1,5 +1,5 @@
 import type {LoreDocument, LoreDocumentLink} from '../../entityTypes';
-import {replaceLoreDocumentLinks, saveLoreDocument} from '../../loreStorage';
+import {replaceLoreDocumentLinks, saveLoreDocument} from '../storage';
 import type {RAGProvider} from '../rag/RAGService';
 import {describeError} from '../errors';
 import {parseLoreImport} from './loreImport';

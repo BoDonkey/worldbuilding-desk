@@ -6,7 +6,7 @@ import type {
   LoreFactProposal,
   WorldEntity
 } from '../../entityTypes';
-import type {ConsistencyAlias} from '../consistency/aliasStorage';
+import type {ConsistencyAlias} from '../storage';
 import {buildCharacterSnapshot, getSceneOrder} from '../state/characterSnapshot';
 import {
   snapshotCategories,

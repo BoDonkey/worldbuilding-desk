@@ -1,14 +1,19 @@
 import {useCallback, useState} from 'react';
 import type {Dispatch, SetStateAction} from 'react';
-import {saveEntity, deleteEntity} from '../entityStorage';
+import {
+  saveEntity,
+  deleteEntity,
+  deleteAliasesForEntity,
+  replaceAliasesForEntity,
+  type ConsistencyAlias
+} from '../services/storage';
 import type {
   Character,
   EntityCategory,
   WorldEntity,
   Project
 } from '../entityTypes';
-import type {ConsistencyAlias, ReviewQueueItem} from '../services/consistency';
-import {deleteAliasesForEntity, replaceAliasesForEntity} from '../services/consistency';
+import type {ReviewQueueItem} from '../services/consistency';
 import {
   isCharacterLikeEntity as isCharacterLikeRecord,
   isLocationLikeEntity as isLocationLikeRecord,

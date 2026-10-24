@@ -1,8 +1,7 @@
 import {useCallback, useEffect, useRef, useState} from 'react';
 import type {WorldCanvasDocument, WorldCanvasLensKind, WorldCanvasOpenThread} from '../entityTypes';
 import {useStatusAnnouncement} from './useStatusAnnouncement';
-import {getWorldCanvasByProjectId, saveWorldCanvas} from '../worldCanvasStorage';
-import {saveLoreDocument} from '../loreStorage';
+import {getWorldCanvasByProjectId, saveWorldCanvas, saveLoreDocument} from '../services/storage';
 import type {RAGProvider} from '../services/rag/RAGService';
 import {
   addAnotherSketch, addOpenThread, buildSourceNoteFromBrainstormItem,

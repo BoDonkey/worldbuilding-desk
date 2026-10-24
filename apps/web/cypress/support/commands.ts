@@ -5,7 +5,7 @@ import {
   DB_VERSION,
   upgradeDatabase,
   PROJECT_MIGRATION_BACKUP_STORE_NAME
-} from '../../src/db';
+} from '../../src/services/storage/db';
 
 const STORE_NAMES = [
   'entities',

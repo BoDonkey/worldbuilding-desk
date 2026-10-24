@@ -8,7 +8,7 @@ import type {
   WritingDocument
 } from '../../entityTypes';
 import {resolveReusableItem, type ItemStateAuthoringWritePlan} from '../state/itemStateAuthoringService';
-import {sortWritingDocuments} from '../../writingStorage';
+import {sortWritingDocuments} from '../storage';
 import {isItemCategory} from '../worldBible/worldBibleSummary';
 import {hashSceneContent, type PendingInventoryCapture, type RosterPlanResult} from './sceneRosterMutationTypes';
 interface CaptureContext {

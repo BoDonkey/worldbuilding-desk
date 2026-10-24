@@ -7,7 +7,7 @@ import type {
   WorldEntity
 } from '../../entityTypes';
 import {buildCanonDecisionClusters} from './canonDecisionClustering';
-import {buildEntityDecisionSuppressionKey} from './canonDecisionSuppressionStorage';
+import {buildEntityDecisionSuppressionKey} from '../storage';
 
 const projectId = 'project-1';
 

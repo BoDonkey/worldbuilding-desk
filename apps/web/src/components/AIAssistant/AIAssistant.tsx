@@ -27,7 +27,7 @@ import {
   getTemporalCustodySubject,
   resolveTemporalCustodyAnswer
 } from '../../services/assistant/temporalCustody';
-import {getDocumentsByProject} from '../../writingStorage';
+import {getDocumentsByProject} from '../../services/storage';
 import type {LoreFactProposal, ProjectAISettings, PromptTool, ProjectMode, WritingDocument} from '../../entityTypes';
 import {
   PENDING_PROPOSAL_INSTRUCTION,

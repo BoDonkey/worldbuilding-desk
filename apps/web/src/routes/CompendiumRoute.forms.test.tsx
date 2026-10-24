@@ -2,12 +2,12 @@ import {fireEvent, screen, waitFor, within} from '@testing-library/react';
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
 import CompendiumRoute from './CompendiumRoute';
 import {renderRoute, seedRouteTestState} from '../test/renderRoute';
-import * as compendium from '../services/compendium';
+import * as storage from '../services/storage';
 
 beforeEach(async () => {
   seedRouteTestState();
-  const settlement = await compendium.getOrCreateSettlementState('route-smoke-project');
-  vi.spyOn(compendium, 'getOrCreateSettlementState').mockResolvedValue(settlement);
+  const settlement = await storage.getOrCreateSettlementState('route-smoke-project');
+  vi.spyOn(storage, 'getOrCreateSettlementState').mockResolvedValue(settlement);
 });
 afterEach(() => vi.restoreAllMocks());
 
@@ -70,7 +70,7 @@ describe('Compendium form lifetimes', () => {
   });
 
   it('submits the same normalized recipe and resets only the fields reset before extraction', async () => {
-    const save = vi.spyOn(compendium, 'saveUnlockableRecipe').mockResolvedValue();
+    const save = vi.spyOn(storage, 'saveUnlockableRecipe').mockResolvedValue();
     await openAdvanced();
     tab('Progression');
     const recipe = section('Recipes');
@@ -92,7 +92,7 @@ describe('Compendium form lifetimes', () => {
   });
 
   it('keeps recipe input when persistence rejects and does not add an unsaved list entry', async () => {
-    vi.spyOn(compendium, 'saveUnlockableRecipe').mockRejectedValue(new DOMException('IndexedDB error', 'UnknownError'));
+    vi.spyOn(storage, 'saveUnlockableRecipe').mockRejectedValue(new DOMException('IndexedDB error', 'UnknownError'));
     await openAdvanced();
     tab('Progression');
     const recipe = section('Recipes');

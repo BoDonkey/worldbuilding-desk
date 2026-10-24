@@ -1,6 +1,6 @@
 import {useState} from 'react';
 import type {UnlockableRecipe} from '../../entityTypes';
-import {saveUnlockableRecipe} from '../../services/compendium';
+import {saveUnlockableRecipe} from '../../services/storage';
 import {parseCommaSeparatedIds} from '../../services/compendium/compendiumFormValues';
 import {describeError} from '../../services/errors';
 import type {CompendiumFormContext, SetFormValue} from './formTypes';

@@ -2,41 +2,35 @@ import {useCallback, useEffect, useRef, useState} from 'react';
 import type {ChangeEvent, FormEvent} from 'react';
 import {useNavigate} from 'react-router';
 import type {Project, ProjectMode} from '../entityTypes';
-import {createDefaultSettings} from '../settingsStorage';
-import {getDefaultFeatureToggles} from '../projectMode';
-import type {WorldRuleset} from '@worldbuilding-desk/rules-engine';
 import {
+  createDefaultSettings,
   getAllProjects,
   getProjectById,
   saveProject,
-  deleteProject as deleteProjectFromStore
-} from '../projectStorage';
-import {getDocumentsByProject} from '../writingStorage';
-import {getEntitiesByProject} from '../entityStorage';
-import {getRulesetByProjectId} from '../services/rules';
+  deleteProject as deleteProjectFromStore,
+  getDocumentsByProject,
+  getEntitiesByProject,
+  getRulesetByProjectId,
+  exportProjectBackupZip,
+  importProjectBackup,
+  parseProjectBackupZip,
+  previewProjectBackupConflicts,
+  buildProjectSnapshot,
+  diffSnapshotCounts,
+  validateSnapshotCounts,
+  type ProjectBackupConflictSummary,
+  type ProjectBackupImportMode,
+  type ProjectSnapshotImportPreview,
+  type ProjectSnapshot
+} from '../services/storage';
+import {getDefaultFeatureToggles} from '../projectMode';
+import type {WorldRuleset} from '@worldbuilding-desk/rules-engine';
 import {
   getSeriesBibleConfig,
   linkProjectToParent,
   unlinkProjectFromParent,
   syncChildWithParent
 } from '../services/seriesBible/SeriesBibleService';
-import {exportProjectBackupZip} from '../services/storage';
-import {
-  importProjectBackup,
-  parseProjectBackupZip,
-  previewProjectBackupConflicts
-} from '../services/storage';
-import type {
-  ProjectBackupConflictSummary,
-  ProjectBackupImportMode,
-  ProjectSnapshotImportPreview
-} from '../services/storage';
-import type {ProjectSnapshot} from '../services/storage';
-import {
-  buildProjectSnapshot,
-  diffSnapshotCounts,
-  validateSnapshotCounts
-} from '../services/storage';
 import {useAppStore} from '../store/appStore';
 import {createSampleProject} from '../services/onboarding/createSampleProject';
 import {createTrustDogfoodProject} from '../services/onboarding/createTrustDogfoodProject';

@@ -12,7 +12,7 @@ import {
   getNextWritingDocumentOrder,
   sortWritingDocuments,
   saveWritingDocument
-} from '../writingStorage';
+} from '../services/storage';
 import {countWords} from '../utils/textHelpers';
 import {
   exportScenesAsDocx,

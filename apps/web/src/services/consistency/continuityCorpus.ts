@@ -7,7 +7,7 @@ import type {
   CorpusIssueCode
 } from '../../fixtures/continuityCorpus';
 import {buildExtractedProposal, ConsistencyEngineService} from './ConsistencyEngineService';
-import type {ConsistencyAlias} from './aliasStorage';
+import type {ConsistencyAlias} from '../storage';
 import {findCanonContradictions} from './contradictionReview';
 import {buildKnownConsistencyEntities} from './reviewLinkOptions';
 import type {GuardrailIssue, KnownEntityRef} from './types';

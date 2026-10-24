@@ -7,10 +7,10 @@ const storage = vi.hoisted(() => ({
   getLoreFactProposalsByProject: vi.fn(),
   getLoreDocumentsByProject: vi.fn()
 }));
-vi.mock('../services/lore/loreFactStorage', () => ({
+vi.mock('../services/storage/repositories/loreFactStorage', () => ({
   getLoreFactProposalsByProject: storage.getLoreFactProposalsByProject
 }));
-vi.mock('../loreStorage', () => ({getLoreDocumentsByProject: storage.getLoreDocumentsByProject}));
+vi.mock('../services/storage/repositories/loreStorage', () => ({getLoreDocumentsByProject: storage.getLoreDocumentsByProject}));
 
 const proposal = (id: string, status: LoreFactProposal['status'] = 'proposed') =>
   ({id, loreDocumentId: 'note-1', status}) as LoreFactProposal;

@@ -1,6 +1,6 @@
 import {describe, expect, it} from 'vitest';
 import type {EntityCategory, WorldEntity} from '../../entityTypes';
-import type {ConsistencyAlias} from './aliasStorage';
+import type {ConsistencyAlias} from '../storage';
 import {buildKnownLoreHighlights} from './knownLoreHighlights';
 
 const category = (id: string, kind: EntityCategory['kind']): EntityCategory => ({

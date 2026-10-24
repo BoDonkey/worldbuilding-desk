@@ -4,7 +4,7 @@ const TOOL_NAMES = {
   general: 'General Clarity Tool'
 } as const;
 
-import {DB_NAME, DB_VERSION} from '../../src/db';
+import {DB_NAME, DB_VERSION} from '../../src/services/storage/db';
 
 function mutateSmokeDb(
   mutator: (db: IDBDatabase) => void | Promise<void>

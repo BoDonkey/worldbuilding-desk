@@ -8,8 +8,8 @@ const mocks = vi.hoisted(() => ({
   saveCategory: vi.fn()
 }));
 
-vi.mock('../entityStorage', () => ({saveEntity: mocks.saveEntity}));
-vi.mock('../categoryStorage', () => ({saveCategory: mocks.saveCategory}));
+vi.mock('../services/storage/repositories/entityStorage', () => ({saveEntity: mocks.saveEntity}));
+vi.mock('../services/storage/repositories/categoryStorage', () => ({saveCategory: mocks.saveCategory}));
 
 const locations: EntityCategory = {
   id: 'locations',

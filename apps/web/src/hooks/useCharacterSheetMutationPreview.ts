@@ -6,7 +6,7 @@ import type {
   WritingDocument
 } from '../entityTypes';
 import type {MutationFormType} from '../components/CharacterSheets/MutationForm';
-import {sortWritingDocuments} from '../writingStorage';
+import {sortWritingDocuments} from '../services/storage';
 import {buildCharacterSheetMutationCommand} from '../services/characters/characterSheetRuleset';
 import {replayCharacterState} from '../services/state/stateReplay';
 import {buildStateMutationPreview} from '../services/state/stateMutationPresentation';

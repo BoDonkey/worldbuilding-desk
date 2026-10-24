@@ -1,9 +1,11 @@
 import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import type {ChapterCard, StateMutationEvent, StoredRuleset, WritingDocument} from '../entityTypes';
-import {getDocumentsByProject} from '../writingStorage';
+import {
+  getDocumentsByProject,
+  getRulesetByProjectId,
+  getStateMutationEventsByProject
+} from '../services/storage';
 import {buildStoryDashboard} from '../services/dashboard/storyDashboard';
-import {getRulesetByProjectId} from '../services/rules/rulesetService';
-import {getStateMutationEventsByProject} from '../services/state/stateMutationLedger';
 
 export function useStoryDashboardData(params: {
   projectId: string | null;

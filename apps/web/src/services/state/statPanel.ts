@@ -1,5 +1,5 @@
 import type {ChapterCard, WritingDocument} from '../../entityTypes';
-import {sortWritingDocuments} from '../../writingStorage';
+import {sortWritingDocuments} from '../storage';
 import type {CharacterSnapshotChange} from './characterSnapshot';
 
 export const MAX_STAT_PINS = 3;

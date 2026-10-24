@@ -1,6 +1,5 @@
 import type {EntityCategory, EntityFields, WorldEntity} from '../../entityTypes';
-import {getCategoriesByProject, saveCategory} from '../../categoryStorage';
-import {getEntitiesByProject, saveEntity} from '../../entityStorage';
+import {getCategoriesByProject, saveCategory, getEntitiesByProject, saveEntity} from '../storage';
 import {isCharacterCategory, normalizeCharacterIdentityName} from './characterIdentity';
 
 const DEFAULT_CHARACTER_FIELD_SCHEMA: EntityCategory['fieldSchema'] = [

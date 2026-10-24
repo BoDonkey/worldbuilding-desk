@@ -1,4 +1,4 @@
-import {DB_NAME, DB_VERSION} from '../../src/db';
+import {DB_NAME, DB_VERSION} from '../../src/services/storage/db';
 
 type StoredCategory = {
   id: string;

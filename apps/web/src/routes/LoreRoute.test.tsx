@@ -2,7 +2,7 @@ import {fireEvent, screen, waitFor, within} from '@testing-library/react';
 import {beforeEach, describe, expect, it, vi} from 'vitest';
 import LoreRoute from './LoreRoute';
 import {renderRoute, seedRouteTestState} from '../test/renderRoute';
-import {getLoreDocumentsByProject} from '../loreStorage';
+import {getLoreDocumentsByProject} from '../services/storage';
 
 const indexGate = vi.hoisted(() => {
   let release: () => void = () => {};

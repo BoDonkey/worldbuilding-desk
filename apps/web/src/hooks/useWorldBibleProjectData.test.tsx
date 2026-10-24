@@ -8,8 +8,8 @@ const {categoryLoad, empty} = vi.hoisted(() => ({
   empty: async () => []
 }));
 
-vi.mock('../categoryStorage', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('../categoryStorage')>()),
+vi.mock('../services/storage/repositories/categoryStorage', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../services/storage/repositories/categoryStorage')>()),
   initializeDefaultCategories: vi.fn(async () => undefined),
   saveCategory: vi.fn(async () => undefined),
   getCategoriesByProject: vi.fn(
@@ -18,38 +18,38 @@ vi.mock('../categoryStorage', async (importOriginal) => ({
     })
   )
 }));
-vi.mock('../characterStorage', () => ({getCharactersByProject: vi.fn(empty)}));
-vi.mock('../entityStorage', () => ({getEntitiesByProject: vi.fn(empty)}));
-vi.mock('../writingStorage', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('../writingStorage')>()),
+vi.mock('../services/storage/repositories/characterStorage', () => ({getCharactersByProject: vi.fn(empty)}));
+vi.mock('../services/storage/repositories/entityStorage', () => ({getEntitiesByProject: vi.fn(empty)}));
+vi.mock('../services/storage/repositories/writingStorage', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../services/storage/repositories/writingStorage')>()),
   getDocumentsByProject: vi.fn(empty)
 }));
-vi.mock('../loreStorage', () => ({
+vi.mock('../services/storage/repositories/loreStorage', () => ({
   getLoreDocumentsByProject: vi.fn(empty),
   getLoreDocumentLinksByProject: vi.fn(empty)
 }));
-vi.mock('../services/characters/characterSheetService', () => ({getCharacterSheetsByProject: vi.fn(empty)}));
-vi.mock('../services/characters/characterIdentityStorage', () => ({
+vi.mock('../services/storage/repositories/characterSheetStorage', () => ({getCharacterSheetsByProject: vi.fn(empty)}));
+vi.mock('../services/storage/repositories/characterIdentityStorage', () => ({
   getCharacterIdentityMigrationReport: vi.fn(async () => null)
 }));
-vi.mock('../services/compendium', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('../services/compendium')>()),
+vi.mock('../services/storage/repositories/compendiumStorage', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../services/storage/repositories/compendiumStorage')>()),
   getCompendiumEntriesByProject: vi.fn(empty)
 }));
-vi.mock('../services/consistency', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('../services/consistency')>()),
+vi.mock('../services/storage/repositories/aliasStorage', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../services/storage/repositories/aliasStorage')>()),
   getAliasesByProject: vi.fn(empty)
 }));
-vi.mock('../services/lore/loreFactStorage', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('../services/lore/loreFactStorage')>()),
+vi.mock('../services/storage/repositories/loreFactStorage', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../services/storage/repositories/loreFactStorage')>()),
   getCanonicalFactsByProject: vi.fn(empty)
 }));
-vi.mock('../services/state/stateMutationLedger', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('../services/state/stateMutationLedger')>()),
+vi.mock('../services/storage/repositories/stateMutationLedger', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../services/storage/repositories/stateMutationLedger')>()),
   getStateMutationEventsByProject: vi.fn(empty)
 }));
-vi.mock('../services/rules', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('../services/rules')>()),
+vi.mock('../services/storage/repositories/rulesetStorage', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../services/storage/repositories/rulesetStorage')>()),
   getRulesetByProjectId: vi.fn(async () => null)
 }));
 vi.mock('../services/rag/getRAGService', () => ({getRAGService: vi.fn(() => new Promise(() => undefined))}));

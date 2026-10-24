@@ -16,13 +16,14 @@ import {
   PROJECT_MIGRATION_BACKUP_STORE_NAME,
   PROJECT_SCOPED_STORE_NAMES,
   PROJECT_STORE_NAME
-} from '../../db';
+} from './db';
 import {quarantineInvalidRules} from '@worldbuilding-desk/rules-engine';
 import {classifyCharacterIdentities} from '../characters/characterIdentity';
 import {
   getRulesetByProjectId,
   replaceRulesetSnapshot
-} from '../rules/rulesetService';
+} from './repositories/rulesetStorage';
+import {requestToPromise, transactionToPromise} from './idbRequest';
 
 export const LEGACY_PROJECT_SCHEMA_VERSION = 1;
 export const CURRENT_PROJECT_SCHEMA_VERSION = 7;
@@ -203,21 +204,6 @@ const PROJECT_MIGRATIONS: readonly ProjectSchemaMigration[] = [
     migrate: migrateQuarantineInvalidRules
   }
 ];
-
-function requestToPromise<T>(request: IDBRequest<T>): Promise<T> {
-  return new Promise((resolve, reject) => {
-    request.onsuccess = () => resolve(request.result);
-    request.onerror = () => reject(request.error);
-  });
-}
-
-function transactionToPromise(transaction: IDBTransaction): Promise<void> {
-  return new Promise((resolve, reject) => {
-    transaction.oncomplete = () => resolve();
-    transaction.onerror = () => reject(transaction.error);
-    transaction.onabort = () => reject(transaction.error);
-  });
-}
 
 function assertSchemaVersion(version: number, label: string): void {
   if (!Number.isInteger(version) || version < 1) {

@@ -1,5 +1,5 @@
 import type {WorldEntity} from '../../entityTypes';
-import type {ConsistencyAlias} from './aliasStorage';
+import type {ConsistencyAlias} from '../storage';
 
 export type ReviewQueueReason = 'needsCompletion' | 'aliasFollowUp';
 

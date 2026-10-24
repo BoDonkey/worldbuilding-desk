@@ -16,29 +16,31 @@ import type {
   WorldEntity,
   WritingDocument
 } from '../entityTypes';
-import {getChapterCardsByProjectId} from '../corkboardStorage';
-import {getWorldCanvasByProjectId} from '../worldCanvasStorage';
-import {getCategoriesByProject} from '../categoryStorage';
-import {getCharactersByProject} from '../characterStorage';
-import {getEntitiesByProject} from '../entityStorage';
-import {getProjectSettings} from '../settingsStorage';
-import {getDocumentsByProject, sortWritingDocuments} from '../writingStorage';
-import {getProjectCapabilities} from '../projectMode';
-import {getCharacterSheetsByProject} from '../services/characters';
-import {getActorResolutionsByProject} from '../services/characters/characterIdentityStorage';
-import {isCharacterCategory, type ActorResolution} from '../services/characters/characterIdentity';
-import {getRulesetByProjectId} from '../services/rules';
 import {
-  DEFAULT_PARTY_SYNERGY_RULES,
-  deriveCharacterRuntimeModifiers,
+  getChapterCardsByProjectId,
+  getWorldCanvasByProjectId,
+  getCategoriesByProject,
+  getCharactersByProject,
+  getEntitiesByProject,
+  getProjectSettings,
+  getDocumentsByProject,
+  sortWritingDocuments,
+  getCharacterSheetsByProject,
+  getActorResolutionsByProject,
+  getRulesetByProjectId,
   getCompendiumEntriesByProject,
-  getPartySynergySuggestions,
   getSettlementModulesByProject,
-  getSettlementState
-} from '../services/compendium';
-import {getAliasesByProject, type ConsistencyAlias} from '../services/consistency';
-import {getCanonicalFactsByProject, getLoreFactProposalsByProject} from '../services/lore/loreFactStorage';
-import {getStateMutationEventsByProject} from '../services/state/stateMutationLedger';
+  getSettlementState,
+  getAliasesByProject,
+  type ConsistencyAlias,
+  getCanonicalFactsByProject,
+  getLoreFactProposalsByProject,
+  getStateMutationEventsByProject,
+  appendToScratchpad
+} from '../services/storage';
+import {getProjectCapabilities} from '../projectMode';
+import {isCharacterCategory, type ActorResolution} from '../services/characters/characterIdentity';
+import {DEFAULT_PARTY_SYNERGY_RULES, deriveCharacterRuntimeModifiers, getPartySynergySuggestions} from '../services/compendium';
 import {
   buildCharacterVoiceContext,
   findCharacterNameCollisions,
@@ -47,7 +49,6 @@ import {
   type CharacterVoicePosition
 } from '../services/characterLab';
 import {describeError} from '../services/errors';
-import {appendToScratchpad} from '../scratchpadStorage';
 import {saveCharacterFromDescription} from '../services/characterLab/characterFromDescriptionStorage';
 import type {CharacterFromDescriptionRecords} from '../services/characterLab/characterFromDescription';
 import {getRAGService} from '../services/rag/getRAGService';

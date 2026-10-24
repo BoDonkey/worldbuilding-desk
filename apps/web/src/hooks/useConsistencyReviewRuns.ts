@@ -22,7 +22,7 @@ import {
   saveProjectReviewRun,
   type ProjectReviewRun,
   type StoredSceneReview
-} from '../services/consistency/projectReviewRunStorage';
+} from '../services/storage';
 import type {WorldEngine, WorldEngineStatus} from '../services/worldEngine';
 import {htmlToPlainText} from '../utils/textHelpers';
 import type {ActorResolution} from '../services/characters/characterIdentity';

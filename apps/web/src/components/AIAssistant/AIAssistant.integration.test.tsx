@@ -14,15 +14,15 @@ const mocks = vi.hoisted(() => ({
   stream: vi.fn()
 }));
 
-vi.mock('../../entityStorage', () => ({
+vi.mock('../../services/storage/repositories/entityStorage', () => ({
   getEntitiesByProject: mocks.getEntitiesByProject
 }));
 
-vi.mock('../../services/consistency/aliasStorage', () => ({
+vi.mock('../../services/storage/repositories/aliasStorage', () => ({
   getAliasesByProject: mocks.getAliasesByProject
 }));
 
-vi.mock('../../writingStorage', () => ({
+vi.mock('../../services/storage/repositories/writingStorage', () => ({
   getDocumentsByProject: mocks.getDocumentsByProject
 }));
 

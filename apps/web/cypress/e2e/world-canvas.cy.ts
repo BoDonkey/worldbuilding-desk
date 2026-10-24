@@ -1,4 +1,4 @@
-import {DB_NAME} from '../../src/db';
+import {DB_NAME} from '../../src/services/storage/db';
 
 const seedCanvasReturnExperience = (win: Window): Promise<void> =>
   new Promise((resolve, reject) => {

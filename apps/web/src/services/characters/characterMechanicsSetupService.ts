@@ -1,12 +1,12 @@
 import {createEmptyRuleset, type WorldRuleset} from '@worldbuilding-desk/rules-engine';
 import type {CharacterSheet, Project, WorldEntity} from '../../entityTypes';
-import {saveProject} from '../../projectStorage';
-import {deleteRuleset, saveRuleset} from '../rules';
 import {
+  saveProject,
   deleteCharacterSheet,
   getCharacterSheetsByProject,
   saveCharacterSheet
-} from './characterSheetService';
+} from '../storage';
+import {deleteRuleset, saveRuleset} from '../rules';
 
 export type FirstTrackedValueKind = 'stat' | 'resource';
 

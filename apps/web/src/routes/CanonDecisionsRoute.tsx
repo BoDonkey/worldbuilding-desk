@@ -12,30 +12,25 @@ import type {
   WorldEntity
 } from '../entityTypes';
 import {LLMService} from '../services/llm/LLMService';
-import {getCharactersByProject} from '../characterStorage';
-import {getEntitiesByProject} from '../entityStorage';
-import {getLoreDocumentsByProject, getLoreDocumentLinksByProject} from '../loreStorage';
-import {getDocumentsByProject} from '../writingStorage';
 import {
+  getCharactersByProject,
+  getEntitiesByProject,
+  getLoreDocumentsByProject,
+  getLoreDocumentLinksByProject,
+  getDocumentsByProject,
   getCanonicalFactsByProject,
   getLoreFactProposalsByProject,
-  saveLoreFactProposal
-} from '../services/lore/loreFactStorage';
-import {
+  saveLoreFactProposal,
   getLoreEntityProposalsByProject,
-  saveLoreEntityProposal
-} from '../services/lore/loreEntityProposalStorage';
-import {
+  saveLoreEntityProposal,
   getCanonDecisionClustersByProject,
   replaceCanonDecisionClusters,
-  saveCanonDecisionCluster
-} from '../services/lore/canonDecisionStorage';
-import {
+  saveCanonDecisionCluster,
   buildEntityDecisionSuppressionKey,
   buildFactDecisionSuppressionKey,
   getCanonDecisionSuppressionsByProject,
   saveCanonDecisionSuppression
-} from '../services/lore/canonDecisionSuppressionStorage';
+} from '../services/storage';
 import {buildCanonDecisionClusters} from '../services/lore/canonDecisionClustering';
 import {buildCanonDecisionConsultationPrompt} from '../services/lore/canonDecisionConsultation';
 import {

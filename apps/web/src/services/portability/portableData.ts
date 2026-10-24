@@ -5,7 +5,7 @@ import type {
   LoreDocumentLink,
   WorldEntity
 } from '../../entityTypes';
-import type {ConsistencyAlias} from '../consistency';
+import type {ConsistencyAlias} from '../storage';
 import {buildZip, type ZipEntryInput} from '../../utils/zip';
 
 export const PORTABLE_DATA_SCHEMA_VERSION = 1;

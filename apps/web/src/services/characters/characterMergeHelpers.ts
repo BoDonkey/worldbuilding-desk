@@ -1,5 +1,5 @@
 import type {Character} from '../../entityTypes';
-import type {ConsistencyAlias} from '../consistency';
+import type {ConsistencyAlias} from '../storage';
 
 export interface CharacterMergeCandidate {
   character: Character;

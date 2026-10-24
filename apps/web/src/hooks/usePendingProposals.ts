@@ -1,8 +1,7 @@
 import {useCallback, useEffect, useRef, useState} from 'react';
 import type {LoreFactProposal} from '../entityTypes';
-import {getLoreDocumentsByProject} from '../loreStorage';
+import {getLoreDocumentsByProject, getLoreFactProposalsByProject} from '../services/storage';
 import {describeError} from '../services/errors';
-import {getLoreFactProposalsByProject} from '../services/lore/loreFactStorage';
 
 export interface PendingProposalContext {
   proposals: LoreFactProposal[];

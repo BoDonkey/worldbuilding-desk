@@ -12,7 +12,7 @@ import {
   getEffectiveResourceValues,
   getEffectiveStatValue
 } from '../compendium';
-import {sortWritingDocuments} from '../../writingStorage';
+import {sortWritingDocuments} from '../storage';
 import {findConsumableEntry} from './consumableEffects';
 import {replayCharacterState} from './stateReplay';
 

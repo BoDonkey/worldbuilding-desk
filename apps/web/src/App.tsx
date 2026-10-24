@@ -40,7 +40,7 @@ import RulesetRoute from './routes/RulesetRoute';
 import LoreRoute from './routes/LoreRoute';
 import CanonDecisionsRoute from './routes/CanonDecisionsRoute';
 import AskProjectRoute from './routes/AskProjectRoute';
-import {getAllProjects} from './projectStorage';
+import {getAllProjects} from './services/storage';
 import {createFirstRunProject, hasCheckedFirstRun, markFirstRunChecked} from './services/onboarding/firstRun';
 import appShellStyles from './styles/AppShell.module.css';
 

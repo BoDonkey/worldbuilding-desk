@@ -1,7 +1,7 @@
 import {useMemo, useState} from 'react';
 import {Link} from 'react-router';
 import type {ProjectAISettings} from '../../entityTypes';
-import type {ConsistencyAlias} from '../../services/consistency/aliasStorage';
+import type {ConsistencyAlias} from '../../services/storage';
 import {
   buildCraftContextChunks,
   dedupeCraftCitations
