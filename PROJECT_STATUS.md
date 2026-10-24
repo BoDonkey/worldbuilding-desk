@@ -23,10 +23,11 @@ SagaSpine is a desktop writing environment for fiction authors. The current prod
   encrypted by SagaSpine. Optional encrypted backup files remain planned as
   roadmap Slice 5.14; optional password-protected working project vaults are
   planned separately as Slice 5.15 before beta.
-- The configured Ollama path defaults to `http://localhost:11434`, but the
-  current UI does not yet distinguish a verified local model from an Ollama
-  cloud model or reject a remote base URL. Until provider hardening lands,
-  `Ollama` alone is not proof that a request stayed on the computer.
+- Local AI stays on the computer only on a verified route: Ollama at a
+  loopback address with a model `/api/tags` lists as installed and not cloud,
+  or a local OpenAI-compatible server (KoboldCPP, LM Studio, llama.cpp) at a
+  loopback address. Ollama cloud models and remote addresses for either are
+  blocked, and anything unverified is disclosed and budgeted as remote.
 - There is no diagnostic telemetry or automatic crash-report upload.
 
 Under the hood, the app still includes rich systems for world data, rules, character state, AI assistance, and consistency review. The difference in the current direction is presentation: those systems are support infrastructure, not the primary surface.
@@ -643,7 +644,7 @@ Under the hood, the app still includes rich systems for world data, rules, chara
   runner, with newer snapshot versions rejected before import writes begin.
 
 ### AI and Retrieval
-- Multi-provider abstraction for Anthropic, OpenAI, Ollama, and Gemini.
+- Multi-provider abstraction for Anthropic, OpenAI, Gemini, Ollama, and a local OpenAI-compatible server (KoboldCPP, LM Studio, llama.cpp).
 - Prompt management and provider diagnostics.
 - Local RAG and Shodh memory services for contextual assistance.
 - Selection-aware AI insertion and editor assistance tools.
@@ -1090,6 +1091,25 @@ runtime schema, and nothing here changes the roadmap's status board.
   reloads, scene re-reviews, and project review runs while their quote is
   still in the scene (`survivesSceneRereview`, `pruneModelCheckItems`), and
   their dismissal is saved. The 4.38 session store slice is gone.
+- Slice 4.67 local OpenAI-compatible provider: Settings now offers **Local
+  server (OpenAI-compatible)** for KoboldCPP (default
+  `http://localhost:5001/v1`), LM Studio, and the llama.cpp server. It needs no
+  API key, uses the OpenAI request shape with its own code, and never goes
+  through the hosted OpenAI provider or its disclosure. It is a private-local
+  route like Ollama: at a loopback address it says "Runs on your local model
+  server. Nothing leaves this computer." and does not spend the consultation
+  budget or show a hosted price ceiling; a remote address is blocked in the
+  route, the provider, and the desktop main process. Settings takes the
+  server address, tests the connection with a one-token chat request, and
+  offers the models the server lists. With no model set, requests name the
+  first listed model, or none so the server uses the model it has loaded. No
+  `response_format` is sent (4.68 settles what each server accepts), no token
+  cap is sent unless a feature sets one, and a reply cut off at a length
+  limit is refused with a plain message. Desktop requests run in the main
+  process, as Ollama's do. Ollama-only features (local AI review, the canon
+  decision "Force local Ollama" mode) stay Ollama-only. Checked against a
+  real OpenAI-compatible server (Ollama's `/v1`); KoboldCPP, LM Studio, and
+  llama.cpp themselves were not run.
 - Slice 3.24b backup import id remapping: importing a backup as a new
   project now gives every record a new id and rewrites every reference
   through one map. A backup can therefore be copied into the browser it came

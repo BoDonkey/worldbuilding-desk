@@ -18,6 +18,7 @@ import {ModelRunProgress} from '../common/ModelRunProgress';
 import {ConsultationBudgetNotice} from '../common/ConsultationBudgetNotice';
 import styles from '../../styles/CharacterLab.module.css';
 import {describeCharacterLabDataFlow, getCharacterLabProviderIssue} from './characterLabProvider';
+import {isLocalAIProvider} from '../../services/llm/providerConfig';
 
 interface CharacterFromDescriptionDialogProps {
   isOpen: boolean;
@@ -117,7 +118,7 @@ export function CharacterFromDescriptionDialog({
         // Only Ollama reads this; hosted providers keep their own thinking policy.
         think: false,
         maxTokens:
-          lab.aiConfig.provider === 'ollama'
+          isLocalAIProvider(lab.aiConfig.provider)
             ? undefined
             : Math.max(inspector?.maxResponseTokens ?? 0, HOSTED_STRUCTURED_RESPONSE_MINIMUM, PROFILE_RESPONSE_MINIMUM),
         cache: false

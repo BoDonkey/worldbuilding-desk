@@ -122,6 +122,25 @@ exploratory Canvas content as World Bible canon.
     Confirm action to apply it. Start another request, press Stop, and confirm
     no proposal or Canvas write occurs.
 
+## 1b. Local Model Server (slice 4.67)
+
+Automated tests stub the server; run this against a real one before relying on
+a server the author names (KoboldCPP, LM Studio, or `llama-server`), in both
+the desktop app and the browser build.
+
+1. Start the server with a model loaded. In Settings → AI Settings choose
+   `Local server (OpenAI-compatible)`, enter its address (KoboldCPP
+   `http://localhost:5001/v1`, LM Studio `http://localhost:1234/v1`, llama.cpp
+   `http://localhost:8080/v1`), and press `Test connection`. Expect success
+   and, where the server lists models, `Use <model>` buttons. In the browser
+   build a CORS refusal shows as "Could not reach…"; LM Studio needs CORS
+   turned on.
+2. Talk to a character in the Character Lab. The dialog says "Runs on your
+   local model server. Nothing leaves this computer." and the reply streams.
+   A thinking model's reasoning shows while it runs and is not kept.
+3. Stop the server and send again: the error names the local model server.
+   Enter a non-loopback address: Settings and the lab say it is blocked.
+
 ## 2. Review Completion (Import → Workspace Review → World Bible Queue)
 
 Goal: verify the writing-first review flow from imported manuscript text

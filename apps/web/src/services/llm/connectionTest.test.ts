@@ -13,8 +13,10 @@ vi.mock('./LLMService', () => ({
 import {
   describeConnectionTestError,
   testHostedProviderConnection,
+  testLocalServerConnection,
   testOllamaConnection
 } from './connectionTest';
+import {LOCAL_SERVER_RESPONSE_LIMIT_MESSAGE} from './localServer';
 
 describe('describeConnectionTestError', () => {
   it('passes through an already-plain missing-key message', () => {
@@ -201,5 +203,57 @@ describe('testOllamaConnection', () => {
     const result = await testOllamaConnection({});
     expect(result.tone).toBe('error');
     expect(result.summary).toMatch(/Could not reach Ollama/);
+  });
+});
+
+describe('testLocalServerConnection', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    completeMock.mockReset();
+  });
+
+  const listing = (ids: string[] | null) =>
+    vi.fn(async () =>
+      ids ? {ok: true, json: async () => ({data: ids.map((id) => ({id}))})} : {ok: false, json: async () => ({})}
+    );
+
+  it('reports the listed models and succeeds when the server answers a chat request', async () => {
+    vi.stubGlobal('fetch', listing(['mistral-7b', 'qwen3']));
+    completeMock.mockResolvedValue({content: 'OK'});
+    const result = await testLocalServerConnection({baseUrl: 'http://localhost:1234/v1'});
+    expect(result.tone).toBe('success');
+    expect(result.detectedModels).toEqual(['mistral-7b', 'qwen3']);
+    expect(result.details).toContain('Connected to http://localhost:1234/v1.');
+    expect(result.details.join(' ')).toMatch(/Requests will name "mistral-7b"/);
+  });
+
+  it('succeeds without a listing, and when the tiny test reply hits its length cap', async () => {
+    vi.stubGlobal('fetch', listing(null));
+    completeMock.mockRejectedValue(new Error(LOCAL_SERVER_RESPONSE_LIMIT_MESSAGE));
+    const result = await testLocalServerConnection({});
+    expect(result.tone).toBe('success');
+    expect(result.details.join(' ')).toMatch(/did not list its models/);
+  });
+
+  it('reports an unreachable server and passes other server errors through', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('Failed to fetch')));
+    completeMock.mockRejectedValue(new Error('Could not connect to the local model server at http://localhost:5001/v1.'));
+    const unreachable = await testLocalServerConnection({});
+    expect(unreachable.tone).toBe('error');
+    expect(unreachable.summary).toMatch(/^Could not reach the local model server at http:\/\/localhost:5001\/v1\. Check that it is running/);
+
+    vi.stubGlobal('fetch', listing(['m']));
+    completeMock.mockRejectedValue(new Error('The local model server responded with 400: No models loaded.'));
+    expect((await testLocalServerConnection({})).summary).toBe('The local model server responded with 400: No models loaded.');
+  });
+
+  it('refuses a remote address without contacting it', async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+    const result = await testLocalServerConnection({baseUrl: 'http://10.0.0.5:5001/v1'});
+    expect(result.tone).toBe('error');
+    expect(result.summary).toMatch(/Remote addresses are blocked/);
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(completeMock).not.toHaveBeenCalled();
   });
 });

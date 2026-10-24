@@ -1,9 +1,9 @@
-export type ProviderId = 'anthropic' | 'openai' | 'gemini' | 'ollama';
+export type ProviderId = 'anthropic' | 'openai' | 'gemini' | 'ollama' | 'local-openai';
 
-export const PROVIDER_IDS: readonly ProviderId[] = ['anthropic', 'openai', 'gemini', 'ollama'];
+export const PROVIDER_IDS: readonly ProviderId[] = ['anthropic', 'openai', 'gemini', 'ollama', 'local-openai'];
 
 /** The only HTTPS origin each hosted provider may be reached at. */
-const HOSTED_ORIGINS: Record<Exclude<ProviderId, 'ollama'>, string> = {
+const HOSTED_ORIGINS: Record<Exclude<ProviderId, 'ollama' | 'local-openai'>, string> = {
   anthropic: 'https://api.anthropic.com',
   openai: 'https://api.openai.com',
   gemini: 'https://generativelanguage.googleapis.com'
@@ -13,7 +13,8 @@ const DEFAULT_BASE_URLS: Record<ProviderId, string> = {
   anthropic: HOSTED_ORIGINS.anthropic,
   openai: HOSTED_ORIGINS.openai,
   gemini: `${HOSTED_ORIGINS.gemini}/v1beta`,
-  ollama: 'http://localhost:11434'
+  ollama: 'http://localhost:11434',
+  'local-openai': 'http://localhost:5001/v1'
 };
 
 export function isProviderId(value: unknown): value is ProviderId {
@@ -28,8 +29,9 @@ export function isLoopbackHost(hostname: string): boolean {
 /**
  * Resolves the base URL a provider request may use, or throws. Hosted
  * providers accept only HTTPS on their own origin, so a key can never be sent
- * anywhere else. Ollama, and an explicitly local OpenAI-compatible server,
- * accept only loopback hosts. URLs carrying credentials, a query, or a
+ * anywhere else. Ollama and the local model server (`local-openai`, which
+ * never carries a key) accept only loopback hosts. The hosted OpenAI provider
+ * also accepts a loopback host, as it did before `local-openai` existed. URLs carrying credentials, a query, or a
  * fragment are rejected.
  */
 export function resolveProviderBaseUrl(providerId: ProviderId, baseUrl?: string): string {
@@ -54,6 +56,13 @@ export function resolveProviderBaseUrl(providerId: ProviderId, baseUrl?: string)
     if ((url.protocol === 'http:' || url.protocol === 'https:') && loopback) return normalized;
     throw new Error(
       'Ollama must run on this computer (localhost or 127.0.0.1); remote Ollama addresses are not allowed.'
+    );
+  }
+
+  if (providerId === 'local-openai') {
+    if ((url.protocol === 'http:' || url.protocol === 'https:') && loopback) return normalized;
+    throw new Error(
+      'The local model server must run on this computer (localhost or 127.0.0.1); remote addresses are not allowed.'
     );
   }
 

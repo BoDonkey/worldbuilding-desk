@@ -1,4 +1,9 @@
 import type {ProviderId} from '../endpointPolicy';
+import {
+  assertLocalServerResponseComplete,
+  fetchLocalServer,
+  localServerApiBase
+} from '../localServerPolicy';
 
 export type {ProviderId};
 
@@ -414,6 +419,89 @@ export class OllamaCompletionAdapter implements CompletionAdapter {
   }
 }
 
+/** Mirrors the renderer's `buildLocalServerChatPayload`: no `response_format`, no default token cap. */
+export function buildLocalServerChatPayload(config: ProviderConfig, stream: boolean) {
+  const {model, maxTokens, temperature} = config.request;
+  return {
+    ...(model ? {model} : {}),
+    stream,
+    ...(typeof maxTokens === 'number' ? {max_tokens: maxTokens} : {}),
+    ...(typeof temperature === 'number' ? {temperature} : {}),
+    messages: buildMessagesWithSystem(config.request)
+  };
+}
+
+function postLocalServer(config: ProviderConfig, stream: boolean): Promise<Response> {
+  return fetchLocalServer(localServerApiBase(config.baseUrl ?? 'http://localhost:5001/v1'), '/chat/completions', {
+    method: 'POST',
+    signal: config.signal,
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(buildLocalServerChatPayload(config, stream))
+  });
+}
+
+/** A local OpenAI-compatible server. Never sends a key; the address is loopback-only. */
+export class LocalServerStreamingAdapter implements StreamingAdapter {
+  private readonly config: ProviderConfig;
+
+  constructor(config: ProviderConfig) {
+    this.config = config;
+  }
+
+  async *stream(): AsyncIterable<string> {
+    const response = await postLocalServer(this.config, true);
+    if (!response.body) throw new Error('The local model server sent an empty response.');
+
+    const reader = (response.body as ReadableStream<Uint8Array>).getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+    let finishReason: unknown;
+
+    while (true) {
+      const {done, value} = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, {stream: true});
+      const lines = buffer.split('\n');
+      buffer = lines.pop() ?? '';
+
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed.startsWith('data:')) continue;
+        const data = trimmed.slice(5).trim();
+        if (!data || data === '[DONE]') continue;
+        try {
+          const choice = JSON.parse(data).choices?.[0];
+          finishReason = choice?.finish_reason ?? finishReason;
+          const reasoning = choice?.delta?.reasoning_content;
+          if (typeof reasoning === 'string' && reasoning) yield `<think>${reasoning}</think>`;
+          const delta = choice?.delta?.content;
+          if (typeof delta === 'string' && delta) yield delta;
+        } catch {
+          // Ignore malformed chunks.
+        }
+      }
+    }
+    assertLocalServerResponseComplete(finishReason);
+  }
+}
+
+export class LocalServerCompletionAdapter implements CompletionAdapter {
+  private readonly config: ProviderConfig;
+
+  constructor(config: ProviderConfig) {
+    this.config = config;
+  }
+
+  async complete(): Promise<string> {
+    const response = await postLocalServer(this.config, false);
+    const choice = (await response.json()).choices?.[0];
+    assertLocalServerResponseComplete(choice?.finish_reason);
+    const reasoning = choice?.message?.reasoning_content;
+    const content = choice?.message?.content ?? '';
+    return typeof reasoning === 'string' && reasoning ? `<think>${reasoning}</think>${content}` : content;
+  }
+}
+
 /** Mirrors the renderer's Gemini thinking policy (hostedResponsePolicy.ts). */
 export function geminiThinkingConfig(
   model: string,
@@ -526,6 +614,10 @@ export function createStreamingAdapter(
     return new OllamaStreamingAdapter(config);
   }
 
+  if (providerId === 'local-openai') {
+    return new LocalServerStreamingAdapter(config);
+  }
+
   throw new Error(`Provider "${providerId}" is not implemented.`);
 }
 
@@ -547,6 +639,10 @@ export function createCompletionAdapter(
 
   if (providerId === 'ollama') {
     return new OllamaCompletionAdapter(config);
+  }
+
+  if (providerId === 'local-openai') {
+    return new LocalServerCompletionAdapter(config);
   }
 
   throw new Error(`Provider "${providerId}" is not implemented.`);

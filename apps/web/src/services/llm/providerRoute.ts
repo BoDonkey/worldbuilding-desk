@@ -1,5 +1,5 @@
 import type {AIProviderId, ProjectAISettings} from '../../entityTypes';
-import {HOSTED_PROVIDER_NAMES, PROVIDER_DEFAULT_BASE_URLS} from './providerConfig';
+import {HOSTED_PROVIDER_NAMES, PROVIDER_DEFAULT_BASE_URLS, isHostedAIProvider} from './providerConfig';
 
 /**
  * Where a project's AI requests actually go. One classification drives the
@@ -8,8 +8,9 @@ import {HOSTED_PROVIDER_NAMES, PROVIDER_DEFAULT_BASE_URLS} from './providerConfi
  * budget treats as remote.
  *
  * - `private-local`: Ollama on a loopback address with a model verified as
- *   installed on this computer. The only route that is disclosed as staying
- *   on device and exempt from the consultation budget.
+ *   installed on this computer, or a local OpenAI-compatible server on a
+ *   loopback address. The only route that is disclosed as staying on device
+ *   and exempt from the consultation budget.
  * - `hosted`: Anthropic, OpenAI, or Gemini.
  * - `ollama-cloud`: an Ollama model that runs on Ollama's servers. Blocked.
  * - `ollama-remote`: Ollama at a non-loopback address. Blocked.
@@ -17,13 +18,16 @@ import {HOSTED_PROVIDER_NAMES, PROVIDER_DEFAULT_BASE_URLS} from './providerConfi
  *   as installed locally (not checked yet, unreachable, or not installed).
  *   Fails closed: disclosed and counted as remote, and the request policy
  *   refuses to send until the model is confirmed.
+ * - `local-server-remote`: the local OpenAI-compatible server at a
+ *   non-loopback address. Blocked.
  */
 export type ProviderRouteKind =
   | 'private-local'
   | 'hosted'
   | 'ollama-cloud'
   | 'ollama-remote'
-  | 'ollama-unverified';
+  | 'ollama-unverified'
+  | 'local-server-remote';
 
 export interface ProviderRoute {
   kind: ProviderRouteKind;
@@ -32,7 +36,7 @@ export interface ProviderRoute {
   isPrivateLocal: boolean;
   /** False when the request policy will refuse to send. */
   allowsRequests: boolean;
-  /** The Ollama model a request will use, when verified. */
+  /** The Ollama model a request will use when verified, or the local server's configured model. */
   model?: string;
   /** Plain-language reason when the route is not private-local Ollama. */
   reason?: string;
@@ -126,6 +130,9 @@ function ollamaCloudReason(model: string): string {
   return `"${model}" is an Ollama cloud model, so your text would leave this computer. Private mode blocks it; choose a locally installed model in Settings.`;
 }
 
+export const LOCAL_SERVER_REMOTE_REASON =
+  'The local model server must run on this computer (localhost or 127.0.0.1). Remote addresses are blocked.';
+
 const REMOTE_OLLAMA_REASON =
   'Ollama must run on this computer (localhost or 127.0.0.1). Remote Ollama addresses are blocked.';
 
@@ -138,6 +145,15 @@ export function classifyProviderRoute(
   installed: readonly OllamaModelEntry[] | null
 ): ProviderRoute {
   const provider = aiConfig?.provider;
+  if (provider === 'local-openai') {
+    // No model check: these servers run whatever model they have loaded, and
+    // none of them can hand a request to a cloud model the way Ollama can.
+    const config = aiConfig?.configs?.['local-openai'];
+    const baseUrl = config?.baseUrl?.trim() || PROVIDER_DEFAULT_BASE_URLS['local-openai'];
+    return isLoopbackUrl(baseUrl)
+      ? {kind: 'private-local', provider, isPrivateLocal: true, allowsRequests: true, model: config?.model?.trim() || undefined}
+      : {kind: 'local-server-remote', provider, isPrivateLocal: false, allowsRequests: false, reason: LOCAL_SERVER_REMOTE_REASON};
+  }
   if (provider !== 'ollama') {
     return {kind: 'hosted', provider, isPrivateLocal: false, allowsRequests: true};
   }
@@ -172,6 +188,12 @@ export function classifyProviderRoute(
 
 /** Shown only for a verified private-local route. */
 export const PRIVATE_LOCAL_DISCLOSURE = 'Runs on your local Ollama model. Nothing leaves this computer.';
+export const LOCAL_SERVER_DISCLOSURE = 'Runs on your local model server. Nothing leaves this computer.';
+
+/** The on-device sentence for a private-local route, naming the kind of local model. */
+export function describePrivateLocalRoute(route: Pick<ProviderRoute, 'provider'>): string {
+  return route.provider === 'local-openai' ? LOCAL_SERVER_DISCLOSURE : PRIVATE_LOCAL_DISCLOSURE;
+}
 
 /**
  * Point-of-use data-flow sentence. `sentMaterial` names what a request sends,
@@ -180,10 +202,10 @@ export const PRIVATE_LOCAL_DISCLOSURE = 'Runs on your local Ollama model. Nothin
 export function describeRouteDataFlow(route: ProviderRoute, sentMaterial: string): string | null {
   switch (route.kind) {
     case 'private-local':
-      return PRIVATE_LOCAL_DISCLOSURE;
+      return describePrivateLocalRoute(route);
     case 'hosted':
-      return route.provider
-        ? `Sends ${sentMaterial} to ${HOSTED_PROVIDER_NAMES[route.provider as Exclude<AIProviderId, 'ollama'>]}’s servers only when you send.`
+      return isHostedAIProvider(route.provider)
+        ? `Sends ${sentMaterial} to ${HOSTED_PROVIDER_NAMES[route.provider]}’s servers only when you send.`
         : null;
     default:
       return route.reason ?? null;

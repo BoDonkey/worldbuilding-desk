@@ -22,6 +22,7 @@ describe('hosted response cost ceiling', () => {
       model: 'custom-model'
     });
     expect(getHostedResponseCostCeiling('ollama', 'qwen3', 500)).toBeNull();
+    expect(getHostedResponseCostCeiling('local-openai', 'gpt-4o-mini', 500)).toBeNull();
   });
 });
 

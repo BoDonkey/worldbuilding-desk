@@ -350,7 +350,7 @@ Cypress.Commands.add('ensureSettingsSectionOpen', (sectionTitle: string) => {
     });
 });
 
-Cypress.Commands.add('setSeededProjectProvider', (provider: 'anthropic' | 'ollama') => {
+Cypress.Commands.add('setSeededProjectProvider', (provider: 'anthropic' | 'ollama' | 'local-openai') => {
   return cy.window().then(
     (win) =>
       new Cypress.Promise<void>((resolve, reject) => {
@@ -395,7 +395,7 @@ declare global {
       // Expands a collapsed <details> section on the Settings page; a no-op when already open.
       ensureSettingsSectionOpen(sectionTitle: string): Chainable<void>;
       // Switches the seeded smoke project's AI provider in IndexedDB; reload afterwards.
-      setSeededProjectProvider(provider: 'anthropic' | 'ollama'): Chainable<void>;
+      setSeededProjectProvider(provider: 'anthropic' | 'ollama' | 'local-openai'): Chainable<void>;
     }
   }
 }

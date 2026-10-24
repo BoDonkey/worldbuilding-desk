@@ -12,6 +12,7 @@ import {
   LENS_DEFINITIONS,
   updateSketchText
 } from './worldCanvasService';
+import {isLocalAIProvider} from '../llm/providerConfig';
 
 export type WorldCanvasCoachingAction =
   | 'focus'
@@ -217,7 +218,7 @@ export function canvasCoachingResponseTokens(
   provider: AIProviderId | undefined,
   configured: number | undefined
 ): number | undefined {
-  return provider === 'ollama'
+  return isLocalAIProvider(provider)
     ? undefined
     : Math.max(configured ?? 0, CANVAS_COACHING_MIN_RESPONSE_TOKENS);
 }

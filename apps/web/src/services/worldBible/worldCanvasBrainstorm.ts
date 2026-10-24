@@ -7,6 +7,7 @@ import type {
 } from '../../entityTypes';
 import type {ConsistencyAlias} from '../storage';
 import {LENS_DEFINITIONS} from './worldCanvasService';
+import {isLocalAIProvider} from '../llm/providerConfig';
 
 /**
  * World Canvas brainstorming (Slice 4.33 / WC-4). The model proposes alternatives, tensions,
@@ -82,7 +83,7 @@ export const brainstormResponseTokens = (
   provider: AIProviderId | undefined,
   configured: number | undefined
 ): number | undefined =>
-  provider === 'ollama' ? undefined : Math.max(configured ?? 0, BRAINSTORM_MIN_RESPONSE_TOKENS);
+  isLocalAIProvider(provider) ? undefined : Math.max(configured ?? 0, BRAINSTORM_MIN_RESPONSE_TOKENS);
 
 export const describeBrainstormFocus = (focus: WorldCanvasBrainstormFocus): string =>
   focus.type === 'premise'

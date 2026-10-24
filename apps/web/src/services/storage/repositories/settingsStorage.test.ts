@@ -41,4 +41,11 @@ describe('settingsStorage AI defaults', () => {
     expect(getDefaultAIProvider()).toBe('openai');
     expect(createDefaultAISettings().provider).toBe('openai');
   });
+
+  it('remembers the local model server and defaults its address to KoboldCPP', () => {
+    rememberDefaultAIProvider('local-openai');
+
+    expect(getDefaultAIProvider()).toBe('local-openai');
+    expect(createDefaultAISettings().configs['local-openai']).toEqual({baseUrl: 'http://localhost:5001/v1'});
+  });
 });
