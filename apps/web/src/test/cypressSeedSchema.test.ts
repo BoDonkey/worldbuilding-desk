@@ -1,7 +1,7 @@
 import {describe, expect, it} from 'vitest';
 import {readFileSync} from 'node:fs';
 import {join} from 'node:path';
-import {CURRENT_PROJECT_SCHEMA_VERSION} from '../services/storage/projectSchemaMigrations';
+import {CURRENT_PROJECT_SCHEMA_VERSION} from '../services/storage';
 
 describe('Cypress smoke seed schema version', () => {
   it('seeds projects at the current storage schema so no load-time migration races spec DB writes', () => {

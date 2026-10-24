@@ -10,7 +10,7 @@ const mocks = vi.hoisted(() => ({
   deleteCategory: vi.fn()
 }));
 
-vi.mock('../../categoryStorage', () => ({
+vi.mock('../../services/storage/repositories/categoryStorage', () => ({
   saveCategory: mocks.saveCategory,
   deleteCategory: mocks.deleteCategory
 }));

@@ -29,4 +29,27 @@ export default defineConfig([
       'react-hooks/preserve-manual-memoization': 'off'
     }
   },
+  {
+    // Storage boundary (slice 3.23a): IndexedDB is reached only through
+    // services/storage. Everything else imports that folder's index, which
+    // does not export openDb. Tests may reach in to seed or inspect databases.
+    files: ['src/**/*.{ts,tsx}'],
+    ignores: ['src/services/storage/**', 'src/**/*.test.{ts,tsx}', 'src/test/**'],
+    rules: {
+      'no-restricted-imports': ['error', {
+        patterns: [{
+          regex: '(^|/)storage/.+',
+          message: 'Import persistence from services/storage (its index), not its internal modules.'
+        }]
+      }],
+      'no-restricted-globals': ['error', {
+        name: 'indexedDB',
+        message: 'Use IndexedDB only inside services/storage.'
+      }],
+      'no-restricted-properties': ['error',
+        {object: 'window', property: 'indexedDB', message: 'Use IndexedDB only inside services/storage.'},
+        {object: 'globalThis', property: 'indexedDB', message: 'Use IndexedDB only inside services/storage.'}
+      ]
+    }
+  },
 ])

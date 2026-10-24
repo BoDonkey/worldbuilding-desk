@@ -1,6 +1,6 @@
 import 'fake-indexeddb/auto';
 import {describe, expect, it, vi} from 'vitest';
-import {ENTITY_STORE_NAME} from '../../db';
+import {ENTITY_STORE_NAME} from './db';
 import {runProjectWriteTransaction} from './projectWriteTransaction';
 
 describe('runProjectWriteTransaction', () => {

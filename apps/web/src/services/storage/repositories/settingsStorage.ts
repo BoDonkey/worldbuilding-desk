@@ -1,0 +1,413 @@
+import type {
+  Project,
+  ProjectSettings,
+  ProjectAISettings,
+  InspectorSettings,
+  ProjectMode,
+  WorkspaceImportMode,
+  StatBlockGroup,
+  StatBlockPreferences,
+  EditorFeedbackSettings
+} from '../../../entityTypes';
+import { openDb, SETTINGS_STORE_NAME } from '../db';
+import {getDefaultFeatureToggles, normalizeFeatureToggles} from '../../../projectMode';
+import {getProjectById} from './projectStorage';
+import {
+  DEFAULT_AI_PROVIDER,
+  PROVIDER_DEFAULT_BASE_URLS,
+  PROVIDER_FALLBACK_MODELS,
+  normalizeConfiguredModel
+} from '../../llm/providerConfig';
+
+const LAST_AI_PROVIDER_STORAGE_KEY = 'wbd:ai:last-provider';
+
+const DEFAULT_INSPECTOR_SETTINGS: InspectorSettings = {
+  enableAIConsultation: true,
+  reviewEngineMode: 'deterministic',
+  canonDecisionProviderMode: 'project-provider',
+  maxConsultationsPerDay: 20,
+  maxContextChars: 1800,
+  maxResponseTokens: 500,
+  lowCostModel: ''
+};
+
+const DEFAULT_PROJECT_MODE: ProjectMode = 'litrpg';
+const DEFAULT_CONSISTENCY_ACTION_CUES: string[] = [];
+const DEFAULT_IGNORED_UNKNOWN_SURFACES: string[] = [];
+const DEFAULT_IGNORED_ENTITY_MATCH_KEYS: string[] = [];
+const DEFAULT_STAT_BLOCK_PREFERENCES: StatBlockPreferences = {
+  sourceType: 'character',
+  style: 'full',
+  insertMode: 'block',
+  scopePreset: 'all',
+  selectedGroupId: '',
+  selectedStatIds: [],
+  selectedResourceIds: [],
+  groups: []
+};
+const DEFAULT_EDITOR_FEEDBACK: EditorFeedbackSettings = {
+  inlineHighlightsMode: 'visible'
+};
+const DEFAULT_IMPORT_MODE: WorkspaceImportMode = 'balanced';
+const DEFAULT_SKIP_IMPORT_SUGGESTIONS = false;
+
+function isAIProviderId(value: unknown): value is ProjectAISettings['provider'] {
+  return (
+    value === 'anthropic' ||
+    value === 'openai' ||
+    value === 'gemini' ||
+    value === 'ollama'
+  );
+}
+
+export function rememberDefaultAIProvider(provider: ProjectAISettings['provider']): void {
+  if (typeof localStorage === 'undefined') return;
+  try {
+    localStorage.setItem(LAST_AI_PROVIDER_STORAGE_KEY, provider);
+  } catch {
+    // Provider preference is a convenience; failed storage should not block saves.
+  }
+}
+
+export function getDefaultAIProvider(): ProjectAISettings['provider'] {
+  if (typeof localStorage === 'undefined') return DEFAULT_AI_PROVIDER;
+  try {
+    const stored = localStorage.getItem(LAST_AI_PROVIDER_STORAGE_KEY);
+    return isAIProviderId(stored) ? stored : DEFAULT_AI_PROVIDER;
+  } catch {
+    return DEFAULT_AI_PROVIDER;
+  }
+}
+
+export function createDefaultAISettings(): ProjectAISettings {
+  return {
+    provider: getDefaultAIProvider(),
+    configs: {
+      anthropic: {
+        model: PROVIDER_FALLBACK_MODELS.anthropic
+      },
+      openai: {
+        model: PROVIDER_FALLBACK_MODELS.openai
+      },
+      gemini: {
+        model: PROVIDER_FALLBACK_MODELS.gemini
+      },
+      ollama: {
+        baseUrl: PROVIDER_DEFAULT_BASE_URLS.ollama
+      }
+    },
+    promptTools: [],
+    defaultToolIds: [],
+    defaultToolIdsByMode: {
+      litrpg: [],
+      game: [],
+      general: []
+    },
+    inspectorSettings: {...DEFAULT_INSPECTOR_SETTINGS}
+  };
+}
+
+function normalizeStatBlockGroups(groups: StatBlockGroup[] | undefined): StatBlockGroup[] {
+  if (!Array.isArray(groups)) return [];
+  return groups
+    .map((group) => {
+      const name = typeof group.name === 'string' ? group.name.trim() : '';
+      if (!name) return null;
+      return {
+        id: typeof group.id === 'string' && group.id.trim() ? group.id : crypto.randomUUID(),
+        name,
+        statIds: Array.isArray(group.statIds)
+          ? group.statIds.filter((id): id is string => typeof id === 'string' && id.trim().length > 0)
+          : [],
+        resourceIds: Array.isArray(group.resourceIds)
+          ? group.resourceIds.filter((id): id is string => typeof id === 'string' && id.trim().length > 0)
+          : []
+      };
+    })
+    .filter((group): group is StatBlockGroup => Boolean(group));
+}
+
+function normalizeConsistencyActionCues(cues: string[] | undefined): string[] {
+  if (!Array.isArray(cues)) return [];
+  const unique = new Set<string>();
+  cues.forEach((cue) => {
+    const normalized = cue.trim().toLowerCase();
+    if (normalized) {
+      unique.add(normalized);
+    }
+  });
+  return Array.from(unique);
+}
+
+function normalizeIgnoredEntityMatchKeys(keys: string[] | undefined): string[] {
+  if (!Array.isArray(keys)) return [];
+  const unique = new Set<string>();
+  keys.forEach((key) => {
+    const normalized = key.trim();
+    if (normalized) {
+      unique.add(normalized);
+    }
+  });
+  return Array.from(unique);
+}
+
+function ensureAISettings(settings: ProjectSettings): ProjectSettings {
+  const aiSettings: ProjectAISettings = {
+    ...(settings.aiSettings ?? createDefaultAISettings())
+  };
+
+  aiSettings.configs = {
+    ...createDefaultAISettings().configs,
+    ...(aiSettings.configs ?? {})
+  };
+  aiSettings.configs = {
+    ...aiSettings.configs,
+    anthropic: {
+      ...aiSettings.configs.anthropic,
+      model: normalizeConfiguredModel(aiSettings.configs.anthropic?.model) ?? PROVIDER_FALLBACK_MODELS.anthropic
+    },
+    openai: {
+      ...aiSettings.configs.openai,
+      model: normalizeConfiguredModel(aiSettings.configs.openai?.model) ?? PROVIDER_FALLBACK_MODELS.openai
+    },
+    gemini: {
+      ...aiSettings.configs.gemini,
+      model: normalizeConfiguredModel(aiSettings.configs.gemini?.model) ?? PROVIDER_FALLBACK_MODELS.gemini
+    },
+    ollama: {
+      ...aiSettings.configs.ollama,
+      model: normalizeConfiguredModel(aiSettings.configs.ollama?.model),
+      baseUrl: aiSettings.configs.ollama?.baseUrl ?? PROVIDER_DEFAULT_BASE_URLS.ollama
+    }
+  };
+  aiSettings.promptTools = aiSettings.promptTools ?? [];
+  aiSettings.defaultToolIds = aiSettings.defaultToolIds ?? [];
+  const enabledIds = new Set(
+    aiSettings.promptTools.filter((tool) => tool.enabled).map((tool) => tool.id)
+  );
+  aiSettings.defaultToolIds = aiSettings.defaultToolIds.filter((id) =>
+    enabledIds.has(id)
+  );
+  const fallbackDefaults = [...aiSettings.defaultToolIds];
+  aiSettings.defaultToolIdsByMode = {
+    litrpg:
+      aiSettings.defaultToolIdsByMode?.litrpg?.filter((id) => enabledIds.has(id)) ??
+      fallbackDefaults,
+    game:
+      aiSettings.defaultToolIdsByMode?.game?.filter((id) => enabledIds.has(id)) ??
+      fallbackDefaults,
+    general:
+      aiSettings.defaultToolIdsByMode?.general?.filter((id) => enabledIds.has(id)) ??
+      fallbackDefaults
+  };
+  aiSettings.inspectorSettings = {
+    ...DEFAULT_INSPECTOR_SETTINGS,
+    ...(aiSettings.inspectorSettings ?? {}),
+    reviewEngineMode:
+      aiSettings.inspectorSettings?.reviewEngineMode === 'local-ai-preview'
+        ? 'local-ai-preview'
+        : 'deterministic',
+    canonDecisionProviderMode:
+      aiSettings.inspectorSettings?.canonDecisionProviderMode === 'local-ollama'
+        ? 'local-ollama'
+        : 'project-provider',
+    maxConsultationsPerDay: Math.max(
+      1,
+      Math.floor(aiSettings.inspectorSettings?.maxConsultationsPerDay ?? 20)
+    ),
+    maxContextChars: Math.max(
+      300,
+      Math.floor(aiSettings.inspectorSettings?.maxContextChars ?? 1800)
+    ),
+    maxResponseTokens: Math.max(
+      100,
+      Math.floor(aiSettings.inspectorSettings?.maxResponseTokens ?? 500)
+    )
+  };
+
+  return {
+    ...settings,
+    aiSettings,
+    consistencyActionCues: normalizeConsistencyActionCues(
+      settings.consistencyActionCues ?? DEFAULT_CONSISTENCY_ACTION_CUES
+    ),
+    ignoredUnknownSurfaces: normalizeConsistencyActionCues(
+      settings.ignoredUnknownSurfaces ?? DEFAULT_IGNORED_UNKNOWN_SURFACES
+    ),
+    ignoredEntityMatchKeys: normalizeIgnoredEntityMatchKeys(
+      settings.ignoredEntityMatchKeys ?? DEFAULT_IGNORED_ENTITY_MATCH_KEYS
+    ),
+    keptSeparateCharacterIdentityKeys: normalizeIgnoredEntityMatchKeys(
+      settings.keptSeparateCharacterIdentityKeys ?? []
+    ),
+    activeSkills: settings.activeSkills ?? [],
+    projectMode: settings.projectMode ?? DEFAULT_PROJECT_MODE,
+    featureToggles: normalizeFeatureToggles({
+      mode: settings.projectMode ?? DEFAULT_PROJECT_MODE,
+      featureToggles: settings.featureToggles
+    }),
+    defaultImportMode:
+      settings.defaultImportMode === 'strict' ||
+      settings.defaultImportMode === 'balanced' ||
+      settings.defaultImportMode === 'lenient'
+        ? settings.defaultImportMode
+        : DEFAULT_IMPORT_MODE,
+    defaultSkipImportSuggestions:
+      typeof settings.defaultSkipImportSuggestions === 'boolean'
+        ? settings.defaultSkipImportSuggestions
+        : DEFAULT_SKIP_IMPORT_SUGGESTIONS,
+    statBlockPreferences: (() => {
+      const merged = {
+        ...DEFAULT_STAT_BLOCK_PREFERENCES,
+        ...(settings.statBlockPreferences ?? {})
+      };
+      return {
+        ...merged,
+        scopePreset:
+          merged.scopePreset === 'all' ||
+          merged.scopePreset === 'stats' ||
+          merged.scopePreset === 'resources' ||
+          merged.scopePreset === 'custom'
+            ? merged.scopePreset
+            : 'all',
+        selectedGroupId: merged.selectedGroupId ?? '',
+        selectedStatIds: Array.isArray(merged.selectedStatIds)
+          ? merged.selectedStatIds.filter(
+              (id): id is string => typeof id === 'string' && id.trim().length > 0
+            )
+          : [],
+        selectedResourceIds: Array.isArray(merged.selectedResourceIds)
+          ? merged.selectedResourceIds.filter(
+              (id): id is string => typeof id === 'string' && id.trim().length > 0
+            )
+          : [],
+        groups: normalizeStatBlockGroups(merged.groups)
+      };
+    })(),
+    editorFeedback: {
+      ...DEFAULT_EDITOR_FEEDBACK,
+      ...(settings.editorFeedback ?? {}),
+      inlineHighlightsMode:
+        settings.editorFeedback?.inlineHighlightsMode === 'subtle' ||
+        settings.editorFeedback?.inlineHighlightsMode === 'hidden-while-typing'
+          ? settings.editorFeedback.inlineHighlightsMode
+          : 'visible'
+    }
+  };
+}
+
+export async function getProjectSettings(projectId: string): Promise<ProjectSettings | null> {
+  const db = await openDb();
+
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(SETTINGS_STORE_NAME, 'readonly');
+    const store = tx.objectStore(SETTINGS_STORE_NAME);
+    const request = store.getAll();
+
+    request.onsuccess = () => {
+      const all = request.result as ProjectSettings[];
+      const settings = all.find(s => s.projectId === projectId);
+      resolve(settings ? ensureAISettings(settings) : null);
+    };
+
+    request.onerror = () => {
+      reject(request.error);
+    };
+  });
+}
+
+export async function saveProjectSettings(settings: ProjectSettings): Promise<void> {
+  const db = await openDb();
+  const normalizedSettings = ensureAISettings(settings);
+
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(SETTINGS_STORE_NAME, 'readwrite');
+    const store = tx.objectStore(SETTINGS_STORE_NAME);
+    const request = store.put(normalizedSettings);
+
+    request.onsuccess = () => {
+      rememberDefaultAIProvider(normalizedSettings.aiSettings.provider);
+      resolve();
+    };
+
+    request.onerror = () => {
+      reject(request.error);
+    };
+  });
+}
+
+export async function createDefaultSettings(projectId: string): Promise<ProjectSettings> {
+  const now = Date.now();
+  const settings: ProjectSettings = {
+    id: crypto.randomUUID(),
+    projectId,
+    characterStyles: [],
+    aiSettings: createDefaultAISettings(),
+    consistencyActionCues: [...DEFAULT_CONSISTENCY_ACTION_CUES],
+    ignoredUnknownSurfaces: [...DEFAULT_IGNORED_UNKNOWN_SURFACES],
+    ignoredEntityMatchKeys: [...DEFAULT_IGNORED_ENTITY_MATCH_KEYS],
+    keptSeparateCharacterIdentityKeys: [],
+    activeSkills: [],
+    projectMode: DEFAULT_PROJECT_MODE,
+    featureToggles: getDefaultFeatureToggles(DEFAULT_PROJECT_MODE),
+    defaultImportMode: DEFAULT_IMPORT_MODE,
+    defaultSkipImportSuggestions: DEFAULT_SKIP_IMPORT_SUGGESTIONS,
+    statBlockPreferences: {...DEFAULT_STAT_BLOCK_PREFERENCES},
+    editorFeedback: {...DEFAULT_EDITOR_FEEDBACK},
+    createdAt: now,
+    updatedAt: now
+  };
+
+  await saveProjectSettings(settings);
+  return settings;
+}
+
+export async function getOrCreateSettings(projectId: string): Promise<ProjectSettings> {
+  const existing = await getProjectSettings(projectId);
+  if (existing) return existing;
+  return createDefaultSettings(projectId);
+}
+
+export async function getResolvedConsistencyActionCues(
+  project: Project
+): Promise<string[]> {
+  const visited = new Set<string>();
+  const ordered: string[] = [];
+  const seen = new Set<string>();
+
+  const appendCues = (cues: string[]) => {
+    cues.forEach((cue) => {
+      const normalized = cue.trim().toLowerCase();
+      if (!normalized || seen.has(normalized)) return;
+      seen.add(normalized);
+      ordered.push(normalized);
+    });
+  };
+
+  const visit = async (current: Project | null): Promise<void> => {
+    if (!current || visited.has(current.id)) {
+      return;
+    }
+    visited.add(current.id);
+
+    if (current.parentProjectId) {
+      const parent = await getProjectById(current.parentProjectId);
+      await visit(parent);
+    }
+
+    const settings = await getProjectSettings(current.id);
+    appendCues(settings?.consistencyActionCues ?? []);
+  };
+
+  await visit(project);
+  return ordered;
+}
+
+export async function getInheritedConsistencyActionCues(
+  project: Project
+): Promise<string[]> {
+  if (!project.parentProjectId) return [];
+  const parent = await getProjectById(project.parentProjectId);
+  if (!parent) return [];
+  return getResolvedConsistencyActionCues(parent);
+}

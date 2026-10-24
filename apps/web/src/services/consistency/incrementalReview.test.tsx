@@ -7,7 +7,7 @@ import {
   markStaleReviewItems,
   planIncrementalReview
 } from './incrementalReview';
-import type {ProjectReviewRun} from './projectReviewRunStorage';
+import type {ProjectReviewRun} from '../storage';
 
 // .test.tsx: hashSceneContent strips HTML through the DOM (jsdom project).
 const doc = (id: string, content: string): WritingDocument => ({

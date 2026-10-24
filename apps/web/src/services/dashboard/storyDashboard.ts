@@ -5,7 +5,7 @@ import type {
   StoredRuleset,
   WritingDocument
 } from '../../entityTypes';
-import {sortWritingDocuments} from '../../writingStorage';
+import {sortWritingDocuments} from '../storage';
 
 export type StateChangeCategory =
   | 'Attributes'

@@ -3,7 +3,7 @@ import type {ChangeEvent} from 'react';
 import {useNavigate} from 'react-router';
 import {useAppStore} from '../store/appStore';
 import {getProjectCapabilities} from '../projectMode';
-import {getRulesetByProjectId} from '../services/rules';
+import {getRulesetByProjectId} from '../services/storage';
 import {
   exportCharactersJson,
   importCharactersJson

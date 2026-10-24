@@ -20,7 +20,7 @@ import type {
   WritingDocument,
   WorldEntity
 } from '../entityTypes';
-import {saveLoreDocument, saveLoreDocumentLinks} from '../loreStorage';
+import {saveLoreDocument, saveLoreDocumentLinks} from '../services/storage';
 import type {RAGProvider} from '../services/rag/RAGService';
 import {createCharacterLinkResolver} from '../services/characters/characterIdentity';
 import {

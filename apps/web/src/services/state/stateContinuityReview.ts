@@ -5,7 +5,7 @@ import type {
   StoredRuleset,
   WritingDocument
 } from '../../entityTypes';
-import {compareWritingDocuments} from '../../writingStorage';
+import {compareWritingDocuments} from '../storage';
 import type {ActorResolution} from '../characters/characterIdentity';
 import type {GuardrailIssue, KnownEntityRef} from '../consistency';
 import {extractStateDeltaObservations} from '../worldEngine/stateDeltaObservations';

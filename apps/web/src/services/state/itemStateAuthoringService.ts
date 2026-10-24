@@ -5,12 +5,6 @@ import type {
   StoredRuleset,
   WorldEntity
 } from '../../entityTypes';
-import {
-  COMPENDIUM_ENTRY_STORE_NAME,
-  ENTITY_STORE_NAME,
-  openDb,
-  STATE_MUTATION_EVENT_STORE_NAME
-} from '../../db';
 import {isItemCategory} from '../worldBible/worldBibleSummary';
 import {buildCompoundChangePreview} from './positionedStateChange';
 import {
@@ -18,6 +12,7 @@ import {
   type CharacterReplayState
 } from './stateReplay';
 import {validateStateMutationEvent} from './stateMutationSchemas';
+import {saveItemStateAuthoringPlan} from '../storage';
 
 const normalizeItemName = (value: string): string =>
   value.trim().replace(/\s+/g, ' ').toLocaleLowerCase();
@@ -136,14 +131,6 @@ export function validateItemStateAuthoringPlan(params: {
   }
 }
 
-function transactionToPromise(transaction: IDBTransaction): Promise<void> {
-  return new Promise((resolve, reject) => {
-    transaction.oncomplete = () => resolve();
-    transaction.onerror = () => reject(transaction.error);
-    transaction.onabort = () => reject(transaction.error);
-  });
-}
-
 export async function applyItemStateAuthoringPlan(params: {
   plan: ItemStateAuthoringWritePlan;
   ruleset: StoredRuleset | null;
@@ -151,26 +138,7 @@ export async function applyItemStateAuthoringPlan(params: {
 }): Promise<void> {
   validateItemStateAuthoringPlan(params);
   const {plan} = params;
-  const stores = [STATE_MUTATION_EVENT_STORE_NAME];
-  if (plan.entityToSave) stores.push(ENTITY_STORE_NAME);
-  if (plan.compendiumEntryToSave) stores.push(COMPENDIUM_ENTRY_STORE_NAME);
-  const db = await openDb();
-  const transaction = db.transaction(stores, 'readwrite');
-  if (plan.entityToSave) {
-    transaction.objectStore(ENTITY_STORE_NAME).put(plan.entityToSave);
-  }
-  if (plan.compendiumEntryToSave) {
-    transaction
-      .objectStore(COMPENDIUM_ENTRY_STORE_NAME)
-      .put(plan.compendiumEntryToSave);
-  }
-  transaction.objectStore(STATE_MUTATION_EVENT_STORE_NAME).put(plan.event);
-  if (plan.eventToInvalidate) {
-    transaction
-      .objectStore(STATE_MUTATION_EVENT_STORE_NAME)
-      .put(plan.eventToInvalidate);
-  }
-  await transactionToPromise(transaction);
+  await saveItemStateAuthoringPlan(plan);
 
   if (typeof window !== 'undefined') {
     if (plan.entityToSave) {

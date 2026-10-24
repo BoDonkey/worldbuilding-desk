@@ -1,6 +1,6 @@
 import {useEffect, useMemo, useState} from 'react';
 import type {SettlementState} from '../../entityTypes';
-import {updateSettlementFortressLevel, updateSettlementBaseStats} from '../../services/compendium';
+import {updateSettlementFortressLevel, updateSettlementBaseStats} from '../../services/storage';
 import {
   BASE_STAT_KEYS,
   toBaseStatsDraft,

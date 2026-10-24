@@ -24,7 +24,7 @@ normalized-name join computed at read time
 (`buildCharacterLoreEntityIdByCharacterId` in
 `services/consistency/reviewLinkOptions.ts`,
 `resolveCharacterAliasEntityMigrations` in
-`services/consistency/aliasStorage.ts`,
+`services/storage/repositories/aliasStorage.ts`,
 `buildManualCaptureLinkOptions` in `services/workspace/workspaceView.ts`).
 World Bible's "link to Character Tools" action
 (`useWorldBibleEntityActions.handleImportEntityToCharacters`) copies
@@ -84,7 +84,7 @@ Two additional findings the brief missed, both relevant to beta trust:
 | Entity→tools "linking" is a name-deduped field copy | `useWorldBibleEntityActions.ts` |
 | Lore character proposal acceptance creates free-standing `Character` | `services/lore/entityProposalActions.ts` |
 | Facts/aliases/lore links target `'character' \| 'entity'`; character facts materialize into `Character.fields` | `entityTypes.ts`, `services/lore/canonicalFactActions.ts` |
-| Alias→entity migration helper exists: exact-unique normalized-name rule only | `services/consistency/aliasStorage.ts` |
+| Alias→entity migration helper exists: exact-unique normalized-name rule only | `services/storage/repositories/aliasStorage.ts` |
 | Replay actor match: `actorId \| characterId \| sheetId`; derivation also matches sheet name | `services/state/stateReplay.ts`, `stateMutationDerivation.ts` |
 | IndexedDB `DB_VERSION 24`, create-only upgrades, no data migrations | `db.ts` |
 | Backup snapshot schemaVersion 1 omits consistency aliases (and consistency proposals/events) | `services/storage/projectSnapshotService.ts` |

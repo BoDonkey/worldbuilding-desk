@@ -1,6 +1,6 @@
 import {useState} from 'react';
 import type {CompendiumMilestone} from '../../entityTypes';
-import {saveCompendiumMilestone} from '../../services/compendium';
+import {saveCompendiumMilestone} from '../../services/storage';
 import {parseCommaSeparatedIds} from '../../services/compendium/compendiumFormValues';
 import {describeError} from '../../services/errors';
 import type {CompendiumFormContext, SetFormValue} from './formTypes';

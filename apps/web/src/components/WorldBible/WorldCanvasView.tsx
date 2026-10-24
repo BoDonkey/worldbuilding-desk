@@ -6,7 +6,7 @@ import type {
 import {useConfirmDialog} from '../../hooks/useConfirmDialog';
 import {useConsultationBudget} from '../../hooks/useConsultationBudget';
 import type {useWorldCanvas} from '../../hooks/useWorldCanvas';
-import type {ConsistencyAlias} from '../../services/consistency/aliasStorage';
+import type {ConsistencyAlias} from '../../services/storage';
 import {describeError} from '../../services/errors';
 import {
   LENS_DEFINITIONS, deriveCanvasCanonName, findSuggestedCanvasCategory,

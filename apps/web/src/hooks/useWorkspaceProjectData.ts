@@ -19,37 +19,34 @@ import type {
 } from '../entityTypes';
 import type {EditorConfig} from '../config/editorConfig';
 import {createEditorConfigWithStyles} from '../config/editorConfig';
-import {getDocumentsByProject} from '../writingStorage';
-import {getEntitiesByProject} from '../entityStorage';
-import {getCategoriesByProject, initializeDefaultCategories} from '../categoryStorage';
-import {getCharactersByProject} from '../characterStorage';
 import {
+  getDocumentsByProject,
+  getEntitiesByProject,
+  getCategoriesByProject,
+  initializeDefaultCategories,
+  getCharactersByProject,
   deriveCharacterSheetNames,
-  getCharacterSheetsByProject
-} from '../services/characters';
-import {getActorResolutionsByProject} from '../services/characters/characterIdentityStorage';
-import type {ActorResolution} from '../services/characters/characterIdentity';
-import {getResolvedConsistencyActionCues} from '../settingsStorage';
-import {getRulesetByProjectId} from '../services/rules';
-import {
+  getCharacterSheetsByProject,
+  getActorResolutionsByProject,
+  getResolvedConsistencyActionCues,
+  getRulesetByProjectId,
   getCompendiumActionLogs,
   getCompendiumEntriesByProject,
   getCompendiumProgress,
   getOrCreateSettlementState,
-  getSettlementModulesByProject
-} from '../services/compendium';
+  getSettlementModulesByProject,
+  getAliasesByProject,
+  migrateCharacterAliasesToEntities,
+  type ConsistencyAlias,
+  getStateMutationEventsByProject,
+  getCanonicalFactsByProject
+} from '../services/storage';
+import type {ActorResolution} from '../services/characters/characterIdentity';
 import {
   getSeriesBibleConfig,
   getCanonSyncState
 } from '../services/seriesBible/SeriesBibleService';
-import {
-  getAliasesByProject,
-  migrateCharacterAliasesToEntities,
-  type ConsistencyAlias
-} from '../services/consistency';
 import {appendSystemHistoryEntry} from '../services/system';
-import {getStateMutationEventsByProject} from '../services/state/stateMutationLedger';
-import {getCanonicalFactsByProject} from '../services/lore/loreFactStorage';
 import type {RAGProvider} from '../services/rag/RAGService';
 import {getRAGService} from '../services/rag/getRAGService';
 import type {Project} from '../entityTypes';

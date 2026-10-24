@@ -12,8 +12,11 @@ import {requestCharacterStatPeek} from '../commands/characterStatPeek';
 import {getProjectCapabilities} from '../projectMode';
 import {
   deriveCharacterSheetNames,
-  getCharacterSheetsByProject
-} from '../services/characters';
+  getCharacterSheetsByProject,
+  getDocumentsByProject,
+  getEntitiesByProject,
+  getAliasesByProject
+} from '../services/storage';
 import {
   buildCharacterPeekTargets,
   resolveCharacterStatCardTemplate,
@@ -23,9 +26,6 @@ import {
   createAppCommands,
   type AppCommand
 } from '../commands/commandRegistry';
-import {getDocumentsByProject} from '../writingStorage';
-import {getEntitiesByProject} from '../entityStorage';
-import {getAliasesByProject} from '../services/consistency';
 import {useAppStore} from '../store/appStore';
 import {
   CommandPaletteContext,

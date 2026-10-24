@@ -3,7 +3,7 @@ import {describe, expect, it, vi} from 'vitest';
 import type {EntityCategory} from '../entityTypes';
 import CategoryEditor from './CategoryEditor';
 
-vi.mock('../categoryStorage', () => ({
+vi.mock('../services/storage/repositories/categoryStorage', () => ({
   saveCategory: vi.fn(async () => undefined)
 }));
 

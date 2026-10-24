@@ -1,6 +1,6 @@
 import {describe, expect, it} from 'vitest';
 import type {CharacterSheet, WorldEntity} from '../../entityTypes';
-import type {ConsistencyAlias} from '../consistency/aliasStorage';
+import type {ConsistencyAlias} from '../storage';
 import {
   applyCharacterStatCardTemplate,
   buildCharacterPeekTargets,

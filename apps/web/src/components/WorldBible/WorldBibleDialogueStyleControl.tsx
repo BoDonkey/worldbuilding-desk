@@ -1,6 +1,6 @@
 import {useEffect, useId, useState} from 'react';
 import type {Character, CharacterStyle, WorldEntity} from '../../entityTypes';
-import {saveCharacter} from '../../characterStorage';
+import {saveCharacter} from '../../services/storage';
 import styles from '../../assets/components/WorldBibleRoute.module.css';
 import {describeError} from '../../services/errors';
 

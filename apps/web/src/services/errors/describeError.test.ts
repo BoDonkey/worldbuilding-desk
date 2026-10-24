@@ -1,7 +1,7 @@
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
 import {classifyError, describeError} from './describeError';
 import {listDiagnostics, resetDiagnosticsForTests} from './diagnostics';
-import {ProjectMigrationError} from '../storage/projectSchemaMigrations';
+import {ProjectMigrationError} from '../storage';
 
 describe('describeError', () => {
   beforeEach(() => {

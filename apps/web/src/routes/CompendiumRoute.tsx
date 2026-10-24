@@ -37,15 +37,8 @@ import type {
   ZoneAffinityProfile,
   ZoneAffinityProgress
 } from '../entityTypes';
+import {DEFAULT_FORTRESS_TIERS, DEFAULT_PARTY_SYNERGY_RULES, deriveCraftingRuntimeModifiers, getNextFortressTier, getPartySynergySuggestions, getSettlementComputedEffects, getUnlockedFortressTiers, getActiveSettlementAuraEffects} from '../services/compendium';
 import {
-  DEFAULT_FORTRESS_TIERS,
-  DEFAULT_PARTY_SYNERGY_RULES,
-  deriveCraftingRuntimeModifiers,
-  getNextFortressTier,
-  getPartySynergySuggestions,
-  getSettlementComputedEffects,
-  getUnlockedFortressTiers,
-  getActiveSettlementAuraEffects,
   getCompendiumActionLogs,
   getCompendiumEntriesByProject,
   getCompendiumMilestonesByProject,
@@ -56,13 +49,13 @@ import {
   getZoneAffinityProfilesByProject,
   getZoneAffinityProgressByProject,
   recordCompendiumAction,
-  saveCompendiumEntry
-} from '../services/compendium';
-import {getCharacterSheetsByProject} from '../services/characters';
-import {getCharactersByProject} from '../characterStorage';
-import {getEntitiesByProject} from '../entityStorage';
+  saveCompendiumEntry,
+  getCharacterSheetsByProject,
+  getCharactersByProject,
+  getEntitiesByProject,
+  getRulesetByProjectId
+} from '../services/storage';
 import {getProjectCapabilities} from '../projectMode';
-import {getRulesetByProjectId} from '../services/rules';
 import {describeError} from '../services/errors';
 import {RouteFeedback} from '../components/common';
 

@@ -1,6 +1,6 @@
 import {beforeEach, describe, expect, it, vi} from 'vitest';
 import type {LoreDocument} from '../../entityTypes';
-import {getLoreDocumentLinksByProject, getLoreDocumentsByProject} from '../../loreStorage';
+import {getLoreDocumentLinksByProject, getLoreDocumentsByProject} from '../storage';
 import type {RAGProvider} from '../rag/RAGService';
 import {findImportedSourceNote, importSourceNoteFiles} from './sourceNoteBatchImport';
 

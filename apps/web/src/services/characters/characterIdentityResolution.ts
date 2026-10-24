@@ -5,12 +5,10 @@ import type {
   WorldEntity
 } from '../../entityTypes';
 import {
-  ACTOR_RESOLUTION_STORE_NAME,
-  CHARACTER_SHEET_STORE_NAME,
-  CHARACTER_STORE_NAME,
-  ENTITY_STORE_NAME,
-  openDb
-} from '../../db';
+  applyCharacterIdentityResolution,
+  type CharacterIdentityResolutionSnapshot,
+  type CharacterIdentityResolutionWrite
+} from '../storage';
 import {
   classifyCharacterIdentities,
   type ActorResolution,
@@ -113,12 +111,6 @@ export function buildCharacterIdentityResolutionQueue(params: {
     .sort((left, right) => left.name.localeCompare(right.name) || left.key.localeCompare(right.key));
 }
 
-const requestResult = <T>(request: IDBRequest<T>): Promise<T> =>
-  new Promise((resolve, reject) => {
-    request.onsuccess = () => resolve(request.result);
-    request.onerror = () => reject(request.error);
-  });
-
 const emitIdentityChanges = (): void => {
   if (typeof window === 'undefined') return;
   window.dispatchEvent(new CustomEvent('wbd:entity-records-changed'));
@@ -126,124 +118,111 @@ const emitIdentityChanges = (): void => {
   window.dispatchEvent(new CustomEvent('wbd:character-sheet-records-changed'));
 };
 
-export async function resolveCharacterIdentity(params: {
+export interface CharacterIdentityResolutionParams {
   projectId: string;
   item: Pick<CharacterIdentityResolutionItem, 'recordType' | 'recordId'>;
   entityId: string;
   entityToCreate?: WorldEntity;
   resolvedAt?: number;
-}): Promise<void> {
-  const db = await openDb();
-  const tx = db.transaction(
-    [
-      ENTITY_STORE_NAME,
-      CHARACTER_STORE_NAME,
-      CHARACTER_SHEET_STORE_NAME,
-      ACTOR_RESOLUTION_STORE_NAME
-    ],
-    'readwrite'
-  );
-  const entityStore = tx.objectStore(ENTITY_STORE_NAME);
-  const characterStore = tx.objectStore(CHARACTER_STORE_NAME);
-  const sheetStore = tx.objectStore(CHARACTER_SHEET_STORE_NAME);
-  const actorStore = tx.objectStore(ACTOR_RESOLUTION_STORE_NAME);
-  const entityRequest = entityStore.get(params.entityId);
-  const charactersRequest = characterStore.getAll();
-  const sheetsRequest = sheetStore.getAll();
+}
 
-  try {
-    const [storedEntity, allCharacters, allSheets] = await Promise.all([
-      requestResult<WorldEntity | undefined>(entityRequest),
-      requestResult<Character[]>(charactersRequest),
-      requestResult<CharacterSheet[]>(sheetsRequest)
-    ]);
-    const entity = params.entityToCreate ?? storedEntity;
-    if (!entity || entity.id !== params.entityId || entity.projectId !== params.projectId) {
-      throw new Error('Choose a World Bible character from this project.');
-    }
-
-    const characters = allCharacters.filter((record) => record.projectId === params.projectId);
-    const sheets = allSheets.filter((record) => record.projectId === params.projectId);
-    const character =
-      params.item.recordType === 'character'
-        ? characters.find((record) => record.id === params.item.recordId)
-        : undefined;
-    const sourceSheet =
-      params.item.recordType === 'sheet'
-        ? sheets.find((record) => record.id === params.item.recordId)
-        : undefined;
-    if (params.item.recordType === 'character' && !character) {
-      throw new Error('The legacy character capability record no longer exists.');
-    }
-    if (params.item.recordType === 'sheet' && !sourceSheet) {
-      throw new Error('The legacy character sheet no longer exists.');
-    }
-
-    const familyCharacter = character ?? (
-      sourceSheet?.characterId
-        ? characters.find((record) => record.id === sourceSheet.characterId)
-        : undefined
-    );
-    const familySheets = sheets.filter(
-      (sheet) =>
-        sheet.id === sourceSheet?.id ||
-        (familyCharacter !== undefined && sheet.characterId === familyCharacter.id)
-    );
-    if (familySheets.length > 1) {
-      throw new Error(
-        `"${entity.name}" has multiple legacy sheets in this record family. Keep one sheet before linking to canon.`
-      );
-    }
-    const existingEntitySheet = sheets.find(
-      (sheet) =>
-        sheet.characterEntityId === params.entityId &&
-        !familySheets.some((familySheet) => familySheet.id === sheet.id)
-    );
-    if (existingEntitySheet && familySheets.length > 0) {
-      throw new Error(
-        `"${entity.name}" already has a different character sheet. Resolve that collision before linking.`
-      );
-    }
-
-    if (params.entityToCreate) entityStore.put(params.entityToCreate);
-    const resolvedAt = params.resolvedAt ?? Date.now();
-    if (familyCharacter) {
-      characterStore.put({...familyCharacter, entityId: params.entityId, updatedAt: resolvedAt});
-      const actorResolution: ActorResolution = {
-        id: `${params.projectId}:character:${familyCharacter.id}`,
-        projectId: params.projectId,
-        legacyActorId: familyCharacter.id,
-        legacyActorType: 'character',
-        entityId: params.entityId,
-        createdAt: resolvedAt
-      };
-      actorStore.put(actorResolution);
-    }
-    familySheets.forEach((sheet) => {
-      sheetStore.put({...sheet, characterEntityId: params.entityId, updatedAt: resolvedAt});
-      const actorResolution: ActorResolution = {
-        id: `${params.projectId}:sheet:${sheet.id}`,
-        projectId: params.projectId,
-        legacyActorId: sheet.id,
-        legacyActorType: 'sheet',
-        entityId: params.entityId,
-        createdAt: resolvedAt
-      };
-      actorStore.put(actorResolution);
-    });
-
-    await new Promise<void>((resolve, reject) => {
-      tx.oncomplete = () => resolve();
-      tx.onerror = () => reject(tx.error);
-      tx.onabort = () => reject(tx.error);
-    });
-    emitIdentityChanges();
-  } catch (error) {
-    try {
-      tx.abort();
-    } catch {
-      // The transaction may already have aborted because a request failed.
-    }
-    throw error;
+/**
+ * The writes that link a legacy character or sheet family to a World Bible
+ * character, decided from the records read inside the resolution transaction.
+ * Throws (aborting the transaction) when the link would be unsafe.
+ */
+export function planCharacterIdentityResolution(
+  params: CharacterIdentityResolutionParams,
+  snapshot: CharacterIdentityResolutionSnapshot
+): CharacterIdentityResolutionWrite[] {
+  const {storedEntity, allCharacters, allSheets} = snapshot;
+  const writes: CharacterIdentityResolutionWrite[] = [];
+  const entity = params.entityToCreate ?? storedEntity;
+  if (!entity || entity.id !== params.entityId || entity.projectId !== params.projectId) {
+    throw new Error('Choose a World Bible character from this project.');
   }
+
+  const characters = allCharacters.filter((record) => record.projectId === params.projectId);
+  const sheets = allSheets.filter((record) => record.projectId === params.projectId);
+  const character =
+    params.item.recordType === 'character'
+      ? characters.find((record) => record.id === params.item.recordId)
+      : undefined;
+  const sourceSheet =
+    params.item.recordType === 'sheet'
+      ? sheets.find((record) => record.id === params.item.recordId)
+      : undefined;
+  if (params.item.recordType === 'character' && !character) {
+    throw new Error('The legacy character capability record no longer exists.');
+  }
+  if (params.item.recordType === 'sheet' && !sourceSheet) {
+    throw new Error('The legacy character sheet no longer exists.');
+  }
+
+  const familyCharacter = character ?? (
+    sourceSheet?.characterId
+      ? characters.find((record) => record.id === sourceSheet.characterId)
+      : undefined
+  );
+  const familySheets = sheets.filter(
+    (sheet) =>
+      sheet.id === sourceSheet?.id ||
+      (familyCharacter !== undefined && sheet.characterId === familyCharacter.id)
+  );
+  if (familySheets.length > 1) {
+    throw new Error(
+      `"${entity.name}" has multiple legacy sheets in this record family. Keep one sheet before linking to canon.`
+    );
+  }
+  const existingEntitySheet = sheets.find(
+    (sheet) =>
+      sheet.characterEntityId === params.entityId &&
+      !familySheets.some((familySheet) => familySheet.id === sheet.id)
+  );
+  if (existingEntitySheet && familySheets.length > 0) {
+    throw new Error(
+      `"${entity.name}" already has a different character sheet. Resolve that collision before linking.`
+    );
+  }
+
+  if (params.entityToCreate) writes.push({kind: 'entity', record: params.entityToCreate});
+  const resolvedAt = params.resolvedAt ?? Date.now();
+  if (familyCharacter) {
+    writes.push({
+      kind: 'character',
+      record: {...familyCharacter, entityId: params.entityId, updatedAt: resolvedAt}
+    });
+    const actorResolution: ActorResolution = {
+      id: `${params.projectId}:character:${familyCharacter.id}`,
+      projectId: params.projectId,
+      legacyActorId: familyCharacter.id,
+      legacyActorType: 'character',
+      entityId: params.entityId,
+      createdAt: resolvedAt
+    };
+    writes.push({kind: 'actorResolution', record: actorResolution});
+  }
+  familySheets.forEach((sheet) => {
+    writes.push({
+      kind: 'sheet',
+      record: {...sheet, characterEntityId: params.entityId, updatedAt: resolvedAt}
+    });
+    const actorResolution: ActorResolution = {
+      id: `${params.projectId}:sheet:${sheet.id}`,
+      projectId: params.projectId,
+      legacyActorId: sheet.id,
+      legacyActorType: 'sheet',
+      entityId: params.entityId,
+      createdAt: resolvedAt
+    };
+    writes.push({kind: 'actorResolution', record: actorResolution});
+  });
+  return writes;
+}
+
+export async function resolveCharacterIdentity(params: CharacterIdentityResolutionParams): Promise<void> {
+  await applyCharacterIdentityResolution(params.entityId, (snapshot) =>
+    planCharacterIdentityResolution(params, snapshot)
+  );
+  emitIdentityChanges();
 }

@@ -6,7 +6,7 @@ import type {
   EntityCategory,
   WorldEntity
 } from '../../entityTypes';
-import {CHARACTER_SHEET_STORE_NAME, openDb} from '../../db';
+import {CHARACTER_SHEET_STORE_NAME, openDb} from '../storage/db';
 import {
   classifyCharacterIdentities,
   createCharacterLinkResolver,
@@ -17,7 +17,7 @@ import {
   getCharacterIdentityResolutionKey,
   resolveCharacterIdentity
 } from './characterIdentityResolution';
-import {getCharacterSheet} from './characterSheetService';
+import {getCharacterSheet} from '../storage';
 
 const category = (overrides: Partial<EntityCategory> = {}): EntityCategory => ({
   id: 'characters',

@@ -1,6 +1,6 @@
 import type {WritingDocument} from '../../entityTypes';
 import {htmlToPlainText} from '../../utils/textHelpers';
-import type {ProjectReviewRun, StoredSceneReview} from './projectReviewRunStorage';
+import type {ProjectReviewRun, StoredSceneReview} from '../storage';
 import type {ConsistencyReviewItem} from './reviewReadiness';
 import type {KnownEntityRef} from './types';
 

@@ -1,9 +1,13 @@
 import {useCallback, useState} from 'react';
 import type {Dispatch, SetStateAction} from 'react';
-import {saveEntity, deleteEntity} from '../entityStorage';
+import {
+  saveEntity,
+  deleteEntity,
+  deleteAliasesForEntity,
+  replaceAliasesForEntity,
+  type ConsistencyAlias
+} from '../services/storage';
 import type {EntityCategory, Project, WorldEntity} from '../entityTypes';
-import type {ConsistencyAlias} from '../services/consistency';
-import {deleteAliasesForEntity, replaceAliasesForEntity} from '../services/consistency';
 import {buildEntityMergePlan, getAliasConversionPlan} from '../services/worldBible/worldBibleCanonicalization';
 import {getCategorySlug} from '../services/worldBible/worldBibleEntityPlans';
 import type {RAGProvider} from '../services/rag/RAGService';

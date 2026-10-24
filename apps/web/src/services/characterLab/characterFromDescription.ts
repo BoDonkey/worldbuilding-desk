@@ -14,7 +14,7 @@ import {
   isCharacterCategory,
   normalizeCharacterIdentityName
 } from '../characters/characterIdentity';
-import type {ConsistencyAlias} from '../consistency/aliasStorage';
+import type {ConsistencyAlias} from '../storage';
 import {convertPlainTextToRichHtml} from '../worldBible/worldBibleEntityHelpers';
 
 export const CHARACTER_PROFILE_FACT_TYPES = [

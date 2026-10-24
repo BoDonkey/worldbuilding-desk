@@ -5,7 +5,7 @@ import type {
   WorldCanvasLensKind,
   WorldEntity
 } from '../../entityTypes';
-import type {ConsistencyAlias} from '../consistency/aliasStorage';
+import type {ConsistencyAlias} from '../storage';
 import {LENS_DEFINITIONS} from './worldCanvasService';
 
 /**

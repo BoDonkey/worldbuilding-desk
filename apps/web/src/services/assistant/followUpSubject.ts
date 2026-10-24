@@ -1,6 +1,5 @@
 import type {WorldEntity} from '../../entityTypes';
-import {getEntitiesByProject} from '../../entityStorage';
-import {getAliasesByProject, type ConsistencyAlias} from '../consistency/aliasStorage';
+import {getEntitiesByProject, getAliasesByProject, type ConsistencyAlias} from '../storage';
 import {findTextMatches, type TextMatchPattern} from '../consistency/textMatcher';
 import {isContinuationRequest} from './factualQuestionBoundary';
 

@@ -1,8 +1,10 @@
 import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import type {CanonicalFact, Character, StateMutationEvent, StoredRuleset, WritingDocument} from '../entityTypes';
-import {getCanonicalFactsByProject} from '../services/lore/loreFactStorage';
-import {getCharactersByProject} from '../characterStorage';
-import {getAliasesByProject} from '../services/consistency/aliasStorage';
+import {
+  getCanonicalFactsByProject,
+  getCharactersByProject,
+  getAliasesByProject
+} from '../services/storage';
 import {
   buildAbandonedProgressionMethodCandidates,
   buildUnusedSolutionCandidates,

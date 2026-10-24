@@ -180,10 +180,18 @@ boundary).
 
 ## Persistence
 
-Primary project data is stored locally through IndexedDB-backed services.
-Application and workspace UI preferences use Zustand with persistence where
-appropriate. Components should not introduce new direct persistence paths when
-an owning service or store already exists.
+Primary project data is stored locally in IndexedDB, reached only through
+`apps/web/src/services/storage/` (Slice 3.23a). The connection (`db.ts`, store
+names, upgrades), the shared request helpers (`idbRequest.ts`), and every
+repository (`repositories/`) live there. The rulesets database (`worldbuilding-desk`)
+is opened by `repositories/rulesetStorage.ts`. Code outside the folder imports its
+index, which does not export `openDb`; ESLint rejects deep imports into the
+folder and any use of `indexedDB` elsewhere (tests may reach in to seed
+databases). Services that need several stores at once either call a storage
+function that takes a pure planner (character identity resolution) or use
+`runProjectWriteTransaction`. Application and workspace UI preferences use
+Zustand with persistence where appropriate. Components should not introduce new
+direct persistence paths when an owning service or store already exists.
 
 A change that spans several stores and must not be left half-done — accepting
 or removing canon is the main case — commits through
@@ -316,11 +324,11 @@ without turning cancelled or unverified code into a passing check.
 
 ## Current Architecture Risks
 
-1. Persistence has no single owning boundary. About 28 modules open
-   IndexedDB directly; root-level repositories are imported by routes and
-   hooks; and project-scoped reads load every project's records and filter
-   in memory. The 5.15 vault needs one boundary to encrypt through. Slices
-   3.22–3.23c consolidate it before 5.15.
+1. Persistence now has one boundary (`services/storage/`, Slice 3.23a), but
+   project-scoped reads still load every project's records and filter in
+   memory (3.23b), and some author-typed drafts and preferences still sit in
+   plaintext `localStorage` (3.23c). The 5.15 vault encrypts through the
+   storage boundary, so both must land before it.
 2. Slice 3.22 moved the remaining hook-held domain logic into tested
    services: World Bible draft, classification, and review-queue planning
    (`services/worldBible/worldBibleEntityPlans.ts`) and Workspace stat-block

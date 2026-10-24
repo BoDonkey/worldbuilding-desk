@@ -3,7 +3,7 @@ import {beforeEach, describe, expect, it, vi} from 'vitest';
 import {renderRoute, seedRouteTestState} from '../test/renderRoute';
 import {Navigation} from './Navigation';
 
-vi.mock('../services/compendium', () => ({
+vi.mock('../services/storage/repositories/compendiumStorage', () => ({
   getCompendiumEntriesByProject: vi.fn(async () => [
     {needsCompletion: true},
     {needsCompletion: true},

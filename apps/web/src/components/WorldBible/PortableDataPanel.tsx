@@ -7,9 +7,12 @@ import type {
   Project,
   WorldEntity
 } from '../../entityTypes';
-import type {ConsistencyAlias} from '../../services/consistency';
-import {saveEntity} from '../../entityStorage';
-import {replaceLoreDocumentLinks, saveLoreDocument} from '../../loreStorage';
+import {
+  saveEntity,
+  replaceLoreDocumentLinks,
+  saveLoreDocument,
+  type ConsistencyAlias
+} from '../../services/storage';
 import {summarizeContent} from '../../services/lore/sourceNoteCapture';
 import {
   downloadPortableDataZip,

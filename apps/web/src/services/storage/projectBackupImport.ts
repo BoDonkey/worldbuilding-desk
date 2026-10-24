@@ -15,7 +15,7 @@ import type {
   WorldEntity,
   WritingDocument,
 } from '../../entityTypes';
-import type {ConsistencyAlias} from '../consistency/aliasStorage';
+import type {ConsistencyAlias} from './repositories/aliasStorage';
 import type {
   ActorResolution,
   CharacterIdentityMigrationReport
@@ -51,9 +51,10 @@ import {
   WRITING_STORE_NAME,
   ZONE_AFFINITY_PROFILE_STORE_NAME,
   ZONE_AFFINITY_PROGRESS_STORE_NAME
-} from '../../db';
-import {saveProject, getProjectById, getAllProjects} from '../../projectStorage';
-import {getRulesetByProjectId, saveRuleset, deleteRuleset} from '../rules/rulesetService';
+} from './db';
+import {saveProject, getProjectById, getAllProjects} from './repositories/projectStorage';
+import {saveRuleset, deleteRuleset} from '../rules/rulesetService';
+import {getRulesetByProjectId} from './repositories/rulesetStorage';
 import type {ProjectSnapshot} from './projectSnapshotService';
 import {migrateProjectSnapshotPayload} from './projectSnapshotMigrations';
 import {
@@ -62,6 +63,7 @@ import {
 } from './projectSchemaMigrations';
 import {extractSingleFileZip} from '../../utils/unzip';
 import {migrateWorldCanvasDocument} from '../worldBible/worldCanvasService';
+import {requestToPromise} from './idbRequest';
 
 export type ProjectBackupImportMode = 'new' | 'merge';
 
@@ -85,13 +87,6 @@ export interface ProjectBackupImportResult {
   projectId: string;
   projectName: string;
   mode: ProjectBackupImportMode;
-}
-
-function requestToPromise<T>(request: IDBRequest<T>): Promise<T> {
-  return new Promise((resolve, reject) => {
-    request.onsuccess = () => resolve(request.result);
-    request.onerror = () => reject(request.error);
-  });
 }
 
 async function getProjectRecords<T extends {projectId: string}>(

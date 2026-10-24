@@ -14,28 +14,24 @@ import type {
   WritingDocument,
   WorldEntity
 } from '../entityTypes';
-import {getCharactersByProject} from '../characterStorage';
-import {getEntitiesByProject} from '../entityStorage';
 import {
+  getCharactersByProject,
+  getEntitiesByProject,
   deleteLoreDocument,
   getLoreDocumentLinksByProject,
   getLoreDocumentsByProject,
   replaceLoreDocumentLinks,
-  saveLoreDocument
-} from '../loreStorage';
-import {getDocumentsByProject} from '../writingStorage';
-import {parseLoreImport} from '../services/lore/loreImport';
-import {
+  saveLoreDocument,
+  getDocumentsByProject,
   getCanonicalFactsByProject,
   getLoreFactProposalsByProject,
   replaceLoreFactProposals,
-  saveLoreFactProposal
-} from '../services/lore/loreFactStorage';
-import {
+  saveLoreFactProposal,
   getLoreEntityProposalsByProject,
   replaceLoreEntityProposals,
   saveLoreEntityProposal
-} from '../services/lore/loreEntityProposalStorage';
+} from '../services/storage';
+import {parseLoreImport} from '../services/lore/loreImport';
 import {extractLoreFactProposals} from '../services/lore/loreFactExtraction';
 import {extractLoreEntityProposals} from '../services/lore/loreEntityExtraction';
 import {

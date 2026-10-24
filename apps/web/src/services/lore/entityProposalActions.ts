@@ -13,16 +13,21 @@ import {
   CONSISTENCY_ALIAS_STORE_NAME,
   ENTITY_STORE_NAME,
   LORE_DOCUMENT_LINK_STORE_NAME,
-  LORE_ENTITY_PROPOSAL_STORE_NAME
-} from '../../db';
-import {getCharactersByProject, putCharacterInTransaction} from '../../characterStorage';
-import {getCategoriesByProject, putCategoryInTransaction} from '../../categoryStorage';
-import {getEntitiesByProject, putEntityInTransaction} from '../../entityStorage';
-import {replaceLoreDocumentLinksInTransaction} from '../../loreStorage';
+  LORE_ENTITY_PROPOSAL_STORE_NAME,
+  getCharactersByProject,
+  putCharacterInTransaction,
+  getCategoriesByProject,
+  putCategoryInTransaction,
+  getEntitiesByProject,
+  putEntityInTransaction,
+  replaceLoreDocumentLinksInTransaction,
+  getAliasesByProject,
+  planAliasSave,
+  putAliasInTransaction,
+  runProjectWriteTransaction,
+  putLoreEntityProposalInTransaction
+} from '../storage';
 import {planCharacterCanonIntake} from '../characters/characterIntakeService';
-import {getAliasesByProject, planAliasSave, putAliasInTransaction} from '../consistency/aliasStorage';
-import {runProjectWriteTransaction} from '../storage/projectWriteTransaction';
-import {putLoreEntityProposalInTransaction} from './loreEntityProposalStorage';
 
 const CATEGORY_CONFIG: Record<
   Exclude<LoreEntityKind, 'character'>,

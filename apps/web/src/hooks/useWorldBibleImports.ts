@@ -1,8 +1,7 @@
 import {useCallback, useEffect, useMemo, useState} from 'react';
 import type {ChangeEvent, Dispatch, SetStateAction} from 'react';
 import type {EntityCategory, WorldEntity} from '../entityTypes';
-import {saveEntity} from '../entityStorage';
-import {saveCategory} from '../categoryStorage';
+import {saveEntity, saveCategory} from '../services/storage';
 import {
   convertPlainTextToRichHtml,
   normalizeRichTextValue

@@ -1,9 +1,11 @@
 import type {Project, ProjectMode, ProjectSettings} from '../../entityTypes';
-import {saveProject} from '../../projectStorage';
-import {createDefaultSettings} from '../../settingsStorage';
+import {
+  saveProject,
+  createDefaultSettings,
+  saveWritingDocument,
+  saveLoreDocument
+} from '../storage';
 import {getDefaultFeatureToggles} from '../../projectMode';
-import {saveWritingDocument} from '../../writingStorage';
-import {saveLoreDocument} from '../../loreStorage';
 import {SAMPLE_CHAPTERS, SAMPLE_LORE_DOCUMENTS, SAMPLE_PROJECT_NAME} from '../../fixtures/sampleProjectContent';
 import {markProjectForOnboardingGuide} from './onboardingGuide';
 

@@ -1,7 +1,7 @@
 import type {ActorResolution} from '../characters/characterIdentity';
 import {replayCharacterState} from '../state/stateReplay';
 import type {CharacterSheet, StateMutationEvent, StoredRuleset, WritingDocument} from '../../entityTypes';
-import {sortWritingDocuments} from '../../writingStorage';
+import {sortWritingDocuments} from '../storage';
 import {hashSceneContent, type PendingPositionedChange, type RosterPlanResult} from './sceneRosterMutationTypes';
 import type {StateMutationTextAnchor} from '../state/stateMutationAnchor';
 export function planPositionedChange({

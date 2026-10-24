@@ -7,10 +7,14 @@ import type {
   StoredRuleset,
   WorldEntity
 } from '../entityTypes';
-import {getCategoriesByProject, initializeDefaultCategories} from '../categoryStorage';
-import {saveEntity} from '../entityStorage';
-import type {ConsistencyAlias, GuardrailIssue} from '../services/consistency';
-import {saveAlias} from '../services/consistency';
+import {
+  getCategoriesByProject,
+  initializeDefaultCategories,
+  saveEntity,
+  saveAlias,
+  type ConsistencyAlias
+} from '../services/storage';
+import type {GuardrailIssue} from '../services/consistency';
 import {buildCharacterCaptureAliasList} from '../services/worldBible/worldBibleCanonicalization';
 import {isCharacterCategory} from '../services/characters/characterIdentity';
 import {

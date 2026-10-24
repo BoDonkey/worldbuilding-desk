@@ -1,6 +1,9 @@
-import {saveEntity} from '../../entityStorage';
-import {saveLoreDocument, saveLoreDocumentLinks} from '../../loreStorage';
-import {saveLoreFactProposal} from '../lore/loreFactStorage';
+import {
+  saveEntity,
+  saveLoreDocument,
+  saveLoreDocumentLinks,
+  saveLoreFactProposal
+} from '../storage';
 import type {RAGProvider} from '../rag/RAGService';
 import {buildWorldBibleEntityContent} from '../worldBible/worldBibleEntityHelpers';
 import type {CharacterFromDescriptionRecords} from './characterFromDescription';

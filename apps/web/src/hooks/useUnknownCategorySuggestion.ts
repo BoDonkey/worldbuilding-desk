@@ -1,7 +1,7 @@
 import {useCallback} from 'react';
 import type {Dispatch, SetStateAction} from 'react';
 import type {EntityCategory, Project, WritingDocument} from '../entityTypes';
-import {saveCategory} from '../categoryStorage';
+import {saveCategory} from '../services/storage';
 import type {GuardrailIssue} from '../services/consistency';
 import {canonicalizeUnknownSurface} from '../services/consistency/sceneReviewHelpers';
 import {

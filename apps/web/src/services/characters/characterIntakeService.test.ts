@@ -5,12 +5,12 @@ import type {
   EntityCategory,
   WorldEntity
 } from '../../entityTypes';
-import {validateCharacterWrite} from '../../characterStorage';
 import {
+  validateCharacterWrite,
   deriveCharacterSheetNames,
   findCharacterSheetCollisions,
   validateCharacterSheetWrite
-} from './characterSheetService';
+} from '../storage';
 import {planCharacterCanonIntake} from './characterIntakeService';
 
 const category = (

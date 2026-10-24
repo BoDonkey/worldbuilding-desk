@@ -5,7 +5,7 @@ import {
   saveScratchpad,
   SCRATCHPAD_APPENDED_EVENT,
   type ScratchpadAppendedDetail
-} from '../scratchpadStorage';
+} from '../services/storage';
 
 export type ScratchpadSaveStatus = 'idle' | 'loading' | 'saving' | 'saved' | 'error';
 

@@ -1,7 +1,7 @@
 import 'fake-indexeddb/auto';
 import {act, renderHook, waitFor} from '@testing-library/react';
 import {describe, expect, it} from 'vitest';
-import {appendToScratchpad, getScratchpadByProjectId, saveScratchpad} from '../scratchpadStorage';
+import {appendToScratchpad, getScratchpadByProjectId, saveScratchpad} from '../services/storage';
 import {useWorkspaceScratchpad} from './useWorkspaceScratchpad';
 
 const seed = (projectId: string, content: string) =>

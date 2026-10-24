@@ -31,8 +31,9 @@ import {
 } from '../services/state/stateMutationAnchor';
 import {
   invalidateStateMutationEventById,
-  saveStateMutationEvent
-} from '../services/state/stateMutationLedger';
+  saveStateMutationEvent,
+  sortWritingDocuments
+} from '../services/storage';
 import {
   replayCharacterState,
   validateStateMutationEventForRuleset
@@ -47,7 +48,6 @@ import {
   buildSceneRosterModel,
   buildSelectedSceneTimeline
 } from '../services/workspace/workspaceView';
-import {sortWritingDocuments} from '../writingStorage';
 import {describeError} from '../services/errors';
 
 export type {PendingPositionedChange, PendingInventoryCapture} from '../services/workspace/sceneRosterMutationTypes';

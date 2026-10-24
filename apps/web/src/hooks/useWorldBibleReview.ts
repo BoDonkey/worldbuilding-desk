@@ -1,11 +1,7 @@
 import {useMemo} from 'react';
 import type {EntityCategory, WorldEntity} from '../entityTypes';
-import {
-  buildWorldReviewQueue,
-  type ConsistencyAlias,
-  type ReviewQueueItem,
-  type ReviewQueueReason
-} from '../services/consistency';
+import {buildWorldReviewQueue, type ReviewQueueItem, type ReviewQueueReason} from '../services/consistency';
+import {type ConsistencyAlias} from '../services/storage';
 import {
   buildPotentialEntityMatches,
   buildReviewEntityInsightsById,

@@ -6,7 +6,7 @@ import {
   type SetStateAction
 } from 'react';
 import type {EntityCategory, WorldEntity} from '../entityTypes';
-import {saveCategory} from '../categoryStorage';
+import {saveCategory} from '../services/storage';
 import type {WorldBibleImportDraft} from './useWorldBibleImports';
 import {
   ALTERNATIVE_NAMES_KEY,

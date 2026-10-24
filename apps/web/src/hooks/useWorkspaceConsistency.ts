@@ -13,7 +13,8 @@ import type {
   WritingDocument
 } from '../entityTypes';
 import type {RAGProvider} from '../services/rag/RAGService';
-import type {ConsistencyAlias, GuardrailIssue} from '../services/consistency';
+import type {GuardrailIssue} from '../services/consistency';
+import type {ConsistencyAlias} from '../services/storage';
 import type {WorldEngine} from '../services/worldEngine';
 import type {ShodhMemoryProvider} from '../services/shodh/ShodhMemoryService';
 import type {WorkspaceAnnotationSummary} from '../services/consistency/workspaceAnnotations';

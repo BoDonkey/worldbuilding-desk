@@ -3,10 +3,12 @@ import {beforeAll, beforeEach, describe, expect, it} from 'vitest';
 import {renderRoute, seedRouteTestState} from '../test/renderRoute';
 import {useAppStore} from '../store/appStore';
 import {useWorkspaceUiStore} from '../store/workspaceUiStore';
-import {saveEntity} from '../entityStorage';
-import {saveCharacterSheet} from '../services/characters/characterSheetService';
-import {saveWritingDocument} from '../writingStorage';
-import {saveChapterCard} from '../corkboardStorage';
+import {
+  saveEntity,
+  saveCharacterSheet,
+  saveWritingDocument,
+  saveChapterCard
+} from '../services/storage';
 import type {CharacterSnapshot} from '../services/state/characterSnapshot';
 import {StatPinPanel} from './StatPinPanel';
 

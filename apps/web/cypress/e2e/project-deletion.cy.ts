@@ -1,4 +1,4 @@
-import {DB_NAME, DB_VERSION, PROJECT_SCOPED_STORE_NAMES, PROJECT_MIGRATION_BACKUP_STORE_NAME} from '../../src/db';
+import {DB_NAME, DB_VERSION, PROJECT_SCOPED_STORE_NAMES, PROJECT_MIGRATION_BACKUP_STORE_NAME} from '../../src/services/storage/db';
 
 const projectId = 'cypress-project-1';
 const projectName = 'Cypress Smoke Project';

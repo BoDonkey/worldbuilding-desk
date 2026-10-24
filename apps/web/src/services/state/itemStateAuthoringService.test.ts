@@ -11,7 +11,7 @@ import {
   ENTITY_STORE_NAME,
   openDb,
   STATE_MUTATION_EVENT_STORE_NAME
-} from '../../db';
+} from '../storage/db';
 import {
   applyItemStateAuthoringPlan,
   resolveReusableItem

@@ -8,11 +8,7 @@ import type {
   ZoneAffinityProfile,
   SettlementState
 } from '../../entityTypes';
-import {
-  upsertCompendiumEntryFromEntity,
-  upsertZoneAffinityProfile,
-  updateSettlementLocation
-} from '../../services/compendium';
+import {upsertCompendiumEntryFromEntity, upsertZoneAffinityProfile, updateSettlementLocation} from '../../services/storage';
 import {getDefaultActions, toBiomeKey} from '../../services/compendium/compendiumFormValues';
 import {describeError} from '../../services/errors';
 import type {CompendiumTab} from './constants';

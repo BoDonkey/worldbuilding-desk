@@ -1,6 +1,6 @@
 import {describe, expect, it} from 'vitest';
 import {buildWorldReviewQueue} from './reviewQueue';
-import type {ConsistencyAlias} from './aliasStorage';
+import type {ConsistencyAlias} from '../storage';
 import type {WorldEntity} from '../../entityTypes';
 
 const makeEntity = (overrides: Partial<WorldEntity>): WorldEntity => ({

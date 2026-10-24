@@ -1,4 +1,4 @@
-import { saveGuardrailEvent, saveProposal } from './consistencyStorage';
+import { saveGuardrailEvent, saveProposal } from '../storage';
 import type {
   ExtractProposalInput,
   ExtractedProposal,

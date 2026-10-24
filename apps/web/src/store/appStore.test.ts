@@ -1,17 +1,17 @@
 import {describe, expect, it, vi} from 'vitest';
 import type {Project, ProjectSettings} from '../entityTypes';
 
-vi.mock('../settingsStorage', () => ({
+vi.mock('../services/storage/repositories/settingsStorage', () => ({
   getOrCreateSettings: vi.fn(),
   saveProjectSettings: vi.fn(async (settings: ProjectSettings) => settings)
 }));
 
-vi.mock('../projectStorage', () => ({
+vi.mock('../services/storage/repositories/projectStorage', () => ({
   getProjectById: vi.fn()
 }));
 
-const {getOrCreateSettings} = await import('../settingsStorage');
-const {getProjectById} = await import('../projectStorage');
+const {getOrCreateSettings} = await import('../services/storage/repositories/settingsStorage');
+const {getProjectById} = await import('../services/storage/repositories/projectStorage');
 const {useAppStore} = await import('./appStore');
 
 const mockedGetOrCreateSettings = vi.mocked(getOrCreateSettings);
@@ -92,7 +92,7 @@ describe('useAppStore', () => {
   it('keeps the newest project settings when saves finish out of order', async () => {
     useAppStore.setState(useAppStore.getInitialState(), true);
     useAppStore.setState({activeProject: makeProject('typing'), projectSettings: makeSettings('typing')});
-    const {saveProjectSettings: persist} = await import('../settingsStorage');
+    const {saveProjectSettings: persist} = await import('../services/storage/repositories/settingsStorage');
     const older = createDeferred<void>();
     vi.mocked(persist).mockImplementationOnce(() => older.promise);
 

@@ -12,11 +12,11 @@ import {
   PROJECT_MIGRATION_BACKUP_STORE_NAME,
   PROJECT_SCOPED_STORE_NAMES,
   PROJECT_STORE_NAME
-} from '../../db';
+} from './db';
 import {
   getRulesetByProjectId,
   replaceRulesetSnapshot
-} from '../rules/rulesetService';
+} from './repositories/rulesetStorage';
 import {
   createProjectMigrationBackup,
   ensureProjectStorageCurrent,

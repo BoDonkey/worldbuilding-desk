@@ -1,5 +1,5 @@
 import type {LoreDocumentLink} from '../../entityTypes';
-import {getLoreDocumentLinksByProject} from '../../loreStorage';
+import {getLoreDocumentLinksByProject} from '../storage';
 import type {RAGSearchResult} from '../rag/types';
 import type {LLMContextChunk} from './types';
 

@@ -12,28 +12,24 @@ import {
   CHARACTER_STORE_NAME,
   CONSISTENCY_ALIAS_STORE_NAME,
   ENTITY_STORE_NAME,
-  LORE_FACT_PROPOSAL_STORE_NAME
-} from '../../db';
-import {getCategoriesByProject} from '../../categoryStorage';
-import {getCharactersByProject, putCharacterInTransaction} from '../../characterStorage';
-import {isCharacterCategory} from '../characters/characterIdentity';
-import {getEntitiesByProject, putEntityInTransaction} from '../../entityStorage';
-import {
+  LORE_FACT_PROPOSAL_STORE_NAME,
+  getCategoriesByProject,
+  getCharactersByProject,
+  putCharacterInTransaction,
+  getEntitiesByProject,
+  putEntityInTransaction,
   deleteAliasInTransaction,
   getAliasesByProject,
   planAliasSave,
-  putAliasInTransaction
-} from '../consistency/aliasStorage';
-import type {ConsistencyAlias} from '../consistency/aliasStorage';
-import {
+  putAliasInTransaction,
   runProjectWriteTransaction,
-  type ProjectWriteTransaction
-} from '../storage/projectWriteTransaction';
-import {
+  type ProjectWriteTransaction,
   deleteCanonicalFactInTransaction,
   putCanonicalFactInTransaction,
-  putLoreFactProposalInTransaction
-} from './loreFactStorage';
+  putLoreFactProposalInTransaction,
+  type ConsistencyAlias
+} from '../storage';
+import {isCharacterCategory} from '../characters/characterIdentity';
 import type {ShodhMemoryProvider} from '../shodh/ShodhMemoryService';
 import {
   formatCanonicalFactValidity,

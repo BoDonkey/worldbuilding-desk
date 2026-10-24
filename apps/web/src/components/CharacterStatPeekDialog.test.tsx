@@ -2,8 +2,7 @@ import {fireEvent, screen, waitFor, within} from '@testing-library/react';
 import {afterEach, beforeAll, beforeEach, describe, expect, it} from 'vitest';
 import {renderRoute, seedRouteTestState} from '../test/renderRoute';
 import {useAppStore} from '../store/appStore';
-import {saveCharacterSheet} from '../services/characters/characterSheetService';
-import {saveEntity} from '../entityStorage';
+import {saveCharacterSheet, saveEntity} from '../services/storage';
 import {
   CHARACTER_STAT_PEEK_EVENT,
   type CharacterStatPeekRequestDetail

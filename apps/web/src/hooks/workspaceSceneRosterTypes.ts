@@ -11,7 +11,7 @@ import type {
   WritingDocument
 } from '../entityTypes';
 import type {ActorResolution} from '../services/characters/characterIdentity';
-import type {ConsistencyAlias} from '../services/consistency';
+import type {ConsistencyAlias} from '../services/storage';
 import type {CharacterRuntimeModifiers} from '../services/compendium';
 import type {EditorTextSnapshot, StateMutationTextAnchor} from '../services/state/stateMutationAnchor';
 import type {SceneRosterOverrides} from '../services/workspace/sceneRoster';
