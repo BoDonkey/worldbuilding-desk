@@ -18,7 +18,8 @@ import type {
 } from '../../entityTypes';
 import type {ConsistencyAlias} from './repositories/aliasStorage';
 import {mechanicsDraftId} from './repositories/mechanicsDraftStorage';
-import {assertNoProjectBackupCollisions} from './projectBackupCollisions';
+import {assertNoProjectBackupCollisions, findProjectBackupCollisions} from './projectBackupCollisions';
+import {collectImportRecordIds, remapImportedSnapshot, stableImportId} from './projectBackupIdRemap';
 import type {
   ActorResolution,
   CharacterIdentityMigrationReport
@@ -220,18 +221,24 @@ function rewriteConsistencyAliases(
   records: ConsistencyAlias[],
   projectId: string
 ): ConsistencyAlias[] {
-  return records.map((record) => ({
-    ...record,
-    id: `${projectId}:alias:${record.id}`,
-    projectId
-  }));
+  // A restore keeps the project's own ids, so it updates in place. Ids from an
+  // earlier import already carry a project prefix; keep only the alias's own id
+  // so they do not keep growing.
+  const ALIAS_MARK = ':alias:';
+  return records.map((record) => {
+    if (record.projectId === projectId) return record;
+    const mark = record.id.lastIndexOf(ALIAS_MARK);
+    const ownId = mark >= 0 ? record.id.slice(mark + ALIAS_MARK.length) : record.id;
+    return {...record, id: `${projectId}${ALIAS_MARK}${ownId}`, projectId};
+  });
 }
 
 function rewriteActorResolutions(
   records: ActorResolution[],
   projectId: string
 ): ActorResolution[] {
-  return records.map((record) => ({
+  // A restore keeps the project's own ids, so it updates in place.
+  return records.map((record) => record.projectId === projectId ? record : ({
     ...record,
     id: `${projectId}:${record.legacyActorType}:${record.legacyActorId}`,
     projectId
@@ -242,7 +249,7 @@ function rewriteCharacterIdentityReports(
   records: CharacterIdentityMigrationReport[],
   projectId: string
 ): CharacterIdentityMigrationReport[] {
-  return records.map((record, index) => ({
+  return records.map((record, index) => record.projectId === projectId ? record : ({
     ...record,
     id: `${projectId}:character-identity-report:${record.generatedAt}:${index}`,
     projectId
@@ -524,14 +531,22 @@ export async function importProjectBackup(params: {
   mode: ProjectBackupImportMode;
   targetProjectId?: string;
 }): Promise<ProjectBackupImportResult> {
-  const snapshot = params.snapshot;
+  let snapshot = params.snapshot;
 
   let targetProjectId: string;
   let targetProjectName: string;
   if (params.mode === 'new') {
-    // Checked before the project record is written, so a refusal leaves nothing behind.
-    await assertNoProjectBackupCollisions({snapshot, mode: 'new', targetProjectId: null});
     targetProjectId = crypto.randomUUID();
+    // 3.24b: a new project gets new ids throughout, so it never shares a
+    // record with the project the backup came from.
+    snapshot = remapImportedSnapshot({
+      snapshot,
+      ids: collectImportRecordIds(snapshot.data),
+      targetProjectId
+    });
+    // Safety net (3.24a): refuse rather than overwrite another project's record.
+    // Checked before the project record is written, so a refusal leaves nothing behind.
+    await assertNoProjectBackupCollisions({snapshot, targetProjectId: null});
     const now = Date.now();
     targetProjectName = await uniqueProjectName(
       sanitizeImportedProjectName(snapshot.project.name)
@@ -555,7 +570,19 @@ export async function importProjectBackup(params: {
     }
     targetProjectId = existing.id;
     targetProjectName = existing.name;
-    await assertNoProjectBackupCollisions({snapshot, mode: 'merge', targetProjectId: existing.id});
+    // A merge keeps ids where it can. Ids that belong to another project get
+    // new ones derived from the target and the old id, so merging the same
+    // backup again updates the same records instead of adding copies.
+    const collisions = await findProjectBackupCollisions({snapshot, targetProjectId: existing.id});
+    if (collisions.ids.length > 0) {
+      snapshot = remapImportedSnapshot({
+        snapshot,
+        ids: collisions.ids,
+        targetProjectId: existing.id,
+        newId: (oldId) => stableImportId(`${existing.id}:${oldId}`)
+      });
+    }
+    await assertNoProjectBackupCollisions({snapshot, targetProjectId: existing.id});
   }
 
   let importedData = snapshot.data;

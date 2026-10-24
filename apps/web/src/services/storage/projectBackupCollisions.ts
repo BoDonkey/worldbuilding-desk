@@ -32,12 +32,13 @@ import {getProjectById} from './repositories/projectStorage';
 import {getRuleset} from './repositories/rulesetStorage';
 
 /*
- * Slice 3.24a guard. Import keeps each record's own id for the stores below,
- * changing only `projectId`. If such an id already belongs to another project
- * in this browser, writing it would move that record out of its project. So
- * import checks first and refuses rather than lose data. Restoring a backup
- * into the project it came from is fine: those ids already belong to the
- * target. 3.24b replaces this with id remapping.
+ * Slice 3.24a guard. For the stores below, a record is written under its own
+ * id. If that id already belongs to another project in this browser, the
+ * write would move the record out of its project. Since 3.24b, import first
+ * gives such records new ids (`projectBackupIdRemap.ts`), so this check is a
+ * safety net: it refuses, before any write, if a collision is still left.
+ * Restoring a backup into the project it came from is fine: those ids already
+ * belong to the target.
  *
  * Stores whose import builds ids from the target project id (scratchpad,
  * World Canvas, aliases, actor resolutions, identity reports, mechanics
@@ -80,6 +81,8 @@ export interface ProjectBackupCollisionReport {
   /** Records that importing would take away from another project. */
   recordCount: number;
   owners: ProjectBackupCollisionOwner[];
+  /** The incoming ids involved, for remapping (3.24b). */
+  ids: string[];
 }
 
 export class ProjectBackupCollisionError extends Error {
@@ -114,11 +117,13 @@ export async function findProjectBackupCollisions(params: {
     ? (await readProjectRecords<{id: string}>(SETTINGS_STORE_NAME, targetProjectId))[0]?.id ?? null
     : null;
   const counts = new Map<string | null, number>();
-  const note = (existing: unknown) => {
-    if (existing === undefined) return;
+  const ids = new Set<string>();
+  const noteFor = (id: string) => (existing: unknown) => {
+    if (existing === undefined || existing === null) return;
     const owner = ownerOf(existing);
     if (targetProjectId !== null && owner === targetProjectId) return;
     counts.set(owner, (counts.get(owner) ?? 0) + 1);
+    ids.add(id);
   };
 
   const db = await openDb();
@@ -133,16 +138,16 @@ export async function findProjectBackupCollisions(params: {
     const store = tx.objectStore(storeName);
     for (const record of records) {
       if (typeof record?.id !== 'string' || !record.id) continue;
-      reads.push(requestToPromise(store.get(record.id)).then(note));
+      reads.push(requestToPromise(store.get(record.id)).then(noteFor(record.id)));
     }
   }
   if (settingsId) {
-    reads.push(requestToPromise(tx.objectStore(SETTINGS_STORE_NAME).get(settingsId)).then(note));
+    reads.push(requestToPromise(tx.objectStore(SETTINGS_STORE_NAME).get(settingsId)).then(noteFor(settingsId)));
   }
   await Promise.all(reads);
 
   const rulesetId = snapshot.data.ruleset?.id;
-  if (typeof rulesetId === 'string' && rulesetId) note(await getRuleset(rulesetId) ?? undefined);
+  if (typeof rulesetId === 'string' && rulesetId) noteFor(rulesetId)(await getRuleset(rulesetId));
 
   const owners = await Promise.all(
     [...counts.entries()].map(async ([projectId, recordCount]) => ({
@@ -152,7 +157,7 @@ export async function findProjectBackupCollisions(params: {
     }))
   );
   owners.sort((a, b) => b.recordCount - a.recordCount);
-  return {recordCount: owners.reduce((sum, owner) => sum + owner.recordCount, 0), owners};
+  return {recordCount: owners.reduce((sum, owner) => sum + owner.recordCount, 0), owners, ids: [...ids]};
 }
 
 const quoteNames = (owners: ProjectBackupCollisionOwner[]): string => {
@@ -160,34 +165,39 @@ const quoteNames = (owners: ProjectBackupCollisionOwner[]): string => {
   return names.length <= 1 ? names.join('') : `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`;
 };
 
-/** Why the import is blocked, for the preview and (after "Nothing was imported.") the error. */
-export function describeProjectBackupCollisions(
+const recordsText = (count: number) => (count === 1 ? '1 record' : `${count} records`);
+
+/** The refusal, shown only if remapping left a collision. */
+export function describeProjectBackupCollisions(report: ProjectBackupCollisionReport): string {
+  return (
+    `${recordsText(report.recordCount)} would have overwritten records that belong to ` +
+    `${quoteNames(report.owners)}, so the import stopped before writing anything.`
+  );
+}
+
+/** For the preview (3.24b): the import makes copies and leaves the other project alone. */
+export function describeProjectBackupCopy(
   report: ProjectBackupCollisionReport,
   mode: 'new' | 'merge'
 ): string {
-  const records = report.recordCount === 1 ? '1 record' : `${report.recordCount} records`;
-  const action = mode === 'new' ? 'Importing it as a new project' : 'Merging it into this project';
-  const restore = report.owners.find((owner) => owner.projectName)?.projectName;
-  return (
-    `${records} in this backup already belong to ${quoteNames(report.owners)} ` +
-    `on this computer. ${action} would move them out of that project, because copying a project ` +
-    `within the same browser is not supported yet. Import this backup on another computer or ` +
-    `browser profile` +
-    (restore ? `, or merge it into “${restore}” to restore that project.` : '.')
-  );
+  const names = quoteNames(report.owners);
+  return mode === 'new'
+    ? `${names} is already in this browser. Importing creates an independent copy with new ` +
+        `record ids; ${names} is not changed.`
+    : `${recordsText(report.recordCount)} in this backup also belong to ${names}. They are ` +
+        `copied into this project with new ids; ${names} is not changed.`;
 }
 
 /** Throws `ProjectBackupCollisionError` when the import would take records from another project. */
 export async function assertNoProjectBackupCollisions(params: {
   snapshot: ProjectSnapshot;
-  mode: 'new' | 'merge';
   targetProjectId: string | null;
 }): Promise<void> {
   const report = await findProjectBackupCollisions(params);
   if (report.recordCount > 0) {
     throw new ProjectBackupCollisionError(
       report,
-      `Nothing was imported. ${describeProjectBackupCollisions(report, params.mode)}`
+      `Nothing was imported. ${describeProjectBackupCollisions(report)}`
     );
   }
 }

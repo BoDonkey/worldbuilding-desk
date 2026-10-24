@@ -1,6 +1,7 @@
 import 'fake-indexeddb/auto';
 import {describe, expect, it} from 'vitest';
 import {
+  assertNoProjectBackupCollisions,
   findProjectBackupCollisions,
   ID_PRESERVING_IMPORT_STORES,
   ProjectBackupCollisionError
@@ -15,7 +16,10 @@ import {getRuleset, putRulesetRecord} from './repositories/rulesetStorage';
 import {ENTITY_STORE_NAME, openDb, WRITING_STORE_NAME} from './db';
 import {transactionToPromise} from './idbRequest';
 
-/* Slice 3.24a: import must never take records away from another project. */
+/*
+ * Slice 3.24a guard. Since 3.24b import remaps ids first, so the guard is a
+ * safety net; these tests call it directly on a backup that was not remapped.
+ */
 
 async function seedProject(name: string): Promise<string> {
   const projectId = `guard-${crypto.randomUUID()}`;
@@ -49,34 +53,35 @@ const refusal = async (promise: Promise<unknown>): Promise<ProjectBackupCollisio
 };
 
 describe('backup import collision guard', () => {
-  it('refuses a new-project import in the browser the backup came from and writes nothing', async () => {
+  it('refuses a new-project write in the browser the backup came from', async () => {
     const sourceId = await seedProject('Ember Archive');
     const backup = await backupOf(sourceId);
     const projectCount = (await getAllProjects()).length;
 
-    const error = await refusal(importProjectBackup({snapshot: backup, mode: 'new'}));
+    const error = await refusal(assertNoProjectBackupCollisions({snapshot: backup, targetProjectId: null}));
 
     // Entity, scene, and settings all belong to the source.
-    expect(error.report).toEqual({
+    expect(error.report).toMatchObject({
       recordCount: 3,
       owners: [{projectId: sourceId, projectName: 'Ember Archive', recordCount: 3}]
     });
-    expect(error.message).toContain('Nothing was imported. 3 records in this backup already belong to “Ember Archive”');
-    expect(error.message).toContain('merge it into “Ember Archive” to restore that project');
+    expect(error.message).toBe(
+      'Nothing was imported. 3 records would have overwritten records that belong to “Ember Archive”, ' +
+      'so the import stopped before writing anything.'
+    );
     expect((await getAllProjects()).length).toBe(projectCount);
     await expectIntact(sourceId);
   });
 
-  it('refuses a merge into a different project and leaves both untouched', async () => {
+  it('refuses a merge write into a different project', async () => {
     const sourceId = await seedProject('Source');
     const otherId = await seedProject('Other');
     const backup = await backupOf(sourceId);
 
-    const error = await refusal(importProjectBackup({snapshot: backup, mode: 'merge', targetProjectId: otherId}));
+    const error = await refusal(assertNoProjectBackupCollisions({snapshot: backup, targetProjectId: otherId}));
 
     // The target has its own settings, which merge reuses, so only entity and scene collide.
     expect(error.report.recordCount).toBe(2);
-    expect(error.message).toContain('Merging it into this project would move them out of that project');
     await expectIntact(sourceId);
     await expectIntact(otherId);
   });
@@ -115,7 +120,8 @@ describe('backup import collision guard', () => {
       data: {...backup.data, ruleset: {...(await getRuleset('shared-ruleset'))!, projectId: freshId}}
     };
 
-    const error = await refusal(importProjectBackup({snapshot: withRuleset, mode: 'new'}));
+    const error = await refusal(assertNoProjectBackupCollisions({snapshot: withRuleset, targetProjectId: null}));
+    expect(error.report.ids).toEqual(['shared-ruleset']);
     expect(error.report.owners).toEqual([{projectId: sourceId, projectName: 'Rules owner', recordCount: 1}]);
     expect((await getRuleset('shared-ruleset'))?.projectId).toBe(sourceId);
   });

@@ -241,10 +241,18 @@ commit. Derived indexes (retrieval, memory) update after the commit and can
 be rebuilt; bookkeeping such as resolving a canon-decision cluster may follow
 as a separate step, because leaving it open is safe.
 
-Import keeps most record ids. Until slice 3.24b gives imported records new
-ids, `projectBackupCollisions.ts` refuses, before any write, an import that
-would overwrite a record belonging to another project in this browser (3.24a).
-Restoring a backup into the project it came from is allowed.
+Importing as a new project gives every record a new id
+(`projectBackupIdRemap.ts`, slice 3.24b), so a backup can be copied into the
+browser it came from without touching the source. One old-to-new map is built
+first, and every string in the backup is rewritten through it. References in
+any field follow, including fields added later. Ids the app derives keep their
+shape: `settlement:<project>:global` gets the new project id. A merge keeps
+ids, except those that belong to another project; those get ids derived from
+the target and the old id, so merging the same backup again updates in place.
+Restoring into the source project changes no ids. Ruleset definition ids are
+never remapped. As a safety net, `projectBackupCollisions.ts` (3.24a) still
+refuses, before any write, an import that would overwrite another project's
+record.
 
 Project backup is the portability boundary. Derived RAG/Shodh data may be
 rebuilt from primary records.

@@ -43,54 +43,6 @@ function putRecord<T extends {id: string}>(
   });
 }
 
-/** Deletes a project's records but keeps its row, like opening its backup on another computer. */
-function removeProjectRecords(db: IDBDatabase, projectId: string): Promise<void> {
-  const storeNames = Array.from(db.objectStoreNames).filter((name) => name !== 'projects');
-  return new Cypress.Promise<void>((resolve, reject) => {
-    const tx = db.transaction(storeNames, 'readwrite');
-    for (const storeName of storeNames) {
-      const store = tx.objectStore(storeName);
-      store.openCursor().onsuccess = (event) => {
-        const cursor = (event.target as IDBRequest<IDBCursorWithValue | null>).result;
-        if (!cursor) return;
-        if ((cursor.value as {projectId?: string}).projectId === projectId) cursor.delete();
-        cursor.continue();
-      };
-    }
-    tx.oncomplete = () => resolve();
-    tx.onerror = () => reject(tx.error);
-    tx.onabort = () => reject(tx.error);
-  });
-}
-
-/** Deletes a project's ruleset from the separate rulesets database. */
-function removeProjectRuleset(projectId: string): Cypress.Chainable<void> {
-  return cy.window().then(
-    (win) =>
-      new Cypress.Promise<void>((resolve, reject) => {
-        const openRequest = win.indexedDB.open('worldbuilding-desk', 2);
-        openRequest.onerror = () => reject(openRequest.error);
-        openRequest.onsuccess = () => {
-          const db = openRequest.result;
-          if (!db.objectStoreNames.contains('rulesets')) {
-            db.close();
-            resolve();
-            return;
-          }
-          const tx = db.transaction('rulesets', 'readwrite');
-          tx.objectStore('rulesets').openCursor().onsuccess = (event) => {
-            const cursor = (event.target as IDBRequest<IDBCursorWithValue | null>).result;
-            if (!cursor) return;
-            if ((cursor.value as {projectId?: string}).projectId === projectId) cursor.delete();
-            cursor.continue();
-          };
-          tx.oncomplete = () => { db.close(); resolve(); };
-          tx.onerror = () => { db.close(); reject(tx.error); };
-        };
-      })
-  );
-}
-
 function getRecord<T>(db: IDBDatabase, storeName: string, id: string): Promise<T> {
   return new Cypress.Promise<T>((resolve, reject) => {
     const tx = db.transaction([storeName], 'readonly');
@@ -893,23 +845,11 @@ describe('Post-merge smoke checklist', () => {
         .next('input[type="file"]')
         .selectFile(backupFile, {force: true});
 
-      // 3.24a: in the browser the backup came from, a new-project import would take
-      // the source's records, so it is blocked before anything is written.
-      cy.contains('h2', 'Backup Import Preview').should('be.visible');
-      cy.contains('[role="alert"]', 'This import is blocked.')
-        .should('contain.text', 'already belong to “Cypress Smoke Project”');
-      cy.contains('button', 'Apply Import').should('be.disabled');
-
-      // As on another computer: the source's records are not here.
-      mutateSmokeDb((db) => removeProjectRecords(db, 'cypress-project-1'));
-      removeProjectRuleset('cypress-project-1');
-      cy.contains('button', 'Import Backup (.zip)')
-        .next('input[type="file"]')
-        .selectFile(backupFile, {force: true});
     });
 
+    // 3.24b: in the browser the backup came from, import makes an independent copy.
     cy.contains('h2', 'Backup Import Preview').should('be.visible');
-    cy.contains('[role="alert"]', 'This import is blocked.').should('not.exist');
+    cy.contains('[role="note"]', '“Cypress Smoke Project” is already in this browser.');
     cy.contains('button', 'Apply Import').click();
     cy.contains('[role="status"]', 'Count check passed.').should('be.visible');
     cy.contains('strong', 'Cypress Smoke Project (Imported)').should('be.visible');
@@ -928,7 +868,27 @@ describe('Post-merge smoke checklist', () => {
           record.projectId !== 'cypress-project-1'
       );
       expect(importedAlias).to.exist;
-      expect(importedAlias?.targetId).to.equal('entity-ember-archive');
+      const importedProjectId = importedAlias!.projectId;
+
+      // 3.24b: the copy has its own entity and scenes; the source keeps its own.
+      const entities = await getAllRecords<{id: string; projectId: string; name: string}>(db, 'entities');
+      const sourceEntity = entities.find((record) => record.id === 'entity-ember-archive');
+      expect(sourceEntity?.projectId).to.equal('cypress-project-1');
+      const importedEntity = entities.find(
+        (record) => record.projectId === importedProjectId && record.name === sourceEntity?.name
+      );
+      expect(importedEntity?.id).to.exist.and.not.equal('entity-ember-archive');
+      expect(importedAlias?.targetId).to.equal(importedEntity?.id);
+      const sourceAlias = aliases.find(
+        (record) => record.alias === 'The Archive of Embers' && record.projectId === 'cypress-project-1'
+      );
+      expect(sourceAlias?.targetId).to.equal('entity-ember-archive');
+
+      const scenes = await getAllRecords<{id: string; projectId: string; title: string}>(db, 'writingDocuments');
+      const importedSceneIdFor = (sourceSceneId: string) => {
+        const title = scenes.find((scene) => scene.id === sourceSceneId)?.title;
+        return scenes.find((scene) => scene.projectId === importedProjectId && scene.title === title)?.id;
+      };
 
       const canvases = await getAllRecords<{
         id: string;
@@ -963,10 +923,10 @@ describe('Post-merge smoke checklist', () => {
       }>(db, 'mechanics_drafts');
       const importedDraft = drafts.find((record) => record.projectId !== 'cypress-project-1');
       expect(importedDraft).to.deep.include({
-        entityId: 'entity-ember-archive', kind: 'stat', name: 'Archive Memory', defaultValue: '12'
+        entityId: importedEntity?.id, kind: 'stat', name: 'Archive Memory', defaultValue: '12'
       });
       expect(importedDraft?.id).to.equal(
-        `${importedDraft?.projectId}:mechanics-draft:entity-ember-archive`
+        `${importedDraft?.projectId}:mechanics-draft:${importedEntity?.id}`
       );
 
       const chapterCards = await getAllRecords<{
@@ -979,7 +939,15 @@ describe('Post-merge smoke checklist', () => {
         (record) => record.title === 'Backup-linked chapter' && record.projectId !== 'cypress-project-1'
       );
       expect(importedCard).to.exist;
-      expect(importedCard?.sceneIds).to.deep.equal(['scene-alpha', 'scene-beta']);
+      expect(importedCard?.sceneIds).to.deep.equal([
+        importedSceneIdFor('scene-alpha'),
+        importedSceneIdFor('scene-beta')
+      ]);
+      expect(importedCard?.sceneIds).not.to.include('scene-alpha');
+      const sourceCard = chapterCards.find(
+        (record) => record.title === 'Backup-linked chapter' && record.projectId === 'cypress-project-1'
+      );
+      expect(sourceCard?.sceneIds).to.deep.equal(['scene-alpha', 'scene-beta']);
     });
 
     cy.visit('/workspace');

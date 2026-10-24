@@ -46,6 +46,7 @@ export * from './projectWriteTransaction';
 export * from './projectBackupExport';
 export * from './projectBackupImport';
 export * from './projectBackupCollisions';
+export * from './projectBackupIdRemap';
 export * from './projectSnapshotService';
 export * from './projectSchemaMigrations';
 export * from './projectSnapshotMigrations';
