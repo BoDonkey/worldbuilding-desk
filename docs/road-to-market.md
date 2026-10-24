@@ -394,6 +394,7 @@ and required revisit point, `WIP`, `Done <commit>`.
 | 4.72 | Prompt breakdown with token counts | 4 | S | — |
 | 4.73 | Alternative replies | 4 | M | — |
 | 4.74 | Rolling Character Lab summaries | 4 | M | — |
+| 4.75 | Local reply length from server context | 4 | S | — |
 | 5.1 | Auto-update decision + implementation | 5 | M | — |
 | 5.2 | Code signing + notarization, both platforms | 5 | M | — |
 | 5.3 | Packaged-app validation + Electron E2E | 5 | M | — |
@@ -2189,6 +2190,16 @@ KoboldCPP.
   sessions, summarize older turns so the conversation fits the model's
   context. The summary is shown and editable, is labeled as a summary, and
   is never treated as canon or saved to the World Bible.
+- **4.75 Local reply length from server context.** Found during 4.68: with
+  no `max_tokens`, KoboldCPP stops a reply at 2,048 tokens, reasoning
+  included, so long thinking-model replies (chat, scene work) are cut off
+  and refused. For the local model server, read the loaded model's context
+  size where the server reports it (first confirm the endpoint against
+  running KoboldCPP, LM Studio, and llama.cpp servers) and send a
+  `max_tokens` that fits what remains after the prompt. Where no size is
+  reported, use an Advanced setting for local maximum reply length. A reply
+  that still hits the limit stays refused with the existing message. Hosted
+  providers and Ollama are unchanged.
 
 ## Phase 5 — Release Engineering
 
