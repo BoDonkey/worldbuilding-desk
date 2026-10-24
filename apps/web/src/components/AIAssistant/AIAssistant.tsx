@@ -18,6 +18,12 @@ import {
 import {PromptManager} from '../../services/prompts/PromptManager';
 import {buildUnverifiedFactualAnswer} from '../../services/assistant/factualQuestionBoundary';
 import {
+  buildSubjectClarification,
+  describeResolvedSubject,
+  getPreviousTurn,
+  planFollowUpSubject
+} from '../../services/assistant/followUpSubject';
+import {
   getTemporalCustodySubject,
   resolveTemporalCustodyAnswer
 } from '../../services/assistant/temporalCustody';
@@ -356,6 +362,7 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
     const selectedTextInstruction = selectedText
       ? getContextInstruction(context?.type, contextLabel)
       : '';
+    const previousTurn = getPreviousTurn(messages);
     const displayedUserMessage: LLMMessage = {role: 'user', content: promptText};
     const requestUserMessage: LLMMessage = {
       role: 'user',
@@ -375,8 +382,24 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
         promptText,
         Boolean(selectedText)
       );
+      // A gated follow-up runs on its carried-over subject (1.4b); selected
+      // text keeps its own handling.
+      const subject = groundingRequired && !selectedText
+        ? await planFollowUpSubject({projectId, prompt: promptText, previousTurn})
+        : {kind: 'unchanged' as const};
+      if (subject.kind === 'clarify') {
+        setMessages((prev) => [
+          ...prev,
+          {role: 'assistant', content: buildSubjectClarification(subject.candidates)}
+        ]);
+        scrollMessagesToBottom();
+        return;
+      }
+      const factualPrompt = subject.kind === 'resolved' ? subject.prompt : promptText;
+      const withSubjectNote = (content: string) =>
+        subject.kind === 'resolved' ? `${describeResolvedSubject(subject.record)} ${content}` : content;
       const needsOrderedScenes =
-        Boolean(getTemporalCustodySubject(promptText)) ||
+        Boolean(getTemporalCustodySubject(factualPrompt)) ||
         groundingRequired ||
         context?.type === 'document';
       const orderedScenes = needsOrderedScenes
@@ -387,9 +410,9 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
         : [];
       const [unfilteredRagResults, shodhChunks] = await Promise.all([
         ragService.current
-          ? ragService.current.search(promptText, groundingRequired ? 20 : 3)
+          ? ragService.current.search(factualPrompt, groundingRequired ? 20 : 3)
           : [],
-        buildMemoryChunks(promptText, orderedScenes)
+        buildMemoryChunks(factualPrompt, orderedScenes)
       ]);
       const ragResults = filterCanonFactResultsForScene(
         unfilteredRagResults,
@@ -398,8 +421,8 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
       );
 
       const directSavedFact =
-        resolveTemporalCustodyAnswer(promptText, orderedScenes, ragResults) ??
-        getDirectSavedFactAnswer(promptText, ragResults);
+        resolveTemporalCustodyAnswer(factualPrompt, orderedScenes, ragResults) ??
+        getDirectSavedFactAnswer(factualPrompt, ragResults);
       if (directSavedFact) {
         const directChunks = await buildRagContextChunks(
           projectId,
@@ -409,12 +432,12 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
           ...prev,
           {
             role: 'assistant',
-            content: pendingProposals
+            content: withSubjectNote(pendingProposals
               ? appendPendingProposalNote(
                   directSavedFact.content,
-                  findPendingProposalsForQuestion(promptText, pendingProposals.proposals)
+                  findPendingProposalsForQuestion(factualPrompt, pendingProposals.proposals)
                 )
-              : directSavedFact.content,
+              : directSavedFact.content),
             contextSources: getContextSourceSummaries(directChunks)
           }
         ]);
@@ -432,12 +455,12 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
           ...prev,
           {
             role: 'assistant',
-            content: pendingProposals
+            content: withSubjectNote(pendingProposals
               ? appendPendingProposalNote(
                   unverified.content,
-                  findPendingProposalsForQuestion(promptText, pendingProposals.proposals)
+                  findPendingProposalsForQuestion(factualPrompt, pendingProposals.proposals)
                 )
-              : unverified.content,
+              : unverified.content),
             contextSources: getContextSourceSummaries(reviewedChunks)
           }
         ]);
@@ -548,6 +571,7 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
     context?.id,
     context?.type,
     contextStatus,
+    messages,
     projectId,
     scrollMessagesToBottom,
     setMessages,
